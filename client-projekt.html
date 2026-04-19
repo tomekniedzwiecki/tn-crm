@@ -8448,14 +8448,41 @@
                 'POV': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
                 'Rutyna': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
                 'Reakcja': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                'Reakcja dziecka': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
                 'Efekt WOW': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
                 'Porównanie': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                'Split screen': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
                 'ASMR': 'bg-cyan-500/20 text-cyan-400 border-cyan-500/30',
                 'Unboxing': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
                 'Tutorial': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
+                'Top-down tutorial': 'bg-indigo-500/20 text-indigo-400 border-indigo-500/30',
                 'Estetyka': 'bg-rose-500/20 text-rose-400 border-rose-500/30',
                 'Storytime': 'bg-violet-500/20 text-violet-400 border-violet-500/30',
-                'GRWM': 'bg-teal-500/20 text-teal-400 border-teal-500/30'
+                'GRWM': 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+                'Talking head': 'bg-sky-500/20 text-sky-400 border-sky-500/30',
+                'Testimonial rodzica': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+                'Sceptyk przekonany': 'bg-lime-500/20 text-lime-400 border-lime-500/30',
+                'Voiceover + timelapse': 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30',
+                'Silent storytelling': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+                'POV dziecka': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+                'Demo mikroskopu': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+                'Demo wizualne': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+                'Dramatyczna transformacja': 'bg-fuchsia-500/20 text-fuchsia-400 border-fuchsia-500/30',
+                'Hot take': 'bg-red-500/20 text-red-400 border-red-500/30',
+                'Edukacja przez szok': 'bg-orange-500/20 text-orange-400 border-orange-500/30',
+                'Test challenge': 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
+                'Ekskluzywność': 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+                'Rant': 'bg-red-500/20 text-red-400 border-red-500/30',
+                'Duet Stitch': 'bg-teal-500/20 text-teal-400 border-teal-500/30',
+                'Partner reveal': 'bg-pink-500/20 text-pink-400 border-pink-500/30',
+                'Day in the life': 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+                'POV-text story': 'bg-violet-500/20 text-violet-400 border-violet-500/30'
+            };
+
+            const funnelLabels = {
+                'awareness': { label: 'Zasięg', cls: 'bg-blue-500/10 text-blue-300 border-blue-500/20' },
+                'consideration': { label: 'Wartość', cls: 'bg-amber-500/10 text-amber-300 border-amber-500/20' },
+                'conversion': { label: 'Sprzedaż', cls: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/20' }
             };
 
             // Split scenarios into face/no-face groups
@@ -8474,8 +8501,9 @@
                             <span class="text-purple-400 font-bold text-sm">${index + 1}</span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-1">
+                            <div class="flex items-center gap-2 mb-1 flex-wrap">
                                 <span class="px-2 py-0.5 text-[10px] font-medium rounded border ${typeClass}">${escapeHtml(scenario.type || 'Video')}</span>
+                                ${scenario.funnelStage && funnelLabels[scenario.funnelStage] ? `<span class="px-2 py-0.5 text-[10px] font-medium rounded border ${funnelLabels[scenario.funnelStage].cls}">${funnelLabels[scenario.funnelStage].label}</span>` : ''}
                                 ${scenario.duration ? `<span class="text-[10px] text-[#777]">${escapeHtml(scenario.duration)}</span>` : ''}
                             </div>
                             <h4 class="text-white text-[14px] font-medium truncate">${escapeHtml(scenario.title)}</h4>
@@ -8550,6 +8578,37 @@
                                 <div class="text-[#888] text-[12px]">
                                     <span class="text-[#777] text-[10px] block mb-1">Tekst na ekranie:</span>
                                     <span class="text-[#aaa]">${escapeHtml(scenario.textOverlay)}</span>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${scenario.script ? `
+                            <div class="flex items-start gap-2 bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 mt-2">
+                                <i class="ph ph-microphone-stage text-emerald-400 text-sm mt-0.5"></i>
+                                <div class="text-[#bbb] text-[13px] leading-relaxed">
+                                    <span class="text-emerald-400 text-[10px] block mb-1 uppercase tracking-wider font-medium">Co powiedzieć (dokładny skrypt)</span>
+                                    <span class="italic">"${escapeHtml(scenario.script)}"</span>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${scenario.coverFrame ? `
+                            <div class="flex items-start gap-2 bg-indigo-500/5 border border-indigo-500/20 rounded-lg p-3 mt-2">
+                                <i class="ph ph-image-square text-indigo-400 text-sm mt-0.5"></i>
+                                <div class="text-[#888] text-[12px]">
+                                    <span class="text-indigo-400 text-[10px] block mb-1 uppercase tracking-wider font-medium">Okładka (pierwszy kadr na profilu)</span>
+                                    <span class="text-[#aaa]">${escapeHtml(scenario.coverFrame)}</span>
+                                </div>
+                            </div>
+                            ` : ''}
+
+                            ${scenario.caption || (scenario.hashtags && scenario.hashtags.length) ? `
+                            <div class="flex items-start gap-2 bg-rose-500/5 border border-rose-500/20 rounded-lg p-3 mt-2">
+                                <i class="ph ph-chat-text text-rose-400 text-sm mt-0.5"></i>
+                                <div class="text-[#aaa] text-[12px] flex-1">
+                                    <span class="text-rose-400 text-[10px] block mb-1 uppercase tracking-wider font-medium">Opis pod filmem</span>
+                                    ${scenario.caption ? `<p class="text-[#bbb] mb-2">${escapeHtml(scenario.caption)}</p>` : ''}
+                                    ${scenario.hashtags && scenario.hashtags.length ? `<div class="flex flex-wrap gap-1">${scenario.hashtags.map(h => `<span class="px-1.5 py-0.5 text-[10px] rounded bg-rose-500/10 text-rose-300">${escapeHtml(h)}</span>`).join('')}</div>` : ''}
                                 </div>
                             </div>
                             ` : ''}

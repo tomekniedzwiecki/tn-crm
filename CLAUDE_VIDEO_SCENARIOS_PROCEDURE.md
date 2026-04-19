@@ -1,805 +1,391 @@
-# Procedura: Generowanie Scenariuszy Video TikTok
+# Procedura: Generowanie scenariuszy video TikTok
 
-> **WAŻNE**: Zawsze pisz z polskimi znakami diakrytycznymi (ą, ę, ć, ś, ź, ż, ó, ł, ń).
+> **Zasada nadrzędna**: scenariusz = **content strategy dopasowana do produktu, nagrywającego i widza**. Nie jedna formuła ("DRAMA! RANT!") dla wszystkich. Dramat działa dla wellness/bólu, a topi się na mikroskopie dla dzieci albo B2B.
 
-## Kiedy wywołać
-
-Użytkownik mówi: "Wygeneruj scenariusze video dla workflow X"
-
-## Co generuje
-
-**10 VIRALOWYCH scenariuszy video** podzielonych na dwie kategorie:
-- **5 scenariuszy Z TWARZĄ** — emocje, drama, rant, storytelling
-- **5 scenariuszy BEZ TWARZY** — relatability, ekskluzywność, challenge
-
-> **PAMIĘTAJ:** To NIE są reklamy produktu. To content który ludzie CHCĄ oglądać, udostępniać i komentować. Produkt jest drugorzędny — emocje są pierwsze.
+> **Polskie znaki**: ą ę ć ś ź ż ó ł ń — zawsze.
+> **Bez cen** w treści.
+> **Bez angielskich zwrotów** ("glow up", "goals", "morning routine") — klient może nie rozumieć.
 
 ---
 
-## Struktura scenariusza
+## 0. REGUŁA ZŁOTA — autentyczność 2026
+
+> **Klient wygra autentycznością nieumiejętności, nie finezją copywritera.** Twoje skrypty mają BRZMIEĆ jak SMS do kumpla, nie jak post na blogu. TikTok 2026 karze polish — wygrywają video wyglądające "jakby powstały w 15 minut".
+
+### 5 zasad przy KAŻDYM skrypcie:
+
+1. **Jeden take. Bez poprawek.** Zająknięcie zostawić — to trust signal. Wycięty dubel = reklama.
+2. **Telefon w ręku, nie statyw.** Statyw = "kręcę reklamę". Wyjątek: top-down tutorial, split screen.
+3. **Max 3 zdania w "core" skryptu.** Resztę klient improwizuje swoimi słowami. Nie pisz monologów.
+4. **Hook w sek 1 = pytanie lub konfrontacja**, nie ekspozycja. „Znowu tablet" > „Jestem elektrykiem, nie pedagogiem".
+5. **Uciąć na emocji dziecka/partnera/reakcji**, nie na CTA sprzedażowym klienta.
+
+### Copywriter-ese detector — NIGDY tak nie pisz:
+
+| ❌ Copywriter-ese (wytnij) | ✅ Jak mówi normalny człowiek |
+|---------------------------|------------------------------|
+| „Codziennie patrzyłem, jak mój syn siedzi z tabletem" | „No i tak, znowu tablet. Znowu." |
+| „Nie wiem, kiedy stałem się dzieckiem. Ale się stałem." | [wytnij całkiem — to jest książka, nie TikTok] |
+| „Pierwsza cisza w domu od miesiąca" | „Ziomek, on się nie odzywa od godziny. Ja nie wiem co robić." |
+| „Założenie zerowe: kolejna chińska zabawka" | „Miało być gówno. Jakieś chińskie gówno." |
+| „Pytanie, co go bardziej wciąga" | [wytnij tekst — same obrazy wystarczą] |
+| „Jestem elektrykiem, nie pedagogiem" | „No i dobra. Nie znam się na dzieciach, ale…" |
+| „Weekend, który się nie skończył nudą" | „Pierwsza sobota od miesięcy, że nie spała z tabletem." |
+
+### Czerwone flagi w skrypcie — jeśli widzisz, PRZEPISZ:
+
+- Zdanie zaczyna się od "Jestem X" / "Bywają chwile, gdy..." / „To nie reklama, to…"
+- Metafora, którą zachwyciłby się polonista ("mina przyłapanego taty", "pole powierzchni jak Księżyc")
+- Punchline na końcu pasujący do reklamy telewizyjnej
+- Okrągłe zdanie z liczbami ("godzina i czterdzieści siedem minut")
+- Trzy zdania pod rząd o tej samej długości (pisarska kadencja)
+- Paralelizmy („Bez pytania. Bez bajki. Bez łez.")
+- Deklaracja intencji („Musicie to usłyszeć")
+
+### Zasady długości — trend 2026
+
+| Format | Sweet spot | Kiedy |
+|--------|-----------|-------|
+| Talking head / testimonial | **21-34 sek** | Większość początkujących |
+| Reakcja / POV-text / Duet | **10-18 sek** | Algorytm faworyzuje krótsze hooki |
+| Day in the life / Storytime | **60-90 sek** | +43% reach, +64% watch time — ALE tylko jeśli utrzymasz uwagę |
+| Demo / ASMR bez słów | **12-20 sek** | Evergreen |
+
+**Dla debiutującego klienta domyślnie 21-34 sek.** Tylko 12% video >60s utrzymuje widza — początkujący rzadko to dostarcza.
+
+---
+
+## 1. Kiedy wywołać
+
+Użytkownik: "Wygeneruj scenariusze video dla workflow X".
+
+**Wynik**: 10 scenariuszy video wstawionych do `workflow_video.video_scenarios`, zrównoważonych:
+- 5 Z TWARZĄ (`showFace: true`) + 5 BEZ TWARZY (`showFace: false`) — **chyba że analiza klienta sugeruje inaczej** (nieśmiały → 8 bez twarzy; doświadczony influencer → 8 z twarzą).
+- 3 awareness + 4 consideration + 3 conversion (lejek).
+
+---
+
+## 2. Macierz: 3 wymiary dopasowania
+
+Przed pisaniem scenariuszy **zawsze** określ trzy rzeczy. To determinuje ton, formaty i angle.
+
+### 2.1 Archetyp produktu
+
+| Archetyp | Przykłady | Dominujące emocje | Tony NIE pasujące |
+|----------|-----------|-------------------|-------------------|
+| **Wellness / ból / intymne** | pas termiczny, suplementy, produkty miesiączkowe | drama, rant, ekskluzywność, "NFZ refunduje" | tutorial-nauczyciel, luxury |
+| **Dla dzieci / rodzina** | mikroskop, zabawka edukacyjna, gra planszowa | duma rodzica, zachwyt dziecka, nostalgia, "offline vs ekran" | rant, ekskluzywność "tylko my rozumiemy" |
+| **Tech / gear / biohacker** | smartwatch, urządzenie pomiarowe, sprzęt fitness | dane, performance, "przed/po w liczbach", sceptyk przekonany | drama, "łzawe historie" |
+| **Dom / lifestyle** | robot odkurzający, oczyszczacz, dekoracja | oszczędność czasu, estetyka, "ja vs robot pracuje", satysfakcja | rant, kontrowersja |
+| **Premium / luxury** | zegarek, biżuteria, perfumy | aspiration, detail, cisza, slow cinema | drama, przesada, "3 w nocy" |
+| **B2B / usługi** | narzędzie SaaS, kurs, konsultacje | autorytet, case study, "jak to robię w firmie" | rant, POV "leżę na podłodze" |
+
+**Jeśli nie pasuje do żadnego** — opisz własnymi słowami i wybierz 2-3 dominujące emocje. Wypisz je.
+
+### 2.2 Kto nagrywa × kto ogląda
+
+| Nagrywa | Widz | Angle |
+|---------|------|-------|
+| Kobieta / produkt kobiecy | Kobieta | Bezpośredni ("Ja używam...") |
+| Mężczyzna / produkt kobiecy | Kobieta | "Kupiłem żonie...", "Moja partnerka mnie zmusiła..." |
+| Kobieta / produkt męski | Mężczyzna | "Mój chłopak używa...", recenzja dla partnera |
+| Rodzic / produkt dla dzieci | **Inny rodzic** | "Mój syn/córka...", reakcja dziecka, "moje dziecko zamiast telefonu" |
+| Właściciel firmy / B2B | Inny właściciel | "Tak robimy u nas...", case study |
+| Użytkownik / produkt unisex | Każdy | POV, demo, review |
+
+**KLUCZOWE**: dla produktów, gdzie nagrywający ≠ użytkownik (dzieci, prezenty, B2B), formuły typu POV/rant "leżę na podłodze" **nie działają**. Wtedy angle zmienia się na "obserwator opowiadający" lub "reakcja X".
+
+### 2.3 Persona nagrywającego
+
+| Pytanie | Wpływ |
+|---------|-------|
+| Doświadczenie z TikTok? | Początkujący → prostsze, mniej dramy, gotowe skrypty słowo-w-słowo |
+| Introwersja/ekstrawersja? | Introwertyk → więcej `showFace:false`, voiceover, silent storytelling |
+| Spójność z dotychczasowym contentem? | Jeśli ma już profil — sprawdź i dopasuj ton |
+| Czas na nagranie? | Zajęty (firma własna) → wszystkie scenariusze nagrywane z jednego kadru w 30 min |
+
+---
+
+## 3. 24 formaty (nie 10)
+
+Sztywne "5 + 5" się nie skaluje. Poniżej 24 formaty — wybieraj 10 dopasowanych do archetypu (patrz sekcja 4).
+
+### Z TWARZĄ (`showFace: true`):
+
+| # | Format | Kiedy używać | Kluczowy element |
+|---|--------|--------------|------------------|
+| 1 | **POV dramatyczny** | wellness, ból, intymne | przesada, mimika |
+| 2 | **Rant** | wellness, coś-nie-działa | złość, głośny głos |
+| 3 | **Storytime z twistem** | wellness, lifestyle | punchline — UWAGA: szybko robi się copywriter-ese |
+| 4 | **Hot take** | kontrowersyjne tematy | opinia wywołująca komentarze |
+| 5 | **Talking head edukacyjny** | tech, B2B, dla rodziców | fakt + dowód + CTA — UWAGA: na TikTok 2026 niedoświadczeni wyglądają sztucznie, używaj sparingly |
+| 6 | **Sceptyk przekonany** | tech, premium, dla dzieci | "myślałem że gówno, ale..." |
+| 7 | **Reakcja na reakcję** | dla dzieci, prezenty | nagrywasz KOGOŚ reagującego |
+| 8 | **Get ready / rutyna** | beauty, lifestyle | dzień z produktem, bez dramy |
+| 9 | **Testimonial** | dla dzieci, wellness | "7 dni, tablet leży" — konkret nad patosem |
+| 10 | **Dramatyczna transformacja** | przed/po: ból, sprzątanie | maksymalny kontrast |
+| 21 | **Day in the life (długi)** | dla dzieci, lifestyle, B2B | 60-90 sek handheld, bez scenariusza, timestampy |
+| 22 | **Duet / Stitch** | wszystko — szczególnie dla debiutantów | reakcja na viral o kontekście produktu = darmowy reach |
+| 23 | **Partner reveal** | dla dzieci, prezenty, dom | partner/członek rodziny nagrywa i reaguje z offu |
+
+### BEZ TWARZY (`showFace: false` — klient nie w kadrze):
+
+| # | Format | Kiedy używać | Kluczowy element |
+|---|--------|--------------|------------------|
+| 11 | **Voiceover + timelapse** | wszystko | narracja + przyspieszone ujęcie — UWAGA: łatwo wpaść w patos |
+| 12 | **ASMR unboxing** | wszystko fizyczne | dźwięk papieru, kliknięć |
+| 13 | **Split screen** | porównania, "ekran vs ekran" | kontrast w tym samym kadrze — trzymaj copy minimalne |
+| 14 | **Silent storytelling** | premium, edukacja | tekst + muzyka, zero głosu — UWAGA: napisy łatwo stają się sloganem |
+| 15 | **Tutorial z góry (top-down)** | dom, tech, dla dzieci | ręce + produkt z lotu ptaka |
+| 16 | **POV pierwszej osoby** | dla dzieci, gear | kamera "widzi to co ja" |
+| 17 | **Edukacja przez szok** | wellness, edukacja | "Rzeczy o X których nikt…" |
+| 18 | **Test/challenge 24h** | wszystko | zegarek jako narracja |
+| 19 | **Ekskluzywność** | wellness, niche | „ten post dla 50%…" — NIE dla dzieci/B2B |
+| 20 | **Demo wizualne / showcase** | produkty „pokazujące coś" | sam produkt robi show |
+| 24 | **POV-text story** | wszystko, szczególnie parenting 2026 | tekst na ekranie jako narrator, w tle zwykłe życie — ZERO scripted speech, dominuje trend Q1 2026 |
+
+---
+
+## 4. Dopasowanie formatów do archetypu
+
+| Archetyp | Rekomendowane formaty (wybierz 10 z tego zestawu) |
+|----------|---------------------------------------------------|
+| **Wellness / ból** | 1, 2, 3, 4, 9, 10, 22 / 11, 12, 17, 18, 19, 24 |
+| **Dla dzieci / rodzina** | 6, 7, 9, 21, 22, 23 / 13, 15, 16, 20, 24 (reakcja dziecka, POV-text, duet, day-in-life — trend 2026) |
+| **Tech / biohacker** | 6, 8, 10, 22 / 11, 12, 13, 15, 17, 18, 20 (demo, liczby, sceptyk, stitch benchmarków) |
+| **Dom / lifestyle** | 8, 10, 21, 22 / 11, 13, 14, 15, 18, 20 (satysfakcja, top-down, transformacja) |
+| **Premium** | 6, 8, 21 / 11, 12, 14, 15, 20, 24 (cisza, detail shots, slow cinema) |
+| **B2B / usługi** | 6, 9, 21, 22 / 11, 14, 15, 17, 24 (case study, stitch, fakty, bez dramy) |
+
+**Dla archetypu "dzieci" NIE używaj**: format 1 (POV dramat), 2 (rant), 4 (hot take), 19 (ekskluzywność). Nie pasują do kontekstu rodzicielskiego.
+
+**Dla debiutujących klientów (brak doświadczenia z TikTok) priorytet**: 7 (reakcja), 22 (duet/stitch), 23 (partner reveal), 24 (POV-text). Te formaty wymagają MINIMUM aktorstwa — klient nie musi "grać".
+
+**Format 5 (talking head)** i **3 (storytime)** — używaj ostrożnie. Dla niedoświadczonych klientów to pułapki: łatwo wpaść w ton copywritera lub mówcy motywacyjnego. Jeśli używasz, max 1 na 10 scenariuszy i trzymaj skrypt do 3 zdań.
+
+---
+
+## 5. Lejek konwersji — 10 scenariuszy to content plan
+
+Nie generuj 10 niezależnych video. Myśl o tym jak o content planie profilu na pierwsze 3 tygodnie.
+
+| Etap | Liczba | Cel | Przykłady formatów |
+|------|--------|-----|-------------------|
+| **Awareness** (scroll stopper, broad reach) | 3 | zatrzymać scroll, wywołać reakcję, zasięg | 1, 4, 7, 11, 13, 16, 20 |
+| **Consideration** (pokazanie wartości) | 4 | edukacja, USP, "czemu to?", porównania | 5, 6, 8, 12, 15, 17, 18 |
+| **Conversion** (bezpośredni push) | 3 | testimonial, demo, CTA | 9, 10, 14, 19, + wariant z `ending` = wyraźne CTA |
+
+**Oznacz `funnelStage`** w każdym scenariuszu.
+
+---
+
+## 6. Proces generowania — 6 kroków
+
+### Krok 1: Research (OBOWIĄZKOWY — 4 źródła)
+
+```bash
+KEY="<SUPABASE_SERVICE_KEY z c:/repos_tn/tn-crm/.env>"
+WID="<workflow-id>"
+
+# 1. Workflow (klient, sales_page_url, selected_product_id)
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.$WID&select=id,customer_name,customer_phone,customer_email,sales_page_url,selected_product_id" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+
+# 2. Branding (brand_info: name/tagline/description)
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.$WID&type=eq.brand_info" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+
+# 3. Raporty (specyfikacja, USP, grupa docelowa)
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reports?workflow_id=eq.$WID" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY"
+
+# 4. Landing page (GOTOWE copy — najważniejsze źródło!)
+curl -sL "<sales_page_url>" | head -c 20000
+```
+
+**Wyciągnij z landing page**:
+- Hero headline (to jest najsilniejszy hook produktu)
+- Problem framing (jak pain jest opisany)
+- USP i bullet points
+- Testimoniale (autentyczny język odbiorcy)
+- CTA (czego chcą żeby ludzie zrobili)
+
+### Krok 2: Analiza (5 linii — max)
+
+Wypisz dla użytkownika:
+
+```
+Produkt: <nazwa>
+Archetyp: <z sekcji 2.1>
+Nagrywa: <imię> (<płeć>), widz: <kto>
+Emocje dominujące: <2-3>
+Główne angle z landing: <3 hooki>
+Formaty wybrane: <10 numerów z sekcji 3>
+```
+
+**NIE pytaj użytkownika o potwierdzenie**. Od razu przejdź do generacji. Jeśli user chce zmianę, odezwie się.
+
+### Krok 3: Generacja 10 scenariuszy
+
+Struktura JSON każdego scenariusza:
 
 ```json
 {
   "id": "scenario_1",
-  "type": "POV",
-  "showFace": true,
-  "title": "Krótki tytuł (max 30 znaków)",
-  "hook": "Co zrobić na początku (1-2 zdania)",
-  "action": "Co zrobić z produktem (2-3 zdania)",
-  "ending": "Jak zakończyć (1-2 zdania)",
+  "type": "<nazwa formatu — tak jak w typeColors>",
+  "showFace": true | false,
+  "funnelStage": "awareness" | "consideration" | "conversion",
+  "title": "Krótki tytuł (max 40 znaków)",
+  "hook": "Co WIDAĆ w pierwszych 2 sek (wizualny opening + akcja kamery)",
+  "script": "Dokładny tekst do powiedzenia słowo-w-słowo. Jeśli voiceover/bez głosu — opis dźwięku lub 'Bez dialogu'. Dla storytime: pełna narracja.",
+  "action": "Co robisz fizycznie (kroki, props, ruch kamery) — nie co mówisz",
+  "ending": "Ostatnie 2-3 sek + CTA (mówione lub tekstowe)",
   "duration": "15-20 sek",
-  "tip": "Konkretna wskazówka techniczna",
-  "soundTip": "Sugestia dźwięku/muzyki",
-  "textOverlay": "Opcjonalny tekst do wyświetlenia na ekranie"
+  "tip": "Wskazówka techniczna (światło, kąt, kadrowanie)",
+  "soundTip": "Co z dźwiękiem: oryginalny głos / trending audio / voiceover / cisza + tekst",
+  "textOverlay": "Tekst na ekranie (hook lub CTA)",
+  "coverFrame": "Opis pierwszego kadru dla thumbnaila na profilu TikTok (co ma być ZATRZYMANE jako cover) — wpływa na klikalność profilu",
+  "caption": "Opis pod filmem na TikTok (120-250 znaków, emoji max 2, wplata keywords SEO)",
+  "hashtags": ["#tag1", "#tag2", "#tag3", "#tag4", "#tag5"]
 }
 ```
 
-### Pola:
-- **type** — typ scenariusza (patrz sekcja "Typy scenariuszy")
-- **showFace** — `true` = z twarzą, `false` = bez twarzy
-- **title** — krótki, chwytliwy tytuł widoczny dla klienta
-- **hook** — co zrobić w PIERWSZYCH 3 SEKUNDACH (najważniejsze!)
-- **action** — główna akcja z produktem, opisz konkretnie co robić
-- **ending** — jak zakończyć video (CTA lub punchline)
-- **duration** — sugerowany czas trwania
-- **tip** — wskazówka dot. oświetlenia, kąta kamery, ustawienia
-- **soundTip** — czy użyć oryginalnego dźwięku, muzyki, czy voiceover
-- **textOverlay** — tekst do dodania w edytorze TikTok (opcjonalnie)
-
----
-
-## ⚠️ MINDSET VIRALOWY — PRZECZYTAJ NAJPIERW!
-
-> **KLUCZOWE:** Nie piszesz reklamy produktu. Piszesz content który ludzie CHCĄ oglądać, udostępniać i komentować. Produkt jest DRUGORZĘDNY — emocje są PIERWSZE.
-
-### Co sprawia że video jest viralne:
-
-| Element | Nudne (NIE RÓB) | Viralne (TAK!) |
-|---------|-----------------|----------------|
-| **Hook** | "Cześć, dziś pokażę wam produkt..." | "PIĘTNAŚCIE LAT łykałam tabletki i NIKT mi nie powiedział..." |
-| **Emocja** | Uśmiech, spokój | DRAMA, złość, śmiech, zaskoczenie, niedowierzanie |
-| **Pozycja ciała** | Stoisz/siedzisz normalnie | Leżysz na podłodze, zwijasz się, dramatyczne pozy |
-| **Ton** | Prezentacja produktu | Rant do przyjaciółki, plotka, wyznanie |
-| **Zakończenie** | "Link w bio" | Punchline, twist, "no powiedzcie że nie mam racji" |
-
-### 5 filarów viralowego contentu:
-
-1. **RELATABILITY** — widz musi powiedzieć "O KURDE TO JA"
-2. **DRAMA i PRZESADA** — TikTok to teatr, nie dokumentalny
-3. **KONTROWERSJA** — opinie wywołują komentarze, komentarze = algorytm
-4. **EKSKLUZYWNOŚĆ** — "tylko my to rozumiemy", "faceci nie zrozumieją"
-5. **TWIST/PUNCHLINE** — zaskoczenie na końcu trzyma do końca
-
-### Viralne hooki — szablony:
-
-```
-"POV: [relatywna sytuacja z problemem]"
-"Muszę wam powiedzieć o czymś co powinnyśmy wiedzieć DAWNO"
-"[X] lat robiłam [stare rozwiązanie] i NIKT mi nie powiedział że..."
-"Ten post jest dla 50% populacji. Reszta nie zrozumie."
-"Hot take który rozwścieczy połowę internetu"
-"Rzeczy o [temacie] których nikt ci nie powie"
-"Moja [mama/chłopak/koleżanka] zobaczyła co [robię] i..."
-"Zamówiłam to o 3 w nocy w akcie desperacji"
-"Najlepsza decyzja którą podjęłam [kontekst]"
-"To powinno być refundowane przez NFZ"
-```
-
-### Viralne zakończenia — szablony:
-
-```
-"...no powiedzcie że nie mam racji"
-"Wyślij tej jednej koleżance która ZROZUMIE"
-"Jeśli rozumiesz — wiesz. Jeśli nie — ciesz się."
-"Dlaczego ja o tym nie wiedziałam wcześniej?!"
-"Najlepsza decyzja podjęta o 3 w nocy"
-"[Osoba] zamówiła sobie dwie sztuki"
-"I teraz... serio?" (z niedowierzaniem)
-```
-
----
-
-## Zasady tworzenia scenariuszy
-
-### MUSI być:
-- ✅ **VIRALOWE** — emocje > produkt, drama > prezentacja
-- ✅ **PROSTE** — 3 kroki, każdy w 1-3 zdaniach
-- ✅ **Bez montażu** — jedno ciągłe nagranie, bez cięć (max prosty transition)
-- ✅ **Bez innych osób** — nagrywający sam
-- ✅ **Bez specjalnych lokacji** — dom, pokój, biurko
-- ✅ **Krótkie** — 15-30 sekund max
-- ✅ **Konkretne** — opisz DOKŁADNIE co robić, nie ogólnikowo
-- ✅ **HOOK W PIERWSZEJ SEKUNDZIE** — zatrzymaj scrollowanie natychmiast
-
-### NIE MOŻE być:
-- ❌ **NUDNE** — typowa prezentacja produktu, "dziś pokażę wam..."
-- ❌ **BEZ EMOCJI** — spokojny, neutralny ton
-- ❌ Skomplikowane scenariusze wymagające planowania
-- ❌ Potrzeba dodatkowego sprzętu (gimbal, oświetlenie studyjne)
-- ❌ Dialogi z innymi osobami
-- ❌ Efekty specjalne wymagające umiejętności montażu
-- ❌ Scenariusze dłuższe niż 30 sekund
-- ❌ **CENY** — nigdy nie podawaj cen produktu w scenariuszach (ani w textOverlay, ani w hook/action/ending)
-- ❌ **ANGIELSKIE ZWROTY** — unikaj angielskich słów i fraz (np. "glow up", "morning routine", "goals") — klienci mogą ich nie zrozumieć. Pisz po polsku!
-
-### Scenariusze BEZ TWARZY (showFace: false):
-- ❌ Nigdy nie wymagają pokazywania twarzy
-- ✅ Skupione na produkcie, rękach, otoczeniu
-- ✅ Idealne dla osób nieśmiałych lub bez doświadczenia
-- ✅ Łatwiejsze do nagrania — mniej stresu
-- ✅ Często lepiej się sprawdzają dla produktów fizycznych
-
----
-
-## Typy scenariuszy — VIRAL EDITION
-
-### Z TWARZĄ (showFace: true):
-
-#### 1. POV Drama
-**Co to jest:** Widz "wchodzi" w DRAMATYCZNĄ sytuację, ty reagujesz PRZESADNIE
-**Format:** "POV: [bolesna/śmieszna relatywna sytuacja]" → dramatyczna reakcja → produkt ratuje
-**Przykładowe sytuacje:**
-- POV: Tłumaczysz facetowi dlaczego nie możesz wstać z kanapy
-- POV: Ktoś mówi "to tylko ból, weź tabletkę"
-- POV: Twoja mama pyta co to za urządzenie
-
-**Wskazówki:**
-- PRZESADZAJ z mimiką — to ma być teatr!
-- Leż na podłodze, zwij się, rób dramatyczne miny
-- Hook MUSI zatrzymać scrollowanie
-
-#### 2. Rant / Wygadanie się
-**Co to jest:** Emocjonalne wyżalenie się do kamery z produktem jako rozwiązaniem
-**Format:** "Muszę wam powiedzieć..." → złość/frustracja → produkt → ulga
-**Przykładowe ranty:**
-- "X LAT robiłam [stare rozwiązanie] i NIKT mi nie powiedział..."
-- "Dlaczego tego nie uczą w szkole?!"
-- "Jestem wściekła że dopiero teraz się dowiedziałam"
-
-**Wskazówki:**
-- Autentyczna ZŁOŚĆ lub NIEDOWIERZANIE
-- Gestykuluj! Mów głośno!
-- To wywołuje komentarze = algorytm kocha
-
-#### 3. Storytime z twistem
-**Co to jest:** Historia która zaczyna się zwyczajnie ale ma ZASKAKUJĄCE zakończenie
-**Format:** "Okej, historia z wczoraj..." → budowanie → TWIST/punchline
-**Przykładowe historie:**
-- "Moja mama zobaczyła co zakładam i... [twist: zamówiła sobie dwie]"
-- "Mój chłopak myślał że umieram... [twist: teraz on chce jedno dla pleców]"
-- "Kupiłam to o 3 w nocy... [twist: najlepsza decyzja ever]"
-
-**Wskazówki:**
-- Buduj napięcie — nie zdradzaj punchline za wcześnie
-- Mów jak do przyjaciółki przy winie
-- Twist na końcu trzyma widza do końca
-
-#### 4. Dramatyczna transformacja
-**Co to jest:** MAKSYMALNY kontrast między "przed" a "po"
-**Format:** Cierpienie/dramat → transition → sielanka/ulga
-**Przykłady:**
-- Leżysz na podłodze w bólu → transition → siedzisz z herbatą, chill
-- Grymas, ból, cierpienie → transition → uśmiech, spokój
-- "Ja o 3 w nocy" vs "Ja teraz"
-
-**Wskazówki:**
-- CZĘŚĆ 1 = MAKSYMALNY dramat (leż na podłodze!)
-- CZĘŚĆ 2 = MAKSYMALNA sielanka
-- Im większy kontrast, tym lepiej
-
-#### 5. Hot take / Kontrowersja
-**Co to jest:** Opinia która WYWOŁA dyskusję w komentarzach
-**Format:** "Hot take..." → kontrowersyjna opinia → produkt jako dowód
-**Przykładowe hot takes:**
-- "To powinno być refundowane przez NFZ"
-- "Tabletki to ściema przemysłu farmaceutycznego"
-- "Dlaczego kobiety muszą cierpieć w ciszy?"
-
-**Wskazówki:**
-- Pewność siebie! Masz rację i to wiesz.
-- Kontrowersja = komentarze = algorytm = viral
-- Zakończ: "no powiedzcie że nie mam racji"
-
----
-
-### BEZ TWARZY (showFace: false):
-
-#### 6. Relatywny moment
-**Co to jest:** Sytuacja którą KAŻDY zna, bez pokazywania twarzy
-**Format:** Relatywna sytuacja (tekst) → ręce/produkt rozwiązują problem
-**Przykłady:**
-- "Dzień 1 vs reszta świata" — alarm, kalendarz, sięgasz po produkt
-- "Każda wie o czym mówię" — bez słów, sytuacja mówi sama za siebie
-- "Rzeczy które rozumie tylko 50% populacji"
-
-**Wskazówki:**
-- Hook tekstowy na początku — relatywność
-- Ręce robią to co wszystkie robią w tej sytuacji
-- Ludzie tagują koleżanki = viral
-
-#### 7. Zamówienie o 3 w nocy
-**Co to jest:** Historia impulsowego zakupu z happy endem
-**Format:** Telefon o 3 w nocy → "KUP TERAZ" → paczka → działa!
-**Przykłady:**
-- Ekran telefonu z godziną 3:14 → palec wciska "zamów"
-- Paczka pod drzwiami → niepewność → pozytywne zaskoczenie
-- "Najlepsza decyzja podjęta w akcie desperacji"
-
-**Wskazówki:**
-- Buduj narrację: desperacja → niepewność → sukces
-- Pokaż godzinę na telefonie (3 w nocy = relatable)
-- Zakończ oceną produktu (gwiazdki, kciuk w górę)
-
-#### 8. Edukacja przez szok
-**Co to jest:** "Rzeczy których nikt ci nie powie" ale z emocją
-**Format:** Szokujący fakt (tekst) → dowód (produkt) → CTA
-**Przykłady:**
-- "Rzeczy o [temacie] których nikt ci nie powie: punkt 1, 2, 3..."
-- "Wiedziałaś że...? [szokujący fakt]"
-- "Przekaż dalej, bo ja dowiedziałam się za późno"
-
-**Wskazówki:**
-- Każdy punkt = osobne ujęcie
-- Tekst na ekranie — czytelny, duży
-- Zakończ CTA: "Wyślij koleżance"
-
-#### 9. Test / Challenge
-**Co to jest:** "Czy przeżyję [sytuację] z tym produktem?"
-**Format:** Challenge (tekst) → seria ujęć przez dzień → werdykt
-**Przykłady:**
-- "Test: czy przeżyję dzień 1 w biurze z tym?"
-- "Sprawdzam czy to działa tak jak mówią"
-- "24h z [produktem] — uczciwa recenzja"
-
-**Wskazówki:**
-- Zegarek/czas jako element narracji
-- Szybkie cięcia, dynamicznie
-- Werdykt na końcu — buduj napięcie
-
-#### 10. Ekskluzywność
-**Co to jest:** "Ten post nie jest dla wszystkich"
-**Format:** Ekskluzywny hook → produkt → "jeśli wiesz to wiesz"
-**Przykłady:**
-- "Ten post jest dla 50% populacji. Reszta nie zrozumie."
-- "Faceci — scrollujcie dalej. To nie dla was."
-- "Jeśli rozumiesz — wiesz. Jeśli nie — ciesz się."
-
-**Wskazówki:**
-- Buduj "my vs oni" — ekskluzywność
-- Wywołuje komentarze i tagowanie
-- Ludzie lubią być w "klubie" który rozumie
-
----
-
-## Wskazówki techniczne (dla wszystkich typów)
-
-### Oświetlenie:
-- **Dzień**: Naturalne światło z okna (najlepsze!)
-- **Wieczór**: Ciepłe lampki, LED-y produktu
-- **LED-y produktu**: Przyciemnij pokój żeby były widoczne
-- **Unikaj**: Światła z tyłu (kontra), jarzeniówek
-
-### Kąt kamery:
-- **Z twarzą**: Na wysokości oczu lub lekko z góry
-- **Bez twarzy**: Z góry (bird's eye) lub pod kątem 45°
-- **Produkt**: Na wysokości produktu dla dramatyzmu
-
-### Dźwięk:
-- **Oryginalny dźwięk**: Dla ASMR, unboxing, efektów
-- **Trending audio**: Dla POV, reakcji, porównań
-- **Voiceover**: Dla tutorial, storytime
-- **Cisza + tekst**: Zawsze działa
-
-### Tekst na ekranie:
-- **Hook**: Pierwsze 1-2 sekundy, duży tekst
-- **Kontekst**: Mały tekst wyjaśniający sytuację
-- **CTA**: Na końcu "Link w bio" / "Sprawdź to"
-
----
-
-## ⚠️ KROK 0: OKREŚL PŁEĆ NAGRYWAJĄCEGO (OBOWIĄZKOWE!)
-
-> **KRYTYCZNE:** Zanim napiszesz jakikolwiek scenariusz, sprawdź `customer_name` z workflow i określ płeć klienta. Scenariusze MUSZĄ być dostosowane do osoby która będzie je nagrywać!
-
-### Jak określić płeć po polskim imieniu:
-
-| Końcówka/wzorzec | Płeć | Przykłady |
-|------------------|------|-----------|
-| `-a` (większość) | Kobieta | Anna, Katarzyna, Magda, Ewa, Joanna, Agnieszka, Monika |
-| `-ek`, `-usz`, `-aw`, `-an` | Mężczyzna | Marek, Łukasz, Tomasz, Sławek, Jan, Damian |
-| `-eł`, `-ał`, `-ił` | Mężczyzna | Paweł, Michał, Kamil, Rafał |
-| Wyjątki kobiece bez `-a` | Kobieta | Dagmara→Daga, Małgorzata→Gosia |
-
-### Popularne polskie imiona:
-
-**Męskie:** Adam, Andrzej, Bartek, Damian, Daniel, Dawid, Dominik, Filip, Grzegorz, Jakub, Jan, Kamil, Karol, Krzysztof, Łukasz, Maciej, Marcin, Marek, Mateusz, Michał, Paweł, Piotr, Rafał, Robert, Sebastian, Szymon, Tomasz, Wojciech
-
-**Żeńskie:** Agnieszka, Aleksandra, Alicja, Anna, Barbara, Beata, Dorota, Ewa, Iwona, Joanna, Justyna, Karolina, Katarzyna, Kinga, Magda, Małgorzata, Maria, Marta, Monika, Natalia, Patrycja, Paulina, Renata, Sylwia, Weronika, Zuzanna
-
-### Jak dostosować scenariusze:
-
-| Element | Kobieta | Mężczyzna |
-|---------|---------|-----------|
-| **Perspektywa beauty/anti-aging** | Bezpośrednia ("Ja używam...") | Pośrednia ("Kupiłem żonie...", "Moja partnerka...") LUB biohacker angle |
-| **Hook emocjonalny** | "koleżanki pytają", "kobiety 30+" | "kumple myśleli że zwariowałem", "faceci którzy rozumieją" |
-| **Rant** | "smarowałam się kremami" | "ćwiczyłem jak wariat a efektów brak" |
-| **Ekskluzywność** | "Ten post dla kobiet które rozumieją" | "Ten post dla facetów którzy ogarniają" |
-| **Storytime** | "Mama/koleżanka myślała..." | "Żona myślała że zwariowałem...", "Kumple się śmiali..." |
-
-### Męskie angle'e dla produktów wellness/beauty:
-
-1. **Biohacker** — optymalizacja, performance, nauka, dane
-2. **Sportowiec** — regeneracja, wydajność, energia po treningu
-3. **Produktywność** — focus, energia w pracy, przewaga konkurencyjna
-4. **Prezent dla niej** — "kupiłem żonie i sam zacząłem używać"
-5. **Sceptyk przekonany** — "myślałem że ściema, ale..."
-
-### Proporcje scenariuszy:
-
-| Płeć klienta | Scenariusze bezpośrednie | Scenariusze "dla partnera/ki" |
-|--------------|--------------------------|------------------------------|
-| Kobieta | 8-10 (większość) | 0-2 |
-| Mężczyzna (produkt unisex) | 6-8 | 2-4 |
-| Mężczyzna (produkt typowo kobiecy) | 3-4 (biohacker angle) | 6-7 ("dla niej") |
-
-### Przykład — produkt anti-aging, klient: Łukasz (mężczyzna)
-
-**Zamiast:** "Piętnaście lat smarowałam się kremami..."
-**Napisz:** "Żona wydała fortunę na kremy. Ja znalazłem coś co działa od środka..."
-
-**Zamiast:** "Koleżanki pytają co bierzesz"
-**Napisz:** "Kumple pytają skąd mam tyle energii na siłowni"
-
-**Zamiast:** "Ten post dla kobiet 30+"
-**Napisz:** "Ten post dla facetów którzy ogarniają zdrowie"
-
----
-
-## Proces generowania
-
-### Krok 1: Pobierz WSZYSTKIE dane o produkcie
-
-```bash
-# Podstawowe dane workflow
-curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflows?id=eq.[WORKFLOW_ID]&select=*" \
-  -H "apikey: [SERVICE_KEY]" -H "Authorization: Bearer [SERVICE_KEY]"
-
-# Branding (nazwa marki, tagline, opis, kolory)
-curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.[WORKFLOW_ID]&select=*" \
-  -H "apikey: [SERVICE_KEY]" -H "Authorization: Bearer [SERVICE_KEY]"
-
-# ⚠️ RAPORTY PRODUKTU — KLUCZOWE DLA ANALIZY!
-curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reports?workflow_id=eq.[WORKFLOW_ID]&select=*" \
-  -H "apikey: [SERVICE_KEY]" -H "Authorization: Bearer [SERVICE_KEY]"
-```
-
-> **WAŻNE:** Raporty często zawierają szczegółowe informacje o produkcie:
-> - Specyfikacja techniczna (moc, funkcje, tryby pracy)
-> - Analiza konkurencji (co wyróżnia ten produkt)
-> - Grupa docelowa (kto kupuje, jakie ma problemy)
-> - USP (unikalna propozycja wartości)
->
-> **Przeczytaj raporty** zanim zaczniesz analizę — znajdziesz tam odpowiedzi na większość pytań z sekcji 2.2-2.3.
-
----
-
-## ⚠️ Krok 2: GŁĘBOKA ANALIZA PRODUKTU (OBOWIĄZKOWA)
-
-> **ZATRZYMAJ SIĘ TUTAJ** — zanim napiszesz jakikolwiek scenariusz, przeprowadź pełną analizę. Wypisz wnioski dla użytkownika i poczekaj na jego akceptację.
-
-### 2.1 Wykorzystaj raporty produktu
-
-Raporty (`workflow_reports`) to najcenniejsze źródło informacji. Szukaj w nich:
-
-| Sekcja raportu | Co wyciągnąć dla scenariuszy |
-|----------------|------------------------------|
-| **Specyfikacja techniczna** | Konkretne funkcje do pokazania (moc ssania 5000Pa, nawigacja LiDAR, tryby pracy) |
-| **Analiza konkurencji** | Co wyróżnia TEN produkt — to powinno być w scenariuszach |
-| **Grupa docelowa** | Jakie problemy rozwiązuje, kim jest kupujący |
-| **USP / Wyróżniki** | Główny "hak" do hook'a w scenariuszu |
-| **Funkcje / tryby** | Materiał na Tutorial, Porównanie |
-| **Zastosowania** | Konkretne sytuacje do POV i Rutyny |
-
-> **Jeśli raport jest w formacie PDF/załącznik** — pobierz i przeczytaj. Nie zgaduj specyfikacji!
-
-### 2.2 Podstawowe informacje
-
-| Pytanie | Co sprawdzić |
-|---------|--------------|
-| **Nazwa produktu** | Z `workflow_branding` type=`brand_info` |
-| **Kategoria** | Elektronika, fitness, beauty, dom, zdrowie, gadżety, inne |
-| **Typ produktu** | Fizyczny / cyfrowy / usługa |
-| **Cena** | Tani (<100zł), średni (100-500zł), premium (>500zł) — wpływa na ton |
-
-### 2.3 Analiza cech wizualnych i dźwiękowych
-
-Odpowiedz na każde pytanie — to determinuje które scenariusze zadziałają:
-
-| Cecha | Pytanie | Wpływ na scenariusze |
-|-------|---------|---------------------|
-| **LED-y / światła** | Czy produkt świeci? Jakie kolory? | Tak → Efekt WOW w ciemności zadziała. Nie → wymyśl inny "wow" |
-| **Dźwięk pracy** | Cichy, głośny, przyjemny, irytujący? | Głośny → ASMR odpada. Cichy → ASMR może działać |
-| **Ruch / dynamika** | Produkt się porusza? Sam działa? Wymaga akcji użytkownika? | Sam działa → pokaż efekt "przed/po". Wymaga akcji → pokaż proces |
-| **Rozmiar** | Mały (dłoń), średni (biurko), duży (podłoga) | Mały → close-upy. Duży → szersze ujęcia, kontekst pokoju |
-| **Czas działania** | Efekt natychmiastowy czy wymaga czasu? | Natychmiastowy → łatwe do nagrania. Wymaga czasu → przyspieszone video lub "przed/po" |
-
-### 2.4 Analiza emocjonalna — KLUCZOWE dla scenariuszy VIRALOWYCH
-
-Określ główny "hak emocjonalny" produktu i jak go WYOLBRZYMIĆ:
-
-| Kategoria emocji | Przykłady produktów | VIRALOWE scenariusze |
-|------------------|---------------------|---------------------|
-| **Rozwiązanie bólu/problemu** | Produkty zdrowotne, wellness | Rant ("X LAT cierpiałam i NIKT..."), Hot take ("To powinno być refundowane"), POV Drama |
-| **Oszczędność czasu** | Robot odkurzający, automatyka | Dramatyczna transformacja (leżę vs robot pracuje), Storytime z twistem ("mój mąż myślał że sprzątam") |
-| **Ukryte cierpienie** | Produkty intymne, zdrowie | Ekskluzywność ("Ten post nie dla wszystkich"), Relatywny moment, Edukacja przez szok |
-| **Zmiana życia** | Fitness, beauty, wellness | "Zamówienie o 3 w nocy" → sukces, Test challenge, Dramatyczna transformacja |
-| **Sekret/dyskrecja** | Produkty noszone, intymne | "Nikt nie wie" reveal, Ekskluzywność, Relatywny moment |
-| **Frustracja z obecnym rozwiązaniem** | Alternatywy dla leków, starych metod | Rant, Hot take, Porównanie dramatyczne |
-
-**ZAWSZE szukaj:**
-- Co ludzie CIERPIĄ używając starego rozwiązania? → Rant, Hot take
-- Co jest TABU w tej kategorii? → Ekskluzywność, "Nikt ci nie powie"
-- Co jest RELATYWNE dla grupy docelowej? → POV Drama, Relatywny moment
-- Jaki jest potencjalny TWIST? → Storytime, Zamówienie o 3 w nocy
-
-### 2.5 Ocena typów scenariuszy VIRALOWYCH dla TEGO produktu
-
-Wypełnij tabelę — zaznacz ✅ (pasuje), ⚠️ (wymaga modyfikacji), ❌ (nie pasuje):
-
-**Z TWARZĄ:**
-| Typ scenariusza | Ocena | Uzasadnienie / jaki viralne angle użyć |
-|-----------------|-------|---------------------------------------|
-| POV Drama | | Jaka relatywna bolesna sytuacja? |
-| Rant | | Na co ludzie są wściekli? Co nie działa? |
-| Storytime z twistem | | Jaki twist będzie zaskakujący? |
-| Dramatyczna transformacja | | Jaki kontrast przed/po? |
-| Hot take | | Jaka kontrowersyjna opinia wywoła dyskusję? |
-
-**BEZ TWARZY:**
-| Typ scenariusza | Ocena | Uzasadnienie / jaki viralne angle użyć |
-|-----------------|-------|---------------------------------------|
-| Relatywny moment | | Jaka sytuacja którą KAŻDY zna? |
-| Zamówienie o 3 w nocy | | Czy pasuje narracja "desperacja → sukces"? |
-| Edukacja przez szok | | Jakie fakty są szokujące/nieznane? |
-| Test challenge | | Jaki challenge będzie ciekawy? |
-| Ekskluzywność | | Kto "zrozumie" a kto nie? |
-
-### 2.6 Przykładowe pytania do analizy (zależnie od produktu)
-
-**Robot odkurzający:**
-- Czy ma stację dokującą (do pokazania "wraca do bazy")?
-- Czy ma aplikację (można pokazać sterowanie z telefonu)?
-- Czy omija przeszkody (można zaaranżować test)?
-- Jak długo sprząta? (czy da się pokazać efekt w 30 sek?)
-
-**Sprzęt fitness:**
-- Czy wymaga miejsca? (czy zmieści się w kadrze?)
-- Czy powoduje pot/zmęczenie? (autentyczność)
-- Czy ma tryby/poziomy trudności? (tutorial)
-
-**Beauty / skincare:**
-- Czy efekt jest widoczny od razu?
-- Czy można pokazać na skórze?
-- Czy pachnie? (trzeba opisać słowami)
-
-**Elektronika / gadżety:**
-- Czy ma ekran/wyświetlacz?
-- Czy łączy się z telefonem?
-- Czy ma unikalne funkcje do pokazania?
-
-### 2.7 Kontekst nagrywającego
-
-| Pytanie | Wpływ |
-|---------|-------|
-| **Kto nagrywa?** | Klient (początkujący) vs influencer (doświadczony) |
-| **Doświadczenie z TikTok** | Proste scenariusze dla początkujących |
-| **Czy ma produkt?** | Musi mieć produkt fizycznie żeby nagrać |
-
-### 2.8 Wnioski z analizy (WYPISZ DLA UŻYTKOWNIKA)
-
-Po analizie wypisz:
-
-```
-## Analiza produktu: [NAZWA]
-
-**Kategoria:** [kategoria]
-**Typ:** [fizyczny / cyfrowy / usługa]
-
-### Z raportów produktu:
-- **Specyfikacja:** [kluczowe parametry techniczne]
-- **USP:** [co wyróżnia ten produkt od konkurencji]
-- **Grupa docelowa:** [kto kupuje, jaki problem rozwiązuje]
-- **Wyróżniki:** [unikalne funkcje do pokazania w scenariuszach]
-
-### Analiza dla scenariuszy:
-**Główny hak emocjonalny:** [oszczędność czasu / wygoda / wow / zdrowie / status / rozwiązanie problemu]
-
-**Cechy wizualne:** [LED-y, rozmiar, ruch, dynamika]
-**Cechy dźwiękowe:** [cichy/głośny, przyjemny/irytujący]
-**Czas efektu:** [natychmiastowy / wymaga czasu]
-
-### Ocena typów scenariuszy:
-
-**Co zadziała dobrze:**
-- [lista scenariuszy które pasują idealnie]
-
-**Co wymaga modyfikacji:**
-- [typ scenariusza] → [jak zmodyfikować / jaki zamiennik użyć]
-
-**Co odpada:**
-- [typ scenariusza] → [dlaczego nie zadziała]
-
-### Do wykorzystania w scenariuszach:
-
-**Kluczowe funkcje do pokazania:**
-- [funkcja 1 z raportu/specyfikacji]
-- [funkcja 2]
-- [funkcja 3]
-
-**Konkretne sytuacje użycia:**
-- [sytuacja 1 - np. "wracam z pracy"]
-- [sytuacja 2 - np. "przed przyjściem gości"]
-
-**Rekomendowane lokalizacje:**
-- [salon / kuchnia / biurko / sypialnia / itp.]
-```
-
-> **WYPISZ WNIOSKI** dla użytkownika i od razu przejdź do generowania scenariuszy.
-
----
-
-### Krok 3: Napisz 10 scenariuszy VIRALOWYCH
-- **Scenariusze 1-5**: showFace: true (typy: POV Drama, Rant, Storytime z twistem, Dramatyczna transformacja, Hot take)
-- **Scenariusze 6-10**: showFace: false (typy: Relatywny moment, Zamówienie o 3 w nocy, Edukacja przez szok, Test challenge, Ekskluzywność)
-- **WAŻNE**: Dostosuj typy do wniosków z analizy — jeśli jakiś nie pasuje, zamień na inny z tej samej kategorii
-
-### Krok 4: Dodaj VIRALOWE elementy
-- **Hook MUSI zatrzymać scrollowanie** — użyj szablonów z sekcji "Viralne hooki"
-- **Emocje > produkt** — produkt jest drugorzędny, emocje są pierwsze
-- **Drama i przesada** — TikTok to teatr, nie dokument
-- **Relatability** — widz musi powiedzieć "O KURDE TO JA"
-- **Kontrowersja/opinia** — wywołuje komentarze = algorytm kocha
-- **Twist/punchline na końcu** — trzyma widza do końca
-- **CTA viralowe** — "Wyślij koleżance", "Jeśli wiesz to wiesz"
-
----
-
-## Wstawianie do bazy przez API
-
-> **WAŻNE**: NIE generuj SQL! Wstawiaj dane BEZPOŚREDNIO przez Supabase REST API używając curl.
-
-### Krok 1: Przygotuj JSON ze scenariuszami
-
-Zapisz scenariusze do pliku tymczasowego `c:/tmp/video_scenarios.json`:
+**Zasady**:
+- `script` MUSI mieć dokładny tekst do powiedzenia (chyba że silent/voiceover — wtedy opis)
+- `hashtags`: 4-6 hasztagów, mieszanka niche (#mikroskop, #edukacjadzieci) + broad (#rodzicielstwo, #dziecizamiasttelefonu)
+- `caption`: TikTok czyta captions do SEO — wpleć słowa kluczowe, nie tylko emoji
+- `coverFrame`: pierwszy kadr widoczny na profilu — zadecyduje czy ktoś kliknie w twój profil
+
+**Zachowane pola kompatybilne**: `type`, `showFace`, `title`, `hook`, `action`, `ending`, `duration`, `tip`, `soundTip`, `textOverlay`.
+**Nowe pola**: `funnelStage`, `script`, `coverFrame`, `caption`, `hashtags`.
+
+### Krok 4: Self-review (lint przed insertem)
+
+Zanim wstawisz do bazy, sprawdź **każdy scenariusz**:
+
+**Formalne:**
+- [ ] Brak cen w treści (hook, action, ending, script, caption, textOverlay)
+- [ ] Brak angielskich zwrotów ("goals", "glow up", "morning routine", "vibe", "mood")
+- [ ] Polskie diakrytyki prawidłowe (ą ę ć ś ź ż ó ł ń)
+- [ ] Płeć spójna w całym scenariuszu
+- [ ] Hook NIE jest duplikatem
+- [ ] `funnelStage` distribution: 3 awareness / 4 consideration / 3 conversion
+- [ ] `showFace` distribution dopasowany do persony (domyślnie 5/5)
+- [ ] `hashtags`: 4-6 pozycji, bez spacji, mix niche+broad
+- [ ] `caption`: 100-250 znaków
+
+**Autentyczność (sekcja 0):**
+- [ ] Żaden skrypt nie zaczyna się od „Jestem X, nie Y" (manifest LinkedIn)
+- [ ] Żaden skrypt nie ma zdania-cytatu z książki („Nie wiem, kiedy…", „Pierwsza cisza od miesiąca")
+- [ ] Żaden skrypt nie ma paralelizmu 3-krotnego („Bez X. Bez Y. Bez Z.")
+- [ ] Żaden skrypt nie kończy się sloganem reklamowym
+- [ ] **Co najmniej 3 scenariusze BEZ speech'u klienta** (POV-text, Demo, Reakcja, Duet) — niedoświadczony klient potrzebuje awaryjnych formatów
+- [ ] **Max 1 scenariusz talking-head** (format 5) — resztę opieraj na formatach aktorsko lekkich
+- [ ] `script` core ma **max 3 zdania**. Jeśli dłuższy — tniesz lub dzielisz na 2 scenariusze
+- [ ] Hook w sek 1 = pytanie albo konfrontacja, nie ekspozycja
+- [ ] Długość: 21-34 sek dla talking-head, 10-18 dla krótkich formatów, 60-90 tylko dla day-in-the-life
+
+**Różnorodność formatów:**
+- [ ] Max 2 scenariusze z tej samej rodziny (talking-head/testimonial/storytime to JEDNA rodzina „klient mówi do kamery")
+- [ ] Min 1 format 2026-trend (21 day-in-life / 22 duet/stitch / 23 partner reveal / 24 POV-text)
+
+Jeśli cokolwiek nie spełnia — popraw scenariusz przed insertem.
+
+### Krok 5: Insert via Supabase API
+
+Zapisz JSON do `c:/tmp/video_scenarios.json`:
 
 ```json
 {
-  "workflow_id": "[WORKFLOW_ID]",
-  "video_scenarios": [
-    {"id": "scenario_1", "type": "POV Drama", "showFace": true, "title": "...", "hook": "...", "action": "...", "ending": "...", "duration": "15-20 sek", "tip": "...", "soundTip": "...", "textOverlay": "..."},
-    {"id": "scenario_2", "showFace": true, ...},
-    ...
-    {"id": "scenario_10", "showFace": false, ...}
-  ],
+  "workflow_id": "<WID>",
+  "video_scenarios": [<10 scenariuszy>],
   "is_active": true,
-  "activated_at": "2026-03-20T12:00:00Z"
+  "activated_at": "<ISO timestamp now>"
 }
 ```
 
-### Krok 2: Wstaw przez UPSERT (POST z resolution=merge-duplicates)
+Upsert przez REST API:
 
 ```bash
 curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video" \
-  -H "apikey: [SERVICE_KEY]" \
-  -H "Authorization: Bearer [SERVICE_KEY]" \
+  -H "apikey: $KEY" \
+  -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
   -H "Prefer: resolution=merge-duplicates,return=minimal" \
   -d @c:/tmp/video_scenarios.json
 ```
 
-> **UWAGA**: Nagłówek `Prefer: resolution=merge-duplicates` powoduje UPSERT — jeśli rekord istnieje, zostanie zaktualizowany.
-
-### Alternatywnie: PATCH jeśli rekord już istnieje
+### Krok 6: Weryfikacja + raport
 
 ```bash
-curl -s -X PATCH "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.[WORKFLOW_ID]" \
-  -H "apikey: [SERVICE_KEY]" \
-  -H "Authorization: Bearer [SERVICE_KEY]" \
-  -H "Content-Type: application/json" \
-  -H "Prefer: return=minimal" \
-  -d @c:/tmp/video_scenarios.json
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.$WID&select=workflow_id,is_active,video_scenarios" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY" | head -c 500
 ```
 
-### Krok 3: Weryfikacja
-
-```bash
-curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.[WORKFLOW_ID]&select=workflow_id,is_active,video_scenarios" \
-  -H "apikey: [SERVICE_KEY]" \
-  -H "Authorization: Bearer [SERVICE_KEY]"
-```
-
-Po wstawieniu poinformuj użytkownika: "Gotowe! Odśwież stronę workflow — zakładka Video powinna być aktywna."
+Poinformuj użytkownika:
+- Ile scenariuszy wstawiono (10)
+- Dystrybucja lejka (3/4/3)
+- Dystrybucja twarzy (5/5 lub inna)
+- Lista formatów użytych
+- Link do portalu klienta
 
 ---
 
-## Przykładowe scenariusze — VIRAL EDITION (Siela - pas termoterapeutyczny)
-
-> Poniższe przykłady pokazują VIRALNE podejście. Zauważ: emocje > produkt, drama > prezentacja.
-
-### Z TWARZĄ:
-
-```json
-{
-  "id": "scenario_1",
-  "type": "POV Drama",
-  "showFace": true,
-  "title": "Tłumaczysz facetowi",
-  "hook": "Leżysz na kanapie w pozycji embrionalnej, dramatyczna mina bólu. Patrzysz w kamerę z wyrazem 'nie teraz'.",
-  "action": "Udajesz że ktoś pyta 'No wstań, idziemy na spacer'. Robisz MEGA dramatyczną minę typu 'CZY TY SERIO?!'. Pokazujesz pas na brzuchu, wciskasz przycisk. Zamykasz oczy z wyrazem ulgi.",
-  "ending": "Otwierasz oczy, patrzysz w kamerę z wyrazem 'ratuje mi życie i związek'. Możesz pokazać kciuk w górę z sarkazmem.",
-  "duration": "15-20 sek",
-  "tip": "PRZESADZAJ z mimiką! Im bardziej dramatycznie, tym lepiej. To ma być śmieszne.",
-  "soundTip": "Trending audio typu 'are you serious right now' lub dramatyczna muzyka",
-  "textOverlay": "POV: Tłumaczysz facetowi dlaczego nie możesz wstać z kanapy"
-}
-```
-
-```json
-{
-  "id": "scenario_2",
-  "type": "Rant",
-  "showFace": true,
-  "title": "15 lat łykania tabletek",
-  "hook": "Wchodzisz w kadr z wyrazem złości/niedowierzania. Zacznij mówić od razu: 'Okej, muszę się wygadać...'",
-  "action": "Rant do kamery: 'Piętnaście lat. PIĘTNAŚCIE LAT łykałam tabletki co miesiąc. I NIKT mi nie powiedział że istnieje coś takiego?!' Pokazujesz pas. 'Ciepło plus masaż. BEZ CHEMII. Dlaczego ja o tym nie wiedziałam?!'",
-  "ending": "Zakładasz pas, włączasz, robisz minę ulgi przechodzącą w złość: 'Jestem wściekła że dopiero teraz'.",
-  "duration": "20-25 sek",
-  "tip": "Autentyczna złość! Mów jak do przyjaciółki której musisz TO powiedzieć. Gestykuluj!",
-  "soundTip": "Oryginalny dźwięk z twoim głosem — rant musi być słyszalny",
-  "textOverlay": "Musimy porozmawiać o czymś co powinnyśmy wiedzieć DAWNO"
-}
-```
-
-```json
-{
-  "id": "scenario_3",
-  "type": "Storytime z twistem",
-  "showFace": true,
-  "title": "Mama myślała że to coś dziwnego",
-  "hook": "Zacznij z sekretną miną, jakbyś plotkowała: 'Okej, historia z wczoraj...'",
-  "action": "Opowiadasz: 'Mama wchodzi do pokoju, ja zakładam pas na brzuch. Ona: CO TO JEST?! Ja: Mama, spokojnie, to na ból...' Pokazujesz pas. 'Ona przez 30 lat używała termoforów. Ja jej pokazuję że to się NAGRZEWA i WIBRUJE.'",
-  "ending": "Punchline: 'Zamówiła sobie dwie sztuki. Jedną dla siebie, jedną dla cioci.' Śmiech do kamery.",
-  "duration": "25-30 sek",
-  "tip": "Opowiadaj jak historię znajomym. Mimika, pauzy, timing są kluczowe!",
-  "soundTip": "Oryginalny dźwięk lub trending storytime audio",
-  "textOverlay": "Storytime: Moja mama myślała że to coś ZUPEŁNIE innego"
-}
-```
-
-```json
-{
-  "id": "scenario_4",
-  "type": "Dramatyczna transformacja",
-  "showFace": true,
-  "title": "Ja o 3 w nocy vs ja teraz",
-  "hook": "CZĘŚĆ 1: Leżysz na podłodze (SERIO na podłodze), zwinięta w kłębek, dramatyczna mina cierpienia, ręka na brzuchu.",
-  "action": "Tekst: 'Ja o 3 w nocy szukająca ratunku'. TRANSITION (mrugasz/przejście). CZĘŚĆ 2: Siedzisz normalnie, uśmiechnięta, pas na brzuchu, pijesz herbatę jakby nic się nie stało.",
-  "ending": "Wzruszasz ramionami z wyrazem 'no co, działa'. Możesz mrugnąć do kamery.",
-  "duration": "15-20 sek",
-  "tip": "Kontrast musi być MAKSYMALNY. Część 1 = dramat, część 2 = sielanka. Im większa różnica, tym lepiej.",
-  "soundTip": "Audio z dramatycznym transition lub 'upgrade' sound",
-  "textOverlay": "Ja o 3 w nocy szukająca pomocy w internecie → Ja teraz"
-}
-```
-
-```json
-{
-  "id": "scenario_5",
-  "type": "Hot take",
-  "showFace": true,
-  "title": "To powinno być refundowane",
-  "hook": "Wchodzisz w kadr z miną 'mam opinię i ją powiem'. Zacznij mocno: 'Okej, hot take...'",
-  "action": "'Jeśli tabletki przeciwbólowe są w każdej aptece, to DLACZEGO nikt nie mówi o alternatywach bez chemii?' Pokazujesz pas. 'Ciepło lecznicze plus masaż. Działa. Bez skutków ubocznych. To powinno być REFUNDOWANE.'",
-  "ending": "Patrzysz w kamerę z wyrazem 'no powiedzcie że nie mam racji'. Zakładasz pas demonstracyjnie.",
-  "duration": "20-25 sek",
-  "tip": "Pewność siebie! Masz rację i to wiesz. To wywoła dyskusję w komentarzach — idealne dla algorytmu.",
-  "soundTip": "Oryginalny dźwięk lub trending 'hot take' audio",
-  "textOverlay": "Hot take który rozwścieczy połowę internetu"
-}
-```
-
-### BEZ TWARZY:
-
-```json
-{
-  "id": "scenario_6",
-  "type": "Relatywny moment",
-  "showFace": false,
-  "title": "Dzień 1 vs reszta świata",
-  "hook": "Telefon z alarmem '7:00 — WSTAŃ DO PRACY'. Ręka wyłącza alarm z dramatycznym gestem niechęci.",
-  "action": "Pokaż kalendarz z zaznaczonym dniem (kropka/symbol). Pokaż rękę sięgającą po pas. Włączenie, założenie (nie pokazuj twarzy — tylko ręce i brzuch). Pokaż normalne ubieranie się — pas niewidoczny.",
-  "ending": "Ujęcie wychodzenia z domu. Tekst: 'A świat myśli że jest normalny dzień'. Drzwi się zamykają.",
-  "duration": "20-25 sek",
-  "tip": "To ma być relatable — każda kobieta to zna. Spokojne, realistyczne ujęcia.",
-  "soundTip": "Melancholijna muzyka lub trending audio o 'ukrywaniu bólu'",
-  "textOverlay": "Każda wie o czym mówię 🗓️"
-}
-```
-
-```json
-{
-  "id": "scenario_7",
-  "type": "Zamówienie o 3 w nocy",
-  "showFace": false,
-  "title": "Decyzje podjęte w desperacji",
-  "hook": "Ekran telefonu o 3:14 w nocy. Otwarta przeglądarka z produktem. Palec wciska 'KUP TERAZ'.",
-  "action": "Przejście: paczka pod drzwiami. Ręce otwierają paczkę — niepewnie, jakby 'co ja zamówiłam?'. Wyjmujesz pas, oglądasz. Włączasz — działa. Zakładasz.",
-  "ending": "Ujęcie ręki dającej 5 gwiazdek w recenzji. Tekst: 'Najlepsza decyzja podjęta o 3 w nocy'.",
-  "duration": "20-25 sek",
-  "tip": "Buduj narrację: desperacja → niepewność → pozytywne zaskoczenie. Bez twarzy, tylko ręce i produkt.",
-  "soundTip": "Trending audio o 'nocnych zakupach' lub 'impulsywnych decyzjach'",
-  "textOverlay": "Rzeczy zamówione o 3 w nocy w akcie desperacji: ocena"
-}
-```
-
-```json
-{
-  "id": "scenario_8",
-  "type": "Edukacja przez szok",
-  "showFace": false,
-  "title": "Rzeczy które nikt ci nie powie",
-  "hook": "Czarny ekran. Tekst pojawia się: 'Rzeczy o bólach miesiączkowych których nikt ci nie powie:'. Pauza dramatyczna.",
-  "action": "Punkt 1: 'Tabletki to nie jedyna opcja' — pokaż pas. Punkt 2: 'Ciepło + masaż = medycyna bez chemii' — pokaż włączanie trybów. Punkt 3: 'Możesz nosić to w pracy i NIKT nie wie' — pokaż pas pod ubraniem.",
-  "ending": "Tekst: 'Przekaż dalej, bo ja dowiedziałam się za późno'. Logo/produkt na końcu.",
-  "duration": "25-30 sek",
-  "tip": "Edukacyjny ton ale z emocją. Każdy punkt to osobne ujęcie. Czytelne, proste.",
-  "soundTip": "Trending audio 'things nobody tells you' lub dramatyczna muzyka",
-  "textOverlay": "Zapisz to i wyślij koleżance 📌"
-}
-```
-
-```json
-{
-  "id": "scenario_9",
-  "type": "Test challenge",
-  "showFace": false,
-  "title": "Czy przeżyję dzień w pracy",
-  "hook": "Tekst: 'Test: czy przeżyję dzień 1 w biurze z tym pasem?'. Pokaż pas i zegarek ustawiony na 8:00.",
-  "action": "Seria szybkich ujęć: 8:00 — zakładasz pas. 10:30 — spotkanie (pas niewidoczny pod ubraniem). 13:00 — obiad, wszystko ok. 16:00 — dalej działa. Pokaż ręce piszące na laptopie — normalny dzień.",
-  "ending": "18:00 — wychodzisz z biura. Tekst: 'Werdykt: PRZEŻYŁAM. I to bez tabletek.' Kciuk w górę ręką.",
-  "duration": "20-25 sek",
-  "tip": "Szybkie cięcia, dynamiczne. Pokaż że życie toczy się normalnie. Zegarek/czas jako element narracji.",
-  "soundTip": "Energetyczna muzyka lub trending audio challenge",
-  "textOverlay": "Challenge: dzień 1 w biurze BEZ tabletek"
-}
-```
-
-```json
-{
-  "id": "scenario_10",
-  "type": "Ekskluzywność",
-  "showFace": false,
-  "title": "Post nie dla wszystkich",
-  "hook": "Tekst na ekranie: 'Ten post jest dla 50% populacji. Reszta nie zrozumie.' Pauza.",
-  "action": "Pokaż ręce wyjmujące pas z pudełka. Pokaż funkcje: ciepło (ręka czuje ciepło), masaż (wibracje widoczne). Pokaż zakładanie. Pokaż że jest niewidoczny pod ubraniem.",
-  "ending": "Tekst: 'Jeśli rozumiesz — wiesz. Jeśli nie rozumiesz — ciesz się.' Końcowe ujęcie produktu.",
-  "duration": "20-25 sek",
-  "tip": "Buduj ekskluzywność — 'to jest dla nas'. Wywołuje komentarze i tagowanie koleżanek.",
-  "soundTip": "Trending audio 'jeśli wiesz to wiesz' lub tajemnicza muzyka",
-  "textOverlay": "Wyślij tej jednej koleżance która ZROZUMIE"
-}
-```
-
----
-
-## Konfiguracja
+## 7. Konfiguracja
 
 - **Supabase URL**: `https://yxmavwkwnfuphjqbelws.supabase.co`
-- **Service Key**: w pliku `.env` (zmienna `SUPABASE_SERVICE_KEY`)
+- **Service Key**: `c:/repos_tn/tn-crm/.env` → `SUPABASE_SERVICE_KEY`
+- **Frontend render**: `c:/repos_tn/tn-crm/client-projekt.html:8434` (client portal) + `c:/repos_tn/tn-crm/tn-workflow/workflow.html:7271` (admin editor)
 
 ---
 
-## Szablon promptu
+## 8. Przykłady hooków per archetyp (do inspiracji, nie kopiuj 1:1)
+
+### Wellness/ból (stara procedura — zostawione dla kompatybilności)
+- "PIĘTNAŚCIE LAT łykałam tabletki i NIKT mi nie powiedział że..."
+- "POV: Tłumaczysz facetowi dlaczego nie możesz wstać z kanapy"
+
+### Dla dzieci / rodzina (surowe, 2026)
+- „Tydzień. Tablet tu leży. Serio, tu leży."
+- „Miało być gówno. Jakieś chińskie gówno z Aliexpressu." (sceptyk — działa autentycznie)
+- „6 godzin? Okej, zobacz to." (duet/stitch na viral o screen time)
+- „Kupiłem coś dla córki." + żona z offu: „Znowu chińskie gówno?" (partner reveal)
+- „Sobota 9 rano. Córka się obudziła. Test: dam jej mikroskop zamiast tabletu." (day in the life)
+- „POV: jesteś tatą co drugi raz dziś próbuje wyrwać syna z ekranu" (POV-text, zero dialogu)
+- „Tato, a łzę ludzką się da zobaczyć?" (cytat dziecka jako hook)
+
+### Omijaj (łatwo wpadają w copywriter-ese):
+- ❌ „Jestem elektrykiem, nie pedagogiem" (manifest)
+- ❌ „Nie wiem, kiedy stałem się dzieckiem" (literacki)
+- ❌ „Pierwsza cisza w domu od miesiąca" (patos)
+- ❌ „Weekend, który się nie skończył nudą" (slogan)
+
+### Tech / biohacker
+- "Mierzę to od 30 dni. Liczby mówią same."
+- "Wydałem X na suplementy. To działa lepiej za ułamek."
+
+### Premium
+- "Detale, których zwykły klient nie zauważy"
+- (cisza + slow zoom + tekst na ekranie)
+
+### B2B
+- "Jak pozyskujemy 100 leadów miesięcznie — krok po kroku"
+
+---
+
+## 9. Znane pułapki (lekcje)
+
+1. **Mikrosz 2026-04 (pierwsza iteracja)**: procedura podsuwała "rant 15 lat cierpiałam" — nietrafione dla mikroskopu dla dzieci. Stąd macierz archetypów (sekcja 2.1).
+2. **Siela 2026-02**: scenariusze bez scriptu → klientka narzekała, że "nie wie co dokładnie powiedzieć". Stąd pole `script`.
+3. **Brak captions**: klienci wrzucali video bez captions → SEO TikToka ich nie indeksowało. Stąd `caption` + `hashtags` obowiązkowe.
+4. **Cover frame**: klient otwiera swój profil i widzi 10 identycznych minek → brak klikalności. Stąd `coverFrame` jako oddzielna instrukcja.
+5. **Mikrosz 2026-04 (audyt autentyczności)**: druga iteracja — pierwsze 10 scenariuszy wyglądało poprawnie strukturalnie, ale 4 z 10 były copywriter-ese (literackie metafory, paralelizmy, manifesty LinkedIn). Agent-audytor wyłapał, że Daniel-elektryk nie powie „Pierwsza cisza w domu od miesiąca" ani „Nie wiem, kiedy stałem się dzieckiem". Stąd sekcja 0 (reguła złota) + czerwone flagi + Copywriter-ese detector.
+6. **Mikrosz 2026-04 (trend 2026)**: nie używaliśmy formatów dominujących parenting TikTok Q1 2026: duet/stitch (darmowy reach), POV-text story, partner reveal, day-in-the-life. Stąd formaty 21-24 — szczególnie dla debiutujących klientów w niche „rodzice kontra ekrany".
+7. **Klienci-niedoświadczeni vs talking head**: talking head (format 5) i storytime (3) najłatwiej wpadają w copywriter-ese u niedoświadczonych klientów. Stąd regula max 1 × talking-head i priorytet formatów „aktorsko lekkich" (reakcja, POV-text, duet, partner reveal).
+
+---
+
+## 10. Szablon promptu
 
 ```
 Wygeneruj scenariusze video dla workflow [UUID]
