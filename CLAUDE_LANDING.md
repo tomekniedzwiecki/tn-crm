@@ -8,7 +8,7 @@
 
 ```
 User → "Przygotuj landing dla projektu [UUID]"
-Claude → otwiera CLAUDE_LANDING_PROCEDURE.md → autonomicznie wykonuje 5 etapów
+Claude → otwiera CLAUDE_LANDING_PROCEDURE.md → autonomicznie wykonuje 6 etapów
 Output → https://tn-crm.vercel.app/landing-pages/[slug]/ + commit
 ```
 
@@ -24,7 +24,8 @@ Output → https://tn-crm.vercel.app/landing-pages/[slug]/ + commit
 | [CLAUDE_LANDING_REVIEW.md](CLAUDE_LANDING_REVIEW.md) | ETAP 2 — Weryfikacja treści | Kompletność sekcji, Hero deep dive, copy review |
 | [CLAUDE_LANDING_DIRECTION.md](CLAUDE_LANDING_DIRECTION.md) | ETAP 2.5 — Manifesto | Autonomiczny wybór kierunku estetycznego, 4-kroki |
 | [CLAUDE_LANDING_DESIGN.md](CLAUDE_LANDING_DESIGN.md) | ETAP 3 — Design polish | Implementacja manifesta w CSS/HTML + JS effects |
-| [CLAUDE_LANDING_VERIFY.md](CLAUDE_LANDING_VERIFY.md) | ETAP 4 — Playwright | Visual verification przed deployem |
+| [CLAUDE_LANDING_VERIFY.md](CLAUDE_LANDING_VERIFY.md) | ETAP 4 — Playwright | Visual verification 3 viewports |
+| [CLAUDE_LANDING_MOBILE.md](CLAUDE_LANDING_MOBILE.md) | 📱 **ETAP 4.5 — Mobile Polish Pass** | Systematyczny polish mobile (375px) — 10 obszarów + bash scan |
 | [CLAUDE_LANDING_PATTERNS.md](CLAUDE_LANDING_PATTERNS.md) | 📚 Biblioteka snippetów | Copy-paste signature elements, JS effects, layout discipline (21 wzorców) |
 | [CLAUDE_AI_IMAGES_PROCEDURE.md](CLAUDE_AI_IMAGES_PROCEDURE.md) | 🖼️ Obrazy AI | Wywoływana wewnątrz ETAP 3 gdy trzeba wygenerować grafikę |
 
@@ -94,6 +95,15 @@ Output → https://tn-crm.vercel.app/landing-pages/[slug]/ + commit
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
+│  ETAP 4.5 — Mobile Polish Pass (CLAUDE_LANDING_MOBILE.md)        │
+│  - Bash grep scan (touch targets, overflow-x, 100vw, images…)    │
+│  - Checklist 10 obszarów (A–J): touch, typo, spacing, layout,    │
+│    hero, nav, images, overflow, interactive, performance         │
+│  - Re-run screenshot → iteruj aż 5/5 finalna certyfikacja PASS   │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
 │  COMMIT + PUSH + LINK                                            │
 │  git add landing-pages/[slug]/ && git commit && git push         │
 │  → https://tn-crm.vercel.app/landing-pages/[slug]/               │
@@ -124,10 +134,11 @@ Output → https://tn-crm.vercel.app/landing-pages/[slug]/ + commit
 - [ ] Hero headline ≤ 10 słów, lede ≤ 25 słów
 - [ ] 3 persony z imieniem + wiek + sytuacja (z raportu PDF)
 - [ ] FAQ ≥ 5 pytań (gwarancja/zwroty obowiązkowe)
-- [ ] Offer box: cena + przekreślona + savings + 6-elementowa lista + guarantee
+- [ ] **Offer box — 15-point checklist** (DESIGN.md sekcja H.9): price anchoring dual, guarantee z konkretem dni, trust strip, BLIK-first payment logos, rating nad CTA, single dominant CTA, mobile sticky 56px+, EU Omnibus compliance
 - [ ] Zero „lorem", „TODO", power words
 - [ ] Zero UUID-ów obcych workflow w obrazach
 - [ ] Zero zakazanych obietnic dostawy (24h, magazyn PL)
+- [ ] Zero dark patterns w offer boxie (fake timer, fake stock, pre-checked upsell, hidden costs)
 
 ### 🟢 Design (ETAP 3)
 
@@ -158,6 +169,18 @@ Output → https://tn-crm.vercel.app/landing-pages/[slug]/ + commit
 - [ ] FAQ accordion click działa
 - [ ] Polskie znaki renderują się poprawnie (ą, ę, ć, ł, ń, ó, ś, ż, ź)
 - [ ] Bez JS (DevTools disable) → strona nadal pokazuje całą treść
+
+### 📱 Mobile Polish Pass (ETAP 4.5)
+
+- [ ] Bash grep scan przeszedł bez podejrzanych leaków (100vw, negative positioning, brak `overflow-x:hidden`)
+- [ ] Touch targets ≥44px (CTA, nav links, hamburger, FAQ headers)
+- [ ] Typography: `clamp()` na H1/H2, `line-height` 1.15-1.25 dla headings, body ≥16px
+- [ ] Layout: każdy grid przełącza się na `1fr` ≤768px, hero stack'uje text → visual
+- [ ] Hero above-the-fold na 375×812, CTA `width: 100%`, brak floating decorations
+- [ ] Nav: header fixed, hamburger overlay, menu zamyka się po kliknięciu
+- [ ] Obrazy: width/height na każdym, hero `fetchpriority="high"`, reszta lazy
+- [ ] Bez horizontal scroll na mobile (body `overflow-x: hidden` + żadnych 100vw)
+- [ ] Finalna certyfikacja 5/5 (IG-worthy, portfel w 30s, kciuk, anty-AI, senior audit)
 
 ### Deploy
 

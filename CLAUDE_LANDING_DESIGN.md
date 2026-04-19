@@ -356,6 +356,252 @@ Gdy kafelka zajmuje 2+ kolumn, **nie rób pionowej** (tekst-nad-figurą). Zrób 
 
 ---
 
+### H. OFFER BOX / CTA — kanoniczny playbook 2026 (OBOWIĄZKOWY)
+
+**Źródło:** Baymard, NN/g, GoodUI, FTC Dark Patterns Report, EU Omnibus Directive, 7 real refs (Oura, Theragun, Apollo Neuro, Hatch, AG1, Eight Sleep, Foreo).
+
+**Dlaczego osobna sekcja:** offer box to 80% konwersji po Hero. Pozostałe sekcje mogą być dopracowane 90%, ale jeśli offer box jest średni → strata pieniędzy na reklamach.
+
+#### H.1 — Visual hierarchy (Z-pattern)
+
+Kolejność wzroku w offer boxie:
+```
+┌─────────────────────────────────────┐
+│ [sticker top-right: BESTSELLER -23%]│
+│                                     │
+│ ★★★★★ 4.8/5 · 1 247 opinii          │
+│                                     │
+│ Nazwa / Headline oferty             │
+│ Lede (max 12 słów)                  │
+│                                     │
+│ 199 zł  → 149 zł        [-25%]      │
+│        Oszczędzasz 50 zł            │
+│ lub 3 raty po 50 zł z PayPo         │
+│                                     │
+│ ✓ Benefit 1 (benefit→feature→emo)  │
+│ ✓ Benefit 2                         │
+│ ✓ Benefit 3                         │
+│ ✓ Benefit 4 (max 5)                 │
+│                                     │
+│ [  Zamawiam — 149 zł            ]   │
+│                                     │
+│ 🛡️ 30 dni na zwrot · bez pytań      │
+│                                     │
+│ ─── 🚚 🛡️ 🔄 ───                    │
+│ Darmowa wysyłka · 30 dni zwrotu ·   │
+│ 2 lata gwarancji                    │
+│                                     │
+│ [BLIK][Visa][MC][P24][Apple Pay]    │
+└─────────────────────────────────────┘
+```
+
+**Jedno ognisko wizualne = CTA, nie cena.** NN/g: dwa elementy o równej wadze wizualnej = wzrok skacze, klient dłużej się waha. Cena 48-64px bold. CTA 56-64px wysokości, kontrastowy kolor (komplementarny do tła). Nie używaj tego samego accent color na cenie i CTA — np. cena ciemna granat, CTA teal/amber.
+
+#### H.2 — Price anchoring (stara vs nowa + savings)
+
+**Reguły bezwzględne:**
+- Stara cena SZARA (`#9ca3af`) z `line-through`, rozmiar 60-70% nowej ceny
+- Nowa cena kontrastowa (ciemna lub brand primary), 48-64px desktop / 40px+ mobile
+- Savings pokazuj **DWA razy:** badge "-25%" + tekst "Oszczędzasz 50 zł"
+- **Rule of 100:** % dla cen <100 zł (wygląda większe); kwota zł dla cen >100 zł (80 zł brzmi mocniej niż 20%)
+
+**⚠️ EU Omnibus compliance (OBOWIĄZKOWE od 2023 w PL):**
+Stara cena w strikethrough MUSI być najniższą ceną z ostatnich 30 dni. Inaczej UOKiK grzywny (do 10% rocznego obrotu). NIGDY nie wpisuj sztucznie wyższej "original price" żeby nakręcić savings — ścigane.
+
+```html
+<div class="price-row">
+  <span class="price-old">199 zł</span>
+  <span class="price-new">149 zł</span>
+  <span class="price-save-badge">-25%</span>
+</div>
+<div class="price-save-text">Oszczędzasz 50 zł</div>
+<!-- UWAGA: BNPL (PayPo/Klarna/raty) NIE stosujemy w TN — zob. H.3 -->
+```
+
+```css
+.price-old{color:#9ca3af;text-decoration:line-through;font-size:22px;font-weight:500}
+.price-new{color:var(--primary);font-size:56px;font-weight:800;line-height:1;letter-spacing:-.02em}
+.price-save-badge{background:#fee2e2;color:#b91c1c;font-weight:700;font-size:14px;padding:4px 10px;border-radius:6px;transform:rotate(-3deg)}
+.price-save-text{color:#059669;font-weight:600;font-size:14px;margin-top:4px}
+.price-bnpl{font-size:13px;color:var(--text-soft);margin-top:8px;display:flex;align-items:center;gap:6px}
+```
+
+#### H.3 — Trust signals (MAX 3-5 typów)
+
+**Baymard:** strony z 1-3 typami trust signals konwertują +23% lepiej; z 7+ typami konwertują -8% (cognitive clutter). Dobierz świadomie.
+
+**Optimal stack (5 typów) dla landingów PL:**
+1. **Rating + liczba opinii** NAD CTA: `★★★★★ 4.8/5 · 1 247 opinii` (+270% konwersji na high-ticket wg Baymard)
+2. **Gwarancja** POD CTA — 1 linia: `🛡️ 30 dni na zwrot · bez pytań` (+21% visible MBG per Conversion Fanatics)
+3. **Trust strip** z 3 ikonami + 1-liner: Darmowa wysyłka · 30 dni zwrotu · 2 lata gwarancji
+4. **Payment logos** strip grayscale: **BLIK pierwsze** (PL-first), Visa, MC, Przelewy24, Apple Pay — max 6, wszystkie ~18-20px wysokości
+5. **Social proof** jako dynamic counter (jeśli mamy prawdziwe dane): `Popular — 23 zamówienia w 24h`
+
+**⚠️ TN-specyfic ZAKAZ** (zob. [MEMORY.md feedback-payment-methods](~/.claude/projects/c--repos-tn/memory/feedback-payment-methods.md)):
+W `offer-payments` strip **NIGDY nie umieszczaj**:
+- ❌ `ZA POBR.` / „za pobraniem" / „płatność przy odbiorze" — TN nie obsługuje COD
+- ❌ `PayPo` / `Klarna` / `Twisto` / „3 raty" / „4 raty" — TN nie ma integracji ratalnej
+
+Dozwolone: **BLIK** (zawsze pierwsze), **VISA**, **MC**, **P24** (Przelewy24), **APPLE PAY**, ewentualnie **GOOGLE PAY**.
+
+Research rekomenduje BNPL jako winning pattern (5/7 premium brands). Dla TN to NIE PASUJE — mimo że pattern dobry, operacja tego nie wspiera. **Research = input, NIE command.** Jeśli wpiszesz BNPL/COD w copy to okłamujesz klienta wobec dostawcy = reklamacje.
+
+**Placement reguła Baymard:** guarantee **pod** CTA (nie nad), shipping **obok ceny**, reviews **nad** CTA.
+
+```html
+<!-- Rating nad CTA -->
+<div class="offer-rating">
+  <span class="stars">★★★★★</span>
+  <span>4.8/5 · <strong>1 247</strong> opinii</span>
+</div>
+
+<!-- CTA -->
+<button class="cta-primary magnetic">Zamawiam — 149 zł</button>
+
+<!-- Guarantee pod CTA -->
+<p class="offer-guarantee">🛡️ 30 dni na zwrot · bez pytań · Płatność BLIK, karta, za pobraniem</p>
+
+<!-- Trust strip -->
+<div class="trust-strip">
+  <span><svg>truck</svg> Darmowa wysyłka</span>
+  <span><svg>shield</svg> 30 dni zwrotu</span>
+  <span><svg>refresh</svg> 2 lata gwarancji</span>
+</div>
+
+<!-- Payment logos -->
+<div class="payment-logos">
+  <img src="blik.svg" alt="BLIK" height="20">
+  <img src="visa.svg" alt="Visa" height="20">
+  <img src="mastercard.svg" alt="Mastercard" height="20">
+  <img src="przelewy24.svg" alt="Przelewy24" height="20">
+  <img src="applepay.svg" alt="Apple Pay" height="20">
+</div>
+```
+
+#### H.4 — Urgency / scarcity (tylko prawdziwa!)
+
+**TAK** — jeśli masz real dane:
+- Timer tied do prawdziwej kampanii z endDate w bazie (pokazuj TYLKO gdy `endsAt - now < 7 dni`)
+- Stock-left z API (pokazuj TYLKO gdy `stock < 10`)
+- Dynamic social proof z CRM: `23 zamówienia w ostatnich 24h` (prawdziwe dane)
+
+**NIE** — dark patterns:
+- "Tylko dzisiaj!" bez real endDate (FTC classyfikuje jako deceptive, UOKiK ściga)
+- "Zostało 3 szt." bez realnego stocku
+- Evergreen countdown (resetuje się przy reload) — 68% userów rozpoznaje i traci trust
+
+**Fallback gdy nie ma real data:** zamiast fake scarcity użyj **social proof** — "42 osoby kupiły w tym tygodniu" (prawdziwe z CRM) albo "Bestseller w kategorii Health-Tech".
+
+```js
+// Timer pokazuj TYLKO gdy real promo
+if (promo.endsAt && (promo.endsAt - Date.now()) < 7*24*3600*1000) showTimer();
+```
+
+#### H.5 — Copy microcopy (winning patterns)
+
+**CTA button text — decyzja:**
+- Impulse / low-ticket (<200 zł): **"Kup teraz"** lub **"Zamawiam"** (akcja)
+- High-consideration (>300 zł): **benefit-driven** ("Zacznij słyszeć wyraźniej", "Odbierz komplet")
+- **Hybrydowy winner (statystycznie stabilny):** `[CTA] [akcja] — [cena] zł` np. `"Zamawiam — 149 zł"` (akcja + value w buttonie)
+
+**Guarantee microcopy — ZAWSZE konkret czasu:**
+- ✅ "30 dni na zwrot · bez pytań"
+- ❌ "Nie ryzykujesz ani złotówki" (abstract, brak konkretu)
+- ❌ "Satysfakcja gwarantowana" (generic, nic nie znaczy)
+
+**Bullets — benefit → feature → emotion, 3 warstwy w 1 linii:**
+- ❌ (feature-only) "Filtr 27 dB SNR"
+- ✅ (benefit→feature→emotion) "Filtr 27 dB — maluch zasypia mimo hałasu wesela"
+- ❌ (feature-only) "Kamera 1080p Full HD"
+- ✅ "Podgląd Full HD — widzisz dokładnie gdzie jesteś, zanim włożysz końcówkę"
+
+**Subheadline pod nagłówkiem** — 1 zdanie, problem→solution, max 12 słów.
+
+#### H.6 — Visual moves 2026 (które warto ukraść)
+
+**TAK:**
+- **"BESTSELLER" / "NAJCZĘŚCIEJ WYBIERANE" sticker** — corner top-right, nachylony -3°, kolor accent (amber/czerwony)
+- **Subtle gradient border** (brand-primary → secondary) na 1 karcie (jeśli wariantów 2-3) — nie animuj
+- **Dark card** dla premium (>500 zł tech, luxury) — ale dla emocjonalnych zakupów (rodzina, dzieci, health) **jasna karta** konwertuje lepiej (medical/pharma wzorzec)
+- **Floating testimonial** obok CTA — krótkie (≤12 słów) + inicjały: "Mój syn w końcu nie boi się czyszczenia — Magda K."
+- **Live social proof** (Theragun move): dynamic counter "23 zamówienia w ostatnich 24h" (z prawdziwej bazy)
+
+**NIE:**
+- **Separator "lub" między dwoma CTA** — sugeruje wahanie. Clean single CTA wygrywa (-10-30% primary action przy dwóch równorzędnych)
+- **Animowany gradient border** — ruch rozprasza od decyzji
+- **Auto-play video w offer boxie** — NN/g: obniża task completion
+
+#### H.7 — Mobile specifics (375px)
+
+**Sticky CTA na dole** (+8-15% conversion wg testów):
+- Wywołuje się po scroll poza oryginalny offer box (nie od startu strony)
+- Slide-up 200-300ms
+- 56px+ wysokości (tap target threshold, Apple HIG)
+- Full-width minus 16px margin
+- Zawiera TYLKO: cena + button (nie warianty, nie dropdowny — modal on tap)
+- `env(safe-area-inset-bottom)` dla iOS
+
+```css
+.sticky-cta{
+  position:fixed;bottom:0;left:0;right:0;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  background:#fff;box-shadow:0 -4px 16px rgba(0,0,0,.08);
+  z-index:50;display:flex;gap:12px;align-items:center;
+  transform:translateY(100%);transition:transform .25s ease-out
+}
+.sticky-cta.visible{transform:translateY(0)}
+.sticky-cta .price{font-weight:800;font-size:18px;white-space:nowrap}
+.sticky-cta .btn{flex:1;min-height:56px;font-size:17px;font-weight:700}
+```
+
+```js
+// Show sticky po scroll poza main offer
+const mainCTA = document.querySelector('.offer-box');
+const stickyBar = document.querySelector('.sticky-cta');
+new IntersectionObserver(([e])=>{
+  stickyBar.classList.toggle('visible', !e.isIntersecting);
+},{threshold:0.1}).observe(mainCTA);
+```
+
+**Mobile — WSZYSTKIE benefity widoczne** (nie collapse). "Pokaż więcej" dla długich specyfikacji/FAQ, NIGDY dla sprzedażowych benefits (bounce).
+
+**Price size mobile:** nie mniejsze niż 40px (zostaje dominantem), stara cena 18-20px.
+
+#### H.8 — Anti-patterny (NIGDY)
+
+| Anti-pattern | Dlaczego zły | Ryzyko |
+|---|---|---|
+| **"Tylko dzisiaj!"** bez real timera | FTC/UOKiK: deceptive urgency | Grzywna + brand distrust; 68% userów rozpoznaje manipulację |
+| **"Zostało 3 szt."** bez realnego stocku | FTC explicit dark pattern | Enforcement risk |
+| **Strikethrough z ceną WYŻSZĄ** niż była naprawdę w 30 dni | Narusza EU Omnibus (obowiązek 30-day low price) | Grzywna UOKiK do 10% obrotu |
+| **Pre-checked upsell checkbox** | FTC named dark pattern | Enforcement risk |
+| **Auto-play video w offer boxie** | Rozprasza od decyzji | NN/g: obniża task completion |
+| **Exit-intent popup** z rabatem | Trenuje userów do „wyjścia = rabat"; Google penalizuje intrusive interstitials (mobile) | SEO penalty + uczone zachowanie |
+| **Fake reviews / 5.0 z 3 opiniami** | Omnibus wymaga weryfikacji recenzji (EU) | Grzywna + trust erosion |
+| **Ukryte koszty dopiero w kroku 3** | Baymard #1 powód abandon (48%) | Massive conversion leak |
+| **Dwa CTA o równej wadze** | Decision paralysis | -10-30% primary action |
+| **"Dołącz do 10 000+ klientów"** bez źródła | Dewaluuje social proof | Trust erosion |
+
+#### H.9 — Checklist offer box (przed deployem MUST PASS)
+
+- [ ] **Price anchoring** — stara cena GRAY strikethrough, nowa 48-64px bold
+- [ ] **Savings dual display** — badge "-X%" + tekst "Oszczędzasz N zł"
+- [ ] **EU Omnibus compliance** — stara cena = najniższa z 30 dni (nie sztucznie zawyżona)
+- [ ] **CTA button** — text "Zamawiam — 149 zł" (akcja + value) albo benefit-driven
+- [ ] **Guarantee microcopy POD CTA** — konkretna liczba dni ("30 dni na zwrot · bez pytań")
+- [ ] **Trust strip** 3 ikony + 1-liner (darmowa wysyłka / zwrot / gwarancja)
+- [ ] **Payment logos** grayscale, BLIK pierwsze (PL-first), max 6
+- [ ] **Rating + liczba opinii** nad CTA (jeśli mamy prawdziwe dane)
+- [ ] **Bestseller/Popular sticker** corner top-right (jeśli uzasadniony danymi)
+- [ ] **Single dominant CTA** — nie 2 równorzędne
+- [ ] **Mobile sticky CTA** 56px+, full-width, visible po scroll poza main offer
+- [ ] **Benefit bulletów 3-5** — benefit→feature→emotion, nie feature-only
+- [ ] **Zero fake urgency** (timer bez real endDate, stock bez realnego)
+- [ ] **Zero pre-checked upsells**
+- [ ] **Magnetic CTA** dla pointer-fine (+prefers-reduced-motion respected)
+
+---
+
 ## 4. Proces dopracowania
 
 ### Krok 1: Audit
@@ -473,13 +719,7 @@ Hero to 80% pierwszego wrażenia. **NIE RÓB** standardowego 2-kolumnowego layou
 - Zdjęcia/avatary z kolorowym border
 - Karty z różnym tłem (co druga inna)
 
-**Pricing/Offer:**
-- **WYRÓŻNIJ SIĘ** — to najważniejsza sekcja po Hero
-- Duży, wycentrowany box z gradientowym border
-- Przekreślona stara cena z animacją
-- Pulsujący CTA button
-- Badge "Bestseller" / "Najczęściej wybierany"
-- Lista korzyści z checkmarkami
+**Pricing/Offer — patrz sekcja H (pełna procedura offer box 2026).** To najważniejsza sekcja po Hero — ma własny kanoniczny playbook bo 80% konwersji zależy od niej.
 
 **FAQ:**
 - Accordion z płynną animacją
