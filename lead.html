@@ -1399,6 +1399,18 @@
                                     Pobierz PDF
                                 </button>
                                 <p class="text-[11px] text-zinc-500 text-center mt-2">Załącz plik do maila do leada.</p>
+                                <div class="pt-4 mt-4 border-t border-white/5">
+                                    <label class="block text-xs text-zinc-500 mb-1.5 flex items-center gap-1.5">
+                                        <i class="ph ph-key text-amber-400"></i>
+                                        Hasło do portalu klienta <span class="text-zinc-600">(notatka, nie trafia do PDF)</span>
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <input id="nda-workflow-password" type="text" value="przejmij$biznes123" class="input-field flex-1 rounded-lg px-3 py-2.5 text-sm text-white font-mono">
+                                        <button onclick="copyNdaWorkflowPassword(this)" type="button" class="bg-zinc-800 hover:bg-zinc-700 text-white px-3 rounded-lg text-sm transition-colors flex items-center gap-1.5" title="Kopiuj">
+                                            <i class="ph ph-copy"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -5611,6 +5623,17 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             `;
             const preview = document.getElementById('nda-preview');
             if (preview) preview.innerHTML = html;
+        }
+
+        function copyNdaWorkflowPassword(btn) {
+            const input = document.getElementById('nda-workflow-password');
+            if (!input) return;
+            navigator.clipboard.writeText(input.value).then(() => {
+                const icon = btn.querySelector('i');
+                const orig = icon.className;
+                icon.className = 'ph ph-check text-green-400';
+                setTimeout(() => { icon.className = orig; }, 1500);
+            });
         }
 
         function downloadNdaPdf() {
