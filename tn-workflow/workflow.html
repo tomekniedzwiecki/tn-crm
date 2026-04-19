@@ -1635,24 +1635,19 @@
 
                     <!-- TAB: Landing Page (Etap 3) -->
                     <div id="tab-landing" class="workflow-panel hidden">
-                        <!-- Header with AI Images button -->
+                        <!-- Header -->
                         <div class="flex items-center justify-between mb-6">
                             <h3 class="text-lg font-semibold text-white flex items-center gap-2">
                                 <i class="ph ph-browser text-cyan-400"></i>
                                 Strona sprzedażowa
                             </h3>
-                            <div class="flex items-center gap-2">
-                                <button onclick="copyAIPrompt('ai_images')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Uzupełnij brakujące grafiki">
-                                    <i class="ph ph-image"></i> AI Images
-                                </button>
-                                <button onclick="copyAIPrompt('ai_images_reset')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-red-500/30 transition-colors" title="Usuń obecne grafiki i wygeneruj od nowa">
-                                    <i class="ph ph-arrows-clockwise"></i> Reset
-                                </button>
-                            </div>
+                            <button onclick="copyAIPrompt('ai_images')" class="text-xs text-zinc-400 hover:text-white flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 transition-colors" title="Uzupełnij brakujące grafiki">
+                                <i class="ph ph-image"></i> AI Images
+                            </button>
                         </div>
 
                         <!-- Toggle widoczności -->
-                        <div class="flex items-center justify-between py-4 border-b border-[#222] mb-4">
+                        <div class="flex items-center justify-between py-4 border-b border-[#222] mb-6">
                             <div>
                                 <div class="text-[13px] text-white">Widoczność dla klienta</div>
                                 <div class="text-[12px] text-[#666] mt-0.5">Włącz, aby klient widział zakładkę Landing Page</div>
@@ -1663,21 +1658,50 @@
                             </label>
                         </div>
 
-                        <div class="space-y-4">
-                            <!-- 1. Domena -->
-                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">1</span>
-                                    <span class="text-[13px] text-white">Kup domenę</span>
-                                    <code id="landing-suggested-domain" class="text-[12px] text-[#666] font-mono ml-2">—</code>
+                        <!-- OFICJALNY ADRES STRONY (na samej górze) -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-6">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph ph-globe text-cyan-400"></i>
+                                    <span class="text-[13px] text-white font-medium">Oficjalny adres strony</span>
                                 </div>
-                                <a id="landing-lh-link" href="#" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                    LH.pl <i class="ph ph-arrow-square-out"></i>
+                                <a id="landing-page-link" href="#" target="_blank" class="hidden text-[12px] text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1">
+                                    Otwórz <i class="ph ph-arrow-square-out"></i>
+                                </a>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <input type="url" id="landing-page-url" class="flex-1 bg-transparent border border-[#333] rounded-md px-3 py-2 text-[13px] text-white placeholder-[#555] focus:border-cyan-500 focus:outline-none font-mono" placeholder="https://marka.pl" onchange="saveLandingPageUrl()">
+                                <div class="flex items-center gap-3">
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="landing-status" value="draft" class="accent-[#555] w-3 h-3" checked onchange="saveLandingPageUrl()">
+                                        <span class="text-[12px] text-[#666]">Draft</span>
+                                    </label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer">
+                                        <input type="radio" name="landing-status" value="live" class="accent-emerald-500 w-3 h-3" onchange="saveLandingPageUrl()">
+                                        <span class="text-[12px] text-emerald-400">Live</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <p class="text-[11px] text-[#555] mt-2">Może być inny niż domena z LH.pl jeśli sugerowana była zajęta.</p>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- 1. KUP DOMENĘ - duży button LH.pl -->
+                            <div>
+                                <div class="flex items-center gap-3 mb-3">
+                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">1</span>
+                                    <span class="text-[13px] text-white font-medium">Kup domenę</span>
+                                    <code id="landing-suggested-domain" class="text-[12px] text-cyan-400 font-mono ml-1">—</code>
+                                </div>
+                                <a id="landing-lh-link" href="#" target="_blank" class="ml-8 flex items-center justify-center gap-2 w-full max-w-md bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-[14px] font-medium px-5 py-3 rounded-lg transition-all shadow-lg shadow-cyan-500/10">
+                                    <i class="ph-bold ph-shopping-cart text-lg"></i>
+                                    Kup w LH.pl
+                                    <i class="ph ph-arrow-square-out text-sm opacity-70"></i>
                                 </a>
                             </div>
 
                             <!-- 2. DNS -->
-                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
+                            <div class="flex items-center justify-between py-3 border-t border-[#222]">
                                 <div class="flex items-center gap-3">
                                     <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">2</span>
                                     <span class="text-[13px] text-white">Ustaw DNS</span>
@@ -1688,94 +1712,78 @@
                                 </label>
                             </div>
 
-                            <!-- 3. Produkt TD -->
-                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">3</span>
-                                    <span class="text-[13px] text-white">Dodaj produkt</span>
+                            <!-- 3. KONFIGURUJ TAKEDROP - checklist -->
+                            <div class="pt-3 border-t border-[#222]">
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">3</span>
+                                        <span class="text-[13px] text-white font-medium">Konfiguruj TakeDrop</span>
+                                    </div>
+                                    <a id="landing-takedrop-login" href="https://app.takedrop.pl/login" target="_blank" class="text-[11px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        Zaloguj <i class="ph ph-arrow-square-out"></i>
+                                    </a>
                                 </div>
-                                <div class="flex items-center gap-4">
-                                    <a id="landing-aliexpress-link" href="#" target="_blank" class="hidden text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                        AliExpress <i class="ph ph-arrow-square-out"></i>
-                                    </a>
-                                    <a id="landing-takedrop-login" href="#" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                        TakeDrop <i class="ph ph-arrow-square-out"></i>
-                                    </a>
+                                <div class="ml-8 space-y-1">
+                                    <!-- Dodaj produkt -->
+                                    <div class="flex items-center justify-between py-2.5 px-3 rounded-md hover:bg-[#0e0e0e] transition-colors">
+                                        <label class="flex items-center gap-3 cursor-pointer flex-1">
+                                            <input type="checkbox" id="td-product-added" class="w-4 h-4 accent-emerald-500 cursor-pointer" onchange="saveTdProductAdded()">
+                                            <span class="text-[13px] text-zinc-300">Dodaj produkt</span>
+                                        </label>
+                                        <a id="td-product-ref-link" href="#" target="_blank" class="hidden text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1 ml-3">
+                                            <i class="ph ph-image"></i> <span id="td-product-ref-label">Zdjęcie referencyjne</span> <i class="ph ph-arrow-square-out text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <!-- Dodaj HTML -->
+                                    <div class="flex items-center justify-between py-2.5 px-3 rounded-md hover:bg-[#0e0e0e] transition-colors">
+                                        <label class="flex items-center gap-3 cursor-pointer flex-1">
+                                            <input type="checkbox" id="td-html-added" class="w-4 h-4 accent-emerald-500 cursor-pointer" onchange="saveTdHtmlAdded()">
+                                            <span class="text-[13px] text-zinc-300">Dodaj HTML</span>
+                                        </label>
+                                        <a href="https://app.takedrop.pl/shop/theme" target="_blank" class="text-[11px] text-[#666] hover:text-white transition-colors flex items-center gap-1 ml-3">
+                                            Otwórz <i class="ph ph-arrow-square-out text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <!-- Dodaj logo -->
+                                    <div class="flex items-center justify-between py-2.5 px-3 rounded-md hover:bg-[#0e0e0e] transition-colors">
+                                        <label class="flex items-center gap-3 cursor-pointer flex-1">
+                                            <input type="checkbox" id="td-logo-added" class="w-4 h-4 accent-emerald-500 cursor-pointer" onchange="saveTdLogoAdded()">
+                                            <span class="text-[13px] text-zinc-300">Dodaj logo</span>
+                                        </label>
+                                        <a href="https://builder.takedrop.pl/settings" target="_blank" class="text-[11px] text-[#666] hover:text-white transition-colors flex items-center gap-1 ml-3">
+                                            Otwórz <i class="ph ph-arrow-square-out text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <!-- Ustaw domenę -->
+                                    <div class="flex items-center justify-between py-2.5 px-3 rounded-md hover:bg-[#0e0e0e] transition-colors">
+                                        <label class="flex items-center gap-3 cursor-pointer flex-1">
+                                            <input type="checkbox" id="td-domain-added" class="w-4 h-4 accent-emerald-500 cursor-pointer" onchange="saveTdDomainAdded()">
+                                            <span class="text-[13px] text-zinc-300">Ustaw domenę</span>
+                                        </label>
+                                        <a href="https://app.takedrop.pl/shop/domain" target="_blank" class="text-[11px] text-[#666] hover:text-white transition-colors flex items-center gap-1 ml-3">
+                                            Otwórz <i class="ph ph-arrow-square-out text-[10px]"></i>
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
 
-                            <!-- 4. ID produktu + prompt -->
-                            <div class="py-3 border-b border-[#222]">
+                            <!-- 4. CHECKOUT + LINKI PRAWNE -->
+                            <div class="pt-3 border-t border-[#222]">
                                 <div class="flex items-center gap-3 mb-3">
                                     <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">4</span>
-                                    <span class="text-[13px] text-white">Dodaj checkout i linki prawne</span>
+                                    <span class="text-[13px] text-white font-medium">Dodaj checkout i linki prawne</span>
                                 </div>
                                 <div class="ml-8">
-                                    <div class="flex items-center gap-3">
+                                    <div class="flex items-center gap-3 flex-wrap">
                                         <input type="text" id="landing-product-id" class="w-56 bg-transparent border border-[#333] rounded px-2.5 py-1.5 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="103035094-321191805" onchange="saveLandingProductId()">
-                                        <button onclick="copyLandingCheckoutPrompt()" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
+                                        <button onclick="copyLandingCheckoutPrompt()" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1.5 px-2.5 py-1.5 rounded-md bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50">
                                             <i class="ph ph-copy"></i> Kopiuj prompt
                                         </button>
                                     </div>
-                                    <p class="text-[#555] text-[10px] mt-1">Format: ID-WARIANT</p>
+                                    <p class="text-[#555] text-[10px] mt-1.5">Format: ID-WARIANT (z URL produktu w TakeDrop)</p>
                                     <div id="landing-checkout-preview" class="mt-2">
                                         <code id="landing-checkout-link" class="text-[11px] text-[#50e3c2] font-mono"></code>
                                     </div>
-                                </div>
-                            </div>
-
-                            <!-- 5. Konfiguracja TD -->
-                            <div class="py-3 border-b border-[#222]">
-                                <div class="flex items-center gap-3 mb-3">
-                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">5</span>
-                                    <span class="text-[13px] text-white">Konfiguruj TakeDrop</span>
-                                </div>
-                                <div class="ml-8 flex flex-wrap gap-4">
-                                    <a href="https://app.takedrop.pl/shop/theme" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                        Strona HTML <i class="ph ph-arrow-square-out"></i>
-                                    </a>
-                                    <a href="https://builder.takedrop.pl/settings" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                        Logo <i class="ph ph-arrow-square-out"></i>
-                                    </a>
-                                    <a href="https://app.takedrop.pl/shop/domain" target="_blank" class="text-[12px] text-[#666] hover:text-white transition-colors flex items-center gap-1">
-                                        Domena <i class="ph ph-arrow-square-out"></i>
-                                    </a>
-                                </div>
-                            </div>
-
-                            <!-- 6. Grafiki AI -->
-                            <div class="flex items-center justify-between py-3 border-b border-[#222]">
-                                <div class="flex items-center gap-3">
-                                    <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">6</span>
-                                    <span class="text-[13px] text-white">Grafiki AI</span>
-                                </div>
-                                <label class="relative inline-flex items-center cursor-pointer">
-                                    <input type="checkbox" id="landing-ai-images-done" class="sr-only peer" onchange="saveLandingAiImagesDone()">
-                                    <div class="w-9 h-5 bg-[#333] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-[#666] after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600 peer-checked:after:bg-white"></div>
-                                </label>
-                            </div>
-
-                            <!-- 7. URL strony -->
-                            <div class="py-3">
-                                <div class="flex items-center gap-3 mb-3">
-                                    <span id="landing-step7-icon" class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">7</span>
-                                    <span class="text-[13px] text-white">URL strony</span>
-                                </div>
-                                <div class="ml-8 flex items-center gap-3">
-                                    <input type="url" id="landing-page-url" class="flex-1 max-w-xs bg-transparent border border-[#333] rounded px-2.5 py-1.5 text-[12px] text-white placeholder-[#555] focus:border-[#555] focus:outline-none font-mono" placeholder="https://marka.pl" onchange="saveLandingPageUrl()">
-                                    <div class="flex items-center gap-2">
-                                        <label class="flex items-center gap-1 cursor-pointer">
-                                            <input type="radio" name="landing-status" value="draft" class="accent-[#555] w-3 h-3" checked onchange="saveLandingPageUrl()">
-                                            <span class="text-[11px] text-[#666]">Draft</span>
-                                        </label>
-                                        <label class="flex items-center gap-1 cursor-pointer">
-                                            <input type="radio" name="landing-status" value="live" class="accent-emerald-500 w-3 h-3" onchange="saveLandingPageUrl()">
-                                            <span class="text-[11px] text-emerald-400">Live</span>
-                                        </label>
-                                    </div>
-                                    <a id="landing-page-link" href="#" target="_blank" class="hidden text-[12px] text-[#666] hover:text-white transition-colors">
-                                        <i class="ph ph-arrow-square-out"></i>
-                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -9047,16 +9055,46 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     takeDropData.landing_status = status;
                 }
                 updateLandingPagePreview();
-                // Update step 6 icon
-                const step6Icon = document.getElementById('landing-step6-icon');
-                if (step6Icon && url && status === 'live') {
-                    step6Icon.className = 'flex-shrink-0 w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[12px] font-bold';
-                    step6Icon.innerHTML = '<i class="ph ph-check text-sm"></i>';
-                }
                 showToast('Zapisano', 'success');
             } else {
                 showToast('Błąd: ' + error.message, 'error');
             }
+        }
+
+        // === TakeDrop config checklist ===
+        async function _saveTdField(field, done) {
+            if (!workflow?.id) return;
+            const now = new Date().toISOString();
+            const payload = { workflow_id: workflow.id, [field]: done };
+            payload[`${field}_at`] = done ? now : null;
+            const { error } = await supabaseClient
+                .from('workflow_takedrop')
+                .upsert(payload, { onConflict: 'workflow_id' });
+            if (error) {
+                showToast('Błąd: ' + error.message, 'error');
+                return false;
+            }
+            if (takeDropData) {
+                takeDropData[field] = done;
+                takeDropData[`${field}_at`] = payload[`${field}_at`];
+            }
+            return true;
+        }
+        async function saveTdProductAdded() {
+            const done = document.getElementById('td-product-added')?.checked || false;
+            if (await _saveTdField('td_product_added', done)) showToast(done ? 'Produkt: dodany' : 'Produkt: odznaczony', 'success');
+        }
+        async function saveTdHtmlAdded() {
+            const done = document.getElementById('td-html-added')?.checked || false;
+            if (await _saveTdField('td_html_added', done)) showToast(done ? 'HTML: dodany' : 'HTML: odznaczony', 'success');
+        }
+        async function saveTdLogoAdded() {
+            const done = document.getElementById('td-logo-added')?.checked || false;
+            if (await _saveTdField('td_logo_added', done)) showToast(done ? 'Logo: dodane' : 'Logo: odznaczone', 'success');
+        }
+        async function saveTdDomainAdded() {
+            const done = document.getElementById('td-domain-added')?.checked || false;
+            if (await _saveTdField('domain_connected', done)) showToast(done ? 'Domena: ustawiona' : 'Domena: odznaczona', 'success');
         }
 
         function updateLandingCheckoutPreview() {
@@ -9077,14 +9115,13 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
         function updateLandingPagePreview() {
             const url = document.getElementById('landing-page-url')?.value.trim();
-            const preview = document.getElementById('landing-page-preview');
             const link = document.getElementById('landing-page-link');
-
-            if (url && preview && link) {
+            if (!link) return;
+            if (url) {
                 link.href = url;
-                preview.classList.remove('hidden');
-            } else if (preview) {
-                preview.classList.add('hidden');
+                link.classList.remove('hidden');
+            } else {
+                link.classList.add('hidden');
             }
         }
 
@@ -9112,22 +9149,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 domainDisplay.textContent = suggestedDomain;
             }
 
-            // Load AliExpress link from selected product
-            const aliLink = document.getElementById('landing-aliexpress-link');
-            if (aliLink && workflow?.selected_product_id) {
-                supabaseClient
-                    .from('workflow_products')
-                    .select('source_url')
-                    .eq('id', workflow.selected_product_id)
-                    .single()
-                    .then(({ data }) => {
-                        if (data?.source_url) {
-                            aliLink.href = data.source_url;
-                            aliLink.classList.remove('hidden');
-                        }
-                    });
-            }
-
             // Load TakeDrop login link with credentials in query
             const tdLogin = document.getElementById('landing-takedrop-login');
             if (tdLogin && takeDropData) {
@@ -9140,42 +9161,66 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
             }
 
+            // Load product reference image (from Etap 1 - workflow_products)
+            const refLink = document.getElementById('td-product-ref-link');
+            const refLabel = document.getElementById('td-product-ref-label');
+            if (refLink && workflow?.id) {
+                supabaseClient
+                    .from('workflow_products')
+                    .select('image_url, source_url, name, selected_by_client, is_active')
+                    .eq('workflow_id', workflow.id)
+                    .order('selected_by_client', { ascending: false })
+                    .order('is_active', { ascending: false })
+                    .limit(1)
+                    .then(({ data }) => {
+                        const p = data && data[0];
+                        if (p?.image_url) {
+                            refLink.href = p.image_url;
+                            if (refLabel) refLabel.textContent = 'Zdjęcie referencyjne';
+                            refLink.classList.remove('hidden');
+                        } else if (p?.source_url) {
+                            refLink.href = p.source_url;
+                            if (refLabel) refLabel.textContent = 'Źródło produktu';
+                            refLink.classList.remove('hidden');
+                        } else {
+                            refLink.classList.add('hidden');
+                        }
+                    });
+            }
+
             // Load existing data from takeDropData
             if (takeDropData) {
-                // Load DNS status
+                // DNS status
                 const dnsCheckbox = document.getElementById('landing-dns-done');
-                if (dnsCheckbox) {
-                    dnsCheckbox.checked = takeDropData.dns_configured || false;
-                }
+                if (dnsCheckbox) dnsCheckbox.checked = takeDropData.dns_configured || false;
+
+                // Checkout product ID
                 const productIdInput = document.getElementById('landing-product-id');
                 if (productIdInput && takeDropData.product_id) {
                     productIdInput.value = takeDropData.product_id;
                     updateLandingCheckoutPreview();
                 }
 
+                // Official URL
                 const urlInput = document.getElementById('landing-page-url');
                 if (urlInput && takeDropData.landing_url) {
                     urlInput.value = takeDropData.landing_url;
                     updateLandingPagePreview();
                 }
-
                 if (takeDropData.landing_status) {
                     const radio = document.querySelector(`input[name="landing-status"][value="${takeDropData.landing_status}"]`);
                     if (radio) radio.checked = true;
                 }
 
-                // Update step 6 icon if completed
-                // AI Images done
-                const aiImagesDone = document.getElementById('landing-ai-images-done');
-                if (aiImagesDone) {
-                    aiImagesDone.checked = takeDropData.ai_images_done || false;
-                }
-
-                const step7Icon = document.getElementById('landing-step7-icon');
-                if (step7Icon && takeDropData.landing_url && takeDropData.landing_status === 'live') {
-                    step7Icon.className = 'flex-shrink-0 w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-[12px] font-bold';
-                    step7Icon.innerHTML = '<i class="ph ph-check text-sm"></i>';
-                }
+                // TakeDrop config checklist
+                const tdProduct = document.getElementById('td-product-added');
+                if (tdProduct) tdProduct.checked = takeDropData.td_product_added || false;
+                const tdHtml = document.getElementById('td-html-added');
+                if (tdHtml) tdHtml.checked = takeDropData.td_html_added || false;
+                const tdLogo = document.getElementById('td-logo-added');
+                if (tdLogo) tdLogo.checked = takeDropData.td_logo_added || false;
+                const tdDomain = document.getElementById('td-domain-added');
+                if (tdDomain) tdDomain.checked = takeDropData.domain_connected || false;
             }
         }
 
@@ -9206,6 +9251,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.copyLandingCheckoutPrompt = copyLandingCheckoutPrompt;
         window.saveLandingPageUrl = saveLandingPageUrl;
         window.loadLandingPageSteps = loadLandingPageSteps;
+        window.saveTdProductAdded = saveTdProductAdded;
+        window.saveTdHtmlAdded = saveTdHtmlAdded;
+        window.saveTdLogoAdded = saveTdLogoAdded;
+        window.saveTdDomainAdded = saveTdDomainAdded;
 
         // =============================================
         // PAYMENT GATEWAY MANAGEMENT
