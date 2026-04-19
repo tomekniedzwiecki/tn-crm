@@ -278,8 +278,8 @@
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
         <!-- Header -->
-        <header class="h-14 glass-header flex items-center justify-between gap-3 px-4 md:px-6 sticky top-0 z-30">
-            <div class="flex items-center gap-3 min-w-0 flex-1">
+        <header class="h-14 glass-header flex items-center px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3 min-w-0">
                 <a href="/tn-workflow/workflows" data-page="workflows" class="mobile-back-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors flex-shrink-0">
                     <i class="ph ph-arrow-left text-xl"></i>
                 </a>
@@ -288,20 +288,21 @@
                     <span class="text-zinc-700 hidden sm:inline flex-shrink-0">/</span>
                     <span id="breadcrumb-name" class="text-white font-medium truncate min-w-0">...</span>
                 </div>
-            </div>
-            <!-- Quick actions (desktop only) -->
-            <div class="hidden md:flex items-center gap-1 flex-shrink-0">
-                <a id="hdr-email" href="#" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-zinc-400 hover:text-white hover:bg-white/5 transition-colors max-w-[260px]" title="Wyślij email">
-                    <i class="ph ph-envelope text-[14px] flex-shrink-0"></i>
-                    <span id="hdr-email-text" class="truncate"></span>
-                </a>
-                <a id="hdr-whatsapp" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title="Otwórz WhatsApp">
-                    <i class="ph ph-whatsapp-logo text-[16px]"></i>
-                </a>
-                <a id="hdr-domain" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors max-w-[200px]" title="Otwórz stronę">
-                    <i class="ph ph-globe text-[14px] flex-shrink-0"></i>
-                    <span id="hdr-domain-text" class="truncate font-mono"></span>
-                </a>
+                <!-- Quick actions (desktop only) - tuż obok breadcrumba -->
+                <div class="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-white/5 flex-shrink-0">
+                    <button type="button" id="hdr-email" onclick="copyCustomerEmail()" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-zinc-400 hover:text-white hover:bg-white/5 transition-colors max-w-[260px]" title="Kliknij aby skopiować email">
+                        <i class="ph ph-envelope text-[14px] flex-shrink-0"></i>
+                        <span id="hdr-email-text" class="truncate"></span>
+                        <i class="ph ph-copy text-[11px] opacity-50 flex-shrink-0"></i>
+                    </button>
+                    <a id="hdr-whatsapp" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title="Otwórz WhatsApp">
+                        <i class="ph ph-whatsapp-logo text-[16px]"></i>
+                    </a>
+                    <a id="hdr-domain" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[12px] text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors max-w-[200px]" title="Otwórz stronę">
+                        <i class="ph ph-globe text-[14px] flex-shrink-0"></i>
+                        <span id="hdr-domain-text" class="truncate font-mono"></span>
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -5179,13 +5180,29 @@
             return `<span class="responsible-badge responsible-${responsible}">${labels[responsible] || responsible}</span>`;
         }
 
+        async function copyCustomerEmail() {
+            const email = workflow?.customer_email;
+            if (!email) return;
+            try {
+                await navigator.clipboard.writeText(email);
+                showToast(`Skopiowano: ${email}`, 'success');
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = email; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+                document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); showToast(`Skopiowano: ${email}`, 'success'); }
+                catch { showToast('Nie udało się skopiować', 'error'); }
+                document.body.removeChild(ta);
+            }
+        }
+        window.copyCustomerEmail = copyCustomerEmail;
+
         function updateHeaderQuickActions() {
             if (!workflow) return;
-            // Email
+            // Email (kliknij = kopiuj do schowka)
             const emailEl = document.getElementById('hdr-email');
             const emailText = document.getElementById('hdr-email-text');
             if (emailEl && workflow.customer_email) {
-                emailEl.href = `mailto:${workflow.customer_email}`;
                 if (emailText) emailText.textContent = workflow.customer_email;
                 emailEl.classList.remove('hidden');
             } else if (emailEl) {
