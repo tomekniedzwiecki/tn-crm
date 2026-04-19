@@ -1720,6 +1720,38 @@
                                     <span class="w-5 h-5 rounded-full bg-[#222] text-[#666] flex items-center justify-center text-[10px] font-mono">2</span>
                                     <span class="text-[13px] text-white font-medium">Konfiguruj TakeDrop</span>
                                 </div>
+
+                                <!-- Credentials box (z konta TakeDrop) -->
+                                <div id="td-credentials-box" class="ml-8 mb-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-md p-3">
+                                    <div id="td-credentials-filled" class="hidden space-y-2">
+                                        <div class="flex items-center gap-2 text-[12px]">
+                                            <span class="text-[#555] w-12 flex-shrink-0 uppercase tracking-wide text-[10px]">Email</span>
+                                            <code id="td-cred-email" class="text-white font-mono flex-1 truncate cursor-pointer hover:text-cyan-300 transition-colors" onclick="copyTdCredential('email')" title="Kliknij aby skopiować">—</code>
+                                            <button onclick="copyTdCredential('email')" class="text-[#666] hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Kopiuj email">
+                                                <i class="ph ph-copy text-[12px]"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-[12px]">
+                                            <span class="text-[#555] w-12 flex-shrink-0 uppercase tracking-wide text-[10px]">Hasło</span>
+                                            <code id="td-cred-password" class="text-white font-mono flex-1 truncate cursor-pointer hover:text-cyan-300 transition-colors" data-revealed="false" onclick="copyTdCredential('password')" title="Kliknij aby skopiować">••••••••</code>
+                                            <button id="td-cred-pass-toggle" onclick="toggleTdPasswordReveal()" class="text-[#666] hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Pokaż">
+                                                <i class="ph ph-eye text-[12px]"></i>
+                                            </button>
+                                            <button onclick="copyTdCredential('password')" class="text-[#666] hover:text-white p-1 rounded hover:bg-white/5 transition-colors" title="Kopiuj hasło">
+                                                <i class="ph ph-copy text-[12px]"></i>
+                                            </button>
+                                        </div>
+                                        <a id="td-cred-login" href="https://app.takedrop.pl/login" target="_blank" class="inline-flex items-center gap-1.5 text-[11px] text-cyan-400 hover:text-cyan-300 transition-colors pt-1">
+                                            <i class="ph ph-sign-in"></i> Zaloguj do TakeDrop <i class="ph ph-arrow-square-out text-[10px]"></i>
+                                        </a>
+                                    </div>
+                                    <div id="td-credentials-empty" class="text-[12px] text-[#666] flex items-center gap-2">
+                                        <i class="ph ph-warning text-amber-400"></i>
+                                        Brak danych logowania —
+                                        <a href="#" onclick="event.preventDefault(); switchTab('takedrop'); return false;" class="text-cyan-400 hover:text-cyan-300 underline">uzupełnij w zakładce TakeDrop</a>
+                                    </div>
+                                </div>
+
                                 <div class="ml-8 space-y-1">
                                     <!-- Dodaj produkt -->
                                     <div class="flex items-center justify-between py-2.5 px-3 rounded-md hover:bg-[#0e0e0e] transition-colors">
@@ -9136,6 +9168,74 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
+        // === TakeDrop credentials w sekcji Konfiguruj TakeDrop ===
+        async function copyTdCredential(field) {
+            const value = field === 'email' ? takeDropData?.account_email : takeDropData?.account_password;
+            if (!value) { showToast('Brak danych do skopiowania', 'error'); return; }
+            try {
+                await navigator.clipboard.writeText(value);
+                showToast(field === 'email' ? `Skopiowano email` : `Skopiowano hasło`, 'success');
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = value; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+                document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); showToast('Skopiowano', 'success'); }
+                catch { showToast('Nie udało się skopiować', 'error'); }
+                document.body.removeChild(ta);
+            }
+        }
+
+        function toggleTdPasswordReveal() {
+            const codeEl = document.getElementById('td-cred-password');
+            const btn = document.getElementById('td-cred-pass-toggle');
+            if (!codeEl) return;
+            const revealed = codeEl.dataset.revealed === 'true';
+            const password = takeDropData?.account_password || '';
+            if (!password) return;
+            if (revealed) {
+                codeEl.textContent = '••••••••';
+                codeEl.dataset.revealed = 'false';
+                if (btn) { btn.title = 'Pokaż'; btn.innerHTML = '<i class="ph ph-eye text-[12px]"></i>'; }
+            } else {
+                codeEl.textContent = password;
+                codeEl.dataset.revealed = 'true';
+                if (btn) { btn.title = 'Ukryj'; btn.innerHTML = '<i class="ph ph-eye-slash text-[12px]"></i>'; }
+            }
+        }
+
+        function loadTdCredentialsBox() {
+            const filled = document.getElementById('td-credentials-filled');
+            const empty = document.getElementById('td-credentials-empty');
+            const emailEl = document.getElementById('td-cred-email');
+            const passwordEl = document.getElementById('td-cred-password');
+            const loginEl = document.getElementById('td-cred-login');
+            if (!filled || !empty) return;
+
+            const email = takeDropData?.account_email || '';
+            const password = takeDropData?.account_password || '';
+
+            if (email || password) {
+                filled.classList.remove('hidden');
+                empty.classList.add('hidden');
+                if (emailEl) emailEl.textContent = email || '—';
+                if (passwordEl) {
+                    // Reset do ukrytego stanu przy reload
+                    passwordEl.textContent = password ? '••••••••' : '—';
+                    passwordEl.dataset.revealed = 'false';
+                    const btn = document.getElementById('td-cred-pass-toggle');
+                    if (btn) btn.innerHTML = '<i class="ph ph-eye text-[12px]"></i>';
+                }
+                if (loginEl) {
+                    loginEl.href = `https://app.takedrop.pl/login?e=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
+                }
+            } else {
+                filled.classList.add('hidden');
+                empty.classList.remove('hidden');
+            }
+        }
+        window.copyTdCredential = copyTdCredential;
+        window.toggleTdPasswordReveal = toggleTdPasswordReveal;
+
         // === TakeDrop config checklist ===
         async function _saveTdField(field, done) {
             if (!workflow?.id) return;
@@ -9224,17 +9324,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 domainDisplay.textContent = suggestedDomain;
             }
 
-            // Load TakeDrop login link with credentials in query
-            const tdLogin = document.getElementById('landing-takedrop-login');
-            if (tdLogin && takeDropData) {
-                const email = takeDropData.account_email || '';
-                const password = takeDropData.account_password || '';
-                if (email || password) {
-                    tdLogin.href = `https://app.takedrop.pl/login?e=${encodeURIComponent(email)}&p=${encodeURIComponent(password)}`;
-                } else {
-                    tdLogin.href = 'https://app.takedrop.pl/login';
-                }
-            }
+            // Load TakeDrop credentials box (email + password z konta TakeDrop)
+            loadTdCredentialsBox();
 
             // Load product reference image (from Etap 1 - workflow_products)
             const refLink = document.getElementById('td-product-ref-link');
