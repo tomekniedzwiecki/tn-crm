@@ -253,6 +253,26 @@ Rekomendacja: **nie usuwaj automatycznie**. Stary obraz = rollback option gdy no
 
 Te problemy kosztowały godziny debugowania. Nie powtarzaj ich.
 
+### 0. Baseline mismatch — NIE kopiuj vitrix jako „szybkiego startu" dla innego kierunku
+
+**Problem:** ETAP 1 w `_templates/README.md` każe kopiować istniejący landing jako bazę. Kusząco — oszczędza czas, przechodzi 18/18 verify. **Pułapka:** gdy kierunek manifesta NIE pasuje do baseline'a, wynik = „vitrix przebrany za kawę" — klient widzi kolejny AI-editorial landing, nie wyjątkową markę.
+
+**Wymuszany check przed kopiowaniem:** policz ile czerwonych flag manifesta trafia:
+- Moodboard referuje inny świat wizualny (Filson/Red Wing/Yeti vs Kinfolk/Dyson/B&O)
+- Paleta wyraźnie inna (ciemna + metal vs paper + italic teal)
+- Fotografia lokalizacji inna („parking 4:30" vs „salon 18. piętro")
+- Manifesto wprost wyklucza italic editorial serif / round acts / delikatne shadows
+- Persona z innego świata (kierowca TIR, rzemieślnik vs prawniczka, architektka)
+
+**≥3 flagi trafiają:** NIE kopiuj baseline'a z innego kierunku. Zamiast tego:
+1. **Zachowaj tę samą architekturę 14 sekcji** (header → hero → trust → wyzwanie → atelier → rytuał → spec → epoki → persony → głosy → FAQ → oferta → finał → footer)
+2. **Zaprojektuj CSS od zera** pod manifesto (inne CSS tokens, inne signature elements, inne proporcje)
+3. **Dodaj nowy slug do `_templates/README.md`** jako baseline dla tego kierunku — następny landing tego typu już nie będzie „od zera"
+
+**Pierwszy precedens:** Kafina (Rugged Heritage) — vitrix był dostępny, pasowała architektura, ale manifest Filson/Red Wing/Yeti wymagał dark hero + stamp badges + brak editorial italic. Świadoma decyzja: szkielet vitrix, design od zera. Zobacz `landing-pages/kafina/_brief.md` sekcję 6.
+
+**Baseline matching table:** `landing-pages/_templates/README.md`.
+
 ### 1. Fade-in z `opacity:0` MUSI mieć fallback bez JS
 
 **Antywzorzec (ŹLE, ukrywa 80% strony gdy JS padnie / bot crawluje):**

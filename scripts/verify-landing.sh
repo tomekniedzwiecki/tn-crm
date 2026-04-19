@@ -74,9 +74,14 @@ echo "📷 1. Obrazy i placeholdery"
 N_PH=$(grep -oE 'class="[^"]*(-figure|-placeholder|bento-image|step-image|img-placeholder)[^"]*"' "$FILE" | wc -l)
 check_range "Placeholdery/figury" 12 20 "$N_PH"
 
-# UUID check — tylko bieżący
+# UUID check — 0 (tylko placeholdery — ok pre-ETAP 3 image gen) lub 1 (własny workflow)
+# FAIL tylko gdy 2+ (= obce workflow wpuszczone do HTML)
 UUIDS=$(grep -oE "ai-generated/[a-z0-9-]+" "$FILE" | sort -u | wc -l)
-check "Tylko jedno źródło UUID (brak obcych workflow)" "1" "$UUIDS"
+if [ "$UUIDS" -le 1 ]; then
+  check "Brak obcych workflow (UUID sources ≤1)" "$UUIDS" "$UUIDS"
+else
+  check "Brak obcych workflow (UUID sources ≤1)" "1" "$UUIDS"
+fi
 
 # ─── 2. Numeracja sekcji ───
 echo ""
