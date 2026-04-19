@@ -54,8 +54,8 @@ WYMAGANIA:
 2 ad sety — różne persony (NIE duplikat!). Dobierz na bazie wcześniejszej analizy z tego wątku. Każda grupa:
 - name: opisowa nazwa (np. "Mamy alergików 28-45")
 - age_min, age_max, gender ("all" | "female" | "male")
-- interests: 3-6 konkretnych po angielsku zgodnie z katalogiem Mety
-- behaviors: opcjonalnie ("Online shoppers" itd.)
+- interests: tablica 3-6 konkretnych zainteresowań **WYŁĄCZNIE PO POLSKU** i **WYŁĄCZNIE takich, które realnie istnieją w katalogu Meta Ads Manager dla Polski** (interfejs użytkownika jest ustawiony na polski, więc angielskie nazwy nie zostaną znalezione w wyszukiwarce targetingu). NIE wymyślaj. NIE tłumacz angielskich terminów dosłownie. Używaj dokładnych nazw z polskiego UI Mety. Przykłady prawidłowych: "Zdrowie i uroda", "Kosmetyki naturalne", "Dieta i odżywianie", "Rodzicielstwo", "Gotowanie w domu", "Joga", "Ekologiczny styl życia", "Moda", "Finanse osobiste", "Przedsiębiorczość", "Rozwój osobisty", "Fitness i kulturystyka", "Zakupy online", "Dom i ogród". Jeśli nie jesteś pewien czy dane zainteresowanie istnieje w katalogu Mety PL — NIE używaj go. Lepiej mniej, ale trafnie.
+- behaviors: opcjonalnie zachowania zakupowe **WYŁĄCZNIE PO POLSKU** zgodne z katalogiem Mety PL (np. "Kupujący online", "Zaangażowani kupujący", "Użytkownicy urządzeń mobilnych z aktywnością na FB"). Jeśli nie jesteś pewien — pomiń behaviors.
 - creatives: ZAWSZE [0,1,2,3,4] — każda grupa dostaje WSZYSTKIE 5 kreacji (Meta sama zoptymalizuje, pełen A/B test)
 - rationale: 1 zdanie — dlaczego ta persona
 
