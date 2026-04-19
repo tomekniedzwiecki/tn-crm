@@ -71,17 +71,29 @@ Zapisz liste zajetych nazw — NIE proponuj zadnej z nich!
 - ~10 nazw polskich (bezposrednie, fachowe)
 - ~5-10 nazw mieszanych/kreatywnych
 
-**KROK 2.3 — Sprawdz WSZYSTKIE domeny JEDNYM BATCHEM:**
+**KROK 2.3 — Sprawdz WSZYSTKIE domeny JEDNYM BATCHEM (RDAP — oficjalny rejestr NASK):**
+
+> **WAŻNE**: NIE używaj `nslookup`! Łapie tylko domeny z rekordem A — domeny zaparkowane bez DNS pokażą się jako "WOLNA", a w rzeczywistości są zajęte. RDAP pyta oficjalny rejestr NASK.
+
 ```bash
 for domain in nazwa1.pl nazwa2.pl nazwa3.pl [... wszystkie 25-30 ...]; do
-  result=$(nslookup $domain 8.8.8.8 2>&1)
-  if echo "$result" | grep -qi "can't find\|NXDOMAIN\|Non-existent\|server can't find"; then
-    echo "$domain - WOLNA"
+  status=$(curl -s -o /dev/null -w "%{http_code}" "https://rdap.dns.pl/domain/${domain}")
+  if [ "$status" = "404" ]; then
+    echo "$domain - WOLNA ✅"
+  elif [ "$status" = "200" ]; then
+    echo "$domain - ZAJETA ❌"
   else
-    echo "$domain - ZAJETA"
+    echo "$domain - BŁĄD ($status)"
   fi
 done
 ```
+
+**Interpretacja:**
+- HTTP 404 = domena nie istnieje w rejestrze = **WOLNA**
+- HTTP 200 = domena zarejestrowana (nawet jeśli zaparkowana bez DNS) = **ZAJĘTA**
+- Inne kody = powtórz lub sprawdź ręcznie
+
+Uruchamiaj w tle z `&` żeby przyspieszyć (max 10 równolegle), bo 30 zapytań sekwencyjnych ~30s.
 
 **KROK 2.4 — Filtruj i wybierz TOP 10:**
 Z kandydatow ktore PRZECHODZA oba filtry (domena wolna + nie ma w systemie), wybierz 10 najlepszych:
@@ -118,13 +130,59 @@ Krotkie haslo (3-6 slow) po polsku. Powinno:
 - Byc chwytliwe i zapamietywalne
 - Uzywac rytmu / rymu / powtorzenia
 
-### Krok 4: Opis marki
+### Krok 4: Opis marki — FRAMEWORK LOVE BRAND (OBOWIĄZKOWY)
 
-3-5 zdan po polsku. Powinien:
-- Przedstawic marke (kto jestesmy)
-- Opisac flagowy produkt
-- Okreslic grupe docelowa
-- Zakonczyc emocjonalnym CTA
+> **ZASADA NACZELNA**: Nie piszesz opisu produktu. Piszesz manifest marki, z którym klient się utożsami. Celujesz w **love brand**, nie w kartę katalogową.
+
+#### Czego NIE robić (❌ funkcjonalny opis):
+- Zaczynać od "Marka X to [produkt] dla..."
+- Listować specyfikacji jako feature'ów
+- Używać marketing-speak: "odkryj", "unikalny", "innowacyjny"
+- Opisywać grupę docelową jako "dla tych, którzy [robią X]"
+- Kończyć komercyjnym CTA ("kup teraz", "wypróbuj")
+
+#### Co ROBIĆ (✅ love brand):
+- Zaczynać od **tożsamości klienta** lub **manifestu** ("Niektórzy ludzie...", "Poranek zaczyna się...")
+- Używać specs jako **dowodu obietnicy**, nie jako listy feature'ów
+- Pokazywać **wartość**, z którą klient się utożsami ("nie oddają swojego rytuału")
+- Kończyć **zdaniem-manifestem** w stylu tatuażu — krótkim, emocjonalnym, zapadającym w pamięć
+
+#### Struktura (4 części, 5-7 zdań total):
+
+1. **Manifest/identyfikacja** (1-2 zdania): Opis postawy/tożsamości tych ludzi
+2. **Persona w akcji** (1 zdanie): Konkretne scenariusze życia (gdzie, kiedy, w jakiej sytuacji)
+3. **Obietnica z dowodem** (1-2 zdania): Kluczowe specs — ale JAKO dowód że obietnica jest prawdziwa, nie jako lista
+4. **Emocjonalne zamknięcie** (1-2 zdania): Zdanie-manifest, które klient chciałby powiedzieć sam o sobie
+
+#### Przykład DOBRY (Caffora — ekspres przenośny):
+
+> **Niektórzy ludzie nie oddają swojego rytuału.** Nie wymieniają porannego espresso na kawę z automatu tylko dlatego, że są 800 km od domu — i nie kompromitują smaku pierwszej filiżanki, bo zamiast kuchni mają kabinę, kemper albo skalną platformę nad chmurami. **Caffora powstała dla nich.** 20 barów prawdziwego ciśnienia, wbudowany system grzewczy, cały dzień pracy na jednym ładowaniu — zamknięte w urządzeniu lżejszym niż butelka wody. **Twój rytuał jedzie z Tobą. Dobrego poranka nie zostawia się w domu.**
+
+Dlaczego działa:
+- Zdanie 1 = manifest o KLIENCIE, nie o produkcie
+- Zdania 2-3 = konkretne obrazy (800 km, kabina, skalna platforma) — klient się rozpoznaje
+- Zdanie 4 = specs jako dowód, ale w rytmie listy konceptów, nie arkusza danych
+- Zdania 5-6 = dwa manifesty-tatuaże, które klient chciałby mieć na kubku
+
+#### Przykład ZŁY (funkcjonalny, marketing speak):
+
+> "Caffora to przenośny ekspres ciśnieniowy dla tych, którzy parzą kawę tam, gdzie są — w kabinie TIR-a, na parkingu przed spotkaniem, na szczycie szlaku. Flagowy model generuje 20 barów profesjonalnego ciśnienia, grzeje wodę bez kabli i działa cały dzień na jednym ładowaniu. Odkryj, że dobre espresso nie wymaga adresu."
+
+Dlaczego nie działa:
+- Zaczyna od definicji produktu ("Caffora to ekspres")
+- "Dla tych, którzy parzą kawę" — generic, nie tożsamość
+- Lista specs bez obietnicy ("generuje 20 barów...")
+- "Odkryj" = marketing speak, nie manifest
+
+#### Inspiracje stylu (referencyjne love brandy):
+
+- **Patagonia:** "We're in business to save our home planet."
+- **Harley-Davidson:** Nie sprzedają motocykli, sprzedają wolność.
+- **Rapha:** "Road racing is the most beautiful sport in the world."
+- **Yeti:** "Built for the wild."
+- **Aesop:** "Products of considered use."
+
+Szukaj tonu: **spokojnie pewny**, nie krzykliwy. Manifest, nie reklama.
 
 ### Krok 5: Paleta kolorow
 
@@ -323,21 +381,28 @@ White background (#FFFFFF). Square format 1024x1024px. Centered composition with
 This logo should look like it cost $15,000 from a top branding agency.
 ```
 
-**Prompt 3 — Geometryczny sygnet (średni prompt):**
+**Prompt 3 — Monogram w okręgu (sam sygnet, bez wordmark):**
 ```
-Logo for "[NAZWA]" — [kategoria produktu] brand.
+Monogram logo for "[NAZWA]" brand — [kategoria produktu].
 
-Create a logo with geometric symbol on the left and wordmark on the right.
-Symbol: Built on a grid system using circles and lines. Abstract representation of [CECHA PRODUKTU] — movement, precision, or energy. No literal icons.
-Wordmark: "[NAZWA]" in bold geometric sans-serif font.
-Color: Symbol [PRIMARY HEX], text [NEUTRAL DARK HEX].
+LAYOUT: Single circular badge, centered in frame. NO wordmark text — only the monogram.
+SYMBOL: The first letter "[PIERWSZA LITERA]" custom-designed inside a solid circle. Letter should be modified to suggest [CECHA PRODUKTU] — hidden curve, negative space, geometric cut. Think Beats, Monocle, Bang & Olufsen monograms.
+COLORS: Circle filled with [PRIMARY HEX] ([nazwa koloru]), letter cut out to white OR letter in [NEUTRAL DARK HEX] on white circle with [PRIMARY HEX] outline.
+STYLE: Strong, iconic, works as app icon at 32x32px. Premium monogram feel.
 
-White background. Square 1024x1024px. Clean, modern, premium quality.
+White background (#FFFFFF). Square 1024x1024px. Centered composition with 20% padding around the circle.
 ```
 
-**Prompt 4 — Typograficzny akcent (krótki prompt):**
+**Prompt 4 — Wordmark-only (tylko typografia, bez sygnetu):**
 ```
-Minimalist logo: "[NAZWA]" wordmark with integrated symbol on the left side. The symbol should be derived from letterforms — perhaps a stylized first letter with [CECHA PRODUKTU] suggestion. Primary color [PRIMARY HEX] for symbol, dark text. White background, square 1024x1024px. Tech-forward, contemporary.
+Wordmark-only logo for "[NAZWA]" — no icon, no symbol, pure typography.
+
+TEXT: "[NAZWA]" as the ONLY element — custom letterforms, not a plain Google Font.
+STYLE: Consider one distinctive detail: a modified letter (cut, extended, ligature), a color accent on one letter, or an unusual tracking. Think Supreme, Hermès, Figma wordmarks.
+PROPORTIONS: Large, bold, centered horizontally. Letter spacing optically balanced.
+COLORS: Main text in [NEUTRAL DARK HEX]. Optionally one letter or accent element in [PRIMARY HEX] ([nazwa koloru]) for character.
+
+White background (#FFFFFF). Square 1024x1024px. Text fills ~70% of frame width, vertically centered. Editorial, confident, timeless.
 ```
 
 **Prompt 5 — Dynamiczny i nowoczesny (długi prompt):**
@@ -390,6 +455,14 @@ Reference style: Stripe, Linear, Vercel, Notion — modern tech minimalism.
 > NIE projektuj nowego logo. NIE zmieniaj proporcji, kolorów ani układu.
 > Skopiuj logo 1:1 i umieść na gadżecie zgodnie ze specyfikacją.
 > ```
+>
+> **🚨 WARUNEK WSTĘPNY przed generowaniem mockupów:**
+>
+> Mockupy są generowane przez `generate-image` edge function z referencyjnym obrazem loga przekazywanym jako `reference_images[{type:'logo'}]`. Logo jest pobierane przez `getLogoUrl()` z rekordu `workflow_branding` gdzie `type='logo'` i `notes.is_main === true`.
+>
+> **JEŚLI ŻADNE LOGO NIE MA `is_main: true`** — mockupy NIE MOGĄ być wygenerowane. System pokaże toast "Najpierw ustaw główne logo".
+>
+> **Dlatego:** po wygenerowaniu 5 logo upewnij się, że logo z `sort_order: 0` ma `notes.is_main === true`. Jeśli użytkownik uploadował ręcznie dodatkowe loga przez modal "Dodaj logo" — muszą same mieć `is_main` ustawione (pierwsze = true, kolejne = false). Jeśli user zmienia główne logo — kliknięcie "Ustaw jako główne" aktualizuje flag w bazie (funkcja `setMainLogo()` w workflow.html).
 
 ---
 
@@ -814,6 +887,29 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_brand
 
 Po każdym POST sprawdź czy zwróciło pustą odpowiedź (sukces) lub błąd JSON.
 
+### Krok 3: WERYFIKACJA (obowiązkowa!)
+
+Po wszystkich INSERT-ach policz wstawione rekordy i porównaj z oczekiwaniami:
+
+```bash
+curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?workflow_id=eq.[WORKFLOW_ID]&select=type" \
+  -H "apikey: [SERVICE_KEY]" \
+  -H "Authorization: Bearer [SERVICE_KEY]" | \
+  python -c "import json,sys,collections; d=json.load(sys.stdin); c=collections.Counter(x['type'] for x in d); print(dict(c))"
+```
+
+**Oczekiwane:** `{'brand_info': 1, 'color': 6, 'font': 3, 'ai_prompt': 15}`
+
+Jeśli liczby się nie zgadzają → błąd w jednym z POST-ów → zbadaj odpowiedzi curla i wstaw ręcznie brakujące rekordy.
+
+### Krok 4: NIE oznaczaj brandingu jako shared/delivered!
+
+> **🚨 ZAKAZ**: NIE ustawiaj automatycznie pola `branding_shared_at` (ani podobnych pól typu `*_shared_at`, `*_delivered_at`).
+>
+> **Dlaczego:** To pole triggeruje automatyzację `branding_delivered` — wysłanie e-maila do klienta. Decyzję o przekazaniu brandingu klientowi podejmuje **użytkownik ręcznie** (po przejrzeniu wygenerowanych logo, kolorów, promptów i zatwierdzeniu jakości). Automatyczne ustawienie tego pola wyśle klientowi maila o gotowym brandingu zanim zostanie zaakceptowany.
+>
+> **Co zamiast tego:** Poinformuj użytkownika w podsumowaniu, że branding jest gotowy w bazie, i że musi ręcznie kliknąć "Przekaż klientowi" w panelu workflow, kiedy będzie zadowolony z jakości.
+
 ---
 
 ## Przyklad uzycia
@@ -878,25 +974,37 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_brand
   }'
 ```
 
-### Kolejność generowania
+### Generuj RÓWNOLEGLE (5 logo jednocześnie)
 
-1. **Logo minimalistyczne** — `is_main: true` (pierwsze = główne)
-2. **Logo premium** — `is_main: false`
-3. **Logo geometryczne** — `is_main: false`
-4. **Logo typograficzne** — `is_main: false`
-5. **Logo dynamiczne** — `is_main: false`
+> **ZMIANA**: Edge function `generate-image` jest stateless — wyślij wszystkie 5 requestów równolegle zamiast sekwencyjnie. Czas: 100s (seq) → 20-25s (parallel).
+
+**Implementacja:** Użyj 5 równoczesnych wywołań Bash (tool `Bash` z `run_in_background: true` lub `&` w jednej komendzie), zbierz wyniki, potem zapisz do bazy.
+
+### Przypisanie `is_main` (deterministyczne)
+
+Niezależnie od kolejności odpowiedzi API:
+1. **Logo minimalistyczne** (sort_order 0) — `is_main: true` ZAWSZE
+2. **Logo premium** (sort_order 1) — `is_main: false`
+3. **Logo monogram** (sort_order 2) — `is_main: false`
+4. **Logo wordmark-only** (sort_order 3) — `is_main: false`
+5. **Logo dynamiczne** (sort_order 4) — `is_main: false`
+
+### Weryfikacja wymiarów (obowiązkowa)
+
+Po pobraniu URL-a każdego logo sprawdź czy obraz jest kwadratem 1024x1024:
+
+```bash
+curl -s -o /tmp/logo_check.png "[LOGO_URL]"
+python -c "from PIL import Image; img=Image.open('/tmp/logo_check.png'); print(img.size)"
+# Oczekiwane: (1024, 1024)
+```
+
+Jeśli wymiary są inne → zanotuj w raporcie końcowym dla użytkownika (nie blokuje procesu, ale warto wiedzieć).
 
 ### Obsługa błędów
 
-- Jeśli generowanie pojedynczego logo się nie uda — kontynuuj z kolejnym
-- Na końcu poinformuj użytkownika ile logo zostało wygenerowanych
-- Przykład: "Wygenerowano 5/5 logo. Odśwież stronę workflow."
-
-### Ważne
-
-- Generuj logo SEKWENCYJNIE (jedno po drugim), nie równolegle
-- Każde generowanie może trwać 10-30 sekund
-- Pierwsze wygenerowane logo ZAWSZE ma `is_main: true`
+- Jeśli generowanie pojedynczego logo się nie uda — kontynuuj z pozostałymi
+- Na końcu poinformuj użytkownika: "Wygenerowano X/5 logo. Odśwież stronę workflow."
 
 ---
 

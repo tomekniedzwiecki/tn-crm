@@ -3654,6 +3654,8 @@
             document.getElementById('image-lightbox').classList.add('hidden');
             document.getElementById('lightbox-img').src = '';
         }
+        window.openImageLightbox = openImageLightbox;
+        window.closeImageLightbox = closeImageLightbox;
 
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -7311,15 +7313,42 @@
             // Type badge colors
             const typeColors = {
                 'POV': 'bg-blue-500/20 text-blue-400',
+                'POV dziecka': 'bg-blue-500/20 text-blue-400',
                 'Rutyna': 'bg-emerald-500/20 text-emerald-400',
                 'Reakcja': 'bg-amber-500/20 text-amber-400',
+                'Reakcja dziecka': 'bg-amber-500/20 text-amber-400',
                 'Efekt WOW': 'bg-pink-500/20 text-pink-400',
                 'Porównanie': 'bg-purple-500/20 text-purple-400',
+                'Split screen': 'bg-purple-500/20 text-purple-400',
                 'ASMR': 'bg-cyan-500/20 text-cyan-400',
                 'Unboxing': 'bg-orange-500/20 text-orange-400',
                 'Tutorial': 'bg-indigo-500/20 text-indigo-400',
+                'Top-down tutorial': 'bg-indigo-500/20 text-indigo-400',
                 'Estetyka': 'bg-rose-500/20 text-rose-400',
-                'Storytime': 'bg-violet-500/20 text-violet-400'
+                'Storytime': 'bg-violet-500/20 text-violet-400',
+                'Talking head': 'bg-sky-500/20 text-sky-400',
+                'Testimonial rodzica': 'bg-emerald-500/20 text-emerald-400',
+                'Sceptyk przekonany': 'bg-lime-500/20 text-lime-400',
+                'Voiceover + timelapse': 'bg-fuchsia-500/20 text-fuchsia-400',
+                'Silent storytelling': 'bg-slate-500/20 text-slate-400',
+                'Demo mikroskopu': 'bg-pink-500/20 text-pink-400',
+                'Demo wizualne': 'bg-pink-500/20 text-pink-400',
+                'Dramatyczna transformacja': 'bg-fuchsia-500/20 text-fuchsia-400',
+                'Hot take': 'bg-red-500/20 text-red-400',
+                'Edukacja przez szok': 'bg-orange-500/20 text-orange-400',
+                'Test challenge': 'bg-yellow-500/20 text-yellow-400',
+                'Ekskluzywność': 'bg-purple-500/20 text-purple-400',
+                'Rant': 'bg-red-500/20 text-red-400',
+                'Duet Stitch': 'bg-teal-500/20 text-teal-400',
+                'Partner reveal': 'bg-pink-500/20 text-pink-400',
+                'Day in the life': 'bg-amber-500/20 text-amber-400',
+                'POV-text story': 'bg-violet-500/20 text-violet-400'
+            };
+
+            const funnelLabels = {
+                'awareness': { label: 'Zasięg', cls: 'bg-blue-500/10 text-blue-300' },
+                'consideration': { label: 'Wartość', cls: 'bg-amber-500/10 text-amber-300' },
+                'conversion': { label: 'Sprzedaż', cls: 'bg-emerald-500/10 text-emerald-300' }
             };
 
             // Split into face/no-face
@@ -7337,8 +7366,9 @@
                     <div onclick="toggleAdminScenario(${index})" class="flex items-center gap-3 p-3 cursor-pointer hover:bg-[#111] transition-colors">
                         <span class="w-6 h-6 rounded bg-purple-500/10 flex items-center justify-center text-purple-400 text-[10px] font-bold flex-shrink-0">${index + 1}</span>
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-0.5">
+                            <div class="flex items-center gap-2 mb-0.5 flex-wrap">
                                 ${scenario.type ? `<span class="px-1.5 py-0.5 text-[9px] font-medium rounded ${typeClass}">${escapeHtml(scenario.type)}</span>` : ''}
+                                ${scenario.funnelStage && funnelLabels[scenario.funnelStage] ? `<span class="px-1.5 py-0.5 text-[9px] font-medium rounded ${funnelLabels[scenario.funnelStage].cls}">${funnelLabels[scenario.funnelStage].label}</span>` : ''}
                                 ${scenario.showFace !== undefined ? `<i class="ph ${faceIcon} ${faceColor} text-[10px]"></i>` : ''}
                                 ${scenario.duration ? `<span class="text-[9px] text-[#555]">${escapeHtml(scenario.duration)}</span>` : ''}
                             </div>
@@ -7358,6 +7388,10 @@
                             ${scenario.tip ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-lightbulb text-amber-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.tip)}</span></div>` : ''}
                             ${scenario.soundTip ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-music-notes text-cyan-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.soundTip)}</span></div>` : ''}
                             ${scenario.textOverlay ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-text-aa text-purple-400 mt-0.5"></i><span class="text-[#666]">${escapeHtml(scenario.textOverlay)}</span></div>` : ''}
+                            ${scenario.script ? `<div class="mt-2 p-2 bg-emerald-500/5 border border-emerald-500/20 rounded"><div class="flex items-start gap-1.5"><i class="ph ph-microphone-stage text-emerald-400 mt-0.5"></i><div><span class="text-emerald-400 text-[9px] uppercase tracking-wider block">Skrypt</span><span class="text-[#999] italic">"${escapeHtml(scenario.script)}"</span></div></div></div>` : ''}
+                            ${scenario.coverFrame ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-image-square text-indigo-400 mt-0.5"></i><div><span class="text-indigo-400 text-[9px] uppercase tracking-wider block">Okładka</span><span class="text-[#666]">${escapeHtml(scenario.coverFrame)}</span></div></div>` : ''}
+                            ${scenario.caption ? `<div class="mt-2 flex items-start gap-1.5"><i class="ph ph-chat-text text-rose-400 mt-0.5"></i><div><span class="text-rose-400 text-[9px] uppercase tracking-wider block">Opis</span><span class="text-[#666]">${escapeHtml(scenario.caption)}</span></div></div>` : ''}
+                            ${scenario.hashtags && scenario.hashtags.length ? `<div class="mt-2 flex flex-wrap gap-1">${scenario.hashtags.map(h => `<span class="px-1.5 py-0.5 text-[9px] rounded bg-rose-500/10 text-rose-300">${escapeHtml(h)}</span>`).join('')}</div>` : ''}
                             ${scenario.description ? `<div class="mt-2 text-[#666]">${escapeHtml(scenario.description)}</div>` : ''}
                         </div>
                     </div>
@@ -13858,9 +13892,10 @@ Zwróć TYLKO JSON.`;
 
             const { data: urlData } = supabaseClient.storage.from('attachments').getPublicUrl(fileName);
 
+            const existingLogosCount = brandingItems.filter(b => b.type === 'logo').length;
             const { error } = await supabaseClient.from('workflow_branding').insert({
                 workflow_id: workflow.id, type: 'logo', title, file_url: urlData.publicUrl,
-                notes: JSON.stringify({ variant }), sort_order: brandingItems.filter(b => b.type === 'logo').length
+                notes: JSON.stringify({ variant, is_main: existingLogosCount === 0 }), sort_order: existingLogosCount
             });
 
             document.getElementById('logo-upload-progress').classList.add('hidden');
@@ -14802,7 +14837,12 @@ Zwróć TYLKO JSON.`;
         function getLogoUrl() {
             const mainLogo = brandingItems.find(b => b.type === 'logo' && b.file_url && parseNotes(b.notes).is_main === true);
             if (mainLogo) return mainLogo.file_url;
-            return brandingItems.find(b => b.type === 'logo' && b.file_url)?.file_url || null;
+            const allLogos = brandingItems.filter(b => b.type === 'logo' && b.file_url);
+            if (allLogos.length > 0) {
+                console.warn('[LOGO] Brak loga z is_main=true. Mockupy nie beda wygenerowane. Ustaw glowne logo klikajac "Ustaw jako glowne".',
+                    allLogos.map(l => ({ title: l.title, is_main: parseNotes(l.notes).is_main })));
+            }
+            return null;
         }
 
         function getProductImageUrl() {
@@ -14896,11 +14936,16 @@ Zwróć TYLKO JSON.`;
                     const logoUrl = getLogoUrl();
                     const productImageUrl = getProductImageUrl();
 
-                    // Build reference images array
-                    const referenceImages = [];
-                    if (logoUrl) {
-                        referenceImages.push({ url: logoUrl, type: 'logo' });
+                    if (!logoUrl) {
+                        mockupGeneratingSet.delete(label);
+                        updateMockupChipStatus(index, 'idle');
+                        showToast('Najpierw ustaw glowne logo (klik "Ustaw jako glowne" na wybranym logo)', 'error');
+                        continue;
                     }
+
+                    const referenceImages = [
+                        { url: logoUrl, type: 'logo' }
+                    ];
                     if (productImageUrl) {
                         referenceImages.push({ url: productImageUrl, type: 'product' });
                     }
