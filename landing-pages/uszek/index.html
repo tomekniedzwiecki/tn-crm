@@ -348,8 +348,8 @@ section{position:relative}
 .cta-banner .container{position:relative;z-index:2}
 
 /* JS EFFECTS BASE */
-.js-split .char{display:inline-block;opacity:0;transform:translateY(.5em);transition:opacity .6s cubic-bezier(.2,.8,.2,1),transform .6s cubic-bezier(.2,.8,.2,1);white-space:pre}
-.js-split .char.space{width:.3em}
+.js-split .word{display:inline-block;white-space:nowrap}
+.js-split .char{display:inline-block;opacity:0;transform:translateY(.5em);transition:opacity .6s cubic-bezier(.2,.8,.2,1),transform .6s cubic-bezier(.2,.8,.2,1)}
 .js-split.revealed .char{opacity:1;transform:translateY(0)}
 .magnetic{will-change:transform;transition:transform .25s cubic-bezier(.2,.8,.2,1)}
 .bento-card{transform-style:preserve-3d;will-change:transform}
@@ -861,22 +861,33 @@ fadeEls.forEach(el=>io.observe(el));
 // Safety: elements already above viewport get revealed after 300ms (filtered by position)
 setTimeout(()=>{fadeEls.forEach(el=>{const r=el.getBoundingClientRect();if(r.top<window.innerHeight&&!el.classList.contains('visible'))el.classList.add('visible')})},400);
 
-// ---- Split headline reveal (char-by-char)
+// ---- Split headline reveal (word-grouped, char-by-char inside)
 document.querySelectorAll('.js-split').forEach(h=>{
   const walker=document.createTreeWalker(h,NodeFilter.SHOW_TEXT);
   const nodes=[];let n;while(n=walker.nextNode())nodes.push(n);
+  let idx=0;
   nodes.forEach(node=>{
     const frag=document.createDocumentFragment();
-    [...node.textContent].forEach((ch,i)=>{
-      const s=document.createElement('span');
-      s.className='char'+(ch===' '?' space':'');
-      s.textContent=ch===' '?'\u00A0':ch;
-      s.style.transitionDelay=(i*22)+'ms';
-      frag.appendChild(s);
+    const words=node.textContent.split(/(\s+)/); // keep spaces as separators
+    words.forEach(word=>{
+      if(/^\s+$/.test(word)){
+        frag.appendChild(document.createTextNode(word));
+        return;
+      }
+      if(!word) return;
+      const wrap=document.createElement('span');
+      wrap.className='word';
+      [...word].forEach(ch=>{
+        const s=document.createElement('span');
+        s.className='char';s.textContent=ch;
+        s.style.transitionDelay=(idx*22)+'ms';
+        idx++;
+        wrap.appendChild(s);
+      });
+      frag.appendChild(wrap);
     });
     node.parentNode.replaceChild(frag,node);
   });
-  // Trigger reveal when in view
   const ob=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){h.classList.add('revealed');ob.disconnect()}}),{threshold:.3});
   ob.observe(h);
 });
