@@ -1,6 +1,6 @@
 # GlassNova — Landing Brief
 
-**Status:** 🟢 migracja retrospektywna · **Kierunek:** Panoramic Clarity · **Workflow:** `0b97bf06-f91c-4b5f-9587-f4aeaf3ed1ca`
+**Status:** 🟢 v2 rebuild ukończony · **Kierunek:** Panoramic Clarity · **Workflow:** `0b97bf06-f91c-4b5f-9587-f4aeaf3ed1ca` · **Live:** https://tn-crm.vercel.app/landing-pages/glassnova/
 
 ---
 
@@ -90,24 +90,61 @@ Persona główna dla hero: **Anna (mieszkanie na piętrze)** — największy pai
 
 ## 6. Decisions log
 
-- **2026-04-19** — Migracja retrospektywna. Landing istniał sprzed briefowania. Przegląd verify-landing.sh: 18 ✅ / 5 ⚠️ / 10 ❌. Retrospective `_brief.md` zapisany. Wprowadzone fixy:
-  - Meta head: shortened title/desc, added OG image (full Supabase URL), `&subset=latin-ext` dla fontów, html.js gate script
-  - Header: solid `#FFFFFF` bez backdrop-filter (zgodnie z DESIGN.md sekcja 0.1)
-  - Fade-in: gated za `html.js`, safety timeout 2500ms z viewport filter
-  - JS effects: `.js-split` na h1 hero, `.js-counter` na hero-spec-value, `.magnetic` na wszystkich btn-primary, `.tile-tilt` na bento-card
-  - Offer box overhaul (sekcja H.9 checklist): `-20%` savings badge, `★★★★★ 4.8/5 · 1 247 opinii` rating nad CTA, trust strip (3 ikony), payment logos row (BLIK-first: BLIK, Visa, MC, Przelewy24, Apple Pay)
-  - Section numbering `01 / 10 — ...` przed każdą section-label (10 sekcji)
-  - Trust bar: „Kurierem w 24-48h" → „InPost · DPD · kurier" (usunięcie obietnicy czasu)
-  - Sticky mobile CTA (fixed bottom, price + button, visible po scroll poza offer)
+### v2 — 2026-04-19 · Full rebuild (commit `ddb5470`)
+
+User poprosił o **pełen rebuild od zera** — poprzednia wersja miała zbyt dekoracyjne animacje (4× glass-panel z cleanWipe, 8 droplets, 6 sparkles, 6 particles, scan-line, hero-glow). Wykasowane na rzecz czystszej typografii i jaśniejszej hierarchii. 3449 linii usuniętych → 1401 wstawionych.
+
+**Zmiany strukturalne:**
+- 10 sekcji numerowanych `Nº 01..10` z `.eyebrow` zawierającym `num + dash + label` (editorial convention).
+- Signature moved: zamiast CSS animacji w hero → oversized editorial numeral `01` w tle hero + `10` w tle finale (opacity 0.06 / 0.03).
+- Sekcja ciemna `Nº 05 Technologia` (spec sheet list, rytm redakcyjny jasno/jasno/jasno/jasno/**ciemno**/jasno...) + Finale (ciemna przed footerem).
+- Bento 3-col z `.tile.tile-hero` span 2-col grid wewnętrzny (text L + figure R) + 3 tile bez figure (tylko kicker + title + copy).
+- Offer box przepisany wg H.9: sticker `-3deg` rotacja, rating, stara/nowa cena (old 60% size, line-through), savings-badge rotowany + text zielony, 5 bullets, magnetic CTA, guarantee, trust strip, payment logos (BLIK first).
+
+**Wszystkie CTA (7 miejsc) → `glassnova.pl/checkout?products=103035102-321191852`:**
+header-cta, hero-cta, mobile-menu, offer-cta, finale-cta, sticky-cta, cookie-banner link.
+
+**Footer legal (3 miejsca):**
+- Kolumna `.footer-col` „Pomoc"
+- `.footer-legal` bar w `.footer-bottom`
+- Link w cookie banner
+URLs: `glassnova.pl/help/{regulation,privacy-policy,delivery}`.
+
+**Bug fixes w procesie rebuild:**
+- `.magnetic { display: inline-flex }` nadpisywało `.header-cta { display: none }` na mobile — usunięte `display`.
+- Split reveal łamał słowo między literami („upadku" → „upadk / u") — rewrite JS: split po whitespace, każde słowo w `<span class="word">` z `white-space: nowrap`, chars wewnątrz.
+- `.btn` dodana `min-height: 48px` + `:active` (touch targets Apple HIG 44px+).
+
+**ETAP 4 Playwright:** 3 viewporty sprawdzone (1440 · 768 · 375). Zero horizontal scroll, hero above-the-fold, sticky mobile CTA widoczny po scroll poza offer.
+
+**ETAP 4.5 Mobile Polish 10-obszarów (A-J):**
+- A Touch: `.btn min-height:48`, offer-cta 58, sticky 50, mobile-menu-btn 54 ✅
+- B Typography: `clamp()` × 11 na h1/h2/h3/hero-lede/offer-price/finale::before ✅
+- C Spacing: `padding: clamp(72px, 9vw, 112px)` na section, container padding 20px mobile ✅
+- D Layout: `grid-template-columns:1fr` × 18 (wszystkie 2/3/4-col stacks) ✅
+- E Hero: content order 0 nad visual order 1 na ≤1024px, hero-figure max 320px mobile, CTAs column + 100% width ✅
+- F Nav: header fixed + white, hamburger 44×44, mobile-menu fixed inset ✅
+- G Images: wszystkie `<img>` mają width+height (CLS 0), hero fetchpriority=high, reszta loading=lazy ✅
+- H Overflow: `body { overflow-x:hidden }`, zero leaks 100vw/negative ✅
+- I Interactive: `-webkit-tap-highlight:transparent`, `:active` na .btn, FAQ accordion tap-friendly ✅
+- J Performance: 2× preconnect, &subset=latin-ext, 3 font families max, heavy animacje respect prefers-reduced-motion ✅
+
+**verify-landing.sh:** 33 ✅ / 0 ⚠️ / 0 ❌
+
+### v1 — 2026-04-19 · Migracja retrospektywna (commit `2642bda`)
+
+Landing istniał sprzed briefowania. Przegląd verify: 18✅ / 5⚠️ / 10❌. Dodane: html.js gate, OG image, latin-ext, solid header, fade-in gated + safety 2500ms, JS effects (split/counter/magnetic/tilt), offer box H.9 (savings badge, rating, trust strip, payment logos BLIK-first), Nº 01..10 numbering, trust-bar „24-48h"→„InPost · DPD · kurier", sticky mobile CTA.
 
 ## 7. JS Effects zaimplementowane
 
-- [x] Split headline reveal (char-by-char, 22ms stagger)
-- [x] Number counter (5600, 3, 20, 30 — 1.4s easing)
-- [x] Magnetic CTA (0.18 factor, `(hover:hover)` only)
-- [x] Tile 3D tilt (bento-card, max 4°, perspective 900px)
-- [x] Scroll reveal fade-in (gated, safety-filtered)
-- [x] Glass-panel cleanWipe + scan-line (hero signature, pre-existing)
+- [x] **Split headline** reveal — word-aware (każde słowo `inline-block; white-space:nowrap`, chars wewnątrz), 22ms stagger per char, fallback na `prefers-reduced-motion`
+- [x] **Number counter** × 5 — 5600Pa (hero), 3 min (hero), 4 h (problem), 2×/rok (problem), 1247 opinii (offer rating). Easing cubic, 1400ms, IntersectionObserver threshold 0.4
+- [x] **Magnetic CTA** × 4 — header + hero + offer + finale. Factor 0.18, `(hover:hover) and (pointer:fine)` only
+- [x] **Tile 3D tilt** — bento `.tile:not(.tile-hero)`, max 4° rotateX/Y, perspective 900px
+- [x] **Fade-in scroll reveal** — gated za `html.js`, threshold 0.12, rootMargin `-70px` bottom, safety 2500ms filtruje po `getBoundingClientRect().top < window.innerHeight`
+- [x] **FAQ accordion** — smooth max-height transition, `aria-expanded` state
+- [x] **Sticky mobile CTA** — IntersectionObserver na `.offer-box`, scroll position threshold 420px
+- [x] **Header scroll state** — `.scrolled` class + box-shadow po scrollY > 40
 
 ## 8. Live link
 
