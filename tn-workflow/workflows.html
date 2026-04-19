@@ -803,55 +803,35 @@
         // Normalize phone number for comparison (remove spaces, dashes, +48 prefix)
         function normalizePhone(phone) {
             if (!phone) return '';
-            return phone.replace(/[\s\-\(\)]/g, '').replace(/^\+48/, '').replace(/^48/, '');
+            // Wyciagnij wylacznie cyfry i obetnij prefix kraju 48 (po ewentualnym +48)
+            return String(phone).replace(/\D/g, '').replace(/^48(?=\d{6,})/, '');
         }
 
-        // Smart search matching
+        // Smart search matching - tolerancyjne na spacje, +48, mysliniki, nawiasy
         function matchesSearch(workflow, searchTerm) {
             if (!searchTerm) return true;
-
             const term = searchTerm.toLowerCase().trim();
-            const terms = term.split(/\s+/); // Split by spaces for multi-word search
+            if (!term) return true;
 
-            // Normalize phone for comparison
-            const normalizedSearchPhone = normalizePhone(term);
-            const customerPhone = normalizePhone(workflow.customer_phone);
-
-            // Fields to search
-            const name = (workflow.customer_name || '').toLowerCase();
-            const company = (workflow.customer_company || '').toLowerCase();
-            const email = (workflow.customer_email || '').toLowerCase();
-            const offer = (workflow.offer_name || '').toLowerCase();
-            const id = (workflow.workflow_id || '').toLowerCase();
-            const brandName = (brandNames[workflow.workflow_id] || '').toLowerCase();
-
-            // Single term search - check all fields
-            if (terms.length === 1) {
-                // Phone match (if search looks like a phone number)
-                if (/^\d{3,}$/.test(normalizedSearchPhone) && customerPhone.includes(normalizedSearchPhone)) {
-                    return true;
-                }
-
-                // Standard field matching
-                return name.includes(term) ||
-                       company.includes(term) ||
-                       email.includes(term) ||
-                       offer.includes(term) ||
-                       id.includes(term) ||
-                       brandName.includes(term);
+            // Phone-mode: query zawiera tylko cyfry/spacje/+/-/() i ma >=3 cyfry
+            const isPhoneLike = /^[\d\s+\-()]+$/.test(term);
+            const queryDigits = normalizePhone(term);
+            if (isPhoneLike && queryDigits.length >= 3) {
+                const customerPhone = normalizePhone(workflow.customer_phone);
+                return customerPhone.includes(queryDigits);
             }
 
-            // Multi-word search - all terms must match somewhere (great for "Jan Kowalski")
-            return terms.every(t => {
-                const normalizedT = normalizePhone(t);
-                return name.includes(t) ||
-                       company.includes(t) ||
-                       email.includes(t) ||
-                       offer.includes(t) ||
-                       id.includes(t) ||
-                       brandName.includes(t) ||
-                       (/^\d{3,}$/.test(normalizedT) && customerPhone.includes(normalizedT));
-            });
+            // Text-mode: AND po slowach, OR po polach
+            const allText = [
+                workflow.customer_name,
+                workflow.customer_company,
+                workflow.customer_email,
+                workflow.offer_name,
+                workflow.workflow_id,
+                brandNames[workflow.workflow_id]
+            ].filter(Boolean).join(' ').toLowerCase();
+
+            return term.split(/\s+/).every(t => allText.includes(t));
         }
 
         function applyFilters() {

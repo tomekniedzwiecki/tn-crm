@@ -919,8 +919,14 @@
             applyFilters();
         }
 
+        function _normalizeLeadPhone(phone) {
+            if (!phone) return '';
+            return String(phone).replace(/\D/g, '').replace(/^48(?=\d{6,})/, '');
+        }
+
         function applyFilters() {
-            const searchTerm = document.getElementById('filter-search').value.toLowerCase();
+            const rawSearch = document.getElementById('filter-search').value.trim();
+            const searchTerm = rawSearch.toLowerCase();
             const statusFilter = document.getElementById('filter-status').value;
             const leadSourceFilter = document.getElementById('filter-lead-source').value;
             const sourceFilter = document.getElementById('filter-source').value;
@@ -929,14 +935,25 @@
             const whatsappFilter = document.getElementById('filter-whatsapp').value;
             const teamFilter = document.getElementById('filter-team')?.value || '';
 
+            // Phone-mode: query zawiera tylko cyfry/spacje/+/-/() i ma >=3 cyfry
+            const isPhoneLikeSearch = searchTerm && /^[\d\s+\-()]+$/.test(searchTerm);
+            const searchPhoneDigits = isPhoneLikeSearch ? _normalizeLeadPhone(searchTerm) : '';
+            const phoneMode = isPhoneLikeSearch && searchPhoneDigits.length >= 3;
+
             filteredLeads = leads.filter(lead => {
                 // Team member filter (admin only)
                 if (teamFilter && lead.assigned_to !== teamFilter) return false;
 
                 // Search
                 if (searchTerm) {
-                    const searchFields = [lead.email, lead.phone, lead.utm_campaign].filter(Boolean).join(' ').toLowerCase();
-                    if (!searchFields.includes(searchTerm)) return false;
+                    if (phoneMode) {
+                        const phoneDigits = _normalizeLeadPhone(lead.phone);
+                        if (!phoneDigits.includes(searchPhoneDigits)) return false;
+                    } else {
+                        const allText = [lead.email, lead.phone, lead.utm_campaign].filter(Boolean).join(' ').toLowerCase();
+                        const ok = searchTerm.split(/\s+/).every(t => allText.includes(t));
+                        if (!ok) return false;
+                    }
                 }
 
                 // Status
