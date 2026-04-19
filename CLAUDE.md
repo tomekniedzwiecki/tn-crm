@@ -76,6 +76,7 @@ Gdy słyszysz którąkolwiek frazę → **otwórz `CLAUDE_LANDING_PROCEDURE.md`*
 - `CLAUDE_LANDING_DIRECTION.md` — **ETAP 2.5: OBOWIĄZKOWY** manifesto → `landing-pages/[slug]/_brief.md`
 - `CLAUDE_LANDING_DESIGN.md` — ETAP 3: dopracowanie estetyki + JS effects + layout discipline
 - `CLAUDE_LANDING_VERIFY.md` — ETAP 4: **OBOWIĄZKOWY** Playwright screenshot 3 viewportów
+- `CLAUDE_LANDING_MOBILE.md` — **ETAP 4.5: OBOWIĄZKOWY** Mobile Polish Pass (10 obszarów + bash scan + copy-paste fixy)
 - `CLAUDE_LANDING_PATTERNS.md` — biblioteka 22 signature snippetów (kopiuj-wklej)
 
 **Automatyzacja:**
@@ -105,12 +106,18 @@ implementacja manifesto z ETAP 2.5 w CSS/HTML: typografia, głębia kolorów, as
 
 **ETAP 4 — Wizualna weryfikacja** (`CLAUDE_LANDING_VERIFY.md`) — OBOWIĄZKOWY:
 1. `npm install -D playwright && npx playwright install chromium` (pierwszy raz)
-2. Uruchom `_shoot.mjs` → screenshoty 3 viewportów (desktop 1440, tablet 768, mobile 375)
+2. Uruchom `bash scripts/screenshot-landing.sh [slug]` → screenshoty 3 viewportów (desktop 1440, tablet 768, mobile 375)
 3. Obejrzyj wszystkie — checklist z pliku
 4. Napraw wyłapane bugi, powtórz
-5. Dopiero po pozytywnej weryfikacji: commit & deploy
 
-**Dlaczego ETAP 4 jest obowiązkowy:** code review nie wyłapuje `opacity:0 + JS zależnego` buga, który ukrył 80% strony. Zawsze sprawdzaj screenshotem.
+**ETAP 4.5 — Mobile Polish Pass** (`CLAUDE_LANDING_MOBILE.md`) — OBOWIĄZKOWY:
+1. Bash grep scan (touch targets, overflow-x, 100vw leaks, images bez width/height)
+2. Checklist 10 obszarów (A–J): touch, typography, spacing, layout, hero, nav, images, overflow, interactive, performance
+3. Użyj copy-paste fixów (hero stack, trust strip, decorations hide, bento flat, footer 4→1)
+4. Re-run screenshot → iteruj aż 5/5 finalna certyfikacja PASS
+5. Dopiero po PASS: commit & deploy
+
+**Dlaczego ETAP 4 + 4.5 są obowiązkowe:** code review nie wyłapuje `opacity:0 + JS zależnego` buga (ETAP 4), ani nie wyczuje "wciśniętego desktopu" na 375px (ETAP 4.5). 60-70% ruchu to mobile — landing musi być **idealny** na telefonie, nie tylko "działający".
 
 Wzorce: `landing-pages/paromia/` (editorial/luxury), `landing-pages/h2vital/` (jasny), `landing-pages/pupilnik/` (playful/pet care).
 

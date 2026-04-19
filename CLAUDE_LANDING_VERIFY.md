@@ -116,9 +116,20 @@ Zmień `paromia_shots` i `[SLUG]` na nazwę projektu.
 
 Wróć do ETAP 1/3. Po naprawie ponownie uruchom `node _shoot.mjs`.
 
+## Krok 6.5 — ETAP 4.5 Mobile Polish Pass (OBOWIĄZKOWY)
+
+VERIFY tylko wyłapuje bugi. **`CLAUDE_LANDING_MOBILE.md`** systematycznie dopracowuje mobile na 375px:
+
+- Bash grep scan (touch targets, overflow-x, 100vw leaks, images bez width/height)
+- Checklist 10 obszarów (A–J): touch, typography, spacing, layout, hero, nav, images, overflow, interactive, performance
+- Copy-paste mobile-only fixy (hero stack, trust strip, decorations hide, bento flat, footer 4→1)
+- Finalna certyfikacja 5/5 przed commitem
+
+**Przejdź całą procedurę MOBILE.md przed Krokiem 7.**
+
 ## Krok 7 — Commit & Deploy
 
-Dopiero gdy checklist jest pełny:
+Dopiero gdy checklist + MOBILE.md certyfikacja są pełne:
 
 ```bash
 cd /c/repos_tn/tn-crm
