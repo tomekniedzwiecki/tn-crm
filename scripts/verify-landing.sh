@@ -205,9 +205,56 @@ check "Zero lorem/TODO" "0" "$LOREM"
 DELIVERY=$(grep -ciE "wysy[łl]ka 24|w 24 ?h|polski magazyn|z magazynu w Polsc|D\+1" "$FILE" || true)
 check "Zero zakazanych obietnic dostawy (dropshipping)" "0" "$DELIVERY"
 
-# ─── 9. Brief persistence ───
+# ─── 9. Offer Box 2026 (DESIGN.md sekcja H) ───
 echo ""
-echo "📋 9. Brief persistence (manifesto)"
+echo "💰 9. Offer Box / CTA (DESIGN.md sekcja H.9)"
+
+# H.2 — Price anchoring dual display
+OLDPRICE=$(grep -cE 'class="[^"]*(offer-price-old|price-old)[^"]*"|text-decoration:line-through' "$FILE" || true)
+check "Stara cena przekreślona (anchor)" "1" "$([ "$OLDPRICE" -ge 1 ] && echo 1 || echo 0)"
+
+SAVEBADGE=$(grep -cE 'class="[^"]*(offer-price-save|save-badge|price-save)[^"]*"' "$FILE" || true)
+check "Savings badge (-X%)" "1" "$([ "$SAVEBADGE" -ge 1 ] && echo 1 || echo 0)"
+
+SAVETEXT=$(grep -ciE "oszczędzasz|oszczedzasz" "$FILE" || true)
+check "Savings text (Oszczędzasz N zł)" "1" "$([ "$SAVETEXT" -ge 1 ] && echo 1 || echo 0)"
+
+# H.3 — Trust signals
+RATING=$(grep -cE 'class="[^"]*(offer-rating|stars)[^"]*"|★★★★★' "$FILE" || true)
+check "Rating nad CTA" "1" "$([ "$RATING" -ge 1 ] && echo 1 || echo 0)" "warn"
+
+TRUSTSTRIP=$(grep -cE 'class="[^"]*(offer-trust|trust-strip)[^"]*"' "$FILE" || true)
+check "Trust strip (3 ikony)" "1" "$([ "$TRUSTSTRIP" -ge 1 ] && echo 1 || echo 0)"
+
+# H.3 — Payment logos BLIK-first
+BLIK=$(grep -cE "BLIK|blik" "$FILE" || true)
+check "Payment logo: BLIK" "1" "$([ "$BLIK" -ge 1 ] && echo 1 || echo 0)"
+
+# ZAKAZ BNPL/COD (feedback-payment-methods.md)
+BNPL=$(grep -ciE "paypo|klarna|twisto|afterpay|[0-9]+ rat[yae]|rozłóż na raty|bez odsetek" "$FILE" || true)
+check "Zero BNPL (rat/PayPo/Klarna)" "0" "$BNPL"
+
+COD=$(grep -ciE "za pobranie|płatność przy odbiorze|cash on delivery|\\bCOD\\b" "$FILE" || true)
+check "Zero 'za pobraniem' / COD" "0" "$COD"
+
+# H.5 — Guarantee microcopy z konkretem dni
+GUARANTEE=$(grep -cE "class=\"[^\"]*offer-guarantee[^\"]*\"" "$FILE" || true)
+check "Guarantee microcopy pod CTA" "1" "$([ "$GUARANTEE" -ge 1 ] && echo 1 || echo 0)"
+
+GDAYS=$(grep -ciE "[0-9]+ dni (na zwrot|gwarancj|bez pytań)" "$FILE" || true)
+check "Guarantee z konkretem N dni" "1" "$([ "$GDAYS" -ge 1 ] && echo 1 || echo 0)" "warn"
+
+# H.8 — Anti-patterns
+FAKEURGENCY=$(grep -ciE "tylko dzisiaj|tylko dzis|zostało [0-9]+ szt|hurry up|ostatnie [0-9]+ sztuk" "$FILE" || true)
+check "Zero fake urgency (tylko dziś / zostało X szt.)" "0" "$FAKEURGENCY"
+
+# H.7 — Mobile sticky CTA 56px+
+STICKY=$(grep -cE 'class="[^"]*sticky-cta[^"]*"' "$FILE" || true)
+check "Sticky CTA mobile obecny" "1" "$([ "$STICKY" -ge 1 ] && echo 1 || echo 0)" "warn"
+
+# ─── 10. Brief persistence ───
+echo ""
+echo "📋 10. Brief persistence (manifesto)"
 BRIEF="landing-pages/$SLUG/_brief.md"
 if [ -f "$BRIEF" ]; then
   BRIEF_SIZE=$(wc -c < "$BRIEF")

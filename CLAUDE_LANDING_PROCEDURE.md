@@ -8,20 +8,21 @@
 > - „Wygeneruj stronę sprzedażową [UUID]"
 > - lub wskazuje ten plik (`CLAUDE_LANDING_PROCEDURE.md`)
 >
-> → **Autonomicznie wykonaj wszystkie 5 etapów od ETAP 1 do ETAP 4, BEZ pytania o nic.**
+> → **Autonomicznie wykonaj wszystkie 6 etapów od ETAP 1 do ETAP 4.5, BEZ pytania o nic.**
 > Zakończ commitem, pushem i linkiem do deploya.
 
 ---
 
-## Przegląd flow (5 etapów — wszystkie OBOWIĄZKOWE)
+## Przegląd flow (6 etapów — wszystkie OBOWIĄZKOWE)
 
 | # | Etap | Plik | Output |
 |---|------|------|--------|
 | **1** | Generowanie | `CLAUDE_LANDING_PROCEDURE.md` (ten plik) | Roboczy `landing-pages/[slug]/index.html` |
 | **2** | Weryfikacja treści | `CLAUDE_LANDING_REVIEW.md` | Audyt + fixy copy |
 | **2.5** | Direction (manifesto) | `CLAUDE_LANDING_DIRECTION.md` | `landing-pages/[slug]/_brief.md` (persystentny) |
-| **3** | Design polish | `CLAUDE_LANDING_DESIGN.md` | Finalne CSS/HTML zgodne z manifesto |
-| **4** | Wizualna weryfikacja | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshoty + deploy |
+| **3** | Design polish | `CLAUDE_LANDING_DESIGN.md` (w tym **sekcja H — Offer Box / CTA playbook 2026, OBOWIĄZKOWA**) | Finalne CSS/HTML zgodne z manifesto + offer box 15-point checklist |
+| **4** | Wizualna weryfikacja | `CLAUDE_LANDING_VERIFY.md` | Playwright screenshoty 3 viewporty |
+| **4.5** | **Mobile Polish Pass** | `CLAUDE_LANDING_MOBILE.md` | Systematyczne fixy mobile (375px) przed deployem |
 
 Dodatkowo:
 - `CLAUDE_LANDING_PATTERNS.md` — biblioteka gotowych snippetów (signature elements, JS effects, layout discipline)
@@ -39,10 +40,15 @@ Dodatkowo:
         → zapisz do `landing-pages/[slug]/_brief.md` (nie /c/tmp/!)
 [ ] 4.  ETAP 3 — Przeczytaj `CLAUDE_LANDING_DESIGN.md`, dopracuj design zgodnie z manifesto
         → w tym wywołanie `CLAUDE_AI_IMAGES_PROCEDURE.md` dla obrazów
+        → **OBOWIĄZKOWO zrealizuj sekcję H (Offer Box / CTA playbook 2026)**
+          z 15-point checkistą H.9 — to 80% konwersji po Hero. Bez sekcji H landing jest niegotowy.
 [ ] 5.  ETAP 4 — Przeczytaj `CLAUDE_LANDING_VERIFY.md`, uruchom:
         → bash scripts/verify-landing.sh [slug]  (target: 18/18 PASS)
         → bash scripts/screenshot-landing.sh [slug]  (3 viewports)
-[ ] 6.  Commit + push + podaj link do https://tn-crm.vercel.app/landing-pages/[slug]/
+[ ] 6.  ETAP 4.5 — Przeczytaj `CLAUDE_LANDING_MOBILE.md`, przejdź checklist 10-obszarów
+        → obejrzyj mobile_full.png + mid-scroll, popraw co trzeba
+        → re-run screenshot, iteruj aż 5/5 certyfikacja PASS
+[ ] 7.  Commit + push + podaj link do https://tn-crm.vercel.app/landing-pages/[slug]/
 ```
 
 **KRYTYCZNE:** NIE rób commitów pośrednich. Jeden commit na końcu z pełnym deliverem.
@@ -334,7 +340,7 @@ Absolute positioning (spec badges nad produktem, floating elements) psuje się n
 
 ### 4. Weryfikuj wizualnie w przeglądarce ZANIM commit
 
-**Nigdy nie commituj bez sprawdzenia screenshotem.** ETAP 4 (`CLAUDE_LANDING_VERIFY.md`) jest obowiązkowy. Code review nie wyłapuje bugów typu „80% strony niewidoczne przez opacity:0".
+**Nigdy nie commituj bez sprawdzenia screenshotem.** ETAP 4 (`CLAUDE_LANDING_VERIFY.md`) + ETAP 4.5 (`CLAUDE_LANDING_MOBILE.md`) są obowiązkowe. Code review nie wyłapuje bugów typu „80% strony niewidoczne przez opacity:0" ani „hero rozjeżdża się na 375px".
 
 ### 5. ⛔ NIE obiecuj „wysyłki 24h" ani „magazynu w Polsce"
 
