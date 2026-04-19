@@ -118,14 +118,23 @@ async function generateWithGemini(
 
   // Build the prompt with STRONG reference instruction
   let finalPrompt = ''
-  if (productRefAdded) {
-    // Zgodnie z Google Cloud guide dla Nano Banana: krótko, pozytywnie, bez negacji.
-    // Model dyfuzyjny rekonstruuje z szumu — długie instrukcje i "DO NOT" psują rezultat.
+  if (productRefAdded && logoRefAdded) {
+    // Oba: produkt + logo. Kolejnosc referenced obrazow: produkt (index 0), logo (index 1)
+    finalPrompt = `The physical product in the scene matches the first reference image exactly. The brand logo printed on the merchandise matches the second reference image — copy it pixel-perfect: same shape, same colors, same proportions, same letterforms. Do not invent a new logo.
+
+${prompt}`
+  } else if (productRefAdded) {
+    // Zgodnie z Google Cloud guide dla Nano Banana: krotko, pozytywnie, bez negacji.
+    // Model dyfuzyjny rekonstruuje z szumu — dlugie instrukcje i "DO NOT" psuja rezultat.
     finalPrompt = `Using the exact product shown in the reference image as the physical object in the scene:
 
 ${prompt}`
   } else if (logoRefAdded) {
-    finalPrompt = `Using the brand logo from the reference image:\n\n${prompt}`
+    // Silny pozytywny prompt dla logo-only (mockupy gadzetow).
+    // Kluczowe sformulowanie: "pixel-perfect copy" + "same shape/colors/proportions".
+    finalPrompt = `The merchandise in this scene displays the exact logo from the reference image. Copy the logo pixel-perfect onto the item — same shape, same colors, same proportions, same letterforms as shown in the reference. The logo is fixed artwork, not a design to reinterpret.
+
+${prompt}`
   } else {
     finalPrompt = prompt
   }

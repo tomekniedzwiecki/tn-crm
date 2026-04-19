@@ -449,12 +449,20 @@ Reference style: Stripe, Linear, Vercel, Notion — modern tech minimalism.
 
 > **FILOZOFIA**: Mockupy muszą wyglądać jak sesja z budżetem $5,000 — nie jak stockowe zdjęcia. Poziom Apple, Aesop, Kinfolk Magazine. Każde zdjęcie opowiada historię marki.
 
-> **KRYTYCZNA INSTRUKCJA (zawsze na początku promptu):**
+> **KRYTYCZNA INSTRUKCJA (zawsze na początku promptu — POZYTYWNIE, PO ANGIELSKU):**
+>
+> Modele diffusion (Gemini 3 Pro Image Preview / Nano Banana) **ignorują polskie zakazy** ("NIE zmieniaj") i rozumieją angielski lepiej niż polski. Dlatego header mockupów zawsze po angielsku, krótko, **pozytywnie**, BEZ "DO NOT":
+>
 > ```
-> ⚠️ UŻYJ DOKŁADNIE TEGO LOGO które jest załączone w tej rozmowie.
-> NIE projektuj nowego logo. NIE zmieniaj proporcji, kolorów ani układu.
-> Skopiuj logo 1:1 i umieść na gadżecie zgodnie ze specyfikacją.
+> LOGO REFERENCE: The merchandise in this scene displays the exact logo from the reference image attached.
+> Copy the logo pixel-perfect — same shape, colors, proportions, and letterforms as the reference.
+> The logo is fixed artwork, not a design to reinterpret.
 > ```
+>
+> **Dlaczego tak:**
+> - Model generatywny (nie edytujący) traktuje reference jako inspirację, nie szablon. Dobra instrukcja może zwiększyć trafność z ~50% do ~70-80%, ale nie zagwarantuje 100%
+> - Edge function `generate-image/index.ts` dodatkowo wrapuje prompt własnym "pixel-perfect copy" instruction (to jest równie ważne — i już jest tam zaimplementowane)
+> - Jeśli dalej ~30% mockupów ma złe logo → user klika "Regeneruj" na tym konkretnym mockupie (button w UI)
 >
 > **🚨 WARUNEK WSTĘPNY przed generowaniem mockupów:**
 >
