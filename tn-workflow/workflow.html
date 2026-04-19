@@ -6813,6 +6813,14 @@
                     loadEmailHistory();
                     break;
             }
+
+            // Persist active tab in URL hash so refresh keeps the same view
+            try {
+                const newHash = '#' + tabName;
+                if (location.hash !== newHash) {
+                    history.replaceState(null, '', location.pathname + location.search + newHash);
+                }
+            } catch {}
         }
         window.switchTab = switchTab;
 
@@ -16894,6 +16902,11 @@ Zwróć TYLKO JSON.`;
                 await loadCommentsForBadge();
                 // Set favicon from branding logo
                 setFaviconFromBranding();
+                // Restore active tab from URL hash
+                const hashTab = (location.hash || '').replace(/^#/, '');
+                if (hashTab && document.getElementById('tab-' + hashTab)) {
+                    switchTab(hashTab);
+                }
             }
         }
 
