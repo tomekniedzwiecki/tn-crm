@@ -1,18 +1,22 @@
 <!DOCTYPE html>
 <html lang="pl">
 <head>
+  <script>document.documentElement.classList.add('js')</script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GlassNova — Robot do mycia okien | Lśniące szyby bez ryzyka upadku</title>
-  <meta name="description" content="Inteligentny robot GlassNova sam myje okna od wewnątrz i od zewnątrz — także na piętrze. Krystaliczny efekt w 3 minuty na m², bez drabiny i smug. 30 dni na zwrot.">
+  <title>GlassNova — Lśniące okna bez ryzyka upadku</title>
+  <meta name="description" content="Robot sam myje okna z zewnątrz — także na piętrze. Krystaliczny efekt w 3 min/m², bez drabiny i smug. 30 dni zwrotu.">
   <meta property="og:title" content="GlassNova — Lśniące okna bez ryzyka upadku">
   <meta property="og:description" content="Robot sam myje Twoje okna — Ty parzysz kawę. Bez drabiny, bez smug, bez ryzyka.">
   <meta property="og:type" content="product">
   <meta property="og:locale" content="pl_PL">
+  <meta property="og:image" content="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034171876_0.jpg">
+  <meta property="og:url" content="https://tn-crm.vercel.app/landing-pages/glassnova/">
+  <meta name="twitter:card" content="summary_large_image">
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🪟</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap&subset=latin-ext" rel="stylesheet">
   <style>
     /* ═══════════════════════════════════════════════════════════
        GLASSNOVA — PREMIUM SMART HOME LANDING PAGE
@@ -276,16 +280,13 @@
       right: 0;
       z-index: 1000;
       padding: 16px 0;
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid transparent;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      background: #FFFFFF;
+      border-bottom: 1px solid var(--border-light);
+      transition: padding 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
     }
 
     .header.scrolled {
       padding: 12px 0;
-      background: rgba(255, 255, 255, 0.95);
       box-shadow: 0 4px 30px rgba(0, 212, 232, 0.08);
       border-bottom: 1px solid rgba(0, 212, 232, 0.1);
     }
@@ -817,6 +818,16 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
       position: relative;
+      color: var(--primary); /* fallback when background-clip unsupported */
+    }
+
+    /* Kiedy split działa, kazdy char musi dziedziczyc gradient-clip od parenta highlight */
+    .hero-title .highlight .char {
+      background: var(--gradient-primary);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      color: var(--primary);
     }
 
     .hero-description {
@@ -1948,15 +1959,19 @@
        ANIMATIONS
     ═══════════════════════════════════════════════════════════ */
 
-    .fade-in {
+    html.js .fade-in {
       opacity: 0;
       transform: translateY(40px);
       transition: opacity 0.8s ease, transform 0.8s ease;
     }
 
-    .fade-in.visible {
+    html.js .fade-in.visible {
       opacity: 1;
       transform: translateY(0);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html.js .fade-in { opacity: 1; transform: none; transition: none; }
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -1966,16 +1981,16 @@
     @media (max-width: 1024px) {
       .hero-inner {
         grid-template-columns: 1fr;
-        gap: 48px;
+        gap: 40px;
         text-align: center;
       }
 
       .hero-content {
-        order: 1;
+        order: 0;
       }
 
       .hero-visual {
-        order: 0;
+        order: 1;
       }
 
       .hero-cta {
@@ -2049,7 +2064,31 @@
       }
 
       .hero {
-        padding: 120px 0 60px;
+        padding: 96px 0 48px;
+      }
+
+      .hero-animations,
+      .glass-panel,
+      .droplets,
+      .sparkles,
+      .particles,
+      .scan-line,
+      .hero-glow {
+        display: none !important;
+      }
+
+      .hero-inner {
+        gap: 28px;
+      }
+
+      .hero-product {
+        max-width: 320px;
+        margin: 0 auto;
+      }
+
+      .hero-product img {
+        max-height: 50vh;
+        object-fit: contain;
       }
 
       .hero-specs {
@@ -2334,6 +2373,203 @@
     @media (max-width: 900px) {
       .personas-grid { grid-template-columns: 1fr; }
     }
+
+    /* ═══════════════════════════════════════════════════════════
+       SECTION NUMERAL (01 / 10 — LABEL)
+    ═══════════════════════════════════════════════════════════ */
+    .section-num {
+      display: inline-block;
+      font-family: var(--font-accent);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      color: var(--text-tertiary);
+      margin-right: 10px;
+    }
+    .section-num::after {
+      content: '—';
+      margin-left: 10px;
+      opacity: 0.5;
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       JS EFFECTS — SPLIT / COUNTER / MAGNETIC / TILT
+    ═══════════════════════════════════════════════════════════ */
+    html.js .js-split .char {
+      display: inline-block;
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1), transform 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+      will-change: opacity, transform;
+    }
+    html.js .js-split.ready .char {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .js-counter { display: inline-block; font-variant-numeric: tabular-nums; }
+
+    .magnetic { will-change: transform; }
+    @media (prefers-reduced-motion: reduce) {
+      html.js .js-split .char { opacity: 1; transform: none; transition: none; }
+      .magnetic { will-change: auto; }
+    }
+
+    .bento-card.tile-tilt {
+      transform-style: preserve-3d;
+      transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+    }
+    .bento-card.tile-tilt > * { transform: translateZ(0); }
+
+    /* ═══════════════════════════════════════════════════════════
+       OFFER BOX — ENHANCED (savings badge · rating · trust · payments)
+    ═══════════════════════════════════════════════════════════ */
+    .offer-rating {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    .offer-rating-stars {
+      display: inline-flex;
+      color: var(--accent);
+      letter-spacing: 1px;
+      font-size: 16px;
+    }
+    .offer-rating strong { color: var(--text-primary); font-weight: 700; }
+
+    .offer-price-row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 8px;
+    }
+    .offer-savings-badge {
+      display: inline-flex;
+      align-items: center;
+      background: #fee2e2;
+      color: #b91c1c;
+      font-family: var(--font-accent);
+      font-weight: 700;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      transform: rotate(-3deg);
+      letter-spacing: 0.5px;
+      line-height: 1.4;
+    }
+
+    .offer-trust-strip {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+      align-items: center;
+      gap: 18px;
+      padding: 18px 0;
+      margin-top: 20px;
+      border-top: 1px solid var(--border-light);
+      border-bottom: 1px solid var(--border-light);
+    }
+    .offer-trust-strip .trust-strip-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .offer-trust-strip .trust-strip-item svg {
+      width: 18px;
+      height: 18px;
+      color: var(--primary);
+      flex-shrink: 0;
+    }
+
+    .offer-payments {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 4px;
+    }
+    .offer-payments-label {
+      font-family: var(--font-accent);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-tertiary);
+      margin-right: 4px;
+    }
+    .pay-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      min-width: 48px;
+      padding: 4px 10px;
+      background: #fff;
+      border: 1px solid var(--border-medium);
+      border-radius: 6px;
+      font-family: var(--font-accent);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      filter: grayscale(1);
+      opacity: 0.85;
+      transition: filter 0.2s ease, opacity 0.2s ease;
+    }
+    .pay-logo:hover { filter: grayscale(0); opacity: 1; }
+    .pay-logo.pay-blik { color: #000; background: #ff6d00; border-color: #ff6d00; }
+    .pay-logo.pay-visa { color: #1a1f71; font-style: italic; font-weight: 900; }
+    .pay-logo.pay-mc { color: #eb001b; font-weight: 800; }
+    .pay-logo.pay-p24 { color: #d40f14; }
+    .pay-logo.pay-applepay { color: #000; }
+
+    @media (max-width: 640px) {
+      .offer-trust-strip { gap: 12px; }
+      .offer-trust-strip .trust-strip-item { font-size: 12px; }
+      .offer-payments { gap: 8px; }
+      .pay-logo { height: 26px; font-size: 10px; }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       STICKY MOBILE CTA
+    ═══════════════════════════════════════════════════════════ */
+    .sticky-cta {
+      display: none;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: #fff;
+      box-shadow: 0 -4px 24px rgba(10, 22, 40, 0.12);
+      z-index: 900;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(120%);
+      transition: transform 0.25s cubic-bezier(0.2, 0.7, 0.2, 1);
+      border-top: 1px solid var(--border-medium);
+    }
+    .sticky-cta.visible { transform: translateY(0); }
+    .sticky-cta-price { display: flex; flex-direction: column; line-height: 1.1; }
+    .sticky-cta-price-old { font-size: 12px; color: var(--text-tertiary); text-decoration: line-through; }
+    .sticky-cta-price-new { font-weight: 800; font-size: 19px; color: var(--text-primary); font-family: var(--font-heading); }
+    .sticky-cta .btn {
+      flex: 1;
+      min-height: 52px;
+      font-size: 16px;
+      font-weight: 700;
+      padding: 14px 18px;
+    }
+    @media (max-width: 768px) {
+      .sticky-cta { display: flex; }
+      body.sticky-cta-on { padding-bottom: 80px; }
+    }
   </style>
 </head>
 <body>
@@ -2433,7 +2669,7 @@
             <span class="hero-badge-dot"></span>
             Koniec z drabiną i smugami
           </div>
-          <h1 class="hero-title">
+          <h1 class="hero-title js-split">
             <span class="highlight">Lśniące okna</span><br>
             bez ryzyka upadku.
           </h1>
@@ -2441,7 +2677,7 @@
             Inteligentny robot, który sam myje okna od wewnątrz i od zewnątrz — także na piętrze. Ty parzysz kawę, on pracuje. Krystaliczny efekt w 3 minuty na m².
           </p>
           <div class="hero-cta">
-            <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary">Zamów z rabatem -300 PLN</a>
+            <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary magnetic">Zamów z rabatem -300 PLN</a>
             <a href="#jak-dziala" class="btn btn-secondary">Zobacz jak działa</a>
           </div>
           <div class="hero-features">
@@ -2472,12 +2708,12 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="hero-product">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034171876_0.jpg" alt="Robot GlassNova do mycia okien">
+          <div class="hero-product hero-placeholder-ph">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034171876_0.jpg" alt="Robot GlassNova do mycia okien" fetchpriority="high" decoding="async" width="800" height="1000">
           </div>
           <div class="hero-specs">
             <div class="hero-spec">
-              <div class="hero-spec-value">5600Pa</div>
+              <div class="hero-spec-value"><span class="js-counter" data-target="5600" data-suffix="Pa">5600Pa</span></div>
               <div class="hero-spec-label">Siła ssania</div>
             </div>
             <div class="hero-spec">
@@ -2485,7 +2721,7 @@
               <div class="hero-spec-label">Nawigacja</div>
             </div>
             <div class="hero-spec">
-              <div class="hero-spec-value">3 min</div>
+              <div class="hero-spec-value"><span class="js-counter" data-target="3" data-suffix=" min">3 min</span></div>
               <div class="hero-spec-label">Na 1m²</div>
             </div>
             <div class="hero-spec">
@@ -2526,7 +2762,7 @@
           </div>
           <div class="trust-text">
             <strong>Darmowa dostawa</strong>
-            <span>Kurierem w 24-48h</span>
+            <span>InPost · DPD · kurier</span>
           </div>
         </div>
         <div class="trust-item">
@@ -2564,20 +2800,20 @@
   <section class="gallery">
     <div class="container">
       <div class="gallery-header fade-in">
-        <span class="section-label">Zobacz z bliska</span>
+        <span class="section-label"><span class="section-num">Nº 01</span>Zobacz z bliska</span>
         <h2 class="section-title">Jedno urządzenie. Każde okno w domu.</h2>
         <p class="section-subtitle">
           Od szyb balkonowych po panoramiczne okna w salonie — GlassNova radzi sobie z każdą płaszczyzną.
         </p>
       </div>
       <div class="gallery-grid fade-in">
-        <div class="gallery-item gallery-item-large">
+        <div class="gallery-item gallery-item-large tile-figure">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776248425307_0.jpg" alt="GlassNova na panoramicznym oknie w salonie">
         </div>
-        <div class="gallery-item">
+        <div class="gallery-item tile-figure">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776248431337_0.jpg" alt="GlassNova myjący okno w apartamencie">
         </div>
-        <div class="gallery-item">
+        <div class="gallery-item tile-figure">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776248434520_0.jpg" alt="GlassNova widok z góry, panel sterowania">
         </div>
       </div>
@@ -2591,7 +2827,7 @@
     <div class="container">
       <div class="problem-inner fade-in">
         <div class="problem-content">
-          <span class="section-label">Problem</span>
+          <span class="section-label"><span class="section-num">Nº 02</span>Problem</span>
           <h2 class="problem-title">Mycie okien potrafi popsuć całą sobotę.</h2>
           <p class="problem-description">
             Wychylasz się przez okno z wiadrem, balansujesz na krześle albo drabinie, a i tak zostają smugi w świetle słońca. A okna od zewnątrz na piętrze? Praktycznie nie do umycia bez ryzyka. Godziny pracy — efekt, który znika po pierwszym deszczu.
@@ -2607,7 +2843,7 @@
             </div>
           </div>
         </div>
-        <div class="problem-visual">
+        <div class="problem-visual ph-box">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034301963_0.jpg" alt="Tradycyjne mycie okien - trudne i niebezpieczne">
         </div>
       </div>
@@ -2620,7 +2856,7 @@
   <section class="solution" id="funkcje">
     <div class="container">
       <div class="solution-header fade-in">
-        <span class="section-label">Rozwiązanie</span>
+        <span class="section-label"><span class="section-num">Nº 03</span>Rozwiązanie</span>
         <h2 class="section-title">Wystarczy przyłożyć — reszta dzieje się sama</h2>
         <p class="section-subtitle">
           Robot sam trzyma się szyby, sam planuje trasę i sam myje bez smug. Ty tylko wybierasz, od którego okna zacząć.
@@ -2706,11 +2942,11 @@
   <section class="technology">
     <div class="container">
       <div class="technology-inner fade-in">
-        <div class="technology-visual">
+        <div class="technology-visual spec-fig">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776246654511_0.jpg" alt="Technologia GlassNova - podwójna mikrofibra w akcji">
         </div>
         <div class="technology-content">
-          <span class="section-label">Technologia</span>
+          <span class="section-label"><span class="section-num">Nº 04</span>Technologia</span>
           <h2 class="section-title">Inżynieria, która myje za Ciebie</h2>
           <p class="technology-description">
             Każdy detal został zaprojektowany tak, żebyś mógł zostawić robota samemu — i wrócić do szklanych bez smug. Bez drabiny, bez wiadra, bez nerwów.
@@ -2764,7 +3000,7 @@
   <section class="how-it-works" id="jak-dziala">
     <div class="container">
       <div class="how-it-works-header fade-in">
-        <span class="section-label">Jak to działa</span>
+        <span class="section-label"><span class="section-num">Nº 05</span>Jak to działa</span>
         <h2 class="section-title">3 proste kroki do lśniących okien</h2>
         <p class="section-subtitle">
           Wystarczy przyłożyć, włączyć i cieszyć się efektem. To naprawdę takie proste.
@@ -2772,7 +3008,7 @@
       </div>
       <div class="steps">
         <div class="step fade-in">
-          <div class="step-image">
+          <div class="step-image ritual-fig">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034229566_0.jpg" alt="Krok 1 - Przyłóż do szyby">
           </div>
           <div class="step-number">1</div>
@@ -2782,7 +3018,7 @@
           </p>
         </div>
         <div class="step fade-in">
-          <div class="step-image">
+          <div class="step-image ritual-fig">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034249998_0.jpg" alt="Krok 2 - Naciśnij START">
           </div>
           <div class="step-number">2</div>
@@ -2792,7 +3028,7 @@
           </p>
         </div>
         <div class="step fade-in">
-          <div class="step-image">
+          <div class="step-image ritual-fig">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1775034281582_0.jpg" alt="Krok 3 - Gotowe!">
           </div>
           <div class="step-number">3</div>
@@ -2811,7 +3047,7 @@
   <section class="personas">
     <div class="container">
       <div class="personas-header fade-in">
-        <span class="section-label">Dla kogo</span>
+        <span class="section-label"><span class="section-num">Nº 06</span>Dla kogo</span>
         <h2 class="section-title">Stworzony dla ludzi, którzy cenią swój czas</h2>
         <p class="section-subtitle">
           Niezależnie od tego, gdzie mieszkasz — GlassNova dopasuje się do Twoich okien i Twojego stylu życia.
@@ -2819,7 +3055,7 @@
       </div>
       <div class="personas-grid">
         <div class="persona-card fade-in">
-          <div class="persona-image">
+          <div class="persona-image persona-figure">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776246660914_0.jpg" alt="Osoba w mieszkaniu na piętrze">
           </div>
           <div class="persona-body">
@@ -2831,7 +3067,7 @@
           </div>
         </div>
         <div class="persona-card fade-in">
-          <div class="persona-image">
+          <div class="persona-image persona-figure">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776246664637_0.jpg" alt="Rodzina w domu z dużymi oknami">
           </div>
           <div class="persona-body">
@@ -2843,7 +3079,7 @@
           </div>
         </div>
         <div class="persona-card fade-in">
-          <div class="persona-image">
+          <div class="persona-image persona-figure">
             <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1776246666309_0.jpg" alt="Apartament z panoramicznym widokiem">
           </div>
           <div class="persona-body">
@@ -2864,7 +3100,7 @@
   <section class="comparison">
     <div class="container">
       <div class="comparison-header fade-in">
-        <span class="section-label">Porównanie</span>
+        <span class="section-label"><span class="section-num">Nº 07</span>Porównanie</span>
         <h2 class="section-title">Dlaczego GlassNova?</h2>
         <p class="section-subtitle">
           Zobacz różnicę między tradycyjnym myciem a inteligentnym rozwiązaniem.
@@ -2913,7 +3149,7 @@
   <section class="testimonials" id="opinie">
     <div class="container">
       <div class="testimonials-header fade-in">
-        <span class="section-label">Opinie klientów</span>
+        <span class="section-label"><span class="section-num">Nº 08</span>Opinie klientów</span>
         <h2 class="section-title">Co mówią nasi klienci</h2>
         <p class="section-subtitle">
           Dołącz do tysięcy zadowolonych użytkowników GlassNova.
@@ -2987,7 +3223,7 @@
   <section class="faq" id="faq">
     <div class="container">
       <div class="faq-header fade-in">
-        <span class="section-label">FAQ</span>
+        <span class="section-label"><span class="section-num">Nº 09</span>FAQ</span>
         <h2 class="section-title">Często zadawane pytania</h2>
         <p class="section-subtitle">
           Masz pytania? Znajdziesz tu odpowiedzi na najczęstsze z nich.
@@ -3082,23 +3318,30 @@
   <section class="offer" id="offer">
     <div class="container">
       <div class="offer-header fade-in">
-        <span class="section-label">Oferta specjalna</span>
+        <span class="section-label"><span class="section-num">Nº 10</span>Oferta specjalna</span>
         <h2 class="section-title">Odzyskaj wolne weekendy</h2>
         <p class="section-subtitle">
           Zamów dziś z rabatem -300 PLN. Masz 30 dni na test — jeśli nie zachwyci, zwracamy pieniądze bez pytań.
         </p>
       </div>
       <div class="offer-box fade-in">
-        <div class="offer-image">
+        <div class="offer-image offer-figure-inner">
           <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/glassnova/1773991624603_0.jpg" alt="GlassNova Pro Set">
         </div>
         <div class="offer-content">
-          <span class="offer-badge">BESTSELLER</span>
+          <span class="offer-badge">BESTSELLER · -20%</span>
           <h3 class="offer-title">GlassNova Pro Set</h3>
           <p class="offer-subtitle">Kompletny zestaw do mycia okien</p>
+          <div class="offer-rating">
+            <span class="offer-rating-stars" aria-hidden="true">★★★★★</span>
+            <span><strong>4.8/5</strong> · 1 247 opinii</span>
+          </div>
           <div class="offer-price">
             <div class="offer-price-old">1499 PLN</div>
-            <div class="offer-price-current">1199 <span>PLN</span></div>
+            <div class="offer-price-row">
+              <div class="offer-price-current">1199 <span>PLN</span></div>
+              <span class="offer-savings-badge save-badge">-20%</span>
+            </div>
             <div class="offer-savings">Oszczędzasz 300 PLN</div>
           </div>
           <div class="offer-includes">
@@ -3142,12 +3385,34 @@
               </li>
             </ul>
           </div>
-          <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary offer-cta">Zamów z rabatem -300 PLN</a>
+          <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary offer-cta magnetic">Zamawiam — 1199 PLN</a>
           <div class="offer-guarantee">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
             30 dni na testy. Zwrot bez pytań.
+          </div>
+          <div class="offer-trust-strip" role="list">
+            <span class="trust-strip-item" role="listitem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              Darmowa wysyłka
+            </span>
+            <span class="trust-strip-item" role="listitem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              30 dni na zwrot
+            </span>
+            <span class="trust-strip-item" role="listitem">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+              2 lata gwarancji
+            </span>
+          </div>
+          <div class="offer-payments" aria-label="Metody płatności">
+            <span class="offer-payments-label">Płatność</span>
+            <span class="pay-logo pay-blik">BLIK</span>
+            <span class="pay-logo pay-visa">VISA</span>
+            <span class="pay-logo pay-mc">MC</span>
+            <span class="pay-logo pay-p24">P24</span>
+            <span class="pay-logo pay-applepay">Apple Pay</span>
           </div>
         </div>
       </div>
@@ -3163,9 +3428,20 @@
       <p class="section-subtitle">
         Wystarczy jedno zamówienie — weekendy już nigdy nie będą zmarnowane na mycie okien.
       </p>
-      <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary">Zamów z rabatem -300 PLN</a>
+      <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary magnetic">Zamów z rabatem -300 PLN</a>
     </div>
   </section>
+
+  <!-- ═══════════════════════════════════════════════════════════
+       STICKY MOBILE CTA
+  ═══════════════════════════════════════════════════════════ -->
+  <div class="sticky-cta" id="stickyCta" aria-hidden="true">
+    <div class="sticky-cta-price">
+      <span class="sticky-cta-price-old">1499 PLN</span>
+      <span class="sticky-cta-price-new">1199 PLN</span>
+    </div>
+    <a href="https://glassnova.pl/checkout?products=103035102-321191852" class="btn btn-primary">Zamawiam</a>
+  </div>
 
   <!-- ═══════════════════════════════════════════════════════════
        FOOTER
@@ -3226,16 +3502,29 @@
        JAVASCRIPT
   ═══════════════════════════════════════════════════════════ -->
   <script>
-    // Intersection Observer for fade-in animations
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1 });
-
-    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+    // ───────────────────────────────────────────────────────────
+    // Fade-in reveal (gated przez html.js; safety filtruje po pozycji)
+    // ───────────────────────────────────────────────────────────
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            io.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+      document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+      // Safety: po 2500ms pokaż fade-in które są już w viewport (reszta czeka na IO)
+      setTimeout(() => {
+        document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
+          const rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight) el.classList.add('visible');
+        });
+      }, 2500);
+    } else {
+      document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+    }
 
     // Header scroll effect
     const header = document.getElementById('header');
@@ -3246,6 +3535,144 @@
         header.classList.remove('scrolled');
       }
     });
+
+    // ───────────────────────────────────────────────────────────
+    // Split headline reveal (char-by-char, respektuje reduced-motion)
+    // ───────────────────────────────────────────────────────────
+    (() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.querySelectorAll('.js-split').forEach(el => {
+        // Split po tekst-nodach żeby zachować <span class="highlight">, <br>
+        const walk = (node) => {
+          if (node.nodeType === Node.TEXT_NODE) {
+            const frag = document.createDocumentFragment();
+            node.textContent.split('').forEach(ch => {
+              if (ch === ' ') {
+                frag.appendChild(document.createTextNode(' '));
+                return;
+              }
+              const span = document.createElement('span');
+              span.className = 'char';
+              span.textContent = ch;
+              frag.appendChild(span);
+            });
+            node.parentNode.replaceChild(frag, node);
+          } else if (node.nodeType === Node.ELEMENT_NODE && node.nodeName !== 'BR') {
+            Array.from(node.childNodes).forEach(walk);
+          }
+        };
+        Array.from(el.childNodes).forEach(walk);
+
+        if (prefersReduced) {
+          el.classList.add('ready');
+          return;
+        }
+        const chars = el.querySelectorAll('.char');
+        chars.forEach((c, i) => { c.style.transitionDelay = (i * 22) + 'ms'; });
+        // Trigger on load (hero jest above-the-fold)
+        requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('ready')));
+      });
+    })();
+
+    // ───────────────────────────────────────────────────────────
+    // Number counter (0 → target z easing)
+    // ───────────────────────────────────────────────────────────
+    (() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+      const animate = (el) => {
+        if (prefersReduced) return;
+        const target = parseFloat(el.dataset.target);
+        const suffix = el.dataset.suffix || '';
+        if (!target || isNaN(target)) return;
+        const duration = 1400;
+        const start = performance.now();
+        const step = (now) => {
+          const p = Math.min(1, (now - start) / duration);
+          const val = target * easeOutCubic(p);
+          el.textContent = (target % 1 === 0 ? Math.round(val) : val.toFixed(1)) + suffix;
+          if (p < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      };
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) { animate(e.target); io.unobserve(e.target); }
+          });
+        }, { threshold: 0.4 });
+        document.querySelectorAll('.js-counter').forEach(el => io.observe(el));
+      }
+    })();
+
+    // ───────────────────────────────────────────────────────────
+    // Magnetic CTA (tylko hover:hover, respektuje reduced-motion)
+    // ───────────────────────────────────────────────────────────
+    (() => {
+      const canMagnet = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!canMagnet) return;
+      document.querySelectorAll('.magnetic').forEach(el => {
+        el.addEventListener('mousemove', (e) => {
+          const r = el.getBoundingClientRect();
+          const x = (e.clientX - r.left - r.width / 2) * 0.18;
+          const y = (e.clientY - r.top - r.height / 2) * 0.18;
+          el.style.transform = `translate(${x}px, ${y}px)`;
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = '';
+        });
+      });
+    })();
+
+    // ───────────────────────────────────────────────────────────
+    // Tile 3D tilt (bento-card, max 4°, respektuje reduced-motion)
+    // ───────────────────────────────────────────────────────────
+    (() => {
+      const canTilt = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+        && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!canTilt) return;
+      document.querySelectorAll('.bento-card').forEach(el => {
+        el.classList.add('tile-tilt');
+        el.style.perspective = '900px';
+        el.addEventListener('mousemove', (e) => {
+          const r = el.getBoundingClientRect();
+          const px = (e.clientX - r.left) / r.width - 0.5;
+          const py = (e.clientY - r.top) / r.height - 0.5;
+          el.style.transform = `perspective(900px) rotateY(${px * 4}deg) rotateX(${-py * 4}deg)`;
+        });
+        el.addEventListener('mouseleave', () => {
+          el.style.transform = '';
+        });
+      });
+    })();
+
+    // ───────────────────────────────────────────────────────────
+    // Sticky mobile CTA — widoczny po scrollu poza offer-box
+    // ───────────────────────────────────────────────────────────
+    (() => {
+      const offerBox = document.querySelector('.offer-box');
+      const sticky = document.getElementById('stickyCta');
+      if (!offerBox || !sticky) return;
+      const apply = (visible) => {
+        sticky.classList.toggle('visible', visible);
+        sticky.setAttribute('aria-hidden', visible ? 'false' : 'true');
+        document.body.classList.toggle('sticky-cta-on', visible);
+      };
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(([e]) => {
+          // Pokaż gdy offer NIE jest widoczny i użytkownik przewinął
+          const scrolledPast = window.scrollY > 400;
+          apply(!e.isIntersecting && scrolledPast);
+        }, { threshold: 0.1 });
+        io.observe(offerBox);
+        window.addEventListener('scroll', () => {
+          const r = offerBox.getBoundingClientRect();
+          const offerVisible = r.top < window.innerHeight && r.bottom > 0;
+          apply(!offerVisible && window.scrollY > 400);
+        }, { passive: true });
+      }
+    })();
 
     // Hamburger menu
     const hamburger = document.getElementById('hamburger');
