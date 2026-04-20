@@ -18,13 +18,14 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 6 etapów autonomiczni
 
 ## Mapa plików (13)
 
-### Flow etapów (6)
+### Flow etapów (7)
 
 | # | Plik | Rola |
 |---|------|------|
 | 1 | [`01-direction.md`](01-direction.md) | **DIRECTION** — audyt + manifesto + baseline + verify-brief |
 | 2 | [`02-generate.md`](02-generate.md) | **GENERATE** — HTML zgodny z briefem (po valid briefie) |
-| 3 | [`03-review.md`](03-review.md) | **REVIEW** — weryfikacja treści (~33 grep checks) |
+| 3 | [`03-review.md`](03-review.md) | **REVIEW** — weryfikacja treści (~63 grep checks) |
+| 3.5 | [`03-5-copy-review.md`](03-5-copy-review.md) | **COPY REVIEW** — Manus rewrite purple prose → direct response |
 | 4 | [`04-design.md`](04-design.md) | **DESIGN** — polish + offer box (sekcja H) |
 | 5 | [`05-verify.md`](05-verify.md) | **VERIFY** — Playwright screenshoty 3 viewporty |
 | 6 | [`06-mobile.md`](06-mobile.md) | **MOBILE** — polish pass na 375px |
@@ -50,11 +51,14 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 6 etapów autonomiczni
 | Skrypt | Cel |
 |--------|-----|
 | `scripts/verify-brief.sh [slug]` | Walidacja `_brief.md` przed ETAP 2 (BLOKUJE jeśli niekompletny) |
-| `scripts/verify-landing.sh [slug]` | ~33 grep checks na index.html (target: ≥15 PASS) |
+| `scripts/verify-landing.sh [slug]` | ~63 grep checks na index.html (target: ≥60 PASS) |
 | `scripts/verify-all-landings.sh` | Regression check na 6 baseline'ach |
 | `scripts/screenshot-landing.sh [slug]` | Playwright screenshoty 3 viewporty |
-| `scripts/landing-autorun.sh [UUID]` | Entry-point AUTO-RUN mode (KROK 16 v3) |
-| `scripts/generate-landing-images.sh [UUID] [SLUG]` | Background AI image generation (KROK 16 v3) |
+| `scripts/landing-autorun.sh [UUID]` | Entry-point AUTO-RUN mode |
+| `scripts/generate-landing-images.sh [UUID] [SLUG]` | Background AI image generation |
+| `scripts/extract-copy.mjs [slug] [outFile]` | ETAP 3.5 — wyciąga copy z index.html do JSON (Playwright) |
+| `scripts/review-copy-manus.sh [slug]` | ETAP 3.5 — Manus copy rewrite (submit + poll 15 min) |
+| `scripts/apply-copy.mjs [slug]` | ETAP 3.5 — aplikuje rewritten JSON do index.html |
 
 ---
 
@@ -73,7 +77,10 @@ ETAP 1 — DIRECTION (manifesto)      — autonomous
   ↓
 ETAP 2 — GENERATE (HTML)            — autonomous
   ↓
-ETAP 3 — REVIEW (treść, 33 grep)    — autonomous
+ETAP 3 — REVIEW (treść, 63 grep)    — autonomous
+  ↓
+ETAP 3.5 — COPY REVIEW (Manus)      — autonomous (~5-15 min)
+  [bash scripts/review-copy-manus.sh + node scripts/apply-copy.mjs]
   ↓
 ETAP 4 — DESIGN (polish + offer)    — autonomous
   ↓

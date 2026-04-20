@@ -58,7 +58,7 @@ Kiedy uzytkownik mowi "zrob branding dla workflow X":
 
 Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a następnie 5 wygenerowanych logo.
 
-### Generowanie landing page (6 etapów + reference + skrypty)
+### Generowanie landing page (7 etapów + reference + skrypty)
 
 **🎯 TRIGGER FRAZY (AUTO-RUN, FULL autonomous):**
 - „Przygotuj landing dla projektu [UUID]"
@@ -73,7 +73,8 @@ Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](doc
 |---|------|------|
 | 1 | [`docs/landing/01-direction.md`](docs/landing/01-direction.md) | **DIRECTION** — manifesto + baseline + verify-brief gate |
 | 2 | [`docs/landing/02-generate.md`](docs/landing/02-generate.md) | **GENERATE** — HTML zgodny z briefem |
-| 3 | [`docs/landing/03-review.md`](docs/landing/03-review.md) | **REVIEW** — weryfikacja treści (~33 grep checks) |
+| 3 | [`docs/landing/03-review.md`](docs/landing/03-review.md) | **REVIEW** — weryfikacja treści (~63 grep checks) |
+| 3.5 | [`docs/landing/03-5-copy-review.md`](docs/landing/03-5-copy-review.md) | **COPY REVIEW** — Manus rewrite purple prose → direct response |
 | 4 | [`docs/landing/04-design.md`](docs/landing/04-design.md) | **DESIGN** — polish + offer box |
 | 5 | [`docs/landing/05-verify.md`](docs/landing/05-verify.md) | **VERIFY** — Playwright screenshoty 3 viewporty |
 | 6 | [`docs/landing/06-mobile.md`](docs/landing/06-mobile.md) | **MOBILE** — polish 375px |

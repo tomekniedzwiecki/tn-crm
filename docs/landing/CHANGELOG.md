@@ -1,5 +1,74 @@
 # Changelog — Landing Page Procedure
 
+## [v3.5] — 2026-04-20
+
+### Added — ETAP 3.5 Copy Review (Manus)
+Nowy obowiązkowy etap pomiędzy ETAP 3 REVIEW a ETAP 4 DESIGN. Wykorzystuje Manus edge function (`manus-ask` / `manus-get-result`) do rewrite'u purple prose na direct response.
+
+**Nowe pliki:**
+- `docs/landing/03-5-copy-review.md` — pełna procedura ETAP 3.5
+- `scripts/extract-copy.mjs` — extract copy z index.html przez Playwright (UTF-8 safe)
+- `scripts/review-copy-manus.sh` — submit + poll Manus (15 min timeout)
+- `scripts/apply-copy.mjs` — apply rewritten JSON do HTML
+
+**Integracja z AUTO-RUN:**
+- `scripts/landing-autorun.sh` prompt aktualizowany — Claude wywołuje ETAP 3.5 po ETAP 3 PASS
+- `docs/landing/README.md` flow 6 → **7 etapów**
+- `docs/landing/03-review.md` — pointer na ETAP 3.5 po PASS
+
+**Dlaczego:**
+Tomek pokazał Problem copy w Caffora z purple prose („smak żalu", „coś z domu zostaje też w tobie"). `verify-landing.sh` sprawdzał tylko anti-patterns, nie jakość literacką. Manus (senior copywriter direct response AI) jest specjalizowany w tym — dostaje prompt z twardymi zasadami (zakaz purple prose, konkret > metafora, 2 osoba, max 15 słów/zdanie) + brief + obecne copy, zwraca rewrite.
+
+**Wynik na Caffora:**
+- Problem h2: „Rytuał który zostaje w domu" → „260 razy w roku zaczynasz dzień od kompromisu"
+- Problem body: „smak żalu / papierowy kubek" → „cappuccino za 9 zł: sproszkowane mleko, letnia woda"
+- Agitacja: „coś z domu zostaje też w tobie" → „Pięć dni w tygodniu. 52 tygodnie. 260 poranków"
+
+### Added — Per-section placeholder checks
+Nowa memory `feedback-landing-placeholder-per-section.md` + `verify-landing.sh` Grupa 1a:
+- Hero: min 1 `hero-figure` / `hero-image` / `hero-product`
+- Personas: min 3 `persona-figure`
+- Testimonials: min 2 `avatar-figure` / `voice-figure` / `testi-avatar-figure`
+- Procedure/How: min 3 `step-figure` / `ritual-figure`
+- Final CTA: 1 `bg-figure` (warn, opcjonalnie)
+
+### Added — No purple prose rule
+`reference/safety.md` #11: zakaz literary flourish + lista czerwonych fraz do rewrite.
+
+---
+
+## [v3.4] — 2026-04-20
+
+### Added — Grupa 12 Copy quality (pozytywne)
+`verify-landing.sh` sprawdza teraz:
+- Headline ≤10 słów
+- Brak „nasz/nasza/nasze" (2 osoba Ty/Twój)
+- Konkretne liczby w hero (digit + jednostka)
+- FAQ answers ≥80 znaków
+- Testimonials ≥80 znaków
+- Offer CTA z korzyścią
+
+---
+
+## [v3.3] — 2026-04-20
+
+### Added — 5 obowiązkowych JS effects
+`verify-landing.sh` Grupa 7:
+- `.js-split` (1× h1 hero)
+- `.js-counter` (≥2)
+- `.magnetic` (≥2)
+- `.js-tilt` (≥2)
+- `.js-parallax` (≥1)
+
+---
+
+## [v3.2] — 2026-04-20
+
+### Added — Section completeness + hero placeholder
+`verify-landing.sh` Grupa 11 sprawdza explicite wszystkie 14 sekcji po klasie HTML. Hero MUSI mieć `hero-figure` placeholder.
+
+---
+
 ## [v3.1] — 2026-04-20 (hotfix)
 
 ### BREAKING CHANGE

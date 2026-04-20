@@ -7,6 +7,8 @@
 
 Ta procedura jest **obowiązkowa** — nie kończ pracy nad landingiem bez jej wykonania.
 
+**Po PASS (≥60 PASS / 0 FAIL) →** przejdź do [`03-5-copy-review.md`](03-5-copy-review.md) (Manus rewrite purple prose) **PRZED** ETAP 4 DESIGN. Verify-landing sprawdza anti-patterns i długości, ale NIE ocenia jakości copy — Manus to robi.
+
 ---
 
 ## 0. Automatyczne kontrole (uruchom najpierw)

@@ -121,18 +121,34 @@ cat <<EOF
 Zrób landing dla workflow UUID=$UUID (slug=$SLUG).
 
 TRYB: AUTO-RUN FULL autonomous (landingi to preview dla klienta, nie produkcja).
-- Wykonuj wszystkie ETAPY 1-6 autonomicznie, bez pytania użytkownika
+- Wykonuj wszystkie ETAPY 1-6 autonomicznie + ETAP 3.5 (Manus copy review), bez pytania użytkownika
 - Folder landing-pages/$SLUG/ już istnieje z _brief.template.md (wypełnij go)
 - AI images generują się w tle (PID ${AI_PID:-N/A}) — użyj placeholderów jeśli jeszcze nie gotowe
 - Po ETAP 6: git add + commit + push BEZ pytania (zgodnie z feedback-landing-auto-deploy.md)
 - Finalny output: link https://tn-crm.vercel.app/landing-pages/$SLUG/ + raport
 
+FLOW (wykonaj w tej kolejności):
+1. ETAP 1 DIRECTION → _brief.md + verify-brief.sh
+2. ETAP 2 GENERATE → index.html (14 sekcji + 5 JS effects + placeholders per-section)
+3. ETAP 3 REVIEW → bash scripts/verify-landing.sh $SLUG (cel: ≥60 PASS / 0 FAIL)
+4. ETAP 3.5 COPY REVIEW (Manus) — OBOWIĄZKOWY:
+   a. bash scripts/review-copy-manus.sh $SLUG   (5-15 min, blocking poll)
+   b. node scripts/apply-copy.mjs $SLUG
+   c. bash scripts/verify-landing.sh $SLUG (re-verify — nadal ≥60 PASS)
+5. ETAP 4 DESIGN polish (już w HTML z ETAP 2 — tutaj tylko drobne poprawki per manifest)
+6. ETAP 5 VERIFY → bash scripts/screenshot-landing.sh $SLUG + obejrzyj screenshoty
+7. ETAP 6 MOBILE polish 375px
+8. bash scripts/verify-all-landings.sh (regression)
+9. git add + commit + push (landingi w scope feedback-landing-auto-deploy.md)
+
 DEFAULT DECYZJE (bez pytania):
 - verify-brief.sh fail po 3 próbach → STOP + raport
 - VERIFY screenshot bug nieznany → max 2 próby fixa, potem STOP
 - AI image nie gotowy w ETAP 4 → zostaw placeholder z brief, kontynuuj, deploy
+- Manus task timeout (>15 min w ETAP 3.5) → STOP, deploy z oryginalnym copy + flag w commit msg
+- Manus zwraca error → retry 1x, jeśli znów error → STOP
 - regression (verify-all-landings) fail → STOP, raport, NIE deploy
-- verify-landing.sh <15/18 → STOP, raport, NIE deploy (safety violation)
+- verify-landing.sh <60 PASS → STOP, raport, NIE deploy (safety/quality violation)
 - Wszystko inne → kontynuuj, deploy, raportuj niedociągnięcia w podsumowaniu
 
 Punkt startu: docs/landing/01-direction.md
