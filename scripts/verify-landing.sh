@@ -257,9 +257,58 @@ check "Zero fake urgency (tylko dziś / zostało X szt.)" "0" "$FAKEURGENCY"
 STICKY=$(grep -cE 'class="[^"]*sticky-cta[^"]*"' "$FILE" || true)
 check "Sticky CTA mobile obecny" "1" "$([ "$STICKY" -ge 1 ] && echo 1 || echo 0)" "warn"
 
-# ─── 10. Brief persistence ───
+# ─── 11. Section completeness — wszystkie 14 sekcji obecne ───
 echo ""
-echo "📋 10. Brief persistence (manifesto)"
+echo "🧱 11. Kompletność sekcji (wszystkie 14)"
+
+# Hero MA mieć placeholder zdjęcia (feedback-landing-hero-image-required.md)
+HERO_FIGURE=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*hero[^"]*-figure|class="[^"]*hero[^"]*-image|class="[^"]*hero-product' || true)
+check "Hero ma placeholder zdjęcia produktu" "1" "$([ "$HERO_FIGURE" -ge 1 ] && echo 1 || echo 0)"
+
+# 14 sekcji obowiązkowych (feedback-landing-section-completeness.md)
+declare -A SECTIONS=(
+  ["Header"]='<header[^>]*class="[^"]*header'
+  ["Mobile Menu"]='class="[^"]*mobile-menu'
+  ["Hero"]='<section[^>]*class="[^"]*hero'
+  ["Trust Bar"]='<section[^>]*class="[^"]*trust'
+  ["Problem"]='<section[^>]*class="[^"]*(problem|wyzwanie|challenge)'
+  ["Solution/Bento"]='<section[^>]*class="[^"]*(solution|atelier|bento|features)'
+  ["How It Works"]='<section[^>]*class="[^"]*(how|ritual|steps|process)'
+  ["Comparison"]='<section[^>]*class="[^"]*(versus|comparison|compare)'
+  ["Testimonials"]='<section[^>]*class="[^"]*(voices|testimonials|opinie|social-proof)'
+  ["FAQ"]='<section[^>]*class="[^"]*faq'
+  ["Offer"]='<section[^>]*class="[^"]*offer'
+  ["Final CTA"]='<section[^>]*class="[^"]*(final-cta|cta-banner|final)'
+  ["Footer"]='<footer'
+  ["Sticky CTA"]='class="[^"]*sticky-cta'
+)
+for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How It Works" Comparison Testimonials FAQ Offer "Final CTA" Footer "Sticky CTA"; do
+  pattern="${SECTIONS[$label]}"
+  HIT=$(grep -cE "$pattern" "$FILE" || true)
+  if [ "$HIT" -ge 1 ]; then
+    PASS=$((PASS + 1))
+    echo "  ✅ Sekcja: $label"
+  else
+    FAIL=$((FAIL + 1))
+    echo "  ❌ Sekcja BRAK: $label"
+  fi
+done
+
+# Min 4 tiles w bento (top-level tile divs, NIE sub-classes)
+BENTO_TILES=$(grep -cE '<div class="tile( fade-in)?"|<div class="tile tile-' "$FILE" || true)
+check_range "Bento ma ≥4 tiles" 4 8 "$BENTO_TILES"
+
+# Min 3 acts w How It Works (top-level act/step/how-step)
+ACTS=$(grep -cE '<div class="act( fade-in)?"|<div class="how-step|<div class="step( fade-in)?"' "$FILE" || true)
+check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
+
+# Min 5 FAQ pytań
+FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq' "$FILE" || true)
+check_range "FAQ ≥5 pytań" 5 12 "$FAQS"
+
+# ─── 12. Brief persistence ───
+echo ""
+echo "📋 12. Brief persistence (manifesto)"
 BRIEF="landing-pages/$SLUG/_brief.md"
 if [ -f "$BRIEF" ]; then
   BRIEF_SIZE=$(wc -c < "$BRIEF")

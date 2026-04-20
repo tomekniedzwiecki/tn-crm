@@ -169,23 +169,28 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 }
 .hero-grid {
   position: relative; z-index: 2;
-  display: grid; grid-template-columns: 1.15fr 1fr; gap: 60px;
+  display: grid; grid-template-columns: 1.05fr 1fr; gap: 80px;
   align-items: center;
+}
+.hero-figure-wrap {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
 }
 .hero-numeral {
   position: absolute;
-  right: -30px; top: 40%; transform: translateY(-50%);
+  right: -50px; top: 50%; transform: translateY(-50%);
   font-family: var(--font-display);
   font-style: italic; font-weight: 400;
-  font-size: clamp(280px, 30vw, 460px);
+  font-size: clamp(220px, 22vw, 360px);
   font-variation-settings: "opsz" 144, "SOFT" 50;
   line-height: 0.78;
   letter-spacing: -0.04em;
   color: var(--primary);
-  opacity: 0.92;
+  opacity: 0.18;
   user-select: none;
-  z-index: 1;
+  z-index: 0;
   animation: numeral-breathe 5s ease-in-out infinite;
+  pointer-events: none;
 }
 .hero-numeral sup {
   font-family: var(--font-mono);
@@ -198,8 +203,8 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   opacity: 0.88;
 }
 @keyframes numeral-breathe {
-  0%, 100% { opacity: 0.85; }
-  50% { opacity: 1; }
+  0%, 100% { opacity: 0.14; }
+  50% { opacity: 0.22; }
 }
 .hero-eyebrow {
   font-family: var(--font-mono);
@@ -259,14 +264,54 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 }
 .hero-meta-stars { color: var(--primary); letter-spacing: 0.05em; }
 
+/* Hero figure (placeholder zdjęcia produktu — safety #4a) */
+.hero-figure {
+  position: relative; z-index: 2;
+  aspect-ratio: 4/5;
+  background: linear-gradient(180deg, rgba(156, 107, 62, 0.08), rgba(232, 213, 183, 0.04));
+  border: 1px solid rgba(232, 213, 183, 0.18);
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 40px 32px;
+  backdrop-filter: blur(2px);
+}
+.hero-figure .ph-mark {
+  position: absolute; top: 20px; left: 20px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.20em; color: var(--cream);
+  text-transform: uppercase; line-height: 1.4; opacity: 0.6;
+}
+.hero-figure .ph-title {
+  font-family: var(--font-display); font-style: italic; font-weight: 500;
+  font-size: 24px; color: var(--paper);
+  margin-bottom: 10px;
+}
+.hero-figure .ph-size {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--primary); letter-spacing: 0.16em;
+  text-transform: uppercase; margin-bottom: 18px; line-height: 1.4;
+}
+.hero-figure .ph-note {
+  font-size: 12px; color: rgba(245, 239, 230, 0.52);
+  line-height: 1.55; max-width: 240px;
+}
+.hero-figure-corner {
+  position: absolute; bottom: 20px; right: 24px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; color: var(--cream);
+  text-transform: uppercase; line-height: 1.4; opacity: 0.5;
+}
+
 @media (max-width: 900px) {
   .hero { padding: 120px 0 70px; min-height: auto; }
   .hero-grid { grid-template-columns: 1fr; gap: 40px; }
-  .hero-numeral { position: static; transform: none; font-size: clamp(180px, 50vw, 260px); text-align: center; opacity: 0.55; margin: 20px 0 -40px; }
+  .hero-numeral { position: absolute; top: 20px; right: -20px; transform: none; font-size: clamp(180px, 45vw, 260px); opacity: 0.18; z-index: 0; }
   .hero h1 { font-size: clamp(34px, 7vw, 48px); }
   .hero-lede { font-size: 17px; }
   .btn { width: 100%; justify-content: center; }
   .hero-meta { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .hero-figure { aspect-ratio: 3/4; }
 }
 
 /* ─── TRUST STRIP (jedna linia desktop, vertical mobile) ─── */
@@ -603,10 +648,11 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   .spec-row, .spec-row:nth-child(even) { padding: 18px 0; }
 }
 
-/* ─── PORÓWNANIE (Format A: dwie karty narracyjne) ─── */
+/* ─── PORÓWNANIE (dwie karty + stats numbers + vs separator) ─── */
 .versus {
   background: var(--paper);
   padding: var(--pad-section) 0;
+  position: relative; overflow: hidden;
 }
 .versus-head { text-align: center; margin-bottom: 70px; max-width: 720px; margin-left: auto; margin-right: auto; }
 .versus h2 {
@@ -615,42 +661,121 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   line-height: 1.1; margin-bottom: 18px; letter-spacing: -0.02em;
 }
 .versus h2 em { font-style: italic; color: var(--primary); }
-.versus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+.versus-lede { font-size: 17px; line-height: 1.6; color: var(--warm-gray); }
+
+/* Wrapper z separatorem 'vs' w środku */
+.versus-wrap {
+  position: relative;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  align-items: stretch;
+}
+.versus-wrap::before {
+  content: 'vs';
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-family: var(--font-display); font-style: italic; font-weight: 400;
+  font-size: 56px; color: var(--primary);
+  background: var(--paper); width: 84px; height: 84px;
+  border: 1px solid rgba(156, 107, 62, 0.32);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 5;
+  line-height: 1;
+}
+
 .versus-card {
   padding: 44px 36px;
   background: #FFFFFF;
   border: 1px solid var(--rule);
   border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  position: relative;
 }
-.versus-card.hero {
+.versus-card.dim {
+  background: var(--paper-2);
+  border-color: var(--rule);
+  opacity: 0.85;
+}
+.versus-card.win {
   background: var(--charcoal); color: var(--paper);
   border-color: var(--primary);
   box-shadow: var(--shadow-brass);
 }
+.versus-no {
+  position: absolute; top: 22px; right: 28px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; color: var(--warm-gray);
+  text-transform: uppercase; line-height: 1.4;
+}
+.versus-card.win .versus-no { color: rgba(232, 213, 183, 0.5); }
 .versus-kicker {
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   letter-spacing: 0.20em; text-transform: uppercase;
   color: var(--warm-gray); margin-bottom: 16px; line-height: 1.4;
 }
-.versus-card.hero .versus-kicker { color: var(--primary); }
+.versus-card.win .versus-kicker { color: var(--primary); }
 .versus-title {
   font-family: var(--font-display); font-weight: 500;
-  font-size: 30px; margin-bottom: 22px; line-height: 1.15;
-  color: var(--ink);
+  font-size: 28px; margin-bottom: 28px; line-height: 1.15;
+  color: var(--ink); letter-spacing: -0.01em;
 }
-.versus-card.hero .versus-title { color: var(--paper); }
+.versus-card.win .versus-title { color: var(--paper); }
 .versus-title em { font-style: italic; color: var(--primary); }
-.versus-list { list-style: none; padding: 0; margin: 0; }
-.versus-list li {
-  font-size: 15px; line-height: 1.65; color: var(--charcoal);
-  padding: 14px 0;
+
+/* Stats row w kartach */
+.versus-stats {
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+  padding: 22px 0; margin-bottom: 22px;
+  border-top: 1px solid var(--rule);
   border-bottom: 1px solid var(--rule);
 }
+.versus-card.win .versus-stats {
+  border-color: var(--rule-on-dark);
+}
+.versus-stat-num {
+  font-family: var(--font-display); font-style: italic; font-weight: 500;
+  font-size: 26px; line-height: 1; color: var(--ink);
+  margin-bottom: 4px;
+}
+.versus-card.win .versus-stat-num { color: var(--primary); }
+.versus-card.dim .versus-stat-num { color: var(--warm-gray); }
+.versus-stat-label {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--warm-gray); line-height: 1.4;
+}
+.versus-card.win .versus-stat-label { color: rgba(232, 213, 183, 0.5); }
+
+.versus-list { list-style: none; padding: 0; margin: 0 0 24px; flex-grow: 1; }
+.versus-list li {
+  font-size: 14.5px; line-height: 1.6; color: var(--charcoal);
+  padding: 12px 0 12px 22px;
+  border-bottom: 1px solid var(--rule);
+  position: relative;
+}
 .versus-list li:last-child { border-bottom: 0; }
-.versus-card.hero .versus-list li { color: rgba(245, 239, 230, 0.85); border-bottom-color: var(--rule-on-dark); }
+.versus-list li::before {
+  content: '\2014';
+  position: absolute; left: 0; top: 12px;
+  color: var(--warm-gray);
+}
+.versus-card.win .versus-list li { color: rgba(245, 239, 230, 0.86); border-bottom-color: var(--rule-on-dark); }
+.versus-card.win .versus-list li::before { color: var(--primary); }
+
+.versus-bottom {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--warm-gray); padding-top: 20px;
+  border-top: 1px solid var(--rule); line-height: 1.4;
+}
+.versus-card.win .versus-bottom {
+  color: var(--cream); border-top-color: var(--rule-on-dark);
+}
 
 @media (max-width: 900px) {
-  .versus-grid { grid-template-columns: 1fr; gap: 24px; }
+  .versus-wrap { grid-template-columns: 1fr; gap: 60px; }
+  .versus-wrap::before { left: 50%; top: auto; bottom: auto; position: relative; transform: none; margin: -30px auto; }
+  .versus-stats { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .versus-stat-num { font-size: 22px; }
 }
 
 /* ─── PERSONY (3 wignety) ─── */
@@ -1056,7 +1181,16 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
           <span>4.8 / 5 · ranne wczasowicze i kierowcy z doświadczenia</span>
         </div>
       </div>
-      <div class="hero-numeral" aria-hidden="true">20<sup>BAR</sup></div>
+      <div class="hero-figure-wrap fade-in">
+        <div class="hero-numeral" aria-hidden="true">20<sup>BAR</sup></div>
+        <div class="hero-figure">
+          <div class="ph-mark">P · Hero</div>
+          <div class="ph-title">Packshot Caffora w&nbsp;ręce</div>
+          <div class="ph-size">1200 × 1500 · pionowa 4:5</div>
+          <div class="ph-note">Caffora trzymana w dłoni mężczyzny — kciuk na przycisku, gęsta crema u góry. Tło: deep charcoal #1A1A1C z subtelnym brass vignette w prawym dolnym rogu. Światło: side-back 45°, kontrastowe, jak Leica catalog.</div>
+          <div class="hero-figure-corner">FIG. 01</div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -1220,27 +1354,60 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
     <div class="versus-head fade-in">
       <div class="section-no">Nº 06 — Porównanie</div>
       <h2>Czemu <em>nie wystarczy</em> termos.</h2>
+      <p class="versus-lede">Dwa sposoby na poranną kawę poza domem. Jeden zostawia kompromis na języku. Drugi — daje ci dom w plecaku.</p>
     </div>
-    <div class="versus-grid">
-      <div class="versus-card fade-in">
-        <div class="versus-kicker">Stara droga</div>
-        <h3 class="versus-title">Termos z domu / kapsułki na stacji</h3>
+    <div class="versus-wrap">
+      <div class="versus-card dim fade-in">
+        <div class="versus-no">A · stara droga</div>
+        <div class="versus-kicker">Termos / stacja benzynowa</div>
+        <h3 class="versus-title">Letnia kawa lub<br>papierowy kubek.</h3>
+        <div class="versus-stats">
+          <div>
+            <div class="versus-stat-num">2 h</div>
+            <div class="versus-stat-label">do utraty<br>aromatu</div>
+          </div>
+          <div>
+            <div class="versus-stat-num">0 BAR</div>
+            <div class="versus-stat-label">prawdziwego<br>ciśnienia</div>
+          </div>
+          <div>
+            <div class="versus-stat-num">~9 zł</div>
+            <div class="versus-stat-label">kawa<br>na stacji</div>
+          </div>
+        </div>
         <ul class="versus-list">
           <li>Po dwóch godzinach kawa traci aromat — zostaje letnia, gorzka, bez crema.</li>
           <li>Stacyjny espresso to sproszkowane mleko i syntetyczna piana. Smak żalu.</li>
           <li>Jednorazowe kubki, plastik, ślad po sobie w każdym parking lot.</li>
           <li>Twój rytuał zostaje w domu. Każdy dzień zaczynasz od kompromisu.</li>
         </ul>
+        <div class="versus-bottom">Co rano: kompromis</div>
       </div>
-      <div class="versus-card hero fade-in">
-        <div class="versus-kicker">Caffora</div>
-        <h3 class="versus-title">20 barów ciśnienia, <em>kiedy chcesz.</em></h3>
+      <div class="versus-card win fade-in">
+        <div class="versus-no">B · Caffora</div>
+        <div class="versus-kicker">Espresso 20 BAR · in&nbsp;situ</div>
+        <h3 class="versus-title">Świeże espresso<br><em>kiedy chcesz.</em></h3>
+        <div class="versus-stats">
+          <div>
+            <div class="versus-stat-num">3 min</div>
+            <div class="versus-stat-label">do gotowej<br>filiżanki</div>
+          </div>
+          <div>
+            <div class="versus-stat-num">20 BAR</div>
+            <div class="versus-stat-label">profesjonalne<br>ciśnienie</div>
+          </div>
+          <div>
+            <div class="versus-stat-num">~1,80 zł</div>
+            <div class="versus-stat-label">koszt jednej<br>filiżanki</div>
+          </div>
+        </div>
         <ul class="versus-list">
           <li>Świeży espresso z prawdziwym ciśnieniem — w samochodzie, kemperze, na biwaku.</li>
           <li>Twoja kawa, twoja filiżanka, twój smak. Bez kapsułek, bez stacji.</li>
-          <li>Wielokrotnego użytku — anodyzowane aluminium na lata.</li>
+          <li>Wielokrotnego użytku — anodyzowane aluminium na lata, zero plastiku.</li>
           <li>Codzienna dyscyplina poranka. Dobrego poranka nie zostawia się w domu.</li>
         </ul>
+        <div class="versus-bottom">Co rano: rytuał</div>
       </div>
     </div>
   </div>

@@ -176,6 +176,14 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 ---
 
+## ⚠️ Wszystkie 14 sekcji są OBOWIĄZKOWE
+
+> Memory: `feedback-landing-section-completeness.md`. `verify-landing.sh` Grupa 11 sprawdza explicite obecność każdej z 14 sekcji po klasie HTML. Brak którejkolwiek = ❌ FAIL deploy.
+
+> Memory: `feedback-landing-polish-required.md`. **Każda sekcja MUSI być dopieszczona wizualnie** — nie wystarczy tekst w plain layout. Comparison potrzebuje stats + visual w karcie wygranej, Trust Bar potrzebuje ikon, Problem potrzebuje visual + bold statystyk. Najsłabsza sekcja podcina wrażenie premium.
+
+> Memory: `feedback-landing-hero-image-required.md`. **Hero MUSI mieć placeholder zdjęcia produktu** (klasa `hero-figure` / `hero-image` / `hero-product`) z 4-polowym briefem fotografa. Signature element (numerał) NIE zastępuje.
+
 ## Architektura strony (14 sekcji)
 
 Każdy landing składa się z tych sekcji w kolejności:

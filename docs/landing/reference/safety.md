@@ -114,6 +114,22 @@ Absolute positioning (spec badges nad produktem, floating elements) psuje się n
 
 ---
 
+## 4a. Hero MUSI mieć placeholder zdjęcia produktu
+
+**Zasada bezwzględna (memory: `feedback-landing-hero-image-required.md`):** każda sekcja Hero MUSI zawierać element z klasą zawierającą `hero-figure`, `hero-image` lub `hero-product` z 4-polowym briefem fotografa. Signature element (oversized numerał) NIE zastępuje placeholdera.
+
+**Przykład (w `<section class="hero">`):**
+```html
+<div class="hero-figure">
+  <div class="ph-mark">P · HERO</div>
+  <div class="ph-title">Packshot Caffora w ręce</div>
+  <div class="ph-size">1200 × 1500 · pionowa 4:5</div>
+  <div class="ph-note">Caffora trzymana w ręce, dłoń mężczyzny, paznokcie czyste. Tło: deep charcoal #1A1A1C z subtelnym brass vignette. Światło: side-back 45°, kontrastowe, jak Leica catalog.</div>
+</div>
+```
+
+**Dlaczego:** klient potrzebuje wyraźnego miejsca gdzie ma trafić packshot. Hero bez konkretnego placeholdera = prezentacja konceptu, nie preview sklepu. `verify-landing.sh` blokuje deploy jeśli brak.
+
 ## 4. Placeholder MUSI być briefem dla klienta, nie „TODO"
 
 **ŹLE:**
