@@ -18,20 +18,7 @@ bash scripts/verify-brief.sh $SLUG
 
 **Exit 1** → STOP, wróć do [`01-direction.md`](01-direction.md). NIE wybieraj kierunku samodzielnie z presetu.
 
-**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` i **sprawdź MODE na górze briefa** (linia `MODE: template` lub `MODE: paradigm`). Dalsze kroki zależą od wyboru MODE.
-
----
-
-## 🚦 Fork — dwie ścieżki w zależności od MODE
-
-> **Na starcie procedury ETAP 1 `01-direction.md` Krok 0 pyta użytkownika jaki MODE wybiera.** Odpowiedź zapisana w pierwszej linii `_brief.md` jako `MODE: template` lub `MODE: paradigm`.
-
-| MODE | Kiedy używać | Co generujesz |
-|------|--------------|---------------|
-| **`template`** (ŚCIEŻKA A) | Szybki preview dla klienta, produkt klasyczny, brak czasu na projektowanie | Sztywny szkielet 14 sekcji w ustalonej kolejności (sekcja „Ścieżka A" poniżej) |
-| **`paradigm`** (ŚCIEŻKA B) | Unikalny produkt/persona, chcesz strukturalnie inny landing od reszty portfolio | 10 tematów content coverage, forma zgodna z 1 z 12 paradygmatów (sekcja „Ścieżka B" poniżej) |
-
-**Różnica w 1 zdaniu:** Template = gwarantowany wynik podobny do istniejących. Paradigm = gwarantowana strukturalna unikalność, ale wymaga decyzji projektowych per landing.
+**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` (szczególnie **Sekcja 9: Paradigm architektury**) i buduj szkielet **zgodny z wybranym paradygmatem** (nie sztywny 14-sekcyjny template).
 
 > ⚠️ **NIGDY nie kopiuj istniejących baseline'ów** (`cp -r landing-pages/$BASE` jest **zakazane**). Procedura ma być uniwersalna — patrz memory `feedback-landing-always-forge.md` + [`01-direction.md` Krok 6](01-direction.md). Tabela baseline w Kroku 5 to **anty-referencje** (co już jest, czego nie powtarzaj), nie template'y.
 
@@ -189,60 +176,9 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 ---
 
-## ŚCIEŻKA A — MODE=template (klasyczny 14-sekcyjny szablon)
+## ⚠️ 10 tematów do pokrycia (forma zależy od paradygmatu z Etapu 1.5)
 
-> **Kiedy:** `_brief.md` zawiera `MODE: template` na górze. Brief ma 8 sekcji (bez sekcji 9 Paradigm — nie jest wymagana w tym trybie).
-
-> Memory: `feedback-landing-polish-required.md` + `feedback-landing-hero-image-required.md` + `feedback-landing-placeholder-per-section.md` obowiązują. **Każda sekcja MUSI być dopieszczona wizualnie + hero MUSI mieć placeholder zdjęcia + każda sekcja wizualna MUSI mieć brief fotografa.**
-
-### Wszystkie 14 sekcji są OBOWIĄZKOWE (MODE=template)
-
-Każdy landing składa się z tych sekcji w kolejności:
-
-| # | Sekcja | Funkcja | Elementy |
-|---|--------|---------|----------|
-| 1 | **Header** | Nawigacja | Logo, linki (Funkcje, Opinie, FAQ), CTA button, hamburger mobile |
-| 2 | **Mobile Menu** | Nawigacja mobilna | Fullscreen overlay z linkami |
-| 3 | **Hero** | Pierwsze wrażenie | Headline, subheadline, dual CTA, badges, hero image, glow effects |
-| 4 | **Trust Bar** | Budowanie zaufania | 4-5 ikon z wartościami (gwarancja, dostawa, etc.) |
-| 5 | **Problem** | PAS: Agitacja | Headline z pytaniem, opis bólu, statystyki, wizualizacja |
-| 6 | **Solution (Bento)** | Prezentacja produktu | Grid 2x2 z features, spotlight hover effect |
-| 7 | **How It Works** | Edukacja | 3 kroki z ikonami i opisami |
-| 8 | **Comparison** | Wyższość vs konkurencja | Dwie karty / tabela porównawcza |
-| 9 | **Social Proof** | Dowód społeczny | Marquee z logami, karty z opiniami |
-| 10 | **FAQ** | Eliminacja obiekcji | Accordion z 5-7 pytaniami |
-| 11 | **Offer** | Finalizacja | Product box z ceną, lista zawartości, CTA, gwarancja |
-| 12 | **CTA Banner** | Ostatnia szansa | Prosty headline + CTA |
-| 13 | **Footer** | Informacje | 3 kolumny: brand, linki, kontakt |
-| 14 | **Sticky CTA** | Mobile conversion | Przyklejony przycisk na dole (tylko mobile) |
-| 15 | **Cookie Banner** | Compliance | RODO zgoda |
-
-### Placeholder zdjęć per sekcja (MODE=template)
-
-| Sekcja | Min | Klasa CSS | Opis fotografii |
-|--------|-----|-----------|------------------|
-| **Hero** | 1 | `hero-figure` / `hero-image` / `hero-product` | Packshot produktu, lifestyle |
-| **Gallery** | 5–6 | `gal-figure` / `bento-image` / `gallery-image` | Detail + context shots |
-| **Personas** | 3 | `persona-figure` / `persona-image` | Persona w kontekście użycia |
-| **Testimonials** | 2–4 | `testi-avatar-figure` / `voice-figure` / `avatar-figure` | Zdjęcie twarzy klienta 112×112 |
-| **Procedure / How** | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
-| **Final CTA** | 1 (opcjonalne) | `final-cta-figure` / `cta-figure` / `bg-figure` | Panorama / bg image |
-
-### Patterns limit (MODE=template)
-
-**Bez limitu** — możesz używać wszystkich 22 snippetów z [`reference/patterns.md`](reference/patterns.md) (Editorial Numeral + Magazine Numbering + Editorial Italic + Bento Spotlight + Border Beam + Marquee + …). To jest intended behavior szablonu — oferuje sprawdzone elementy do złożenia.
-
-### Po wybraniu Ścieżki A — idź dalej do „Wzorce designu" niżej
-
----
-
-## ŚCIEŻKA B — MODE=paradigm (paradygmat-driven skeleton)
-
-> **Kiedy:** `_brief.md` zawiera `MODE: paradigm` na górze i sekcję 9 Paradigm wypełnioną. Memory: `feedback-landing-structural-uniqueness.md`.
-
-### 10 tematów do pokrycia (forma zależy od paradygmatu z sekcji 9 briefa)
-
-Zamiast „14 sekcji w sztywnej kolejności z identycznymi klasami CSS" — pokrywasz **10 tematów**, a ich formę wybierasz na podstawie paradygmatu z briefa (Sekcja 9: Paradigm architektury).
+> **Zmiana z 2026-04-20 (memory: `feedback-landing-structural-uniqueness.md`):** zamiast „14 sekcji w sztywnej kolejności z identycznymi klasami CSS" — pokrywasz **10 tematów**, a ich formę wybierasz na podstawie paradygmatu z briefa (Sekcja 9: Paradigm architektury).
 
 > Memory: `feedback-landing-polish-required.md` + `feedback-landing-hero-image-required.md` + `feedback-landing-placeholder-per-section.md` obowiązują dalej — każda forma musi być dopieszczona + hero musi mieć placeholder zdjęcia + każda sekcja wizualna musi mieć brief fotografa.
 
@@ -358,14 +294,6 @@ Final: solo CTA
 | **Offer / CTA** | 1 | `offer-figure` / `final-cta-figure` / `cta-figure` / `bg-figure` | Flat lay zestawu / panorama |
 
 Liczba klas dopuszczalnych celowo szeroka — żeby paradigm Editorial nie musiał używać `bento-image` gdy ma long-form prose. Weryfikacja jest **content coverage** (czy jest placeholder), nie **class naming** (czy nazywa się konkretnie).
-
-### Patterns limit (MODE=paradigm)
-
-**MAX 3 signature patterns per landing** — patrz [`reference/patterns.md`](reference/patterns.md) nagłówek. Safety primitywy (#11-#16) bez limitu. To jest kluczowe dla strukturalnej unikalności.
-
-### Po wybraniu Ścieżki B — idź dalej do „Wzorce designu" niżej
-
----
 
 ---
 

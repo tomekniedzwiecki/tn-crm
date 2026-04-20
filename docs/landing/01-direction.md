@@ -29,62 +29,9 @@ Historycznie (do 2026-04) ten etap był „2.5" — uruchamiany PO wygenerowaniu
 
 ## Zasada fundamentalna
 
-**NIE PYTAJ użytkownika o kierunek wizualny.** Autonomicznie pobierz dane z Supabase i zdecyduj sam. Jeśli brak danych → zgadnij na podstawie kategorii produktu i tagline, potem zapisz w manifesto dlaczego.
-
-**WYJĄTEK — Krok 0:** MUSISZ zapytać o wybór **MODE** (template vs paradigm). To jedyne pytanie do użytkownika w całej procedurze.
+**NIE PYTAJ użytkownika o kierunek.** Autonomicznie pobierz dane z Supabase i zdecyduj sam. Jeśli brak danych → zgadnij na podstawie kategorii produktu i tagline, potem zapisz w manifesto dlaczego.
 
 Manifesto to **kontrakt z samym sobą**. Jeśli nie umiesz go napisać w 5 linijkach — nie wiesz co robisz. Wróć do raportu PDF.
-
----
-
-## Krok 0 — Wybór trybu generowania (ZAWSZE pytaj użytkownika)
-
-> **OBOWIĄZKOWE pytanie na starcie procedury.** Bez odpowiedzi nie przechodzisz do Kroku 1. Zapisz wybór w pierwszej linii `_brief.md` jako `MODE: template` lub `MODE: paradigm`.
-
-### Pytanie do zadania
-
-Zadaj to pytanie użytkownikowi **dokładnie tak** (wklej do odpowiedzi przed uruchomieniem Kroku 1):
-
-```
-Jaki tryb generowania landingu?
-
-A) SZABLON (MODE=template) — klasyczny 14-sekcyjny układ
-   (header → hero → trust → problem → bento → how → comparison → voices → FAQ → offer → CTA → footer)
-   - Sprawdzony, szybki, przewidywalny wynik
-   - Bez limitu signature patterns (użyj wszystkich 22 z biblioteki)
-   - Podobny strukturalnie do pozostałych landingów w portfolio
-
-B) PARADYGMAT (MODE=paradigm) — custom architektura per produkt
-   - Wybór 1 z 12 paradygmatów (Cinematic / Dashboard / Editorial / Scrollytelling / …)
-   - MIN 2/4 structural signatures różne od istniejących landingów
-   - MAX 3 signature patterns per landing
-   - Strukturalnie unikalny, ale wymaga decyzji projektowych
-
-Który wybierasz? (A / B)
-```
-
-### Po odpowiedzi
-
-- **„A"** lub „template" lub „szablon" → `MODE=template`, pomiń **Krok 6.5**, w _brief.md sekcja 9 opcjonalna (nie wypełniaj)
-- **„B"** lub „paradigm" lub „paradygmat" → `MODE=paradigm`, **Krok 6.5 obowiązkowy**, sekcja 9 briefa wymagana
-
-### Format briefa (pierwsza linia przed sekcją 1)
-
-```markdown
-MODE: template
----
-# [MARKA] — Design Manifesto
-...
-```
-
-lub
-
-```markdown
-MODE: paradigm
----
-# [MARKA] — Design Manifesto
-...
-```
 
 ---
 
@@ -256,11 +203,9 @@ mkdir -p landing-pages/$SLUG
 
 ---
 
-## Krok 6.5 — Wybór paradygmatu architektury (TYLKO dla MODE=paradigm)
+## Krok 6.5 — Wybór paradygmatu architektury (OBOWIĄZKOWY)
 
-> **Pomiń ten krok, jeśli w Kroku 0 użytkownik wybrał `MODE=template`.** Template ma sztywną architekturę 14 sekcji — paradigm selection nie ma zastosowania.
-
-> **Memory: `feedback-landing-structural-uniqueness.md`.** Bez tego kroku w MODE=paradigm każdy landing wychodzi strukturalnie identyczny — tylko inne kolory i teksty. Ten krok forsuje **różny układ strony** per produkt.
+> **Memory: `feedback-landing-structural-uniqueness.md`.** Bez tego kroku każdy landing wychodzi strukturalnie identyczny — tylko inne kolory i teksty. Ten krok forsuje **różny układ strony** per produkt.
 
 ### Reguła decyzyjna (2 pytania)
 
@@ -352,9 +297,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 # Edytuj wszystkie 8 sekcji
 ```
 
-**Struktura `_brief.md`** (9 sekcji — sekcja 9 tylko dla MODE=paradigm):
-
-**Linia #1 (OBOWIĄZKOWA):** `MODE: template` lub `MODE: paradigm` (z Kroku 0).
+**Struktura `_brief.md`** (9 sekcji obowiązkowych):
 
 1. Kierunek manifesta (z 6 presetów lub „nowy")
 2. Moodboard — 3 realne marki referencyjne (spoza landing-pages/)
@@ -364,7 +307,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)
 8. Signature element
-9. **Paradigm architektury** — **TYLKO MODE=paradigm** (emocja + hero type + wybór 1 z 12 + structural signature tabela). Dla MODE=template pomiń tę sekcję.
+9. **Paradigm architektury** (z Kroku 6.5 — emocja + hero type + wybór 1 z 12 + structural signature tabela)
 
 **NIE używaj `/c/tmp/`** — `_brief.md` jest commitowany razem z landingiem (persystentny brief projektu).
 
@@ -381,14 +324,13 @@ bash scripts/verify-brief.sh $SLUG
 **Exit 1:** Brief niekompletny → wróć do Kroku 8, uzupełnij brakujące sekcje. Powtórz aż exit 0.
 
 **Skrypt sprawdza:**
-- **Pierwsza linia:** `MODE: template` lub `MODE: paradigm` obecna
-- 8 sekcji zawsze wymagane (`## 1.` do `## 8.`); **sekcja 9 wymagana TYLKO gdy MODE=paradigm**
+- 9 sekcji obecnych (`## 1.` do `## 9.`)
 - Sekcja 1: któryś kierunek zaznaczony `[x]`
 - Sekcja 2: 3 marki wypełnione (3 numerowane wpisy z `**`)
 - Sekcja 3: paleta nie ma więcej niż 1 placeholdera `______`
 - Sekcja 6: anty-referencje wypełnione (≥50 znaków treści)
 - Sekcja 7: wszystkie 4 testy anty-generic na TAK `[x]`
-- Sekcja 9 (MODE=paradigm only): paradigm wybrany + structural signature tabela wypełniona (MIN 2 różnice vs istniejące landingi)
+- Sekcja 9: paradigm wybrany + structural signature tabela wypełniona (MIN 2 różnice vs istniejące landingi)
 
 **Bez valid briefa NIE przechodź do ETAP 2.** To jest twardy gate — autonomous mode w `landing-autorun.sh` wymusza max 3 retries, potem STOP + raport.
 
