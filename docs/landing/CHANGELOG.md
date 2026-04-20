@@ -1,5 +1,28 @@
 # Changelog — Landing Page Procedure
 
+## [v3.6] — 2026-04-20
+
+### Added — Section variants library (22 wariantów per sekcja)
+
+Biblioteka wariantów Tier 1 dla 3 kluczowych sekcji (Hero/Features/Testimonials). Reszta sekcji (Header, Trust, Problem, How, Compare, FAQ, Offer, Final CTA, Footer, Sticky CTA, Cookie) = klasyczny szablon bez zmian — fundament konwersji nienaruszony.
+
+**Nowe pliki:**
+- `docs/landing/reference/section-variants.md` — 10 wariantów Hero + 6 Features + 6 Testimonials, każdy z HTML snippet + CSS + kryteriami wyboru. Plus drzewo decyzyjne (rozdział 4) + reguła pierwszeństwa „pierwsza pasująca z góry wygrywa". Plus rozdział 6: JS Effects coverage — tabela deficytów per wariant + reguła uzupełniania fallbacków.
+
+**Zmiany:**
+- `docs/landing/02-generate.md` — nowy rozdział „Autonomiczny wybór wariantów sekcji" przed architekturą 14 sekcji. Krok 2 workflow ETAP 2: wybierz warianty z drzewa + zaloguj w `_brief.md` sekcja 9. Krok 5 workflow: sprawdź pokrycie 5 JS effects, uzupełnij fallbacki.
+- `docs/landing/01-direction.md` — sekcja 9 briefa opisana jako opcjonalna (wypełniana autonomicznie w ETAP 2).
+- `docs/landing/03-review.md` — tabela „Checklist sekcji i obrazów" variant-aware. Nº numbering oznaczony jako opcjonalny (Editorial paradigm only).
+- `landing-pages/_templates/_brief.template.md` — dodana sekcja 9.
+- `scripts/landing-autorun.sh` — prompt dla Claude'a wspomina krok wyboru wariantów.
+- `scripts/verify-landing.sh` — `BENTO_TILES` regex akceptuje `<div>` i `<article>` (warianty F używają article). `PERS_PH` + `TESTI_PH` obniżone do ≥1 (T5 Single Hero ma 1 avatar). Grupa 2 Nº numbering USUNIĘTA (Editorial-only signature, nie universal requirement).
+- `CLAUDE.md` + `docs/landing/README.md` — dodany section-variants.md w reference table. Liczba etapów ujednolicona na 7 (było 6 gdzie pomijano 3.5).
+
+**Motywacja:**
+Kafina/Caffora/Numerator/GlassNova (rebuild) miały identyczną architekturę strony (hero split + bento + ritual + spec + versus + voices + FAQ + offer). Różne tylko kolory/teksty. Paradigm approach v3.6 (cofnięty) udawał że każda strona jest inna; realnie tylko 3 sekcje niosą wizualną wagę (Hero/Features/Testimonials) i te wariantujemy — reszta to fundament konwersji.
+
+---
+
 ## [v3.5] — 2026-04-20
 
 ### Added — ETAP 3.5 Copy Review (Manus)

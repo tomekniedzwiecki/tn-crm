@@ -1151,5 +1151,64 @@ To nie jest blokujące dla verify-brief (sekcja opcjonalna), ale zalecane dla do
 
 - `02-generate.md` → rozdział „Autonomiczny wybór wariantów sekcji" odsyła tutaj
 - `01-direction.md` → Krok 8 ma check „wybierz 3 warianty po napisaniu manifesta"
-- `patterns.md` → biblioteka 22 snippetów signature elementów (MAX 3 per landing), niezależna od tej biblioteki (tamta = cross-section, ta = per-section)
+- `patterns.md` → biblioteka 22 snippetów signature elementów (cross-section, opcjonalne), niezależna od tej biblioteki (tamta = cross-section, ta = per-section)
 - `verify-landing.sh` → każdy wariant tutaj respektuje wymagane klasy CSS (testowane: każdy przejdzie weryfikację)
+
+---
+
+# 6. JS Effects coverage — obowiązkowa weryfikacja po wyborze wariantów
+
+> **Verify-landing.sh Grupa 7** wymaga 5 JS effects globalnie w pliku:
+> - `.js-split` ≥1 (headline hero)
+> - `.js-counter` ≥2 (animowane liczby)
+> - `.magnetic` ≥2 (CTA z przyciąganiem)
+> - `.js-tilt` ≥2 (karty z 3D tilt)
+> - `.js-parallax` ≥1 (parallax numerals/elementów)
+>
+> **Niektóre warianty NIE mają wszystkich 5 effects — musisz uzupełnić w klasycznych sekcjach.**
+
+### Pokrycie per wariant
+
+| Wariant | js-split | js-counter | magnetic | js-tilt | js-parallax |
+|---------|:--------:|:----------:|:--------:|:-------:|:-----------:|
+| H1 Split klasyczny | ✅ | — | ✅ | — | — |
+| H2 Full-bleed | ✅ | — | ✅ | — | — |
+| H3 Dashboard mockup | ✅ | ✅ (1) | ✅ | — | — |
+| H4 Editorial numerał | ✅ | — | ✅ | — | ✅ |
+| H5 Oversized typography | ✅ | — | ✅ | — | — |
+| H6 Persona portrait | ✅ | — | ✅ | — | — |
+| H7 Product macro | ✅ | — | ✅ | — | — |
+| H8 Split z ceną | ✅ | — | ✅ | — | — |
+| H9 Video loop | ✅ | — | ✅ | — | — |
+| H10 Before/After | ✅ | — | ✅ | — | — |
+| F1 Bento 2×2 | — | — | — | ✅ (4) | — |
+| F2 Bento asymetryczny | — | — | — | — | — |
+| F3 Linear stack | — | ✅ (1) | — | — | — |
+| F4 Cards z mockupami | — | ✅ (1) | — | ✅ (4) | — |
+| F5 Horizontal scroll | — | — | — | — | — |
+| F6 Split sticky | — | — | — | — | — |
+| T1-T6 | — | — | — | — | — |
+
+### Reguła uzupełniania fallbacków (OBOWIĄZKOWE w Kroku 4 ETAP 2)
+
+Po złożeniu HTML z wybranymi wariantami, **policz wystąpienia każdego z 5 JS effects** w całym pliku. Jeśli pokrycie nie spełnia verify:
+
+| Brak | Gdzie dodać fallback |
+|------|----------------------|
+| **`.js-counter` <2** | Hero stats (jeśli H nie ma) **lub** Offer box „Oszczędzasz <span class="js-counter" data-target="400">0</span> zł" + Problem section z dużą liczbą statystyki |
+| **`.js-tilt` <2** | Trust Bar icons (owiń 2+ `.trust-item` w `.js-tilt`) **lub** How It Works kroki (każdy `.how-step` dostaje `.js-tilt`) |
+| **`.js-parallax` <1** | Problem section — numeral w tle (stylizowany jak [patterns.md #21](patterns.md#21-parallax-numerals)) **lub** Final CTA bg-number |
+| **`.magnetic` <2** | Dodaj do sticky-cta + offer-cta (poza hero) |
+| **`.js-split` <1** | Niemożliwe (każdy wariant H ma js-split na h1) — jeśli brak, dodaj do h1 hero |
+
+### Weryfikacja
+
+Po uzupełnieniu fallbacków uruchom:
+
+```bash
+bash scripts/verify-landing.sh [slug]
+```
+
+Grupa 7 „JS effects" musi być 100% zielona. Jeśli nie — dodaj brakujące klasy w miejscach zgodnie z tabelą powyżej.
+
+**Nie zignoruj tego kroku** — jest główną przyczyną FAIL verify przy kombinacjach non-default wariantów (np. H5 + F3 + T4).

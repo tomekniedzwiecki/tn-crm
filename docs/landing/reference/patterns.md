@@ -2,6 +2,9 @@
 
 **Cel:** gotowe snippety signature elements, które odróżniają landing „pro" od „template".
 
+> **To jest biblioteka cross-section signature elementów** (do selektywnego użycia, nie obowiązkowa).
+> **Do wyboru per-section wariantów** (Hero/Features/Testimonials) — patrz [`section-variants.md`](section-variants.md) — to OBOWIĄZKOWA biblioteka wyboru w ETAP 2.
+
 Każdy snippet ma:
 - **Kiedy użyć**
 - **HTML**

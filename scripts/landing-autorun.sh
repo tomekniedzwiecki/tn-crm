@@ -121,7 +121,7 @@ cat <<EOF
 Zrób landing dla workflow UUID=$UUID (slug=$SLUG).
 
 TRYB: AUTO-RUN FULL autonomous (landingi to preview dla klienta, nie produkcja).
-- Wykonuj wszystkie ETAPY 1-6 autonomicznie + ETAP 3.5 (Manus copy review), bez pytania użytkownika
+- Wykonuj wszystkie 7 ETAPÓW autonomicznie (1, 2, 3, 3.5 Manus copy review, 4, 5, 6), bez pytania użytkownika
 - Folder landing-pages/$SLUG/ już istnieje z _brief.template.md (wypełnij go)
 - AI images generują się w tle (PID ${AI_PID:-N/A}) — użyj placeholderów jeśli jeszcze nie gotowe
 - Po ETAP 6: git add + commit + push BEZ pytania (zgodnie z feedback-landing-auto-deploy.md)

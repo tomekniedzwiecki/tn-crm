@@ -4,7 +4,7 @@
 
 ## TL;DR
 
-Generowanie landing page w **6 etapach**. **Manifesto PRZED HTML** (nie po). Po ETAP 6 — **FULL auto deploy** na Vercel (landingi to preview dla klienta, nie produkcja).
+Generowanie landing page w **7 etapach** (1, 2, 3, **3.5 Manus copy review**, 4, 5, 6). **Manifesto PRZED HTML** (nie po). Po ETAP 6 — **FULL auto deploy** na Vercel (landingi to preview dla klienta, nie produkcja).
 
 ## 🎯 Trigger frazy (AUTO-RUN)
 
@@ -12,7 +12,7 @@ Generowanie landing page w **6 etapach**. **Manifesto PRZED HTML** (nie po). Po 
 - „Zrób landing dla [UUID]" / „Zrób landing dla workflow [nazwa]"
 - „Wygeneruj stronę sprzedażową [UUID]"
 
-Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 6 etapów autonomicznie.
+Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomicznie (w tym ETAP 3.5 Manus copy review).
 
 ---
 

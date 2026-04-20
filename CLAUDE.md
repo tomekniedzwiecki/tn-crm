@@ -65,9 +65,9 @@ Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a 
 - „Zrób landing dla [UUID]" / „Zrób landing dla workflow [nazwa]"
 - „Wygeneruj stronę sprzedażową [UUID]"
 
-Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](docs/landing/README.md)** i wykonaj AUTO-RUN — wszystkie 6 etapów autonomicznie, **commit + push + deploy bez pytania** (landingi to preview dla klienta, nie produkcja — patrz `feedback-landing-auto-deploy.md`). Zakończ podaniem linku live: `https://tn-crm.vercel.app/landing-pages/[slug]/`.
+Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](docs/landing/README.md)** i wykonaj AUTO-RUN — wszystkie 7 etapów autonomicznie (1, 2, 3, **3.5 Manus copy review**, 4, 5, 6), **commit + push + deploy bez pytania** (landingi to preview dla klienta, nie produkcja — patrz `feedback-landing-auto-deploy.md`). Zakończ podaniem linku live: `https://tn-crm.vercel.app/landing-pages/[slug]/`.
 
-**Flow (6 etapów):**
+**Flow (7 etapów):**
 
 | # | Plik | Rola |
 |---|------|------|

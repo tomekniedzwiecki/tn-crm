@@ -333,8 +333,9 @@ for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How I
 done
 
 # Min 4 tiles w bento (top-level tile divs)
-BENTO_TILES=$(grep -cE '<div class="tile[^-][^"]*"' "$FILE" || true)
-check_range "Bento ma ≥4 tiles" 4 8 "$BENTO_TILES"
+# Tiles w Solution/Features: akceptuje <div> lub <article> (warianty F1-F6 z section-variants.md używają <article>)
+BENTO_TILES=$(grep -cE '<(div|article) class="tile[^-][^"]*"' "$FILE" || true)
+check_range "Bento/Features ma ≥4 tiles" 4 10 "$BENTO_TILES"
 
 # Min 3 acts w How It Works (top-level act/step/how-step)
 ACTS=$(grep -cE '<div class="act[^-][^"]*"|<div class="how-step|<div class="step[^-][^"]*"' "$FILE" || true)
