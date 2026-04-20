@@ -28,8 +28,8 @@ if [ ! -f "node_modules/.bin/playwright" ]; then
   npm install -D playwright && npx playwright install chromium
 fi
 
-# Create temp shoot script
-SHOOT_SCRIPT="/tmp/_shoot_${SLUG}.mjs"
+# Create temp shoot script w bieżącym katalogu (żeby node znalazł node_modules/playwright)
+SHOOT_SCRIPT="_shoot_${SLUG}.mjs"
 OUT_DIR="C:/tmp/${SLUG}_shots"
 
 cat > "$SHOOT_SCRIPT" <<EOF
