@@ -291,6 +291,9 @@
                 <!-- Quick actions (desktop only) - tuż obok breadcrumba -->
                 <div class="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-white/5 flex-shrink-0">
                     <!-- Grupa: Portal klienta -->
+                    <a id="hdr-crm" href="#" target="_blank" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10 transition-colors" title="Otwórz leada w CRM">
+                        <i class="ph ph-address-book text-[16px]"></i>
+                    </a>
                     <button type="button" onclick="openClientPreview()" class="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors" title="Podgląd klienta">
                         <i class="ph ph-eye text-[16px]"></i>
                     </button>
@@ -4458,13 +4461,16 @@
                 .single();
 
             if (lead) {
-                const link = document.getElementById('crm-lead-link');
-                if (link) {
-                    const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
-                        ? '/leads.html' : '/leads';
-                    link.href = `${basePath}?id=${lead.id}`;
-                    link.classList.remove('hidden');
-                }
+                const basePath = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+                    ? '/leads.html' : '/leads';
+                const href = `${basePath}?id=${lead.id}`;
+                ['crm-lead-link', 'hdr-crm'].forEach(id => {
+                    const link = document.getElementById(id);
+                    if (link) {
+                        link.href = href;
+                        link.classList.remove('hidden');
+                    }
+                });
             }
         }
 
