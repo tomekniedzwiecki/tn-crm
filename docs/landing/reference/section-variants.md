@@ -101,6 +101,7 @@
 .hero-overlay-inner h1{color:#fff;font-size:clamp(40px,5vw,64px)}
 .hero-overlay-inner .eyebrow.light{color:rgba(255,255,255,0.75)}
 .hero-overlay-inner .hero-sub.light{color:rgba(255,255,255,0.9)}
+@media(max-width:768px){.hero-fullbleed{height:min(560px,82vh)}.hero-overlay{padding-bottom:48px}.hero-overlay-inner h1{font-size:clamp(32px,7vw,44px)}}
 ```
 
 ---
@@ -152,6 +153,8 @@
 .hero-mockup{position:relative;min-height:520px}
 .hero-phone{position:absolute;left:0;top:20px;width:55%;aspect-ratio:9/18;background:var(--ink);border-radius:32px;padding:10px;box-shadow:var(--shadow-lg);transform:rotate(-3deg);z-index:2}
 .hero-device-ph{position:absolute;right:0;top:0;width:56%;aspect-ratio:3/4;z-index:1}
+@media(max-width:900px){.hero-mockup{min-height:420px}.hero-phone{width:62%}.hero-device-ph{width:56%}}
+@media(max-width:480px){.hero-mockup{min-height:360px}.hero-phone{width:65%;transform:rotate(-2deg)}}
 ```
 
 > Szczegółowa implementacja phone UI: patrz `landing-pages/glassnova/index.html` (referencyjny).
@@ -199,6 +202,7 @@
 .hero-numeral-bg{position:absolute;top:-40px;right:-20px;font-family:var(--font-display);font-size:clamp(280px,28vw,440px);line-height:.78;font-weight:300;font-style:italic;color:var(--paper-2);letter-spacing:-.04em;z-index:0;user-select:none}
 .hero-numeral-bg sup{font-size:.22em;font-style:normal;font-family:var(--font-mono);letter-spacing:.1em;color:var(--muted);vertical-align:top}
 .hero-numeral .hero-grid{position:relative;z-index:1}
+@media(max-width:900px){.hero-numeral-bg{font-size:clamp(200px,30vw,320px);top:auto;right:-10px;bottom:-20px}}
 ```
 
 ---
@@ -244,6 +248,7 @@
 .hero-oversized .hero-sub.center{text-align:center;max-width:520px;margin:0 auto 32px}
 .hero-oversized .hero-cta-row.center{justify-content:center;margin-bottom:56px}
 .hero-oversized .hero-figure{aspect-ratio:2/1;max-width:1100px;margin:0 auto;border-radius:20px;overflow:hidden}
+@media(max-width:768px){.hero-oversized{padding:120px 0 60px}.hero-oversized-h1{font-size:clamp(40px,12vw,72px);line-height:1.02}.hero-oversized .hero-figure{aspect-ratio:4/3;border-radius:12px}}
 ```
 
 ---
@@ -292,6 +297,7 @@
 .hero-portrait .hero-figure{aspect-ratio:5/7}
 .hero-quote{margin-top:32px;padding:18px 22px;border-left:2px solid var(--primary);font-family:var(--font-display);font-size:17px;font-style:italic;color:var(--ink);line-height:1.5;max-width:420px}
 .hero-quote cite{display:block;font-family:var(--font-body);font-style:normal;font-size:13px;color:var(--muted);margin-top:10px}
+@media(max-width:900px){.hero-portrait .hero-grid{grid-template-columns:1fr;gap:32px}.hero-portrait .hero-figure{max-height:480px;aspect-ratio:4/5}.hero-quote{font-size:15px;max-width:100%}}
 ```
 
 ---
@@ -334,6 +340,7 @@
 .hero-macro-overlay h1{color:#fff;font-size:clamp(36px,4.5vw,56px);max-width:720px}
 .hero-macro-overlay .hero-sub.light{color:rgba(255,255,255,0.88);max-width:540px;margin-bottom:28px}
 .hero-macro-overlay .eyebrow.light{color:rgba(255,255,255,0.7)}
+@media(max-width:768px){.hero-macro{min-height:min(580px,82vh)}.hero-macro-overlay{padding-bottom:40px}.hero-macro-overlay h1{font-size:clamp(28px,6.5vw,40px)}}
 ```
 
 ---
@@ -391,6 +398,7 @@
 .hero-price-note{font-size:13px;color:var(--muted);margin-bottom:24px}
 .hero-rating{margin-top:20px;display:flex;gap:10px;align-items:center;font-size:13px;color:var(--muted)}
 .hero-rating .stars{color:var(--accent);font-size:15px;letter-spacing:2px}
+@media(max-width:480px){.hero-price-box{gap:12px}.hero-price-current{font-size:34px}.hero-price-old{font-size:18px}}
 ```
 
 ---
@@ -436,6 +444,7 @@
 .hero-video-overlay{position:absolute;inset:0;display:flex;align-items:center;padding:0;background:linear-gradient(135deg,rgba(0,0,0,0.5) 0%,transparent 50%)}
 .hero-video-overlay h1{color:#fff;font-size:clamp(40px,5.5vw,72px);max-width:620px;margin-bottom:32px}
 .hero-video-overlay .eyebrow.light{color:rgba(255,255,255,0.75);margin-bottom:20px}
+@media(max-width:768px){.hero-video{min-height:min(560px,82vh)}.hero-video-overlay h1{font-size:clamp(32px,8vw,48px);margin-bottom:20px}}
 ```
 
 > Uwaga: jeśli brak video w zasobach → fallback na H2 Full-bleed lifestyle.

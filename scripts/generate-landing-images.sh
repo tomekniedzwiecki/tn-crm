@@ -29,7 +29,13 @@ if [ "$PROMPTS" = "[]" ]; then
   exit 0
 fi
 
-# Standard 11 zdjęć landing (lista nazw)
+# Standard 11 zdjęć landing (lista nazw) — pod KLASYCZNY 14-sekcyjny szablon
+# Jeśli wybrany wariant Hero/Features/Testimonials z section-variants.md wymaga innych
+# kadrów (np. H6 Persona portrait = pionowy portret, H10 Before/After = 2 kadry przed/po,
+# T4 UGC wall = 8 square), zdjęcia powyższe mogą być nieużyte a brakujące
+# wymagają custom prompts. TODO: variant-aware image generation w przyszłej iteracji.
+# Na razie: Claude w ETAP 4 podmienia placeholdery na dostępne ai-generated,
+# pozostawia 4-polowe briefy tam gdzie brak pasującego obrazu.
 NAMES=(
   "hero"
   "challenge"

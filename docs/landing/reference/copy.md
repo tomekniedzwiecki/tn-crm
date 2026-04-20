@@ -144,13 +144,28 @@ Pisz ostatnie "so what" — to jest prawdziwa korzyść.
 
 **Cel**: Zatrzymać scroll, wzbudzić ciekawość, obiecać transformację
 
-**Struktura**:
+**UWAGA — headline zależy od wybranego wariantu Hero** (patrz [`section-variants.md`](section-variants.md)):
+
+| Wariant | Długość headline | Formuła copy | Przykład |
+|---------|-----------------|--------------|----------|
+| **H1 Split klasyczny** | 3-8 słów | [Wynik] bez [ból] | „Lśniące okna bez drabiny" |
+| **H2 Full-bleed lifestyle** | 4-6 słów | Stan aspiracyjny, lekki mood | „Poranek, kawa, czyste szyby." |
+| **H3 Dashboard mockup** | 4-6 słów | [Obiekt kontroli] + [w zasięgu] | „12 piętro. Bez drabiny." |
+| **H4 Editorial numerał** | 3-5 słów | Minimal, liczba w tle niesie resztę | „Precyzja. 5600 Pa." |
+| **H5 Oversized typography** | **2-4 słowa** (monumentalne) | 1 mocne stwierdzenie + em italic dopowiedzenie | „Czyste okna. _Bez ryzyka._" |
+| **H6 Persona portrait** | 5-8 słów | [Dla X], [korzyść] — persona-speak | „Dla mam na 12 piętrze, które nie mają czasu." |
+| **H7 Product macro** | 3-5 słów | Material/craft/powiedz co pokazujesz | „Niemiecka stal. Polska precyzja." |
+| **H8 Split z ceną** | 5-10 słów | Value prop + cena w headline | „Robot do okien. 1499 zł. Bez drabiny." |
+| **H9 Video loop** | 4-6 słów | Jedno mocne hasło, reszta w video | „Zobacz jak wraca do bazy." |
+| **H10 Before/After** | 5-8 słów | [Stan A] → [Stan B] z em italic na kontraście | „3 godziny _w 20 minut._" |
+
+**Podstawowa struktura (każdy wariant)**:
 ```
-[BADGE] — opcjonalny, buduje credibility
-[HEADLINE] — max 10 słów, trafia w ból LUB obiecuje wynik
-[SUBHEADLINE] — 1-2 zdania, mechanizm działania lub dowód
+[BADGE/EYEBROW] — opcjonalny, buduje credibility
+[HEADLINE] — długość per wariant (patrz tabela)
+[SUBHEADLINE] — 1-2 zdania, mechanizm/dowód (pomiń jeśli H5 Oversized)
 [CTA PRIMARY] — akcja + korzyść
-[CTA SECONDARY] — niższe ryzyko
+[CTA SECONDARY] — niższe ryzyko (opcjonalny — pomiń dla H2/H7/H9 full-bleed)
 ```
 
 **Formuły headline**:

@@ -26,6 +26,29 @@
 
 ---
 
+## ⚠️ Variant-specific handling (sprawdź PRZED ogólną checklistą)
+
+Jeśli w `_brief.md` sekcja 9 zalogowany jest non-default wariant Hero/Features/Testimonials — `reference/section-variants.md` zawiera **dedykowane `@media` queries** dla każdego wariantu. Skopiowałeś je do HTML razem z snippetem w ETAP 2. Zweryfikuj:
+
+| Wariant | Mobile risk | Sprawdź na 375px |
+|---------|-------------|------------------|
+| **H2 Full-bleed / H7 Macro / H9 Video** | Overlay na zdjęciu — tekst może znikać w gradiencie | `.hero-overlay` height/padding odpowiedni dla krótszego ekranu; headline font-size clamp zredukowany |
+| **H3 Dashboard mockup** | Phone + device absolute positioning — może się nakładać | `.hero-phone` width 60-65%, rotation zredukowany do -2deg, min-height hero-mockup dopasowany |
+| **H4 Editorial numerał** | Monumentalna cyfra tła — może wyjść z ekranu lub zasłonić headline | numerał font-size zredukowany, position top→bottom (lepiej pod headlinem) |
+| **H5 Oversized typography** | Display headline 128px → 72px na mobile | clamp(40px,12vw,72px) — sprawdź że nie rozlewa się poza container |
+| **H6 Persona portrait** | Grid 1fr 1fr → 1fr, portret max-height 480px | stacking OK, portret nie zabiera więcej niż 60% viewport |
+| **H8 Split z ceną** | Price box + stars — mogą przewijać się wiersz po wierszu | `.hero-price-current` 34px, stars inline |
+| **H10 Before/After** | 1fr auto 1fr → 1fr z arrow obróconym 90° | `.hero-ba-arrow{transform:rotate(90deg)}` |
+| **F3 Linear stack** | Row grid-template 1fr 1fr → 1fr, kolejność text-image | `.feature-row.reverse` order reset do 0 |
+| **F5 Horizontal scroll** | Już jest mobile-first (karty scroll X) | sprawdź że scroll-snap działa, card flex 0 0 320px |
+| **F6 Sticky scrollytelling** | sticky position → relative na mobile | `.sticky-figure{position:relative;top:0}` |
+| **T4 UGC wall** | Grid 4 cols → 2 cols | `.ugc-grid{grid-template-columns:repeat(2,1fr)}` |
+| **T6 Press logos** | Grid 5 cols → 3 cols | `.press-logos{grid-template-columns:repeat(3,1fr)}` |
+
+Jeśli brakuje którejkolwiek — skopiuj `@media` z `reference/section-variants.md` dla danego wariantu.
+
+---
+
 ## Checklist — podzielony na 10 obszarów
 
 ### A. Touch targets (≥44px, Apple HIG)
