@@ -1085,6 +1085,13 @@
 
 > **Claude wybiera wariant per sekcja automatycznie** na bazie danych z briefa (kategoria + persona + price). Nie pyta użytkownika. Wybór loguje w `_brief.md` sekcji 9.
 
+## ⚠️ Reguła pierwszeństwa (tiebreaker)
+
+**Pierwsza pasująca reguła z góry tabeli wygrywa.** Jeśli produkt pasuje do kilku warunków (np. „premium AGD z aplikacją" = Smart home ✓ + Premium AGD ✓), wybierasz wariant z **pierwszej pasującej linii**, nie „najlepszej" (to byłoby subiektywne). Default (ostatni wiersz) włącza się **tylko** jeśli żadna wcześniejsza reguła nie pasuje.
+
+**Przykład:** Dyson V15 (premium AGD + aplikacja) → Smart home linia 1 wygrywa → **H3 Dashboard mockup**.
+Jeśli chcesz wymusić H4 Editorial numerał — edytuj brief sekcji 1 (Kierunek) tak, żeby „Smart home" nie pasowało (np. zaznacz Editorial/Luxury).
+
 ## Hero (wybierz 1 z 10)
 
 | Warunki | Wybierz |

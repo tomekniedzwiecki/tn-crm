@@ -128,8 +128,14 @@ TRYB: AUTO-RUN FULL autonomous (landingi to preview dla klienta, nie produkcja).
 - Finalny output: link https://tn-crm.vercel.app/landing-pages/$SLUG/ + raport
 
 FLOW (wykonaj w tej kolejności):
-1. ETAP 1 DIRECTION → _brief.md + verify-brief.sh
-2. ETAP 2 GENERATE → index.html (14 sekcji + 5 JS effects + placeholders per-section)
+1. ETAP 1 DIRECTION → _brief.md (8 sekcji) + verify-brief.sh
+2. ETAP 2 GENERATE:
+   a. Wybierz 3 warianty sekcji z docs/landing/reference/section-variants.md
+      (Hero z 10, Features z 6, Testimonials z 6 — drzewo decyzyjne rozdział 4,
+      pierwsza pasująca reguła z góry wygrywa)
+   b. Zaloguj wybory w _brief.md sekcja 9 (opcjonalna, ale zalecana)
+   c. Zbuduj index.html (14 sekcji — 3 wybrane warianty + 11 standardowych
+      + 5 JS effects + placeholders per-section)
 3. ETAP 3 REVIEW → bash scripts/verify-landing.sh $SLUG (cel: ≥60 PASS / 0 FAIL)
 4. ETAP 3.5 COPY REVIEW (Manus) — OBOWIĄZKOWY:
    a. bash scripts/review-copy-manus.sh $SLUG   (5-15 min, blocking poll)

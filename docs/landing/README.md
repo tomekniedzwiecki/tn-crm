@@ -37,7 +37,8 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 6 etapów autonomiczni
 | [`reference/safety.md`](reference/safety.md) | 10 zasad bezwarunkowych (single source of truth) |
 | [`reference/copy.md`](reference/copy.md) | Senior Copywriter Playbook + Conversion Boosters |
 | [`reference/pagespeed.md`](reference/pagespeed.md) | Optymalizacja wydajności (90+ mobile) |
-| [`reference/patterns.md`](reference/patterns.md) | 22 signature snippetów (kopiuj-wklej) |
+| [`reference/patterns.md`](reference/patterns.md) | 22 cross-section signature snippetów (kopiuj-wklej) |
+| [`reference/section-variants.md`](reference/section-variants.md) | **22 warianty per-sekcja** (10 hero + 6 features + 6 testimonials) + drzewo decyzyjne autonomicznego wyboru |
 
 ### Specjalne przypadki
 

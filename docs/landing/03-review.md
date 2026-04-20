@@ -24,8 +24,10 @@ FILE="landing-pages/$SLUG/index.html"
 echo "Placeholdery:"
 grep -cE '<div class="(hero-placeholder-ph|tile-figure|ritual-fig|spec-fig|persona-figure|offer-figure-inner|img-placeholder|ph-box)"' "$FILE"
 
-# 2. Ciągłość numeracji Nº (brak luk, brak duplikatów)
-echo "Numeracja Nº:"
+# 2. Numeracja Nº — OPCJONALNE (sygnatura Editorial paradigm, nie wymóg uniwersalny)
+# Jeśli _brief.md wskazuje Editorial/Luxury kierunek → sprawdź ciągłość.
+# Dla pozostałych paradygmatów (Dashboard/Cinematic/Value/Oversized typo) — pomiń.
+echo "Numeracja Nº (tylko dla Editorial paradigm):"
 grep -oE "Nº [0-9]+" "$FILE" | sort -u
 
 # 3. Czy wszystkie CTA prowadzą do tego samego miejsca
@@ -90,7 +92,7 @@ grep -cE "grid-row\s*:\s*span 2" "$FILE"
 | Kontrola | Oczekiwane | Jeśli inaczej |
 |----------|-----------|---------------|
 | Placeholdery | 12-20 | dodaj więcej figur w bento/ritual/personas |
-| Numeracja Nº | ciągła (Nº 01, 02, 03, … bez luk) | przenumeruj brakujące |
+| Numeracja Nº | **opcjonalna** — ciągła tylko dla Editorial paradigm (paromia). Dashboard/Cinematic/Value/Oversized nie wymagają Nº | jeśli Editorial → przenumeruj; jeśli inny paradigm → pomiń |
 | Linki CTA | max 2 unikalne (np. `#zamow` + kotwice menu) | zunifikuj do jednego `#offer/#zamow` |
 | Hero headline | ≤ 10 słów | skróć |
 | Hero subheadline | ≤ 25 słów | skróć |
@@ -113,28 +115,22 @@ grep -cE "grid-row\s*:\s*span 2" "$FILE"
 
 ## 1. Checklist sekcji i obrazów
 
-Checklist pokrywa **funkcje** sekcji, nie dokładne nazwy. Dla kierunku
-Editorial/Luxury (patrz `04-design.md`) nazwy mogą wyglądać
-inaczej, ale każda **funkcja** musi być pokryta.
+Checklist pokrywa **funkcje** sekcji, nie dokładne nazwy. Liczba obrazów w sekcjach **Hero / Solution / Testimonials** zależy od wybranego wariantu z [`reference/section-variants.md`](reference/section-variants.md) (rozdział 1-3). Pozostałe sekcje = standard.
 
-| # | Funkcja | Editorial nazwa (przykład) | Min. obrazów | OK |
-|---|---------|---------------------------|--------------|-----|
-| 1 | Header + Logo | — | 1 (logo) | [ ] |
-| 2 | Hero | Nº 01 | 1–2 (produkt główny) | [ ] |
-| 3 | Trust Bar | Trust Strip | 0 (ikony/SVG) | [ ] |
-| 4 | Product Showcase / Gallery | rozproszone w bento figures | 2–4 zdjęcia detali | [ ] |
-| 5 | Problem | Nº 02 Manifesto | 1 (ilustracja) | [ ] |
-| 6 | Solution / Benefits | Nº 03 Atelier (bento) | 3–4 (figure w tile) | [ ] |
-| 7 | Technology / How It's Made | Nº 05 Spec Sheet | 1 (przekrój techniczny) | [ ] |
-| 8 | How It Works (kroki) | Nº 04 Rytuał | 3 (każdy akt = 1 obraz) | [ ] |
-| 9 | Personas / For Who | Nº 07 Dla Kogo | 3 (każda persona = 1 portret) | [ ] |
-| 10 | Comparison | Nº 06 Dwie epoki | 0 (tekst + lista) | [ ] |
-| 11 | Testimonials | Nº 08 Głosy | 0 (awatary-inicjały OK) | [ ] |
-| 12 | Package / What's Included | w Offer | 1 (zestaw/unboxing) | [ ] |
-| 13 | Offer / Pricing | Nº 10 Oferta | 1 (produkt w ofercie) | [ ] |
-| 14 | FAQ | Nº 09 Pytania | 0 | [ ] |
-| 15 | CTA Banner / Final | Nº 11 Finał | 0 | [ ] |
-| 16 | Footer | — | 1 (logo) | [ ] |
+| # | Funkcja | Min. obrazów (zależnie od wariantu) | OK |
+|---|---------|-------------------------------------|-----|
+| 1 | Header + Logo | 1 (logo) | [ ] |
+| 2 | Hero | 1–2 (H1-H10 każdy ma własny brief placeholder) | [ ] |
+| 3 | Trust Bar | 0 (ikony/SVG) | [ ] |
+| 4 | Problem | 1 (ilustracja lub stat + cytat) | [ ] |
+| 5 | Solution / Features | 3–6 (F1 bento 4 · F2 asym 5-6 · F3 linear 4 · F4 cards 4 · F5 scroll 6 · F6 sticky 4) | [ ] |
+| 6 | How It Works (kroki) | 3 (standard: 3 akty = 3 step-figure) | [ ] |
+| 7 | Comparison | 0 (tekst + lista) — opcjonalna | [ ] |
+| 8 | Testimonials / Proof | **zależnie od wariantu** (T1 voices: 3 · T2 B/A: 3 · T3 video: 3 · T4 UGC: 6-8 · T5 single: 1 · T6 press: 5 logo) | [ ] |
+| 9 | Offer / Pricing | 1 (produkt w ofercie + flat lay zestawu) | [ ] |
+| 10 | FAQ | 0 | [ ] |
+| 11 | Final CTA Banner | 0-1 (opcjonalny bg-figure) | [ ] |
+| 12 | Footer | 1 (logo) | [ ] |
 
 **Minimum placeholderów obrazów na stronie: 12–20.**
 

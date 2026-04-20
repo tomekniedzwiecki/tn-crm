@@ -83,7 +83,8 @@ Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](doc
 - [`docs/landing/reference/safety.md`](docs/landing/reference/safety.md) — 10 zasad bezwarunkowych (single source of truth)
 - [`docs/landing/reference/copy.md`](docs/landing/reference/copy.md) — Senior Copywriter + Conversion Boosters
 - [`docs/landing/reference/pagespeed.md`](docs/landing/reference/pagespeed.md) — optymalizacja wydajności
-- [`docs/landing/reference/patterns.md`](docs/landing/reference/patterns.md) — 22 signature snippetów
+- [`docs/landing/reference/patterns.md`](docs/landing/reference/patterns.md) — 22 cross-section signature snippetów
+- [`docs/landing/reference/section-variants.md`](docs/landing/reference/section-variants.md) — **22 warianty per-sekcja (10 hero + 6 features + 6 testimonials)**. Claude w ETAP 2 autonomicznie wybiera po 1 wariancie per sekcja (drzewo decyzyjne rozdział 4).
 
 **Specjalne przypadki:**
 - Modyfikacja / migracja starego landinga → [`docs/landing/migrate.md`](docs/landing/migrate.md)
