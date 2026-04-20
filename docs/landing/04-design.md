@@ -1,6 +1,11 @@
-# Procedura dopracowania designu Landing Page
+# ETAP 4 — DESIGN: polish + offer box (OBOWIĄZKOWY)
 
-**Kiedy wywołać:** Po zakończeniu weryfikacji treści (CLAUDE_LANDING_REVIEW.md) **i manifesto kierunku** (CLAUDE_LANDING_DIRECTION.md).
+> **Safety rules:** [`reference/safety.md`](reference/safety.md) — szczególnie #9 (Header #FFFFFF), #2 (fade-in gate), #7 (diakrytyki).
+> **Copy + offer box copy:** [`reference/copy.md`](reference/copy.md).
+> **Patterns** (signature snippets): [`reference/patterns.md`](reference/patterns.md).
+> **PageSpeed**: [`reference/pagespeed.md`](reference/pagespeed.md).
+
+**Kiedy wywołać:** Po ETAP 3 ([`03-review.md`](03-review.md)) i przy aktywnym briefie z ETAP 1 ([`01-direction.md`](01-direction.md)).
 
 Ta procedura przekształca "poprawny szablon" w **wyróżniającą się stronę marki**.
 
@@ -86,7 +91,7 @@ Dla produktów premium/lifestyle/AGD. Wzorzec referencyjny: `landing-pages/parom
 - Display: **Fraunces** (variable, `opsz 144, SOFT 30–90`) — headlines
 - Editorial: **Cormorant Garamond** (300/400) — eyebrows, page numbers, captions
   ⚠️ NIE używaj `Italiana` — ma uszkodzony glif polskiej „Ł" w uppercase
-  (kreska wystaje nad literę). Szczegóły w `CLAUDE_LANDING_PROCEDURE.md` lekcja #6.
+  (kreska wystaje nad literę). Szczegóły w `02-generate.md` lekcja #6.
 - Body: **Inter** — czytelny neutralny
 
 **Kolorystyka:**
@@ -107,7 +112,7 @@ Nº 01 Hero (asymetryczny, oversized numeral w tle) · Nº 02 Manifesto (sticky 
 4. FIG. 01 caption pod hero visual
 5. Italic em na kluczowych słowach (1–2 per headline, Fraunces `SOFT 90`)
 
-**Wszystkie snippety HTML/CSS** → `CLAUDE_LANDING_PATTERNS.md` (14 gotowych wzorców).
+**Wszystkie snippety HTML/CSS** → `reference/patterns.md` (14 gotowych wzorców).
 
 ---
 
@@ -186,7 +191,7 @@ Od teraz **każdy landing MUSI mieć minimum 4 JS effects** (bez nich wygląda s
 
 | # | Efekt | Klasa / hook | Gdzie użyć | Referencja |
 |---|---|---|---|---|
-| 1 | **Split headline reveal** | `.js-split` na H1 hero | Jeden hero headline — char-by-char staggered reveal (18-22ms delay) | `CLAUDE_LANDING_PATTERNS.md` pattern 17 |
+| 1 | **Split headline reveal** | `.js-split` na H1 hero | Jeden hero headline — char-by-char staggered reveal (18-22ms delay) | `reference/patterns.md` pattern 17 |
 | 2 | **Number counter** | `.js-counter` + `data-target` + `data-suffix` | Hero stats (3 liczby), offer savings — liczą od 0 w 1.4s easing cubic | pattern 18 |
 | 3 | **Magnetic CTA** | `.magnetic` na `.btn-primary` | CTA w hero + offer + finale — kursor przyciąga (0.18 factor, `(hover:hover)` only) | pattern 19 |
 | 4 | **Tile 3D tilt** | Na `.tile:not(.tile-hero)` | Bento/feature tiles — subtle rotateX/Y max 4°, perspective 900px | pattern 20 |

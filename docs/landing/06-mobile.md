@@ -1,10 +1,13 @@
-# ETAP 4.5: Mobile Polish Pass (OBOWIĄZKOWY)
+# ETAP 6 — MOBILE: Polish Pass (OBOWIĄZKOWY)
 
-**Kiedy uruchomić:** PO `screenshot-landing.sh` (ETAP 4 — VERIFY), PRZED commitem i deployem.
+> **Safety rules:** [`reference/safety.md`](reference/safety.md) — szczególnie #3 (dual bank), #7 (diakrytyki), #9 (header).
+> **Mobile copy rules:** [`reference/copy.md`](reference/copy.md) Część 3.3.
+
+**Kiedy uruchomić:** PO `screenshot-landing.sh` (ETAP 5 — [`05-verify.md`](05-verify.md)), PRZED commitem i deployem.
 
 **Cel:** systematycznie dopracować landing na **375px** tak, by mobile user doznawał tego samego "wow" co desktop. VERIFY tylko wyłapuje bugi — ten etap je naprawia.
 
-**Dlaczego obowiązkowy:** 60-70% ruchu to mobile (MEMORY.md). Landing który wygląda świetnie na 1440px ale "się rozjeżdża" na 375px = wyrzucone pieniądze na reklamę.
+**Dlaczego obowiązkowy:** 60-70% ruchu to mobile. Landing który wygląda świetnie na 1440px ale "się rozjeżdża" na 375px = wyrzucone pieniądze na reklamę.
 
 ---
 
@@ -289,10 +292,10 @@ Przed commitem odpowiedz TAK na wszystkie 5:
 4. **Nie ma "AI-looking" artefaktów?** Żadnych emoji zamiast ikon, żadnych tęczowych gradientów w nagłówkach
 5. **Przeszedłby audyt senior designera?** Rytm, hierarchia, kontrast — nie "wszystko równo"
 
-Jeśli którekolwiek NIE → wracaj do ETAP 3 (design polish) lub ETAP 1 (copy).
+Jeśli którekolwiek NIE → wracaj do ETAP 4 (design polish) lub ETAP 2 (copy).
 
 ---
 
 **Po ostatecznym PASS → commit + push + link.**
 
-Patrz `CLAUDE_LANDING_VERIFY.md` Krok 7 (commit & deploy).
+Patrz `05-verify.md` Krok 7 (commit & deploy).

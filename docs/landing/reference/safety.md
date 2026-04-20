@@ -1,0 +1,347 @@
+# Safety Rules — zasady bezwarunkowe (single source of truth)
+
+> **Single source of truth dla 10 reguł safety.** Inne pliki (01-direction, 02-generate, 04-design, 05-verify, 06-mobile, reference/patterns) LINKUJĄ tutaj, nie duplikują.
+
+## Kiedy czytać
+- Przed ETAP 2 (generate) — jako checklist wejściowy
+- W trakcie ETAP 4 (design polish) — przy modyfikacjach
+- Przed deploy — `verify-landing.sh` waliduje każdą regułę przez grep checks
+
+## Dlaczego te reguły
+Każda z 10 reguł powstała z konkretnego incydentu (godziny debugowania, zepsute landingi, niezadowoleni klienci). Te problemy są zbyt drogie żeby je powtarzać.
+
+---
+
+## 1. Baseline mismatch — NIE kopiuj vitrix jako „szybkiego startu" dla innego kierunku
+
+**Problem:** Kuszące jest skopiować istniejący landing (np. vitrix) jako bazę dla nowego — przechodzi 18/18 verify, oszczędza czas. **Pułapka:** gdy kierunek manifesta NIE pasuje do baseline'a, wynik = „vitrix przebrany za kawę" — klient widzi kolejny AI-editorial landing, nie wyjątkową markę.
+
+**Wymuszany check przed kopiowaniem** — policz ile czerwonych flag manifesta trafia:
+- Moodboard referuje inny świat wizualny (Filson/Red Wing/Yeti vs Kinfolk/Dyson/B&O)
+- Paleta wyraźnie inna (ciemna + metal vs paper + italic teal)
+- Fotografia lokalizacji inna („parking 4:30" vs „salon 18. piętro")
+- Manifesto wprost wyklucza italic editorial serif / round acts / delikatne shadows
+- Persona z innego świata (kierowca TIR, rzemieślnik vs prawniczka, architektka)
+
+**≥3 flagi trafiają — szkielet od zera (MODE=forge):**
+1. Zachowaj architekturę 14 sekcji (header → hero → trust → wyzwanie → atelier → rytuał → spec → epoki → persony → głosy → FAQ → oferta → finał → footer)
+2. Zaprojektuj CSS od zera pod manifesto (inne CSS tokens, inne signature elements, inne proporcje)
+3. Dodaj nowy slug do `_templates/README.md` jako baseline dla tego kierunku
+
+**Pierwszy precedens:** Kafina (Rugged Heritage) — vitrix był dostępny, pasowała architektura, ale manifest Filson/Red Wing/Yeti wymagał dark hero + stamp badges + brak editorial italic. Świadoma decyzja: szkielet vitrix, design od zera. Zobacz [`landing-pages/kafina/_brief.md`](../../../landing-pages/kafina/_brief.md) sekcję 6.
+
+**Decyzja MODE=copy-adapt vs MODE=forge** odbywa się w [`01-direction.md`](../01-direction.md) Krok 6.
+
+---
+
+## 2. Fade-in `opacity:0` MUSI mieć JS gate (html.js class)
+
+**Antywzorzec (ŹLE — ukrywa 80% strony gdy JS padnie / bot crawluje):**
+```css
+.fade-in { opacity: 0; transform: translateY(30px); transition: ... }
+.fade-in.visible { opacity: 1; }
+```
+
+**Poprawnie — gate'uj przez klasę `.js` na `<html>`:**
+```html
+<head>
+  <script>document.documentElement.classList.add('js')</script>
+</head>
+```
+```css
+html.js .fade-in { opacity: 0; transform: translateY(30px); transition: ... }
+html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
+```
+```js
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((es) => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  }), { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+  document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+
+  // Safety fallback: po 3s pokaż TYLKO te elementy które user powinien już widzieć
+  setTimeout(() => {
+    document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    });
+  }, 3000);
+} else {
+  document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+}
+```
+
+**Dlaczego:** crawler, fullpage screenshot, print, slow JS, wyłączony JS = 80% strony niewidoczne. Bez `html.js` gate'u nigdy tego nie zauważysz.
+
+### KRYTYCZNE — safety timeout MUSI filtrować po pozycji
+
+```js
+// ❌ ŹLE — po 2.5s wszystkie fade-in (też te na końcu strony) stają się visible
+setTimeout(() => document.querySelectorAll('.fade-in:not(.visible)')
+  .forEach(el => el.classList.add('visible')), 2500);
+```
+To psuje scroll-reveal — user siedzi w hero 3 sekundy, a cała strona (nawet offer 10 ekranów niżej) już się „odkryła". Gdy doscrolluje, nic się nie pojawia.
+
+**✅ Poprawnie:** safety filtruje `getBoundingClientRect().top < window.innerHeight` — pokazuje tylko to co user powinien widzieć NA EKRANIE.
+
+**Gotowy snippet do copy-paste:** [`reference/patterns.md` #11 Fade-in safe](patterns.md#11-fade-in-safe)
+
+---
+
+## 3. Element absolute position w karcie — dual bank dla mobile
+
+Absolute positioning (spec badges nad produktem, floating elements) psuje się na mobile gdy kontener ma inny aspect-ratio. **Dwa banki treści:** jeden absolute desktop, drugi static mobile (pod kartą) z `display:none` na przeciwległym viewporcie.
+
+```html
+<figure class="hero-figure">
+  <div class="hero-spec-stack"><!-- absolute, desktop only --></div>
+</figure>
+<div class="hero-spec-stack-mobile"><!-- static, mobile only --></div>
+```
+```css
+.hero-spec-stack-mobile { display: none; }
+@media (max-width:768px) {
+  .hero-figure .hero-spec-stack { display: none; }
+  .hero-spec-stack-mobile { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 16px; }
+}
+```
+
+**Gotowy snippet:** [`reference/patterns.md` #7 Hero Spec Stack DUAL BANK](patterns.md#7-hero-spec-stack)
+
+---
+
+## 4. Placeholder MUSI być briefem dla klienta, nie „TODO"
+
+**ŹLE:**
+```html
+<div class="img-placeholder">Hero Image 1200×900</div>
+```
+
+**DOBRZE — 4 pola** (mark, title, size, ton/światło):
+```html
+<div class="ph">
+  <div class="ph-mark">P</div>
+  <div class="ph-title">Fotografia produktowa</div>
+  <div class="ph-size">Paromia Handheld · 1200 × 1500</div>
+  <div class="ph-note">Neutralne tło (ivory/paper). Orientacja pionowa 4:5, przycięte ciasno. Światło miękkie, boczne.</div>
+</div>
+```
+
+**Dlaczego:** placeholder zostaje na landingu dopóki klient nie dostarczy zdjęć. Bez briefu fotograf nie wie co strzelać → opóźnienie tygodni.
+
+**Gotowy snippet:** [`reference/patterns.md` #10 Placeholder z briefem](patterns.md#10-placeholder)
+
+---
+
+## 5. Weryfikuj wizualnie ZANIM commit (ETAP 5 + 6 OBOWIĄZKOWE)
+
+**Nigdy nie commituj bez sprawdzenia screenshotem.** ETAP 5 ([`05-verify.md`](../05-verify.md)) + ETAP 6 ([`06-mobile.md`](../06-mobile.md)) są obowiązkowe. Code review nie wyłapuje:
+- 80% strony niewidocznej przez `opacity:0` (reguła #2)
+- Hero rozjeżdżający się na 375px
+- Polskie diakrytyki obcięte w UPPERCASE (reguła #7)
+- Header rgba+backdrop nieczytelny na mobile (reguła #9)
+
+W AUTO-RUN mode te etapy są autonomiczne (Playwright + bash scan), ale **nie pomijalne**.
+
+---
+
+## 6. ⛔ Zakazane obietnice — ZERO TOLERANCJI
+
+Nigdy nie umieszczaj w trust-bar / FAQ / hero / offer:
+
+### Wysyłka i dostawa
+- ❌ „Wysyłka 24 h" / „Wysyłamy w 24h" / „D+1"
+- ❌ „z magazynu w Polsce" / „z polskiego magazynu"
+
+**Dlaczego:** większość produktów jest w Fazie 1 modelu (dropshipping AliExpress/agent w Chinach). Realna dostawa = 10–14 dni. Magazyn w Polsce to Faza 3, nieliczne projekty. Fałszywa obietnica = masa zwrotów i reklamacji.
+
+**Zamiast tego:**
+- ✅ „30 dni na zwrot" / „Bez pytań"
+- ✅ „Darmowa dostawa" / „InPost · DPD · kurier"
+- ✅ „2 lata gwarancji" / „polska obsługa"
+- ✅ „Bezpieczna płatność"
+
+**FAQ „Kiedy otrzymam przesyłkę?":**
+```
+Przesyłka dociera w 1–3 dni robocze od zaksięgowania wpłaty.
+Dostawa InPostem, DPD lub kurierem — darmowa.
+```
+(bez konkretnej godziny wysyłki)
+
+### Płatności — tylko przedpłata
+- ❌ „Za pobraniem" / COD
+- ❌ „Ratalnie" / „Rozłóż na raty" / PayPo / Klarna / Twisto
+- ❌ Jakiekolwiek BNPL (Buy Now Pay Later)
+
+**Zamiast tego (kolejność jak w offer/checkout):**
+- ✅ **BLIK (PIERWSZE)** — najpopularniejsze w PL
+- ✅ Karta VISA/MasterCard
+- ✅ Przelewy24 / P24
+- ✅ Apple Pay / Google Pay
+
+### Grep control (uruchamiane przez verify-landing.sh)
+```bash
+grep -ciE "24 ?h|w 24h|polski magazyn|magazyn.*Polsce|D\+1|pobraniem|PayPo|Klarna|Twisto|raty|ratach|ratalnie" landing-pages/[SLUG]/index.html
+# Oczekiwane: 0
+```
+
+---
+
+## 7. Polskie diakrytyki UPPERCASE → line-height ≥ 1.2
+
+Litery **Ł Ś Ć Ź Ż Ń Ó** mają kreski/kropki nad/pod znakiem. Domyślne `line-height: 1` + `text-transform: uppercase` + `letter-spacing` **obcina diakrytyki** — widać artefakty, odcięte kreski, nakładanie na sąsiedni wiersz.
+
+**Widoczne najczęściej w:**
+- Nav links, header CTA
+- Eyebrow / kicker („N**º** 03 — ATELIER")
+- Trust strip strong, buttons, footer headers
+- Tile kickers, spec keys, persona meta
+
+**Zawsze dodawaj do klas z `text-transform: uppercase`:**
+```css
+.nav-link, .eyebrow, .header-cta, .trust-item strong,
+.btn, .footer-col h4, .tile-kicker {
+  line-height: 1.4;   /* minimum 1.2, bezpieczne 1.4 */
+  text-transform: uppercase;
+}
+```
+
+**Lub jedna globalna reguła (zalecane dla editorial/luxury):**
+```css
+[class*="eyebrow"], [class*="kicker"], [class*="label"],
+.nav-link, .header-cta, .mobile-link, .page-number,
+.trust-item strong, .btn, .footer-col h4 {
+  line-height: 1.4;
+}
+```
+
+### UWAGA — nie każdy font renderuje „Ł" poprawnie w uppercase
+
+| Font | Polska „Ł" w UPPERCASE | Używać? |
+|------|-------------------------|---------|
+| **Italiana** | ❌ ukośna kreska wychodzi **ponad** górną belkę | NIE |
+| **Playfair Display SC** | ❌ czasem obcięte | ostrożnie |
+| **Fredoka One** | ❌ brak polskich znaków | NIE — użyj `Fredoka` |
+| **Patrick Hand** | ❌ brak polskich znaków | NIE — użyj `Caveat` |
+| **Fraunces** | ✅ prawidłowa | TAK |
+| **Cormorant Garamond** | ✅ prawidłowa, elegancka | TAK (editorial) |
+| **Libre Bodoni** | ✅ prawidłowa | TAK |
+| **EB Garamond** | ✅ prawidłowa | TAK |
+| **Inter** | ✅ prawidłowa | TAK (body/nav) |
+| **Poppins, Roboto, Space Grotesk** | ✅ prawidłowa | TAK |
+
+**Przed wyborem fontu editorial dla eyebrow / page-numbers — przetestuj go na frazie `Nº 04 — RYTUAŁ` i `ZAMÓW · 249 ZŁ`.** Jeśli Ł ma kreskę nad literą → wymień font.
+
+**Zamiennik Italiana:** `Cormorant Garamond` (waga 300/400) — ten sam editorial feel, poprawne PL.
+
+---
+
+## 8. Oversized editorial numeral > animated glow orbs
+
+Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (Fraunces italic, 280-440px, color: paper-3) wygląda 10× bardziej profesjonalnie niż animowane glow orby. To jeden element, który klient zapamięta.
+
+```html
+<div class="hero-numeral">26<sup>sek.</sup></div>
+```
+```css
+.hero-numeral {
+  position: absolute; top: -40px; right: -20px; z-index: -1;
+  font-family: var(--font-display);
+  font-size: clamp(280px, 28vw, 440px);
+  font-weight: 300; font-style: italic;
+  color: var(--paper-3); letter-spacing: -.04em; line-height: .78;
+  user-select: none;
+}
+```
+
+**Zakazane:** cursor followers, glitch effects, confetti, auto-play video w hero, animated background particles na mobile.
+
+**Gotowy snippet:** [`reference/patterns.md` #1 Oversized Editorial Numeral](patterns.md#1-oversized-editorial-numeral)
+
+---
+
+## 9. Header — ZAWSZE solid #FFFFFF (NIE rgba + backdrop-filter)
+
+```css
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: #FFFFFF;               /* nie paper-2, nie backdrop-filter, nie rgba — czysty #FFF */
+  border-bottom: 1px solid var(--rule);
+}
+```
+
+**Dlaczego:**
+- Biały header zawsze kontrastuje z zawartością poniżej (hero, sekcje ciemne), niezależnie od palety produktu
+- Logo klienta jest zaprojektowane na białym tle — każdy inny kolor w headerze psuje jego czytelność
+- `rgba() + backdrop-filter: blur()` jest nieczytelne na mobile (słaby kontrast nad treścią)
+
+**Logo w headerze:** tylko grafika, BEZ napisu tekstowego obok (logo zawiera już nazwę marki — nie dublujemy).
+
+**Header MA BYĆ fixed + zawsze widoczny:**
+- `position: fixed; top: 0;`
+- Bez hide-on-scroll JavaScript
+- Z-index ≥ 100
+
+---
+
+## 10. Fonty / assety — zawsze pełne URL-e
+
+### Google Fonts — `&subset=latin-ext`
+```html
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap&subset=latin-ext" rel="stylesheet">
+```
+
+Bez `&subset=latin-ext` polskie znaki ą, ę, ć, ł, ó, ś, ź, ż, ń mogą się nie załadować lub fallbackować do system font.
+
+**Max 3 rodziny fontów.** Każda dodatkowa = +200ms LCP.
+
+### Fallbacki dla fontów bez polskich znaków
+- `Fredoka One` → użyj `Fredoka`
+- `Patrick Hand` → użyj `Caveat`
+
+### OG image + logo — pełny URL Supabase (nie względny)
+
+```html
+<!-- ❌ ŹLE — względny path, nie zadziała po przeniesieniu na TakeDrop -->
+<img src="./logo.png" alt="Logo">
+<meta property="og:image" content="/landing-pages/foo/og.jpg">
+
+<!-- ✅ DOBRZE — pełny URL Supabase Storage -->
+<img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/foo/logo.png" alt="Logo" width="140" height="36">
+<meta property="og:image" content="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/foo/og.jpg">
+```
+
+**Dlaczego:** landingi są przenoszone na TakeDrop / inne hostingi — względne paths się rozjeżdżają.
+
+**Upload assetu:**
+```bash
+curl -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/attachments/landing/[slug]/logo.png" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
+  -H "Content-Type: image/png" \
+  --data-binary @"landing-pages/[slug]/logo.png"
+```
+
+---
+
+## Grep control — automatic enforcement
+
+Każda reguła ma odpowiadający check w `scripts/verify-landing.sh`. Pełna tabela 18 checks → [`05-verify.md`](../05-verify.md).
+
+**Przed deploy:**
+```bash
+bash scripts/verify-landing.sh [slug]   # 18/18 checks
+```
+
+**Przed każdą zmianą safety rule (regression):**
+```bash
+bash scripts/verify-all-landings.sh    # 6/6 baseline'ów
+```
+
+---
+
+## Cross-references
+
+- Implementacja kodu (snippety) → [`reference/patterns.md`](patterns.md)
+- Wybór baseline'u (mismatch decision) → [`01-direction.md` Krok 6](../01-direction.md)
+- Offer box (zakazane płatności H.3) → [`04-design.md` sekcja H](../04-design.md)
+- Mobile-specific safety (touch targets, overflow) → [`06-mobile.md`](../06-mobile.md)

@@ -1,6 +1,9 @@
-# Procedura weryfikacji Landing Page
+# ETAP 3 — REVIEW: weryfikacja treści (OBOWIĄZKOWY)
 
-**Kiedy wywołać:** Po zakończeniu pierwszego etapu tworzenia landing page (po zapisaniu pliku index.html).
+> **Safety rules:** [`reference/safety.md`](reference/safety.md) — wszystkie 10 reguł.
+> **Copy reference:** [`reference/copy.md`](reference/copy.md) — Copywriter Playbook.
+
+**Kiedy wywołać:** Po ETAP 2 ([`02-generate.md`](02-generate.md)) — po zapisaniu pliku index.html.
 
 Ta procedura jest **obowiązkowa** — nie kończ pracy nad landingiem bez jej wykonania.
 
@@ -109,7 +112,7 @@ grep -cE "grid-row\s*:\s*span 2" "$FILE"
 ## 1. Checklist sekcji i obrazów
 
 Checklist pokrywa **funkcje** sekcji, nie dokładne nazwy. Dla kierunku
-Editorial/Luxury (patrz `CLAUDE_LANDING_DESIGN.md`) nazwy mogą wyglądać
+Editorial/Luxury (patrz `04-design.md`) nazwy mogą wyglądać
 inaczej, ale każda **funkcja** musi być pokryta.
 
 | # | Funkcja | Editorial nazwa (przykład) | Min. obrazów | OK |
@@ -269,7 +272,7 @@ Landing MUSI odzwierciedlać ustalenia z raportu. Sprawdź:
 - [ ] Fade-in CSS gated behind `html.js` (`html.js .fade-in{opacity:0}`, NIE `.fade-in{opacity:0}`)
 - [ ] Fade-in JS ma `setTimeout` safety fallback 2500ms
 
-### 4.B Zasady bezwarunkowe headera (z CLAUDE_LANDING_DESIGN.md sekcja 0)
+### 4.B Zasady bezwarunkowe headera (z 04-design.md sekcja 0)
 
 - [ ] Header ma tło **czysto białe `#FFFFFF`** — NIE `rgba(...)` z `backdrop-filter`, NIE `var(--paper)`
 - [ ] Logo w headerze to **tylko `<img>`** — bez napisu tekstowego obok (jeśli logo zawiera nazwę marki)
@@ -281,7 +284,7 @@ grep -E "background\s*:\s*#FFFFFF|background\s*:\s*white" landing-pages/$SLUG/in
 grep -cE "backdrop-filter" landing-pages/$SLUG/index.html  # powinno być 0 w headerze
 ```
 
-### 4.C Layout integrity (cross-ref: `CLAUDE_LANDING_DESIGN.md` sekcja G)
+### 4.C Layout integrity (cross-ref: `04-design.md` sekcja G)
 
 Szczegółowe zasady + anti-patterns znajdziesz w DESIGN.md „G. Layout Discipline". Tu tylko szybka checklista do weryfikacji:
 
@@ -335,9 +338,9 @@ Sprawdź czy każda sekcja ma **własny** aspect-ratio, NIE globalne wymuszenie 
 Po przejściu checklisty:
 
 1. **Jeśli są braki w treściach** — popraw je i przejdź ponownie przez sekcje z problemami
-2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 2.5: DIRECTION** (`CLAUDE_LANDING_DIRECTION.md`)
+2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 2.5: DIRECTION** (`01-direction.md`)
 
-Kolejność: ETAP 2 (treści OK) → **ETAP 2.5 (manifesto kierunku)** → ETAP 3 (design polish) → ETAP 4 (Playwright) → commit.
+Kolejność: ETAP 3 (treści OK) → **ETAP 2 (manifesto kierunku)** → ETAP 4 (design polish) → ETAP 5 (Playwright) → commit.
 
 **NIE COMMITUJ JESZCZE** — najpierw manifesto, potem design, potem weryfikacja wizualna.
 
@@ -365,15 +368,15 @@ Po zakończeniu weryfikacji przedstaw krótki raport:
 
 ---
 
-## 7. ETAP 2.5 + 3 + 4: Direction, Design i Wizualna weryfikacja
+## 7. ETAP 2 + 3 + 4: Direction, Design i Wizualna weryfikacja
 
 **OBOWIĄZKOWE** — po weryfikacji treści przejdź kolejno:
 
-1. **ETAP 2.5 — `CLAUDE_LANDING_DIRECTION.md`** — audytujesz produkt, autonomicznie wybierasz kierunek estetyczny, piszesz **Design Manifesto** do `landing-pages/[slug]/_brief.md`. **NIE PYTAJ użytkownika.**
-2. **ETAP 3 — `CLAUDE_LANDING_DESIGN.md`** — implementujesz manifesto: typografia, paleta, signature element
-3. **ETAP 4 — `CLAUDE_LANDING_VERIFY.md`** — Playwright screenshot w 3 viewportach
+1. **ETAP 2 — `01-direction.md`** — audytujesz produkt, autonomicznie wybierasz kierunek estetyczny, piszesz **Design Manifesto** do `landing-pages/[slug]/_brief.md`. **NIE PYTAJ użytkownika.**
+2. **ETAP 4 — `04-design.md`** — implementujesz manifesto: typografia, paleta, signature element
+3. **ETAP 5 — `05-verify.md`** — Playwright screenshot w 3 viewportach
 
-Dopiero po ETAP 4 (pozytywna weryfikacja wizualna) wykonaj deploy:
+Dopiero po ETAP 5 (pozytywna weryfikacja wizualna) wykonaj deploy:
 
 ```bash
 cd /c/repos_tn/tn-crm && git add landing-pages/[nazwa]/ && git commit -m "Add [nazwa] landing page" && git push

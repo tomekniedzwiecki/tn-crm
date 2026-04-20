@@ -1,0 +1,128 @@
+#!/bin/bash
+# landing-autorun.sh — entry-point dla AUTO-RUN landing generation (FULL autonomous)
+# Usage: bash scripts/landing-autorun.sh [UUID]
+# Output: prompt dla Claude'a + utworzony placeholder folder + AI images w tle
+#
+# FULL auto deploy: po ETAP 6 commit + push + Vercel deploy bez pytania
+# (landingi to preview dla klienta, nie produkcja — patrz feedback-landing-auto-deploy.md)
+
+set -e
+
+UUID="$1"
+if [ -z "$UUID" ]; then
+  echo "Usage: bash scripts/landing-autorun.sh [UUID]"
+  echo "Przykład: bash scripts/landing-autorun.sh a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+  exit 1
+fi
+
+# Załaduj env
+if [ ! -f /c/repos_tn/tn-crm/.env ]; then
+  echo "❌ Brak /c/repos_tn/tn-crm/.env"
+  exit 1
+fi
+set -a && source /c/repos_tn/tn-crm/.env && set +a
+
+if [ -z "$SUPABASE_SERVICE_KEY" ]; then
+  echo "❌ Brak SUPABASE_SERVICE_KEY w .env"
+  exit 1
+fi
+
+SUPABASE_URL="https://yxmavwkwnfuphjqbelws.supabase.co"
+
+# Walidacja 1: workflow istnieje
+WF=$(curl -s "$SUPABASE_URL/rest/v1/workflows?id=eq.$UUID&select=id,customer_name" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+if [ "$WF" = "[]" ]; then
+  echo "❌ Workflow $UUID nie istnieje"
+  exit 1
+fi
+
+# Walidacja 2: brand_info
+BI=$(curl -s "$SUPABASE_URL/rest/v1/workflow_branding?workflow_id=eq.$UUID&type=eq.brand_info&select=value" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+if [ "$BI" = "[]" ]; then
+  echo "❌ Brak brand_info — wróć do CLAUDE_BRANDING_PROCEDURE.md"
+  exit 1
+fi
+
+# Walidacja 3: report_pdf
+RP=$(curl -s "$SUPABASE_URL/rest/v1/workflow_reports?workflow_id=eq.$UUID&type=eq.report_pdf&select=file_url" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+if [ "$RP" = "[]" ]; then
+  echo "❌ Brak raportu PDF"
+  exit 1
+fi
+
+# Walidacja 4 (opcjonalna): products
+PR=$(curl -s "$SUPABASE_URL/rest/v1/workflow_products?workflow_id=eq.$UUID&select=name,price" \
+  -H "apikey: $SUPABASE_SERVICE_KEY" -H "Authorization: Bearer $SUPABASE_SERVICE_KEY")
+if [ "$PR" = "[]" ]; then
+  echo "⚠️  Brak workflow_products — cena/zestaw z raportu lub deep research"
+fi
+
+# Ekstrakcja slug
+SLUG=$(echo "$BI" | grep -oE '"name":"[^"]+"' | head -1 | sed 's/"name":"//; s/"$//' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+if [ -z "$SLUG" ]; then
+  echo "❌ Nie mogę ekstrahować slug z brand_info"
+  exit 1
+fi
+
+echo ""
+echo "═══════════════════════════════════════════════════════════"
+echo "  LANDING AUTO-RUN: $SLUG"
+echo "  Workflow: $UUID"
+echo "═══════════════════════════════════════════════════════════"
+echo ""
+echo "✅ Walidacja Supabase OK"
+
+# Utworzenie folderu
+mkdir -p "/c/repos_tn/tn-crm/landing-pages/$SLUG"
+echo "✅ Folder utworzony: landing-pages/$SLUG/"
+
+# Kopiuj template briefa (jeśli nie istnieje)
+if [ ! -f "/c/repos_tn/tn-crm/landing-pages/$SLUG/_brief.md" ]; then
+  cp /c/repos_tn/tn-crm/landing-pages/_templates/_brief.template.md \
+     "/c/repos_tn/tn-crm/landing-pages/$SLUG/_brief.md"
+  echo "✅ Brief template skopiowany"
+else
+  echo "⚠️  _brief.md już istnieje — będzie używany istniejący"
+fi
+
+# Wystartuj background AI image generation
+if [ -f /c/repos_tn/tn-crm/scripts/generate-landing-images.sh ]; then
+  echo ""
+  echo "🎨 Startuję AI image generation w tle..."
+  bash /c/repos_tn/tn-crm/scripts/generate-landing-images.sh "$UUID" "$SLUG" > "/c/tmp/landing-ai-log-$SLUG.txt" 2>&1 &
+  AI_PID=$!
+  echo "$AI_PID" > "/c/tmp/landing-ai-pid-$SLUG"
+  echo "   PID: $AI_PID, log: /c/tmp/landing-ai-log-$SLUG.txt"
+fi
+
+# Wypluwanie promptu dla Claude'a
+cat <<EOF
+
+═══════════════════════════════════════════════════════════
+  AUTO-RUN PROMPT (copy-paste do Claude'a):
+═══════════════════════════════════════════════════════════
+
+Zrób landing dla workflow UUID=$UUID (slug=$SLUG).
+
+TRYB: AUTO-RUN FULL autonomous (landingi to preview dla klienta, nie produkcja).
+- Wykonuj wszystkie ETAPY 1-6 autonomicznie, bez pytania użytkownika
+- Folder landing-pages/$SLUG/ już istnieje z _brief.template.md (wypełnij go)
+- AI images generują się w tle (PID ${AI_PID:-N/A}) — użyj placeholderów jeśli jeszcze nie gotowe
+- Po ETAP 6: git add + commit + push BEZ pytania (zgodnie z feedback-landing-auto-deploy.md)
+- Finalny output: link https://tn-crm.vercel.app/landing-pages/$SLUG/ + raport
+
+DEFAULT DECYZJE (bez pytania):
+- verify-brief.sh fail po 3 próbach → STOP + raport
+- VERIFY screenshot bug nieznany → max 2 próby fixa, potem STOP
+- AI image nie gotowy w ETAP 4 → zostaw placeholder z brief, kontynuuj, deploy
+- regression (verify-all-landings) fail → STOP, raport, NIE deploy
+- verify-landing.sh <15/18 → STOP, raport, NIE deploy (safety violation)
+- Wszystko inne → kontynuuj, deploy, raportuj niedociągnięcia w podsumowaniu
+
+Punkt startu: docs/landing/01-direction.md
+
+═══════════════════════════════════════════════════════════
+EOF

@@ -478,7 +478,7 @@ Jedna karta hero (duża, ciemna, ze WIELKĄ liczbą w Fraunces italic) — to si
 
 ## 11. Fade-in safe (z JS gate'em)
 
-**Kiedy:** ZAWSZE. To jest krytyczne — patrz KRYTYCZNE LEKCJE w `CLAUDE_LANDING_PROCEDURE.md`.
+**Kiedy:** ZAWSZE. To jest krytyczne — patrz KRYTYCZNE LEKCJE w `02-generate.md`.
 
 **Head:**
 ```html
@@ -688,7 +688,7 @@ część (`strong`, `em`, `span`) ląduje w osobnej linii — rozjazd 3 linie pe
 
 ## 16. Layout Discipline (image-box fit)
 
-**Przeniesione do** [`CLAUDE_LANDING_DESIGN.md`](CLAUDE_LANDING_DESIGN.md) sekcja **„G. Layout Discipline"** — to zestaw reguł obowiązkowych, nie snippet signature. Tam znajdziesz 5 zasad + anti-patterns.
+**Przeniesione do** [`04-design.md`](../04-design.md) sekcja **„G. Layout Discipline"** — to zestaw reguł obowiązkowych, nie snippet signature. Tam znajdziesz 5 zasad + anti-patterns.
 
 ---
 
@@ -1001,4 +1001,4 @@ close-up at 45-degree angle, pressed against a large panoramic glass pane...
 - **Dziecięca/pet-care** marka → kierunek playful. Oversized numeral wygląda zbyt poważnie.
 - **Food & beverage** → kierunek organic. Użyj miękkich fluid shapes, nie ostrych dividerów.
 
-Patrz `CLAUDE_LANDING_DESIGN.md` → „Wybór kierunku estetycznego".
+Patrz `04-design.md` → „Wybór kierunku estetycznego".
