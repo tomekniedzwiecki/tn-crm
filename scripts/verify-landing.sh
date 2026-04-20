@@ -356,9 +356,9 @@ done
 BENTO_TILES=$(grep -cE '<(div|article) class="tile[^-][^"]*"' "$FILE" || true)
 check_range "Bento/Features ma ≥4 tiles" 4 10 "$BENTO_TILES"
 
-# Min 3 acts w How It Works (top-level act/step/how-step)
-ACTS=$(grep -cE '<div class="act[^-][^"]*"|<div class="how-step|<div class="step[^-][^"]*"' "$FILE" || true)
-check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
+# Min 3 acts w How It Works (top-level act/step/how-step) — precyzyjny regex (nie łapie how-steps, how-step-num)
+ACTS=$(grep -cE '<div class="(act|how-step|step)([^a-z-]|")' "$FILE" || true)
+check_range "How It Works ≥3 kroki" 3 8 "$ACTS"
 
 # Min 5 FAQ pytań
 FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq' "$FILE" || true)

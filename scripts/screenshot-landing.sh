@@ -32,7 +32,8 @@ fi
 SHOOT_SCRIPT="_shoot_${SLUG}.mjs"
 # Persistent path w repo — ABSOLUTNY (node.js nie wie gdzie jest repo root inaczej)
 # W .gitignore żeby nie zaśmiecać commitów. Claude może je obejrzeć w kolejnej iteracji.
-REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+# pwd -W na Git Bash (Windows) wypisze C:/ zamiast /c/ — node.js na Windows potrzebuje tego formatu
+REPO_ROOT="$(cd "$(dirname "$0")/.." && (pwd -W 2>/dev/null || pwd))"
 OUT_DIR="${REPO_ROOT}/landing-pages/${SLUG}/_shots"
 
 cat > "$SHOOT_SCRIPT" <<EOF
