@@ -809,10 +809,10 @@
 
 **Kategoria:** wszystkie (default).
 
-**Klasy wymagane:** `<section class="testimonials voices">`, ≥2 `class="... testi-avatar-figure"` lub `avatar-figure`/`voice-figure`.
+**Klasy wymagane:** `<section class="testimonials voices personas">`, ≥2 `class="... testi-avatar-figure"` lub `avatar-figure`/`voice-figure`.
 
 ```html
-<section class="testimonials voices">
+<section class="testimonials voices personas">
   <div class="container">
     <div class="section-head">
       <div class="eyebrow">Nº 07 · Opinie</div>
@@ -824,7 +824,7 @@
     </div>
     <div class="voices-grid">
       <article class="voice-card">
-        <div class="voice-avatar testi-avatar-figure avatar-figure">
+        <div class="voice-avatar testi-avatar-figure avatar-figure persona-figure">
           <div class="ph"><div class="ph-mark">[inicjały]</div></div>
         </div>
         <blockquote class="voice-quote">„[Cytat 2-3 zdania konkretnie o efekcie]"</blockquote>
@@ -854,10 +854,10 @@
 
 **Kategoria:** transformation, productivity, cost-saving, wellness measurable.
 
-**Klasy wymagane:** `<section class="testimonials social-proof">`, ≥2 `class="... avatar-figure"`.
+**Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"`.
 
 ```html
-<section class="testimonials social-proof">
+<section class="testimonials social-proof personas">
   <div class="container">
     <div class="section-head">
       <div class="eyebrow">Nº 07 · Dane klientów</div>
@@ -866,7 +866,7 @@
     <div class="ba-grid">
       <article class="ba-card">
         <div class="ba-person">
-          <div class="ba-avatar testi-avatar-figure avatar-figure"><div class="ph"><div class="ph-mark">[inicj]</div></div></div>
+          <div class="ba-avatar testi-avatar-figure avatar-figure persona-figure"><div class="ph"><div class="ph-mark">[inicj]</div></div></div>
           <div><div class="ba-name">[Imię N.]</div><div class="ba-meta">[kontekst, miasto]</div></div>
         </div>
         <div class="ba-compare">
@@ -908,10 +908,10 @@
 
 **Kategoria:** lifestyle, beauty, fitness, high-trust products z video production.
 
-**Klasy wymagane:** `<section class="testimonials voices">`, ≥2 `class="... voice-figure"` (thumbnail video = placeholder).
+**Klasy wymagane:** `<section class="testimonials voices personas">`, ≥2 `class="... voice-figure"` (thumbnail video = placeholder).
 
 ```html
-<section class="testimonials voices">
+<section class="testimonials voices personas">
   <div class="container">
     <div class="section-head">
       <div class="eyebrow">Nº 07 · Wideo opinie</div>
@@ -919,7 +919,7 @@
     </div>
     <div class="video-testi-grid">
       <article class="video-testi">
-        <div class="video-testi-thumb voice-figure testi-avatar-figure">
+        <div class="video-testi-thumb voice-figure testi-avatar-figure persona-figure">
           <div class="ph">
             <div class="ph-mark">V</div>
             <div class="ph-title">Video opinia [Imię]</div>
@@ -958,10 +958,10 @@
 
 **Kategoria:** beauty, fashion DTC, food/drink lifestyle, community brand.
 
-**Klasy wymagane:** `<section class="testimonials social-proof">`, ≥2 `class="... avatar-figure"` lub `voice-figure`.
+**Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` lub `voice-figure`.
 
 ```html
-<section class="testimonials social-proof">
+<section class="testimonials social-proof personas">
   <div class="container">
     <div class="section-head">
       <div class="eyebrow">Nº 07 · #[hashtag]</div>
@@ -969,14 +969,14 @@
       <p class="section-sub">Ponad [N] zdjęć od klientów na Instagramie.</p>
     </div>
     <div class="ugc-grid">
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U1 — 600×600]</div><div class="ugc-handle">@[user1]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U2]</div><div class="ugc-handle">@[user2]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U3]</div><div class="ugc-handle">@[user3]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U4]</div><div class="ugc-handle">@[user4]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U5]</div><div class="ugc-handle">@[user5]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U6]</div><div class="ugc-handle">@[user6]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U7]</div><div class="ugc-handle">@[user7]</div></div>
-      <div class="ugc-tile voice-figure avatar-figure"><div class="ph">[U8]</div><div class="ugc-handle">@[user8]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U1 — 600×600]</div><div class="ugc-handle">@[user1]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U2]</div><div class="ugc-handle">@[user2]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U3]</div><div class="ugc-handle">@[user3]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U4]</div><div class="ugc-handle">@[user4]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U5]</div><div class="ugc-handle">@[user5]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U6]</div><div class="ugc-handle">@[user6]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U7]</div><div class="ugc-handle">@[user7]</div></div>
+      <div class="ugc-tile voice-figure avatar-figure persona-figure"><div class="ph">[U8]</div><div class="ugc-handle">@[user8]</div></div>
     </div>
   </div>
 </section>
@@ -998,10 +998,10 @@
 
 **Kategoria:** premium, luxury, endorsed product z 1 strong voice.
 
-**Klasy wymagane:** `<section class="testimonials voices">`, 1+ `class="... testi-avatar-figure"`.
+**Klasy wymagane:** `<section class="testimonials voices personas">`, 1+ `class="... testi-avatar-figure"`.
 
 ```html
-<section class="testimonials voices">
+<section class="testimonials voices personas">
   <div class="container">
     <div class="single-testi">
       <div class="eyebrow">Nº 07 · Opinia</div>
@@ -1009,7 +1009,7 @@
         „[Długi cytat 3-4 zdania, mocny, konkretny, z nazwą marki. Ten jeden cytat niesie całą sekcję.]"
       </blockquote>
       <div class="single-testi-author">
-        <div class="single-testi-avatar testi-avatar-figure avatar-figure voice-figure">
+        <div class="single-testi-avatar testi-avatar-figure avatar-figure voice-figure persona-figure">
           <div class="ph"><div class="ph-mark">[inicjały]</div></div>
         </div>
         <div>
@@ -1040,20 +1040,20 @@
 
 **Kategoria:** editorial, premium, PR-backed launch.
 
-**Klasy wymagane:** `<section class="testimonials social-proof">`, ≥2 `class="... avatar-figure"` (logo magazynów = placeholder).
+**Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` (logo magazynów = placeholder).
 
 ```html
-<section class="testimonials social-proof">
+<section class="testimonials social-proof personas">
   <div class="container">
     <div class="press-wall">
       <div class="eyebrow center">Nº 07 · W mediach</div>
       <h2 class="press-headline">Nagrodzone przez redakcje, <em>nie kupione recenzjami.</em></h2>
       <div class="press-logos">
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure"><div class="ph"><div class="ph-mark">VOGUE</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure"><div class="ph"><div class="ph-mark">NYT</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure"><div class="ph"><div class="ph-mark">ELLE</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure"><div class="ph"><div class="ph-mark">WIRED</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure"><div class="ph"><div class="ph-mark">FORBES</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">VOGUE</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">NYT</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">ELLE</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">WIRED</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">FORBES</div></div></div>
       </div>
       <blockquote class="press-quote">
         „[Cytat z jednego z magazynów, 2-3 zdania, z konkretną recenzją]"

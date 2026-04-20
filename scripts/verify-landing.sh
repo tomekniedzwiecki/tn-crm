@@ -84,13 +84,13 @@ echo "📷 1a. Placeholder per section (wymagane od 2026-04)"
 HERO_PH=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(hero-figure|hero-product|hero-image|hero.*-placeholder|img-placeholder)[^"]*"' || true)
 check_range "Hero: placeholder obecny (≥1)" 1 10 "$HERO_PH"
 
-# Personas (3 placeholdery)
+# Personas (≥1 placeholder — różni wariant T ma różną liczbę, T5 single-testi ma 1, T4 UGC ma 8)
 PERS_PH=$(awk '/<section[^>]*class="[^"]*personas[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(persona-figure|persona-image|persona.*-placeholder)[^"]*"' || true)
-check_range "Personas: placeholdery (≥3)" 3 8 "$PERS_PH"
+check_range "Personas: placeholdery (≥1)" 1 10 "$PERS_PH"
 
-# Testimonials (3-4 placeholdery avatar)
+# Testimonials (≥1 placeholder avatar — T5 single-testi ma 1, T4 UGC ma 8)
 TESTI_PH=$(awk '/<section[^>]*class="[^"]*testimonials[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(testi-avatar-figure|testi-figure|avatar.*-figure|avatar.*-placeholder|voice-figure)[^"]*"' || true)
-check_range "Testimonials: avatar placeholdery (≥2)" 2 8 "$TESTI_PH"
+check_range "Testimonials: avatar placeholdery (≥1)" 1 10 "$TESTI_PH"
 
 # Procedure / How It Works (3 placeholdery step)
 STEP_PH=$(awk '/<section[^>]*class="[^"]*(procedure|process|how|steps)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(step-figure|step-image|how-figure|ritual-figure|process-figure)[^"]*"' || true)
@@ -115,11 +115,11 @@ else
   check "Brak obcych workflow (UUID sources ≤1)" "1" "$UUIDS"
 fi
 
-# ─── 2. Numeracja sekcji ───
-echo ""
-echo "📑 2. Numeracja sekcji"
-N_NUM=$(grep -oE "Nº [0-9]+" "$FILE" | sort -u | wc -l)
-check_range "Ciągła numeracja Nº (10±1 sekcji)" 8 12 "$N_NUM"
+# ─── 2. Numeracja sekcji — USUNIĘTE 2026-04-20 ───
+# Nº numbering było sygnaturą Editorial/Paromia paradigm, nie uniwersalną regułą.
+# Landing value-focused / dashboard-style / oversized-typography nie musi mieć magazine
+# numbering — wymuszanie tego forsowało Editorial aesthetic na każdy landing.
+# Jeśli paradygmat Editorial — używaj Nº w eyebrow'ach (patterns.md #2), ale to opcjonalne.
 
 # ─── 3. Zasady bezwarunkowe headera ───
 echo ""

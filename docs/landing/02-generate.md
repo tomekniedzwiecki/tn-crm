@@ -1,5 +1,19 @@
 # ETAP 2 — GENERATE: szkielet HTML zgodny z manifestem
 
+## 🎯 Kolejność działań (workflow ETAP 2) — OBOWIĄZKOWA
+
+1. **Przeczytaj `_brief.md`** — manifest, paleta, fonty, persona, price point, kategoria produktu.
+2. **Wybierz 3 warianty sekcji** z [`reference/section-variants.md`](reference/section-variants.md) używając drzewa decyzyjnego (rozdział 4 tego pliku) + **zaloguj wybór w `_brief.md` sekcja 9**. Hero + Features + Testimonials. Reszta sekcji (11) = standard z tabeli niżej.
+3. **Pobierz logo + obrazy** (Supabase — instrukcje niżej).
+4. **Zbuduj HTML** — 14 sekcji w kolejności, 3 wybrane warianty podmieniają ich odpowiedniki w szkielecie. Wypełnij placeholdery treścią z briefa + raportu PDF.
+5. **Zapisz** `landing-pages/[slug]/index.html`.
+6. **Uruchom `verify-landing.sh`** — jeśli FAIL, napraw przed deployem.
+
+**NIE generuj HTML przed krokiem 2** — wybór wariantów determinuje strukturę hero/features/testimonials sekcji. Zmiana wariantu po wygenerowaniu HTML = przepisywanie tych 3 sekcji od zera.
+
+---
+
+
 > **Safety rules:** [`reference/safety.md`](reference/safety.md) — zasady bezwarunkowe.
 > **Copy:** [`reference/copy.md`](reference/copy.md) — Hero Headline + Copywriter Playbook + Conversion Boosters.
 > **Patterns:** [`reference/patterns.md`](reference/patterns.md) — 22 signature snippety (cross-section).
