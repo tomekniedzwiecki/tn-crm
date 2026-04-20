@@ -299,6 +299,13 @@
                         <i class="ph ph-link text-[14px]"></i>
                         Kopiuj link
                     </button>
+                    <button type="button" onclick="copyWorkflowId()" class="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors" title="Kopiuj ID workflow">
+                        <i class="ph ph-hash text-[14px]"></i>
+                    </button>
+                    <button type="button" id="hdr-schedule" onclick="scrollToSchedule()" class="hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] transition-colors" title="Harmonogram płatności — kliknij aby przejść do sekcji">
+                        <i class="ph ph-credit-card text-[14px]"></i>
+                        <span id="hdr-schedule-text"></span>
+                    </button>
                     <a id="hdr-crm" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-300 hover:text-white hover:bg-white/5 transition-colors" title="Otwórz leada w CRM">
                         <i class="ph ph-address-book text-[14px]"></i>
                         CRM
@@ -4703,6 +4710,15 @@
         }
         window.openWhatsApp = openWhatsApp;
 
+        function scrollToSchedule() {
+            switchTab('przeglad');
+            setTimeout(() => {
+                const el = document.getElementById('payment-schedule-card');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 100);
+        }
+        window.scrollToSchedule = scrollToSchedule;
+
         async function copyWorkflowId() {
             if (!workflow) return;
             try {
@@ -5938,6 +5954,9 @@
             const copyBtn = document.getElementById('copy-schedule-link-btn');
             const statusText = document.getElementById('schedule-status-text');
 
+            const hdrPill = document.getElementById('hdr-schedule');
+            const hdrPillText = document.getElementById('hdr-schedule-text');
+
             if (!paymentSchedule || paymentInstallments.length === 0) {
                 content.classList.add('hidden');
                 empty.classList.remove('hidden');
@@ -5945,6 +5964,7 @@
                 linkBtn.classList.remove('hidden');
                 copyBtn.classList.add('hidden');
                 statusText.textContent = 'Brak harmonogramu';
+                if (hdrPill) hdrPill.classList.add('hidden');
                 return;
             }
 
@@ -5976,6 +5996,35 @@
             } else {
                 statusBadge.innerHTML = '<span class="text-[#555]">Oczekuje</span>';
                 statusText.textContent = `${paymentInstallments.length} rat do opłacenia`;
+            }
+
+            // Header pill
+            if (hdrPill && hdrPillText) {
+                const today = new Date(); today.setHours(0,0,0,0);
+                const unpaid = paymentInstallments.filter(i => i.status !== 'paid');
+                const overdue = unpaid.filter(i => new Date(i.due_date) < today);
+                const next = unpaid.sort((a,b) => new Date(a.due_date) - new Date(b.due_date))[0];
+
+                let tone = 'text-zinc-300 hover:text-white hover:bg-white/5';
+                let label;
+                if (paidCount === paymentInstallments.length) {
+                    tone = 'text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10';
+                    label = `✓ ${paidCount}/${paymentInstallments.length} rat`;
+                } else if (overdue.length > 0) {
+                    tone = 'text-red-400 hover:text-red-300 hover:bg-red-500/10';
+                    const oldest = overdue.sort((a,b) => new Date(a.due_date) - new Date(b.due_date))[0];
+                    label = `${overdue.length} zaległa${overdue.length > 1 ? 'e' : ''} • ${formatDateShort(oldest.due_date)}`;
+                } else if (next) {
+                    const daysUntil = Math.ceil((new Date(next.due_date) - today) / 86400000);
+                    if (daysUntil <= 7) {
+                        tone = 'text-amber-400 hover:text-amber-300 hover:bg-amber-500/10';
+                    }
+                    label = `${paidCount}/${paymentInstallments.length} rat • ${formatDateShort(next.due_date)}`;
+                } else {
+                    label = `${paidCount}/${paymentInstallments.length} rat`;
+                }
+                hdrPillText.textContent = label;
+                hdrPill.className = `inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] transition-colors ${tone}`;
             }
 
             // Render installments
