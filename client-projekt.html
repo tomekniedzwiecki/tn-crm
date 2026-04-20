@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026041502';
+        const APP_VERSION = '2026042001';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -12257,12 +12257,11 @@
         }
         window.postComment = postComment;
 
-        // Initialize with timeout and error handling
+        // Initialize with timeout, retry and error handling
         (async function init() {
             const LOAD_TIMEOUT = 30000; // 30 seconds
             let loadComplete = false;
 
-            // Timeout handler
             const timeoutId = setTimeout(() => {
                 if (!loadComplete) {
                     console.error('loadProject timeout after', LOAD_TIMEOUT, 'ms');
@@ -12270,15 +12269,24 @@
                 }
             }, LOAD_TIMEOUT);
 
+            // Jeden retry po 1s — chroni przed przejściowym błędem sieci (np. przy kliknięciu z emaila)
             try {
                 await loadProject();
                 loadComplete = true;
                 clearTimeout(timeoutId);
-            } catch (err) {
-                loadComplete = true;
-                clearTimeout(timeoutId);
-                console.error('loadProject error:', err);
-                showError('Wystąpił błąd podczas ładowania. Odśwież stronę lub spróbuj później.');
+            } catch (err1) {
+                console.warn('loadProject failed, retrying in 1s:', err1);
+                await new Promise(r => setTimeout(r, 1000));
+                try {
+                    await loadProject();
+                    loadComplete = true;
+                    clearTimeout(timeoutId);
+                } catch (err2) {
+                    loadComplete = true;
+                    clearTimeout(timeoutId);
+                    console.error('loadProject error (po retry):', err2);
+                    showError('Wystąpił błąd podczas ładowania. Odśwież stronę lub spróbuj później.');
+                }
             }
         })();
     </script>
