@@ -230,11 +230,24 @@ check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
 MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
 check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
 
+# js-tilt + js-parallax = opcjonalne aesthetic effects (niektóre kierunki celowo ich nie używają, np. Rugged Heritage = industrial bez ruchu)
 JSTILT=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
-check_range "Tile 3D Tilt (.js-tilt) ≥ 2" 2 12 "$JSTILT"
+if [ "$JSTILT" -ge 2 ]; then
+  echo "  ✅ Tile 3D Tilt (.js-tilt) ≥ 2 ($JSTILT)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Tile 3D Tilt (.js-tilt) ≥ 2 (got $JSTILT) — opcjonalne, niektóre kierunki celowo pomijają (Rugged Heritage, industrial, static)"
+  WARN=$((WARN + 1))
+fi
 
 JSPARALLAX=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
-check "Parallax numerals (.js-parallax) ≥ 1" "1" "$([ "$JSPARALLAX" -ge 1 ] && echo 1 || echo 0)"
+if [ "$JSPARALLAX" -ge 1 ]; then
+  echo "  ✅ Parallax numerals (.js-parallax) ≥ 1"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Parallax numerals (.js-parallax) ≥ 1 (got 0) — opcjonalne, niektóre kierunki pomijają"
+  WARN=$((WARN + 1))
+fi
 
 # ─── 8. Copy anti-patterns ───
 echo ""
@@ -247,6 +260,11 @@ check "Zero lorem/TODO" "0" "$LOREM"
 
 DELIVERY=$(grep -ciE "wysy[łl]ka 24|w 24 ?h|polski magazyn|z magazynu w Polsc|D\+1" "$FILE" || true)
 check "Zero zakazanych obietnic dostawy (dropshipping)" "0" "$DELIVERY"
+
+# Purple prose — zakazane metafory/aforyzmy (ETAP 3.5 Manus powinien był je usunąć, ale catch przed)
+# Memory: feedback-landing-no-purple-prose.md
+PURPLE=$(grep -ciE "smak żalu|gorycz poran|coś z domu|zostaje w (tobie|nas)|dawno przestał|kawa która|niekompromisowa jakość|w poszukiwaniu siebie|smak dzieciństwa|aroma( |t) wspomnień|serce (twojego|naszego) domu" "$FILE" || true)
+check "Zero purple prose (metafory/aforyzmy)" "0" "$PURPLE"
 
 # ─── 9. Offer Box 2026 (DESIGN.md sekcja H) ───
 echo ""
@@ -344,6 +362,39 @@ check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
 # Min 5 FAQ pytań
 FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq' "$FILE" || true)
 check_range "FAQ ≥5 pytań" 5 12 "$FAQS"
+
+# ─── 11b. Mobile polish enforcement (WARN — 06-mobile.md) ───
+echo ""
+echo "📱 11b. Mobile polish enforcement (≥375px dedicated CSS)"
+
+MEDIA_480=$(grep -cE "@media[^{]*max-width:\s*480px" "$FILE" || true)
+if [ "$MEDIA_480" -ge 1 ]; then
+  echo "  ✅ Mobile CSS (@media max-width:480px) obecne ($MEDIA_480)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Brak @media max-width:480px — 60-70% ruchu to mobile, procedura 06-mobile.md wymaga dedykowanego CSS"
+  WARN=$((WARN + 1))
+fi
+
+# Hero visual max-height na mobile (zapobiega > 60vh hero na 375px)
+HERO_MAX_H=$(grep -cE "\.hero[^{]*\{[^}]*max-height:[0-9]+(vh|px)|@media[^{]*\{[^}]*\.hero[^{]*max-height" "$FILE" || true)
+if [ "$HERO_MAX_H" -ge 1 ]; then
+  echo "  ✅ Hero visual ma max-height (zapobiega zjadaniu >60vh na mobile)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Hero bez max-height na mobile — może zjadać >60% viewport 375px, CTA spada pod fold"
+  WARN=$((WARN + 1))
+fi
+
+# CTA primary 100% width na mobile (touch target)
+CTA_WIDTH=$(grep -cE "@media[^{]*768\|480\|600[^{]*\{[^}]*(btn-primary|offer-cta)[^}]*width:\s*100%" "$FILE" || true)
+if [ "$CTA_WIDTH" -ge 1 ]; then
+  echo "  ✅ CTA primary ma width:100% w media query mobile"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  CTA nie ma width:100% na mobile — touch target może być <44px szerokości, trudny do trafienia"
+  WARN=$((WARN + 1))
+fi
 
 # ─── 12. Copy quality (pozytywne jakości — reference/copy.md) ───
 echo ""

@@ -30,7 +30,9 @@ fi
 
 # Create temp shoot script w bieżącym katalogu (żeby node znalazł node_modules/playwright)
 SHOOT_SCRIPT="_shoot_${SLUG}.mjs"
-OUT_DIR="C:/tmp/${SLUG}_shots"
+# Persistent path w repo (landing-pages/[slug]/_shots/) — w .gitignore żeby nie zaśmiecać commitów
+# Claude może je obejrzeć w kolejnej iteracji / Cursor może pokazać jako preview
+OUT_DIR="landing-pages/${SLUG}/_shots"
 
 cat > "$SHOOT_SCRIPT" <<EOF
 import { chromium } from 'playwright';
@@ -78,13 +80,13 @@ echo "🎬 Uruchamiam Playwright dla $SLUG..."
 node "$SHOOT_SCRIPT"
 
 echo ""
-echo "📸 Screenshoty: $OUT_DIR"
+echo "📸 Screenshoty: $OUT_DIR (persistent w repo, gitignore'owane)"
 echo ""
 echo "Następny krok — obejrzyj screenshoty w Claude Code Read tool:"
 echo "  ${OUT_DIR}/desktop_full.png"
 echo "  ${OUT_DIR}/mobile_full.png"
 echo ""
-echo "Checklist w CLAUDE_LANDING_VERIFY.md — Krok 5"
+echo "Checklist w docs/landing/05-verify.md"
 
 # Cleanup temp script
 rm -f "$SHOOT_SCRIPT"

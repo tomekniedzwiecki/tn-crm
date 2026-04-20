@@ -3,12 +3,21 @@
 ## 🎯 Kolejność działań (workflow ETAP 2) — OBOWIĄZKOWA
 
 1. **Przeczytaj `_brief.md`** — manifest, paleta, fonty, persona, price point, kategoria produktu.
-2. **Wybierz 3 warianty sekcji** z [`reference/section-variants.md`](reference/section-variants.md) używając drzewa decyzyjnego (rozdział 4 tego pliku) + **zaloguj wybór w `_brief.md` sekcja 9**. Hero + Features + Testimonials. Reszta sekcji (11) = standard z tabeli niżej.
-3. **Pobierz logo + obrazy** (Supabase — instrukcje niżej).
-4. **Zbuduj HTML** — 14 sekcji w kolejności, 3 wybrane warianty podmieniają ich odpowiedniki w szkielecie. Wypełnij placeholdery treścią z briefa + raportu PDF.
-5. **Sprawdź pokrycie 5 JS effects** — Verify wymaga `.js-split ≥1`, `.js-counter ≥2`, `.magnetic ≥2`, `.js-tilt ≥2`, `.js-parallax ≥1`. Nie wszystkie warianty je zawierają (patrz [`reference/section-variants.md` rozdział 6](reference/section-variants.md#6-js-effects-coverage)). Dodaj brakujące w klasycznych sekcjach (Trust/Problem/How/Offer) zgodnie z tabelą fallbacków.
-6. **Zapisz** `landing-pages/[slug]/index.html`.
-7. **Uruchom `verify-landing.sh`** — jeśli FAIL, napraw przed deployem.
+2. **Wybierz 3 warianty sekcji** z [`reference/section-variants.md`](reference/section-variants.md) używając drzewa decyzyjnego (rozdział 4 tego pliku). Pierwsza pasująca reguła z góry wygrywa.
+3. **OBOWIĄZKOWE: Zaloguj wybór w `_brief.md` sekcja 9** (Edit tool, dopisz przed generowaniem HTML). Format:
+   ```markdown
+   ## 9. Warianty sekcji (autonomicznie wybrane)
+
+   - **Hero:** H[N] [Nazwa wariantu] — [uzasadnienie 1 zdanie na bazie kategorii/persony/price]
+   - **Features:** F[N] [Nazwa] — [uzasadnienie]
+   - **Testimonials:** T[N] [Nazwa] — [uzasadnienie]
+   ```
+   Bez tego kroku **dokumentacja decyzji nie istnieje** — audit wariantów niemożliwy, Claude w następnej iteracji (np. fix copy, modify design) nie wie które warianty zostały wybrane.
+4. **Pobierz logo + obrazy** (Supabase — instrukcje niżej).
+5. **Zbuduj HTML** — 14 sekcji w kolejności, 3 wybrane warianty podmieniają ich odpowiedniki w szkielecie. **SKOPIUJ faktyczne HTML+CSS snippetów** z `section-variants.md` (nie tylko nazwę wariantu — cały kod). Wypełnij placeholdery treścią z briefa + raportu PDF.
+6. **Sprawdź pokrycie 5 JS effects** — Verify wymaga `.js-split ≥1`, `.js-counter ≥2`, `.magnetic ≥2`. (`.js-tilt ≥2` i `.js-parallax ≥1` są teraz WARN, nie FAIL — celowe pominięcie w Rugged/industrial kierunkach jest OK). Patrz [`reference/section-variants.md` rozdział 6](reference/section-variants.md#6-js-effects-coverage).
+7. **Zapisz** `landing-pages/[slug]/index.html`.
+8. **Uruchom `verify-landing.sh`** — jeśli FAIL (nie WARN), napraw przed deployem.
 
 **NIE generuj HTML przed krokiem 2** — wybór wariantów determinuje strukturę hero/features/testimonials sekcji. Zmiana wariantu po wygenerowaniu HTML = przepisywanie tych 3 sekcji od zera.
 
