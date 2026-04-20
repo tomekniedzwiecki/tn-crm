@@ -39,7 +39,7 @@
 - **Display:** `Fredoka` (wagi 500, 600) — **NIE Fredoka One** (tamten nie ma polskich znaków!). Zaokrąglony, przyjazny, ale da się z nim robić duże hero headlines.
 - **Body:** `Nunito` (400, 500, 600, 700) — czysty, czytelny humanistic sans, świetne polskie diakrytyki.
 - **Accent/Handwriting:** `Caveat` (400, 500) — **NIE Patrick Hand** (tamten nie ma polskich znaków!). Używana w badge/label/polaroid-caption, max 3 miejsca.
-- **Google Fonts URL MUSI mieć `&subset=latin-ext`** — safety rule #10, inaczej ą/ę/ć renderuje się jako placeholder.
+- **Google Fonts URL BEZ `&subset=latin-ext`** — Google Fonts v2 przy tym parametrze serwuje OKROJONE TTF bez unicode-range, polskie znaki wypadają poza zakres → fallback cursive. Bez parametru Google zwraca pełny CSS z multiple @font-face per unicode-range, przeglądarka sama pobiera co trzeba. Patrz memory `feedback-landing-fonts-polish.md`.
 
 ## 5. Persona główna (z auditu produktu)
 

@@ -419,7 +419,7 @@ Kolory z brandingu (primary, secondary, accent) powinny być widoczne w **każde
 - HTML5 semantic
 - CSS3 (custom properties, grid, flexbox)
 - Vanilla JS (intersection observer dla fade-in, hamburger)
-- Google Fonts (z &subset=latin-ext — patrz reference/safety.md #10)
+- Google Fonts (z  — patrz reference/safety.md #10)
 - Zero dependencies
 ```
 
@@ -1094,7 +1094,7 @@ Toolkit ma wbudowany `mobileBar` — nie twórz duplikatu `.sticky-cta`!
 - [ ] **Conversion Toolkit zintegrowany**
 - [ ] **PageSpeed Optimization** (preconnect, fetchpriority, lazy loading) — patrz [`reference/pagespeed.md`](reference/pagespeed.md)
 - [ ] **Header `#FFFFFF` solid** (NIE rgba+backdrop) — patrz safety.md #9
-- [ ] **Fonty z `&subset=latin-ext`** — patrz safety.md #10
+- [ ] **Fonty z ``** — patrz safety.md #10
 - [ ] **Zero zakazanych fraz** (24h, magazyn PL, COD, raty, PayPo, Klarna) — patrz safety.md #6
 - [ ] Route w `vercel.json` (jeśli dedykowany URL)
 

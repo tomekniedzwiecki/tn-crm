@@ -113,14 +113,29 @@ h3 { font-size: clamp(20px, 5vw, 28px); line-height: 1.3; }
 @media (max-width: 768px) { .hero-grid { grid-template-columns: 1fr; } }
 ```
 
-### E. Hero mobile — pierwsze 5 sekund
+### E. Hero mobile — pierwsze 5 sekund (HARD RULES — od 2026-04-20)
 
 - [ ] Headline + lede + CTA widoczne **above-the-fold** na 375×812 (iPhone 13)
-- [ ] CTA primary jest `width: 100%` (nie `fit-content`) — trafić łatwo kciukiem
-- [ ] Hero visual nie zajmuje >50% viewport (inaczej copy zjeżdża z ekranu)
-- [ ] Brak floating decorations (pawłów, particles, glow rings) — `display:none` na ≤768px
+- [ ] **CTA primary `width: 100%`** (nie `fit-content`) — trafić łatwo kciukiem
+- [ ] **Hero visual `max-height: 60vh`** na ≤768px, **50vh** na ≤480px — inaczej copy zjeżdża pod fold
+- [ ] **Floating decorations ukryte na mobile**: `.hero-polaroid`, `.hero-glow`, `.hero-particles`, `.hero-numeral-bg` w rogu → `display: none` lub `opacity: 0.4` na ≤768px. Te elementy na mobile tylko przeszkadzają (zabierają space, konkurują z headline).
+- [ ] **Absolute-positioned hero elements na mobile → display:none** — inaczej nakładają się na `.hero-product` przy mniejszym viewport
+- [ ] **js-split MUSI być word-by-word, NIE char-by-char** — char-by-char z `display:inline-block` pozwala przeglądarce łamać wyrazy w dowolnym miejscu („Bez\ntelefonu" split na 2 linie w środku słowa). Word-by-word z `white-space:nowrap` na każdym słowie = zero rozerwań w środku słowa.
 - [ ] Trust badges: NIE 5 w linii — `flex-wrap: wrap` lub 2×2 grid
 - [ ] Jeśli jest editorial numeral (Nº 01) — `font-size` zmniejszony min. 40%
+
+**Copy-paste media queries (bazowe, dostosuj per wariant):**
+```css
+@media (max-width:768px){
+  .hero-polaroid,.hero-glow,.hero-particles{display:none}  /* ukryj dekoracje */
+  .hero-figure{aspect-ratio:1/1;max-height:60vh}
+  .hero-product{width:100%}
+}
+@media (max-width:480px){
+  .hero-figure{max-height:50vh}
+  .btn-primary,.offer-cta{width:100%}
+}
+```
 
 ### F. Navigation — header, sticky, urgency bar
 
@@ -164,7 +179,7 @@ grep -nE "width:\s*100vw|left:\s*-[0-9]+|right:\s*-[0-9]+" landing-pages/[slug]/
 
 ### J. Performance mobile — LCP + CLS + INP
 
-- [ ] Fonty: max 3 rodziny, `display=swap`, `&subset=latin-ext`
+- [ ] Fonty: max 3 rodziny, `display=swap`, ``
 - [ ] `preconnect` do `fonts.googleapis.com` + `fonts.gstatic.com` (crossorigin!)
 - [ ] Hero `<img>` ma `fetchpriority="high"`
 - [ ] Heavy animacje (particles, parallax) wyłączone na `prefers-reduced-motion` + na ≤768px

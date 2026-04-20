@@ -1221,3 +1221,37 @@ bash scripts/verify-landing.sh [slug]
 Grupa 7 „JS effects" musi być 100% zielona. Jeśli nie — dodaj brakujące klasy w miejscach zgodnie z tabelą powyżej.
 
 **Nie zignoruj tego kroku** — jest główną przyczyną FAIL verify przy kombinacjach non-default wariantów (np. H5 + F3 + T4).
+
+### ⚠️ HARD RULE dla js-split: word-by-word, NIE char-by-char
+
+Implementacja `.js-split` w klasycznych snippetach była char-by-char (każda litera w osobnym `<span>` z `display:inline-block`). **PROBLEM:** przeglądarka na mobile może złamać linię **w środku słowa** między spanami-literami (np. „Bez" w jednej linii, „telefonu" w drugiej — ale też „Bez tel\nefonu" w środku słowa).
+
+**Fix (standard od 2026-04-20):** split POSŁOWO (`split(/(\s+)/)`), każde słowo wrapowane w `<span style="white-space:nowrap">` z własnym delay. Spacje między słowami zostają jako zwykłe text nodes — przeglądarka łamie tylko na granicy słów, nigdy w środku.
+
+```javascript
+document.querySelectorAll('.js-split').forEach(el => {
+  const html = el.innerHTML;
+  const parts = html.split(/(<em[^>]*>.*?<\/em>)/);
+  let wordIdx = 0;
+  const wrapWord = (word, delayMs) =>
+    `<span style="display:inline-block;white-space:nowrap;opacity:0;transform:translateY(18px);transition:opacity .5s ease ${delayMs}ms,transform .5s ease ${delayMs}ms">${word}</span>`;
+  el.innerHTML = parts.map(p => {
+    if (p.startsWith('<em')) {
+      const m = p.match(/<em([^>]*)>(.*?)<\/em>/);
+      const attrs = m ? m[1] : '';
+      const inner = m ? m[2] : p;
+      return '<em' + attrs + '>' + inner.split(/(\s+)/).map(w => {
+        if (/^\s+$/.test(w)) return ' ';
+        return wrapWord(w, (wordIdx++) * 50);
+      }).join('') + '</em>';
+    }
+    return p.split(/(\s+)/).map(w => {
+      if (/^\s+$/.test(w)) return ' ';
+      return wrapWord(w, (wordIdx++) * 50);
+    }).join('');
+  }).join('');
+  setTimeout(() => {
+    el.querySelectorAll('span').forEach(s => { s.style.opacity = 1; s.style.transform = 'translateY(0)'; });
+  }, 100);
+});
+```

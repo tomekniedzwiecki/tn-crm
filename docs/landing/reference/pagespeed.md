@@ -7,7 +7,7 @@
 - **Wczesny ETAP 5 (verify)** — przed Playwright screenshotami
 
 ## Cross-references
-- Wymóg fontów `&subset=latin-ext` → [`reference/safety.md` reguła #10](safety.md)
+- Wymóg fontów `` → [`reference/safety.md` reguła #10](safety.md)
 - Mobile performance checklist → [`06-mobile.md` obszar J](../06-mobile.md)
 
 ---
@@ -31,15 +31,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<!-- 2. Font z display=swap i subset=latin-ext (dla polskich znaków) -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap&subset=latin-ext" rel="stylesheet">
+<!-- 2. Font z display=swap (BEZ subset=latin-ext — to anty-wzorzec, patrz niżej) -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 ```
 
 **Zasady fontów:**
 - **Max 2-3 fonty** — każdy dodatkowy font to +100-200ms
 - **Max 3-4 warianty grubości** per font (np. 400;500;600;700, NIE 300;400;500;600;700;800;900)
 - **ZAWSZE `display=swap`** — tekst widoczny od razu, font ładuje się w tle
-- **ZAWSZE `subset=latin-ext`** — dla polskich znaków (ą, ę, ć, ś, ź, ż, ó, ł, ń)
+- **NIGDY `&subset=latin-ext`** — anty-wzorzec. Google Fonts v2 przy tym parametrze serwuje dla niektórych fontów (Fredoka!) pojedynczy TTF bez `unicode-range`, polskie znaki wypadają → fallback cursive. Bez parametru Google zwraca `@font-face` per-subset, przeglądarka pobiera potrzebne. Patrz memory `feedback-landing-fonts-polish.md`.
 
 **Fonty z polskimi znakami (bezpieczne):**
 - Inter, Poppins, Roboto, Open Sans, Lato, Nunito, Montserrat
@@ -270,7 +270,7 @@
 **Przed deploy sprawdź:**
 
 - [ ] **Preconnect** do `fonts.googleapis.com` i `fonts.gstatic.com`
-- [ ] **Fonty**: max 3, max 4 wagi, `display=swap`, `subset=latin-ext`
+- [ ] **Fonty**: max 3, max 4 wagi, `display=swap` (BEZ `subset=latin-ext` — anty-wzorzec dla polskich znaków)
 - [ ] **Hero image**: `fetchpriority="high"`, BEZ `loading="lazy"`
 - [ ] **Wszystkie obrazy**: mają `width` i `height` (zapobiega CLS)
 - [ ] **Obrazy below fold**: `loading="lazy"`
@@ -306,8 +306,8 @@ https://pagespeed.web.dev/analysis?url=https://tn-crm.vercel.app/landing-pages/[
   <!-- Preload hero image (LCP optimization) -->
   <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/[slug]/hero.webp" fetchpriority="high">
 
-  <!-- Fonts (max 2-3, z display=swap, &subset=latin-ext) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap&subset=latin-ext" rel="stylesheet">
+  <!-- Fonts (max 2-3, z display=swap, ) -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
 
   <!-- Open Graph (pełny URL Supabase — patrz reference/safety.md #10) -->
   <meta property="og:title" content="...">

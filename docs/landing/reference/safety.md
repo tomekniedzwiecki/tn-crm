@@ -319,12 +319,15 @@ Dla produktów premium/luxury/lifestyle — pojedyncza wielka cyfra w tle hero (
 
 ## 10. Fonty / assety — zawsze pełne URL-e
 
-### Google Fonts — `&subset=latin-ext`
+### Google Fonts — NIGDY `&subset=latin-ext` (anty-wzorzec)
 ```html
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap&subset=latin-ext" rel="stylesheet">
+<!-- ✅ DOBRZE — BEZ subset=latin-ext -->
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 ```
 
-Bez `&subset=latin-ext` polskie znaki ą, ę, ć, ł, ó, ś, ź, ż, ń mogą się nie załadować lub fallbackować do system font.
+**NIE dodawaj `&subset=latin-ext`.** Google Fonts v2 przy tym parametrze dla niektórych fontów (Fredoka, Nunito w starszych wersjach) serwuje **jeden plik TTF bez `unicode-range`** zawierający tylko basic latin (U+0000-00FF) → polskie znaki ą/ę/ć/ł/ó/ś/ź/ż/ń wypadają poza zakres → fallback na systemową kursywę dla pojedynczych glyphów („zdjęcia" ma `ę` w innym fonie niż reszta).
+
+Bez parametru Google zwraca pełny CSS z multiple `@font-face` per `unicode-range` (latin, latin-ext, cyrillic, vietnamese) — przeglądarka sama pobiera potrzebne subsety. To standard Google Fonts v2. Memory: `feedback-landing-fonts-polish.md`.
 
 **Max 3 rodziny fontów.** Każda dodatkowa = +200ms LCP.
 

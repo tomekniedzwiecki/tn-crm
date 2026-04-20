@@ -187,8 +187,10 @@ echo "🔗 6. Meta & fonts"
 OG=$(grep -cE 'property="og:image"[^>]*yxmavwkwnfuphjqbelws' "$FILE" || true)
 check "OG image = pełny URL Supabase" "1" "$OG"
 
+# Google Fonts &subset=latin-ext = ANTY-WZORZEC (patrz safety.md #10, memory feedback-landing-fonts-polish.md)
+# Serwuje okrojony TTF bez unicode-range dla Fredoki/Nunito → polskie znaki fallback na system cursive
 LATIN=$(grep -cE "subset=latin-ext" "$FILE" || true)
-check "Fonty z subset=latin-ext (polskie znaki)" "1" "$LATIN"
+check "BEZ &subset=latin-ext (Google Fonts v2 anty-wzorzec)" "0" "$LATIN"
 
 # Meta title length (≤ 60 znaków)
 TITLE=$(grep -oE "<title>[^<]+</title>" "$FILE" | sed 's/<title>//; s|</title>||')

@@ -237,7 +237,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 1. Kierunek manifesta (z 6 presetów lub „nowy")
 2. Moodboard — 3 realne marki referencyjne (spoza landing-pages/)
 3. Paleta (3-4 kolory z workflow_branding)
-4. Typografia (2-3 fonty z workflow_branding + `&subset=latin-ext`)
+4. Typografia (2-3 fonty z workflow_branding + ``)
 5. Persona główna (z report_pdf — wiek/zawód/pain/motywacja)
 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)

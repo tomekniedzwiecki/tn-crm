@@ -130,7 +130,7 @@ Landingi to **preview dla klienta** (demo sprzedażowe), nie produkcja. Pre-comm
 - [ ] Header `#FFFFFF` solid (nie rgba+backdrop) — safety #9
 - [ ] Fade-in z `html.js` gate + safety timeout filtrujący `getBoundingClientRect()` — safety #2
 - [ ] Polskie diakrytyki UPPERCASE: `line-height ≥ 1.4` — safety #7
-- [ ] Fonty z `&subset=latin-ext` (Fredoka NIE Fredoka One) — safety #10
+- [ ] Fonty z `` (Fredoka NIE Fredoka One) — safety #10
 - [ ] OG image + logo: pełny URL Supabase (nie względny) — safety #10
 - [ ] Placeholdery 4-polowe (mark/title/size/note) — safety #4
 - [ ] Element absolute w karcie ma dual bank desktop/mobile — safety #3
@@ -160,7 +160,7 @@ Landingi to **preview dla klienta** (demo sprzedażowe), nie produkcja. Pre-comm
 | Hero spec rozjeżdża się na mobile | Dual bank desktop absolute + mobile static | [`reference/safety.md` #3](reference/safety.md) |
 | „Ł" w UPPERCASE wychodzi nad belkę | Wymień Italiana → Cormorant Garamond | [`reference/safety.md` #7](reference/safety.md) |
 | Header nieczytelny mobile | `background: #FFFFFF` solid, NIE rgba+backdrop | [`reference/safety.md` #9](reference/safety.md) |
-| Polskie znaki w fontach renderują się jako ? | Dodaj `&subset=latin-ext` do Google Fonts URL | [`reference/safety.md` #10](reference/safety.md) |
+| Polskie znaki w fontach renderują się jako ? | Dodaj `` do Google Fonts URL | [`reference/safety.md` #10](reference/safety.md) |
 | Trust strip rozjeżdża się na mobile | `flex-direction: column` na ≤900px + `white-space: nowrap` | [`reference/patterns.md` #15](reference/patterns.md) |
 | `verify-brief.sh` exit 1 | Uzupełnij brakujące sekcje w `_brief.md` | [`01-direction.md` Krok 9](01-direction.md) |
 | Manifesto „za ogólne" / pasuje do 5 produktów | Wróć do Kroku 1 (audyt produktu) | [`01-direction.md` Krok 4.1](01-direction.md) |
