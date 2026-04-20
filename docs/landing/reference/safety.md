@@ -331,8 +331,14 @@ Bez parametru Google zwraca pełny CSS z multiple `@font-face` per `unicode-rang
 
 **Max 3 rodziny fontów.** Każda dodatkowa = +200ms LCP.
 
+### Fonty DO UNIKANIA (bug polskich znaków)
+
+- `Fredoka One` → nie ma polskich znaków w ogóle, użyj **Nunito 800/900**
+- `Patrick Hand` → nie ma polskich znaków, użyj **Caveat**
+- `Fredoka` (v17+) → teoretycznie ma latin-ext subset ale Playwright/Chromium go nie pobiera consistently (incident KidSnap v2 2026-04-20). **Zamiast Fredoki użyj `Nunito` weight 800 (Black) lub 900 (Ultra Black)** — bulletproof latin-ext, mniej wag do pobrania, szybszy LCP.
+
 ### Fallbacki dla fontów bez polskich znaków
-- `Fredoka One` → użyj `Fredoka`
+- `Fredoka` / `Fredoka One` → `Nunito` w wagach 800-900 (rounded humanist, masowo używany, zero issues z polskimi)
 - `Patrick Hand` → użyj `Caveat`
 
 ### OG image + logo — pełny URL Supabase (nie względny)

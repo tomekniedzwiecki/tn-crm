@@ -36,10 +36,11 @@
 
 ## 4. Typografia (KRYTYCZNE — polskie znaki!)
 
-- **Display:** `Fredoka` (wagi 500, 600) — **NIE Fredoka One** (tamten nie ma polskich znaków!). Zaokrąglony, przyjazny, ale da się z nim robić duże hero headlines.
-- **Body:** `Nunito` (400, 500, 600, 700) — czysty, czytelny humanistic sans, świetne polskie diakrytyki.
-- **Accent/Handwriting:** `Caveat` (400, 500) — **NIE Patrick Hand** (tamten nie ma polskich znaków!). Używana w badge/label/polaroid-caption, max 3 miejsca.
-- **Google Fonts URL BEZ `&subset=latin-ext`** — Google Fonts v2 przy tym parametrze serwuje OKROJONE TTF bez unicode-range, polskie znaki wypadają poza zakres → fallback cursive. Bez parametru Google zwraca pełny CSS z multiple @font-face per unicode-range, przeglądarka sama pobiera co trzeba. Patrz memory `feedback-landing-fonts-polish.md`.
+- **Display:** `Nunito` wagi 800-900 (Black, Ultra Black) — bulletproof polskie znaki, bold i wyrazisty jak headline. Wcześniej miało być `Fredoka` ale empirycznie Playwright/Chromium nie pobierał poprawnie jej latin-ext subsetu → polskie „ą/ę/ż" fallbackowały na cienki system font = MIXED typography w jednym wyrazie (patrz `feedback-landing-fonts-polish.md` incident KidSnap v2 2026-04-20).
+- **Body:** `Nunito` wagi 400-700 — ten sam family co display, mniej wag do pobrania, szybszy LCP.
+- **Accent/Handwriting:** `Caveat` (400, 500, 600) — **NIE Patrick Hand** (tamten nie ma polskich znaków!). Używana w badge/label/polaroid-caption, max 3 miejsca.
+- **Google Fonts URL BEZ `&subset=latin-ext`** — anty-wzorzec. Patrz memory `feedback-landing-fonts-polish.md`.
+- **Total:** 2 font families (Nunito + Caveat), 9 wag łącznie — mniej niż typowe 3 fonts × 4 wag.
 
 ## 5. Persona główna (z auditu produktu)
 
