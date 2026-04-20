@@ -18,7 +18,7 @@ bash scripts/verify-brief.sh $SLUG
 
 **Exit 1** → STOP, wróć do [`01-direction.md`](01-direction.md). NIE wybieraj kierunku samodzielnie z presetu.
 
-**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` i buduj **szkielet 14 sekcji od zera**.
+**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` (szczególnie **Sekcja 9: Paradigm architektury**) i buduj szkielet **zgodny z wybranym paradygmatem** (nie sztywny 14-sekcyjny template).
 
 > ⚠️ **NIGDY nie kopiuj istniejących baseline'ów** (`cp -r landing-pages/$BASE` jest **zakazane**). Procedura ma być uniwersalna — patrz memory `feedback-landing-always-forge.md` + [`01-direction.md` Krok 6](01-direction.md). Tabela baseline w Kroku 5 to **anty-referencje** (co już jest, czego nie powtarzaj), nie template'y.
 
@@ -176,50 +176,124 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 ---
 
-## ⚠️ Wszystkie 14 sekcji są OBOWIĄZKOWE
+## ⚠️ 10 tematów do pokrycia (forma zależy od paradygmatu z Etapu 1.5)
 
-> Memory: `feedback-landing-section-completeness.md`. `verify-landing.sh` Grupa 11 sprawdza explicite obecność każdej z 14 sekcji po klasie HTML. Brak którejkolwiek = ❌ FAIL deploy.
+> **Zmiana z 2026-04-20 (memory: `feedback-landing-structural-uniqueness.md`):** zamiast „14 sekcji w sztywnej kolejności z identycznymi klasami CSS" — pokrywasz **10 tematów**, a ich formę wybierasz na podstawie paradygmatu z briefa (Sekcja 9: Paradigm architektury).
 
-> Memory: `feedback-landing-polish-required.md`. **Każda sekcja MUSI być dopieszczona wizualnie** — nie wystarczy tekst w plain layout. Comparison potrzebuje stats + visual w karcie wygranej, Trust Bar potrzebuje ikon, Problem potrzebuje visual + bold statystyk. Najsłabsza sekcja podcina wrażenie premium.
+> Memory: `feedback-landing-polish-required.md` + `feedback-landing-hero-image-required.md` + `feedback-landing-placeholder-per-section.md` obowiązują dalej — każda forma musi być dopieszczona + hero musi mieć placeholder zdjęcia + każda sekcja wizualna musi mieć brief fotografa.
 
-> Memory: `feedback-landing-hero-image-required.md`. **Hero MUSI mieć placeholder zdjęcia produktu** (klasa `hero-figure` / `hero-image` / `hero-product`) z 4-polowym briefem fotografa. Signature element (numerał) NIE zastępuje.
+### 10 tematów do pokrycia (content coverage — MUSI być każdy)
 
-> Memory: `feedback-landing-placeholder-per-section.md`. **KAŻDA sekcja wizualna MUSI mieć placeholder zdjęcia z 4-polowym briefem.** Nie wystarczy sam hero. `verify-landing.sh` Grupa `1a. Placeholder per section` sprawdza osobno:
->
-> | Sekcja | Min | Klasa CSS | Opis fotografii |
-> |--------|-----|-----------|------------------|
-> | **Hero** | 1 | `hero-figure` / `hero-image` / `hero-product` | Packshot produktu, lifestyle |
-> | **Gallery** | 5–6 | `gal-figure` / `bento-image` / `gallery-image` | Detail + context shots |
-> | **Personas** | 3 | `persona-figure` / `persona-image` | Persona w kontekście użycia |
-> | **Testimonials** | 2–4 | `testi-avatar-figure` / `voice-figure` / `avatar-figure` | Zdjęcie twarzy klienta 112×112 |
-> | **Procedure / How** | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
-> | **Final CTA** | 1 (opcjonalne) | `final-cta-figure` / `cta-figure` / `bg-figure` | Panorama / bg image |
->
-> **Częsty błąd (do 2026-04):** testimonial avatary jako gradient kółka z inicjałami (MK, PB itd.) zamiast placeholder na zdjęcie → fotograf nie dostaje briefu na te ujęcia → po podstawieniu zdjęć produktowych testimonials nadal wyglądają „puste". Każdy avatar i każdy krok how-it-works potrzebuje briefu.
+| # | Temat | Funkcja | Pokrywam przez (zależy od paradygmatu) |
+|---|-------|---------|---------------------------------------|
+| 1 | **Navigation** | Dostęp do sekcji / CTA zawsze w zasięgu | Header sticky / anchor-tabs / minimal-logo / no-nav |
+| 2 | **Hero** | Pierwsze wrażenie, promise | Full-bleed / split-image / text-first / dashboard-mockup / numeral-bg / carousel / prompt-input / persona-portrait |
+| 3 | **Trust** | Uwiarygodnienie w <10 sek | Trust bar ikon / press logos / cert badges / rating count / user count |
+| 4 | **Problem** | Rezonans z bólem / status quo | PAS paragraph / cytat klienta / statystyka dużym drukiem / ilustracja kontrastu |
+| 5 | **Solution** | Co produkt robi | Bento 2×2 / scrollytelling sticky / linear features / configurator / comparison / horizontal scroll / long-form |
+| 6 | **Edukacja / How** | Jak działa w praktyce | 3 kroki / demo video / app screenshots / diagram techniczny / „day in the life" narracja |
+| 7 | **Proof** | Dowód społeczny | Testimonials grid / before-after cards / case study / UGC wall / press quotes / video-dominant / before-after stats |
+| 8 | **Objection handling** | FAQ, wątpliwości | Accordion FAQ / long-form „dlaczego" / comparison table / guarantee block |
+| 9 | **Offer** | Cena + co dostajesz + gwarancja | Offer box / pricing tiers / bundle card / configurator total / quiz-end recommendation |
+| 10 | **Final action** | Ostatnia okazja konwersji | CTA banner / sticky CTA mobile / footer CTA / email capture |
 
-## Architektura strony (14 sekcji)
+**Reguła:** MUSI być pokryty każdy z 10 tematów. **Forma wybrana per paradygmat** z Sekcji 9 briefa.
 
-Każdy landing składa się z tych sekcji w kolejności:
+### Paradigm → canonical skeleton (przykłady form per paradygmat)
 
-| # | Sekcja | Funkcja | Elementy |
-|---|--------|---------|----------|
-| 1 | **Header** | Nawigacja | Logo, linki (Funkcje, Opinie, FAQ), CTA button, hamburger mobile |
-| 2 | **Mobile Menu** | Nawigacja mobilna | Fullscreen overlay z linkami |
-| 3 | **Hero** | Pierwsze wrażenie | Headline, subheadline, dual CTA, badges, hero image, glow effects |
-| 4 | **Trust Bar** | Budowanie zaufania | 4-5 ikon z wartościami (gwarancja, dostawa, etc.) |
-| 5 | **Problem** | PAS: Agitacja | Headline z pytaniem, opis bólu, statystyki, wizualizacja |
-| 6 | **Solution (Bento)** | Prezentacja produktu | Grid 2x2 z features, spotlight hover effect |
-| 7 | **How It Works** | Edukacja | 3 kroki z ikonami i opisami |
-| 8 | **Comparison** | Wyższość vs konkurencja | Dwie karty / tabela porównawcza |
-| 9 | **Social Proof** | Dowód społeczny | Marquee z logami, karty z opiniami |
-| 10 | **FAQ** | Eliminacja obiekcji | Accordion z 5-7 pytaniami |
-| 11 | **Offer** | Finalizacja | Product box z ceną, lista zawartości, CTA, gwarancja |
-| 12 | **CTA Banner** | Ostatnia szansa | Prosty headline + CTA |
-| 13 | **Footer** | Informacje | 3 kolumny: brand, linki, kontakt |
-| 14 | **Sticky CTA** | Mobile conversion | Przyklejony przycisk na dole (tylko mobile) |
-| 15 | **Cookie Banner** | Compliance | RODO zgoda |
+**Dashboard-style (anxiety + outcome-hero — np. smart home, safety):**
+```
+Hero: split image, app/device mockup prawo + headline „You're in control" lewo
+Trust: mała belka z liczbami użytkowników + cert badges
+Problem: statystyka duża + short paragraph (nie PAS 3-akapitowy)
+Solution: feature cards z UI screenshots (nie bento grid)
+How: 3 app-screen sequence (nie ikonki abstrakcyjne)
+Proof: real-data case study z wykresami/stats + 2 video quotes
+FAQ: compact accordion, 5 pytań
+Offer: box z gwarancją powrotu, subskrypcja vs single purchase
+Final: sticky CTA na mobile + email capture w footerze
+```
 
-> **Copy per sekcja** — szczegółowe wytyczne w [`reference/copy.md` Część 2](reference/copy.md).
+**Scrollytelling (anxiety → reassurance arc, demo):**
+```
+Hero: sekwencyjne frames (przed → w trakcie → po), headline jedna linia
+Trust: przesunięte niżej, po hero (buduje suspens)
+Problem: zadany obraz lęku (np. fotka drabiny + cytat)
+Solution: STICKY image w center + scrolling narracja z boku (3-4 beatów)
+How: demonstracja kontinuum (nie „3 kroki z ikonkami")
+Proof: before-after split cards z konkretnymi liczbami
+FAQ: expandable, pytania dotyczące lęku
+Offer: box z pełną obietnicą bezpieczeństwa
+Final: CTA z podkreśleniem „zero ryzyka"
+```
+
+**Editorial / manifesto (desire/identity, enthusiast):**
+```
+Hero: text-first, duża prose headline, minimal photo w tle
+Trust: subtelne press quote strip (bez badges)
+Problem: long-form prose paragraph (nie statystyka)
+Solution: sekwencja krótkich magazynowych sekcji Nº 01, Nº 02 (numeracja)
+How: jeden długi przekrój tekstowy z inline quotes
+Proof: 1-2 cytaty press + zero „5 stars" review grid
+FAQ: rozwijane jako text links (nie accordion-styled)
+Offer: scarcity-framed, limited release framing
+Final: quiet CTA bez urgency
+```
+
+**Cinematic launch (desire + product-hero, premium AGD):**
+```
+Hero: full-bleed video autoplay + jedno statement headline
+Trust: brak osobnej sekcji (integrated in nav: „As seen in Vogue")
+Problem: krótki, 1 beat emocjonalny
+Solution: 3 emotional beats scroll-revealed z cutaway diagrams
+How: animated tech breakdown (slow-mo shots style)
+Proof: minimal — zero testi, 1 video, press logos
+FAQ: hidden w tabs (tylko dla fryzerów decyzji)
+Offer: dark, product-centric box z numerem produkcji
+Final: elegant „order now" bez urgency
+```
+
+**Comparison grid (skepticism, B2B, buyer porównuje SKU):**
+```
+Hero: split z ceną widoczną + „compare plans" CTA
+Trust: logo klientów rząd (credibility mass)
+Problem: skrótowe, listing-style
+Solution: full comparison table z feature matrix
+How: link do demo video (skondensowane)
+Proof: rating widget + count reviews prominent
+FAQ: expandable (szczegółowe)
+Offer: 3 pricing tiers side-by-side
+Final: double CTA: „start trial" + „talk to sales"
+```
+
+**Spec waterfall (desire + product-hero, tech):**
+```
+Hero: oversized numeral background (5600, 120Hz, 0.3s)
+Trust: press + mikro-review snippets
+Problem: minimal, 1 zdanie
+Solution: scroll-down spec cards, każda reveal jednej liczby
+How: cutaway technical diagram
+Proof: benchmark graph + tech review quote
+FAQ: tech-focused
+Offer: box z pełną specyfikacją
+Final: solo CTA
+```
+
+> Pozostałe 6 paradygmatów (Platform breadth, Configurator, Founder-led, Moment, Quiz-first, Prompt-as-hero) — wybierz skeleton analogicznie, patrz tabela w `01-direction.md` Krok 6.5.
+
+**DLACZEGO nie ma sztywnego szablonu:** bo różny produkt + persona = różna architektura. Oura NIE wygląda jak Dyson. Ring NIE wygląda jak Aesop. To jest mechanika branży, nie kwestia stylu.
+
+### Placeholder zdjęć — wymogi (bez zmian)
+
+| Sekcja-typ | Min | Klasa CSS (elastyczna) | Opis fotografii |
+|--------|-----|-----------|------------------|
+| **Hero** | 1 | `hero-figure` / `hero-image` / `hero-product` / `hero-mockup` | Packshot / app UI / lifestyle / osoba |
+| **Solution / Gallery** | 3-6 | `gal-figure` / `bento-image` / `gallery-image` / `feature-image` / `step-image` | Detail + context + UI |
+| **Persona / Proof** | 2-4 | `persona-figure` / `testi-avatar-figure` / `voice-figure` / `avatar-figure` / `case-figure` | Twarz 112×112 LUB scenka |
+| **How / Process** | 3 (jeśli paradygmat używa How-step) | `step-figure` / `step-image` / `how-figure` / `ritual-figure` | Ujęcie wykonania kroku |
+| **Offer / CTA** | 1 | `offer-figure` / `final-cta-figure` / `cta-figure` / `bg-figure` | Flat lay zestawu / panorama |
+
+Liczba klas dopuszczalnych celowo szeroka — żeby paradigm Editorial nie musiał używać `bento-image` gdy ma long-form prose. Weryfikacja jest **content coverage** (czy jest placeholder), nie **class naming** (czy nazywa się konkretnie).
 
 ---
 
@@ -766,10 +840,11 @@ cookieBtn.addEventListener('click', () => {
 ## Proces tworzenia (workflow)
 
 1. **Pobierz dane** z Supabase (workflow, branding, products, reports)
-2. **Przeczytaj `_brief.md`** (wynik ETAP 1) — manifest, paleta, fonty, persona, signature element
-3. **Buduj szkielet 14 sekcji od zera** — manifest jest jedynym driverem designu
-4. **Napisz copy** dla każdej sekcji (patrz [`reference/copy.md`](reference/copy.md))
-5. **Wygeneruj HTML** — używaj snippetów copy-paste z [`reference/patterns.md`](reference/patterns.md) (safety primitywy, nie layouty)
+2. **Przeczytaj `_brief.md`** (wynik ETAP 1) — szczególnie **Sekcja 9: Paradigm architektury** (emocja + hero type + wybór 1 z 12 + structural signature)
+3. **Zbuduj szkielet per paradigm** — z canonical skeletons powyżej (Dashboard / Scrollytelling / Editorial / Cinematic / Comparison / Spec waterfall / …) — manifesto i paradygmat są jedynymi driverami designu
+4. **Pokryj 10 tematów** w formie zgodnej z paradygmatem (nie sztywnie 14 sekcji)
+5. **Napisz copy** dla każdej sekcji (patrz [`reference/copy.md`](reference/copy.md))
+6. **Wygeneruj HTML** — używaj snippetów z [`reference/patterns.md`](reference/patterns.md) ostrożnie (**MAX 3 patterns per landing** — patrz nagłówek patterns.md)
 6. **Zapisz** `landing-pages/[slug]/index.html` (pojedynczy plik, inline CSS + JS)
 7. **Logo upload** — sharp().trim() + Supabase Storage (Kroki po wygenerowaniu HTML wyżej)
 8. **Skonfiguruj URL** w `vercel.json` (jeśli dedykowany URL)
@@ -1010,7 +1085,7 @@ Toolkit ma wbudowany `mobileBar` — nie twórz duplikatu `.sticky-cta`!
 
 ## Checklist przed deploy
 
-- [ ] Wszystkie 14 sekcji obecne (header → footer)
+- [ ] Wszystkie 10 tematów pokryte (Navigation → Final action), forma zgodna z paradygmatem z briefa sekcja 9
 - [ ] Kolory i fonty z brandingu (zgodne z `_brief.md`)
 - [ ] Logo z projektu (przycięte sharp().trim, pełny URL Supabase)
 - [ ] **Pełne URL** do wszystkich assetów (Supabase Storage, NIE względne)

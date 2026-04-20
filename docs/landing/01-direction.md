@@ -203,6 +203,71 @@ mkdir -p landing-pages/$SLUG
 
 ---
 
+## Krok 6.5 — Wybór paradygmatu architektury (OBOWIĄZKOWY)
+
+> **Memory: `feedback-landing-structural-uniqueness.md`.** Bez tego kroku każdy landing wychodzi strukturalnie identyczny — tylko inne kolory i teksty. Ten krok forsuje **różny układ strony** per produkt.
+
+### Reguła decyzyjna (2 pytania)
+
+**Pytanie 1 — dominująca emocja klienta wchodzącego na stronę:**
+- **Anxiety** (bezpieczeństwo, zdrowie, pierwszy zakup, lęk) → reassurance architecture
+- **Desire** (status, aesthetic, craft, identity) → editorial/aesthetic architecture
+- **Skepticism** (value, comparison, B2B decision) → comparison architecture
+- **Identity-seeking** (values, tribe, hobby) → mission/founder architecture
+
+**Pytanie 2 — czym jest hero strony:**
+- **Product-hero** (Dyson, Aesop) — produkt JEST bohaterem, object-photography
+- **Outcome-hero** (Oura, Ring, Eight Sleep) — wynik/dane/styl życia
+- **Ritual-hero** (Ghia, Blue Bottle) — moment użycia w kontekście
+- **Founder-hero** (Fly By Jing, Omsom) — osoba = autentyczność
+
+### Taksonomia 12 paradygmatów architektury
+
+| # | Paradygmat | Kiedy użyć | Hero | Solution | Social proof |
+|---|-----------|------------|------|----------|--------------|
+| 1 | **Cinematic launch** | Desire + product-hero, premium AGD, emocjonalny skok | Full-bleed video/foto, 1 headline | Scroll-reveal 3 beatów | Press logos + 1 video |
+| 2 | **Platform breadth** | B2B, szeroka oferta, SaaS | Gradient mesh + logo grid | Horizontal product rail | Customer logos carousel |
+| 3 | **Editorial / manifesto** | Desire/identity + enthusiast | Text-first prose, minimal photo | Long-form z inline quotes | Press quotes, brak testi |
+| 4 | **Dashboard-style** | Anxiety + outcome-hero (smart home, safety, SaaS) | App/device mockup hero | Feature cards z UI screenshots | Real-data case studies |
+| 5 | **Comparison grid** | Skepticism, buyer wybiera SKU | Split hero z price | Comparison table pełna | Reviews prominent z gwiazdkami |
+| 6 | **Configurator / showroom** | Lifestyle object, wariantowy produkt | Carousel wariantów | Build-your-own interactive | UGC grid |
+| 7 | **Spec waterfall** | Desire/skepticism + product-hero, tech | Oversized numeral (spec) | Scroll-down spec cards | Minimal |
+| 8 | **Scrollytelling** | Anxiety → reassurance arc, demonstracja | Sekwencyjne frames | Sticky image + side narracja | Before/after story |
+| 9 | **Founder-led** | Identity + founder-hero, cultural | Osoba + cytat | Founder story long-form | Press + UGC |
+| 10 | **Moment / ritual** | Desire + ritual-hero (coffee, non-alc) | Lifestyle-moment | Warmth sections (scene) | Editorial quotes |
+| 11 | **Quiz-first** | Anxiety + personalizacja (medical, telehealth) | Quiz start button | Per-answer reveal | Doctor quotes |
+| 12 | **Prompt-as-hero** | AI/interaktywny produkt = input | Interactive input | Output examples | User-generated outputs |
+
+### Output — dopisz do `_brief.md` sekcję 9:
+
+```markdown
+## 9. Paradigm architektury
+
+- **Dominująca emocja klienta:** [anxiety | desire | skepticism | identity]
+- **Hero type:** [product | outcome | ritual | founder]
+- **Wybrany paradygmat (1 z 12):** [nazwa + numer]
+- **Uzasadnienie:** [2-3 zdania dlaczego TEN paradygmat dla TEGO produktu + persony]
+
+### Structural signature (MUSI różnić się od istniejących landingów)
+
+| Element | Wybór dla tego landinga | Różny od istniejących? |
+|---------|------------------------|------------------------|
+| **Navigation style** | [sticky-nav full / anchor-tabs / minimal-logo-only / no-nav] | ✓ różny niż [slug które kopiują ten sam styl] |
+| **Hero format** | [full-bleed-video / split-image / text-first / dashboard-mockup / numeral-background / carousel / prompt-input / persona-portrait] | ✓ różny niż [...] |
+| **Solution format** | [bento-grid / linear-scroll / scrollytelling-sticky / comparison-table / configurator / long-form-prose / horizontal-scroll] | ✓ różny niż [...] |
+| **Testimonials format** | [quote-grid / video-dominant / UGC-wall / press-logos-only / before-after-cards / no-testimonials] | ✓ różny niż [...] |
+
+**Reguła:** MIN 2 z 4 elementów MUSZĄ różnić się od każdego istniejącego landingu w `landing-pages/`. Sprawdź to explicite.
+```
+
+### Weryfikacja przed przejściem do ETAP 2
+
+1. Otwórz 2-3 istniejące landingi (`landing-pages/kafina/`, `landing-pages/vitrix/`, `landing-pages/paromia/`) — tylko ich strukturalne decyzje (hero, solution, testimonials).
+2. Upewnij się że Twoja tabela MIN 2 różnice vs każdy z nich.
+3. Jeśli nie — wróć do pytania 1 i wybierz **inny paradygmat**.
+
+---
+
 ## Krok 7 — Mapowanie manifesto → decyzje w ETAP 4 (DESIGN)
 
 Manifesto musi przekładać się 1:1 na konkretne decyzje w kodzie. Wypełnij tabelę w pliku manifesto:
@@ -232,7 +297,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 # Edytuj wszystkie 8 sekcji
 ```
 
-**Struktura `_brief.md`** (8 sekcji obowiązkowych):
+**Struktura `_brief.md`** (9 sekcji obowiązkowych):
 
 1. Kierunek manifesta (z 6 presetów lub „nowy")
 2. Moodboard — 3 realne marki referencyjne (spoza landing-pages/)
@@ -242,6 +307,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)
 8. Signature element
+9. **Paradigm architektury** (z Kroku 6.5 — emocja + hero type + wybór 1 z 12 + structural signature tabela)
 
 **NIE używaj `/c/tmp/`** — `_brief.md` jest commitowany razem z landingiem (persystentny brief projektu).
 
@@ -258,12 +324,13 @@ bash scripts/verify-brief.sh $SLUG
 **Exit 1:** Brief niekompletny → wróć do Kroku 8, uzupełnij brakujące sekcje. Powtórz aż exit 0.
 
 **Skrypt sprawdza:**
-- 8 sekcji obecnych (`## 1.` do `## 8.`)
+- 9 sekcji obecnych (`## 1.` do `## 9.`)
 - Sekcja 1: któryś kierunek zaznaczony `[x]`
 - Sekcja 2: 3 marki wypełnione (3 numerowane wpisy z `**`)
 - Sekcja 3: paleta nie ma więcej niż 1 placeholdera `______`
 - Sekcja 6: anty-referencje wypełnione (≥50 znaków treści)
 - Sekcja 7: wszystkie 4 testy anty-generic na TAK `[x]`
+- Sekcja 9: paradigm wybrany + structural signature tabela wypełniona (MIN 2 różnice vs istniejące landingi)
 
 **Bez valid briefa NIE przechodź do ETAP 2.** To jest twardy gate — autonomous mode w `landing-autorun.sh` wymusza max 3 retries, potem STOP + raport.
 
