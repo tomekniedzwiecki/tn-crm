@@ -1,5 +1,6 @@
 #!/bin/bash
-# verify-brief.sh — sprawdza czy landing-pages/[slug]/_brief.md ma wszystkie 9 sekcji
+# verify-brief.sh — sprawdza czy landing-pages/[slug]/_brief.md ma wymagane sekcje
+# 8 sekcji dla MODE=template; 9 sekcji dla MODE=paradigm
 # Wywołanie: bash scripts/verify-brief.sh [slug]
 # Exit 0 = brief kompletny; Exit 1 = brief niekompletny (BLOKUJE ETAP 2)
 
@@ -10,17 +11,45 @@ BRIEF="landing-pages/$SLUG/_brief.md"
 [ -z "$SLUG" ] && echo "Usage: verify-brief.sh [slug]" && exit 1
 [ ! -f "$BRIEF" ] && echo "❌ Brak $BRIEF — wróć do ETAP 1 (docs/landing/01-direction.md)" && exit 1
 
-REQUIRED=(
-  "1. Kierunek manifesta"
-  "2. Moodboard"
-  "3. Paleta"
-  "4. Typografia"
-  "5. Persona"
-  "6. Anty-referencje"
-  "7. Test anty-generic"
-  "8. Signature element"
-  "9. Paradigm architektury"
-)
+# Wykryj MODE (pierwsza linia lub gdziekolwiek na górze briefa przed sekcją 1)
+MODE=""
+if grep -qE "^MODE:\s*template" "$BRIEF"; then
+  MODE="template"
+elif grep -qE "^MODE:\s*paradigm" "$BRIEF"; then
+  MODE="paradigm"
+else
+  MODE="template"
+  echo "⚠️  Brak linii 'MODE: template' lub 'MODE: paradigm' — fallback na 'template' (klasyczny 14-sekcyjny flow)"
+  echo "   Dla nowych landingów dodaj 'MODE: ...' na pierwszą linię briefa (Krok 0 z 01-direction.md)"
+fi
+
+echo "📋 MODE: $MODE"
+
+# Sekcje wymagane per MODE
+if [ "$MODE" = "paradigm" ]; then
+  REQUIRED=(
+    "1. Kierunek manifesta"
+    "2. Moodboard"
+    "3. Paleta"
+    "4. Typografia"
+    "5. Persona"
+    "6. Anty-referencje"
+    "7. Test anty-generic"
+    "8. Signature element"
+    "9. Paradigm architektury"
+  )
+else
+  REQUIRED=(
+    "1. Kierunek manifesta"
+    "2. Moodboard"
+    "3. Paleta"
+    "4. Typografia"
+    "5. Persona"
+    "6. Anty-referencje"
+    "7. Test anty-generic"
+    "8. Signature element"
+  )
+fi
 
 FAIL=0
 for section in "${REQUIRED[@]}"; do
@@ -64,17 +93,19 @@ if [ "$ANTYGENERIC_COUNT" -lt 4 ]; then
   FAIL=1
 fi
 
-# Sekcja 9: Paradigm architektury — sprawdź że jest wybrany paradygmat (słowa kluczowe) + structural signature tabela
-PARADIGM_LEN=$(awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -vE "^##|^>" | tr -d '[:space:]' | wc -c)
-if [ "$PARADIGM_LEN" -lt 100 ]; then
-  echo "❌ Sekcja 9 (Paradigm architektury) niewypełniona ($PARADIGM_LEN znaków — wymagane 100+)"
-  FAIL=1
-fi
+# Sekcja 9: Paradigm architektury — TYLKO dla MODE=paradigm
+if [ "$MODE" = "paradigm" ]; then
+  PARADIGM_LEN=$(awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -vE "^##|^>" | tr -d '[:space:]' | wc -c)
+  if [ "$PARADIGM_LEN" -lt 100 ]; then
+    echo "❌ Sekcja 9 (Paradigm architektury) niewypełniona ($PARADIGM_LEN znaków — wymagane 100+)"
+    FAIL=1
+  fi
 
-# Sekcja 9 MUSI zawierać nazwę paradygmatu z taksonomii 12
-if ! awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -qiE "cinematic|platform breadth|editorial|manifesto|dashboard|comparison grid|configurator|spec waterfall|scrollytelling|founder-led|moment|ritual|quiz-first|prompt-as-hero"; then
-  echo "❌ Sekcja 9: brak wybranego paradygmatu z taksonomii 12 (musi zawierać nazwę np. 'Dashboard-style', 'Scrollytelling', 'Editorial', 'Cinematic launch', itd.)"
-  FAIL=1
+  # Sekcja 9 MUSI zawierać nazwę paradygmatu z taksonomii 12
+  if ! awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -qiE "cinematic|platform breadth|editorial|manifesto|dashboard|comparison grid|configurator|spec waterfall|scrollytelling|founder-led|moment|ritual|quiz-first|prompt-as-hero"; then
+    echo "❌ Sekcja 9: brak wybranego paradygmatu z taksonomii 12 (musi zawierać nazwę np. 'Dashboard-style', 'Scrollytelling', 'Editorial', 'Cinematic launch', itd.)"
+    FAIL=1
+  fi
 fi
 
 if [ "$FAIL" -eq 1 ]; then

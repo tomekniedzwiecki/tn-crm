@@ -1,3 +1,5 @@
+MODE: paradigm
+
 # Design Brief — GlassNova
 
 ## 1. Kierunek manifesta (z 01-direction.md)

@@ -60,12 +60,17 @@ Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a 
 
 ### Generowanie landing page (7 etapów + reference + skrypty)
 
-**🎯 TRIGGER FRAZY (AUTO-RUN, FULL autonomous):**
+**🎯 TRIGGER FRAZY (AUTO-RUN z jednym pytaniem na starcie):**
 - „Przygotuj landing dla projektu [UUID]"
 - „Zrób landing dla [UUID]" / „Zrób landing dla workflow [nazwa]"
 - „Wygeneruj stronę sprzedażową [UUID]"
 
-Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](docs/landing/README.md)** i wykonaj AUTO-RUN — wszystkie 6 etapów autonomicznie, **commit + push + deploy bez pytania** (landingi to preview dla klienta, nie produkcja — patrz `feedback-landing-auto-deploy.md`). Zakończ podaniem linku live: `https://tn-crm.vercel.app/landing-pages/[slug]/`.
+Gdy słyszysz którąkolwiek frazę:
+
+1. **ZAWSZE najpierw zadaj pytanie o MODE** (Krok 0 z `01-direction.md`) — szablon (14 sekcji) vs paradygmat (custom per produkt). Poczekaj na odpowiedź A / B.
+2. Po odpowiedzi → **otwórz [`docs/landing/README.md`](docs/landing/README.md)** i wykonaj AUTO-RUN — wszystkie 6 etapów autonomicznie, **commit + push + deploy bez pytania** (landingi to preview dla klienta, nie produkcja — patrz `feedback-landing-auto-deploy.md`). Zakończ podaniem linku live: `https://tn-crm.vercel.app/landing-pages/[slug]/`.
+
+**MODE gate to JEDYNE pytanie w procedurze** — wszystko inne autonomiczne.
 
 **Flow (6 etapów):**
 
