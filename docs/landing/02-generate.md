@@ -2,7 +2,8 @@
 
 > **Safety rules:** [`reference/safety.md`](reference/safety.md) — zasady bezwarunkowe.
 > **Copy:** [`reference/copy.md`](reference/copy.md) — Hero Headline + Copywriter Playbook + Conversion Boosters.
-> **Patterns:** [`reference/patterns.md`](reference/patterns.md) — 22 signature snippety.
+> **Patterns:** [`reference/patterns.md`](reference/patterns.md) — 22 signature snippety (cross-section).
+> **Section Variants:** [`reference/section-variants.md`](reference/section-variants.md) — 22 warianty per sekcja (10 hero + 6 features + 6 testimonials). **Autonomiczny wybór per produkt.**
 > **PageSpeed:** [`reference/pagespeed.md`](reference/pagespeed.md) — optymalizacja wydajności.
 
 ## Kiedy uruchomić
@@ -197,9 +198,54 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 >
 > **Częsty błąd (do 2026-04):** testimonial avatary jako gradient kółka z inicjałami (MK, PB itd.) zamiast placeholder na zdjęcie → fotograf nie dostaje briefu na te ujęcia → po podstawieniu zdjęć produktowych testimonials nadal wyglądają „puste". Każdy avatar i każdy krok how-it-works potrzebuje briefu.
 
+## 🎨 Autonomiczny wybór wariantów sekcji (przed HTML generation)
+
+> **Wprowadzone 2026-04-20.** Aby uniknąć template-copy między landingami, **3 kluczowe sekcje mają warianty**: Hero (10), Solution/Features (6), Testimonials (6). Claude wybiera **autonomicznie** po 1 wariancie per sekcja na bazie danych z briefa. Pełna biblioteka: [`reference/section-variants.md`](reference/section-variants.md).
+
+### Drzewo decyzyjne (skrócone — pełne w section-variants.md rozdział 4)
+
+**Hero (1 z 10):**
+- Smart home / IoT / app-controlled → **H3 Dashboard mockup**
+- Premium AGD z mocną liczbą spec → **H4 Editorial numerał**
+- Premium AGD lifestyle → **H2 Full-bleed lifestyle**
+- Craft / luxury materials → **H7 Product macro**
+- Wellness / beauty / femtech → **H6 Persona portrait**
+- Food/drink DTC editorial → **H5 Oversized typography**
+- Value/budget (<800 zł) → **H8 Split z ceną**
+- Transformation product → **H10 Before/After split**
+- Cinematic premium z video → **H9 Video loop**
+- Default → **H1 Split klasyczny**
+
+**Features (1 z 6):**
+- App-controlled → **F4 Cards z mockupami**
+- Premium editorial → **F2 Bento asymetryczny**
+- Complex tech (3-5 dłuższe opisy) → **F3 Linear stack**
+- 6-10 features → **F5 Horizontal scroll**
+- Narracyjny / multi-step → **F6 Sticky scrollytelling**
+- Default → **F1 Bento 2×2**
+
+**Testimonials (1 z 6):**
+- Transformation mierzalne → **T2 Before/After stats**
+- Video assets → **T3 Video-dominant**
+- Beauty/fashion/food UGC → **T4 UGC wall**
+- 1 strong voice premium → **T5 Single hero testi**
+- PR/editorial → **T6 Press logos + cytat**
+- Default → **T1 Voices quote grid**
+
+### Po wyborze
+
+1. Zaloguj wybory w `_brief.md` sekcja 9 (format w `section-variants.md` rozdział 5)
+2. Skopiuj HTML + CSS 3 wybranych wariantów z `section-variants.md`
+3. Osadź w szkielecie 14 sekcji (pozostałe 11 sekcji = standard)
+4. Wypełnij placeholdery treścią z briefa + raportu PDF
+
+**Reszta 11 sekcji** (Header, Mobile Menu, Trust Bar, Problem, How It Works, Comparison, FAQ, Offer, CTA Banner, Footer, Sticky CTA, Cookie Banner) → klasyczny układ z tego pliku niżej. **Nie wariantuj ich** — to fundament konwersji.
+
+---
+
 ## Architektura strony (14 sekcji)
 
-Każdy landing składa się z tych sekcji w kolejności:
+Każdy landing składa się z tych sekcji w kolejności. **3 z nich (Hero, Solution, Testimonials) wybierasz jako wariant z [`section-variants.md`](reference/section-variants.md) — pozostałe 11 standardowe**:
 
 | # | Sekcja | Funkcja | Elementy |
 |---|--------|---------|----------|

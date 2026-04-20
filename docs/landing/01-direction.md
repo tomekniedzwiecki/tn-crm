@@ -232,7 +232,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 # Edytuj wszystkie 8 sekcji
 ```
 
-**Struktura `_brief.md`** (8 sekcji obowiązkowych):
+**Struktura `_brief.md`** (8 sekcji obowiązkowych + sekcja 9 opcjonalna):
 
 1. Kierunek manifesta (z 6 presetów lub „nowy")
 2. Moodboard — 3 realne marki referencyjne (spoza landing-pages/)
@@ -242,6 +242,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)
 8. Signature element
+9. **Warianty sekcji** (opcjonalne — wybór Hero/Features/Testimonials z [`reference/section-variants.md`](reference/section-variants.md). Dopisywane autonomicznie przez Claude w ETAP 2 przed generowaniem HTML)
 
 **NIE używaj `/c/tmp/`** — `_brief.md` jest commitowany razem z landingiem (persystentny brief projektu).
 

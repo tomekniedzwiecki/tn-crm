@@ -76,3 +76,11 @@ Jeśli nic podobnego nie ma — wpisz „brak istniejącego landinga w tym kieru
 - „Color-changing shadow z primary brand color na hover kart (Panoramic Calm)"
 
 **Twój signature element:**
+
+## 9. Warianty sekcji (wypełniane autonomicznie przez Claude w ETAP 2)
+
+> Opcjonalne — dopisywane przed generowaniem HTML. Claude wybiera po 1 wariancie z biblioteki [`docs/landing/reference/section-variants.md`](../../docs/landing/reference/section-variants.md) na bazie kategorii + persony + price point.
+
+- **Hero:** H[1-10] [Nazwa wariantu] — [uzasadnienie w 1 zdaniu]
+- **Features:** F[1-6] [Nazwa wariantu] — [uzasadnienie]
+- **Testimonials:** T[1-6] [Nazwa wariantu] — [uzasadnienie]
