@@ -4768,6 +4768,26 @@
             const brandName = brandInfo?.title || workflow.offer_name || 'Marka';
             content = content.replace(/\{\{brand_name\}\}/g, brandName);
 
+            // Resolve reference image URL (same priority as ad creative regeneration)
+            if (content.includes('{{reference_image_url}}')) {
+                let refUrl = null;
+                const selectedId = workflow?.selected_product_id;
+                if (selectedId) {
+                    const { data: p } = await supabaseClient.from('workflow_products').select('image_url').eq('id', selectedId).maybeSingle();
+                    if (p?.image_url) refUrl = p.image_url;
+                }
+                if (!refUrl) {
+                    const { data: wp } = await supabaseClient.from('workflow_products').select('image_url').eq('workflow_id', workflow.id).not('image_url', 'is', null).limit(1);
+                    if (wp?.[0]?.image_url) refUrl = wp[0].image_url;
+                }
+                if (!refUrl) {
+                    const mockup = brandingItems.find(b => b.type === 'mockup' && b.file_url);
+                    const logo = brandingItems.find(b => b.type === 'logo' && b.file_url);
+                    refUrl = mockup?.file_url || logo?.file_url || null;
+                }
+                content = content.replace(/\{\{reference_image_url\}\}/g, refUrl || 'BRAK — podaj URL zdjęcia produktu ręcznie');
+            }
+
             try {
                 await navigator.clipboard.writeText(content);
                 showToast('Prompt skopiowany');
