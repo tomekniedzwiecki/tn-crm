@@ -117,9 +117,9 @@ fi
 
 # ─── 2. Numeracja sekcji ───
 echo ""
-echo "📑 2. Numeracja sekcji (Nº — opcjonalne, signature Editorial paradigm)"
+echo "📑 2. Numeracja sekcji"
 N_NUM=$(grep -oE "Nº [0-9]+" "$FILE" | sort -u | wc -l)
-check_range "Ciągła numeracja Nº — opcjonalne (Editorial=8-12, inne paradygmaty=0-7)" 0 12 "$N_NUM" "warn"
+check_range "Ciągła numeracja Nº (10±1 sekcji)" 8 12 "$N_NUM"
 
 # ─── 3. Zasady bezwarunkowe headera ───
 echo ""
@@ -297,46 +297,52 @@ check "Sticky CTA mobile obecny" "1" "$([ "$STICKY" -ge 1 ] && echo 1 || echo 0)
 
 # ─── 11. Section completeness — wszystkie 14 sekcji obecne ───
 echo ""
-echo "🧱 11. Content coverage (10 tematów — forma elastyczna per paradigm)"
+echo "🧱 11. Kompletność sekcji (wszystkie 14)"
 
-# Hero MA mieć placeholder zdjęcia (feedback-landing-hero-image-required.md — bez zmian)
-HERO_FIGURE=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*hero[^"]*-figure|class="[^"]*hero[^"]*-image|class="[^"]*hero-product|class="[^"]*hero-mockup' || true)
+# Hero MA mieć placeholder zdjęcia (feedback-landing-hero-image-required.md)
+HERO_FIGURE=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*hero[^"]*-figure|class="[^"]*hero[^"]*-image|class="[^"]*hero-product' || true)
 check "Hero ma placeholder zdjęcia produktu" "1" "$([ "$HERO_FIGURE" -ge 1 ] && echo 1 || echo 0)"
 
-# 10 tematów CONTENT COVERAGE (zmiana 2026-04-20 — feedback-landing-structural-uniqueness.md)
-# Zamiast sprawdzać konkretne klasy CSS (wymuszały template), sprawdzamy obecność CONTENT.
-# Dzięki temu różne paradygmaty (Editorial / Scrollytelling / Dashboard / Comparison) mogą przejść.
-declare -A TOPICS=(
-  ["1. Navigation (nav/header/anchor)"]='<header|<nav|id="(menu|mobile-menu|nav)'
-  ["2. Hero (first impression)"]='<section[^>]*class="[^"]*hero|<section[^>]*id="hero'
-  ["3. Trust (icons|logos|badges|stats|press)"]='class="[^"]*(trust|press|logos|badges|credibility|stats-bar|social-proof-bar|proof-bar)'
-  ["4. Problem/Pain (problem|challenge|pain|status-quo)"]='class="[^"]*(problem|wyzwanie|challenge|pain|status-quo|before|obstacle)'
-  ["5. Solution (features|bento|how-product-works)"]='class="[^"]*(solution|atelier|bento|features|capabilities|product-works|what-it-does|showroom|configurator)'
-  ["6. Education/How (3 kroki|demo|app-screens|diagram)"]='class="[^"]*(how|ritual|steps|process|demo|walkthrough|day-in-life|app-screens)'
-  ["7. Social proof (testimonials|UGC|case|before-after)"]='class="[^"]*(voices|testimonials|opinie|social-proof|case|before-after|ugc|reviews|results)'
-  ["8. Objection handling (FAQ|guarantee|compare)"]='class="[^"]*(faq|guarantee|warranty|compare|versus|comparison)|<details'
-  ["9. Offer (pricing|offer|bundle)"]='class="[^"]*(offer|pricing|bundle|purchase|buy-box)'
-  ["10. Final action (cta-banner|footer-cta|sticky|final-cta)"]='class="[^"]*(final-cta|cta-banner|final|sticky-cta|footer-cta|email-capture|newsletter)'
+# 14 sekcji obowiązkowych (feedback-landing-section-completeness.md)
+declare -A SECTIONS=(
+  ["Header"]='<header[^>]*class="[^"]*header'
+  ["Mobile Menu"]='class="[^"]*mobile-menu'
+  ["Hero"]='<section[^>]*class="[^"]*hero'
+  ["Trust Bar"]='<section[^>]*class="[^"]*trust'
+  ["Problem"]='<section[^>]*class="[^"]*(problem|wyzwanie|challenge)'
+  ["Solution/Bento"]='<section[^>]*class="[^"]*(solution|atelier|bento|features)'
+  ["How It Works"]='<section[^>]*class="[^"]*(how|ritual|steps|process)'
+  ["Comparison"]='<section[^>]*class="[^"]*(versus|comparison|compare)'
+  ["Testimonials"]='<section[^>]*class="[^"]*(voices|testimonials|opinie|social-proof)'
+  ["FAQ"]='<section[^>]*class="[^"]*faq'
+  ["Offer"]='<section[^>]*class="[^"]*offer'
+  ["Final CTA"]='<section[^>]*class="[^"]*(final-cta|cta-banner|final)'
+  ["Footer"]='<footer'
+  ["Sticky CTA"]='class="[^"]*sticky-cta'
 )
-for label in "1. Navigation (nav/header/anchor)" "2. Hero (first impression)" "3. Trust (icons|logos|badges|stats|press)" "4. Problem/Pain (problem|challenge|pain|status-quo)" "5. Solution (features|bento|how-product-works)" "6. Education/How (3 kroki|demo|app-screens|diagram)" "7. Social proof (testimonials|UGC|case|before-after)" "8. Objection handling (FAQ|guarantee|compare)" "9. Offer (pricing|offer|bundle)" "10. Final action (cta-banner|footer-cta|sticky|final-cta)"; do
-  pattern="${TOPICS[$label]}"
+for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How It Works" Comparison Testimonials FAQ Offer "Final CTA" Footer "Sticky CTA"; do
+  pattern="${SECTIONS[$label]}"
   HIT=$(grep -cE "$pattern" "$FILE" || true)
   if [ "$HIT" -ge 1 ]; then
     PASS=$((PASS + 1))
-    echo "  ✅ Temat: $label"
+    echo "  ✅ Sekcja: $label"
   else
     FAIL=$((FAIL + 1))
-    echo "  ❌ Temat BRAK: $label"
+    echo "  ❌ Sekcja BRAK: $label"
   fi
 done
 
-# Footer (zawsze)
-FOOTER=$(grep -cE '<footer' "$FILE" || true)
-check "Footer obecny" "1" "$([ "$FOOTER" -ge 1 ] && echo 1 || echo 0)"
+# Min 4 tiles w bento (top-level tile divs)
+BENTO_TILES=$(grep -cE '<div class="tile[^-][^"]*"' "$FILE" || true)
+check_range "Bento ma ≥4 tiles" 4 8 "$BENTO_TILES"
 
-# FAQ min 3 pytania (zmniejszone z 5 — paradigm cinematic/editorial może mieć mniej)
-FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq|class="[^"]*faq-question|class="[^"]*question' "$FILE" || true)
-check_range "FAQ/Objection items ≥3" 3 15 "$FAQS"
+# Min 3 acts w How It Works (top-level act/step/how-step)
+ACTS=$(grep -cE '<div class="act[^-][^"]*"|<div class="how-step|<div class="step[^-][^"]*"' "$FILE" || true)
+check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
+
+# Min 5 FAQ pytań
+FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq' "$FILE" || true)
+check_range "FAQ ≥5 pytań" 5 12 "$FAQS"
 
 # ─── 12. Copy quality (pozytywne jakości — reference/copy.md) ───
 echo ""

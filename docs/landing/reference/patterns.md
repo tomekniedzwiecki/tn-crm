@@ -2,23 +2,6 @@
 
 **Cel:** gotowe snippety signature elements, które odróżniają landing „pro" od „template".
 
-## ⚠️ REGUŁA KRYTYCZNA: MAX 3 patterns per landing
-
-> **Memory: `feedback-landing-structural-uniqueness.md`** (2026-04-20). Używanie 8-10 patternów z tej biblioteki w JEDNYM landingu = kolejny template-copy. Każdy nowy landing wyglądał jak rodzeństwo poprzednich, bo wszystkie używały tych samych signature elementów (oversized numeral + magazine numbering + editorial em italic + bento spotlight + border beam + marquee + …).
->
-> **Reguła:** MAX **3** snippety sygnaturowe (patterny #1-#10 + #17-#21 — czyli editorial/signature/animation) na landing.
->
-> **Bez limitu:** safety primitywy #11-#16 (fade-in safe, dual-bank mobile, header solid, trust strip, magnetic CTA, cookie banner, hamburger) — to są bezpieczniki, nie charakter.
->
-> **Dlaczego:** jeśli każdy landing ma oversized numeral + magazine eyebrow + editorial italic, to wszystkie wyglądają jak Paromia. Signature elementy są **charakterem** marki, nie biblioteką do wyczerpania.
->
-> **Jak wybrać 3:** w briefa sekcja 8 ustal **JEDEN** główny signature (hero dominant) + max 2 pomocnicze w sekcjach niżej. Reszta — nie używaj, nawet jeśli „pasuje". Mniej > więcej.
->
-> **Forbidden combinations (kumulują się w jeden szablon):**
-> - Numeral hero (#1) + Magazine numbering (#2) + Editorial italic (#3) = rama Paromii, NIE kopiuj
-> - Bento spotlight (#9) + Tile 3D tilt (#20) + Hero glow (#10) = rama Kafiny/Caffory
-> - Wszystkie 5 obowiązkowych JS effects (patrz 02-generate.md) NIE liczą się do limitu — to minimum, nie signature
-
 Każdy snippet ma:
 - **Kiedy użyć**
 - **HTML**

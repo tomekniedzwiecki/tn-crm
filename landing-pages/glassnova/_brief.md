@@ -59,26 +59,6 @@
 
 ## 8. Signature element
 
-> **Jedno (nie trzy — MAX 3 patterns rule):** **Dashboard phone mockup** jako centralny signature. Telefon z widokiem aplikacji GlassNova (real-time status mycia, Pa ssania counter, bateria, ETA) umieszczony obok robota przyczepionego do okna. To JEST hero — nie dekoracja.
+> **Oversized italic numerał „5600"** (Pa ssania) w cyan electric `#00D4E8` na deep navy `#0D1B2A` hero. Fraunces italic, clamp(240px, 24vw, 400px). Obok mikrometria „PA · SSANIE · 15°" w Space Mono.
 
-**Drugi pomocniczy (max 1):** subtelny „window grid" pattern jako background dla hero section (siatka 4×4 delikatnych pionowych linii 1px rgba(0,212,232,0.06)) — kontekstowa metafora produktu.
-
-**Zabronione (dobry pomysł, ale nie pasuje do Dashboard-style):** ~~Oversized numerał 5600~~ — to jest sygnatura Spec Waterfall paradigm (Dyson), nie Dashboard. Liczba Pa pokazana w UI telefonu jako live stat, nie jako monumentalna typografia.
-
-## 9. Paradigm architektury
-
-- **Dominująca emocja klienta:** **anxiety** (lęk przed spadnięciem z drabiny z 12 piętra, stres o bezpieczeństwo)
-- **Hero type:** **outcome-hero** — nie sam robot, ale DOŚWIADCZENIE kontroli przez aplikację + wolny weekend
-- **Wybrany paradygmat (1 z 12):** **#4 Dashboard-style**
-- **Uzasadnienie:** GlassNova to smart home safety device — klient kupuje SPOKÓJ i KONTROLĘ, nie produkt. Dokładnie jak Ring (dashboard-hero z app), Nest (control-at-glance), Eight Sleep (data-hero). Buyer anxiety → reassurance architecture. Dashboard-mockup pokazuje: „jesteś w kontroli z bezpiecznej kanapy". Real-data case studies + app screenshots jako proof. Zero „hero photo with vacuum" (to byłby Spec Waterfall / Cinematic Dyson).
-
-### Structural signature (MUSI różnić się od istniejących landingów)
-
-| Element | Wybór | vs kafina | vs vitrix | vs paromia |
-|---------|-------|-----------|-----------|------------|
-| **Navigation style** | **minimal: tylko logo lewo + CTA prawo** (bez anchor-nav links) | ✓ (kafina ma pełny anchor-nav) | ✓ (vitrix ma anchor-nav) | ✓ (paromia ma editorial nav z Nº) |
-| **Hero format** | **dashboard-mockup split: phone UI lewo + robot na oknie prawo** | ✓ (kafina = workshop landscape full-bleed) | ✓ (vitrix = panoramic view) | ✓ (paromia = editorial numerał tło) |
-| **Solution format** | **feature cards z app UI screenshots** (każda karta = jeden app feature + mini mockup + 1 liczba) | ✓ (kafina = bento 2×2 atelier) | ✓ (vitrix = bento features) | ✓ (paromia = atelier bento z sekcjami Nº) |
-| **Testimonials format** | **before-after cards z konkretnymi liczbami** („3h → 20 min", „380 zł/mies → 0 zł", „12 piętro → bez drabiny") | ✓ (kafina = voice quote-grid) | ✓ (vitrix = voices) | ✓ (paromia = voices z italic pull-quotes) |
-
-**Diff score: 4/4 vs każdy z 3 porównywanych baseline'ów.** Żaden istniejący landing nie ma kombinacji: minimal-nav + dashboard-mockup-hero + app-ui-feature-cards + before-after-stats-cards.
+**Secondary:** subtelny „window grid" pattern w tle (siatka 4×4 delikatnych pionowych linii jak odbicie w szybie) — kontekstowa metafora produktu.

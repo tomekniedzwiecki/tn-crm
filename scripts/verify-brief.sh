@@ -1,5 +1,5 @@
 #!/bin/bash
-# verify-brief.sh — sprawdza czy landing-pages/[slug]/_brief.md ma wszystkie 9 sekcji
+# verify-brief.sh — sprawdza czy landing-pages/[slug]/_brief.md ma wszystkie 8 sekcji
 # Wywołanie: bash scripts/verify-brief.sh [slug]
 # Exit 0 = brief kompletny; Exit 1 = brief niekompletny (BLOKUJE ETAP 2)
 
@@ -19,7 +19,6 @@ REQUIRED=(
   "6. Anty-referencje"
   "7. Test anty-generic"
   "8. Signature element"
-  "9. Paradigm architektury"
 )
 
 FAIL=0
@@ -61,19 +60,6 @@ fi
 ANTYGENERIC_COUNT=$(awk '/^## 7\. Test anty-generic/,/^## 8\./' "$BRIEF" | grep -cE "^- \[x\]|^- \[X\]" || true)
 if [ "$ANTYGENERIC_COUNT" -lt 4 ]; then
   echo "❌ Test anty-generic ma $ANTYGENERIC_COUNT/4 odpowiedzi TAK"
-  FAIL=1
-fi
-
-# Sekcja 9: Paradigm architektury — sprawdź że jest wybrany paradygmat (słowa kluczowe) + structural signature tabela
-PARADIGM_LEN=$(awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -vE "^##|^>" | tr -d '[:space:]' | wc -c)
-if [ "$PARADIGM_LEN" -lt 100 ]; then
-  echo "❌ Sekcja 9 (Paradigm architektury) niewypełniona ($PARADIGM_LEN znaków — wymagane 100+)"
-  FAIL=1
-fi
-
-# Sekcja 9 MUSI zawierać nazwę paradygmatu z taksonomii 12
-if ! awk '/^## 9\. Paradigm/,0' "$BRIEF" | grep -qiE "cinematic|platform breadth|editorial|manifesto|dashboard|comparison grid|configurator|spec waterfall|scrollytelling|founder-led|moment|ritual|quiz-first|prompt-as-hero"; then
-  echo "❌ Sekcja 9: brak wybranego paradygmatu z taksonomii 12 (musi zawierać nazwę np. 'Dashboard-style', 'Scrollytelling', 'Editorial', 'Cinematic launch', itd.)"
   FAIL=1
 fi
 
