@@ -737,13 +737,40 @@
     }
     .proc-step {
       counter-increment: step;
-      padding: 36px 28px;
       background: var(--paper);
       border: 1px solid var(--line);
       border-radius: var(--r-md);
       position: relative;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+    }
+    .proc-step-body { padding: 28px 28px 32px; display: flex; flex-direction: column; flex: 1; }
+    .step-figure {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .step-figure::after {
+      content: "";
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0,212,255,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .step-figure-ph {
+      position: absolute; inset: 14px;
+      padding: 12px;
+      background: rgba(10,22,40,0.72);
+      border: 1px dashed var(--orange);
+      border-radius: var(--r-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
     }
     .proc-step::before {
       content: "§ 03." counter(step, upper-alpha);
@@ -943,11 +970,47 @@
       gap: 20px;
     }
     .persona {
-      padding: 34px 28px;
       background: var(--paper);
       border: 1px solid var(--line);
       border-radius: var(--r-md);
       border-top: 3px solid var(--cyan);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .persona-figure {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .persona-figure::after {
+      content: "";
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0,212,255,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,212,255,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      pointer-events: none;
+    }
+    .persona-figure-ph {
+      position: absolute;
+      inset: 16px;
+      padding: 14px;
+      background: rgba(10,22,40,0.72);
+      border: 1px dashed var(--orange);
+      border-radius: var(--r-sm);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      text-align: center;
+    }
+    .persona-body {
+      padding: 28px 28px 32px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
     }
     .persona:nth-child(2) { border-top-color: var(--orange); }
     .persona:nth-child(3) { border-top-color: var(--ok); }
@@ -1047,18 +1110,36 @@
       border-top: 1px dashed var(--line);
     }
     .testi-avatar {
-      width: 44px;
-      height: 44px;
+      width: 56px;
+      height: 56px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--cyan), var(--orange));
+      background: var(--surface-2);
+      border: 1px dashed var(--orange);
       display: flex;
       align-items: center;
       justify-content: center;
-      font-family: var(--f-display);
+      font-family: var(--f-mono);
       font-weight: 700;
-      color: var(--paper);
-      font-size: 16px;
+      color: var(--orange);
+      font-size: 9px;
+      letter-spacing: 1.5px;
+      line-height: 1.2;
+      padding: 4px;
+      text-align: center;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
     }
+    .testi-avatar::before {
+      content: "";
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0,212,255,0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,212,255,0.06) 1px, transparent 1px);
+      background-size: 10px 10px;
+      pointer-events: none;
+    }
+    .testi-avatar span { position: relative; z-index: 1; }
     .testi-who {
       font-family: var(--f-display);
       font-weight: 700;
@@ -1395,7 +1476,35 @@
       padding: 110px 0;
       text-align: center;
       border-top: 1px solid var(--line);
+      position: relative;
+      overflow: hidden;
     }
+    .final-cta-bg {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      background: var(--surface);
+      opacity: 0.55;
+    }
+    .final-cta-bg::before {
+      content: "";
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(to right, rgba(0,212,255,0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0,212,255,0.05) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    .final-cta-bg-ph {
+      position: absolute;
+      top: 24px; right: 24px;
+      max-width: 280px;
+      padding: 14px;
+      background: rgba(10,22,40,0.82);
+      border: 1px dashed var(--orange);
+      border-radius: var(--r-sm);
+      text-align: left;
+    }
+    .final-cta > .wrap { position: relative; z-index: 1; }
     .final-cta h2 {
       font-family: var(--f-display);
       font-weight: 700;
@@ -1929,24 +2038,54 @@
 
     <div class="procedure-grid">
       <div class="how-step step proc-step">
-        <div class="proc-step-no js-parallax">01</div>
-        <h4>Włącz i wsuń sondę</h4>
-        <p>Jedno naciśnięcie przycisku. Po 2 sekundach ekran IPS pokazuje obraz z kamery. Wsuwasz sondę w otwór (świeca, rura, szczelina) — kabel utrzymuje ukształtowany kąt.</p>
-        <div class="proc-step-time">Czas startu: ~2 s</div>
+        <div class="step-figure step-image img-placeholder">
+          <div class="step-figure-ph">
+            <div class="gal-ph-mark">STEP-01 · POWER ON</div>
+            <div class="gal-ph-title">Dłoń włącza kamerę, ekran się zapala</div>
+            <div class="gal-ph-size">960×720 px</div>
+            <div class="gal-ph-note">Close-up na kciuk przyciskający power, ekran IPS startuje (ostry focus).</div>
+          </div>
+        </div>
+        <div class="proc-step-body">
+          <div class="proc-step-no js-parallax">01</div>
+          <h4>Włącz i wsuń sondę</h4>
+          <p>Jedno naciśnięcie przycisku. Po 2 sekundach ekran IPS pokazuje obraz z kamery. Wsuwasz sondę w otwór (świeca, rura, szczelina) — kabel utrzymuje ukształtowany kąt.</p>
+          <div class="proc-step-time">Czas startu: ~2 s</div>
+        </div>
       </div>
 
       <div class="how-step step proc-step">
-        <div class="proc-step-no js-parallax">02</div>
-        <h4>Przełączaj między 0° i 90°</h4>
-        <p>Jednym klawiszem zmieniasz obraz między frontem a bokiem. Regulujesz LED zależnie od oświetlenia wnętrza. Zatrzymujesz obraz (freeze), żeby przyjrzeć się detalowi.</p>
-        <div class="proc-step-time">Narzędzie: DL Switch · LED Trim</div>
+        <div class="step-figure step-image img-placeholder">
+          <div class="step-figure-ph">
+            <div class="gal-ph-mark">STEP-02 · DL SWITCH</div>
+            <div class="gal-ph-title">Ekran z podwójnym widokiem 0° / 90°</div>
+            <div class="gal-ph-size">960×720 px</div>
+            <div class="gal-ph-note">UI kamery — widok frontalny przełączany na boczny. Obraz wnętrza rury/silnika.</div>
+          </div>
+        </div>
+        <div class="proc-step-body">
+          <div class="proc-step-no js-parallax">02</div>
+          <h4>Przełączaj między 0° i 90°</h4>
+          <p>Jednym klawiszem zmieniasz obraz między frontem a bokiem. Regulujesz LED zależnie od oświetlenia wnętrza. Zatrzymujesz obraz (freeze), żeby przyjrzeć się detalowi.</p>
+          <div class="proc-step-time">Narzędzie: DL Switch · LED Trim</div>
+        </div>
       </div>
 
       <div class="how-step step proc-step">
-        <div class="proc-step-no js-parallax">03</div>
-        <h4>Decyzja — remontujesz czy nie</h4>
-        <p>Widzisz pęknięcie zaworu? Głowica do warsztatu. Rura czysta, usterka na złączu? Wymieniasz złączkę za 15 zł. Bez zdejmowania niczego „na ślepo".</p>
-        <div class="proc-step-time">Zysk: godziny / setki złotych</div>
+        <div class="step-figure step-image img-placeholder">
+          <div class="step-figure-ph">
+            <div class="gal-ph-mark">STEP-03 · DECYZJA</div>
+            <div class="gal-ph-title">Ekran pokazuje defekt — notowanie usterki</div>
+            <div class="gal-ph-size">960×720 px</div>
+            <div class="gal-ph-note">Mechanik ogląda ekran, notuje coś w zeszycie. Widać obraz z kamery w kadrze.</div>
+          </div>
+        </div>
+        <div class="proc-step-body">
+          <div class="proc-step-no js-parallax">03</div>
+          <h4>Decyzja — remontujesz czy nie</h4>
+          <p>Widzisz pęknięcie zaworu? Głowica do warsztatu. Rura czysta, usterka na złączu? Wymieniasz złączkę za 15 zł. Bez zdejmowania niczego „na ślepo".</p>
+          <div class="proc-step-time">Zysk: godziny / setki złotych</div>
+        </div>
       </div>
     </div>
   </div>
@@ -2104,36 +2243,66 @@
 
     <div class="persona-grid">
       <div class="persona">
-        <div class="persona-lab">PROFIL A · Mechanik</div>
-        <h4>Właściciel warsztatu</h4>
-        <p>Diagnozujesz pół tuzina silników tygodniowo. Teraz masz endoskop, który nie potrzebuje telefonu, działa w oleju i pokazuje zawór z dwóch stron naraz.</p>
-        <ul>
-          <li>Silniki samochodowe i motocyklowe</li>
-          <li>Inspekcja zaworów przez otwór świecy</li>
-          <li>Szybka diagnoza przed zdjęciem głowicy</li>
-        </ul>
+        <div class="persona-figure img-placeholder">
+          <div class="persona-figure-ph">
+            <div class="gal-ph-mark">PER-01 · MECHANIK</div>
+            <div class="gal-ph-title">Mechanik przy silniku, sonda w otworze po świecy</div>
+            <div class="gal-ph-size">1200×900 px · JPG</div>
+            <div class="gal-ph-note">Warsztat, ręce w rękawicach, komora silnika, ekran kamery widoczny w kadrze. Realistyczne, oświetlenie boczne.</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-lab">PROFIL A · Mechanik</div>
+          <h4>Właściciel warsztatu</h4>
+          <p>Diagnozujesz pół tuzina silników tygodniowo. Teraz masz endoskop, który nie potrzebuje telefonu, działa w oleju i pokazuje zawór z dwóch stron naraz.</p>
+          <ul>
+            <li>Silniki samochodowe i motocyklowe</li>
+            <li>Inspekcja zaworów przez otwór świecy</li>
+            <li>Szybka diagnoza przed zdjęciem głowicy</li>
+          </ul>
+        </div>
       </div>
 
       <div class="persona">
-        <div class="persona-lab">PROFIL B · Hydraulik / Elektryk</div>
-        <h4>Fachowiec na budowie</h4>
-        <p>Rury, odpływy, puszki instalacyjne, kanały wentylacyjne. IP67 znosi wilgoć, kabel 1 m dociera w zakręt syfonu, Dual Lens pokazuje pęknięcie z dwóch stron.</p>
-        <ul>
-          <li>Lokalizacja przecieków bez kucia</li>
-          <li>Inspekcja puszek elektrycznych w ścianie</li>
-          <li>Audyt starych instalacji przed remontem</li>
-        </ul>
+        <div class="persona-figure img-placeholder">
+          <div class="persona-figure-ph">
+            <div class="gal-ph-mark">PER-02 · HYDRAULIK</div>
+            <div class="gal-ph-title">Hydraulik wsuwa sondę do syfonu pod zlewem</div>
+            <div class="gal-ph-size">1200×900 px · JPG</div>
+            <div class="gal-ph-note">Mieszkanie/łazienka, kucka pod zlewem, kamera w dłoni, napięcie skupienia. Kolorystyka ciepła/neutralna.</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-lab">PROFIL B · Hydraulik / Elektryk</div>
+          <h4>Fachowiec na budowie</h4>
+          <p>Rury, odpływy, puszki instalacyjne, kanały wentylacyjne. IP67 znosi wilgoć, kabel 1 m dociera w zakręt syfonu, Dual Lens pokazuje pęknięcie z dwóch stron.</p>
+          <ul>
+            <li>Lokalizacja przecieków bez kucia</li>
+            <li>Inspekcja puszek elektrycznych w ścianie</li>
+            <li>Audyt starych instalacji przed remontem</li>
+          </ul>
+        </div>
       </div>
 
       <div class="persona">
-        <div class="persona-lab">PROFIL C · DIY zaawansowany</div>
-        <h4>Właściciel domu, majster</h4>
-        <p>Robisz u siebie wszystko sam — od naprawy pralki po remont łazienki. Narzędzie, które raz kupisz i masz przy sobie na każdej kolejnej awarii.</p>
-        <ul>
-          <li>Pralka, zmywarka, piec CO</li>
-          <li>Wilgoć w ścianie, rura pod płytkami</li>
-          <li>Inspekcja kominów i wentylacji</li>
-        </ul>
+        <div class="persona-figure img-placeholder">
+          <div class="persona-figure-ph">
+            <div class="gal-ph-mark">PER-03 · DIY MAJSTER</div>
+            <div class="gal-ph-title">Majster w garażu, inspekcja pralki od spustu</div>
+            <div class="gal-ph-size">1200×900 px · JPG</div>
+            <div class="gal-ph-note">Domowy warsztat, ~45 lat mężczyzna w koszuli w kratę, uchyla tylną pokrywę pralki. Ciepłe światło, naturalne.</div>
+          </div>
+        </div>
+        <div class="persona-body">
+          <div class="persona-lab">PROFIL C · DIY zaawansowany</div>
+          <h4>Właściciel domu, majster</h4>
+          <p>Robisz u siebie wszystko sam — od naprawy pralki po remont łazienki. Narzędzie, które raz kupisz i masz przy sobie na każdej kolejnej awarii.</p>
+          <ul>
+            <li>Pralka, zmywarka, piec CO</li>
+            <li>Wilgoć w ścianie, rura pod płytkami</li>
+            <li>Inspekcja kominów i wentylacji</li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>
@@ -2158,7 +2327,7 @@
         </div>
         <blockquote>Sprawdziłem stan zaworów przez otwór po świecy. W 10 minut wiedziałem, że silnik nadaje się do remontu — bez tego musiałbym zdejmować głowicę za 1500 zł.</blockquote>
         <div class="testi-auth">
-          <div class="testi-avatar">MK</div>
+          <div class="testi-avatar testi-avatar-figure img-placeholder" aria-label="Foto klienta — placeholder"><span>FOTO<br>112×112</span></div>
           <div>
             <div class="testi-who">Marek K.</div>
             <div class="testi-role">Mechanik · Rzeszów</div>
@@ -2173,7 +2342,7 @@
         </div>
         <blockquote>Zlokalizowałem pęknięcie w rurze kanalizacyjnej bez kucia płytek. Kamera boczna (90°) pokazała dokładnie gdzie jest problem — oszczędziłem tysiące.</blockquote>
         <div class="testi-auth">
-          <div class="testi-avatar">PB</div>
+          <div class="testi-avatar testi-avatar-figure img-placeholder" aria-label="Foto klienta — placeholder"><span>FOTO<br>112×112</span></div>
           <div>
             <div class="testi-who">Piotr B.</div>
             <div class="testi-role">DIY · Poznań</div>
@@ -2188,7 +2357,7 @@
         </div>
         <blockquote>Kupiłem trzy endoskopy przez pięć lat. Dwa padły po miesiącu. Ten jest inny — czuć, że zrobiony do roboty. Ekran IPS to inna liga niż podgląd na telefonie.</blockquote>
         <div class="testi-auth">
-          <div class="testi-avatar">TR</div>
+          <div class="testi-avatar testi-avatar-figure img-placeholder" aria-label="Foto klienta — placeholder"><span>FOTO<br>112×112</span></div>
           <div>
             <div class="testi-who">Tomasz R.</div>
             <div class="testi-role">Hydraulik · Gdańsk</div>
@@ -2203,7 +2372,7 @@
         </div>
         <blockquote>Pralka zaczęła „buczeć". Wsunąłem sondę do bębna od spustu — w środku skrawek skarpetki w pompie. 5 minut. Wcześniej bym dzwonił po serwis za 200 zł.</blockquote>
         <div class="testi-auth">
-          <div class="testi-avatar">JS</div>
+          <div class="testi-avatar testi-avatar-figure img-placeholder" aria-label="Foto klienta — placeholder"><span>FOTO<br>112×112</span></div>
           <div>
             <div class="testi-who">Jacek S.</div>
             <div class="testi-role">DIY · Warszawa</div>
@@ -2382,6 +2551,13 @@
 
 <!-- ============ FINAL CTA ============ -->
 <section class="final-cta">
+  <div class="final-cta-bg final-cta-figure img-placeholder" aria-hidden="true">
+    <div class="final-cta-bg-ph">
+      <div class="gal-ph-mark">CTA-BG · WARSZTAT</div>
+      <div class="gal-ph-title">Panorama warsztatu z InnerScan w użyciu</div>
+      <div class="gal-ph-size">2400×1200 px · JPG · ciemne/zdesaturowane</div>
+    </div>
+  </div>
   <div class="wrap">
     <h2>Przestań zgadywać. <em>Zacznij widzieć.</em></h2>
     <p>Każda minuta spędzona na demontażu „na ślepo" to minuta, którą mogłeś oszczędzić, gdybyś zobaczył co jest nie tak. InnerScan to jedna decyzja — reszta już się opłaca sama.</p>

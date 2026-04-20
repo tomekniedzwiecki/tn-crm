@@ -70,9 +70,41 @@ echo "════════════════════════�
 echo ""
 
 # ─── 1. Placeholdery / obrazy ───
+# Wymaganie: kazda sekcja wizualna MUSI miec placeholder zdjecia (feedback-landing-placeholder-per-section.md).
+# Sekcje: hero (1), gallery (5-6), personas (3), testimonials (3-4), procedure steps (3), final-cta (1 bg) = 16-18 minimum.
 echo "📷 1. Obrazy i placeholdery"
 N_PH=$(grep -oE 'class="[^"]*(-figure|-placeholder|bento-image|step-image|img-placeholder)[^"]*"' "$FILE" | wc -l)
-check_range "Placeholdery/figury" 12 20 "$N_PH"
+check_range "Placeholdery/figury (globalnie)" 12 40 "$N_PH"
+
+# Per-section check — kazda z sekcji wizualnych musi miec >=1 placeholder
+echo ""
+echo "📷 1a. Placeholder per section (wymagane od 2026-04)"
+
+# Hero (1 placeholder min)
+HERO_PH=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(hero-figure|hero-product|hero-image|hero.*-placeholder|img-placeholder)[^"]*"' || true)
+check_range "Hero: placeholder obecny (≥1)" 1 10 "$HERO_PH"
+
+# Personas (3 placeholdery)
+PERS_PH=$(awk '/<section[^>]*class="[^"]*personas[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(persona-figure|persona-image|persona.*-placeholder)[^"]*"' || true)
+check_range "Personas: placeholdery (≥3)" 3 8 "$PERS_PH"
+
+# Testimonials (3-4 placeholdery avatar)
+TESTI_PH=$(awk '/<section[^>]*class="[^"]*testimonials[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(testi-avatar-figure|testi-figure|avatar.*-figure|avatar.*-placeholder|voice-figure)[^"]*"' || true)
+check_range "Testimonials: avatar placeholdery (≥2)" 2 8 "$TESTI_PH"
+
+# Procedure / How It Works (3 placeholdery step)
+STEP_PH=$(awk '/<section[^>]*class="[^"]*(procedure|process|how|steps)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(step-figure|step-image|how-figure|ritual-figure|process-figure)[^"]*"' || true)
+check_range "Procedure/How: step placeholdery (≥3)" 3 8 "$STEP_PH"
+
+# Final CTA (1 bg placeholder opcjonalnie — warn)
+FINAL_PH=$(awk '/<section[^>]*class="[^"]*(final-cta|cta-banner|final)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(final-cta-figure|final-figure|cta-figure|bg-figure)[^"]*"' || true)
+if [ "$FINAL_PH" -ge 1 ]; then
+  echo "  ✅ Final CTA: bg placeholder ($FINAL_PH)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Final CTA: brak bg placeholder (opcjonalne, polecane dla impactu)"
+  WARN=$((WARN + 1))
+fi
 
 # UUID check — 0 (tylko placeholdery — ok pre-ETAP 3 image gen) lub 1 (własny workflow)
 # FAIL tylko gdy 2+ (= obce workflow wpuszczone do HTML)

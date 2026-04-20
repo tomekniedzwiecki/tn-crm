@@ -184,6 +184,19 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 > Memory: `feedback-landing-hero-image-required.md`. **Hero MUSI mieć placeholder zdjęcia produktu** (klasa `hero-figure` / `hero-image` / `hero-product`) z 4-polowym briefem fotografa. Signature element (numerał) NIE zastępuje.
 
+> Memory: `feedback-landing-placeholder-per-section.md`. **KAŻDA sekcja wizualna MUSI mieć placeholder zdjęcia z 4-polowym briefem.** Nie wystarczy sam hero. `verify-landing.sh` Grupa `1a. Placeholder per section` sprawdza osobno:
+>
+> | Sekcja | Min | Klasa CSS | Opis fotografii |
+> |--------|-----|-----------|------------------|
+> | **Hero** | 1 | `hero-figure` / `hero-image` / `hero-product` | Packshot produktu, lifestyle |
+> | **Gallery** | 5–6 | `gal-figure` / `bento-image` / `gallery-image` | Detail + context shots |
+> | **Personas** | 3 | `persona-figure` / `persona-image` | Persona w kontekście użycia |
+> | **Testimonials** | 2–4 | `testi-avatar-figure` / `voice-figure` / `avatar-figure` | Zdjęcie twarzy klienta 112×112 |
+> | **Procedure / How** | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
+> | **Final CTA** | 1 (opcjonalne) | `final-cta-figure` / `cta-figure` / `bg-figure` | Panorama / bg image |
+>
+> **Częsty błąd (do 2026-04):** testimonial avatary jako gradient kółka z inicjałami (MK, PB itd.) zamiast placeholder na zdjęcie → fotograf nie dostaje briefu na te ujęcia → po podstawieniu zdjęć produktowych testimonials nadal wyglądają „puste". Każdy avatar i każdy krok how-it-works potrzebuje briefu.
+
 ## Architektura strony (14 sekcji)
 
 Każdy landing składa się z tych sekcji w kolejności:

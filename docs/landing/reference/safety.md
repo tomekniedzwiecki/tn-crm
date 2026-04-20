@@ -114,21 +114,34 @@ Absolute positioning (spec badges nad produktem, floating elements) psuje się n
 
 ---
 
-## 4a. Hero MUSI mieć placeholder zdjęcia produktu
+## 4a. KAŻDA sekcja wizualna MUSI mieć placeholder zdjęcia
 
-**Zasada bezwzględna (memory: `feedback-landing-hero-image-required.md`):** każda sekcja Hero MUSI zawierać element z klasą zawierającą `hero-figure`, `hero-image` lub `hero-product` z 4-polowym briefem fotografa. Signature element (oversized numerał) NIE zastępuje placeholdera.
+**Zasada bezwzględna (memory: `feedback-landing-placeholder-per-section.md`, `feedback-landing-hero-image-required.md`):** każda sekcja która normalnie zawiera fotografię/ilustrację MUSI mieć placeholder z 4-polowym briefem fotografa. Signature element (numerał, ikona, pattern) NIE zastępuje placeholdera.
+
+**Sekcje wizualne WYMAGANE (verify-landing.sh blokuje deploy jeśli brak):**
+
+| Sekcja | Min liczba | Klasa CSS (dowolna z wymienionych) | Typ zdjęcia |
+|--------|-----------|------------------------------------|-------------|
+| Hero | 1 | `hero-figure` / `hero-image` / `hero-product` | Packshot produktu, lifestyle |
+| Gallery | 5–6 | `gal-figure` / `bento-image` / `gallery-image` | Detail + context shots |
+| Personas | 3 | `persona-figure` / `persona-image` | Persona w kontekście użycia |
+| Testimonials | 2–4 | `testi-avatar-figure` / `voice-figure` / `avatar-figure` | Zdjęcie twarzy klienta 112×112 |
+| Procedure / How | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
+| Final CTA | 1 (opcjonalne) | `final-cta-figure` / `cta-figure` / `bg-figure` | Panorama / bg image |
 
 **Przykład (w `<section class="hero">`):**
 ```html
-<div class="hero-figure">
+<div class="hero-figure img-placeholder">
   <div class="ph-mark">P · HERO</div>
   <div class="ph-title">Packshot Caffora w ręce</div>
   <div class="ph-size">1200 × 1500 · pionowa 4:5</div>
-  <div class="ph-note">Caffora trzymana w ręce, dłoń mężczyzny, paznokcie czyste. Tło: deep charcoal #1A1A1C z subtelnym brass vignette. Światło: side-back 45°, kontrastowe, jak Leica catalog.</div>
+  <div class="ph-note">Caffora trzymana w ręce, dłoń mężczyzny. Tło: deep charcoal z brass vignette. Side-back 45°.</div>
 </div>
 ```
 
-**Dlaczego:** klient potrzebuje wyraźnego miejsca gdzie ma trafić packshot. Hero bez konkretnego placeholdera = prezentacja konceptu, nie preview sklepu. `verify-landing.sh` blokuje deploy jeśli brak.
+**Dlaczego:** klient potrzebuje wyraźnego miejsca gdzie ma trafić zdjęcie W KAŻDEJ SEKCJI — nie tylko w hero. Landing bez placeholderów w testimonials/personas/steps = fotograf dostaje brief tylko na hero, reszta sekcji zostaje „naga" po podstawieniu zdjęć. Brak placeholderów w tych sekcjach był częstym błędem do 2026-04 (np. testimonial avatary zamieniane na gradient kółka z inicjałami zamiast brief na zdjęcie).
+
+**Jak sprawdzić:** `verify-landing.sh` ma osobny blok `1a. Placeholder per section` — każda sekcja liczona osobno.
 
 ## 4. Placeholder MUSI być briefem dla klienta, nie „TODO"
 
