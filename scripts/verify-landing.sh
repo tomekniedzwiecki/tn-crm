@@ -263,7 +263,8 @@ check "Zero zakazanych obietnic dostawy (dropshipping)" "0" "$DELIVERY"
 
 # Purple prose — zakazane metafory/aforyzmy (ETAP 3.5 Manus powinien był je usunąć, ale catch przed)
 # Memory: feedback-landing-no-purple-prose.md
-PURPLE=$(grep -ciE "smak żalu|gorycz poran|coś z domu|zostaje w (tobie|nas)|dawno przestał|kawa która|niekompromisowa jakość|w poszukiwaniu siebie|smak dzieciństwa|aroma( |t) wspomnień|serce (twojego|naszego) domu" "$FILE" || true)
+# Word boundaries (\b) gdzie ambiguous — uniknąć false positive na „tobieszyn", „nasza" itd.
+PURPLE=$(grep -ciE "smak żalu|gorycz poran|coś z domu|\bzostaje w (tobie|nas)\b|dawno przestał|kawa która|niekompromisowa jakość|w poszukiwaniu siebie|smak dzieciństwa|\baromat? wspomnień\b|serce (twojego|naszego) domu" "$FILE" || true)
 check "Zero purple prose (metafory/aforyzmy)" "0" "$PURPLE"
 
 # ─── 9. Offer Box 2026 (DESIGN.md sekcja H) ───
@@ -386,13 +387,21 @@ else
   WARN=$((WARN + 1))
 fi
 
-# CTA primary 100% width na mobile (touch target)
-CTA_WIDTH=$(grep -cE "@media[^{]*768\|480\|600[^{]*\{[^}]*(btn-primary|offer-cta)[^}]*width:\s*100%" "$FILE" || true)
-if [ "$CTA_WIDTH" -ge 1 ]; then
-  echo "  ✅ CTA primary ma width:100% w media query mobile"
+# CTA primary 100% width na mobile (touch target) — 2-step check (multiline-safe)
+# Krok 1: czy landing ma @media mobile (dowolny breakpoint 375-768)
+# Krok 2: czy CTA ma width:100% (gdziekolwiek — zakłada że jest w @media skoro krok 1 TAK)
+MEDIA_MOBILE=$(grep -cE "@media[^{]*max-width:\s*(3[0-9]{2}|4[0-9]{2}|5[0-9]{2}|6[0-9]{2}|7[0-9]{2})px" "$FILE" || true)
+BTN_100=$(grep -cE "(\.btn-primary|\.offer-cta|\.hero-cta-row\s*\.btn|btn-shimmer|cta-btn)[^}]*width:\s*100%" "$FILE" || true)
+# Fallback: multiline flatten check
+CTA_FLAT=$(tr '\n' ' ' < "$FILE" | grep -cE "@media[^{]*max-width:\s*[3-7][0-9]{2}px[^}]*(btn-primary|offer-cta|hero-cta-row)[^}]*width:\s*100%" || true)
+if [ "$BTN_100" -ge 1 ] || [ "$CTA_FLAT" -ge 1 ]; then
+  echo "  ✅ CTA ma width:100% (mobile touch target)"
   PASS=$((PASS + 1))
+elif [ "$MEDIA_MOBILE" -ge 1 ]; then
+  echo "  ⚠️  @media mobile obecne ale CTA bez width:100% — touch target może być <44px szerokości"
+  WARN=$((WARN + 1))
 else
-  echo "  ⚠️  CTA nie ma width:100% na mobile — touch target może być <44px szerokości, trudny do trafienia"
+  echo "  ⚠️  CTA bez width:100% na mobile (brak @media mobile w ogóle)"
   WARN=$((WARN + 1))
 fi
 

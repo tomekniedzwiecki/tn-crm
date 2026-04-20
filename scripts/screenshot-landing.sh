@@ -30,9 +30,10 @@ fi
 
 # Create temp shoot script w bieżącym katalogu (żeby node znalazł node_modules/playwright)
 SHOOT_SCRIPT="_shoot_${SLUG}.mjs"
-# Persistent path w repo (landing-pages/[slug]/_shots/) — w .gitignore żeby nie zaśmiecać commitów
-# Claude może je obejrzeć w kolejnej iteracji / Cursor może pokazać jako preview
-OUT_DIR="landing-pages/${SLUG}/_shots"
+# Persistent path w repo — ABSOLUTNY (node.js nie wie gdzie jest repo root inaczej)
+# W .gitignore żeby nie zaśmiecać commitów. Claude może je obejrzeć w kolejnej iteracji.
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+OUT_DIR="${REPO_ROOT}/landing-pages/${SLUG}/_shots"
 
 cat > "$SHOOT_SCRIPT" <<EOF
 import { chromium } from 'playwright';
