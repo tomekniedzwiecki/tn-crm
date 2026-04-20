@@ -60,10 +60,23 @@ if [ "$PR" = "[]" ]; then
   echo "⚠️  Brak workflow_products — cena/zestaw z raportu lub deep research"
 fi
 
-# Ekstrakcja slug
-SLUG=$(echo "$BI" | grep -oE '"name":"[^"]+"' | head -1 | sed 's/"name":"//; s/"$//' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
+# Ekstrakcja slug — value to escaped JSON string, używamy node do parse
+# Format z Supabase: [{"value":"{\"name\":\"Caffora\",...}"}]
+SLUG=$(echo "$BI" | node -e "
+try {
+  const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+  if (!d || !d[0] || !d[0].value) process.exit(1);
+  const inner = JSON.parse(d[0].value);
+  if (!inner.name) process.exit(1);
+  console.log(inner.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''));
+} catch (e) {
+  process.exit(1);
+}
+" 2>/dev/null)
+
 if [ -z "$SLUG" ]; then
   echo "❌ Nie mogę ekstrahować slug z brand_info"
+  echo "   Sprawdź format: $(echo "$BI" | head -c 200)"
   exit 1
 fi
 
