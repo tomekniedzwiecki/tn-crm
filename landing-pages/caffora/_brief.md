@@ -29,11 +29,11 @@
 
 ## 4. Typografia (dobrana pod manifest)
 
-- **Display (nagłówki):** Fraunces (italic na kluczowych słowach + dramatic numerals w hero). `&display=swap&subset=latin-ext`. Polskie „Ł" sprawdzone OK (safety #7).
+- **Display (nagłówki):** Fraunces (italic na kluczowych słowach + dramatic numerals w hero). `&display=swap`. Polskie „Ł" sprawdzone OK (safety #7).
 - **Body (treść):** Inter — czytelna sans-serif, neutralna, dobrze renderuje polskie znaki.
 - **Mono (spec values):** Space Mono 700 — dla `20 BAR · 230°C · 1.2 KG` w spec sheet.
 
-> Max 3 rodziny ✅. Wszystkie Google Fonts z `&subset=latin-ext`.
+> Max 3 rodziny ✅. Wszystkie Google Fonts z ``.
 
 ## 5. Persona główna (z brand_info description + audytu)
 
