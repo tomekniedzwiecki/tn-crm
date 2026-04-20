@@ -154,8 +154,15 @@ DEFAULT DECYZJE (bez pytania):
 - Manus task timeout (>15 min w ETAP 3.5) → STOP, deploy z oryginalnym copy + flag w commit msg
 - Manus zwraca error → retry 1x, jeśli znów error → STOP
 - regression (verify-all-landings) fail → STOP, raport, NIE deploy
-- verify-landing.sh <60 PASS → STOP, raport, NIE deploy (safety/quality violation)
+- **verify-landing.sh ≥1 FAIL → STOP, raport, NIE commit/deploy (safety/quality violation — hard rule)**
+- verify-landing.sh <60 PASS → STOP, raport, NIE deploy
 - Wszystko inne → kontynuuj, deploy, raportuj niedociągnięcia w podsumowaniu
+
+PRE-COMMIT CHECK (obligatoryjne przed 'git add'):
+  bash scripts/verify-landing.sh $SLUG
+  # Tylko gdy SUMMARY pokazuje ❌ 0 (FAIL = 0) → git add + commit
+  # Jeśli ≥1 FAIL — napraw PRZED commitem
+  # Możesz mieć WARN (opcjonalne aesthetic choices) — nie blokują
 
 Punkt startu: docs/landing/01-direction.md
 

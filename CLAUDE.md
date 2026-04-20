@@ -67,6 +67,16 @@ Dane wstawiane: brand_info, colors, fonts, ai_prompts (5 logo + 10 mockupow), a 
 
 Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](docs/landing/README.md)** i wykonaj AUTO-RUN — wszystkie 7 etapów autonomicznie (1, 2, 3, **3.5 Manus copy review**, 4, 5, 6), **commit + push + deploy bez pytania** (landingi to preview dla klienta, nie produkcja — patrz `feedback-landing-auto-deploy.md`). Zakończ podaniem linku live: `https://tn-crm.vercel.app/landing-pages/[slug]/`.
 
+**⛔ HARD RULE: Verify-landing 0 FAIL OBOWIĄZKOWE przed commitem**
+
+Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zostało wdrożone ze stanem łamiącym 10+ safety rules (brak html.js gate, brak subset=latin-ext, zakazana fraza dropshipping, zero 5 JS effects, brak OG image URL). Procedura deklarowała ale NIE egzekwowała.
+
+**Zasady bezwzględne:**
+1. **NIE commituj landingu** (`landing-pages/[slug]/index.html`) jeśli `bash scripts/verify-landing.sh [slug]` zwraca ≥1 FAIL
+2. WARN są OK (opcjonalne aesthetic choices jak js-tilt dla Rugged Heritage); FAIL = safety/quality violation
+3. **Zainstaluj pre-commit hook**: `bash scripts/install-landing-hooks.sh` — blokuje commit gdy FAIL, niezależnie od pamiętania
+4. Jeśli musisz pominąć (hotfix) → `git commit --no-verify` + ZRÓB follow-up fix commit w tej samej sesji
+
 **Flow (7 etapów):**
 
 | # | Plik | Rola |
