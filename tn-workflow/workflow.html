@@ -288,36 +288,37 @@
                     <span class="text-zinc-700 hidden sm:inline flex-shrink-0">/</span>
                     <span id="breadcrumb-name" class="text-white font-medium truncate min-w-0">...</span>
                 </div>
-                <!-- Quick actions (desktop only) - tuż obok breadcrumba -->
-                <div class="hidden md:flex items-center gap-1 ml-3 pl-3 border-l border-white/5 flex-shrink-0">
-                    <!-- Grupa: Portal klienta -->
-                    <a id="hdr-crm" href="#" target="_blank" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-violet-400 hover:bg-violet-500/10 transition-colors" title="Otwórz leada w CRM">
-                        <i class="ph ph-address-book text-[16px]"></i>
+                <!-- Quick actions (desktop only) -->
+                <div class="hidden md:flex items-center gap-0.5 ml-4 flex-shrink-0">
+                    <!-- ACTIONS: labeled pills -->
+                    <button type="button" onclick="openClientPreview()" class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-300 hover:text-white hover:bg-white/5 transition-colors" title="Podgląd klienta (jak widzi to klient)">
+                        <i class="ph ph-eye text-[14px]"></i>
+                        Podgląd
+                    </button>
+                    <button type="button" onclick="copyClientLink()" class="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-300 hover:text-white hover:bg-white/5 transition-colors" title="Kopiuj link do portalu klienta">
+                        <i class="ph ph-link text-[14px]"></i>
+                        Kopiuj link
+                    </button>
+                    <a id="hdr-crm" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-300 hover:text-white hover:bg-white/5 transition-colors" title="Otwórz leada w CRM">
+                        <i class="ph ph-address-book text-[14px]"></i>
+                        CRM
                     </a>
-                    <button type="button" onclick="openClientPreview()" class="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors" title="Podgląd klienta">
-                        <i class="ph ph-eye text-[16px]"></i>
-                    </button>
-                    <button type="button" onclick="copyClientLink()" class="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-white hover:bg-white/5 transition-colors" title="Kopiuj link do portalu klienta">
-                        <i class="ph ph-link text-[16px]"></i>
-                    </button>
-                    <!-- Separator -->
-                    <span class="text-zinc-700 mx-1 select-none">·</span>
-                    <!-- Grupa: Kontakt klienta -->
-                    <button type="button" id="hdr-email" onclick="copyCustomerEmail()" class="hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-400 hover:text-white hover:bg-white/5 transition-colors max-w-[260px]" title="Kliknij aby skopiować email">
-                        <i class="ph ph-envelope text-[14px] flex-shrink-0"></i>
+
+                    <!-- Divider pionowy -->
+                    <span id="hdr-info-divider" class="hidden w-px h-5 bg-white/10 mx-2"></span>
+
+                    <!-- INFO: muted glanceable strip -->
+                    <button type="button" id="hdr-email" onclick="copyCustomerEmail()" class="hidden inline-flex items-center gap-1.5 h-8 px-2 rounded-md text-[12px] text-zinc-500 hover:text-white hover:bg-white/5 transition-colors max-w-[240px]" title="Kliknij aby skopiować email">
+                        <i class="ph ph-envelope text-[13px] flex-shrink-0 opacity-70"></i>
                         <span id="hdr-email-text" class="truncate"></span>
-                        <i class="ph ph-copy text-[11px] opacity-50 flex-shrink-0"></i>
                     </button>
-                    <a id="hdr-whatsapp" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-400 hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors" title="Otwórz WhatsApp">
+                    <a id="hdr-whatsapp" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-white/5 transition-colors" title="Otwórz WhatsApp">
                         <i class="ph ph-whatsapp-logo text-[16px]"></i>
                     </a>
-                    <!-- Separator między grupami -->
-                    <span id="hdr-group-sep" class="hidden text-zinc-700 mx-1 select-none">·</span>
-                    <!-- Grupa: Landing -->
-                    <a id="hdr-domain" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-zinc-400 hover:text-cyan-400 hover:bg-cyan-500/10 transition-colors max-w-[200px]" title="Otwórz stronę sprzedażową">
-                        <i class="ph ph-globe text-[14px] flex-shrink-0"></i>
+                    <a id="hdr-domain" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center gap-1.5 h-8 px-2 rounded-md text-[12px] text-zinc-500 hover:text-white hover:bg-white/5 transition-colors max-w-[180px]" title="Otwórz stronę sprzedażową">
+                        <i class="ph ph-globe text-[13px] flex-shrink-0 opacity-70"></i>
                         <span id="hdr-domain-text" class="truncate font-mono"></span>
-                        <i class="ph ph-arrow-square-out text-[11px] opacity-50 flex-shrink-0"></i>
+                        <i class="ph ph-arrow-square-out text-[10px] opacity-50 flex-shrink-0"></i>
                     </a>
                 </div>
             </div>
@@ -5261,12 +5262,14 @@
 
         function updateHeaderQuickActions() {
             if (!workflow) return;
+            let anyInfoVisible = false;
             // Email (kliknij = kopiuj do schowka)
             const emailEl = document.getElementById('hdr-email');
             const emailText = document.getElementById('hdr-email-text');
             if (emailEl && workflow.customer_email) {
                 if (emailText) emailText.textContent = workflow.customer_email;
                 emailEl.classList.remove('hidden');
+                anyInfoVisible = true;
             } else if (emailEl) {
                 emailEl.classList.add('hidden');
             }
@@ -5277,6 +5280,7 @@
                 if (cleanPhone) {
                     waEl.href = `https://wa.me/${cleanPhone}`;
                     waEl.classList.remove('hidden');
+                    anyInfoVisible = true;
                 } else {
                     waEl.classList.add('hidden');
                 }
@@ -5287,24 +5291,22 @@
             const domEl = document.getElementById('hdr-domain');
             const domText = document.getElementById('hdr-domain-text');
             const rawUrl = takeDropData?.landing_url || workflow.sales_page_url || '';
-            let domainVisible = false;
             if (domEl && rawUrl) {
                 try {
                     const u = new URL(rawUrl.startsWith('http') ? rawUrl : 'https://' + rawUrl);
                     domEl.href = u.href;
                     if (domText) domText.textContent = u.hostname.replace(/^www\./, '');
                     domEl.classList.remove('hidden');
-                    domainVisible = true;
+                    anyInfoVisible = true;
                 } catch {
                     domEl.classList.add('hidden');
                 }
             } else {
                 domEl?.classList.add('hidden');
             }
-            // Separator między kontaktem klienta a landingiem (pokaż tylko gdy obie grupy coś mają)
-            const sepEl = document.getElementById('hdr-group-sep');
-            const clientVisible = !!workflow.customer_email || !!workflow.customer_phone;
-            if (sepEl) sepEl.classList.toggle('hidden', !(clientVisible && domainVisible));
+            // Divider między akcjami a info strip (pokaż tylko gdy info ma cokolwiek)
+            const divEl = document.getElementById('hdr-info-divider');
+            if (divEl) divEl.classList.toggle('hidden', !anyInfoVisible);
         }
 
         function renderWorkflow() {
