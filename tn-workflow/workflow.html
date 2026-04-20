@@ -9639,29 +9639,21 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     test_accepted_at: isCompleted ? new Date().toISOString() : null
                 };
 
-                if (takeDropData?.id) {
-                    const { error } = await supabaseClient
-                        .from('workflow_takedrop')
-                        .update(updateData)
-                        .eq('id', takeDropData.id);
-
-                    if (error) throw error;
-
-                    takeDropData.test_accepted = isCompleted;
-                    takeDropData.test_accepted_at = updateData.test_accepted_at;
-                } else {
-                    const { data, error } = await supabaseClient
-                        .from('workflow_takedrop')
-                        .insert({
-                            workflow_id: workflow.id,
-                            ...updateData
-                        })
-                        .select()
-                        .single();
-
-                    if (error) throw error;
-                    takeDropData = data;
+                if (!takeDropData?.id) {
+                    await loadTakeDrop();
                 }
+
+                const { data, error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .upsert({
+                        workflow_id: workflow.id,
+                        ...updateData
+                    }, { onConflict: 'workflow_id' })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+                takeDropData = data;
 
                 loadTestTab();
                 updateNavChecks(); // Update nav to show/hide stage 4
