@@ -178,7 +178,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 }
 .hero-numeral {
   position: absolute;
-  right: -50px; top: 50%; transform: translateY(-50%);
+  right: -50px; top: 50%;
   font-family: var(--font-display);
   font-style: italic; font-weight: 400;
   font-size: clamp(220px, 22vw, 360px);
@@ -191,6 +191,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   z-index: 0;
   animation: numeral-breathe 5s ease-in-out infinite;
   pointer-events: none;
+  margin-top: -180px;  /* offset zamiast translateY bo parallax go nadpisuje */
 }
 .hero-numeral sup {
   font-family: var(--font-mono);
@@ -1108,6 +1109,25 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   .magnetic { transition: transform 0.18s cubic-bezier(.4,0,.2,1); }
 }
 
+/* ─── SPLIT HEADLINE (char-by-char fade-in, word-grouped nowrap) ─── */
+html.js .split-word { display: inline-block; white-space: nowrap; }
+html.js .split-char {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+html.js .split-char.is-in { opacity: 1; transform: translateY(0); }
+
+/* ─── TILE 3D TILT (subtle) ─── */
+@media (hover: hover) {
+  .js-tilt { transition: transform 0.4s cubic-bezier(.23,1,.32,1); transform-style: preserve-3d; }
+  .js-tilt.tilt-active { transition: transform 0.15s cubic-bezier(.4,0,.2,1); }
+}
+
+/* ─── PARALLAX NUMERALS (updated via JS) ─── */
+.js-parallax { will-change: transform; }
+
 /* ─── COOKIE BANNER ─── */
 .cookie {
   position: fixed; bottom: 16px; left: 16px; right: 16px; max-width: 480px; margin: 0 auto;
@@ -1168,7 +1188,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
     <div class="hero-grid">
       <div class="hero-text fade-in">
         <div class="hero-eyebrow">Nº 01 — Caffora</div>
-        <h1>Espresso bez <em>adresu.</em></h1>
+        <h1 class="js-split">Espresso bez <em>adresu.</em></h1>
         <p class="hero-lede">
           20 barów prawdziwego ciśnienia. Wbudowany system grzewczy. Cały dzień pracy na jednym ładowaniu — w urządzeniu lżejszym niż butelka wody. Dobrego poranka nie zostawia się w domu.
         </p>
@@ -1182,7 +1202,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
         </div>
       </div>
       <div class="hero-figure-wrap fade-in">
-        <div class="hero-numeral" aria-hidden="true">20<sup>BAR</sup></div>
+        <div class="hero-numeral js-parallax" data-speed="0.15" aria-hidden="true">20<sup>BAR</sup></div>
         <div class="hero-figure">
           <div class="ph-mark">P · Hero</div>
           <div class="ph-title">Packshot Caffora w&nbsp;ręce</div>
@@ -1248,7 +1268,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
       <p class="atelier-lede">Cztery decyzje inżynieryjne, które oddają ci poranek. Niezależnie od tego, gdzie się obudziłeś.</p>
     </div>
     <div class="bento">
-      <div class="tile tile-hero fade-in">
+      <div class="tile tile-hero fade-in js-tilt">
         <div class="tile-no">Nº 03 · 01 / 04</div>
         <div>
           <div class="tile-kicker">Ciśnienie · 20 BAR</div>
@@ -1259,7 +1279,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
           <div class="ph-mark">P · Hero produktu w ręce</div>
         </div>
       </div>
-      <div class="tile fade-in">
+      <div class="tile fade-in js-tilt">
         <div class="tile-no">02 / 04</div>
         <div class="tile-kicker">System grzewczy</div>
         <h3 class="tile-title">Wbudowane grzanie — woda gotowa w 3 minuty.</h3>
@@ -1268,7 +1288,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
           <div class="ph-mark">Detal · system grzewczy</div>
         </div>
       </div>
-      <div class="tile fade-in">
+      <div class="tile fade-in js-tilt">
         <div class="tile-no">03 / 04</div>
         <div class="tile-kicker">Bateria · cały dzień</div>
         <h3 class="tile-title">8 espresso na jednym ładowaniu.</h3>
@@ -1277,7 +1297,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
           <div class="ph-mark">Detal · USB-C w obudowie</div>
         </div>
       </div>
-      <div class="tile fade-in">
+      <div class="tile fade-in js-tilt">
         <div class="tile-no">04 / 04</div>
         <div class="tile-kicker">Waga · 480 g</div>
         <h3 class="tile-title">Lżejsza niż butelka wody.</h3>
@@ -1672,6 +1692,96 @@ if (window.matchMedia('(hover: hover)').matches) {
     });
     el.addEventListener('mouseleave', () => { el.style.transform = ''; });
   });
+}
+
+// ─── Split headline reveal (char-by-char, word-grouped żeby nie łamać słów) ───
+document.querySelectorAll('.js-split').forEach(el => {
+  let charIdx = 0;
+  const makeWord = (text) => {
+    const word = document.createElement('span');
+    word.className = 'split-word';
+    text.split('').forEach(ch => {
+      const span = document.createElement('span');
+      span.className = 'split-char';
+      span.style.transitionDelay = (charIdx * 22) + 'ms';
+      span.textContent = ch;
+      word.appendChild(span);
+      charIdx++;
+    });
+    return word;
+  };
+  const walk = (node) => {
+    const out = document.createDocumentFragment();
+    node.childNodes.forEach(child => {
+      if (child.nodeType === 3) {
+        const parts = child.textContent.split(/(\s+)/);
+        parts.forEach(part => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) {
+            out.appendChild(document.createTextNode(' '));
+          } else {
+            out.appendChild(makeWord(part));
+          }
+        });
+      } else if (child.nodeType === 1) {
+        const clone = child.cloneNode(false);
+        clone.appendChild(walk(child));
+        out.appendChild(clone);
+      }
+    });
+    return out;
+  };
+  const frag = walk(el);
+  el.innerHTML = '';
+  el.appendChild(frag);
+});
+const splitIO = new IntersectionObserver((entries) => {
+  entries.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.querySelectorAll('.split-char').forEach(s => s.classList.add('is-in'));
+    splitIO.unobserve(e.target);
+  });
+}, { threshold: 0.3 });
+document.querySelectorAll('.js-split').forEach(el => splitIO.observe(el));
+
+// ─── Tile 3D Tilt (max 4°, tylko desktop) ───
+if (window.matchMedia('(hover: hover)').matches) {
+  document.querySelectorAll('.js-tilt').forEach(el => {
+    el.addEventListener('mousemove', (e) => {
+      const rect = el.getBoundingClientRect();
+      const px = (e.clientX - rect.left) / rect.width - 0.5;
+      const py = (e.clientY - rect.top) / rect.height - 0.5;
+      const rotY = px * 4;
+      const rotX = -py * 4;
+      el.style.transform = `perspective(900px) rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(0)`;
+      el.classList.add('tilt-active');
+    });
+    el.addEventListener('mouseleave', () => {
+      el.style.transform = '';
+      el.classList.remove('tilt-active');
+    });
+  });
+}
+
+// ─── Parallax numerals (scroll-driven translateY) ───
+const parallaxEls = document.querySelectorAll('.js-parallax');
+if (parallaxEls.length && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  let ticking = false;
+  const update = () => {
+    parallaxEls.forEach(el => {
+      const speed = parseFloat(el.dataset.speed) || 0.15;
+      const rect = el.getBoundingClientRect();
+      const viewCenter = window.innerHeight / 2;
+      const elCenter = rect.top + rect.height / 2;
+      const delta = (viewCenter - elCenter) * speed;
+      el.style.transform = `translateY(${-delta}px)`;
+    });
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => {
+    if (!ticking) { requestAnimationFrame(update); ticking = true; }
+  }, { passive: true });
+  update();
 }
 
 // ─── Cookie banner ───

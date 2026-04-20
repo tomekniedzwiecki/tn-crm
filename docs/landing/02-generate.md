@@ -671,7 +671,22 @@ Każdy landing MA mieć subtelną animację W TLE sekcji hero, dopasowaną do pr
 
 ---
 
-## JavaScript (minimal)
+## JavaScript — 5 obowiązkowych JS effects w ETAP 2
+
+> **Wszystkie 5 effects MUSZĄ być w każdym landingu** (DESIGN D.1 + verify-landing.sh Grupa 7). Dodawaj je razem z HTML w ETAP 2, nie odkładaj do ETAP 4.
+
+| # | Effect | Klasa | Gdzie | Pattern |
+|---|---|---|---|---|
+| 1 | **Fade-in safe** (html.js gate + safety timeout z filtrem getBoundingClientRect) | `.fade-in` | wszędzie | [#11](reference/patterns.md) |
+| 2 | **Split headline reveal** (char-by-char staggered) | `.js-split` | h1 w Hero | [#17](reference/patterns.md) |
+| 3 | **Number counters** (0→target, easeOutCubic) | `.js-counter` z `data-target` | min 2× (spec sheet, hero stats, offer savings) | [#18](reference/patterns.md) |
+| 4 | **Magnetic CTA** (kursor lekko przyciąga, tylko `hover:hover`) | `.magnetic` | min 2× na primary/offer buttons | [#19](reference/patterns.md) |
+| 5 | **Tile 3D Tilt** (subtle rotateX/Y max 4°) | `.js-tilt` | min 2× na bento tiles | [#20](reference/patterns.md) |
+| 6 | **Parallax numerals** (editorial numerals unoszą się przy scrollu) | `.js-parallax` z `data-speed` | min 1× (signature element hero/section) | [#21](reference/patterns.md) |
+
+**Jeśli brak któregokolwiek → `verify-landing.sh` FAIL → blokuje deploy.**
+
+## JavaScript (snippety podstawowe)
 
 > ⚠️ Fade-in MUSI mieć `html.js` gate i safety timeout filtrujący `getBoundingClientRect()` — patrz [`reference/safety.md` #2](reference/safety.md). Pełny snippet copy-paste: [`reference/patterns.md` #11](reference/patterns.md).
 

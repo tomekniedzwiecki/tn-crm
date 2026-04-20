@@ -186,17 +186,23 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ─── 7. JS effects coverage (DESIGN.md D.1) ───
+# ─── 7. JS effects coverage (5 obowiązkowych, DESIGN.md D.1) ───
 echo ""
-echo "✨ 7. JS effects (DESIGN.md sekcja D.1)"
+echo "✨ 7. JS effects (5 obowiązkowych, DESIGN.md sekcja D.1)"
 JSSPLIT=$(grep -cE 'class="[^"]*js-split[^"]*"' "$FILE" || true)
-check "Split headline (.js-split)" "1" "$JSSPLIT" "warn"
+check "Split headline (.js-split) na h1 hero" "1" "$([ "$JSSPLIT" -ge 1 ] && echo 1 || echo 0)"
 
 JSCOUNT=$(grep -cE 'class="js-counter"' "$FILE" || true)
 check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
 
 MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
 check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
+
+JSTILT=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
+check_range "Tile 3D Tilt (.js-tilt) ≥ 2" 2 12 "$JSTILT"
+
+JSPARALLAX=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
+check "Parallax numerals (.js-parallax) ≥ 1" "1" "$([ "$JSPARALLAX" -ge 1 ] && echo 1 || echo 0)"
 
 # ─── 8. Copy anti-patterns ───
 echo ""
@@ -294,12 +300,12 @@ for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How I
   fi
 done
 
-# Min 4 tiles w bento (top-level tile divs, NIE sub-classes)
-BENTO_TILES=$(grep -cE '<div class="tile( fade-in)?"|<div class="tile tile-' "$FILE" || true)
+# Min 4 tiles w bento (top-level tile divs)
+BENTO_TILES=$(grep -cE '<div class="tile[^-][^"]*"' "$FILE" || true)
 check_range "Bento ma ≥4 tiles" 4 8 "$BENTO_TILES"
 
 # Min 3 acts w How It Works (top-level act/step/how-step)
-ACTS=$(grep -cE '<div class="act( fade-in)?"|<div class="how-step|<div class="step( fade-in)?"' "$FILE" || true)
+ACTS=$(grep -cE '<div class="act[^-][^"]*"|<div class="how-step|<div class="step[^-][^"]*"' "$FILE" || true)
 check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
 
 # Min 5 FAQ pytań
