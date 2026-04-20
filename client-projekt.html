@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026042001';
+        const APP_VERSION = '2026042002';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1759,6 +1759,58 @@
             <div id="dash-stage-timeline" class="mb-8 md:mb-10">
                 <div class="stage-nav" id="stage-timeline-container">
                     <!-- Rendered by JS -->
+                </div>
+            </div>
+
+            <!-- Payment Schedule (cross-stage, shown when schedule exists) -->
+            <div id="dash-payment-schedule" class="hidden px-4 md:px-6 mb-4">
+                <div class="bento-box p-5">
+                    <div class="flex items-start justify-between gap-4 mb-4 flex-wrap">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-calendar-check text-amber-400 text-xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-semibold text-[15px]">Harmonogram płatności</h3>
+                                <p id="dash-schedule-status" class="text-[#666] text-xs">-</p>
+                            </div>
+                        </div>
+                        <div id="dash-next-payment" class="hidden flex items-center gap-3">
+                            <div class="text-right">
+                                <p class="text-[#666] text-[10px] uppercase tracking-wider">Najbliższa rata</p>
+                                <p class="text-white text-sm"><span id="dash-next-payment-amount" class="font-semibold font-mono">-</span> <span class="text-[#666]">·</span> <span id="dash-next-payment-date" class="font-medium">-</span></p>
+                            </div>
+                            <a id="dash-next-payment-link" href="#" class="inline-flex items-center gap-1.5 px-3 h-9 bg-amber-500 hover:bg-amber-400 text-black text-[13px] font-semibold rounded-lg transition-colors whitespace-nowrap">
+                                <i class="ph ph-credit-card"></i>
+                                Opłać teraz
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="flex items-center justify-between text-[11px] mb-1.5">
+                            <span class="text-[#666]">Postęp płatności</span>
+                            <span id="dash-schedule-progress-text" class="text-white font-medium">0%</span>
+                        </div>
+                        <div class="h-1.5 bg-[#1a1a1a] rounded-full overflow-hidden">
+                            <div id="dash-schedule-progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-3 pt-3 border-t border-[#1a1a1a]">
+                        <div>
+                            <p class="text-[#666] text-[10px] uppercase tracking-wider mb-0.5">Razem</p>
+                            <p id="dash-schedule-total" class="text-white text-[13px] font-semibold font-mono">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[#666] text-[10px] uppercase tracking-wider mb-0.5">Opłacono</p>
+                            <p id="dash-schedule-paid" class="text-emerald-400 text-[13px] font-semibold font-mono">-</p>
+                        </div>
+                        <div>
+                            <p class="text-[#666] text-[10px] uppercase tracking-wider mb-0.5">Pozostało</p>
+                            <p id="dash-schedule-remaining" class="text-amber-400 text-[13px] font-semibold font-mono">-</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -7473,50 +7525,71 @@
 
         function renderClientPaymentSchedule() {
             const container = document.getElementById('client-payment-schedule');
+            const dashContainer = document.getElementById('dash-payment-schedule');
+
             if (!clientPaymentSchedule || clientInstallments.length === 0) {
                 container?.classList.add('hidden');
+                dashContainer?.classList.add('hidden');
                 return;
             }
 
             container?.classList.remove('hidden');
+            dashContainer?.classList.remove('hidden');
 
             const total = parseFloat(clientPaymentSchedule.total_amount);
             const paid = clientInstallments.filter(i => i.status === 'paid').reduce((sum, i) => sum + parseFloat(i.amount), 0);
             const remaining = total - paid;
             const paidCount = clientInstallments.filter(i => i.status === 'paid').length;
             const progressPercent = Math.round((paid / total) * 100);
+            const statusLabel = paidCount === clientInstallments.length
+                ? 'Opłacone w całości'
+                : `${paidCount} z ${clientInstallments.length} rat opłaconych`;
 
-            // Update summary
-            document.getElementById('client-schedule-total').textContent = formatPrice(total);
-            document.getElementById('client-schedule-paid').textContent = formatPrice(paid);
-            document.getElementById('client-schedule-remaining').textContent = formatPrice(remaining);
+            const nextInstallment = clientInstallments.find(i => i.status !== 'paid');
+            const hasNext = nextInstallment && paidCount < clientInstallments.length;
+            const nextAmount = hasNext ? formatPrice(nextInstallment.amount) : '';
+            const nextDate = hasNext ? formatDateShort(nextInstallment.due_date) : '';
+            const nextLink = hasNext ? `/checkout/?installment_id=${nextInstallment.id}&workflow_id=${workflow.id}` : '#';
 
-            // Update progress
-            document.getElementById('client-schedule-progress-text').textContent = `${progressPercent}%`;
-            document.getElementById('client-schedule-progress-bar').style.width = `${progressPercent}%`;
+            const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            const setHref = (id, val) => { const el = document.getElementById(id); if (el) el.href = val; };
+            const setWidth = (id, val) => { const el = document.getElementById(id); if (el) el.style.width = val; };
 
-            // Update status text
-            const statusEl = document.getElementById('client-schedule-status');
-            if (paidCount === clientInstallments.length) {
-                statusEl.textContent = 'Opłacone w całości';
+            // Legacy view
+            setText('client-schedule-total', formatPrice(total));
+            setText('client-schedule-paid', formatPrice(paid));
+            setText('client-schedule-remaining', formatPrice(remaining));
+            setText('client-schedule-progress-text', `${progressPercent}%`);
+            setWidth('client-schedule-progress-bar', `${progressPercent}%`);
+            setText('client-schedule-status', statusLabel);
+            setHref('client-schedule-link', `/payment-schedule.html?token=${workflow.unique_token}`);
+
+            const nextLegacy = document.getElementById('client-next-payment');
+            if (hasNext) {
+                nextLegacy?.classList.remove('hidden');
+                setText('client-next-payment-amount', nextAmount);
+                setText('client-next-payment-date', nextDate);
+                setHref('client-next-payment-link', nextLink);
             } else {
-                statusEl.textContent = `${paidCount} z ${clientInstallments.length} rat opłaconych`;
+                nextLegacy?.classList.add('hidden');
             }
 
-            // Link to full schedule page
-            document.getElementById('client-schedule-link').href = `/payment-schedule.html?token=${workflow.unique_token}`;
+            // Dashboard view
+            setText('dash-schedule-total', formatPrice(total));
+            setText('dash-schedule-paid', formatPrice(paid));
+            setText('dash-schedule-remaining', formatPrice(remaining));
+            setText('dash-schedule-progress-text', `${progressPercent}%`);
+            setWidth('dash-schedule-progress-bar', `${progressPercent}%`);
+            setText('dash-schedule-status', statusLabel);
 
-            // Find next unpaid installment
-            const nextInstallment = clientInstallments.find(i => i.status !== 'paid');
-            const nextPaymentEl = document.getElementById('client-next-payment');
-
-            if (nextInstallment && paidCount < clientInstallments.length) {
-                nextPaymentEl?.classList.remove('hidden');
-                document.getElementById('client-next-payment-amount').textContent = formatPrice(nextInstallment.amount);
-                document.getElementById('client-next-payment-date').textContent = formatDateShort(nextInstallment.due_date);
-                document.getElementById('client-next-payment-link').href = `/checkout/?installment_id=${nextInstallment.id}&workflow_id=${workflow.id}`;
+            const nextDash = document.getElementById('dash-next-payment');
+            if (hasNext) {
+                nextDash?.classList.remove('hidden');
+                setText('dash-next-payment-amount', nextAmount);
+                setText('dash-next-payment-date', nextDate);
+                setHref('dash-next-payment-link', nextLink);
             } else {
-                nextPaymentEl?.classList.add('hidden');
+                nextDash?.classList.add('hidden');
             }
         }
 
