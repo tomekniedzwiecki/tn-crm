@@ -159,65 +159,47 @@ Sprawdź brand_info z Supabase:
 
 ---
 
-## Krok 5 — Mapping manifesto → baseline
+## Krok 5 — Anty-referencje (co JUŻ JEST, czego NIE powielać)
 
-> **Wchłonięte z `landing-pages/_templates/README.md`** — w jednym miejscu zamiast dwóch.
+> ⚠️ **Ta tabela to ANTY-REFERENCJE, NIE template'y do kopiowania.** Każdy nowy landing budujesz **od zera** zgodnie z manifestem (patrz Krok 6). Tabela służy żebyś wiedział co już istnieje i NIE powtarzał tego samego designu.
 
-| Kierunek manifesta | Baseline | Typografia | Charakterystyka |
-|---|---|---|---|
-| **Panoramic Calm** (architectural, tech premium, salon 18. piętro) | [`landing-pages/vitrix/`](../../landing-pages/vitrix/) | Plus Jakarta + Instrument Serif italic + Space Mono | Paper/navy/teal, `Nº 01–10` magazine numbering, oversized italic numerals, theatrical dark spec-sheet |
-| **Editorial/Luxury** (premium AGD, lifestyle, hygge) | [`landing-pages/paromia/`](../../landing-pages/paromia/) | Fraunces + Italiana + Inter | Paper/ink/gold, `Nº` magazine, editorial numerals, italic pull quotes |
-| **Organic/Natural** (wellness, health, spa) | [`landing-pages/h2vital/`](../../landing-pages/h2vital/) | Rounded sans + soft serif | Fluid shapes, soft gradients, greens/beiges |
-| **Playful/Toy** (pet, kids, gadgets) | [`landing-pages/pupilnik/`](../../landing-pages/pupilnik/) | Rounded bouncy + display | Vivid colors, emoji, bouncy animations |
-| **Retro-Futuristic** (gaming, tech edgy) | [`landing-pages/vibestrike/`](../../landing-pages/vibestrike/) | Neon mono + glitch | Neon on black, cyber, glitch effects |
-| **Rugged Heritage** (workwear, outdoor premium, tools & trades) | [`landing-pages/kafina/`](../../landing-pages/kafina/) | Archivo 800 + Inter + Space Mono 700 | **Dark hero** (coal/pine) jako pattern break, `Cat. Nº 01–10` catalog numbering, stamp badges, mosiężne akcenty, brak italic editorial serif |
+| Kierunek z manifesta | Co już zrobiliśmy (anty-referencja) | Czego NIE powtarzaj |
+|---|---|---|
+| **Panoramic Calm** | [`landing-pages/vitrix/`](../../landing-pages/vitrix/) | Nie kopiuj Plus Jakarta + Instrument Serif + paper/navy/teal — wymyśl własną typografię i paletę pod swoją markę |
+| **Editorial/Luxury** | [`landing-pages/paromia/`](../../landing-pages/paromia/) | Nie kopiuj Fraunces + Italiana + paper/ink/gold — Twoja marka ma swoje fonty z `workflow_branding` |
+| **Organic/Natural** | [`landing-pages/h2vital/`](../../landing-pages/h2vital/) | Nie kopiuj rounded sans + greens/beiges — własny moodboard |
+| **Playful/Toy** | [`landing-pages/pupilnik/`](../../landing-pages/pupilnik/) | Nie kopiuj rounded bouncy + emoji — własny vibe |
+| **Retro-Futuristic** | [`landing-pages/vibestrike/`](../../landing-pages/vibestrike/) | Nie kopiuj neon on black + glitch — własna interpretacja |
+| **Rugged Heritage** | [`landing-pages/kafina/`](../../landing-pages/kafina/) | Nie kopiuj Archivo + dark hero + stamp badges — własne signature elements |
 
-**Brak pasującego presetu** → przejdź do Kroku 6 z `MODE=forge`. NIE używaj „najbliższego" baseline'a jeśli kierunek jest wyraźnie inny (patrz [`reference/safety.md` reguła #1 Baseline mismatch](reference/safety.md)).
+**Zasada fundamentalna:** procedura ma być uniwersalna — **musi działać nawet gdyby `landing-pages/` było puste**. Tabela powyżej to tylko historia, nie biblioteka template'ów.
+
+**Co MOŻESZ kopiować:** snippety z [`reference/patterns.md`](reference/patterns.md) — to safety primitywy (fade-in safe, dual-bank mobile, header solid, magnetic CTA), nie layouty. Składasz świeżo pod manifest.
 
 ---
 
-## Krok 6 — Decyzja: MODE=copy-adapt vs MODE=forge
+## Krok 6 — MODE=forge (zawsze, jedyna opcja)
 
-### Sprawdź 5 czerwonych flag mismatcha
-
-Policz ile flag trafia do Twojego manifesta:
-
-- [ ] Moodboard referuje inny świat wizualny niż baseline (np. Filson/Red Wing/Yeti vs Kinfolk/Dyson/B&O)
-- [ ] Paleta wyraźnie inna od baseline (np. ciemna + metal vs paper + italic teal)
-- [ ] Fotografia lokalizacji inna („parking 4:30" vs „salon 18. piętro")
-- [ ] Manifesto wprost wyklucza italic editorial serif / round acts / delikatne shadows (rzeczy charakterystyczne dla baseline)
-- [ ] Persona z innego świata (kierowca TIR, rzemieślnik vs prawniczka, architektka)
-
-### Decyzja
-
-**0–2 flagi trafiają → MODE=copy-adapt:**
-```bash
-SLUG="nowa-marka"
-BASE="paromia"   # wybrany z tabeli Krok 5
-
-cp -r landing-pages/$BASE landing-pages/$SLUG
-rm landing-pages/$SLUG/_brief.md  # własny brief, nie baseline'owy
-rm landing-pages/$SLUG/logo*.png  # logo z workflow_branding
-
-# Global replace nazwy marki
-cd landing-pages/$SLUG
-sed -i "s/Paromia/NewBrand/g; s/paromia/newbrand/g" index.html
-```
-
-→ ETAP 2 (`02-generate.md`) z flagą `MODE=copy-adapt`: kopia + adaptacja copy per brief.
-
-**3+ flagi trafiają → MODE=forge:**
+> **Decyzja architektoniczna (memory: feedback-landing-always-forge.md):** każdy landing budujesz **od zera**. NIE kopiujesz istniejących baseline'ów (`cp -r landing-pages/$BASE` jest **zakazane**). Procedura ma być uniwersalna.
 
 ```bash
 SLUG="nowa-marka"
 mkdir -p landing-pages/$SLUG
-# Brief już jest z Kroku 8
-# ETAP 2 buduje szkielet 14 sekcji od zera, design pod manifesto
+# _brief.md już jest z Kroku 8
 ```
 
-→ ETAP 2 (`02-generate.md`) z flagą `MODE=forge`: szkielet 14 sekcji od zera, własny design language.
+→ ETAP 2 ([`02-generate.md`](02-generate.md)) buduje **szkielet 14 sekcji od zera**, używając:
+- Architektury sekcji z `02-generate.md` (header → hero → trust → ... → footer)
+- Snippetów copy-paste z [`reference/patterns.md`](reference/patterns.md) (fade-in safe, dual-bank, magnetic CTA, etc.)
+- Manifesta z `_brief.md` jako **jedynego** drivera designu (paleta, typografia, signature, tempo)
 
-**Pierwszy precedens forge:** Kafina (Rugged Heritage) — vitrix był dostępny, pasowała architektura, ale manifest Filson/Red Wing/Yeti wymagał dark hero + stamp badges + brak editorial italic. Świadoma decyzja: szkielet vitrix, design od zera. Po ukończeniu Kafina została dodana jako baseline dla Rugged Heritage.
+**Dlaczego nie copy-adapt:**
+- **Local maxima** — kopiowanie istniejącego baseline = powielanie jego błędów + brak ewolucji
+- **Klient widzi „rodzeństwo" landingów** zamiast unikalnej marki
+- **AI-slop** — adaptacja sprawdzonego layoutu wygląda jak kolejna iteracja tego samego
+- **Procedura nie jest uniwersalna** — gdyby `landing-pages/` było puste, copy-adapt by nie działał
+
+**Tradeoff:** forge zajmuje ~2× więcej czasu niż adaptacja, ale daje **świeży, unikalny landing** za każdym razem.
 
 ---
 
@@ -257,7 +239,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 3. Paleta (3-4 kolory z workflow_branding)
 4. Typografia (2-3 fonty z workflow_branding + `&subset=latin-ext`)
 5. Persona główna (z report_pdf — wiek/zawód/pain/motywacja)
-6. Baseline decision (MODE=copy-adapt lub MODE=forge)
+6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)
 8. Signature element
 
@@ -280,7 +262,7 @@ bash scripts/verify-brief.sh $SLUG
 - Sekcja 1: któryś kierunek zaznaczony `[x]`
 - Sekcja 2: 3 marki wypełnione (3 numerowane wpisy z `**`)
 - Sekcja 3: paleta nie ma więcej niż 1 placeholdera `______`
-- Sekcja 6: baseline decision zaznaczona `[x]`
+- Sekcja 6: anty-referencje wypełnione (≥50 znaków treści)
 - Sekcja 7: wszystkie 4 testy anty-generic na TAK `[x]`
 
 **Bez valid briefa NIE przechodź do ETAP 2.** To jest twardy gate — autonomous mode w `landing-autorun.sh` wymusza max 3 retries, potem STOP + raport.
@@ -297,7 +279,7 @@ bash scripts/verify-brief.sh $SLUG
 - [ ] Test ryzyka: min. 1 element odważny
 - [ ] Paleta zgadza się z `workflow_branding` type=color
 - [ ] Tabela mapowania Krok 7 wypełniona
-- [ ] MODE wybrane (copy-adapt lub forge) z uzasadnieniem
+- [ ] Anty-referencje wypełnione (sekcja 6 — co już jest, czego nie powtarzasz)
 - [ ] `_brief.md` zapisany w `landing-pages/[slug]/`
 - [ ] `verify-brief.sh` exit 0
 - [ ] Użytkownik NIE był pytany o nic — wszystkie decyzje oparte na danych
@@ -312,7 +294,7 @@ bash scripts/verify-brief.sh $SLUG
 - ❌ Referencje typu „like paromia but warmer" — zamknięta pętla stylistyczna
 - ❌ Manifesto napisane po zakodowaniu HTML — to racjonalizacja, nie projektowanie
 - ❌ Pytanie użytkownika „jaki kierunek preferujesz?" — to TWOJA decyzja oparta na danych
-- ❌ MODE=copy-adapt z baseline który nie pasuje — patrz [`reference/safety.md` reguła #1](reference/safety.md)
+- ❌ `cp -r landing-pages/$BASE` — kopiowanie istniejących baseline'ów jest **zakazane** (memory: `feedback-landing-always-forge.md`, [`reference/safety.md` #1](reference/safety.md))
 
 ---
 

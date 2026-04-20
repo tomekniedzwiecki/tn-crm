@@ -1,5 +1,35 @@
 # Changelog — Landing Page Procedure
 
+## [v3.1] — 2026-04-20 (hotfix)
+
+### BREAKING CHANGE
+- **Usunięta opcja MODE=copy-adapt** — zawsze MODE=forge (memory: `feedback-landing-always-forge.md`)
+- Każdy landing budujesz **od zera** używając szkieletu 14 sekcji + snippetów z `reference/patterns.md`
+- NIGDY nie kopiuj istniejących baseline'ów (`cp -r landing-pages/$BASE` jest zakazane)
+
+### Dlaczego
+Tomek zobaczył efekt MODE=copy-adapt dla Caffory (kopia kafiny 1:1 z innymi kolorami/copy) i to nie jest to czego chce. Argumenty:
+- Procedura ma być **uniwersalna** — działać nawet gdyby `landing-pages/` było puste
+- Kopiowanie baseline = local maxima (powielasz błędy poprzednika, brak ewolucji)
+- Klient widzi „rodzeństwo" landingów zamiast unikalnej marki
+- AI-slop — adaptacja sprawdzonego layoutu wygląda generycznie
+
+### Changed
+- `01-direction.md` Krok 5 — tabela baseline jako **anty-referencje** (co JUŻ JEST, czego NIE powtarzać), nie template'y
+- `01-direction.md` Krok 6 — usunięty MODE decision, zawsze forge
+- `02-generate.md` — usunięte wszystkie wzmianki o `cp -r` i MODE=copy-adapt
+- `_brief.template.md` sekcja 6 — z „Baseline decision" na „Anty-referencje"
+- `verify-brief.sh` — sprawdza sekcję 6 jako anty-referencje (treść, nie checkbox MODE)
+- `reference/safety.md` #1 — przepisana z „Baseline mismatch" na „NIGDY nie kopiuj layoutu"
+
+### Bug fix
+- `landing-autorun.sh` — slug extraction (brand_info to escaped JSON, parsuj przez node, nie grep)
+
+### Wpływ na istniejące landingi
+- `landing-pages/caffora/` — utworzony PRZED v3.1 jako test copy-adapt z kafiny. **Powinien zostać usunięty i zrobiony od zera** (decyzja użytkownika)
+
+---
+
 ## [v3] — 2026-04-20
 
 ### BREAKING CHANGES

@@ -47,12 +47,16 @@
 - **Kluczowa motywacja zakupu** (czego oczekuje od produktu):
 - **Cytat brzmiący jak wypowiedź persony** (do testimonials):
 
-## 6. Baseline decision
+## 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzaj)
 
-- [ ] **MODE=copy-adapt** — istniejący baseline pasuje, kopiuję `landing-pages/[nazwa]/`
-- [ ] **MODE=forge** — szkielet 14 sekcji od zera (≥3 czerwone flagi mismatcha — patrz safety.md #1)
+> Procedura wymaga ZAWSZE budowania od zera (MODE=forge). Tabela poniżej to historia, NIE template'y do kopiowania (memory: `feedback-landing-always-forge.md`).
 
-**Wybrany baseline / argumentacja forge:**
+Sprawdź czy w `landing-pages/` jest już landing podobnego kierunku (vitrix, paromia, h2vital, pupilnik, vibestrike, kafina) — jeśli tak, zanotuj **czego specyficznie nie chcesz powtórzyć**:
+
+- **Już istnieje:** [nazwa landinga] — [kierunek manifesta]
+- **Czego unikam (signature elements istniejącego):** [np. „nie kopiuję Archivo + dark hero + stamp badges z kafiny — moja marka ma własną typografię i jasne hero"]
+
+Jeśli nic podobnego nie ma — wpisz „brak istniejącego landinga w tym kierunku".
 
 ## 7. Test anty-generic (4 pytania — wszystkie TAK)
 

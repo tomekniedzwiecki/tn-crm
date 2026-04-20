@@ -18,9 +18,9 @@ bash scripts/verify-brief.sh $SLUG
 
 **Exit 1** → STOP, wróć do [`01-direction.md`](01-direction.md). NIE wybieraj kierunku samodzielnie z presetu.
 
-**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` i postępuj zgodnie z MODE:
-- **MODE=copy-adapt** → kopiuj baseline, adaptuj copy zgodnie z briefem
-- **MODE=forge** → szkielet 14 sekcji od zera (resztę tego pliku)
+**Exit 0** → przeczytaj `landing-pages/$SLUG/_brief.md` i buduj **szkielet 14 sekcji od zera**.
+
+> ⚠️ **NIGDY nie kopiuj istniejących baseline'ów** (`cp -r landing-pages/$BASE` jest **zakazane**). Procedura ma być uniwersalna — patrz memory `feedback-landing-always-forge.md` + [`01-direction.md` Krok 6](01-direction.md). Tabela baseline w Kroku 5 to **anty-referencje** (co już jest, czego nie powtarzaj), nie template'y.
 
 ---
 
@@ -101,7 +101,7 @@ Kompletny plik `landing-pages/[slug]/index.html` gotowy do verify (ETAP 3).
 
 **To jest krytyczna zasada — naruszenie = oszustwo wobec klienta.**
 
-Kiedy kopiujesz szablon innego landingu (MODE=copy-adapt), **MUSISZ** usunąć WSZYSTKIE `<img src>` wskazujące na zasoby należące do tamtego workflow i zastąpić je:
+Procedura zakazuje kopiowania szablonów (zawsze MODE=forge — patrz [`01-direction.md` Krok 6](01-direction.md)). Ale gdy modyfikujesz istniejący landing ([`migrate.md`](migrate.md) Use case 2), **MUSISZ** zweryfikować że żadne `<img src>` nie wskazują na zasoby z innego workflow. Zastąp je:
 
 1. **Zdjęciami z BIEŻĄCEGO workflow** (`workflow_branding` type='mockup' lub 'logo', `workflow_reports` type=`report_infographic`) — jedyne dozwolone źródło
 2. **Wyraźnymi placeholderami** (4-polowy brief fotografa — patrz [`reference/safety.md` #4](reference/safety.md))
@@ -730,16 +730,16 @@ cookieBtn.addEventListener('click', () => {
 ## Proces tworzenia (workflow)
 
 1. **Pobierz dane** z Supabase (workflow, branding, products, reports)
-2. **Przeczytaj `_brief.md`** (wynik ETAP 1) — kierunek manifesta, baseline decision, persona
-3. **Wybierz tryb:**
-   - `MODE=copy-adapt` → `cp -r landing-pages/$BASE landing-pages/$SLUG`, global replace nazwy, adaptuj copy
-   - `MODE=forge` → szkielet 14 sekcji od zera (pisz HTML zgodnie z manifestem)
+2. **Przeczytaj `_brief.md`** (wynik ETAP 1) — manifest, paleta, fonty, persona, signature element
+3. **Buduj szkielet 14 sekcji od zera** — manifest jest jedynym driverem designu
 4. **Napisz copy** dla każdej sekcji (patrz [`reference/copy.md`](reference/copy.md))
-5. **Wygeneruj HTML** — używaj patterns z [`reference/patterns.md`](reference/patterns.md), zachowuj safety rules
+5. **Wygeneruj HTML** — używaj snippetów copy-paste z [`reference/patterns.md`](reference/patterns.md) (safety primitywy, nie layouty)
 6. **Zapisz** `landing-pages/[slug]/index.html` (pojedynczy plik, inline CSS + JS)
 7. **Logo upload** — sharp().trim() + Supabase Storage (Kroki po wygenerowaniu HTML wyżej)
 8. **Skonfiguruj URL** w `vercel.json` (jeśli dedykowany URL)
 9. **Przejdź do ETAP 3** ([`03-review.md`](03-review.md)) — `bash scripts/verify-landing.sh [slug]`
+
+> ⚠️ **NIE** używaj `cp -r landing-pages/$BASE` — to było MODE=copy-adapt, **usunięte z procedury** (memory `feedback-landing-always-forge.md`).
 
 ---
 

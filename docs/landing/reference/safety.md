@@ -12,25 +12,29 @@ Każda z 10 reguł powstała z konkretnego incydentu (godziny debugowania, zepsu
 
 ---
 
-## 1. Baseline mismatch — NIE kopiuj vitrix jako „szybkiego startu" dla innego kierunku
+## 1. NIGDY nie kopiuj layoutu z istniejących landingów
 
-**Problem:** Kuszące jest skopiować istniejący landing (np. vitrix) jako bazę dla nowego — przechodzi 18/18 verify, oszczędza czas. **Pułapka:** gdy kierunek manifesta NIE pasuje do baseline'a, wynik = „vitrix przebrany za kawę" — klient widzi kolejny AI-editorial landing, nie wyjątkową markę.
+**Zasada bezwzględna (memory: `feedback-landing-always-forge.md`):** każdy nowy landing budujesz **od zera**. NIE używaj `cp -r landing-pages/$BASE` ani „adaptacji sprawdzonego layoutu" — nawet jeśli baseline „pasuje" do kierunku.
 
-**Wymuszany check przed kopiowaniem** — policz ile czerwonych flag manifesta trafia:
-- Moodboard referuje inny świat wizualny (Filson/Red Wing/Yeti vs Kinfolk/Dyson/B&O)
-- Paleta wyraźnie inna (ciemna + metal vs paper + italic teal)
-- Fotografia lokalizacji inna („parking 4:30" vs „salon 18. piętro")
-- Manifesto wprost wyklucza italic editorial serif / round acts / delikatne shadows
-- Persona z innego świata (kierowca TIR, rzemieślnik vs prawniczka, architektka)
+**Dlaczego:**
+- **Local maxima** — kopiowanie istniejącego baseline = powielanie jego błędów + brak ewolucji designu
+- **Klient widzi „rodzeństwo" landingów** zamiast unikalnej marki
+- **AI-slop** — adaptacja sprawdzonego layoutu wygląda jak kolejna iteracja tego samego
+- **Procedura nie jest uniwersalna** — gdyby `landing-pages/` było puste, copy-adapt by nie działał. Procedura ma działać uniwersalnie, **bez żadnego przykładu**.
 
-**≥3 flagi trafiają — szkielet od zera (MODE=forge):**
-1. Zachowaj architekturę 14 sekcji (header → hero → trust → wyzwanie → atelier → rytuał → spec → epoki → persony → głosy → FAQ → oferta → finał → footer)
-2. Zaprojektuj CSS od zera pod manifesto (inne CSS tokens, inne signature elements, inne proporcje)
-3. Dodaj nowy slug do `_templates/README.md` jako baseline dla tego kierunku
+**Co MOŻESZ używać** (to NIE są layouty):
+- Architektura 14 sekcji z [`02-generate.md`](../02-generate.md) — szkielet semantyczny
+- Snippety copy-paste z [`reference/patterns.md`](patterns.md) — safety primitywy (fade-in safe, dual-bank mobile, header solid, magnetic CTA, etc.)
+- Tabela anty-referencji w [`01-direction.md` Krok 5](../01-direction.md) — historia co JUŻ JEST, czego NIE powtarzać
 
-**Pierwszy precedens:** Kafina (Rugged Heritage) — vitrix był dostępny, pasowała architektura, ale manifest Filson/Red Wing/Yeti wymagał dark hero + stamp badges + brak editorial italic. Świadoma decyzja: szkielet vitrix, design od zera. Zobacz [`landing-pages/kafina/_brief.md`](../../../landing-pages/kafina/_brief.md) sekcję 6.
+**Co MUSISZ od zera**:
+- CSS tokens (paleta z `workflow_branding`, NIE z baseline)
+- Typografia (z `workflow_branding`, NIE z baseline)
+- Signature elements (per manifest z `_brief.md`, NIE z baseline)
+- Layout sekcji (struktura 14 sekcji TAK, ale grid/spacing/proporcje od zera)
+- Animacje (subtelne z `reference/patterns.md`, ale dobór per kierunek)
 
-**Decyzja MODE=copy-adapt vs MODE=forge** odbywa się w [`01-direction.md`](../01-direction.md) Krok 6.
+**Wyjątek:** [`migrate.md`](../migrate.md) Use case 2 — modyfikacja **istniejącego** landinga (nie tworzenie nowego od zera). Tam pracujesz z gotowym index.html.
 
 ---
 

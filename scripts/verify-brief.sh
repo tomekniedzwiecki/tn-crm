@@ -16,7 +16,7 @@ REQUIRED=(
   "3. Paleta"
   "4. Typografia"
   "5. Persona"
-  "6. Baseline decision"
+  "6. Anty-referencje"
   "7. Test anty-generic"
   "8. Signature element"
 )
@@ -49,9 +49,10 @@ if [ "$PALETA_PLACEHOLDERS" -gt 1 ]; then
   FAIL=1
 fi
 
-# Sprawdź że baseline decision jest zaznaczony
-if ! awk '/^## 6\. Baseline/,/^## 7\./' "$BRIEF" | grep -q "^- \[x\]\|^- \[X\]"; then
-  echo "❌ Baseline decision (MODE) nie jest wybrany w sekcji 6"
+# Sekcja 6: Anty-referencje — sprawdź czy jest wypełniona (więcej niż 50 znaków user contentu poza nagłówkami)
+ANTYREF_LEN=$(awk '/^## 6\. Anty-referencje/,/^## 7\./' "$BRIEF" | grep -vE "^##|^>" | tr -d '[:space:]' | wc -c)
+if [ "$ANTYREF_LEN" -lt 50 ]; then
+  echo "❌ Sekcja 6 (Anty-referencje) niewypełniona ($ANTYREF_LEN znaków)"
   FAIL=1
 fi
 
