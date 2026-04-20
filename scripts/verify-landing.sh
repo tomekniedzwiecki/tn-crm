@@ -312,9 +312,88 @@ check_range "How It Works ≥3 kroki" 3 6 "$ACTS"
 FAQS=$(grep -cE 'class="faq-item|<details[^>]*class="[^"]*faq' "$FILE" || true)
 check_range "FAQ ≥5 pytań" 5 12 "$FAQS"
 
-# ─── 12. Brief persistence ───
+# ─── 12. Copy quality (pozytywne jakości — reference/copy.md) ───
 echo ""
-echo "📋 12. Brief persistence (manifesto)"
+echo "✍️  12. Copy quality (pozytywne — reference/copy.md)"
+
+# Headline hero ≤ 10 słów (extract text z <h1 class="js-split">...</h1>)
+HERO_H1=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -oE "<h1[^>]*>[^<]*(<em>[^<]*</em>[^<]*)?</h1>" | sed -E 's/<[^>]+>//g; s/[[:space:]]+/ /g; s/^ //; s/ $//' | head -1)
+HERO_WORDS=$(echo "$HERO_H1" | wc -w)
+if [ "$HERO_WORDS" -ge 1 ] && [ "$HERO_WORDS" -le 10 ]; then
+  echo "  ✅ Hero headline ≤10 słów ($HERO_WORDS — \"$HERO_H1\")"
+  PASS=$((PASS + 1))
+elif [ "$HERO_WORDS" -gt 10 ]; then
+  echo "  ⚠️  Hero headline $HERO_WORDS słów (max 10): \"$HERO_H1\""
+  WARN=$((WARN + 1))
+else
+  echo "  ❌ Hero headline pusty lub brak"
+  FAIL=$((FAIL + 1))
+fi
+
+# Brak "nasz/nasza/nasze/naszą/naszym/my" (2 osoba, nie my)
+NASZ=$(grep -icE "\b(nasz|nasza|nasze|naszą|naszym|naszego|naszej|naszemu|naszych|naszymi)\b" "$FILE" || true)
+check_range "Brak 'nasz/nasza...' (pisz w 2 osobie Ty/Twój)" 0 3 "$NASZ"
+
+# Konkretne liczby w hero (min 1 digit+unit np "20 BAR", "26 sek", "3 min")
+HERO_DIGITS=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -cE "[0-9]+\s*(BAR|sek|sekund|min|godzin|h|kPa|bar|ml|g|kg|°C|%|zł)" || true)
+check_range "Hero zawiera konkretne liczby (liczba + jednostka)" 1 50 "$HERO_DIGITS"
+
+# FAQ odpowiedzi min length (każda ≥80 znaków treści, z usuniętymi tagami HTML)
+FAQ_SHORT=0
+FAQ_COUNT=0
+while IFS= read -r answer; do
+  FAQ_COUNT=$((FAQ_COUNT + 1))
+  # Remove HTML tags, count visible chars
+  STRIPPED=$(echo "$answer" | sed -E 's/<[^>]+>//g' | tr -s '[:space:]' ' ')
+  LEN=${#STRIPPED}
+  if [ "$LEN" -lt 80 ]; then
+    FAQ_SHORT=$((FAQ_SHORT + 1))
+  fi
+done < <(awk '/<div class="faq-a">/{flag=1; sub(/.*<div class="faq-a">/, "")} flag{buf=buf $0 " "} /<\/div>/{if(flag){sub(/<\/div>.*/, "", buf); print buf; buf=""; flag=0}}' "$FILE")
+if [ "$FAQ_COUNT" -eq 0 ]; then
+  echo "  ⚠️  Nie znaleziono FAQ answers (faq-a)"
+  WARN=$((WARN + 1))
+elif [ "$FAQ_SHORT" -eq 0 ]; then
+  echo "  ✅ FAQ odpowiedzi ≥80 znaków ($FAQ_COUNT/$FAQ_COUNT OK)"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ FAQ $FAQ_SHORT/$FAQ_COUNT odpowiedzi jest zbyt krótkich (<80 znaków)"
+  FAIL=$((FAIL + 1))
+fi
+
+# Testimonials min length (każdy cytat ≥80 znaków)
+TEST_SHORT=0
+TEST_COUNT=0
+while IFS= read -r quote; do
+  TEST_COUNT=$((TEST_COUNT + 1))
+  # strip HTML, count chars
+  LEN=${#quote}
+  if [ "$LEN" -lt 80 ]; then TEST_SHORT=$((TEST_SHORT + 1)); fi
+done < <(grep -oE 'class="voice-quote"[^>]*>[^<]+' "$FILE" | sed 's/class="voice-quote"[^>]*>//')
+if [ "$TEST_COUNT" -eq 0 ]; then
+  echo "  ⚠️  Nie znaleziono testimonials (voice-quote)"
+  WARN=$((WARN + 1))
+elif [ "$TEST_SHORT" -eq 0 ]; then
+  echo "  ✅ Testimonials ≥80 znaków ($TEST_COUNT/$TEST_COUNT OK)"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ Testimonials $TEST_SHORT/$TEST_COUNT zbyt krótkie"
+  FAIL=$((FAIL + 1))
+fi
+
+# Offer CTA z korzyścią (zawiera "oszczęd|odbierz|dołącz" lub cenę)
+OFFER_CTA=$(grep -oE '<a[^>]*class="offer-cta[^"]*"[^>]*>[^<]+' "$FILE" | head -1)
+if echo "$OFFER_CTA" | grep -iqE "oszczęd|odbierz|dołącz|[0-9]+ zł"; then
+  echo "  ✅ Offer CTA zawiera korzyść (kwota/akcja)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Offer CTA może być generyczny: \"$OFFER_CTA\""
+  WARN=$((WARN + 1))
+fi
+
+# ─── 13. Brief persistence ───
+echo ""
+echo "📋 13. Brief persistence (manifesto)"
 BRIEF="landing-pages/$SLUG/_brief.md"
 if [ -f "$BRIEF" ]; then
   BRIEF_SIZE=$(wc -c < "$BRIEF")
