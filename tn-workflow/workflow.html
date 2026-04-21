@@ -11092,6 +11092,13 @@ Zwróć TYLKO JSON.`;
                 structOnly.innerHTML = '<i class="ph ph-frame-corners"></i> Tylko struktura';
                 structOnly.title = 'XLSX tylko z kampanią + 2 grupami odbiorców (bez reklam). Obchodzi ograniczenie Meta #3738001. Reklamy dodajesz ręcznie w Ads Managerze.';
                 actions.appendChild(structOnly);
+
+                const cowork = document.createElement('button');
+                cowork.onclick = exportClaudeCoworkZip;
+                cowork.className = 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 border border-orange-500/30 flex items-center gap-1.5';
+                cowork.innerHTML = '<i class="ph ph-robot"></i> Pakiet Claude Cowork';
+                cowork.title = 'ZIP: BRIEF.md + kreacje + dane.json — dla rozszerzenia Claude Cowork w Chrome. Claude sam wyklikuje kampanię w Ads Managerze.';
+                actions.appendChild(cowork);
             }
         }
 
@@ -11481,6 +11488,271 @@ Zwróć TYLKO JSON.`;
             }
         }
         window.exportMetaBulkZip = exportMetaBulkZip;
+
+        // ---- EXPORT CLAUDE COWORK PACKAGE (BRIEF.md + kreacje + dane.json) ----
+        // Claude Cowork = rozszerzenie Chrome, w którym Claude wyklikuje kampanię
+        // w Ads Managerze na podstawie briefu. Format ZUPEŁNIE INNY niż XLSX Meta:
+        // zamiast strukturalnego importu — instrukcja krok-po-kroku dla agenta.
+        async function exportClaudeCoworkZip() {
+            const creatives = getCreatives();
+            const versions = getVersions();
+            if (!creatives.length && !versions.length) { showToast('Brak materiałów', 'error'); return; }
+            showToast('Buduję pakiet Claude Cowork...', 'info');
+            try {
+                const JSZipLib = await loadLib('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'JSZip');
+                const zip = new JSZipLib();
+
+                // Landing URL — priorytet jak w Pakiecie Meta
+                let landingUrl = '';
+                try {
+                    const { data: td } = await supabaseClient.from('workflow_takedrop')
+                        .select('domain, landing_url, checkout_link').eq('workflow_id', workflow.id).maybeSingle();
+                    landingUrl = normalizeUrl(td?.landing_url || td?.domain || td?.checkout_link || '');
+                } catch (_) {}
+                if (!landingUrl) {
+                    try {
+                        const { data: freshWf } = await supabaseClient.from('workflows')
+                            .select('sales_page_url').eq('id', workflow.id).maybeSingle();
+                        landingUrl = normalizeUrl(freshWf?.sales_page_url || '');
+                    } catch (_) {}
+                }
+                if (!landingUrl) landingUrl = normalizeUrl(adsData?.campaign_spec?.campaign?.landing_url || '');
+
+                // Spec z Manusa — reużywamy jeśli dostępny (grupy odbiorców, rationale)
+                const spec = adsData?.campaign_spec || null;
+                const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
+                const dailyBudget = spec?.campaign?.daily_budget_total || 10;
+
+                // Beneficjent z brandingu
+                let beneficiary = '';
+                let brandDesc = '';
+                try {
+                    const { data: brandingRow } = await supabaseClient.from('workflow_branding')
+                        .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
+                    if (brandingRow?.value) {
+                        const bv = typeof brandingRow.value === 'string' ? JSON.parse(brandingRow.value) : brandingRow.value;
+                        beneficiary = bv?.name || '';
+                        brandDesc = bv?.description || bv?.tagline || '';
+                    }
+                } catch (_) {}
+                if (!beneficiary) beneficiary = spec?.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
+
+                // Produkt (dla kontekstu w briefie)
+                let productName = '', productDesc = '';
+                try {
+                    const { data: prodRow } = await supabaseClient.from('workflow_products')
+                        .select('name, description').eq('workflow_id', workflow.id).limit(1).maybeSingle();
+                    if (prodRow) { productName = prodRow.name || ''; productDesc = prodRow.description || ''; }
+                } catch (_) {}
+
+                // Sugerowana grupa z Manusa (bierzemy TYLKO PIERWSZĄ — user preferuje 1 grupę na start)
+                const manusGroups = Array.isArray(spec?.ad_sets) ? spec.ad_sets : [];
+                const suggestedGroup = manusGroups[0] || null;
+
+                // Kreacje + copy (A/B test w ramach JEDNEJ grupy)
+                const ads = creatives.map((c, i) => {
+                    const v = versions[i] || {};
+                    return {
+                        index: i + 1,
+                        filename: c.filename || `kreacja_${i + 1}.png`,
+                        angle: v.angle || c.type || '',
+                        primary_text: v.primary_text || '',
+                        headline: v.headline || '',
+                        description: v.description || '',
+                        cta: v.cta || 'Dowiedz się więcej',
+                    };
+                });
+
+                // ---- BRIEF.md ----
+                const lines = [];
+                lines.push(`# BRIEF: Kampania Meta Ads dla "${beneficiary}"`);
+                lines.push(``);
+                lines.push(`> **Dla Claude Cowork (rozszerzenie Chrome).** Ten brief przeprowadzi Cię przez konfigurację kampanii reklamowej w Meta Ads Managerze (https://adsmanager.facebook.com). Pracuj krok po kroku, pytaj użytkownika jeśli coś jest niejasne. **Status kampanii zostaw na "Wstrzymana" (Paused) — publikację robi administrator.**`);
+                lines.push(``);
+                lines.push(`## 1. Kontekst`);
+                lines.push(``);
+                lines.push(`- **Marka / beneficjent:** ${beneficiary}`);
+                if (productName) lines.push(`- **Produkt:** ${productName}`);
+                if (productDesc) lines.push(`- **Opis produktu:** ${productDesc}`);
+                if (brandDesc) lines.push(`- **Tagline / opis marki:** ${brandDesc}`);
+                lines.push(`- **Landing page (docelowy URL reklamy):** ${landingUrl || '⚠️ BRAK — zapytaj użytkownika!'}`);
+                lines.push(`- **Workflow ID:** \`${workflow.id}\``);
+                lines.push(``);
+                lines.push(`## 2. Parametry kampanii`);
+                lines.push(``);
+                lines.push(`| Parametr | Wartość |`);
+                lines.push(`|---|---|`);
+                lines.push(`| Nazwa kampanii | ${campaignName} |`);
+                lines.push(`| Cel | **Sprzedaż** (Outcome Sales) |`);
+                lines.push(`| Strategia budżetu | **Budżet kampanii (CBO)** |`);
+                lines.push(`| Dzienny budżet | **${dailyBudget} zł** |`);
+                lines.push(`| Strategia oferty | Najniższy koszt |`);
+                lines.push(`| Typ zakupu | Aukcja |`);
+                lines.push(`| Status (na start) | **Wstrzymana** |`);
+                lines.push(`| Beneficjent | ${beneficiary} |`);
+                lines.push(`| Płatnik | ${beneficiary} (taki sam jak beneficjent) |`);
+                lines.push(``);
+                lines.push(`## 3. Grupa odbiorców (tylko JEDNA na start)`);
+                lines.push(``);
+                lines.push(`### 🎯 WAŻNE — zanim zaczniesz konfigurować grupę:`);
+                lines.push(``);
+                lines.push(`**NIE bierz automatycznie sugerowanej grupy poniżej.** Najpierw **samodzielnie** przeanalizuj:`);
+                lines.push(``);
+                lines.push(`1. Produkt (nazwa, opis, kategoria)`);
+                lines.push(`2. Landing page (${landingUrl || 'brak URL'}) — jeśli masz dostęp, obejrzyj go`);
+                lines.push(`3. Copy reklamowe (sekcja 4 poniżej — headline, primary text, angles)`);
+                lines.push(``);
+                lines.push(`Następnie **zaproponuj użytkownikowi 2–3 własne warianty grupy odbiorców**:`);
+                lines.push(``);
+                lines.push(`- **Wariant 1:** szeroka grupa (np. bez zainteresowań, tylko wiek + płeć + kraj — niech Advantage+ zrobi targetowanie)`);
+                lines.push(`- **Wariant 2:** wąska grupa z konkretnymi zainteresowaniami (2–5 interestów ściśle związanych z produktem)`);
+                lines.push(`- **Wariant 3:** grupa oparta na zachowaniach / problemach, które rozwiązuje produkt`);
+                lines.push(``);
+                lines.push(`Dla każdego wariantu podaj: **nazwę, wiek min/max, płeć, kraj, interesy/zachowania, uzasadnienie (rationale).**`);
+                lines.push(``);
+                lines.push(`**Następnie porównaj swoje warianty z sugestią Manusa poniżej** i zarekomenduj użytkownikowi jedną — **uzasadnij dlaczego.** Dopiero po akceptacji użytkownika konfiguruj grupę w Ads Managerze.`);
+                lines.push(``);
+                lines.push(`### 📋 Sugestia od Manusa (do porównania, NIE do ślepego przepisania):`);
+                lines.push(``);
+                if (suggestedGroup) {
+                    const g = suggestedGroup;
+                    const genderPl = g.gender === 'female' ? 'Kobiety' : g.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
+                    lines.push(`- **Nazwa:** ${g.name || 'Grupa A'}`);
+                    lines.push(`- **Wiek:** ${g.age_min || 25}–${g.age_max || 55}`);
+                    lines.push(`- **Płeć:** ${genderPl}`);
+                    lines.push(`- **Kraj:** Polska`);
+                    if (Array.isArray(g.interests) && g.interests.length) {
+                        lines.push(`- **Zainteresowania (${g.interests.length}):** ${g.interests.join(', ')}`);
+                    }
+                    if (Array.isArray(g.behaviors) && g.behaviors.length) {
+                        lines.push(`- **Zachowania (${g.behaviors.length}):** ${g.behaviors.join(', ')}`);
+                    }
+                    if (g.rationale) lines.push(`- **Uzasadnienie Manusa:** ${g.rationale}`);
+                } else {
+                    lines.push(`_Manus nie wygenerował sugestii grupy dla tego workflow._ Zaproponuj użytkownikowi własne warianty od zera.`);
+                }
+                lines.push(``);
+                lines.push(`### ⚙️ Ustawienia zestawu reklam (niezależne od targetowania):`);
+                lines.push(``);
+                lines.push(`- **Lokalizacja konwersji:** Strona internetowa`);
+                lines.push(`- **Pixel / zdarzenie:** zapytaj użytkownika który pixel i które zdarzenie (zazwyczaj "Kup" / Purchase)`);
+                lines.push(`- **Umiejscowienia:** **Advantage+ (automatyczne)** — NIE wybieraj ręcznie`);
+                lines.push(`- **Optymalizacja dostarczania:** Konwersje`);
+                lines.push(``);
+                lines.push(`## 4. Reklamy (${ads.length} wariantów w tej jednej grupie — A/B test)`);
+                lines.push(``);
+                lines.push(`Wszystkie ${ads.length} reklam idzie do **tej samej** grupy odbiorców. Każda ma inną grafikę i inny angle (kąt perswazji). Meta sama wybierze zwycięzcę.`);
+                lines.push(``);
+                lines.push(`**Dla każdej reklamy w Ads Managerze wybierz:**`);
+                lines.push(``);
+                lines.push(`- Format: **Jedna grafika lub film**`);
+                lines.push(`- Multi-advertiser: **wyłącz**`);
+                lines.push(`- Zaawansowane ulepszenia: **wyłącz** (inaczej Meta podmieni teksty)`);
+                lines.push(`- Destynacja: **Witryna internetowa**`);
+                lines.push(`- Adres URL: \`${landingUrl}\``);
+                lines.push(``);
+                ads.forEach(ad => {
+                    lines.push(`### Reklama #${ad.index}${ad.angle ? ` (${ad.angle})` : ''}`);
+                    lines.push(``);
+                    lines.push(`- **Grafika:** \`kreacje/${ad.filename}\` (w tym pakiecie ZIP)`);
+                    lines.push(`- **Tekst główny (Primary, max 125 znaków):**`);
+                    lines.push(``);
+                    lines.push(`  > ${ad.primary_text.replace(/\n/g, '\n  > ')}`);
+                    lines.push(``);
+                    lines.push(`- **Nagłówek (Headline, max 40 znaków):** ${ad.headline}`);
+                    lines.push(`- **Opis linku (Description, max 30 znaków):** ${ad.description}`);
+                    lines.push(`- **CTA (Call to Action):** ${ad.cta}`);
+                    lines.push(``);
+                });
+                lines.push(`## 5. Kolejność działań w Ads Managerze`);
+                lines.push(``);
+                lines.push(`1. **Utwórz kampanię** z parametrami z sekcji 2. Status: Wstrzymana.`);
+                lines.push(`2. **Zaproponuj użytkownikowi warianty grupy odbiorców** (sekcja 3) — czekaj na akceptację.`);
+                lines.push(`3. **Utwórz 1 zestaw reklam (ad set)** z zaakceptowanego wariantu.`);
+                lines.push(`4. **Dodaj ${ads.length} reklamy** w ad secie — każda z własną grafiką z folderu \`kreacje/\` i copy z sekcji 4.`);
+                lines.push(`5. **Sprawdź podgląd** reklam (desktop + mobile).`);
+                lines.push(`6. **NIE publikuj.** Zostaw status "Wstrzymana" i poinformuj użytkownika, że kampania jest gotowa do review.`);
+                lines.push(``);
+                lines.push(`## 6. Gotowość / Checklist końcowy`);
+                lines.push(``);
+                lines.push(`- [ ] Kampania utworzona, CBO = ${dailyBudget} zł/dzień, cel Sprzedaż, Wstrzymana`);
+                lines.push(`- [ ] Beneficjent i płatnik = "${beneficiary}"`);
+                lines.push(`- [ ] Grupa odbiorców ustalona z użytkownikiem (NIE ślepo z Manusa)`);
+                lines.push(`- [ ] Placement = Advantage+`);
+                lines.push(`- [ ] Pixel i zdarzenie Purchase wybrane`);
+                lines.push(`- [ ] ${ads.length} reklam dodanych z poprawną grafiką + copy`);
+                lines.push(`- [ ] Adres URL każdej reklamy = ${landingUrl}`);
+                lines.push(`- [ ] Każda reklama: multi-advertiser WYŁ., zaawansowane ulepszenia WYŁ.`);
+                lines.push(``);
+                lines.push(`---`);
+                lines.push(`_Wygenerowano: ${new Date().toISOString()} · Workflow: ${workflow.id}_`);
+
+                zip.file('BRIEF.md', lines.join('\n'));
+
+                // dane.json — strukturalne dane dla Claude (jako fallback, gdyby wolał JSON)
+                zip.file('dane.json', JSON.stringify({
+                    workflow_id: workflow.id,
+                    beneficiary,
+                    product: { name: productName, description: productDesc },
+                    landing_url: landingUrl,
+                    campaign: {
+                        name: campaignName,
+                        objective: 'OUTCOME_SALES',
+                        daily_budget: dailyBudget,
+                        status: 'PAUSED',
+                        bid_strategy: 'LOWEST_COST',
+                        budget_type: 'CBO',
+                    },
+                    ad_sets_suggested_by_manus: suggestedGroup ? [suggestedGroup] : [],
+                    ad_set_count_target: 1,
+                    ads,
+                }, null, 2));
+
+                // README.txt
+                zip.file('README.txt', [
+                    'PAKIET CLAUDE COWORK — kampania Meta Ads',
+                    '==========================================',
+                    '',
+                    'Zawartość:',
+                    '  BRIEF.md          — instrukcja krok po kroku dla Claude Cowork',
+                    '  dane.json         — te same dane w formacie strukturalnym (opcjonalne)',
+                    '  kreacje/*.png     — grafiki reklamowe (5 szt.)',
+                    '',
+                    'Jak użyć:',
+                    '  1. Otwórz Chrome z rozszerzeniem Claude Cowork.',
+                    '  2. Wejdź na https://adsmanager.facebook.com',
+                    '  3. Uruchom Claude Cowork i wklej/załącz BRIEF.md jako kontekst.',
+                    '  4. Powiedz: "Skonfiguruj kampanię wg tego briefu. Najpierw zaproponuj',
+                    '     mi warianty grupy odbiorców — NIE bierz automatycznie sugestii Manusa."',
+                    '  5. Claude wyklika kampanię w Ads Managerze, zadając pytania po drodze.',
+                    '  6. Status kampanii zostanie na "Wstrzymana" — ty publikujesz sam po review.',
+                    '',
+                    `Wygenerowano: ${new Date().toISOString()}`,
+                ].join('\n'));
+
+                // Pobierz PNG-i do folderu kreacje/
+                for (const c of creatives) {
+                    if (!c?.url) continue;
+                    try {
+                        const res = await fetch(c.url);
+                        const blob = await res.blob();
+                        zip.file(`kreacje/${c.filename || 'kreacja.png'}`, blob);
+                    } catch (e) { console.error('img', e); }
+                }
+
+                const out = await zip.generateAsync({ type: 'blob' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(out);
+                a.download = `${(workflow?.customer_name || 'kampania').replace(/\s+/g, '_')}_cowork.zip`;
+                document.body.appendChild(a); a.click(); a.remove();
+                setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+                showToast('Pakiet Claude Cowork pobrany!', 'success');
+            } catch (e) {
+                console.error('exportClaudeCoworkZip', e);
+                showToast('Błąd eksportu: ' + e.message, 'error');
+            }
+        }
+        window.exportClaudeCoworkZip = exportClaudeCoworkZip;
 
         // ---- FB POST PREVIEW (jak u klienta) ----
         function renderFbPostPreview() {
