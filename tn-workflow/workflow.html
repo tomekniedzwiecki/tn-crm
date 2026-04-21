@@ -5347,11 +5347,14 @@
             // Header
             document.getElementById('breadcrumb-name').textContent = customerDisplay;
             updateHeaderQuickActions();
-            // Try to fetch landing URL early for header (independent of TakeDrop tab)
-            supabaseClient.from('workflow_takedrop').select('landing_url').eq('workflow_id', workflow.id).maybeSingle().then(({ data }) => {
-                if (data?.landing_url) {
+            // Try to fetch TakeDrop row early for header (independent of TakeDrop tab)
+            // select('*') zamiast select('landing_url') - w przeciwnym razie takeDropData
+            // ma tylko landing_url, a loadTestTab/loadAdAccountTab widza ze jest "set" i
+            // nie pobieraja pelnych danych (test_accepted, id itd.)
+            supabaseClient.from('workflow_takedrop').select('*').eq('workflow_id', workflow.id).maybeSingle().then(({ data }) => {
+                if (data) {
                     if (!takeDropData) takeDropData = data;
-                    else takeDropData.landing_url = takeDropData.landing_url || data.landing_url;
+                    else Object.assign(takeDropData, data);
                     updateHeaderQuickActions();
                 }
             });
