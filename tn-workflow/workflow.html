@@ -2301,28 +2301,28 @@
 
                             <!-- Sub-steps checklist -->
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
-                                <div id="admin-step-ad-account" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                <div id="admin-step-ad-account" onclick="toggleAdAccountSubStep('partner_access_granted')" title="Kliknij aby zmienić stan" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 cursor-pointer hover:border-zinc-600 transition-colors">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-ad-icon" class="ph ph-circle text-zinc-600"></i>
                                         <span class="text-[13px] text-white font-medium">Konto reklamowe</span>
                                     </div>
                                     <p id="admin-step-ad-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
-                                <div id="admin-step-fanpage" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                <div id="admin-step-fanpage" onclick="toggleAdAccountSubStep('fanpage_access_granted')" title="Kliknij aby zmienić stan" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 cursor-pointer hover:border-zinc-600 transition-colors">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-fp-icon" class="ph ph-circle text-zinc-600"></i>
                                         <span class="text-[13px] text-white font-medium">Fanpage</span>
                                     </div>
                                     <p id="admin-step-fp-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
-                                <div id="admin-step-instagram" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                <div id="admin-step-instagram" onclick="toggleAdAccountSubStep('instagram_access_granted')" title="Kliknij aby zmienić stan" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 cursor-pointer hover:border-zinc-600 transition-colors">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-ig-icon" class="ph ph-circle text-zinc-600"></i>
                                         <span class="text-[13px] text-white font-medium">Instagram</span>
                                     </div>
                                     <p id="admin-step-ig-date" class="text-[11px] text-zinc-500 ml-6">Oczekuje</p>
                                 </div>
-                                <div id="admin-step-phone" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4">
+                                <div id="admin-step-phone" onclick="toggleAdAccountSubStep('phone_verified')" title="Kliknij aby zmienić stan" class="bg-zinc-900/50 border border-zinc-800 rounded-lg p-4 cursor-pointer hover:border-zinc-600 transition-colors">
                                     <div class="flex items-center gap-2 mb-1">
                                         <i id="admin-step-ph-icon" class="ph ph-circle text-zinc-600"></i>
                                         <span class="text-[13px] text-white font-medium">Telefon</span>
@@ -10125,6 +10125,55 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 console.error('Error toggling ad account:', err);
                 showToast('Błąd aktualizacji', 'error');
                 if (toggle) toggle.checked = !isReady;
+            }
+        }
+
+        async function toggleAdAccountSubStep(field) {
+            const atField = field === 'phone_verified' ? 'phone_verified_at' : field + '_at';
+            const labels = {
+                partner_access_granted: 'Konto reklamowe',
+                fanpage_access_granted: 'Fanpage',
+                instagram_access_granted: 'Instagram',
+                phone_verified: 'Telefon'
+            };
+            const currentValue = !!adsData?.[field];
+            const newValue = !currentValue;
+            const nowIso = new Date().toISOString();
+            const updateData = {
+                [field]: newValue,
+                [atField]: newValue ? nowIso : null
+            };
+
+            try {
+                if (adsData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_ads')
+                        .update(updateData)
+                        .eq('id', adsData.id);
+                    if (error) throw error;
+                    adsData[field] = newValue;
+                    adsData[atField] = updateData[atField];
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_ads')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: nowIso,
+                            ...updateData
+                        })
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    adsData = data;
+                }
+
+                loadAdAccountTab();
+                updateNavChecks();
+                showToast(`${labels[field]}: ${newValue ? 'oznaczone' : 'odznaczone'}`);
+            } catch (err) {
+                console.error('Error toggling sub-step:', err);
+                showToast('Błąd aktualizacji', 'error');
             }
         }
 
