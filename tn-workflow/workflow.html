@@ -9743,16 +9743,44 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     await loadTakeDrop();
                 }
 
-                const { data, error } = await supabaseClient
-                    .from('workflow_takedrop')
-                    .upsert({
-                        workflow_id: workflow.id,
-                        ...updateData
-                    }, { onConflict: 'workflow_id' })
-                    .select()
-                    .single();
+                // Update if row exists, otherwise insert (avoids upsert edge cases)
+                let data, error;
+                if (takeDropData?.id) {
+                    ({ data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update(updateData)
+                        .eq('id', takeDropData.id)
+                        .select()
+                        .single());
+                } else {
+                    ({ data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({
+                            workflow_id: workflow.id,
+                            is_active: true,
+                            activated_at: new Date().toISOString(),
+                            ...updateData
+                        })
+                        .select()
+                        .single());
+                }
 
                 if (error) throw error;
+                if (!data) throw new Error('Brak danych po zapisie (prawdopodobnie RLS)');
+
+                // Verify persistence — read-after-write
+                const { data: verify, error: verifyErr } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .select('test_accepted')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+
+                if (verifyErr) throw verifyErr;
+                if (!!verify?.test_accepted !== isCompleted) {
+                    console.error('test_accepted mismatch after save', { expected: isCompleted, actual: verify?.test_accepted });
+                    throw new Error('Zapis nie persystuje w bazie — sprawdź uprawnienia (RLS)');
+                }
+
                 takeDropData = data;
 
                 loadTestTab();
