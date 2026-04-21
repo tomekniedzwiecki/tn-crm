@@ -11090,7 +11090,7 @@ Zwróć TYLKO JSON.`;
                 cowork.onclick = exportClaudeCoworkZip;
                 cowork.className = 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 border border-orange-500/30 flex items-center gap-1.5';
                 cowork.innerHTML = '<i class="ph ph-robot"></i> Pakiet Claude Cowork';
-                cowork.title = 'ZIP: BRIEF.md + kreacje + dane.json — dla rozszerzenia Claude Cowork w Chrome. Claude sam wyklikuje kampanię w Ads Managerze.';
+                cowork.title = 'ZIP: BRIEF.txt (jeden plik do wklejenia w Claude Cowork) + folder kreacje/ z 5 grafikami. Weryfikuje portfolio "Tomasz Niedźwiecki AI" przed startem.';
                 actions.appendChild(cowork);
             }
         }
@@ -11557,134 +11557,230 @@ Zwróć TYLKO JSON.`;
                 });
 
                 // ---- BRIEF.md ----
+                const PORTFOLIO = 'Tomasz Niedźwiecki AI';
                 const lines = [];
-                lines.push(`# BRIEF: Kampania Meta Ads dla "${beneficiary}"`);
+                const sep = '===================================================================';
+
+                lines.push(sep);
+                lines.push(`BRIEF DLA CLAUDE COWORK — Kampania Meta Ads dla "${beneficiary}"`);
+                lines.push(sep);
                 lines.push(``);
-                lines.push(`> **Dla Claude Cowork (rozszerzenie Chrome).** Ten brief przeprowadzi Cię przez konfigurację kampanii reklamowej w Meta Ads Managerze (https://adsmanager.facebook.com). Pracuj krok po kroku, pytaj użytkownika jeśli coś jest niejasne. **Status kampanii zostaw na "Wstrzymana" (Paused) — publikację robi administrator.**`);
+                lines.push(`Ten brief przeprowadzi Cię przez konfigurację kampanii reklamowej`);
+                lines.push(`w Meta Ads Managerze (https://adsmanager.facebook.com). Pracuj krok`);
+                lines.push(`po kroku, pytaj użytkownika jeśli coś jest niejasne.`);
+                lines.push(`STATUS KAMPANII ZOSTAW NA "WSTRZYMANA" (Paused) — publikację robi`);
+                lines.push(`administrator po ręcznym review.`);
                 lines.push(``);
-                lines.push(`## 1. Kontekst`);
                 lines.push(``);
-                lines.push(`- **Marka / beneficjent:** ${beneficiary}`);
-                if (productName) lines.push(`- **Produkt:** ${productName}`);
-                if (productDesc) lines.push(`- **Opis produktu:** ${productDesc}`);
-                if (brandDesc) lines.push(`- **Tagline / opis marki:** ${brandDesc}`);
-                lines.push(`- **Landing page (docelowy URL reklamy):** ${landingUrl || '⚠️ BRAK — zapytaj użytkownika!'}`);
-                lines.push(`- **Workflow ID:** \`${workflow.id}\``);
+                lines.push(sep);
+                lines.push(`KROK 0 — WERYFIKACJA STRONY W PORTFOLIO (WYKONAJ NAJPIERW!)`);
+                lines.push(sep);
                 lines.push(``);
-                lines.push(`## 2. Parametry kampanii`);
+                lines.push(`Kampania ma być prowadzona z portfolio biznesowego Meta o nazwie:`);
                 lines.push(``);
-                lines.push(`| Parametr | Wartość |`);
-                lines.push(`|---|---|`);
-                lines.push(`| Nazwa kampanii | ${campaignName} |`);
-                lines.push(`| Cel | **Sprzedaż** (Outcome Sales) |`);
-                lines.push(`| Strategia budżetu | **Budżet kampanii (CBO)** |`);
-                lines.push(`| Dzienny budżet | **${dailyBudget} zł** |`);
-                lines.push(`| Strategia oferty | Najniższy koszt |`);
-                lines.push(`| Typ zakupu | Aukcja |`);
-                lines.push(`| Status (na start) | **Wstrzymana** |`);
-                lines.push(`| Beneficjent | ${beneficiary} |`);
-                lines.push(`| Płatnik | ${beneficiary} (taki sam jak beneficjent) |`);
+                lines.push(`    "${PORTFOLIO}"`);
                 lines.push(``);
-                lines.push(`## 3. Grupa odbiorców (tylko JEDNA na start)`);
+                lines.push(`ZANIM UTWORZYSZ KAMPANIĘ:`);
                 lines.push(``);
-                lines.push(`### 🎯 WAŻNE — zanim zaczniesz konfigurować grupę:`);
+                lines.push(`1. W Ads Managerze rozwiń selektor portfolio (lewy górny róg — ikona`);
+                lines.push(`   z awatarem konta) albo wejdź na https://business.facebook.com`);
+                lines.push(`2. Przełącz się na portfolio "${PORTFOLIO}".`);
+                lines.push(`3. W tym portfolio znajdź Stronę (Facebook Page) odpowiadającą marce:`);
                 lines.push(``);
-                lines.push(`**NIE bierz automatycznie sugerowanej grupy poniżej.** Najpierw **samodzielnie** przeanalizuj:`);
+                lines.push(`       "${beneficiary}"`);
                 lines.push(``);
-                lines.push(`1. Produkt (nazwa, opis, kategoria)`);
-                lines.push(`2. Landing page (${landingUrl || 'brak URL'}) — jeśli masz dostęp, obejrzyj go`);
-                lines.push(`3. Copy reklamowe (sekcja 4 poniżej — headline, primary text, angles)`);
+                lines.push(`   Nazwa strony może być identyczna z marką albo podobna`);
+                lines.push(`   (np. z końcówką ".pl", "shop", "oficjalny", "sklep" itp.).`);
+                lines.push(`   Sprawdź w Business Suite → "Accounts" / "Konta" → "Pages" / "Strony".`);
                 lines.push(``);
-                lines.push(`Następnie **zaproponuj użytkownikowi 2–3 własne warianty grupy odbiorców**:`);
+                lines.push(`>>> JEŚLI STRONA "${beneficiary}" NIE ZOSTANIE ZNALEZIONA: <<<`);
                 lines.push(``);
-                lines.push(`- **Wariant 1:** szeroka grupa (np. bez zainteresowań, tylko wiek + płeć + kraj — niech Advantage+ zrobi targetowanie)`);
-                lines.push(`- **Wariant 2:** wąska grupa z konkretnymi zainteresowaniami (2–5 interestów ściśle związanych z produktem)`);
-                lines.push(`- **Wariant 3:** grupa oparta na zachowaniach / problemach, które rozwiązuje produkt`);
+                lines.push(`    ZATRZYMAJ SIĘ TUTAJ. NIE twórz kampanii, NIE ad seta, NIE reklamy.`);
+                lines.push(`    Wyraźnie powiedz użytkownikowi np.:`);
                 lines.push(``);
-                lines.push(`Dla każdego wariantu podaj: **nazwę, wiek min/max, płeć, kraj, interesy/zachowania, uzasadnienie (rationale).**`);
+                lines.push(`      "Nie znalazłem strony dla marki '${beneficiary}' w portfolio`);
+                lines.push(`       '${PORTFOLIO}'. Sprawdziłem i widzę tam następujące strony:`);
+                lines.push(`       [wymień nazwy stron, które znalazłeś].`);
+                lines.push(`       Musisz ją samodzielnie dodać do portfolio zanim będę mógł`);
+                lines.push(`       kontynuować konfigurację kampanii."`);
                 lines.push(``);
-                lines.push(`**Następnie porównaj swoje warianty z sugestią Manusa poniżej** i zarekomenduj użytkownikowi jedną — **uzasadnij dlaczego.** Dopiero po akceptacji użytkownika konfiguruj grupę w Ads Managerze.`);
+                lines.push(`    Czekaj na potwierdzenie użytkownika. NIE kontynuuj zanim strona`);
+                lines.push(`    nie pojawi się w portfolio.`);
                 lines.push(``);
-                lines.push(`### 📋 Sugestia od Manusa (do porównania, NIE do ślepego przepisania):`);
+                lines.push(`>>> JEŚLI STRONA ZOSTAŁA ZNALEZIONA: <<<`);
+                lines.push(``);
+                lines.push(`    Zapisz jej dokładną nazwę (użyjesz jej w reklamach jako strona,`);
+                lines.push(`    z której reklamy będą wychodzić). Przejdź do kroku 1.`);
+                lines.push(``);
+                lines.push(``);
+                lines.push(sep);
+                lines.push(`1. KONTEKST`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(`- Marka / beneficjent: ${beneficiary}`);
+                if (productName) lines.push(`- Produkt: ${productName}`);
+                if (productDesc) lines.push(`- Opis produktu: ${productDesc}`);
+                if (brandDesc) lines.push(`- Tagline / opis marki: ${brandDesc}`);
+                lines.push(`- Landing page (docelowy URL reklamy): ${landingUrl || '!!! BRAK — zapytaj użytkownika'}`);
+                lines.push(`- Portfolio Meta: ${PORTFOLIO}`);
+                lines.push(`- Workflow ID: ${workflow.id}`);
+                lines.push(``);
+                lines.push(``);
+                lines.push(sep);
+                lines.push(`2. PARAMETRY KAMPANII`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(`  Nazwa kampanii ........... ${campaignName}`);
+                lines.push(`  Cel ...................... Sprzedaż (Outcome Sales)`);
+                lines.push(`  Strategia budżetu ........ Budżet kampanii (CBO)`);
+                lines.push(`  Dzienny budżet ........... ${dailyBudget} zł`);
+                lines.push(`  Strategia oferty ......... Najniższy koszt`);
+                lines.push(`  Typ zakupu ............... Aukcja`);
+                lines.push(`  Status (na start) ........ Wstrzymana`);
+                lines.push(`  Beneficjent .............. ${beneficiary}`);
+                lines.push(`  Płatnik .................. ${beneficiary} (taki sam jak beneficjent)`);
+                lines.push(``);
+                lines.push(``);
+                lines.push(sep);
+                lines.push(`3. GRUPA ODBIORCÓW (tylko JEDNA na start)`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(`*** WAŻNE — zanim zaczniesz konfigurować grupę: ***`);
+                lines.push(``);
+                lines.push(`NIE bierz automatycznie sugerowanej grupy poniżej. Najpierw`);
+                lines.push(`SAMODZIELNIE przeanalizuj:`);
+                lines.push(``);
+                lines.push(`  1) Produkt (nazwa, opis, kategoria)`);
+                lines.push(`  2) Landing page (${landingUrl || 'brak URL'}) — jeśli masz dostęp, obejrzyj go`);
+                lines.push(`  3) Copy reklamowe (sekcja 4 poniżej — headline, primary text, angles)`);
+                lines.push(``);
+                lines.push(`Następnie ZAPROPONUJ UŻYTKOWNIKOWI 2-3 WŁASNE WARIANTY grupy odbiorców:`);
+                lines.push(``);
+                lines.push(`  Wariant 1 — szeroka grupa (np. bez zainteresowań, tylko wiek + płeć`);
+                lines.push(`              + kraj — niech Advantage+ zrobi targetowanie)`);
+                lines.push(`  Wariant 2 — wąska grupa z konkretnymi zainteresowaniami (2-5 interestów`);
+                lines.push(`              ściśle związanych z produktem)`);
+                lines.push(`  Wariant 3 — grupa oparta na zachowaniach / problemach, które rozwiązuje`);
+                lines.push(`              produkt`);
+                lines.push(``);
+                lines.push(`Dla każdego wariantu podaj: nazwę, wiek min/max, płeć, kraj,`);
+                lines.push(`interesy/zachowania, uzasadnienie (rationale).`);
+                lines.push(``);
+                lines.push(`NASTĘPNIE porównaj swoje warianty z sugestią Manusa poniżej`);
+                lines.push(`i zarekomenduj użytkownikowi JEDEN — uzasadnij dlaczego.`);
+                lines.push(`Dopiero po akceptacji użytkownika konfiguruj grupę w Ads Managerze.`);
+                lines.push(``);
+                lines.push(`--- Sugestia od Manusa (do porównania, NIE do ślepego przepisania) ---`);
                 lines.push(``);
                 if (suggestedGroup) {
                     const g = suggestedGroup;
                     const genderPl = g.gender === 'female' ? 'Kobiety' : g.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
-                    lines.push(`- **Nazwa:** ${g.name || 'Grupa A'}`);
-                    lines.push(`- **Wiek:** ${g.age_min || 25}–${g.age_max || 55}`);
-                    lines.push(`- **Płeć:** ${genderPl}`);
-                    lines.push(`- **Kraj:** Polska`);
+                    lines.push(`  Nazwa ............ ${g.name || 'Grupa A'}`);
+                    lines.push(`  Wiek ............. ${g.age_min || 25}-${g.age_max || 55}`);
+                    lines.push(`  Płeć ............. ${genderPl}`);
+                    lines.push(`  Kraj ............. Polska`);
                     if (Array.isArray(g.interests) && g.interests.length) {
-                        lines.push(`- **Zainteresowania (${g.interests.length}):** ${g.interests.join(', ')}`);
+                        lines.push(`  Zainteresowania .. ${g.interests.join(', ')}`);
                     }
                     if (Array.isArray(g.behaviors) && g.behaviors.length) {
-                        lines.push(`- **Zachowania (${g.behaviors.length}):** ${g.behaviors.join(', ')}`);
+                        lines.push(`  Zachowania ....... ${g.behaviors.join(', ')}`);
                     }
-                    if (g.rationale) lines.push(`- **Uzasadnienie Manusa:** ${g.rationale}`);
+                    if (g.rationale) {
+                        lines.push(``);
+                        lines.push(`  Uzasadnienie Manusa:`);
+                        lines.push(`  ${g.rationale}`);
+                    }
                 } else {
-                    lines.push(`_Manus nie wygenerował sugestii grupy dla tego workflow._ Zaproponuj użytkownikowi własne warianty od zera.`);
+                    lines.push(`  (Manus nie wygenerował sugestii grupy dla tego workflow.`);
+                    lines.push(`   Zaproponuj użytkownikowi własne warianty od zera.)`);
                 }
                 lines.push(``);
-                lines.push(`### ⚙️ Ustawienia zestawu reklam (niezależne od targetowania):`);
+                lines.push(`--- Ustawienia zestawu reklam (niezależne od targetowania) ---`);
                 lines.push(``);
-                lines.push(`- **Lokalizacja konwersji:** Strona internetowa`);
-                lines.push(`- **Pixel / zdarzenie:** zapytaj użytkownika który pixel i które zdarzenie (zazwyczaj "Kup" / Purchase)`);
-                lines.push(`- **Umiejscowienia:** **Advantage+ (automatyczne)** — NIE wybieraj ręcznie`);
-                lines.push(`- **Optymalizacja dostarczania:** Konwersje`);
+                lines.push(`  Lokalizacja konwersji ...... Strona internetowa`);
+                lines.push(`  Pixel / zdarzenie .......... zapytaj użytkownika (zazwyczaj "Kup" / Purchase)`);
+                lines.push(`  Umiejscowienia ............. Advantage+ (automatyczne) — NIE ręcznie`);
+                lines.push(`  Optymalizacja dostarczania.. Konwersje`);
                 lines.push(``);
-                lines.push(`## 4. Reklamy (${ads.length} wariantów w tej jednej grupie — A/B test)`);
                 lines.push(``);
-                lines.push(`Wszystkie ${ads.length} reklam idzie do **tej samej** grupy odbiorców. Każda ma inną grafikę i inny angle (kąt perswazji). Meta sama wybierze zwycięzcę.`);
+                lines.push(sep);
+                lines.push(`4. REKLAMY (${ads.length} wariantów w tej jednej grupie — A/B test)`);
+                lines.push(sep);
                 lines.push(``);
-                lines.push(`**Dla każdej reklamy w Ads Managerze wybierz:**`);
+                lines.push(`Wszystkie ${ads.length} reklamy idą do TEJ SAMEJ grupy odbiorców.`);
+                lines.push(`Każda ma inną grafikę i inny angle (kąt perswazji). Meta sama`);
+                lines.push(`wybierze zwycięzcę.`);
                 lines.push(``);
-                lines.push(`- Format: **Jedna grafika lub film**`);
-                lines.push(`- Multi-advertiser: **wyłącz**`);
-                lines.push(`- Zaawansowane ulepszenia: **wyłącz** (inaczej Meta podmieni teksty)`);
-                lines.push(`- Destynacja: **Witryna internetowa**`);
-                lines.push(`- Adres URL: \`${landingUrl}\``);
+                lines.push(`Dla każdej reklamy w Ads Managerze wybierz:`);
+                lines.push(``);
+                lines.push(`  - Strona (Page): strona marki "${beneficiary}" z portfolio (patrz Krok 0)`);
+                lines.push(`  - Format: Jedna grafika lub film`);
+                lines.push(`  - Multi-advertiser: WYŁĄCZ`);
+                lines.push(`  - Zaawansowane ulepszenia: WYŁĄCZ (inaczej Meta podmieni teksty)`);
+                lines.push(`  - Destynacja: Witryna internetowa`);
+                lines.push(`  - Adres URL: ${landingUrl}`);
                 lines.push(``);
                 ads.forEach(ad => {
-                    lines.push(`### Reklama #${ad.index}${ad.angle ? ` (${ad.angle})` : ''}`);
+                    lines.push(`--- REKLAMA #${ad.index}${ad.angle ? ` (${ad.angle})` : ''} ---`);
                     lines.push(``);
-                    lines.push(`- **Grafika:** \`kreacje/${ad.filename}\` (w tym pakiecie ZIP)`);
-                    lines.push(`- **Tekst główny (Primary, max 125 znaków):**`);
+                    lines.push(`Grafika: kreacje/${ad.filename}`);
+                    lines.push(`         (użytkownik wgra ten plik ręcznie w Ads Managerze;`);
+                    lines.push(`         znajduje się w folderze "kreacje/" tego pakietu)`);
                     lines.push(``);
-                    lines.push(`  > ${ad.primary_text.replace(/\n/g, '\n  > ')}`);
+                    lines.push(`Tekst główny (Primary, max 125 znaków):`);
                     lines.push(``);
-                    lines.push(`- **Nagłówek (Headline, max 40 znaków):** ${ad.headline}`);
-                    lines.push(`- **Opis linku (Description, max 30 znaków):** ${ad.description}`);
-                    lines.push(`- **CTA (Call to Action):** ${ad.cta}`);
+                    ad.primary_text.split('\n').forEach(l => lines.push(`    ${l}`));
+                    lines.push(``);
+                    lines.push(`Nagłówek (Headline, max 40 znaków):`);
+                    lines.push(`    ${ad.headline}`);
+                    lines.push(``);
+                    lines.push(`Opis linku (Description, max 30 znaków):`);
+                    lines.push(`    ${ad.description}`);
+                    lines.push(``);
+                    lines.push(`CTA (Call to Action):`);
+                    lines.push(`    ${ad.cta}`);
                     lines.push(``);
                 });
-                lines.push(`## 5. Kolejność działań w Ads Managerze`);
                 lines.push(``);
-                lines.push(`1. **Utwórz kampanię** z parametrami z sekcji 2. Status: Wstrzymana.`);
-                lines.push(`2. **Zaproponuj użytkownikowi warianty grupy odbiorców** (sekcja 3) — czekaj na akceptację.`);
-                lines.push(`3. **Utwórz 1 zestaw reklam (ad set)** z zaakceptowanego wariantu.`);
-                lines.push(`4. **Dodaj ${ads.length} reklamy** w ad secie — każda z własną grafiką z folderu \`kreacje/\` i copy z sekcji 4.`);
-                lines.push(`5. **Sprawdź podgląd** reklam (desktop + mobile).`);
-                lines.push(`6. **NIE publikuj.** Zostaw status "Wstrzymana" i poinformuj użytkownika, że kampania jest gotowa do review.`);
+                lines.push(sep);
+                lines.push(`5. KOLEJNOŚĆ DZIAŁAŃ W ADS MANAGERZE`);
+                lines.push(sep);
                 lines.push(``);
-                lines.push(`## 6. Gotowość / Checklist końcowy`);
+                lines.push(`  0. ZNAJDŹ STRONĘ marki "${beneficiary}" w portfolio "${PORTFOLIO}".`);
+                lines.push(`     Jeśli strony nie ma — ZATRZYMAJ SIĘ (patrz Krok 0 powyżej).`);
+                lines.push(`  1. Utwórz kampanię z parametrami z sekcji 2. Status: Wstrzymana.`);
+                lines.push(`  2. Zaproponuj użytkownikowi 2-3 WARIANTY grupy odbiorców (sekcja 3).`);
+                lines.push(`     Czekaj na akceptację PRZED konfigurowaniem ad seta.`);
+                lines.push(`  3. Utwórz 1 zestaw reklam (ad set) z zaakceptowanego wariantu.`);
+                lines.push(`  4. Dodaj ${ads.length} reklamy w tym ad secie — każda z własną grafiką`);
+                lines.push(`     z folderu "kreacje/" i copy z sekcji 4.`);
+                lines.push(`  5. Sprawdź podgląd reklam (desktop + mobile).`);
+                lines.push(`  6. NIE PUBLIKUJ. Zostaw status "Wstrzymana" i poinformuj użytkownika,`);
+                lines.push(`     że kampania jest gotowa do review.`);
                 lines.push(``);
-                lines.push(`- [ ] Kampania utworzona, CBO = ${dailyBudget} zł/dzień, cel Sprzedaż, Wstrzymana`);
-                lines.push(`- [ ] Beneficjent i płatnik = "${beneficiary}"`);
-                lines.push(`- [ ] Grupa odbiorców ustalona z użytkownikiem (NIE ślepo z Manusa)`);
-                lines.push(`- [ ] Placement = Advantage+`);
-                lines.push(`- [ ] Pixel i zdarzenie Purchase wybrane`);
-                lines.push(`- [ ] ${ads.length} reklam dodanych z poprawną grafiką + copy`);
-                lines.push(`- [ ] Adres URL każdej reklamy = ${landingUrl}`);
-                lines.push(`- [ ] Każda reklama: multi-advertiser WYŁ., zaawansowane ulepszenia WYŁ.`);
                 lines.push(``);
-                lines.push(`---`);
-                lines.push(`_Wygenerowano: ${new Date().toISOString()} · Workflow: ${workflow.id}_`);
-
-                zip.file('BRIEF.md', lines.join('\n'));
-
-                // dane.json — strukturalne dane dla Claude (jako fallback, gdyby wolał JSON)
-                zip.file('dane.json', JSON.stringify({
+                lines.push(sep);
+                lines.push(`6. CHECKLIST KOŃCOWY`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(`  [ ] Strona marki "${beneficiary}" znaleziona w portfolio "${PORTFOLIO}"`);
+                lines.push(`  [ ] Kampania utworzona: CBO = ${dailyBudget} zł/dzień, cel Sprzedaż, Wstrzymana`);
+                lines.push(`  [ ] Beneficjent i płatnik = "${beneficiary}"`);
+                lines.push(`  [ ] Grupa odbiorców ustalona z użytkownikiem (NIE ślepo z Manusa)`);
+                lines.push(`  [ ] Placement = Advantage+`);
+                lines.push(`  [ ] Pixel i zdarzenie Purchase wybrane`);
+                lines.push(`  [ ] ${ads.length} reklam dodanych z poprawną grafiką + copy`);
+                lines.push(`  [ ] Adres URL każdej reklamy = ${landingUrl}`);
+                lines.push(`  [ ] Każda reklama: multi-advertiser WYŁ., zaawansowane ulepszenia WYŁ.`);
+                lines.push(``);
+                lines.push(``);
+                lines.push(sep);
+                lines.push(`ZAŁĄCZNIK A — DANE STRUKTURALNE (JSON, do szybkiego lookupu)`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(JSON.stringify({
                     workflow_id: workflow.id,
+                    portfolio: PORTFOLIO,
                     beneficiary,
                     product: { name: productName, description: productDesc },
                     landing_url: landingUrl,
@@ -11700,28 +11796,26 @@ Zwróć TYLKO JSON.`;
                     ad_set_count_target: 1,
                     ads,
                 }, null, 2));
+                lines.push(``);
+                lines.push(``);
+                lines.push(sep);
+                lines.push(`JAK UŻYĆ TEGO BRIEFA (dla administratora, nie dla Claude)`);
+                lines.push(sep);
+                lines.push(``);
+                lines.push(`  1. Otwórz Chrome z rozszerzeniem Claude Cowork.`);
+                lines.push(`  2. Wejdź na https://adsmanager.facebook.com`);
+                lines.push(`  3. Uruchom Claude Cowork i WKLEJ CAŁĄ TREŚĆ TEGO PLIKU jako pierwszą`);
+                lines.push(`     wiadomość w czacie.`);
+                lines.push(`  4. Powiedz: "Skonfiguruj kampanię wg tego briefu. Najpierw zweryfikuj`);
+                lines.push(`     stronę w portfolio (Krok 0), a potem zaproponuj mi warianty grupy"`);
+                lines.push(`  5. Grafiki wgraj ręcznie z folderu "kreacje/" kiedy Cowork poprosi`);
+                lines.push(`     (przeciągnij plik do pola upload w Ads Managerze — Cowork nie ma`);
+                lines.push(`     bezpośredniego dostępu do dysku).`);
+                lines.push(`  6. Status kampanii zostanie na "Wstrzymana" — publikacja ręczna po review.`);
+                lines.push(``);
+                lines.push(`Wygenerowano: ${new Date().toISOString()}`);
 
-                // README.txt
-                zip.file('README.txt', [
-                    'PAKIET CLAUDE COWORK — kampania Meta Ads',
-                    '==========================================',
-                    '',
-                    'Zawartość:',
-                    '  BRIEF.md          — instrukcja krok po kroku dla Claude Cowork',
-                    '  dane.json         — te same dane w formacie strukturalnym (opcjonalne)',
-                    '  kreacje/*.png     — grafiki reklamowe (5 szt.)',
-                    '',
-                    'Jak użyć:',
-                    '  1. Otwórz Chrome z rozszerzeniem Claude Cowork.',
-                    '  2. Wejdź na https://adsmanager.facebook.com',
-                    '  3. Uruchom Claude Cowork i wklej/załącz BRIEF.md jako kontekst.',
-                    '  4. Powiedz: "Skonfiguruj kampanię wg tego briefu. Najpierw zaproponuj',
-                    '     mi warianty grupy odbiorców — NIE bierz automatycznie sugestii Manusa."',
-                    '  5. Claude wyklika kampanię w Ads Managerze, zadając pytania po drodze.',
-                    '  6. Status kampanii zostanie na "Wstrzymana" — ty publikujesz sam po review.',
-                    '',
-                    `Wygenerowano: ${new Date().toISOString()}`,
-                ].join('\n'));
+                zip.file('BRIEF.txt', lines.join('\n'));
 
                 // Pobierz PNG-i do folderu kreacje/
                 for (const c of creatives) {
