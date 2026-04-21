@@ -11513,10 +11513,9 @@ Zwróć TYLKO JSON.`;
 
                 // Spec z Manusa — reużywamy jeśli dostępny (grupy odbiorców, rationale)
                 const spec = adsData?.campaign_spec || null;
-                const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
                 const dailyBudget = spec?.campaign?.daily_budget_total || 10;
 
-                // Beneficjent z brandingu
+                // Beneficjent z brandingu — MUSI być przed campaignName (nazwa kampanii = marka, nie klient)
                 let beneficiary = '';
                 let brandDesc = '';
                 try {
@@ -11529,6 +11528,10 @@ Zwróć TYLKO JSON.`;
                     }
                 } catch (_) {}
                 if (!beneficiary) beneficiary = spec?.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
+
+                // Nazwa kampanii ZAWSZE z marki — nigdy z nazwy/nazwiska klienta.
+                // Ignorujemy spec.campaign.name z Manusa, bo bywa tam customer_name.
+                const campaignName = `${beneficiary} — Launch`;
 
                 // Produkt (dla kontekstu w briefie)
                 let productName = '', productDesc = '';
