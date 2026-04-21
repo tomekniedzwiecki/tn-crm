@@ -18,25 +18,88 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
+// Detect actual image type from magic bytes. Returns null if unknown.
+// CDNs sometimes lie in Content-Type (e.g. kwcdn serves AVIF with image/jpeg header
+// when /format/avif is in path), so the only reliable check is the file signature.
+function sniffImageType(bytes: Uint8Array): string | null {
+  if (bytes.length < 12) return null
+  // JPEG: FF D8 FF
+  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return 'image/jpeg'
+  // PNG: 89 50 4E 47 0D 0A 1A 0A
+  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47 &&
+      bytes[4] === 0x0D && bytes[5] === 0x0A && bytes[6] === 0x1A && bytes[7] === 0x0A) return 'image/png'
+  // WebP: RIFF....WEBP
+  if (bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46 &&
+      bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp'
+  // ISO BMFF (HEIC/HEIF/AVIF): bytes[4..7] = 'ftyp', brand at bytes[8..11]
+  if (bytes[4] === 0x66 && bytes[5] === 0x74 && bytes[6] === 0x79 && bytes[7] === 0x70) {
+    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11])
+    if (brand === 'avif' || brand === 'avis') return 'image/avif'
+    if (brand === 'heic' || brand === 'heix' || brand === 'mif1' || brand === 'msf1') return 'image/heic'
+    if (brand === 'heif') return 'image/heif'
+  }
+  return null
+}
+
+// Normalize reference URLs so CDN returns a Gemini-compatible format.
+// kwcdn/Qiniu-style: replace /format/avif with /format/jpg (keeps w/h/q params intact).
+// Strip Cloudinary f_auto/f_avif, imgix fm=avif, etc.
+function normalizeReferenceUrl(url: string): string {
+  let out = url
+  // Qiniu: /format/avif -> /format/jpg (also webp; Gemini supports webp but some CDNs glitch)
+  out = out.replace(/\/format\/avif\b/gi, '/format/jpg')
+  // Cloudinary: f_avif -> f_jpg (inside comma-separated transform list)
+  out = out.replace(/([,/])f_avif\b/gi, '$1f_jpg')
+  // imgix/thumbor: fm=avif -> fm=jpg (query param)
+  out = out.replace(/([?&])fm=avif\b/gi, '$1fm=jpg')
+  return out
+}
+
 // Fetch image and convert to base64 (safe chunking for large images)
 async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeType: string }> {
-  console.log(`Fetching reference image: ${url}`)
-  const response = await fetch(url, {
+  const normalizedUrl = normalizeReferenceUrl(url)
+  if (normalizedUrl !== url) {
+    console.log(`Normalized reference URL: ${url} -> ${normalizedUrl}`)
+  }
+  console.log(`Fetching reference image: ${normalizedUrl}`)
+  const response = await fetch(normalizedUrl, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; SupabaseEdge/1.0)',
-      'Accept': 'image/jpeg,image/png,image/webp,*/*'
+      // Explicitly downrank AVIF/HEIC so content-negotiating CDNs pick JPEG/PNG/WebP
+      'Accept': 'image/jpeg,image/png,image/webp;q=0.9,image/*;q=0.5,*/*;q=0.1'
     }
   })
   if (!response.ok) {
     throw new Error(`Failed to fetch reference image: ${response.status}`)
   }
 
-  let contentType = response.headers.get('content-type') || 'image/jpeg'
-  // Normalize content-type (strip charset, etc.)
+  let contentType = response.headers.get('content-type') || ''
   contentType = contentType.split(';')[0].trim().toLowerCase()
 
   const arrayBuffer = await response.arrayBuffer()
   const uint8Array = new Uint8Array(arrayBuffer)
+
+  // Trust magic bytes over Content-Type header — CDNs lie.
+  const sniffedType = sniffImageType(uint8Array)
+  if (sniffedType && sniffedType !== contentType) {
+    console.warn(`Content-Type mismatch: header="${contentType}" magic="${sniffedType}". Trusting magic bytes.`)
+    contentType = sniffedType
+  } else if (!sniffedType && !contentType) {
+    throw new Error('Could not determine image format: missing Content-Type and unrecognized magic bytes')
+  }
+
+  // Fail loudly — earlier code silently relabeled AVIF as JPEG, which then blew up
+  // downstream when the bytes reached Claude/Gemini. Force the caller to supply a
+  // supported format rather than lying about the mime type.
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+  if (!validTypes.includes(contentType)) {
+    throw new Error(
+      `Unsupported reference image format: ${contentType}. ` +
+      `Source URL returns a format Gemini cannot process. ` +
+      `Strip CDN format parameters (e.g. /format/avif, f_avif, fm=avif) or use a JPEG/PNG/WebP source. ` +
+      `Original URL: ${url}`
+    )
+  }
 
   // Chunked base64 encoding to avoid stack overflow on large images
   const CHUNK_SIZE = 32768
@@ -46,14 +109,6 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeTy
     binary += String.fromCharCode.apply(null, Array.from(chunk))
   }
   const base64 = btoa(binary)
-
-  // Gemini accepts image/jpeg, image/png, image/webp, image/heic, image/heif
-  // Fallback to image/jpeg if unknown
-  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-  if (!validTypes.includes(contentType)) {
-    console.warn(`Unsupported mime type: ${contentType}, falling back to image/jpeg`)
-    contentType = 'image/jpeg'
-  }
 
   console.log(`Reference image fetched: ${contentType}, ${uint8Array.length} bytes, ${base64.length} base64 chars`)
   return { base64, mimeType: contentType }
