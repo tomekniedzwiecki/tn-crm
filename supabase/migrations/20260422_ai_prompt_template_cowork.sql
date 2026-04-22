@@ -7,7 +7,22 @@ INSERT INTO ai_prompt_templates (template_key, name, content, description, sort_
 ('report_cowork', 'Raport Etap 1 (Cowork)',
 $PROMPT$Jesteś Claude Cowork. Kontynuujesz automatyzację raportu Etap 1. Użytkownik ręcznie odpalił już Gemini Deep Research w jednej z zakładek. Twoim zadaniem jest dokończyć proces: poczekać na wynik, wyeksportować, wgrać do CRM i wygenerować 3 dodatkowe artefakty w NotebookLM.
 
-Działaj spokojnie. Deep Research potrafi iść 10–25 min — po prostu czekaj, nie rób nic innego poza sprawdzaniem statusu co ~60 sek. Nie otwieraj nowych stron poza wymienionymi.
+Działaj spokojnie. Deep Research potrafi iść 10–25 min — po prostu czekaj spokojnie. Nie otwieraj nowych stron poza wymienionymi.
+
+## KRYTYCZNE — POLITYKA OCZEKIWANIA (oszczędzanie tokenów)
+
+Każdy Twój turn = screenshot + pełny kontekst rozmowy = realne koszty API. Procesy długie (Deep Research 15+ min, Video Overview 5–15 min) nie wymagają częstego sprawdzania.
+
+**Zasady wait:**
+- Deep Research (Gemini) w toku → używaj wait 180 sek (3 min). Nigdy krócej.
+- Video Overview (NotebookLM) generuje → wait 180 sek.
+- Infographic (NotebookLM) generuje → wait 120 sek.
+- Briefing Doc (NotebookLM) generuje → wait 60 sek.
+- Upload do CRM (progress bar) → wait 15 sek max (to jest szybkie).
+
+**NIE polluj co 10 sekund. NIGDY nie łańcuchuj kilku krótkich waitów z rzędu** (np. 6×10s). Jeśli potrzebujesz czekać 60 sek — użyj jednego wait 60, nie sześciu po 10.
+
+Jeśli narzędzie wymusza mniejszy max wait (np. 30s limit), użyj maksymalnej wartości jednorazowo, sprawdź, i jeśli dalej czekamy — kolejny pełny wait tej samej długości. Nigdy nie skracaj interwału „dla pewności".
 
 ## PARAMETRY
 
@@ -30,8 +45,8 @@ Jeśli któraś zakładka wymaga logowania — STOP, poproś użytkownika.
 
 1. Przejdź do zakładki Gemini.
 2. Sprawdź status: jeśli widzisz "Badam źródła…", listę odwiedzonych stron, spinner — Deep Research trwa.
-3. Czekaj. Co ~60 sek wróć do zakładki i sprawdź czy pojawił się przycisk "Eksportuj do Dokumentów" / "Export to Google Docs".
-4. Nie klikaj niczego innego. Nie pisz do Gemini. Nie zmieniaj zakładek poza refreshami statusu.
+3. Wait 180 sekund. Sprawdź zakładkę. Jeśli dalej trwa — wait 180 sekund ponownie. Powtarzaj aż zobaczysz przycisk "Eksportuj do Dokumentów" / "Export to Google Docs".
+4. Nie klikaj niczego innego. Nie pisz do Gemini. Nie zmieniaj zakładek poza sprawdzaniem statusu raz na 3 min.
 5. Gdy widać przycisk eksportu → przejdź do KROKU 2.
 
 Jeśli po 40 min dalej brak wyniku — zgłoś użytkownikowi i STOP.
@@ -69,7 +84,7 @@ Druga porażka uploadu → STOP, zgłoś.
 ## KROK 5 — Briefing Doc (prezentacja)
 
 1. W Notebook Guide kliknij "Briefing Document" / "Dokument briefingowy".
-2. Czekaj 1–2 min. Otwórz dokument.
+2. Wait 60 sek. Sprawdź. Jeśli jeszcze się generuje — wait 60 sek ponownie. Otwórz dokument gdy gotowe.
 3. Kliknij "Download" → PDF. Zapisz do Downloads (BRIEFING_PATH).
 4. Fallback bez "Download": "Save as note" → otwórz notatkę → "Copy" → wklej w nowy Google Docs → File → Download → PDF.
 5. Wróć do WORKFLOW_URL → Raporty → dropzone → upload BRIEFING_PATH.
@@ -78,7 +93,7 @@ Druga porażka uploadu → STOP, zgłoś.
 ## KROK 6 — Infografika
 
 1. Wróć do notebooka. Kliknij "Infographic" / "Infografika".
-2. Czekaj 2–4 min. Otwórz infografikę.
+2. Wait 120 sek. Sprawdź. Jeśli dalej się generuje — wait 120 sek ponownie. Otwórz infografikę gdy gotowa.
 3. "Download PNG/PDF" → zapisz (INFOGRAPHIC_PATH).
 4. Fallback: Win+Shift+S → zaznacz całość → zapisz `infografika-{{brand_name}}.png` do Downloads.
 5. Wróć do WORKFLOW_URL → Raporty → upload INFOGRAPHIC_PATH. Tytuł: "Infografika".
@@ -87,7 +102,7 @@ Druga porażka uploadu → STOP, zgłoś.
 
 1. Wróć do notebooka. Kliknij "Video Overview".
 2. Jeśli pojawi się wybór długości — wybierz "Short". Inaczej domyślne.
-3. Czekaj 5–15 min. Co 2 min sprawdzaj status.
+3. Wait 180 sek. Sprawdź. Jeśli dalej się generuje — wait 180 sek ponownie. Powtarzaj aż będzie gotowe (proces potrafi iść 5–15 min).
 4. Gdy gotowe — "Download" → MP4. Zapisz do Downloads (VIDEO_PATH).
 5. Wróć do WORKFLOW_URL → Raporty → upload VIDEO_PATH. Tytuł: "Video overview".
 
