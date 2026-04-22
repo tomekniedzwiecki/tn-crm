@@ -82,3 +82,38 @@ Dopełnienie (subtelne): cross-hair grid w rogu hero (2px cyan lines tworzące p
 - **Hero:** H4 Editorial numerał — mamy jedną monumentalną liczbę spec (`5600 Pa`) która jest gwiazdą produktu; ciemny hero z dużą cyfrą tła + Space Grotesk + Space Mono `Pa` pasuje 1:1 do manifesta „Engineered Air".
 - **Features:** F2 Bento asymetryczny — 6 funkcji (ssanie, linka, UPS, alarm, podwójne tarcze, pilot+aplikacja) mieszczą się w 6-polowym bento; hero tile ciemna z dominującą liczbą `5600 Pa` powtarza rytm z Hero i daje editorial feel bez generycznego 2×2 grid.
 - **Testimonials:** T2 Before/After — Windox jest produktem transformacyjnym z MIERZALNĄ zmianą (czas: 3h → 20min, ryzyko: „wychylać się" → „pilot w ręce", widok: „mgła" → „ostry horyzont"); before/after karty z ciemnym tłem i cyan highlight na stronie „po" są mocniejsze niż 3 generyczne voice cards.
+
+## 10. Photo System (Engineered Air)
+
+### Shape constraint (NAJWAŻNIEJSZE — dla każdego promptu z reference)
+`MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY — do not redesign. Windox WX-5600 Pro robot window cleaner: rectangular white matte body with rounded corners, large OVAL central module (glossy black rim, smooth white top surface, small blue LED dot on dark front panel). Two circular GRAY microfiber pads on left and right sides (each about 1/3 of body width). Black power cable exits from the bottom edge. Compact size, roughly 22cm × 17cm.`
+
+### Lighting
+Boczne naturalne światło z dużego okna + drugi dim practical lamp w tle. Chłodny poranek (Nordic morning / cloudy). W hero scenach — dark mode z niskim kluczem, ostre highlight na produkcie, głęboki cień pod nim. W rytual/how-it-works — jasne rozproszone światło z pochmurnego nieba.
+
+### Paleta w scenach
+- **Tła:** deep space navy (#0D1B2A) w hero/CTA; cool paper (#F7FAFC) w light body scenes; biel ścian + szarość siding w panoramie.
+- **Akcenty:** crystal cyan (#00D4E8) TYLKO subtelnie — LED na robocie, reflex na szybie, nigdy jako duży element.
+- **Pomarańcz (safety orange #FF6D3A):** tylko na małym karabińczyku safety rope na offer flat-lay.
+- **UNIKAMY:** ciepłe gold hour, purple-blue gradient, neon glow.
+
+### Kadrowanie
+- Hero & problem: pionowy 4:5, produkt/osoba w 1/3 dolnej, dużo pustej panoramy u góry.
+- Bento tiles: 16:9 macro close-up, shallow DoF.
+- Rytuał: 4:3 cinematic, ręce + produkt w połowie kadru.
+- Offer: 4:3 overhead flat-lay, geometryczny rozkład.
+
+### Post-processing
+Shot on 35mm film (Kodak Portra 400), subtle grain, mild halation na highlightach, slight chromatic aberration na krawędziach szyby. Lekko desaturated cool tones. Slight hand-held tilt — nie CGI-perfect symmetry.
+
+### Persona w kadrze
+Tomek, 40 l., IT entrepreneur, 15-25k PLN/mies. Mieszka na 4. piętrze w apartamencie panoramicznym lub bloku 11-piętrowym. Skandynawski capsule interior — linen sofa, mid-century floor lamp, dębowe podłogi. Gdy w kadrze: tmavy szary henley lub cienki wool crewneck, krótkie włosy, natural stubble, slightly tired morning expression. Trzyma kubek kawy z naturalnym gestem.
+
+### Negatywy — NIGDY
+- Neon cyan glow pulsujący na wszystkim
+- Glitch / holographic overlay
+- Stock body language (pointing at product, thumbs up, sztywne uśmiechy)
+- Checkmark ✓ na obrazie
+- Border-left 4px solid na produkcie
+- Golden hour (tylko chłodne światło poranka)
+- Tekst / labels / watermarks w kadrze
