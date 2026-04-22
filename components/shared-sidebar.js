@@ -34,6 +34,7 @@ const APP_AVATAR_COLORS = {
 // ============================================
 const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
+    { id: 'target', icon: 'ph-target', label: 'Target', ownerEmails: ['tomekniedzwiecki@gmail.com'] },
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
     { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
@@ -497,7 +498,18 @@ function renderSidebar(config = {}) {
     // Build navigation HTML
     const navHtml = navItems.map(item => {
         const isActive = item.id === currentPage;
-        const hiddenClass = item.adminOnly ? ' hidden' : '';
+        // Hide by default if: adminOnly (until showAdminNav called) OR ownerEmails (until email verified)
+        let hiddenClass = '';
+        if (item.adminOnly) hiddenClass = ' hidden';
+        if (item.ownerEmails) {
+            // Hide unless current user email is in ownerEmails
+            const userUsername = (_userEmail || '').toLowerCase().split('@')[0];
+            const allowed = item.ownerEmails.some(e => {
+                const u = e.toLowerCase().includes('@') ? e.toLowerCase().split('@')[0] : e.toLowerCase();
+                return u === userUsername;
+            });
+            if (!allowed) hiddenClass = ' hidden';
+        }
         const itemId = `id="nav-${item.id}"`;
 
         const activeClasses = isActive
@@ -644,6 +656,20 @@ function setUserEmail(email) {
 
     // Re-render app switcher with proper permissions
     updateAppSwitcherVisibility();
+
+    // Show/hide per-user ownerEmails nav items (e.g. Target for Tomek only)
+    const userUsername = (_userEmail || '').toLowerCase().split('@')[0];
+    const navItems = getNavItemsForApp(_currentAppId);
+    navItems.filter(item => item.ownerEmails).forEach(item => {
+        const el = document.getElementById(`nav-${item.id}`);
+        if (!el) return;
+        const allowed = item.ownerEmails.some(e => {
+            const u = e.toLowerCase().includes('@') ? e.toLowerCase().split('@')[0] : e.toLowerCase();
+            return u === userUsername;
+        });
+        if (allowed) el.classList.remove('hidden');
+        else el.classList.add('hidden');
+    });
 }
 
 function updateAppSwitcherVisibility() {
