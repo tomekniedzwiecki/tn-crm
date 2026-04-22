@@ -11688,9 +11688,35 @@ Zwróć TYLKO JSON.`;
                 const manusGroups = Array.isArray(spec?.ad_sets) ? spec.ad_sets : [];
                 const suggestedGroup = manusGroups[0] || null;
 
+                // Mapowanie CTA → polski Meta UI (niektóre warianty z copy nie
+                // istnieją w Meta — Cowork ma użyć najbliższego odpowiednika).
+                const ctaPolishMap = {
+                    'sprawdź szczegóły': 'Dowiedz się więcej',
+                    'sprawdz szczegoly': 'Dowiedz się więcej',
+                    'zobacz szczegóły': 'Dowiedz się więcej',
+                    'dowiedz się więcej': 'Dowiedz się więcej',
+                    'zobacz opinie': 'Zobacz więcej',
+                    'zobacz więcej': 'Zobacz więcej',
+                    'kup teraz': 'Kup teraz',
+                    'zamów': 'Zamów teraz',
+                    'zamów teraz': 'Zamów teraz',
+                    'zapisz się': 'Zapisz się',
+                    'zarezerwuj': 'Zarezerwuj',
+                    'pobierz': 'Pobierz',
+                    'skontaktuj się': 'Skontaktuj się',
+                    'poproś o wycenę': 'Poproś o wycenę',
+                };
+                const mapCtaPl = (raw) => {
+                    const k = String(raw || '').toLowerCase().trim();
+                    if (!k) return { used: 'Dowiedz się więcej', original: '' };
+                    if (ctaPolishMap[k]) return { used: ctaPolishMap[k], original: raw };
+                    return { used: 'Dowiedz się więcej', original: raw };
+                };
+
                 // Kreacje + copy (A/B test w ramach JEDNEJ grupy)
                 const ads = creatives.map((c, i) => {
                     const v = versions[i] || {};
+                    const cta = mapCtaPl(v.cta);
                     return {
                         index: i + 1,
                         filename: c.filename || `kreacja_${i + 1}.png`,
@@ -11698,7 +11724,8 @@ Zwróć TYLKO JSON.`;
                         primary_text: v.primary_text || '',
                         headline: v.headline || '',
                         description: v.description || '',
-                        cta: v.cta || 'Dowiedz się więcej',
+                        cta_original: cta.original,
+                        cta_meta: cta.used,
                     };
                 });
 
@@ -11716,6 +11743,30 @@ Zwróć TYLKO JSON.`;
                 lines.push(`po kroku, pytaj użytkownika jeśli coś jest niejasne.`);
                 lines.push(`STATUS KAMPANII ZOSTAW NA "WSTRZYMANA" (Paused) — publikację robi`);
                 lines.push(`administrator po ręcznym review.`);
+                lines.push(``);
+                lines.push(`>>> DANE WEJŚCIOWE (ZERKNIJ NAJPIERW, POTEM WRÓĆ DO PROCEDURY) <<<`);
+                lines.push(``);
+                lines.push(`  Marka ....... ${beneficiary}`);
+                if (productName) lines.push(`  Produkt ..... ${productName}`);
+                lines.push(`  Landing ..... ${landingUrl || '!!! BRAK — zapytaj użytkownika'}`);
+                lines.push(`  Portfolio ... ${PORTFOLIO}`);
+                lines.push(`  Budżet ...... ${dailyBudget} zł/dzień · CBO · Sprzedaż`);
+                lines.push(`  Reklam ...... ${ads.length} (już wybrane przez admina, NIE dobieraj)`);
+                lines.push(``);
+                lines.push(`Otwórz landing page przed analizą produktu — najszybsze źródło wiedzy`);
+                lines.push(`o propozycji wartości, tonie, buyer persona.`);
+                lines.push(``);
+                lines.push(``);
+                lines.push(`>>> CHECKPOINTY (Twoje STOP-punkty, NIE pomijaj) <<<`);
+                lines.push(``);
+                lines.push(`  CHECKPOINT 0 — Weryfikacja strony marki w portfolio (przed kampanią).`);
+                lines.push(`                 Jeśli brak strony: ZATRZYMAJ i powiedz użytkownikowi.`);
+                lines.push(`  CHECKPOINT 1 — Akceptacja grupy odbiorców (przed konfiguracją ad seta).`);
+                lines.push(`                 Zaproponuj, czekaj na "ok"/"akceptuję".`);
+                lines.push(`  CHECKPOINT 2 — Wgranie grafik do biblioteki (przed pierwszą reklamą).`);
+                lines.push(`                 Czekaj na "gotowe"/"wgrane".`);
+                lines.push(`  CHECKPOINT 3 — Przekazanie kampanii do review (na końcu).`);
+                lines.push(`                 NIE publikuj, zostaw Wstrzymaną, poinformuj admina.`);
                 lines.push(``);
                 lines.push(``);
                 lines.push(sep);
@@ -11791,41 +11842,34 @@ Zwróć TYLKO JSON.`;
                 lines.push(`3. GRUPA ODBIORCÓW (tylko JEDNA na start)`);
                 lines.push(sep);
                 lines.push(``);
-                lines.push(`*** WAŻNE — zanim zaczniesz konfigurować grupę: ***`);
+                lines.push(`Masz AUTONOMIĘ w wyborze grupy odbiorców. NIE otrzymujesz żadnej`);
+                lines.push(`propozycji referencyjnej — proponujesz w pełni samodzielnie na podstawie`);
+                lines.push(`produktu, landingu i copy. Jedna propozycja → akceptacja → konfiguracja.`);
                 lines.push(``);
-                lines.push(`Masz AUTONOMIĘ w wyborze zainteresowań. NIE pytaj użytkownika o każdy`);
-                lines.push(`interest z osobna — sam dobierz sensowną listę na podstawie produktu`);
-                lines.push(`i copy, przedstaw ją raz użytkownikowi do akceptacji, potem konfiguruj.`);
+                lines.push(`Najpierw przeanalizuj (w tej kolejności):`);
                 lines.push(``);
-                lines.push(`Najpierw SAMODZIELNIE przeanalizuj:`);
-                lines.push(``);
-                lines.push(`  1) Produkt (nazwa, opis, kategoria)`);
-                lines.push(`  2) Landing page (${landingUrl || 'brak URL'}) — jeśli masz dostęp, obejrzyj go`);
-                lines.push(`  3) Copy reklamowe (sekcja 4 poniżej — headline, primary text, angles)`);
+                lines.push(`  1) Landing page ${landingUrl ? `(${landingUrl})` : ''} — otwórz go, obejrzyj.`);
+                lines.push(`  2) Produkt (nazwa, opis, kategoria — sekcja "Dane wejściowe").`);
+                lines.push(`  3) Copy reklamowe (sekcja 4 poniżej — headline, tekst główny, angles).`);
                 lines.push(``);
                 lines.push(`--- REGUŁY DOBORU ZAINTERESOWAŃ (KLUCZOWE) ---`);
                 lines.push(``);
                 lines.push(`  > Preferuj SZEROKIE zainteresowania, NIE zawężaj. <`);
                 lines.push(``);
-                lines.push(`  Meta algorytm dużo lepiej optymalizuje na większej populacji.`);
-                lines.push(`  Zbyt wąski interest (kilka tysięcy osób) = wysoki CPM, słabe wyniki,`);
-                lines.push(`  brak danych do uczenia. Szeroki interest (setki tysięcy / miliony osób)`);
-                lines.push(`  = Advantage+ znajdzie Ci właściwych kupujących w tej puli.`);
+                lines.push(`  Meta algorytm optymalizuje lepiej na większej populacji. Zbyt wąski`);
+                lines.push(`  interest (kilka tys. osób) = wysoki CPM, brak danych do uczenia.`);
+                lines.push(`  Szeroki interest (setki tys./miliony) = Advantage+ znajdzie kupujących.`);
                 lines.push(``);
                 lines.push(`  Konkretnie:`);
-                lines.push(`    - Wybieraj "parasolowe" kategorie (np. "Zdrowie i dobre samopoczucie",`);
-                lines.push(`      "Fitness", "Żywienie naturalne") zamiast nisz (np. "Biohacking",`);
-                lines.push(`      "Nootropics", "Intermittent fasting").`);
-                lines.push(`    - Jeśli Meta pokazuje liczbę odbiorców <100 tys. — interest jest`);
-                lines.push(`      za wąski, poszukaj szerszego odpowiednika.`);
-                lines.push(`    - 3-5 szerokich interestów > 10 wąskich. Więcej nie znaczy lepiej.`);
-                lines.push(`    - Nie łącz wykluczających się kategorii (np. "Luxury shopping"`);
-                lines.push(`      + "Deal hunting" — Meta zgłupieje).`);
+                lines.push(`    - Parasolowe kategorie (np. "Zdrowie i dobre samopoczucie", "Fitness",`);
+                lines.push(`      "Żywienie naturalne") zamiast nisz (np. "Biohacking", "Nootropics").`);
+                lines.push(`    - Odbiorców <100 tys. → interest za wąski, szukaj szerszego.`);
+                lines.push(`    - 3-5 szerokich > 10 wąskich. Więcej nie znaczy lepiej.`);
+                lines.push(`    - Nie łącz wykluczających się (np. "Luxury" + "Deal hunting").`);
                 lines.push(``);
                 lines.push(`--- TWOJE ZADANIE ---`);
                 lines.push(``);
-                lines.push(`  1. Zaproponuj JEDNĄ grupę odbiorców (nie 3 warianty — jedną, najlepszą`);
-                lines.push(`     pod ten produkt wg Twojej oceny). Z parametrami:`);
+                lines.push(`  1. Zaproponuj JEDNĄ grupę odbiorców z parametrami:`);
                 lines.push(`       - Nazwa (krótka, opisowa)`);
                 lines.push(`       - Wiek min-max`);
                 lines.push(`       - Płeć`);
@@ -11834,40 +11878,10 @@ Zwróć TYLKO JSON.`;
                 lines.push(`       - 0-2 zachowania (opcjonalnie)`);
                 lines.push(`       - Uzasadnienie 2-3 zdania dlaczego akurat to pasuje`);
                 lines.push(``);
-                lines.push(`  2. Porównaj swoją propozycję z sugestią Manusa poniżej. Jeśli Manus`);
-                lines.push(`     proponuje wąskie interesy — zastąp je szerszymi odpowiednikami.`);
+                lines.push(`  2. Przedstaw ją użytkownikowi. CHECKPOINT 1 — czekaj na "ok"/"akceptuję".`);
                 lines.push(``);
-                lines.push(`  3. Przedstaw użytkownikowi swoją finalną propozycję + krótko powiedz`);
-                lines.push(`     "różnice względem Manusa: zamieniłem X na szersze Y, bo ...".`);
-                lines.push(`     Poczekaj na akceptację lub zmiany.`);
-                lines.push(``);
-                lines.push(`  4. Po akceptacji — konfiguruj ad set w Ads Managerze (patrz sekcja`);
+                lines.push(`  3. Po akceptacji — konfiguruj ad set w Ads Managerze (patrz sekcja`);
                 lines.push(`     "JAK TECHNICZNIE DODAĆ" poniżej).`);
-                lines.push(``);
-                lines.push(`--- Sugestia od Manusa (do porównania i ew. rozszerzenia, NIE jako wyrocznia) ---`);
-                lines.push(``);
-                if (suggestedGroup) {
-                    const g = suggestedGroup;
-                    const genderPl = g.gender === 'female' ? 'Kobiety' : g.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
-                    lines.push(`  Nazwa ............ ${g.name || 'Grupa A'}`);
-                    lines.push(`  Wiek ............. ${g.age_min || 25}-${g.age_max || 55}`);
-                    lines.push(`  Płeć ............. ${genderPl}`);
-                    lines.push(`  Kraj ............. Polska`);
-                    if (Array.isArray(g.interests) && g.interests.length) {
-                        lines.push(`  Zainteresowania .. ${g.interests.join(', ')}`);
-                    }
-                    if (Array.isArray(g.behaviors) && g.behaviors.length) {
-                        lines.push(`  Zachowania ....... ${g.behaviors.join(', ')}`);
-                    }
-                    if (g.rationale) {
-                        lines.push(``);
-                        lines.push(`  Uzasadnienie Manusa:`);
-                        lines.push(`  ${g.rationale}`);
-                    }
-                } else {
-                    lines.push(`  (Manus nie wygenerował sugestii grupy dla tego workflow.`);
-                    lines.push(`   Zaproponuj użytkownikowi własne warianty od zera.)`);
-                }
                 lines.push(``);
                 lines.push(`--- Ustawienia zestawu reklam (niezależne od targetowania) ---`);
                 lines.push(``);
@@ -11919,6 +11933,12 @@ Zwróć TYLKO JSON.`;
                 lines.push(`  przed zapisaniem ad seta. Jeśli się przywraca po wyłączeniu — zgłoś`);
                 lines.push(`  to użytkownikowi, nie walcz z nią w pętli.`);
                 lines.push(``);
+                lines.push(`  Gdy Meta wyświetli DIALOG z pytaniem o powód wyłączenia Advantage+`);
+                lines.push(`  ("Dlaczego wyłączasz tę funkcję?" / "Udostępnij opinię"):`);
+                lines.push(`    → kliknij po prostu "Wyłącz" / "Kontynuuj" BEZ wyboru powodu.`);
+                lines.push(`    → jeśli nie ma takiej opcji — wybierz pierwszy dostępny powód.`);
+                lines.push(`    → NIE wypełniaj pola tekstowego, NIE zostawiaj tej decyzji adminowi.`);
+                lines.push(``);
                 lines.push(``);
                 lines.push(sep);
                 lines.push(`4. REKLAMY (${ads.length} wariantów w tej jednej grupie — A/B test)`);
@@ -11928,9 +11948,35 @@ Zwróć TYLKO JSON.`;
                 lines.push(`Każda ma inną grafikę i inny angle (kąt perswazji). Meta sama`);
                 lines.push(`wybierze zwycięzcę.`);
                 lines.push(``);
-                lines.push(`Dla każdej reklamy w Ads Managerze wybierz:`);
+                lines.push(`--- MAPOWANIE REKLAMA → PLIK GRAFIKI ---`);
                 lines.push(``);
-                lines.push(`  - Strona (Page): strona marki "${beneficiary}" z portfolio (patrz Krok 0)`);
+                ads.forEach(ad => {
+                    lines.push(`  Reklama #${ad.index}${ad.angle ? ` (${ad.angle})` : ''}  →  ${ad.filename}`);
+                });
+                lines.push(``);
+                lines.push(`UWAGA: numery reklam są 1..${ads.length} (nie odpowiadają numerom w nazwach plików).`);
+                lines.push(`Plik 'ad_3_...png' może należeć do "Reklamy #2" — kieruj się mapowaniem powyżej.`);
+                lines.push(``);
+                lines.push(`--- MAPOWANIE CTA (copy → polskie UI Meta) ---`);
+                lines.push(``);
+                lines.push(`Meta akceptuje tylko określone wartości w polu "Wezwanie do działania".`);
+                lines.push(`Jeśli w copy jest CTA którego Meta nie ma na liście, wybierz najbliższy`);
+                lines.push(`odpowiednik z tej tabeli:`);
+                lines.push(``);
+                lines.push(`  Copy → Meta UI (PL):`);
+                lines.push(`    "Sprawdź szczegóły" → "Dowiedz się więcej"`);
+                lines.push(`    "Zobacz opinie"     → "Zobacz więcej"`);
+                lines.push(`    "Zobacz szczegóły"  → "Dowiedz się więcej"`);
+                lines.push(`    "Kup teraz"         → "Kup teraz"`);
+                lines.push(`    "Zamów teraz"       → "Zamów teraz"`);
+                lines.push(`    "Zapisz się"        → "Zapisz się"`);
+                lines.push(``);
+                lines.push(`Jeśli dla konkretnej reklamy brief zawiera CTA spoza tej tabeli — wybierz`);
+                lines.push(`"Dowiedz się więcej" jako bezpieczny default.`);
+                lines.push(``);
+                lines.push(`--- USTAWIENIA WSPÓLNE DLA KAŻDEJ REKLAMY ---`);
+                lines.push(``);
+                lines.push(`  - Strona (Page): strona marki "${beneficiary}" z portfolio (patrz CHECKPOINT 0)`);
                 lines.push(`  - Format: Jedna grafika lub film`);
                 lines.push(`  - Multi-advertiser: WYŁĄCZ`);
                 lines.push(`  - Zaawansowane ulepszenia: WYŁĄCZ (inaczej Meta podmieni teksty)`);
@@ -11981,18 +12027,18 @@ Zwróć TYLKO JSON.`;
                 lines.push(``);
                 lines.push(`        Możesz to zrobić przez 'Account media' → 'Upload media' albo`);
                 lines.push(`        bezpośrednio przez 'Dodaj media' w kreatorze reklamy (wszystkie`);
-                lines.push(`        5 naraz — drag&drop). Daj znać 'gotowe' gdy wszystkie są w`);
+                lines.push(`        ${ads.length} naraz — drag&drop). Daj znać 'gotowe' gdy wszystkie są w`);
                 lines.push(`        bibliotece."`);
                 lines.push(``);
-                lines.push(`  3. CZEKAJ na potwierdzenie użytkownika ("gotowe", "ok", "wgrane").`);
+                lines.push(`  3. CHECKPOINT 2 — czekaj na potwierdzenie ("gotowe", "ok", "wgrane").`);
                 lines.push(`  4. Od teraz dla każdej reklamy po prostu WYBIERASZ właściwą grafikę`);
                 lines.push(`     z biblioteki po nazwie pliku — bez kolejnych STOP'ów.`);
                 lines.push(``);
                 lines.push(`--- PRZY KAŻDEJ REKLAMIE (już po wgraniu wszystkich grafik) ---`);
                 lines.push(``);
-                lines.push(`  1. Pole grafiki: kliknij "Select from library" / "Wybierz z biblioteki"`);
-                lines.push(`     i wybierz plik po NAZWIE (np. 'ad_1_myth_busting.png').`);
-                lines.push(`  2. Wypełnij pola tekstowe (Primary, Headline, Description, CTA, URL).`);
+                lines.push(`  1. Pole grafiki: kliknij "Wybierz z biblioteki" / "Select from library"`);
+                lines.push(`     i wybierz plik po NAZWIE (wg mapowania na początku sekcji 4).`);
+                lines.push(`  2. Wypełnij pola tekstowe (Tekst główny, Nagłówek, Opis linku, CTA, URL).`);
                 lines.push(`  3. Przejdź do następnej reklamy.`);
                 lines.push(``);
                 lines.push(`Jeśli w bibliotece brakuje którejś grafiki — ZATRZYMAJ SIĘ i poproś`);
@@ -12003,18 +12049,22 @@ Zwróć TYLKO JSON.`;
                     lines.push(``);
                     lines.push(`Grafika (wybierz z biblioteki po nazwie): ${ad.filename}`);
                     lines.push(``);
-                    lines.push(`Tekst główny (Primary, max 125 znaków):`);
+                    lines.push(`Tekst główny (max 125 znaków):`);
                     lines.push(``);
                     ad.primary_text.split('\n').forEach(l => lines.push(`    ${l}`));
                     lines.push(``);
-                    lines.push(`Nagłówek (Headline, max 40 znaków):`);
+                    lines.push(`Nagłówek (max 40 znaków):`);
                     lines.push(`    ${ad.headline}`);
                     lines.push(``);
-                    lines.push(`Opis linku (Description, max 30 znaków):`);
+                    lines.push(`Opis linku (max 30 znaków):`);
                     lines.push(`    ${ad.description}`);
                     lines.push(``);
-                    lines.push(`CTA (Call to Action):`);
-                    lines.push(`    ${ad.cta}`);
+                    lines.push(`Wezwanie do działania (CTA w Meta UI):`);
+                    if (ad.cta_original && ad.cta_original.toLowerCase().trim() !== ad.cta_meta.toLowerCase().trim()) {
+                        lines.push(`    ${ad.cta_meta}  (copy miało: "${ad.cta_original}" — użyj mapowania)`);
+                    } else {
+                        lines.push(`    ${ad.cta_meta}`);
+                    }
                     lines.push(``);
                 });
                 lines.push(``);
@@ -12023,37 +12073,42 @@ Zwróć TYLKO JSON.`;
                 lines.push(sep);
                 lines.push(``);
                 lines.push(`  0. ZNAJDŹ STRONĘ marki "${beneficiary}" w portfolio "${PORTFOLIO}".`);
-                lines.push(`     Jeśli strony nie ma — ZATRZYMAJ SIĘ (patrz Krok 0 powyżej).`);
+                lines.push(`     CHECKPOINT 0 — jeśli strony nie ma, ZATRZYMAJ (patrz wyżej).`);
                 lines.push(`  1. Utwórz kampanię z parametrami z sekcji 2. Status: Wstrzymana.`);
-                lines.push(`  2. Zaproponuj użytkownikowi 2-3 WARIANTY grupy odbiorców (sekcja 3).`);
-                lines.push(`     Czekaj na akceptację PRZED konfigurowaniem ad seta.`);
+                lines.push(`  2. Zaproponuj użytkownikowi JEDNĄ grupę odbiorców (sekcja 3).`);
+                lines.push(`     CHECKPOINT 1 — czekaj na akceptację PRZED konfigurowaniem ad seta.`);
                 lines.push(`  3. Utwórz 1 zestaw reklam (ad set) z zaakceptowanego wariantu.`);
-                lines.push(`  4. Przy PIERWSZEJ reklamie: ZATRZYMAJ SIĘ na polu grafiki i poproś`);
+                lines.push(`  4. Przy PIERWSZEJ reklamie zatrzymaj się na polu grafiki i poproś`);
                 lines.push(`     użytkownika o wgranie WSZYSTKICH ${ads.length} plików PNG naraz`);
-                lines.push(`     do biblioteki mediów (patrz sekcja 4, "BARDZO WAŻNE").`);
-                lines.push(`     Czekaj na potwierdzenie "gotowe".`);
+                lines.push(`     do biblioteki mediów.`);
+                lines.push(`     CHECKPOINT 2 — czekaj na "gotowe".`);
                 lines.push(`  5. Utwórz ${ads.length} reklamy — dla każdej:`);
-                lines.push(`     a) Wybierz grafikę z biblioteki po nazwie pliku (bez kolejnych STOP'ów).`);
-                lines.push(`     b) Wypełnij pola tekstowe (Primary, Headline, Description, CTA, URL).`);
+                lines.push(`     a) Wybierz grafikę z biblioteki po nazwie (wg mapowania w sekcji 4).`);
+                lines.push(`     b) Wypełnij Tekst główny, Nagłówek, Opis linku, CTA (wg mapy), URL.`);
                 lines.push(`  6. Sprawdź podgląd reklam (desktop + mobile).`);
-                lines.push(`  7. NIE PUBLIKUJ. Zostaw status "Wstrzymana" i poinformuj użytkownika,`);
-                lines.push(`     że kampania jest gotowa do review.`);
+                lines.push(`  7. NIE PUBLIKUJ. Zostaw status "Wstrzymana".`);
+                lines.push(`     CHECKPOINT 3 — poinformuj admina że kampania gotowa do review.`);
                 lines.push(``);
                 lines.push(``);
                 lines.push(sep);
-                lines.push(`6. CHECKLIST KOŃCOWY`);
+                lines.push(`6. WERYFIKACJA PO KONFIGURACJI (dla admina po przejęciu)`);
                 lines.push(sep);
+                lines.push(``);
+                lines.push(`Przekazując kampanię adminowi, potwierdź mu że sprawdziłeś wszystkie`);
+                lines.push(`poniższe punkty. Jeśli któryś nie gra — wyraźnie to zaznacz:`);
                 lines.push(``);
                 lines.push(`  [ ] Strona marki "${beneficiary}" znaleziona w portfolio "${PORTFOLIO}"`);
-                lines.push(`  [ ] Kampania utworzona: CBO = ${dailyBudget} zł/dzień, cel Sprzedaż, Wstrzymana`);
+                lines.push(`  [ ] Kampania: CBO = ${dailyBudget} zł/dzień, cel Sprzedaż, status Wstrzymana`);
                 lines.push(`  [ ] Beneficjent i płatnik = "${beneficiary}"`);
-                lines.push(`  [ ] Grupa odbiorców ustalona z użytkownikiem (NIE ślepo z Manusa)`);
-                lines.push(`  [ ] Placement = Advantage+`);
-                lines.push(`  [ ] Pixel i zdarzenie Purchase wybrane`);
-                lines.push(`  [ ] ${ads.length} grafik wgranych do biblioteki mediów (user wgrał raz, naraz)`);
-                lines.push(`  [ ] ${ads.length} reklam dodanych: grafika wybrana z biblioteki po nazwie + copy z briefa`);
+                lines.push(`  [ ] Grupa odbiorców: zaakceptowana przez admina (nie bez zgody)`);
+                lines.push(`  [ ] Umiejscowienia = Advantage+ (automatyczne)`);
+                lines.push(`  [ ] Pixel wybrany, zdarzenie = Zakup/Purchase`);
+                lines.push(`  [ ] ${ads.length} grafik w bibliotece mediów (wgrał admin, jednym batchem)`);
+                lines.push(`  [ ] ${ads.length} reklamy utworzone, każda ma: grafikę z biblioteki + copy z briefa`);
                 lines.push(`  [ ] Adres URL każdej reklamy = ${landingUrl}`);
                 lines.push(`  [ ] Każda reklama: multi-advertiser WYŁ., zaawansowane ulepszenia WYŁ.`);
+                lines.push(`  [ ] CTA w Meta zgodne z mapowaniem (nie "Sprawdź szczegóły"/"Zobacz opinie")`);
+                lines.push(`  [ ] Kadrowanie w placementach poziomych: "Użyj oryginału" albo placement wyłączony`);
                 lines.push(``);
                 lines.push(``);
                 lines.push(sep);
