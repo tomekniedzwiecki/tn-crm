@@ -11883,6 +11883,44 @@ Zwróć TYLKO JSON.`;
                 lines.push(`  3. Po akceptacji — konfiguruj ad set w Ads Managerze (patrz sekcja`);
                 lines.push(`     "JAK TECHNICZNIE DODAĆ" poniżej).`);
                 lines.push(``);
+                // Surowe dane z researchu Manusa (jeśli są). NIE jako "gotowa propozycja"
+                // tylko jako context materials — Cowork może się tym inspirować, nie musi.
+                if (suggestedGroup) {
+                    const g = suggestedGroup;
+                    const genderPl = g.gender === 'female' ? 'Kobiety' : g.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
+                    lines.push(`--- SYGNAŁY Z RESEARCHU (do wglądu, NIE jako gotowa grupa) ---`);
+                    lines.push(``);
+                    lines.push(`Manus analizował ten produkt przed Tobą — konkurencję, angles, buyer`);
+                    lines.push(`persona. Poniżej SUROWE DANE z jego researchu. Traktuj jako input`);
+                    lines.push(`do własnej analizy, NIE jako gotowy szablon do przepisania:`);
+                    lines.push(``);
+                    lines.push(`  Wnioski z researchu (wąskie, wymagają rozszerzenia):`);
+                    lines.push(`    Buyer hipotetyczny . ${g.age_min || 25}-${g.age_max || 55} ${genderPl}`);
+                    if (Array.isArray(g.interests) && g.interests.length) {
+                        lines.push(`    Wąskie interesy .... ${g.interests.join(', ')}`);
+                    }
+                    if (Array.isArray(g.behaviors) && g.behaviors.length) {
+                        lines.push(`    Zachowania ......... ${g.behaviors.join(', ')}`);
+                    }
+                    if (g.rationale) {
+                        lines.push(``);
+                        lines.push(`  Wnioski o core buyer (z researchu):`);
+                        // Split rationale into 70-char lines for readability
+                        const words = g.rationale.split(' ');
+                        let line = '    ';
+                        words.forEach(w => {
+                            if ((line + w).length > 72) { lines.push(line); line = '    '; }
+                            line += w + ' ';
+                        });
+                        if (line.trim()) lines.push(line.trimEnd());
+                    }
+                    lines.push(``);
+                    lines.push(`Uwaga: Manus zwykle dobiera wąskie niszowe interesy. Jeśli Twoja`);
+                    lines.push(`propozycja będzie mieć szerszy wariant parasolowy, który te wąskie`);
+                    lines.push(`niszowe interesy pokrywa — to jest SPÓJNE z intencją briefu, nie`);
+                    lines.push(`sprzeczność. Research Manusa = sygnał o kim myśleć, nie finalny zestaw.`);
+                    lines.push(``);
+                }
                 lines.push(`--- Ustawienia zestawu reklam (niezależne od targetowania) ---`);
                 lines.push(``);
                 lines.push(`  Lokalizacja konwersji ...... Strona internetowa`);
