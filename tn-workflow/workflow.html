@@ -2027,6 +2027,15 @@
                                     Zapisz wszystkie dokumenty
                                 </button>
                             </div>
+
+                            <!-- Allow client to edit again -->
+                            <div class="mt-3 hidden" id="allow-legal-edit-wrap">
+                                <button onclick="allowClientLegalReEdit()" id="allow-legal-edit-btn" class="w-full bg-[#1a1a1a] hover:bg-[#222] border border-[#333] text-[#ccc] text-[13px] font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
+                                    <i class="ph ph-pencil-simple"></i>
+                                    Pozwól klientowi ponownie edytować
+                                </button>
+                                <p class="text-[11px] text-[#666] text-center mt-2">Dane zostaną zachowane — klient zobaczy formularz wypełniony i będzie mógł go poprawić</p>
+                            </div>
                         </div>
 
                         <!-- Documents generated status -->
@@ -8271,6 +8280,7 @@
             }
 
             // Show nav checkmark only if documents are actually ready
+            const allowEditWrap = document.getElementById('allow-legal-edit-wrap');
             if (takeDropData?.legal_documents_ready) {
                 if (navCheck) navCheck.classList.remove('hidden');
 
@@ -8282,6 +8292,8 @@
                     saveBtn.classList.add('bg-emerald-700', 'cursor-default');
                     saveBtn.disabled = true;
                 }
+
+                if (allowEditWrap) allowEditWrap.classList.remove('hidden');
             } else {
                 if (navCheck) navCheck.classList.add('hidden');
 
@@ -8293,8 +8305,54 @@
                     saveBtn.classList.remove('bg-emerald-700', 'cursor-default');
                     saveBtn.disabled = false;
                 }
+
+                if (allowEditWrap) allowEditWrap.classList.add('hidden');
             }
         }
+
+        async function allowClientLegalReEdit() {
+            if (!takeDropData?.id) {
+                showToast('Brak rekordu w bazie', 'error');
+                return;
+            }
+            if (!confirm('Odblokować edycję dokumentów prawnych? Dane pozostaną zachowane — klient zobaczy formularz wypełniony i będzie mógł go poprawić i zapisać ponownie.')) {
+                return;
+            }
+
+            const btn = document.getElementById('allow-legal-edit-btn');
+            const originalHTML = btn?.innerHTML;
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Odblokowuję...';
+            }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({ legal_documents_ready: false })
+                    .eq('id', takeDropData.id);
+
+                if (error) throw error;
+
+                takeDropData.legal_documents_ready = false;
+
+                logActivity('legal_documents_unlocked', 'Odblokowano dokumenty prawne do ponownej edycji przez klienta');
+
+                showToast('Klient może teraz ponownie edytować dokumenty', 'success');
+
+                renderLegalClientData();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Error unlocking legal docs:', err);
+                showToast('Błąd odblokowania', 'error');
+                if (btn && originalHTML) {
+                    btn.disabled = false;
+                    btn.innerHTML = originalHTML;
+                }
+            }
+        }
+
+        window.allowClientLegalReEdit = allowClientLegalReEdit;
 
         async function toggleTakeDropActive() {
             const isActive = document.getElementById('takedrop-active').checked;
