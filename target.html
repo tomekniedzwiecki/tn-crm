@@ -444,6 +444,45 @@
                     </div>
                 </div>
 
+                <!-- REALIZACJA DZIENNA -->
+                <div class="section-card p-5 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <div class="text-sm font-semibold text-white">Realizacja dzienna</div>
+                            <div class="text-xs text-zinc-500 mt-0.5">Wszystkie etapy per dzień — weekendy wyszarzone, dzisiejszy dzień obramowany</div>
+                        </div>
+                        <div class="flex items-center gap-3 text-[10px] text-zinc-500">
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-teal-400 mr-1"></span>Deal</span>
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1"></span>Praca</span>
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-red-500/70 mr-1"></span>Pusty</span>
+                            <span><span class="inline-block w-2 h-2 rounded-full bg-zinc-600 mr-1"></span>Weekend</span>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto -mx-5 px-5">
+                        <table class="w-full text-xs" id="daily-table">
+                            <thead>
+                                <tr class="text-[10px] text-zinc-500 uppercase tracking-wider border-b border-white/5">
+                                    <th class="text-left py-2 pr-3 font-semibold sticky left-0 bg-[#0a0a0a]">Dzień</th>
+                                    <th class="text-left py-2 px-2 font-semibold">Dz.tyg</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Odezw.</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Rozm.</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Ofer.</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Domyk.</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Paid</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Rev netto</th>
+                                    <th class="text-right py-2 pl-2 font-semibold">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="daily-table-body">
+                                <!-- Populated by JS -->
+                            </tbody>
+                            <tfoot class="border-t-2 border-white/10" id="daily-table-foot">
+                                <!-- Populated by JS -->
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- KOLEJKA DOMYKANIE -->
                 <div class="section-card p-5 mb-6">
                     <div class="flex items-center justify-between mb-4">
@@ -561,9 +600,14 @@
             counts: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
             today: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
             revenue_netto: 0,
+            revenue_netto_full: 0,
             queue_leads: [],
-            daily_paid: [], // array {date, count, revenue}
+            daily_paid: [], // array {day, count, revenue}
             avg_ticket_netto: 0,
+            // NEW: per-day breakdown for Realizacja dzienna table
+            daily: {
+                odezwanie: [], rozmowa: [], oferta: [], domykanie: [], paid: [], revenue: []
+            },
         };
 
         let trendChart = null;
@@ -693,13 +737,23 @@
                 : (currentMonth > new Date() ? 'Miesiąc przyszły' : 'Miesiąc zakończony');
 
             // Reset data
+            const zeros = () => new Array(progress.dayTotal).fill(0);
             DATA = {
                 counts: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
                 today: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
                 revenue_netto: 0,
+                revenue_netto_full: 0,
                 queue_leads: [],
                 daily_paid: [],
                 avg_ticket_netto: 0,
+                daily: {
+                    odezwanie: zeros(),
+                    rozmowa: zeros(),
+                    oferta: zeros(),
+                    domykanie: zeros(),
+                    paid: zeros(),
+                    revenue: zeros(),
+                },
             };
 
             // Parallel fetch
@@ -721,24 +775,35 @@
         async function fetchOdezwanie(start, end) {
             const startISO = start.toISOString();
             const endISO = end.toISOString();
-            const todayISO = getTodayISO();
+            const todayPrefix = getTodayISO().split('T')[0];
 
-            // Count total this month
-            const { count, error } = await supabaseClient
-                .from('outreach_contacts')
-                .select('id', { count: 'exact', head: true })
-                .gte('whatsapp_contacted_at', startISO)
-                .lt('whatsapp_contacted_at', endISO);
+            // Paginate all contacts with whatsapp_contacted_at in month
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('outreach_contacts')
+                    .select('whatsapp_contacted_at')
+                    .gte('whatsapp_contacted_at', startISO)
+                    .lt('whatsapp_contacted_at', endISO)
+                    .range(offset, offset + 999);
+                if (error) { console.error('odezwanie:', error); return; }
+                if (!data || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < 1000) break;
+                offset += 1000;
+            }
 
-            if (error) { console.error('odezwanie:', error); return; }
-            DATA.counts.odezwanie = count || 0;
-
-            // Count today
-            const { count: todayCount } = await supabaseClient
-                .from('outreach_contacts')
-                .select('id', { count: 'exact', head: true })
-                .gte('whatsapp_contacted_at', todayISO);
-            DATA.today.odezwanie = todayCount || 0;
+            DATA.counts.odezwanie = all.length;
+            DATA.today.odezwanie = 0;
+            const daily = DATA.daily.odezwanie;
+            for (const c of all) {
+                const ts = c.whatsapp_contacted_at;
+                if (!ts) continue;
+                const day = new Date(ts).getDate();
+                if (day >= 1 && day <= daily.length) daily[day - 1]++;
+                if (ts.startsWith(todayPrefix)) DATA.today.odezwanie++;
+            }
         }
 
         // ============================================
@@ -810,6 +875,25 @@
 
             DATA.counts.rozmowa = qualifyingLeads.size;
             DATA.today.rozmowa = qualifiedToday.size;
+
+            // Per-day: dla każdego qualifying lead — znajdź dzień, w którym osiągnął próg 5 sensownych
+            // (5-ta meaningful Maciek msg w tym miesiącu — to moment "rozmowy")
+            const daily = DATA.daily.rozmowa;
+            const meaningfulByLead = new Map(); // lid -> sorted array of timestamps
+            for (const m of meaningful) {
+                if (!m.lead_id) continue;
+                if (!meaningfulByLead.has(m.lead_id)) meaningfulByLead.set(m.lead_id, []);
+                meaningfulByLead.get(m.lead_id).push(m.message_timestamp);
+            }
+            for (const lid of qualifyingLeads) {
+                const timestamps = (meaningfulByLead.get(lid) || []).sort();
+                // 5th meaningful message timestamp — dzień w którym się zakwalifikował
+                if (timestamps.length >= 5) {
+                    const fifthTs = timestamps[4];
+                    const day = new Date(fifthTs).getDate();
+                    if (day >= 1 && day <= daily.length) daily[day - 1]++;
+                }
+            }
         }
 
         // ============================================
@@ -818,22 +902,35 @@
         async function fetchOferta(start, end) {
             const startISO = start.toISOString();
             const endISO = end.toISOString();
-            const todayISO = getTodayISO();
+            const todayPrefix = getTodayISO().split('T')[0];
 
-            const { count } = await supabaseClient
-                .from('client_offers')
-                .select('id', { count: 'exact', head: true })
-                .eq('offer_type', 'full')
-                .gte('created_at', startISO)
-                .lt('created_at', endISO);
-            DATA.counts.oferta = count || 0;
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('client_offers')
+                    .select('created_at')
+                    .eq('offer_type', 'full')
+                    .gte('created_at', startISO)
+                    .lt('created_at', endISO)
+                    .range(offset, offset + 999);
+                if (error) { console.error('oferta:', error); return; }
+                if (!data || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < 1000) break;
+                offset += 1000;
+            }
 
-            const { count: todayCount } = await supabaseClient
-                .from('client_offers')
-                .select('id', { count: 'exact', head: true })
-                .eq('offer_type', 'full')
-                .gte('created_at', todayISO);
-            DATA.today.oferta = todayCount || 0;
+            DATA.counts.oferta = all.length;
+            DATA.today.oferta = 0;
+            const daily = DATA.daily.oferta;
+            for (const o of all) {
+                const ts = o.created_at;
+                if (!ts) continue;
+                const day = new Date(ts).getDate();
+                if (day >= 1 && day <= daily.length) daily[day - 1]++;
+                if (ts.startsWith(todayPrefix)) DATA.today.oferta++;
+            }
         }
 
         // ============================================
@@ -859,9 +956,12 @@
             // Simpler: count (A) currently in negotiation with entered this month
             //       + (B) in won/lost with activities containing "→ Domykanie" this month
             let enteredThisMonth = 0;
+            const daily = DATA.daily.domykanie;
             for (const lead of (queueLeads || [])) {
                 if (lead.status_entered_at && lead.status_entered_at >= startISO && lead.status_entered_at < endISO) {
                     enteredThisMonth++;
+                    const day = new Date(lead.status_entered_at).getDate();
+                    if (day >= 1 && day <= daily.length) daily[day - 1]++;
                 }
             }
 
@@ -878,11 +978,12 @@
                 for (const act of activities) {
                     if (act.type !== 'status_change') continue;
                     const content = act.content || '';
-                    // Accept both 'Domykanie' (new label) and 'Negocjacje' (legacy label)
                     const matchesDomykanie = content.includes('Domykanie') || content.includes('Negocjacje');
                     if (!matchesDomykanie) continue;
                     if (act.created_at >= startISO && act.created_at < endISO) {
                         closedPassedNegotiation++;
+                        const day = new Date(act.created_at).getDate();
+                        if (day >= 1 && day <= daily.length) daily[day - 1]++;
                         break;
                     }
                 }
@@ -968,31 +1069,30 @@
             // Save full-customer revenue separately for accurate avg ticket calculation
             DATA.revenue_netto_full = fullRevenueBrutto / 1.23;
 
-            // Daily data — total revenue per day (netto), cała)
-            const { dayTotal } = getDayProgress();
-            const daily = new Array(dayTotal).fill(0);
-            const dailyRev = new Array(dayTotal).fill(0);
+            // Daily data — total revenue per day (netto), wszystkie paid
+            const dailyPaidCount = DATA.daily.paid;    // by day count
+            const dailyRevenue = DATA.daily.revenue;   // by day revenue netto (total)
+            const dayTotal = dailyPaidCount.length;
             for (const o of allPaid) {
                 if (!o.paid_at) continue;
                 const d = new Date(o.paid_at);
                 const day = d.getDate();
                 if (day >= 1 && day <= dayTotal) {
-                    dailyRev[day - 1] += (parseFloat(o.amount) || 0) / 1.23;
+                    dailyRevenue[day - 1] += (parseFloat(o.amount) || 0) / 1.23;
                 }
             }
-            // Daily paid count — unique full customers whose first-in-month order was on this day
-            const countedByDay = new Set();
+            // Daily paid count — unique full customers whose first-in-month paid_at was on this day
             for (const [, orders] of byCustomer) {
                 if (!isFullCustomer(orders)) continue;
                 const firstPaid = orders[0]?.paid_at;
                 if (!firstPaid) continue;
                 const day = new Date(firstPaid).getDate();
-                if (day >= 1 && day <= dayTotal) daily[day - 1]++;
+                if (day >= 1 && day <= dayTotal) dailyPaidCount[day - 1]++;
             }
-            DATA.daily_paid = daily.map((count, i) => ({
+            DATA.daily_paid = dailyPaidCount.map((count, i) => ({
                 day: i + 1,
                 count,
-                revenue: dailyRev[i]
+                revenue: dailyRevenue[i]
             }));
 
             // Avg ticket netto — bazuje TYLKO na full customer revenue (precyzyjny avg per deal)
@@ -1048,6 +1148,9 @@
 
             // PLAN TABLE
             renderPlanTable(pctDayProgress, dayCurrent, dayTotal);
+
+            // DAILY TABLE
+            renderDailyTable(dayCurrent, dayTotal);
 
             // QUEUE
             renderQueue();
@@ -1237,6 +1340,143 @@
                     </tr>
                 `;
             }).join('');
+        }
+
+        function renderDailyTable(dayCurrent, dayTotal) {
+            const body = document.getElementById('daily-table-body');
+            const foot = document.getElementById('daily-table-foot');
+            if (!body || !foot) return;
+
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const dayNames = ['Nd','Pn','Wt','Śr','Cz','Pt','So'];
+            const isThisMonthActual = isCurrentMonth();
+            const todayDay = isThisMonthActual ? new Date().getDate() : -1;
+
+            // Daily targets (simply = monthly / total workable days, ale per każdy dzień kalendarzowy)
+            const dailyTargets = {
+                odezwanie: TARGETS.targets.odezwanie / dayTotal,
+                rozmowa: TARGETS.targets.rozmowa / dayTotal,
+                oferta: TARGETS.targets.oferta / dayTotal,
+                domykanie: TARGETS.targets.domykanie / dayTotal,
+                paid: TARGETS.targets.paid / dayTotal,
+            };
+
+            let rowsHtml = '';
+            let sumOdezw = 0, sumRozm = 0, sumOfer = 0, sumDomyk = 0, sumPaid = 0, sumRev = 0;
+
+            for (let i = 0; i < dayTotal; i++) {
+                const dayNum = i + 1;
+                const date = new Date(year, month, dayNum);
+                const dow = date.getDay(); // 0=Nd, 6=So
+                const isWeekend = (dow === 0 || dow === 6);
+                const isFuture = isThisMonthActual && dayNum > todayDay;
+                const isToday = dayNum === todayDay;
+
+                const o = DATA.daily.odezwanie[i] || 0;
+                const r = DATA.daily.rozmowa[i] || 0;
+                const of = DATA.daily.oferta[i] || 0;
+                const d = DATA.daily.domykanie[i] || 0;
+                const p = DATA.daily.paid[i] || 0;
+                const rev = DATA.daily.revenue[i] || 0;
+
+                sumOdezw += o; sumRozm += r; sumOfer += of; sumDomyk += d; sumPaid += p; sumRev += rev;
+
+                // Status dnia
+                let statusLabel, statusClass;
+                if (isFuture) {
+                    statusLabel = '—';
+                    statusClass = 'text-zinc-700';
+                } else if (isWeekend && o + r + of + d + p === 0) {
+                    statusLabel = 'Weekend';
+                    statusClass = 'text-zinc-500';
+                } else if (p > 0) {
+                    statusLabel = `✓ Deal${p > 1 ? ` ×${p}` : ''}`;
+                    statusClass = 'text-teal-400';
+                } else if (o + r + of + d > 0) {
+                    statusLabel = '○ Praca';
+                    statusClass = 'text-amber-400';
+                } else {
+                    statusLabel = '× Pusty';
+                    statusClass = 'text-red-400';
+                }
+
+                // Row styling
+                let rowClass = 'border-b border-white/5 transition-colors ';
+                if (isFuture) rowClass += 'opacity-40 ';
+                else if (isToday) rowClass += 'bg-teal-500/5 outline outline-1 outline-teal-500/30 ';
+                else if (isWeekend) rowClass += 'bg-white/[0.015] opacity-75 ';
+                else rowClass += 'hover:bg-white/[0.03] ';
+
+                // Highlight per-stage cells: bold if exceeded daily target
+                const cellClass = (val, target) => {
+                    if (isFuture || val === 0) return 'text-zinc-600';
+                    if (val >= target) return 'text-white font-medium';
+                    if (val >= target * 0.5) return 'text-zinc-300';
+                    return 'text-zinc-400';
+                };
+
+                rowsHtml += `
+                    <tr class="${rowClass}">
+                        <td class="py-1.5 pr-3 font-mono text-zinc-300 sticky left-0 bg-[#0a0a0a]${isToday ? ' text-teal-400' : ''}">${String(dayNum).padStart(2, '0')}.${String(month + 1).padStart(2, '0')}</td>
+                        <td class="py-1.5 px-2 ${isWeekend ? 'text-zinc-600' : 'text-zinc-400'}">${dayNames[dow]}${isToday ? ' • dziś' : ''}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(o, dailyTargets.odezwanie)}">${o || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(r, dailyTargets.rozmowa)}">${r || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(of, dailyTargets.oferta)}">${of || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(d, dailyTargets.domykanie)}">${d || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${p > 0 ? 'text-teal-400 font-semibold' : 'text-zinc-600'}">${p || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${rev > 0 ? 'text-white' : 'text-zinc-700'}">${rev > 0 ? fmtMoney(rev) + ' zł' : '·'}</td>
+                        <td class="py-1.5 pl-2 text-right text-[11px] ${statusClass}">${statusLabel}</td>
+                    </tr>
+                `;
+            }
+
+            body.innerHTML = rowsHtml;
+
+            // Footer — sums
+            const pctOdezw = TARGETS.targets.odezwanie > 0 ? 100 * sumOdezw / TARGETS.targets.odezwanie : 0;
+            const pctRozm = TARGETS.targets.rozmowa > 0 ? 100 * sumRozm / TARGETS.targets.rozmowa : 0;
+            const pctOfer = TARGETS.targets.oferta > 0 ? 100 * sumOfer / TARGETS.targets.oferta : 0;
+            const pctDomyk = TARGETS.targets.domykanie > 0 ? 100 * sumDomyk / TARGETS.targets.domykanie : 0;
+            const pctPaid = TARGETS.targets.paid > 0 ? 100 * sumPaid / TARGETS.targets.paid : 0;
+            const pctRev = TARGETS.monthly_revenue_netto > 0 ? 100 * sumRev / TARGETS.monthly_revenue_netto : 0;
+            const pctCls = (pct) => pct >= 100 ? 'text-teal-400' : (pct >= 66 ? 'text-zinc-300' : 'text-amber-400');
+
+            foot.innerHTML = `
+                <tr class="text-zinc-400 text-[11px]">
+                    <td class="py-2 pr-3 font-semibold sticky left-0 bg-[#0a0a0a]">SUMA</td>
+                    <td class="py-2 px-2"></td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-white">${fmtNum(sumOdezw)}</td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-white">${fmtNum(sumRozm)}</td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-white">${fmtNum(sumOfer)}</td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-white">${fmtNum(sumDomyk)}</td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-teal-400">${fmtNum(sumPaid)}</td>
+                    <td class="py-2 px-2 text-right font-mono font-semibold text-white">${fmtMoney(sumRev)} zł</td>
+                    <td class="py-2 pl-2 text-right text-[10px]"></td>
+                </tr>
+                <tr class="text-[10px] text-zinc-600">
+                    <td class="py-1 pr-3 sticky left-0 bg-[#0a0a0a]">% celu</td>
+                    <td class="py-1 px-2"></td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctOdezw)}">${pctOdezw.toFixed(0)}%</td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctRozm)}">${pctRozm.toFixed(0)}%</td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctOfer)}">${pctOfer.toFixed(0)}%</td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctDomyk)}">${pctDomyk.toFixed(0)}%</td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctPaid)}">${pctPaid.toFixed(0)}%</td>
+                    <td class="py-1 px-2 text-right font-mono ${pctCls(pctRev)}">${pctRev.toFixed(0)}%</td>
+                    <td class="py-1 pl-2"></td>
+                </tr>
+                <tr class="text-[10px] text-zinc-600">
+                    <td class="py-1 pr-3 sticky left-0 bg-[#0a0a0a]">Cel /dz</td>
+                    <td class="py-1 px-2"></td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.odezwanie.toFixed(1)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.rozmowa.toFixed(1)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.oferta.toFixed(1)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.domykanie.toFixed(1)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.paid.toFixed(2)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${fmtMoney(TARGETS.monthly_revenue_netto / dayTotal)} zł</td>
+                    <td class="py-1 pl-2"></td>
+                </tr>
+            `;
         }
 
         function renderQueue() {
