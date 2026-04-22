@@ -292,6 +292,15 @@
     }
     .persona-figure img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
+    /* section-figure (solution / how-it-works section hero) — override HTML width/height attrs */
+    .section-figure img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .section-figure.section-figure-square { aspect-ratio: 3/2; overflow: hidden; }
+    .section-figure.section-figure-square img { width: 100%; height: 100%; object-fit: cover; }
+
     .personas { padding: var(--section-padding) 0; background: var(--bg-white); }
     .personas-header { text-align: center; max-width: 720px; margin: 0 auto 56px; }
     .personas-grid {
@@ -325,7 +334,7 @@
 
     .step-figure {
       width: 100%;
-      aspect-ratio: 4/3;
+      aspect-ratio: 3/2;
       border-radius: var(--radius-lg);
       overflow: hidden;
       margin-bottom: 20px;
@@ -339,15 +348,32 @@
       overflow: hidden;
       z-index: 0;
     }
-    .final-cta-figure img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0.7; }
+    .final-cta-figure img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+      opacity: 1;
+      transform: scale(1.02);
+    }
+    /* Dwuwarstwowy overlay: pełny vignette + radial softness w centrum dla czytelności tekstu */
+    .final-cta-figure::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at center, rgba(10,22,40,0.75) 0%, rgba(10,22,40,0.5) 45%, rgba(10,22,40,0.8) 100%);
+      z-index: 1;
+    }
     .final-cta-figure::after {
       content: '';
       position: absolute;
       inset: 0;
-      background: linear-gradient(135deg, rgba(10,22,40,0.7) 0%, rgba(10,22,40,0.35) 100%);
+      background: linear-gradient(180deg, rgba(10,22,40,0.4) 0%, rgba(10,22,40,0.2) 50%, rgba(10,22,40,0.55) 100%);
+      z-index: 1;
     }
-    .cta-banner { position: relative; isolation: isolate; }
-    .cta-banner > .container { position: relative; z-index: 1; }
+    .cta-banner { position: relative; isolation: isolate; overflow: hidden; }
+    .cta-banner > .container { position: relative; z-index: 2; }
 
     /* ═══════════════════════════════════════════════════════════
        IMAGE PLACEHOLDERS
@@ -758,18 +784,21 @@
 
     .hero-product {
       width: 100%;
-      max-width: 400px;
+      max-width: 480px;
+      aspect-ratio: 4/5;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--bg-white);
+      box-shadow: var(--shadow-xl);
     }
 
     .hero-product .img-placeholder,
     .hero-product img {
       width: 100%;
-      aspect-ratio: 4/5;
-      border-radius: var(--radius-xl);
-      background: var(--bg-white);
-      box-shadow: var(--shadow-xl);
+      height: 100%;
       display: block;
       object-fit: cover;
+      object-position: center 35%;
     }
 
     .hero-specs {
@@ -935,14 +964,19 @@
       color: var(--text-secondary);
     }
 
+    .problem-visual {
+      width: 100%;
+      aspect-ratio: 3/2;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      box-shadow: var(--shadow-xl);
+    }
     .problem-visual .img-placeholder,
     .problem-visual img {
       width: 100%;
-      aspect-ratio: 4/3;
-      border-radius: var(--radius-xl);
+      height: 100%;
       display: block;
       object-fit: cover;
-      box-shadow: var(--shadow-xl);
     }
 
     /* Section hero images (solution/steps/offer) */
@@ -1565,21 +1599,35 @@
     ═══════════════════════════════════════════════════════════ */
 
     .cta-banner {
-      padding: 80px 0;
+      padding: 140px 0;
+      min-height: 560px;
+      display: flex;
+      align-items: center;
       background: var(--gradient-cta);
       text-align: center;
     }
 
     .cta-banner .cta-title {
-      font-size: clamp(28px, 4vw, 40px);
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 1.1;
       color: var(--text-on-dark);
-      margin-bottom: 16px;
+      margin-bottom: 20px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
     }
 
     .cta-banner .cta-subtitle {
-      font-size: 18px;
-      color: rgba(255, 255, 255, 0.8);
-      margin-bottom: 32px;
+      font-size: 19px;
+      line-height: 1.5;
+      color: rgba(255, 255, 255, 0.88);
+      margin-bottom: 40px;
+      max-width: 560px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    @media (max-width: 768px) {
+      .cta-banner { padding: 80px 0; min-height: 420px; }
     }
 
     .cta-banner .btn-primary {

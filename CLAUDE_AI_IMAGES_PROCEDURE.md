@@ -157,6 +157,7 @@ Dla każdego landing ≥12 obrazów, podzielone na kategorie:
 | **Spec Sheet** | 1:1 | Techniczny przekrój / izometryczny render / wire-frame | NIE |
 | **Personas** (×3) | 4:5 (pionowy portret) | Portret persony w swoim środowisku (half-body) | TAK, centralna |
 | **Offer packshot** | 4:3 lub 1:1 | Flat-lay zestawu startowego na czystym tle | NIE |
+| **Final-CTA bg** | 21:9 / 16:9 (landscape) | Cinematic wide shot produktu w atmosferycznym tle (steam/smoke/particles + rim light) na ciemnym void — negative space top+sides dla text overlay. **Obowiązkowe** — bez tła sekcja wygląda płaska. Patrz `docs/landing/reference/patterns.md` pattern 23 | NIE |
 
 ### 4.2 Sloty opcjonalne
 
@@ -582,6 +583,66 @@ grep -nE '<img[^>]*style=' landing-pages/[slug]/index.html
 ```
 
 Wynik MUSI być pusty. Inline `style="height:..."` lub `style="width:..."` zawsze powoduje cropping.
+
+### 7.6 ⚠️ Pułapka: HTML `width`/`height` attr nadpisuje CSS `aspect-ratio` na `<img>`
+
+**Bug znaleziony 2026-04-22 (Parivo):** jeśli wstawisz `<img src="..." width="1024" height="1536">` i zastosujesz CSS `.figure img { width: 100%; aspect-ratio: 4/5 }`, przeglądarka **NIE** obliczy wysokości z aspect-ratio — użyje wysokości z HTML attr jako intrinsic, dając `height: 1536px` na renderze. Rezultat: obraz jest gigantyczny / bardzo wysoki.
+
+**Zawsze używaj wzorca wrapper + img 100%/100%:**
+
+```html
+<figure class="persona-figure">
+  <img src="..." alt="..." width="768" height="768" loading="lazy">
+</figure>
+```
+
+```css
+.persona-figure {
+  width: 100%;
+  aspect-ratio: 1/1;       /* aspect-ratio NA WRAPPERZE, nie na img */
+  overflow: hidden;
+  border-radius: var(--radius-xl);
+}
+.persona-figure img {
+  width: 100%;
+  height: 100%;            /* wypełnia wrapper */
+  object-fit: cover;
+  display: block;
+}
+```
+
+**Anty-wzorzec (Parivo pre-fix):**
+```css
+/* ❌ NIE rób tak — HTML height attr nadpisze aspect-ratio */
+.persona-figure img {
+  width: 100%;
+  aspect-ratio: 1/1;
+}
+```
+
+**Sanity check:**
+```bash
+# Przed commitem: sprawdź że wszystkie img w figure'ach mają container z aspect-ratio (nie img)
+grep -nE "figure[^{]+\{[^}]*aspect-ratio" landing-pages/[slug]/index.html
+```
+
+Alternatywa: pominąć HTML `width`/`height` attrs — aspect-ratio wtedy zadziała bezpośrednio na img. Ale tracisz CLS protection (Cumulative Layout Shift) przy ładowaniu. **Zalecany jest pattern wrapper + 100%/100%.**
+
+### 7.7 GPT-image-2 aspect ratios — mapping do CSS
+
+`generate-image` edge function przyjmuje `aspect_ratio` w 10 wartościach (1:1, 2:3, 3:2, 3:4, 4:3, 4:5, 5:4, 9:16, 16:9, 21:9), ale OpenAI GPT-image-2 **wspiera tylko 3 rozmiary**:
+- `1:1` → `1024x1024` (wszystkie 1:1 requesty)
+- Wszystkie **portrait** (2:3, 3:4, 4:5, 9:16) → `1024x1536` (co jest **2:3** ≈ 0.667)
+- Wszystkie **landscape** (3:2, 4:3, 5:4, 16:9, 21:9) → `1536x1024` (co jest **3:2** ≈ 1.5)
+
+**Implikacja:** jeśli poprosisz o aspect 4:5 ale CSS ma `aspect-ratio: 4/5`, dostaniesz obraz 2:3 wpakowany w container 4:5 → object-fit:cover skropi góra/dół.
+
+**Zasada:** dopasuj CSS `aspect-ratio` do **rzeczywistego** output GPT-image-2:
+- Portrait slots (hero, personas): użyj `aspect-ratio: 2/3` albo `3/4` (mniej narrow)
+- Landscape slots (problem, steps, solution): użyj `aspect-ratio: 3/2`
+- Square slots (avatars, offer packshot): użyj `aspect-ratio: 1/1`
+
+Gemini 3 Pro Image Preview daje dokładnie requested ratio, więc nie ma tego problemu. Przełącznik provider w `settings` (tab „Generowanie obrazów AI") — GPT-image-2 ma wyższą jakość, Gemini daje szerszy wybór ratio.
 
 ---
 

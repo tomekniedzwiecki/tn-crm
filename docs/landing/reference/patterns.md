@@ -998,6 +998,103 @@ close-up at 45-degree angle, pressed against a large panoramic glass pane...
 
 ---
 
+## 23. Final-CTA Hero Banner (bg image + dwuwarstwowy overlay)
+
+**Kiedy:** zawsze dla `.cta-banner` / `.final-cta` na końcu strony (przed footerem). Daje sekcji wizualną wagę „klimatu produktowego" zamiast płaskiego coloru.
+
+**HTML:**
+```html
+<section class="cta-banner final-cta">
+  <figure class="final-cta-figure">
+    <img src="[URL_AI_IMAGE]" alt="" width="1536" height="1024" loading="lazy" aria-hidden="true">
+  </figure>
+  <div class="container">
+    <h2 class="cta-title">[Tagline marki]</h2>
+    <p class="cta-subtitle">[Dołącz do X+ klientów. [Value prop]]</p>
+    <a href="#offer" class="btn btn-primary magnetic">[CTA]</a>
+  </div>
+</section>
+```
+
+**CSS:**
+```css
+.cta-banner {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 560px;
+  padding: 140px 0;
+  display: flex;
+  align-items: center;
+  text-align: center;
+}
+.cta-banner > .container { position: relative; z-index: 2; }
+
+.final-cta-figure {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  z-index: 0;
+}
+.final-cta-figure img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  opacity: 1;
+  transform: scale(1.02);  /* lekki zoom — ukrywa edge artifacts AI */
+}
+/* Dwuwarstwowy overlay dla czytelności tekstu:
+   1) radial vignette (ciemny centrum + krawędzie, jaśniejszy middle-ring)
+   2) linear vertical (ciemny top/bottom, jaśniejszy środek — dla balance'u) */
+.final-cta-figure::before {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: radial-gradient(ellipse at center,
+    rgba(var(--bg-dark-rgb), 0.75) 0%,
+    rgba(var(--bg-dark-rgb), 0.5) 45%,
+    rgba(var(--bg-dark-rgb), 0.8) 100%);
+}
+.final-cta-figure::after {
+  content: ''; position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg,
+    rgba(var(--bg-dark-rgb), 0.4) 0%,
+    rgba(var(--bg-dark-rgb), 0.2) 50%,
+    rgba(var(--bg-dark-rgb), 0.55) 100%);
+}
+
+@media (max-width: 768px) {
+  .cta-banner { min-height: 420px; padding: 80px 0; }
+}
+```
+
+**Prompt do generate-image (aspect_ratio 21:9 lub 16:9, landscape):**
+```
+MATCH THE PRODUCT IN REFERENCE IMAGE EXACTLY.
+Cinematic wide hero shot: the exact [PRODUCT] centered in a vast dark void
+(brand dark color), enveloped in atmospheric steam/smoke/particles.
+[BRAND ACCENT COLOR] rim lighting from both sides creating halo effect.
+Composition: 21:9 ultra-wide, product in lower third, atmospheric effects
+filling upper two-thirds, negative space on both sides for text overlay.
+Premium tech product photography, Apple keynote reveal aesthetic.
+Shot on 35mm, subtle grain, mild halation. No text, no captions.
+```
+
+**Uwaga kadrowanie:** generate-image zwraca landscape jako 1536x1024 (3:2), nie prawdziwe 21:9. CSS `object-fit: cover` + `object-position: center` wytnie środek horyzontalnie jeśli sekcja jest wyższa. W większości przypadków OK — wystarczy żeby produkt był w lower-third kompozycji.
+
+**Anti-pattern:**
+- ❌ `opacity: 0.35` na obrazie + single dark overlay → obraz praktycznie niewidoczny, wygląda jak płaska sekcja
+- ❌ Overlay bez radial vignette → tekst zlewa się z obrazem w centrum
+- ❌ `background: url(...) no-repeat center / cover` zamiast `<img>` → brak kontroli nad LCP/priority hints, CLS
+- ❌ Sekcja <400px wysoka → produkt w tle ucinany na twarz/funkcję, traci wizualny impact
+
+**Weryfikacja verify-landing.sh:**
+```bash
+FINAL_PH=$(awk '/<section[^>]*class="[^"]*(final-cta|cta-banner)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(final-cta-figure|bg-figure)[^"]*"')
+```
+Pattern 23 wymaga `.final-cta-figure` wewnątrz sekcji `.cta-banner` / `.final-cta`.
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".
