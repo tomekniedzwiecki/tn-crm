@@ -1,149 +1,118 @@
--- Dodaje szablon Cowork do generowania raportu Etap 1 przez Claude Cowork
--- (Gemini Deep Research + NotebookLM: Briefing Doc, Infografika, Video Overview)
+-- Szablon Cowork do dokończenia raportu Etap 1.
+-- Zakłada że użytkownik ręcznie odpalił Gemini Deep Research
+-- (załączył product PDF + wysłał prompt "report"). Cowork dokończa:
+-- czeka na Deep Research → export → upload do CRM → NotebookLM (3 artefakty).
 
 INSERT INTO ai_prompt_templates (template_key, name, content, description, sort_order) VALUES
 ('report_cowork', 'Raport Etap 1 (Cowork)',
-$PROMPT$Jesteś Claude Cowork. Wykonaj od początku do końca automatyzację generowania raportu dla Etapu 1 w systemie tn-workflow. Działaj spokojnie, cierpliwie, nie spiesz się. Deep Research trwa 5–15 minut — po prostu czekaj, nie rób w tym czasie nic innego poza sprawdzaniem co minutę czy jest gotowy. Nie otwieraj nowych zakładek ani stron poza tymi wymienionymi w krokach.
+$PROMPT$Jesteś Claude Cowork. Kontynuujesz automatyzację raportu Etap 1. Użytkownik ręcznie odpalił już Gemini Deep Research w jednej z zakładek. Twoim zadaniem jest dokończyć proces: poczekać na wynik, wyeksportować, wgrać do CRM i wygenerować 3 dodatkowe artefakty w NotebookLM.
+
+Działaj spokojnie. Deep Research potrafi iść 10–25 min — po prostu czekaj, nie rób nic innego poza sprawdzaniem statusu co ~60 sek. Nie otwieraj nowych stron poza wymienionymi.
 
 ## PARAMETRY
 
 WORKFLOW_ID = {{workflow_id}}
 CUSTOMER_NAME = {{customer_name}}
-PRODUCT_NAME = {{product_name}}
 BRAND_NAME = {{brand_name}}
-PRODUCT_IMAGE_URL = {{reference_image_url}}
-CRM_BASE = https://crm.tomekniedzwiecki.pl
 WORKFLOW_URL = https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id={{workflow_id}}
 
 ## PRZED STARTEM — weryfikacja środowiska
 
-Otwórz w osobnych zakładkach:
-1. WORKFLOW_URL (powyżej)
-2. https://gemini.google.com/app
-3. https://notebooklm.google.com/
+Sprawdź, że masz otwarte zakładki:
+1. Gemini (https://gemini.google.com/app) z trwającym/ukończonym Deep Research
+2. WORKFLOW_URL (zalogowany jako admin)
+3. https://notebooklm.google.com/ (zalogowany)
 
-Sprawdź, że w każdej z tych zakładek jesteś zalogowany. Jeśli któraś wymaga logowania — ZATRZYMAJ się i poproś użytkownika o zalogowanie, nie próbuj sam wprowadzać hasła.
+Jeśli Gemini NIE ma uruchomionego Deep Research — STOP i zgłoś użytkownikowi (on miał to odpalić ręcznie).
+Jeśli któraś zakładka wymaga logowania — STOP, poproś użytkownika.
 
-## KROK 1 — Pobierz zdjęcie produktu
+## KROK 1 — Czekaj na Deep Research
 
-1. Otwórz PRODUCT_IMAGE_URL w nowej zakładce.
-2. Kliknij prawym na zdjęciu → "Zapisz obraz jako..." → zapisz do Downloads jako `produkt-{BRAND_NAME}.png` (usuń polskie znaki z nazwy, spacje na myślniki).
-3. Zanotuj PRODUCT_IMAGE_PATH = ścieżka do zapisanego pliku.
+1. Przejdź do zakładki Gemini.
+2. Sprawdź status: jeśli widzisz "Badam źródła…", listę odwiedzonych stron, spinner — Deep Research trwa.
+3. Czekaj. Co ~60 sek wróć do zakładki i sprawdź czy pojawił się przycisk "Eksportuj do Dokumentów" / "Export to Google Docs".
+4. Nie klikaj niczego innego. Nie pisz do Gemini. Nie zmieniaj zakładek poza refreshami statusu.
+5. Gdy widać przycisk eksportu → przejdź do KROKU 2.
 
-Jeśli PRODUCT_IMAGE_URL jest pusty lub zawiera "BRAK" — przejdź do WORKFLOW_URL → zakładka "Produkty" → otwórz wybrany produkt → pobierz zdjęcie stamtąd.
+Jeśli po 40 min dalej brak wyniku — zgłoś użytkownikowi i STOP.
+Jeśli Gemini pokaże błąd / pusty raport — zgłoś i STOP.
 
-Stop-check: bez zdjęcia produktu nie uruchamiaj Deep Research. Zgłoś i STOP.
-
-## KROK 2 — Gemini Deep Research
-
-1. Przejdź do zakładki https://gemini.google.com/app.
-2. Rozpocznij nową konwersację.
-3. Wybierz tryb "Deep Research" (przełącznik modelu u góry lub w bocznym panelu).
-4. Kliknij ikonę załącznika (spinacz) OBOK pola promptu.
-5. Wybierz PRODUCT_IMAGE_PATH z Downloads. Poczekaj aż się załaduje (miniaturka pod promptem).
-6. W polu promptu wklej DOKŁADNIE poniższy tekst:
-
-    Przeprowadź dogłębną analizę poniższego produktu i przygotuj kompletny raport strategiczny, który posłuży jako fundament do budowy marki i sprzedaży tego produktu na rynku polskim.
-
-    PRODUKT jest załączony jako zrzut ekranu
-
-    KONTEKST BIZNESOWY:
-    - Model startu: dropshipping z AliExpress (pierwsze zamówienia)
-    - Docelowy model: import przez agenta w Chinach z pełnym brandingiem (własne opakowanie, logo na produkcie, wkładki do paczki, branded unboxing experience), a następnie import do magazynów w Polsce
-    - Kanał sprzedaży: dedykowany landing page (one-product store)
-    - Rynek docelowy: Polska
-
-    1. Przeanalizuj produkt i jego potencjał rynkowy.
-    2. Jaki problem rozwiązuje i jakie potrzeby zaspokaja. Jakie są czułe punkty w które warto uderzać aby potencjalny klient czuł bardzo silną potrzebę zakupu. Jak grać na emocjach.
-    3. Kim jest grupa docelowa i zbuduj jej avatar
-    4. Jak podejść do budowy marki dla tego produktu. Zaproponuj 5 nazw dla marki, mogą po polsku i po angielsku. Jak marka powinna się komunikować, jaki mieć styl, jakie wartości eksponować.
-    5. Opracuj plan komunikacji marketingowej
-    6. Przygotuj strategię rozwoju i pomysłu na skalowanie
-
-    Ten raport ma być przewodnikiem dla osoby, który już zdecydowała, że chce sprzedawać ten produkt i raport ma maksymalnie pomóc w tym, aby wprowadzić produkt na rynek, oraz zacząć budować markę wokół niego i maksymalizować zyski ze sprzedaży.
-
-    Raport jest przygotowany dla: {{customer_name}}
-
-7. Wyślij. Gemini najpierw pokaże plan badawczy — potwierdź ("Rozpocznij badanie").
-8. CZEKAJ. Co ~60 sekund sprawdzaj status. Nie klikaj niczego innego, nie zmieniaj zakładek, nie pisz do Gemini nic więcej. Deep Research pokaże progres (lista odwiedzonych stron itd.). Finalny raport = duża sformatowana odpowiedź + przycisk "Eksportuj do Dokumentów".
-9. Jeśli po 25 min dalej się generuje — NIE przerywaj, czekaj. Potrafi iść 20+ min.
-
-## KROK 3 — Export do Docs, rename, download PDF
+## KROK 2 — Export do Docs, rename, download PDF
 
 1. Kliknij "Eksportuj do Dokumentów" w Gemini.
-2. Nowa zakładka Google Docs otworzy się z treścią raportu. Poczekaj aż się załaduje.
-3. Kliknij tytuł dokumentu u góry i zmień na dokładnie: `{{brand_name}} raport główny`. Enter.
-4. Ctrl+A → Ctrl+C (treść zostaje w schowku — użyjesz w KROKU 5).
+2. Otworzy się nowa zakładka Google Docs z raportem. Poczekaj aż się załaduje.
+3. Kliknij tytuł dokumentu u góry, zmień na dokładnie: `{{brand_name}} raport główny`. Enter.
+4. Ctrl+A → Ctrl+C (treść w schowku — przyda się w KROKU 4).
 5. File → Download → PDF Document (.pdf). Poczekaj aż pobranie się skończy.
-6. Plik trafia do Downloads. Zanotuj PDF_PATH.
+6. Plik w Downloads. Zanotuj PDF_PATH.
 
-## KROK 4 — Upload PDF do CRM jako raport główny
+## KROK 3 — Upload PDF do CRM jako raport główny
 
 1. Wróć do WORKFLOW_URL.
 2. Kliknij zakładkę "Raporty".
-3. Kliknij dropzone ("Przeciągnij pliki lub kliknij") lub przeciągnij plik PDF_PATH bezpośrednio na dropzone.
-4. W pickerze wybierz PDF_PATH. Plik zostanie automatycznie uploadowany.
-5. Po uploadzie pojawi się nowy wpis w liście raportów. Kliknij w jego tytuł/ikonę edycji jeśli trzeba zmienić nazwę na "Raport główny".
-6. NIE klikaj "Udostępnij klientowi" — zostaw niewidoczne dla klienta.
+3. Przeciągnij plik z Downloads na dropzone "Przeciągnij pliki lub kliknij" LUB kliknij dropzone i wybierz plik w pickerze.
+4. Poczekaj aż upload się zakończy (pojawi się nowy wpis w liście).
+5. Jeśli tytuł jest automatyczny (np. nazwa pliku) — kliknij w niego i zmień na "Raport główny".
+6. NIE klikaj "Udostępnij klientowi".
 
-Stop-check: jeśli upload padł — spróbuj ponownie. Druga porażka → STOP i zgłoś.
+Druga porażka uploadu → STOP, zgłoś.
 
-## KROK 5 — NotebookLM: nowy notebook + źródło tekstowe
+## KROK 4 — NotebookLM: nowy notebook + źródło tekstowe
 
-1. Przejdź do zakładki https://notebooklm.google.com/.
+1. Przejdź do zakładki NotebookLM.
 2. Kliknij "+ Create new notebook".
 3. W oknie dodawania źródeł wybierz "Copied text" / "Kopiuj tekst".
-4. Wklej (Ctrl+V) treść raportu skopiowaną w KROKU 3, punkt 4.
-5. Nazwij źródło: `Raport główny — {{brand_name}}`.
+4. Wklej (Ctrl+V) treść raportu ze schowka (ta z KROKU 2.4).
+5. Nazwa źródła: `Raport główny — {{brand_name}}`.
 6. Potwierdź. NotebookLM przetworzy tekst (~30 sek).
 
-## KROK 6 — Generuj Briefing Doc (jako "prezentacja")
+## KROK 5 — Briefing Doc (prezentacja)
 
 1. W Notebook Guide kliknij "Briefing Document" / "Dokument briefingowy".
-2. Czekaj 1–2 min aż się wygeneruje. Otwórz dokument.
-3. Kliknij "Download" / "Pobierz" → wybierz PDF. Zapisz do Downloads jako BRIEFING_PATH.
-4. Fallback jeśli brak "Download": "Save as note" → otwórz notatkę → "Copy" → wklej w nowy Google Docs → File → Download → PDF.
+2. Czekaj 1–2 min. Otwórz dokument.
+3. Kliknij "Download" → PDF. Zapisz do Downloads (BRIEFING_PATH).
+4. Fallback bez "Download": "Save as note" → otwórz notatkę → "Copy" → wklej w nowy Google Docs → File → Download → PDF.
 5. Wróć do WORKFLOW_URL → Raporty → dropzone → upload BRIEFING_PATH.
-6. Zmień tytuł w liście na "Briefing (prezentacja)".
+6. Zmień tytuł wpisu na "Briefing (prezentacja)".
 
-## KROK 7 — Generuj Infografikę
+## KROK 6 — Infografika
 
 1. Wróć do notebooka. Kliknij "Infographic" / "Infografika".
 2. Czekaj 2–4 min. Otwórz infografikę.
-3. Jeśli jest "Download PNG/PDF" — użyj. INFOGRAPHIC_PATH.
-4. Fallback: Win+Shift+S → zaznacz całość infografiki → zapisz jako `infografika-{{brand_name}}.png` do Downloads.
-5. Wróć do WORKFLOW_URL → Raporty → upload INFOGRAPHIC_PATH. Zmień tytuł na "Infografika".
+3. "Download PNG/PDF" → zapisz (INFOGRAPHIC_PATH).
+4. Fallback: Win+Shift+S → zaznacz całość → zapisz `infografika-{{brand_name}}.png` do Downloads.
+5. Wróć do WORKFLOW_URL → Raporty → upload INFOGRAPHIC_PATH. Tytuł: "Infografika".
 
-## KROK 8 — Generuj Video Overview (krótkie)
+## KROK 7 — Video Overview (krótkie)
 
 1. Wróć do notebooka. Kliknij "Video Overview".
 2. Jeśli pojawi się wybór długości — wybierz "Short". Inaczej domyślne.
-3. Czekaj 5–15 min. Co 2 min odświeżaj.
-4. Gdy gotowe — otwórz video. Kliknij "Download" → MP4. Zapisz do Downloads jako VIDEO_PATH.
-5. Wróć do WORKFLOW_URL → Raporty → upload VIDEO_PATH. Zmień tytuł na "Video overview".
+3. Czekaj 5–15 min. Co 2 min sprawdzaj status.
+4. Gdy gotowe — "Download" → MP4. Zapisz do Downloads (VIDEO_PATH).
+5. Wróć do WORKFLOW_URL → Raporty → upload VIDEO_PATH. Tytuł: "Video overview".
 
-## KROK 9 — Raport końcowy
+## KROK 8 — Raport końcowy
 
 Zgłoś użytkownikowi:
 - Workflow: {{workflow_id}}
 - Brand: {{brand_name}} / Klient: {{customer_name}}
-- Artefakty w {{workflow_id}} → Raporty:
+- 4 artefakty w WORKFLOW_URL → Raporty:
   * Raport główny (PDF)
-  * Briefing (PDF)
+  * Briefing (prezentacja) (PDF)
   * Infografika (PNG/PDF)
   * Video overview (MP4)
-- Czas pracy: przybliżony.
+- Przybliżony czas pracy.
 
 ## ZASADY OGÓLNE
 
-- Nie możesz czegoś znaleźć? Screenshot + opis + pytanie do użytkownika. NIE zgaduj.
+- Nie znajdujesz czegoś? Screenshot + opis + pytanie do użytkownika. NIE zgaduj.
 - NIE wprowadzaj haseł.
-- NIE zmieniaj innych danych workflow poza dodawaniem raportów.
+- NIE zmieniaj danych workflow poza dodawaniem raportów.
 - NIE usuwaj istniejących raportów.
 - NIE wchodź na inne konta Google ani inne strony.
-- Drugi raz ten sam krok pada → STOP, pełny log co robiłeś.
-- Raporty zostają niewidoczne dla klienta (udostępnienie ręczne przez użytkownika).$PROMPT$,
-'Cowork prompt: Gemini Deep Research + NotebookLM → 4 artefakty w Raportach Etap 1', 1)
+- Drugi raz ten sam krok pada → STOP + pełny log.
+- Raporty zostają niewidoczne dla klienta (udostępnia użytkownik ręcznie).$PROMPT$,
+'Cowork dokańcza flow: czeka na Deep Research → upload do CRM → NotebookLM (Briefing + Infografika + Video)', 1)
 ON CONFLICT (template_key) DO UPDATE
     SET content = EXCLUDED.content,
         name = EXCLUDED.name,
