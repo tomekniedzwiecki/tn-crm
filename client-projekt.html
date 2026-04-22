@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026042004';
+        const APP_VERSION = '2026042201';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3583,7 +3583,7 @@
                                 <div id="pg-payu-section">
                                     <div class="flex items-center justify-between mb-1">
                                         <h3 class="text-[15px] font-medium text-white">Skonfiguruj PayU w TakeDrop</h3>
-                                        <div id="pg-payu-success-state" class="hidden flex items-center gap-2">
+                                        <div id="pg-payu-success-state" class="hidden items-center gap-2">
                                             <i class="ph-fill ph-check-circle text-emerald-500"></i>
                                             <span class="text-[12px] text-emerald-500">Skonfigurowano</span>
                                         </div>
@@ -3613,7 +3613,7 @@
                                 <div id="pg-stripe-section" class="hidden">
                                     <div class="flex items-center justify-between mb-1">
                                         <h3 class="text-[15px] font-medium text-white">Skonfiguruj Stripe w TakeDrop</h3>
-                                        <div id="pg-stripe-success-state" class="hidden flex items-center gap-2">
+                                        <div id="pg-stripe-success-state" class="hidden items-center gap-2">
                                             <i class="ph-fill ph-check-circle text-emerald-500"></i>
                                             <span class="text-[12px] text-emerald-500">Skonfigurowano</span>
                                         </div>
@@ -3636,6 +3636,81 @@
                                             <i class="ph ph-check mr-1"></i>
                                             Skonfigurowałem Stripe
                                         </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Test payment gateway with a test order -->
+                    <div id="pg-step-test" class="hidden bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
+                        <div class="flex items-start gap-4">
+                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">3</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1">
+                                    <h3 class="text-[15px] font-medium text-white">Sprawdź czy bramka działa — złóż testowe zamówienie</h3>
+                                    <div id="pg-test-success-label" class="hidden items-center gap-2">
+                                        <i class="ph-fill ph-check-circle text-emerald-500"></i>
+                                        <span class="text-[12px] text-emerald-500">Test zaliczony</span>
+                                    </div>
+                                </div>
+                                <p class="text-[13px] text-[#666] mb-4">
+                                    Zanim uznamy bramkę za gotową — upewnij się, że płatności faktycznie działają. Złóż testowe zamówienie na swoim sklepie i potwierdź obie rzeczy poniżej.
+                                </p>
+
+                                <!-- Form (visible until tested) -->
+                                <div id="pg-test-form">
+                                    <div class="bg-[#070707] border border-[#1a1a1a] rounded-lg p-4 mb-4">
+                                        <p class="text-[12px] text-[#888] font-medium mb-3 uppercase tracking-wide">Co musisz zrobić:</p>
+                                        <ol class="space-y-3 text-[13px] text-[#bbb]">
+                                            <li class="flex gap-3">
+                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">1</span>
+                                                <span>Otwórz <a id="pg-test-shop-link" href="#" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">swój sklep</a> i złóż testowe zamówienie (dowolny produkt, dowolna ilość).</span>
+                                            </li>
+                                            <li class="flex gap-3">
+                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">2</span>
+                                                <span>Sprawdź swoją skrzynkę mailową — powinieneś dostać <strong class="text-white">potwierdzenie złożenia zamówienia</strong>.</span>
+                                            </li>
+                                            <li class="flex gap-3">
+                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">3</span>
+                                                <span>Zaloguj się do <a href="https://takedrop.pl/account/orders" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">TakeDrop → zakładka Zamówienia</a> i sprawdź, czy Twoje testowe zamówienie jest tam widoczne.</span>
+                                            </li>
+                                        </ol>
+                                    </div>
+
+                                    <p class="text-[12px] text-[#888] font-medium mb-3 uppercase tracking-wide">Potwierdź oba punkty:</p>
+                                    <div class="space-y-2 mb-4">
+                                        <label class="flex items-start gap-3 p-3 rounded-lg bg-[#070707] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors">
+                                            <input type="checkbox" id="pg-test-check-email" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded border-[#333] bg-[#1a1a1a] cursor-pointer accent-emerald-500">
+                                            <span class="text-[13px] text-[#ccc] flex-1">Dostałem e-mail z potwierdzeniem zamówienia</span>
+                                        </label>
+                                        <label class="flex items-start gap-3 p-3 rounded-lg bg-[#070707] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors">
+                                            <input type="checkbox" id="pg-test-check-orders" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded border-[#333] bg-[#1a1a1a] cursor-pointer accent-emerald-500">
+                                            <span class="text-[13px] text-[#ccc] flex-1">Widzę zamówienie w TakeDrop (zakładka Zamówienia)</span>
+                                        </label>
+                                    </div>
+
+                                    <button id="pg-test-confirm-btn" onclick="confirmPaymentGatewayTested()" disabled
+                                            class="inline-flex items-center gap-2 bg-emerald-500 text-white text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500">
+                                        <i class="ph ph-check-circle text-[14px]"></i>
+                                        Potwierdzam — test bramki zakończony pozytywnie
+                                    </button>
+                                </div>
+
+                                <!-- Success banner (visible after tested) -->
+                                <div id="pg-test-success-banner" class="hidden">
+                                    <div class="rounded-xl p-5 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30">
+                                        <div class="flex items-start gap-4">
+                                            <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
+                                                <i class="ph-fill ph-check-circle text-2xl text-emerald-400"></i>
+                                            </div>
+                                            <div class="flex-1 min-w-0">
+                                                <h4 class="text-[15px] font-semibold text-emerald-300 mb-1">Test bramki zakończony pozytywnie</h4>
+                                                <p class="text-[13px] text-[#aaa]">Bramka płatności działa poprawnie — zamówienia trafiają do TakeDrop, a e-maile z potwierdzeniem są wysyłane. Możesz spokojnie przyjmować prawdziwe zamówienia.</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -10061,61 +10136,100 @@
             const payuSection = document.getElementById('pg-payu-section');
             const stripeSection = document.getElementById('pg-stripe-section');
 
+            // Step 2 "configured" = configured_at set OR ready=true (legacy)
+            const isConfigured = !!(takeDropData?.payment_gateway_configured_at || takeDropData?.payment_gateway_ready);
+            // Step 3 "tested" = ready=true
+            const isTested = !!takeDropData?.payment_gateway_ready;
+
+            const setStepDone = (successId, formId, done) => {
+                const success = document.getElementById(successId);
+                const form = document.getElementById(formId);
+                if (done) {
+                    success?.classList.remove('hidden');
+                    success?.classList.add('flex');
+                    form?.classList.add('hidden');
+                } else {
+                    success?.classList.add('hidden');
+                    success?.classList.remove('flex');
+                    form?.classList.remove('hidden');
+                }
+            };
+
             if (hasNip) {
-                // PayU flow - self-configuration (same as Stripe)
                 payuSection?.classList.remove('hidden');
                 stripeSection?.classList.add('hidden');
-
-                const isConfigured = takeDropData?.payment_gateway_ready;
-                if (isConfigured) {
-                    document.getElementById('pg-payu-success-state')?.classList.remove('hidden');
-                    document.getElementById('pg-payu-form')?.classList.add('hidden');
-                } else {
-                    document.getElementById('pg-payu-success-state')?.classList.add('hidden');
-                    document.getElementById('pg-payu-form')?.classList.remove('hidden');
-                }
+                setStepDone('pg-payu-success-state', 'pg-payu-form', isConfigured);
             } else {
-                // Stripe flow - self-configuration
                 payuSection?.classList.add('hidden');
                 stripeSection?.classList.remove('hidden');
+                setStepDone('pg-stripe-success-state', 'pg-stripe-form', isConfigured);
+            }
 
-                const isConfigured = takeDropData?.payment_gateway_ready;
-                if (isConfigured) {
-                    document.getElementById('pg-stripe-success-state')?.classList.remove('hidden');
-                    document.getElementById('pg-stripe-form')?.classList.add('hidden');
-                } else {
-                    document.getElementById('pg-stripe-success-state')?.classList.add('hidden');
-                    document.getElementById('pg-stripe-form')?.classList.remove('hidden');
+            // Step 3: show only after step 2 is done
+            const stepTest = document.getElementById('pg-step-test');
+            if (isConfigured) {
+                stepTest?.classList.remove('hidden');
+
+                // Set shop link (domain or fallback)
+                const shopLink = document.getElementById('pg-test-shop-link');
+                if (shopLink) {
+                    const domain = takeDropData?.domain;
+                    if (domain) {
+                        shopLink.href = domain.startsWith('http') ? domain : `https://${domain}`;
+                    } else {
+                        shopLink.href = '#';
+                    }
                 }
+
+                setStepDone('pg-test-success-label', 'pg-test-form', isTested);
+                const banner = document.getElementById('pg-test-success-banner');
+                if (isTested) {
+                    banner?.classList.remove('hidden');
+                } else {
+                    banner?.classList.add('hidden');
+                    // Reset checkboxes & button
+                    const cb1 = document.getElementById('pg-test-check-email');
+                    const cb2 = document.getElementById('pg-test-check-orders');
+                    if (cb1) cb1.checked = false;
+                    if (cb2) cb2.checked = false;
+                    updatePaymentTestButton();
+                }
+            } else {
+                stepTest?.classList.add('hidden');
             }
         }
 
+        function updatePaymentTestButton() {
+            const cb1 = document.getElementById('pg-test-check-email');
+            const cb2 = document.getElementById('pg-test-check-orders');
+            const btn = document.getElementById('pg-test-confirm-btn');
+            if (btn) btn.disabled = !(cb1?.checked && cb2?.checked);
+        }
+        window.updatePaymentTestButton = updatePaymentTestButton;
+
         async function confirmStripeConfigured() {
             try {
+                const now = new Date().toISOString();
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
                         payment_gateway_type: 'stripe',
-                        payment_gateway_ready: true,
-                        payment_gateway_configured_at: new Date().toISOString()
+                        payment_gateway_configured_at: now
                     })
                     .eq('workflow_id', workflow.id);
 
                 if (error) throw error;
 
-                // Update local data
                 takeDropData = {
                     ...takeDropData,
                     payment_gateway_type: 'stripe',
-                    payment_gateway_ready: true,
-                    payment_gateway_configured_at: new Date().toISOString()
+                    payment_gateway_configured_at: now
                 };
 
-                // Update UI
                 loadPaymentGatewayTab();
                 updateDashSidebar();
                 renderEtap3BramkaPlatnosciBox();
-                showToast('Stripe skonfigurowany!', 'success');
+                showToast('Skonfigurowano! Złóż teraz testowe zamówienie aby dokończyć.', 'success');
 
             } catch (err) {
                 console.error('Error confirming Stripe configuration:', err);
@@ -10126,30 +10240,27 @@
 
         async function confirmPayUConfigured() {
             try {
+                const now = new Date().toISOString();
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
                         payment_gateway_type: 'payu',
-                        payment_gateway_ready: true,
-                        payment_gateway_configured_at: new Date().toISOString()
+                        payment_gateway_configured_at: now
                     })
                     .eq('workflow_id', workflow.id);
 
                 if (error) throw error;
 
-                // Update local data
                 takeDropData = {
                     ...takeDropData,
                     payment_gateway_type: 'payu',
-                    payment_gateway_ready: true,
-                    payment_gateway_configured_at: new Date().toISOString()
+                    payment_gateway_configured_at: now
                 };
 
-                // Update UI
                 loadPaymentGatewayTab();
                 updateDashSidebar();
                 renderEtap3BramkaPlatnosciBox();
-                showToast('PayU skonfigurowane!', 'success');
+                showToast('Skonfigurowano! Złóż teraz testowe zamówienie aby dokończyć.', 'success');
 
             } catch (err) {
                 console.error('Error confirming PayU configuration:', err);
@@ -10157,6 +10268,37 @@
             }
         }
         window.confirmPayUConfigured = confirmPayUConfigured;
+
+        async function confirmPaymentGatewayTested() {
+            const cb1 = document.getElementById('pg-test-check-email');
+            const cb2 = document.getElementById('pg-test-check-orders');
+            if (!cb1?.checked || !cb2?.checked) {
+                showToast('Potwierdź oba punkty przed zakończeniem testu', 'error');
+                return;
+            }
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({ payment_gateway_ready: true })
+                    .eq('workflow_id', workflow.id);
+
+                if (error) throw error;
+
+                takeDropData = { ...takeDropData, payment_gateway_ready: true };
+
+                loadPaymentGatewayTab();
+                updateDashSidebar();
+                renderEtap3BramkaPlatnosciBox();
+                renderEtap3TestBox();
+                renderEtap3Dashboard();
+                showToast('Test bramki zakończony pozytywnie!', 'success');
+
+            } catch (err) {
+                console.error('Error confirming payment gateway test:', err);
+                showToast(err.message || 'Błąd zapisu', 'error');
+            }
+        }
+        window.confirmPaymentGatewayTested = confirmPaymentGatewayTested;
 
         // =============================================
         // TEST SKLEPU FUNCTIONS
