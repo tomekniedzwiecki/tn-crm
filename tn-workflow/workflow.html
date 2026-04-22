@@ -12713,8 +12713,8 @@ Zwróć TYLKO JSON.`;
                 }
 
                 // Trigger automation for email notification
-                const clientName = workflow?.first_name || 'Kliencie';
-                const brandName = workflow?.brand_name || workflow?.name || 'Twój sklep';
+                const clientName = (workflow?.customer_name || '').split(' ')[0] || 'Kliencie';
+                const brandName = workflow?.offer_name || 'Twój sklep';
 
                 try {
                     await supabaseClient.functions.invoke('automation-trigger', {
@@ -12724,8 +12724,8 @@ Zwróć TYLKO JSON.`;
                             entity_id: workflow.id,
                             context: {
                                 workflow_id: workflow.id,
-                                client_name: clientName,
-                                brand_name: brandName,
+                                clientName,
+                                brandName,
                                 launched_at: now
                             }
                         }
