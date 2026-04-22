@@ -11110,6 +11110,7 @@ Zwróć TYLKO JSON.`;
             creatives[index] = { ...creatives[index], selected_for_cowork: !current };
             adsData.ad_creatives = creatives;
             renderCreativeGallery();
+            try { renderContentStepper(); } catch (_) {}
             updateContentStatusBar();
             // Zapis do bazy (fire-and-forget, ale z error handlingiem)
             try {
@@ -12439,17 +12440,25 @@ Zwróć TYLKO JSON.`;
             const progAds = progress.ads || [];
 
             // Nav tabs
+            const coworkSelected = getCoworkSelectedIndexes().length;
             nav.innerHTML = Array.from({ length: n }).map((_, i) => {
                 const active = i === currentAdIndex;
                 const done = !!progAds[i];
                 const v = versions[i] || {};
+                const c = creatives[i] || {};
                 const angleLabel = angleStyle(v.angle).label;
+                const starred = !!c.selected_for_cowork;
                 return `
-                <button onclick="setCurrentAd(${i})" class="shrink-0 px-3 py-2 rounded-lg border text-left flex items-center gap-2 transition-all ${active ? 'bg-violet-500/15 border-violet-500/40' : 'bg-zinc-900/50 border-white/5 hover:border-white/20'}">
-                    <span class="text-[11px] font-bold ${active ? 'text-violet-200' : 'text-zinc-400'}">#${i + 1}</span>
-                    <span class="text-[10px] ${active ? 'text-zinc-200' : 'text-zinc-500'}">${escapeHtml(angleLabel)}</span>
-                    ${done ? '<i class="ph ph-check-circle text-emerald-400 text-[13px]"></i>' : ''}
-                </button>`;
+                <div class="shrink-0 relative inline-flex items-stretch rounded-lg border transition-all ${active ? 'bg-violet-500/15 border-violet-500/40' : 'bg-zinc-900/50 border-white/5 hover:border-white/20'} ${starred ? 'ring-1 ring-amber-500/50' : ''}">
+                    <button onclick="setCurrentAd(${i})" class="px-3 py-2 text-left flex items-center gap-2">
+                        <span class="text-[11px] font-bold ${active ? 'text-violet-200' : 'text-zinc-400'}">#${i + 1}</span>
+                        <span class="text-[10px] ${active ? 'text-zinc-200' : 'text-zinc-500'}">${escapeHtml(angleLabel)}</span>
+                        ${done ? '<i class="ph ph-check-circle text-emerald-400 text-[13px]"></i>' : ''}
+                    </button>
+                    <button onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${starred ? 'Odznacz z Cowork' : `Zaznacz do Cowork (wybrano ${coworkSelected}/2)`}" class="px-2 flex items-center justify-center border-l ${active ? 'border-violet-500/40' : 'border-white/5'} ${starred ? 'text-amber-400' : 'text-zinc-500 hover:text-amber-400'} transition-colors">
+                        <i class="ph ${starred ? 'ph-star-fill' : 'ph-star'} text-[13px]"></i>
+                    </button>
+                </div>`;
             }).join('');
 
             // Active ad body — 3 kolumny
