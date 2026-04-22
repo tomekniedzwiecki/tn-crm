@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026042201';
+        const APP_VERSION = '2026042202';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3534,189 +3534,19 @@
             <div id="tab-bramka-platnosci" class="tab-panel hidden animate-enter">
                 <div class="max-w-2xl">
                     <!-- Header -->
-                    <div class="mb-8">
+                    <div class="mb-6">
                         <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Bramka płatności</h2>
-                        <p class="text-[14px] text-[#666]">Załóż konto w bramce płatności, aby móc przyjmować płatności online</p>
+                        <p class="text-[14px] text-[#666]">Trzy kroki do przyjmowania płatności online</p>
                     </div>
 
-                    <!-- Gateway type info (depends on NIP) -->
-                    <div id="pg-client-gateway-info" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
-                        <div class="flex items-start gap-4">
-                            <div id="pg-gateway-icon" class="w-12 h-12 rounded-xl bg-[#1a1a1a] flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-credit-card text-xl text-white"></i>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 id="pg-gateway-title" class="text-[16px] font-medium text-white mb-2">Ładowanie...</h3>
-                                <p id="pg-gateway-desc" class="text-[13px] text-[#666] mb-4">Sprawdzam typ bramki...</p>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Gateway badge (rendered by JS) -->
+                    <div id="pg-gateway-badge" class="mb-6"></div>
 
-                    <!-- Step 1: Create Account -->
-                    <div id="pg-step-register" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
-                        <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                                <span class="text-[13px] font-medium text-white">1</span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <h3 class="text-[15px] font-medium text-white mb-1">Załóż konto</h3>
-                                <p id="pg-register-desc" class="text-[13px] text-[#666] mb-4">
-                                    Kliknij przycisk poniżej i załóż konto w bramce płatności.
-                                </p>
-                                <a id="pg-register-link" href="#" target="_blank" rel="noopener noreferrer"
-                                   class="inline-flex items-center gap-2 bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
-                                    <span id="pg-register-btn-text">Załóż konto</span>
-                                    <i class="ph ph-arrow-up-right text-[14px]"></i>
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+                    <!-- Stepper (rendered by JS) -->
+                    <div id="pg-stepper" class="mb-6"></div>
 
-                    <!-- Step 2: Confirm Account / Provide Credentials (PayU) or Self-config (Stripe) -->
-                    <div id="pg-step-credentials" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
-                        <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                                <span class="text-[13px] font-medium text-white">2</span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <!-- PayU: self-configuration -->
-                                <div id="pg-payu-section">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <h3 class="text-[15px] font-medium text-white">Skonfiguruj PayU w TakeDrop</h3>
-                                        <div id="pg-payu-success-state" class="hidden items-center gap-2">
-                                            <i class="ph-fill ph-check-circle text-emerald-500"></i>
-                                            <span class="text-[12px] text-emerald-500">Skonfigurowano</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-[13px] text-[#666] mb-4">
-                                        Połącz swoje konto PayU z TakeDrop według instrukcji poniżej.
-                                    </p>
-                                    <div id="pg-payu-form">
-                                        <a href="https://pomoc.takedrop.pl/support/solutions/articles/77000485209-konfiguracja-p%C5%82atno%C5%9Bci-payu"
-                                           target="_blank" rel="noopener noreferrer"
-                                           class="inline-flex items-center gap-2 bg-[#00d084] text-white text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#00b872] transition-colors mb-4">
-                                            <i class="ph ph-book-open text-[14px]"></i>
-                                            Otwórz instrukcję konfiguracji
-                                            <i class="ph ph-arrow-up-right text-[14px]"></i>
-                                        </a>
-                                        <p class="text-[12px] text-[#777] mb-4">
-                                            Po wykonaniu wszystkich kroków z instrukcji, kliknij przycisk poniżej:
-                                        </p>
-                                        <button onclick="confirmPayUConfigured()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
-                                            <i class="ph ph-check mr-1"></i>
-                                            Skonfigurowałem PayU
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <!-- Stripe: self-configuration -->
-                                <div id="pg-stripe-section" class="hidden">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <h3 class="text-[15px] font-medium text-white">Skonfiguruj Stripe w TakeDrop</h3>
-                                        <div id="pg-stripe-success-state" class="hidden items-center gap-2">
-                                            <i class="ph-fill ph-check-circle text-emerald-500"></i>
-                                            <span class="text-[12px] text-emerald-500">Skonfigurowano</span>
-                                        </div>
-                                    </div>
-                                    <p class="text-[13px] text-[#666] mb-4">
-                                        Połącz swoje konto Stripe z TakeDrop według instrukcji poniżej.
-                                    </p>
-                                    <div id="pg-stripe-form">
-                                        <a href="https://takedrop.freshdesk.com/support/solutions/articles/77000519608-konfiguracja-p%C5%82atno%C5%9Bci-stripe"
-                                           target="_blank" rel="noopener noreferrer"
-                                           class="inline-flex items-center gap-2 bg-[#635bff] text-white text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#5851e6] transition-colors mb-4">
-                                            <i class="ph ph-book-open text-[14px]"></i>
-                                            Otwórz instrukcję konfiguracji
-                                            <i class="ph ph-arrow-up-right text-[14px]"></i>
-                                        </a>
-                                        <p class="text-[12px] text-[#777] mb-4">
-                                            Po wykonaniu wszystkich kroków z instrukcji, kliknij przycisk poniżej:
-                                        </p>
-                                        <button onclick="confirmStripeConfigured()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
-                                            <i class="ph ph-check mr-1"></i>
-                                            Skonfigurowałem Stripe
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Step 3: Test payment gateway with a test order -->
-                    <div id="pg-step-test" class="hidden bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4">
-                        <div class="flex items-start gap-4">
-                            <div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                                <span class="text-[13px] font-medium text-white">3</span>
-                            </div>
-                            <div class="flex-1 min-w-0">
-                                <div class="flex items-center justify-between mb-1">
-                                    <h3 class="text-[15px] font-medium text-white">Sprawdź czy bramka działa — złóż testowe zamówienie</h3>
-                                    <div id="pg-test-success-label" class="hidden items-center gap-2">
-                                        <i class="ph-fill ph-check-circle text-emerald-500"></i>
-                                        <span class="text-[12px] text-emerald-500">Test zaliczony</span>
-                                    </div>
-                                </div>
-                                <p class="text-[13px] text-[#666] mb-4">
-                                    Zanim uznamy bramkę za gotową — upewnij się, że płatności faktycznie działają. Złóż testowe zamówienie na swoim sklepie i potwierdź obie rzeczy poniżej.
-                                </p>
-
-                                <!-- Form (visible until tested) -->
-                                <div id="pg-test-form">
-                                    <div class="bg-[#070707] border border-[#1a1a1a] rounded-lg p-4 mb-4">
-                                        <p class="text-[12px] text-[#888] font-medium mb-3 uppercase tracking-wide">Co musisz zrobić:</p>
-                                        <ol class="space-y-3 text-[13px] text-[#bbb]">
-                                            <li class="flex gap-3">
-                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">1</span>
-                                                <span>Otwórz <a id="pg-test-shop-link" href="#" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">swój sklep</a> i złóż testowe zamówienie (dowolny produkt, dowolna ilość).</span>
-                                            </li>
-                                            <li class="flex gap-3">
-                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">2</span>
-                                                <span>Sprawdź swoją skrzynkę mailową — powinieneś dostać <strong class="text-white">potwierdzenie złożenia zamówienia</strong>.</span>
-                                            </li>
-                                            <li class="flex gap-3">
-                                                <span class="flex-shrink-0 w-5 h-5 rounded-full bg-[#1a1a1a] text-white/70 text-[11px] flex items-center justify-center font-medium">3</span>
-                                                <span>Zaloguj się do <a href="https://takedrop.pl/account/orders" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">TakeDrop → zakładka Zamówienia</a> i sprawdź, czy Twoje testowe zamówienie jest tam widoczne.</span>
-                                            </li>
-                                        </ol>
-                                    </div>
-
-                                    <p class="text-[12px] text-[#888] font-medium mb-3 uppercase tracking-wide">Potwierdź oba punkty:</p>
-                                    <div class="space-y-2 mb-4">
-                                        <label class="flex items-start gap-3 p-3 rounded-lg bg-[#070707] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors">
-                                            <input type="checkbox" id="pg-test-check-email" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded border-[#333] bg-[#1a1a1a] cursor-pointer accent-emerald-500">
-                                            <span class="text-[13px] text-[#ccc] flex-1">Dostałem e-mail z potwierdzeniem zamówienia</span>
-                                        </label>
-                                        <label class="flex items-start gap-3 p-3 rounded-lg bg-[#070707] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors">
-                                            <input type="checkbox" id="pg-test-check-orders" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded border-[#333] bg-[#1a1a1a] cursor-pointer accent-emerald-500">
-                                            <span class="text-[13px] text-[#ccc] flex-1">Widzę zamówienie w TakeDrop (zakładka Zamówienia)</span>
-                                        </label>
-                                    </div>
-
-                                    <button id="pg-test-confirm-btn" onclick="confirmPaymentGatewayTested()" disabled
-                                            class="inline-flex items-center gap-2 bg-emerald-500 text-white text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500">
-                                        <i class="ph ph-check-circle text-[14px]"></i>
-                                        Potwierdzam — test bramki zakończony pozytywnie
-                                    </button>
-                                </div>
-
-                                <!-- Success banner (visible after tested) -->
-                                <div id="pg-test-success-banner" class="hidden">
-                                    <div class="rounded-xl p-5 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent border border-emerald-500/30">
-                                        <div class="flex items-start gap-4">
-                                            <div class="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
-                                                <i class="ph-fill ph-check-circle text-2xl text-emerald-400"></i>
-                                            </div>
-                                            <div class="flex-1 min-w-0">
-                                                <h4 class="text-[15px] font-semibold text-emerald-300 mb-1">Test bramki zakończony pozytywnie</h4>
-                                                <p class="text-[13px] text-[#aaa]">Bramka płatności działa poprawnie — zamówienia trafiają do TakeDrop, a e-maile z potwierdzeniem są wysyłane. Możesz spokojnie przyjmować prawdziwe zamówienia.</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+                    <!-- Active step content (rendered by JS) -->
+                    <div id="pg-active-step"></div>
                 </div>
             </div>
 
@@ -10079,124 +9909,306 @@
         const PAYU_REGISTER_URL = 'https://registration.payu.com/boarding/#/form?partnerId=d09890lm&origin=pl&lang=pl';
         const STRIPE_REGISTER_URL = 'https://dashboard.stripe.com/register';
 
+        // Focus-mode state: user-selected step override (null = auto-compute)
+        let pgActiveStepOverride = null;
+
         function loadPaymentGatewayTab() {
-            // Check if client has NIP (from legal_data)
             const hasNip = takeDropData?.legal_data?.nip && takeDropData.legal_data.nip.trim().length > 0;
-            const gatewayType = hasNip ? 'payu' : 'stripe';
-
-            // Update gateway info section
-            const gatewayIcon = document.getElementById('pg-gateway-icon');
-            const gatewayTitle = document.getElementById('pg-gateway-title');
-            const gatewayDesc = document.getElementById('pg-gateway-desc');
-
-            if (hasNip) {
-                if (gatewayIcon) gatewayIcon.innerHTML = '<span class="text-xl font-bold text-[#00d084]">P</span>';
-                if (gatewayTitle) gatewayTitle.textContent = 'PayU';
-                if (gatewayDesc) gatewayDesc.textContent = 'Bramka płatności dla firm z numerem NIP. Niskie prowizje i szybkie wypłaty.';
-
-                // Update registration link
-                const registerLink = document.getElementById('pg-register-link');
-                if (registerLink) registerLink.href = PAYU_REGISTER_URL;
-                const registerBtnText = document.getElementById('pg-register-btn-text');
-                if (registerBtnText) registerBtnText.textContent = 'Załóż konto PayU';
-
-                const registerDesc = document.getElementById('pg-register-desc');
-                if (registerDesc) registerDesc.textContent = 'Przejdź do PayU i zarejestruj konto firmowe. Potrzebujesz numeru NIP i danych firmy.';
-            } else {
-                if (gatewayIcon) gatewayIcon.innerHTML = '<span class="text-xl font-bold text-[#635bff]">S</span>';
-                if (gatewayTitle) gatewayTitle.textContent = 'Stripe';
-                if (gatewayDesc) gatewayDesc.innerHTML = `
-                    Bramka płatności dla osób prywatnych. <strong class="text-amber-400">Wymaga aktywacji konta produkcyjnego</strong> — bez tego nie można przyjmować prawdziwych płatności.
-                `;
-
-                // Update registration link
-                const registerLink = document.getElementById('pg-register-link');
-                if (registerLink) registerLink.href = STRIPE_REGISTER_URL;
-                const registerBtnText = document.getElementById('pg-register-btn-text');
-                if (registerBtnText) registerBtnText.textContent = 'Załóż konto Stripe';
-
-                const registerDesc = document.getElementById('pg-register-desc');
-                if (registerDesc) registerDesc.innerHTML = `
-                    <strong class="text-white">WAŻNE: Po rejestracji musisz aktywować konto produkcyjne!</strong><br><br>
-                    <span class="text-[#888]">Kroki do wykonania:</span><br>
-                    <span class="text-[#aaa]">1.</span> Zarejestruj się i potwierdź email<br>
-                    <span class="text-[#aaa]">2.</span> Kliknij banner <span class="text-amber-400">"Activate your account"</span> lub przejdź do Settings → Account details<br>
-                    <span class="text-[#aaa]">3.</span> Wypełnij wszystkie wymagane dane:<br>
-                    <span class="pl-4 text-[#777]">• Dane osobowe (imię, nazwisko, data urodzenia, adres)</span><br>
-                    <span class="pl-4 text-[#777]">• Numer telefonu</span><br>
-                    <span class="pl-4 text-[#777]">• Dokument tożsamości (Stripe może poprosić o zdjęcie)</span><br>
-                    <span class="pl-4 text-[#777]">• Numer konta bankowego (IBAN) do wypłat</span><br>
-                    <span class="text-[#aaa]">4.</span> Poczekaj na weryfikację (zwykle 1-2 dni robocze)<br>
-                    <span class="text-[#aaa]">5.</span> Gdy zobaczysz <span class="text-emerald-400">"Your account is activated"</span> — konto jest gotowe!<br><br>
-                    <span class="text-amber-400/80 text-[12px]">⚠️ Bez aktywacji konto pozostaje w trybie testowym i nie może przyjmować prawdziwych płatności.</span>
-                `;
-            }
-
-            // Show/hide PayU vs Stripe sections
-            const payuSection = document.getElementById('pg-payu-section');
-            const stripeSection = document.getElementById('pg-stripe-section');
-
-            // Step 2 "configured" = configured_at set OR ready=true (legacy)
+            const gateway = hasNip ? 'payu' : 'stripe';
             const isConfigured = !!(takeDropData?.payment_gateway_configured_at || takeDropData?.payment_gateway_ready);
-            // Step 3 "tested" = ready=true
             const isTested = !!takeDropData?.payment_gateway_ready;
 
-            const setStepDone = (successId, formId, done) => {
-                const success = document.getElementById(successId);
-                const form = document.getElementById(formId);
-                if (done) {
-                    success?.classList.remove('hidden');
-                    success?.classList.add('flex');
-                    form?.classList.add('hidden');
-                } else {
-                    success?.classList.add('hidden');
-                    success?.classList.remove('flex');
-                    form?.classList.remove('hidden');
-                }
-            };
-
-            if (hasNip) {
-                payuSection?.classList.remove('hidden');
-                stripeSection?.classList.add('hidden');
-                setStepDone('pg-payu-success-state', 'pg-payu-form', isConfigured);
+            // Compute which step is active
+            let activeStep;
+            if (isTested) {
+                activeStep = 'done';
+            } else if (pgActiveStepOverride && pgActiveStepOverride >= 1 && pgActiveStepOverride <= 3) {
+                activeStep = pgActiveStepOverride;
+            } else if (isConfigured) {
+                activeStep = 3;
             } else {
-                payuSection?.classList.add('hidden');
-                stripeSection?.classList.remove('hidden');
-                setStepDone('pg-stripe-success-state', 'pg-stripe-form', isConfigured);
+                activeStep = 1;
             }
 
-            // Step 3: show only after step 2 is done
-            const stepTest = document.getElementById('pg-step-test');
-            if (isConfigured) {
-                stepTest?.classList.remove('hidden');
+            renderPgGatewayBadge(gateway);
+            renderPgStepper(activeStep, isConfigured, isTested);
+            renderPgActiveStep(activeStep, gateway);
+        }
 
-                // Set shop link (domain or fallback)
-                const shopLink = document.getElementById('pg-test-shop-link');
-                if (shopLink) {
-                    const domain = takeDropData?.domain;
-                    if (domain) {
-                        shopLink.href = domain.startsWith('http') ? domain : `https://${domain}`;
-                    } else {
-                        shopLink.href = '#';
-                    }
-                }
+        function setPgActiveStep(n) {
+            pgActiveStepOverride = n;
+            loadPaymentGatewayTab();
+        }
+        window.setPgActiveStep = setPgActiveStep;
 
-                setStepDone('pg-test-success-label', 'pg-test-form', isTested);
-                const banner = document.getElementById('pg-test-success-banner');
-                if (isTested) {
-                    banner?.classList.remove('hidden');
-                } else {
-                    banner?.classList.add('hidden');
-                    // Reset checkboxes & button
-                    const cb1 = document.getElementById('pg-test-check-email');
-                    const cb2 = document.getElementById('pg-test-check-orders');
-                    if (cb1) cb1.checked = false;
-                    if (cb2) cb2.checked = false;
-                    updatePaymentTestButton();
-                }
-            } else {
-                stepTest?.classList.add('hidden');
+        function renderPgGatewayBadge(gateway) {
+            const el = document.getElementById('pg-gateway-badge');
+            if (!el) return;
+            const isPayu = gateway === 'payu';
+            const letter = isPayu ? 'P' : 'S';
+            const letterColor = isPayu ? 'text-[#00d084]' : 'text-[#635bff]';
+            const bgColor = isPayu ? 'bg-[#00d084]/10' : 'bg-[#635bff]/10';
+            const title = isPayu ? 'PayU' : 'Stripe';
+            const why = isPayu ? 'Wybraliśmy dla Ciebie — bo masz firmę z NIP' : 'Wybraliśmy dla Ciebie — bo rozliczasz się jako osoba prywatna';
+
+            el.innerHTML = `
+                <div class="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                    <div class="w-10 h-10 rounded-lg ${bgColor} flex items-center justify-center flex-shrink-0">
+                        <span class="text-lg font-bold ${letterColor}">${letter}</span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[13px] font-medium text-white">${title}</div>
+                        <div class="text-[11px] text-[#666]">${why}</div>
+                    </div>
+                </div>`;
+        }
+
+        function renderPgStepper(active, isConfigured, isTested) {
+            const el = document.getElementById('pg-stepper');
+            if (!el) return;
+
+            const steps = [
+                { num: 1, label: 'Rejestracja', done: isConfigured },
+                { num: 2, label: 'Konfiguracja', done: isConfigured },
+                { num: 3, label: 'Test', done: isTested }
+            ];
+            const isDone = active === 'done';
+
+            const nodes = steps.map((s, i) => {
+                const isActive = !isDone && active === s.num;
+                const state = s.done ? 'done' : (isActive ? 'active' : 'pending');
+                const dotCls = state === 'done'
+                    ? 'bg-emerald-500 text-white shadow-[0_0_0_4px_rgba(16,185,129,0.12)]'
+                    : state === 'active'
+                        ? 'bg-white text-black shadow-[0_0_0_4px_rgba(255,255,255,0.08)]'
+                        : 'bg-[#111] text-[#555] ring-1 ring-[#222]';
+                const labelCls = state === 'done' ? 'text-emerald-400' : state === 'active' ? 'text-white' : 'text-[#555]';
+                const inner = state === 'done'
+                    ? '<i class="ph-fill ph-check text-[14px]"></i>'
+                    : `<span class="text-[13px] font-semibold">${s.num}</span>`;
+
+                const connector = i < steps.length - 1
+                    ? `<div class="flex-1 h-0.5 mt-[19px] ${steps[i].done ? 'bg-emerald-500' : 'bg-[#1a1a1a]'} mx-1"></div>`
+                    : '';
+
+                return `
+                    <button type="button" onclick="setPgActiveStep(${s.num})" class="flex flex-col items-center gap-2 min-w-[72px] focus:outline-none">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center transition-all ${dotCls}">${inner}</div>
+                        <span class="text-[11px] font-medium transition-colors ${labelCls}">${s.label}</span>
+                    </button>
+                    ${connector}
+                `;
+            }).join('');
+
+            el.innerHTML = `<div class="flex items-start">${nodes}</div>`;
+        }
+
+        function renderPgActiveStep(step, gateway) {
+            const el = document.getElementById('pg-active-step');
+            if (!el) return;
+
+            if (step === 'done') {
+                el.innerHTML = renderPgStepDone(gateway);
+                return;
             }
+            if (step === 1) el.innerHTML = renderPgStep1(gateway);
+            else if (step === 2) el.innerHTML = renderPgStep2(gateway);
+            else if (step === 3) el.innerHTML = renderPgStep3(gateway);
+
+            if (step === 3) updatePaymentTestButton();
+        }
+
+        function renderPgStep1(gateway) {
+            const isPayu = gateway === 'payu';
+            const brand = isPayu ? 'PayU' : 'Stripe';
+            const url = isPayu ? PAYU_REGISTER_URL : STRIPE_REGISTER_URL;
+            const btnCls = isPayu ? 'bg-[#00d084] hover:bg-[#00b872]' : 'bg-[#635bff] hover:bg-[#5851e6]';
+            const iconBg = isPayu ? 'bg-[#00d084]/15' : 'bg-[#635bff]/15';
+            const iconColor = isPayu ? 'text-[#00d084]' : 'text-[#635bff]';
+            const subtitle = isPayu
+                ? 'Zarejestruj konto firmowe. Potrzebujesz numeru NIP i danych firmy.'
+                : 'Zarejestruj się na Stripe — bramka dla osób prywatnych bez NIP.';
+
+            const stripeActivation = !isPayu ? `
+                <details class="mb-5 rounded-xl bg-amber-500/5 border border-amber-500/20 group">
+                    <summary class="cursor-pointer px-4 py-3 flex items-center gap-2 text-[13px] text-amber-400 font-medium hover:bg-amber-500/10 transition-colors rounded-xl group-open:rounded-b-none list-none">
+                        <i class="ph ph-warning-circle flex-shrink-0"></i>
+                        <span class="flex-1">WAŻNE: Po rejestracji musisz aktywować konto</span>
+                        <i class="ph ph-caret-down text-[12px] transition-transform group-open:rotate-180"></i>
+                    </summary>
+                    <div class="px-4 pb-4 pt-3 text-[13px] text-[#aaa] border-t border-amber-500/20 leading-relaxed">
+                        <p class="mb-3">Stripe startuje w trybie testowym. Aby przyjmować prawdziwe płatności:</p>
+                        <ol class="space-y-1.5 list-decimal list-inside">
+                            <li>Zarejestruj się i potwierdź email</li>
+                            <li>Kliknij <span class="text-amber-400">"Activate your account"</span> (lub Settings → Account details)</li>
+                            <li>Wypełnij dane: osobowe, telefon, dokument tożsamości, IBAN</li>
+                            <li>Poczekaj 1–2 dni robocze na weryfikację</li>
+                            <li>Gdy zobaczysz <span class="text-emerald-400">"Your account is activated"</span> — gotowe</li>
+                        </ol>
+                    </div>
+                </details>
+            ` : '';
+
+            return `
+                <div class="rounded-2xl bg-gradient-to-br from-[#0a0a0a] to-[#070707] border border-[#1a1a1a] p-6 md:p-8">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${iconBg} mb-4">
+                            <i class="ph ph-user-plus text-3xl ${iconColor}"></i>
+                        </div>
+                        <div class="text-[11px] uppercase tracking-wider text-[#666] mb-2">Krok 1 z 3</div>
+                        <h3 class="text-[20px] font-semibold text-white mb-2">Załóż konto ${brand}</h3>
+                        <p class="text-[13px] text-[#888] max-w-sm mx-auto">${subtitle}</p>
+                    </div>
+
+                    ${stripeActivation}
+
+                    <div class="flex flex-col gap-3">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center justify-center gap-2 ${btnCls} text-white text-[14px] font-medium px-6 py-3 rounded-xl transition-colors">
+                            <i class="ph ph-arrow-up-right"></i>
+                            Przejdź do ${brand} i załóż konto
+                        </a>
+                        <button onclick="setPgActiveStep(2)"
+                                class="inline-flex items-center justify-center gap-2 text-[13px] text-[#888] hover:text-white transition-colors py-2">
+                            Mam już konto — dalej
+                            <i class="ph ph-arrow-right text-[12px]"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPgStep2(gateway) {
+            const isPayu = gateway === 'payu';
+            const brand = isPayu ? 'PayU' : 'Stripe';
+            const instrUrl = isPayu
+                ? 'https://pomoc.takedrop.pl/support/solutions/articles/77000485209-konfiguracja-p%C5%82atno%C5%9Bci-payu'
+                : 'https://takedrop.freshdesk.com/support/solutions/articles/77000519608-konfiguracja-p%C5%82atno%C5%9Bci-stripe';
+            const instrBtnCls = isPayu ? 'bg-[#00d084] hover:bg-[#00b872]' : 'bg-[#635bff] hover:bg-[#5851e6]';
+            const iconBg = isPayu ? 'bg-[#00d084]/15' : 'bg-[#635bff]/15';
+            const iconColor = isPayu ? 'text-[#00d084]' : 'text-[#635bff]';
+            const confirmFn = isPayu ? 'confirmPayUConfigured()' : 'confirmStripeConfigured()';
+
+            return `
+                <div class="rounded-2xl bg-gradient-to-br from-[#0a0a0a] to-[#070707] border border-[#1a1a1a] p-6 md:p-8">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl ${iconBg} mb-4">
+                            <i class="ph ph-plugs-connected text-3xl ${iconColor}"></i>
+                        </div>
+                        <div class="text-[11px] uppercase tracking-wider text-[#666] mb-2">Krok 2 z 3</div>
+                        <h3 class="text-[20px] font-semibold text-white mb-2">Połącz ${brand} z TakeDrop</h3>
+                        <p class="text-[13px] text-[#888] max-w-sm mx-auto">
+                            Wklej klucze API ${brand} do panelu TakeDrop według instrukcji.
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col gap-3">
+                        <a href="${instrUrl}" target="_blank" rel="noopener noreferrer"
+                           class="inline-flex items-center justify-center gap-2 ${instrBtnCls} text-white text-[14px] font-medium px-6 py-3 rounded-xl transition-colors">
+                            <i class="ph ph-book-open"></i>
+                            Otwórz instrukcję konfiguracji
+                            <i class="ph ph-arrow-up-right text-[12px]"></i>
+                        </a>
+                        <button onclick="${confirmFn}"
+                                class="inline-flex items-center justify-center gap-2 bg-white text-black text-[14px] font-medium px-6 py-3 rounded-xl hover:bg-[#e5e5e5] transition-colors">
+                            <i class="ph ph-check"></i>
+                            Skonfigurowałem ${brand}
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderPgStep3(gateway) {
+            const domain = takeDropData?.domain;
+            const shopUrl = domain
+                ? (domain.startsWith('http') ? domain : `https://${domain}`)
+                : '#';
+
+            return `
+                <div class="rounded-2xl bg-gradient-to-br from-[#0a0a0a] to-[#070707] border border-[#1a1a1a] p-6 md:p-8">
+                    <div class="text-center mb-6">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-emerald-500/15 mb-4">
+                            <i class="ph ph-flask text-3xl text-emerald-400"></i>
+                        </div>
+                        <div class="text-[11px] uppercase tracking-wider text-[#666] mb-2">Krok 3 z 3</div>
+                        <h3 class="text-[20px] font-semibold text-white mb-2">Złóż testowe zamówienie</h3>
+                        <p class="text-[13px] text-[#888] max-w-sm mx-auto">
+                            Zanim uznamy bramkę za gotową — sprawdź czy naprawdę działa.
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] p-5 mb-5">
+                        <p class="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-4">Co musisz zrobić</p>
+                        <ol class="space-y-3.5">
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[#1a1a1a] text-white/80 text-[12px] font-medium flex items-center justify-center">1</span>
+                                <span class="text-[13px] text-[#ccc] leading-relaxed pt-0.5">Otwórz <a href="${shopUrl}" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">swój sklep</a> i złóż testowe zamówienie.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[#1a1a1a] text-white/80 text-[12px] font-medium flex items-center justify-center">2</span>
+                                <span class="text-[13px] text-[#ccc] leading-relaxed pt-0.5">Sprawdź skrzynkę — powinieneś dostać <strong class="text-white">potwierdzenie zamówienia</strong>.</span>
+                            </li>
+                            <li class="flex gap-3">
+                                <span class="flex-shrink-0 w-6 h-6 rounded-full bg-[#1a1a1a] text-white/80 text-[12px] font-medium flex items-center justify-center">3</span>
+                                <span class="text-[13px] text-[#ccc] leading-relaxed pt-0.5">Zaloguj się do <a href="https://takedrop.pl/account/orders" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:underline font-medium">TakeDrop → Zamówienia</a> — zamówienie powinno tam być.</span>
+                            </li>
+                        </ol>
+                    </div>
+
+                    <p class="text-[11px] font-semibold uppercase tracking-wider text-[#888] mb-3">Potwierdź oba punkty</p>
+                    <div class="space-y-2 mb-5">
+                        <label class="flex items-start gap-3 p-3.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors has-[:checked]:border-emerald-500/50 has-[:checked]:bg-emerald-500/5">
+                            <input type="checkbox" id="pg-test-check-email" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded cursor-pointer accent-emerald-500">
+                            <span class="text-[13px] text-[#ddd] flex-1">Dostałem e-mail z potwierdzeniem zamówienia</span>
+                        </label>
+                        <label class="flex items-start gap-3 p-3.5 rounded-xl bg-[#0f0f0f] border border-[#1a1a1a] hover:border-[#2a2a2a] cursor-pointer transition-colors has-[:checked]:border-emerald-500/50 has-[:checked]:bg-emerald-500/5">
+                            <input type="checkbox" id="pg-test-check-orders" onchange="updatePaymentTestButton()" class="mt-0.5 w-4 h-4 rounded cursor-pointer accent-emerald-500">
+                            <span class="text-[13px] text-[#ddd] flex-1">Widzę zamówienie w TakeDrop (zakładka Zamówienia)</span>
+                        </label>
+                    </div>
+
+                    <button id="pg-test-confirm-btn" onclick="confirmPaymentGatewayTested()" disabled
+                            class="w-full inline-flex items-center justify-center gap-2 bg-emerald-500 text-white text-[14px] font-medium px-6 py-3 rounded-xl hover:bg-emerald-600 transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500">
+                        <i class="ph ph-check-circle"></i>
+                        Potwierdzam — test zakończony pozytywnie
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderPgStepDone(gateway) {
+            const brand = gateway === 'payu' ? 'PayU' : 'Stripe';
+            return `
+                <div class="relative rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/30 p-8 overflow-hidden">
+                    <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent pointer-events-none"></div>
+                    <div class="relative text-center">
+                        <div class="inline-flex items-center justify-center w-20 h-20 rounded-full bg-emerald-500/20 mb-5">
+                            <i class="ph-fill ph-check-circle text-5xl text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-[22px] font-semibold text-white mb-2">Bramka płatności gotowa</h3>
+                        <p class="text-[14px] text-[#aaa] max-w-md mx-auto mb-6">
+                            ${brand} jest skonfigurowana i przetestowana. Możesz przyjmować prawdziwe zamówienia.
+                        </p>
+                        <div class="inline-flex flex-wrap items-center justify-center gap-3 px-5 py-3 rounded-xl bg-[#0a0a0a] border border-[#1a1a1a]">
+                            <div class="flex items-center gap-2 text-[12px]">
+                                <i class="ph-fill ph-check text-emerald-500"></i>
+                                <span class="text-[#ccc]">Konto ${brand}</span>
+                            </div>
+                            <div class="w-px h-4 bg-[#1a1a1a]"></div>
+                            <div class="flex items-center gap-2 text-[12px]">
+                                <i class="ph-fill ph-check text-emerald-500"></i>
+                                <span class="text-[#ccc]">Konfiguracja</span>
+                            </div>
+                            <div class="w-px h-4 bg-[#1a1a1a]"></div>
+                            <div class="flex items-center gap-2 text-[12px]">
+                                <i class="ph-fill ph-check text-emerald-500"></i>
+                                <span class="text-[#ccc]">Test</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         function updatePaymentTestButton() {
@@ -10226,6 +10238,7 @@
                     payment_gateway_configured_at: now
                 };
 
+                pgActiveStepOverride = null;
                 loadPaymentGatewayTab();
                 updateDashSidebar();
                 renderEtap3BramkaPlatnosciBox();
@@ -10257,6 +10270,7 @@
                     payment_gateway_configured_at: now
                 };
 
+                pgActiveStepOverride = null;
                 loadPaymentGatewayTab();
                 updateDashSidebar();
                 renderEtap3BramkaPlatnosciBox();
@@ -10286,6 +10300,7 @@
 
                 takeDropData = { ...takeDropData, payment_gateway_ready: true };
 
+                pgActiveStepOverride = null;
                 loadPaymentGatewayTab();
                 updateDashSidebar();
                 renderEtap3BramkaPlatnosciBox();
