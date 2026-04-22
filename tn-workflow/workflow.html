@@ -12448,15 +12448,28 @@ Zwróć TYLKO JSON.`;
                 const c = creatives[i] || {};
                 const angleLabel = angleStyle(v.angle).label;
                 const starred = !!c.selected_for_cowork;
+                // Style per tab state. Priority: starred (most prominent) > active > default.
+                const tabBase = 'shrink-0 relative inline-flex items-stretch rounded-lg border transition-all';
+                let tabStyle;
+                if (starred && active) {
+                    tabStyle = 'bg-gradient-to-br from-amber-500/25 to-violet-500/15 border-amber-400/70 shadow-lg shadow-amber-500/15';
+                } else if (starred) {
+                    tabStyle = 'bg-gradient-to-br from-amber-500/15 to-amber-600/5 border-amber-400/50 hover:border-amber-400/70 shadow-md shadow-amber-500/10';
+                } else if (active) {
+                    tabStyle = 'bg-violet-500/15 border-violet-500/40';
+                } else {
+                    tabStyle = 'bg-zinc-900/50 border-white/5 hover:border-white/20';
+                }
                 return `
-                <div class="shrink-0 relative inline-flex items-stretch rounded-lg border transition-all ${active ? 'bg-violet-500/15 border-violet-500/40' : 'bg-zinc-900/50 border-white/5 hover:border-white/20'} ${starred ? 'ring-1 ring-amber-500/50' : ''}">
+                <div class="${tabBase} ${tabStyle}">
+                    ${starred ? '<span class="absolute -top-1.5 -left-1.5 text-[8px] font-bold tracking-wider uppercase bg-amber-400 text-zinc-900 px-1.5 py-0.5 rounded shadow-md">Cowork</span>' : ''}
                     <button onclick="setCurrentAd(${i})" class="px-3 py-2 text-left flex items-center gap-2">
-                        <span class="text-[11px] font-bold ${active ? 'text-violet-200' : 'text-zinc-400'}">#${i + 1}</span>
-                        <span class="text-[10px] ${active ? 'text-zinc-200' : 'text-zinc-500'}">${escapeHtml(angleLabel)}</span>
+                        <span class="text-[11px] font-bold ${starred ? 'text-amber-200' : (active ? 'text-violet-200' : 'text-zinc-400')}">#${i + 1}</span>
+                        <span class="text-[10px] ${starred ? 'text-amber-100' : (active ? 'text-zinc-200' : 'text-zinc-500')}">${escapeHtml(angleLabel)}</span>
                         ${done ? '<i class="ph ph-check-circle text-emerald-400 text-[13px]"></i>' : ''}
                     </button>
-                    <button onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${starred ? 'Odznacz z Cowork' : `Zaznacz do Cowork (wybrano ${coworkSelected}/2)`}" class="px-2 flex items-center justify-center border-l ${active ? 'border-violet-500/40' : 'border-white/5'} ${starred ? 'text-amber-400' : 'text-zinc-500 hover:text-amber-400'} transition-colors">
-                        <i class="ph ${starred ? 'ph-star-fill' : 'ph-star'} text-[13px]"></i>
+                    <button onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${starred ? 'Odznacz z Cowork' : `Zaznacz do Cowork (wybrano ${coworkSelected}/2)`}" class="px-2.5 flex items-center justify-center border-l ${starred ? 'border-amber-400/40 bg-amber-400/10 text-amber-300' : (active ? 'border-violet-500/40 text-zinc-500 hover:text-amber-400' : 'border-white/5 text-zinc-500 hover:text-amber-400')} transition-colors">
+                        <i class="ph ${starred ? 'ph-star-fill' : 'ph-star'} text-[14px]"></i>
                     </button>
                 </div>`;
             }).join('');
