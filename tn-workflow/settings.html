@@ -199,6 +199,10 @@
                     <i class="ph ph-clock"></i>
                     <span>Deadline kroków</span>
                 </button>
+                <button onclick="switchSettingsTab('ai-images')" data-settings-tab="ai-images" class="settings-nav-btn">
+                    <i class="ph ph-image-square"></i>
+                    <span>Generowanie obrazów AI</span>
+                </button>
             </nav>
         </aside>
 
@@ -760,6 +764,57 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- AI Images Tab -->
+                <div id="tab-ai-images" class="settings-tab hidden animate-fade-in">
+                    <div class="mb-6">
+                        <h2 class="text-lg font-semibold text-white mb-1">Generowanie obrazów AI</h2>
+                        <p class="text-[13px] text-[#888]">Wybierz model AI używany do generowania logo, mockupów i zdjęć w brandingu.</p>
+                    </div>
+
+                    <div class="card p-5 mb-6">
+                        <label class="block mb-3">
+                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectImageProvider('gemini')">
+                                <input type="radio" name="image-provider" id="provider-gemini" value="gemini" class="mt-1 accent-white">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-[14px] font-medium text-white">Gemini 3 Pro Image</span>
+                                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Tańszy</span>
+                                    </div>
+                                    <p class="text-[12px] text-[#888]">Google Gemini. ~$0.134 / obraz (1024×1024). Obsługuje 10 aspect ratio. Max 1 obraz/request.</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="block">
+                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectImageProvider('gpt-image-2')">
+                                <input type="radio" name="image-provider" id="provider-gpt-image-2" value="gpt-image-2" class="mt-1 accent-white">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-[14px] font-medium text-white">GPT-image-2</span>
+                                        <span class="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Wyższa jakość</span>
+                                    </div>
+                                    <p class="text-[12px] text-[#888]">OpenAI (ChatGPT Images 2.0). ~$0.21 / obraz (1024×1024 high). Do 10 obrazów/request. 3 rozmiary: 1024², 1024×1536, 1536×1024.</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 mb-6 text-[12px] text-amber-200/80">
+                        <div class="flex items-start gap-2">
+                            <i class="ph ph-info text-amber-400 mt-0.5"></i>
+                            <div>
+                                <strong class="text-amber-300">Uwaga:</strong> dla GPT-image-2 wymagany jest secret <code class="bg-black/40 px-1 py-0.5 rounded">OPENAI_API_KEY</code> w Supabase Edge Functions. Gemini używa <code class="bg-black/40 px-1 py-0.5 rounded">GOOGLE_AI_API_KEY</code>.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button onclick="saveImageProvider()" class="btn-primary flex items-center gap-2">
+                            <i class="ph ph-floppy-disk"></i> Zapisz ustawienia
+                        </button>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -866,7 +921,8 @@
                         'deadline_report',
                         'deadline_branding',
                         'deadline_salespage',
-                        'deadline_scenario'
+                        'deadline_scenario',
+                        'image_provider'
                     ]);
 
                 if (error) throw error;
@@ -924,9 +980,40 @@
                     }
                 });
                 updateEtap1Total();
+
+                // AI Image provider setting
+                const provider = settingsMap.image_provider === 'gpt-image-2' ? 'gpt-image-2' : 'gemini';
+                const providerRadio = document.getElementById(`provider-${provider}`);
+                if (providerRadio) providerRadio.checked = true;
             } catch (err) {
                 console.error('Error loading settings:', err);
                 showToast('Blad ladowania ustawien', 'error');
+            }
+        }
+
+        // ============================================
+        // AI IMAGE PROVIDER
+        // ============================================
+        function selectImageProvider(provider) {
+            const radio = document.getElementById(`provider-${provider}`);
+            if (radio) radio.checked = true;
+        }
+
+        async function saveImageProvider() {
+            const selected = document.querySelector('input[name="image-provider"]:checked');
+            if (!selected) {
+                showToast('Wybierz providera', 'error');
+                return;
+            }
+            try {
+                const { error } = await sb
+                    .from('settings')
+                    .upsert({ key: 'image_provider', value: selected.value }, { onConflict: 'key' });
+                if (error) throw error;
+                showToast(`Provider: ${selected.value}`, 'success');
+            } catch (err) {
+                console.error('Error saving provider:', err);
+                showToast('Blad zapisu', 'error');
             }
         }
 

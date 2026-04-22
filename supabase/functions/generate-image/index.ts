@@ -114,6 +114,159 @@ async function fetchImageAsBase64(url: string): Promise<{ base64: string; mimeTy
   return { base64, mimeType: contentType }
 }
 
+// Map Gemini-style aspect ratios to OpenAI sizes (GPT-image-2 supports 3 sizes + auto)
+function aspectRatioToOpenAISize(ratio: string): '1024x1024' | '1536x1024' | '1024x1536' | 'auto' {
+  const landscape = new Set(['3:2', '4:3', '5:4', '16:9', '21:9'])
+  const portrait = new Set(['2:3', '3:4', '4:5', '9:16'])
+  if (ratio === '1:1') return '1024x1024'
+  if (landscape.has(ratio)) return '1536x1024'
+  if (portrait.has(ratio)) return '1024x1536'
+  return 'auto'
+}
+
+// Generate image using OpenAI GPT-image-2 with optional reference images.
+// Uses /v1/images/edits when references exist (multipart), /v1/images/generations otherwise (JSON).
+async function generateWithOpenAI(
+  prompt: string,
+  count: number,
+  apiKey: string,
+  referenceImages?: { url: string; type: 'logo' | 'product' }[],
+  aspectRatio?: string
+): Promise<{ images: { base64: string; mimeType: string }[] }> {
+  const model = 'gpt-image-2'
+  const size = aspectRatioToOpenAISize(aspectRatio || '1:1')
+  const n = Math.min(Math.max(count, 1), 10) // GPT-image-2 obsługuje do 10 obrazów na call
+
+  console.log(`Using OpenAI model: ${model}, size: ${size}, n: ${n}`)
+
+  // Fetch reference images in parallel with retry
+  const refBlobs: { blob: Blob; filename: string; type: 'logo' | 'product' }[] = []
+  let productRefAdded = false
+  let logoRefAdded = false
+  const refErrors: string[] = []
+
+  if (referenceImages && referenceImages.length > 0) {
+    for (const ref of referenceImages) {
+      let lastErr: any = null
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const { base64, mimeType } = await fetchImageAsBase64(ref.url)
+          const binary = atob(base64)
+          const bytes = new Uint8Array(binary.length)
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+          const ext = mimeType.includes('png') ? 'png' : mimeType.includes('webp') ? 'webp' : 'jpg'
+          refBlobs.push({
+            blob: new Blob([bytes], { type: mimeType }),
+            filename: `${ref.type}_${refBlobs.length}.${ext}`,
+            type: ref.type
+          })
+          if (ref.type === 'product') productRefAdded = true
+          if (ref.type === 'logo') logoRefAdded = true
+          lastErr = null
+          break
+        } catch (err) {
+          lastErr = err
+          console.error(`Attempt ${attempt} failed for ${ref.type}:`, err.message)
+          if (attempt < 3) await new Promise(r => setTimeout(r, attempt * 500))
+        }
+      }
+      if (lastErr) refErrors.push(`${ref.type}: ${lastErr.message}`)
+    }
+  }
+
+  const productRequested = referenceImages?.some(r => r.type === 'product')
+  if (productRequested && !productRefAdded) {
+    throw new Error(`Product reference image could not be loaded after retries. Errors: ${refErrors.join('; ')}`)
+  }
+
+  // Build prompt with same reference instructions as Gemini path
+  let finalPrompt = prompt
+  if (productRefAdded && logoRefAdded) {
+    finalPrompt = `The physical product in the scene matches the first reference image exactly. The brand logo printed on the merchandise matches the second reference image — copy it pixel-perfect: same shape, same colors, same proportions, same letterforms. Do not invent a new logo.\n\n${prompt}`
+  } else if (productRefAdded) {
+    finalPrompt = `Using the exact product shown in the reference image as the physical object in the scene:\n\n${prompt}`
+  } else if (logoRefAdded) {
+    finalPrompt = `The merchandise in this scene displays the exact logo from the reference image. Copy the logo pixel-perfect onto the item — same shape, same colors, same proportions, same letterforms as shown in the reference. The logo is fixed artwork, not a design to reinterpret.\n\n${prompt}`
+  }
+
+  const images: { base64: string; mimeType: string }[] = []
+
+  if (refBlobs.length > 0) {
+    // /v1/images/edits — multipart/form-data
+    const form = new FormData()
+    form.append('model', model)
+    form.append('prompt', finalPrompt)
+    form.append('n', String(n))
+    if (size !== 'auto') form.append('size', size)
+    form.append('quality', 'high')
+    for (const rb of refBlobs) {
+      form.append('image[]', rb.blob, rb.filename)
+    }
+
+    console.log(`Calling OpenAI /v1/images/edits with ${refBlobs.length} references`)
+    const response = await fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}` },
+      body: form
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('OpenAI edits API error:', errorText)
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    if (data.data && Array.isArray(data.data)) {
+      for (const item of data.data) {
+        if (item.b64_json) {
+          images.push({ base64: item.b64_json, mimeType: 'image/png' })
+        }
+      }
+    }
+  } else {
+    // /v1/images/generations — JSON
+    const body: Record<string, unknown> = {
+      model,
+      prompt: finalPrompt,
+      n,
+      quality: 'high'
+    }
+    if (size !== 'auto') body.size = size
+
+    console.log(`Calling OpenAI /v1/images/generations (no references)`)
+    const response = await fetch('https://api.openai.com/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('OpenAI generations API error:', errorText)
+      throw new Error(`OpenAI API error: ${response.status} - ${errorText}`)
+    }
+
+    const data = await response.json()
+    if (data.data && Array.isArray(data.data)) {
+      for (const item of data.data) {
+        if (item.b64_json) {
+          images.push({ base64: item.b64_json, mimeType: 'image/png' })
+        }
+      }
+    }
+  }
+
+  if (images.length === 0) {
+    throw new Error('No images generated by OpenAI — prompt may have been rejected by safety filter')
+  }
+
+  return { images }
+}
+
 // Generate image using Gemini with optional reference images
 async function generateWithGemini(
   prompt: string,
@@ -273,15 +426,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
-    if (!apiKey) {
-      throw new Error('Missing GOOGLE_AI_API_KEY - add it in Supabase Edge Functions Secrets')
-    }
-
     const body = await req.json()
-    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images, aspect_ratio } = body
+    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images, aspect_ratio, provider: providerOverride } = body
 
-    // Validate aspect_ratio against Gemini-supported values
+    // Validate aspect_ratio against Gemini-supported values (GPT-image-2 path maps them internally)
     const ALLOWED_ASPECT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
     const finalAspectRatio = aspect_ratio && ALLOWED_ASPECT_RATIOS.includes(aspect_ratio)
       ? aspect_ratio
@@ -297,7 +445,25 @@ Deno.serve(async (req) => {
       })
     }
 
-    console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}`)
+    // Supabase client — also used to read provider setting
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Resolve provider: request override > DB setting > default 'gemini'
+    let provider: 'gemini' | 'gpt-image-2' = 'gemini'
+    if (providerOverride === 'gpt-image-2' || providerOverride === 'gemini') {
+      provider = providerOverride
+    } else {
+      const { data: settingRow } = await supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'image_provider')
+        .maybeSingle()
+      if (settingRow?.value === 'gpt-image-2') provider = 'gpt-image-2'
+    }
+
+    console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}, provider: ${provider}`)
     console.log(`Prompt: ${prompt.substring(0, 100)}...`)
 
     // Support both old format (reference_image_url) and new format (reference_images array)
@@ -311,12 +477,21 @@ Deno.serve(async (req) => {
     }
 
     console.log(`Aspect ratio: ${finalAspectRatio}`)
-    const result = await generateWithGemini(prompt, count, apiKey, refImages, finalAspectRatio)
 
-    // Upload to Supabase Storage
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const supabase = createClient(supabaseUrl, supabaseKey)
+    let result: { images: { base64: string; mimeType: string }[] }
+    if (provider === 'gpt-image-2') {
+      const openaiKey = Deno.env.get('OPENAI_API_KEY')
+      if (!openaiKey) {
+        throw new Error('Missing OPENAI_API_KEY - add it in Supabase Edge Functions Secrets')
+      }
+      result = await generateWithOpenAI(prompt, count, openaiKey, refImages, finalAspectRatio)
+    } else {
+      const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
+      if (!apiKey) {
+        throw new Error('Missing GOOGLE_AI_API_KEY - add it in Supabase Edge Functions Secrets')
+      }
+      result = await generateWithGemini(prompt, count, apiKey, refImages, finalAspectRatio)
+    }
 
     const uploadedImages = await Promise.all(
       result.images.map(async (img, index) => {
