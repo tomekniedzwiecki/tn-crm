@@ -1871,6 +1871,29 @@
                             </div>
                         </div>
 
+                        <!-- Admin: edit lock control (visible whenever client submitted form at least once) -->
+                        <div id="allow-legal-edit-wrap" class="hidden mb-6">
+                            <div id="allow-legal-edit-locked" class="hidden bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                                <div class="flex items-start gap-3">
+                                    <i class="ph-fill ph-lock text-amber-400 text-lg mt-0.5"></i>
+                                    <div class="flex-1 min-w-0">
+                                        <div class="text-[13px] text-amber-300 font-medium">Formularz zablokowany dla klienta</div>
+                                        <div class="text-[12px] text-amber-400/70 mt-0.5">Klient już zapisał dane i nie może ich edytować. Możesz odblokować — dane zostaną zachowane.</div>
+                                    </div>
+                                    <button onclick="allowClientLegalReEdit()" id="allow-legal-edit-btn" class="shrink-0 bg-amber-500 hover:bg-amber-400 text-black text-[12px] font-medium px-3 py-2 rounded-md transition-colors flex items-center gap-1.5 whitespace-nowrap">
+                                        <i class="ph ph-pencil-simple"></i>
+                                        Pozwól edytować
+                                    </button>
+                                </div>
+                            </div>
+                            <div id="allow-legal-edit-unlocked" class="hidden bg-[#0e1a14] border border-emerald-500/20 rounded-lg p-4">
+                                <div class="flex items-center gap-3">
+                                    <i class="ph-fill ph-lock-open text-emerald-400 text-lg"></i>
+                                    <div class="text-[13px] text-emerald-300/90">Klient może obecnie edytować formularz prawny</div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Info box -->
                         <div id="legal-info-box" class="bg-[#111] border border-[#222] rounded-lg p-4 mb-6">
                             <div class="flex items-start gap-3">
@@ -2028,14 +2051,6 @@
                                 </button>
                             </div>
 
-                            <!-- Allow client to edit again -->
-                            <div class="mt-3 hidden" id="allow-legal-edit-wrap">
-                                <button onclick="allowClientLegalReEdit()" id="allow-legal-edit-btn" class="w-full bg-[#1a1a1a] hover:bg-[#222] border border-[#333] text-[#ccc] text-[13px] font-medium px-4 py-3 rounded-lg transition-colors flex items-center justify-center gap-2">
-                                    <i class="ph ph-pencil-simple"></i>
-                                    Pozwól klientowi ponownie edytować
-                                </button>
-                                <p class="text-[11px] text-[#666] text-center mt-2">Dane zostaną zachowane — klient zobaczy formularz wypełniony i będzie mógł go poprawić</p>
-                            </div>
                         </div>
 
                         <!-- Documents generated status -->
@@ -8279,8 +8294,27 @@
                 if (clientStatus) clientStatus.classList.add('hidden');
             }
 
-            // Show nav checkmark only if documents are actually ready
+            // Admin lock panel — visible whenever client submitted form at least once,
+            // regardless of whether admin generated/saved documents
             const allowEditWrap = document.getElementById('allow-legal-edit-wrap');
+            const lockedBox = document.getElementById('allow-legal-edit-locked');
+            const unlockedBox = document.getElementById('allow-legal-edit-unlocked');
+            if (allowEditWrap && lockedBox && unlockedBox) {
+                if (hasLegalData) {
+                    allowEditWrap.classList.remove('hidden');
+                    if (takeDropData?.legal_documents_ready) {
+                        lockedBox.classList.remove('hidden');
+                        unlockedBox.classList.add('hidden');
+                    } else {
+                        lockedBox.classList.add('hidden');
+                        unlockedBox.classList.remove('hidden');
+                    }
+                } else {
+                    allowEditWrap.classList.add('hidden');
+                }
+            }
+
+            // Show nav checkmark only if documents are actually ready
             if (takeDropData?.legal_documents_ready) {
                 if (navCheck) navCheck.classList.remove('hidden');
 
@@ -8292,8 +8326,6 @@
                     saveBtn.classList.add('bg-emerald-700', 'cursor-default');
                     saveBtn.disabled = true;
                 }
-
-                if (allowEditWrap) allowEditWrap.classList.remove('hidden');
             } else {
                 if (navCheck) navCheck.classList.add('hidden');
 
@@ -8305,8 +8337,6 @@
                     saveBtn.classList.remove('bg-emerald-700', 'cursor-default');
                     saveBtn.disabled = false;
                 }
-
-                if (allowEditWrap) allowEditWrap.classList.add('hidden');
             }
         }
 
