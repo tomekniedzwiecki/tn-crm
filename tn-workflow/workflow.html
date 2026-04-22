@@ -11086,6 +11086,45 @@ Zwróć TYLKO JSON.`;
             return Array.isArray(adsData?.ad_creatives) ? adsData.ad_creatives : [];
         }
 
+        // Ile i które kreacje są zaznaczone do eksportu do Claude Cowork (max 2)
+        function getCoworkSelectedIndexes() {
+            return getCreatives()
+                .map((c, i) => (c?.selected_for_cowork ? i : -1))
+                .filter(i => i >= 0);
+        }
+
+        // Toggle zaznaczenia kreacji (dla Cowork). Max 2 na raz.
+        async function toggleCoworkSelect(index) {
+            const creatives = getCreatives();
+            if (!creatives[index]) return;
+            const current = !!creatives[index].selected_for_cowork;
+            if (!current) {
+                // Jeśli już są 2 — zablokuj i pokaż info
+                const selected = getCoworkSelectedIndexes();
+                if (selected.length >= 2) {
+                    showToast('Możesz wybrać maksymalnie 2 kreacje. Odznacz jedną zanim dodasz kolejną.', 'error');
+                    return;
+                }
+            }
+            // Toggle flagi w lokalnym stanie
+            creatives[index] = { ...creatives[index], selected_for_cowork: !current };
+            adsData.ad_creatives = creatives;
+            renderCreativeGallery();
+            updateContentStatusBar();
+            // Zapis do bazy (fire-and-forget, ale z error handlingiem)
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_ads')
+                    .update({ ad_creatives: creatives })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+            } catch (e) {
+                console.error('toggleCoworkSelect save failed', e);
+                showToast('Nie udało się zapisać wyboru: ' + e.message, 'error');
+            }
+        }
+        window.toggleCoworkSelect = toggleCoworkSelect;
+
         // ---- STATUS BAR ----
         function updateContentStatusBar() {
             const pill = document.getElementById('content-status-pill');
@@ -11167,10 +11206,17 @@ Zwróć TYLKO JSON.`;
                 actions.appendChild(structOnly);
 
                 const cowork = document.createElement('button');
+                const coworkSelected = getCoworkSelectedIndexes().length;
+                const coworkReady = coworkSelected === 2;
                 cowork.onclick = exportClaudeCoworkZip;
-                cowork.className = 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 border border-orange-500/30 flex items-center gap-1.5';
-                cowork.innerHTML = '<i class="ph ph-robot"></i> Pakiet Claude Cowork';
-                cowork.title = 'ZIP: BRIEF.txt (jeden plik do wklejenia w Claude Cowork) + folder kreacje/ z 5 grafikami. Weryfikuje portfolio "Tomasz Niedźwiecki AI" przed startem.';
+                cowork.disabled = !coworkReady;
+                cowork.className = coworkReady
+                    ? 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 border border-orange-500/30 flex items-center gap-1.5'
+                    : 'text-[11px] text-zinc-500 px-3 py-1.5 rounded-lg bg-zinc-800/40 border border-white/5 flex items-center gap-1.5 cursor-not-allowed opacity-70';
+                cowork.innerHTML = `<i class="ph ph-robot"></i> Pakiet Claude Cowork ${coworkReady ? '' : `(${coworkSelected}/2 ★)`}`;
+                cowork.title = coworkReady
+                    ? 'ZIP: BRIEF.txt + 2 wybrane grafiki dla Claude Cowork.'
+                    : `Zaznacz 2 kreacje gwiazdką ★ w galerii powyżej zanim wygenerujesz pakiet. Obecnie wybrano: ${coworkSelected}/2.`;
                 actions.appendChild(cowork);
             }
         }
@@ -11185,28 +11231,34 @@ Zwróć TYLKO JSON.`;
             const versions = getVersions();
             if (!creatives.length) { section.classList.add('hidden'); return; }
             section.classList.remove('hidden');
-            if (countEl) countEl.textContent = `· ${creatives.length}`;
+            const selectedCount = getCoworkSelectedIndexes().length;
+            if (countEl) {
+                countEl.innerHTML = `· ${creatives.length} · <span class="${selectedCount === 2 ? 'text-amber-400' : 'text-zinc-500'}">do Cowork: <b>${selectedCount}/2</b></span>`;
+            }
             grid.innerHTML = creatives.map((c, i) => {
                 const v = versions[i] || {};
                 const a = angleStyle(v.angle || c.type);
+                const selected = !!c.selected_for_cowork;
                 return `
-                    <button type="button" onclick="openCreativeDrawer(${i})" class="group relative text-left bg-zinc-900/50 hover:bg-zinc-900 border border-white/5 hover:border-violet-500/40 rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:ring-cyan-500/40 focus:outline-none">
-                        <div class="relative aspect-square bg-zinc-800 overflow-hidden">
-                            <img src="${escapeHtml(c.url || '')}" alt="${escapeHtml(v.headline || c.filename || '')}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]">
-                            <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                            <div class="absolute top-2 left-2 flex items-center gap-1.5">
-                                <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white">#${i + 1}</span>
-                                <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} backdrop-blur">${escapeHtml(a.label)}</span>
+                    <div class="group relative text-left bg-zinc-900/50 hover:bg-zinc-900 border ${selected ? 'border-amber-500/60 ring-2 ring-amber-500/30' : 'border-white/5 hover:border-violet-500/40'} rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5">
+                        <button type="button" onclick="openCreativeDrawer(${i})" class="block w-full text-left focus-visible:ring-2 focus-visible:ring-cyan-500/40 focus:outline-none">
+                            <div class="relative aspect-square bg-zinc-800 overflow-hidden">
+                                <img src="${escapeHtml(c.url || '')}" alt="${escapeHtml(v.headline || c.filename || '')}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]">
+                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+                                <div class="absolute top-2 left-2 flex items-center gap-1.5">
+                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white">#${i + 1}</span>
+                                    <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} backdrop-blur">${escapeHtml(a.label)}</span>
+                                </div>
                             </div>
-                            <div class="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1.5">
-                                <span class="text-[10px] px-2 py-1 rounded bg-white/15 backdrop-blur text-white flex items-center gap-1"><i class="ph ph-arrow-square-out"></i> Otwórz</span>
+                            <div class="p-2.5">
+                                <p class="text-[12px] font-medium text-white line-clamp-1">${escapeHtml(v.headline || c.filename || 'Kreacja ' + (i + 1))}</p>
+                                <p class="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml((v.primary_text || '').slice(0, 80))}</p>
                             </div>
-                        </div>
-                        <div class="p-2.5">
-                            <p class="text-[12px] font-medium text-white line-clamp-1">${escapeHtml(v.headline || c.filename || 'Kreacja ' + (i + 1))}</p>
-                            <p class="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml((v.primary_text || '').slice(0, 80))}</p>
-                        </div>
-                    </button>`;
+                        </button>
+                        <button type="button" onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${selected ? 'Odznacz z Cowork' : 'Zaznacz do Cowork (max 2)'}" class="absolute top-2 right-2 z-10 w-8 h-8 rounded-full ${selected ? 'bg-amber-500 text-white' : 'bg-black/60 backdrop-blur text-zinc-200 hover:bg-amber-500/80 hover:text-white'} flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-amber-400">
+                            <i class="ph ${selected ? 'ph-star-fill' : 'ph-star'} text-[15px]"></i>
+                        </button>
+                    </div>`;
             }).join('');
         }
 
@@ -11567,9 +11619,19 @@ Zwróć TYLKO JSON.`;
         // w Ads Managerze na podstawie briefu. Format ZUPEŁNIE INNY niż XLSX Meta:
         // zamiast strukturalnego importu — instrukcja krok-po-kroku dla agenta.
         async function exportClaudeCoworkZip() {
-            const creatives = getCreatives();
-            const versions = getVersions();
-            if (!creatives.length && !versions.length) { showToast('Brak materiałów', 'error'); return; }
+            const allCreatives = getCreatives();
+            const allVersions = getVersions();
+            if (!allCreatives.length && !allVersions.length) { showToast('Brak materiałów', 'error'); return; }
+
+            // Filtruj do TYLKO zaznaczonych do Cowork (dokładnie 2 — walidacja przed)
+            const selectedIdx = getCoworkSelectedIndexes();
+            if (selectedIdx.length !== 2) {
+                showToast(`Zaznacz dokładnie 2 kreacje gwiazdką ★ w galerii. Aktualnie: ${selectedIdx.length}/2.`, 'error');
+                return;
+            }
+            const creatives = selectedIdx.map(i => allCreatives[i]);
+            const versions = selectedIdx.map(i => allVersions[i] || {});
+
             showToast('Buduję pakiet Claude Cowork...', 'info');
             try {
                 const JSZipLib = await loadLib('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'JSZip');
