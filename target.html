@@ -876,9 +876,12 @@
             for (const lead of (closedLeads || [])) {
                 const activities = lead.activities || [];
                 for (const act of activities) {
-                    if (act.type === 'status_change' && typeof act.content === 'string' &&
-                        act.content.includes('Domykanie') &&
-                        act.created_at >= startISO && act.created_at < endISO) {
+                    if (act.type !== 'status_change') continue;
+                    const content = act.content || '';
+                    // Accept both 'Domykanie' (new label) and 'Negocjacje' (legacy label)
+                    const matchesDomykanie = content.includes('Domykanie') || content.includes('Negocjacje');
+                    if (!matchesDomykanie) continue;
+                    if (act.created_at >= startISO && act.created_at < endISO) {
                         closedPassedNegotiation++;
                         break;
                     }
@@ -889,50 +892,98 @@
         }
 
         // ============================================
-        // FETCH — PAID (orders status=paid this month, full offer only)
+        // FETCH — PAID
+        // Revenue netto: CAŁY przychód netto z paid orders w miesiącu
+        //               (wszystkie amount łącznie z ratami, zaliczkami, dopłatami)
+        // Paid count: UNIKALNI klienci gdzie w miesiącu łączna kwota >= 4000
+        //             LUB mają installment_id (rata pełnej oferty)
+        //             LUB description pasuje do pełnej oferty
         // ============================================
         async function fetchPaid(start, end) {
             const startISO = start.toISOString();
             const endISO = end.toISOString();
             const todayStart = getTodayISO();
+            const todayPrefix = todayStart.split('T')[0];
 
-            // Fetch all paid orders this month
+            // Fetch all paid orders this month (paid_at in month)
             const { data: orders, error } = await supabaseClient
                 .from('orders')
-                .select('id,amount,description,paid_at,created_at,installment_id')
+                .select('id,amount,description,paid_at,created_at,installment_id,lead_id,customer_email')
                 .eq('status', 'paid')
                 .gte('paid_at', startISO)
                 .lt('paid_at', endISO)
                 .order('paid_at', { ascending: true });
             if (error) { console.error('paid:', error); return; }
 
-            // Filter: only full offer (amount >= 4000 brutto OR description contains full)
-            // Startery są < 3000 zł brutto. Pełna oferta 8400+/9400/11400
-            const fullOrders = (orders || []).filter(o => {
-                const amt = parseFloat(o.amount) || 0;
-                const desc = (o.description || '').toLowerCase();
-                // Exclude starters
-                if (amt < 4000) return false;
-                if (desc.includes('starter')) return false;
-                return true;
-            });
+            const allPaid = orders || [];
 
-            // Count unique PAID transactions (could split by lead but not needed here)
-            DATA.counts.paid = fullOrders.length;
-            DATA.revenue_netto = fullOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0) / 1.23, 0);
+            // TOTAL REVENUE netto — cały przychód, bez filtrowania
+            DATA.revenue_netto = allPaid.reduce((sum, o) => sum + (parseFloat(o.amount) || 0) / 1.23, 0);
 
-            // Today
-            DATA.today.paid = fullOrders.filter(o => (o.paid_at || '').startsWith(todayStart.split('T')[0])).length;
+            // Group by customer (email fallback when no lead_id)
+            const groupKey = (o) => o.lead_id || (o.customer_email || '').toLowerCase() || o.id;
+            const byCustomer = new Map();
+            for (const o of allPaid) {
+                const k = groupKey(o);
+                if (!byCustomer.has(k)) byCustomer.set(k, []);
+                byCustomer.get(k).push(o);
+            }
 
-            // Daily paid array
+            // Qualify as "full paid" if:
+            // - total sum in month >= 4000 OR
+            // - any order has installment_id (part of full offer schedule) OR
+            // - any order description matches 'pełen pakiet' / 'pełna oferta' / 'pelen pakiet' / 'Budowa sklepu pełen pakiet'
+            // Exclude explicit starters (description contains 'starter' and total < 4000)
+            const isFullCustomer = (orders) => {
+                const total = orders.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+                const hasInstallment = orders.some(o => o.installment_id);
+                const fullDescRegex = /(pełen pakiet|pelen pakiet|pełna oferta|pelna oferta|dopłata do pełn|doplata do peln)/i;
+                const hasFullDesc = orders.some(o => fullDescRegex.test(o.description || ''));
+                const starterRegex = /starter/i;
+                const allStarter = orders.every(o => starterRegex.test(o.description || ''));
+                if (allStarter && total < 4000) return false;
+                return total >= 4000 || hasInstallment || hasFullDesc;
+            };
+
+            // Count unique full customers + their today count
+            let fullPaidCount = 0;
+            let fullPaidToday = 0;
+            const fullCustomerOrders = []; // flat list of orders belonging to full-paid customers
+            for (const [, orders] of byCustomer) {
+                if (isFullCustomer(orders)) {
+                    fullPaidCount++;
+                    fullCustomerOrders.push(...orders);
+                    // Did this customer have a first paid today?
+                    const firstPaidInMonth = orders[0]; // already sorted by paid_at asc
+                    if ((firstPaidInMonth?.paid_at || '').startsWith(todayPrefix)) {
+                        fullPaidToday++;
+                    }
+                }
+            }
+
+            DATA.counts.paid = fullPaidCount;
+            DATA.today.paid = fullPaidToday;
+
+            // Daily data — total revenue per day (netto), cała)
             const { dayTotal } = getDayProgress();
             const daily = new Array(dayTotal).fill(0);
             const dailyRev = new Array(dayTotal).fill(0);
-            for (const o of fullOrders) {
+            for (const o of allPaid) {
+                if (!o.paid_at) continue;
                 const d = new Date(o.paid_at);
                 const day = d.getDate();
-                daily[day - 1]++;
-                dailyRev[day - 1] += (parseFloat(o.amount) || 0) / 1.23;
+                if (day >= 1 && day <= dayTotal) {
+                    dailyRev[day - 1] += (parseFloat(o.amount) || 0) / 1.23;
+                }
+            }
+            // Daily paid count — unique full customers whose first-in-month order was on this day
+            const countedByDay = new Set();
+            for (const [, orders] of byCustomer) {
+                if (!isFullCustomer(orders)) continue;
+                const firstPaid = orders[0]?.paid_at;
+                if (!firstPaid) continue;
+                const day = new Date(firstPaid).getDate();
+                if (day >= 1 && day <= dayTotal) daily[day - 1]++;
             }
             DATA.daily_paid = daily.map((count, i) => ({
                 day: i + 1,
@@ -940,9 +991,9 @@
                 revenue: dailyRev[i]
             }));
 
-            // Avg ticket netto
-            DATA.avg_ticket_netto = fullOrders.length > 0
-                ? DATA.revenue_netto / fullOrders.length
+            // Avg ticket netto — revenue / full paid count (reflects real avg per deal)
+            DATA.avg_ticket_netto = fullPaidCount > 0
+                ? DATA.revenue_netto / fullPaidCount
                 : TARGETS.avg_ticket_netto;
         }
 
