@@ -948,11 +948,13 @@
             // Count unique full customers + their today count
             let fullPaidCount = 0;
             let fullPaidToday = 0;
+            let fullRevenueBrutto = 0;
             const fullCustomerOrders = []; // flat list of orders belonging to full-paid customers
             for (const [, orders] of byCustomer) {
                 if (isFullCustomer(orders)) {
                     fullPaidCount++;
                     fullCustomerOrders.push(...orders);
+                    fullRevenueBrutto += orders.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
                     // Did this customer have a first paid today?
                     const firstPaidInMonth = orders[0]; // already sorted by paid_at asc
                     if ((firstPaidInMonth?.paid_at || '').startsWith(todayPrefix)) {
@@ -963,6 +965,8 @@
 
             DATA.counts.paid = fullPaidCount;
             DATA.today.paid = fullPaidToday;
+            // Save full-customer revenue separately for accurate avg ticket calculation
+            DATA.revenue_netto_full = fullRevenueBrutto / 1.23;
 
             // Daily data — total revenue per day (netto), cała)
             const { dayTotal } = getDayProgress();
@@ -991,9 +995,9 @@
                 revenue: dailyRev[i]
             }));
 
-            // Avg ticket netto — revenue / full paid count (reflects real avg per deal)
+            // Avg ticket netto — bazuje TYLKO na full customer revenue (precyzyjny avg per deal)
             DATA.avg_ticket_netto = fullPaidCount > 0
-                ? DATA.revenue_netto / fullPaidCount
+                ? DATA.revenue_netto_full / fullPaidCount
                 : TARGETS.avg_ticket_netto;
         }
 
