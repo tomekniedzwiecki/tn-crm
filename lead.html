@@ -3153,6 +3153,22 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     { status: newStatus }
                 );
 
+                // AUTO-REASSIGN do Tomka gdy status → negotiation (Domykanie)
+                // Target pipeline: Maciek przenosi do Domykania, Tomek zamyka
+                const TOMEK_ID = '6d05370c-0ada-4af9-b0d8-07e02e0f4792';
+                if (newStatus === 'negotiation' && lead.assigned_to !== TOMEK_ID) {
+                    lead.assigned_to = TOMEK_ID;
+                    const assignedSelect = document.getElementById('field-assigned-to');
+                    if (assignedSelect) assignedSelect.value = TOMEK_ID;
+                    activities.push({
+                        type: 'auto_reassign',
+                        content: 'Auto-przekazano do Tomka (Domykanie)',
+                        created_at: new Date().toISOString(),
+                        performed_by: null,
+                        performed_by_name: 'System (target pipeline)'
+                    });
+                }
+
                 updatePipelineStepper(newStatus);
                 renderActivities();
                 autoSave();

@@ -742,21 +742,23 @@
         }
 
         // ============================================
-        // FETCH — ROZMOWA (≥5 WA msgs exchanged this month)
+        // FETCH — ROZMOWA
+        // Kryteria (z user): ≥5 sensownych wiadomości wymienionych między stronami
+        // Sensowna = length(text) >= 10 chars
+        // Bi-directional: min 2 inbound + min 2 outbound
         // ============================================
         async function fetchRozmowa(start, end) {
             const startISO = start.toISOString();
             const endISO = end.toISOString();
             const todayISO = getTodayISO();
 
-            // Fetch all WA messages this month (paginate if needed)
             let allMessages = [];
             let offset = 0;
             const pageSize = 1000;
             while (true) {
                 const { data, error } = await supabaseClient
                     .from('whatsapp_messages')
-                    .select('lead_id,message_timestamp')
+                    .select('lead_id,message_timestamp,direction,message_text')
                     .gte('message_timestamp', startISO)
                     .lt('message_timestamp', endISO)
                     .not('lead_id', 'is', null)
@@ -768,32 +770,38 @@
                 offset += pageSize;
             }
 
-            // Group by lead_id, count messages
-            const msgByLead = new Map();
-            const msgTodayByLead = new Map();
+            // Filter: only meaningful messages (text length >= 10)
+            const meaningful = allMessages.filter(m =>
+                m.message_text && m.message_text.length >= 10
+            );
+
+            // Group by lead: count meaningful + per-direction
+            const leadStats = new Map(); // lid -> {total, inbound, outbound, hadMsgToday}
             const todayDate = todayISO.split('T')[0];
-            for (const m of allMessages) {
+            for (const m of meaningful) {
                 if (!m.lead_id) continue;
-                msgByLead.set(m.lead_id, (msgByLead.get(m.lead_id) || 0) + 1);
-                if ((m.message_timestamp || '').startsWith(todayDate)) {
-                    msgTodayByLead.set(m.lead_id, (msgTodayByLead.get(m.lead_id) || 0) + 1);
+                if (!leadStats.has(m.lead_id)) {
+                    leadStats.set(m.lead_id, { total: 0, inbound: 0, outbound: 0, hadMsgToday: false });
+                }
+                const s = leadStats.get(m.lead_id);
+                s.total++;
+                if (m.direction === 'inbound') s.inbound++;
+                else if (m.direction === 'outbound') s.outbound++;
+                if ((m.message_timestamp || '').startsWith(todayDate)) s.hadMsgToday = true;
+            }
+
+            // Qualifying: >=5 meaningful total AND >=2 inbound AND >=2 outbound
+            const qualifyingLeads = new Set();
+            const qualifiedToday = new Set();
+            for (const [lid, s] of leadStats) {
+                if (s.total >= 5 && s.inbound >= 2 && s.outbound >= 2) {
+                    qualifyingLeads.add(lid);
+                    if (s.hadMsgToday) qualifiedToday.add(lid);
                 }
             }
 
-            // Count leads with >= 5 messages (counts as rozmowa)
-            let qualifyingLeads = 0;
-            for (const count of msgByLead.values()) {
-                if (count >= 5) qualifyingLeads++;
-            }
-            DATA.counts.rozmowa = qualifyingLeads;
-
-            // For today: leads that CROSSED 5 threshold today
-            // Simplified: count leads where cumulative >= 5 AND had any msg today
-            let todayCount = 0;
-            for (const [lid, cnt] of msgByLead) {
-                if (cnt >= 5 && msgTodayByLead.has(lid)) todayCount++;
-            }
-            DATA.today.rozmowa = todayCount;
+            DATA.counts.rozmowa = qualifyingLeads.size;
+            DATA.today.rozmowa = qualifiedToday.size;
         }
 
         // ============================================

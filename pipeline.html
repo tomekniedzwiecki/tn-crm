@@ -1308,11 +1308,29 @@
                 performed_by_name: currentMember?.name || null
             }];
 
+            // AUTO-REASSIGN do Tomka gdy status → negotiation (Domykanie)
+            // Target pipeline: Maciek przenosi do Domykania, Tomek zamyka
+            const TOMEK_ID = '6d05370c-0ada-4af9-b0d8-07e02e0f4792';
+            let autoReassigned = false;
+            if (newStage === 'negotiation' && lead.assigned_to !== TOMEK_ID) {
+                autoReassigned = true;
+                updatedActivities.push({
+                    type: 'auto_reassign',
+                    content: 'Auto-przekazano do Tomka (Domykanie)',
+                    created_at: new Date().toISOString(),
+                    performed_by: null,
+                    performed_by_name: 'System (target pipeline)'
+                });
+            }
+
             // Update in database
             const updateData = {
                 status: newStage,
                 activities: updatedActivities
             };
+            if (autoReassigned) {
+                updateData.assigned_to = TOMEK_ID;
+            }
 
             const { error } = await supabaseClient
                 .from('leads')
@@ -1334,6 +1352,9 @@
             // Update local state and re-render
             lead.status = newStage;
             lead.activities = updatedActivities;
+            if (autoReassigned) {
+                lead.assigned_to = TOMEK_ID;
+            }
             renderPipeline();
 
             // Trigger automatyzacji "lead_status_changed"
