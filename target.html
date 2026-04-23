@@ -314,25 +314,10 @@
                     </div>
                 </div>
 
-                <!-- NORMY — prosta legenda dzień + miesiąc -->
-                <div class="section-card p-3 mb-6">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-xs">
-                            <thead>
-                                <tr class="text-[10px] text-zinc-600 uppercase tracking-wider border-b border-white/5">
-                                    <th class="text-left py-1.5 pr-3 font-semibold w-16">Cel</th>
-                                    <th class="text-right py-1.5 px-2 font-semibold">Odezwanie</th>
-                                    <th class="text-right py-1.5 px-2 font-semibold">Rozmowa</th>
-                                    <th class="text-right py-1.5 px-2 font-semibold">Oferta</th>
-                                    <th class="text-right py-1.5 px-2 font-semibold">Domykanie</th>
-                                    <th class="text-right py-1.5 px-2 font-semibold">Paid</th>
-                                    <th class="text-right py-1.5 pl-3 font-semibold border-l border-white/5">Rev netto</th>
-                                </tr>
-                            </thead>
-                            <tbody id="normy-legend">
-                                <!-- Populated by JS -->
-                            </tbody>
-                        </table>
+                <!-- NORMY — jednoliniowa legenda, karta flex -->
+                <div class="section-card px-4 py-3 mb-6">
+                    <div id="normy-legend" class="flex items-center gap-x-5 gap-y-2 flex-wrap text-xs">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 
@@ -1215,25 +1200,38 @@
 
             const fmtTarget = (val) => val >= 10 ? Math.round(val).toLocaleString('pl-PL') : val.toFixed(1);
 
-            // Compute targets per stage
-            const perStage = STAGE_DEFS.map(stage => ({
-                monthly: TARGETS.targets[stage.key] || 0,
-                daily: (TARGETS.targets[stage.key] || 0) / dayTotal,
-            }));
+            const stageChip = (stage) => {
+                const monthly = TARGETS.targets[stage.key] || 0;
+                const daily = monthly / dayTotal;
+                return `
+                    <div class="flex items-center gap-2">
+                        <span class="text-zinc-500">${stage.name}</span>
+                        <span class="font-mono text-white font-semibold">${fmtTarget(daily)}</span>
+                        <span class="text-zinc-600 text-[10px]">/dz</span>
+                        <span class="text-zinc-700">·</span>
+                        <span class="font-mono text-zinc-300">${fmtTarget(monthly)}</span>
+                        <span class="text-zinc-600 text-[10px]">/mies</span>
+                    </div>
+                `;
+            };
+
             const revMonthly = TARGETS.monthly_revenue_netto;
             const revDaily = revMonthly / dayTotal;
+            const revChip = `
+                <div class="flex items-center gap-2 ml-auto pl-4 border-l border-white/10">
+                    <i class="ph ph-currency-circle-dollar text-emerald-400"></i>
+                    <span class="font-mono text-emerald-400 font-semibold">${fmtMoney(revDaily)} zł</span>
+                    <span class="text-zinc-600 text-[10px]">/dz</span>
+                    <span class="text-zinc-700">·</span>
+                    <span class="font-mono text-emerald-400 font-semibold">${fmtMoney(revMonthly)} zł</span>
+                    <span class="text-zinc-600 text-[10px]">/mies netto</span>
+                </div>
+            `;
 
             body.innerHTML = `
-                <tr class="border-b border-white/5">
-                    <td class="py-1.5 pr-3 text-[10px] text-zinc-500 uppercase font-semibold">Dzień</td>
-                    ${perStage.map(s => `<td class="text-right py-1.5 px-2 font-mono text-zinc-300">${fmtTarget(s.daily)}</td>`).join('')}
-                    <td class="text-right py-1.5 pl-3 font-mono text-emerald-400/80 border-l border-white/5">${fmtMoney(revDaily)} zł</td>
-                </tr>
-                <tr>
-                    <td class="py-1.5 pr-3 text-[10px] text-zinc-500 uppercase font-semibold">Miesiąc</td>
-                    ${perStage.map(s => `<td class="text-right py-1.5 px-2 font-mono text-white font-semibold">${fmtTarget(s.monthly)}</td>`).join('')}
-                    <td class="text-right py-1.5 pl-3 font-mono text-emerald-400 font-semibold border-l border-white/5">${fmtMoney(revMonthly)} zł</td>
-                </tr>
+                <span class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mr-2">Normy</span>
+                ${STAGE_DEFS.map(stageChip).join('<span class="text-zinc-800">|</span>')}
+                ${revChip}
             `;
         }
 
