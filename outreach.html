@@ -2725,14 +2725,17 @@
                 }
                 renderWaContacts();
                 loadWaStats();
-                showToast('Oznaczono jako skontaktowany');
             }
+
+            // Auto-add to CRM pipeline (bez otwierania nowej karty z leadem)
+            await addToPipeline(contactId, { silent: true });
         }
 
-        async function addToPipeline(contactId) {
+        async function addToPipeline(contactId, options = {}) {
+            const silent = options.silent === true;
             const contact = waContacts.find(c => c.id === contactId);
             if (!contact) {
-                showToast('Nie znaleziono kontaktu');
+                if (!silent) showToast('Nie znaleziono kontaktu');
                 return;
             }
 
@@ -2744,8 +2747,12 @@
                 .maybeSingle();
 
             if (existingLead) {
-                showToast('Lead z tym emailem już istnieje w CRM');
-                window.open(Sidebar.getPagePath('lead') + '?id=' + existingLead.id, '_blank');
+                if (silent) {
+                    showToast('Oznaczono jako skontaktowany (lead już był w CRM)');
+                } else {
+                    showToast('Lead z tym emailem już istnieje w CRM');
+                    window.open(Sidebar.getPagePath('lead') + '?id=' + existingLead.id, '_blank');
+                }
                 return;
             }
 
@@ -2765,15 +2772,18 @@
                 .select();
 
             if (error) {
-                showToast('Błąd: ' + error.message);
+                showToast('Błąd dodawania do pipeline: ' + error.message);
                 return;
             }
 
-            showToast('Dodano do pipeline jako Skontaktowany');
-
-            // Open new lead in new tab
-            if (data && data[0]) {
-                window.open(Sidebar.getPagePath('lead') + '?id=' + data[0].id, '_blank');
+            if (silent) {
+                showToast('Skontaktowano + dodano do pipeline');
+            } else {
+                showToast('Dodano do pipeline jako Skontaktowany');
+                // Open new lead in new tab
+                if (data && data[0]) {
+                    window.open(Sidebar.getPagePath('lead') + '?id=' + data[0].id, '_blank');
+                }
             }
         }
 
