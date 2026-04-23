@@ -314,6 +314,48 @@
                     </div>
                 </div>
 
+                <!-- NORMY — ile musi być zdarzeń na każdy dzień / tydzień / miesiąc -->
+                <div class="section-card p-5 mb-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <div class="text-sm font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-target text-teal-400"></i>
+                                Normy — ile musi się wydarzyć
+                            </div>
+                            <div class="text-xs text-zinc-500 mt-0.5">Czarno na białym: cele vs realizacja na każdy okres</div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="text-[10px] text-zinc-500 uppercase tracking-wider border-b border-white/5">
+                                    <th class="text-left py-2 pr-3 font-semibold"></th>
+                                    <th class="text-center py-2 px-2 font-semibold" colspan="3">
+                                        <div class="text-teal-400">CEL (ile MA być)</div>
+                                    </th>
+                                    <th class="text-center py-2 px-2 font-semibold" colspan="3">
+                                        <div class="text-white">REALIZACJA (ile JEST)</div>
+                                    </th>
+                                    <th class="text-right py-2 pl-2 font-semibold">Status</th>
+                                </tr>
+                                <tr class="text-[10px] text-zinc-500 uppercase tracking-wider border-b border-white/10">
+                                    <th class="text-left py-2 pr-3 font-semibold">Etap</th>
+                                    <th class="text-right py-2 px-2 font-semibold text-teal-500/70">Dzień</th>
+                                    <th class="text-right py-2 px-2 font-semibold text-teal-500/70">Tydzień</th>
+                                    <th class="text-right py-2 px-2 font-semibold text-teal-500/70">Miesiąc</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Dziś</th>
+                                    <th class="text-right py-2 px-2 font-semibold">7 dni</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Miesiąc</th>
+                                    <th class="text-right py-2 pl-2 font-semibold"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="normy-table">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- 5 ETAPÓW — redesigned z DZIŚ/WCZORAJ/7D + sparkline -->
                 <div id="stages-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
                     <!-- Populated by JS via renderStageCards() -->
@@ -1165,6 +1207,9 @@
             document.getElementById('hero-forecast').textContent = fmtMoney(forecast) + ' zł';
             setBadge('hero-badge', getStatusVsPace(heroPct, pctDayProgress));
 
+            // NORMY (cele vs realizacja — tabela)
+            renderNormyTable(dayTotal);
+
             // 5 STAGES — new unified render
             renderStageCards(pctDayProgress, dayCurrent, dayTotal, remainingDays);
 
@@ -1182,6 +1227,120 @@
 
             // QUEUE
             renderQueue();
+        }
+
+        function renderNormyTable(dayTotal) {
+            const body = document.getElementById('normy-table');
+            if (!body) return;
+
+            // Precision helper for small numbers (paid goal może być 0,5)
+            const fmtTarget = (val) => val >= 10 ? Math.round(val).toLocaleString('pl-PL') : val.toFixed(1);
+
+            const stageRows = STAGE_DEFS.map(stage => {
+                const monthlyTarget = TARGETS.targets[stage.key] || 0;
+                const dailyTarget = monthlyTarget / dayTotal;
+                const weeklyTarget = monthlyTarget * 7 / dayTotal;
+
+                const todayVal = getStageToday(stage.key);
+                const weekVal = getStageLast7Days(stage.key);
+                const monthVal = DATA.counts[stage.key] || 0;
+
+                // Status: compare month realization to monthly target (simplified)
+                const monthPct = monthlyTarget > 0 ? monthVal / monthlyTarget : 0;
+                const progress = getDayProgress();
+                const status = getStatusVsPace(monthPct, progress.progressPct);
+
+                // Compare realized vs target per period
+                const cellClass = (actual, target) => {
+                    if (target === 0) return 'text-zinc-500';
+                    if (actual >= target) return 'text-teal-400 font-semibold';
+                    if (actual >= target * 0.6) return 'text-amber-400';
+                    if (actual === 0) return 'text-zinc-700';
+                    return 'text-red-400';
+                };
+
+                return `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-2.5 pr-3">
+                            <div class="flex items-center gap-2">
+                                <div class="w-6 h-6 rounded ${stage.iconBg} flex items-center justify-center">
+                                    <i class="ph ${stage.icon} ${stage.iconColor} text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-white">${stage.name}</div>
+                                    <div class="text-[10px] text-zinc-600">${stage.desc}</div>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="text-right py-2.5 px-2 text-teal-400/80 font-mono font-medium">${fmtTarget(dailyTarget)}</td>
+                        <td class="text-right py-2.5 px-2 text-teal-400/80 font-mono font-medium">${fmtTarget(weeklyTarget)}</td>
+                        <td class="text-right py-2.5 px-2 text-teal-400 font-mono font-semibold">${fmtTarget(monthlyTarget)}</td>
+                        <td class="text-right py-2.5 px-2 font-mono ${cellClass(todayVal, dailyTarget)}">${fmtNum(todayVal)}</td>
+                        <td class="text-right py-2.5 px-2 font-mono ${cellClass(weekVal, weeklyTarget)}">${fmtNum(weekVal)}</td>
+                        <td class="text-right py-2.5 px-2 font-mono ${cellClass(monthVal, monthlyTarget)}">${fmtNum(monthVal)}</td>
+                        <td class="text-right py-2.5 pl-2">
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${status.class}">${status.text}</span>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Revenue row (podsumowanie finansowe)
+            const monthlyRevTarget = TARGETS.monthly_revenue_netto;
+            const dailyRevTarget = monthlyRevTarget / dayTotal;
+            const weeklyRevTarget = monthlyRevTarget * 7 / dayTotal;
+
+            // Realization — today/7d/month revenue
+            let todayRev = 0;
+            let weekRev = 0;
+            const isThisMonth = isCurrentMonth();
+            if (isThisMonth) {
+                const todayDay = new Date().getDate();
+                todayRev = DATA.daily.revenue[todayDay - 1] || 0;
+                for (let i = 0; i < 7; i++) {
+                    const d = todayDay - i;
+                    if (d >= 1 && d <= DATA.daily.revenue.length) weekRev += DATA.daily.revenue[d - 1] || 0;
+                }
+            }
+            const monthRev = DATA.revenue_netto;
+            const revPct = monthlyRevTarget > 0 ? monthRev / monthlyRevTarget : 0;
+            const progress = getDayProgress();
+            const revStatus = getStatusVsPace(revPct, progress.progressPct);
+
+            const revCellClass = (actual, target) => {
+                if (target === 0) return 'text-zinc-500';
+                if (actual >= target) return 'text-teal-400 font-semibold';
+                if (actual >= target * 0.6) return 'text-amber-400';
+                if (actual === 0) return 'text-zinc-700';
+                return 'text-red-400';
+            };
+
+            const revenueRow = `
+                <tr class="border-t-2 border-white/10 bg-teal-500/5">
+                    <td class="py-3 pr-3">
+                        <div class="flex items-center gap-2">
+                            <div class="w-6 h-6 rounded bg-emerald-500/15 flex items-center justify-center">
+                                <i class="ph ph-currency-circle-dollar text-emerald-400 text-sm"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-semibold text-white">Przychód netto</div>
+                                <div class="text-[10px] text-zinc-600">Realny wpływ na konto</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-right py-3 px-2 text-emerald-400/80 font-mono font-medium">${fmtMoney(dailyRevTarget)} zł</td>
+                    <td class="text-right py-3 px-2 text-emerald-400/80 font-mono font-medium">${fmtMoney(weeklyRevTarget)} zł</td>
+                    <td class="text-right py-3 px-2 text-emerald-400 font-mono font-bold">${fmtMoney(monthlyRevTarget)} zł</td>
+                    <td class="text-right py-3 px-2 font-mono ${revCellClass(todayRev, dailyRevTarget)}">${fmtMoney(todayRev)} zł</td>
+                    <td class="text-right py-3 px-2 font-mono ${revCellClass(weekRev, weeklyRevTarget)}">${fmtMoney(weekRev)} zł</td>
+                    <td class="text-right py-3 px-2 font-mono font-semibold ${revCellClass(monthRev, monthlyRevTarget)}">${fmtMoney(monthRev)} zł</td>
+                    <td class="text-right py-3 pl-2">
+                        <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${revStatus.class}">${revStatus.text}</span>
+                    </td>
+                </tr>
+            `;
+
+            body.innerHTML = stageRows + revenueRow;
         }
 
         function renderStageCards(paceProgress, dayCurrent, dayTotal, remainingDays) {
