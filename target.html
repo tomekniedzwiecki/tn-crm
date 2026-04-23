@@ -312,12 +312,16 @@
                             <div id="hero-avg-ticket" class="text-lg font-semibold text-white font-mono">—</div>
                         </div>
                     </div>
+                </div>
 
-                    <!-- NORMY — wewnątrz hero, jednoliniowa legenda -->
-                    <div class="mt-4 pt-4 border-t border-white/5">
-                        <div id="normy-legend" class="flex items-center gap-x-5 gap-y-2 flex-wrap text-xs">
-                            <!-- Populated by JS -->
-                        </div>
+                <!-- NORMY — osobna karta, 6 mini-kolumn -->
+                <div class="section-card mb-6">
+                    <div class="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+                        <i class="ph ph-ruler text-zinc-500"></i>
+                        <span class="text-xs text-zinc-400 uppercase tracking-wider font-semibold">Normy — ile ma być</span>
+                    </div>
+                    <div id="normy-legend" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                        <!-- Populated by JS -->
                     </div>
                 </div>
 
@@ -1200,39 +1204,47 @@
 
             const fmtTarget = (val) => val >= 10 ? Math.round(val).toLocaleString('pl-PL') : val.toFixed(1);
 
-            const stageChip = (stage) => {
+            const stageCell = (stage) => {
                 const monthly = TARGETS.targets[stage.key] || 0;
                 const daily = monthly / dayTotal;
                 return `
-                    <div class="flex items-center gap-2">
-                        <span class="text-zinc-500">${stage.name}</span>
-                        <span class="font-mono text-white font-semibold">${fmtTarget(daily)}</span>
-                        <span class="text-zinc-600 text-[10px]">/dz</span>
-                        <span class="text-zinc-700">·</span>
-                        <span class="font-mono text-zinc-300">${fmtTarget(monthly)}</span>
-                        <span class="text-zinc-600 text-[10px]">/mies</span>
+                    <div class="px-4 py-3.5 border-r border-white/5 last:border-r-0">
+                        <div class="flex items-center gap-1.5 mb-2">
+                            <i class="ph ${stage.icon} ${stage.iconColor} text-sm"></i>
+                            <span class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold">${stage.name}</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5 mb-0.5">
+                            <span class="text-2xl font-bold text-white font-mono leading-none">${fmtTarget(daily)}</span>
+                            <span class="text-[10px] text-zinc-500">/dzień</span>
+                        </div>
+                        <div class="flex items-baseline gap-1.5">
+                            <span class="text-sm text-zinc-400 font-mono">${fmtTarget(monthly)}</span>
+                            <span class="text-[10px] text-zinc-600">/mies</span>
+                        </div>
                     </div>
                 `;
             };
 
             const revMonthly = TARGETS.monthly_revenue_netto;
             const revDaily = revMonthly / dayTotal;
-            const revChip = `
-                <div class="flex items-center gap-2 ml-auto pl-4 border-l border-white/10">
-                    <i class="ph ph-currency-circle-dollar text-emerald-400"></i>
-                    <span class="font-mono text-emerald-400 font-semibold">${fmtMoney(revDaily)} zł</span>
-                    <span class="text-zinc-600 text-[10px]">/dz</span>
-                    <span class="text-zinc-700">·</span>
-                    <span class="font-mono text-emerald-400 font-semibold">${fmtMoney(revMonthly)} zł</span>
-                    <span class="text-zinc-600 text-[10px]">/mies netto</span>
+            const revCell = `
+                <div class="px-4 py-3.5 bg-emerald-500/[0.04] border-l border-white/10">
+                    <div class="flex items-center gap-1.5 mb-2">
+                        <i class="ph ph-currency-circle-dollar text-emerald-400 text-sm"></i>
+                        <span class="text-[10px] uppercase tracking-wider text-emerald-400/70 font-semibold">Rev netto</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5 mb-0.5">
+                        <span class="text-2xl font-bold text-emerald-400 font-mono leading-none">${fmtMoney(revDaily)}</span>
+                        <span class="text-[10px] text-emerald-400/70">zł/dzień</span>
+                    </div>
+                    <div class="flex items-baseline gap-1.5">
+                        <span class="text-sm text-emerald-400/80 font-mono">${fmtMoney(revMonthly)}</span>
+                        <span class="text-[10px] text-emerald-400/50">zł/mies</span>
+                    </div>
                 </div>
             `;
 
-            body.innerHTML = `
-                <span class="text-[10px] text-zinc-600 uppercase tracking-wider font-semibold mr-2">Normy</span>
-                ${STAGE_DEFS.map(stageChip).join('<span class="text-zinc-800">|</span>')}
-                ${revChip}
-            `;
+            body.innerHTML = STAGE_DEFS.map(stageCell).join('') + revCell;
         }
 
         function renderStageCards(paceProgress, dayCurrent, dayTotal, remainingDays) {
