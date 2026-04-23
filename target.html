@@ -516,7 +516,7 @@
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
 
-        const OWNER_EMAIL = 'tomekniedzwiecki@gmail.com';
+        const OWNER_EMAILS = ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl'];
 
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -678,7 +678,8 @@
             const user = session.user;
             const userEmail = (user.email || '').toLowerCase();
 
-            if (userEmail !== OWNER_EMAIL.toLowerCase()) {
+            const allowedEmails = OWNER_EMAILS.map(e => e.toLowerCase());
+            if (!allowedEmails.includes(userEmail)) {
                 // Not authorized for this page → redirect to dashboard
                 window.location.href = '/dashboard';
                 return;

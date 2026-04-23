@@ -34,7 +34,7 @@ const APP_AVATAR_COLORS = {
 // ============================================
 const NAV_ITEMS_CRM = [
     { id: 'dashboard', icon: 'ph-house', label: 'Overview' },
-    { id: 'target', icon: 'ph-target', label: 'Target', ownerEmails: ['tomekniedzwiecki@gmail.com'] },
+    { id: 'target', icon: 'ph-target', label: 'Target', ownerEmails: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl'] },
     { id: 'leads', icon: 'ph-users', label: 'Leady', showCount: true },
     { id: 'pipeline', icon: 'ph-kanban', label: 'Pipeline' },
     { id: 'whatsapp', icon: 'ph-whatsapp-logo', label: 'WhatsApp' },
