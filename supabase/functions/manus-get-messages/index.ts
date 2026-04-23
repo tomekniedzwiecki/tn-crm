@@ -52,6 +52,15 @@ serve(async (req) => {
         return []
       })
 
+    // Also extract attachments from assistant messages
+    const assistantAttachments = messages
+      .filter((m: any) => m.type === 'assistant_message')
+      .flatMap((m: any) => {
+        const am = m.assistant_message
+        if (typeof am === 'object' && am?.attachments) return am.attachments
+        return []
+      })
+
     return new Response(JSON.stringify({
       status,
       message_count: messages.length,
@@ -60,6 +69,8 @@ serve(async (req) => {
       user_attachments: userAttachments,
       user_attachments_count: userAttachments.length,
       user_messages: userMessages,
+      assistant_attachments: assistantAttachments,
+      assistant_attachments_count: assistantAttachments.length,
       last_assistant: assistantMessages[assistantMessages.length - 1] || null,
       all_assistant: assistantMessages
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
