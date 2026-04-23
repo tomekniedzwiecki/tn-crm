@@ -52,6 +52,10 @@ function normalizeReferenceUrl(url: string): string {
   out = out.replace(/([,/])f_avif\b/gi, '$1f_jpg')
   // imgix/thumbor: fm=avif -> fm=jpg (query param)
   out = out.replace(/([?&])fm=avif\b/gi, '$1fm=jpg')
+  // AliExpress-media / Taobao CDN kaskada: trailing "_.avif" lub ".avif_.avif" na końcu
+  // ścieżki (przed ? lub #). Po usunięciu CDN zwraca poprzedni format z kaskady (webp/jpg).
+  // Przykład: "...jpeg_960x960q75.jpeg_.avif" -> "...jpeg_960x960q75.jpeg" (image/webp)
+  out = out.replace(/(?:\.avif)?_\.avif(?=$|\?|#)/gi, '')
   return out
 }
 
