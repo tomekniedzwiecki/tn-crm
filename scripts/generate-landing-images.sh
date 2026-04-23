@@ -61,7 +61,7 @@ for name in "${NAMES[@]}"; do
   curl -s --max-time 60 -X POST "$SUPABASE_URL/functions/v1/generate-image" \
     -H "Authorization: Bearer $SUPABASE_SERVICE_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"workflow_id\":\"$UUID\",\"slug\":\"$SLUG\",\"filename\":\"$name\"}" \
+    -d "{\"workflow_id\":\"$UUID\",\"slug\":\"$SLUG\",\"filename\":\"$name\",\"type\":\"landing\"}" \
     > "$OUT/$name.result.json" 2>&1 &
 done
 

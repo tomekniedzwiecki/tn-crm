@@ -459,6 +459,7 @@ Deno.serve(async (req) => {
     } else {
       const typedKey = type === 'logo' ? 'image_provider_logo'
         : type === 'mockup' ? 'image_provider_mockup'
+        : type === 'landing' ? 'image_provider_landing'
         : null
       let value: string | undefined
       if (typedKey) {

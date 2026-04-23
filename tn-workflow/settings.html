@@ -80,6 +80,58 @@
             border-radius: 12px;
         }
 
+        /* Provider option — card-based radio */
+        .provider-option {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 16px;
+            background: #0e0e0e;
+            border: 1.5px solid #2a2a2a;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        .provider-option:hover {
+            border-color: #4a4a4a;
+            background: #121212;
+        }
+        .provider-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .provider-option .provider-indicator {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #444;
+            background: #0a0a0a;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+        .provider-option.selected {
+            border-color: #ffffff;
+            background: rgba(255, 255, 255, 0.04);
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+        }
+        .provider-option.selected .provider-indicator {
+            border-color: #ffffff;
+            background: #ffffff;
+        }
+        .provider-option.selected .provider-indicator::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #0a0a0a;
+        }
+
         .input-field {
             width: 100%;
             background: transparent;
@@ -769,82 +821,116 @@
                 <div id="tab-ai-images" class="settings-tab hidden animate-fade-in">
                     <div class="mb-6">
                         <h2 class="text-lg font-semibold text-white mb-1">Generowanie obrazów AI</h2>
-                        <p class="text-[13px] text-[#888]">Provider można wybrać osobno dla logo i mockupów — edge function <code class="bg-black/40 px-1 py-0.5 rounded text-[11px]">generate-image</code> routuje na podstawie parametru <code class="bg-black/40 px-1 py-0.5 rounded text-[11px]">type</code>.</p>
+                        <p class="text-[13px] text-[#888]">Osobny provider dla każdego typu materiału — edge function <code class="bg-black/40 px-1 py-0.5 rounded text-[11px]">generate-image</code> routuje na podstawie parametru <code class="bg-black/40 px-1 py-0.5 rounded text-[11px]">type</code> w request body.</p>
                     </div>
 
                     <!-- LOGO PROVIDER -->
                     <div class="card p-5 mb-5">
-                        <div class="flex items-center gap-2 mb-3">
-                            <i class="ph ph-rocket-launch text-white"></i>
-                            <h3 class="text-[14px] font-semibold text-white">Logo</h3>
-                            <span class="text-[11px] text-[#666]">— setting <code class="bg-black/40 px-1 py-0.5 rounded">image_provider_logo</code></span>
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-rocket-launch text-white text-lg"></i>
+                            <h3 class="text-[15px] font-semibold text-white">Logo</h3>
+                            <span class="text-[11px] text-[#666] ml-1">→ <code class="bg-black/40 px-1 py-0.5 rounded">image_provider_logo</code></span>
                         </div>
-                        <label class="block mb-3">
-                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectLogoProvider('gemini')">
-                                <input type="radio" name="logo-provider" id="logo-provider-gemini" value="gemini" class="mt-1 accent-white">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-[14px] font-medium text-white">Gemini 3 Pro Image</span>
-                                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Tańszy</span>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="provider-option" data-logo-card="gemini" onclick="selectLogoProvider('gemini')">
+                                <input type="radio" name="logo-provider" id="logo-provider-gemini" value="gemini">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">Gemini 3 Pro</span>
+                                        <span class="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded">Tańszy</span>
                                     </div>
-                                    <p class="text-[12px] text-[#888]">Google Gemini. ~$0.134 / obraz.</p>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">Google. ~$0.134 / obraz.</p>
                                 </div>
-                            </div>
-                        </label>
-                        <label class="block">
-                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectLogoProvider('gpt-image-2')">
-                                <input type="radio" name="logo-provider" id="logo-provider-gpt-image-2" value="gpt-image-2" class="mt-1 accent-white">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-[14px] font-medium text-white">GPT-image-2</span>
-                                        <span class="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Wyższa jakość</span>
-                                        <span class="text-[10px] text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded">Rekomendowane dla logo</span>
+                            </label>
+                            <label class="provider-option" data-logo-card="gpt-image-2" onclick="selectLogoProvider('gpt-image-2')">
+                                <input type="radio" name="logo-provider" id="logo-provider-gpt-image-2" value="gpt-image-2">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">GPT-image-2</span>
+                                        <span class="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/25 px-1.5 py-0.5 rounded">Jakość</span>
+                                        <span class="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded">Rekomendowane</span>
                                     </div>
-                                    <p class="text-[12px] text-[#888]">OpenAI. ~$0.21 / obraz. Lepsza typografia i geometria.</p>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">OpenAI. ~$0.21 / obraz. Lepsza typografia i geometria.</p>
                                 </div>
-                            </div>
-                        </label>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- MOCKUP PROVIDER -->
                     <div class="card p-5 mb-5">
-                        <div class="flex items-center gap-2 mb-3">
-                            <i class="ph ph-image-square text-white"></i>
-                            <h3 class="text-[14px] font-semibold text-white">Mockupy</h3>
-                            <span class="text-[11px] text-[#666]">— setting <code class="bg-black/40 px-1 py-0.5 rounded">image_provider_mockup</code></span>
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-image-square text-white text-lg"></i>
+                            <h3 class="text-[15px] font-semibold text-white">Mockupy</h3>
+                            <span class="text-[11px] text-[#666] ml-1">→ <code class="bg-black/40 px-1 py-0.5 rounded">image_provider_mockup</code></span>
                         </div>
-                        <label class="block mb-3">
-                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectMockupProvider('gemini')">
-                                <input type="radio" name="mockup-provider" id="mockup-provider-gemini" value="gemini" class="mt-1 accent-white">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-[14px] font-medium text-white">Gemini 3 Pro Image</span>
-                                        <span class="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Tańszy</span>
-                                        <span class="text-[10px] text-[#888] bg-[#1a1a1a] px-1.5 py-0.5 rounded">Rekomendowane dla mockupów</span>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="provider-option" data-mockup-card="gemini" onclick="selectMockupProvider('gemini')">
+                                <input type="radio" name="mockup-provider" id="mockup-provider-gemini" value="gemini">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">Gemini 3 Pro</span>
+                                        <span class="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded">Tańszy</span>
+                                        <span class="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded">Rekomendowane</span>
                                     </div>
-                                    <p class="text-[12px] text-[#888]">Google Gemini. Lepiej respektuje reference image loga na gadżecie.</p>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">Google. Lepiej respektuje reference image (logo na gadżecie).</p>
                                 </div>
-                            </div>
-                        </label>
-                        <label class="block">
-                            <div class="flex items-start gap-3 p-4 bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg cursor-pointer hover:border-[#333] transition-colors" onclick="selectMockupProvider('gpt-image-2')">
-                                <input type="radio" name="mockup-provider" id="mockup-provider-gpt-image-2" value="gpt-image-2" class="mt-1 accent-white">
-                                <div class="flex-1">
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <span class="text-[14px] font-medium text-white">GPT-image-2</span>
-                                        <span class="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded">Wyższa jakość</span>
+                            </label>
+                            <label class="provider-option" data-mockup-card="gpt-image-2" onclick="selectMockupProvider('gpt-image-2')">
+                                <input type="radio" name="mockup-provider" id="mockup-provider-gpt-image-2" value="gpt-image-2">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">GPT-image-2</span>
+                                        <span class="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/25 px-1.5 py-0.5 rounded">Jakość</span>
                                     </div>
-                                    <p class="text-[12px] text-[#888]">OpenAI. Droższy, ale więcej detali fotograficznych.</p>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">OpenAI. Droższy, więcej detali fotograficznych.</p>
                                 </div>
-                            </div>
-                        </label>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- LANDING PROVIDER -->
+                    <div class="card p-5 mb-5">
+                        <div class="flex items-center gap-2 mb-4">
+                            <i class="ph ph-browser text-white text-lg"></i>
+                            <h3 class="text-[15px] font-semibold text-white">Landing page — grafiki</h3>
+                            <span class="text-[11px] text-[#666] ml-1">→ <code class="bg-black/40 px-1 py-0.5 rounded">image_provider_landing</code></span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <label class="provider-option" data-landing-card="gemini" onclick="selectLandingProvider('gemini')">
+                                <input type="radio" name="landing-provider" id="landing-provider-gemini" value="gemini">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">Gemini 3 Pro</span>
+                                        <span class="text-[10px] text-emerald-300 bg-emerald-500/15 border border-emerald-500/25 px-1.5 py-0.5 rounded">Tańszy</span>
+                                    </div>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">Google. Szybkie zdjęcia lifestyle. 10 aspect ratio.</p>
+                                </div>
+                            </label>
+                            <label class="provider-option" data-landing-card="gpt-image-2" onclick="selectLandingProvider('gpt-image-2')">
+                                <input type="radio" name="landing-provider" id="landing-provider-gpt-image-2" value="gpt-image-2">
+                                <span class="provider-indicator"></span>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+                                        <span class="text-[14px] font-semibold text-white">GPT-image-2</span>
+                                        <span class="text-[10px] text-purple-300 bg-purple-500/15 border border-purple-500/25 px-1.5 py-0.5 rounded">Jakość</span>
+                                        <span class="text-[10px] text-amber-200 bg-amber-500/10 border border-amber-500/25 px-1.5 py-0.5 rounded">Rekomendowane</span>
+                                    </div>
+                                    <p class="text-[12px] text-[#aaa] leading-relaxed">OpenAI. Ostrzejsze hero shoty produktowe, lepszy realizm.</p>
+                                </div>
+                            </label>
+                        </div>
                     </div>
 
                     <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-4 mb-6 text-[12px] text-amber-200/80">
                         <div class="flex items-start gap-2">
                             <i class="ph ph-info text-amber-400 mt-0.5"></i>
                             <div>
-                                <strong class="text-amber-300">Secrets w Supabase Edge Functions:</strong> dla GPT-image-2 wymagany <code class="bg-black/40 px-1 py-0.5 rounded">OPENAI_API_KEY</code>, dla Gemini <code class="bg-black/40 px-1 py-0.5 rounded">GOOGLE_AI_API_KEY</code>. Jeśli typ requestu nie jest rozpoznany (inne funkcje: PMax, kampanie), function spada na legacy klucz <code class="bg-black/40 px-1 py-0.5 rounded">image_provider</code>.
+                                <strong class="text-amber-300">Secrets:</strong> dla GPT-image-2 wymagany <code class="bg-black/40 px-1 py-0.5 rounded">OPENAI_API_KEY</code>, dla Gemini <code class="bg-black/40 px-1 py-0.5 rounded">GOOGLE_AI_API_KEY</code> w Supabase Edge Functions. Inne funkcje (PMax, campaigns) używają własnych override'ów lub fallback na legacy <code class="bg-black/40 px-1 py-0.5 rounded">image_provider</code>.
                             </div>
                         </div>
                     </div>
@@ -964,7 +1050,8 @@
                         'deadline_scenario',
                         'image_provider',
                         'image_provider_logo',
-                        'image_provider_mockup'
+                        'image_provider_mockup',
+                        'image_provider_landing'
                     ]);
 
                 if (error) throw error;
@@ -1023,18 +1110,12 @@
                 });
                 updateEtap1Total();
 
-                // AI Image provider settings — per typ (logo + mockup), z fallbackiem na legacy image_provider
+                // AI Image providers — per typ (logo / mockup / landing), fallback: legacy image_provider
                 const legacy = settingsMap.image_provider === 'gpt-image-2' ? 'gpt-image-2' : 'gemini';
-                const logoProvider = settingsMap.image_provider_logo
-                    ? (settingsMap.image_provider_logo === 'gpt-image-2' ? 'gpt-image-2' : 'gemini')
-                    : legacy;
-                const mockupProvider = settingsMap.image_provider_mockup
-                    ? (settingsMap.image_provider_mockup === 'gpt-image-2' ? 'gpt-image-2' : 'gemini')
-                    : legacy;
-                const logoRadio = document.getElementById(`logo-provider-${logoProvider}`);
-                if (logoRadio) logoRadio.checked = true;
-                const mockupRadio = document.getElementById(`mockup-provider-${mockupProvider}`);
-                if (mockupRadio) mockupRadio.checked = true;
+                const normalize = v => (v === 'gpt-image-2' ? 'gpt-image-2' : 'gemini');
+                selectLogoProvider(normalize(settingsMap.image_provider_logo ?? legacy));
+                selectMockupProvider(normalize(settingsMap.image_provider_mockup ?? legacy));
+                selectLandingProvider(normalize(settingsMap.image_provider_landing ?? legacy));
             } catch (err) {
                 console.error('Error loading settings:', err);
                 showToast('Blad ladowania ustawien', 'error');
@@ -1042,23 +1123,38 @@
         }
 
         // ============================================
-        // AI IMAGE PROVIDERS — per typ (logo + mockup)
+        // AI IMAGE PROVIDERS — per typ (logo / mockup / landing)
         // ============================================
+        function highlightCard(groupAttr, provider) {
+            document.querySelectorAll(`[${groupAttr}]`).forEach(el => el.classList.remove('selected'));
+            const card = document.querySelector(`[${groupAttr}="${provider}"]`);
+            if (card) card.classList.add('selected');
+        }
+
         function selectLogoProvider(provider) {
             const radio = document.getElementById(`logo-provider-${provider}`);
             if (radio) radio.checked = true;
+            highlightCard('data-logo-card', provider);
         }
 
         function selectMockupProvider(provider) {
             const radio = document.getElementById(`mockup-provider-${provider}`);
             if (radio) radio.checked = true;
+            highlightCard('data-mockup-card', provider);
+        }
+
+        function selectLandingProvider(provider) {
+            const radio = document.getElementById(`landing-provider-${provider}`);
+            if (radio) radio.checked = true;
+            highlightCard('data-landing-card', provider);
         }
 
         async function saveImageProviders() {
             const logo = document.querySelector('input[name="logo-provider"]:checked');
             const mockup = document.querySelector('input[name="mockup-provider"]:checked');
-            if (!logo || !mockup) {
-                showToast('Wybierz providera dla logo i mockupów', 'error');
+            const landing = document.querySelector('input[name="landing-provider"]:checked');
+            if (!logo || !mockup || !landing) {
+                showToast('Wybierz providera dla każdego typu', 'error');
                 return;
             }
             try {
@@ -1066,10 +1162,11 @@
                     .from('settings')
                     .upsert([
                         { key: 'image_provider_logo', value: logo.value },
-                        { key: 'image_provider_mockup', value: mockup.value }
+                        { key: 'image_provider_mockup', value: mockup.value },
+                        { key: 'image_provider_landing', value: landing.value }
                     ], { onConflict: 'key' });
                 if (error) throw error;
-                showToast(`Logo: ${logo.value} · Mockup: ${mockup.value}`, 'success');
+                showToast(`Logo: ${logo.value} · Mockup: ${mockup.value} · Landing: ${landing.value}`, 'success');
             } catch (err) {
                 console.error('Error saving providers:', err);
                 showToast('Blad zapisu', 'error');
