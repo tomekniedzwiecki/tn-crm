@@ -69,6 +69,55 @@ echo "  File: $FILE"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
+# ─── 0. Style Lock load (v4.0) ───
+# Odczytaj Style ID z _brief.md i ustaw flagi co styl pozwala/zakazuje
+# Dzięki temu JS effects i sections dopasowują się do stylu (Apothecary nie wymaga split/parallax).
+BRIEF="landing-pages/$SLUG/_brief.md"
+STYLE_ID=""
+STYLE_ALLOWS_SPLIT=1
+STYLE_ALLOWS_PARALLAX=1
+STYLE_ALLOWS_MAGNETIC=1
+STYLE_ALLOWS_TILT=1
+STYLE_ALLOWS_COUNTER=1
+STYLE_REQUIRES_STICKY_CTA=1
+STYLE_REQUIRES_TRUST_BAR=1
+
+if [ -f "$BRIEF" ]; then
+  STYLE_ID=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | grep -oE 'Style ID:[*]+[[:space:]]*`[a-z-]+`' | head -1 | sed 's/^[^`]*`//; s/`.*//')
+fi
+
+STYLE_REQUIRES_BENTO=1
+STYLE_REQUIRES_HOW_STEPS=1
+STYLE_REQUIRES_SOLUTION_BENTO=1
+
+if [ -n "$STYLE_ID" ] && [ -f "docs/landing/style-atlas/$STYLE_ID.md" ]; then
+  STYLE_FILE="docs/landing/style-atlas/$STYLE_ID.md"
+  MOTION=$(awk '/^## 10\. Motion Budget/,/^## 11\./' "$STYLE_FILE" || true)
+  # Parse tylko js_effects_forbidden (nie required)
+  MOTION_FORBIDDEN=$(echo "$MOTION" | awk '/js_effects_forbidden:/,/js_effects_count:|js_effects_required:|^[[:space:]]*`/')
+
+  echo "$MOTION_FORBIDDEN" | grep -q "\.js-split" && STYLE_ALLOWS_SPLIT=0 || true
+  echo "$MOTION_FORBIDDEN" | grep -q "\.js-parallax" && STYLE_ALLOWS_PARALLAX=0 || true
+  echo "$MOTION_FORBIDDEN" | grep -q "\.magnetic" && STYLE_ALLOWS_MAGNETIC=0 || true
+  echo "$MOTION_FORBIDDEN" | grep -q "\.js-tilt" && STYLE_ALLOWS_TILT=0 || true
+  echo "$MOTION_FORBIDDEN" | grep -q "\.js-counter" && STYLE_ALLOWS_COUNTER=0 || true
+
+  # Section Architecture forbidden
+  SECARCH=$(awk '/^## 8\. Section/,/^## 9\./' "$STYLE_FILE" || true)
+  SECARCH_FORBIDDEN=$(echo "$SECARCH" | awk '/forbidden:/,/^[[:space:]]*`/')
+  echo "$SECARCH_FORBIDDEN" | grep -qi "Trust Bar" && STYLE_REQUIRES_TRUST_BAR=0 || true
+  echo "$SECARCH_FORBIDDEN" | grep -qi "Sticky CTA" && STYLE_REQUIRES_STICKY_CTA=0 || true
+  echo "$SECARCH_FORBIDDEN" | grep -qiE "Bento|bento 2×2" && STYLE_REQUIRES_BENTO=0 || true
+  # Section 9 — allowed_variants features
+  VARS=$(awk '/^## 9\. Allowed Variants/,/^## 10\./' "$STYLE_FILE" || true)
+  echo "$VARS" | grep -qE "features_allowed:.*F3" && ! echo "$VARS" | grep -qE "features_allowed:.*F1|features_allowed:.*F2|features_allowed:.*F4|features_allowed:.*F5" && STYLE_REQUIRES_SOLUTION_BENTO=0 || true
+
+  echo "📋 Style Lock: $STYLE_ID"
+  echo "  split=$STYLE_ALLOWS_SPLIT parallax=$STYLE_ALLOWS_PARALLAX magnetic=$STYLE_ALLOWS_MAGNETIC tilt=$STYLE_ALLOWS_TILT counter=$STYLE_ALLOWS_COUNTER"
+  echo "  trust=$STYLE_REQUIRES_TRUST_BAR sticky=$STYLE_REQUIRES_STICKY_CTA bento=$STYLE_REQUIRES_BENTO solution_bento=$STYLE_REQUIRES_SOLUTION_BENTO"
+  echo ""
+fi
+
 # ─── 1. Placeholdery / obrazy ───
 # Wymaganie: kazda sekcja wizualna MUSI miec placeholder zdjecia (feedback-landing-placeholder-per-section.md).
 # Sekcje: hero (1), gallery (5-6), personas (3), testimonials (3-4), procedure steps (3), final-cta (1 bg) = 16-18 minimum.
@@ -222,33 +271,64 @@ fi
 
 # ─── 7. JS effects coverage (5 obowiązkowych, DESIGN.md D.1) ───
 echo ""
-echo "✨ 7. JS effects (5 obowiązkowych, DESIGN.md sekcja D.1)"
+echo "✨ 7. JS effects (adaptowane per Style Lock)"
 JSSPLIT=$(grep -cE 'class="[^"]*js-split[^"]*"' "$FILE" || true)
-check "Split headline (.js-split) na h1 hero" "1" "$([ "$JSSPLIT" -ge 1 ] && echo 1 || echo 0)"
-
-JSCOUNT=$(grep -cE 'class="js-counter"' "$FILE" || true)
-check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
-
-MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
-check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
-
-# js-tilt + js-parallax = opcjonalne aesthetic effects (niektóre kierunki celowo ich nie używają, np. Rugged Heritage = industrial bez ruchu)
-JSTILT=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
-if [ "$JSTILT" -ge 2 ]; then
-  echo "  ✅ Tile 3D Tilt (.js-tilt) ≥ 2 ($JSTILT)"
-  PASS=$((PASS + 1))
+if [ "$STYLE_ALLOWS_SPLIT" = "0" ]; then
+  # Styl zakazuje — grep OBECNY = fail, brak = pass
+  if [ "$JSSPLIT" -eq 0 ]; then echo "  ✅ Split (.js-split) nieobecny (zgodnie ze Style Lock)"; PASS=$((PASS + 1));
+  else echo "  ❌ Split (.js-split) obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
 else
-  echo "  ⚠️  Tile 3D Tilt (.js-tilt) ≥ 2 (got $JSTILT) — opcjonalne, niektóre kierunki celowo pomijają (Rugged Heritage, industrial, static)"
-  WARN=$((WARN + 1))
+  check "Split headline (.js-split) na h1 hero" "1" "$([ "$JSSPLIT" -ge 1 ] && echo 1 || echo 0)"
 fi
 
-JSPARALLAX=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
-if [ "$JSPARALLAX" -ge 1 ]; then
-  echo "  ✅ Parallax numerals (.js-parallax) ≥ 1"
-  PASS=$((PASS + 1))
+JSCOUNT=$(grep -cE 'class="[^"]*js-counter[^"]*"' "$FILE" || true)
+if [ "$STYLE_ALLOWS_COUNTER" = "0" ]; then
+  if [ "$JSCOUNT" -eq 0 ]; then echo "  ✅ Counter (.js-counter) nieobecny (Style Lock)"; PASS=$((PASS + 1));
+  else echo "  ❌ Counter obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
 else
-  echo "  ⚠️  Parallax numerals (.js-parallax) ≥ 1 (got 0) — opcjonalne, niektóre kierunki pomijają"
-  WARN=$((WARN + 1))
+  check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
+fi
+
+MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
+if [ "$STYLE_ALLOWS_MAGNETIC" = "0" ]; then
+  if [ "$MAGNET" -eq 0 ]; then echo "  ✅ Magnetic (.magnetic) nieobecny (Style Lock)"; PASS=$((PASS + 1));
+  else echo "  ❌ Magnetic obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+else
+  check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
+fi
+
+# js-tilt + js-parallax = opcjonalne aesthetic effects (niektóre kierunki celowo ich nie używają, np. Rugged Heritage = industrial bez ruchu)
+if [ "$STYLE_ALLOWS_TILT" = "0" ]; then
+  JSTILT_CHECK=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
+  if [ "$JSTILT_CHECK" -eq 0 ]; then echo "  ✅ Tilt (.js-tilt) nieobecny (Style Lock)"; PASS=$((PASS + 1));
+  else echo "  ❌ Tilt obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+fi
+if [ "$STYLE_ALLOWS_PARALLAX" = "0" ]; then
+  JSPAR_CHECK=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
+  if [ "$JSPAR_CHECK" -eq 0 ]; then echo "  ✅ Parallax (.js-parallax) nieobecny (Style Lock)"; PASS=$((PASS + 1));
+  else echo "  ❌ Parallax obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+fi
+# Oryginalne JSTILT/JSPARALLAX WARN — pomijane gdy Style Lock zakazuje (już obsłużone wyżej)
+if [ "$STYLE_ALLOWS_TILT" = "1" ]; then
+  JSTILT=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
+  if [ "$JSTILT" -ge 2 ]; then
+    echo "  ✅ Tile 3D Tilt (.js-tilt) ≥ 2 ($JSTILT)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Tile 3D Tilt (.js-tilt) ≥ 2 (got $JSTILT) — opcjonalne"
+    WARN=$((WARN + 1))
+  fi
+fi
+
+if [ "$STYLE_ALLOWS_PARALLAX" = "1" ]; then
+  JSPARALLAX=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
+  if [ "$JSPARALLAX" -ge 1 ]; then
+    echo "  ✅ Parallax numerals (.js-parallax) ≥ 1"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Parallax numerals (.js-parallax) ≥ 1 (got 0) — opcjonalne"
+    WARN=$((WARN + 1))
+  fi
 fi
 
 # ─── 8. Copy anti-patterns ───
@@ -347,6 +427,12 @@ for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How I
   if [ "$HIT" -ge 1 ]; then
     PASS=$((PASS + 1))
     echo "  ✅ Sekcja: $label"
+  elif [ "$label" = "Trust Bar" ] && [ "$STYLE_REQUIRES_TRUST_BAR" = "0" ]; then
+    PASS=$((PASS + 1))
+    echo "  ✅ Sekcja: $label (skipped — Style Lock zakazuje, używana sec-meta)"
+  elif [ "$label" = "Sticky CTA" ] && [ "$STYLE_REQUIRES_STICKY_CTA" = "0" ]; then
+    PASS=$((PASS + 1))
+    echo "  ✅ Sekcja: $label (skipped — Style Lock zakazuje)"
   else
     FAIL=$((FAIL + 1))
     echo "  ❌ Sekcja BRAK: $label"
@@ -354,12 +440,25 @@ for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How I
 done
 
 # Min 4 tiles w bento (top-level tile divs)
-# Tiles w Solution/Features: akceptuje <div> lub <article> (warianty F1-F6 z section-variants.md używają <article>)
-BENTO_TILES=$(grep -cE '<(div|article) class="tile[^-][^"]*"' "$FILE" || true)
-check_range "Bento/Features ma ≥4 tiles" 4 10 "$BENTO_TILES"
+# Apothecary/Japandi/Swiss itd. używają feat-spec-list (F3 Linear stack) zamiast bento — skip jeśli styl zakazuje
+if [ "$STYLE_REQUIRES_SOLUTION_BENTO" = "0" ]; then
+  FEAT_ROWS=$(grep -cE '<li[^>]*(class="[^"]*|)>.*<span class="feat-key"|<(div|article) class="feat' "$FILE" || true)
+  FEAT_SPEC=$(grep -cE 'class="feat-spec-list"|class="[^"]*feat-key[^"]*"' "$FILE" || true)
+  if [ "$FEAT_SPEC" -ge 1 ]; then
+    echo "  ✅ Features as spec rows (Style Lock F3 Linear stack)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ❌ Brak feat-spec-list (wymagane przez Style Lock $STYLE_ID)"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  BENTO_TILES=$(grep -cE '<(div|article) class="tile[^-][^"]*"' "$FILE" || true)
+  check_range "Bento/Features ma ≥4 tiles" 4 10 "$BENTO_TILES"
+fi
 
-# Min 3 acts w How It Works (top-level act/step/how-step) — precyzyjny regex (nie łapie how-steps, how-step-num)
-ACTS=$(grep -cE '<div class="(act|how-step|step)([^a-z-]|")' "$FILE" || true)
+# Min 3 acts w How It Works — akceptuje <div>, <article>, <li> z klasą act/how-step/step
+# ([^a-z-]|") żeby NIE matchować how-step-num, how-step-body, step-figure itd.
+ACTS=$(grep -cE '<(div|article|li)[^>]*class="[^"]*(act|how-step|step)([^a-zA-Z0-9-]|")' "$FILE" || true)
 check_range "How It Works ≥3 kroki" 3 8 "$ACTS"
 
 # Min 5 FAQ pytań
@@ -411,8 +510,8 @@ fi
 echo ""
 echo "✍️  12. Copy quality (pozytywne — reference/copy.md)"
 
-# Headline hero ≤ 10 słów (extract text z <h1 class="js-split">...</h1>)
-HERO_H1=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | grep -oE "<h1[^>]*>[^<]*(<em>[^<]*</em>[^<]*)?</h1>" | sed -E 's/<[^>]+>//g; s/[[:space:]]+/ /g; s/^ //; s/ $//' | head -1)
+# Headline hero ≤ 10 słów (extract text z <h1>...</h1>, multiline-safe)
+HERO_H1=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | tr '\n' ' ' | grep -oE '<h1[^>]*>.*</h1>' | head -1 | sed -E 's/<[^>]+>//g; s/[[:space:]]+/ /g; s/^ //; s/ $//')
 HERO_WORDS=$(echo "$HERO_H1" | wc -w)
 if [ "$HERO_WORDS" -ge 1 ] && [ "$HERO_WORDS" -le 10 ]; then
   echo "  ✅ Hero headline ≤10 słów ($HERO_WORDS — \"$HERO_H1\")"

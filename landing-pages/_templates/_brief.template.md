@@ -77,10 +77,57 @@ Jeśli nic podobnego nie ma — wpisz „brak istniejącego landinga w tym kieru
 
 **Twój signature element:**
 
-## 9. Warianty sekcji (wypełniane autonomicznie przez Claude w ETAP 2)
+## 9. Warianty sekcji (z [`section-variants.md`](../../docs/landing/reference/section-variants.md), LIMITED przez allowed_variants w Style Lock)
 
-> Opcjonalne — dopisywane przed generowaniem HTML. Claude wybiera po 1 wariancie z biblioteki [`docs/landing/reference/section-variants.md`](../../docs/landing/reference/section-variants.md) na bazie kategorii + persony + price point.
+- **Hero:** H[N] [Nazwa wariantu] — [z allowed_variants w Style Lock, top-1]
+- **Features:** F[N] [Nazwa]
+- **Testimonials:** T[N] [Nazwa]
 
-- **Hero:** H[1-10] [Nazwa wariantu] — [uzasadnienie w 1 zdaniu]
-- **Features:** F[1-6] [Nazwa wariantu] — [uzasadnienie]
-- **Testimonials:** T[1-6] [Nazwa wariantu] — [uzasadnienie]
+---
+
+## 10. STYLE LOCK — wybrany styl z Atlas (OBOWIĄZKOWE od v4.0)
+
+> Ta sekcja jest **kontraktem** — łamiesz ją = FAIL w `verify-style-lock.sh`. Dodana automatycznie po Kroku 9a w [`01-direction.md`](../../docs/landing/01-direction.md).
+
+### 10.1 Wybrany styl
+- **Style ID:** [nazwa pliku bez .md, np. `apothecary-label`]
+- **Plik:** [`docs/landing/style-atlas/[style-id].md`](../../docs/landing/style-atlas/)
+
+### 10.2 Product DNA (z Kroku 9a.1)
+- Utility↔Ritual: __
+- Precision↔Expression: __
+- Evidence↔Feeling: __
+- Solo↔Community: __
+- Quiet↔Loud: __
+- Tradition↔Future: __
+- Intimate↔Public: __
+
+Match z wybranym stylem: __/7. Argumentacja (1 zdanie): __
+
+### 10.3 MUSZĄ być użyte (auto-paste z pliku stylu)
+<!-- Skopiuj sekcję MUSZĄ z style-atlas/[style-id].md -->
+- Font display: [konkretna nazwa] w font-family
+- Font body: [konkretna nazwa]
+- Paleta (min 3 z 5): [hex1], [hex2], [hex3]
+- Layout DNA: [z sekcji 6 pliku stylu]
+- Signature primitive #1 obecny
+- Section architecture min: N sekcji
+
+### 10.4 NIE WOLNO użyć (auto-paste)
+<!-- Skopiuj sekcję NIE WOLNO z style-atlas/[style-id].md -->
+- **Fonty:** NIE [lista]
+- **Layout:** NIE [lista]
+- **Elementy:** NIE [lista]
+- **Kolory:** NIE [lista hex]
+- **Motion:** NIE [js effects forbidden]
+
+### 10.5 Section Architecture (z pliku stylu sekcja 8)
+Required (min N): [lista sekcji z klas CSS]
+Forbidden: [lista zakazanych sekcji]
+
+### 10.6 Motion Budget (z pliku stylu sekcja 10)
+```yaml
+js_effects_required: [...]
+js_effects_forbidden: [...]
+js_effects_count: { counter_min: N, ... }
+```

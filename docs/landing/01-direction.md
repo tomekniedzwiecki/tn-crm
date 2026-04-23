@@ -248,6 +248,65 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 
 ---
 
+## Krok 9a — Product DNA + Style Pick z Atlas (OBOWIĄZKOWY od v4.0)
+
+> **Wprowadzone 2026-04-23.** Rozwiązuje problem konwergencji landingów do tego samego zestawu fontów/layoutów/patternów mimo różnych manifestów. Od v4.0 wybór stylu jest **deterministyczny** przez Product DNA → match z Style Atlas, nie subiektywny „Claude wymyśla".
+
+### 9a.1 — Wypełnij Product DNA (7 etykiet)
+
+Na bazie `brand_info`, `report_pdf`, `workflow_products` odpowiedz na 7 osi z [`style-atlas/README.md`](style-atlas/README.md):
+
+| Oś | Wartość | Uzasadnienie (1 zdanie) | 2 kotwice z DNA Anchors |
+|----|---------|-------------------------|-------------------------|
+| Utility ↔ Ritual | __ | | |
+| Precision ↔ Expression | __ | | |
+| Evidence ↔ Feeling | __ | | |
+| Solo ↔ Community | __ | | |
+| Quiet ↔ Loud | __ | | |
+| Tradition ↔ Future | __ | | |
+| Intimate ↔ Public | __ | | |
+
+**Zasada kotwic:** dla każdej etykiety musisz wymienić 2 produkty z [DNA Anchors tabeli](style-atlas/README.md#product-dna-anchors--kotwice-per-o%C5%9B) które uzasadniają wybór. Jeśli nie możesz znaleźć 2 kotwic w danej kategorii — DNA jest błędne.
+
+### 9a.2 — Algorytmiczny Style Pick
+
+Dla każdego z 15 stylów w [`style-atlas/`](style-atlas/) oblicz match:
+
+```
+match = count(DNA dimensions gdzie styl ma = wartość produktu) / 7
+```
+
+Top-3 score'y = kandydaci. **Pierwszy w rankingu wygrywa.** Tie-break (gdy 2+ style mają ten sam match):
+1. Sprawdź ostatnie 10 landingów w `landing-pages/` (grep `## 1. Kierunek` w `_brief.md`) — **wyklucz style które były użyte 2× lub więcej w ostatnich 5 landingach** (anti-repetition)
+2. Jeśli nadal tie — weź styl z niższym `style_id` alphabetycznie (deterministyczne)
+
+**Przykład dla Steamla:**
+- DNA: `utility · precision · evidence · solo · quiet · present · intimate`
+- Match:
+  - **Apothecary Label** 7/7 → wygrywa
+  - Clinical Kitchen 6/7 (różni się loud: moderate vs quiet)
+  - Swiss Grid 5/7 (różni się public vs intimate, quiet vs quiet ✓)
+
+### 9a.3 — Argumentacja wyboru (1 zdanie)
+
+Claude NIE wybiera stylu, tylko argumentuje dlaczego Top-1 (wygrany algorytmicznie) pasuje. Jeśli Claude NIE może argumentować — DNA jest błędne, wróć do 9a.1.
+
+### 9a.4 — Przeczytaj plik wybranego stylu CAŁOŚCIOWO
+
+Otwórz `style-atlas/[style-id].md`. Przeczytaj WSZYSTKIE 12 sekcji. Internalizuj:
+- Font stack (konkretne nazwy)
+- Paleta (konkretne hex)
+- Section Architecture (ile sekcji, które)
+- Allowed Variants (H/F/T limited)
+- Motion Budget (js effects required/forbidden)
+- MUSZĄ / NIE WOLNO listy
+
+### 9a.5 — Wygeneruj STYLE LOCK do `_brief.md` sekcja 10
+
+Skopiuj sekcje `MUSZĄ` i `NIE WOLNO` z pliku stylu do `_brief.md` sekcja 10 (auto-paste). Ta sekcja staje się **kontraktem** — łamiesz = FAIL w `verify-style-lock.sh`.
+
+---
+
 ## Krok 9 — verify-brief.sh (OBOWIĄZKOWY GATE)
 
 ```bash

@@ -19,6 +19,7 @@ REQUIRED=(
   "6. Anty-referencje"
   "7. Test anty-generic"
   "8. Signature element"
+  "10. STYLE LOCK"
 )
 
 FAIL=0
@@ -60,6 +61,33 @@ fi
 ANTYGENERIC_COUNT=$(awk '/^## 7\. Test anty-generic/,/^## 8\./' "$BRIEF" | grep -cE "^- \[x\]|^- \[X\]" || true)
 if [ "$ANTYGENERIC_COUNT" -lt 4 ]; then
   echo "❌ Test anty-generic ma $ANTYGENERIC_COUNT/4 odpowiedzi TAK"
+  FAIL=1
+fi
+
+# Sekcja 10: STYLE LOCK — wymuś konkretny Style ID + min 3 listy MUSZĄ/NIE WOLNO
+STYLE_ID=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | grep -oE 'Style ID:[*]+[[:space:]]*`[a-z-]+`' | head -1 | sed 's/^[^`]*`//; s/`.*//')
+if [ -z "$STYLE_ID" ]; then
+  echo "❌ Sekcja 10 STYLE LOCK: brak 'Style ID: \`[style-id]\`'"
+  FAIL=1
+else
+  STYLE_FILE="docs/landing/style-atlas/${STYLE_ID}.md"
+  if [ ! -f "$STYLE_FILE" ]; then
+    echo "❌ Style ID '$STYLE_ID' nie istnieje w $STYLE_FILE"
+    FAIL=1
+  else
+    echo "  ✅ Style: $STYLE_ID"
+  fi
+fi
+
+# Sekcja 10: sprawdź że 10.3 MUSZĄ i 10.4 NIE WOLNO wypełnione (min 3 bullet points każde)
+MUSZA_COUNT=$(awk '/^### 10\.3 MUSZĄ/,/^### 10\.4/' "$BRIEF" | grep -cE "^- " || true)
+NIEWOLNO_COUNT=$(awk '/^### 10\.4 NIE WOLNO/,/^### 10\.5/' "$BRIEF" | grep -cE "^- " || true)
+if [ "$MUSZA_COUNT" -lt 3 ]; then
+  echo "❌ Sekcja 10.3 MUSZĄ: tylko $MUSZA_COUNT bulletów (min 3)"
+  FAIL=1
+fi
+if [ "$NIEWOLNO_COUNT" -lt 3 ]; then
+  echo "❌ Sekcja 10.4 NIE WOLNO: tylko $NIEWOLNO_COUNT bulletów (min 3)"
   FAIL=1
 fi
 
