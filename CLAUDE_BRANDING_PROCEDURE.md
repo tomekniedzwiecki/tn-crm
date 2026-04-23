@@ -38,7 +38,7 @@ Dane wstawiane do tabeli `workflow_branding`:
    - `title` = nazwa promptu (np. "Logo główne na ciemnym tle")
    - `value` = pełna treść promptu
    - `notes` = JSON `{"category":"logo|mockup"}`
-   - Minimum 5 promptów logo + 10 promptów mockupów (razem 15)
+   - 3 prompty logo + 10 promptów mockupów (razem 13)
 
 ## Proces myslenia (jak generowac)
 
@@ -357,10 +357,11 @@ To logo musi wyglądać jakby kosztowało $15,000 od agencji brandingowej.
 | **Masażer** | ręka, mięśnie | fale koncentryczne, pulsowanie |
 | **Odkurzacz** | odkurzacz, dom | spirala ruchu, wir, ścieżka |
 
-#### 5 wariantów logo do wygenerowania (OBOWIĄZKOWE):
+#### 3 warianty logo do wygenerowania (OBOWIĄZKOWE):
 
-> **WAŻNE**: Po wstawieniu brandingu do bazy, system automatycznie wygeneruje wszystkie 5 logo.
-> Wszystkie logo mają: sygnet PO LEWEJ, wordmark PO PRAWEJ, BIAŁE TŁO, format KWADRATOWY 1024x1024px.
+> **WAŻNE**: Po wstawieniu brandingu do bazy, system automatycznie wygeneruje wszystkie 3 logo.
+> Wszystkie logo mają: sygnet PO LEWEJ, wordmark PO PRAWEJ (dla combo marka), BIAŁE TŁO, format KWADRATOWY 1024x1024px.
+> Logo generowane są przez **OpenAI GPT-image-2** (setting `image_provider_logo`).
 
 **Prompt 1 — Minimalistyczne (krótki prompt):**
 ```
@@ -391,51 +392,6 @@ COLORS: Circle filled with [PRIMARY HEX] ([nazwa koloru]), letter cut out to whi
 STYLE: Strong, iconic, works as app icon at 32x32px. Premium monogram feel.
 
 White background (#FFFFFF). Square 1024x1024px. Centered composition with 20% padding around the circle.
-```
-
-**Prompt 4 — Wordmark-only (tylko typografia, bez sygnetu):**
-```
-Wordmark-only logo for "[NAZWA]" — no icon, no symbol, pure typography.
-
-TEXT: "[NAZWA]" as the ONLY element — custom letterforms, not a plain Google Font.
-STYLE: Consider one distinctive detail: a modified letter (cut, extended, ligature), a color accent on one letter, or an unusual tracking. Think Supreme, Hermès, Figma wordmarks.
-PROPORTIONS: Large, bold, centered horizontally. Letter spacing optically balanced.
-COLORS: Main text in [NEUTRAL DARK HEX]. Optionally one letter or accent element in [PRIMARY HEX] ([nazwa koloru]) for character.
-
-White background (#FFFFFF). Square 1024x1024px. Text fills ~70% of frame width, vertically centered. Editorial, confident, timeless.
-```
-
-**Prompt 5 — Dynamiczny i nowoczesny (długi prompt):**
-```
-Create a modern, dynamic logo for "[NAZWA]" brand in the [KATEGORIA] category.
-
-COMPOSITION:
-- Left: Bold graphic symbol suggesting [EMOCJE MARKI: np. speed, precision, energy]
-- Right: "[NAZWA]" wordmark in contemporary sans-serif
-- Horizontal alignment, single line
-
-SYMBOL REQUIREMENTS:
-- Abstract geometric form, NOT a literal representation of the product
-- Should convey [EMOCJE: np. motion, trust, innovation]
-- Works perfectly at small sizes (favicon)
-- Built with mathematical precision (golden ratio or √2 proportions)
-
-TYPOGRAPHY:
-- Custom feel, not a standard Google Font look
-- Consider unique ligature or modified letterforms
-- Balanced kerning, strong presence
-
-COLORS:
-- Symbol: [PRIMARY HEX] ([nazwa koloru])
-- Wordmark: [NEUTRAL DARK HEX] ([nazwa])
-
-TECHNICAL:
-- White background (#FFFFFF)
-- Square format: 1024x1024px
-- Flat design, no shadows, no gradients
-- Must scale from 16x16px to billboard
-
-Reference style: Stripe, Linear, Vercel, Notion — modern tech minimalism.
 ```
 
 > **ZASADA UKŁADU (WSZYSTKIE WARIANTY):**
@@ -470,7 +426,7 @@ Reference style: Stripe, Linear, Vercel, Notion — modern tech minimalism.
 >
 > **JEŚLI ŻADNE LOGO NIE MA `is_main: true`** — mockupy NIE MOGĄ być wygenerowane. System pokaże toast "Najpierw ustaw główne logo".
 >
-> **Dlatego:** po wygenerowaniu 5 logo upewnij się, że logo z `sort_order: 0` ma `notes.is_main === true`. Jeśli użytkownik uploadował ręcznie dodatkowe loga przez modal "Dodaj logo" — muszą same mieć `is_main` ustawione (pierwsze = true, kolejne = false). Jeśli user zmienia główne logo — kliknięcie "Ustaw jako główne" aktualizuje flag w bazie (funkcja `setMainLogo()` w workflow.html).
+> **Dlatego:** po wygenerowaniu 3 logo upewnij się, że logo z `sort_order: 0` ma `notes.is_main === true`. Jeśli użytkownik uploadował ręcznie dodatkowe loga przez modal "Dodaj logo" — muszą same mieć `is_main` ustawione (pierwsze = true, kolejne = false). Jeśli user zmienia główne logo — kliknięcie "Ustaw jako główne" aktualizuje flag w bazie (funkcja `setMainLogo()` w workflow.html).
 
 ---
 
@@ -869,20 +825,18 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_brand
 ]
 ```
 
-**ai_prompts** (tablica 15 obiektów — 5 logo + 10 mockupów):
+**ai_prompts** (tablica 13 obiektów — 3 logo + 10 mockupów):
 ```json
 [
   {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo minimalistyczne", "value": "[KRÓTKI PROMPT 1]", "notes": "{\"category\":\"logo\"}", "sort_order": 0},
   {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo premium", "value": "[DŁUGI PROMPT 2]", "notes": "{\"category\":\"logo\"}", "sort_order": 1},
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo geometryczne", "value": "[ŚREDNI PROMPT 3]", "notes": "{\"category\":\"logo\"}", "sort_order": 2},
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo typograficzne", "value": "[KRÓTKI PROMPT 4]", "notes": "{\"category\":\"logo\"}", "sort_order": 3},
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo dynamiczne", "value": "[DŁUGI PROMPT 5]", "notes": "{\"category\":\"logo\"}", "sort_order": 4},
-  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Koszulka — [kontekst]", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"mockup\"}", "sort_order": 5},
-  ...pozostałe 9 mockupów z sort_order 6-14...
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Logo monogram", "value": "[PROMPT 3]", "notes": "{\"category\":\"logo\"}", "sort_order": 2},
+  {"workflow_id": "[WID]", "type": "ai_prompt", "title": "Koszulka — [kontekst]", "value": "[PEŁNY PROMPT]", "notes": "{\"category\":\"mockup\"}", "sort_order": 3},
+  ...pozostałe 9 mockupów z sort_order 4-12...
 ]
 ```
 
-> **WAŻNE**: Każdy prompt logo musi być kompletny i samodzielny. Użyj szablonów z sekcji "5 wariantów logo do wygenerowania" powyżej, podstawiając dane marki (nazwa, kolory, cechy produktu).
+> **WAŻNE**: Każdy prompt logo musi być kompletny i samodzielny. Użyj szablonów z sekcji "3 warianty logo do wygenerowania" powyżej, podstawiając dane marki (nazwa, kolory, cechy produktu).
 
 ### Kolejność wstawiania
 
@@ -906,7 +860,7 @@ curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_branding?work
   python -c "import json,sys,collections; d=json.load(sys.stdin); c=collections.Counter(x['type'] for x in d); print(dict(c))"
 ```
 
-**Oczekiwane:** `{'brand_info': 1, 'color': 6, 'font': 3, 'ai_prompt': 15}`
+**Oczekiwane:** `{'brand_info': 1, 'color': 6, 'font': 3, 'ai_prompt': 13}`
 
 Jeśli liczby się nie zgadzają → błąd w jednym z POST-ów → zbadaj odpowiedzi curla i wstaw ręcznie brakujące rekordy.
 
@@ -934,19 +888,21 @@ Claude:
    - Przygotowuje dane (brand info, kolory, fonty, prompty)
    - **WSTAWIA BEZPOSREDNIO DO BAZY** przez curl (DELETE + POST)
    - Weryfikuje czy dane sa w bazie
-8. **AUTOMATYCZNIE GENERUJE 5 LOGO** — patrz sekcja poniżej
-9. Informuje użytkownika: "Gotowe! Branding i 5 logo wygenerowane. Odśwież stronę workflow."
+8. **AUTOMATYCZNIE GENERUJE 3 LOGO** — patrz sekcja poniżej
+9. Informuje użytkownika: "Gotowe! Branding i 3 logo wygenerowane. Odśwież stronę workflow."
 
 ---
 
-## Automatyczne generowanie 5 logo (OBOWIĄZKOWE)
+## Automatyczne generowanie 3 logo (OBOWIĄZKOWE)
 
-> **WAŻNE**: Po wstawieniu brandingu do bazy, Claude MUSI automatycznie wygenerować 5 logo.
+> **WAŻNE**: Po wstawieniu brandingu do bazy, Claude MUSI automatycznie wygenerować 3 logo.
 > NIE czekaj na użytkownika — generuj od razu po wstawieniu danych.
+>
+> **Provider:** Logo generowane są przez OpenAI GPT-image-2 (`settings.image_provider_logo = 'gpt-image-2'`). Mockupy idą przez Gemini (`settings.image_provider_mockup = 'gemini'`). Edge function `generate-image` routuje automatycznie na podstawie parametru `type` w body.
 
 ### Procedura generowania logo
 
-Dla każdego z 5 promptów logo zapisanych w bazie:
+Dla każdego z 3 promptów logo zapisanych w bazie:
 
 1. **Wywołaj edge function `generate-image`** przez curl:
 ```bash
@@ -982,11 +938,11 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_brand
   }'
 ```
 
-### Generuj RÓWNOLEGLE (5 logo jednocześnie)
+### Generuj RÓWNOLEGLE (3 logo jednocześnie)
 
-> **ZMIANA**: Edge function `generate-image` jest stateless — wyślij wszystkie 5 requestów równolegle zamiast sekwencyjnie. Czas: 100s (seq) → 20-25s (parallel).
+> Edge function `generate-image` jest stateless — wyślij wszystkie 3 requesty równolegle zamiast sekwencyjnie.
 
-**Implementacja:** Użyj 5 równoczesnych wywołań Bash (tool `Bash` z `run_in_background: true` lub `&` w jednej komendzie), zbierz wyniki, potem zapisz do bazy.
+**Implementacja:** Użyj 3 równoczesnych wywołań Bash (tool `Bash` z `run_in_background: true` lub `&` w jednej komendzie), zbierz wyniki, potem zapisz do bazy.
 
 ### Przypisanie `is_main` (deterministyczne)
 
@@ -994,8 +950,6 @@ Niezależnie od kolejności odpowiedzi API:
 1. **Logo minimalistyczne** (sort_order 0) — `is_main: true` ZAWSZE
 2. **Logo premium** (sort_order 1) — `is_main: false`
 3. **Logo monogram** (sort_order 2) — `is_main: false`
-4. **Logo wordmark-only** (sort_order 3) — `is_main: false`
-5. **Logo dynamiczne** (sort_order 4) — `is_main: false`
 
 ### Weryfikacja wymiarów (obowiązkowa)
 
@@ -1012,7 +966,7 @@ Jeśli wymiary są inne → zanotuj w raporcie końcowym dla użytkownika (nie b
 ### Obsługa błędów
 
 - Jeśli generowanie pojedynczego logo się nie uda — kontynuuj z pozostałymi
-- Na końcu poinformuj użytkownika: "Wygenerowano X/5 logo. Odśwież stronę workflow."
+- Na końcu poinformuj użytkownika: "Wygenerowano X/3 logo. Odśwież stronę workflow."
 
 ---
 

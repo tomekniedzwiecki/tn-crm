@@ -450,17 +450,34 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Resolve provider: request override > DB setting > default 'gemini'
+    // Resolve provider: request override > per-type DB setting > legacy generic setting > default 'gemini'
+    // Per-type settings: image_provider_logo (for type='logo'), image_provider_mockup (for type='mockup')
+    // Legacy fallback: image_provider (used by any other type or when per-type key is missing)
     let provider: 'gemini' | 'gpt-image-2' = 'gemini'
     if (providerOverride === 'gpt-image-2' || providerOverride === 'gemini') {
       provider = providerOverride
     } else {
-      const { data: settingRow } = await supabase
-        .from('settings')
-        .select('value')
-        .eq('key', 'image_provider')
-        .maybeSingle()
-      if (settingRow?.value === 'gpt-image-2') provider = 'gpt-image-2'
+      const typedKey = type === 'logo' ? 'image_provider_logo'
+        : type === 'mockup' ? 'image_provider_mockup'
+        : null
+      let value: string | undefined
+      if (typedKey) {
+        const { data: typedRow } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', typedKey)
+          .maybeSingle()
+        value = typedRow?.value
+      }
+      if (!value) {
+        const { data: legacyRow } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'image_provider')
+          .maybeSingle()
+        value = legacyRow?.value
+      }
+      if (value === 'gpt-image-2' || value === 'gemini') provider = value
     }
 
     console.log(`Generating ${count} image(s) for workflow ${workflow_id}, type: ${type}, provider: ${provider}`)
