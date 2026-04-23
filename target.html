@@ -124,6 +124,74 @@
             display: flex; align-items: center; justify-content: center;
             z-index: 9999;
         }
+
+        /* Stage card — redesigned */
+        .stage-card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 1rem;
+            transition: all 0.2s;
+            display: flex; flex-direction: column;
+            min-height: 280px;
+        }
+        .stage-card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .mini-stat { text-align: center; }
+        .mini-stat-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #71717a;
+            margin-bottom: 2px;
+        }
+        .mini-stat-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1;
+            color: #fafafa;
+        }
+        .mini-stat-delta {
+            font-size: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            margin-top: 2px;
+        }
+        .mini-stat-delta.ok { color: #14b8a6; }
+        .mini-stat-delta.warn { color: #f59e0b; }
+        .mini-stat-delta.bad { color: #ef4444; }
+        .mini-stat-delta.neutral { color: #52525b; }
+        .mini-stat-delta.future { color: #3f3f46; }
+
+        /* Sparkline — mini bar chart */
+        .sparkline {
+            display: flex;
+            align-items: flex-end;
+            gap: 1px;
+            height: 24px;
+            width: 100%;
+        }
+        .sparkline-bar {
+            flex: 1;
+            min-height: 1px;
+            border-radius: 1px;
+            background: rgba(255,255,255,0.08);
+            transition: background 0.2s;
+        }
+        .sparkline-bar.today {
+            background: #14b8a6 !important;
+        }
+        .sparkline-bar.has-data {
+            background: rgba(255,255,255,0.35);
+        }
+        .sparkline-bar.weekend {
+            opacity: 0.4;
+        }
+        .sparkline-bar.future {
+            background: rgba(255,255,255,0.03);
+        }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -246,139 +314,9 @@
                     </div>
                 </div>
 
-                <!-- 5 ETAPÓW -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-
-                    <!-- Etap 1: Odezwanie -->
-                    <div class="stat-card p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center">
-                                    <i class="ph ph-paper-plane-tilt text-sky-400 text-lg"></i>
-                                </div>
-                                <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Etap 1</div>
-                            </div>
-                            <span id="s1-badge" class="text-[10px] px-2 py-0.5 rounded-full font-medium">—</span>
-                        </div>
-                        <div class="text-sm font-semibold text-white mb-1">Odezwanie</div>
-                        <div class="text-[11px] text-zinc-500 mb-3">WhatsApp outreach (Maciek)</div>
-                        <div class="flex items-baseline gap-2 mb-2">
-                            <span id="s1-current" class="text-2xl font-bold text-white font-mono">0</span>
-                            <span class="text-xs text-zinc-500">/ <span id="s1-target">1 125</span></span>
-                        </div>
-                        <div class="progress-bar h-1.5 mb-2">
-                            <div id="s1-progress" class="progress-bar-fill pb-ontrack" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-zinc-500">
-                            <span>Dziś: <span id="s1-today" class="text-zinc-300 font-medium">0</span></span>
-                            <span>Cel/dzień: <span id="s1-daily-target" class="text-zinc-300 font-medium">—</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Etap 2: Rozmowa -->
-                    <div class="stat-card p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center">
-                                    <i class="ph ph-chats-circle text-violet-400 text-lg"></i>
-                                </div>
-                                <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Etap 2</div>
-                            </div>
-                            <span id="s2-badge" class="text-[10px] px-2 py-0.5 rounded-full font-medium">—</span>
-                        </div>
-                        <div class="text-sm font-semibold text-white mb-1">Rozmowa</div>
-                        <div class="text-[11px] text-zinc-500 mb-3">≥5 WA wiadomości wymienione</div>
-                        <div class="flex items-baseline gap-2 mb-2">
-                            <span id="s2-current" class="text-2xl font-bold text-white font-mono">0</span>
-                            <span class="text-xs text-zinc-500">/ <span id="s2-target">338</span></span>
-                        </div>
-                        <div class="progress-bar h-1.5 mb-2">
-                            <div id="s2-progress" class="progress-bar-fill pb-ontrack" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-zinc-500">
-                            <span>Dziś: <span id="s2-today" class="text-zinc-300 font-medium">0</span></span>
-                            <span>Cel/dzień: <span id="s2-daily-target" class="text-zinc-300 font-medium">—</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Etap 3: Oferta -->
-                    <div class="stat-card p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg bg-pink-500/15 flex items-center justify-center">
-                                    <i class="ph ph-file-text text-pink-400 text-lg"></i>
-                                </div>
-                                <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Etap 3</div>
-                            </div>
-                            <span id="s3-badge" class="text-[10px] px-2 py-0.5 rounded-full font-medium">—</span>
-                        </div>
-                        <div class="text-sm font-semibold text-white mb-1">Oferta</div>
-                        <div class="text-[11px] text-zinc-500 mb-3">Pełna oferta wysłana</div>
-                        <div class="flex items-baseline gap-2 mb-2">
-                            <span id="s3-current" class="text-2xl font-bold text-white font-mono">0</span>
-                            <span class="text-xs text-zinc-500">/ <span id="s3-target">152</span></span>
-                        </div>
-                        <div class="progress-bar h-1.5 mb-2">
-                            <div id="s3-progress" class="progress-bar-fill pb-ontrack" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-zinc-500">
-                            <span>Dziś: <span id="s3-today" class="text-zinc-300 font-medium">0</span></span>
-                            <span>Cel/dzień: <span id="s3-daily-target" class="text-zinc-300 font-medium">—</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Etap 4: Domykanie -->
-                    <div class="stat-card p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center">
-                                    <i class="ph ph-handshake text-orange-400 text-lg"></i>
-                                </div>
-                                <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Etap 4</div>
-                            </div>
-                            <span id="s4-badge" class="text-[10px] px-2 py-0.5 rounded-full font-medium">—</span>
-                        </div>
-                        <div class="text-sm font-semibold text-white mb-1">Domykanie</div>
-                        <div class="text-[11px] text-zinc-500 mb-3">Przekazane Tomkowi (status=negotiation)</div>
-                        <div class="flex items-baseline gap-2 mb-2">
-                            <span id="s4-current" class="text-2xl font-bold text-white font-mono">0</span>
-                            <span class="text-xs text-zinc-500">/ <span id="s4-target">53</span></span>
-                        </div>
-                        <div class="progress-bar h-1.5 mb-2">
-                            <div id="s4-progress" class="progress-bar-fill pb-ontrack" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-zinc-500">
-                            <span>W kolejce: <span id="s4-queue" class="text-orange-300 font-medium">0</span></span>
-                            <span>Cel/dzień: <span id="s4-daily-target" class="text-zinc-300 font-medium">—</span></span>
-                        </div>
-                    </div>
-
-                    <!-- Etap 5: Paid -->
-                    <div class="stat-card p-4">
-                        <div class="flex items-start justify-between mb-3">
-                            <div class="flex items-center gap-2">
-                                <div class="w-8 h-8 rounded-lg bg-teal-500/15 flex items-center justify-center">
-                                    <i class="ph ph-check-circle text-teal-400 text-lg"></i>
-                                </div>
-                                <div class="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Etap 5</div>
-                            </div>
-                            <span id="s5-badge" class="text-[10px] px-2 py-0.5 rounded-full font-medium">—</span>
-                        </div>
-                        <div class="text-sm font-semibold text-white mb-1">Paid</div>
-                        <div class="text-[11px] text-zinc-500 mb-3">Opłacone zamówienia (pełna oferta)</div>
-                        <div class="flex items-baseline gap-2 mb-2">
-                            <span id="s5-current" class="text-2xl font-bold text-white font-mono">0</span>
-                            <span class="text-xs text-zinc-500">/ <span id="s5-target">16</span></span>
-                        </div>
-                        <div class="progress-bar h-1.5 mb-2">
-                            <div id="s5-progress" class="progress-bar-fill pb-ontrack" style="width: 0%"></div>
-                        </div>
-                        <div class="flex justify-between text-[10px] text-zinc-500">
-                            <span>Dziś: <span id="s5-today" class="text-zinc-300 font-medium">0</span></span>
-                            <span>Netto: <span id="s5-revenue" class="text-teal-300 font-medium">0 zł</span></span>
-                        </div>
-                    </div>
-
+                <!-- 5 ETAPÓW — redesigned z DZIŚ/WCZORAJ/7D + sparkline -->
+                <div id="stages-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3 mb-6">
+                    <!-- Populated by JS via renderStageCards() -->
                 </div>
 
                 <!-- ANALYTICS PANEL -->
@@ -611,6 +549,105 @@
         };
 
         let trendChart = null;
+
+        // Stage definitions (metadata for renderStageCards)
+        const STAGE_DEFS = [
+            {
+                key: 'odezwanie', num: 1, name: 'Odezwanie',
+                desc: 'WhatsApp outreach (Maciek)',
+                icon: 'ph-paper-plane-tilt', iconBg: 'bg-sky-500/15', iconColor: 'text-sky-400',
+                accent: 'sky',
+            },
+            {
+                key: 'rozmowa', num: 2, name: 'Rozmowa',
+                desc: '≥5 sensownych WA (Maciek)',
+                icon: 'ph-chats-circle', iconBg: 'bg-violet-500/15', iconColor: 'text-violet-400',
+                accent: 'violet',
+            },
+            {
+                key: 'oferta', num: 3, name: 'Oferta',
+                desc: 'Pełna oferta wysłana',
+                icon: 'ph-file-text', iconBg: 'bg-pink-500/15', iconColor: 'text-pink-400',
+                accent: 'pink',
+            },
+            {
+                key: 'domykanie', num: 4, name: 'Domykanie',
+                desc: 'Przekazane Tomkowi',
+                icon: 'ph-handshake', iconBg: 'bg-orange-500/15', iconColor: 'text-orange-400',
+                accent: 'orange',
+            },
+            {
+                key: 'paid', num: 5, name: 'Paid',
+                desc: 'Pełna oferta opłacona',
+                icon: 'ph-check-circle', iconBg: 'bg-teal-500/15', iconColor: 'text-teal-400',
+                accent: 'teal',
+            },
+        ];
+
+        // ============================================
+        // METRIC HELPERS — dziś / wczoraj / 7 dni
+        // ============================================
+        function getDayValue(stageKey, dayNum) {
+            // dayNum 1-based (1..31)
+            const arr = DATA.daily[stageKey] || [];
+            return arr[dayNum - 1] || 0;
+        }
+
+        function getStageToday(stageKey) {
+            if (!isCurrentMonth()) return 0;
+            return getDayValue(stageKey, new Date().getDate());
+        }
+
+        function getStageYesterday(stageKey) {
+            const now = new Date();
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            // Yesterday might be in previous month
+            if (yesterday.getMonth() !== currentMonth.getMonth() ||
+                yesterday.getFullYear() !== currentMonth.getFullYear()) {
+                return null; // can't compute from current month data
+            }
+            return getDayValue(stageKey, yesterday.getDate());
+        }
+
+        function getStageLast7Days(stageKey) {
+            // Sum last 7 days INCLUDING today (within current month only)
+            if (!isCurrentMonth()) return 0;
+            const today = new Date().getDate();
+            const arr = DATA.daily[stageKey] || [];
+            let sum = 0;
+            for (let i = 0; i < 7; i++) {
+                const d = today - i;
+                if (d >= 1 && d <= arr.length) sum += arr[d - 1] || 0;
+            }
+            return sum;
+        }
+
+        function getSparklineData(stageKey, numDays = 14) {
+            // Ostatnie N dni, uwzględniając current month (jeśli dni spadają do poprzedniego miesiąca - puste)
+            const arr = DATA.daily[stageKey] || [];
+            const now = new Date();
+            const isThisMonth = isCurrentMonth();
+            const endDay = isThisMonth ? now.getDate() : arr.length;
+            const result = [];
+            for (let i = numDays - 1; i >= 0; i--) {
+                const d = endDay - i;
+                if (d < 1 || d > arr.length) {
+                    result.push({ day: null, value: 0, isWeekend: false, isFuture: true });
+                } else {
+                    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d);
+                    const dow = date.getDay();
+                    result.push({
+                        day: d,
+                        value: arr[d - 1] || 0,
+                        isWeekend: dow === 0 || dow === 6,
+                        isFuture: false,
+                        isToday: isThisMonth && d === now.getDate(),
+                    });
+                }
+            }
+            return result;
+        }
 
         // ============================================
         // INIT
@@ -1131,14 +1168,8 @@
             document.getElementById('hero-forecast').textContent = fmtMoney(forecast) + ' zł';
             setBadge('hero-badge', getStatusVsPace(heroPct, pctDayProgress));
 
-            // 5 STAGES
-            renderStage('s1', DATA.counts.odezwanie, TARGETS.targets.odezwanie, DATA.today.odezwanie, pctDayProgress, dayCurrent, dayTotal, remainingDays);
-            renderStage('s2', DATA.counts.rozmowa, TARGETS.targets.rozmowa, DATA.today.rozmowa, pctDayProgress, dayCurrent, dayTotal, remainingDays);
-            renderStage('s3', DATA.counts.oferta, TARGETS.targets.oferta, DATA.today.oferta, pctDayProgress, dayCurrent, dayTotal, remainingDays);
-            renderStage('s4', DATA.counts.domykanie, TARGETS.targets.domykanie, DATA.queue_leads.length, pctDayProgress, dayCurrent, dayTotal, remainingDays, true /*queueMode*/);
-            renderStage('s5', DATA.counts.paid, TARGETS.targets.paid, DATA.today.paid, pctDayProgress, dayCurrent, dayTotal, remainingDays);
-
-            document.getElementById('s5-revenue').textContent = fmtMoney(DATA.revenue_netto) + ' zł';
+            // 5 STAGES — new unified render
+            renderStageCards(pctDayProgress, dayCurrent, dayTotal, remainingDays);
 
             // CONVERSIONS
             renderConversions();
@@ -1156,29 +1187,149 @@
             renderQueue();
         }
 
-        function renderStage(prefix, current, target, today, paceProgress, dayCurrent, dayTotal, remainingDays, queueMode) {
-            const pct = target > 0 ? current / target : 0;
-            document.getElementById(`${prefix}-current`).textContent = fmtNum(current);
-            setProgress(`${prefix}-progress`, pct, paceProgress);
+        function renderStageCards(paceProgress, dayCurrent, dayTotal, remainingDays) {
+            const grid = document.getElementById('stages-grid');
+            if (!grid) return;
 
-            const status = getStatusVsPace(pct, paceProgress);
-            setBadge(`${prefix}-badge`, status);
+            const dailyTargetOf = (k) => (TARGETS.targets[k] || 0) / dayTotal;
+            const weeklyTargetOf = (k) => (TARGETS.targets[k] || 0) * 7 / dayTotal;
 
-            // Daily target = what's needed to reach target per remaining day
-            const gap = target - current;
-            const dailyTarget = remainingDays > 0 && gap > 0 ? Math.ceil(gap / remainingDays) : 0;
-            const dailyTargetEl = document.getElementById(`${prefix}-daily-target`);
-            if (dailyTargetEl) dailyTargetEl.textContent = dailyTarget > 0 ? fmtNum(dailyTarget) : '✓';
+            const pctDeltaBadge = (actual, target) => {
+                if (actual === null) return { text: '—', cls: 'neutral' };
+                if (target === 0) return { text: '—', cls: 'neutral' };
+                const pct = (actual / target) * 100;
+                let cls = 'warn';
+                if (pct >= 100) cls = 'ok';
+                else if (pct >= 60) cls = 'warn';
+                else cls = 'bad';
+                if (actual === 0) cls = 'bad';
+                return { text: pct.toFixed(0) + '%', cls };
+            };
 
-            // Today or queue
-            if (queueMode) {
-                // s4: queue
-                const queueEl = document.getElementById(`${prefix}-queue`);
-                if (queueEl) queueEl.textContent = today;
-            } else {
-                const todayEl = document.getElementById(`${prefix}-today`);
-                if (todayEl) todayEl.textContent = today;
-            }
+            const sparklineHtml = (data, maxVal) => {
+                const max = Math.max(maxVal, 1);
+                return data.map(d => {
+                    const heightPct = d.value > 0 ? Math.max(5, (d.value / max) * 100) : 3;
+                    const cls = d.isFuture
+                        ? 'sparkline-bar future'
+                        : d.isToday
+                            ? 'sparkline-bar today'
+                            : d.value > 0
+                                ? `sparkline-bar has-data${d.isWeekend ? ' weekend' : ''}`
+                                : `sparkline-bar${d.isWeekend ? ' weekend' : ''}`;
+                    const title = d.day ? `${d.day}.${currentMonth.getMonth() + 1}: ${d.value}` : '';
+                    return `<div class="${cls}" style="height: ${heightPct}%" title="${title}"></div>`;
+                }).join('');
+            };
+
+            grid.innerHTML = STAGE_DEFS.map(stage => {
+                const current = DATA.counts[stage.key] || 0;
+                const target = TARGETS.targets[stage.key] || 0;
+                const progressPct = target > 0 ? current / target : 0;
+                const progressWidth = Math.min(100, progressPct * 100);
+
+                // Progress bar color vs pace
+                let progressCls = 'pb-behind';
+                if (progressPct >= 1) progressCls = 'pb-ahead';
+                else if (progressPct >= paceProgress * 0.95) progressCls = 'pb-ontrack';
+                else if (progressPct >= paceProgress * 0.75) progressCls = 'pb-warn';
+
+                // Status badge
+                const status = getStatusVsPace(progressPct, paceProgress);
+
+                // Metrics: today / yesterday / 7d
+                const todayVal = getStageToday(stage.key);
+                const yestVal = getStageYesterday(stage.key);
+                const weekVal = getStageLast7Days(stage.key);
+
+                const dailyTarget = dailyTargetOf(stage.key);
+                const weeklyTarget = weeklyTargetOf(stage.key);
+
+                const todayDelta = pctDeltaBadge(todayVal, dailyTarget);
+                const yestDelta = pctDeltaBadge(yestVal, dailyTarget);
+                const weekDelta = pctDeltaBadge(weekVal, weeklyTarget);
+
+                // Sparkline 14d
+                const spark = getSparklineData(stage.key, 14);
+                const sparkMax = Math.max(...spark.map(d => d.value), dailyTarget * 1.5);
+
+                // Special footer for Domykanie — show queue
+                const footerHtml = stage.key === 'domykanie'
+                    ? `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                         <span>W kolejce: <span class="text-orange-300 font-semibold">${DATA.queue_leads.length}</span></span>
+                         <span>Cel/dzień: <span class="text-zinc-300">${dailyTarget.toFixed(1)}</span></span>
+                       </div>`
+                    : stage.key === 'paid'
+                        ? `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                             <span>Rev netto: <span class="text-teal-300 font-semibold">${fmtMoney(DATA.revenue_netto)} zł</span></span>
+                             <span>Cel/dzień: <span class="text-zinc-300">${dailyTarget.toFixed(2)}</span></span>
+                           </div>`
+                        : `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                             <span>Cel/dzień: <span class="text-zinc-300 font-semibold">${dailyTarget.toFixed(1)}</span></span>
+                             <span>Cel/tydz: <span class="text-zinc-300">${weeklyTarget.toFixed(0)}</span></span>
+                           </div>`;
+
+                return `
+                    <div class="stage-card">
+                        <!-- Header -->
+                        <div class="flex items-start justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <div class="w-8 h-8 rounded-lg ${stage.iconBg} flex items-center justify-center">
+                                    <i class="ph ${stage.icon} ${stage.iconColor} text-lg"></i>
+                                </div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold">Etap ${stage.num}</div>
+                            </div>
+                            <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${status.class}">${status.text}</span>
+                        </div>
+
+                        <!-- Title -->
+                        <div class="text-sm font-semibold text-white">${stage.name}</div>
+                        <div class="text-[10px] text-zinc-500 mb-3">${stage.desc}</div>
+
+                        <!-- Big number + progress -->
+                        <div class="flex items-baseline gap-2 mb-1.5">
+                            <span class="text-3xl font-bold text-white font-mono leading-none">${fmtNum(current)}</span>
+                            <span class="text-xs text-zinc-500">/ ${fmtNum(target)}</span>
+                        </div>
+                        <div class="progress-bar h-1.5 mb-3">
+                            <div class="progress-bar-fill ${progressCls}" style="width: ${progressWidth}%"></div>
+                        </div>
+
+                        <!-- Mini stats: DZIŚ / WCZORAJ / 7 DNI -->
+                        <div class="grid grid-cols-3 gap-1 py-2 rounded-lg bg-white/[0.02] mb-2">
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">Dziś</div>
+                                <div class="mini-stat-value">${fmtNum(todayVal)}</div>
+                                <div class="mini-stat-delta ${todayDelta.cls}">${todayDelta.text}</div>
+                            </div>
+                            <div class="mini-stat border-l border-r border-white/5">
+                                <div class="mini-stat-label">Wczoraj</div>
+                                <div class="mini-stat-value">${yestVal === null ? '—' : fmtNum(yestVal)}</div>
+                                <div class="mini-stat-delta ${yestDelta.cls}">${yestDelta.text}</div>
+                            </div>
+                            <div class="mini-stat">
+                                <div class="mini-stat-label">7 dni</div>
+                                <div class="mini-stat-value">${fmtNum(weekVal)}</div>
+                                <div class="mini-stat-delta ${weekDelta.cls}">${weekDelta.text}</div>
+                            </div>
+                        </div>
+
+                        <!-- Sparkline 14 dni -->
+                        <div class="mb-2">
+                            <div class="text-[9px] text-zinc-600 mb-1 flex justify-between">
+                                <span>Ostatnie 14 dni</span>
+                                <span class="text-zinc-500 font-mono">${fmtNum(spark.reduce((s,d) => s+d.value, 0))}</span>
+                            </div>
+                            <div class="sparkline">${sparklineHtml(spark, sparkMax)}</div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="mt-auto">
+                            ${footerHtml}
+                        </div>
+                    </div>
+                `;
+            }).join('');
         }
 
         function renderConversions() {
