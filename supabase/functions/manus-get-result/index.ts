@@ -138,10 +138,12 @@ serve(async (req) => {
 
       console.log('Checking assistant_message, preview:', content.substring(0, 300))
 
-      // Look for JSON with ad metrics
-      if (content.includes('{') && (content.includes('"spend"') || content.includes('"impressions"') || content.includes('"clicks"'))) {
+      // Accept any assistant_message that looks like it contains JSON (has both braces).
+      // Downstream balanced-brace extractor (below) handles the actual parsing, so we don't
+      // need to filter by specific field names (ads metrics, copy fields, etc.) here.
+      if (content.includes('{') && content.includes('}')) {
         result = content
-        console.log('Found JSON-like content with ad metrics in assistant_message')
+        console.log('Found JSON-like content in assistant_message (length:', content.length, ')')
         break
       }
     }
@@ -173,16 +175,32 @@ serve(async (req) => {
     console.log('Raw result length:', result?.length || 0)
     console.log('Raw result preview:', result?.substring(0, 500))
 
+    // Strip markdown code fence if Manus wrapped JSON in ```json ... ```
+    // (LLMs often ignore "no markdown" instructions)
+    const fenceMatch = result.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    if (fenceMatch) {
+      console.log('Stripped markdown code fence from Manus response')
+      result = fenceMatch[1]
+    }
+
     try {
-      // Find balanced JSON object by counting braces
+      // Find balanced JSON object by counting braces, but IGNORE braces inside string literals
+      // (previous naive matcher counted { inside "text with { braces" as structural)
       let depth = 0
       let start = -1
       let end = -1
+      let inString = false
+      let escape = false
       for (let i = 0; i < result.length; i++) {
-        if (result[i] === '{') {
+        const ch = result[i]
+        if (escape) { escape = false; continue }
+        if (ch === '\\') { escape = true; continue }
+        if (ch === '"') { inString = !inString; continue }
+        if (inString) continue
+        if (ch === '{') {
           if (depth === 0) start = i
           depth++
-        } else if (result[i] === '}') {
+        } else if (ch === '}') {
           depth--
           if (depth === 0 && start !== -1) {
             end = i + 1
@@ -251,7 +269,7 @@ serve(async (req) => {
       }
     } catch (parseErr) {
       console.error('Error parsing result:', parseErr)
-      // Store raw result if can't parse
+      // Store raw result so callers can attempt jsonrepair / manual fix client-side.
       reportData = {
         raw_result: result || '(empty)',
         parse_error: true,

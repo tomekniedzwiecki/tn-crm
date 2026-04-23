@@ -111,6 +111,20 @@ $(cat "$COPY_JSON")
 
 ZWRÓĆ TYLKO JSON (bez explanations, bez \`\`\`). Dokładnie te same klucze, nowe wartości. Polskie znaki (ą ę ć ł ś ź ż ó ń) poprawnie. \`<em>...</em>\` tagi zachowane.
 
+**KRYTYCZNE — cudzysłowy wewnątrz wartości JSON:**
+
+JSON wymaga, by każdy znak \`"\` wewnątrz wartości stringa był escape'owany (\`\\"\`). Jeśli chcesz zacytować polskie słowo, użyj TYPOGRAFICZNYCH cudzysłowów „…" (U+201E dolny + U+201D górny), NIGDY prostych \`"…"\`.
+
+POPRAWNIE:
+\`"faq_q": "Co zawiera „pakiet startowy"?"\`  ← dolny „ + górny " są poza gramatyką JSON, nie psują parsera
+\`"offer_item": "Instrukcja PL + broszurka „Rytuał 15 minut""\`
+
+NIEPOPRAWNIE (łamie JSON syntax):
+\`"faq_q": "Co zawiera "pakiet startowy"?"\`  ← proste " zamyka string w środku, parser fail
+\`"offer_item": "Instrukcja PL + broszurka "Rytuał 15 minut""\`
+
+Sprawdź KAŻDĄ wartość przed zwróceniem. Jeśli masz wątpliwość czy twój output jest valid JSON — przepisz cudzysłowy na typograficzne lub pomiń je całkiem.
+
 Jeśli w jakiejś sekcji NIC NIE TRZEBA POPRAWIAĆ — zwróć oryginalną wartość (ale sprawdź każdą sekcję świeżym okiem — większość landingów ma zbyt wiele słów).
 
 START:
@@ -157,16 +171,56 @@ for i in $(seq 1 $MAX_ATTEMPTS); do
   if [ "$STATUS" = "completed" ] || [ "$STATUS" = "done" ] || [ "$STATUS" = "stopped" ]; then
     echo "   ✅ Task done. Extracting response..."
     OUT_FILE="/c/tmp/manus-copy-$SLUG.json"
-    # Response zawiera result w różnych polach — wyciągnij JSON
-    echo "$POLL" | node -e "
-    const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));
-    const raw = d.result || d.data?.result || d.task?.result || d.task?.output || '';
-    // Extract JSON z markdown code block jeśli jest
-    const match = raw.match(/\`\`\`json\s*([\s\S]*?)\s*\`\`\`/) || raw.match(/(\{[\s\S]*\})/);
-    const json = match ? match[1] : raw;
-    console.log(json);
+    # Edge function zwraca już sparsowany JSON w d.report_data.
+    # Fallback 1: parse_error → spróbuj jsonrepair na raw_result (naprawia typowe LLM JSON bugs).
+    # Fallback 2: legacy — szukaj w starych polach (d.result/d.task.output).
+    echo "$POLL" > "/c/tmp/manus-poll-$SLUG.json"
+    node -e "
+    (async () => {
+      const fs = require('fs');
+      const d = JSON.parse(fs.readFileSync('/c/tmp/manus-poll-$SLUG.json', 'utf8'));
+      const rd = d.report_data;
+
+      // Happy path: edge function sparsowała JSON
+      if (rd && typeof rd === 'object' && !rd.parse_error) {
+        const {source, fetched_at, manus_task_id, ...cleanData} = rd;
+        console.log(JSON.stringify(cleanData, null, 2));
+        return;
+      }
+
+      // Fallback 1: parse_error + raw_result → jsonrepair
+      if (rd && rd.parse_error && rd.raw_result) {
+        console.error('[manus-get-result] parse_error:', rd.error_reason);
+        console.error('[fallback] Trying jsonrepair on raw_result (len:', rd.raw_result.length, ')');
+        try {
+          const { jsonrepair } = await import('jsonrepair');
+          // Strip markdown fence jeśli został
+          const stripped = rd.raw_result.replace(/^\\s*\`\`\`(?:json)?\\s*/, '').replace(/\\s*\`\`\`\\s*\$/, '').trim();
+          const repaired = jsonrepair(stripped);
+          const obj = JSON.parse(repaired);
+          console.error('[fallback] jsonrepair SUCCESS, keys:', Object.keys(obj).length);
+          console.log(JSON.stringify(obj, null, 2));
+          return;
+        } catch (e) {
+          console.error('[fallback] jsonrepair FAILED:', e.message);
+          console.error('[fallback] raw_result preview (first 500):', rd.raw_result.slice(0, 500));
+          return;
+        }
+      }
+
+      // Fallback 2: legacy path
+      const raw = d.result || d.data?.result || d.task?.result || d.task?.output || '';
+      const match = raw.match(/\`\`\`json\\s*([\\s\\S]*?)\\s*\`\`\`/) || raw.match(/(\\{[\\s\\S]*\\})/);
+      console.log(match ? match[1] : raw);
+    })();
     " > "$OUT_FILE"
-    echo "   ✅ Zapisane: $OUT_FILE"
+    OUT_SIZE=$(wc -c < "$OUT_FILE")
+    if [ "$OUT_SIZE" -lt 50 ]; then
+      echo "   ❌ Zapisany JSON pusty lub za mały ($OUT_SIZE bajtów)."
+      echo "   ℹ️  Surowy response zapisany: /c/tmp/manus-poll-$SLUG.json"
+      exit 1
+    fi
+    echo "   ✅ Zapisane: $OUT_FILE ($OUT_SIZE bajtów)"
     echo ""
     echo "📋 [6/6] Następny krok:"
     echo "   node scripts/apply-copy.mjs $SLUG"
