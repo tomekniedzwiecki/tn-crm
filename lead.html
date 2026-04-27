@@ -3133,7 +3133,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
         }
 
-        function changeStatus(newStatus) {
+        async function changeStatus(newStatus) {
             const oldStatus = lead.status || 'new';
             if (newStatus !== oldStatus) {
                 lead.status = newStatus;
@@ -3171,7 +3171,32 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
                 updatePipelineStepper(newStatus);
                 renderActivities();
-                autoSave();
+                const saved = await autoSave();
+
+                // Trigger automatyzacji "lead_status_changed" — analogicznie do pipeline.html
+                if (saved) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'lead_status_changed',
+                                entity_type: 'lead',
+                                entity_id: lead.id,
+                                context: {
+                                    email: lead.email,
+                                    name: lead.name,
+                                    phone: lead.phone,
+                                    company: lead.company,
+                                    deal_value: lead.deal_value,
+                                    previous_status: oldStatus,
+                                    expected_status: newStatus
+                                },
+                                filters: { status: newStatus }
+                            }
+                        });
+                    } catch (err) {
+                        console.warn('[lead] automation-trigger invocation failed:', err);
+                    }
+                }
             }
         }
 
@@ -3237,6 +3262,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (error) {
                 showSaveStatus('error');
                 console.error('Auto-save error:', error);
+                return false;
             } else {
                 // Log field changes if any
                 if (Object.keys(changedFields).length > 0) {
@@ -3252,6 +3278,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 }
                 hasChanges = false;
                 showSaveStatus('saved');
+                return true;
             }
         }
 

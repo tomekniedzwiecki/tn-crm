@@ -1345,6 +1345,9 @@
             const phone = document.getElementById('modal-phone').value;
             const notes = document.getElementById('modal-notes').value;
 
+            const leadBeforeSave = leads.find(l => l.id === currentLeadId);
+            const oldStatus = leadBeforeSave?.status || 'new';
+
             const { error } = await supabaseClient.from('leads').update({ status, phone, notes }).eq('id', currentLeadId);
             if (error) { alert('Błąd zapisu'); return; }
 
@@ -1353,6 +1356,31 @@
                 lead.status = status;
                 lead.phone = phone;
                 lead.notes = notes;
+            }
+
+            // Trigger automatyzacji "lead_status_changed" — analogicznie do pipeline.html
+            if (lead && status !== oldStatus) {
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'lead_status_changed',
+                            entity_type: 'lead',
+                            entity_id: lead.id,
+                            context: {
+                                email: lead.email,
+                                name: lead.name,
+                                phone: lead.phone,
+                                company: lead.company,
+                                deal_value: lead.deal_value,
+                                previous_status: oldStatus,
+                                expected_status: status
+                            },
+                            filters: { status }
+                        }
+                    });
+                } catch (err) {
+                    console.warn('[leads] automation-trigger invocation failed:', err);
+                }
             }
 
             document.getElementById('nav-leads-count').textContent = leads.filter(l => l.status === 'new' || !l.status).length;
