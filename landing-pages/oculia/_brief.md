@@ -1,8 +1,9 @@
 # Design Brief — Oculia
 
-<!-- Ten plik jest OBOWIĄZKOWY. scripts/verify-brief.sh blokuje ETAP 2 jeśli któraś sekcja jest pusta. -->
-<!-- Wypełnij wszystkie 8 sekcji ZANIM przejdziesz do generowania HTML. -->
-<!-- Pełna dokumentacja: docs/landing/01-direction.md -->
+> Inteligentny masażer oczu (TH-823): grafen 38–42°C, presoterapia, Bluetooth, 5 trybów, 1200 mAh.
+> Pozycja: affordable luxury (249–349 PLN) między dropshipping ($50–80) a premium ($450–800).
+> Mechanizm psychologii: PAS (Problem–Agitate–Solution) — kupują ucieczkę od cyfrowego zmęczenia wzroku.
+> Estetyka: Clinical Kitchen — data-driven, dashboard-style, KPI-first.
 
 ## 1. Kierunek manifesta (z 01-direction.md)
 
@@ -12,110 +13,215 @@
 - [ ] Playful/Toy — pet, kids, gadgets (pupilnik)
 - [ ] Retro-Futuristic — gaming, tech edgy (vibestrike)
 - [ ] Rugged Heritage — workwear, outdoor, tools & trades (kafina)
-- [x] Nowy (opisz poniżej): **Apothecary Nocturne** — wieczorny rytuał apteczny, edytorialny spokój, apothecary-modern wellness (Aesop / Byredo / Kinfolk). Nie spa „naturalnej zieleni" (h2vital), nie corporate premium. Zamknięte oczy, ciepło grafenu, piętnaście minut bez ekranu. Czarny tusz + szałwia + terakota — nie zielone drzewa i pudrowe róże.
+- [x] Nowy: **Clinical Kitchen** — data-heavy health-tech, dashboard hero, KPI cards, IBM Plex stack
 
-**Uzasadnienie wyboru** (1-2 zdania z auditu produktu): Produkt jest **rytuałem sensorycznej deprywacji** dla managerki pracującej 8-10h przed monitorem — nie gadżetem wellness. Apothecary Nocturne łączy apteczną precyzję (grafen 38-42°C, 5 trybów, CE/RoHS) z wieczornym spokojem (15 minut w ciemności, muzyka, rozluźnione skronie) — żadna inna kategoria z 6 presetów tego nie oddaje.
+**Uzasadnienie wyboru:** Produkt to medical-grade wellness device z konkretnymi specs (38–42°C grafen, 1200 mAh, 5 trybów, 15 min sesja). Persona Magda kupuje "evidence-driven" — chce widzieć liczby (90% pracowników biurowych zgłasza problemy ze wzrokiem, 7+h przed ekranem dziennie). Clinical Kitchen domyślnie eksponuje liczby jako design element (KPI grid hero, comparison bar charts, instrument-panel trust strip) — co perfect-match z Conversion DNA `mixed · mixed · problem-aware · mixed · considered`.
 
 ## 2. Moodboard — 3 realne marki referencyjne (SPOZA landing-pages/)
 
-> Marki z prawdziwego świata, NIE inne landingi z `landing-pages/`. Każda referuje konkretny element wizualny lub tonalny.
+1. **Withings (Body Smart, Sleep Analyzer)** — dashboard hero z liczbami jako hero element, KPI cards jako tile, kliniczny ale ciepły undertone, IBM Plex-like sans, light-bg
+2. **Eight Sleep (Pod 4 Cover)** — sleep-tech, before/after metrics ("87% deeper sleep"), klisze data viz w hero, dark KPI tiles + ink text
+3. **Therabody (Theragun PRO)** — wellness device pozycjonowany jako tool, technical illustration produktu z callout-ami, percentage badges („99% deeper recovery")
 
-1. **Aesop** — apothecary-grade typografia (Fraunces-like serif + mono caption nad headline'em `Nº 03 / Ritual`), paleta papierowa + szałwia, dużo pustego miejsca między sekcjami (120-160px padding), produkt traktowany jak książka, nie gadżet.
-2. **Byredo** — sensory poetics w copy („Zamknij oczy. Oddychaj. Wróć." = ich ton), matowe tła terakotowe i midnight-ink, wordmark-centric wizualność, rytuał > feature-list.
-3. **Kinfolk magazine** — editorial numbering sekcji (`Nº 01 → Nº 10`), portrait photography bez stock-photo uśmiechów (osoba z zamkniętymi oczami, rozproszone światło przez lniane zasłony), tempo spokojne, duża typografia italic w cytatach.
+## 3. Paleta (z workflow_branding type=color, dostosowana do Clinical Kitchen 60/30/10)
 
-## 3. Paleta (z workflow_branding type=color)
+- **Primary (akcent — szałwiowy zielony brand):** #4F6E5C
+- **Ink (główny tekst — instrument ink):** #1F2420
+- **Paper (tło — lab white, BEZ warm cream — Clinical Kitchen forbids warm tones):** #F7F9FB
+- **Accent / Support 1 (chart-gray, separator lines):** #A5AFA8
+- **Support 2 (highlight — warm copper z brandingu, używany RZADKO, max 5%):** #C88B65
 
-- **Primary (akcent):** #4F6E5C (deep sage — brand ink, rytuał)
-- **Ink (główny tekst):** #1F2420 (midnight ink)
-- **Paper (tło):** #F5F1EA (pearl cream)
-- **Accent / Gold (opcjonalny):** #C88B65 (terracotta — ciepło grafenu, CTA, moments of warmth)
+> NB: kolor lavender #A394C4 z brandingu pominięty (Clinical Kitchen unika 2+ accent hue). Cream #F5F1EA pominięty (warm cream forbidden). Sage #4F6E5C jako brand primary zachowany.
 
-> Wspierające (użyj oszczędnie): `#A394C4` lilac-dusk (dreamy/evening accents w gradientach), `#A5AFA8` mist gray (dividers, rules, borderlines).
-> Paleta 60/30/10:
-> - **60% Paper** #F5F1EA — oddech strony
-> - **30% Sage** #4F6E5C — brand ink, nagłówki wybijane, ritual markers
-> - **10% Terracotta** #C88B65 — TYLKO w: CTA primary button, underline hover, minute-timer separator „15:00"
+## 4. Typografia (override fonts brandingu — Style Lock wymusza IBM Plex)
 
-## 4. Typografia (z workflow_branding type=font)
+- **Display (nagłówki):** IBM Plex Sans 500/600 — `https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap`
+- **Body (treść):** IBM Plex Sans 400/500 — ten sam rodzaj
+- **Mono / Caption (KPI labels, spec readouts):** IBM Plex Mono 400/500 — `family=IBM+Plex+Mono:wght@400;500&display=swap`
 
-- **Display (nagłówki):** Fraunces + `&display=swap&subset=latin-ext` (bezpieczne Ł w uppercase — safety #7)
-- **Body (treść):** Inter + `&display=swap&subset=latin-ext`
-- **Mono / Caption (opcjonalny):** JetBrains Mono (eyebrows `MINUTA 03 · RYTUAŁ` + mikro-dane), Cormorant Garamond (cytaty testimoniale w italic, monumentalny timer hero)
+> ⚠️ **Override branding fonts** (Fraunces/Cormorant z Supabase). Powód: Style Lock Clinical Kitchen forbid `Fraunces` + `Cormorant`. Raport strategiczny eksplicite rekomenduje "fonty bezszeryfowe, dużo white space" (zgodne z Plex). Polskie diakrytyki: IBM Plex Sans pełny support PL (Latin Extended).
+> NIE dodawaj `&subset=latin-ext` (Google Fonts v2 anty-wzorzec, patrz `feedback-landing-fonts-polish.md`).
+> Max 3 rodziny fontów: Plex Sans + Plex Mono = 2 (margines).
 
-> ⚠️ Sprawdź polskie „Ł" w UPPERCASE — patrz [`docs/landing/reference/safety.md` reguła #7](../../docs/landing/reference/safety.md). Italiana ❌, Fraunces ✅.
-> Max 3 rodziny fontów (Fraunces + Inter + Cormorant Garamond; JetBrains Mono w captions liczę jako 3cią bo Cormorant użyty tylko w signature timer + cite, nie ciele).
+## 5. Persona główna (z report_pdf — Awatar 1: Managerka Magda)
 
-## 5. Persona główna (z report_pdf)
+- **Wiek / zawód / status:** 30–45, manager korporacyjny lub własna firma, 8–10h dziennie przed monitorem, dochód powyżej średniej krajowej, mieszka w mieście
+- **Kluczowy pain point:** Cyfrowe zmęczenie wzroku: pieczenie po 7. godzinie pracy, wieczorne pulsujące bóle skroni, suchość oka, cienie pod oczami przed wideokonferencją. Nie ma czasu na wizytę u fizjoterapeuty.
+- **Kluczowa motywacja zakupu:** Szuka 15-minutowego "biurowego survival kit" — chce wrócić do sprawności intelektualnej i estetycznego wyglądu przed ważnym spotkaniem. Kupuje "efekt natychmiastowy" + prestiż domowego SPA.
+- **Cytat brzmiący jak wypowiedź persony:** „Po siódmej godzinie przed laptopem skronie pulsują tak, że nie mogę przeczytać własnych notatek. Próbowałam okładów z chłodnej łyżki. Działa 5 minut. Tu mam 15 minut ciemności, ciepła i ucisku — i wracam do roboty."
 
-- **Wiek / zawód / status:** Managerka Magda, 35 lat, middle management w korpo lub własna firma (Warszawa / Poznań / Wrocław). Mąż, dziecko w wieku szkolnym, mieszkanie w bloku lub dom pod miastem. Dochód 12-18k netto.
-- **Kluczowy pain point** (co najbardziej frustruje): Pieczenie oczu po siódmej godzinie przed ekranem, wieczorne napięciowe bóle głowy w poniedziałki, cienie pod oczami które nie chcą zniknąć przed porannym spotkaniem. Próbowała już kropli nawilżających, okularów z filtrem niebieskim, szklanki wody — nic nie działa na przyczynę, bo przyczyną jest 8-10 godzin pracy, a tego nie zmieni.
-- **Kluczowa motywacja zakupu** (czego oczekuje od produktu): „Piętnaście minut wieczorem dla siebie" — rytuał deprywacji sensorycznej zanim wróci do maili. NIE prezent. NIE gadżet. Coś co działa TERAZ, żeby jutro wyglądała jak wyspana.
-- **Cytat brzmiący jak wypowiedź persony** (do testimonials): „Zaczęłam od migreny w niedzielę wieczorem — sięgałam po ibuprofen z automatu. Po trzech tygodniach z Oculia odkładam telefon o 22:30, zakładam masażer na piętnaście minut i rano nie mam worków. Pierwszy raz od lat czuję, że wieczór należy do mnie, nie do ekranu."
+## 6. Anty-referencje (co JUŻ JEST w landing-pages/)
 
-## 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzaj)
-
-> Procedura wymaga ZAWSZE budowania od zera (MODE=forge). Tabela poniżej to historia, NIE template'y do kopiowania (memory: `feedback-landing-always-forge.md`).
-
-Sprawdź czy w `landing-pages/` jest już landing podobnego kierunku (vitrix, paromia, h2vital, pupilnik, vibestrike, kafina) — jeśli tak, zanotuj **czego specyficznie nie chcesz powtórzyć**:
-
-- **Już istnieje (najbliższy kierunek):** `h2vital/` — Organic/Natural wellness z miętowymi greenami i zaokrąglonym sans. **NIE POWIELAM:** rounded sans, mint/beige palette, spa-green aesthetic, bubbly iconography. Oculia jest surowsza — midnight ink + deep sage (NIE mint), matowa terakota, Fraunces serif zamiast rounded sans, edytorialna precyzja apteczna zamiast ziołowej miękkości.
-- **Już istnieje (drugi kierunek pokrewny):** `paromia/` — Editorial/Luxury z Fraunces + Italiana + paper/ink/gold. **NIE POWIELAM:** złoty akcent (u nas terakota), Italiana (u nas Cormorant Garamond w akcentach), hygge domowy (u nas apothecary-clinical). Magda nie kupuje „cozy atmosphere" — kupuje „reset dla oczu przed jutrzejszym spotkaniem".
-- **Czego unikam (signature elements istniejących):** żadnych oversize italic numeral jak w paromia (to ich signature), żadnych zaokrąglonych liści / fal jak w h2vital. Własne: **monumentalny countdown „15:00" w Cormorant Garamond italic** + **minute-markers** `MINUTA 01 → MINUTA 15` numerujące sekcje zamiast klasycznego `Nº 01 → Nº 10`.
+- **Już istnieje:** `innerscan/`, `innerscan-v2/` — health diagnostic, podobna kategoria; `vitrix/` — Panoramic Calm tech premium; `lunatherma/`, `kineso/` — wellness-tech.
+- **Czego unikam (signature elements istniejących):**
+  - NIE kopiuję `vitrix` panoramic architectural hero z full-bleed photo — Oculia ma KPI dashboard hero (Clinical Kitchen mandatory primitive #1)
+  - NIE używam warm cream `#F5F1EA` (Editorial/Organic baseline) — Clinical Kitchen forbids warm tones, paper jest chłodny `#F7F9FB`
+  - NIE editorial `Nº` eyebrow (paromia signature) — Clinical Kitchen forbids
+  - NIE Fraunces/Italic accent — Plex Sans + Plex Mono only
+  - NIE oversized italic numerał w hero (Editorial Print primitive) — moje liczby są tabular-nums w KPI cards, nie dramaturgia
+  - NIE „spa-ritual ozdobnik" h2vital (zioła, leaf icons) — Oculia jest tech-medical-clean, nie botanical
 
 ## 7. Test anty-generic (4 pytania — wszystkie TAK)
 
-- [x] Czy 3 wybrane marki referencyjne są SPOZA e-commerce? → Aesop (apteczna kosmetyka), Byredo (niszowe perfumy), Kinfolk (magazyn editorial). Żadne nie są „sklepy z masażerami".
-- [x] Czy odwracając logo nadal zgaduję branżę (moodboard jest charakterystyczny)? → Sage + terracotta + pearl cream + Fraunces + minute-markers → wellness-rytualny apothecary. Nie wygląda jak kolejny sklep z elektroniką ani jak generic „spa".
-- [x] Czy persona NIE pasowałaby do innego baseline'u z tabeli? → Magda managerka wymagająca rytuału sensorycznej deprywacji ≠ Panoramic Calm (zbyt corporate/architectural), ≠ Organic (zbyt ziołowa miękkość), ≠ Playful (wiek/ton nie pasuje), ≠ Retro-Fut (inny vibe), ≠ Rugged (inna płeć/kontekst), ≠ Editorial/Luxury (nie kupuje statusu, kupuje reset).
-- [x] Czy manifest w 5 linijkach da się zacytować bez słów „premium", „luxury", „wysoka jakość"? → Tak: „Wieczorny rytuał dla oczu pracujących 10h przed ekranem. Piętnaście minut w ciepłej ciemności. Grafen 38-42°C, poduszki powietrzne, muzyka. Zamknij oczy. Wróć." — zero słów-wytrychów.
+- [x] Czy 3 wybrane marki referencyjne są SPOZA e-commerce? → Withings (med-tech device maker, B2C ale data-tool brand), Eight Sleep (sleep-tech B2C), Therabody (wellness-tech device). Wszystkie technology-first, nie pure DTC fashion.
+- [x] Czy odwracając logo nadal zgaduję branżę (moodboard jest charakterystyczny)? → Tak: KPI hero + chart-compare + technical callouts = wellness/med-tech device niezależnie od logo.
+- [x] Czy persona NIE pasowałaby do innego baseline'u z tabeli? → Magda nie pasuje do paromia (luxury-aspiration), pupilnik (pet-playful), kafina (workwear-rugged). Jej decyzja jest evidence-driven (kliknie KPI „90% biurowych pracowników"), nie aspiration-driven (status badge).
+- [x] Czy manifest w 5 linijkach da się zacytować bez słów „premium", „luxury", „wysoka jakość"? → Tak: „15 minut. Grafen 38–42°C. Presoterapia poduszek powietrznych. 5 trybów. Wracasz do roboty."
 
 ## 8. Signature element
 
-> Jeden charakterystyczny element wizualny, który zostanie po obejrzeniu landinga. NIE „nowoczesny design" — coś konkretnego.
+> Jeden charakterystyczny element wizualny, który zostanie po obejrzeniu landinga.
 
-**Twój signature element:**
+**Twój signature element:** **Hero KPI dashboard** — grid 4 czarnych KPI tile'ów z tabular-nums (Plex Mono): `38–42°C grafen`, `15 min sesja`, `5 trybów`, `1200 mAh / 8 sesji`. Każdy tile ma cienką warning-amber kreskę na lewej krawędzi (akcent #C88B65 jako 5%) i ink-on-paper kontrast — to jest podpis Oculii: tu nie ma poetyki, tu są liczby. Plus drugi mini-signature: w problemie sekcji `chart-compare` z poziomymi bar-chartami — „minuty bólu skroni / dziennie" 47 min vs „po 15-min sesji" 6 min, jako zielony→czerwony bar.
 
-**„Minute-marker" — numerowanie sekcji w minutach rytuału zamiast w numerach kolejnych.** Każda sekcja dostaje własny czas rytuału w postaci micro-eyebrow `MINUTA 01 · RYTUAŁ`, `MINUTA 03 · PROBLEM`, `MINUTA 07 · TECHNOLOGIA`, `MINUTA 12 · GŁOSY`, `MINUTA 15 · KONIEC` (zastępuje klasyczne `Nº 03`). W hero: monumentalny countdown **`15:00`** w Cormorant Garamond italic 280-440px, deep sage #4F6E5C na pearl cream, z subtelnym pulsowaniem opacity 0.65↔1 co 4 sekundy (jak oddech przed zamknięciem oczu) — jedyna animacja tła. Dwukropek w `15:00` jest w terracotta #C88B65.
+## 9. Warianty sekcji (z section-variants.md, LIMITED przez Clinical Kitchen allowed_variants)
 
-**Dlaczego to działa:** manifest mówi „piętnaście minut w ciepłej ciemności" — minute-marker zamienia abstract narrative w wizualny measurement. Klient scrollując odczuwa czas rytuału. Paromia ma `Nº 01-10` (klasyczne magazine numbering) — my mamy `MINUTA 01-15` (ritual numbering). To uniwersalne signature, nie-kopiowalne bez zmiany narracji produktu.
-
-**Reguły stosowania:**
-- Minute-marker w eyebrow wybranych sekcji (Problem, Solution, Ritual/Features, Voices, Final CTA).
-- Pozostałe sekcje używają klasycznego `Nº` (trust-bar, gallery, offer, faq).
-- Countdown `15:00` pojawia się TYLKO raz — w hero, jako architektoniczny element tła (pozycja absolute, parallax speed 0.15, z-index 0).
-- Kolor timera: sage z terakotową interpunkcją. NIGDY złoty (to paromia).
-
-## 9. Warianty sekcji (autonomicznie wybrane)
-
-- **Hero:** H6 Persona portrait — wellness/beauty/femtech + persona-driven to pierwsza pasująca reguła w drzewie decyzyjnym (rozdz. 4). Magda MUSI zobaczyć kogoś podobnego do siebie używającego produktu z zamkniętymi oczami w wieczornym kontekście. Headline + tagline + CTA po lewej, portret Magdy z masażerem w 5:7 po prawej. Ritual quote pod CTA.
-- **Features:** F3 Linear stack — produkt ma **5 trybów + 3 technologie** (Graphene heating, Airbag shiatsu, Bluetooth music) = 5 features wymagających dłuższych opisów z konkretnymi liczbami (38-42°C, 1200mAh, 6-8 sesji, 180° składanie). Bento 2×2 (F1) by zgubił detale. F3 daje każdej funkcji własny scroll-stop + alternacja L/R odzwierciedla rytm oddechowy.
-- **Testimonials:** T2 Before/After ze statsami — produkt transformacyjny z **mierzalnymi** pain pointami z raportu PDF: migreny (3×/tydz → 1×), ibuprofen (4/tydz → 0), sen (3h przewracania → 30 min zasypiania). T1 Voices (default) byłby słabszy — Magda chce liczb, nie cytatów.
-
-## 10. Mapowanie manifesto → decyzje w ETAP 4 (DESIGN)
-
-| Decyzja | Wartość z manifesto |
-|---|---|
-| Hero background | Pearl cream `#F5F1EA` z subtelnym radial gradient sage 8% w prawym-górnym rogu (jak poświata lampki nocnej) |
-| Hero headline font-family | Fraunces 400-500 (display) |
-| Hero headline font-style | Regular z `<em>` italic na kluczowych słowach („*piętnaście minut*", „*wróć*") |
-| Signature element HTML | `<div class="ritual-timer js-parallax" data-speed="0.15">15<span class="tc">:</span>00</div>` absolute w tle hero |
-| Dark section rytm | Jedna ciemna sekcja (Solution — midnight ink `#1F2420` tło, pearl cream tekst, sage accent). Reszta pearl cream / soft-sage. |
-| Animacja hero | Subtle: js-split na headline (line-by-line fade-in), ritual-timer pulse 4s opacity 0.65↔1, magnetic CTA. Zero parallax shake. |
-| Border-radius globalny | 16px karty, 999px pills/CTA, 0 dla dark hero strips |
-| Shadow styl | `0 24px 64px -24px rgba(31,36,32,0.18)` — miękki, jak cień świecy |
-| Divider między sekcjami | Ultra-cienki 1px `#A5AFA8` mist gray + minute-marker w eyebrow (zastępuje line divider w niektórych sekcjach) |
+- **Hero:** **H3 KPI Dashboard Hero** (Clinical Kitchen primitive 1, allowed)
+- **Features:** **F4 Cards z mockupami** (allowed dla Clinical Kitchen)
+- **Testimonials:** **T2 Before/After stats** (data-driven, allowed dla Clinical Kitchen)
 
 ---
 
-## Checklist wyjściowy ETAP 1
+## 10. STYLE LOCK — wybrany styl z Atlas
 
-- [x] Audyt produktu z raportu PDF (nie z głowy) — 66% Polaków z wadami wzroku, 90% biurowych z problemami, cena 249-349 mid-premium, 5 trybów, grafen 38-42°C
-- [x] 3 realne marki referencyjne wybrane (spoza `landing-pages/`)
-- [x] Manifesto napisane — Apothecary Nocturne zdefiniowany
-- [x] Nazwa kierunku WŁASNA (nie z 6 presetów)
-- [x] Paleta zgodna z workflow_branding (sage #4F6E5C, midnight #1F2420, pearl #F5F1EA, terracotta #C88B65)
-- [x] Fonty zgodne z workflow_branding (Fraunces + Inter + Cormorant Garamond)
-- [x] Signature element konkretny (minute-marker `MINUTA 01-15` + monumentalny `15:00`)
-- [x] Anty-referencje: unikam h2vital rounded/mint oraz paromia gold/Italiana
-- [x] Warianty sekcji wybrane: H6 + F3 + T2
+### 10.1 Wybrany styl
+- **Style ID:** `clinical-kitchen`
+- **Plik:** [`docs/landing/style-atlas/clinical-kitchen.md`](../../docs/landing/style-atlas/clinical-kitchen.md)
+
+### 10.2 Product DNA (z Kroku 9a.1)
+- Utility↔Ritual: **utility** (15-min daily session, jak codzienne ważenie się Withings)
+- Precision↔Expression: **precision** (5 trybów, 38–42°C, nie "vibe")
+- Evidence↔Feeling: **evidence** (raport strategiczny pełen liczb: 66% / 90% / 50%; persona Magda kupuje dane)
+- Solo↔Community: **solo** (rytuał indywidualny w ciszy, deprywacja sensoryczna, NIE plemię)
+- Quiet↔Loud: **moderate** (data-heavy ale nie klikbajt)
+- Tradition↔Future: **future** (smart device + Bluetooth + grafen — material przyszłości)
+- Intimate↔Public: **intimate** (zakładasz na twarz, w ciemności, dom/biuro)
+
+Match z Clinical Kitchen: **6/7** (jedyny mismatch: Quiet↔Loud — Clinical Kitchen ma "moderate", Oculia też moderate → match). Argumentacja: Oculia to dokładnie kategoria z punktu 2 stylu — "Health tech (glukometry, ciśnieniomierze)" + "Smart home tech".
+
+### 10.3 MUSZĄ być użyte (auto-paste z pliku stylu)
+- Font display: **`IBM Plex Sans`** w `font-family` (display + body)
+- Font mono: **`IBM Plex Mono`** w `font-family` (KPI labels, spec readouts)
+- Min 1 `.kpi-grid` lub `.dashboard` (primitive 1 — Hero KPI Dashboard)
+- Min 1 `.chart-compare` lub `.chart-bar` (primitive 2 — Comparison bar charts)
+- Tło sekcji: `#F7F9FB` lub `#FFFFFF` dla min 4 sekcji (lab white)
+- Min **8 unique specs** (liczba + unit) w landingu (38°C, 42°C, 15 min, 5 trybów, 1200 mAh, 6–8 sesji, 180°, 99 g szyby, etc.)
+- Min **3 `.js-counter`** (animowane KPI w hero + w trust panel)
+
+### 10.4 NIE WOLNO użyć (auto-paste)
+- **Fonty:** NIE `Fraunces`, `Cormorant`, `Playfair`, `Italiana`, `Archivo Black`, `Caveat`
+- **Layout:** NIE editorial-column, NIE `Nº` eyebrow, NIE full-bleed color sekcji (Poster style)
+- **Elementy:** NIE warm cream tło `#F5F1EA` ani `#F6F3ED`, NIE gold accent `#C9A961`, NIE script handwriting, NIE italic em w h1/h2
+- **Kolory:** NIE `#F6F3ED`, NIE `#E09A3C`, NIE `#C9A961` (gold luxury palette)
+- **Motion:** NIE `.js-parallax`, NIE `.js-split`, NIE `.magnetic`
+
+### 10.5 Section Architecture (z pliku stylu sekcja 8)
+**Required (min 11):** Header, Mobile Menu, Hero Dashboard (`.hero-dashboard`), Instrument Panel (`.trust-panel` zamiast trust-bar), Problem (z liczbami), Features Cards (grid 2×2 piktogramy NIE bento tekstowe), How It Works (3 steps z mockups), Comparison Bar Charts (`.chart-compare`), Testimonials z KPI, FAQ, Offer (spec-dense), Final CTA, Footer.
+**Forbidden:** Editorial eyebrow `Nº`, warm cream sections, script/handwriting accent.
+
+### 10.6 Motion Budget (z pliku stylu sekcja 10)
+```yaml
+js_effects_required:
+  - .fade-in
+  - .js-counter           # min 3 dla KPI cards
+  - .js-tilt              # min 2 na cards feature
+js_effects_forbidden:
+  - .js-split             # za editorial
+  - .js-parallax          # za miękkie
+  - .magnetic             # zbyt DTC
+js_effects_count:
+  counter_min: 3          # KPI cards wymagają counter'ów
+  counter_max: 10
+  tilt_min: 2
+```
+
+---
+
+## 11. CONVERSION LOCK — wybrany mechanizm psychologiczny
+
+### 11.1 Wybrany mechanizm
+- **Mechanism ID:** `pas`
+- **Plik:** [`docs/landing/conversion-atlas/pas.md`](../../docs/landing/conversion-atlas/pas.md)
+
+### 11.2 Conversion DNA (z Kroku 9b.1)
+- Pain↔Aspiration: **mixed** (pain-leaning) (kotwice: Hims/Hers — wstyd/lęk; Squatty Potty — dyskomfort fizjologii)
+- Decision basis: **mixed** (kotwice: Withings — dane + design; Therabody — specs + emocja)
+- Awareness stage: **problem-aware** (kotwice: Squatty Potty — wszyscy znają problem; Casper — znasz materace)
+- Risk appetite: **mixed** (kotwice: Casper — mid-price, sceptyk; Therabody — early adopter wellness mid-tier)
+- Decision speed: **considered** (kotwice: Casper materac; Glassnova robot — 249–349 PLN to nie impuls dla Polaka)
+
+Match z PAS (`pain · mixed · problem-aware · mixed · considered`): **4/5**. Argumentacja: Brand_info Oculia eksplicite agituje ból ("pieczenie po siódmej godzinie", "pulsujące skronie") — to jest klasyczny PAS hero, gdzie ból jest nazwany przed produktem. Mismatch tylko na osi Pain↔Aspiration (Oculia=mixed, PAS=pain) — ale narracja produktu jest zdecydowanie pain-leaning, co usprawiedliwia.
+
+### 11.3 Hero formula (auto-paste z pliku mechanizmu)
+
+```
+Pre-headline: „PIECZE? PULSUJE?"
+H1: „7 godzin przed monitorem kosztuje cię wieczór."
+Sub: „90% pracowników biurowych zgłasza zmęczenie wzroku. Większość godzi się z tym. Nie musisz. Oculia rozluźnia skronie i nawilża oczy w 15 minut."
+Primary CTA: „Skończ z bólem skroni — 299 zł"
+Secondary signal: 4.8/5 z 1 247 opinii · 30 dni na zwrot · gwarancja PL
+```
+
+### 11.4 MUSZĄ być użyte (auto-paste z pliku mechanizmu)
+- **pas_hero_pain_word** — hero h1 zawiera ≥1 słowo bólu (regex: `\b(boli|kosztuje|tracisz|frustruje|męczy|stresuje|godzin tracisz|bez sensu|zmagasz|denerwuje|irytuje|drażni|ucisz|żmudny|udręka)\b`) → użyte: „kosztuje", „męczy" w sub
+- **pas_amplifier_section** — sekcja `.pain-amplifier` lub `.problem-amplifier` obecna (zaraz po hero)
+- **pas_solution_reveal** — sekcja `.solution-reveal` lub fraza „Dlatego stworzyliśmy" / „Rozwiązanie:" / „Tu pojawia się"
+- **pas_consequence_specifics** — ≥2 konkretne liczby/jednostki w pain/agitate (regex: `[0-9]+ (godzin|minut|zł|dni|razy|miesięcy)`) → użyte: „7 godzin", „47 minut bólu skroni"
+- **pas_offer_pain_callback** — w sekcji offer guarantee odwołuje się do bólu z hero („Pulsujące skronie nie znikną? Zwracamy kasę.")
+
+### 11.5 NIE WOLNO użyć (auto-paste)
+- **forbidden_aspirational_hero** — hero NIE może być aspiracyjne / status-driven (`\b(odkryj|zostań|dołącz do|stań się|premium|luksus|elegancja|aspiruj)\b` w h1)
+- **forbidden_solution_first** — hero NIE może zaczynać od features/specs produktu („Smart eye massager z grafenem..." → ZAKAZ)
+- **forbidden_lifestyle_gallery** — NIE umieszczaj `.lifestyle-gallery` ani Instagram-style UGC grid (PAS to drama bólu, nie aesthetic feed)
+- **forbidden_tribe_language** — NIE „dla ciebie który...", „dla świadomych", „dla wymagających" (Identity Buying language)
+- **forbidden_curiosity_clickbait** — NIE pytania-zagadki w h1 typu „Co optycy ukrywają?"
+
+### 11.6 Style compatibility (z pliku mechanizmu sekcja 9)
+```yaml
+forces: []                # PAS nie wymusza pojedynczego stylu
+compatible:
+  - brutalist-diy
+  - editorial-print        # tylko investigative-journalism wariant
+  - clinical-kitchen       # ✅ wybrany
+  - poster-utility
+  - swiss-grid
+  - rugged-heritage
+incompatible:
+  - apothecary-label
+  - panoramic-calm
+  - cottagecore-botanical
+  - playful-toy
+```
+
+**Coupling z STYLE LOCK:** `clinical-kitchen` jest na liście **compatible** PAS — naturalna para ("Data-driven agitacja"). Brak konfliktu.
+
+### 11.7 Section sequence (z pliku mechanizmu sekcja 5)
+
+**Sekcje wymagane (extra ponad standard 14):**
+- `.pain-amplifier` — sekcja amplifikująca ból, zaraz po hero (przed solution). 3 specific consequences w formacie statystyk (7h przed monitorem, 90% biurowych pracowników, 47 min pulsowania skroni dziennie).
+- `.solution-reveal` — explicit moment „tu pojawia się produkt" (3–4 sekcja). Frame: „Dlatego stworzyliśmy Oculię."
+
+**Sekcje pominięte:**
+- Lifestyle gallery / UGC grid — przerywa narrację bólu
+- „Dla kogo" personas-grid (Identity Buying tribe segmentation) — PAS agituje uniwersalny ból, nie segmentuje plemienia
+
+### 11.8 Offer formulation (z pliku mechanizmu sekcja 6)
+
+```
+Price display:
+  Stara cena (przekreślona): 449 zł
+  Nowa cena (dominująca): 299 zł
+  Savings badge: „Oszczędzasz 150 zł (33%)"
+
+Guarantee — POŁĄCZONA z bólem hero:
+  „30 dni testu w domu. Pieczenie po pracy nie zniknie? Pulsujące skronie wrócą? Zwracamy kasę. Bez pytań."
+
+Payment options: BLIK / Karta / Przelew (BLIK pierwsze)
+
+Trust strip:
+  - 30 dni na zwrot
+  - Polska obsługa
+  - Bezpieczna płatność (BLIK · Karta)
+  - 4.8★ z 1 247 opinii
+  - Gwarancja PL 24 mies.
+```
