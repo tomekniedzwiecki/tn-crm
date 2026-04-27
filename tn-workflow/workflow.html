@@ -311,6 +311,21 @@
                         CRM
                     </a>
 
+                    <!-- Portfolio control (offer v2) -->
+                    <div class="relative inline-flex items-center" title="Pokazywanie tego projektu w client-offer-v2 portfolio (klient w etapie 4)">
+                        <i class="ph ph-star text-[14px] text-zinc-500 absolute left-2 pointer-events-none"></i>
+                        <select id="hdr-portfolio-select"
+                                onchange="updatePortfolioStatus(this.value)"
+                                class="appearance-none h-8 pl-7 pr-7 rounded-md bg-transparent hover:bg-white/5 text-[12px] text-zinc-300 hover:text-white border border-transparent hover:border-white/10 transition-colors cursor-pointer focus:outline-none focus:border-white/20">
+                            <option value="" class="bg-zinc-900">Portfolio: nie</option>
+                            <option value="gallery" class="bg-zinc-900">Portfolio: galeria</option>
+                            <option value="1" class="bg-zinc-900">Portfolio: trailer #1</option>
+                            <option value="2" class="bg-zinc-900">Portfolio: trailer #2</option>
+                            <option value="3" class="bg-zinc-900">Portfolio: trailer #3</option>
+                        </select>
+                        <i class="ph ph-caret-down text-[10px] text-zinc-500 absolute right-2 pointer-events-none"></i>
+                    </div>
+
                     <!-- Divider pionowy -->
                     <span id="hdr-info-divider" class="hidden w-px h-5 bg-white/10 mx-2"></span>
 
@@ -5360,6 +5375,42 @@
             // Divider między akcjami a info strip (pokaż tylko gdy info ma cokolwiek)
             const divEl = document.getElementById('hdr-info-divider');
             if (divEl) divEl.classList.toggle('hidden', !anyInfoVisible);
+
+            // Portfolio control (offer v2)
+            const portfolioSel = document.getElementById('hdr-portfolio-select');
+            if (portfolioSel) {
+                const visible = !!workflow.portfolio_visible;
+                const order = workflow.portfolio_featured_order;
+                let val = '';
+                if (visible) {
+                    if (order === 1 || order === 2 || order === 3) val = String(order);
+                    else val = 'gallery';
+                }
+                portfolioSel.value = val;
+            }
+        }
+
+        async function updatePortfolioStatus(value) {
+            if (!workflow) return;
+            const update = { portfolio_visible: false, portfolio_featured_order: null };
+            if (value === 'gallery') {
+                update.portfolio_visible = true;
+            } else if (value === '1' || value === '2' || value === '3') {
+                update.portfolio_visible = true;
+                update.portfolio_featured_order = parseInt(value, 10);
+            }
+            const { error } = await supabaseClient
+                .from('workflows')
+                .update(update)
+                .eq('id', workflow.id);
+            if (error) {
+                showToast('Błąd zapisu portfolio: ' + error.message, 'error');
+                return;
+            }
+            workflow.portfolio_visible = update.portfolio_visible;
+            workflow.portfolio_featured_order = update.portfolio_featured_order;
+            const labels = { '': 'usunięte z portfolio', 'gallery': 'w galerii', '1': 'trailer slot 1', '2': 'trailer slot 2', '3': 'trailer slot 3' };
+            showToast(`Portfolio: ${labels[value] || 'zapisane'}`, 'success');
         }
 
         function renderWorkflow() {
