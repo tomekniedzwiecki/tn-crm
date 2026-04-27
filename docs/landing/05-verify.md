@@ -245,6 +245,32 @@ Nie commituj skryptów screenshot do repo — są utility.
 
 ---
 
-## Po ETAP 5
+## Po ETAP 5 — przejdź do ETAP 5.5 (Visual Review, v4.1)
 
-Przejdź do [`06-mobile.md`](06-mobile.md) — Mobile Polish Pass na 375px.
+Screenshoty zrobione, ale code review nie ocenia jakości wizualnej. **OBOWIĄZKOWY ETAP 5.5:**
+
+```bash
+# 1. Wygeneruj prompt-template
+bash scripts/review-landing-visual.sh $SLUG
+```
+
+Wypisuje listę screenshotów + 8 kryteriów oceny (hierarchia, signature element, kontrast, spacing, CTA visibility, polskie diakrytyki, AI images vs placeholdery, spójność ze stylem).
+
+```
+2. Read tool'em obejrzyj wszystkie screenshoty z _shots/:
+   - desktop_full.png + tablet_full.png + mobile_full.png (overview)
+   - desktop_y900.png (hero+nav), desktop_y2000.png (bento), desktop_y7000.png (offer)
+   - mobile_y900.png + mobile_y5000.png
+
+3. Zapisz raport do landing-pages/$SLUG/_visual-review.md w formacie:
+   - 3 sekcje: Desktop / Tablet / Mobile
+   - Min 3-4 verdykty per sekcja: ✅ PASS / ⚠️ WARN / ❌ FAIL z konkretną obserwacją
+   - Verdict: GO (lub NO-GO jeśli ≥1 FAIL)
+
+4. bash scripts/review-landing-visual.sh $SLUG --check
+   # exit 0 = OK do dalej; exit 1 = blokuje deploy
+```
+
+**Po PASS** → [`06-mobile.md`](06-mobile.md) (jeśli visual review wskazał mobile issues — inaczej skip do PRE-COMMIT).
+
+**Dlaczego osobny etap:** `verify-landing.sh` to grep — łapie safety violations, długości, klasy CSS. Nie ocenia czy hero wygląda atrakcyjnie, czy bento ma rytm, czy CTA wygląda klikalnie. Visual review (Claude jako reviewer) to zamyka.

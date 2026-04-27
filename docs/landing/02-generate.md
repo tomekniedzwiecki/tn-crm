@@ -201,6 +201,97 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 ---
 
+## 🌬️ SCROLLABILITY RULES (v4.3) — landing musi oddychać
+
+> **Wprowadzone 2026-04-27 po feedbacku:** „Te landingi stały się ciężkie i nieprzyjemne w zapoznawaniu się z nimi". Conversion Atlas + Style Atlas wymuszały tyle liczb/spec/data że każdy landing czytał się jak research paper. Te reguły są nadrzędne nad mech MUSZĄ patterns — jeśli mech wymaga 5 evidence elements ale scrollability rule mówi max 2 dense sections, **scrollability wygrywa**.
+
+### Zasada nadrzędna: "1 mocna liczba > 5 słabych"
+
+Wybierz JEDNĄ zapadającą w pamięć liczbę per landing (np. „5600 Pa", „99% sierści", „14 dni"). Nie produkuj `tabel z N badaniami × N instytucjami × N normami`. Klient pamięta jedną liczbę z hero. Pozostałe są noise.
+
+### Maksymalnie 2 "dense" sekcje per landing
+
+Dense sekcja = sekcja z gęstą informacją (≥3 liczby/specs/badań w jednym widoku). Lista dense candidates:
+- KPI dashboard / results-kpi
+- Research evidence (badania kliniczne)
+- Spec table / spec-row list
+- Authority roster (≥3 ekspertów obok siebie)
+- Versus comparison table
+
+**Reguła:** w 1 landingu max 2 z powyższych. Jeśli mech (np. Authority) chce 3 — wybierz 2 najlepsze, resztę zamień na lekkie warianty (1 quote zamiast roster, 1 hero metric zamiast tabeli).
+
+### Minimum 3 "breathing" momenty per landing
+
+Breathing moment = sekcja z dominującym zdjęciem/cytatem/single statement, bez tabel/list. Lista breathing candidates:
+- Lifestyle hero photo (full-bleed, min 600px wysokości)
+- Single quote testimonial (jeden cytat, duży, italic, foto autora)
+- Big-statement separator (jeden zdanie italic na całą szerokość, padding 120px+)
+- Single image gallery (1 produkt w użyciu, 16:9 albo 4:5)
+- Manifesto / mission statement section
+
+**Reguła:** min 3 z powyższych równomiernie rozłożone (top, mid, bottom landing). Nie zlepiaj wszystkich u góry.
+
+### Lifestyle photos minimum: 3 obrazy
+
+Każdy landing musi mieć **minimum 3 lifestyle photos** (produkt w użyciu z osobą lub w kontekście domu/sceny). NIE 3 packshoty na białym tle. Konkretnie:
+- 1× hero (produkt w ręce / w użyciu / w scenie domowej)
+- 1× w sekcji "How it works" lub "Procedure" (ujęcie z procesu)
+- 1× w sekcji "Testimonials" (twarz klienta) lub "Final CTA" (panorama lifestyle)
+
+Jeśli AI images jeszcze nie gotowe, placeholder MUSI mieć brief fotografa wymuszający lifestyle (NIE „packshot na białym").
+
+### Liczby — twardy limit per sekcja
+
+| Sekcja | Max liczb (digit + jednostka) |
+|---|---|
+| Hero | **1-2** (jedna mocna + opcjonalnie social proof "4.9 z X opinii") |
+| Problem / Pain | **1-2** (jedna konkretna konsekwencja) |
+| Features | **0-3** total (NIE 1 per tile) |
+| How it works | **0** (kroki opisowe, nie metryczne) |
+| Testimonials | **1-2** (1 specific number per landing total, nie per testimonial) |
+| FAQ | **0-2** (w odpowiedziach gdy konieczne) |
+| Offer | **2-3** (cena, oszczędność, dni gwarancji) |
+| **Total per landing** | **8-12 liczb max** (nie 30+) |
+
+Glassnova ma 23 liczb, oculia/steamla po 31. To jest 2-4× więcej niż powinno. Nowe landingi: target 8-12.
+
+### Whitespace — twardy minimum
+
+- Padding sekcji: **min 120px desktop, min 80px mobile** (pomiędzy sekcjami)
+- Hero height: **min 80vh desktop** (pełnoekranowy moment, nie 50vh squeeze)
+- Padding wewnętrzny sekcji: **min 64px desktop**
+- Między ostatnią sekcją a footerem: **min 160px** (oddech przed CTA finalnym)
+
+### Anty-patterns w copy (mniej technical, więcej human)
+
+❌ ZAKAZANE w nowych landingach:
+- „PN-EN ISO X" / „EN 1822 H13" / „p<0,05" — normy techniczne w body text. Idą do FAQ/footnote.
+- „N=84" / „N=247" — sample size w hero/sekcjach. Idą do FAQ.
+- „Akademia Filtrów Polska" / wymyślone instytucje w stat-rows
+- 3 badania kliniczne z 3 normami w jednej sekcji
+- Tabele z 5+ wierszami danych
+
+✅ OK:
+- „99% wychwytu sierści" — jedna mocna liczba w hero
+- „Testowane przez weterynarzy" — bez nazw instytucji, jedna fraza w trust strip
+- „Rekomendowane przez 1247 właścicieli" — social proof, jedna liczba
+
+### Per-mech adaptacja (override starych MUSZĄ)
+
+Conversion Atlas v4.2 mech files wymagały więcej density niż user toleruje. Aktualne MUSZĄ patterns w mech files są **maximum**, nie minimum. Praktyczna implementacja:
+
+- **PAS:** 1 pain word w hero + 1 amplifier statement (NIE rozbudowana sekcja statystyk strat)
+- **Authority:** 1 expert quote z imieniem (NIE roster 5 ekspertów + research-evidence section)
+- **Risk Reversal:** 1 guarantee statement (już jest light w schemacie)
+- **Transformation:** 1 outcome metric w hero + 1 before/after photo (NIE KPI dashboard z 5 counterami)
+- **Identity Buying:** już light by default (manifesto-driven)
+- **Curiosity Gap:** już light (paradox + reveal)
+- **Demonstration:** 1 hero video + 1 demo section (NIE 4 demo embeds)
+
+`verify-conversion-lock.sh` jest na to nadrzędny — relaxowane thresholds w v4.3.
+
+---
+
 ## ⚠️ Wszystkie 14 sekcji są OBOWIĄZKOWE
 
 > Memory: `feedback-landing-section-completeness.md`. `verify-landing.sh` Grupa 11 sprawdza explicite obecność każdej z 14 sekcji po klasie HTML. Brak którejkolwiek = ❌ FAIL deploy.
