@@ -62,3 +62,40 @@
 > **Oversized italic numerał „5600"** (Pa ssania) w cyan electric `#00D4E8` na deep navy `#0D1B2A` hero. Fraunces italic, clamp(240px, 24vw, 400px). Obok mikrometria „PA · SSANIE · 15°" w Space Mono.
 
 **Secondary:** subtelny „window grid" pattern w tle (siatka 4×4 delikatnych pionowych linii jak odbicie w szybie) — kontekstowa metafora produktu.
+
+## 9. Photo System
+
+**Reference image (ground truth):** `https://ae-pic-a1.aliexpress-media.com/kf/S917c60c94d6c4583a4681f74ffaa4d816.jpg_960x960q75.jpg_.avif`
+
+**Product geometry (z referencji — nie odbiegaj):**
+- Compact pill-shaped vertical white robotic window cleaner, body taller than wide, rounded edges
+- Small pentagonal black sensor panel on top with three tiny indicator LEDs (red, blue, yellow); four small grille dots above
+- Black vertical ventilation rail along right edge of body
+- Single small circular black port mid-body on right side
+- Power button at lower front
+- Two large white circular microfiber cleaning pads attached underside
+- DC power cable plugged in at lower-right with right-angle connector
+- NO screen, NO app indicators (sterowanie tylko pilotem)
+
+**Accessories (offer set):** 8× gray circular microfiber pads, 1× black plastic remote (OK/STOP/arrows), 1× clear plastic spray bottle, 2× black coiled cable organizers, 1× black AC adapter with right-angle DC + EU plug, 1× black braided safety rope with metal carabiner.
+
+**Lighting:**
+- Warsaw 18th-floor panoramic window apartment, late autumn afternoon → dusk
+- Mixed temperature: cool overcast outdoor light + single warm tungsten table lamp interior
+- Soft diffuse with rare warm orange accent (sunset / lamp glow)
+
+**Paleta w scenach:**
+- Tła wnętrza: deep navy painted walls (#0A1628), cool white window frames, navy linen sofa
+- Akcenty: warm tungsten lamp glow (rare), warm orange dusk reflections, cyan electric ONLY on robot LED panel
+- Czego unikamy: golden hour overdone, neon glow, salonowy luxury, organic green/beige
+
+**Persona w kadrze:** Marek, 42 lat, IT manager Warszawa, 18p apartament. Dark short hair, navy crew sweater lub linen rolled sleeves, simple chinos. Tired-Sunday-morning candid father vibe.
+
+**Camera:** Fujifilm X-T5, 35mm f/2 equivalent, slight cinematic blue-gray grade, subtle film grain, imperfect hand-held framing.
+
+**Negatywy — NIGDY:**
+- Tekst, captions, labels, watermarks, signage
+- Smartphone z aplikacją (produkt nie ma WiFi)
+- Generyczny biały studio background (poza offer flat-lay)
+- Stock-photo body language (sztywne uśmiechy, pointing at product)
+- Inwencja przycisków/ekranów których nie ma na referencji
