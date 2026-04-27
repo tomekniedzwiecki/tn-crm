@@ -8,37 +8,37 @@
 - [ ] Playful/Toy — pet, kids, gadgets (pupilnik)
 - [ ] Retro-Futuristic — gaming, tech edgy (vibestrike)
 - [ ] Rugged Heritage — workwear, outdoor, tools & trades (kafina)
-- [x] Nowy: **Apothecary Label** — uczciwa etykieta produktu, jeden składnik, evidence-first (handheld parownica jako narzędzie sterylne, nie magazyn lifestylowy)
+- [x] Nowy: **Swiss Grid** — modułowy Helvetica, lewa krawędź, 12-col grid, zero ornamentu (Vitsoe / Dieter Rams / IBM ThinkPad)
 
 **Uzasadnienie wyboru** (1-2 zdania z auditu produktu):
-Steamla = utility (czyści) + precision (1500 W, 3 bary, 15 s) + evidence (jedyny składnik: H₂O). Style Atlas literalnie wymienia "Parownica ręczna eko-mamy (Steamla)" jako DNA Anchor #1 dla Apothecary Label (7/7 match osi DNA).
+Steamla = utility (czyści) + precision (1500 W, 3 bary, 15 s) + evidence (jedyny składnik: H₂O). Swiss Grid DNA = utility · precision · evidence · solo · quiet · present · public — 6/7 match (jedyna oś rozjazdu: intimate vs public; Swiss jest „documenter manualem" przedstawiającym dane bezosobowo, co pasuje do specyfikacji urządzenia AGD).
 
 ## 2. Moodboard — 3 realne marki referencyjne (SPOZA landing-pages/)
 
 > Marki z prawdziwego świata, NIE inne landingi z `landing-pages/`. Każda referuje konkretny element wizualny lub tonalny.
 
-1. **Necessaire (body care)** — spec-first design, technical disclosure jako estetyka, paper white tło + ink heading + jeden brand color jako akcent.
-2. **Common Heir (apothecary supplements)** — pill-bottle-as-hero, oversized produkt label z monospace ingredient stamp, filozofia "skład > marketing".
-3. **Seventh Generation (eco cleaning)** — uczciwa typografia pudełka: geometric sans + mono na jednostki, recycled-paper beige (tu wymieniony na paper white przez Style Lock), deep ink. Składnik wyeksponowany jak na opakowaniu leku.
+1. **Vitsoe (półki 606 system)** — strict 12-col modular grid, Helvetica Now, lewe wyrównanie, cienkie 1px rule lines dzielące moduły, zero gradient/cieni.
+2. **Dieter Rams / Braun documentation** — left-aligned spec sheets, hierarchia przez wielkość (nie kolor), pure white tło, jedyny accent jako Signal Red przy CTA.
+3. **IBM ThinkPad design archives** — modular info layout, Inter/Helvetica + jednostki w mono, bezosobowy dokumentalny ton ("dokumentacja produktu", nie "marketing").
 
-## 3. Paleta (z workflow_branding type=color, ograniczona Style Lock apothecary-label)
+## 3. Paleta (Swiss Grid — pure white + black + 1 signal accent)
 
-- **Primary (akcent):** `#3DB5C9` Steam Teal (z brand) — CTA, 1-2 highlights
-- **Ink (główny tekst):** `#0F1115` (Style Atlas Apothecary — sterylne ink)
-- **Paper (tło):** `#FAFAF7` Paper White (Style Atlas — laboratorium, nie cream)
-- **Lab Gray:** `#6B6F76` (Style Atlas — meta, units, footnotes)
-- **Seal Red (opcjonalny):** `#C53030` (Style Atlas — ostrzeżenia liczbowe)
+- **Paper (tło):** `#FFFFFF` Pure White (Swiss strict — NIE cream, NIE off-white)
+- **Ink (tekst, CTA solid):** `#000000` Absolute Black (Swiss strict)
+- **Accent (1 highlight per sekcja):** `#3DB5C9` Steam Teal (brand primary z workflow) zamiast Signal Red — zachowuje brand identity
+- **Grid Gray (secondary text):** `#707070`
+- **Rule Gray (1px borders dzielące moduły):** `#DADADA`
 
-> Brand `#E09A3C` Amber Glow (gold/brass) i `#F6F3ED` Linen Cream są ZAKAZANE w Apothecary Label (sekcja 10.4) → ignorujemy z brand palette zgodnie ze Style Lock.
+> Brand `#E09A3C` Amber Glow / `#E8B4A0` Warm Clay / `#F6F3ED` Linen Cream — wszystkie pomijane przez Swiss Grid „pure white + black" filozofię. Steam Teal `#3DB5C9` zostaje jako jedyny brand-derived akcent.
 
-## 4. Typografia (z Style Lock apothecary-label, NIE z brand workflow)
+## 4. Typografia (Swiss Grid — Helvetica/Inter, zero serifa)
 
-- **Display (nagłówki):** `IBM Plex Sans` 500/600/700 + `&display=swap&subset=latin-ext`
-- **Body (treść):** `Inter` 400/500/600 + `&display=swap&subset=latin-ext`
-- **Mono (jednostki, ingredients, version numbers):** `IBM Plex Mono` 400/500 + `&display=swap&subset=latin-ext`
+- **Display (nagłówki):** `Helvetica Neue` z fallbackiem `Inter` 500/600 — swiss archetype, oversized lewe-wyrównane (64-140px)
+- **Body (treść):** `Inter` 400/500 — body i sub
+- **Tight (spec labels, jednostki):** `Inter Tight` 500/600 — opcjonalne dla `[01]` footnote markers, info-box labels
 
-> Brand workflow proponuje Fraunces + Inter + Caveat — Fraunces i Caveat są ZAKAZANE w Apothecary Label (sekcja 10.4). Stosujemy stack Style Atlas.
-> Polskie „Ł" UPPERCASE: IBM Plex Sans renderuje czysto, line-height ≥ 1.4 zachowane.
+> Brand workflow proponuje Fraunces + Caveat — oba ZAKAZANE w Swiss Grid. Inter jest brand-friendly i atlas-friendly (zachowuje brand spójność z body Inter).
+> Polskie „Ł" UPPERCASE: Helvetica Neue + Inter renderują czysto, line-height ≥ 1.4 zachowane.
 
 ## 5. Persona główna (z report_pdf + brand_info)
 
@@ -70,15 +70,15 @@ Sprawdź czy w `landing-pages/` jest już landing podobnego kierunku (vitrix, pa
 > Jeden charakterystyczny element wizualny, który zostanie po obejrzeniu landinga. NIE „nowoczesny design" — coś konkretnego.
 
 **Twój signature element:**
-**Full-width "spec-label" block** — gigantyczna etykieta produktu w środku strony: ramka 2px solid ink, padding 56px, headline `H₂O` w IBM Plex Sans 700 na 80-160px (clamp), pod nim `100% · bez dodatków` w mono caps i tabela specyfikacji `Objętość | 350 ml`, `Temperatura pary | 105 °C`, `Czas do gotowości | 15 s`. Etykieta wygląda jak strona ulotki leku przeniesiona na A2.
+**12-col grid z widocznymi 1px rule lines** dzielącymi każdy moduł + **oversized left-aligned h1 (clamp 64-140px Helvetica 500)** w hero, ułożone jak strona spec-sheet'u Vitsoe lub Dieter Rams documentation. Każdy claim oznaczony przypisem `[01]`, `[02]` z odniesieniem na dole sekcji.
 
-Drugi element wspierający: **sec-meta strip** w pełnej szerokości (`STEAMLA · LOT 2026-Q2 · BATCH 001 · PAROWNICA HANDHELD`) zamiast standardowego trust-bara z ikonami w kółkach.
+Drugi element wspierający: **info-box panel** (ramka 1px solid ink, padding 24px, label `SPEC — 2026` w mono caps + lista `dl/dt/dd` z kluczem-wartością) zamiast typowego trust-bara — info-box renderuje specyfikację jak spec-sheet inżynierski.
 
 ## 9. Warianty sekcji (z [`section-variants.md`](../../docs/landing/reference/section-variants.md), LIMITED przez allowed_variants w Style Lock)
 
-- **Hero:** H8 Split z ceną — guarantee w pre-headline + cena w CTA = naturalny dom dla Risk Reversal + Apothecary spec-stack
-- **Features:** F3 Linear stack — pasuje do spec-row format (NIE bento 2×2, które jest forbidden)
-- **Testimonials:** T2 Before/After stats — evidence-based, "byłem sceptyczny → wypróbowałem → kupiłem na stałe" struktura wpasowuje się w Risk Reversal narrative
+- **Hero:** H5 Oversized typography — left-aligned, oversized h1 jako pure typographic statement (Swiss archetype) + col-span-4 info-box po prawej dla spec/cena
+- **Features:** F3 Linear stack — pionowe 12-col rows z numbered claims (01/02/03), zgodne z DNA „documenter manualem"
+- **Testimonials:** T5 Single hero z pionową linią — jedyny acceptable wariant w Swiss; pojedynczy pull-quote z 1px rule po lewej, bez avatar-grid (T5 nie wymaga >1 testimonial)
 
 ---
 
@@ -87,45 +87,46 @@ Drugi element wspierający: **sec-meta strip** w pełnej szerokości (`STEAMLA �
 > Ta sekcja jest **kontraktem** — łamiesz ją = FAIL w `verify-style-lock.sh`.
 
 ### 10.1 Wybrany styl
-- **Style ID:** `apothecary-label`
-- **Plik:** [`docs/landing/style-atlas/apothecary-label.md`](../../docs/landing/style-atlas/apothecary-label.md)
+- **Style ID:** `swiss-grid`
+- **Plik:** [`docs/landing/style-atlas/swiss-grid.md`](../../docs/landing/style-atlas/swiss-grid.md)
 
 ### 10.2 Product DNA (z Kroku 9a.1)
-- Utility↔Ritual: **utility** (czyści, narzędzie)
-- Precision↔Expression: **precision** (3 bary, 1500 W, 15 s, 105 °C — twarde liczby)
-- Evidence↔Feeling: **evidence** (jedyny składnik H₂O — fakt, nie aspiracja)
-- Solo↔Community: **solo** (sprzątasz sam_a, intymny dotyk materaca dziecka)
-- Quiet↔Loud: **quiet** (calm wellness, bez chemii, ciche dźwięki — para)
-- Tradition↔Future: **present** (parowanie zna każda babcia, ale nowoczesna realizacja 1500 W)
-- Intimate↔Public: **intimate** (kuchnia, sypialnia, fotelik dziecka)
+- Utility↔Ritual: **utility** (czyści, narzędzie — kotwice: Anker PowerCore, Dyson V15)
+- Precision↔Expression: **precision** (3 bary, 1500 W, 15 s, 105 °C — kotwice: Swiss watch, sous-vide cooker)
+- Evidence↔Feeling: **evidence** (jedyny składnik H₂O — kotwice: Anker mAh specs, Dyson „99% pick up")
+- Solo↔Community: **solo** (sprzątasz sam_a — kotwice: Skincare serum, Notebook)
+- Quiet↔Loud: **quiet** (bez ornamentu, dokumentacja produktu — kotwice: Muji, Aesop apothecary)
+- Tradition↔Future: **present** (parowanie nowoczesne, ale dokumentacja klasyczna swiss — kotwice: Dieter Rams legacy, IBM ThinkPad)
+- Intimate↔Public: **public** (specyfikacja jest dokumentem publicznym, „documenter manualem" — Swiss DNA przesuwa intimate Steamla na public przez bezosobowy register)
 
-Match z wybranym stylem: **7/7**. Argumentacja (1 zdanie): Style Atlas literalnie wymienia "Parownica ręczna eko-mamy (Steamla)" jako pierwszy DNA Anchor — perfect alignment.
+Match z wybranym stylem: **6/7**. Argumentacja (1 zdanie): Swiss Grid (utility · precision · evidence · solo · quiet · present · public) pasuje 6/7 osi do Steamla — różnica: Swiss preferuje public bo to dokumentacja produktu (jak spec-sheet Braun HL70), nie intimate ritual. Steamla ma silną stronę „precision · evidence" (1500 W / 3 bary / 15 s / 105 °C / 350 ml) która natywnie kupuje się jako dokumentacja techniczna.
 
 ### 10.3 MUSZĄ być użyte (auto-paste z pliku stylu)
-- Display font: `IBM Plex Sans` w `font-family`
-- Mono font: `IBM Plex Mono` — min 1 występ per sekcja
-- Min 1 `<table>` lub `.spec-*-list` w landingu
-- Padding sekcji ≥ `100px 0` (grep CSS)
-- Primitive 1 (`.spec-label-section`) obecny — gigantyczny `H₂O` block
-- Paleta: `#FAFAF7` (paper) + `#0F1115` (ink) + `#3DB5C9` (Steam Teal jako brand accent)
-- Layout DNA: stack dense, max 720-880px central column, ZERO bento 2×2
+- Display font: `Helvetica Neue` lub `Inter` w `font-family`
+- Tło body: `#FFFFFF` (pure white, nie cream)
+- Grid 12-col widoczny: `grid-template-columns: repeat(12, 1fr)` minimum 1 wystąpienie
+- Min 3 sekcje left-aligned (`text-align: left` lub brak `text-align: center`)
+- `border-radius: 0` dla cards/tiles (cards owalne zakazane)
+- Primitive 1 (12-col grid z 1px rule lines) obecny
+- Primitive 5 (info-box panel z `SPEC — 2026` label) obecny
 
 ### 10.4 NIE WOLNO użyć (auto-paste)
-- **Fonty:** NIE `Fraunces`, `Cormorant`, `Playfair`, `Italiana`, `Libre Bodoni`, `Caveat`, `Fredoka`, `Archivo Black`, `Nunito`
-- **Layout:** NIE `grid-template-columns: 1fr 1fr` dla features (bento 2×2 zakaz)
-- **Elementy:** NIE `Nº` w eyebrow, NIE `.hero-numeral` (oversized italic), NIE `.trust-strip` z dark bg + icon circles
-- **Kolory:** NIE `#F6F3ED` (linen cream), NIE `#E09A3C` `#C9A961` (gold/brass), NIE `linear-gradient` w tłach sekcji
-- **Motion:** NIE `.js-split`, NIE `.js-parallax`, NIE `.magnetic`
+- **Fonty:** NIE `Fraunces`, `Playfair`, `Archivo Black`, `Caveat`, `Cormorant`
+- **Layout:** NIE centered hero (Swiss strict: lewe wyrównanie), NIE full-bleed color, NIE bento 2×2 z zaokrągleniami
+- **Elementy:** NIE stickers, NIE badges owalne (border-radius:50%), NIE hover shadows
+- **Kolory:** NIE gradient tła, NIE warm cream, NIE gold (#E09A3C / #C9A961)
+- **Motion:** NIE `.js-split`, NIE `.js-parallax`, NIE `.magnetic`, NIE `.js-tilt`
 
 ### 10.5 Section Architecture (z pliku stylu sekcja 8)
-Required (min 10 z 12): Header, Mobile Menu, Hero, Sec Meta Strip, Spec Label Big, Features as Spec Rows, How It Works, Comparison Table, FAQ, Offer, Footer
-Forbidden: Trust Bar dark (z ikonami w kółkach), Social Proof Marquee, Final CTA Banner (wide)
+Required (min 10): Header (minimalist left brand), Mobile Menu, Hero (12-col grid + oversized left h1), Info Box Panel (zamiast trust bar), Features (12-col + 4-6 modułów), How It Works (3 numbered rows), Spec Table (tabelaryczne, monospace), Comparison (tabela 2-col strict), Offer (left-aligned, NIE centered), Footer (12-col grid)
+Optional: Problem (left heading), Testimonials T5 (1 pullquote z pionową linią)
+Forbidden: Centered hero, Poster full-bleed color, Bento 2×2 z zaokrągleniami, Sticker badges, Gradient backgrounds
 
-### 10.6 Motion Budget (z pliku stylu sekcja 10)
+### 10.6 Motion Budget (z pliku stylu sekcja 10 — level: still)
 ```yaml
-js_effects_required: [.fade-in, .js-counter]
-js_effects_forbidden: [.js-split, .js-parallax, .magnetic]
-js_effects_count: { counter_min: 1, counter_max: 3, magnetic_min: 0, tilt_min: 0, parallax_min: 0 }
+js_effects_required: [.fade-in]
+js_effects_forbidden: [.js-split, .js-parallax, .magnetic, .js-tilt]
+js_effects_count: { counter_min: 0, magnetic_min: 0, tilt_min: 0, parallax_min: 0 }
 ```
 
 ---
@@ -176,10 +177,10 @@ Secondary signal: „30 dni gwarancji + odbiór z domu + 4,8/5 z 612 opinii"
 forces: []                # Risk Reversal jest stylistycznie neutralny
 compatible:
   - panoramic-calm
-  - apothecary-label      # ✅ wybrany — "Klinicyzm + medical-grade guarantee = match"
+  - apothecary-label
   - clinical-kitchen
   - editorial-print
-  - swiss-grid
+  - swiss-grid            # ✅ wybrany — "Modular grid wspiera klarowną politykę zwrotu"
   - poster-utility
   - rugged-heritage
   - playful-toy
@@ -188,7 +189,7 @@ incompatible:
   - retro-futuristic      # cyber/dark vs trust-first
 ```
 
-**Coupling z sekcją 10 STYLE LOCK:** apothecary-label jest w `compatible` → match potwierdzony.
+**Coupling z sekcją 10 STYLE LOCK:** swiss-grid jest w `compatible` → match potwierdzony. Modular 12-col grid renderuje politykę zwrotu jako klarowną tabelę (3-row procedure 01/02/03), a info-box panel jest naturalnym domem dla guarantee badge.
 
 ### 11.7 Section sequence (z pliku mechanizmu sekcja 5)
 
