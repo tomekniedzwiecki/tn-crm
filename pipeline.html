@@ -263,6 +263,35 @@
         </div>
     </div>
 
+    <!-- Open Stage Leads Modal -->
+    <div id="open-stage-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-sm shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-arrow-square-out text-blue-400"></i>
+                    Otwórz leady w nowych kartach
+                </h2>
+                <button id="close-open-stage-modal" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div class="p-5">
+                <p class="text-zinc-400 text-xs mb-4">
+                    Status <span id="open-stage-name" class="text-white font-medium"></span> zawiera <span id="open-stage-total" class="text-white font-medium"></span> leadów. Ile otworzyć (zaczynając od najstarszych)?
+                </p>
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <button data-open-count="10" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white px-3 py-3 rounded-lg text-sm transition-colors">10</button>
+                    <button data-open-count="15" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white px-3 py-3 rounded-lg text-sm transition-colors">15</button>
+                    <button data-open-count="20" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white px-3 py-3 rounded-lg text-sm transition-colors">20</button>
+                    <button data-open-count="30" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white px-3 py-3 rounded-lg text-sm transition-colors">30</button>
+                    <button data-open-count="50" class="bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white px-3 py-3 rounded-lg text-sm transition-colors">50</button>
+                    <button data-open-count="0" class="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 text-blue-400 px-3 py-3 rounded-lg text-sm transition-colors">Wszystkie</button>
+                </div>
+                <p class="text-zinc-600 text-[10px]">Przeglądarka może poprosić o zgodę na otwieranie wielu kart naraz.</p>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -927,6 +956,69 @@
             }
         }
 
+        // ===== Otwórz leady ze statusu w nowych kartach =====
+        let openStageContext = null;
+
+        function getSortedStageLeads(stageId) {
+            const stage = STAGES.find(s => s.id === stageId);
+            const isWaitingStage = stageId === 'waiting' || stage?.name?.toLowerCase() === 'oczekiwanie';
+
+            return filteredLeads
+                .filter(l => (l.status || 'new') === stageId)
+                .sort((a, b) => {
+                    if (isWaitingStage) {
+                        const closeA = a.expected_close ? new Date(a.expected_close) : null;
+                        const closeB = b.expected_close ? new Date(b.expected_close) : null;
+                        if (!closeA && !closeB) return 0;
+                        if (!closeA) return 1;
+                        if (!closeB) return -1;
+                        return closeA - closeB;
+                    }
+                    // Zawsze od najstarszych - niezależnie od ustawienia sortowania
+                    return getLeadStatusDate(a) - getLeadStatusDate(b);
+                });
+        }
+
+        function openLeadsInTabs(leadsList) {
+            leadsList.forEach(lead => {
+                window.open(getLeadPath(lead.id), '_blank');
+            });
+        }
+
+        function openStageLeadsAction(stageId) {
+            const stageLeads = getSortedStageLeads(stageId);
+            const total = stageLeads.length;
+
+            if (total === 0) return;
+
+            if (total <= 10) {
+                openLeadsInTabs(stageLeads);
+                return;
+            }
+
+            openStageContext = { stageId, total };
+            const stage = STAGES.find(s => s.id === stageId);
+            document.getElementById('open-stage-name').textContent = stage?.name || stageId;
+            document.getElementById('open-stage-total').textContent = total;
+            document.getElementById('open-stage-modal').classList.remove('hidden');
+        }
+
+        function closeOpenStageModal() {
+            document.getElementById('open-stage-modal').classList.add('hidden');
+            openStageContext = null;
+        }
+
+        function confirmOpenStage(count) {
+            if (!openStageContext) return;
+            const stageLeads = getSortedStageLeads(openStageContext.stageId);
+            const limit = count === 0 ? stageLeads.length : Math.min(count, stageLeads.length);
+            const toOpen = stageLeads.slice(0, limit);
+            closeOpenStageModal();
+            openLeadsInTabs(toOpen);
+        }
+
+        window.openStageLeadsAction = openStageLeadsAction;
+
         function renderPipeline() {
             const board = document.getElementById('pipeline-board');
 
@@ -996,8 +1088,16 @@
                                 <span class="font-medium text-white text-sm">${stage.name}</span>
                                 <span class="text-[10px] ${colors.text} ${colors.bg} px-1.5 py-0.5 rounded font-mono">${stageLeads.length}</span>
                             </div>
-                            ${canHaveFollowups ? `
-                                <div class="flex items-center gap-1">
+                            <div class="flex items-center gap-1">
+                                ${stageLeads.length > 0 ? `
+                                    <button
+                                        onclick="openStageLeadsAction('${stage.id}')"
+                                        class="flex items-center gap-1 px-2 py-1 text-[10px] bg-blue-500/10 text-blue-400 rounded hover:bg-blue-500/20 transition-colors"
+                                        title="Otwórz leady w nowych kartach (od najstarszych)">
+                                        <i class="ph ph-arrow-square-out"></i>
+                                    </button>
+                                ` : ''}
+                                ${canHaveFollowups ? `
                                     ${queueCount > 0 ? `
                                         <span class="flex items-center gap-1 px-2 py-1 text-[10px] bg-zinc-500/10 text-zinc-400 rounded" title="W kolejce do wygenerowania">
                                             <i class="ph ph-queue"></i>
@@ -1017,8 +1117,8 @@
                                         title="Przetwórz kolejkę (generuj 5 followupów)">
                                         <i class="ph ph-play"></i>
                                     </button>
-                                </div>
-                            ` : ''}
+                                ` : ''}
+                            </div>
                         </div>
                         <div class="text-[10px] text-zinc-500 font-mono mb-3 px-1">${formatCurrency(stageValue)}</div>
 
@@ -1459,7 +1559,21 @@
         });
 
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closeAddModal();
+            if (e.key === 'Escape') {
+                closeAddModal();
+                closeOpenStageModal();
+            }
+        });
+
+        // Open Stage modal handlers
+        document.getElementById('close-open-stage-modal').addEventListener('click', closeOpenStageModal);
+        document.getElementById('open-stage-modal').addEventListener('click', (e) => {
+            if (e.target === e.currentTarget) closeOpenStageModal();
+        });
+        document.querySelectorAll('#open-stage-modal [data-open-count]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                confirmOpenStage(parseInt(btn.dataset.openCount, 10));
+            });
         });
 
         async function init() {
