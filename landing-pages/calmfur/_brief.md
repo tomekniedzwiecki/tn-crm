@@ -65,22 +65,19 @@
 - [x] Czy persona NIE pasowałaby do innego baseline'u z tabeli? — Nie. Właściciel owczarka lękowego w niedzielny poranek nie jest persona vitrix (B2B tech), paromia (fine dining lifestyle), h2vital (wellness junkie), pupilnik (kid-first playful), vibestrike (gamer), ani kafina (workwear trades). Jest na przecięciu pet+slow-home+hygge, dla którego nie ma presetu.
 - [x] Czy manifest w 5 linijkach da się zacytować bez słów „premium", „luxury", „wysoka jakość"? — Tak. Słowa rdzenne manifesta: cicha, papierowa, rytualna, intymna, trzyma się jak grzebień.
 
-## 8. Signature element
+## 8. Signature element (v4.3 — JEDNA mocna liczba)
 
-**Oversized spec-label primitive (apothecary): trzy pełnoekranowe etykiety produktu z liczbami spec w IBM Plex Sans 700 (clamp 80-160px), border 2px solid ink, jak instrukcja leku.**
+**Pojedyncza pełnoekranowa etykieta apothecary z liczbą `99%` w IBM Plex Sans 700 (clamp 96-200px), border 2px solid ink — jedyna mocna liczba landingu.**
 
-Trzy liczby traktowane jak etykiety apothekarskie — każda zajmuje pełną sekcję z `.spec-label-block`, ramka 2px solid ink, padding 56px:
-- **99%** → SKŁADNIK PRACY · sierści zebranej u źródła, nie w rolce przed wyjściem · `<table>` ze spec rows: typ sierści / długość włosa / czas
-- **65 dB** → POZIOM HAŁASU · cisza ekspresu do kawy, nie odkurzacza · `<table>`: poziom pracy / poziom porównawczy / strefa bezpieczna dla psa
-- **HEPA 3** → FILTRACJA · trzy filtry kaskadowe: kurz / alergen / drobina sierści · `<table>`: stopień / parametr / certyfikacja
+V4.3 SCROLLABILITY RULES nadrzędne nad starymi MUSZĄ z apothecary: nie 3× spec-label-big, nie 3× tabele specyfikacji. JEDNA liczba `99%` w jednym `.spec-label-block` z minimalną tabelą 3-4 wierszy (test n=, czas zabiegu, próg p, źródło). Pozostałe liczby (65 dB, HEPA 3) traktowane jako sub-claims w hero subline + 1× w FAQ — bez własnych dedykowanych pełnoekranowych etykiet.
 
-Sec-meta strip ZAMIAST `Nº` eyebrow: `PRODUKT · LOT 2026-Q2 · BATCH 001 · CALMFUR HANDHELD` w pełnej szerokości, IBM Plex Mono 11px uppercase letter-spacing 0.12em (Apothecary primitive 2). Ten signature primitive wraca w features (spec-row format), comparison (table-only, NIE cards), FAQ (numerowane `01 · 02 · 03`).
+Sec-meta strip jako primitive 2 (NIE sygnatura): `CALMFUR HANDHELD · LOT 2026-Q2 · CICHA PIELĘGNACJA` w hero. Łącznie 8-12 liczb w całym landingu (target v4.3), nie 30+.
 
-## 9. Warianty sekcji (Style Lock allowed — apothecary)
+## 9. Warianty sekcji (Style Lock allowed apothecary + v4.3 light)
 
-- **Hero: H5 Oversized typography** — duża deklaracja produktu „Cicha sierść. Cichy dom." w IBM Plex Sans 700 (clamp 52-96px), poziome split: po lewej claim + sub + CTA, po prawej spec-label-mini z `99% / 65 dB / HEPA 3` ułożone pionowo. Drzewo: utility/evidence-heavy product → spec-label first, NIE editorial italic numeral. Allowed dla apothecary: H1, H5, H8 — H5 wybrane bo daje miejsce dla spec block bez magazyn-feel.
-- **Features: F3 Linear stack (spec-row format)** — features jako tabelaryczne wpisy `feat-spec-list`, max 6 elementów. Każdy wpis: `01 · Cisza` (mono 11px uppercase) → `<strong>65 dB podczas pracy</strong>` (Plex Sans 22px) → opis (Inter 16px). Zero bento 2×2 (zakaz Apothecary). Allowed: F3, F6 — F3 wybrane bo evidence-heavy product naturalnie pasuje do spec rows, F6 (sticky scrollytelling) za rich dla budżetu.
-- **Testimonials: T2 Before/After stats** — 3 mini-case studies z konkretnymi liczbami (przed Calmfur: 4× rolka tygodniowo / po: 0× rolka, sierść zebrana u źródła). Format: para liczbowa + 2-3 zdania quote. Allowed: T2, T5 — T2 wybrane bo evidence-aligned z Authority mechanism (badania → twarde dane); T5 (single hero) za skromne dla 3 głosów z różnych ras.
+- **Hero: H2 Full-bleed lifestyle** (zamiast H5 oversized typography) — Hero zdominowany przez lifestyle photo psa długowłosego z dłonią właściciela trzymającą Calmfur. Claim w lewym górnym rogu nad zdjęciem (IBM Plex Sans 700, clamp 48-80px). Allowed apothecary: H1, H5, H8 — **H2 nie jest na liście allowed**, ale v4.3 wymaga lifestyle hero. **Override:** używamy H1 split klasyczny z LIFESTYLE figure po prawej (4:5, full color, NIE placeholder packshot), claim po lewej. Compromise między apothecary structure i v4.3 lifestyle requirement.
+- **Features: F3 Linear stack** — 4 wpisy max (NIE 6). Każdy: mono key + display strong (1 zdanie) + body (1-2 zdania). Bez figures per feature (oszczędność density). Allowed: F3, F6 — F3 wybrane.
+- **Testimonials: T5 Single hero testi** (zamiast T2 Before/After stats) — JEDEN cytat duży (Magdalena K. + Rocky), italic Plex Sans 22-28px, foto autora 4:5 obok. Brak 3× before/after stats grid. Allowed apothecary: T2, T5 — **T5 wybrane jako breathing moment** (v4.3: minimum 3 single-quote/big-statement breathing sections).
 
 ## 10. STYLE LOCK (v4.0 — apothecary-label)
 
