@@ -91,6 +91,39 @@ grep -nE "(hero-figure|tile-figure|act-figure|spec-figure|persona-figure|offer-f
 
 Zrób tabelę: sekcja → selektor → docelowy aspect-ratio.
 
+### 1.6 ⚠️ KRYTYCZNE: aspect-ratio audit PRZED generacją (gate)
+
+**Lekcja z glassnova 2026-04-27:** wygenerowano 10 obrazów z aspect_ratio dopasowanym do tabeli "matryca slotów" w KROK 4.1. Po wdrożeniu okazało się że **CSS containerów `.tile-figure` (16/10) i `.offer-figure` (16/9) NIE pasowały** do generation aspect_ratio (1:1, 4:3). `object-fit: cover` obciął **37% kadru** w tile (dla 1:1 w 16:10) i **25% w offer** (4:3 w 16:9). User zauważył obcięte zdjęcia w sekcji oferty (8 padów → widać 5).
+
+**Procedura zapobiegawcza — uruchom PRZED generacją:**
+
+```bash
+bash scripts/audit-landing-aspect-ratios.sh [slug]
+```
+
+Skrypt skanuje WSZYSTKIE figure-containery (z stripped @media) i raportuje effective `aspect-ratio` per element + porównuje z `width/height` attr `<img>`. Drift >5% = MISMATCH (cover obetnie widocznie).
+
+**Mapping CSS → Gemini aspect_ratio:**
+
+| CSS | Generation | Drift |
+|-----|------------|-------|
+| `4/5` | `4:5` | 0% |
+| `3/4` | `3:4` | 0% |
+| `4/3` | `4:3` | 0% |
+| `3/2` | `3:2` | 0% |
+| `16/9` | `16:9` | 0% |
+| `1/1` | `1:1` | 0% |
+| **`16/10`** | brak — **zmień CSS** na `16/9` lub generuj `3:2` (drift 6.7%) |
+| **`5/4`** | `5:4` | 0% |
+
+**Workflow po audycie:**
+- Jeśli audit `exit 0` → generuj z aspect_ratio jak w briefie
+- Jeśli `exit 1` → DECYZJA przed generacją:
+  - **Opcja A (preferowana, mniej kosztowna):** zmień `aspect-ratio` w CSS containerów na wartość obsługiwaną przez Gemini (patrz mapping). Brak regeneracji obrazów.
+  - **Opcja B:** wygeneruj obrazy z aspect_ratio dopasowanym do CSS i zaktualizuj `<img width=W height=H>` na rzeczywiste wymiary nowego obrazu.
+- **Po podmianie URL na nowy obraz ZAWSZE zaktualizuj `width="..."` i `height="..."` attr** — w przeciwnym razie audit pokaże fałszywie dopasowanie (porównuje z attr, nie z plikiem).
+- Re-run audit przed commitem. Cel: `0/N mismatch`.
+
 ---
 
 ## KROK 2 — Zdefiniuj photo system (spójność)
@@ -729,10 +762,12 @@ Podaj link: `https://tn-crm.vercel.app/landing-pages/[slug]/`
 - [ ] Referencja produktu dostępna (workflow_products.image_url lub mockup)
 - [ ] Persony wyjęte z raportu PDF (imię, wiek, sytuacja, garderoba, postawa)
 - [ ] Edge function wspiera `aspect_ratio` w body (jeśli nie, zaktualizuj)
+- [ ] **`bash scripts/audit-landing-aspect-ratios.sh [slug]` exit 0 PRZED generacją** (KROK 1.6)
 - [ ] Każdy prompt ma suffix kamera + „no text…"
 - [ ] Każdy obraz ręcznie sprawdzony (Read tool) przed użyciem
 - [ ] Photo system konsystentny we wszystkich obrazach
-- [ ] HTML podmieniony bez inline styles
+- [ ] HTML podmieniony bez inline styles, **`width`/`height` attr zaktualizowane do rzeczywistych wymiarów obrazu**
+- [ ] **Re-run `audit-landing-aspect-ratios.sh` PO podmianie URL — exit 0 obowiązkowo**
 - [ ] Playwright verify przechodzi
 - [ ] Commit + push + link dla użytkownika
 

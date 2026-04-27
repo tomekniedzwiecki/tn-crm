@@ -53,6 +53,7 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 |--------|-----|
 | `scripts/verify-brief.sh [slug]` | Walidacja `_brief.md` przed ETAP 2 (BLOKUJE jeśli niekompletny) |
 | `scripts/verify-landing.sh [slug]` | ~63 grep checks na index.html (target: ≥60 PASS, **0 FAIL obowiązkowe przed commitem**) |
+| `scripts/audit-landing-aspect-ratios.sh [slug]` | **CSS aspect-ratio vs `<img>` width/height** — łapie obcięcia z `object-fit: cover` przed wdrożeniem (target: 0 mismatch) |
 | `scripts/install-landing-hooks.sh` | **Instaluje git pre-commit hook** egzekwujący verify-landing 0 FAIL przed commitem (opt-in) |
 | `scripts/verify-all-landings.sh` | Regression check na 6 baseline'ach |
 | `scripts/screenshot-landing.sh [slug]` | Playwright screenshoty 3 viewporty |
