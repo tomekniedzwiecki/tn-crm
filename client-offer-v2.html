@@ -99,15 +99,22 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 12px;
-            align-items: start;
         }
         @media (min-width: 640px) {
-            .bento { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .bento {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 14px;
+                grid-auto-rows: minmax(240px, auto);
+            }
             .bento-wide { grid-column: span 2; }
             .bento-full { grid-column: span 2; }
         }
         @media (min-width: 1024px) {
-            .bento { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+            .bento {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 16px;
+                grid-auto-rows: minmax(260px, auto);
+            }
             .bento-wide { grid-column: span 2; }
             .bento-full { grid-column: span 4; }
         }
@@ -199,7 +206,7 @@
             align-items: flex-end;
             justify-content: space-between;
             gap: 5px;
-            height: 88px;
+            height: 110px;
             padding-top: 8px;
         }
         .viz-chart .bar {
@@ -380,8 +387,8 @@
             display: grid;
             grid-template-columns: repeat(4, 1fr);
             grid-template-rows: repeat(2, 1fr);
-            gap: 4px;
-            aspect-ratio: 4/2;
+            gap: 5px;
+            min-height: 130px;
         }
         .viz-media .tile {
             border-radius: 4px;
@@ -486,41 +493,63 @@
         }
         .viz-orderbar .b.dim { opacity: 0.25; }
 
-        /* === VIZ 08: Calendar === */
-        .viz-cal {
+        /* === VIZ 08: Channels (direct contact) === */
+        .viz-channels {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
-        .viz-cal-month {
+        @media (min-width: 640px) {
+            .viz-channels { grid-template-columns: repeat(4, 1fr); gap: 12px; }
+        }
+        .viz-channel {
+            position: relative;
             background: rgba(255,255,255,0.025);
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 8px;
-            padding: 8px;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 14px;
+            padding: 16px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.3s ease;
         }
-        .viz-cal-month-label {
+        .viz-channel:hover {
+            background: rgba(255,255,255,0.04);
+            border-color: var(--accent-30);
+        }
+        .viz-channel-ico {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: var(--accent-10);
+            border: 1px solid var(--accent-30);
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            box-shadow: 0 0 14px var(--accent-20);
+        }
+        .viz-channel-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+        }
+        .viz-channel-label {
+            font-size: 13px;
+            font-weight: 700;
+            color: white;
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+        }
+        .viz-channel-sub {
             font-family: 'JetBrains Mono', monospace;
             font-size: 9px;
-            text-transform: uppercase;
             color: rgba(255,255,255,0.4);
-            margin-bottom: 6px;
-            letter-spacing: 0.12em;
-            font-weight: 700;
-        }
-        .viz-cal-grid {
-            display: grid;
-            grid-template-columns: repeat(7, 1fr);
-            gap: 2px;
-        }
-        .viz-cal-day {
-            aspect-ratio: 1;
-            border-radius: 2px;
-            background: rgba(255,255,255,0.04);
-            min-height: 6px;
-        }
-        .viz-cal-day.m {
-            background: var(--accent);
-            box-shadow: 0 0 8px var(--accent-50);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
 
         /* Accordion */
@@ -1308,52 +1337,63 @@
                     <div class="b dim"></div><div class="b dim"></div><div class="b dim"></div>
                 </div>
             `,
-            calendar: () => {
-                const months = ['MIES. 1', 'MIES. 2', 'MIES. 3'];
-                const meetings = [[3, 17], [4, 18], [5, 16]];
-                return `
-                    <div class="viz-cal">
-                        ${months.map((label, i) => {
-                            let days = '';
-                            for (let d = 1; d <= 21; d++) {
-                                const isM = meetings[i].includes(d);
-                                days += `<div class="viz-cal-day ${isM ? 'm' : ''}"></div>`;
-                            }
-                            return `
-                                <div class="viz-cal-month">
-                                    <div class="viz-cal-month-label">${label}</div>
-                                    <div class="viz-cal-grid">${days}</div>
-                                </div>
-                            `;
-                        }).join('')}
+            channels: () => `
+                <div class="viz-channels">
+                    <div class="viz-channel">
+                        <div class="viz-channel-ico"><i class="ph-bold ph-phone"></i></div>
+                        <div class="viz-channel-text">
+                            <span class="viz-channel-label">Telefon</span>
+                            <span class="viz-channel-sub">Kiedy potrzeba</span>
+                        </div>
                     </div>
-                `;
-            },
+                    <div class="viz-channel">
+                        <div class="viz-channel-ico"><i class="ph-bold ph-whatsapp-logo"></i></div>
+                        <div class="viz-channel-text">
+                            <span class="viz-channel-label">WhatsApp</span>
+                            <span class="viz-channel-sub">Codziennie</span>
+                        </div>
+                    </div>
+                    <div class="viz-channel">
+                        <div class="viz-channel-ico"><i class="ph-bold ph-envelope"></i></div>
+                        <div class="viz-channel-text">
+                            <span class="viz-channel-label">E-mail</span>
+                            <span class="viz-channel-sub">Bez ograniczeń</span>
+                        </div>
+                    </div>
+                    <div class="viz-channel">
+                        <div class="viz-channel-ico"><i class="ph-bold ph-users-three"></i></div>
+                        <div class="viz-channel-text">
+                            <span class="viz-channel-label">Spotkania</span>
+                            <span class="viz-channel-sub">Osobiste</span>
+                        </div>
+                    </div>
+                </div>
+            `,
         };
 
-        // size: 'wide' = span 2 (lg), 'full' = span 4 (lg) / span 2 (sm), default = 1 col
         // Layout (lg, 4 cols):
-        //   Row 1: [01 wide] [02 wide]      = 4 ✓
-        //   Row 2: [03 wide] [04] [05]      = 4 ✓
-        //   Row 3: [06 wide] [07 wide]      = 4 ✓
-        //   Row 4: [08 full]                = 4 ✓
+        //   Row 1: [01 wide]  [02 wide]            ← 2+2 = 4
+        //   Row 2: [03 FULL = sklep dominant]      ← 4
+        //   Row 3: [04 wide]  [05 wide]            ← 2+2 = 4
+        //   Row 4: [06 wide]  [07 wide]            ← 2+2 = 4
+        //   Row 5: [08 FULL = kontakt dominant]    ← 4
         const FULL_PACKAGE_HIGHLIGHTS = [
             { color: '#f43f5e', size: 'wide', badge: '15 dni', viz: 'chart',
               title: 'Analiza rynku i wybór bestsellerowego produktu' },
             { color: '#8b5cf6', size: 'wide',                  viz: 'brand',
               title: 'Marka, logo i pełna identyfikacja wizualna' },
-            { color: '#06b6d4', size: 'wide',                  viz: 'browser',
+            { color: '#06b6d4', size: 'full',                  viz: 'browser',
               title: 'Profesjonalny sklep online pod Twoją domeną' },
-            { color: '#10b981', size: 'normal', badge: '10 dni', viz: 'docs',
-              title: 'Formalności i bramka płatności' },
-            { color: '#f97316', size: 'normal', badge: '7 dni',  viz: 'media',
-              title: 'Grafiki i video reklamowe' },
+            { color: '#10b981', size: 'wide', badge: '10 dni', viz: 'docs',
+              title: 'Formalności prawne, RODO i bramka płatności' },
+            { color: '#f97316', size: 'wide', badge: '7 dni',  viz: 'media',
+              title: 'Komplet grafik i video reklamowych' },
             { color: '#ec4899', size: 'wide',                  viz: 'polaroid',
               title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
             { color: '#f59e0b', size: 'wide', badge: 'Walidacja', viz: 'bignum',
               title: '1000 realnych zamówień przed startem solo' },
-            { color: '#0ea5e9', size: 'full', badge: '90 dni',  viz: 'calendar',
-              title: '3 miesiące mentoringu 1:1 z Tomkiem' },
+            { color: '#0ea5e9', size: 'full',                  viz: 'channels',
+              title: 'Bezpośrednia współpraca z Tomkiem' },
         ];
 
         function renderHighlights(milestones) {
