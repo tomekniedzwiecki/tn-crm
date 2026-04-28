@@ -5970,7 +5970,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         }
 
         // Render quick payment links
-        function renderOfferQuickLinks() {
+        async function renderOfferQuickLinks() {
             const wrap = document.getElementById('offer-quick-links');
             const list = document.getElementById('offer-quick-links-list');
             if (!wrap || !list || !clientOffer || !lead) return;
@@ -5989,14 +5989,31 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 : null;
             const remainingUrl = `${baseUrl}/checkout?amount=${remainingAmount}&description=${encodeURIComponent('Pozostała kwota: ' + offerName)}&lead_id=${lead.id}`;
 
+            // Check if deposit is already paid (only then show "remaining" link)
+            let depositPaid = false;
+            try {
+                const { data: paidDeposit } = await supabaseClient
+                    .from('orders')
+                    .select('id')
+                    .eq('lead_id', lead.id)
+                    .eq('status', 'paid')
+                    .eq('amount', depositAmount)
+                    .ilike('description', 'Zadatek%')
+                    .limit(1);
+                depositPaid = Array.isArray(paidDeposit) && paidDeposit.length > 0;
+            } catch (e) {
+                console.warn('[offer] Could not check deposit status:', e);
+            }
+
             const links = [
                 { label: 'Oferta', priceLabel: '', url: offerUrl, color: 'amber', icon: 'ph-handshake' },
-                { label: 'Zadatek', priceLabel: `${depositAmount} zł`, url: depositUrl, color: 'cyan', icon: 'ph-lock-key' },
+                { label: 'Zadatek', priceLabel: `${depositAmount} zł${depositPaid ? ' ✓' : ''}`, url: depositUrl, color: 'cyan', icon: 'ph-lock-key' },
             ];
             if (fullUrl) {
                 links.push({ label: 'Pełna kwota', priceLabel: `${fmtPLN(fullPrice)} zł`, url: fullUrl, color: 'amber', icon: 'ph-credit-card' });
             }
-            if (remainingAmount > 0 && remainingAmount !== fullPrice) {
+            // "Pozostała kwota" link — only when deposit is paid (otherwise client should pay deposit first)
+            if (depositPaid && remainingAmount > 0 && remainingAmount !== fullPrice) {
                 links.push({ label: 'Pozostała kwota', priceLabel: `${fmtPLN(remainingAmount)} zł`, url: remainingUrl, color: 'emerald', icon: 'ph-arrow-right' });
             }
 
