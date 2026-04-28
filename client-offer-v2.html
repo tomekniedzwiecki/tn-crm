@@ -521,24 +521,50 @@
         .viz-media .tile:nth-child(7) { background: linear-gradient(225deg, var(--accent-20), rgba(0,0,0,0.6)); }
         .viz-media .tile:nth-child(8) { background: linear-gradient(135deg, rgba(255,255,255,0.04), var(--accent-20)); }
 
-        /* === VIZ 06: Polaroid === */
-        .viz-polaroid-wrap {
-            display: flex;
-            justify-content: center;
-            padding: 4px 0;
+        /* === VIZ 06: Polaroid stack === */
+        .viz-polaroid-stack {
+            position: relative;
+            height: 138px;
+            margin-bottom: 14px;
         }
         .viz-polaroid {
+            position: absolute;
+            left: 50%;
+            top: 8px;
             background: #fafafa;
-            padding: 7px 7px 24px;
+            padding: 6px 6px 22px;
             border-radius: 3px;
-            transform: rotate(-3deg);
-            box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
-            transition: transform 0.4s ease;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 1px 3px rgba(0,0,0,0.3);
+            transition: transform 0.45s cubic-bezier(0.4,0,0.2,1);
+            transform-origin: center;
         }
-        .bento-cell:hover .viz-polaroid { transform: rotate(-1deg) scale(1.02); }
+        .viz-polaroid.p1 {
+            transform: translate(-50%, 0) rotate(-3deg);
+            z-index: 3;
+        }
+        .viz-polaroid.p2 {
+            transform: translate(-50%, 0) translateX(28px) rotate(6deg);
+            z-index: 2;
+            opacity: 0.96;
+        }
+        .viz-polaroid.p3 {
+            transform: translate(-50%, 0) translateX(-28px) rotate(-9deg);
+            z-index: 1;
+            opacity: 0.88;
+        }
+        .bento-cell:hover .viz-polaroid.p1 {
+            transform: translate(-50%, -4px) rotate(-2deg);
+        }
+        .bento-cell:hover .viz-polaroid.p2 {
+            transform: translate(-50%, -2px) translateX(40px) rotate(8deg);
+        }
+        .bento-cell:hover .viz-polaroid.p3 {
+            transform: translate(-50%, -2px) translateX(-40px) rotate(-11deg);
+        }
+
         .viz-polaroid-img {
-            width: 110px;
-            height: 110px;
+            width: 88px;
+            height: 88px;
             background: linear-gradient(135deg, var(--accent) 0%, rgba(0,0,0,0.7) 100%);
             border-radius: 2px;
             display: flex;
@@ -548,57 +574,106 @@
             position: relative;
             overflow: hidden;
         }
+        .viz-polaroid-img.alt-1 {
+            background: linear-gradient(225deg, var(--accent) 0%, rgba(0,0,0,0.75) 100%);
+        }
+        .viz-polaroid-img.alt-2 {
+            background: linear-gradient(45deg, var(--accent) 0%, rgba(0,0,0,0.75) 100%);
+        }
         .viz-polaroid-img::after {
             content: '';
             position: absolute;
             inset: 0;
-            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 50%);
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.25), transparent 50%);
         }
         .viz-polaroid-img i {
-            font-size: 36px;
-            opacity: 0.9;
+            font-size: 28px;
+            opacity: 0.92;
             position: relative;
             z-index: 1;
         }
-
-        /* === VIZ 07: Big number === */
-        .viz-bignum {
+        .viz-polaroid-cap {
             display: flex;
-            align-items: baseline;
-            gap: 12px;
+            align-items: center;
+            gap: 9px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            letter-spacing: 0.05em;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .viz-polaroid-cap .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            flex-shrink: 0;
+            box-shadow: 0 0 6px var(--accent-50);
+        }
+
+        /* === VIZ 07: Big number + growth chart === */
+        .viz-bignum {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: 18px;
+            align-items: center;
             margin-bottom: 14px;
+        }
+        .viz-bignum-num {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
         .viz-bignum-n {
             font-family: 'Inter', sans-serif;
-            font-size: 60px;
             font-weight: 800;
-            line-height: 0.9;
+            font-size: 50px;
+            line-height: 0.85;
             letter-spacing: -0.05em;
-            color: white;
-            background: linear-gradient(180deg, white 0%, var(--accent) 110%);
+            background: linear-gradient(180deg, white 0%, var(--accent) 115%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-        }
-        .viz-bignum-suffix {
-            font-size: 28px;
-            font-weight: 800;
-            color: var(--accent);
-            line-height: 1;
-        }
-        .viz-orderbar {
             display: flex;
-            gap: 3px;
-            align-items: flex-end;
-            height: 22px;
+            align-items: baseline;
         }
-        .viz-orderbar .b {
-            flex: 1;
-            background: var(--accent);
-            border-radius: 2px;
-            opacity: 0.8;
+        .viz-bignum-n .plus {
+            font-size: 28px;
+            color: var(--accent);
+            -webkit-text-fill-color: var(--accent);
+            margin-left: 2px;
         }
-        .viz-orderbar .b.dim { opacity: 0.25; }
+        .viz-bignum-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.55);
+        }
+        .viz-bignum-chart {
+            color: var(--accent);
+            display: block;
+            width: 100%;
+            height: 70px;
+        }
+        .viz-bignum-axis {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            color: rgba(255,255,255,0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding-top: 11px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .viz-bignum-axis .ok {
+            color: var(--accent);
+            font-weight: 700;
+        }
 
         /* === VIZ 08: Channels (direct contact) === */
         .viz-channels {
@@ -1460,24 +1535,49 @@
                 </div>
             `,
             polaroid: () => `
-                <div class="viz-polaroid-wrap">
-                    <div class="viz-polaroid">
+                <div class="viz-polaroid-stack">
+                    <div class="viz-polaroid p3">
+                        <div class="viz-polaroid-img alt-2"></div>
+                    </div>
+                    <div class="viz-polaroid p2">
+                        <div class="viz-polaroid-img alt-1"></div>
+                    </div>
+                    <div class="viz-polaroid p1">
                         <div class="viz-polaroid-img">
-                            <i class="ph-bold ph-user-focus"></i>
+                            <i class="ph-bold ph-camera"></i>
                         </div>
                     </div>
+                </div>
+                <div class="viz-polaroid-cap">
+                    <span class="dot"></span>
+                    <span>Sesja produktowa · zdjęcia + reels</span>
                 </div>
             `,
             bignum: () => `
                 <div class="viz-bignum">
-                    <span class="viz-bignum-n">1000</span>
-                    <span class="viz-bignum-suffix">+</span>
+                    <div class="viz-bignum-num">
+                        <div class="viz-bignum-n">1000<span class="plus">+</span></div>
+                        <div class="viz-bignum-label">Zamówień</div>
+                    </div>
+                    <svg class="viz-bignum-chart" viewBox="0 0 200 70" preserveAspectRatio="none" aria-hidden="true">
+                        <defs>
+                            <linearGradient id="bn-fill" x1="0" x2="0" y1="0" y2="1">
+                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.35"/>
+                                <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+                            </linearGradient>
+                        </defs>
+                        <path d="M 0 65 L 25 62 L 50 56 L 80 46 L 110 32 L 140 18 L 170 8 L 200 3 L 200 70 L 0 70 Z"
+                              fill="url(#bn-fill)"/>
+                        <path d="M 0 65 L 25 62 L 50 56 L 80 46 L 110 32 L 140 18 L 170 8 L 200 3"
+                              stroke="currentColor" stroke-width="1.8" fill="none"
+                              stroke-linejoin="round" stroke-linecap="round"/>
+                        <circle cx="200" cy="3" r="3.5" fill="currentColor"/>
+                    </svg>
                 </div>
-                <div class="viz-orderbar">
-                    <div class="b"></div><div class="b"></div><div class="b"></div>
-                    <div class="b"></div><div class="b"></div><div class="b"></div>
-                    <div class="b"></div><div class="b"></div><div class="b dim"></div>
-                    <div class="b dim"></div><div class="b dim"></div><div class="b dim"></div>
+                <div class="viz-bignum-axis">
+                    <span>Start: 0 zam.</span>
+                    <span>4-6 mies.</span>
+                    <span class="ok">1000+ ✓</span>
                 </div>
             `,
             channels: () => `
