@@ -6355,7 +6355,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }).join('');
         }
 
-        // Load archive of all client_offers for this lead (full history)
+        // Load full history of all offers for this lead — LIVE (client_offers) + DELETED (lead_activities snapshots)
         async function loadOfferArchive() {
             const wrapper = document.getElementById('offer-archive-wrapper');
             const container = document.getElementById('offer-archive');
@@ -6363,35 +6363,77 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (!wrapper || !container || !lead) return;
 
             try {
-                const { data: archive } = await supabaseClient
-                    .from('client_offers')
-                    .select('id, offer_id, custom_price, unique_token, valid_until, view_count, viewed_at, created_at, offers(id, name, price)')
-                    .eq('lead_id', lead.id)
-                    .order('created_at', { ascending: false });
+                // Fetch both sources in parallel
+                const [liveRes, deletedRes] = await Promise.all([
+                    supabaseClient
+                        .from('client_offers')
+                        .select('id, offer_id, custom_price, unique_token, valid_until, view_count, viewed_at, created_at, offers(id, name, price)')
+                        .eq('lead_id', lead.id)
+                        .order('created_at', { ascending: false }),
+                    supabaseClient
+                        .from('lead_activities')
+                        .select('id, created_at, metadata')
+                        .eq('lead_id', lead.id)
+                        .eq('type', 'offer_deleted')
+                        .order('created_at', { ascending: false })
+                ]);
 
-                if (!archive || archive.length === 0) {
+                const liveOffers = liveRes.data || [];
+                const deletedActs = deletedRes.data || [];
+
+                // Normalize both into a unified shape
+                const allOffers = [];
+                liveOffers.forEach(co => {
+                    allOffers.push({
+                        kind: 'live',
+                        id: co.id,
+                        created_at: co.created_at,
+                        offer_name: co.offers?.name || 'Oferta',
+                        price: parseFloat(co.custom_price || co.offers?.price || 0),
+                        valid_until: co.valid_until,
+                        view_count: co.view_count || 0,
+                        isCurrent: co.id === clientOffer?.id
+                    });
+                });
+                deletedActs.forEach(act => {
+                    const m = act.metadata || {};
+                    allOffers.push({
+                        kind: 'deleted',
+                        id: m.client_offer_id || act.id,
+                        // Use original creation time (when offer was made), not deletion time
+                        created_at: m.original_created_at || act.created_at,
+                        deleted_at: act.created_at,
+                        offer_name: m.offer_name || 'Oferta usunięta',
+                        price: parseFloat(m.price || 0),
+                        valid_until: m.valid_until,
+                        view_count: m.view_count || 0,
+                        isCurrent: false
+                    });
+                });
+
+                // Sort by created_at desc (newest first)
+                allOffers.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+                if (allOffers.length === 0) {
                     wrapper.classList.add('hidden');
                     return;
                 }
 
                 wrapper.classList.remove('hidden');
-                if (counter) counter.textContent = archive.length;
+                if (counter) counter.textContent = allOffers.length;
 
                 const now = new Date();
-                const currentClientOfferId = clientOffer?.id;
 
-                container.innerHTML = archive.map((co, i) => {
-                    const offer = co.offers;
-                    const offerName = offer?.name || 'Oferta (usunięta)';
-                    const price = parseFloat(co.custom_price || offer?.price || 0);
-                    const validDate = co.valid_until ? new Date(co.valid_until) : null;
+                container.innerHTML = allOffers.map(o => {
+                    const validDate = o.valid_until ? new Date(o.valid_until) : null;
                     const isExpired = validDate && validDate < now;
-                    const isCurrent = co.id === currentClientOfferId;
 
                     let badge, badgeColor;
-                    if (isCurrent && isExpired) {
+                    if (o.kind === 'deleted') {
+                        badge = 'usunięta'; badgeColor = 'red';
+                    } else if (o.isCurrent && isExpired) {
                         badge = 'wygasła'; badgeColor = 'red';
-                    } else if (isCurrent) {
+                    } else if (o.isCurrent) {
                         badge = 'aktualna'; badgeColor = 'amber';
                     } else if (isExpired) {
                         badge = 'wygasła'; badgeColor = 'zinc';
@@ -6399,23 +6441,22 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                         badge = 'zastąpiona'; badgeColor = 'zinc';
                     }
 
-                    const createdShort = new Date(co.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-                    const validShort = validDate ? validDate.toLocaleDateString('pl-PL', { day: '2-digit', month: 'short' }) : '—';
-                    const offerUrl = `${window.location.origin}/p/${co.unique_token}`;
-                    const safeUrl = offerUrl.replace(/'/g, "\\'");
+                    const createdShort = new Date(o.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    const isCurrentRow = o.isCurrent;
+                    const isDeletedRow = o.kind === 'deleted';
 
                     return `
-                        <div class="px-4 py-3 ${isCurrent ? 'bg-amber-500/5' : ''}">
+                        <div class="px-4 py-3 ${isCurrentRow ? 'bg-amber-500/5' : ''} ${isDeletedRow ? 'opacity-70' : ''}">
                             <div class="flex items-baseline justify-between gap-2 mb-1.5">
-                                <span class="text-white text-sm font-semibold truncate">${escapeHtml(offerName)}</span>
+                                <span class="text-white text-sm font-semibold truncate ${isDeletedRow ? 'line-through decoration-zinc-600' : ''}">${escapeHtml(o.offer_name)}</span>
                                 <span class="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-${badgeColor}-500/15 text-${badgeColor}-400 border border-${badgeColor}-500/25 flex-shrink-0">${badge}</span>
                             </div>
                             <div class="flex items-center gap-2 text-[11px] text-zinc-500 flex-wrap">
-                                <span class="text-${badgeColor}-400/90 font-mono font-semibold">${fmtPLN(price)} zł</span>
+                                <span class="text-${badgeColor}-400/90 font-mono font-semibold">${fmtPLN(o.price)} zł</span>
                                 <span class="text-zinc-700">·</span>
                                 <span class="font-mono">${createdShort}</span>
                                 <span class="text-zinc-700">·</span>
-                                <span class="flex items-center gap-1"><i class="ph ph-eye"></i> ${co.view_count || 0} wyświetleń</span>
+                                <span class="flex items-center gap-1"><i class="ph ph-eye"></i> ${o.view_count} wyświetleń</span>
                             </div>
                         </div>
                     `;
