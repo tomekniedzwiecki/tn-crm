@@ -94,6 +94,44 @@
             -webkit-backdrop-filter: blur(12px);
         }
 
+        /* Deliverable cards with mockup area */
+        .deliverable-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .deliverable-card:hover {
+            border-color: rgba(245, 158, 11, 0.3);
+            transform: translateY(-2px);
+        }
+        .deliverable-mockup {
+            aspect-ratio: 16/10;
+            background: radial-gradient(ellipse at top, rgba(245, 158, 11, 0.08), transparent 60%), #0a0a0a;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .deliverable-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 3px 8px;
+            border-radius: 6px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            z-index: 2;
+        }
+
         /* Accordion */
         .acc-content {
             max-height: 0;
@@ -447,7 +485,7 @@
         <footer class="border-t border-white/5 mt-8 pb-24 sm:pb-12">
             <div class="max-w-3xl mx-auto px-6 py-6 text-center">
                 <p class="text-zinc-600 text-xs">
-                    Powered by <span class="text-zinc-400">TN Digital</span>
+                    <span class="text-zinc-400">Buduję e-biznesy od 15 lat</span>
                 </p>
             </div>
         </footer>
@@ -773,29 +811,17 @@
             loadPaymentSchedule();
         }
 
-        // Color palette per box (literal Tailwind classes — must be present in source for JIT)
-        const COLOR_CLASSES = {
-            rose:    { bg: 'bg-rose-500/15',    border: 'border-rose-500/25',    text: 'text-rose-400',    badgeBg: 'bg-rose-500/10',    badgeText: 'text-rose-300' },
-            violet:  { bg: 'bg-violet-500/15',  border: 'border-violet-500/25',  text: 'text-violet-400',  badgeBg: 'bg-violet-500/10',  badgeText: 'text-violet-300' },
-            cyan:    { bg: 'bg-cyan-500/15',    border: 'border-cyan-500/25',    text: 'text-cyan-400',    badgeBg: 'bg-cyan-500/10',    badgeText: 'text-cyan-300' },
-            emerald: { bg: 'bg-emerald-500/15', border: 'border-emerald-500/25', text: 'text-emerald-400', badgeBg: 'bg-emerald-500/10', badgeText: 'text-emerald-300' },
-            orange:  { bg: 'bg-orange-500/15',  border: 'border-orange-500/25',  text: 'text-orange-400',  badgeBg: 'bg-orange-500/10',  badgeText: 'text-orange-300' },
-            pink:    { bg: 'bg-pink-500/15',    border: 'border-pink-500/25',    text: 'text-pink-400',    badgeBg: 'bg-pink-500/10',    badgeText: 'text-pink-300' },
-            amber:   { bg: 'bg-amber-500/15',   border: 'border-amber-500/25',   text: 'text-amber-400',   badgeBg: 'bg-amber-500/10',   badgeText: 'text-amber-300' },
-            sky:     { bg: 'bg-sky-500/15',     border: 'border-sky-500/25',     text: 'text-sky-400',     badgeBg: 'bg-sky-500/10',     badgeText: 'text-sky-300' },
-        };
-
         // Custom highlights for "Budowa sklepu pełen pakiet"
         const FULL_PACKAGE_OFFER_ID = '30bf199b-8bc1-4810-8716-43dbffeb9113';
         const FULL_PACKAGE_HIGHLIGHTS = [
-            { color: 'rose',    icon: 'magnifying-glass-plus', title: 'Analiza rynku',       badge: '15 dni' },
-            { color: 'violet',  icon: 'palette',               title: 'Marka i logo' },
-            { color: 'cyan',    icon: 'storefront',            title: 'Sklep online' },
-            { color: 'emerald', icon: 'shield-check',          title: 'Formalności i RODO',  badge: '10 dni' },
-            { color: 'orange',  icon: 'film-strip',            title: 'Reklamy i video',     badge: '7 dni' },
-            { color: 'pink',    icon: 'camera',                title: 'Sesja z influencerem' },
-            { color: 'amber',   icon: 'rocket-launch',         title: '1000 zamówień',       badge: 'walidacja' },
-            { color: 'sky',     icon: 'chalkboard-teacher',    title: 'Mentoring 1:1',       badge: '3 mies.' },
+            { color: '#f43f5e', icon: 'ph-magnifying-glass-plus', title: 'Analiza rynku',         badge: '15 dni' },
+            { color: '#8b5cf6', icon: 'ph-paint-brush',           title: 'Marka i logo' },
+            { color: '#06b6d4', icon: 'ph-storefront',            title: 'Sklep online' },
+            { color: '#10b981', icon: 'ph-shield-check',          title: 'Formalności i RODO',    badge: '10 dni' },
+            { color: '#f97316', icon: 'ph-film-strip',            title: 'Reklamy i video',       badge: '7 dni' },
+            { color: '#ec4899', icon: 'ph-camera',                title: 'Sesja z influencerem' },
+            { color: '#f59e0b', icon: 'ph-rocket-launch',         title: '1000 zamówień',         badge: 'walidacja' },
+            { color: '#0ea5e9', icon: 'ph-chalkboard-teacher',    title: 'Mentoring 1:1',         badge: '3 mies.' },
         ];
 
         function renderHighlights(milestones) {
@@ -804,39 +830,26 @@
 
             // Custom layout for "Budowa sklepu pełen pakiet"
             if (offer.id === FULL_PACKAGE_OFFER_ID) {
-                // Switch to 4-column grid for compact tiles
                 grid.classList.remove('md:grid-cols-2');
-                grid.classList.add('grid-cols-2', 'md:grid-cols-4');
+                grid.classList.add('grid-cols-2', 'lg:grid-cols-4');
 
-                grid.innerHTML = FULL_PACKAGE_HIGHLIGHTS.map(b => {
-                    const c = COLOR_CLASSES[b.color];
-                    // Per-color subtle background tint via inline gradient (Tailwind would need literal classes)
-                    const tints = {
-                        rose:    'rgba(244,63,94,0.08)',
-                        violet:  'rgba(139,92,246,0.08)',
-                        cyan:    'rgba(6,182,212,0.08)',
-                        emerald: 'rgba(16,185,129,0.08)',
-                        orange:  'rgba(249,115,22,0.08)',
-                        pink:    'rgba(236,72,153,0.08)',
-                        amber:   'rgba(245,158,11,0.08)',
-                        sky:     'rgba(14,165,233,0.08)',
-                    };
-                    const tint = tints[b.color];
-                    return `
-                        <div class="relative rounded-2xl border border-white/10 hover:border-white/20 p-4 sm:p-5 transition-all overflow-hidden group"
-                             style="background: radial-gradient(circle at top right, ${tint}, transparent 70%), rgba(24,24,27,0.5);">
+                grid.innerHTML = FULL_PACKAGE_HIGHLIGHTS.map(b => `
+                    <div class="deliverable-card">
+                        <div class="deliverable-mockup" style="background: radial-gradient(ellipse at top, ${b.color}1f, transparent 65%), #0a0a0a;">
                             ${b.badge ? `
-                                <span class="absolute top-2.5 right-2.5 ${c.badgeBg} ${c.badgeText} text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded">
+                                <span class="deliverable-badge"
+                                      style="background: ${b.color}1a; color: ${b.color}; border: 1px solid ${b.color}33;">
                                     ${escapeHtml(b.badge)}
                                 </span>
                             ` : ''}
-                            <div class="w-12 h-12 sm:w-14 sm:h-14 ${c.bg} border ${c.border} rounded-2xl flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                                <i class="ph-bold ph-${b.icon} text-2xl sm:text-3xl ${c.text}"></i>
-                            </div>
-                            <h4 class="text-white font-bold text-sm sm:text-base leading-tight">${escapeHtml(b.title)}</h4>
+                            <i class="ph-fill ${b.icon} text-6xl sm:text-7xl"
+                               style="color: ${b.color}; opacity: 0.9; filter: drop-shadow(0 8px 24px ${b.color}44);"></i>
                         </div>
-                    `;
-                }).join('');
+                        <div class="p-4 sm:p-5">
+                            <h4 class="text-white font-bold text-sm sm:text-base leading-snug">${escapeHtml(b.title)}</h4>
+                        </div>
+                    </div>
+                `).join('');
                 document.getElementById('guarantee-card').classList.remove('hidden');
                 section.classList.remove('hidden');
                 return;
