@@ -544,6 +544,11 @@
                         <i class="ph ph-user-circle"></i>
                         Informacje podstawowe
                     </button>
+                    <button class="tab-btn" data-tab="offer" onclick="switchTab('offer')">
+                        <i class="ph ph-handshake text-amber-400"></i>
+                        Oferta
+                        <span class="tab-badge" id="offer-tab-count">—</span>
+                    </button>
                     <button class="tab-btn" data-tab="activity" onclick="switchTab('activity')">
                         <i class="ph ph-note-pencil"></i>
                         Notatki
@@ -664,7 +669,53 @@
                             </div>
                         </div>
 
-                        <!-- Deal & Oferta - Combined Section -->
+                        <!-- Mini-summary of offer (full management in tab "Oferta") -->
+                        <div id="info-offer-summary" class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                            <div class="px-4 py-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-white/5 flex items-center justify-between">
+                                <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                    <i class="ph ph-handshake text-amber-400"></i>
+                                    Oferta
+                                </h3>
+                                <span id="info-offer-status" class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 border border-white/5">brak</span>
+                            </div>
+                            <div class="p-4">
+                                <!-- No offer state -->
+                                <div id="info-offer-empty" class="text-sm text-zinc-400">
+                                    Klient nie ma jeszcze utworzonej oferty.
+                                    <button onclick="switchTab('offer')" class="block mt-3 w-full text-amber-400 hover:text-amber-300 font-medium py-2 border border-amber-500/30 hover:border-amber-500/50 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                                        <i class="ph ph-plus"></i>
+                                        Utwórz ofertę
+                                    </button>
+                                </div>
+                                <!-- Offer exists state -->
+                                <div id="info-offer-exists" class="hidden">
+                                    <div class="flex items-baseline justify-between gap-2 mb-2">
+                                        <div id="info-offer-name" class="text-white font-semibold text-sm truncate min-w-0">-</div>
+                                        <div id="info-offer-price" class="text-amber-400 font-bold text-sm flex-shrink-0">0 zł</div>
+                                    </div>
+                                    <div class="flex items-center gap-3 text-[11px] text-zinc-500 mb-3">
+                                        <span class="flex items-center gap-1">
+                                            <i class="ph ph-eye text-cyan-400/70"></i>
+                                            <span id="info-offer-views" class="text-zinc-300">0</span>
+                                        </span>
+                                        <span class="flex items-center gap-1">
+                                            <i class="ph ph-calendar text-amber-400/70"></i>
+                                            do <span id="info-offer-valid" class="text-zinc-300">-</span>
+                                        </span>
+                                        <span class="flex items-center gap-1 ml-auto">
+                                            <i class="ph ph-credit-card text-emerald-400/70"></i>
+                                            <span id="info-offer-paid" class="text-zinc-300">0 zł</span>
+                                        </span>
+                                    </div>
+                                    <button onclick="switchTab('offer')" class="w-full text-amber-400 hover:text-amber-300 font-medium py-2 border border-amber-500/30 hover:border-amber-500/50 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm">
+                                        <i class="ph ph-arrow-right"></i>
+                                        Pełne zarządzanie ofertą
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Deal & Oferta - Combined Section (will be MOVED to tab "Oferta" by JS) -->
                         <div id="client-offer-section" class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden hidden">
                             <!-- Header -->
                             <div class="px-4 py-3 bg-gradient-to-r from-amber-500/10 to-transparent border-b border-white/5 flex items-center justify-between">
@@ -1148,6 +1199,134 @@
                     </div>
                 </div>
                 </div><!-- /tab-info -->
+
+                <!-- Tab: Oferta -->
+                <div id="tab-offer" class="tab-content">
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+                        <!-- Left Column - Main offer management -->
+                        <div class="lg:col-span-2 space-y-6">
+                            <!-- Active offer card (placeholder, populated by JS) -->
+                            <div id="offer-active-card" class="hidden bg-zinc-900/40 rounded-xl border border-amber-500/20 overflow-hidden">
+                                <div class="px-4 py-3 bg-gradient-to-r from-amber-500/15 to-transparent border-b border-amber-500/15 flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-handshake text-amber-400"></i>
+                                        Aktywna oferta
+                                    </h3>
+                                    <span id="offer-active-status" class="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">—</span>
+                                </div>
+                                <div class="p-4 sm:p-5">
+                                    <div class="flex items-baseline justify-between gap-3 mb-3">
+                                        <div class="min-w-0">
+                                            <div id="offer-active-name" class="text-white font-semibold text-base truncate">-</div>
+                                            <div id="offer-active-meta" class="text-zinc-500 text-xs mt-0.5">—</div>
+                                        </div>
+                                        <div class="text-right flex-shrink-0">
+                                            <div id="offer-active-price" class="text-amber-400 font-bold text-xl leading-none">0 zł</div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-4 text-xs text-zinc-500 pt-3 border-t border-white/5">
+                                        <span class="flex items-center gap-1.5">
+                                            <i class="ph ph-eye text-cyan-400/70"></i>
+                                            <span id="offer-active-views" class="text-zinc-300 font-medium">0</span> wyświetleń
+                                        </span>
+                                        <span class="flex items-center gap-1.5">
+                                            <i class="ph ph-clock text-emerald-400/70"></i>
+                                            <span id="offer-active-last-view" class="text-zinc-300 font-medium">—</span>
+                                        </span>
+                                        <span class="flex items-center gap-1.5 ml-auto">
+                                            <i class="ph ph-credit-card text-amber-400/70"></i>
+                                            <span id="offer-active-paid" class="text-zinc-300 font-medium">0 / 0 zł</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Quick payment links -->
+                            <div id="offer-quick-links" class="hidden bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="px-4 py-3 bg-gradient-to-r from-emerald-500/10 to-transparent border-b border-white/5 flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-link-simple text-emerald-400"></i>
+                                        Szybkie linki do płatności
+                                    </h3>
+                                    <span class="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">do skopiowania</span>
+                                </div>
+                                <div class="divide-y divide-white/5" id="offer-quick-links-list">
+                                    <!-- populated by JS -->
+                                </div>
+                            </div>
+
+                            <!-- Offer creation/edit (the existing client-offer-section will be MOVED here by JS) -->
+                            <div id="offer-management-mount"></div>
+                        </div>
+
+                        <!-- Right Column - Sidebar -->
+                        <div class="space-y-6">
+                            <!-- Timeline -->
+                            <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="px-4 py-3 bg-zinc-800/40 border-b border-white/5 flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-clock-clockwise text-zinc-400"></i>
+                                        Historia
+                                    </h3>
+                                    <span id="offer-timeline-count" class="text-[10px] font-mono text-zinc-500">0</span>
+                                </div>
+                                <div id="offer-timeline" class="p-4 max-h-[500px] overflow-y-auto">
+                                    <div class="text-center text-zinc-600 text-xs py-4">
+                                        <i class="ph ph-circle-notch animate-spin"></i> Ładowanie...
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Payments / orders -->
+                            <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="px-4 py-3 bg-zinc-800/40 border-b border-white/5 flex items-center justify-between">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-receipt text-emerald-400"></i>
+                                        Wpłaty
+                                    </h3>
+                                    <span id="offer-payments-summary" class="text-[10px] font-mono text-emerald-400">0 zł</span>
+                                </div>
+                                <div id="offer-payments" class="divide-y divide-white/5">
+                                    <div class="px-4 py-6 text-center text-zinc-600 text-xs">
+                                        <i class="ph ph-circle-notch animate-spin"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Related (workflow + invoices) -->
+                            <div class="bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden">
+                                <div class="px-4 py-3 bg-zinc-800/40 border-b border-white/5">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-graph text-violet-400"></i>
+                                        Powiązane
+                                    </h3>
+                                </div>
+                                <div id="offer-related" class="p-4 space-y-2 text-sm">
+                                    <div class="text-center text-zinc-600 text-xs py-2">
+                                        <i class="ph ph-circle-notch animate-spin"></i>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Archive (historical offers) -->
+                            <details id="offer-archive-wrapper" class="hidden bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden group">
+                                <summary class="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-zinc-800/30 transition-colors">
+                                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                                        <i class="ph ph-archive text-zinc-500"></i>
+                                        Archiwum ofert
+                                        <span id="offer-archive-count" class="text-[10px] font-mono text-zinc-500 ml-1">0</span>
+                                    </h3>
+                                    <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
+                                </summary>
+                                <div id="offer-archive" class="border-t border-white/5 divide-y divide-white/5">
+                                    <!-- populated by JS -->
+                                </div>
+                            </details>
+                        </div>
+
+                    </div>
+                </div><!-- /tab-offer -->
 
                 <!-- Tab: Notatki -->
                 <div id="tab-activity" class="tab-content">
@@ -3912,13 +4091,19 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             const existsState = document.getElementById('client-offer-exists');
             const offerId = document.getElementById('field-offer').value;
 
+            // Section is always visible in tab "Oferta" (form to create + existing state)
+            section.classList.remove('hidden');
+
+            // Always also refresh summaries (mini in info + active card in offer tab)
+            renderOfferSummaries();
+            renderOfferQuickLinks();
+
             // Show section only if offer is selected
             if (!offerId) {
-                section.classList.add('hidden');
+                emptyState?.classList.remove('hidden');
+                existsState?.classList.add('hidden');
                 return;
             }
-
-            section.classList.remove('hidden');
 
             if (clientOffer) {
                 // Show existing offer
@@ -4838,6 +5023,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {
             setTimeout(initPaymentScheduleUI, 100);
+            // Move full offer-management section from info tab → tab "Oferta"
+            moveOfferSectionToOfferTab();
         });
 
         async function generateClientOffer() {
@@ -5645,11 +5832,422 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 loadEmailHistoryFull();
             }
 
+            // Lazy-load offer tab data on first open (or refresh on every open)
+            if (tabName === 'offer') {
+                refreshOfferTabData();
+            }
+
             // Prefill NDA form from lead on first open
             if (tabName === 'nda') {
                 prefillNdaForm();
                 renderNdaPreview();
             }
+        }
+
+        // ============ OFFER TAB ============
+
+        // Move full offer-management section from info tab → offer tab (DOM ready)
+        function moveOfferSectionToOfferTab() {
+            const section = document.getElementById('client-offer-section');
+            const mount = document.getElementById('offer-management-mount');
+            if (section && mount && !mount.contains(section)) {
+                mount.appendChild(section);
+                // In tab-offer, the section is always visible (no hidden state)
+                section.classList.remove('hidden');
+            }
+        }
+
+        // Format relative date helper
+        function formatRelativeDate(dateStr) {
+            if (!dateStr) return '—';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            if (diff < 60) return 'przed chwilą';
+            if (diff < 3600) return `${Math.floor(diff / 60)} min temu`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)} godz. temu`;
+            if (diff < 604800) return `${Math.floor(diff / 86400)} dni temu`;
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
+        }
+
+        function fmtPLN(value) {
+            return new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(value || 0);
+        }
+
+        // Render mini-summary in info tab + active offer card in offer tab
+        function renderOfferSummaries() {
+            const infoEmpty = document.getElementById('info-offer-empty');
+            const infoExists = document.getElementById('info-offer-exists');
+            const infoStatus = document.getElementById('info-offer-status');
+            const tabBadge = document.getElementById('offer-tab-count');
+            const activeCard = document.getElementById('offer-active-card');
+
+            if (!clientOffer) {
+                if (infoEmpty) infoEmpty.classList.remove('hidden');
+                if (infoExists) infoExists.classList.add('hidden');
+                if (infoStatus) {
+                    infoStatus.textContent = 'brak';
+                    infoStatus.className = 'text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-500 border border-white/5';
+                }
+                if (tabBadge) tabBadge.textContent = '—';
+                if (activeCard) activeCard.classList.add('hidden');
+                return;
+            }
+
+            const offer = offers.find(o => o.id === clientOffer.offer_id) || lead.offer || null;
+            const offerName = offer?.name || 'Oferta';
+            const fullPrice = parseFloat(clientOffer.custom_price || offer?.price || lead.value || 0);
+            const validDate = clientOffer.valid_until ? new Date(clientOffer.valid_until).toLocaleDateString('pl-PL') : '—';
+            const isExpired = clientOffer.valid_until && new Date(clientOffer.valid_until) < new Date();
+
+            let statusText, statusClass;
+            if (isExpired) {
+                statusText = 'wygasła';
+                statusClass = 'bg-red-500/15 text-red-400 border border-red-500/30';
+            } else if (clientOffer.view_count > 0) {
+                statusText = 'oglądana';
+                statusClass = 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30';
+            } else {
+                statusText = 'aktywna';
+                statusClass = 'bg-amber-500/15 text-amber-400 border border-amber-500/30';
+            }
+
+            // Info mini-summary
+            if (infoEmpty) infoEmpty.classList.add('hidden');
+            if (infoExists) infoExists.classList.remove('hidden');
+            if (infoStatus) {
+                infoStatus.textContent = statusText;
+                infoStatus.className = 'text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full ' + statusClass;
+            }
+            const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setText('info-offer-name', offerName);
+            setText('info-offer-price', fmtPLN(fullPrice) + ' zł');
+            setText('info-offer-views', clientOffer.view_count || 0);
+            setText('info-offer-valid', validDate);
+            if (tabBadge) tabBadge.textContent = '✓';
+
+            // Active offer card in tab-offer
+            if (activeCard) activeCard.classList.remove('hidden');
+            const activeStatus = document.getElementById('offer-active-status');
+            if (activeStatus) {
+                activeStatus.textContent = statusText;
+                activeStatus.className = 'text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-full ' + statusClass;
+            }
+            setText('offer-active-name', offerName);
+            setText('offer-active-meta', `Ważna do ${validDate} · Token: ${(clientOffer.unique_token || '').slice(0, 12)}…`);
+            setText('offer-active-price', fmtPLN(fullPrice) + ' zł');
+            setText('offer-active-views', clientOffer.view_count || 0);
+            setText('offer-active-last-view', clientOffer.viewed_at ? formatRelativeDate(clientOffer.viewed_at) : 'nigdy');
+        }
+
+        // Render quick payment links
+        function renderOfferQuickLinks() {
+            const wrap = document.getElementById('offer-quick-links');
+            const list = document.getElementById('offer-quick-links-list');
+            if (!wrap || !list || !clientOffer || !lead) return;
+
+            const offer = offers.find(o => o.id === clientOffer.offer_id) || lead.offer || null;
+            const fullPrice = parseFloat(clientOffer.custom_price || offer?.price || lead.value || 0);
+            const baseUrl = window.location.origin;
+            const offerName = offer?.name || 'Oferta';
+            const depositAmount = 500;
+            const remainingAmount = Math.max(0, fullPrice - depositAmount);
+
+            const offerUrl = `${baseUrl}/p/${clientOffer.unique_token}`;
+            const depositUrl = `${baseUrl}/checkout?amount=${depositAmount}&description=${encodeURIComponent('Zadatek: ' + offerName)}&lead_id=${lead.id}`;
+            const fullUrl = offer?.id
+                ? `${baseUrl}/checkout?offer=${offer.id}&client_offer=${clientOffer.id}`
+                : null;
+            const remainingUrl = `${baseUrl}/checkout?amount=${remainingAmount}&description=${encodeURIComponent('Pozostała kwota: ' + offerName)}&lead_id=${lead.id}`;
+
+            const links = [
+                { label: 'Oferta', priceLabel: '', url: offerUrl, color: 'amber', icon: 'ph-handshake' },
+                { label: 'Zadatek', priceLabel: `${depositAmount} zł`, url: depositUrl, color: 'cyan', icon: 'ph-lock-key' },
+            ];
+            if (fullUrl) {
+                links.push({ label: 'Pełna kwota', priceLabel: `${fmtPLN(fullPrice)} zł`, url: fullUrl, color: 'amber', icon: 'ph-credit-card' });
+            }
+            if (remainingAmount > 0 && remainingAmount !== fullPrice) {
+                links.push({ label: 'Pozostała kwota', priceLabel: `${fmtPLN(remainingAmount)} zł`, url: remainingUrl, color: 'emerald', icon: 'ph-arrow-right' });
+            }
+
+            list.innerHTML = links.map(link => {
+                const safeUrl = link.url.replace(/'/g, "\\'");
+                return `
+                    <div class="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                        <div class="w-8 h-8 bg-${link.color}-500/15 border border-${link.color}-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="ph-bold ${link.icon} text-${link.color}-400 text-base"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-white text-sm font-semibold">${escapeHtml(link.label)}</span>
+                                ${link.priceLabel ? `<span class="text-${link.color}-400 text-xs font-mono">${link.priceLabel}</span>` : ''}
+                            </div>
+                            <div class="text-zinc-600 text-[10px] font-mono truncate">${escapeHtml(link.url.replace(baseUrl, ''))}</div>
+                        </div>
+                        <button onclick="copyQuickLink('${safeUrl}', this)" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white" title="Kopiuj">
+                            <i class="ph ph-copy text-base"></i>
+                        </button>
+                        <button onclick="window.open('${safeUrl}', '_blank')" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors text-zinc-400 hover:text-white" title="Otwórz">
+                            <i class="ph ph-arrow-square-out text-base"></i>
+                        </button>
+                    </div>
+                `;
+            }).join('');
+
+            wrap.classList.remove('hidden');
+        }
+
+        function copyQuickLink(url, btn) {
+            navigator.clipboard.writeText(url).then(() => {
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<i class="ph ph-check text-emerald-400 text-base"></i>';
+                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+            });
+        }
+
+        // Load timeline (lead_activities + offer views + orders)
+        async function loadOfferTimeline() {
+            const container = document.getElementById('offer-timeline');
+            const counter = document.getElementById('offer-timeline-count');
+            if (!container || !lead) return;
+
+            const events = [];
+
+            // Lead created
+            if (lead.created_at) {
+                events.push({
+                    time: lead.created_at,
+                    icon: 'ph-user-plus', color: 'zinc',
+                    label: 'Lead utworzony',
+                    sub: lead.source ? `Źródło: ${lead.source}` : null
+                });
+            }
+
+            // Client offer created
+            if (clientOffer?.created_at) {
+                events.push({
+                    time: clientOffer.created_at,
+                    icon: 'ph-handshake', color: 'amber',
+                    label: 'Oferta utworzona',
+                    sub: null
+                });
+            }
+
+            // Offer views
+            if (Array.isArray(clientOffer?.view_history)) {
+                clientOffer.view_history.slice(-15).forEach((vt, i) => {
+                    events.push({
+                        time: vt,
+                        icon: 'ph-eye', color: 'cyan',
+                        label: i === 0 ? 'Pierwsze otwarcie oferty' : `Otwarcie oferty (${i + 1})`,
+                        sub: null
+                    });
+                });
+            } else if (clientOffer?.viewed_at) {
+                events.push({
+                    time: clientOffer.viewed_at,
+                    icon: 'ph-eye', color: 'cyan',
+                    label: 'Otwarcie oferty',
+                    sub: null
+                });
+            }
+
+            // Lead activities
+            try {
+                const { data: acts } = await supabaseClient
+                    .from('lead_activities')
+                    .select('*')
+                    .eq('lead_id', lead.id)
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                (acts || []).forEach(a => {
+                    const meta = a.metadata || {};
+                    if (a.type === 'checkout_started') {
+                        const labels = { deposit: 'Rezerwacja zadatku', remaining: 'Płatność pozostałej kwoty', full: 'Płatność całości' };
+                        events.push({
+                            time: a.created_at,
+                            icon: 'ph-shopping-cart', color: 'orange',
+                            label: labels[meta.checkout_type] || 'Przejście do checkout',
+                            sub: meta.amount ? `${fmtPLN(meta.amount)} zł` : null
+                        });
+                    } else if (a.type === 'proforma') {
+                        events.push({
+                            time: a.created_at,
+                            icon: 'ph-file-pdf', color: 'violet',
+                            label: 'Pobranie proformy',
+                            sub: meta.offer_name || null
+                        });
+                    } else if (a.type === 'note' && a.description) {
+                        events.push({
+                            time: a.created_at,
+                            icon: 'ph-note', color: 'zinc',
+                            label: 'Notatka',
+                            sub: a.description.length > 60 ? a.description.slice(0, 60) + '…' : a.description
+                        });
+                    }
+                });
+            } catch (e) { console.warn('[offer] activities load failed:', e); }
+
+            // Orders
+            try {
+                const { data: orders } = await supabaseClient
+                    .from('orders')
+                    .select('id, status, amount, description, paid_at, payment_source, created_at')
+                    .eq('lead_id', lead.id)
+                    .order('created_at', { ascending: false });
+                (orders || []).forEach(o => {
+                    if (o.status === 'paid' && o.paid_at) {
+                        events.push({
+                            time: o.paid_at,
+                            icon: 'ph-check-circle', color: 'emerald',
+                            label: `Wpłata ${fmtPLN(o.amount)} zł`,
+                            sub: (o.description || '') + (o.payment_source ? ' · ' + o.payment_source : '')
+                        });
+                    }
+                });
+            } catch (e) { console.warn('[offer] orders load failed:', e); }
+
+            events.sort((a, b) => new Date(b.time) - new Date(a.time));
+            if (counter) counter.textContent = events.length;
+
+            if (events.length === 0) {
+                container.innerHTML = '<div class="text-center text-zinc-600 text-xs py-6">Brak zdarzeń</div>';
+                return;
+            }
+
+            container.innerHTML = events.map(e => `
+                <div class="flex items-start gap-2.5 pb-3 mb-3 border-b border-white/5 last:border-0 last:mb-0 last:pb-0">
+                    <div class="w-7 h-7 bg-${e.color}-500/15 border border-${e.color}-500/25 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <i class="ph-bold ${e.icon} text-${e.color}-400 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-white text-xs font-medium leading-tight">${escapeHtml(e.label)}</div>
+                        ${e.sub ? `<div class="text-zinc-500 text-[10px] leading-snug mt-0.5 truncate">${escapeHtml(e.sub)}</div>` : ''}
+                        <div class="text-zinc-600 text-[10px] font-mono mt-1">${formatRelativeDate(e.time)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Load payments / orders list
+        async function loadOfferPayments() {
+            const container = document.getElementById('offer-payments');
+            const summary = document.getElementById('offer-payments-summary');
+            const paidLine = document.getElementById('offer-active-paid');
+            const infoPaid = document.getElementById('info-offer-paid');
+            if (!container || !lead) return;
+
+            try {
+                const { data: orders } = await supabaseClient
+                    .from('orders')
+                    .select('id, status, amount, description, paid_at, payment_source, created_at')
+                    .eq('lead_id', lead.id)
+                    .order('created_at', { ascending: false });
+
+                if (!orders || orders.length === 0) {
+                    container.innerHTML = '<div class="px-4 py-6 text-center text-zinc-600 text-xs">Brak wpłat</div>';
+                    if (summary) summary.textContent = '0 zł';
+                    if (paidLine) paidLine.textContent = '0 zł';
+                    if (infoPaid) infoPaid.textContent = '0 zł';
+                    return;
+                }
+
+                let totalPaid = 0;
+                orders.forEach(o => { if (o.status === 'paid') totalPaid += parseFloat(o.amount); });
+                if (summary) summary.textContent = fmtPLN(totalPaid) + ' zł';
+
+                // Compute total target price for "paid / target" display
+                const offer = offers.find(o => o.id === clientOffer?.offer_id) || lead?.offer;
+                const targetPrice = parseFloat(clientOffer?.custom_price || offer?.price || lead?.value || 0);
+                if (paidLine) paidLine.textContent = `${fmtPLN(totalPaid)} / ${fmtPLN(targetPrice)} zł`;
+                if (infoPaid) infoPaid.textContent = fmtPLN(totalPaid) + ' zł';
+
+                container.innerHTML = orders.map(o => {
+                    let badge, color;
+                    if (o.status === 'paid') { badge = 'opłacone'; color = 'emerald'; }
+                    else if (o.status === 'pending') { badge = 'czeka'; color = 'amber'; }
+                    else { badge = o.status; color = 'zinc'; }
+
+                    const time = o.paid_at || o.created_at;
+                    const ds = new Date(time).toLocaleString('pl-PL', { dateStyle: 'short', timeStyle: 'short' });
+                    return `
+                        <div class="px-4 py-3">
+                            <div class="flex items-baseline justify-between gap-2 mb-1">
+                                <span class="text-white text-sm font-semibold">${fmtPLN(o.amount)} zł</span>
+                                <span class="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-${color}-500/15 text-${color}-400 border border-${color}-500/25">${badge}</span>
+                            </div>
+                            <div class="text-zinc-500 text-[11px] truncate">${escapeHtml(o.description || '-')}</div>
+                            <div class="text-zinc-600 text-[10px] font-mono mt-0.5">${ds}${o.payment_source ? ' · ' + o.payment_source : ''}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.warn('[offer] orders load failed:', e);
+                container.innerHTML = '<div class="px-4 py-6 text-center text-zinc-600 text-xs">Błąd ładowania</div>';
+            }
+        }
+
+        // Load related items (workflow, invoices)
+        async function loadOfferRelated() {
+            const container = document.getElementById('offer-related');
+            if (!container || !lead) return;
+
+            const items = [];
+            if (lead.workflow_id) {
+                items.push({
+                    icon: 'ph-tree-structure', color: 'violet',
+                    label: 'Workflow',
+                    sub: 'Otwórz w TN Workflow',
+                    url: `/tn-workflow/workflow?id=${lead.workflow_id}`
+                });
+            }
+
+            try {
+                const { data: invoices } = await supabaseClient
+                    .from('orders')
+                    .select('id, invoice_id, invoice_number, amount')
+                    .eq('lead_id', lead.id)
+                    .not('invoice_id', 'is', null);
+                if (invoices && invoices.length > 0) {
+                    const total = invoices.reduce((s, i) => s + parseFloat(i.amount), 0);
+                    items.push({
+                        icon: 'ph-file-text', color: 'cyan',
+                        label: `Faktury (${invoices.length})`,
+                        sub: `Łącznie ${fmtPLN(total)} zł`
+                    });
+                }
+            } catch (e) {}
+
+            if (items.length === 0) {
+                container.innerHTML = '<div class="text-zinc-600 text-xs text-center py-2">Brak powiązanych obiektów</div>';
+                return;
+            }
+
+            container.innerHTML = items.map(it => {
+                const action = it.url ? `onclick="window.open('${it.url}', '_blank')"` : '';
+                return `
+                    <div class="flex items-center gap-3 px-3 py-2 rounded-lg ${it.url ? 'hover:bg-white/[0.03] cursor-pointer' : ''} transition-colors" ${action}>
+                        <div class="w-7 h-7 bg-${it.color}-500/15 border border-${it.color}-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="ph-bold ${it.icon} text-${it.color}-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-white text-xs font-medium">${escapeHtml(it.label)}</div>
+                            <div class="text-zinc-500 text-[10px] truncate">${escapeHtml(it.sub)}</div>
+                        </div>
+                        ${it.url ? '<i class="ph ph-arrow-up-right text-zinc-500"></i>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Refresh all offer-tab data sources
+        function refreshOfferTabData() {
+            renderOfferSummaries();
+            renderOfferQuickLinks();
+            loadOfferTimeline();
+            loadOfferPayments();
+            loadOfferRelated();
         }
 
         // ============ NDA GENERATOR ============
@@ -5996,6 +6594,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // Make functions global
         window.switchTab = switchTab;
+        window.copyQuickLink = copyQuickLink;
+        window.refreshOfferTabData = refreshOfferTabData;
         window.filterEmails = filterEmails;
         window.sendEmailToLead = sendEmailToLead;
 
