@@ -714,7 +714,7 @@
                                             <i class="ph ph-link text-emerald-400"></i>
                                             <span>Linki do skopiowania</span>
                                         </div>
-                                        <div id="info-offer-quick-links-list" class="space-y-1">
+                                        <div id="info-offer-quick-links-list" class="space-y-2">
                                             <!-- populated by JS -->
                                         </div>
                                     </div>
@@ -6036,24 +6036,25 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             wrap.classList.remove('hidden');
 
-            // Mirror compact version into info-tab mini-summary (copy-only, smaller)
+            // Mirror into info-tab mini-summary — whole row is a copy button (touch-friendly)
             const infoList = document.getElementById('info-offer-quick-links-list');
             if (infoList) {
                 infoList.innerHTML = links.map(link => {
                     const safeUrl = link.url.replace(/'/g, "\\'");
                     return `
-                        <div class="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-white/[0.03] transition-colors">
-                            <div class="w-6 h-6 bg-${link.color}-500/15 border border-${link.color}-500/25 rounded flex items-center justify-center flex-shrink-0">
-                                <i class="ph-bold ${link.icon} text-${link.color}-400 text-xs"></i>
+                        <button onclick="copyQuickLink('${safeUrl}', this)" class="w-full flex items-center gap-3 px-3 py-3 rounded-lg bg-zinc-900/40 border border-white/5 hover:bg-white/[0.04] active:bg-white/[0.07] transition-colors text-left">
+                            <div class="w-9 h-9 bg-${link.color}-500/15 border border-${link.color}-500/25 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph-bold ${link.icon} text-${link.color}-400 text-lg"></i>
                             </div>
-                            <div class="flex-1 min-w-0 flex items-baseline gap-2">
-                                <span class="text-white text-xs font-medium">${escapeHtml(link.label)}</span>
-                                ${link.priceLabel ? `<span class="text-${link.color}-400 text-[10px] font-mono">${link.priceLabel}</span>` : ''}
+                            <div class="flex-1 min-w-0 flex items-baseline gap-2 flex-wrap">
+                                <span class="text-white text-sm font-semibold">${escapeHtml(link.label)}</span>
+                                ${link.priceLabel ? `<span class="text-${link.color}-400 text-xs font-mono">${link.priceLabel}</span>` : ''}
                             </div>
-                            <button onclick="copyQuickLink('${safeUrl}', this)" class="p-1 hover:bg-zinc-800 rounded transition-colors text-zinc-500 hover:text-white" title="Kopiuj">
-                                <i class="ph ph-copy text-xs"></i>
-                            </button>
-                        </div>
+                            <div class="flex items-center gap-1.5 text-zinc-300 px-3 py-1.5 rounded-md bg-zinc-800/80 border border-white/5 flex-shrink-0">
+                                <i class="ph-bold ph-copy text-base"></i>
+                                <span class="text-xs font-semibold hidden sm:inline">Kopiuj</span>
+                            </div>
+                        </button>
                     `;
                 }).join('');
             }
