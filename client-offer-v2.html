@@ -1201,8 +1201,8 @@
         <div id="sticky-pay-bar" class="fixed bottom-0 left-0 right-0 z-50 translate-y-full transition-transform duration-300" style="background:rgba(5,5,5,0.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.08);">
             <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
                 <div class="min-w-0">
-                    <div id="sticky-amount" class="text-white font-bold text-base">500 zł zadatku</div>
-                    <div id="sticky-sub" class="text-zinc-500 text-[11px]">blokuje Twój termin</div>
+                    <div id="sticky-amount" class="text-white font-bold text-base">Zarezerwuj miejsce</div>
+                    <div id="sticky-sub" class="text-zinc-500 text-[11px]">tylko kilka osób w miesiącu</div>
                 </div>
                 <button id="sticky-cta" onclick="proceedToDeposit()" class="flex-shrink-0 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-amber-500/20">
                     <i id="sticky-cta-icon" class="ph-bold ph-lock-key"></i>
@@ -2016,8 +2016,56 @@
         }
 
         // ===== Payment flows =====
-        function proceedToDeposit() {
+        // Log to lead_activities + Slack when client clicks any "proceed to checkout" CTA.
+        // Returns a promise — callers should await before redirecting so events don't get lost.
+        async function logCheckoutStart(checkoutType, amount) {
+            const labelMap = {
+                deposit:   'Rezerwuję miejsce (zadatek)',
+                remaining: 'Opłacam pozostałość (po zadatku)',
+                full:      'Płacę całość od razu',
+            };
+            const label = labelMap[checkoutType] || checkoutType;
+            const fullPrice = getEffectivePrice();
+
+            const activityPayload = {
+                lead_id: lead.id,
+                type: 'checkout_started',
+                description: `Klient kliknął "${label}" — przeszedł do checkout`,
+                metadata: {
+                    client_offer_id: clientOffer?.id,
+                    offer_id: offer.id,
+                    offer_name: offer.name,
+                    offer_full_price: fullPrice,
+                    checkout_type: checkoutType,
+                    amount: amount,
+                    page_version: 'v2',
+                    user_agent: navigator.userAgent,
+                    url: window.location.href,
+                },
+            };
+
+            const slackPayload = {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_phone: lead.phone,
+                lead_company: lead.company,
+                lead_id: lead.id,
+                offer_name: offer.name,
+                checkout_type: checkoutType,
+                amount: amount,
+                page_version: 'v2',
+            };
+
+            // Run both in parallel; don't fail the redirect if either fails.
+            await Promise.allSettled([
+                supabaseClient.from('lead_activities').insert([activityPayload]),
+                sendSlackNotification('checkout_started', slackPayload),
+            ]);
+        }
+
+        async function proceedToDeposit() {
             trackInitiateCheckout('deposit');
+            await logCheckoutStart('deposit', DEPOSIT_AMOUNT);
 
             const description = `Zadatek: ${offer.name}`;
             const params = new URLSearchParams({
@@ -2028,8 +2076,9 @@
             window.location.href = `/checkout?${params.toString()}`;
         }
 
-        function proceedToFullPayment() {
+        async function proceedToFullPayment() {
             trackInitiateCheckout('full');
+            await logCheckoutStart('full', getEffectivePrice());
 
             let checkoutUrl = `/checkout?offer=${offer.id}`;
             if (clientOffer?.id) {
@@ -2039,10 +2088,11 @@
         }
 
         // Pay the remainder after deposit (full price - 500 zł)
-        function proceedToRemainingPayment() {
+        async function proceedToRemainingPayment() {
             trackInitiateCheckout('remaining');
-
             const remaining = Math.max(0, getEffectivePrice() - DEPOSIT_AMOUNT);
+            await logCheckoutStart('remaining', remaining);
+
             const description = `Pozostała kwota: ${offer.name}`;
             const params = new URLSearchParams({
                 amount: String(remaining),

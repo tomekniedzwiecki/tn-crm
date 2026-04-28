@@ -61,6 +61,11 @@ Deno.serve(async (req) => {
         message = formatScheduleViewedMessage(data)
         break
 
+      case 'checkout_started':
+        webhookUrl = webhookActivity
+        message = formatCheckoutStartedMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -683,6 +688,71 @@ function formatProformaMessage(data: {
         text: {
           type: 'plain_text',
           text: '📄 Wygenerowano proformę!',
+          emoji: true
+        }
+      },
+      {
+        type: 'section',
+        fields: fields
+      },
+      {
+        type: 'context',
+        elements: [
+          {
+            type: 'mrkdwn',
+            text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+          }
+        ]
+      }
+    ]
+  }
+}
+
+function formatCheckoutStartedMessage(data: {
+  lead_name?: string
+  lead_email: string
+  lead_phone?: string
+  lead_company?: string
+  lead_id?: string
+  offer_name: string
+  checkout_type: 'deposit' | 'remaining' | 'full'
+  amount?: number
+  page_version?: string
+}) {
+  const displayName = data.lead_company || data.lead_name || data.lead_email
+
+  const typeLabels: Record<string, string> = {
+    deposit:   '🔒 Zadatek (rezerwacja miejsca)',
+    remaining: '💳 Pozostała kwota (po zadatku)',
+    full:      '💰 Pełna opłata (od razu)'
+  }
+  const typeLabel = typeLabels[data.checkout_type] || data.checkout_type
+
+  const fields = [
+    { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
+    { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` },
+    { type: 'mrkdwn', text: `*Typ:*\n${typeLabel}` }
+  ]
+
+  if (data.amount) {
+    fields.push({ type: 'mrkdwn', text: `*Kwota:*\n${data.amount.toLocaleString('pl-PL')} PLN` })
+  }
+
+  if (data.lead_email !== displayName) {
+    fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.lead_email, data.lead_email, data.lead_id)}` })
+  }
+
+  if (data.lead_phone) {
+    fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.lead_phone}` })
+  }
+
+  return {
+    blocks: [
+      {
+        type: 'header',
+        text: {
+          type: 'plain_text',
+          text: '🛒 Klient przeszedł do checkout!',
           emoji: true
         }
       },
