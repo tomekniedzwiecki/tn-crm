@@ -5846,14 +5846,27 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // ============ OFFER TAB ============
 
+        // HTML escape helper (offers tab)
+        function escapeHtml(text) {
+            if (text == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
         // Move full offer-management section from info tab → offer tab (DOM ready)
         function moveOfferSectionToOfferTab() {
             const section = document.getElementById('client-offer-section');
             const mount = document.getElementById('offer-management-mount');
+            console.log('[offer-tab] move check — section:', !!section, 'mount:', !!mount);
             if (section && mount && !mount.contains(section)) {
                 mount.appendChild(section);
-                // In tab-offer, the section is always visible (no hidden state)
                 section.classList.remove('hidden');
+                console.log('[offer-tab] section moved to offer tab');
+            } else if (!mount) {
+                console.warn('[offer-tab] mount #offer-management-mount NOT FOUND — tab-offer HTML missing?');
+            } else if (!section) {
+                console.warn('[offer-tab] section #client-offer-section NOT FOUND');
             }
         }
 
