@@ -831,6 +831,26 @@
         let isCustomPayment = false;
         let customPaymentLeadId = null;
 
+        // Prefill customer form from lead data (for deposit / remaining / full from offer page)
+        function prefillCustomerForm(lead) {
+            if (!lead) return;
+            if (lead.email && !document.getElementById('customer-email').value) {
+                document.getElementById('customer-email').value = lead.email;
+            }
+            if (lead.phone && !document.getElementById('customer-phone').value) {
+                document.getElementById('customer-phone').value = lead.phone;
+            }
+            if (lead.name && !document.getElementById('customer-name').value) {
+                document.getElementById('customer-name').value = lead.name;
+            }
+            if (lead.company && !document.getElementById('customer-company').value) {
+                document.getElementById('customer-company').value = lead.company;
+            }
+            if (lead.nip && !document.getElementById('customer-nip').value) {
+                document.getElementById('customer-nip').value = lead.nip;
+            }
+        }
+
         // Upgrade workflow state
         let upgradeWorkflowId = null;
         let upgradeToOfferId = null;
@@ -1473,6 +1493,20 @@
                 // Hide discount code section for custom payments
                 document.getElementById('discount-code-section').style.display = 'none';
 
+                // Prefill customer data from lead (deposit/remaining flow from offer page)
+                if (leadId) {
+                    try {
+                        const { data: lead } = await supabaseClient
+                            .from('leads')
+                            .select('email, phone, name, company, nip')
+                            .eq('id', leadId)
+                            .single();
+                        prefillCustomerForm(lead);
+                    } catch (e) {
+                        console.warn('[checkout] Could not prefill from lead:', e);
+                    }
+                }
+
                 showCheckout();
 
                 // Track ViewContent to Meta
@@ -1558,13 +1592,13 @@
 
                 currentOffer = offer;
 
-                // Check for custom price from client_offer
+                // Check for custom price from client_offer + prefill customer data
                 const clientOfferId = params.get('client_offer');
                 if (clientOfferId) {
                     try {
                         const { data: clientOffer } = await supabaseClient
                             .from('client_offers')
-                            .select('custom_price')
+                            .select('custom_price, leads(email, phone, name, company, nip)')
                             .eq('id', clientOfferId)
                             .single();
 
@@ -1572,8 +1606,11 @@
                             currentOffer.price = parseFloat(clientOffer.custom_price);
                             console.log('[checkout] Using custom price:', currentOffer.price);
                         }
+                        if (clientOffer?.leads) {
+                            prefillCustomerForm(clientOffer.leads);
+                        }
                     } catch (e) {
-                        console.log('[checkout] Could not load client_offer custom_price');
+                        console.log('[checkout] Could not load client_offer:', e);
                     }
                 }
 
