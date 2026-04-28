@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twoja oferta — zarezerwuj termin</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+    <!-- Google Analytics 4 -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W8CLDSHVFC"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-W8CLDSHVFC', {
+            'linker': {
+                'domains': ['tomekniedzwiecki.pl', 'crm.tomekniedzwiecki.pl'],
+                'accept_incoming': true
+            }
+        });
+    </script>
+
+    <!-- Meta Pixel -->
+    <script>
+        !function(f,b,e,v,n,t,s)
+        {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+        n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+        if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+        n.queue=[];t=b.createElement(e);t.async=!0;
+        t.src=v;s=b.getElementsByTagName(e)[0];
+        s.parentNode.insertBefore(t,s)}(window, document,'script',
+        'https://connect.facebook.net/en_US/fbevents.js');
+        fbq('init', '1668188210820080');
+        fbq('track', 'PageView');
+    </script>
+
+    <!-- TikTok Pixel -->
+    <script>
+        !function (w, d, t) {
+            w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var i=document.createElement("script");i.type="text/javascript",i.async=!0,i.src=r+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(i,a)};
+            ttq.load('D6AP4E3C77U3L7SP8O7G');
+            ttq.page();
+        }(window, document, 'ttq');
+    </script>
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #050505; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.5s ease-out forwards; }
+
+        @keyframes pulseRing {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+            50% { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0); }
+        }
+        .pulse-ring { animation: pulseRing 2s ease-out infinite; }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.2s;
+        }
+        .input-field:focus {
+            border-color: rgba(255,255,255,0.25);
+            outline: none;
+        }
+
+        .glass-card {
+            background: rgba(24, 24, 27, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        /* Accordion */
+        .acc-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s ease-out, opacity 0.25s ease-out;
+            opacity: 0;
+        }
+        .acc-content.expanded {
+            max-height: 3000px;
+            opacity: 1;
+        }
+        .acc-chevron { transition: transform 0.25s ease; }
+        .acc-chevron.rotated { transform: rotate(180deg); }
+
+        /* Hero glow */
+        .hero-glow {
+            background: radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 60%);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
+        <div class="w-full max-w-md animate-enter">
+            <div class="text-center mb-8">
+                <div class="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
+                    <i class="ph-bold ph-lightning text-2xl"></i>
+                </div>
+                <h1 class="text-2xl font-bold text-white mb-2">Twoja spersonalizowana oferta</h1>
+                <p class="text-zinc-400">Wprowadź swój adres e-mail, aby zobaczyć szczegóły</p>
+            </div>
+
+            <div class="glass-card rounded-2xl border border-white/10 p-6">
+                <div class="mb-4">
+                    <label class="block text-zinc-400 text-xs font-medium mb-2">Adres e-mail</label>
+                    <input type="email" id="email-input"
+                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           placeholder="jan@firma.pl"
+                           autofocus>
+                </div>
+                <div id="login-error" class="text-red-400 text-sm mb-4 hidden"></div>
+                <button id="login-btn"
+                        class="w-full bg-white hover:bg-zinc-200 text-black px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
+                    <span>Zobacz ofertę</span>
+                    <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+
+            <p class="text-center text-zinc-600 text-xs mt-6">
+                Link jest ważny do: <span id="valid-until-preview" class="text-zinc-400">-</span>
+            </p>
+        </div>
+    </div>
+
+    <!-- Expired Screen -->
+    <div id="expired-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-clock-countdown text-4xl text-red-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Oferta wygasła</h1>
+            <p class="text-zinc-400 mb-6">Ta oferta nie jest już dostępna. Skontaktuj się z nami, aby otrzymać nową.</p>
+            <a href="https://wa.me/48793113898" target="_blank"
+               class="inline-flex items-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-6 py-3 rounded-xl font-medium transition-colors">
+                <i class="ph ph-whatsapp-logo"></i>
+                Napisz do nas
+            </a>
+        </div>
+    </div>
+
+    <!-- Not Found Screen -->
+    <div id="not-found-screen" class="min-h-screen flex items-center justify-center px-4 hidden">
+        <div class="w-full max-w-md text-center animate-enter">
+            <div class="w-20 h-20 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="ph ph-question text-4xl text-zinc-400"></i>
+            </div>
+            <h1 class="text-2xl font-bold text-white mb-3">Nie znaleziono oferty</h1>
+            <p class="text-zinc-400">Ten link jest nieprawidłowy lub oferta została usunięta.</p>
+        </div>
+    </div>
+
+    <!-- Offer Content -->
+    <div id="offer-screen" class="hidden">
+        <!-- Header -->
+        <header class="sticky top-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-b border-white/5">
+            <div class="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div class="text-zinc-500 text-sm">Oferta dla:</div>
+                <div class="flex items-center gap-4 text-sm">
+                    <div class="text-right">
+                        <div id="header-name" class="text-white font-medium">-</div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-3xl mx-auto px-4 sm:px-6 py-8 sm:py-10">
+
+            <!-- Personalized Intro -->
+            <div id="intro-section" class="mb-6 hidden">
+                <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6">
+                    <div class="flex items-start gap-3 sm:gap-4">
+                        <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-hand-waving text-xl text-amber-400"></i>
+                        </div>
+                        <div>
+                            <p id="intro-text" class="text-zinc-300 text-sm sm:text-base leading-relaxed whitespace-pre-line"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Offer name -->
+            <div class="mb-6 animate-enter">
+                <div class="text-zinc-500 text-[11px] font-mono uppercase tracking-widest mb-2">Twoja oferta</div>
+                <h1 id="offer-name" class="text-2xl sm:text-3xl font-bold text-white leading-tight">-</h1>
+                <p id="offer-description" class="text-zinc-400 text-sm sm:text-base leading-relaxed mt-2"></p>
+            </div>
+
+            <!-- HERO: Deposit-first pricing -->
+            <div class="relative mb-8 animate-enter">
+                <div class="absolute inset-0 hero-glow pointer-events-none rounded-3xl"></div>
+
+                <div class="relative glass-card rounded-3xl border border-amber-500/30 p-6 sm:p-8">
+                    <!-- Top label -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-semibold uppercase tracking-wider">
+                            <i class="ph-fill ph-circle text-[8px] pulse-ring rounded-full"></i>
+                            Zarezerwuj termin
+                        </span>
+                    </div>
+
+                    <!-- Main pitch -->
+                    <h2 class="text-xl sm:text-2xl font-bold text-white leading-tight mb-2">
+                        Wpłać <span class="text-amber-400">500 zł</span> zadatku i ruszamy
+                    </h2>
+                    <p class="text-zinc-400 text-sm sm:text-base mb-6 leading-relaxed">
+                        Zadatek blokuje Twój termin w grafiku. Resztę rozliczamy zgodnie z harmonogramem płatności po starcie projektu.
+                    </p>
+
+                    <!-- Big deposit number -->
+                    <div class="flex items-end gap-3 mb-6 pb-6 border-b border-white/10">
+                        <div>
+                            <div class="text-zinc-500 text-[11px] font-mono uppercase tracking-wider mb-1">Dziś płacisz</div>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-5xl sm:text-6xl font-extrabold text-white">500</span>
+                                <span class="text-xl sm:text-2xl text-zinc-400 font-semibold">zł</span>
+                            </div>
+                        </div>
+                        <div class="flex-1 text-right pb-2">
+                            <div class="text-zinc-500 text-[11px] font-mono uppercase tracking-wider mb-1">Ważne do</div>
+                            <div id="valid-until-display" class="text-sm font-semibold text-white">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Primary CTA: deposit -->
+                    <button onclick="proceedToDeposit()"
+                            class="w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-6 py-4 rounded-xl font-bold text-base sm:text-lg transition-all shadow-lg shadow-amber-500/25 mb-3">
+                        <i class="ph-bold ph-lock-key"></i>
+                        Wpłacam 500 zł zadatku
+                    </button>
+
+                    <!-- Secondary CTA: full payment -->
+                    <button onclick="proceedToFullPayment()"
+                            class="w-full inline-flex items-center justify-center gap-2 text-zinc-300 hover:text-white px-4 py-3 rounded-xl font-medium transition-colors text-sm border border-white/10 hover:border-white/20">
+                        <i class="ph ph-credit-card"></i>
+                        Wolę zapłacić całość teraz
+                        <span class="text-zinc-500">·</span>
+                        <span id="full-price-inline" class="text-zinc-400">-</span>
+                    </button>
+
+                    <!-- Trust line -->
+                    <div class="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-zinc-500 text-xs">
+                        <span class="inline-flex items-center gap-1.5">
+                            <i class="ph ph-shield-check text-emerald-400"></i>
+                            Płatność TPay
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <i class="ph ph-receipt text-emerald-400"></i>
+                            Faktura VAT
+                        </span>
+                        <span class="inline-flex items-center gap-1.5">
+                            <i class="ph ph-arrow-counter-clockwise text-emerald-400"></i>
+                            Zadatek odliczany od ceny
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What you get -->
+            <div id="highlights-section" class="mb-6 hidden">
+                <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-package text-base text-emerald-400"></i>
+                        </div>
+                        <h3 class="text-base sm:text-lg font-semibold text-white">Co dostaniesz</h3>
+                    </div>
+                    <div id="highlights-list" class="space-y-2.5">
+                        <!-- highlights rendered here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion: Detailed timeline -->
+            <div id="timeline-accordion" class="mb-4 hidden">
+                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
+                    <button onclick="toggleAccordion('timeline')"
+                            class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-white/5 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-chart-line text-base text-amber-400"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-white font-semibold text-sm sm:text-base">Pełny harmonogram realizacji</div>
+                                <div class="text-zinc-500 text-xs"><span id="milestones-count">-</span> · co i kiedy</div>
+                            </div>
+                        </div>
+                        <i id="acc-chevron-timeline" class="ph ph-caret-down text-zinc-400 acc-chevron flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-content-timeline" class="acc-content">
+                        <div class="p-4 sm:p-6 pt-0 border-t border-white/5">
+                            <div id="timeline-container" class="relative pl-6 sm:pl-8 mt-5">
+                                <!-- Timeline items rendered here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Accordion: Invoice data + proforma -->
+            <div class="mb-4">
+                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
+                    <button onclick="toggleAccordion('invoice')"
+                            class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-white/5 transition-colors">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-8 h-8 bg-zinc-700/50 rounded-lg flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-receipt text-base text-zinc-300"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-white font-semibold text-sm sm:text-base">Dane do faktury i proforma</div>
+                                <div class="text-zinc-500 text-xs">Pełna wartość: <span id="full-price-accordion">-</span> PLN brutto</div>
+                            </div>
+                        </div>
+                        <i id="acc-chevron-invoice" class="ph ph-caret-down text-zinc-400 acc-chevron flex-shrink-0"></i>
+                    </button>
+                    <div id="acc-content-invoice" class="acc-content">
+                        <div class="p-4 sm:p-6 pt-0 border-t border-white/5">
+                            <!-- Total breakdown -->
+                            <div class="mt-5 mb-5 grid grid-cols-2 gap-3">
+                                <div class="rounded-xl bg-zinc-900/60 border border-white/5 p-3">
+                                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Wartość projektu</div>
+                                    <div class="text-white font-semibold"><span id="invoice-total">-</span> PLN</div>
+                                </div>
+                                <div class="rounded-xl bg-amber-500/5 border border-amber-500/20 p-3">
+                                    <div class="text-amber-400 text-[10px] font-mono uppercase tracking-wider mb-1">Zadatek dziś</div>
+                                    <div class="text-amber-300 font-semibold">500 PLN</div>
+                                </div>
+                            </div>
+
+                            <!-- Client data -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 mb-5">
+                                <div id="client-name-row" class="hidden">
+                                    <span class="text-zinc-500 text-sm">Imię i nazwisko: </span>
+                                    <span id="client-name" class="text-white text-sm"></span>
+                                </div>
+                                <div id="client-company-row" class="hidden">
+                                    <span class="text-zinc-500 text-sm">Firma: </span>
+                                    <span id="client-company" class="text-white text-sm font-medium"></span>
+                                </div>
+                                <div id="client-nip-row" class="hidden">
+                                    <span class="text-zinc-500 text-sm">NIP: </span>
+                                    <span id="client-nip" class="text-zinc-200 text-sm font-mono"></span>
+                                </div>
+                                <div>
+                                    <span class="text-zinc-500 text-sm">Email: </span>
+                                    <span id="client-email" class="text-white text-sm"></span>
+                                </div>
+                                <div id="client-phone-row" class="hidden">
+                                    <span class="text-zinc-500 text-sm">Telefon: </span>
+                                    <span id="client-phone" class="text-zinc-200 text-sm"></span>
+                                </div>
+                                <div id="client-address-row" class="hidden sm:col-span-2">
+                                    <span class="text-zinc-500 text-sm">Adres: </span>
+                                    <span id="client-address" class="text-zinc-200 text-sm"></span>
+                                </div>
+                            </div>
+
+                            <!-- Proforma button -->
+                            <button onclick="downloadProforma()" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-xl font-medium transition-all border border-white/10 text-sm">
+                                <i class="ph ph-file-pdf"></i>
+                                Pobierz proformę PDF
+                            </button>
+
+                            <!-- Payment Schedule (if exists) -->
+                            <div id="payment-schedule-section" class="hidden mt-5 pt-5 border-t border-white/10">
+                                <div class="flex items-center gap-2 text-zinc-400 text-[10px] font-mono uppercase tracking-wider mb-3">
+                                    <i class="ph ph-calendar-check text-amber-400"></i>
+                                    <span>Harmonogram płatności</span>
+                                </div>
+                                <div id="payment-schedule-list" class="space-y-2"></div>
+                                <div class="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-sm">
+                                    <span class="text-zinc-500">Suma:</span>
+                                    <span id="schedule-total" class="text-white font-semibold">-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contact Section -->
+            <div class="glass-card rounded-2xl border border-white/10 p-5 sm:p-6 mt-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div class="flex items-center gap-4">
+                        <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat.png" alt="Tomek Niedźwiecki" class="w-12 h-12 rounded-full object-cover flex-shrink-0">
+                        <div>
+                            <h3 class="text-base font-semibold text-white mb-0.5">Masz pytania?</h3>
+                            <p class="text-zinc-400 text-xs">Napisz bezpośrednio do mnie.</p>
+                        </div>
+                    </div>
+                    <a href="https://wa.me/48793113898" target="_blank" class="inline-flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-5 py-2.5 rounded-lg font-medium transition-colors text-sm shadow-lg shadow-[#25D366]/20">
+                        <i class="ph ph-whatsapp-logo"></i>
+                        WhatsApp
+                    </a>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Sticky bottom payment bar -->
+        <div id="sticky-pay-bar" class="fixed bottom-0 left-0 right-0 z-50 translate-y-full transition-transform duration-300" style="background:rgba(5,5,5,0.9);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.08);">
+            <div class="max-w-3xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-white font-bold text-base">500 zł zadatku</div>
+                    <div class="text-zinc-500 text-[11px]">blokuje Twój termin</div>
+                </div>
+                <button onclick="proceedToDeposit()" class="flex-shrink-0 inline-flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-amber-500/20">
+                    <i class="ph-bold ph-lock-key"></i>
+                    Wpłacam zadatek
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/5 mt-8 pb-24 sm:pb-12">
+            <div class="max-w-3xl mx-auto px-6 py-6 text-center">
+                <p class="text-zinc-600 text-xs">
+                    Powered by <span class="text-zinc-400">TN Digital</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const DEPOSIT_AMOUNT = 500;
+
+        let clientOffer = null;
+        let offer = null;
+        let lead = null;
+        let paymentSchedule = null;
+        let trackingEventsSent = {};
+
+        function getEffectivePrice() {
+            return clientOffer?.custom_price || offer?.price || 0;
+        }
+
+        // ===== Tracking (keeps full offer value for ROAS, regardless of deposit-first UX) =====
+        async function trackViewContent() {
+            if (trackingEventsSent.viewContent) return;
+            trackingEventsSent.viewContent = true;
+
+            const eventId = `view_${clientOffer.id}_${Date.now()}`;
+            const value = getEffectivePrice() / 1.23;
+
+            gtag('event', 'view_item', {
+                currency: 'PLN', value: value,
+                items: [{ item_id: offer.id, item_name: offer.name, price: value, quantity: 1 }]
+            });
+            fbq('track', 'ViewContent', {
+                content_name: offer.name, content_ids: [offer.id], content_type: 'product',
+                value: value, currency: 'PLN'
+            }, { eventID: eventId });
+            ttq.track('ViewContent', {
+                content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN'
+            });
+
+            const fbpCookie = document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1];
+
+            fetch(`${SUPABASE_URL}/functions/v1/tiktok-event`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({
+                    event: 'ViewContent', email: lead.email, phone: lead.phone, lead_id: lead.id,
+                    content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN',
+                    event_id: eventId, user_agent: navigator.userAgent
+                })
+            }).catch(e => console.warn('[tracking] TikTok server-side error:', e));
+
+            fetch(`${SUPABASE_URL}/functions/v1/meta-event`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({
+                    event: 'ViewContent', email: lead.email, phone: lead.phone, lead_id: lead.id,
+                    content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN',
+                    event_id: eventId, fbp: fbpCookie, user_agent: navigator.userAgent, url: window.location.href
+                })
+            }).catch(e => console.warn('[tracking] Meta server-side error:', e));
+        }
+
+        async function trackProformaDownload() {
+            const eventId = `proforma_${clientOffer.id}_${Date.now()}`;
+            const value = getEffectivePrice() / 1.23;
+
+            gtag('event', 'add_to_cart', {
+                currency: 'PLN', value: value,
+                items: [{ item_id: offer.id, item_name: offer.name, price: value, quantity: 1 }]
+            });
+            fbq('track', 'AddToCart', {
+                content_name: offer.name, content_ids: [offer.id], content_type: 'product',
+                value: value, currency: 'PLN'
+            }, { eventID: eventId });
+            ttq.track('AddToCart', {
+                content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN'
+            });
+        }
+
+        async function trackInitiateCheckout(mode) {
+            const eventId = `checkout_${mode}_${clientOffer.id}_${Date.now()}`;
+            // For deposit, track deposit value to checkout; full offer remains in ViewContent
+            const value = mode === 'deposit' ? (DEPOSIT_AMOUNT / 1.23) : (getEffectivePrice() / 1.23);
+
+            gtag('event', 'begin_checkout', {
+                currency: 'PLN', value: value,
+                items: [{ item_id: offer.id, item_name: offer.name + (mode === 'deposit' ? ' - zadatek' : ''), price: value, quantity: 1 }]
+            });
+            fbq('track', 'InitiateCheckout', {
+                content_name: offer.name + (mode === 'deposit' ? ' - zadatek' : ''),
+                content_ids: [offer.id], content_type: 'product',
+                value: value, currency: 'PLN', num_items: 1
+            }, { eventID: eventId });
+            ttq.track('InitiateCheckout', {
+                content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN'
+            });
+
+            const fbpCookie = document.cookie.split('; ').find(row => row.startsWith('_fbp='))?.split('=')[1];
+
+            fetch(`${SUPABASE_URL}/functions/v1/meta-event`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                body: JSON.stringify({
+                    event: 'InitiateCheckout', email: lead.email, phone: lead.phone, lead_id: lead.id,
+                    content_name: offer.name, content_id: offer.id, value: value, currency: 'PLN',
+                    event_id: eventId, fbp: fbpCookie, user_agent: navigator.userAgent, url: window.location.href
+                })
+            }).catch(e => console.warn('[tracking] Meta server-side error:', e));
+        }
+
+        // ===== Helpers =====
+        function getToken() {
+            const path = window.location.pathname;
+            // Match both /p/:token and /p2/:token
+            const pathMatch = path.match(/\/p2?\/([a-zA-Z0-9]+)/);
+            if (pathMatch) return pathMatch[1];
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token');
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function formatPrice(price) {
+            return new Intl.NumberFormat('pl-PL').format(price);
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function sendSlackNotification(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/slack-notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Slack notification error:', err);
+            }
+        }
+
+        async function sendEmail(type, data) {
+            try {
+                await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify({ type, data })
+                });
+            } catch (err) {
+                console.error('Email notification error:', err);
+            }
+        }
+
+        function showScreen(screenId) {
+            ['login-screen', 'expired-screen', 'not-found-screen', 'offer-screen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+            if (screenId === 'offer-screen') {
+                setTimeout(initStickyBar, 100);
+            }
+        }
+
+        // ===== Loading =====
+        async function loadOffer() {
+            const token = getToken();
+            if (!token) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            const { data, error } = await supabaseClient
+                .from('client_offers')
+                .select('*, leads(*), offers(*)')
+                .eq('unique_token', token)
+                .single();
+
+            if (error || !data) {
+                showScreen('not-found-screen');
+                return;
+            }
+
+            clientOffer = data;
+            offer = data.offers;
+            lead = data.leads;
+
+            const validUntil = new Date(clientOffer.valid_until);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            if (validUntil < today) {
+                showScreen('expired-screen');
+                return;
+            }
+
+            document.getElementById('valid-until-preview').textContent = formatDate(clientOffer.valid_until);
+            showScreen('login-screen');
+        }
+
+        async function verifyEmail() {
+            const emailInput = document.getElementById('email-input');
+            const email = emailInput.value.trim().toLowerCase();
+            const errorDiv = document.getElementById('login-error');
+
+            if (!email) {
+                errorDiv.textContent = 'Wprowadź adres e-mail';
+                errorDiv.classList.remove('hidden');
+                return;
+            }
+            if (email !== lead.email.toLowerCase()) {
+                errorDiv.textContent = 'Nieprawidłowy adres e-mail';
+                errorDiv.classList.remove('hidden');
+                emailInput.classList.add('border-red-500');
+                return;
+            }
+
+            const { data: freshData } = await supabaseClient
+                .from('client_offers')
+                .select('view_count, view_history')
+                .eq('id', clientOffer.id)
+                .single();
+
+            const currentViewCount = freshData?.view_count || 0;
+            const isFirstView = currentViewCount === 0;
+            const viewHistory = freshData?.view_history || [];
+            viewHistory.push(new Date().toISOString());
+
+            const { error: updateError } = await supabaseClient
+                .from('client_offers')
+                .update({
+                    view_count: currentViewCount + 1,
+                    viewed_at: new Date().toISOString(),
+                    view_history: viewHistory
+                })
+                .eq('id', clientOffer.id);
+
+            if (updateError) {
+                console.warn('view_history update failed, trying without it:', updateError);
+                await supabaseClient
+                    .from('client_offers')
+                    .update({
+                        view_count: currentViewCount + 1,
+                        viewed_at: new Date().toISOString()
+                    })
+                    .eq('id', clientOffer.id);
+            }
+
+            sendSlackNotification('offer_viewed', {
+                lead_name: lead.name,
+                lead_email: lead.email,
+                lead_phone: lead.phone,
+                lead_company: lead.company,
+                lead_id: lead.id,
+                offer_name: offer.name,
+                offer_price: getEffectivePrice(),
+                first_view: isFirstView,
+                view_history: viewHistory,
+                page_version: 'v2'
+            });
+
+            renderOffer();
+            showScreen('offer-screen');
+            trackViewContent();
+        }
+
+        // ===== Render =====
+        function renderOffer() {
+            const displayName = lead.company || lead.name || lead.email;
+            document.getElementById('header-name').textContent = displayName;
+
+            if (clientOffer.personalized_intro) {
+                document.getElementById('intro-section').classList.remove('hidden');
+                document.getElementById('intro-text').textContent = clientOffer.personalized_intro;
+            }
+
+            // Client info
+            document.getElementById('client-email').textContent = lead.email;
+            if (lead.name) {
+                document.getElementById('client-name').textContent = lead.name;
+                document.getElementById('client-name-row').classList.remove('hidden');
+            }
+            if (lead.company) {
+                document.getElementById('client-company').textContent = lead.company;
+                document.getElementById('client-company-row').classList.remove('hidden');
+            }
+            if (lead.nip) {
+                document.getElementById('client-nip').textContent = lead.nip;
+                document.getElementById('client-nip-row').classList.remove('hidden');
+            }
+            if (lead.address) {
+                document.getElementById('client-address').textContent = lead.address;
+                document.getElementById('client-address-row').classList.remove('hidden');
+            }
+            if (lead.phone) {
+                document.getElementById('client-phone').textContent = lead.phone;
+                document.getElementById('client-phone-row').classList.remove('hidden');
+            }
+
+            // Offer
+            document.getElementById('offer-name').textContent = offer.name;
+            document.getElementById('offer-description').textContent = offer.description || '';
+            document.getElementById('valid-until-display').textContent = formatDate(clientOffer.valid_until);
+
+            const fullPrice = getEffectivePrice();
+            document.getElementById('full-price-inline').textContent = formatPrice(fullPrice) + ' zł';
+            document.getElementById('full-price-accordion').textContent = formatPrice(fullPrice);
+            document.getElementById('invoice-total').textContent = formatPrice(fullPrice);
+
+            const milestones = offer.milestones || [];
+            renderHighlights(milestones);
+            renderTimeline(milestones);
+
+            loadPaymentSchedule();
+        }
+
+        function renderHighlights(milestones) {
+            // Pull top 5 deliverables across all milestones
+            const allDeliverables = [];
+            milestones.forEach(m => {
+                (m.deliverables || []).forEach(d => {
+                    const trimmed = (d || '').trim();
+                    if (trimmed) allDeliverables.push(trimmed);
+                });
+            });
+
+            const top = allDeliverables.slice(0, 5);
+            if (top.length === 0) return;
+
+            const section = document.getElementById('highlights-section');
+            const list = document.getElementById('highlights-list');
+            list.innerHTML = top.map(d => `
+                <div class="flex items-start gap-3">
+                    <i class="ph-fill ph-check-circle text-emerald-400 text-lg mt-0.5 flex-shrink-0"></i>
+                    <span class="text-zinc-200 text-sm leading-relaxed">${escapeHtml(d)}</span>
+                </div>
+            `).join('');
+            section.classList.remove('hidden');
+        }
+
+        function renderTimeline(milestones) {
+            const container = document.getElementById('timeline-container');
+            const accordion = document.getElementById('timeline-accordion');
+
+            if (milestones.length === 0) {
+                accordion.classList.add('hidden');
+                return;
+            }
+            accordion.classList.remove('hidden');
+            document.getElementById('milestones-count').textContent =
+                milestones.length + (milestones.length === 1 ? ' etap' : (milestones.length < 5 ? ' etapy' : ' etapów'));
+
+            let currentDay = 1;
+            const timelineHtml = milestones.map((milestone, index) => {
+                const hasDuration = milestone.duration_days && milestone.duration_days > 0;
+                const startDay = currentDay;
+                const endDay = hasDuration ? currentDay + milestone.duration_days - 1 : currentDay - 1;
+                if (hasDuration) currentDay = endDay + 1;
+
+                const deliverables = (milestone.deliverables || []).filter(d => d.trim());
+                const tasks = milestone.tasks || [];
+
+                return `
+                    <div class="relative mb-4">
+                        <div class="absolute -left-4 sm:-left-5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center z-10">
+                            <span class="text-[9px] sm:text-[10px] font-bold text-amber-400">${index + 1}</span>
+                        </div>
+                        <div class="ml-3 sm:ml-4">
+                            <div class="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
+                                <div class="flex items-start justify-between gap-3 mb-2">
+                                    <h4 class="text-sm sm:text-base font-semibold text-white leading-tight">${escapeHtml(milestone.title) || 'Etap ' + (index + 1)}</h4>
+                                    ${hasDuration ? `
+                                        <div class="text-right flex-shrink-0">
+                                            <div class="text-amber-400 text-xs font-bold">${milestone.duration_days} dni</div>
+                                            <div class="text-zinc-600 text-[10px] font-mono">Dzień ${startDay}${startDay !== endDay ? '-' + endDay : ''}</div>
+                                        </div>
+                                    ` : ''}
+                                </div>
+                                ${milestone.description ? `<p class="text-zinc-500 text-xs sm:text-sm mb-3">${escapeHtml(milestone.description)}</p>` : ''}
+                                ${deliverables.length > 0 ? `
+                                    <div class="space-y-1.5 mt-2">
+                                        ${deliverables.map(d => `
+                                            <div class="flex items-start gap-2">
+                                                <i class="ph-fill ph-check-circle text-emerald-400 text-sm mt-0.5 flex-shrink-0"></i>
+                                                <span class="text-zinc-300 text-xs sm:text-sm">${escapeHtml(d)}</span>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                ` : ''}
+                                ${tasks.length > 0 ? `
+                                    <div class="mt-3 pt-3 border-t border-white/5 space-y-1.5">
+                                        ${tasks.map(task => {
+                                            let bg, fg, label;
+                                            if (task.responsible === 'client') { bg = 'bg-cyan-500/15 border-cyan-500/30'; fg = 'text-cyan-400'; label = 'Klient'; }
+                                            else if (task.responsible === 'shared') { bg = 'bg-amber-500/15 border-amber-500/30'; fg = 'text-amber-400'; label = 'Wspólne'; }
+                                            else { bg = 'bg-violet-500/15 border-violet-500/30'; fg = 'text-violet-400'; label = 'TN'; }
+                                            return `
+                                                <div class="flex items-start gap-2">
+                                                    <span class="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border ${bg} ${fg} font-medium flex-shrink-0 mt-0.5">${label}</span>
+                                                    <span class="text-zinc-300 text-xs">${escapeHtml(task.title)}</span>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.innerHTML = timelineHtml;
+        }
+
+        async function loadPaymentSchedule() {
+            if (!lead?.id) return;
+            try {
+                const { data: schedule, error } = await supabaseClient
+                    .from('payment_schedules')
+                    .select('*, payment_installments(*)')
+                    .eq('lead_id', lead.id)
+                    .single();
+
+                if (error || !schedule) return;
+                paymentSchedule = schedule;
+                renderPaymentSchedule();
+            } catch (err) {
+                console.error('[offer] Error loading payment schedule:', err);
+            }
+        }
+
+        function renderPaymentSchedule() {
+            if (!paymentSchedule || !paymentSchedule.payment_installments?.length) return;
+
+            document.getElementById('payment-schedule-section')?.classList.remove('hidden');
+
+            const container = document.getElementById('payment-schedule-list');
+            const installments = paymentSchedule.payment_installments
+                .sort((a, b) => a.installment_number - b.installment_number);
+
+            container.innerHTML = installments.map(inst => {
+                const statusColors = {
+                    'pending': 'text-zinc-400 bg-zinc-800',
+                    'paid': 'text-emerald-400 bg-emerald-500/20',
+                    'overdue': 'text-red-400 bg-red-500/20',
+                    'cancelled': 'text-zinc-600 bg-zinc-900'
+                };
+                const statusLabels = {
+                    'pending': 'Do zapłaty',
+                    'paid': 'Opłacona',
+                    'overdue': 'Zaległa',
+                    'cancelled': 'Anulowana'
+                };
+                const statusClass = statusColors[inst.status] || statusColors.pending;
+                const statusLabel = statusLabels[inst.status] || inst.status;
+
+                return `
+                    <div class="flex items-center gap-3 p-3 rounded-lg bg-zinc-900/50 border border-white/5">
+                        <div class="w-7 h-7 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            ${inst.installment_number}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2">
+                                <span class="text-white font-medium">${formatPrice(inst.amount)} PLN</span>
+                                <span class="px-1.5 py-0.5 rounded text-[10px] ${statusClass}">${statusLabel}</span>
+                            </div>
+                            <div class="text-zinc-500 text-xs">Termin: ${formatDate(inst.due_date)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('schedule-total').textContent = formatPrice(paymentSchedule.total_amount) + ' PLN';
+        }
+
+        // ===== Accordions =====
+        function toggleAccordion(name) {
+            const content = document.getElementById('acc-content-' + name);
+            const chevron = document.getElementById('acc-chevron-' + name);
+            const expanded = content.classList.contains('expanded');
+            if (expanded) {
+                content.classList.remove('expanded');
+                chevron.classList.remove('rotated');
+            } else {
+                content.classList.add('expanded');
+                chevron.classList.add('rotated');
+            }
+        }
+
+        // ===== Payment flows =====
+        function proceedToDeposit() {
+            trackInitiateCheckout('deposit');
+
+            const description = `Zadatek: ${offer.name}`;
+            const params = new URLSearchParams({
+                amount: String(DEPOSIT_AMOUNT),
+                description: description,
+                lead_id: lead.id
+            });
+            window.location.href = `/checkout?${params.toString()}`;
+        }
+
+        function proceedToFullPayment() {
+            trackInitiateCheckout('full');
+
+            let checkoutUrl = `/checkout?offer=${offer.id}`;
+            if (clientOffer?.id) {
+                checkoutUrl += `&client_offer=${clientOffer.id}`;
+            }
+            window.location.href = checkoutUrl;
+        }
+
+        // ===== Proforma =====
+        function parseAddress(address) {
+            if (!address) return { street: '', postCode: '', city: '' };
+            const match = address.match(/^(.+?),?\s*(\d{2}-\d{3})\s+(.+)$/);
+            if (match) return { street: match[1].trim(), postCode: match[2], city: match[3].trim() };
+            return { street: address, postCode: '', city: '' };
+        }
+
+        async function downloadProforma() {
+            const btn = event.target.closest('button');
+            const originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Generowanie...';
+
+            try {
+                const addressParts = parseAddress(lead.address);
+                const requestData = {
+                    buyer: {
+                        name: lead.name,
+                        company: lead.company,
+                        email: lead.email,
+                        nip: lead.nip || '',
+                        street: addressParts.street,
+                        postCode: addressParts.postCode,
+                        city: addressParts.city
+                    },
+                    offer: {
+                        name: offer.name,
+                        description: offer.description,
+                        price: getEffectivePrice()
+                    },
+                    validUntil: clientOffer.valid_until
+                };
+
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/fakturownia-proforma`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` },
+                    body: JSON.stringify(requestData)
+                });
+
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Błąd generowania proformy');
+
+                window.open(result.pdfUrl, '_blank');
+                trackProformaDownload();
+
+                try {
+                    await supabaseClient.from('lead_activities').insert([{
+                        lead_id: lead.id,
+                        type: 'proforma',
+                        description: `Wygenerowano proformę przez klienta (v2)`,
+                        metadata: {
+                            offer_name: offer.name,
+                            offer_price: getEffectivePrice(),
+                            invoice_id: result.invoiceId,
+                            generated_by: 'client',
+                            client_email: lead.email,
+                            page_version: 'v2'
+                        }
+                    }]);
+                } catch (logError) {
+                    console.error('Activity log error:', logError);
+                }
+
+                sendSlackNotification('proforma_generated', {
+                    lead_name: lead.name,
+                    lead_email: lead.email,
+                    lead_company: lead.company,
+                    lead_id: lead.id,
+                    offer_name: offer.name,
+                    offer_price: getEffectivePrice(),
+                    generated_by: 'client'
+                });
+
+                sendEmail('proforma_generated', {
+                    email: lead.email,
+                    clientName: lead.name,
+                    offerName: offer.name,
+                    offerPrice: getEffectivePrice(),
+                    pdfUrl: result.pdfUrl
+                });
+
+            } catch (error) {
+                console.error('Proforma error:', error);
+                alert('Błąd: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHtml;
+            }
+        }
+
+        // ===== Sticky bar =====
+        const stickyBar = document.getElementById('sticky-pay-bar');
+        function initStickyBar() {
+            // Show sticky bar when hero is out of view
+            const hero = document.querySelector('.border-amber-500\\/30');
+            if (!hero || !stickyBar) return;
+            const observer = new IntersectionObserver(([entry]) => {
+                if (entry.isIntersecting) {
+                    stickyBar.classList.add('translate-y-full');
+                } else {
+                    stickyBar.classList.remove('translate-y-full');
+                }
+            }, { threshold: 0 });
+            observer.observe(hero);
+        }
+
+        // ===== Init =====
+        document.getElementById('login-btn').addEventListener('click', verifyEmail);
+        document.getElementById('email-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') verifyEmail();
+        });
+
+        loadOffer();
+    </script>
+</body>
+</html>
