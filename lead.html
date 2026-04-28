@@ -875,46 +875,10 @@
 
                                     <!-- ===== RESULT: Offer exists ===== -->
                                     <div id="client-offer-exists" class="hidden">
-                                        <!-- Link section - prominent -->
-                                        <div class="bg-zinc-800/30 rounded-xl p-3 sm:p-4 mb-4 border border-white/5">
-                                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2">
-                                                <i class="ph ph-link text-amber-400"></i>
-                                                <span class="font-mono uppercase tracking-wider">Link do oferty</span>
-                                            </div>
-                                            <div class="flex flex-col sm:flex-row gap-2">
-                                                <input type="text" id="client-offer-url" readonly class="flex-1 bg-zinc-900/80 border border-zinc-700/50 rounded-lg px-3 py-2.5 text-xs sm:text-sm text-zinc-300 font-mono truncate">
-                                                <div class="flex gap-2">
-                                                    <button onclick="copyOfferUrl()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-white">
-                                                        <i class="ph ph-copy"></i>
-                                                        <span class="sm:hidden">Kopiuj</span>
-                                                    </button>
-                                                    <button onclick="openOfferPreview()" class="flex-1 sm:flex-none px-4 py-2.5 bg-amber-500/20 hover:bg-amber-500/30 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm text-amber-400">
-                                                        <i class="ph ph-arrow-square-out"></i>
-                                                        <span class="sm:hidden">Otwórz</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Stats row - compact -->
-                                        <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 mb-3">
-                                            <div class="flex items-center gap-4">
-                                                <span class="flex items-center gap-1.5">
-                                                    <i class="ph ph-calendar text-amber-400/70"></i>
-                                                    <span>do</span>
-                                                    <span id="client-offer-valid-display" class="text-zinc-300 font-medium">-</span>
-                                                </span>
-                                                <button onclick="openViewHistoryModal()" class="flex items-center gap-1.5 hover:text-white transition-colors">
-                                                    <i class="ph ph-eye text-cyan-400/70"></i>
-                                                    <span id="client-offer-views" class="text-zinc-300 font-medium">0</span>
-                                                    <span>wyświetleń</span>
-                                                </button>
-                                            </div>
-                                            <button onclick="deleteClientOffer()" class="flex items-center gap-1 text-red-400/60 hover:text-red-400 transition-colors px-2 py-1 rounded hover:bg-red-500/10" title="Usuń ofertę">
-                                                <i class="ph ph-trash"></i>
-                                                <span class="hidden sm:inline">Usuń</span>
-                                            </button>
-                                        </div>
+                                        <!-- Hidden state holders (used by JS for state sync — link/stats moved to "Aktywna oferta" card) -->
+                                        <input type="hidden" id="client-offer-url">
+                                        <span id="client-offer-valid-display" class="hidden">-</span>
+                                        <span id="client-offer-views" class="hidden">0</span>
 
                                         <!-- Payment Schedule Link (if exists) -->
                                         <div id="payment-schedule-link-section" class="hidden pt-4 border-t border-white/5">
@@ -1262,6 +1226,12 @@
                                             Kopiuj link
                                         </button>
                                     </div>
+
+                                    <!-- Subtle delete option -->
+                                    <button onclick="deleteClientOffer()" class="w-full mt-3 inline-flex items-center justify-center gap-1.5 text-red-400/60 hover:text-red-400 hover:bg-red-500/10 text-xs py-2 rounded transition-colors" title="Usuń ofertę">
+                                        <i class="ph ph-trash"></i>
+                                        <span>Usuń ofertę</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -6177,12 +6147,21 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 (acts || []).forEach(a => {
                     const meta = a.metadata || {};
                     if (a.type === 'checkout_started') {
-                        const labels = { deposit: 'Rezerwacja zadatku', remaining: 'Płatność pozostałej kwoty', full: 'Płatność całości' };
+                        const labels = {
+                            deposit:   "Kliknął „Rezerwuję teraz”",
+                            remaining: "Kliknął „Opłacam pozostałość”",
+                            full:      "Kliknął „Zapłacę całość”"
+                        };
+                        const subs = {
+                            deposit:   `Zadatek ${meta.amount ? fmtPLN(meta.amount) + ' zł' : ''} — przeszedł do checkoutu (płatność niedokończona)`,
+                            remaining: `Pozostała kwota ${meta.amount ? fmtPLN(meta.amount) + ' zł' : ''} — przeszedł do checkoutu`,
+                            full:      `Pełna kwota ${meta.amount ? fmtPLN(meta.amount) + ' zł' : ''} — przeszedł do checkoutu`
+                        };
                         events.push({
                             time: a.created_at,
-                            icon: 'ph-shopping-cart', color: 'orange',
-                            label: labels[meta.checkout_type] || 'Przejście do checkout',
-                            sub: meta.amount ? `${fmtPLN(meta.amount)} zł` : null
+                            icon: 'ph-cursor-click', color: 'orange',
+                            label: labels[meta.checkout_type] || 'Przejście do checkoutu',
+                            sub: subs[meta.checkout_type] || (meta.amount ? `${fmtPLN(meta.amount)} zł` : null)
                         });
                     } else if (a.type === 'proforma') {
                         events.push({
