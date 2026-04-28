@@ -1111,6 +1111,132 @@
             background: radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 60%);
         }
 
+        /* ===== Login screen ===== */
+        .login-bg {
+            background:
+                radial-gradient(ellipse 80% 50% at 50% 0%, rgba(245,158,11,0.10), transparent 60%),
+                radial-gradient(ellipse 60% 40% at 0% 100%, rgba(139,92,246,0.05), transparent 60%),
+                radial-gradient(ellipse 60% 40% at 100% 100%, rgba(6,182,212,0.04), transparent 60%);
+        }
+        .login-avatar {
+            width: 84px;
+            height: 84px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 2px solid rgba(245,158,11,0.55);
+            box-shadow: 0 0 36px rgba(245,158,11,0.28), inset 0 0 0 1px rgba(255,255,255,0.06);
+            position: relative;
+        }
+        .login-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .login-avatar::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: #10b981;
+            border: 2.5px solid #050505;
+            box-shadow: 0 0 10px rgba(16,185,129,0.7);
+        }
+        .login-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            color: rgba(255,255,255,0.5);
+            font-weight: 700;
+        }
+        .login-status .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 7px #10b981;
+        }
+        .login-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: rgba(245,158,11,0.85);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+        }
+        .login-divider .line {
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(245,158,11,0.4), transparent);
+        }
+        .login-teaser {
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px;
+            padding: 18px 20px;
+            background: rgba(15,15,17,0.4);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-teaser::before {
+            content: '';
+            position: absolute;
+            bottom: -50%;
+            right: -30%;
+            width: 70%;
+            height: 70%;
+            background: radial-gradient(circle, rgba(245,158,11,0.15), transparent 65%);
+            pointer-events: none;
+        }
+        .login-teaser-label {
+            position: relative;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: rgba(245,158,11,0.9);
+            margin-bottom: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .login-teaser-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(245,158,11,0.3), transparent);
+        }
+        .login-teaser-items {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .login-teaser-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 11px;
+            color: rgba(255,255,255,0.88);
+            font-size: 13.5px;
+            line-height: 1.45;
+        }
+        .login-teaser-item i {
+            color: #10b981;
+            font-size: 17px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
         /* ===== Timeline (magazine spread, always visible) ===== */
         .timeline-stages {
             display: flex;
@@ -1314,19 +1440,66 @@
 <body class="min-h-screen font-sans text-sm tracking-tight antialiased">
 
     <!-- Login Screen -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4">
-        <div class="w-full max-w-md animate-enter">
-            <div class="text-center mb-8">
-                <div class="w-14 h-14 bg-white text-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-[0_0_30px_rgba(255,255,255,0.1)]">
-                    <i class="ph-bold ph-lightning text-2xl"></i>
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden">
+        <div class="absolute inset-0 login-bg pointer-events-none"></div>
+
+        <div class="relative w-full max-w-lg animate-enter">
+            <!-- Hero: Avatar + Tomek info -->
+            <div class="flex flex-col items-center text-center mb-8">
+                <div class="login-avatar mb-5">
+                    <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat.png" alt="Tomek Niedźwiecki">
                 </div>
-                <h1 class="text-2xl font-bold text-white mb-2">Twoja spersonalizowana oferta</h1>
-                <p class="text-zinc-400">Wprowadź swój adres e-mail, aby zobaczyć szczegóły</p>
+                <div class="text-white font-bold text-base mb-2">Tomek Niedźwiecki</div>
+                <div class="login-status">
+                    <span class="dot"></span>
+                    <span>Online · Buduję e-biznesy od 15 lat</span>
+                </div>
             </div>
 
-            <div class="glass-card rounded-2xl border border-white/10 p-6">
+            <!-- Pitch -->
+            <div class="text-center mb-7">
+                <div class="login-divider mb-5">
+                    <span class="line"></span>
+                    <span>Twoja oferta jest gotowa</span>
+                    <span class="line"></span>
+                </div>
+                <h1 class="text-white text-2xl sm:text-3xl font-extrabold leading-[1.15] tracking-tight max-w-md mx-auto">
+                    Przygotowałem dla Ciebie spersonalizowaną propozycję
+                </h1>
+                <p class="text-zinc-400 text-sm sm:text-base mt-3 max-w-md mx-auto leading-relaxed">
+                    Pełen plan uruchomienia biznesu online — od analizy rynku, przez markę i sklep, po skalowanie i przekazanie kompetencji.
+                </p>
+            </div>
+
+            <!-- Teaser bullets — what's inside -->
+            <div class="login-teaser mb-6">
+                <div class="login-teaser-label">
+                    <span>W ofercie</span>
+                </div>
+                <div class="login-teaser-items">
+                    <div class="login-teaser-item">
+                        <i class="ph-fill ph-check-circle"></i>
+                        <span>5-etapowy plan działania (4-6 miesięcy)</span>
+                    </div>
+                    <div class="login-teaser-item">
+                        <i class="ph-fill ph-check-circle"></i>
+                        <span>Pełen pakiet: marka, sklep, kampanie reklamowe</span>
+                    </div>
+                    <div class="login-teaser-item">
+                        <i class="ph-fill ph-check-circle"></i>
+                        <span>1000 zamówień jako walidacja modelu</span>
+                    </div>
+                    <div class="login-teaser-item">
+                        <i class="ph-fill ph-check-circle"></i>
+                        <span>Bezpośredni kontakt ze mną przez 90 dni</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email gate -->
+            <div class="glass-card rounded-2xl border border-amber-500/25 p-5 sm:p-6">
                 <div class="mb-4">
-                    <label class="block text-zinc-400 text-xs font-medium mb-2">Adres e-mail</label>
+                    <label class="block text-amber-400/80 text-[10px] font-mono uppercase tracking-widest font-bold mb-2">Twój e-mail</label>
                     <input type="email" id="email-input"
                            class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
                            placeholder="jan@firma.pl"
@@ -1334,14 +1507,16 @@
                 </div>
                 <div id="login-error" class="text-red-400 text-sm mb-4 hidden"></div>
                 <button id="login-btn"
-                        class="w-full bg-white hover:bg-zinc-200 text-black px-4 py-3 rounded-xl font-semibold transition-colors flex items-center justify-center gap-2">
-                    <span>Zobacz ofertę</span>
-                    <i class="ph ph-arrow-right"></i>
+                        class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-4 py-3.5 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25">
+                    <span>Pokaż mi ofertę</span>
+                    <i class="ph-bold ph-arrow-right"></i>
                 </button>
             </div>
 
-            <p class="text-center text-zinc-600 text-xs mt-6">
-                Link jest ważny do: <span id="valid-until-preview" class="text-zinc-400">-</span>
+            <!-- Validity -->
+            <p class="text-center text-zinc-500 text-xs mt-5 inline-flex items-center justify-center gap-1.5 w-full">
+                <i class="ph ph-clock text-amber-400/70"></i>
+                Link ważny do: <span id="valid-until-preview" class="text-zinc-300 font-medium">-</span>
             </p>
         </div>
     </div>
