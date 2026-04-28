@@ -119,12 +119,14 @@ function formatNewLeadMessage(data: {
   direction?: string
   weekly_hours?: string
   target_income?: string
+  current_income?: string
   experience?: string
   open_question?: string
   budget?: string
+  survey_version?: number
 }) {
   // Check if this is from zapisy form (has survey fields)
-  if (data.weekly_hours || data.target_income || data.experience) {
+  if (data.weekly_hours || data.target_income || data.current_income || data.experience) {
     return formatZapisyLeadMessage(data)
   }
 
@@ -227,21 +229,44 @@ function formatNewLeadMessage(data: {
 function formatZapisyLeadMessage(data: {
   email: string
   phone?: string
+  name?: string
   lead_id?: string
   traffic_source?: string
   direction?: string
   weekly_hours?: string
   target_income?: string
+  current_income?: string
   experience?: string
   open_question?: string
   budget?: string
+  survey_version?: number
 }) {
-  // Labels for form values
-  const directionLabels: Record<string, string> = {
+  // Detekcja v2 (zapisy v2): ma current_income, budget jako liczba, lub explicit version
+  const isV2 = data.survey_version === 2
+            || !!data.current_income
+            || (!!data.budget && /^\d+$/.test(data.budget))
+
+  // v1 — pojedynczy "kierunek" (nieużywane w v2)
+  const directionLabelsV1: Record<string, string> = {
     'sklep': 'Sklep internetowy',
     'aplikacja': 'Aplikacja / SaaS',
     'produkt_cyfrowy': 'Kurs / Produkt cyfrowy',
     'nie_wiem': 'Potrzebuje doradzenia'
+  }
+
+  // v2 — multiselect "co już próbował" (CSV)
+  const triedLabelsV2: Record<string, string> = {
+    sklep_online: 'Własny sklep online',
+    allegro: 'Allegro',
+    vinted_olx: 'Vinted / OLX',
+    dropshipping: 'Dropshipping',
+    takedrop: 'TakeDrop',
+    amazon: 'Amazon FBA',
+    kursy: 'Kursy / szkolenia',
+    freelance: 'Freelance / usługi',
+    afiliacja: 'Afiliacja',
+    trading: 'Trading / krypto',
+    nigdy: 'Nigdy nie próbował'
   }
 
   const hoursLabels: Record<string, string> = {
@@ -252,18 +277,30 @@ function formatZapisyLeadMessage(data: {
   }
 
   const incomeLabels: Record<string, string> = {
+    '<5k': 'Poniżej 5k PLN',
     '5-10k': '5-10k PLN',
     '10-20k': '10-20k PLN',
     '20-50k': '20-50k PLN',
     '50k+': '50k+ PLN'
   }
 
-  const budgetLabels: Record<string, string> = {
+  // v1 budget brackets (zachowane dla starych)
+  const budgetLabelsV1: Record<string, string> = {
     '5-10k': '5-10k PLN',
     '10-20k': '10-20k PLN',
     '20-40k': '20-40k PLN',
     '40k+': '40k+ PLN'
   }
+
+  function formatBudgetV2(raw: string): string {
+    const n = parseInt(raw.replace(/\D/g, ''), 10)
+    if (!n || n <= 0) return raw
+    return n.toLocaleString('pl-PL').replace(/,/g, ' ') + ' PLN'
+  }
+
+  const versionTag = isV2 ? ' _(v2)_' : ''
+  const headerLabel = data.name ? `*${data.name}* · ` : ''
+  const phoneLabel = data.phone ? ` · ${data.phone}` : ''
 
   const blocks: any[] = [
     {
@@ -278,69 +315,75 @@ function formatZapisyLeadMessage(data: {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*${leadLink(data.email, data.email, data.lead_id)}*${data.phone ? ` · ${data.phone}` : ''}`
+        text: `${headerLabel}*${leadLink(data.email, data.email, data.lead_id)}*${phoneLabel}${versionTag}`
       }
     }
   ]
 
-  // Only show fields that exist
-  const optionalFields = []
+  // Co próbował / Kierunek
+  const optionalFields: any[] = []
   if (data.direction) {
-    optionalFields.push({ type: 'mrkdwn', text: `*Kierunek:*\n${directionLabels[data.direction] || data.direction}` })
+    if (isV2) {
+      const labels = data.direction
+        .split(',').map(v => v.trim()).filter(Boolean)
+        .map(v => triedLabelsV2[v] || v)
+        .join(', ')
+      optionalFields.push({ type: 'mrkdwn', text: `*Co próbował:*\n${labels}` })
+    } else {
+      optionalFields.push({ type: 'mrkdwn', text: `*Kierunek:*\n${directionLabelsV1[data.direction] || data.direction}` })
+    }
   }
   if (data.traffic_source) {
     optionalFields.push({ type: 'mrkdwn', text: `*Źródło:*\n${data.traffic_source}` })
   }
   if (optionalFields.length > 0) {
-    blocks.push({
-      type: 'section',
-      fields: optionalFields
-    })
+    blocks.push({ type: 'section', fields: optionalFields })
   }
 
-  // Survey fields (weekly hours and target income)
-  const surveyFields = []
+  // Survey: czas + dochód
+  const surveyFields: any[] = []
   if (data.weekly_hours) {
     surveyFields.push({ type: 'mrkdwn', text: `*Czas/tydzień:*\n${hoursLabels[data.weekly_hours] || data.weekly_hours}` })
   }
-  if (data.target_income) {
-    surveyFields.push({ type: 'mrkdwn', text: `*Cel dochodu:*\n${incomeLabels[data.target_income] || data.target_income}` })
+  const incomeValue = data.current_income || data.target_income
+  if (incomeValue) {
+    const incomeLabel = isV2 ? 'Obecny dochód' : 'Cel dochodu'
+    surveyFields.push({ type: 'mrkdwn', text: `*${incomeLabel}:*\n${incomeLabels[incomeValue] || incomeValue}` })
   }
   if (surveyFields.length > 0) {
-    blocks.push({
-      type: 'section',
-      fields: surveyFields
-    })
+    blocks.push({ type: 'section', fields: surveyFields })
   }
 
-  // Budget (optional, was removed from form)
+  // Budżet (v2: liczba; v1: kategoria)
   if (data.budget) {
+    const budgetText = isV2 ? formatBudgetV2(data.budget) : (budgetLabelsV1[data.budget] || data.budget)
     blocks.push({
       type: 'section',
       fields: [
-        { type: 'mrkdwn', text: `*Budżet:*\n${budgetLabels[data.budget] || data.budget}` }
+        { type: 'mrkdwn', text: `*Budżet inwestycyjny:*\n${budgetText}` }
       ]
     })
   }
 
-  // Experience (always present)
+  // Experience (etykieta zależna od wersji)
   if (data.experience) {
+    const expLabel = isV2 ? 'O sobie' : 'Doświadczenie'
     blocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Doświadczenie:*\n${data.experience.substring(0, 500)}`
+        text: `*${expLabel}:*\n${data.experience.substring(0, 500)}`
       }
     })
   }
 
-  // Open question (optional)
+  // Open question (v1 only)
   if (data.open_question) {
     blocks.push({
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: `*Dodatkowe info:*\n${data.open_question.substring(0, 500)}`
+        text: `*Czym się zajmuje:*\n${data.open_question.substring(0, 500)}`
       }
     })
   }
