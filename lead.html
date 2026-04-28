@@ -5347,6 +5347,32 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 }
             }
 
+            // Snapshot offer data into lead_activities BEFORE delete (preserve history)
+            try {
+                const offerData = offers.find(o => o.id === clientOffer.offer_id);
+                const offerName = offerData?.name || 'Oferta';
+                const price = parseFloat(clientOffer.custom_price || offerData?.price || 0);
+                await supabaseClient.from('lead_activities').insert([{
+                    lead_id: lead.id,
+                    type: 'offer_deleted',
+                    description: `Oferta usunięta: ${offerName} (${fmtPLN(price)} zł)`,
+                    metadata: {
+                        client_offer_id: clientOffer.id,
+                        offer_id: clientOffer.offer_id,
+                        offer_name: offerName,
+                        price: price,
+                        valid_until: clientOffer.valid_until,
+                        unique_token: clientOffer.unique_token,
+                        view_count: clientOffer.view_count || 0,
+                        original_created_at: clientOffer.created_at,
+                        schedule_deleted: deleteSchedule
+                    }
+                }]);
+            } catch (e) {
+                console.warn('[delete-offer] Could not save snapshot to lead_activities:', e);
+                // Continue with delete even if snapshot fails
+            }
+
             // Delete the offer
             const { error } = await supabaseClient
                 .from('client_offers')
@@ -5368,6 +5394,10 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
             clientOffer = null;
             updateClientOfferSection();
+
+            // Refresh entire offer tab — archive, timeline, payments will re-fetch
+            // (timeline now picks up the offer_deleted event we just inserted)
+            refreshOfferTabData();
 
             if (deleteSchedule) {
                 // Reset sidebar schedule to empty state
@@ -6153,6 +6183,14 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                             icon: 'ph-file-pdf', color: 'violet',
                             label: 'Pobranie proformy',
                             sub: meta.offer_name || null
+                        });
+                    } else if (a.type === 'offer_deleted') {
+                        const priceStr = meta.price ? `${fmtPLN(meta.price)} zł` : '';
+                        events.push({
+                            time: a.created_at,
+                            icon: 'ph-trash', color: 'red',
+                            label: 'Oferta usunięta',
+                            sub: meta.offer_name ? `${meta.offer_name}${priceStr ? ' · ' + priceStr : ''} (${meta.view_count || 0} wyświetleń)` : a.description
                         });
                     } else if (a.type === 'note' && a.description) {
                         events.push({
