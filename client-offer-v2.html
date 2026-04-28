@@ -94,42 +94,131 @@
             -webkit-backdrop-filter: blur(12px);
         }
 
-        /* Deliverable cards with mockup area */
-        .deliverable-card {
-            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 20px;
-            overflow: hidden;
-            transition: all 0.3s ease;
+        /* Deliverable tile cards (premium style) */
+        .tile-card {
             position: relative;
-        }
-        .deliverable-card:hover {
-            border-color: rgba(245, 158, 11, 0.3);
-            transform: translateY(-2px);
-        }
-        .deliverable-mockup {
-            aspect-ratio: 16/10;
-            background: radial-gradient(ellipse at top, rgba(245, 158, 11, 0.08), transparent 60%), #0a0a0a;
-            position: relative;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%),
+                rgba(15, 15, 17, 0.85);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 22px;
+            padding: 22px 22px 24px;
+            min-height: 230px;
+            display: flex;
+            flex-direction: column;
             overflow: hidden;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                        border-color 0.35s ease,
+                        box-shadow 0.35s ease;
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.04) inset,
+                0 4px 14px rgba(0,0,0,0.3),
+                0 1px 2px rgba(0,0,0,0.4);
+        }
+        .tile-card::before {
+            /* Ambient color glow in top-right */
+            content: '';
+            position: absolute;
+            top: -30%;
+            right: -30%;
+            width: 80%;
+            height: 80%;
+            background: radial-gradient(circle, var(--accent, #f59e0b) 0%, transparent 65%);
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.4s ease;
+        }
+        .tile-card::after {
+            /* Bottom accent line */
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 22px;
+            right: 22px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent, #f59e0b), transparent);
+            opacity: 0.5;
+            z-index: 1;
+        }
+        .tile-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255,255,255,0.14);
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.06) inset,
+                0 16px 40px rgba(0,0,0,0.45),
+                0 4px 10px rgba(0,0,0,0.3),
+                0 0 50px var(--accent-glow, rgba(245,158,11,0.08));
+        }
+        .tile-card:hover::before {
+            opacity: 0.28;
+        }
+        .tile-header {
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            z-index: 2;
+            margin-bottom: 28px;
+        }
+        .tile-number {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.32);
+        }
+        .tile-badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 4px 9px;
+            border-radius: 999px;
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .tile-icon-wrap {
+            position: relative;
+            z-index: 2;
+            margin-bottom: 22px;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+        }
+        .tile-icon-circle {
+            width: 56px;
+            height: 56px;
+            border-radius: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
+            background: rgba(0,0,0,0.45);
+            border: 1px solid var(--accent, #f59e0b);
+            border-color: color-mix(in srgb, var(--accent) 35%, transparent);
+            box-shadow: 0 8px 24px var(--accent-glow, rgba(245,158,11,0.2));
         }
-        .deliverable-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            padding: 3px 8px;
-            border-radius: 6px;
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+        .tile-icon-circle i {
+            font-size: 30px;
+            color: var(--accent, #f59e0b);
+            filter: drop-shadow(0 0 12px var(--accent-glow, rgba(245,158,11,0.5)));
+        }
+        .tile-title {
+            position: relative;
             z-index: 2;
+            margin-top: auto;
+            color: white;
+            font-weight: 700;
+            font-size: 15px;
+            line-height: 1.35;
+            letter-spacing: -0.01em;
+        }
+        @media (min-width: 640px) {
+            .tile-card { padding: 24px 24px 26px; min-height: 240px; }
+            .tile-icon-circle { width: 60px; height: 60px; border-radius: 18px; }
+            .tile-icon-circle i { font-size: 32px; }
+            .tile-title { font-size: 16px; }
         }
 
         /* Accordion */
@@ -618,6 +707,14 @@
             return new Intl.NumberFormat('pl-PL').format(price);
         }
 
+        function hexToRgba(hex, alpha) {
+            const m = hex.replace('#', '');
+            const r = parseInt(m.substring(0, 2), 16);
+            const g = parseInt(m.substring(2, 4), 16);
+            const b = parseInt(m.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
         function escapeHtml(text) {
             if (!text) return '';
             const div = document.createElement('div');
@@ -814,14 +911,14 @@
         // Custom highlights for "Budowa sklepu pełen pakiet"
         const FULL_PACKAGE_OFFER_ID = '30bf199b-8bc1-4810-8716-43dbffeb9113';
         const FULL_PACKAGE_HIGHLIGHTS = [
-            { color: '#f43f5e', icon: 'ph-magnifying-glass-plus', title: 'Analiza rynku',         badge: '15 dni' },
-            { color: '#8b5cf6', icon: 'ph-paint-brush',           title: 'Marka i logo' },
-            { color: '#06b6d4', icon: 'ph-storefront',            title: 'Sklep online' },
-            { color: '#10b981', icon: 'ph-shield-check',          title: 'Formalności i RODO',    badge: '10 dni' },
-            { color: '#f97316', icon: 'ph-film-strip',            title: 'Reklamy i video',       badge: '7 dni' },
-            { color: '#ec4899', icon: 'ph-camera',                title: 'Sesja z influencerem' },
-            { color: '#f59e0b', icon: 'ph-rocket-launch',         title: '1000 zamówień',         badge: 'walidacja' },
-            { color: '#0ea5e9', icon: 'ph-chalkboard-teacher',    title: 'Mentoring 1:1',         badge: '3 mies.' },
+            { color: '#f43f5e', icon: 'ph-magnifying-glass-plus', title: 'Analiza rynku i wybór bestsellerowego produktu', badge: '15 dni' },
+            { color: '#8b5cf6', icon: 'ph-paint-brush',           title: 'Marka, logo i pełna identyfikacja wizualna' },
+            { color: '#06b6d4', icon: 'ph-storefront',            title: 'Profesjonalny sklep online pod Twoją domeną' },
+            { color: '#10b981', icon: 'ph-shield-check',          title: 'Formalności prawne, RODO i bramka płatności',   badge: '10 dni' },
+            { color: '#f97316', icon: 'ph-film-strip',            title: 'Komplet grafik i video reklamowych',             badge: '7 dni' },
+            { color: '#ec4899', icon: 'ph-camera',                title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
+            { color: '#f59e0b', icon: 'ph-rocket-launch',         title: 'Walidacja biznesu na 1000 realnych zamówieniach' },
+            { color: '#0ea5e9', icon: 'ph-chalkboard-teacher',    title: '3 miesiące mentoringu 1:1 z Tomkiem',            badge: '90 dni' },
         ];
 
         function renderHighlights(milestones) {
@@ -831,25 +928,32 @@
             // Custom layout for "Budowa sklepu pełen pakiet"
             if (offer.id === FULL_PACKAGE_OFFER_ID) {
                 grid.classList.remove('md:grid-cols-2');
-                grid.classList.add('grid-cols-2', 'lg:grid-cols-4');
+                grid.classList.add('grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-4');
 
-                grid.innerHTML = FULL_PACKAGE_HIGHLIGHTS.map(b => `
-                    <div class="deliverable-card">
-                        <div class="deliverable-mockup" style="background: radial-gradient(ellipse at top, ${b.color}1f, transparent 65%), #0a0a0a;">
-                            ${b.badge ? `
-                                <span class="deliverable-badge"
-                                      style="background: ${b.color}1a; color: ${b.color}; border: 1px solid ${b.color}33;">
-                                    ${escapeHtml(b.badge)}
-                                </span>
-                            ` : ''}
-                            <i class="ph-fill ${b.icon} text-6xl sm:text-7xl"
-                               style="color: ${b.color}; opacity: 0.9; filter: drop-shadow(0 8px 24px ${b.color}44);"></i>
+                grid.innerHTML = FULL_PACKAGE_HIGHLIGHTS.map((b, i) => {
+                    const num = String(i + 1).padStart(2, '0');
+                    // Glow rgba derived from hex (45% alpha for ambient)
+                    const glowRgba = hexToRgba(b.color, 0.22);
+                    return `
+                        <div class="tile-card" style="--accent: ${b.color}; --accent-glow: ${glowRgba};">
+                            <div class="tile-header">
+                                <span class="tile-number">${num}</span>
+                                ${b.badge ? `
+                                    <span class="tile-badge"
+                                          style="background: ${b.color}1f; color: ${b.color}; border: 1px solid ${b.color}38;">
+                                        ${escapeHtml(b.badge)}
+                                    </span>
+                                ` : ''}
+                            </div>
+                            <div class="tile-icon-wrap">
+                                <div class="tile-icon-circle">
+                                    <i class="ph-bold ${b.icon}"></i>
+                                </div>
+                            </div>
+                            <h4 class="tile-title">${escapeHtml(b.title)}</h4>
                         </div>
-                        <div class="p-4 sm:p-5">
-                            <h4 class="text-white font-bold text-sm sm:text-base leading-snug">${escapeHtml(b.title)}</h4>
-                        </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
                 document.getElementById('guarantee-card').classList.remove('hidden');
                 section.classList.remove('hidden');
                 return;
