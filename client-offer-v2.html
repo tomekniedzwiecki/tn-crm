@@ -1111,193 +1111,182 @@
             background: radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 60%);
         }
 
-        /* ===== Timeline (always visible, no accordion) ===== */
-        .timeline-stack {
+        /* ===== Timeline (magazine spread, always visible) ===== */
+        .timeline-stages {
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            position: relative;
+            gap: 36px;
         }
-        .ts-step {
-            position: relative;
+        @media (min-width: 768px) {
+            .timeline-stages { gap: 48px; }
+        }
+
+        /* Stage = "rozdział" — pełnoszerokościowy header + 2-col body */
+        .stage {
             display: flex;
-            gap: 14px;
+            flex-direction: column;
+            gap: 22px;
         }
-        @media (min-width: 640px) {
-            .ts-step { gap: 18px; }
+        @media (min-width: 768px) {
+            .stage { gap: 28px; }
         }
-        /* Vertical line connecting steps */
-        .ts-step:not(:last-child)::before {
-            content: '';
-            position: absolute;
-            left: 21px;
-            top: 44px;
-            bottom: -16px;
-            width: 1px;
-            background: linear-gradient(180deg, var(--accent), rgba(255,255,255,0.04));
-            opacity: 0.5;
-            z-index: 1;
+
+        /* Cover: meta-strip (etap 01 · 15 dni) + tytuł duży + opis */
+        .stage-cover {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        @media (min-width: 640px) {
-            .ts-step:not(:last-child)::before { left: 23px; top: 48px; }
-        }
-        .ts-step-num {
-            position: relative;
-            z-index: 2;
-            width: 42px;
-            height: 42px;
-            flex-shrink: 0;
-            border-radius: 12px;
-            background: linear-gradient(135deg, var(--accent), rgba(0,0,0,0.55));
-            border: 1px solid var(--accent);
+        .stage-meta {
             display: flex;
             align-items: center;
-            justify-content: center;
-            color: white;
+            gap: 14px;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            box-shadow: 0 3px 10px var(--accent-30), inset 0 1px 0 rgba(255,255,255,0.18);
-        }
-        @media (min-width: 640px) {
-            .ts-step-num { width: 46px; height: 46px; font-size: 14px; }
-        }
-        .ts-step-card {
-            flex: 1;
-            position: relative;
-            background:
-                linear-gradient(165deg, rgba(255,255,255,0.025) 0%, transparent 50%),
-                rgba(15, 15, 17, 0.55);
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 16px;
-            padding: 16px 18px;
-            overflow: hidden;
-            min-width: 0;
-        }
-        @media (min-width: 640px) {
-            .ts-step-card { padding: 18px 22px; }
-        }
-        .ts-step-card::before {
-            content: '';
-            position: absolute;
-            bottom: -55%;
-            right: -45%;
-            width: 75%;
-            height: 75%;
-            background: radial-gradient(circle, var(--accent), transparent 70%);
-            opacity: 0.05;
-            pointer-events: none;
-            z-index: 0;
-        }
-        .ts-step-card > * { position: relative; z-index: 1; }
-
-        .ts-step-head {
-            display: flex;
-            align-items: flex-start;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 4px;
-        }
-        .ts-step-title {
-            color: white;
+            font-size: 11px;
             font-weight: 700;
-            font-size: 16px;
-            line-height: 1.2;
-            letter-spacing: -0.015em;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
         }
-        @media (min-width: 640px) {
-            .ts-step-title { font-size: 18px; }
+        .stage-meta-num {
+            color: var(--accent);
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
         }
-        .ts-step-duration {
+        .stage-meta-num::before {
+            content: '';
+            width: 26px;
+            height: 1.5px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+        .stage-meta-sep {
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+        }
+        .stage-meta-time {
+            color: rgba(255,255,255,0.55);
+        }
+        .stage-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: white;
+            line-height: 1.1;
+            letter-spacing: -0.025em;
+        }
+        @media (min-width: 768px) {
+            .stage-title { font-size: 30px; }
+        }
+        .stage-desc {
+            color: rgba(255,255,255,0.6);
+            font-size: 14px;
+            line-height: 1.6;
+            max-width: 720px;
+        }
+        @media (min-width: 768px) {
+            .stage-desc { font-size: 15px; }
+        }
+
+        /* Body: 2 columns (Rezultaty | Zadania) */
+        .stage-body {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 28px;
+        }
+        @media (min-width: 768px) {
+            .stage-body {
+                grid-template-columns: 1fr 1fr;
+                gap: 40px;
+            }
+        }
+        .stage-col-head {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 14px;
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--accent);
-            background: var(--accent-10);
-            border: 1px solid var(--accent-20);
-            padding: 4px 10px;
-            border-radius: 999px;
-            white-space: nowrap;
-            flex-shrink: 0;
-            margin-top: 1px;
+            letter-spacing: 0.18em;
+            color: rgba(255,255,255,0.55);
         }
-        .ts-step-desc {
-            color: rgba(255,255,255,0.62);
-            font-size: 13px;
-            line-height: 1.5;
-            margin-top: 8px;
+        .stage-col-head::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.1), transparent);
         }
-        .ts-step-section {
-            margin-top: 14px;
-            padding-top: 14px;
-            border-top: 1px solid rgba(255,255,255,0.06);
-        }
-        .ts-step-section-label {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 9.5px;
+        .stage-col-head .count {
+            color: rgba(255,255,255,0.32);
             font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.16em;
-            color: rgba(255,255,255,0.5);
-            margin-bottom: 9px;
         }
-        .ts-step-list {
+        .stage-list {
             display: flex;
             flex-direction: column;
-            gap: 6px;
+            gap: 11px;
         }
-        .ts-step-del {
+        .stage-del {
             display: flex;
             align-items: flex-start;
-            gap: 9px;
-            color: rgba(255,255,255,0.88);
-            font-size: 13px;
-            line-height: 1.4;
+            gap: 11px;
+            color: rgba(255,255,255,0.92);
+            font-size: 14px;
+            line-height: 1.5;
         }
-        .ts-step-del .check {
+        .stage-del .check {
             color: var(--accent);
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1;
             flex-shrink: 0;
             margin-top: 2px;
         }
-        .ts-step-task {
+        .stage-task {
             display: flex;
             align-items: flex-start;
-            gap: 9px;
-            color: rgba(255,255,255,0.72);
-            font-size: 12.5px;
-            line-height: 1.4;
+            gap: 10px;
+            color: rgba(255,255,255,0.78);
+            font-size: 13.5px;
+            line-height: 1.5;
         }
-        .ts-step-task-tag {
+        .stage-tag {
             flex-shrink: 0;
             font-family: 'JetBrains Mono', monospace;
-            font-size: 9px;
+            font-size: 9.5px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.08em;
-            padding: 2px 7px;
-            border-radius: 4px;
+            padding: 3px 8px;
+            border-radius: 5px;
             margin-top: 1px;
             white-space: nowrap;
+            min-width: 44px;
+            text-align: center;
         }
-        .ts-step-task-tag.team {
-            background: rgba(139,92,246,0.12);
+        .stage-tag.team {
+            background: rgba(139,92,246,0.10);
             color: #a78bfa;
-            border: 1px solid rgba(139,92,246,0.28);
+            border: 1px solid rgba(139,92,246,0.22);
         }
-        .ts-step-task-tag.client {
-            background: rgba(6,182,212,0.12);
+        .stage-tag.client {
+            background: rgba(6,182,212,0.10);
             color: #22d3ee;
-            border: 1px solid rgba(6,182,212,0.28);
+            border: 1px solid rgba(6,182,212,0.22);
         }
-        .ts-step-task-tag.shared {
-            background: rgba(245,158,11,0.12);
+        .stage-tag.shared {
+            background: rgba(245,158,11,0.10);
             color: #fbbf24;
-            border: 1px solid rgba(245,158,11,0.28);
+            border: 1px solid rgba(245,158,11,0.22);
+        }
+
+        /* Subtle divider between stages */
+        .stage:not(:last-child)::after {
+            content: '';
+            margin-top: 12px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.07) 30%, rgba(255,255,255,0.07) 70%, transparent);
         }
     </style>
 </head>
@@ -1508,9 +1497,9 @@
             </div>
 
             <!-- Accordion: Detailed timeline -->
-            <div id="timeline-section" class="mb-6 hidden">
+            <div id="timeline-section" class="mt-12 sm:mt-16 mb-6 hidden">
                 <!-- Section header -->
-                <div class="flex items-center gap-3 mb-5">
+                <div class="flex items-center gap-3 mb-8 sm:mb-10">
                     <div class="w-9 h-9 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
                         <i class="ph-bold ph-chart-line text-base text-amber-400"></i>
                     </div>
@@ -1522,8 +1511,8 @@
                     </div>
                 </div>
 
-                <div id="timeline-container" class="timeline-stack">
-                    <!-- Steps rendered here -->
+                <div id="timeline-container" class="timeline-stages">
+                    <!-- Stages rendered here -->
                 </div>
             </div>
 
@@ -2344,47 +2333,60 @@
                 const tasks = m.tasks || [];
 
                 return `
-                    <div class="ts-step" style="${accentVars}">
-                        <div class="ts-step-num">${num}</div>
-                        <div class="ts-step-card">
-                            <div class="ts-step-head">
-                                <div class="ts-step-title">${escapeHtml(m.title) || 'Etap ' + (i + 1)}</div>
-                                ${hasDuration ? `<div class="ts-step-duration">${m.duration_days} dni</div>` : ''}
+                    <article class="stage" style="${accentVars}">
+                        <header class="stage-cover">
+                            <div class="stage-meta">
+                                <span class="stage-meta-num">Etap ${num}</span>
+                                ${hasDuration ? `
+                                    <span class="stage-meta-sep"></span>
+                                    <span class="stage-meta-time">${m.duration_days} dni</span>
+                                ` : ''}
                             </div>
-                            ${m.description ? `<p class="ts-step-desc">${escapeHtml(m.description)}</p>` : ''}
+                            <h4 class="stage-title">${escapeHtml(m.title) || 'Etap ' + (i + 1)}</h4>
+                            ${m.description ? `<p class="stage-desc">${escapeHtml(m.description)}</p>` : ''}
+                        </header>
 
-                            ${deliverables.length > 0 ? `
-                                <div class="ts-step-section">
-                                    <div class="ts-step-section-label">Rezultaty</div>
-                                    <div class="ts-step-list">
-                                        ${deliverables.map(d => `
-                                            <div class="ts-step-del">
-                                                <i class="ph-fill ph-check-circle check"></i>
-                                                <span>${escapeHtml(d)}</span>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-
-                            ${tasks.length > 0 ? `
-                                <div class="ts-step-section">
-                                    <div class="ts-step-section-label">Zadania</div>
-                                    <div class="ts-step-list">
-                                        ${tasks.map(t => {
-                                            const meta = taskMeta(t.responsible);
-                                            return `
-                                                <div class="ts-step-task">
-                                                    <span class="ts-step-task-tag ${meta.cls}">${meta.label}</span>
-                                                    <span>${escapeHtml(t.title)}</span>
+                        ${(deliverables.length > 0 || tasks.length > 0) ? `
+                            <div class="stage-body">
+                                ${deliverables.length > 0 ? `
+                                    <section>
+                                        <div class="stage-col-head">
+                                            <span>Rezultaty</span>
+                                            <span class="count">${deliverables.length}</span>
+                                        </div>
+                                        <div class="stage-list">
+                                            ${deliverables.map(d => `
+                                                <div class="stage-del">
+                                                    <i class="ph-fill ph-check-circle check"></i>
+                                                    <span>${escapeHtml(d)}</span>
                                                 </div>
-                                            `;
-                                        }).join('')}
-                                    </div>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
+                                            `).join('')}
+                                        </div>
+                                    </section>
+                                ` : '<section></section>'}
+
+                                ${tasks.length > 0 ? `
+                                    <section>
+                                        <div class="stage-col-head">
+                                            <span>Zadania</span>
+                                            <span class="count">${tasks.length}</span>
+                                        </div>
+                                        <div class="stage-list">
+                                            ${tasks.map(t => {
+                                                const meta = taskMeta(t.responsible);
+                                                return `
+                                                    <div class="stage-task">
+                                                        <span class="stage-tag ${meta.cls}">${meta.label}</span>
+                                                        <span>${escapeHtml(t.title)}</span>
+                                                    </div>
+                                                `;
+                                            }).join('')}
+                                        </div>
+                                    </section>
+                                ` : ''}
+                            </div>
+                        ` : ''}
+                    </article>
                 `;
             }).join('');
         }
