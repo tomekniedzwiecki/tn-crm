@@ -443,22 +443,30 @@
 
             <div class="p-5 space-y-4">
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                    <div id="survey-modal-hours-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
                         <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
                         <div id="survey-modal-hours" class="text-white text-sm font-medium">-</div>
                     </div>
-                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cel dochodu (rocznie)</div>
+                    <div id="survey-modal-income-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                        <div id="survey-modal-income-label" class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dochód</div>
                         <div id="survey-modal-income" class="text-white text-sm font-medium">-</div>
                     </div>
                 </div>
-                <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Doświadczenie</div>
-                    <div id="survey-modal-experience" class="text-white text-sm leading-relaxed">-</div>
+                <div id="survey-modal-budget-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Budżet inwestycyjny</div>
+                    <div id="survey-modal-budget" class="text-emerald-400 text-sm font-semibold">-</div>
+                </div>
+                <div id="survey-modal-tried-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Co już próbował</div>
+                    <div id="survey-modal-tried" class="flex flex-wrap gap-1.5">-</div>
+                </div>
+                <div id="survey-modal-experience-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                    <div id="survey-modal-experience-label" class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Od klienta</div>
+                    <div id="survey-modal-experience" class="text-white text-sm leading-relaxed whitespace-pre-wrap">-</div>
                 </div>
                 <div id="survey-modal-open-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
-                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dodatkowe informacje</div>
-                    <div id="survey-modal-open" class="text-white text-sm leading-relaxed">-</div>
+                    <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czym się zajmuje</div>
+                    <div id="survey-modal-open" class="text-white text-sm leading-relaxed whitespace-pre-wrap">-</div>
                 </div>
             </div>
 
@@ -805,9 +813,15 @@
                 offers.map(offer => `<option value="${offer.id}">${offer.name}</option>`).join('');
         }
 
+        // Detekcja czy lead ma jakiekolwiek dane ankietowe (v1 lub v2)
+        function hasAnySurvey(lead) {
+            return !!(lead.weekly_hours || lead.target_income || lead.current_income
+                  || lead.budget || lead.direction || lead.experience || lead.open_question);
+        }
+
         // Auto-assign status='new' to leads with survey but no status
         async function autoAssignStatusForSurveyLeads(leadsData) {
-            const leadsToUpdate = leadsData.filter(lead => lead.weekly_hours && !lead.status);
+            const leadsToUpdate = leadsData.filter(lead => hasAnySurvey(lead) && !lead.status);
 
             for (const lead of leadsToUpdate) {
                 const { error } = await supabaseClient
@@ -984,7 +998,7 @@
 
                 // Survey
                 if (surveyFilter) {
-                    const hasSurvey = !!lead.weekly_hours;
+                    const hasSurvey = hasAnySurvey(lead);
                     if (surveyFilter === 'yes' && !hasSurvey) return false;
                     if (surveyFilter === 'no' && hasSurvey) return false;
                 }
@@ -1049,7 +1063,7 @@
                 const initial = lead.email.charAt(0).toUpperCase();
                 const colors = ['from-violet-500 to-purple-600', 'from-blue-500 to-cyan-600', 'from-emerald-500 to-green-600', 'from-orange-500 to-amber-600', 'from-pink-500 to-rose-600'];
                 const colorIndex = lead.email.charCodeAt(0) % colors.length;
-                const hasSurvey = !!lead.weekly_hours;
+                const hasSurvey = hasAnySurvey(lead);
 
                 return `
                 <tr class="hover:bg-white/[0.02] transition-colors cursor-pointer group" onclick="openLead('${lead.id}')">
@@ -1177,25 +1191,97 @@
             return map[value] || value || '-';
         }
 
+        // Mapowanie wartości multiselect "co próbował" (zapisy v2)
+        const TRIED_LABELS = {
+            sklep_online: 'Własny sklep online',
+            allegro: 'Allegro',
+            vinted_olx: 'Vinted / OLX',
+            dropshipping: 'Dropshipping',
+            takedrop: 'TakeDrop',
+            amazon: 'Amazon FBA',
+            kursy: 'Kursy / szkolenia',
+            freelance: 'Freelance / usługi',
+            afiliacja: 'Afiliacja',
+            trading: 'Trading / krypto',
+            nigdy: 'Nigdy nie próbował'
+        };
+
+        function formatTriedChips(csv) {
+            if (!csv) return '';
+            return csv.split(',').map(v => v.trim()).filter(Boolean).map(v => {
+                const label = TRIED_LABELS[v] || v;
+                const isNever = v === 'nigdy';
+                const cls = isNever
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                    : 'bg-cyan-500/10 border-cyan-500/25 text-cyan-300';
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs ${cls}">${label}</span>`;
+            }).join('');
+        }
+
+        function formatBudgetPLN(value) {
+            if (!value) return '-';
+            const n = parseInt(String(value).replace(/\D/g, ''), 10);
+            if (!n || n <= 0) return '-';
+            return n.toLocaleString('pl-PL').replace(/,/g, ' ') + ' zł';
+        }
+
+        function setSurveyField(containerId, condition) {
+            document.getElementById(containerId).classList.toggle('hidden', !condition);
+        }
+
         let surveyLeadId = null;
 
         function openSurveyModal(id) {
             const lead = leads.find(l => l.id === id);
-            if (!lead || !lead.weekly_hours) return;
+            if (!lead) return;
+
+            // Pokaż modal jeśli istnieje JAKIEKOLWIEK pole ankietowe (v1 lub v2)
+            const hasAny = lead.weekly_hours || lead.target_income || lead.current_income
+                        || lead.budget || lead.direction || lead.experience || lead.open_question;
+            if (!hasAny) return;
 
             surveyLeadId = id;
-
             document.getElementById('survey-modal-email').textContent = lead.email;
-            document.getElementById('survey-modal-hours').textContent = formatSurveyHours(lead.weekly_hours);
-            document.getElementById('survey-modal-income').textContent = formatSurveyMoney(lead.target_income);
-            document.getElementById('survey-modal-experience').textContent = lead.experience || '-';
 
-            const openContainer = document.getElementById('survey-modal-open-container');
+            // Czas tygodniowo
+            setSurveyField('survey-modal-hours-container', !!lead.weekly_hours);
+            if (lead.weekly_hours) {
+                document.getElementById('survey-modal-hours').textContent = formatSurveyHours(lead.weekly_hours);
+            }
+
+            // Dochód — etykieta v1 vs v2
+            const incomeValue = lead.current_income || lead.target_income;
+            setSurveyField('survey-modal-income-container', !!incomeValue);
+            if (incomeValue) {
+                const isV2 = !!lead.current_income;
+                document.getElementById('survey-modal-income-label').textContent = isV2 ? 'Obecny dochód' : 'Oczekiwany dochód';
+                document.getElementById('survey-modal-income').textContent = formatSurveyMoney(incomeValue);
+            }
+
+            // Budżet (v2 only)
+            setSurveyField('survey-modal-budget-container', !!lead.budget);
+            if (lead.budget) {
+                document.getElementById('survey-modal-budget').textContent = formatBudgetPLN(lead.budget);
+            }
+
+            // Co próbował (v2 only)
+            setSurveyField('survey-modal-tried-container', !!lead.direction);
+            if (lead.direction) {
+                document.getElementById('survey-modal-tried').innerHTML = formatTriedChips(lead.direction);
+            }
+
+            // Doświadczenie / O sobie
+            setSurveyField('survey-modal-experience-container', !!lead.experience);
+            if (lead.experience) {
+                const isV2 = !!lead.current_income || !!lead.budget || !!lead.direction;
+                document.getElementById('survey-modal-experience-label').textContent = isV2 ? 'O sobie' : 'Doświadczenie';
+                document.getElementById('survey-modal-experience').textContent = lead.experience;
+            }
+
+            // Czym się zajmuje (v1 only)
+            setSurveyField('survey-modal-open-container', !!lead.open_question);
             if (lead.open_question) {
-                openContainer.classList.remove('hidden');
                 document.getElementById('survey-modal-open').textContent = lead.open_question;
-            } else {
-                openContainer.classList.add('hidden');
             }
 
             document.getElementById('survey-modal').classList.remove('hidden');

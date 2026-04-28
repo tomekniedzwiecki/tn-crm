@@ -47,12 +47,14 @@ interface LeadData {
   deal_value?: number
   status?: string
   notes?: string
-  // Survey fields
-  direction?: string
+  // Survey fields (v1 + v2)
+  direction?: string         // v2: csv "sklep_online,allegro,..."
   weekly_hours?: string
-  target_income?: string
+  target_income?: string     // v1: "marzenie" (deprecated dla nowych)
+  current_income?: string    // v2: obecny dochód
+  budget?: string            // v2: liczba PLN jako string
   experience?: string
-  open_question?: string
+  open_question?: string     // v1: "czym się zajmujesz" (deprecated dla nowych)
   lead_source?: 'website' | 'outreach' | 'manual'
   // Tracking data
   tracking?: TrackingData
@@ -110,11 +112,13 @@ Deno.serve(async (req) => {
       if (data.direction) updates.direction = data.direction
       if (data.weekly_hours) updates.weekly_hours = data.weekly_hours
       if (data.target_income) updates.target_income = data.target_income
+      if (data.current_income) updates.current_income = data.current_income
+      if (data.budget) updates.budget = data.budget
       if (data.experience) updates.experience = data.experience
       if (data.open_question) updates.open_question = data.open_question
 
       // Set survey_completed_at when survey fields are submitted
-      const hasSurveyData = data.weekly_hours || data.target_income || data.experience
+      const hasSurveyData = data.weekly_hours || data.target_income || data.current_income || data.budget || data.experience
       if (hasSurveyData) {
         updates.survey_completed_at = new Date().toISOString()
       }
@@ -150,11 +154,13 @@ Deno.serve(async (req) => {
       if (data.direction) insertData.direction = data.direction
       if (data.weekly_hours) insertData.weekly_hours = data.weekly_hours
       if (data.target_income) insertData.target_income = data.target_income
+      if (data.current_income) insertData.current_income = data.current_income
+      if (data.budget) insertData.budget = data.budget
       if (data.experience) insertData.experience = data.experience
       if (data.open_question) insertData.open_question = data.open_question
 
       // Set survey_completed_at when survey fields are submitted
-      const hasSurveyData = data.weekly_hours || data.target_income || data.experience
+      const hasSurveyData = data.weekly_hours || data.target_income || data.current_income || data.budget || data.experience
       if (hasSurveyData) {
         insertData.survey_completed_at = new Date().toISOString()
       }

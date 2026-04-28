@@ -584,21 +584,29 @@
                             </summary>
                             <div class="bg-cyan-950/20 rounded-b-lg border border-t-0 border-cyan-500/20 p-4 -mt-1">
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
+                                    <div id="survey-hours-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
                                         <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czas tygodniowo</div>
                                         <div id="survey-hours" class="text-white text-sm font-medium">-</div>
                                     </div>
-                                    <div class="p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Cel dochodu (mies.)</div>
+                                    <div id="survey-income-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                                        <div id="survey-income-label" class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dochód</div>
                                         <div id="survey-income" class="text-white text-sm font-medium">-</div>
                                     </div>
-                                    <div class="sm:col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5">
-                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Doświadczenie</div>
-                                        <div id="survey-experience" class="text-white text-sm leading-relaxed">-</div>
+                                    <div id="survey-budget-container" class="p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Budżet inwestycyjny</div>
+                                        <div id="survey-budget" class="text-emerald-400 text-sm font-semibold">-</div>
+                                    </div>
+                                    <div id="survey-tried-container" class="sm:col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Co już próbował</div>
+                                        <div id="survey-tried" class="flex flex-wrap gap-1.5">-</div>
+                                    </div>
+                                    <div id="survey-experience-container" class="sm:col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
+                                        <div id="survey-experience-label" class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Od klienta</div>
+                                        <div id="survey-experience" class="text-white text-sm leading-relaxed whitespace-pre-wrap">-</div>
                                     </div>
                                     <div id="survey-open-container" class="sm:col-span-2 p-3 bg-zinc-900/60 rounded-lg border border-white/5 hidden">
-                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Dodatkowe informacje</div>
-                                        <div id="survey-open" class="text-white text-sm leading-relaxed">-</div>
+                                        <div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">Czym się zajmuje</div>
+                                        <div id="survey-open" class="text-white text-sm leading-relaxed whitespace-pre-wrap">-</div>
                                     </div>
                                 </div>
                             </div>
@@ -2284,28 +2292,95 @@
             return map[value] || value || '-';
         }
 
+        // Mapowanie wartości multiselect "co próbował" (zapisy v2)
+        const TRIED_LABELS = {
+            sklep_online: 'Własny sklep online',
+            allegro: 'Allegro',
+            vinted_olx: 'Vinted / OLX',
+            dropshipping: 'Dropshipping',
+            takedrop: 'TakeDrop',
+            amazon: 'Amazon FBA',
+            kursy: 'Kursy / szkolenia',
+            freelance: 'Freelance / usługi',
+            afiliacja: 'Afiliacja',
+            trading: 'Trading / krypto',
+            nigdy: 'Nigdy nie próbował'
+        };
+
+        function formatTriedChips(csv) {
+            if (!csv) return '';
+            return csv.split(',').map(v => v.trim()).filter(Boolean).map(v => {
+                const label = TRIED_LABELS[v] || v;
+                const isNever = v === 'nigdy';
+                const cls = isNever
+                    ? 'bg-amber-500/15 border-amber-500/30 text-amber-300'
+                    : 'bg-cyan-500/10 border-cyan-500/25 text-cyan-300';
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded-md border text-xs ${cls}">${label}</span>`;
+            }).join('');
+        }
+
+        function formatBudgetPLN(value) {
+            if (!value) return '-';
+            const n = parseInt(String(value).replace(/\D/g, ''), 10);
+            if (!n || n <= 0) return '-';
+            return n.toLocaleString('pl-PL').replace(/,/g, ' ') + ' zł';
+        }
+
+        function showSurveyField(containerId, condition) {
+            document.getElementById(containerId).classList.toggle('hidden', !condition);
+        }
+
         function renderSurvey() {
             const section = document.getElementById('survey-section');
 
-            // Show section only if lead has survey data
-            if (!lead.weekly_hours && !lead.target_income && !lead.experience) {
+            // Pokaż sekcję jeśli istnieje JAKIEKOLWIEK pole ankietowe (v1 lub v2)
+            const hasAnySurvey = lead.weekly_hours || lead.target_income || lead.current_income
+                              || lead.budget || lead.direction || lead.experience || lead.open_question;
+            if (!hasAnySurvey) {
                 section.classList.add('hidden');
                 return;
             }
-
             section.classList.remove('hidden');
 
-            document.getElementById('survey-hours').textContent = formatSurveyHours(lead.weekly_hours);
-            document.getElementById('survey-income').textContent = formatSurveyMoney(lead.target_income);
-            document.getElementById('survey-experience').textContent = lead.experience || '-';
+            // Czas tygodniowo (wspólne v1+v2)
+            showSurveyField('survey-hours-container', !!lead.weekly_hours);
+            if (lead.weekly_hours) {
+                document.getElementById('survey-hours').textContent = formatSurveyHours(lead.weekly_hours);
+            }
 
-            // Show open question if available
-            const openContainer = document.getElementById('survey-open-container');
+            // Dochód — etykieta zależy czy v1 (target_income = marzenie) czy v2 (current_income = obecny)
+            const incomeValue = lead.current_income || lead.target_income;
+            showSurveyField('survey-income-container', !!incomeValue);
+            if (incomeValue) {
+                const isV2 = !!lead.current_income;
+                document.getElementById('survey-income-label').textContent = isV2 ? 'Obecny dochód' : 'Oczekiwany dochód';
+                document.getElementById('survey-income').textContent = formatSurveyMoney(incomeValue);
+            }
+
+            // Budżet inwestycyjny (v2 only)
+            showSurveyField('survey-budget-container', !!lead.budget);
+            if (lead.budget) {
+                document.getElementById('survey-budget').textContent = formatBudgetPLN(lead.budget);
+            }
+
+            // Co próbował (v2 only — multiselect csv)
+            showSurveyField('survey-tried-container', !!lead.direction);
+            if (lead.direction) {
+                document.getElementById('survey-tried').innerHTML = formatTriedChips(lead.direction);
+            }
+
+            // Doświadczenie / "od klienta" — wspólne, ale etykieta różni się: v1 = "Doświadczenie", v2 = "O sobie"
+            showSurveyField('survey-experience-container', !!lead.experience);
+            if (lead.experience) {
+                const isV2 = !!lead.current_income || !!lead.budget || !!lead.direction;
+                document.getElementById('survey-experience-label').textContent = isV2 ? 'O sobie' : 'Doświadczenie';
+                document.getElementById('survey-experience').textContent = lead.experience;
+            }
+
+            // Czym się zajmuje (v1 only — open_question)
+            showSurveyField('survey-open-container', !!lead.open_question);
             if (lead.open_question) {
-                openContainer.classList.remove('hidden');
                 document.getElementById('survey-open').textContent = lead.open_question;
-            } else {
-                openContainer.classList.add('hidden');
             }
         }
 
