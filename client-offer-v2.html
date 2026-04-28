@@ -204,7 +204,125 @@
             min-height: 0;
         }
 
-        /* === VIZ 01: Bar chart === */
+        /* === VIZ 01: Research report (top 3 niches with metrics) === */
+        .viz-research {
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            overflow: hidden;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        .viz-research-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            background: rgba(255,255,255,0.025);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+        }
+        .viz-research-head-label {
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .viz-research-head-label::before {
+            content: '';
+            width: 16px;
+            height: 1.5px;
+            background: var(--accent);
+            border-radius: 1px;
+        }
+        .viz-research-head-count {
+            color: rgba(255,255,255,0.45);
+        }
+        .viz-research-rows {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+        }
+        .viz-research-row {
+            display: grid;
+            grid-template-columns: 30px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .viz-research-row:last-child { border-bottom: none; }
+        .viz-research-row.winner {
+            background: linear-gradient(90deg, var(--accent-20) 0%, transparent 70%);
+        }
+        .viz-research-row .rank {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            color: rgba(255,255,255,0.4);
+        }
+        .viz-research-row.winner .rank {
+            font-size: 16px;
+        }
+        .viz-research-row .info {
+            min-width: 0;
+        }
+        .viz-research-row .name {
+            color: rgba(255,255,255,0.92);
+            font-weight: 700;
+            font-size: 13px;
+            line-height: 1.2;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .viz-research-row.winner .name {
+            color: var(--accent);
+        }
+        .viz-research-row .stars {
+            color: var(--accent);
+            font-size: 10px;
+            letter-spacing: 1px;
+            opacity: 0.7;
+        }
+        .viz-research-row.winner .stars { opacity: 1; }
+        .viz-research-row .stars .dim { color: rgba(255,255,255,0.15); }
+        .viz-research-row .meta {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.45);
+            line-height: 1.4;
+            margin-top: 2px;
+        }
+        .viz-research-row .meta .sep {
+            color: rgba(255,255,255,0.18);
+            margin: 0 5px;
+        }
+        .viz-research-row .badge {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            background: var(--accent-20);
+            border: 1px solid var(--accent);
+            padding: 3px 8px;
+            border-radius: 4px;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* legacy chart styles (kept for safety - unused after research viz) */
         .viz-chart {
             display: flex;
             align-items: flex-end;
@@ -1242,13 +1360,20 @@
                 radial-gradient(ellipse 60% 40% at 100% 100%, rgba(6,182,212,0.04), transparent 60%);
         }
         .login-avatar {
-            width: 84px;
-            height: 84px;
+            width: 64px;
+            height: 64px;
             border-radius: 50%;
             overflow: hidden;
             border: 2px solid rgba(245,158,11,0.55);
-            box-shadow: 0 0 36px rgba(245,158,11,0.28), inset 0 0 0 1px rgba(255,255,255,0.06);
+            box-shadow: 0 0 28px rgba(245,158,11,0.25), inset 0 0 0 1px rgba(255,255,255,0.06);
             position: relative;
+        }
+        @media (min-width: 640px) {
+            .login-avatar {
+                width: 84px;
+                height: 84px;
+                box-shadow: 0 0 36px rgba(245,158,11,0.28), inset 0 0 0 1px rgba(255,255,255,0.06);
+            }
         }
         .login-avatar img {
             width: 100%;
@@ -1259,14 +1384,24 @@
         .login-avatar::after {
             content: '';
             position: absolute;
-            bottom: 4px;
-            right: 4px;
-            width: 14px;
-            height: 14px;
+            bottom: 2px;
+            right: 2px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             background: #10b981;
-            border: 2.5px solid #050505;
-            box-shadow: 0 0 10px rgba(16,185,129,0.7);
+            border: 2px solid #050505;
+            box-shadow: 0 0 8px rgba(16,185,129,0.7);
+        }
+        @media (min-width: 640px) {
+            .login-avatar::after {
+                bottom: 4px;
+                right: 4px;
+                width: 14px;
+                height: 14px;
+                border-width: 2.5px;
+                box-shadow: 0 0 10px rgba(16,185,129,0.7);
+            }
         }
         .login-status {
             display: inline-flex;
@@ -1304,11 +1439,14 @@
         }
         .login-teaser {
             border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 16px;
-            padding: 18px 20px;
+            border-radius: 14px;
+            padding: 14px 16px;
             background: rgba(15,15,17,0.4);
             position: relative;
             overflow: hidden;
+        }
+        @media (min-width: 640px) {
+            .login-teaser { padding: 18px 20px; border-radius: 16px; }
         }
         .login-teaser::before {
             content: '';
@@ -1343,21 +1481,30 @@
             position: relative;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 7px;
+        }
+        @media (min-width: 640px) {
+            .login-teaser-items { gap: 10px; }
         }
         .login-teaser-item {
             display: flex;
             align-items: flex-start;
-            gap: 11px;
+            gap: 10px;
             color: rgba(255,255,255,0.88);
-            font-size: 13.5px;
-            line-height: 1.45;
+            font-size: 12.5px;
+            line-height: 1.4;
+        }
+        @media (min-width: 640px) {
+            .login-teaser-item { gap: 11px; font-size: 13.5px; line-height: 1.45; }
         }
         .login-teaser-item i {
             color: #10b981;
-            font-size: 17px;
+            font-size: 15px;
             flex-shrink: 0;
             margin-top: 1px;
+        }
+        @media (min-width: 640px) {
+            .login-teaser-item i { font-size: 17px; }
         }
 
         /* ===== Timeline (magazine spread, always visible) ===== */
@@ -1563,16 +1710,16 @@
 <body class="min-h-screen font-sans text-sm tracking-tight antialiased">
 
     <!-- Login Screen -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden">
+    <div id="login-screen" class="min-h-screen flex items-center justify-center px-4 py-6 sm:py-10 relative overflow-hidden">
         <div class="absolute inset-0 login-bg pointer-events-none"></div>
 
         <div class="relative w-full max-w-lg animate-enter">
             <!-- Hero: Avatar + Tomek info -->
-            <div class="flex flex-col items-center text-center mb-8">
-                <div class="login-avatar mb-5">
+            <div class="flex flex-col items-center text-center mb-5 sm:mb-8">
+                <div class="login-avatar mb-3 sm:mb-5">
                     <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat.png" alt="Tomek Niedźwiecki">
                 </div>
-                <div class="text-white font-bold text-base mb-2">Tomek Niedźwiecki</div>
+                <div class="text-white font-bold text-sm sm:text-base mb-1.5 sm:mb-2">Tomek Niedźwiecki</div>
                 <div class="login-status">
                     <span class="dot"></span>
                     <span>Online · Buduję e-biznesy od 15 lat</span>
@@ -1580,22 +1727,22 @@
             </div>
 
             <!-- Pitch -->
-            <div class="text-center mb-7">
-                <div class="login-divider mb-5">
+            <div class="text-center mb-5 sm:mb-7">
+                <div class="login-divider mb-3 sm:mb-5">
                     <span class="line"></span>
                     <span>Twoja oferta jest gotowa</span>
                     <span class="line"></span>
                 </div>
-                <h1 class="text-white text-2xl sm:text-3xl font-extrabold leading-[1.15] tracking-tight max-w-md mx-auto">
+                <h1 class="text-white text-lg sm:text-2xl md:text-3xl font-extrabold leading-[1.2] tracking-tight max-w-md mx-auto">
                     Przygotowałem dla Ciebie spersonalizowaną propozycję
                 </h1>
-                <p class="text-zinc-400 text-sm sm:text-base mt-3 max-w-md mx-auto leading-relaxed">
-                    Pełen plan uruchomienia biznesu online — od analizy rynku, przez markę i sklep, po skalowanie i przekazanie kompetencji.
+                <p class="text-zinc-400 text-xs sm:text-sm md:text-base mt-2 sm:mt-3 max-w-md mx-auto leading-relaxed">
+                    Pełen plan uruchomienia biznesu online — od analizy rynku, przez markę i sklep, po skalowanie.
                 </p>
             </div>
 
             <!-- Teaser bullets — what's inside -->
-            <div class="login-teaser mb-6">
+            <div class="login-teaser mb-4 sm:mb-6">
                 <div class="login-teaser-label">
                     <span>W ofercie</span>
                 </div>
@@ -1620,24 +1767,24 @@
             </div>
 
             <!-- Email gate -->
-            <div class="glass-card rounded-2xl border border-amber-500/25 p-5 sm:p-6">
-                <div class="mb-4">
+            <div class="glass-card rounded-2xl border border-amber-500/25 p-4 sm:p-6">
+                <div class="mb-3 sm:mb-4">
                     <label class="block text-amber-400/80 text-[10px] font-mono uppercase tracking-widest font-bold mb-2">Twój e-mail</label>
                     <input type="email" id="email-input"
-                           class="input-field w-full rounded-xl px-4 py-3 text-white text-base"
+                           class="input-field w-full rounded-xl px-4 py-2.5 sm:py-3 text-white text-base"
                            placeholder="jan@firma.pl"
                            autofocus>
                 </div>
-                <div id="login-error" class="text-red-400 text-sm mb-4 hidden"></div>
+                <div id="login-error" class="text-red-400 text-sm mb-3 sm:mb-4 hidden"></div>
                 <button id="login-btn"
-                        class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-4 py-3.5 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25">
+                        class="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-black px-4 py-3 sm:py-3.5 rounded-xl font-bold text-base transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/25">
                     <span>Pokaż mi ofertę</span>
                     <i class="ph-bold ph-arrow-right"></i>
                 </button>
             </div>
 
             <!-- Validity -->
-            <p class="text-center text-zinc-500 text-xs mt-5 inline-flex items-center justify-center gap-1.5 w-full">
+            <p class="text-center text-zinc-500 text-[11px] sm:text-xs mt-3 sm:mt-5 inline-flex items-center justify-center gap-1.5 w-full">
                 <i class="ph ph-clock text-amber-400/70"></i>
                 Link ważny do: <span id="valid-until-preview" class="text-zinc-300 font-medium">-</span>
             </p>
@@ -2283,32 +2430,48 @@
         // Visual content per cell (CSS-only mini-illustrations)
         const VIZ = {
             chart: () => `
-                <div class="viz-chart">
-                    <div class="bar" style="--h: 28%"></div>
-                    <div class="bar" style="--h: 48%"></div>
-                    <div class="bar" style="--h: 65%"></div>
-                    <div class="bar hi" style="--h: 100%"></div>
-                    <div class="bar" style="--h: 72%"></div>
-                    <div class="bar" style="--h: 50%"></div>
-                    <div class="bar" style="--h: 38%"></div>
-                    <div class="bar" style="--h: 25%"></div>
-                </div>
-                <div class="viz-chart-x">
-                    <span>P1</span><span>P2</span><span>P3</span><span class="hi">P4</span>
-                    <span>P5</span><span>P6</span><span>P7</span><span>P8</span>
-                </div>
-                <div class="viz-chart-stats">
-                    <div class="viz-chart-stat">
-                        <span class="viz-chart-stat-num">8</span>
-                        <span class="viz-chart-stat-label">kandydatów</span>
+                <div class="viz-research">
+                    <div class="viz-research-head">
+                        <span class="viz-research-head-label">Top kandydaci</span>
+                        <span class="viz-research-head-count">z 8 sprawdzonych nisz</span>
                     </div>
-                    <div class="viz-chart-stat">
-                        <span class="viz-chart-stat-num">3 mies.</span>
-                        <span class="viz-chart-stat-label">danych z rynku</span>
-                    </div>
-                    <div class="viz-chart-stat">
-                        <span class="viz-chart-stat-num"><span class="accent"><i class="ph-fill ph-star"></i></span></span>
-                        <span class="viz-chart-stat-label">bestseller</span>
+                    <div class="viz-research-rows">
+                        <div class="viz-research-row winner">
+                            <div class="rank"><i class="ph-fill ph-star"></i></div>
+                            <div class="info">
+                                <div class="name">
+                                    <span>Nisza #1</span>
+                                    <span class="stars">★★★★★</span>
+                                </div>
+                                <div class="meta">marża 68%<span class="sep">·</span>ROAS 3.2×<span class="sep">·</span>popyt ↗↗↗</div>
+                            </div>
+                            <div class="badge">
+                                <i class="ph-bold ph-check"></i>
+                                Wybór
+                            </div>
+                        </div>
+                        <div class="viz-research-row">
+                            <div class="rank">02</div>
+                            <div class="info">
+                                <div class="name">
+                                    <span>Nisza #2</span>
+                                    <span class="stars">★★★★<span class="dim">★</span></span>
+                                </div>
+                                <div class="meta">marża 55%<span class="sep">·</span>ROAS 2.1×<span class="sep">·</span>popyt ↗↗</div>
+                            </div>
+                            <div></div>
+                        </div>
+                        <div class="viz-research-row">
+                            <div class="rank">03</div>
+                            <div class="info">
+                                <div class="name">
+                                    <span>Nisza #3</span>
+                                    <span class="stars">★★★<span class="dim">★★</span></span>
+                                </div>
+                                <div class="meta">marża 48%<span class="sep">·</span>ROAS 1.8×<span class="sep">·</span>popyt ↗</div>
+                            </div>
+                            <div></div>
+                        </div>
                     </div>
                 </div>
             `,
