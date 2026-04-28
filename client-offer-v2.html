@@ -94,88 +94,430 @@
             -webkit-backdrop-filter: blur(12px);
         }
 
-        /* Editorial list rows */
-        .ed-row {
-            position: relative;
-            padding: 22px 0;
-            border-top: 1px solid rgba(255,255,255,0.06);
-            transition: padding 0.3s ease;
-        }
-        .ed-row:last-child {
-            border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .ed-row:hover .ed-icon i {
-            transform: translateX(2px) scale(1.05);
-        }
-        .ed-row:hover .ed-title {
-            color: white;
-        }
-        .ed-grid {
+        /* ===== Bento grid + visualizations ===== */
+        .bento {
             display: grid;
-            grid-template-columns: 56px 1fr auto;
-            gap: 20px;
-            align-items: center;
-        }
-        .ed-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .ed-icon i {
-            font-size: 38px;
-            color: var(--accent, #f59e0b);
-            filter: drop-shadow(0 0 16px var(--accent-glow, rgba(245,158,11,0.4)));
-            transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
-        }
-        .ed-meta {
-            display: flex;
-            align-items: center;
+            grid-template-columns: 1fr;
             gap: 12px;
-            margin-bottom: 6px;
         }
-        .ed-num {
+        @media (min-width: 640px) {
+            .bento { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+        }
+        @media (min-width: 1024px) {
+            .bento { grid-template-columns: repeat(4, 1fr); gap: 16px; }
+            .bento-wide { grid-column: span 2; }
+        }
+
+        .bento-cell {
+            position: relative;
+            background:
+                linear-gradient(165deg, rgba(255,255,255,0.025) 0%, transparent 50%),
+                rgba(15, 15, 17, 0.6);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 22px;
+            padding: 22px;
+            overflow: hidden;
+            transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            min-height: 240px;
+        }
+        .bento-cell::before {
+            content: '';
+            position: absolute;
+            bottom: -40%;
+            right: -40%;
+            width: 90%;
+            height: 90%;
+            background: radial-gradient(circle, var(--accent), transparent 60%);
+            opacity: 0.10;
+            pointer-events: none;
+            z-index: 0;
+            transition: opacity 0.45s ease;
+        }
+        .bento-cell:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-30);
+        }
+        .bento-cell:hover::before { opacity: 0.18; }
+        .bento-cell > * { position: relative; z-index: 1; }
+
+        @media (min-width: 640px) {
+            .bento-cell { padding: 24px; min-height: 250px; }
+        }
+        @media (min-width: 1024px) {
+            .bento-cell { padding: 26px; min-height: 260px; }
+        }
+
+        .bento-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .bento-num {
             font-family: 'JetBrains Mono', monospace;
             font-size: 11px;
             font-weight: 700;
             letter-spacing: 0.2em;
-            color: var(--accent, #f59e0b);
-            opacity: 0.8;
+            color: var(--accent);
         }
-        .ed-line {
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(90deg, var(--accent, #f59e0b)40, transparent);
-            max-width: 60px;
-        }
-        .ed-title {
-            color: rgba(255,255,255,0.92);
-            font-weight: 700;
-            font-size: 17px;
-            line-height: 1.3;
-            letter-spacing: -0.01em;
-            transition: color 0.25s ease;
-        }
-        .ed-badge {
+        .bento-badge {
             font-family: 'JetBrains Mono', monospace;
             font-size: 10px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.1em;
-            padding: 5px 10px;
+            padding: 4px 10px;
             border-radius: 999px;
+            background: var(--accent-10);
+            color: var(--accent);
+            border: 1px solid var(--accent-20);
             white-space: nowrap;
         }
-        @media (min-width: 640px) {
-            .ed-row { padding: 26px 0; }
-            .ed-grid { grid-template-columns: 72px 1fr auto; gap: 24px; }
-            .ed-icon i { font-size: 46px; }
-            .ed-title { font-size: 19px; }
-            .ed-num { font-size: 12px; }
+        .bento-title {
+            color: rgba(255,255,255,0.96);
+            font-weight: 700;
+            font-size: 17px;
+            line-height: 1.25;
+            letter-spacing: -0.015em;
+            margin-bottom: 18px;
         }
         @media (min-width: 1024px) {
-            .ed-row { padding: 30px 0; }
-            .ed-icon i { font-size: 52px; }
-            .ed-title { font-size: 22px; }
+            .bento-title { font-size: 19px; }
+        }
+        .bento-viz {
+            margin-top: auto;
+        }
+
+        /* === VIZ 01: Bar chart === */
+        .viz-chart {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 5px;
+            height: 88px;
+            padding-top: 8px;
+        }
+        .viz-chart .bar {
+            flex: 1;
+            min-width: 0;
+            border-radius: 4px 4px 2px 2px;
+            background: linear-gradient(180deg, var(--accent-40) 0%, var(--accent-10) 100%);
+            height: var(--h);
+            position: relative;
+        }
+        .viz-chart .bar.hi {
+            background: linear-gradient(180deg, var(--accent) 0%, var(--accent-60) 100%);
+            box-shadow: 0 0 16px var(--accent-50), 0 -4px 12px var(--accent-30);
+        }
+        .viz-chart .bar.hi::after {
+            content: '';
+            position: absolute;
+            top: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+        }
+        .viz-chart-cap {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.45);
+            margin-top: 10px;
+            letter-spacing: 0.05em;
+        }
+
+        /* === VIZ 02: Brand kit === */
+        .viz-brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 6px 0;
+        }
+        .viz-brand-logo {
+            width: 56px;
+            height: 56px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 22px;
+            color: white;
+            background: linear-gradient(135deg, var(--accent) 0%, rgba(0,0,0,0.6) 100%);
+            box-shadow: 0 6px 16px var(--accent-30), inset 0 1px 0 rgba(255,255,255,0.15);
+            flex-shrink: 0;
+        }
+        .viz-brand-stack {
+            flex: 1;
+            min-width: 0;
+        }
+        .viz-palette {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 8px;
+        }
+        .viz-palette .sw {
+            width: 22px;
+            height: 22px;
+            border-radius: 6px;
+            background: var(--c);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .viz-fonts {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.4);
+            letter-spacing: 0.05em;
+        }
+
+        /* === VIZ 03: Browser mock === */
+        .viz-browser {
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.1);
+            overflow: hidden;
+            background: rgba(0,0,0,0.5);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.3);
+        }
+        .viz-browser-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 9px;
+            background: rgba(255,255,255,0.04);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        .viz-browser-dots {
+            display: flex;
+            gap: 4px;
+        }
+        .viz-browser-dots span {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+        }
+        .viz-browser-dots span:nth-child(1) { background: #f56; }
+        .viz-browser-dots span:nth-child(2) { background: #fb5; }
+        .viz-browser-dots span:nth-child(3) { background: #5e5; }
+        .viz-browser-url {
+            flex: 1;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.5);
+            background: rgba(255,255,255,0.05);
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .viz-browser-content {
+            padding: 10px;
+        }
+        .viz-browser-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 5px;
+            margin-bottom: 5px;
+        }
+        .viz-browser-row .item {
+            height: 32px;
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--accent-30), var(--accent-10));
+        }
+        .viz-browser-row .item.tall { height: 36px; }
+        .viz-browser-headline {
+            height: 8px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, rgba(255,255,255,0.25), transparent 60%);
+            margin-bottom: 7px;
+            width: 70%;
+        }
+
+        /* === VIZ 04: Documents checklist === */
+        .viz-docs {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .viz-docs .row {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 7px 11px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 8px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.78);
+            font-weight: 500;
+        }
+        .viz-docs .row .check {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 900;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px var(--accent-50);
+        }
+
+        /* === VIZ 05: Media grid === */
+        .viz-media {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(2, 1fr);
+            gap: 4px;
+            aspect-ratio: 4/2;
+        }
+        .viz-media .tile {
+            border-radius: 4px;
+            background: linear-gradient(135deg, var(--accent-40), rgba(0,0,0,0.4));
+        }
+        .viz-media .tile:nth-child(1) { background: linear-gradient(135deg, var(--accent-50), var(--accent-20)); }
+        .viz-media .tile:nth-child(2) { background: linear-gradient(45deg, rgba(255,255,255,0.08), var(--accent-30)); }
+        .viz-media .tile:nth-child(3) {
+            background: linear-gradient(135deg, var(--accent-30), rgba(0,0,0,0.5));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .viz-media .tile:nth-child(3)::after {
+            content: '▶';
+            color: white;
+            font-size: 12px;
+            opacity: 0.8;
+        }
+        .viz-media .tile:nth-child(4) { background: linear-gradient(225deg, var(--accent-50), rgba(0,0,0,0.4)); }
+        .viz-media .tile:nth-child(5) { background: linear-gradient(45deg, var(--accent-20), rgba(0,0,0,0.5)); }
+        .viz-media .tile:nth-child(6) { background: linear-gradient(135deg, var(--accent-50), var(--accent-10)); }
+        .viz-media .tile:nth-child(7) { background: linear-gradient(225deg, var(--accent-30), rgba(0,0,0,0.6)); }
+        .viz-media .tile:nth-child(8) { background: linear-gradient(135deg, rgba(255,255,255,0.06), var(--accent-30)); }
+
+        /* === VIZ 06: Polaroid === */
+        .viz-polaroid-wrap {
+            display: flex;
+            justify-content: center;
+            padding: 4px 0;
+        }
+        .viz-polaroid {
+            background: #fafafa;
+            padding: 7px 7px 24px;
+            border-radius: 3px;
+            transform: rotate(-3deg);
+            box-shadow: 0 8px 22px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+            transition: transform 0.4s ease;
+        }
+        .bento-cell:hover .viz-polaroid { transform: rotate(-1deg) scale(1.02); }
+        .viz-polaroid-img {
+            width: 110px;
+            height: 110px;
+            background: linear-gradient(135deg, var(--accent) 0%, rgba(0,0,0,0.7) 100%);
+            border-radius: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .viz-polaroid-img::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3), transparent 50%);
+        }
+        .viz-polaroid-img i {
+            font-size: 36px;
+            opacity: 0.9;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* === VIZ 07: Big number === */
+        .viz-bignum {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .viz-bignum-n {
+            font-family: 'Inter', sans-serif;
+            font-size: 60px;
+            font-weight: 800;
+            line-height: 0.9;
+            letter-spacing: -0.05em;
+            color: white;
+            background: linear-gradient(180deg, white 0%, var(--accent) 110%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .viz-bignum-suffix {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+            line-height: 1;
+        }
+        .viz-orderbar {
+            display: flex;
+            gap: 3px;
+            align-items: flex-end;
+            height: 22px;
+        }
+        .viz-orderbar .b {
+            flex: 1;
+            background: var(--accent);
+            border-radius: 2px;
+            opacity: 0.8;
+        }
+        .viz-orderbar .b.dim { opacity: 0.25; }
+
+        /* === VIZ 08: Calendar === */
+        .viz-cal {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .viz-cal-month {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        .viz-cal-month-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+            margin-bottom: 6px;
+            letter-spacing: 0.12em;
+            font-weight: 700;
+        }
+        .viz-cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 2px;
+        }
+        .viz-cal-day {
+            aspect-ratio: 1;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.04);
+            min-height: 6px;
+        }
+        .viz-cal-day.m {
+            background: var(--accent);
+            box-shadow: 0 0 8px var(--accent-50);
         }
 
         /* Accordion */
@@ -867,15 +1209,142 @@
 
         // Custom highlights for "Budowa sklepu pełen pakiet"
         const FULL_PACKAGE_OFFER_ID = '30bf199b-8bc1-4810-8716-43dbffeb9113';
+
+        // Visual content per cell (CSS-only mini-illustrations)
+        const VIZ = {
+            chart: () => `
+                <div class="viz-chart">
+                    <div class="bar" style="--h: 28%"></div>
+                    <div class="bar" style="--h: 48%"></div>
+                    <div class="bar" style="--h: 65%"></div>
+                    <div class="bar hi" style="--h: 100%"></div>
+                    <div class="bar" style="--h: 72%"></div>
+                    <div class="bar" style="--h: 50%"></div>
+                    <div class="bar" style="--h: 38%"></div>
+                    <div class="bar" style="--h: 25%"></div>
+                </div>
+                <div class="viz-chart-cap">→ Bestseller wybrany na podstawie danych</div>
+            `,
+            brand: () => `
+                <div class="viz-brand">
+                    <div class="viz-brand-logo">B</div>
+                    <div class="viz-brand-stack">
+                        <div class="viz-palette">
+                            <span class="sw" style="--c: #1f2937"></span>
+                            <span class="sw" style="--c: #f59e0b"></span>
+                            <span class="sw" style="--c: #06b6d4"></span>
+                            <span class="sw" style="--c: #ec4899"></span>
+                            <span class="sw" style="--c: #fafafa"></span>
+                        </div>
+                        <div class="viz-fonts">
+                            <span>HEADER · Inter Tight 800</span>
+                            <span>BODY · Inter 400</span>
+                        </div>
+                    </div>
+                </div>
+            `,
+            browser: () => `
+                <div class="viz-browser">
+                    <div class="viz-browser-bar">
+                        <div class="viz-browser-dots"><span></span><span></span><span></span></div>
+                        <div class="viz-browser-url">twojadomena.pl</div>
+                    </div>
+                    <div class="viz-browser-content">
+                        <div class="viz-browser-headline"></div>
+                        <div class="viz-browser-row">
+                            <div class="item tall"></div>
+                            <div class="item tall"></div>
+                            <div class="item tall"></div>
+                        </div>
+                        <div class="viz-browser-row">
+                            <div class="item"></div>
+                            <div class="item"></div>
+                            <div class="item"></div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            docs: () => `
+                <div class="viz-docs">
+                    <div class="row"><span class="check">✓</span> Regulamin sklepu</div>
+                    <div class="row"><span class="check">✓</span> Polityka prywatności + RODO</div>
+                    <div class="row"><span class="check">✓</span> Bramka płatności TPay</div>
+                    <div class="row"><span class="check">✓</span> System fakturowania</div>
+                </div>
+            `,
+            media: () => `
+                <div class="viz-media">
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                    <div class="tile"></div>
+                </div>
+            `,
+            polaroid: () => `
+                <div class="viz-polaroid-wrap">
+                    <div class="viz-polaroid">
+                        <div class="viz-polaroid-img">
+                            <i class="ph-bold ph-user-focus"></i>
+                        </div>
+                    </div>
+                </div>
+            `,
+            bignum: () => `
+                <div class="viz-bignum">
+                    <span class="viz-bignum-n">1000</span>
+                    <span class="viz-bignum-suffix">+</span>
+                </div>
+                <div class="viz-orderbar">
+                    <div class="b"></div><div class="b"></div><div class="b"></div>
+                    <div class="b"></div><div class="b"></div><div class="b"></div>
+                    <div class="b"></div><div class="b"></div><div class="b dim"></div>
+                    <div class="b dim"></div><div class="b dim"></div><div class="b dim"></div>
+                </div>
+            `,
+            calendar: () => {
+                const months = ['MIES. 1', 'MIES. 2', 'MIES. 3'];
+                const meetings = [[3, 17], [4, 18], [5, 16]];
+                return `
+                    <div class="viz-cal">
+                        ${months.map((label, i) => {
+                            let days = '';
+                            for (let d = 1; d <= 21; d++) {
+                                const isM = meetings[i].includes(d);
+                                days += `<div class="viz-cal-day ${isM ? 'm' : ''}"></div>`;
+                            }
+                            return `
+                                <div class="viz-cal-month">
+                                    <div class="viz-cal-month-label">${label}</div>
+                                    <div class="viz-cal-grid">${days}</div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            },
+        };
+
         const FULL_PACKAGE_HIGHLIGHTS = [
-            { color: '#f43f5e', icon: 'ph-magnifying-glass-plus', title: 'Analiza rynku i wybór bestsellerowego produktu', badge: '15 dni' },
-            { color: '#8b5cf6', icon: 'ph-paint-brush',           title: 'Marka, logo i pełna identyfikacja wizualna' },
-            { color: '#06b6d4', icon: 'ph-storefront',            title: 'Profesjonalny sklep online pod Twoją domeną' },
-            { color: '#10b981', icon: 'ph-shield-check',          title: 'Formalności prawne, RODO i bramka płatności',   badge: '10 dni' },
-            { color: '#f97316', icon: 'ph-film-strip',            title: 'Komplet grafik i video reklamowych',             badge: '7 dni' },
-            { color: '#ec4899', icon: 'ph-camera',                title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
-            { color: '#f59e0b', icon: 'ph-rocket-launch',         title: 'Walidacja biznesu na 1000 realnych zamówieniach' },
-            { color: '#0ea5e9', icon: 'ph-chalkboard-teacher',    title: '3 miesiące mentoringu 1:1 z Tomkiem',            badge: '90 dni' },
+            { color: '#f43f5e', wide: true,  badge: '15 dni',     viz: 'chart',
+              title: 'Analiza rynku i wybór bestsellerowego produktu' },
+            { color: '#8b5cf6', wide: false,                       viz: 'brand',
+              title: 'Marka, logo i pełna identyfikacja wizualna' },
+            { color: '#06b6d4', wide: true,                        viz: 'browser',
+              title: 'Profesjonalny sklep online pod Twoją domeną' },
+            { color: '#10b981', wide: false, badge: '10 dni',     viz: 'docs',
+              title: 'Formalności prawne, RODO i bramka płatności' },
+            { color: '#f97316', wide: false, badge: '7 dni',      viz: 'media',
+              title: 'Komplet grafik i video reklamowych' },
+            { color: '#ec4899', wide: false,                       viz: 'polaroid',
+              title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
+            { color: '#f59e0b', wide: true,  badge: 'Walidacja',  viz: 'bignum',
+              title: 'Realnych zamówień przed Twoim startem solo' },
+            { color: '#0ea5e9', wide: true,  badge: '90 dni',     viz: 'calendar',
+              title: '3 miesiące mentoringu 1:1 z Tomkiem' },
         ];
 
         function renderHighlights(milestones) {
@@ -884,32 +1353,30 @@
 
             // Custom layout for "Budowa sklepu pełen pakiet"
             if (offer.id === FULL_PACKAGE_OFFER_ID) {
-                // Disable the grid — render as vertical editorial list
-                grid.className = 'flex flex-col';
+                // Bento grid with mini-illustrations
+                grid.className = 'bento';
 
                 grid.innerHTML = FULL_PACKAGE_HIGHLIGHTS.map((b, i) => {
                     const num = String(i + 1).padStart(2, '0');
-                    const glow = hexToRgba(b.color, 0.35);
+                    // Pre-compute color shades from hex
+                    const accentVars = `
+                        --accent: ${b.color};
+                        --accent-10: ${hexToRgba(b.color, 0.10)};
+                        --accent-20: ${hexToRgba(b.color, 0.20)};
+                        --accent-30: ${hexToRgba(b.color, 0.30)};
+                        --accent-40: ${hexToRgba(b.color, 0.40)};
+                        --accent-50: ${hexToRgba(b.color, 0.50)};
+                        --accent-60: ${hexToRgba(b.color, 0.65)};
+                    `;
+                    const vizFn = VIZ[b.viz] || (() => '');
                     return `
-                        <div class="ed-row" style="--accent: ${b.color}; --accent-glow: ${glow};">
-                            <div class="ed-grid">
-                                <div class="ed-icon">
-                                    <i class="ph-bold ${b.icon}"></i>
-                                </div>
-                                <div class="min-w-0">
-                                    <div class="ed-meta">
-                                        <span class="ed-num">${num}</span>
-                                        <span class="ed-line"></span>
-                                    </div>
-                                    <h4 class="ed-title">${escapeHtml(b.title)}</h4>
-                                </div>
-                                ${b.badge ? `
-                                    <span class="ed-badge"
-                                          style="background: ${b.color}14; color: ${b.color}; border: 1px solid ${b.color}30;">
-                                        ${escapeHtml(b.badge)}
-                                    </span>
-                                ` : ''}
+                        <div class="bento-cell ${b.wide ? 'bento-wide' : ''}" style="${accentVars}">
+                            <div class="bento-meta">
+                                <span class="bento-num">${num}</span>
+                                ${b.badge ? `<span class="bento-badge">${escapeHtml(b.badge)}</span>` : '<span></span>'}
                             </div>
+                            <h4 class="bento-title">${escapeHtml(b.title)}</h4>
+                            <div class="bento-viz">${vizFn()}</div>
                         </div>
                     `;
                 }).join('');
