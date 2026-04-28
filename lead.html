@@ -1874,6 +1874,14 @@
         let customInstallmentDates = {}; // Store custom dates keyed by installment number
         let customInstallmentAmounts = {}; // Store custom amounts keyed by installment number
 
+        // HTML escape helper (used across all rendering — must be defined early)
+        function escapeHtml(text) {
+            if (text == null) return '';
+            const div = document.createElement('div');
+            div.textContent = String(text);
+            return div.innerHTML;
+        }
+
         // Audit logging helper
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value, metadata = {}) {
             if (!currentMember) return;
@@ -5025,6 +5033,14 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             setTimeout(initPaymentScheduleUI, 100);
             // Move full offer-management section from info tab → tab "Oferta"
             moveOfferSectionToOfferTab();
+
+            // Default validity for new offer: +48h (2 days) — always set, even before offer selection
+            const validInput = document.getElementById('client-offer-valid-until');
+            if (validInput && !validInput.value) {
+                const d = new Date();
+                d.setDate(d.getDate() + 2);
+                validInput.value = d.toISOString().split('T')[0];
+            }
         });
 
         async function generateClientOffer() {
