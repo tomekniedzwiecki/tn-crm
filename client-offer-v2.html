@@ -1104,6 +1104,195 @@
         .hero-glow {
             background: radial-gradient(ellipse at top, rgba(245,158,11,0.18), transparent 60%);
         }
+
+        /* ===== Timeline (always visible, no accordion) ===== */
+        .timeline-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            position: relative;
+        }
+        .ts-step {
+            position: relative;
+            display: flex;
+            gap: 14px;
+        }
+        @media (min-width: 640px) {
+            .ts-step { gap: 18px; }
+        }
+        /* Vertical line connecting steps */
+        .ts-step:not(:last-child)::before {
+            content: '';
+            position: absolute;
+            left: 21px;
+            top: 44px;
+            bottom: -16px;
+            width: 1px;
+            background: linear-gradient(180deg, var(--accent), rgba(255,255,255,0.04));
+            opacity: 0.5;
+            z-index: 1;
+        }
+        @media (min-width: 640px) {
+            .ts-step:not(:last-child)::before { left: 23px; top: 48px; }
+        }
+        .ts-step-num {
+            position: relative;
+            z-index: 2;
+            width: 42px;
+            height: 42px;
+            flex-shrink: 0;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--accent), rgba(0,0,0,0.55));
+            border: 1px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            box-shadow: 0 3px 10px var(--accent-30), inset 0 1px 0 rgba(255,255,255,0.18);
+        }
+        @media (min-width: 640px) {
+            .ts-step-num { width: 46px; height: 46px; font-size: 14px; }
+        }
+        .ts-step-card {
+            flex: 1;
+            position: relative;
+            background:
+                linear-gradient(165deg, rgba(255,255,255,0.025) 0%, transparent 50%),
+                rgba(15, 15, 17, 0.55);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 16px;
+            padding: 16px 18px;
+            overflow: hidden;
+            min-width: 0;
+        }
+        @media (min-width: 640px) {
+            .ts-step-card { padding: 18px 22px; }
+        }
+        .ts-step-card::before {
+            content: '';
+            position: absolute;
+            bottom: -55%;
+            right: -45%;
+            width: 75%;
+            height: 75%;
+            background: radial-gradient(circle, var(--accent), transparent 70%);
+            opacity: 0.05;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .ts-step-card > * { position: relative; z-index: 1; }
+
+        .ts-step-head {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 4px;
+        }
+        .ts-step-title {
+            color: white;
+            font-weight: 700;
+            font-size: 16px;
+            line-height: 1.2;
+            letter-spacing: -0.015em;
+        }
+        @media (min-width: 640px) {
+            .ts-step-title { font-size: 18px; }
+        }
+        .ts-step-duration {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            background: var(--accent-10);
+            border: 1px solid var(--accent-20);
+            padding: 4px 10px;
+            border-radius: 999px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+        .ts-step-desc {
+            color: rgba(255,255,255,0.62);
+            font-size: 13px;
+            line-height: 1.5;
+            margin-top: 8px;
+        }
+        .ts-step-section {
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+        .ts-step-section-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: rgba(255,255,255,0.5);
+            margin-bottom: 9px;
+        }
+        .ts-step-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .ts-step-del {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            color: rgba(255,255,255,0.88);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+        .ts-step-del .check {
+            color: var(--accent);
+            font-size: 15px;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+        .ts-step-task {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            color: rgba(255,255,255,0.72);
+            font-size: 12.5px;
+            line-height: 1.4;
+        }
+        .ts-step-task-tag {
+            flex-shrink: 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-top: 1px;
+            white-space: nowrap;
+        }
+        .ts-step-task-tag.team {
+            background: rgba(139,92,246,0.12);
+            color: #a78bfa;
+            border: 1px solid rgba(139,92,246,0.28);
+        }
+        .ts-step-task-tag.client {
+            background: rgba(6,182,212,0.12);
+            color: #22d3ee;
+            border: 1px solid rgba(6,182,212,0.28);
+        }
+        .ts-step-task-tag.shared {
+            background: rgba(245,158,11,0.12);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,0.28);
+        }
     </style>
 </head>
 <body class="min-h-screen font-sans text-sm tracking-tight antialiased">
@@ -1313,28 +1502,22 @@
             </div>
 
             <!-- Accordion: Detailed timeline -->
-            <div id="timeline-accordion" class="mb-4 hidden">
-                <div class="glass-card rounded-2xl border border-white/10 overflow-hidden">
-                    <button onclick="toggleAccordion('timeline')"
-                            class="w-full flex items-center justify-between gap-3 p-4 sm:p-5 text-left hover:bg-white/5 transition-colors">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-chart-line text-base text-amber-400"></i>
-                            </div>
-                            <div class="min-w-0">
-                                <div class="text-white font-semibold text-sm sm:text-base">Pełny harmonogram realizacji</div>
-                                <div class="text-zinc-500 text-xs"><span id="milestones-count">-</span> · co i kiedy</div>
-                            </div>
-                        </div>
-                        <i id="acc-chevron-timeline" class="ph ph-caret-down text-zinc-400 acc-chevron flex-shrink-0"></i>
-                    </button>
-                    <div id="acc-content-timeline" class="acc-content">
-                        <div class="p-4 sm:p-6 pt-0 border-t border-white/5">
-                            <div id="timeline-container" class="relative pl-6 sm:pl-8 mt-5">
-                                <!-- Timeline items rendered here -->
-                            </div>
+            <div id="timeline-section" class="mb-6 hidden">
+                <!-- Section header -->
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-9 h-9 bg-amber-500/20 border border-amber-500/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i class="ph-bold ph-chart-line text-base text-amber-400"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-lg sm:text-xl font-bold text-white leading-tight">Harmonogram realizacji</h3>
+                        <div class="text-zinc-500 text-xs">
+                            <span id="timeline-count">-</span> etapów · razem <span id="timeline-days">-</span> dni pracy
                         </div>
                     </div>
+                </div>
+
+                <div id="timeline-container" class="timeline-stack">
+                    <!-- Steps rendered here -->
                 </div>
             </div>
 
@@ -2123,78 +2306,81 @@
             section.classList.remove('hidden');
         }
 
-        function renderTimeline(milestones) {
-            const container = document.getElementById('timeline-container');
-            const accordion = document.getElementById('timeline-accordion');
+        const STEP_COLORS = ['#8b5cf6', '#10b981', '#f97316', '#f59e0b', '#0ea5e9', '#ec4899', '#06b6d4'];
 
-            if (milestones.length === 0) {
-                accordion.classList.add('hidden');
+        function renderTimeline(milestones) {
+            const section = document.getElementById('timeline-section');
+            const container = document.getElementById('timeline-container');
+
+            if (!milestones || milestones.length === 0) {
+                section.classList.add('hidden');
                 return;
             }
-            accordion.classList.remove('hidden');
-            document.getElementById('milestones-count').textContent =
-                milestones.length + (milestones.length === 1 ? ' etap' : (milestones.length < 5 ? ' etapy' : ' etapów'));
+            section.classList.remove('hidden');
 
-            let currentDay = 1;
-            const timelineHtml = milestones.map((milestone, index) => {
-                const hasDuration = milestone.duration_days && milestone.duration_days > 0;
-                const startDay = currentDay;
-                const endDay = hasDuration ? currentDay + milestone.duration_days - 1 : currentDay - 1;
-                if (hasDuration) currentDay = endDay + 1;
+            const totalDays = milestones.reduce((sum, m) => sum + (m.duration_days || 0), 0);
+            document.getElementById('timeline-count').textContent = milestones.length;
+            document.getElementById('timeline-days').textContent = totalDays || '—';
 
-                const deliverables = (milestone.deliverables || []).filter(d => d.trim());
-                const tasks = milestone.tasks || [];
+            const taskMeta = (responsible) => {
+                if (responsible === 'client') return { cls: 'client', label: 'Klient' };
+                if (responsible === 'shared') return { cls: 'shared', label: 'Wspólne' };
+                return { cls: 'team', label: 'TN' };
+            };
+
+            container.innerHTML = milestones.map((m, i) => {
+                const num = String(i + 1).padStart(2, '0');
+                const color = STEP_COLORS[i % STEP_COLORS.length];
+                const accentVars = `--accent: ${color}; --accent-10: ${hexToRgba(color, 0.10)}; --accent-20: ${hexToRgba(color, 0.20)}; --accent-30: ${hexToRgba(color, 0.30)};`;
+
+                const hasDuration = m.duration_days && m.duration_days > 0;
+                const deliverables = (m.deliverables || []).filter(d => d && d.trim());
+                const tasks = m.tasks || [];
 
                 return `
-                    <div class="relative mb-4">
-                        <div class="absolute -left-4 sm:-left-5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-amber-500/20 border-2 border-amber-500 flex items-center justify-center z-10">
-                            <span class="text-[9px] sm:text-[10px] font-bold text-amber-400">${index + 1}</span>
-                        </div>
-                        <div class="ml-3 sm:ml-4">
-                            <div class="rounded-xl border border-white/10 bg-zinc-900/40 p-4">
-                                <div class="flex items-start justify-between gap-3 mb-2">
-                                    <h4 class="text-sm sm:text-base font-semibold text-white leading-tight">${escapeHtml(milestone.title) || 'Etap ' + (index + 1)}</h4>
-                                    ${hasDuration ? `
-                                        <div class="text-right flex-shrink-0">
-                                            <div class="text-amber-400 text-xs font-bold">${milestone.duration_days} dni</div>
-                                            <div class="text-zinc-600 text-[10px] font-mono">Dzień ${startDay}${startDay !== endDay ? '-' + endDay : ''}</div>
-                                        </div>
-                                    ` : ''}
-                                </div>
-                                ${milestone.description ? `<p class="text-zinc-500 text-xs sm:text-sm mb-3">${escapeHtml(milestone.description)}</p>` : ''}
-                                ${deliverables.length > 0 ? `
-                                    <div class="space-y-1.5 mt-2">
+                    <div class="ts-step" style="${accentVars}">
+                        <div class="ts-step-num">${num}</div>
+                        <div class="ts-step-card">
+                            <div class="ts-step-head">
+                                <div class="ts-step-title">${escapeHtml(m.title) || 'Etap ' + (i + 1)}</div>
+                                ${hasDuration ? `<div class="ts-step-duration">${m.duration_days} dni</div>` : ''}
+                            </div>
+                            ${m.description ? `<p class="ts-step-desc">${escapeHtml(m.description)}</p>` : ''}
+
+                            ${deliverables.length > 0 ? `
+                                <div class="ts-step-section">
+                                    <div class="ts-step-section-label">Rezultaty</div>
+                                    <div class="ts-step-list">
                                         ${deliverables.map(d => `
-                                            <div class="flex items-start gap-2">
-                                                <i class="ph-fill ph-check-circle text-emerald-400 text-sm mt-0.5 flex-shrink-0"></i>
-                                                <span class="text-zinc-300 text-xs sm:text-sm">${escapeHtml(d)}</span>
+                                            <div class="ts-step-del">
+                                                <i class="ph-fill ph-check-circle check"></i>
+                                                <span>${escapeHtml(d)}</span>
                                             </div>
                                         `).join('')}
                                     </div>
-                                ` : ''}
-                                ${tasks.length > 0 ? `
-                                    <div class="mt-3 pt-3 border-t border-white/5 space-y-1.5">
-                                        ${tasks.map(task => {
-                                            let bg, fg, label;
-                                            if (task.responsible === 'client') { bg = 'bg-cyan-500/15 border-cyan-500/30'; fg = 'text-cyan-400'; label = 'Klient'; }
-                                            else if (task.responsible === 'shared') { bg = 'bg-amber-500/15 border-amber-500/30'; fg = 'text-amber-400'; label = 'Wspólne'; }
-                                            else { bg = 'bg-violet-500/15 border-violet-500/30'; fg = 'text-violet-400'; label = 'TN'; }
+                                </div>
+                            ` : ''}
+
+                            ${tasks.length > 0 ? `
+                                <div class="ts-step-section">
+                                    <div class="ts-step-section-label">Zadania</div>
+                                    <div class="ts-step-list">
+                                        ${tasks.map(t => {
+                                            const meta = taskMeta(t.responsible);
                                             return `
-                                                <div class="flex items-start gap-2">
-                                                    <span class="inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border ${bg} ${fg} font-medium flex-shrink-0 mt-0.5">${label}</span>
-                                                    <span class="text-zinc-300 text-xs">${escapeHtml(task.title)}</span>
+                                                <div class="ts-step-task">
+                                                    <span class="ts-step-task-tag ${meta.cls}">${meta.label}</span>
+                                                    <span>${escapeHtml(t.title)}</span>
                                                 </div>
                                             `;
                                         }).join('')}
                                     </div>
-                                ` : ''}
-                            </div>
+                                </div>
+                            ` : ''}
                         </div>
                     </div>
                 `;
             }).join('');
-
-            container.innerHTML = timelineHtml;
         }
 
         async function loadPaymentSchedule() {
