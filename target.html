@@ -353,7 +353,7 @@
                         <div class="flex items-center justify-between mb-4">
                             <div>
                                 <div class="text-sm font-semibold text-white">Dzienny trend</div>
-                                <div class="text-xs text-zinc-500 mt-0.5">Paid orderów per dzień vs on-pace</div>
+                                <div class="text-xs text-zinc-500 mt-0.5">Skumulowany przychód netto vs on-pace</div>
                             </div>
                             <i class="ph ph-chart-line-up text-xl text-zinc-500"></i>
                         </div>
@@ -417,7 +417,7 @@
                                     <th class="text-right py-2 px-2 font-semibold">Odezw.</th>
                                     <th class="text-right py-2 px-2 font-semibold">Rozm.</th>
                                     <th class="text-right py-2 px-2 font-semibold">Ofer.</th>
-                                    <th class="text-right py-2 px-2 font-semibold">Domyk.</th>
+                                    <th class="text-right py-2 px-2 font-semibold">Zadat.</th>
                                     <th class="text-right py-2 px-2 font-semibold">Paid</th>
                                     <th class="text-right py-2 px-2 font-semibold">Rev netto</th>
                                     <th class="text-right py-2 pl-2 font-semibold">Status</th>
@@ -433,15 +433,15 @@
                     </div>
                 </div>
 
-                <!-- KOLEJKA DOMYKANIE -->
+                <!-- KOLEJKA ZADATEK -->
                 <div class="section-card p-5 mb-6">
                     <div class="flex items-center justify-between mb-4">
                         <div>
                             <div class="text-sm font-semibold text-white flex items-center gap-2">
-                                <i class="ph ph-handshake text-orange-400"></i>
-                                Kolejka Domykanie
+                                <i class="ph ph-coin text-orange-400"></i>
+                                Po zadatku — czekają na pełną wpłatę
                             </div>
-                            <div class="text-xs text-zinc-500 mt-0.5">Leady w statusie <span class="text-orange-400">negotiation</span> czekające na zamknięcie</div>
+                            <div class="text-xs text-zinc-500 mt-0.5">Klienci którzy wpłacili <span class="text-orange-400">zadatek/zaliczkę</span>, ale nie domknęli pełnej oferty</div>
                         </div>
                         <span id="queue-count" class="text-xs px-2 py-1 bg-orange-500/15 text-orange-400 rounded-full border border-orange-500/30 font-medium">0</span>
                     </div>
@@ -490,11 +490,11 @@
                         <input id="set-c23" type="number" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label class="text-xs text-zinc-400 mb-1 block">Konw. 3→4 (%)</label>
+                        <label class="text-xs text-zinc-400 mb-1 block">Oferta→Zadatek (%)</label>
                         <input id="set-c34" type="number" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm">
                     </div>
                     <div>
-                        <label class="text-xs text-zinc-400 mb-1 block">Konw. 4→paid (%)</label>
+                        <label class="text-xs text-zinc-400 mb-1 block">Zadatek→Paid (%)</label>
                         <input id="set-c45" type="number" step="0.01" class="w-full bg-zinc-800 border border-zinc-700 text-white rounded-lg px-3 py-2 text-sm">
                     </div>
                 </div>
@@ -535,20 +535,20 @@
                 odezwanie: 1125,
                 rozmowa: 338,
                 oferta: 152,
-                domykanie: 53,
+                zadatek: 53,
                 paid: 16
             },
             conversions_assumed: {
                 odezwanie_to_rozmowa: 0.30,
                 rozmowa_to_oferta: 0.45,
-                oferta_to_domykanie: 0.35,
-                domykanie_to_paid: 0.30
+                oferta_to_zadatek: 0.35,
+                zadatek_to_paid: 0.30
             }
         };
 
         let DATA = {
-            counts: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
-            today: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
+            counts: { odezwanie: 0, rozmowa: 0, oferta: 0, zadatek: 0, paid: 0 },
+            today: { odezwanie: 0, rozmowa: 0, oferta: 0, zadatek: 0, paid: 0 },
             revenue_netto: 0,
             revenue_netto_full: 0,
             queue_leads: [],
@@ -556,7 +556,7 @@
             avg_ticket_netto: 0,
             // NEW: per-day breakdown for Realizacja dzienna table
             daily: {
-                odezwanie: [], rozmowa: [], oferta: [], domykanie: [], paid: [], revenue: []
+                odezwanie: [], rozmowa: [], oferta: [], zadatek: [], paid: [], revenue: []
             },
         };
 
@@ -578,21 +578,22 @@
             },
             {
                 key: 'oferta', num: 3, name: 'Oferta',
-                desc: 'Pełna oferta wysłana',
-                icon: 'ph-file-text', iconBg: 'bg-pink-500/15', iconColor: 'text-pink-400',
+                desc: 'Pełna oferta otwarta przez klienta',
+                icon: 'ph-eye', iconBg: 'bg-pink-500/15', iconColor: 'text-pink-400',
                 accent: 'pink',
             },
             {
-                key: 'domykanie', num: 4, name: 'Domykanie',
-                desc: 'Przekazane Tomkowi',
-                icon: 'ph-handshake', iconBg: 'bg-orange-500/15', iconColor: 'text-orange-400',
+                key: 'zadatek', num: 4, name: 'Zadatek',
+                desc: 'Wpłacony zadatek/zaliczka',
+                icon: 'ph-coin', iconBg: 'bg-orange-500/15', iconColor: 'text-orange-400',
                 accent: 'orange',
             },
             {
-                key: 'paid', num: 5, name: 'Paid',
-                desc: 'Pełna oferta opłacona',
-                icon: 'ph-check-circle', iconBg: 'bg-teal-500/15', iconColor: 'text-teal-400',
+                key: 'paid', num: 5, name: 'Przychód',
+                desc: 'Wpłacony przychód netto (wszystkie płatności)',
+                icon: 'ph-currency-circle-dollar', iconBg: 'bg-teal-500/15', iconColor: 'text-teal-400',
                 accent: 'teal',
+                isRevenue: true,
             },
         ];
 
@@ -707,6 +708,21 @@
             if (data?.value) {
                 try {
                     const parsed = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+                    // Backward-compat: old key 'domykanie' → 'zadatek'
+                    if (parsed.targets && parsed.targets.domykanie != null && parsed.targets.zadatek == null) {
+                        parsed.targets.zadatek = parsed.targets.domykanie;
+                        delete parsed.targets.domykanie;
+                    }
+                    if (parsed.conversions_assumed) {
+                        if (parsed.conversions_assumed.oferta_to_domykanie != null && parsed.conversions_assumed.oferta_to_zadatek == null) {
+                            parsed.conversions_assumed.oferta_to_zadatek = parsed.conversions_assumed.oferta_to_domykanie;
+                            delete parsed.conversions_assumed.oferta_to_domykanie;
+                        }
+                        if (parsed.conversions_assumed.domykanie_to_paid != null && parsed.conversions_assumed.zadatek_to_paid == null) {
+                            parsed.conversions_assumed.zadatek_to_paid = parsed.conversions_assumed.domykanie_to_paid;
+                            delete parsed.conversions_assumed.domykanie_to_paid;
+                        }
+                    }
                     TARGETS = { ...TARGETS, ...parsed };
                 } catch (e) { console.error('parse targets:', e); }
             }
@@ -786,8 +802,8 @@
             // Reset data
             const zeros = () => new Array(progress.dayTotal).fill(0);
             DATA = {
-                counts: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
-                today: { odezwanie: 0, rozmowa: 0, oferta: 0, domykanie: 0, paid: 0 },
+                counts: { odezwanie: 0, rozmowa: 0, oferta: 0, zadatek: 0, paid: 0 },
+                today: { odezwanie: 0, rozmowa: 0, oferta: 0, zadatek: 0, paid: 0 },
                 revenue_netto: 0,
                 revenue_netto_full: 0,
                 queue_leads: [],
@@ -797,19 +813,22 @@
                     odezwanie: zeros(),
                     rozmowa: zeros(),
                     oferta: zeros(),
-                    domykanie: zeros(),
+                    zadatek: zeros(),
                     paid: zeros(),
                     revenue: zeros(),
                 },
             };
+
+            // Pre-fetch shared paid orders (used by both fetchZadatek and fetchPaid)
+            const paidOrders = await fetchPaidOrdersInMonth(start, end);
 
             // Parallel fetch
             await Promise.all([
                 fetchOdezwanie(start, end),
                 fetchRozmowa(start, end),
                 fetchOferta(start, end),
-                fetchDomykanie(start, end),
-                fetchPaid(start, end),
+                fetchZadatek(start, end, paidOrders),
+                fetchPaid(start, end, paidOrders),
             ]);
 
             render();
@@ -859,7 +878,7 @@
         // Sensowna = length(text) >= 10 chars
         // Bi-directional: min 2 inbound + min 2 outbound
         // FILTR: tylko rozmowy synced_by=maciek (lub null dla starych) —
-        //        konwersacje Tomka to etap Domykanie, nie Rozmowa
+        //        konwersacje Tomka to inny kanał (nie outreach Maćka)
         // ============================================
         async function fetchRozmowa(start, end) {
             const startISO = start.toISOString();
@@ -944,7 +963,9 @@
         }
 
         // ============================================
-        // FETCH — OFERTA (client_offers created this month, offer_type=full)
+        // FETCH — OFERTA (full offer OPENED by client this month)
+        // Liczy się dopiero gdy klient otworzył ofertę (view_history[0] w miesiącu),
+        // nie samo wysłanie. Oferta wysłana w marcu a otwarta w kwietniu = kwiecień.
         // ============================================
         async function fetchOferta(start, end) {
             const startISO = start.toISOString();
@@ -956,10 +977,9 @@
             while (true) {
                 const { data, error } = await supabaseClient
                     .from('client_offers')
-                    .select('created_at')
+                    .select('view_history,viewed_at')
                     .eq('offer_type', 'full')
-                    .gte('created_at', startISO)
-                    .lt('created_at', endISO)
+                    .not('viewed_at', 'is', null)
                     .range(offset, offset + 999);
                 if (error) { console.error('oferta:', error); return; }
                 if (!data || data.length === 0) break;
@@ -968,12 +988,20 @@
                 offset += 1000;
             }
 
-            DATA.counts.oferta = all.length;
+            // First-open timestamp: view_history[0] (sorted asc) — fallback to viewed_at
+            const firstOpens = all
+                .map(o => {
+                    const fromHistory = Array.isArray(o.view_history) && o.view_history.length > 0
+                        ? o.view_history[0]
+                        : null;
+                    return fromHistory || o.viewed_at;
+                })
+                .filter(ts => ts && ts >= startISO && ts < endISO);
+
+            DATA.counts.oferta = firstOpens.length;
             DATA.today.oferta = 0;
             const daily = DATA.daily.oferta;
-            for (const o of all) {
-                const ts = o.created_at;
-                if (!ts) continue;
+            for (const ts of firstOpens) {
                 const day = new Date(ts).getDate();
                 if (day >= 1 && day <= daily.length) daily[day - 1]++;
                 if (ts.startsWith(todayPrefix)) DATA.today.oferta++;
@@ -981,62 +1009,127 @@
         }
 
         // ============================================
-        // FETCH — DOMYKANIE (leads in status=negotiation + entered this month)
+        // FETCH — PAID ORDERS RAW (shared by fetchZadatek + fetchPaid)
         // ============================================
-        async function fetchDomykanie(start, end) {
+        async function fetchPaidOrdersInMonth(start, end) {
             const startISO = start.toISOString();
             const endISO = end.toISOString();
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('id,amount,description,paid_at,created_at,installment_id,lead_id,customer_email')
+                    .eq('status', 'paid')
+                    .gte('paid_at', startISO)
+                    .lt('paid_at', endISO)
+                    .order('paid_at', { ascending: true })
+                    .range(offset, offset + 999);
+                if (error) { console.error('paid orders raw:', error); return all; }
+                if (!data || data.length === 0) break;
+                all = all.concat(data);
+                if (data.length < 1000) break;
+                offset += 1000;
+            }
+            return all;
+        }
 
-            // Queue: all leads currently in negotiation
-            const { data: queueLeads } = await supabaseClient
-                .from('leads')
-                .select('id,name,email,phone,status_entered_at,deal_value,created_at')
-                .eq('status', 'negotiation')
-                .order('status_entered_at', { ascending: false });
+        // ============================================
+        // FETCH — ZADATEK
+        // Definicja: order paid w miesiącu z description matchującym /zadatek|zaliczka/i
+        // Count: unikalni klienci (lead_id || customer_email)
+        // Daily: dzień pierwszego zadatku per klient
+        // Queue: klienci po zadatku którzy NIE skonwertowali na full Paid w tym miesiącu
+        //        (suma wpłat <4000 AND brak installment_id AND brak desc 'pełen pakiet/oferta')
+        // ============================================
+        const DEPOSIT_REGEX = /(zadatek|zaliczka)/i;
+        const FULL_DESC_REGEX = /(pełen pakiet|pelen pakiet|pełna oferta|pelna oferta|dopłata do pełn|doplata do peln)/i;
 
-            DATA.queue_leads = queueLeads || [];
+        function customerKey(o) {
+            return o.lead_id || (o.customer_email || '').toLowerCase() || o.id;
+        }
 
-            // Count: leads currently in negotiation OR moved past negotiation this month
-            // For simplicity: count leads where status_entered_at >= start AND status is negotiation/won/lost/abandoned
-            // AND they had negotiation in their path (check activities)
+        async function fetchZadatek(start, end, paidOrders) {
+            const todayPrefix = getTodayISO().split('T')[0];
 
-            // Simpler: count (A) currently in negotiation with entered this month
-            //       + (B) in won/lost with activities containing "→ Domykanie" this month
-            let enteredThisMonth = 0;
-            const daily = DATA.daily.domykanie;
-            for (const lead of (queueLeads || [])) {
-                if (lead.status_entered_at && lead.status_entered_at >= startISO && lead.status_entered_at < endISO) {
-                    enteredThisMonth++;
-                    const day = new Date(lead.status_entered_at).getDate();
-                    if (day >= 1 && day <= daily.length) daily[day - 1]++;
-                }
+            // Group ALL paid orders by customer (for "is full paid?" check)
+            const allByCustomer = new Map();
+            for (const o of paidOrders) {
+                const k = customerKey(o);
+                if (!allByCustomer.has(k)) allByCustomer.set(k, []);
+                allByCustomer.get(k).push(o);
             }
 
-            // Also: fetch leads in won/lost with status_entered_at (they passed through negotiation)
-            const { data: closedLeads } = await supabaseClient
-                .from('leads')
-                .select('id,status,activities,status_entered_at')
-                .in('status', ['won', 'lost', 'abandoned'])
-                .gte('updated_at', startISO);
-
-            let closedPassedNegotiation = 0;
-            for (const lead of (closedLeads || [])) {
-                const activities = lead.activities || [];
-                for (const act of activities) {
-                    if (act.type !== 'status_change') continue;
-                    const content = act.content || '';
-                    const matchesDomykanie = content.includes('Domykanie') || content.includes('Negocjacje');
-                    if (!matchesDomykanie) continue;
-                    if (act.created_at >= startISO && act.created_at < endISO) {
-                        closedPassedNegotiation++;
-                        const day = new Date(act.created_at).getDate();
-                        if (day >= 1 && day <= daily.length) daily[day - 1]++;
-                        break;
-                    }
-                }
+            // Group deposit orders by customer
+            const depositByCustomer = new Map();
+            for (const o of paidOrders) {
+                if (!DEPOSIT_REGEX.test(o.description || '')) continue;
+                const k = customerKey(o);
+                if (!depositByCustomer.has(k)) depositByCustomer.set(k, []);
+                depositByCustomer.get(k).push(o);
             }
 
-            DATA.counts.domykanie = enteredThisMonth + closedPassedNegotiation;
+            DATA.counts.zadatek = depositByCustomer.size;
+
+            // Daily + today: based on first deposit per customer
+            const daily = DATA.daily.zadatek;
+            let todayCount = 0;
+            for (const [, deps] of depositByCustomer) {
+                const firstDep = deps[0]; // already sorted asc by paid_at
+                if (!firstDep?.paid_at) continue;
+                const day = new Date(firstDep.paid_at).getDate();
+                if (day >= 1 && day <= daily.length) daily[day - 1]++;
+                if (firstDep.paid_at.startsWith(todayPrefix)) todayCount++;
+            }
+            DATA.today.zadatek = todayCount;
+
+            // Queue: deposit customers who haven't reached full paid threshold
+            const queueCandidates = [];
+            for (const [key, deps] of depositByCustomer) {
+                const all = allByCustomer.get(key) || deps;
+                const total = all.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
+                const hasInstallment = all.some(o => o.installment_id);
+                const hasFullDesc = all.some(o => FULL_DESC_REGEX.test(o.description || ''));
+                const isFullPaid = total >= 4000 || hasInstallment || hasFullDesc;
+                if (isFullPaid) continue;
+                const firstDep = deps[0];
+                queueCandidates.push({
+                    lead_id: firstDep.lead_id,
+                    customer_email: firstDep.customer_email,
+                    deposit_paid_at: firstDep.paid_at,
+                    deposit_amount: parseFloat(firstDep.amount) || 0,
+                    deposit_description: firstDep.description || '',
+                    total_paid_in_month: total
+                });
+            }
+
+            // Fetch lead details for queue items with lead_id
+            const leadIds = queueCandidates.filter(q => q.lead_id).map(q => q.lead_id);
+            const leadMap = new Map();
+            if (leadIds.length > 0) {
+                const { data: leads } = await supabaseClient
+                    .from('leads')
+                    .select('id,name,email,phone,deal_value')
+                    .in('id', leadIds);
+                for (const l of (leads || [])) leadMap.set(l.id, l);
+            }
+
+            DATA.queue_leads = queueCandidates
+                .sort((a, b) => (b.deposit_paid_at || '').localeCompare(a.deposit_paid_at || ''))
+                .map(q => {
+                    const lead = q.lead_id ? leadMap.get(q.lead_id) : null;
+                    return {
+                        id: q.lead_id || null,
+                        name: lead?.name || q.customer_email || '—',
+                        email: lead?.email || q.customer_email || '',
+                        phone: lead?.phone || null,
+                        deal_value: lead?.deal_value || null,
+                        status_entered_at: q.deposit_paid_at,
+                        deposit_amount: q.deposit_amount,
+                        deposit_description: q.deposit_description,
+                        total_paid_in_month: q.total_paid_in_month
+                    };
+                });
         }
 
         // ============================================
@@ -1047,23 +1140,11 @@
         //             LUB mają installment_id (rata pełnej oferty)
         //             LUB description pasuje do pełnej oferty
         // ============================================
-        async function fetchPaid(start, end) {
-            const startISO = start.toISOString();
-            const endISO = end.toISOString();
+        async function fetchPaid(start, end, paidOrders) {
             const todayStart = getTodayISO();
             const todayPrefix = todayStart.split('T')[0];
 
-            // Fetch all paid orders this month (paid_at in month)
-            const { data: orders, error } = await supabaseClient
-                .from('orders')
-                .select('id,amount,description,paid_at,created_at,installment_id,lead_id,customer_email')
-                .eq('status', 'paid')
-                .gte('paid_at', startISO)
-                .lt('paid_at', endISO)
-                .order('paid_at', { ascending: true });
-            if (error) { console.error('paid:', error); return; }
-
-            const allPaid = orders || [];
+            const allPaid = paidOrders || [];
 
             // TOTAL REVENUE netto — cały przychód, bez filtrowania
             DATA.revenue_netto = allPaid.reduce((sum, o) => sum + (parseFloat(o.amount) || 0) / 1.23, 0);
@@ -1277,8 +1358,11 @@
             };
 
             grid.innerHTML = STAGE_DEFS.map(stage => {
-                const current = DATA.counts[stage.key] || 0;
-                const target = TARGETS.targets[stage.key] || 0;
+                const isRev = stage.isRevenue === true;
+
+                // Current value & target — revenue stage uses zł, others use count
+                const current = isRev ? DATA.revenue_netto : (DATA.counts[stage.key] || 0);
+                const target = isRev ? TARGETS.monthly_revenue_netto : (TARGETS.targets[stage.key] || 0);
                 const progressPct = target > 0 ? current / target : 0;
                 const progressWidth = Math.min(100, progressPct * 100);
 
@@ -1291,37 +1375,49 @@
                 // Status badge
                 const status = getStatusVsPace(progressPct, paceProgress);
 
-                // Metrics: today / yesterday / 7d
-                const todayVal = getStageToday(stage.key);
-                const yestVal = getStageYesterday(stage.key);
-                const weekVal = getStageLast7Days(stage.key);
+                // Daily/weekly targets + per-day data key
+                const dailyTarget = isRev
+                    ? (TARGETS.monthly_revenue_netto / dayTotal)
+                    : dailyTargetOf(stage.key);
+                const weeklyTarget = isRev
+                    ? (TARGETS.monthly_revenue_netto * 7 / dayTotal)
+                    : weeklyTargetOf(stage.key);
+                const dataKey = isRev ? 'revenue' : stage.key;
 
-                const dailyTarget = dailyTargetOf(stage.key);
-                const weeklyTarget = weeklyTargetOf(stage.key);
+                // Metrics: today / yesterday / 7d
+                const todayVal = getStageToday(dataKey);
+                const yestVal = getStageYesterday(dataKey);
+                const weekVal = getStageLast7Days(dataKey);
 
                 const todayDelta = pctDeltaBadge(todayVal, dailyTarget);
                 const yestDelta = pctDeltaBadge(yestVal, dailyTarget);
                 const weekDelta = pctDeltaBadge(weekVal, weeklyTarget);
 
+                // Number formatting helper for big values + mini stats
+                const fmt = isRev ? (n) => fmtMoney(n) + ' zł' : fmtNum;
+
                 // Sparkline 14d
-                const spark = getSparklineData(stage.key, 14);
+                const spark = getSparklineData(dataKey, 14);
                 const sparkMax = Math.max(...spark.map(d => d.value), dailyTarget * 1.5);
 
-                // Special footer for Domykanie — show queue
-                const footerHtml = stage.key === 'domykanie'
-                    ? `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
-                         <span>W kolejce: <span class="text-orange-300 font-semibold">${DATA.queue_leads.length}</span></span>
+                // Special footer for Zadatek — show queue (deposit customers awaiting full paid)
+                let footerHtml;
+                if (stage.key === 'zadatek') {
+                    footerHtml = `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                         <span>Czeka na full: <span class="text-orange-300 font-semibold">${DATA.queue_leads.length}</span></span>
                          <span>Cel/dzień: <span class="text-zinc-300">${dailyTarget.toFixed(1)}</span></span>
-                       </div>`
-                    : stage.key === 'paid'
-                        ? `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
-                             <span>Rev netto: <span class="text-teal-300 font-semibold">${fmtMoney(DATA.revenue_netto)} zł</span></span>
-                             <span>Cel/dzień: <span class="text-zinc-300">${dailyTarget.toFixed(2)}</span></span>
-                           </div>`
-                        : `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
-                             <span>Cel/dzień: <span class="text-zinc-300 font-semibold">${dailyTarget.toFixed(1)}</span></span>
-                             <span>Cel/tydz: <span class="text-zinc-300">${weeklyTarget.toFixed(0)}</span></span>
-                           </div>`;
+                       </div>`;
+                } else if (isRev) {
+                    footerHtml = `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                         <span>Klienci paid: <span class="text-teal-300 font-semibold">${DATA.counts.paid}</span></span>
+                         <span>Cel/dzień: <span class="text-zinc-300">${fmtMoney(dailyTarget)} zł</span></span>
+                       </div>`;
+                } else {
+                    footerHtml = `<div class="flex justify-between text-[10px] text-zinc-500 pt-2 border-t border-white/5">
+                         <span>Cel/dzień: <span class="text-zinc-300 font-semibold">${dailyTarget.toFixed(1)}</span></span>
+                         <span>Cel/tydz: <span class="text-zinc-300">${weeklyTarget.toFixed(0)}</span></span>
+                       </div>`;
+                }
 
                 return `
                     <div class="stage-card">
@@ -1342,8 +1438,8 @@
 
                         <!-- Big number + progress -->
                         <div class="flex items-baseline gap-2 mb-1.5">
-                            <span class="text-3xl font-bold text-white font-mono leading-none">${fmtNum(current)}</span>
-                            <span class="text-xs text-zinc-500">/ ${fmtNum(target)}</span>
+                            <span class="${isRev ? 'text-2xl' : 'text-3xl'} font-bold text-white font-mono leading-none">${fmt(current)}</span>
+                            <span class="text-xs text-zinc-500">/ ${fmt(target)}</span>
                         </div>
                         <div class="progress-bar h-1.5 mb-3">
                             <div class="progress-bar-fill ${progressCls}" style="width: ${progressWidth}%"></div>
@@ -1353,17 +1449,17 @@
                         <div class="grid grid-cols-3 gap-1 py-2 rounded-lg bg-white/[0.02] mb-2">
                             <div class="mini-stat">
                                 <div class="mini-stat-label">Dziś</div>
-                                <div class="mini-stat-value">${fmtNum(todayVal)}</div>
+                                <div class="mini-stat-value">${fmt(todayVal)}</div>
                                 <div class="mini-stat-delta ${todayDelta.cls}">${todayDelta.text}</div>
                             </div>
                             <div class="mini-stat border-l border-r border-white/5">
                                 <div class="mini-stat-label">Wczoraj</div>
-                                <div class="mini-stat-value">${yestVal === null ? '—' : fmtNum(yestVal)}</div>
+                                <div class="mini-stat-value">${yestVal === null ? '—' : fmt(yestVal)}</div>
                                 <div class="mini-stat-delta ${yestDelta.cls}">${yestDelta.text}</div>
                             </div>
                             <div class="mini-stat">
                                 <div class="mini-stat-label">7 dni</div>
-                                <div class="mini-stat-value">${fmtNum(weekVal)}</div>
+                                <div class="mini-stat-value">${fmt(weekVal)}</div>
                                 <div class="mini-stat-delta ${weekDelta.cls}">${weekDelta.text}</div>
                             </div>
                         </div>
@@ -1372,7 +1468,7 @@
                         <div class="mb-2">
                             <div class="text-[9px] text-zinc-600 mb-1 flex justify-between">
                                 <span>Ostatnie 14 dni</span>
-                                <span class="text-zinc-500 font-mono">${fmtNum(spark.reduce((s,d) => s+d.value, 0))}</span>
+                                <span class="text-zinc-500 font-mono">${fmt(spark.reduce((s,d) => s+d.value, 0))}</span>
                             </div>
                             <div class="sparkline">${sparklineHtml(spark, sparkMax)}</div>
                         </div>
@@ -1391,8 +1487,8 @@
             const conv = [
                 { label: 'Odezwanie → Rozmowa', actual: DATA.counts.odezwanie > 0 ? DATA.counts.rozmowa / DATA.counts.odezwanie : 0, target: TARGETS.conversions_assumed.odezwanie_to_rozmowa },
                 { label: 'Rozmowa → Oferta', actual: DATA.counts.rozmowa > 0 ? DATA.counts.oferta / DATA.counts.rozmowa : 0, target: TARGETS.conversions_assumed.rozmowa_to_oferta },
-                { label: 'Oferta → Domykanie', actual: DATA.counts.oferta > 0 ? DATA.counts.domykanie / DATA.counts.oferta : 0, target: TARGETS.conversions_assumed.oferta_to_domykanie },
-                { label: 'Domykanie → Paid', actual: DATA.counts.domykanie > 0 ? DATA.counts.paid / DATA.counts.domykanie : 0, target: TARGETS.conversions_assumed.domykanie_to_paid },
+                { label: 'Oferta → Zadatek', actual: DATA.counts.oferta > 0 ? DATA.counts.zadatek / DATA.counts.oferta : 0, target: TARGETS.conversions_assumed.oferta_to_zadatek },
+                { label: 'Zadatek → Paid', actual: DATA.counts.zadatek > 0 ? DATA.counts.paid / DATA.counts.zadatek : 0, target: TARGETS.conversions_assumed.zadatek_to_paid },
             ];
 
             container.innerHTML = conv.map(c => {
@@ -1429,18 +1525,15 @@
             const { dayTotal } = getDayProgress();
             const labels = Array.from({length: dayTotal}, (_, i) => i + 1);
 
-            // Cumulative paid
+            // Cumulative revenue (netto) — wszystkie płatności w miesiącu
             let cumulative = 0;
-            const cumulativeData = DATA.daily_paid.map(d => {
-                cumulative += d.count;
+            const cumulativeData = (DATA.daily.revenue || []).map(rev => {
+                cumulative += (rev || 0);
                 return cumulative;
             });
 
-            // On-pace line (linear from 0 to target)
-            const paceData = labels.map(i => (TARGETS.targets.paid * i / dayTotal));
-
-            // Daily individual
-            const dailyData = DATA.daily_paid.map(d => d.count);
+            // On-pace line (linear from 0 to monthly_revenue_netto target)
+            const paceData = labels.map(i => (TARGETS.monthly_revenue_netto * i / dayTotal));
 
             if (trendChart) trendChart.destroy();
             trendChart = new Chart(ctx, {
@@ -1449,7 +1542,7 @@
                     labels,
                     datasets: [
                         {
-                            label: 'Skumulowane paid',
+                            label: 'Skumulowany przychód',
                             data: cumulativeData,
                             borderColor: '#14b8a6',
                             backgroundColor: 'rgba(20,184,166,0.1)',
@@ -1460,7 +1553,7 @@
                             borderWidth: 2
                         },
                         {
-                            label: 'On-pace',
+                            label: 'On-pace (cel)',
                             data: paceData,
                             borderColor: 'rgba(255,255,255,0.25)',
                             borderDash: [4, 4],
@@ -1484,7 +1577,10 @@
                             borderWidth: 1,
                             titleColor: '#fff',
                             bodyColor: '#d4d4d8',
-                            padding: 8
+                            padding: 8,
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${fmtMoney(ctx.parsed.y)} zł`
+                            }
                         }
                     },
                     scales: {
@@ -1494,7 +1590,11 @@
                         },
                         y: {
                             grid: { color: 'rgba(255,255,255,0.04)' },
-                            ticks: { color: '#52525b', font: { size: 10 } },
+                            ticks: {
+                                color: '#52525b',
+                                font: { size: 10 },
+                                callback: (val) => fmtMoney(val) + ' zł'
+                            },
                             beginAtZero: true
                         }
                     }
@@ -1508,23 +1608,27 @@
                 { key: 'odezwanie', name: 'Odezwanie', pillClass: 's1' },
                 { key: 'rozmowa', name: 'Rozmowa', pillClass: 's2' },
                 { key: 'oferta', name: 'Oferta', pillClass: 's3' },
-                { key: 'domykanie', name: 'Domykanie', pillClass: 's4' },
-                { key: 'paid', name: 'Paid', pillClass: 's5' },
+                { key: 'zadatek', name: 'Zadatek', pillClass: 's4' },
+                { key: 'paid', name: 'Przychód', pillClass: 's5', isRevenue: true },
             ];
 
             document.getElementById('plan-table').innerHTML = stages.map(s => {
-                const current = DATA.counts[s.key];
-                const target = TARGETS.targets[s.key];
-                const onPaceNeeded = Math.round(target * paceProgress);
+                const isRev = s.isRevenue === true;
+                const current = isRev ? DATA.revenue_netto : DATA.counts[s.key];
+                const target = isRev ? TARGETS.monthly_revenue_netto : TARGETS.targets[s.key];
+                const onPaceNeeded = target * paceProgress;
                 const diff = current - onPaceNeeded;
                 const gap = Math.max(0, target - current);
                 const dailyTarget = remainingDays > 0 ? (gap / remainingDays) : 0;
                 const actualPace = dayCurrent > 0 ? current / dayCurrent : 0;
-                const forecast = Math.round(actualPace * dayTotal);
+                const forecast = actualPace * dayTotal;
+
+                const fmt = isRev ? (n) => fmtMoney(n) + ' zł' : (n) => fmtNum(Math.round(n));
+                const fmtPace = isRev ? (n) => fmtMoney(n) + ' zł' : (n) => n.toFixed(1);
+                const fmtDelta = isRev ? (n) => (n >= 0 ? '+' : '−') + fmtMoney(Math.abs(n)) + ' zł' : (n) => (n >= 0 ? '+' : '') + fmtNum(Math.round(n));
 
                 const diffClass = diff >= 0 ? 'text-emerald-400' : 'text-red-400';
-                const sign = diff >= 0 ? '+' : '';
-                const status = getStatusVsPace(current / target, paceProgress);
+                const status = getStatusVsPace(target > 0 ? current / target : 0, paceProgress);
                 const badgeClass = status.class;
 
                 return `
@@ -1532,13 +1636,13 @@
                         <td class="py-2 pr-4">
                             <span class="stage-pill ${s.pillClass} text-sm text-white">${s.name}</span>
                         </td>
-                        <td class="text-right py-2 px-3 text-zinc-300 font-mono">${fmtNum(target)}</td>
-                        <td class="text-right py-2 px-3 text-white font-mono font-semibold">${fmtNum(current)}</td>
-                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${fmtNum(onPaceNeeded)}</td>
-                        <td class="text-right py-2 px-3 font-mono ${diffClass}">${sign}${fmtNum(diff)}</td>
-                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${dailyTarget > 0 ? dailyTarget.toFixed(1) : '—'}</td>
-                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${actualPace.toFixed(1)}</td>
-                        <td class="text-right py-2 px-3 text-zinc-300 font-mono">${fmtNum(forecast)}</td>
+                        <td class="text-right py-2 px-3 text-zinc-300 font-mono">${fmt(target)}</td>
+                        <td class="text-right py-2 px-3 text-white font-mono font-semibold">${fmt(current)}</td>
+                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${fmt(onPaceNeeded)}</td>
+                        <td class="text-right py-2 px-3 font-mono ${diffClass}">${fmtDelta(diff)}</td>
+                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${dailyTarget > 0 ? fmtPace(dailyTarget) : '—'}</td>
+                        <td class="text-right py-2 px-3 text-zinc-400 font-mono">${fmtPace(actualPace)}</td>
+                        <td class="text-right py-2 px-3 text-zinc-300 font-mono">${fmt(forecast)}</td>
                         <td class="text-right py-2 pl-3">
                             <span class="text-[10px] px-2 py-0.5 rounded-full font-medium ${badgeClass}">${status.text}</span>
                         </td>
@@ -1563,7 +1667,7 @@
                 odezwanie: TARGETS.targets.odezwanie / dayTotal,
                 rozmowa: TARGETS.targets.rozmowa / dayTotal,
                 oferta: TARGETS.targets.oferta / dayTotal,
-                domykanie: TARGETS.targets.domykanie / dayTotal,
+                zadatek: TARGETS.targets.zadatek / dayTotal,
                 paid: TARGETS.targets.paid / dayTotal,
             };
 
@@ -1581,7 +1685,7 @@
                 const o = DATA.daily.odezwanie[i] || 0;
                 const r = DATA.daily.rozmowa[i] || 0;
                 const of = DATA.daily.oferta[i] || 0;
-                const d = DATA.daily.domykanie[i] || 0;
+                const d = DATA.daily.zadatek[i] || 0;
                 const p = DATA.daily.paid[i] || 0;
                 const rev = DATA.daily.revenue[i] || 0;
 
@@ -1628,7 +1732,7 @@
                         <td class="py-1.5 px-2 text-right font-mono ${cellClass(o, dailyTargets.odezwanie)}">${o || '·'}</td>
                         <td class="py-1.5 px-2 text-right font-mono ${cellClass(r, dailyTargets.rozmowa)}">${r || '·'}</td>
                         <td class="py-1.5 px-2 text-right font-mono ${cellClass(of, dailyTargets.oferta)}">${of || '·'}</td>
-                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(d, dailyTargets.domykanie)}">${d || '·'}</td>
+                        <td class="py-1.5 px-2 text-right font-mono ${cellClass(d, dailyTargets.zadatek)}">${d || '·'}</td>
                         <td class="py-1.5 px-2 text-right font-mono ${p > 0 ? 'text-teal-400 font-semibold' : 'text-zinc-600'}">${p || '·'}</td>
                         <td class="py-1.5 px-2 text-right font-mono ${rev > 0 ? 'text-white' : 'text-zinc-700'}">${rev > 0 ? fmtMoney(rev) + ' zł' : '·'}</td>
                         <td class="py-1.5 pl-2 text-right text-[11px] ${statusClass}">${statusLabel}</td>
@@ -1642,7 +1746,7 @@
             const pctOdezw = TARGETS.targets.odezwanie > 0 ? 100 * sumOdezw / TARGETS.targets.odezwanie : 0;
             const pctRozm = TARGETS.targets.rozmowa > 0 ? 100 * sumRozm / TARGETS.targets.rozmowa : 0;
             const pctOfer = TARGETS.targets.oferta > 0 ? 100 * sumOfer / TARGETS.targets.oferta : 0;
-            const pctDomyk = TARGETS.targets.domykanie > 0 ? 100 * sumDomyk / TARGETS.targets.domykanie : 0;
+            const pctDomyk = TARGETS.targets.zadatek > 0 ? 100 * sumDomyk / TARGETS.targets.zadatek : 0;
             const pctPaid = TARGETS.targets.paid > 0 ? 100 * sumPaid / TARGETS.targets.paid : 0;
             const pctRev = TARGETS.monthly_revenue_netto > 0 ? 100 * sumRev / TARGETS.monthly_revenue_netto : 0;
             const pctCls = (pct) => pct >= 100 ? 'text-teal-400' : (pct >= 66 ? 'text-zinc-300' : 'text-amber-400');
@@ -1676,7 +1780,7 @@
                     <td class="py-1 px-2 text-right font-mono">${dailyTargets.odezwanie.toFixed(1)}</td>
                     <td class="py-1 px-2 text-right font-mono">${dailyTargets.rozmowa.toFixed(1)}</td>
                     <td class="py-1 px-2 text-right font-mono">${dailyTargets.oferta.toFixed(1)}</td>
-                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.domykanie.toFixed(1)}</td>
+                    <td class="py-1 px-2 text-right font-mono">${dailyTargets.zadatek.toFixed(1)}</td>
                     <td class="py-1 px-2 text-right font-mono">${dailyTargets.paid.toFixed(2)}</td>
                     <td class="py-1 px-2 text-right font-mono">${fmtMoney(TARGETS.monthly_revenue_netto / dayTotal)} zł</td>
                     <td class="py-1 pl-2"></td>
@@ -1692,41 +1796,45 @@
                 container.innerHTML = `
                     <div class="text-center py-8 text-zinc-600 text-sm">
                         <i class="ph ph-check-circle text-3xl mb-2"></i>
-                        <div>Pusta kolejka — nikt nie czeka na domknięcie</div>
+                        <div>Brak — wszyscy z zadatkiem domknęli pełną wpłatę w tym miesiącu</div>
                     </div>
                 `;
                 return;
             }
 
             container.innerHTML = DATA.queue_leads.map(lead => {
-                const enteredDate = lead.status_entered_at
+                const depositDate = lead.status_entered_at
                     ? new Date(lead.status_entered_at).toLocaleDateString('pl-PL', { day: '2-digit', month: 'short' })
                     : '—';
-                const daysInStage = lead.status_entered_at
+                const daysSinceDeposit = lead.status_entered_at
                     ? Math.floor((new Date() - new Date(lead.status_entered_at)) / (1000 * 60 * 60 * 24))
                     : 0;
-                const staleClass = daysInStage >= 7 ? 'text-red-400' : (daysInStage >= 3 ? 'text-amber-400' : 'text-zinc-400');
-                const dealValue = lead.deal_value ? `${fmtMoney(parseFloat(lead.deal_value))} zł` : '—';
+                const staleClass = daysSinceDeposit >= 7 ? 'text-red-400' : (daysSinceDeposit >= 3 ? 'text-amber-400' : 'text-zinc-400');
+                const depositInfo = `${fmtMoney(lead.deposit_amount || 0)} zł`;
+                const totalInfo = (lead.total_paid_in_month || 0) > (lead.deposit_amount || 0)
+                    ? ` (suma ${fmtMoney(lead.total_paid_in_month)} zł)`
+                    : '';
                 const waLink = lead.phone ? `https://wa.me/${(lead.phone || '').replace(/\D/g, '')}` : null;
+                const leadLink = lead.id ? `/lead?id=${lead.id}` : null;
                 return `
                     <div class="flex items-center justify-between p-3 bg-white/[0.02] hover:bg-white/5 rounded-lg border border-white/5 transition-colors">
                         <div class="flex items-center gap-3 min-w-0 flex-1">
                             <div class="w-8 h-8 rounded-lg bg-orange-500/15 flex items-center justify-center flex-shrink-0">
-                                <i class="ph ph-user text-orange-400"></i>
+                                <i class="ph ph-coin text-orange-400"></i>
                             </div>
                             <div class="min-w-0 flex-1">
                                 <div class="text-sm font-medium text-white truncate">${lead.name || lead.email || '—'}</div>
-                                <div class="text-xs text-zinc-500 truncate">${lead.email || ''}</div>
+                                <div class="text-xs text-zinc-500 truncate">${lead.email || ''} · ${lead.deposit_description || 'zadatek'}</div>
                             </div>
                         </div>
                         <div class="flex items-center gap-4 flex-shrink-0 ml-3">
                             <div class="text-right">
-                                <div class="text-xs text-zinc-400 font-mono">${dealValue}</div>
-                                <div class="text-[10px] ${staleClass}">${enteredDate} · ${daysInStage}d</div>
+                                <div class="text-xs text-zinc-400 font-mono">${depositInfo}${totalInfo}</div>
+                                <div class="text-[10px] ${staleClass}">${depositDate} · ${daysSinceDeposit}d temu</div>
                             </div>
                             <div class="flex gap-1">
                                 ${waLink ? `<a href="${waLink}" target="_blank" class="w-8 h-8 flex items-center justify-center rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 transition-colors" title="WhatsApp"><i class="ph ph-whatsapp-logo"></i></a>` : ''}
-                                <a href="/lead?id=${lead.id}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" title="Otwórz leada"><i class="ph ph-arrow-square-out"></i></a>
+                                ${leadLink ? `<a href="${leadLink}" class="w-8 h-8 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white transition-colors" title="Otwórz leada"><i class="ph ph-arrow-square-out"></i></a>` : ''}
                             </div>
                         </div>
                     </div>
@@ -1786,8 +1894,8 @@
             document.getElementById('set-ticket').value = TARGETS.avg_ticket_netto;
             document.getElementById('set-c12').value = (TARGETS.conversions_assumed.odezwanie_to_rozmowa * 100).toFixed(1);
             document.getElementById('set-c23').value = (TARGETS.conversions_assumed.rozmowa_to_oferta * 100).toFixed(1);
-            document.getElementById('set-c34').value = (TARGETS.conversions_assumed.oferta_to_domykanie * 100).toFixed(1);
-            document.getElementById('set-c45').value = (TARGETS.conversions_assumed.domykanie_to_paid * 100).toFixed(1);
+            document.getElementById('set-c34').value = (TARGETS.conversions_assumed.oferta_to_zadatek * 100).toFixed(1);
+            document.getElementById('set-c45').value = (TARGETS.conversions_assumed.zadatek_to_paid * 100).toFixed(1);
             document.getElementById('settings-modal').classList.remove('hidden');
             document.getElementById('settings-modal').classList.add('flex');
             updateCalcPreview();
@@ -1808,8 +1916,8 @@
             const c12 = (parseFloat(document.getElementById('set-c12').value) || 30) / 100;
 
             const paid = Math.ceil(rev / ticket);
-            const domykanie = Math.ceil(paid / c45);
-            const oferta = Math.ceil(domykanie / c34);
+            const zadatek = Math.ceil(paid / c45);
+            const oferta = Math.ceil(zadatek / c34);
             const rozmowa = Math.ceil(oferta / c23);
             const odezwanie = Math.ceil(rozmowa / c12);
 
@@ -1817,7 +1925,7 @@
                 <div>Odezwanie: <span class="text-white font-mono">${fmtNum(odezwanie)}</span>/mies</div>
                 <div>Rozmowa: <span class="text-white font-mono">${fmtNum(rozmowa)}</span>/mies</div>
                 <div>Oferta: <span class="text-white font-mono">${fmtNum(oferta)}</span>/mies</div>
-                <div>Domykanie: <span class="text-white font-mono">${fmtNum(domykanie)}</span>/mies</div>
+                <div>Zadatek: <span class="text-white font-mono">${fmtNum(zadatek)}</span>/mies</div>
                 <div>Paid: <span class="text-white font-mono">${fmtNum(paid)}</span>/mies → <span class="text-teal-400 font-mono">${fmtMoney(paid * ticket)} zł</span></div>
             `;
         }
@@ -1836,8 +1944,8 @@
             const c45 = (parseFloat(document.getElementById('set-c45').value) || 30) / 100;
 
             const paid = Math.ceil(rev / ticket);
-            const domykanie = Math.ceil(paid / c45);
-            const oferta = Math.ceil(domykanie / c34);
+            const zadatek = Math.ceil(paid / c45);
+            const oferta = Math.ceil(zadatek / c34);
             const rozmowa = Math.ceil(oferta / c23);
             const odezwanie = Math.ceil(rozmowa / c12);
 
@@ -1845,12 +1953,12 @@
                 monthly_revenue_netto: rev,
                 monthly_paid: paid,
                 avg_ticket_netto: ticket,
-                targets: { odezwanie, rozmowa, oferta, domykanie, paid },
+                targets: { odezwanie, rozmowa, oferta, zadatek, paid },
                 conversions_assumed: {
                     odezwanie_to_rozmowa: c12,
                     rozmowa_to_oferta: c23,
-                    oferta_to_domykanie: c34,
-                    domykanie_to_paid: c45
+                    oferta_to_zadatek: c34,
+                    zadatek_to_paid: c45
                 },
                 prices_brutto: TARGETS.prices_brutto || [8400, 9400, 11400]
             };
