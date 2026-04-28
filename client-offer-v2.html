@@ -880,7 +880,130 @@
             box-shadow: 0 0 6px var(--accent-50);
         }
 
-        /* === VIZ 07: Big number + growth chart === */
+        /* === VIZ 07: Live orders stream (admin panel mockup) === */
+        .viz-orders {
+            background: rgba(0,0,0,0.45);
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        .viz-orders-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            background: rgba(255,255,255,0.025);
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 700;
+        }
+        .viz-orders-live {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #10b981;
+        }
+        .viz-orders-live-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 7px #10b981;
+            animation: orderPulse 1.6s ease-in-out infinite;
+        }
+        @keyframes orderPulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.85); }
+        }
+        .viz-orders-stat {
+            color: rgba(255,255,255,0.55);
+        }
+        .viz-orders-stat strong {
+            color: var(--accent);
+            font-weight: 800;
+        }
+        .viz-orders-list {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+        .viz-order-row {
+            display: grid;
+            grid-template-columns: auto 1fr auto auto;
+            gap: 10px;
+            align-items: center;
+            padding: 9px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            font-size: 12px;
+            color: rgba(255,255,255,0.85);
+        }
+        .viz-order-row:last-child { border-bottom: none; }
+        .viz-order-num {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: rgba(255,255,255,0.35);
+            font-weight: 700;
+        }
+        .viz-order-name {
+            font-weight: 500;
+            color: rgba(255,255,255,0.85);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .viz-order-amount {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            color: var(--accent);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .viz-order-status {
+            color: #10b981;
+            font-size: 13px;
+            line-height: 1;
+        }
+        .viz-orders-footer {
+            padding: 11px 14px;
+            background: linear-gradient(90deg, var(--accent-10), transparent 80%);
+            border-top: 1px solid var(--accent-20);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .viz-orders-footer-ico {
+            width: 26px;
+            height: 26px;
+            border-radius: 8px;
+            background: var(--accent-30);
+            border: 1px solid var(--accent);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+            box-shadow: 0 0 8px var(--accent-30);
+        }
+        .viz-orders-footer-text {
+            font-size: 12.5px;
+            line-height: 1.35;
+            color: rgba(255,255,255,0.85);
+        }
+        .viz-orders-footer-text strong {
+            color: var(--accent);
+            font-weight: 800;
+        }
+
+        /* legacy bignum styles kept for safety - unused after orders viz */
         .viz-bignum {
             display: grid;
             grid-template-columns: auto 1fr;
@@ -2333,31 +2456,49 @@
                     <span>Sesja produktowa · zdjęcia + reels</span>
                 </div>
             `,
-            bignum: () => `
-                <div class="viz-bignum">
-                    <div class="viz-bignum-num">
-                        <div class="viz-bignum-n">1000<span class="plus">+</span></div>
-                        <div class="viz-bignum-label">Zamówień</div>
+            orders: () => `
+                <div class="viz-orders">
+                    <div class="viz-orders-head">
+                        <span class="viz-orders-live">
+                            <span class="viz-orders-live-dot"></span>
+                            <span>Live</span>
+                        </span>
+                        <span class="viz-orders-stat">Dziś: <strong>47</strong></span>
                     </div>
-                    <svg class="viz-bignum-chart" viewBox="0 0 200 70" preserveAspectRatio="none" aria-hidden="true">
-                        <defs>
-                            <linearGradient id="bn-fill" x1="0" x2="0" y1="0" y2="1">
-                                <stop offset="0%" stop-color="currentColor" stop-opacity="0.35"/>
-                                <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
-                            </linearGradient>
-                        </defs>
-                        <path d="M 0 65 L 25 62 L 50 56 L 80 46 L 110 32 L 140 18 L 170 8 L 200 3 L 200 70 L 0 70 Z"
-                              fill="url(#bn-fill)"/>
-                        <path d="M 0 65 L 25 62 L 50 56 L 80 46 L 110 32 L 140 18 L 170 8 L 200 3"
-                              stroke="currentColor" stroke-width="1.8" fill="none"
-                              stroke-linejoin="round" stroke-linecap="round"/>
-                        <circle cx="200" cy="3" r="3.5" fill="currentColor"/>
-                    </svg>
-                </div>
-                <div class="viz-bignum-axis">
-                    <span>Start: 0 zam.</span>
-                    <span>4-6 mies.</span>
-                    <span class="ok">1000+ ✓</span>
+                    <div class="viz-orders-list">
+                        <div class="viz-order-row">
+                            <span class="viz-order-num">#1247</span>
+                            <span class="viz-order-name">Maria K.</span>
+                            <span class="viz-order-amount">99 PLN</span>
+                            <i class="ph-fill ph-check-circle viz-order-status"></i>
+                        </div>
+                        <div class="viz-order-row">
+                            <span class="viz-order-num">#1246</span>
+                            <span class="viz-order-name">Janusz K.</span>
+                            <span class="viz-order-amount">79 PLN</span>
+                            <i class="ph-fill ph-check-circle viz-order-status"></i>
+                        </div>
+                        <div class="viz-order-row">
+                            <span class="viz-order-num">#1245</span>
+                            <span class="viz-order-name">Aga W.</span>
+                            <span class="viz-order-amount">149 PLN</span>
+                            <i class="ph-fill ph-check-circle viz-order-status"></i>
+                        </div>
+                        <div class="viz-order-row">
+                            <span class="viz-order-num">#1244</span>
+                            <span class="viz-order-name">Tomek S.</span>
+                            <span class="viz-order-amount">99 PLN</span>
+                            <i class="ph-fill ph-check-circle viz-order-status"></i>
+                        </div>
+                    </div>
+                    <div class="viz-orders-footer">
+                        <div class="viz-orders-footer-ico">
+                            <i class="ph-fill ph-trophy"></i>
+                        </div>
+                        <div class="viz-orders-footer-text">
+                            <strong>1000+</strong> zamówień osiągniętych · <strong>~287 000 PLN</strong> sprzedaży
+                        </div>
+                    </div>
                 </div>
             `,
             channels: () => `
@@ -2424,7 +2565,7 @@
               title: 'Komplet grafik i video reklamowych' },
             { color: '#ec4899', size: 'wide',                  viz: 'polaroid',
               title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
-            { color: '#f59e0b', size: 'wide', badge: 'Walidacja', viz: 'bignum',
+            { color: '#f59e0b', size: 'wide', badge: 'Walidacja', viz: 'orders',
               title: '1000 realnych zamówień przed startem solo' },
             { color: '#0ea5e9', size: 'wide',                  viz: 'channels',
               title: 'Bezpośrednia współpraca z Tomkiem' },
