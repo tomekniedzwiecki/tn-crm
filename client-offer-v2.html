@@ -99,13 +99,17 @@
             display: grid;
             grid-template-columns: 1fr;
             gap: 12px;
+            align-items: start;
         }
         @media (min-width: 640px) {
             .bento { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+            .bento-wide { grid-column: span 2; }
+            .bento-full { grid-column: span 2; }
         }
         @media (min-width: 1024px) {
             .bento { grid-template-columns: repeat(4, 1fr); gap: 16px; }
             .bento-wide { grid-column: span 2; }
+            .bento-full { grid-column: span 4; }
         }
 
         .bento-cell {
@@ -120,7 +124,6 @@
             transition: all 0.45s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             flex-direction: column;
-            min-height: 240px;
         }
         .bento-cell::before {
             content: '';
@@ -143,10 +146,10 @@
         .bento-cell > * { position: relative; z-index: 1; }
 
         @media (min-width: 640px) {
-            .bento-cell { padding: 24px; min-height: 250px; }
+            .bento-cell { padding: 24px; }
         }
         @media (min-width: 1024px) {
-            .bento-cell { padding: 26px; min-height: 260px; }
+            .bento-cell { padding: 26px; }
         }
 
         .bento-meta {
@@ -187,7 +190,7 @@
             .bento-title { font-size: 19px; }
         }
         .bento-viz {
-            margin-top: auto;
+            margin-top: 18px;
         }
 
         /* === VIZ 01: Bar chart === */
@@ -1328,22 +1331,28 @@
             },
         };
 
+        // size: 'wide' = span 2 (lg), 'full' = span 4 (lg) / span 2 (sm), default = 1 col
+        // Layout (lg, 4 cols):
+        //   Row 1: [01 wide] [02 wide]      = 4 ✓
+        //   Row 2: [03 wide] [04] [05]      = 4 ✓
+        //   Row 3: [06 wide] [07 wide]      = 4 ✓
+        //   Row 4: [08 full]                = 4 ✓
         const FULL_PACKAGE_HIGHLIGHTS = [
-            { color: '#f43f5e', wide: true,  badge: '15 dni',     viz: 'chart',
+            { color: '#f43f5e', size: 'wide', badge: '15 dni', viz: 'chart',
               title: 'Analiza rynku i wybór bestsellerowego produktu' },
-            { color: '#8b5cf6', wide: false,                       viz: 'brand',
+            { color: '#8b5cf6', size: 'wide',                  viz: 'brand',
               title: 'Marka, logo i pełna identyfikacja wizualna' },
-            { color: '#06b6d4', wide: true,                        viz: 'browser',
+            { color: '#06b6d4', size: 'wide',                  viz: 'browser',
               title: 'Profesjonalny sklep online pod Twoją domeną' },
-            { color: '#10b981', wide: false, badge: '10 dni',     viz: 'docs',
-              title: 'Formalności prawne, RODO i bramka płatności' },
-            { color: '#f97316', wide: false, badge: '7 dni',      viz: 'media',
-              title: 'Komplet grafik i video reklamowych' },
-            { color: '#ec4899', wide: false,                       viz: 'polaroid',
+            { color: '#10b981', size: 'normal', badge: '10 dni', viz: 'docs',
+              title: 'Formalności i bramka płatności' },
+            { color: '#f97316', size: 'normal', badge: '7 dni',  viz: 'media',
+              title: 'Grafiki i video reklamowe' },
+            { color: '#ec4899', size: 'wide',                  viz: 'polaroid',
               title: 'Sesja zdjęciowa Twojego produktu z influencerem' },
-            { color: '#f59e0b', wide: true,  badge: 'Walidacja',  viz: 'bignum',
-              title: 'Realnych zamówień przed Twoim startem solo' },
-            { color: '#0ea5e9', wide: true,  badge: '90 dni',     viz: 'calendar',
+            { color: '#f59e0b', size: 'wide', badge: 'Walidacja', viz: 'bignum',
+              title: '1000 realnych zamówień przed startem solo' },
+            { color: '#0ea5e9', size: 'full', badge: '90 dni',  viz: 'calendar',
               title: '3 miesiące mentoringu 1:1 z Tomkiem' },
         ];
 
@@ -1369,8 +1378,10 @@
                         --accent-60: ${hexToRgba(b.color, 0.65)};
                     `;
                     const vizFn = VIZ[b.viz] || (() => '');
+                    const sizeClass = b.size === 'wide' ? 'bento-wide'
+                                    : b.size === 'full' ? 'bento-full' : '';
                     return `
-                        <div class="bento-cell ${b.wide ? 'bento-wide' : ''}" style="${accentVars}">
+                        <div class="bento-cell ${sizeClass}" style="${accentVars}">
                             <div class="bento-meta">
                                 <span class="bento-num">${num}</span>
                                 ${b.badge ? `<span class="bento-badge">${escapeHtml(b.badge)}</span>` : '<span></span>'}
