@@ -1299,12 +1299,12 @@
                                 </div>
                             </div>
 
-                            <!-- Archive (historical offers) -->
-                            <details id="offer-archive-wrapper" class="hidden bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden group">
+                            <!-- Offer history (all client_offers for this lead) -->
+                            <details id="offer-archive-wrapper" class="hidden bg-zinc-900/40 rounded-xl border border-white/5 overflow-hidden group" open>
                                 <summary class="px-4 py-3 cursor-pointer flex items-center justify-between hover:bg-zinc-800/30 transition-colors">
                                     <h3 class="text-sm font-medium text-white flex items-center gap-2">
-                                        <i class="ph ph-archive text-zinc-500"></i>
-                                        Archiwum ofert
+                                        <i class="ph ph-stack text-zinc-400"></i>
+                                        Historia ofert
                                         <span id="offer-archive-count" class="text-[10px] font-mono text-zinc-500 ml-1">0</span>
                                     </h3>
                                     <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
@@ -6331,6 +6331,87 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }).join('');
         }
 
+        // Load archive of all client_offers for this lead (full history)
+        async function loadOfferArchive() {
+            const wrapper = document.getElementById('offer-archive-wrapper');
+            const container = document.getElementById('offer-archive');
+            const counter = document.getElementById('offer-archive-count');
+            if (!wrapper || !container || !lead) return;
+
+            try {
+                const { data: archive } = await supabaseClient
+                    .from('client_offers')
+                    .select('id, offer_id, custom_price, unique_token, valid_until, view_count, viewed_at, created_at, offers(id, name, price)')
+                    .eq('lead_id', lead.id)
+                    .order('created_at', { ascending: false });
+
+                if (!archive || archive.length === 0) {
+                    wrapper.classList.add('hidden');
+                    return;
+                }
+
+                wrapper.classList.remove('hidden');
+                if (counter) counter.textContent = archive.length;
+
+                const now = new Date();
+                const currentClientOfferId = clientOffer?.id;
+
+                container.innerHTML = archive.map((co, i) => {
+                    const offer = co.offers;
+                    const offerName = offer?.name || 'Oferta (usunięta)';
+                    const price = parseFloat(co.custom_price || offer?.price || 0);
+                    const validDate = co.valid_until ? new Date(co.valid_until) : null;
+                    const isExpired = validDate && validDate < now;
+                    const isCurrent = co.id === currentClientOfferId;
+
+                    let badge, badgeColor;
+                    if (isCurrent && isExpired) {
+                        badge = 'wygasła'; badgeColor = 'red';
+                    } else if (isCurrent) {
+                        badge = 'aktualna'; badgeColor = 'amber';
+                    } else if (isExpired) {
+                        badge = 'wygasła'; badgeColor = 'zinc';
+                    } else {
+                        badge = 'zastąpiona'; badgeColor = 'zinc';
+                    }
+
+                    const createdShort = new Date(co.created_at).toLocaleString('pl-PL', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+                    const validShort = validDate ? validDate.toLocaleDateString('pl-PL', { day: '2-digit', month: 'short' }) : '—';
+                    const offerUrl = `${window.location.origin}/p/${co.unique_token}`;
+                    const safeUrl = offerUrl.replace(/'/g, "\\'");
+
+                    return `
+                        <div class="px-4 py-3 ${isCurrent ? 'bg-amber-500/5' : ''}">
+                            <div class="flex items-baseline justify-between gap-2 mb-1.5">
+                                <span class="text-white text-sm font-semibold truncate">${escapeHtml(offerName)}</span>
+                                <span class="text-[9px] font-mono uppercase tracking-wider px-1.5 py-0.5 rounded bg-${badgeColor}-500/15 text-${badgeColor}-400 border border-${badgeColor}-500/25 flex-shrink-0">${badge}</span>
+                            </div>
+                            <div class="flex items-center gap-2 text-[10px] text-zinc-500 mb-2 flex-wrap">
+                                <span class="text-${badgeColor}-400/80 font-mono font-semibold">${fmtPLN(price)} zł</span>
+                                <span class="text-zinc-700">·</span>
+                                <span class="flex items-center gap-1"><i class="ph ph-eye"></i> ${co.view_count || 0}</span>
+                                <span class="text-zinc-700">·</span>
+                                <span class="font-mono">utw. ${createdShort}</span>
+                                ${validDate ? `<span class="text-zinc-700">·</span><span class="font-mono">do ${validShort}</span>` : ''}
+                            </div>
+                            <div class="flex gap-1.5">
+                                <button onclick="window.open('${safeUrl}', '_blank')" class="flex-1 inline-flex items-center justify-center gap-1.5 bg-zinc-800 hover:bg-zinc-700 text-white px-2 py-1.5 rounded text-[11px] font-medium transition-colors">
+                                    <i class="ph ph-arrow-square-out text-xs"></i>
+                                    Otwórz
+                                </button>
+                                <button onclick="copyQuickLink('${safeUrl}', this)" class="inline-flex items-center justify-center bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white px-2.5 py-1.5 rounded text-[11px] transition-colors" title="Kopiuj link">
+                                    <i class="ph ph-copy text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.warn('[offer] Archive load failed:', e);
+                wrapper.classList.add('hidden');
+            }
+        }
+
         // Refresh all offer-tab data sources
         function refreshOfferTabData() {
             renderOfferSummaries();
@@ -6338,6 +6419,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             loadOfferTimeline();
             loadOfferPayments();
             loadOfferRelated();
+            loadOfferArchive();
         }
 
         // ============ NDA GENERATOR ============
