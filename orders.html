@@ -477,10 +477,10 @@
                                     <div class="text-emerald-400 font-medium" id="invoice-number-display">-</div>
                                     <div class="text-zinc-500 text-xs mt-1">Faktura wystawiona</div>
                                 </div>
-                                <a id="invoice-pdf-link" href="#" target="_blank" rel="noopener" class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                <button type="button" id="invoice-pdf-link" class="flex items-center gap-2 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors">
                                     <i class="ph ph-file-pdf"></i>
                                     Pobierz PDF
-                                </a>
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -841,10 +841,10 @@
                                     <i class="ph ph-file-text text-sm"></i>
                                 </button>
                                 ` : ''}
-                                ${order.invoice_token ? `
-                                <a href="https://tomekniedzwiecki.fakturownia.pl/invoice/${order.invoice_token}.pdf" target="_blank" rel="noopener" class="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded transition-colors" title="Pobierz fakture ${order.invoice_number}">
+                                ${order.invoice_id ? `
+                                <button type="button" onclick="openInvoicePdf('${order.invoice_id}')" class="p-1.5 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded transition-colors" title="Pobierz fakture ${order.invoice_number}">
                                     <i class="ph ph-file-pdf text-sm"></i>
-                                </a>
+                                </button>
                                 ` : ''}
                                 <button onclick="editOrder('${order.id}')" class="p-1.5 text-zinc-500 hover:text-white hover:bg-white/10 rounded transition-colors" title="Edytuj">
                                     <i class="ph ph-pencil-simple text-sm"></i>
@@ -1026,10 +1026,11 @@
                     }
 
                     // Show invoice section if invoice exists
-                    if (order.invoice_number && order.invoice_token) {
+                    if (order.invoice_number && order.invoice_id) {
                         document.getElementById('invoice-section').classList.remove('hidden');
                         document.getElementById('invoice-number-display').textContent = order.invoice_number;
-                        document.getElementById('invoice-pdf-link').href = `https://tomekniedzwiecki.fakturownia.pl/invoice/${order.invoice_token}.pdf`;
+                        const pdfBtn = document.getElementById('invoice-pdf-link');
+                        pdfBtn.onclick = () => openInvoicePdf(order.invoice_id);
                     }
                 }
             }
@@ -1344,6 +1345,34 @@
 
             btn.disabled = false;
             btn.innerHTML = '<i class="ph ph-magnifying-glass"></i><span class="hidden sm:inline">Pobierz dane</span>';
+        }
+
+        // Open invoice PDF — proxy przez edge function (api_token nie wycieka do klienta).
+        // Public token URL Fakturowni przekierowuje na login dla anonim - dlatego proxy.
+        async function openInvoicePdf(invoiceId) {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) { showToast('Brak sesji - zaloguj sie ponownie'); return; }
+
+                showToast('Pobieranie faktury...');
+                const resp = await fetch(`${SUPABASE_URL}/functions/v1/invoice-pdf?invoice_id=${invoiceId}`, {
+                    headers: { 'Authorization': `Bearer ${session.access_token}` }
+                });
+
+                if (!resp.ok) {
+                    const err = await resp.json().catch(() => ({}));
+                    showToast('Blad pobierania faktury: ' + (err.error || resp.status));
+                    return;
+                }
+
+                const blob = await resp.blob();
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
+            } catch (err) {
+                console.error('Invoice PDF error:', err);
+                showToast('Blad: ' + err.message);
+            }
         }
 
         // Generate VAT Invoice
