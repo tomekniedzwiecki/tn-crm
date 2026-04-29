@@ -71,7 +71,8 @@ Deno.serve(async (req) => {
     subdomain = subdomain.replace(/^https?:\/\//, '').replace(/\.fakturownia\.pl.*$/, '').trim()
 
     // 4. Department ID — z secrets lub fallback do invoice JSON
-    let departmentId = Deno.env.get('fakturownia_department_id')
+    const secretDept = Deno.env.get('fakturownia_department_id')
+    let departmentId = secretDept && secretDept.trim() ? secretDept.trim() : ''
     if (!departmentId) {
       const jsonResp = await fetch(`https://${subdomain}.fakturownia.pl/invoices/${invoiceId}.json?api_token=${apiToken}`)
       if (jsonResp.ok) {
