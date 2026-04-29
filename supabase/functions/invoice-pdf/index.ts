@@ -81,46 +81,44 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5. Pobierz PDF
-    const fakturUrl = departmentId
-      ? `https://${subdomain}.fakturownia.pl/invoices/${invoiceId}.pdf?api_token=${apiToken}&department_id=${departmentId}`
-      : `https://${subdomain}.fakturownia.pl/invoices/${invoiceId}.pdf?api_token=${apiToken}`
+    // 5. Próbuje pobrać PDF — najpierw z dept_id, potem różne dept'y, potem bez
+    const tryDepts: (string | null)[] = []
+    if (departmentId) tryDepts.push(departmentId)
+    tryDepts.push(null) // fallback bez dept_id
 
-    const pdfResp = await fetch(fakturUrl)
-    if (!pdfResp.ok) {
-      const errText = await pdfResp.text()
-      return new Response(JSON.stringify({ error: `Fakturownia ${pdfResp.status}: ${errText.substring(0, 200)}` }), {
-        status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      })
-    }
+    let lastStatus = 0
+    let lastErrPreview = ''
+    for (const dept of tryDepts) {
+      const fakturUrl = dept
+        ? `https://${subdomain}.fakturownia.pl/invoices/${invoiceId}.pdf?api_token=${apiToken}&department_id=${dept}`
+        : `https://${subdomain}.fakturownia.pl/invoices/${invoiceId}.pdf?api_token=${apiToken}`
 
-    // Sanity check: response IS PDF (czasem Fakturownia zwraca 200 z HTML)
-    const ct = pdfResp.headers.get('content-type') || ''
-    if (!ct.includes('pdf')) {
+      console.log(`[invoice-pdf] try invoice=${invoiceId} dept=${dept || 'none'}`)
+      const pdfResp = await fetch(fakturUrl, { redirect: 'manual' })
+      const ct = pdfResp.headers.get('content-type') || ''
       const buf = await pdfResp.arrayBuffer()
-      const isPdfMagic = buf.byteLength >= 4 && new Uint8Array(buf.slice(0, 4)).every((b, i) => [0x25, 0x50, 0x44, 0x46][i] === b)
-      if (!isPdfMagic) {
-        return new Response(JSON.stringify({ error: `Fakturownia zwróciła non-PDF (content-type: ${ct})` }), {
-          status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      const isPdf = buf.byteLength >= 4 && new Uint8Array(buf.slice(0, 4)).every((b, i) => [0x25, 0x50, 0x44, 0x46][i] === b)
+
+      if (pdfResp.ok && isPdf) {
+        return new Response(buf, {
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': `inline; filename="faktura-${invoiceId}.pdf"`,
+            'Cache-Control': 'private, max-age=300'
+          }
         })
       }
-      return new Response(buf, {
-        headers: {
-          ...corsHeaders,
-          'Content-Type': 'application/pdf',
-          'Content-Disposition': `inline; filename="faktura-${invoiceId}.pdf"`,
-          'Cache-Control': 'private, max-age=300'
-        }
-      })
+
+      lastStatus = pdfResp.status
+      lastErrPreview = isPdf ? '[got PDF but not 200]' : new TextDecoder().decode(buf.slice(0, 150))
+      console.log(`[invoice-pdf] failed status=${pdfResp.status} ct=${ct} dept=${dept || 'none'}`)
     }
 
-    return new Response(pdfResp.body, {
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/pdf',
-        'Content-Disposition': `inline; filename="faktura-${invoiceId}.pdf"`,
-        'Cache-Control': 'private, max-age=300'
-      }
+    return new Response(JSON.stringify({
+      error: `Fakturownia ${lastStatus} dla invoice ${invoiceId} (dept tried: ${tryDepts.join(', ')}): ${lastErrPreview}`
+    }), {
+      status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
