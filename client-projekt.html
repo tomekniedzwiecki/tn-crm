@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026042203';
+        const APP_VERSION = '2026042901';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3175,6 +3175,27 @@
                             <h3 class="text-[17px] font-medium text-white">Twoje profile społecznościowe</h3>
                         </div>
                         <p class="text-[#666] text-[13px]">Podaj linki do profili, na których będziesz publikować nagrania. Wszystkie 3 platformy są wymagane.</p>
+                    </div>
+
+                    <!-- Info: nazwa profili = nazwa marki -->
+                    <div id="profiles-brand-name-info" class="mb-6 p-4 bg-pink-500/5 border border-pink-500/20 rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <i class="ph ph-info text-pink-400 text-[18px] mt-0.5 flex-shrink-0"></i>
+                            <div class="flex-1 min-w-0">
+                                <p class="text-[13px] text-white font-medium mb-1">Nazwa profili = nazwa Twojej marki</p>
+                                <p class="text-[12px] text-[#888] leading-relaxed">
+                                    Wszystkie 3 profile (TikTok, YouTube, Instagram) muszą mieć <strong class="text-white">tę samą nazwę / handle co nazwa Twojej marki</strong>. Dzięki temu klienci łatwo Cię znajdą i rozpoznają.
+                                </p>
+                                <div id="profiles-brand-name-display" class="hidden mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-pink-500/10 border border-pink-500/30 rounded-md">
+                                    <i class="ph ph-storefront text-pink-400 text-[13px]"></i>
+                                    <span class="text-[11px] text-[#888]">Nazwa marki:</span>
+                                    <span id="profiles-brand-name-value" class="text-[13px] font-semibold text-white"></span>
+                                </div>
+                                <p id="profiles-brand-name-missing" class="hidden mt-3 text-[11px] text-amber-400">
+                                    <i class="ph ph-warning"></i> Nazwa marki będzie widoczna po dostarczeniu brandingu — sprawdź zakładkę „Branding".
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="space-y-4">
@@ -9246,6 +9267,22 @@
             if (tiktokInput) tiktokInput.value = profiles.tiktok || '';
             if (youtubeInput) youtubeInput.value = profiles.youtube || '';
             if (instagramInput) instagramInput.value = profiles.instagram || '';
+
+            // Pokaż nazwę marki z zakładki Branding
+            const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+            const brandName = brandInfo ? parseBrandNotes(brandInfo.value)?.name : null;
+            const brandNameDisplay = document.getElementById('profiles-brand-name-display');
+            const brandNameValue = document.getElementById('profiles-brand-name-value');
+            const brandNameMissing = document.getElementById('profiles-brand-name-missing');
+
+            if (brandName) {
+                if (brandNameValue) brandNameValue.textContent = brandName;
+                if (brandNameDisplay) brandNameDisplay.classList.remove('hidden');
+                if (brandNameMissing) brandNameMissing.classList.add('hidden');
+            } else {
+                if (brandNameDisplay) brandNameDisplay.classList.add('hidden');
+                if (brandNameMissing) brandNameMissing.classList.remove('hidden');
+            }
 
             // Update status
             updateProfilesStatus();
