@@ -102,6 +102,9 @@
                 <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
                     <i class="ph ph-robot"></i> Prompty AI
                 </button>
+                <button onclick="switchSettingsTab('zapisy')" data-tab="zapisy" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap flex items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors">
+                    <i class="ph ph-clipboard-text"></i> Zapisy
+                </button>
                 <!-- AI WhatsApp przeniesione do /whatsapp -->
                 <button onclick="switchSettingsTab('ai-whatsapp')" data-tab="ai-whatsapp" class="settings-tab-mobile admin-only-mobile hidden whitespace-nowrap items-center gap-1.5 px-3 py-1.5 text-zinc-500 text-xs font-medium rounded-lg hover:bg-white/5 transition-colors" style="display:none !important">
                     <i class="ph ph-whatsapp-logo"></i> AI WhatsApp
@@ -144,6 +147,10 @@
                             <button onclick="switchSettingsTab('prompts')" data-tab="prompts" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
                                 <i class="ph ph-robot text-lg"></i>
                                 <span class="text-sm font-medium">Prompty AI</span>
+                            </button>
+                            <button onclick="switchSettingsTab('zapisy')" data-tab="zapisy" class="settings-tab w-full flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left">
+                                <i class="ph ph-clipboard-text text-lg"></i>
+                                <span class="text-sm font-medium">Zapisy</span>
                             </button>
                             <!-- AI WhatsApp przeniesione do /whatsapp -->
                             <button onclick="switchSettingsTab('ai-whatsapp')" data-tab="ai-whatsapp" class="settings-tab w-full items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-all text-left" style="display:none !important">
@@ -610,6 +617,49 @@
                                 <div id="prompts-list" class="space-y-4">
                                     <!-- Templates loaded dynamically -->
                                     <div class="text-zinc-500 text-sm text-center py-8">Ładowanie szablonów...</div>
+                                </div>
+                            </div>
+
+                            <!-- TAB: Zapisy -->
+                            <div id="tab-zapisy" class="settings-panel hidden space-y-6">
+                                <div>
+                                    <h1 class="text-2xl font-semibold text-white tracking-tight mb-1">Zapisy</h1>
+                                    <p class="text-zinc-500 text-sm">Ustawienia formularza zapisów na <a href="https://tomekniedzwiecki.pl/zapisy" target="_blank" class="text-violet-400 hover:underline">tomekniedzwiecki.pl/zapisy</a></p>
+                                </div>
+
+                                <!-- WhatsApp Phone -->
+                                <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-6">
+                                    <div class="flex items-center gap-3 mb-4">
+                                        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                            <i class="ph ph-whatsapp-logo text-emerald-400 text-xl"></i>
+                                        </div>
+                                        <div>
+                                            <h2 class="text-white font-medium">Numer WhatsApp w podziękowaniu</h2>
+                                            <p class="text-zinc-500 text-xs">Pokazywany na ekranie po wysłaniu aplikacji</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="space-y-3">
+                                        <label class="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
+                                            <input type="radio" name="zapisy-phone" value="533308623" class="w-4 h-4 accent-emerald-500">
+                                            <div class="flex-1">
+                                                <div class="text-white text-sm font-medium">+48 533 30 86 23</div>
+                                                <div class="text-zinc-500 text-xs">533308623</div>
+                                            </div>
+                                        </label>
+                                        <label class="flex items-center gap-3 p-3 bg-zinc-900 border border-zinc-800 rounded-lg cursor-pointer hover:border-zinc-700 transition-colors">
+                                            <input type="radio" name="zapisy-phone" value="793113898" class="w-4 h-4 accent-emerald-500">
+                                            <div class="flex-1">
+                                                <div class="text-white text-sm font-medium">+48 793 11 38 98</div>
+                                                <div class="text-zinc-500 text-xs">793113898</div>
+                                            </div>
+                                        </label>
+
+                                        <button onclick="saveZapisyPhone()" class="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2">
+                                            <i class="ph ph-floppy-disk"></i>
+                                            Zapisz
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -1647,6 +1697,52 @@
         }
 
         // =============================================
+        // ZAPISY (formularz tomekniedzwiecki.pl/zapisy)
+        // =============================================
+
+        function loadZapisySettings() {
+            const phone = settings.zapisy_whatsapp_phone || '793113898';
+            const radio = document.querySelector(`input[name="zapisy-phone"][value="${phone}"]`);
+            if (radio) radio.checked = true;
+        }
+
+        async function saveZapisyPhone() {
+            const selected = document.querySelector('input[name="zapisy-phone"]:checked');
+            if (!selected) {
+                showToast('Wybierz numer');
+                return;
+            }
+            const phone = selected.value;
+            const oldValue = settings.zapisy_whatsapp_phone || null;
+
+            const { error } = await supabaseClient.from('settings').upsert({
+                key: 'zapisy_whatsapp_phone',
+                value: phone,
+                updated_at: new Date().toISOString()
+            }, { onConflict: 'key' });
+
+            if (error) {
+                console.error('Error saving zapisy phone:', error);
+                alert('Błąd zapisu numeru');
+                return;
+            }
+
+            settings.zapisy_whatsapp_phone = phone;
+
+            await logAuditActivity(
+                'update',
+                'settings',
+                null,
+                'zapisy_whatsapp_phone',
+                oldValue,
+                phone,
+                { setting: 'zapisy_phone' }
+            );
+
+            showToast('Numer WhatsApp zapisany');
+        }
+
+        // =============================================
         // TPAY SETTINGS
         // =============================================
 
@@ -1918,6 +2014,7 @@
         window.resetLegalContent = resetLegalContent;
         window.saveAccountProfile = saveAccountProfile;
         window.copyAccountSignature = copyAccountSignature;
+        window.saveZapisyPhone = saveZapisyPhone;
 
         // =============================================
         // INIT
@@ -1947,6 +2044,7 @@
                     loadTpaySettings();
                     loadLegalCompanyData();
                     loadPromptTemplates();
+                    loadZapisySettings();
                 }
 
                 // Check for tab URL parameter
