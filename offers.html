@@ -437,7 +437,7 @@
                     <!-- Filtered summary -->
                     <div id="schedules-summary" class="hidden mt-6 bg-zinc-900/50 border border-emerald-500/20 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
                         <div class="text-zinc-500 text-xs font-mono uppercase tracking-wider">
-                            Suma do zainkasowania (widoczne harmonogramy)
+                            Suma najbliższych rat (widoczne harmonogramy)
                         </div>
                         <div class="flex items-baseline gap-3">
                             <span id="sched-summary-count" class="text-zinc-500 text-xs font-mono">0 harmonogramów</span>
@@ -1909,8 +1909,11 @@
             const empty = document.getElementById('schedules-empty');
             const summary = document.getElementById('schedules-summary');
 
-            // Update summary (sum of remaining amounts on visible schedules)
-            const totalRemaining = schedules.reduce((sum, s) => sum + (s.totalPending || 0), 0);
+            // Update summary — sum of NEXT installment amounts on visible schedules (kasa "do wzięcia teraz")
+            const totalRemaining = schedules.reduce(
+                (sum, s) => sum + (s.nextInstallment ? parseFloat(s.nextInstallment.amount || 0) : 0),
+                0
+            );
             const count = schedules.length;
             document.getElementById('sched-summary-count').textContent =
                 `${count} ${count === 1 ? 'harmonogram' : (count >= 2 && count <= 4 ? 'harmonogramy' : 'harmonogramów')}`;
