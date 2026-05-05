@@ -508,6 +508,47 @@
         </div>
     </div>
 
+    <!-- Edit Schedule Modal -->
+    <div id="schedule-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-calendar-check text-amber-400"></i>
+                    Edytuj harmonogram — <span id="sched-modal-client" class="text-zinc-400"></span>
+                </h2>
+                <button onclick="closeScheduleModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto flex-1">
+                <div id="sched-modal-rows" class="space-y-2">
+                    <!-- rendered by JS -->
+                </div>
+
+                <div class="mt-4 flex items-center justify-between pt-4 border-t border-white/5">
+                    <button onclick="addScheduleRow()" class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1">
+                        <i class="ph ph-plus"></i> Dodaj ratę
+                    </button>
+                    <div class="text-xs font-mono">
+                        <span class="text-zinc-500">Suma rat: </span>
+                        <span id="sched-modal-total" class="text-white font-semibold">0 zł</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 px-5 py-4 border-t border-white/5">
+                <div class="flex-1"></div>
+                <button onclick="closeScheduleModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                    Anuluj
+                </button>
+                <button onclick="saveSchedule()" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    Zapisz
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
@@ -2016,6 +2057,9 @@
                                 ${leadLink}
                                 ${workflowLink}
                                 ${scheduleLink}
+                                <button onclick="openScheduleModal('${schedule.id}')" class="text-zinc-500 hover:text-amber-400 transition-colors" title="Edytuj harmonogram">
+                                    <i class="ph ph-pencil-simple"></i>
+                                </button>
                                 <button onclick="deleteSchedule('${schedule.id}', '${schedule.clientName.replace(/'/g, "\\'")}')" class="text-red-400/60 hover:text-red-400 transition-colors" title="Usuń harmonogram">
                                     <i class="ph ph-trash"></i>
                                 </button>
@@ -2085,6 +2129,223 @@
             }
         }
 
+        // ==================== EDIT SCHEDULE MODAL ====================
+        let editingScheduleId = null;
+        // Local working copy: { id?, installment_number, amount, due_date, status, paid_at, _new?, _deleted? }
+        let editingRows = [];
+
+        function openScheduleModal(scheduleId) {
+            const schedule = paymentSchedules.find(s => s.id === scheduleId);
+            if (!schedule) return;
+
+            editingScheduleId = scheduleId;
+            editingRows = (schedule.installments || []).map(i => ({
+                id: i.id,
+                installment_number: i.installment_number,
+                amount: parseFloat(i.amount),
+                due_date: i.due_date,
+                status: i.status,
+                paid_at: i.paid_at,
+                _new: false,
+                _deleted: false
+            }));
+
+            document.getElementById('sched-modal-client').textContent =
+                `${schedule.clientName}${schedule.offerName ? ' · ' + schedule.offerName : ''}`;
+            renderScheduleRows();
+            document.getElementById('schedule-modal').classList.remove('hidden');
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('schedule-modal').classList.add('hidden');
+            editingScheduleId = null;
+            editingRows = [];
+        }
+
+        function renderScheduleRows() {
+            const container = document.getElementById('sched-modal-rows');
+            const visible = editingRows.filter(r => !r._deleted);
+
+            if (visible.length === 0) {
+                container.innerHTML = '<p class="text-zinc-500 text-sm text-center py-6">Brak rat — kliknij „Dodaj ratę" żeby utworzyć.</p>';
+                updateScheduleTotal();
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-12 gap-2 text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 mb-1">
+                    <div class="col-span-1">#</div>
+                    <div class="col-span-3">Data</div>
+                    <div class="col-span-3">Kwota (zł)</div>
+                    <div class="col-span-3">Status</div>
+                    <div class="col-span-2"></div>
+                </div>
+            ` + visible.map(row => {
+                const idx = editingRows.indexOf(row);
+                const isPaid = row.status === 'paid';
+                return `
+                    <div class="grid grid-cols-12 gap-2 items-center bg-zinc-900/50 border border-white/5 rounded-lg p-2">
+                        <div class="col-span-1 text-zinc-400 text-sm font-mono px-1">${row.installment_number}</div>
+                        <input type="date" value="${row.due_date || ''}" onchange="updateScheduleRow(${idx}, 'due_date', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600">
+                        <input type="number" step="0.01" min="0" value="${row.amount}" onchange="updateScheduleRow(${idx}, 'amount', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600">
+                        <select onchange="updateScheduleRow(${idx}, 'status', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600 ${isPaid ? 'text-emerald-400' : 'text-white'}">
+                            <option value="pending" ${row.status === 'pending' ? 'selected' : ''}>Oczekuje</option>
+                            <option value="paid" ${row.status === 'paid' ? 'selected' : ''}>Opłacona</option>
+                            <option value="overdue" ${row.status === 'overdue' ? 'selected' : ''}>Zaległa</option>
+                            <option value="cancelled" ${row.status === 'cancelled' ? 'selected' : ''}>Anulowana</option>
+                        </select>
+                        <div class="col-span-2 flex justify-end">
+                            <button onclick="removeScheduleRow(${idx})" class="text-red-400/60 hover:text-red-400 text-sm p-1.5" title="Usuń ratę">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            updateScheduleTotal();
+        }
+
+        function updateScheduleRow(idx, field, value) {
+            if (field === 'amount') {
+                editingRows[idx].amount = parseFloat(value) || 0;
+                updateScheduleTotal();
+            } else if (field === 'status') {
+                editingRows[idx].status = value;
+                if (value === 'paid' && !editingRows[idx].paid_at) {
+                    editingRows[idx].paid_at = new Date().toISOString();
+                } else if (value !== 'paid') {
+                    editingRows[idx].paid_at = null;
+                }
+                renderScheduleRows();
+            } else {
+                editingRows[idx][field] = value;
+            }
+        }
+
+        function addScheduleRow() {
+            const visibleNumbers = editingRows.filter(r => !r._deleted).map(r => r.installment_number);
+            const nextNumber = visibleNumbers.length > 0 ? Math.max(...visibleNumbers) + 1 : 1;
+            const lastVisible = editingRows.filter(r => !r._deleted).slice(-1)[0];
+            const baseDate = lastVisible?.due_date ? new Date(lastVisible.due_date) : new Date();
+            baseDate.setMonth(baseDate.getMonth() + 1);
+
+            editingRows.push({
+                id: null,
+                installment_number: nextNumber,
+                amount: 0,
+                due_date: baseDate.toISOString().split('T')[0],
+                status: 'pending',
+                paid_at: null,
+                _new: true,
+                _deleted: false
+            });
+            renderScheduleRows();
+        }
+
+        function removeScheduleRow(idx) {
+            const row = editingRows[idx];
+            if (row.status === 'paid') {
+                if (!confirm('Ta rata jest oznaczona jako opłacona. Naprawdę usunąć?')) return;
+            }
+            if (row._new) {
+                editingRows.splice(idx, 1);
+            } else {
+                row._deleted = true;
+            }
+            renderScheduleRows();
+        }
+
+        function updateScheduleTotal() {
+            const total = editingRows.filter(r => !r._deleted).reduce((s, r) => s + (r.amount || 0), 0);
+            document.getElementById('sched-modal-total').textContent =
+                Math.round(total).toLocaleString('pl-PL') + ' zł';
+        }
+
+        async function saveSchedule() {
+            if (!editingScheduleId) return;
+
+            const visible = editingRows.filter(r => !r._deleted);
+            if (visible.some(r => !r.due_date)) {
+                alert('Każda rata musi mieć datę');
+                return;
+            }
+
+            try {
+                // Delete removed installments
+                const toDelete = editingRows.filter(r => r._deleted && r.id).map(r => r.id);
+                if (toDelete.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments')
+                        .delete()
+                        .in('id', toDelete);
+                    if (error) throw error;
+                }
+
+                // Insert new installments
+                const toInsert = editingRows.filter(r => r._new && !r._deleted).map(r => ({
+                    schedule_id: editingScheduleId,
+                    installment_number: r.installment_number,
+                    amount: r.amount,
+                    due_date: r.due_date,
+                    status: r.status,
+                    paid_at: r.paid_at
+                }));
+                if (toInsert.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments')
+                        .insert(toInsert);
+                    if (error) throw error;
+                }
+
+                // Update existing installments
+                const toUpdate = editingRows.filter(r => !r._new && !r._deleted && r.id);
+                for (const r of toUpdate) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments')
+                        .update({
+                            amount: r.amount,
+                            due_date: r.due_date,
+                            status: r.status,
+                            paid_at: r.paid_at
+                        })
+                        .eq('id', r.id);
+                    if (error) throw error;
+                }
+
+                // Update schedule total_amount and installments_count
+                const newTotal = visible.reduce((s, r) => s + (r.amount || 0), 0);
+                const { error: schedError } = await supabaseClient
+                    .from('payment_schedules')
+                    .update({
+                        total_amount: newTotal,
+                        installments_count: visible.length,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', editingScheduleId);
+                if (schedError) throw schedError;
+
+                closeScheduleModal();
+
+                // Reload schedules
+                schedulesLoaded = false;
+                await loadPaymentSchedules();
+
+                const toast = document.createElement('div');
+                toast.className = 'fixed bottom-4 right-4 bg-emerald-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 animate-enter';
+                toast.innerHTML = '<i class="ph ph-check mr-2"></i>Harmonogram zaktualizowany';
+                document.body.appendChild(toast);
+                setTimeout(() => toast.remove(), 3000);
+
+            } catch (err) {
+                console.error('Error saving schedule:', err);
+                alert('Błąd zapisu harmonogramu: ' + (err.message || err));
+            }
+        }
+
         // Make functions available globally
         window.openAddModal = openAddModal;
         window.editOffer = editOffer;
@@ -2095,6 +2356,12 @@
         window.resetSentFilters = resetSentFilters;
         window.filterSchedules = filterSchedules;
         window.deleteSchedule = deleteSchedule;
+        window.openScheduleModal = openScheduleModal;
+        window.closeScheduleModal = closeScheduleModal;
+        window.updateScheduleRow = updateScheduleRow;
+        window.addScheduleRow = addScheduleRow;
+        window.removeScheduleRow = removeScheduleRow;
+        window.saveSchedule = saveSchedule;
 
         async function init() {
             const session = await checkAuth();
