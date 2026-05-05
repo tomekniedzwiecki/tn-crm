@@ -1154,6 +1154,9 @@
                                         <i class="ph ph-arrow-square-out"></i>
                                         Pełny widok
                                     </button>
+                                    <button onclick="openEditScheduleModal()" class="text-zinc-500 hover:text-amber-400 text-xs flex items-center justify-center gap-1 transition-colors py-2 px-3 rounded-lg hover:bg-amber-500/10" title="Edytuj harmonogram">
+                                        <i class="ph ph-pencil-simple"></i>
+                                    </button>
                                     <button onclick="deleteLeadSchedule()" class="text-zinc-600 hover:text-red-400 text-xs flex items-center justify-center gap-1 transition-colors py-2 px-3 rounded-lg hover:bg-red-500/10">
                                         <i class="ph ph-trash"></i>
                                     </button>
@@ -1829,6 +1832,45 @@
                             Utwórz harmonogram
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Schedule Modal -->
+    <div id="edit-schedule-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeEditScheduleModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-zinc-950 border border-white/10 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+                <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <h3 class="text-sm font-medium text-white flex items-center gap-2">
+                        <i class="ph ph-calendar-check text-amber-400"></i>
+                        Edytuj harmonogram rat
+                    </h3>
+                    <button onclick="closeEditScheduleModal()" class="text-zinc-500 hover:text-white transition-colors">
+                        <i class="ph ph-x text-lg"></i>
+                    </button>
+                </div>
+                <div class="p-5 overflow-y-auto flex-1">
+                    <div id="edit-sched-rows" class="space-y-2"></div>
+                    <div class="mt-4 flex items-center justify-between pt-4 border-t border-white/5">
+                        <button onclick="addEditScheduleRow()" class="text-xs text-cyan-400 hover:text-cyan-300 transition-colors flex items-center gap-1">
+                            <i class="ph ph-plus"></i> Dodaj ratę
+                        </button>
+                        <div class="text-xs font-mono">
+                            <span class="text-zinc-500">Suma rat: </span>
+                            <span id="edit-sched-total" class="text-white font-semibold">0 zł</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 px-5 py-4 border-t border-white/5">
+                    <div class="flex-1"></div>
+                    <button onclick="closeEditScheduleModal()" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">
+                        Anuluj
+                    </button>
+                    <button onclick="saveEditedSchedule()" class="bg-amber-500 hover:bg-amber-400 text-black px-4 py-2 rounded-lg text-sm font-semibold transition-colors">
+                        Zapisz
+                    </button>
                 </div>
             </div>
         </div>
@@ -3408,24 +3450,6 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     { status: oldStatus },
                     { status: newStatus }
                 );
-
-                // AUTO-REASSIGN do Tomka gdy status → negotiation (Domykanie)
-                // Target pipeline: Maciek przenosi do Domykania, Tomek zamyka
-                const TOMEK_ID = '6d05370c-0ada-4af9-b0d8-07e02e0f4792';
-                if (newStatus === 'negotiation' && lead.assigned_to !== TOMEK_ID) {
-                    lead.assigned_to = TOMEK_ID;
-                    const assignedSelect = document.getElementById('field-assigned-to');
-                    if (assignedSelect) assignedSelect.value = TOMEK_ID;
-                    const assignedQuick = document.getElementById('field-assigned-to-quick');
-                    if (assignedQuick) assignedQuick.value = TOMEK_ID;
-                    activities.push({
-                        type: 'auto_reassign',
-                        content: 'Auto-przekazano do Tomka (Domykanie)',
-                        created_at: new Date().toISOString(),
-                        performed_by: null,
-                        performed_by_name: 'System (target pipeline)'
-                    });
-                }
 
                 updatePipelineStepper(newStatus);
                 renderActivities();
@@ -5046,6 +5070,199 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 showToast('Błąd usuwania harmonogramu', 'error');
             }
         }
+
+        // ==================== EDIT SCHEDULE MODAL ====================
+        let editingRows = [];
+
+        function openEditScheduleModal() {
+            if (!currentSchedule) return;
+            editingRows = (currentSchedule.installments || []).map(i => ({
+                id: i.id,
+                installment_number: i.installment_number,
+                amount: parseFloat(i.amount),
+                due_date: i.due_date,
+                status: i.status,
+                paid_at: i.paid_at,
+                _new: false,
+                _deleted: false
+            }));
+            renderEditScheduleRows();
+            document.getElementById('edit-schedule-modal').classList.remove('hidden');
+        }
+
+        function closeEditScheduleModal() {
+            document.getElementById('edit-schedule-modal').classList.add('hidden');
+            editingRows = [];
+        }
+
+        function renderEditScheduleRows() {
+            const container = document.getElementById('edit-sched-rows');
+            const visible = editingRows.filter(r => !r._deleted);
+
+            if (visible.length === 0) {
+                container.innerHTML = '<p class="text-zinc-500 text-sm text-center py-6">Brak rat — kliknij „Dodaj ratę" żeby utworzyć.</p>';
+                updateEditScheduleTotal();
+                return;
+            }
+
+            container.innerHTML = `
+                <div class="grid grid-cols-12 gap-2 text-[10px] font-mono uppercase tracking-wider text-zinc-500 px-2 mb-1">
+                    <div class="col-span-1">#</div>
+                    <div class="col-span-3">Data</div>
+                    <div class="col-span-3">Kwota (zł)</div>
+                    <div class="col-span-3">Status</div>
+                    <div class="col-span-2"></div>
+                </div>
+            ` + visible.map(row => {
+                const idx = editingRows.indexOf(row);
+                const isPaid = row.status === 'paid';
+                return `
+                    <div class="grid grid-cols-12 gap-2 items-center bg-zinc-900/50 border border-white/5 rounded-lg p-2">
+                        <div class="col-span-1 text-zinc-400 text-sm font-mono px-1">${row.installment_number}</div>
+                        <input type="date" value="${row.due_date || ''}" onchange="updateEditScheduleRow(${idx}, 'due_date', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600">
+                        <input type="number" step="0.01" min="0" value="${row.amount}" onchange="updateEditScheduleRow(${idx}, 'amount', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-white text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600">
+                        <select onchange="updateEditScheduleRow(${idx}, 'status', this.value)"
+                            class="col-span-3 bg-zinc-900 border border-zinc-800 text-sm px-2 py-1.5 rounded outline-none focus:border-zinc-600 ${isPaid ? 'text-emerald-400' : 'text-white'}">
+                            <option value="pending" ${row.status === 'pending' ? 'selected' : ''}>Oczekuje</option>
+                            <option value="paid" ${row.status === 'paid' ? 'selected' : ''}>Opłacona</option>
+                            <option value="overdue" ${row.status === 'overdue' ? 'selected' : ''}>Zaległa</option>
+                            <option value="cancelled" ${row.status === 'cancelled' ? 'selected' : ''}>Anulowana</option>
+                        </select>
+                        <div class="col-span-2 flex justify-end">
+                            <button onclick="removeEditScheduleRow(${idx})" class="text-red-400/60 hover:text-red-400 text-sm p-1.5" title="Usuń ratę">
+                                <i class="ph ph-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            updateEditScheduleTotal();
+        }
+
+        function updateEditScheduleRow(idx, field, value) {
+            if (field === 'amount') {
+                editingRows[idx].amount = parseFloat(value) || 0;
+                updateEditScheduleTotal();
+            } else if (field === 'status') {
+                editingRows[idx].status = value;
+                if (value === 'paid' && !editingRows[idx].paid_at) {
+                    editingRows[idx].paid_at = new Date().toISOString();
+                } else if (value !== 'paid') {
+                    editingRows[idx].paid_at = null;
+                }
+                renderEditScheduleRows();
+            } else {
+                editingRows[idx][field] = value;
+            }
+        }
+
+        function addEditScheduleRow() {
+            const visibleNumbers = editingRows.filter(r => !r._deleted).map(r => r.installment_number);
+            const nextNumber = visibleNumbers.length > 0 ? Math.max(...visibleNumbers) + 1 : 1;
+            const lastVisible = editingRows.filter(r => !r._deleted).slice(-1)[0];
+            const baseDate = lastVisible?.due_date ? new Date(lastVisible.due_date) : new Date();
+            baseDate.setMonth(baseDate.getMonth() + 1);
+
+            editingRows.push({
+                id: null,
+                installment_number: nextNumber,
+                amount: 0,
+                due_date: baseDate.toISOString().split('T')[0],
+                status: 'pending',
+                paid_at: null,
+                _new: true,
+                _deleted: false
+            });
+            renderEditScheduleRows();
+        }
+
+        function removeEditScheduleRow(idx) {
+            const row = editingRows[idx];
+            if (row.status === 'paid') {
+                if (!confirm('Ta rata jest oznaczona jako opłacona. Naprawdę usunąć?')) return;
+            }
+            if (row._new) {
+                editingRows.splice(idx, 1);
+            } else {
+                row._deleted = true;
+            }
+            renderEditScheduleRows();
+        }
+
+        function updateEditScheduleTotal() {
+            const total = editingRows.filter(r => !r._deleted).reduce((s, r) => s + (r.amount || 0), 0);
+            document.getElementById('edit-sched-total').textContent =
+                Math.round(total).toLocaleString('pl-PL') + ' zł';
+        }
+
+        async function saveEditedSchedule() {
+            if (!currentSchedule) return;
+            const visible = editingRows.filter(r => !r._deleted);
+            if (visible.some(r => !r.due_date)) {
+                showToast('Każda rata musi mieć datę', 'error');
+                return;
+            }
+
+            try {
+                const toDelete = editingRows.filter(r => r._deleted && r.id).map(r => r.id);
+                if (toDelete.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments').delete().in('id', toDelete);
+                    if (error) throw error;
+                }
+
+                const toInsert = editingRows.filter(r => r._new && !r._deleted).map(r => ({
+                    schedule_id: currentSchedule.id,
+                    installment_number: r.installment_number,
+                    amount: r.amount,
+                    due_date: r.due_date,
+                    status: r.status,
+                    paid_at: r.paid_at
+                }));
+                if (toInsert.length > 0) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments').insert(toInsert);
+                    if (error) throw error;
+                }
+
+                const toUpdate = editingRows.filter(r => !r._new && !r._deleted && r.id);
+                for (const r of toUpdate) {
+                    const { error } = await supabaseClient
+                        .from('payment_installments')
+                        .update({ amount: r.amount, due_date: r.due_date, status: r.status, paid_at: r.paid_at })
+                        .eq('id', r.id);
+                    if (error) throw error;
+                }
+
+                const newTotal = visible.reduce((s, r) => s + (r.amount || 0), 0);
+                const { error: schedError } = await supabaseClient
+                    .from('payment_schedules')
+                    .update({
+                        total_amount: newTotal,
+                        installments_count: visible.length,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', currentSchedule.id);
+                if (schedError) throw schedError;
+
+                closeEditScheduleModal();
+                await loadSidebarSchedule({ ...currentSchedule, total_amount: newTotal, installments_count: visible.length });
+                showToast('Harmonogram zaktualizowany', 'success');
+
+            } catch (err) {
+                console.error('Error saving schedule:', err);
+                showToast('Błąd zapisu: ' + (err.message || err), 'error');
+            }
+        }
+
+        window.openEditScheduleModal = openEditScheduleModal;
+        window.closeEditScheduleModal = closeEditScheduleModal;
+        window.updateEditScheduleRow = updateEditScheduleRow;
+        window.addEditScheduleRow = addEditScheduleRow;
+        window.removeEditScheduleRow = removeEditScheduleRow;
+        window.saveEditedSchedule = saveEditedSchedule;
 
         // Initialize when DOM is ready
         document.addEventListener('DOMContentLoaded', () => {

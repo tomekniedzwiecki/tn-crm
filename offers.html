@@ -403,19 +403,30 @@
                     </div>
 
                     <!-- Filters -->
-                    <div class="flex flex-wrap items-center gap-3 mb-4">
-                        <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
-                            <input type="checkbox" id="sched-filter-paid" onchange="filterSchedules()" checked class="accent-emerald-500">
-                            <span>Tylko z płatnością w CRM</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
-                            <input type="checkbox" id="sched-filter-overdue" onchange="filterSchedules()" class="accent-red-500">
-                            <span>Tylko zaległe</span>
-                        </label>
-                        <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
-                            <input type="checkbox" id="sched-filter-upcoming" onchange="filterSchedules()" checked class="accent-amber-500">
-                            <span>Nadchodzące 7 dni</span>
-                        </label>
+                    <div class="flex flex-col gap-3 mb-4">
+                        <div class="relative">
+                            <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                            <input type="search" id="sched-search" oninput="filterSchedules()" placeholder="Szukaj po nazwisku, emailu, telefonie lub ofercie…"
+                                class="w-full bg-zinc-900 border border-zinc-800 text-white text-sm pl-10 pr-3 py-2 rounded-lg outline-none focus:border-zinc-600">
+                        </div>
+                        <div class="flex flex-wrap items-center gap-3">
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="sched-filter-paid" onchange="filterSchedules()" checked class="accent-emerald-500">
+                                <span>Tylko z płatnością w CRM</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="sched-filter-overdue" onchange="filterSchedules()" class="accent-red-500">
+                                <span>Tylko zaległe</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="sched-filter-upcoming" onchange="filterSchedules()" checked class="accent-amber-500">
+                                <span>Nadchodzące 7 dni</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                                <input type="checkbox" id="sched-filter-this-month" onchange="filterSchedules()" class="accent-cyan-500">
+                                <span>W tym miesiącu</span>
+                            </label>
+                        </div>
                     </div>
 
                     <!-- Schedules List -->
@@ -1858,6 +1869,7 @@
                     // Get client info from lead or workflow
                     const clientName = schedule.leads?.name || schedule.workflows?.customer_name || 'Nieznany';
                     const clientEmail = schedule.leads?.email || schedule.workflows?.customer_email || '';
+                    const clientPhone = schedule.leads?.phone || schedule.workflows?.customer_phone || '';
                     const offerName = schedule.workflows?.offer_name || '';
                     const leadId = schedule.lead_id;
                     const workflowId = schedule.workflow_id;
@@ -1880,6 +1892,7 @@
                         totalPending,
                         clientName,
                         clientEmail,
+                        clientPhone,
                         offerName,
                         leadId,
                         workflowId,
@@ -1920,6 +1933,8 @@
             const showPaidOnly = document.getElementById('sched-filter-paid').checked;
             const showOverdueOnly = document.getElementById('sched-filter-overdue').checked;
             const showUpcoming = document.getElementById('sched-filter-upcoming').checked;
+            const showThisMonth = document.getElementById('sched-filter-this-month').checked;
+            const searchTerm = (document.getElementById('sched-search')?.value || '').trim().toLowerCase();
 
             let filtered = [...paymentSchedules];
 
@@ -1934,12 +1949,34 @@
                 filtered = filtered.filter(s => s.hasCrmPayment);
             }
 
-            if (showOverdueOnly) {
-                filtered = filtered.filter(s => s.isOverdue);
+            // Time-based filters: any checked filter acts as a union (OR)
+            if (showOverdueOnly || showUpcoming || showThisMonth) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const monthYear = today.getFullYear();
+                const monthIdx = today.getMonth();
+
+                filtered = filtered.filter(s => {
+                    if (showOverdueOnly && s.isOverdue) return true;
+                    if (showUpcoming && s.daysUntilNext !== null && s.daysUntilNext >= 0 && s.daysUntilNext <= 7) return true;
+                    if (showThisMonth && s.nextInstallment) {
+                        const due = new Date(s.nextInstallment.due_date);
+                        if (due.getFullYear() === monthYear && due.getMonth() === monthIdx) return true;
+                    }
+                    return false;
+                });
             }
 
-            if (showUpcoming && !showOverdueOnly) {
-                filtered = filtered.filter(s => s.daysUntilNext !== null && s.daysUntilNext <= 7);
+            // Text search on name / email / phone / offer
+            if (searchTerm) {
+                const normalize = (v) => (v || '').toString().toLowerCase().replace(/\s+/g, '');
+                const needle = normalize(searchTerm);
+                filtered = filtered.filter(s =>
+                    (s.clientName || '').toLowerCase().includes(searchTerm) ||
+                    (s.clientEmail || '').toLowerCase().includes(searchTerm) ||
+                    normalize(s.clientPhone).includes(needle) ||
+                    (s.offerName || '').toLowerCase().includes(searchTerm)
+                );
             }
 
             renderSchedulesList(filtered);
