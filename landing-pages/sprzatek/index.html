@@ -349,7 +349,22 @@
       object-fit: cover;
       border-radius: var(--radius-lg);
       display: block;
+    }
+
+    /* Wrapper-based aspect-ratio frames (Vitrix pattern) */
+    .img-frame {
+      width: 100%;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+      background: var(--bg-soft);
+    }
+
+    .img-frame img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
     }
 
     .img-placeholder::before {
@@ -935,35 +950,51 @@
 
     .showcase-grid {
       display: grid;
-      grid-template-columns: 2fr 1fr 1fr;
-      grid-template-rows: 1fr 1fr;
+      grid-template-columns: 1fr 1fr 1fr;
       gap: 20px;
     }
 
-    .showcase-main {
-      grid-row: span 2;
+    .showcase-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      aspect-ratio: 1 / 1;
+      transition: transform 0.4s ease, box-shadow 0.4s ease;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
     }
 
-    .showcase-item .img-placeholder {
+    .showcase-item.showcase-main {
+      grid-column: 1 / -1;
+      aspect-ratio: 16 / 9;
+    }
+
+    .showcase-item img {
+      width: 100%;
       height: 100%;
-      min-height: 180px;
-      transition: all 0.4s ease;
+      object-fit: cover;
+      display: block;
+      border-radius: 0;
+      box-shadow: none;
     }
 
-    .showcase-item:hover .img-placeholder {
-      transform: scale(1.02);
+    .showcase-item:hover {
+      transform: translateY(-4px);
       box-shadow: var(--shadow-lg);
     }
 
     @media (max-width: 768px) {
       .showcase-grid {
         grid-template-columns: 1fr 1fr;
-        grid-template-rows: auto;
       }
 
-      .showcase-main {
-        grid-column: span 2;
-        grid-row: span 1;
+      .showcase-item.showcase-main {
+        grid-column: 1 / -1;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .showcase-grid {
+        grid-template-columns: 1fr;
       }
     }
 
@@ -1284,21 +1315,24 @@
       position: relative;
     }
 
-    /* Connecting line - positioned below images */
-    .how-steps::before {
-      content: '';
-      position: absolute;
-      top: 220px;
-      left: 15%;
-      right: 15%;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--secondary), var(--accent));
-      border-radius: 2px;
-      z-index: 0;
+    /* Connecting line removed — caused alignment issues with real images */
+
+    .how-step-image {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.08);
     }
 
-    .how-step-image .img-placeholder {
-      border-radius: var(--radius-lg);
+    .how-step-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .how-step {
@@ -1470,8 +1504,29 @@
       align-items: center;
     }
 
-    .package-image .img-placeholder {
+    .package-image {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      overflow: hidden;
+      border-radius: var(--radius-xl);
       box-shadow: var(--shadow-lg);
+    }
+
+    .package-image img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    @media (max-width: 768px) {
+      .package-image {
+        aspect-ratio: 4 / 3;
+        max-width: 480px;
+        margin: 0 auto;
+      }
     }
 
     .package-list {
@@ -2558,16 +2613,16 @@
 
       <div class="showcase-grid">
         <div class="showcase-item showcase-main scroll-reveal">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251903_0.jpg" alt="Sprzatek robot i stacja w nowoczesnym polskim salonie" class="landing-img" style="aspect-ratio: 16/9;" width="1280" height="720" loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251903_0.jpg" alt="Sprzatek robot i stacja w nowoczesnym polskim salonie" width="1280" height="720" loading="lazy">
         </div>
         <div class="showcase-item scroll-reveal">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251698_0.jpg" alt="Stacja samoopróżniająca z bliska" class="landing-img" style="aspect-ratio: 1/1;" width="800" height="800" loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251698_0.jpg" alt="Stacja samoopróżniająca z bliska" width="800" height="800" loading="lazy">
         </div>
         <div class="showcase-item scroll-reveal">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249930_0.jpg" alt="Robot Sprzatek z niskiego ujęcia" class="landing-img" style="aspect-ratio: 1/1;" width="800" height="800" loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249930_0.jpg" alt="Robot Sprzatek z niskiego ujęcia" width="800" height="800" loading="lazy">
         </div>
         <div class="showcase-item scroll-reveal">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975252172_0.jpg" alt="Sterowanie Sprzatkiem z aplikacji" class="landing-img" style="aspect-ratio: 1/1;" width="800" height="800" loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975252172_0.jpg" alt="Sterowanie Sprzatkiem z aplikacji" width="800" height="800" loading="lazy">
         </div>
       </div>
     </div>
@@ -2739,7 +2794,7 @@
       <div class="how-steps">
         <div class="how-step scroll-reveal">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251178_0.jpg" alt="Ustawienie stacji Sprzatka przy ścianie" class="landing-img" style="aspect-ratio: 4/3; margin-bottom: 20px;" width="1200" height="900" loading="lazy">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251178_0.jpg" alt="Ustawienie stacji Sprzatka przy ścianie" loading="lazy">
           </div>
           <div class="how-step-number">1</div>
           <h3 class="how-step-title">Postaw stację</h3>
@@ -2748,7 +2803,7 @@
 
         <div class="how-step scroll-reveal">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249930_0.jpg" alt="Ustawianie harmonogramu sprzątania w aplikacji" class="landing-img" style="aspect-ratio: 4/3; margin-bottom: 20px;" width="1200" height="900" loading="lazy">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249930_0.jpg" alt="Ustawianie harmonogramu sprzątania w aplikacji" loading="lazy">
           </div>
           <div class="how-step-number">2</div>
           <h3 class="how-step-title">Ustaw harmonogram</h3>
@@ -2757,7 +2812,7 @@
 
         <div class="how-step scroll-reveal">
           <div class="how-step-image">
-            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251241_0.jpg" alt="Sprzatek sprząta autonomicznie podczas gdy domownik odpoczywa" class="landing-img" style="aspect-ratio: 4/3; margin-bottom: 20px;" width="1200" height="900" loading="lazy">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975251241_0.jpg" alt="Sprzatek sprząta autonomicznie podczas gdy domownik odpoczywa" loading="lazy">
           </div>
           <div class="how-step-number">3</div>
           <h3 class="how-step-title">Zapomnij o sprzątaniu</h3>
@@ -2975,7 +3030,7 @@
 
       <div class="package-grid">
         <div class="package-image scroll-reveal">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249967_0.jpg" alt="Zawartość pudełka — robot, stacja, pilot, akcesoria" class="landing-img" style="aspect-ratio: 4/3;" width="1200" height="900" loading="lazy">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/sprzatek/1777975249967_0.jpg" alt="Zawartość pudełka — robot, stacja, pilot, akcesoria" loading="lazy">
         </div>
         <div class="package-list scroll-reveal">
           <div class="package-item">
