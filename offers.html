@@ -433,6 +433,17 @@
                         <div class="w-5 h-5 mx-auto mb-3 border-2 border-zinc-700 border-t-white rounded-full animate-spin"></div>
                         <p class="text-zinc-500 text-sm font-mono">Ładowanie harmonogramów...</p>
                     </div>
+
+                    <!-- Filtered summary -->
+                    <div id="schedules-summary" class="hidden mt-6 bg-zinc-900/50 border border-emerald-500/20 rounded-lg p-4 flex flex-wrap items-center justify-between gap-3">
+                        <div class="text-zinc-500 text-xs font-mono uppercase tracking-wider">
+                            Suma do zainkasowania (widoczne harmonogramy)
+                        </div>
+                        <div class="flex items-baseline gap-3">
+                            <span id="sched-summary-count" class="text-zinc-500 text-xs font-mono">0 harmonogramów</span>
+                            <span id="sched-summary-amount" class="text-2xl font-bold text-emerald-400">0 zł</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1896,14 +1907,25 @@
         function renderSchedulesList(schedules) {
             const list = document.getElementById('schedules-list');
             const empty = document.getElementById('schedules-empty');
+            const summary = document.getElementById('schedules-summary');
+
+            // Update summary (sum of remaining amounts on visible schedules)
+            const totalRemaining = schedules.reduce((sum, s) => sum + (s.totalPending || 0), 0);
+            const count = schedules.length;
+            document.getElementById('sched-summary-count').textContent =
+                `${count} ${count === 1 ? 'harmonogram' : (count >= 2 && count <= 4 ? 'harmonogramy' : 'harmonogramów')}`;
+            document.getElementById('sched-summary-amount').textContent =
+                Math.round(totalRemaining).toLocaleString('pl-PL') + ' zł';
 
             if (schedules.length === 0) {
                 list.innerHTML = '';
                 empty.classList.remove('hidden');
+                summary.classList.add('hidden');
                 return;
             }
 
             empty.classList.add('hidden');
+            summary.classList.remove('hidden');
 
             list.innerHTML = schedules.map(schedule => {
                 const next = schedule.nextInstallment;
