@@ -405,6 +405,10 @@
                     <!-- Filters -->
                     <div class="flex flex-wrap items-center gap-3 mb-4">
                         <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
+                            <input type="checkbox" id="sched-filter-paid" onchange="filterSchedules()" checked class="accent-emerald-500">
+                            <span>Tylko z płatnością w CRM</span>
+                        </label>
+                        <label class="flex items-center gap-1.5 text-sm text-zinc-400 cursor-pointer">
                             <input type="checkbox" id="sched-filter-overdue" onchange="filterSchedules()" class="accent-red-500">
                             <span>Tylko zaległe</span>
                         </label>
@@ -1740,6 +1744,43 @@
                     installmentsBySchedule[inst.schedule_id].push(inst);
                 });
 
+                // Fetch paid orders (CRM payments) for clients in these schedules — match by lead_id and email
+                const scheduleLeadIds = [...new Set(schedules.map(s => s.lead_id).filter(Boolean))];
+                const scheduleEmails = [...new Set(schedules.map(s =>
+                    s.leads?.email || s.workflows?.customer_email
+                ).filter(Boolean))];
+
+                const paidLeadIds = new Set();
+                const paidEmails = new Set();
+
+                const ordersQueries = [];
+                if (scheduleLeadIds.length > 0) {
+                    ordersQueries.push(
+                        supabaseClient.from('orders').select('lead_id, customer_email')
+                            .eq('status', 'paid').in('lead_id', scheduleLeadIds)
+                    );
+                }
+                if (scheduleEmails.length > 0) {
+                    ordersQueries.push(
+                        supabaseClient.from('orders').select('lead_id, customer_email')
+                            .eq('status', 'paid').in('customer_email', scheduleEmails)
+                    );
+                }
+
+                if (ordersQueries.length > 0) {
+                    const ordersResults = await Promise.all(ordersQueries);
+                    ordersResults.forEach(({ data, error: ordersError }) => {
+                        if (ordersError) {
+                            console.warn('Error fetching paid orders for schedule filter:', ordersError);
+                            return;
+                        }
+                        (data || []).forEach(o => {
+                            if (o.lead_id) paidLeadIds.add(o.lead_id);
+                            if (o.customer_email) paidEmails.add(o.customer_email.toLowerCase());
+                        });
+                    });
+                }
+
                 // Enrich schedules with installments and compute next payment
                 paymentSchedules = schedules.map(schedule => {
                     const installments = installmentsBySchedule[schedule.id] || [];
@@ -1769,6 +1810,12 @@
                     const leadId = schedule.lead_id;
                     const workflowId = schedule.workflow_id;
 
+                    // Has any payment in CRM: paid order OR paid installment in this schedule
+                    const hasCrmPayment =
+                        (leadId && paidLeadIds.has(leadId)) ||
+                        (clientEmail && paidEmails.has(clientEmail.toLowerCase())) ||
+                        paidInstallments.length > 0;
+
                     return {
                         ...schedule,
                         installments,
@@ -1783,7 +1830,8 @@
                         clientEmail,
                         offerName,
                         leadId,
-                        workflowId
+                        workflowId,
+                        hasCrmPayment
                     };
                 });
 
@@ -1817,6 +1865,7 @@
         }
 
         function filterSchedules() {
+            const showPaidOnly = document.getElementById('sched-filter-paid').checked;
             const showOverdueOnly = document.getElementById('sched-filter-overdue').checked;
             const showUpcoming = document.getElementById('sched-filter-upcoming').checked;
 
@@ -1828,6 +1877,10 @@
                 if (b.daysUntilNext === null) return -1;
                 return a.daysUntilNext - b.daysUntilNext;
             });
+
+            if (showPaidOnly) {
+                filtered = filtered.filter(s => s.hasCrmPayment);
+            }
 
             if (showOverdueOnly) {
                 filtered = filtered.filter(s => s.isOverdue);
