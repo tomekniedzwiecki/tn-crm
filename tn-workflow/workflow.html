@@ -12673,9 +12673,10 @@ Zwróć TYLKO JSON.`;
                     <div class="bg-zinc-900/70 border border-white/5 rounded-xl overflow-hidden">
                         ${imgUrl ? `<img src="${escapeHtml(imgUrl)}" alt="" class="w-full aspect-square object-cover">` : `<div class="w-full aspect-square flex items-center justify-center bg-zinc-900"><i class="ph ph-image text-5xl text-zinc-600"></i></div>`}
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-3 gap-2">
                         <a href="${escapeHtml(imgUrl || '#')}" download="${escapeHtml(c.filename || 'ad.png')}" class="text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-download-simple"></i> PNG</a>
                         <a href="${escapeHtml(imgUrl || '#')}" target="_blank" rel="noopener" class="text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-arrow-square-out"></i> Pełny</a>
+                        <button id="btn-step-regen-${i}" onclick="regenerateCreative(${i})" title="Zrób nową grafikę (na podstawie zdjęcia produktu z zakładki Produkty)" class="text-[11px] text-pink-200 hover:text-white flex items-center justify-center gap-1.5 px-2.5 py-2 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20"><i class="ph ph-arrows-clockwise"></i> Zrób nową</button>
                     </div>
                 </div>
                 <!-- Kolumna 2: teksty -->
@@ -13031,24 +13032,26 @@ Zwróć TYLKO JSON.`;
                 return;
             }
 
-            // Wszystkie elementy które wskazują że ta kreacja jest w trakcie regeneracji
-            // (przycisk w siatce + ewentualnie przycisk w drawerze gdy otwarty na tym indexie)
+            // Wszystkie miejsca w UI gdzie ten sam index może mieć przycisk regen:
+            // 1) galeria miniatur (renderCreativeGallery), 2) drawer (gdy otwarty na tym i),
+            // 3) stepper „Reklamy" (renderStepAds — ale tylko aktywna reklama jest renderowana).
             const galleryBtn = document.getElementById(`btn-gallery-regen-${index}`);
             const drawerBtn = (typeof drawerIndex !== 'undefined' && drawerIndex === index)
                 ? document.getElementById('drawer-regen-btn') : null;
+            const stepBtn = document.getElementById(`btn-step-regen-${index}`);
             const setBusy = (busy) => {
-                [galleryBtn, drawerBtn].forEach(b => {
+                if (galleryBtn) {
+                    galleryBtn.disabled = busy;
+                    galleryBtn.innerHTML = busy
+                        ? '<i class="ph ph-spinner animate-spin text-[15px]"></i>'
+                        : '<i class="ph ph-arrows-clockwise text-[15px]"></i>';
+                }
+                [drawerBtn, stepBtn].forEach(b => {
                     if (!b) return;
                     b.disabled = busy;
-                    if (b === galleryBtn) {
-                        b.innerHTML = busy
-                            ? '<i class="ph ph-spinner animate-spin text-[15px]"></i>'
-                            : '<i class="ph ph-arrows-clockwise text-[15px]"></i>';
-                    } else {
-                        b.innerHTML = busy
-                            ? '<i class="ph ph-spinner animate-spin"></i> Generuję...'
-                            : '<i class="ph ph-arrows-clockwise"></i> Zrób nową';
-                    }
+                    b.innerHTML = busy
+                        ? '<i class="ph ph-spinner animate-spin"></i> Generuję...'
+                        : '<i class="ph ph-arrows-clockwise"></i> Zrób nową';
                 });
             };
             setBusy(true);
@@ -13101,8 +13104,9 @@ Zwróć TYLKO JSON.`;
                         .update({ ad_creatives: adsData.ad_creatives })
                         .eq('workflow_id', workflow.id);
 
-                    // Odśwież widoki — siatkę zawsze, drawer tylko jeśli otwarty na tym indexie
+                    // Odśwież widoki — siatkę i stepper „Reklamy" zawsze, drawer tylko gdy otwarty na tym i
                     try { renderCreativeGallery(); } catch (_) {}
+                    try { renderContentStepper(); } catch (_) {}
                     if (typeof drawerIndex !== 'undefined' && drawerIndex === index) {
                         try { renderDrawerContent(); } catch (_) {}
                     }
