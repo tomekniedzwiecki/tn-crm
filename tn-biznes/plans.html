@@ -395,11 +395,11 @@
                     .gte('date', startStr)
                     .lte('date', endStr);
 
-                // Get pipeline - tylko Rezerwacja (negotiation) + Oczekiwanie (stage_6)
+                // Get pipeline
                 const { data: pipeline } = await supabaseClient
                     .from('leads')
                     .select('deal_value')
-                    .in('status', ['negotiation', 'stage_6']);
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation']);
 
                 // Przychody przeliczane na netto (VAT 23%)
                 const crmRevenue = (orders || []).reduce((s, o) => s + toNetto(parseFloat(o.amount || 0)), 0);
@@ -613,7 +613,7 @@
                     .gte('date', startStr).lte('date', endStr).order('date', { ascending: false }).limit(10),
                 supabaseClient.from('biznes_costs').select('*'),
                 supabaseClient.from('leads').select('name, deal_value, status')
-                    .in('status', ['negotiation', 'stage_6'])
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation'])
             ]);
 
             const orders = ordersRes.data || [];

@@ -528,9 +528,9 @@
                 return d >= prev30Start && d < last30;
             }).length;
 
-            // Pipeline calculations - only Rezerwacja (negotiation) + Oczekiwanie (stage_6)
-            const activeStatuses = ['negotiation', 'stage_6'];
-            const activeLeads = leads.filter(l => activeStatuses.includes(l.status));
+            // Pipeline calculations
+            const activeStatuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation'];
+            const activeLeads = leads.filter(l => activeStatuses.includes(l.status || 'new'));
             const pipelineValue = activeLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
 
             // Conversion calculations

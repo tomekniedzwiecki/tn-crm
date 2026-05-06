@@ -379,9 +379,6 @@
         let pipelineStages = [...DEFAULT_STAGES];
         let STAGES = []; // Combined stages (pipeline + terminal)
 
-        // Pipeline counts only Rezerwacja (negotiation) + Oczekiwanie (stage_6)
-        const PIPELINE_ACTIVE_STATUSES = ['negotiation', 'stage_6'];
-
         async function loadPipelineSettings() {
             const { data, error } = await supabaseClient
                 .from('settings')
@@ -626,8 +623,8 @@
             const teamFilter = document.getElementById('filter-team')?.value || '';
 
             filteredLeads = leads.filter(lead => {
-                // Only show leads in active pipeline statuses (Rezerwacja + Oczekiwanie)
-                if (!PIPELINE_ACTIVE_STATUSES.includes(lead.status)) return false;
+                // Only show leads that have a pipeline status (not null)
+                if (!lead.status) return false;
 
                 // Search filter
                 if (searchTerm) {
@@ -656,10 +653,9 @@
             const hasFilters = searchTerm || sourceFilter || minValue || maxValue || teamFilter;
             document.getElementById('clear-pipeline-filters').classList.toggle('hidden', !hasFilters);
 
-            // Update counts (only Rezerwacja + Oczekiwanie)
-            const allActiveCount = leads.filter(l => PIPELINE_ACTIVE_STATUSES.includes(l.status)).length;
+            // Update counts
             document.getElementById('filtered-count').textContent = filteredLeads.length;
-            document.getElementById('all-count').textContent = allActiveCount;
+            document.getElementById('all-count').textContent = leads.length;
 
             renderPipeline();
         }
@@ -1037,8 +1033,8 @@
             document.getElementById('total-value').textContent = formatCurrency(totalValue);
             document.getElementById('total-deals').textContent = `${filteredLeads.length} leadów`;
 
-            // Render columns - only Rezerwacja + Oczekiwanie
-            board.innerHTML = STAGES.filter(stage => PIPELINE_ACTIVE_STATUSES.includes(stage.id)).map(stage => {
+            // Render columns
+            board.innerHTML = STAGES.map(stage => {
                 const isTerminalStage = terminalStages.includes(stage.id);
                 const isWaitingStage = stage.id === 'waiting' || stage.name?.toLowerCase() === 'oczekiwanie';
                 const stageLeads = filteredLeads
@@ -1412,11 +1408,29 @@
                 performed_by_name: currentMember?.name || null
             }];
 
+            // AUTO-REASSIGN do Tomka gdy status → negotiation (Domykanie)
+            // Target pipeline: Maciek przenosi do Domykania, Tomek zamyka
+            const TOMEK_ID = '6d05370c-0ada-4af9-b0d8-07e02e0f4792';
+            let autoReassigned = false;
+            if (newStage === 'negotiation' && lead.assigned_to !== TOMEK_ID) {
+                autoReassigned = true;
+                updatedActivities.push({
+                    type: 'auto_reassign',
+                    content: 'Auto-przekazano do Tomka (Domykanie)',
+                    created_at: new Date().toISOString(),
+                    performed_by: null,
+                    performed_by_name: 'System (target pipeline)'
+                });
+            }
+
             // Update in database
             const updateData = {
                 status: newStage,
                 activities: updatedActivities
             };
+            if (autoReassigned) {
+                updateData.assigned_to = TOMEK_ID;
+            }
 
             const { error } = await supabaseClient
                 .from('leads')
@@ -1438,6 +1452,9 @@
             // Update local state and re-render
             lead.status = newStage;
             lead.activities = updatedActivities;
+            if (autoReassigned) {
+                lead.assigned_to = TOMEK_ID;
+            }
             renderPipeline();
 
             // Trigger automatyzacji "lead_status_changed"
