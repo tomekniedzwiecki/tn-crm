@@ -1026,9 +1026,13 @@
             const terminalStages = ['won', 'lost', 'abandoned'];
 
             // Calculate totals for filtered leads
+            // Suma kwot tylko z Rezerwacja (negotiation) + Oczekiwanie (stage_6)
+            const VALUE_STATUSES = ['negotiation', 'stage_6'];
             let totalValue = 0;
             filteredLeads.forEach(lead => {
-                totalValue += getLeadValue(lead);
+                if (VALUE_STATUSES.includes(lead.status)) {
+                    totalValue += getLeadValue(lead);
+                }
             });
             document.getElementById('total-value').textContent = formatCurrency(totalValue);
             document.getElementById('total-deals').textContent = `${filteredLeads.length} leadów`;

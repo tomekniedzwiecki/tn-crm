@@ -395,11 +395,11 @@
                     .gte('date', startStr)
                     .lte('date', endStr);
 
-                // Get pipeline
+                // Get pipeline - tylko Rezerwacja (negotiation) + Oczekiwanie (stage_6) do sumy kwot
                 const { data: pipeline } = await supabaseClient
                     .from('leads')
                     .select('deal_value')
-                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation']);
+                    .in('status', ['negotiation', 'stage_6']);
 
                 // Przychody przeliczane na netto (VAT 23%)
                 const crmRevenue = (orders || []).reduce((s, o) => s + toNetto(parseFloat(o.amount || 0)), 0);

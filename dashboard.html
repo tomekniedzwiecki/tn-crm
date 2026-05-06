@@ -531,7 +531,11 @@
             // Pipeline calculations
             const activeStatuses = ['new', 'contacted', 'qualified', 'proposal', 'negotiation'];
             const activeLeads = leads.filter(l => activeStatuses.includes(l.status || 'new'));
-            const pipelineValue = activeLeads.reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
+            // Suma kwot tylko z Rezerwacja (negotiation) + Oczekiwanie (stage_6)
+            const valueStatuses = ['negotiation', 'stage_6'];
+            const pipelineValue = leads
+                .filter(l => valueStatuses.includes(l.status))
+                .reduce((sum, l) => sum + (parseFloat(l.deal_value) || 0), 0);
 
             // Conversion calculations
             const wonLeads = leads.filter(l => l.status === 'won');

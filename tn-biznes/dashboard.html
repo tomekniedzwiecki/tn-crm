@@ -595,11 +595,11 @@
                     .eq('period_start', startStr)
                     .maybeSingle(),
 
-                // Pipeline
+                // Pipeline (count = wszystkie aktywne, sumę kwot liczymy tylko z negotiation + stage_6)
                 supabaseClient
                     .from('leads')
                     .select('deal_value, status, name')
-                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation'])
+                    .in('status', ['new', 'contacted', 'qualified', 'proposal', 'negotiation', 'stage_6'])
             ]);
 
             const orders = ordersRes?.data || [];
@@ -625,7 +625,10 @@
             const profit = totalRevenue - costs.total;
             const prevProfit = prevTotalRevenue - prevCosts.total;
 
-            const pipelineValue = pipeline.reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
+            // Suma kwot tylko z Rezerwacja (negotiation) + Oczekiwanie (stage_6)
+            const pipelineValue = pipeline
+                .filter(l => ['negotiation', 'stage_6'].includes(l.status))
+                .reduce((sum, l) => sum + parseFloat(l.deal_value || 0), 0);
 
             return {
                 revenue: { total: totalRevenue, previous: prevTotalRevenue, orders, manual: manualRevenues },
