@@ -2644,6 +2644,7 @@
                                 <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
                                     <img id="drawer-image" src="" alt="" class="w-full aspect-square object-cover cursor-zoom-in" onclick="openLightbox(this.src)">
                                     <div class="flex gap-2 p-2.5 border-t border-white/5">
+                                        <button id="drawer-regen-btn" onclick="regenerateCreative(drawerIndex)" class="flex-1 text-[11px] text-pink-200 hover:text-white flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-pink-500/15 hover:bg-pink-500/25 border border-pink-500/20" title="Wygeneruj na nowo używając zdjęcia produktu jako referencji"><i class="ph ph-arrows-clockwise"></i> Zrób nową</button>
                                         <a id="drawer-download" href="#" download class="flex-1 text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-download-simple"></i> Pobierz PNG</a>
                                         <button onclick="copyDrawerUrl()" class="flex-1 text-[11px] text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5"><i class="ph ph-link"></i> Skopiuj URL</button>
                                     </div>
@@ -11347,6 +11348,9 @@ Zwróć TYLKO JSON.`;
                         <button type="button" onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${selected ? 'Odznacz z Cowork' : 'Zaznacz do Cowork (max 2)'}" class="absolute top-2 right-2 z-10 w-8 h-8 rounded-full ${selected ? 'bg-amber-500 text-white' : 'bg-black/60 backdrop-blur text-zinc-200 hover:bg-amber-500/80 hover:text-white'} flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-amber-400">
                             <i class="ph ${selected ? 'ph-star-fill' : 'ph-star'} text-[15px]"></i>
                         </button>
+                        <button type="button" id="btn-gallery-regen-${i}" onclick="event.stopPropagation(); regenerateCreative(${i})" title="Zrób nową grafikę (na podstawie zdjęcia produktu)" class="absolute top-2 right-12 z-10 w-8 h-8 rounded-full bg-black/60 backdrop-blur text-pink-200 hover:bg-pink-500/80 hover:text-white flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-pink-400">
+                            <i class="ph ph-arrows-clockwise text-[15px]"></i>
+                        </button>
                     </div>`;
             }).join('');
         }
@@ -13027,42 +13031,68 @@ Zwróć TYLKO JSON.`;
                 return;
             }
 
-            const btn = document.getElementById(`btn-regen-${index}`);
-            if (btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i>';
-            }
+            // Wszystkie elementy które wskazują że ta kreacja jest w trakcie regeneracji
+            // (przycisk w siatce + ewentualnie przycisk w drawerze gdy otwarty na tym indexie)
+            const galleryBtn = document.getElementById(`btn-gallery-regen-${index}`);
+            const drawerBtn = (typeof drawerIndex !== 'undefined' && drawerIndex === index)
+                ? document.getElementById('drawer-regen-btn') : null;
+            const setBusy = (busy) => {
+                [galleryBtn, drawerBtn].forEach(b => {
+                    if (!b) return;
+                    b.disabled = busy;
+                    if (b === galleryBtn) {
+                        b.innerHTML = busy
+                            ? '<i class="ph ph-spinner animate-spin text-[15px]"></i>'
+                            : '<i class="ph ph-arrows-clockwise text-[15px]"></i>';
+                    } else {
+                        b.innerHTML = busy
+                            ? '<i class="ph ph-spinner animate-spin"></i> Generuję...'
+                            : '<i class="ph ph-arrows-clockwise"></i> Zrób nową';
+                    }
+                });
+            };
+            setBusy(true);
 
             try {
-                // Pobierz ref image: selected_product (global catalog) > workflow_products > mockup > logo
+                // Reference image MUSI pochodzić z zakładki Produkty (workflow_products).
+                // Priorytet: selected_product_id z workflows, potem dowolny produkt powiązany z workflow.
+                // Brak produktu = fail (nie chcemy generować bez wizualnej referencji).
                 let refUrl = null;
                 const selectedId = workflow?.selected_product_id;
                 if (selectedId) {
-                    const { data: p } = await supabaseClient.from('workflow_products').select('image_url').eq('id', selectedId).maybeSingle();
+                    const { data: p } = await supabaseClient
+                        .from('workflow_products')
+                        .select('image_url')
+                        .eq('id', selectedId)
+                        .maybeSingle();
                     if (p?.image_url) refUrl = p.image_url;
                 }
                 if (!refUrl) {
-                    const { data: wp } = await supabaseClient.from('workflow_products').select('image_url').eq('workflow_id', workflow.id);
+                    const { data: wp } = await supabaseClient
+                        .from('workflow_products')
+                        .select('image_url')
+                        .eq('workflow_id', workflow.id)
+                        .not('image_url', 'is', null)
+                        .limit(1);
                     if (wp?.[0]?.image_url) refUrl = wp[0].image_url;
                 }
                 if (!refUrl) {
-                    const { data: mockups } = await supabaseClient.from('workflow_branding').select('type, file_url').eq('workflow_id', workflow.id).in('type', ['mockup', 'logo']).not('file_url', 'is', null).limit(3);
-                    refUrl = mockups?.find(m => m.type === 'mockup')?.file_url || mockups?.find(m => m.type === 'logo')?.file_url || null;
+                    showToast('Brak zdjęcia produktu — dodaj produkt w zakładce Produkty', 'error');
+                    return;
                 }
 
-                const body = {
-                    prompt: creative.prompt,
-                    count: 1,
-                    workflow_id: workflow.id,
-                    type: `ad_regen_${index}`
-                };
-                if (refUrl) body.reference_images = [{ url: refUrl, type: 'product' }];
-
-                const { data, error } = await supabaseClient.functions.invoke('generate-image', { body });
+                const { data, error } = await supabaseClient.functions.invoke('generate-image', {
+                    body: {
+                        prompt: creative.prompt,
+                        count: 1,
+                        workflow_id: workflow.id,
+                        type: `ad_regen_${index}`,
+                        reference_images: [{ url: refUrl, type: 'product' }]
+                    }
+                });
                 if (error) throw error;
 
                 if (data?.images?.[0]?.url) {
-                    // Update local + DB
                     adsData.ad_creatives[index].url = data.images[0].url;
                     adsData.ad_creatives[index].generated_at = new Date().toISOString();
 
@@ -13071,9 +13101,11 @@ Zwróć TYLKO JSON.`;
                         .update({ ad_creatives: adsData.ad_creatives })
                         .eq('workflow_id', workflow.id);
 
-                    // Update img src
-                    const imgEl = document.getElementById(`creative-img-${index}`);
-                    if (imgEl) imgEl.src = data.images[0].url;
+                    // Odśwież widoki — siatkę zawsze, drawer tylko jeśli otwarty na tym indexie
+                    try { renderCreativeGallery(); } catch (_) {}
+                    if (typeof drawerIndex !== 'undefined' && drawerIndex === index) {
+                        try { renderDrawerContent(); } catch (_) {}
+                    }
 
                     showToast('Nowa kreacja wygenerowana!', 'success');
                 }
@@ -13081,10 +13113,7 @@ Zwróć TYLKO JSON.`;
                 console.error('Regenerate creative error:', err);
                 showToast('Błąd generowania: ' + err.message, 'error');
             } finally {
-                if (btn) {
-                    btn.disabled = false;
-                    btn.innerHTML = '<i class="ph ph-arrows-clockwise"></i> Nowa';
-                }
+                setBusy(false);
             }
         }
 
