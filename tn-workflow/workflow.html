@@ -14462,39 +14462,79 @@ KROK B — POBIERANIE z AliExpress (tylko gdy baza pusta dla tego workflow)
 ═══════════════════════════════════════════════════════════════
 KROK C — GENERATOR STATYCZNEGO HTML (zawsze)
 ═══════════════════════════════════════════════════════════════
+WAŻNE: CSS dla sekcji opinii JEST JUŻ w pliku landingu (per-landing styling
+w stylu danej marki). Twoim zadaniem jest WYŁĄCZNIE podmienić CONTENT
+między markerami HTML. NIE dodawaj <style>, NIE kopiuj CSS, NIE zmieniaj
+nic poza zawartością między markerami.
+
 1. Pobierz z bazy NIEUKRYTE opinie:
    GET ...workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
    GET ...workflow_optimization?workflow_id=eq.${workflow.id}&select=reviews_total_ratings,reviews_avg_star,reviews_positive_pct
 
-2. Wygeneruj HTML sekcji STATS (między <!-- REVIEWS:STATS:START --> a <!-- REVIEWS:STATS:END -->):
-   Trzy boxy: "Ponad X" (zaokrąglone w dół do 500 jeśli >=1000), avg star "/5", pozytywne %.
-   Użyj klas .reviews-stats / .reviews-meta-stat / .reviews-meta-value / .reviews-meta-label
-   (CSS jest już w landing parova/index.html — sprawdź jakie klasy są zdefiniowane).
+2. Sprawdź że plik istnieje: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
+   Jeśli landingSlug = 'NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij i zapytaj o slug.
+   Read plik. Sprawdź że ZAWIERA już CSS klas: .review-card, .review-stars,
+   .review-text, .review-author, .review-avatar, .review-images, .reviews-meta-stat,
+   .reviews-grid-xl. Jeśli któregoś nie ma → przerwij i zgłoś (CSS musi być
+   ręcznie dodany do landingu w stylu marki przed pierwszym uruchomieniem promptu).
 
-3. Wygeneruj HTML sekcji GRID (między <!-- REVIEWS:GRID:START --> a <!-- REVIEWS:GRID:END -->):
-   Container <div class="reviews-grid-xl">.
-   W środku każda opinia jako <div class="review-card"> z:
-     - <div class="review-stars"> z 5 SVG gwiazdkami (skopiuj z istniejących testimonials w pliku)
-     - <div class="review-images" data-count="N"> z <img loading="lazy" referrerpolicy="no-referrer"> (max 4)
-     - <p class="review-text"> z escape'owanym content_pl (escape: & < > " ')
-     - <div class="review-author"> z .review-avatar (inicjały z author_name) + .review-name + .review-verified ("Zweryfikowany zakup" + ikona check SVG)
-   ZERO inline JS. Czysty HTML.
+3. Wygeneruj HTML sekcji STATS dla podmiany między
+   <!-- REVIEWS:STATS:START --> ... <!-- REVIEWS:STATS:END -->
+   Format (3 kafelki w wrapperze .reviews-stats):
+     <div class="reviews-stats">
+       <div class="reviews-meta-stat">
+         <div class="reviews-meta-value">Ponad X</div>
+         <div class="reviews-meta-label">zadowolonych klientów</div>
+       </div>
+       <div class="reviews-meta-stat">
+         <div class="reviews-meta-value reviews-meta-yellow">4.8<span style="opacity:.5">/5</span></div>
+         <div class="reviews-meta-label">średnia ocena</div>
+       </div>
+       <div class="reviews-meta-stat">
+         <div class="reviews-meta-value reviews-meta-green">96%</div>
+         <div class="reviews-meta-label">pozytywnych opinii</div>
+       </div>
+     </div>
+   - "Ponad X": jeśli total >= 1000, zaokrąglij W DÓŁ do najbliższych 500
+     i prefiks "Ponad ", w przeciwnym razie surowa liczba.
+   - Średnia: 1 miejsce po przecinku (np. "4.8").
+   - Pozytywne: zaokrąglone do całości + "%".
+   - Jeśli któraś metadana jest null — pomiń ten kafelek (kafelki to elastyczny grid).
 
-4. Sprawdź że plik landing istnieje: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
-   Jeśli landingSlug = 'NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij i zapytaj usera o slug.
+4. Wygeneruj HTML sekcji GRID dla podmiany między
+   <!-- REVIEWS:GRID:START --> ... <!-- REVIEWS:GRID:END -->
+   Format:
+     <div class="reviews-grid-xl">
+       [karta dla każdej opinii]
+     </div>
+   Karta opinii:
+     <div class="review-card">
+       <div class="review-stars">
+         <!-- 5 razy ten sam SVG gwiazdki (skopiuj z istniejącej sekcji ".testimonial-stars" w pliku) -->
+       </div>
+       <!-- jeśli image_urls.length > 0: -->
+       <div class="review-images" data-count="N">
+         <img src="URL1" alt="" loading="lazy" referrerpolicy="no-referrer">
+         <!-- max 4 obrazków -->
+       </div>
+       <p class="review-text">[escape'owany content_pl]</p>
+       <div class="review-author">
+         <div class="review-avatar">[inicjały z author_name, max 2 wielkie litery, fallback "?"]</div>
+         <div class="review-author-info">
+           <div class="review-name">[escape'owany author_name lub "Klient"]</div>
+           <div class="review-verified">
+             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+             Zweryfikowany zakup
+           </div>
+         </div>
+       </div>
+     </div>
+   Escape HTML: & → &amp;, < → &lt;, > → &gt;, " → &quot;, ' → &#39;
+   ZERO inline JS, zero <style>, zero <script>. Czysty HTML.
 
-5. Read plik. Znajdź markery (regex multiline):
-     <!-- REVIEWS:STATS:START -->...<!-- REVIEWS:STATS:END -->
-     <!-- REVIEWS:GRID:START -->...<!-- REVIEWS:GRID:END -->
-   Podmień zawartość MIĘDZY markerami na nowy HTML (markery zostają!).
+5. Podmień zawartość MIĘDZY markerami w pliku (markery zostają!) używając Edit tool.
 
-6. Skopiuj CSS z reviews-widget.js (znajdź funkcję injectStyles i wyciągnij CSS:
-   .reviews-stats, .reviews-meta-stat, .reviews-meta-value, .reviews-grid-xl,
-   .review-card, .review-stars, .review-images, .review-text, .review-author, .review-avatar,
-   .review-name, .review-verified). Wstaw to w <style> w landingu (jeśli już jest — pomiń, idempotency).
-   Markery: <!-- REVIEWS:CSS:START --> ... <!-- REVIEWS:CSS:END --> (dodaj jeśli nie ma).
-
-7. Commit + push:
+6. Commit + push:
    cd c:/repos_tn/tn-crm
    git add landing-pages/${landingSlug}/index.html
    git commit -m "Reviews ${landingSlug}: regen statycznego HTML (X opinii)"
