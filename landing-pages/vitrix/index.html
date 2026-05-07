@@ -842,24 +842,24 @@
       .cookie-btn{padding:9px 14px;font-size:11px}
     }
 
-    /* ═══ Mobile fix: usuń sticky-cta + header sticky (nie fixed) ═══
-       Tomek 2026-05-07 (iteracja F, finalna): „dobra, usuwaj ten pasek z
-       zamów teraz". Sticky-cta była źródłem layout shift, który powodował
-       że fixed header się gubił. Usuwamy ją całkowicie na mobile — CTA
-       jest dostępne w hero, atelier, reels, offer i finale (wystarczy).
-       Header pozostaje position:sticky top:0 (stabilny mechanizm).
-       Body overflow-x:clip (NIE hidden — blokowałby sticky). */
+    /* ═══ Mobile fix: header position:static (NIE fixed, NIE sticky) ═══
+       Tomek 2026-05-07 (iteracja G, finalna): po pięciu próbach naprawy
+       fixed/sticky headera na mobile — header NIE jest już ani fixed ani
+       sticky. Jest zwykłym statycznym elementem na górze strony. Scroll
+       go zabiera wraz z resztą content. Nic się nie chowa, nic się nie
+       rusza, bo nic nie próbuje się przykleić.
+       Logo + nawigacja dostępne po scroll-to-top (pierwsza rzecz na
+       stronie). Sticky-cta usunięta. CTA są w hero/reels/offer/finale.
+       Stories-bar pozostaje sticky top:0 (klei się do top po scrollu
+       headera poza viewport). */
     @media (max-width:720px){
       body{overflow-x:clip;padding-bottom:0 !important}
       .header{
-        position:sticky !important;
-        top:0 !important;
-        z-index:9999 !important;
+        position:static !important;
         box-shadow:0 2px 8px rgba(13,33,55,0.06) !important;
       }
-      .hero{padding-top:32px !important}
-      .mobile-menu{z-index:9998 !important}
-      .stories-bar{top:58px !important;z-index:99 !important;border-top:1px solid rgba(13,33,55,0.06) !important}
+      .hero{padding-top:24px !important}
+      .stories-bar{top:0 !important;z-index:99 !important;border-top:1px solid rgba(13,33,55,0.06) !important}
       .sticky-cta{display:none !important}
       .wa-widget{bottom:20px !important}
       .reviews-side-widget{bottom:20px !important}
@@ -4011,24 +4011,45 @@
     }
 
     // Scroll parallax dla editorial numerals (hero + finale) — subtle Y translate
+    // BUG FIX 2026-05-07: getBoundingClientRect() zwraca pozycję PO transformacji,
+    // więc midpoint w każdej klatce był wyliczany z aktualnego (już przesuniętego)
+    // rect.top → delta narastała w nieskończoność (Tomek widział translateY 1458px+),
+    // co rozciągało dokument i psuło layout (header „się chował"). Fix: zapisz
+    // initial offset PRZED pierwszą transformacją, używaj go jako stałego punktu
+    // odniesienia. Dodatkowo wyłączam parallax na mobile (≤720px) — to gimmick
+    // wizualny niewart problemów z layoutem na małych ekranach.
     const parallaxEls = [
       { el: document.querySelector('.hero-numeral'), speed: 0.18, baseRotate: -3 },
       { el: document.querySelector('.finale-numeral'), speed: 0.12, baseRotate: 0 },
     ].filter(x => x.el);
     if (parallaxEls.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      // Capture initial absolute offsets BEFORE any transform is applied
+      parallaxEls.forEach((p) => {
+        const rect = p.el.getBoundingClientRect();
+        p.initialMidpoint = window.scrollY + rect.top + rect.height / 2;
+      });
+      const isMobile = () => matchMedia('(max-width: 720px)').matches;
       let ticking = false;
       const apply = () => {
+        if (isMobile()) {
+          // Mobile: reset to base transform, no parallax
+          parallaxEls.forEach(({el, baseRotate}) => {
+            const reset = el.classList.contains('finale-numeral') ? 'translate(-50%, -50%) ' : '';
+            el.style.transform = reset + 'rotate(' + baseRotate + 'deg)';
+          });
+          ticking = false;
+          return;
+        }
         const y = window.scrollY;
-        parallaxEls.forEach(({el, speed, baseRotate}) => {
-          const rect = el.getBoundingClientRect();
-          const midpoint = y + rect.top + rect.height / 2;
-          const delta = (y + window.innerHeight / 2 - midpoint) * speed;
+        parallaxEls.forEach(({el, speed, baseRotate, initialMidpoint}) => {
+          const delta = (y + window.innerHeight / 2 - initialMidpoint) * speed;
           const translate = el.classList.contains('finale-numeral') ? `translate(-50%, calc(-50% + ${delta}px))` : `translateY(${delta}px)`;
           el.style.transform = `${translate} rotate(${baseRotate}deg)`;
         });
         ticking = false;
       };
       window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(apply); ticking = true; } }, { passive: true });
+      window.addEventListener('resize', () => { if (!ticking) { requestAnimationFrame(apply); ticking = true; } });
       apply();
     }
 
