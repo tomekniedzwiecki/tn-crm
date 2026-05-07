@@ -2942,9 +2942,19 @@
       tab.addEventListener('click', () => widget.classList.add('open'));
       closeBtn.addEventListener('click', () => widget.classList.remove('open'));
 
+      // Auto-open na desktop (≥1080px) przy pierwszym wejściu w viewport widgetu
+      let firstReadyDone = false;
+      const desktopMQ = matchMedia('(min-width: 1080px)');
       function checkScroll() {
-        if (window.scrollY > 300) widget.classList.add('ready');
-        else widget.classList.remove('ready');
+        if (window.scrollY > 300) {
+          widget.classList.add('ready');
+          if (!firstReadyDone && desktopMQ.matches) {
+            widget.classList.add('open');
+            firstReadyDone = true;
+          }
+        } else {
+          widget.classList.remove('ready');
+        }
       }
       checkScroll();
       window.addEventListener('scroll', checkScroll, { passive: true });

@@ -927,9 +927,20 @@ values na rzeczywiste z danej palety (--primary, --bg-cream, --radius-lg, etc.).
     close.addEventListener('click', () => widget.classList.remove('open'));
 
     // Pokaż widget po przewinięciu poza hero (>300px)
+    // Na desktop (≥1080px) auto-open przy pierwszym wejściu — od razu social proof.
+    // Na mobile zostaje collapsed (tab) — panel zasłaniałby treść.
+    let firstReadyDone = false;
+    const desktopMQ = matchMedia('(min-width: 1080px)');
     function checkScroll() {
-      if (window.scrollY > 300) widget.classList.add('ready');
-      else widget.classList.remove('ready');
+      if (window.scrollY > 300) {
+        widget.classList.add('ready');
+        if (!firstReadyDone && desktopMQ.matches) {
+          widget.classList.add('open');
+          firstReadyDone = true;
+        }
+      } else {
+        widget.classList.remove('ready');
+      }
     }
     checkScroll();
     window.addEventListener('scroll', checkScroll, { passive: true });
