@@ -14398,18 +14398,24 @@ Zwróć TYLKO JSON.`;
             const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
             const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
 
-            const prompt = `Wygeneruj/zaktualizuj sekcję opinii AliExpress dla workflow ${workflow.id} (${workflow.customer_name || 'klient'} - ${workflow.offer_name || ''}).
+            // CTA URL (do lightbox) — z sales_page_url pliku albo z istniejącego btn-primary[href*=checkout]
+            const ctaUrlForLightbox = salesPageUrl ? salesPageUrl.replace(/\/$/, '') + '/checkout' : '#offer';
+            const brandName = workflow.customer_company || workflow.offer_name?.replace(/budowa sklepu|pełen pakiet/gi, '').trim() || landingSlug;
+
+            const prompt = `Sekcja Opinii dla landingu ${landingSlug} (workflow ${workflow.id}: ${workflow.customer_name || 'klient'} — ${workflow.offer_name || ''}).
 
 PARAMETRY:
 - WORKFLOW_ID: ${workflow.id}
 - PRODUCT_URL: ${productUrl}
 - PRODUCT_ID: ${productId}
-- LANDING_SLUG: ${landingSlug}  (folder w landing-pages/, sprawdź czy istnieje)
+- LANDING_SLUG: ${landingSlug}
 - LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
+- BRAND_NAME (do CTA w lightboxie): ${brandName}
+- CTA_URL (do lightboxie, link do koszyka): ${ctaUrlForLightbox}
 
-ZADANIE: idempotentny prompt — uruchamiany za 1. razem (po podaniu URL) ORAZ za każdym razem
-gdy admin/klient ukryje/pokaże opinię w panelu. Robi DOKŁADNIE to samo każdym razem:
-fetchuje (jeśli trzeba) → generuje statyczny HTML → podmienia w pliku → commit + push.
+ZADANIE: SELF-CONTAINED prompt. Idempotentny przy każdym uruchomieniu.
+Wstawia BRAKUJĄCE elementy (CSS, lightbox HTML/JS, sekcja, nota), zawsze
+podmienia CONTENT między markerami opinii. Jeden prompt = wszystko gotowe.
 
 ═══════════════════════════════════════════════════════════════
 KROK A — SPRAWDŹ stan bazy
@@ -14441,118 +14447,189 @@ KROK B — POBIERANIE z AliExpress (tylko gdy baza pusta dla tego workflow)
    - was_translated = true, language_original = sourceLang, content_original = oryginał
    Jeśli sourceLang === 'pl': content_pl = oryginał, was_translated = false.
 
+4b. Anonimizacja autora (WAŻNE — prawne):
+    Jeśli buyerName === 'AliExpress Shopper' lub zawiera 'aliexpress' (case-insensitive)
+    → ustaw author_name = 'Klient'. NIGDY nie pokazuj 'AliExpress' w pliku landingu.
+    Imiona zamaskowane (np. "I***a") zostają bez zmian.
+
 5. Bulk INSERT do workflow_reviews:
-   POST https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reviews
+   POST .../rest/v1/workflow_reviews
    Headers: apikey + Authorization: Bearer SERVICE_KEY
             Content-Type: application/json
             Prefer: resolution=merge-duplicates,return=minimal
-   Body: array obiektów z polami:
-     workflow_id='${workflow.id}', source='aliexpress',
-     source_review_id (md5 z evaDate+buyerName, deterministyczne — idempotency!),
+   Body: array obiektów: workflow_id='${workflow.id}', source='aliexpress',
+     source_review_id (md5 z evaDate+buyerName — deterministyczne!),
      rating, content_pl, content_original, language_original, was_translated,
      author_name, review_date, sku_info, image_urls (array URL), sort_order (0..N).
 
-6. Update workflow_optimization (workflow_id=${workflow.id}):
-   - reviews_fetched_at = NOW
-   - reviews_count = (po INSERT zapytaj count z bazy)
-   - reviews_total_ratings = parseInt(displayMessage.numRatings)
-   - reviews_avg_star = data.productEvaluationStatistic.evarageStar  (LITERÓWKA W API: 'evarage' nie 'average')
-   - reviews_positive_pct = data.productEvaluationStatistic.evarageStarRage
+6. Update workflow_optimization gdzie workflow_id='${workflow.id}':
+   reviews_fetched_at = NOW, reviews_count, reviews_total_ratings,
+   reviews_avg_star (literówka API: 'evarageStar' nie 'average'!),
+   reviews_positive_pct = evarageStarRage.
 
 ═══════════════════════════════════════════════════════════════
-KROK C — GENERATOR STATYCZNEGO HTML (zawsze)
+KROK C — INTEGRACJA W LANDINGU (idempotent — wstaw co brakuje)
 ═══════════════════════════════════════════════════════════════
-WAŻNE: CSS dla sekcji opinii JEST JUŻ w pliku landingu (per-landing styling
-w stylu danej marki). Twoim zadaniem jest WYŁĄCZNIE podmienić CONTENT
-między markerami HTML. NIE dodawaj <style>, NIE kopiuj CSS, NIE zmieniaj
-nic poza zawartością między markerami.
+TEMPLATE: c:/repos_tn/tn-crm/landing-pages/_templates/reviews-section.html
+Single source of truth. Zawiera 4 bloki do wklejenia:
+  REVIEWS_TEMPLATE_CSS         — <style data-template="reviews-css">...</style>
+  REVIEWS_TEMPLATE_SECTION     — <section class="reviews-xl">...</section>
+  REVIEWS_TEMPLATE_SIDE_WIDGET — <div id="reviews-side-widget">...</div>
+  REVIEWS_TEMPLATE_LIGHTBOX    — <div id="reviews-lightbox">...</div>
+  REVIEWS_TEMPLATE_JS          — <script data-template="reviews-js">...</script>
+Plus REVIEWS_TEMPLATE_CARD (komentarz na końcu) — szablon karty.
 
-1. Pobierz z bazy NIEUKRYTE opinie:
-   GET ...workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
-   GET ...workflow_optimization?workflow_id=eq.${workflow.id}&select=reviews_total_ratings,reviews_avg_star,reviews_positive_pct
+PLACEHOLDERY do podmiany w blokach:
+  {{BRAND_NAME}}  → ${brandName}
+  {{CTA_URL}}     → ${ctaUrlForLightbox}
 
-2. Sprawdź że plik istnieje: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
-   Jeśli landingSlug = 'NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij i zapytaj o slug.
-   Read plik. Sprawdź że ZAWIERA już CSS klas: .review-card, .review-stars,
-   .review-text, .review-author, .review-avatar, .review-images, .reviews-meta-stat,
-   .reviews-grid-xl. Jeśli któregoś nie ma → przerwij i zgłoś (CSS musi być
-   ręcznie dodany do landingu w stylu marki przed pierwszym uruchomieniem promptu).
+C0. Pobierz NIEUKRYTE opinie:
+    GET .../workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
 
-3. Wygeneruj HTML sekcji STATS dla podmiany między
-   <!-- REVIEWS:STATS:START --> ... <!-- REVIEWS:STATS:END -->
-   Format (3 kafelki w wrapperze .reviews-stats):
-     <div class="reviews-stats">
-       <div class="reviews-meta-stat">
-         <div class="reviews-meta-value">Ponad X</div>
-         <div class="reviews-meta-label">zadowolonych klientów</div>
-       </div>
-       <div class="reviews-meta-stat">
-         <div class="reviews-meta-value reviews-meta-yellow">4.8<span style="opacity:.5">/5</span></div>
-         <div class="reviews-meta-label">średnia ocena</div>
-       </div>
-       <div class="reviews-meta-stat">
-         <div class="reviews-meta-value reviews-meta-green">96%</div>
-         <div class="reviews-meta-label">pozytywnych opinii</div>
-       </div>
-     </div>
-   - "Ponad X": jeśli total >= 1000, zaokrąglij W DÓŁ do najbliższych 500
-     i prefiks "Ponad ", w przeciwnym razie surowa liczba.
-   - Średnia: 1 miejsce po przecinku (np. "4.8").
-   - Pozytywne: zaokrąglone do całości + "%".
-   - Jeśli któraś metadana jest null — pomiń ten kafelek (kafelki to elastyczny grid).
+C1. Sprawdź czy plik landingu istnieje:
+    c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
+    Jeśli landingSlug=='NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij, zapytaj o slug.
 
-4. Wygeneruj HTML sekcji GRID dla podmiany między
-   <!-- REVIEWS:GRID:START --> ... <!-- REVIEWS:GRID:END -->
-   Format:
-     <div class="reviews-grid-xl">
-       [karta dla każdej opinii]
-     </div>
-   Karta opinii:
-     <div class="review-card">
-       <div class="review-stars">
-         <!-- 5 razy ten sam SVG gwiazdki (skopiuj z istniejącej sekcji ".testimonial-stars" w pliku) -->
-       </div>
-       <!-- jeśli image_urls.length > 0: -->
-       <div class="review-images" data-count="N">
-         <img src="URL1" alt="" loading="lazy" referrerpolicy="no-referrer">
-         <!-- max 4 obrazków -->
-       </div>
-       <p class="review-text">[escape'owany content_pl]</p>
-       <div class="review-author">
-         <div class="review-avatar">[inicjały z author_name, max 2 wielkie litery, fallback "?"]</div>
-         <div class="review-author-info">
-           <div class="review-name">[escape'owany author_name lub "Klient"]</div>
-           <div class="review-verified">
-             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
-             Zweryfikowany zakup
-           </div>
-         </div>
-       </div>
-     </div>
-   Escape HTML: & → &amp;, < → &lt;, > → &gt;, " → &quot;, ' → &#39;
-   ZERO inline JS, zero <style>, zero <script>. Czysty HTML.
+C2. ZAŁADUJ TEMPLATE.
+    Read plik c:/repos_tn/tn-crm/landing-pages/_templates/reviews-section.html
+    Wyciągnij 5 bloków (między komentarzami REVIEWS_TEMPLATE_*):
+      A. CSS (zawartość <style data-template="reviews-css">)
+      B. SECTION (<!-- ═══ OPINIE KLIENTÓW...) do </section>)
+      C. SIDE_WIDGET (<div id="reviews-side-widget">...</div>)
+      D. LIGHTBOX (<div id="reviews-lightbox">...</div>)
+      E. JS (zawartość <script data-template="reviews-js">)
 
-5. Podmień zawartość MIĘDZY markerami w pliku (markery zostają!) używając Edit tool.
+    W blokach B, C, D podmień placeholdery:
+      {{BRAND_NAME}} → "${brandName}"
+      {{CTA_URL}}    → "${ctaUrlForLightbox}"
 
-6. Commit + push:
-   cd c:/repos_tn/tn-crm
-   git add landing-pages/${landingSlug}/index.html
-   git commit -m "Reviews ${landingSlug}: regen statycznego HTML (X opinii)"
-   git push origin main
+    OPCJONALNIE (best-effort dopasowanie do palety landingu): Read landing,
+    wyciągnij z :root wartości (--primary, --secondary, --bg-cream itp.)
+    i podmień fallback values w CSS template na wartości landingu.
+    Jeśli landing używa innych nazw zmiennych (np. --color-primary zamiast
+    --primary) — w skopiowanym CSS zostaw var(--primary, ZNALEZIONA_WARTOSC)
+    żeby fallback pasował.
+
+C3. SEKCJA HTML (sprawdź czy jest, jeśli nie → wstaw przed <section class="cta-banner">
+    lub innym ostatnim CTA / przed footerem):
+
+    <!-- ═══ OPINIE KLIENTÓW (XL) — generowane przez prompt Etap 5/Krok 2 ═══ -->
+    <section class="reviews-xl" id="reviews">
+      <div class="container">
+        <div class="reviews-header fade-in">
+          <span class="section-label">Opinie klientów</span>
+          <h2 class="section-title">Tysiące osób już cieszy się ${brandName}</h2>
+          <p class="section-subtitle">
+            Prawdziwe opinie ze zdjęciami od osób, które używają tego produktu. Bez retuszu, bez wybiórki.
+          </p>
+        </div>
+        <!-- REVIEWS:GRID:START -->
+        <div class="reviews-empty-placeholder" style="text-align:center;padding:60px 20px;color:rgba(0,0,0,0.4);">
+          <p>Wkrótce pojawią się tu opinie klientów.</p>
+        </div>
+        <!-- REVIEWS:GRID:END -->
+        <div class="reviews-disclosure">
+          <strong>Pochodzenie opinii.</strong> Pokazane opinie pochodzą od osób, które kupiły i używały tego produktu. Sprzedawca nie weryfikuje samodzielnie tożsamości recenzentów. Wyświetlamy wybór ocen 5/5 zawierających zdjęcia.
+        </div>
+      </div>
+    </section>
+
+    Jeśli już jest sekcja .reviews-xl z markerami GRID:START/END → pomiń wstawianie,
+    przejdź do C7 (podmiana content między markerami). Jeśli jest stara sekcja
+    z markerami REVIEWS:STATS lub REVIEWS:CSS — usuń je razem z zawartością
+    (statystyk już NIE pokazujemy, CSS jest w <style>, nie w sekcji).
+
+═══════════════════════════════════════════════════════════════
+KROKI C4-C6: WSTAW BLOKI Z TEMPLATU
+═══════════════════════════════════════════════════════════════
+TEMPLATE = c:/repos_tn/tn-crm/landing-pages/_templates/reviews-section.html
+NIGDY NIE pisz CSS/HTML/JS opinii ręcznie. Czytaj TEMPLATE.
+
+C4. CSS — sprawdź czy w <style> landingu są już klasy:
+      .review-card, .reviews-grid-xl, .reviews-disclosure-popover,
+      .reviews-side-widget, .reviews-side-track, .reviews-lightbox-spinner
+    JEŚLI którejś NIE MA → wstaw przed </style> ZAWARTOŚĆ <style data-template="reviews-css">
+    z TEMPLATE (skopiuj 1:1, fallback values w var(--xxx, FALLBACK) zostają jak są).
+    JEŚLI sa klasy ale są STARE (np. .review-name, .review-author-info, .reviews-stats,
+    .reviews-meta-*, lub .review-stars na początku karty) — usuń stary blok i wstaw
+    nowy z TEMPLATE.
+
+C5. SEKCJA HTML — sprawdź czy <section class="reviews-xl"> z markerami
+      <!-- REVIEWS:GRID:START/END -->
+    jest w pliku. JEŚLI NIE → wstaw blok REVIEWS_TEMPLATE_SECTION z TEMPLATE,
+    podmieniając {{BRAND_NAME}} → "${brandName}". Wstaw po </section> Solution
+    (lub innej sekcji, jeśli landing nie ma Solution — przed Comparison/Offer).
+
+C6. LIGHTBOX + SIDE WIDGET HTML — sprawdź czy <div id="reviews-lightbox">
+    i <div id="reviews-side-widget"> są w pliku. JEŚLI NIE → wstaw oba bloki
+    REVIEWS_TEMPLATE_LIGHTBOX i REVIEWS_TEMPLATE_SIDE_WIDGET z TEMPLATE,
+    bezpośrednio po </section> reviews-xl. Podmień {{BRAND_NAME}} i {{CTA_URL}}.
+
+C6b. LIGHTBOX/POPOVER/SIDE WIDGET JS — sprawdź czy w landingu jest funkcja
+     initReviewsLightbox. JEŚLI NIE → wstaw zawartość <script data-template="reviews-js">
+     z TEMPLATE w istniejący <script> z DOMContentLoaded (lub osobny <script> przed </body>).
+     JEŚLI JEST stara wersja (np. const captionName, const author w gallery item, const
+     gallery = imgs.map(img => img.src)) — zastąp w całości nową wersją z TEMPLATE.
+
+C7. PODMIANA CONTENT GRID (zawsze, nawet idempotent).
+    Wygeneruj HTML kart i podmień zawartość MIĘDZY markerami:
+    <!-- REVIEWS:GRID:START --> ... <!-- REVIEWS:GRID:END -->
+
+    Wrapper: <div class="reviews-grid-xl">
+    Karta — DOKŁADNIE zgodnie z REVIEWS_TEMPLATE_CARD w TEMPLATE (komentarz na końcu pliku):
+
+      <div class="review-card">
+        [jeśli image_urls.length > 0:]
+        <div class="review-images" data-count="N">
+          <img class="review-img" src="URL" alt="" loading="lazy" referrerpolicy="no-referrer">
+          [max 4 obrazków, każdy z class="review-img"]
+        </div>
+        <div class="review-body">
+          <p class="review-text">[escape'owany content_pl]</p>
+        </div>
+        <div class="review-footer">
+          <div class="review-author">
+            <div class="review-avatar">
+              <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg>
+            </div>
+            <div class="review-tag">
+              <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+              Opinia o produkcie
+            </div>
+          </div>
+          <div class="review-rating">
+            [5x SVG gwiazdki: <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>]
+          </div>
+        </div>
+      </div>
+
+    KRYTYCZNE — ZAWSZE:
+    - Avatar = ikona osoby SVG (nie inicjały, nie tekst, nie '?')
+    - BRAK <div class="review-name"> i BRAK <div class="review-author-info"> (usunęliśmy imię — spell-checker przeglądarki przekreślał maskowane imiona jak "D***r")
+    - Gwiazdki w stopce karty (.review-rating), NIE na górze (stary układ .review-stars to legacy)
+    - Obrazki mają class="review-img" + data-count na wrapperze
+    - Etykieta "Opinia o produkcie" (NIGDY "Zweryfikowany zakup", NIGDY "AliExpress")
+
+    Escape HTML: & → &amp;, < → &lt;, > → &gt;, " → &quot;, ' → &#39;
+
+C8. Commit + push:
+    cd c:/repos_tn/tn-crm
+    git add landing-pages/${landingSlug}/index.html
+    git commit -m "Reviews ${landingSlug}: regen statycznego HTML (X opinii)"
+    git push origin main
 
 ═══════════════════════════════════════════════════════════════
 KLUCZE
 ═══════════════════════════════════════════════════════════════
 SUPABASE_URL=https://yxmavwkwnfuphjqbelws.supabase.co
-SUPABASE_SERVICE_KEY z c:/repos_tn/tn-crm/.env (zmienna SUPABASE_SERVICE_KEY)
+SUPABASE_SERVICE_KEY z c:/repos_tn/tn-crm/.env
 
 ═══════════════════════════════════════════════════════════════
 PODSUMOWANIE wyświetl na końcu:
 - ile opinii w bazie / ile widocznych / ile ukrytych
-- stats produktu (total/avg/positive)
-- ścieżka pliku landingu zaktualizowanego
-- link do commit
-- INSTRUKCJA dla Tomka: "Skopiuj zawartość ${landingSlug}/index.html do CMS na ${salesPageUrl || 'stronie sklepu klienta'}"`;
+- elementy WSTAWIONE (sekcja, CSS, lightbox HTML/JS, nota) — które brakowały w pliku
+- ścieżka pliku, link do commit
+- INSTRUKCJA: "Skopiuj zawartość ${landingSlug}/index.html do CMS na ${salesPageUrl || 'stronie sklepu klienta'}"`;
 
             promptOutput.value = prompt;
             section.classList.remove('hidden');
