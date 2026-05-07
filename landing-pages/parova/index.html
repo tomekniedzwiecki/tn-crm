@@ -3867,6 +3867,25 @@ Zobacz zdjęcia.</p>
       .reels-lb-counter { top: 16px; font-size: 11px; padding: 6px 12px; }
       .reels-lb-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 20px; }
     }
+
+    /* ═══ Mobile fix: ukryj nasze duplikaty na mobile (CMS klienta ma swoje) ═══
+       Landingi idą do CMS TakeDrop (parova.pl, vitrix.pl, ...) który dostarcza
+       własny header, mobile-menu i sticky cart bar. Nasze duplikaty kolidują
+       (header się rusza, layout jump przy scroll). Ukrywamy je na mobile, na
+       desktopie (preview vercel + CMS desktop) zostają. Stories-bar w trybie
+       static (no fixed header to z którym mial konflikt), przewija z heroem.
+       WA/reviews-side bottom:88px — safety nad CMS-owym sticky cart bar (~70px).
+       Wzorzec dla wszystkich landingów ze sticky-cta lub bez — zapobiega
+       layout jumpom gdy CMS klienta dorzuca własną nawigację. */
+    @media (max-width: 720px) {
+      .header { display: none !important }
+      .mobile-menu { display: none !important }
+      .sticky-cta { display: none !important }
+      body { padding-bottom: 0 !important }
+      .stories-bar { position: static !important; top: auto !important; border-top: none !important }
+      .wa-widget { bottom: 88px !important }
+      .reviews-side-widget { bottom: 88px !important }
+    }
   </style>
 
   <section class="reels" id="reels">
