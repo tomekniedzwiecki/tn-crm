@@ -2604,7 +2604,6 @@
   </style>
   <div class="stories-bar" id="storiesBar" aria-label="Reels — kliknij aby obejrzeć">
     <div class="stories-bar-inner">
-      <span class="stories-bar-label">▶ Reels</span>
       <button type="button" class="story-ring" data-video-idx="0" aria-label="Otwórz video 1">
         <span class="story-ring-inner">
           <img class="story-ring-img" src="https://img.youtube.com/vi/iwuuqeyxqEs/hqdefault.jpg" alt="Reel 1" referrerpolicy="no-referrer">
@@ -3542,12 +3541,20 @@ Zobacz zdjęcia.</p>
     .reel-phone-player {
       position: absolute;
       inset: 0;
+      overflow: hidden;
     }
+    /* Crop hack dla YouTube Shorts: iframe robie szerszy (16:9) i wysrodkowuje,
+       zeby YT Player renderowal video w trybie desktop (bez Shorts UI side panel).
+       Frame wciaz pokazuje pionowy kawalek 9:16 — video shorts wpasowane na srodku. */
     .reel-phone-player iframe {
-      width: 100% !important;
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
       height: 100% !important;
-      border: 0;
-      pointer-events: none; /* klik = sekcja decyduje (lightbox / setActive) */
+      width: 177.778% !important;  /* 16/9 * 100% — sprawia ze iframe ma 16:9 ratio */
+      transform: translate(-50%, -50%) !important;
+      border: 0 !important;
+      pointer-events: none !important; /* klik = sekcja decyduje (lightbox / setActive) */
     }
 
     /* Play button overlay (znika gdy phone aktywnie odtwarza) */
@@ -3764,11 +3771,18 @@ Zobacz zdjęcia.</p>
     .reels-lb-player {
       position: absolute;
       inset: 0;
+      overflow: hidden;
     }
+    /* Ten sam crop hack co w sekcji — iframe 16:9 width, frame przycina sides.
+       YT player renderuje video w trybie desktop (bez Shorts UI side panel z inforamami). */
     .reels-lb-player iframe {
-      width: 100% !important;
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
       height: 100% !important;
-      border: 0;
+      width: 177.778% !important;
+      transform: translate(-50%, -50%) !important;
+      border: 0 !important;
     }
 
     .reels-lb-link {
