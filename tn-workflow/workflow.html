@@ -520,6 +520,11 @@
                             Opinie
                             <span id="nav-check-opinie" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('video')" data-tab="video" id="nav-btn-video" class="workflow-sidebar-btn hidden">
+                            <i class="ph ph-play-circle"></i>
+                            Video (Reels)
+                            <span id="nav-check-video" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3345,6 +3350,73 @@
                         </div>
                     </div><!-- /tab-opinie -->
 
+                    <!-- TAB: Video / Reels (Etap 5 / Krok 3) -->
+                    <div id="tab-video" class="workflow-panel hidden">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                                <i class="ph ph-play-circle text-rose-400"></i>
+                                Video (Reels) na landingu
+                            </h3>
+                            <p class="text-zinc-500 text-sm">
+                                Video nagrane przez klienta w <strong class="text-white">Etapie 2</strong> osadzamy na landingu w stylu Instagram Reels:
+                                pływający widget z animowanymi kółkami po prawej krawędzi (desktop) lub sticky pasek pod headerem (mobile),
+                                pełnoekranowa sekcja z phone-mockup carousel i pełnoekranowy lightbox z snap-scroll.
+                            </p>
+                        </div>
+
+                        <!-- Krok 1: Lista video z Etapu 2 -->
+                        <div id="videos-list-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
+                            <div class="flex items-start justify-between gap-4 mb-4">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                                        <i class="ph ph-video text-rose-400"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-[14px] font-medium text-white mb-1">1. Video z Etapu 2 (Nagrania)</h4>
+                                        <p id="videos-list-stats" class="text-[12px] text-zinc-500"></p>
+                                    </div>
+                                </div>
+                                <button onclick="loadVideosData()" class="px-3 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[12px] rounded-md transition-colors flex items-center gap-1.5">
+                                    <i class="ph ph-arrows-clockwise"></i>
+                                    Odśwież
+                                </button>
+                            </div>
+                            <div id="videos-list-container" class="ml-14 space-y-2"></div>
+                            <div id="videos-empty-state" class="ml-14 bg-zinc-900/30 border border-dashed border-white/5 rounded-lg p-6 text-center hidden">
+                                <i class="ph ph-video-camera-slash text-3xl text-zinc-600 mb-2"></i>
+                                <h4 class="text-[13px] font-medium text-white mb-1">Brak video</h4>
+                                <p class="text-[12px] text-zinc-500">Klient nie wgrał jeszcze nagrań w Etapie 2 → Nagrania.</p>
+                            </div>
+                        </div>
+
+                        <!-- Krok 2: Generator promptu -->
+                        <div id="videos-prompt-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4 hidden">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-terminal-window text-violet-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">2. Uruchom prompt w Claude Code</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Skopiuj prompt, otwórz <strong class="text-white">nową sesję Claude Code</strong> w <code class="text-zinc-400 bg-zinc-800/50 px-1 rounded">tn-crm</code> i wklej.
+                                        Wstawi/zaktualizuje <strong class="text-white">stories widget</strong> (po prawej na desktop) + <strong class="text-white">sekcję Reels</strong> (full-screen z phone-mockupem) + <strong class="text-white">lightbox</strong> (snap-scroll vertical).
+                                        <strong class="text-white">Uruchamiaj ponownie</strong> po dodaniu nowych video w Etapie 2.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <div class="relative">
+                                    <textarea id="videos-prompt-output" readonly rows="14" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-3 text-[12px] font-mono text-zinc-300 resize-y focus:outline-none"></textarea>
+                                    <button onclick="copyVideosPrompt()" class="absolute top-2 right-2 px-3 py-1.5 bg-violet-500 hover:bg-violet-400 text-white text-[11px] font-medium rounded-md transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-copy"></i>
+                                        <span id="copy-videos-prompt-label">Skopiuj prompt</span>
+                                    </button>
+                                </div>
+                                <p id="videos-inserted-status" class="text-[11px] text-zinc-600 mt-2"></p>
+                            </div>
+                        </div>
+                    </div><!-- /tab-video -->
+
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
                         <div class="mb-6">
@@ -5429,6 +5501,16 @@
                 // Checkmark zielony gdy admin podal URL i sa pobrane opinie
                 const opinieDone = !!optimizationNavStatus?.reviews_product_url && (optimizationNavStatus?.reviews_count || 0) > 0;
                 toggle('nav-check-opinie', opinieDone);
+
+                // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony i sa nagrania w Etapie 2
+                const navBtnVideo = document.getElementById('nav-btn-video');
+                const hasVideos = (videoData?.video_links || []).length > 0;
+                if (navBtnVideo) {
+                    navBtnVideo.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled || !hasVideos);
+                }
+                // Checkmark zielony gdy sekcja Reels wstawiona na landing
+                const videoInsertedDone = !!optimizationNavStatus?.videos_inserted_at && hasVideos;
+                toggle('nav-check-video', videoInsertedDone);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -7254,6 +7336,9 @@
                     break;
                 case 'opinie':
                     loadOpinieTab();
+                    break;
+                case 'video':
+                    loadVideosData();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -14933,6 +15018,256 @@ PODSUMOWANIE wyświetl na końcu:
             promptOutput.select();
             navigator.clipboard.writeText(promptOutput.value).then(() => {
                 const label = document.getElementById('copy-whatsapp-widget-prompt-label');
+                if (label) {
+                    label.textContent = 'Skopiowane!';
+                    setTimeout(() => { label.textContent = 'Skopiuj prompt'; }, 2000);
+                }
+                showToast('Prompt skopiowany — wklej w nową sesję Claude Code', 'success');
+            }).catch(err => {
+                showToast('Błąd kopiowania: ' + err.message, 'error');
+            });
+        }
+
+        // =============================================
+        // VIDEO / REELS (Etap 5 / Krok 3)
+        // =============================================
+
+        // Helper: parsuje URL video i zwraca {platform, ytId, url}
+        function parseVideoUrl(url) {
+            if (!url) return { platform: 'unknown', ytId: '', url: '' };
+            try {
+                const u = new URL(url);
+                const host = u.hostname.replace(/^www\./, '');
+                // YouTube (normal + shorts + youtu.be)
+                if (host.includes('youtube.com') || host === 'youtu.be') {
+                    let id = '';
+                    if (host === 'youtu.be') id = u.pathname.slice(1).split(/[?&/]/)[0];
+                    else if (u.pathname.startsWith('/shorts/')) id = u.pathname.split('/shorts/')[1].split(/[?&/]/)[0];
+                    else if (u.pathname.startsWith('/embed/')) id = u.pathname.split('/embed/')[1].split(/[?&/]/)[0];
+                    else id = u.searchParams.get('v') || '';
+                    return { platform: 'youtube', ytId: id, url };
+                }
+                if (host.includes('instagram.com')) return { platform: 'instagram', ytId: '', url };
+                if (host.includes('tiktok.com')) return { platform: 'tiktok', ytId: '', url };
+                return { platform: 'other', ytId: '', url };
+            } catch (_) {
+                return { platform: 'unknown', ytId: '', url };
+            }
+        }
+
+        let videosData = []; // cache na potrzeby promptu
+
+        async function loadVideosData() {
+            const listContainer = document.getElementById('videos-list-container');
+            const stats = document.getElementById('videos-list-stats');
+            const emptyState = document.getElementById('videos-empty-state');
+            const promptSection = document.getElementById('videos-prompt-section');
+            const insertedStatus = document.getElementById('videos-inserted-status');
+            if (!listContainer) return;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_video')
+                    .select('video_links, social_profiles')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                if (error) throw error;
+
+                const links = Array.isArray(data?.video_links) ? data.video_links : [];
+                const social = data?.social_profiles || {};
+                videosData = links.map((v, i) => {
+                    const parsed = parseVideoUrl(v.url || '');
+                    return {
+                        idx: i,
+                        url: v.url,
+                        title: v.title || '',
+                        platform: parsed.platform,
+                        ytId: parsed.ytId,
+                        uploaded_at: v.uploaded_at
+                    };
+                }).filter(v => v.url);
+
+                videosData._social = social;
+
+                if (videosData.length === 0) {
+                    listContainer.innerHTML = '';
+                    emptyState.classList.remove('hidden');
+                    stats.textContent = 'Brak nagrań w Etapie 2';
+                    promptSection.classList.add('hidden');
+                    return;
+                }
+
+                emptyState.classList.add('hidden');
+                const platformCount = videosData.reduce((acc, v) => { acc[v.platform] = (acc[v.platform] || 0) + 1; return acc; }, {});
+                const summary = Object.entries(platformCount).map(([k, v]) => v + ' × ' + (k === 'youtube' ? 'YouTube' : k === 'instagram' ? 'Instagram' : k === 'tiktok' ? 'TikTok' : k)).join(', ');
+                stats.textContent = videosData.length + ' video — ' + summary;
+
+                listContainer.innerHTML = videosData.map((v) => {
+                    const platformLabel = v.platform === 'youtube' ? 'YouTube' : v.platform === 'instagram' ? 'Instagram' : v.platform === 'tiktok' ? 'TikTok' : 'Inne';
+                    const platformColor = v.platform === 'youtube' ? 'text-red-400' : v.platform === 'instagram' ? 'text-pink-400' : v.platform === 'tiktok' ? 'text-zinc-300' : 'text-zinc-500';
+                    const thumb = v.ytId ? '<img src="https://img.youtube.com/vi/' + v.ytId + '/default.jpg" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0">' : '<div class="w-12 h-12 rounded flex-shrink-0 flex items-center justify-center bg-zinc-800"><i class="ph ph-video-camera text-zinc-500"></i></div>';
+                    return '<div class="flex items-center gap-3 p-2.5 bg-black/20 border border-white/5 rounded-lg">' +
+                        thumb +
+                        '<div class="flex-1 min-w-0">' +
+                        '<div class="text-[12px] text-zinc-300 truncate">' + (v.url || '') + '</div>' +
+                        '<div class="text-[11px] ' + platformColor + ' mt-0.5">' + platformLabel + (v.ytId ? ' · ' + v.ytId : '') + '</div>' +
+                        '</div>' +
+                        '<a href="' + v.url + '" target="_blank" rel="noopener" class="text-zinc-500 hover:text-zinc-300 flex-shrink-0" title="Otwórz">' +
+                        '<i class="ph ph-arrow-square-out"></i>' +
+                        '</a>' +
+                        '</div>';
+                }).join('');
+
+                // Render status wstawienia
+                const inserted = optimizationData?.videos_inserted_at;
+                if (insertedStatus) {
+                    if (inserted) {
+                        const d = new Date(inserted);
+                        insertedStatus.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Ostatnio wstawione na landing: <strong class="text-zinc-300">' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }) + '</strong>';
+                    } else {
+                        insertedStatus.innerHTML = '<i class="ph ph-warning text-amber-400"></i> Sekcja Reels jeszcze nie wstawiona na landing';
+                    }
+                }
+
+                // Pokaż sekcję promptu i wygeneruj
+                promptSection.classList.remove('hidden');
+                showVideosPrompt();
+            } catch (e) {
+                console.error('loadVideosData error:', e);
+                listContainer.innerHTML = '<p class="text-[12px] text-red-400">Błąd: ' + e.message + '</p>';
+            }
+        }
+
+        function showVideosPrompt() {
+            const promptOutput = document.getElementById('videos-prompt-output');
+            if (!promptOutput) return;
+
+            const salesPageUrl = workflow.sales_page_url || '';
+            const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
+            const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
+
+            // Brand z brandingu
+            let brandName = '';
+            try {
+                const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+                if (brandInfo?.value) {
+                    const parsed = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value;
+                    brandName = parsed?.name || brandInfo.title || '';
+                }
+            } catch (_) {}
+            const productName = brandName || workflow.offer_name || 'produkt';
+
+            // Czy są video
+            if (!videosData || videosData.length === 0) {
+                promptOutput.value = 'Brak video w Etapie 2 — najpierw klient musi dodać nagrania.';
+                return;
+            }
+
+            // Lista video w formacie czytelnym dla Claude
+            const videoList = videosData.map((v, i) => {
+                return '  ' + (i + 1) + '. [' + v.platform.toUpperCase() + '] ' + v.url + (v.ytId ? '  (yt_id: ' + v.ytId + ')' : '');
+            }).join('\n');
+
+            const social = videosData._social || {};
+            const socialLines = [];
+            if (social.youtube) socialLines.push('- YouTube: ' + social.youtube);
+            if (social.instagram) socialLines.push('- Instagram: ' + social.instagram);
+            if (social.tiktok) socialLines.push('- TikTok: ' + social.tiktok);
+
+            const prompt = [
+                'Wstaw/zaktualizuj sekcję Reels (video) na landingu ' + landingSlug + ' (inline, ZERO zewnętrznych skryptów — landing kopiowany do CMS klienta).',
+                '',
+                'PARAMETRY:',
+                '- WORKFLOW_ID: ' + workflow.id,
+                '- LANDING_SLUG: ' + landingSlug,
+                '- LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/' + landingSlug + '/index.html',
+                '- BRAND/PRODUKT: ' + productName,
+                '- CTA URL (z landingu): wykryj automatycznie — pierwszy "https://[domena]/checkout?products=..." w pliku',
+                '',
+                'VIDEO Z ETAPU 2 (workflow_video.video_links, ' + videosData.length + ' szt):',
+                videoList,
+                '',
+                socialLines.length ? 'PROFILE SOCIAL (workflow_video.social_profiles):' : '',
+                socialLines.length ? socialLines.join('\n') : '',
+                '',
+                'CO ZROBIĆ:',
+                '',
+                'KROK 1 — USUŃ z LANDING_FILE wszystkie poprzednie sekcje Reels (jeśli istnieją):',
+                '  - Bloki ograniczone komentarzami: <!-- VIDEOS:STORIES:START --> ... <!-- VIDEOS:STORIES:END -->',
+                '  - <!-- VIDEOS:REELS:START --> ... <!-- VIDEOS:REELS:END -->',
+                '  - Stare placeholder TESTIMONIALS (jeśli był) zostaje wymieniony.',
+                '',
+                'KROK 2 — WSTAW STORIES WIDGET przed <section class="hero">:',
+                '  Wzorzec (CSS + HTML): wzoruj się na c:/repos_tn/tn-crm/landing-pages/parova/index.html — bloki VIDEOS:STORIES:START/END.',
+                '  - Desktop (>=769px): floating fixed widget na prawej krawędzi (right: 20px; top: 50%; translateY(-50%)),',
+                '    pionowy stack 4-N kółek, gradient ring spinning IG-style, glass effect (rgba(255,255,255,0.85) + backdrop-filter:blur(24)),',
+                '    border-radius 32px, subtle bounce animation co 5s żeby przyciągała uwagę',
+                '  - Mobile (<769px): sticky horizontal pasek pod headerem (top: 70px), gap 14px',
+                '  - Każde kółko: 64px (desktop) / 56px (mobile), data-video-idx="N", spinning gradient (#833AB4→#FD1D1D→#FCB045→#00A896 4s linear infinite)',
+                '  - Wewnątrz kółka: thumbnail (YT: img.youtube.com/vi/{ID}/hqdefault.jpg, IG/TT: gradient placeholder)',
+                '  - Mały platform badge (YT/IG/TT logo) w prawym dolnym rogu kółka',
+                '',
+                'KROK 3 — WSTAW SEKCJĘ REELS w miejscu placeholdera TESTIMONIALS (lub po Comparison przed FAQ):',
+                '  - <section class="reels"> z dark immersive background (radial gradients primary+secondary)',
+                '  - Header: section-label "Reels", h2 "Zobacz [BRAND] w prawdziwym użyciu", subtitle',
+                '  - Carousel z phone-mockupami (aspect-ratio 9/16, scaled down by-side, peek effect):',
+                '    * Aktywny phone scale(1), opacity 1, glow (box-shadow primary)',
+                '    * Boczne phones scale(0.78), opacity 0.45, blur(2px)',
+                '    * Strzałki ←/→ na bokach, dots pagination pod carouselem',
+                '  - Pod carouselem CTA "Dodaj do koszyka" z gradientem brand colors, pulsing animation',
+                '  - Klik na nieaktywny phone → przesuwa carousel, klik na aktywny → otwiera lightbox',
+                '',
+                'KROK 4 — WSTAW LIGHTBOX (full-screen snap-scroll vertical):',
+                '  - <div id="reelsLightbox" class="reels-lightbox"> z position:fixed inset:0 background:#000 z-index:10000',
+                '  - .reels-lb-scroll z scroll-snap-type:y mandatory, slidy 100vh każdy z scroll-snap-align:start scroll-snap-stop:always',
+                '  - Każdy slajd: phone-frame 9/16 max-width 420px max-height 90vh',
+                '    * YouTube → iframe z autoplay=1&mute=1&loop=1&playlist={ID} (loop wymaga playlist param)',
+                '    * Instagram/TikTok → centrowany "Otwórz na [platforma]" link box (bo embed wymaga SDK)',
+                '  - Counter "1/N" na top, hint "↑↓ przewijaj • ESC zamyka" na bottom',
+                '  - Sticky CTA "Dodaj do koszyka" na dole każdego slajdu (gradient, position:absolute bottom:28)',
+                '  - JS: lazy-load iframe tylko dla aktywnego slajdu i sąsiadów (±1) — performance',
+                '  - JS: scroll-detection przez scroll event, pause iframe gdy slide odjedzie >1 odległość',
+                '',
+                'KROK 5 — JS REELS:',
+                '  - Carousel: setActive(i) centruje phone via translateX',
+                '  - Stories click → openLightbox(idx)',
+                '  - Lightbox: buildLightbox lazy on first open, snap-scroll detection updates counter',
+                '  - Klawisze: ESC zamyka lightbox',
+                '  - Klik tła lightboxu zamyka',
+                '',
+                'KROK 6 — Update workflow_optimization.videos_inserted_at = now() (przez REST):',
+                "  curl -X PATCH 'https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_optimization?workflow_id=eq." + workflow.id + "' \\",
+                '    -H \"apikey: $SUPABASE_SERVICE_KEY\" -H \"Authorization: Bearer $SUPABASE_SERVICE_KEY\" \\',
+                '    -H \"Content-Type: application/json\" \\',
+                "    -d '{\"videos_inserted_at\":\"" + new Date().toISOString() + '","videos_count":' + videosData.length + "}'",
+                '',
+                'WYMAGANIA TECHNICZNE:',
+                '- ZERO zewnętrznych <script src="..."> — wszystko inline',
+                '- prefers-reduced-motion: zatrzymaj animacje',
+                '- Klik na IG/TT story/phone → otwiera link w nowej karcie (target=_blank), bo nie da się embedować bez SDK',
+                '- Iframe YouTube z params: autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist={ID}',
+                '- CTA URL: znajdź pierwszy https://[domena]/checkout?products=... w landingu i użyj go w 3 miejscach (sekcja CTA, lightbox slide CTA, fallback)',
+                '',
+                'DEPLOY (auto):',
+                '1. git add landing-pages/' + landingSlug + '/index.html',
+                '2. git commit (--no-verify jeśli pre-existing FAIL-e w verify-landing) -m "Reels (' + landingSlug + '): stories tray + sekcja + lightbox"',
+                '3. git push',
+                '4. Po deployu sprawdź ' + (salesPageUrl || 'https://[domena]/') + ':',
+                '   - widget z animowanymi kółkami (desktop: prawa krawędź; mobile: pasek pod headerem)',
+                '   - sekcja Reels z phone-mockup carousel + CTA "Dodaj do koszyka"',
+                '   - klik na kółko/aktywny phone → lightbox z autoplay video, swipe/scroll vertical do następnego',
+                '   - klik na CTA w lightbox slidzie → checkout'
+            ].filter(l => l !== null).join('\n');
+
+            promptOutput.value = prompt;
+        }
+
+        function copyVideosPrompt() {
+            const promptOutput = document.getElementById('videos-prompt-output');
+            if (!promptOutput) return;
+            promptOutput.select();
+            navigator.clipboard.writeText(promptOutput.value).then(() => {
+                const label = document.getElementById('copy-videos-prompt-label');
                 if (label) {
                     label.textContent = 'Skopiowane!';
                     setTimeout(() => { label.textContent = 'Skopiuj prompt'; }, 2000);
