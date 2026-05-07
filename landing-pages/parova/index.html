@@ -4364,8 +4364,11 @@ Zobacz zdjęcia.</p>
       }, { passive: true });
 
       lbClose.addEventListener('click', closeLightbox);
+      // Klik gdziekolwiek POZA video frame i CTA zamyka lightbox
+      // (kliki na frame przekazujemy do iframe = play/pause; kliki na CTA = redirect)
       lb.addEventListener('click', function(e) {
-        if (e.target === lb) closeLightbox();
+        if (e.target.closest('.reels-lb-frame, .reels-lb-slide-cta, .reels-lb-close')) return;
+        closeLightbox();
       });
       document.addEventListener('keydown', function(e) {
         if (!lb.classList.contains('show')) return;
