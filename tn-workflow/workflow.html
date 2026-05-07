@@ -525,6 +525,11 @@
                             Video (Reels)
                             <span id="nav-check-video" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('narzedzia')" data-tab="narzedzia" id="nav-btn-narzedzia" class="workflow-sidebar-btn hidden">
+                            <i class="ph ph-toolbox"></i>
+                            Narzędzia
+                            <span id="nav-check-narzedzia" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -3348,6 +3353,28 @@
                             <h4 class="text-[14px] font-medium text-white mb-1">Brak opinii w bazie</h4>
                             <p class="text-[12px] text-zinc-500">Wpisz link do produktu i uruchom prompt, żeby pobrać opinie z AliExpress.</p>
                         </div>
+
+                        <!-- Krok 4: Przekaż klientowi (opinie dodane do sklepu) -->
+                        <div id="reviews-share-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mt-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-paper-plane-tilt text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">4. Opinie dodane do sklepu — przekaż klientowi</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Po wstawieniu opinii do landingu wyślij klientowi email z informacją że sekcja jest gotowa.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <p id="reviews-shared-status" class="text-[12px] text-zinc-500 mb-3"></p>
+                                <button onclick="shareReviewsWithClient()" id="reviews-share-btn" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    <span id="reviews-share-btn-label">Wyślij email i oznacz jako przekazane</span>
+                                </button>
+                            </div>
+                        </div>
                     </div><!-- /tab-opinie -->
 
                     <!-- TAB: Video / Reels (Etap 5 / Krok 3) -->
@@ -3364,7 +3391,7 @@
                             </p>
                         </div>
 
-                        <!-- Krok 1: Lista video z Etapu 2 -->
+                        <!-- Krok 1: Lista video z Etapu 2 + dodawanie/usuwanie -->
                         <div id="videos-list-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
                             <div class="flex items-start justify-between gap-4 mb-4">
                                 <div class="flex items-start gap-4">
@@ -3372,7 +3399,7 @@
                                         <i class="ph ph-video text-rose-400"></i>
                                     </div>
                                     <div>
-                                        <h4 class="text-[14px] font-medium text-white mb-1">1. Video z Etapu 2 (Nagrania)</h4>
+                                        <h4 class="text-[14px] font-medium text-white mb-1">1. Lista video</h4>
                                         <p id="videos-list-stats" class="text-[12px] text-zinc-500"></p>
                                     </div>
                                 </div>
@@ -3385,7 +3412,21 @@
                             <div id="videos-empty-state" class="ml-14 bg-zinc-900/30 border border-dashed border-white/5 rounded-lg p-6 text-center hidden">
                                 <i class="ph ph-video-camera-slash text-3xl text-zinc-600 mb-2"></i>
                                 <h4 class="text-[13px] font-medium text-white mb-1">Brak video</h4>
-                                <p class="text-[12px] text-zinc-500">Klient nie wgrał jeszcze nagrań w Etapie 2 → Nagrania.</p>
+                                <p class="text-[12px] text-zinc-500">Wgraj video z Etapu 2 lub dodaj nowy URL poniżej.</p>
+                            </div>
+
+                            <!-- Formularz dodawania nowego video -->
+                            <div class="ml-14 mt-4 pt-4 border-t border-white/5">
+                                <label class="block text-[12px] text-zinc-500 mb-2">Dodaj nowe video (URL z YouTube/Instagram/TikTok)</label>
+                                <div class="flex gap-2">
+                                    <input type="url" id="videos-add-input" placeholder="https://youtube.com/shorts/... lub instagram.com/reel/..."
+                                           class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[13px] text-white focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/20 focus:outline-none">
+                                    <button onclick="addVideo()" class="px-4 py-2 bg-rose-500 hover:bg-rose-400 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-plus"></i>
+                                        Dodaj
+                                    </button>
+                                </div>
+                                <p id="videos-add-hint" class="text-[11px] text-zinc-600 mt-1"></p>
                             </div>
                         </div>
 
@@ -3415,7 +3456,51 @@
                                 <p id="videos-inserted-status" class="text-[11px] text-zinc-600 mt-2"></p>
                             </div>
                         </div>
+
+                        <!-- Krok 3: Przekaż klientowi (email + share flag) -->
+                        <div id="videos-share-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-paper-plane-tilt text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">3. Przekaż klientowi</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Po wstawieniu sekcji Reels na landing wyślij klientowi email z linkiem do strony i panelu.
+                                        Po kliknięciu przejdziemy do następnego kroku — <strong class="text-white">Narzędzia</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <p id="videos-shared-status" class="text-[12px] text-zinc-500 mb-3"></p>
+                                <button onclick="shareVideosWithClient()" id="videos-share-btn" class="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-black text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    <span id="videos-share-btn-label">Wyślij email i oznacz jako przekazane</span>
+                                </button>
+                            </div>
+                        </div>
                     </div><!-- /tab-video -->
+
+                    <!-- TAB: Narzędzia (Etap 5 / Krok 4) — placeholder, zajmiemy się potem -->
+                    <div id="tab-narzedzia" class="workflow-panel hidden">
+                        <div class="mb-6">
+                            <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
+                                <i class="ph ph-toolbox text-amber-400"></i>
+                                Narzędzia
+                            </h3>
+                            <p class="text-zinc-500 text-sm">
+                                Krok 4 Etapu 5 — wkrótce uzupełnimy listę narzędzi i konfiguracji potrzebnych do prowadzenia sklepu.
+                            </p>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-dashed border-white/10 rounded-xl p-12 text-center">
+                            <i class="ph ph-toolbox text-5xl text-amber-400/50 mb-3"></i>
+                            <h4 class="text-[15px] font-medium text-white mb-2">W przygotowaniu</h4>
+                            <p class="text-[13px] text-zinc-500 max-w-md mx-auto">
+                                Krok aktywuje się po przekazaniu Reels klientowi. Zawartość zostanie uzupełniona w kolejnej iteracji.
+                            </p>
+                            <p id="tools-started-status" class="text-[11px] text-zinc-600 mt-4"></p>
+                        </div>
+                    </div><!-- /tab-narzedzia -->
 
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
@@ -5382,7 +5467,7 @@
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -5498,8 +5583,8 @@
                 if (navBtnOpinie) {
                     navBtnOpinie.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled);
                 }
-                // Checkmark zielony gdy admin podal URL i sa pobrane opinie
-                const opinieDone = !!optimizationNavStatus?.reviews_product_url && (optimizationNavStatus?.reviews_count || 0) > 0;
+                // Checkmark zielony gdy opinie zostaly oznaczone jako przekazane klientowi
+                const opinieDone = !!optimizationNavStatus?.reviews_shared_at;
                 toggle('nav-check-opinie', opinieDone);
 
                 // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony i sa nagrania w Etapie 2
@@ -5508,9 +5593,16 @@
                 if (navBtnVideo) {
                     navBtnVideo.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled || !hasVideos);
                 }
-                // Checkmark zielony gdy sekcja Reels wstawiona na landing
-                const videoInsertedDone = !!optimizationNavStatus?.videos_inserted_at && hasVideos;
-                toggle('nav-check-video', videoInsertedDone);
+                // Checkmark zielony gdy sekcja przekazana klientowi (videos_shared_at)
+                const videoSharedDone = !!optimizationNavStatus?.videos_shared_at;
+                toggle('nav-check-video', videoSharedDone);
+
+                // Etap 5 / Krok 4 - Narzedzia: pokaz po przekazaniu Reels (videos_shared_at)
+                const navBtnNarzedzia = document.getElementById('nav-btn-narzedzia');
+                if (navBtnNarzedzia) {
+                    navBtnNarzedzia.classList.toggle('hidden', !optimizationNavStatus?.videos_shared_at);
+                }
+                toggle('nav-check-narzedzia', !!optimizationNavStatus?.tools_ready_at);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -7339,6 +7431,9 @@
                     break;
                 case 'video':
                     loadVideosData();
+                    break;
+                case 'narzedzia':
+                    loadNarzedziaTab();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -14461,9 +14556,83 @@ Zwróć TYLKO JSON.`;
                 }
 
                 await refreshReviewsList();
+                renderReviewsShareSection();
             } catch (err) {
                 console.error('loadOpinieTab error:', err);
                 showToast('Błąd ładowania opinii: ' + err.message, 'error');
+            }
+        }
+
+        function renderReviewsShareSection() {
+            const status = document.getElementById('reviews-shared-status');
+            const btn = document.getElementById('reviews-share-btn');
+            const btnLabel = document.getElementById('reviews-share-btn-label');
+            if (!status || !btn) return;
+            const sharedAt = optimizationData?.reviews_shared_at;
+            const reviewsCount = optimizationData?.reviews_count || 0;
+
+            if (reviewsCount === 0) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Najpierw pobierz opinie (Krok 2)';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+                return;
+            }
+            btn.disabled = false;
+            if (sharedAt) {
+                const d = new Date(sharedAt);
+                status.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Przekazane klientowi: <strong class="text-zinc-300">' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + '</strong>';
+                if (btnLabel) btnLabel.textContent = 'Wyślij ponownie';
+            } else {
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Po kliknięciu wyślemy email do klienta o gotowych opiniach';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+            }
+        }
+
+        async function shareReviewsWithClient() {
+            const btn = document.getElementById('reviews-share-btn');
+            const btnLabel = document.getElementById('reviews-share-btn-label');
+            if (!btn || btn.disabled) return;
+            if (!confirm('Wysłać email do klienta o gotowych opiniach?')) return;
+            try {
+                btn.disabled = true;
+                if (btnLabel) btnLabel.textContent = 'Wysyłanie...';
+                const now = new Date().toISOString();
+                const { error: ue } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({ reviews_shared_at: now })
+                    .eq('workflow_id', workflow.id);
+                if (ue) throw ue;
+
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'reviews_shared',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflowId: workflow.id,
+                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                clientName: workflow.customer_name || 'Kliencie',
+                                clientEmail: workflow.customer_email,
+                                salesPageUrl: workflow.sales_page_url || '',
+                                reviewsCount: optimizationData?.reviews_count || 0,
+                                reviewsAvg: optimizationData?.reviews_avg_star || null
+                            }
+                        }
+                    });
+                } catch (te) {
+                    console.warn('automation-trigger reviews_shared failed:', te);
+                }
+
+                if (optimizationData) optimizationData.reviews_shared_at = now;
+                showToast('Email wysłany do klienta', 'success');
+                renderReviewsShareSection();
+                updateNavChecks();
+            } catch (e) {
+                console.error('shareReviewsWithClient error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
             }
         }
 
@@ -15106,15 +15275,18 @@ PODSUMOWANIE wyświetl na końcu:
                     const platformLabel = v.platform === 'youtube' ? 'YouTube' : v.platform === 'instagram' ? 'Instagram' : v.platform === 'tiktok' ? 'TikTok' : 'Inne';
                     const platformColor = v.platform === 'youtube' ? 'text-red-400' : v.platform === 'instagram' ? 'text-pink-400' : v.platform === 'tiktok' ? 'text-zinc-300' : 'text-zinc-500';
                     const thumb = v.ytId ? '<img src="https://img.youtube.com/vi/' + v.ytId + '/default.jpg" alt="" class="w-12 h-12 rounded object-cover flex-shrink-0">' : '<div class="w-12 h-12 rounded flex-shrink-0 flex items-center justify-center bg-zinc-800"><i class="ph ph-video-camera text-zinc-500"></i></div>';
-                    return '<div class="flex items-center gap-3 p-2.5 bg-black/20 border border-white/5 rounded-lg">' +
+                    return '<div class="flex items-center gap-3 p-2.5 bg-black/20 border border-white/5 rounded-lg group">' +
                         thumb +
                         '<div class="flex-1 min-w-0">' +
                         '<div class="text-[12px] text-zinc-300 truncate">' + (v.url || '') + '</div>' +
                         '<div class="text-[11px] ' + platformColor + ' mt-0.5">' + platformLabel + (v.ytId ? ' · ' + v.ytId : '') + '</div>' +
                         '</div>' +
-                        '<a href="' + v.url + '" target="_blank" rel="noopener" class="text-zinc-500 hover:text-zinc-300 flex-shrink-0" title="Otwórz">' +
+                        '<a href="' + v.url + '" target="_blank" rel="noopener" class="text-zinc-500 hover:text-zinc-300 flex-shrink-0 p-1.5" title="Otwórz">' +
                         '<i class="ph ph-arrow-square-out"></i>' +
                         '</a>' +
+                        '<button onclick="deleteVideo(' + v.idx + ')" class="text-zinc-500 hover:text-red-400 flex-shrink-0 p-1.5 transition-colors" title="Usuń video">' +
+                        '<i class="ph ph-trash"></i>' +
+                        '</button>' +
                         '</div>';
                 }).join('');
 
@@ -15129,12 +15301,202 @@ PODSUMOWANIE wyświetl na końcu:
                     }
                 }
 
+                // Update share button + status
+                renderShareSection();
+
                 // Pokaż sekcję promptu i wygeneruj
                 promptSection.classList.remove('hidden');
                 showVideosPrompt();
             } catch (e) {
                 console.error('loadVideosData error:', e);
                 listContainer.innerHTML = '<p class="text-[12px] text-red-400">Błąd: ' + e.message + '</p>';
+            }
+        }
+
+        // Add new video URL — append do workflow_video.video_links
+        async function addVideo() {
+            const input = document.getElementById('videos-add-input');
+            const hint = document.getElementById('videos-add-hint');
+            if (!input) return;
+            const url = input.value.trim();
+            if (!url) { hint.innerHTML = '<span class="text-amber-400">Wpisz URL video</span>'; return; }
+
+            const parsed = parseVideoUrl(url);
+            if (parsed.platform === 'unknown') { hint.innerHTML = '<span class="text-red-400">Niepoprawny URL</span>'; return; }
+            if (parsed.platform === 'other') { hint.innerHTML = '<span class="text-amber-400">Nieobsługiwana platforma — tylko YouTube/Instagram/TikTok</span>'; return; }
+
+            try {
+                hint.innerHTML = '<span class="text-zinc-400">Dodaję...</span>';
+                // Pobierz aktualne video_links
+                const { data: vd, error: ge } = await supabaseClient
+                    .from('workflow_video')
+                    .select('id, video_links')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                if (ge) throw ge;
+
+                let links = Array.isArray(vd?.video_links) ? [...vd.video_links] : [];
+                if (links.some(l => l.url === url)) {
+                    hint.innerHTML = '<span class="text-amber-400">To video już jest na liście</span>';
+                    return;
+                }
+                links.push({ url, title: '', uploaded_at: new Date().toISOString() });
+
+                if (vd?.id) {
+                    const { error: ue } = await supabaseClient
+                        .from('workflow_video')
+                        .update({ video_links: links })
+                        .eq('workflow_id', workflow.id);
+                    if (ue) throw ue;
+                } else {
+                    // Brak rekordu — utwórz
+                    const { error: ie } = await supabaseClient
+                        .from('workflow_video')
+                        .insert({ workflow_id: workflow.id, video_links: links, is_active: true });
+                    if (ie) throw ie;
+                }
+
+                input.value = '';
+                hint.innerHTML = '<span class="text-emerald-400">✓ Dodano</span>';
+                showToast('Video dodane', 'success');
+                setTimeout(() => { hint.innerHTML = ''; }, 3000);
+                await loadVideosData();
+            } catch (e) {
+                console.error('addVideo error', e);
+                hint.innerHTML = '<span class="text-red-400">Błąd: ' + (e.message || 'nieznany') + '</span>';
+            }
+        }
+
+        // Delete video by index — remove z workflow_video.video_links
+        async function deleteVideo(idx) {
+            if (!confirm('Na pewno usunąć to video z listy?')) return;
+            try {
+                const { data: vd, error: ge } = await supabaseClient
+                    .from('workflow_video')
+                    .select('video_links')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+                if (ge) throw ge;
+                let links = Array.isArray(vd?.video_links) ? [...vd.video_links] : [];
+                if (idx < 0 || idx >= links.length) return;
+                links.splice(idx, 1);
+                const { error: ue } = await supabaseClient
+                    .from('workflow_video')
+                    .update({ video_links: links })
+                    .eq('workflow_id', workflow.id);
+                if (ue) throw ue;
+                showToast('Video usunięte', 'success');
+                await loadVideosData();
+            } catch (e) {
+                console.error('deleteVideo error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+            }
+        }
+
+        // Render sekcji "Przekaż klientowi" — przycisk + status
+        function renderShareSection() {
+            const status = document.getElementById('videos-shared-status');
+            const btn = document.getElementById('videos-share-btn');
+            const btnLabel = document.getElementById('videos-share-btn-label');
+            if (!status || !btn) return;
+
+            const sharedAt = optimizationData?.videos_shared_at;
+            const insertedAt = optimizationData?.videos_inserted_at;
+            const hasVideos = videosData && videosData.length > 0;
+
+            // Disable jeśli brak video lub jeszcze nie wstawione na landing
+            if (!hasVideos) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Brak video do przekazania';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+                return;
+            }
+            if (!insertedAt) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-warning text-amber-400"></i> Najpierw uruchom prompt z Krok 2 aby wstawić sekcję na landing';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+                return;
+            }
+            btn.disabled = false;
+            if (sharedAt) {
+                const d = new Date(sharedAt);
+                status.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Przekazane klientowi: <strong class="text-zinc-300">' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + '</strong>';
+                if (btnLabel) btnLabel.textContent = 'Wyślij ponownie';
+            } else {
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Po kliknięciu wyślemy email do klienta i odblokuje się krok Narzędzia';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+            }
+        }
+
+        // Send email + ustawia videos_shared_at + odblokowuje Narzedzia (tools_started_at)
+        async function shareVideosWithClient() {
+            const btn = document.getElementById('videos-share-btn');
+            const btnLabel = document.getElementById('videos-share-btn-label');
+            if (!btn || btn.disabled) return;
+            if (!confirm('Wysłać email do klienta o gotowej sekcji Reels?')) return;
+
+            try {
+                btn.disabled = true;
+                if (btnLabel) btnLabel.textContent = 'Wysyłanie...';
+
+                const now = new Date().toISOString();
+                // Update workflow_optimization
+                const { error: ue } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({
+                        videos_shared_at: now,
+                        tools_started_at: optimizationData?.tools_started_at || now
+                    })
+                    .eq('workflow_id', workflow.id);
+                if (ue) throw ue;
+
+                // Wywołaj automation-trigger żeby wysłał email (analogicznie do innych etapów)
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'videos_shared',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflowId: workflow.id,
+                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                clientName: workflow.customer_name || 'Kliencie',
+                                clientEmail: workflow.customer_email,
+                                salesPageUrl: workflow.sales_page_url || '',
+                                videosCount: videosData.length
+                            }
+                        }
+                    });
+                } catch (te) {
+                    console.warn('automation-trigger failed (kontynuujemy):', te);
+                }
+
+                // Refresh local cache
+                if (optimizationData) {
+                    optimizationData.videos_shared_at = now;
+                    if (!optimizationData.tools_started_at) optimizationData.tools_started_at = now;
+                }
+                showToast('Email wysłany do klienta — Narzędzia odblokowane', 'success');
+                renderShareSection();
+                updateNavChecks();
+            } catch (e) {
+                console.error('shareVideosWithClient error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+            }
+        }
+
+        // Etap 5 / Krok 4 — Narzedzia (placeholder)
+        function loadNarzedziaTab() {
+            const status = document.getElementById('tools-started-status');
+            if (!status) return;
+            const startedAt = optimizationData?.tools_started_at;
+            if (startedAt) {
+                const d = new Date(startedAt);
+                status.innerHTML = 'Krok aktywowany: ' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+            } else {
+                status.innerHTML = 'Krok jeszcze nie aktywowany — przekaż Reels klientowi.';
             }
         }
 

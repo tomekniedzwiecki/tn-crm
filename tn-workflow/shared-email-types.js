@@ -47,7 +47,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     optymalizacja: {
         label: 'Etap 5 - Optymalizacja',
         description: 'Maile związane z optymalizacją sprzedaży',
-        templates: ['optimization_started']
+        templates: ['optimization_started', 'reviews_shared', 'videos_shared']
     }
 };
 
@@ -203,6 +203,18 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy admin aktywuje Etap 5 (COD + WhatsApp + odzyskiwanie zamówień)',
         icon: 'ph-sparkle',
         color: 'violet'
+    },
+    'reviews_shared': {
+        name: 'Opinie dodane do sklepu',
+        description: 'Wysyłany gdy admin oznaczy że opinie są już widoczne w sklepie (Etap 5/Krok 2)',
+        icon: 'ph-star',
+        color: 'yellow'
+    },
+    'videos_shared': {
+        name: 'Reels (video) udostępnione',
+        description: 'Wysyłany gdy admin oznaczy że sekcja Reels jest gotowa na landingu (Etap 5/Krok 3)',
+        icon: 'ph-play-circle',
+        color: 'rose'
     }
 };
 
@@ -259,7 +271,9 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
         { value: 'content_ready', label: 'Materiały reklamowe gotowe' },
         { value: 'campaign_launched', label: 'Kampania uruchomiona' },
-        { value: 'optimization_started', label: 'Etap 5 — Optymalizacja' }
+        { value: 'optimization_started', label: 'Etap 5 — Optymalizacja' },
+        { value: 'reviews_shared', label: 'Opinie dodane do sklepu' },
+        { value: 'videos_shared', label: 'Reels (video) udostępnione' }
     ]
 };
 
@@ -296,5 +310,7 @@ const TRIGGER_DEFINITIONS = {
     content_ready: { label: 'Materiały reklamowe gotowe', icon: 'ph-magic-wand', color: 'violet' },
     campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' },
     // Etap 5 - Optymalizacja
-    optimization_started: { label: 'Etap 5 — Optymalizacja', icon: 'ph-sparkle', color: 'violet' }
+    optimization_started: { label: 'Etap 5 — Optymalizacja', icon: 'ph-sparkle', color: 'violet' },
+    reviews_shared: { label: 'Opinie dodane do sklepu', icon: 'ph-star', color: 'yellow' },
+    videos_shared: { label: 'Reels udostępnione', icon: 'ph-play-circle', color: 'rose' }
 };

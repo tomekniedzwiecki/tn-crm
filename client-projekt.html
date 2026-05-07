@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050710';
+        const APP_VERSION = '2026050715';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1604,6 +1604,16 @@
                             <span>Opinie</span>
                             <i id="dash-nav-check-opinie" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="dash-nav-video" class="dash-nav-item hidden" onclick="switchToDashTab('video')">
+                            <i class="ph ph-play-circle"></i>
+                            <span>Video (Reels)</span>
+                            <i id="dash-nav-check-video" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                        <div id="dash-nav-narzedzia" class="dash-nav-item hidden" onclick="switchToDashTab('narzedzia')">
+                            <i class="ph ph-toolbox"></i>
+                            <span>Narzędzia</span>
+                            <i id="dash-nav-check-narzedzia" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1742,6 +1752,16 @@
                                 <i class="ph ph-star"></i>
                                 <span>Opinie</span>
                                 <i id="dash-nav-check-opinie-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-mobile-video" class="dash-nav-item hidden" onclick="switchToDashTab('video');toggleDashMobileMenu()">
+                                <i class="ph ph-play-circle"></i>
+                                <span>Video (Reels)</span>
+                                <i id="dash-nav-check-video-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-mobile-narzedzia" class="dash-nav-item hidden" onclick="switchToDashTab('narzedzia');toggleDashMobileMenu()">
+                                <i class="ph ph-toolbox"></i>
+                                <span>Narzędzia</span>
+                                <i id="dash-nav-check-narzedzia-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -2117,6 +2137,24 @@
                 <div id="dash-etap5-box-optymalizacje" class="bento-box p-0 overflow-hidden cursor-pointer transition-all"
                      style="grid-column: span 12; min-height: 220px;" onclick="switchToDashTab('optymalizacje')">
                     <div id="dash-etap5-optymalizacje-content" class="h-full"></div>
+                </div>
+
+                <!-- Opinie Box (visible po cod_enabled) -->
+                <div id="dash-etap5-box-opinie" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
+                     style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('opinie')">
+                    <div id="dash-etap5-opinie-content" class="h-full"></div>
+                </div>
+
+                <!-- Video Box (visible po videos w workflow_video) -->
+                <div id="dash-etap5-box-video" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
+                     style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('video')">
+                    <div id="dash-etap5-video-content" class="h-full"></div>
+                </div>
+
+                <!-- Narzedzia Box (visible po videos_shared_at) -->
+                <div id="dash-etap5-box-narzedzia" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
+                     style="grid-column: span 12; min-height: 180px;" onclick="switchToDashTab('narzedzia')">
+                    <div id="dash-etap5-narzedzia-content" class="h-full"></div>
                 </div>
             </div><!-- /dash-bento-etap5 -->
 
@@ -4943,6 +4981,53 @@
                 <style>@keyframes rev-spin { to { transform: rotate(360deg); } }</style>
             </div>
 
+            <!-- Tab: Video (Reels) — Etap 5 / Krok 3 -->
+            <div id="tab-video" class="tab-panel hidden animate-enter">
+                <div class="mb-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center">
+                            <i class="ph ph-play-circle text-rose-400 text-xl"></i>
+                        </div>
+                        <h2 class="text-white text-xl font-semibold">Reels (video) na sklepie</h2>
+                    </div>
+                    <p class="text-[#999] text-[13px] leading-relaxed">
+                        Twoje nagrania z Etapu 2 osadzone na sklepie w stylu Instagram Reels. Klienci widzą animowane kółka po prawej krawędzi, sekcję z phone-mockupem i pełnoekranowy odtwarzacz.
+                    </p>
+                </div>
+                <div id="client-videos-status" class="bento-box p-6 mb-4" style="background:rgba(244,63,94,0.04);border:1px solid rgba(244,63,94,0.18);">
+                    <p class="text-[13px] text-[#bbb]">Ładowanie statusu…</p>
+                </div>
+                <div id="client-videos-list" class="space-y-3"></div>
+                <div class="bento-box p-5 mt-6" style="background:rgba(255,255,255,0.02);">
+                    <p class="text-[12px] text-[#999] leading-relaxed">
+                        <i class="ph ph-info text-rose-400"></i>
+                        Aby dodać kolejne video, wgraj je w zakładce <strong class="text-white">Etap 2 → Nagrania</strong>. Po dodaniu poinformuj nas — odświeżymy sekcję na sklepie.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Tab: Narzedzia — Etap 5 / Krok 4 (placeholder) -->
+            <div id="tab-narzedzia" class="tab-panel hidden animate-enter">
+                <div class="mb-6">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
+                            <i class="ph ph-toolbox text-amber-400 text-xl"></i>
+                        </div>
+                        <h2 class="text-white text-xl font-semibold">Narzędzia</h2>
+                    </div>
+                    <p class="text-[#999] text-[13px] leading-relaxed">
+                        Lista narzędzi i konfiguracji potrzebnych do prowadzenia Twojego sklepu.
+                    </p>
+                </div>
+                <div class="bento-box p-12 text-center" style="border:1px dashed rgba(245,158,11,0.25);background:rgba(245,158,11,0.03);">
+                    <i class="ph ph-toolbox text-5xl text-amber-400/50 mb-3"></i>
+                    <h3 class="text-white text-lg font-semibold mb-2">W przygotowaniu</h3>
+                    <p class="text-[13px] text-[#999] max-w-md mx-auto">
+                        Krok aktywuje się po przekazaniu sekcji Reels. Wkrótce uzupełnimy zawartość — dam znać mailem gdy wszystko będzie gotowe.
+                    </p>
+                </div>
+            </div>
+
         </main>
         </div><!-- /flex -->
     </div>
@@ -6866,18 +6951,102 @@
             const codDone = !!optimizationData?.cod_enabled && !!optimizationData?.cod_stock_confirmed;
             const whatsappDone = !!optimizationData?.whatsapp_enabled;
             const recoveryDone = !!optimizationData?.recovery_calls_done;
+            const reviewsShared = !!optimizationData?.reviews_shared_at;
+            const videosShared = !!optimizationData?.videos_shared_at;
+            const toolsReady = !!optimizationData?.tools_ready_at;
 
-            const completedSteps = [codDone, whatsappDone, recoveryDone].filter(Boolean).length;
-            const progressPercent = Math.round((completedSteps / 3) * 100);
+            const optimizationCoreDone = codDone && whatsappDone && recoveryDone;
+            const reviewsAvailable = !!optimizationData?.cod_enabled;
+            const videosAvailable = (videoData?.video_links || []).length > 0;
+            const toolsAvailable = !!optimizationData?.videos_shared_at;
+
+            // Liczymy progress: 1 punkt za optymalizacje (3 sub-kroki) + ewentualnie reviews/videos/tools
+            const totalSteps = 1 + (reviewsAvailable ? 1 : 0) + (videosAvailable ? 1 : 0) + (toolsAvailable ? 1 : 0);
+            const completedSteps = (optimizationCoreDone ? 1 : 0) + (reviewsShared ? 1 : 0) + (videosShared ? 1 : 0) + (toolsReady ? 1 : 0);
+            const progressPercent = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
 
             const labelEl = document.getElementById('dash-etap5-progress-label');
             const percentEl = document.getElementById('dash-etap5-progress-percent');
             const barEl = document.getElementById('dash-etap5-progress-bar');
-            if (labelEl) labelEl.textContent = completedSteps === 3 ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
+            if (labelEl) labelEl.textContent = completedSteps === totalSteps ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
             if (percentEl) percentEl.textContent = progressPercent;
             if (barEl) barEl.style.width = progressPercent + '%';
 
+            // Visibility boxów
+            document.getElementById('dash-etap5-box-opinie')?.classList.toggle('hidden', !reviewsAvailable);
+            document.getElementById('dash-etap5-box-video')?.classList.toggle('hidden', !videosAvailable);
+            document.getElementById('dash-etap5-box-narzedzia')?.classList.toggle('hidden', !toolsAvailable);
+
             renderEtap5OptymalizacjeBox();
+            if (reviewsAvailable) renderEtap5OpinieBox();
+            if (videosAvailable) renderEtap5VideoBox();
+            if (toolsAvailable) renderEtap5NarzedziaBox();
+        }
+
+        function renderEtap5OpinieBox() {
+            const content = document.getElementById('dash-etap5-opinie-content');
+            if (!content) return;
+            const sharedAt = optimizationData?.reviews_shared_at;
+            const reviewsCount = optimizationData?.reviews_count || 0;
+            const status = sharedAt
+                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Opinie widoczne na sklepie</span>'
+                : (reviewsCount > 0
+                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Wkrótce dodamy do sklepu</span>'
+                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Pobieramy opinie</span>');
+            content.innerHTML =
+                '<div class="p-6 h-full flex flex-col">' +
+                '<div class="flex items-start gap-3 mb-3">' +
+                '<div class="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center flex-shrink-0">' +
+                '<i class="ph ph-star text-yellow-400 text-xl"></i></div>' +
+                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Opinie klientów</h3>' +
+                '<p class="text-[12px] text-[#999] mt-0.5">Krok 2 — social proof na sklepie</p></div></div>' +
+                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
+                (reviewsCount > 0 ? '<div class="text-[11px] text-[#777] mt-2">' + reviewsCount + ' opinii w bazie</div>' : '') +
+                '</div>';
+        }
+
+        function renderEtap5VideoBox() {
+            const content = document.getElementById('dash-etap5-video-content');
+            if (!content) return;
+            const sharedAt = optimizationData?.videos_shared_at;
+            const insertedAt = optimizationData?.videos_inserted_at;
+            const videoCount = (videoData?.video_links || []).length;
+            const status = sharedAt
+                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Reels gotowe na sklepie</span>'
+                : (insertedAt
+                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Sekcja wstawiona — wkrótce powiadomimy</span>'
+                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Przygotowujemy sekcję</span>');
+            content.innerHTML =
+                '<div class="p-6 h-full flex flex-col">' +
+                '<div class="flex items-start gap-3 mb-3">' +
+                '<div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center flex-shrink-0">' +
+                '<i class="ph ph-play-circle text-rose-400 text-xl"></i></div>' +
+                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Reels (video)</h3>' +
+                '<p class="text-[12px] text-[#999] mt-0.5">Krok 3 — video w stylu Instagram</p></div></div>' +
+                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
+                '<div class="text-[11px] text-[#777] mt-2">' + videoCount + ' nagrań</div>' +
+                '</div>';
+        }
+
+        function renderEtap5NarzedziaBox() {
+            const content = document.getElementById('dash-etap5-narzedzia-content');
+            if (!content) return;
+            const ready = !!optimizationData?.tools_ready_at;
+            const started = !!optimizationData?.tools_started_at;
+            const status = ready
+                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Narzędzia skonfigurowane</span>'
+                : (started
+                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Konfigurujemy narzędzia</span>'
+                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Wkrótce</span>');
+            content.innerHTML =
+                '<div class="p-6 h-full flex flex-col">' +
+                '<div class="flex items-start gap-3 mb-3">' +
+                '<div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">' +
+                '<i class="ph ph-toolbox text-amber-400 text-xl"></i></div>' +
+                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Narzędzia</h3>' +
+                '<p class="text-[12px] text-[#999] mt-0.5">Krok 4 — konfiguracja narzędzi</p></div></div>' +
+                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
+                '</div>';
         }
 
         function renderEtap5OptymalizacjeBox() {
@@ -7586,10 +7755,30 @@
             ['dash-nav-opinie','dash-mobile-opinie','nav-opinie-desktop','nav-opinie-mobile-wrap'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasOpinie);
             });
-            // Checkmark zielony gdy sa pobrane opinie
-            const opinieDone = (optimizationData?.reviews_count || 0) > 0;
+            // Checkmark zielony gdy opinie zostaly udostepnione
+            const opinieDone = !!optimizationData?.reviews_shared_at;
             ['dash-nav-check-opinie','dash-nav-check-opinie-mobile','nav-check-opinie-desktop','nav-check-opinie-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !opinieDone);
+            });
+
+            // Etap 5 / Krok 3 - Video (Reels): pokaz gdy sa nagrania w workflow_video
+            const hasVideoStep = (videoData?.video_links || []).length > 0 && !!optimizationData?.cod_enabled;
+            ['dash-nav-video','dash-mobile-video'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !hasVideoStep);
+            });
+            const videoDone = !!optimizationData?.videos_shared_at;
+            ['dash-nav-check-video','dash-nav-check-video-mobile'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !videoDone);
+            });
+
+            // Etap 5 / Krok 4 - Narzedzia: pokaz po videos_shared_at
+            const hasNarzedzia = !!optimizationData?.videos_shared_at;
+            ['dash-nav-narzedzia','dash-mobile-narzedzia'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !hasNarzedzia);
+            });
+            const narzedziaDone = !!optimizationData?.tools_ready_at;
+            ['dash-nav-check-narzedzia','dash-nav-check-narzedzia-mobile'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !narzedziaDone);
             });
 
             // Update landing tab status
@@ -8267,9 +8456,70 @@
                 case 'opinie':
                     loadOpinieClient();
                     break;
+                case 'video':
+                    loadVideoClient();
+                    break;
+                case 'narzedzia':
+                    loadNarzedziaClient();
+                    break;
             }
         }
         window.switchTab = switchTab;
+
+        // Etap 5 / Krok 3 — Video (Reels) view dla klienta
+        function loadVideoClient() {
+            const statusBox = document.getElementById('client-videos-status');
+            const listEl = document.getElementById('client-videos-list');
+            if (!statusBox || !listEl) return;
+
+            const sharedAt = optimizationData?.videos_shared_at;
+            const insertedAt = optimizationData?.videos_inserted_at;
+            const links = videoData?.video_links || [];
+            const salesUrl = workflow?.sales_page_url || '';
+
+            let statusHtml;
+            if (sharedAt) {
+                const d = new Date(sharedAt);
+                statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0"><i class="ph-fill ph-check-circle text-emerald-400"></i></div>' +
+                    '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Sekcja Reels jest już na sklepie ✓</p>' +
+                    '<p class="text-[12px] text-[#999]">Udostępnione: ' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + '</p>' +
+                    (salesUrl ? '<a href="' + salesUrl + '" target="_blank" rel="noopener" class="inline-flex items-center gap-1.5 text-[13px] text-rose-400 hover:text-rose-300 mt-2"><i class="ph ph-arrow-square-out"></i> Zobacz na sklepie</a>' : '') +
+                    '</div></div>';
+            } else if (insertedAt) {
+                statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-clock text-amber-400"></i></div>' +
+                    '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Sekcja gotowa — wkrótce powiadomienie</p>' +
+                    '<p class="text-[12px] text-[#999]">Wstawiliśmy sekcję Reels na sklep, niedługo dostaniesz mail z potwierdzeniem.</p></div></div>';
+            } else {
+                statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-zinc-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-hourglass text-zinc-400"></i></div>' +
+                    '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Przygotowujemy sekcję Reels</p>' +
+                    '<p class="text-[12px] text-[#999]">Twoje nagrania z Etapu 2 wkrótce trafią na stronę sklepu.</p></div></div>';
+            }
+            statusBox.innerHTML = statusHtml;
+
+            if (links.length === 0) {
+                listEl.innerHTML = '<div class="bento-box p-6 text-center text-[#999] text-[13px]">Brak nagrań — wgraj video w Etapie 2 → Nagrania.</div>';
+                return;
+            }
+
+            listEl.innerHTML = '<h3 class="text-white text-[14px] font-semibold mb-3">Twoje nagrania (' + links.length + ')</h3>' +
+                links.map(function(v) {
+                    const url = v.url || '';
+                    const m = url.match(/(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)([\w-]+)/);
+                    const ytId = m ? m[1] : '';
+                    const thumb = ytId
+                        ? '<img src="https://img.youtube.com/vi/' + ytId + '/default.jpg" class="w-14 h-14 rounded object-cover flex-shrink-0">'
+                        : '<div class="w-14 h-14 rounded flex-shrink-0 bg-zinc-800 flex items-center justify-center"><i class="ph ph-video-camera text-zinc-500"></i></div>';
+                    const platform = url.includes('youtube') || url.includes('youtu.be') ? 'YouTube' : url.includes('instagram') ? 'Instagram' : url.includes('tiktok') ? 'TikTok' : 'Video';
+                    return '<div class="bento-box p-3 flex items-center gap-3">' + thumb +
+                        '<div class="flex-1 min-w-0"><div class="text-[12px] text-[#aaa] truncate">' + url + '</div>' +
+                        '<div class="text-[11px] text-[#666] mt-0.5">' + platform + '</div></div>' +
+                        '<a href="' + url + '" target="_blank" rel="noopener" class="text-[#777] hover:text-white p-1.5"><i class="ph ph-arrow-square-out"></i></a>' +
+                        '</div>';
+                }).join('');
+        }
+
+        // Etap 5 / Krok 4 — Narzedzia (placeholder)
+        function loadNarzedziaClient() { /* placeholder, panel rendered z HTML */ }
 
         // Video (Etap 2) functions
         let videoData = null;

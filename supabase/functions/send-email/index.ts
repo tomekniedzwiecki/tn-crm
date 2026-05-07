@@ -55,6 +55,8 @@ const VALID_EMAIL_TYPES = [
   'ad_report',
   // Etap 5 - Optymalizacja
   'optimization_started',
+  'reviews_shared',
+  'videos_shared',
   'direct'
 ]
 
@@ -88,7 +90,9 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   campaign_launched: '🚀 Kampania {{brandName}} została uruchomiona!',
   ad_report: 'Raport z kampanii reklamowej — {{period_from}} - {{period_to}}',
   // Etap 5 - Optymalizacja
-  optimization_started: 'Etap 5: Optymalizacja — zwiększamy liczbę zamówień'
+  optimization_started: 'Etap 5: Optymalizacja — zwiększamy liczbę zamówień',
+  reviews_shared: 'Opinie klientów są już widoczne w Twoim sklepie ⭐',
+  videos_shared: 'Twoje Reels są już na sklepie 🎬'
 }
 
 // Offer flow email types (use special reply-to)
