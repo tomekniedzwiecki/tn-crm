@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050706';
+        const APP_VERSION = '2026050707';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4928,8 +4928,8 @@
                     <button type="button" id="client-rlb-prev" class="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Poprzednie">&lsaquo;</button>
                     <button type="button" id="client-rlb-next" class="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Następne">&rsaquo;</button>
                     <div class="flex-1 max-w-5xl w-full flex items-center justify-center min-h-0 relative">
-                        <div id="client-rlb-spinner" class="absolute w-9 h-9 border-[3px] border-white/15 border-t-white/80 rounded-full animate-spin opacity-0 transition-opacity"></div>
-                        <img id="client-rlb-img" src="" alt="" referrerpolicy="no-referrer" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl opacity-0 transition-opacity duration-200 select-none">
+                        <div id="client-rlb-spinner" class="absolute w-9 h-9 border-[3px] border-white/15 border-t-white/80 rounded-full animate-spin select-none" style="opacity:0;transition:opacity .2s ease;"></div>
+                        <img id="client-rlb-img" src="" alt="" referrerpolicy="no-referrer" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl select-none" style="opacity:0;transition:opacity .2s ease;">
                     </div>
                     <div class="text-zinc-400 text-[12px] bg-black/40 px-3 py-1 rounded-full mt-4">
                         <span id="client-rlb-current">1</span> / <span id="client-rlb-total">1</span>
@@ -12280,7 +12280,7 @@
             lb.classList.remove('flex');
             document.body.style.overflow = '';
             const img = document.getElementById('client-rlb-img');
-            if (img) { img.src = ''; img.classList.remove('opacity-100'); img.classList.add('opacity-0'); }
+            if (img) { img.src = ''; img.style.opacity = '0'; }
         }
         function showClientReviewsLightboxImage(i) {
             const total = clientReviewsGallery.length;
@@ -12298,18 +12298,14 @@
             tot.textContent = total;
             stars.textContent = '★'.repeat(item.rating);
             text.textContent = item.text;
-            img.classList.remove('opacity-100');
-            img.classList.add('opacity-0');
-            spinner.classList.add('opacity-100');
-            spinner.classList.remove('opacity-0');
+            img.style.opacity = '0';
+            spinner.style.opacity = '1';
             const onLoad = () => {
-                img.classList.remove('opacity-0');
-                img.classList.add('opacity-100');
-                spinner.classList.add('opacity-0');
-                spinner.classList.remove('opacity-100');
+                img.style.opacity = '1';
+                spinner.style.opacity = '0';
             };
             img.onload = onLoad;
-            img.onerror = () => { spinner.classList.add('opacity-0'); spinner.classList.remove('opacity-100'); };
+            img.onerror = () => { spinner.style.opacity = '0'; };
             if (img.src === item.src) img.src = '';
             img.src = item.src;
             if (img.complete && img.naturalWidth > 0) onLoad();
