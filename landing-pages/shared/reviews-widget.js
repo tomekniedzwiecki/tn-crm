@@ -75,7 +75,10 @@
     const stats = (Array.isArray(optArr) && optArr.length > 0) ? optArr[0] : null;
 
     const data = { reviews, stats };
-    setCached(workflowId, data);
+    // Cache tylko gdy mamy realne opinie — pusty stan zawsze refetchuje
+    if (reviews && reviews.length > 0) {
+      setCached(workflowId, data);
+    }
     return data;
   }
 
