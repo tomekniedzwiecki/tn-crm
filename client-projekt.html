@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050726';
+        const APP_VERSION = '2026050727';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -7462,43 +7462,115 @@
             box.classList.toggle('cursor-pointer', !isLocked);
             box.onclick = isLocked ? null : () => switchToDashTab('narzedzia');
 
+            // Helper: stan kazdego z 3 zadan
+            //  0 = czeka na klienta (gray)
+            //  1 = wyslane przez klienta, czeka na admina (amber pulse)
+            //  2 = osadzone/zatwierdzone (emerald)
+            const stepState = (sentAt, doneAt) => doneAt ? 2 : (sentAt ? 1 : 0);
+            const gaState = stepState(optimizationData?.tools_ga_script_at, optimizationData?.tools_ga_connected_at);
+            const hjState = stepState(optimizationData?.tools_hotjar_script_at, optimizationData?.tools_hotjar_connected_at);
+            const notesState = stepState(optimizationData?.tools_session_notes_at, optimizationData?.tools_ready_at);
+            const doneCount = (gaState === 2 ? 1 : 0) + (hjState === 2 ? 1 : 0) + (notesState === 2 ? 1 : 0);
+
+            const dotClass = (s) => s === 2
+                ? 'bg-emerald-500 ring-emerald-500/30'
+                : s === 1
+                    ? 'bg-amber-400 ring-amber-400/30 animate-pulse'
+                    : 'bg-white/15 ring-white/10';
+            const labelColor = (s) => s === 2 ? 'text-emerald-400' : s === 1 ? 'text-amber-400' : 'text-[#555]';
+
+            const renderProgress = () => `
+                <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/[0.04]">
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="w-2 h-2 rounded-full ring-2 ${dotClass(gaState)}"></span>
+                        <span class="text-[10px] ${labelColor(gaState)} uppercase tracking-wider">GA</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="w-2 h-2 rounded-full ring-2 ${dotClass(hjState)}"></span>
+                        <span class="text-[10px] ${labelColor(hjState)} uppercase tracking-wider">Hotjar</span>
+                    </div>
+                    <div class="flex flex-col items-center gap-1">
+                        <span class="w-2 h-2 rounded-full ring-2 ${dotClass(notesState)}"></span>
+                        <span class="text-[10px] ${labelColor(notesState)} uppercase tracking-wider">Sesje</span>
+                    </div>
+                </div>
+            `;
+
             if (ready) {
                 box.classList.remove('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col relative overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.08] via-transparent to-cyan-500/[0.04] pointer-events-none"></div>
+                        <div class="absolute inset-0 bg-gradient-to-br from-emerald-500/[0.08] via-transparent to-amber-500/[0.04] pointer-events-none"></div>
                         <div class="relative flex items-center justify-between mb-4">
                             <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia</span>
                             <span class="flex items-center gap-1 text-emerald-500 text-xs">
                                 <i class="ph-fill ph-check-circle"></i>
-                                Skonfigurowane
+                                Etap 5 zakończony
                             </span>
                         </div>
                         <div class="relative flex-1 flex flex-col items-center justify-center">
-                            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-500/10 ring-1 ring-amber-500/30 flex items-center justify-center shadow-lg">
-                                <i class="ph-fill ph-toolbox text-3xl text-amber-400"></i>
+                            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-amber-500/10 ring-1 ring-emerald-500/30 flex items-center justify-center shadow-lg">
+                                <i class="ph-fill ph-check-circle text-3xl text-emerald-400"></i>
                             </div>
-                            <h3 class="text-white text-base font-semibold mt-3">Gotowe</h3>
-                            <p class="text-[#666] text-[11px] mt-1">analytics + pixele + email</p>
+                            <h3 class="text-white text-base font-semibold mt-3">Wszystko gotowe</h3>
+                            <p class="text-[#666] text-[11px] mt-1">GA + Hotjar + uwagi po sesjach</p>
                         </div>
                     </div>
                 `;
             } else if (!isLocked) {
                 box.classList.add('bento-action');
+
+                // Dynamiczny status i CTA w zaleznosci od progresu
+                let statusText, statusColor, headline, subline;
+
+                // Wybierz nastepny waiting step
+                if (gaState === 0) {
+                    statusText = 'Twoja kolej';
+                    statusColor = 'text-amber-400';
+                    headline = 'Wklej skrypt GA';
+                    subline = 'Załóż Google Analytics i wyślij skrypt';
+                } else if (hjState === 0) {
+                    statusText = 'Twoja kolej';
+                    statusColor = 'text-amber-400';
+                    headline = 'Wklej skrypt Hotjar';
+                    subline = 'Załóż konto Hotjar i wyślij skrypt';
+                } else if (gaState === 1 || hjState === 1) {
+                    statusText = 'Czekam na Tomka';
+                    statusColor = 'text-cyan-400';
+                    headline = 'Tomek osadza skrypty';
+                    subline = 'Po osadzeniu zaczniesz analizę sesji';
+                } else if (notesState === 0) {
+                    statusText = 'Twoja kolej';
+                    statusColor = 'text-amber-400';
+                    headline = 'Przeanalizuj 2-3 sesje';
+                    subline = 'Hotjar zbiera nagrania — obejrzyj i napisz uwagi';
+                } else if (notesState === 1) {
+                    statusText = 'Czekam na Tomka';
+                    statusColor = 'text-cyan-400';
+                    headline = 'Tomek czyta uwagi';
+                    subline = 'Zaraz zatwierdzimy i przejdziemy do Serwisów';
+                } else {
+                    statusText = 'W przygotowaniu';
+                    statusColor = 'text-cyan-400';
+                    headline = 'Narzędzia analityczne';
+                    subline = 'Google Analytics, Hotjar, analiza sesji';
+                }
+
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
-                        <div class="flex items-center justify-between mb-4">
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia</span>
-                            <span class="flex items-center gap-1.5 ${started ? 'text-amber-500' : 'text-cyan-500'} text-xs">
-                                <span class="w-1.5 h-1.5 rounded-full ${started ? 'bg-amber-500' : 'bg-cyan-500'} animate-pulse"></span>
-                                ${started ? 'Konfigurujemy' : 'W przygotowaniu'}
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia · ${doneCount}/3</span>
+                            <span class="flex items-center gap-1.5 ${statusColor} text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full ${statusColor.replace('text-', 'bg-')} animate-pulse"></span>
+                                ${statusText}
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph ph-toolbox text-5xl text-amber-400 mb-4"></i>
-                            <h3 class="text-white text-base font-medium">Narzędzia</h3>
-                            <p class="text-[#666] text-xs text-center mt-2">Analytics, pixele, email marketing</p>
+                        <div class="flex-1 flex flex-col items-center justify-center text-center">
+                            <i class="ph ph-wrench text-4xl text-amber-400 mb-3"></i>
+                            <h3 class="text-white text-[15px] font-semibold leading-tight">${headline}</h3>
+                            <p class="text-[#888] text-[11px] mt-1.5 max-w-[200px]">${subline}</p>
                         </div>
+                        ${renderProgress()}
                     </div>
                 `;
             } else {
@@ -7512,10 +7584,10 @@
                                 Zablokowane
                             </span>
                         </div>
-                        <div class="flex-1 flex flex-col items-center justify-center">
-                            <i class="ph ph-toolbox text-4xl text-zinc-600 mb-3"></i>
-                            <h3 class="text-zinc-500 text-base font-medium">Narzędzia</h3>
-                            <p class="text-zinc-600 text-xs text-center mt-2">Po wpięciu reels na sklep</p>
+                        <div class="flex-1 flex flex-col items-center justify-center text-center">
+                            <i class="ph ph-wrench text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-[15px] font-medium">Aktywuje się po Reels</h3>
+                            <p class="text-zinc-600 text-[11px] mt-1.5 max-w-[200px]">GA, Hotjar, analiza sesji — ostatni krok Etapu 5</p>
                         </div>
                     </div>
                 `;
