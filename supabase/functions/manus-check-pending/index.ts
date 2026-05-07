@@ -56,7 +56,8 @@ serve(async (req) => {
           },
           body: JSON.stringify({
             task_id: task.manus_task_id,
-            workflow_id: task.workflow_id
+            workflow_id: task.workflow_id,
+            auto_send: true
           })
         })
 
@@ -70,20 +71,23 @@ serve(async (req) => {
           success: result.success
         })
 
-        // If task failed or is stuck for too long (> 10 minutes), mark as failed
+        // Failuj tylko gdy task rzeczywiście pada (status='error' lub 'failed').
+        // 'waiting' i 'running' to OK — Manus dziś bywa wolny (15-20 min).
+        // Zostaw je w pending, kolejny check-pending je odbierze gdy skończą.
+        const isErrorState = result.status === 'error' || result.status === 'failed'
         const createdAt = new Date(task.manus_task_created_at)
-        const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
+        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000)
 
-        if (createdAt < tenMinutesAgo && result.status !== 'stopped' && result.status !== 'completed') {
+        if (isErrorState || (createdAt < thirtyMinutesAgo && result.status !== 'stopped' && result.status !== 'completed')) {
           await supabase
             .from('workflow_ads')
             .update({
               manus_task_status: 'failed',
-              manus_task_error: 'Task timeout - przekroczono 10 minut'
+              manus_task_error: isErrorState ? `Manus task ${result.status}` : 'Task timeout - przekroczono 30 minut'
             })
             .eq('id', task.id)
 
-          console.log(`Task ${task.manus_task_id} marked as failed (timeout)`)
+          console.log(`Task ${task.manus_task_id} marked as failed (${isErrorState ? result.status : 'timeout'})`)
         }
 
       } catch (err) {

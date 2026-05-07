@@ -23,7 +23,7 @@ serve(async (req) => {
       )
     }
 
-    const { task_id, workflow_id } = await req.json()
+    const { task_id, workflow_id, auto_send } = await req.json()
 
     if (!task_id) {
       return new Response(
@@ -336,7 +336,10 @@ serve(async (req) => {
             .eq('workflow_id', workflow_id)
             .single()
 
-          if (adsData?.auto_reports_enabled) {
+          // Email idzie tylko z auto-cyklu (cron → check-pending z auto_send=true).
+          // UI "Pobierz dane" wywołuje bez auto_send, żeby admin mógł odświeżyć
+          // dane bez spamowania klienta. Ręczna wysyłka idzie osobno przez send-email.
+          if (auto_send === true && adsData?.auto_reports_enabled) {
             // Pobierz dane workflow i klienta
             const { data: workflow } = await supabase
               .from('workflows')
@@ -345,8 +348,12 @@ serve(async (req) => {
               .single()
 
             if (workflow?.customer_email) {
-              // Wyślij email z raportem
+              // Wyślij email z raportem (API: type + data.email — zgodnie z send-email)
               try {
+                const spend = Number(reportData.spend || 0)
+                const revenue = Number(reportData.revenue || 0)
+                const roas = spend > 0 ? revenue / spend : Number(reportData.roas || 0)
+
                 const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
                   method: 'POST',
                   headers: {
@@ -354,16 +361,16 @@ serve(async (req) => {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
-                    to: workflow.customer_email,
-                    template: 'ad_report',
+                    type: 'ad_report',
                     data: {
+                      email: workflow.customer_email,
                       client_name: workflow.customer_name || 'Kliencie',
-                      project_name: workflow.offer_name,
+                      project_name: workflow.offer_name || 'Twój sklep',
                       period_from: periodFrom,
                       period_to: periodTo,
-                      spend: reportData.spend || 0,
-                      revenue: reportData.revenue || 0,
-                      roas: Number(reportData.roas || 0).toFixed(2),
+                      spend,
+                      revenue,
+                      roas: Number(roas).toFixed(2),
                       purchases: reportData.purchases || reportData.conversions || 0,
                       clicks: reportData.clicks || 0,
                       impressions: reportData.impressions || 0,
@@ -377,20 +384,31 @@ serve(async (req) => {
                   })
                 })
 
-                // Sprawdź czy email się wysłał
                 if (!emailResponse.ok) {
-                  console.error('Email send failed:', await emailResponse.text())
-                  throw new Error('Email send failed')
+                  const errBody = await emailResponse.text()
+                  console.error('Email send failed:', errBody)
+                  throw new Error('Email send failed: ' + errBody.substring(0, 100))
                 }
 
-                // Oznacz raport jako wysłany
+                const sentAt = new Date().toISOString()
+
+                // Oznacz raport jako wysłany w historii
                 await supabase
                   .from('workflow_ad_reports')
                   .update({
                     sent_to_client: true,
-                    sent_at: new Date().toISOString()
+                    sent_at: sentAt
                   })
                   .eq('id', historyRecord.id)
+
+                // Odblokuj Etap 5: report_sent na workflow_ads steruje widocznością Optymalizacji
+                await supabase
+                  .from('workflow_ads')
+                  .update({
+                    report_sent: true,
+                    report_sent_at: sentAt
+                  })
+                  .eq('workflow_id', workflow_id)
 
                 console.log('Report email sent to:', workflow.customer_email)
               } catch (emailErr) {
