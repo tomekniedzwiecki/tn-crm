@@ -5635,12 +5635,14 @@
                 const opinieDone = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at;
                 toggle('nav-check-opinie', opinieDone);
 
-                // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony I (sa nagrania LUB step pominiety LUB juz przekazane)
-                // Chcemy zeby zakladka byla widoczna takze gdy admin pominal — bo musi miec opcje cofniecia.
+                // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony.
+                // Zakladka widoczna od razu po wlaczeniu COD, niezaleznie od tego czy klient ma
+                // juz nagrania, czy admin pominal etap, czy oznaczyl jako wstawiony/przekazany.
+                // Wewnatrz zakladki sa odpowiednie sekcje sterujace stanem (Przekaz / Przypomnij / Pomin).
                 const navBtnVideo = document.getElementById('nav-btn-video');
                 const hasVideos = (videoData?.video_links || []).length > 0;
                 const videoSkipped = !!videoData?.skipped;
-                const videoStepActive = !!optimizationNavStatus?.cod_enabled && (hasVideos || videoSkipped || !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at);
+                const videoStepActive = !!optimizationNavStatus?.cod_enabled;
                 if (navBtnVideo) {
                     navBtnVideo.classList.toggle('hidden', !videoStepActive);
                 }
