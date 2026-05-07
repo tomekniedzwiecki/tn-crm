@@ -1522,10 +1522,10 @@
         }
       }
 
-      if (!enabled || !phone) return;
+      if (!enabled || !phone || typeof phone !== 'string') return;
 
       // Sanitize phone: keep only digits and leading +
-      let cleanPhone = phone.replace(/[^\d+]/g, '').replace(/^00/, '+');
+      let cleanPhone = String(phone).replace(/[^\d+]/g, '').replace(/^00/, '+');
       let phoneForWa = cleanPhone.replace(/^\+/, '').replace(/[^\d]/g, '');
       // Auto-add Polish prefix when 9-digit national format (no country code)
       if (phoneForWa.length === 9) phoneForWa = '48' + phoneForWa;

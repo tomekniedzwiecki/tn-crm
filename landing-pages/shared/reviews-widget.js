@@ -25,16 +25,16 @@
   const STAR_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
 
   function escapeHtml(str) {
-    if (!str) return '';
+    if (str === null || str === undefined || str === '') return '';
     return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[s]);
   }
   function escapeAttr(str) {
-    if (!str) return '';
+    if (str === null || str === undefined || str === '') return '';
     return String(str).replace(/"/g, '&quot;');
   }
 
   function avatarInitials(name) {
-    if (!name) return '?';
+    if (!name || typeof name !== 'string') return '?';
     const cleaned = name.replace(/\*/g, '');
     const letters = cleaned.match(/[A-Za-zĄĆĘŁŃÓŚŹŻąćęłńóśźż]/g) || [];
     if (letters.length === 0) return '?';
