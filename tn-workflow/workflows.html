@@ -946,18 +946,16 @@
                             const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
                             return w.ads_stage?.report_sent && !allDone;
                         }
-                        // "opinie" = core Etap 5 gotowe + COD + opinie nie shared (sequential — przed Video)
+                        // "opinie" = COD włączony ALE opinie nie udostępnione klientowi (independent od video)
                         if (stage === 'opinie') {
                             const opt = w.optimization_stage;
-                            const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
-                            return coreDone && opt?.cod_enabled && !opt?.reviews_shared_at;
+                            return opt?.cod_enabled && !opt?.reviews_shared_at;
                         }
-                        // "video" = core gotowe + Opinie ALREADY shared + są nagrania ALE Reels nie shared
+                        // "video" = COD włączony + są nagrania ALE Reels nie udostępnione (independent od opinii)
                         if (stage === 'video') {
                             const opt = w.optimization_stage;
-                            const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
                             const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                            return coreDone && !!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at;
+                            return opt?.cod_enabled && hasVideos && !opt?.videos_shared_at;
                         }
                         // "narzedzia" = Reels shared + narzędzia nie ready
                         if (stage === 'narzedzia') {
@@ -1137,31 +1135,33 @@
                     counts.ads_report++;
                     continue;
                 }
-                // "optymalizacje" = raport wysłany ALE optymalizacja core niezakończona (3 sub-checkboxy)
-                // Sequential: jeden projekt liczony do JEDNEGO kroku naraz (najwczesniejszy nieukonczony)
+                // Etap 5 — projekt może być liczony do WIELU kroków naraz (independent)
                 if (w.ads_stage?.report_sent) {
                     const opt = w.optimization_stage;
                     const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                    let stage5Matched = false;
+                    // Krok 1 — Optymalizacje core
                     if (!coreDone) {
                         counts.optymalizacje++;
-                        continue;
+                        stage5Matched = true;
                     }
-                    // Etap 5 / Krok 2 — Opinie (PIERWSZY priorytet po core)
+                    // Krok 2 — Opinie (gdy COD włączony, opinie nie shared)
                     if (opt?.cod_enabled && !opt?.reviews_shared_at) {
                         counts.opinie++;
-                        continue;
+                        stage5Matched = true;
                     }
-                    // Etap 5 / Krok 3 — Video (TYLKO gdy Opinie juz shared)
+                    // Krok 3 — Video (gdy COD + są nagrania, Reels nie shared)
                     const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                    if (!!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at) {
+                    if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
                         counts.video++;
-                        continue;
+                        stage5Matched = true;
                     }
-                    // Etap 5 / Krok 4 — Narzedzia (gdy Reels shared)
+                    // Krok 4 — Narzedzia (gdy Reels shared, narzędzia nie ready)
                     if (opt?.videos_shared_at && !opt?.tools_ready_at) {
                         counts.narzedzia++;
-                        continue;
+                        stage5Matched = true;
                     }
+                    if (stage5Matched) continue;
                 }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
