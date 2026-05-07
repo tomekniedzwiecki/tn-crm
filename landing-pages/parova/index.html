@@ -3868,18 +3868,15 @@ Zobacz zdjęcia.</p>
       .reels-lb-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 20px; }
     }
 
-    /* ═══ Mobile fix: header sticky (NIE fixed) — fundamentalna stabilność ═══
-       Iteracje A→D (fixed + z-index + translateZ(0)) nie naprawiały „header się
-       chowa". Root cause: position:fixed na mobile + iOS Safari + layout shift
-       od sticky-cta + body padding-bottom = ciągły dryf headera.
-       Rozwiązanie: header position:sticky top:0 — zajmuje miejsce w document
-       flow, klei się do top viewport, nie wyskakuje. Fundamentalnie inny
-       mechanizm niż fixed, nie ma scroll-bounce bug iOS.
-       UWAGA: body { overflow-x: hidden } BLOKUJE sticky w niektórych
-       przeglądarkach. Zamieniam na overflow-x: clip (modern, nie blokuje
-       sticky). Hero padding-top zmniejszony bo sticky zajmuje miejsce w flow. */
+    /* ═══ Mobile fix: usuń sticky-cta + header sticky (nie fixed) ═══
+       Tomek 2026-05-07 (iteracja F, finalna): „dobra, usuwaj ten pasek z
+       zamów teraz". Sticky-cta była źródłem layout shift, który powodował
+       że fixed header się gubił. Usuwamy ją całkowicie na mobile — CTA
+       jest dostępne w hero, reels, offer i finale (wystarczy).
+       Header pozostaje position:sticky top:0 (stabilny mechanizm).
+       Body overflow-x:clip (NIE hidden — blokowałby sticky). */
     @media (max-width: 720px) {
-      body { overflow-x: clip }
+      body { overflow-x: clip; padding-bottom: 0 !important }
       .header {
         position: sticky !important;
         top: 0 !important;
@@ -3889,9 +3886,9 @@ Zobacz zdjęcia.</p>
       .hero { padding-top: 32px !important }
       .mobile-menu { z-index: 9998 !important }
       .stories-bar { top: 58px !important; z-index: 99 !important; border-top: 1px solid rgba(13,33,55,0.06) !important }
-      .sticky-cta { z-index: 90 !important; transform: translateZ(0); -webkit-transform: translateZ(0) }
-      .wa-widget { bottom: 100px !important }
-      .reviews-side-widget { bottom: 100px !important }
+      .sticky-cta { display: none !important }
+      .wa-widget { bottom: 20px !important }
+      .reviews-side-widget { bottom: 20px !important }
     }
   </style>
 
