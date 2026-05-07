@@ -14418,7 +14418,9 @@ KROK A0 — USTAL BRAND_NAME i CTA_URL (ZAWSZE pierwszy krok)
 
 A0.1 BRAND_NAME — w kolejności priorytetowej:
   1) GET workflow_branding?workflow_id=eq.${workflow.id}&type=eq.brand_info&select=title,value
-     → użyj 'title' (jeśli niepusty), w przeciwnym razie parsuj JSON z 'value' i weź .name
+     → użyj 'title' (jeśli niepusty)
+     → fallback: JSON.parse('value') i weź .name (UWAGA: 'value' w bazie to STRING z JSON,
+       nie object — musisz parsować!)
   2) Jeśli pkt 1 niedostępny → capitalize(LANDING_SLUG)  (np. "parova" → "Parova", "h2vital" → "H2Vital")
 
   NIGDY nie używaj customer_name ani customer_company jako BRAND_NAME — to imię klienta sklepu, nie marka produktu.
@@ -14526,76 +14528,50 @@ PLACEHOLDERY do podmiany w blokach:
   {{BRAND_NAME}}  → wartość ustalona w A0.1
   {{CTA_URL}}     → wartość ustalona w A0.2
 
-C0. Pobierz NIEUKRYTE opinie:
+C1. Pobierz NIEUKRYTE opinie z bazy:
     GET .../workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
 
-C1. Sprawdź czy plik landingu istnieje:
+C2. Sprawdź czy plik landingu istnieje:
     c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
     Jeśli landingSlug=='NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij, zapytaj o slug.
 
-C2. ZAŁADUJ TEMPLATE.
+C3. ZAŁADUJ TEMPLATE i przygotuj 5 bloków do wklejenia.
     Read plik c:/repos_tn/tn-crm/landing-pages/_templates/reviews-section.html
-    Wyciągnij 5 bloków (między komentarzami REVIEWS_TEMPLATE_*):
-      A. CSS (zawartość <style data-template="reviews-css">)
-      B. SECTION (<!-- ═══ OPINIE KLIENTÓW...) do </section>)
-      C. SIDE_WIDGET (<div id="reviews-side-widget">...</div>)
-      D. LIGHTBOX (<div id="reviews-lightbox">...</div>)
-      E. JS (zawartość <script data-template="reviews-js">)
+    Wyciągnij 5 bloków:
+      A. CSS  — zawartość <style data-template="reviews-css">...</style>
+      B. SECTION — od <!-- ═══ OPINIE KLIENTÓW (XL) ═══ --> do </section>
+      C. SIDE_WIDGET — cały <div id="reviews-side-widget">...</div>
+      D. LIGHTBOX — cały <div id="reviews-lightbox">...</div>
+      E. JS — zawartość <script data-template="reviews-js">...</script>
 
     W blokach B, C, D podmień placeholdery:
-      {{BRAND_NAME}} → wartość ustalona w A0.1
-      {{CTA_URL}}    → wartość ustalona w A0.2
+      {{BRAND_NAME}} → wartość z A0.1
+      {{CTA_URL}}    → wartość z A0.2
 
-    OPCJONALNIE (best-effort dopasowanie do palety landingu): Read landing,
-    wyciągnij z :root wartości (--primary, --secondary, --bg-cream itp.)
-    i podmień fallback values w CSS template na wartości landingu.
-    Jeśli landing używa innych nazw zmiennych (np. --color-primary zamiast
-    --primary) — w skopiowanym CSS zostaw var(--primary, ZNALEZIONA_WARTOSC)
-    żeby fallback pasował.
-
-C3. SEKCJA HTML (sprawdź czy jest, jeśli nie → wstaw przed <section class="cta-banner">
-    lub innym ostatnim CTA / przed footerem):
-
-    <!-- ═══ OPINIE KLIENTÓW (XL) — generowane przez prompt Etap 5/Krok 2 ═══ -->
-    <section class="reviews-xl" id="reviews">
-      <div class="container">
-        <div class="reviews-header fade-in">
-          <span class="section-label">Opinie klientów</span>
-          <h2 class="section-title">Tysiące osób już cieszy się [BRAND_NAME z A0.1]</h2>
-          <p class="section-subtitle">
-            Prawdziwe opinie ze zdjęciami od osób, które używają tego produktu. Bez retuszu, bez wybiórki.
-          </p>
-        </div>
-        <!-- REVIEWS:GRID:START -->
-        <div class="reviews-empty-placeholder" style="text-align:center;padding:60px 20px;color:rgba(0,0,0,0.4);">
-          <p>Wkrótce pojawią się tu opinie klientów.</p>
-        </div>
-        <!-- REVIEWS:GRID:END -->
-        <div class="reviews-disclosure">
-          <strong>Pochodzenie opinii.</strong> Pokazane opinie pochodzą od osób, które kupiły i używały tego produktu. Sprzedawca nie weryfikuje samodzielnie tożsamości recenzentów. Wyświetlamy wybór ocen 5/5 zawierających zdjęcia.
-        </div>
-      </div>
-    </section>
-
-    Jeśli już jest sekcja .reviews-xl z markerami GRID:START/END → pomiń wstawianie,
-    przejdź do C7 (podmiana content między markerami). Jeśli jest stara sekcja
-    z markerami REVIEWS:STATS lub REVIEWS:CSS — usuń je razem z zawartością
-    (statystyk już NIE pokazujemy, CSS jest w <style>, nie w sekcji).
+    Mapowanie tokenów :root (z A0.3) — jeśli landing używa nietypowych nazw
+    (--teal/--coral/--display itp.), podmień w CSS bloku A:
+      var(--primary, #00A896)   → var(--primary, var(--teal, #00A896))
+      var(--secondary, #F77F00) → var(--secondary, var(--coral, #F77F00))
+      var(--font-heading, ...)  → var(--font-heading, var(--font-display, ...))
+      itd.
+    Jeśli landing używa standardowych nazw — pomiń (template działa as-is).
 
 ═══════════════════════════════════════════════════════════════
-KROKI C4-C6: WSTAW BLOKI Z TEMPLATU
+KROKI C4-C6: WSTAW BLOKI Z TEMPLATU (idempotent — wstaw co brakuje)
 ═══════════════════════════════════════════════════════════════
-TEMPLATE = c:/repos_tn/tn-crm/landing-pages/_templates/reviews-section.html
-NIGDY NIE pisz CSS/HTML/JS opinii ręcznie. Czytaj TEMPLATE.
 
 C4. CSS — sprawdź czy w <style> landingu są już klasy:
       .review-card, .reviews-grid-xl, .reviews-disclosure-popover,
       .reviews-side-widget, .reviews-side-track, .reviews-lightbox-spinner
-    JEŚLI którejś NIE MA → wstaw przed </style> ZAWARTOŚĆ <style data-template="reviews-css">
-    z TEMPLATE (skopiuj 1:1, fallback values w var(--xxx, FALLBACK) zostają jak są).
-    JEŚLI sa klasy ale są STARE (np. .review-name, .review-author-info, .reviews-stats,
-    .reviews-meta-*, lub .review-stars na początku karty) — usuń stary blok i wstaw
-    nowy z TEMPLATE.
+    JEŚLI którejś NIE MA → wstaw blok A (CSS z templatu) przed </style>.
+    JEŚLI istnieją STARE pozostałości:
+      - .review-name { ... }, .review-author-info { ... }
+      - .reviews-stats { ... }, .reviews-meta-stat { ... }, .reviews-meta-value { ... }
+      - .review-stars { ... } (gwiazdki na górze karty — legacy)
+      - markery <!-- REVIEWS:CSS:START --> ... <!-- REVIEWS:CSS:END --> (z poprzedniego prompta)
+      - markery <!-- REVIEWS:STATS:START --> ... <!-- REVIEWS:STATS:END --> wraz z zawartością
+    → USUŃ je przed wstawieniem nowego bloku z templatu (cascade w CSS = późniejszy wygrywa,
+    ale nieużywane klasy mylą + zostawiają duplikaty == zwiększenie pliku bez efektu).
 
 C5. SEKCJA HTML — sprawdź czy <section class="reviews-xl"> z markerami
       <!-- REVIEWS:GRID:START/END -->
@@ -14621,6 +14597,19 @@ C5. SEKCJA HTML — sprawdź czy <section class="reviews-xl"> z markerami
     Cel: opinie mają być w środku lejka — po wytłumaczeniu produktu/rozwiązania,
     przed porównaniem/FAQ/ofertą — żeby budować zaufanie tuż przed decyzją.
     NIE wstawiaj na końcu strony (po cta-banner) — to martwa strefa dla scroll'erów.
+
+C5b. USUŃ STARĄ SEKCJĘ TESTIMONIALS (jeśli istnieje).
+    Niektóre landingi (np. SilkTip, InnerScan, H2Vital) mają <section class="testimonials">
+    z hardcoded FAKE'ami (Anna K., Magda N. itp. — kart .testimonial-card z .testimonial-text,
+    .testimonial-author z imionami i rolami typu "Mama dwójki dzieci").
+
+    Jeśli w pliku jest <section class="testimonials"> z .testimonial-card → USUŃ ją CAŁĄ.
+    Powód: nie chcemy mieć 2 sekcji opinii (nasza nowa reviews-xl + stara testimonials z fake'ami)
+    + fake imiona/role to dodatkowy spell-check problem + konflikt etyczny (nieprawdziwe opinie).
+
+    NIE usuwaj <section class="reviews-xl"> (to nasza). NIE usuwaj <section class="voices"> (Vitrix
+    używa "voices" jako swoją sekcję — jeśli zawiera fake'i, też usuń, ale ostrożnie sprawdź czy
+    klasy zaczynają się od .testimonial-* lub .voice-* z imionami).
 
 C6. LIGHTBOX + SIDE WIDGET HTML — sprawdź czy <div id="reviews-lightbox">
     i <div id="reviews-side-widget"> są w pliku. JEŚLI NIE → wstaw oba bloki
