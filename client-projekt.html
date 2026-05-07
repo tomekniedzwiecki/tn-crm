@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050723';
+        const APP_VERSION = '2026050724';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -2336,6 +2336,16 @@
                             <span>Opinie</span>
                             <i id="nav-check-opinie-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="nav-video-reels-desktop" class="dash-nav-item" data-tab="video" onclick="switchTab('video')">
+                            <i class="ph ph-play-circle"></i>
+                            <span>Video (Reels)</span>
+                            <i id="nav-check-video-reels-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
+                        <div id="nav-narzedzia-desktop" class="dash-nav-item hidden" data-tab="narzedzia" onclick="switchTab('narzedzia')">
+                            <i class="ph ph-toolbox"></i>
+                            <span>Narzędzia</span>
+                            <i id="nav-check-narzedzia-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -2479,6 +2489,16 @@
                                 <i class="ph ph-star"></i>
                                 <span>Opinie</span>
                                 <i id="nav-check-opinie-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-video-reels-mobile-wrap" class="dash-nav-item" data-tab="video" onclick="switchTab('video');toggleMobileMenu()">
+                                <i class="ph ph-play-circle"></i>
+                                <span>Video (Reels)</span>
+                                <i id="nav-check-video-reels-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-narzedzia-mobile-wrap" class="dash-nav-item hidden" data-tab="narzedzia" onclick="switchTab('narzedzia');toggleMobileMenu()">
+                                <i class="ph ph-toolbox"></i>
+                                <span>Narzędzia</span>
+                                <i id="nav-check-narzedzia-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -8001,22 +8021,22 @@
             const isVideoStepSkipped = !!videoData?.skipped;
             const hasVideoLinks = (videoData?.video_links || []).length > 0;
             const hasVideoStep = !!optimizationData?.cod_enabled;
-            ['dash-nav-video','dash-mobile-video'].forEach(id => {
+            ['dash-nav-video','dash-mobile-video','nav-video-reels-desktop','nav-video-reels-mobile-wrap'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasVideoStep);
             });
             // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi LUB pominieta
             const videoDone = !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at || isVideoStepSkipped;
-            ['dash-nav-check-video-reels','dash-nav-check-video-reels-mobile'].forEach(id => {
+            ['dash-nav-check-video-reels','dash-nav-check-video-reels-mobile','nav-check-video-reels-desktop','nav-check-video-reels-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !videoDone);
             });
 
             // Etap 5 / Krok 4 - Narzedzia: pokaz po videos_shared_at LUB skipped
             const hasNarzedzia = !!optimizationData?.videos_shared_at || isVideoStepSkipped;
-            ['dash-nav-narzedzia','dash-mobile-narzedzia'].forEach(id => {
+            ['dash-nav-narzedzia','dash-mobile-narzedzia','nav-narzedzia-desktop','nav-narzedzia-mobile-wrap'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasNarzedzia);
             });
             const narzedziaDone = !!optimizationData?.tools_ready_at;
-            ['dash-nav-check-narzedzia','dash-nav-check-narzedzia-mobile'].forEach(id => {
+            ['dash-nav-check-narzedzia','dash-nav-check-narzedzia-mobile','nav-check-narzedzia-desktop','nav-check-narzedzia-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !narzedziaDone);
             });
 
