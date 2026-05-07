@@ -5574,8 +5574,10 @@
                 if (navStage5) {
                     navStage5.classList.toggle('hidden', !adsNavStatus?.report_sent);
                 }
-                // Optymalizacje: zielony checkbox gdy 3 glowne zadania zrobione (COD + WhatsApp + Recovery)
-                const optDone = !!optimizationNavStatus?.cod_enabled && !!optimizationNavStatus?.whatsapp_enabled && !!optimizationNavStatus?.recovery_calls_done;
+                // Optymalizacje: zielony checkbox gdy 3 glowne zadania zrobione LUB admin posunal sie do dalszych krokow Etapu 5
+                const optCoreDone = !!optimizationNavStatus?.cod_enabled && !!optimizationNavStatus?.whatsapp_enabled && !!optimizationNavStatus?.recovery_calls_done;
+                const optProgressed = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at || !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at || !!optimizationNavStatus?.tools_ready_at;
+                const optDone = optCoreDone || optProgressed;
                 toggle('nav-check-optymalizacje', optDone);
 
                 // Etap 5 / Krok 2 - Opinie: pokaz w sidebar gdy COD wlaczony

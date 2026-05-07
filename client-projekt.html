@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050716';
+        const APP_VERSION = '2026050717';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -7742,10 +7742,10 @@
             document.getElementById('optymalizacje-stage-desktop')?.classList.toggle('hidden', !hasOptimization);
             document.getElementById('optymalizacje-stage-mobile')?.classList.toggle('hidden', !hasOptimization);
 
-            // Update Optymalizacje checkmark (green when 3 main tasks done: COD + WhatsApp + Recovery)
-            // cod_stock_confirmed to dodatkowy meta-check (admin potwierdza ze klient ma 2-3 sztuki),
-            // NIE jest wymagany do oznaczenia kroku jako gotowy.
-            const optDone = !!optimizationData?.cod_enabled && !!optimizationData?.whatsapp_enabled && !!optimizationData?.recovery_calls_done;
+            // Update Optymalizacje checkmark — gotowe gdy 3 glowne zadania zrobione LUB admin doszedl do dalszych krokow Etapu 5
+            const optCoreDone = !!optimizationData?.cod_enabled && !!optimizationData?.whatsapp_enabled && !!optimizationData?.recovery_calls_done;
+            const optProgressed = (optimizationData?.reviews_count || 0) > 0 || !!optimizationData?.reviews_shared_at || !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at || !!optimizationData?.tools_ready_at;
+            const optDone = optCoreDone || optProgressed;
             ['dash-nav-check-optymalizacje','dash-nav-check-optymalizacje-mobile','nav-check-optymalizacje-desktop','nav-check-optymalizacje-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !optDone);
             });
