@@ -14091,12 +14091,20 @@ Zwróć TYLKO JSON.`;
                 if (enabled && !optimizationData.whatsapp_configured_at) {
                     updates.whatsapp_configured_at = new Date().toISOString();
                 }
+                // Auto-default phone z workflow.customer_phone gdy admin wlacza ale jeszcze nie zapisal numeru
+                if (enabled && !optimizationData.whatsapp_phone && workflow.customer_phone) {
+                    updates.whatsapp_phone = workflow.customer_phone;
+                }
                 const { error } = await supabaseClient
                     .from('workflow_optimization')
                     .update(updates)
                     .eq('id', optimizationData.id);
                 if (error) throw error;
                 optimizationData = { ...optimizationData, ...updates };
+                if (updates.whatsapp_phone) {
+                    const phoneInput = document.getElementById('opt-whatsapp-phone');
+                    if (phoneInput) phoneInput.value = updates.whatsapp_phone;
+                }
                 showToast(enabled ? 'WhatsApp aktywny na stronie' : 'WhatsApp wyłączony', 'success');
             } catch (err) {
                 showToast('Błąd: ' + err.message, 'error');
