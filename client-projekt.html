@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050720';
+        const APP_VERSION = '2026050721';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -6967,22 +6967,26 @@
         // ETAP 5: OPTYMALIZACJA - Dashboard functions
         // ============================================
         function renderEtap5Dashboard() {
-            const codDone = !!optimizationData?.cod_enabled && !!optimizationData?.cod_stock_confirmed;
-            const whatsappDone = !!optimizationData?.whatsapp_enabled;
+            const codEnabled = !!optimizationData?.cod_enabled;
+            const codStock = !!optimizationData?.cod_stock_confirmed;
+            const whatsappEnabled = !!optimizationData?.whatsapp_enabled;
             const recoveryDone = !!optimizationData?.recovery_calls_done;
             const reviewsShared = !!optimizationData?.reviews_shared_at;
             const videosShared = !!optimizationData?.videos_shared_at;
             const toolsReady = !!optimizationData?.tools_ready_at;
 
-            // Etap 5 ma 4 elementy: Optymalizacje (3 sub-kroki) + Opinie + Video + Narzędzia
-            const optymalizacjeDone = codDone && whatsappDone && recoveryDone;
-            const completedSteps = [optymalizacjeDone, reviewsShared, videosShared, toolsReady].filter(Boolean).length;
-            const progressPercent = Math.round((completedSteps / 4) * 100);
+            // 4 glowne kroki po 25%. Optymalizacje liczone granularnie:
+            // 4 sub-checkboxy × 6.25% (kazdy daje czesc z 25% calego kroku).
+            const optymalizacjeSubDone = [codEnabled, codStock, whatsappEnabled, recoveryDone].filter(Boolean).length;
+            const optymalizacjeWeight = optymalizacjeSubDone / 4; // 0..1
+            const completedWeight = optymalizacjeWeight + (reviewsShared ? 1 : 0) + (videosShared ? 1 : 0) + (toolsReady ? 1 : 0);
+            const progressPercent = Math.round((completedWeight / 4) * 100);
+            const allDone = optymalizacjeWeight === 1 && reviewsShared && videosShared && toolsReady;
 
             const labelEl = document.getElementById('dash-etap5-progress-label');
             const percentEl = document.getElementById('dash-etap5-progress-percent');
             const barEl = document.getElementById('dash-etap5-progress-bar');
-            if (labelEl) labelEl.textContent = completedSteps === 4 ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
+            if (labelEl) labelEl.textContent = allDone ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
             if (percentEl) percentEl.textContent = progressPercent;
             if (barEl) barEl.style.width = progressPercent + '%';
 
