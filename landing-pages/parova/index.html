@@ -1889,59 +1889,43 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-
-  /* Stopka karty (autor + gwiazdki) */
+  /* Stopka karty (avatar + tag + gwiazdki) — bez imienia, neutralny look */
   .review-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 16px 24px 22px;
+    padding: 14px 22px 18px;
     border-top: 1px solid var(--border-light, rgba(0,0,0,0.06));
   }
   .review-author {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     min-width: 0;
   }
   .review-avatar {
-    width: 38px; height: 38px;
+    width: 32px; height: 32px;
     border-radius: 50%;
     background: var(--gradient-cta, linear-gradient(135deg, var(--primary, #00A896), var(--secondary, #F77F00)));
     color: #fff;
-    font-family: var(--font-heading, system-ui);
-    font-size: 13px;
-    font-weight: 700;
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
   }
-  .review-author-info { min-width: 0; }
-  .review-name {
-    font-family: var(--font-heading, system-ui);
-    font-size: 13.5px;
-    font-weight: 600;
-    color: var(--text-primary, #1A1A2E);
-    line-height: 1.2;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 180px;
-  }
+  .review-avatar svg { width: 16px; height: 16px; opacity: 0.95; }
   .review-tag {
-    font-size: 10.5px;
-    color: var(--text-tertiary, rgba(0,0,0,0.4));
+    font-size: 11px;
+    color: var(--text-tertiary, rgba(0,0,0,0.45));
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    margin-top: 2px;
     font-weight: 500;
     letter-spacing: 0.01em;
   }
-  .review-tag svg { width: 10px; height: 10px; opacity: 0.6; }
+  .review-tag svg { width: 11px; height: 11px; opacity: 0.6; }
   .review-rating {
     display: flex;
     gap: 1px;
@@ -2132,11 +2116,28 @@
     background: var(--text-tertiary, rgba(0,0,0,0.1));
     color: var(--text-primary, #1A1A2E);
   }
+  /* Marquee scroll: zdjęcia płyną od dołu do góry, infinite loop */
   .reviews-side-grid {
+    height: 240px;
+    overflow: hidden;
+    padding: 4px;
+    position: relative;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  }
+  .reviews-side-track {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px;
-    padding: 4px;
+    animation: reviews-side-flow 22s linear infinite;
+    will-change: transform;
+  }
+  .reviews-side-grid:hover .reviews-side-track {
+    animation-play-state: paused;
+  }
+  @keyframes reviews-side-flow {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
   }
   .reviews-side-thumb {
     width: 100%;
@@ -2170,12 +2171,29 @@
     border-radius: var(--radius-md, 14px);
     box-shadow: var(--shadow-primary, 0 8px 32px rgba(0,168,150,0.25));
     transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: reviews-side-pulse 2.4s ease-in-out infinite;
+    will-change: transform, box-shadow;
   }
   .reviews-side-cta:hover {
     transform: translateY(-2px);
     box-shadow: 0 12px 32px rgba(0,168,150,0.4);
+    animation-play-state: paused;
   }
   .reviews-side-cta svg { width: 14px; height: 14px; }
+  @keyframes reviews-side-pulse {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      box-shadow: var(--shadow-primary, 0 8px 32px rgba(0,168,150,0.25));
+    }
+    50% {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 14px 40px rgba(0,168,150,0.55);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reviews-side-cta { animation: none; }
+    .reviews-side-track { animation: none; }
+  }
 
   /* ═══ LIGHTBOX (galeria + CTA) ═══ */
   .reviews-lightbox {
@@ -2662,11 +2680,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2680,11 +2695,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">MI</div>
-      <div class="review-author-info">
-        <div class="review-name">M***i</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2697,11 +2709,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">DL</div>
-      <div class="review-author-info">
-        <div class="review-name">D***l</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2713,11 +2722,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2732,11 +2738,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">PR</div>
-      <div class="review-author-info">
-        <div class="review-name">P***r</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2749,11 +2752,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2767,11 +2767,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">JZ</div>
-      <div class="review-author-info">
-        <div class="review-name">J***z</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2784,11 +2781,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">AA</div>
-      <div class="review-author-info">
-        <div class="review-name">A***a</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2800,11 +2794,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2818,11 +2809,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">AK</div>
-      <div class="review-author-info">
-        <div class="review-name">A***k</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2834,11 +2822,8 @@
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">RK</div>
-      <div class="review-author-info">
-        <div class="review-name">R***k</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2855,11 +2840,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">EY</div>
-      <div class="review-author-info">
-        <div class="review-name">E***Y</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2873,11 +2855,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2889,11 +2868,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">RZ</div>
-      <div class="review-author-info">
-        <div class="review-name">R***z</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2905,11 +2881,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">PR</div>
-      <div class="review-author-info">
-        <div class="review-name">p***r</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2924,11 +2897,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">LZ</div>
-      <div class="review-author-info">
-        <div class="review-name">L***z</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2940,11 +2910,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">DO</div>
-      <div class="review-author-info">
-        <div class="review-name">D***o</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2958,11 +2925,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2974,11 +2938,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -2990,11 +2951,8 @@ Zobacz zdjęcia.</p>
   </div>
   <div class="review-footer">
     <div class="review-author">
-      <div class="review-avatar">?</div>
-      <div class="review-author-info">
-        <div class="review-name">Klient</div>
-        <div class="review-tag"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>Opinia o produkcie</div>
-      </div>
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      
     </div>
     <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
   </div>
@@ -3061,7 +3019,6 @@ Zobacz zdjęcia.</p>
   <div class="reviews-lightbox-counter"><span class="reviews-lightbox-current">1</span> / <span class="reviews-lightbox-total">1</span></div>
   <div class="reviews-lightbox-caption">
     <div class="reviews-lightbox-caption-meta">
-      <span class="reviews-lightbox-caption-name"></span>
       <span class="reviews-lightbox-caption-stars"></span>
     </div>
     <p class="reviews-lightbox-caption-text"></p>
@@ -3534,7 +3491,6 @@ Zobacz zdjęcia.</p>
         const spinner = lb.querySelector('.reviews-lightbox-spinner');
         const cur = lb.querySelector('.reviews-lightbox-current');
         const total = lb.querySelector('.reviews-lightbox-total');
-        const captionName = lb.querySelector('.reviews-lightbox-caption-name');
         const captionStars = lb.querySelector('.reviews-lightbox-caption-stars');
         const captionText = lb.querySelector('.reviews-lightbox-caption-text');
         const btnClose = lb.querySelector('.reviews-lightbox-close');
@@ -3547,14 +3503,12 @@ Zobacz zdjęcia.</p>
         cards.forEach(card => {
           const imgs = card.querySelectorAll('.review-images img');
           if (imgs.length === 0) return;
-          const author = card.querySelector('.review-name')?.textContent?.trim() || 'Klient';
           const ratingEls = card.querySelectorAll('.review-rating svg');
           const rating = ratingEls.length || 5;
           const text = card.querySelector('.review-text')?.textContent?.trim() || '';
           imgs.forEach(img => {
             gallery.push({
               src: img.src,
-              author,
               rating,
               text,
               triggerEl: img
@@ -3572,7 +3526,6 @@ Zobacz zdjęcia.</p>
           cur.textContent = idx + 1;
           total.textContent = gallery.length;
       
-          captionName.textContent = item.author;
           captionStars.innerHTML = Array(item.rating).fill(STAR_SVG).join('');
           captionText.textContent = item.text;
       
@@ -3595,7 +3548,7 @@ Zobacz zdjęcia.</p>
           if (stage.src === item.src) {
             stage.src = '';
           }
-          stage.alt = item.author;
+          stage.alt = '';
           stage.src = item.src;
           // Fallback: jeśli już complete (cache), wywołaj ręcznie
           if (stage.complete && stage.naturalWidth > 0) {
@@ -3685,26 +3638,34 @@ Zobacz zdjęcia.</p>
           });
         }
       
-        // ═══ SIDE WIDGET (sticky panel + tab) ═══
+        // ═══ SIDE WIDGET (sticky panel + tab) z marquee scroll ═══
         const widget = document.getElementById('reviews-side-widget');
         if (widget && gallery.length > 0) {
           const grid = widget.querySelector('[data-side-grid]');
           const tab = widget.querySelector('.reviews-side-tab');
           const close = widget.querySelector('.reviews-side-close');
       
-          // Wpisz max 6 thumbnails (różne, z różnych opinii)
+          // Wybierz unikalne zdjęcia (max 12 dla bogatego marquee)
           const seen = new Set();
           const picks = [];
           for (const item of gallery) {
             if (seen.has(item.src)) continue;
             seen.add(item.src);
             picks.push(item);
-            if (picks.length >= 6) break;
+            if (picks.length >= 12) break;
           }
-          grid.innerHTML = picks.map((item, i) => {
+          // Min 6 do dobrego efektu - jeśli mało, duplikuj cykl
+          while (picks.length < 6 && picks.length > 0) {
+            picks.push(...picks.slice(0, 6 - picks.length));
+          }
+      
+          function thumbHtml(item) {
             const fullIdx = gallery.findIndex(g => g.src === item.src);
             return `<img class="reviews-side-thumb" src="${item.src}" alt="" loading="lazy" referrerpolicy="no-referrer" data-gallery-idx="${fullIdx >= 0 ? fullIdx : 0}">`;
-          }).join('');
+          }
+          // Track z duplikatem dla seamless loop (translateY -50% pokazuje 1. kopię, potem 2. = ten sam content)
+          const trackInner = picks.map(thumbHtml).join('');
+          grid.innerHTML = `<div class="reviews-side-track">${trackInner}${trackInner}</div>`;
       
           grid.querySelectorAll('.reviews-side-thumb').forEach(img => {
             img.addEventListener('click', () => {
@@ -3715,7 +3676,7 @@ Zobacz zdjęcia.</p>
           tab.addEventListener('click', () => widget.classList.add('open'));
           close.addEventListener('click', () => widget.classList.remove('open'));
       
-          // Pokaż widget po przewinięciu poza hero (przed sekcją Solution albo >300px)
+          // Pokaż widget po przewinięciu poza hero (>300px)
           function checkScroll() {
             if (window.scrollY > 300) widget.classList.add('ready');
             else widget.classList.remove('ready');
