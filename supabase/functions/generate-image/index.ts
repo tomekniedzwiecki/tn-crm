@@ -208,11 +208,17 @@ async function generateWithOpenAI(
     }
 
     console.log(`Calling OpenAI /v1/images/edits with ${refBlobs.length} references`)
+    const startEdits = Date.now()
     const response = await fetch('https://api.openai.com/v1/images/edits', {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}` },
-      body: form
+      body: form,
+      signal: AbortSignal.timeout(120000)
+    }).catch(err => {
+      console.error(`OpenAI edits fetch FAILED after ${Date.now()-startEdits}ms:`, err.name, err.message)
+      throw new Error(`OpenAI edits fetch error after ${Date.now()-startEdits}ms: ${err.name}: ${err.message}`)
     })
+    console.log(`OpenAI edits responded in ${Date.now()-startEdits}ms with status ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -239,14 +245,20 @@ async function generateWithOpenAI(
     if (size !== 'auto') body.size = size
 
     console.log(`Calling OpenAI /v1/images/generations (no references)`)
+    const startGen = Date.now()
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120000)
+    }).catch(err => {
+      console.error(`OpenAI generations fetch FAILED after ${Date.now()-startGen}ms:`, err.name, err.message)
+      throw new Error(`OpenAI generations fetch error after ${Date.now()-startGen}ms: ${err.name}: ${err.message}`)
     })
+    console.log(`OpenAI generations responded in ${Date.now()-startGen}ms with status ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -365,6 +377,7 @@ ${prompt}`
   for (let i = 0; i < Math.min(count, 4); i++) {
     console.log(`Generating image ${i + 1}/${count}...`)
 
+    const startGem = Date.now()
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -380,8 +393,13 @@ ${prompt}`
             aspectRatio: aspectRatio || '1:1'
           }
         }
-      })
+      }),
+      signal: AbortSignal.timeout(120000)
+    }).catch(err => {
+      console.error(`Gemini fetch FAILED after ${Date.now()-startGem}ms:`, err.name, err.message)
+      throw new Error(`Gemini fetch error after ${Date.now()-startGem}ms: ${err.name}: ${err.message}`)
     })
+    console.log(`Gemini responded in ${Date.now()-startGem}ms with status ${response.status}`)
 
     if (!response.ok) {
       const errorText = await response.text()
