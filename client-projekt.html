@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050715';
+        const APP_VERSION = '2026050716';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -7755,8 +7755,8 @@
             ['dash-nav-opinie','dash-mobile-opinie','nav-opinie-desktop','nav-opinie-mobile-wrap'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasOpinie);
             });
-            // Checkmark zielony gdy opinie zostaly udostepnione
-            const opinieDone = !!optimizationData?.reviews_shared_at;
+            // Checkmark zielony: opinie pobrane LUB przekazane klientowi
+            const opinieDone = (optimizationData?.reviews_count || 0) > 0 || !!optimizationData?.reviews_shared_at;
             ['dash-nav-check-opinie','dash-nav-check-opinie-mobile','nav-check-opinie-desktop','nav-check-opinie-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !opinieDone);
             });
@@ -7766,7 +7766,8 @@
             ['dash-nav-video','dash-mobile-video'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasVideoStep);
             });
-            const videoDone = !!optimizationData?.videos_shared_at;
+            // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi
+            const videoDone = !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at;
             ['dash-nav-check-video','dash-nav-check-video-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !videoDone);
             });

@@ -5583,8 +5583,8 @@
                 if (navBtnOpinie) {
                     navBtnOpinie.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled);
                 }
-                // Checkmark zielony gdy opinie zostaly oznaczone jako przekazane klientowi
-                const opinieDone = !!optimizationNavStatus?.reviews_shared_at;
+                // Checkmark zielony: opinie pobrane (>=1) LUB przekazane klientowi
+                const opinieDone = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at;
                 toggle('nav-check-opinie', opinieDone);
 
                 // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony i sa nagrania w Etapie 2
@@ -5593,9 +5593,9 @@
                 if (navBtnVideo) {
                     navBtnVideo.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled || !hasVideos);
                 }
-                // Checkmark zielony gdy sekcja przekazana klientowi (videos_shared_at)
-                const videoSharedDone = !!optimizationNavStatus?.videos_shared_at;
-                toggle('nav-check-video', videoSharedDone);
+                // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi
+                const videoDone = !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at;
+                toggle('nav-check-video', videoDone);
 
                 // Etap 5 / Krok 4 - Narzedzia: pokaz po przekazaniu Reels (videos_shared_at)
                 const navBtnNarzedzia = document.getElementById('nav-btn-narzedzia');
@@ -15404,16 +15404,10 @@ PODSUMOWANIE wyświetl na końcu:
             const insertedAt = optimizationData?.videos_inserted_at;
             const hasVideos = videosData && videosData.length > 0;
 
-            // Disable jeśli brak video lub jeszcze nie wstawione na landing
+            // Disabled tylko gdy brak video w bazie (analogicznie do opinii — nie wymagamy videos_inserted_at)
             if (!hasVideos) {
                 btn.disabled = true;
-                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Brak video do przekazania';
-                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
-                return;
-            }
-            if (!insertedAt) {
-                btn.disabled = true;
-                status.innerHTML = '<i class="ph ph-warning text-amber-400"></i> Najpierw uruchom prompt z Krok 2 aby wstawić sekcję na landing';
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Brak video do przekazania (dodaj URL powyżej)';
                 if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
                 return;
             }
@@ -15422,6 +15416,9 @@ PODSUMOWANIE wyświetl na końcu:
                 const d = new Date(sharedAt);
                 status.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Przekazane klientowi: <strong class="text-zinc-300">' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + '</strong>';
                 if (btnLabel) btnLabel.textContent = 'Wyślij ponownie';
+            } else if (!insertedAt) {
+                status.innerHTML = '<i class="ph ph-warning text-amber-400"></i> Sekcja Reels nie wstawiona na landing (Krok 2). Możesz mimo to przekazać klientowi — dostanie email z linkiem.';
+                if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
             } else {
                 status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Po kliknięciu wyślemy email do klienta i odblokuje się krok Narzędzia';
                 if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
