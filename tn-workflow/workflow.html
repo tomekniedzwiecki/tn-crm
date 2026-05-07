@@ -500,10 +500,20 @@
                             Raport
                             <span id="nav-check-raport" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
-                        <button onclick="switchTab('skalowanie')" data-tab="skalowanie" class="workflow-sidebar-btn">
-                            <i class="ph ph-trend-up"></i>
-                            Skalowanie
-                            <span id="nav-check-skalowanie" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                    </div>
+                </div>
+
+                <!-- Etap 5 - Optymalizacja -->
+                <div id="nav-stage5" class="hidden pt-4 mt-4 border-t border-white/5">
+                    <button onclick="toggleStageSection(5)" class="flex items-center justify-between w-full px-3 mb-2 group cursor-pointer">
+                        <span class="text-[10px] text-zinc-600 uppercase tracking-wider">Etap 5</span>
+                        <i id="stage-5-chevron" class="ph ph-caret-down text-zinc-600 text-xs transition-transform"></i>
+                    </button>
+                    <div id="stage-5-content">
+                        <button onclick="switchTab('optymalizacje')" data-tab="optymalizacje" class="workflow-sidebar-btn">
+                            <i class="ph ph-sparkle"></i>
+                            Optymalizacje
+                            <span id="nav-check-optymalizacje" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
                     </div>
                 </div>
@@ -3073,33 +3083,123 @@
                         </div>
                     </div><!-- /tab-raport -->
 
-                    <!-- TAB: Skalowanie (Etap 4) -->
-                    <div id="tab-skalowanie" class="workflow-panel hidden">
+                    <!-- TAB: Optymalizacje (Etap 5) -->
+                    <div id="tab-optymalizacje" class="workflow-panel hidden">
                         <div class="mb-6">
                             <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-                                <i class="ph ph-trend-up text-amber-400"></i>
-                                Skalowanie
+                                <i class="ph ph-sparkle text-violet-400"></i>
+                                Optymalizacje
                             </h3>
-                            <p class="text-zinc-500 text-sm">Zwiększanie budżetu i zasięgu kampanii</p>
+                            <p class="text-zinc-500 text-sm">Optymalizacja sprzedaży: COD + WhatsApp na stronie</p>
                         </div>
 
-                        <!-- Status info -->
-                        <div id="skalowanie-admin-status" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
-                            <div class="flex items-center gap-4 mb-4">
-                                <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                                    <i class="ph ph-clock text-xl text-amber-400"></i>
+                        <!-- Aktywacja etapu 5 -->
+                        <div class="bg-gradient-to-br from-violet-500/10 to-fuchsia-500/5 border border-violet-500/30 rounded-xl p-6 mb-6">
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-xl bg-violet-500/20 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-rocket-launch text-xl text-violet-400"></i>
                                 </div>
-                                <div>
-                                    <h4 class="text-[14px] font-medium text-white">Skalowanie nieaktywne</h4>
-                                    <p class="text-[12px] text-[#666]">Rozpocznij skalowanie po analizie wyników</p>
+                                <div class="flex-1">
+                                    <h4 class="text-[15px] font-medium text-white mb-1">Włącz Etap 5 — Optymalizacja</h4>
+                                    <p class="text-[13px] text-zinc-400 leading-relaxed mb-4">
+                                        Po przełączeniu klient zobaczy nowy etap w swoim panelu. Wykonaj zadania poniżej (COD + WhatsApp), a następnie przełącz włącznik.
+                                    </p>
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" id="opt-is-active-toggle" onchange="toggleOptimizationActive(this.checked)" class="w-5 h-5 rounded border-white/20 bg-white/5 text-violet-500 focus:ring-violet-500 focus:ring-offset-0">
+                                        <span class="text-[14px] font-medium text-white">Aktywuj Etap 5 dla klienta</span>
+                                        <span id="opt-active-status" class="text-[12px] text-[#666] ml-2"></span>
+                                    </label>
                                 </div>
                             </div>
-                            <button onclick="markScalingStarted()" id="btn-start-scaling" class="w-full bg-amber-500 hover:bg-amber-400 text-white py-3 rounded-xl text-[14px] font-semibold transition-colors">
-                                <i class="ph ph-trend-up mr-2"></i>
-                                Rozpocznij skalowanie
-                            </button>
                         </div>
-                    </div><!-- /tab-skalowanie -->
+
+                        <!-- COD -->
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-package text-amber-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Płatność za pobraniem (COD)</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Włącz COD w sklepie klienta (TakeDrop) i poinformuj go, żeby zamówił 2-3 sztuki produktu — będzie wysyłał z domu, bo czas dropshippingu (14 dni) jest za długi dla zamówień COD.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="space-y-2 ml-14">
+                                <label class="flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] p-2 rounded-lg -ml-2">
+                                    <input type="checkbox" id="opt-cod-enabled" onchange="toggleOptCodEnabled(this.checked)" class="w-4 h-4 rounded border-white/20 bg-white/5 text-amber-500 focus:ring-amber-500 focus:ring-offset-0">
+                                    <span class="text-[13px] text-white">COD włączony w sklepie klienta</span>
+                                </label>
+                                <label class="flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] p-2 rounded-lg -ml-2">
+                                    <input type="checkbox" id="opt-cod-stock" onchange="toggleOptCodStock(this.checked)" class="w-4 h-4 rounded border-white/20 bg-white/5 text-amber-500 focus:ring-amber-500 focus:ring-offset-0">
+                                    <span class="text-[13px] text-white">Klient potwierdził: ma 2-3 sztuki produktu w domu</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- WhatsApp -->
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-whatsapp-logo text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">WhatsApp na stronie sprzedażowej</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Dodaje float button WhatsApp na landing page klienta — klienci sklepu mogą szybko zadać pytanie. Domyślnie używamy numeru klienta z workflow; klient może zmienić w swoim panelu.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14 space-y-3">
+                                <label class="flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] p-2 rounded-lg -ml-2">
+                                    <input type="checkbox" id="opt-whatsapp-enabled" onchange="toggleOptWhatsapp(this.checked)" class="w-4 h-4 rounded border-white/20 bg-white/5 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0">
+                                    <span class="text-[13px] text-white">WhatsApp aktywny na stronie</span>
+                                </label>
+                                <div>
+                                    <label class="block text-[12px] text-zinc-500 mb-1.5">Numer telefonu (format międzynarodowy, np. +48...)</label>
+                                    <div class="flex gap-2">
+                                        <input type="tel" id="opt-whatsapp-phone" placeholder="+48..." class="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-[13px] text-white focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/20 focus:outline-none">
+                                        <button onclick="saveOptWhatsappPhone()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-[13px] font-medium rounded-lg transition-colors">
+                                            Zapisz
+                                        </button>
+                                    </div>
+                                    <p id="opt-whatsapp-phone-hint" class="text-[11px] text-zinc-600 mt-1.5"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recovery calls -->
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mt-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-phone-call text-cyan-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Odzyskiwanie niedokończonych zamówień</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Klient sklepu sprawdza nieopłacone zamówienia i porzucone koszyki, dzwoni do tych osób i pyta dlaczego nie dokończyli zamówienia. Notatki pojawiają się w jego panelu — oboje widzicie i edytujecie ten sam tekst.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14 space-y-3">
+                                <label class="flex items-center gap-3 cursor-pointer hover:bg-white/[0.02] p-2 rounded-lg -ml-2">
+                                    <input type="checkbox" id="opt-recovery-done" onchange="toggleOptRecoveryDone(this.checked)" class="w-4 h-4 rounded border-white/20 bg-white/5 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0">
+                                    <span class="text-[13px] text-white">Klient wykonał próby kontaktu z niedokończonymi zamówieniami</span>
+                                </label>
+                                <div>
+                                    <label class="block text-[12px] text-zinc-500 mb-1.5">Notatki z prób kontaktu (wspólne — widzi też klient)</label>
+                                    <textarea id="opt-recovery-notes" rows="6" placeholder="Wpisy klienta pojawią się tutaj..." class="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-[13px] text-white focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/20 focus:outline-none resize-y"></textarea>
+                                    <div class="flex items-center justify-between mt-2">
+                                        <p id="opt-recovery-notes-status" class="text-[11px] text-zinc-600"></p>
+                                        <button onclick="saveOptRecoveryNotes()" class="px-3 py-1.5 bg-cyan-500/15 hover:bg-cyan-500/25 text-cyan-400 text-[12px] font-medium rounded-lg transition-colors">
+                                            Zapisz notatki
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div><!-- /tab-optymalizacje -->
 
                     <!-- TAB: Historia (Full Activity History) -->
                     <div id="tab-historia" class="workflow-panel hidden">
@@ -5060,12 +5160,13 @@
                 toggle('nav-check-strona', !!workflow.sales_page_shared_at);
 
                 // These need DB queries
-                const [brandRes, repsRes, videoRes, takedropRes, adsRes] = await Promise.all([
+                const [brandRes, repsRes, videoRes, takedropRes, adsRes, optimizationRes] = await Promise.all([
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent, scaling_started').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_optimization').select('is_active').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -5165,7 +5266,14 @@
                 }
                 toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
                 toggle('nav-check-raport', !!adsNavStatus?.report_sent);
-                toggle('nav-check-skalowanie', !!adsNavStatus?.scaling_started);
+
+                // Etap 5 - Optymalizacja: pokaz po wyslaniu raportu (auto-create row)
+                const optimizationNavStatus = optimizationRes.data;
+                const navStage5 = document.getElementById('nav-stage5');
+                if (navStage5) {
+                    navStage5.classList.toggle('hidden', !adsNavStatus?.report_sent);
+                }
+                toggle('nav-check-optymalizacje', !!optimizationNavStatus?.is_active);
             } catch (e) {
                 console.error('updateNavChecks error:', e);
             }
@@ -6900,7 +7008,8 @@
             const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
             const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
             const stage3Tabs = ['takedrop', 'landing', 'legal', 'payment-gateway', 'test'];
-            const stage4Tabs = ['ad-account', 'budzet'];
+            const stage4Tabs = ['ad-account', 'budzet', 'content', 'kampania', 'raport'];
+            const stage5Tabs = ['optymalizacje'];
 
             if (stage1Tabs.includes(tabName)) {
                 expandStageSection(1);
@@ -6910,6 +7019,8 @@
                 expandStageSection(3);
             } else if (stage4Tabs.includes(tabName)) {
                 expandStageSection(4);
+            } else if (stage5Tabs.includes(tabName)) {
+                expandStageSection(5);
             }
 
             // Update sidebar buttons
@@ -6982,6 +7093,9 @@
                     break;
                 case 'raport':
                     loadRaportTab();
+                    break;
+                case 'optymalizacje':
+                    loadOptymalizacjeTab();
                     break;
                 case 'historia':
                     loadFullHistory(true);
@@ -13813,6 +13927,256 @@ Zwróć TYLKO JSON.`;
         window.saveMetaAdAccountId = saveMetaAdAccountId;
         window.setDateRangePreset = setDateRangePreset;
         window.checkManusStatusNow = checkManusStatusNow;
+
+        // =============================================
+        // ETAP 5 - OPTYMALIZACJE
+        // =============================================
+        let optimizationData = null;
+
+        async function loadOptymalizacjeTab() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (!data) {
+                    // Auto-create row gdy nie istnieje
+                    const { data: created, error: createErr } = await supabaseClient
+                        .from('workflow_optimization')
+                        .insert({ workflow_id: workflow.id })
+                        .select()
+                        .single();
+                    if (createErr) throw createErr;
+                    optimizationData = created;
+                } else {
+                    optimizationData = data;
+                }
+
+                // Render UI
+                document.getElementById('opt-is-active-toggle').checked = !!optimizationData.is_active;
+                document.getElementById('opt-active-status').textContent =
+                    optimizationData.is_active && optimizationData.activated_at
+                        ? `Aktywny od ${new Date(optimizationData.activated_at).toLocaleDateString('pl-PL')}`
+                        : '';
+
+                document.getElementById('opt-cod-enabled').checked = !!optimizationData.cod_enabled;
+                document.getElementById('opt-cod-stock').checked = !!optimizationData.cod_stock_confirmed;
+
+                document.getElementById('opt-whatsapp-enabled').checked = !!optimizationData.whatsapp_enabled;
+                const phoneInput = document.getElementById('opt-whatsapp-phone');
+                phoneInput.value = optimizationData.whatsapp_phone || workflow.customer_phone || '';
+
+                // Recovery calls
+                document.getElementById('opt-recovery-done').checked = !!optimizationData.recovery_calls_done;
+                document.getElementById('opt-recovery-notes').value = optimizationData.recovery_calls_notes || '';
+                const recoveryStatus = document.getElementById('opt-recovery-notes-status');
+                if (optimizationData.recovery_calls_done_at) {
+                    recoveryStatus.textContent = `Ostatnia aktualizacja: ${new Date(optimizationData.recovery_calls_done_at).toLocaleString('pl-PL')}`;
+                } else {
+                    recoveryStatus.textContent = 'Notatki są wspólne — klient też je widzi i edytuje';
+                }
+
+                const phoneHint = document.getElementById('opt-whatsapp-phone-hint');
+                if (optimizationData.whatsapp_phone_set_by_client) {
+                    phoneHint.textContent = '⚠️ Klient nadpisał numer ze swojego panelu';
+                    phoneHint.className = 'text-[11px] text-amber-400 mt-1.5';
+                } else if (!optimizationData.whatsapp_phone) {
+                    phoneHint.textContent = `Domyślnie: ${workflow.customer_phone || '(brak telefonu w workflow)'} — z danych workflow`;
+                    phoneHint.className = 'text-[11px] text-zinc-600 mt-1.5';
+                } else {
+                    phoneHint.textContent = 'Numer ustawiony przez admina';
+                    phoneHint.className = 'text-[11px] text-zinc-600 mt-1.5';
+                }
+            } catch (err) {
+                console.error('loadOptymalizacjeTab error:', err);
+                showToast('Błąd ładowania optymalizacji: ' + err.message, 'error');
+            }
+        }
+
+        async function toggleOptimizationActive(active) {
+            if (!optimizationData) return;
+            try {
+                const updates = { is_active: active };
+                if (active && !optimizationData.activated_at) {
+                    updates.activated_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+
+                optimizationData = { ...optimizationData, ...updates };
+                document.getElementById('opt-active-status').textContent =
+                    active && updates.activated_at
+                        ? `Aktywny od ${new Date(updates.activated_at).toLocaleDateString('pl-PL')}`
+                        : (active ? 'Aktywny' : '');
+
+                // Wywolaj automatyzacje (optional)
+                if (active) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'optimization_started',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    customerName: workflow.customer_name,
+                                    customerEmail: workflow.customer_email
+                                }
+                            }
+                        });
+                    } catch (e) {
+                        console.warn('automation-trigger failed (non-critical):', e);
+                    }
+                }
+
+                document.getElementById('nav-check-optymalizacje')?.classList.toggle('hidden', !active);
+                showToast(active ? 'Etap 5 aktywowany — klient widzi nową sekcję' : 'Etap 5 wstrzymany', 'success');
+            } catch (err) {
+                console.error('toggleOptimizationActive error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+                document.getElementById('opt-is-active-toggle').checked = optimizationData.is_active;
+            }
+        }
+
+        async function toggleOptCodEnabled(enabled) {
+            if (!optimizationData) return;
+            try {
+                const updates = { cod_enabled: enabled };
+                if (enabled && !optimizationData.cod_enabled_at) {
+                    updates.cod_enabled_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                showToast('Zapisano', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+                document.getElementById('opt-cod-enabled').checked = optimizationData.cod_enabled;
+            }
+        }
+
+        async function toggleOptCodStock(confirmed) {
+            if (!optimizationData) return;
+            try {
+                const updates = { cod_stock_confirmed: confirmed };
+                if (confirmed && !optimizationData.cod_stock_confirmed_at) {
+                    updates.cod_stock_confirmed_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                showToast('Zapisano', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+                document.getElementById('opt-cod-stock').checked = optimizationData.cod_stock_confirmed;
+            }
+        }
+
+        async function toggleOptWhatsapp(enabled) {
+            if (!optimizationData) return;
+            try {
+                const updates = { whatsapp_enabled: enabled };
+                if (enabled && !optimizationData.whatsapp_configured_at) {
+                    updates.whatsapp_configured_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                showToast(enabled ? 'WhatsApp aktywny na stronie' : 'WhatsApp wyłączony', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+                document.getElementById('opt-whatsapp-enabled').checked = optimizationData.whatsapp_enabled;
+            }
+        }
+
+        async function saveOptWhatsappPhone() {
+            if (!optimizationData) return;
+            const phone = document.getElementById('opt-whatsapp-phone').value.trim();
+            try {
+                const updates = {
+                    whatsapp_phone: phone || null,
+                    whatsapp_phone_set_by_client: false
+                };
+                if (!optimizationData.whatsapp_configured_at) {
+                    updates.whatsapp_configured_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                const phoneHint = document.getElementById('opt-whatsapp-phone-hint');
+                phoneHint.textContent = phone ? 'Numer ustawiony przez admina' : `Domyślnie: ${workflow.customer_phone || '(brak)'} — z danych workflow`;
+                phoneHint.className = 'text-[11px] text-zinc-600 mt-1.5';
+                showToast('Numer zapisany', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+
+        async function toggleOptRecoveryDone(done) {
+            if (!optimizationData) return;
+            try {
+                const updates = { recovery_calls_done: done };
+                if (done && !optimizationData.recovery_calls_done_at) {
+                    updates.recovery_calls_done_at = new Date().toISOString();
+                }
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                showToast('Zapisano', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+                document.getElementById('opt-recovery-done').checked = optimizationData.recovery_calls_done;
+            }
+        }
+
+        async function saveOptRecoveryNotes() {
+            if (!optimizationData) return;
+            const notes = document.getElementById('opt-recovery-notes').value;
+            try {
+                const updates = { recovery_calls_notes: notes };
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('id', optimizationData.id);
+                if (error) throw error;
+                optimizationData = { ...optimizationData, ...updates };
+                document.getElementById('opt-recovery-notes-status').textContent =
+                    'Zapisane: ' + new Date().toLocaleString('pl-PL');
+                showToast('Notatki zapisane', 'success');
+            } catch (err) {
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+
+        window.loadOptymalizacjeTab = loadOptymalizacjeTab;
+        window.toggleOptimizationActive = toggleOptimizationActive;
+        window.toggleOptCodEnabled = toggleOptCodEnabled;
+        window.toggleOptCodStock = toggleOptCodStock;
+        window.toggleOptWhatsapp = toggleOptWhatsapp;
+        window.saveOptWhatsappPhone = saveOptWhatsappPhone;
+        window.toggleOptRecoveryDone = toggleOptRecoveryDone;
+        window.saveOptRecoveryNotes = saveOptRecoveryNotes;
 
         // =============================================
         // AUTO-REPORTS & HISTORY

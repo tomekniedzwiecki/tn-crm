@@ -43,6 +43,11 @@ const EMAIL_TEMPLATE_CATEGORIES = {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z kampaniami reklamowymi',
         templates: ['ads_activated', 'content_ready', 'campaign_launched', 'ad_report']
+    },
+    optymalizacja: {
+        label: 'Etap 5 - Optymalizacja',
+        description: 'Maile związane z optymalizacją sprzedaży',
+        templates: ['optimization_started']
     }
 };
 
@@ -191,6 +196,13 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Automatyczny raport z wynikami kampanii (co 7 dni)',
         icon: 'ph-chart-line-up',
         color: 'rose'
+    },
+    // Etap 5 - Optymalizacja
+    'optimization_started': {
+        name: 'Etap 5 — Optymalizacja',
+        description: 'Wysyłany gdy admin aktywuje Etap 5 (COD + WhatsApp + odzyskiwanie zamówień)',
+        icon: 'ph-sparkle',
+        color: 'violet'
     }
 };
 
@@ -246,7 +258,8 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'test_ready', label: 'Test sklepu gotowy' },
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
         { value: 'content_ready', label: 'Materiały reklamowe gotowe' },
-        { value: 'campaign_launched', label: 'Kampania uruchomiona' }
+        { value: 'campaign_launched', label: 'Kampania uruchomiona' },
+        { value: 'optimization_started', label: 'Etap 5 — Optymalizacja' }
     ]
 };
 
@@ -281,5 +294,7 @@ const TRIGGER_DEFINITIONS = {
     // Etap 4 - Reklamy
     ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' },
     content_ready: { label: 'Materiały reklamowe gotowe', icon: 'ph-magic-wand', color: 'violet' },
-    campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' }
+    campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' },
+    // Etap 5 - Optymalizacja
+    optimization_started: { label: 'Etap 5 — Optymalizacja', icon: 'ph-sparkle', color: 'violet' }
 };

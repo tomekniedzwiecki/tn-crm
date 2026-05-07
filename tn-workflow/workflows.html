@@ -305,10 +305,19 @@
                                 <i class="ph ph-chart-line-up"></i> Raport
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
-                            <button onclick="toggleStatusStage('skalowanie')" data-stage="skalowanie"
+                        </div>
+                    </div>
+                    <!-- Etap 5 -->
+                    <div class="mb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Etap 5</span>
+                            <span class="text-[10px] text-zinc-700">Optymalizacja</span>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="toggleStatusStage('optymalizacje')" data-stage="optymalizacje"
                                 class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
-                                <i class="ph ph-trend-up"></i> Skalowanie
-                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                                <i class="ph ph-sparkle"></i> Optymalizacje
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
                         </div>
                     </div>
@@ -739,10 +748,11 @@
             const workflowIds = workflows.map(w => w.workflow_id);
             if (workflowIds.length === 0) return;
 
-            const [videoRes, takedropRes, adsRes] = await Promise.all([
+            const [videoRes, takedropRes, adsRes, optRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -755,10 +765,14 @@
             if (adsRes.error) {
                 console.error('Error loading ads stages:', adsRes.error);
             }
+            if (optRes.error) {
+                console.error('Error loading optimization stages:', optRes.error);
+            }
 
             videoStages = {};
             takedropStages = {};
             let adsStages = {};
+            let optStages = {};
 
             (videoRes.data || []).forEach(v => {
                 videoStages[v.workflow_id] = v;
@@ -772,23 +786,26 @@
                 adsStages[a.workflow_id] = a;
             });
 
+            (optRes.data || []).forEach(o => {
+                optStages[o.workflow_id] = o;
+            });
+
             // Attach stage info to workflows
             for (const w of workflows) {
                 w.video_stage = videoStages[w.workflow_id] || null;
                 w.takedrop_stage = takedropStages[w.workflow_id] || null;
                 w.ads_stage = adsStages[w.workflow_id] || null;
+                w.optimization_stage = optStages[w.workflow_id] || null;
             }
         }
 
         function getWorkflowStage(w) {
-            // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop, 4 = Ads
-            // Etap 4 = test_accepted (Etap 3 zakończony)
-            // Etap 3 = video ukończone (≥3 nagrań LUB skipped) LUB takedrop aktywny
-            // Etap 2 = video aktywne ALE nie ukończone
+            // Returns: 1 = Stage 1 (milestones), 2 = Video, 3 = TakeDrop, 4 = Ads, 5 = Optymalizacja
             const videoLinks = w.video_stage?.video_links || [];
             const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
             const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
+            if (w.optimization_stage?.is_active) return 5;
             if (w.takedrop_stage?.test_accepted) return 4;
             if (w.takedrop_stage?.is_active || isVideoComplete) return 3;
             if (isVideoActive) return 2;
@@ -908,9 +925,11 @@
                         if (stage === 'ads_report') {
                             return w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent;
                         }
-                        // "skalowanie" = raport wysłany ALE skalowanie NIE rozpoczęte
-                        if (stage === 'skalowanie') {
-                            return w.ads_stage?.report_sent && !w.ads_stage?.scaling_started;
+                        // "optymalizacje" = raport wysłany ALE optymalizacja NIE aktywowana lub niezakończona
+                        if (stage === 'optymalizacje') {
+                            const opt = w.optimization_stage;
+                            const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                            return w.ads_stage?.report_sent && !allDone;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -1017,7 +1036,7 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0, budget: 0, campaign: 0, ads_report: 0, skalowanie: 0
+                ad_account: 0, budget: 0, campaign: 0, ads_report: 0, optymalizacje: 0
             };
 
             // Only count active workflows
@@ -1084,17 +1103,20 @@
                     counts.ads_report++;
                     continue;
                 }
-                // "skalowanie" = raport wysłany ALE skalowanie NIE rozpoczęte
-                if (w.ads_stage?.report_sent && !w.ads_stage?.scaling_started) {
-                    counts.skalowanie++;
-                    continue;
+                // "optymalizacje" = raport wysłany ALE optymalizacja niezakończona
+                if (w.ads_stage?.report_sent) {
+                    const opt = w.optimization_stage;
+                    const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                    if (!allDone) {
+                        counts.optymalizacje++;
+                        continue;
+                    }
                 }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
-                // Skip takedrop/landing/legal_data/legal/payment_gateway/test/ad_account/budget/campaign/ads_report/skalowanie - these are handled above with exact filter logic
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'skalowanie'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'optymalizacje'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
@@ -1325,8 +1347,10 @@
             // Raport wysłany
             if (!w.ads_stage?.report_sent) return 'ads_report';
 
-            // Skalowanie rozpoczęte
-            if (!w.ads_stage?.scaling_started) return 'skalowanie';
+            // Etap 5: Optymalizacja
+            const opt = w.optimization_stage;
+            const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+            if (!optAllDone) return 'optymalizacje';
 
             return null; // all done
         }
@@ -1513,13 +1537,18 @@
                     }
                 }
 
-                // Skalowanie - pokazuj gdy raport wysłany
-                if (w.ads_stage?.report_sent) {
-                    if (w.ads_stage?.scaling_started) {
-                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Skalowanie</span>`);
-                    } else {
-                        items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>Skalowanie</span>`);
-                    }
+            }
+
+            // Etap 5: Optymalizacja - pokazuj gdy raport wysłany
+            if (w.ads_stage?.report_sent) {
+                const opt = w.optimization_stage;
+                const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                if (optAllDone) {
+                    items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Optymalizacje</span>`);
+                } else if (opt?.is_active) {
+                    items.push(`<span class="flex items-center gap-1 text-violet-400"><i class="ph ph-circle-notch text-[10px]"></i>Optymalizacje</span>`);
+                } else {
+                    items.push(`<span class="flex items-center gap-1 text-zinc-500"><i class="ph ph-sparkle text-[10px]"></i>Optymalizacje</span>`);
                 }
             }
 
@@ -1722,6 +1751,54 @@
         function renderCurrentWork(w) {
             const stage = getWorkflowStage(w);
             const progressPercent = w.progress_percent || 0;
+
+            // Etap 5: Optymalizacja
+            if (stage === 5) {
+                const opt = w.optimization_stage;
+                const codDone = opt?.cod_enabled && opt?.cod_stock_confirmed;
+                const waDone = opt?.whatsapp_enabled;
+                const recoveryDone = opt?.recovery_calls_done;
+
+                let stepName, status, icon, isClientTask;
+
+                if (!codDone) {
+                    stepName = 'COD w sklepie';
+                    status = opt?.cod_enabled ? 'Klient zamawia 2-3 sztuki' : 'Włącz COD i poinformuj klienta';
+                    icon = 'ph ph-package text-amber-400';
+                    isClientTask = !!opt?.cod_enabled;
+                } else if (!waDone) {
+                    stepName = 'WhatsApp na stronie';
+                    status = 'Aktywuj widget WhatsApp';
+                    icon = 'ph ph-whatsapp-logo text-emerald-400';
+                    isClientTask = false;
+                } else if (!recoveryDone) {
+                    stepName = 'Odzyskiwanie zamówień';
+                    status = 'Klient kontaktuje się z porzuconymi koszykami';
+                    icon = 'ph ph-phone-call text-cyan-400';
+                    isClientTask = true;
+                } else {
+                    stepName = 'Optymalizacje';
+                    status = 'Wszystko gotowe';
+                    icon = 'ph-fill ph-check-circle text-emerald-400';
+                    isClientTask = false;
+                }
+
+                const ownerBadge = isClientTask
+                    ? '<span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>'
+                    : '<span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>';
+
+                return `
+                    <div class="py-2">
+                        <div class="flex items-center gap-2 text-[11px]">
+                            <i class="${icon}"></i>
+                            <span class="text-white font-medium">${stepName}</span>
+                            ${ownerBadge}
+                            <span class="text-zinc-500">·</span>
+                            <span class="text-zinc-400">${status}</span>
+                        </div>
+                    </div>
+                `;
+            }
 
             // Etap 4: Reklamy
             if (stage === 4) {
