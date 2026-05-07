@@ -3174,6 +3174,32 @@
                             </div>
                         </div>
 
+                        <!-- Widget WhatsApp na landingu (Krok: prompt do Claude Code) -->
+                        <div id="whatsapp-widget-prompt-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mt-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-chat-circle-dots text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Widget WhatsApp na landingu — prompt do Claude Code</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Rozszerza prosty floating button o panel z 4 quick-reply (zamów telefonicznie / pytanie o produkt / dostawa / porada) + dymek-zachęta po 8s.
+                                        Skopiuj prompt, otwórz <strong class="text-white">nową sesję Claude Code</strong> w <code class="text-zinc-400 bg-zinc-800/50 px-1 rounded">tn-crm</code> i wklej.
+                                    </p>
+                                    <p id="whatsapp-widget-prompt-status" class="text-[11px] mt-2"></p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <div class="relative">
+                                    <textarea id="whatsapp-widget-prompt-output" readonly rows="20" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-3 text-[12px] font-mono text-zinc-300 resize-y focus:outline-none"></textarea>
+                                    <button onclick="copyWhatsappWidgetPrompt()" class="absolute top-2 right-2 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 text-white text-[11px] font-medium rounded-md transition-colors flex items-center gap-1.5">
+                                        <i class="ph ph-copy"></i>
+                                        <span id="copy-whatsapp-widget-prompt-label">Skopiuj prompt</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Recovery calls -->
                         <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mt-4">
                             <div class="flex items-start gap-4 mb-4">
@@ -14100,6 +14126,9 @@ Zwróć TYLKO JSON.`;
                 const phoneInput = document.getElementById('opt-whatsapp-phone');
                 phoneInput.value = optimizationData.whatsapp_phone || workflow.customer_phone || '';
 
+                // Generuj prompt do widget WhatsApp (Claude Code)
+                showWhatsappWidgetPrompt();
+
                 // Recovery calls
                 document.getElementById('opt-recovery-done').checked = !!optimizationData.recovery_calls_done;
                 document.getElementById('opt-recovery-notes').value = optimizationData.recovery_calls_notes || '';
@@ -14236,6 +14265,7 @@ Zwróć TYLKO JSON.`;
                     if (phoneInput) phoneInput.value = updates.whatsapp_phone;
                 }
                 showToast(enabled ? 'WhatsApp aktywny na stronie' : 'WhatsApp wyłączony', 'success');
+                showWhatsappWidgetPrompt();
             } catch (err) {
                 showToast('Błąd: ' + err.message, 'error');
                 document.getElementById('opt-whatsapp-enabled').checked = optimizationData.whatsapp_enabled;
@@ -14263,6 +14293,7 @@ Zwróć TYLKO JSON.`;
                 phoneHint.textContent = phone ? 'Numer ustawiony przez admina' : `Domyślnie: ${workflow.customer_phone || '(brak)'} — z danych workflow`;
                 phoneHint.className = 'text-[11px] text-zinc-600 mt-1.5';
                 showToast('Numer zapisany', 'success');
+                showWhatsappWidgetPrompt();
             } catch (err) {
                 showToast('Błąd: ' + err.message, 'error');
             }
@@ -14702,6 +14733,104 @@ PODSUMOWANIE wyświetl na końcu:
             });
         }
 
+        function showWhatsappWidgetPrompt() {
+            const promptOutput = document.getElementById('whatsapp-widget-prompt-output');
+            const statusEl = document.getElementById('whatsapp-widget-prompt-status');
+            if (!promptOutput) return;
+
+            // Slug landingu z sales_page_url
+            const salesPageUrl = workflow.sales_page_url || '';
+            const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
+            const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
+
+            // Nazwa produktu / marki — preferuj offer_name, fallback customer_name
+            const productName = workflow.offer_name || workflow.customer_name || 'produkt';
+            const productGen = productName + 'a'; // dopelniacz hack — uzytkownik moze poprawic
+
+            // Status WA
+            const waEnabled = !!optimizationData?.whatsapp_enabled;
+            const waPhone = optimizationData?.whatsapp_phone || '';
+            if (statusEl) {
+                if (waEnabled && waPhone) {
+                    statusEl.innerHTML = '<span class="text-emerald-400">✓ WhatsApp aktywny</span> · numer: <code class="text-zinc-400">' + waPhone + '</code>';
+                } else if (waPhone) {
+                    statusEl.innerHTML = '<span class="text-amber-400">⚠ Numer jest, ale checkbox WhatsApp wyłączony</span> — widget się nie pokaże dopóki nie aktywujesz wyżej';
+                } else {
+                    statusEl.innerHTML = '<span class="text-amber-400">⚠ Brak numeru WhatsApp</span> — uzupełnij wyżej, inaczej widget się nie pokaże';
+                }
+            }
+
+            const prompt = 'Włącz interaktywny widget WhatsApp na landingu ' + landingSlug + '.\n' +
+                '\n' +
+                'PARAMETRY:\n' +
+                '- WORKFLOW_ID: ' + workflow.id + '\n' +
+                '- LANDING_SLUG: ' + landingSlug + '\n' +
+                '- LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/' + landingSlug + '/index.html\n' +
+                '- PRODUKT (mianownik): ' + productName + '\n' +
+                '- PRODUKT (dopełniacz, popraw jeśli źle): ' + productGen + '\n' +
+                '\n' +
+                'CO ZROBIĆ:\n' +
+                'W LANDING_FILE w bloku ConversionToolkit.init({...}) zastąp obecny blok `whatsapp: {...}` poniższym:\n' +
+                '\n' +
+                'whatsapp: {\n' +
+                "  workflowId: '" + workflow.id + "',\n" +
+                "  message: 'Cześć! Mam pytanie o " + productName + ".',\n" +
+                '  teaser: {\n' +
+                '    enabled: true,\n' +
+                '    delaySec: 8,\n' +
+                '    rotateSec: 14,\n' +
+                '    messages: [\n' +
+                "      'Cześć! Pomożemy w wyborze 👋',\n" +
+                "      'Masz pytanie? Napisz do nas',\n" +
+                "      'Zamów wygodnie przez czat'\n" +
+                '    ]\n' +
+                '  },\n' +
+                '  quickReplies: [\n' +
+                "    { icon: '📞', label: 'Zamów przez telefon',  message: 'Cześć! Chcę zamówić " + productName + " — proszę o kontakt telefoniczny.' },\n" +
+                "    { icon: '💬', label: 'Pytanie o produkt',    message: 'Cześć! Mam pytanie o " + productName + ".' },\n" +
+                "    { icon: '🚚', label: 'Pytanie o dostawę',    message: 'Cześć! Mam pytanie o dostawę " + productGen + ".' },\n" +
+                "    { icon: '🎯', label: 'Potrzebuję porady',    message: 'Cześć! Zastanawiam się nad zakupem " + productGen + " — potrzebuję porady.' }\n" +
+                '  ]\n' +
+                '}\n' +
+                '\n' +
+                'WYMAGANIA TECHNICZNE (już zaimplementowane w shared/conversion-toolkit.js — nic w nim nie zmieniaj):\n' +
+                '- floating zielony button WA, prawy dolny róg, subtle pulse\n' +
+                '- klik = panel z 4 quick replies (każda opcja = wa.me z prefill message)\n' +
+                '- po delaySec pokazuje się dymek-teaser obok buttona, znika po 6s lub po interakcji\n' +
+                '- gdy istnieje #reviews-side-widget → button auto-offset na bottom: 90px\n' +
+                '- numer WA pobierany z workflow_optimization.whatsapp_phone\n' +
+                '\n' +
+                'WAŻNE:\n' +
+                '- NIE używaj „za pobraniem" w żadnym labelku/wiadomości (tylko BLIK/karta/przelew)\n' +
+                '- triggery muszą zachęcać do KONTAKTU Z WŁAŚCICIELEM\n' +
+                '- POPRAW formy gramatyczne produktu jeśli automatyczny dopełniacz wyszedł brzydko\n' +
+                '\n' +
+                'DEPLOY (auto):\n' +
+                '1. git add landing-pages/' + landingSlug + '/index.html\n' +
+                '2. Sprawdź czy verify-landing FAIL-e są pre-existing (git stash → verify-landing.sh ' + landingSlug + ' → git stash pop → verify ponownie). Jeśli liczba FAIL-i się NIE zmieniła → użyj --no-verify\n' +
+                '3. git commit (--no-verify jeśli pkt 2 wymagał) -m "WhatsApp widget: panel z quick replies (' + landingSlug + ')"\n' +
+                '4. git push (Vercel auto-deploy)\n' +
+                '5. Po deployu: SPRAWDŹ na ' + (salesPageUrl || 'https://[domena]/') + ' czy zielony button WA pojawia się w prawym dolnym rogu i czy klik rozwija panel z 4 opcjami.\n';
+
+            promptOutput.value = prompt;
+        }
+
+        function copyWhatsappWidgetPrompt() {
+            const promptOutput = document.getElementById('whatsapp-widget-prompt-output');
+            if (!promptOutput) return;
+            promptOutput.select();
+            navigator.clipboard.writeText(promptOutput.value).then(() => {
+                const label = document.getElementById('copy-whatsapp-widget-prompt-label');
+                if (label) {
+                    label.textContent = 'Skopiowane!';
+                    setTimeout(() => { label.textContent = 'Skopiuj prompt'; }, 2000);
+                }
+                showToast('Prompt skopiowany — wklej w nową sesję Claude Code', 'success');
+            }).catch(err => {
+                showToast('Błąd kopiowania: ' + err.message, 'error');
+            });
+        }
+
         async function refreshReviewsList() {
             try {
                 const { data, error } = await supabaseClient
@@ -14822,6 +14951,8 @@ PODSUMOWANIE wyświetl na końcu:
         window.loadOpinieTab = loadOpinieTab;
         window.saveReviewsProductUrl = saveReviewsProductUrl;
         window.copyReviewsPrompt = copyReviewsPrompt;
+        window.copyWhatsappWidgetPrompt = copyWhatsappWidgetPrompt;
+        window.showWhatsappWidgetPrompt = showWhatsappWidgetPrompt;
         window.refreshReviewsList = refreshReviewsList;
         window.toggleReviewHidden = toggleReviewHidden;
 
