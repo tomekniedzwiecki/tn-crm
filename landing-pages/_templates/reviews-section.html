@@ -755,30 +755,39 @@ values na rzeczywiste z danej palety (--primary, --bg-cream, --radius-lg, etc.).
     captionStars.innerHTML = Array(item.rating).fill(STAR_SVG).join('');
     captionText.textContent = item.text;
 
-    // Async load with spinner + fade
+    // Spinner + fade na realnym <img> (czekamy na jego onload, nie preload osobno)
     const token = ++currentLoadToken;
     stage.classList.remove('loaded');
     spinner.classList.add('show');
-    const img = new Image();
-    img.referrerPolicy = 'no-referrer';
-    img.onload = () => {
+    const onLoaded = () => {
       if (token !== currentLoadToken) return;
-      stage.src = item.src;
-      stage.alt = item.author;
-      requestAnimationFrame(() => {
-        stage.classList.add('loaded');
-        spinner.classList.remove('show');
-      });
-      // Preload sąsiadów
-      [gallery[(idx + 1) % gallery.length], gallery[(idx - 1 + gallery.length) % gallery.length]].forEach(adj => {
-        if (adj && adj.src) { const p = new Image(); p.referrerPolicy = 'no-referrer'; p.src = adj.src; }
-      });
+      stage.classList.add('loaded');
+      spinner.classList.remove('show');
     };
-    img.onerror = () => {
+    const onErr = () => {
       if (token !== currentLoadToken) return;
       spinner.classList.remove('show');
     };
-    img.src = item.src;
+    stage.onload = onLoaded;
+    stage.onerror = onErr;
+    // Jeśli już cached - onload nie firuje. Wymuszamy reset:
+    if (stage.src === item.src) {
+      stage.src = '';
+    }
+    stage.alt = item.author;
+    stage.src = item.src;
+    // Fallback: jeśli już complete (cache), wywołaj ręcznie
+    if (stage.complete && stage.naturalWidth > 0) {
+      onLoaded();
+    }
+    // Preload sąsiadów (osobno, fire-and-forget)
+    [gallery[(idx + 1) % gallery.length], gallery[(idx - 1 + gallery.length) % gallery.length]].forEach(adj => {
+      if (adj && adj.src && adj.src !== item.src) {
+        const p = new Image();
+        p.referrerPolicy = 'no-referrer';
+        p.src = adj.src;
+      }
+    });
   }
 
   function findIndexByImg(img) {
@@ -885,9 +894,9 @@ values na rzeczywiste z danej palety (--primary, --bg-cream, --radius-lg, etc.).
     tab.addEventListener('click', () => widget.classList.add('open'));
     close.addEventListener('click', () => widget.classList.remove('open'));
 
-    // Pokaż widget po przewinięciu poniżej hero (~600px)
+    // Pokaż widget po przewinięciu poza hero (przed sekcją Solution albo >300px)
     function checkScroll() {
-      if (window.scrollY > 600) widget.classList.add('ready');
+      if (window.scrollY > 300) widget.classList.add('ready');
       else widget.classList.remove('ready');
     }
     checkScroll();
