@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050709';
+        const APP_VERSION = '2026050710';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4923,23 +4923,24 @@
                 </div>
 
                 <!-- LIGHTBOX dla zdjęć opinii (panel klienta) -->
-                <div id="client-reviews-lightbox" class="fixed inset-0 z-[9999] hidden flex-col items-center justify-center p-6 bg-black/90 backdrop-blur-md" style="width:100vw;height:100vh;top:0;left:0;right:0;bottom:0;">
-                    <button type="button" id="client-rlb-close" class="fixed top-5 right-5 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors" aria-label="Zamknij">&times;</button>
-                    <button type="button" id="client-rlb-prev" class="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Poprzednie">&lsaquo;</button>
-                    <button type="button" id="client-rlb-next" class="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Następne">&rsaquo;</button>
-                    <div class="flex-1 max-w-5xl w-full flex items-center justify-center min-h-0 relative">
-                        <div id="client-rlb-spinner" class="absolute w-9 h-9 border-[3px] border-white/15 border-t-white/80 rounded-full animate-spin select-none" style="display:none;"></div>
-                        <img id="client-rlb-img" src="" alt="" referrerpolicy="no-referrer" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl select-none">
+                <div id="client-reviews-lightbox" style="position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;display:none;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,0.92);backdrop-filter:blur(8px);">
+                    <button type="button" id="client-rlb-close" aria-label="Zamknij" style="position:fixed;top:20px;right:20px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:22px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">&times;</button>
+                    <button type="button" id="client-rlb-prev" aria-label="Poprzednie" style="position:absolute;left:20px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">&lsaquo;</button>
+                    <button type="button" id="client-rlb-next" aria-label="Następne" style="position:absolute;right:20px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.15);color:#fff;font-size:26px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">&rsaquo;</button>
+                    <div style="position:relative;width:100%;max-width:1100px;display:flex;align-items:center;justify-content:center;flex:1 1 auto;min-height:0;">
+                        <div id="client-rlb-spinner" style="position:absolute;width:36px;height:36px;border:3px solid rgba(255,255,255,0.15);border-top-color:rgba(255,255,255,0.8);border-radius:50%;animation:rev-spin 0.8s linear infinite;display:none;"></div>
+                        <img id="client-rlb-img" src="" alt="" referrerpolicy="no-referrer" style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:12px;box-shadow:0 30px 80px rgba(0,0,0,0.5);user-select:none;display:block;">
                     </div>
-                    <div class="text-zinc-400 text-[12px] bg-black/40 px-3 py-1 rounded-full mt-4">
+                    <div style="margin-top:14px;color:rgba(255,255,255,0.6);font-size:12px;background:rgba(0,0,0,0.4);padding:5px 14px;border-radius:999px;letter-spacing:0.04em;">
                         <span id="client-rlb-current">1</span> / <span id="client-rlb-total">1</span>
                     </div>
-                    <div class="text-center text-zinc-300 text-[13px] mt-3 max-w-xl">
-                        <div id="client-rlb-stars" class="text-yellow-400 mb-1.5"></div>
-                        <p id="client-rlb-text" class="text-zinc-400 italic"></p>
+                    <div style="text-align:center;color:rgba(255,255,255,0.85);font-size:13px;margin-top:14px;max-width:600px;padding:0 16px;">
+                        <div id="client-rlb-stars" style="color:#FFC107;font-size:14px;margin-bottom:6px;letter-spacing:1px;"></div>
+                        <p id="client-rlb-text" style="color:rgba(255,255,255,0.7);font-style:italic;margin:0;line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;"></p>
                     </div>
-                    <div class="text-zinc-500 text-[11px] mt-3 tracking-wide">← → strzałki, ESC zamyka</div>
+                    <div style="color:rgba(255,255,255,0.4);font-size:11px;margin-top:14px;letter-spacing:0.04em;">← → strzałki · ESC zamyka · swipe na mobile</div>
                 </div>
+                <style>@keyframes rev-spin { to { transform: rotate(360deg); } }</style>
             </div>
 
         </main>
@@ -12269,15 +12270,13 @@
             if (!lb || clientReviewsGallery.length === 0) return;
             clientReviewsLightboxIdx = idx;
             showClientReviewsLightboxImage(idx);
-            lb.classList.remove('hidden');
-            lb.classList.add('flex');
+            lb.style.display = 'flex';
             document.body.style.overflow = 'hidden';
         }
         function closeClientReviewsLightbox() {
             const lb = document.getElementById('client-reviews-lightbox');
             if (!lb) return;
-            lb.classList.add('hidden');
-            lb.classList.remove('flex');
+            lb.style.display = 'none';
             document.body.style.overflow = '';
             const img = document.getElementById('client-rlb-img');
             if (img) img.src = '';
@@ -12315,7 +12314,7 @@
             document.getElementById('client-rlb-next')?.addEventListener('click', clientReviewsLightboxNext);
             lb.addEventListener('click', (e) => { if (e.target === lb) closeClientReviewsLightbox(); });
             document.addEventListener('keydown', (e) => {
-                if (lb.classList.contains('hidden')) return;
+                if (lb.style.display !== 'flex') return;
                 if (e.key === 'Escape') closeClientReviewsLightbox();
                 else if (e.key === 'ArrowRight') clientReviewsLightboxNext();
                 else if (e.key === 'ArrowLeft') clientReviewsLightboxPrev();
