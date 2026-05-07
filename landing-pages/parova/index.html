@@ -3543,18 +3543,20 @@ Zobacz zdjęcia.</p>
       inset: 0;
       overflow: hidden;
     }
-    /* Crop hack dla YouTube Shorts: iframe robie szerszy (16:9) i wysrodkowuje,
-       zeby YT Player renderowal video w trybie desktop (bez Shorts UI side panel).
-       Frame wciaz pokazuje pionowy kawalek 9:16 — video shorts wpasowane na srodku. */
+    /* Crop hack dla YouTube Shorts: iframe szerszy (16:9 ratio) wysrodkowany w 9:16 frame.
+       UWAGA: YT.Player REPLACES div w DOM, wiec iframe staje sie direct child .reel-phone-screen
+       (klasa .reel-phone-player ginie po replacement) — selektor musi targetowac przez parent screen. */
+    .reel-phone-screen { overflow: hidden; }
+    .reel-phone-screen > iframe,
     .reel-phone-player iframe {
       position: absolute !important;
       top: 50% !important;
       left: 50% !important;
       height: 100% !important;
-      width: 177.778% !important;  /* 16/9 * 100% — sprawia ze iframe ma 16:9 ratio */
+      width: 177.778% !important;
       transform: translate(-50%, -50%) !important;
       border: 0 !important;
-      pointer-events: none !important; /* klik = sekcja decyduje (lightbox / setActive) */
+      pointer-events: none !important;
     }
 
     /* Play button overlay (znika gdy phone aktywnie odtwarza) */
@@ -3773,8 +3775,9 @@ Zobacz zdjęcia.</p>
       inset: 0;
       overflow: hidden;
     }
-    /* Ten sam crop hack co w sekcji — iframe 16:9 width, frame przycina sides.
-       YT player renderuje video w trybie desktop (bez Shorts UI side panel z inforamami). */
+    /* Ten sam crop hack co w sekcji — iframe 16:9 width w 9:16 frame.
+       YT.Player replaces div, wiec selektor przez parent .reels-lb-frame. */
+    .reels-lb-frame > iframe,
     .reels-lb-player iframe {
       position: absolute !important;
       top: 50% !important;
@@ -4093,6 +4096,11 @@ Zobacz zdjęcia.</p>
             events: {
               onReady: function(e) {
                 try {
+                  // Crop hack — iframe 16:9 wysrodkowany w 9:16 frame (defensive: backup jesli CSS nie zlapal)
+                  const ifr = e.target.getIframe();
+                  if (ifr) {
+                    ifr.style.cssText = 'position:absolute !important; top:50% !important; left:50% !important; height:100% !important; width:177.778% !important; transform:translate(-50%, -50%) !important; border:0 !important; pointer-events:none !important;';
+                  }
                   e.target.mute();
                   e.target.playVideo();
                   phone.classList.add('reel-phone--playing');
@@ -4262,6 +4270,17 @@ Zobacz zdjęcia.</p>
                 modestbranding: 1,
                 playsinline: 1,
                 iv_load_policy: 3
+              },
+              events: {
+                onReady: function(e) {
+                  try {
+                    // Crop hack — iframe 16:9 wysrodkowany w 9:16 frame
+                    const ifr = e.target.getIframe();
+                    if (ifr) {
+                      ifr.style.cssText = 'position:absolute !important; top:50% !important; left:50% !important; height:100% !important; width:177.778% !important; transform:translate(-50%, -50%) !important; border:0 !important;';
+                    }
+                  } catch (err) { console.error(err); }
+                }
               }
             });
           } catch (e) { console.error(e); }
