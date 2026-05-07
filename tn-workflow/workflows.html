@@ -1398,17 +1398,18 @@
             // Raport wysłany
             if (!w.ads_stage?.report_sent) return 'ads_report';
 
-            // Etap 5: Optymalizacja (4 kroki, sequential)
+            // Etap 5: Optymalizacja (4 kroki) — priorytet: nowsze kroki nadpisuja core
             const opt = w.optimization_stage;
+            const hasVideos = (w.video_stage?.video_links || []).length > 0;
+            // Krok 4 — Narzedzia (gdy Reels juz przekazane)
+            if (opt?.videos_shared_at && !opt?.tools_ready_at) return 'narzedzia';
+            // Krok 3 — Video (gdy COD wlaczony + sa nagrania, niezaleznie od Opinii)
+            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) return 'video';
+            // Krok 2 — Opinie (gdy COD wlaczony)
+            if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
+            // Krok 1 — Optymalizacje core (fallback gdy zadne z wyzszych nie aktywne)
             const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
             if (!optAllDone) return 'optymalizacje';
-            // Krok 2 — Opinie (PIERWSZY priorytet po core)
-            if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
-            // Krok 3 — Video (TYLKO gdy Opinie juz shared, są nagrania ALE Reels nie shared)
-            const hasVideos = (w.video_stage?.video_links || []).length > 0;
-            if (!!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at) return 'video';
-            // Krok 4 — Narzedzia (gdy Reels shared, narzędzia nie skonfigurowane)
-            if (opt?.videos_shared_at && !opt?.tools_ready_at) return 'narzedzia';
 
             return null; // all done
         }
@@ -1835,16 +1836,40 @@
             const stage = getWorkflowStage(w);
             const progressPercent = w.progress_percent || 0;
 
-            // Etap 5: Optymalizacja
+            // Etap 5: Optymalizacja — priorytetyzacja: pokazuj REALNY aktualny krok,
+            // nie zalegające core sub-checkboxy gdy admin juz pracuje nad Opiniami/Video/Narzedziami
             if (stage === 5) {
                 const opt = w.optimization_stage;
                 const codDone = opt?.cod_enabled && opt?.cod_stock_confirmed;
                 const waDone = opt?.whatsapp_enabled;
                 const recoveryDone = opt?.recovery_calls_done;
+                const hasVideos = (w.video_stage?.video_links || []).length > 0;
 
                 let stepName, status, icon, isClientTask;
 
-                if (!codDone) {
+                // Priorytet 1: Narzedzia (Krok 4) — gdy Reels juz przekazane
+                if (opt?.videos_shared_at && !opt?.tools_ready_at) {
+                    stepName = 'Narzędzia';
+                    status = 'Skonfiguruj narzędzia (krok 4)';
+                    icon = 'ph ph-toolbox text-amber-400';
+                    isClientTask = false;
+                }
+                // Priorytet 2: Video Reels (Krok 3) — gdy COD wlaczony i sa nagrania
+                else if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
+                    stepName = 'Video Reels na sklepie';
+                    status = opt?.videos_inserted_at ? 'Przekaż klientowi (email)' : 'Wstaw sekcję Reels na landing';
+                    icon = 'ph ph-play-circle text-rose-400';
+                    isClientTask = false;
+                }
+                // Priorytet 3: Opinie (Krok 2) — gdy COD wlaczony
+                else if (opt?.cod_enabled && !opt?.reviews_shared_at) {
+                    stepName = 'Opinie do sklepu';
+                    status = (opt?.reviews_count || 0) > 0 ? 'Wstaw opinie + przekaż klientowi' : 'Pobierz opinie z AliExpress';
+                    icon = 'ph ph-star text-yellow-400';
+                    isClientTask = false;
+                }
+                // Fallback: core sub-checkboxy (Optymalizacje krok 1)
+                else if (!codDone) {
                     stepName = 'COD w sklepie';
                     status = opt?.cod_enabled ? 'Klient zamawia 2-3 sztuki' : 'Włącz COD i poinformuj klienta';
                     icon = 'ph ph-package text-amber-400';
@@ -1859,21 +1884,6 @@
                     status = 'Klient kontaktuje się z porzuconymi koszykami';
                     icon = 'ph ph-phone-call text-cyan-400';
                     isClientTask = true;
-                } else if (opt?.cod_enabled && !opt?.reviews_shared_at) {
-                    stepName = 'Opinie do sklepu';
-                    status = (opt?.reviews_count || 0) > 0 ? 'Wstaw opinie + przekaż klientowi' : 'Pobierz opinie z AliExpress';
-                    icon = 'ph ph-star text-yellow-400';
-                    isClientTask = false;
-                } else if (!!opt?.reviews_shared_at && (w.video_stage?.video_links || []).length > 0 && !opt?.videos_shared_at) {
-                    stepName = 'Video Reels na sklepie';
-                    status = opt?.videos_inserted_at ? 'Przekaż klientowi (email)' : 'Wstaw sekcję Reels na landing';
-                    icon = 'ph ph-play-circle text-rose-400';
-                    isClientTask = false;
-                } else if (opt?.videos_shared_at && !opt?.tools_ready_at) {
-                    stepName = 'Narzędzia';
-                    status = 'Skonfiguruj narzędzia (krok 4)';
-                    icon = 'ph ph-toolbox text-amber-400';
-                    isClientTask = false;
                 } else {
                     stepName = 'Etap 5 ukończony';
                     status = 'Wszystko gotowe';
