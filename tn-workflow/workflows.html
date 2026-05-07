@@ -1172,16 +1172,18 @@
                 }
             }
 
-            // Update badge for each stage — zawsze widoczny z liczbą (0 dla pustych)
+            // Update badge for each stage — widoczny tylko gdy count > 0 (ukryty gdy 0)
             document.querySelectorAll('.status-stage-btn').forEach(btn => {
                 const stage = btn.dataset.stage;
                 const countEl = btn.querySelector('.stage-count');
                 if (countEl && counts.hasOwnProperty(stage)) {
                     const count = counts[stage];
-                    countEl.textContent = count;
-                    countEl.classList.remove('hidden');
-                    // Subtelnie wyciszamy kolor gdy 0 (zachowujemy widoczność ale mniej krzykliwie)
-                    countEl.classList.toggle('opacity-40', count === 0);
+                    if (count > 0) {
+                        countEl.textContent = count;
+                        countEl.classList.remove('hidden');
+                    } else {
+                        countEl.classList.add('hidden');
+                    }
                 }
             });
         }
