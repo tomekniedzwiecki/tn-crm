@@ -1347,21 +1347,25 @@
             // Test sklepu (wyświetlaj tylko jeśli bramka gotowa)
             if (!w.takedrop_stage?.test_accepted) return 'test';
 
-            // Etap 4: Reklamy
-            // Konto reklamowe (partner access + fanpage + instagram)
-            if (!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified)) return 'ad_account';
+            // Etap 4: Reklamy — sekwencyjne sprawdzanie tylko gdy raport jeszcze nie wysłany.
+            // Gdy report_sent=true, wcześniejsze flagi (content_shared_with_client itd.) mogą być
+            // niezsynchronizowane historycznie. Raport = Etap 4 zamknięty, idziemy do Etapu 5.
+            if (!w.ads_stage?.report_sent) {
+                // Konto reklamowe (partner access + fanpage + instagram)
+                if (!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified)) return 'ad_account';
 
-            // Budżet reklamowy
-            if (!w.ads_stage?.budget_funded) return 'budget';
+                // Budżet reklamowy
+                if (!w.ads_stage?.budget_funded) return 'budget';
 
-            // Content — materiały reklamowe (pipeline generuje automatycznie, admin udostępnia)
-            if (!w.ads_stage?.content_shared_with_client) return 'content';
+                // Content — materiały reklamowe (pipeline generuje automatycznie, admin udostępnia)
+                if (!w.ads_stage?.content_shared_with_client) return 'content';
 
-            // Kampania uruchomiona
-            if (!w.ads_stage?.campaign_launched) return 'campaign';
+                // Kampania uruchomiona
+                if (!w.ads_stage?.campaign_launched) return 'campaign';
 
-            // Raport wysłany
-            if (!w.ads_stage?.report_sent) return 'ads_report';
+                // Raport wysłany
+                return 'ads_report';
+            }
 
             // Etap 5: Optymalizacja (4 kroki) — priorytet: nowsze kroki nadpisuja core
             const opt = w.optimization_stage;

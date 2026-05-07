@@ -3527,24 +3527,166 @@
                         </div>
                     </div><!-- /tab-video -->
 
-                    <!-- TAB: Narzędzia (Etap 5 / Krok 4) — placeholder, zajmiemy się potem -->
+                    <!-- TAB: Narzędzia (Etap 5 / Krok 4) -->
                     <div id="tab-narzedzia" class="workflow-panel hidden">
                         <div class="mb-6">
                             <h3 class="text-lg font-semibold text-white mb-2 flex items-center gap-2">
-                                <i class="ph ph-toolbox text-amber-400"></i>
-                                Narzędzia
+                                <i class="ph ph-wrench text-amber-400"></i>
+                                Narzędzia analityczne
                             </h3>
                             <p class="text-zinc-500 text-sm">
-                                Krok 4 Etapu 5 — wkrótce uzupełnimy listę narzędzi i konfiguracji potrzebnych do prowadzenia sklepu.
+                                Krok 4 Etapu 5 — klient podłącza Google Analytics i Hotjar, analizuje 2-3 sesje i wpisuje uwagi. Po Twojej akceptacji przechodzimy do Serwisów.
                             </p>
                         </div>
-                        <div class="bg-zinc-900/50 border border-dashed border-white/10 rounded-xl p-12 text-center">
-                            <i class="ph ph-toolbox text-5xl text-amber-400/50 mb-3"></i>
-                            <h4 class="text-[15px] font-medium text-white mb-2">W przygotowaniu</h4>
+
+                        <!-- Status startu kroku (gdy nie aktywowany) -->
+                        <div id="narzedzia-not-started" class="bg-zinc-900/50 border border-dashed border-white/10 rounded-xl p-10 text-center hidden">
+                            <i class="ph ph-lock-key text-4xl text-zinc-600 mb-3"></i>
+                            <h4 class="text-[15px] font-medium text-white mb-2">Krok jeszcze nie aktywowany</h4>
                             <p class="text-[13px] text-zinc-500 max-w-md mx-auto">
-                                Krok aktywuje się po przekazaniu Reels klientowi. Zawartość zostanie uzupełniona w kolejnej iteracji.
+                                Aktywuje się automatycznie gdy przekażesz Reels klientowi (Krok 3) lub pominiesz krok video.
                             </p>
-                            <p id="tools-started-status" class="text-[11px] text-zinc-600 mt-4"></p>
+                        </div>
+
+                        <!-- Body — gdy krok aktywny -->
+                        <div id="narzedzia-body" class="hidden space-y-4">
+
+                            <!-- Sekcja: Wyślij info do klienta -->
+                            <div id="narzedzia-email-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                                <div class="flex items-start gap-4 mb-4">
+                                    <div class="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                                        <i class="ph ph-paper-plane-tilt text-amber-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-[14px] font-medium text-white mb-1">Wyślij info do klienta</h4>
+                                        <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                            Email z instrukcją: założenie Google Analytics i Hotjar, wklejenie skryptów do panelu, analiza 2-3 sesji.
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="ml-14">
+                                    <p id="narzedzia-email-status" class="text-[12px] text-zinc-500 mb-3"></p>
+                                    <button onclick="sendToolsStartedEmail()" id="narzedzia-email-btn" class="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="ph ph-paper-plane-tilt"></i>
+                                        <span id="narzedzia-email-btn-label">Wyślij info o narzędziach</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Sekcja: GA -->
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                                <div class="flex items-start justify-between gap-4 mb-4">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                            <i class="ph ph-chart-line-up text-orange-400"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="text-[14px] font-medium text-white mb-1">Google Analytics</h4>
+                                            <p class="text-[12px] text-zinc-500 leading-relaxed">Skrypt od klienta — skopiuj i osadź w sklepie TakeDrop.</p>
+                                        </div>
+                                    </div>
+                                    <div id="narzedzia-ga-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                                </div>
+                                <div class="ml-14 space-y-3">
+                                    <div id="narzedzia-ga-no-script" class="hidden p-4 bg-zinc-800/40 border border-zinc-700/40 rounded-lg text-[12px] text-zinc-500">
+                                        <i class="ph ph-clock-countdown mr-1"></i>
+                                        Czekamy na skrypt od klienta. Po wklejeniu w panelu klienta — pojawi się tutaj.
+                                    </div>
+                                    <div id="narzedzia-ga-script-wrap" class="hidden">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] text-zinc-500 uppercase tracking-wider">Skrypt</span>
+                                            <button onclick="copyToolsScript('ga')" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                                                <i class="ph ph-copy"></i> Kopiuj
+                                            </button>
+                                        </div>
+                                        <textarea id="narzedzia-ga-script" readonly class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[12px] text-zinc-300 font-mono resize-none" rows="5"></textarea>
+                                        <p id="narzedzia-ga-script-meta" class="text-[11px] text-zinc-600 mt-2"></p>
+                                        <button onclick="markToolConnected('ga')" id="narzedzia-ga-connect-btn" class="mt-3 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <i class="ph ph-check-circle"></i>
+                                            <span id="narzedzia-ga-connect-label">Osadziłem w sklepie</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sekcja: Hotjar -->
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                                <div class="flex items-start justify-between gap-4 mb-4">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-lg bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                                            <i class="ph ph-fire text-rose-400"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="text-[14px] font-medium text-white mb-1">Hotjar</h4>
+                                            <p class="text-[12px] text-zinc-500 leading-relaxed">Skrypt od klienta — skopiuj i osadź w sklepie TakeDrop.</p>
+                                        </div>
+                                    </div>
+                                    <div id="narzedzia-hotjar-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                                </div>
+                                <div class="ml-14 space-y-3">
+                                    <div id="narzedzia-hotjar-no-script" class="hidden p-4 bg-zinc-800/40 border border-zinc-700/40 rounded-lg text-[12px] text-zinc-500">
+                                        <i class="ph ph-clock-countdown mr-1"></i>
+                                        Czekamy na skrypt od klienta.
+                                    </div>
+                                    <div id="narzedzia-hotjar-script-wrap" class="hidden">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] text-zinc-500 uppercase tracking-wider">Skrypt</span>
+                                            <button onclick="copyToolsScript('hotjar')" class="text-[11px] text-amber-400 hover:text-amber-300 flex items-center gap-1">
+                                                <i class="ph ph-copy"></i> Kopiuj
+                                            </button>
+                                        </div>
+                                        <textarea id="narzedzia-hotjar-script" readonly class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[12px] text-zinc-300 font-mono resize-none" rows="5"></textarea>
+                                        <p id="narzedzia-hotjar-script-meta" class="text-[11px] text-zinc-600 mt-2"></p>
+                                        <button onclick="markToolConnected('hotjar')" id="narzedzia-hotjar-connect-btn" class="mt-3 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <i class="ph ph-check-circle"></i>
+                                            <span id="narzedzia-hotjar-connect-label">Osadziłem w sklepie</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sekcja: Uwagi klienta po analizie sesji -->
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
+                                <div class="flex items-start justify-between gap-4 mb-4">
+                                    <div class="flex items-start gap-4">
+                                        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                                            <i class="ph ph-note-pencil text-cyan-400"></i>
+                                        </div>
+                                        <div class="flex-1">
+                                            <h4 class="text-[14px] font-medium text-white mb-1">Uwagi po analizie sesji</h4>
+                                            <p class="text-[12px] text-zinc-500 leading-relaxed">Klient analizuje 2-3 nagrania w Hotjar i wpisuje co warto poprawić. Przeczytaj i zatwierdź żeby zamknąć Etap 5.</p>
+                                        </div>
+                                    </div>
+                                    <div id="narzedzia-notes-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                                </div>
+                                <div class="ml-14 space-y-3">
+                                    <div id="narzedzia-notes-empty" class="hidden p-4 bg-zinc-800/40 border border-zinc-700/40 rounded-lg text-[12px] text-zinc-500">
+                                        <i class="ph ph-clock-countdown mr-1"></i>
+                                        Czekamy aż klient wpisze uwagi po analizie sesji.
+                                    </div>
+                                    <div id="narzedzia-notes-wrap" class="hidden">
+                                        <textarea id="narzedzia-notes-content" readonly class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[13px] text-zinc-200 resize-none" rows="8"></textarea>
+                                        <p id="narzedzia-notes-meta" class="text-[11px] text-zinc-600 mt-2"></p>
+                                        <button onclick="acceptToolsNotes()" id="narzedzia-accept-btn" class="mt-3 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                            <i class="ph ph-check-circle"></i>
+                                            <span id="narzedzia-accept-label">Zatwierdź uwagi i przejdź do Serwisów</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sekcja: Status zakończenia -->
+                            <div id="narzedzia-completed-section" class="hidden bg-emerald-500/5 border border-emerald-500/20 rounded-xl p-6">
+                                <div class="flex items-start gap-4">
+                                    <div class="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                        <i class="ph ph-check-circle text-emerald-400"></i>
+                                    </div>
+                                    <div class="flex-1">
+                                        <h4 class="text-[14px] font-medium text-white mb-1">Etap 5 zakończony</h4>
+                                        <p id="narzedzia-completed-meta" class="text-[12px] text-zinc-500 leading-relaxed"></p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div><!-- /tab-narzedzia -->
 
@@ -5513,7 +5655,7 @@
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -15719,16 +15861,268 @@ PODSUMOWANIE wyświetl na końcu:
             }
         }
 
-        // Etap 5 / Krok 4 — Narzedzia (placeholder)
+        // ============================================
+        // Etap 5 / Krok 4 — Narzedzia
+        // ============================================
         function loadNarzedziaTab() {
-            const status = document.getElementById('tools-started-status');
-            if (!status) return;
-            const startedAt = optimizationData?.tools_started_at;
-            if (startedAt) {
-                const d = new Date(startedAt);
-                status.innerHTML = 'Krok aktywowany: ' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' });
+            const notStarted = document.getElementById('narzedzia-not-started');
+            const body = document.getElementById('narzedzia-body');
+            if (!notStarted || !body) return;
+
+            // Auto-load optimizationData jesli jeszcze nie zaladowane (mozemy wejsc bezposrednio na tab)
+            if (!optimizationData) {
+                loadOptymalizacjeTab().then(() => loadNarzedziaTab());
+                return;
+            }
+
+            const isStarted = !!optimizationData.tools_started_at;
+            notStarted.classList.toggle('hidden', isStarted);
+            body.classList.toggle('hidden', !isStarted);
+
+            if (!isStarted) return;
+
+            const fmt = (iso) => new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+            // Email status
+            const emailSentAt = optimizationData.tools_email_sent_at;
+            const emailStatus = document.getElementById('narzedzia-email-status');
+            const emailBtn = document.getElementById('narzedzia-email-btn');
+            const emailLabel = document.getElementById('narzedzia-email-btn-label');
+            if (emailSentAt) {
+                emailStatus.innerHTML = `<i class="ph ph-check-circle text-emerald-400"></i> Wysłano ${fmt(emailSentAt)}`;
+                emailLabel.textContent = 'Wyślij ponownie';
+                emailBtn.classList.remove('bg-amber-600', 'hover:bg-amber-700');
+                emailBtn.classList.add('bg-zinc-700', 'hover:bg-zinc-600');
             } else {
-                status.innerHTML = 'Krok jeszcze nie aktywowany — przekaż Reels klientowi.';
+                emailStatus.textContent = 'Email jeszcze nie wysłany — kliknij aby wysłać klientowi instrukcję.';
+                emailLabel.textContent = 'Wyślij info o narzędziach';
+                emailBtn.classList.remove('bg-zinc-700', 'hover:bg-zinc-600');
+                emailBtn.classList.add('bg-amber-600', 'hover:bg-amber-700');
+            }
+            emailBtn.disabled = false;
+
+            // GA
+            renderToolCard('ga', 'Google Analytics');
+
+            // Hotjar
+            renderToolCard('hotjar', 'Hotjar');
+
+            // Notes
+            const notes = optimizationData.tools_session_notes;
+            const notesAt = optimizationData.tools_session_notes_at;
+            const notesEmpty = document.getElementById('narzedzia-notes-empty');
+            const notesWrap = document.getElementById('narzedzia-notes-wrap');
+            const notesBadge = document.getElementById('narzedzia-notes-badge');
+            const isReady = !!optimizationData.tools_ready_at;
+
+            if (notes && notes.trim()) {
+                notesEmpty.classList.add('hidden');
+                notesWrap.classList.remove('hidden');
+                document.getElementById('narzedzia-notes-content').value = notes;
+                document.getElementById('narzedzia-notes-meta').textContent = notesAt ? 'Wysłane ' + fmt(notesAt) : '';
+                const acceptBtn = document.getElementById('narzedzia-accept-btn');
+                const acceptLabel = document.getElementById('narzedzia-accept-label');
+                if (isReady) {
+                    notesBadge.textContent = '✓ Zatwierdzone';
+                    notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-emerald-500/15 text-emerald-400';
+                    acceptBtn.disabled = true;
+                    acceptLabel.textContent = 'Zatwierdzone — Etap 5 zakończony';
+                } else {
+                    notesBadge.textContent = 'Czeka na akceptację';
+                    notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-cyan-500/15 text-cyan-400';
+                    acceptBtn.disabled = false;
+                    acceptLabel.textContent = 'Zatwierdź uwagi i przejdź do Serwisów';
+                }
+            } else {
+                notesEmpty.classList.remove('hidden');
+                notesWrap.classList.add('hidden');
+                notesBadge.textContent = 'Czekamy';
+                notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-zinc-700/40 text-zinc-400';
+            }
+
+            // Completed banner
+            const completedSection = document.getElementById('narzedzia-completed-section');
+            const completedMeta = document.getElementById('narzedzia-completed-meta');
+            if (isReady) {
+                completedSection.classList.remove('hidden');
+                completedMeta.textContent = 'Zakończono ' + fmt(optimizationData.tools_ready_at) + '. Klient dostał email i widzi już Serwisy.';
+            } else {
+                completedSection.classList.add('hidden');
+            }
+        }
+
+        function renderToolCard(tool, label) {
+            const script = optimizationData[`tools_${tool}_script`];
+            const scriptAt = optimizationData[`tools_${tool}_script_at`];
+            const connectedAt = optimizationData[`tools_${tool}_connected_at`];
+            const noScript = document.getElementById(`narzedzia-${tool}-no-script`);
+            const scriptWrap = document.getElementById(`narzedzia-${tool}-script-wrap`);
+            const badge = document.getElementById(`narzedzia-${tool}-badge`);
+            const fmt = (iso) => new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+            if (!script || !script.trim()) {
+                noScript.classList.remove('hidden');
+                scriptWrap.classList.add('hidden');
+                badge.textContent = 'Czekamy na skrypt';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-zinc-700/40 text-zinc-400';
+                return;
+            }
+
+            noScript.classList.add('hidden');
+            scriptWrap.classList.remove('hidden');
+            document.getElementById(`narzedzia-${tool}-script`).value = script;
+            document.getElementById(`narzedzia-${tool}-script-meta`).textContent = scriptAt ? 'Otrzymane ' + fmt(scriptAt) : '';
+
+            const connectBtn = document.getElementById(`narzedzia-${tool}-connect-btn`);
+            const connectLabel = document.getElementById(`narzedzia-${tool}-connect-label`);
+            if (connectedAt) {
+                badge.textContent = '✓ Osadzone';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-emerald-500/15 text-emerald-400';
+                connectBtn.disabled = true;
+                connectLabel.textContent = 'Osadzone ' + fmt(connectedAt);
+            } else {
+                badge.textContent = 'Do osadzenia';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-amber-500/15 text-amber-400';
+                connectBtn.disabled = false;
+                connectLabel.textContent = 'Osadziłem w sklepie';
+            }
+        }
+
+        async function copyToolsScript(tool) {
+            const ta = document.getElementById(`narzedzia-${tool}-script`);
+            if (!ta) return;
+            try {
+                await navigator.clipboard.writeText(ta.value);
+                showToast('Skrypt skopiowany do schowka', 'success');
+            } catch (e) {
+                ta.select();
+                document.execCommand('copy');
+                showToast('Skrypt skopiowany', 'success');
+            }
+        }
+
+        async function sendToolsStartedEmail() {
+            const btn = document.getElementById('narzedzia-email-btn');
+            const label = document.getElementById('narzedzia-email-btn-label');
+            if (!btn || btn.disabled) return;
+            const isResend = !!optimizationData.tools_email_sent_at;
+            const msg = isResend
+                ? 'Wysłać email tools_started PONOWNIE? Klient już raz dostał info o narzędziach.'
+                : 'Wysłać klientowi email z instrukcją podłączenia GA i Hotjar?';
+            if (!confirm(msg)) return;
+
+            try {
+                btn.disabled = true;
+                const oldLabel = label.textContent;
+                label.textContent = 'Wysyłanie...';
+
+                const now = new Date().toISOString();
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'tools_started',
+                        entity_type: 'workflow',
+                        entity_id: workflow.id,
+                        context: {
+                            workflowId: workflow.id,
+                            brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                            clientName: workflow.customer_name || 'Kliencie',
+                            clientEmail: workflow.customer_email
+                        }
+                    }
+                });
+
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({ tools_email_sent_at: now })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                optimizationData.tools_email_sent_at = now;
+                logActivity('tools_email_sent', 'Wysłano info o narzędziach do klienta (Etap 5/Krok 4)', {});
+                showToast('Email wysłany do klienta', 'success');
+                loadNarzedziaTab();
+            } catch (e) {
+                console.error('sendToolsStartedEmail error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                label.textContent = isResend ? 'Wyślij ponownie' : 'Wyślij info o narzędziach';
+            }
+        }
+
+        async function markToolConnected(tool) {
+            const btn = document.getElementById(`narzedzia-${tool}-connect-btn`);
+            const label = document.getElementById(`narzedzia-${tool}-connect-label`);
+            if (!btn || btn.disabled) return;
+            const toolLabel = tool === 'ga' ? 'Google Analytics' : 'Hotjar';
+            if (!confirm(`Potwierdzasz że osadziłeś ${toolLabel} w sklepie klienta?`)) return;
+
+            try {
+                btn.disabled = true;
+                label.textContent = 'Zapisywanie...';
+                const now = new Date().toISOString();
+                const col = `tools_${tool}_connected_at`;
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({ [col]: now })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                optimizationData[col] = now;
+                logActivity(`tools_${tool}_connected`, `Osadzono ${toolLabel} w sklepie klienta`, {});
+                showToast(`${toolLabel} oznaczone jako osadzone`, 'success');
+                loadNarzedziaTab();
+            } catch (e) {
+                console.error('markToolConnected error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                label.textContent = 'Osadziłem w sklepie';
+            }
+        }
+
+        async function acceptToolsNotes() {
+            const btn = document.getElementById('narzedzia-accept-btn');
+            const label = document.getElementById('narzedzia-accept-label');
+            if (!btn || btn.disabled) return;
+            if (!confirm('Zatwierdzić uwagi klienta?\n\n✓ Etap 5 zostanie zamknięty (tools_ready_at)\n✓ Klient dostanie email „Etap 5 zakończony"\n✓ W panelu klienta odblokuje się zakładka Serwisy\n\nMożesz cofnąć ręcznie w bazie.')) return;
+
+            try {
+                btn.disabled = true;
+                label.textContent = 'Zapisywanie...';
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({ tools_ready_at: now })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'tools_completed',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflowId: workflow.id,
+                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                clientName: workflow.customer_name || 'Kliencie',
+                                clientEmail: workflow.customer_email
+                            }
+                        }
+                    });
+                } catch (te) {
+                    console.warn('automation-trigger tools_completed failed (kontynuujemy):', te);
+                }
+
+                optimizationData.tools_ready_at = now;
+                logActivity('tools_ready', 'Zatwierdzono uwagi — Etap 5 zakończony, przejście do Serwisów', {});
+                showToast('Etap 5 zakończony — Serwisy odblokowane', 'success');
+                loadNarzedziaTab();
+                updateNavChecks();
+            } catch (e) {
+                console.error('acceptToolsNotes error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                label.textContent = 'Zatwierdź uwagi i przejdź do Serwisów';
             }
         }
 

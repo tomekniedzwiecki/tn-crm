@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050725';
+        const APP_VERSION = '2026050726';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -5054,25 +5054,179 @@
                 </div>
             </div>
 
-            <!-- Tab: Narzedzia — Etap 5 / Krok 4 (placeholder) -->
+            <!-- Tab: Narzedzia — Etap 5 / Krok 4 -->
             <div id="tab-narzedzia" class="tab-panel hidden animate-enter">
-                <div class="mb-6">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center">
-                            <i class="ph ph-toolbox text-amber-400 text-xl"></i>
+                <div class="max-w-4xl">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-wrench text-2xl text-amber-400"></i>
                         </div>
-                        <h2 class="text-white text-xl font-semibold">Narzędzia</h2>
+                        <div>
+                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Narzędzia analityczne</h2>
+                            <p class="text-[14px] text-[#888] leading-relaxed">
+                                Ostatni krok Etapu 5 — podłącz Google Analytics i Hotjar, przeanalizuj 2-3 sesje na sklepie i napisz mi co warto poprawić. Po Twoich uwagach przejdziemy do Serwisów.
+                            </p>
+                        </div>
                     </div>
-                    <p class="text-[#999] text-[13px] leading-relaxed">
-                        Lista narzędzi i konfiguracji potrzebnych do prowadzenia Twojego sklepu.
-                    </p>
-                </div>
-                <div class="bento-box p-12 text-center" style="border:1px dashed rgba(245,158,11,0.25);background:rgba(245,158,11,0.03);">
-                    <i class="ph ph-toolbox text-5xl text-amber-400/50 mb-3"></i>
-                    <h3 class="text-white text-lg font-semibold mb-2">W przygotowaniu</h3>
-                    <p class="text-[13px] text-[#999] max-w-md mx-auto">
-                        Krok aktywuje się po przekazaniu sekcji Reels. Wkrótce uzupełnimy zawartość — dam znać mailem gdy wszystko będzie gotowe.
-                    </p>
+
+                    <!-- Status banner gdy zakonczone -->
+                    <div id="narzedzia-client-completed" class="hidden bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 mb-4 flex items-start gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-check-circle text-emerald-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white text-[15px] font-semibold mb-1">Etap 5 zakończony</h3>
+                            <p class="text-[13px] text-[#888]">Wszystkie zadania wykonane. Przechodzimy do Serwisów — zobacz nową zakładkę w menu.</p>
+                        </div>
+                    </div>
+
+                    <!-- Krok 1: Google Analytics -->
+                    <div class="bento-box p-6 mb-4">
+                        <div class="flex items-start justify-between gap-4 mb-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-orange-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-chart-line-up text-orange-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white text-[15px] font-semibold mb-0.5">1. Google Analytics</h3>
+                                    <p class="text-[12px] text-[#888]">Dane o ruchu, ścieżkach konwersji i źródłach klientów.</p>
+                                </div>
+                            </div>
+                            <div id="narzedzia-client-ga-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                        </div>
+
+                        <div class="ml-12 space-y-3">
+                            <a href="https://pomoc.takedrop.pl/support/solutions/articles/77000561089-integracja-z-google-analytics" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[13px] text-amber-400 hover:text-amber-300 mb-2">
+                                <i class="ph ph-book-open"></i>
+                                <span>Otwórz instrukcję TakeDrop</span>
+                                <i class="ph ph-arrow-square-out text-[10px]"></i>
+                            </a>
+
+                            <div id="narzedzia-client-ga-form">
+                                <label class="block text-[12px] text-[#888] mb-1.5">Wklej skrypt z Google Analytics:</label>
+                                <textarea id="narzedzia-client-ga-textarea" placeholder="<!-- Google tag (gtag.js) -->&#10;<script async src=&quot;https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX&quot;>&lt;/script>&#10;..." class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[12px] text-white font-mono resize-none focus:outline-none focus:border-amber-500/50" rows="6"></textarea>
+                                <button onclick="submitToolScript('ga')" id="narzedzia-client-ga-submit" class="mt-3 px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-black text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    <span>Wyślij skrypt do Tomka</span>
+                                </button>
+                            </div>
+
+                            <div id="narzedzia-client-ga-sent" class="hidden p-4 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <i class="ph ph-clock-countdown text-amber-400 mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-[13px] text-white font-medium mb-1">Skrypt wysłany — czekamy na osadzenie</p>
+                                        <p class="text-[12px] text-[#999]" id="narzedzia-client-ga-sent-meta">Tomek osadzi skrypt w sklepie i oznaczy gotowe.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="narzedzia-client-ga-done" class="hidden p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph ph-check-circle text-emerald-400"></i>
+                                    <p class="text-[13px] text-emerald-300 font-medium">Google Analytics jest osadzone w sklepie ✓</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Krok 2: Hotjar -->
+                    <div class="bento-box p-6 mb-4">
+                        <div class="flex items-start justify-between gap-4 mb-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-rose-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-fire text-rose-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white text-[15px] font-semibold mb-0.5">2. Hotjar</h3>
+                                    <p class="text-[12px] text-[#888]">Nagrania sesji — zobaczysz dokładnie jak klienci poruszają się po sklepie.</p>
+                                </div>
+                            </div>
+                            <div id="narzedzia-client-hotjar-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                        </div>
+
+                        <div class="ml-12 space-y-3">
+                            <a href="https://pomoc.takedrop.pl/support/solutions/articles/77000486560-integracja-z-hotjar" target="_blank" rel="noopener" class="inline-flex items-center gap-2 text-[13px] text-amber-400 hover:text-amber-300 mb-2">
+                                <i class="ph ph-book-open"></i>
+                                <span>Otwórz instrukcję TakeDrop</span>
+                                <i class="ph ph-arrow-square-out text-[10px]"></i>
+                            </a>
+
+                            <div id="narzedzia-client-hotjar-form">
+                                <label class="block text-[12px] text-[#888] mb-1.5">Wklej skrypt z Hotjar:</label>
+                                <textarea id="narzedzia-client-hotjar-textarea" placeholder="<!-- Hotjar Tracking Code -->&#10;<script>&#10;    (function(h,o,t,j,a,r){...})(...);&#10;&lt;/script>" class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[12px] text-white font-mono resize-none focus:outline-none focus:border-rose-500/50" rows="6"></textarea>
+                                <button onclick="submitToolScript('hotjar')" id="narzedzia-client-hotjar-submit" class="mt-3 px-5 py-2.5 bg-rose-500 hover:bg-rose-400 text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    <span>Wyślij skrypt do Tomka</span>
+                                </button>
+                            </div>
+
+                            <div id="narzedzia-client-hotjar-sent" class="hidden p-4 bg-rose-500/5 border border-rose-500/20 rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <i class="ph ph-clock-countdown text-rose-400 mt-0.5"></i>
+                                    <div class="flex-1">
+                                        <p class="text-[13px] text-white font-medium mb-1">Skrypt wysłany — czekamy na osadzenie</p>
+                                        <p class="text-[12px] text-[#999]" id="narzedzia-client-hotjar-sent-meta">Tomek osadzi skrypt w sklepie i oznaczy gotowe.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="narzedzia-client-hotjar-done" class="hidden p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <i class="ph ph-check-circle text-emerald-400"></i>
+                                    <p class="text-[13px] text-emerald-300 font-medium">Hotjar jest osadzony w sklepie ✓</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Krok 3: Analiza sesji + uwagi -->
+                    <div class="bento-box p-6 mb-4" id="narzedzia-client-notes-card">
+                        <div class="flex items-start justify-between gap-4 mb-4">
+                            <div class="flex items-start gap-3">
+                                <div class="w-9 h-9 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-note-pencil text-cyan-400"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-white text-[15px] font-semibold mb-0.5">3. Przeanalizuj 2-3 sesje i napisz uwagi</h3>
+                                    <p class="text-[12px] text-[#888]">Po 24-48h od osadzenia Hotjar zacznie zbierać sesje. Obejrzyj 2-3 nagrania i napisz co rzuciło Ci się w oczy.</p>
+                                </div>
+                            </div>
+                            <div id="narzedzia-client-notes-badge" class="px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap"></div>
+                        </div>
+
+                        <div class="ml-12 space-y-3">
+                            <div id="narzedzia-client-notes-locked" class="hidden p-4 bg-zinc-800/40 border border-zinc-700/40 rounded-lg text-[12px] text-[#888]">
+                                <i class="ph ph-lock-key mr-1"></i>
+                                Sekcja odblokuje się gdy oba skrypty (GA + Hotjar) zostaną osadzone w sklepie.
+                            </div>
+
+                            <div id="narzedzia-client-notes-form">
+                                <label class="block text-[12px] text-[#888] mb-1.5">Co zauważyłeś podczas analizy sesji? Co warto poprawić?</label>
+                                <textarea id="narzedzia-client-notes-textarea" placeholder="Np.: Klienci długo zatrzymują się na stronie produktu, ale niewielu klika &quot;Dodaj do koszyka&quot;. Może warto powiększyć przycisk?&#10;&#10;Sesja 1: ...&#10;Sesja 2: ...&#10;Sesja 3: ..." class="w-full bg-black/40 border border-white/10 rounded-lg p-3 text-[13px] text-white resize-none focus:outline-none focus:border-cyan-500/50" rows="8"></textarea>
+                                <p class="text-[11px] text-[#666] mt-2">Tomek przeczyta i zatwierdzi — wtedy zamykamy Etap 5 i przechodzimy do Serwisów.</p>
+                                <button onclick="submitToolNotes()" id="narzedzia-client-notes-submit" class="mt-3 px-5 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-white text-[13px] font-semibold rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-paper-plane-tilt"></i>
+                                    <span>Wyślij uwagi do Tomka</span>
+                                </button>
+                            </div>
+
+                            <div id="narzedzia-client-notes-sent" class="hidden">
+                                <label class="block text-[12px] text-[#888] mb-1.5">Wysłane uwagi:</label>
+                                <div id="narzedzia-client-notes-display" class="p-4 bg-black/40 border border-white/10 rounded-lg text-[13px] text-[#ddd] whitespace-pre-wrap"></div>
+                                <p id="narzedzia-client-notes-sent-meta" class="text-[11px] text-[#666] mt-2"></p>
+                                <p class="text-[12px] text-cyan-300 mt-3"><i class="ph ph-clock-countdown"></i> Tomek czyta uwagi — zaraz zatwierdzimy i przejdziemy do Serwisów.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pomoc -->
+                    <div class="bento-box p-5" style="background:rgba(255,255,255,0.02);">
+                        <p class="text-[12px] text-[#888] leading-relaxed">
+                            <i class="ph ph-question text-amber-400"></i>
+                            Masz problem z założeniem konta lub konfiguracją? Napisz na <a href="mailto:pomoc@takedrop.pl" class="text-amber-400 hover:text-amber-300">pomoc@takedrop.pl</a> — wsparcie TakeDrop pomoże.
+                        </p>
+                    </div>
                 </div>
             </div>
 
@@ -8806,8 +8960,220 @@
                 }).join('');
         }
 
-        // Etap 5 / Krok 4 — Narzedzia (placeholder)
-        function loadNarzedziaClient() { /* placeholder, panel rendered z HTML */ }
+        // ============================================
+        // Etap 5 / Krok 4 — Narzedzia (klient)
+        // ============================================
+        function loadNarzedziaClient() {
+            if (!optimizationData) {
+                if (window.loadOptimizationData) {
+                    loadOptimizationData().then(() => loadNarzedziaClient());
+                }
+                return;
+            }
+
+            const fmt = (iso) => new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            const isReady = !!optimizationData.tools_ready_at;
+
+            // Banner gdy zakonczone
+            const completedBanner = document.getElementById('narzedzia-client-completed');
+            if (completedBanner) completedBanner.classList.toggle('hidden', !isReady);
+
+            // GA card
+            renderClientToolCard('ga', 'Google Analytics');
+
+            // Hotjar card
+            renderClientToolCard('hotjar', 'Hotjar');
+
+            // Notes card — odblokowane gdy oba connected
+            const gaConnected = !!optimizationData.tools_ga_connected_at;
+            const hjConnected = !!optimizationData.tools_hotjar_connected_at;
+            const bothConnected = gaConnected && hjConnected;
+
+            const notesLocked = document.getElementById('narzedzia-client-notes-locked');
+            const notesForm = document.getElementById('narzedzia-client-notes-form');
+            const notesSent = document.getElementById('narzedzia-client-notes-sent');
+            const notesBadge = document.getElementById('narzedzia-client-notes-badge');
+            const notes = optimizationData.tools_session_notes;
+            const notesAt = optimizationData.tools_session_notes_at;
+            const hasNotes = !!notes && !!notes.trim();
+
+            if (!bothConnected) {
+                notesLocked.classList.remove('hidden');
+                notesForm.classList.add('hidden');
+                notesSent.classList.add('hidden');
+                notesBadge.textContent = 'Zablokowane';
+                notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-zinc-700/40 text-zinc-400';
+            } else if (hasNotes) {
+                notesLocked.classList.add('hidden');
+                notesForm.classList.add('hidden');
+                notesSent.classList.remove('hidden');
+                document.getElementById('narzedzia-client-notes-display').textContent = notes;
+                document.getElementById('narzedzia-client-notes-sent-meta').textContent = notesAt ? 'Wysłano ' + fmt(notesAt) : '';
+                if (isReady) {
+                    notesBadge.textContent = '✓ Zatwierdzone';
+                    notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-emerald-500/15 text-emerald-400';
+                } else {
+                    notesBadge.textContent = 'Czeka na zatwierdzenie';
+                    notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-cyan-500/15 text-cyan-400';
+                }
+            } else {
+                notesLocked.classList.add('hidden');
+                notesForm.classList.remove('hidden');
+                notesSent.classList.add('hidden');
+                notesBadge.textContent = 'Do wypełnienia';
+                notesBadge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-cyan-500/15 text-cyan-400';
+            }
+        }
+
+        function renderClientToolCard(tool, label) {
+            const fmt = (iso) => new Date(iso).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+            const script = optimizationData[`tools_${tool}_script`];
+            const scriptAt = optimizationData[`tools_${tool}_script_at`];
+            const connectedAt = optimizationData[`tools_${tool}_connected_at`];
+
+            const form = document.getElementById(`narzedzia-client-${tool}-form`);
+            const sent = document.getElementById(`narzedzia-client-${tool}-sent`);
+            const done = document.getElementById(`narzedzia-client-${tool}-done`);
+            const badge = document.getElementById(`narzedzia-client-${tool}-badge`);
+
+            if (connectedAt) {
+                form.classList.add('hidden');
+                sent.classList.add('hidden');
+                done.classList.remove('hidden');
+                badge.textContent = '✓ Osadzone';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-emerald-500/15 text-emerald-400';
+            } else if (script && script.trim()) {
+                form.classList.add('hidden');
+                sent.classList.remove('hidden');
+                done.classList.add('hidden');
+                document.getElementById(`narzedzia-client-${tool}-sent-meta`).textContent = scriptAt
+                    ? `Wysłany ${fmt(scriptAt)} — Tomek osadzi w sklepie i oznaczy gotowe.`
+                    : 'Tomek osadzi w sklepie i oznaczy gotowe.';
+                badge.textContent = 'Czekamy na osadzenie';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-amber-500/15 text-amber-400';
+            } else {
+                form.classList.remove('hidden');
+                sent.classList.add('hidden');
+                done.classList.add('hidden');
+                badge.textContent = 'Do podłączenia';
+                badge.className = 'px-3 py-1 rounded-full text-[11px] font-medium whitespace-nowrap bg-zinc-700/40 text-zinc-400';
+            }
+        }
+
+        async function submitToolScript(tool) {
+            const ta = document.getElementById(`narzedzia-client-${tool}-textarea`);
+            const btn = document.getElementById(`narzedzia-client-${tool}-submit`);
+            if (!ta || !btn || btn.disabled) return;
+            const script = (ta.value || '').trim();
+            if (script.length < 30) {
+                showToast('Wklej pełny skrypt (musi mieć minimum 30 znaków)', 'error');
+                return;
+            }
+
+            const toolLabel = tool === 'ga' ? 'Google Analytics' : 'Hotjar';
+            try {
+                btn.disabled = true;
+                const oldHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> <span>Wysyłanie...</span>';
+
+                const now = new Date().toISOString();
+                const updates = {
+                    [`tools_${tool}_script`]: script,
+                    [`tools_${tool}_script_at`]: now
+                };
+
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update(updates)
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                // Email do admina
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'tools_script_received',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflowId: workflow.id,
+                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                clientName: workflow.customer_name || 'Klient',
+                                clientEmail: workflow.customer_email,
+                                toolName: toolLabel
+                            }
+                        }
+                    });
+                } catch (te) {
+                    console.warn('automation-trigger tools_script_received failed:', te);
+                }
+
+                optimizationData[`tools_${tool}_script`] = script;
+                optimizationData[`tools_${tool}_script_at`] = now;
+                showToast(`Skrypt ${toolLabel} wysłany — Tomek osadzi w sklepie`, 'success');
+                loadNarzedziaClient();
+            } catch (e) {
+                console.error('submitToolScript error:', e);
+                showToast('Błąd wysyłania: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> <span>Wyślij skrypt do Tomka</span>';
+            }
+        }
+
+        async function submitToolNotes() {
+            const ta = document.getElementById('narzedzia-client-notes-textarea');
+            const btn = document.getElementById('narzedzia-client-notes-submit');
+            if (!ta || !btn || btn.disabled) return;
+            const notes = (ta.value || '').trim();
+            if (notes.length < 50) {
+                showToast('Napisz coś więcej — minimum kilka zdań po obejrzeniu sesji.', 'error');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                const oldHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> <span>Wysyłanie...</span>';
+
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient
+                    .from('workflow_optimization')
+                    .update({
+                        tools_session_notes: notes,
+                        tools_session_notes_at: now
+                    })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                try {
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'tools_notes_received',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                workflowId: workflow.id,
+                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                clientName: workflow.customer_name || 'Klient',
+                                clientEmail: workflow.customer_email
+                            }
+                        }
+                    });
+                } catch (te) {
+                    console.warn('automation-trigger tools_notes_received failed:', te);
+                }
+
+                optimizationData.tools_session_notes = notes;
+                optimizationData.tools_session_notes_at = now;
+                showToast('Uwagi wysłane — Tomek je przeczyta i zatwierdzi', 'success');
+                loadNarzedziaClient();
+            } catch (e) {
+                console.error('submitToolNotes error:', e);
+                showToast('Błąd wysyłania: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> <span>Wyślij uwagi do Tomka</span>';
+            }
+        }
 
         // Video (Etap 2) functions
         let videoData = null;
