@@ -2445,6 +2445,7 @@
   ═══════════════════════════════════════════════════════════ -->
   <!-- VIDEOS:STORIES:START -->
   <style>
+    /* MOBILE-FIRST: horizontal sticky pasek pod headerem */
     .stories-bar {
       position: sticky;
       top: 70px;
@@ -2478,6 +2479,89 @@
       color: var(--text-secondary, #6B7280);
       flex-shrink: 0;
       padding-right: 4px;
+    }
+
+    /* DESKTOP: floating pionowy widget na prawej krawędzi, środek viewportu */
+    @media (min-width: 769px) {
+      .stories-bar {
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        padding: 16px 12px 14px;
+        border-radius: 32px;
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(0, 168, 150, 0.15);
+        box-shadow:
+          0 16px 48px rgba(0, 0, 0, 0.12),
+          0 0 0 1px rgba(0, 168, 150, 0.05),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        z-index: 95;
+        opacity: 0;
+        animation: stories-widget-in 0.7s 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                   stories-widget-bounce 5s 2.5s ease-in-out infinite;
+        will-change: transform;
+      }
+      @keyframes stories-widget-in {
+        from { opacity: 0; transform: translateY(-50%) translateX(60px) scale(0.9); }
+        to   { opacity: 1; transform: translateY(-50%) translateX(0)    scale(1);   }
+      }
+      @keyframes stories-widget-bounce {
+        0%, 92%, 100% { transform: translateY(-50%) translateX(0); }
+        94%  { transform: translateY(-50%) translateX(-6px); }
+        96%  { transform: translateY(-50%) translateX(2px); }
+        98%  { transform: translateY(-50%) translateX(-2px); }
+      }
+      .stories-bar:hover {
+        animation-play-state: paused;
+        transform: translateY(-50%) translateX(-4px);
+        box-shadow:
+          0 24px 64px rgba(0, 0, 0, 0.16),
+          0 0 0 1px rgba(0, 168, 150, 0.15),
+          0 0 40px rgba(0, 168, 150, 0.15);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+      }
+      .stories-bar-inner {
+        flex-direction: column;
+        gap: 14px;
+        padding: 0;
+        max-width: none;
+        overflow: visible;
+      }
+      .stories-bar-label {
+        font-size: 9px;
+        letter-spacing: 1.5px;
+        padding: 0 0 2px;
+        color: var(--primary, #00A896);
+        text-align: center;
+        position: relative;
+      }
+      .stories-bar-label::after {
+        content: '';
+        display: block;
+        width: 24px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--primary, #00A896), transparent);
+        margin: 6px auto 0;
+        border-radius: 1px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stories-bar { animation: stories-widget-in 0.4s ease forwards; }
+      }
+    }
+    @media (min-width: 769px) and (max-width: 1100px) {
+      /* Na średnich ekranach przesuń widget bardziej do środka żeby nie kolidował z prawą krawędzią content'u */
+      .stories-bar { right: 12px; padding: 14px 10px; }
+    }
+    /* Na bardzo niskich desktop heights: pozwól widgetowi na scroll */
+    @media (min-width: 769px) and (max-height: 640px) {
+      .stories-bar {
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      .stories-bar::-webkit-scrollbar { display: none; }
     }
 
     .story-ring {
