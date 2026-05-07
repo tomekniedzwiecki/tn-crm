@@ -3249,7 +3249,9 @@
                                 <div class="flex-1">
                                     <h4 class="text-[14px] font-medium text-white mb-1">2. Uruchom prompt w Claude Code</h4>
                                     <p class="text-[12px] text-zinc-500 leading-relaxed">
-                                        Skopiuj prompt poniżej, otwórz <strong class="text-white">nową sesję Claude Code</strong> w katalogu <code class="text-zinc-400 bg-zinc-800/50 px-1 rounded">tn-crm</code> i wklej go. Claude pobierze opinie, przetłumaczy i zapisze do bazy.
+                                        Skopiuj prompt, otwórz <strong class="text-white">nową sesję Claude Code</strong> w <code class="text-zinc-400 bg-zinc-800/50 px-1 rounded">tn-crm</code> i wklej.
+                                        <strong class="text-white">Pierwsze uruchomienie:</strong> pobierze opinie z AliExpress + tłumaczy + generuje statyczny HTML w pliku landingu + commit.
+                                        <strong class="text-white">Kolejne (po ukryciu opinii):</strong> regeneruje HTML uwzględniając ukryte. Uruchamiaj ten sam prompt po każdej zmianie.
                                     </p>
                                 </div>
                             </div>
@@ -3280,6 +3282,13 @@
                                     <i class="ph ph-arrows-clockwise"></i>
                                     Odśwież
                                 </button>
+                            </div>
+
+                            <div class="bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-4 flex items-start gap-2">
+                                <i class="ph ph-info text-amber-400 mt-0.5"></i>
+                                <p class="text-[12px] text-amber-200/80 leading-relaxed">
+                                    <strong>Po każdej zmianie</strong> (ukryj/pokaż opinię) skopiuj ponownie prompt z sekcji 2 i uruchom go w Claude Code — wygeneruje świeży HTML z aktualnymi opiniami, podmieni w pliku landingu i scommituje. Potem skopiuj zawartość pliku landingu do CMS sklepu klienta.
+                                </p>
                             </div>
 
                             <div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3 mb-4 hidden" id="reviews-meta-stats">
@@ -14384,51 +14393,126 @@ Zwróć TYLKO JSON.`;
             const productIdMatch = productUrl.match(/\/item\/(\d+)\.html/);
             const productId = productIdMatch ? productIdMatch[1] : 'BRAK';
 
-            const prompt = `Pobierz opinie z AliExpress dla workflow ${workflow.id} (${workflow.customer_name || 'klient'} - ${workflow.offer_name || ''}).
+            // Slug landingu z sales_page_url (np. "https://tn-crm.vercel.app/parova" -> "parova")
+            const salesPageUrl = workflow.sales_page_url || '';
+            const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
+            const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
 
-WORKFLOW_ID: ${workflow.id}
-PRODUCT_URL: ${productUrl}
-PRODUCT_ID: ${productId}
+            const prompt = `Wygeneruj/zaktualizuj sekcję opinii AliExpress dla workflow ${workflow.id} (${workflow.customer_name || 'klient'} - ${workflow.offer_name || ''}).
 
-Zadania (wykonaj w kolejności):
+PARAMETRY:
+- WORKFLOW_ID: ${workflow.id}
+- PRODUCT_URL: ${productUrl}
+- PRODUCT_ID: ${productId}
+- LANDING_SLUG: ${landingSlug}  (folder w landing-pages/, sprawdź czy istnieje)
+- LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
 
-1. Odczytaj /c/tmp/aliexpress-reviews-api.md żeby poznać endpoint API.
+ZADANIE: idempotentny prompt — uruchamiany za 1. razem (po podaniu URL) ORAZ za każdym razem
+gdy admin/klient ukryje/pokaże opinię w panelu. Robi DOKŁADNIE to samo każdym razem:
+fetchuje (jeśli trzeba) → generuje statyczny HTML → podmienia w pliku → commit + push.
 
-2. Pobierz opinie z https://feedback.aliexpress.com/pc/searchEvaluation.do
+═══════════════════════════════════════════════════════════════
+KROK A — SPRAWDŹ stan bazy
+═══════════════════════════════════════════════════════════════
+GET https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reviews?workflow_id=eq.${workflow.id}&select=count
+(headers: apikey + Authorization: Bearer SERVICE_KEY)
+
+- Jeśli count == 0 → idź do KROK B (pobranie z AliExpress)
+- Jeśli count > 0 → pomiń KROK B, idź od razu do KROK C
+
+═══════════════════════════════════════════════════════════════
+KROK B — POBIERANIE z AliExpress (tylko gdy baza pusta dla tego workflow)
+═══════════════════════════════════════════════════════════════
+1. Odczytaj /c/tmp/aliexpress-reviews-api.md (endpoint, struktura, pułapki).
+
+2. Fetch z https://feedback.aliexpress.com/pc/searchEvaluation.do
    Parametry: productId=${productId}, lang=en_US, country=US, pageSize=20, filter=withPic, sort=complex_default
-   Iteruj po stronach (page=1..N) aż uzbierasz 30 opinii spełniających filtry, max 5 stron.
+   Iteruj page=1..N aż uzbierasz 30 opinii spełniających filtry, max 5 stron.
+   Po każdej stronie await sleep(200) (rate limit).
 
-3. Filtruj — bierz tylko opinie:
+3. Filtruj — bierz TYLKO opinie z WSZYSTKIMI warunkami:
    - rating == 5 (buyerEval == 100)
    - images.length > 0 (min 1 zdjęcie)
    - tekst niepusty (buyerTranslationFeedback || buyerFeedback)
-   - aigc !== true (nie AI-generated)
+   - aigc !== true
 
-4. Dla każdej opinii, jeśli buyerFbType.sourceLang !== 'pl':
-   - Przetłumacz tekst na polski (sam, jako LLM — naturalnie, jak osoba, nie literalnie)
+4. Tłumaczenie: jeśli buyerFbType.sourceLang !== 'pl':
+   - Przetłumacz na polski (sam, jako LLM — naturalnie, jak osoba — nie literalnie, bez kalek)
    - was_translated = true, language_original = sourceLang, content_original = oryginał
-   Jeśli sourceLang === 'pl': content_pl = oryginał, was_translated = false
+   Jeśli sourceLang === 'pl': content_pl = oryginał, was_translated = false.
 
-5. Zapisz do bazy Supabase (REST API z service key z .env). Tabela: workflow_reviews.
-   Kolumny: workflow_id='${workflow.id}', source='aliexpress', source_review_id (zbuduj z evaDate+buyerName, np. md5),
-   rating, content_pl, content_original, language_original, was_translated,
-   author_name, review_date, sku_info, image_urls (jsonb array URL-i), sort_order (0..N indeks).
+5. Bulk INSERT do workflow_reviews:
+   POST https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reviews
+   Headers: apikey + Authorization: Bearer SERVICE_KEY
+            Content-Type: application/json
+            Prefer: resolution=merge-duplicates,return=minimal
+   Body: array obiektów z polami:
+     workflow_id='${workflow.id}', source='aliexpress',
+     source_review_id (md5 z evaDate+buyerName, deterministyczne — idempotency!),
+     rating, content_pl, content_original, language_original, was_translated,
+     author_name, review_date, sku_info, image_urls (array URL), sort_order (0..N).
 
-   Użyj Prefer: resolution=merge-duplicates (idempotency po (workflow_id, source, source_review_id)).
-
-6. Zaktualizuj workflow_optimization (gdzie workflow_id='${workflow.id}'):
+6. Update workflow_optimization (workflow_id=${workflow.id}):
    - reviews_fetched_at = NOW
-   - reviews_count = liczba zapisanych opinii (visible)
+   - reviews_count = (po INSERT zapytaj count z bazy)
    - reviews_total_ratings = parseInt(displayMessage.numRatings)
-   - reviews_avg_star = data.productEvaluationStatistic.evarageStar (literówka API!)
+   - reviews_avg_star = data.productEvaluationStatistic.evarageStar  (LITERÓWKA W API: 'evarage' nie 'average')
    - reviews_positive_pct = data.productEvaluationStatistic.evarageStarRage
 
-7. Wyświetl podsumowanie: ile opinii pobrano / przetłumaczono / błędów / metadane produktu.
+═══════════════════════════════════════════════════════════════
+KROK C — GENERATOR STATYCZNEGO HTML (zawsze)
+═══════════════════════════════════════════════════════════════
+1. Pobierz z bazy NIEUKRYTE opinie:
+   GET ...workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
+   GET ...workflow_optimization?workflow_id=eq.${workflow.id}&select=reviews_total_ratings,reviews_avg_star,reviews_positive_pct
 
-KEY: SUPABASE_URL=https://yxmavwkwnfuphjqbelws.supabase.co
-KEY: SUPABASE_SERVICE_KEY z /c/repos_tn/tn-crm/.env (zmienna SUPABASE_SERVICE_KEY)
+2. Wygeneruj HTML sekcji STATS (między <!-- REVIEWS:STATS:START --> a <!-- REVIEWS:STATS:END -->):
+   Trzy boxy: "Ponad X" (zaokrąglone w dół do 500 jeśli >=1000), avg star "/5", pozytywne %.
+   Użyj klas .reviews-stats / .reviews-meta-stat / .reviews-meta-value / .reviews-meta-label
+   (CSS jest już w landing parova/index.html — sprawdź jakie klasy są zdefiniowane).
 
-Po zakończeniu wróć tutaj — odświeżę listę opinii w panelu admina.`;
+3. Wygeneruj HTML sekcji GRID (między <!-- REVIEWS:GRID:START --> a <!-- REVIEWS:GRID:END -->):
+   Container <div class="reviews-grid-xl">.
+   W środku każda opinia jako <div class="review-card"> z:
+     - <div class="review-stars"> z 5 SVG gwiazdkami (skopiuj z istniejących testimonials w pliku)
+     - <div class="review-images" data-count="N"> z <img loading="lazy" referrerpolicy="no-referrer"> (max 4)
+     - <p class="review-text"> z escape'owanym content_pl (escape: & < > " ')
+     - <div class="review-author"> z .review-avatar (inicjały z author_name) + .review-name + .review-verified ("Zweryfikowany zakup" + ikona check SVG)
+   ZERO inline JS. Czysty HTML.
+
+4. Sprawdź że plik landing istnieje: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
+   Jeśli landingSlug = 'NIEUSTALONY-SPRAWDZ-RECZNIE' → przerwij i zapytaj usera o slug.
+
+5. Read plik. Znajdź markery (regex multiline):
+     <!-- REVIEWS:STATS:START -->...<!-- REVIEWS:STATS:END -->
+     <!-- REVIEWS:GRID:START -->...<!-- REVIEWS:GRID:END -->
+   Podmień zawartość MIĘDZY markerami na nowy HTML (markery zostają!).
+
+6. Skopiuj CSS z reviews-widget.js (znajdź funkcję injectStyles i wyciągnij CSS:
+   .reviews-stats, .reviews-meta-stat, .reviews-meta-value, .reviews-grid-xl,
+   .review-card, .review-stars, .review-images, .review-text, .review-author, .review-avatar,
+   .review-name, .review-verified). Wstaw to w <style> w landingu (jeśli już jest — pomiń, idempotency).
+   Markery: <!-- REVIEWS:CSS:START --> ... <!-- REVIEWS:CSS:END --> (dodaj jeśli nie ma).
+
+7. Commit + push:
+   cd c:/repos_tn/tn-crm
+   git add landing-pages/${landingSlug}/index.html
+   git commit -m "Reviews ${landingSlug}: regen statycznego HTML (X opinii)"
+   git push origin main
+
+═══════════════════════════════════════════════════════════════
+KLUCZE
+═══════════════════════════════════════════════════════════════
+SUPABASE_URL=https://yxmavwkwnfuphjqbelws.supabase.co
+SUPABASE_SERVICE_KEY z c:/repos_tn/tn-crm/.env (zmienna SUPABASE_SERVICE_KEY)
+
+═══════════════════════════════════════════════════════════════
+PODSUMOWANIE wyświetl na końcu:
+- ile opinii w bazie / ile widocznych / ile ukrytych
+- stats produktu (total/avg/positive)
+- ścieżka pliku landingu zaktualizowanego
+- link do commit
+- INSTRUKCJA dla Tomka: "Skopiuj zawartość ${landingSlug}/index.html do CMS na ${salesPageUrl || 'stronie sklepu klienta'}"`;
 
             promptOutput.value = prompt;
             section.classList.remove('hidden');
