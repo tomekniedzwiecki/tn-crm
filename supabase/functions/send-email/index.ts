@@ -57,6 +57,8 @@ const VALID_EMAIL_TYPES = [
   'optimization_started',
   'reviews_shared',
   'videos_shared',
+  'videos_reminder',
+  'videos_skipped',
   'direct'
 ]
 
@@ -92,7 +94,9 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   // Etap 5 - Optymalizacja
   optimization_started: 'Etap 5: Optymalizacja — zwiększamy liczbę zamówień',
   reviews_shared: 'Opinie klientów są już widoczne w Twoim sklepie ⭐',
-  videos_shared: 'Twoje Reels są już na sklepie 🎬'
+  videos_shared: 'Twoje Reels są już na sklepie 🎬',
+  videos_reminder: 'Przypomnienie: czekamy na Twoje nagrania video 🎬',
+  videos_skipped: 'Etap nagrań video pominięty — idziemy dalej'
 }
 
 // Offer flow email types (use special reply-to)

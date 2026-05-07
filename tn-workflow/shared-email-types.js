@@ -47,7 +47,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     optymalizacja: {
         label: 'Etap 5 - Optymalizacja',
         description: 'Maile związane z optymalizacją sprzedaży',
-        templates: ['optimization_started', 'reviews_shared', 'videos_shared']
+        templates: ['optimization_started', 'reviews_shared', 'videos_shared', 'videos_reminder', 'videos_skipped']
     }
 };
 
@@ -215,6 +215,18 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy admin oznaczy że sekcja Reels jest gotowa na landingu (Etap 5/Krok 3)',
         icon: 'ph-play-circle',
         color: 'rose'
+    },
+    'videos_reminder': {
+        name: 'Przypomnienie o nagraniach video',
+        description: 'Wysyłany gdy admin chce przypomnieć klientowi że czekamy na jego nagrania video (Etap 5/Krok 3)',
+        icon: 'ph-bell-ringing',
+        color: 'cyan'
+    },
+    'videos_skipped': {
+        name: 'Etap video pominięty',
+        description: 'Wysyłany gdy admin oznaczy że pomijamy etap nagrań video i idziemy dalej (Etap 5/Krok 3)',
+        icon: 'ph-skip-forward',
+        color: 'zinc'
     }
 };
 
@@ -273,7 +285,9 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'campaign_launched', label: 'Kampania uruchomiona' },
         { value: 'optimization_started', label: 'Etap 5 — Optymalizacja' },
         { value: 'reviews_shared', label: 'Opinie dodane do sklepu' },
-        { value: 'videos_shared', label: 'Reels (video) udostępnione' }
+        { value: 'videos_shared', label: 'Reels (video) udostępnione' },
+        { value: 'videos_reminder', label: 'Przypomnienie o nagraniach video' },
+        { value: 'videos_skipped', label: 'Etap video pominięty' }
     ]
 };
 
@@ -312,5 +326,7 @@ const TRIGGER_DEFINITIONS = {
     // Etap 5 - Optymalizacja
     optimization_started: { label: 'Etap 5 — Optymalizacja', icon: 'ph-sparkle', color: 'violet' },
     reviews_shared: { label: 'Opinie dodane do sklepu', icon: 'ph-star', color: 'yellow' },
-    videos_shared: { label: 'Reels udostępnione', icon: 'ph-play-circle', color: 'rose' }
+    videos_shared: { label: 'Reels udostępnione', icon: 'ph-play-circle', color: 'rose' },
+    videos_reminder: { label: 'Przypomnienie o nagraniach video', icon: 'ph-bell-ringing', color: 'cyan' },
+    videos_skipped: { label: 'Etap video pominięty', icon: 'ph-skip-forward', color: 'zinc' }
 };

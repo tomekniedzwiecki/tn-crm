@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050719';
+        const APP_VERSION = '2026050720';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1616,7 +1616,7 @@
                         <div id="dash-nav-video" class="dash-nav-item hidden" onclick="switchToDashTab('video')">
                             <i class="ph ph-play-circle"></i>
                             <span>Video (Reels)</span>
-                            <i id="dash-nav-check-video" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            <i id="dash-nav-check-video-reels" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
                         <div id="dash-nav-narzedzia" class="dash-nav-item hidden" onclick="switchToDashTab('narzedzia')">
                             <i class="ph ph-toolbox"></i>
@@ -1765,7 +1765,7 @@
                             <div id="dash-mobile-video" class="dash-nav-item hidden" onclick="switchToDashTab('video');toggleDashMobileMenu()">
                                 <i class="ph ph-play-circle"></i>
                                 <span>Video (Reels)</span>
-                                <i id="dash-nav-check-video-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                                <i id="dash-nav-check-video-reels-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                             <div id="dash-mobile-narzedzia" class="dash-nav-item hidden" onclick="switchToDashTab('narzedzia');toggleDashMobileMenu()">
                                 <i class="ph ph-toolbox"></i>
@@ -7175,13 +7175,32 @@
             const videoCount = (videoData?.video_links || []).length;
             const videosShared = !!optimizationData?.videos_shared_at;
             const videosInserted = !!optimizationData?.videos_inserted_at;
-            const isLocked = videoCount === 0;
+            const videosSkipped = !!videoData?.skipped;
+            const isLocked = videoCount === 0 && !videosSkipped;
 
             box.classList.toggle('opacity-50', isLocked);
             box.classList.toggle('cursor-pointer', !isLocked);
             box.onclick = isLocked ? null : () => switchToDashTab('video');
 
-            if (videosShared) {
+            if (videosSkipped) {
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Video Reels</span>
+                            <span class="flex items-center gap-1 text-zinc-400 text-xs">
+                                <i class="ph ph-skip-forward"></i>
+                                Pominięte
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-skip-forward text-4xl text-zinc-500 mb-3"></i>
+                            <h3 class="text-zinc-300 text-base font-medium">Etap pominięty</h3>
+                            <p class="text-[#666] text-xs text-center mt-2">Idziemy dalej bez Reels</p>
+                        </div>
+                    </div>
+                `;
+            } else if (videosShared) {
                 box.classList.remove('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col relative overflow-hidden">
@@ -7249,7 +7268,8 @@
             const ready = !!optimizationData?.tools_ready_at;
             const started = !!optimizationData?.tools_started_at;
             const videosShared = !!optimizationData?.videos_shared_at;
-            const isLocked = !videosShared;
+            const videosSkipped = !!videoData?.skipped;
+            const isLocked = !videosShared && !videosSkipped;
 
             box.classList.toggle('opacity-50', isLocked);
             box.classList.toggle('cursor-pointer', !isLocked);
@@ -7951,7 +7971,7 @@
 
             // Update Optymalizacje checkmark — gotowe gdy 3 glowne zadania zrobione LUB admin doszedl do dalszych krokow Etapu 5
             const optCoreDone = !!optimizationData?.cod_enabled && !!optimizationData?.whatsapp_enabled && !!optimizationData?.recovery_calls_done;
-            const optProgressed = (optimizationData?.reviews_count || 0) > 0 || !!optimizationData?.reviews_shared_at || !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at || !!optimizationData?.tools_ready_at;
+            const optProgressed = (optimizationData?.reviews_count || 0) > 0 || !!optimizationData?.reviews_shared_at || !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at || !!optimizationData?.tools_ready_at || !!videoData?.skipped;
             const optDone = optCoreDone || optProgressed;
             ['dash-nav-check-optymalizacje','dash-nav-check-optymalizacje-mobile','nav-check-optymalizacje-desktop','nav-check-optymalizacje-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !optDone);
@@ -7968,19 +7988,22 @@
                 document.getElementById(id)?.classList.toggle('hidden', !opinieDone);
             });
 
-            // Etap 5 / Krok 3 - Video (Reels): pokaz gdy sa nagrania w workflow_video
-            const hasVideoStep = (videoData?.video_links || []).length > 0 && !!optimizationData?.cod_enabled;
+            // Etap 5 / Krok 3 - Video (Reels): pokaz gdy COD wlaczony I (sa nagrania LUB skipped LUB inserted/shared)
+            // Skipped = "klient nie nagral, idziemy dalej" — zakladka pokazuje status pominiecia
+            const isVideoStepSkipped = !!videoData?.skipped;
+            const hasVideoLinks = (videoData?.video_links || []).length > 0;
+            const hasVideoStep = !!optimizationData?.cod_enabled && (hasVideoLinks || isVideoStepSkipped || !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at);
             ['dash-nav-video','dash-mobile-video'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasVideoStep);
             });
-            // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi
-            const videoDone = !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at;
-            ['dash-nav-check-video','dash-nav-check-video-mobile'].forEach(id => {
+            // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi LUB pominieta
+            const videoDone = !!optimizationData?.videos_inserted_at || !!optimizationData?.videos_shared_at || isVideoStepSkipped;
+            ['dash-nav-check-video-reels','dash-nav-check-video-reels-mobile'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !videoDone);
             });
 
-            // Etap 5 / Krok 4 - Narzedzia: pokaz po videos_shared_at
-            const hasNarzedzia = !!optimizationData?.videos_shared_at;
+            // Etap 5 / Krok 4 - Narzedzia: pokaz po videos_shared_at LUB skipped
+            const hasNarzedzia = !!optimizationData?.videos_shared_at || isVideoStepSkipped;
             ['dash-nav-narzedzia','dash-mobile-narzedzia'].forEach(id => {
                 document.getElementById(id)?.classList.toggle('hidden', !hasNarzedzia);
             });
@@ -8682,11 +8705,21 @@
 
             const sharedAt = optimizationData?.videos_shared_at;
             const insertedAt = optimizationData?.videos_inserted_at;
+            const skipped = !!videoData?.skipped;
+            const skippedAt = videoData?.skipped_at;
             const links = videoData?.video_links || [];
             const salesUrl = workflow?.sales_page_url || '';
 
             let statusHtml;
-            if (sharedAt) {
+            if (skipped) {
+                const d = skippedAt ? new Date(skippedAt) : null;
+                const dateStr = d ? d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+                statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-zinc-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-skip-forward text-zinc-400"></i></div>' +
+                    '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Etap pominięty — idziemy dalej</p>' +
+                    '<p class="text-[12px] text-[#999]">' + (dateStr ? 'Pominięto: ' + dateStr + '. ' : '') + 'Sklep działa bez sekcji Reels — możesz dodać video później jeśli zmienisz zdanie. Wystarczy że dasz znać.</p></div></div>';
+                statusBox.style.background = 'rgba(113,113,122,0.06)';
+                statusBox.style.borderColor = 'rgba(113,113,122,0.22)';
+            } else if (sharedAt) {
                 const d = new Date(sharedAt);
                 statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0"><i class="ph-fill ph-check-circle text-emerald-400"></i></div>' +
                     '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Sekcja Reels jest już na sklepie ✓</p>' +
@@ -8697,6 +8730,12 @@
                 statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-amber-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-clock text-amber-400"></i></div>' +
                     '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Sekcja gotowa — wkrótce powiadomienie</p>' +
                     '<p class="text-[12px] text-[#999]">Wstawiliśmy sekcję Reels na sklep, niedługo dostaniesz mail z potwierdzeniem.</p></div></div>';
+            } else if (links.length === 0) {
+                statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-cyan-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-video-camera text-cyan-400"></i></div>' +
+                    '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Czekamy na Twoje nagrania video</p>' +
+                    '<p class="text-[12px] text-[#999]">Wgraj nagrania w zakładce <strong class="text-white">Etap 2 → Nagrania</strong>, a my zamontujemy je na sklepie. Jeśli nie chcesz nagrywać — daj znać, pominiemy ten krok.</p></div></div>';
+                statusBox.style.background = 'rgba(6,182,212,0.04)';
+                statusBox.style.borderColor = 'rgba(6,182,212,0.2)';
             } else {
                 statusHtml = '<div class="flex items-start gap-3"><div class="w-9 h-9 rounded-full bg-zinc-500/15 flex items-center justify-center flex-shrink-0"><i class="ph ph-hourglass text-zinc-400"></i></div>' +
                     '<div class="flex-1"><p class="text-white font-semibold text-[14px] mb-1">Przygotowujemy sekcję Reels</p>' +
@@ -8705,7 +8744,11 @@
             statusBox.innerHTML = statusHtml;
 
             if (links.length === 0) {
-                listEl.innerHTML = '<div class="bento-box p-6 text-center text-[#999] text-[13px]">Brak nagrań — wgraj video w Etapie 2 → Nagrania.</div>';
+                if (skipped) {
+                    listEl.innerHTML = '';
+                } else {
+                    listEl.innerHTML = '<div class="bento-box p-6 text-center text-[#999] text-[13px]">Brak nagrań — wgraj video w Etapie 2 → Nagrania.</div>';
+                }
                 return;
             }
 

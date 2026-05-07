@@ -3479,6 +3479,52 @@
                                 </button>
                             </div>
                         </div>
+
+                        <!-- Krok 3 alt-A: Przypomnij klientowi o nagraniach (gdy klient zwleka) -->
+                        <div id="videos-reminder-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-bell-ringing text-cyan-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Przypomnij klientowi o nagraniach</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Klient nie wgrał jeszcze nagrań w Etapie 2? Wyślij email-przypomnienie z linkiem do panelu video.
+                                        Możesz wysyłać wielokrotnie — każdy raz zapisany w historii.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <p id="videos-reminder-status" class="text-[12px] text-zinc-500 mb-3"></p>
+                                <button onclick="sendVideosReminder()" id="videos-reminder-btn" class="px-4 py-2.5 bg-cyan-500 hover:bg-cyan-400 text-black text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-bell-ringing"></i>
+                                    <span>Wyślij przypomnienie</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Krok 3 alt-B: Pomiń krok ostatecznie (gdy klient nie chce nagrywać) -->
+                        <div id="videos-skip-section" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6 mb-4">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="w-10 h-10 rounded-lg bg-zinc-700/30 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-skip-forward text-zinc-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] font-medium text-white mb-1">Pomiń krok ostatecznie</h4>
+                                    <p class="text-[12px] text-zinc-500 leading-relaxed">
+                                        Klient nie chce nagrywać video — pomijamy ten krok. Wyślemy mu email z informacją że idziemy dalej,
+                                        a w panelu klienta odblokujemy <strong class="text-white">Narzędzia</strong>.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="ml-14">
+                                <p id="videos-skip-status" class="text-[12px] text-zinc-500 mb-3"></p>
+                                <button onclick="skipVideosStep()" id="videos-skip-btn" class="px-4 py-2.5 bg-zinc-700 hover:bg-zinc-600 text-white text-[13px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                    <i class="ph ph-skip-forward"></i>
+                                    <span id="videos-skip-btn-label">Pomiń ostatecznie i wyślij email</span>
+                                </button>
+                            </div>
+                        </div>
                     </div><!-- /tab-video -->
 
                     <!-- TAB: Narzędzia (Etap 5 / Krok 4) — placeholder, zajmiemy się potem -->
@@ -5576,7 +5622,7 @@
                 }
                 // Optymalizacje: zielony checkbox gdy 3 glowne zadania zrobione LUB admin posunal sie do dalszych krokow Etapu 5
                 const optCoreDone = !!optimizationNavStatus?.cod_enabled && !!optimizationNavStatus?.whatsapp_enabled && !!optimizationNavStatus?.recovery_calls_done;
-                const optProgressed = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at || !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at || !!optimizationNavStatus?.tools_ready_at;
+                const optProgressed = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at || !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at || !!optimizationNavStatus?.tools_ready_at || !!videoData?.skipped;
                 const optDone = optCoreDone || optProgressed;
                 toggle('nav-check-optymalizacje', optDone);
 
@@ -5589,20 +5635,24 @@
                 const opinieDone = (optimizationNavStatus?.reviews_count || 0) > 0 || !!optimizationNavStatus?.reviews_shared_at;
                 toggle('nav-check-opinie', opinieDone);
 
-                // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony i sa nagrania w Etapie 2
+                // Etap 5 / Krok 3 - Video: pokaz w sidebar gdy COD wlaczony I (sa nagrania LUB step pominiety LUB juz przekazane)
+                // Chcemy zeby zakladka byla widoczna takze gdy admin pominal — bo musi miec opcje cofniecia.
                 const navBtnVideo = document.getElementById('nav-btn-video');
                 const hasVideos = (videoData?.video_links || []).length > 0;
+                const videoSkipped = !!videoData?.skipped;
+                const videoStepActive = !!optimizationNavStatus?.cod_enabled && (hasVideos || videoSkipped || !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at);
                 if (navBtnVideo) {
-                    navBtnVideo.classList.toggle('hidden', !optimizationNavStatus?.cod_enabled || !hasVideos);
+                    navBtnVideo.classList.toggle('hidden', !videoStepActive);
                 }
-                // Checkmark zielony: sekcja wstawiona na landing LUB przekazana klientowi
-                const videoDone = !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at;
+                // Checkmark: zielony gdy wstawiona LUB przekazana LUB pominieta (skipped)
+                const videoDone = !!optimizationNavStatus?.videos_inserted_at || !!optimizationNavStatus?.videos_shared_at || videoSkipped;
                 toggle('nav-check-video', videoDone);
 
-                // Etap 5 / Krok 4 - Narzedzia: pokaz po przekazaniu Reels (videos_shared_at)
+                // Etap 5 / Krok 4 - Narzedzia: pokaz po przekazaniu Reels LUB pominieciu video
                 const navBtnNarzedzia = document.getElementById('nav-btn-narzedzia');
+                const toolsUnlocked = !!optimizationNavStatus?.videos_shared_at || videoSkipped;
                 if (navBtnNarzedzia) {
-                    navBtnNarzedzia.classList.toggle('hidden', !optimizationNavStatus?.videos_shared_at);
+                    navBtnNarzedzia.classList.toggle('hidden', !toolsUnlocked);
                 }
                 toggle('nav-check-narzedzia', !!optimizationNavStatus?.tools_ready_at);
             } catch (e) {
@@ -15303,8 +15353,10 @@ PODSUMOWANIE wyświetl na końcu:
                     }
                 }
 
-                // Update share button + status
+                // Update share button + status (+ reminder + skip sections)
                 renderShareSection();
+                renderVideosReminderSection();
+                renderVideosSkipSection();
 
                 // Pokaż sekcję promptu i wygeneruj
                 promptSection.classList.remove('hidden');
@@ -15424,6 +15476,185 @@ PODSUMOWANIE wyświetl na końcu:
             } else {
                 status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Po kliknięciu wyślemy email do klienta i odblokuje się krok Narzędzia';
                 if (btnLabel) btnLabel.textContent = 'Wyślij email i oznacz jako przekazane';
+            }
+        }
+
+        // Render sekcji "Przypomnij klientowi" — przycisk + status (counter ile razy wysłano)
+        function renderVideosReminderSection() {
+            const status = document.getElementById('videos-reminder-status');
+            const btn = document.getElementById('videos-reminder-btn');
+            if (!status || !btn) return;
+
+            const skipped = !!videoAdminData?.skipped;
+            const sharedAt = optimizationData?.videos_shared_at;
+            const hasVideos = videosData && videosData.length > 0;
+
+            // Disable gdy: krok pominięty albo już przekazany albo klient już wgrał video
+            if (skipped) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-skip-forward text-zinc-500"></i> Krok pominięty — przypomnienie nieaktywne.';
+            } else if (sharedAt) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Reels już przekazane — przypomnienie nie ma sensu.';
+            } else if (hasVideos) {
+                btn.disabled = true;
+                status.innerHTML = '<i class="ph ph-check-circle text-emerald-400"></i> Klient wgrał już ' + videosData.length + ' nagrań — przypomnienie nie jest potrzebne.';
+            } else {
+                btn.disabled = false;
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Klient otrzyma email z linkiem do panelu video. Możesz wysłać wielokrotnie.';
+            }
+        }
+
+        // Render sekcji "Pomiń krok ostatecznie" — przycisk + status
+        function renderVideosSkipSection() {
+            const status = document.getElementById('videos-skip-status');
+            const btn = document.getElementById('videos-skip-btn');
+            const btnLabel = document.getElementById('videos-skip-btn-label');
+            if (!status || !btn) return;
+
+            const skipped = !!videoAdminData?.skipped;
+            const skippedAt = videoAdminData?.skipped_at;
+            const sharedAt = optimizationData?.videos_shared_at;
+
+            if (skipped) {
+                btn.disabled = false;
+                if (btnLabel) btnLabel.textContent = 'Cofnij pominięcie';
+                const d = skippedAt ? new Date(skippedAt) : null;
+                status.innerHTML = '<i class="ph ph-check-circle text-zinc-400"></i> Krok pominięty' + (d ? ' (' + d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + ')' : '') + '. Narzędzia odblokowane.';
+            } else if (sharedAt) {
+                btn.disabled = true;
+                if (btnLabel) btnLabel.textContent = 'Pomiń ostatecznie i wyślij email';
+                status.innerHTML = '<i class="ph ph-info text-zinc-500"></i> Reels już przekazane — pomijanie nie ma sensu.';
+            } else {
+                btn.disabled = false;
+                if (btnLabel) btnLabel.textContent = 'Pomiń ostatecznie i wyślij email';
+                status.innerHTML = '<i class="ph ph-warning text-amber-400/70"></i> Wyślemy klientowi email „etap pominięty" i odblokujemy Narzędzia. Można cofnąć później.';
+            }
+        }
+
+        // Wyślij email-przypomnienie do klienta o nagraniach
+        async function sendVideosReminder() {
+            const btn = document.getElementById('videos-reminder-btn');
+            if (!btn || btn.disabled) return;
+            if (!confirm('Wysłać klientowi przypomnienie o nagraniach video?')) return;
+
+            try {
+                btn.disabled = true;
+                const oldHtml = btn.innerHTML;
+                btn.innerHTML = '<i class="ph ph-spinner ph-spin"></i> <span>Wysyłanie...</span>';
+
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'videos_reminder',
+                        entity_type: 'workflow',
+                        entity_id: workflow.id,
+                        context: {
+                            workflowId: workflow.id,
+                            brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                            clientName: workflow.customer_name || 'Kliencie',
+                            clientEmail: workflow.customer_email
+                        }
+                    }
+                });
+
+                logActivity('videos_reminder_sent', 'Wysłano przypomnienie o nagraniach video', {});
+                showToast('Przypomnienie wysłane do klienta', 'success');
+                btn.innerHTML = oldHtml;
+                renderVideosReminderSection();
+            } catch (e) {
+                console.error('sendVideosReminder error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-bell-ringing"></i> <span>Wyślij przypomnienie</span>';
+            }
+        }
+
+        // Pomiń krok video ostatecznie (set workflow_video.skipped + email + odblokuj Narzedzia)
+        async function skipVideosStep() {
+            const btn = document.getElementById('videos-skip-btn');
+            const btnLabel = document.getElementById('videos-skip-btn-label');
+            if (!btn || btn.disabled) return;
+
+            const isCurrentlySkipped = !!videoAdminData?.skipped;
+            const confirmMsg = isCurrentlySkipped
+                ? 'Cofnąć pominięcie etapu video? Klient nie dostanie maila — to zmiana wewnętrzna.'
+                : 'Pominąć etap video ostatecznie?\n\n' +
+                  '✓ Klient dostanie email „etap pominięty"\n' +
+                  '✓ Narzędzia (Krok 4) odblokują się\n' +
+                  '✓ Sekcja Reels nie pojawi się na sklepie\n\n' +
+                  'Możesz cofnąć później.';
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                btn.disabled = true;
+                if (btnLabel) btnLabel.textContent = 'Zapisywanie...';
+
+                const now = new Date().toISOString();
+                const newSkipped = !isCurrentlySkipped;
+
+                // 1) Update workflow_video.skipped + skipped_at
+                const { error: ve } = await supabaseClient
+                    .from('workflow_video')
+                    .update({
+                        skipped: newSkipped,
+                        skipped_at: newSkipped ? now : null
+                    })
+                    .eq('workflow_id', workflow.id);
+                if (ve) throw ve;
+
+                // 2) Jeśli oznaczamy jako skipped — odblokuj Narzedzia (tools_started_at)
+                if (newSkipped) {
+                    const { error: oe } = await supabaseClient
+                        .from('workflow_optimization')
+                        .update({
+                            tools_started_at: optimizationData?.tools_started_at || now
+                        })
+                        .eq('workflow_id', workflow.id);
+                    if (oe) throw oe;
+                    if (optimizationData && !optimizationData.tools_started_at) optimizationData.tools_started_at = now;
+                }
+
+                // 3) Lokalny cache
+                if (videoAdminData) {
+                    videoAdminData.skipped = newSkipped;
+                    videoAdminData.skipped_at = newSkipped ? now : null;
+                }
+
+                // 4) Email tylko gdy włączamy skip (cofnięcie nie wysyła)
+                if (newSkipped) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'videos_skipped',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    workflowId: workflow.id,
+                                    brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                    clientName: workflow.customer_name || 'Kliencie',
+                                    clientEmail: workflow.customer_email
+                                }
+                            }
+                        });
+                    } catch (te) {
+                        console.warn('automation-trigger videos_skipped failed (kontynuujemy):', te);
+                    }
+                    logActivity('videos_skipped', 'Pominięto etap video ostatecznie (Etap 5)', {});
+                    showToast('Krok pominięty — Narzędzia odblokowane', 'success');
+                } else {
+                    logActivity('videos_skip_cancelled', 'Cofnięto pominięcie etapu video', {});
+                    showToast('Cofnięto pominięcie', 'success');
+                }
+
+                renderVideosSkipSection();
+                renderShareSection();
+                renderVideosReminderSection();
+                updateNavChecks();
+            } catch (e) {
+                console.error('skipVideosStep error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                btn.disabled = false;
+                if (btnLabel) btnLabel.textContent = isCurrentlySkipped ? 'Cofnij pominięcie' : 'Pomiń ostatecznie i wyślij email';
             }
         }
 
