@@ -3940,14 +3940,10 @@ Zobacz zdjęcia.</p>
       let autoplayStarted = false;
       let autoplayPaused = false;
 
-      // ═══ Carousel: klasy + recenter ═══
+      // ═══ Carousel: klasy + recenter (linear, bez cyclical wrap) ═══
       function applyClasses() {
-        const n = phones.length;
         phones.forEach((p, idx) => {
-          let offset = idx - activeIdx;
-          if (offset > n / 2) offset -= n;
-          else if (offset < -n / 2) offset += n;
-          const abs = Math.abs(offset);
+          const abs = Math.abs(idx - activeIdx);
           p.classList.remove('reel-phone--active', 'reel-phone--peek', 'reel-phone--peek-far');
           if (abs === 0) p.classList.add('reel-phone--active');
           else if (abs === 1) p.classList.add('reel-phone--peek');
@@ -4112,6 +4108,12 @@ Zobacz zdjęcia.</p>
       }
 
       function advanceToNext() {
+        // Po ostatnim video — zatrzymaj autoplay (user wciska progress bar zeby restart)
+        if (activeIdx >= phones.length - 1) {
+          updateProgressBars(100);
+          phones[activeIdx].classList.remove('reel-phone--playing');
+          return;
+        }
         setActive(activeIdx + 1);
         setTimeout(playActiveInSection, 700);
       }
