@@ -158,15 +158,75 @@ h3 { font-size: clamp(20px, 5vw, 28px); line-height: 1.3; }
 
 ### H. Overflow-x — najczęstszy mobile bug
 
+- [ ] **`html { overflow-x: hidden; max-width: 100vw }`** — body samo nie wystarcza, html nad nim też może scrollować poziomo
 - [ ] `body { overflow-x: hidden; }` — ZAWSZE obecne
+- [ ] **Sekcje z dekoracyjnymi pseudoelementami (Editorial numerals: `.atelier::before` „03", `.epochs::before` „06", `.personas::before` „07" z `font-size: 200-380px` i `right/left: -20-40px`) MUSZĄ mieć `overflow: hidden`** na sekcji-parencie. Bez tego pseudoelement wystaje i rozszerza viewport mimo `body overflow-x:hidden`.
 - [ ] Żaden element nie ma `width: 100vw` (powoduje scroll gdy jest scrollbar)
 - [ ] Floating elements z `position: absolute; left: -X` są obcinane przez `overflow: hidden` na parent'cie
 - [ ] Żadne `transform: translateX(...)` nie wystaje poza 100%
 
+**Wzorcowy guard (copy-paste do `<style>`):**
+```css
+html { overflow-x: hidden; max-width: 100vw }
+body { overflow-x: hidden }
+/* Sekcje z editorial numerals — KAŻDA musi mieć overflow:hidden */
+.atelier, .epochs, .personas, .finale { overflow: hidden }
+```
+
 **Grep sanity (wykryj potencjalne leaki):**
 ```bash
 grep -nE "width:\s*100vw|left:\s*-[0-9]+|right:\s*-[0-9]+" landing-pages/[slug]/index.html
+# Plus sprawdź sekcje z ::before "0X" — jeśli są, weryfikuj overflow:hidden:
+grep -nE "::before\{content:\"[0-9]+\"" landing-pages/[slug]/index.html
 ```
+
+### H.bis. Parallax JS — bug który psuje cały viewport
+
+Jeśli landing ma JS parallax na editorial numerals (`.hero-numeral`, `.finale-numeral`) — UWAŻAJ na klasyczny bug. Standardowa implementacja czyta `getBoundingClientRect().top` w każdej klatce scrolla i z niego liczy delta. Ale **`getBoundingClientRect()` zwraca pozycję PO transform** — każda klatka aplikuje transform na transform, delta narasta nieskończenie.
+
+Empiryczny objaw: `style="transform: translateY(1458.52px)"` (1.5km) — element przesuwa się tak daleko że rozciąga dokument i cały layout (header, sticky-cta) wizualnie skacze.
+
+**Fix (capture initial offset PRZED pierwszą transformacją + wyłącz na mobile):**
+```js
+const parallaxEls = [
+  { el: document.querySelector('.hero-numeral'), speed: 0.18, baseRotate: -3 },
+  { el: document.querySelector('.finale-numeral'), speed: 0.12, baseRotate: 0 },
+].filter(x => x.el);
+if (parallaxEls.length && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  // KLUCZOWE: capture once, BEFORE any transform applied
+  parallaxEls.forEach((p) => {
+    const rect = p.el.getBoundingClientRect();
+    p.initialMidpoint = window.scrollY + rect.top + rect.height / 2;
+  });
+  const isMobile = () => matchMedia('(max-width: 720px)').matches;
+  let ticking = false;
+  const apply = () => {
+    if (isMobile()) {
+      // Reset transform na mobile, brak parallax (gimmick wizualny niewart bug ryzyka)
+      parallaxEls.forEach(({el, baseRotate}) => {
+        const reset = el.classList.contains('finale-numeral') ? 'translate(-50%, -50%) ' : '';
+        el.style.transform = reset + 'rotate(' + baseRotate + 'deg)';
+      });
+      ticking = false;
+      return;
+    }
+    const y = window.scrollY;
+    parallaxEls.forEach(({el, speed, baseRotate, initialMidpoint}) => {
+      const delta = (y + window.innerHeight / 2 - initialMidpoint) * speed;
+      const translate = el.classList.contains('finale-numeral')
+        ? `translate(-50%, calc(-50% + ${delta}px))`
+        : `translateY(${delta}px)`;
+      el.style.transform = `${translate} rotate(${baseRotate}deg)`;
+    });
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(apply); ticking = true; } }, { passive: true });
+  window.addEventListener('resize', () => { if (!ticking) { requestAnimationFrame(apply); ticking = true; } });
+  apply();
+}
+```
+
+**Meta-lesson:** gdy element wizualnie „skacze/chowa się" przy scrollu i CSS pozycjonowanie nie pomaga — sprawdź JS aplikujący transformy w pętli. Każdy parallax oparty na bieżącym `rect.top` MUSI mieć captured initial offset.
 
 ### I. Interaktywne — touch zamiast hover
 
