@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050703';
+        const APP_VERSION = '2026050704';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1599,6 +1599,11 @@
                             <span>Optymalizacje</span>
                             <i id="dash-nav-check-optymalizacje" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="dash-nav-opinie" class="dash-nav-item hidden" onclick="switchToDashTab('opinie')">
+                            <i class="ph ph-star"></i>
+                            <span>Opinie</span>
+                            <i id="dash-nav-check-opinie" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -1732,6 +1737,11 @@
                                 <i class="ph ph-sparkle"></i>
                                 <span>Optymalizacje</span>
                                 <i id="dash-nav-check-optymalizacje-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-mobile-opinie" class="dash-nav-item hidden" onclick="switchToDashTab('opinie');toggleDashMobileMenu()">
+                                <i class="ph ph-star"></i>
+                                <span>Opinie</span>
+                                <i id="dash-nav-check-opinie-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -2264,6 +2274,11 @@
                             <span>Optymalizacje</span>
                             <i id="nav-check-optymalizacje-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="nav-opinie-desktop" class="dash-nav-item hidden" data-tab="opinie" onclick="switchTab('opinie')">
+                            <i class="ph ph-star"></i>
+                            <span>Opinie</span>
+                            <i id="nav-check-opinie-desktop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
                 </nav>
 
@@ -2402,6 +2417,11 @@
                                 <i class="ph ph-sparkle"></i>
                                 <span>Optymalizacje</span>
                                 <i id="nav-check-optymalizacje-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="nav-opinie-mobile-wrap" class="dash-nav-item hidden" data-tab="opinie" onclick="switchTab('opinie');toggleMobileMenu()">
+                                <i class="ph ph-star"></i>
+                                <span>Opinie</span>
+                                <i id="nav-check-opinie-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -4828,6 +4848,60 @@
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Opinie (Etap 5 / Krok 2) -->
+            <div id="tab-opinie" class="tab-panel hidden animate-enter">
+                <div class="max-w-5xl">
+                    <div class="flex items-start gap-4 mb-8">
+                        <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-star text-2xl text-yellow-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Opinie klientów</h2>
+                            <p class="text-[14px] text-[#888] leading-relaxed">
+                                Pobieramy 5★ opinie ze zdjęciami od osób, które już kupiły ten produkt. Pokazujemy je na Twojej stronie sprzedażowej jako social proof. Możesz ukryć dowolną opinię, jeśli nie chcesz, żeby się tam pojawiała.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Stats header -->
+                    <div id="client-reviews-stats" class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 mb-4 hidden">
+                        <div class="grid grid-cols-3 gap-4 text-center">
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Pobranych</div>
+                                <div class="text-[24px] font-semibold text-white" id="client-reviews-count-total">0</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Na stronie</div>
+                                <div class="text-[24px] font-semibold text-emerald-400" id="client-reviews-count-visible">0</div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase tracking-wider">Ukrytych</div>
+                                <div class="text-[24px] font-semibold text-zinc-500" id="client-reviews-count-hidden">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Toggle pokaz ukryte -->
+                    <div class="flex items-center justify-between mb-4 px-1">
+                        <p class="text-[12px] text-zinc-500" id="client-reviews-list-label"></p>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" id="client-reviews-show-hidden" onchange="renderClientReviews()" class="w-4 h-4 rounded border-white/20 bg-white/5 text-zinc-500 focus:ring-zinc-500 focus:ring-offset-0">
+                            <span class="text-[12px] text-zinc-400">Pokaż ukryte</span>
+                        </label>
+                    </div>
+
+                    <!-- Lista opinii (masonry) -->
+                    <div id="client-reviews-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+
+                    <!-- Pusty stan -->
+                    <div id="client-reviews-empty" class="bg-zinc-900/30 border border-dashed border-white/5 rounded-xl p-8 text-center hidden">
+                        <i class="ph ph-star-half text-4xl text-zinc-600 mb-3"></i>
+                        <h3 class="text-[15px] font-medium text-white mb-1">Czekamy na opinie</h3>
+                        <p class="text-[13px] text-zinc-500">Tomek wkrótce pobierze opinie z bazy produktu i dodaje je do Twojej strony.</p>
                     </div>
                 </div>
             </div>
@@ -7468,6 +7542,17 @@
                 document.getElementById(id)?.classList.toggle('hidden', !optDone);
             });
 
+            // Etap 5 / Krok 2 - Opinie: pokaz sidebar gdy Tomek wlaczyl COD
+            const hasOpinie = !!optimizationData?.cod_enabled;
+            ['dash-nav-opinie','dash-mobile-opinie','nav-opinie-desktop','nav-opinie-mobile-wrap'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !hasOpinie);
+            });
+            // Checkmark zielony gdy sa pobrane opinie
+            const opinieDone = (optimizationData?.reviews_count || 0) > 0;
+            ['dash-nav-check-opinie','dash-nav-check-opinie-mobile','nav-check-opinie-desktop','nav-check-opinie-mobile'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !opinieDone);
+            });
+
             // Update landing tab status
             updateLandingTabStatus();
             updateDokumentyTabStatus();
@@ -8139,6 +8224,9 @@
                     break;
                 case 'optymalizacje':
                     loadOptymalizacjeClient();
+                    break;
+                case 'opinie':
+                    loadOpinieClient();
                     break;
             }
         }
@@ -11966,6 +12054,126 @@
         window.loadOptymalizacjeClient = loadOptymalizacjeClient;
         window.saveClientWhatsappPhone = saveClientWhatsappPhone;
         window.saveClientRecoveryNotes = saveClientRecoveryNotes;
+
+        // =============================================
+        // ETAP 5 / KROK 2 - OPINIE (Client side)
+        // =============================================
+        let clientReviewsList = [];
+
+        async function loadOpinieClient() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_reviews')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .order('sort_order', { ascending: true });
+                if (error) throw error;
+                clientReviewsList = data || [];
+                renderClientReviews();
+            } catch (err) {
+                console.error('loadOpinieClient error:', err);
+            }
+        }
+
+        function renderClientReviews() {
+            const grid = document.getElementById('client-reviews-grid');
+            const empty = document.getElementById('client-reviews-empty');
+            const stats = document.getElementById('client-reviews-stats');
+            const listLabel = document.getElementById('client-reviews-list-label');
+            const showHidden = document.getElementById('client-reviews-show-hidden')?.checked;
+
+            if (!grid) return;
+
+            const total = clientReviewsList.length;
+            const visible = clientReviewsList.filter(r => !r.hidden).length;
+            const hiddenCount = total - visible;
+
+            if (total === 0) {
+                grid.innerHTML = '';
+                empty?.classList.remove('hidden');
+                stats?.classList.add('hidden');
+                listLabel.textContent = '';
+                return;
+            }
+
+            empty?.classList.add('hidden');
+            stats?.classList.remove('hidden');
+            document.getElementById('client-reviews-count-total').textContent = total;
+            document.getElementById('client-reviews-count-visible').textContent = visible;
+            document.getElementById('client-reviews-count-hidden').textContent = hiddenCount;
+
+            const filtered = showHidden ? clientReviewsList : clientReviewsList.filter(r => !r.hidden);
+            listLabel.textContent = filtered.length === 1 ? '1 opinia' : `${filtered.length} opinii`;
+
+            grid.innerHTML = filtered.map(r => {
+                const stars = '★'.repeat(r.rating);
+                const images = Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? JSON.parse(r.image_urls) : []);
+                const hiddenStyle = r.hidden ? 'opacity-50 ring-1 ring-rose-500/30' : 'hover:border-white/10 transition-colors';
+                const author = r.author_name || 'Anonim';
+                return `
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4 ${hiddenStyle} flex flex-col">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-yellow-400 text-[13px]">${stars}</span>
+                            ${r.hidden ? '<span class="text-[10px] text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">UKRYTA</span>' : ''}
+                        </div>
+                        <p class="text-[13px] text-zinc-300 leading-relaxed mb-3 flex-1">${escapeClientHtml(r.content_pl || '')}</p>
+                        ${images.length > 0 ? `
+                            <div class="flex gap-1.5 flex-wrap mb-3">
+                                ${images.slice(0, 4).map(url => `<img src="${escapeClientAttr(url)}" alt="" class="w-14 h-14 object-cover rounded border border-white/5" loading="lazy">`).join('')}
+                                ${images.length > 4 ? `<div class="w-14 h-14 rounded bg-zinc-800 flex items-center justify-center text-[11px] text-zinc-400">+${images.length - 4}</div>` : ''}
+                            </div>
+                        ` : ''}
+                        <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                            <span class="text-[11px] text-zinc-500">${escapeClientHtml(author)}</span>
+                            <button onclick="toggleClientReviewHidden('${r.id}', ${!r.hidden})" class="text-[11px] px-2 py-1 rounded ${r.hidden ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'} transition-colors flex items-center gap-1">
+                                <i class="ph ${r.hidden ? 'ph-eye' : 'ph-eye-slash'}"></i>
+                                ${r.hidden ? 'Pokaż' : 'Ukryj'}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function escapeClientHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[s]);
+        }
+        function escapeClientAttr(str) {
+            if (!str) return '';
+            return String(str).replace(/"/g, '&quot;');
+        }
+
+        async function toggleClientReviewHidden(reviewId, hidden) {
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_reviews')
+                    .update({
+                        hidden,
+                        hidden_at: hidden ? new Date().toISOString() : null,
+                        hidden_by: hidden ? 'client' : null
+                    })
+                    .eq('id', reviewId);
+                if (error) throw error;
+
+                // Update local
+                const r = clientReviewsList.find(x => x.id === reviewId);
+                if (r) {
+                    r.hidden = hidden;
+                    r.hidden_at = hidden ? new Date().toISOString() : null;
+                    r.hidden_by = hidden ? 'client' : null;
+                }
+                showToast(hidden ? 'Opinia ukryta — nie pojawi się na stronie' : 'Opinia wraca na stronę', 'success');
+                renderClientReviews();
+            } catch (err) {
+                console.error('toggleClientReviewHidden error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+
+        window.loadOpinieClient = loadOpinieClient;
+        window.renderClientReviews = renderClientReviews;
+        window.toggleClientReviewHidden = toggleClientReviewHidden;
 
         // Mobile menu toggle
         function toggleMobileMenu() {
