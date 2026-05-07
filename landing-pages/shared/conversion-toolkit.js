@@ -1525,9 +1525,11 @@
       if (!enabled || !phone) return;
 
       // Sanitize phone: keep only digits and leading +
-      const cleanPhone = phone.replace(/[^\d+]/g, '').replace(/^00/, '+');
-      const phoneForWa = cleanPhone.replace(/^\+/, '').replace(/[^\d]/g, '');
-      if (!phoneForWa) return;
+      let cleanPhone = phone.replace(/[^\d+]/g, '').replace(/^00/, '+');
+      let phoneForWa = cleanPhone.replace(/^\+/, '').replace(/[^\d]/g, '');
+      // Auto-add Polish prefix when 9-digit national format (no country code)
+      if (phoneForWa.length === 9) phoneForWa = '48' + phoneForWa;
+      if (!phoneForWa || phoneForWa.length < 10) return;
 
       const waUrl = `https://wa.me/${phoneForWa}?text=${encodeURIComponent(cfg.message || '')}`;
 
