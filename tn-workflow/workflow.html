@@ -14398,20 +14398,63 @@ Zwróć TYLKO JSON.`;
             const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
             const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
 
-            // CTA URL (do lightbox) — z sales_page_url pliku albo z istniejącego btn-primary[href*=checkout]
-            const ctaUrlForLightbox = salesPageUrl ? salesPageUrl.replace(/\/$/, '') + '/checkout' : '#offer';
-            const brandName = workflow.customer_company || workflow.offer_name?.replace(/budowa sklepu|pełen pakiet/gi, '').trim() || landingSlug;
-
             const prompt = `Sekcja Opinii dla landingu ${landingSlug} (workflow ${workflow.id}: ${workflow.customer_name || 'klient'} — ${workflow.offer_name || ''}).
 
-PARAMETRY:
+PARAMETRY (przekazane z panelu):
 - WORKFLOW_ID: ${workflow.id}
 - PRODUCT_URL: ${productUrl}
 - PRODUCT_ID: ${productId}
 - LANDING_SLUG: ${landingSlug}
 - LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/${landingSlug}/index.html
-- BRAND_NAME (do CTA w lightboxie): ${brandName}
-- CTA_URL (do lightboxie, link do koszyka): ${ctaUrlForLightbox}
+
+PARAMETRY DO USTALENIA (pobierz z bazy + pliku landinga, krok A0):
+- BRAND_NAME — nazwa marki (np. "Parova", "Vitrix") — NIE nazwisko klienta
+- CTA_URL — pełny URL koszyka (np. https://parova.pl/checkout?products=103037039-321197585)
+                                    — MUSI mieć products= z konkretnymi ID
+
+═══════════════════════════════════════════════════════════════
+KROK A0 — USTAL BRAND_NAME i CTA_URL (ZAWSZE pierwszy krok)
+═══════════════════════════════════════════════════════════════
+
+A0.1 BRAND_NAME — w kolejności priorytetowej:
+  1) GET workflow_branding?workflow_id=eq.${workflow.id}&type=eq.brand_info&select=title,value
+     → użyj 'title' (jeśli niepusty), w przeciwnym razie parsuj JSON z 'value' i weź .name
+  2) Jeśli pkt 1 niedostępny → capitalize(LANDING_SLUG)  (np. "parova" → "Parova", "h2vital" → "H2Vital")
+
+  NIGDY nie używaj customer_name ani customer_company jako BRAND_NAME — to imię klienta sklepu, nie marka produktu.
+  Po ustaleniu BRAND_NAME zapamiętaj go — używasz w SECTION header (h2), w lightboxie ("Zamów BRAND teraz") i side widget.
+
+A0.2 CTA_URL — w kolejności priorytetowej:
+  1) Read plik LANDING_FILE → znajdź pierwszy <a> z class="btn btn-primary" lub class zawierającym "btn-primary"
+     i href zawierającym "checkout" lub "?products=". Wyciągnij ten href DOSŁOWNIE.
+  2) Jeśli plik nie istnieje LUB nie ma takiego buttona →
+     GET workflow_takedrop?workflow_id=eq.${workflow.id}&select=domain
+     → zbuduj 'https://' + domain + '/checkout' (jeśli domain niepusty)
+  3) Jeśli żaden powyższy → przerwij i zapytaj usera o CTA URL
+
+  NIGDY NIE używaj sales_page_url + '/checkout' jako CTA — sales_page to nasz preview landingu,
+  NIE jest hostem koszyka klienta.
+
+Po ustaleniu obu — używaj ich konsekwentnie we wszystkich blokach (CSS w {{}} placeholderach,
+SECTION header h2, lightbox CTA href + tekst, side widget CTA href).
+
+A0.3 ANALIZA TOKENÓW :root (opcjonalne, dla spójności wizualnej):
+  Read początek pliku LANDING_FILE (do ~250 linii). Znajdź ":root { ... }".
+  Sprawdź czy landing używa STANDARDOWYCH nazw zmiennych (te z templatu):
+     --primary, --secondary, --bg-cream, --bg-white, --bg-light,
+     --text-primary, --text-secondary, --text-tertiary, --border-light,
+     --radius-lg, --radius-md, --radius-sm, --font-heading, --font-body,
+     --shadow-sm, --shadow-md, --shadow-lg, --shadow-primary, --gradient-cta
+
+  Jeśli landing używa NIESTANDARDOWYCH nazw (np. --teal zamiast --primary,
+  --coral zamiast --secondary, --display zamiast --font-heading, --navy zamiast --text-primary):
+    - W skopiowanym CSS opinii podmień var(--primary, #00A896) na var(--primary, var(--teal, #00A896))
+      (chain fallback — pierwsza zmienna z templatu, druga z palety landingu, na końcu hardcoded)
+    - Analogicznie dla pozostałych: --secondary → --coral / --accent, --font-heading → --font-display, etc.
+    - Cel: kolory/fonty sekcji opinii pasują do reszty landingu, nawet gdy template default by się rozjechał
+
+  Jeśli landing NIE MA :root w ogóle (rzadkie, ale możliwe) — pomiń ten krok,
+  template z hardcoded fallbacks zadziała standalone.
 
 ZADANIE: SELF-CONTAINED prompt. Idempotentny przy każdym uruchomieniu.
 Wstawia BRAKUJĄCE elementy (CSS, lightbox HTML/JS, sekcja, nota), zawsze
@@ -14480,8 +14523,8 @@ Single source of truth. Zawiera 4 bloki do wklejenia:
 Plus REVIEWS_TEMPLATE_CARD (komentarz na końcu) — szablon karty.
 
 PLACEHOLDERY do podmiany w blokach:
-  {{BRAND_NAME}}  → ${brandName}
-  {{CTA_URL}}     → ${ctaUrlForLightbox}
+  {{BRAND_NAME}}  → wartość ustalona w A0.1
+  {{CTA_URL}}     → wartość ustalona w A0.2
 
 C0. Pobierz NIEUKRYTE opinie:
     GET .../workflow_reviews?workflow_id=eq.${workflow.id}&hidden=eq.false&order=sort_order.asc
@@ -14500,8 +14543,8 @@ C2. ZAŁADUJ TEMPLATE.
       E. JS (zawartość <script data-template="reviews-js">)
 
     W blokach B, C, D podmień placeholdery:
-      {{BRAND_NAME}} → "${brandName}"
-      {{CTA_URL}}    → "${ctaUrlForLightbox}"
+      {{BRAND_NAME}} → wartość ustalona w A0.1
+      {{CTA_URL}}    → wartość ustalona w A0.2
 
     OPCJONALNIE (best-effort dopasowanie do palety landingu): Read landing,
     wyciągnij z :root wartości (--primary, --secondary, --bg-cream itp.)
@@ -14518,7 +14561,7 @@ C3. SEKCJA HTML (sprawdź czy jest, jeśli nie → wstaw przed <section class="c
       <div class="container">
         <div class="reviews-header fade-in">
           <span class="section-label">Opinie klientów</span>
-          <h2 class="section-title">Tysiące osób już cieszy się ${brandName}</h2>
+          <h2 class="section-title">Tysiące osób już cieszy się [BRAND_NAME z A0.1]</h2>
           <p class="section-subtitle">
             Prawdziwe opinie ze zdjęciami od osób, które używają tego produktu. Bez retuszu, bez wybiórki.
           </p>
@@ -14557,8 +14600,27 @@ C4. CSS — sprawdź czy w <style> landingu są już klasy:
 C5. SEKCJA HTML — sprawdź czy <section class="reviews-xl"> z markerami
       <!-- REVIEWS:GRID:START/END -->
     jest w pliku. JEŚLI NIE → wstaw blok REVIEWS_TEMPLATE_SECTION z TEMPLATE,
-    podmieniając {{BRAND_NAME}} → "${brandName}". Wstaw po </section> Solution
-    (lub innej sekcji, jeśli landing nie ma Solution — przed Comparison/Offer).
+    podmieniając {{BRAND_NAME}} → wartość ustalona w A0.1.
+
+    LOKALIZACJA — wstaw zaraz po </section> tej z LISTY PRIORYTETU (pierwsza znaleziona):
+      1) <section class="solution"  (Parova, InnerScan, SilkTip, Dentaflow)
+      2) <section class="atelier"   (Vitrix-style — sekcja "rozwiązanie/produkt")
+      3) <section class="benefits"  (H2Vital-style — korzyści produktu)
+      4) <section class="science"   (H2Vital-style — wyjaśnienie działania)
+      5) <section class="how-it-works" lub class="how-to-use"
+      6) <section class="technology"
+      7) <section class="ritual"
+
+    Jeśli ŻADNA z powyższych nie istnieje — wstaw PRZED pierwszą znalezioną z:
+      - <section class="comparison">
+      - <section class="testimonials">
+      - <section class="faq">
+      - <section class="offer">
+      - <section class="cta-banner">
+
+    Cel: opinie mają być w środku lejka — po wytłumaczeniu produktu/rozwiązania,
+    przed porównaniem/FAQ/ofertą — żeby budować zaufanie tuż przed decyzją.
+    NIE wstawiaj na końcu strony (po cta-banner) — to martwa strefa dla scroll'erów.
 
 C6. LIGHTBOX + SIDE WIDGET HTML — sprawdź czy <div id="reviews-lightbox">
     i <div id="reviews-side-widget"> są w pliku. JEŚLI NIE → wstaw oba bloki
