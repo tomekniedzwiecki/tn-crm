@@ -319,6 +319,21 @@
                                 <i class="ph ph-sparkle"></i> Optymalizacje
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-violet-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
+                            <button onclick="toggleStatusStage('opinie')" data-stage="opinie"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-star"></i> Opinie
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-yellow-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
+                            <button onclick="toggleStatusStage('video')" data-stage="video"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-play-circle"></i> Video (Reels)
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
+                            <button onclick="toggleStatusStage('narzedzia')" data-stage="narzedzia"
+                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
+                                <i class="ph ph-toolbox"></i> Narzędzia
+                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
+                            </button>
                         </div>
                     </div>
                     <!-- Owner Filter -->
@@ -752,7 +767,7 @@
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -931,6 +946,22 @@
                             const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
                             return w.ads_stage?.report_sent && !allDone;
                         }
+                        // "opinie" = COD włączony ALE opinie nie przekazane klientowi
+                        if (stage === 'opinie') {
+                            const opt = w.optimization_stage;
+                            return opt?.cod_enabled && !opt?.reviews_shared_at;
+                        }
+                        // "video" = są nagrania w Etap 2 + COD włączony ALE Reels nie przekazane
+                        if (stage === 'video') {
+                            const opt = w.optimization_stage;
+                            const hasVideos = (w.video_stage?.video_links || []).length > 0;
+                            return opt?.cod_enabled && hasVideos && !opt?.videos_shared_at;
+                        }
+                        // "narzedzia" = Reels przekazane ALE narzędzia nie skonfigurowane
+                        if (stage === 'narzedzia') {
+                            const opt = w.optimization_stage;
+                            return opt?.videos_shared_at && !opt?.tools_ready_at;
+                        }
                         // Other stages = next step
                         return nextStep === stage;
                     });
@@ -1036,7 +1067,8 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0, budget: 0, campaign: 0, ads_report: 0, optymalizacje: 0
+                ad_account: 0, budget: 0, campaign: 0, ads_report: 0,
+                optymalizacje: 0, opinie: 0, video: 0, narzedzia: 0
             };
 
             // Only count active workflows
@@ -1103,7 +1135,7 @@
                     counts.ads_report++;
                     continue;
                 }
-                // "optymalizacje" = raport wysłany ALE optymalizacja niezakończona
+                // "optymalizacje" = raport wysłany ALE optymalizacja core niezakończona (3 sub-checkboxy)
                 if (w.ads_stage?.report_sent) {
                     const opt = w.optimization_stage;
                     const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
@@ -1111,12 +1143,28 @@
                         counts.optymalizacje++;
                         continue;
                     }
+                    // Etap 5 / Krok 2 — Opinie: COD wlaczony ALE opinie nie udostepnione
+                    if (opt?.cod_enabled && !opt?.reviews_shared_at) {
+                        counts.opinie++;
+                        continue;
+                    }
+                    // Etap 5 / Krok 3 — Video: są nagrania ALE Reels nie udostepnione
+                    const hasVideos = (w.video_stage?.video_links || []).length > 0;
+                    if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
+                        counts.video++;
+                        continue;
+                    }
+                    // Etap 5 / Krok 4 — Narzedzia: Reels udostepnione ALE narzedzia nie skonfigurowane
+                    if (opt?.videos_shared_at && !opt?.tools_ready_at) {
+                        counts.narzedzia++;
+                        continue;
+                    }
                 }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
                 const nextStep = getNextStep(w);
                 if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'optymalizacje'].includes(nextStep)) {
+                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'optymalizacje', 'opinie', 'video', 'narzedzia'].includes(nextStep)) {
                     counts[nextStep]++;
                 }
             }
@@ -1347,10 +1395,17 @@
             // Raport wysłany
             if (!w.ads_stage?.report_sent) return 'ads_report';
 
-            // Etap 5: Optymalizacja
+            // Etap 5: Optymalizacja (4 kroki)
             const opt = w.optimization_stage;
             const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
             if (!optAllDone) return 'optymalizacje';
+            // Krok 2 — Opinie: COD wlaczony ALE opinie nie udostepnione
+            if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
+            // Krok 3 — Video Reels: są nagrania ALE Reels nie udostepnione
+            const hasVideos = (w.video_stage?.video_links || []).length > 0;
+            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) return 'video';
+            // Krok 4 — Narzedzia: Reels udostepnione ALE narzedzia nie skonfigurowane
+            if (opt?.videos_shared_at && !opt?.tools_ready_at) return 'narzedzia';
 
             return null; // all done
         }
@@ -1549,6 +1604,31 @@
                     items.push(`<span class="flex items-center gap-1 text-violet-400"><i class="ph ph-circle-notch text-[10px]"></i>Optymalizacje</span>`);
                 } else {
                     items.push(`<span class="flex items-center gap-1 text-zinc-500"><i class="ph ph-sparkle text-[10px]"></i>Optymalizacje</span>`);
+                }
+                // Krok 2 — Opinie (pokazuj gdy COD wlaczony)
+                if (opt?.cod_enabled) {
+                    if (opt?.reviews_shared_at) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Opinie</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-yellow-400"><i class="ph ph-star text-[10px]"></i>Opinie</span>`);
+                    }
+                }
+                // Krok 3 — Video Reels (pokazuj gdy są nagrania)
+                const hasVideos = (w.video_stage?.video_links || []).length > 0;
+                if (opt?.cod_enabled && hasVideos) {
+                    if (opt?.videos_shared_at) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Reels</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-rose-400"><i class="ph ph-play-circle text-[10px]"></i>Reels</span>`);
+                    }
+                }
+                // Krok 4 — Narzedzia (pokazuj po videos_shared_at)
+                if (opt?.videos_shared_at) {
+                    if (opt?.tools_ready_at) {
+                        items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Narzędzia</span>`);
+                    } else {
+                        items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-toolbox text-[10px]"></i>Narzędzia</span>`);
+                    }
                 }
             }
 
@@ -1776,8 +1856,23 @@
                     status = 'Klient kontaktuje się z porzuconymi koszykami';
                     icon = 'ph ph-phone-call text-cyan-400';
                     isClientTask = true;
+                } else if (opt?.cod_enabled && !opt?.reviews_shared_at) {
+                    stepName = 'Opinie do sklepu';
+                    status = (opt?.reviews_count || 0) > 0 ? 'Wstaw opinie + przekaż klientowi' : 'Pobierz opinie z AliExpress';
+                    icon = 'ph ph-star text-yellow-400';
+                    isClientTask = false;
+                } else if (opt?.cod_enabled && (w.video_stage?.video_links || []).length > 0 && !opt?.videos_shared_at) {
+                    stepName = 'Video Reels na sklepie';
+                    status = opt?.videos_inserted_at ? 'Przekaż klientowi (email)' : 'Wstaw sekcję Reels na landing';
+                    icon = 'ph ph-play-circle text-rose-400';
+                    isClientTask = false;
+                } else if (opt?.videos_shared_at && !opt?.tools_ready_at) {
+                    stepName = 'Narzędzia';
+                    status = 'Skonfiguruj narzędzia (krok 4)';
+                    icon = 'ph ph-toolbox text-amber-400';
+                    isClientTask = false;
                 } else {
-                    stepName = 'Optymalizacje';
+                    stepName = 'Etap 5 ukończony';
                     status = 'Wszystko gotowe';
                     icon = 'ph-fill ph-check-circle text-emerald-400';
                     isClientTask = false;
