@@ -842,15 +842,15 @@
       .cookie-btn{padding:9px 14px;font-size:11px}
     }
 
-    /* ═══ Mobile fix: floating widgets + header/stories collision ═══
+    /* ═══ Mobile fix: floating widgets + header/stories layering ═══
        Sticky-cta (≤720px) zajmuje bottom 0..~70px → przesun WA/reviews-side.
-       Stories-bar konflikt z fixed header → na mobile static (nie sticky),
-       przewija sie z heroem. Header zawsze widoczny (fixed, z-index:200). */
+       Stories-bar pod headerem (sticky top:58px == header height mobile).
+       Header z-index:200 + box-shadow → wizualne odseparowanie od stories-bar. */
     @media (max-width:720px){
       .wa-widget{bottom:88px !important}
       .reviews-side-widget{bottom:88px !important}
-      .stories-bar{position:static !important;top:auto !important}
-      .header{z-index:200 !important}
+      .stories-bar{top:58px !important;border-top:1px solid rgba(13,33,55,0.06) !important}
+      .header{z-index:200 !important;box-shadow:0 2px 8px rgba(13,33,55,0.06) !important}
     }
 
     /* ─── Narrow phones (≤380px) ──────────── */
@@ -3456,25 +3456,27 @@
         });
       });
 
-      // ═══ IntersectionObserver: start autoplay przy 80% viewport, pause poza ═══
+      // ═══ IntersectionObserver: start autoplay gdy 30%+ widoczne (mobile-friendly) ═══
+      // 0.3 zamiast 0.8 — na mobile sekcja moze byc dluzsza od viewport,
+      // ratio nigdy nie osiagnie 0.8. 0.3 = wystarczajaco zeby start.
       const obs = new IntersectionObserver(function(entries) {
         entries.forEach(function(e) {
-          if (e.isIntersecting && e.intersectionRatio >= 0.8 && !autoplayStarted) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.3 && !autoplayStarted) {
             autoplayStarted = true;
             ensureYtApi(playActiveInSection);
           }
           if (autoplayStarted) {
-            if (e.intersectionRatio < 0.15 && !autoplayPaused) {
+            if (e.intersectionRatio < 0.1 && !autoplayPaused) {
               autoplayPaused = true;
               if (sectionPlayer) try { sectionPlayer.pauseVideo(); } catch (_) {}
               stopProgress();
-            } else if (e.intersectionRatio >= 0.5 && autoplayPaused) {
+            } else if (e.intersectionRatio >= 0.3 && autoplayPaused) {
               autoplayPaused = false;
               if (sectionPlayer) try { sectionPlayer.playVideo(); } catch (_) {}
             }
           }
         });
-      }, { threshold: [0, 0.15, 0.5, 0.8, 1] });
+      }, { threshold: [0, 0.1, 0.3, 0.5, 1] });
       obs.observe(section);
 
       // Recenter on resize

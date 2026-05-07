@@ -4163,25 +4163,27 @@ Zobacz zdjęcia.</p>
         });
       });
 
-      // ═══ IntersectionObserver: start autoplay przy 80% viewport, pause poza ═══
+      // ═══ IntersectionObserver: start autoplay gdy 30%+ widoczne (mobile-friendly) ═══
+      // 0.3 zamiast 0.8 — na mobile sekcja moze byc dluzsza od viewport,
+      // ratio nigdy nie osiagnie 0.8. 0.3 = wystarczajaco zeby start.
       const obs = new IntersectionObserver(function(entries) {
         entries.forEach(function(e) {
-          if (e.isIntersecting && e.intersectionRatio >= 0.8 && !autoplayStarted) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.3 && !autoplayStarted) {
             autoplayStarted = true;
             ensureYtApi(playActiveInSection);
           }
           if (autoplayStarted) {
-            if (e.intersectionRatio < 0.15 && !autoplayPaused) {
+            if (e.intersectionRatio < 0.1 && !autoplayPaused) {
               autoplayPaused = true;
               if (sectionPlayer) try { sectionPlayer.pauseVideo(); } catch (_) {}
               stopProgress();
-            } else if (e.intersectionRatio >= 0.5 && autoplayPaused) {
+            } else if (e.intersectionRatio >= 0.3 && autoplayPaused) {
               autoplayPaused = false;
               if (sectionPlayer) try { sectionPlayer.playVideo(); } catch (_) {}
             }
           }
         });
-      }, { threshold: [0, 0.15, 0.5, 0.8, 1] });
+      }, { threshold: [0, 0.1, 0.3, 0.5, 1] });
       obs.observe(section);
 
       // Recenter on resize
