@@ -14743,9 +14743,17 @@ PODSUMOWANIE wyświetl na końcu:
             const slugMatch = salesPageUrl.match(/\/([a-z0-9_-]+)\/?$/i) || salesPageUrl.match(/\/lp\/([a-z0-9_-]+)/i);
             const landingSlug = slugMatch ? slugMatch[1] : 'NIEUSTALONY-SPRAWDZ-RECZNIE';
 
-            // Nazwa produktu / marki — preferuj offer_name, fallback customer_name
-            const productName = workflow.offer_name || workflow.customer_name || 'produkt';
-            const productGen = productName + 'a'; // dopelniacz hack — uzytkownik moze poprawic
+            // Brand / produkt landingu — preferuj brand_info z brandingu (np. "Parova"),
+            // fallback offer_name (uwaga: to często nazwa USŁUGI z workflow, nie produktu landingu)
+            let brandName = '';
+            try {
+                const brandInfo = brandingItems.find(b => b.type === 'brand_info');
+                if (brandInfo?.value) {
+                    const parsed = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value;
+                    brandName = parsed?.name || brandInfo.title || '';
+                }
+            } catch(_) {}
+            const productName = brandName || workflow.offer_name || workflow.customer_name || 'produkt';
 
             // Status WA
             const waEnabled = !!optimizationData?.whatsapp_enabled;
@@ -14760,52 +14768,159 @@ PODSUMOWANIE wyświetl na końcu:
                 }
             }
 
-            const prompt = 'Włącz interaktywny widget WhatsApp na landingu ' + landingSlug + '.\n' +
-                '\n' +
-                'PARAMETRY:\n' +
-                '- WORKFLOW_ID: ' + workflow.id + '\n' +
-                '- LANDING_SLUG: ' + landingSlug + '\n' +
-                '- LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/' + landingSlug + '/index.html\n' +
-                '- PRODUKT (mianownik): ' + productName + '\n' +
-                '- PRODUKT (dopełniacz, popraw jeśli źle): ' + productGen + '\n' +
-                '\n' +
-                'CO ZROBIĆ:\n' +
-                'W LANDING_FILE w bloku ConversionToolkit.init({...}) zastąp obecny blok `whatsapp: {...}` poniższym:\n' +
-                '\n' +
-                'whatsapp: {\n' +
-                "  workflowId: '" + workflow.id + "',\n" +
-                "  message: 'Cześć! Mam pytanie o " + productName + ".',\n" +
-                '  teaser: {\n' +
-                '    enabled: true,\n' +
-                '    delaySec: 8,\n' +
-                '    rotateSec: 14,\n' +
-                '    messages: [\n' +
-                "      'Cześć! Pomożemy w wyborze 👋',\n" +
-                "      'Masz pytanie? Napisz do nas',\n" +
-                "      'Zamów wygodnie przez czat'\n" +
-                '    ]\n' +
-                '  },\n' +
-                '  quickReplies: [\n' +
-                "    { icon: '📞', label: 'Zamów przez telefon',  message: 'Cześć! Chcę zamówić " + productName + " — proszę o kontakt telefoniczny.' },\n" +
-                "    { icon: '💬', label: 'Pytanie o produkt',    message: 'Cześć! Mam pytanie o " + productName + ".' },\n" +
-                "    { icon: '🚚', label: 'Pytanie o dostawę',    message: 'Cześć! Mam pytanie o dostawę " + productGen + ".' },\n" +
-                "    { icon: '🎯', label: 'Potrzebuję porady',    message: 'Cześć! Zastanawiam się nad zakupem " + productGen + " — potrzebuję porady.' }\n" +
-                '  ]\n' +
-                '}\n' +
-                '\n' +
-                'WYMAGANIA TECHNICZNE (już zaimplementowane w shared/conversion-toolkit.js — nic w nim nie zmieniaj):\n' +
-                '- floating zielony button WA, prawy dolny róg, subtle pulse\n' +
-                '- klik = panel z 4 quick replies (każda opcja = wa.me z prefill message)\n' +
-                '- po delaySec pokazuje się dymek-teaser obok buttona, znika po 6s lub po interakcji\n' +
-                '- gdy istnieje #reviews-side-widget → button auto-offset na bottom: 90px\n' +
-                '- numer WA pobierany z workflow_optimization.whatsapp_phone\n' +
-                '\n' +
-                'DEPLOY (auto):\n' +
-                '1. git add landing-pages/' + landingSlug + '/index.html\n' +
-                '2. Sprawdź czy verify-landing FAIL-e są pre-existing (git stash → verify-landing.sh ' + landingSlug + ' → git stash pop → verify ponownie). Jeśli liczba FAIL-i się NIE zmieniła → użyj --no-verify\n' +
-                '3. git commit (--no-verify jeśli pkt 2 wymagał) -m "WhatsApp widget: panel z quick replies (' + landingSlug + ')"\n' +
-                '4. git push (Vercel auto-deploy)\n' +
-                '5. Po deployu: SPRAWDŹ na ' + (salesPageUrl || 'https://[domena]/') + ' czy zielony button WA pojawia się w prawym dolnym rogu i czy klik rozwija panel z 4 opcjami.\n';
+            // Numer dla wa.me — same cyfry, bez +/spacji
+            const phoneClean = waPhone.replace(/[^\d]/g, '');
+
+            // Tag SVG WhatsApp używany 2x w widget HTML — wyciągnięty żeby prompt był czytelniejszy
+            const WA_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>';
+
+            const prompt = [
+                'Wstaw samodzielny widget WhatsApp na landingu ' + landingSlug + ' (inline HTML+CSS+JS — landing kopiowany do CMS klienta, ZERO zewnętrznych skryptów).',
+                '',
+                'PARAMETRY:',
+                '- WORKFLOW_ID: ' + workflow.id,
+                '- LANDING_SLUG: ' + landingSlug,
+                '- LANDING_FILE: c:/repos_tn/tn-crm/landing-pages/' + landingSlug + '/index.html',
+                '- BRAND/PRODUKT (z brandingu): ' + productName,
+                '- WhatsApp phone: ' + (waPhone || '[BRAK — uzupełnij workflow_optimization.whatsapp_phone PRZED kontynuacją]'),
+                '- wa.me phone (same cyfry): ' + (phoneClean || '[BRAK]'),
+                '',
+                'KROK 1 — USUŃ z LANDING_FILE (jeśli istnieją, po stwierdzonych grep-em):',
+                '  a) <script src="https://crm.tomekniedzwiecki.pl/landing-pages/shared/conversion-toolkit.js"></script>',
+                '  b) Cały blok ConversionToolkit.init({ ... }); — od linii "ConversionToolkit.init({" do najbliższego "});" zamykającego ten wywołanie',
+                '  c) HTML <div id="reviews-side-widget"...> + <div id="reviews-lightbox"...> jeśli korzystają z toolkit (zachowaj jeśli widget reviews ma własny inline JS — sprawdź)',
+                '  Powód: zewnętrzny toolkit nie ładuje się w CMS klienta (TakeDrop) i ma broken merge na customer config (crash JS).',
+                '',
+                'KROK 2 — DOPASUJ TREŚCI WIADOMOŚCI do produktu landingu:',
+                '  Brand z brandingu: "' + productName + '". ALE landing może używać formy złożonej (np. "myjkę parową Parova" zamiast samego "Parova").',
+                '  Zanim wkleisz widget — przeczytaj hero/offer/cta landinga i wyłap NAZWĘ PRODUKTU używaną w copy oraz jego polskie formy:',
+                '    • BIERNIK ("zamówić X", "mam pytanie o X")  — np. "myjkę parową Parova" / "kurs odchudzania" / "krem do twarzy"',
+                '    • DOPEŁNIACZ ("dostawa X", "zakup X")        — np. "myjki parowej Parova" / "kursu odchudzania" / "kremu do twarzy"',
+                '  ZASADY:',
+                '    • NIE używaj "za pobraniem"/"ratalnie" w żadnej wiadomości (tylko BLIK/karta/przelew)',
+                '    • Triggery zachęcają do KONTAKTU Z WŁAŚCICIELEM, nie do działania na stronie',
+                '    • Jeśli to usługa, nie produkt — w "Pytanie o dostawę" zmień na "realizację" zamiast "dostawę"',
+                '',
+                'KROK 3 — WSTAW przed </body> ten samodzielny widget. Wypełnij {{PRODUKT_BIERNIK}} i {{PRODUKT_DOPELNIACZ}} formami z KROK 2:',
+                '',
+                '<style>',
+                '.wa-widget { position: fixed; right: 20px; bottom: 20px; z-index: 9998; font-family: var(--font-body, system-ui); }',
+                '@media (max-width: 540px) { .wa-widget { right: 14px; bottom: 14px; } }',
+                '.wa-btn {',
+                '  width: 60px; height: 60px; border-radius: 50%;',
+                '  background: #25D366; color: #fff; border: none; cursor: pointer;',
+                '  display: flex; align-items: center; justify-content: center;',
+                '  box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45);',
+                '  transition: transform 0.2s ease, box-shadow 0.2s ease;',
+                '  animation: wa-pulse 2.4s ease-in-out infinite;',
+                '}',
+                '.wa-btn:hover { transform: scale(1.06); box-shadow: 0 12px 32px rgba(37, 211, 102, 0.6); animation-play-state: paused; }',
+                '.wa-btn svg { width: 30px; height: 30px; }',
+                '@keyframes wa-pulse {',
+                '  0%, 100% { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45); }',
+                '  50%      { box-shadow: 0 8px 24px rgba(37, 211, 102, 0.45), 0 0 0 12px rgba(37, 211, 102, 0); }',
+                '}',
+                '@media (prefers-reduced-motion: reduce) { .wa-btn { animation: none; } }',
+                '.wa-teaser {',
+                '  position: absolute; right: 74px; bottom: 12px;',
+                '  background: #fff; color: #1A1A2E;',
+                '  padding: 10px 14px; border-radius: 18px 18px 4px 18px;',
+                '  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);',
+                '  font-size: 13px; font-weight: 500; white-space: nowrap;',
+                '  opacity: 0; transform: translateX(8px); pointer-events: none;',
+                '  transition: opacity 0.3s ease, transform 0.3s ease;',
+                '  cursor: pointer;',
+                '}',
+                '.wa-teaser.wa-teaser--show { opacity: 1; transform: translateX(0); pointer-events: auto; }',
+                '@media (max-width: 540px) {',
+                '  .wa-teaser { right: 68px; bottom: 10px; font-size: 12px; padding: 8px 12px; max-width: calc(100vw - 90px); white-space: normal; }',
+                '}',
+                '.wa-panel {',
+                '  position: absolute; right: 0; bottom: 76px;',
+                '  width: 320px; max-width: calc(100vw - 28px);',
+                '  background: #fff; border-radius: 16px;',
+                '  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.18);',
+                '  overflow: hidden;',
+                '  opacity: 0; transform: translateY(8px) scale(0.98); pointer-events: none;',
+                '  transition: opacity 0.2s ease, transform 0.2s ease;',
+                '}',
+                '.wa-widget.wa-open .wa-panel { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }',
+                '.wa-panel-header { padding: 16px 18px; background: #075E54; color: #fff; display: flex; align-items: center; gap: 12px; }',
+                '.wa-panel-header-icon { width: 38px; height: 38px; border-radius: 50%; background: #25D366; display: flex; align-items: center; justify-content: center; }',
+                '.wa-panel-header-icon svg { width: 22px; height: 22px; color: #fff; }',
+                '.wa-panel-header-text strong { display: block; font-size: 14px; font-weight: 700; }',
+                '.wa-panel-header-text span { font-size: 12px; opacity: 0.85; }',
+                '.wa-replies { padding: 8px; display: flex; flex-direction: column; gap: 4px; }',
+                '.wa-reply { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 10px; text-decoration: none; color: #1A1A2E; transition: background 0.15s ease; }',
+                '.wa-reply:hover { background: #F1F5F9; }',
+                '.wa-reply-ico { font-size: 18px; line-height: 1; }',
+                '.wa-reply-label { font-size: 14px; font-weight: 500; }',
+                '</style>',
+                '',
+                '<div id="wa-widget" class="wa-widget" aria-label="Czat WhatsApp">',
+                '  <div class="wa-panel" role="dialog" aria-label="Wybierz temat rozmowy">',
+                '    <div class="wa-panel-header">',
+                '      <div class="wa-panel-header-icon">' + WA_SVG + '</div>',
+                '      <div class="wa-panel-header-text">',
+                '        <strong>Napisz do nas</strong>',
+                '        <span>Odpowiadamy zwykle w kilka minut</span>',
+                '      </div>',
+                '    </div>',
+                '    <div class="wa-replies"></div>',
+                '  </div>',
+                '  <div class="wa-teaser">Cześć! Pomożemy w wyborze 👋</div>',
+                '  <button type="button" class="wa-btn" aria-label="Otwórz czat WhatsApp">' + WA_SVG + '</button>',
+                '</div>',
+                '',
+                '<script>',
+                '(function initWaWidget() {',
+                "  var PHONE = '" + phoneClean + "';",
+                '  var REPLIES = [',
+                "    { icon: '📞', label: 'Zamów przez telefon', message: 'Cześć! Chcę zamówić {{PRODUKT_BIERNIK}} — proszę o kontakt telefoniczny.' },",
+                "    { icon: '💬', label: 'Pytanie o produkt',   message: 'Cześć! Mam pytanie o {{PRODUKT_BIERNIK}}.' },",
+                "    { icon: '🚚', label: 'Pytanie o dostawę',   message: 'Cześć! Mam pytanie o dostawę {{PRODUKT_DOPELNIACZ}}.' },",
+                "    { icon: '🎯', label: 'Potrzebuję porady',   message: 'Cześć! Zastanawiam się nad zakupem {{PRODUKT_DOPELNIACZ}} — potrzebuję porady.' }",
+                '  ];',
+                '  var TEASERS = [',
+                "    'Cześć! Pomożemy w wyborze 👋',",
+                "    'Masz pytanie? Napisz do nas',",
+                "    'Zamów wygodnie przez czat'",
+                '  ];',
+                "  var widget = document.getElementById('wa-widget');",
+                '  if (!widget) return;',
+                "  var btn = widget.querySelector('.wa-btn');",
+                "  var teaser = widget.querySelector('.wa-teaser');",
+                "  var repliesList = widget.querySelector('.wa-replies');",
+                '  repliesList.innerHTML = REPLIES.map(function(r){',
+                "    return \"<a class='wa-reply' target='_blank' rel='noopener' href='https://wa.me/\" + PHONE + \"?text=\" + encodeURIComponent(r.message) + \"'><span class='wa-reply-ico'>\" + r.icon + \"</span><span class='wa-reply-label'>\" + r.label + \"</span></a>\";",
+                "  }).join('');",
+                "  btn.addEventListener('click', function(){ widget.classList.toggle('wa-open'); teaser.classList.remove('wa-teaser--show'); });",
+                "  document.addEventListener('click', function(e){ if (!widget.contains(e.target)) widget.classList.remove('wa-open'); });",
+                '  var teaserIdx = 0, teaserTimer;',
+                '  function showTeaser() {',
+                "    if (widget.classList.contains('wa-open')) return;",
+                '    teaser.textContent = TEASERS[teaserIdx % TEASERS.length];',
+                "    teaser.classList.add('wa-teaser--show');",
+                '    clearTimeout(teaserTimer);',
+                "    teaserTimer = setTimeout(function(){ teaser.classList.remove('wa-teaser--show'); }, 6000);",
+                '    teaserIdx++;',
+                '  }',
+                "  teaser.addEventListener('click', function(){ teaser.classList.remove('wa-teaser--show'); widget.classList.add('wa-open'); });",
+                '  setTimeout(function(){ showTeaser(); setInterval(showTeaser, 14000); }, 8000);',
+                '})();',
+                '</' + 'script>',
+                '',
+                'DEPLOY (auto):',
+                '1. git add landing-pages/' + landingSlug + '/index.html',
+                '2. Sprawdź czy verify-landing FAIL-e są pre-existing (git stash → verify-landing.sh ' + landingSlug + ' → git stash pop → verify ponownie). Jeśli liczba FAIL-i się NIE zmieniła → użyj --no-verify',
+                '3. git commit (--no-verify jeśli pkt 2 wymagał) -m "WhatsApp widget: self-contained inline (' + landingSlug + ')"',
+                '4. git push (Vercel auto-deploy)',
+                '5. Po deployu: SPRAWDŹ na ' + (salesPageUrl || 'https://[domena]/') + ':',
+                '   - zielony button WA pojawia się w prawym dolnym rogu (desktop i mobile)',
+                '   - klik rozwija panel z 4 quick replies',
+                '   - dymek-teaser pokazuje się po 8s ZARÓWNO na desktop JAK I na mobile',
+                '   - klik w opcję otwiera wa.me z poprawną treścią pre-wypełnioną'
+            ].join('\n');
 
             promptOutput.value = prompt;
         }
