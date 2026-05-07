@@ -11,7 +11,8 @@ ALTER TABLE workflow_optimization
   ADD COLUMN IF NOT EXISTS tools_hotjar_script_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS tools_hotjar_connected_at TIMESTAMPTZ,
   ADD COLUMN IF NOT EXISTS tools_session_notes TEXT,
-  ADD COLUMN IF NOT EXISTS tools_session_notes_at TIMESTAMPTZ;
+  ADD COLUMN IF NOT EXISTS tools_session_notes_at TIMESTAMPTZ,
+  ADD COLUMN IF NOT EXISTS tools_email_sent_at TIMESTAMPTZ;
 
 COMMENT ON COLUMN workflow_optimization.tools_ga_script IS 'Skrypt Google Analytics dostarczony przez klienta (do osadzenia w sklepie)';
 COMMENT ON COLUMN workflow_optimization.tools_ga_script_at IS 'Data wyslania skryptu GA przez klienta';
@@ -21,6 +22,7 @@ COMMENT ON COLUMN workflow_optimization.tools_hotjar_script_at IS 'Data wyslania
 COMMENT ON COLUMN workflow_optimization.tools_hotjar_connected_at IS 'Admin osadzil Hotjar w sklepie TakeDrop i potwierdzil';
 COMMENT ON COLUMN workflow_optimization.tools_session_notes IS 'Uwagi klienta po przeanalizowaniu 2-3 sesji w Hotjar';
 COMMENT ON COLUMN workflow_optimization.tools_session_notes_at IS 'Data wyslania uwag przez klienta';
+COMMENT ON COLUMN workflow_optimization.tools_email_sent_at IS 'Admin recznie kliknal Wyslij info o narzedziach (email tools_started)';
 
 -- Trigger types (dodaj 4 nowe)
 ALTER TABLE automation_flows DROP CONSTRAINT IF EXISTS automation_flows_trigger_type_check;

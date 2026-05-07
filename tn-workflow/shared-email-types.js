@@ -47,7 +47,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     optymalizacja: {
         label: 'Etap 5 - Optymalizacja',
         description: 'Maile związane z optymalizacją sprzedaży',
-        templates: ['optimization_started', 'reviews_shared', 'videos_shared', 'videos_reminder', 'videos_skipped']
+        templates: ['optimization_started', 'reviews_shared', 'videos_shared', 'videos_reminder', 'videos_skipped', 'tools_started', 'tools_script_received', 'tools_notes_received', 'tools_completed']
     }
 };
 
@@ -227,6 +227,30 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy admin oznaczy że pomijamy etap nagrań video i idziemy dalej (Etap 5/Krok 3)',
         icon: 'ph-skip-forward',
         color: 'zinc'
+    },
+    'tools_started': {
+        name: 'Narzędzia analityczne aktywowane',
+        description: 'Wysyłany gdy admin odpala krok narzędzi: prośba o skrypty GA + Hotjar i analizę sesji (Etap 5/Krok 4)',
+        icon: 'ph-wrench',
+        color: 'amber'
+    },
+    'tools_script_received': {
+        name: 'Skrypt narzędzia otrzymany (do admina)',
+        description: 'Wysyłany do admina gdy klient wkleje skrypt GA lub Hotjar do osadzenia (Etap 5/Krok 4)',
+        icon: 'ph-code',
+        color: 'amber'
+    },
+    'tools_notes_received': {
+        name: 'Uwagi po analizie sesji (do admina)',
+        description: 'Wysyłany do admina gdy klient wpisze uwagi po analizie sesji w Hotjar (Etap 5/Krok 4)',
+        icon: 'ph-note-pencil',
+        color: 'cyan'
+    },
+    'tools_completed': {
+        name: 'Etap 5 zakończony — przejście do Serwisów',
+        description: 'Wysyłany do klienta gdy admin zatwierdzi uwagi i zamknie Etap 5 (Etap 5/Krok 4)',
+        icon: 'ph-check-circle',
+        color: 'green'
     }
 };
 
@@ -287,7 +311,11 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'reviews_shared', label: 'Opinie dodane do sklepu' },
         { value: 'videos_shared', label: 'Reels (video) udostępnione' },
         { value: 'videos_reminder', label: 'Przypomnienie o nagraniach video' },
-        { value: 'videos_skipped', label: 'Etap video pominięty' }
+        { value: 'videos_skipped', label: 'Etap video pominięty' },
+        { value: 'tools_started', label: 'Narzędzia — aktywacja kroku' },
+        { value: 'tools_script_received', label: 'Narzędzia — skrypt do osadzenia (do admina)' },
+        { value: 'tools_notes_received', label: 'Narzędzia — uwagi klienta po sesjach (do admina)' },
+        { value: 'tools_completed', label: 'Narzędzia — Etap 5 zakończony' }
     ]
 };
 
@@ -328,5 +356,9 @@ const TRIGGER_DEFINITIONS = {
     reviews_shared: { label: 'Opinie dodane do sklepu', icon: 'ph-star', color: 'yellow' },
     videos_shared: { label: 'Reels udostępnione', icon: 'ph-play-circle', color: 'rose' },
     videos_reminder: { label: 'Przypomnienie o nagraniach video', icon: 'ph-bell-ringing', color: 'cyan' },
-    videos_skipped: { label: 'Etap video pominięty', icon: 'ph-skip-forward', color: 'zinc' }
+    videos_skipped: { label: 'Etap video pominięty', icon: 'ph-skip-forward', color: 'zinc' },
+    tools_started: { label: 'Narzędzia — aktywacja kroku', icon: 'ph-wrench', color: 'amber' },
+    tools_script_received: { label: 'Narzędzia — skrypt do osadzenia', icon: 'ph-code', color: 'amber' },
+    tools_notes_received: { label: 'Narzędzia — uwagi klienta po sesjach', icon: 'ph-note-pencil', color: 'cyan' },
+    tools_completed: { label: 'Narzędzia — Etap 5 zakończony', icon: 'ph-check-circle', color: 'green' }
 };

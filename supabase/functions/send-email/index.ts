@@ -59,6 +59,10 @@ const VALID_EMAIL_TYPES = [
   'videos_shared',
   'videos_reminder',
   'videos_skipped',
+  'tools_started',
+  'tools_script_received',
+  'tools_notes_received',
+  'tools_completed',
   'direct'
 ]
 
@@ -96,7 +100,11 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   reviews_shared: 'Opinie klientów są już widoczne w Twoim sklepie ⭐',
   videos_shared: 'Twoje Reels są już na sklepie 🎬',
   videos_reminder: 'Przypomnienie: czekamy na Twoje nagrania video 🎬',
-  videos_skipped: 'Etap nagrań video pominięty — idziemy dalej'
+  videos_skipped: 'Etap nagrań video pominięty — idziemy dalej',
+  tools_started: 'Ostatni krok Etapu 5 — narzędzia analityczne 🔧',
+  tools_script_received: '{{clientName}} przesłał skrypt {{toolName}} do osadzenia 🔧',
+  tools_notes_received: '{{clientName}} wpisał uwagi po analizie sesji 📝',
+  tools_completed: 'Etap 5 zakończony — lecimy dalej 🚀'
 }
 
 // Offer flow email types (use special reply-to)
