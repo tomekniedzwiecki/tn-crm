@@ -3868,21 +3868,25 @@ Zobacz zdjęcia.</p>
       .reels-lb-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 20px; }
     }
 
-    /* ═══ Mobile fix: czyste warstwy (header + stories + sticky-cta + WA + Opinie) ═══
-       Tomek 2026-05-07: „header się chowa kiedy pasek z zamów teraz pojawia się
-       na dole — to przenosi header". Klasyczny iOS Safari bug — position:fixed
-       header gubi się przy layout shift od sticky-cta (body padding-bottom).
-       Fix: transform:translateZ(0) promuje header na compositor layer (GPU),
-       stabilizuje fixed positioning. Plus z-index 9999 — nasz header musi być
-       NAD wszystkim, włącznie z ewentualnymi sticky elementami CMS klienta. */
+    /* ═══ Mobile fix: header sticky (NIE fixed) — fundamentalna stabilność ═══
+       Iteracje A→D (fixed + z-index + translateZ(0)) nie naprawiały „header się
+       chowa". Root cause: position:fixed na mobile + iOS Safari + layout shift
+       od sticky-cta + body padding-bottom = ciągły dryf headera.
+       Rozwiązanie: header position:sticky top:0 — zajmuje miejsce w document
+       flow, klei się do top viewport, nie wyskakuje. Fundamentalnie inny
+       mechanizm niż fixed, nie ma scroll-bounce bug iOS.
+       UWAGA: body { overflow-x: hidden } BLOKUJE sticky w niektórych
+       przeglądarkach. Zamieniam na overflow-x: clip (modern, nie blokuje
+       sticky). Hero padding-top zmniejszony bo sticky zajmuje miejsce w flow. */
     @media (max-width: 720px) {
+      body { overflow-x: clip }
       .header {
+        position: sticky !important;
+        top: 0 !important;
         z-index: 9999 !important;
         box-shadow: 0 2px 8px rgba(13,33,55,0.06) !important;
-        transform: translateZ(0);
-        -webkit-transform: translateZ(0);
-        will-change: transform;
       }
+      .hero { padding-top: 32px !important }
       .mobile-menu { z-index: 9998 !important }
       .stories-bar { top: 58px !important; z-index: 99 !important; border-top: 1px solid rgba(13,33,55,0.06) !important }
       .sticky-cta { z-index: 90 !important; transform: translateZ(0); -webkit-transform: translateZ(0) }
