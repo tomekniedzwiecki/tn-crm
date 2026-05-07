@@ -940,27 +940,11 @@
                         if (stage === 'ads_report') {
                             return w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent;
                         }
-                        // "optymalizacje" = raport wysłany ALE optymalizacja NIE aktywowana lub niezakończona
-                        if (stage === 'optymalizacje') {
-                            const opt = w.optimization_stage;
-                            const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
-                            return w.ads_stage?.report_sent && !allDone;
-                        }
-                        // "opinie" = COD włączony ALE opinie nie udostępnione klientowi (independent od video)
-                        if (stage === 'opinie') {
-                            const opt = w.optimization_stage;
-                            return opt?.cod_enabled && !opt?.reviews_shared_at;
-                        }
-                        // "video" = COD włączony + są nagrania ALE Reels nie udostępnione (independent od opinii)
-                        if (stage === 'video') {
-                            const opt = w.optimization_stage;
-                            const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                            return opt?.cod_enabled && hasVideos && !opt?.videos_shared_at;
-                        }
-                        // "narzedzia" = Reels shared + narzędzia nie ready
-                        if (stage === 'narzedzia') {
-                            const opt = w.optimization_stage;
-                            return !!opt?.videos_shared_at && !opt?.tools_ready_at;
+                        // Etap 5: krokom przypisujemy NAJNOWSZY etap (mutually exclusive).
+                        // Projekt już w "opinie"/"video"/"narzedzia" NIE pokazuje się w "optymalizacje".
+                        // Priorytet: narzedzia > video > opinie > optymalizacje (zgodny z getNextStep).
+                        if (stage === 'optymalizacje' || stage === 'opinie' || stage === 'video' || stage === 'narzedzia') {
+                            return nextStep === stage;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -1135,33 +1119,14 @@
                     counts.ads_report++;
                     continue;
                 }
-                // Etap 5 — projekt może być liczony do WIELU kroków naraz (independent)
+                // Etap 5 — projekt liczy się do JEDNEGO kroku (najnowszego, mutually exclusive).
+                // Priorytet: narzedzia > video > opinie > optymalizacje (zgodny z getNextStep).
                 if (w.ads_stage?.report_sent) {
-                    const opt = w.optimization_stage;
-                    const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
-                    let stage5Matched = false;
-                    // Krok 1 — Optymalizacje core
-                    if (!coreDone) {
-                        counts.optymalizacje++;
-                        stage5Matched = true;
+                    const stage5 = getNextStep(w);
+                    if (stage5 && counts.hasOwnProperty(stage5)) {
+                        counts[stage5]++;
                     }
-                    // Krok 2 — Opinie (gdy COD włączony, opinie nie shared)
-                    if (opt?.cod_enabled && !opt?.reviews_shared_at) {
-                        counts.opinie++;
-                        stage5Matched = true;
-                    }
-                    // Krok 3 — Video (gdy COD + są nagrania, Reels nie shared)
-                    const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                    if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
-                        counts.video++;
-                        stage5Matched = true;
-                    }
-                    // Krok 4 — Narzedzia (gdy Reels shared, narzędzia nie ready)
-                    if (opt?.videos_shared_at && !opt?.tools_ready_at) {
-                        counts.narzedzia++;
-                        stage5Matched = true;
-                    }
-                    if (stage5Matched) continue;
+                    continue;
                 }
 
                 // Other stages (Etap 1 & 2) - use getNextStep()
