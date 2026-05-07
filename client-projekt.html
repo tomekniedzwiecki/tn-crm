@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050704';
+        const APP_VERSION = '2026050705';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4855,7 +4855,7 @@
             <!-- TAB: Opinie (Etap 5 / Krok 2) -->
             <div id="tab-opinie" class="tab-panel hidden animate-enter">
                 <div class="max-w-5xl">
-                    <div class="flex items-start gap-4 mb-8">
+                    <div class="flex items-start gap-4 mb-6">
                         <div class="w-12 h-12 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
                             <i class="ph ph-star text-2xl text-yellow-400"></i>
                         </div>
@@ -4866,6 +4866,23 @@
                             </p>
                         </div>
                     </div>
+
+                    <!-- Link do sklepu na żywo -->
+                    <a id="client-reviews-shop-link" href="#" target="_blank" rel="noopener" class="hidden flex items-center justify-between gap-4 p-4 mb-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl hover:bg-emerald-500/10 hover:border-emerald-500/40 transition-colors group">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-10 h-10 rounded-lg bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+                                <i class="ph ph-storefront text-emerald-400 text-xl"></i>
+                            </div>
+                            <div class="min-w-0">
+                                <div class="text-[12px] text-zinc-500 mb-0.5">Twój sklep na żywo</div>
+                                <div id="client-reviews-shop-domain" class="text-[14px] font-medium text-white truncate">—</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 text-emerald-400 text-[12px] font-medium flex-shrink-0">
+                            <span class="hidden sm:inline">Zobacz sekcję Opinie</span>
+                            <i class="ph ph-arrow-square-out text-lg group-hover:translate-x-0.5 transition-transform"></i>
+                        </div>
+                    </a>
 
                     <!-- Stats header -->
                     <div id="client-reviews-stats" class="bg-zinc-900/50 border border-white/5 rounded-2xl p-6 mb-4 hidden">
@@ -4903,6 +4920,25 @@
                         <h3 class="text-[15px] font-medium text-white mb-1">Czekamy na opinie</h3>
                         <p class="text-[13px] text-zinc-500">Tomek wkrótce pobierze opinie z bazy produktu i dodaje je do Twojej strony.</p>
                     </div>
+                </div>
+
+                <!-- LIGHTBOX dla zdjęć opinii (panel klienta) -->
+                <div id="client-reviews-lightbox" class="fixed inset-0 z-[9999] hidden flex-col items-center justify-center p-6 bg-black/90 backdrop-blur-md">
+                    <button type="button" id="client-rlb-close" class="fixed top-5 right-5 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-xl flex items-center justify-center transition-colors" aria-label="Zamknij">&times;</button>
+                    <button type="button" id="client-rlb-prev" class="absolute left-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Poprzednie">&lsaquo;</button>
+                    <button type="button" id="client-rlb-next" class="absolute right-5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 border border-white/15 hover:bg-white/20 text-white text-2xl flex items-center justify-center transition-colors" aria-label="Następne">&rsaquo;</button>
+                    <div class="flex-1 max-w-5xl w-full flex items-center justify-center min-h-0 relative">
+                        <div id="client-rlb-spinner" class="absolute w-9 h-9 border-[3px] border-white/15 border-t-white/80 rounded-full animate-spin opacity-0 transition-opacity"></div>
+                        <img id="client-rlb-img" src="" alt="" referrerpolicy="no-referrer" class="max-w-full max-h-[70vh] object-contain rounded-lg shadow-2xl opacity-0 transition-opacity duration-200 select-none">
+                    </div>
+                    <div class="text-zinc-400 text-[12px] bg-black/40 px-3 py-1 rounded-full mt-4">
+                        <span id="client-rlb-current">1</span> / <span id="client-rlb-total">1</span>
+                    </div>
+                    <div class="text-center text-zinc-300 text-[13px] mt-3 max-w-xl">
+                        <div id="client-rlb-stars" class="text-yellow-400 mb-1.5"></div>
+                        <p id="client-rlb-text" class="text-zinc-400 italic"></p>
+                    </div>
+                    <div class="text-zinc-500 text-[11px] mt-3 tracking-wide">← → strzałki, ESC zamyka</div>
                 </div>
             </div>
 
@@ -12059,6 +12095,8 @@
         // ETAP 5 / KROK 2 - OPINIE (Client side)
         // =============================================
         let clientReviewsList = [];
+        let clientReviewsGallery = []; // płaska lista zdjęć ze wszystkich opinii (do lightboxa)
+        let clientReviewsLightboxIdx = 0;
 
         async function loadOpinieClient() {
             try {
@@ -12070,8 +12108,41 @@
                 if (error) throw error;
                 clientReviewsList = data || [];
                 renderClientReviews();
+                renderClientReviewsShopLink();
             } catch (err) {
                 console.error('loadOpinieClient error:', err);
+            }
+        }
+
+        function renderClientReviewsShopLink() {
+            // Pokaz link do sklepu klienta (z workflow_takedrop.domain lub fallback sales_page_url)
+            const link = document.getElementById('client-reviews-shop-link');
+            const domainEl = document.getElementById('client-reviews-shop-domain');
+            if (!link || !domainEl) return;
+
+            let url = '';
+            let display = '';
+            const domain = (takeDropData?.domain || '').trim();
+            if (domain) {
+                // Normalizuj — usuń trailing slash, dodaj https:// jeśli brak schematu
+                url = domain.replace(/\/+$/, '');
+                if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+                display = url.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+                // Dodaj #reviews żeby od razu otworzył sekcję opinii
+                url = url + '/#reviews';
+            } else if (workflow?.sales_page_url) {
+                url = workflow.sales_page_url + '#reviews';
+                display = workflow.sales_page_url.replace(/^https?:\/\//i, '').replace(/\/+$/, '');
+            }
+
+            if (url) {
+                link.href = url;
+                domainEl.textContent = display;
+                link.classList.remove('hidden');
+                link.classList.add('flex');
+            } else {
+                link.classList.add('hidden');
+                link.classList.remove('flex');
             }
         }
 
@@ -12105,25 +12176,44 @@
             const filtered = showHidden ? clientReviewsList : clientReviewsList.filter(r => !r.hidden);
             listLabel.textContent = filtered.length === 1 ? '1 opinia' : `${filtered.length} opinii`;
 
+            // Zbuduj globalna galerie ze wszystkich filtrowanych opinii (do lightboxa)
+            clientReviewsGallery = [];
+            filtered.forEach(r => {
+                const images = Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? JSON.parse(r.image_urls) : []);
+                images.forEach(url => {
+                    clientReviewsGallery.push({
+                        src: url,
+                        rating: r.rating || 5,
+                        text: r.content_pl || ''
+                    });
+                });
+            });
+
             grid.innerHTML = filtered.map(r => {
                 const stars = '★'.repeat(r.rating);
                 const images = Array.isArray(r.image_urls) ? r.image_urls : (r.image_urls ? JSON.parse(r.image_urls) : []);
                 const hiddenStyle = r.hidden ? 'opacity-50 ring-1 ring-rose-500/30' : 'hover:border-white/10 transition-colors';
                 const author = r.author_name || 'Anonim';
+                // Wybor grid layout: 1 zdjecie = full, 2-4 = 2-col, >4 = 2-col + counter
+                const imgCount = images.length;
+                const gridCls = imgCount === 1 ? 'grid-cols-1' : 'grid-cols-2';
                 return `
-                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-4 ${hiddenStyle} flex flex-col">
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-yellow-400 text-[13px]">${stars}</span>
+                    <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden ${hiddenStyle} flex flex-col">
+                        <div class="flex items-center justify-between px-4 pt-4 mb-2">
+                            <span class="text-yellow-400 text-[14px]">${stars}</span>
                             ${r.hidden ? '<span class="text-[10px] text-rose-400 bg-rose-500/10 px-2 py-0.5 rounded">UKRYTA</span>' : ''}
                         </div>
-                        <p class="text-[13px] text-zinc-300 leading-relaxed mb-3 flex-1">${escapeClientHtml(r.content_pl || '')}</p>
                         ${images.length > 0 ? `
-                            <div class="flex gap-1.5 flex-wrap mb-3">
-                                ${images.slice(0, 4).map(url => `<img src="${escapeClientAttr(url)}" alt="" class="w-14 h-14 object-cover rounded border border-white/5" loading="lazy">`).join('')}
-                                ${images.length > 4 ? `<div class="w-14 h-14 rounded bg-zinc-800 flex items-center justify-center text-[11px] text-zinc-400">+${images.length - 4}</div>` : ''}
+                            <div class="grid ${gridCls} gap-1 px-4 mb-3">
+                                ${images.slice(0, 4).map(url => {
+                                    const idx = clientReviewsGallery.findIndex(g => g.src === url);
+                                    return `<img src="${escapeClientAttr(url)}" alt="" loading="lazy" referrerpolicy="no-referrer" data-gallery-idx="${idx}" onclick="openClientReviewsLightbox(${idx})" class="w-full aspect-square object-cover rounded-lg border border-white/5 cursor-zoom-in hover:opacity-90 transition-opacity">`;
+                                }).join('')}
                             </div>
+                            ${images.length > 4 ? `<div class="px-4 -mt-2 mb-2 text-[11px] text-zinc-500">+ ${images.length - 4} kolejnych zdjęć — kliknij dowolne, by przeglądać wszystkie</div>` : ''}
                         ` : ''}
-                        <div class="flex items-center justify-between pt-3 border-t border-white/5">
+                        <p class="text-[13px] text-zinc-300 leading-relaxed px-4 mb-3 flex-1">${escapeClientHtml(r.content_pl || '')}</p>
+                        <div class="flex items-center justify-between px-4 py-3 border-t border-white/5 bg-zinc-900/30">
                             <span class="text-[11px] text-zinc-500">${escapeClientHtml(author)}</span>
                             <button onclick="toggleClientReviewHidden('${r.id}', ${!r.hidden})" class="text-[11px] px-2 py-1 rounded ${r.hidden ? 'bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25' : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'} transition-colors flex items-center gap-1">
                                 <i class="ph ${r.hidden ? 'ph-eye' : 'ph-eye-slash'}"></i>
@@ -12171,6 +12261,86 @@
             }
         }
 
+        // ═══ LIGHTBOX dla zdjęć opinii (panel klienta) ═══
+        function openClientReviewsLightbox(idx) {
+            const lb = document.getElementById('client-reviews-lightbox');
+            if (!lb || clientReviewsGallery.length === 0) return;
+            clientReviewsLightboxIdx = idx;
+            showClientReviewsLightboxImage(idx);
+            lb.classList.remove('hidden');
+            lb.classList.add('flex');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeClientReviewsLightbox() {
+            const lb = document.getElementById('client-reviews-lightbox');
+            if (!lb) return;
+            lb.classList.add('hidden');
+            lb.classList.remove('flex');
+            document.body.style.overflow = '';
+            const img = document.getElementById('client-rlb-img');
+            if (img) { img.src = ''; img.classList.remove('opacity-100'); img.classList.add('opacity-0'); }
+        }
+        function showClientReviewsLightboxImage(i) {
+            const total = clientReviewsGallery.length;
+            if (total === 0) return;
+            clientReviewsLightboxIdx = (i + total) % total;
+            const item = clientReviewsGallery[clientReviewsLightboxIdx];
+            const img = document.getElementById('client-rlb-img');
+            const spinner = document.getElementById('client-rlb-spinner');
+            const cur = document.getElementById('client-rlb-current');
+            const tot = document.getElementById('client-rlb-total');
+            const stars = document.getElementById('client-rlb-stars');
+            const text = document.getElementById('client-rlb-text');
+            if (!img) return;
+            cur.textContent = clientReviewsLightboxIdx + 1;
+            tot.textContent = total;
+            stars.textContent = '★'.repeat(item.rating);
+            text.textContent = item.text;
+            img.classList.remove('opacity-100');
+            img.classList.add('opacity-0');
+            spinner.classList.add('opacity-100');
+            spinner.classList.remove('opacity-0');
+            const onLoad = () => {
+                img.classList.remove('opacity-0');
+                img.classList.add('opacity-100');
+                spinner.classList.add('opacity-0');
+                spinner.classList.remove('opacity-100');
+            };
+            img.onload = onLoad;
+            img.onerror = () => { spinner.classList.add('opacity-0'); spinner.classList.remove('opacity-100'); };
+            if (img.src === item.src) img.src = '';
+            img.src = item.src;
+            if (img.complete && img.naturalWidth > 0) onLoad();
+        }
+        function clientReviewsLightboxNext() { showClientReviewsLightboxImage(clientReviewsLightboxIdx + 1); }
+        function clientReviewsLightboxPrev() { showClientReviewsLightboxImage(clientReviewsLightboxIdx - 1); }
+        // Bind eventy raz, gdy DOM gotowy
+        document.addEventListener('DOMContentLoaded', () => {
+            const lb = document.getElementById('client-reviews-lightbox');
+            if (!lb) return;
+            document.getElementById('client-rlb-close')?.addEventListener('click', closeClientReviewsLightbox);
+            document.getElementById('client-rlb-prev')?.addEventListener('click', clientReviewsLightboxPrev);
+            document.getElementById('client-rlb-next')?.addEventListener('click', clientReviewsLightboxNext);
+            lb.addEventListener('click', (e) => { if (e.target === lb) closeClientReviewsLightbox(); });
+            document.addEventListener('keydown', (e) => {
+                if (lb.classList.contains('hidden')) return;
+                if (e.key === 'Escape') closeClientReviewsLightbox();
+                else if (e.key === 'ArrowRight') clientReviewsLightboxNext();
+                else if (e.key === 'ArrowLeft') clientReviewsLightboxPrev();
+            });
+            // Swipe
+            let startX = null;
+            const stage = document.getElementById('client-rlb-img');
+            stage?.addEventListener('touchstart', (e) => { if (e.touches.length === 1) startX = e.touches[0].clientX; }, { passive: true });
+            stage?.addEventListener('touchend', (e) => {
+                if (startX === null) return;
+                const dx = e.changedTouches[0].clientX - startX;
+                if (Math.abs(dx) > 50) { if (dx > 0) clientReviewsLightboxPrev(); else clientReviewsLightboxNext(); }
+                startX = null;
+            }, { passive: true });
+        });
+        window.openClientReviewsLightbox = openClientReviewsLightbox;
+        window.closeClientReviewsLightbox = closeClientReviewsLightbox;
         window.loadOpinieClient = loadOpinieClient;
         window.renderClientReviews = renderClientReviews;
         window.toggleClientReviewHidden = toggleClientReviewHidden;
