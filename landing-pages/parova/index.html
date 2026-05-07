@@ -3868,21 +3868,19 @@ Zobacz zdjęcia.</p>
       .reels-lb-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 20px; }
     }
 
-    /* ═══ Mobile fix: ukryj nasze duplikaty na mobile (CMS klienta ma swoje) ═══
-       Landingi idą do CMS TakeDrop (parova.pl, vitrix.pl, ...) który dostarcza
-       własny header, mobile-menu i sticky cart bar. Nasze duplikaty kolidują
-       (header się rusza, layout jump przy scroll). Ukrywamy je na mobile, na
-       desktopie (preview vercel + CMS desktop) zostają. Stories-bar w trybie
-       static (no fixed header to z którym mial konflikt), przewija z heroem.
-       WA/reviews-side bottom:88px — safety nad CMS-owym sticky cart bar (~70px).
-       Wzorzec dla wszystkich landingów ze sticky-cta lub bez — zapobiega
-       layout jumpom gdy CMS klienta dorzuca własną nawigację. */
+    /* ═══ Mobile fix: czyste warstwy (header + stories + sticky-cta + WA) ═══
+       Wszystkie elementy widoczne. Klucz to z-index hierarchy + odstępy:
+       - header (fixed top:0)         → z-index 200 (najwyżej, nad wszystkim)
+       - mobile-menu (fixed top:64px) → z-index 199 (pod headerem, nad content)
+       - stories-bar (sticky top)     → z-index 99, top:58px (= mobile header h),
+                                        border-top dla wizualnego oddzielenia od header
+       - sticky-cta (fixed bottom:0)  → z-index 90, body padding-bottom dla content
+       - wa-widget / reviews-side     → bottom:88px (12px safety nad sticky-cta) */
     @media (max-width: 720px) {
-      .header { display: none !important }
-      .mobile-menu { display: none !important }
-      .sticky-cta { display: none !important }
-      body { padding-bottom: 0 !important }
-      .stories-bar { position: static !important; top: auto !important; border-top: none !important }
+      .header { z-index: 200 !important; box-shadow: 0 2px 8px rgba(13,33,55,0.06) !important }
+      .mobile-menu { z-index: 199 !important }
+      .stories-bar { top: 58px !important; z-index: 99 !important; border-top: 1px solid rgba(13,33,55,0.06) !important }
+      .sticky-cta { z-index: 90 !important }
       .wa-widget { bottom: 88px !important }
       .reviews-side-widget { bottom: 88px !important }
     }
