@@ -5310,7 +5310,7 @@
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, reviews_product_url, reviews_count').eq('workflow_id', workflow.id).maybeSingle()
+                    supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
                 // Store takedrop status for nav checks
@@ -5417,7 +5417,9 @@
                 if (navStage5) {
                     navStage5.classList.toggle('hidden', !adsNavStatus?.report_sent);
                 }
-                toggle('nav-check-optymalizacje', !!optimizationNavStatus?.is_active);
+                // Optymalizacje: zielony checkbox gdy 3 glowne zadania zrobione (COD + WhatsApp + Recovery)
+                const optDone = !!optimizationNavStatus?.cod_enabled && !!optimizationNavStatus?.whatsapp_enabled && !!optimizationNavStatus?.recovery_calls_done;
+                toggle('nav-check-optymalizacje', optDone);
 
                 // Etap 5 / Krok 2 - Opinie: pokaz w sidebar gdy COD wlaczony
                 const navBtnOpinie = document.getElementById('nav-btn-opinie');
@@ -14786,7 +14788,7 @@ PODSUMOWANIE wyświetl na końcu:
                 '- wa.me phone (same cyfry): ' + (phoneClean || '[BRAK]'),
                 '',
                 'KROK 1 — USUŃ z LANDING_FILE (jeśli istnieją, po stwierdzonych grep-em):',
-                '  a) <script src="https://crm.tomekniedzwiecki.pl/landing-pages/shared/conversion-toolkit.js"></script>',
+                '  a) <script src="https://crm.tomekniedzwiecki.pl/landing-pages/shared/conversion-toolkit.js"></' + 'script>',
                 '  b) Cały blok ConversionToolkit.init({ ... }); — od linii "ConversionToolkit.init({" do najbliższego "});" zamykającego ten wywołanie',
                 '  c) HTML <div id="reviews-side-widget"...> + <div id="reviews-lightbox"...> jeśli korzystają z toolkit (zachowaj jeśli widget reviews ma własny inline JS — sprawdź)',
                 '  Powód: zewnętrzny toolkit nie ładuje się w CMS klienta (TakeDrop) i ma broken merge na customer config (crash JS).',
