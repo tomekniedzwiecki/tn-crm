@@ -146,7 +146,14 @@
           workflowId: null,            // pobierze numer z workflow_optimization
           phone: null,                 // override (format: +48...)
           message: 'Cześć, mam pytanie o produkt',
-          position: 'bottom-right'
+          position: 'bottom-right',
+          quickReplies: null,          // opcjonalny array {icon,label,message} → renderuje panel zamiast bezpośredniego linku
+          teaser: {
+            enabled: false,            // dymek-zachęta przy buttonie (działa tylko gdy quickReplies podane)
+            delaySec: 8,
+            rotateSec: 12,
+            messages: ['Cześć! Mam pytanie?', 'Pomożemy w wyborze']
+          }
         }
       };
     },
@@ -1531,22 +1538,146 @@
       if (phoneForWa.length === 9) phoneForWa = '48' + phoneForWa;
       if (!phoneForWa || phoneForWa.length < 10) return;
 
-      const waUrl = `https://wa.me/${phoneForWa}?text=${encodeURIComponent(cfg.message || '')}`;
+      const buildWaUrl = (msg) => `https://wa.me/${phoneForWa}?text=${encodeURIComponent(msg || cfg.message || '')}`;
 
-      const positionStyles = cfg.position === 'bottom-left'
-        ? 'left: 20px; bottom: 20px;'
-        : 'right: 20px; bottom: 20px;';
+      // Auto-offset: jeśli na stronie jest #reviews-side-widget, podnosimy WA o ~70px nad pigułkę opinii
+      const hasReviewsWidget = !!document.getElementById('reviews-side-widget');
+      const baseBottom = hasReviewsWidget ? 90 : 20;
 
-      const btn = document.createElement('a');
-      btn.href = waUrl;
-      btn.target = '_blank';
-      btn.rel = 'noopener noreferrer';
-      btn.setAttribute('aria-label', 'Napisz na WhatsApp');
-      btn.className = 'ct-whatsapp-btn';
-      btn.style.cssText = `
+      const isLeft = cfg.position === 'bottom-left';
+      const sideStyle = isLeft ? `left: 20px;` : `right: 20px;`;
+
+      const WA_SVG = `
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+        </svg>`;
+
+      const replies = Array.isArray(cfg.quickReplies) ? cfg.quickReplies.filter(r => r && r.label) : [];
+      const usePanel = replies.length > 0;
+
+      // ─── Animacje (raz na stronę) ───
+      if (!document.getElementById('ct-wa-styles')) {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'ct-wa-styles';
+        styleEl.textContent = `
+          @keyframes ct-wa-pulse {
+            0%,100% { box-shadow: 0 4px 16px rgba(37,211,102,0.4), 0 0 0 0 rgba(37,211,102,0.45); }
+            50%     { box-shadow: 0 6px 20px rgba(37,211,102,0.5), 0 0 0 14px rgba(37,211,102,0); }
+          }
+          @keyframes ct-wa-teaser-in {
+            from { opacity: 0; transform: translateY(6px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          @keyframes ct-wa-panel-in {
+            from { opacity: 0; transform: translateY(10px) scale(0.97); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+          }
+          .ct-wa-btn { animation: ct-wa-pulse 2.4s ease-in-out infinite; }
+          .ct-wa-btn:hover { animation-play-state: paused; }
+          .ct-wa-quick-btn { transition: background 0.18s ease, transform 0.18s ease; }
+          .ct-wa-quick-btn:hover { background: #f0fdf4 !important; transform: translateX(2px); }
+          .ct-wa-teaser-close:hover { background: rgba(0,0,0,0.08) !important; }
+          @media (prefers-reduced-motion: reduce) {
+            .ct-wa-btn { animation: none; }
+          }
+        `;
+        document.head.appendChild(styleEl);
+      }
+
+      // ─── Wrapper ───
+      const wrap = document.createElement('div');
+      wrap.className = 'ct-whatsapp-wrap';
+      wrap.style.cssText = `
         position: fixed;
-        ${positionStyles}
+        ${sideStyle}
+        bottom: ${baseBottom}px;
         z-index: 9998;
+        display: flex;
+        flex-direction: column;
+        align-items: ${isLeft ? 'flex-start' : 'flex-end'};
+        gap: 10px;
+      `;
+
+      // ─── Panel z quick replies (gdy podane) ───
+      let panel = null;
+      if (usePanel) {
+        panel = document.createElement('div');
+        panel.className = 'ct-wa-panel';
+        panel.style.cssText = `
+          display: none;
+          width: 300px;
+          max-width: calc(100vw - 32px);
+          background: #fff;
+          border-radius: 16px;
+          box-shadow: 0 16px 48px rgba(0,0,0,0.18);
+          overflow: hidden;
+          animation: ct-wa-panel-in 0.22s ease;
+        `;
+        const repliesHtml = replies.map((r, i) => `
+          <a href="${buildWaUrl(r.message)}" target="_blank" rel="noopener noreferrer"
+             class="ct-wa-quick-btn"
+             style="display:flex;align-items:center;gap:12px;padding:14px 16px;text-decoration:none;color:#1a1a2e;font:600 14px/1.3 system-ui,-apple-system,sans-serif;border-bottom:${i < replies.length-1 ? '1px solid rgba(0,0,0,0.06)' : 'none'};">
+            <span style="font-size:20px;flex-shrink:0;">${r.icon || '💬'}</span>
+            <span style="flex:1;">${r.label}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#25D366" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
+        `).join('');
+        panel.innerHTML = `
+          <div style="background:#25D366;color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <div style="font:700 14px/1.2 system-ui,sans-serif;">Napisz do nas</div>
+              <div style="font:400 12px/1.3 system-ui,sans-serif;opacity:0.9;margin-top:2px;">Odpowiadamy zwykle w kilka minut</div>
+            </div>
+            <button type="button" class="ct-wa-panel-close" aria-label="Zamknij" style="background:rgba(255,255,255,0.18);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
+          </div>
+          <div>${repliesHtml}</div>
+          <div style="padding:10px 16px;background:#f8fafc;font:400 11px/1.4 system-ui,sans-serif;color:#94a3b8;text-align:center;border-top:1px solid rgba(0,0,0,0.04);">
+            🔒 Bezpieczna rozmowa przez WhatsApp
+          </div>
+        `;
+        wrap.appendChild(panel);
+      }
+
+      // ─── Teaser bubble (dymek) ───
+      let teaser = null;
+      if (usePanel && cfg.teaser && cfg.teaser.enabled && Array.isArray(cfg.teaser.messages) && cfg.teaser.messages.length) {
+        teaser = document.createElement('div');
+        teaser.className = 'ct-wa-teaser';
+        teaser.style.cssText = `
+          display: none;
+          background: #fff;
+          color: #1a1a2e;
+          padding: 12px 16px 12px 14px;
+          border-radius: 14px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+          font: 500 13px/1.4 system-ui,-apple-system,sans-serif;
+          max-width: 240px;
+          position: relative;
+          animation: ct-wa-teaser-in 0.3s ease;
+          cursor: pointer;
+          align-items: center;
+          gap: 8px;
+        `;
+        teaser.innerHTML = `
+          <span class="ct-wa-teaser-text" style="flex:1;"></span>
+          <button type="button" class="ct-wa-teaser-close" aria-label="Zamknij dymek"
+                  style="background:transparent;border:none;color:#94a3b8;cursor:pointer;font-size:16px;line-height:1;padding:2px 4px;border-radius:4px;flex-shrink:0;">&times;</button>
+        `;
+        wrap.appendChild(teaser);
+      }
+
+      // ─── Button ───
+      const btn = document.createElement(usePanel ? 'button' : 'a');
+      btn.className = 'ct-wa-btn ct-whatsapp-btn';
+      btn.setAttribute('aria-label', 'Napisz na WhatsApp');
+      if (!usePanel) {
+        btn.href = buildWaUrl();
+        btn.target = '_blank';
+        btn.rel = 'noopener noreferrer';
+      } else {
+        btn.type = 'button';
+      }
+      btn.style.cssText = `
         width: 56px;
         height: 56px;
         border-radius: 50%;
@@ -1554,24 +1685,94 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 16px rgba(37, 211, 102, 0.4);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+        border: none;
         text-decoration: none;
+        transition: transform 0.2s ease;
       `;
-      btn.innerHTML = `
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-        </svg>
-      `;
-      btn.addEventListener('mouseenter', () => {
-        btn.style.transform = 'scale(1.08)';
-        btn.style.boxShadow = '0 6px 20px rgba(37, 211, 102, 0.55)';
+      btn.innerHTML = WA_SVG;
+      btn.addEventListener('mouseenter', () => btn.style.transform = 'scale(1.08)');
+      btn.addEventListener('mouseleave', () => btn.style.transform = 'scale(1)');
+      wrap.appendChild(btn);
+      document.body.appendChild(wrap);
+
+      if (!usePanel) return;
+
+      // ─── Toggle panel ───
+      let teaserDismissed = false;
+      let teaserTimer = null;
+      let teaserRotate = null;
+      const hideTeaser = () => {
+        if (teaser) teaser.style.display = 'none';
+        if (teaserRotate) { clearInterval(teaserRotate); teaserRotate = null; }
+      };
+      const togglePanel = () => {
+        const open = panel.style.display === 'block';
+        panel.style.display = open ? 'none' : 'block';
+        if (!open) {
+          teaserDismissed = true;
+          hideTeaser();
+        }
+      };
+      btn.addEventListener('click', (e) => { e.preventDefault(); togglePanel(); });
+      panel.querySelector('.ct-wa-panel-close').addEventListener('click', () => panel.style.display = 'none');
+
+      // Klik poza panelem zamyka
+      document.addEventListener('click', (e) => {
+        if (panel.style.display !== 'block') return;
+        if (wrap.contains(e.target)) return;
+        panel.style.display = 'none';
       });
-      btn.addEventListener('mouseleave', () => {
-        btn.style.transform = 'scale(1)';
-        btn.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.4)';
-      });
-      document.body.appendChild(btn);
+
+      // ─── Teaser logika ───
+      if (teaser) {
+        const messages = cfg.teaser.messages;
+        const textEl = teaser.querySelector('.ct-wa-teaser-text');
+        let idx = 0;
+        const showTeaser = () => {
+          if (teaserDismissed) return;
+          if (panel.style.display === 'block') return;
+          textEl.textContent = messages[idx % messages.length];
+          teaser.style.display = 'flex';
+        };
+        teaser.querySelector('.ct-wa-teaser-close').addEventListener('click', (e) => {
+          e.stopPropagation();
+          teaserDismissed = true;
+          hideTeaser();
+        });
+        teaser.addEventListener('click', (e) => {
+          if (e.target.classList.contains('ct-wa-teaser-close')) return;
+          togglePanel();
+        });
+        teaserTimer = setTimeout(() => {
+          showTeaser();
+          // auto-hide po 6s
+          setTimeout(() => { if (!teaserDismissed && panel.style.display !== 'block') teaser.style.display = 'none'; }, 6000);
+          // rotacja kolejnych wiadomości
+          const rotateMs = Math.max(6, cfg.teaser.rotateSec || 12) * 1000;
+          teaserRotate = setInterval(() => {
+            if (teaserDismissed) { clearInterval(teaserRotate); return; }
+            if (panel.style.display === 'block') return;
+            idx++;
+            showTeaser();
+            setTimeout(() => { if (!teaserDismissed && panel.style.display !== 'block') teaser.style.display = 'none'; }, 6000);
+          }, rotateMs);
+        }, Math.max(2, cfg.teaser.delaySec || 8) * 1000);
+
+        // Pierwsza interakcja użytkownika ukrywa nieaktywny teaser
+        ['scroll', 'keydown'].forEach(ev => {
+          document.addEventListener(ev, () => {
+            // Pokaż teaser wcześniej jeśli scroll >40% i jeszcze nie pokazany
+            if (teaserDismissed) return;
+            const scrolled = (window.scrollY + window.innerHeight) / document.documentElement.scrollHeight;
+            if (scrolled > 0.4 && teaser.style.display !== 'flex' && panel.style.display !== 'block') {
+              clearTimeout(teaserTimer);
+              showTeaser();
+              setTimeout(() => { if (!teaserDismissed && panel.style.display !== 'block') teaser.style.display = 'none'; }, 6000);
+            }
+          }, { passive: true });
+        });
+      }
     }
   };
 
