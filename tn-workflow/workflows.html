@@ -946,21 +946,23 @@
                             const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
                             return w.ads_stage?.report_sent && !allDone;
                         }
-                        // "opinie" = COD włączony ALE opinie nie przekazane klientowi
+                        // "opinie" = core Etap 5 gotowe + COD + opinie nie shared (sequential — przed Video)
                         if (stage === 'opinie') {
                             const opt = w.optimization_stage;
-                            return opt?.cod_enabled && !opt?.reviews_shared_at;
+                            const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                            return coreDone && opt?.cod_enabled && !opt?.reviews_shared_at;
                         }
-                        // "video" = są nagrania w Etap 2 + COD włączony ALE Reels nie przekazane
+                        // "video" = core gotowe + Opinie ALREADY shared + są nagrania ALE Reels nie shared
                         if (stage === 'video') {
                             const opt = w.optimization_stage;
+                            const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
                             const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                            return opt?.cod_enabled && hasVideos && !opt?.videos_shared_at;
+                            return coreDone && !!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at;
                         }
-                        // "narzedzia" = Reels przekazane ALE narzędzia nie skonfigurowane
+                        // "narzedzia" = Reels shared + narzędzia nie ready
                         if (stage === 'narzedzia') {
                             const opt = w.optimization_stage;
-                            return opt?.videos_shared_at && !opt?.tools_ready_at;
+                            return !!opt?.videos_shared_at && !opt?.tools_ready_at;
                         }
                         // Other stages = next step
                         return nextStep === stage;
@@ -1136,25 +1138,26 @@
                     continue;
                 }
                 // "optymalizacje" = raport wysłany ALE optymalizacja core niezakończona (3 sub-checkboxy)
+                // Sequential: jeden projekt liczony do JEDNEGO kroku naraz (najwczesniejszy nieukonczony)
                 if (w.ads_stage?.report_sent) {
                     const opt = w.optimization_stage;
-                    const allDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
-                    if (!allDone) {
+                    const coreDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
+                    if (!coreDone) {
                         counts.optymalizacje++;
                         continue;
                     }
-                    // Etap 5 / Krok 2 — Opinie: COD wlaczony ALE opinie nie udostepnione
+                    // Etap 5 / Krok 2 — Opinie (PIERWSZY priorytet po core)
                     if (opt?.cod_enabled && !opt?.reviews_shared_at) {
                         counts.opinie++;
                         continue;
                     }
-                    // Etap 5 / Krok 3 — Video: są nagrania ALE Reels nie udostepnione
+                    // Etap 5 / Krok 3 — Video (TYLKO gdy Opinie juz shared)
                     const hasVideos = (w.video_stage?.video_links || []).length > 0;
-                    if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
+                    if (!!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at) {
                         counts.video++;
                         continue;
                     }
-                    // Etap 5 / Krok 4 — Narzedzia: Reels udostepnione ALE narzedzia nie skonfigurowane
+                    // Etap 5 / Krok 4 — Narzedzia (gdy Reels shared)
                     if (opt?.videos_shared_at && !opt?.tools_ready_at) {
                         counts.narzedzia++;
                         continue;
@@ -1169,18 +1172,16 @@
                 }
             }
 
-            // Update badge for each stage
+            // Update badge for each stage — zawsze widoczny z liczbą (0 dla pustych)
             document.querySelectorAll('.status-stage-btn').forEach(btn => {
                 const stage = btn.dataset.stage;
                 const countEl = btn.querySelector('.stage-count');
                 if (countEl && counts.hasOwnProperty(stage)) {
                     const count = counts[stage];
-                    if (count > 0) {
-                        countEl.textContent = count;
-                        countEl.classList.remove('hidden');
-                    } else {
-                        countEl.classList.add('hidden');
-                    }
+                    countEl.textContent = count;
+                    countEl.classList.remove('hidden');
+                    // Subtelnie wyciszamy kolor gdy 0 (zachowujemy widoczność ale mniej krzykliwie)
+                    countEl.classList.toggle('opacity-40', count === 0);
                 }
             });
         }
@@ -1395,16 +1396,16 @@
             // Raport wysłany
             if (!w.ads_stage?.report_sent) return 'ads_report';
 
-            // Etap 5: Optymalizacja (4 kroki)
+            // Etap 5: Optymalizacja (4 kroki, sequential)
             const opt = w.optimization_stage;
             const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
             if (!optAllDone) return 'optymalizacje';
-            // Krok 2 — Opinie: COD wlaczony ALE opinie nie udostepnione
+            // Krok 2 — Opinie (PIERWSZY priorytet po core)
             if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
-            // Krok 3 — Video Reels: są nagrania ALE Reels nie udostepnione
+            // Krok 3 — Video (TYLKO gdy Opinie juz shared, są nagrania ALE Reels nie shared)
             const hasVideos = (w.video_stage?.video_links || []).length > 0;
-            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) return 'video';
-            // Krok 4 — Narzedzia: Reels udostepnione ALE narzedzia nie skonfigurowane
+            if (!!opt?.reviews_shared_at && hasVideos && !opt?.videos_shared_at) return 'video';
+            // Krok 4 — Narzedzia (gdy Reels shared, narzędzia nie skonfigurowane)
             if (opt?.videos_shared_at && !opt?.tools_ready_at) return 'narzedzia';
 
             return null; // all done
@@ -1861,7 +1862,7 @@
                     status = (opt?.reviews_count || 0) > 0 ? 'Wstaw opinie + przekaż klientowi' : 'Pobierz opinie z AliExpress';
                     icon = 'ph ph-star text-yellow-400';
                     isClientTask = false;
-                } else if (opt?.cod_enabled && (w.video_stage?.video_links || []).length > 0 && !opt?.videos_shared_at) {
+                } else if (!!opt?.reviews_shared_at && (w.video_stage?.video_links || []).length > 0 && !opt?.videos_shared_at) {
                     stepName = 'Video Reels na sklepie';
                     status = opt?.videos_inserted_at ? 'Przekaż klientowi (email)' : 'Wstaw sekcję Reels na landing';
                     icon = 'ph ph-play-circle text-rose-400';
