@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050717';
+        const APP_VERSION = '2026050718';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -713,10 +713,19 @@
                 min-height: 220px;
             }
 
+            /* Etap 5 boxes mobile */
+            #dash-bento-etap5 .bento-box {
+                min-height: 160px;
+            }
+            #dash-bento-etap5 #dash-etap5-box-optymalizacje {
+                min-height: 260px;
+            }
+
             /* Tighter padding inside rich done-state tiles on narrow screens */
             #dash-bento-etap2 .bento-box > div > .p-6,
             #dash-bento-etap3 .bento-box > div > .p-6,
-            #dash-bento-etap4 .bento-box > div > .p-6 {
+            #dash-bento-etap4 .bento-box > div > .p-6,
+            #dash-bento-etap5 .bento-box > div > .p-6 {
                 padding: 1rem !important;
             }
 
@@ -2116,44 +2125,54 @@
             </div><!-- /dash-bento-etap4 -->
 
             <!-- ETAP 5: Optymalizacja -->
-            <div id="dash-bento-etap5" class="dash-bento-grid hidden">
-                <!-- Header full width -->
-                <div class="bento-box p-6" style="grid-column: span 12; min-height: auto;">
-                    <div class="flex items-center justify-between flex-wrap gap-4">
-                        <div>
-                            <h2 class="text-white text-xl font-semibold tracking-tight">Etap 5 — Optymalizacja</h2>
-                            <p id="dash-etap5-progress-label" class="text-[11px] text-[#666] uppercase tracking-wider font-medium mt-2">Postęp realizacji: Etap 5</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-3xl font-semibold text-white"><span id="dash-etap5-progress-percent">0</span>%</p>
-                            <div class="w-32 h-1 bg-[#222] rounded-full overflow-hidden mt-2">
-                                <div id="dash-etap5-progress-bar" class="h-full bg-violet-500 transition-all duration-500" style="width: 0%"></div>
+            <div id="dash-bento-etap5" class="bento-grid hidden">
+                <!-- Progress Hero -->
+                <div class="bento-box bento-lg p-0 overflow-hidden" style="grid-column: span 8;">
+                    <div class="relative h-full">
+                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] via-transparent to-fuchsia-500/[0.05]"></div>
+                        <div class="relative p-6 md:p-8 h-full flex flex-col">
+                            <p id="dash-etap5-progress-label" class="text-[11px] text-[#666] uppercase tracking-wider font-medium mb-2">Postęp realizacji: Etap 5</p>
+                            <div class="flex items-baseline gap-2">
+                                <span id="dash-etap5-progress-percent" class="text-[48px] md:text-[56px] font-bold text-white leading-none tracking-tight">0</span>
+                                <span class="text-[24px] text-[#666] font-medium">%</span>
+                            </div>
+                            <div class="h-2 bg-[#1a1a1a] rounded-full overflow-hidden mt-6">
+                                <div id="dash-etap5-progress-bar" class="h-full rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-1000 ease-out" style="width: 0%"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Optymalizacje Box -->
+                <!-- Info box -->
+                <div class="bento-box p-5" style="grid-column: span 4;">
+                    <div class="flex items-center gap-2 mb-4">
+                        <i class="ph ph-sparkle text-violet-400"></i>
+                        <p class="text-[10px] text-[#666] uppercase tracking-wider font-medium">Optymalizacja sklepu</p>
+                    </div>
+                    <p class="text-[#888] text-sm leading-relaxed">Maksymalizujemy konwersję i odzyskujemy porzucone zamówienia</p>
+                </div>
+
+                <!-- Optymalizacje Box (4 sub-kroki konwersji) -->
                 <div id="dash-etap5-box-optymalizacje" class="bento-box p-0 overflow-hidden cursor-pointer transition-all"
-                     style="grid-column: span 12; min-height: 220px;" onclick="switchToDashTab('optymalizacje')">
+                     style="grid-column: span 12; min-height: 200px;" onclick="switchToDashTab('optymalizacje')">
                     <div id="dash-etap5-optymalizacje-content" class="h-full"></div>
                 </div>
 
-                <!-- Opinie Box (visible po cod_enabled) -->
-                <div id="dash-etap5-box-opinie" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
-                     style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('opinie')">
+                <!-- Opinie Box -->
+                <div id="dash-etap5-box-opinie" class="bento-box p-0 overflow-hidden cursor-pointer transition-all"
+                     style="grid-column: span 4; min-height: 180px;" onclick="switchToDashTab('opinie')">
                     <div id="dash-etap5-opinie-content" class="h-full"></div>
                 </div>
 
-                <!-- Video Box (visible po videos w workflow_video) -->
-                <div id="dash-etap5-box-video" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
-                     style="grid-column: span 6; min-height: 200px;" onclick="switchToDashTab('video')">
+                <!-- Video Box -->
+                <div id="dash-etap5-box-video" class="bento-box p-0 overflow-hidden cursor-pointer transition-all"
+                     style="grid-column: span 4; min-height: 180px;" onclick="switchToDashTab('video')">
                     <div id="dash-etap5-video-content" class="h-full"></div>
                 </div>
 
-                <!-- Narzedzia Box (visible po videos_shared_at) -->
-                <div id="dash-etap5-box-narzedzia" class="bento-box p-0 overflow-hidden cursor-pointer transition-all hidden"
-                     style="grid-column: span 12; min-height: 180px;" onclick="switchToDashTab('narzedzia')">
+                <!-- Narzedzia Box -->
+                <div id="dash-etap5-box-narzedzia" class="bento-box p-0 overflow-hidden cursor-pointer transition-all"
+                     style="grid-column: span 4; min-height: 180px;" onclick="switchToDashTab('narzedzia')">
                     <div id="dash-etap5-narzedzia-content" class="h-full"></div>
                 </div>
             </div><!-- /dash-bento-etap5 -->
@@ -6955,157 +6974,319 @@
             const videosShared = !!optimizationData?.videos_shared_at;
             const toolsReady = !!optimizationData?.tools_ready_at;
 
-            const optimizationCoreDone = codDone && whatsappDone && recoveryDone;
-            const reviewsAvailable = !!optimizationData?.cod_enabled;
-            const videosAvailable = (videoData?.video_links || []).length > 0;
-            const toolsAvailable = !!optimizationData?.videos_shared_at;
-
-            // Liczymy progress: 1 punkt za optymalizacje (3 sub-kroki) + ewentualnie reviews/videos/tools
-            const totalSteps = 1 + (reviewsAvailable ? 1 : 0) + (videosAvailable ? 1 : 0) + (toolsAvailable ? 1 : 0);
-            const completedSteps = (optimizationCoreDone ? 1 : 0) + (reviewsShared ? 1 : 0) + (videosShared ? 1 : 0) + (toolsReady ? 1 : 0);
-            const progressPercent = totalSteps === 0 ? 0 : Math.round((completedSteps / totalSteps) * 100);
+            // Etap 5 ma 4 elementy: Optymalizacje (3 sub-kroki) + Opinie + Video + Narzędzia
+            const optymalizacjeDone = codDone && whatsappDone && recoveryDone;
+            const completedSteps = [optymalizacjeDone, reviewsShared, videosShared, toolsReady].filter(Boolean).length;
+            const progressPercent = Math.round((completedSteps / 4) * 100);
 
             const labelEl = document.getElementById('dash-etap5-progress-label');
             const percentEl = document.getElementById('dash-etap5-progress-percent');
             const barEl = document.getElementById('dash-etap5-progress-bar');
-            if (labelEl) labelEl.textContent = completedSteps === totalSteps ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
+            if (labelEl) labelEl.textContent = completedSteps === 4 ? 'Etap 5 ukończony' : 'Postęp realizacji: Etap 5';
             if (percentEl) percentEl.textContent = progressPercent;
             if (barEl) barEl.style.width = progressPercent + '%';
 
-            // Visibility boxów
-            document.getElementById('dash-etap5-box-opinie')?.classList.toggle('hidden', !reviewsAvailable);
-            document.getElementById('dash-etap5-box-video')?.classList.toggle('hidden', !videosAvailable);
-            document.getElementById('dash-etap5-box-narzedzia')?.classList.toggle('hidden', !toolsAvailable);
-
             renderEtap5OptymalizacjeBox();
-            if (reviewsAvailable) renderEtap5OpinieBox();
-            if (videosAvailable) renderEtap5VideoBox();
-            if (toolsAvailable) renderEtap5NarzedziaBox();
-        }
-
-        function renderEtap5OpinieBox() {
-            const content = document.getElementById('dash-etap5-opinie-content');
-            if (!content) return;
-            const sharedAt = optimizationData?.reviews_shared_at;
-            const reviewsCount = optimizationData?.reviews_count || 0;
-            const status = sharedAt
-                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Opinie widoczne na sklepie</span>'
-                : (reviewsCount > 0
-                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Wkrótce dodamy do sklepu</span>'
-                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Pobieramy opinie</span>');
-            content.innerHTML =
-                '<div class="p-6 h-full flex flex-col">' +
-                '<div class="flex items-start gap-3 mb-3">' +
-                '<div class="w-10 h-10 rounded-xl bg-yellow-500/15 flex items-center justify-center flex-shrink-0">' +
-                '<i class="ph ph-star text-yellow-400 text-xl"></i></div>' +
-                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Opinie klientów</h3>' +
-                '<p class="text-[12px] text-[#999] mt-0.5">Krok 2 — social proof na sklepie</p></div></div>' +
-                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
-                (reviewsCount > 0 ? '<div class="text-[11px] text-[#777] mt-2">' + reviewsCount + ' opinii w bazie</div>' : '') +
-                '</div>';
-        }
-
-        function renderEtap5VideoBox() {
-            const content = document.getElementById('dash-etap5-video-content');
-            if (!content) return;
-            const sharedAt = optimizationData?.videos_shared_at;
-            const insertedAt = optimizationData?.videos_inserted_at;
-            const videoCount = (videoData?.video_links || []).length;
-            const status = sharedAt
-                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Reels gotowe na sklepie</span>'
-                : (insertedAt
-                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Sekcja wstawiona — wkrótce powiadomimy</span>'
-                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Przygotowujemy sekcję</span>');
-            content.innerHTML =
-                '<div class="p-6 h-full flex flex-col">' +
-                '<div class="flex items-start gap-3 mb-3">' +
-                '<div class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center flex-shrink-0">' +
-                '<i class="ph ph-play-circle text-rose-400 text-xl"></i></div>' +
-                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Reels (video)</h3>' +
-                '<p class="text-[12px] text-[#999] mt-0.5">Krok 3 — video w stylu Instagram</p></div></div>' +
-                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
-                '<div class="text-[11px] text-[#777] mt-2">' + videoCount + ' nagrań</div>' +
-                '</div>';
-        }
-
-        function renderEtap5NarzedziaBox() {
-            const content = document.getElementById('dash-etap5-narzedzia-content');
-            if (!content) return;
-            const ready = !!optimizationData?.tools_ready_at;
-            const started = !!optimizationData?.tools_started_at;
-            const status = ready
-                ? '<span class="text-emerald-400"><i class="ph-fill ph-check-circle"></i> Narzędzia skonfigurowane</span>'
-                : (started
-                    ? '<span class="text-amber-400"><i class="ph ph-clock"></i> Konfigurujemy narzędzia</span>'
-                    : '<span class="text-[#777]"><i class="ph ph-hourglass"></i> Wkrótce</span>');
-            content.innerHTML =
-                '<div class="p-6 h-full flex flex-col">' +
-                '<div class="flex items-start gap-3 mb-3">' +
-                '<div class="w-10 h-10 rounded-xl bg-amber-500/15 flex items-center justify-center flex-shrink-0">' +
-                '<i class="ph ph-toolbox text-amber-400 text-xl"></i></div>' +
-                '<div class="flex-1"><h3 class="text-white font-semibold text-[15px]">Narzędzia</h3>' +
-                '<p class="text-[12px] text-[#999] mt-0.5">Krok 4 — konfiguracja narzędzi</p></div></div>' +
-                '<div class="flex-1 flex items-end"><p class="text-[12px]">' + status + '</p></div>' +
-                '</div>';
+            renderEtap5OpinieBox();
+            renderEtap5VideoBox();
+            renderEtap5NarzedziaBox();
         }
 
         function renderEtap5OptymalizacjeBox() {
+            const box = document.getElementById('dash-etap5-box-optymalizacje');
             const content = document.getElementById('dash-etap5-optymalizacje-content');
-            if (!content) return;
+            if (!box || !content) return;
 
             const codEnabled = !!optimizationData?.cod_enabled;
             const codStock = !!optimizationData?.cod_stock_confirmed;
             const whatsappEnabled = !!optimizationData?.whatsapp_enabled;
             const recoveryDone = !!optimizationData?.recovery_calls_done;
 
-            const items = [
-                {
-                    label: 'COD włączony w sklepie',
-                    done: codEnabled,
-                    icon: 'ph-package',
-                    color: codEnabled ? 'emerald' : 'zinc'
-                },
-                {
-                    label: 'Zamówiłeś 2-3 sztuki produktu',
-                    done: codStock,
-                    icon: 'ph-check-square',
-                    color: codStock ? 'emerald' : 'amber'
-                },
-                {
-                    label: 'WhatsApp na stronie aktywny',
-                    done: whatsappEnabled,
-                    icon: 'ph-whatsapp-logo',
-                    color: whatsappEnabled ? 'emerald' : 'zinc'
-                },
-                {
-                    label: 'Próby kontaktu z porzuconymi koszykami',
-                    done: recoveryDone,
-                    icon: 'ph-phone-call',
-                    color: recoveryDone ? 'emerald' : 'zinc'
-                }
+            // Liczymy 4 sub-kroki: COD, stock, WhatsApp, recovery calls
+            const subSteps = [
+                { label: 'COD aktywny w sklepie', done: codEnabled, icon: 'ph-package' },
+                { label: 'Stock 2-3 szt. produktu', done: codStock, icon: 'ph-check-square' },
+                { label: 'WhatsApp aktywny',         done: whatsappEnabled, icon: 'ph-whatsapp-logo' },
+                { label: 'Recovery calls',           done: recoveryDone, icon: 'ph-phone-call' }
             ];
+            const doneCount = subSteps.filter(s => s.done).length;
+            const allDone = doneCount === 4;
+            const partialDone = doneCount > 0;
 
-            content.innerHTML = `
-                <div class="h-full p-6 flex flex-col">
-                    <div class="flex items-center justify-between mb-5">
-                        <div>
-                            <span class="text-[#666] text-xs uppercase tracking-wide">Optymalizacje</span>
-                            <h3 class="text-white text-lg font-medium mt-1">Zwiększamy konwersję</h3>
+            if (!allDone) {
+                box.classList.add('bento-action');
+                const progressText = `${doneCount} z 4`;
+                const statusText = partialDone ? 'W trakcie' : 'Wymaga akcji';
+                const statusColor = partialDone ? 'text-amber-500' : 'text-rose-500';
+                const pulseClass = partialDone ? '' : 'animate-pulse';
+
+                content.innerHTML = `
+                    <div class="h-full p-5 md:p-6 flex flex-col">
+                        <div class="flex items-center justify-between mb-5">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Optymalizacje konwersji</span>
+                            <span class="flex items-center gap-1.5 ${statusColor} text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full ${statusColor.replace('text-', 'bg-')} ${pulseClass}"></span>
+                                ${statusText} · ${progressText}
+                            </span>
                         </div>
-                        <div class="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                            <i class="ph ph-sparkle text-2xl text-violet-400"></i>
+                        <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                            ${subSteps.map(s => `
+                                <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-md bg-[#0e0e0e] border border-[#1e1e1e]">
+                                    <i class="ph ${s.done ? 'ph-fill ph-check-circle' : s.icon} ${s.done ? 'text-emerald-500' : 'text-violet-400/80'} text-base"></i>
+                                    <span class="text-[12px] ${s.done ? 'text-white' : 'text-[#bbb]'} flex-1 truncate">${s.label}</span>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                    <div class="space-y-2 flex-1">
-                        ${items.map(item => `
-                            <div class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-white/[0.02] border border-white/5">
-                                <i class="ph ${item.done ? 'ph-fill ph-check-circle' : item.icon} text-${item.color}-${item.done ? '400' : '500'} text-lg"></i>
-                                <span class="text-[13px] ${item.done ? 'text-white' : 'text-zinc-400'}">${item.label}</span>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 md:p-6 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-violet-500/[0.08] via-transparent to-emerald-500/[0.05] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-5">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Optymalizacje konwersji</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Wszystko gotowe
+                            </span>
+                        </div>
+                        <div class="relative flex-1 grid grid-cols-1 md:grid-cols-2 gap-2">
+                            ${subSteps.map(s => `
+                                <div class="flex items-center gap-2.5 px-3 py-2.5 rounded-md bg-[#0e0e0e] border border-[#1e1e1e]">
+                                    <i class="ph ${s.icon} text-violet-400/80 text-base"></i>
+                                    <span class="text-[12px] text-[#bbb] flex-1 truncate">${s.label}</span>
+                                    <i class="ph-fill ph-check-circle text-emerald-500 text-xs"></i>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap5OpinieBox() {
+            const box = document.getElementById('dash-etap5-box-opinie');
+            const content = document.getElementById('dash-etap5-opinie-content');
+            if (!box || !content) return;
+
+            const codEnabled = !!optimizationData?.cod_enabled;
+            const reviewsShared = !!optimizationData?.reviews_shared_at;
+            const reviewsCount = optimizationData?.reviews_count || 0;
+            const isLocked = !codEnabled;
+
+            // Klikalność tylko gdy nie locked
+            box.classList.toggle('opacity-50', isLocked);
+            box.classList.toggle('cursor-pointer', !isLocked);
+            box.onclick = isLocked ? null : () => switchToDashTab('opinie');
+
+            if (reviewsShared) {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-yellow-500/[0.08] via-transparent to-amber-500/[0.04] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Opinie</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Na sklepie
+                            </span>
+                        </div>
+                        <div class="relative flex-1 flex flex-col items-center justify-center">
+                            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-500/20 to-amber-500/10 ring-1 ring-yellow-500/30 flex items-center justify-center shadow-lg">
+                                <i class="ph-fill ph-star text-3xl text-yellow-400"></i>
                             </div>
-                        `).join('')}
+                            <h3 class="text-white text-base font-semibold mt-3">Social proof</h3>
+                            ${reviewsCount > 0 ? `<p class="text-[#666] text-[11px] mt-1">${reviewsCount} opinii klientów</p>` : ''}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else if (!isLocked) {
+                box.classList.add('bento-action');
+                const inProgress = reviewsCount > 0;
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Opinie</span>
+                            <span class="flex items-center gap-1.5 ${inProgress ? 'text-amber-500' : 'text-cyan-500'} text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full ${inProgress ? 'bg-amber-500' : 'bg-cyan-500'} animate-pulse"></span>
+                                ${inProgress ? 'W trakcie' : 'Pobieramy'}
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-star text-5xl text-yellow-400 mb-4"></i>
+                            <h3 class="text-white text-base font-medium">Opinie klientów</h3>
+                            <p class="text-[#666] text-xs text-center mt-2">${inProgress ? `${reviewsCount} opinii w bazie` : 'Social proof na sklepie'}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Opinie</span>
+                            <span class="flex items-center gap-1 text-zinc-500 text-xs">
+                                <i class="ph ph-lock-simple"></i>
+                                Zablokowane
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-star text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-base font-medium">Opinie klientów</h3>
+                            <p class="text-zinc-600 text-xs text-center mt-2">Najpierw włącz COD</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap5VideoBox() {
+            const box = document.getElementById('dash-etap5-box-video');
+            const content = document.getElementById('dash-etap5-video-content');
+            if (!box || !content) return;
+
+            const videoCount = (videoData?.video_links || []).length;
+            const videosShared = !!optimizationData?.videos_shared_at;
+            const videosInserted = !!optimizationData?.videos_inserted_at;
+            const isLocked = videoCount === 0;
+
+            box.classList.toggle('opacity-50', isLocked);
+            box.classList.toggle('cursor-pointer', !isLocked);
+            box.onclick = isLocked ? null : () => switchToDashTab('video');
+
+            if (videosShared) {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-rose-500/[0.08] via-transparent to-fuchsia-500/[0.04] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Video Reels</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Na sklepie
+                            </span>
+                        </div>
+                        <div class="relative flex-1 flex flex-col items-center justify-center">
+                            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-rose-500/20 to-fuchsia-500/10 ring-1 ring-rose-500/30 flex items-center justify-center shadow-lg">
+                                <i class="ph-fill ph-play-circle text-3xl text-rose-400"></i>
+                            </div>
+                            <h3 class="text-white text-base font-semibold mt-3">${videoCount} ${videoCount === 1 ? 'reel' : 'reelsów'}</h3>
+                            <p class="text-[#666] text-[11px] mt-1">stories + sekcja video</p>
+                        </div>
+                    </div>
+                `;
+            } else if (!isLocked) {
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Video Reels</span>
+                            <span class="flex items-center gap-1.5 ${videosInserted ? 'text-amber-500' : 'text-cyan-500'} text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full ${videosInserted ? 'bg-amber-500' : 'bg-cyan-500'} animate-pulse"></span>
+                                ${videosInserted ? 'Wstawione' : 'W przygotowaniu'}
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-play-circle text-5xl text-rose-400 mb-4"></i>
+                            <h3 class="text-white text-base font-medium">${videoCount} ${videoCount === 1 ? 'reel' : 'reelsów'}</h3>
+                            <p class="text-[#666] text-xs text-center mt-2">${videosInserted ? 'Wkrótce wpięte' : 'Stories + sekcja video'}</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Video Reels</span>
+                            <span class="flex items-center gap-1 text-zinc-500 text-xs">
+                                <i class="ph ph-hourglass"></i>
+                                Wkrótce
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-play-circle text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-base font-medium">Video Reels</h3>
+                            <p class="text-zinc-600 text-xs text-center mt-2">Nagrania w toku</p>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderEtap5NarzedziaBox() {
+            const box = document.getElementById('dash-etap5-box-narzedzia');
+            const content = document.getElementById('dash-etap5-narzedzia-content');
+            if (!box || !content) return;
+
+            const ready = !!optimizationData?.tools_ready_at;
+            const started = !!optimizationData?.tools_started_at;
+            const videosShared = !!optimizationData?.videos_shared_at;
+            const isLocked = !videosShared;
+
+            box.classList.toggle('opacity-50', isLocked);
+            box.classList.toggle('cursor-pointer', !isLocked);
+            box.onclick = isLocked ? null : () => switchToDashTab('narzedzia');
+
+            if (ready) {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-amber-500/[0.08] via-transparent to-cyan-500/[0.04] pointer-events-none"></div>
+                        <div class="relative flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia</span>
+                            <span class="flex items-center gap-1 text-emerald-500 text-xs">
+                                <i class="ph-fill ph-check-circle"></i>
+                                Skonfigurowane
+                            </span>
+                        </div>
+                        <div class="relative flex-1 flex flex-col items-center justify-center">
+                            <div class="relative w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-500/20 to-cyan-500/10 ring-1 ring-amber-500/30 flex items-center justify-center shadow-lg">
+                                <i class="ph-fill ph-toolbox text-3xl text-amber-400"></i>
+                            </div>
+                            <h3 class="text-white text-base font-semibold mt-3">Gotowe</h3>
+                            <p class="text-[#666] text-[11px] mt-1">analytics + pixele + email</p>
+                        </div>
+                    </div>
+                `;
+            } else if (!isLocked) {
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia</span>
+                            <span class="flex items-center gap-1.5 ${started ? 'text-amber-500' : 'text-cyan-500'} text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full ${started ? 'bg-amber-500' : 'bg-cyan-500'} animate-pulse"></span>
+                                ${started ? 'Konfigurujemy' : 'W przygotowaniu'}
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-toolbox text-5xl text-amber-400 mb-4"></i>
+                            <h3 class="text-white text-base font-medium">Narzędzia</h3>
+                            <p class="text-[#666] text-xs text-center mt-2">Analytics, pixele, email marketing</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                box.classList.remove('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Narzędzia</span>
+                            <span class="flex items-center gap-1 text-zinc-500 text-xs">
+                                <i class="ph ph-lock-simple"></i>
+                                Zablokowane
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center">
+                            <i class="ph ph-toolbox text-4xl text-zinc-600 mb-3"></i>
+                            <h3 class="text-zinc-500 text-base font-medium">Narzędzia</h3>
+                            <p class="text-zinc-600 text-xs text-center mt-2">Po wpięciu reels na sklep</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
 
         function renderPlaceholderDashboard(stageNum) {
