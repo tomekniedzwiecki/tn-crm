@@ -2445,23 +2445,22 @@
   ═══════════════════════════════════════════════════════════ -->
   <!-- VIDEOS:STORIES:START -->
   <style>
-    /* MOBILE-FIRST: horizontal sticky pasek pod headerem */
+    /* MOBILE-FIRST: kompaktowy horizontal pasek pod headerem */
     .stories-bar {
       position: sticky;
       top: 70px;
       z-index: 99;
-      padding: 12px 0;
+      padding: 7px 0;
       background: rgba(255, 255, 255, 0.92);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border-bottom: 1px solid rgba(0, 168, 150, 0.08);
-      transition: padding 0.3s ease;
     }
     .stories-bar-inner {
       display: flex;
       align-items: center;
-      gap: 14px;
-      padding: 0 24px;
+      gap: 9px;
+      padding: 0 16px;
       max-width: var(--container-width, 1200px);
       margin: 0 auto;
       overflow-x: auto;
@@ -2472,114 +2471,25 @@
 
     .stories-bar-label {
       font-family: var(--font-accent, monospace);
-      font-size: 10px;
+      font-size: 9px;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--text-secondary, #6B7280);
+      letter-spacing: 1.5px;
+      color: var(--primary, #00A896);
       flex-shrink: 0;
       padding-right: 4px;
     }
 
-    /* DESKTOP: floating pionowy widget na prawej krawędzi, środek viewportu */
-    @media (min-width: 769px) {
-      .stories-bar {
-        position: fixed;
-        top: 50%;
-        right: 20px;
-        transform: translateY(-50%);
-        padding: 16px 12px 14px;
-        border-radius: 32px;
-        background: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(24px);
-        -webkit-backdrop-filter: blur(24px);
-        border: 1px solid rgba(0, 168, 150, 0.15);
-        box-shadow:
-          0 16px 48px rgba(0, 0, 0, 0.12),
-          0 0 0 1px rgba(0, 168, 150, 0.05),
-          inset 0 1px 0 rgba(255, 255, 255, 0.7);
-        z-index: 95;
-        opacity: 0;
-        animation: stories-widget-in 0.7s 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
-                   stories-widget-bounce 5s 2.5s ease-in-out infinite;
-        will-change: transform;
-      }
-      @keyframes stories-widget-in {
-        from { opacity: 0; transform: translateY(-50%) translateX(60px) scale(0.9); }
-        to   { opacity: 1; transform: translateY(-50%) translateX(0)    scale(1);   }
-      }
-      @keyframes stories-widget-bounce {
-        0%, 92%, 100% { transform: translateY(-50%) translateX(0); }
-        94%  { transform: translateY(-50%) translateX(-6px); }
-        96%  { transform: translateY(-50%) translateX(2px); }
-        98%  { transform: translateY(-50%) translateX(-2px); }
-      }
-      .stories-bar:hover {
-        animation-play-state: paused;
-        transform: translateY(-50%) translateX(-4px);
-        box-shadow:
-          0 24px 64px rgba(0, 0, 0, 0.16),
-          0 0 0 1px rgba(0, 168, 150, 0.15),
-          0 0 40px rgba(0, 168, 150, 0.15);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
-      }
-      .stories-bar-inner {
-        flex-direction: column;
-        gap: 14px;
-        padding: 0;
-        max-width: none;
-        overflow: visible;
-      }
-      .stories-bar-label {
-        font-size: 9px;
-        letter-spacing: 1.5px;
-        padding: 0 0 2px;
-        color: var(--primary, #00A896);
-        text-align: center;
-        position: relative;
-      }
-      .stories-bar-label::after {
-        content: '';
-        display: block;
-        width: 24px;
-        height: 2px;
-        background: linear-gradient(90deg, transparent, var(--primary, #00A896), transparent);
-        margin: 6px auto 0;
-        border-radius: 1px;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .stories-bar { animation: stories-widget-in 0.4s ease forwards; }
-      }
-    }
-    @media (min-width: 769px) and (max-width: 1100px) {
-      /* Na średnich ekranach przesuń widget bardziej do środka żeby nie kolidował z prawą krawędzią content'u */
-      .stories-bar { right: 12px; padding: 14px 10px; }
-    }
-    /* Na bardzo niskich desktop heights: pozwól widgetowi na scroll */
-    @media (min-width: 769px) and (max-height: 640px) {
-      .stories-bar {
-        max-height: calc(100vh - 40px);
-        overflow-y: auto;
-      }
-      .stories-bar::-webkit-scrollbar { display: none; }
-    }
-
+    /* Story ring (kółeczko ze spinning gradientem) */
     .story-ring {
       position: relative;
-      width: 64px;
-      height: 64px;
+      width: 44px;
+      height: 44px;
       flex-shrink: 0;
       cursor: pointer;
       border-radius: 50%;
-      padding: 3px;
-      background: conic-gradient(
-        from 0deg,
-        #833AB4 0%,
-        #FD1D1D 25%,
-        #FCB045 50%,
-        #00A896 75%,
-        #833AB4 100%
-      );
+      padding: 2px;
+      background: conic-gradient(from 0deg, #833AB4, #FD1D1D, #FCB045, #00A896, #833AB4);
       animation: story-spin 4s linear infinite;
       transition: transform 0.25s ease;
       border: none;
@@ -2587,15 +2497,13 @@
     }
     .story-ring:hover {
       animation-play-state: paused;
-      transform: scale(1.08);
+      transform: scale(1.1);
     }
     .story-ring.story-ring--seen {
-      background: linear-gradient(135deg, #c7c9d2, #c7c9d2);
+      background: #c7c9d2;
       animation: none;
     }
-    @keyframes story-spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes story-spin { to { transform: rotate(360deg); } }
     @media (prefers-reduced-motion: reduce) {
       .story-ring { animation: none; }
     }
@@ -2606,14 +2514,8 @@
       border-radius: 50%;
       background: #fff;
       padding: 2px;
-      animation: story-spin-counter 4s linear infinite;
+      display: block;
     }
-    .story-ring:hover .story-ring-inner { animation-play-state: paused; }
-    @keyframes story-spin-counter {
-      to { transform: rotate(-360deg); }
-    }
-    .story-ring--seen .story-ring-inner { animation: none; }
-
     .story-ring-img {
       width: 100%;
       height: 100%;
@@ -2621,45 +2523,83 @@
       object-fit: cover;
       display: block;
     }
-    .story-ring-placeholder {
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .story-ring-placeholder svg {
-      width: 28px;
-      height: 28px;
-      color: #fff;
-    }
-    .story-ring-placeholder--instagram { background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 60%, #FCB045 100%); }
-    .story-ring-placeholder--tiktok { background: linear-gradient(135deg, #000 0%, #25F4EE 50%, #FE2C55 100%); }
+    /* Badges per-platforma — usunięte, redundant gdy wszystko YT */
+    .story-ring-platform { display: none; }
 
-    .story-ring-platform {
-      position: absolute;
-      bottom: -2px;
-      right: -2px;
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-    }
-    .story-ring-platform svg { width: 12px; height: 12px; }
-    .story-ring-platform--youtube svg { color: #FF0000; }
-
-    @media (max-width: 540px) {
-      .stories-bar { top: 60px; padding: 8px 0; }
-      .stories-bar-inner { padding: 0 14px; gap: 10px; }
-      .stories-bar-label { font-size: 9px; letter-spacing: 1.5px; }
+    /* DESKTOP: floating pionowy widget na prawej krawędzi */
+    @media (min-width: 769px) {
+      .stories-bar {
+        position: fixed;
+        top: 50%;
+        right: 16px;
+        transform: translateY(-50%);
+        padding: 10px 8px;
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(24px);
+        -webkit-backdrop-filter: blur(24px);
+        border: 1px solid rgba(0, 168, 150, 0.12);
+        box-shadow:
+          0 12px 36px rgba(0, 0, 0, 0.10),
+          0 0 0 1px rgba(0, 168, 150, 0.04),
+          inset 0 1px 0 rgba(255, 255, 255, 0.7);
+        z-index: 95;
+        opacity: 0;
+        animation: stories-widget-in 0.7s 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards,
+                   stories-widget-bounce 6s 3s ease-in-out infinite;
+        will-change: transform;
+      }
+      @keyframes stories-widget-in {
+        from { opacity: 0; transform: translateY(-50%) translateX(60px); }
+        to   { opacity: 1; transform: translateY(-50%) translateX(0); }
+      }
+      @keyframes stories-widget-bounce {
+        0%, 90%, 100% { transform: translateY(-50%) translateX(0); }
+        93%  { transform: translateY(-50%) translateX(-5px); }
+        96%  { transform: translateY(-50%) translateX(2px); }
+        99%  { transform: translateY(-50%) translateX(-1px); }
+      }
+      .stories-bar:hover {
+        animation-play-state: paused;
+        transform: translateY(-50%) translateX(-3px);
+        box-shadow:
+          0 18px 48px rgba(0, 0, 0, 0.14),
+          0 0 0 1px rgba(0, 168, 150, 0.18),
+          0 0 32px rgba(0, 168, 150, 0.12);
+        transition: transform 0.3s, box-shadow 0.3s;
+      }
+      .stories-bar-inner {
+        flex-direction: column;
+        gap: 8px;
+        padding: 0;
+        max-width: none;
+        overflow: visible;
+      }
+      .stories-bar-label {
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        padding: 2px 0 6px;
+        margin-bottom: 2px;
+        color: var(--primary, #00A896);
+        text-align: center;
+        width: 100%;
+        border-bottom: 1px solid rgba(0, 168, 150, 0.1);
+      }
+      /* Większe kółka na desktop dla lepszej widoczności */
       .story-ring { width: 56px; height: 56px; padding: 2.5px; }
-      .story-ring-platform { width: 20px; height: 20px; bottom: -1px; right: -1px; }
-      .story-ring-platform svg { width: 11px; height: 11px; }
+      @media (prefers-reduced-motion: reduce) {
+        .stories-bar { animation: stories-widget-in 0.4s ease forwards; }
+      }
+    }
+    @media (min-width: 769px) and (max-width: 1100px) {
+      .stories-bar { right: 10px; }
+    }
+    @media (min-width: 769px) and (max-height: 620px) {
+      .stories-bar {
+        max-height: calc(100vh - 32px);
+        overflow-y: auto;
+      }
+      .stories-bar::-webkit-scrollbar { display: none; }
     }
   </style>
   <div class="stories-bar" id="storiesBar" aria-label="Reels — kliknij aby obejrzeć">
@@ -3474,10 +3414,10 @@ Zobacz zdjęcia.</p>
   ═══════════════════════════════════════════════════════════ -->
   <!-- VIDEOS:REELS:START -->
   <style>
+    /* ═══ SEKCJA REELS ═══ */
     .reels {
       position: relative;
-      min-height: 100vh;
-      padding: 80px 0 60px;
+      padding: 80px 0 64px;
       background: linear-gradient(180deg, #0F172A 0%, #1A1A2E 50%, #0F172A 100%);
       overflow: hidden;
       color: #fff;
@@ -3512,77 +3452,84 @@ Zobacz zdjęcia.</p>
       margin: 0 auto;
     }
 
-    /* Carousel z phone-mockupem w środku + side peek */
+    /* Stage z phone-mockupami (5 widocznych: aktywny + 2 z każdej strony) */
     .reels-stage {
       position: relative;
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 24px;
-      perspective: 1200px;
+      width: 100%;
+      height: 560px;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
+              mask-image: linear-gradient(to right, transparent 0, #000 12%, #000 88%, transparent 100%);
     }
-
     .reels-track {
+      position: absolute;
+      top: 50%;
+      left: 50%;
       display: flex;
+      gap: 24px;
       align-items: center;
-      gap: 18px;
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: translate(-50%, -50%);
+      transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1);
+      will-change: transform;
     }
 
-    /* Phone mockup */
     .reel-phone {
       flex-shrink: 0;
-      width: 320px;
-      aspect-ratio: 9/16;
-      max-height: 70vh;
-      border-radius: 36px;
+      width: 280px;
+      aspect-ratio: 9 / 16;
+      max-height: 500px;
+      border-radius: 32px;
       background: linear-gradient(135deg, #1A1A2E 0%, #0a0a14 100%);
-      padding: 10px;
+      padding: 8px;
       position: relative;
-      box-shadow:
-        0 24px 60px rgba(0, 0, 0, 0.5),
-        0 0 0 2px rgba(255, 255, 255, 0.08);
-      transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease, filter 0.4s ease;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1.5px rgba(255, 255, 255, 0.05);
+      transition: transform 0.6s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.5s ease, filter 0.5s ease, box-shadow 0.5s ease;
       cursor: pointer;
-      transform: scale(0.78);
-      opacity: 0.45;
-      filter: blur(2px) saturate(0.8);
+      border: none;
+      color: inherit;
+      transform: scale(0.5);
+      opacity: 0.25;
+      filter: blur(3px) saturate(0.7);
     }
-    .reel-phone.reel-phone--active {
+    .reel-phone--peek-far { transform: scale(0.5); opacity: 0.25; filter: blur(3px) saturate(0.7); }
+    .reel-phone--peek      { transform: scale(0.7); opacity: 0.6;  filter: blur(1px) saturate(0.85); }
+    .reel-phone--active    {
       transform: scale(1);
       opacity: 1;
       filter: none;
       box-shadow:
-        0 32px 80px rgba(0, 0, 0, 0.6),
+        0 32px 64px rgba(0, 0, 0, 0.55),
         0 0 0 2px var(--primary, #00A896),
-        0 0 60px rgba(0, 168, 150, 0.25);
+        0 0 60px rgba(0, 168, 150, 0.3);
+      z-index: 2;
     }
-    @media (max-width: 720px) {
-      .reel-phone { width: 240px; max-height: 65vh; transform: scale(0.7); }
-      .reel-phone.reel-phone--active { transform: scale(1); }
+    .reel-phone--active:hover {
+      box-shadow:
+        0 36px 72px rgba(0, 0, 0, 0.65),
+        0 0 0 2px var(--primary-light, #00C4AE),
+        0 0 80px rgba(0, 168, 150, 0.45);
     }
 
-    /* Phone notch decoration */
+    /* Phone notch (Dynamic Island) */
     .reel-phone::before {
       content: '';
       position: absolute;
-      top: 18px;
+      top: 14px;
       left: 50%;
       transform: translateX(-50%);
-      width: 90px;
-      height: 22px;
+      width: 78px;
+      height: 18px;
       background: #000;
-      border-radius: 14px;
+      border-radius: 12px;
       z-index: 3;
+      pointer-events: none;
     }
 
     .reel-phone-screen {
       position: relative;
       width: 100%;
       height: 100%;
-      border-radius: 28px;
+      border-radius: 24px;
       overflow: hidden;
       background: #000;
     }
@@ -3592,141 +3539,97 @@ Zobacz zdjęcia.</p>
       object-fit: cover;
       display: block;
     }
-    .reel-phone-placeholder {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background-size: 200% 200%;
-      animation: video-thumb-gradient 8s ease infinite;
-    }
-    .reel-phone-placeholder--instagram { background: linear-gradient(135deg, #833AB4 0%, #FD1D1D 50%, #FCB045 100%); }
-    .reel-phone-placeholder--tiktok { background: linear-gradient(135deg, #000000 0%, #25F4EE 50%, #FE2C55 100%); }
-    .reel-phone-placeholder svg { width: 80px; height: 80px; color: #fff; }
-    @keyframes video-thumb-gradient {
-      0%, 100% { background-position: 0% 50%; }
-      50%      { background-position: 100% 50%; }
-    }
-
-    .reel-phone-overlay {
+    .reel-phone-player {
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg,
-        rgba(0,0,0,0) 0%,
-        rgba(0,0,0,0) 50%,
-        rgba(0,0,0,0.5) 100%);
-      pointer-events: none;
+    }
+    .reel-phone-player iframe {
+      width: 100% !important;
+      height: 100% !important;
+      border: 0;
+      pointer-events: none; /* klik = sekcja decyduje (lightbox / setActive) */
     }
 
+    /* Play button overlay (znika gdy phone aktywnie odtwarza) */
     .reel-phone-play {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%) scale(1);
-      width: 72px;
-      height: 72px;
+      width: 60px;
+      height: 60px;
       border-radius: 50%;
       background: rgba(255, 255, 255, 0.95);
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-      transition: transform 0.3s ease, background 0.3s ease;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
       z-index: 2;
+      transition: opacity 0.3s ease, transform 0.3s ease;
     }
-    .reel-phone:hover .reel-phone-play {
+    .reel-phone-play svg {
+      width: 22px;
+      height: 22px;
+      color: var(--primary, #00A896);
+      margin-left: 3px;
+    }
+    .reel-phone--playing .reel-phone-play {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .reel-phone--active:hover .reel-phone-play {
       transform: translate(-50%, -50%) scale(1.1);
       background: var(--primary, #00A896);
     }
-    .reel-phone-play svg {
-      width: 28px;
-      height: 28px;
-      color: var(--primary, #00A896);
-      margin-left: 4px;
-      transition: color 0.3s ease;
-    }
-    .reel-phone:hover .reel-phone-play svg { color: #fff; }
+    .reel-phone--active:hover .reel-phone-play svg { color: #fff; }
 
-    .reel-phone-platform {
-      position: absolute;
-      top: 56px;
-      right: 14px;
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 2;
-    }
-    .reel-phone-platform svg { width: 18px; height: 18px; color: #fff; }
-    .reel-phone-platform--youtube { background: rgba(255, 0, 0, 0.95); }
-
-    /* Nav arrows na boku stage */
-    .reels-nav {
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 56px;
-      height: 56px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      color: #fff;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      line-height: 1;
-      backdrop-filter: blur(10px);
-      transition: background 0.2s ease, transform 0.2s ease;
-      z-index: 5;
-    }
-    .reels-nav:hover {
-      background: var(--primary, #00A896);
-      transform: translateY(-50%) scale(1.08);
-    }
-    .reels-nav--prev { left: 24px; }
-    .reels-nav--next { right: 24px; }
     @media (max-width: 720px) {
-      .reels-nav { width: 44px; height: 44px; font-size: 22px; }
-      .reels-nav--prev { left: 8px; }
-      .reels-nav--next { right: 8px; }
+      .reels { padding: 56px 0 48px; }
+      .reels-stage { height: 460px; }
+      .reels-track { gap: 16px; }
+      .reel-phone { width: 220px; max-height: 400px; border-radius: 28px; padding: 7px; }
+      .reel-phone::before { top: 11px; width: 64px; height: 15px; }
+      .reel-phone--peek { transform: scale(0.45); opacity: 0.35; filter: blur(2px); }
+      .reel-phone--peek-far { display: none; }
+      .reel-phone-play { width: 50px; height: 50px; }
+      .reel-phone-play svg { width: 18px; height: 18px; }
+    }
+    @media (max-width: 420px) {
+      .reels-stage { height: 420px; }
+      .reel-phone { width: 200px; max-height: 360px; }
     }
 
-    /* Pagination dots */
-    .reels-dots {
+    /* Progress bars (zamiast dots) — wizualizują postęp aktywnego video */
+    .reels-progress {
       display: flex;
-      justify-content: center;
-      gap: 8px;
-      margin: 32px 0 28px;
+      gap: 6px;
+      max-width: 360px;
+      margin: 32px auto 28px;
+      padding: 0 16px;
     }
-    .reels-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.25);
-      border: none;
+    .reels-progress-bar {
+      flex: 1;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.14);
+      border-radius: 2px;
       cursor: pointer;
-      transition: width 0.3s ease, background 0.3s ease;
+      overflow: hidden;
+      position: relative;
+      border: none;
       padding: 0;
     }
-    .reels-dot.reels-dot--active {
-      width: 28px;
-      border-radius: 4px;
+    .reels-progress-bar > span {
+      display: block;
+      height: 100%;
+      width: 0;
       background: var(--primary-light, #00C4AE);
+      border-radius: 2px;
+      transition: width 0.15s linear;
     }
+    .reels-progress-bar--filled > span { width: 100% !important; }
 
     /* CTA pod video */
-    .reels-cta-wrap {
-      text-align: center;
-      max-width: 480px;
-      margin: 0 auto;
-    }
+    .reels-cta-wrap { text-align: center; max-width: 480px; margin: 0 auto; }
     .reels-cta {
       display: inline-flex;
       align-items: center;
@@ -3738,7 +3641,7 @@ Zobacz zdjęcia.</p>
       font-size: 17px;
       font-weight: 700;
       text-decoration: none;
-      border-radius: var(--radius-md, 14px);
+      border-radius: 14px;
       box-shadow: 0 16px 40px rgba(0, 168, 150, 0.4);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
       animation: reels-cta-pulse 2.6s ease-in-out infinite;
@@ -3754,49 +3657,70 @@ Zobacz zdjęcia.</p>
       50%      { box-shadow: 0 16px 40px rgba(0, 168, 150, 0.4), 0 0 60px rgba(0, 168, 150, 0.5); }
     }
     @media (prefers-reduced-motion: reduce) { .reels-cta { animation: none; } }
-    .reels-cta-hint {
-      margin-top: 14px;
-      color: rgba(255, 255, 255, 0.55);
-      font-size: 13px;
-    }
+    .reels-cta-hint { margin-top: 14px; color: rgba(255, 255, 255, 0.55); font-size: 13px; }
 
-    /* ═══ FULL-SCREEN REELS LIGHTBOX (snap-scroll vertical) ═══ */
+    /* ═══ LIGHTBOX (full-screen, snap-scroll vertical, IG/TT-style) ═══ */
     .reels-lightbox {
       position: fixed;
       inset: 0;
-      background: #000;
+      background: radial-gradient(ellipse at center, #1a1a2e 0%, #000 100%);
       z-index: 10000;
       display: none;
       flex-direction: column;
+      overscroll-behavior: contain;
     }
     .reels-lightbox.show {
       display: flex;
-      animation: reels-lb-fade 0.25s ease;
+      animation: reels-lb-fade 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    @keyframes reels-lb-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes reels-lb-fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
 
     .reels-lb-close {
       position: absolute;
       top: 20px;
       right: 20px;
-      z-index: 3;
+      z-index: 10;
       width: 44px;
       height: 44px;
       border-radius: 50%;
-      background: rgba(255, 255, 255, 0.15);
+      background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
       color: #fff;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 20px;
-      backdrop-filter: blur(10px);
-      transition: background 0.2s ease;
+      font-size: 22px;
+      line-height: 1;
+      backdrop-filter: blur(12px);
+      transition: background 0.2s, transform 0.2s;
     }
-    .reels-lb-close:hover { background: rgba(255, 255, 255, 0.28); }
+    .reels-lb-close:hover {
+      background: rgba(255, 255, 255, 0.22);
+      transform: scale(1.06);
+    }
 
-    /* Snap scroll container */
+    .reels-lb-counter {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      color: #fff;
+      font-family: var(--font-body, system-ui);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px 16px;
+      border-radius: 999px;
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
     .reels-lb-scroll {
       flex: 1;
       overflow-y: auto;
@@ -3811,33 +3735,42 @@ Zobacz zdjęcia.</p>
     .reels-lb-slide {
       width: 100%;
       height: 100vh;
+      height: 100dvh;
       scroll-snap-align: start;
       scroll-snap-stop: always;
       display: flex;
       align-items: center;
       justify-content: center;
       position: relative;
-      padding: 0 16px;
+      padding: 24px 16px 110px;
+      box-sizing: border-box;
     }
 
     .reels-lb-frame {
       position: relative;
       width: 100%;
-      max-width: 420px;
-      aspect-ratio: 9/16;
-      max-height: 90vh;
+      max-width: 380px;
+      aspect-ratio: 9 / 16;
+      max-height: calc(100vh - 170px);
+      max-height: calc(100dvh - 170px);
       background: #000;
-      border-radius: 16px;
+      border-radius: 22px;
       overflow: hidden;
-      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+      box-shadow:
+        0 32px 80px rgba(0, 0, 0, 0.7),
+        0 0 0 1px rgba(255, 255, 255, 0.08),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     }
-    .reels-lb-iframe {
+    .reels-lb-player {
       position: absolute;
       inset: 0;
-      width: 100%;
-      height: 100%;
+    }
+    .reels-lb-player iframe {
+      width: 100% !important;
+      height: 100% !important;
       border: 0;
     }
+
     .reels-lb-link {
       position: absolute;
       inset: 0;
@@ -3849,9 +3782,11 @@ Zobacz zdjęcia.</p>
       text-decoration: none;
       color: #fff;
       font-family: var(--font-heading, system-ui);
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
     }
     .reels-lb-link-icon {
-      width: 80px; height: 80px;
+      width: 80px;
+      height: 80px;
       border-radius: 24px;
       display: flex;
       align-items: center;
@@ -3861,9 +3796,9 @@ Zobacz zdjęcia.</p>
     .reels-lb-link-icon--tiktok { background: linear-gradient(135deg, #000, #25F4EE, #FE2C55); }
     .reels-lb-link-icon svg { width: 40px; height: 40px; color: #fff; }
     .reels-lb-link-label { font-size: 18px; font-weight: 700; }
-    .reels-lb-link-sub { font-size: 13px; color: rgba(255,255,255,0.6); }
+    .reels-lb-link-sub { font-size: 13px; color: rgba(255, 255, 255, 0.6); }
 
-    /* Slide info — counter + CTA na samym dole każdego slajdu */
+    /* Sticky CTA na dole każdego slajdu */
     .reels-lb-slide-cta {
       position: absolute;
       bottom: 28px;
@@ -3872,7 +3807,7 @@ Zobacz zdjęcia.</p>
       display: inline-flex;
       align-items: center;
       gap: 10px;
-      padding: 14px 28px;
+      padding: 16px 32px;
       background: linear-gradient(135deg, var(--primary, #00A896) 0%, var(--secondary, #F77F00) 100%);
       color: #fff;
       font-family: var(--font-heading, system-ui);
@@ -3880,48 +3815,40 @@ Zobacz zdjęcia.</p>
       font-size: 14px;
       text-decoration: none;
       border-radius: 999px;
-      box-shadow: 0 12px 32px rgba(0, 168, 150, 0.45);
+      box-shadow: 0 16px 40px rgba(0, 168, 150, 0.5);
       z-index: 4;
       white-space: nowrap;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
     .reels-lb-slide-cta:hover {
-      transform: translateX(-50%) translateY(-2px);
-      box-shadow: 0 16px 40px rgba(0, 168, 150, 0.6);
+      transform: translateX(-50%) translateY(-2px) scale(1.02);
+      box-shadow: 0 20px 48px rgba(0, 168, 150, 0.65);
     }
     .reels-lb-slide-cta svg { width: 16px; height: 16px; }
 
-    .reels-lb-counter {
-      position: absolute;
-      top: 24px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 3;
-      color: rgba(255, 255, 255, 0.7);
-      font-family: var(--font-body, system-ui);
-      font-size: 12px;
-      letter-spacing: 0.04em;
-      background: rgba(0, 0, 0, 0.4);
-      padding: 6px 14px;
-      border-radius: 999px;
-      backdrop-filter: blur(8px);
-    }
-
     .reels-lb-hint {
       position: absolute;
-      bottom: 12px;
+      bottom: 8px;
       left: 50%;
       transform: translateX(-50%);
-      z-index: 3;
-      color: rgba(255, 255, 255, 0.4);
+      z-index: 5;
+      color: rgba(255, 255, 255, 0.35);
       font-family: var(--font-body, system-ui);
-      font-size: 11px;
-      letter-spacing: 0.06em;
-      pointer-events: none;
+      font-size: 10px;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
+      pointer-events: none;
     }
     @media (max-width: 720px) {
       .reels-lb-hint { display: none; }
+      .reels-lb-frame {
+        max-height: calc(100vh - 150px);
+        max-height: calc(100dvh - 150px);
+        border-radius: 18px;
+      }
+      .reels-lb-slide-cta { padding: 14px 24px; font-size: 13px; bottom: 20px; }
+      .reels-lb-counter { top: 16px; font-size: 11px; padding: 6px 12px; }
+      .reels-lb-close { top: 16px; right: 16px; width: 40px; height: 40px; font-size: 20px; }
     }
   </style>
 
@@ -3935,68 +3862,42 @@ Zobacz zdjęcia.</p>
         </p>
       </div>
 
-      <div class="reels-stage">
-        <button type="button" class="reels-nav reels-nav--prev" aria-label="Poprzedni reel">&lsaquo;</button>
+      <div class="reels-stage" id="reelsStage">
         <div class="reels-track" id="reelsTrack">
           <!-- VIDEOS:REELS-TRACK:START -->
-          <button type="button" class="reel-phone reel-phone--active" data-video-idx="0" data-platform="youtube" data-yt-id="iwuuqeyxqEs" aria-label="Otwórz reel 1">
+          <button type="button" class="reel-phone" data-video-idx="0" data-platform="youtube" data-yt-id="iwuuqeyxqEs" aria-label="Reel 1">
             <div class="reel-phone-screen">
               <img class="reel-phone-thumb" src="https://img.youtube.com/vi/iwuuqeyxqEs/hqdefault.jpg" alt="Reel 1" referrerpolicy="no-referrer">
-              <span class="reel-phone-overlay" aria-hidden="true"></span>
-              <span class="reel-phone-platform reel-phone-platform--youtube" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </span>
-              <span class="reel-phone-play" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-              </span>
+              <span class="reel-phone-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
             </div>
           </button>
-          <button type="button" class="reel-phone" data-video-idx="1" data-platform="youtube" data-yt-id="9NMk97deMuo" aria-label="Otwórz reel 2">
+          <button type="button" class="reel-phone" data-video-idx="1" data-platform="youtube" data-yt-id="9NMk97deMuo" aria-label="Reel 2">
             <div class="reel-phone-screen">
               <img class="reel-phone-thumb" src="https://img.youtube.com/vi/9NMk97deMuo/hqdefault.jpg" alt="Reel 2" referrerpolicy="no-referrer">
-              <span class="reel-phone-overlay" aria-hidden="true"></span>
-              <span class="reel-phone-platform reel-phone-platform--youtube" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </span>
-              <span class="reel-phone-play" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-              </span>
+              <span class="reel-phone-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
             </div>
           </button>
-          <button type="button" class="reel-phone" data-video-idx="2" data-platform="youtube" data-yt-id="o_3hwy9CwIA" aria-label="Otwórz reel 3">
+          <button type="button" class="reel-phone" data-video-idx="2" data-platform="youtube" data-yt-id="o_3hwy9CwIA" aria-label="Reel 3">
             <div class="reel-phone-screen">
               <img class="reel-phone-thumb" src="https://img.youtube.com/vi/o_3hwy9CwIA/hqdefault.jpg" alt="Reel 3" referrerpolicy="no-referrer">
-              <span class="reel-phone-overlay" aria-hidden="true"></span>
-              <span class="reel-phone-platform reel-phone-platform--youtube" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </span>
-              <span class="reel-phone-play" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-              </span>
+              <span class="reel-phone-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
             </div>
           </button>
-          <button type="button" class="reel-phone" data-video-idx="3" data-platform="youtube" data-yt-id="eldOiZegtJo" aria-label="Otwórz reel 4">
+          <button type="button" class="reel-phone" data-video-idx="3" data-platform="youtube" data-yt-id="eldOiZegtJo" aria-label="Reel 4">
             <div class="reel-phone-screen">
               <img class="reel-phone-thumb" src="https://img.youtube.com/vi/eldOiZegtJo/hqdefault.jpg" alt="Reel 4" referrerpolicy="no-referrer">
-              <span class="reel-phone-overlay" aria-hidden="true"></span>
-              <span class="reel-phone-platform reel-phone-platform--youtube" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-              </span>
-              <span class="reel-phone-play" aria-hidden="true">
-                <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-              </span>
+              <span class="reel-phone-play"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg></span>
             </div>
           </button>
           <!-- VIDEOS:REELS-TRACK:END -->
         </div>
-        <button type="button" class="reels-nav reels-nav--next" aria-label="Następny reel">&rsaquo;</button>
       </div>
 
-      <div class="reels-dots" id="reelsDots">
-        <button type="button" class="reels-dot reels-dot--active" data-dot-idx="0" aria-label="Reel 1"></button>
-        <button type="button" class="reels-dot" data-dot-idx="1" aria-label="Reel 2"></button>
-        <button type="button" class="reels-dot" data-dot-idx="2" aria-label="Reel 3"></button>
-        <button type="button" class="reels-dot" data-dot-idx="3" aria-label="Reel 4"></button>
+      <div class="reels-progress" id="reelsProgress">
+        <button type="button" class="reels-progress-bar" data-progress-idx="0" aria-label="Reel 1"><span></span></button>
+        <button type="button" class="reels-progress-bar" data-progress-idx="1" aria-label="Reel 2"><span></span></button>
+        <button type="button" class="reels-progress-bar" data-progress-idx="2" aria-label="Reel 3"><span></span></button>
+        <button type="button" class="reels-progress-bar" data-progress-idx="3" aria-label="Reel 4"><span></span></button>
       </div>
 
       <div class="reels-cta-wrap">
@@ -4009,207 +3910,440 @@ Zobacz zdjęcia.</p>
     </div>
   </section>
 
-  <!-- Full-screen Reels Lightbox -->
-  <div id="reelsLightbox" class="reels-lightbox" role="dialog" aria-modal="true" aria-label="Galeria reels">
+  <!-- Lightbox (zewnętrzny, żeby był poza document flow sekcji) -->
+  <div id="reelsLightbox" class="reels-lightbox" role="dialog" aria-modal="true" aria-label="Galeria Reels">
     <button type="button" class="reels-lb-close" aria-label="Zamknij">&times;</button>
     <div class="reels-lb-counter" id="reelsLbCounter">1 / 4</div>
-    <div class="reels-lb-scroll" id="reelsLbScroll">
-      <!-- Slidy generowane przez JS -->
-    </div>
-    <div class="reels-lb-hint">↑ ↓ przewijaj • ESC zamyka</div>
+    <div class="reels-lb-scroll" id="reelsLbScroll"></div>
+    <div class="reels-lb-hint">↑↓ przewijaj • ESC zamyka</div>
   </div>
 
   <script>
     (function initReels() {
-      // Lista video — synced z DOM `.reel-phone[data-yt-id|platform]`
-      const phones = Array.from(document.querySelectorAll('.reel-phone[data-video-idx]'));
+      const section = document.querySelector('.reels');
+      if (!section) return;
+
+      const phones = Array.from(document.querySelectorAll('.reel-phone[data-yt-id]'));
       if (phones.length === 0) return;
-
-      const videos = phones.map(p => ({
-        idx: parseInt(p.dataset.videoIdx, 10),
-        platform: p.dataset.platform || 'youtube',
-        ytId: p.dataset.ytId || '',
-        url: p.dataset.url || '',
-        thumb: p.querySelector('.reel-phone-thumb')?.src || ''
-      }));
-
       const track = document.getElementById('reelsTrack');
-      const dots = Array.from(document.querySelectorAll('.reels-dot'));
-      const navPrev = document.querySelector('.reels-nav--prev');
-      const navNext = document.querySelector('.reels-nav--next');
+      const progressBars = Array.from(document.querySelectorAll('.reels-progress-bar'));
+      const CTA_URL = 'https://parova.pl/checkout?products=103037039-321197585';
 
       let activeIdx = 0;
+      let sectionPlayer = null;
+      let progressRaf = null;
+      let progressStart = 0;
+      let progressDuration = 0;
+      let ytApiReady = false;
+      let ytApiLoading = false;
+      let ytApiCallbacks = [];
+      let autoplayStarted = false;
+      let autoplayPaused = false;
 
-      // ═══ Carousel (sekcja Reels) ═══
-      function setActive(i) {
-        activeIdx = ((i % videos.length) + videos.length) % videos.length;
-        phones.forEach((p, idx) => p.classList.toggle('reel-phone--active', idx === activeIdx));
-        dots.forEach((d, idx) => d.classList.toggle('reels-dot--active', idx === activeIdx));
+      // ═══ Carousel: klasy + recenter ═══
+      function applyClasses() {
+        const n = phones.length;
+        phones.forEach((p, idx) => {
+          let offset = idx - activeIdx;
+          if (offset > n / 2) offset -= n;
+          else if (offset < -n / 2) offset += n;
+          const abs = Math.abs(offset);
+          p.classList.remove('reel-phone--active', 'reel-phone--peek', 'reel-phone--peek-far');
+          if (abs === 0) p.classList.add('reel-phone--active');
+          else if (abs === 1) p.classList.add('reel-phone--peek');
+          else p.classList.add('reel-phone--peek-far');
+        });
+      }
 
-        // Center active phone via translateX on track
-        const stage = track.parentElement;
+      function recenterTrack() {
         const phone = phones[activeIdx];
-        if (phone && stage) {
-          const stageRect = stage.getBoundingClientRect();
-          const phoneRect = phone.getBoundingClientRect();
-          const trackRect = track.getBoundingClientRect();
-          // current center of phone relative to track (before transform)
-          const currentTransform = parseFloat(track.style.transform.replace(/[^\-\d.]/g, '')) || 0;
-          const phoneCenter = phoneRect.left + phoneRect.width/2 - trackRect.left + currentTransform;
-          const targetCenter = stageRect.width / 2;
-          const newTransform = targetCenter - phoneCenter;
-          track.style.transform = 'translateX(' + newTransform + 'px)';
+        if (!phone || !track) return;
+        // offsetLeft/offsetWidth ignoruje transformy → pozwala policzyć natural center
+        const trackWidth = track.offsetWidth;
+        const phoneCenter = phone.offsetLeft + phone.offsetWidth / 2;
+        const delta = (trackWidth / 2) - phoneCenter;
+        track.style.transform = 'translate(calc(-50% + ' + delta + 'px), -50%)';
+      }
+
+      function setActive(i, doRecenter) {
+        if (typeof doRecenter !== 'boolean') doRecenter = true;
+        activeIdx = ((i % phones.length) + phones.length) % phones.length;
+        applyClasses();
+        updateProgressBars();
+        if (doRecenter) {
+          requestAnimationFrame(() => recenterTrack());
         }
       }
 
-      navPrev.addEventListener('click', () => setActive(activeIdx - 1));
-      navNext.addEventListener('click', () => setActive(activeIdx + 1));
-      dots.forEach((d, i) => d.addEventListener('click', () => setActive(i)));
-
-      // Klik na phone — jeśli nieaktywny, zostaje aktywnym; jeśli aktywny, otwiera lightbox
-      phones.forEach((p, i) => {
-        p.addEventListener('click', (e) => {
-          if (i !== activeIdx) {
-            setActive(i);
+      function updateProgressBars(activePct) {
+        progressBars.forEach((b, idx) => {
+          const span = b.querySelector('span');
+          b.classList.remove('reels-progress-bar--filled');
+          if (!span) return;
+          if (idx < activeIdx) {
+            b.classList.add('reels-progress-bar--filled');
+          } else if (idx > activeIdx) {
+            span.style.width = '0';
+          } else if (typeof activePct === 'number') {
+            span.style.width = activePct + '%';
           } else {
+            span.style.width = '0';
+          }
+        });
+      }
+
+      // ═══ Progress timer dla aktywnego video ═══
+      function startProgress(durationMs) {
+        stopProgress();
+        progressStart = Date.now();
+        progressDuration = durationMs;
+        const span = progressBars[activeIdx] && progressBars[activeIdx].querySelector('span');
+        if (!span) return;
+        span.style.width = '0';
+        function tick() {
+          const elapsed = Date.now() - progressStart;
+          const pct = Math.min(100, (elapsed / progressDuration) * 100);
+          span.style.width = pct + '%';
+          if (pct < 100 && progressRaf !== null) {
+            progressRaf = requestAnimationFrame(tick);
+          }
+        }
+        progressRaf = requestAnimationFrame(tick);
+      }
+      function stopProgress() {
+        if (progressRaf !== null) {
+          cancelAnimationFrame(progressRaf);
+          progressRaf = null;
+        }
+      }
+
+      // ═══ YouTube iframe API loader ═══
+      function ensureYtApi(callback) {
+        if (window.YT && window.YT.Player && ytApiReady) { callback(); return; }
+        ytApiCallbacks.push(callback);
+        if (ytApiLoading) return;
+        ytApiLoading = true;
+        const tag = document.createElement('script');
+        tag.src = 'https://www.youtube.com/iframe_api';
+        document.head.appendChild(tag);
+        const prev = window.onYouTubeIframeAPIReady;
+        window.onYouTubeIframeAPIReady = function() {
+          ytApiReady = true;
+          ytApiCallbacks.forEach(function(cb){ try { cb(); } catch(e) { console.error(e); } });
+          ytApiCallbacks = [];
+          if (typeof prev === 'function') { try { prev(); } catch(e) {} }
+        };
+      }
+
+      // ═══ Section autoplay ═══
+      function destroySectionPlayer() {
+        if (sectionPlayer) {
+          try { sectionPlayer.destroy(); } catch (_) {}
+          sectionPlayer = null;
+        }
+        phones.forEach(function(p) {
+          const screen = p.querySelector('.reel-phone-screen');
+          const playerDiv = screen && screen.querySelector('.reel-phone-player');
+          if (playerDiv) playerDiv.remove();
+          p.classList.remove('reel-phone--playing');
+        });
+        stopProgress();
+      }
+
+      function playActiveInSection() {
+        if (autoplayPaused) return;
+        destroySectionPlayer();
+        const phone = phones[activeIdx];
+        const ytId = phone && phone.dataset.ytId;
+        if (!ytId) return;
+        const screen = phone.querySelector('.reel-phone-screen');
+        if (!screen) return;
+
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'reel-phone-player';
+        const playerId = 'reel-player-' + Date.now() + '-' + activeIdx;
+        playerDiv.id = playerId;
+        screen.appendChild(playerDiv);
+
+        try {
+          sectionPlayer = new YT.Player(playerId, {
+            videoId: ytId,
+            playerVars: {
+              autoplay: 1,
+              mute: 1,
+              controls: 0,
+              rel: 0,
+              modestbranding: 1,
+              playsinline: 1,
+              loop: 0,
+              iv_load_policy: 3,
+              fs: 0,
+              disablekb: 1
+            },
+            events: {
+              onReady: function(e) {
+                try {
+                  e.target.mute();
+                  e.target.playVideo();
+                  phone.classList.add('reel-phone--playing');
+                  const dur = e.target.getDuration() * 1000;
+                  if (dur > 0) startProgress(dur);
+                } catch (err) { console.error(err); }
+              },
+              onStateChange: function(e) {
+                if (e.data === YT.PlayerState.ENDED) {
+                  stopProgress();
+                  updateProgressBars(100);
+                  setTimeout(advanceToNext, 350);
+                } else if (e.data === YT.PlayerState.PLAYING) {
+                  phone.classList.add('reel-phone--playing');
+                  if (!progressRaf) {
+                    const dur = e.target.getDuration() * 1000;
+                    if (dur > 0) startProgress(dur);
+                  }
+                }
+              },
+              onError: function() {
+                setTimeout(advanceToNext, 600);
+              }
+            }
+          });
+        } catch (e) { console.error(e); }
+      }
+
+      function advanceToNext() {
+        setActive(activeIdx + 1);
+        setTimeout(playActiveInSection, 700);
+      }
+
+      // ═══ Click handlery: phone + progress ═══
+      phones.forEach(function(p, i) {
+        p.addEventListener('click', function() {
+          if (i === activeIdx) {
             openLightbox(i);
+          } else {
+            setActive(i);
+            if (autoplayStarted && !autoplayPaused) {
+              setTimeout(playActiveInSection, 700);
+            }
           }
         });
       });
 
-      // Recenter on resize
-      let resizeTimer;
-      window.addEventListener('resize', () => {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(() => setActive(activeIdx), 150);
+      progressBars.forEach(function(b, i) {
+        b.addEventListener('click', function() {
+          setActive(i);
+          if (autoplayStarted && !autoplayPaused) {
+            setTimeout(playActiveInSection, 700);
+          }
+        });
       });
 
-      // Initial center after layout settles
-      setTimeout(() => setActive(0), 50);
+      // ═══ IntersectionObserver: start autoplay przy 80% viewport, pause poza ═══
+      const obs = new IntersectionObserver(function(entries) {
+        entries.forEach(function(e) {
+          if (e.isIntersecting && e.intersectionRatio >= 0.8 && !autoplayStarted) {
+            autoplayStarted = true;
+            ensureYtApi(playActiveInSection);
+          }
+          if (autoplayStarted) {
+            if (e.intersectionRatio < 0.15 && !autoplayPaused) {
+              autoplayPaused = true;
+              if (sectionPlayer) try { sectionPlayer.pauseVideo(); } catch (_) {}
+              stopProgress();
+            } else if (e.intersectionRatio >= 0.5 && autoplayPaused) {
+              autoplayPaused = false;
+              if (sectionPlayer) try { sectionPlayer.playVideo(); } catch (_) {}
+            }
+          }
+        });
+      }, { threshold: [0, 0.15, 0.5, 0.8, 1] });
+      obs.observe(section);
 
-      // ═══ Stories tray click → lightbox ═══
-      document.querySelectorAll('.story-ring[data-video-idx]').forEach(ring => {
-        ring.addEventListener('click', () => {
-          const i = parseInt(ring.dataset.videoIdx, 10) || 0;
+      // Recenter on resize
+      let resizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(recenterTrack, 200);
+      });
+
+      // Init
+      requestAnimationFrame(function() {
+        applyClasses();
+        setTimeout(recenterTrack, 50);
+      });
+
+      // ═══ Stories click → lightbox ═══
+      document.querySelectorAll('.story-ring[data-video-idx]').forEach(function(ring) {
+        ring.addEventListener('click', function() {
           ring.classList.add('story-ring--seen');
+          const i = parseInt(ring.dataset.videoIdx, 10) || 0;
           openLightbox(i);
         });
       });
 
-      // ═══ Full-screen Lightbox z snap-scroll ═══
+      // ═══ LIGHTBOX ═══
       const lb = document.getElementById('reelsLightbox');
       const lbScroll = document.getElementById('reelsLbScroll');
       const lbClose = lb.querySelector('.reels-lb-close');
       const lbCounter = document.getElementById('reelsLbCounter');
       let lbBuilt = false;
-      const CTA_URL = 'https://parova.pl/checkout?products=103037039-321197585';
+      const lbPlayers = {};
+      let lbCurrentIdx = 0;
 
       function buildLightbox() {
         if (lbBuilt) return;
-        const slides = videos.map((v, i) => {
-          let frameContent = '';
-          if (v.platform === 'youtube' && v.ytId) {
-            frameContent = '<iframe class="reels-lb-iframe" data-slide-idx="' + i + '" data-yt-id="' + v.ytId + '" src="" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>';
+        lbScroll.innerHTML = phones.map(function(p, i) {
+          const ytId = p.dataset.ytId;
+          const platform = p.dataset.platform || 'youtube';
+          const url = p.dataset.url || '#';
+          let frame = '';
+          if (platform === 'youtube' && ytId) {
+            frame = '<div class="reels-lb-player" data-yt-id="' + ytId + '" id="reels-lb-player-' + i + '"></div>';
           } else {
-            // IG/TT — link do platformy
-            const iconCls = 'reels-lb-link-icon--' + v.platform;
-            const platformLabel = v.platform === 'instagram' ? 'Otwórz na Instagram' : 'Otwórz na TikTok';
-            frameContent = '<a class="reels-lb-link" href="' + (v.url || '#') + '" target="_blank" rel="noopener">' +
-              '<span class="reels-lb-link-icon ' + iconCls + '"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12m-10 0a10 10 0 1 0 20 0 10 10 0 1 0 -20 0"/></svg></span>' +
-              '<span class="reels-lb-link-label">' + platformLabel + '</span>' +
+            const iconCls = 'reels-lb-link-icon--' + platform;
+            const label = platform === 'instagram' ? 'Otwórz na Instagram' : (platform === 'tiktok' ? 'Otwórz na TikTok' : 'Otwórz video');
+            frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
+              '<span class="reels-lb-link-icon ' + iconCls + '"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
+              '<span class="reels-lb-link-label">' + label + '</span>' +
               '<span class="reels-lb-link-sub">Otworzy się w nowej karcie</span>' +
               '</a>';
           }
           return '<div class="reels-lb-slide" data-slide-idx="' + i + '">' +
-            '<div class="reels-lb-frame">' + frameContent + '</div>' +
+            '<div class="reels-lb-frame">' + frame + '</div>' +
             '<a class="reels-lb-slide-cta" href="' + CTA_URL + '">' +
             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>' +
-            'Dodaj do koszyka' +
+            '<span>Dodaj do koszyka</span>' +
             '</a>' +
             '</div>';
         }).join('');
-        lbScroll.innerHTML = slides;
         lbBuilt = true;
       }
 
+      function ensureLbPlayer(idx, autoplay) {
+        if (idx < 0 || idx >= phones.length) return;
+        if (lbPlayers[idx]) {
+          if (autoplay) playLbPlayer(idx);
+          return;
+        }
+        const phone = phones[idx];
+        if (!phone || !phone.dataset.ytId) return;
+        ensureYtApi(function() {
+          if (lbPlayers[idx]) {
+            if (autoplay) playLbPlayer(idx);
+            return;
+          }
+          const playerEl = document.getElementById('reels-lb-player-' + idx);
+          if (!playerEl) return;
+          try {
+            lbPlayers[idx] = new YT.Player('reels-lb-player-' + idx, {
+              videoId: phone.dataset.ytId,
+              playerVars: {
+                autoplay: autoplay ? 1 : 0,
+                mute: 1,
+                controls: 1,
+                rel: 0,
+                modestbranding: 1,
+                playsinline: 1,
+                iv_load_policy: 3
+              }
+            });
+          } catch (e) { console.error(e); }
+        });
+      }
+
+      function pauseLbPlayer(idx) {
+        const p = lbPlayers[idx];
+        if (p && typeof p.pauseVideo === 'function') {
+          try { p.pauseVideo(); } catch (_) {}
+        }
+      }
+      function playLbPlayer(idx) {
+        const p = lbPlayers[idx];
+        if (p && typeof p.playVideo === 'function') {
+          try { p.playVideo(); } catch (_) {}
+        }
+      }
+
       function openLightbox(startIdx) {
+        // Pauza sekcji
+        autoplayPaused = true;
+        if (sectionPlayer) { try { sectionPlayer.pauseVideo(); } catch (_) {} }
+        stopProgress();
+
         buildLightbox();
         lb.classList.add('show');
         document.body.style.overflow = 'hidden';
-        // Najpierw load iframe dla startIdx (i sąsiadów), potem scroll
-        loadSlideIframe(startIdx);
-        loadSlideIframe(startIdx + 1);
-        loadSlideIframe(startIdx - 1);
-        // Scroll do startIdx (bez animacji)
-        const targetSlide = lbScroll.querySelector('.reels-lb-slide[data-slide-idx="' + startIdx + '"]');
-        if (targetSlide) {
-          requestAnimationFrame(() => {
-            lbScroll.style.scrollBehavior = 'auto';
-            targetSlide.scrollIntoView({ block: 'start' });
-            requestAnimationFrame(() => { lbScroll.style.scrollBehavior = 'smooth'; });
-          });
+
+        lbCurrentIdx = startIdx;
+        updateLbCounter(startIdx);
+
+        // Scroll do startIdx (bezpośrednio scrollTop — niezawodne na mobile Safari)
+        lbScroll.style.scrollBehavior = 'auto';
+        const slideHeight = lbScroll.clientHeight;
+        if (slideHeight > 0) {
+          lbScroll.scrollTop = startIdx * slideHeight;
         }
-        updateCounter(startIdx);
+        requestAnimationFrame(function() {
+          lbScroll.style.scrollBehavior = 'smooth';
+        });
+
+        ensureLbPlayer(startIdx, true);
+        ensureLbPlayer(startIdx + 1, false);
+        ensureLbPlayer(startIdx - 1, false);
       }
 
       function closeLightbox() {
         lb.classList.remove('show');
         document.body.style.overflow = '';
-        // Zatrzymaj wszystkie iframe (clear src)
-        lbScroll.querySelectorAll('.reels-lb-iframe').forEach(f => { f.src = ''; });
-      }
-
-      function loadSlideIframe(idx) {
-        if (idx < 0 || idx >= videos.length) return;
-        const slide = lbScroll.querySelector('.reels-lb-slide[data-slide-idx="' + idx + '"]');
-        if (!slide) return;
-        const iframe = slide.querySelector('.reels-lb-iframe');
-        if (!iframe || iframe.src) return;
-        const ytId = iframe.dataset.ytId;
-        if (!ytId) return;
-        // YT Shorts embed format — pierwszy slajd autoplay, pozostałe load on demand
-        iframe.src = 'https://www.youtube.com/embed/' + ytId + '?autoplay=1&mute=1&rel=0&modestbranding=1&playsinline=1&loop=1&playlist=' + ytId;
-      }
-
-      function pauseSlideIframe(idx) {
-        if (idx < 0 || idx >= videos.length) return;
-        const slide = lbScroll.querySelector('.reels-lb-slide[data-slide-idx="' + idx + '"]');
-        if (!slide) return;
-        const iframe = slide.querySelector('.reels-lb-iframe');
-        if (!iframe || !iframe.src) return;
-        // Reload bez autoplay = pause efektywnie
-        iframe.src = '';
-      }
-
-      function updateCounter(idx) {
-        if (lbCounter) lbCounter.textContent = (idx + 1) + ' / ' + videos.length;
-      }
-
-      // Detect aktywny slide po scrollu
-      let lastActiveSlide = -1;
-      lbScroll && lbScroll.addEventListener('scroll', () => {
-        const slides = Array.from(lbScroll.querySelectorAll('.reels-lb-slide'));
-        const scrollTop = lbScroll.scrollTop;
-        const slideHeight = lbScroll.clientHeight;
-        const currentIdx = Math.round(scrollTop / slideHeight);
-        if (currentIdx !== lastActiveSlide && currentIdx >= 0 && currentIdx < slides.length) {
-          // Pause poprzedni (oprócz ±1 sąsiada — keep loaded)
-          if (lastActiveSlide >= 0 && Math.abs(lastActiveSlide - currentIdx) > 1) {
-            pauseSlideIframe(lastActiveSlide);
+        Object.keys(lbPlayers).forEach(function(idx) { pauseLbPlayer(idx); });
+        autoplayPaused = false;
+        // Wznów autoplay sekcji jeśli widoczna
+        setTimeout(function() {
+          if (autoplayStarted) {
+            const r = section.getBoundingClientRect();
+            if (r.top < window.innerHeight && r.bottom > 0) {
+              playActiveInSection();
+            }
           }
-          // Play current + load sąsiadów
-          loadSlideIframe(currentIdx);
-          loadSlideIframe(currentIdx + 1);
-          loadSlideIframe(currentIdx - 1);
-          updateCounter(currentIdx);
-          lastActiveSlide = currentIdx;
+        }, 300);
+      }
+
+      function updateLbCounter(idx) {
+        if (lbCounter) lbCounter.textContent = (idx + 1) + ' / ' + phones.length;
+      }
+
+      // Scroll detection w lightbox (snap-aware)
+      lbScroll.addEventListener('scroll', function() {
+        const slideHeight = lbScroll.clientHeight;
+        if (slideHeight === 0) return;
+        const newIdx = Math.round(lbScroll.scrollTop / slideHeight);
+        if (newIdx !== lbCurrentIdx && newIdx >= 0 && newIdx < phones.length) {
+          pauseLbPlayer(lbCurrentIdx);
+          lbCurrentIdx = newIdx;
+          ensureLbPlayer(newIdx, true);
+          ensureLbPlayer(newIdx + 1, false);
+          ensureLbPlayer(newIdx - 1, false);
+          updateLbCounter(newIdx);
         }
       }, { passive: true });
 
       lbClose.addEventListener('click', closeLightbox);
-      document.addEventListener('keydown', (e) => {
+      lb.addEventListener('click', function(e) {
+        if (e.target === lb) closeLightbox();
+      });
+      document.addEventListener('keydown', function(e) {
         if (!lb.classList.contains('show')) return;
         if (e.key === 'Escape') closeLightbox();
+        else if (e.key === 'ArrowDown' || e.key === 'PageDown') {
+          e.preventDefault();
+          const nextIdx = Math.min(phones.length - 1, lbCurrentIdx + 1);
+          lbScroll.scrollTo({ top: nextIdx * lbScroll.clientHeight, behavior: 'smooth' });
+        } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+          e.preventDefault();
+          const prevIdx = Math.max(0, lbCurrentIdx - 1);
+          lbScroll.scrollTo({ top: prevIdx * lbScroll.clientHeight, behavior: 'smooth' });
+        }
       });
     })();
   </script>
