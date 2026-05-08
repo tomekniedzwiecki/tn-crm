@@ -1370,10 +1370,11 @@
             // Etap 5: Optymalizacja (4 kroki) — priorytet: nowsze kroki nadpisuja core
             const opt = w.optimization_stage;
             const hasVideos = (w.video_stage?.video_links || []).length > 0;
-            // Krok 4 — Narzedzia (gdy Reels juz przekazane)
-            if (opt?.videos_shared_at && !opt?.tools_ready_at) return 'narzedzia';
-            // Krok 3 — Video (gdy COD wlaczony + sa nagrania, niezaleznie od Opinii)
-            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) return 'video';
+            const videoSkipped = !!w.video_stage?.skipped;
+            // Krok 4 — Narzedzia (gdy Reels przekazane LUB video pominiete) — spojne z workflow.html toolsUnlocked
+            if ((opt?.videos_shared_at || videoSkipped) && !opt?.tools_ready_at) return 'narzedzia';
+            // Krok 3 — Video (gdy COD wlaczony + sa nagrania + nie pominiete)
+            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at && !videoSkipped) return 'video';
             // Krok 2 — Opinie (gdy COD wlaczony)
             if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
             // Krok 1 — Optymalizacje core (fallback gdy zadne z wyzszych nie aktywne)
