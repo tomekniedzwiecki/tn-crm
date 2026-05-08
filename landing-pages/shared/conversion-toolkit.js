@@ -1507,7 +1507,7 @@
       if (cfg.workflowId) {
         try {
           const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
-          const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl4bWF2d2t3bmZ1cGhqcWJlbHdzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3NjQyNTUsImV4cCI6MjA4NDM0MDI1NX0.XeR0Fc7OFn6YbNJrOKTBEj36JtmLISZTM87y4ai9340';
+          const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
           const url = `${SUPABASE_URL}/rest/v1/workflow_optimization?workflow_id=eq.${cfg.workflowId}&select=is_active,whatsapp_enabled,whatsapp_phone`;
           const res = await fetch(url, {
             headers: {
