@@ -1006,6 +1006,607 @@
       .roi-row.highlight .value { font-size: 20px; }
       .trust-bar-inner { grid-template-columns: 1fr; }
     }
+  <style data-template="reviews-css">
+  /* ═══ OPINIE — sekcja XL ═══ */
+  .reviews-xl {
+    padding: var(--section-padding, 100px) 0;
+    background: linear-gradient(180deg,
+      var(--bg-cream, var(--bg-light, #F8FAFC)) 0%,
+      var(--bg-white, #FFFFFF) 50%,
+      var(--primary-soft, rgba(0,0,0,0.03)) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .reviews-xl::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, var(--primary-soft, rgba(0,0,0,0.05)) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .reviews-xl::after {
+    content: '';
+    position: absolute;
+    bottom: -120px; left: -120px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, var(--secondary-soft, rgba(0,0,0,0.04)) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .reviews-xl .container { position: relative; z-index: 1; }
+  .reviews-xl .reviews-header {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 56px;
+  }
+
+  /* Masonry grid */
+  .reviews-grid-xl {
+    column-count: 1;
+    column-gap: 24px;
+  }
+  @media (min-width: 720px)  { .reviews-grid-xl { column-count: 2; } }
+  @media (min-width: 1080px) { .reviews-grid-xl { column-count: 3; } }
+  @media (min-width: 1440px) { .reviews-grid-xl { column-count: 4; } }
+
+  /* Karta opinii (zdjęcia hero, tekst, autor+gwiazdki w stopce) */
+  .review-card {
+    break-inside: avoid;
+    background: var(--bg-white, #FFFFFF);
+    border: 1px solid var(--border-light, rgba(0,0,0,0.06));
+    border-radius: var(--radius-lg, 22px);
+    overflow: hidden;
+    margin-bottom: 24px;
+    display: inline-block;
+    width: 100%;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  }
+  .review-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg, 0 16px 48px rgba(0,0,0,0.1));
+    border-color: var(--primary-soft, rgba(0,0,0,0.08));
+  }
+
+  /* Zdjęcia jako hero karty (pierwsze, klikalne, dwa-kolumnowo lub jedno full) */
+  .review-images {
+    display: grid;
+    gap: 2px;
+    background: var(--border-light, rgba(0,0,0,0.06));
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .review-images[data-count="1"] { grid-template-columns: 1fr; }
+  .review-images[data-count="3"] .review-img:first-child { grid-row: span 2; }
+  .review-images .review-img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: zoom-in;
+    transition: transform 0.4s ease, opacity 0.3s ease;
+    display: block;
+  }
+  .review-images[data-count="3"] .review-img:first-child { aspect-ratio: 1; }
+  .review-card:hover .review-images .review-img { transform: scale(1.03); }
+  .review-images .review-img:hover { opacity: 0.92; }
+
+  /* Body karty */
+  .review-body {
+    padding: 24px 24px 18px;
+  }
+  .review-text {
+    font-family: var(--font-body, system-ui);
+    font-size: 14.5px;
+    line-height: 1.65;
+    color: var(--text-primary, #1A1A2E);
+    margin: 0;
+    /* Limit 6 linii, "..." jeśli dłuższe */
+    display: -webkit-box;
+    -webkit-line-clamp: 8;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* Stopka karty (avatar + tag + gwiazdki) — bez imienia, neutralny look */
+  .review-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 22px 18px;
+    border-top: 1px solid var(--border-light, rgba(0,0,0,0.06));
+  }
+  .review-author {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+  .review-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--gradient-cta, linear-gradient(135deg, var(--primary, #00A896), var(--secondary, #F77F00)));
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: var(--shadow-sm, 0 1px 3px rgba(0,0,0,0.04));
+  }
+  .review-avatar svg { width: 16px; height: 16px; opacity: 0.95; }
+  .review-tag {
+    font-size: 11px;
+    color: var(--text-tertiary, rgba(0,0,0,0.45));
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+  .review-tag svg { width: 11px; height: 11px; opacity: 0.6; }
+  .review-rating {
+    display: flex;
+    gap: 1px;
+    color: #F59E0B;
+    flex-shrink: 0;
+  }
+  .review-rating svg { width: 14px; height: 14px; }
+
+  /* Pusty stan */
+  .reviews-empty-placeholder {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--text-tertiary, rgba(0,0,0,0.4));
+    font-family: var(--font-body, system-ui);
+    font-size: 14px;
+  }
+
+  /* Nota prawna (Omnibus) — schowana pod ikoną ? */
+  .reviews-disclosure-wrap {
+    text-align: center;
+    margin: 48px auto 0;
+    position: relative;
+  }
+  .reviews-disclosure-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: transparent;
+    border: 1px solid var(--border-light, rgba(0,0,0,0.08));
+    border-radius: 999px;
+    color: var(--text-tertiary, rgba(0,0,0,0.5));
+    font-family: var(--font-body, system-ui);
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    user-select: none;
+  }
+  .reviews-disclosure-trigger:hover {
+    background: var(--primary-soft, rgba(0,0,0,0.03));
+    color: var(--text-secondary, rgba(0,0,0,0.7));
+    border-color: var(--primary, #00A896);
+  }
+  .reviews-disclosure-trigger svg {
+    width: 14px;
+    height: 14px;
+    opacity: 0.7;
+  }
+  .reviews-disclosure-popover {
+    display: none;
+    position: relative;
+    max-width: 600px;
+    margin: 16px auto 0;
+    padding: 18px 24px;
+    background: var(--bg-white, #FFFFFF);
+    border: 1px solid var(--border-light, rgba(0,0,0,0.06));
+    border-radius: var(--radius-md, 14px);
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.08));
+    text-align: left;
+    font-family: var(--font-body, system-ui);
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-secondary, rgba(0,0,0,0.7));
+    animation: rev-pop-in 0.2s ease;
+  }
+  .reviews-disclosure-popover.show { display: block; }
+  @keyframes rev-pop-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .reviews-disclosure-popover strong {
+    color: var(--text-primary, #1A1A2E);
+    font-weight: 600;
+  }
+  .reviews-disclosure-popover::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 14px;
+    background: var(--bg-white, #FFFFFF);
+    border-top: 1px solid var(--border-light, rgba(0,0,0,0.06));
+    border-left: 1px solid var(--border-light, rgba(0,0,0,0.06));
+    rotate: 45deg;
+  }
+
+  /* ═══ FLOATING SIDE WIDGET (sticky panel po LEWEJ, desktop + mobile) ═══ */
+  .reviews-side-widget {
+    position: fixed;
+    left: 20px;
+    bottom: 20px;
+    z-index: 9000;
+    display: none;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    transition: transform 0.3s ease;
+  }
+  .reviews-side-widget.ready { display: flex; }
+  @media (max-width: 540px) {
+    .reviews-side-widget {
+      left: 12px;
+      bottom: 12px;
+    }
+  }
+
+  /* Tab (zwinięty stan — mała pigułka po prawej) */
+  .reviews-side-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 18px;
+    background: var(--bg-white, #FFFFFF);
+    border: 1px solid var(--border-light, rgba(0,0,0,0.08));
+    border-radius: 999px;
+    box-shadow: var(--shadow-md, 0 4px 16px rgba(0,0,0,0.12));
+    cursor: pointer;
+    color: var(--text-primary, #1A1A2E);
+    font-family: var(--font-heading, system-ui);
+    font-size: 13px;
+    font-weight: 600;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .reviews-side-tab:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg, 0 16px 48px rgba(0,0,0,0.15));
+  }
+  .reviews-side-tab-stars {
+    display: inline-flex;
+    gap: 1px;
+    color: #F59E0B;
+  }
+  .reviews-side-tab-stars svg { width: 12px; height: 12px; }
+
+  /* Panel (rozwinięty stan) */
+  .reviews-side-panel {
+    display: none;
+    width: 280px;
+    max-width: calc(100vw - 32px);
+    background: var(--bg-white, #FFFFFF);
+    border: 1px solid var(--border-light, rgba(0,0,0,0.08));
+    border-radius: var(--radius-lg, 22px);
+    box-shadow: var(--shadow-lg, 0 16px 48px rgba(0,0,0,0.18));
+    overflow: hidden;
+    animation: rev-side-in 0.3s ease;
+  }
+  @media (max-width: 540px) {
+    .reviews-side-panel { width: 260px; }
+    .reviews-side-tab { padding: 10px 14px; font-size: 12px; }
+    .reviews-side-tab-stars svg { width: 10px; height: 10px; }
+  }
+  .reviews-side-widget.open .reviews-side-panel { display: block; }
+  .reviews-side-widget.open .reviews-side-tab { display: none; }
+  @keyframes rev-side-in {
+    from { opacity: 0; transform: translateY(20px) scale(0.96); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .reviews-side-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-light, rgba(0,0,0,0.06));
+  }
+  .reviews-side-title {
+    font-family: var(--font-heading, system-ui);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-primary, #1A1A2E);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .reviews-side-title-stars {
+    display: inline-flex;
+    gap: 1px;
+    color: #F59E0B;
+  }
+  .reviews-side-title-stars svg { width: 12px; height: 12px; }
+  .reviews-side-close {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: none;
+    background: var(--border-light, rgba(0,0,0,0.05));
+    color: var(--text-tertiary, rgba(0,0,0,0.5));
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .reviews-side-close:hover {
+    background: var(--text-tertiary, rgba(0,0,0,0.1));
+    color: var(--text-primary, #1A1A2E);
+  }
+  /* Marquee scroll: zdjęcia płyną od dołu do góry, infinite loop */
+  .reviews-side-grid {
+    height: 240px;
+    overflow: hidden;
+    padding: 4px;
+    position: relative;
+    mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 24px, #000 calc(100% - 24px), transparent 100%);
+  }
+  .reviews-side-track {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px;
+    animation: reviews-side-flow 22s linear infinite;
+    will-change: transform;
+  }
+  .reviews-side-grid:hover .reviews-side-track {
+    animation-play-state: paused;
+  }
+  @keyframes reviews-side-flow {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-50%); }
+  }
+  .reviews-side-thumb {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    cursor: zoom-in;
+    border-radius: var(--radius-sm, 10px);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    display: block;
+  }
+  .reviews-side-thumb:hover {
+    transform: scale(1.04);
+    opacity: 0.92;
+  }
+  .reviews-side-cta-wrap {
+    padding: 12px 14px 14px;
+  }
+  .reviews-side-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 18px;
+    background: var(--gradient-cta, linear-gradient(135deg, var(--primary, #00A896), var(--secondary, #F77F00)));
+    color: #fff;
+    text-decoration: none;
+    font-family: var(--font-heading, system-ui);
+    font-weight: 700;
+    font-size: 13px;
+    border-radius: var(--radius-md, 14px);
+    box-shadow: var(--shadow-primary, 0 8px 32px rgba(0,168,150,0.25));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    animation: reviews-side-pulse 2.4s ease-in-out infinite;
+    will-change: transform, box-shadow;
+  }
+  .reviews-side-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0,168,150,0.4);
+    animation-play-state: paused;
+  }
+  .reviews-side-cta svg { width: 14px; height: 14px; }
+  @keyframes reviews-side-pulse {
+    0%, 100% {
+      transform: translateY(0) scale(1);
+      box-shadow: var(--shadow-primary, 0 8px 32px rgba(0,168,150,0.25));
+    }
+    50% {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 14px 40px rgba(0,168,150,0.55);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .reviews-side-cta { animation: none; }
+    .reviews-side-track { animation: none; }
+  }
+
+  /* ═══ LIGHTBOX (galeria + CTA) ═══ */
+  .reviews-lightbox {
+    position: fixed; inset: 0;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .reviews-lightbox.show {
+    display: flex;
+    animation: rev-lb-fade 0.25s ease;
+  }
+  @keyframes rev-lb-fade { from { opacity: 0; } to { opacity: 1; } }
+
+  .reviews-lightbox-stage {
+    flex: 1;
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    min-height: 0;
+  }
+  .reviews-lightbox-img {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: var(--radius-md, 14px);
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    user-select: none;
+    touch-action: pan-y pinch-zoom;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    display: block;
+  }
+  .reviews-lightbox-img.loaded { opacity: 1; }
+  .reviews-lightbox-spinner {
+    position: absolute;
+    width: 36px; height: 36px;
+    border: 3px solid rgba(255,255,255,0.15);
+    border-top-color: rgba(255,255,255,0.9);
+    border-radius: 50%;
+    animation: rev-spin 0.8s linear infinite;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .reviews-lightbox-spinner.show { opacity: 1; }
+  @keyframes rev-spin { to { transform: rotate(360deg); } }
+
+  .reviews-lightbox-close,
+  .reviews-lightbox-prev,
+  .reviews-lightbox-next {
+    position: absolute;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 28px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, transform 0.2s ease;
+    z-index: 2;
+    line-height: 1;
+  }
+  .reviews-lightbox-close:hover,
+  .reviews-lightbox-prev:hover,
+  .reviews-lightbox-next:hover {
+    background: rgba(255,255,255,0.22);
+    transform: scale(1.05);
+  }
+  .reviews-lightbox-close { top: 24px; right: 24px; font-size: 22px; position: fixed; }
+  .reviews-lightbox-prev { left: 24px; top: 50%; transform: translateY(-50%); }
+  .reviews-lightbox-next { right: 24px; top: 50%; transform: translateY(-50%); }
+  .reviews-lightbox-prev:hover { transform: translateY(-50%) scale(1.05); }
+  .reviews-lightbox-next:hover { transform: translateY(-50%) scale(1.05); }
+
+  /* Caption (autor + gwiazdki + fragment tekstu) */
+  .reviews-lightbox-caption {
+    margin: 18px auto 0;
+    max-width: 640px;
+    width: 100%;
+    text-align: center;
+    color: rgba(255,255,255,0.85);
+    font-family: var(--font-body, system-ui);
+    font-size: 13px;
+    line-height: 1.55;
+    padding: 0 16px;
+  }
+  .reviews-lightbox-caption-meta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+  .reviews-lightbox-caption-name {
+    font-family: var(--font-heading, system-ui);
+    font-weight: 600;
+    color: rgba(255,255,255,0.95);
+    font-size: 14px;
+  }
+  .reviews-lightbox-caption-stars {
+    display: inline-flex;
+    gap: 1px;
+    color: #FFC107;
+  }
+  .reviews-lightbox-caption-stars svg { width: 14px; height: 14px; }
+  .reviews-lightbox-caption-text {
+    color: rgba(255,255,255,0.7);
+    font-style: italic;
+    max-width: 520px;
+    margin: 0 auto;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .reviews-lightbox-counter {
+    color: rgba(255,255,255,0.6);
+    font-family: var(--font-body, system-ui);
+    font-size: 12px;
+    background: rgba(0,0,0,0.4);
+    padding: 5px 12px;
+    border-radius: 999px;
+    margin: 12px 0 8px;
+    letter-spacing: 0.04em;
+  }
+
+  .reviews-lightbox-cta {
+    margin-top: 14px;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 36px;
+    background: var(--gradient-cta, linear-gradient(135deg, var(--primary, #00A896), var(--secondary, #F77F00)));
+    color: #fff;
+    font-family: var(--font-heading, system-ui);
+    font-weight: 700;
+    font-size: 15px;
+    border-radius: var(--radius-md, 14px);
+    text-decoration: none;
+    box-shadow: var(--shadow-primary, 0 8px 32px rgba(0,168,150,0.25));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    letter-spacing: 0.01em;
+  }
+  .reviews-lightbox-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 36px rgba(0,168,150,0.4);
+  }
+  .reviews-lightbox-cta svg { width: 18px; height: 18px; }
+  .reviews-lightbox-hint {
+    color: rgba(255,255,255,0.4);
+    font-family: var(--font-body, system-ui);
+    font-size: 11px;
+    margin-top: 14px;
+    letter-spacing: 0.04em;
+  }
+
+  @media (max-width: 720px) {
+    .reviews-lightbox { padding: 16px; }
+    .reviews-lightbox-prev,
+    .reviews-lightbox-next { width: 40px; height: 40px; font-size: 22px; }
+    .reviews-lightbox-close { width: 40px; height: 40px; top: 16px; right: 16px; font-size: 18px; }
+    .reviews-lightbox-cta {
+      padding: 14px 28px;
+      font-size: 14px;
+      width: 100%;
+      max-width: 360px;
+      justify-content: center;
+    }
+    .reviews-lightbox-img { max-height: 56vh; }
+    .reviews-lightbox-caption { font-size: 12px; }
+  }
+</style>
   </style>
 </head>
 <body>
@@ -1227,6 +1828,457 @@
     </div>
   </section>
 
+  <!-- ═══ OPINIE KLIENTÓW (XL) ═══ -->
+<section class="reviews-xl testimonials" id="reviews">
+  <div class="container">
+    <div class="reviews-header fade-in">
+      <span class="section-label">★★★★★ &nbsp; Opinie klientów</span>
+      <h2 class="section-title">Sprawdź, co mówią osoby,<br>które już używają OraVibe</h2>
+      <p class="section-subtitle">
+        Prawdziwe opinie ze zdjęciami od osób, które kupiły i używają tego produktu.
+      </p>
+    </div>
+    <!-- REVIEWS:GRID:START -->
+      <div class="reviews-grid-xl">
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Aa69bdc98a6814273a966f45c7318458cG.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Wcześniej miałem Waterpika za 100 €, a ten w stosunku do ceny wydaje mi się lepszy — nie ma gumy na rączce, która mogłaby się zniszczyć albo zapleśnieć, brak szczelin gdzie zatrzyma się woda, transformator zewnętrzny — jak się zepsuje, można wymienić bez rozbierania całości. Do tego włącznik, nie pulsacyjny przycisk. Świetna sprawa. PS: Mój pierwszy nie zadziałał, ale w jeden dzień załatwili zwrot i kupiłem drugi taki sam — jestem zadowolony.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="2"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Ae62ee21616c749ffbb0be9a0a9f2123eX.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A5d68a98bafa1422cb0c63f4d62e09bc1w.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Bardzo mi się podoba — mniejszy niż myślałam, ale na najwyższym biegu ma sporo mocy. Można zatrzymać strumień jednym przyciskiem, co daje większą kontrolę. Na razie wszystko super. Jedyny minus: trochę głośny na najwyższej prędkości. Przewoźnik świetny — próbowali dostarczyć w niedzielę, ale podałam adres pracy więc się nie udało; już rano następnego dnia kurier był z paczką.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="4"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A2433ab529e75491fb558fdd5d1a2fd29g.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A103a2424ade54c07a39a0930e318f0b5D.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/Aca80f38b435b4411b16abed1b2313ad5d.jpg" alt="Zdjęcie od klienta 3" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/Afd44efcea5d346d595059a8e684556cdi.jpg" alt="Zdjęcie od klienta 4" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Bardzo praktyczny produkt, niezbędny dla całej rodziny. Idealnie czyści zęby i usuwa resztki jedzenia. Mocno polecam.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A4fc081c7e0c14c11833103f9264e6cb2H.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Towar przyjechał bardzo szybko. Pudełko lekko pogniecione, ale produkt nieuszkodzony. Zgadza się z opisem na stronie. Bardzo mocny strumień, płynna regulacja siły. Przy pierwszym uruchomieniu trzeba poczekać aż woda napełni pompę, żeby działało normalnie. Pierwsze wrażenia bardzo pozytywne.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A9702d26f543946fcb0bf69b3396ad15bu.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Działa idealnie od pierwszego włączenia. Mocno polecam. Włącza się od razu, bez czekania na ciśnienie. Bardzo zadowolony.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Se95c6233acb34addb6c69c0f2991806dg.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Po doświadczeniu z 4 koreańskimi modelami AquaPik przez prawie 20 lat — stosunek jakości do ceny tego urządzenia jest naprawdę imponujący!</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/S7eb4998dcb584e4db0569ddccb8cf9c0N.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Drugi zakup. Wtyczka inna niż u nas, więc kupiłem przejściówkę 220 V — i tak satysfakcja wysoka.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/S61f39bca0754451fb05af6998c0c73e7W.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Odkąd tego używam, rzadziej chodzę do dentysty — i to mnie cieszy. Dużo wygodniejsze i czystsze niż nić dentystyczna.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Sf9608e5aae1c48819ad389af78ce43c8A.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Kupiłem kilka rzeczy i wygląda, że dobrze trafiłem. Mniejszy niż się spodziewałem — najpierw zaskoczenie, ale wydajność spoko. Zastanawiałem się dlaczego pokrywka nie jest sztywno dokręcona — okazało się, że trzeba dolewać wodę za każdym razem, więc to prawidłowy projekt. Tylko przycisk dość twardy — przy każdym kliknięciu lekko porusza całą obudową. Ale używać się da. Byle nie zepsuło się szybko.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/S81322022ca07445a9c661084648cab50h.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Lekki, przycisk on/off trochę ciężki, ale w tej cenie — warty użytkowania. Ustawiam tarczę na ok. 4. Trochę głośny, ale za tę cenę spoko.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Sac8b16ec5a7d498595cc3f537d013e2fH.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Po pierwszym użyciu — duża pojemność to plus, działa świetnie!</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A6b335a4218164a93862fa5b1c6496ed66.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Produkt przerósł moje oczekiwania. Dostawa trochę zajęła, ale wszystko przyszło w idealnym stanie.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="2"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A4720660de70c41d3b4a683da9f9d2241a.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A87f10aed7e4341869733c861a5d3dc01m.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Otrzymałem dziś, 17.03.2026. Dobry produkt, jestem zadowolony. Gorzej z doręczeniem przez ostatniego kuriera Peddler — kiepska komunikacja i 5 dni czekania.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="3"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A552dd7c13f0d4fc09c4571499e642105M.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A816359e66b844b12a02017c3670ffec8L.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A903f614ca8e043feab66ab761d6d44b2t.jpg" alt="Zdjęcie od klienta 3" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Mega szybka dostawa, wszystko jak w opisie. Sklep polecam 👍, dziękuję 🙏</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="4"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A8010893a82fb4598bf33e605dae88263P.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A3558772257ee4e17aab01fea406a9580z.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/Acab3e23206c942efae471a306cd17273M.jpg" alt="Zdjęcie od klienta 3" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/Ae66cf71e08b64b9aa2123053b3c4e624E.jpg" alt="Zdjęcie od klienta 4" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Super jakość, wszystko działa normalnie, pięć gwiazdek dla sklepu ⭐️⭐️⭐️⭐️⭐️</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Ac73d2d8b84a0427b818c60086298404dU.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Cześć, dobra jakość, ekspresowa wysyłka!</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="3"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Aeded7f8ce4b7471c9469860af9fa66d2D.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/Abc454d994a3d480f98b31e4002773b01B.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A44988fbaa75c4499a0c46e88df515581O.jpg" alt="Zdjęcie od klienta 3" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Zamówienie przyszło Ukrpoczte, całe i nieuszkodzone. Wszystko zgodne z opisem. Jakość wygląda OK, sprawdziłem — działa. Jeszcze nie używałem, jak zacznę dopiszę opinię.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/S79127a584e4b470d978a5eb61365ee07J.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Idealnie, działa jak należy.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A63b137d5e4d0465ea12bfa0bed872755Q.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Petarda 👍👍👍👍👍👍👍 najlepsze!</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/Ab2a7662170104943b373ccefdb896841K.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Bardzo przydatne i dobrej jakości.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="2"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A8aab9630e03f4a96897b75a78999601dg.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/A68d963e1aaae4656b61bdc2d0aa01e6ff.jpg" alt="Zdjęcie od klienta 2" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Bardzo dobry.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+        <div class="review-card">
+  <div class="review-images" data-count="1"><img src="https://ae-pic-a1.aliexpress-media.com/kf/A8e954adb33df40809e4fad9b5b3720d8R.jpg" alt="Zdjęcie od klienta 1" class="review-img" loading="lazy" referrerpolicy="no-referrer"></div>
+  <div class="review-body">
+    <p class="review-text">Przydatna rzecz.</p>
+  </div>
+  <div class="review-footer">
+    <div class="review-author">
+      <div class="review-avatar"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 12c2.7 0 4.85-2.15 4.85-4.85S14.7 2.3 12 2.3 7.15 4.45 7.15 7.15 9.3 12 12 12zm0 2.4c-3.24 0-9.7 1.62-9.7 4.85V21h19.4v-1.75c0-3.23-6.46-4.85-9.7-4.85z"/></svg></div>
+      <div class="review-tag">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17 4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+        Opinia o produkcie
+      </div>
+    </div>
+    <div class="review-rating"><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+  </div>
+</div>
+      </div>
+      <!-- REVIEWS:GRID:END -->
+    <div class="reviews-disclosure-wrap">
+      <button type="button" class="reviews-disclosure-trigger" aria-expanded="false" aria-controls="reviews-disclosure-popover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        Skąd pochodzą te opinie?
+      </button>
+      <div id="reviews-disclosure-popover" class="reviews-disclosure-popover" role="region">
+        <strong>Pochodzenie opinii.</strong> Pokazane opinie pochodzą od osób, które kupiły i używały tego produktu. Sprzedawca nie weryfikuje samodzielnie tożsamości recenzentów.
+      </div>
+    </div>
+  </div>
+</section>
+
+  <div id="reviews-side-widget" class="reviews-side-widget" data-cta-url="https://oravibe.pl/checkout?products=103032606-321178488" aria-label="Galeria opinii klientów">
+  <div class="reviews-side-panel" role="dialog" aria-label="Opinie z galerią zdjęć">
+    <div class="reviews-side-header">
+      <span class="reviews-side-title">
+        <span class="reviews-side-title-stars" aria-label="5 z 5 gwiazdek">
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </span>
+        Opinie klientów
+      </span>
+      <button type="button" class="reviews-side-close" aria-label="Zamknij">&times;</button>
+    </div>
+    <div class="reviews-side-grid" data-side-grid>
+      <!-- Thumbnails wstawiane przez JS -->
+    </div>
+    <div class="reviews-side-cta-wrap">
+      <a class="reviews-side-cta" href="https://oravibe.pl/checkout?products=103032606-321178488">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Dodaj do koszyka
+      </a>
+    </div>
+  </div>
+  <button type="button" class="reviews-side-tab" aria-label="Pokaż opinie klientów">
+    <span class="reviews-side-tab-stars" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+    </span>
+    Opinie
+  </button>
+</div>
+
+  <div id="reviews-lightbox" class="reviews-lightbox" data-cta-url="https://oravibe.pl/checkout?products=103032606-321178488" role="dialog" aria-modal="true" aria-label="Galeria zdjęć od klientów">
+  <button type="button" class="reviews-lightbox-close" aria-label="Zamknij">&times;</button>
+  <button type="button" class="reviews-lightbox-prev" aria-label="Poprzednie">&lsaquo;</button>
+  <button type="button" class="reviews-lightbox-next" aria-label="Następne">&rsaquo;</button>
+  <div class="reviews-lightbox-stage">
+    <div class="reviews-lightbox-spinner"></div>
+    <img class="reviews-lightbox-img" src="" alt="" referrerpolicy="no-referrer">
+  </div>
+  <div class="reviews-lightbox-counter"><span class="reviews-lightbox-current">1</span> / <span class="reviews-lightbox-total">1</span></div>
+  <div class="reviews-lightbox-caption">
+    <div class="reviews-lightbox-caption-meta">
+      <span class="reviews-lightbox-caption-stars"></span>
+    </div>
+    <p class="reviews-lightbox-caption-text"></p>
+  </div>
+  <a class="reviews-lightbox-cta" href="https://oravibe.pl/checkout?products=103032606-321178488">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+    Zamów OraVibe teraz
+  </a>
+  <div class="reviews-lightbox-hint">← → strzałki, ESC zamyka, swipe na mobile</div>
+</div>
+
+
   <div class="section-divider"></div>
 
   <!-- ═══ ROI CALCULATOR ═══ -->
@@ -1265,90 +2317,7 @@
     </div>
   </section>
 
-  <!-- ═══ SOCIAL PROOF ═══ -->
-  <section class="social-proof" id="reviews">
-    <div class="social-proof-header">
-      <p class="section-label fade-in">Opinie</p>
-      <h2 class="fade-in delay-1"><span class="num">5 000+</span> zadowolonych Polaków już używa OraVibe.</h2>
-      <p class="fade-in delay-2" style="display:flex; align-items:center; justify-content:center; gap:8px;">
-        <span style="color:var(--gold); font-size:18px;">&#9733;&#9733;&#9733;&#9733;&#9733;</span>
-        <span>4.9/5 — Wyrób Medyczny Klasy I</span>
-      </p>
-    </div>
 
-    <div class="marquee-wrap">
-      <div class="marquee-track">
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Dentysta.pl</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Zdrowie WP</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Medonet</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Polki.pl</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Stomatologia Praktyczna</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Business Insider PL</span></div>
-        <!-- Duplicate for infinite scroll -->
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Dentysta.pl</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Zdrowie WP</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Medonet</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Polki.pl</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Stomatologia Praktyczna</span></div>
-        <div class="marquee-item"><div class="logo-ph"><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></div><span>Business Insider PL</span></div>
-      </div>
-    </div>
-
-    <div class="testimonials container">
-      <div class="testimonial-card fade-in">
-        <div class="testimonial-top">
-          <div class="testimonial-avatar">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div class="testimonial-meta">
-            <div class="author-name">Marta K.</div>
-            <div class="author-role">Ortodonta, Warszawa</div>
-          </div>
-        </div>
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <blockquote>„Mój ortodonta zapytał, co zmieniłam w higienie. Odpowiedź brzmi: OraVibe. Od 3 miesięcy zero kamienia, dziąsła nie krwawią. Polecam każdemu pacjentowi z aparatem."</blockquote>
-      </div>
-      <div class="testimonial-card fade-in delay-1">
-        <div class="testimonial-top">
-          <div class="testimonial-avatar">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div class="testimonial-meta">
-            <div class="author-name">Tomek R.</div>
-            <div class="author-role">Programista, Kraków</div>
-          </div>
-        </div>
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <blockquote>„Po implantach szukałem czegoś, co doczyści miejsca, do których nic nie sięga. OraVibe okazał się strzałem w dziesiątkę. Dwa miesiące i dentysta powiedział, że dziąsła wyglądają idealnie."</blockquote>
-      </div>
-      <div class="testimonial-card fade-in delay-2">
-        <div class="testimonial-top">
-          <div class="testimonial-avatar">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div class="testimonial-meta">
-            <div class="author-name">Kasia D.</div>
-            <div class="author-role">Mama trójki, Poznań</div>
-          </div>
-        </div>
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <blockquote>„Kupiłam dla siebie, a teraz cała rodzina stoi w kolejce do łazienki. Dzieci wreszcie CHCĄ myć zęby — bo ‚strumień wody jest fajny'. Nie spodziewałam się, że irygator może być rozrywką."</blockquote>
-      </div>
-      <div class="testimonial-card fade-in delay-3">
-        <div class="testimonial-top">
-          <div class="testimonial-avatar">
-            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </div>
-          <div class="testimonial-meta">
-            <div class="author-name">Dr Anna W.</div>
-            <div class="author-role">Periodontolog</div>
-          </div>
-        </div>
-        <div class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</div>
-        <blockquote>„Jako periodontolog widzę codziennie skutki zaniedbanej higieny międzyzębowej. Irygator to nie luksus — to konieczność. OraVibe oferuje parametry porównywalne ze sprzętem gabinetowym w cenie 5× niższej."</blockquote>
-      </div>
-    </div>
-  </section>
 
   <div class="section-divider"></div>
 
@@ -1796,6 +2765,223 @@
     setTimeout(function(){ showTeaser(); setInterval(showTeaser, 14000); }, 8000);
   })();
   </script>
+
+
+  <script data-template="reviews-js">
+(function initReviewsLightbox() {
+  const lb = document.getElementById('reviews-lightbox');
+  if (!lb) return;
+  const cards = Array.from(document.querySelectorAll('.review-card'));
+  const stage = lb.querySelector('.reviews-lightbox-img');
+  const spinner = lb.querySelector('.reviews-lightbox-spinner');
+  const cur = lb.querySelector('.reviews-lightbox-current');
+  const total = lb.querySelector('.reviews-lightbox-total');
+  const captionStars = lb.querySelector('.reviews-lightbox-caption-stars');
+  const captionText = lb.querySelector('.reviews-lightbox-caption-text');
+  const btnClose = lb.querySelector('.reviews-lightbox-close');
+  const btnPrev = lb.querySelector('.reviews-lightbox-prev');
+  const btnNext = lb.querySelector('.reviews-lightbox-next');
+
+  // Zbuduj galerię: każde zdjęcie z meta (autor, gwiazdki, fragment tekstu) z karty
+  const STAR_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+  const gallery = [];
+  cards.forEach(card => {
+    const imgs = card.querySelectorAll('.review-images img');
+    if (imgs.length === 0) return;
+    const ratingEls = card.querySelectorAll('.review-rating svg');
+    const rating = ratingEls.length || 5;
+    const text = card.querySelector('.review-text')?.textContent?.trim() || '';
+    imgs.forEach(img => {
+      gallery.push({
+        src: img.src,
+        rating,
+        text,
+        triggerEl: img
+      });
+    });
+  });
+  if (gallery.length === 0) return;
+
+  let idx = 0;
+  let currentLoadToken = 0;
+
+  function show(i) {
+    idx = (i + gallery.length) % gallery.length;
+    const item = gallery[idx];
+    cur.textContent = idx + 1;
+    total.textContent = gallery.length;
+
+    captionStars.innerHTML = Array(item.rating).fill(STAR_SVG).join('');
+    captionText.textContent = item.text;
+
+    // Spinner + fade na realnym <img> (czekamy na jego onload, nie preload osobno)
+    const token = ++currentLoadToken;
+    stage.classList.remove('loaded');
+    spinner.classList.add('show');
+    const onLoaded = () => {
+      if (token !== currentLoadToken) return;
+      stage.classList.add('loaded');
+      spinner.classList.remove('show');
+    };
+    const onErr = () => {
+      if (token !== currentLoadToken) return;
+      spinner.classList.remove('show');
+    };
+    stage.onload = onLoaded;
+    stage.onerror = onErr;
+    // Jeśli już cached - onload nie firuje. Wymuszamy reset:
+    if (stage.src === item.src) {
+      stage.src = '';
+    }
+    stage.alt = '';
+    stage.src = item.src;
+    // Fallback: jeśli już complete (cache), wywołaj ręcznie
+    if (stage.complete && stage.naturalWidth > 0) {
+      onLoaded();
+    }
+    // Preload sąsiadów (osobno, fire-and-forget)
+    [gallery[(idx + 1) % gallery.length], gallery[(idx - 1 + gallery.length) % gallery.length]].forEach(adj => {
+      if (adj && adj.src && adj.src !== item.src) {
+        const p = new Image();
+        p.referrerPolicy = 'no-referrer';
+        p.src = adj.src;
+      }
+    });
+  }
+
+  function findIndexByImg(img) {
+    return gallery.findIndex(g => g.triggerEl === img);
+  }
+  function open(i) {
+    show(i);
+    lb.classList.add('show');
+    document.body.style.overflow = 'hidden';
+  }
+  function close() {
+    lb.classList.remove('show');
+    document.body.style.overflow = '';
+    stage.src = '';
+    stage.classList.remove('loaded');
+  }
+  function next() { show(idx + 1); }
+  function prev() { show(idx - 1); }
+
+  cards.forEach(card => {
+    const imgs = card.querySelectorAll('.review-images img');
+    imgs.forEach(img => {
+      img.addEventListener('click', () => {
+        const i = findIndexByImg(img);
+        if (i >= 0) open(i);
+      });
+    });
+  });
+  btnClose.addEventListener('click', close);
+  btnPrev.addEventListener('click', prev);
+  btnNext.addEventListener('click', next);
+  lb.addEventListener('click', (e) => {
+    if (e.target === lb || e.target.classList.contains('reviews-lightbox-stage')) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!lb.classList.contains('show')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowRight') next();
+    else if (e.key === 'ArrowLeft') prev();
+  });
+
+  // Swipe na mobile
+  let touchX = null, touchY = null;
+  stage.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    touchX = e.touches[0].clientX;
+    touchY = e.touches[0].clientY;
+  }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    const dy = e.changedTouches[0].clientY - touchY;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) prev(); else next();
+    }
+    touchX = null;
+  }, { passive: true });
+
+  // ═══ POPOVER: Skąd pochodzą te opinie? ═══
+  const trigger = document.querySelector('.reviews-disclosure-trigger');
+  const popover = document.querySelector('.reviews-disclosure-popover');
+  if (trigger && popover) {
+    trigger.addEventListener('click', () => {
+      const open = popover.classList.toggle('show');
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    document.addEventListener('click', (e) => {
+      if (!popover.classList.contains('show')) return;
+      if (e.target === trigger || trigger.contains(e.target)) return;
+      if (!popover.contains(e.target)) {
+        popover.classList.remove('show');
+        trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
+
+  // ═══ SIDE WIDGET (sticky panel + tab) z marquee scroll ═══
+  const widget = document.getElementById('reviews-side-widget');
+  if (widget && gallery.length > 0) {
+    const grid = widget.querySelector('[data-side-grid]');
+    const tab = widget.querySelector('.reviews-side-tab');
+    const close = widget.querySelector('.reviews-side-close');
+
+    // Wybierz unikalne zdjęcia (max 12 dla bogatego marquee)
+    const seen = new Set();
+    const picks = [];
+    for (const item of gallery) {
+      if (seen.has(item.src)) continue;
+      seen.add(item.src);
+      picks.push(item);
+      if (picks.length >= 12) break;
+    }
+    // Min 6 do dobrego efektu - jeśli mało, duplikuj cykl
+    while (picks.length < 6 && picks.length > 0) {
+      picks.push(...picks.slice(0, 6 - picks.length));
+    }
+
+    function thumbHtml(item) {
+      const fullIdx = gallery.findIndex(g => g.src === item.src);
+      return `<img class="reviews-side-thumb" src="${item.src}" alt="" loading="lazy" referrerpolicy="no-referrer" data-gallery-idx="${fullIdx >= 0 ? fullIdx : 0}">`;
+    }
+    // Track z duplikatem dla seamless loop (translateY -50% pokazuje 1. kopię, potem 2. = ten sam content)
+    const trackInner = picks.map(thumbHtml).join('');
+    grid.innerHTML = `<div class="reviews-side-track">${trackInner}${trackInner}</div>`;
+
+    grid.querySelectorAll('.reviews-side-thumb').forEach(img => {
+      img.addEventListener('click', () => {
+        const i = parseInt(img.dataset.galleryIdx, 10) || 0;
+        open(i);
+      });
+    });
+    tab.addEventListener('click', () => widget.classList.add('open'));
+    close.addEventListener('click', () => widget.classList.remove('open'));
+
+    // Pokaż widget po przewinięciu poza hero (>300px)
+    // Na desktop (≥1080px) auto-open przy pierwszym wejściu — od razu social proof.
+    // Na mobile zostaje collapsed (tab) — panel zasłaniałby treść.
+    let firstReadyDone = false;
+    const desktopMQ = matchMedia('(min-width: 1080px)');
+    function checkScroll() {
+      if (window.scrollY > 300) {
+        widget.classList.add('ready');
+        if (!firstReadyDone && desktopMQ.matches) {
+          widget.classList.add('open');
+          firstReadyDone = true;
+        }
+      } else {
+        widget.classList.remove('ready');
+      }
+    }
+    checkScroll();
+    window.addEventListener('scroll', checkScroll, { passive: true });
+  }
+})();
+</script>
 
 </body>
 </html>
