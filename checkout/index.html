@@ -1759,14 +1759,15 @@
                         discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
                         discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                         payment_source: paymentSource,
-                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment (no workflow)' : ''}`,
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`,
                         updated_at: new Date().toISOString()
                     };
 
-                    // Custom payment - ensure skip_workflow is set
-                    if (isCustomPayment) {
-                        updateData.skip_workflow = true;
-                    }
+                    // Custom payment: NIE ustawiamy skip_workflow=true.
+                    // Trigger create_workflow_on_payment sam pomija zadatki/zaliczki po nazwie
+                    // (RULE 1 w migracji 20260429). Custom payments typu "Pozostała kwota"
+                    // / "Pierwsza część" / etc. MAJĄ tworzyć workflow.
+                    // skip_workflow=true zostaje tylko dla upgrade workflow i rat (poniżej).
 
                     await supabaseClient
                         .from('orders')
@@ -1790,15 +1791,16 @@
                         discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                         status: 'pending',
                         payment_source: paymentSource,
-                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment (no workflow)' : ''}`
+                        notes: `Checkout: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`
                     };
 
-                    // Custom payment - skip workflow creation
-                    if (isCustomPayment) {
-                        orderData.skip_workflow = true;
-                        if (customPaymentLeadId) {
-                            orderData.lead_id = customPaymentLeadId;
-                        }
+                    // Custom payment: linkujemy lead_id, ale NIE skip_workflow.
+                    // Trigger create_workflow_on_payment pomija zadatki/zaliczki po nazwie
+                    // (RULE 1, migracja 20260429). Custom payment typu "Pozostała kwota" /
+                    // "Pierwsza część" MA tworzyć workflow — wcześniej był to bug
+                    // (skip_workflow=true blokowało utworzenie workflow po finalnej płatności).
+                    if (isCustomPayment && customPaymentLeadId) {
+                        orderData.lead_id = customPaymentLeadId;
                     }
 
                     // Upgrade workflow - save reference for trigger to process
