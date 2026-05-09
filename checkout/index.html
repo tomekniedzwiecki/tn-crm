@@ -1811,12 +1811,12 @@
                         orderData.notes += ' | Upgrade workflow';
                     }
 
-                    // Installment payment - link to installment and workflow (if exists)
+                    // Installment payment - link to installment and workflow (if exists).
+                    // NIE ustawiamy skip_workflow=true. Trigger sam pomija raty>1 (RULE 2 w 20260429),
+                    // a rata 1 MA tworzyć workflow. Wcześniej skip_workflow=true blokował RULE 2
+                    // i workflow nie powstawał nigdy dla klientów z planem ratalnym.
                     if (installmentId && installmentData) {
                         orderData.installment_id = installmentId;
-                        // workflow_id na orders to kolumna jeszcze nieobecna w schemacie —
-                        // związanie z workflow idzie przez installment_id → payment_installments → schedule.
-                        orderData.skip_workflow = true; // Don't create new workflow - trigger will handle it
                         // Get lead_id from workflow if exists, otherwise from schedule's lead
                         orderData.lead_id = installmentData.schedule?.workflow?.lead?.id || installmentData.schedule?.lead?.id || null;
                         orderData.notes += ` | Rata ${installmentData.installment_number}/${installmentData.schedule.installments_count}`;
