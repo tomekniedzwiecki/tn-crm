@@ -821,7 +821,14 @@
             const isVideoSkipped = w.video_stage?.skipped || false;
             const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
             if (w.optimization_stage?.is_active) return 5;
-            if (w.takedrop_stage?.test_accepted) return 4;
+            // Etap 4 dopiero gdy CAŁY Etap 3 ukończony (landing + dokumenty + bramka + test).
+            // Sam test_accepted=true nie wystarczy — admin może w UI zaznaczyć flagi w dowolnej
+            // kolejności, a workflow musi pozostać w Etap 3 dopóki realne kroki są niedokończone.
+            const etap3Complete = w.takedrop_stage?.test_accepted
+                && w.takedrop_stage?.landing_page_connected
+                && w.takedrop_stage?.legal_documents_ready
+                && w.takedrop_stage?.payment_gateway_ready;
+            if (etap3Complete) return 4;
             if (w.takedrop_stage?.is_active || isVideoComplete) return 3;
             if (isVideoActive) return 2;
             return 1;
@@ -886,69 +893,13 @@
                 const currentStage = getCurrentStage(w);
                 const stageMatch = currentStage === 0 || selectedStages.size === 0 || selectedStages.has(currentStage);
 
-                // Status stage filter (mixed logic depending on stage)
+                // Status stage filter — mutually exclusive klasyfikacja.
+                // Workflow trafia do DOKŁADNIE JEDNEGO koszyka (first-match-wins),
+                // niezależnie od tego ile flag późniejszych kroków admin zaznaczył out-of-order.
                 let statusStageMatch = true;
                 if (selectedStatusStages.size > 0) {
-                    const nextStep = getNextStep(w);
-                    const isVideoSkipped = w.video_stage?.skipped || false;
-                    const videoLinks = w.video_stage?.video_links || [];
-                    // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
-                    const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
-                    const isEtap1Complete = !!w.sales_page_shared_at;
-
-                    statusStageMatch = Array.from(selectedStatusStages).every(stage => {
-                        // "takedrop" (Konto TD) = Etap 1 + video ukończone + (TD nie aktywny LUB konto nie założone)
-                        if (stage === 'takedrop') {
-                            return isEtap1Complete && isVideoComplete &&
-                                   (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created);
-                        }
-                        // "landing" (Strona TD) = konto założone, admin ma zrobić stronę
-                        if (stage === 'landing') {
-                            return w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected;
-                        }
-                        // "legal_data" (Dane prawne) = strona TD gotowa, klient NIE wypełnił formularza
-                        if (stage === 'legal_data') {
-                            const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
-                            return w.takedrop_stage?.landing_page_connected && !hasLegalData && !w.takedrop_stage?.legal_documents_ready;
-                        }
-                        // "legal" (Dokumenty) = strona TD gotowa, klient WYPEŁNIŁ formularz, admin ma wygenerować
-                        if (stage === 'legal') {
-                            const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
-                            return w.takedrop_stage?.landing_page_connected && hasLegalData && !w.takedrop_stage?.legal_documents_ready;
-                        }
-                        // "payment_gateway" (Bramka) = strona + dokumenty gotowe ALE bramka NIE gotowa
-                        if (stage === 'payment_gateway') {
-                            return w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready;
-                        }
-                        // "test" = bramka gotowa ALE test NIE zaakceptowany
-                        if (stage === 'test') {
-                            return w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted;
-                        }
-                        // "ad_account" = test zaakceptowany ALE wszystkie 3 accessy NIE granted
-                        if (stage === 'ad_account') {
-                            return w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified);
-                        }
-                        // "budget" = wszystkie 3 accessy granted ALE budget NIE funded
-                        if (stage === 'budget') {
-                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified) && !w.ads_stage?.budget_funded;
-                        }
-                        // "campaign" = budget funded ALE kampania NIE uruchomiona (wymaga też wszystkie accessy)
-                        if (stage === 'campaign') {
-                            return (w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified) && w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched;
-                        }
-                        // "ads_report" = kampania uruchomiona ALE raport NIE wysłany
-                        if (stage === 'ads_report') {
-                            return w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent;
-                        }
-                        // Etap 5: krokom przypisujemy NAJNOWSZY etap (mutually exclusive).
-                        // Projekt już w "opinie"/"video"/"narzedzia" NIE pokazuje się w "optymalizacje".
-                        // Priorytet: narzedzia > video > opinie > optymalizacje (zgodny z getNextStep).
-                        if (stage === 'optymalizacje' || stage === 'opinie' || stage === 'video' || stage === 'narzedzia') {
-                            return nextStep === stage;
-                        }
-                        // Other stages = next step
-                        return nextStep === stage;
-                    });
+                    const currentStatusStage = getCurrentStatusStage(w);
+                    statusStageMatch = Array.from(selectedStatusStages).every(stage => currentStatusStage === stage);
                 }
 
                 // Owner filter (mine = admin tasks, client = client tasks)
@@ -1045,8 +996,8 @@
         }
 
         function updateStageCounts() {
-            // Count active workflows at each stage
-            // IMPORTANT: Use EXACT same logic as filter in applyFilters()
+            // Counts używają tej samej funkcji co filtry → liczniki zawsze zgodne z tym,
+            // co user zobaczy po kliknięciu w danym filtrze (first-match-wins, mutually exclusive).
             const counts = {
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
@@ -1055,85 +1006,12 @@
                 optymalizacje: 0, opinie: 0, video: 0, narzedzia: 0
             };
 
-            // Only count active workflows
             const activeWorkflows = workflows.filter(w => w.status === 'active');
 
             for (const w of activeWorkflows) {
-                // Etap 3 stages - use EXACT same conditions as filter
-                const isVideoSkipped = w.video_stage?.skipped || false;
-                const videoLinks = w.video_stage?.video_links || [];
-                // Video ukończone = pominięte LUB ma 4+ nagrań (nie polegamy na stage_accepted)
-                const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
-                const isEtap1Complete = !!w.sales_page_shared_at;
-
-                // "takedrop" = Etap 1 ukończony + video ukończone + (TD nie aktywny LUB aktywny ale konto nie założone)
-                if (isEtap1Complete && isVideoComplete) {
-                    if (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created) {
-                        counts.takedrop++;
-                        continue;
-                    }
-                }
-                // "landing" = konto założone, admin ma zrobić stronę
-                if (w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected) {
-                    counts.landing++;
-                    continue;
-                }
-                // "legal_data" = strona TD gotowa, klient NIE wypełnił formularza
-                // "legal" = strona TD gotowa, klient WYPEŁNIŁ formularz, admin ma wygenerować
-                if (w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready) {
-                    const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
-                    if (hasLegalData) {
-                        counts.legal++;
-                    } else {
-                        counts.legal_data++;
-                    }
-                    continue;
-                }
-                // "payment_gateway" = strona + dokumenty gotowe ALE bramka NIE gotowa
-                if (w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready) {
-                    counts.payment_gateway++;
-                    continue;
-                }
-                // "test" = bramka gotowa ALE test NIE zaakceptowany
-                if (w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted) {
-                    counts.test++;
-                    continue;
-                }
-                // "ad_account" = test zaakceptowany ALE wszystkie 3 accessy NIE granted
-                if (w.takedrop_stage?.test_accepted && !(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified)) {
-                    counts.ad_account++;
-                    continue;
-                }
-                // "budget" = wszystkie 3 accessy granted ALE budget NIE funded
-                if ((w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified) && !w.ads_stage?.budget_funded) {
-                    counts.budget++;
-                    continue;
-                }
-                // "campaign" = budget funded ALE kampania NIE uruchomiona
-                if (w.ads_stage?.budget_funded && !w.ads_stage?.campaign_launched) {
-                    counts.campaign++;
-                    continue;
-                }
-                // "ads_report" = kampania uruchomiona ALE raport NIE wysłany
-                if (w.ads_stage?.campaign_launched && !w.ads_stage?.report_sent) {
-                    counts.ads_report++;
-                    continue;
-                }
-                // Etap 5 — projekt liczy się do JEDNEGO kroku (najnowszego, mutually exclusive).
-                // Priorytet: narzedzia > video > opinie > optymalizacje (zgodny z getNextStep).
-                if (w.ads_stage?.report_sent) {
-                    const stage5 = getNextStep(w);
-                    if (stage5 && counts.hasOwnProperty(stage5)) {
-                        counts[stage5]++;
-                    }
-                    continue;
-                }
-
-                // Other stages (Etap 1 & 2) - use getNextStep()
-                const nextStep = getNextStep(w);
-                if (nextStep && counts.hasOwnProperty(nextStep) &&
-                    !['takedrop', 'landing', 'legal_data', 'legal', 'payment_gateway', 'test', 'ad_account', 'budget', 'campaign', 'ads_report', 'optymalizacje', 'opinie', 'video', 'narzedzia'].includes(nextStep)) {
-                    counts[nextStep]++;
+                const stage = getCurrentStatusStage(w);
+                if (stage && counts.hasOwnProperty(stage)) {
+                    counts[stage]++;
                 }
             }
 
@@ -1382,6 +1260,52 @@
             if (!optAllDone) return 'optymalizacje';
 
             return null; // all done
+        }
+
+        // Returns SINGLE current status-stage for filter/count classification.
+        // First-match-wins → gwarantuje mutually-exclusive klasyfikację:
+        // workflow pojawia się TYLKO w jednym koszyku, niezależnie od tego ile flag późniejszych kroków
+        // admin zaznaczył out-of-order. To naprawia bug, w którym workflow z `test_accepted=true`
+        // ale `landing_page_connected=false` pokazywał się w filtrze "Konto reklamowe" (Etap 4)
+        // mimo realnego nextStep='landing' (Etap 3).
+        function getCurrentStatusStage(w) {
+            const isVideoSkipped = w.video_stage?.skipped || false;
+            const videoLinks = w.video_stage?.video_links || [];
+            const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
+            const isEtap1Complete = !!w.sales_page_shared_at;
+
+            // Etap 3 — TakeDrop pipeline (kolejność: takedrop → landing → legal_data/legal → payment_gateway → test)
+            if (isEtap1Complete && isVideoComplete) {
+                if (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created) return 'takedrop';
+            }
+            if (w.takedrop_stage?.account_created && !w.takedrop_stage?.landing_page_connected) return 'landing';
+            if (w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready) {
+                const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
+                return hasLegalData ? 'legal' : 'legal_data';
+            }
+            if (w.takedrop_stage?.landing_page_connected && w.takedrop_stage?.legal_documents_ready && !w.takedrop_stage?.payment_gateway_ready) {
+                return 'payment_gateway';
+            }
+            if (w.takedrop_stage?.payment_gateway_ready && !w.takedrop_stage?.test_accepted) {
+                return 'test';
+            }
+
+            // Etap 4 — Reklamy (dopiero gdy CAŁY etap 3 ukończony)
+            if (w.takedrop_stage?.test_accepted) {
+                if (!w.ads_stage?.report_sent) {
+                    if (!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified)) {
+                        return 'ad_account';
+                    }
+                    if (!w.ads_stage?.budget_funded) return 'budget';
+                    if (!w.ads_stage?.campaign_launched) return 'campaign';
+                    return 'ads_report';
+                }
+                // Etap 5 — używamy getNextStep (zwraca optymalizacje/opinie/video/narzedzia)
+                return getNextStep(w);
+            }
+
+            // Etap 1+2 fallback
+            return getNextStep(w);
         }
 
         function getWorkflowPath(id) {
@@ -1914,11 +1838,23 @@
                     status = 'Do uruchomienia';
                     icon = 'ph ph-rocket-launch text-cyan-400';
                     isClientTask = false;
-                } else {
-                    // Wszystko ukończone
+                } else if (nextStep === 'ads_report') {
+                    stepName = 'Raport';
+                    status = 'Do wysłania';
+                    icon = 'ph ph-chart-line-up text-cyan-400';
+                    isClientTask = false;
+                } else if (ads?.report_sent) {
+                    // Etap 4 realnie ukończony (raport wysłany) — następne kroki Etap 5
                     stepName = 'Reklamy';
                     status = 'Kampania aktywna';
                     icon = 'ph-fill ph-check-circle text-emerald-400';
+                    isClientTask = false;
+                } else {
+                    // Fallback diagnostyczny — nextStep zwrócił coś nieoczekiwanego.
+                    // NIE pokazujemy "Kampania aktywna" gdy raport realnie nie poszedł.
+                    stepName = 'Reklamy';
+                    status = nextStep ? `Następny krok: ${nextStep}` : 'W trakcie';
+                    icon = 'ph ph-megaphone-simple text-amber-400';
                     isClientTask = false;
                 }
 
@@ -1942,6 +1878,21 @@
             if (stage === 3) {
                 const td = w.takedrop_stage;
                 const nextStep = getNextStep(w);
+
+                // Strona TD - gdy konto założone ale landing nie podłączony (admin tworzy stronę)
+                if (nextStep === 'landing') {
+                    return `
+                        <div class="py-2">
+                            <div class="flex items-center gap-2 text-[11px]">
+                                <i class="ph ph-layout text-cyan-400"></i>
+                                <span class="text-white font-medium">Strona TD</span>
+                                <span class="text-[9px] text-cyan-400/70 bg-cyan-500/10 px-1 py-0.5 rounded">Ty</span>
+                                <span class="text-zinc-500">·</span>
+                                <span class="text-zinc-400">Do skonfigurowania</span>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 // Dokumenty prawne - gdy strona TD podłączona ale dokumenty nie gotowe
                 if (nextStep === 'legal') {
