@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026050801';
+        const APP_VERSION = '2026051101';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1599,6 +1599,11 @@
                             <span>Raport</span>
                             <i id="dash-nav-check-raport" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
+                        <div id="dash-nav-sprzedaz" class="dash-nav-item" onclick="switchToDashTab('sprzedaz')">
+                            <i class="ph ph-shopping-bag"></i>
+                            <span>Sprzedaż</span>
+                            <i id="dash-nav-check-sprzedaz" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                        </div>
                     </div>
 
                     <div id="dash-section-etap5" class="hidden">
@@ -1747,6 +1752,11 @@
                                 <i class="ph ph-chart-line-up"></i>
                                 <span>Raport</span>
                                 <i id="dash-nav-check-raport-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
+                            </div>
+                            <div id="dash-nav-sprzedaz-mobile" class="dash-nav-item" onclick="switchToDashTab('sprzedaz');toggleDashMobileMenu()">
+                                <i class="ph ph-shopping-bag"></i>
+                                <span>Sprzedaż</span>
+                                <i id="dash-nav-check-sprzedaz-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
                         </div>
 
@@ -4753,6 +4763,136 @@
                     </div>
                 </div>
             </div>
+
+            <!-- TAB: Sprzedaż (Etap 4) — operacyjny widok zamówień klienta -->
+            <div id="tab-sprzedaz" class="tab-panel hidden animate-enter">
+                <div class="max-w-5xl">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-12 h-12 rounded-xl bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
+                            <i class="ph ph-shopping-bag text-2xl text-emerald-400"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h2 class="text-[22px] font-semibold text-white tracking-tight mb-2">Twoje zamówienia</h2>
+                            <p class="text-[14px] text-[#888] leading-relaxed">
+                                Zapisuj tu każde zamówienie ze sklepu. Sami obliczymy marżę i pokażemy trendy. To Twoja prywatna księga — widzi ją też Tomek i może zostawić uwagi.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Cashflow per status (4 kafelki) -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+                        <div class="bg-[#0a0a0a] border border-amber-500/20 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <i class="ph ph-clock text-amber-400 text-sm"></i>
+                                <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Nowe</span>
+                            </div>
+                            <div id="csprz-cashflow-nowe-amount" class="text-[18px] md:text-[20px] font-semibold text-white">0,00 zł</div>
+                            <div id="csprz-cashflow-nowe-count" class="text-[10px] text-zinc-600 mt-0.5">0 zamówień · do zrealizowania</div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-blue-500/20 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <i class="ph ph-truck text-blue-400 text-sm"></i>
+                                <span class="text-[11px] text-zinc-500 uppercase tracking-wide">W realizacji</span>
+                            </div>
+                            <div id="csprz-cashflow-realizacja-amount" class="text-[18px] md:text-[20px] font-semibold text-white">0,00 zł</div>
+                            <div id="csprz-cashflow-realizacja-count" class="text-[10px] text-zinc-600 mt-0.5">0 zamówień · kapitał w drodze</div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-emerald-500/20 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <i class="ph ph-check-circle text-emerald-400 text-sm"></i>
+                                <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Zrealizowane (30d)</span>
+                            </div>
+                            <div id="csprz-cashflow-zrealizowane-amount" class="text-[18px] md:text-[20px] font-semibold text-white">0,00 zł</div>
+                            <div id="csprz-cashflow-zrealizowane-count" class="text-[10px] text-zinc-600 mt-0.5">0 zamówień · zarobione</div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-red-500/20 rounded-xl p-4">
+                            <div class="flex items-center gap-2 mb-1.5">
+                                <i class="ph ph-arrow-u-up-left text-red-400 text-sm"></i>
+                                <span class="text-[11px] text-zinc-500 uppercase tracking-wide">Zwroty (30d)</span>
+                            </div>
+                            <div id="csprz-cashflow-zwrot-amount" class="text-[18px] md:text-[20px] font-semibold text-white">0,00 zł</div>
+                            <div id="csprz-cashflow-zwrot-count" class="text-[10px] text-zinc-600 mt-0.5">0 zamówień · do refundu</div>
+                        </div>
+                    </div>
+
+                    <!-- Tygodniowe porównanie (3 wskaźniki z delta) -->
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl p-4 md:p-5 mb-5">
+                        <div class="flex items-center justify-between mb-3">
+                            <div class="text-[12px] font-medium text-white flex items-center gap-2">
+                                <i class="ph ph-trend-up text-emerald-400 text-sm"></i>
+                                Ten tydzień vs poprzedni
+                            </div>
+                            <div class="text-[10px] text-zinc-600" id="csprz-week-range">—</div>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase">Zamówienia</div>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span id="csprz-week-count" class="text-[18px] font-semibold text-white">0</span>
+                                    <span id="csprz-week-count-delta" class="text-[11px] text-zinc-600"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase">Przychód</div>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span id="csprz-week-revenue" class="text-[18px] font-semibold text-white">0 zł</span>
+                                    <span id="csprz-week-revenue-delta" class="text-[11px] text-zinc-600"></span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="text-[10px] text-zinc-500 uppercase">Marża</div>
+                                <div class="flex items-baseline gap-1.5">
+                                    <span id="csprz-week-margin" class="text-[18px] font-semibold text-white">—</span>
+                                    <span id="csprz-week-margin-delta" class="text-[11px] text-zinc-600"></span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Formularz quick-add -->
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl p-4 mb-5">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-plus-circle text-emerald-400"></i>
+                            <span class="text-[13px] text-white font-medium">Dodaj zamówienie</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-12 gap-2">
+                            <input id="csprz-new-date" type="date" class="md:col-span-2 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-emerald-500 focus:outline-none" />
+                            <input id="csprz-new-number" type="text" placeholder="Nr zamówienia" class="md:col-span-3 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-emerald-500 focus:outline-none" />
+                            <input id="csprz-new-customer" type="text" placeholder="Klient (opc.)" class="md:col-span-3 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-emerald-500 focus:outline-none" />
+                            <input id="csprz-new-revenue" type="number" step="0.01" min="0" placeholder="Wartość zł" class="md:col-span-2 bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-[13px] text-white focus:border-emerald-500 focus:outline-none" />
+                            <button onclick="csprzAddOrder()" class="md:col-span-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg px-3 py-2 text-[13px] font-medium transition-colors flex items-center justify-center gap-1">
+                                <i class="ph ph-plus"></i> Dodaj
+                            </button>
+                        </div>
+                        <p class="text-[10px] text-zinc-600 mt-2">Wpisz tylko trzy najważniejsze rzeczy. Resztę (koszty, notatki) możesz uzupełnić później klikając w wiersz zamówienia.</p>
+                    </div>
+
+                    <!-- Lista zamówień -->
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-xl overflow-hidden">
+                        <div class="px-4 py-3 border-b border-[#1f1f1f] flex items-center justify-between">
+                            <div class="text-[12px] text-zinc-400">
+                                Twoje zamówienia (<span id="csprz-list-count">0</span>)
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select id="csprz-filter-status" onchange="csprzRenderList()" class="bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1 text-[11px] text-zinc-300 focus:outline-none">
+                                    <option value="">Wszystkie</option>
+                                    <option value="nowe">Nowe</option>
+                                    <option value="w_realizacji">W realizacji</option>
+                                    <option value="zrealizowane">Zrealizowane</option>
+                                    <option value="zwrot">Zwrot</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div id="csprz-list-empty" class="hidden px-4 py-12 text-center">
+                            <i class="ph ph-shopping-cart text-3xl text-zinc-700"></i>
+                            <p class="text-[12px] text-zinc-500 mt-2">Brak zamówień. Dodaj pierwsze powyżej, gdy przyjdzie zamówienie ze sklepu.</p>
+                        </div>
+                        <div id="csprz-list" class="divide-y divide-[#1f1f1f]">
+                            <!-- Wiersze generowane przez JS -->
+                        </div>
+                    </div>
+                </div>
+            </div><!-- /tab-sprzedaz -->
 
             <!-- TAB: Optymalizacje (Etap 5) -->
             <div id="tab-optymalizacje" class="tab-panel hidden animate-enter">
@@ -8217,6 +8357,11 @@
             document.getElementById('nav-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
             document.getElementById('dash-nav-raport')?.classList.toggle('hidden', !hasReportSent);
             document.getElementById('dash-nav-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
+
+            // Show/hide Sprzedaż nav item — widoczne gdy Etap 4 (workflow_ads) aktywny
+            const hasSprzedaz = !!adsData?.is_active;
+            document.getElementById('dash-nav-sprzedaz')?.classList.toggle('hidden', !hasSprzedaz);
+            document.getElementById('dash-nav-sprzedaz-mobile')?.classList.toggle('hidden', !hasSprzedaz);
             // Update Raport checkmark
             document.getElementById('nav-check-raport-desktop')?.classList.toggle('hidden', !hasReportSent);
             document.getElementById('nav-check-raport-mobile')?.classList.toggle('hidden', !hasReportSent);
@@ -8943,6 +9088,9 @@
                     break;
                 case 'raport':
                     loadRaportClient();
+                    break;
+                case 'sprzedaz':
+                    loadSprzedazClient();
                     break;
                 case 'optymalizacje':
                     loadOptymalizacjeClient();
@@ -12928,6 +13076,383 @@
         // ============================================
         // ETAP 5 - OPTYMALIZACJA (Client side)
         // ============================================
+        // =============================================
+        // ETAP 4 - SPRZEDAŻ (klient)
+        // =============================================
+        let csprzOrders = [];
+        let csprzProducts = [];
+        const CSPRZ_STATUS_LABELS = {
+            nowe: 'Nowe',
+            w_realizacji: 'W realizacji',
+            zrealizowane: 'Zrealizowane',
+            zwrot: 'Zwrot'
+        };
+        const CSPRZ_STATUS_COLORS = {
+            nowe: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
+            w_realizacji: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
+            zrealizowane: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+            zwrot: 'bg-red-500/15 text-red-400 border-red-500/30'
+        };
+
+        function csprzMoney(value) {
+            if (value === null || value === undefined) return '—';
+            return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN' }).format(value);
+        }
+
+        function csprzDate(dateStr) {
+            if (!dateStr) return '—';
+            try {
+                return new Date(dateStr).toLocaleDateString('pl-PL', { day: '2-digit', month: 'short' });
+            } catch { return dateStr; }
+        }
+
+        async function loadSprzedazClient() {
+            try {
+                const dateInput = document.getElementById('csprz-new-date');
+                if (dateInput && !dateInput.value) {
+                    dateInput.value = new Date().toISOString().slice(0, 10);
+                }
+
+                if (csprzProducts.length === 0) {
+                    const { data: prods } = await supabaseClient
+                        .from('workflow_products')
+                        .select('id, name, image_url')
+                        .eq('workflow_id', workflow.id);
+                    csprzProducts = prods || [];
+                }
+
+                const { data, error } = await supabaseClient
+                    .from('workflow_orders')
+                    .select('*')
+                    .eq('workflow_id', workflow.id)
+                    .order('order_date', { ascending: false })
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+                csprzOrders = data || [];
+
+                csprzRenderAll();
+            } catch (err) {
+                console.error('loadSprzedazClient error:', err);
+                showToast('Błąd ładowania zamówień: ' + err.message, 'error');
+            }
+        }
+        window.loadSprzedazClient = loadSprzedazClient;
+
+        function csprzRenderAll() {
+            csprzRenderCashflow();
+            csprzRenderWeekStats();
+            csprzRenderList();
+            // Checkmark w sidebarze (zielony gdy są jakiekolwiek zamówienia)
+            const hasOrders = csprzOrders.length > 0;
+            ['dash-nav-check-sprzedaz', 'dash-nav-check-sprzedaz-mobile'].forEach(id => {
+                document.getElementById(id)?.classList.toggle('hidden', !hasOrders);
+            });
+        }
+
+        function csprzRenderCashflow() {
+            const now = new Date();
+            const cutoff30 = new Date(now); cutoff30.setDate(cutoff30.getDate() - 30);
+
+            const groups = { nowe: [], w_realizacji: [], zrealizowane: [], zwrot: [] };
+            csprzOrders.forEach(o => {
+                if (!groups[o.status]) return;
+                if (o.status === 'zrealizowane' || o.status === 'zwrot') {
+                    if (new Date(o.order_date) < cutoff30) return;
+                }
+                groups[o.status].push(o);
+            });
+
+            const cells = [
+                { status: 'nowe', idKey: 'nowe', suffix: 'do zrealizowania' },
+                { status: 'w_realizacji', idKey: 'realizacja', suffix: 'kapitał w drodze' },
+                { status: 'zrealizowane', idKey: 'zrealizowane', suffix: 'zarobione' },
+                { status: 'zwrot', idKey: 'zwrot', suffix: 'do refundu' }
+            ];
+            cells.forEach(({ status, idKey, suffix }) => {
+                const arr = groups[status];
+                const total = arr.reduce((s, o) => s + Number(o.revenue_gross || 0), 0);
+                const amountEl = document.getElementById(`csprz-cashflow-${idKey}-amount`);
+                const countEl = document.getElementById(`csprz-cashflow-${idKey}-count`);
+                if (amountEl) amountEl.textContent = csprzMoney(total);
+                if (countEl) countEl.textContent = `${arr.length} ${arr.length === 1 ? 'zamówienie' : 'zamówień'} · ${suffix}`;
+            });
+        }
+
+        function csprzRenderWeekStats() {
+            const now = new Date();
+            const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Mon
+            const thisWeekStart = new Date(now); thisWeekStart.setDate(now.getDate() - dayOfWeek); thisWeekStart.setHours(0,0,0,0);
+            const prevWeekStart = new Date(thisWeekStart); prevWeekStart.setDate(prevWeekStart.getDate() - 7);
+
+            const inRange = (o, start, end) => {
+                const d = new Date(o.order_date);
+                return d >= start && d < end && o.status !== 'zwrot';
+            };
+            const thisWeek = csprzOrders.filter(o => inRange(o, thisWeekStart, new Date(thisWeekStart.getTime() + 7*24*3600*1000)));
+            const prevWeek = csprzOrders.filter(o => inRange(o, prevWeekStart, thisWeekStart));
+
+            const sumRev = arr => arr.reduce((s, o) => s + Number(o.revenue_gross || 0), 0);
+            const sumMargin = arr => {
+                const withCosts = arr.filter(o => o.margin !== null && o.margin !== undefined);
+                return {
+                    has: withCosts.length > 0,
+                    margin: withCosts.reduce((s, o) => s + Number(o.margin || 0), 0),
+                    revenue: withCosts.reduce((s, o) => s + Number(o.revenue_gross || 0), 0)
+                };
+            };
+
+            const thisRev = sumRev(thisWeek);
+            const prevRev = sumRev(prevWeek);
+            const thisMg = sumMargin(thisWeek);
+            const prevMg = sumMargin(prevWeek);
+
+            document.getElementById('csprz-week-count').textContent = thisWeek.length;
+            document.getElementById('csprz-week-revenue').textContent = csprzMoney(thisRev);
+
+            const renderDelta = (elId, current, previous, isPercent = false, suffix = '') => {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                if (previous === 0 && current === 0) { el.textContent = ''; return; }
+                if (previous === 0) { el.textContent = current > 0 ? '▲ nowe' : ''; el.className = 'text-[11px] text-emerald-400'; return; }
+                const delta = current - previous;
+                const pct = Math.round((delta / Math.abs(previous)) * 100);
+                if (Math.abs(pct) < 1) { el.textContent = '≈'; el.className = 'text-[11px] text-zinc-500'; return; }
+                el.textContent = `${delta > 0 ? '▲' : '▼'} ${Math.abs(pct)}%`;
+                el.className = `text-[11px] ${delta > 0 ? 'text-emerald-400' : 'text-red-400'}`;
+            };
+            renderDelta('csprz-week-count-delta', thisWeek.length, prevWeek.length);
+            renderDelta('csprz-week-revenue-delta', thisRev, prevRev);
+
+            const marginEl = document.getElementById('csprz-week-margin');
+            const marginDeltaEl = document.getElementById('csprz-week-margin-delta');
+            if (thisMg.has && thisMg.revenue > 0) {
+                const thisPct = Math.round((thisMg.margin / thisMg.revenue) * 100);
+                marginEl.textContent = `${thisPct}%`;
+                if (prevMg.has && prevMg.revenue > 0) {
+                    const prevPct = Math.round((prevMg.margin / prevMg.revenue) * 100);
+                    const diff = thisPct - prevPct;
+                    if (Math.abs(diff) < 1) {
+                        marginDeltaEl.textContent = '≈';
+                        marginDeltaEl.className = 'text-[11px] text-zinc-500';
+                    } else {
+                        marginDeltaEl.textContent = `${diff > 0 ? '▲' : '▼'} ${Math.abs(diff)}pp`;
+                        marginDeltaEl.className = `text-[11px] ${diff > 0 ? 'text-emerald-400' : 'text-red-400'}`;
+                    }
+                } else {
+                    marginDeltaEl.textContent = '';
+                }
+            } else {
+                marginEl.textContent = '—';
+                marginDeltaEl.textContent = '';
+            }
+
+            // Date range
+            const formatRange = (start, end) => {
+                const opts = { day: '2-digit', month: 'short' };
+                const endDate = new Date(end.getTime() - 24*3600*1000);
+                return `${start.toLocaleDateString('pl-PL', opts)} – ${endDate.toLocaleDateString('pl-PL', opts)}`;
+            };
+            const rangeEl = document.getElementById('csprz-week-range');
+            if (rangeEl) rangeEl.textContent = formatRange(thisWeekStart, new Date(thisWeekStart.getTime() + 7*24*3600*1000));
+        }
+
+        function csprzRenderList() {
+            const filterStatus = document.getElementById('csprz-filter-status')?.value || '';
+            const filtered = filterStatus ? csprzOrders.filter(o => o.status === filterStatus) : csprzOrders;
+
+            const list = document.getElementById('csprz-list');
+            const empty = document.getElementById('csprz-list-empty');
+            const countEl = document.getElementById('csprz-list-count');
+            if (countEl) countEl.textContent = filtered.length;
+
+            if (filtered.length === 0) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            const customerCount = {};
+            csprzOrders.forEach(o => {
+                if (!o.customer_name) return;
+                const key = o.customer_name.trim().toLowerCase();
+                customerCount[key] = (customerCount[key] || 0) + 1;
+            });
+
+            list.innerHTML = filtered.map(o => csprzRenderRow(o, customerCount)).join('');
+        }
+        window.csprzRenderList = csprzRenderList;
+
+        function csprzRenderRow(o, customerCount) {
+            const product = csprzProducts.find(p => p.id === o.product_id);
+            const productImg = product?.image_url || '';
+            const productName = product?.name || '';
+            const recurringBadge = (o.customer_name && (customerCount[o.customer_name.trim().toLowerCase()] || 0) > 1)
+                ? `<span class="ml-1 text-[9px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-300 font-medium">${customerCount[o.customer_name.trim().toLowerCase()]}×</span>`
+                : '';
+            const marginText = (o.margin !== null && o.margin !== undefined)
+                ? `<span class="text-[11px] text-zinc-500">marża ${csprzMoney(o.margin)} (${Math.round((Number(o.margin) / Number(o.revenue_gross)) * 100)}%)</span>`
+                : `<span class="text-[11px] text-zinc-700">brak kosztów</span>`;
+            const adminNoteBlock = o.admin_note
+                ? `<div class="mt-2 flex items-start gap-2 bg-violet-500/5 border border-violet-500/20 rounded-md px-2.5 py-1.5">
+                    <i class="ph ph-chat-circle-text text-violet-400 text-xs mt-0.5"></i>
+                    <div class="flex-1">
+                        <div class="text-[10px] text-violet-400 uppercase tracking-wide mb-0.5">Wskazówka od Tomka</div>
+                        <span class="text-[12px] text-violet-200">${o.admin_note.replace(/</g, '&lt;')}</span>
+                    </div>
+                </div>`
+                : '';
+
+            return `
+                <div class="px-4 py-3 hover:bg-white/[0.02] transition-colors" data-order-id="${o.id}">
+                    <div class="flex items-center gap-3 cursor-pointer" onclick="csprzToggleDetails('${o.id}')">
+                        ${productImg ? `<img src="${productImg}" alt="${productName}" class="w-10 h-10 rounded object-cover bg-zinc-900 flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-10 h-10 rounded bg-zinc-900 flex-shrink-0 flex items-center justify-center"><i class="ph ph-package text-zinc-600"></i></div>'}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-[10px] text-zinc-500 font-mono">${csprzDate(o.order_date)}</span>
+                                ${o.order_number ? `<span class="text-[12px] text-white font-medium">${o.order_number}</span>` : ''}
+                                ${o.customer_name ? `<span class="text-[12px] text-zinc-400">${o.customer_name}${recurringBadge}</span>` : ''}
+                            </div>
+                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span class="text-[14px] font-semibold text-white">${csprzMoney(o.revenue_gross)}</span>
+                                ${marginText}
+                            </div>
+                        </div>
+                        <select onclick="event.stopPropagation()" onchange="csprzUpdateField('${o.id}', 'status', this.value)" class="text-[10px] px-2 py-1 rounded-md border ${CSPRZ_STATUS_COLORS[o.status]} cursor-pointer focus:outline-none">
+                            ${Object.entries(CSPRZ_STATUS_LABELS).map(([k, v]) => `<option value="${k}" ${k === o.status ? 'selected' : ''}>${v}</option>`).join('')}
+                        </select>
+                    </div>
+                    ${adminNoteBlock}
+                    <div id="csprz-details-${o.id}" class="hidden mt-3 pt-3 border-t border-[#1f1f1f] grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-zinc-600 uppercase mb-1">Koszt produktu (zł)</label>
+                            <input type="number" step="0.01" min="0" value="${o.supplier_cost ?? ''}" onchange="csprzUpdateField('${o.id}', 'supplier_cost', this.value)" class="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-[12px] text-white focus:border-emerald-500 focus:outline-none" />
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-zinc-600 uppercase mb-1">Koszt wysyłki (zł)</label>
+                            <input type="number" step="0.01" min="0" value="${o.shipping_cost ?? ''}" onchange="csprzUpdateField('${o.id}', 'shipping_cost', this.value)" class="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-[12px] text-white focus:border-emerald-500 focus:outline-none" />
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="block text-[10px] text-zinc-600 uppercase mb-1">Notatki</label>
+                            <textarea rows="2" onchange="csprzUpdateField('${o.id}', 'notes', this.value)" placeholder="ID u dostawcy, tracking, uwagi..." class="w-full bg-zinc-900 border border-zinc-700 rounded-md px-2 py-1.5 text-[12px] text-white focus:border-emerald-500 focus:outline-none resize-y">${o.notes ?? ''}</textarea>
+                        </div>
+                        <div class="md:col-span-2 flex justify-end">
+                            <button onclick="csprzDeleteOrder('${o.id}')" class="text-[11px] text-red-400 hover:text-red-300 flex items-center gap-1">
+                                <i class="ph ph-trash"></i> Usuń zamówienie
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function csprzToggleDetails(orderId) {
+            const el = document.getElementById(`csprz-details-${orderId}`);
+            if (el) el.classList.toggle('hidden');
+        }
+        window.csprzToggleDetails = csprzToggleDetails;
+
+        async function csprzAddOrder() {
+            const date = document.getElementById('csprz-new-date').value;
+            const number = document.getElementById('csprz-new-number').value.trim();
+            const customer = document.getElementById('csprz-new-customer').value.trim();
+            const revenueRaw = document.getElementById('csprz-new-revenue').value;
+            const revenue = parseFloat(revenueRaw);
+
+            if (!date || !revenue || isNaN(revenue) || revenue < 0) {
+                showToast('Wpisz datę i wartość zamówienia', 'error');
+                return;
+            }
+
+            const defaultProductId = workflow?.selected_product_id || null;
+
+            try {
+                const { data, error } = await supabaseClient
+                    .from('workflow_orders')
+                    .insert({
+                        workflow_id: workflow.id,
+                        order_date: date,
+                        order_number: number || null,
+                        customer_name: customer || null,
+                        revenue_gross: revenue,
+                        product_id: defaultProductId,
+                        status: 'nowe'
+                    })
+                    .select()
+                    .single();
+                if (error) throw error;
+
+                csprzOrders.unshift(data);
+                document.getElementById('csprz-new-number').value = '';
+                document.getElementById('csprz-new-customer').value = '';
+                document.getElementById('csprz-new-revenue').value = '';
+                document.getElementById('csprz-new-number').focus();
+                csprzRenderAll();
+                showToast('Zamówienie dodane', 'success');
+            } catch (err) {
+                console.error('csprzAddOrder error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.csprzAddOrder = csprzAddOrder;
+
+        async function csprzUpdateField(orderId, field, value) {
+            try {
+                let val = value;
+                if (['supplier_cost', 'shipping_cost'].includes(field)) {
+                    val = (value === '' || value === null) ? null : parseFloat(value);
+                    if (val !== null && (isNaN(val) || val < 0)) {
+                        showToast('Wartość musi być liczbą ≥ 0', 'error');
+                        return;
+                    }
+                }
+                if (value === '') val = null;
+
+                const { error } = await supabaseClient
+                    .from('workflow_orders')
+                    .update({ [field]: val })
+                    .eq('id', orderId);
+                if (error) throw error;
+
+                const idx = csprzOrders.findIndex(o => o.id === orderId);
+                if (idx >= 0) {
+                    csprzOrders[idx][field] = val;
+                    if (['supplier_cost', 'shipping_cost', 'revenue_gross'].includes(field)) {
+                        const { data: fresh } = await supabaseClient
+                            .from('workflow_orders')
+                            .select('*')
+                            .eq('id', orderId)
+                            .single();
+                        if (fresh) csprzOrders[idx] = fresh;
+                    }
+                }
+                csprzRenderAll();
+            } catch (err) {
+                console.error('csprzUpdateField error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.csprzUpdateField = csprzUpdateField;
+
+        async function csprzDeleteOrder(orderId) {
+            if (!confirm('Usunąć to zamówienie?')) return;
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_orders')
+                    .delete()
+                    .eq('id', orderId);
+                if (error) throw error;
+                csprzOrders = csprzOrders.filter(o => o.id !== orderId);
+                csprzRenderAll();
+                showToast('Zamówienie usunięte', 'success');
+            } catch (err) {
+                console.error('csprzDeleteOrder error:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
+        window.csprzDeleteOrder = csprzDeleteOrder;
+
         async function loadOptymalizacjeClient() {
             if (!optimizationData) {
                 const { data } = await supabaseClient
