@@ -2996,9 +2996,7 @@
       inset: 0;
       overflow: hidden;
     }
-    /* Ten sam crop hack co w sekcji — iframe 16:9 width w 9:16 frame.
-       YT.Player replaces div, wiec selektor przez parent .reels-lb-frame. */
-    .reels-lb-frame > iframe,
+    /* Crop hack tylko dla YT (16:9 → 9:16). TikTok/IG embed nativnie 9:16. */
     .reels-lb-player iframe {
       position: absolute !important;
       top: 50% !important;
@@ -3007,6 +3005,14 @@
       width: 177.778% !important;
       transform: translate(-50%, -50%) !important;
       border: 0 !important;
+    }
+    .reels-lb-embed {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #000;
     }
 
     .reels-lb-link {
@@ -3277,7 +3283,9 @@
       const section = document.querySelector('.reels');
       if (!section) return;
 
-      const phones = Array.from(document.querySelectorAll('.reel-phone[data-yt-id]'));
+      // Wszystkie miniaturki (YouTube + TikTok + Instagram). YT odtwarza w sekcji,
+      // TT/IG pokazuje thumbnail 4s i przechodzi dalej; lightbox dla TT/IG = link out.
+      const phones = Array.from(document.querySelectorAll('.reel-phone[data-video-idx]'));
       if (phones.length === 0) return;
       const track = document.getElementById('reelsTrack');
       const progressBars = Array.from(document.querySelectorAll('.reels-progress-bar'));
@@ -3293,6 +3301,9 @@
       let ytApiCallbacks = [];
       let autoplayStarted = false;
       let autoplayPaused = false;
+
+      function getTiktokId(url) { const m = (url || '').match(/\/video\/(\d+)/); return m ? m[1] : null; }
+      function getInstagramShortcode(url) { const m = (url || '').match(/\/(?:p|reel)\/([A-Za-z0-9_-]+)/); return m ? m[1] : null; }
 
       // ═══ Carousel: klasy + recenter (linear, bez cyclical wrap) ═══
       function applyClasses() {
@@ -3391,6 +3402,9 @@
           try { sectionPlayer.destroy(); } catch (_) {}
           sectionPlayer = null;
         }
+        if (typeof nonYtTimer !== 'undefined' && nonYtTimer) {
+          clearTimeout(nonYtTimer); nonYtTimer = null;
+        }
         phones.forEach(function(p) {
           const screen = p.querySelector('.reel-phone-screen');
           const playerDiv = screen && screen.querySelector('.reel-phone-player');
@@ -3400,12 +3414,25 @@
         stopProgress();
       }
 
+      let nonYtTimer = null;
+
       function playActiveInSection() {
         if (autoplayPaused) return;
         destroySectionPlayer();
+        if (nonYtTimer) { clearTimeout(nonYtTimer); nonYtTimer = null; }
         const phone = phones[activeIdx];
-        const ytId = phone && phone.dataset.ytId;
-        if (!ytId) return;
+        if (!phone) return;
+        const ytId = phone.dataset.ytId;
+        // TikTok / Instagram: pokaz thumbnail jak story 4s, potem advance
+        if (!ytId) {
+          phone.classList.add('reel-phone--playing');
+          startProgress(4000);
+          nonYtTimer = setTimeout(function() {
+            phone.classList.remove('reel-phone--playing');
+            advanceToNext();
+          }, 4000);
+          return;
+        }
         const screen = phone.querySelector('.reel-phone-screen');
         if (!screen) return;
 
@@ -3563,14 +3590,31 @@
           let frame = '';
           if (platform === 'youtube' && ytId) {
             frame = '<div class="reels-lb-player" data-yt-id="' + ytId + '" id="reels-lb-player-' + i + '"></div>';
+          } else if (platform === 'tiktok') {
+            const ttId = getTiktokId(url);
+            if (ttId) {
+              frame = '<div class="reels-lb-embed-host" data-platform="tiktok" data-embed-id="' + ttId + '" id="reels-lb-embed-' + i + '"></div>';
+            } else {
+              frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
+                '<span class="reels-lb-link-icon reels-lb-link-icon--tiktok"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
+                '<span class="reels-lb-link-label">Otwórz na TikTok</span>' +
+                '<span class="reels-lb-link-sub">Otworzy się w nowej karcie</span></a>';
+            }
+          } else if (platform === 'instagram') {
+            const igCode = getInstagramShortcode(url);
+            if (igCode) {
+              frame = '<div class="reels-lb-embed-host" data-platform="instagram" data-embed-shortcode="' + igCode + '" data-fallback-url="' + url + '" id="reels-lb-embed-' + i + '"></div>';
+            } else {
+              frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
+                '<span class="reels-lb-link-icon reels-lb-link-icon--instagram"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
+                '<span class="reels-lb-link-label">Otwórz na Instagram</span>' +
+                '<span class="reels-lb-link-sub">Otworzy się w nowej karcie</span></a>';
+            }
           } else {
-            const iconCls = 'reels-lb-link-icon--' + platform;
-            const label = platform === 'instagram' ? 'Otwórz na Instagram' : (platform === 'tiktok' ? 'Otwórz na TikTok' : 'Otwórz video');
             frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
-              '<span class="reels-lb-link-icon ' + iconCls + '"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
-              '<span class="reels-lb-link-label">' + label + '</span>' +
-              '<span class="reels-lb-link-sub">Otworzy się w nowej karcie</span>' +
-              '</a>';
+              '<span class="reels-lb-link-icon"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
+              '<span class="reels-lb-link-label">Otwórz video</span>' +
+              '<span class="reels-lb-link-sub">Otworzy się w nowej karcie</span></a>';
           }
           return '<div class="reels-lb-slide" data-slide-idx="' + i + '">' +
             '<div class="reels-lb-frame">' + frame + '</div>' +
@@ -3583,14 +3627,52 @@
         lbBuilt = true;
       }
 
+      function ensureLbEmbed(idx, autoplay) {
+        const host = document.getElementById('reels-lb-embed-' + idx);
+        if (!host) return;
+        const platform = host.dataset.platform;
+        if (host.querySelector('iframe')) return;
+        let src = '';
+        if (platform === 'tiktok') {
+          const id = host.dataset.embedId;
+          if (!id) return;
+          src = 'https://www.tiktok.com/player/v1/' + encodeURIComponent(id) + '?autoplay=' + (autoplay ? '1' : '0') + '&loop=0&controls=1&music_info=0&description=0&rel=0';
+        } else if (platform === 'instagram') {
+          const code = host.dataset.embedShortcode;
+          if (!code) return;
+          src = 'https://www.instagram.com/p/' + encodeURIComponent(code) + '/embed/captioned/';
+        } else {
+          return;
+        }
+        const iframe = document.createElement('iframe');
+        iframe.className = 'reels-lb-embed';
+        iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
+        iframe.allowFullscreen = true;
+        iframe.referrerPolicy = 'no-referrer-when-downgrade';
+        iframe.src = src;
+        host.appendChild(iframe);
+      }
+      function pauseLbEmbed(idx) {
+        const host = document.getElementById('reels-lb-embed-' + idx);
+        if (!host) return;
+        const iframe = host.querySelector('iframe');
+        if (iframe) iframe.remove();
+      }
+
       function ensureLbPlayer(idx, autoplay) {
         if (idx < 0 || idx >= phones.length) return;
+        const phone = phones[idx];
+        if (!phone) return;
+        const platform = phone.dataset.platform || 'youtube';
+        if (platform !== 'youtube') {
+          if (autoplay) ensureLbEmbed(idx, true);
+          return;
+        }
         if (lbPlayers[idx]) {
           if (autoplay) playLbPlayer(idx);
           return;
         }
-        const phone = phones[idx];
-        if (!phone || !phone.dataset.ytId) return;
+        if (!phone.dataset.ytId) return;
         ensureYtApi(function() {
           if (lbPlayers[idx]) {
             if (autoplay) playLbPlayer(idx);
@@ -3633,6 +3715,7 @@
         if (p && typeof p.pauseVideo === 'function') {
           try { p.pauseVideo(); } catch (_) {}
         }
+        pauseLbEmbed(idx);
       }
       function playLbPlayer(idx) {
         const p = lbPlayers[idx];
@@ -3673,6 +3756,7 @@
         lb.classList.remove('show');
         document.body.style.overflow = '';
         Object.keys(lbPlayers).forEach(function(idx) { pauseLbPlayer(idx); });
+        for (let i = 0; i < phones.length; i++) pauseLbEmbed(i);
         autoplayPaused = false;
         // Wznów autoplay sekcji jeśli widoczna
         setTimeout(function() {
@@ -3772,11 +3856,11 @@
         <div class="offer-badge">Bestseller — ostatnie sztuki</div>
         <h3>OraVibe V300 Komplet</h3>
         <div class="price-row">
-          <span class="price">299 <small style="font-size:20px; font-weight:400;">PLN</small></span>
+          <span class="price">239 <small style="font-size:20px; font-weight:400;">PLN</small></span>
           <span class="price-old">499 PLN</span>
         </div>
         <div class="price-label">brutto, z VAT &middot; darmowa dostawa 24h</div>
-        <div class="price-save">OSZCZĘDZASZ 200 PLN</div>
+        <div class="price-save">OSZCZĘDZASZ 260 PLN</div>
 
         <ul class="offer-includes">
           <li><span class="check">&#10003;</span> OraVibe V300 (zbiornik 800 ml)</li>
@@ -3787,7 +3871,7 @@
           <li><span class="check">&#10003;</span> Gwarancja 24 miesiące</li>
         </ul>
 
-        <a href="https://oravibe.pl/checkout?products=103032606-321178488" class="btn-cta-main">Zamów z dostawą 24h — 299 PLN</a>
+        <a href="https://oravibe.pl/checkout?products=103032606-321178488" class="btn-cta-main">Zamów z dostawą 24h — 239 PLN</a>
         <div class="btn-sub">BLIK &middot; karta &middot; PayU &middot; za pobraniem</div>
       </div>
     </div>
@@ -3846,7 +3930,7 @@
 
   <!-- Sticky mobile CTA -->
   <div class="sticky-cta" id="stickyCta">
-    <a href="https://oravibe.pl/checkout?products=103032606-321178488">Zamów OraVibe — 299 PLN</a>
+    <a href="https://oravibe.pl/checkout?products=103032606-321178488">Zamów OraVibe — 239 PLN</a>
   </div>
 
   <!-- Cookie banner -->
