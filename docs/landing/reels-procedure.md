@@ -143,13 +143,17 @@ Pełna implementacja w `landing-pages/dentaflow/index.html` (commit `aea41a7+`).
 | YT pobiera HLS tylko (m3u8), wymaga ffmpeg do merge → broken MP4 (duration=0) | Wymuś `-f 18` (360p single mp4 z audio) lub zainstaluj ffmpeg |
 | TT/IG video usunięte/prywatne → yt-dlp fail | Skrypt po prostu pomija ten URL (continue) |
 | Wszystkie 18 reels to duplikaty po dedupie → tylko N unikalnych | Manifest pokazuje `duplicates_removed`, HTML emit ma N buttons |
-| Brak phash distance match mimo wizualnej zgodności | Zmniejsz `PHASH_THRESHOLD` w skrypcie (default 20, można 30 dla bardziej agresywnego dedupu) |
+| Brak phash distance match mimo wizualnej zgodności | Zmniejsz `PHASH_THRESHOLD` w skrypcie (default 20, można 30) |
 | Zapisany w bazie URL ma jakieś `?si=...` lub tracking params | yt-dlp i tak je obsłuży, ale `extract_yt_id` może wymagać poprawki |
+| **Re-run dla tego samego landinga (zmiana liczby reels)** | Skrypt sam zrobi cleanup `reel-{N}.{mp4,jpg}` dla N >= keep_count po upload (`supa_cleanup_old_reels`). NIE trzeba ręcznie kasować w Storage. |
+| **Cache reuse przy iterowaniu** | Skrypt sprawdza czy `reels-out/{slug}/src-{i}.{mp4,jpg}` istnieją (>50KB) i pomija download. Zmień video w bazie i delete `reels-out/{slug}/` żeby wymusić ponowne pobranie. |
+| **Migracja starego landinga** (z YT iframe / bez data-mp4-url) | Po `generate-reels.py` wklej cały blok `<!-- VIDEOS:REELS:START -->...<!-- VIDEOS:REELS:END -->` z `dentaflow/index.html` jako template + zamień `OraVibe`→brand, `oravibe.pl/checkout?products=...`→swój CTA URL, podmień track/progress/counter z manifestu. **Sprawdź czy nie ma 2 IIFE `initReels()`** — stare leftover z poprzedniej wersji v2 bywa poza markerami REELS. Usuń. |
 
 ---
 
 ## Histo­ria zmian
 
+- **2026-05-11 (v3.2)** — Migracja `parova/`, `innerscan/`, `vitrix/` na MP4-based + dedup v2. Wyniki: parova 4→4, innerscan 13→6, vitrix 27→5. Dodany `supa_cleanup_old_reels` (po upload usuwa stare `reel-{N}+`) i cache reuse (`src-{i}.mp4` jeśli istnieje, pomija download).
 - **2026-05-11 (v3.1)** — Dedup v2: duration ±0.3s jako primary signal. Patryk zgłosił że v3 (phash only) zostawiał duplikaty (pos 11/12/13 to były 3× ten sam reel z dur diff 0.02-0.08s, ale phash distance 42-116 bo YT miał custom cover). Dla dentaflow: 18 → 6 (zamiast 13).
 - **2026-05-11 (v3)** — MP4-based playback + phash dedup (v1). Naprawia: czarny ekran YT shortów (region-locked), pustą ramkę TT/IG embed (X-Frame), iframe-based playback. Wzorzec: `dentaflow/`.
 - **2026-05-08** — v2 (`innerscan/`): selektor zmieniony na `.reel-phone[data-video-idx]` (było tylko `[data-yt-id]`), próba TikTok player/v1 + Instagram embed iframe — okazało się nie działać dla większości videos.

@@ -102,9 +102,19 @@ def fetch_video_links(workflow_id: str):
 # yt-dlp download
 # ─────────────────────────────────────────────────────────────────────
 
-def download_one(url: str, out_path_template: str, idx: int) -> tuple:
-    """Zwraca (mp4_path, jpg_path) lub (None, None) jeśli failed."""
+def download_one(url: str, out_path_template: str, idx: int, force: bool = False) -> tuple:
+    """Zwraca (mp4_path, jpg_path) lub (None, None) jeśli failed.
+    Cache reuse: jeśli oba pliki istnieją (i mają sensowny rozmiar) — pomija download."""
     platform = detect_platform(url)
+    mp4_path = out_path_template % "mp4"
+    jpg_path = out_path_template % "jpg"
+
+    # Cache hit
+    if not force and Path(mp4_path).exists() and Path(jpg_path).exists():
+        if os.path.getsize(mp4_path) > 50_000 and os.path.getsize(jpg_path) > 1_000:
+            print(f"  [{idx}] cache hit (skip download)", file=sys.stderr)
+            return (mp4_path, jpg_path)
+
     cmd_base = ["python", "-m", "yt_dlp", "--quiet", "--no-warnings"]
 
     # YouTube: format 18 (360p single mp4 z audio, bez HLS) + JS bypass
@@ -123,7 +133,6 @@ def download_one(url: str, out_path_template: str, idx: int) -> tuple:
             url,
         ]
 
-    mp4_path = out_path_template % "mp4"
     if Path(mp4_path).exists():
         Path(mp4_path).unlink()
 
@@ -140,7 +149,6 @@ def download_one(url: str, out_path_template: str, idx: int) -> tuple:
         return (None, None)
 
     # Thumbnail
-    jpg_path = out_path_template % "jpg"
     if platform == "youtube":
         ytid = extract_yt_id(url)
         if ytid:
@@ -243,6 +251,31 @@ def supa_upload(local_path: str, supa_path: str, content_type: str):
 def supa_delete(supa_path: str):
     url = f"{SUPA_URL}/storage/v1/object/{supa_path}"
     requests.delete(url, headers={"Authorization": f"Bearer {SUPA_KEY}", "apikey": SUPA_KEY}, timeout=30)
+
+def supa_list_reels(slug: str) -> list:
+    """Lista wszystkich plików reel-*.{mp4,jpg} w storage dla danego slug."""
+    url = f"{SUPA_URL}/storage/v1/object/list/attachments"
+    r = requests.post(
+        url,
+        headers={"Authorization": f"Bearer {SUPA_KEY}", "apikey": SUPA_KEY, "Content-Type": "application/json"},
+        json={"prefix": f"landing/{slug}/reels/", "limit": 1000},
+        timeout=30,
+    )
+    if not r.ok:
+        return []
+    return [obj["name"] for obj in r.json() if re.match(r"reel-\d+\.(mp4|jpg)", obj["name"])]
+
+def supa_cleanup_old_reels(slug: str, keep_count: int):
+    """Usuń wszystkie reel-{N}.{mp4,jpg} dla N >= keep_count (śmieci po poprzednich runach)."""
+    existing = supa_list_reels(slug)
+    to_delete = []
+    for name in existing:
+        m = re.match(r"reel-(\d+)\.(mp4|jpg)", name)
+        if m and int(m.group(1)) >= keep_count:
+            to_delete.append(f"attachments/landing/{slug}/reels/{name}")
+    for path in to_delete:
+        supa_delete(path)
+    return len(to_delete)
 
 # ─────────────────────────────────────────────────────────────────────
 # HTML emit
@@ -349,6 +382,10 @@ def main():
                 supa_path = f"attachments/landing/{args.slug}/reels/reel-{new_idx}.{ext}"
                 ok, msg = supa_upload(src, supa_path, ctype)
                 print(f"  [{new_idx}.{ext}] {'OK' if ok else 'FAIL: '+msg}", file=sys.stderr)
+        # Cleanup: usuń stare reel-{N}.{mp4,jpg} dla N >= len(kept) (śmieci po poprzednich runach)
+        deleted = supa_cleanup_old_reels(args.slug, len(kept))
+        if deleted:
+            print(f"  + cleanup: usunięto {deleted} starych plików (reel-{len(kept)}+ z poprzednich runów)", file=sys.stderr)
 
     print(f"\n[4/5] Generuję HTML snippet", file=sys.stderr)
     html = emit_html(args.slug, kept)
