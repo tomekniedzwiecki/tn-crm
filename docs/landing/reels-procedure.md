@@ -15,7 +15,7 @@
 | **Blockquote embed.js** (TT/IG oficjalne) | Renderuje szeroki widget z opisem i komentarzami → nie pasuje do 9:16 ramki, niespójny UX | Pobierz MP4 lokalnie |
 | **YouTube iframe embed dla `data-yt-id`** | „Czarny ekran" dla niektórych shortów (region-locked, embed-disabled albo wymagają specjalnych formatów) | Pobierz MP4 lokalnie (yt-dlp z `--remote-components ejs:github` + format `18`) |
 | **Selektor `.reel-phone[data-yt-id]`** | Łapał TYLKO YT, TT/IG thumbnails nie reagowały na klik, counter „X / 18" kłamał (logika na 6) | Selektor `.reel-phone[data-video-idx]` i jednolity `data-mp4-url` dla wszystkich |
-| **Duplikaty TT+IG+YT** | Klient uploaduje ten sam reel na 3 platformy → 18 thumbnaili, ale 9 unikalnych. Marnujemy storage, mylimy UX | Perceptual hash (phash) thumbnaili — pHamming distance ≤20 + |Δduration| ≤2s = duplikat |
+| **Duplikaty TT+IG+YT (v1 — phash only)** | Klient uploaduje ten sam reel na 3 platformy → 18 thumbnaili, ale 6 unikalnych. **Phash zawodzi cross-platform** bo YT ma custom cover (graficzny), TT/IG biorą pierwszą klatkę → te same nagrania mają distance 100+ | **Duration match ±0.3s primary signal** — różne nagrania w 0.3s precyzji ekstremalnie rzadkie. Phash tylko jako wspierający (≤20 + dur ≤2s) |
 
 **Wzorce zostawione tylko jako fallback w kodzie:**
 - YT.Player API + `data-yt-id` — gdy MP4 lokalnie się nie udało pobrać (broken HLS bez ffmpeg). Domyślnie nieużywane.
@@ -50,7 +50,10 @@ Skrypt zrobi:
    - YouTube: `--remote-components ejs:github --js-runtimes node -f 18` (360p MP4 z audio, single file, no ffmpeg merge)
    - TikTok/Instagram: `-f best[ext=mp4]/best`
    - Thumbnaile: YT przez `img.youtube.com/vi/{id}/maxresdefault.jpg`, TT/IG przez `--write-thumbnail`
-3. **Phash dedup** — `imagehash.phash(hash_size=16)` thumbnaila + duration check ±2s. Gdy match (Hamming ≤20) → grupa duplikatów.
+3. **Dedup cross-platform** — algorytm v2:
+   - **Primary: duration match ±0.3s** (różne nagrania w tej precyzji ekstremalnie rzadkie; klient regularnie uploaduje ten sam reel na TT+IG+YT)
+   - **Wspierający: phash** (`imagehash.phash` hash_size=16, distance ≤20) gdy duration ≤2s — łapie te same video gdy yt-dlp wziął nieidentyczne klatki źródłowe
+   - **NIE** używa samego phash (zawodzi cross-platform: YT custom cover ≠ TT/IG pierwsza klatka, distance 100+)
 4. **Wybór najlepszego** z grupy: priorytet YT (lepsza jakość, view counter), inaczej największy MP4.
 5. **Upload** unikalnych do `attachments/landing/{slug}/reels/reel-{0..N-1}.{mp4,jpg}` — renumerowane od zera.
 6. **Manifest** `reels-out/{slug}/manifest.json` z mapping new_idx → mp4_url + thumb_url + dropped duplikaty.
@@ -147,6 +150,7 @@ Pełna implementacja w `landing-pages/dentaflow/index.html` (commit `aea41a7+`).
 
 ## Histo­ria zmian
 
-- **2026-05-11** — v3 (MP4-based + phash dedup). Naprawia: czarny ekran YT shortów (region-locked), pustą ramkę TT/IG embed (X-Frame), duplikaty TT+IG+YT z tego samego reela. Wzorzec: `dentaflow/`.
+- **2026-05-11 (v3.1)** — Dedup v2: duration ±0.3s jako primary signal. Patryk zgłosił że v3 (phash only) zostawiał duplikaty (pos 11/12/13 to były 3× ten sam reel z dur diff 0.02-0.08s, ale phash distance 42-116 bo YT miał custom cover). Dla dentaflow: 18 → 6 (zamiast 13).
+- **2026-05-11 (v3)** — MP4-based playback + phash dedup (v1). Naprawia: czarny ekran YT shortów (region-locked), pustą ramkę TT/IG embed (X-Frame), iframe-based playback. Wzorzec: `dentaflow/`.
 - **2026-05-08** — v2 (`innerscan/`): selektor zmieniony na `.reel-phone[data-video-idx]` (było tylko `[data-yt-id]`), próba TikTok player/v1 + Instagram embed iframe — okazało się nie działać dla większości videos.
 - **2026-05-07** — v1 (`parova/`): pierwsza wersja z YT.Player API, autoplay-on-scroll, lightbox snap-scroll. Działała tylko dla YouTube — TT/IG miały link out.

@@ -43,8 +43,12 @@ except ImportError as e:
 
 SUPA_URL = "https://yxmavwkwnfuphjqbelws.supabase.co"
 SUPA_KEY = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
-PHASH_THRESHOLD = 20  # 20/256 bits = ~8% różnicy thumbnaili
-DUR_TOLERANCE = 2.0   # ±2s na duration
+# DEDUP: priorytetowy sygnał = duration match. Phash bywa nieskuteczny dla cross-platform
+# bo YouTube często ma custom cover (graficzny), TT/IG biorą pierwszą klatkę video.
+# Te same nagrania dają radykalnie różne thumbnaile (phash distance 100+) mimo tego samego content.
+DUR_STRONG_MATCH = 0.3  # różnica <0.3s w realnym świecie = niemal pewny cross-platform duplikat
+PHASH_THRESHOLD = 20    # tylko wspierający sygnał gdy duration nie matchuje strong
+DUR_TOLERANCE = 2.0     # tolerancja gdy phash MATCHUJE (dla weak signal)
 
 # ─────────────────────────────────────────────────────────────────────
 # Helpers
@@ -167,19 +171,33 @@ def download_one(url: str, out_path_template: str, idx: int) -> tuple:
 # Dedup via phash
 # ─────────────────────────────────────────────────────────────────────
 
+def is_duplicate(a: dict, b: dict) -> tuple:
+    """Zwraca (is_dup: bool, reason: str)."""
+    dur_diff = abs(a["dur"] - b["dur"])
+    # Strong duration signal: różnica <0.3s = niemal pewny duplikat cross-platform
+    # (klient wrzuca ten sam reel na TT+IG+YT — encoding daje minimalną różnicę 0.0-0.2s)
+    if dur_diff <= DUR_STRONG_MATCH:
+        return True, f"dur match {dur_diff:.2f}s"
+    # Weak signal: phash similarity + szersza tolerancja duration
+    try:
+        phash_dist = a["phash"] - b["phash"]
+    except Exception:
+        phash_dist = 999
+    if phash_dist <= PHASH_THRESHOLD and dur_diff <= DUR_TOLERANCE:
+        return True, f"phash dist {phash_dist} + dur {dur_diff:.2f}s"
+    return False, ""
+
 def dedup(items: list) -> list:
     """items: [{idx, url, platform, mp4, jpg, dur, sz, phash}]
-       Zwraca: [{group_id, primary, dropped: [...]}]"""
+       Zwraca: [{primary, dropped: [...]}]
+       Algorytm: greedy grouping, primary signal = duration ±0.3s,
+       wspierający = phash ≤20 + duration ±2s."""
     groups = []
     for it in items:
         placed = False
         for g in groups:
-            ref = g[0]
-            try:
-                dist = it["phash"] - ref["phash"]
-            except Exception:
-                continue
-            if dist <= PHASH_THRESHOLD and abs(it["dur"] - ref["dur"]) <= DUR_TOLERANCE:
+            dup, _ = is_duplicate(it, g[0])
+            if dup:
                 g.append(it)
                 placed = True
                 break
@@ -190,9 +208,14 @@ def dedup(items: list) -> list:
     for g in groups:
         valid = [x for x in g if x["dur"] > 1]
         pool = valid if valid else g
-        # Preferuj YouTube (lepsza jakość, view counter), inaczej największy MP4
-        yt = [x for x in pool if x["platform"] == "youtube"]
-        best = max(yt or pool, key=lambda x: x["sz"])
+        # Priorytety wyboru "najlepszego" w grupie:
+        # 1. YouTube (zwykle najlepsza jakość + view counter — gdy działa lokalnie jako MP4)
+        # 2. Instagram (zwykle dobra jakość, brak watermark TikToka)
+        # 3. TikTok (watermark może przeszkadzać estetycznie)
+        # W ramach platformy: największy MP4 (większy bitrate)
+        priority = {"youtube": 0, "instagram": 1, "tiktok": 2, "other": 3}
+        pool_sorted = sorted(pool, key=lambda x: (priority.get(x["platform"], 9), -x["sz"]))
+        best = pool_sorted[0]
         dropped = [x for x in g if x["idx"] != best["idx"]]
         chosen.append({"primary": best, "dropped": dropped})
     return chosen
