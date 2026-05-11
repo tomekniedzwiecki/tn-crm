@@ -2991,6 +2991,34 @@
         0 0 0 1px rgba(255, 255, 255, 0.08),
         inset 0 0 0 1px rgba(255, 255, 255, 0.05);
     }
+    /* TikTok/IG blockquote embed nie pasuje w 9:16 — pozwalamy ramce rosnąć
+       w pionie (max viewport) i scrollować, tło białe pasuje do widgetów. */
+    .reels-lb-frame:has(.reels-lb-embed-host) {
+      aspect-ratio: auto;
+      max-width: 540px;
+      width: min(540px, 100%);
+      height: auto;
+      min-height: 480px;
+      background: #000;
+      border-radius: 18px;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+    }
+    .reels-lb-embed-host {
+      width: 100%;
+      max-width: 540px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #000;
+    }
+    .reels-lb-embed-host .reels-lb-blockquote {
+      margin: 0 auto !important;
+      width: 100% !important;
+    }
     .reels-lb-player {
       position: absolute;
       inset: 0;
@@ -3593,7 +3621,7 @@
           } else if (platform === 'tiktok') {
             const ttId = getTiktokId(url);
             if (ttId) {
-              frame = '<div class="reels-lb-embed-host" data-platform="tiktok" data-embed-id="' + ttId + '" id="reels-lb-embed-' + i + '"></div>';
+              frame = '<div class="reels-lb-embed-host" data-platform="tiktok" data-embed-id="' + ttId + '" data-embed-url="' + url + '" id="reels-lb-embed-' + i + '"></div>';
             } else {
               frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
                 '<span class="reels-lb-link-icon reels-lb-link-icon--tiktok"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
@@ -3603,7 +3631,7 @@
           } else if (platform === 'instagram') {
             const igCode = getInstagramShortcode(url);
             if (igCode) {
-              frame = '<div class="reels-lb-embed-host" data-platform="instagram" data-embed-shortcode="' + igCode + '" data-fallback-url="' + url + '" id="reels-lb-embed-' + i + '"></div>';
+              frame = '<div class="reels-lb-embed-host" data-platform="instagram" data-embed-shortcode="' + igCode + '" data-embed-url="' + url + '" id="reels-lb-embed-' + i + '"></div>';
             } else {
               frame = '<a class="reels-lb-link" href="' + url + '" target="_blank" rel="noopener">' +
                 '<span class="reels-lb-link-icon reels-lb-link-icon--instagram"><svg viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg></span>' +
@@ -3627,36 +3655,65 @@
         lbBuilt = true;
       }
 
+      // Lazy loader dla TikTok/IG embed.js (jeden script per platforma, na zadanie)
+      let ttScriptLoaded = false, igScriptLoaded = false;
+      function loadTiktokScript(cb) {
+        if (window.tiktokEmbed || ttScriptLoaded) { ttScriptLoaded = true; if (cb) cb(); return; }
+        ttScriptLoaded = true;
+        const s = document.createElement('script');
+        s.async = true; s.src = 'https://www.tiktok.com/embed.js';
+        s.onload = function() { if (cb) cb(); };
+        document.head.appendChild(s);
+      }
+      function loadInstagramScript(cb) {
+        if (window.instgrm) { igScriptLoaded = true; if (cb) cb(); return; }
+        if (igScriptLoaded) { setTimeout(function(){ if (cb) cb(); }, 300); return; }
+        igScriptLoaded = true;
+        const s = document.createElement('script');
+        s.async = true; s.src = 'https://www.instagram.com/embed.js';
+        s.onload = function() { if (cb) cb(); };
+        document.head.appendChild(s);
+      }
+
       function ensureLbEmbed(idx, autoplay) {
         const host = document.getElementById('reels-lb-embed-' + idx);
         if (!host) return;
         const platform = host.dataset.platform;
-        if (host.querySelector('iframe')) return;
-        let src = '';
+        if (host.dataset.embedRendered === '1') return;
+        const url = host.dataset.embedUrl || '#';
         if (platform === 'tiktok') {
           const id = host.dataset.embedId;
           if (!id) return;
-          src = 'https://www.tiktok.com/player/v1/' + encodeURIComponent(id) + '?autoplay=' + (autoplay ? '1' : '0') + '&loop=0&controls=1&music_info=0&description=0&rel=0';
+          // TikTok blockquote — embed.js zamieni go na natywny iframe playera
+          host.innerHTML =
+            '<blockquote class="tiktok-embed reels-lb-blockquote" cite="' + url + '" data-video-id="' + id + '" style="max-width:605px;min-width:325px;">' +
+            '<section><a target="_blank" href="' + url + '">Załaduj film z TikTok</a></section>' +
+            '</blockquote>';
+          host.dataset.embedRendered = '1';
+          loadTiktokScript(function() {
+            // embed.js sam obserwuje DOM i renderuje nowe blockquote
+            try { if (window.tiktokEmbed && window.tiktokEmbed.lib && window.tiktokEmbed.lib.render) window.tiktokEmbed.lib.render([host.querySelector('blockquote')]); } catch (_) {}
+          });
         } else if (platform === 'instagram') {
           const code = host.dataset.embedShortcode;
           if (!code) return;
-          src = 'https://www.instagram.com/p/' + encodeURIComponent(code) + '/embed/captioned/';
-        } else {
-          return;
+          host.innerHTML =
+            '<blockquote class="instagram-media reels-lb-blockquote" data-instgrm-captioned data-instgrm-permalink="' + url + '" data-instgrm-version="14" style="background:#FFF;border:0;margin:0;max-width:540px;min-width:326px;width:calc(100% - 2px);">' +
+            '<a href="' + url + '" target="_blank">Załaduj post z Instagram</a>' +
+            '</blockquote>';
+          host.dataset.embedRendered = '1';
+          loadInstagramScript(function() {
+            try { if (window.instgrm && window.instgrm.Embeds) window.instgrm.Embeds.process(); } catch (_) {}
+          });
         }
-        const iframe = document.createElement('iframe');
-        iframe.className = 'reels-lb-embed';
-        iframe.allow = 'autoplay; encrypted-media; fullscreen; picture-in-picture';
-        iframe.allowFullscreen = true;
-        iframe.referrerPolicy = 'no-referrer-when-downgrade';
-        iframe.src = src;
-        host.appendChild(iframe);
       }
       function pauseLbEmbed(idx) {
+        // Blockquote embeds renderują własne iframe — usuwamy cały wyrenderowany kontent
+        // żeby zatrzymać audio i pozwolić ponownie załadować przy powrocie.
         const host = document.getElementById('reels-lb-embed-' + idx);
-        if (!host) return;
-        const iframe = host.querySelector('iframe');
-        if (iframe) iframe.remove();
+        if (!host || host.dataset.embedRendered !== '1') return;
+        host.innerHTML = '';
+        host.dataset.embedRendered = '';
       }
 
       function ensureLbPlayer(idx, autoplay) {
