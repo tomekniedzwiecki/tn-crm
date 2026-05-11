@@ -45,12 +45,14 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 | Plik | Kiedy |
 |------|-------|
 | [`migrate.md`](migrate.md) | Modyfikacja starego landinga LUB migracja briefa retrospektywnie |
+| [`reels-procedure.md`](reels-procedure.md) | Dodanie / aktualizacja sekcji Reels (video TikTok/Instagram/YouTube). **MP4-based + phash dedup** — NIE używaj YT iframe ani embed.js (5 udokumentowanych błędów) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historia zmian procedury (v1→v3) |
 
 ### Skrypty pomocnicze
 
 | Skrypt | Cel |
 |--------|-----|
+| `scripts/generate-reels.py --workflow-id <UUID> --slug <slug>` | **Reels: pobiera MP4 z TT/IG/YT, dedupuje przez phash, uploaduje do Supabase, drukuje HTML.** Wymaga `pip install yt-dlp imagehash Pillow` + node |
 | `scripts/verify-brief.sh [slug]` | Walidacja `_brief.md` przed ETAP 2 (BLOKUJE jeśli niekompletny) |
 | `scripts/verify-landing.sh [slug]` | ~63 grep checks na index.html (target: ≥60 PASS, **0 FAIL obowiązkowe przed commitem**) |
 | `scripts/audit-landing-aspect-ratios.sh [slug]` | **CSS aspect-ratio vs `<img>` width/height** — łapie obcięcia z `object-fit: cover` przed wdrożeniem (target: 0 mismatch) |
