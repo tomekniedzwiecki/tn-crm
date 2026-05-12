@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026051103';
+        const APP_VERSION = '2026051201';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1563,7 +1563,7 @@
                             <span>Konto</span>
                             <i id="dash-nav-check-takedrop" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                         </div>
-                        <div class="dash-nav-item" onclick="switchToDashTab('landing')">
+                        <div id="dash-nav-landing" class="dash-nav-item hidden" onclick="switchToDashTab('landing')">
                             <i class="ph ph-browser"></i>
                             <span>Strona</span>
                             <i id="dash-nav-check-landing" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -1720,7 +1720,7 @@
                                 <span>Konto</span>
                                 <i id="dash-nav-check-takedrop-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
                             </div>
-                            <div class="dash-nav-item" onclick="switchToDashTab('landing');toggleDashMobileMenu()">
+                            <div id="dash-nav-landing-mobile" class="dash-nav-item hidden" onclick="switchToDashTab('landing');toggleDashMobileMenu()">
                                 <i class="ph ph-browser"></i>
                                 <span>Strona</span>
                                 <i id="dash-nav-check-landing-mobile" class="ph-fill ph-check-circle text-emerald-400 ml-auto hidden"></i>
@@ -3551,11 +3551,62 @@
                         </div>
                     </div>
 
-                    <!-- Step 3: Landing Page Connected -->
+                    <!-- Step 3: Verify Account Active (drugi gate — karta podpięta) -->
+                    <div id="takedrop-verify-step" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 mb-4 hidden">
+                        <div class="flex items-start gap-4">
+                            <div id="takedrop-verify-icon" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
+                                <span class="text-[13px] font-medium text-white">3</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between mb-1 gap-3">
+                                    <h3 class="text-[15px] font-medium text-white">Zweryfikuj aktywację konta</h3>
+                                    <div id="takedrop-verify-success-state" class="hidden flex items-center gap-2 flex-shrink-0">
+                                        <i class="ph-fill ph-check-circle text-emerald-500"></i>
+                                        <span class="text-[12px] text-emerald-500">Aktywne</span>
+                                        <span id="takedrop-verify-confirmed-date" class="text-[11px] text-[#777]"></span>
+                                    </div>
+                                </div>
+                                <div id="takedrop-verify-form">
+                                    <p class="text-[13px] text-[#888] mb-3">
+                                        Zaloguj się na konto TakeDrop i upewnij się, że jest <strong class="text-white">w pełni aktywne</strong>:
+                                    </p>
+                                    <ul class="space-y-1.5 mb-4 text-[13px] text-[#888]">
+                                        <li class="flex items-start gap-2">
+                                            <i class="ph ph-check text-emerald-500 text-[14px] mt-0.5 flex-shrink-0"></i>
+                                            <span>Karta płatnicza jest podpięta i pobrano testową płatność (1 zł)</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <i class="ph ph-check text-emerald-500 text-[14px] mt-0.5 flex-shrink-0"></i>
+                                            <span>Panel TakeDrop nie pokazuje blokady płatności / komunikatu „aktywuj plan"</span>
+                                        </li>
+                                        <li class="flex items-start gap-2">
+                                            <i class="ph ph-check text-emerald-500 text-[14px] mt-0.5 flex-shrink-0"></i>
+                                            <span>Możesz wejść w ustawienia sklepu, dodawać produkty, edytować domenę</span>
+                                        </li>
+                                    </ul>
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <a href="https://app.takedrop.pl/login" target="_blank" rel="noopener noreferrer"
+                                           class="inline-flex items-center gap-2 bg-[#111] border border-[#252525] text-white text-[13px] font-medium px-4 py-2.5 rounded-lg hover:bg-[#1a1a1a] transition-colors">
+                                            <i class="ph ph-sign-in"></i> Zaloguj do TakeDrop
+                                            <i class="ph ph-arrow-up-right text-[12px]"></i>
+                                        </a>
+                                        <button id="takedrop-verify-btn" onclick="confirmTakeDropAccountActive()" class="bg-white text-black text-[13px] font-medium px-5 py-2.5 rounded-lg hover:bg-[#e5e5e5] transition-colors">
+                                            Potwierdzam — konto jest aktywne
+                                        </button>
+                                    </div>
+                                    <p class="text-[12px] text-[#555] mt-3 leading-relaxed">
+                                        Klikając „Potwierdzam" zaświadczasz, że konto faktycznie działa. Jeśli nie — odczekaj aż TakeDrop dokończy aktywację po podpięciu karty.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Landing Page Connected -->
                     <div id="takedrop-landing-step" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-6 hidden">
                         <div class="flex items-start gap-4">
                             <div id="takedrop-landing-icon" class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center flex-shrink-0">
-                                <span class="text-[13px] font-medium text-white">3</span>
+                                <span class="text-[13px] font-medium text-white">4</span>
                             </div>
                             <div class="flex-1 min-w-0">
                                 <div class="flex items-center justify-between mb-1">
@@ -6351,7 +6402,9 @@
 
         function renderEtap3Dashboard() {
             // Etap 3 ma 5 elementów: Konto, Strona, Dokumenty, Bramka płatności, Test
-            const accountDone = takeDropData?.account_created;
+            // „Konto" jest ukończone dopiero po weryfikacji aktywacji (drugi gate),
+            // nie po samym wpisaniu loginu/hasła.
+            const accountDone = takeDropData?.account_active;
             const landingDone = takeDropData?.landing_page_connected;
             const dokumentyDone = takeDropData?.legal_documents_ready;
             const bramkaDone = takeDropData?.payment_gateway_ready;
@@ -6378,6 +6431,7 @@
             if (!box || !content) return;
 
             if (!takeDropData?.account_created) {
+                // Stan 1: konto jeszcze nie założone
                 box.classList.add('bento-action');
                 content.innerHTML = `
                     <div class="h-full p-5 flex flex-col">
@@ -6395,7 +6449,27 @@
                         </div>
                     </div>
                 `;
+            } else if (!takeDropData?.account_active) {
+                // Stan 2: konto założone, ale nie zweryfikowane (brak podpiętej karty / blokada billingu)
+                box.classList.add('bento-action');
+                content.innerHTML = `
+                    <div class="h-full p-5 flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-[#666] text-xs uppercase tracking-wide">Konto TakeDrop</span>
+                            <span class="flex items-center gap-1.5 text-amber-500 text-xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                                Zweryfikuj aktywację
+                            </span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center justify-center text-center">
+                            <i class="ph ph-shield-warning text-5xl text-amber-400 mb-3"></i>
+                            <h3 class="text-white text-lg font-medium">Konto nie jest aktywne</h3>
+                            <p class="text-[#666] text-sm mt-2 max-w-xs">Zaloguj się i potwierdź, że karta jest podpięta a konto działa</p>
+                        </div>
+                    </div>
+                `;
             } else {
+                // Stan 3: konto aktywne (w pełni)
                 box.classList.remove('bento-action');
                 const email = takeDropData?.account_email || '';
                 content.innerHTML = `
@@ -8305,8 +8379,8 @@
             document.getElementById('nav-check-video')?.classList.toggle('hidden', !isVideoActive);
             document.getElementById('nav-check-video-mobile')?.classList.toggle('hidden', !isVideoActive);
 
-            // Update sidebar checkmark for TakeDrop (green when account_created)
-            const hasTakeDrop = takeDropData && takeDropData.account_created;
+            // Update sidebar checkmark for TakeDrop (green dopiero gdy klient zweryfikuje aktywację)
+            const hasTakeDrop = takeDropData && takeDropData.account_active;
             document.getElementById('dash-nav-check-takedrop')?.classList.toggle('hidden', !hasTakeDrop);
             document.getElementById('dash-nav-check-takedrop-mobile')?.classList.toggle('hidden', !hasTakeDrop);
             document.getElementById('nav-check-takedrop')?.classList.toggle('hidden', !hasTakeDrop);
@@ -8318,6 +8392,14 @@
             document.getElementById('dash-nav-check-landing-mobile')?.classList.toggle('hidden', !hasLanding);
             document.getElementById('nav-check-landing')?.classList.toggle('hidden', !hasLanding);
             document.getElementById('nav-check-landing-mobile')?.classList.toggle('hidden', !hasLanding);
+
+            // Landing nav (Strona sprzedażowa) — ukryty dopóki konto TakeDrop nie jest zweryfikowane
+            // jako aktywne. Drugi gate po stworzeniu konta — patrz workflow_takedrop.account_active.
+            const canShowLanding = takeDropData && takeDropData.account_active;
+            document.getElementById('dash-nav-landing')?.classList.toggle('hidden', !canShowLanding);
+            document.getElementById('dash-nav-landing-mobile')?.classList.toggle('hidden', !canShowLanding);
+            const dashBoxLanding = document.getElementById('dash-etap3-box-landing');
+            if (dashBoxLanding) dashBoxLanding.classList.toggle('hidden', !canShowLanding);
 
             // Update sidebar checkmark for Dokumenty (green when legal_documents_ready)
             const hasDokumenty = takeDropData && takeDropData.legal_documents_ready;
@@ -11163,7 +11245,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('id, is_active, account_created, account_created_at, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
+                    .select('id, is_active, account_created, account_created_at, account_active, account_active_at, account_active_confirmed_by, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -11258,7 +11340,41 @@
                 if (confirmBtn) confirmBtn.textContent = 'Potwierdź założenie konta';
             }
 
-            // Step 3: Landing page
+            // Step 3: Verify Account Active (drugi gate — karta podpięta)
+            const verifyStep = document.getElementById('takedrop-verify-step');
+            const verifySuccessState = document.getElementById('takedrop-verify-success-state');
+            const verifyConfirmedDate = document.getElementById('takedrop-verify-confirmed-date');
+            const verifyForm = document.getElementById('takedrop-verify-form');
+            const verifyIcon = document.getElementById('takedrop-verify-icon');
+            if (verifyStep) {
+                if (takeDropData && takeDropData.account_created) {
+                    verifyStep.classList.remove('hidden');
+                    if (takeDropData.account_active) {
+                        verifySuccessState?.classList.remove('hidden');
+                        verifyForm?.classList.add('hidden');
+                        if (verifyConfirmedDate && takeDropData.account_active_at) {
+                            verifyConfirmedDate.textContent = new Date(takeDropData.account_active_at).toLocaleDateString('pl-PL');
+                        }
+                        if (verifyIcon) {
+                            verifyIcon.innerHTML = '<i class="ph-fill ph-check text-emerald-500 text-[14px]"></i>';
+                            verifyIcon.classList.remove('bg-white/10');
+                            verifyIcon.classList.add('bg-emerald-500/20');
+                        }
+                    } else {
+                        verifySuccessState?.classList.add('hidden');
+                        verifyForm?.classList.remove('hidden');
+                        if (verifyIcon) {
+                            verifyIcon.innerHTML = '<span class="text-[13px] font-medium text-white">3</span>';
+                            verifyIcon.classList.add('bg-white/10');
+                            verifyIcon.classList.remove('bg-emerald-500/20');
+                        }
+                    }
+                } else {
+                    verifyStep.classList.add('hidden');
+                }
+            }
+
+            // Step 4: Landing page (odsłaniane DOPIERO po account_active)
             const landingStep = document.getElementById('takedrop-landing-step');
             const landingIcon = document.getElementById('takedrop-landing-icon');
             const landingStatusIcon = document.getElementById('takedrop-landing-status-icon');
@@ -11266,7 +11382,7 @@
             const landingDate = document.getElementById('takedrop-landing-date');
             const landingDesc = document.getElementById('takedrop-landing-desc');
 
-            if (landingStep && takeDropData && takeDropData.account_created) {
+            if (landingStep && takeDropData && takeDropData.account_active) {
                 landingStep.classList.remove('hidden');
 
                 if (takeDropData.landing_page_connected) {
@@ -11281,7 +11397,7 @@
                         landingDate.textContent = new Date(takeDropData.landing_page_connected_at).toLocaleDateString('pl-PL');
                     }
                 } else {
-                    landingIcon.innerHTML = '<span class="text-[13px] font-medium text-white">3</span>';
+                    landingIcon.innerHTML = '<span class="text-[13px] font-medium text-white">4</span>';
                     landingIcon.classList.add('bg-white/10');
                     landingIcon.classList.remove('bg-emerald-500/20');
                     landingStatusIcon.className = 'ph ph-clock text-[#777]';
@@ -11516,6 +11632,56 @@
             }
         }
         window.confirmTakeDropAccount = confirmTakeDropAccount;
+
+        async function confirmTakeDropAccountActive() {
+            const btn = document.getElementById('takedrop-verify-btn');
+            if (!takeDropData?.account_created) {
+                showToast('Najpierw potwierdź założenie konta (krok 2)', 'error');
+                return;
+            }
+
+            const ok = confirm(
+                'Czy na pewno zalogowałeś się na konto TakeDrop i sprawdziłeś, że jest w pełni aktywne (karta podpięta, brak blokady płatności)?\n\n' +
+                'Jeśli klikniesz „OK", odsłonimy kolejny krok — Strona sprzedażowa.'
+            );
+            if (!ok) return;
+
+            const token = getToken();
+            if (!token) {
+                showToast('Błąd: nieprawidłowy link projektu', 'error');
+                return;
+            }
+
+            const originalText = btn?.textContent;
+            if (btn) { btn.disabled = true; btn.textContent = 'Zapisuję...'; }
+
+            try {
+                const { data, error } = await supabaseClient.rpc('confirm_workflow_takedrop_active', {
+                    p_token: token,
+                    p_active: true
+                });
+
+                if (error) throw error;
+                if (data === false) throw new Error('Nie udało się zapisać statusu aktywacji');
+
+                takeDropData = {
+                    ...takeDropData,
+                    account_active: true,
+                    account_active_at: new Date().toISOString(),
+                    account_active_confirmed_by: 'client'
+                };
+                renderTakeDrop();
+                renderEtap3Dashboard();
+                updateDashSidebar();
+                showToast('Dziękujemy! Strona sprzedażowa jest już odsłonięta.', 'success');
+            } catch (err) {
+                console.error('Error confirming TakeDrop active:', err);
+                showToast(err.message || 'Błąd potwierdzenia aktywacji', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = originalText; }
+            }
+        }
+        window.confirmTakeDropAccountActive = confirmTakeDropAccountActive;
 
         // =============================================
         // PAYMENT GATEWAY (CLIENT SIDE)

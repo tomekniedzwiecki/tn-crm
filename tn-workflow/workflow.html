@@ -1674,6 +1674,26 @@
                             </div>
                         </div>
 
+                        <!-- Aktywacja konta (drugi gate) -->
+                        <div id="takedrop-active-section" class="hidden py-4 border-b border-[#222]">
+                            <div class="flex items-start justify-between gap-4 mb-3">
+                                <div class="flex-1 min-w-0">
+                                    <div class="text-[13px] text-white">Aktywacja konta (karta podpięta)</div>
+                                    <div class="text-[12px] text-[#666] mt-0.5">Klient potwierdza że konto faktycznie działa — brak blokady billingu. Dopóki nie potwierdzi, w portalu klienta nie odsłania się Strona sprzedażowa.</div>
+                                </div>
+                                <div id="takedrop-active-badge" class="flex items-center gap-2 flex-shrink-0 mt-0.5"></div>
+                            </div>
+                            <div id="takedrop-active-meta" class="hidden text-[12px] text-[#666] mb-3"></div>
+                            <div class="flex flex-wrap gap-2">
+                                <button id="takedrop-force-active-btn" onclick="adminToggleAccountActive(true)" class="hidden inline-flex items-center gap-1.5 text-[12px] text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-500/50 rounded-md px-3 py-1.5 transition-colors">
+                                    <i class="ph ph-check-circle"></i> Wymuś jako aktywne
+                                </button>
+                                <button id="takedrop-revoke-active-btn" onclick="adminToggleAccountActive(false)" class="hidden inline-flex items-center gap-1.5 text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 rounded-md px-3 py-1.5 transition-colors">
+                                    <i class="ph ph-x-circle"></i> Cofnij — konto nieaktywne
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- Dane konta -->
                         <div class="py-4">
                             <div class="text-[12px] text-[#666] mb-4">Dane logowania klienta</div>
@@ -1791,6 +1811,13 @@
 
                                 <!-- Credentials box (z konta TakeDrop) -->
                                 <div id="td-credentials-box" class="ml-8 mb-3 bg-[#0a0a0a] border border-[#1a1a1a] rounded-md p-3">
+                                    <!-- Banner: klient nie potwierdził jeszcze aktywacji konta -->
+                                    <div id="td-account-inactive-banner" class="hidden mb-3 -mx-3 -mt-3 px-3 py-2 bg-amber-500/10 border-b border-amber-500/30 text-[11px] text-amber-300 flex items-start gap-2 rounded-t-md">
+                                        <i class="ph ph-shield-warning mt-0.5"></i>
+                                        <div>
+                                            <strong>Konto nieaktywne.</strong> Klient nie potwierdził jeszcze, że TakeDrop działa (karta podpięta, brak blokady billingu). Nie zaczynaj konfiguracji strony, dopóki klient nie zweryfikuje aktywacji — sprawdź zakładkę „Konto TakeDrop".
+                                        </div>
+                                    </div>
                                     <div id="td-credentials-filled" class="hidden space-y-2">
                                         <div class="flex items-center gap-2 text-[12px]">
                                             <span class="text-[#555] w-12 flex-shrink-0 uppercase tracking-wide text-[10px]">Email</span>
@@ -5840,7 +5867,7 @@
                     supabaseClient.from('workflow_branding').select('id', { count: 'exact', head: true }).eq('workflow_id', workflow.id),
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_takedrop').select('is_active, account_created, account_active, account_active_at, account_active_confirmed_by, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
@@ -5912,7 +5939,9 @@
                 }
 
                 // Etap 3 nav checks
-                toggle('nav-check-takedrop', !!takedropNavStatus?.account_created);
+                // TakeDrop: zielony dopiero gdy klient potwierdził AKTYWACJĘ (drugi gate),
+                // nie sam fakt założenia konta. Inaczej landing rusza zanim karta jest podpięta.
+                toggle('nav-check-takedrop', !!takedropNavStatus?.account_active);
                 toggle('nav-check-landing', !!takedropNavStatus?.landing_page_connected);
                 toggle('nav-check-legal', !!takedropNavStatus?.legal_documents_ready);
                 toggle('nav-check-payment-gateway', !!takedropNavStatus?.payment_gateway_ready);
@@ -8991,13 +9020,14 @@
 
                 if (takeDropData.account_created) {
                     statusDot.className = 'w-2 h-2 rounded-full bg-[#50e3c2]';
-                    statusText.textContent = 'Konto założone';
+                    statusText.textContent = takeDropData.account_active ? 'Konto założone i aktywne' : 'Konto założone (czeka na potwierdzenie aktywacji)';
                     statusText.className = 'text-[13px] text-[#50e3c2]';
                     createdInfo.classList.remove('hidden');
                     createdDate.textContent = takeDropData.account_created_at
                         ? new Date(takeDropData.account_created_at).toLocaleString('pl-PL')
                         : '-';
-                    navCheck.classList.remove('hidden');
+                    // nav-check zielony dopiero po pełnej aktywacji
+                    navCheck.classList.toggle('hidden', !takeDropData.account_active);
                 } else {
                     statusDot.className = 'w-2 h-2 rounded-full bg-[#666]';
                     statusText.textContent = takeDropData.is_active ? 'Oczekuje na założenie konta' : 'Konto nieaktywne';
@@ -9005,6 +9035,11 @@
                     createdInfo.classList.add('hidden');
                     navCheck.classList.add('hidden');
                 }
+
+                // Aktywacja konta — sekcja widoczna dopiero po założeniu konta
+                renderTakeDropActiveSection();
+                // Banner ostrzegawczy na zakładce „Strona sprzedażowa"
+                if (typeof loadTdCredentialsBox === 'function') loadTdCredentialsBox();
 
                 // Domain connected
                 if (domainInput) domainInput.value = takeDropData.domain || '';
@@ -9282,6 +9317,72 @@
             } catch (err) {
                 console.error('Error toggling TakeDrop:', err);
                 showToast('Błąd aktualizacji', 'error');
+            }
+        }
+
+        function renderTakeDropActiveSection() {
+            const section = document.getElementById('takedrop-active-section');
+            const badge = document.getElementById('takedrop-active-badge');
+            const meta = document.getElementById('takedrop-active-meta');
+            const forceBtn = document.getElementById('takedrop-force-active-btn');
+            const revokeBtn = document.getElementById('takedrop-revoke-active-btn');
+            if (!section || !badge) return;
+
+            // Pokaż dopiero gdy klient założył konto (Step 2)
+            if (!takeDropData?.account_created) {
+                section.classList.add('hidden');
+                return;
+            }
+            section.classList.remove('hidden');
+
+            if (takeDropData.account_active) {
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400"></span><span class="text-[13px] text-emerald-400">Aktywne</span>';
+                if (meta) {
+                    const date = takeDropData.account_active_at
+                        ? new Date(takeDropData.account_active_at).toLocaleString('pl-PL')
+                        : '-';
+                    const by = takeDropData.account_active_confirmed_by === 'admin'
+                        ? 'wymuszone przez admina'
+                        : 'potwierdzone przez klienta';
+                    meta.classList.remove('hidden');
+                    meta.textContent = `Potwierdzono: ${date} · ${by}`;
+                }
+                forceBtn?.classList.add('hidden');
+                revokeBtn?.classList.remove('hidden');
+            } else {
+                badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span class="text-[13px] text-amber-400">Czeka na potwierdzenie klienta</span>';
+                meta?.classList.add('hidden');
+                forceBtn?.classList.remove('hidden');
+                revokeBtn?.classList.add('hidden');
+            }
+        }
+
+        async function adminToggleAccountActive(active) {
+            if (!takeDropData) {
+                showToast('Brak rekordu TakeDrop', 'error');
+                return;
+            }
+            const confirmMsg = active
+                ? 'Wymusić status „aktywne"? Klient będzie mógł przejść do strony sprzedażowej.'
+                : 'Cofnąć status aktywacji? Klient ponownie musi potwierdzić że konto działa, strona sprzedażowa zostanie ukryta.';
+            if (!confirm(confirmMsg)) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({
+                        account_active: active,
+                        account_active_at: active ? new Date().toISOString() : null,
+                        account_active_confirmed_by: active ? 'admin' : null
+                    })
+                    .eq('id', takeDropData.id);
+
+                if (error) throw error;
+                showToast(active ? 'Konto oznaczone jako aktywne' : 'Aktywacja konta cofnięta', 'success');
+                await loadTakeDrop();
+            } catch (err) {
+                console.error('Error toggling account_active:', err);
+                showToast('Błąd: ' + err.message, 'error');
             }
         }
 
@@ -9956,6 +10057,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.loadTakeDrop = loadTakeDrop;
         window.toggleTakeDropActive = toggleTakeDropActive;
         window.saveTakeDropCredentials = saveTakeDropCredentials;
+        window.adminToggleAccountActive = adminToggleAccountActive;
         window.togglePasswordVisibility = togglePasswordVisibility;
         window.toggleLandingPageConnected = toggleLandingPageConnected;
         window.generateLandingPrompt = generateLandingPrompt;
@@ -10240,6 +10342,14 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const passwordEl = document.getElementById('td-cred-password');
             const loginEl = document.getElementById('td-cred-login');
             if (!filled || !empty) return;
+
+            // Banner: konto założone ale klient nie potwierdził aktywacji (drugi gate)
+            const inactiveBanner = document.getElementById('td-account-inactive-banner');
+            if (inactiveBanner) {
+                const accountCreated = !!takeDropData?.account_created;
+                const accountActive = !!takeDropData?.account_active;
+                inactiveBanner.classList.toggle('hidden', !(accountCreated && !accountActive));
+            }
 
             const email = takeDropData?.account_email || '';
             const password = takeDropData?.account_password || '';
