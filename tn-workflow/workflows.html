@@ -251,12 +251,6 @@
                                 <i class="ph ph-storefront"></i> Konto TD
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
-                            <button onclick="toggleStatusStage('takedrop_verify')" data-stage="takedrop_verify"
-                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5"
-                                title="Klient założył konto, ale nie potwierdził że karta jest podpięta">
-                                <i class="ph ph-shield-warning"></i> Aktywacja TD
-                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-amber-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
-                            </button>
                             <button onclick="toggleStatusStage('landing')" data-stage="landing"
                                 class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
                                 <i class="ph ph-layout"></i> Strona TD
@@ -1007,7 +1001,7 @@
             const counts = {
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
-                takedrop: 0, takedrop_verify: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
+                takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
                 ad_account: 0, budget: 0, campaign: 0, ads_report: 0,
                 optymalizacje: 0, opinie: 0, video: 0, narzedzia: 0
             };
@@ -1286,12 +1280,13 @@
             const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
             const isEtap1Complete = !!w.sales_page_shared_at;
 
-            // Etap 3 — TakeDrop pipeline (kolejność: takedrop → takedrop_verify → landing → legal_data/legal → payment_gateway → test)
+            // Etap 3 — TakeDrop pipeline (kolejność: takedrop [założenie + weryfikacja aktywacji] → landing → legal_data/legal → payment_gateway → test)
+            // Weryfikacja aktywacji (drugi gate) wpada do tego samego koszyka co założenie konta —
+            // user nie chce dwóch chipów, tylko jeden „Konto TD" z różnymi sub-stanami.
             if (isEtap1Complete && isVideoComplete) {
                 if (!w.takedrop_stage?.is_active || !w.takedrop_stage?.account_created) return 'takedrop';
             }
-            // Drugi gate TakeDrop — klient musi potwierdzić, że konto realnie działa (karta podpięta)
-            if (w.takedrop_stage?.account_created && !w.takedrop_stage?.account_active) return 'takedrop_verify';
+            if (w.takedrop_stage?.account_created && !w.takedrop_stage?.account_active) return 'takedrop';
             if (w.takedrop_stage?.account_active && !w.takedrop_stage?.landing_page_connected) return 'landing';
             if (w.takedrop_stage?.landing_page_connected && !w.takedrop_stage?.legal_documents_ready) {
                 const hasLegalData = w.takedrop_stage?.legal_data && Object.keys(w.takedrop_stage.legal_data).length > 0;
@@ -1422,7 +1417,7 @@
                     items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.account_created) {
                     // Założone, ale jeszcze nie zweryfikowane (drugi gate — karta podpięta)
-                    items.push(`<span class="flex items-center gap-1 text-amber-400" title="Konto założone, czeka na weryfikację aktywacji (karta podpięta)"><i class="ph ph-shield-warning text-[10px]"></i>TakeDrop · weryfikacja</span>`);
+                    items.push(`<span class="flex items-center gap-1 text-amber-400" title="Konto założone, czeka na weryfikację aktywacji (karta podpięta)"><i class="ph ph-shield-warning text-[10px]"></i>TakeDrop</span>`);
                 } else if (w.takedrop_stage?.is_active) {
                     items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-circle-notch text-[10px]"></i>TakeDrop</span>`);
                 } else {
@@ -1899,15 +1894,16 @@
 
                 // Weryfikacja aktywacji TakeDrop — klient musi zalogować się i potwierdzić,
                 // że konto faktycznie działa (karta podpięta, brak blokady billingu).
+                // Pokazujemy jako sub-stan „Konto TD", nie osobny krok.
                 if (nextStep === 'takedrop_verify') {
                     return `
                         <div class="py-2">
                             <div class="flex items-center gap-2 text-[11px]">
-                                <i class="ph ph-shield-warning text-amber-400"></i>
-                                <span class="text-white font-medium">Aktywacja TakeDrop</span>
+                                <i class="ph ph-storefront text-amber-400"></i>
+                                <span class="text-white font-medium">Konto TD</span>
                                 <span class="text-[9px] text-amber-400/70 bg-amber-500/10 px-1 py-0.5 rounded">Klient</span>
                                 <span class="text-zinc-500">·</span>
-                                <span class="text-zinc-400">Czeka na potwierdzenie (karta podpięta)</span>
+                                <span class="text-zinc-400">Czeka na weryfikację aktywacji (karta podpięta)</span>
                             </div>
                         </div>
                     `;
