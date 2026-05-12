@@ -61,3 +61,19 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION confirm_workflow_takedrop_active(TEXT, BOOLEAN) TO anon;
+
+-- BACKFILL jednorazowy:
+-- Wszystkie istniejące projekty z założonym kontem TakeDrop traktujemy jako
+-- "konto już zweryfikowane jako aktywne" (kontrakt: jeśli dotarły dalej w pipeline,
+-- to znaczy że konto faktycznie działa). Inaczej WSZYSTKIE wpadną w nowy stan
+-- „Aktywacja TD" i pipeline klientów się rozsypie.
+-- Wyjątek: Mopia (ea1ab8cf-2931-4bf8-b768-43dca4697b50) — tu klient REALNIE czeka
+-- na podpięcie karty, więc backfill go pomija.
+UPDATE workflow_takedrop
+SET
+    account_active = TRUE,
+    account_active_at = COALESCE(account_created_at, NOW()),
+    account_active_confirmed_by = 'admin'
+WHERE account_created = TRUE
+  AND account_active IS NOT TRUE
+  AND workflow_id <> 'ea1ab8cf-2931-4bf8-b768-43dca4697b50';
