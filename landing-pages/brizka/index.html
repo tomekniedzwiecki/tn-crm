@@ -369,20 +369,24 @@ section { padding: 120px 0; position: relative; }
 .hero-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   padding: 8px 16px;
   background: var(--white);
   border-radius: 999px;
   font-family: var(--font-display);
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
   line-height: 1.4;
   color: var(--teal-deep);
   margin-bottom: 24px;
   box-shadow: 0 2px 12px -6px rgba(46, 196, 182, 0.32);
+  max-width: 100%;
+  flex-wrap: nowrap;
+  white-space: nowrap;
 }
+.hero-eyebrow .serif-italic { font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ink); }
 .hero-eyebrow .dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--teal);
@@ -390,6 +394,26 @@ section { padding: 120px 0; position: relative; }
 }
 .hero h1 { margin-bottom: 24px; }
 .hero h1 .accent { color: var(--ink); }
+.hero h1 em {
+  font-style: normal;
+  position: relative;
+  display: inline-block;
+  color: var(--teal-deep);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.hero h1 em::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0.04em;
+  height: 12px;
+  background: var(--lemon);
+  border-radius: 4px;
+  z-index: -1;
+  opacity: 0.65;
+}
 .hero-sub {
   font-size: 19px;
   line-height: 1.6;
@@ -1310,8 +1334,7 @@ section { padding: 120px 0; position: relative; }
 @media (max-width: 720px) { .sticky-cta { display: block; } }
 
 /* ============ JS Effects (Split / Counter / Magnetic / Tilt / Parallax) ============ */
-html.js .js-split .char { display: inline-block; opacity: 0; transform: translateY(20px); }
-html.js .js-split.visible .char { animation: split-rise 0.5s forwards; }
+html.js .js-split .char { display: inline-block; opacity: 0; transform: translateY(20px); animation: split-rise 0.6s cubic-bezier(.2,.65,.3,1) forwards; }
 @keyframes split-rise { to { opacity: 1; transform: translateY(0); } }
 
 .magnetic { position: relative; transition: transform 0.2s ease; }
@@ -1329,9 +1352,12 @@ html.js .js-split.visible .char { animation: split-rise 0.5s forwards; }
   body.has-sticky-cta { padding-bottom: 80px; }
 }
 @media (max-width: 480px) {
-  .hero { padding: 112px 0 64px; min-height: auto; max-height:95vh; overflow: hidden; }
-  .hero h1 { font-size: 34px; }
-  .hero-figure { max-height: 280px; }
+  .hero { padding: 96px 0 56px; min-height: auto; max-height:200vh; }
+  .hero h1 { font-size: 32px; line-height: 1.12; }
+  .hero-eyebrow { font-size: 10px; gap: 8px; padding: 7px 12px; }
+  .hero-eyebrow .serif-italic { font-size: 13px; }
+  .hero-figure { max-height: 240px; }
+  .hero h1 em::after { height: 8px; }
   .problem-item { grid-template-columns: 1fr; gap: 12px; padding: 20px; }
   .problem-num { width: 48px; height: 48px; font-size: 18px; }
   .voice-stats { grid-template-columns: 1fr 1fr; gap: 8px; }
@@ -1390,8 +1416,8 @@ html.js .js-split.visible .char { animation: split-rise 0.5s forwards; }
 <section class="hero" id="top">
   <div class="container hero-inner">
     <div class="hero-left">
-      <span class="hero-eyebrow"><span class="dot"></span><span class="serif-italic">Nowy rytuał czystości</span> · 15 sekund · 100 °C · zero chemii</span>
-      <h1 class="js-split">Czysta kuchnia w <em>30 minut</em>. Bez chemii.</h1>
+      <span class="hero-eyebrow"><span class="dot"></span><span class="serif-italic">Nowy rytuał</span> · 15 s · 100 °C · zero chemii</span>
+      <h1 class="js-split">Czysty dom w <em>30 minut</em>. Bez kropli chemii.</h1>
       <p class="hero-sub">Para 100 °C zabija 99,9 % bakterii bez kropli chemii. Włączasz, czekasz 15 sekund, ruszasz. Kuchnia, łazienka i auto czyste w 30 minut — sobotni poranek zostaje dla Ciebie.</p>
       <div class="hero-cta-row">
         <a href="#offer" class="btn btn-primary magnetic">Zamów — odbierz 30 % rabatu</a>
@@ -1993,23 +2019,28 @@ if ('IntersectionObserver' in window) {
   document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
 }
 
-// ─── Split headline (.js-split) char-by-char reveal ───
+// ─── Split headline (.js-split) word-by-word reveal — preserves natural wrapping ───
+let __splitIdx = 0;
 document.querySelectorAll('.js-split').forEach(el => {
-  const html = el.innerHTML;
-  // walk text nodes, wrap chars
+  __splitIdx = 0;
   const wrapTextNodes = (node) => {
     if (node.nodeType === 3) {
       const text = node.textContent;
       const frag = document.createDocumentFragment();
-      text.split('').forEach((ch, i) => {
-        const span = document.createElement('span');
-        span.className = 'char';
-        span.textContent = ch;
-        span.style.animationDelay = (i * 0.025) + 's';
-        frag.appendChild(span);
+      // Split keeping spaces as separate items
+      text.split(/(\s+)/).forEach((part) => {
+        if (/^\s+$/.test(part) || part === '') {
+          frag.appendChild(document.createTextNode(part));
+        } else {
+          const span = document.createElement('span');
+          span.className = 'char';
+          span.textContent = part;
+          span.style.animationDelay = (__splitIdx++ * 0.07) + 's';
+          frag.appendChild(span);
+        }
       });
       node.replaceWith(frag);
-    } else if (node.nodeType === 1) {
+    } else if (node.nodeType === 1 && node.tagName !== 'BR') {
       [...node.childNodes].forEach(wrapTextNodes);
     }
   };
