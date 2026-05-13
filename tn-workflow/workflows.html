@@ -767,7 +767,7 @@
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, account_active, account_active_at, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at').in('workflow_id', workflowIds)
+                supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes_at').in('workflow_id', workflowIds)
             ]);
 
             // Error handling
@@ -1533,12 +1533,23 @@
                         items.push(`<span class="flex items-center gap-1 text-rose-400"><i class="ph ph-play-circle text-[10px]"></i>Reels</span>`);
                     }
                 }
-                // Krok 4 — Narzedzia (pokazuj po videos_shared_at)
+                // Krok 4 — Narzedzia (pokazuj po videos_shared_at). Sub-stany sygnalizuja
+                // kto trzyma pilke: klient (czeka na skrypt/uwagi) vs admin (osadz/zatwierdz).
                 if (opt?.videos_shared_at) {
                     if (opt?.tools_ready_at) {
                         items.push(`<span class="flex items-center gap-1 text-emerald-400"><i class="ph-fill ph-check-circle text-[10px]"></i>Narzędzia</span>`);
+                    } else if (!opt?.tools_ga_script_at) {
+                        items.push(`<span class="flex items-center gap-1 text-zinc-500" title="Czekam na skrypt GA od klienta"><i class="ph ph-hourglass text-[10px]"></i>GA klient</span>`);
+                    } else if (!opt?.tools_ga_connected_at) {
+                        items.push(`<span class="flex items-center gap-1 text-amber-400" title="Klient wyslal skrypt GA — osadz w sklepie"><i class="ph ph-arrow-down-right text-[10px]"></i>GA osadz</span>`);
+                    } else if (!opt?.tools_hotjar_script_at) {
+                        items.push(`<span class="flex items-center gap-1 text-zinc-500" title="Czekam na skrypt Hotjar od klienta"><i class="ph ph-hourglass text-[10px]"></i>Hotjar klient</span>`);
+                    } else if (!opt?.tools_hotjar_connected_at) {
+                        items.push(`<span class="flex items-center gap-1 text-amber-400" title="Klient wyslal skrypt Hotjar — osadz w sklepie"><i class="ph ph-arrow-down-right text-[10px]"></i>Hotjar osadz</span>`);
+                    } else if (!opt?.tools_session_notes_at) {
+                        items.push(`<span class="flex items-center gap-1 text-zinc-500" title="Czekam na uwagi klienta po analizie sesji"><i class="ph ph-hourglass text-[10px]"></i>Uwagi klient</span>`);
                     } else {
-                        items.push(`<span class="flex items-center gap-1 text-amber-400"><i class="ph ph-toolbox text-[10px]"></i>Narzędzia</span>`);
+                        items.push(`<span class="flex items-center gap-1 text-amber-400" title="Klient wyslal uwagi — zatwierdz i zakoncz Etap 5"><i class="ph ph-check-square text-[10px]"></i>Zatwierdz</span>`);
                     }
                 }
             }
@@ -1757,9 +1768,28 @@
                 // Priorytet 1: Narzedzia (Krok 4) — gdy Reels juz przekazane
                 if (opt?.videos_shared_at && !opt?.tools_ready_at) {
                     stepName = 'Narzędzia';
-                    status = 'Skonfiguruj narzędzia (krok 4)';
                     icon = 'ph ph-toolbox text-amber-400';
-                    isClientTask = false;
+
+                    // Sub-stany sekwencyjne: GA script → GA connected → Hotjar script → Hotjar connected → notes → accept
+                    if (!opt?.tools_ga_script_at) {
+                        status = 'Czekam na skrypt Google Analytics od klienta';
+                        isClientTask = true;
+                    } else if (!opt?.tools_ga_connected_at) {
+                        status = 'Osadź skrypt GA w sklepie';
+                        isClientTask = false;
+                    } else if (!opt?.tools_hotjar_script_at) {
+                        status = 'Czekam na skrypt Hotjar od klienta';
+                        isClientTask = true;
+                    } else if (!opt?.tools_hotjar_connected_at) {
+                        status = 'Osadź skrypt Hotjar w sklepie';
+                        isClientTask = false;
+                    } else if (!opt?.tools_session_notes_at) {
+                        status = 'Czekam na uwagi klienta po analizie sesji';
+                        isClientTask = true;
+                    } else {
+                        status = 'Zatwierdź uwagi i zakończ Etap 5';
+                        isClientTask = false;
+                    }
                 }
                 // Priorytet 2: Video Reels (Krok 3) — gdy COD wlaczony i sa nagrania
                 else if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {

@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026051202';
+        const APP_VERSION = '2026051301';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -9441,26 +9441,6 @@
                     .update(updates)
                     .eq('workflow_id', workflow.id);
                 if (error) throw error;
-
-                // Email do admina
-                try {
-                    await supabaseClient.functions.invoke('automation-trigger', {
-                        body: {
-                            trigger_type: 'tools_script_received',
-                            entity_type: 'workflow',
-                            entity_id: workflow.id,
-                            context: {
-                                workflowId: workflow.id,
-                                brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
-                                clientName: workflow.customer_name || 'Klient',
-                                clientEmail: workflow.customer_email,
-                                toolName: toolLabel
-                            }
-                        }
-                    });
-                } catch (te) {
-                    console.warn('automation-trigger tools_script_received failed:', te);
-                }
 
                 optimizationData[`tools_${tool}_script`] = script;
                 optimizationData[`tools_${tool}_script_at`] = now;
