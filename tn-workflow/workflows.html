@@ -820,7 +820,14 @@
             const isVideoActive = w.video_stage?.is_active || false;
             const isVideoSkipped = w.video_stage?.skipped || false;
             const isVideoComplete = isVideoSkipped || videoLinks.length >= 3;
-            if (w.optimization_stage?.is_active) return 5;
+            // Etap 5: wykryj po dowolnej fladze, nie tylko is_active. Admin moze recznie ustawiac
+            // pojedyncze flagi (videos_shared_at, tools_started_at...) bez klikania "Wlacz optymalizacje".
+            // Jesli ktorakolwiek wskazuje na realne wejscie w Etap 5 — kategoryzujemy jako Etap 5.
+            const opt5 = w.optimization_stage;
+            if (opt5 && (opt5.is_active || opt5.cod_enabled || opt5.reviews_shared_at
+                || opt5.videos_shared_at || opt5.videos_inserted_at
+                || opt5.tools_started_at || opt5.tools_ga_script_at || opt5.tools_hotjar_script_at
+                || opt5.tools_session_notes_at || opt5.tools_ready_at)) return 5;
             // Etap 4 dopiero gdy CAŁY Etap 3 ukończony (landing + dokumenty + bramka + test).
             // Sam test_accepted=true nie wystarczy — admin może w UI zaznaczyć flagi w dowolnej
             // kolejności, a workflow musi pozostać w Etap 3 dopóki realne kroki są niedokończone.
@@ -1251,16 +1258,25 @@
                 return 'ads_report';
             }
 
-            // Etap 5: Optymalizacja (4 kroki) — priorytet: nowsze kroki nadpisuja core
+            // Etap 5: Optymalizacja (4 kroki). Reguly:
+            // - krok jest "dotkniety" gdy ma jakikolwiek timestamp albo poprzedni krok zakonczony
+            // - pokazujemy NAJWYZSZY dotkniety krok ktory nie jest jeszcze zakonczony,
+            //   nawet jesli wczesniejsze sa niedokonczone (klient juz przeszedl dalej)
             const opt = w.optimization_stage;
             const hasVideos = (w.video_stage?.video_links || []).length > 0;
             const videoSkipped = !!w.video_stage?.skipped;
-            // Krok 4 — Narzedzia (gdy Reels przekazane LUB video pominiete) — spojne z workflow.html toolsUnlocked
-            if ((opt?.videos_shared_at || videoSkipped) && !opt?.tools_ready_at) return 'narzedzia';
-            // Krok 3 — Video (gdy COD wlaczony + sa nagrania + nie pominiete)
-            if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at && !videoSkipped) return 'video';
-            // Krok 2 — Opinie (gdy COD wlaczony)
-            if (opt?.cod_enabled && !opt?.reviews_shared_at) return 'opinie';
+            const toolsTouched = !!(opt?.tools_started_at || opt?.tools_ga_script_at
+                || opt?.tools_hotjar_script_at || opt?.tools_session_notes_at
+                || opt?.videos_shared_at || videoSkipped);
+            const videoTouched = !!(opt?.videos_inserted_at || opt?.videos_shared_at);
+            const reviewsTouched = !!(opt?.reviews_shared_at || (opt?.reviews_count || 0) > 0);
+
+            // Krok 4 — Narzedzia (gdy dotkniety lub videoSkipped)
+            if (toolsTouched && !opt?.tools_ready_at) return 'narzedzia';
+            // Krok 3 — Video Reels (gdy dotkniety lub krok 2 zakonczony lub sa nagrania + COD)
+            if ((videoTouched || opt?.reviews_shared_at || (opt?.cod_enabled && hasVideos)) && !opt?.videos_shared_at && !videoSkipped) return 'video';
+            // Krok 2 — Opinie (gdy dotkniety lub COD wlaczony)
+            if ((reviewsTouched || opt?.cod_enabled) && !opt?.reviews_shared_at) return 'opinie';
             // Krok 1 — Optymalizacje core (fallback gdy zadne z wyzszych nie aktywne)
             const optAllDone = opt?.cod_enabled && opt?.cod_stock_confirmed && opt?.whatsapp_enabled && opt?.recovery_calls_done;
             if (!optAllDone) return 'optymalizacje';
@@ -1644,7 +1660,7 @@
                 // Etap 3 = 4+ nagrań (etap 2 ukończony)
                 // Zielony gdy konto TakeDrop AKTYWNE (drugi gate), amber w trakcie
                 s3Class = w.takedrop_stage?.account_active ? 'bg-emerald-500' : 'bg-amber-500';
-            } else if (currentStage === 4) {
+            } else if (currentStage >= 4) {
                 s3Class = 'bg-emerald-500';
             }
 
@@ -1652,6 +1668,8 @@
             let s4Class = 'bg-zinc-700';
             if (currentStage === 4) {
                 s4Class = w.ads_stage?.ad_account_ready ? 'bg-emerald-500' : 'bg-amber-500';
+            } else if (currentStage >= 5) {
+                s4Class = 'bg-emerald-500';
             }
 
             // Line between stages
@@ -1754,19 +1772,27 @@
             const stage = getWorkflowStage(w);
             const progressPercent = w.progress_percent || 0;
 
-            // Etap 5: Optymalizacja — priorytetyzacja: pokazuj REALNY aktualny krok,
-            // nie zalegające core sub-checkboxy gdy admin juz pracuje nad Opiniami/Video/Narzedziami
+            // Etap 5: Optymalizacja — pokazuj NAJWYZSZY realnie dotkniety krok.
+            // "Dotkniety" = ma jakikolwiek timestamp/flage (np. tools_started_at, reviews_shared_at).
+            // Gdy klient juz w krok 4, nie pokazujemy "COD klient zamawia 2-3 sztuki" z kroku 1,
+            // nawet jesli COD nigdy nie zostal potwierdzony (zaleglosc, nie aktualny task).
             if (stage === 5) {
                 const opt = w.optimization_stage;
+                const hasVideos = (w.video_stage?.video_links || []).length > 0;
+                const videoSkipped = !!w.video_stage?.skipped;
                 const codDone = opt?.cod_enabled && opt?.cod_stock_confirmed;
                 const waDone = opt?.whatsapp_enabled;
                 const recoveryDone = opt?.recovery_calls_done;
-                const hasVideos = (w.video_stage?.video_links || []).length > 0;
+                const toolsTouched = !!(opt?.tools_started_at || opt?.tools_ga_script_at
+                    || opt?.tools_hotjar_script_at || opt?.tools_session_notes_at
+                    || opt?.videos_shared_at || videoSkipped);
+                const videoTouched = !!(opt?.videos_inserted_at || opt?.videos_shared_at);
+                const reviewsTouched = !!(opt?.reviews_shared_at || (opt?.reviews_count || 0) > 0);
 
                 let stepName, status, icon, isClientTask;
 
-                // Priorytet 1: Narzedzia (Krok 4) — gdy Reels juz przekazane
-                if (opt?.videos_shared_at && !opt?.tools_ready_at) {
+                // Priorytet 1: Narzedzia (Krok 4) — gdy dotkniety
+                if (toolsTouched && !opt?.tools_ready_at) {
                     stepName = 'Narzędzia';
                     icon = 'ph ph-toolbox text-amber-400';
 
@@ -1791,21 +1817,25 @@
                         isClientTask = false;
                     }
                 }
-                // Priorytet 2: Video Reels (Krok 3) — gdy COD wlaczony i sa nagrania
-                else if (opt?.cod_enabled && hasVideos && !opt?.videos_shared_at) {
+                // Priorytet 2: Video Reels (Krok 3) — gdy:
+                // - dotkniety (admin juz wstawil sekcje)
+                // - LUB krok 2 zakonczony (reviews_shared_at) i krok 3 wciaz nie zakonczony — kolej na admina
+                // - LUB klasyka: COD wlaczony i sa nagrania
+                else if ((videoTouched || opt?.reviews_shared_at || (opt?.cod_enabled && hasVideos)) && !opt?.videos_shared_at && !videoSkipped) {
                     stepName = 'Video Reels na sklepie';
                     status = opt?.videos_inserted_at ? 'Przekaż klientowi (email)' : 'Wstaw sekcję Reels na landing';
                     icon = 'ph ph-play-circle text-rose-400';
                     isClientTask = false;
                 }
-                // Priorytet 3: Opinie (Krok 2) — gdy COD wlaczony
-                else if (opt?.cod_enabled && !opt?.reviews_shared_at) {
+                // Priorytet 3: Opinie (Krok 2) — gdy dotkniety lub COD wlaczony
+                else if ((reviewsTouched || opt?.cod_enabled) && !opt?.reviews_shared_at) {
                     stepName = 'Opinie do sklepu';
                     status = (opt?.reviews_count || 0) > 0 ? 'Wstaw opinie + przekaż klientowi' : 'Pobierz opinie z AliExpress';
                     icon = 'ph ph-star text-yellow-400';
                     isClientTask = false;
                 }
-                // Fallback: core sub-checkboxy (Optymalizacje krok 1)
+                // Fallback: core sub-checkboxy (Optymalizacje krok 1) — TYLKO gdy zadne z wyzszych krokow nie sa dotkniete.
+                // Inaczej zaleglosc COD/WA/recovery moglaby "ukrasc" widok aktualnemu krokowi.
                 else if (!codDone) {
                     stepName = 'COD w sklepie';
                     status = opt?.cod_enabled ? 'Klient zamawia 2-3 sztuki' : 'Włącz COD i poinformuj klienta';
