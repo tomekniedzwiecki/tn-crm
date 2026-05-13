@@ -12274,7 +12274,98 @@ Zwróć TYLKO JSON.`;
                     : `Zaznacz 2 kreacje gwiazdką ★ w galerii powyżej zanim wygenerujesz pakiet. Obecnie wybrano: ${coworkSelected}/2.`;
                 actions.appendChild(cowork);
             }
+            if (ready || failed) {
+                const del = document.createElement('button');
+                del.id = 'btn-reset-content';
+                del.onclick = () => resetCampaignContent();
+                del.className = 'text-[11px] text-red-300 hover:text-white px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/80 border border-red-500/30 flex items-center gap-1.5';
+                del.innerHTML = '<i class="ph ph-trash"></i> Usuń content';
+                del.title = 'Usuń research, copy i kreacje — pozwoli wygenerować od nowa';
+                actions.appendChild(del);
+            }
         }
+
+        async function resetCampaignContent() {
+            const creatives = getCreatives();
+            const versions = getVersions();
+            const summary = [];
+            if (creatives.length) summary.push(`${creatives.length} kreacji`);
+            if (versions.length) summary.push(`${versions.length} wersji copy`);
+            if (adsData?.competitor_research) summary.push('research konkurencji');
+            const what = summary.length ? summary.join(', ') : 'cały content';
+            if (!confirm(`Usunąć ${what}?\n\nTa operacja jest nieodwracalna. Po usunięciu możesz uruchomić pipeline od nowa.`)) return;
+
+            const btn = document.getElementById('btn-reset-content');
+            const original = btn?.innerHTML;
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="ph ph-spinner animate-spin"></i> Usuwam...'; }
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_ads')
+                    .update({
+                        competitor_research: null,
+                        competitor_research_at: null,
+                        competitor_research_task_id: null,
+                        competitor_research_status: 'idle',
+                        ad_copies: null,
+                        ad_copies_generated_at: null,
+                        ad_creatives: null,
+                        ad_creatives_generated_at: null,
+                        campaign_pipeline_status: 'idle',
+                        campaign_pipeline_step: null,
+                        campaign_pipeline_started_at: null,
+                        campaign_pipeline_completed_at: null,
+                        content_ready: false,
+                        content_ready_at: null,
+                        content_shared_with_client: false,
+                        content_shared_at: null
+                    })
+                    .eq('workflow_id', workflow.id);
+                if (error) throw error;
+
+                // Stop polling jeśli leci
+                if (typeof bgPipelinePollInterval !== 'undefined' && bgPipelinePollInterval) {
+                    clearInterval(bgPipelinePollInterval);
+                    bgPipelinePollInterval = null;
+                }
+                pipelineRunning = false;
+
+                // Reset lokalnego stanu
+                if (adsData) {
+                    adsData.competitor_research = null;
+                    adsData.competitor_research_at = null;
+                    adsData.competitor_research_task_id = null;
+                    adsData.competitor_research_status = 'idle';
+                    adsData.ad_copies = null;
+                    adsData.ad_copies_generated_at = null;
+                    adsData.ad_creatives = null;
+                    adsData.ad_creatives_generated_at = null;
+                    adsData.campaign_pipeline_status = 'idle';
+                    adsData.campaign_pipeline_step = null;
+                    adsData.campaign_pipeline_started_at = null;
+                    adsData.campaign_pipeline_completed_at = null;
+                    adsData.content_ready = false;
+                    adsData.content_ready_at = null;
+                    adsData.content_shared_with_client = false;
+                    adsData.content_shared_at = null;
+                }
+
+                // Schowaj sekcje resztek
+                document.getElementById('research-results')?.classList.add('hidden');
+                document.getElementById('copies-results')?.classList.add('hidden');
+                document.getElementById('creatives-results')?.classList.add('hidden');
+                document.getElementById('pipeline-progress')?.classList.add('hidden');
+
+                showToast('Content usunięty — możesz wygenerować od nowa', 'success');
+                loadContentTab();
+                updateNavChecks();
+            } catch (err) {
+                console.error('Reset content error:', err);
+                showToast('Błąd usuwania: ' + err.message, 'error');
+                if (btn) { btn.disabled = false; btn.innerHTML = original || 'Usuń content'; }
+            }
+        }
+        window.resetCampaignContent = resetCampaignContent;
 
         // ---- GALLERY ----
         function renderCreativeGallery() {
