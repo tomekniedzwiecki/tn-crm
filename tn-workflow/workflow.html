@@ -10293,6 +10293,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     takeDropData.landing_status = status;
                 }
                 updateLandingPagePreview();
+                updateLandingCheckoutPreview();
                 if (typeof updateHeaderQuickActions === 'function') updateHeaderQuickActions();
                 showToast('Zapisano', 'success');
             } else {
@@ -10414,8 +10415,23 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
         function updateLandingCheckoutPreview() {
             const productId = document.getElementById('landing-product-id')?.value.trim();
-            const domainEl = document.getElementById('landing-suggested-domain');
-            const domain = domainEl?.textContent || 'domena.pl';
+
+            // Priorytet: "Oficjalny adres strony" (landing-page-url). Fallback: propozycja z marki.
+            let domain = '';
+            const urlField = document.getElementById('landing-page-url')?.value.trim();
+            if (urlField) {
+                try {
+                    const u = new URL(urlField.startsWith('http') ? urlField : 'https://' + urlField);
+                    domain = u.hostname;
+                } catch {
+                    domain = urlField.replace(/^https?:\/\//, '').split('/')[0];
+                }
+            }
+            if (!domain) {
+                const suggested = document.getElementById('landing-suggested-domain')?.textContent.trim();
+                domain = (suggested && suggested !== '—') ? suggested : 'domena.pl';
+            }
+
             const link = document.getElementById('landing-checkout-link');
 
             if (link) {
@@ -10500,18 +10516,19 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const dnsCheckbox = document.getElementById('landing-dns-done');
                 if (dnsCheckbox) dnsCheckbox.checked = takeDropData.dns_configured || false;
 
+                // Official URL (musi być ustawiony PRZED productId, bo updateLandingCheckoutPreview
+                // priorytetowo bierze domenę z tego pola)
+                const urlInput = document.getElementById('landing-page-url');
+                if (urlInput && takeDropData.landing_url) {
+                    urlInput.value = takeDropData.landing_url;
+                    updateLandingPagePreview();
+                }
+
                 // Checkout product ID
                 const productIdInput = document.getElementById('landing-product-id');
                 if (productIdInput && takeDropData.product_id) {
                     productIdInput.value = takeDropData.product_id;
                     updateLandingCheckoutPreview();
-                }
-
-                // Official URL
-                const urlInput = document.getElementById('landing-page-url');
-                if (urlInput && takeDropData.landing_url) {
-                    urlInput.value = takeDropData.landing_url;
-                    updateLandingPagePreview();
                 }
                 if (takeDropData.landing_status) {
                     const radio = document.querySelector(`input[name="landing-status"][value="${takeDropData.landing_status}"]`);
