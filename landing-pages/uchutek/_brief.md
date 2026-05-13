@@ -1,4 +1,4 @@
-# Uszek — Landing Brief
+# Uchutek — Landing Brief
 
 **Status:** 🟡 W opracowaniu (ETAP 2.5 → 3) · **Kierunek:** Visible Care · **Workflow:** `ac3deb9c-9079-4394-b1d8-95e043a3cdd4`
 
@@ -8,7 +8,7 @@
 
 ### Kierunek: **Visible Care** (Widoczna Troska)
 
-Nie „medical tech" (zimno), nie „family wellness" (banał). Uszek to **moment precyzyjnej troski w domowej kuchni** — dziecko na kolanach, kamera pokazuje prawdę, rodzic widzi zanim zrobi. To jest **gabinet rodziny**: cisza i precyzja, ale w świetle z kuchennego okna, a nie z jarzeniówki.
+Nie „medical tech" (zimno), nie „family wellness" (banał). Uchutek to **moment precyzyjnej troski w domowej kuchni** — dziecko na kolanach, kamera pokazuje prawdę, rodzic widzi zanim zrobi. To jest **gabinet rodziny**: cisza i precyzja, ale w świetle z kuchennego okna, a nie z jarzeniówki.
 
 ### Tempo: **Spokojne z precyzją**
 
@@ -32,7 +32,7 @@ Każda sekcja ma w lewym górnym rogu `Nº 03 / 09` w DM Mono 11px uppercase nav
 
 ### Od czego świadomie uciekam
 
-- **Zimny clinical blue** (Bebird, Medicover) — Uszek to dom, nie szpital
+- **Zimny clinical blue** (Bebird, Medicover) — Uchutek to dom, nie szpital
 - **AliExpress neon + emoji burst** (⚡🔥✅) — tanio, nie pasuje do ceny premium 149 zł
 - **Purple-to-blue gradient** (AI slop) — zero gradientów na dużych powierzchniach
 - **Zdjęcia produktu na czystej bieli studio** — zawsze kontekst domowy (łazienka, kuchnia, kolana rodzica)
@@ -78,9 +78,9 @@ Subtle 35mm film grain (Kodak Portra 400), lekko cieplejsze cienie, neutralne li
 
 | # | Imię | Wiek | Sytuacja | Scena hero dla niej/niego |
 |---|------|------|----------|----------------------------|
-| 1 | **Magda** | 34 l., Wrocław | Mama 2 dzieci, HR-owka, mieszkanie w bloku z klasą, capsule wardrobe, łazienka z białym kaflem | Rano, łazienka, Magda siedzi na brzegu wanny, 5-letnia córka na kolanach, spokojna; Uszek w dłoni Magdy, telefon na pralce pokazuje podgląd ucha. Magda patrzy na ekran, nie na kamerę. Len i pastel. |
-| 2 | **Kamil** | 29 l., Warszawa | Dev/gadżeciarz, słuchawki nauszne 8h, mieszkanie z roślinami i biurkiem z setupem, bluza oversized | Wieczór, biurko z dwoma monitorami, Kamil siedzi bokiem, słuchawki nauszne zdjęte wiszą na stojaku, w dłoni Uszek, na ekranie iPhone obok wyraźny podgląd przewodu słuchowego. Neutralna mina skupienia. |
-| 3 | **Jan** | 67 l., mniejsze miasto / miasteczko | Emeryt, samodzielny, mieszkanie z ciepłym drewnem, stoły zastawione książkami. Kupione często przez córkę na prezent. | Popołudnie, salon z fotelem uszakiem, Jan w okularach, na kolanach tablet z podglądem, Uszek w dłoni pewnie. Obok na stoliku herbata w szklance. Mina „znów słyszę świat". |
+| 1 | **Magda** | 34 l., Wrocław | Mama 2 dzieci, HR-owka, mieszkanie w bloku z klasą, capsule wardrobe, łazienka z białym kaflem | Rano, łazienka, Magda siedzi na brzegu wanny, 5-letnia córka na kolanach, spokojna; Uchutek w dłoni Magdy, telefon na pralce pokazuje podgląd ucha. Magda patrzy na ekran, nie na kamerę. Len i pastel. |
+| 2 | **Kamil** | 29 l., Warszawa | Dev/gadżeciarz, słuchawki nauszne 8h, mieszkanie z roślinami i biurkiem z setupem, bluza oversized | Wieczór, biurko z dwoma monitorami, Kamil siedzi bokiem, słuchawki nauszne zdjęte wiszą na stojaku, w dłoni Uchutek, na ekranie iPhone obok wyraźny podgląd przewodu słuchowego. Neutralna mina skupienia. |
+| 3 | **Jan** | 67 l., mniejsze miasto / miasteczko | Emeryt, samodzielny, mieszkanie z ciepłym drewnem, stoły zastawione książkami. Kupione często przez córkę na prezent. | Popołudnie, salon z fotelem uszakiem, Jan w okularach, na kolanach tablet z podglądem, Uchutek w dłoni pewnie. Obok na stoliku herbata w szklance. Mina „znów słyszę świat". |
 
 ---
 
@@ -105,8 +105,8 @@ Subtle 35mm film grain (Kodak Portra 400), lekko cieplejsze cienie, neutralne li
 
 | Marka | Co pożyczam | Dlaczego |
 |-------|-------------|----------|
-| **Oura Ring** (oura.com) | Mono numbers w metric cards (`72 bpm · 95% SpO2`) na neutralnym papierze, ciepła biel | Health-tech bez kliniczności. Uszek trust-bar i spec sheet bierze ich styl liczb. |
-| **Muji** (muji.com) | Ciepła off-white paleta `#FBFAF7`, dużo pustego miejsca między sekcjami, ikony płaskie bez dramatu | Przeciwwaga dla „tech edgy" — Uszek ma być domowy, nie start-upowy |
+| **Oura Ring** (oura.com) | Mono numbers w metric cards (`72 bpm · 95% SpO2`) na neutralnym papierze, ciepła biel | Health-tech bez kliniczności. Uchutek trust-bar i spec sheet bierze ich styl liczb. |
+| **Muji** (muji.com) | Ciepła off-white paleta `#FBFAF7`, dużo pustego miejsca między sekcjami, ikony płaskie bez dramatu | Przeciwwaga dla „tech edgy" — Uchutek ma być domowy, nie start-upowy |
 | **Bang & Olufsen** (bang-olufsen.com) | Detail macro photography — zdjęcia tekstury gumki głośnika, przełącznika, pokrętła | Detal końcówki silikonowej, USB-C portu, przycisku — showcase musi mieć gatunek macro craft |
 
 **Zabronione:** Bebird, Medicover, prywatne kliniki, AliExpress style, inne landingi z `landing-pages/`.
@@ -135,6 +135,6 @@ Subtle 35mm film grain (Kodak Portra 400), lekko cieplejsze cienie, neutralne li
 
 ## 8. Live link
 
-https://tn-crm.vercel.app/landing-pages/uszek/
+https://tn-crm.vercel.app/landing-pages/uchutek/
 
 **Status Vercel:** ✅ Live (auto-deploy z main)
