@@ -446,9 +446,29 @@
             const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
             const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
 
+            // Paginate leads — bez tego PostgREST tnie do 1000 i KPI (won/conversion/pipeline value) liczone są po obciętym zbiorze.
+            async function fetchAllLeads() {
+                const all = [];
+                const pageSize = 1000;
+                let page = 0;
+                while (true) {
+                    const { data, error } = await supabaseClient
+                        .from('leads')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .range(page * pageSize, (page + 1) * pageSize - 1);
+                    if (error) { console.error('leads fetch:', error); return all; }
+                    if (!data || data.length === 0) break;
+                    all.push(...data);
+                    if (data.length < pageSize) break;
+                    page++;
+                }
+                return all;
+            }
+
             // Load all data in parallel
-            const [leadsRes, ordersRes, auditRes, stagesRes, trackingRes, workflowsRes, videoRes, takedropRes, installmentsRes] = await Promise.all([
-                supabaseClient.from('leads').select('*').order('created_at', { ascending: false }),
+            const [leadsAll, ordersRes, auditRes, stagesRes, trackingRes, workflowsRes, videoRes, takedropRes, installmentsRes] = await Promise.all([
+                fetchAllLeads(),
                 supabaseClient.from('orders').select('*').order('created_at', { ascending: false }),
                 supabaseClient.from('audit_log').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('settings').select('*').eq('key', 'pipeline_stages').single(),
@@ -463,7 +483,7 @@
             takedropStages = takedropRes.data || [];
             upcomingInstallments = installmentsRes.data || [];
 
-            leads = leadsRes.data || [];
+            leads = leadsAll;
 
             // Merge tracking data into leads
             const trackingByLead = {};
