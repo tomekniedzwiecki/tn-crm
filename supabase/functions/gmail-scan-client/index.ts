@@ -136,9 +136,10 @@ Deno.serve(async (req) => {
     debug.push(`selected ${allMailName}`);
 
     // IMAP SEARCH: messages where from OR to is the client (bidirectional)
-    // SINCE filter to limit volume
+    // SINCE filter to limit volume. RFC 3501 date format: dd-Mon-yyyy
     const since = new Date(Date.now() - SCAN_LOOKBACK_DAYS * 86400_000);
-    const sinceStr = since.toLocaleDateString("en-US", { day: "2-digit", month: "short", year: "numeric" }).replace(",", "");
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const sinceStr = `${since.getUTCDate().toString().padStart(2,"0")}-${monthNames[since.getUTCMonth()]}-${since.getUTCFullYear()}`;
     const escapedEmail = customer_email.replace(/"/g, '\\"');
     const searchCmd = `UID SEARCH SINCE ${sinceStr} OR FROM "${escapedEmail}" TO "${escapedEmail}"`;
     const searchLines = await imap.runCommand(searchCmd);

@@ -49,14 +49,18 @@ export function paramFromHeader(headerVal: string, paramName: string): string | 
 }
 
 export function splitHeadersBody(part: Uint8Array): { headers: string; body: Uint8Array } {
+  // Headers decoded as UTF-8 (handles raw Polish chars in Subject/From etc).
+  // Body remains binary (caller decides decoding based on Content-Type).
+  // Note: per RFC 5322 headers should be ASCII (non-ASCII must be RFC 2047 encoded),
+  // but Gmail clients often send raw UTF-8 in headers when transport is 8bit-clean.
   for (let i = 0; i < part.length - 3; i++) {
     if (part[i] === 13 && part[i + 1] === 10 && part[i + 2] === 13 && part[i + 3] === 10) {
-      const headers = new TextDecoder("latin1").decode(part.subarray(0, i));
+      const headers = new TextDecoder("utf-8", { fatal: false }).decode(part.subarray(0, i));
       const body = part.subarray(i + 4);
       return { headers, body };
     }
   }
-  return { headers: new TextDecoder("latin1").decode(part), body: new Uint8Array(0) };
+  return { headers: new TextDecoder("utf-8", { fatal: false }).decode(part), body: new Uint8Array(0) };
 }
 
 export function splitByBoundary(body: Uint8Array, boundary: string): Uint8Array[] {
