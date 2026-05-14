@@ -446,18 +446,17 @@
             const thirtyDaysAgo = new Date(now - 30 * 24 * 60 * 60 * 1000).toISOString();
             const ninetyDaysAgo = new Date(now - 90 * 24 * 60 * 60 * 1000).toISOString();
 
-            // Paginate leads — bez tego PostgREST tnie do 1000 i KPI (won/conversion/pipeline value) liczone są po obciętym zbiorze.
-            async function fetchAllLeads() {
+            // Paginate — bez tego PostgREST tnie do 1000 i KPI (won/conversion/pipeline value, source attribution) liczone są po obciętym zbiorze.
+            async function fetchAllPaginated(tableName, selectCols = '*', orderBy = null) {
                 const all = [];
                 const pageSize = 1000;
                 let page = 0;
                 while (true) {
-                    const { data, error } = await supabaseClient
-                        .from('leads')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .range(page * pageSize, (page + 1) * pageSize - 1);
-                    if (error) { console.error('leads fetch:', error); return all; }
+                    let q = supabaseClient.from(tableName).select(selectCols);
+                    if (orderBy) q = q.order(orderBy.col, { ascending: orderBy.asc });
+                    q = q.range(page * pageSize, (page + 1) * pageSize - 1);
+                    const { data, error } = await q;
+                    if (error) { console.error(`${tableName} fetch:`, error); return all; }
                     if (!data || data.length === 0) break;
                     all.push(...data);
                     if (data.length < pageSize) break;
@@ -467,12 +466,12 @@
             }
 
             // Load all data in parallel
-            const [leadsAll, ordersRes, auditRes, stagesRes, trackingRes, workflowsRes, videoRes, takedropRes, installmentsRes] = await Promise.all([
-                fetchAllLeads(),
-                supabaseClient.from('orders').select('*').order('created_at', { ascending: false }),
+            const [leadsAll, ordersAll, auditRes, stagesRes, trackingAll, workflowsRes, videoRes, takedropRes, installmentsRes] = await Promise.all([
+                fetchAllPaginated('leads', '*', { col: 'created_at', asc: false }),
+                fetchAllPaginated('orders', '*', { col: 'created_at', asc: false }),
                 supabaseClient.from('audit_log').select('*').gte('created_at', thirtyDaysAgo).order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('settings').select('*').eq('key', 'pipeline_stages').single(),
-                supabaseClient.from('lead_tracking').select('*'),
+                fetchAllPaginated('lead_tracking', '*'),
                 supabaseClient.from('workflows').select('id, status, customer_name, customer_email').order('created_at', { ascending: false }),
                 supabaseClient.from('workflow_video').select('workflow_id, is_active'),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active'),
@@ -487,7 +486,7 @@
 
             // Merge tracking data into leads
             const trackingByLead = {};
-            (trackingRes.data || []).forEach(t => { trackingByLead[t.lead_id] = t; });
+            trackingAll.forEach(t => { trackingByLead[t.lead_id] = t; });
             leads.forEach(l => {
                 const t = trackingByLead[l.id];
                 if (t) {
@@ -501,7 +500,7 @@
                     l.utm_campaign = t.utm_campaign;
                 }
             });
-            orders = ordersRes.data || [];
+            orders = ordersAll;
             auditLogs = auditRes.data || [];
 
             // Parse pipeline stages
