@@ -626,6 +626,12 @@
                 // Only show leads that have a pipeline status (not null)
                 if (!lead.status) return false;
 
+                // Ukryj lost/abandoned bez aktywnosci od 30 dni (cisza = nie zaśmiecaj kanbana).
+                // Jak coś sie pojawi (status_change, notatka, email, WA) → automatycznie wraca.
+                if (['lost', 'abandoned'].includes(lead.status) && !hasRecentActivity(lead)) {
+                    return false;
+                }
+
                 // Search filter
                 if (searchTerm) {
                     const name = (lead.name || '').toLowerCase();
@@ -748,6 +754,9 @@
             // Auto-assign status for leads with survey but no status
             await autoAssignStatusForSurveyLeads(leads);
 
+            // Load recent WA activity (do filtrowania stale lost/abandoned)
+            await loadRecentWhatsappActivity();
+
             // Load follow-up status (last WhatsApp message time)
             await loadFollowupStatus();
             await loadFollowupCounts();
@@ -759,6 +768,51 @@
         // Stages that should show follow-up indicator
         const FOLLOWUP_STAGES = ['contacted', 'qualified', 'proposal', 'negotiation'];
         const FOLLOWUP_HOURS = 24; // Hours without activity = needs follow-up
+
+        // Mapa lead_id -> ISO timestamp ostatniej wiadomosci WA (tylko ostatnie 30 dni)
+        // Sluzy do filtrowania lost/abandoned w applyFilters - cisza >30d ukrywa karte.
+        let recentWhatsappMap = {};
+        const STALE_THRESHOLD_DAYS = 30;
+
+        async function loadRecentWhatsappActivity() {
+            const cutoff = new Date(Date.now() - STALE_THRESHOLD_DAYS * 24 * 60 * 60 * 1000).toISOString();
+            const all = [];
+            const pageSize = 1000;
+            let page = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('whatsapp_messages')
+                    .select('lead_id, message_timestamp')
+                    .gte('message_timestamp', cutoff)
+                    .not('lead_id', 'is', null)
+                    .order('message_timestamp', { ascending: false })
+                    .range(page * pageSize, (page + 1) * pageSize - 1);
+                if (error) { console.error('recent WA activity:', error); break; }
+                if (!data || data.length === 0) break;
+                all.push(...data);
+                if (data.length < pageSize) break;
+                page++;
+            }
+            recentWhatsappMap = {};
+            for (const m of all) {
+                if (!recentWhatsappMap[m.lead_id]) recentWhatsappMap[m.lead_id] = m.message_timestamp;
+            }
+        }
+
+        function hasRecentActivity(lead, days = STALE_THRESHOLD_DAYS) {
+            const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+            // status_entered_at lapie ostatnia zmiane statusu (auto/manual)
+            if (lead.status_entered_at && new Date(lead.status_entered_at).getTime() >= cutoff) return true;
+            // activities array: status_change, note, email_event, auto_status_change, auto_reassign
+            const activities = lead.activities || [];
+            for (const a of activities) {
+                if (a.created_at && new Date(a.created_at).getTime() >= cutoff) return true;
+            }
+            // WhatsApp wiadomosci (z bazy, ograniczone do ostatnich STALE_THRESHOLD_DAYS dni)
+            const lastWa = recentWhatsappMap[lead.id];
+            if (lastWa && new Date(lastWa).getTime() >= cutoff) return true;
+            return false;
+        }
 
         async function loadFollowupStatus() {
             // Get lead IDs that are in follow-up stages OR waiting stage
