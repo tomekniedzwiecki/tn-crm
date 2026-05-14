@@ -16,6 +16,7 @@
 | **YouTube iframe embed dla `data-yt-id`** | „Czarny ekran" dla niektórych shortów (region-locked, embed-disabled albo wymagają specjalnych formatów) | Pobierz MP4 lokalnie (yt-dlp z `--remote-components ejs:github` + format `18`) |
 | **Selektor `.reel-phone[data-yt-id]`** | Łapał TYLKO YT, TT/IG thumbnails nie reagowały na klik, counter „X / 18" kłamał (logika na 6) | Selektor `.reel-phone[data-video-idx]` i jednolity `data-mp4-url` dla wszystkich |
 | **Duplikaty TT+IG+YT (v1 — phash only)** | Klient uploaduje ten sam reel na 3 platformy → 18 thumbnaili, ale 6 unikalnych. **Phash zawodzi cross-platform** bo YT ma custom cover (graficzny), TT/IG biorą pierwszą klatkę → te same nagrania mają distance 100+ | **Duration match ±0.3s primary signal** — różne nagrania w 0.3s precyzji ekstremalnie rzadkie. Phash tylko jako wspierający (≤20 + dur ≤2s) |
+| **Tap w aktywny phone otwiera tylko lightbox** | Mobile user widzi jeden phone na środku (peeki schowane przez `display: none` na ≤768px), intuicyjnie tappuje ekran w nadziei „następny reel" — a system otwiera lightbox. User myśli że widget zepsuty, ucieka. Zgłoszone przez Patryka (OraVibe) 2026-05-11 | **Mobile (≤768px): tap w aktywny phone → cyclic next reel.** Desktop dalej otwiera lightbox. Click handler check `window.matchMedia('(max-width: 768px)').matches`. Patrz „Click handler — mobile vs desktop" niżej |
 
 **Wzorce zostawione tylko jako fallback w kodzie:**
 - YT.Player API + `data-yt-id` — gdy MP4 lokalnie się nie udało pobrać (broken HLS bez ffmpeg). Domyślnie nieużywane.
@@ -96,6 +97,37 @@ W reels JS musi być:
 const phones = Array.from(document.querySelectorAll('.reel-phone[data-video-idx]'));
 // NIE: .reel-phone[data-yt-id] — to łapało tylko YT, ignorowało TT/IG.
 ```
+
+### 6. Click handler — mobile tap = next reel (WYMAGANE od 2026-05-14)
+
+W bloku `// ═══ Click handlery: phone + progress ═══` w reels JS:
+
+```javascript
+phones.forEach(function(p, i) {
+  p.addEventListener('click', function() {
+    if (i === activeIdx) {
+      // Mobile (≤768px): tap w aktywny phone → cyclic next reel (TikTok-like).
+      // Desktop: tap w aktywny phone → lightbox full-screen.
+      if (window.matchMedia('(max-width: 768px)').matches) {
+        const nextIdx = (activeIdx + 1) % phones.length;
+        setActive(nextIdx);
+        if (autoplayStarted && !autoplayPaused) {
+          setTimeout(playActiveInSection, 700);
+        }
+      } else {
+        openLightbox(i);
+      }
+    } else {
+      setActive(i);
+      if (autoplayStarted && !autoplayPaused) {
+        setTimeout(playActiveInSection, 700);
+      }
+    }
+  });
+});
+```
+
+**Dlaczego:** na mobile peeki są ukryte (`display: none` na ≤768px), kropki małe — user widzi tylko jeden phone i intuicyjnie tappuje w nadziei „dalej". Bez tej logiki dostaje lightbox czego nie oczekuje. Patrz hard rule w tabeli historii błędów.
 
 W `playActiveInSection()`:
 

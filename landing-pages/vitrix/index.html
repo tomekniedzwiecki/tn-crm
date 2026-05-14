@@ -3367,10 +3367,20 @@
       }
 
       // ═══ Click handlery: phone + progress ═══
+      // Mobile (≤768px): tap w aktywny phone → cyclic next reel (TikTok-like, intuicyjne dla touch).
+      // Desktop: tap w aktywny phone → lightbox full-screen (peeki + kropki dają mobile-like nav).
       phones.forEach(function(p, i) {
         p.addEventListener('click', function() {
           if (i === activeIdx) {
-            openLightbox(i);
+            if (window.matchMedia('(max-width: 768px)').matches) {
+              const nextIdx = (activeIdx + 1) % phones.length;
+              setActive(nextIdx);
+              if (autoplayStarted && !autoplayPaused) {
+                setTimeout(playActiveInSection, 700);
+              }
+            } else {
+              openLightbox(i);
+            }
           } else {
             setActive(i);
             if (autoplayStarted && !autoplayPaused) {
