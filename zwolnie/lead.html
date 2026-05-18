@@ -123,7 +123,7 @@
               </div>
               <button id="analysis-edit-btn" class="text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj</button>
             </div>
-            <div id="analysis-view" class="json-pretty text-zinc-300"></div>
+            <div id="analysis-view" class="text-zinc-300"></div>
             <textarea id="analysis-input" rows="20" class="hidden ze-input w-full px-3 py-3 rounded-lg text-xs font-mono"></textarea>
             <div id="analysis-edit-actions" class="hidden mt-3 flex gap-2">
               <button id="analysis-save-btn" class="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold">Zapisz analizę</button>
@@ -463,13 +463,13 @@ function renderAnalysis() {
   const view = document.getElementById('analysis-view');
   const meta = document.getElementById('analysis-meta');
   if (lead.ai_analysis) {
-    view.textContent = JSON.stringify(lead.ai_analysis, null, 2);
+    view.innerHTML = ZE.renderAnalysisHtml(lead.ai_analysis);
     meta.textContent = lead.ai_analysis_published_at
-      ? 'Wklejona ' + ZE.fmtRelative(lead.ai_analysis_published_at)
-      : 'Wklejona — brak metki czasu';
+      ? 'Zapisana ' + ZE.fmtRelative(lead.ai_analysis_published_at)
+      : 'Zapisana';
   } else {
-    view.textContent = '';
-    meta.textContent = 'Brak. Wygeneruj prompt, uruchom w Claude Code, wklej JSON tutaj.';
+    view.innerHTML = '<div class="text-sm text-zinc-500 py-6 border border-dashed border-white/10 rounded-lg text-center">Brak analizy. Skopiuj prompt z tab "Prompt AI" i wklej do Claude Code w VS Code — Claude Code sam zapisze wynik tutaj (przez API).</div>';
+    meta.textContent = 'Brak.';
   }
 }
 

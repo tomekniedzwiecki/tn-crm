@@ -76,6 +76,7 @@
         <select id="f-sort" class="ze-input px-3 py-2.5 rounded-lg text-sm">
           <option value="created_at-desc">Najnowsze</option>
           <option value="created_at-asc">Najstarsze</option>
+          <option value="updated_at-desc">Ostatnio zmienione</option>
           <option value="contact_name-asc">Imię A-Z</option>
           <option value="status-asc">Status</option>
         </select>
@@ -111,12 +112,13 @@
               <th class="ze-th hidden xl:table-cell">Zespół</th>
               <th class="ze-th hidden xl:table-cell">Budżet</th>
               <th class="ze-th">Status</th>
+              <th class="ze-th">Postęp</th>
               <th class="ze-th">Utworzony</th>
               <th class="ze-th w-10"></th>
             </tr>
           </thead>
           <tbody id="leads-tbody">
-            <tr><td colspan="9" class="ze-td text-center text-zinc-500 py-10">Ładowanie...</td></tr>
+            <tr><td colspan="10" class="ze-td text-center text-zinc-500 py-10">Ładowanie...</td></tr>
           </tbody>
         </table>
       </div>
@@ -257,7 +259,7 @@ let activeQuick = null;
 async function loadLeads() {
   const { data, error } = await ZE_SB
     .from('ze_leads')
-    .select('*')
+    .select('*, ze_lead_attachments(count), ze_lead_notes(count)')
     .order('created_at', { ascending: false })
     .range(0, 999);
   if (error) {
@@ -309,10 +311,15 @@ function applyFilters() {
 function renderLeads(list) {
   const tbody = document.getElementById('leads-tbody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="ze-td text-center text-zinc-500 py-10">Brak leadów spełniających kryteria.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" class="ze-td text-center text-zinc-500 py-10">Brak leadów spełniających kryteria.</td></tr>';
     return;
   }
-  tbody.innerHTML = list.map(l => `
+  tbody.innerHTML = list.map(l => {
+    const attCount = (l.ze_lead_attachments && l.ze_lead_attachments[0]?.count) || 0;
+    const noteCount = (l.ze_lead_notes && l.ze_lead_notes[0]?.count) || 0;
+    const hasAnalysis = !!l.ai_analysis;
+    const hasMvp = !!l.mvp_html;
+    return `
     <tr class="ze-row cursor-pointer ${l.starred ? 'is-starred' : ''}" data-id="${l.id}">
       <td class="ze-td" onclick="event.stopPropagation()">
         <input type="checkbox" class="ze-row-check rounded bg-zinc-800 border-zinc-700"
@@ -330,15 +337,43 @@ function renderLeads(list) {
       <td class="ze-td hidden lg:table-cell text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry || '—')}</td>
       <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.TEAM_SIZE_LABELS[l.team_size] || l.team_size || '—')}</td>
       <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget || '—')}</td>
-      <td class="ze-td">${ZE.statusBadge(l.status)}</td>
-      <td class="ze-td text-zinc-500 text-xs">${ZE.fmtRelative(l.created_at)}</td>
+      <td class="ze-td" onclick="event.stopPropagation()">
+        <select class="ze-input text-xs px-2 py-1 rounded ze-row-status" data-id="${l.id}">
+          ${ZE.STATUS_ORDER.map(s => `<option value="${s}" ${s === l.status ? 'selected' : ''}>${ZE.STATUS_LABELS[s]}</option>`).join('')}
+        </select>
+      </td>
+      <td class="ze-td">
+        <div class="flex items-center gap-1.5 text-xs">
+          ${hasAnalysis ? '<span title="Analiza AI gotowa" class="text-emerald-400"><i class="ph-fill ph-sparkle"></i></span>' : '<span title="Brak analizy" class="text-zinc-700"><i class="ph ph-sparkle"></i></span>'}
+          ${hasMvp ? '<span title="MVP gotowe" class="text-violet-400"><i class="ph-fill ph-cursor-click"></i></span>' : '<span title="Brak MVP" class="text-zinc-700"><i class="ph ph-cursor-click"></i></span>'}
+          ${attCount > 0 ? `<span title="Załączniki: ${attCount}" class="text-zinc-400"><i class="ph ph-paperclip"></i>${attCount}</span>` : ''}
+          ${noteCount > 0 ? `<span title="Notatki: ${noteCount}" class="text-zinc-400"><i class="ph ph-note"></i>${noteCount}</span>` : ''}
+          ${l.converted_to_project_id ? '<span title="Konwertowany na projekt" class="text-violet-400"><i class="ph-fill ph-folder-open"></i></span>' : ''}
+        </div>
+      </td>
+      <td class="ze-td text-zinc-500 text-xs whitespace-nowrap">${ZE.fmtRelative(l.created_at)}</td>
       <td class="ze-td text-right">
         <button onclick="event.stopPropagation(); toggleStar('${l.id}', ${!l.starred})" class="text-zinc-500 hover:text-amber-400">
           <i class="ph ${l.starred ? 'ph-fill ph-star' : 'ph-star'}"></i>
         </button>
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
+
+  // Bind inline status changes
+  tbody.querySelectorAll('.ze-row-status').forEach(sel => {
+    sel.addEventListener('change', async (e) => {
+      const id = sel.dataset.id;
+      const old = allLeads.find(x => x.id === id)?.status;
+      const { error } = await ZE_SB.from('ze_leads').update({ status: sel.value }).eq('id', id);
+      if (error) { ZE.toast(error.message, 'error'); sel.value = old; return; }
+      await ZE.logActivity(id, 'status_changed', { from: old, to: sel.value });
+      const lead = allLeads.find(x => x.id === id);
+      if (lead) lead.status = sel.value;
+      ZE.toast('Status zmieniony.', 'success');
+    });
+  });
 
   tbody.querySelectorAll('.ze-row').forEach(row => {
     row.addEventListener('click', () => {
