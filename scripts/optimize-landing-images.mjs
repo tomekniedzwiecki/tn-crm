@@ -163,10 +163,15 @@ for (const file of rasters) {
       continue;
     }
 
-    // Upload WebP
+    // Upload WebP z długim cache (1 rok, immutable bo plik kontentowo niezmienny)
+    // Supabase default = 'no-cache' co psuje PageSpeed (przeglądarka revaliduje co request)
     const { error: uploadError } = await supabase.storage
       .from('attachments')
-      .upload(webpRemotePath, webp, { contentType: 'image/webp', upsert: false });
+      .upload(webpRemotePath, webp, {
+        contentType: 'image/webp',
+        cacheControl: '31536000',  // 1 rok
+        upsert: false
+      });
 
     if (uploadError) {
       console.log(`  ❌ ${file.name}: upload fail (${uploadError.message})`);
@@ -205,6 +210,17 @@ if (!DRY_RUN && converted > 0) {
     html = html.replace(new RegExp('(' + scopeRe.source + ')\\.(png|jpg|jpeg)', 'gi'), '$1.webp');
 
     const afterCount = (html.match(new RegExp(scopeRe.source + '\\.webp', 'g')) || []).length;
+
+    // Migracja URL: /object/public/ → /render/image/public/?format=webp&width=1200&quality=85
+    // Powód: /object/public/ zwraca no-cache (Supabase Cloudflare CDN ignoruje cacheControl).
+    // /render/image/public/?format=webp zwraca WebP -23% mniejszy + cache 1 rok.
+    const OBJECT_PUBLIC_RE = /https:\/\/yxmavwkwnfuphjqbelws\.supabase\.co\/storage\/v1\/object\/public\/(attachments\/(?:ai-generated\/[^/]+|landing\/[^/]+\/reels)\/[^"'\s)]+\.(?:webp|png|jpg|jpeg))/gi;
+    const RENDER_PREFIX = 'https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/';
+    const renderCount = (html.match(OBJECT_PUBLIC_RE) || []).length;
+    if (renderCount > 0) {
+      html = html.replace(OBJECT_PUBLIC_RE, `${RENDER_PREFIX}$1?format=webp&width=1200&quality=85`);
+      console.log(`📡 Migracja na /render/image/: ${renderCount} URL-i (cache no-cache → 1 rok, WebP -23%)`);
+    }
     fs.writeFileSync(htmlPath, html);
 
     console.log(`📝 HTML zaktualizowany: ${beforePng} .png + ${beforeJpg} .jpg → ${afterCount} .webp`);

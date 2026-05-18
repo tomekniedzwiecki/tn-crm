@@ -58,6 +58,12 @@
 
 > ⛔ **OBOWIĄZKOWE po ETAP 4 (podstawieniu obrazów AI) — 2 skrypty:**
 >
+> **Uwaga (2026-05-18):** URL-e Supabase Storage MUSZĄ być w formacie `/render/image/public/...?format=webp&width=1200&quality=85`, NIE `/object/public/`. Powód:
+> - `/object/public/` zwraca `Cache-Control: no-cache` (Supabase Cloudflare CDN to wymusza)
+> - `/render/image/public/?format=webp` zwraca WebP **-23% mniejszy** + cache 1 rok
+> - Skrypt `optimize-landing-images.mjs` od v4.5 automatycznie podstawia render URL-e w HTML
+> - Dla istniejących landingów: `node scripts/migrate-to-render-image.mjs --all` (idempotentne)
+>
 > ```bash
 > # 1. AI obrazy (ai-generated/) → WebP + resize
 > node scripts/optimize-landing-images.mjs [slug]

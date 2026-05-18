@@ -1,5 +1,41 @@
 # Changelog — Landing Page Procedure
 
+## [v4.5] — 2026-05-18
+
+### Added — Migracja URL Supabase na /render/image/ (cache 1 rok + WebP -23%)
+
+**Trzeci missing piece po WebP (v4.3) i AliExpress (v4.4):** PageSpeed flagował "Używaj efektywnego czasu cache" (~478 KiB savings per landing). Diagnostyka:
+
+- `/storage/v1/object/public/` zwraca `Cache-Control: no-cache` mimo upload z `cacheControl: '31536000'`
+- Cloudflare CDN przed Supabase Storage **wymusza no-cache** niezależnie od planu (Free + Pro)
+- Smart CDN add-on **nie istnieje** osobno (tylko IPv4/PITR/Custom Domain)
+
+**Rozwiązanie:** Supabase ma drugi endpoint `/storage/v1/render/image/public/` z native cache + transform. Z parametrem `?format=webp&width=1200&quality=85`:
+
+| Endpoint | Format | Size | Cache |
+|---|---|---|---|
+| `/object/public/` (stare) | WebP | 72 KB | no-cache |
+| `/render/image/?format=webp` | **WebP** | **56 KB** (-23%) | **max-age=1y** ✅ |
+
+Supabase robi re-encode na fly z bardziej agresywnymi parametrami WebP. **3 zalety naraz:**
+1. WebP (mniejsze niż JPEG)
+2. **Mniejsze niż oryginalny WebP** (-23%)
+3. Cache 1 rok
+
+**Nowy skrypt:** `scripts/migrate-to-render-image.mjs`
+- Idempotentny regex replace `/object/public/...` → `/render/image/public/...?format=webp&width=1200&quality=85`
+- Scope: tylko `ai-generated/` i `landing/<slug>/reels/` (kontentowo niezmienne)
+- NIE rusza `logo.png` (już używane przez TakeDrop)
+
+**Wynik dla 42 landingów: 534 URL-i migrowanych.**
+
+**Integracja:**
+- `optimize-landing-images.mjs`: po WebP conversion automatycznie podstawia `/render/image/` URL-e w HTML
+- `reference/pagespeed.md`: uwaga o /render/image/ formacie
+- Future landingi: automatyczny render URL od pierwszego deploymentu
+
+---
+
 ## [v4.4] — 2026-05-18
 
 ### Added — AliExpress reviews thumbnail optimization
