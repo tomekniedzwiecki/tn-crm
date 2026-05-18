@@ -10,13 +10,23 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
 <link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 <style>
-  .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; background: var(--ds-surface-1); border: 1px solid var(--ds-border); border-radius: var(--ds-r-md); }
+  .filter-bar {
+    position: sticky; top: var(--ds-header-h); z-index: 30;
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    padding: 12px 0;
+    background: rgba(0,0,0,0.85); backdrop-filter: blur(16px);
+    margin: 0 calc(-1 * var(--ds-s-8)); padding-left: var(--ds-s-8); padding-right: var(--ds-s-8);
+    border-bottom: 1px solid var(--ds-border);
+  }
   .quick-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ds-border); font-size: 12px; color: var(--ds-fg-3); transition: all var(--ds-d-fast) var(--ds-ease); background: transparent; }
   .quick-chip:hover { color: var(--ds-fg-1); border-color: var(--ds-border-hover); }
   .quick-chip.is-active { background: var(--ds-fg-1); color: var(--ds-bg); border-color: var(--ds-fg-1); }
   .row-actions { opacity: 0; transition: opacity var(--ds-d-fast) var(--ds-ease); }
   tr:hover .row-actions { opacity: 1; }
-  .bulk-bar { position: sticky; top: var(--ds-header-h); z-index: 20; padding: 10px 16px; background: var(--ds-magic-gradient); color: white; border-radius: var(--ds-r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; box-shadow: var(--ds-shadow-3); }
+  .bulk-bar { position: sticky; top: calc(var(--ds-header-h) + 110px); z-index: 25; padding: 10px 16px; background: var(--ds-magic-gradient); color: white; border-radius: var(--ds-r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; box-shadow: var(--ds-shadow-3); }
+  /* dense table */
+  .ds-table--dense td { padding: 10px 14px; font-size: 13px; }
+  .ds-table--dense th { padding: 10px 14px; }
 </style>
 </head>
 <body>
@@ -26,12 +36,21 @@
 
   <main class="ds-main">
     <header class="ds-header">
-      <div class="ds-breadcrumb">
-        <a href="/zwolnie/">Zwolnię</a>
-        <span class="ds-sep">/</span>
-        <span class="ds-current">Leady</span>
+      <div class="ds-header__left">
+        <div class="ds-breadcrumb">
+          <a href="/zwolnie/">Zwolnię</a>
+          <span class="ds-sep">/</span>
+          <span class="ds-current">Leady</span>
+        </div>
       </div>
-      <div class="ds-flex ds-items-center ds-gap-2">
+      <div class="ds-header__center">
+        <button onclick="ZE_Sidebar.openPalette()" class="ds-cmd">
+          <i class="ph ph-magnifying-glass"></i>
+          <span>Szukaj lub idź do...</span>
+          <span class="ds-cmd__hint"><span class="ds-kbd">⌘</span><span class="ds-kbd">K</span></span>
+        </button>
+      </div>
+      <div class="ds-header__right">
         <button id="export-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-download-simple"></i> Export</button>
         <button id="refresh-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-arrows-clockwise" id="refresh-icon"></i></button>
         <button id="add-lead-btn" class="ds-btn ds-btn--primary ds-btn--sm"><i class="ph ph-plus"></i> Dodaj lead</button>
@@ -39,19 +58,23 @@
     </header>
 
     <div class="ds-content ds-fade-in">
-      <div class="ds-flex ds-items-start ds-justify-between ds-mb-6">
-        <div>
-          <h1 class="ds-h1">Leady</h1>
-          <p class="ds-small ds-mt-2">Wszystkie zgłoszenia z formularza i dodane ręcznie.</p>
-        </div>
-        <div style="text-align: right;">
-          <div class="ds-h1 ds-num" id="lead-count" style="font-size: 28px;">—</div>
-          <div class="ds-xs" id="lead-count-filtered"></div>
+      <div class="ds-page-header">
+        <div class="ds-page-header__top">
+          <div>
+            <h1 class="ds-page-header__title">Leady</h1>
+            <p class="ds-page-header__sub">Wszystkie zgłoszenia z formularza i dodane ręcznie.</p>
+          </div>
+          <div class="ds-page-header__actions">
+            <div style="text-align: right;">
+              <div class="ds-num" id="lead-count" style="font-size: 32px; line-height: 1; font-weight: 600; color: var(--ds-fg-1);">—</div>
+              <div class="ds-xs ds-mt-2" id="lead-count-filtered"></div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Filter bar -->
-      <div class="filter-bar ds-mb-3">
+      <!-- Filter bar (sticky) -->
+      <div class="filter-bar">
         <div class="ds-input-group" style="flex: 1; min-width: 200px;">
           <i class="ph ph-magnifying-glass ds-input-group__icon"></i>
           <input id="f-search" type="text" class="ds-input" placeholder="Szukaj po imieniu, firmie, mailu...">

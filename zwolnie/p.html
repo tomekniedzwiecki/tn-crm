@@ -209,12 +209,12 @@ function renderStages(stages) {
   const total = stages.length, done = stages.filter(s => s.status === 'completed').length;
   document.getElementById('progress-text').textContent = `${done}/${total}`;
 
-  el.innerHTML = `<div class="pc-stage-line"></div>` + stages.map(s => {
+  el.innerHTML = `<div class="pc-stage-line"></div>` + stages.map((s, i) => {
     const tasks = (s.tasks || []).slice().sort((a, b) => a.order_index - b.order_index);
     const labelMap = { pending: 'Czeka', in_progress: 'W toku', completed: 'Zrobione', skipped: 'Pominięty' };
     const labelColors = { pending: 'var(--ds-fg-5)', in_progress: 'var(--ds-amber)', completed: 'var(--ds-emerald)', skipped: 'var(--ds-fg-6)' };
     return `
-      <div style="position: relative; margin-bottom: 24px;">
+      <div style="position: relative; margin-bottom: 24px; opacity: 0; animation: ds-fadeInUp 0.5s var(--ds-ease) ${i * 100}ms forwards;">
         <div class="pc-stage-dot--${s.status}" style="position: absolute; left: -34px; top: 8px; width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--ds-bg); display: flex; align-items: center; justify-content: center; color: #000; font-size: 12px;">
           ${s.status === 'completed' ? '<i class="ph-bold ph-check"></i>' : ''}
         </div>

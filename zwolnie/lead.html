@@ -10,12 +10,24 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
 <link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 <style>
-  .lead-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; }
-  @media (max-width: 1100px) { .lead-grid { grid-template-columns: 1fr; } }
-  .json-pretty { font-family: var(--ds-font-mono); font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .lead-grid { display: grid; grid-template-columns: 1fr 320px; gap: 32px; align-items: start; }
+  @media (max-width: 1200px) { .lead-grid { grid-template-columns: 1fr; } }
   .ze-panel { display: none; }
   .ze-panel.is-active { display: block; animation: ds-fadeIn 240ms var(--ds-ease); }
   .prompt-textarea { font-family: var(--ds-font-mono); font-size: 12px; line-height: 1.55; height: 480px; resize: vertical; }
+  /* Big page header z avatarem */
+  .lead-header {
+    padding: var(--ds-s-8) 0 var(--ds-s-5);
+    border-bottom: 1px solid var(--ds-border);
+  }
+  .lead-header__top { display: flex; align-items: flex-start; gap: 20px; }
+  .lead-header__title { font-size: 32px; line-height: 1.15; font-weight: 600; letter-spacing: -0.03em; color: var(--ds-fg-1); }
+  .lead-header__meta-row { display: flex; align-items: center; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .lead-header__meta-item { font-size: 13px; color: var(--ds-fg-3); display: inline-flex; align-items: center; gap: 6px; }
+  .lead-header__meta-item i { color: var(--ds-fg-5); font-size: 14px; }
+  /* Sticky tabs pod headerem */
+  .lead-tabs { position: sticky; top: var(--ds-header-h); z-index: 30; background: rgba(0,0,0,0.85); backdrop-filter: blur(16px); margin: 0 calc(-1 * var(--ds-s-8)); padding: 0 var(--ds-s-8); border-bottom: 1px solid var(--ds-border); }
+  .ctx-card { position: sticky; top: calc(var(--ds-header-h) + 60px); }
 </style>
 </head>
 <body>
@@ -25,25 +37,52 @@
 
   <main class="ds-main">
     <header class="ds-header">
-      <div class="ds-breadcrumb">
-        <a href="/zwolnie/leads">Leady</a>
-        <span class="ds-sep">/</span>
-        <span class="ds-current ds-truncate" id="hdr-name" style="max-width: 240px;">—</span>
+      <div class="ds-header__left">
+        <div class="ds-breadcrumb">
+          <a href="/zwolnie/leads">Leady</a>
+          <span class="ds-sep">/</span>
+          <span class="ds-current ds-truncate" id="hdr-name" style="max-width: 240px;">—</span>
+        </div>
       </div>
-      <div class="ds-flex ds-items-center ds-gap-2">
-        <select id="status-select" class="ds-select" style="width: 160px;"></select>
-        <a id="view-project-btn" href="#" class="ds-btn ds-btn--magic ds-btn--sm ds-hidden"><i class="ph ph-folder-open"></i> Projekt</a>
-        <button id="convert-btn" class="ds-btn ds-btn--sm ds-hidden" style="background: var(--ds-emerald); color: #000;"><i class="ph ph-rocket-launch"></i> Konwertuj</button>
+      <div class="ds-header__center">
+        <button onclick="ZE_Sidebar.openPalette()" class="ds-cmd">
+          <i class="ph ph-magnifying-glass"></i>
+          <span>Szukaj lub idź do...</span>
+          <span class="ds-cmd__hint"><span class="ds-kbd">⌘</span><span class="ds-kbd">K</span></span>
+        </button>
+      </div>
+      <div class="ds-header__right">
         <button id="delete-btn" class="ds-btn ds-btn--ghost ds-btn--sm" title="Usuń"><i class="ph ph-trash"></i></button>
       </div>
     </header>
 
-    <div class="ds-content ds-fade-in" style="max-width: 1400px;">
-      <div class="lead-grid">
+    <div class="ds-content ds-fade-in">
+      <!-- Big page header -->
+      <div class="lead-header">
+        <div class="lead-header__top">
+          <div id="lead-avatar-big" style="flex-shrink:0"></div>
+          <div style="flex:1; min-width:0">
+            <h1 class="lead-header__title" id="lead-title">—</h1>
+            <div class="lead-header__meta-row">
+              <span class="lead-header__meta-item" id="lh-company"><i class="ph ph-buildings"></i><span></span></span>
+              <span class="lead-header__meta-item" id="lh-email"><i class="ph ph-envelope"></i><span></span></span>
+              <span class="lead-header__meta-item" id="lh-phone"><i class="ph ph-phone"></i><span></span></span>
+              <span class="lead-header__meta-item" id="lh-web"><i class="ph ph-globe"></i><span></span></span>
+            </div>
+          </div>
+          <div class="ds-flex ds-items-center ds-gap-2" style="flex-shrink:0">
+            <select id="status-select" class="ds-select" style="width: 160px;"></select>
+            <a id="view-project-btn" href="#" class="ds-btn ds-btn--magic ds-btn--sm ds-hidden"><i class="ph ph-folder-open"></i> Projekt</a>
+            <button id="convert-btn" class="ds-btn ds-hidden" style="background: var(--ds-emerald); color: #000;"><i class="ph ph-rocket-launch"></i> Konwertuj</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lead-grid ds-mt-5">
 
         <section>
-          <!-- Tabs -->
-          <div class="ds-tabs ds-mb-5">
+          <!-- Sticky tabs -->
+          <div class="ds-tabs lead-tabs ds-mb-5">
             <div class="ds-tab is-active" data-tab="brief"><i class="ph ph-file-text"></i> Brief</div>
             <div class="ds-tab" data-tab="prompt" style="color: var(--ds-magic);"><i class="ph ph-sparkle"></i> Prompt AI</div>
             <div class="ds-tab" data-tab="analysis"><i class="ph ph-chart-pie"></i> Analiza</div>
@@ -181,34 +220,31 @@
           </div>
         </section>
 
-        <!-- SIDEBAR -->
-        <aside class="ds-flex-col ds-gap-4">
-          <div class="ds-card">
+        <!-- Context panel (sticky) -->
+        <aside class="ctx-card ds-flex-col ds-gap-4">
+          <div id="next-step" class="ds-card ds-card--magic ds-hidden">
             <div class="ds-card__body">
-              <div class="ds-flex ds-items-center ds-gap-3 ds-mb-4">
-                <div id="avatar"></div>
-                <div style="min-width: 0;">
-                  <div class="ds-fg-1 ds-truncate" id="s-name" style="font-weight: 600;"></div>
-                  <div class="ds-xs ds-truncate" id="s-company"></div>
-                </div>
+              <div class="ds-flex ds-items-center ds-gap-2" style="margin-bottom:12px">
+                <span class="ds-avatar" style="width:24px;height:24px;background:var(--ds-magic-gradient);font-size:11px"><i class="ph ph-sparkle"></i></span>
+                <div class="ds-label" style="color: var(--ds-magic);">Następny krok</div>
               </div>
-              <div class="ds-flex-col ds-gap-3" style="font-size: 13px;">
-                <div class="ds-flex ds-items-center ds-gap-2"><i class="ph ph-envelope" style="color: var(--ds-fg-4);"></i><a id="s-email" class="ds-fg-2 ds-truncate" style="flex:1"></a></div>
-                <div class="ds-flex ds-items-center ds-gap-2"><i class="ph ph-phone" style="color: var(--ds-fg-4);"></i><a id="s-phone" class="ds-fg-2"></a></div>
-                <div class="ds-flex ds-items-center ds-gap-2"><i class="ph ph-globe" style="color: var(--ds-fg-4);"></i><a id="s-website" target="_blank" rel="noopener" class="ds-fg-2 ds-truncate" style="flex:1"></a></div>
-              </div>
-              <div class="ds-divider"></div>
-              <div class="ds-grid ds-grid-2 ds-gap-3">
-                <div><div class="ds-label">Źródło</div><div class="ds-fg-2 ds-mt-2" id="s-source" style="font-size: 12px;"></div></div>
-                <div><div class="ds-label">Token</div><div class="ds-fg-3 ds-mono ds-mt-2" id="s-token" style="font-size: 10px;"></div></div>
-              </div>
+              <div id="next-step-body"></div>
             </div>
           </div>
 
-          <div id="next-step" class="ds-card ds-card--magic ds-hidden">
-            <div class="ds-card__body">
-              <div class="ds-label" style="color: var(--ds-magic);">Następny krok</div>
-              <div id="next-step-body" class="ds-mt-3"></div>
+          <div class="ds-card">
+            <div class="ds-card__header">
+              <h3 class="ds-h4" style="font-size:13px">Lead</h3>
+            </div>
+            <div class="ds-card__body" style="padding:16px 20px">
+              <div class="ds-flex-col ds-gap-3" style="font-size: 13px;">
+                <div><div class="ds-label" style="font-size:10px">Źródło</div><div class="ds-fg-2 ds-mt-2" id="s-source" style="font-size: 13px;"></div></div>
+                <div><div class="ds-label" style="font-size:10px">Token</div><div class="ds-fg-3 ds-mono ds-mt-2" id="s-token" style="font-size: 11px;"></div></div>
+                <div><div class="ds-label" style="font-size:10px">Branża</div><div class="ds-fg-2 ds-mt-2" id="s-industry" style="font-size: 13px;"></div></div>
+                <div><div class="ds-label" style="font-size:10px">Zespół</div><div class="ds-fg-2 ds-mt-2" id="s-team" style="font-size: 13px;"></div></div>
+                <div><div class="ds-label" style="font-size:10px">Pensje</div><div class="ds-fg-2 ds-mt-2" id="s-payroll" style="font-size: 13px;"></div></div>
+                <div><div class="ds-label" style="font-size:10px">Budżet</div><div class="ds-fg-2 ds-mt-2" id="s-budget" style="font-size: 13px;"></div></div>
+              </div>
             </div>
           </div>
         </aside>
@@ -298,20 +334,33 @@ function renderLead() {
   document.title = `Zwolnię · ${lead.contact_name || lead.contact_email || 'Lead'}`;
   document.getElementById('hdr-name').textContent = lead.contact_name || lead.contact_email || '(brak)';
 
-  document.getElementById('avatar').outerHTML = `<div id="avatar">${ZE.avatarHtml(lead.contact_name || lead.contact_email || '?', 48)}</div>`;
-  document.getElementById('s-name').textContent = lead.contact_name || '(brak imienia)';
-  document.getElementById('s-company').textContent = lead.company || '—';
-  const emailEl = document.getElementById('s-email');
-  emailEl.textContent = lead.contact_email || '—'; if (lead.contact_email) emailEl.href = 'mailto:' + lead.contact_email;
-  const phoneEl = document.getElementById('s-phone');
-  phoneEl.textContent = lead.contact_phone || '—'; if (lead.contact_phone) phoneEl.href = 'tel:' + lead.contact_phone;
-  const webEl = document.getElementById('s-website');
-  const safe = ZE.safeUrl(lead.website);
-  if (safe) { webEl.href = safe; webEl.textContent = lead.website.replace(/^https?:\/\//, ''); webEl.rel = 'noopener nofollow'; }
-  else { webEl.textContent = '—'; webEl.removeAttribute('href'); }
+  // Big header
+  document.getElementById('lead-avatar-big').innerHTML = ZE.avatarHtml(lead.contact_name || lead.contact_email || '?', 64);
+  document.getElementById('lead-title').textContent = lead.contact_name || lead.contact_email || '(brak imienia)';
+
+  const setMeta = (id, value, makeLink) => {
+    const el = document.getElementById(id);
+    const span = el.querySelector('span');
+    if (!value) { el.style.display = 'none'; return; }
+    span.textContent = value;
+    if (makeLink) {
+      span.outerHTML = `<a href="${makeLink}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${ZE.escapeHtml(value)}</a>`;
+    }
+  };
+  setMeta('lh-company', lead.company);
+  setMeta('lh-email', lead.contact_email, lead.contact_email ? 'mailto:' + lead.contact_email : null);
+  setMeta('lh-phone', lead.contact_phone, lead.contact_phone ? 'tel:' + lead.contact_phone : null);
+  setMeta('lh-web', lead.website ? lead.website.replace(/^https?:\/\//, '') : null, ZE.safeUrl(lead.website));
+
+  // Context panel
   document.getElementById('s-source').textContent = lead.source;
   document.getElementById('s-token').textContent = lead.token;
+  document.getElementById('s-industry').textContent = ZE.INDUSTRY_LABELS[lead.industry] || lead.industry || '—';
+  document.getElementById('s-team').textContent = ZE.TEAM_SIZE_LABELS[lead.team_size] || lead.team_size || '—';
+  document.getElementById('s-payroll').textContent = ZE.PAYROLL_LABELS[lead.payroll] || lead.payroll || '—';
+  document.getElementById('s-budget').textContent = ZE.BUDGET_LABELS[lead.budget] || lead.budget || '—';
 
+  // Brief tab
   document.getElementById('brief-problem').textContent = lead.problem || '(brak opisu)';
   document.getElementById('b-industry').textContent = ZE.INDUSTRY_LABELS[lead.industry] || lead.industry || '—';
   document.getElementById('b-team').textContent = ZE.TEAM_SIZE_LABELS[lead.team_size] || lead.team_size || '—';

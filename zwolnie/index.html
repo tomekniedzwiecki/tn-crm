@@ -9,77 +9,144 @@
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
 <link rel="stylesheet" href="/zwolnie/_assets/ds.css">
+<style>
+  .hero {
+    position: relative; overflow: hidden;
+    border-radius: var(--ds-r-xl);
+    padding: 56px 48px;
+    margin-bottom: 32px;
+    background: var(--ds-surface-1);
+    border: 1px solid var(--ds-border);
+  }
+  .hero::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 600px 300px at 0% 0%, rgba(0,200,150,0.18), transparent 60%),
+      radial-gradient(ellipse 500px 300px at 100% 0%, rgba(128,81,255,0.14), transparent 60%);
+  }
+  .hero::after {
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+    background-size: 32px 32px;
+    mask-image: radial-gradient(ellipse at top left, black, transparent 70%);
+  }
+  .hero__content { position: relative; z-index: 1; }
+  .hero__title { font-size: clamp(32px, 4vw, 44px); line-height: 1.05; font-weight: 600; letter-spacing: -0.035em; color: var(--ds-fg-1); }
+  .hero__sub { color: var(--ds-fg-3); font-size: 16px; margin-top: 12px; max-width: 560px; }
+
+  .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px; }
+  @media (max-width: 900px) { .metric-row { grid-template-columns: repeat(2, 1fr); } }
+  .metric {
+    position: relative;
+    padding: 20px;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--ds-border-hover);
+    border-radius: var(--ds-r-md);
+    transition: all var(--ds-d-fast) var(--ds-ease);
+  }
+  .metric:hover { border-color: var(--ds-border-strong); transform: translateY(-2px); }
+  .metric__icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
+  .metric__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-fg-4); margin-bottom: 4px; }
+  .metric__value { font-size: 32px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+  .feed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 900px) { .feed-grid { grid-template-columns: 1fr; } }
+  .feed { background: var(--ds-surface-1); border: 1px solid var(--ds-border); border-radius: var(--ds-r-lg); overflow: hidden; }
+  .feed__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--ds-border); }
+  .feed__title { font-size: 14px; font-weight: 600; color: var(--ds-fg-1); display: flex; align-items: center; gap: 8px; }
+  .feed__list { padding: 4px; max-height: 420px; overflow-y: auto; }
+  .feed-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background var(--ds-d-fast) var(--ds-ease); }
+  .feed-row:hover { background: rgba(255,255,255,0.03); }
+</style>
 </head>
 <body>
 
 <div class="ds-app">
-  <aside id="ze-sidebar" class="ds-sidebar"></aside>
+  <aside id="ze-sidebar"></aside>
 
   <main class="ds-main">
     <header class="ds-header">
-      <div class="ds-breadcrumb">
-        <span class="ds-current">Dashboard</span>
+      <div class="ds-header__left">
+        <div class="ds-breadcrumb">
+          <span class="ds-current">Dashboard</span>
+        </div>
       </div>
-      <div class="ds-flex ds-items-center ds-gap-2">
-        <span class="ds-kbd">⌘K</span>
+      <div class="ds-header__center">
+        <button onclick="ZE_Sidebar.openPalette()" class="ds-cmd">
+          <i class="ph ph-magnifying-glass"></i>
+          <span>Szukaj lub idź do...</span>
+          <span class="ds-cmd__hint"><span class="ds-kbd">⌘</span><span class="ds-kbd">K</span></span>
+        </button>
+      </div>
+      <div class="ds-header__right">
+        <a href="/zwolnie/leads" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-bell"></i></a>
       </div>
     </header>
 
     <div class="ds-content ds-fade-in">
-      <div class="ds-mb-8">
-        <h1 class="ds-h1">Cześć, Tomek 👋</h1>
-        <p class="ds-small ds-mt-2">Co się dzieje w pipeline.</p>
-      </div>
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero__content">
+          <h1 class="hero__title">Cześć, Tomek <span style="display:inline-block;animation:wave 1.5s ease-in-out infinite">👋</span></h1>
+          <p class="hero__sub">Co dziś robisz? Skróty: <span class="ds-kbd">⌘K</span> otwiera command palette, <span class="ds-kbd">G</span> potem <span class="ds-kbd">L</span> → leady.</p>
 
-      <!-- Metrics -->
-      <div class="ds-grid ds-grid-4 ds-gap-4 ds-mb-8">
-        <div class="ds-metric">
-          <div class="ds-metric__label">Wszystkie leady</div>
-          <div class="ds-metric__value" id="m-total">—</div>
-          <div class="ds-metric__delta" id="m-total-delta"></div>
+          <div class="metric-row">
+            <a href="/zwolnie/leads" class="metric">
+              <div class="metric__icon" style="background:rgba(255,255,255,0.06);color:var(--ds-fg-1)"><i class="ph ph-users-three"></i></div>
+              <div class="metric__label">Wszystkie leady</div>
+              <div class="metric__value" id="m-total">—</div>
+            </a>
+            <div class="metric">
+              <div class="metric__icon" style="background:var(--ds-emerald-soft);color:var(--ds-emerald)"><i class="ph ph-trend-up"></i></div>
+              <div class="metric__label">Nowe (7 dni)</div>
+              <div class="metric__value" id="m-week" style="color:#6EE7B7">—</div>
+            </div>
+            <a href="/zwolnie/leads#todo" class="metric">
+              <div class="metric__icon" style="background:var(--ds-amber-soft);color:var(--ds-amber)"><i class="ph ph-clock-clockwise"></i></div>
+              <div class="metric__label">Czekają na analizę</div>
+              <div class="metric__value" id="m-todo" style="color:#FCD34D">—</div>
+            </a>
+            <a href="/zwolnie/projects" class="metric">
+              <div class="metric__icon" style="background:var(--ds-magic-soft);color:var(--ds-magic)"><i class="ph ph-folder-simple"></i></div>
+              <div class="metric__label">Aktywne projekty</div>
+              <div class="metric__value" id="m-projects" style="color:#C4B5FD">—</div>
+            </a>
+          </div>
         </div>
-        <div class="ds-metric">
-          <div class="ds-metric__label">Nowe (7 dni)</div>
-          <div class="ds-metric__value ds-metric__delta--up" id="m-week" style="color: var(--ds-emerald)">—</div>
-          <div class="ds-metric__delta">w ostatnim tygodniu</div>
-        </div>
-        <div class="ds-metric">
-          <div class="ds-metric__label">Czekają na analizę</div>
-          <div class="ds-metric__value" id="m-todo" style="color: var(--ds-amber)">—</div>
-          <div class="ds-metric__delta">do obrobienia</div>
-        </div>
-        <div class="ds-metric">
-          <div class="ds-metric__label">Aktywne projekty</div>
-          <div class="ds-metric__value" id="m-projects" style="color: var(--ds-magic)">—</div>
-          <div class="ds-metric__delta">w realizacji</div>
-        </div>
-      </div>
+      </section>
 
-      <!-- Two columns -->
-      <div class="ds-grid ds-grid-2 ds-gap-4">
-        <div class="ds-card">
-          <div class="ds-card__header">
-            <h3 class="ds-h4">Najnowsze leady</h3>
+      <!-- Two feeds -->
+      <div class="feed-grid">
+        <div class="feed">
+          <div class="feed__head">
+            <div class="feed__title"><i class="ph ph-list-bullets" style="color:var(--ds-fg-4)"></i> Najnowsze leady</div>
             <a href="/zwolnie/leads" class="ds-btn ds-btn--ghost ds-btn--sm">Wszystkie <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div class="ds-card__body" id="recent-leads" style="padding: 8px;">
-            <div class="ds-empty ds-small">Ładowanie...</div>
+          <div class="feed__list" id="recent-leads">
+            <div class="ds-empty"><div class="ds-empty__desc">Ładowanie...</div></div>
           </div>
         </div>
 
-        <div class="ds-card">
-          <div class="ds-card__header">
-            <h3 class="ds-h4">Wymagają akcji</h3>
+        <div class="feed">
+          <div class="feed__head">
+            <div class="feed__title"><i class="ph ph-flame" style="color:var(--ds-amber)"></i> Wymagają akcji</div>
             <a href="/zwolnie/pipeline" class="ds-btn ds-btn--ghost ds-btn--sm">Pipeline <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div class="ds-card__body" id="action-needed" style="padding: 8px;">
-            <div class="ds-empty ds-small">Ładowanie...</div>
+          <div class="feed__list" id="action-needed">
+            <div class="ds-empty"><div class="ds-empty__desc">Ładowanie...</div></div>
           </div>
         </div>
       </div>
     </div>
   </main>
 </div>
+
+<style>
+@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(14deg); } 75% { transform: rotate(-8deg); } }
+</style>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -96,8 +163,8 @@
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).in('status', ['new', 'analyzing']),
     ZE_SB.from('ze_projects').select('id', { count: 'exact', head: true }).in('status', ['planning', 'building']),
-    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').order('created_at', { ascending: false }).limit(6),
-    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at, status_changed_at').in('status', ['new', 'analyzing']).order('status_changed_at', { ascending: true }).limit(6)
+    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').order('created_at', { ascending: false }).limit(7),
+    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at, status_changed_at').in('status', ['new', 'analyzing']).order('status_changed_at', { ascending: true }).limit(7)
   ]);
 
   document.getElementById('m-total').textContent = totalRes.count ?? '0';
@@ -107,8 +174,8 @@
   ZE_Sidebar.setBadge('leads', totalRes.count ?? 0);
 
   const renderRow = (l) => `
-    <a href="/zwolnie/lead?id=${l.id}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;transition:background 120ms" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
-      ${ZE.avatarHtml(l.contact_name || l.company || '?', 28)}
+    <a href="/zwolnie/lead?id=${l.id}" class="feed-row">
+      ${ZE.avatarHtml(l.contact_name || l.company || '?', 32)}
       <div style="flex:1;min-width:0">
         <div class="ds-fg-1 ds-truncate" style="font-size:13px;font-weight:500">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
         <div class="ds-truncate" style="font-size:11px;color:var(--ds-fg-5)">${ZE.escapeHtml(l.company || '—')} · ${ZE.fmtRelative(l.created_at)}</div>
