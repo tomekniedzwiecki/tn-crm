@@ -5,74 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Dashboard</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/zwolnie/_assets/ds.css">
-<style>
-  .hero {
-    position: relative; overflow: hidden;
-    border-radius: var(--ds-r-xl);
-    padding: 56px 48px;
-    margin-bottom: 32px;
-    background: var(--ds-surface-1);
-    border: 1px solid var(--ds-border);
-  }
-  .hero::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background:
-      radial-gradient(ellipse 600px 300px at 0% 0%, rgba(0,200,150,0.18), transparent 60%),
-      radial-gradient(ellipse 500px 300px at 100% 0%, rgba(128,81,255,0.14), transparent 60%);
-  }
-  .hero::after {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-    background-size: 32px 32px;
-    mask-image: radial-gradient(ellipse at top left, black, transparent 70%);
-  }
-  .hero__content { position: relative; z-index: 1; }
-  .hero__title { font-size: clamp(32px, 4vw, 44px); line-height: 1.05; font-weight: 600; letter-spacing: -0.035em; color: var(--ds-fg-1); }
-  .hero__sub { color: var(--ds-fg-3); font-size: 16px; margin-top: 12px; max-width: 560px; }
-
-  .metric-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 32px; }
-  @media (max-width: 900px) { .metric-row { grid-template-columns: repeat(2, 1fr); } }
-  .metric {
-    position: relative;
-    padding: 20px;
-    background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--ds-border-hover);
-    border-radius: var(--ds-r-md);
-    transition: all var(--ds-d-fast) var(--ds-ease);
-  }
-  .metric:hover { border-color: var(--ds-border-strong); transform: translateY(-2px); }
-  .metric__icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 12px; }
-  .metric__label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ds-fg-4); margin-bottom: 4px; }
-  .metric__value { font-size: 32px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.1; font-variant-numeric: tabular-nums; }
-
-  .feed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 900px) { .feed-grid { grid-template-columns: 1fr; } }
-  .feed { background: var(--ds-surface-1); border: 1px solid var(--ds-border); border-radius: var(--ds-r-lg); overflow: hidden; }
-  .feed__head { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--ds-border); }
-  .feed__title { font-size: 14px; font-weight: 600; color: var(--ds-fg-1); display: flex; align-items: center; gap: 8px; }
-  .feed__list { padding: 4px; max-height: 420px; overflow-y: auto; }
-  .feed-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 8px; transition: background var(--ds-d-fast) var(--ds-ease); }
-  .feed-row:hover { background: rgba(255,255,255,0.03); }
-</style>
+<script>
+  tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+</script>
 </head>
-<body>
+<body class="font-sans tracking-tight antialiased">
 
 <div class="ds-app">
   <aside id="ze-sidebar"></aside>
 
   <main class="ds-main">
-    <header class="ds-header">
+    <header class="glass-header px-6">
       <div class="ds-header__left">
-        <div class="ds-breadcrumb">
-          <span class="ds-current">Dashboard</span>
-        </div>
+        <div class="ds-breadcrumb"><span class="ds-current">Dashboard</span></div>
       </div>
       <div class="ds-header__center">
         <button onclick="ZE_Sidebar.openPalette()" class="ds-cmd">
@@ -81,72 +31,109 @@
           <span class="ds-cmd__hint"><span class="ds-kbd">⌘</span><span class="ds-kbd">K</span></span>
         </button>
       </div>
-      <div class="ds-header__right">
-        <a href="/zwolnie/leads" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-bell"></i></a>
-      </div>
+      <div class="ds-header__right"></div>
     </header>
 
-    <div class="ds-content ds-fade-in">
-      <!-- Hero -->
-      <section class="hero">
-        <div class="hero__content">
-          <h1 class="hero__title">Cześć, Tomek <span style="display:inline-block;animation:wave 1.5s ease-in-out infinite">👋</span></h1>
-          <p class="hero__sub">Co dziś robisz? Skróty: <span class="ds-kbd">⌘K</span> otwiera command palette, <span class="ds-kbd">G</span> potem <span class="ds-kbd">L</span> → leady.</p>
+    <div class="ds-content animate-enter">
 
-          <div class="metric-row">
-            <a href="/zwolnie/leads" class="metric">
-              <div class="metric__icon" style="background:rgba(255,255,255,0.06);color:var(--ds-fg-1)"><i class="ph ph-users-three"></i></div>
-              <div class="metric__label">Wszystkie leady</div>
-              <div class="metric__value" id="m-total">—</div>
-            </a>
-            <div class="metric">
-              <div class="metric__icon" style="background:var(--ds-emerald-soft);color:var(--ds-emerald)"><i class="ph ph-trend-up"></i></div>
-              <div class="metric__label">Nowe (7 dni)</div>
-              <div class="metric__value" id="m-week" style="color:#6EE7B7">—</div>
-            </div>
-            <a href="/zwolnie/leads#todo" class="metric">
-              <div class="metric__icon" style="background:var(--ds-amber-soft);color:var(--ds-amber)"><i class="ph ph-clock-clockwise"></i></div>
-              <div class="metric__label">Czekają na analizę</div>
-              <div class="metric__value" id="m-todo" style="color:#FCD34D">—</div>
-            </a>
-            <a href="/zwolnie/projects" class="metric">
-              <div class="metric__icon" style="background:var(--ds-magic-soft);color:var(--ds-magic)"><i class="ph ph-folder-simple"></i></div>
-              <div class="metric__label">Aktywne projekty</div>
-              <div class="metric__value" id="m-projects" style="color:#C4B5FD">—</div>
-            </a>
+      <!-- Hero (radial gradient — Tomek's signature) -->
+      <section class="hero-revenue p-8 mb-6 relative overflow-hidden">
+        <div class="flex items-center justify-between gap-6 flex-wrap mb-6">
+          <div>
+            <div class="text-xs uppercase tracking-widest text-zinc-500 mb-2">Dashboard</div>
+            <h1 class="text-3xl font-bold tracking-tight">Cześć, Tomek</h1>
+            <p class="text-zinc-400 text-sm mt-2">Co się dzieje w Twoim pipeline. <span class="ds-kbd">⌘K</span> = command palette.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <a href="/zwolnie/leads" class="ds-btn ds-btn--secondary"><i class="ph ph-users-three"></i> Leady</a>
+            <a href="/zwolnie/pipeline" class="ds-btn ds-btn--accent"><i class="ph ph-kanban"></i> Pipeline</a>
+          </div>
+        </div>
+
+        <!-- Mini stats trio: TYDZIEŃ / MIESIĄC / WSZYSTKIE -->
+        <div class="grid grid-cols-3 gap-4 max-w-2xl">
+          <div class="mini-stat" style="text-align:left">
+            <div class="mini-stat-label">7 dni</div>
+            <div class="mini-stat-value" id="ms-week">—</div>
+            <div class="mini-stat-delta neutral" id="ms-week-delta">vs poprzedni tydzień</div>
+          </div>
+          <div class="mini-stat" style="text-align:left;border-left:1px solid var(--ds-border);padding-left:16px">
+            <div class="mini-stat-label">Miesiąc</div>
+            <div class="mini-stat-value" id="ms-month">—</div>
+            <div class="mini-stat-delta neutral">nowych leadów</div>
+          </div>
+          <div class="mini-stat" style="text-align:left;border-left:1px solid var(--ds-border);padding-left:16px">
+            <div class="mini-stat-label">Wszystkie</div>
+            <div class="mini-stat-value" id="ms-total">—</div>
+            <div class="mini-stat-delta neutral">w bazie</div>
           </div>
         </div>
       </section>
 
-      <!-- Two feeds -->
-      <div class="feed-grid">
-        <div class="feed">
-          <div class="feed__head">
-            <div class="feed__title"><i class="ph ph-list-bullets" style="color:var(--ds-fg-4)"></i> Najnowsze leady</div>
+      <!-- Bento grid: 4 metric cards + 2 feed cards -->
+      <div class="grid grid-cols-12 gap-4 mb-6">
+        <a href="/zwolnie/leads" class="stat-card p-5 col-span-3">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:rgba(255,255,255,0.06)"><i class="ph ph-users-three text-base"></i></span>
+            <i class="ph ph-arrow-up-right text-zinc-600"></i>
+          </div>
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Wszystkie leady</div>
+          <div class="font-mono text-3xl font-bold leading-none" id="m-total">—</div>
+        </a>
+        <a href="/zwolnie/leads#stale" class="stat-card p-5 col-span-3">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--ds-amber-soft);color:var(--ds-amber)"><i class="ph ph-clock-clockwise text-base"></i></span>
+            <i class="ph ph-arrow-up-right text-zinc-600"></i>
+          </div>
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Czekają na analizę</div>
+          <div class="font-mono text-3xl font-bold leading-none" id="m-todo" style="color:var(--ds-amber)">—</div>
+        </a>
+        <a href="/zwolnie/projects" class="stat-card p-5 col-span-3">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--ds-violet-soft);color:var(--ds-violet)"><i class="ph ph-folder-simple text-base"></i></span>
+            <i class="ph ph-arrow-up-right text-zinc-600"></i>
+          </div>
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Aktywne projekty</div>
+          <div class="font-mono text-3xl font-bold leading-none" id="m-projects" style="color:var(--ds-violet)">—</div>
+        </a>
+        <a href="/zwolnie/pipeline" class="stat-card p-5 col-span-3">
+          <div class="flex items-center justify-between mb-3">
+            <span class="w-8 h-8 rounded-lg flex items-center justify-center" style="background:var(--ds-teal-soft);color:var(--ds-teal)"><i class="ph ph-trophy text-base"></i></span>
+            <i class="ph ph-arrow-up-right text-zinc-600"></i>
+          </div>
+          <div class="text-[10px] uppercase tracking-widest text-zinc-500 mb-1">Wygrane</div>
+          <div class="font-mono text-3xl font-bold leading-none" id="m-won" style="color:var(--ds-teal)">—</div>
+        </a>
+      </div>
+
+      <!-- Activity feeds -->
+      <div class="grid grid-cols-12 gap-4">
+        <div class="section-card col-span-7 overflow-hidden">
+          <div class="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-list-bullets text-zinc-500"></i>
+              <h3 class="text-sm font-semibold">Najnowsze leady</h3>
+            </div>
             <a href="/zwolnie/leads" class="ds-btn ds-btn--ghost ds-btn--sm">Wszystkie <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div class="feed__list" id="recent-leads">
-            <div class="ds-empty"><div class="ds-empty__desc">Ładowanie...</div></div>
-          </div>
+          <div class="p-2 max-h-[420px] overflow-y-auto" id="recent-leads"></div>
         </div>
 
-        <div class="feed">
-          <div class="feed__head">
-            <div class="feed__title"><i class="ph ph-flame" style="color:var(--ds-amber)"></i> Wymagają akcji</div>
+        <div class="section-card col-span-5 overflow-hidden">
+          <div class="px-5 py-4 border-b border-white/[0.06] flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-flame" style="color:var(--ds-amber)"></i>
+              <h3 class="text-sm font-semibold">Wymagają akcji</h3>
+            </div>
             <a href="/zwolnie/pipeline" class="ds-btn ds-btn--ghost ds-btn--sm">Pipeline <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div class="feed__list" id="action-needed">
-            <div class="ds-empty"><div class="ds-empty__desc">Ładowanie...</div></div>
-          </div>
+          <div class="p-2 max-h-[420px] overflow-y-auto" id="action-needed"></div>
         </div>
       </div>
+
     </div>
   </main>
 </div>
-
-<style>
-@keyframes wave { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(14deg); } 75% { transform: rotate(-8deg); } }
-</style>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -158,26 +145,33 @@
   ZE_Sidebar.render({ active: 'dashboard', userEmail: staff.email });
 
   const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const [totalRes, weekRes, todoRes, projectsRes, recentRes, actionRes] = await Promise.all([
+  const monthAgo = new Date(Date.now() - 30*24*60*60*1000).toISOString();
+
+  const [totalRes, weekRes, monthRes, todoRes, projectsRes, wonRes, recentRes, actionRes] = await Promise.all([
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }),
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
+    ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).gte('created_at', monthAgo),
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).in('status', ['new', 'analyzing']),
     ZE_SB.from('ze_projects').select('id', { count: 'exact', head: true }).in('status', ['planning', 'building']),
+    ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).eq('status', 'won'),
     ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').order('created_at', { ascending: false }).limit(7),
     ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at, status_changed_at').in('status', ['new', 'analyzing']).order('status_changed_at', { ascending: true }).limit(7)
   ]);
 
   document.getElementById('m-total').textContent = totalRes.count ?? '0';
-  document.getElementById('m-week').textContent = weekRes.count ?? '0';
   document.getElementById('m-todo').textContent = todoRes.count ?? '0';
   document.getElementById('m-projects').textContent = projectsRes.count ?? '0';
+  document.getElementById('m-won').textContent = wonRes.count ?? '0';
+  document.getElementById('ms-week').textContent = weekRes.count ?? '0';
+  document.getElementById('ms-month').textContent = monthRes.count ?? '0';
+  document.getElementById('ms-total').textContent = totalRes.count ?? '0';
   ZE_Sidebar.setBadge('leads', totalRes.count ?? 0);
 
   const renderRow = (l) => `
-    <a href="/zwolnie/lead?id=${l.id}" class="feed-row">
-      ${ZE.avatarHtml(l.contact_name || l.company || '?', 32)}
-      <div style="flex:1;min-width:0">
-        <div class="ds-fg-1 ds-truncate" style="font-size:13px;font-weight:500">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
+    <a href="/zwolnie/lead?id=${l.id}" class="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/[0.03] transition-colors">
+      ${ZE.avatarHtml(l.contact_name || l.company || '?', 28)}
+      <div class="flex-1 min-w-0">
+        <div class="ds-truncate" style="font-size:13px;font-weight:500;color:var(--ds-fg-1)">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
         <div class="ds-truncate" style="font-size:11px;color:var(--ds-fg-5)">${ZE.escapeHtml(l.company || '—')} · ${ZE.fmtRelative(l.created_at)}</div>
       </div>
       <span class="ds-badge ds-badge--${l.status}">${ZE.STATUS_LABELS[l.status]}</span>

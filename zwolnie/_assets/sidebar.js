@@ -1,6 +1,6 @@
-// Slim icon-only sidebar (Linear/Raycast style) z tooltipami
+// Sidebar 280px wide z labelami (Tomek-style, jak shared-sidebar.js w tn-crm)
 window.ZE_Sidebar = (function() {
-  const NAV = [
+  const NAV_MAIN = [
     { id: 'dashboard', label: 'Dashboard', icon: 'ph-house', href: '/zwolnie/' },
     { id: 'leads', label: 'Leady', icon: 'ph-users-three', href: '/zwolnie/leads', badge: true },
     { id: 'pipeline', label: 'Pipeline', icon: 'ph-kanban', href: '/zwolnie/pipeline' },
@@ -16,31 +16,43 @@ window.ZE_Sidebar = (function() {
     el.className = 'ds-sidebar';
     const initials = (userEmail || 'T').slice(0, 2).toUpperCase();
 
-    const navHtml = (items) => items.map(item => {
+    const navItem = (item) => {
       const isActive = item.id === active;
       return `
-        <a href="${item.href}" data-label="${item.label}" class="ds-nav__item ${isActive ? 'is-active' : ''}">
+        <a href="${item.href}" class="ds-nav__item ${isActive ? 'is-active' : ''}">
           <i class="ph ${item.icon}"></i>
+          <span>${item.label}</span>
           ${item.badge ? `<span id="ze-sidebar-badge-${item.id}" class="ds-nav__badge ds-hidden"></span>` : ''}
         </a>
       `;
-    }).join('');
+    };
 
     el.innerHTML = `
       <div class="ds-nav">
-        <a href="/zwolnie/" class="ds-nav__brand" title="Zwolnię">
+        <a href="/zwolnie/" class="ds-nav__brand">
           <span class="ds-nav__brand-mark">Z</span>
+          <span class="ds-nav__brand-text">
+            <span class="ds-nav__brand-name">Zwolnię</span>
+            <span class="ds-nav__brand-sub">CRM · v7</span>
+          </span>
         </a>
 
         <div class="ds-nav__section">
-          ${navHtml(NAV)}
-          <div class="ds-nav__divider"></div>
-          ${navHtml(NAV_AI)}
+          <div class="ds-nav__section-label">Workspace</div>
+          ${NAV_MAIN.map(navItem).join('')}
+
+          <div class="ds-nav__section-label" style="margin-top:12px">AI Tools</div>
+          ${NAV_AI.map(navItem).join('')}
         </div>
 
         <div class="ds-nav__footer">
-          <button onclick="ZE_Sidebar.openProfile()" data-label="${userEmail}" class="ds-nav__item">
-            <span style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#525252,#262626);border:1px solid var(--ds-border-hover);color:#fff;font-size:10px;font-weight:600;display:flex;align-items:center;justify-content:center">${initials}</span>
+          <button onclick="ZE_Sidebar.openProfile()" id="ze-sb-profile" class="ds-nav__profile">
+            <span class="ds-avatar" style="width:32px;height:32px;font-size:11px;background:linear-gradient(135deg,#525252,#262626);border:1px solid var(--ds-border-hover)">${initials}</span>
+            <div class="ds-nav__profile-info">
+              <div class="ds-nav__profile-email">${userEmail}</div>
+              <div class="ds-nav__profile-role">Admin</div>
+            </div>
+            <i class="ph ph-caret-up-down" style="color: var(--ds-fg-5); font-size: 14px;"></i>
           </button>
         </div>
       </div>
@@ -48,13 +60,13 @@ window.ZE_Sidebar = (function() {
   }
 
   function openProfile() {
-    const userEmail = document.querySelector('.ds-nav__footer .ds-nav__item')?.dataset.label || '';
+    const userEmail = document.getElementById('ze-sb-profile')?.querySelector('.ds-nav__profile-email')?.textContent || '';
     const initials = (userEmail || 'T').slice(0, 2).toUpperCase();
     const wrap = document.createElement('div');
     wrap.className = 'ds-modal-backdrop';
     wrap.innerHTML = `
-      <div class="ds-modal" style="max-width: 320px;">
-        <div class="ds-modal__body" style="padding: var(--ds-s-5);">
+      <div class="ds-modal" style="max-width: 360px;">
+        <div class="ds-modal__body" style="padding: 24px;">
           <div class="ds-flex ds-items-center ds-gap-3 ds-mb-4">
             <span class="ds-avatar" style="width:44px;height:44px;font-size:14px;background:linear-gradient(135deg,#525252,#262626);border:1px solid var(--ds-border-hover)">${initials}</span>
             <div style="min-width:0">
@@ -145,7 +157,6 @@ window.ZE_Sidebar = (function() {
     });
   }
 
-  // Global ⌘K palette
   function openPalette() {
     const wrap = document.createElement('div');
     wrap.className = 'ds-modal-backdrop';
@@ -220,7 +231,6 @@ window.ZE_Sidebar = (function() {
     });
   }
 
-  // Mount global keyboard shortcut once
   if (!window.__zePaletteBound) {
     window.__zePaletteBound = true;
     window.addEventListener('keydown', (e) => {
