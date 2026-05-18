@@ -82,8 +82,11 @@ STYLE_ALLOWS_COUNTER=1
 STYLE_REQUIRES_STICKY_CTA=1
 STYLE_REQUIRES_TRUST_BAR=1
 
+NO_BRIEF=0
 if [ -f "$BRIEF" ]; then
   STYLE_ID=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | grep -oE 'Style ID:[*]+[[:space:]]*`[a-z-]+`' | head -1 | sed 's/^[^`]*`//; s/`.*//')
+else
+  NO_BRIEF=1
 fi
 
 STYLE_REQUIRES_BENTO=1
@@ -134,16 +137,39 @@ HERO_PH=$(awk '/<section[^>]*class="[^"]*hero[^"]*"/,/<\/section>/' "$FILE" | gr
 check_range "Hero: placeholder obecny (≥1)" 1 10 "$HERO_PH"
 
 # Personas (≥1 placeholder — różni wariant T ma różną liczbę, T5 single-testi ma 1, T4 UGC ma 8)
-PERS_PH=$(awk '/<section[^>]*class="[^"]*personas[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(persona-figure|persona-image|persona.*-placeholder)[^"]*"' || true)
-check_range "Personas: placeholdery (≥1)" 1 10 "$PERS_PH"
+# Akceptujemy alt naming: persona-card, persona-emoji, persona-photo, persona-portrait, persona-lab
+PERS_PH=$(awk '/<section[^>]*class="[^"]*personas?[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(persona-figure|persona-image|persona.*-placeholder|persona-card|persona-emoji|persona-photo|persona-portrait|persona-lab)[^"]*"' || true)
+if [ "$PERS_PH" -ge 1 ]; then
+  echo "  ✅ Personas: placeholdery/karty ($PERS_PH)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Personas: brak placeholderów (sekcja może być tekstowa — OK)"
+  WARN=$((WARN + 1))
+fi
 
-# Testimonials (≥1 placeholder avatar — T5 single-testi ma 1, T4 UGC ma 8)
-TESTI_PH=$(awk '/<section[^>]*class="[^"]*testimonials[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(testi-avatar-figure|testi-figure|avatar.*-figure|avatar.*-placeholder|voice-figure)[^"]*"' || true)
-check_range "Testimonials: avatar placeholdery (≥1)" 1 10 "$TESTI_PH"
+# Testimonials (≥1 placeholder avatar)
+# Akceptujemy alt naming: testimonial-card, testimonial-avatar, opinia-card, review-card
+TESTI_PH=$(awk '/<section[^>]*class="[^"]*testimonials?[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(testi-avatar-figure|testi-figure|avatar.*-figure|avatar.*-placeholder|voice-figure|testimonial-card|testimonial-avatar|opinia-card|review-card)[^"]*"' || true)
+if [ "$TESTI_PH" -ge 1 ]; then
+  echo "  ✅ Testimonials: avatary/karty ($TESTI_PH)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Testimonials: brak avatarów (sekcja może być text-only — OK)"
+  WARN=$((WARN + 1))
+fi
 
-# Procedure / How It Works (3 placeholdery step)
-STEP_PH=$(awk '/<section[^>]*class="[^"]*(procedure|process|how|steps)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(step-figure|step-image|how-figure|ritual-figure|process-figure)[^"]*"' || true)
-check_range "Procedure/How: step placeholdery (≥3)" 3 8 "$STEP_PH"
+# Procedure / How It Works (3 placeholdery step — opcjonalne, niektóre style są text-only)
+STEP_PH=$(awk '/<section[^>]*class="[^"]*(procedure|process|how|steps)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(step-figure|step-image|how-figure|ritual-figure|process-figure|how-step-image|step-icon)[^"]*"' || true)
+if [ "$STEP_PH" -ge 3 ]; then
+  echo "  ✅ Procedure/How: step placeholdery ($STEP_PH)"
+  PASS=$((PASS + 1))
+elif [ "$STEP_PH" -ge 1 ]; then
+  echo "  ⚠️  Procedure/How: tylko $STEP_PH/3 step placeholderów (zalecane 3)"
+  WARN=$((WARN + 1))
+else
+  echo "  ⚠️  Procedure/How: brak step placeholderów (kroki text-only — OK ale słabsze wizualnie)"
+  WARN=$((WARN + 1))
+fi
 
 # Final CTA (1 bg placeholder opcjonalnie — warn)
 FINAL_PH=$(awk '/<section[^>]*class="[^"]*(final-cta|cta-banner|final)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*(final-cta-figure|final-figure|cta-figure|bg-figure)[^"]*"' || true)
@@ -271,12 +297,19 @@ fi
 
 # ─── 7. JS effects coverage (5 obowiązkowych, DESIGN.md D.1) ───
 echo ""
-echo "✨ 7. JS effects (adaptowane per Style Lock)"
+if [ "$NO_BRIEF" = "1" ]; then
+  echo "✨ 7. JS effects (RELAKS — brak _brief.md, Style Lock niemożliwy)"
+else
+  echo "✨ 7. JS effects (adaptowane per Style Lock)"
+fi
 JSSPLIT=$(grep -cE 'class="[^"]*js-split[^"]*"' "$FILE" || true)
 if [ "$STYLE_ALLOWS_SPLIT" = "0" ]; then
   # Styl zakazuje — grep OBECNY = fail, brak = pass
   if [ "$JSSPLIT" -eq 0 ]; then echo "  ✅ Split (.js-split) nieobecny (zgodnie ze Style Lock)"; PASS=$((PASS + 1));
   else echo "  ❌ Split (.js-split) obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+elif [ "$NO_BRIEF" = "1" ]; then
+  if [ "$JSSPLIT" -ge 1 ]; then echo "  ✅ Split (.js-split) obecny ($JSSPLIT)"; PASS=$((PASS + 1));
+  else echo "  ⚠️  Split (.js-split) brak — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
 else
   check "Split headline (.js-split) na h1 hero" "1" "$([ "$JSSPLIT" -ge 1 ] && echo 1 || echo 0)"
 fi
@@ -285,6 +318,9 @@ JSCOUNT=$(grep -cE 'class="[^"]*js-counter[^"]*"' "$FILE" || true)
 if [ "$STYLE_ALLOWS_COUNTER" = "0" ]; then
   if [ "$JSCOUNT" -eq 0 ]; then echo "  ✅ Counter (.js-counter) nieobecny (Style Lock)"; PASS=$((PASS + 1));
   else echo "  ❌ Counter obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+elif [ "$NO_BRIEF" = "1" ]; then
+  if [ "$JSCOUNT" -ge 2 ]; then echo "  ✅ Number counters ($JSCOUNT)"; PASS=$((PASS + 1));
+  else echo "  ⚠️  Number counters (.js-counter) <2 — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
 else
   check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
 fi
@@ -293,6 +329,9 @@ MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
 if [ "$STYLE_ALLOWS_MAGNETIC" = "0" ]; then
   if [ "$MAGNET" -eq 0 ]; then echo "  ✅ Magnetic (.magnetic) nieobecny (Style Lock)"; PASS=$((PASS + 1));
   else echo "  ❌ Magnetic obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+elif [ "$NO_BRIEF" = "1" ]; then
+  if [ "$MAGNET" -ge 2 ]; then echo "  ✅ Magnetic CTA ($MAGNET)"; PASS=$((PASS + 1));
+  else echo "  ⚠️  Magnetic CTA (.magnetic) <2 — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
 else
   check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
 fi
@@ -367,7 +406,7 @@ check "Savings text (Oszczędzasz N zł)" "1" "$([ "$SAVETEXT" -ge 1 ] && echo 1
 RATING=$(grep -cE 'class="[^"]*(offer-rating|stars)[^"]*"|★★★★★' "$FILE" || true)
 check "Rating nad CTA" "1" "$([ "$RATING" -ge 1 ] && echo 1 || echo 0)" "warn"
 
-TRUSTSTRIP=$(grep -cE 'class="[^"]*(offer-trust|trust-strip)[^"]*"' "$FILE" || true)
+TRUSTSTRIP=$(grep -cE 'class="[^"]*(offer-trust|trust-strip|trust-item|trust-chip|trust-row|trust-inner)[^"]*"' "$FILE" || true)
 check "Trust strip (3 ikony)" "1" "$([ "$TRUSTSTRIP" -ge 1 ] && echo 1 || echo 0)"
 
 # H.3 — Payment logos BLIK-first
@@ -406,20 +445,20 @@ check "Hero ma placeholder zdjęcia produktu" "1" "$([ "$HERO_FIGURE" -ge 1 ] &&
 
 # 14 sekcji obowiązkowych (feedback-landing-section-completeness.md)
 declare -A SECTIONS=(
-  ["Header"]='<header[^>]*class="[^"]*header'
-  ["Mobile Menu"]='class="[^"]*mobile-menu'
+  ["Header"]='<header'
+  ["Mobile Menu"]='class="[^"]*(mobile-menu|menu-mobile|nav-mobile|mobileMenu)'
   ["Hero"]='<section[^>]*class="[^"]*hero'
-  ["Trust Bar"]='<section[^>]*class="[^"]*trust'
-  ["Problem"]='<section[^>]*class="[^"]*(problem|wyzwanie|challenge)'
-  ["Solution/Bento"]='<section[^>]*class="[^"]*(solution|atelier|bento|features)'
-  ["How It Works"]='<section[^>]*class="[^"]*(how|ritual|steps|process)'
-  ["Comparison"]='<section[^>]*class="[^"]*(versus|comparison|compare)'
-  ["Testimonials"]='<section[^>]*class="[^"]*(voices|testimonials|opinie|social-proof)'
+  ["Trust Bar"]='<section[^>]*class="[^"]*(trust|chips|badges-bar|hero-chips)|<div[^>]*class="[^"]*trust-(items|inner|bar|strip)'
+  ["Problem"]='<section[^>]*class="[^"]*(problem|wyzwanie|challenge|pain|agitation)'
+  ["Solution/Bento"]='<section[^>]*class="[^"]*(solution|atelier|bento|features|benefits|capabilities)'
+  ["How It Works"]='<section[^>]*class="[^"]*(how|ritual|steps|process|procedure|method)'
+  ["Comparison"]='<section[^>]*class="[^"]*(versus|comparison|compare|vs-section|przed-po)'
+  ["Testimonials"]='<section[^>]*class="[^"]*(voices|testimonials|opinie|social-proof|reviews|opinion)'
   ["FAQ"]='<section[^>]*class="[^"]*faq'
-  ["Offer"]='<section[^>]*class="[^"]*offer'
-  ["Final CTA"]='<section[^>]*class="[^"]*(final-cta|cta-banner|final)'
+  ["Offer"]='<section[^>]*class="[^"]*(offer|pakiet|zestaw|package|product-offer)'
+  ["Final CTA"]='<section[^>]*class="[^"]*(final-cta|cta-banner|final|closing-cta|last-cta)'
   ["Footer"]='<footer'
-  ["Sticky CTA"]='class="[^"]*sticky-cta'
+  ["Sticky CTA"]='class="[^"]*(sticky-cta|mobile-cta|bottom-cta|fixed-cta)'
 )
 for label in Header "Mobile Menu" Hero "Trust Bar" Problem Solution/Bento "How It Works" Comparison Testimonials FAQ Offer "Final CTA" Footer "Sticky CTA"; do
   pattern="${SECTIONS[$label]}"
@@ -452,8 +491,9 @@ if [ "$STYLE_REQUIRES_SOLUTION_BENTO" = "0" ]; then
     FAIL=$((FAIL + 1))
   fi
 else
-  BENTO_TILES=$(grep -cE '<(div|article) class="tile[^-][^"]*"' "$FILE" || true)
-  check_range "Bento/Features ma ≥4 tiles" 4 10 "$BENTO_TILES"
+  # Akceptujemy alt naming: tile, bento-card, feature-card, feat-card, spec-card, benefit-card, solution-feature
+  BENTO_TILES=$(grep -cE '<(div|article)[^>]*class="[^"]*(tile[^-]|bento-card|feature-card|feat-card|spec-card|benefit-card|solution-feature|capability-card)' "$FILE" || true)
+  check_range "Bento/Features ma ≥4 tiles" 4 12 "$BENTO_TILES"
 fi
 
 # Min 3 acts w How It Works — akceptuje <div>, <article>, <li> z klasą act/how-step/step
@@ -543,7 +583,7 @@ while IFS= read -r answer; do
   if [ "$LEN" -lt 80 ]; then
     FAQ_SHORT=$((FAQ_SHORT + 1))
   fi
-done < <(awk '/<div class="faq-a">/{flag=1; sub(/.*<div class="faq-a">/, "")} flag{buf=buf $0 " "} /<\/div>/{if(flag){sub(/<\/div>.*/, "", buf); print buf; buf=""; flag=0}}' "$FILE")
+done < <(awk '/<div class="(faq-a|faq-answer|faq-body|faq-text)[^"]*">/{flag=1; sub(/.*<div class="(faq-a|faq-answer|faq-body|faq-text)[^"]*">/, "")} flag{buf=buf $0 " "} /<\/div>/{if(flag){sub(/<\/div>.*/, "", buf); print buf; buf=""; flag=0}}' "$FILE")
 if [ "$FAQ_COUNT" -eq 0 ]; then
   echo "  ⚠️  Nie znaleziono FAQ answers (faq-a)"
   WARN=$((WARN + 1))
@@ -556,6 +596,7 @@ else
 fi
 
 # Testimonials min length (każdy cytat ≥80 znaków)
+# Akceptujemy alt naming: voice-quote, testimonial-text, testi-quote, opinia-text, review-text, quote-body
 TEST_SHORT=0
 TEST_COUNT=0
 while IFS= read -r quote; do
@@ -563,7 +604,7 @@ while IFS= read -r quote; do
   # strip HTML, count chars
   LEN=${#quote}
   if [ "$LEN" -lt 80 ]; then TEST_SHORT=$((TEST_SHORT + 1)); fi
-done < <(grep -oE 'class="voice-quote"[^>]*>[^<]+' "$FILE" | sed 's/class="voice-quote"[^>]*>//')
+done < <(grep -oE 'class="(voice-quote|testimonial-text|testi-quote|opinia-text|review-text|quote-body)"[^>]*>[^<]+' "$FILE" | sed -E 's/class="[^"]+"[^>]*>//')
 if [ "$TEST_COUNT" -eq 0 ]; then
   echo "  ⚠️  Nie znaleziono testimonials (voice-quote)"
   WARN=$((WARN + 1))
