@@ -205,6 +205,19 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# /object/public/ URL-e w naszym scope (ai-generated/, landing/<slug>/reels/)
+# MUSZĄ być migrowane na /render/image/public/?format=webp (cache 1 rok + WebP -23%)
+RAW_OBJECT=$(grep -oE 'object/public/attachments/(ai-generated/[^/"]+|landing/[^/"]+/reels)/[^"]+\.(webp|png|jpg|jpeg)' "$FILE" 2>/dev/null | wc -l || true)
+if [ "$RAW_OBJECT" -eq 0 ]; then
+  echo "  ✅ Wszystkie URL używają /render/image/ (cache 1 rok)"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ $RAW_OBJECT URL-i używa /object/public/ (no-cache, gorsze)"
+  echo "     Uruchom: node scripts/migrate-to-render-image.mjs $SLUG"
+  echo "     /render/image/?format=webp daje WebP -23% + cache 1 rok"
+  FAIL=$((FAIL + 1))
+fi
+
 # AliExpress thumbs — sprawdź czy URL-e mają suffix _NxNq*
 # Bez suffix CDN serwuje original (200KB-1.4MB każde) zamiast WebP
 ALI_RAW=$(grep -oE 'ae-pic-a1\.aliexpress-media\.com/kf/[A-Za-z0-9]+\.jpe?g(?!_)' "$FILE" 2>/dev/null | wc -l || true)

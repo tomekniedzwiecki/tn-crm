@@ -196,37 +196,41 @@ if (totalBefore > 0) {
 }
 console.log(`═══════════════════════════════════════════════════════════\n`);
 
-// 2. Update HTML — replace ai-generated/<prefix>/*.png|jpg → *.webp
-if (!DRY_RUN && converted > 0) {
-  if (fs.existsSync(htmlPath)) {
-    let html = fs.readFileSync(htmlPath, 'utf-8');
-    // Match obu scope: ai-generated/<id>/* + landing/<slug>/reels/*
-    const scopeRe = /(ai-generated\/[a-z0-9-]+|landing\/[a-z0-9-]+\/reels)\/[^"\s]+/;
-    const beforePng = (html.match(new RegExp(scopeRe.source + '\\.png', 'g')) || []).length;
-    const beforeJpg = (html.match(new RegExp(scopeRe.source + '\\.(jpg|jpeg)', 'gi')) || []).length;
+// 2. Update HTML — replace .png/.jpg → .webp + migracja na /render/image/
+// Migracja URL działa ZAWSZE (nawet gdy converted=0), bo URL-e mogą być nieoptymalizowane
+// niezależnie od storage state.
+if (!DRY_RUN && fs.existsSync(htmlPath)) {
+  let html = fs.readFileSync(htmlPath, 'utf-8');
+  const htmlBefore = html;
 
-    // Replace .png/.jpg/.jpeg → .webp tylko w naszym scope
-    // NIE zamienia logo.png, MP4 ani innych assetów
+  // Match obu scope: ai-generated/<id>/* + landing/<slug>/reels/*
+  const scopeRe = /(ai-generated\/[a-z0-9-]+|landing\/[a-z0-9-]+\/reels)\/[^"\s]+/;
+  const beforePng = (html.match(new RegExp(scopeRe.source + '\\.png', 'g')) || []).length;
+  const beforeJpg = (html.match(new RegExp(scopeRe.source + '\\.(jpg|jpeg)', 'gi')) || []).length;
+
+  // (a) Replace .png/.jpg/.jpeg → .webp w naszym scope
+  if (beforePng + beforeJpg > 0) {
     html = html.replace(new RegExp('(' + scopeRe.source + ')\\.(png|jpg|jpeg)', 'gi'), '$1.webp');
-
     const afterCount = (html.match(new RegExp(scopeRe.source + '\\.webp', 'g')) || []).length;
+    console.log(`📝 Format swap: ${beforePng} .png + ${beforeJpg} .jpg → ${afterCount} .webp`);
+  }
 
-    // Migracja URL: /object/public/ → /render/image/public/?format=webp&width=1200&quality=85
-    // Powód: /object/public/ zwraca no-cache (Supabase Cloudflare CDN ignoruje cacheControl).
-    // /render/image/public/?format=webp zwraca WebP -23% mniejszy + cache 1 rok.
-    const OBJECT_PUBLIC_RE = /https:\/\/yxmavwkwnfuphjqbelws\.supabase\.co\/storage\/v1\/object\/public\/(attachments\/(?:ai-generated\/[^/]+|landing\/[^/]+\/reels)\/[^"'\s)]+\.(?:webp|png|jpg|jpeg))/gi;
-    const RENDER_PREFIX = 'https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/';
-    const renderCount = (html.match(OBJECT_PUBLIC_RE) || []).length;
-    if (renderCount > 0) {
-      html = html.replace(OBJECT_PUBLIC_RE, `${RENDER_PREFIX}$1?format=webp&width=1200&quality=85`);
-      console.log(`📡 Migracja na /render/image/: ${renderCount} URL-i (cache no-cache → 1 rok, WebP -23%)`);
-    }
+  // (b) Migracja URL: /object/public/ → /render/image/public/?format=webp&width=1200&quality=85
+  // Powód: /object/public/ zwraca no-cache (Supabase Cloudflare CDN ignoruje cacheControl).
+  // /render/image/public/?format=webp zwraca WebP -23% mniejszy + cache 1 rok.
+  const OBJECT_PUBLIC_RE = /https:\/\/yxmavwkwnfuphjqbelws\.supabase\.co\/storage\/v1\/object\/public\/(attachments\/(?:ai-generated\/[^/]+|landing\/[^/]+\/reels)\/[^"'\s)]+\.(?:webp|png|jpg|jpeg))/gi;
+  const RENDER_PREFIX = 'https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/';
+  const renderCount = (html.match(OBJECT_PUBLIC_RE) || []).length;
+  if (renderCount > 0) {
+    html = html.replace(OBJECT_PUBLIC_RE, `${RENDER_PREFIX}$1?format=webp&width=1200&quality=85`);
+    console.log(`📡 Migracja /object/public/ → /render/image/: ${renderCount} URL-i (cache 1 rok + WebP -23%)`);
+  }
+
+  if (html !== htmlBefore) {
     fs.writeFileSync(htmlPath, html);
-
-    console.log(`📝 HTML zaktualizowany: ${beforePng} .png + ${beforeJpg} .jpg → ${afterCount} .webp`);
     console.log(`   ${htmlPath}\n`);
   } else {
-    console.log(`⚠️  ${htmlPath} nie istnieje — pomijam HTML update\n`);
+    console.log(`✅ HTML już zoptymalizowany (.webp + /render/image/)\n`);
   }
 }
 

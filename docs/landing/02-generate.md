@@ -163,6 +163,25 @@ curl -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/attachm
 <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/[slug]/logo.png" alt="[Marka]" width="140" height="36">
 ```
 
+### URL obrazów AI w HTML (od v4.5)
+
+**Dla obrazów z `ai-generated/` i `landing/<slug>/reels/` — używaj `/render/image/public/` z `?format=webp`:**
+
+```html
+<!-- ✅ DOBRZE — render/image/ z cache 1 rok + WebP -23% -->
+<img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/ai-generated/[slug]/[filename].webp?format=webp&width=1200&quality=85"
+     alt="..." width="..." height="...">
+
+<!-- ❌ ŹLE — /object/public/ zwraca no-cache, mniejszy plik ale brak cache -->
+<img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/ai-generated/[slug]/[filename].webp">
+```
+
+**Dlaczego:** `/object/public/` Supabase zwraca `Cache-Control: no-cache` (Cloudflare CDN to wymusza). `/render/image/?format=webp` zwraca cache 1 rok + WebP -23% mniejszy (Supabase re-encode).
+
+**Wyjątek:** `logo.png` zostaje na `/object/public/` (TakeDrop CMS używa starego URL, nie ruszać).
+
+**Fallback:** `scripts/optimize-landing-images.mjs` w ETAP 4.5 automatycznie migruje `/object/public/` → `/render/image/`. Jeśli Claude zapomni — skrypt naprawi.
+
 ### Struktura w Supabase Storage
 
 ```
