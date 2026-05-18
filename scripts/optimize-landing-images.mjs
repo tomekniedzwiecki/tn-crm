@@ -64,7 +64,8 @@ const htmlPath = path.join(REPO_ROOT, 'landing-pages', SLUG, 'index.html');
 const htmlContent = fs.existsSync(htmlPath) ? fs.readFileSync(htmlPath, 'utf-8') : '';
 
 const prefixesInHtml = new Set();
-const imgUrlRegex = /attachments\/(ai-generated\/[^/]+)\/[^"\s]+\.(png|jpg|jpeg)/g;
+// Scope: ai-generated/<id>/ (AI images) + landing/<slug>/reels/ (video thumbnails)
+const imgUrlRegex = /attachments\/(ai-generated\/[^/]+|landing\/[^/]+\/reels)\/[^"\s]+\.(png|jpg|jpeg)/g;
 let match;
 while ((match = imgUrlRegex.exec(htmlContent)) !== null) {
   prefixesInHtml.add(match[1]);
@@ -142,11 +143,14 @@ for (const file of rasters) {
     const beforeKB = (buffer.length / 1024).toFixed(0);
     totalBefore += buffer.length;
 
-    // Convert to WebP + resize max 1600x1600
-    // (zostawiamy retina-ready dla wyświetlanego 800px hero)
+    // Convert to WebP + resize. Reels thumbnails wyświetlane na ~280px → 800 retina-ready.
+    // AI images wyświetlane jako hero/bento ~800px → 1600 retina-ready.
+    const isReel = file.prefix.includes('/reels');
+    const maxSize = isReel ? 800 : 1600;
+    const quality = isReel ? 80 : 85;
     const webp = await sharp(buffer)
-      .resize(1600, 1600, { fit: 'inside', withoutEnlargement: true })
-      .webp({ quality: 85 })
+      .resize(maxSize, maxSize, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality })
       .toBuffer();
 
     const afterKB = (webp.length / 1024).toFixed(0);
@@ -191,14 +195,16 @@ console.log(`══════════════════════�
 if (!DRY_RUN && converted > 0) {
   if (fs.existsSync(htmlPath)) {
     let html = fs.readFileSync(htmlPath, 'utf-8');
-    const beforePng = (html.match(/ai-generated\/[a-z0-9-]+\/[^"\s]+\.png/g) || []).length;
-    const beforeJpg = (html.match(/ai-generated\/[a-z0-9-]+\/[^"\s]+\.(jpg|jpeg)/g) || []).length;
+    // Match obu scope: ai-generated/<id>/* + landing/<slug>/reels/*
+    const scopeRe = /(ai-generated\/[a-z0-9-]+|landing\/[a-z0-9-]+\/reels)\/[^"\s]+/;
+    const beforePng = (html.match(new RegExp(scopeRe.source + '\\.png', 'g')) || []).length;
+    const beforeJpg = (html.match(new RegExp(scopeRe.source + '\\.(jpg|jpeg)', 'gi')) || []).length;
 
-    // Replace .png/.jpg/.jpeg → .webp tylko dla URLs zawierających ai-generated/
-    // NIE zamienia logo.png ani innych assetów spoza ai-generated/
-    html = html.replace(/(ai-generated\/[a-z0-9-]+\/[^"\s]+)\.(png|jpg|jpeg)/gi, '$1.webp');
+    // Replace .png/.jpg/.jpeg → .webp tylko w naszym scope
+    // NIE zamienia logo.png, MP4 ani innych assetów
+    html = html.replace(new RegExp('(' + scopeRe.source + ')\\.(png|jpg|jpeg)', 'gi'), '$1.webp');
 
-    const afterCount = (html.match(/ai-generated\/[a-z0-9-]+\/[^"\s]+\.webp/g) || []).length;
+    const afterCount = (html.match(new RegExp(scopeRe.source + '\\.webp', 'g')) || []).length;
     fs.writeFileSync(htmlPath, html);
 
     console.log(`📝 HTML zaktualizowany: ${beforePng} .png + ${beforeJpg} .jpg → ${afterCount} .webp`);
