@@ -1,5 +1,46 @@
 # Changelog — Landing Page Procedure
 
+## [v4.3] — 2026-05-18
+
+### Added — AI Image Optimization (batch + procedure integration)
+
+**Krytyczne odkrycie 2026-05-18:** AI-generated obrazki landingów ZERO optymalizacji.
+`generate-image` edge function zwraca PNG quality:'high' (1024×1024+, 1.5-3 MB/obraz),
+bezpośrednio wgrywa do Supabase Storage bez konwersji/resize.
+
+**Empirycznie zmierzone na 5 ostatnich landingach:**
+| Landing   | Przed     | Po       |
+|-----------|-----------|----------|
+| zoomik    | 38.14 MB  | 2.74 MB  |
+| czystosz  | 32.15 MB  | 2.39 MB  |
+| innerscan | 22.02 MB  | 3.82 MB  |
+| zenoko    | 32.16 MB  | 1.58 MB  |
+| sprzatek  | 8.99 MB   | 1.03 MB  |
+| TOTAL     | 133.5 MB  | 11.6 MB  | -91%
+
+**Nowy skrypt:** `scripts/optimize-landing-images.mjs [slug]`
+- Wykrywa storage prefix z HTML (slug lub UUID workflow)
+- Pobiera PNG/JPG z `attachments/ai-generated/<prefix>/`
+- Konwertuje do WebP (quality 85) + resize max 1600×1600
+- Wgrywa .webp jako duplikat (PNG zostaje jako backup)
+- Update `landing-pages/<slug>/index.html` (zamiana URL .png/.jpg → .webp)
+
+**Integracja z procedurą:**
+- `landing-autorun.sh` prompt: nowy ETAP 4.5 OPTIMIZE IMAGES po ETAP 4 DESIGN
+- `reference/pagespeed.md`: skrypt OBOWIĄZKOWY po podstawieniu obrazów
+- `verify-landing.sh`: nowy check WebP enforcement — FAIL gdy HTML linkuje do .png/.jpg z `ai-generated/`
+
+**Konsekwencje biznesowe:**
+- Mobile LCP: ~5-30s → ~1-3s (Core Web Vitals: FAIL → PASS)
+- PageSpeed mobile: ~30-50 → 75-90+ (target 90+)
+- Branża e-com: +1s LCP = -7% konwersji → +20%+ konwersji
+
+**Sesja 2 odłożona:** modify `generate-image` edge function żeby od razu zwracała WebP.
+Wymaga Deno-compatible WebP encoder (squoosh WASM lub imagescript bez WebP support).
+Lite alternatywa: skrypt batch wywoływany po ETAP 4 — działa od razu, sprawdzony empirycznie.
+
+---
+
 ## [v4.2] — 2026-05-18
 
 ### Refactor — `verify-landing.sh` akceptuje alt CSS naming (75→43 FAIL, -43% false positives)

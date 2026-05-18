@@ -56,6 +56,20 @@
 
 ## 2. Obrazy — KRYTYCZNE dla LCP i CLS
 
+> ⛔ **OBOWIĄZKOWE po ETAP 4 (podstawieniu obrazów AI):**
+>
+> ```bash
+> node scripts/optimize-landing-images.mjs [slug]
+> ```
+>
+> Skrypt konwertuje wszystkie PNG/JPG z `attachments/ai-generated/[prefix]/` do WebP + resize max 1600×1600 + quality 85. Update HTML automatyczny.
+>
+> **Empirycznie (2026-05-18):** 5 landingów × średnio 25 MB → 2 MB każdy (-91% sumaryczne). Mobile LCP z >5s na ~1-3s (Core Web Vitals: FAIL → PASS).
+>
+> **Dlaczego:** `generate-image` edge function zwraca PNG quality:'high' (1024×1024+, 1.5-3 MB/obraz). 14-section landing = 10-15 AI obrazów = 20-40 MB. Bez optymalizacji mobile LCP > 5s = automatic Core Web Vitals FAIL = SEO ↓ i konwersja ↓.
+
+
+
 ### Placeholder images (przed otrzymaniem zdjęć)
 
 ```html

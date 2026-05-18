@@ -142,10 +142,13 @@ FLOW (wykonaj w tej kolejności):
    b. node scripts/apply-copy.mjs $SLUG
    c. bash scripts/verify-landing.sh $SLUG (re-verify — nadal ≥60 PASS)
 5. ETAP 4 DESIGN polish (już w HTML z ETAP 2 — tutaj tylko drobne poprawki per manifest)
-6. ETAP 5 VERIFY → bash scripts/screenshot-landing.sh $SLUG + obejrzyj screenshoty
-7. ETAP 6 MOBILE polish 375px
-8. bash scripts/verify-all-landings.sh (regression)
-9. git add + commit + push (landingi w scope feedback-landing-auto-deploy.md)
+6. ETAP 4.5 OPTIMIZE IMAGES → node scripts/optimize-landing-images.mjs $SLUG
+   (OBOWIĄZKOWE po podstawieniu obrazów AI — konwertuje PNG/JPG → WebP,
+    -85-95% rozmiaru. Bez tego mobile LCP > 5s, PageSpeed < 50)
+7. ETAP 5 VERIFY → bash scripts/screenshot-landing.sh $SLUG + obejrzyj screenshoty
+8. ETAP 6 MOBILE polish 375px
+9. bash scripts/verify-all-landings.sh (regression)
+10. git add + commit + push (landingi w scope feedback-landing-auto-deploy.md)
 
 DEFAULT DECYZJE (bez pytania):
 - verify-brief.sh fail po 3 próbach → STOP + raport

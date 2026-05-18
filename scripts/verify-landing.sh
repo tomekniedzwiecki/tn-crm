@@ -190,6 +190,21 @@ else
   check "Brak obcych workflow (UUID sources ≤1)" "1" "$UUIDS"
 fi
 
+# WebP enforcement (od v4.3 — patrz reference/pagespeed.md)
+# AI obrazki MUSZĄ być .webp (nie .png/.jpg) — generate-image zwraca PNG quality:'high'
+# bezpośrednio do Supabase Storage, bez optymalizacji = 1.5-3MB każdy.
+# Skrypt scripts/optimize-landing-images.mjs konwertuje + update HTML.
+NON_WEBP=$(grep -oE 'ai-generated/[^"]+\.(png|jpg|jpeg)' "$FILE" | wc -l)
+if [ "$NON_WEBP" -eq 0 ]; then
+  echo "  ✅ AI images są WebP (zoptymalizowane)"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ AI images NIE są WebP ($NON_WEBP odwołań do .png/.jpg)"
+  echo "     Uruchom: node scripts/optimize-landing-images.mjs $SLUG"
+  echo "     Empirycznie: PNG→WebP zmniejsza ~85-95% (mobile LCP 5s→1s)"
+  FAIL=$((FAIL + 1))
+fi
+
 # ─── 2. Numeracja sekcji — USUNIĘTE 2026-04-20 ───
 # Nº numbering było sygnaturą Editorial/Paromia paradigm, nie uniwersalną regułą.
 # Landing value-focused / dashboard-style / oversized-typography nie musi mieć magazine
