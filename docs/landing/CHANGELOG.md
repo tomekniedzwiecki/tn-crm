@@ -1,5 +1,42 @@
 # Changelog — Landing Page Procedure
 
+## [v4.4] — 2026-05-18
+
+### Added — AliExpress reviews thumbnail optimization
+
+**Drugi missing piece po v4.3 (AI images WebP):** sekcja opinii klientów (`.review-card`) zawiera zdjęcia bezpośrednio z `ae-pic-a1.aliexpress-media.com` w pełnej rozdzielczości. 30+ obrazów × 100KB-1.4MB = 3-15 MB per landing — całkowicie pomijane przez `optimize-landing-images.mjs` (poza scope `ai-generated/`).
+
+**Rozwiązanie:** AliExpress CDN obsługuje natywne resize+WebP przez URL suffix. Idempotentny skrypt regex-replace bez ruszania storage:
+
+```bash
+node scripts/optimize-aliexpress-thumbs.mjs [slug]
+```
+
+Append `_640x640q75.jpg` do każdego `ae-pic-a1.aliexpress-media.com/kf/<hash>.jpg|jpeg`. CDN auto-serwuje WebP przez content-negotiation.
+
+**Empirycznie (parova, jeden landing):**
+- Original (max): 1448 KB
+- `_640x640q75.jpg`: 43 KB (-97%) → image/webp
+- 45 URL-i × średnio ~60 KB = ~2.7 MB → 0.15 MB
+
+**Wyniki dla 5 landingów z aktywnymi kampaniami:**
+| Landing   | AliExpress URLs | Oszczędność |
+|-----------|----------------|-------------|
+| parova    | 45             | ~3 MB       |
+| silktip   | 67             | ~4 MB       |
+| h2vital   | 23             | ~1.5 MB     |
+| innerscan | 55             | ~3.5 MB     |
+| vitrix    | 48             | ~3 MB       |
+
+(oravibe, spraycraft, wodorka — brak sekcji reviews ze zdjęciami)
+
+**Integracja z procedurą:**
+- `landing-autorun.sh`: ETAP 4.5 → 2 kroki (obrazy AI + AliExpress thumbs)
+- `reference/pagespeed.md`: oba skrypty obowiązkowe po podstawieniu obrazów
+- `verify-landing.sh`: nowy check — FAIL gdy HTML linkuje do AliExpress bez suffix `_NxNq*`
+
+---
+
 ## [v4.3] — 2026-05-18
 
 ### Added — AI Image Optimization (batch + procedure integration)

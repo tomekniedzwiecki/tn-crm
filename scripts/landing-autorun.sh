@@ -142,9 +142,14 @@ FLOW (wykonaj w tej kolejności):
    b. node scripts/apply-copy.mjs $SLUG
    c. bash scripts/verify-landing.sh $SLUG (re-verify — nadal ≥60 PASS)
 5. ETAP 4 DESIGN polish (już w HTML z ETAP 2 — tutaj tylko drobne poprawki per manifest)
-6. ETAP 4.5 OPTIMIZE IMAGES → node scripts/optimize-landing-images.mjs $SLUG
-   (OBOWIĄZKOWE po podstawieniu obrazów AI — konwertuje PNG/JPG → WebP,
-    -85-95% rozmiaru. Bez tego mobile LCP > 5s, PageSpeed < 50)
+6. ETAP 4.5 OPTIMIZE IMAGES (OBOWIĄZKOWE 2 kroki):
+   a. node scripts/optimize-landing-images.mjs $SLUG
+      (konwertuje PNG/JPG z ai-generated/ → WebP, -85-95% rozmiaru)
+   b. node scripts/optimize-aliexpress-thumbs.mjs $SLUG
+      (dodaje suffix _640x640q75.jpg do URL-i AliExpress reviews,
+       CDN auto-serwuje WebP, -95-99% per obraz, ~3-4 MB oszczędności
+       per landing z sekcją opinii)
+   Bez kroku (a): mobile LCP >5s. Bez kroku (b): reviews ładują się 1448KB każdy.
 7. ETAP 5 VERIFY → bash scripts/screenshot-landing.sh $SLUG + obejrzyj screenshoty
 8. ETAP 6 MOBILE polish 375px
 9. bash scripts/verify-all-landings.sh (regression)

@@ -205,6 +205,19 @@ else
   FAIL=$((FAIL + 1))
 fi
 
+# AliExpress thumbs — sprawdź czy URL-e mają suffix _NxNq*
+# Bez suffix CDN serwuje original (200KB-1.4MB każde) zamiast WebP
+ALI_RAW=$(grep -oE 'ae-pic-a1\.aliexpress-media\.com/kf/[A-Za-z0-9]+\.jpe?g(?!_)' "$FILE" 2>/dev/null | wc -l || true)
+if [ "$ALI_RAW" -eq 0 ]; then
+  echo "  ✅ AliExpress thumbs: brak nieoptymalizowanych URL-i (lub brak sekcji reviews)"
+  PASS=$((PASS + 1))
+else
+  echo "  ❌ AliExpress thumbs: $ALI_RAW URL-i bez suffix _NxNq* (CDN serwuje 200KB-1.4MB każde)"
+  echo "     Uruchom: node scripts/optimize-aliexpress-thumbs.mjs $SLUG"
+  echo "     Empirycznie: suffix _640x640q75.jpg zmniejsza ~95-97% per obraz"
+  FAIL=$((FAIL + 1))
+fi
+
 # ─── 2. Numeracja sekcji — USUNIĘTE 2026-04-20 ───
 # Nº numbering było sygnaturą Editorial/Paromia paradigm, nie uniwersalną regułą.
 # Landing value-focused / dashboard-style / oversized-typography nie musi mieć magazine

@@ -56,17 +56,26 @@
 
 ## 2. Obrazy — KRYTYCZNE dla LCP i CLS
 
-> ⛔ **OBOWIĄZKOWE po ETAP 4 (podstawieniu obrazów AI):**
+> ⛔ **OBOWIĄZKOWE po ETAP 4 (podstawieniu obrazów AI) — 2 skrypty:**
 >
 > ```bash
+> # 1. AI obrazy (ai-generated/) → WebP + resize
 > node scripts/optimize-landing-images.mjs [slug]
+>
+> # 2. AliExpress reviews → CDN URL suffix (jeśli landing ma sekcję opinii)
+> node scripts/optimize-aliexpress-thumbs.mjs [slug]
 > ```
 >
-> Skrypt konwertuje wszystkie PNG/JPG z `attachments/ai-generated/[prefix]/` do WebP + resize max 1600×1600 + quality 85. Update HTML automatyczny.
+> **Skrypt 1** konwertuje PNG/JPG z `attachments/ai-generated/[prefix]/` do WebP (quality 85, max 1600×1600). Update HTML automatyczny.
 >
-> **Empirycznie (2026-05-18):** 5 landingów × średnio 25 MB → 2 MB każdy (-91% sumaryczne). Mobile LCP z >5s na ~1-3s (Core Web Vitals: FAIL → PASS).
+> **Skrypt 2** dodaje suffix `_640x640q75.jpg` do URL-i `ae-pic-a1.aliexpress-media.com/kf/<hash>.jpg|jpeg`. AliExpress CDN auto-serwuje WebP przez content-negotiation. Idempotentny — bezpieczny do wielokrotnego uruchamiania.
 >
-> **Dlaczego:** `generate-image` edge function zwraca PNG quality:'high' (1024×1024+, 1.5-3 MB/obraz). 14-section landing = 10-15 AI obrazów = 20-40 MB. Bez optymalizacji mobile LCP > 5s = automatic Core Web Vitals FAIL = SEO ↓ i konwersja ↓.
+> **Empirycznie (2026-05-18):**
+> - AI obrazy: 5 landingów × średnio 25 MB → 2 MB każdy (-91%)
+> - AliExpress reviews: 5 landingów × średnio ~3.5 MB → ~250 KB każdy (-93%). Pojedynczy obraz 1448 KB → 43 KB (-97%).
+> - Razem: mobile LCP z >5s na ~1-3s (Core Web Vitals: FAIL → PASS).
+>
+> **Dlaczego:** `generate-image` edge function zwraca PNG quality:'high' (1024×1024+, 1.5-3 MB/obraz). 14-section landing = 10-15 AI obrazów = 20-40 MB. Plus sekcja opinii: 30+ zdjęć × 100-1400 KB z AliExpress = 3-15 MB dodatkowo. Bez optymalizacji mobile LCP > 5s = automatic Core Web Vitals FAIL = SEO ↓ i konwersja ↓.
 
 
 
