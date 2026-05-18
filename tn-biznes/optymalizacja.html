@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN Biznes - Optymalizacja podatkowa</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-biznes/favicon.svg">
+    <meta name="theme-color" content="#000000">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #14b8a6; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .card {
+            background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            transition: all 0.2s;
+        }
+        .card:hover {
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, rgba(20, 184, 166, 0.1) 0%, rgba(20, 184, 166, 0.02) 100%);
+            border: 1px solid rgba(20, 184, 166, 0.2);
+        }
+
+        .warning-card {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(245, 158, 11, 0.02) 100%);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .danger-card {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.02) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .scenario-row {
+            transition: background 0.15s ease;
+        }
+        .scenario-row:hover {
+            background: rgba(255,255,255,0.02);
+        }
+
+        .badge {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 500;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+        }
+        .badge-best { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .badge-good { background: rgba(20, 184, 166, 0.15); color: #14b8a6; }
+        .badge-neutral { background: rgba(255,255,255,0.06); color: #a1a1aa; }
+        .badge-warn { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .badge-bad { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            height: 4px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            outline: none;
+        }
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: #14b8a6;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.15);
+        }
+        input[type="range"]::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            background: #14b8a6;
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+        }
+
+        .input-field {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #e5e5e5;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .input-field:focus {
+            border-color: rgba(20, 184, 166, 0.5);
+            outline: none;
+        }
+
+        details summary {
+            cursor: pointer;
+            list-style: none;
+        }
+        details summary::-webkit-details-marker { display: none; }
+        details[open] summary .chevron {
+            transform: rotate(180deg);
+        }
+        .chevron { transition: transform 0.2s; }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.04);
+            font-size: 13px;
+        }
+        .breakdown-row:last-child { border-bottom: none; }
+
+        .delta-positive { color: #10b981; }
+        .delta-negative { color: #ef4444; }
+
+        .pro-li { color: #10b981; }
+        .con-li { color: #f59e0b; }
+        .red-li { color: #ef4444; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="h-16 glass-header flex items-center justify-between px-4 md:px-6 sticky top-0 z-30">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden items-center justify-center w-9 h-9 rounded-lg hover:bg-white/5 text-zinc-400 hover:text-white transition-colors">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <div class="flex items-center gap-2 text-zinc-500">
+                    <span class="text-zinc-400 hidden sm:inline">tn-biznes</span>
+                    <span class="text-zinc-700 hidden sm:inline">/</span>
+                    <span class="text-white font-medium">optymalizacja podatkowa</span>
+                </div>
+            </div>
+            <div class="text-xs text-zinc-500 hidden md:block">
+                2026 · Polska · Dane orientacyjne
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto">
+            <div class="p-4 md:p-6 lg:p-10 max-w-6xl mx-auto animate-enter">
+
+                <!-- Intro -->
+                <div class="mb-8">
+                    <h1 class="text-2xl md:text-3xl font-semibold text-white mb-2">Ile pieniędzy realnie zostaje w kieszeni</h1>
+                    <p class="text-zinc-500 text-sm">Porównanie scenariuszy podatkowych z perspektywy <strong class="text-zinc-300">finalnej kwoty do dyspozycji prywatnej</strong> — czyli ile zostaje po wszystkich daninach, w tym po wypłaceniu zysku ze spółki na konto prywatne.</p>
+                </div>
+
+                <!-- Aktualna sytuacja -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-file-text text-teal-400"></i>
+                        <h2 class="text-base font-semibold text-white">Aktualna sytuacja (z dokumentów księgowych 01–04.2026)</h2>
+                    </div>
+                    <div class="card rounded-xl p-4 md:p-6">
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Forma opodatkowania</div>
+                                <div class="text-base text-white font-medium">PIT-36L</div>
+                                <div class="text-[10px] text-zinc-600">liniowy 19%</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Przychód YTD</div>
+                                <div class="text-base font-mono text-emerald-400">396 936 zł</div>
+                                <div class="text-[10px] text-zinc-600">styczeń–kwiecień</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Koszty YTD</div>
+                                <div class="text-base font-mono text-red-400">134 289 zł</div>
+                                <div class="text-[10px] text-zinc-600">~34% przychodu</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Dochód YTD</div>
+                                <div class="text-base font-mono text-white">262 646 zł</div>
+                                <div class="text-[10px] text-zinc-600">przed ZUS i PIT</div>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-1">Zaliczki PIT YTD</div>
+                                <div class="text-base font-mono text-amber-400">47 359 zł</div>
+                                <div class="text-[10px] text-zinc-600">+ ZUS ~13 386 zł</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Slider: prognoza roczna -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-sliders text-teal-400"></i>
+                        <h2 class="text-base font-semibold text-white">Założenia kalkulatora</h2>
+                    </div>
+                    <div class="card rounded-xl p-4 md:p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <label class="block text-xs text-zinc-500 mb-2">Roczny dochód firmy (przychód − koszty operacyjne)</label>
+                                <div class="flex items-center gap-3 mb-2">
+                                    <input type="range" id="income-slider" min="100000" max="2000000" step="10000" value="600000" class="flex-1">
+                                    <input type="number" id="income-input" value="600000" step="10000" class="input-field rounded-lg px-3 py-1.5 w-32 text-right">
+                                    <span class="text-zinc-500 text-xs">zł/rok</span>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-zinc-600">
+                                    <span>100 tys.</span>
+                                    <span>600 tys. (prognoza)</span>
+                                    <span>2 mln</span>
+                                </div>
+                                <p class="text-xs text-zinc-500 mt-3">Domyślnie 600 000 zł — uwzględnia spadek z peaku top‑tieru bazy w marcu 2026 do steady‑state 50–90 tys./mies.</p>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-zinc-500 mb-2">Wariant ZUS (DG)</label>
+                                <div class="flex flex-col gap-2">
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="zus-variant" value="full" checked class="accent-teal-500">
+                                        <span class="text-sm">Pełny ZUS (~22 656 zł/rok z chorobowym)</span>
+                                    </label>
+                                    <label class="flex items-center gap-2 cursor-pointer">
+                                        <input type="radio" name="zus-variant" value="no-sick" class="accent-teal-500">
+                                        <span class="text-sm">Bez dobrowolnego chorobowego (~21 264 zł/rok)</span>
+                                    </label>
+                                </div>
+                                <label class="block text-xs text-zinc-500 mt-4 mb-2">Założenie dystrybucji ze spółki</label>
+                                <div class="flex items-center gap-2">
+                                    <input type="range" id="payout-slider" min="0" max="100" step="5" value="100" class="flex-1">
+                                    <span id="payout-label" class="font-mono text-teal-400 w-12 text-right">100%</span>
+                                </div>
+                                <p class="text-[10px] text-zinc-600 mt-1">Część zysku spółki wypłacana jako dywidenda. 0% = zostawiam w spółce, 100% = wszystko na konto prywatne.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Wyniki: ranking -->
+                <section class="mb-8">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <i class="ph ph-trophy text-teal-400"></i>
+                            <h2 class="text-base font-semibold text-white">Ranking — ile zostaje na koncie prywatnym</h2>
+                        </div>
+                        <div class="text-xs text-zinc-500">Sortowane od najwyższej kwoty netto</div>
+                    </div>
+                    <div class="card rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-white/[0.02] text-xs text-zinc-500 uppercase tracking-wider">
+                                <tr>
+                                    <th class="text-left py-3 px-4 font-medium">Scenariusz</th>
+                                    <th class="text-right py-3 px-3 font-medium hidden sm:table-cell">Daniny</th>
+                                    <th class="text-right py-3 px-3 font-medium">Efekt. stawka</th>
+                                    <th class="text-right py-3 px-4 font-medium">Na rękę / rok</th>
+                                    <th class="text-right py-3 px-4 font-medium hidden md:table-cell">Δ vs liniówka</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ranking-body" class="text-zinc-300"></tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Szczegóły scenariuszy -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-list-bullets text-teal-400"></i>
+                        <h2 class="text-base font-semibold text-white">Szczegóły scenariuszy</h2>
+                    </div>
+                    <div id="scenario-details" class="space-y-3"></div>
+                </section>
+
+                <!-- Optymalizacje dodatkowe -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-plus-circle text-teal-400"></i>
+                        <h2 class="text-base font-semibold text-white">Optymalizacje dodatkowe (kompatybilne z każdą formą)</h2>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">IKZE</h3>
+                                <span class="badge badge-good">Oszczędność ~3 002 zł/rok</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Limit 2026: <strong class="text-zinc-200">15 803 zł</strong> dla samozatrudnionych (1,8× limitu standardowego). Pełna kwota odliczana od podstawy PIT‑36L.</p>
+                            <p class="text-xs text-zinc-500">19% × 15 803 = <strong class="text-emerald-400">3 002 zł</strong> mniej podatku rocznie. Na koniec: 10% zryczałtowany PIT przy wypłacie po 65 r.ż. — i tak zysk netto.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">IKE</h3>
+                                <span class="badge badge-neutral">Brak ulgi PIT</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Limit 2026: ~26 019 zł (3× przeciętnego wynagrodzenia). Bez odliczenia teraz, ale <strong>zwolnione z podatku Belki (19%)</strong> przy wypłacie po 60 r.ż.</p>
+                            <p class="text-xs text-zinc-500">Dobre uzupełnienie IKZE — para IKE+IKZE = 41 822 zł/rok schowane przed fiskusem długoterminowo.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Samochód osobowy w firmie</h3>
+                                <span class="badge badge-warn">Limity od 2026</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Amortyzacja do <strong>225 tys. zł</strong> (elektryk) / <strong>150 tys. zł</strong> (spalinowy). Leasing operacyjny: 75% kosztów eksploatacji (mieszane użytkowanie) lub 100% (tylko firma + ewidencja przebiegu).</p>
+                            <p class="text-xs text-zinc-500">Realnie: leasing 5 000 zł/mies × 12 × 75% = 45 000 zł kosztu = <strong class="text-emerald-400">~8 550 zł</strong> mniej PIT‑36L (liniówka).</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Zatrudnienie małżonka / partnerki</h3>
+                                <span class="badge badge-good">Rozdzielenie progów</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Wynagrodzenie do <strong>30 000 zł/rok kwota wolna</strong> + niskie progi skali (12%). Koszt firmy = wynagrodzenie + ZUS pracodawcy (~20%).</p>
+                            <p class="text-xs text-zinc-500">Realne tylko jeśli faktycznie pracuje (umowa, zakres obowiązków). Inaczej ryzyko zakwestionowania kosztu przez US.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Najem prywatny (ryczałt 8,5% / 12,5%)</h3>
+                                <span class="badge badge-good">Brak ZUS</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Do 100 tys. zł przychodu rocznego: <strong>8,5%</strong>. Powyżej: <strong>12,5%</strong>. Brak ZUS, brak składki zdrowotnej. Osobne źródło przychodu poza DG.</p>
+                            <p class="text-xs text-zinc-500">Nieruchomość kupiona prywatnie (nie z firmy) i wynajmowana — najem opodatkowany odrębnie, dochód z DG nie zwiększa progu.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">IP Box (5% PIT)</h3>
+                                <span class="badge badge-warn">Wymaga R&D + IP</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Kwalifikowane dochody z autorskich praw do programu komputerowego: <strong>5% PIT</strong> zamiast 19%. Wymagana ewidencja prac B+R.</p>
+                            <p class="text-xs text-zinc-500">Dla Tomka — CRM, edge functions, automatyzacje są <strong>narzędziem wewnętrznym</strong>, nie produktem sprzedawanym. Trudne uzasadnienie, ale możliwe gdy uruchomi SaaS lub sprzeda licencję na narzędzie.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Fundacja rodzinna</h3>
+                                <span class="badge badge-neutral">Sukcesja</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">CIT <strong>15%</strong> od wypłat dla beneficjentów. Najbliższa rodzina (małżonek, dzieci, rodzice) — <strong>0% PIT</strong>. Brak ZUS. Wymaga kapitału założycielskiego 100 tys. zł + notariusza.</p>
+                            <p class="text-xs text-zinc-500">Sensowne przy majątku &gt; 5–10 mln zł lub gdy planujesz przekazanie biznesu dzieciom. Koszty admin: 10–30 tys. zł/rok.</p>
+                        </div>
+
+                        <div class="card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Darowizny i sponsoring sportowy/kulturalny</h3>
+                                <span class="badge badge-neutral">Ulga ~150%</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2">Ulga sponsoringowa: 50% kosztu sponsoringu dodatkowo odliczana od podstawy (oprócz pełnego kosztu uzyskania).</p>
+                            <p class="text-xs text-zinc-500">Realny benefit: wspierasz coś co i tak chcesz wspierać + ~9% efektu PR + 9,5% oszczędności (19% × 50%).</p>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Czerwone flagi -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-warning-octagon text-red-400"></i>
+                        <h2 class="text-base font-semibold text-white">Czerwone flagi — co aktywnie kwestionuje KAS/ZUS w 2024–2026</h2>
+                    </div>
+                    <div class="space-y-3">
+
+                        <div class="danger-card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Licencja na wizerunek / prawo do wykorzystania marki osobistej</h3>
+                                <span class="badge badge-bad">Wysokie ryzyko</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2"><strong>Model:</strong> Tomek udziela spółce licencji na swój wizerunek (YouTube, „Tomek Niedźwiecki AI"). Spółka płaci honorarium → koszt CIT. U Tomka: PIT skala z <strong>50% KUP</strong> (do limitu 120 000 zł/rok).</p>
+                            <p class="text-xs text-zinc-400 mb-2"><strong>Matematyka:</strong> 120 000 zł honorarium − 50% KUP = 60 000 zł podstawa → 12% × (60 000 − 30 000) = 3 600 zł PIT. Efektywna stawka <strong class="text-emerald-400">~3%</strong> od 120 000 zł. Brak ZUS od praw autorskich.</p>
+                            <p class="text-xs text-zinc-400 mb-2"><strong>Ryzyka:</strong></p>
+                            <ul class="text-xs text-zinc-400 space-y-1 ml-4 list-disc">
+                                <li class="red-li">KIS od 2022 wydaje <strong>negatywne</strong> interpretacje gdy wizerunek udostępniany własnej spółce w wysokich kwotach</li>
+                                <li class="red-li">Wymóg uzasadnienia <strong>wartości rynkowej</strong> licencji — bez tego dospakowane jako przychód z działalności + sankcje</li>
+                                <li class="red-li">ZUS coraz częściej traktuje to jako <strong>ukryte wynagrodzenie</strong> → doszacowanie składek wstecz</li>
+                                <li class="red-li">Klauzula GAAR (ogólna klauzula obejścia prawa podatkowego) — działania głównie dla korzyści podatkowej mogą być pominięte</li>
+                            </ul>
+                            <p class="text-xs text-zinc-500 mt-2"><strong>Werdykt:</strong> Realne jeśli faktycznie zarabiasz na wizerunku (YouTube, kursy z twarzą) i kwota jest <strong>rynkowa</strong> (np. 30–80 tys. zł/rok dla mikro‑influencera, nie 200+). Powyżej tego — wezwij doradcę podatkowego z interpretacją indywidualną PRZED transakcją.</p>
+                        </div>
+
+                        <div class="danger-card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Powtarzające się świadczenia niepieniężne (art. 176 KSH)</h3>
+                                <span class="badge badge-bad">ZUS atakuje</span>
+                            </div>
+                            <p class="text-xs text-zinc-400 mb-2"><strong>Model:</strong> Wspólnik świadczy spółce usługi (np. konsulting strategiczny, marketing) za wynagrodzeniem ustalonym w umowie spółki. Bez ZUS (formalnie). U wspólnika: PIT skala.</p>
+                            <p class="text-xs text-zinc-400 mb-2"><strong>Ryzyka:</strong></p>
+                            <ul class="text-xs text-zinc-400 space-y-1 ml-4 list-disc">
+                                <li class="red-li">ZUS od 2023 prowadzi <strong>masowe kontrole</strong> i wydaje decyzje o objęciu ubezpieczeniem (jako „działalność zarobkowa")</li>
+                                <li class="red-li">Sądy <strong>różnie</strong> orzekają — część po stronie ZUS, część podatnika</li>
+                                <li class="red-li">Świadczenia muszą być <strong>precyzyjnie zdefiniowane</strong> w umowie spółki (charakter, częstotliwość, wynagrodzenie)</li>
+                            </ul>
+                            <p class="text-xs text-zinc-500 mt-2"><strong>Werdykt:</strong> Działa, ale ryzykownie. Lepiej: estoński CIT (nie potrzeba sztuczek).</p>
+                        </div>
+
+                        <div class="warning-card rounded-xl p-4">
+                            <div class="flex items-start justify-between mb-2">
+                                <h3 class="font-semibold text-white">Fikcyjne koszty firmy „prywatnego użytku"</h3>
+                                <span class="badge badge-warn">Niski próg</span>
+                            </div>
+                            <p class="text-xs text-zinc-400">Sprzęt elektroniczny, podróże, kosmetyki, suplementy „testy dla content marketingu". US patrzy na <strong>związek z przychodem</strong>. Kosztem może być tylko to, co realnie służy biznesowi.</p>
+                            <p class="text-xs text-zinc-500 mt-2"><strong>Bezpieczne:</strong> sprzęt do produkcji (kamery, mikrofony, komputery), software, kursy w branży, podróże do klientów udokumentowane. <strong>Ryzykowne:</strong> Tesla bez ewidencji przebiegu, „pokazowy" zegarek, podróż „inspiracyjna" do Tajlandii.</p>
+                        </div>
+
+                    </div>
+                </section>
+
+                <!-- Roadmap -->
+                <section class="mb-8">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i class="ph ph-path text-teal-400"></i>
+                        <h2 class="text-base font-semibold text-white">Roadmap — co kiedy</h2>
+                    </div>
+                    <div class="summary-card rounded-xl p-4 md:p-6">
+                        <div class="space-y-4 text-sm">
+                            <div>
+                                <div class="text-teal-400 font-medium mb-1">Teraz (DG, ~600 tys. dochodu)</div>
+                                <p class="text-zinc-400 text-xs">Status quo PIT‑36L liniowy zostaje. Wpłać <strong>IKZE 15 803 zł</strong> przed końcem 2026 (oszczędność ~3 002 zł PIT). Leasing samochodu jeśli realny use case. Maksymalizuj koszty firmowe (sprzęt, software, kursy).</p>
+                            </div>
+                            <div>
+                                <div class="text-teal-400 font-medium mb-1">Próg 1: gdy planujesz wypłacić &gt; 500 tys./rok na życie</div>
+                                <p class="text-zinc-400 text-xs">Rozważ <strong>estoński CIT w sp. z o.o.</strong> Warunek: 1 zatrudniony niebędący wspólnikiem. Oszczędność na liniówce zaczyna się dopiero przy wysokich wypłatach + brak ZUS od dywidend.</p>
+                            </div>
+                            <div>
+                                <div class="text-teal-400 font-medium mb-1">Próg 2: gdy masz scale 1+ mln dochodu/rok i wolne środki</div>
+                                <p class="text-zinc-400 text-xs">Część zysków zostawiaj w spółce (estoński CIT — 0% podatku do dystrybucji) i inwestuj poprzez spółkę (akcje, nieruchomości komercyjne). Buduj <strong>holding</strong>: spółka operacyjna pod spółką matkową (zwolnienie dywidendowe między spółkami).</p>
+                            </div>
+                            <div>
+                                <div class="text-teal-400 font-medium mb-1">Próg 3: majątek &gt; 5 mln, dzieci, perspektywa sukcesji</div>
+                                <p class="text-zinc-400 text-xs"><strong>Fundacja rodzinna</strong>. Wnoszenie zysków bez podatku, wypłaty dla rodziny ze stawką 0% (kategoria zerowa), ochrona majątku przed roszczeniami, planowanie sukcesji.</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Disclaimer -->
+                <section class="mb-8">
+                    <div class="card rounded-xl p-4 text-xs text-zinc-500">
+                        <p class="mb-2"><strong class="text-zinc-400">Disclaimer:</strong> Wyliczenia oparte na stawkach 2026 (liniowy 19%, skala 12%/32%, mały CIT 9%, estoński 10/20%, składka zdrowotna liniowa 4,9% z limitem odliczenia 14 100 zł, ZUS preferencyjny pominięty). VAT pominięty (przyjęto neutralność — i tak rozliczasz). Uproszczono: pełna dystrybucja zysków, brak ulg dodatkowych, brak składki solidarnościowej (4% od dochodu &gt; 1 mln zł).</p>
+                        <p>Przed zmianą formy prawnej skonsultuj z doradcą podatkowym i poproś o <strong>interpretację indywidualną</strong> KIS (zwłaszcza dla licencji wizerunku, IP Box, świadczeń niepieniężnych).</p>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // ============================================
+        // SUPABASE & AUTH
+        // ============================================
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            return session;
+        }
+
+        // ============================================
+        // STAŁE 2026
+        // ============================================
+        const C = {
+            // Skala podatkowa
+            SKALA_PROG: 120_000,
+            SKALA_STAWKA1: 0.12,
+            SKALA_STAWKA2: 0.32,
+            KWOTA_WOLNA: 30_000,
+            KWOTA_ZMNIEJSZAJACA: 3_600, // 30_000 × 12%
+
+            // Liniowy
+            LINIOWY: 0.19,
+
+            // Ryczałt — przyjmujemy stawkę 12% (PKD IT/marketing 62.01.Z / 73.11.Z)
+            RYCZALT_STAWKA: 0.12,
+
+            // CIT
+            CIT_MALY: 0.09,
+            CIT_DUZY: 0.19,
+            DYWIDENDA: 0.19,
+
+            // Estoński CIT (mały podatnik)
+            ESTONIA_CIT: 0.10,
+            ESTONIA_ODLICZENIE: 0.90, // 90% CIT odliczane od PIT od dywidendy
+            // Efektywnie: 10% + (19% × (1 − 10%) − 19% × 90% × 10%) = ok. 20%
+
+            // ZUS DG 2026 (pełne stawki, bez preferencji)
+            ZUS_SPOLECZNY_ROCZNY: 21_264, // bez chorobowego
+            ZUS_SPOLECZNY_ROCZNY_PELNY: 22_656, // z chorobowym
+            ZDROWOTNA_LINIOWA: 0.049,
+            ZDROWOTNA_SKALA: 0.09,
+            ZDROWOTNA_MIN_MIES: 433,
+            LIMIT_ZDROWOTNA_LINIOWA: 14_100, // do odliczenia od podstawy PIT 2026
+            ZDROWOTNA_RYCZALT_3PRG: 14_400, // ~1 200/mies dla przychodów >300k
+
+            // Koszty admin spółki z o.o.
+            KOSZT_ADMIN_SPOLKI: 12_000, // księgowa + ZUS pełnomocnictwa + sprawozdania
+            KOSZT_ADMIN_ESTONIA: 15_000, // księgowa zna estoński CIT
+            ZARZADCZE_BEZ_ZUS: false, // bardzo specyficzne
+
+            // 50% KUP (prawa autorskie)
+            KUP_AUTORSKIE_LIMIT: 120_000,
+        };
+
+        // ============================================
+        // STATE
+        // ============================================
+        let state = {
+            income: 600_000,       // dochód firmy roczny (przychód − koszty)
+            zusVariant: 'full',    // full | no-sick
+            payoutPct: 100,        // % zysku spółki wypłacany jako dywidenda
+        };
+
+        function getZusSpoleczny() {
+            return state.zusVariant === 'full' ? C.ZUS_SPOLECZNY_ROCZNY_PELNY : C.ZUS_SPOLECZNY_ROCZNY;
+        }
+
+        // ============================================
+        // KALKULATORY SCENARIUSZY
+        // ============================================
+
+        // DG + PIT-36L liniowy 19%
+        function calcLiniowy(income) {
+            const zusSpol = getZusSpoleczny();
+            const podstawaZdrowotna = Math.max(0, income - zusSpol);
+            const zdrowotna = Math.max(podstawaZdrowotna * C.ZDROWOTNA_LINIOWA, C.ZDROWOTNA_MIN_MIES * 12);
+            const zdrowotnaOdliczana = Math.min(zdrowotna, C.LIMIT_ZDROWOTNA_LINIOWA);
+            const podstawa = Math.max(0, income - zusSpol - zdrowotnaOdliczana);
+            const pit = podstawa * C.LINIOWY;
+            const daniny = zusSpol + zdrowotna + pit;
+            const naReke = income - daniny;
+            return {
+                name: 'DG · PIT‑36L liniowy 19%',
+                key: 'liniowy',
+                badge: 'Status quo',
+                badgeClass: 'badge-neutral',
+                naReke,
+                daniny,
+                breakdown: [
+                    ['Dochód firmy', income],
+                    ['− ZUS społeczny', -zusSpol],
+                    ['− Składka zdrowotna (4,9%)', -zdrowotna],
+                    ['  (z czego odliczona od podstawy: ' + fmt(zdrowotnaOdliczana) + ')', null],
+                    ['Podstawa PIT', podstawa],
+                    ['− PIT 19%', -pit],
+                    ['= Na rękę', naReke, 'highlight'],
+                ],
+                pros: [
+                    'Najprostsza forma, jedno rozliczenie roczne',
+                    'Pełne koszty uzyskania przychodu',
+                    'Składka zdrowotna częściowo odliczana (do 14 100 zł)',
+                    'Brak kosztów administracyjnych spółki',
+                ],
+                cons: [
+                    'ZUS pełny + zdrowotna 4,9% od całego dochodu',
+                    'Brak optymalizacji ponad standardową',
+                    'Składka solidarnościowa 4% od nadwyżki ponad 1 mln zł',
+                ],
+            };
+        }
+
+        // DG + skala 12%/32%
+        function calcSkala(income) {
+            const zusSpol = getZusSpoleczny();
+            const podstawaZdrowotna = Math.max(0, income - zusSpol);
+            const zdrowotna = Math.max(podstawaZdrowotna * C.ZDROWOTNA_SKALA, C.ZDROWOTNA_MIN_MIES * 12);
+            // Skala: zdrowotna NIE odliczana od PIT
+            const podstawa = Math.max(0, income - zusSpol);
+            let pit;
+            if (podstawa <= C.SKALA_PROG) {
+                pit = Math.max(0, podstawa * C.SKALA_STAWKA1 - C.KWOTA_ZMNIEJSZAJACA);
+            } else {
+                pit = (C.SKALA_PROG * C.SKALA_STAWKA1 - C.KWOTA_ZMNIEJSZAJACA) + (podstawa - C.SKALA_PROG) * C.SKALA_STAWKA2;
+            }
+            const daniny = zusSpol + zdrowotna + pit;
+            const naReke = income - daniny;
+            return {
+                name: 'DG · Skala 12% / 32%',
+                key: 'skala',
+                badge: 'Tylko niskie dochody',
+                badgeClass: 'badge-warn',
+                naReke,
+                daniny,
+                breakdown: [
+                    ['Dochód firmy', income],
+                    ['− ZUS społeczny', -zusSpol],
+                    ['− Składka zdrowotna (9%)', -zdrowotna],
+                    ['Podstawa PIT (zdrowotna NIEodliczana)', podstawa],
+                    ['− PIT skala (12%/32%, kwota wolna 30k)', -pit],
+                    ['= Na rękę', naReke, 'highlight'],
+                ],
+                pros: [
+                    'Kwota wolna 30 000 zł',
+                    'Korzystne tylko przy dochodzie < ~130 tys. zł/rok',
+                    'Można odliczyć ulgi: prorodzinną, internetową, na dzieci',
+                ],
+                cons: [
+                    'Składka zdrowotna 9% NIEodliczana od PIT',
+                    'Próg 32% od nadwyżki ponad 120 tys. zł — bardzo wysoki',
+                    'Składka solidarnościowa 4% > 1 mln zł',
+                ],
+            };
+        }
+
+        // DG + ryczałt 12% (przyjęcie dla usług IT/marketingowych)
+        function calcRyczalt(income, przychod) {
+            // Ryczałt liczony od PRZYCHODU, nie dochodu — przyjmujemy przychod = dochod / 0.66 (zakładając koszty 34%)
+            const zusSpol = getZusSpoleczny();
+            const zdrowotna = C.ZDROWOTNA_RYCZALT_3PRG; // próg 3 (>300k przychodu)
+            const podstawa = Math.max(0, przychod - zusSpol - zdrowotna * 0.5); // ryczałt: 50% zdrowotnej odliczane od przychodu
+            const ryczalt = podstawa * C.RYCZALT_STAWKA;
+            const daniny = zusSpol + zdrowotna + ryczalt;
+            // BRAK uznawania kosztów — ale dochód "realny" = przychod - koszty (już = income), więc na rękę = income - daniny... ale wykluczyliśmy koszty z odliczenia
+            // Realnie firma i tak ponosi koszty, więc na rękę = przychod - koszty - daniny = income - daniny
+            const naReke = income - daniny;
+            return {
+                name: 'DG · Ryczałt 12% (IT/marketing)',
+                key: 'ryczalt',
+                badge: 'Niskie koszty',
+                badgeClass: 'badge-warn',
+                naReke,
+                daniny,
+                breakdown: [
+                    ['Szacowany przychód roczny', przychod],
+                    ['− ZUS społeczny', -zusSpol],
+                    ['− Składka zdrowotna (próg >300k)', -zdrowotna],
+                    ['Podstawa ryczałtu', podstawa],
+                    ['− Ryczałt 12%', -ryczalt],
+                    ['(koszty firmy ' + fmt(przychod - income) + ' NIE są odliczane)', null],
+                    ['= Na rękę (przychód − koszty − daniny)', naReke, 'highlight'],
+                ],
+                pros: [
+                    'Prosta księgowość (ewidencja przychodów)',
+                    'Zryczałtowana składka zdrowotna (3 progi)',
+                    'Korzystne przy bardzo niskich kosztach (< 10% przychodu)',
+                ],
+                cons: [
+                    'BRAK odliczania kosztów — bardzo niekorzystne przy ~34% kosztów u Tomka',
+                    'PKD musi być na liście dla danej stawki',
+                    'Brak ulg podatkowych ograniczona',
+                ],
+            };
+        }
+
+        // Sp. z o.o. mały CIT 9% + dywidenda 19%
+        function calcSpzooMaly(income) {
+            const koszty = C.KOSZT_ADMIN_SPOLKI;
+            const dochodSpolki = income - koszty;
+            const cit = Math.max(0, dochodSpolki) * C.CIT_MALY;
+            const zyskNetto = dochodSpolki - cit;
+            const dywidenda = zyskNetto * (state.payoutPct / 100);
+            const podatekDywidenda = dywidenda * C.DYWIDENDA;
+            const naReke = dywidenda - podatekDywidenda;
+            const zostajeWSpolce = zyskNetto - dywidenda;
+            const daniny = cit + podatekDywidenda;
+            return {
+                name: 'Sp. z o.o. · CIT 9% + dywidenda',
+                key: 'spzoo-maly',
+                badge: 'Klasyk',
+                badgeClass: 'badge-neutral',
+                naReke,
+                daniny,
+                extraInSpolce: zostajeWSpolce,
+                breakdown: [
+                    ['Dochód firmy (przed kosztami spółki)', income],
+                    ['− Koszty administracyjne spółki', -koszty],
+                    ['Dochód do CIT', dochodSpolki],
+                    ['− CIT 9% (mały podatnik, < 2M EUR)', -cit],
+                    ['Zysk netto spółki', zyskNetto],
+                    ['Dywidenda wypłacona (' + state.payoutPct + '%)', dywidenda],
+                    ['− Podatek od dywidendy 19%', -podatekDywidenda],
+                    ['Zostaje w spółce', zostajeWSpolce],
+                    ['= Na konto prywatne', naReke, 'highlight'],
+                ],
+                pros: [
+                    'Ograniczona odpowiedzialność osobista',
+                    'Mały CIT 9% przy obrocie < 2M EUR',
+                    'Brak ZUS i zdrowotnej od dywidendy',
+                    'Możliwość zostawienia zysku w spółce do reinwestycji',
+                    'Łatwa sprzedaż udziałów',
+                ],
+                cons: [
+                    'Podwójne opodatkowanie (CIT + PIT od dywidendy = efekt. ~26%)',
+                    'Koszty administracyjne ~12 tys. zł/rok',
+                    'Sztywne procedury (uchwały, sprawozdania, KRS)',
+                    'ZUS od wynagrodzenia zarządu (jeśli wypłacane)',
+                ],
+            };
+        }
+
+        // Sp. z o.o. duży CIT 19% + dywidenda 19%
+        function calcSpzooDuzy(income) {
+            const koszty = C.KOSZT_ADMIN_SPOLKI;
+            const dochodSpolki = income - koszty;
+            const cit = Math.max(0, dochodSpolki) * C.CIT_DUZY;
+            const zyskNetto = dochodSpolki - cit;
+            const dywidenda = zyskNetto * (state.payoutPct / 100);
+            const podatekDywidenda = dywidenda * C.DYWIDENDA;
+            const naReke = dywidenda - podatekDywidenda;
+            const zostajeWSpolce = zyskNetto - dywidenda;
+            const daniny = cit + podatekDywidenda;
+            return {
+                name: 'Sp. z o.o. · CIT 19% + dywidenda',
+                key: 'spzoo-duzy',
+                badge: '> 2M EUR obrotu',
+                badgeClass: 'badge-bad',
+                naReke,
+                daniny,
+                extraInSpolce: zostajeWSpolce,
+                breakdown: [
+                    ['Dochód firmy', income],
+                    ['− Koszty administracyjne spółki', -koszty],
+                    ['Dochód do CIT', dochodSpolki],
+                    ['− CIT 19%', -cit],
+                    ['Zysk netto spółki', zyskNetto],
+                    ['Dywidenda (' + state.payoutPct + '%)', dywidenda],
+                    ['− Podatek od dywidendy 19%', -podatekDywidenda],
+                    ['= Na konto prywatne', naReke, 'highlight'],
+                ],
+                pros: ['Te same plusy co mały CIT'],
+                cons: [
+                    'Efektywne opodatkowanie ~34,4% (19% CIT + 19% × 81%)',
+                    'Włącza się przy przychodzie > 2M EUR rocznie',
+                ],
+            };
+        }
+
+        // Estoński CIT (mały podatnik)
+        function calcEstonia(income) {
+            const koszty = C.KOSZT_ADMIN_ESTONIA;
+            const dochodSpolki = income - koszty;
+            // Estoński CIT: brak bieżącego CIT. Tylko przy wypłacie.
+            // Mały podatnik: 10% CIT przy dystrybucji + 19% PIT od dywidendy
+            // Mechanizm odliczenia: udziałowiec odlicza 90% CIT od swojego PIT
+            const zyskDoPodzialu = dochodSpolki;
+            const dywidenda = zyskDoPodzialu * (state.payoutPct / 100);
+            const cit = dywidenda * C.ESTONIA_CIT;
+            const dywidendaPoCit = dywidenda - cit;
+            const pitOdDywidendy = dywidenda * C.DYWIDENDA;
+            const odliczenie = cit * C.ESTONIA_ODLICZENIE;
+            const pitNetto = Math.max(0, pitOdDywidendy - odliczenie);
+            const naReke = dywidendaPoCit - pitNetto;
+            const zostajeWSpolce = zyskDoPodzialu - dywidenda;
+            const daniny = cit + pitNetto;
+            return {
+                name: 'Sp. z o.o. · Estoński CIT (mały)',
+                key: 'estonia',
+                badge: 'Najlepszy efekt',
+                badgeClass: 'badge-best',
+                naReke,
+                daniny,
+                extraInSpolce: zostajeWSpolce,
+                breakdown: [
+                    ['Dochód firmy', income],
+                    ['− Koszty admin (księgowa + estoński know‑how)', -koszty],
+                    ['Zysk do podziału', zyskDoPodzialu],
+                    ['Dywidenda (' + state.payoutPct + '%)', dywidenda],
+                    ['− CIT 10% (przy dystrybucji)', -cit],
+                    ['  Dywidenda po CIT', dywidendaPoCit],
+                    ['− PIT 19% od dywidendy: ' + fmt(pitOdDywidendy), null],
+                    ['+ Odliczenie 90% CIT od PIT: ' + fmt(odliczenie), null],
+                    ['= Realny PIT od dywidendy', -pitNetto],
+                    ['Zostaje w spółce (zero podatku!)', zostajeWSpolce],
+                    ['= Na konto prywatne', naReke, 'highlight'],
+                ],
+                pros: [
+                    'BRAK podatku od zysku zostawionego w spółce — idealne do reinwestycji',
+                    'Efektywna stawka przy dystrybucji ~20% (vs ~26% klasyczna sp. z o.o., vs ~30% liniówka z ZUS)',
+                    'Brak ZUS od dywidendy',
+                    'Brak rozliczeń kwartalnych CIT — wszystko przy wypłacie',
+                    'Sprzyja kapitalizacji firmy',
+                ],
+                cons: [
+                    'Wymaga zatrudnienia <strong>1 osoby</strong> nie‑wspólnika (mały podatnik) lub 3 osób (duży)',
+                    'Wybór estońskiego CIT na 4 lata (umowa rolling)',
+                    'Brak amortyzacji bilansowej (ale brak też podatkowej do czasu wypłaty)',
+                    'Wyłączenie: spółki z udziałami w innych spółkach',
+                    'Doradca podatkowy zna estońskiego — koszt wyższy',
+                ],
+            };
+        }
+
+        // Sp. z o.o. + udostępnianie wizerunku (estoński CIT + licencja)
+        function calcWizerunek(income) {
+            // Model: spółka płaci Tomkowi 120k zł/rok za licencję wizerunku
+            // Po stronie Tomka: PIT skala z 50% KUP
+            // Po stronie spółki: koszt 120k zmniejsza zysk → CIT od reszty
+            const licencja = 120_000;
+            const koszty = C.KOSZT_ADMIN_ESTONIA + 5_000; // + doradca prawny
+            const dochodSpolki = Math.max(0, income - koszty - licencja);
+            const dywidenda = dochodSpolki * (state.payoutPct / 100);
+            const cit = dywidenda * C.ESTONIA_CIT;
+            const pitOdDyw = dywidenda * C.DYWIDENDA;
+            const odliczenie = cit * C.ESTONIA_ODLICZENIE;
+            const pitDywNetto = Math.max(0, pitOdDyw - odliczenie);
+            const naRekeDywidenda = dywidenda - cit - pitDywNetto;
+
+            // Licencja u Tomka: skala z 50% KUP (limit 120k zastosowany)
+            const kup = Math.min(licencja * 0.5, C.KUP_AUTORSKIE_LIMIT);
+            const podstawaLicencji = licencja - kup;
+            let pitLicencja;
+            if (podstawaLicencji <= C.SKALA_PROG) {
+                pitLicencja = Math.max(0, podstawaLicencji * C.SKALA_STAWKA1 - C.KWOTA_ZMNIEJSZAJACA);
+            } else {
+                pitLicencja = (C.SKALA_PROG * C.SKALA_STAWKA1 - C.KWOTA_ZMNIEJSZAJACA) + (podstawaLicencji - C.SKALA_PROG) * C.SKALA_STAWKA2;
+            }
+            const naRekeLicencja = licencja - pitLicencja;
+
+            const naReke = naRekeDywidenda + naRekeLicencja;
+            const zostajeWSpolce = dochodSpolki - dywidenda;
+            const daniny = cit + pitDywNetto + pitLicencja;
+            return {
+                name: 'Sp. z o.o. (estoński) · + licencja wizerunku',
+                key: 'wizerunek',
+                badge: 'Ryzykowne',
+                badgeClass: 'badge-bad',
+                naReke,
+                daniny,
+                extraInSpolce: zostajeWSpolce,
+                breakdown: [
+                    ['Dochód firmy', income],
+                    ['− Koszty admin + doradca prawny', -koszty],
+                    ['− Honorarium za licencję wizerunku', -licencja],
+                    ['Zysk spółki do podziału', dochodSpolki],
+                    ['Dywidenda (' + state.payoutPct + '%)', dywidenda],
+                    ['− CIT estoński 10%', -cit],
+                    ['− PIT od dywidendy (po odliczeniu CIT)', -pitDywNetto],
+                    ['= Na rękę z dywidendy', naRekeDywidenda],
+                    ['Licencja (120 tys. brutto, 50% KUP)', licencja],
+                    ['− PIT skala od 60 tys. podstawy', -pitLicencja],
+                    ['= Na rękę z licencji', naRekeLicencja],
+                    ['Zostaje w spółce', zostajeWSpolce],
+                    ['= Razem na konto prywatne', naReke, 'highlight'],
+                ],
+                pros: [
+                    'Dodatkowe 120 tys. zł rocznie wyciągnięte z efektywną stawką ~3%',
+                    'Brak ZUS od licencji autorskich',
+                    'Spółka zmniejsza CIT o pełną kwotę honorarium',
+                ],
+                cons: [
+                    '<strong>CZERWONA FLAGA</strong>: KIS często wydaje negatywne interpretacje',
+                    'Wymaga uzasadnienia wartości rynkowej (wycena niezależna)',
+                    'Ryzyko reklasyfikacji jako ukryte wynagrodzenie → ZUS doszacuje wstecz',
+                    'Klauzula GAAR — działania głównie dla korzyści podatkowej mogą być pominięte',
+                    'KONIECZNIE interpretacja indywidualna PRZED transakcją',
+                ],
+            };
+        }
+
+        // ============================================
+        // RENDER
+        // ============================================
+        function fmt(n) {
+            if (n === null || n === undefined) return '';
+            return new Intl.NumberFormat('pl-PL', { maximumFractionDigits: 0 }).format(Math.round(n)) + ' zł';
+        }
+
+        function calcAllScenarios() {
+            const income = state.income;
+            // Szacujemy przychód jako income / 0.66 (na potrzeby ryczałtu)
+            const przychod = income / 0.66;
+            return [
+                calcLiniowy(income),
+                calcSkala(income),
+                calcRyczalt(income, przychod),
+                calcSpzooMaly(income),
+                calcSpzooDuzy(income),
+                calcEstonia(income),
+                calcWizerunek(income),
+            ];
+        }
+
+        function render() {
+            const scenarios = calcAllScenarios();
+            const baseline = scenarios.find(s => s.key === 'liniowy').naReke;
+            const sorted = [...scenarios].sort((a, b) => b.naReke - a.naReke);
+
+            // Ranking
+            const rankingBody = document.getElementById('ranking-body');
+            rankingBody.innerHTML = sorted.map((s, idx) => {
+                const delta = s.naReke - baseline;
+                const efektywnaStawka = (s.daniny / state.income) * 100;
+                const deltaClass = delta > 0 ? 'delta-positive' : (delta < 0 ? 'delta-negative' : 'text-zinc-500');
+                const deltaSign = delta > 0 ? '+' : '';
+                return `
+                    <tr class="scenario-row border-t border-white/[0.04]">
+                        <td class="py-3 px-4">
+                            <div class="flex items-center gap-2">
+                                <span class="text-zinc-600 font-mono text-xs w-5">${idx + 1}.</span>
+                                <span class="text-white">${s.name}</span>
+                                <span class="badge ${s.badgeClass}">${s.badge}</span>
+                            </div>
+                        </td>
+                        <td class="py-3 px-3 text-right font-mono text-red-400 hidden sm:table-cell">${fmt(s.daniny)}</td>
+                        <td class="py-3 px-3 text-right font-mono text-zinc-400">${efektywnaStawka.toFixed(1)}%</td>
+                        <td class="py-3 px-4 text-right font-mono text-emerald-400 font-semibold">${fmt(s.naReke)}</td>
+                        <td class="py-3 px-4 text-right font-mono ${deltaClass} hidden md:table-cell">${deltaSign}${fmt(delta)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // Szczegóły
+            const detailsContainer = document.getElementById('scenario-details');
+            detailsContainer.innerHTML = scenarios.map(s => {
+                const breakdownHtml = s.breakdown.map(row => {
+                    if (row.length === 2 && row[1] === null) {
+                        return `<div class="text-[11px] text-zinc-600 italic px-1">${row[0]}</div>`;
+                    }
+                    const [label, value, mod] = row;
+                    const isHighlight = mod === 'highlight';
+                    const valueColor = isHighlight ? 'text-emerald-400 font-semibold' : (typeof value === 'number' && value < 0 ? 'text-red-400' : 'text-zinc-300');
+                    return `
+                        <div class="breakdown-row ${isHighlight ? 'border-t border-teal-500/30 pt-2 mt-1' : ''}">
+                            <span class="text-zinc-400">${label}</span>
+                            <span class="font-mono ${valueColor}">${fmt(value)}</span>
+                        </div>
+                    `;
+                }).join('');
+
+                const prosHtml = s.pros.map(p => `<li class="pro-li flex items-start gap-1.5"><i class="ph ph-check-circle-bold mt-0.5 flex-shrink-0"></i><span class="text-zinc-400">${p}</span></li>`).join('');
+                const consHtml = s.cons.map(c => `<li class="con-li flex items-start gap-1.5"><i class="ph ph-warning-bold mt-0.5 flex-shrink-0"></i><span class="text-zinc-400">${c}</span></li>`).join('');
+
+                return `
+                    <details class="card rounded-xl overflow-hidden group">
+                        <summary class="p-4 flex items-center justify-between hover:bg-white/[0.02]">
+                            <div class="flex items-center gap-3">
+                                <span class="badge ${s.badgeClass}">${s.badge}</span>
+                                <div>
+                                    <div class="font-medium text-white">${s.name}</div>
+                                    <div class="text-xs text-zinc-500 mt-0.5">Na rękę: <span class="font-mono text-emerald-400">${fmt(s.naReke)}</span></div>
+                                </div>
+                            </div>
+                            <i class="ph ph-caret-down chevron text-zinc-500"></i>
+                        </summary>
+                        <div class="px-4 pb-4 grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-white/[0.04] pt-4">
+                            <div class="md:col-span-1">
+                                <div class="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Rozliczenie</div>
+                                ${breakdownHtml}
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Plusy</div>
+                                <ul class="text-xs space-y-1.5">${prosHtml}</ul>
+                            </div>
+                            <div>
+                                <div class="text-xs text-zinc-500 mb-2 uppercase tracking-wider">Minusy / ryzyka</div>
+                                <ul class="text-xs space-y-1.5">${consHtml}</ul>
+                            </div>
+                        </div>
+                    </details>
+                `;
+            }).join('');
+        }
+
+        // ============================================
+        // EVENT HANDLERS
+        // ============================================
+        function setupInputs() {
+            const slider = document.getElementById('income-slider');
+            const input = document.getElementById('income-input');
+            const payoutSlider = document.getElementById('payout-slider');
+            const payoutLabel = document.getElementById('payout-label');
+
+            slider.addEventListener('input', e => {
+                const v = parseInt(e.target.value);
+                input.value = v;
+                state.income = v;
+                render();
+            });
+
+            input.addEventListener('input', e => {
+                const v = Math.max(50000, Math.min(5000000, parseInt(e.target.value) || 600000));
+                slider.value = Math.min(v, parseInt(slider.max));
+                state.income = v;
+                render();
+            });
+
+            document.querySelectorAll('input[name="zus-variant"]').forEach(radio => {
+                radio.addEventListener('change', e => {
+                    state.zusVariant = e.target.value;
+                    render();
+                });
+            });
+
+            payoutSlider.addEventListener('input', e => {
+                const v = parseInt(e.target.value);
+                state.payoutPct = v;
+                payoutLabel.textContent = v + '%';
+                render();
+            });
+        }
+
+        // ============================================
+        // INIT
+        // ============================================
+        async function init() {
+            const session = await checkAuth();
+            if (!session) return;
+
+            if (!Sidebar.canAccessApp('biznes', session.user.email)) {
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            Sidebar.render({ appId: 'biznes' });
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            Sidebar.setupLogout(supabaseClient);
+            Sidebar.setupProfileClick();
+
+            const { data: profile } = await supabaseClient
+                .from('team_members')
+                .select('full_name, avatar_color')
+                .eq('user_id', session.user.id)
+                .single();
+
+            if (profile) {
+                Sidebar.setUserName(profile.full_name);
+                Sidebar.setUserColor(profile.avatar_color);
+            }
+
+            setupInputs();
+            render();
+        }
+
+        init();
+    </script>
+</body>
+</html>

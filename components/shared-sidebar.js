@@ -69,6 +69,7 @@ const NAV_ITEMS_BIZNES = [
     { id: 'revenues', icon: 'ph-money', label: 'Przychody' },
     { id: 'employees', icon: 'ph-users', label: 'Pracownicy' },
     { id: 'taxes', icon: 'ph-calculator', label: 'Rozliczenia' },
+    { id: 'optymalizacja', icon: 'ph-strategy', label: 'Optymalizacja' },
     { id: 'plans', icon: 'ph-target', label: 'Plany' },
 ];
 
