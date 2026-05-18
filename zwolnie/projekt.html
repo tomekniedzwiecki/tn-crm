@@ -5,140 +5,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Projekt</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="/zwolnie/_assets/common.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 <style>
-  html, body { font-family: 'Inter', sans-serif; }
-  .stage-line { width: 2px; background: rgba(255,255,255,0.06); }
+  .pj-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; }
+  @media (max-width: 1100px) { .pj-grid { grid-template-columns: 1fr; } }
+  .stage-row { border: 1px solid var(--ds-border); border-radius: var(--ds-r-md); padding: 16px; transition: border-color var(--ds-d-fast) var(--ds-ease); }
+  .stage-row.is-progress { border-color: rgba(245,166,35,0.4); background: rgba(245,166,35,0.04); }
+  .stage-row.is-done { border-color: rgba(0,200,150,0.4); background: rgba(0,200,150,0.04); }
+  .stage-dot { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; flex-shrink: 0; }
+  .stage-dot.pending { background: var(--ds-surface-3); color: var(--ds-fg-4); }
+  .stage-dot.in_progress { background: var(--ds-amber); color: #000; }
+  .stage-dot.completed { background: var(--ds-emerald); color: #000; }
+  .stage-dot.skipped { background: var(--ds-surface-3); color: var(--ds-fg-5); }
 </style>
 </head>
-<body class="min-h-screen flex">
+<body>
 
-<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+<div class="ds-app">
+  <aside id="ze-sidebar" class="ds-sidebar"></aside>
+  <main class="ds-main">
+    <header class="ds-header">
+      <div class="ds-breadcrumb">
+        <a href="/zwolnie/projects">Projekty</a>
+        <span class="ds-sep">/</span>
+        <span class="ds-current ds-truncate" id="hdr-title" style="max-width: 320px;">—</span>
+      </div>
+      <div class="ds-flex ds-items-center ds-gap-2">
+        <button id="copy-client-link" class="ds-btn ds-btn--secondary ds-btn--sm"><i class="ph ph-link"></i> Kopiuj link klienta</button>
+        <select id="status-select" class="ds-select" style="width: 160px;"></select>
+      </div>
+    </header>
 
-<main class="flex-1 flex flex-col min-w-0">
-  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-    <div class="flex items-center gap-3 min-w-0">
-      <a href="/zwolnie/projects" class="text-zinc-500 hover:text-white"><i class="ph ph-arrow-left text-lg"></i></a>
-      <div class="flex items-center gap-2 text-sm min-w-0">
-        <span class="text-zinc-500">Projekty</span>
-        <span class="text-zinc-700">/</span>
-        <span class="text-white font-medium truncate" id="hdr-title">—</span>
+    <div class="ds-content ds-fade-in" style="max-width: 1400px;">
+      <div class="pj-grid">
+        <section>
+          <div class="ds-mb-6">
+            <h1 id="project-title" class="ds-h1"></h1>
+            <p id="project-desc" class="ds-body ds-mt-3"></p>
+          </div>
+
+          <!-- Brief -->
+          <details class="ds-card ds-mb-4" open>
+            <summary style="padding: 16px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+              <h3 class="ds-h4">Brief klienta</h3>
+              <i class="ph ph-caret-down ds-fg-5"></i>
+            </summary>
+            <div style="padding: 0 24px 24px; border-top: 1px solid var(--ds-border);">
+              <div class="ds-grid ds-grid-2 ds-gap-3 ds-mt-4 ds-mb-4">
+                <div><div class="ds-label">Kontakt</div><div class="ds-fg-1 ds-mt-2 ds-truncate" id="b-contact"></div></div>
+                <div><div class="ds-label">Firma</div><div class="ds-fg-1 ds-mt-2 ds-truncate" id="b-company"></div></div>
+                <div><div class="ds-label">Branża</div><div class="ds-fg-1 ds-mt-2" id="b-industry">—</div></div>
+                <div><div class="ds-label">Zespół</div><div class="ds-fg-1 ds-mt-2" id="b-team">—</div></div>
+                <div><div class="ds-label">Pensje</div><div class="ds-fg-1 ds-mt-2" id="b-payroll">—</div></div>
+                <div><div class="ds-label">Budżet</div><div class="ds-fg-1 ds-mt-2" id="b-budget">—</div></div>
+              </div>
+              <div class="ds-label">Problem własnymi słowami</div>
+              <div id="b-problem" class="ds-fg-2 ds-mt-2" style="white-space: pre-wrap; line-height: 1.65; padding: 16px; background: var(--ds-surface-2); border-radius: var(--ds-r-sm);"></div>
+              <a id="b-lead-link" class="ds-btn ds-btn--ghost ds-btn--sm ds-mt-3"><i class="ph ph-arrow-square-out"></i> Otwórz pełny lead</a>
+            </div>
+          </details>
+
+          <!-- Analiza AI -->
+          <details id="analysis-details" class="ds-card ds-card--magic ds-mb-4 ds-hidden" open>
+            <summary style="padding: 16px 24px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+              <div class="ds-flex ds-items-center ds-gap-3">
+                <span class="ds-avatar" style="width: 28px; height: 28px; background: var(--ds-magic-gradient);"><i class="ph ph-sparkle"></i></span>
+                <h3 class="ds-h4">Analiza AI</h3>
+                <span id="analysis-date" class="ds-xs"></span>
+              </div>
+              <i class="ph ph-caret-down ds-fg-5"></i>
+            </summary>
+            <div style="padding: 24px; border-top: 1px solid var(--ds-border);">
+              <div id="analysis-rendered"></div>
+            </div>
+          </details>
+
+          <!-- Etapy -->
+          <div class="ds-card ds-mb-4">
+            <div class="ds-card__header">
+              <h3 class="ds-h4">Etapy projektu</h3>
+              <button id="add-stage-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-plus"></i> Dodaj etap</button>
+            </div>
+            <div class="ds-card__body" id="stages-list" style="display: flex; flex-direction: column; gap: 8px;"></div>
+          </div>
+
+          <!-- Aktualizacje -->
+          <div class="ds-card ds-mb-4">
+            <div class="ds-card__header"><h3 class="ds-h4">Aktualizacje dla klienta</h3></div>
+            <div class="ds-card__body">
+              <input id="update-title" placeholder="Tytuł aktualizacji..." class="ds-input ds-mb-2">
+              <textarea id="update-body" rows="2" placeholder="Treść (opcjonalnie)..." class="ds-textarea"></textarea>
+              <div class="ds-flex ds-justify-between ds-mt-3"><span></span><button id="add-update-btn" class="ds-btn ds-btn--primary ds-btn--sm">Dodaj</button></div>
+              <div id="updates-list" class="ds-mt-6 ds-flex-col ds-gap-3"></div>
+            </div>
+          </div>
+
+          <!-- MVP -->
+          <div class="ds-card">
+            <div class="ds-card__header">
+              <h3 class="ds-h4">Klikalny prototyp MVP</h3>
+              <button id="open-mvp-btn" class="ds-btn ds-btn--ghost ds-btn--sm ds-hidden"><i class="ph ph-arrow-square-out"></i> Pełny ekran</button>
+            </div>
+            <div class="ds-card__body">
+              <div id="mvp-window" class="ds-window ds-hidden">
+                <div class="ds-window__bar"><span class="ds-dot"></span><span class="ds-window__bar-title">prototyp</span></div>
+                <iframe id="mvp-iframe" sandbox="allow-scripts allow-forms" style="width: 100%; height: 600px; border: 0; display: block; background: white;"></iframe>
+              </div>
+              <div id="mvp-empty" class="ds-empty"><div class="ds-empty__icon"><i class="ph ph-cursor-click"></i></div><div class="ds-empty__title">Brak MVP</div><div class="ds-empty__desc">Wróć do <a id="lead-link" style="color: var(--ds-magic);">lead'a</a> i wygeneruj prototyp.</div></div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="ds-flex-col ds-gap-4">
+          <div class="ds-card">
+            <div class="ds-card__body">
+              <div class="ds-label">Klient widzi</div>
+              <a id="client-link" target="_blank" class="ds-mono ds-mt-3" style="display: block; font-size: 11px; color: var(--ds-blue); word-break: break-all;"></a>
+            </div>
+          </div>
+          <div class="ds-card">
+            <div class="ds-card__body">
+              <div class="ds-label">Postęp etapów</div>
+              <div id="progress-summary" class="ds-num ds-mt-3" style="font-size: 28px; font-weight: 600; color: var(--ds-fg-1);">0/0</div>
+              <div style="height: 4px; background: var(--ds-surface-3); border-radius: 999px; overflow: hidden; margin-top: 8px;">
+                <div id="progress-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--ds-emerald) 0%, #6EE7B7 100%); transition: width 280ms;"></div>
+              </div>
+            </div>
+          </div>
+          <a id="lead-back" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-arrow-left"></i> Wróć do lead'a</a>
+        </aside>
       </div>
     </div>
-    <div class="flex items-center gap-2">
-      <button id="copy-client-link" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
-        <i class="ph ph-link"></i> Skopiuj link klienta
-      </button>
-      <select id="status-select" class="ze-input px-3 py-2 rounded-lg text-xs"></select>
-    </div>
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
-
-      <section>
-        <div class="mb-6">
-          <h1 id="project-title" class="text-3xl font-semibold text-white"></h1>
-          <p id="project-desc" class="text-zinc-400 text-sm mt-2"></p>
-        </div>
-
-        <!-- Brief klienta -->
-        <details class="bg-zinc-900/40 border border-white/5 rounded-xl mb-6" open>
-          <summary class="px-6 py-4 cursor-pointer flex items-center justify-between hover:bg-white/5">
-            <h2 class="text-lg font-semibold text-white">Brief klienta</h2>
-            <i class="ph ph-caret-down text-zinc-500"></i>
-          </summary>
-          <div class="px-6 pb-6 border-t border-white/5">
-            <div class="grid grid-cols-2 gap-3 text-sm my-4">
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Kontakt</div><div id="b-contact" class="text-white"></div></div>
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Firma</div><div id="b-company" class="text-white"></div></div>
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Branża</div><div id="b-industry" class="text-white">—</div></div>
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Zespół</div><div id="b-team" class="text-white">—</div></div>
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Pensje (mies.)</div><div id="b-payroll" class="text-white">—</div></div>
-              <div><div class="text-xs text-zinc-500 uppercase mb-1">Budżet</div><div id="b-budget" class="text-white">—</div></div>
-            </div>
-            <div class="text-xs text-zinc-500 uppercase mb-2">Problem własnymi słowami</div>
-            <div id="b-problem" class="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed bg-zinc-950/50 p-4 rounded-lg"></div>
-            <a id="b-lead-link" class="inline-flex items-center gap-2 text-xs text-zinc-500 hover:text-white mt-3">
-              <i class="ph ph-arrow-square-out"></i> Otwórz pełny lead
-            </a>
-          </div>
-        </details>
-
-        <!-- Analiza AI -->
-        <details id="analysis-details" class="hidden bg-zinc-900/40 border border-emerald-500/20 rounded-xl mb-6" open>
-          <summary class="px-6 py-4 cursor-pointer flex items-center justify-between hover:bg-white/5">
-            <div class="flex items-center gap-2">
-              <i class="ph ph-sparkle text-emerald-400"></i>
-              <h2 class="text-lg font-semibold text-white">Analiza AI</h2>
-              <span id="analysis-date" class="text-xs text-zinc-500"></span>
-            </div>
-            <i class="ph ph-caret-down text-zinc-500"></i>
-          </summary>
-          <div class="px-6 pb-6 border-t border-white/5">
-            <div id="analysis-rendered" class="text-sm mt-4"></div>
-          </div>
-        </details>
-
-        <!-- Etapy -->
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-white">Etapy projektu</h2>
-            <button id="add-stage-btn" class="text-xs text-zinc-400 hover:text-white"><i class="ph ph-plus"></i> Dodaj etap</button>
-          </div>
-          <div id="stages-list" class="space-y-2"></div>
-        </div>
-
-        <!-- Updates -->
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
-          <h2 class="text-lg font-semibold text-white mb-3">Aktualizacje dla klienta</h2>
-          <div class="flex gap-2 mb-3">
-            <input id="update-title" placeholder="Tytuł aktualizacji..." class="ze-input flex-1 px-3 py-2 rounded-lg text-sm">
-            <button id="add-update-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-semibold">Dodaj</button>
-          </div>
-          <textarea id="update-body" rows="2" placeholder="Treść (opcjonalnie)..." class="ze-input w-full px-3 py-2 rounded-lg text-sm"></textarea>
-          <div id="updates-list" class="mt-4 space-y-2"></div>
-        </div>
-
-        <!-- MVP -->
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-lg font-semibold text-white">Klikalny prototyp MVP</h2>
-            <button id="open-mvp-btn" class="hidden text-xs text-emerald-400 hover:text-emerald-300"><i class="ph ph-arrow-square-out"></i> Pełny ekran</button>
-          </div>
-          <iframe id="mvp-iframe" sandbox="allow-scripts" class="hidden w-full bg-white rounded-lg" style="height: 600px;"></iframe>
-          <div id="mvp-empty" class="text-zinc-500 text-sm py-10 text-center border border-dashed border-white/10 rounded-lg">
-            Brak MVP. Wracaj do <a id="lead-link" class="text-emerald-400 hover:underline">lead'a</a>, wygeneruj w tab "MVP", potem zaktualizuj projekt.
-          </div>
-        </div>
-      </section>
-
-      <aside class="space-y-4">
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
-          <div class="text-xs text-zinc-500 uppercase mb-2">Klient widzi</div>
-          <a id="client-link" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-sm break-all font-mono"></a>
-        </div>
-
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
-          <div class="text-xs text-zinc-500 uppercase mb-2">Postęp etapów</div>
-          <div id="progress-summary" class="text-3xl font-semibold text-white mb-1">0/0</div>
-          <div class="h-2 bg-white/5 rounded-full overflow-hidden">
-            <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400" style="width: 0%"></div>
-          </div>
-        </div>
-
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
-          <div class="text-xs text-zinc-500 uppercase mb-3">Z lead'a</div>
-          <a id="lead-back" class="text-sm text-zinc-300 hover:text-white">← Wróć do lead'a</a>
-        </div>
-      </aside>
-    </div>
-  </div>
-</main>
+  </main>
+</div>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -163,26 +165,20 @@ let stages = [];
   document.getElementById('status-select').addEventListener('change', async (e) => {
     const v = e.target.value;
     const { error } = await ZE_SB.from('ze_projects').update({ status: v }).eq('id', projectId);
-    if (error) { ZE.toast(error.message, 'error'); return; }
-    project.status = v;
-    ZE.toast('Status zmieniony.', 'success');
+    if (error) return ZE.toast(error.message, 'error');
+    project.status = v; ZE.toast('Status zmieniony.', 'success');
   });
-
   document.getElementById('copy-client-link').addEventListener('click', () => {
-    const url = location.origin + ZE_CONFIG.CLIENT_VIEW_BASE + project.token;
-    navigator.clipboard.writeText(url);
+    navigator.clipboard.writeText(location.origin + ZE_CONFIG.CLIENT_VIEW_BASE + project.token);
     ZE.toast('Link skopiowany.', 'success');
   });
-
   document.getElementById('add-stage-btn').addEventListener('click', addStage);
   document.getElementById('add-update-btn').addEventListener('click', addUpdate);
-
   document.getElementById('open-mvp-btn').addEventListener('click', () => ZE.openHtmlInNewTab(project.mvp_html));
 })();
 
 async function loadProject() {
-  const { data, error } = await ZE_SB
-    .from('ze_projects')
+  const { data, error } = await ZE_SB.from('ze_projects')
     .select('*, ze_leads:lead_id(id, contact_name, contact_email, contact_phone, company, website, industry, team_size, payroll, budget, problem, ai_analysis, ai_analysis_published_at)')
     .eq('id', projectId).single();
   if (error || !data) { location.replace('/zwolnie/projects'); return; }
@@ -191,161 +187,22 @@ async function loadProject() {
   document.getElementById('hdr-title').textContent = project.title;
   document.getElementById('project-title').textContent = project.title;
   document.getElementById('project-desc').textContent = project.description || '';
-
-  renderBrief(project.ze_leads || {});
-  renderAnalysis(project.ze_leads?.ai_analysis, project.ze_leads?.ai_analysis_published_at);
-
-  const sel = document.getElementById('status-select');
-  sel.innerHTML = Object.entries(PROJECT_STATUS).map(([v, l]) => `<option value="${v}" ${v===project.status?'selected':''}>${l}</option>`).join('');
+  document.getElementById('status-select').innerHTML = Object.entries(PROJECT_STATUS).map(([v, l]) => `<option value="${v}" ${v === project.status ? 'selected' : ''}>${l}</option>`).join('');
 
   const clientUrl = location.origin + ZE_CONFIG.CLIENT_VIEW_BASE + project.token;
   const cl = document.getElementById('client-link');
   cl.href = clientUrl; cl.textContent = clientUrl;
+  document.querySelectorAll('#lead-link, #lead-back').forEach(a => a.href = '/zwolnie/lead?id=' + project.lead_id);
 
-  const leadLinks = document.querySelectorAll('#lead-link, #lead-back');
-  leadLinks.forEach(a => a.href = '/zwolnie/lead?id=' + project.lead_id);
+  renderBrief(project.ze_leads || {});
+  renderAnalysis(project.ze_leads?.ai_analysis, project.ze_leads?.ai_analysis_published_at);
 
-  // MVP
   if (project.mvp_html) {
-    const iframe = document.getElementById('mvp-iframe');
-    iframe.srcdoc = project.mvp_html;
-    iframe.classList.remove('hidden');
-    document.getElementById('mvp-empty').classList.add('hidden');
-    document.getElementById('open-mvp-btn').classList.remove('hidden');
+    document.getElementById('mvp-iframe').srcdoc = project.mvp_html;
+    document.getElementById('mvp-window').classList.remove('ds-hidden');
+    document.getElementById('mvp-empty').classList.add('ds-hidden');
+    document.getElementById('open-mvp-btn').classList.remove('ds-hidden');
   }
-}
-
-async function loadStages() {
-  const { data } = await ZE_SB
-    .from('ze_project_stages')
-    .select('*, ze_project_tasks(id, title, completed, order_index)')
-    .eq('project_id', projectId)
-    .order('order_index');
-  stages = data || [];
-  renderStages();
-}
-
-function renderStages() {
-  const el = document.getElementById('stages-list');
-  if (!stages.length) {
-    el.innerHTML = '<div class="text-sm text-zinc-500 py-4">Brak etapów.</div>';
-    return;
-  }
-  el.innerHTML = stages.map((s, idx) => {
-    const tasks = (s.ze_project_tasks || []).sort((a, b) => a.order_index - b.order_index);
-    const colorMap = {
-      pending: 'border-zinc-700 bg-zinc-900',
-      in_progress: 'border-amber-500/40 bg-amber-500/5',
-      completed: 'border-emerald-500/40 bg-emerald-500/5',
-      skipped: 'border-zinc-700 bg-zinc-900/50 opacity-60'
-    };
-    return `
-      <div class="border ${colorMap[s.status]} rounded-lg p-4">
-        <div class="flex items-center justify-between gap-3">
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-8 h-8 rounded-full ${s.status==='completed' ? 'bg-emerald-500 text-black' : s.status==='in_progress' ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-800 text-zinc-500'} flex items-center justify-center text-sm font-bold flex-shrink-0">
-              ${s.status === 'completed' ? '<i class="ph ph-check"></i>' : idx + 1}
-            </div>
-            <div class="min-w-0">
-              <div class="text-white font-medium">${ZE.escapeHtml(s.title)}</div>
-              <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(s.description || '')}</div>
-            </div>
-          </div>
-          <select onchange="updateStageStatus('${s.id}', this.value)" class="ze-input px-2 py-1 rounded text-xs">
-            ${Object.entries(STAGE_STATUS).map(([v, l]) => `<option value="${v}" ${v===s.status?'selected':''}>${l}</option>`).join('')}
-          </select>
-        </div>
-        <div class="mt-3 space-y-1.5 pl-11">
-          ${tasks.map(t => `
-            <label class="flex items-center gap-2 text-sm hover:bg-white/5 px-2 py-1 -mx-2 rounded cursor-pointer">
-              <input type="checkbox" ${t.completed?'checked':''} onchange="toggleTask('${t.id}', this.checked)" class="rounded bg-zinc-800 border-zinc-700">
-              <span class="${t.completed?'text-zinc-500 line-through':'text-zinc-300'}">${ZE.escapeHtml(t.title)}</span>
-            </label>
-          `).join('')}
-          <button onclick="addTask('${s.id}')" class="text-xs text-zinc-500 hover:text-white px-2 py-1"><i class="ph ph-plus"></i> Dodaj zadanie</button>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  const total = stages.length;
-  const done = stages.filter(s => s.status === 'completed').length;
-  const pct = total ? Math.round(done/total*100) : 0;
-  document.getElementById('progress-summary').textContent = `${done}/${total}`;
-  document.getElementById('progress-bar').style.width = pct + '%';
-}
-
-async function updateStageStatus(id, status) {
-  const patch = { status };
-  if (status === 'in_progress') patch.started_at = new Date().toISOString();
-  if (status === 'completed') patch.completed_at = new Date().toISOString();
-  const { error } = await ZE_SB.from('ze_project_stages').update(patch).eq('id', id);
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  await loadStages();
-}
-
-async function toggleTask(id, completed) {
-  const { error } = await ZE_SB.from('ze_project_tasks').update({
-    completed,
-    completed_at: completed ? new Date().toISOString() : null
-  }).eq('id', id);
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  await loadStages();
-}
-
-async function addTask(stageId) {
-  const title = await ZE.askText({ title: 'Nowe zadanie', placeholder: 'Co konkretnie do zrobienia?', multiline: false });
-  if (!title) return;
-  const stage = stages.find(s => s.id === stageId);
-  const order = (stage?.ze_project_tasks || []).length;
-  const { error } = await ZE_SB.from('ze_project_tasks').insert({ stage_id: stageId, title: title.slice(0, 500), order_index: order });
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  await loadStages();
-}
-window.addTask = addTask;
-
-async function addStage() {
-  const title = await ZE.askText({ title: 'Nowy etap', placeholder: 'Np. "Migracja danych"', multiline: false });
-  if (!title) return;
-  const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'etap') + '-' + Math.random().toString(36).slice(2, 6);
-  const order = stages.length + 1;
-  const { error } = await ZE_SB.from('ze_project_stages').insert({
-    project_id: projectId,
-    title: title.slice(0, 200), slug, order_index: order, status: 'pending'
-  });
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  await loadStages();
-}
-
-async function loadUpdates() {
-  const { data } = await ZE_SB.from('ze_project_updates').select('*').eq('project_id', projectId).order('posted_at', { ascending: false });
-  const list = data || [];
-  const el = document.getElementById('updates-list');
-  if (!list.length) { el.innerHTML = '<div class="text-sm text-zinc-500">Brak aktualizacji.</div>'; return; }
-  el.innerHTML = list.map(u => `
-    <div class="p-3 bg-zinc-900 border border-white/5 rounded-lg">
-      <div class="flex items-center justify-between gap-2 mb-1">
-        <div class="text-sm text-white font-medium">${ZE.escapeHtml(u.title)}</div>
-        <button onclick="deleteUpdate('${u.id}')" class="text-zinc-600 hover:text-red-400 text-xs"><i class="ph ph-trash"></i></button>
-      </div>
-      ${u.body ? `<div class="text-sm text-zinc-300 whitespace-pre-wrap">${ZE.escapeHtml(u.body)}</div>` : ''}
-      <div class="text-xs text-zinc-500 mt-1">${ZE.fmtRelative(u.posted_at)}</div>
-    </div>
-  `).join('');
-}
-
-async function addUpdate() {
-  const title = document.getElementById('update-title').value.trim();
-  const body = document.getElementById('update-body').value.trim();
-  if (!title) return;
-  const staff = ZE_Auth.staff();
-  const { error } = await ZE_SB.from('ze_project_updates').insert({
-    project_id: projectId, title, body: body || null, author_id: staff.id
-  });
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  document.getElementById('update-title').value = '';
-  document.getElementById('update-body').value = '';
-  await loadUpdates();
 }
 
 function renderBrief(l) {
@@ -361,83 +218,127 @@ function renderBrief(l) {
 
 function renderAnalysis(a, publishedAt) {
   if (!a) return;
-  document.getElementById('analysis-details').classList.remove('hidden');
+  document.getElementById('analysis-details').classList.remove('ds-hidden');
   if (publishedAt) document.getElementById('analysis-date').textContent = '· ' + ZE.fmtRelative(publishedAt);
+  document.getElementById('analysis-rendered').innerHTML = ZE.renderAnalysisHtml(a);
+}
 
-  const e = ZE.escapeHtml;
-  let html = '';
-  if (a.summary) html += `<div class="text-zinc-200 text-base leading-relaxed mb-5 italic">${e(a.summary)}</div>`;
-  if (a.honest_assessment) html += `<div class="text-amber-300 text-sm bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-5"><i class="ph ph-lightbulb"></i> ${e(a.honest_assessment)}</div>`;
+async function loadStages() {
+  const { data } = await ZE_SB.from('ze_project_stages').select('*, ze_project_tasks(id, title, completed, order_index)').eq('project_id', projectId).order('order_index');
+  stages = data || [];
+  renderStages();
+}
 
-  if (Array.isArray(a.diagnosed_pain_points) && a.diagnosed_pain_points.length) {
-    html += `<div class="text-xs text-zinc-500 uppercase mb-2">Diagnozowane bóle (${a.diagnosed_pain_points.length})</div>`;
-    html += '<div class="space-y-2 mb-5">' + a.diagnosed_pain_points.map(p => `
-      <div class="bg-zinc-950/50 border border-white/5 rounded-lg p-3">
-        <div class="flex items-center gap-2 mb-1"><strong class="text-white text-sm">${e(p.title)}</strong>
-          <span class="text-[10px] uppercase px-1.5 py-0.5 rounded ${p.severity === 'high' ? 'bg-red-500/20 text-red-300' : p.severity === 'medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-700 text-zinc-400'}">${e(p.severity || 'medium')}</span>
+function renderStages() {
+  const el = document.getElementById('stages-list');
+  if (!stages.length) { el.innerHTML = '<div class="ds-xs" style="text-align: center; padding: 24px;">Brak etapów.</div>'; return; }
+  el.innerHTML = stages.map((s, idx) => {
+    const tasks = (s.ze_project_tasks || []).sort((a, b) => a.order_index - b.order_index);
+    const cls = s.status === 'completed' ? 'is-done' : s.status === 'in_progress' ? 'is-progress' : '';
+    return `
+      <div class="stage-row ${cls}">
+        <div class="ds-flex ds-items-center ds-justify-between ds-gap-3">
+          <div class="ds-flex ds-items-center ds-gap-3" style="min-width: 0;">
+            <div class="stage-dot ${s.status}">${s.status === 'completed' ? '<i class="ph-bold ph-check"></i>' : idx + 1}</div>
+            <div style="min-width: 0;">
+              <div class="ds-fg-1" style="font-weight: 500; font-size: 14px;">${ZE.escapeHtml(s.title)}</div>
+              <div class="ds-xs ds-truncate" style="max-width: 360px;">${ZE.escapeHtml(s.description || '')}</div>
+            </div>
+          </div>
+          <select onchange="updateStageStatus('${s.id}', this.value)" class="ds-select" style="width: 130px; height: 28px; font-size: 11px;">
+            ${Object.entries(STAGE_STATUS).map(([v, l]) => `<option value="${v}" ${v === s.status ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
         </div>
-        ${p.evidence_from_brief ? `<div class="text-xs text-zinc-500 italic mb-1">„${e(p.evidence_from_brief)}"</div>` : ''}
-        ${p.business_cost ? `<div class="text-xs text-zinc-400"><strong>Koszt biznesowy:</strong> ${e(p.business_cost)}</div>` : ''}
-      </div>
-    `).join('') + '</div>';
-  }
-
-  if (Array.isArray(a.proposed_solutions) && a.proposed_solutions.length) {
-    html += `<div class="text-xs text-zinc-500 uppercase mb-2">Propozycje (${a.proposed_solutions.length})</div>`;
-    html += '<div class="space-y-3 mb-5">' + a.proposed_solutions.map((s, i) => `
-      <div class="bg-zinc-950/50 border border-white/5 rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center justify-center">${i+1}</span>
-          <strong class="text-white">${e(s.title)}</strong>
+        <div class="ds-flex-col ds-gap-1 ds-mt-3" style="padding-left: 40px;">
+          ${tasks.map(t => `
+            <label class="ds-flex ds-items-center ds-gap-2" style="cursor: pointer; padding: 4px 0; font-size: 13px; color: ${t.completed ? 'var(--ds-fg-5)' : 'var(--ds-fg-2)'};">
+              <input type="checkbox" ${t.completed ? 'checked' : ''} onchange="toggleTask('${t.id}', this.checked)">
+              <span style="${t.completed ? 'text-decoration: line-through;' : ''}">${ZE.escapeHtml(t.title)}</span>
+            </label>
+          `).join('')}
+          <button onclick="addTask('${s.id}')" class="ds-btn ds-btn--ghost ds-btn--sm" style="align-self: flex-start; padding: 4px 6px; height: 22px;"><i class="ph ph-plus"></i> Dodaj zadanie</button>
         </div>
-        ${s.what_it_does ? `<div class="text-sm text-zinc-300 mb-2">${e(s.what_it_does)}</div>` : ''}
-        ${s.what_etat_replaces ? `<div class="text-xs text-zinc-400 mb-2"><strong>Zastępuje:</strong> ${e(s.what_etat_replaces)}</div>` : ''}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs">
-          ${s.build_estimate_pln ? `<div><div class="text-zinc-500">Budowa</div><div class="text-white font-semibold">${e(s.build_estimate_pln)}</div></div>` : ''}
-          ${s.build_estimate_weeks ? `<div><div class="text-zinc-500">Czas</div><div class="text-white font-semibold">${e(s.build_estimate_weeks)} tyg</div></div>` : ''}
-          ${s.monthly_savings_pln ? `<div><div class="text-zinc-500">Oszczędność/mies</div><div class="text-emerald-300 font-semibold">${e(s.monthly_savings_pln)}</div></div>` : ''}
-          ${s.payback_months ? `<div><div class="text-zinc-500">Zwrot</div><div class="text-white font-semibold">${e(s.payback_months)} mies</div></div>` : ''}
-        </div>
-        ${s.stack_suggestion ? `<div class="text-[11px] text-zinc-500 mt-2"><strong>Stack:</strong> ${e(s.stack_suggestion)}</div>` : ''}
-        ${s.depends_on ? `<div class="text-[11px] text-zinc-500"><strong>Wymaga:</strong> ${e(s.depends_on)}</div>` : ''}
-      </div>
-    `).join('') + '</div>';
-  }
-
-  if (a.recommended_first_step) {
-    const r = a.recommended_first_step;
-    html += `
-      <div class="bg-emerald-500/5 border border-emerald-500/30 rounded-lg p-4 mb-5">
-        <div class="text-xs uppercase text-emerald-400 mb-1">Rekomendowany pierwszy krok</div>
-        <div class="text-white font-semibold mb-1">${e(r.title || '')}</div>
-        ${r.why ? `<div class="text-sm text-zinc-300 mb-2">${e(r.why)}</div>` : ''}
-        ${r.mvp_scope ? `<div class="text-xs text-zinc-400"><strong>Zakres MVP:</strong> ${e(r.mvp_scope)}</div>` : ''}
       </div>
     `;
-  }
+  }).join('');
+  const total = stages.length, done = stages.filter(s => s.status === 'completed').length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progress-summary').textContent = `${done}/${total}`;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
 
-  if (a.estimated_total_savings_pln_per_year || a.estimated_total_build_pln) {
-    html += `<div class="grid grid-cols-2 gap-3 mb-3">
-      ${a.estimated_total_build_pln ? `<div class="bg-zinc-950/50 border border-white/5 rounded-lg p-3"><div class="text-xs text-zinc-500">Total budowa</div><div class="text-lg font-semibold text-white">${e(a.estimated_total_build_pln)}</div></div>` : ''}
-      ${a.estimated_total_savings_pln_per_year ? `<div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3"><div class="text-xs text-emerald-400">Total oszczędności/rok</div><div class="text-lg font-semibold text-emerald-300">${e(a.estimated_total_savings_pln_per_year)}</div></div>` : ''}
-    </div>`;
-  }
+async function updateStageStatus(id, status) {
+  const patch = { status };
+  if (status === 'in_progress') patch.started_at = new Date().toISOString();
+  if (status === 'completed') patch.completed_at = new Date().toISOString();
+  const { error } = await ZE_SB.from('ze_project_stages').update(patch).eq('id', id);
+  if (error) return ZE.toast(error.message, 'error');
+  await loadStages();
+}
+window.updateStageStatus = updateStageStatus;
 
-  if (Array.isArray(a.clarifying_questions) && a.clarifying_questions.length) {
-    html += `<details class="mt-4 bg-zinc-950/50 border border-white/5 rounded-lg">
-      <summary class="px-3 py-2 text-xs text-zinc-500 cursor-pointer hover:text-white">Pytania doprecyzowujące (${a.clarifying_questions.length})</summary>
-      <ul class="px-3 pb-3 space-y-1 text-sm text-zinc-300">${a.clarifying_questions.map(q => `<li>• ${e(q)}</li>`).join('')}</ul>
-    </details>`;
-  }
+async function toggleTask(id, completed) {
+  const { error } = await ZE_SB.from('ze_project_tasks').update({ completed, completed_at: completed ? new Date().toISOString() : null }).eq('id', id);
+  if (error) return ZE.toast(error.message, 'error');
+  await loadStages();
+}
+window.toggleTask = toggleTask;
 
-  document.getElementById('analysis-rendered').innerHTML = html;
+async function addTask(stageId) {
+  const title = await ZE.askText({ title: 'Nowe zadanie', placeholder: 'Co konkretnie do zrobienia?', multiline: false });
+  if (!title) return;
+  const stage = stages.find(s => s.id === stageId);
+  const order = (stage?.ze_project_tasks || []).length;
+  const { error } = await ZE_SB.from('ze_project_tasks').insert({ stage_id: stageId, title: title.slice(0, 500), order_index: order });
+  if (error) return ZE.toast(error.message, 'error');
+  await loadStages();
+}
+window.addTask = addTask;
+
+async function addStage() {
+  const title = await ZE.askText({ title: 'Nowy etap', placeholder: 'Np. "Migracja danych"', multiline: false });
+  if (!title) return;
+  const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'etap') + '-' + Math.random().toString(36).slice(2, 6);
+  const order = stages.length + 1;
+  const { error } = await ZE_SB.from('ze_project_stages').insert({ project_id: projectId, title: title.slice(0, 200), slug, order_index: order, status: 'pending' });
+  if (error) return ZE.toast(error.message, 'error');
+  await loadStages();
+}
+
+async function loadUpdates() {
+  const { data } = await ZE_SB.from('ze_project_updates').select('*').eq('project_id', projectId).order('posted_at', { ascending: false });
+  const list = data || [];
+  const el = document.getElementById('updates-list');
+  if (!list.length) { el.innerHTML = '<div class="ds-xs" style="text-align: center; padding: 12px;">Brak aktualizacji.</div>'; return; }
+  el.innerHTML = list.map(u => `
+    <article style="padding: 14px 16px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-r-sm);">
+      <div class="ds-flex ds-items-center ds-justify-between ds-mb-2">
+        <div class="ds-fg-1" style="font-weight: 500;">${ZE.escapeHtml(u.title)}</div>
+        <button onclick="deleteUpdate('${u.id}')" class="ds-btn ds-btn--ghost ds-btn--sm" style="height: 22px; padding: 0 4px; color: var(--ds-fg-5);"><i class="ph ph-trash"></i></button>
+      </div>
+      ${u.body ? `<div class="ds-fg-2" style="font-size: 13px; white-space: pre-wrap; line-height: 1.6;">${ZE.escapeHtml(u.body)}</div>` : ''}
+      <div class="ds-xs ds-mt-2">${ZE.fmtRelative(u.posted_at)}</div>
+    </article>
+  `).join('');
+}
+
+async function addUpdate() {
+  const title = document.getElementById('update-title').value.trim();
+  const body = document.getElementById('update-body').value.trim();
+  if (!title) return;
+  const staff = ZE_Auth.staff();
+  const { error } = await ZE_SB.from('ze_project_updates').insert({ project_id: projectId, title, body: body || null, author_id: staff.id });
+  if (error) return ZE.toast(error.message, 'error');
+  document.getElementById('update-title').value = '';
+  document.getElementById('update-body').value = '';
+  await loadUpdates();
 }
 
 async function deleteUpdate(id) {
   const ok = await ZE.confirm('Usunąć aktualizację?');
   if (!ok) return;
   const { error } = await ZE_SB.from('ze_project_updates').delete().eq('id', id);
-  if (error) { ZE.toast(error.message, 'error'); return; }
+  if (error) return ZE.toast(error.message, 'error');
   await loadUpdates();
 }
 window.deleteUpdate = deleteUpdate;

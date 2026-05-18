@@ -5,76 +5,81 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Dashboard</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="/zwolnie/_assets/common.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  html, body { font-family: 'Inter', sans-serif; }
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 </head>
-<body class="min-h-screen flex">
+<body>
 
-<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+<div class="ds-app">
+  <aside id="ze-sidebar" class="ds-sidebar"></aside>
 
-<main class="flex-1 flex flex-col min-w-0">
-  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-    <div class="flex items-center gap-2 text-sm">
-      <span class="text-zinc-500">Zwolnię</span>
-      <span class="text-zinc-700">/</span>
-      <span class="text-white font-medium">Dashboard</span>
-    </div>
-  </header>
+  <main class="ds-main">
+    <header class="ds-header">
+      <div class="ds-breadcrumb">
+        <span class="ds-current">Dashboard</span>
+      </div>
+      <div class="ds-flex ds-items-center ds-gap-2">
+        <span class="ds-kbd">⌘K</span>
+      </div>
+    </header>
 
-  <div class="flex-1 overflow-y-auto p-8 ze-fade">
-    <div class="max-w-6xl mx-auto">
-      <h1 class="text-3xl font-semibold text-white mb-1">Dashboard</h1>
-      <p class="text-zinc-500 mb-8">Co się dzieje w Twoim pipeline.</p>
+    <div class="ds-content ds-fade-in">
+      <div class="ds-mb-8">
+        <h1 class="ds-h1">Cześć, Tomek 👋</h1>
+        <p class="ds-small ds-mt-2">Co się dzieje w pipeline.</p>
+      </div>
 
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <div class="p-5 bg-zinc-900/60 border border-white/5 rounded-xl">
-          <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Wszystkie leady</div>
-          <div class="text-3xl font-semibold text-white" id="m-total">—</div>
+      <!-- Metrics -->
+      <div class="ds-grid ds-grid-4 ds-gap-4 ds-mb-8">
+        <div class="ds-metric">
+          <div class="ds-metric__label">Wszystkie leady</div>
+          <div class="ds-metric__value" id="m-total">—</div>
+          <div class="ds-metric__delta" id="m-total-delta"></div>
         </div>
-        <div class="p-5 bg-zinc-900/60 border border-white/5 rounded-xl">
-          <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Nowe (ten tydzień)</div>
-          <div class="text-3xl font-semibold text-emerald-400" id="m-week">—</div>
+        <div class="ds-metric">
+          <div class="ds-metric__label">Nowe (7 dni)</div>
+          <div class="ds-metric__value ds-metric__delta--up" id="m-week" style="color: var(--ds-emerald)">—</div>
+          <div class="ds-metric__delta">w ostatnim tygodniu</div>
         </div>
-        <div class="p-5 bg-zinc-900/60 border border-white/5 rounded-xl">
-          <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Wymagają analizy</div>
-          <div class="text-3xl font-semibold text-amber-400" id="m-todo">—</div>
+        <div class="ds-metric">
+          <div class="ds-metric__label">Czekają na analizę</div>
+          <div class="ds-metric__value" id="m-todo" style="color: var(--ds-amber)">—</div>
+          <div class="ds-metric__delta">do obrobienia</div>
         </div>
-        <div class="p-5 bg-zinc-900/60 border border-white/5 rounded-xl">
-          <div class="text-xs text-zinc-500 uppercase tracking-wider mb-2">Aktywne projekty</div>
-          <div class="text-3xl font-semibold text-violet-400" id="m-projects">—</div>
+        <div class="ds-metric">
+          <div class="ds-metric__label">Aktywne projekty</div>
+          <div class="ds-metric__value" id="m-projects" style="color: var(--ds-magic)">—</div>
+          <div class="ds-metric__delta">w realizacji</div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-white">Najnowsze leady</h2>
-            <a href="/zwolnie/leads" class="text-xs text-zinc-400 hover:text-white">Wszystkie →</a>
+      <!-- Two columns -->
+      <div class="ds-grid ds-grid-2 ds-gap-4">
+        <div class="ds-card">
+          <div class="ds-card__header">
+            <h3 class="ds-h4">Najnowsze leady</h3>
+            <a href="/zwolnie/leads" class="ds-btn ds-btn--ghost ds-btn--sm">Wszystkie <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div id="recent-leads" class="space-y-2">
-            <div class="text-sm text-zinc-500">Ładowanie...</div>
+          <div class="ds-card__body" id="recent-leads" style="padding: 8px;">
+            <div class="ds-empty ds-small">Ładowanie...</div>
           </div>
         </div>
 
-        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-semibold text-white">Wymagają Twojej akcji</h2>
-            <a href="/zwolnie/pipeline" class="text-xs text-zinc-400 hover:text-white">Pipeline →</a>
+        <div class="ds-card">
+          <div class="ds-card__header">
+            <h3 class="ds-h4">Wymagają akcji</h3>
+            <a href="/zwolnie/pipeline" class="ds-btn ds-btn--ghost ds-btn--sm">Pipeline <i class="ph ph-arrow-right"></i></a>
           </div>
-          <div id="action-needed" class="space-y-2">
-            <div class="text-sm text-zinc-500">Ładowanie...</div>
+          <div class="ds-card__body" id="action-needed" style="padding: 8px;">
+            <div class="ds-empty ds-small">Ładowanie...</div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</main>
+  </main>
+</div>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -85,50 +90,40 @@
   const { staff } = await ZE_Auth.require();
   ZE_Sidebar.render({ active: 'dashboard', userEmail: staff.email });
 
-  // Metrics
   const weekAgo = new Date(Date.now() - 7*24*60*60*1000).toISOString();
-  const [
-    totalRes,
-    weekRes,
-    todoRes,
-    projectsRes,
-    recentRes,
-    actionRes
-  ] = await Promise.all([
+  const [totalRes, weekRes, todoRes, projectsRes, recentRes, actionRes] = await Promise.all([
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }),
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).gte('created_at', weekAgo),
     ZE_SB.from('ze_leads').select('id', { count: 'exact', head: true }).in('status', ['new', 'analyzing']),
     ZE_SB.from('ze_projects').select('id', { count: 'exact', head: true }).in('status', ['planning', 'building']),
-    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').order('created_at', { ascending: false }).limit(8),
-    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').in('status', ['new', 'analyzing']).order('created_at', { ascending: false }).limit(8)
+    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at').order('created_at', { ascending: false }).limit(6),
+    ZE_SB.from('ze_leads').select('id, contact_name, company, status, created_at, status_changed_at').in('status', ['new', 'analyzing']).order('status_changed_at', { ascending: true }).limit(6)
   ]);
 
   document.getElementById('m-total').textContent = totalRes.count ?? '0';
   document.getElementById('m-week').textContent = weekRes.count ?? '0';
   document.getElementById('m-todo').textContent = todoRes.count ?? '0';
   document.getElementById('m-projects').textContent = projectsRes.count ?? '0';
-
   ZE_Sidebar.setBadge('leads', totalRes.count ?? 0);
 
   const renderRow = (l) => `
-    <a href="/zwolnie/lead?id=${l.id}" class="flex items-center justify-between p-3 rounded-lg hover:bg-white/5 transition-colors">
-      <div class="min-w-0">
-        <div class="text-sm text-white truncate">${ZE.escapeHtml(l.contact_name || '(brak imienia)')}</div>
-        <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(l.company || '—')} · ${ZE.fmtRelative(l.created_at)}</div>
+    <a href="/zwolnie/lead?id=${l.id}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:6px;transition:background 120ms" onmouseover="this.style.background='rgba(255,255,255,0.03)'" onmouseout="this.style.background=''">
+      ${ZE.avatarHtml(l.contact_name || l.company || '?', 28)}
+      <div style="flex:1;min-width:0">
+        <div class="ds-fg-1 ds-truncate" style="font-size:13px;font-weight:500">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
+        <div class="ds-truncate" style="font-size:11px;color:var(--ds-fg-5)">${ZE.escapeHtml(l.company || '—')} · ${ZE.fmtRelative(l.created_at)}</div>
       </div>
-      ${ZE.statusBadge(l.status)}
+      <span class="ds-badge ds-badge--${l.status}">${ZE.STATUS_LABELS[l.status]}</span>
     </a>
   `;
 
-  const recentEl = document.getElementById('recent-leads');
-  recentEl.innerHTML = (recentRes.data || []).length
-    ? (recentRes.data.map(renderRow).join(''))
-    : '<div class="text-sm text-zinc-500 py-4">Brak leadów. Pierwszy wpadnie z formularza zwolnie.tomekniedzwiecki.pl/zwolnie/.</div>';
+  document.getElementById('recent-leads').innerHTML = (recentRes.data || []).length
+    ? recentRes.data.map(renderRow).join('')
+    : `<div class="ds-empty"><div class="ds-empty__icon"><i class="ph ph-inbox"></i></div><div class="ds-empty__title">Pusto</div><div class="ds-empty__desc">Pierwszy lead wpadnie z formularza zwolnie.tomekniedzwiecki.pl</div></div>`;
 
-  const actionEl = document.getElementById('action-needed');
-  actionEl.innerHTML = (actionRes.data || []).length
-    ? (actionRes.data.map(renderRow).join(''))
-    : '<div class="text-sm text-zinc-500 py-4">Wszystko ogarnięte. Brak leadów do analizy.</div>';
+  document.getElementById('action-needed').innerHTML = (actionRes.data || []).length
+    ? actionRes.data.map(renderRow).join('')
+    : `<div class="ds-empty"><div class="ds-empty__icon"><i class="ph ph-check-circle"></i></div><div class="ds-empty__title">Wszystko ogarnięte</div><div class="ds-empty__desc">Brak leadów do analizy.</div></div>`;
 })();
 </script>
 </body>

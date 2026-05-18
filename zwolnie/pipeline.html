@@ -5,84 +5,76 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Pipeline</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="/zwolnie/_assets/common.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  html, body { font-family: 'Inter', sans-serif; }
-  .kanban-col { min-width: 280px; max-width: 320px; }
-  .kanban-card { transition: transform .15s, box-shadow .15s; cursor: grab; }
-  .kanban-card:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
-  .kanban-card.is-dragging { opacity: .4; cursor: grabbing; }
-  .kanban-body.is-over { background: rgba(16, 185, 129, 0.05); border-color: rgba(16, 185, 129, 0.3); }
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 </head>
-<body class="min-h-screen flex">
+<body>
 
-<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+<div class="ds-app">
+  <aside id="ze-sidebar" class="ds-sidebar"></aside>
 
-<main class="flex-1 flex flex-col min-w-0">
-  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-    <div class="flex items-center gap-2 text-sm">
-      <span class="text-zinc-500">Zwolnię</span>
-      <span class="text-zinc-700">/</span>
-      <span class="text-white font-medium">Pipeline</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button id="open-batch-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
-        <i class="ph ph-tabs"></i><span class="hidden md:inline">Otwórz N w kartach</span>
-      </button>
-      <label class="flex items-center gap-2 text-xs text-zinc-400 pl-2">
-        <input type="checkbox" id="show-terminal" class="rounded bg-zinc-800 border-zinc-700">
-        Pokaż wygrane/przegrane
-      </label>
-      <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-2.5 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
-        <i class="ph ph-arrows-clockwise text-base" id="refresh-icon"></i>
-      </button>
-    </div>
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-6 ze-fade">
-    <div class="mb-5 px-2 flex items-end justify-between gap-4 flex-wrap">
-      <div>
-        <h1 class="text-2xl font-semibold text-white">Pipeline</h1>
-        <p class="text-zinc-500 text-sm">Przeciągaj leady między etapami. Czerwone „d" = czas w obecnym statusie.</p>
+  <main class="ds-main">
+    <header class="ds-header">
+      <div class="ds-breadcrumb">
+        <a href="/zwolnie/">Zwolnię</a>
+        <span class="ds-sep">/</span>
+        <span class="ds-current">Pipeline</span>
       </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <div class="relative">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
-          <input type="text" id="p-search" placeholder="Szukaj leada..." class="ze-input pl-9 pr-3 py-2 rounded-lg text-sm w-64">
+      <div class="ds-flex ds-items-center ds-gap-2">
+        <label class="ds-flex ds-items-center ds-gap-2" style="font-size: 12px; color: var(--ds-fg-3);">
+          <input type="checkbox" id="show-terminal"> Pokaż won/lost
+        </label>
+        <button id="open-batch-btn" class="ds-btn ds-btn--secondary ds-btn--sm"><i class="ph ph-tabs"></i> Otwórz N w kartach</button>
+        <button id="refresh-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-arrows-clockwise" id="refresh-icon"></i></button>
+      </div>
+    </header>
+
+    <div class="ds-content ds-fade-in" style="max-width: none;">
+      <div class="ds-flex ds-items-end ds-justify-between ds-gap-4 ds-mb-6" style="flex-wrap: wrap;">
+        <div>
+          <h1 class="ds-h1">Pipeline</h1>
+          <p class="ds-small ds-mt-2">Przeciągaj między etapami. Czerwone „d" = czas w obecnym statusie.</p>
         </div>
-        <select id="p-sort" class="ze-input px-3 py-2 rounded-lg text-sm">
-          <option value="status-time-desc">Najpilniejsze (dni w statusie)</option>
-          <option value="created-desc">Najnowsze leady</option>
-          <option value="created-asc">Najstarsze leady</option>
-        </select>
-        <button id="p-clear" class="text-xs text-zinc-500 hover:text-white px-2 py-2 hidden">Wyczyść</button>
+        <div class="ds-flex ds-items-center ds-gap-2" style="flex-wrap: wrap;">
+          <div class="ds-input-group" style="width: 240px;">
+            <i class="ph ph-magnifying-glass ds-input-group__icon"></i>
+            <input id="p-search" type="text" class="ds-input" placeholder="Szukaj leada...">
+          </div>
+          <select id="p-sort" class="ds-select" style="width: 240px;">
+            <option value="status-time-desc">Najpilniejsze (dni w statusie)</option>
+            <option value="created-desc">Najnowsze leady</option>
+            <option value="created-asc">Najstarsze leady</option>
+          </select>
+          <button id="p-clear" class="ds-btn ds-btn--ghost ds-btn--sm ds-hidden">Wyczyść</button>
+        </div>
       </div>
-    </div>
 
-    <div id="kanban-board" class="flex gap-4 overflow-x-auto pb-6"></div>
-  </div>
-</main>
-
-<!-- Open batch modal -->
-<div id="batch-modal" class="hidden fixed inset-0 bg-black/70 z-[1100] items-center justify-center p-4">
-  <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-sm">
-    <h3 class="text-white font-semibold mb-1">Otwórz leady w nowych kartach</h3>
-    <p class="text-xs text-zinc-500 mb-4">Z bieżącego widoku, top N wg sortowania. Każdy w nowej karcie. Tip: użyj Ctrl/Cmd+Tab do przełączania.</p>
-    <div class="grid grid-cols-3 gap-2 mb-4">
-      <button data-n="5" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">5</button>
-      <button data-n="10" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">10</button>
-      <button data-n="20" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">20</button>
-      <button data-n="30" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">30</button>
-      <button data-n="50" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">50</button>
-      <button data-n="all" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">wsz.</button>
+      <div id="kanban-board" class="ds-kanban"></div>
     </div>
-    <div class="flex justify-end">
-      <button id="batch-close" class="px-3 py-2 text-sm text-zinc-400 hover:text-white">Anuluj</button>
+  </main>
+</div>
+
+<!-- Batch modal -->
+<div id="batch-modal" class="ds-modal-backdrop ds-hidden">
+  <div class="ds-modal" style="max-width: 380px;">
+    <div class="ds-modal__header">
+      <div>
+        <h3 class="ds-h3">Otwórz w nowych kartach</h3>
+        <p class="ds-small ds-mt-2">Z bieżącego widoku, top N wg sortowania.</p>
+      </div>
+      <button onclick="document.getElementById('batch-modal').classList.add('ds-hidden')" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="ds-modal__body">
+      <div class="ds-grid ds-grid-3 ds-gap-2">
+        <button data-n="5" class="ze-batch-n ds-btn ds-btn--secondary">5</button>
+        <button data-n="10" class="ze-batch-n ds-btn ds-btn--secondary">10</button>
+        <button data-n="20" class="ze-batch-n ds-btn ds-btn--secondary">20</button>
+        <button data-n="30" class="ze-batch-n ds-btn ds-btn--secondary">30</button>
+        <button data-n="50" class="ze-batch-n ds-btn ds-btn--secondary">50</button>
+        <button data-n="all" class="ze-batch-n ds-btn ds-btn--secondary">wsz.</button>
+      </div>
     </div>
   </div>
 </div>
@@ -103,42 +95,29 @@ let filters = { search: '', sort: 'status-time-desc' };
 
   document.getElementById('show-terminal').addEventListener('change', renderBoard);
   document.getElementById('refresh-btn').addEventListener('click', async () => {
-    document.getElementById('refresh-icon').classList.add('ze-spin');
+    document.getElementById('refresh-icon').classList.add('ds-spin');
     await loadLeads();
-    setTimeout(() => document.getElementById('refresh-icon').classList.remove('ze-spin'), 600);
+    setTimeout(() => document.getElementById('refresh-icon').classList.remove('ds-spin'), 600);
   });
-
   document.getElementById('p-search').addEventListener('input', (e) => {
     filters.search = e.target.value.trim().toLowerCase();
-    document.getElementById('p-clear').classList.toggle('hidden', !filters.search);
+    document.getElementById('p-clear').classList.toggle('ds-hidden', !filters.search);
     renderBoard();
   });
   document.getElementById('p-sort').addEventListener('change', (e) => { filters.sort = e.target.value; renderBoard(); });
   document.getElementById('p-clear').addEventListener('click', () => {
-    document.getElementById('p-search').value = '';
-    filters.search = '';
-    document.getElementById('p-clear').classList.add('hidden');
-    renderBoard();
+    document.getElementById('p-search').value = ''; filters.search = '';
+    document.getElementById('p-clear').classList.add('ds-hidden'); renderBoard();
   });
-
-  // Batch open
-  document.getElementById('open-batch-btn').addEventListener('click', () => {
-    document.getElementById('batch-modal').classList.remove('hidden');
-    document.getElementById('batch-modal').classList.add('flex');
-  });
-  document.getElementById('batch-close').addEventListener('click', () => {
-    document.getElementById('batch-modal').classList.add('hidden');
-    document.getElementById('batch-modal').classList.remove('flex');
-  });
+  document.getElementById('open-batch-btn').addEventListener('click', () => document.getElementById('batch-modal').classList.remove('ds-hidden'));
   document.querySelectorAll('.ze-batch-n').forEach(btn => {
     btn.addEventListener('click', () => {
       const filtered = getFilteredAndSorted();
       const n = btn.dataset.n === 'all' ? filtered.length : parseInt(btn.dataset.n, 10);
       const slice = filtered.slice(0, n);
       slice.forEach(l => window.open('/zwolnie/lead?id=' + l.id, '_blank', 'noopener'));
-      document.getElementById('batch-modal').classList.add('hidden');
-      document.getElementById('batch-modal').classList.remove('flex');
-      ZE.toast(`Otwarto ${slice.length} leadów w nowych kartach.`, 'success');
+      document.getElementById('batch-modal').classList.add('ds-hidden');
+      ZE.toast(`Otwarto ${slice.length} leadów.`, 'success');
     });
   });
 
@@ -146,12 +125,9 @@ let filters = { search: '', sort: 'status-time-desc' };
 })();
 
 async function loadLeads() {
-  const { data, error } = await ZE_SB
-    .from('ze_leads')
+  const { data, error } = await ZE_SB.from('ze_leads')
     .select('id, status, contact_name, contact_email, company, industry, budget, created_at, status_changed_at, starred, ai_analysis, mvp_html')
-    .neq('status', 'archived')
-    .order('updated_at', { ascending: false })
-    .range(0, 999);
+    .neq('status', 'archived').order('updated_at', { ascending: false }).range(0, 999);
   if (error) { ZE.toast(error.message, 'error'); return; }
   allLeads = data || [];
   ZE_Sidebar.setBadge('leads', allLeads.length);
@@ -165,13 +141,9 @@ function getFilteredAndSorted() {
     const hay = [l.contact_name, l.contact_email, l.company, l.industry].filter(Boolean).join(' ').toLowerCase();
     return hay.includes(q);
   });
-  if (filters.sort === 'status-time-desc') {
-    list.sort((a, b) => new Date(a.status_changed_at || a.created_at) - new Date(b.status_changed_at || b.created_at));
-  } else if (filters.sort === 'created-desc') {
-    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  } else if (filters.sort === 'created-asc') {
-    list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
-  }
+  if (filters.sort === 'status-time-desc') list.sort((a, b) => new Date(a.status_changed_at || a.created_at) - new Date(b.status_changed_at || b.created_at));
+  else if (filters.sort === 'created-desc') list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  else if (filters.sort === 'created-asc') list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   return list;
 }
 
@@ -183,17 +155,16 @@ function renderBoard() {
   board.innerHTML = cols.map(col => {
     const list = filtered.filter(l => l.status === col);
     return `
-      <div class="kanban-col flex-shrink-0 flex flex-col">
-        <div class="px-3 py-2 mb-2 flex items-center justify-between">
-          ${ZE.statusBadge(col)}
-          <span class="text-xs text-zinc-500">${list.length}</span>
+      <div class="ds-kanban__col">
+        <div class="ds-kanban__col-head">
+          <span class="ds-badge ds-badge--${col}">${ZE.STATUS_LABELS[col]}</span>
+          <span class="ds-xs ds-num">${list.length}</span>
         </div>
-        <div class="kanban-body flex-1 bg-zinc-900/30 border border-white/5 rounded-xl p-2 space-y-2 min-h-[200px]"
-             data-status="${col}"
+        <div class="ds-kanban__body" data-status="${col}"
              ondragover="event.preventDefault(); this.classList.add('is-over');"
              ondragleave="this.classList.remove('is-over');"
              ondrop="handleDrop(event)">
-          ${list.map(renderCard).join('') || '<div class="text-xs text-zinc-600 text-center py-6">Pusto</div>'}
+          ${list.map(renderCard).join('') || '<div class="ds-empty" style="padding: 20px;"><div class="ds-empty__desc">Pusto</div></div>'}
         </div>
       </div>
     `;
@@ -201,36 +172,34 @@ function renderBoard() {
 }
 
 function renderCard(l) {
-  const urgency = ZE.urgencyBadge(l.status_changed_at, l.status);
   const days = ZE.daysInStatus(l.status_changed_at);
-  const cardBorder = days != null && days >= 7 ? 'border-red-500/30' : 'border-white/5';
-  const hasAnalysis = !!l.ai_analysis;
-  const hasMvp = !!l.mvp_html;
+  const urgent = days != null && days >= 7;
+  const urgencyBadge = ZE.urgencyBadge(l.status_changed_at, l.status);
   return `
-    <div class="kanban-card bg-zinc-900 border ${cardBorder} rounded-lg p-3"
+    <div class="ds-kanban__card ${urgent ? 'is-urgent' : ''}"
          draggable="true" data-id="${l.id}"
          ondragstart="event.dataTransfer.setData('text', '${l.id}'); this.classList.add('is-dragging');"
          ondragend="this.classList.remove('is-dragging');"
          onclick="location.href='/zwolnie/lead?id=${l.id}'"
          onauxclick="if(event.button === 1){ event.preventDefault(); window.open('/zwolnie/lead?id=${l.id}', '_blank', 'noopener'); }">
-      <div class="flex items-start gap-2.5 mb-2">
+      <div class="ds-flex ds-items-start ds-gap-3 ds-mb-3">
         ${ZE.avatarHtml(l.contact_name || l.contact_email || '?', 32)}
-        <div class="flex-1 min-w-0">
-          <div class="text-sm text-white font-medium truncate">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
-          <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(l.company || '—')}</div>
+        <div style="flex: 1; min-width: 0;">
+          <div class="ds-fg-1 ds-truncate" style="font-weight: 500; font-size: 13px;">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
+          <div class="ds-xs ds-truncate">${ZE.escapeHtml(l.company || '—')}</div>
         </div>
-        ${l.starred ? '<i class="ph ph-fill ph-star text-amber-400 text-xs flex-shrink-0"></i>' : ''}
+        ${l.starred ? '<i class="ph-fill ph-star" style="color: var(--ds-amber); font-size: 14px;"></i>' : ''}
       </div>
-      <div class="flex items-center gap-1.5 flex-wrap text-[10px] mb-2">
-        ${urgency}
-        ${l.industry ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry)}</span>` : ''}
-        ${l.budget ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget)}</span>` : ''}
+      <div class="ds-flex ds-items-center ds-gap-2" style="flex-wrap: wrap; font-size: 11px;">
+        ${urgencyBadge}
+        ${l.industry ? `<span class="ds-badge ds-badge--no-dot">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry)}</span>` : ''}
+        ${l.budget ? `<span class="ds-badge ds-badge--no-dot">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget)}</span>` : ''}
       </div>
-      <div class="flex items-center justify-between text-[10px] text-zinc-600">
+      <div class="ds-flex ds-items-center ds-justify-between ds-mt-3" style="font-size: 11px; color: var(--ds-fg-5);">
         <span>${ZE.fmtRelative(l.created_at)}</span>
-        <div class="flex items-center gap-1">
-          ${hasAnalysis ? '<i class="ph-fill ph-sparkle text-emerald-400" title="Analiza"></i>' : ''}
-          ${hasMvp ? '<i class="ph-fill ph-cursor-click text-violet-400" title="MVP"></i>' : ''}
+        <div class="ds-flex ds-gap-2">
+          ${l.ai_analysis ? '<i class="ph-fill ph-sparkle" style="color: var(--ds-magic)" title="Analiza"></i>' : ''}
+          ${l.mvp_html ? '<i class="ph-fill ph-cursor-click" style="color: var(--ds-emerald)" title="MVP"></i>' : ''}
         </div>
       </div>
     </div>
@@ -246,27 +215,20 @@ async function handleDrop(e) {
   if (!lead || lead.status === newStatus) return;
   const oldStatus = lead.status;
 
-  // Guard: warn before skipping analysis/MVP for terminal-positive moves
   if (newStatus === 'won' || newStatus === 'proposal_sent') {
     const { data: full } = await ZE_SB.from('ze_leads').select('ai_analysis, mvp_html').eq('id', leadId).single();
     const missing = [];
     if (!full?.ai_analysis) missing.push('analizy');
     if (!full?.mvp_html) missing.push('MVP');
     if (missing.length) {
-      const ok = await ZE.confirm(`Lead nie ma jeszcze ${missing.join(' ani ')}. Czy na pewno przesunąć na "${ZE.STATUS_LABELS[newStatus]}"?`);
+      const ok = await ZE.confirm(`Lead nie ma jeszcze ${missing.join(' ani ')}. Przesunąć na „${ZE.STATUS_LABELS[newStatus]}"?`, { danger: false, okLabel: 'Przesuń' });
       if (!ok) return;
     }
   }
 
-  lead.status = newStatus;
-  renderBoard();
+  lead.status = newStatus; renderBoard();
   const { error } = await ZE_SB.from('ze_leads').update({ status: newStatus }).eq('id', leadId);
-  if (error) {
-    ZE.toast(error.message, 'error');
-    lead.status = oldStatus;
-    renderBoard();
-    return;
-  }
+  if (error) { ZE.toast(error.message, 'error'); lead.status = oldStatus; renderBoard(); return; }
   await ZE.logActivity(leadId, 'status_changed', { from: oldStatus, to: newStatus });
 }
 </script>

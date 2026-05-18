@@ -160,21 +160,24 @@ ZE.openHtmlInNewTab = (html) => {
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 };
 
-// Modal: zamiennik dla natywnego prompt() obsługujący multi-line text.
-// Returns Promise<string|null>. Anuluj zwraca null.
 ZE.askText = ({ title, value = '', placeholder = '', multiline = false, maxLength = 20000 } = {}) => {
   return new Promise((resolve) => {
     const wrap = document.createElement('div');
-    wrap.className = 'fixed inset-0 bg-black/70 z-[1100] flex items-center justify-center p-4';
+    wrap.className = 'ds-modal-backdrop';
     wrap.innerHTML = `
-      <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-lg">
-        <h3 class="text-white font-semibold mb-3">${ZE.escapeHtml(title)}</h3>
-        ${multiline
-          ? `<textarea rows="6" maxlength="${maxLength}" class="ze-input w-full px-3 py-2 rounded-lg text-sm"></textarea>`
-          : `<input type="text" maxlength="${maxLength}" class="ze-input w-full px-3 py-2 rounded-lg text-sm">`}
-        <div class="flex justify-end gap-2 mt-4">
-          <button data-act="cancel" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
-          <button data-act="ok" class="px-4 py-2 rounded-lg text-sm bg-white text-black font-semibold hover:bg-zinc-200">OK</button>
+      <div class="ds-modal">
+        <div class="ds-modal__header">
+          <h3 class="ds-h3">${ZE.escapeHtml(title)}</h3>
+          <button data-act="cancel" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="ds-modal__body">
+          ${multiline
+            ? `<textarea rows="6" maxlength="${maxLength}" class="ds-textarea"></textarea>`
+            : `<input type="text" maxlength="${maxLength}" class="ds-input ds-input--lg">`}
+        </div>
+        <div class="ds-modal__footer">
+          <button data-act="cancel" class="ds-btn ds-btn--ghost">Anuluj</button>
+          <button data-act="ok" class="ds-btn ds-btn--primary">Zapisz</button>
         </div>
       </div>
     `;
@@ -182,11 +185,10 @@ ZE.askText = ({ title, value = '', placeholder = '', multiline = false, maxLengt
     const input = wrap.querySelector('input, textarea');
     input.value = value;
     if (placeholder) input.placeholder = placeholder;
-    input.focus();
-    if (!multiline) input.select();
+    setTimeout(() => { input.focus(); if (!multiline) input.select(); }, 50);
 
     const close = (val) => { wrap.remove(); resolve(val); };
-    wrap.querySelector('[data-act="cancel"]').addEventListener('click', () => close(null));
+    wrap.querySelectorAll('[data-act="cancel"]').forEach(b => b.addEventListener('click', () => close(null)));
     wrap.querySelector('[data-act="ok"]').addEventListener('click', () => close(input.value));
     wrap.addEventListener('click', (e) => { if (e.target === wrap) close(null); });
     input.addEventListener('keydown', (e) => {
@@ -197,45 +199,55 @@ ZE.askText = ({ title, value = '', placeholder = '', multiline = false, maxLengt
   });
 };
 
-// Render structured AI analysis JSON → HTML cards
+// Render structured AI analysis JSON → DS HTML cards (Stripe-style propozycje)
 ZE.renderAnalysisHtml = (a) => {
   if (!a) return '';
   const e = ZE.escapeHtml;
+  const sevColors = {
+    high: { bg: 'rgba(238,68,68,0.1)', color: '#FCA5A5' },
+    medium: { bg: 'rgba(245,166,35,0.1)', color: '#FCD34D' },
+    low: { bg: 'rgba(115,115,115,0.1)', color: 'var(--ds-fg-3)' }
+  };
   let html = '';
-  if (a.summary) html += `<div class="text-zinc-200 text-base leading-relaxed mb-5 italic">${e(a.summary)}</div>`;
-  if (a.honest_assessment) html += `<div class="text-amber-300 text-sm bg-amber-500/5 border border-amber-500/20 rounded-lg p-3 mb-5"><i class="ph ph-lightbulb"></i> ${e(a.honest_assessment)}</div>`;
+
+  if (a.summary) html += `<div style="font-size: 15px; line-height: 1.65; color: var(--ds-fg-1); margin-bottom: 20px; font-style: italic; padding: 16px; background: rgba(255,255,255,0.02); border-left: 3px solid var(--ds-magic); border-radius: 0 var(--ds-r-sm) var(--ds-r-sm) 0;">${e(a.summary)}</div>`;
+
+  if (a.honest_assessment) html += `<div style="padding: 12px 16px; background: rgba(245,166,35,0.06); border: 1px solid rgba(245,166,35,0.25); border-radius: var(--ds-r-sm); color: #FCD34D; font-size: 13px; line-height: 1.6; margin-bottom: 20px;"><i class="ph ph-lightbulb"></i> ${e(a.honest_assessment)}</div>`;
 
   if (Array.isArray(a.diagnosed_pain_points) && a.diagnosed_pain_points.length) {
-    html += `<div class="text-xs text-zinc-500 uppercase mb-2">Diagnozowane bóle (${a.diagnosed_pain_points.length})</div>`;
-    html += '<div class="space-y-2 mb-5">' + a.diagnosed_pain_points.map(p => `
-      <div class="bg-zinc-950/50 border border-white/5 rounded-lg p-3">
-        <div class="flex items-center gap-2 mb-1"><strong class="text-white text-sm">${e(p.title || '')}</strong>
-          <span class="text-[10px] uppercase px-1.5 py-0.5 rounded ${p.severity === 'high' ? 'bg-red-500/20 text-red-300' : p.severity === 'medium' ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-700 text-zinc-400'}">${e(p.severity || 'medium')}</span>
+    html += `<div class="ds-label ds-mb-3">Diagnozowane bóle (${a.diagnosed_pain_points.length})</div>`;
+    html += '<div class="ds-flex-col ds-gap-2 ds-mb-6">' + a.diagnosed_pain_points.map(p => {
+      const sc = sevColors[p.severity] || sevColors.medium;
+      return `
+      <div style="padding: 14px 16px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-r-sm);">
+        <div class="ds-flex ds-items-center ds-gap-2 ds-mb-2">
+          <strong class="ds-fg-1" style="font-size: 14px;">${e(p.title || '')}</strong>
+          <span style="font-size: 10px; text-transform: uppercase; padding: 2px 6px; border-radius: var(--ds-r-xs); background: ${sc.bg}; color: ${sc.color};">${e(p.severity || 'medium')}</span>
         </div>
-        ${p.evidence_from_brief ? `<div class="text-xs text-zinc-500 italic mb-1">„${e(p.evidence_from_brief)}"</div>` : ''}
-        ${p.business_cost ? `<div class="text-xs text-zinc-400"><strong>Koszt biznesowy:</strong> ${e(p.business_cost)}</div>` : ''}
-      </div>
-    `).join('') + '</div>';
+        ${p.evidence_from_brief ? `<div class="ds-xs" style="font-style: italic; margin-bottom: 6px;">„${e(p.evidence_from_brief)}"</div>` : ''}
+        ${p.business_cost ? `<div class="ds-xs" style="color: var(--ds-fg-3);"><strong>Koszt:</strong> ${e(p.business_cost)}</div>` : ''}
+      </div>`;
+    }).join('') + '</div>';
   }
 
   if (Array.isArray(a.proposed_solutions) && a.proposed_solutions.length) {
-    html += `<div class="text-xs text-zinc-500 uppercase mb-2">Propozycje (${a.proposed_solutions.length})</div>`;
-    html += '<div class="space-y-3 mb-5">' + a.proposed_solutions.map((s, i) => `
-      <div class="bg-zinc-950/50 border border-white/5 rounded-lg p-4">
-        <div class="flex items-center gap-2 mb-2">
-          <span class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center justify-center">${i+1}</span>
-          <strong class="text-white">${e(s.title || '')}</strong>
+    html += `<div class="ds-label ds-mb-3">Propozycje (${a.proposed_solutions.length})</div>`;
+    html += '<div class="ds-flex-col ds-gap-3 ds-mb-6">' + a.proposed_solutions.map((s, i) => `
+      <div style="padding: 16px 18px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-r-md); transition: border-color var(--ds-d-fast) var(--ds-ease);" onmouseover="this.style.borderColor='var(--ds-border-hover)'" onmouseout="this.style.borderColor='var(--ds-border)'">
+        <div class="ds-flex ds-items-center ds-gap-3 ds-mb-3">
+          <span style="width: 24px; height: 24px; border-radius: 50%; background: var(--ds-magic-soft); color: var(--ds-magic); font-weight: 600; font-size: 12px; display: flex; align-items: center; justify-content: center;">${i+1}</span>
+          <strong class="ds-fg-1" style="font-size: 14px;">${e(s.title || '')}</strong>
         </div>
-        ${s.what_it_does ? `<div class="text-sm text-zinc-300 mb-2">${e(s.what_it_does)}</div>` : ''}
-        ${s.what_etat_replaces ? `<div class="text-xs text-zinc-400 mb-2"><strong>Zastępuje:</strong> ${e(s.what_etat_replaces)}</div>` : ''}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3 text-xs">
-          ${s.build_estimate_pln ? `<div><div class="text-zinc-500">Budowa</div><div class="text-white font-semibold">${e(s.build_estimate_pln)}</div></div>` : ''}
-          ${s.build_estimate_weeks ? `<div><div class="text-zinc-500">Czas</div><div class="text-white font-semibold">${e(s.build_estimate_weeks)} tyg</div></div>` : ''}
-          ${s.monthly_savings_pln ? `<div><div class="text-zinc-500">Oszczędność/mies</div><div class="text-emerald-300 font-semibold">${e(s.monthly_savings_pln)}</div></div>` : ''}
-          ${s.payback_months ? `<div><div class="text-zinc-500">Zwrot</div><div class="text-white font-semibold">${e(s.payback_months)} mies</div></div>` : ''}
+        ${s.what_it_does ? `<div class="ds-fg-2 ds-mb-3" style="font-size: 13px; line-height: 1.6;">${e(s.what_it_does)}</div>` : ''}
+        ${s.what_etat_replaces ? `<div class="ds-xs ds-mb-3"><strong>Zastępuje:</strong> ${e(s.what_etat_replaces)}</div>` : ''}
+        <div class="ds-grid ds-grid-4 ds-gap-2 ds-mt-3" style="font-size: 11px;">
+          ${s.build_estimate_pln ? `<div style="padding: 10px; background: var(--ds-surface-3); border-radius: var(--ds-r-xs);"><div class="ds-label" style="font-size: 9px;">Budowa</div><div class="ds-fg-1 ds-mt-2 ds-num" style="font-weight: 600;">${e(s.build_estimate_pln)}</div></div>` : ''}
+          ${s.build_estimate_weeks ? `<div style="padding: 10px; background: var(--ds-surface-3); border-radius: var(--ds-r-xs);"><div class="ds-label" style="font-size: 9px;">Czas</div><div class="ds-fg-1 ds-mt-2 ds-num" style="font-weight: 600;">${e(s.build_estimate_weeks)} tyg</div></div>` : ''}
+          ${s.monthly_savings_pln ? `<div style="padding: 10px; background: var(--ds-emerald-soft); border-radius: var(--ds-r-xs);"><div class="ds-label" style="font-size: 9px; color: var(--ds-emerald);">Oszcz./mies</div><div class="ds-mt-2 ds-num" style="font-weight: 600; color: #6EE7B7;">${e(s.monthly_savings_pln)}</div></div>` : ''}
+          ${s.payback_months ? `<div style="padding: 10px; background: var(--ds-surface-3); border-radius: var(--ds-r-xs);"><div class="ds-label" style="font-size: 9px;">Zwrot</div><div class="ds-fg-1 ds-mt-2 ds-num" style="font-weight: 600;">${e(s.payback_months)} mies</div></div>` : ''}
         </div>
-        ${s.stack_suggestion ? `<div class="text-[11px] text-zinc-500 mt-2"><strong>Stack:</strong> ${e(s.stack_suggestion)}</div>` : ''}
-        ${s.depends_on ? `<div class="text-[11px] text-zinc-500"><strong>Wymaga:</strong> ${e(s.depends_on)}</div>` : ''}
+        ${s.stack_suggestion ? `<div class="ds-xs ds-mt-3"><strong>Stack:</strong> ${e(s.stack_suggestion)}</div>` : ''}
+        ${s.depends_on ? `<div class="ds-xs"><strong>Wymaga:</strong> ${e(s.depends_on)}</div>` : ''}
       </div>
     `).join('') + '</div>';
   }
@@ -243,41 +255,44 @@ ZE.renderAnalysisHtml = (a) => {
   if (a.recommended_first_step) {
     const r = a.recommended_first_step;
     html += `
-      <div class="bg-emerald-500/5 border border-emerald-500/30 rounded-lg p-4 mb-5">
-        <div class="text-xs uppercase text-emerald-400 mb-1">Rekomendowany pierwszy krok</div>
-        <div class="text-white font-semibold mb-1">${e(r.title || '')}</div>
-        ${r.why ? `<div class="text-sm text-zinc-300 mb-2">${e(r.why)}</div>` : ''}
-        ${r.mvp_scope ? `<div class="text-xs text-zinc-400"><strong>Zakres MVP:</strong> ${e(r.mvp_scope)}</div>` : ''}
+      <div style="padding: 16px 18px; background: var(--ds-emerald-soft); border: 1px solid rgba(0,200,150,0.35); border-radius: var(--ds-r-md); margin-bottom: 20px;">
+        <div class="ds-label" style="color: var(--ds-emerald); margin-bottom: 6px;"><i class="ph-bold ph-star"></i> Rekomendowany pierwszy krok</div>
+        <div class="ds-fg-1 ds-mb-2" style="font-weight: 600; font-size: 14px;">${e(r.title || '')}</div>
+        ${r.why ? `<div class="ds-fg-2 ds-mb-2" style="font-size: 13px; line-height: 1.6;">${e(r.why)}</div>` : ''}
+        ${r.mvp_scope ? `<div class="ds-xs"><strong>Zakres MVP:</strong> ${e(r.mvp_scope)}</div>` : ''}
       </div>
     `;
   }
 
   if (a.estimated_total_savings_pln_per_year || a.estimated_total_build_pln) {
-    html += `<div class="grid grid-cols-2 gap-3 mb-3">
-      ${a.estimated_total_build_pln ? `<div class="bg-zinc-950/50 border border-white/5 rounded-lg p-3"><div class="text-xs text-zinc-500">Total budowa</div><div class="text-lg font-semibold text-white">${e(a.estimated_total_build_pln)}</div></div>` : ''}
-      ${a.estimated_total_savings_pln_per_year ? `<div class="bg-emerald-500/5 border border-emerald-500/20 rounded-lg p-3"><div class="text-xs text-emerald-400">Total oszczędności/rok</div><div class="text-lg font-semibold text-emerald-300">${e(a.estimated_total_savings_pln_per_year)}</div></div>` : ''}
+    html += `<div class="ds-grid ds-grid-2 ds-gap-3 ds-mb-4">
+      ${a.estimated_total_build_pln ? `<div style="padding: 14px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-r-sm);"><div class="ds-label">Total budowa</div><div class="ds-fg-1 ds-mt-2 ds-num" style="font-size: 18px; font-weight: 600;">${e(a.estimated_total_build_pln)}</div></div>` : ''}
+      ${a.estimated_total_savings_pln_per_year ? `<div style="padding: 14px; background: var(--ds-emerald-soft); border: 1px solid rgba(0,200,150,0.3); border-radius: var(--ds-r-sm);"><div class="ds-label" style="color: var(--ds-emerald);">Total oszczędności/rok</div><div class="ds-mt-2 ds-num" style="font-size: 18px; font-weight: 600; color: #6EE7B7;">${e(a.estimated_total_savings_pln_per_year)}</div></div>` : ''}
     </div>`;
   }
 
   if (Array.isArray(a.clarifying_questions) && a.clarifying_questions.length) {
-    html += `<details class="mt-4 bg-zinc-950/50 border border-white/5 rounded-lg">
-      <summary class="px-3 py-2 text-xs text-zinc-500 cursor-pointer hover:text-white">Pytania doprecyzowujące (${a.clarifying_questions.length})</summary>
-      <ul class="px-3 pb-3 space-y-1 text-sm text-zinc-300">${a.clarifying_questions.map(q => `<li>• ${e(q)}</li>`).join('')}</ul>
+    html += `<details style="margin-top: 16px; background: var(--ds-surface-2); border: 1px solid var(--ds-border); border-radius: var(--ds-r-sm);">
+      <summary class="ds-xs" style="padding: 10px 14px; cursor: pointer;">Pytania doprecyzowujące (${a.clarifying_questions.length})</summary>
+      <ul style="padding: 0 14px 14px; margin: 0; list-style: none;">${a.clarifying_questions.map(q => `<li class="ds-fg-2" style="font-size: 13px; padding: 4px 0;">• ${e(q)}</li>`).join('')}</ul>
     </details>`;
   }
 
   return html;
 };
 
-ZE.confirm = (msg) => new Promise((resolve) => {
+ZE.confirm = (msg, opts = {}) => new Promise((resolve) => {
   const wrap = document.createElement('div');
-  wrap.className = 'fixed inset-0 bg-black/70 z-[1100] flex items-center justify-center p-4';
+  wrap.className = 'ds-modal-backdrop';
+  const danger = opts.danger !== false;
   wrap.innerHTML = `
-    <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-sm">
-      <div class="text-zinc-200 mb-4">${ZE.escapeHtml(msg)}</div>
-      <div class="flex justify-end gap-2">
-        <button data-act="cancel" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
-        <button data-act="ok" class="px-4 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-400">Potwierdź</button>
+    <div class="ds-modal" style="max-width: 400px;">
+      <div class="ds-modal__body" style="padding-top: var(--ds-s-5);">
+        <div class="ds-body">${ZE.escapeHtml(msg)}</div>
+      </div>
+      <div class="ds-modal__footer">
+        <button data-act="cancel" class="ds-btn ds-btn--ghost">Anuluj</button>
+        <button data-act="ok" class="ds-btn ${danger ? 'ds-btn--danger' : 'ds-btn--primary'}">${opts.okLabel || 'Potwierdź'}</button>
       </div>
     </div>
   `;
@@ -289,14 +304,14 @@ ZE.confirm = (msg) => new Promise((resolve) => {
 });
 
 ZE.toast = (msg, type = 'info', timeout = 3500) => {
-  let wrap = document.querySelector('.ze-toast-wrap');
+  let wrap = document.querySelector('.ds-toast-wrap');
   if (!wrap) {
     wrap = document.createElement('div');
-    wrap.className = 'ze-toast-wrap';
+    wrap.className = 'ds-toast-wrap';
     document.body.appendChild(wrap);
   }
   const el = document.createElement('div');
-  el.className = 'ze-toast ze-toast--' + (type === 'error' ? 'err' : type === 'success' ? 'ok' : '');
+  el.className = 'ds-toast ' + (type === 'error' ? 'ds-toast--err' : type === 'success' ? 'ds-toast--ok' : '');
   el.textContent = msg;
   wrap.appendChild(el);
   setTimeout(() => el.remove(), timeout);

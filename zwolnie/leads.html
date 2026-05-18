@@ -5,176 +5,172 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Leady</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="/zwolnie/_assets/common.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 <style>
-  html, body { font-family: 'Inter', sans-serif; }
-  .ze-th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); background: #0a0a0a; }
-  .ze-td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
-  .ze-row:hover { background: rgba(255,255,255,0.025); }
-  .ze-row.is-starred { background: rgba(245, 158, 11, 0.04); }
+  .filter-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; background: var(--ds-surface-1); border: 1px solid var(--ds-border); border-radius: var(--ds-r-md); }
+  .quick-chip { padding: 4px 10px; border-radius: 999px; border: 1px solid var(--ds-border); font-size: 12px; color: var(--ds-fg-3); transition: all var(--ds-d-fast) var(--ds-ease); background: transparent; }
+  .quick-chip:hover { color: var(--ds-fg-1); border-color: var(--ds-border-hover); }
+  .quick-chip.is-active { background: var(--ds-fg-1); color: var(--ds-bg); border-color: var(--ds-fg-1); }
+  .row-actions { opacity: 0; transition: opacity var(--ds-d-fast) var(--ds-ease); }
+  tr:hover .row-actions { opacity: 1; }
+  .bulk-bar { position: sticky; top: var(--ds-header-h); z-index: 20; padding: 10px 16px; background: var(--ds-magic-gradient); color: white; border-radius: var(--ds-r-md); display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; box-shadow: var(--ds-shadow-3); }
 </style>
 </head>
-<body class="min-h-screen flex">
+<body>
 
-<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+<div class="ds-app">
+  <aside id="ze-sidebar" class="ds-sidebar"></aside>
 
-<main class="flex-1 flex flex-col min-w-0">
-  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-    <div class="flex items-center gap-2 text-sm">
-      <span class="text-zinc-500">Zwolnię</span>
-      <span class="text-zinc-700">/</span>
-      <span class="text-white font-medium">Leady</span>
-    </div>
-    <div class="flex items-center gap-2">
-      <button id="export-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
-        <i class="ph ph-download-simple"></i>
-        <span class="hidden md:inline">Export CSV</span>
-      </button>
-      <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-2.5 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
-        <i class="ph ph-arrows-clockwise text-base" id="refresh-icon"></i>
-      </button>
-      <button id="add-lead-btn" class="bg-white text-black hover:bg-zinc-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5">
-        <i class="ph ph-plus"></i>
-        <span class="hidden md:inline">Dodaj lead</span>
-      </button>
-    </div>
-  </header>
+  <main class="ds-main">
+    <header class="ds-header">
+      <div class="ds-breadcrumb">
+        <a href="/zwolnie/">Zwolnię</a>
+        <span class="ds-sep">/</span>
+        <span class="ds-current">Leady</span>
+      </div>
+      <div class="ds-flex ds-items-center ds-gap-2">
+        <button id="export-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-download-simple"></i> Export</button>
+        <button id="refresh-btn" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-arrows-clockwise" id="refresh-icon"></i></button>
+        <button id="add-lead-btn" class="ds-btn ds-btn--primary ds-btn--sm"><i class="ph ph-plus"></i> Dodaj lead</button>
+      </div>
+    </header>
 
-  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
-    <div class="max-w-7xl mx-auto">
-      <div class="flex items-end justify-between mb-6">
+    <div class="ds-content ds-fade-in">
+      <div class="ds-flex ds-items-start ds-justify-between ds-mb-6">
         <div>
-          <h1 class="text-2xl font-semibold text-white">Leady</h1>
-          <p class="text-zinc-500 text-sm">Wszystkie zgłoszenia z formularza i ręcznie dodane.</p>
+          <h1 class="ds-h1">Leady</h1>
+          <p class="ds-small ds-mt-2">Wszystkie zgłoszenia z formularza i dodane ręcznie.</p>
         </div>
-        <div class="text-right">
-          <div class="text-3xl font-semibold text-white" id="lead-count">—</div>
-          <div class="text-xs text-zinc-500" id="lead-count-filtered"></div>
+        <div style="text-align: right;">
+          <div class="ds-h1 ds-num" id="lead-count" style="font-size: 28px;">—</div>
+          <div class="ds-xs" id="lead-count-filtered"></div>
         </div>
       </div>
 
-      <!-- Filters -->
-      <div class="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4">
-        <div class="md:col-span-2 relative">
-          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
-          <input type="text" id="f-search" placeholder="Szukaj po imieniu, firmie, mailu..."
-                 class="ze-input w-full pl-10 pr-4 py-2.5 rounded-lg text-sm">
+      <!-- Filter bar -->
+      <div class="filter-bar ds-mb-3">
+        <div class="ds-input-group" style="flex: 1; min-width: 200px;">
+          <i class="ph ph-magnifying-glass ds-input-group__icon"></i>
+          <input id="f-search" type="text" class="ds-input" placeholder="Szukaj po imieniu, firmie, mailu...">
         </div>
-        <select id="f-status" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+        <select id="f-status" class="ds-select" style="width: 160px;">
           <option value="">Wszystkie statusy</option>
         </select>
-        <select id="f-industry" class="ze-input px-3 py-2.5 rounded-lg text-sm">
-          <option value="">Wszystkie branże</option>
+        <select id="f-industry" class="ds-select" style="width: 160px;">
+          <option value="">Każda branża</option>
         </select>
-        <select id="f-budget" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+        <select id="f-budget" class="ds-select" style="width: 140px;">
           <option value="">Każdy budżet</option>
         </select>
-        <select id="f-sort" class="ze-input px-3 py-2.5 rounded-lg text-sm">
-          <option value="created_at-desc">Najnowsze</option>
-          <option value="created_at-asc">Najstarsze</option>
-          <option value="updated_at-desc">Ostatnio zmienione</option>
-          <option value="contact_name-asc">Imię A-Z</option>
-          <option value="status-asc">Status</option>
-        </select>
-      </div>
-      <!-- Quick filters -->
-      <div class="flex flex-wrap items-center gap-2 mb-4 text-xs">
-        <span class="text-zinc-500">Szybkie:</span>
-        <button data-quick="todo" class="ze-quick px-2.5 py-1 rounded-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/10">Czeka na analizę</button>
-        <button data-quick="no-mvp" class="ze-quick px-2.5 py-1 rounded-md border border-violet-500/30 text-violet-300 hover:bg-violet-500/10">Bez MVP</button>
-        <button data-quick="needs-action" class="ze-quick px-2.5 py-1 rounded-md border border-blue-500/30 text-blue-300 hover:bg-blue-500/10">Wymaga akcji</button>
-        <button data-quick="stale" class="ze-quick px-2.5 py-1 rounded-md border border-red-500/30 text-red-300 hover:bg-red-500/10">Pilne (5+ dni)</button>
-        <button data-quick="starred" class="ze-quick px-2.5 py-1 rounded-md border border-amber-400/30 text-amber-300 hover:bg-amber-400/10">⭐ Gwiazdki</button>
-        <span class="text-zinc-700 mx-1">·</span>
-        <select id="f-date" class="ze-input text-xs px-2 py-1 rounded-md">
+        <select id="f-date" class="ds-select" style="width: 130px;">
           <option value="">Dowolna data</option>
           <option value="today">Dziś</option>
           <option value="week">Ostatni tydzień</option>
           <option value="month">Ostatni miesiąc</option>
         </select>
-        <button data-quick="clear" class="ze-quick px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-400 hover:bg-white/5">Wyczyść</button>
+        <select id="f-sort" class="ds-select" style="width: 160px;">
+          <option value="created_at-desc">Najnowsze</option>
+          <option value="created_at-asc">Najstarsze</option>
+          <option value="updated_at-desc">Ostatnio zmienione</option>
+          <option value="contact_name-asc">Imię A-Z</option>
+        </select>
       </div>
 
-      <!-- Bulk actions -->
-      <div id="bulk-bar" class="hidden mb-3 px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-lg flex items-center justify-between">
-        <span class="text-sm text-zinc-400"><span id="bulk-count">0</span> wybrane</span>
-        <div class="flex gap-2">
-          <button id="bulk-archive" class="text-zinc-400 hover:text-white text-xs px-3 py-1.5 rounded-md border border-zinc-700 hover:border-zinc-500">Archiwizuj</button>
-          <button id="bulk-delete" class="text-red-400 hover:text-red-300 text-xs px-3 py-1.5 rounded-md border border-red-500/30 hover:border-red-500/50 bg-red-500/10">Usuń</button>
+      <!-- Quick chips -->
+      <div class="ds-flex ds-items-center ds-gap-2 ds-mb-4" style="flex-wrap: wrap;">
+        <span class="ds-xs ds-fg-4" style="margin-right: 4px;">Szybkie:</span>
+        <button data-quick="todo" class="quick-chip">Czeka na analizę</button>
+        <button data-quick="no-mvp" class="quick-chip">Bez MVP</button>
+        <button data-quick="needs-action" class="quick-chip">Wymaga akcji</button>
+        <button data-quick="stale" class="quick-chip">Pilne (5+ dni)</button>
+        <button data-quick="starred" class="quick-chip">⭐ Gwiazdki</button>
+        <button data-quick="clear" class="quick-chip">Wyczyść</button>
+      </div>
+
+      <!-- Bulk bar -->
+      <div id="bulk-bar" class="bulk-bar ds-hidden">
+        <span style="font-weight: 500; font-size: 13px;"><span id="bulk-count">0</span> wybranych</span>
+        <div class="ds-flex ds-gap-2">
+          <button id="bulk-archive" class="ds-btn ds-btn--ghost ds-btn--sm" style="color: white; border-color: rgba(255,255,255,0.3);">Archiwizuj</button>
+          <button id="bulk-delete" class="ds-btn ds-btn--sm" style="background: rgba(0,0,0,0.3); color: white; border: 1px solid rgba(255,255,255,0.3);">Usuń</button>
         </div>
       </div>
 
       <!-- Table -->
-      <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
-        <table class="w-full text-sm">
+      <div class="ds-table--card">
+        <table class="ds-table">
           <thead>
             <tr>
-              <th class="ze-th w-10"><input type="checkbox" id="check-all" class="rounded bg-zinc-800 border-zinc-700"></th>
-              <th class="ze-th">Kontakt</th>
-              <th class="ze-th">Firma</th>
-              <th class="ze-th hidden lg:table-cell">Branża</th>
-              <th class="ze-th hidden xl:table-cell">Zespół</th>
-              <th class="ze-th hidden xl:table-cell">Budżet</th>
-              <th class="ze-th">Status</th>
-              <th class="ze-th">Postęp</th>
-              <th class="ze-th">Utworzony</th>
-              <th class="ze-th w-10"></th>
+              <th style="width: 36px;"><input type="checkbox" id="check-all"></th>
+              <th>Kontakt</th>
+              <th>Firma</th>
+              <th class="ds-truncate">Branża</th>
+              <th>Zespół</th>
+              <th>Budżet</th>
+              <th>Status</th>
+              <th>Postęp</th>
+              <th>Dodany</th>
+              <th style="width: 32px;"></th>
             </tr>
           </thead>
           <tbody id="leads-tbody">
-            <tr><td colspan="10" class="ze-td text-center text-zinc-500 py-10">Ładowanie...</td></tr>
+            <tr><td colspan="10" class="ds-table-empty">Ładowanie...</td></tr>
           </tbody>
         </table>
       </div>
     </div>
-  </div>
-</main>
+  </main>
+</div>
 
 <!-- Add Lead Modal -->
-<div id="add-modal" class="hidden fixed inset-0 bg-black/60 z-50 items-center justify-center p-4">
-  <div class="bg-zinc-900 border border-white/10 rounded-xl p-6 w-full max-w-lg">
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-semibold text-white">Dodaj lead ręcznie</h3>
-      <button onclick="closeAddModal()" class="text-zinc-500 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+<div id="add-modal" class="ds-modal-backdrop ds-hidden">
+  <div class="ds-modal">
+    <div class="ds-modal__header">
+      <div>
+        <h3 class="ds-h3">Dodaj lead ręcznie</h3>
+        <p class="ds-small ds-mt-2">Dla klienta z poza formularza.</p>
+      </div>
+      <button onclick="closeAddModal()" class="ds-btn ds-btn--ghost ds-btn--sm"><i class="ph ph-x"></i></button>
     </div>
-    <form id="add-form" class="space-y-3">
-      <div>
-        <label class="text-xs text-zinc-500 uppercase">Imię i nazwisko</label>
-        <input name="contact_name" required class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs text-zinc-500 uppercase">Email</label>
-          <input name="contact_email" type="email" required class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+    <div class="ds-modal__body">
+      <form id="add-form" class="ds-flex-col ds-gap-3">
+        <div class="ds-field">
+          <label class="ds-field__label">Imię i nazwisko *</label>
+          <input name="contact_name" required class="ds-input">
         </div>
-        <div>
-          <label class="text-xs text-zinc-500 uppercase">Telefon</label>
-          <input name="contact_phone" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        <div class="ds-grid ds-grid-2 ds-gap-3">
+          <div class="ds-field">
+            <label class="ds-field__label">Email *</label>
+            <input name="contact_email" type="email" required class="ds-input">
+          </div>
+          <div class="ds-field">
+            <label class="ds-field__label">Telefon</label>
+            <input name="contact_phone" class="ds-input">
+          </div>
         </div>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div>
-          <label class="text-xs text-zinc-500 uppercase">Firma</label>
-          <input name="company" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        <div class="ds-grid ds-grid-2 ds-gap-3">
+          <div class="ds-field">
+            <label class="ds-field__label">Firma</label>
+            <input name="company" class="ds-input">
+          </div>
+          <div class="ds-field">
+            <label class="ds-field__label">Strona WWW</label>
+            <input name="website" class="ds-input">
+          </div>
         </div>
-        <div>
-          <label class="text-xs text-zinc-500 uppercase">Strona WWW</label>
-          <input name="website" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        <div class="ds-field">
+          <label class="ds-field__label">Krótki opis problemu</label>
+          <textarea name="problem" rows="3" class="ds-textarea"></textarea>
         </div>
-      </div>
-      <div>
-        <label class="text-xs text-zinc-500 uppercase">Krótki opis problemu</label>
-        <textarea name="problem" rows="3" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1"></textarea>
-      </div>
-      <div class="flex justify-end gap-2 pt-2">
-        <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
-        <button type="submit" class="px-4 py-2 rounded-lg text-sm bg-white text-black font-semibold hover:bg-zinc-200">Dodaj</button>
-      </div>
-    </form>
+      </form>
+    </div>
+    <div class="ds-modal__footer">
+      <button onclick="closeAddModal()" class="ds-btn ds-btn--ghost">Anuluj</button>
+      <button onclick="document.getElementById('add-form').requestSubmit()" class="ds-btn ds-btn--primary">Dodaj lead</button>
+    </div>
   </div>
 </div>
 
@@ -191,87 +187,63 @@ let activeQuick = null;
   const { staff } = await ZE_Auth.require();
   ZE_Sidebar.render({ active: 'leads', userEmail: staff.email });
 
-  // Populate filter dropdowns
   const fStatus = document.getElementById('f-status');
-  ZE.STATUS_ORDER.forEach(s => {
-    const opt = document.createElement('option');
-    opt.value = s; opt.textContent = ZE.STATUS_LABELS[s];
-    fStatus.appendChild(opt);
-  });
+  ZE.STATUS_ORDER.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = ZE.STATUS_LABELS[s]; fStatus.appendChild(o); });
   const fIndustry = document.getElementById('f-industry');
-  Object.entries(ZE.INDUSTRY_LABELS).forEach(([v, l]) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = l;
-    fIndustry.appendChild(o);
-  });
+  Object.entries(ZE.INDUSTRY_LABELS).forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fIndustry.appendChild(o); });
   const fBudget = document.getElementById('f-budget');
-  Object.entries(ZE.BUDGET_LABELS).forEach(([v, l]) => {
-    const o = document.createElement('option'); o.value = v; o.textContent = l;
-    fBudget.appendChild(o);
-  });
+  Object.entries(ZE.BUDGET_LABELS).forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; fBudget.appendChild(o); });
 
   await loadLeads();
-
-  ['f-search', 'f-status', 'f-industry', 'f-budget', 'f-sort', 'f-date'].forEach(id => {
+  ['f-search','f-status','f-industry','f-budget','f-date','f-sort'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) { el.addEventListener('input', applyFilters); el.addEventListener('change', applyFilters); }
+    el.addEventListener('input', applyFilters);
+    el.addEventListener('change', applyFilters);
   });
-
   document.getElementById('refresh-btn').addEventListener('click', async () => {
-    document.getElementById('refresh-icon').classList.add('ze-spin');
+    document.getElementById('refresh-icon').classList.add('ds-spin');
     await loadLeads();
-    setTimeout(() => document.getElementById('refresh-icon').classList.remove('ze-spin'), 600);
+    setTimeout(() => document.getElementById('refresh-icon').classList.remove('ds-spin'), 600);
   });
-
   document.getElementById('check-all').addEventListener('change', (e) => {
-    const visible = document.querySelectorAll('.ze-row-check');
-    visible.forEach(c => {
+    document.querySelectorAll('.ze-row-check').forEach(c => {
       c.checked = e.target.checked;
-      if (e.target.checked) selectedIds.add(c.dataset.id);
-      else selectedIds.delete(c.dataset.id);
+      if (e.target.checked) selectedIds.add(c.dataset.id); else selectedIds.delete(c.dataset.id);
     });
+    document.querySelectorAll('#leads-tbody tr').forEach(r => r.classList.toggle('is-selected', selectedIds.has(r.dataset.id)));
     updateBulkBar();
   });
-
   document.getElementById('bulk-delete').addEventListener('click', async () => {
-    if (!confirm(`Na pewno usunąć ${selectedIds.size} leadów? Tego się nie cofnie.`)) return;
+    const ok = await ZE.confirm(`Usunąć ${selectedIds.size} leadów? Nieodwracalne.`);
+    if (!ok) return;
     const { error } = await ZE_SB.from('ze_leads').delete().in('id', Array.from(selectedIds));
-    if (error) { ZE.toast(error.message, 'error'); return; }
-    ZE.toast('Usunięto.', 'success');
-    selectedIds.clear();
-    await loadLeads();
+    if (error) return ZE.toast(error.message, 'error');
+    ZE.toast('Usunięto.', 'success'); selectedIds.clear(); await loadLeads();
   });
   document.getElementById('bulk-archive').addEventListener('click', async () => {
     const { error } = await ZE_SB.from('ze_leads').update({ status: 'archived' }).in('id', Array.from(selectedIds));
-    if (error) { ZE.toast(error.message, 'error'); return; }
-    ZE.toast('Zarchiwizowano.', 'success');
-    selectedIds.clear();
-    await loadLeads();
+    if (error) return ZE.toast(error.message, 'error');
+    ZE.toast('Zarchiwizowano.', 'success'); selectedIds.clear(); await loadLeads();
   });
-
   document.getElementById('export-btn').addEventListener('click', exportCSV);
-  document.getElementById('add-lead-btn').addEventListener('click', () => document.getElementById('add-modal').classList.remove('hidden'));
+  document.getElementById('add-lead-btn').addEventListener('click', () => document.getElementById('add-modal').classList.remove('ds-hidden'));
   document.getElementById('add-form').addEventListener('submit', handleAddLead);
-
-  document.querySelectorAll('.ze-quick').forEach(btn => {
+  document.querySelectorAll('[data-quick]').forEach(btn => {
     btn.addEventListener('click', () => {
       activeQuick = btn.dataset.quick === 'clear' ? null : btn.dataset.quick;
-      document.querySelectorAll('.ze-quick').forEach(b => b.classList.toggle('ring-2', b.dataset.quick === activeQuick));
-      if (!activeQuick) {
-        ['f-status','f-industry','f-budget','f-search'].forEach(id => document.getElementById(id).value = '');
-      }
+      document.querySelectorAll('[data-quick]').forEach(b => b.classList.toggle('is-active', b.dataset.quick === activeQuick));
+      if (!activeQuick) ['f-status','f-industry','f-budget','f-search','f-date'].forEach(id => document.getElementById(id).value = '');
       applyFilters();
     });
   });
 })();
 
 async function loadLeads() {
-  const { data, error } = await ZE_SB
-    .from('ze_leads')
+  const { data, error } = await ZE_SB.from('ze_leads')
     .select('*, ze_lead_attachments(count), ze_lead_notes(count)')
-    .order('created_at', { ascending: false })
-    .range(0, 999);
+    .order('created_at', { ascending: false }).range(0, 999);
   if (error) {
-    document.getElementById('leads-tbody').innerHTML = `<tr><td colspan="9" class="ze-td text-red-400 py-10 text-center">${ZE.escapeHtml(error.message)}</td></tr>`;
+    document.getElementById('leads-tbody').innerHTML = `<tr><td colspan="10" class="ds-table-empty" style="color: var(--ds-red)">${ZE.escapeHtml(error.message)}</td></tr>`;
     return;
   }
   allLeads = data || [];
@@ -285,6 +257,7 @@ function applyFilters() {
   const fs = document.getElementById('f-status').value;
   const fi = document.getElementById('f-industry').value;
   const fb = document.getElementById('f-budget').value;
+  const fd = document.getElementById('f-date').value;
   const [sortKey, sortDir] = document.getElementById('f-sort').value.split('-');
 
   let list = allLeads.filter(l => {
@@ -292,7 +265,7 @@ function applyFilters() {
     if (fi && l.industry !== fi) return false;
     if (fb && l.budget !== fb) return false;
     if (q) {
-      const hay = [l.contact_name, l.company, l.contact_email, l.contact_phone, l.industry].filter(Boolean).join(' ').toLowerCase();
+      const hay = [l.contact_name, l.company, l.contact_email, l.contact_phone].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
     if (activeQuick === 'todo' && (l.ai_analysis || ['lost','archived'].includes(l.status))) return false;
@@ -303,93 +276,82 @@ function applyFilters() {
       if (days == null || days < 5 || ['won','lost','archived'].includes(l.status)) return false;
     }
     if (activeQuick === 'starred' && !l.starred) return false;
-
-    const fd = document.getElementById('f-date')?.value;
     if (fd) {
       const ago = { today: 1, week: 7, month: 30 }[fd];
-      const cutoff = Date.now() - ago * 86400000;
-      if (new Date(l.created_at).getTime() < cutoff) return false;
+      if (new Date(l.created_at).getTime() < Date.now() - ago * 86400000) return false;
     }
     return true;
   });
 
   list.sort((a, b) => {
-    const av = a[sortKey] || '';
-    const bv = b[sortKey] || '';
+    const av = a[sortKey] || '', bv = b[sortKey] || '';
     if (av < bv) return sortDir === 'asc' ? -1 : 1;
     if (av > bv) return sortDir === 'asc' ? 1 : -1;
     return 0;
   });
-
   renderLeads(list);
-  document.getElementById('lead-count-filtered').textContent = list.length !== allLeads.length
-    ? `pokazane: ${list.length}`
-    : '';
+  document.getElementById('lead-count-filtered').textContent = list.length !== allLeads.length ? `widoczne: ${list.length}` : '';
 }
 
 function renderLeads(list) {
   const tbody = document.getElementById('leads-tbody');
   if (!list.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="ze-td text-center text-zinc-500 py-10">Brak leadów spełniających kryteria.</td></tr>';
+    tbody.innerHTML = `<tr><td colspan="10"><div class="ds-empty"><div class="ds-empty__icon"><i class="ph ph-magnifying-glass"></i></div><div class="ds-empty__title">Nic nie znaleziono</div><div class="ds-empty__desc">Brak leadów spełniających kryteria. Zmień filtry albo dodaj lead.</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML = list.map(l => {
     const attCount = (l.ze_lead_attachments && l.ze_lead_attachments[0]?.count) || 0;
     const noteCount = (l.ze_lead_notes && l.ze_lead_notes[0]?.count) || 0;
-    const hasAnalysis = !!l.ai_analysis;
-    const hasMvp = !!l.mvp_html;
+    const safeWeb = ZE.safeUrl(l.website);
     return `
-    <tr class="ze-row cursor-pointer ${l.starred ? 'is-starred' : ''}" data-id="${l.id}">
-      <td class="ze-td" onclick="event.stopPropagation()">
-        <input type="checkbox" class="ze-row-check rounded bg-zinc-800 border-zinc-700"
-               data-id="${l.id}" ${selectedIds.has(l.id) ? 'checked' : ''}
-               onchange="toggleSelect('${l.id}', this.checked)">
-      </td>
-      <td class="ze-td">
-        <div class="flex items-center gap-3 group">
-          ${ZE.avatarHtml(l.contact_name || l.contact_email || '?', 32, 'flex-shrink-0')}
-          <div class="min-w-0">
-            <div class="font-medium text-white truncate">${ZE.escapeHtml(l.contact_name || '(brak imienia)')}</div>
-            <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(l.contact_email || '—')}</div>
+      <tr data-id="${l.id}" class="${selectedIds.has(l.id) ? 'is-selected' : ''}">
+        <td onclick="event.stopPropagation()">
+          <input type="checkbox" class="ze-row-check" data-id="${l.id}" ${selectedIds.has(l.id) ? 'checked' : ''} onchange="toggleSelect('${l.id}', this.checked)">
+        </td>
+        <td>
+          <div class="ds-flex ds-items-center ds-gap-3">
+            ${ZE.avatarHtml(l.contact_name || l.contact_email || '?', 32)}
+            <div style="min-width: 0;">
+              <div class="ds-fg-1 ds-truncate" style="font-weight: 500;">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
+              <div class="ds-xs ds-truncate ds-mono">${ZE.escapeHtml(l.contact_email || '—')}</div>
+            </div>
+            <div class="row-actions ds-flex ds-gap-1" onclick="event.stopPropagation()">
+              ${l.contact_email ? `<a href="mailto:${ZE.escapeHtml(l.contact_email)}" title="Email" class="ds-btn ds-btn--ghost ds-btn--sm" style="height:24px;padding:0 6px"><i class="ph ph-envelope"></i></a>` : ''}
+              ${l.contact_phone ? `<a href="tel:${ZE.escapeHtml(l.contact_phone)}" title="Zadzwoń" class="ds-btn ds-btn--ghost ds-btn--sm" style="height:24px;padding:0 6px"><i class="ph ph-phone"></i></a>` : ''}
+            </div>
           </div>
-          <div class="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 ml-auto" onclick="event.stopPropagation()">
-            ${l.contact_email ? `<a href="mailto:${ZE.escapeHtml(l.contact_email)}" class="text-zinc-500 hover:text-emerald-400 p-1" title="Wyślij mail"><i class="ph ph-envelope"></i></a>` : ''}
-            ${l.contact_phone ? `<a href="tel:${ZE.escapeHtml(l.contact_phone)}" class="text-zinc-500 hover:text-emerald-400 p-1" title="Zadzwoń"><i class="ph ph-phone"></i></a>` : ''}
+        </td>
+        <td>
+          <div class="ds-fg-2 ds-truncate" style="max-width: 180px;">${ZE.escapeHtml(l.company || '—')}</div>
+          ${safeWeb ? `<a href="${ZE.escapeHtml(safeWeb)}" target="_blank" rel="noopener nofollow" onclick="event.stopPropagation()" class="ds-xs ds-truncate" style="display:inline-block;max-width:160px;color:var(--ds-blue)"><i class="ph ph-link-simple"></i> ${ZE.escapeHtml(l.website.replace(/^https?:\/\//, ''))}</a>` : ''}
+        </td>
+        <td class="ds-fg-3 ds-truncate">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry || '—')}</td>
+        <td class="ds-fg-3">${ZE.escapeHtml(ZE.TEAM_SIZE_LABELS[l.team_size] || '—')}</td>
+        <td class="ds-fg-3">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || '—')}</td>
+        <td onclick="event.stopPropagation()">
+          <select class="ds-select ze-row-status" style="height: 26px; font-size: 11px; padding: 0 6px;" data-id="${l.id}">
+            ${ZE.STATUS_ORDER.map(s => `<option value="${s}" ${s === l.status ? 'selected' : ''}>${ZE.STATUS_LABELS[s]}</option>`).join('')}
+          </select>
+        </td>
+        <td>
+          <div class="ds-flex ds-items-center ds-gap-2" style="font-size: 12px;">
+            ${l.ai_analysis ? '<span title="Analiza" style="color: var(--ds-magic)"><i class="ph-fill ph-sparkle"></i></span>' : '<span title="Brak analizy" style="color: var(--ds-fg-6)"><i class="ph ph-sparkle"></i></span>'}
+            ${l.mvp_html ? '<span title="MVP" style="color: var(--ds-emerald)"><i class="ph-fill ph-cursor-click"></i></span>' : '<span title="Brak MVP" style="color: var(--ds-fg-6)"><i class="ph ph-cursor-click"></i></span>'}
+            ${attCount > 0 ? `<span title="Pliki: ${attCount}" style="color: var(--ds-fg-4); font-size: 11px;"><i class="ph ph-paperclip"></i> ${attCount}</span>` : ''}
+            ${noteCount > 0 ? `<span title="Notatki: ${noteCount}" style="color: var(--ds-fg-4); font-size: 11px;"><i class="ph ph-note"></i> ${noteCount}</span>` : ''}
+            ${l.converted_to_project_id ? '<span title="Projekt utworzony" style="color: var(--ds-magic)"><i class="ph-fill ph-folder-open"></i></span>' : ''}
           </div>
-        </div>
-      </td>
-      <td class="ze-td">
-        <div class="text-zinc-300">${ZE.escapeHtml(l.company || '—')}</div>
-        ${(() => { const u = ZE.safeUrl(l.website); return u ? `<a href="${ZE.escapeHtml(u)}" target="_blank" rel="noopener nofollow" onclick="event.stopPropagation()" class="text-xs text-zinc-500 hover:text-emerald-400 truncate inline-block max-w-[160px]"><i class="ph ph-link-simple"></i> ${ZE.escapeHtml(l.website.replace(/^https?:\/\//, ''))}</a>` : ''; })()}
-      </td>
-      <td class="ze-td hidden lg:table-cell text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry || '—')}</td>
-      <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.TEAM_SIZE_LABELS[l.team_size] || l.team_size || '—')}</td>
-      <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget || '—')}</td>
-      <td class="ze-td" onclick="event.stopPropagation()">
-        <select class="ze-input text-xs px-2 py-1 rounded ze-row-status" data-id="${l.id}">
-          ${ZE.STATUS_ORDER.map(s => `<option value="${s}" ${s === l.status ? 'selected' : ''}>${ZE.STATUS_LABELS[s]}</option>`).join('')}
-        </select>
-      </td>
-      <td class="ze-td">
-        <div class="flex items-center gap-1.5 text-xs">
-          ${hasAnalysis ? '<span title="Analiza AI gotowa" class="text-emerald-400"><i class="ph-fill ph-sparkle"></i></span>' : '<span title="Brak analizy" class="text-zinc-700"><i class="ph ph-sparkle"></i></span>'}
-          ${hasMvp ? '<span title="MVP gotowe" class="text-violet-400"><i class="ph-fill ph-cursor-click"></i></span>' : '<span title="Brak MVP" class="text-zinc-700"><i class="ph ph-cursor-click"></i></span>'}
-          ${attCount > 0 ? `<span title="Załączniki: ${attCount}" class="text-zinc-400"><i class="ph ph-paperclip"></i>${attCount}</span>` : ''}
-          ${noteCount > 0 ? `<span title="Notatki: ${noteCount}" class="text-zinc-400"><i class="ph ph-note"></i>${noteCount}</span>` : ''}
-          ${l.converted_to_project_id ? '<span title="Konwertowany na projekt" class="text-violet-400"><i class="ph-fill ph-folder-open"></i></span>' : ''}
-        </div>
-      </td>
-      <td class="ze-td text-zinc-500 text-xs whitespace-nowrap">${ZE.fmtRelative(l.created_at)}</td>
-      <td class="ze-td text-right">
-        <button onclick="event.stopPropagation(); toggleStar('${l.id}', ${!l.starred})" class="text-zinc-500 hover:text-amber-400">
-          <i class="ph ${l.starred ? 'ph-fill ph-star' : 'ph-star'}"></i>
-        </button>
-      </td>
-    </tr>
-  `;
+        </td>
+        <td class="ds-xs ds-num" style="white-space: nowrap;">${ZE.fmtRelative(l.created_at)}</td>
+        <td onclick="event.stopPropagation()">
+          <button onclick="toggleStar('${l.id}', ${!l.starred})" class="ds-btn ds-btn--ghost ds-btn--sm" style="height:24px;padding:0 4px;color:${l.starred ? 'var(--ds-amber)' : 'var(--ds-fg-5)'}">
+            <i class="ph ${l.starred ? 'ph-fill ph-star' : 'ph-star'}"></i>
+          </button>
+        </td>
+      </tr>
+    `;
   }).join('');
-
-  // Bind inline status changes
+  tbody.querySelectorAll('tr').forEach(row => row.addEventListener('click', () => { location.href = '/zwolnie/lead?id=' + row.dataset.id; }));
   tbody.querySelectorAll('.ze-row-status').forEach(sel => {
     sel.addEventListener('change', async (e) => {
       const id = sel.dataset.id;
@@ -397,74 +359,53 @@ function renderLeads(list) {
       const { error } = await ZE_SB.from('ze_leads').update({ status: sel.value }).eq('id', id);
       if (error) { ZE.toast(error.message, 'error'); sel.value = old; return; }
       await ZE.logActivity(id, 'status_changed', { from: old, to: sel.value });
-      const lead = allLeads.find(x => x.id === id);
-      if (lead) lead.status = sel.value;
+      const lead = allLeads.find(x => x.id === id); if (lead) lead.status = sel.value;
       ZE.toast('Status zmieniony.', 'success');
-    });
-  });
-
-  tbody.querySelectorAll('.ze-row').forEach(row => {
-    row.addEventListener('click', () => {
-      location.href = '/zwolnie/lead?id=' + row.dataset.id;
     });
   });
 }
 
 function toggleSelect(id, checked) {
-  if (checked) selectedIds.add(id);
-  else selectedIds.delete(id);
+  if (checked) selectedIds.add(id); else selectedIds.delete(id);
+  document.querySelector(`#leads-tbody tr[data-id="${id}"]`)?.classList.toggle('is-selected', checked);
   updateBulkBar();
 }
 function updateBulkBar() {
   const bar = document.getElementById('bulk-bar');
   document.getElementById('bulk-count').textContent = selectedIds.size;
-  bar.classList.toggle('hidden', selectedIds.size === 0);
+  bar.classList.toggle('ds-hidden', selectedIds.size === 0);
 }
-
 async function toggleStar(id, value) {
   await ZE_SB.from('ze_leads').update({ starred: value }).eq('id', id);
   await loadLeads();
 }
-
-function closeAddModal() {
-  document.getElementById('add-modal').classList.add('hidden');
-}
-
+function closeAddModal() { document.getElementById('add-modal').classList.add('ds-hidden'); }
 async function handleAddLead(e) {
   e.preventDefault();
   const fd = new FormData(e.target);
   const payload = {
-    contact_name: fd.get('contact_name'),
-    contact_email: fd.get('contact_email'),
-    contact_phone: fd.get('contact_phone') || null,
-    company: fd.get('company') || null,
-    website: fd.get('website') || null,
-    problem: fd.get('problem') || null,
-    source: 'manual',
-    status: 'new'
+    contact_name: fd.get('contact_name'), contact_email: fd.get('contact_email'),
+    contact_phone: fd.get('contact_phone') || null, company: fd.get('company') || null,
+    website: fd.get('website') || null, problem: fd.get('problem') || null,
+    source: 'manual', status: 'new'
   };
   const { data, error } = await ZE_SB.from('ze_leads').insert(payload).select('id').single();
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  closeAddModal();
-  e.target.reset();
+  if (error) return ZE.toast(error.message, 'error');
+  closeAddModal(); e.target.reset();
   ZE.toast('Lead dodany.', 'success');
   location.href = '/zwolnie/lead?id=' + data.id;
 }
-
 function exportCSV() {
-  const visible = Array.from(document.querySelectorAll('.ze-row')).map(r => r.dataset.id);
-  const list = allLeads.filter(l => visible.includes(l.id));
+  const visible = new Set(Array.from(document.querySelectorAll('#leads-tbody tr')).map(r => r.dataset.id));
+  const list = allLeads.filter(l => visible.has(l.id));
   if (!list.length) { ZE.toast('Nic do wyeksportowania.', 'error'); return; }
-  const headers = ['created_at', 'status', 'contact_name', 'contact_email', 'contact_phone', 'company', 'website', 'industry', 'team_size', 'payroll', 'budget', 'problem'];
+  const headers = ['created_at','status','contact_name','contact_email','contact_phone','company','website','industry','team_size','payroll','budget','problem'];
   const rows = list.map(l => headers.map(h => {
     let v = l[h] ?? '';
-    if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))) {
-      v = '"' + v.replace(/"/g, '""') + '"';
-    }
+    if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))) v = '"' + v.replace(/"/g, '""') + '"';
     return v;
   }).join(','));
-  const csv = headers.join(',') + '\n' + rows.join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const blob = new Blob(['﻿' + headers.join(',') + '\n' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `zwolnie-leady-${new Date().toISOString().slice(0,10)}.csv`;

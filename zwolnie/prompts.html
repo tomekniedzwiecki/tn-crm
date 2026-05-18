@@ -5,44 +5,34 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Zwolnię · Prompty AI</title>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-<script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
-<link rel="stylesheet" href="/zwolnie/_assets/common.css">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  html, body { font-family: 'Inter', sans-serif; }
-  textarea.code { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; }
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/geist@1/dist/fonts.css">
+<link rel="stylesheet" href="/zwolnie/_assets/ds.css">
 </head>
-<body class="min-h-screen flex">
+<body>
 
-<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
-
-<main class="flex-1 flex flex-col min-w-0">
-  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
-    <div class="flex items-center gap-2 text-sm">
-      <span class="text-zinc-500">Zwolnię</span>
-      <span class="text-zinc-700">/</span>
-      <span class="text-white font-medium">Prompty AI</span>
-    </div>
-    <button id="add-prompt-btn" class="bg-white text-black hover:bg-zinc-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5">
-      <i class="ph ph-plus"></i>
-      <span>Nowy prompt</span>
-    </button>
-  </header>
-
-  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
-    <div class="max-w-5xl mx-auto">
-      <div class="mb-6">
-        <h1 class="text-2xl font-semibold text-white">Prompty AI</h1>
-        <p class="text-zinc-500 text-sm">Szablony do generowania w Claude Code. Zmienne {{contact_name}}, {{company}}, {{website}}, {{industry}}, {{team_size}}, {{payroll}}, {{budget}}, {{problem}}.</p>
+<div class="ds-app">
+  <aside id="ze-sidebar" class="ds-sidebar"></aside>
+  <main class="ds-main">
+    <header class="ds-header">
+      <div class="ds-breadcrumb">
+        <a href="/zwolnie/">Zwolnię</a>
+        <span class="ds-sep">/</span>
+        <span class="ds-current">Prompty AI</span>
       </div>
+      <button id="add-prompt-btn" class="ds-btn ds-btn--magic ds-btn--sm"><i class="ph ph-plus"></i> Nowy prompt</button>
+    </header>
 
-      <div id="prompts-list" class="space-y-4"></div>
+    <div class="ds-content ds-fade-in" style="max-width: 1100px;">
+      <div class="ds-mb-6">
+        <h1 class="ds-h1">Prompty AI</h1>
+        <p class="ds-small ds-mt-2">Szablony używane w Claude Code. Zmienne: <code class="ds-mono">{{contact_name}}</code>, <code class="ds-mono">{{company}}</code>, <code class="ds-mono">{{website}}</code>, <code class="ds-mono">{{industry}}</code>, <code class="ds-mono">{{team_size}}</code>, <code class="ds-mono">{{payroll}}</code>, <code class="ds-mono">{{budget}}</code>, <code class="ds-mono">{{problem}}</code>, <code class="ds-mono">{{lead_id}}</code>, <code class="ds-mono">{{panel_url}}</code>.</p>
+      </div>
+      <div id="prompts-list" class="ds-flex-col ds-gap-4"></div>
     </div>
-  </div>
-</main>
+  </main>
+</div>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -55,66 +45,67 @@ let prompts = [];
   const { staff } = await ZE_Auth.require();
   ZE_Sidebar.render({ active: 'prompts', userEmail: staff.email });
   await loadPrompts();
-
   document.getElementById('add-prompt-btn').addEventListener('click', addPrompt);
 })();
 
 async function loadPrompts() {
   const { data, error } = await ZE_SB.from('ze_prompts').select('*').order('created_at');
-  if (error) { ZE.toast(error.message, 'error'); return; }
+  if (error) return ZE.toast(error.message, 'error');
   prompts = data || [];
   renderPrompts();
 }
 
 function renderPrompts() {
   const el = document.getElementById('prompts-list');
-  if (!prompts.length) {
-    el.innerHTML = '<div class="text-sm text-zinc-500 py-10 text-center">Brak promptów.</div>';
-    return;
-  }
+  if (!prompts.length) { el.innerHTML = '<div class="ds-empty"><div class="ds-empty__icon"><i class="ph ph-sparkle"></i></div><div class="ds-empty__title">Brak promptów</div></div>'; return; }
   el.innerHTML = prompts.map((p, i) => `
-    <details class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden" ${i === 0 ? 'open' : ''}>
-      <summary class="px-5 py-4 cursor-pointer hover:bg-white/5 flex items-center justify-between">
-        <div class="min-w-0">
-          <div class="text-white font-semibold">${ZE.escapeHtml(p.title)}</div>
-          <div class="text-xs text-zinc-500 truncate">slug: <code class="text-zinc-400">${ZE.escapeHtml(p.slug)}</code> · format: ${ZE.escapeHtml(p.output_format)} · ${ZE.fmtRelative(p.updated_at)}</div>
+    <details class="ds-card ds-card--magic" ${i === 0 ? 'open' : ''}>
+      <summary style="padding: 16px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="ds-flex ds-items-center ds-gap-3">
+            <span class="ds-avatar" style="width: 32px; height: 32px; background: var(--ds-magic-gradient);"><i class="ph ph-sparkle"></i></span>
+            <div>
+              <div class="ds-h4">${ZE.escapeHtml(p.title)}</div>
+              <div class="ds-xs ds-mt-2">slug <code class="ds-mono">${ZE.escapeHtml(p.slug)}</code> · format ${ZE.escapeHtml(p.output_format)} · ${ZE.fmtRelative(p.updated_at)}</div>
+            </div>
+          </div>
         </div>
-        <i class="ph ph-caret-down text-zinc-500"></i>
+        <i class="ph ph-caret-down" style="color: var(--ds-fg-4);"></i>
       </summary>
-      <div class="px-5 pb-5 border-t border-white/5">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 my-4">
-          <div>
-            <label class="text-xs text-zinc-500 uppercase">Tytuł</label>
-            <input data-field="title" data-id="${p.id}" value="${ZE.escapeHtml(p.title)}" class="ze-input w-full px-3 py-2 rounded-lg text-sm mt-1">
+      <div style="padding: 0 20px 20px; border-top: 1px solid var(--ds-border);">
+        <div class="ds-grid ds-grid-3 ds-gap-3 ds-mt-4">
+          <div class="ds-field">
+            <label class="ds-field__label">Tytuł</label>
+            <input data-field="title" data-id="${p.id}" value="${ZE.escapeHtml(p.title)}" class="ds-input">
           </div>
-          <div>
-            <label class="text-xs text-zinc-500 uppercase">Slug</label>
-            <input data-field="slug" data-id="${p.id}" value="${ZE.escapeHtml(p.slug)}" class="ze-input w-full px-3 py-2 rounded-lg text-sm mt-1 font-mono">
+          <div class="ds-field">
+            <label class="ds-field__label">Slug</label>
+            <input data-field="slug" data-id="${p.id}" value="${ZE.escapeHtml(p.slug)}" class="ds-input ds-mono">
           </div>
-          <div>
-            <label class="text-xs text-zinc-500 uppercase">Format output</label>
-            <select data-field="output_format" data-id="${p.id}" class="ze-input w-full px-3 py-2 rounded-lg text-sm mt-1">
+          <div class="ds-field">
+            <label class="ds-field__label">Format output</label>
+            <select data-field="output_format" data-id="${p.id}" class="ds-select">
               <option value="markdown" ${p.output_format==='markdown'?'selected':''}>markdown</option>
               <option value="json" ${p.output_format==='json'?'selected':''}>json</option>
               <option value="html" ${p.output_format==='html'?'selected':''}>html</option>
             </select>
           </div>
         </div>
-        <div>
-          <label class="text-xs text-zinc-500 uppercase">Opis (do czego służy)</label>
-          <input data-field="description" data-id="${p.id}" value="${ZE.escapeHtml(p.description || '')}" class="ze-input w-full px-3 py-2 rounded-lg text-sm mt-1">
+        <div class="ds-field ds-mt-3">
+          <label class="ds-field__label">Opis (do czego służy)</label>
+          <input data-field="description" data-id="${p.id}" value="${ZE.escapeHtml(p.description || '')}" class="ds-input">
         </div>
-        <div class="mt-3">
-          <label class="text-xs text-zinc-500 uppercase">Szablon (z {{placeholders}})</label>
-          <textarea data-field="template" data-id="${p.id}" rows="16" class="ze-input code w-full px-3 py-3 rounded-lg mt-1">${ZE.escapeHtml(p.template)}</textarea>
+        <div class="ds-field ds-mt-3">
+          <label class="ds-field__label">Szablon (z {{placeholders}})</label>
+          <textarea data-field="template" data-id="${p.id}" rows="16" class="ds-textarea ds-mono" style="font-size: 12px; line-height: 1.55;">${ZE.escapeHtml(p.template)}</textarea>
         </div>
-        <div class="mt-3">
-          <label class="text-xs text-zinc-500 uppercase">Oczekiwany output (komunikat dla Tomka)</label>
-          <input data-field="expected_output" data-id="${p.id}" value="${ZE.escapeHtml(p.expected_output || '')}" class="ze-input w-full px-3 py-2 rounded-lg text-sm mt-1">
+        <div class="ds-field ds-mt-3">
+          <label class="ds-field__label">Oczekiwany output (notatka dla Tomka)</label>
+          <input data-field="expected_output" data-id="${p.id}" value="${ZE.escapeHtml(p.expected_output || '')}" class="ds-input">
         </div>
-        <div class="flex justify-between gap-2 mt-4">
-          <button onclick="deletePrompt('${p.id}', '${ZE.escapeHtml(p.title)}')" class="text-red-400 hover:text-red-300 text-xs px-3 py-2 border border-red-500/20 rounded-md">Usuń</button>
-          <button onclick="savePrompt('${p.id}')" class="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2 rounded-lg text-sm font-semibold">Zapisz</button>
+        <div class="ds-flex ds-justify-between ds-mt-4">
+          <button onclick="deletePrompt('${p.id}', '${ZE.escapeHtml(p.title)}')" class="ds-btn ds-btn--danger ds-btn--sm">Usuń</button>
+          <button onclick="savePrompt('${p.id}')" class="ds-btn ds-btn--magic">Zapisz</button>
         </div>
       </div>
     </details>
@@ -123,37 +114,35 @@ function renderPrompts() {
 
 async function savePrompt(id) {
   const fields = {};
-  document.querySelectorAll(`[data-id="${id}"][data-field]`).forEach(el => {
-    fields[el.dataset.field] = el.value;
-  });
+  document.querySelectorAll(`[data-id="${id}"][data-field]`).forEach(el => fields[el.dataset.field] = el.value);
   const staff = ZE_Auth.staff();
   fields.updated_by = staff.id;
   const { error } = await ZE_SB.from('ze_prompts').update(fields).eq('id', id);
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  ZE.toast('Zapisano.', 'success');
-  await loadPrompts();
+  if (error) return ZE.toast(error.message, 'error');
+  ZE.toast('Zapisano.', 'success'); await loadPrompts();
 }
 
 async function deletePrompt(id, title) {
-  if (!confirm(`Usunąć prompt "${title}"?`)) return;
+  const ok = await ZE.confirm(`Usunąć prompt „${title}"?`);
+  if (!ok) return;
   const { error } = await ZE_SB.from('ze_prompts').delete().eq('id', id);
-  if (error) { ZE.toast(error.message, 'error'); return; }
-  ZE.toast('Usunięto.', 'success');
-  await loadPrompts();
+  if (error) return ZE.toast(error.message, 'error');
+  ZE.toast('Usunięto.', 'success'); await loadPrompts();
 }
+window.deletePrompt = deletePrompt;
+window.savePrompt = savePrompt;
 
 async function addPrompt() {
-  const slug = prompt('Slug nowego promptu (snake_case, np. "deep_audit"):');
+  const slug = await ZE.askText({ title: 'Slug nowego promptu', placeholder: 'np. deep_audit', multiline: false });
   if (!slug) return;
   const staff = ZE_Auth.staff();
   const { error } = await ZE_SB.from('ze_prompts').insert({
     slug: slug.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_'),
     title: 'Nowy prompt',
     template: 'Hej Claude, klient {{contact_name}} z firmy {{company}} ma problem:\n\n{{problem}}\n\nWynik: ...',
-    output_format: 'markdown',
-    updated_by: staff.id
+    output_format: 'markdown', updated_by: staff.id
   });
-  if (error) { ZE.toast(error.message, 'error'); return; }
+  if (error) return ZE.toast(error.message, 'error');
   await loadPrompts();
 }
 </script>
