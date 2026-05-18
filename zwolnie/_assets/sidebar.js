@@ -14,49 +14,63 @@ window.ZE_Sidebar = (function() {
   function render({ active = '', userEmail = '' } = {}) {
     const el = document.getElementById('ze-sidebar');
     if (!el) return;
+    const initials = (userEmail || 'T').slice(0, 2).toUpperCase();
     el.innerHTML = `
-      <div class="flex flex-col h-full">
+      <div class="flex flex-col h-full bg-zinc-950" style="position:relative;z-index:2">
         <div class="px-5 py-5 border-b border-white/5">
-          <a href="/zwolnie/" class="flex items-center gap-2 text-white">
-            <span class="w-7 h-7 rounded bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-sm">Z</span>
-            <span class="font-semibold tracking-tight">Zwolnię</span>
-            <span class="text-zinc-500 text-xs ml-auto">v1</span>
+          <a href="/zwolnie/" class="flex items-center gap-2.5 text-white group">
+            <span class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold text-sm shadow-lg shadow-emerald-500/20 group-hover:shadow-emerald-500/40 transition-shadow">Z</span>
+            <div>
+              <div class="font-semibold tracking-tight text-[15px] leading-none">Zwolnię</div>
+              <div class="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">CRM · v1</div>
+            </div>
           </a>
         </div>
 
-        <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div class="px-5 pt-5 pb-2 text-[10px] uppercase tracking-widest text-zinc-600 font-medium">Workspace</div>
+        <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
           ${NAV.map(item => {
             const isActive = item.id === active;
             return `
               <a href="${item.href}"
-                 class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${isActive
-                   ? 'bg-white/10 text-white'
-                   : 'text-zinc-400 hover:text-white hover:bg-white/5'}">
-                <i class="ph ${item.icon} text-lg"></i>
+                 class="ze-nav-item ${isActive ? 'is-active' : ''} flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-all ${isActive
+                   ? 'bg-white/[0.06] text-white font-medium'
+                   : 'text-zinc-400 hover:text-white hover:bg-white/[0.03]'}">
+                <i class="ph ${item.icon} text-base ${isActive ? 'text-emerald-400' : ''}"></i>
                 <span>${item.label}</span>
-                ${item.badge ? `<span id="ze-sidebar-badge-${item.id}" class="ml-auto text-xs text-zinc-500"></span>` : ''}
+                ${item.badge ? `<span id="ze-sidebar-badge-${item.id}" class="ml-auto text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-medium"></span>` : ''}
               </a>
             `;
           }).join('')}
         </nav>
 
-        <div class="px-3 py-3 border-t border-white/5">
-          <div class="px-3 py-2 text-xs text-zinc-500 truncate">${userEmail}</div>
-          <button onclick="ZE_Sidebar.changePassword()" class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">
-            <i class="ph ph-key text-lg"></i>
-            <span>Zmień hasło</span>
+        <div class="px-3 pb-3 pt-3 border-t border-white/5 mt-2">
+          <button onclick="ZE_Sidebar.toggleProfile()" id="ze-sb-profile" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/[0.04] transition-all text-left">
+            <span class="w-8 h-8 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 border border-white/10 flex items-center justify-center text-white text-xs font-semibold flex-shrink-0">${initials}</span>
+            <div class="min-w-0 flex-1">
+              <div class="text-[12px] text-white font-medium truncate">${userEmail}</div>
+              <div class="text-[10px] text-zinc-500">Admin · Aktywny</div>
+            </div>
+            <i class="ph ph-caret-up-down text-zinc-500 text-sm"></i>
           </button>
-          <button onclick="ZE_Auth.logout()" class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-zinc-400 hover:text-white hover:bg-white/5 transition-colors">
-            <i class="ph ph-sign-out text-lg"></i>
-            <span>Wyloguj</span>
-          </button>
-          <a href="/dashboard" class="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-sm text-zinc-500 hover:text-white hover:bg-white/5 transition-colors mt-1">
-            <i class="ph ph-arrow-square-out text-lg"></i>
-            <span>tn-crm główne</span>
-          </a>
+          <div id="ze-sb-profile-menu" class="hidden mt-1 pt-1 border-t border-white/5 space-y-0.5">
+            <button onclick="ZE_Sidebar.changePassword()" class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[12px] text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors">
+              <i class="ph ph-key text-base"></i><span>Zmień hasło</span>
+            </button>
+            <a href="/dashboard" class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[12px] text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors">
+              <i class="ph ph-arrow-square-out text-base"></i><span>tn-crm główne</span>
+            </a>
+            <button onclick="ZE_Auth.logout()" class="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-[12px] text-red-300 hover:text-red-200 hover:bg-red-500/[0.06] transition-colors">
+              <i class="ph ph-sign-out text-base"></i><span>Wyloguj</span>
+            </button>
+          </div>
         </div>
       </div>
     `;
+  }
+
+  function toggleProfile() {
+    document.getElementById('ze-sb-profile-menu')?.classList.toggle('hidden');
   }
 
   function setBadge(itemId, value) {
@@ -113,5 +127,5 @@ window.ZE_Sidebar = (function() {
     });
   }
 
-  return { render, setBadge, changePassword };
+  return { render, setBadge, changePassword, toggleProfile };
 })();

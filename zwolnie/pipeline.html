@@ -31,7 +31,10 @@
       <span class="text-white font-medium">Pipeline</span>
     </div>
     <div class="flex items-center gap-2">
-      <label class="flex items-center gap-2 text-xs text-zinc-400">
+      <button id="open-batch-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
+        <i class="ph ph-tabs"></i><span class="hidden md:inline">Otwórz N w kartach</span>
+      </button>
+      <label class="flex items-center gap-2 text-xs text-zinc-400 pl-2">
         <input type="checkbox" id="show-terminal" class="rounded bg-zinc-800 border-zinc-700">
         Pokaż wygrane/przegrane
       </label>
@@ -42,14 +45,47 @@
   </header>
 
   <div class="flex-1 overflow-y-auto p-6 ze-fade">
-    <div class="mb-5 px-2">
-      <h1 class="text-2xl font-semibold text-white">Pipeline</h1>
-      <p class="text-zinc-500 text-sm">Przeciągaj leady między etapami. Status zmienia się automatycznie.</p>
+    <div class="mb-5 px-2 flex items-end justify-between gap-4 flex-wrap">
+      <div>
+        <h1 class="text-2xl font-semibold text-white">Pipeline</h1>
+        <p class="text-zinc-500 text-sm">Przeciągaj leady między etapami. Czerwone „d" = czas w obecnym statusie.</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="relative">
+          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+          <input type="text" id="p-search" placeholder="Szukaj leada..." class="ze-input pl-9 pr-3 py-2 rounded-lg text-sm w-64">
+        </div>
+        <select id="p-sort" class="ze-input px-3 py-2 rounded-lg text-sm">
+          <option value="status-time-desc">Najpilniejsze (dni w statusie)</option>
+          <option value="created-desc">Najnowsze leady</option>
+          <option value="created-asc">Najstarsze leady</option>
+        </select>
+        <button id="p-clear" class="text-xs text-zinc-500 hover:text-white px-2 py-2 hidden">Wyczyść</button>
+      </div>
     </div>
 
     <div id="kanban-board" class="flex gap-4 overflow-x-auto pb-6"></div>
   </div>
 </main>
+
+<!-- Open batch modal -->
+<div id="batch-modal" class="hidden fixed inset-0 bg-black/70 z-[1100] items-center justify-center p-4">
+  <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-sm">
+    <h3 class="text-white font-semibold mb-1">Otwórz leady w nowych kartach</h3>
+    <p class="text-xs text-zinc-500 mb-4">Z bieżącego widoku, top N wg sortowania. Każdy w nowej karcie. Tip: użyj Ctrl/Cmd+Tab do przełączania.</p>
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <button data-n="5" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">5</button>
+      <button data-n="10" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">10</button>
+      <button data-n="20" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">20</button>
+      <button data-n="30" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">30</button>
+      <button data-n="50" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">50</button>
+      <button data-n="all" class="ze-batch-n bg-zinc-800 hover:bg-zinc-700 text-white px-3 py-2 rounded text-sm">wsz.</button>
+    </div>
+    <div class="flex justify-end">
+      <button id="batch-close" class="px-3 py-2 text-sm text-zinc-400 hover:text-white">Anuluj</button>
+    </div>
+  </div>
+</div>
 
 <script src="/zwolnie/_assets/config.js"></script>
 <script src="/zwolnie/_assets/auth.js"></script>
@@ -59,6 +95,7 @@
 const COLS_MAIN = ['new', 'analyzing', 'analyzed', 'proposal_sent', 'negotiation'];
 const COLS_TERMINAL = ['won', 'lost'];
 let allLeads = [];
+let filters = { search: '', sort: 'status-time-desc' };
 
 (async () => {
   const { staff } = await ZE_Auth.require();
@@ -71,13 +108,47 @@ let allLeads = [];
     setTimeout(() => document.getElementById('refresh-icon').classList.remove('ze-spin'), 600);
   });
 
+  document.getElementById('p-search').addEventListener('input', (e) => {
+    filters.search = e.target.value.trim().toLowerCase();
+    document.getElementById('p-clear').classList.toggle('hidden', !filters.search);
+    renderBoard();
+  });
+  document.getElementById('p-sort').addEventListener('change', (e) => { filters.sort = e.target.value; renderBoard(); });
+  document.getElementById('p-clear').addEventListener('click', () => {
+    document.getElementById('p-search').value = '';
+    filters.search = '';
+    document.getElementById('p-clear').classList.add('hidden');
+    renderBoard();
+  });
+
+  // Batch open
+  document.getElementById('open-batch-btn').addEventListener('click', () => {
+    document.getElementById('batch-modal').classList.remove('hidden');
+    document.getElementById('batch-modal').classList.add('flex');
+  });
+  document.getElementById('batch-close').addEventListener('click', () => {
+    document.getElementById('batch-modal').classList.add('hidden');
+    document.getElementById('batch-modal').classList.remove('flex');
+  });
+  document.querySelectorAll('.ze-batch-n').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filtered = getFilteredAndSorted();
+      const n = btn.dataset.n === 'all' ? filtered.length : parseInt(btn.dataset.n, 10);
+      const slice = filtered.slice(0, n);
+      slice.forEach(l => window.open('/zwolnie/lead?id=' + l.id, '_blank', 'noopener'));
+      document.getElementById('batch-modal').classList.add('hidden');
+      document.getElementById('batch-modal').classList.remove('flex');
+      ZE.toast(`Otwarto ${slice.length} leadów w nowych kartach.`, 'success');
+    });
+  });
+
   await loadLeads();
 })();
 
 async function loadLeads() {
   const { data, error } = await ZE_SB
     .from('ze_leads')
-    .select('id, status, contact_name, company, industry, budget, created_at, starred')
+    .select('id, status, contact_name, contact_email, company, industry, budget, created_at, status_changed_at, starred, ai_analysis, mvp_html')
     .neq('status', 'archived')
     .order('updated_at', { ascending: false })
     .range(0, 999);
@@ -87,12 +158,30 @@ async function loadLeads() {
   renderBoard();
 }
 
+function getFilteredAndSorted() {
+  const q = filters.search;
+  let list = allLeads.filter(l => {
+    if (!q) return true;
+    const hay = [l.contact_name, l.contact_email, l.company, l.industry].filter(Boolean).join(' ').toLowerCase();
+    return hay.includes(q);
+  });
+  if (filters.sort === 'status-time-desc') {
+    list.sort((a, b) => new Date(a.status_changed_at || a.created_at) - new Date(b.status_changed_at || b.created_at));
+  } else if (filters.sort === 'created-desc') {
+    list.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  } else if (filters.sort === 'created-asc') {
+    list.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  }
+  return list;
+}
+
 function renderBoard() {
   const showTerminal = document.getElementById('show-terminal').checked;
   const cols = showTerminal ? [...COLS_MAIN, ...COLS_TERMINAL] : COLS_MAIN;
+  const filtered = getFilteredAndSorted();
   const board = document.getElementById('kanban-board');
   board.innerHTML = cols.map(col => {
-    const list = allLeads.filter(l => l.status === col);
+    const list = filtered.filter(l => l.status === col);
     return `
       <div class="kanban-col flex-shrink-0 flex flex-col">
         <div class="px-3 py-2 mb-2 flex items-center justify-between">
@@ -112,22 +201,38 @@ function renderBoard() {
 }
 
 function renderCard(l) {
+  const urgency = ZE.urgencyBadge(l.status_changed_at, l.status);
+  const days = ZE.daysInStatus(l.status_changed_at);
+  const cardBorder = days != null && days >= 7 ? 'border-red-500/30' : 'border-white/5';
+  const hasAnalysis = !!l.ai_analysis;
+  const hasMvp = !!l.mvp_html;
   return `
-    <div class="kanban-card bg-zinc-900 border border-white/5 rounded-lg p-3"
+    <div class="kanban-card bg-zinc-900 border ${cardBorder} rounded-lg p-3"
          draggable="true" data-id="${l.id}"
          ondragstart="event.dataTransfer.setData('text', '${l.id}'); this.classList.add('is-dragging');"
          ondragend="this.classList.remove('is-dragging');"
-         onclick="location.href='/zwolnie/lead?id=${l.id}'">
-      <div class="flex items-start justify-between gap-2">
-        <div class="text-sm text-white font-medium truncate flex-1">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
-        ${l.starred ? '<i class="ph ph-fill ph-star text-amber-400 text-xs"></i>' : ''}
+         onclick="location.href='/zwolnie/lead?id=${l.id}'"
+         onauxclick="if(event.button === 1){ event.preventDefault(); window.open('/zwolnie/lead?id=${l.id}', '_blank', 'noopener'); }">
+      <div class="flex items-start gap-2.5 mb-2">
+        ${ZE.avatarHtml(l.contact_name || l.contact_email || '?', 32)}
+        <div class="flex-1 min-w-0">
+          <div class="text-sm text-white font-medium truncate">${ZE.escapeHtml(l.contact_name || '(brak)')}</div>
+          <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(l.company || '—')}</div>
+        </div>
+        ${l.starred ? '<i class="ph ph-fill ph-star text-amber-400 text-xs flex-shrink-0"></i>' : ''}
       </div>
-      <div class="text-xs text-zinc-500 truncate mt-0.5">${ZE.escapeHtml(l.company || '—')}</div>
-      <div class="mt-2 flex items-center gap-2 text-[10px] text-zinc-500">
-        ${l.industry ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry)}</span>` : ''}
-        ${l.budget ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget)}</span>` : ''}
+      <div class="flex items-center gap-1.5 flex-wrap text-[10px] mb-2">
+        ${urgency}
+        ${l.industry ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry)}</span>` : ''}
+        ${l.budget ? `<span class="px-1.5 py-0.5 bg-zinc-800 rounded text-zinc-400">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget)}</span>` : ''}
       </div>
-      <div class="mt-2 text-[10px] text-zinc-600">${ZE.fmtRelative(l.created_at)}</div>
+      <div class="flex items-center justify-between text-[10px] text-zinc-600">
+        <span>${ZE.fmtRelative(l.created_at)}</span>
+        <div class="flex items-center gap-1">
+          ${hasAnalysis ? '<i class="ph-fill ph-sparkle text-emerald-400" title="Analiza"></i>' : ''}
+          ${hasMvp ? '<i class="ph-fill ph-cursor-click text-violet-400" title="MVP"></i>' : ''}
+        </div>
+      </div>
     </div>
   `;
 }

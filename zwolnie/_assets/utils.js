@@ -89,6 +89,44 @@ ZE.statusBadge = (status) => {
   return `<span class="ze-status ze-status--${status}">${label}</span>`;
 };
 
+// Avatar gradient z inicjałami (deterministic z imienia/maila)
+ZE.avatarColors = (seed) => {
+  if (!seed) return ['#3f3f46', '#52525b'];
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = ((h << 5) - h + seed.charCodeAt(i)) | 0;
+  const hue1 = Math.abs(h) % 360;
+  const hue2 = (hue1 + 40) % 360;
+  return [`hsl(${hue1} 65% 45%)`, `hsl(${hue2} 65% 35%)`];
+};
+
+ZE.initials = (name) => {
+  if (!name) return '?';
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+};
+
+ZE.avatarHtml = (name, size = 36, extraClass = '') => {
+  const [c1, c2] = ZE.avatarColors(name || '');
+  return `<div class="${extraClass}" style="width:${size}px;height:${size}px;border-radius:50%;background:linear-gradient(135deg, ${c1}, ${c2});display:inline-flex;align-items:center;justify-content:center;color:#fff;font-weight:600;font-size:${Math.round(size*0.36)}px;flex-shrink:0">${ZE.escapeHtml(ZE.initials(name))}</div>`;
+};
+
+// Urgency: ile dni w obecnym statusie + kolor
+ZE.daysInStatus = (statusChangedAt) => {
+  if (!statusChangedAt) return null;
+  return Math.floor((Date.now() - new Date(statusChangedAt).getTime()) / 86400000);
+};
+
+ZE.urgencyBadge = (statusChangedAt, status) => {
+  if (['won', 'lost', 'archived'].includes(status)) return '';
+  const days = ZE.daysInStatus(statusChangedAt);
+  if (days == null || days < 1) return '';
+  let cls = 'bg-zinc-800 text-zinc-400 border-zinc-700';
+  let pulse = '';
+  if (days >= 7) { cls = 'bg-red-500/15 text-red-300 border-red-500/40'; pulse = 'animate-pulse'; }
+  else if (days >= 5) { cls = 'bg-red-500/10 text-red-300 border-red-500/30'; }
+  else if (days >= 3) { cls = 'bg-amber-500/10 text-amber-300 border-amber-500/30'; }
+  return `<span class="${pulse} inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-medium ${cls}" title="W tym statusie od ${days} dni">${days}d</span>`;
+};
+
 ZE.escapeHtml = (s) => {
   if (s == null) return '';
   return String(s)
