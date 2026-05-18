@@ -139,11 +139,7 @@ let stages = [];
   document.getElementById('add-stage-btn').addEventListener('click', addStage);
   document.getElementById('add-update-btn').addEventListener('click', addUpdate);
 
-  document.getElementById('open-mvp-btn').addEventListener('click', () => {
-    const win = window.open('', '_blank');
-    win.document.write(project.mvp_html || '');
-    win.document.close();
-  });
+  document.getElementById('open-mvp-btn').addEventListener('click', () => ZE.openHtmlInNewTab(project.mvp_html));
 })();
 
 async function loadProject() {
@@ -257,23 +253,24 @@ async function toggleTask(id, completed) {
 }
 
 async function addTask(stageId) {
-  const title = prompt('Tytuł zadania:');
+  const title = await ZE.askText({ title: 'Nowe zadanie', placeholder: 'Co konkretnie do zrobienia?', multiline: false });
   if (!title) return;
   const stage = stages.find(s => s.id === stageId);
   const order = (stage?.ze_project_tasks || []).length;
-  const { error } = await ZE_SB.from('ze_project_tasks').insert({ stage_id: stageId, title, order_index: order });
+  const { error } = await ZE_SB.from('ze_project_tasks').insert({ stage_id: stageId, title: title.slice(0, 500), order_index: order });
   if (error) { ZE.toast(error.message, 'error'); return; }
   await loadStages();
 }
+window.addTask = addTask;
 
 async function addStage() {
-  const title = prompt('Tytuł nowego etapu:');
+  const title = await ZE.askText({ title: 'Nowy etap', placeholder: 'Np. "Migracja danych"', multiline: false });
   if (!title) return;
-  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+  const slug = (title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30) || 'etap') + '-' + Math.random().toString(36).slice(2, 6);
   const order = stages.length + 1;
   const { error } = await ZE_SB.from('ze_project_stages').insert({
     project_id: projectId,
-    title, slug, order_index: order, status: 'pending'
+    title: title.slice(0, 200), slug, order_index: order, status: 'pending'
   });
   if (error) { ZE.toast(error.message, 'error'); return; }
   await loadStages();
@@ -311,11 +308,13 @@ async function addUpdate() {
 }
 
 async function deleteUpdate(id) {
-  if (!confirm('Usunąć aktualizację?')) return;
+  const ok = await ZE.confirm('Usunąć aktualizację?');
+  if (!ok) return;
   const { error } = await ZE_SB.from('ze_project_updates').delete().eq('id', id);
   if (error) { ZE.toast(error.message, 'error'); return; }
   await loadUpdates();
 }
+window.deleteUpdate = deleteUpdate;
 </script>
 </body>
 </html>

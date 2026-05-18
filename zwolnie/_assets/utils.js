@@ -99,6 +99,85 @@ ZE.escapeHtml = (s) => {
     .replace(/'/g, '&#039;');
 };
 
+// Bezpieczna konwersja URL użytkownika do clickable href.
+// Blokuje javascript:, data:, file: schematy. Domyślnie dodaje https://.
+ZE.safeUrl = (url) => {
+  if (!url) return '';
+  const trimmed = String(url).trim();
+  if (!trimmed) return '';
+  // Wykryj niebezpieczne schematy (po lowercase, ignoruj whitespace przed)
+  if (/^\s*(javascript|data|file|vbscript|about):/i.test(trimmed)) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  // Add https:// dla bare domains
+  return 'https://' + trimmed.replace(/^\/+/, '');
+};
+
+// Otwórz dowolne HTML w nowej karcie BEZ udzielenia mu dostępu do origin panelu.
+// Używamy Blob URL zamiast document.write — Blob URL ma osobny origin (null).
+ZE.openHtmlInNewTab = (html) => {
+  if (!html) return;
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+};
+
+// Modal: zamiennik dla natywnego prompt() obsługujący multi-line text.
+// Returns Promise<string|null>. Anuluj zwraca null.
+ZE.askText = ({ title, value = '', placeholder = '', multiline = false, maxLength = 20000 } = {}) => {
+  return new Promise((resolve) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'fixed inset-0 bg-black/70 z-[1100] flex items-center justify-center p-4';
+    wrap.innerHTML = `
+      <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-lg">
+        <h3 class="text-white font-semibold mb-3">${ZE.escapeHtml(title)}</h3>
+        ${multiline
+          ? `<textarea rows="6" maxlength="${maxLength}" class="ze-input w-full px-3 py-2 rounded-lg text-sm"></textarea>`
+          : `<input type="text" maxlength="${maxLength}" class="ze-input w-full px-3 py-2 rounded-lg text-sm">`}
+        <div class="flex justify-end gap-2 mt-4">
+          <button data-act="cancel" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
+          <button data-act="ok" class="px-4 py-2 rounded-lg text-sm bg-white text-black font-semibold hover:bg-zinc-200">OK</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(wrap);
+    const input = wrap.querySelector('input, textarea');
+    input.value = value;
+    if (placeholder) input.placeholder = placeholder;
+    input.focus();
+    if (!multiline) input.select();
+
+    const close = (val) => { wrap.remove(); resolve(val); };
+    wrap.querySelector('[data-act="cancel"]').addEventListener('click', () => close(null));
+    wrap.querySelector('[data-act="ok"]').addEventListener('click', () => close(input.value));
+    wrap.addEventListener('click', (e) => { if (e.target === wrap) close(null); });
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') close(null);
+      if (e.key === 'Enter' && !multiline) close(input.value);
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) close(input.value);
+    });
+  });
+};
+
+ZE.confirm = (msg) => new Promise((resolve) => {
+  const wrap = document.createElement('div');
+  wrap.className = 'fixed inset-0 bg-black/70 z-[1100] flex items-center justify-center p-4';
+  wrap.innerHTML = `
+    <div class="bg-zinc-900 border border-white/10 rounded-xl p-5 w-full max-w-sm">
+      <div class="text-zinc-200 mb-4">${ZE.escapeHtml(msg)}</div>
+      <div class="flex justify-end gap-2">
+        <button data-act="cancel" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
+        <button data-act="ok" class="px-4 py-2 rounded-lg text-sm bg-red-500 text-white hover:bg-red-400">Potwierdź</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  const close = (v) => { wrap.remove(); resolve(v); };
+  wrap.querySelector('[data-act="cancel"]').addEventListener('click', () => close(false));
+  wrap.querySelector('[data-act="ok"]').addEventListener('click', () => close(true));
+  wrap.addEventListener('click', (e) => { if (e.target === wrap) close(false); });
+});
+
 ZE.toast = (msg, type = 'info', timeout = 3500) => {
   let wrap = document.querySelector('.ze-toast-wrap');
   if (!wrap) {

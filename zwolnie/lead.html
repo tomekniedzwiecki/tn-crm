@@ -36,11 +36,15 @@
     </div>
     <div class="flex items-center gap-2">
       <select id="status-select" class="ze-input px-3 py-2 rounded-lg text-xs"></select>
+      <a id="view-project-btn" href="#" class="hidden text-violet-300 hover:text-violet-200 border border-violet-500/30 hover:border-violet-500/50 bg-violet-500/10 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
+        <i class="ph ph-folder-open"></i>
+        <span>Zobacz projekt</span>
+      </a>
       <button id="convert-btn" class="hidden text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
         <i class="ph ph-rocket-launch"></i>
         <span>Konwertuj na projekt</span>
       </button>
-      <button id="delete-btn" class="text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 bg-red-500/5 px-3 py-2 rounded-lg text-xs font-medium">
+      <button id="delete-btn" class="text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 bg-red-500/5 px-3 py-2 rounded-lg text-xs font-medium" title="Usuń lead">
         <i class="ph ph-trash"></i>
       </button>
     </div>
@@ -98,15 +102,12 @@
               <h2 class="text-sm font-semibold text-white">Generator promptów AI</h2>
               <a href="/zwolnie/prompts" class="text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj szablony</a>
             </div>
-            <p class="text-xs text-zinc-500 mb-4">Wybierz prompt, skopiuj, wklej do Claude Code w VS Code. Wynik wklej w panel "Analiza" lub "MVP".</p>
+            <p class="text-xs text-zinc-500 mb-4">Skopiuj → Claude Code (VS Code) → wklej wynik w Analiza/MVP.</p>
             <select id="prompt-select" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mb-3"></select>
-            <textarea id="prompt-output" rows="20" class="ze-input w-full px-3 py-3 rounded-lg text-xs font-mono leading-relaxed"></textarea>
+            <textarea id="prompt-output" readonly rows="20" class="ze-input w-full px-3 py-3 rounded-lg text-xs font-mono leading-relaxed"></textarea>
             <div class="flex gap-2 mt-3">
               <button id="copy-prompt-btn" class="flex-1 bg-white text-black hover:bg-zinc-200 px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
                 <i class="ph ph-copy"></i> Kopiuj do schowka
-              </button>
-              <button id="open-claude-btn" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2">
-                <i class="ph ph-arrow-square-out"></i> Otwórz Claude Code
               </button>
             </div>
           </div>
@@ -223,14 +224,9 @@
           </div>
         </div>
 
-        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
-          <div class="text-xs text-zinc-500 uppercase mb-2">Następne kroki</div>
-          <ol class="space-y-2 text-sm text-zinc-300">
-            <li>1. Otwórz tab <strong>Prompt AI</strong> i skopiuj prompt analizy</li>
-            <li>2. Wklej do Claude Code w VS Code, wykonaj</li>
-            <li>3. Wynik (JSON) wklej w tab <strong>Analiza</strong></li>
-            <li>4. Wygeneruj <strong>MVP</strong> i zaproponuj klientowi</li>
-          </ol>
+        <div id="next-step" class="hidden bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase mb-2">Następny krok</div>
+          <div id="next-step-body"></div>
         </div>
       </aside>
 
@@ -259,15 +255,18 @@ let currentPromptSlug = 'business_analysis';
   await loadNotes();
   await loadActivity();
 
-  // Tabs
+  // Tabs — persist w URL hash
+  function selectTab(name) {
+    document.querySelectorAll('.ze-tab').forEach(x => x.classList.toggle('is-active', x.dataset.tab === name));
+    document.querySelectorAll('.ze-panel').forEach(x => x.classList.toggle('is-active', x.dataset.panel === name));
+    const newHash = '#tab=' + name;
+    if (location.hash !== newHash) history.replaceState(null, '', newHash);
+  }
   document.querySelectorAll('.ze-tab').forEach(t => {
-    t.addEventListener('click', () => {
-      document.querySelectorAll('.ze-tab').forEach(x => x.classList.remove('is-active'));
-      document.querySelectorAll('.ze-panel').forEach(x => x.classList.remove('is-active'));
-      t.classList.add('is-active');
-      document.querySelector(`.ze-panel[data-panel="${t.dataset.tab}"]`).classList.add('is-active');
-    });
+    t.addEventListener('click', () => selectTab(t.dataset.tab));
   });
+  const initialTab = (location.hash.match(/tab=(\w+)/) || [])[1];
+  if (initialTab && document.querySelector(`.ze-tab[data-tab="${initialTab}"]`)) selectTab(initialTab);
 
   // Status change
   document.getElementById('status-select').addEventListener('change', async (e) => {
@@ -283,7 +282,12 @@ let currentPromptSlug = 'business_analysis';
 
   // Delete
   document.getElementById('delete-btn').addEventListener('click', async () => {
-    if (!confirm(`Usunąć lead "${lead.contact_name || lead.contact_email}"? Tego nie cofniesz.`)) return;
+    if (lead.converted_to_project_id) {
+      ZE.toast('Najpierw usuń projekt powiązany z tym leadem.', 'error');
+      return;
+    }
+    const ok = await ZE.confirm(`Usunąć lead "${lead.contact_name || lead.contact_email}"? Tego nie cofniesz.`);
+    if (!ok) return;
     const { error } = await ZE_SB.from('ze_leads').delete().eq('id', leadId);
     if (error) { ZE.toast(error.message, 'error'); return; }
     location.replace('/zwolnie/leads');
@@ -316,11 +320,7 @@ let currentPromptSlug = 'business_analysis';
   document.getElementById('mvp-edit-btn').addEventListener('click', () => toggleMvpEdit(true));
   document.getElementById('mvp-cancel-btn').addEventListener('click', () => toggleMvpEdit(false));
   document.getElementById('mvp-save-btn').addEventListener('click', saveMvp);
-  document.getElementById('mvp-open-btn').addEventListener('click', () => {
-    const win = window.open('', '_blank');
-    win.document.write(lead.mvp_html || '');
-    win.document.close();
-  });
+  document.getElementById('mvp-open-btn').addEventListener('click', () => ZE.openHtmlInNewTab(lead.mvp_html));
 
   // Notes
   document.getElementById('add-note-btn').addEventListener('click', addNote);
@@ -356,9 +356,10 @@ function renderLead() {
   phoneEl.textContent = lead.contact_phone || '—';
   if (lead.contact_phone) phoneEl.href = 'tel:' + lead.contact_phone;
   const webEl = document.getElementById('s-website');
-  if (lead.website) {
-    const url = lead.website.startsWith('http') ? lead.website : 'https://' + lead.website;
-    webEl.href = url; webEl.textContent = lead.website.replace(/^https?:\/\//, '');
+  const safe = ZE.safeUrl(lead.website);
+  if (safe) {
+    webEl.href = safe; webEl.textContent = lead.website.replace(/^https?:\/\//, '');
+    webEl.rel = 'noopener nofollow';
   } else { webEl.textContent = '—'; webEl.removeAttribute('href'); }
   document.getElementById('s-source').textContent = lead.source;
   document.getElementById('s-token').textContent = lead.token;
@@ -385,6 +386,81 @@ function renderLead() {
 function updateConvertButton() {
   const btn = document.getElementById('convert-btn');
   btn.classList.toggle('hidden', !(lead.status === 'won' && !lead.converted_to_project_id));
+  const viewBtn = document.getElementById('view-project-btn');
+  if (lead.converted_to_project_id) {
+    viewBtn.href = '/zwolnie/projekt?id=' + lead.converted_to_project_id;
+    viewBtn.classList.remove('hidden');
+  } else {
+    viewBtn.classList.add('hidden');
+  }
+  renderNextStep();
+}
+
+function renderNextStep() {
+  const box = document.getElementById('next-step');
+  const body = document.getElementById('next-step-body');
+  let html = '';
+  if (lead.converted_to_project_id) {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Lead skonwertowany na projekt — śledź postępy w widoku projektu.</p>
+      <a href="/zwolnie/projekt?id=${lead.converted_to_project_id}" class="bg-violet-500 hover:bg-violet-400 text-white px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-folder-open"></i> Otwórz projekt
+      </a>`;
+  } else if (lead.status === 'won') {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Klient powiedział tak — utwórz projekt i daj klientowi link do śledzenia postępów.</p>
+      <button onclick="convertToProject()" class="w-full bg-emerald-500 hover:bg-emerald-400 text-black px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-rocket-launch"></i> Konwertuj na projekt
+      </button>`;
+  } else if (!lead.ai_analysis) {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Brakuje analizy. Skopiuj prompt, wklej w Claude Code, wynik wklej w tab Analiza.</p>
+      <button onclick="ZE.selectTabExt('prompt')" class="w-full bg-white text-black px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-sparkle"></i> Otwórz Prompt AI
+      </button>`;
+  } else if (!lead.mvp_html) {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Analiza gotowa. Wygeneruj klikalny MVP — szybciej zamknie ofertę niż słowny opis.</p>
+      <button onclick="ZE.selectTabExt('prompt')" class="w-full bg-white text-black px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-cursor-click"></i> Wygeneruj MVP
+      </button>`;
+  } else if (lead.status !== 'proposal_sent') {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Masz analizę i MVP. Wyślij klientowi propozycję i przesuń status na "Propozycja".</p>
+      <button onclick="markProposalSent()" class="w-full bg-white text-black px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-paper-plane-tilt"></i> Oznacz jako wysłaną
+      </button>`;
+  } else {
+    html = `
+      <p class="text-sm text-zinc-400 mb-3">Propozycja wysłana. Czekaj na odpowiedź — albo podbij.</p>
+      <button onclick="bumpStatus('negotiation')" class="w-full bg-amber-500 hover:bg-amber-400 text-black px-3 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+        <i class="ph ph-handshake"></i> Negocjacje
+      </button>`;
+  }
+  body.innerHTML = html;
+  box.classList.remove('hidden');
+}
+
+// Eksponuj selectTab dla inline onclick handlers
+window.ZE.selectTabExt = (name) => {
+  document.querySelector('.ze-tab[data-tab="' + name + '"]')?.click();
+};
+
+async function markProposalSent() {
+  const { error } = await ZE_SB.from('ze_leads').update({ status: 'proposal_sent', last_contacted_at: new Date().toISOString() }).eq('id', leadId);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await ZE.logActivity(leadId, 'status_changed', { from: lead.status, to: 'proposal_sent' });
+  lead.status = 'proposal_sent';
+  lead.last_contacted_at = new Date().toISOString();
+  renderLead();
+}
+
+async function bumpStatus(newStatus) {
+  const { error } = await ZE_SB.from('ze_leads').update({ status: newStatus }).eq('id', leadId);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await ZE.logActivity(leadId, 'status_changed', { from: lead.status, to: newStatus });
+  lead.status = newStatus;
+  renderLead();
 }
 
 function renderAnalysis() {
@@ -498,7 +574,12 @@ async function saveMvp() {
 }
 
 async function editProblem() {
-  const newVal = prompt('Edytuj opis problemu:', lead.problem || '');
+  const newVal = await ZE.askText({
+    title: 'Edytuj opis problemu',
+    value: lead.problem || '',
+    multiline: true,
+    placeholder: 'Co robi firma, gdzie boli, co próbowali zautomatyzować...'
+  });
   if (newVal == null) return;
   const { error } = await ZE_SB.from('ze_leads').update({ problem: newVal }).eq('id', leadId);
   if (error) { ZE.toast(error.message, 'error'); return; }
@@ -522,10 +603,13 @@ async function loadAttachments() {
         <div class="text-sm text-white truncate">${ZE.escapeHtml(f.file_name)}</div>
         <div class="text-xs text-zinc-500">${ZE.fmtFileSize(f.file_size)} · ${ZE.fmtRelative(f.created_at)}</div>
       </div>
-      <button onclick="downloadAttachment('${f.storage_path}', '${ZE.escapeHtml(f.file_name).replace(/'/g, '&#39;')}')"
-              class="text-zinc-400 hover:text-white px-3 py-1.5 rounded-md border border-zinc-700 hover:border-zinc-500 text-xs"><i class="ph ph-download"></i> Pobierz</button>
+      <button data-path="${ZE.escapeHtml(f.storage_path)}" data-name="${ZE.escapeHtml(f.file_name)}"
+              class="ze-download-btn text-zinc-400 hover:text-white px-3 py-1.5 rounded-md border border-zinc-700 hover:border-zinc-500 text-xs"><i class="ph ph-download"></i> Pobierz</button>
     </div>
   `).join('');
+  el.querySelectorAll('.ze-download-btn').forEach(btn => {
+    btn.addEventListener('click', () => downloadAttachment(btn.dataset.path, btn.dataset.name));
+  });
 }
 
 async function downloadAttachment(path, name) {
@@ -535,6 +619,7 @@ async function downloadAttachment(path, name) {
   a.href = data.signedUrl;
   a.download = name;
   a.target = '_blank';
+  a.rel = 'noopener';
   a.click();
 }
 
@@ -592,12 +677,14 @@ async function loadActivity() {
 async function convertToProject() {
   if (lead.status !== 'won') { ZE.toast('Tylko leady ze statusem "Wygrany" mogą być konwertowane.', 'error'); return; }
   if (lead.converted_to_project_id) { ZE.toast('Już skonwertowany.', 'error'); return; }
-  if (!confirm(`Utworzyć projekt dla "${lead.company || lead.contact_name}"? Skopiuje analizę i MVP, doda 7 etapów.`)) return;
+  const ok = await ZE.confirm(`Utworzyć projekt dla "${lead.company || lead.contact_name}"? Skopiuje analizę i MVP, doda 7 etapów.`);
+  if (!ok) return;
 
-  const title = lead.company || lead.contact_name || 'Projekt zwolnie';
+  const title = (lead.company || lead.contact_name || 'Projekt zwolnie').slice(0, 300);
   const desc = lead.problem ? lead.problem.slice(0, 500) : null;
 
-  const { data: project, error } = await ZE_SB.from('ze_projects').insert({
+  // Step 1: insert project
+  const { data: project, error: insertErr } = await ZE_SB.from('ze_projects').insert({
     lead_id: leadId,
     title,
     description: desc,
@@ -606,18 +693,28 @@ async function convertToProject() {
     status: 'planning'
   }).select('id, token').single();
 
-  if (error) { ZE.toast(error.message, 'error'); return; }
+  if (insertErr || !project) { ZE.toast('Nie udało się utworzyć projektu: ' + (insertErr?.message || 'brak danych'), 'error'); return; }
 
-  // Seed stages via RPC
-  await ZE_SB.rpc('ze_seed_default_stages', { p_project_id: project.id });
+  // Step 2: seed stages
+  const { error: seedErr } = await ZE_SB.rpc('ze_seed_default_stages', { p_project_id: project.id });
+  if (seedErr) {
+    // Rollback — delete orphaned project
+    await ZE_SB.from('ze_projects').delete().eq('id', project.id);
+    ZE.toast('Nie udało się zainicjować etapów. Spróbuj ponownie.', 'error');
+    return;
+  }
 
-  // Link back to lead
-  await ZE_SB.from('ze_leads').update({ converted_to_project_id: project.id }).eq('id', leadId);
-  await ZE.logActivity(leadId, 'converted_to_project', { project_id: project.id });
+  // Step 3: link back to lead
+  const { error: linkErr } = await ZE_SB.from('ze_leads').update({ converted_to_project_id: project.id }).eq('id', leadId);
+  if (linkErr) {
+    ZE.toast('Projekt utworzony, ale nie udało się zlinkować z leadem. Otworzę projekt — link uzupełnij ręcznie.', 'error', 6000);
+  }
 
+  await ZE.logActivity(leadId, 'converted_to_project', { project_id: project.id, project_token: project.token });
   ZE.toast('Projekt utworzony.', 'success');
   location.href = '/zwolnie/projekt?id=' + project.id;
 }
+window.convertToProject = convertToProject;
 </script>
 </body>
 </html>

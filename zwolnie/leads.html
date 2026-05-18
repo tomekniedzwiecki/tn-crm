@@ -80,6 +80,15 @@
           <option value="status-asc">Status</option>
         </select>
       </div>
+      <!-- Quick filters -->
+      <div class="flex flex-wrap items-center gap-2 mb-4 text-xs">
+        <span class="text-zinc-500">Szybkie:</span>
+        <button data-quick="todo" class="ze-quick px-2.5 py-1 rounded-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/10">Czeka na analizę</button>
+        <button data-quick="no-mvp" class="ze-quick px-2.5 py-1 rounded-md border border-violet-500/30 text-violet-300 hover:bg-violet-500/10">Bez MVP</button>
+        <button data-quick="needs-action" class="ze-quick px-2.5 py-1 rounded-md border border-blue-500/30 text-blue-300 hover:bg-blue-500/10">Wymaga akcji</button>
+        <button data-quick="starred" class="ze-quick px-2.5 py-1 rounded-md border border-amber-400/30 text-amber-300 hover:bg-amber-400/10">⭐ Gwiazdki</button>
+        <button data-quick="clear" class="ze-quick px-2.5 py-1 rounded-md border border-zinc-700 text-zinc-400 hover:bg-white/5">Wyczyść</button>
+      </div>
 
       <!-- Bulk actions -->
       <div id="bulk-bar" class="hidden mb-3 px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-lg flex items-center justify-between">
@@ -166,6 +175,7 @@
 <script>
 let allLeads = [];
 let selectedIds = new Set();
+let activeQuick = null;
 
 (async () => {
   const { staff } = await ZE_Auth.require();
@@ -231,6 +241,17 @@ let selectedIds = new Set();
   document.getElementById('export-btn').addEventListener('click', exportCSV);
   document.getElementById('add-lead-btn').addEventListener('click', () => document.getElementById('add-modal').classList.remove('hidden'));
   document.getElementById('add-form').addEventListener('submit', handleAddLead);
+
+  document.querySelectorAll('.ze-quick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeQuick = btn.dataset.quick === 'clear' ? null : btn.dataset.quick;
+      document.querySelectorAll('.ze-quick').forEach(b => b.classList.toggle('ring-2', b.dataset.quick === activeQuick));
+      if (!activeQuick) {
+        ['f-status','f-industry','f-budget','f-search'].forEach(id => document.getElementById(id).value = '');
+      }
+      applyFilters();
+    });
+  });
 })();
 
 async function loadLeads() {
@@ -264,6 +285,10 @@ function applyFilters() {
       const hay = [l.contact_name, l.company, l.contact_email, l.contact_phone, l.industry].filter(Boolean).join(' ').toLowerCase();
       if (!hay.includes(q)) return false;
     }
+    if (activeQuick === 'todo' && (l.ai_analysis || ['lost','archived'].includes(l.status))) return false;
+    if (activeQuick === 'no-mvp' && (l.mvp_html || ['lost','archived'].includes(l.status))) return false;
+    if (activeQuick === 'needs-action' && !['new','analyzing','analyzed','proposal_sent','negotiation'].includes(l.status)) return false;
+    if (activeQuick === 'starred' && !l.starred) return false;
     return true;
   });
 
@@ -300,7 +325,7 @@ function renderLeads(list) {
       </td>
       <td class="ze-td">
         <div class="text-zinc-300">${ZE.escapeHtml(l.company || '—')}</div>
-        ${l.website ? `<a href="${ZE.escapeHtml(l.website.startsWith('http') ? l.website : 'https://' + l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-xs text-zinc-500 hover:text-emerald-400 truncate inline-block max-w-[160px]"><i class="ph ph-link-simple"></i> ${ZE.escapeHtml(l.website.replace(/^https?:\/\//, ''))}</a>` : ''}
+        ${(() => { const u = ZE.safeUrl(l.website); return u ? `<a href="${ZE.escapeHtml(u)}" target="_blank" rel="noopener nofollow" onclick="event.stopPropagation()" class="text-xs text-zinc-500 hover:text-emerald-400 truncate inline-block max-w-[160px]"><i class="ph ph-link-simple"></i> ${ZE.escapeHtml(l.website.replace(/^https?:\/\//, ''))}</a>` : ''; })()}
       </td>
       <td class="ze-td hidden lg:table-cell text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry || '—')}</td>
       <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.TEAM_SIZE_LABELS[l.team_size] || l.team_size || '—')}</td>

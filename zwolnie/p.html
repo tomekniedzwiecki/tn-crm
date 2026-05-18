@@ -38,6 +38,13 @@
   <!-- Hero -->
   <section class="border-b border-white/5 px-6 py-12 ze-fade">
     <div class="max-w-4xl mx-auto">
+      <div class="flex items-center gap-3 mb-6">
+        <img src="https://tomekniedzwiecki.pl/img/tn_kwadrat_small.webp" alt="Tomek Niedźwiecki" class="w-10 h-10 rounded-full border border-white/10" loading="lazy">
+        <div>
+          <div class="text-sm text-white font-medium">Tomek Niedźwiecki</div>
+          <div class="text-xs text-zinc-500">Cieszę się, że robimy to razem. Tu śledzisz postępy na bieżąco.</div>
+        </div>
+      </div>
       <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500 mb-3">
         <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
         Projekt w toku
@@ -86,7 +93,7 @@
           <span class="w-3 h-3 rounded-full bg-zinc-400"></span>
           <span class="ml-3 text-xs text-zinc-600">prototyp</span>
         </div>
-        <iframe id="mvp-iframe" sandbox="allow-scripts allow-same-origin" class="w-full bg-white" style="height: 800px; border: none;"></iframe>
+        <iframe id="mvp-iframe" sandbox="allow-scripts allow-forms" class="w-full bg-white" style="height: 800px; border: none;"></iframe>
       </div>
       <div class="text-center mt-4">
         <button id="open-mvp-fullscreen" class="text-zinc-400 hover:text-white text-sm">
@@ -108,7 +115,9 @@
   <footer class="px-6 py-10 border-t border-white/5 text-center">
     <div class="text-xs text-zinc-500">
       Pytania? <a href="mailto:tomek@tomekniedzwiecki.pl" class="text-emerald-400 hover:underline">tomek@tomekniedzwiecki.pl</a>
-      · <a href="https://tomekniedzwiecki.pl/zwolnie/" class="hover:text-white">zwolnie.tomekniedzwiecki.pl</a>
+    </div>
+    <div class="text-[10px] text-zinc-700 mt-2">
+      Ten widok jest prywatny — chroniony unikalnym linkiem. Nie udostępniaj go publicznie.
     </div>
   </footer>
 </div>
@@ -123,13 +132,11 @@ const pathParts = location.pathname.replace(/\/$/, '').split('/');
 const token = pathParts[pathParts.length - 1];
 
 (async () => {
-  if (!token || token === 'p') { showNotFound(); return; }
+  if (!token || token === 'p' || token.length < 8) { showNotFound(); return; }
 
-  const { data: project } = await ZE_SB.from('ze_projects')
-    .select('id, token, title, description, status, mvp_html, kickoff_at, delivery_at, created_at')
-    .eq('token', token).maybeSingle();
-
-  if (!project) { showNotFound(); return; }
+  // RPC zwraca pełny obraz projektu po tokenie (bez PII leakage)
+  const { data: project, error } = await ZE_SB.rpc('ze_get_client_project', { p_token: token });
+  if (error || !project) { showNotFound(); return; }
 
   document.title = project.title + ' · Zwolnię';
   document.getElementById('title').textContent = project.title;
@@ -137,33 +144,26 @@ const token = pathParts[pathParts.length - 1];
   document.getElementById('status').textContent = STATUS_LABELS[project.status] || project.status;
   document.getElementById('kickoff').textContent = ZE.fmtDate(project.kickoff_at || project.created_at);
 
-  // Stages
-  const { data: stages } = await ZE_SB.from('ze_project_stages')
-    .select('id, slug, title, description, status, order_index, started_at, completed_at, ze_project_tasks(id, title, completed, visible_to_client, order_index)')
-    .eq('project_id', project.id).eq('visible_to_client', true).order('order_index');
+  renderStages(project.stages || []);
 
-  renderStages(stages || []);
-
-  // MVP
   if (project.mvp_html) {
     document.getElementById('mvp-section').classList.remove('hidden');
     document.getElementById('mvp-iframe').srcdoc = project.mvp_html;
-    document.getElementById('open-mvp-fullscreen').addEventListener('click', () => {
-      const win = window.open('', '_blank');
-      win.document.write(project.mvp_html);
-      win.document.close();
-    });
+    document.getElementById('open-mvp-fullscreen').addEventListener('click', () => openMvpInNewTab(project.mvp_html));
   }
 
-  // Updates
-  const { data: updates } = await ZE_SB.from('ze_project_updates')
-    .select('id, title, body, posted_at')
-    .eq('project_id', project.id).eq('visible_to_client', true).order('posted_at', { ascending: false });
-  renderUpdates(updates || []);
+  renderUpdates(project.updates || []);
 
   document.getElementById('ze-loading').classList.add('hidden');
   document.getElementById('ze-content').classList.remove('hidden');
 })();
+
+function openMvpInNewTab(html) {
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank', 'noopener,noreferrer');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
 
 function showNotFound() {
   document.getElementById('ze-loading').classList.add('hidden');
@@ -183,7 +183,7 @@ function renderStages(stages) {
   el.innerHTML = `
     <div class="absolute left-3 top-3 bottom-3 stage-line"></div>
     ${stages.map(s => {
-      const tasks = (s.ze_project_tasks || []).filter(t => t.visible_to_client).sort((a,b)=>a.order_index-b.order_index);
+      const tasks = (s.tasks || []).slice().sort((a,b)=>a.order_index-b.order_index);
       const label = { pending: 'Czeka', in_progress: 'W toku', completed: 'Zrobione', skipped: 'Pominięty' }[s.status];
       const labelColor = { pending: 'text-zinc-500', in_progress: 'text-amber-300', completed: 'text-emerald-400', skipped: 'text-zinc-600' }[s.status];
       return `

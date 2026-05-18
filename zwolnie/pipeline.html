@@ -140,6 +140,19 @@ async function handleDrop(e) {
   const lead = allLeads.find(l => l.id === leadId);
   if (!lead || lead.status === newStatus) return;
   const oldStatus = lead.status;
+
+  // Guard: warn before skipping analysis/MVP for terminal-positive moves
+  if (newStatus === 'won' || newStatus === 'proposal_sent') {
+    const { data: full } = await ZE_SB.from('ze_leads').select('ai_analysis, mvp_html').eq('id', leadId).single();
+    const missing = [];
+    if (!full?.ai_analysis) missing.push('analizy');
+    if (!full?.mvp_html) missing.push('MVP');
+    if (missing.length) {
+      const ok = await ZE.confirm(`Lead nie ma jeszcze ${missing.join(' ani ')}. Czy na pewno przesunąć na "${ZE.STATUS_LABELS[newStatus]}"?`);
+      if (!ok) return;
+    }
+  }
+
   lead.status = newStatus;
   renderBoard();
   const { error } = await ZE_SB.from('ze_leads').update({ status: newStatus }).eq('id', leadId);
