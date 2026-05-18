@@ -201,9 +201,11 @@ W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-imag
 
 ---
 
-## 🌬️ SCROLLABILITY RULES (v4.3) — landing musi oddychać
+## 🌬️ SCROLLABILITY RULES — landing musi oddychać
 
-> **Wprowadzone 2026-04-27 po feedbacku:** „Te landingi stały się ciężkie i nieprzyjemne w zapoznawaniu się z nimi". Conversion Atlas + Style Atlas wymuszały tyle liczb/spec/data że każdy landing czytał się jak research paper. Te reguły są nadrzędne nad mech MUSZĄ patterns — jeśli mech wymaga 5 evidence elements ale scrollability rule mówi max 2 dense sections, **scrollability wygrywa**.
+> **Wprowadzone 2026-04-27, utwardzone 2026-05-18:** „Te landingi stały się ciężkie i nieprzyjemne w zapoznawaniu się z nimi". Style Atlas v4.0 wymuszał tyle liczb/spec/data że każdy landing czytał się jak research paper.
+>
+> Te reguły są **nadrzędne** nad innymi wymaganiami procedury — jeśli styl Atlas wymaga 5 evidence elements ale scrollability rule mówi max 2 dense sections, **scrollability wygrywa**.
 
 ### Zasada nadrzędna: "1 mocna liczba > 5 słabych"
 
@@ -276,19 +278,18 @@ Glassnova ma 23 liczb, oculia/steamla po 31. To jest 2-4× więcej niż powinno.
 - „Testowane przez weterynarzy" — bez nazw instytucji, jedna fraza w trust strip
 - „Rekomendowane przez 1247 właścicieli" — social proof, jedna liczba
 
-### Per-mech adaptacja (override starych MUSZĄ)
+### Heurystyki copy psychologii (lekkie, ad-hoc per landing)
 
-Conversion Atlas v4.2 mech files wymagały więcej density niż user toleruje. Aktualne MUSZĄ patterns w mech files są **maximum**, nie minimum. Praktyczna implementacja:
+> Conversion Atlas v4.2 (10 mechanizmów z evidence) został **wycofany 2026-05-18** — wymuszał zbyt gęste landingi. Te heurystyki są jego lekką wersją: stosuj ad-hoc jeśli pasują do produktu, NIE wymuszaj wszystkich.
 
-- **PAS:** 1 pain word w hero + 1 amplifier statement (NIE rozbudowana sekcja statystyk strat)
-- **Authority:** 1 expert quote z imieniem (NIE roster 5 ekspertów + research-evidence section)
-- **Risk Reversal:** 1 guarantee statement (już jest light w schemacie)
-- **Transformation:** 1 outcome metric w hero + 1 before/after photo (NIE KPI dashboard z 5 counterami)
-- **Identity Buying:** już light by default (manifesto-driven)
-- **Curiosity Gap:** już light (paradox + reveal)
-- **Demonstration:** 1 hero video + 1 demo section (NIE 4 demo embeds)
+- **Pain-driven hero (PAS):** 1 pain word w hero + 1 amplifier statement. NIE rozbudowana sekcja statystyk strat.
+- **Authority:** 1 expert quote z imieniem. NIE roster 5 ekspertów + research-evidence section.
+- **Risk Reversal:** 1 guarantee statement (zazwyczaj w offer box).
+- **Transformation:** 1 outcome metric w hero + 1 before/after photo. NIE KPI dashboard z 5 counterami.
+- **Curiosity Gap:** paradox lub niedopowiedzenie w headline.
+- **Demonstration:** 1 hero video lub 1 demo section. NIE 4 demo embeds.
 
-`verify-conversion-lock.sh` jest na to nadrzędny — relaxowane thresholds w v4.3.
+**Patrz pełny research:** [`_research/conversion-atlas-research.md`](_research/conversion-atlas-research.md) (oznaczone WYCOFANE — używaj tylko jako lesson learned).
 
 ---
 

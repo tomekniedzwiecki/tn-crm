@@ -1,6 +1,10 @@
-# Landing Page Procedure — TN CRM (v3)
+# Landing Page Procedure — TN CRM (v4.2)
 
-> Ostatnia aktualizacja: 2026-04-20 (v3 — patrz [CHANGELOG.md](CHANGELOG.md))
+> Ostatnia aktualizacja: 2026-05-18 (v4.2 — patrz [CHANGELOG.md](CHANGELOG.md))
+>
+> **Aktualne v4.x kompoenty:** Style Atlas (15 stylów, deterministyczny pick przez Product DNA) · Sekcja 10 STYLE LOCK w `_brief.md` · `verify-style-lock.sh` · `landing-style-stats.sh` anti-repetition · Scrollability Rules (max 8-12 liczb/landing, 3 breathing momenty)
+>
+> **Wycofane:** Conversion Atlas v4.2 + Quiz Funnel v4.3 (research w `_research/` — Conversion Atlas testowany w kwietniu 2026, spowodował „ciężkie i nieprzyjemne" landingi, Scrollability Rules przejęły jego rolę)
 
 ## TL;DR
 

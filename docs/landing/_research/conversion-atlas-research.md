@@ -1,6 +1,18 @@
 # Conversion Atlas — Biblioteka mechanizmów psychologicznych konwersji dla landing pages TN
 
-> Research output from agent run 2026-04-27. Reference for Faza 1 implementation.
+> ⚠️ **WYCOFANE 2026-05-18** — testowane w kwietniu 2026, spowodowało „ciężkie i nieprzyjemne" landingi (każdy czytał się jak research paper z 30+ liczbami). Scrollability Rules w [`02-generate.md`](../02-generate.md) przejęły jego rolę. Plik zostaje jako **lesson learned**, nie jako roadmap.
+>
+> **Dlaczego wycofane:** mechanizmy (PAS, Authority, Risk Reversal, etc.) wymuszały tyle elementów evidence i agitacji że landingi traciły premium feel + Tomek raportował konkretne pogorszenie odczucia. Empirycznie: 1 mocna liczba > 5 słabych.
+>
+> **Co zostało zachowane z tego researchu:**
+> - Concept że psychologia → estetyka (Mechanism wybierany PRZED Style) — wartościowy ale wymaga lekkiej implementacji
+> - Per-mech adaptation guidelines w Scrollability Rules (PAS = 1 pain word w hero, NIE rozbudowana sekcja statystyk)
+>
+> **Nie wdrażać tego planu w pełni** — jeśli chcesz mech-aware landingi, pisz lekkie wytyczne w `_brief.md` sekcja 11 ad-hoc, nie wymuszaj 5 ewidencjami per mech.
+
+---
+
+Research output from agent run 2026-04-27. Reference for Faza 1 implementation.
 
 Wersja 1.0 (2026-04-27) — companion do Style Atlas. Wybór mechanizmu robisz PRZED wyborem estetyki.
 

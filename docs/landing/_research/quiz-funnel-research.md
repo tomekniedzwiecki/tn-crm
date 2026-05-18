@@ -1,6 +1,14 @@
 # Quiz Funnel Research dla TN — Game Changer assessment
 
-> Research output from agent run 2026-04-27. Reference for Faza 3 implementation.
+> ⚠️ **WYCOFANE 2026-05-18** — Quiz Funnel był Fazą 3 planu integracji v4.2-v4.3, który został wycofany razem z Conversion Atlas (powód: gęstość landinga, patrz [`conversion-atlas-research.md`](conversion-atlas-research.md)).
+>
+> **Research nadal wartościowy jako lesson learned** — Bark, Liquid IV, Function of Beauty, Hims itd. mają realnie wyższe CR dzięki quiz funnel'om dla produktów z 3+ wymiarami decyzyjnymi (persona × use case × wariant). Jeśli kiedyś wrócisz do quiz format'u, ten plik to dobry startup point.
+>
+> **Dlaczego nie wdrażamy teraz:** wymaga osobnej infrastruktury (state machine JS + email-gate + result mapping + verify-quiz-funnel.sh) — większy inwestment niż obecna wartość biznesowa.
+
+---
+
+Research output from agent run 2026-04-27. Reference for Faza 3 implementation.
 
 ## SEKCJA A — Anatomy 7 quiz funnels
 

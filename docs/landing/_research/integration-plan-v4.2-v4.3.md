@@ -1,6 +1,12 @@
 # Integrated Architecture Plan — Conversion Atlas + Quiz Funnel (v4.2 → v4.3)
 
-> Plan output from agent run 2026-04-27. Reference for implementation phases.
+> ⚠️ **WYCOFANE 2026-05-18** — Conversion Atlas testowany w kwietniu 2026 i wycofany (spowodował „ciężkie" landingi, patrz [`conversion-atlas-research.md`](conversion-atlas-research.md)). Quiz Funnel nie został wdrożony i nie planowany.
+>
+> Plan zostaje jako lesson learned + potencjalna inspiracja dla przyszłych iteracji (zwłaszcza Quiz Funnel — wartościowy dla produktów z 3+ wymiarami decyzyjnymi). NIE wdrażać tego planu jako roadmapy.
+
+---
+
+Plan output from agent run 2026-04-27. Reference for implementation phases.
 
 ## 1. Architektura — gdzie wstawić Conversion Atlas
 

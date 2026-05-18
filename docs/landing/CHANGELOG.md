@@ -1,5 +1,117 @@
 # Changelog — Landing Page Procedure
 
+## [v4.2] — 2026-05-18
+
+### Refactor — `verify-landing.sh` akceptuje alt CSS naming (75→43 FAIL, -43% false positives)
+
+Po empirycznym audycie 5 ostatnich landingów (czystosz, innerscan, zoomik, zenoko, sprzatek) odkryto że ~43% raportowanych FAIL'ów to false positives od niezgodnego CSS naming — landingi miały funkcjonalne elementy pod innymi nazwami niż procedura v4.0 wymagała.
+
+**Rozszerzone regex w `verify-landing.sh`:**
+- Testimonials: `voice-quote` → +`testimonial-text|testi-quote|opinia-text|review-text|quote-body`
+- FAQ answers: `faq-a` → +`faq-answer|faq-body|faq-text`
+- Personas: `persona-figure` → +`persona-card|persona-emoji|persona-photo|persona-portrait|persona-lab`
+- Bento tiles: `tile` → +`bento-card|feature-card|feat-card|spec-card|benefit-card|solution-feature`
+- Trust strip: `offer-trust` → +`trust-item|trust-chip|trust-row|trust-inner`
+- Section completeness: Header pattern uproszczony do `<header` (akceptuje `class="nav"`)
+- Step placeholdery: min 3 → 0 (warn, niektóre style są text-only)
+- Personas/Testimonials placeholders: fail → warn (różne wzorce stylów)
+
+**Style Lock relaks:**
+- Gdy brak `_brief.md` (NO_BRIEF=1): JS effects (`.js-split`, `.js-counter`, `.magnetic`) → WARN zamiast FAIL (Style Lock niemożliwy bez briefa)
+
+**Wycofane:** Conversion Atlas v4.2 + Quiz Funnel v4.3 (research w `_research/`). Conversion Atlas testowany w kwietniu 2026, spowodował „ciężkie i nieprzyjemne" landingi (Scrollability Rules przejęły jego rolę). Plan integracji pozostaje jako lesson learned, nie jako roadmapa.
+
+### Dlaczego refactor a nie sprzątanie 5 landingów
+
+Decyzja architektoniczna: skupić procedurę na **przyszłych landingach**, nie naprawiać retrospektywnie 5 obecnych (klienci już mają, koszt zmiany niepewny). False positives w skrypcie to większy ROI: refactor 30 min vs 5× sprzątanie po ~2h = 10h.
+
+### Statistics
+
+| Landing | FAIL przed | FAIL po | Real defects (zostały) |
+|---|---|---|---|
+| sprzatek | 15 | 7 | OG URL, BLIK, html.js, savings |
+| zoomik | 14 | 8 | OG URL, BLIK, savings, How It Works |
+| zenoko | 16 | 9 | OG URL, BLIK, html.js, savings, power-words |
+| innerscan | 15 | 7 | hero liczby, testi length, savings |
+| czystosz | 15 | 12 | brak sekcji + szkielet (potrzebny rebuild) |
+
+---
+
+## [v4.1] — 2026-04-23 (retrospektywnie udokumentowane 2026-05-18)
+
+### Added — 3 enforcement skrypty + sekcja 10 STYLE LOCK
+
+**Nowe skrypty:**
+- `scripts/verify-style-lock.sh` — sprawdza zgodność landingu ze Style Lock z `_brief.md` (hardcoded case statement per styl, MUSZĄ/NIE WOLNO grep checks)
+- `scripts/landing-style-stats.sh` — agreguje Style ID z ostatnich landingów (anti-repetition: max 2× ten sam styl w ostatnich 5)
+- `scripts/review-landing-visual.sh` — visual review per styl
+
+**Update `_brief.template.md`:**
+- Sekcja 10 STYLE LOCK obowiązkowa (Style ID + MUSZĄ + NIE WOLNO + Compat)
+- `verify-brief.sh` wymusza obecność sekcji 10 i Style ID matching plik w `style-atlas/`
+
+**Update `verify-landing.sh`:**
+- Sekcja 0: ładuje Style Lock z briefa, ustawia flagi `STYLE_ALLOWS_*` per JS effect
+- Sekcja 7: JS effects adaptują się per Style Lock (Apothecary nie wymaga .js-split, etc.)
+- Sekcja 11: Trust Bar / Sticky CTA / Bento skipowane gdy Style Lock zakazuje
+
+### Pre-commit hook (`install-landing-hooks.sh`)
+- Egzekwuje `verify-landing.sh` exit 0 + `verify-style-lock.sh` exit 0 przed commitem
+- **Status w praktyce 2026-05-18:** zainstalowany ale rutynowo bypassed przez `--no-verify` w landing-autorun.sh; po refactorze v4.2 enforcement powinien być pragmatyczny
+
+---
+
+## [v4.0] — 2026-04-23 (retrospektywnie udokumentowane 2026-05-18)
+
+### Added — Style Atlas (System v4)
+
+Rozwiązuje problem konwergencji: mimo MODE=forge i różnych manifestów, landingi dryfowały do tego samego zestawu narzędzi (Fraunces + Nº + bento 2×2).
+
+**Nowy katalog `docs/landing/style-atlas/`:**
+- `README.md` — framework + indeks 15 stylów
+- `_template.md` — schema nowego stylu (12 pól)
+- 15 plików stylu (6 retrospektywnie z istniejących baseline'ów + 9 nowych)
+
+**6 baseline retrospektywnie:** Editorial Print, Panoramic Calm, Organic Natural, Playful Toy, Retro-Futuristic, Rugged Heritage
+
+**9 nowych:** Apothecary Label, Poster Utility, Clinical Kitchen, Japandi Serenity, Swiss Grid, Brutalist DIY, Dark Academia, Cottagecore Botanical, Outdoorsy Expedition
+
+**Schema stylu (12 pól):** Nazwa + tagline, Product DNA profil (7 etykiet), Kategorie produktów, Real-world refs, Font stack, Paleta 60/30/10, Layout DNA, Signature primitives, MUSZĄ, NIE WOLNO, Motion budget, Example snippet
+
+### Product DNA — 7 osi wyboru (deterministyczny pick)
+1. Utility ↔ Ritual
+2. Precision ↔ Expression
+3. Evidence ↔ Feeling
+4. Solo ↔ Community
+5. Quiet ↔ Loud
+6. Tradition ↔ Future
+7. Intimate ↔ Public
+
+Każdy styl ma etykietowany profil DNA → algorytmiczny match (count(zgodności) / 7), top-1 wygrywa. Tie-break: anti-repetition (wyklucz style użyte 2× lub więcej w ostatnich 5).
+
+### Update `01-direction.md`
+- **Krok 9a (OBOWIĄZKOWY od v4.0):** Product DNA + Style Pick z Atlas → STYLE LOCK do `_brief.md` sekcja 10
+- Krok 9a.1: wypełnij DNA (7 etykiet z kotwicami)
+- Krok 9a.2: algorytmiczny match top-3
+- Krok 9a.3: argumentacja wyboru (1 zdanie)
+- Krok 9a.4: czytaj plik stylu CAŁOŚCIOWO
+- Krok 9a.5: auto-paste MUSZĄ/NIE WOLNO do briefa
+
+### Update `02-generate.md` (2026-04-27)
+
+**Scrollability Rules:** „Te landingi stały się ciężkie i nieprzyjemne". Conversion Atlas (testowany kwiecień 2026) wymuszał tyle liczb/spec/data że każdy landing czytał się jak research paper. Nowe twarde limity:
+- 1 mocna liczba > 5 słabych (max 1-2 w hero)
+- Max 2 dense sekcje (KPI/spec/research) per landing
+- Min 3 breathing momenty (lifestyle hero/single quote/big-statement)
+- Min 3 lifestyle photos (NIE 3 packshoty)
+- Total liczb per landing: 8-12 max (nie 30+)
+
+### Removed
+- Subiektywny wybór stylu „Claude wymyśla" → algorytmiczny (Product DNA)
+- Conversion Atlas v4.2 mech files (testowane, wycofane — w `_research/`)
+
+---
+
 ## [v3.6] — 2026-04-20
 
 ### Added — Section variants library (22 wariantów per sekcja)
