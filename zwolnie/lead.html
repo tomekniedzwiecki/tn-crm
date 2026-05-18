@@ -232,12 +232,6 @@ let currentPromptSlug = 'business_analysis';
   const { staff } = await ZE_Auth.require();
   ZE_Sidebar.render({ active: 'leads', userEmail: staff.email });
 
-  await loadLead();
-  await loadPrompts();
-  await loadAttachments();
-  await loadNotes();
-  await loadActivity();
-
   function selectTab(name) {
     document.querySelectorAll('.ds-tab').forEach(x => x.classList.toggle('is-active', x.dataset.tab === name));
     document.querySelectorAll('.ze-panel').forEach(x => x.classList.toggle('is-active', x.dataset.panel === name));
@@ -245,9 +239,17 @@ let currentPromptSlug = 'business_analysis';
     if (location.hash !== newHash) history.replaceState(null, '', newHash);
   }
   document.querySelectorAll('.ds-tab').forEach(t => t.addEventListener('click', () => selectTab(t.dataset.tab)));
+  window.ZE.selectTabExt = (name) => document.querySelector('.ds-tab[data-tab="' + name + '"]')?.click();
+
+  await loadLead();
+  await loadPrompts();
+  await loadAttachments();
+  await loadNotes();
+  await loadActivity();
+
+  // Activate tab from URL hash AFTER lead loaded (prompt renders need lead.id)
   const initialTab = (location.hash.match(/tab=(\w+)/) || [])[1];
   if (initialTab && document.querySelector(`.ds-tab[data-tab="${initialTab}"]`)) selectTab(initialTab);
-  window.ZE.selectTabExt = (name) => document.querySelector('.ds-tab[data-tab="' + name + '"]')?.click();
 
   document.getElementById('status-select').addEventListener('change', async (e) => {
     const v = e.target.value;
