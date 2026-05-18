@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zwolnię · Leady</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="/zwolnie/_assets/common.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { font-family: 'Inter', sans-serif; }
+  .ze-th { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #71717a; padding: 12px 16px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); background: #0a0a0a; }
+  .ze-td { padding: 14px 16px; border-bottom: 1px solid rgba(255,255,255,0.05); vertical-align: middle; }
+  .ze-row:hover { background: rgba(255,255,255,0.025); }
+  .ze-row.is-starred { background: rgba(245, 158, 11, 0.04); }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+
+<main class="flex-1 flex flex-col min-w-0">
+  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-zinc-500">Zwolnię</span>
+      <span class="text-zinc-700">/</span>
+      <span class="text-white font-medium">Leady</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="export-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+        <i class="ph ph-download-simple"></i>
+        <span class="hidden md:inline">Export CSV</span>
+      </button>
+      <button id="refresh-btn" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-2.5 py-2 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5">
+        <i class="ph ph-arrows-clockwise text-base" id="refresh-icon"></i>
+      </button>
+      <button id="add-lead-btn" class="bg-white text-black hover:bg-zinc-200 px-3 py-2 rounded-lg font-medium text-sm transition-colors flex items-center gap-1.5">
+        <i class="ph ph-plus"></i>
+        <span class="hidden md:inline">Dodaj lead</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex items-end justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-semibold text-white">Leady</h1>
+          <p class="text-zinc-500 text-sm">Wszystkie zgłoszenia z formularza i ręcznie dodane.</p>
+        </div>
+        <div class="text-right">
+          <div class="text-3xl font-semibold text-white" id="lead-count">—</div>
+          <div class="text-xs text-zinc-500" id="lead-count-filtered"></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="grid grid-cols-1 md:grid-cols-6 gap-2 mb-4">
+        <div class="md:col-span-2 relative">
+          <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+          <input type="text" id="f-search" placeholder="Szukaj po imieniu, firmie, mailu..."
+                 class="ze-input w-full pl-10 pr-4 py-2.5 rounded-lg text-sm">
+        </div>
+        <select id="f-status" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+          <option value="">Wszystkie statusy</option>
+        </select>
+        <select id="f-industry" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+          <option value="">Wszystkie branże</option>
+        </select>
+        <select id="f-budget" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+          <option value="">Każdy budżet</option>
+        </select>
+        <select id="f-sort" class="ze-input px-3 py-2.5 rounded-lg text-sm">
+          <option value="created_at-desc">Najnowsze</option>
+          <option value="created_at-asc">Najstarsze</option>
+          <option value="contact_name-asc">Imię A-Z</option>
+          <option value="status-asc">Status</option>
+        </select>
+      </div>
+
+      <!-- Bulk actions -->
+      <div id="bulk-bar" class="hidden mb-3 px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-lg flex items-center justify-between">
+        <span class="text-sm text-zinc-400"><span id="bulk-count">0</span> wybrane</span>
+        <div class="flex gap-2">
+          <button id="bulk-archive" class="text-zinc-400 hover:text-white text-xs px-3 py-1.5 rounded-md border border-zinc-700 hover:border-zinc-500">Archiwizuj</button>
+          <button id="bulk-delete" class="text-red-400 hover:text-red-300 text-xs px-3 py-1.5 rounded-md border border-red-500/30 hover:border-red-500/50 bg-red-500/10">Usuń</button>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+        <table class="w-full text-sm">
+          <thead>
+            <tr>
+              <th class="ze-th w-10"><input type="checkbox" id="check-all" class="rounded bg-zinc-800 border-zinc-700"></th>
+              <th class="ze-th">Kontakt</th>
+              <th class="ze-th">Firma</th>
+              <th class="ze-th hidden lg:table-cell">Branża</th>
+              <th class="ze-th hidden xl:table-cell">Zespół</th>
+              <th class="ze-th hidden xl:table-cell">Budżet</th>
+              <th class="ze-th">Status</th>
+              <th class="ze-th">Utworzony</th>
+              <th class="ze-th w-10"></th>
+            </tr>
+          </thead>
+          <tbody id="leads-tbody">
+            <tr><td colspan="9" class="ze-td text-center text-zinc-500 py-10">Ładowanie...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Add Lead Modal -->
+<div id="add-modal" class="hidden fixed inset-0 bg-black/60 z-50 items-center justify-center p-4">
+  <div class="bg-zinc-900 border border-white/10 rounded-xl p-6 w-full max-w-lg">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-semibold text-white">Dodaj lead ręcznie</h3>
+      <button onclick="closeAddModal()" class="text-zinc-500 hover:text-white"><i class="ph ph-x text-xl"></i></button>
+    </div>
+    <form id="add-form" class="space-y-3">
+      <div>
+        <label class="text-xs text-zinc-500 uppercase">Imię i nazwisko</label>
+        <input name="contact_name" required class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-zinc-500 uppercase">Email</label>
+          <input name="contact_email" type="email" required class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        </div>
+        <div>
+          <label class="text-xs text-zinc-500 uppercase">Telefon</label>
+          <input name="contact_phone" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-zinc-500 uppercase">Firma</label>
+          <input name="company" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        </div>
+        <div>
+          <label class="text-xs text-zinc-500 uppercase">Strona WWW</label>
+          <input name="website" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1">
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-zinc-500 uppercase">Krótki opis problemu</label>
+        <textarea name="problem" rows="3" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mt-1"></textarea>
+      </div>
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button" onclick="closeAddModal()" class="px-4 py-2 rounded-lg text-sm text-zinc-400 hover:text-white">Anuluj</button>
+        <button type="submit" class="px-4 py-2 rounded-lg text-sm bg-white text-black font-semibold hover:bg-zinc-200">Dodaj</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/zwolnie/_assets/config.js"></script>
+<script src="/zwolnie/_assets/auth.js"></script>
+<script src="/zwolnie/_assets/utils.js"></script>
+<script src="/zwolnie/_assets/sidebar.js"></script>
+<script>
+let allLeads = [];
+let selectedIds = new Set();
+
+(async () => {
+  const { staff } = await ZE_Auth.require();
+  ZE_Sidebar.render({ active: 'leads', userEmail: staff.email });
+
+  // Populate filter dropdowns
+  const fStatus = document.getElementById('f-status');
+  ZE.STATUS_ORDER.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s; opt.textContent = ZE.STATUS_LABELS[s];
+    fStatus.appendChild(opt);
+  });
+  const fIndustry = document.getElementById('f-industry');
+  Object.entries(ZE.INDUSTRY_LABELS).forEach(([v, l]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = l;
+    fIndustry.appendChild(o);
+  });
+  const fBudget = document.getElementById('f-budget');
+  Object.entries(ZE.BUDGET_LABELS).forEach(([v, l]) => {
+    const o = document.createElement('option'); o.value = v; o.textContent = l;
+    fBudget.appendChild(o);
+  });
+
+  await loadLeads();
+
+  ['f-search', 'f-status', 'f-industry', 'f-budget', 'f-sort'].forEach(id => {
+    document.getElementById(id).addEventListener('input', applyFilters);
+    document.getElementById(id).addEventListener('change', applyFilters);
+  });
+
+  document.getElementById('refresh-btn').addEventListener('click', async () => {
+    document.getElementById('refresh-icon').classList.add('ze-spin');
+    await loadLeads();
+    setTimeout(() => document.getElementById('refresh-icon').classList.remove('ze-spin'), 600);
+  });
+
+  document.getElementById('check-all').addEventListener('change', (e) => {
+    const visible = document.querySelectorAll('.ze-row-check');
+    visible.forEach(c => {
+      c.checked = e.target.checked;
+      if (e.target.checked) selectedIds.add(c.dataset.id);
+      else selectedIds.delete(c.dataset.id);
+    });
+    updateBulkBar();
+  });
+
+  document.getElementById('bulk-delete').addEventListener('click', async () => {
+    if (!confirm(`Na pewno usunąć ${selectedIds.size} leadów? Tego się nie cofnie.`)) return;
+    const { error } = await ZE_SB.from('ze_leads').delete().in('id', Array.from(selectedIds));
+    if (error) { ZE.toast(error.message, 'error'); return; }
+    ZE.toast('Usunięto.', 'success');
+    selectedIds.clear();
+    await loadLeads();
+  });
+  document.getElementById('bulk-archive').addEventListener('click', async () => {
+    const { error } = await ZE_SB.from('ze_leads').update({ status: 'archived' }).in('id', Array.from(selectedIds));
+    if (error) { ZE.toast(error.message, 'error'); return; }
+    ZE.toast('Zarchiwizowano.', 'success');
+    selectedIds.clear();
+    await loadLeads();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', exportCSV);
+  document.getElementById('add-lead-btn').addEventListener('click', () => document.getElementById('add-modal').classList.remove('hidden'));
+  document.getElementById('add-form').addEventListener('submit', handleAddLead);
+})();
+
+async function loadLeads() {
+  const { data, error } = await ZE_SB
+    .from('ze_leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(0, 999);
+  if (error) {
+    document.getElementById('leads-tbody').innerHTML = `<tr><td colspan="9" class="ze-td text-red-400 py-10 text-center">${ZE.escapeHtml(error.message)}</td></tr>`;
+    return;
+  }
+  allLeads = data || [];
+  ZE_Sidebar.setBadge('leads', allLeads.length);
+  document.getElementById('lead-count').textContent = allLeads.length;
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('f-search').value.trim().toLowerCase();
+  const fs = document.getElementById('f-status').value;
+  const fi = document.getElementById('f-industry').value;
+  const fb = document.getElementById('f-budget').value;
+  const [sortKey, sortDir] = document.getElementById('f-sort').value.split('-');
+
+  let list = allLeads.filter(l => {
+    if (fs && l.status !== fs) return false;
+    if (fi && l.industry !== fi) return false;
+    if (fb && l.budget !== fb) return false;
+    if (q) {
+      const hay = [l.contact_name, l.company, l.contact_email, l.contact_phone, l.industry].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+
+  list.sort((a, b) => {
+    const av = a[sortKey] || '';
+    const bv = b[sortKey] || '';
+    if (av < bv) return sortDir === 'asc' ? -1 : 1;
+    if (av > bv) return sortDir === 'asc' ? 1 : -1;
+    return 0;
+  });
+
+  renderLeads(list);
+  document.getElementById('lead-count-filtered').textContent = list.length !== allLeads.length
+    ? `pokazane: ${list.length}`
+    : '';
+}
+
+function renderLeads(list) {
+  const tbody = document.getElementById('leads-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="ze-td text-center text-zinc-500 py-10">Brak leadów spełniających kryteria.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(l => `
+    <tr class="ze-row cursor-pointer ${l.starred ? 'is-starred' : ''}" data-id="${l.id}">
+      <td class="ze-td" onclick="event.stopPropagation()">
+        <input type="checkbox" class="ze-row-check rounded bg-zinc-800 border-zinc-700"
+               data-id="${l.id}" ${selectedIds.has(l.id) ? 'checked' : ''}
+               onchange="toggleSelect('${l.id}', this.checked)">
+      </td>
+      <td class="ze-td">
+        <div class="font-medium text-white">${ZE.escapeHtml(l.contact_name || '(brak imienia)')}</div>
+        <div class="text-xs text-zinc-500">${ZE.escapeHtml(l.contact_email || '—')}</div>
+      </td>
+      <td class="ze-td">
+        <div class="text-zinc-300">${ZE.escapeHtml(l.company || '—')}</div>
+        ${l.website ? `<a href="${ZE.escapeHtml(l.website.startsWith('http') ? l.website : 'https://' + l.website)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="text-xs text-zinc-500 hover:text-emerald-400 truncate inline-block max-w-[160px]"><i class="ph ph-link-simple"></i> ${ZE.escapeHtml(l.website.replace(/^https?:\/\//, ''))}</a>` : ''}
+      </td>
+      <td class="ze-td hidden lg:table-cell text-zinc-400">${ZE.escapeHtml(ZE.INDUSTRY_LABELS[l.industry] || l.industry || '—')}</td>
+      <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.TEAM_SIZE_LABELS[l.team_size] || l.team_size || '—')}</td>
+      <td class="ze-td hidden xl:table-cell text-zinc-400">${ZE.escapeHtml(ZE.BUDGET_LABELS[l.budget] || l.budget || '—')}</td>
+      <td class="ze-td">${ZE.statusBadge(l.status)}</td>
+      <td class="ze-td text-zinc-500 text-xs">${ZE.fmtRelative(l.created_at)}</td>
+      <td class="ze-td text-right">
+        <button onclick="event.stopPropagation(); toggleStar('${l.id}', ${!l.starred})" class="text-zinc-500 hover:text-amber-400">
+          <i class="ph ${l.starred ? 'ph-fill ph-star' : 'ph-star'}"></i>
+        </button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('.ze-row').forEach(row => {
+    row.addEventListener('click', () => {
+      location.href = '/zwolnie/lead?id=' + row.dataset.id;
+    });
+  });
+}
+
+function toggleSelect(id, checked) {
+  if (checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  updateBulkBar();
+}
+function updateBulkBar() {
+  const bar = document.getElementById('bulk-bar');
+  document.getElementById('bulk-count').textContent = selectedIds.size;
+  bar.classList.toggle('hidden', selectedIds.size === 0);
+}
+
+async function toggleStar(id, value) {
+  await ZE_SB.from('ze_leads').update({ starred: value }).eq('id', id);
+  await loadLeads();
+}
+
+function closeAddModal() {
+  document.getElementById('add-modal').classList.add('hidden');
+}
+
+async function handleAddLead(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const payload = {
+    contact_name: fd.get('contact_name'),
+    contact_email: fd.get('contact_email'),
+    contact_phone: fd.get('contact_phone') || null,
+    company: fd.get('company') || null,
+    website: fd.get('website') || null,
+    problem: fd.get('problem') || null,
+    source: 'manual',
+    status: 'new'
+  };
+  const { data, error } = await ZE_SB.from('ze_leads').insert(payload).select('id').single();
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  closeAddModal();
+  e.target.reset();
+  ZE.toast('Lead dodany.', 'success');
+  location.href = '/zwolnie/lead?id=' + data.id;
+}
+
+function exportCSV() {
+  const visible = Array.from(document.querySelectorAll('.ze-row')).map(r => r.dataset.id);
+  const list = allLeads.filter(l => visible.includes(l.id));
+  if (!list.length) { ZE.toast('Nic do wyeksportowania.', 'error'); return; }
+  const headers = ['created_at', 'status', 'contact_name', 'contact_email', 'contact_phone', 'company', 'website', 'industry', 'team_size', 'payroll', 'budget', 'problem'];
+  const rows = list.map(l => headers.map(h => {
+    let v = l[h] ?? '';
+    if (typeof v === 'string' && (v.includes(',') || v.includes('"') || v.includes('\n'))) {
+      v = '"' + v.replace(/"/g, '""') + '"';
+    }
+    return v;
+  }).join(','));
+  const csv = headers.join(',') + '\n' + rows.join('\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `zwolnie-leady-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

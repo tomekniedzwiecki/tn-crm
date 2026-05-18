@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zwolnię · Lead</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="/zwolnie/_assets/common.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { font-family: 'Inter', sans-serif; }
+  .ze-tab { padding: 10px 18px; font-size: 13px; color: #71717a; border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s; }
+  .ze-tab:hover { color: #e5e5e5; }
+  .ze-tab.is-active { color: white; border-bottom-color: #10b981; }
+  .ze-panel { display: none; }
+  .ze-panel.is-active { display: block; }
+  .json-pretty { font-family: 'JetBrains Mono', monospace; font-size: 12px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+
+<main class="flex-1 flex flex-col min-w-0">
+  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="/zwolnie/leads" class="text-zinc-500 hover:text-white"><i class="ph ph-arrow-left text-lg"></i></a>
+      <div class="flex items-center gap-2 text-sm min-w-0">
+        <span class="text-zinc-500">Leady</span>
+        <span class="text-zinc-700">/</span>
+        <span class="text-white font-medium truncate" id="hdr-name">—</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <select id="status-select" class="ze-input px-3 py-2 rounded-lg text-xs"></select>
+      <button id="convert-btn" class="hidden text-emerald-300 hover:text-emerald-200 border border-emerald-500/30 hover:border-emerald-500/50 bg-emerald-500/10 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
+        <i class="ph ph-rocket-launch"></i>
+        <span>Konwertuj na projekt</span>
+      </button>
+      <button id="delete-btn" class="text-red-400 hover:text-red-300 border border-red-500/20 hover:border-red-500/40 bg-red-500/5 px-3 py-2 rounded-lg text-xs font-medium">
+        <i class="ph ph-trash"></i>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
+    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+
+      <!-- Main content -->
+      <section>
+        <!-- Tabs -->
+        <div class="flex items-center gap-1 border-b border-white/5 mb-5 overflow-x-auto">
+          <div class="ze-tab is-active" data-tab="brief"><i class="ph ph-file-text mr-1"></i> Brief</div>
+          <div class="ze-tab" data-tab="prompt"><i class="ph ph-sparkle mr-1"></i> Prompt AI</div>
+          <div class="ze-tab" data-tab="analysis"><i class="ph ph-chart-pie mr-1"></i> Analiza</div>
+          <div class="ze-tab" data-tab="mvp"><i class="ph ph-cursor-click mr-1"></i> MVP</div>
+          <div class="ze-tab" data-tab="files"><i class="ph ph-paperclip mr-1"></i> Załączniki <span id="files-count" class="text-zinc-600 ml-1"></span></div>
+          <div class="ze-tab" data-tab="notes"><i class="ph ph-note mr-1"></i> Notatki</div>
+          <div class="ze-tab" data-tab="activity"><i class="ph ph-list-bullets mr-1"></i> Aktywność</div>
+        </div>
+
+        <!-- BRIEF panel -->
+        <div class="ze-panel is-active" data-panel="brief">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <h2 class="text-sm font-semibold text-white mb-1">Opis problemu</h2>
+            <p class="text-xs text-zinc-500 mb-4">Z briefa lub ręcznie dodane.</p>
+            <div id="brief-problem" class="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed"></div>
+            <button id="edit-problem-btn" class="mt-4 text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj</button>
+          </div>
+
+          <div class="mt-5 grid grid-cols-2 gap-3 text-sm">
+            <div class="p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+              <div class="text-xs text-zinc-500 uppercase mb-1">Branża</div>
+              <div id="b-industry" class="text-white">—</div>
+            </div>
+            <div class="p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+              <div class="text-xs text-zinc-500 uppercase mb-1">Zespół</div>
+              <div id="b-team" class="text-white">—</div>
+            </div>
+            <div class="p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+              <div class="text-xs text-zinc-500 uppercase mb-1">Pensje (mies.)</div>
+              <div id="b-payroll" class="text-white">—</div>
+            </div>
+            <div class="p-4 bg-zinc-900/40 border border-white/5 rounded-lg">
+              <div class="text-xs text-zinc-500 uppercase mb-1">Budżet</div>
+              <div id="b-budget" class="text-white">—</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PROMPT panel -->
+        <div class="ze-panel" data-panel="prompt">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <div class="flex items-center justify-between mb-3">
+              <h2 class="text-sm font-semibold text-white">Generator promptów AI</h2>
+              <a href="/zwolnie/prompts" class="text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj szablony</a>
+            </div>
+            <p class="text-xs text-zinc-500 mb-4">Wybierz prompt, skopiuj, wklej do Claude Code w VS Code. Wynik wklej w panel "Analiza" lub "MVP".</p>
+            <select id="prompt-select" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm mb-3"></select>
+            <textarea id="prompt-output" rows="20" class="ze-input w-full px-3 py-3 rounded-lg text-xs font-mono leading-relaxed"></textarea>
+            <div class="flex gap-2 mt-3">
+              <button id="copy-prompt-btn" class="flex-1 bg-white text-black hover:bg-zinc-200 px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2">
+                <i class="ph ph-copy"></i> Kopiuj do schowka
+              </button>
+              <button id="open-claude-btn" class="bg-zinc-800 hover:bg-zinc-700 text-white px-4 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2">
+                <i class="ph ph-arrow-square-out"></i> Otwórz Claude Code
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYSIS panel -->
+        <div class="ze-panel" data-panel="analysis">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h2 class="text-sm font-semibold text-white">Analiza biznesu (z Claude Code)</h2>
+                <p class="text-xs text-zinc-500" id="analysis-meta">Brak. Wygeneruj prompt, uruchom w Claude Code, wklej JSON tutaj.</p>
+              </div>
+              <button id="analysis-edit-btn" class="text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj</button>
+            </div>
+            <div id="analysis-view" class="json-pretty text-zinc-300"></div>
+            <textarea id="analysis-input" rows="20" class="hidden ze-input w-full px-3 py-3 rounded-lg text-xs font-mono"></textarea>
+            <div id="analysis-edit-actions" class="hidden mt-3 flex gap-2">
+              <button id="analysis-save-btn" class="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold">Zapisz analizę</button>
+              <button id="analysis-cancel-btn" class="text-zinc-400 hover:text-white px-4 py-2.5 rounded-lg text-sm">Anuluj</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MVP panel -->
+        <div class="ze-panel" data-panel="mvp">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h2 class="text-sm font-semibold text-white">Klikalny prototyp MVP</h2>
+                <p class="text-xs text-zinc-500" id="mvp-meta">Wklej HTML z Claude Code (`mvp_generator`).</p>
+              </div>
+              <div class="flex gap-2">
+                <button id="mvp-edit-btn" class="text-xs text-zinc-500 hover:text-white"><i class="ph ph-pencil"></i> Edytuj</button>
+                <button id="mvp-open-btn" class="hidden text-xs text-emerald-400 hover:text-emerald-300"><i class="ph ph-arrow-square-out"></i> Pełny ekran</button>
+              </div>
+            </div>
+            <iframe id="mvp-iframe" sandbox="allow-scripts" class="hidden w-full bg-white rounded-lg" style="height: 600px;"></iframe>
+            <div id="mvp-empty" class="text-zinc-500 text-sm py-10 text-center border border-dashed border-white/10 rounded-lg">
+              Brak MVP. Kliknij "Edytuj" i wklej HTML wygenerowany w Claude Code.
+            </div>
+            <textarea id="mvp-input" rows="16" class="hidden ze-input w-full px-3 py-3 rounded-lg text-xs font-mono"
+                      placeholder="&lt;!DOCTYPE html&gt;..."></textarea>
+            <div id="mvp-edit-actions" class="hidden mt-3 flex gap-2">
+              <button id="mvp-save-btn" class="bg-emerald-500 hover:bg-emerald-400 text-black px-4 py-2.5 rounded-lg text-sm font-semibold">Zapisz MVP</button>
+              <button id="mvp-cancel-btn" class="text-zinc-400 hover:text-white px-4 py-2.5 rounded-lg text-sm">Anuluj</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- FILES panel -->
+        <div class="ze-panel" data-panel="files">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <h2 class="text-sm font-semibold text-white mb-1">Załączniki klienta</h2>
+            <p class="text-xs text-zinc-500 mb-4">Pliki wysłane razem z briefem.</p>
+            <div id="files-list" class="space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- NOTES panel -->
+        <div class="ze-panel" data-panel="notes">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <h2 class="text-sm font-semibold text-white mb-3">Notatki wewnętrzne</h2>
+            <textarea id="note-input" rows="3" class="ze-input w-full px-3 py-2.5 rounded-lg text-sm" placeholder="Twoja notatka..."></textarea>
+            <div class="flex justify-end mt-2">
+              <button id="add-note-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-semibold">Dodaj notatkę</button>
+            </div>
+            <div id="notes-list" class="mt-5 space-y-2"></div>
+          </div>
+        </div>
+
+        <!-- ACTIVITY panel -->
+        <div class="ze-panel" data-panel="activity">
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6">
+            <h2 class="text-sm font-semibold text-white mb-3">Aktywność</h2>
+            <div id="activity-list" class="space-y-2"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sidebar -->
+      <aside class="space-y-4">
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="flex items-center gap-3 mb-4">
+            <div id="avatar" class="w-12 h-12 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-800 flex items-center justify-center text-white font-semibold text-lg"></div>
+            <div class="min-w-0">
+              <div id="s-name" class="text-white font-semibold truncate"></div>
+              <div id="s-company" class="text-xs text-zinc-500 truncate"></div>
+            </div>
+          </div>
+          <div class="space-y-2.5 text-sm">
+            <div class="flex items-center gap-2">
+              <i class="ph ph-envelope text-zinc-500"></i>
+              <a id="s-email" class="text-zinc-300 hover:text-emerald-400 truncate"></a>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="ph ph-phone text-zinc-500"></i>
+              <a id="s-phone" class="text-zinc-300 hover:text-emerald-400"></a>
+            </div>
+            <div class="flex items-center gap-2">
+              <i class="ph ph-globe text-zinc-500"></i>
+              <a id="s-website" target="_blank" rel="noopener" class="text-zinc-300 hover:text-emerald-400 truncate"></a>
+            </div>
+          </div>
+          <div class="border-t border-white/5 mt-4 pt-4 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <div class="text-zinc-500 uppercase mb-1">Źródło</div>
+              <div id="s-source" class="text-zinc-300"></div>
+            </div>
+            <div>
+              <div class="text-zinc-500 uppercase mb-1">Token</div>
+              <div id="s-token" class="text-zinc-400 font-mono text-[10px]"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase mb-2">Następne kroki</div>
+          <ol class="space-y-2 text-sm text-zinc-300">
+            <li>1. Otwórz tab <strong>Prompt AI</strong> i skopiuj prompt analizy</li>
+            <li>2. Wklej do Claude Code w VS Code, wykonaj</li>
+            <li>3. Wynik (JSON) wklej w tab <strong>Analiza</strong></li>
+            <li>4. Wygeneruj <strong>MVP</strong> i zaproponuj klientowi</li>
+          </ol>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<script src="/zwolnie/_assets/config.js"></script>
+<script src="/zwolnie/_assets/auth.js"></script>
+<script src="/zwolnie/_assets/utils.js"></script>
+<script src="/zwolnie/_assets/sidebar.js"></script>
+<script>
+const leadId = new URLSearchParams(location.search).get('id');
+let lead = null;
+let prompts = [];
+let currentPromptSlug = 'business_analysis';
+
+(async () => {
+  if (!leadId) { location.replace('/zwolnie/leads'); return; }
+  const { staff } = await ZE_Auth.require();
+  ZE_Sidebar.render({ active: 'leads', userEmail: staff.email });
+
+  await loadLead();
+  await loadPrompts();
+  await loadAttachments();
+  await loadNotes();
+  await loadActivity();
+
+  // Tabs
+  document.querySelectorAll('.ze-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.ze-tab').forEach(x => x.classList.remove('is-active'));
+      document.querySelectorAll('.ze-panel').forEach(x => x.classList.remove('is-active'));
+      t.classList.add('is-active');
+      document.querySelector(`.ze-panel[data-panel="${t.dataset.tab}"]`).classList.add('is-active');
+    });
+  });
+
+  // Status change
+  document.getElementById('status-select').addEventListener('change', async (e) => {
+    const newStatus = e.target.value;
+    if (newStatus === lead.status) return;
+    const { error } = await ZE_SB.from('ze_leads').update({ status: newStatus }).eq('id', leadId);
+    if (error) { ZE.toast(error.message, 'error'); return; }
+    await ZE.logActivity(leadId, 'status_changed', { from: lead.status, to: newStatus });
+    lead.status = newStatus;
+    ZE.toast('Status zmieniony.', 'success');
+    updateConvertButton();
+  });
+
+  // Delete
+  document.getElementById('delete-btn').addEventListener('click', async () => {
+    if (!confirm(`Usunąć lead "${lead.contact_name || lead.contact_email}"? Tego nie cofniesz.`)) return;
+    const { error } = await ZE_SB.from('ze_leads').delete().eq('id', leadId);
+    if (error) { ZE.toast(error.message, 'error'); return; }
+    location.replace('/zwolnie/leads');
+  });
+
+  // Convert to project
+  document.getElementById('convert-btn').addEventListener('click', convertToProject);
+
+  // Prompt actions
+  document.getElementById('prompt-select').addEventListener('change', (e) => {
+    currentPromptSlug = e.target.value;
+    renderCurrentPrompt();
+  });
+  document.getElementById('copy-prompt-btn').addEventListener('click', async () => {
+    const txt = document.getElementById('prompt-output').value;
+    await navigator.clipboard.writeText(txt);
+    ZE.toast('Prompt skopiowany.', 'success');
+    await ZE.logActivity(leadId, 'prompt_copied', { slug: currentPromptSlug });
+  });
+  document.getElementById('open-claude-btn').addEventListener('click', () => {
+    window.open('https://claude.ai/code', '_blank');
+  });
+
+  // Analysis edit
+  document.getElementById('analysis-edit-btn').addEventListener('click', () => toggleAnalysisEdit(true));
+  document.getElementById('analysis-cancel-btn').addEventListener('click', () => toggleAnalysisEdit(false));
+  document.getElementById('analysis-save-btn').addEventListener('click', saveAnalysis);
+
+  // MVP edit
+  document.getElementById('mvp-edit-btn').addEventListener('click', () => toggleMvpEdit(true));
+  document.getElementById('mvp-cancel-btn').addEventListener('click', () => toggleMvpEdit(false));
+  document.getElementById('mvp-save-btn').addEventListener('click', saveMvp);
+  document.getElementById('mvp-open-btn').addEventListener('click', () => {
+    const win = window.open('', '_blank');
+    win.document.write(lead.mvp_html || '');
+    win.document.close();
+  });
+
+  // Notes
+  document.getElementById('add-note-btn').addEventListener('click', addNote);
+
+  // Edit problem
+  document.getElementById('edit-problem-btn').addEventListener('click', editProblem);
+})();
+
+async function loadLead() {
+  const { data, error } = await ZE_SB.from('ze_leads').select('*').eq('id', leadId).single();
+  if (error || !data) {
+    ZE.toast('Lead nie znaleziony.', 'error');
+    setTimeout(() => location.replace('/zwolnie/leads'), 1000);
+    return;
+  }
+  lead = data;
+  renderLead();
+}
+
+function renderLead() {
+  document.title = `Zwolnię · ${lead.contact_name || lead.contact_email || 'Lead'}`;
+  document.getElementById('hdr-name').textContent = lead.contact_name || lead.contact_email || '(brak)';
+
+  // Sidebar contact
+  const initials = (lead.contact_name || lead.contact_email || '?').split(/\s+/).map(s => s[0]).filter(Boolean).slice(0,2).join('').toUpperCase();
+  document.getElementById('avatar').textContent = initials;
+  document.getElementById('s-name').textContent = lead.contact_name || '(brak imienia)';
+  document.getElementById('s-company').textContent = lead.company || '—';
+  const emailEl = document.getElementById('s-email');
+  emailEl.textContent = lead.contact_email || '—';
+  if (lead.contact_email) emailEl.href = 'mailto:' + lead.contact_email;
+  const phoneEl = document.getElementById('s-phone');
+  phoneEl.textContent = lead.contact_phone || '—';
+  if (lead.contact_phone) phoneEl.href = 'tel:' + lead.contact_phone;
+  const webEl = document.getElementById('s-website');
+  if (lead.website) {
+    const url = lead.website.startsWith('http') ? lead.website : 'https://' + lead.website;
+    webEl.href = url; webEl.textContent = lead.website.replace(/^https?:\/\//, '');
+  } else { webEl.textContent = '—'; webEl.removeAttribute('href'); }
+  document.getElementById('s-source').textContent = lead.source;
+  document.getElementById('s-token').textContent = lead.token;
+
+  // Brief panel
+  document.getElementById('brief-problem').textContent = lead.problem || '(brak opisu)';
+  document.getElementById('b-industry').textContent = ZE.INDUSTRY_LABELS[lead.industry] || lead.industry || '—';
+  document.getElementById('b-team').textContent = ZE.TEAM_SIZE_LABELS[lead.team_size] || lead.team_size || '—';
+  document.getElementById('b-payroll').textContent = ZE.PAYROLL_LABELS[lead.payroll] || lead.payroll || '—';
+  document.getElementById('b-budget').textContent = ZE.BUDGET_LABELS[lead.budget] || lead.budget || '—';
+
+  // Status select
+  const sel = document.getElementById('status-select');
+  sel.innerHTML = ZE.STATUS_ORDER.map(s => `<option value="${s}" ${s === lead.status ? 'selected' : ''}>${ZE.STATUS_LABELS[s]}</option>`).join('');
+  updateConvertButton();
+
+  // Analysis
+  renderAnalysis();
+
+  // MVP
+  renderMvp();
+}
+
+function updateConvertButton() {
+  const btn = document.getElementById('convert-btn');
+  btn.classList.toggle('hidden', !(lead.status === 'won' && !lead.converted_to_project_id));
+}
+
+function renderAnalysis() {
+  const view = document.getElementById('analysis-view');
+  const meta = document.getElementById('analysis-meta');
+  if (lead.ai_analysis) {
+    view.textContent = JSON.stringify(lead.ai_analysis, null, 2);
+    meta.textContent = lead.ai_analysis_published_at
+      ? 'Wklejona ' + ZE.fmtRelative(lead.ai_analysis_published_at)
+      : 'Wklejona — brak metki czasu';
+  } else {
+    view.textContent = '';
+    meta.textContent = 'Brak. Wygeneruj prompt, uruchom w Claude Code, wklej JSON tutaj.';
+  }
+}
+
+function renderMvp() {
+  const iframe = document.getElementById('mvp-iframe');
+  const empty = document.getElementById('mvp-empty');
+  const open = document.getElementById('mvp-open-btn');
+  if (lead.mvp_html) {
+    iframe.srcdoc = lead.mvp_html;
+    iframe.classList.remove('hidden');
+    empty.classList.add('hidden');
+    open.classList.remove('hidden');
+    document.getElementById('mvp-meta').textContent = lead.mvp_published_at
+      ? 'Wklejony ' + ZE.fmtRelative(lead.mvp_published_at)
+      : 'Wklejony';
+  } else {
+    iframe.classList.add('hidden');
+    empty.classList.remove('hidden');
+    open.classList.add('hidden');
+  }
+}
+
+async function loadPrompts() {
+  const { data } = await ZE_SB.from('ze_prompts').select('*').order('slug');
+  prompts = data || [];
+  const sel = document.getElementById('prompt-select');
+  sel.innerHTML = prompts.map(p => `<option value="${p.slug}">${ZE.escapeHtml(p.title)}</option>`).join('');
+  renderCurrentPrompt();
+}
+
+function renderCurrentPrompt() {
+  const p = prompts.find(x => x.slug === currentPromptSlug);
+  if (!p) return;
+  document.getElementById('prompt-output').value = ZE.renderPromptTemplate(p.template, lead);
+}
+
+function toggleAnalysisEdit(on) {
+  document.getElementById('analysis-view').classList.toggle('hidden', on);
+  document.getElementById('analysis-input').classList.toggle('hidden', !on);
+  document.getElementById('analysis-edit-actions').classList.toggle('hidden', !on);
+  if (on) {
+    document.getElementById('analysis-input').value = lead.ai_analysis
+      ? JSON.stringify(lead.ai_analysis, null, 2)
+      : '';
+  }
+}
+
+async function saveAnalysis() {
+  const raw = document.getElementById('analysis-input').value.trim();
+  let parsed = null;
+  if (raw) {
+    try {
+      // Strip ```json fences if present
+      const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+      parsed = JSON.parse(cleaned);
+    } catch (e) {
+      ZE.toast('To nie jest poprawny JSON: ' + e.message, 'error', 6000);
+      return;
+    }
+  }
+  const updates = {
+    ai_analysis: parsed,
+    ai_analysis_published_at: parsed ? new Date().toISOString() : null,
+    status: lead.status === 'new' || lead.status === 'analyzing' ? 'analyzed' : lead.status
+  };
+  const { error } = await ZE_SB.from('ze_leads').update(updates).eq('id', leadId);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await ZE.logActivity(leadId, parsed ? 'analysis_published' : 'analysis_cleared');
+  Object.assign(lead, updates);
+  toggleAnalysisEdit(false);
+  renderLead();
+  ZE.toast('Analiza zapisana.', 'success');
+}
+
+function toggleMvpEdit(on) {
+  document.getElementById('mvp-iframe').classList.toggle('hidden', on || !lead.mvp_html);
+  document.getElementById('mvp-empty').classList.toggle('hidden', on || !!lead.mvp_html);
+  document.getElementById('mvp-input').classList.toggle('hidden', !on);
+  document.getElementById('mvp-edit-actions').classList.toggle('hidden', !on);
+  if (on) document.getElementById('mvp-input').value = lead.mvp_html || '';
+}
+
+async function saveMvp() {
+  let html = document.getElementById('mvp-input').value.trim();
+  // Strip ```html fences
+  html = html.replace(/^```(?:html)?\s*/i, '').replace(/```\s*$/, '').trim();
+  const updates = {
+    mvp_html: html || null,
+    mvp_published_at: html ? new Date().toISOString() : null
+  };
+  const { error } = await ZE_SB.from('ze_leads').update(updates).eq('id', leadId);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await ZE.logActivity(leadId, html ? 'mvp_published' : 'mvp_cleared');
+  Object.assign(lead, updates);
+  toggleMvpEdit(false);
+  renderLead();
+  ZE.toast('MVP zapisane.', 'success');
+}
+
+async function editProblem() {
+  const newVal = prompt('Edytuj opis problemu:', lead.problem || '');
+  if (newVal == null) return;
+  const { error } = await ZE_SB.from('ze_leads').update({ problem: newVal }).eq('id', leadId);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  lead.problem = newVal;
+  renderLead();
+}
+
+async function loadAttachments() {
+  const { data } = await ZE_SB.from('ze_lead_attachments').select('*').eq('lead_id', leadId).order('created_at');
+  const list = data || [];
+  document.getElementById('files-count').textContent = list.length ? `(${list.length})` : '';
+  const el = document.getElementById('files-list');
+  if (!list.length) {
+    el.innerHTML = '<div class="text-sm text-zinc-500 py-4">Brak załączników.</div>';
+    return;
+  }
+  el.innerHTML = list.map(f => `
+    <div class="flex items-center gap-3 p-3 bg-zinc-900 border border-white/5 rounded-lg">
+      <i class="ph ph-file-text text-2xl text-zinc-500"></i>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm text-white truncate">${ZE.escapeHtml(f.file_name)}</div>
+        <div class="text-xs text-zinc-500">${ZE.fmtFileSize(f.file_size)} · ${ZE.fmtRelative(f.created_at)}</div>
+      </div>
+      <button onclick="downloadAttachment('${f.storage_path}', '${ZE.escapeHtml(f.file_name).replace(/'/g, '&#39;')}')"
+              class="text-zinc-400 hover:text-white px-3 py-1.5 rounded-md border border-zinc-700 hover:border-zinc-500 text-xs"><i class="ph ph-download"></i> Pobierz</button>
+    </div>
+  `).join('');
+}
+
+async function downloadAttachment(path, name) {
+  const { data, error } = await ZE_SB.storage.from(ZE_CONFIG.STORAGE_BUCKET).createSignedUrl(path, 600);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  const a = document.createElement('a');
+  a.href = data.signedUrl;
+  a.download = name;
+  a.target = '_blank';
+  a.click();
+}
+
+async function loadNotes() {
+  const { data } = await ZE_SB.from('ze_lead_notes').select('*, ze_staff:author_id(name, email)').eq('lead_id', leadId).order('created_at', { ascending: false });
+  const list = data || [];
+  const el = document.getElementById('notes-list');
+  if (!list.length) { el.innerHTML = '<div class="text-sm text-zinc-500">Brak notatek.</div>'; return; }
+  el.innerHTML = list.map(n => `
+    <div class="p-3 bg-zinc-900 border border-white/5 rounded-lg">
+      <div class="text-xs text-zinc-500 mb-1">${ZE.escapeHtml(n.ze_staff?.name || n.ze_staff?.email || 'Unknown')} · ${ZE.fmtRelative(n.created_at)}</div>
+      <div class="text-sm text-zinc-200 whitespace-pre-wrap">${ZE.escapeHtml(n.body)}</div>
+    </div>
+  `).join('');
+}
+
+async function addNote() {
+  const body = document.getElementById('note-input').value.trim();
+  if (!body) return;
+  const staff = ZE_Auth.staff();
+  const { error } = await ZE_SB.from('ze_lead_notes').insert({ lead_id: leadId, author_id: staff.id, body });
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  document.getElementById('note-input').value = '';
+  await ZE.logActivity(leadId, 'note_added');
+  await loadNotes();
+}
+
+async function loadActivity() {
+  const { data } = await ZE_SB.from('ze_lead_activity').select('*, ze_staff:actor_id(name, email)').eq('lead_id', leadId).order('created_at', { ascending: false }).limit(50);
+  const list = data || [];
+  const el = document.getElementById('activity-list');
+  if (!list.length) { el.innerHTML = '<div class="text-sm text-zinc-500">Brak aktywności.</div>'; return; }
+  const ACTION_LABELS = {
+    created: 'Utworzono lead',
+    status_changed: 'Zmiana statusu',
+    note_added: 'Dodano notatkę',
+    analysis_published: 'Wklejono analizę AI',
+    analysis_cleared: 'Wyczyszczono analizę',
+    mvp_published: 'Wklejono MVP',
+    mvp_cleared: 'Wyczyszczono MVP',
+    prompt_copied: 'Skopiowano prompt',
+    converted_to_project: 'Konwersja na projekt'
+  };
+  el.innerHTML = list.map(a => `
+    <div class="flex items-start gap-3 p-2.5 hover:bg-white/5 rounded-lg">
+      <i class="ph ph-circle-fill text-[6px] text-zinc-600 mt-2"></i>
+      <div class="flex-1 min-w-0">
+        <div class="text-sm text-zinc-200">${ZE.escapeHtml(ACTION_LABELS[a.action] || a.action)}${a.details ? ` <span class="text-xs text-zinc-500">${ZE.escapeHtml(JSON.stringify(a.details))}</span>` : ''}</div>
+        <div class="text-xs text-zinc-500">${ZE.escapeHtml(a.ze_staff?.name || a.ze_staff?.email || 'system')} · ${ZE.fmtRelative(a.created_at)}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function convertToProject() {
+  if (lead.status !== 'won') { ZE.toast('Tylko leady ze statusem "Wygrany" mogą być konwertowane.', 'error'); return; }
+  if (lead.converted_to_project_id) { ZE.toast('Już skonwertowany.', 'error'); return; }
+  if (!confirm(`Utworzyć projekt dla "${lead.company || lead.contact_name}"? Skopiuje analizę i MVP, doda 7 etapów.`)) return;
+
+  const title = lead.company || lead.contact_name || 'Projekt zwolnie';
+  const desc = lead.problem ? lead.problem.slice(0, 500) : null;
+
+  const { data: project, error } = await ZE_SB.from('ze_projects').insert({
+    lead_id: leadId,
+    title,
+    description: desc,
+    mvp_html: lead.mvp_html,
+    mvp_published_at: lead.mvp_published_at,
+    status: 'planning'
+  }).select('id, token').single();
+
+  if (error) { ZE.toast(error.message, 'error'); return; }
+
+  // Seed stages via RPC
+  await ZE_SB.rpc('ze_seed_default_stages', { p_project_id: project.id });
+
+  // Link back to lead
+  await ZE_SB.from('ze_leads').update({ converted_to_project_id: project.id }).eq('id', leadId);
+  await ZE.logActivity(leadId, 'converted_to_project', { project_id: project.id });
+
+  ZE.toast('Projekt utworzony.', 'success');
+  location.href = '/zwolnie/projekt?id=' + project.id;
+}
+</script>
+</body>
+</html>

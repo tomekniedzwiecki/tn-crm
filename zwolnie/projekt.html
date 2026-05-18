@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zwolnię · Projekt</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="/zwolnie/_assets/common.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { font-family: 'Inter', sans-serif; }
+  .stage-line { width: 2px; background: rgba(255,255,255,0.06); }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+<aside id="ze-sidebar" class="w-[260px] bg-zinc-950 border-r border-white/5 flex-shrink-0"></aside>
+
+<main class="flex-1 flex flex-col min-w-0">
+  <header class="h-16 glass-header flex items-center justify-between px-6 sticky top-0 z-30">
+    <div class="flex items-center gap-3 min-w-0">
+      <a href="/zwolnie/projects" class="text-zinc-500 hover:text-white"><i class="ph ph-arrow-left text-lg"></i></a>
+      <div class="flex items-center gap-2 text-sm min-w-0">
+        <span class="text-zinc-500">Projekty</span>
+        <span class="text-zinc-700">/</span>
+        <span class="text-white font-medium truncate" id="hdr-title">—</span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="copy-client-link" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-1.5">
+        <i class="ph ph-link"></i> Skopiuj link klienta
+      </button>
+      <select id="status-select" class="ze-input px-3 py-2 rounded-lg text-xs"></select>
+    </div>
+  </header>
+
+  <div class="flex-1 overflow-y-auto p-6 lg:p-8 ze-fade">
+    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
+
+      <section>
+        <div class="mb-6">
+          <h1 id="project-title" class="text-3xl font-semibold text-white"></h1>
+          <p id="project-desc" class="text-zinc-400 text-sm mt-2"></p>
+        </div>
+
+        <!-- Etapy -->
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold text-white">Etapy projektu</h2>
+            <button id="add-stage-btn" class="text-xs text-zinc-400 hover:text-white"><i class="ph ph-plus"></i> Dodaj etap</button>
+          </div>
+          <div id="stages-list" class="space-y-2"></div>
+        </div>
+
+        <!-- Updates -->
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
+          <h2 class="text-lg font-semibold text-white mb-3">Aktualizacje dla klienta</h2>
+          <div class="flex gap-2 mb-3">
+            <input id="update-title" placeholder="Tytuł aktualizacji..." class="ze-input flex-1 px-3 py-2 rounded-lg text-sm">
+            <button id="add-update-btn" class="bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-semibold">Dodaj</button>
+          </div>
+          <textarea id="update-body" rows="2" placeholder="Treść (opcjonalnie)..." class="ze-input w-full px-3 py-2 rounded-lg text-sm"></textarea>
+          <div id="updates-list" class="mt-4 space-y-2"></div>
+        </div>
+
+        <!-- MVP -->
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-6 mb-6">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-lg font-semibold text-white">Klikalny prototyp MVP</h2>
+            <button id="open-mvp-btn" class="hidden text-xs text-emerald-400 hover:text-emerald-300"><i class="ph ph-arrow-square-out"></i> Pełny ekran</button>
+          </div>
+          <iframe id="mvp-iframe" sandbox="allow-scripts" class="hidden w-full bg-white rounded-lg" style="height: 600px;"></iframe>
+          <div id="mvp-empty" class="text-zinc-500 text-sm py-10 text-center border border-dashed border-white/10 rounded-lg">
+            Brak MVP. Wracaj do <a id="lead-link" class="text-emerald-400 hover:underline">lead'a</a>, wygeneruj w tab "MVP", potem zaktualizuj projekt.
+          </div>
+        </div>
+      </section>
+
+      <aside class="space-y-4">
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase mb-2">Klient widzi</div>
+          <a id="client-link" target="_blank" class="text-emerald-400 hover:text-emerald-300 text-sm break-all font-mono"></a>
+        </div>
+
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase mb-2">Postęp etapów</div>
+          <div id="progress-summary" class="text-3xl font-semibold text-white mb-1">0/0</div>
+          <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+            <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-500 to-emerald-400" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+          <div class="text-xs text-zinc-500 uppercase mb-3">Z lead'a</div>
+          <a id="lead-back" class="text-sm text-zinc-300 hover:text-white">← Wróć do lead'a</a>
+        </div>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<script src="/zwolnie/_assets/config.js"></script>
+<script src="/zwolnie/_assets/auth.js"></script>
+<script src="/zwolnie/_assets/utils.js"></script>
+<script src="/zwolnie/_assets/sidebar.js"></script>
+<script>
+const projectId = new URLSearchParams(location.search).get('id');
+const PROJECT_STATUS = { planning: 'Planowanie', building: 'Budowa', delivered: 'Dostarczony', on_hold: 'Wstrzymany', closed: 'Zamknięty' };
+const STAGE_STATUS = { pending: 'Czeka', in_progress: 'W toku', completed: 'Zrobione', skipped: 'Pominięte' };
+let project = null;
+let stages = [];
+
+(async () => {
+  if (!projectId) { location.replace('/zwolnie/projects'); return; }
+  const { staff } = await ZE_Auth.require();
+  ZE_Sidebar.render({ active: 'projects', userEmail: staff.email });
+
+  await loadProject();
+  await loadStages();
+  await loadUpdates();
+
+  document.getElementById('status-select').addEventListener('change', async (e) => {
+    const v = e.target.value;
+    const { error } = await ZE_SB.from('ze_projects').update({ status: v }).eq('id', projectId);
+    if (error) { ZE.toast(error.message, 'error'); return; }
+    project.status = v;
+    ZE.toast('Status zmieniony.', 'success');
+  });
+
+  document.getElementById('copy-client-link').addEventListener('click', () => {
+    const url = location.origin + ZE_CONFIG.CLIENT_VIEW_BASE + project.token;
+    navigator.clipboard.writeText(url);
+    ZE.toast('Link skopiowany.', 'success');
+  });
+
+  document.getElementById('add-stage-btn').addEventListener('click', addStage);
+  document.getElementById('add-update-btn').addEventListener('click', addUpdate);
+
+  document.getElementById('open-mvp-btn').addEventListener('click', () => {
+    const win = window.open('', '_blank');
+    win.document.write(project.mvp_html || '');
+    win.document.close();
+  });
+})();
+
+async function loadProject() {
+  const { data, error } = await ZE_SB
+    .from('ze_projects')
+    .select('*, ze_leads:lead_id(contact_name, contact_email)')
+    .eq('id', projectId).single();
+  if (error || !data) { location.replace('/zwolnie/projects'); return; }
+  project = data;
+  document.title = `Zwolnię · ${project.title}`;
+  document.getElementById('hdr-title').textContent = project.title;
+  document.getElementById('project-title').textContent = project.title;
+  document.getElementById('project-desc').textContent = project.description || '';
+
+  const sel = document.getElementById('status-select');
+  sel.innerHTML = Object.entries(PROJECT_STATUS).map(([v, l]) => `<option value="${v}" ${v===project.status?'selected':''}>${l}</option>`).join('');
+
+  const clientUrl = location.origin + ZE_CONFIG.CLIENT_VIEW_BASE + project.token;
+  const cl = document.getElementById('client-link');
+  cl.href = clientUrl; cl.textContent = clientUrl;
+
+  const leadLinks = document.querySelectorAll('#lead-link, #lead-back');
+  leadLinks.forEach(a => a.href = '/zwolnie/lead?id=' + project.lead_id);
+
+  // MVP
+  if (project.mvp_html) {
+    const iframe = document.getElementById('mvp-iframe');
+    iframe.srcdoc = project.mvp_html;
+    iframe.classList.remove('hidden');
+    document.getElementById('mvp-empty').classList.add('hidden');
+    document.getElementById('open-mvp-btn').classList.remove('hidden');
+  }
+}
+
+async function loadStages() {
+  const { data } = await ZE_SB
+    .from('ze_project_stages')
+    .select('*, ze_project_tasks(id, title, completed, order_index)')
+    .eq('project_id', projectId)
+    .order('order_index');
+  stages = data || [];
+  renderStages();
+}
+
+function renderStages() {
+  const el = document.getElementById('stages-list');
+  if (!stages.length) {
+    el.innerHTML = '<div class="text-sm text-zinc-500 py-4">Brak etapów.</div>';
+    return;
+  }
+  el.innerHTML = stages.map((s, idx) => {
+    const tasks = (s.ze_project_tasks || []).sort((a, b) => a.order_index - b.order_index);
+    const colorMap = {
+      pending: 'border-zinc-700 bg-zinc-900',
+      in_progress: 'border-amber-500/40 bg-amber-500/5',
+      completed: 'border-emerald-500/40 bg-emerald-500/5',
+      skipped: 'border-zinc-700 bg-zinc-900/50 opacity-60'
+    };
+    return `
+      <div class="border ${colorMap[s.status]} rounded-lg p-4">
+        <div class="flex items-center justify-between gap-3">
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-8 h-8 rounded-full ${s.status==='completed' ? 'bg-emerald-500 text-black' : s.status==='in_progress' ? 'bg-amber-500/20 text-amber-300' : 'bg-zinc-800 text-zinc-500'} flex items-center justify-center text-sm font-bold flex-shrink-0">
+              ${s.status === 'completed' ? '<i class="ph ph-check"></i>' : idx + 1}
+            </div>
+            <div class="min-w-0">
+              <div class="text-white font-medium">${ZE.escapeHtml(s.title)}</div>
+              <div class="text-xs text-zinc-500 truncate">${ZE.escapeHtml(s.description || '')}</div>
+            </div>
+          </div>
+          <select onchange="updateStageStatus('${s.id}', this.value)" class="ze-input px-2 py-1 rounded text-xs">
+            ${Object.entries(STAGE_STATUS).map(([v, l]) => `<option value="${v}" ${v===s.status?'selected':''}>${l}</option>`).join('')}
+          </select>
+        </div>
+        <div class="mt-3 space-y-1.5 pl-11">
+          ${tasks.map(t => `
+            <label class="flex items-center gap-2 text-sm hover:bg-white/5 px-2 py-1 -mx-2 rounded cursor-pointer">
+              <input type="checkbox" ${t.completed?'checked':''} onchange="toggleTask('${t.id}', this.checked)" class="rounded bg-zinc-800 border-zinc-700">
+              <span class="${t.completed?'text-zinc-500 line-through':'text-zinc-300'}">${ZE.escapeHtml(t.title)}</span>
+            </label>
+          `).join('')}
+          <button onclick="addTask('${s.id}')" class="text-xs text-zinc-500 hover:text-white px-2 py-1"><i class="ph ph-plus"></i> Dodaj zadanie</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const total = stages.length;
+  const done = stages.filter(s => s.status === 'completed').length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('progress-summary').textContent = `${done}/${total}`;
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+async function updateStageStatus(id, status) {
+  const patch = { status };
+  if (status === 'in_progress') patch.started_at = new Date().toISOString();
+  if (status === 'completed') patch.completed_at = new Date().toISOString();
+  const { error } = await ZE_SB.from('ze_project_stages').update(patch).eq('id', id);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await loadStages();
+}
+
+async function toggleTask(id, completed) {
+  const { error } = await ZE_SB.from('ze_project_tasks').update({
+    completed,
+    completed_at: completed ? new Date().toISOString() : null
+  }).eq('id', id);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await loadStages();
+}
+
+async function addTask(stageId) {
+  const title = prompt('Tytuł zadania:');
+  if (!title) return;
+  const stage = stages.find(s => s.id === stageId);
+  const order = (stage?.ze_project_tasks || []).length;
+  const { error } = await ZE_SB.from('ze_project_tasks').insert({ stage_id: stageId, title, order_index: order });
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await loadStages();
+}
+
+async function addStage() {
+  const title = prompt('Tytuł nowego etapu:');
+  if (!title) return;
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 30);
+  const order = stages.length + 1;
+  const { error } = await ZE_SB.from('ze_project_stages').insert({
+    project_id: projectId,
+    title, slug, order_index: order, status: 'pending'
+  });
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await loadStages();
+}
+
+async function loadUpdates() {
+  const { data } = await ZE_SB.from('ze_project_updates').select('*').eq('project_id', projectId).order('posted_at', { ascending: false });
+  const list = data || [];
+  const el = document.getElementById('updates-list');
+  if (!list.length) { el.innerHTML = '<div class="text-sm text-zinc-500">Brak aktualizacji.</div>'; return; }
+  el.innerHTML = list.map(u => `
+    <div class="p-3 bg-zinc-900 border border-white/5 rounded-lg">
+      <div class="flex items-center justify-between gap-2 mb-1">
+        <div class="text-sm text-white font-medium">${ZE.escapeHtml(u.title)}</div>
+        <button onclick="deleteUpdate('${u.id}')" class="text-zinc-600 hover:text-red-400 text-xs"><i class="ph ph-trash"></i></button>
+      </div>
+      ${u.body ? `<div class="text-sm text-zinc-300 whitespace-pre-wrap">${ZE.escapeHtml(u.body)}</div>` : ''}
+      <div class="text-xs text-zinc-500 mt-1">${ZE.fmtRelative(u.posted_at)}</div>
+    </div>
+  `).join('');
+}
+
+async function addUpdate() {
+  const title = document.getElementById('update-title').value.trim();
+  const body = document.getElementById('update-body').value.trim();
+  if (!title) return;
+  const staff = ZE_Auth.staff();
+  const { error } = await ZE_SB.from('ze_project_updates').insert({
+    project_id: projectId, title, body: body || null, author_id: staff.id
+  });
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  document.getElementById('update-title').value = '';
+  document.getElementById('update-body').value = '';
+  await loadUpdates();
+}
+
+async function deleteUpdate(id) {
+  if (!confirm('Usunąć aktualizację?')) return;
+  const { error } = await ZE_SB.from('ze_project_updates').delete().eq('id', id);
+  if (error) { ZE.toast(error.message, 'error'); return; }
+  await loadUpdates();
+}
+</script>
+</body>
+</html>

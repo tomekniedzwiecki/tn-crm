@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zwolnię · Logowanie</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="/zwolnie/_assets/common.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  html, body { font-family: 'Inter', sans-serif; }
+</style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-6">
+
+<div class="w-full max-w-sm ze-fade">
+  <div class="mb-8 text-center">
+    <div class="inline-flex items-center gap-2 text-white mb-2">
+      <span class="w-9 h-9 rounded bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-black font-bold">Z</span>
+      <span class="font-semibold text-lg">Zwolnię</span>
+    </div>
+    <p class="text-zinc-500 text-sm">Panel administracyjny</p>
+  </div>
+
+  <form id="ze-login-form" class="space-y-3">
+    <div>
+      <label class="text-xs text-zinc-500 uppercase tracking-wider">Email</label>
+      <input type="email" id="ze-email" autocomplete="email" required
+             class="ze-input w-full px-4 py-3 rounded-lg mt-1.5 text-sm"
+             placeholder="ty@firma.pl">
+    </div>
+    <div>
+      <label class="text-xs text-zinc-500 uppercase tracking-wider">Hasło</label>
+      <input type="password" id="ze-password" autocomplete="current-password" required
+             class="ze-input w-full px-4 py-3 rounded-lg mt-1.5 text-sm"
+             placeholder="••••••••">
+    </div>
+    <div id="ze-error" class="hidden text-sm text-red-400 py-2"></div>
+    <button type="submit" id="ze-submit"
+            class="w-full px-4 py-3 rounded-lg bg-white text-black text-sm font-semibold hover:bg-zinc-200 transition-colors">
+      Zaloguj się
+    </button>
+  </form>
+
+  <p class="text-center text-xs text-zinc-600 mt-6">
+    <a href="/dashboard" class="hover:text-zinc-400">← Powrót do tn-crm</a>
+  </p>
+</div>
+
+<script src="/zwolnie/_assets/config.js"></script>
+<script>
+const form = document.getElementById('ze-login-form');
+const errBox = document.getElementById('ze-error');
+const submitBtn = document.getElementById('ze-submit');
+
+// Pre-check: if already logged in, redirect.
+(async () => {
+  const { data: { session } } = await ZE_SB.auth.getSession();
+  if (session) {
+    const ret = new URLSearchParams(location.search).get('return') || '/zwolnie/';
+    location.replace(ret);
+  }
+})();
+
+// Show error if redirected with reason
+const reason = new URLSearchParams(location.search).get('reason');
+if (reason === 'no_staff') {
+  errBox.textContent = 'Twoje konto nie ma uprawnień do panelu.';
+  errBox.classList.remove('hidden');
+}
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  errBox.classList.add('hidden');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Logowanie...';
+
+  const email = document.getElementById('ze-email').value.trim();
+  const password = document.getElementById('ze-password').value;
+
+  const { data, error } = await ZE_SB.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errBox.textContent = error.message === 'Invalid login credentials'
+      ? 'Nieprawidłowy email lub hasło.'
+      : error.message;
+    errBox.classList.remove('hidden');
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Zaloguj się';
+    return;
+  }
+
+  const ret = new URLSearchParams(location.search).get('return') || '/zwolnie/';
+  location.replace(ret);
+});
+</script>
+</body>
+</html>

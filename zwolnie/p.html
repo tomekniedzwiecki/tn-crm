@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Twój projekt · Zwolnię</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<meta name="robots" content="noindex, nofollow">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="/zwolnie/_assets/common.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  html, body { font-family: 'Inter', sans-serif; background: #0a0a0a; }
+  .stage-line { width: 2px; background: rgba(255,255,255,0.06); }
+  .stage-dot--pending { background: #27272a; }
+  .stage-dot--in_progress { background: linear-gradient(135deg, #fbbf24, #f59e0b); box-shadow: 0 0 16px rgba(251,191,36,0.4); }
+  .stage-dot--completed { background: linear-gradient(135deg, #34d399, #10b981); }
+  .stage-dot--skipped { background: #18181b; }
+</style>
+</head>
+<body class="min-h-screen">
+
+<div id="ze-loading" class="min-h-screen flex items-center justify-center">
+  <div class="text-zinc-500 text-sm">Ładowanie...</div>
+</div>
+
+<div id="ze-notfound" class="hidden min-h-screen flex items-center justify-center text-center px-6">
+  <div>
+    <div class="text-5xl mb-4">🔒</div>
+    <h1 class="text-2xl font-bold text-white mb-2">Link nieprawidłowy</h1>
+    <p class="text-zinc-400">Sprawdź czy adres jest kompletny. Jeśli problem się powtarza, daj znać na tomek@tomekniedzwiecki.pl.</p>
+  </div>
+</div>
+
+<div id="ze-content" class="hidden">
+  <!-- Hero -->
+  <section class="border-b border-white/5 px-6 py-12 ze-fade">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex items-center gap-2 text-xs uppercase tracking-wider text-zinc-500 mb-3">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        Projekt w toku
+      </div>
+      <h1 id="title" class="text-4xl md:text-5xl font-bold text-white tracking-tight"></h1>
+      <p id="desc" class="text-zinc-400 mt-3 max-w-2xl"></p>
+
+      <div class="mt-6 inline-flex items-center gap-6 px-5 py-3 bg-zinc-900/60 border border-white/5 rounded-xl">
+        <div>
+          <div class="text-xs text-zinc-500">Status</div>
+          <div id="status" class="text-white font-semibold"></div>
+        </div>
+        <div class="w-px h-8 bg-white/5"></div>
+        <div>
+          <div class="text-xs text-zinc-500">Postęp</div>
+          <div id="progress-text" class="text-white font-semibold">0/0</div>
+        </div>
+        <div class="w-px h-8 bg-white/5"></div>
+        <div>
+          <div class="text-xs text-zinc-500">Start</div>
+          <div id="kickoff" class="text-white font-semibold">—</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stages -->
+  <section class="px-6 py-12">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold text-white mb-1">Co się dzieje</h2>
+      <p class="text-zinc-500 text-sm mb-8">Aktualny stan prac. Aktualizuję na bieżąco — odśwież stronę żeby zobaczyć zmiany.</p>
+
+      <div id="stages-list" class="relative pl-8"></div>
+    </div>
+  </section>
+
+  <!-- MVP -->
+  <section id="mvp-section" class="hidden px-6 py-12 border-t border-white/5 bg-zinc-950/50">
+    <div class="max-w-5xl mx-auto">
+      <h2 class="text-2xl font-bold text-white mb-1">Klikalny prototyp</h2>
+      <p class="text-zinc-500 text-sm mb-6">Wstępna wersja proponowanego rozwiązania. Możesz klikać i sprawdzać. To nie produkcja — dane są mockowane.</p>
+      <div class="rounded-2xl overflow-hidden border border-white/10 bg-white shadow-2xl">
+        <div class="bg-zinc-200 px-4 py-2 flex items-center gap-1.5">
+          <span class="w-3 h-3 rounded-full bg-zinc-400"></span>
+          <span class="w-3 h-3 rounded-full bg-zinc-400"></span>
+          <span class="w-3 h-3 rounded-full bg-zinc-400"></span>
+          <span class="ml-3 text-xs text-zinc-600">prototyp</span>
+        </div>
+        <iframe id="mvp-iframe" sandbox="allow-scripts allow-same-origin" class="w-full bg-white" style="height: 800px; border: none;"></iframe>
+      </div>
+      <div class="text-center mt-4">
+        <button id="open-mvp-fullscreen" class="text-zinc-400 hover:text-white text-sm">
+          <i class="ph ph-arrows-out"></i> Otwórz na pełnym ekranie
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Updates -->
+  <section id="updates-section" class="hidden px-6 py-12 border-t border-white/5">
+    <div class="max-w-3xl mx-auto">
+      <h2 class="text-2xl font-bold text-white mb-6">Aktualizacje</h2>
+      <div id="updates-list" class="space-y-4"></div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="px-6 py-10 border-t border-white/5 text-center">
+    <div class="text-xs text-zinc-500">
+      Pytania? <a href="mailto:tomek@tomekniedzwiecki.pl" class="text-emerald-400 hover:underline">tomek@tomekniedzwiecki.pl</a>
+      · <a href="https://tomekniedzwiecki.pl/zwolnie/" class="hover:text-white">zwolnie.tomekniedzwiecki.pl</a>
+    </div>
+  </footer>
+</div>
+
+<script src="/zwolnie/_assets/config.js"></script>
+<script src="/zwolnie/_assets/utils.js"></script>
+<script>
+const STATUS_LABELS = { planning: 'Planowanie', building: 'Budowa', delivered: 'Dostarczony', on_hold: 'Wstrzymany', closed: 'Zamknięty' };
+
+// Token from URL: /zwolnie/p/{token} - czytamy z path
+const pathParts = location.pathname.replace(/\/$/, '').split('/');
+const token = pathParts[pathParts.length - 1];
+
+(async () => {
+  if (!token || token === 'p') { showNotFound(); return; }
+
+  const { data: project } = await ZE_SB.from('ze_projects')
+    .select('id, token, title, description, status, mvp_html, kickoff_at, delivery_at, created_at')
+    .eq('token', token).maybeSingle();
+
+  if (!project) { showNotFound(); return; }
+
+  document.title = project.title + ' · Zwolnię';
+  document.getElementById('title').textContent = project.title;
+  document.getElementById('desc').textContent = project.description || '';
+  document.getElementById('status').textContent = STATUS_LABELS[project.status] || project.status;
+  document.getElementById('kickoff').textContent = ZE.fmtDate(project.kickoff_at || project.created_at);
+
+  // Stages
+  const { data: stages } = await ZE_SB.from('ze_project_stages')
+    .select('id, slug, title, description, status, order_index, started_at, completed_at, ze_project_tasks(id, title, completed, visible_to_client, order_index)')
+    .eq('project_id', project.id).eq('visible_to_client', true).order('order_index');
+
+  renderStages(stages || []);
+
+  // MVP
+  if (project.mvp_html) {
+    document.getElementById('mvp-section').classList.remove('hidden');
+    document.getElementById('mvp-iframe').srcdoc = project.mvp_html;
+    document.getElementById('open-mvp-fullscreen').addEventListener('click', () => {
+      const win = window.open('', '_blank');
+      win.document.write(project.mvp_html);
+      win.document.close();
+    });
+  }
+
+  // Updates
+  const { data: updates } = await ZE_SB.from('ze_project_updates')
+    .select('id, title, body, posted_at')
+    .eq('project_id', project.id).eq('visible_to_client', true).order('posted_at', { ascending: false });
+  renderUpdates(updates || []);
+
+  document.getElementById('ze-loading').classList.add('hidden');
+  document.getElementById('ze-content').classList.remove('hidden');
+})();
+
+function showNotFound() {
+  document.getElementById('ze-loading').classList.add('hidden');
+  document.getElementById('ze-notfound').classList.remove('hidden');
+}
+
+function renderStages(stages) {
+  const el = document.getElementById('stages-list');
+  if (!stages.length) {
+    el.innerHTML = '<div class="text-sm text-zinc-500">Etapy pojawią się tu wkrótce.</div>';
+    return;
+  }
+  const total = stages.length;
+  const done = stages.filter(s => s.status === 'completed').length;
+  document.getElementById('progress-text').textContent = `${done}/${total}`;
+
+  el.innerHTML = `
+    <div class="absolute left-3 top-3 bottom-3 stage-line"></div>
+    ${stages.map(s => {
+      const tasks = (s.ze_project_tasks || []).filter(t => t.visible_to_client).sort((a,b)=>a.order_index-b.order_index);
+      const label = { pending: 'Czeka', in_progress: 'W toku', completed: 'Zrobione', skipped: 'Pominięty' }[s.status];
+      const labelColor = { pending: 'text-zinc-500', in_progress: 'text-amber-300', completed: 'text-emerald-400', skipped: 'text-zinc-600' }[s.status];
+      return `
+        <div class="relative mb-8">
+          <div class="absolute -left-8 top-1 w-6 h-6 rounded-full stage-dot--${s.status} border-2 border-zinc-900 flex items-center justify-center text-[10px] font-bold text-black">
+            ${s.status === 'completed' ? '<i class="ph ph-check"></i>' : ''}
+          </div>
+          <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+            <div class="flex items-center justify-between gap-3 mb-1">
+              <h3 class="text-lg font-semibold text-white">${ZE.escapeHtml(s.title)}</h3>
+              <span class="text-xs ${labelColor} uppercase tracking-wider font-semibold">${label}</span>
+            </div>
+            ${s.description ? `<p class="text-sm text-zinc-400 mb-3">${ZE.escapeHtml(s.description)}</p>` : ''}
+            ${tasks.length ? `
+              <ul class="mt-3 space-y-1.5 text-sm">
+                ${tasks.map(t => `
+                  <li class="flex items-center gap-2 ${t.completed ? 'text-zinc-500' : 'text-zinc-300'}">
+                    <i class="ph ${t.completed ? 'ph-check-circle text-emerald-400' : 'ph-circle text-zinc-600'}"></i>
+                    <span class="${t.completed ? 'line-through' : ''}">${ZE.escapeHtml(t.title)}</span>
+                  </li>
+                `).join('')}
+              </ul>
+            ` : ''}
+            ${s.completed_at ? `<div class="text-xs text-zinc-600 mt-3">Zakończono ${ZE.fmtDate(s.completed_at)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('')}
+  `;
+}
+
+function renderUpdates(updates) {
+  if (!updates.length) return;
+  document.getElementById('updates-section').classList.remove('hidden');
+  document.getElementById('updates-list').innerHTML = updates.map(u => `
+    <article class="bg-zinc-900/40 border border-white/5 rounded-xl p-5">
+      <div class="text-xs text-zinc-500 mb-2">${ZE.fmtDate(u.posted_at)}</div>
+      <h3 class="text-lg font-semibold text-white mb-2">${ZE.escapeHtml(u.title)}</h3>
+      ${u.body ? `<div class="text-sm text-zinc-300 whitespace-pre-wrap leading-relaxed">${ZE.escapeHtml(u.body)}</div>` : ''}
+    </article>
+  `).join('');
+}
+</script>
+</body>
+</html>
