@@ -63,6 +63,7 @@ const VALID_EMAIL_TYPES = [
   'tools_script_received',
   'tools_notes_received',
   'tools_completed',
+  'analysis_started',
   'direct'
 ]
 
@@ -104,7 +105,8 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   tools_started: 'Ostatni krok Etapu 5 — narzędzia analityczne 🔧',
   tools_script_received: '{{clientName}} przesłał skrypt {{toolName}} do osadzenia 🔧',
   tools_notes_received: '{{clientName}} wpisał uwagi po analizie sesji 📝',
-  tools_completed: 'Etap 5 zakończony — lecimy dalej 🚀'
+  tools_completed: 'Etap 5 zakończony — lecimy dalej 🚀',
+  analysis_started: 'Hotjar zbiera już sesje — czas na analizę 📊'
 }
 
 // Offer flow email types (use special reply-to)

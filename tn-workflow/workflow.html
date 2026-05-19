@@ -16949,7 +16949,43 @@ PODSUMOWANIE wyświetl na końcu:
 
                 optimizationData[col] = now;
                 logActivity(`tools_${tool}_connected`, `Osadzono ${toolLabel} w sklepie klienta`, {});
-                showToast(`${toolLabel} oznaczone jako osadzone`, 'success');
+
+                // Jesli oba skrypty osadzone -> odpal email "analysis_started" do klienta (instrukcja Hotjar)
+                const bothConnected = !!optimizationData.tools_ga_connected_at && !!optimizationData.tools_hotjar_connected_at;
+                if (bothConnected && !optimizationData.analysis_started_at) {
+                    try {
+                        const { error: ase } = await supabaseClient
+                            .from('workflow_optimization')
+                            .update({ analysis_started_at: now })
+                            .eq('workflow_id', workflow.id);
+                        if (ase) throw ase;
+                        optimizationData.analysis_started_at = now;
+
+                        const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#narzedzia`;
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'analysis_started',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    workflowId: workflow.id,
+                                    brandName: workflow.offer_name || workflow.customer_name || 'Twój sklep',
+                                    clientName: workflow.customer_name || 'Kliencie',
+                                    clientEmail: workflow.customer_email,
+                                    projectUrl: projectUrl
+                                }
+                            }
+                        });
+                        logActivity('analysis_started_email_sent', 'Wysłano email "analiza sesji" do klienta (Etap 5/Krok 5)', {});
+                        showToast(`${toolLabel} osadzone. Wysłano email z instrukcją analizy do klienta.`, 'success');
+                    } catch (te) {
+                        console.warn('analysis_started trigger failed (kontynuujemy):', te);
+                        showToast(`${toolLabel} oznaczone, ale wysyłka emaila analizy nie powiodła się — sprawdź konsolę.`, 'error');
+                    }
+                } else {
+                    showToast(`${toolLabel} oznaczone jako osadzone`, 'success');
+                }
+
                 loadNarzedziaTab();
             } catch (e) {
                 console.error('markToolConnected error', e);
