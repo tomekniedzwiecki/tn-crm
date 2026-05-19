@@ -1144,16 +1144,15 @@
         }
 
         // ============================================
-        // FETCH — ZADATEK (snapshot cross-month)
-        // counts.zadatek = ile osób aktualnie czeka na full (= queue.length)
-        // Queue: klienci którzy KIEDYKOLWIEK (12 mies) zapłacili zadatek/zaliczkę
-        //        i ich suma wpłat (cumulative all-time) < 2000 zł
-        //        AND brak installment_id AND brak desc 'pełen pakiet/oferta'
+        // FETCH — ZADATEK (snapshot oparty na pipeline)
+        // Queue = leady które miały zadatek (12 mies) I są w aktywnym statusie
+        //         (status NOT IN 'won', 'lost', 'abandoned')
+        //         = realna „Domykanie" w pipeline (negotiation/stage_6/etc.)
+        // counts.zadatek = queue.length
         // Daily/today: dzień pierwszego zadatku (filtrowane do bieżącego miesiąca)
         // ============================================
         const DEPOSIT_REGEX = /(zadatek|zaliczka)/i;
-        const FULL_DESC_REGEX = /(pełen pakiet|pelen pakiet|pełna oferta|pelna oferta|dopłata do pełn|doplata do peln)/i;
-        const FULL_PAID_THRESHOLD = 2000;
+        const TERMINAL_STATUSES = new Set(['won', 'lost', 'abandoned']);
 
         function customerKey(o) {
             return o.lead_id || (o.customer_email || '').toLowerCase() || o.id;
@@ -1164,47 +1163,55 @@
             const startMs = start.getTime();
             const endMs = end.getTime();
 
-            // Group ALL paid orders by customer (12-month history)
-            const allByCustomer = new Map();
-            for (const o of paidOrdersHistory) {
-                const k = customerKey(o);
-                if (!allByCustomer.has(k)) allByCustomer.set(k, []);
-                allByCustomer.get(k).push(o);
-            }
-
-            // Group deposit orders by customer
-            const depositByCustomer = new Map();
+            // Group deposit orders by lead_id (snapshot opiera się na pipeline, nie na cash)
+            const depositByLead = new Map();
             for (const o of paidOrdersHistory) {
                 if (!DEPOSIT_REGEX.test(o.description || '')) continue;
-                const k = customerKey(o);
-                if (!depositByCustomer.has(k)) depositByCustomer.set(k, []);
-                depositByCustomer.get(k).push(o);
+                if (!o.lead_id) continue; // bez lead_id nie wiemy w jakim statusie — pomijamy
+                if (!depositByLead.has(o.lead_id)) depositByLead.set(o.lead_id, []);
+                depositByLead.get(o.lead_id).push(o);
             }
 
-            // Queue: deposit customers whose total cumulative < threshold (and no full markers)
+            // Sum cash per lead (do display: ile już wpłacili)
+            const cashByLead = new Map();
+            for (const o of paidOrdersHistory) {
+                if (!o.lead_id) continue;
+                cashByLead.set(o.lead_id, (cashByLead.get(o.lead_id) || 0) + (parseFloat(o.amount) || 0));
+            }
+
+            // Pobierz aktualne statusy + dane leadów
+            const leadIds = [...depositByLead.keys()];
+            const leadMap = new Map();
+            if (leadIds.length > 0) {
+                const { data: leads } = await supabaseClient
+                    .from('leads')
+                    .select('id,name,email,phone,deal_value,status')
+                    .in('id', leadIds);
+                for (const l of (leads || [])) leadMap.set(l.id, l);
+            }
+
+            // Queue: leady z zadatkiem i statusem nie-terminalnym
             const queueCandidates = [];
-            for (const [key, deps] of depositByCustomer) {
-                const all = allByCustomer.get(key) || deps;
-                const total = all.reduce((s, o) => s + (parseFloat(o.amount) || 0), 0);
-                const hasInstallment = all.some(o => o.installment_id);
-                const hasFullDesc = all.some(o => FULL_DESC_REGEX.test(o.description || ''));
-                const isFullPaid = total >= FULL_PAID_THRESHOLD || hasInstallment || hasFullDesc;
-                if (isFullPaid) continue;
+            for (const [lid, deps] of depositByLead) {
+                const lead = leadMap.get(lid);
+                if (!lead) continue;
+                if (TERMINAL_STATUSES.has(lead.status)) continue;
                 const firstDep = deps[0]; // sorted asc by paid_at
                 queueCandidates.push({
-                    lead_id: firstDep.lead_id,
+                    lead_id: lid,
                     customer_email: firstDep.customer_email,
                     deposit_paid_at: firstDep.paid_at,
                     deposit_amount: parseFloat(firstDep.amount) || 0,
                     deposit_description: firstDep.description || '',
-                    total_paid: total
+                    total_paid: cashByLead.get(lid) || 0,
+                    lead: lead
                 });
             }
 
             // Snapshot count = queue length
             DATA.counts.zadatek = queueCandidates.length;
 
-            // Daily + today: based on first-deposit-date per currently-queued customer,
+            // Daily + today: based on first-deposit-date per currently-queued lead,
             // filtered to current month (sparkline pokazuje przyrosty kolejki w tym mies.)
             const daily = DATA.daily.zadatek;
             let todayCount = 0;
@@ -1219,33 +1226,19 @@
             }
             DATA.today.zadatek = todayCount;
 
-            // Fetch lead details for queue items with lead_id
-            const leadIds = queueCandidates.filter(q => q.lead_id).map(q => q.lead_id);
-            const leadMap = new Map();
-            if (leadIds.length > 0) {
-                const { data: leads } = await supabaseClient
-                    .from('leads')
-                    .select('id,name,email,phone,deal_value')
-                    .in('id', leadIds);
-                for (const l of (leads || [])) leadMap.set(l.id, l);
-            }
-
             DATA.queue_leads = queueCandidates
                 .sort((a, b) => (b.deposit_paid_at || '').localeCompare(a.deposit_paid_at || ''))
-                .map(q => {
-                    const lead = q.lead_id ? leadMap.get(q.lead_id) : null;
-                    return {
-                        id: q.lead_id || null,
-                        name: lead?.name || q.customer_email || '—',
-                        email: lead?.email || q.customer_email || '',
-                        phone: lead?.phone || null,
-                        deal_value: lead?.deal_value || null,
-                        status_entered_at: q.deposit_paid_at,
-                        deposit_amount: q.deposit_amount,
-                        deposit_description: q.deposit_description,
-                        total_paid_in_month: q.total_paid
-                    };
-                });
+                .map(q => ({
+                    id: q.lead_id,
+                    name: q.lead.name || q.customer_email || '—',
+                    email: q.lead.email || q.customer_email || '',
+                    phone: q.lead.phone || null,
+                    deal_value: q.lead.deal_value || null,
+                    status_entered_at: q.deposit_paid_at,
+                    deposit_amount: q.deposit_amount,
+                    deposit_description: q.deposit_description,
+                    total_paid_in_month: q.total_paid
+                }));
         }
 
         // ============================================
@@ -1928,7 +1921,7 @@
                 container.innerHTML = `
                     <div class="text-center py-8 text-zinc-600 text-sm">
                         <i class="ph ph-check-circle text-3xl mb-2"></i>
-                        <div>Brak — wszyscy z zadatkiem domknęli pełną wpłatę (≥${FULL_PAID_THRESHOLD} zł)</div>
+                        <div>Brak — wszyscy z zadatkiem domknęli pełną wpłatę</div>
                     </div>
                 `;
                 return;
