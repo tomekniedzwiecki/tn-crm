@@ -740,6 +740,22 @@
 
             if (validUntil < today) {
                 showScreen('expired-screen');
+
+                const dedupKey = `expired-notified-${clientOffer.id}`;
+                if (!sessionStorage.getItem(dedupKey)) {
+                    sessionStorage.setItem(dedupKey, '1');
+                    sendSlackNotification('offer_expired_attempt', {
+                        lead_name: lead.name,
+                        lead_email: lead.email,
+                        lead_phone: lead.phone,
+                        lead_company: lead.company,
+                        lead_id: lead.id,
+                        offer_name: offer.name,
+                        offer_price: getEffectivePrice(),
+                        valid_until: clientOffer.valid_until,
+                        page_version: 'v1'
+                    });
+                }
                 return;
             }
 

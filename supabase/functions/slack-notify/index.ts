@@ -66,6 +66,11 @@ Deno.serve(async (req) => {
         message = formatCheckoutStartedMessage(data)
         break
 
+      case 'offer_expired_attempt':
+        webhookUrl = webhookActivity
+        message = formatOfferExpiredAttemptMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -706,6 +711,100 @@ function formatProformaMessage(data: {
       }
     ]
   }
+}
+
+function formatOfferExpiredAttemptMessage(data: {
+  lead_name?: string
+  lead_email: string
+  lead_phone?: string
+  lead_company?: string
+  lead_id?: string
+  offer_name: string
+  offer_price?: number
+  valid_until?: string
+  page_version?: string
+}) {
+  const displayName = data.lead_company || data.lead_name || data.lead_email
+
+  const fields = [
+    { type: 'mrkdwn', text: `*Klient:*\n${leadLink(data.lead_email, displayName, data.lead_id)}` },
+    { type: 'mrkdwn', text: `*Oferta:*\n${data.offer_name}` }
+  ]
+
+  if (data.valid_until) {
+    const expiredDate = new Date(data.valid_until).toLocaleDateString('pl-PL', {
+      day: 'numeric', month: 'long', year: 'numeric'
+    })
+    fields.push({ type: 'mrkdwn', text: `*Wygasła:*\n${expiredDate}` })
+  }
+
+  if (data.offer_price) {
+    fields.push({ type: 'mrkdwn', text: `*Wartość:*\n${data.offer_price.toLocaleString('pl-PL')} PLN` })
+  }
+
+  if (data.lead_email !== displayName) {
+    fields.push({ type: 'mrkdwn', text: `*Email:*\n${leadLink(data.lead_email, data.lead_email, data.lead_id)}` })
+  }
+
+  if (data.lead_phone) {
+    fields.push({ type: 'mrkdwn', text: `*Telefon:*\n${data.lead_phone}` })
+  }
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: {
+        type: 'plain_text',
+        text: '⏰ Lead próbował otworzyć wygasłą ofertę!',
+        emoji: true
+      }
+    },
+    {
+      type: 'section',
+      fields: fields
+    }
+  ]
+
+  const actionElements: any[] = []
+
+  if (data.lead_id) {
+    actionElements.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '📋 Zobacz lead', emoji: true },
+      url: `https://crm.tomekniedzwiecki.pl/lead?id=${data.lead_id}`,
+      action_id: 'view_lead'
+    })
+  }
+
+  if (data.lead_phone) {
+    let waPhone = data.lead_phone.replace(/[\s\-\(\)]/g, '')
+    if (waPhone.startsWith('0')) waPhone = '48' + waPhone.substring(1)
+    if (!waPhone.startsWith('+') && !waPhone.startsWith('48')) waPhone = '48' + waPhone
+    waPhone = waPhone.replace('+', '')
+
+    actionElements.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true },
+      url: `https://wa.me/${waPhone}`,
+      action_id: 'whatsapp'
+    })
+  }
+
+  if (actionElements.length > 0) {
+    blocks.push({ type: 'actions', elements: actionElements })
+  }
+
+  blocks.push({
+    type: 'context',
+    elements: [
+      {
+        type: 'mrkdwn',
+        text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+      }
+    ]
+  })
+
+  return { blocks }
 }
 
 function formatCheckoutStartedMessage(data: {
