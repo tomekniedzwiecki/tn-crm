@@ -429,6 +429,12 @@ check "Zero zakazanych obietnic dostawy (dropshipping)" "0" "$DELIVERY"
 PURPLE=$(grep -ciE "smak żalu|gorycz poran|coś z domu|\bzostaje w (tobie|nas)\b|dawno przestał|kawa która|niekompromisowa jakość|w poszukiwaniu siebie|smak dzieciństwa|\baromat? wspomnień\b|serce (twojego|naszego) domu" "$FILE" || true)
 check "Zero purple prose (metafory/aforyzmy)" "0" "$PURPLE"
 
+# Anti-AI-poetic — 5 grzechów LLM copy (reference/copy.md sekcja "Anti-AI-poetic")
+# Wykryte 2026-05-20 na landingu hovira: "Wracaj do wieczoru", "Mop zdjął butów", "a Ty masz wieczór ✱"
+# Polski copywriter direct response (15 lat) NIE napisałby tych zwrotów.
+AI_POETIC=$(grep -ciE "\boddaj[eą]\s+(ci\s+)?(wieczór|wieczor|spokój|spokoj|kontrol[eę]|wolność|wolnosc|czas|poranek|poranki)\b|\bodkupuj(esz|esz\s+swoj)|\bwracaj\s+do\s+(wieczoru|siebie|domu|spokoju)\b|\b(mop|robot|odkurzacz|szczotka|krem|kawa|herbata)\s+(jeszcze\s+)?(nie\s+)?(zdj[ąa]ł|zdejmuje|czeka|tęskni|tesni|rozumie|wita|zaprasza|otwiera|chce|wzdycha|szepcze|śpi|spi|marzy)\b|który\s+(oddaje|przywraca|odkupuje)\s+(ci|tobie|twój|twoj)|a\s+ty\s+masz\s+(wieczór|wieczor|spokój|spokoj|czas)\s*[✱✦★]?" "$FILE" || true)
+check "Zero anti-AI-poetic (oddaje wieczór / mop zdjął butów / wracaj do X)" "0" "$AI_POETIC"
+
 # ─── 9. Offer Box 2026 (DESIGN.md sekcja H) ───
 echo ""
 echo "💰 9. Offer Box / CTA (DESIGN.md sekcja H.9)"

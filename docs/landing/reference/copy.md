@@ -84,6 +84,116 @@ Subheadline: "Robot GlassNova z siłą ssania 5600Pa myje nawet najtrudniej dost
 
 ---
 
+## ⛔ Anti-AI-poetic — nagłówki, których LLM ciągle pisze (i które brzmią sztucznie)
+
+> **DLACZEGO TO TRAFIŁO TUTAJ (2026-05-20):** Trzy z ośmiu nagłówków landingu Hovira brzmiały jak "AI próbujący być poetą" — `"Wracaj do wieczoru. Hovira sprząta sama."`, `"Wracasz z pracy. Mop jeszcze nie zdjął butów."`, `"a Ty masz wieczór ✱"`. Polski copywriter direct response NIGDY by ich nie napisał. Każdy z nich łamie jedną z 5 reguł poniżej. Klient skierował to do mnie jako pierwsza rzecz do naprawy.
+
+### 5 najczęstszych grzechów AI-copy (z konkretnymi przykładami z polskich landingów)
+
+#### 1. Personifikacja przedmiotów ("Mop jeszcze nie zdjął butów")
+
+LLM lubi przypisywać przedmiotom ludzkie czynności, bo brzmi to "kreatywnie". Polski czytelnik czuje sztuczność natychmiast — mop nie zdejmuje butów, nie wraca z pracy, nie czeka cierpliwie. To nie metafora, to dziwactwo.
+
+| ❌ AI-poetic | ✅ Naturalnie |
+|---|---|
+| "Mop jeszcze nie zdjął butów" | "14 godzin tygodniowo. Tyle ginie na sprzątanie" |
+| "Kawa, która rozumie Twoje poranki" | "Świeżo palona arabica — 200 g, gotowa do mielenia" |
+| "Twoje okna oddychają z ulgą" | "Czyste szyby do 14. piętra, bez drabiny" |
+
+**Zasada:** czasowniki opisujące czynności ludzkie (zdejmuje, czeka, rozumie, oddycha, marzy, tęskni, zaprasza, zachęca) zarezerwowane dla ludzi. Przedmioty robią rzeczy fizyczne (ssie, świeci, mierzy, wibruje).
+
+#### 2. Metafora "oddaje / odkupuje / zwraca [abstrakcyjną wartość]"
+
+LLM ma silne wzorce w stylu „X oddaje Ci wieczór / spokój / kontrolę / wolność". To brzmi jak slogan reklamy z lat 90. Polski czytelnik direct response oczekuje konkretu, nie metafory wymiany.
+
+| ❌ AI-poetic | ✅ Naturalnie |
+|---|---|
+| "Robot, który oddaje Ci wieczór" | "Robot z LiDAR, 5000 Pa i auto-empty" |
+| "Wracaj do wieczoru" | "Posprzątane, zanim wrócisz do domu" |
+| "Odkupujesz swoje poranki" | "180 minut sprzątania znika z codzienności" |
+| "Cztery rzeczy, które oddają Ci wieczór" | "Cztery rzeczy, które działają, gdy Cię nie ma" |
+
+**Zasada:** jeśli w nagłówku jest słowo „oddaje", „odkupuje", „zwraca", „przywraca" + abstrakt (wieczór, spokój, kontrola, czas) — **przepisz na konkret** (liczba godzin, konkretna czynność, konkretny moment).
+
+#### 3. Imperatyw "wracaj do X" / "odkupuj X" / "zostań X"
+
+LLM bardzo lubi tryb rozkazujący ze słowem „wracaj" / „odkupuj". W polskim direct response to brzmi jak hasło motywacyjne (Lifecoach) albo reklama spa. Klient na landingu nie chce być pouczany.
+
+| ❌ AI-poetic | ✅ Naturalnie |
+|---|---|
+| "Wracaj do wieczoru" | "Wieczór bez mopa" |
+| "Wróć do siebie" | "Bez bólu pleców rano" |
+| "Pozwól sobie na luksus" | "Profesjonalny manicure za 79 zł" |
+| "Odkryj nowy rytuał" | "Pasta przeciw kamieniowi · 3 razy dziennie" |
+
+**Zasada:** imperatyw w nagłówku tylko jeśli to konkretna akcja (Zamów, Sprawdź, Zobacz). NIE do abstraktów (wracaj, odkrywaj, pozwól, otwórz się).
+
+#### 4. Aforyzm-podpis ("a Ty masz wieczór ✱", "smak żalu", "coś z domu zostaje")
+
+LLM lubi kończyć sekcję krótkim aforyzmem w italic/handwriting/peach color. Tomek nazywa to "purple prose" i ma na to twardy zakaz w pamięci (`feedback-landing-no-purple-prose.md`). Te zwroty brzmią jak coaching z Instagrama.
+
+| ❌ AI-poetic | ✅ Naturalnie |
+|---|---|
+| "a Ty masz wieczór ✱" | "180 minut sprzątania · zero z Twojej strony" |
+| "smak dzieciństwa wraca" | "55% kakao · receptura z 1948 r." |
+| "coś z domu zostaje w tobie" | "Świeczka sojowa · 50 godzin palenia" |
+| "kawa, która budzi spokój" | "200 mg kofeiny · łagodny dla żołądka" |
+
+**Zasada:** jeśli nagłówek/podpis jest „ładny" ale **nie mówi NIC konkretnego o produkcie** → wytnij. Konkret + liczba > metafora.
+
+#### 5. Pytania retoryczne udające headline ("Ile naprawdę kosztuje X?")
+
+LLM trafia w pytania retoryczne, gdy nie potrafi powiedzieć tej samej rzeczy stwierdzeniem. To unik. Pytanie retoryczne zmusza czytelnika do myślenia, gdy on chciał dostać informację.
+
+| ❌ AI-poetic | ✅ Naturalnie |
+|---|---|
+| "Ile naprawdę kosztuje sprzątanie?" | "Hovira vs odkurzacz + mop" |
+| "Czy wiesz, ile cukru jest w sokach?" | "12 łyżeczek cukru w jednym kartonie" |
+| "Co byś zrobił z 14 godzinami tygodniowo?" | "14 godzin tygodniowo. Tyle ginie na sprzątanie" |
+
+**Wyjątek:** pytania retoryczne OK w FAQ headline ("Najczęstsze pytania" — to label, nie nagłówek sekcji) i w hero podsekcji jako narracyjny pivot — ale max 1 raz na landing.
+
+---
+
+## Test "Polski copywriter direct response, 15 lat doświadczenia" — checklist
+
+Zanim wkleisz nagłówek do HTML, zadaj sobie te 5 pytań:
+
+1. **Czy 50-letni copywriter z agencji DR napisałby to?** Wyobraź sobie Macieja w marynarce, 15 lat w branży, robi copy dla Allegro/Empik/Media Markt. Czy to napisałby? Jeśli "raczej nie" — przepisz.
+
+2. **Czy klient mógłby to zacytować w SMS-ie do żony?** „Kupiłem robot, sprząta sam, super." — TAK. „Kupiłem robot, który oddaje mi wieczór." — NIE, nikt tak nie mówi.
+
+3. **Czy w nagłówku jest LICZBA albo KONKRETNA RZECZ?** „5000 Pa", „180 minut", „60 dni", „LiDAR", „dywanik shaggy" — TAK. „wieczór", „spokój", „luksus", „przyjemność" — NIE.
+
+4. **Czy zamiast tego nagłówka mógłbym napisać 3 inne na ten sam produkt?** Jeśli „tak, równie dobre" — twój nagłówek jest za ogólny. Specyfika produktu MUSI wymuszać dokładnie ten nagłówek.
+
+5. **Czy nagłówek mówi co produkt ROBI, czy co MAM POCZUĆ?** Direct response copy mówi co produkt **robi** (akcja, mechanizm, efekt). Branding copy mówi co masz poczuć. Ty piszesz direct response — opisuj akcję.
+
+---
+
+## Tabela — jak LLM pisze vs jak pisze copywriter (anti-pattern → naprawa)
+
+| Sekcja | ❌ LLM napisze | ✅ Copywriter direct response napisze |
+|---|---|---|
+| Hero h1 | "Wracaj do wieczoru. Hovira sprząta sama." | "Posprzątane, zanim wrócisz do domu." |
+| Hero subhead | "Ty zdejmujesz buty, otwierasz książkę i nie zaczynasz drugiej zmiany." | "5000 Pa, LiDAR, stacja auto-empty. Pracuje w tle, kiedy jesteś w pracy." |
+| Problem h2 | "Wracasz z pracy. Mop jeszcze nie zdjął butów." | "14 godzin tygodniowo. Tyle ginie na sprzątanie." |
+| Features h2 | "Cztery rzeczy, które oddają Ci wieczór." | "Cztery rzeczy, które działają, gdy Cię nie ma." |
+| Feature card title | "Laser nie szuka po omacku." | "LiDAR mapuje mieszkanie w 3 minuty." |
+| How step title | "Hovira mapuje mieszkanie." | "Mapuje mieszkanie w 3 minuty." |
+| Voices h2 | "Co zmieniło się w domach po Hovirze." | "Trzy osoby. Trzy konkretne zmiany." |
+| FAQ h2 | "Pytania, które dostajemy najczęściej." | "Najczęstsze pytania." |
+| Offer h2 | "Hovira + Stacja Auto-Empty w jednym pakiecie." | "Hovira + stacja dokująca w komplecie." |
+| Offer CTA | "Odbierz Hovirę — oszczędzasz 700 zł." | "Zamów Hovirę — oszczędzasz 700 zł." |
+| Final h2 | "180 minut ciszy. Każdy wieczór." | "180 minut sprzątania znika z Twojej codzienności." |
+| Final aforyzm | "a Ty masz wieczór ✱" | "180 minut sprzątania · zero z Twojej strony" |
+
+**Wzór redakcji:** zamiast „X, który oddaje Ci Y" pisz „X robi Z" (gdzie Z to konkretna akcja na produkcie). Zamiast aforyzmu w italic — daj mono-uppercase fakt z liczbą.
+
+---
+
+---
+
 # Część 2 — Senior Copywriter's Playbook
 
 > **FILOZOFIA**: Copy sprzedaje więcej niż design. Każde słowo musi pracować. Pisz jak do przyjaciela, nie jak korporacja. Poziom: doświadczony copywriter direct response, 15+ lat w branży.
