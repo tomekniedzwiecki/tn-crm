@@ -261,7 +261,10 @@
         .v-main {
             flex: 1;
             padding: 48px 32px;
-            padding-bottom: 140px; /* miejsce dla sticky pay bar */
+        }
+
+        @media (max-width: 900px) {
+            .v-main { padding-bottom: 140px; /* miejsce dla mobile sticky bar */ }
         }
 
         .v-container {
@@ -1097,7 +1100,43 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════════
-           BOTTOM PAY BAR — unified sticky bar (desktop + mobile)
+           FORM-END CTA (desktop) — Stripe-style button na końcu form
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-form-cta {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-subtle);
+        }
+
+        .v-form-cta-terms {
+            font-size: 11.5px;
+            color: var(--text-tertiary);
+            text-align: center;
+            line-height: 1.5;
+            margin-top: 12px;
+        }
+
+        .v-form-cta-terms a {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-thickness: 1px;
+        }
+
+        .v-form-cta-terms a:hover { color: var(--accent); }
+
+        /* Desktop: form-cta visible, pay-bar hidden */
+        @media (min-width: 901px) {
+            .v-pay-bar { display: none; }
+        }
+
+        /* Mobile: form-cta hidden, pay-bar visible (sticky bottom) */
+        @media (max-width: 900px) {
+            .v-form-cta { display: none; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           BOTTOM PAY BAR — sticky tylko na mobile
            ═══════════════════════════════════════════════════════════════════ */
         .v-pay-bar {
             position: fixed;
@@ -1775,10 +1814,19 @@
                         </div>
                     </div>
 
-                    <!-- Hidden submit żeby Enter w form trigger handleSubmit -->
-                    <button type="submit" id="v-pay-desktop" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true">
-                        <span id="v-pay-desktop-text"></span>
-                    </button>
+                    <!-- Form-end CTA (desktop) — button + statement + trust signals -->
+                    <div class="v-form-cta">
+                        <button type="submit" class="v-pay-btn" id="v-pay-desktop">
+                            <i class="ph ph-lock-simple"></i>
+                            <span id="v-pay-desktop-text">Zapłać</span>
+                            <i class="ph ph-arrow-right" style="font-size:14px"></i>
+                        </button>
+                        <p class="v-form-cta-terms">
+                            Klikając „Zapłać" akceptujesz
+                            <a class="v-link-regulamin" href="#" target="_blank">regulamin</a>
+                            i <a class="v-link-privacy" href="#" target="_blank">politykę prywatności</a>.
+                        </p>
+                    </div>
                 </form>
 
                 <!-- Trust strip — oficjalne logo płatności -->
@@ -1823,8 +1871,8 @@
                 </button>
                 <p class="v-pay-bar-terms">
                     Klikając „Zapłać" akceptujesz
-                    <a id="v-link-regulamin" href="#" target="_blank">regulamin</a>
-                    i <a id="v-link-privacy" href="#" target="_blank">politykę prywatności</a>.
+                    <a class="v-link-regulamin" href="#" target="_blank">regulamin</a>
+                    i <a class="v-link-privacy" href="#" target="_blank">politykę prywatności</a>.
                 </p>
             </div>
         </div>
@@ -1971,8 +2019,8 @@ function showRevolutInstructions(order) {
 // ═══════════════════════════════════════════════════════════════════
 (function setLegalLinks() {
     const base = 'https://tomekniedzwiecki.pl';
-    $('v-link-regulamin').href = `${base}/dokumenty/regulamin.html`;
-    $('v-link-privacy').href = `${base}/dokumenty/polityka-prywatnosci.html`;
+    document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = `${base}/dokumenty/regulamin.html`);
+    document.querySelectorAll('.v-link-privacy').forEach(a => a.href = `${base}/dokumenty/polityka-prywatnosci.html`);
 })();
 
 // ═══════════════════════════════════════════════════════════════════
