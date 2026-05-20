@@ -880,6 +880,23 @@ Każdy landing MA mieć subtelną animację W TLE sekcji hero, dopasowaną do pr
 
 **Jeśli brak któregokolwiek → `verify-landing.sh` FAIL → blokuje deploy.**
 
+## Bonus: 8 motion effects (subtle premium feel)
+
+> **Wprowadzone 2026-05-20** — patrz [`reference/motion-library.md`](reference/motion-library.md). Wyciągnięte z auriko (Clinical Kitchen) + dentaflow (premium tech). NIE blokują deploy (opt-in per Style Lock compatibility matrix), ale dodają o klasę bardziej premium feel niż czyste statyczne strony.
+
+| # | Effect | Type | Style Lock default |
+|---|---|---|---|
+| 1 | Shimmer overlay primary buttons | CSS | wszystkie subtle+ |
+| 2 | Pulse-glow CTA na offer button | CSS | Clinical Kitchen, Panoramic Calm |
+| 3 | Bouncy card easing `cubic-bezier(0.34,1.56,0.64,1)` | CSS | wszystkie except Swiss Grid |
+| 4 | Hero subtle grain noise (SVG fractalNoise) | CSS | medical/editorial/lab styles |
+| 5 | Bento cursor-follow spotlight | CSS+JS | tech-precision styles |
+| 6 | KPI counter stagger (hero kpi-grid) | JS | Clinical Kitchen wymaga kpi-grid |
+| 7 | Scroll progress bar (top 2px) | CSS+JS | wszystkie except Editorial |
+| 8 | App mockup live signal (flicker + crosshair pulse) | CSS | wymaga app mockup w hero |
+
+**Wybierz 3-5 per landing** według [`motion-library.md` matrix](reference/motion-library.md#style-lock--effect-compatibility-matrix).
+
 ## JavaScript (snippety podstawowe)
 
 > ⚠️ Fade-in MUSI mieć `html.js` gate i safety timeout filtrujący `getBoundingClientRect()` — patrz [`reference/safety.md` #2](reference/safety.md). Pełny snippet copy-paste: [`reference/patterns.md` #11](reference/patterns.md).

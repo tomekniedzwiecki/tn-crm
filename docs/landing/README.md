@@ -43,6 +43,7 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 | [`reference/pagespeed.md`](reference/pagespeed.md) | Optymalizacja wydajności (90+ mobile) |
 | [`reference/patterns.md`](reference/patterns.md) | 22 cross-section signature snippetów (kopiuj-wklej) |
 | [`reference/section-variants.md`](reference/section-variants.md) | **22 warianty per-sekcja** (10 hero + 6 features + 6 testimonials) + drzewo decyzyjne autonomicznego wyboru |
+| [`reference/motion-library.md`](reference/motion-library.md) | **8 motion effects** (shimmer/pulse-glow/bouncy/grain/spotlight/KPI stagger/scroll bar/live signal) + Style Lock compatibility matrix |
 
 ### Specjalne przypadki
 
