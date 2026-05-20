@@ -1,0 +1,2591 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Płatność — Tomasz Niedźwiecki AI</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="robots" content="noindex, nofollow">
+
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com">
+    <link rel="dns-prefetch" href="https://connect.facebook.net">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://yxmavwkwnfuphjqbelws.supabase.co" crossorigin>
+
+    <!-- Google Consent Mode v2 -->
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('consent', 'default', {
+            'ad_storage': 'granted',
+            'ad_user_data': 'granted',
+            'ad_personalization': 'granted',
+            'analytics_storage': 'granted'
+        });
+    </script>
+    <script>
+        window.addEventListener('load', function() {
+            var s = document.createElement('script');
+            s.async = true;
+            s.src = 'https://www.googletagmanager.com/gtag/js?id=G-W8CLDSHVFC';
+            document.head.appendChild(s);
+            s.onload = function() {
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                window.gtag = gtag;
+                gtag('js', new Date());
+                gtag('config', 'G-W8CLDSHVFC', {
+                    'linker': { 'domains': ['tomekniedzwiecki.pl', 'crm.tomekniedzwiecki.pl'], 'accept_incoming': true }
+                });
+                gtag('config', 'AW-17886093904');
+            };
+        });
+    </script>
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="Bezpieczna płatność">
+    <meta property="og:description" content="Sfinalizuj zamówienie. Płatność szyfrowana SSL.">
+    <meta name="theme-color" content="#10b981">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://merchant.revolut.com/embed.js"></script>
+
+    <!-- Meta Pixel -->
+    <script>
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', '1668188210820080');
+    fbq('track', 'PageView');
+    </script>
+
+    <style>
+        /* ═══════════════════════════════════════════════════════════════════
+           DESIGN TOKENS — light mode, Stripe-inspired
+           ═══════════════════════════════════════════════════════════════════ */
+        :root {
+            /* Surface */
+            --bg-page: #f6f9fc;
+            --bg-card: #ffffff;
+            --bg-subtle: #f9fafb;
+            --bg-hover: #f3f4f6;
+
+            /* Border */
+            --border-default: #e3e8ee;
+            --border-strong: #d1d5db;
+            --border-subtle: #eef0f3;
+
+            /* Text */
+            --text-primary: #1a1f36;
+            --text-secondary: #4f566b;
+            --text-tertiary: #6b7280;
+            --text-muted: #9ca3af;
+
+            /* Accent — TN emerald */
+            --accent: #10b981;
+            --accent-hover: #059669;
+            --accent-glow: rgba(16, 185, 129, 0.18);
+            --accent-soft: rgba(16, 185, 129, 0.08);
+            --accent-border: rgba(16, 185, 129, 0.3);
+            --accent-text: #047857;
+
+            /* Status */
+            --error: #dc2626;
+            --error-soft: rgba(220, 38, 38, 0.08);
+            --error-border: rgba(220, 38, 38, 0.2);
+            --warning: #d97706;
+            --success: #10b981;
+
+            /* Shadows — multi-layer, Stripe style */
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+            --shadow-md: 0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.05);
+            --shadow-glow: 0 0 0 4px var(--accent-glow);
+            --shadow-card: 0 0 0 1px var(--border-default), 0 2px 4px rgba(0, 0, 0, 0.02), 0 4px 12px rgba(0, 0, 0, 0.04);
+
+            /* Radii */
+            --r-sm: 6px;
+            --r-md: 8px;
+            --r-lg: 10px;
+            --r-xl: 14px;
+            --r-2xl: 18px;
+            --r-full: 9999px;
+
+            /* Typography */
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            font-feature-settings: 'cv11', 'ss01';
+            font-variant-numeric: tabular-nums;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg-page);
+            color: var(--text-primary);
+            min-height: 100vh;
+            font-size: 15px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        ::selection { background: var(--accent-soft); color: var(--accent-text); }
+
+        /* Tabular numerals for prices */
+        .tnum, [data-price], #v-total, #v-subtotal, #v-discount-amount, #v-summary-price,
+        #v-blik-display, #v-blik-timeout, #v-revolut-amount, #v-mobile-price {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1;
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           LAYOUT
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-page {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .v-header {
+            padding: 24px 32px;
+            border-bottom: 1px solid var(--border-subtle);
+            background: var(--bg-card);
+        }
+
+        .v-header-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .v-brand {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .v-brand-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 7px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .v-test-pill {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 10px;
+            border-radius: var(--r-full);
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-subtle);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .v-test-pill::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent);
+        }
+
+        .v-main {
+            flex: 1;
+            padding: 48px 32px;
+        }
+
+        .v-container {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+            gap: 48px;
+        }
+
+        @media (max-width: 900px) {
+            .v-header { padding: 16px; }
+            .v-main { padding: 24px 16px; padding-bottom: 140px; }
+            .v-container { grid-template-columns: 1fr; gap: 24px; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           ORDER SUMMARY (left column)
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-summary {
+            position: sticky;
+            top: 24px;
+            align-self: start;
+        }
+
+        @media (max-width: 900px) {
+            .v-summary { position: static; }
+        }
+
+        .v-summary-eyebrow {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            margin-bottom: 12px;
+        }
+
+        .v-summary-title {
+            font-size: 28px;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        @media (max-width: 900px) {
+            .v-summary-title { font-size: 24px; }
+        }
+
+        .v-summary-total-display {
+            font-size: 36px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            color: var(--text-primary);
+            line-height: 1;
+            margin-bottom: 28px;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+        }
+
+        .v-summary-total-display .strike {
+            font-size: 18px;
+            font-weight: 500;
+            color: var(--text-muted);
+            text-decoration: line-through;
+        }
+
+        .v-product-row {
+            display: flex;
+            gap: 14px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-xl);
+            margin-bottom: 20px;
+        }
+
+        .v-product-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: var(--r-md);
+            background: linear-gradient(135deg, var(--accent-soft), rgba(16, 185, 129, 0.04));
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+        }
+
+        .v-product-info { min-width: 0; flex: 1; }
+
+        .v-product-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            line-height: 1.4;
+            margin-bottom: 2px;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .v-product-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+        }
+
+        .v-breakdown {
+            padding: 16px 0;
+            border-top: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .v-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            padding: 6px 0;
+        }
+
+        .v-row .label { color: var(--text-tertiary); display: flex; align-items: center; gap: 6px; }
+        .v-row .value { color: var(--text-secondary); font-weight: 500; }
+        .v-row.accent .label, .v-row.accent .value { color: var(--accent); font-weight: 600; }
+
+        .v-row .discount-pill {
+            font-size: 10px;
+            padding: 2px 6px;
+            background: var(--accent-soft);
+            border-radius: var(--r-sm);
+            font-weight: 600;
+            margin-left: 4px;
+        }
+
+        .v-row-total {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            padding-top: 16px;
+            font-weight: 600;
+        }
+
+        .v-row-total .label {
+            font-size: 14px;
+            color: var(--text-primary);
+        }
+
+        .v-row-total .value {
+            font-size: 22px;
+            color: var(--text-primary);
+            letter-spacing: -0.01em;
+        }
+
+        /* Discount code */
+        .v-discount {
+            margin-top: 20px;
+        }
+
+        .v-discount-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .v-discount-toggle:hover { color: var(--text-primary); }
+        .v-discount-toggle i { font-size: 14px; }
+
+        .v-discount-input-wrap {
+            display: none;
+            margin-top: 12px;
+            gap: 8px;
+        }
+
+        .v-discount-input-wrap.open { display: flex; }
+
+        .v-discount-applied {
+            display: none;
+            margin-top: 12px;
+            padding: 10px 12px;
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            border-radius: var(--r-md);
+            font-size: 13px;
+            color: var(--accent-text);
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .v-discount-applied.open { display: flex; }
+
+        .v-discount-applied button {
+            background: none;
+            border: none;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--r-sm);
+            transition: color 0.15s;
+        }
+
+        .v-discount-applied button:hover { color: var(--error); }
+
+        /* Trust mini list */
+        .v-trust-list {
+            margin-top: 24px;
+            padding: 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-xl);
+        }
+
+        .v-trust-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            padding: 6px 0;
+        }
+
+        .v-trust-list-item i {
+            color: var(--accent);
+            font-size: 16px;
+        }
+
+        .v-help {
+            margin-top: 20px;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            text-align: center;
+        }
+
+        .v-help a {
+            color: var(--accent);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            margin-left: 4px;
+        }
+
+        .v-help a:hover { color: var(--accent-hover); }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           FORM CARD (right column)
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-form-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-2xl);
+            padding: 32px;
+            box-shadow: var(--shadow-md);
+        }
+
+        @media (max-width: 900px) {
+            .v-form-card { padding: 20px; border-radius: var(--r-xl); }
+        }
+
+        .v-section + .v-section { margin-top: 28px; }
+
+        .v-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 14px;
+            letter-spacing: -0.005em;
+        }
+
+        /* Form fields */
+        .v-field { margin-bottom: 14px; }
+        .v-field:last-child { margin-bottom: 0; }
+
+        .v-field-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        @media (max-width: 480px) {
+            .v-field-grid { grid-template-columns: 1fr; }
+        }
+
+        .v-label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .v-label .req { color: var(--error); }
+
+        .v-input {
+            width: 100%;
+            font-family: inherit;
+            font-size: 15px;
+            color: var(--text-primary);
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-md);
+            padding: 10px 12px;
+            line-height: 1.4;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+
+        .v-input::placeholder { color: var(--text-muted); }
+        .v-input:hover:not(:focus) { border-color: var(--border-strong); }
+        .v-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: var(--shadow-glow);
+        }
+        .v-input.error {
+            border-color: var(--error);
+            box-shadow: 0 0 0 4px var(--error-soft);
+        }
+
+        .v-error-msg {
+            font-size: 12px;
+            color: var(--error);
+            margin-top: 6px;
+            display: none;
+            align-items: center;
+            gap: 4px;
+        }
+        .v-error-msg.show { display: flex; }
+        .v-error-msg i { font-size: 13px; }
+
+        /* Invoice toggle */
+        .v-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: none;
+            border: none;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 0;
+        }
+        .v-toggle:hover { color: var(--text-primary); }
+        .v-toggle i { font-size: 16px; transition: transform 0.2s; }
+        .v-toggle.open i { transform: rotate(45deg); }
+
+        .v-collapse {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .v-collapse.open { max-height: 400px; }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           PAYMENT METHOD ACCORDION
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-method {
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            background: var(--bg-card);
+            position: relative;
+        }
+
+        .v-method + .v-method { margin-top: 10px; }
+
+        .v-method:hover:not(.active) {
+            border-color: var(--border-strong);
+        }
+
+        .v-method.active {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px var(--accent), 0 8px 24px -8px var(--accent-glow);
+        }
+
+        .v-method-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .v-method-radio {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border-strong);
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: border-color 0.2s;
+            position: relative;
+        }
+
+        .v-method.active .v-method-radio {
+            border-color: var(--accent);
+        }
+
+        .v-method-radio::after {
+            content: '';
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            transform: scale(0);
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .v-method.active .v-method-radio::after {
+            transform: scale(1);
+        }
+
+        .v-method-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: var(--r-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 18px;
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+        }
+
+        .v-method-icon img { width: 70%; height: 70%; object-fit: contain; }
+        .v-method-icon.blik { background: white; border: 1px solid var(--border-subtle); padding: 4px; }
+        .v-method-icon.card-wallet { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+        .v-method-icon.transfer { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; }
+        .v-method-icon.revolut { background: #0075EB; color: white; }
+        .v-method-icon.installments { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
+        .v-method-icon.b2b { background: linear-gradient(135deg, #64748b, #475569); color: white; }
+
+        .v-method-label {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .v-method-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .v-method-desc {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .v-popular-badge {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: var(--accent-text);
+            background: var(--accent-soft);
+            padding: 2px 7px;
+            border-radius: var(--r-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            border: 1px solid var(--accent-border);
+        }
+
+        .v-method-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .v-method.active .v-method-body {
+            max-height: 320px;
+        }
+
+        .v-method-body-inner {
+            padding: 4px 16px 18px;
+            border-top: 1px solid var(--border-subtle);
+            padding-top: 16px;
+        }
+
+        /* BLIK 6-digit inputs */
+        .v-blik-row {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 8px 0;
+        }
+
+        .v-blik-digit {
+            width: 44px;
+            height: 56px;
+            font-family: 'SF Mono', Menlo, Monaco, 'Courier New', monospace;
+            font-size: 22px;
+            font-weight: 600;
+            text-align: center;
+            border: 1.5px solid var(--border-strong);
+            border-radius: var(--r-md);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+            caret-color: var(--accent);
+        }
+
+        .v-blik-digit:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: var(--shadow-glow);
+        }
+
+        .v-blik-digit.filled {
+            background: var(--accent-soft);
+            border-color: var(--accent);
+            color: var(--accent-text);
+        }
+
+        .v-blik-digit.error {
+            border-color: var(--error);
+            background: var(--error-soft);
+        }
+
+        .v-blik-hint {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 8px;
+        }
+
+        /* Wallet sub-buttons (Card / Apple Pay / Google Pay) */
+        .v-wallet-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        @media (max-width: 380px) {
+            .v-wallet-grid { grid-template-columns: 1fr; }
+        }
+
+        .v-wallet-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 14px 8px;
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-md);
+            background: var(--bg-card);
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+            font: inherit;
+            color: var(--text-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .v-wallet-btn:hover {
+            border-color: var(--border-strong);
+            background: var(--bg-subtle);
+        }
+
+        .v-wallet-btn.selected {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            box-shadow: 0 0 0 1px var(--accent);
+        }
+
+        .v-wallet-btn .icon { font-size: 22px; }
+        .v-wallet-btn .label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
+        .v-wallet-btn .sublabel { font-size: 10px; color: var(--text-tertiary); }
+
+        /* Info hint inside method body */
+        .v-method-hint {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            line-height: 1.5;
+        }
+
+        .v-method-hint strong { color: var(--text-secondary); font-weight: 600; }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           TERMS + SUBMIT
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-terms {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            cursor: pointer;
+        }
+
+        .v-terms input {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 1.5px solid var(--border-strong);
+            border-radius: 4px;
+            background: var(--bg-card);
+            margin-top: 1px;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: all 0.15s;
+            position: relative;
+        }
+
+        .v-terms input:checked {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .v-terms input:checked::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 5px;
+            width: 4px;
+            height: 8px;
+            border: solid white;
+            border-width: 0 2px 2px 0;
+            transform: rotate(45deg);
+        }
+
+        .v-terms a {
+            color: var(--accent);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-thickness: 1px;
+        }
+        .v-terms a:hover { color: var(--accent-hover); }
+        .v-terms .req { color: var(--error); }
+
+        .v-pay-btn {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 600;
+            padding: 14px 24px;
+            border-radius: var(--r-md);
+            border: none;
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(180deg, var(--accent), var(--accent-hover));
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.2) inset,
+                0 1px 2px rgba(0,0,0,0.05),
+                0 8px 24px -6px var(--accent-glow);
+            transition: transform 0.15s, box-shadow 0.2s, background 0.2s;
+            margin-top: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .v-pay-btn::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 50%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+            animation: v-shimmer 3.5s infinite;
+            pointer-events: none;
+        }
+
+        @keyframes v-shimmer {
+            0% { left: -100%; }
+            60%, 100% { left: 200%; }
+        }
+
+        .v-pay-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow:
+                0 1px 0 rgba(255,255,255,0.25) inset,
+                0 1px 2px rgba(0,0,0,0.05),
+                0 14px 32px -6px rgba(16, 185, 129, 0.45);
+        }
+
+        .v-pay-btn:active:not(:disabled) { transform: translateY(0); }
+
+        .v-pay-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .v-pay-btn:disabled::after { display: none; }
+
+        .v-pay-btn i { font-size: 16px; }
+
+        .v-secure-line {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-tertiary);
+            margin-top: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .v-secure-line i { color: var(--accent); }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           TRUST STRIP (below form)
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-trust-strip {
+            margin-top: 24px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 14px 20px;
+            font-size: 12px;
+            color: var(--text-tertiary);
+        }
+
+        .v-trust-strip span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+
+        .v-trust-strip i { color: var(--accent); font-size: 14px; }
+
+        .v-trust-strip .v-divider {
+            width: 1px;
+            height: 14px;
+            background: var(--border-default);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           MOBILE STICKY FOOTER
+           ═══════════════════════════════════════════════════════════════════ */
+        @media (max-width: 900px) {
+            .v-form-card .v-desktop-submit { display: none; }
+            .v-mobile-sticky {
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: var(--bg-card);
+                border-top: 1px solid var(--border-default);
+                padding: 12px 16px;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+                z-index: 100;
+                box-shadow: 0 -4px 12px rgba(0,0,0,0.04);
+            }
+            .v-mobile-sticky-row {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                font-size: 13px;
+            }
+            .v-mobile-sticky-row .label {
+                color: var(--text-tertiary);
+                font-weight: 500;
+            }
+            .v-mobile-sticky-row .price {
+                font-size: 18px;
+                font-weight: 700;
+                color: var(--text-primary);
+            }
+            .v-mobile-sticky-row .strike {
+                font-size: 13px;
+                color: var(--text-muted);
+                text-decoration: line-through;
+                margin-right: 6px;
+            }
+        }
+
+        @media (min-width: 901px) {
+            .v-mobile-sticky { display: none; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════
+           OVERLAY STATES
+           ═══════════════════════════════════════════════════════════════════ */
+        .v-overlay {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-page);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            z-index: 1000;
+        }
+        .v-overlay.show { display: flex; }
+
+        .v-overlay-inner {
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-2xl);
+            padding: 40px 28px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .v-overlay-icon {
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 20px;
+            border-radius: 50%;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent);
+            font-size: 28px;
+        }
+
+        .v-overlay-icon.error { background: var(--error-soft); color: var(--error); }
+
+        .v-overlay h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            letter-spacing: -0.01em;
+        }
+
+        .v-overlay p {
+            font-size: 14px;
+            color: var(--text-tertiary);
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .v-spinner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid var(--border-default);
+            border-top-color: var(--accent);
+            animation: v-spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes v-spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .v-blik-display {
+            display: inline-block;
+            padding: 16px 24px;
+            background: var(--bg-subtle);
+            border-radius: var(--r-md);
+            font-family: 'SF Mono', Menlo, Monaco, monospace;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.2em;
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+
+        .v-revolut-amount {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+            padding: 16px 24px;
+            background: var(--accent-soft);
+            border-radius: var(--r-md);
+            margin: 16px 0;
+            letter-spacing: -0.02em;
+        }
+
+        .v-revolut-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px 20px;
+            background: #0075EB;
+            color: white;
+            border-radius: var(--r-md);
+            font-weight: 600;
+            text-decoration: none;
+            transition: background 0.15s;
+        }
+        .v-revolut-link:hover { background: #0066CC; }
+
+        /* Form-level error banner */
+        .v-form-error {
+            display: none;
+            padding: 12px 14px;
+            background: var(--error-soft);
+            border: 1px solid var(--error-border);
+            border-radius: var(--r-md);
+            color: var(--error);
+            font-size: 13px;
+            margin-bottom: 20px;
+            align-items: center;
+            gap: 8px;
+        }
+        .v-form-error.show { display: flex; }
+
+        /* Retry notice */
+        .v-retry-notice {
+            display: none;
+            padding: 12px 14px;
+            background: rgba(217, 119, 6, 0.08);
+            border: 1px solid rgba(217, 119, 6, 0.2);
+            border-radius: var(--r-md);
+            color: var(--warning);
+            font-size: 13px;
+            margin-bottom: 20px;
+            align-items: center;
+            gap: 8px;
+        }
+        .v-retry-notice.show { display: flex; }
+
+        /* Shake animation for errors */
+        @keyframes v-shake {
+            0%, 100% { transform: translateX(0); }
+            25%, 75% { transform: translateX(-3px); }
+            50% { transform: translateX(3px); }
+        }
+        .v-shake { animation: v-shake 0.35s ease-in-out; }
+
+        /* Fade-in entrance */
+        @keyframes v-fade-in {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .v-fade-in { animation: v-fade-in 0.4s cubic-bezier(0.4, 0, 0.2, 1) backwards; }
+
+        /* Discount apply button (inside summary) */
+        .v-btn-sm {
+            padding: 8px 14px;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            background: var(--accent);
+            border: none;
+            border-radius: var(--r-md);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .v-btn-sm:hover:not(:disabled) { background: var(--accent-hover); }
+        .v-btn-sm:disabled { opacity: 0.6; cursor: not-allowed; }
+    </style>
+</head>
+<body>
+
+<!-- Loading State -->
+<div id="v-loading" class="v-overlay show">
+    <div style="text-align:center">
+        <div class="v-spinner"></div>
+        <p style="font-size:13px;color:var(--text-tertiary)">Ładowanie...</p>
+    </div>
+</div>
+
+<!-- Error State (offer unavailable) -->
+<div id="v-error" class="v-overlay">
+    <div class="v-overlay-inner v-fade-in">
+        <div class="v-overlay-icon error"><i class="ph ph-warning-circle"></i></div>
+        <h2>Oferta niedostępna</h2>
+        <p id="v-error-msg">Ta oferta nie istnieje lub nie jest już aktywna.</p>
+        <a href="https://wa.me/48533308623" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:var(--accent);font-weight:600;font-size:14px;text-decoration:none">
+            <i class="ph ph-whatsapp-logo"></i>Napisz do nas
+        </a>
+    </div>
+</div>
+
+<!-- Redirect State -->
+<div id="v-redirect" class="v-overlay">
+    <div class="v-overlay-inner v-fade-in">
+        <div class="v-spinner"></div>
+        <h2>Przetwarzanie płatności</h2>
+        <p>Za chwilę zostaniesz przekierowany do bezpiecznej bramki płatności.</p>
+        <div style="font-size:12px;color:var(--text-tertiary);display:flex;align-items:center;justify-content:center;gap:6px">
+            <i class="ph ph-shield-check" style="color:var(--accent)"></i>Połączenie szyfrowane
+        </div>
+    </div>
+</div>
+
+<!-- BLIK Processing -->
+<div id="v-blik-processing" class="v-overlay">
+    <div class="v-overlay-inner v-fade-in">
+        <div class="v-spinner"></div>
+        <h2>Potwierdź płatność BLIK</h2>
+        <p>Otwórz aplikację bankową i zatwierdź płatność</p>
+        <div class="v-blik-display" id="v-blik-display">000000</div>
+        <div style="font-size:12px;color:var(--text-tertiary);margin-top:12px">
+            Oczekiwanie... <span id="v-blik-timeout">120</span>s
+        </div>
+    </div>
+</div>
+
+<!-- Revolut Instructions -->
+<div id="v-revolut-overlay" class="v-overlay">
+    <div class="v-overlay-inner v-fade-in">
+        <div class="v-overlay-icon" style="background:#0075EB;color:white">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M20.9 6.7c.2.6.4 1.3.4 2.1 0 1.5-.5 2.8-1.4 3.9-.9 1.1-2.1 1.9-3.6 2.3l5.1 6.3h-4.1l-4.7-5.9h-2.4V21H7V3h6.4c2.1 0 3.8.5 5 1.5 1.2 1 1.8 2.4 1.8 4.1 0 .7-.1 1.4-.3 2.1zM10.2 11.5h3c1.2 0 2.1-.3 2.7-.8.6-.5.9-1.3.9-2.2 0-1-.3-1.7-.9-2.2-.6-.5-1.5-.8-2.7-.8h-3v6z"/>
+            </svg>
+        </div>
+        <h2>Płatność przez Revolut</h2>
+        <p>Przelej środki bezpośrednio z aplikacji Revolut</p>
+        <div class="v-revolut-amount tnum" id="v-revolut-amount">0 zł</div>
+        <a id="v-revolut-link" href="https://revolut.me/tomek6n0" target="_blank" class="v-revolut-link">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.9 6.7c.2.6.4 1.3.4 2.1 0 1.5-.5 2.8-1.4 3.9-.9 1.1-2.1 1.9-3.6 2.3l5.1 6.3h-4.1l-4.7-5.9h-2.4V21H7V3h6.4c2.1 0 3.8.5 5 1.5 1.2 1 1.8 2.4 1.8 4.1 0 .7-.1 1.4-.3 2.1zM10.2 11.5h3c1.2 0 2.1-.3 2.7-.8.6-.5.9-1.3.9-2.2 0-1-.3-1.7-.9-2.2-.6-.5-1.5-.8-2.7-.8h-3v6z"/></svg>
+            Otwórz Revolut i zapłać
+        </a>
+    </div>
+</div>
+
+<!-- ═══ MAIN CHECKOUT ═══ -->
+<div id="v-page" class="v-page" style="display:none">
+    <header class="v-header">
+        <div class="v-header-inner">
+            <a href="https://tomekniedzwiecki.pl" class="v-brand">
+                <span class="v-brand-mark">TN</span>
+                <span>Tomasz Niedźwiecki AI</span>
+            </a>
+            <span class="v-test-pill">Bezpieczna płatność</span>
+        </div>
+    </header>
+
+    <main class="v-main">
+        <div class="v-container">
+            <!-- LEFT: Summary -->
+            <aside class="v-summary v-fade-in">
+                <div class="v-summary-eyebrow">Twoje zamówienie</div>
+                <div class="v-summary-total-display">
+                    <span class="strike tnum" id="v-summary-strike" style="display:none"></span>
+                    <span class="tnum" id="v-summary-total">—</span>
+                </div>
+
+                <div class="v-product-row">
+                    <div class="v-product-icon">
+                        <i class="ph-duotone ph-package"></i>
+                    </div>
+                    <div class="v-product-info">
+                        <div class="v-product-name" id="v-product-name">—</div>
+                        <div class="v-product-desc" id="v-product-desc">—</div>
+                    </div>
+                </div>
+
+                <div class="v-breakdown">
+                    <div class="v-row">
+                        <span class="label">Cena</span>
+                        <span class="value tnum" id="v-summary-price">—</span>
+                    </div>
+                    <div class="v-row accent" id="v-discount-row" style="display:none">
+                        <span class="label">
+                            <i class="ph ph-ticket" style="font-size:14px"></i>
+                            Rabat <span class="discount-pill" id="v-discount-pill">-0%</span>
+                        </span>
+                        <span class="value tnum" id="v-discount-amount">-0 zł</span>
+                    </div>
+                    <div class="v-row">
+                        <span class="label">VAT (23%)</span>
+                        <span class="value">w cenie</span>
+                    </div>
+                    <div class="v-row-total">
+                        <span class="label">Razem</span>
+                        <span class="value tnum" id="v-total">—</span>
+                    </div>
+                </div>
+
+                <!-- Discount code -->
+                <div class="v-discount" id="v-discount-section">
+                    <button type="button" class="v-discount-toggle" id="v-discount-toggle">
+                        <i class="ph ph-ticket"></i>
+                        <span>Mam kod rabatowy</span>
+                    </button>
+                    <div class="v-discount-input-wrap" id="v-discount-input-wrap">
+                        <input type="text" id="v-discount-input" class="v-input" placeholder="Wpisz kod" style="text-transform:uppercase;font-family:'SF Mono',monospace;letter-spacing:0.04em">
+                        <button type="button" class="v-btn-sm" id="v-discount-apply">Zastosuj</button>
+                    </div>
+                    <div class="v-error-msg" id="v-discount-error"><i class="ph ph-warning-circle"></i><span>Nieprawidłowy kod</span></div>
+                    <div class="v-discount-applied" id="v-discount-applied">
+                        <span><i class="ph ph-check-circle"></i> Kod: <strong id="v-discount-code-display">-</strong></span>
+                        <button type="button" id="v-discount-remove" aria-label="Usuń kod"><i class="ph ph-x"></i></button>
+                    </div>
+                </div>
+
+                <div class="v-trust-list">
+                    <div class="v-trust-list-item"><i class="ph-fill ph-shield-check"></i> Płatność szyfrowana SSL 256-bit</div>
+                    <div class="v-trust-list-item"><i class="ph-fill ph-lightning"></i> Natychmiastowy dostęp po opłaceniu</div>
+                    <div class="v-trust-list-item"><i class="ph-fill ph-arrow-counter-clockwise"></i> Zwrot do 14 dni</div>
+                </div>
+
+                <p class="v-help">
+                    Potrzebujesz pomocy?
+                    <a href="https://wa.me/48533308623" target="_blank">
+                        <i class="ph ph-whatsapp-logo"></i>Napisz
+                    </a>
+                </p>
+            </aside>
+
+            <!-- RIGHT: Form -->
+            <section class="v-form-card v-fade-in" style="animation-delay:0.05s">
+                <form id="v-form">
+
+                    <div class="v-form-error" id="v-form-error">
+                        <i class="ph ph-warning-circle"></i>
+                        <span id="v-form-error-text"></span>
+                    </div>
+
+                    <div class="v-retry-notice" id="v-retry-notice">
+                        <i class="ph ph-arrow-counter-clockwise"></i>
+                        <span>Kontynuuj poprzednią próbę płatności. Twoje dane zostały zachowane.</span>
+                    </div>
+
+                    <!-- SECTION: Contact -->
+                    <div class="v-section">
+                        <div class="v-section-title">Dane kontaktowe</div>
+                        <div class="v-field">
+                            <label class="v-label" for="v-email">Email <span class="req">*</span></label>
+                            <input type="email" id="v-email" class="v-input" placeholder="jan@firma.pl" autocomplete="email" required>
+                            <div class="v-error-msg" id="v-email-err"><i class="ph ph-warning-circle"></i><span>Podaj poprawny email</span></div>
+                        </div>
+                        <div class="v-field-grid">
+                            <div>
+                                <label class="v-label" for="v-phone">Telefon <span class="req">*</span></label>
+                                <input type="tel" id="v-phone" class="v-input" placeholder="+48 500 600 700" autocomplete="tel" required>
+                                <div class="v-error-msg" id="v-phone-err"><i class="ph ph-warning-circle"></i><span>Podaj poprawny numer</span></div>
+                            </div>
+                            <div>
+                                <label class="v-label" for="v-name">Imię i nazwisko</label>
+                                <input type="text" id="v-name" class="v-input" placeholder="Jan Kowalski" autocomplete="name">
+                            </div>
+                        </div>
+
+                        <button type="button" class="v-toggle" id="v-invoice-toggle">
+                            <i class="ph ph-plus"></i>
+                            <span id="v-invoice-toggle-label">Chcę fakturę VAT</span>
+                        </button>
+                        <div class="v-collapse" id="v-invoice-collapse">
+                            <div style="padding-top:8px">
+                                <div class="v-field">
+                                    <label class="v-label" for="v-company">Nazwa firmy</label>
+                                    <input type="text" id="v-company" class="v-input" placeholder="Firma Sp. z o.o." autocomplete="organization">
+                                </div>
+                                <div class="v-field">
+                                    <label class="v-label" for="v-nip">NIP</label>
+                                    <input type="text" id="v-nip" class="v-input" placeholder="1234567890" inputmode="numeric" maxlength="10">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION: Payment methods accordion -->
+                    <div class="v-section">
+                        <div class="v-section-title">Metoda płatności</div>
+
+                        <!-- METHOD 1: BLIK -->
+                        <div class="v-method active" data-method-row="blik">
+                            <div class="v-method-header" data-method-toggle="blik">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon blik">
+                                    <img src="https://secure.tpay.com/tpayPay/SampleData/web/img/types/blik.svg" alt="BLIK">
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">
+                                        BLIK
+                                        <span class="v-popular-badge">Najpopularniejsze w PL</span>
+                                    </div>
+                                    <div class="v-method-desc">Kod 6-cyfrowy z aplikacji bankowej</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <div class="v-blik-row" id="v-blik-row">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="0">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="1">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="2">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="3">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="4">
+                                        <input type="text" maxlength="1" inputmode="numeric" class="v-blik-digit" data-index="5">
+                                    </div>
+                                    <input type="hidden" id="v-blik-code">
+                                    <div class="v-error-msg" id="v-blik-err" style="justify-content:center">
+                                        <i class="ph ph-warning-circle"></i><span>Wpisz 6-cyfrowy kod BLIK</span>
+                                    </div>
+                                    <p class="v-blik-hint" id="v-blik-hint">Wpisz kod z aplikacji bankowej</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- METHOD 2: Karta lub portfel -->
+                        <div class="v-method" data-method-row="wallet">
+                            <div class="v-method-header" data-method-toggle="wallet">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon card-wallet">
+                                    <i class="ph-fill ph-credit-card"></i>
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">Karta lub portfel</div>
+                                    <div class="v-method-desc">Visa · Mastercard · Apple Pay · Google Pay</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <div class="v-wallet-grid">
+                                        <button type="button" class="v-wallet-btn selected" data-wallet="rev_card">
+                                            <span class="icon"><i class="ph ph-credit-card"></i></span>
+                                            <span class="label">Karta</span>
+                                            <span class="sublabel">Visa · MC</span>
+                                        </button>
+                                        <button type="button" class="v-wallet-btn" data-wallet="rev_apple_pay">
+                                            <span class="icon"><i class="ph-fill ph-apple-logo"></i></span>
+                                            <span class="label">Apple Pay</span>
+                                            <span class="sublabel">iPhone · Mac</span>
+                                        </button>
+                                        <button type="button" class="v-wallet-btn" data-wallet="rev_google_pay">
+                                            <span class="icon"><i class="ph-fill ph-google-logo"></i></span>
+                                            <span class="label">Google Pay</span>
+                                            <span class="sublabel">Android</span>
+                                        </button>
+                                    </div>
+                                    <p class="v-method-hint" style="margin-top:12px;text-align:center">
+                                        Po kliknięciu "Zapłać" otworzy się bezpieczne okno płatności.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- METHOD 3: Przelew online -->
+                        <div class="v-method" data-method-row="transfer">
+                            <div class="v-method-header" data-method-toggle="transfer">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon transfer">
+                                    <i class="ph-fill ph-bank"></i>
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">Przelew online</div>
+                                    <div class="v-method-desc">Wszystkie polskie banki (Pay-By-Link)</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <p class="v-method-hint">
+                                        Po kliknięciu <strong>Zapłać</strong> zostaniesz przekierowany do strony swojego banku.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- METHOD 4: Revolut -->
+                        <div class="v-method" data-method-row="revolut">
+                            <div class="v-method-header" data-method-toggle="revolut">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon revolut">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.9 6.7c.2.6.4 1.3.4 2.1 0 1.5-.5 2.8-1.4 3.9-.9 1.1-2.1 1.9-3.6 2.3l5.1 6.3h-4.1l-4.7-5.9h-2.4V21H7V3h6.4c2.1 0 3.8.5 5 1.5 1.2 1 1.8 2.4 1.8 4.1 0 .7-.1 1.4-.3 2.1zM10.2 11.5h3c1.2 0 2.1-.3 2.7-.8.6-.5.9-1.3.9-2.2 0-1-.3-1.7-.9-2.2-.6-.5-1.5-.8-2.7-.8h-3v6z"/></svg>
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">Revolut</div>
+                                    <div class="v-method-desc">Przelew bezpośredni z aplikacji Revolut</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <p class="v-method-hint">
+                                        Po kliknięciu <strong>Zapłać</strong> otrzymasz instrukcję przelewu bezpośredniego.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- METHOD 5: Raty 0% (visible if price >= 300) -->
+                        <div class="v-method" data-method-row="installments" id="v-method-installments" style="display:none">
+                            <div class="v-method-header" data-method-toggle="installments">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon installments">
+                                    <i class="ph-fill ph-calendar"></i>
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">Raty 0% (Pekao)</div>
+                                    <div class="v-method-desc"><span id="v-installments-monthly">—</span> miesięcznie przez 10 miesięcy</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <p class="v-method-hint">
+                                        Rozłóż płatność na <strong>10 wygodnych rat 0%</strong>. Decyzja online w 2 minuty.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- METHOD 6: PragmaPay (B2B, visible if NIP filled) -->
+                        <div class="v-method" data-method-row="pragmapay" id="v-method-pragmapay" style="display:none">
+                            <div class="v-method-header" data-method-toggle="pragmapay">
+                                <div class="v-method-radio"></div>
+                                <div class="v-method-icon b2b">
+                                    <i class="ph-fill ph-buildings"></i>
+                                </div>
+                                <div class="v-method-label">
+                                    <div class="v-method-name">PragmaPay (B2B)</div>
+                                    <div class="v-method-desc">Płatność odroczona dla firm — 30/60/90 dni</div>
+                                </div>
+                            </div>
+                            <div class="v-method-body">
+                                <div class="v-method-body-inner">
+                                    <p class="v-method-hint">
+                                        Płatność <strong>po otrzymaniu faktury</strong> z terminem 30, 60 lub 90 dni. Wyłącznie dla firm.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- SECTION: Terms + Submit -->
+                    <div class="v-section">
+                        <label class="v-terms">
+                            <input type="checkbox" id="v-terms" required>
+                            <span>
+                                Akceptuję <a id="v-link-regulamin" href="#" target="_blank">regulamin</a>
+                                i <a id="v-link-privacy" href="#" target="_blank">politykę prywatności</a>
+                                <span class="req">*</span>
+                            </span>
+                        </label>
+                        <div class="v-error-msg" id="v-terms-err" style="margin-left:28px"><i class="ph ph-warning-circle"></i><span>Zaakceptuj regulamin</span></div>
+
+                        <div class="v-desktop-submit">
+                            <button type="submit" class="v-pay-btn" id="v-pay-desktop">
+                                <i class="ph ph-lock-simple"></i>
+                                <span id="v-pay-desktop-text">Zapłać —</span>
+                            </button>
+                            <p class="v-secure-line">
+                                <i class="ph ph-shield-check"></i>
+                                Płatność szyfrowana 256-bit SSL
+                            </p>
+                        </div>
+                    </div>
+                </form>
+
+                <!-- Trust strip -->
+                <div class="v-trust-strip">
+                    <span title="BLIK"><img src="https://secure.tpay.com/tpayPay/SampleData/web/img/types/blik.svg" alt="BLIK" style="height:16px;background:white;padding:2px 4px;border-radius:3px;border:1px solid var(--border-subtle)"></span>
+                    <span>Visa</span>
+                    <span>Mastercard</span>
+                    <span><i class="ph-fill ph-apple-logo"></i>Pay</span>
+                    <span><i class="ph-fill ph-google-logo"></i>Pay</span>
+                    <div class="v-divider"></div>
+                    <span><i class="ph ph-shield-check"></i>256-bit SSL</span>
+                    <span><i class="ph ph-arrow-counter-clockwise"></i>Zwrot 14 dni</span>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Mobile sticky bottom CTA -->
+    <div class="v-mobile-sticky">
+        <div class="v-mobile-sticky-row">
+            <span class="label">Do zapłaty</span>
+            <span>
+                <span class="strike tnum" id="v-mobile-price-strike" style="display:none"></span>
+                <span class="price tnum" id="v-mobile-price-total">—</span>
+            </span>
+        </div>
+        <button type="button" class="v-pay-btn" id="v-pay-mobile" style="margin-top:0">
+            <i class="ph ph-lock-simple"></i>
+            <span id="v-pay-mobile-text">Zapłać</span>
+        </button>
+    </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const MIN_INSTALLMENT_AMOUNT = 300;
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
+let currentOffer = null;
+let selectedMethod = 'blik'; // 'blik' | 'rev_card' | 'rev_apple_pay' | 'rev_google_pay' | 'transfer' | 'revolut' | 'installments' | 'pragmapay'
+let selectedMethodRow = 'blik'; // accordion row identifier
+let selectedGroupId = 150; // Tpay group ID for current method (150=BLIK, 0=PBL transfer, 169=Pekao Raty)
+let appliedDiscount = null;
+let isCustomPayment = false;
+let customPaymentLeadId = null;
+let installmentId = null;
+let installmentWorkflowId = null;
+let installmentData = null;
+let upgradeWorkflowId = null;
+let upgradeToOfferId = null;
+
+// Tpay group IDs (for Tpay-routed methods)
+const TPAY_GROUPS = {
+    blik: 150,
+    transfer: 0, // 0 = let Tpay show bank picker
+    installments: 169,
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════════
+function $(id) { return document.getElementById(id); }
+function $$(sel) { return document.querySelectorAll(sel); }
+
+function formatPrice(price) {
+    return new Intl.NumberFormat('pl-PL', {
+        style: 'currency', currency: 'PLN',
+        minimumFractionDigits: 0, maximumFractionDigits: 2
+    }).format(price || 0);
+}
+
+function calculateInstallment(price, months = 10) {
+    return Math.ceil(price / months);
+}
+
+function validateEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+function validatePhone(p) { return p.replace(/\D/g, '').length >= 9; }
+function validateBlikCode(c) { return /^\d{6}$/.test(c); }
+
+function showFieldError(inputId, errMsgId, message) {
+    const input = $(inputId);
+    const err = $(errMsgId);
+    if (input) {
+        input.classList.add('error');
+        input.classList.add('v-shake');
+        setTimeout(() => input.classList.remove('v-shake'), 400);
+    }
+    if (err) {
+        if (message) err.querySelector('span').textContent = message;
+        err.classList.add('show');
+    }
+}
+
+function clearFieldError(inputId, errMsgId) {
+    $(inputId)?.classList.remove('error');
+    $(errMsgId)?.classList.remove('show');
+}
+
+function showFormError(message) {
+    const banner = $('v-form-error');
+    $('v-form-error-text').textContent = message;
+    banner.classList.add('show');
+    banner.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function hideFormError() { $('v-form-error').classList.remove('show'); }
+
+// ═══════════════════════════════════════════════════════════════════
+// STATE TRANSITIONS (overlays)
+// ═══════════════════════════════════════════════════════════════════
+function hideAllOverlays() {
+    ['v-loading', 'v-error', 'v-redirect', 'v-blik-processing', 'v-revolut-overlay']
+        .forEach(id => $(id)?.classList.remove('show'));
+}
+
+function showCheckout() {
+    hideAllOverlays();
+    $('v-page').style.display = 'flex';
+}
+
+function showErrorState(msg) {
+    hideAllOverlays();
+    $('v-error-msg').textContent = msg || 'Wystąpił błąd.';
+    $('v-error').classList.add('show');
+}
+
+function showRedirect() {
+    $('v-redirect').classList.add('show');
+}
+
+function showBlikProcessing(code) {
+    $('v-blik-display').textContent = code;
+    $('v-blik-processing').classList.add('show');
+}
+
+function showRevolutInstructions(order) {
+    const amount = parseFloat(order.amount);
+    $('v-revolut-amount').textContent = formatPrice(amount);
+    $('v-revolut-overlay').classList.add('show');
+
+    // Track InitiateCheckout
+    if (typeof fbq !== 'undefined') {
+        fbq('track', 'InitiateCheckout', {
+            content_name: 'Revolut Payment', currency: 'PLN', value: amount
+        });
+    }
+
+    // Notify Slack (best effort)
+    fetch(`${SUPABASE_URL}/functions/v1/checkout-notify`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ orderId: order.id, paymentMethod: 'revolut' })
+    }).catch(() => {});
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// LEGAL LINKS
+// ═══════════════════════════════════════════════════════════════════
+(function setLegalLinks() {
+    const base = 'https://tomekniedzwiecki.pl';
+    $('v-link-regulamin').href = `${base}/dokumenty/regulamin.html`;
+    $('v-link-privacy').href = `${base}/dokumenty/polityka-prywatnosci.html`;
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// PREFILL FROM LEAD
+// ═══════════════════════════════════════════════════════════════════
+function prefillCustomerForm(lead) {
+    if (!lead) return;
+    if (lead.email && !$('v-email').value) $('v-email').value = lead.email;
+    if (lead.phone && !$('v-phone').value) $('v-phone').value = lead.phone;
+    if (lead.name && !$('v-name').value) $('v-name').value = lead.name;
+    if (lead.company && !$('v-company').value) {
+        $('v-company').value = lead.company;
+        openInvoice();
+    }
+    if (lead.nip && !$('v-nip').value) {
+        $('v-nip').value = lead.nip;
+        openInvoice();
+        showPragmapayMethod();
+    }
+}
+
+function openInvoice() {
+    $('v-invoice-collapse').classList.add('open');
+    $('v-invoice-toggle').classList.add('open');
+    $('v-invoice-toggle-label').textContent = 'Ukryj dane do faktury';
+}
+
+function showPragmapayMethod() {
+    $('v-method-pragmapay').style.display = 'block';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PAYMENT METHOD ACCORDION
+// ═══════════════════════════════════════════════════════════════════
+function setMethodRow(rowKey) {
+    $$('.v-method').forEach(m => {
+        if (m.dataset.methodRow === rowKey) m.classList.add('active');
+        else m.classList.remove('active');
+    });
+    selectedMethodRow = rowKey;
+
+    // Map row to selectedMethod
+    if (rowKey === 'blik') {
+        selectedMethod = 'blik';
+        selectedGroupId = TPAY_GROUPS.blik;
+    } else if (rowKey === 'wallet') {
+        // Use currently selected wallet sub-button
+        const selectedWallet = document.querySelector('.v-wallet-btn.selected');
+        selectedMethod = selectedWallet?.dataset.wallet || 'rev_card';
+        selectedGroupId = 0;
+    } else if (rowKey === 'transfer') {
+        selectedMethod = 'transfer';
+        selectedGroupId = TPAY_GROUPS.transfer;
+    } else if (rowKey === 'revolut') {
+        selectedMethod = 'revolut';
+        selectedGroupId = 0;
+    } else if (rowKey === 'installments') {
+        selectedMethod = 'installments';
+        selectedGroupId = TPAY_GROUPS.installments;
+    } else if (rowKey === 'pragmapay') {
+        selectedMethod = 'pragmapay';
+        selectedGroupId = 0;
+    }
+
+    updatePayButton();
+}
+
+function setWalletSub(walletKey) {
+    $$('.v-wallet-btn').forEach(b => {
+        b.classList.toggle('selected', b.dataset.wallet === walletKey);
+    });
+    selectedMethod = walletKey;
+    updatePayButton();
+}
+
+// Init method accordion listeners
+$$('.v-method-header').forEach(h => {
+    h.addEventListener('click', () => {
+        setMethodRow(h.dataset.methodToggle);
+    });
+});
+
+$$('.v-wallet-btn').forEach(b => {
+    b.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setWalletSub(b.dataset.wallet);
+    });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// BLIK 6-DIGIT INPUTS
+// ═══════════════════════════════════════════════════════════════════
+const blikDigits = $$('.v-blik-digit');
+const blikCodeHidden = $('v-blik-code');
+
+function updateBlikCode() {
+    let code = '';
+    blikDigits.forEach(input => {
+        code += input.value;
+        input.classList.toggle('filled', !!input.value);
+    });
+    blikCodeHidden.value = code;
+}
+
+blikDigits.forEach((input, idx) => {
+    input.addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '').slice(0, 1);
+        updateBlikCode();
+        if (this.value && idx < 5) blikDigits[idx + 1].focus();
+    });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Backspace' && !this.value && idx > 0) {
+            blikDigits[idx - 1].focus();
+            blikDigits[idx - 1].value = '';
+            updateBlikCode();
+        }
+        if (e.key === 'ArrowLeft' && idx > 0) blikDigits[idx - 1].focus();
+        if (e.key === 'ArrowRight' && idx < 5) blikDigits[idx + 1].focus();
+    });
+    input.addEventListener('paste', function(e) {
+        e.preventDefault();
+        const paste = (e.clipboardData || window.clipboardData).getData('text');
+        const digits = paste.replace(/\D/g, '').slice(0, 6);
+        digits.split('').forEach((d, i) => { if (blikDigits[i]) blikDigits[i].value = d; });
+        updateBlikCode();
+        blikDigits[Math.min(digits.length, 5)].focus();
+    });
+    input.addEventListener('focus', function() { this.select(); });
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// INVOICE TOGGLE
+// ═══════════════════════════════════════════════════════════════════
+$('v-invoice-toggle').addEventListener('click', function() {
+    const collapse = $('v-invoice-collapse');
+    const open = collapse.classList.toggle('open');
+    this.classList.toggle('open', open);
+    $('v-invoice-toggle-label').textContent = open ? 'Ukryj dane do faktury' : 'Chcę fakturę VAT';
+});
+
+// Show PragmaPay when NIP is entered
+$('v-nip').addEventListener('input', function() {
+    if (this.value.replace(/\D/g, '').length >= 10) {
+        showPragmapayMethod();
+    }
+});
+
+// ═══════════════════════════════════════════════════════════════════
+// DISCOUNT CODE
+// ═══════════════════════════════════════════════════════════════════
+$('v-discount-toggle').addEventListener('click', function() {
+    const wrap = $('v-discount-input-wrap');
+    const open = wrap.classList.toggle('open');
+    if (open) $('v-discount-input').focus();
+});
+
+$('v-discount-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); applyDiscountCode(); }
+});
+$('v-discount-apply').addEventListener('click', applyDiscountCode);
+$('v-discount-remove').addEventListener('click', removeDiscount);
+
+async function validateDiscountCode(code) {
+    if (!currentOffer) return null;
+    try {
+        const { data, error } = await supabaseClient
+            .rpc('validate_discount_code', { p_code: code, p_offer_id: currentOffer.id });
+        if (error) return { is_valid: false, error_message: 'Błąd walidacji kodu' };
+        if (data && data.length > 0) return data[0];
+        return { is_valid: false, error_message: 'Nieprawidłowy kod' };
+    } catch (e) {
+        return { is_valid: false, error_message: 'Błąd walidacji' };
+    }
+}
+
+async function applyDiscountCode() {
+    const input = $('v-discount-input');
+    const code = input.value.trim().toUpperCase();
+    const errEl = $('v-discount-error');
+
+    if (!code) {
+        errEl.querySelector('span').textContent = 'Wpisz kod rabatowy';
+        errEl.classList.add('show');
+        return;
+    }
+
+    const btn = $('v-discount-apply');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i>';
+
+    const result = await validateDiscountCode(code);
+    btn.disabled = false;
+    btn.textContent = 'Zastosuj';
+
+    if (!result || !result.is_valid) {
+        errEl.querySelector('span').textContent = result?.error_message || 'Nieprawidłowy kod';
+        errEl.classList.add('show');
+        input.classList.add('error', 'v-shake');
+        setTimeout(() => input.classList.remove('v-shake'), 400);
+        return;
+    }
+
+    // Handle linked client_offer with custom_price
+    let basePrice = currentOffer.price;
+    try {
+        const { data: dc } = await supabaseClient
+            .from('discount_codes')
+            .select('client_offer_id, client_offers(custom_price)')
+            .eq('id', result.id).single();
+        if (dc?.client_offer_id && dc?.client_offers?.custom_price) {
+            basePrice = parseFloat(dc.client_offers.custom_price);
+            currentOffer.price = basePrice;
+            $('v-summary-price').textContent = formatPrice(basePrice);
+        }
+    } catch {}
+
+    const pct = parseFloat(result.discount_percent) || 0;
+    const amt = Math.round(basePrice * pct / 100);
+    const target = basePrice - amt;
+
+    appliedDiscount = {
+        id: result.id, code: result.code,
+        target_price: target, discount_amount: amt, discount_percent: pct
+    };
+
+    errEl.classList.remove('show');
+    input.classList.remove('error');
+    updateDiscountDisplay();
+}
+
+function removeDiscount() {
+    appliedDiscount = null;
+    $('v-discount-input').value = '';
+    updateDiscountDisplay();
+}
+
+function updateDiscountDisplay() {
+    const row = $('v-discount-row');
+    const inputWrap = $('v-discount-input-wrap');
+    const applied = $('v-discount-applied');
+    const toggle = $('v-discount-toggle');
+    const strike = $('v-summary-strike');
+    const total = $('v-total');
+    const summaryTotal = $('v-summary-total');
+
+    if (appliedDiscount) {
+        row.style.display = 'flex';
+        $('v-discount-pill').textContent = `-${appliedDiscount.discount_percent.toFixed(0)}%`;
+        $('v-discount-amount').textContent = `-${formatPrice(appliedDiscount.discount_amount)}`;
+
+        inputWrap.classList.remove('open');
+        applied.classList.add('open');
+        toggle.style.display = 'none';
+        $('v-discount-code-display').textContent = appliedDiscount.code;
+
+        strike.textContent = formatPrice(currentOffer.price);
+        strike.style.display = 'inline';
+
+        total.textContent = formatPrice(appliedDiscount.target_price);
+        summaryTotal.textContent = formatPrice(appliedDiscount.target_price);
+
+        // Update installments
+        if (currentOffer.price >= MIN_INSTALLMENT_AMOUNT) {
+            $('v-installments-monthly').textContent = formatPrice(calculateInstallment(appliedDiscount.target_price));
+        }
+    } else {
+        row.style.display = 'none';
+        inputWrap.classList.remove('open');
+        applied.classList.remove('open');
+        toggle.style.display = 'flex';
+        strike.style.display = 'none';
+
+        const price = currentOffer?.price || 0;
+        total.textContent = formatPrice(price);
+        summaryTotal.textContent = formatPrice(price);
+
+        if (currentOffer && currentOffer.price >= MIN_INSTALLMENT_AMOUNT) {
+            $('v-installments-monthly').textContent = formatPrice(calculateInstallment(currentOffer.price));
+        }
+    }
+
+    updatePayButton();
+}
+
+function getEffectivePrice() {
+    return appliedDiscount ? appliedDiscount.target_price : (currentOffer?.price || 0);
+}
+
+async function checkUrlDiscountCode() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code && currentOffer) {
+        $('v-discount-input').value = code;
+        $('v-discount-input-wrap').classList.add('open');
+        await applyDiscountCode();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// VALIDATION
+// ═══════════════════════════════════════════════════════════════════
+function validateForm() {
+    let valid = true;
+    const email = $('v-email').value.trim();
+    const phone = $('v-phone').value.trim();
+    const terms = $('v-terms').checked;
+
+    if (!email || !validateEmail(email)) {
+        showFieldError('v-email', 'v-email-err'); valid = false;
+    } else { clearFieldError('v-email', 'v-email-err'); }
+
+    if (!phone || !validatePhone(phone)) {
+        showFieldError('v-phone', 'v-phone-err'); valid = false;
+    } else { clearFieldError('v-phone', 'v-phone-err'); }
+
+    if (selectedMethod === 'blik') {
+        const code = $('v-blik-code').value.trim();
+        if (!validateBlikCode(code)) {
+            $('v-blik-err').classList.add('show');
+            blikDigits.forEach(i => { i.classList.add('error', 'v-shake'); setTimeout(() => i.classList.remove('v-shake'), 400); });
+            valid = false;
+        } else {
+            $('v-blik-err').classList.remove('show');
+            blikDigits.forEach(i => i.classList.remove('error'));
+        }
+    }
+
+    const termsErr = $('v-terms-err');
+    if (!terms) { termsErr.classList.add('show'); valid = false; }
+    else { termsErr.classList.remove('show'); }
+
+    return valid;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// PAY BUTTON TEXT + MOBILE PRICE
+// ═══════════════════════════════════════════════════════════════════
+function updatePayButton() {
+    const effectivePrice = getEffectivePrice();
+    const price = formatPrice(effectivePrice);
+    let desktopText = `Zapłać ${price}`;
+    let mobileText = `Zapłać ${price}`;
+    let mobilePriceMain = price;
+
+    if (selectedMethod === 'installments') {
+        const monthly = formatPrice(calculateInstallment(effectivePrice));
+        desktopText = `Rozłóż na raty — ${monthly} / mies.`;
+        mobileText = `Raty ${monthly}/mies.`;
+        mobilePriceMain = `${monthly}/mies.`;
+    } else if (selectedMethod === 'pragmapay') {
+        desktopText = `Zamów z PragmaPay — ${price}`;
+        mobileText = `PragmaPay ${price}`;
+    } else if (selectedMethod === 'revolut') {
+        desktopText = `Zapłać przez Revolut — ${price}`;
+        mobileText = `Revolut ${price}`;
+    } else if (selectedMethod === 'rev_card') {
+        desktopText = `Zapłać kartą — ${price}`;
+        mobileText = `Karta ${price}`;
+    } else if (selectedMethod === 'rev_apple_pay') {
+        desktopText = `Zapłać Apple Pay — ${price}`;
+        mobileText = `Apple Pay ${price}`;
+    } else if (selectedMethod === 'rev_google_pay') {
+        desktopText = `Zapłać Google Pay — ${price}`;
+        mobileText = `Google Pay ${price}`;
+    }
+
+    $('v-pay-desktop-text').textContent = desktopText;
+    $('v-pay-mobile-text').textContent = mobileText;
+
+    // Mobile bottom sticky strip
+    $('v-mobile-price-total').textContent = mobilePriceMain;
+    const mobStrike = $('v-mobile-price-strike');
+    if (appliedDiscount && currentOffer && selectedMethod !== 'installments') {
+        mobStrike.textContent = formatPrice(currentOffer.price);
+        mobStrike.style.display = 'inline';
+    } else {
+        mobStrike.style.display = 'none';
+    }
+}
+
+function setButtonsLoading(loading) {
+    const dBtn = $('v-pay-desktop');
+    const mBtn = $('v-pay-mobile');
+    if (loading) {
+        dBtn.disabled = mBtn.disabled = true;
+        dBtn.innerHTML = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i> <span id="v-pay-desktop-text">Przetwarzanie...</span>';
+        mBtn.innerHTML = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i> <span id="v-pay-mobile-text">Przetwarzanie...</span>';
+    } else {
+        dBtn.disabled = mBtn.disabled = false;
+        dBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-desktop-text"></span>';
+        mBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-mobile-text"></span>';
+        updatePayButton();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// REVOLUT WIDGET
+// ═══════════════════════════════════════════════════════════════════
+async function startRevolutCheckout(order) {
+    if (typeof RevolutCheckout === 'undefined') {
+        console.warn('[checkout-v2] RevolutCheckout SDK missing — falling back to manual transfer');
+        showRevolutInstructions(order);
+        return;
+    }
+    try {
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/revolut-create-order`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify({ orderId: order.id })
+        });
+        const result = await response.json();
+        if (!result.success || !result.publicId) {
+            throw new Error(result.error || 'Brak public_id Revolut');
+        }
+        const instance = await RevolutCheckout(result.publicId, result.mode || 'prod');
+        instance.payWithPopup({
+            name: order.customer_name || undefined,
+            email: order.customer_email,
+            phone: order.customer_phone || undefined,
+            savePaymentMethodFor: 'never',
+            onSuccess() {
+                window.location.href = `/checkout/success?order=${order.id}`;
+            },
+            onError(err) {
+                showFormError(err?.message || 'Płatność Revolut nie powiodła się');
+                setButtonsLoading(false);
+            },
+            onCancel() {
+                setButtonsLoading(false);
+            }
+        });
+    } catch (err) {
+        showFormError(err?.message || 'Błąd uruchomienia płatności Revolut');
+        setButtonsLoading(false);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// BLIK STATUS POLL
+// ═══════════════════════════════════════════════════════════════════
+async function pollPaymentStatus(orderId, transactionId) {
+    let attempts = 0;
+    const maxAttempts = 60;
+    const interval = setInterval(async () => {
+        attempts++;
+        $('v-blik-timeout').textContent = 120 - (attempts * 2);
+        try {
+            const { data: order } = await supabaseClient
+                .from('orders').select('status').eq('id', orderId).single();
+            if (order?.status === 'paid') {
+                clearInterval(interval);
+                window.location.href = `/checkout/success?order=${orderId}`;
+            } else if (attempts >= maxAttempts) {
+                clearInterval(interval);
+                window.location.href = `/checkout/error?order=${orderId}`;
+            }
+        } catch (e) { /* keep trying */ }
+    }, 2000);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// SUBMIT HANDLER
+// ═══════════════════════════════════════════════════════════════════
+$('v-form').addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
+$('v-pay-mobile').addEventListener('click', () => handleSubmit());
+
+async function handleSubmit() {
+    if (!currentOffer && !isCustomPayment) return;
+    hideFormError();
+
+    const effectivePrice = getEffectivePrice();
+    if (typeof fbq !== 'undefined') {
+        fbq('track', 'InitiateCheckout', {
+            content_name: currentOffer.name, currency: 'PLN', value: effectivePrice
+        });
+    }
+
+    if (!validateForm()) {
+        const firstErr = document.querySelector('.v-input.error');
+        if (firstErr) { firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' }); firstErr.focus(); }
+        return;
+    }
+
+    const email = $('v-email').value.trim();
+    const phone = $('v-phone').value.trim();
+    const name = $('v-name').value.trim();
+    const company = $('v-company').value.trim();
+    const nip = $('v-nip').value.trim();
+    const blikCode = selectedMethod === 'blik' ? $('v-blik-code').value.trim() : null;
+
+    setButtonsLoading(true);
+
+    try {
+        // Determine payment_source
+        let paymentSource = 'tpay';
+        if (selectedMethod === 'installments') paymentSource = 'installments';
+        else if (selectedMethod === 'pragmapay') paymentSource = 'pragmapay';
+        else if (selectedMethod === 'revolut') paymentSource = 'revolut';
+        else if (['rev_card', 'rev_apple_pay', 'rev_google_pay'].includes(selectedMethod)) paymentSource = 'revolut';
+
+        let order;
+
+        // Try existing pending order for same email+description
+        const { data: existingOrders } = await supabaseClient
+            .from('orders').select('*')
+            .eq('customer_email', email)
+            .eq('description', currentOffer.name)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+        if (existingOrders && existingOrders.length > 0) {
+            order = existingOrders[0];
+            await supabaseClient.from('orders').update({
+                customer_phone: phone,
+                customer_name: name || null,
+                customer_company: company || null,
+                customer_nip: nip || null,
+                amount: effectivePrice,
+                original_amount: appliedDiscount ? currentOffer.price : null,
+                discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
+                discount_code_id: appliedDiscount ? appliedDiscount.id : null,
+                payment_source: paymentSource,
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`,
+                updated_at: new Date().toISOString()
+            }).eq('id', order.id);
+            order.amount = effectivePrice;
+        } else {
+            const orderData = {
+                customer_email: email,
+                customer_phone: phone,
+                customer_name: name || null,
+                customer_company: company || null,
+                customer_nip: nip || null,
+                description: currentOffer.name,
+                amount: effectivePrice,
+                original_amount: appliedDiscount ? currentOffer.price : null,
+                discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
+                discount_code_id: appliedDiscount ? appliedDiscount.id : null,
+                status: 'pending',
+                payment_source: paymentSource,
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`
+            };
+
+            if (isCustomPayment && customPaymentLeadId) {
+                orderData.lead_id = customPaymentLeadId;
+            }
+
+            if (upgradeWorkflowId && upgradeToOfferId) {
+                orderData.upgrade_workflow_id = upgradeWorkflowId;
+                orderData.upgrade_to_offer_id = upgradeToOfferId;
+                orderData.skip_workflow = true;
+                orderData.notes += ' | Upgrade workflow';
+            }
+
+            if (installmentId) {
+                orderData.installment_id = installmentId;
+                if (installmentWorkflowId) orderData.workflow_id = installmentWorkflowId;
+                orderData.notes += ` | Installment ${installmentData?.installment_number || ''}/${installmentData?.schedule?.installments_count || ''}`;
+            }
+
+            const { data: newOrder, error: orderErr } = await supabaseClient
+                .from('orders').insert(orderData).select().single();
+            if (orderErr) throw new Error('Błąd tworzenia zamówienia');
+            order = newOrder;
+        }
+
+        // Route by method
+        if (selectedMethod === 'revolut') {
+            showRevolutInstructions(order);
+            return;
+        }
+        if (['rev_card', 'rev_apple_pay', 'rev_google_pay'].includes(selectedMethod)) {
+            await startRevolutCheckout(order);
+            return;
+        }
+
+        // Tpay path
+        const requestBody = {
+            orderId: order.id,
+            paymentType: selectedMethod === 'installments' ? 'installments' : 'one_time',
+            groupId: selectedGroupId > 0 ? selectedGroupId : null,
+            blikCode
+        };
+
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/tpay-create-transaction`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            },
+            body: JSON.stringify(requestBody)
+        });
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error || 'Błąd płatności');
+
+        if (blikCode && result.transactionId) {
+            showBlikProcessing(blikCode);
+            pollPaymentStatus(order.id, result.transactionId);
+        } else if (result.paymentUrl) {
+            showRedirect();
+            setTimeout(() => window.location.href = result.paymentUrl, 1000);
+        } else {
+            throw new Error('Brak linku do płatności');
+        }
+    } catch (err) {
+        console.error('[checkout-v2] Submit error:', err);
+        showFormError(err.message);
+        setButtonsLoading(false);
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// OFFER / CUSTOM PAYMENT LOADING
+// ═══════════════════════════════════════════════════════════════════
+function setupOfferDisplay(offer) {
+    $('v-product-name').textContent = offer.name;
+    $('v-product-desc').textContent = offer.description || 'Produkt cyfrowy';
+
+    const priceFmt = formatPrice(offer.price);
+    $('v-summary-price').textContent = priceFmt;
+    $('v-total').textContent = priceFmt;
+    $('v-summary-total').textContent = priceFmt;
+
+    document.title = `${offer.name} — Płatność`;
+
+    // Show installments if eligible
+    if (offer.price >= MIN_INSTALLMENT_AMOUNT) {
+        $('v-method-installments').style.display = 'block';
+        $('v-installments-monthly').textContent = formatPrice(calculateInstallment(offer.price));
+    }
+
+    updatePayButton();
+}
+
+async function loadOffer() {
+    const params = new URLSearchParams(window.location.search);
+    const offerId = params.get('offer') || params.get('id');
+    const retryOrderId = params.get('retry');
+    const customAmount = params.get('amount');
+    const customDescription = params.get('description');
+    const leadId = params.get('lead_id');
+
+    upgradeWorkflowId = params.get('upgrade_workflow_id');
+    upgradeToOfferId = params.get('upgrade_to_offer_id');
+    installmentId = params.get('installment_id');
+    installmentWorkflowId = params.get('workflow_id');
+
+    // Installment payment mode
+    if (installmentId) {
+        try {
+            const { data: instData, error: instError } = await supabaseClient
+                .from('payment_installments')
+                .select(`
+                    *,
+                    schedule:payment_schedules(
+                        *,
+                        lead:leads(id, email, phone, name, company, nip),
+                        workflow:workflows(id, offer_name)
+                    )
+                `)
+                .eq('id', installmentId).single();
+
+            if (instError || !instData) { showErrorState('Nie znaleziono raty.'); return; }
+            if (installmentWorkflowId && instData.schedule?.workflow?.id !== installmentWorkflowId) {
+                showErrorState('Nieprawidłowy link.'); return;
+            }
+            if (instData.status === 'paid') { showErrorState('Ta rata została już opłacona.'); return; }
+
+            installmentData = instData;
+            isCustomPayment = true;
+
+            const offerName = 'Budowa sklepu pełen pakiet';
+            const rataLabel = `Rata ${instData.installment_number}/${instData.schedule.installments_count}`;
+            currentOffer = {
+                id: null,
+                name: `${offerName} - ${rataLabel}`,
+                description: `${offerName} - ${rataLabel}`,
+                price: parseFloat(instData.amount)
+            };
+
+            setupOfferDisplay(currentOffer);
+            prefillCustomerForm(instData.schedule.lead);
+            $('v-discount-section').style.display = 'none';
+            showCheckout();
+            return;
+        } catch (e) {
+            console.error('[checkout-v2] Installment load error:', e);
+            showErrorState('Wystąpił błąd. Spróbuj odświeżyć stronę.');
+            return;
+        }
+    }
+
+    // Custom payment mode
+    if (customAmount && customDescription && !offerId) {
+        isCustomPayment = true;
+        customPaymentLeadId = leadId;
+        const amount = parseFloat(customAmount);
+        if (isNaN(amount) || amount <= 0) {
+            showErrorState('Nieprawidłowa kwota płatności.'); return;
+        }
+        currentOffer = {
+            id: null,
+            name: decodeURIComponent(customDescription),
+            description: 'Płatność jednorazowa',
+            price: amount
+        };
+        setupOfferDisplay(currentOffer);
+        $('v-discount-section').style.display = 'none';
+
+        if (leadId) {
+            try {
+                const { data: lead } = await supabaseClient
+                    .from('leads').select('email, phone, name, company, nip')
+                    .eq('id', leadId).single();
+                prefillCustomerForm(lead);
+            } catch {}
+        }
+
+        showCheckout();
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'ViewContent', { content_name: currentOffer.name, content_type: 'custom_payment', currency: 'PLN', value: amount });
+        }
+        return;
+    }
+
+    // Retry mode
+    if (retryOrderId) {
+        try {
+            const { data: existing } = await supabaseClient
+                .from('orders').select('*').eq('id', retryOrderId).eq('status', 'pending').single();
+            if (existing) {
+                if (existing.skip_workflow === true) {
+                    isCustomPayment = true;
+                    customPaymentLeadId = existing.lead_id || null;
+                }
+                const { data: offer } = await supabaseClient
+                    .from('offers').select('*').eq('name', existing.description).eq('is_active', true).single();
+                if (offer) {
+                    currentOffer = offer;
+                    $('v-email').value = existing.customer_email || '';
+                    $('v-phone').value = existing.customer_phone || '';
+                    $('v-name').value = existing.customer_name || '';
+                    if (existing.customer_company) { $('v-company').value = existing.customer_company; openInvoice(); }
+                    if (existing.customer_nip) { $('v-nip').value = existing.customer_nip; openInvoice(); showPragmapayMethod(); }
+                    setupOfferDisplay(offer);
+                    $('v-retry-notice').classList.add('show');
+                    showCheckout();
+                    await checkUrlDiscountCode();
+                    return;
+                }
+            }
+        } catch { /* fall through */ }
+    }
+
+    // Offer mode
+    if (!offerId) {
+        showErrorState('Brak identyfikatora oferty. Sprawdź link.');
+        return;
+    }
+
+    try {
+        const { data: offer, error } = await supabaseClient
+            .from('offers').select('*').eq('id', offerId).eq('is_active', true).single();
+        if (error || !offer) { showErrorState('Ta oferta nie istnieje lub jest nieaktywna.'); return; }
+        if (!offer.price || offer.price <= 0) { showErrorState('Oferta nie ma ustawionej ceny.'); return; }
+
+        currentOffer = offer;
+
+        // Custom price from client_offer + prefill
+        const clientOfferId = params.get('client_offer');
+        if (clientOfferId) {
+            try {
+                const { data: clientOffer } = await supabaseClient
+                    .from('client_offers')
+                    .select('custom_price, leads(email, phone, name, company, nip)')
+                    .eq('id', clientOfferId).single();
+                if (clientOffer?.custom_price) currentOffer.price = parseFloat(clientOffer.custom_price);
+                if (clientOffer?.leads) prefillCustomerForm(clientOffer.leads);
+            } catch {}
+        }
+
+        setupOfferDisplay(currentOffer);
+        showCheckout();
+
+        if (typeof fbq !== 'undefined') {
+            fbq('track', 'ViewContent', { content_name: currentOffer.name, content_type: 'product', currency: 'PLN', value: currentOffer.price });
+        }
+        if (typeof gtag !== 'undefined') {
+            gtag('event', 'begin_checkout', {
+                currency: 'PLN', value: currentOffer.price / 1.23,
+                items: [{ item_id: currentOffer.id || 'custom', item_name: currentOffer.name, price: currentOffer.price / 1.23, quantity: 1 }]
+            });
+        }
+
+        await checkUrlDiscountCode();
+    } catch (err) {
+        console.error('[checkout-v2] Load error:', err);
+        showErrorState('Wystąpił błąd. Spróbuj odświeżyć stronę.');
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// INPUT EVENT LISTENERS (clear errors on type)
+// ═══════════════════════════════════════════════════════════════════
+$('v-email').addEventListener('input', () => clearFieldError('v-email', 'v-email-err'));
+$('v-phone').addEventListener('input', () => clearFieldError('v-phone', 'v-phone-err'));
+$('v-terms').addEventListener('change', () => $('v-terms-err').classList.remove('show'));
+
+// ═══════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════
+loadOffer();
+</script>
+
+</body>
+</html>
