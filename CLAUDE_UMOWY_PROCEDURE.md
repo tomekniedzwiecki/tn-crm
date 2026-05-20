@@ -37,6 +37,26 @@ Na podstawie ustaleń z klientem zmodyfikuj kopię w `umowy/klienci/`:
 
 Umowa jest dostępna TYLKO lokalnie - NIE jest dostępna online (folder w .gitignore).
 
+### Krok 4: ZAWSZE napisz email podsumowujący zmiany do klienta
+
+**OBOWIĄZKOWE** — gdy modyfikujesz umowę w odpowiedzi na uwagi klienta, po wprowadzeniu zmian napisz krótkie podsumowanie do wklejenia do maila/WhatsApp dla klienta.
+
+**Zasady pisania emaila:**
+- Pisz na TY, nie na Pan/Pani — relacja Tomka z klientem jest partnerska
+- Język naturalny, nie formalny — bez „uprzejmie informuję", „niniejszym potwierdzam" itp.
+- **NIE używaj markdown bold (`**...**`) w treści emaila** — widać że to AI pisze. Pogrubione hasła rzucają się w oczy klientowi i wyglądają jak generator. Jeśli chcesz wyróżnić punkt — użyj akapitu, myślnika lub kontekstu zdania, nie pogrubienia. Bold zostaje tylko w SEKCJI PODSUMOWANIA dla Tomka (tabela), nie w samym mailu do klienta
+- Adresuj każdą uwagę klienta po kolei (po punktach lub krótko per akapit)
+- Jeśli przyjąłeś — powiedz „dorzucam"/„robię", krótko jak
+- Jeśli odrzuciłeś — powiedz dlaczego (jednym zdaniem, nie kazaniem)
+- Jeśli przyjąłeś warunkowo (np. cap na pensje zarządu) — wyjaśnij że to dla obopólnego spokoju, nie żeby utrudniać
+- Wskaż co musi dosłać klient (dane Kingi, potwierdzenie nazwiska itp.)
+- Jeśli sprawa złożona — zaproponuj call na żywo
+- Podpis: `Pozdrawiam, Tomek`
+
+**Format dostawy:**
+- Email umieść w bloku markdown (\`\`\`) w odpowiedzi do Tomka
+- Pod emailem zostaw **podsumowanie zmian dla Tomka** (tabela co się zmieniło per paragraf) — żeby wiedział co podpisze
+
 ## Przykład użycia
 
 Użytkownik: "Zrób umowę dla Jana Kowalskiego, obniż kary o 30%"
@@ -45,6 +65,7 @@ Użytkownik: "Zrób umowę dla Jana Kowalskiego, obniż kary o 30%"
 2. Wprowadzam dane klienta
 3. Obniżam kary o 30%
 4. Podaję klikalny link: [jan-kowalski.html](tn-crm/umowy/klienci/jan-kowalski.html)
+5. Piszę krótki email do Jana podsumowujący zmiany (na TY, naturalnym językiem)
 
 ## Typowe modyfikacje
 
