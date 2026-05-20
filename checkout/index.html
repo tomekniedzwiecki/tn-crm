@@ -55,6 +55,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://merchant.revolut.com/embed.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Meta Pixel Code -->
@@ -603,8 +604,8 @@
                                                 <path d="M21.9 40.3h-2.2a25.12 25.12 0 0 0-.4 2.7l-1.6 9.7h2.7c3.5 0 6.1-2.9 6.1-7.3 0-3.1-1.8-5.1-4.6-5.1zm22.24 31.12c-.48 0-6.08-.7-8.47-14.1 0 0 6.52-7.73 6.47-14.34-.9-8.17-8.1-13.7-18.24-13.7 0 0-12.7.5-15 1a5.61 5.61 0 0 0-4.4 5.8 31.68 31.68 0 0 1-.5 6L.3 65.9c-.3 1.4-1 5.7 1.7 8.9a8.2 8.2 0 0 0 6.6 2.8 24.66 24.66 0 0 0 9.4-1.8 6 6 0 0 0 2.3-1.9 11.06 11.06 0 0 0 8.8 3.8 23 23 0 0 0 10.3-2.5s4.6-1.84 4.77-3.77zm-9-.32a17.49 17.49 0 0 1-6 .9c-2 0-4.7-.5-6.4-5.4l-2.9-8.4H16.9l-1.3 8a12.41 12.41 0 0 0-.3 2.7v.2a4 4 0 0 0 .3 1.5 14.6 14.6 0 0 1-3.65 1 22 22 0 0 1-3.35.28c-1.5 0-2.9-.5-3-3.1a14.92 14.92 0 0 1 .2-2.1L9.5 42.9a34.08 34.08 0 0 0 .5-5.5v-1.9a53.79 53.79 0 0 1 9.4-.8h4.3a17.65 17.65 0 0 1 7.5 1.5 10.81 10.81 0 0 1 1.8 1.1 19.2 19.2 0 0 1 1.5 1.4 11 11 0 0 1 1.5 2.6 10.59 10.59 0 0 1 .5 3.1v.9c-.3 4.4-3.1 8-7.4 10.3L33 65.9c1.1 2.8 1.8 3.9 3 4.8a3.55 3.55 0 0 1-.9.4z" transform="matrix(1.322066 0 0 1.322066 2.808062 -38.736535)" fill="url(#revGrad1)"/>
                                             </svg>
                                         </div>
-                                        <div class="text-sm font-medium text-white">Revolut</div>
-                                        <div class="text-xs text-zinc-500">Przelew bezpośredni</div>
+                                        <div class="text-sm font-medium text-white">Revolut Pay</div>
+                                        <div class="text-xs text-zinc-500">Karta · Apple Pay · Google Pay</div>
                                     </div>
                                 </div>
                             </div>
@@ -646,7 +647,7 @@
                                         <span class="text-sm font-medium text-zinc-300">Płatność bezpośrednia Revolut</span>
                                     </div>
                                     <p class="text-xs text-zinc-400 text-center">
-                                        Po kliknięciu "Zapłać" otrzymasz instrukcję przelewu.
+                                        Po kliknięciu "Zapłać" otworzy się okno Revolut. Wybierz kartę, Apple Pay lub Google Pay.
                                     </p>
                                 </div>
                             </div>
@@ -1311,6 +1312,60 @@
             document.querySelector('.mobile-sticky-footer')?.classList.add('hidden');
         }
 
+        async function startRevolutCheckout(order) {
+            // Sanity check — script may be blocked or still loading
+            if (typeof RevolutCheckout === 'undefined') {
+                console.warn('[checkout] RevolutCheckout SDK not loaded — falling back to instructions');
+                showRevolutInstructions(order);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/revolut-create-order`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    },
+                    body: JSON.stringify({ orderId: order.id })
+                });
+
+                const result = await response.json();
+                if (!result.success || !result.publicId) {
+                    throw new Error(result.error || 'Brak public_id Revolut');
+                }
+
+                console.log('[checkout] Revolut order created, opening widget. Mode:', result.mode);
+
+                const instance = await RevolutCheckout(result.publicId, result.mode || 'prod');
+
+                instance.payWithPopup({
+                    name: order.customer_name || undefined,
+                    email: order.customer_email,
+                    phone: order.customer_phone || undefined,
+                    savePaymentMethodFor: 'never',
+                    onSuccess() {
+                        console.log('[checkout] Revolut payment success');
+                        window.location.href = `/checkout/success?order=${order.id}`;
+                    },
+                    onError(err) {
+                        console.error('[checkout] Revolut payment error:', err);
+                        showFormError(err?.message || 'Płatność Revolut nie powiodła się');
+                        setButtonsLoading(false);
+                    },
+                    onCancel() {
+                        console.log('[checkout] Revolut payment cancelled by user');
+                        setButtonsLoading(false);
+                    }
+                });
+            } catch (err) {
+                console.error('[checkout] Revolut checkout error:', err);
+                showFormError(err?.message || 'Błąd uruchomienia płatności Revolut');
+                setButtonsLoading(false);
+            }
+        }
+
         function showRevolutInstructions(order) {
             document.getElementById('checkout-container').classList.add('hidden');
             document.getElementById('revolut-instructions-state').classList.remove('hidden');
@@ -1834,10 +1889,10 @@
                     // Note: Discount code usage is incremented in tpay-webhook when payment succeeds
                 }
 
-                // Handle Revolut payment separately (no TPay)
+                // Handle Revolut payment via Revolut Checkout JS widget (Apple Pay / Google Pay / card)
                 if (selectedMethod === 'revolut') {
-                    console.log('[checkout] Revolut payment - showing instructions');
-                    showRevolutInstructions(order);
+                    console.log('[checkout] Revolut payment - opening widget');
+                    await startRevolutCheckout(order);
                     return;
                 }
 
