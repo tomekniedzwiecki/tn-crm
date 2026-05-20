@@ -261,6 +261,7 @@
         .v-main {
             flex: 1;
             padding: 48px 32px;
+            padding-bottom: 140px; /* miejsce dla sticky pay bar */
         }
 
         .v-container {
@@ -403,16 +404,6 @@
         .v-summary-discount {
             padding: 12px 0;
             border-top: 1px solid var(--border-subtle);
-        }
-
-        /* Pay button w summary card — zawsze widoczny (sticky) */
-        .v-summary-pay {
-            margin-top: 16px !important;
-            min-height: 48px;
-        }
-
-        @media (max-width: 900px) {
-            .v-summary-pay { display: none; } /* mobile uses bottom sticky */
         }
 
         /* Inline trust (1 wiersz) */
@@ -987,58 +978,7 @@
             background: var(--bg-subtle);
         }
 
-        /* ═══════════════════════════════════════════════════════════════════
-           TERMS + SUBMIT
-           ═══════════════════════════════════════════════════════════════════ */
-        .v-terms {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            font-size: 13px;
-            color: var(--text-secondary);
-            line-height: 1.5;
-            cursor: pointer;
-        }
-
-        .v-terms input {
-            appearance: none;
-            width: 18px;
-            height: 18px;
-            border: 1.5px solid var(--border-strong);
-            border-radius: 4px;
-            background: var(--bg-card);
-            margin-top: 1px;
-            flex-shrink: 0;
-            cursor: pointer;
-            transition: all 0.15s;
-            position: relative;
-        }
-
-        .v-terms input:checked {
-            background: var(--accent);
-            border-color: var(--accent);
-        }
-
-        .v-terms input:checked::after {
-            content: '';
-            position: absolute;
-            top: 2px;
-            left: 5px;
-            width: 4px;
-            height: 8px;
-            border: solid white;
-            border-width: 0 2px 2px 0;
-            transform: rotate(45deg);
-        }
-
-        .v-terms a {
-            color: var(--accent);
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            text-decoration-thickness: 1px;
-        }
-        .v-terms a:hover { color: var(--accent-hover); }
-        .v-terms .req { color: var(--error); }
+        /* (Old .v-terms checkbox usuniety — implicit consent w pay-bar-terms statement) */
 
         .v-pay-btn {
             width: 100%;
@@ -1157,62 +1097,112 @@
         }
 
         /* ═══════════════════════════════════════════════════════════════════
-           MOBILE STICKY FOOTER
+           BOTTOM PAY BAR — unified sticky bar (desktop + mobile)
            ═══════════════════════════════════════════════════════════════════ */
-        @media (max-width: 900px) {
-            .v-form-card .v-desktop-submit { display: none; }
-            .v-mobile-sticky {
-                position: fixed;
-                bottom: 0;
-                left: 0;
-                right: 0;
-                background: rgba(255, 255, 255, 0.96);
-                backdrop-filter: blur(20px);
-                -webkit-backdrop-filter: blur(20px);
-                border-top: 1px solid var(--border-default);
-                padding: 14px 16px;
-                padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-                z-index: 100;
-                box-shadow:
-                    0 -1px 0 rgba(255,255,255,0.5) inset,
-                    0 -8px 24px -8px rgba(15, 23, 42, 0.08);
-            }
-            .v-mobile-sticky-row {
-                display: flex;
-                align-items: center;
-                justify-content: space-between;
-                margin-bottom: 10px;
-                font-size: 13px;
-            }
-            .v-mobile-sticky-row .label {
-                color: var(--text-tertiary);
-                font-weight: 500;
-                font-size: 12px;
-                text-transform: uppercase;
-                letter-spacing: 0.04em;
-            }
-            .v-mobile-sticky-row .price {
-                font-size: 22px;
-                font-weight: 700;
-                color: var(--text-primary);
-                letter-spacing: -0.02em;
-            }
-            .v-mobile-sticky-row .strike {
-                font-size: 14px;
-                color: var(--text-muted);
-                text-decoration: line-through;
-                text-decoration-thickness: 1.5px;
-                margin-right: 8px;
-            }
-            .v-mobile-sticky .v-pay-btn {
-                margin-top: 0;
-                padding: 15px 24px;
-                min-height: 50px;
-            }
+        .v-pay-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(24px) saturate(180%);
+            -webkit-backdrop-filter: blur(24px) saturate(180%);
+            border-top: 1px solid var(--border-subtle);
+            z-index: 100;
+            box-shadow:
+                0 -1px 0 rgba(255,255,255,0.6) inset,
+                0 -12px 32px -10px rgba(15, 23, 42, 0.1);
+            padding: 14px 32px;
+            padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
         }
 
-        @media (min-width: 901px) {
-            .v-mobile-sticky { display: none; }
+        .v-pay-bar-inner {
+            max-width: 1120px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .v-pay-bar-price {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 0;
+            flex-shrink: 0;
+        }
+
+        .v-pay-bar-price .label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .v-pay-bar-price .value {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .v-pay-bar-price .amount {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            line-height: 1.1;
+            font-feature-settings: 'tnum' 1, 'lnum' 1, 'ss01' 1;
+        }
+
+        .v-pay-bar-price .strike {
+            font-size: 14px;
+            color: var(--text-muted);
+            text-decoration: line-through;
+            text-decoration-thickness: 1.5px;
+            font-weight: 500;
+        }
+
+        .v-pay-bar-action {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            align-items: stretch;
+            min-width: 280px;
+        }
+
+        .v-pay-bar-action .v-pay-btn {
+            margin-top: 0;
+            padding: 13px 28px;
+            min-height: 48px;
+        }
+
+        .v-pay-bar-terms {
+            font-size: 10.5px;
+            color: var(--text-tertiary);
+            text-align: center;
+            line-height: 1.4;
+            margin: 0;
+        }
+
+        .v-pay-bar-terms a {
+            color: var(--text-secondary);
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            text-decoration-thickness: 1px;
+        }
+
+        .v-pay-bar-terms a:hover { color: var(--accent); }
+
+        @media (max-width: 600px) {
+            .v-pay-bar { padding: 12px 16px; padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+            .v-pay-bar-inner { gap: 12px; }
+            .v-pay-bar-price .label { font-size: 10px; }
+            .v-pay-bar-price .amount { font-size: 20px; }
+            .v-pay-bar-action { min-width: 0; flex: 1; }
+            .v-pay-bar-action .v-pay-btn { padding: 12px 16px; font-size: 14px; min-height: 46px; }
+            .v-pay-bar-terms { display: none; } /* statement schowane na mobile, klient kliknie regulamin gdy chce */
         }
 
         /* ═══════════════════════════════════════════════════════════════════
@@ -1564,11 +1554,6 @@
                         <span><i class="ph-fill ph-arrow-counter-clockwise"></i>Zwrot 14 dni</span>
                     </div>
 
-                    <!-- Pay button — zawsze widoczny (sticky z summary card) -->
-                    <button type="button" class="v-pay-btn v-summary-pay" id="v-pay-summary">
-                        <i class="ph ph-lock-simple"></i>
-                        <span id="v-pay-summary-text">Zapłać</span>
-                    </button>
                 </div>
 
                 <p class="v-help">
@@ -1790,24 +1775,10 @@
                         </div>
                     </div>
 
-                    <!-- SECTION: Terms + Submit -->
-                    <div class="v-section">
-                        <label class="v-terms">
-                            <input type="checkbox" id="v-terms" required>
-                            <span>
-                                Akceptuję <a id="v-link-regulamin" href="#" target="_blank">regulamin</a>
-                                i <a id="v-link-privacy" href="#" target="_blank">politykę prywatności</a>
-                                <span class="req">*</span>
-                            </span>
-                        </label>
-                        <div class="v-error-msg" id="v-terms-err" style="margin-left:28px"><i class="ph ph-warning-circle"></i><span>Zaakceptuj regulamin</span></div>
-
-                        <!-- Desktop submit przeniesiony do summary card (sticky, zawsze widoczny).
-                             Hidden submit żeby Enter w form i tak triggerował handleSubmit -->
-                        <button type="submit" id="v-pay-desktop" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true">
-                            <span id="v-pay-desktop-text"></span>
-                        </button>
-                    </div>
+                    <!-- Hidden submit żeby Enter w form trigger handleSubmit -->
+                    <button type="submit" id="v-pay-desktop" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true">
+                        <span id="v-pay-desktop-text"></span>
+                    </button>
                 </form>
 
                 <!-- Trust strip — oficjalne logo płatności -->
@@ -1834,20 +1805,32 @@
         </div>
     </main>
 
-    <!-- Mobile sticky bottom CTA -->
-    <div class="v-mobile-sticky">
-        <div class="v-mobile-sticky-row">
-            <span class="label">Do zapłaty</span>
-            <span>
-                <span class="strike tnum" id="v-mobile-price-strike" style="display:none"></span>
-                <span class="price tnum" id="v-mobile-price-total">—</span>
-            </span>
+    <!-- BOTTOM PAY BAR — sticky viewport bottom, jeden bar dla desktop i mobile -->
+    <div class="v-pay-bar">
+        <div class="v-pay-bar-inner">
+            <div class="v-pay-bar-price">
+                <span class="label">Do zapłaty</span>
+                <span class="value">
+                    <span class="strike tnum" id="v-pay-bar-strike" style="display:none"></span>
+                    <span class="amount tnum" id="v-pay-bar-amount">—</span>
+                </span>
+            </div>
+            <div class="v-pay-bar-action">
+                <button type="button" class="v-pay-btn" id="v-pay-bar-btn">
+                    <i class="ph ph-lock-simple"></i>
+                    <span id="v-pay-bar-text">Zapłać</span>
+                    <i class="ph ph-arrow-right" style="font-size:14px"></i>
+                </button>
+                <p class="v-pay-bar-terms">
+                    Klikając „Zapłać" akceptujesz
+                    <a id="v-link-regulamin" href="#" target="_blank">regulamin</a>
+                    i <a id="v-link-privacy" href="#" target="_blank">politykę prywatności</a>.
+                </p>
+            </div>
         </div>
-        <button type="button" class="v-pay-btn" id="v-pay-mobile" style="margin-top:0">
-            <i class="ph ph-lock-simple"></i>
-            <span id="v-pay-mobile-text">Zapłać</span>
-        </button>
     </div>
+    <!-- Hidden mobile button (kept for legacy code refs, hidden visually) -->
+    <button type="button" id="v-pay-mobile" style="display:none" tabindex="-1" aria-hidden="true"><span id="v-pay-mobile-text"></span></button>
 </div>
 
 <script>
@@ -2275,7 +2258,6 @@ function validateForm() {
     let valid = true;
     const email = $('v-email').value.trim();
     const phone = $('v-phone').value.trim();
-    const terms = $('v-terms').checked;
 
     if (!email || !validateEmail(email)) {
         showFieldError('v-email', 'v-email-err'); valid = false;
@@ -2297,10 +2279,7 @@ function validateForm() {
         }
     }
 
-    const termsErr = $('v-terms-err');
-    if (!terms) { termsErr.classList.add('show'); valid = false; }
-    else { termsErr.classList.remove('show'); }
-
+    // Implicit consent — klik 'Zaplac' = akceptacja regulaminu (statement pod buttonem w pay bar)
     return valid;
 }
 
@@ -2331,35 +2310,37 @@ function updatePayButton() {
     }
 
     $('v-pay-desktop-text').textContent = desktopText;
-    $('v-pay-mobile-text').textContent = mobileText;
-    $('v-pay-summary-text').textContent = desktopText;
+    $('v-pay-bar-text').textContent = desktopText;
 
-    // Mobile bottom sticky strip
-    $('v-mobile-price-total').textContent = mobilePriceMain;
-    const mobStrike = $('v-mobile-price-strike');
-    if (appliedDiscount && currentOffer && selectedMethod !== 'installments') {
-        mobStrike.textContent = formatPrice(currentOffer.price);
-        mobStrike.style.display = 'inline';
+    // Pay bar price (sticky bottom)
+    const barAmount = $('v-pay-bar-amount');
+    const barStrike = $('v-pay-bar-strike');
+    if (selectedMethod === 'installments') {
+        barAmount.textContent = `${formatPrice(calculateInstallment(effectivePrice))}/mies.`;
+        barStrike.style.display = 'none';
     } else {
-        mobStrike.style.display = 'none';
+        barAmount.textContent = price;
+        if (appliedDiscount && currentOffer) {
+            barStrike.textContent = formatPrice(currentOffer.price);
+            barStrike.style.display = 'inline';
+        } else {
+            barStrike.style.display = 'none';
+        }
     }
 }
 
 function setButtonsLoading(loading) {
     const dBtn = $('v-pay-desktop');
-    const mBtn = $('v-pay-mobile');
-    const sBtn = $('v-pay-summary');
+    const barBtn = $('v-pay-bar-btn');
     if (loading) {
-        dBtn.disabled = mBtn.disabled = sBtn.disabled = true;
+        dBtn.disabled = barBtn.disabled = true;
         const spinIcon = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i>';
         dBtn.innerHTML = `${spinIcon} <span id="v-pay-desktop-text">Przetwarzanie...</span>`;
-        mBtn.innerHTML = `${spinIcon} <span id="v-pay-mobile-text">Przetwarzanie...</span>`;
-        sBtn.innerHTML = `${spinIcon} <span id="v-pay-summary-text">Przetwarzanie...</span>`;
+        barBtn.innerHTML = `${spinIcon} <span id="v-pay-bar-text">Przetwarzanie...</span>`;
     } else {
-        dBtn.disabled = mBtn.disabled = sBtn.disabled = false;
+        dBtn.disabled = barBtn.disabled = false;
         dBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-desktop-text"></span>';
-        mBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-mobile-text"></span>';
-        sBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-summary-text"></span>';
+        barBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-bar-text"></span> <i class="ph ph-arrow-right" style="font-size:14px"></i>';
         updatePayButton();
     }
 }
@@ -2439,8 +2420,7 @@ async function pollPaymentStatus(orderId, transactionId) {
 // SUBMIT HANDLER
 // ═══════════════════════════════════════════════════════════════════
 $('v-form').addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
-$('v-pay-mobile').addEventListener('click', () => handleSubmit());
-$('v-pay-summary').addEventListener('click', () => handleSubmit());
+$('v-pay-bar-btn').addEventListener('click', () => handleSubmit());
 
 async function handleSubmit() {
     if (!currentOffer && !isCustomPayment) return;
