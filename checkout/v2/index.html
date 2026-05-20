@@ -405,6 +405,16 @@
             border-top: 1px solid var(--border-subtle);
         }
 
+        /* Pay button w summary card — zawsze widoczny (sticky) */
+        .v-summary-pay {
+            margin-top: 16px !important;
+            min-height: 48px;
+        }
+
+        @media (max-width: 900px) {
+            .v-summary-pay { display: none; } /* mobile uses bottom sticky */
+        }
+
         /* Inline trust (1 wiersz) */
         .v-summary-trust {
             display: flex;
@@ -1553,6 +1563,12 @@
                         <span><i class="ph-fill ph-lightning"></i>Dostęp od razu</span>
                         <span><i class="ph-fill ph-arrow-counter-clockwise"></i>Zwrot 14 dni</span>
                     </div>
+
+                    <!-- Pay button — zawsze widoczny (sticky z summary card) -->
+                    <button type="button" class="v-pay-btn v-summary-pay" id="v-pay-summary">
+                        <i class="ph ph-lock-simple"></i>
+                        <span id="v-pay-summary-text">Zapłać</span>
+                    </button>
                 </div>
 
                 <p class="v-help">
@@ -1786,12 +1802,11 @@
                         </label>
                         <div class="v-error-msg" id="v-terms-err" style="margin-left:28px"><i class="ph ph-warning-circle"></i><span>Zaakceptuj regulamin</span></div>
 
-                        <div class="v-desktop-submit">
-                            <button type="submit" class="v-pay-btn" id="v-pay-desktop">
-                                <i class="ph ph-lock-simple"></i>
-                                <span id="v-pay-desktop-text">Zapłać —</span>
-                            </button>
-                        </div>
+                        <!-- Desktop submit przeniesiony do summary card (sticky, zawsze widoczny).
+                             Hidden submit żeby Enter w form i tak triggerował handleSubmit -->
+                        <button type="submit" id="v-pay-desktop" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" tabindex="-1" aria-hidden="true">
+                            <span id="v-pay-desktop-text"></span>
+                        </button>
                     </div>
                 </form>
 
@@ -2317,6 +2332,7 @@ function updatePayButton() {
 
     $('v-pay-desktop-text').textContent = desktopText;
     $('v-pay-mobile-text').textContent = mobileText;
+    $('v-pay-summary-text').textContent = desktopText;
 
     // Mobile bottom sticky strip
     $('v-mobile-price-total').textContent = mobilePriceMain;
@@ -2332,14 +2348,18 @@ function updatePayButton() {
 function setButtonsLoading(loading) {
     const dBtn = $('v-pay-desktop');
     const mBtn = $('v-pay-mobile');
+    const sBtn = $('v-pay-summary');
     if (loading) {
-        dBtn.disabled = mBtn.disabled = true;
-        dBtn.innerHTML = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i> <span id="v-pay-desktop-text">Przetwarzanie...</span>';
-        mBtn.innerHTML = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i> <span id="v-pay-mobile-text">Przetwarzanie...</span>';
+        dBtn.disabled = mBtn.disabled = sBtn.disabled = true;
+        const spinIcon = '<i class="ph ph-circle-notch" style="animation: v-spin 0.8s linear infinite"></i>';
+        dBtn.innerHTML = `${spinIcon} <span id="v-pay-desktop-text">Przetwarzanie...</span>`;
+        mBtn.innerHTML = `${spinIcon} <span id="v-pay-mobile-text">Przetwarzanie...</span>`;
+        sBtn.innerHTML = `${spinIcon} <span id="v-pay-summary-text">Przetwarzanie...</span>`;
     } else {
-        dBtn.disabled = mBtn.disabled = false;
+        dBtn.disabled = mBtn.disabled = sBtn.disabled = false;
         dBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-desktop-text"></span>';
         mBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-mobile-text"></span>';
+        sBtn.innerHTML = '<i class="ph ph-lock-simple"></i> <span id="v-pay-summary-text"></span>';
         updatePayButton();
     }
 }
@@ -2420,6 +2440,7 @@ async function pollPaymentStatus(orderId, transactionId) {
 // ═══════════════════════════════════════════════════════════════════
 $('v-form').addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
 $('v-pay-mobile').addEventListener('click', () => handleSubmit());
+$('v-pay-summary').addEventListener('click', () => handleSubmit());
 
 async function handleSubmit() {
     if (!currentOffer && !isCustomPayment) return;
