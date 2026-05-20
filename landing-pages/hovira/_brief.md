@@ -34,10 +34,11 @@ Robot z LiDAR i 5000 Pa to evidence-driven precision tech, ale tagline „Twój 
 
 - **Display (nagłówki):** Plus Jakarta Sans 600/700 + `&display=swap&subset=latin-ext`
 - **Body (treść):** Inter 400/500 + `&display=swap&subset=latin-ext`
-- **Accent (handwriting, 2-3 miejsca):** Caveat 500/700 + `&display=swap&subset=latin-ext`
+- **Mono (KPI labels, mono accent):** IBM Plex Mono 400/500 + `&display=swap`
+- **Fallback (Style Lock IBM):** IBM Plex Sans 500/600 (jako fallback w font-family stack)
 
-> ⚠️ Brand fonts override Style Lock IBM Plex — `workflow_branding` ma priorytet (klient zaakceptował fonty). Plus Jakarta Sans pełni rolę technical sans (geometryczny, neutralny, tabular-nums OK). Inter dla body. Caveat tylko jako accent w 2-3 miejscach maksymalnie (NIE w body, NIE w h1/h2).
-> Polskie „Ł" UPPERCASE: Plus Jakarta i Inter są PL-safe.
+> ⚠️ Brand fonts (Plus Jakarta + Inter) na pierwszym miejscu, IBM Plex Sans/Mono jako Style Lock fallback. Caveat wycofany na rzecz mono peach (uppercase tracking) — Clinical Kitchen zakazuje handwritingu i brand override nie powinien naruszać hard constraint.
+> Polskie „Ł" UPPERCASE: Plus Jakarta, Inter i IBM Plex są PL-safe.
 
 ## 5. Persona główna (z report_pdf + brand opisu)
 
