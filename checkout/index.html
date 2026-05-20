@@ -110,28 +110,49 @@
         body {
             background: #000;
             min-height: 100vh;
+            font-variant-numeric: tabular-nums;
+            background-image:
+                radial-gradient(ellipse 80% 50% at 20% -20%, rgba(16, 185, 129, 0.08), transparent 60%),
+                radial-gradient(ellipse 60% 50% at 80% 120%, rgba(16, 185, 129, 0.05), transparent 60%);
+            background-attachment: fixed;
         }
         ::selection { background: #10b981; color: white; }
 
+        /* Cena: tabular numerals dla równej szerokości cyfr */
+        .price, [id$="-price"], [id$="-amount"], #offer-price, #original-price-strikethrough,
+        #revolut-amount, #blik-display, #blik-timeout, #desktop-price, #mobile-price,
+        #summary-price, #discount-amount {
+            font-variant-numeric: tabular-nums;
+            font-feature-settings: "tnum" 1, "lnum" 1;
+        }
+
         .glass-card {
-            background: rgba(255,255,255,0.02);
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.01));
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border: 1px solid rgba(255,255,255,0.06);
+            box-shadow:
+                0 1px 0 0 rgba(255,255,255,0.03) inset,
+                0 16px 40px -20px rgba(0,0,0,0.4);
         }
 
         .input-field {
             background: rgba(255,255,255,0.04);
             border: 1px solid rgba(255,255,255,0.1);
             color: #ededed;
-            transition: all 0.2s ease;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
         }
         .input-field::placeholder {
             color: #71717a;
         }
+        .input-field:hover:not(:focus) {
+            border-color: rgba(255,255,255,0.18);
+        }
         .input-field:focus {
             outline: none;
             border-color: #10b981;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+            background: rgba(16, 185, 129, 0.04);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15), 0 0 24px -4px rgba(16, 185, 129, 0.2);
         }
         .input-field.input-error {
             border-color: #ef4444 !important;
@@ -142,28 +163,48 @@
 
         /* Payment method cards */
         .payment-method {
-            background: rgba(255,255,255,0.02);
+            background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0.005));
             border: 1px solid rgba(255,255,255,0.08);
-            transition: all 0.2s ease;
+            transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
             cursor: pointer;
+            position: relative;
         }
         .payment-method:hover:not(.selected) {
-            border-color: rgba(255,255,255,0.15);
-            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.18);
+            background: linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.015));
+            transform: translateY(-2px);
         }
         .payment-method.selected {
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.08);
-            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3);
+            border-color: rgba(16, 185, 129, 0.6);
+            background: linear-gradient(180deg, rgba(16, 185, 129, 0.12), rgba(16, 185, 129, 0.04));
+            box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.3), 0 12px 32px -8px rgba(16, 185, 129, 0.25);
         }
         .payment-method .check-icon {
             opacity: 0;
             transform: scale(0.5);
-            transition: all 0.2s ease;
+            transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
         }
         .payment-method.selected .check-icon {
             opacity: 1;
             transform: scale(1);
+        }
+        /* Popular ribbon on payment method */
+        .payment-method .popular-ribbon {
+            position: absolute;
+            top: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            z-index: 1;
         }
 
         /* Method icon */
@@ -191,18 +232,48 @@
 
         /* Pay button */
         .pay-button {
-            background: linear-gradient(to bottom, #10b981, #059669);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 4px 12px rgba(16, 185, 129, 0.3);
-            transition: all 0.2s ease;
+            background: linear-gradient(180deg, #10b981, #059669);
+            box-shadow:
+                0 1px 0 0 rgba(255,255,255,0.15) inset,
+                0 1px 3px rgba(0,0,0,0.2),
+                0 8px 24px -4px rgba(16, 185, 129, 0.4);
+            transition: transform 0.2s ease, box-shadow 0.3s ease, background 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .pay-button::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+            animation: pay-shimmer 3.5s infinite;
+            pointer-events: none;
+        }
+        @keyframes pay-shimmer {
+            0% { left: -100%; }
+            60%, 100% { left: 200%; }
         }
         .pay-button:hover:not(:disabled) {
-            background: linear-gradient(to bottom, #059669, #047857);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2), 0 6px 16px rgba(16, 185, 129, 0.4);
+            background: linear-gradient(180deg, #14c794, #059669);
+            box-shadow:
+                0 1px 0 0 rgba(255,255,255,0.2) inset,
+                0 1px 3px rgba(0,0,0,0.2),
+                0 14px 32px -4px rgba(16, 185, 129, 0.55);
             transform: translateY(-1px);
         }
+        .pay-button:active:not(:disabled) {
+            transform: translateY(0);
+        }
         .pay-button:disabled {
-            opacity: 0.65;
+            opacity: 0.55;
             cursor: not-allowed;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+        .pay-button:disabled::after {
+            display: none;
         }
 
         /* BLIK digit inputs */
@@ -282,15 +353,43 @@
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background: rgba(0,0,0,0.95);
-                backdrop-filter: blur(20px);
-                padding: 16px;
-                padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+                background: linear-gradient(180deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.98) 30%);
+                backdrop-filter: blur(24px);
+                -webkit-backdrop-filter: blur(24px);
+                padding: 12px 16px;
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
                 border-top: 1px solid rgba(255,255,255,0.08);
                 z-index: 50;
+                box-shadow: 0 -8px 32px rgba(0,0,0,0.5);
+            }
+            .mobile-sticky-footer .price-strip {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 8px;
+                padding: 0 4px;
+            }
+            .mobile-sticky-footer .price-strip .label {
+                font-size: 11px;
+                color: #71717a;
+                text-transform: uppercase;
+                letter-spacing: 0.06em;
+                font-weight: 600;
+            }
+            .mobile-sticky-footer .price-strip .price-val {
+                font-size: 18px;
+                font-weight: 700;
+                color: #10b981;
+            }
+            .mobile-sticky-footer .price-strip .price-old {
+                font-size: 13px;
+                color: #52525b;
+                text-decoration: line-through;
+                margin-right: 8px;
+                font-weight: 500;
             }
             #checkout-container {
-                padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: calc(130px + env(safe-area-inset-bottom, 0px));
             }
         }
 
@@ -305,6 +404,105 @@
             max-height: 200px;
             opacity: 1;
         }
+
+        /* Section number badges */
+        .section-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.15));
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.25);
+            box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.2);
+            flex-shrink: 0;
+        }
+        .section-title {
+            font-weight: 600;
+            color: white;
+            font-size: 16px;
+            letter-spacing: -0.01em;
+        }
+
+        /* Dual-ring loading spinner */
+        .spinner-dual {
+            display: inline-block;
+            position: relative;
+            width: 40px;
+            height: 40px;
+        }
+        .spinner-dual::before,
+        .spinner-dual::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            border: 2px solid transparent;
+        }
+        .spinner-dual::before {
+            border-top-color: #10b981;
+            border-right-color: #10b981;
+            animation: spin 0.8s linear infinite;
+        }
+        .spinner-dual::after {
+            inset: 6px;
+            border-top-color: rgba(16, 185, 129, 0.4);
+            border-left-color: rgba(16, 185, 129, 0.4);
+            animation: spin 1.2s linear infinite reverse;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Trust strip — payment provider logos */
+        .trust-strip {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 16px;
+            padding: 16px 12px;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            margin-top: 20px;
+        }
+        .trust-strip .trust-logo {
+            height: 22px;
+            opacity: 0.45;
+            filter: grayscale(0.4);
+            transition: opacity 0.2s ease, filter 0.2s ease;
+        }
+        .trust-strip .trust-logo:hover {
+            opacity: 0.8;
+            filter: grayscale(0);
+        }
+        .trust-strip .trust-text {
+            font-size: 11px;
+            color: #52525b;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .trust-strip .trust-text i {
+            color: #10b981;
+        }
+
+        /* Subtle entrance animation per section */
+        @keyframes section-enter {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .section-enter {
+            animation: section-enter 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+        }
+        .section-enter:nth-child(1) { animation-delay: 0.05s; }
+        .section-enter:nth-child(2) { animation-delay: 0.1s; }
+        .section-enter:nth-child(3) { animation-delay: 0.15s; }
+        .section-enter:nth-child(4) { animation-delay: 0.2s; }
 
         /* Checkbox */
         .custom-checkbox {
@@ -337,7 +535,7 @@
     <!-- Loading State -->
     <div id="loading-state" class="min-h-screen flex items-center justify-center">
         <div class="text-center animate-fadeIn">
-            <div class="w-10 h-10 mx-auto mb-4 border-2 border-zinc-800 border-t-emerald-500 rounded-full animate-spin"></div>
+            <div class="spinner-dual mx-auto mb-4"></div>
             <p class="text-zinc-500 text-sm">Ładowanie...</p>
         </div>
     </div>
@@ -493,10 +691,10 @@
                         </div>
 
                         <!-- Section 1: Contact -->
-                        <div class="mb-6">
-                            <div class="flex items-center gap-2.5 mb-4">
-                                <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">1</div>
-                                <h3 class="font-semibold text-white">Dane kontaktowe</h3>
+                        <div class="mb-6 section-enter">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="section-number">1</div>
+                                <h3 class="section-title">Dane kontaktowe</h3>
                             </div>
 
                             <div class="space-y-3.5">
@@ -559,10 +757,10 @@
                         </div>
 
                         <!-- Section 2: Payment Method -->
-                        <div class="mb-6">
-                            <div class="flex items-center gap-2.5 mb-4">
-                                <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">2</div>
-                                <h3 class="font-semibold text-white">Metoda płatności</h3>
+                        <div class="mb-6 section-enter">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="section-number">2</div>
+                                <h3 class="section-title">Metoda płatności</h3>
                             </div>
 
                             <!-- Standard payments -->
@@ -571,6 +769,7 @@
                                 <div class="grid grid-cols-2 gap-2" id="payment-methods">
                                     <!-- BLIK -->
                                     <div class="payment-method selected rounded-xl p-3 relative" data-method="blik" data-group="150" data-inline="true">
+                                        <span class="popular-ribbon">Najpopularniejsze w PL</span>
                                         <div class="check-icon absolute top-2 right-2 w-5 h-5 bg-emerald-500 rounded-full flex items-center justify-center">
                                             <i class="ph-bold ph-check text-white text-xs"></i>
                                         </div>
@@ -782,10 +981,28 @@
                                 Bezpieczna płatność szyfrowana SSL
                             </p>
                         </div>
+
+                        <!-- Trust strip: payment provider logos + secure badges -->
+                        <div class="trust-strip">
+                            <span class="trust-text" title="BLIK"><img src="https://secure.tpay.com/tpayPay/SampleData/web/img/types/blik.svg" alt="BLIK" class="trust-logo bg-white rounded px-1" style="height:18px"></span>
+                            <span class="trust-text" title="Visa">Visa</span>
+                            <span class="trust-text" title="Mastercard">Mastercard</span>
+                            <span class="trust-text" title="Apple Pay"><i class="ph-fill ph-apple-logo"></i>Pay</span>
+                            <span class="trust-text" title="Google Pay"><i class="ph-fill ph-google-logo"></i>Pay</span>
+                            <span class="trust-text" style="border-left: 1px solid rgba(255,255,255,0.06); padding-left: 16px;"><i class="ph ph-shield-check"></i>256-bit SSL</span>
+                            <span class="trust-text"><i class="ph ph-arrow-clockwise"></i>Zwrot 14 dni</span>
+                        </div>
                     </form>
 
                     <!-- Mobile Sticky Footer -->
                     <div class="mobile-sticky-footer lg:hidden">
+                        <div class="price-strip">
+                            <span class="label">Do zapłaty</span>
+                            <span>
+                                <span id="mobile-price-old" class="price-old hidden"></span>
+                                <span class="price-val" id="mobile-price-total">-</span>
+                            </span>
+                        </div>
                         <button type="button" id="pay-button-mobile"
                                 class="pay-button w-full text-white px-6 py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2">
                             <i class="ph ph-lock-simple"></i>
@@ -1304,6 +1521,25 @@
 
             document.getElementById('desktop-btn-text').textContent = text;
             document.getElementById('mobile-btn-text').textContent = mobileText;
+
+            // Mobile price strip — show effective price + strikethrough oryginalna (jeśli rabat)
+            const mobilePriceTotal = document.getElementById('mobile-price-total');
+            const mobilePriceOld = document.getElementById('mobile-price-old');
+            if (mobilePriceTotal) {
+                if (selectedMethod === 'installments') {
+                    const monthly = formatPrice(calculateInstallment(effectivePrice, 10));
+                    mobilePriceTotal.textContent = `${monthly}/mies.`;
+                    mobilePriceOld?.classList.add('hidden');
+                } else {
+                    mobilePriceTotal.textContent = price;
+                    if (mobilePriceOld && appliedDiscount && currentOffer) {
+                        mobilePriceOld.textContent = formatPrice(currentOffer.price);
+                        mobilePriceOld.classList.remove('hidden');
+                    } else {
+                        mobilePriceOld?.classList.add('hidden');
+                    }
+                }
+            }
         }
 
         // Toggle invoice fields
