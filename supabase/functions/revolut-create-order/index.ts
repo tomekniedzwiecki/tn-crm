@@ -193,8 +193,16 @@ Deno.serve(async (req) => {
       throw new Error(`Błąd Revolut (${response.status}): ${errorDetails}`)
     }
 
-    const revolutOrder: RevolutOrderResponse = await response.json()
+    const revolutOrder: RevolutOrderResponse & { token?: string } = await response.json()
     console.log('[revolut] Order created:', revolutOrder.id, 'state:', revolutOrder.state)
+    console.log('[revolut] Response keys:', Object.keys(revolutOrder).join(','))
+
+    // API v2 (2024-09-01) returns "token"; legacy v1 returned "public_id". Use whichever exists.
+    const widgetToken = revolutOrder.public_id || revolutOrder.token
+    if (!widgetToken) {
+      console.error('[revolut] No public_id or token in response:', JSON.stringify(revolutOrder))
+      throw new Error('Revolut nie zwrócił identyfikatora widgetu (public_id/token)')
+    }
 
     const { error: updateError } = await supabase
       .from('orders')
@@ -217,7 +225,7 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         orderId: revolutOrder.id,
-        publicId: revolutOrder.public_id,
+        publicId: widgetToken,
         token: revolutOrder.token,
         checkoutUrl: revolutOrder.checkout_url,
         mode: useSandbox ? 'sandbox' : 'prod',
