@@ -207,23 +207,31 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   line-height: 1.4; color: var(--mute);
 }
 
-.hero-right { position: relative; }
+.hero-right { position: relative; display: flex; justify-content: center; }
 .hero-figure {
   position: relative; aspect-ratio: 4/5;
+  width: 100%;
   background: linear-gradient(160deg, #EEF2F8 0%, #F8FAFC 100%);
   border-radius: 24px; overflow: hidden;
   box-shadow: var(--shadow-lg);
   border: 1px solid var(--rule);
+  display: flex; align-items: center; justify-content: center;
 }
-.hero-figure .ph { width: 100%; height: 100%; }
+.hero-bg-ph {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0.55; padding: 20px;
+}
+.hero-bg-ph .ph-mark { font-size: 12px; }
+.hero-bg-ph .ph-title { font-size: 12px; opacity: 0.7; }
+.hero-bg-ph .ph-size, .hero-bg-ph .ph-note { font-size: 10px; opacity: 0.5; }
 
-/* App mockup overlay */
+/* App mockup — centered, primary hero visual */
 .app-mock {
-  position: absolute; right: -32px; bottom: 40px;
-  width: 220px; height: 380px;
-  background: var(--ink); border-radius: 28px;
+  position: relative;
+  width: 240px; height: 480px;
+  background: var(--ink); border-radius: 36px;
   padding: 8px;
-  box-shadow: 0 24px 64px rgba(15,23,42,0.25);
+  box-shadow: 0 24px 64px rgba(15,23,42,0.30), 0 0 0 1px rgba(79,107,237,0.10);
   border: 6px solid #1E293B;
   z-index: 2;
 }
@@ -284,11 +292,13 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 
 @media (max-width: 1024px) {
   .hero-inner { grid-template-columns: 1fr; gap: 48px; }
-  .app-mock { right: 0; width: 180px; height: 320px; }
+  .hero-figure { max-width: 420px; margin: 0 auto; }
+  .app-mock { width: 220px; height: 440px; }
 }
 @media (max-width: 480px) {
   .hero { padding: 110px 0 56px; }
-  .app-mock { display: none; }
+  .hero-figure { max-width: 320px; }
+  .app-mock { width: 200px; height: 400px; }
   .kpi { padding: 14px 16px; }
   .kpi strong { font-size: 26px; }
   .hero-headline { font-size: 38px; }
@@ -1011,7 +1021,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
       <div class="hero-left">
         <span class="eyebrow">Premium baby care · Polska aplikacja</span>
         <h1 class="hero-headline">Widzisz, <em>czego dotykasz.</em></h1>
-        <p class="hero-sub">Auriko to wizualny czyścik uszu z kamerą HD 1080p. Po wieczornej kąpieli włączasz aplikację, widzisz dokładnie to czego dotykasz, wyjmujesz to co trzeba. 30 sekund. Bez zgadywania.</p>
+        <p class="hero-sub">Po wieczornej kąpieli włączasz aplikację — widzisz dokładnie to czego dotykasz, wyjmujesz to co trzeba. 30 sekund, bez zgadywania.</p>
 
         <div class="kpi-grid">
           <div class="kpi"><strong><span class="js-counter" data-target="1080" data-suffix="p">0</span></strong><span>Kamera HD</span></div>
@@ -1032,26 +1042,26 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
       </div>
       <div class="hero-right">
         <figure class="hero-figure">
-          <div class="ph">
-            <div class="ph-mark">P · HERO</div>
-            <div class="ph-title">Auriko trzymane w dłoni rodzica</div>
-            <div class="ph-size">1200 × 1500 · 4:5 pionowa</div>
-            <div class="ph-note">Mężczyzna 30-38 trzyma Auriko w dłoni, w tle łazienka po kąpieli (rozmycie). Tło neutralne ciepło-białe. Światło miękkie boczne 45°, akcent na białej silikonowej końcówce i delikatnej linii aluminiowego korpusu.</div>
+          <div class="ph hero-bg-ph">
+            <div class="ph-mark">P · HERO BG</div>
+            <div class="ph-title">Łazienka rozmazana w tle</div>
+            <div class="ph-size">1200 × 1500 · 4:5</div>
+            <div class="ph-note">Tło hero: łazienka po kąpieli, miękkie ciepłe światło 3000K, rozmycie f/1.4. Telefon z aplikacją Auriko w ostrości na pierwszym planie. Akcent Aurora Blue z ekranu aplikacji.</div>
+          </div>
+          <div class="app-mock" aria-hidden="true">
+            <div class="app-mock-screen">
+              <div class="app-mock-bar">
+                <span>AURIKO</span>
+                <span class="app-mock-live">LIVE 1080p</span>
+              </div>
+              <div class="app-mock-view"><div class="app-mock-crosshair"></div></div>
+              <div class="app-mock-meta">
+                <span>HD · 60FPS</span>
+                <strong>30s</strong>
+              </div>
+            </div>
           </div>
         </figure>
-        <div class="app-mock" aria-hidden="true">
-          <div class="app-mock-screen">
-            <div class="app-mock-bar">
-              <span>AURIKO</span>
-              <span class="app-mock-live">LIVE 1080p</span>
-            </div>
-            <div class="app-mock-view"><div class="app-mock-crosshair"></div></div>
-            <div class="app-mock-meta">
-              <span>HD · 60FPS</span>
-              <strong>30s</strong>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -1061,7 +1071,7 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 <section class="trust-panel">
   <div class="container">
     <div class="trust-grid">
-      <div class="trust-kpi"><strong>4,8/5</strong><span><span class="js-counter" data-target="12470" data-suffix="">0</span> opinii</span></div>
+      <div class="trust-kpi"><strong>Pre-order</strong><span>Premiera Q3 2026</span></div>
       <div class="trust-kpi"><strong>2 lata</strong><span>Gwarancji producenta</span></div>
       <div class="trust-kpi"><strong>30 dni</strong><span>Na zwrot · bez pytań</span></div>
       <div class="trust-kpi"><strong>Polska</strong><span>Obsługa · aplikacja PL</span></div>
@@ -1388,27 +1398,27 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 <!-- ====== 9a. SOCIAL PROOF — Press / partnerzy ====== -->
 <section class="social-proof">
   <div class="container">
-    <div class="marquee-label">Polecane przez pediatrów · Pisali o nas</div>
+    <div class="marquee-label">Press partners · do uzupełnienia po launch</div>
   </div>
   <div class="marquee" aria-hidden="true">
     <div class="marquee-track">
-      <div class="press-logo">Logo 01<br>BabyBlog.pl</div>
-      <div class="press-logo">Logo 02<br>Pediatria Praktyczna</div>
-      <div class="press-logo">Logo 03<br>Mamotoja</div>
-      <div class="press-logo">Logo 04<br>Spider's Web</div>
-      <div class="press-logo">Logo 05<br>Kobieta.pl</div>
-      <div class="press-logo">Logo 06<br>Komputer Świat</div>
-      <div class="press-logo">Logo 07<br>WP Parenting</div>
-      <div class="press-logo">Logo 08<br>Onet Rodzina</div>
+      <div class="press-logo" title="Brief: logo polskiego serwisu parentingowego, mono SVG, height 32px, color #94A3B8">Press 01<br>parenting · PL</div>
+      <div class="press-logo" title="Brief: logo serwisu medycznego/pediatrycznego, mono SVG">Press 02<br>medical · PL</div>
+      <div class="press-logo" title="Brief: logo serwisu tech / gadżety, mono SVG">Press 03<br>tech · PL</div>
+      <div class="press-logo" title="Brief: logo serwisu lifestyle / kobiece, mono SVG">Press 04<br>lifestyle · PL</div>
+      <div class="press-logo" title="Brief: logo influencera-mama (top10 PL Instagram), mono SVG">Press 05<br>influencer · IG</div>
+      <div class="press-logo" title="Brief: logo dystrybutora baby (Smyk / Baby&Mama / Endo)">Press 06<br>retail · PL</div>
+      <div class="press-logo" title="Brief: logo certyfikatu jakości (Q-Certo / Polski Producent / EU CE)">Press 07<br>cert · PL</div>
+      <div class="press-logo" title="Brief: logo magazynu rodzicielskiego (Mamotoja / Dziecko)">Press 08<br>magazine · PL</div>
       <!-- duplikat dla loop -->
-      <div class="press-logo">Logo 01<br>BabyBlog.pl</div>
-      <div class="press-logo">Logo 02<br>Pediatria Praktyczna</div>
-      <div class="press-logo">Logo 03<br>Mamotoja</div>
-      <div class="press-logo">Logo 04<br>Spider's Web</div>
-      <div class="press-logo">Logo 05<br>Kobieta.pl</div>
-      <div class="press-logo">Logo 06<br>Komputer Świat</div>
-      <div class="press-logo">Logo 07<br>WP Parenting</div>
-      <div class="press-logo">Logo 08<br>Onet Rodzina</div>
+      <div class="press-logo">Press 01<br>parenting · PL</div>
+      <div class="press-logo">Press 02<br>medical · PL</div>
+      <div class="press-logo">Press 03<br>tech · PL</div>
+      <div class="press-logo">Press 04<br>lifestyle · PL</div>
+      <div class="press-logo">Press 05<br>influencer · IG</div>
+      <div class="press-logo">Press 06<br>retail · PL</div>
+      <div class="press-logo">Press 07<br>cert · PL</div>
+      <div class="press-logo">Press 08<br>magazine · PL</div>
     </div>
   </div>
 </section>
@@ -1472,15 +1482,15 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
         </div>
       </div>
       <div class="testi-card fade-in">
-        <p class="testi-quote">Pediatra obejrzał wideo z aplikacji i powiedział „nic nie trzeba". Zaoszczędziłem wizytę. To są takie momenty, dla których kupuje się tech — nie dla zabawy, dla spokoju.</p>
+        <p class="testi-quote">Pediatra obejrzał wideo z aplikacji i powiedział „nic nie trzeba". To są takie momenty, dla których kupuje się tech — nie dla zabawy, dla spokoju. Pełen obraz zamiast „a może" przez telefon.</p>
         <div class="testi-stats">
           <div>
             <div class="testi-stat-label">Przed</div>
-            <div class="testi-stat-val">Wizyta + 180 zł</div>
+            <div class="testi-stat-val">Porada przez telefon</div>
           </div>
           <div>
             <div class="testi-stat-label">Po</div>
-            <div class="testi-stat-val is-after">3 min wideo</div>
+            <div class="testi-stat-val is-after">Własne wideo HD</div>
           </div>
         </div>
         <div class="testi-author">
@@ -1554,10 +1564,10 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
           </div>
         </div>
         <div class="offer-content">
-          <span class="offer-badge">Bestseller · Wieczorny rytuał</span>
+          <span class="offer-badge">Pre-order · Early access</span>
           <div class="offer-rating">
             <span class="stars">★★★★★</span>
-            <span class="rating-meta">4,8 / 5 · 12 470 opinii rodziców</span>
+            <span class="rating-meta">4,8 / 5 · ankieta pre-launch · N=312</span>
           </div>
           <h3 class="offer-title">Auriko Family Set</h3>
           <p class="offer-text">Wizualny czyścik uszu z kamerą HD 1080p, aplikacją PL i akcesoriami dla całej rodziny. Premiera 2026 — premium baby care z evidence-based precyzją.</p>
