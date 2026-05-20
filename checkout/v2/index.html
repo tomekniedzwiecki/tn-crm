@@ -681,6 +681,21 @@
         .v-method-icon img { width: 70%; height: 70%; object-fit: contain; }
         .v-method-icon.blik { background: white; border: 1px solid var(--border-subtle); padding: 4px; }
         .v-method-icon.card-wallet { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: white; }
+
+        /* Method icon cluster — gdy ikona to grupa logo (Karta lub portfel) */
+        .v-method-icon-cluster {
+            width: 56px;
+            height: 36px;
+            background: white;
+            border: 1px solid var(--border-default);
+            border-radius: var(--r-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            flex-shrink: 0;
+            padding: 4px 6px;
+        }
         .v-method-icon.transfer { background: linear-gradient(135deg, var(--accent), var(--accent-hover)); color: white; }
         .v-method-icon.revolut { background: #0075EB; color: white; }
         .v-method-icon.installments { background: linear-gradient(135deg, #f59e0b, #d97706); color: white; }
@@ -824,6 +839,8 @@
         .v-wallet-btn .icon { font-size: 22px; }
         .v-wallet-btn .label { font-size: 12px; font-weight: 600; color: var(--text-primary); }
         .v-wallet-btn .sublabel { font-size: 10px; color: var(--text-tertiary); }
+        .v-wallet-btn .wallet-logos { display: flex; align-items: center; gap: 6px; height: 22px; }
+        .v-wallet-btn .wallet-logo-single { display: flex; align-items: center; justify-content: center; height: 22px; }
 
         /* Info hint inside method body */
         .v-method-hint {
@@ -1452,8 +1469,13 @@
                         <div class="v-method" data-method-row="wallet">
                             <div class="v-method-header" data-method-toggle="wallet">
                                 <div class="v-method-radio"></div>
-                                <div class="v-method-icon card-wallet">
-                                    <i class="ph-fill ph-credit-card"></i>
+                                <div class="v-method-icon-cluster">
+                                    <img src="https://cdn.simpleicons.org/visa/1A1F71" alt="Visa" style="height:10px">
+                                    <svg viewBox="0 0 32 20" style="height:12px">
+                                        <circle cx="12" cy="10" r="7" fill="#EB001B"/>
+                                        <circle cx="20" cy="10" r="7" fill="#F79E1B"/>
+                                        <path d="M16 4.6a7 7 0 0 0-2.7 5.4 7 7 0 0 0 2.7 5.4 7 7 0 0 0 2.7-5.4A7 7 0 0 0 16 4.6z" fill="#FF5F00"/>
+                                    </svg>
                                 </div>
                                 <div class="v-method-label">
                                     <div class="v-method-name">Karta lub portfel</div>
@@ -1464,17 +1486,28 @@
                                 <div class="v-method-body-inner">
                                     <div class="v-wallet-grid">
                                         <button type="button" class="v-wallet-btn selected" data-wallet="rev_card">
-                                            <span class="icon"><i class="ph ph-credit-card"></i></span>
+                                            <span class="wallet-logos">
+                                                <img src="https://cdn.simpleicons.org/visa/1A1F71" alt="Visa" style="height:11px">
+                                                <svg viewBox="0 0 32 20" style="height:14px">
+                                                    <circle cx="12" cy="10" r="7" fill="#EB001B"/>
+                                                    <circle cx="20" cy="10" r="7" fill="#F79E1B"/>
+                                                    <path d="M16 4.6a7 7 0 0 0-2.7 5.4 7 7 0 0 0 2.7 5.4 7 7 0 0 0 2.7-5.4A7 7 0 0 0 16 4.6z" fill="#FF5F00"/>
+                                                </svg>
+                                            </span>
                                             <span class="label">Karta</span>
                                             <span class="sublabel">Visa · MC</span>
                                         </button>
                                         <button type="button" class="v-wallet-btn" data-wallet="rev_apple_pay">
-                                            <span class="icon"><i class="ph-fill ph-apple-logo"></i></span>
+                                            <span class="wallet-logo-single">
+                                                <img src="https://cdn.simpleicons.org/applepay/000000" alt="Apple Pay" style="height:22px">
+                                            </span>
                                             <span class="label">Apple Pay</span>
                                             <span class="sublabel">iPhone · Mac</span>
                                         </button>
                                         <button type="button" class="v-wallet-btn" data-wallet="rev_google_pay">
-                                            <span class="icon"><i class="ph-fill ph-google-logo"></i></span>
+                                            <span class="wallet-logo-single">
+                                                <img src="https://cdn.simpleicons.org/googlepay/3C4043" alt="Google Pay" style="height:18px">
+                                            </span>
                                             <span class="label">Google Pay</span>
                                             <span class="sublabel">Android</span>
                                         </button>
@@ -1596,13 +1629,24 @@
                     </div>
                 </form>
 
-                <!-- Trust strip -->
+                <!-- Trust strip — oficjalne logo płatności -->
                 <div class="v-trust-strip">
-                    <span title="BLIK"><img src="https://secure.tpay.com/tpayPay/SampleData/web/img/types/blik.svg" alt="BLIK" style="height:16px;background:white;padding:2px 4px;border-radius:3px;border:1px solid var(--border-subtle)"></span>
-                    <span>Visa</span>
-                    <span>Mastercard</span>
-                    <span><i class="ph-fill ph-apple-logo"></i>Pay</span>
-                    <span><i class="ph-fill ph-google-logo"></i>Pay</span>
+                    <img src="https://secure.tpay.com/tpayPay/SampleData/web/img/types/blik.svg" alt="BLIK" title="BLIK" class="v-brand-logo" style="height:18px">
+                    <img src="https://cdn.simpleicons.org/visa/1A1F71" alt="Visa" title="Visa" class="v-brand-logo" style="height:14px">
+                    <!-- Mastercard inline SVG: dwa overlapping kółka -->
+                    <svg viewBox="0 0 32 20" alt="Mastercard" title="Mastercard" class="v-brand-logo" style="height:18px">
+                        <circle cx="12" cy="10" r="7" fill="#EB001B"/>
+                        <circle cx="20" cy="10" r="7" fill="#F79E1B"/>
+                        <path d="M16 4.6a7 7 0 0 0-2.7 5.4 7 7 0 0 0 2.7 5.4 7 7 0 0 0 2.7-5.4A7 7 0 0 0 16 4.6z" fill="#FF5F00"/>
+                    </svg>
+                    <!-- Maestro inline SVG -->
+                    <svg viewBox="0 0 32 20" alt="Maestro" title="Maestro" class="v-brand-logo" style="height:18px">
+                        <circle cx="12" cy="10" r="7" fill="#0099DF"/>
+                        <circle cx="20" cy="10" r="7" fill="#ED0006"/>
+                        <path d="M16 4.6a7 7 0 0 0-2.7 5.4 7 7 0 0 0 2.7 5.4 7 7 0 0 0 2.7-5.4A7 7 0 0 0 16 4.6z" fill="#6C6BBD"/>
+                    </svg>
+                    <img src="https://cdn.simpleicons.org/applepay/000000" alt="Apple Pay" title="Apple Pay" class="v-brand-logo" style="height:18px">
+                    <img src="https://cdn.simpleicons.org/googlepay/3C4043" alt="Google Pay" title="Google Pay" class="v-brand-logo" style="height:16px">
                     <div class="v-divider"></div>
                     <span><i class="ph ph-shield-check"></i>256-bit SSL</span>
                     <span><i class="ph ph-arrow-counter-clockwise"></i>Zwrot 14 dni</span>
