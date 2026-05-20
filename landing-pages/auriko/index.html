@@ -89,12 +89,31 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   cursor: pointer; border: 1px solid transparent;
   transition: all 0.25s ease;
   white-space: nowrap;
+  position: relative; overflow: hidden;
 }
 .btn-primary { background: var(--ink); color: var(--paper); }
 .btn-primary:hover { background: var(--primary); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(79,107,237,0.30); }
+/* Effect 1: Shimmer overlay (diagonal light sweep co 3s) */
+.btn-primary::after {
+  content: ''; position: absolute; top: 0; left: -100%;
+  width: 60%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+  animation: btn-shimmer 3.5s infinite;
+  pointer-events: none;
+}
+@keyframes btn-shimmer { 0% { left: -100%; } 60%, 100% { left: 200%; } }
 .btn-ghost { background: transparent; color: var(--ink); border-color: var(--rule); }
 .btn-ghost:hover { background: var(--paper-3); border-color: var(--ink); }
 .btn-block { display: flex; width: 100%; padding: 18px 28px; }
+/* Effect 2: Pulse-glow na offer CTA (subtle teal breath) */
+.offer-content .btn-block {
+  animation: cta-pulse-glow 2.6s ease-in-out infinite;
+}
+@keyframes cta-pulse-glow {
+  0%, 100% { box-shadow: 0 2px 8px rgba(15,23,42,0.10); }
+  50% { box-shadow: 0 6px 24px rgba(79,107,237,0.32); }
+}
+.offer-content .btn-block:hover { animation: none; box-shadow: 0 8px 30px rgba(79,107,237,0.40); }
 
 /* ====== 1. HEADER ====== */
 .header {
@@ -162,6 +181,13 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   background: radial-gradient(circle, rgba(79,107,237,0.07) 0%, transparent 65%);
   pointer-events: none; z-index: 0;
 }
+/* Effect 4: Subtle grain noise overlay (lab/medical paper feel) */
+.hero::after {
+  content: ''; position: absolute; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.6 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.025; pointer-events: none; z-index: 0;
+  mix-blend-mode: multiply;
+}
 .hero-bg-animation { position: absolute; top: 40%; right: 14%; transform: translateY(-50%); width: 520px; height: 520px; pointer-events: none; z-index: 0; }
 .aperture-ring { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); border-radius: 50%; border: 1px solid rgba(79,107,237,0.12); animation: aperture-pulse 4.5s ease-out infinite; }
 .aperture-ring-1 { width: 220px; height: 220px; }
@@ -191,9 +217,9 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   border: 1px solid var(--rule);
   border-radius: var(--r-md);
   padding: 18px 20px;
-  transition: border-color 0.25s, transform 0.25s;
+  transition: border-color 0.35s ease, transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease;
 }
-.kpi:hover { border-color: var(--primary); transform: translateY(-2px); }
+.kpi:hover { border-color: var(--primary); transform: translateY(-3px); box-shadow: 0 8px 20px rgba(79,107,237,0.10); }
 .kpi strong {
   display: block; font-family: var(--display);
   font-size: 32px; font-weight: 600;
@@ -264,6 +290,11 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   background:
     radial-gradient(circle at 50% 55%, #FFB29D 0%, #E89077 40%, #5C2A1E 80%);
   position: relative; overflow: hidden;
+  animation: signal-flicker 5s ease-in-out infinite;
+}
+@keyframes signal-flicker {
+  0%, 88%, 100% { filter: brightness(1) contrast(1); }
+  92%, 95% { filter: brightness(1.12) contrast(1.05); }
 }
 .app-mock-view::after {
   content: ''; position: absolute; inset: 0;
@@ -276,6 +307,11 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.2);
   z-index: 3;
+  animation: crosshair-pulse 3.4s ease-in-out infinite;
+}
+@keyframes crosshair-pulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255,255,255,0.2), 0 0 0 0 rgba(79,107,237,0); }
+  50% { box-shadow: 0 0 0 1px rgba(255,255,255,0.3), 0 0 0 6px rgba(79,107,237,0.18); }
 }
 .app-mock-crosshair::before, .app-mock-crosshair::after {
   content: ''; position: absolute; background: rgba(79,107,237,0.9);
@@ -319,10 +355,13 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
 }
 .trust-kpi {
-  padding: 0 24px;
+  padding: 16px 24px;
   border-right: 1px solid var(--rule);
   text-align: left;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  border-radius: var(--r-sm);
 }
+.trust-kpi:hover { transform: translateY(-2px); background: rgba(79,107,237,0.03); }
 .trust-kpi:last-child { border-right: 0; }
 .trust-kpi strong {
   display: block; font-family: var(--display);
@@ -397,11 +436,20 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   border: 1px solid var(--rule);
   border-radius: var(--r-lg);
   padding: 32px;
-  transition: transform 0.4s cubic-bezier(.2,.7,.2,1), box-shadow 0.4s;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, border-color 0.3s ease;
   transform-style: preserve-3d;
   overflow: hidden;
 }
 .bento-card:hover { box-shadow: var(--shadow-lg); border-color: var(--primary-soft); }
+/* Effect 5: Cursor-follow spotlight (radial gradient pod kursorem) */
+.bento-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(79,107,237,0.08), transparent 50%);
+  opacity: 0; transition: opacity 0.4s ease;
+  pointer-events: none; z-index: 0;
+}
+.bento-card:hover::before { opacity: 1; }
+.bento-card > * { position: relative; z-index: 1; }
 .bento-image {
   aspect-ratio: 16/10;
   background: linear-gradient(160deg, #EEF2F8 0%, #F8FAFC 100%);
@@ -479,7 +527,9 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   padding: 0;
   overflow: hidden;
   display: flex; flex-direction: column;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, border-color 0.3s ease;
 }
+.persona-card:hover { transform: translateY(-4px); border-color: var(--primary); box-shadow: 0 16px 40px rgba(79,107,237,0.10); }
 .persona-figure {
   aspect-ratio: 4/5;
   background: linear-gradient(160deg, #EEF2F8 0%, #F8FAFC 100%);
@@ -649,7 +699,9 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
   border-radius: var(--r-lg);
   padding: 28px;
   display: flex; flex-direction: column;
+  transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.4s ease, border-color 0.3s ease;
 }
+.testi-card:hover { transform: translateY(-3px); border-color: var(--primary-soft); box-shadow: 0 16px 36px rgba(79,107,237,0.08); }
 .testi-quote {
   font-size: 16px; line-height: 1.7;
   color: var(--ink); margin: 0 0 24px;
@@ -967,6 +1019,15 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 .ph-size { font-family: var(--mono); font-size: 11px; opacity: 0.7; letter-spacing: 0.08em; text-transform: uppercase; line-height: 1.4; }
 .ph-note { font-size: 12px; opacity: 0.8; max-width: 320px; line-height: 1.5; }
 
+/* Effect 7: Scroll progress bar (top thin line) */
+.scroll-progress {
+  position: fixed; top: 0; left: 0;
+  height: 2px; width: 0%;
+  background: linear-gradient(90deg, var(--primary), var(--coral));
+  z-index: 200; pointer-events: none;
+  transition: width 0.08s linear;
+}
+
 /* Polish diacritics in UPPERCASE — line-height 1.4 (safety #7) */
 .eyebrow, .nav-link, .header-cta, .mobile-link, .btn,
 .kpi span, .trust-kpi span, .bento-meta,
@@ -978,6 +1039,9 @@ html.js .fade-in.visible { opacity: 1; transform: translateY(0); }
 </style>
 </head>
 <body>
+
+<!-- Effect 7: Scroll progress bar -->
+<div class="scroll-progress" id="scrollProgress" aria-hidden="true"></div>
 
 <!-- ====== 1. HEADER ====== -->
 <header class="header">
@@ -1703,18 +1767,23 @@ if (hamburger) {
   });
 }
 
-// Fade-in safe (safety #2)
+// Fade-in safe (safety #2) — agresywny IO + safety fallback po 3s
 if ('IntersectionObserver' in window) {
   const io = new IntersectionObserver((es) => es.forEach(e => {
     if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
-  }), { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+  }), { threshold: 0, rootMargin: '0px 0px 120px 0px' });
   document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+  // Safety: po 3s pokaż wszystkie elementy w viewport lub powyżej (już-przewinięte)
   setTimeout(() => {
     document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
       const rect = el.getBoundingClientRect();
-      if (rect.top < window.innerHeight) el.classList.add('visible');
+      if (rect.top < window.innerHeight + 200) el.classList.add('visible');
     });
-  }, 3000);
+  }, 2500);
+  // Druga warstwa safety dla Playwright/screenshot/print — po 5s wszystkie
+  setTimeout(() => {
+    document.querySelectorAll('.fade-in:not(.visible)').forEach(el => el.classList.add('visible'));
+  }, 5000);
 } else {
   document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
 }
@@ -1735,10 +1804,53 @@ function animateCounter(el) {
   }
   requestAnimationFrame(tick);
 }
+// Effect 6: KPI grid counters — staggered boot sequence (120ms apart)
+const heroKpiGrid = document.querySelector('.hero .kpi-grid');
+const heroKpiCounters = heroKpiGrid ? Array.from(heroKpiGrid.querySelectorAll('.js-counter')) : [];
 const counterIO = new IntersectionObserver((es) => es.forEach(e => {
   if (e.isIntersecting) { animateCounter(e.target); counterIO.unobserve(e.target); }
 }), { threshold: 0.4 });
-document.querySelectorAll('.js-counter').forEach(el => counterIO.observe(el));
+document.querySelectorAll('.js-counter').forEach(el => {
+  if (!heroKpiCounters.includes(el)) counterIO.observe(el);
+});
+if (heroKpiGrid && heroKpiCounters.length) {
+  const kpiGridIO = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        heroKpiCounters.forEach((c, i) => setTimeout(() => animateCounter(c), i * 140));
+        kpiGridIO.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  kpiGridIO.observe(heroKpiGrid);
+}
+
+// Effect 5: Bento cursor-follow spotlight (sets --mx/--my CSS vars)
+document.querySelectorAll('.bento-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty('--mx', (e.clientX - rect.left) + 'px');
+    card.style.setProperty('--my', (e.clientY - rect.top) + 'px');
+  });
+});
+
+// Effect 7: Scroll progress bar
+const scrollProgress = document.getElementById('scrollProgress');
+if (scrollProgress) {
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => {
+        const h = document.documentElement;
+        const max = h.scrollHeight - h.clientHeight;
+        const pct = max > 0 ? (h.scrollTop / max) * 100 : 0;
+        scrollProgress.style.width = pct + '%';
+        ticking = false;
+      });
+      ticking = true;
+    }
+  }, { passive: true });
+}
 
 // Tile 3D Tilt (.js-tilt) — subtle rotateX/Y max 4°
 if (window.matchMedia('(hover: hover)').matches) {
