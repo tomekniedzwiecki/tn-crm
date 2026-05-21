@@ -295,11 +295,6 @@
                                 <i class="ph ph-wallet"></i> Budżet
                                 <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-emerald-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
                             </button>
-                            <button onclick="toggleStatusStage('fb_page')" data-stage="fb_page"
-                                class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
-                                <i class="ph ph-facebook-logo"></i> Strona FB
-                                <span class="stage-count hidden absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] bg-blue-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1"></span>
-                            </button>
                             <button onclick="toggleStatusStage('pixel')" data-stage="pixel"
                                 class="status-stage-btn group relative text-xs px-3 py-1.5 rounded-lg border font-medium transition-all cursor-pointer text-zinc-500 border-zinc-700/50 hover:text-white hover:border-zinc-600 hover:bg-zinc-800/50 flex items-center gap-1.5">
                                 <i class="ph ph-broadcast"></i> Pixel
@@ -1019,7 +1014,7 @@
                 contract: 0, product: 0, report: 0, branding: 0, salespage: 0,
                 scenario: 0, profile: 0, nagrania: 0,
                 takedrop: 0, landing: 0, legal_data: 0, legal: 0, payment_gateway: 0, test: 0,
-                ad_account: 0, budget: 0, fb_page: 0, pixel: 0, campaign: 0, ads_report: 0,
+                ad_account: 0, budget: 0, pixel: 0, campaign: 0, ads_report: 0,
                 optymalizacje: 0, opinie: 0, video: 0, narzedzia: 0
             };
 
@@ -1133,11 +1128,10 @@
                 return hasLegalData; // true = admin generuje dokumenty, false = klient wypełnia formularz
             }
 
-            // Etap 4: ad_account i budget = klient; fb_page, pixel i campaign = admin
+            // Etap 4: ad_account i budget = klient; pixel i campaign = admin
             if (nextStep === 'ad_account') return false; // klient dodaje partnera
             if (nextStep === 'budget') return false; // klient doładowuje budżet
-            if (nextStep === 'fb_page') return true; // admin przypisuje Page do ad accounta
-            if (nextStep === 'pixel') return true; // admin konfiguruje Meta Pixel
+            if (nextStep === 'pixel') return true; // admin konfiguruje pixel (ID + strona FB + TakeDrop + landing)
             if (nextStep === 'campaign') return true; // admin uruchamia kampanię
 
             if (adminTasks.includes(nextStep)) return true;
@@ -1187,10 +1181,8 @@
                     return !!(w.ads_stage?.partner_access_granted && w.ads_stage?.fanpage_access_granted && w.ads_stage?.instagram_access_granted && w.ads_stage?.phone_verified);
                 case 'budget':
                     return !!w.ads_stage?.budget_funded;
-                case 'fb_page':
-                    return !!w.ads_stage?.page_assigned;
                 case 'pixel':
-                    return !!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added);
+                    return !!(w.ads_stage?.pixel_configured && w.ads_stage?.page_assigned && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added);
                 case 'campaign':
                     return !!w.ads_stage?.campaign_launched;
                 default:
@@ -1267,11 +1259,8 @@
                 // Content — materiały reklamowe (pipeline generuje automatycznie, admin udostępnia)
                 if (!w.ads_stage?.content_shared_with_client) return 'content';
 
-                // Strona FB — przypisanie Page klienta do konta reklamowego (Business Settings)
-                if (!w.ads_stage?.page_assigned) return 'fb_page';
-
-                // Pixel — ID skonfigurowany + wpisany w TakeDrop + kod fbq() w landingu
-                if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
+                // Pixel — 4 etapy: ID + strona FB w BS + TakeDrop + kod fbq() w landingu
+                if (!(w.ads_stage?.pixel_configured && w.ads_stage?.page_assigned && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
 
                 // Kampania uruchomiona
                 if (!w.ads_stage?.campaign_launched) return 'campaign';
@@ -1344,8 +1333,7 @@
                         return 'ad_account';
                     }
                     if (!w.ads_stage?.budget_funded) return 'budget';
-                    if (!w.ads_stage?.page_assigned) return 'fb_page';
-                    if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
+                    if (!(w.ads_stage?.pixel_configured && w.ads_stage?.page_assigned && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
                     if (!w.ads_stage?.campaign_launched) return 'campaign';
                     return 'ads_report';
                 }
@@ -1930,27 +1918,24 @@
                         icon = 'ph ph-magic-wand text-violet-400';
                         isClientTask = false;
                     }
-                } else if (nextStep === 'fb_page') {
-                    stepName = 'Strona FB';
-                    status = 'Przypisz Page do konta reklamowego';
-                    icon = 'ph ph-facebook-logo text-blue-400';
-                    isClientTask = false;
                 } else if (nextStep === 'pixel') {
                     stepName = 'Pixel Meta';
                     const pxId = w.ads_stage?.pixel_configured;
+                    const pxPage = w.ads_stage?.page_assigned;
                     const pxTd = w.ads_stage?.pixel_takedrop_added;
                     const pxLd = w.ads_stage?.pixel_landing_code_added;
+                    const missing = [];
+                    if (!pxPage) missing.push('strona FB');
+                    if (!pxTd) missing.push('TakeDrop');
+                    if (!pxLd) missing.push('landing');
                     if (!pxId) {
                         status = 'Wpisz ID pixela';
                         icon = 'ph ph-broadcast text-fuchsia-400';
-                    } else if (!pxTd && !pxLd) {
-                        status = 'Dodaj do TakeDrop i landinga';
-                        icon = 'ph ph-broadcast text-amber-400';
-                    } else if (!pxTd) {
-                        status = 'Dodaj do TakeDrop';
-                        icon = 'ph ph-broadcast text-amber-400';
+                    } else if (missing.length === 0) {
+                        status = 'Gotowe';
+                        icon = 'ph ph-broadcast text-emerald-400';
                     } else {
-                        status = 'Wgraj fbq() do landinga';
+                        status = 'Dokończ: ' + missing.join(' + ');
                         icon = 'ph ph-broadcast text-amber-400';
                     }
                     isClientTask = false;
