@@ -42,7 +42,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     reklamy: {
         label: 'Etap 4 - Reklamy',
         description: 'Maile związane z kampaniami reklamowymi',
-        templates: ['ads_activated', 'content_ready', 'campaign_launched', 'ad_report']
+        templates: ['ads_activated', 'content_ready', 'campaign_launched', 'budget_not_funded', 'ad_report']
     },
     optymalizacja: {
         label: 'Etap 5 - Optymalizacja',
@@ -191,6 +191,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         icon: 'ph-rocket-launch',
         color: 'rose'
     },
+    'budget_not_funded': {
+        name: 'Konto nie zostało doładowane',
+        description: 'Wysyłany gdy admin oznaczy, że klient mimo kliknięcia w panelu nie doładował faktycznie konta reklamowego',
+        icon: 'ph-warning-circle',
+        color: 'amber'
+    },
     'ad_report': {
         name: 'Raport reklamowy',
         description: 'Automatyczny raport z wynikami kampanii (co 7 dni)',
@@ -307,6 +313,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
         { value: 'content_ready', label: 'Materiały reklamowe gotowe' },
         { value: 'campaign_launched', label: 'Kampania uruchomiona' },
+        { value: 'budget_not_funded', label: 'Konto nie zostało doładowane' },
         { value: 'optimization_started', label: 'Etap 5 — Optymalizacja' },
         { value: 'reviews_shared', label: 'Opinie dodane do sklepu' },
         { value: 'videos_shared', label: 'Reels (video) udostępnione' },
@@ -351,6 +358,7 @@ const TRIGGER_DEFINITIONS = {
     ads_activated: { label: 'Konfiguracja konta reklamowego', icon: 'ph-megaphone-simple', color: 'rose' },
     content_ready: { label: 'Materiały reklamowe gotowe', icon: 'ph-magic-wand', color: 'violet' },
     campaign_launched: { label: 'Kampania uruchomiona', icon: 'ph-rocket-launch', color: 'rose' },
+    budget_not_funded: { label: 'Konto nie zostało doładowane', icon: 'ph-warning-circle', color: 'amber' },
     // Etap 5 - Optymalizacja
     optimization_started: { label: 'Etap 5 — Optymalizacja', icon: 'ph-sparkle', color: 'violet' },
     reviews_shared: { label: 'Opinie dodane do sklepu', icon: 'ph-star', color: 'yellow' },

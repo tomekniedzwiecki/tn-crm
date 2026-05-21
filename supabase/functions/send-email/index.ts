@@ -52,6 +52,7 @@ const VALID_EMAIL_TYPES = [
   'ads_completed',
   'content_ready',
   'campaign_launched',
+  'budget_not_funded',
   'ad_report',
   // Etap 5 - Optymalizacja
   'optimization_started',
@@ -95,6 +96,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   ads_completed: 'Budżet doładowany — zaczynamy kampanię!',
   content_ready: 'Twoje reklamy są gotowe — zobacz materiały!',
   campaign_launched: '🚀 Kampania {{brandName}} została uruchomiona!',
+  budget_not_funded: 'Konto reklamowe wciąż nie zostało doładowane',
   ad_report: 'Raport z kampanii reklamowej — {{period_from}} - {{period_to}}',
   // Etap 5 - Optymalizacja
   optimization_started: 'Etap 5: Optymalizacja — zwiększamy liczbę zamówień',
