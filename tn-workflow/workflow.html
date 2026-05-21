@@ -11701,21 +11701,37 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 const clientName = workflow?.customer_name || workflow?.client_name || 'Kliencie';
                 const brandName = workflow?.brand_name || workflow?.offer_name || workflow?.name || 'Twój projekt';
                 const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#reklamy`;
+                const clientEmail = workflow?.customer_email;
+                if (!clientEmail) throw new Error('Brak adresu email klienta w workflow');
 
-                await supabaseClient.functions.invoke('automation-trigger', {
+                // Wywolanie send-email w trybie "direct" — pobieramy template z settings
+                // (omijamy automation-trigger bo brak flow w constraint trigger_type)
+                const { data: tplRows, error: tplErr } = await supabaseClient
+                    .from('settings')
+                    .select('key, value')
+                    .in('key', ['email_template_budget_not_funded_subject', 'email_template_budget_not_funded_body']);
+                if (tplErr) throw tplErr;
+                const tpl = {};
+                (tplRows || []).forEach(r => { tpl[r.key] = r.value; });
+                const subjectRaw = tpl['email_template_budget_not_funded_subject'] || 'Konto reklamowe wciąż nie zostało doładowane';
+                const bodyRaw = tpl['email_template_budget_not_funded_body'];
+                if (!bodyRaw) throw new Error('Brak szablonu email_template_budget_not_funded_body w settings');
+
+                const replaceVars = (str) => str
+                    .replace(/\{\{clientName\}\}/g, clientName)
+                    .replace(/\{\{brandName\}\}/g, brandName)
+                    .replace(/\{\{projectUrl\}\}/g, projectUrl);
+
+                const { error: mailErr } = await supabaseClient.functions.invoke('send-email', {
                     body: {
-                        trigger_type: 'budget_not_funded',
-                        entity_type: 'workflow',
-                        entity_id: workflow.id,
-                        context: {
-                            workflowId: workflow.id,
-                            clientName,
-                            brandName,
-                            clientEmail: workflow?.customer_email,
-                            projectUrl
-                        }
+                        to: clientEmail,
+                        subject: replaceVars(subjectRaw),
+                        html: replaceVars(bodyRaw),
+                        no_signature: true,
+                        sender_name: 'Tomek Niedzwiecki'
                     }
                 });
+                if (mailErr) throw mailErr;
 
                 logActivity('budget_not_funded', 'Oznaczono że konto reklamowe nie zostało doładowane — wysłano email do klienta', {
                     workflow_ads_id: adsData.id
