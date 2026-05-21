@@ -1211,12 +1211,14 @@
             // Snapshot count = queue length
             DATA.counts.zadatek = queueCandidates.length;
 
-            // Daily + today: based on first-deposit-date per currently-queued lead,
-            // filtered to current month (sparkline pokazuje przyrosty kolejki w tym mies.)
+            // Daily + today: flow wpłat zadatku w bieżącym miesiącu — niezależnie od aktualnego
+            // statusu leada (won/lost też się liczą — fakt wpłaty zadatku tego dnia jest historyczny)
+            // i niezależnie od tego czy to pierwszy zadatek leada (każda wpłata zadatku to event).
             const daily = DATA.daily.zadatek;
             let todayCount = 0;
-            for (const q of queueCandidates) {
-                const ts = q.deposit_paid_at;
+            for (const o of paidOrdersHistory) {
+                if (!DEPOSIT_REGEX.test(o.description || '')) continue;
+                const ts = o.paid_at;
                 if (!ts) continue;
                 const t = new Date(ts).getTime();
                 if (t < startMs || t >= endMs) continue;
