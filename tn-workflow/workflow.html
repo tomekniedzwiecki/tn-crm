@@ -2810,14 +2810,44 @@
                             </details>
                         </div>
 
-                        <!-- Krok 2: Generator promptu dla Claude Code -->
-                        <div id="pixel-step-prompt" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4 opacity-40 pointer-events-none transition-opacity">
+                        <!-- Krok 2: Pixel w panelu TakeDrop -->
+                        <div id="pixel-step-takedrop" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4 opacity-40 pointer-events-none transition-opacity">
                             <div class="flex items-start gap-3 mb-4">
                                 <div class="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
                                     <span class="text-fuchsia-400 text-[13px] font-semibold">2</span>
                                 </div>
                                 <div class="flex-1">
-                                    <h4 class="text-[14px] text-white font-medium">Dodaj kod fbq() do landingu</h4>
+                                    <h4 class="text-[14px] text-white font-medium">Dodaj pixel do TakeDrop</h4>
+                                    <p class="text-[12px] text-zinc-500 mt-0.5">TakeDrop ma natywne wsparcie — wstrzyknie fbq() na wszystkich stronach + Purchase event na thank-you po zamówieniu</p>
+                                </div>
+                            </div>
+
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3.5 mb-4 text-[12px] text-zinc-400 leading-relaxed">
+                                <div class="text-zinc-300 font-medium mb-1.5">Co zrobić:</div>
+                                <ol class="list-decimal pl-4 space-y-1">
+                                    <li>Zaloguj się do panelu TakeDrop konta klienta (<code id="pixel-takedrop-email" class="text-zinc-300">-</code>)</li>
+                                    <li>Ustawienia → Integracje → Meta Pixel</li>
+                                    <li>Wklej ID pixela: <code id="pixel-takedrop-id" class="text-fuchsia-400 font-mono">-</code></li>
+                                    <li>Zapisz</li>
+                                </ol>
+                            </div>
+
+                            <div class="flex items-center gap-2.5">
+                                <input id="pixel-takedrop-checkbox" type="checkbox" onchange="markTakedropAdded(this.checked)" class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-fuchsia-500 focus:ring-fuchsia-500/30">
+                                <label for="pixel-takedrop-checkbox" class="text-[12px] text-zinc-400 cursor-pointer">
+                                    Pixel wpisany w panelu TakeDrop
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Krok 3: Generator promptu dla Claude Code -->
+                        <div id="pixel-step-prompt" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4 opacity-40 pointer-events-none transition-opacity">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-fuchsia-400 text-[13px] font-semibold">3</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] text-white font-medium">Dodaj kod fbq() do landinga</h4>
                                     <p class="text-[12px] text-zinc-500 mt-0.5">Skopiuj prompt i wklej w Claude Code — automatycznie doda kod do <code id="pixel-landing-file" class="text-zinc-300">landing-pages/[slug]/index.html</code></p>
                                 </div>
                             </div>
@@ -2830,7 +2860,7 @@
                             <div class="mt-4 flex items-center gap-2.5">
                                 <input id="pixel-landing-checkbox" type="checkbox" onchange="markLandingCodeAdded(this.checked)" class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-fuchsia-500 focus:ring-fuchsia-500/30">
                                 <label for="pixel-landing-checkbox" class="text-[12px] text-zinc-400 cursor-pointer">
-                                    Kod fbq() dodany do landingu <span class="text-zinc-600">(zaznacz po przegraniu HTML do TakeDrop)</span>
+                                    Kod fbq() dodany do landinga <span class="text-zinc-600">(po Claude Code i przegraniu Vercel deploy)</span>
                                 </label>
                             </div>
                         </div>
@@ -5963,7 +5993,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, account_active, account_active_at, account_active_confirmed_by, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
@@ -6064,15 +6094,19 @@
                         contentNav.classList.add('hidden');
                     }
                 }
-                // Pixel: zielony gdy pixel_id wpisany I kod fbq() dodany do landingu; żółty gdy tylko pixel_id
+                // Pixel: zielony gdy wszystkie 3 kroki done (ID + TakeDrop + landing), żółty gdy 1-2, ukryty gdy 0
                 const pixelNav = document.getElementById('nav-check-pixel');
                 if (pixelNav) {
-                    if (adsNavStatus?.pixel_configured && adsNavStatus?.pixel_landing_code_added) {
+                    const pxId = !!adsNavStatus?.pixel_configured;
+                    const pxTd = !!adsNavStatus?.pixel_takedrop_added;
+                    const pxLd = !!adsNavStatus?.pixel_landing_code_added;
+                    const pxDoneCount = [pxId, pxTd, pxLd].filter(Boolean).length;
+                    if (pxDoneCount === 3) {
                         pixelNav.classList.remove('hidden');
-                        pixelNav.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400 text-sm" title="Pixel + kod fbq() w landingu"></i>';
-                    } else if (adsNavStatus?.pixel_configured) {
+                        pixelNav.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400 text-sm" title="Pixel + TakeDrop + landing — wszystko gotowe"></i>';
+                    } else if (pxDoneCount > 0) {
                         pixelNav.classList.remove('hidden');
-                        pixelNav.innerHTML = '<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="Pixel zapisany, kod fbq() jeszcze nie wgrany"></i>';
+                        pixelNav.innerHTML = `<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="${pxDoneCount}/3 kroków zrobione"></i>`;
                     } else {
                         pixelNav.classList.add('hidden');
                     }
@@ -11645,9 +11679,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             launchedEl?.classList.add('hidden');
             warningEl?.classList.add('hidden');
 
-            // Gate: pixel musi być w pełni skonfigurowany (id + kod fbq w landingu)
+            // Gate: pixel musi być w pełni skonfigurowany (id + TakeDrop + kod fbq w landingu)
             // zanim odpalimy kampanię z optymalizacją na konwersje.
-            if (!adsData?.campaign_launched && !(adsData?.pixel_configured && adsData?.pixel_landing_code_added)) {
+            const pixelFullyReady = adsData?.pixel_configured && adsData?.pixel_takedrop_added && adsData?.pixel_landing_code_added;
+            if (!adsData?.campaign_launched && !pixelFullyReady) {
                 const tabRoot = document.getElementById('tab-kampania');
                 let gate = document.getElementById('kampania-pixel-gate');
                 if (!gate) {
@@ -11657,7 +11692,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     tabRoot.appendChild(gate);
                 }
                 const missingId = !adsData?.pixel_configured;
-                const missingCode = !adsData?.pixel_landing_code_added;
+                const missingTd = !adsData?.pixel_takedrop_added;
+                const missingLanding = !adsData?.pixel_landing_code_added;
                 gate.innerHTML = `
                     <div class="flex items-start gap-3">
                         <i class="ph ph-warning text-amber-400 text-xl mt-0.5"></i>
@@ -11665,7 +11701,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                             <p class="text-[13px] text-amber-300 font-medium">Brakuje konfiguracji pixela</p>
                             <ul class="text-[12px] text-zinc-400 mt-2 space-y-1 list-disc pl-4">
                                 ${missingId ? '<li>ID pixela Meta nie jest jeszcze zapisane</li>' : ''}
-                                ${missingCode ? '<li>Kod fbq() nie jest jeszcze wgrany do landingu (TakeDrop)</li>' : ''}
+                                ${missingTd ? '<li>Pixel nie jest jeszcze wpisany w panelu TakeDrop</li>' : ''}
+                                ${missingLanding ? '<li>Kod fbq() nie jest jeszcze wgrany do landing page</li>' : ''}
                             </ul>
                             <button onclick="switchTab('pixel')" class="mt-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors inline-flex items-center gap-1.5">
                                 <i class="ph ph-broadcast"></i> Przejdź do kroku Pixel
@@ -14248,6 +14285,8 @@ Zwróć TYLKO JSON.`;
             if (sugg) sugg.textContent = `"${brandName}"`;
             const fileEl = document.getElementById('pixel-landing-file');
             if (fileEl) fileEl.textContent = `landing-pages/${landingSlug}/index.html`;
+            const tdEmailEl = document.getElementById('pixel-takedrop-email');
+            if (tdEmailEl) tdEmailEl.textContent = window._pixelTabCtx?.accountEmail || 'email konta TakeDrop';
 
             renderPixelState();
         }
@@ -14255,21 +14294,30 @@ Zwróć TYLKO JSON.`;
 
         function renderPixelState() {
             const badge = document.getElementById('pixel-status-badge');
-            const step2 = document.getElementById('pixel-step-prompt');
+            const stepTakedrop = document.getElementById('pixel-step-takedrop');
+            const stepPrompt = document.getElementById('pixel-step-prompt');
             const doneBox = document.getElementById('pixel-step-done');
-            const checkbox = document.getElementById('pixel-landing-checkbox');
+            const tdCheckbox = document.getElementById('pixel-takedrop-checkbox');
+            const landingCheckbox = document.getElementById('pixel-landing-checkbox');
+            const tdIdEl = document.getElementById('pixel-takedrop-id');
 
             const hasId = !!adsData?.pixel_configured && !!adsData?.pixel_id;
-            const hasCode = !!adsData?.pixel_landing_code_added;
+            const hasTakedrop = !!adsData?.pixel_takedrop_added;
+            const hasLanding = !!adsData?.pixel_landing_code_added;
+            const allDone = hasId && hasTakedrop && hasLanding;
+            const doneCount = [hasId, hasTakedrop, hasLanding].filter(Boolean).length;
+
+            // Pokaż ID w sekcji TakeDrop (do skopiowania)
+            if (tdIdEl) tdIdEl.textContent = adsData?.pixel_id || '-';
 
             if (badge) {
-                if (hasId && hasCode) {
+                if (allDone) {
                     badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[12px] font-medium">
                         <i class="ph-fill ph-check-circle"></i> Pixel skonfigurowany — możesz przejść do Kampanii
                     </span>`;
                 } else if (hasId) {
                     badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[12px] font-medium">
-                        <i class="ph ph-clock"></i> ID zapisany — wgraj kod fbq() do landingu
+                        <i class="ph ph-clock"></i> ${doneCount}/3 kroków — dokończ TakeDrop i landing
                     </span>`;
                 } else {
                     badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-500/10 border border-zinc-500/30 text-zinc-400 text-[12px] font-medium">
@@ -14278,19 +14326,24 @@ Zwróć TYLKO JSON.`;
                 }
             }
 
-            // Krok 2 (generator promptu) aktywny dopiero gdy ID zapisane
-            if (step2) {
-                step2.classList.toggle('opacity-40', !hasId);
-                step2.classList.toggle('pointer-events-none', !hasId);
+            // Kroki 2 i 3 aktywne dopiero gdy ID (krok 1) zapisany — niezależne między sobą
+            if (stepTakedrop) {
+                stepTakedrop.classList.toggle('opacity-40', !hasId);
+                stepTakedrop.classList.toggle('pointer-events-none', !hasId);
             }
-            if (checkbox) checkbox.checked = hasCode;
+            if (stepPrompt) {
+                stepPrompt.classList.toggle('opacity-40', !hasId);
+                stepPrompt.classList.toggle('pointer-events-none', !hasId);
+            }
+            if (tdCheckbox) tdCheckbox.checked = hasTakedrop;
+            if (landingCheckbox) landingCheckbox.checked = hasLanding;
 
-            // Status końcowy
+            // Status końcowy — gotowy gdy wszystkie 3 done
             if (doneBox) {
-                doneBox.classList.toggle('hidden', !(hasId && hasCode));
-                if (hasId && hasCode) {
+                doneBox.classList.toggle('hidden', !allDone);
+                if (allDone) {
                     const summary = document.getElementById('pixel-done-summary');
-                    if (summary) summary.textContent = `Pixel ${adsData.pixel_id || ''} · kod fbq() w landingu`;
+                    if (summary) summary.textContent = `Pixel ${adsData.pixel_id || ''} · TakeDrop + landing`;
                 }
             }
         }
@@ -14325,6 +14378,27 @@ Zwróć TYLKO JSON.`;
         }
         window.savePixelId = savePixelId;
 
+        async function markTakedropAdded(checked) {
+            try {
+                const nowIso = new Date().toISOString();
+                const patch = checked
+                    ? { pixel_takedrop_added: true, pixel_takedrop_added_at: nowIso }
+                    : { pixel_takedrop_added: false, pixel_takedrop_added_at: null };
+                const { error } = await supabaseClient.from('workflow_ads').update(patch).eq('workflow_id', workflow.id);
+                if (error) throw error;
+                adsData = { ...adsData, ...patch };
+                renderPixelState();
+                showToast(checked ? 'Oznaczone: pixel w TakeDrop' : 'Cofnięto oznaczenie', 'success');
+                try { updateNavChecks(); } catch (_) {}
+            } catch (e) {
+                console.error('markTakedropAdded', e);
+                showToast('Nie udało się zapisać: ' + e.message, 'error');
+                const cb = document.getElementById('pixel-takedrop-checkbox');
+                if (cb) cb.checked = !checked;
+            }
+        }
+        window.markTakedropAdded = markTakedropAdded;
+
         async function markLandingCodeAdded(checked) {
             try {
                 const nowIso = new Date().toISOString();
@@ -14340,7 +14414,6 @@ Zwróć TYLKO JSON.`;
             } catch (e) {
                 console.error('markLandingCodeAdded', e);
                 showToast('Nie udało się zapisać: ' + e.message, 'error');
-                // Cofnij checkbox w UI
                 const cb = document.getElementById('pixel-landing-checkbox');
                 if (cb) cb.checked = !checked;
             }

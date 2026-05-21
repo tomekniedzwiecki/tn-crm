@@ -771,7 +771,7 @@
             const [videoRes, takedropRes, adsRes, optRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, account_active, account_active_at, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_landing_code_added, campaign_launched, report_sent').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes_at').in('workflow_id', workflowIds)
             ]);
 
@@ -1182,7 +1182,7 @@
                 case 'budget':
                     return !!w.ads_stage?.budget_funded;
                 case 'pixel':
-                    return !!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_landing_code_added);
+                    return !!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added);
                 case 'campaign':
                     return !!w.ads_stage?.campaign_launched;
                 default:
@@ -1259,8 +1259,8 @@
                 // Content — materiały reklamowe (pipeline generuje automatycznie, admin udostępnia)
                 if (!w.ads_stage?.content_shared_with_client) return 'content';
 
-                // Pixel — ID skonfigurowany i kod fbq() wgrany do landingu
-                if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
+                // Pixel — ID skonfigurowany + wpisany w TakeDrop + kod fbq() w landingu
+                if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
 
                 // Kampania uruchomiona
                 if (!w.ads_stage?.campaign_launched) return 'campaign';
@@ -1333,7 +1333,7 @@
                         return 'ad_account';
                     }
                     if (!w.ads_stage?.budget_funded) return 'budget';
-                    if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
+                    if (!(w.ads_stage?.pixel_configured && w.ads_stage?.pixel_takedrop_added && w.ads_stage?.pixel_landing_code_added)) return 'pixel';
                     if (!w.ads_stage?.campaign_launched) return 'campaign';
                     return 'ads_report';
                 }
@@ -1920,12 +1920,21 @@
                     }
                 } else if (nextStep === 'pixel') {
                     stepName = 'Pixel Meta';
-                    if (w.ads_stage?.pixel_configured) {
-                        status = 'Wgraj kod fbq() do landingu';
+                    const pxId = w.ads_stage?.pixel_configured;
+                    const pxTd = w.ads_stage?.pixel_takedrop_added;
+                    const pxLd = w.ads_stage?.pixel_landing_code_added;
+                    if (!pxId) {
+                        status = 'Wpisz ID pixela';
+                        icon = 'ph ph-broadcast text-fuchsia-400';
+                    } else if (!pxTd && !pxLd) {
+                        status = 'Dodaj do TakeDrop i landinga';
+                        icon = 'ph ph-broadcast text-amber-400';
+                    } else if (!pxTd) {
+                        status = 'Dodaj do TakeDrop';
                         icon = 'ph ph-broadcast text-amber-400';
                     } else {
-                        status = 'Skonfiguruj pixel';
-                        icon = 'ph ph-broadcast text-fuchsia-400';
+                        status = 'Wgraj fbq() do landinga';
+                        icon = 'ph ph-broadcast text-amber-400';
                     }
                     isClientTask = false;
                 } else if (nextStep === 'campaign') {
