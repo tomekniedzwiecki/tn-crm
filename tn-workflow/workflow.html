@@ -498,6 +498,11 @@
                             Content
                             <span id="nav-check-content" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('fb-page')" data-tab="fb-page" class="workflow-sidebar-btn">
+                            <i class="ph ph-facebook-logo"></i>
+                            Strona FB
+                            <span id="nav-check-fb-page" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                         <button onclick="switchTab('pixel')" data-tab="pixel" class="workflow-sidebar-btn">
                             <i class="ph ph-broadcast"></i>
                             Pixel
@@ -2762,6 +2767,56 @@
                         <img id="lightbox-img" src="" alt="" class="max-w-full max-h-full rounded-xl shadow-2xl">
                         <button onclick="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center" aria-label="Zamknij"><i class="ph ph-x text-xl"></i></button>
                     </div>
+
+                    <!-- TAB: Strona FB (Etap 4) — przypisanie Page klienta do konta reklamowego -->
+                    <div id="tab-fb-page" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-facebook-logo text-blue-400"></i>
+                                    Strona FB w koncie reklamowym
+                                </h3>
+                                <p class="text-zinc-500 text-sm mt-1">Page klienta musi być przypisany do konta reklamowego — bez tego reklamy się nie utworzą</p>
+                            </div>
+                        </div>
+
+                        <div id="fb-page-status-badge" class="mb-5"></div>
+
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                                    <i class="ph ph-link text-blue-400 text-[15px]"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] text-white font-medium">Przypisz Page klienta do konta reklamowego</h4>
+                                    <p class="text-[12px] text-zinc-500 mt-0.5">W Business Settings → Pages → Assign Assets → wybierz konto reklamowe klienta</p>
+                                </div>
+                            </div>
+
+                            <a href="https://business.facebook.com/latest/settings/pages/?business_id=737839566050751" target="_blank" rel="noopener" class="block w-full bg-blue-500 hover:bg-blue-400 text-white py-3 rounded-lg text-[13px] font-medium transition-colors text-center inline-flex items-center justify-center gap-2 mb-4">
+                                <i class="ph ph-arrow-square-out"></i>
+                                Otwórz Business Settings → Pages
+                            </a>
+
+                            <div class="bg-zinc-900/50 border border-white/5 rounded-lg p-3.5 text-[12px] text-zinc-400 leading-relaxed">
+                                <div class="text-zinc-300 font-medium mb-1.5">Co zrobić:</div>
+                                <ol class="list-decimal pl-4 space-y-1">
+                                    <li>Znajdź Page klienta na liście (lub dodaj przez „Add" → „Request access" jeśli go nie ma)</li>
+                                    <li>Kliknij Page → przycisk <code class="text-zinc-300">Assign Assets</code> (prawy panel)</li>
+                                    <li>Wybierz konto reklamowe klienta z listy</li>
+                                    <li>Zaznacz uprawnienia: Create ads / Manage page</li>
+                                    <li>Save</li>
+                                </ol>
+                            </div>
+
+                            <div class="mt-4 flex items-center gap-2.5">
+                                <input id="fb-page-checkbox" type="checkbox" onchange="markPageAssigned(this.checked)" class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-blue-500 focus:ring-blue-500/30">
+                                <label for="fb-page-checkbox" class="text-[12px] text-zinc-400 cursor-pointer">
+                                    Strona przypisana do konta reklamowego
+                                </label>
+                            </div>
+                        </div>
+                    </div><!-- /tab-fb-page -->
 
                     <!-- TAB: Pixel (Etap 4) — konfiguracja Meta Pixel + generator promptu dla Claude Code -->
                     <div id="tab-pixel" class="workflow-panel hidden">
@@ -5993,7 +6048,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, account_active, account_active_at, account_active_confirmed_by, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, page_assigned, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
@@ -6094,6 +6149,8 @@
                         contentNav.classList.add('hidden');
                     }
                 }
+                toggle('nav-check-fb-page', !!adsNavStatus?.page_assigned);
+
                 // Pixel: zielony gdy wszystkie 3 kroki done (ID + TakeDrop + landing), żółty gdy 1-2, ukryty gdy 0
                 const pixelNav = document.getElementById('nav-check-pixel');
                 if (pixelNav) {
@@ -7891,7 +7948,7 @@
             const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
             const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
             const stage3Tabs = ['takedrop', 'landing', 'legal', 'payment-gateway', 'test'];
-            const stage4Tabs = ['ad-account', 'budzet', 'content', 'pixel', 'kampania', 'raport'];
+            const stage4Tabs = ['ad-account', 'budzet', 'content', 'fb-page', 'pixel', 'kampania', 'raport'];
             const stage5Tabs = ['optymalizacje', 'opinie'];
 
             if (stage1Tabs.includes(tabName)) {
@@ -7970,6 +8027,9 @@
                     break;
                 case 'content':
                     loadContentTab();
+                    break;
+                case 'fb-page':
+                    loadFbPageTab();
                     break;
                 case 'pixel':
                     loadPixelTab();
@@ -11679,10 +11739,10 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             launchedEl?.classList.add('hidden');
             warningEl?.classList.add('hidden');
 
-            // Gate: pixel musi być w pełni skonfigurowany (id + TakeDrop + kod fbq w landingu)
-            // zanim odpalimy kampanię z optymalizacją na konwersje.
+            // Gate: Strona FB + pixel (3 flagi) muszą być done zanim odpalimy kampanię.
+            const pageReady = !!adsData?.page_assigned;
             const pixelFullyReady = adsData?.pixel_configured && adsData?.pixel_takedrop_added && adsData?.pixel_landing_code_added;
-            if (!adsData?.campaign_launched && !pixelFullyReady) {
+            if (!adsData?.campaign_launched && !(pageReady && pixelFullyReady)) {
                 const tabRoot = document.getElementById('tab-kampania');
                 let gate = document.getElementById('kampania-pixel-gate');
                 if (!gate) {
@@ -11691,21 +11751,26 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     gate.className = 'bg-amber-500/10 border border-amber-500/30 rounded-xl p-5';
                     tabRoot.appendChild(gate);
                 }
+                const missingPage = !pageReady;
                 const missingId = !adsData?.pixel_configured;
                 const missingTd = !adsData?.pixel_takedrop_added;
                 const missingLanding = !adsData?.pixel_landing_code_added;
+                const jumpTab = missingPage ? 'fb-page' : 'pixel';
+                const jumpIcon = missingPage ? 'ph-facebook-logo' : 'ph-broadcast';
+                const jumpLabel = missingPage ? 'Przejdź do kroku Strona FB' : 'Przejdź do kroku Pixel';
                 gate.innerHTML = `
                     <div class="flex items-start gap-3">
                         <i class="ph ph-warning text-amber-400 text-xl mt-0.5"></i>
                         <div class="flex-1">
-                            <p class="text-[13px] text-amber-300 font-medium">Brakuje konfiguracji pixela</p>
+                            <p class="text-[13px] text-amber-300 font-medium">Brakuje konfiguracji przed uruchomieniem</p>
                             <ul class="text-[12px] text-zinc-400 mt-2 space-y-1 list-disc pl-4">
+                                ${missingPage ? '<li>Strona FB nie jest jeszcze przypisana do konta reklamowego</li>' : ''}
                                 ${missingId ? '<li>ID pixela Meta nie jest jeszcze zapisane</li>' : ''}
                                 ${missingTd ? '<li>Pixel nie jest jeszcze wpisany w panelu TakeDrop</li>' : ''}
                                 ${missingLanding ? '<li>Kod fbq() nie jest jeszcze wgrany do landing page</li>' : ''}
                             </ul>
-                            <button onclick="switchTab('pixel')" class="mt-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors inline-flex items-center gap-1.5">
-                                <i class="ph ph-broadcast"></i> Przejdź do kroku Pixel
+                            <button onclick="switchTab('${jumpTab}')" class="mt-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors inline-flex items-center gap-1.5">
+                                <i class="ph ${jumpIcon}"></i> ${jumpLabel}
                             </button>
                         </div>
                     </div>`;
@@ -14242,6 +14307,59 @@ Zwróć TYLKO JSON.`;
                 }
             }
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // STRONA FB TAB — Etap 4 / krok PRZED Pixelem
+        // ═══════════════════════════════════════════════════════════════════
+        // Przypisanie Page klienta do konta reklamowego w Business Settings.
+        // Bez tego ads_get_ad_account_pages zwraca [] i create_ad pada (każda
+        // reklama wymaga page_id w object_story_spec).
+
+        async function loadFbPageTab() {
+            await ensureAdsData();
+            const checkbox = document.getElementById('fb-page-checkbox');
+            if (checkbox) checkbox.checked = !!adsData?.page_assigned;
+            renderFbPageState();
+        }
+        window.loadFbPageTab = loadFbPageTab;
+
+        function renderFbPageState() {
+            const badge = document.getElementById('fb-page-status-badge');
+            if (!badge) return;
+            if (adsData?.page_assigned) {
+                badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[12px] font-medium">
+                    <i class="ph-fill ph-check-circle"></i> Strona przypisana — możesz przejść dalej
+                </span>`;
+            } else {
+                badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-500/10 border border-zinc-500/30 text-zinc-400 text-[12px] font-medium">
+                    <i class="ph ph-circle-dashed"></i> Strona nie przypisana
+                </span>`;
+            }
+        }
+
+        async function markPageAssigned(checked) {
+            try {
+                const nowIso = new Date().toISOString();
+                const patch = checked
+                    ? { page_assigned: true, page_assigned_at: nowIso }
+                    : { page_assigned: false, page_assigned_at: null };
+                const { error } = await supabaseClient.from('workflow_ads').update(patch).eq('workflow_id', workflow.id);
+                if (error) throw error;
+                adsData = { ...adsData, ...patch };
+                renderFbPageState();
+                showToast(checked ? 'Oznaczone: strona przypisana' : 'Cofnięto oznaczenie', 'success');
+                try { updateNavChecks(); } catch (_) {}
+            } catch (e) {
+                console.error('markPageAssigned', e);
+                showToast('Nie udało się zapisać: ' + e.message, 'error');
+                const cb = document.getElementById('fb-page-checkbox');
+                if (cb) cb.checked = !checked;
+            }
+        }
+        window.markPageAssigned = markPageAssigned;
+        // ═══════════════════════════════════════════════════════════════════
+        // /STRONA FB TAB
+        // ═══════════════════════════════════════════════════════════════════
 
         // ═══════════════════════════════════════════════════════════════════
         // PIXEL TAB — Etap 4 / krok PRZED Kampanią
