@@ -1119,6 +1119,55 @@
             return all;
         }
 
+        // Wpłaty zadatku w bieżącym miesiącu — paid OR cancelled (anulowane też były wpłacone fizycznie)
+        // Używane tylko do sparkline DZIŚ/WCZORAJ/7DNI. Nie do queue ani revenue.
+        async function fetchDepositOrdersInMonth(start, end) {
+            const startISO = start.toISOString();
+            const endISO = end.toISOString();
+            let all = [];
+            let offset = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('id,description,paid_at,status')
+                    .or('status.eq.paid,status.eq.cancelled')
+                    .ilike('description', '%zadatek%')
+                    .not('paid_at', 'is', null)
+                    .gte('paid_at', startISO)
+                    .lt('paid_at', endISO)
+                    .order('paid_at', { ascending: true })
+                    .range(offset, offset + 999);
+                if (error) { console.error('deposit orders:', error); return all; }
+                if (!data || data.length === 0) break;
+                // Also accept 'zaliczka' — ilike łapie tylko 'zadatek', dorobimy drugi pass jeśli trzeba
+                all = all.concat(data);
+                if (data.length < 1000) break;
+                offset += 1000;
+            }
+            // Druga ścieżka: 'zaliczka' (rzadko używane, ale w DEPOSIT_REGEX jest)
+            let offset2 = 0;
+            while (true) {
+                const { data, error } = await supabaseClient
+                    .from('orders')
+                    .select('id,description,paid_at,status')
+                    .or('status.eq.paid,status.eq.cancelled')
+                    .ilike('description', '%zaliczka%')
+                    .not('paid_at', 'is', null)
+                    .gte('paid_at', startISO)
+                    .lt('paid_at', endISO)
+                    .order('paid_at', { ascending: true })
+                    .range(offset2, offset2 + 999);
+                if (error) break;
+                if (!data || data.length === 0) break;
+                for (const r of data) {
+                    if (!all.some(x => x.id === r.id)) all.push(r);
+                }
+                if (data.length < 1000) break;
+                offset2 += 1000;
+            }
+            return all;
+        }
+
         // Historia paid orders (12 mies wstecz) — do snapshotu kolejki zadatek (cross-month)
         async function fetchPaidOrdersHistory() {
             const cutoff = new Date();
@@ -1214,14 +1263,13 @@
             // Daily + today: flow wpłat zadatku w bieżącym miesiącu — niezależnie od aktualnego
             // statusu leada (won/lost też się liczą — fakt wpłaty zadatku tego dnia jest historyczny)
             // i niezależnie od tego czy to pierwszy zadatek leada (każda wpłata zadatku to event).
+            // Pobiera też orders ze status=cancelled (zadatek anulowany później), bo wpłata BYŁA.
+            const depositOrdersInMonth = await fetchDepositOrdersInMonth(start, end);
             const daily = DATA.daily.zadatek;
             let todayCount = 0;
-            for (const o of paidOrdersHistory) {
-                if (!DEPOSIT_REGEX.test(o.description || '')) continue;
+            for (const o of depositOrdersInMonth) {
                 const ts = o.paid_at;
                 if (!ts) continue;
-                const t = new Date(ts).getTime();
-                if (t < startMs || t >= endMs) continue;
                 const day = new Date(ts).getDate();
                 if (day >= 1 && day <= daily.length) daily[day - 1]++;
                 if (ts.startsWith(todayPrefix)) todayCount++;
