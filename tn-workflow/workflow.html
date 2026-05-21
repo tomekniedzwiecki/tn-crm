@@ -498,6 +498,11 @@
                             Content
                             <span id="nav-check-content" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
+                        <button onclick="switchTab('pixel')" data-tab="pixel" class="workflow-sidebar-btn">
+                            <i class="ph ph-broadcast"></i>
+                            Pixel
+                            <span id="nav-check-pixel" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                        </button>
                         <button onclick="switchTab('kampania')" data-tab="kampania" class="workflow-sidebar-btn">
                             <i class="ph ph-rocket-launch"></i>
                             Kampania
@@ -2757,6 +2762,96 @@
                         <img id="lightbox-img" src="" alt="" class="max-w-full max-h-full rounded-xl shadow-2xl">
                         <button onclick="closeLightbox()" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center" aria-label="Zamknij"><i class="ph ph-x text-xl"></i></button>
                     </div>
+
+                    <!-- TAB: Pixel (Etap 4) — konfiguracja Meta Pixel + generator promptu dla Claude Code -->
+                    <div id="tab-pixel" class="workflow-panel hidden">
+                        <div class="flex items-center justify-between mb-6">
+                            <div>
+                                <h3 class="text-lg font-semibold text-white flex items-center gap-2">
+                                    <i class="ph ph-broadcast text-fuchsia-400"></i>
+                                    Konfiguracja Meta Pixel
+                                </h3>
+                                <p class="text-zinc-500 text-sm mt-1">Pixel musi być skonfigurowany zanim uruchomisz kampanię z optymalizacją na konwersje</p>
+                            </div>
+                        </div>
+
+                        <!-- Status badge -->
+                        <div id="pixel-status-badge" class="mb-5"></div>
+
+                        <!-- Krok 1: ID pixela -->
+                        <div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-fuchsia-400 text-[13px] font-semibold">1</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] text-white font-medium">ID pixela Meta</h4>
+                                    <p class="text-[12px] text-zinc-500 mt-0.5">Wklej 15-cyfrowe ID pixela z Events Managera</p>
+                                </div>
+                            </div>
+
+                            <div class="flex gap-2 mb-3">
+                                <input id="pixel-id-input" type="text" inputmode="numeric" pattern="[0-9]*" placeholder="np. 123456789012345"
+                                    class="flex-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg px-3.5 py-2.5 text-[13px] text-white placeholder-zinc-600 focus:outline-none focus:border-fuchsia-500/50 font-mono">
+                                <button onclick="savePixelId()" id="pixel-save-btn" class="bg-fuchsia-500 hover:bg-fuchsia-400 text-white px-4 py-2.5 rounded-lg text-[12px] font-semibold transition-colors">
+                                    Zapisz
+                                </button>
+                            </div>
+
+                            <details class="text-[12px] text-zinc-500">
+                                <summary class="cursor-pointer hover:text-zinc-300">💡 Jak go zdobyć? (rozwiń)</summary>
+                                <ol class="mt-2 pl-4 space-y-1 list-decimal text-[12px]">
+                                    <li>Wejdź na <a href="https://business.facebook.com/events_manager2" target="_blank" class="text-fuchsia-400 hover:underline">business.facebook.com/events_manager2</a></li>
+                                    <li>Wybierz portfolio klienta (zazwyczaj nazwa = marka)</li>
+                                    <li>Connect Data Sources → Web → Meta Pixel → Continue</li>
+                                    <li>Nazwa pixela: <code id="pixel-suggested-name" class="text-zinc-300">-</code></li>
+                                    <li>Po utworzeniu skopiuj 15-cyfrowy ID i wklej powyżej</li>
+                                </ol>
+                            </details>
+                        </div>
+
+                        <!-- Krok 2: Generator promptu dla Claude Code -->
+                        <div id="pixel-step-prompt" class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-xl p-5 mb-4 opacity-40 pointer-events-none transition-opacity">
+                            <div class="flex items-start gap-3 mb-4">
+                                <div class="w-8 h-8 rounded-lg bg-fuchsia-500/10 flex items-center justify-center flex-shrink-0">
+                                    <span class="text-fuchsia-400 text-[13px] font-semibold">2</span>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] text-white font-medium">Dodaj kod fbq() do landingu</h4>
+                                    <p class="text-[12px] text-zinc-500 mt-0.5">Skopiuj prompt i wklej w Claude Code — automatycznie doda kod do <code id="pixel-landing-file" class="text-zinc-300">landing-pages/[slug]/index.html</code></p>
+                                </div>
+                            </div>
+
+                            <button onclick="generatePixelPrompt()" id="pixel-prompt-btn" class="w-full bg-zinc-800 hover:bg-zinc-700 text-white py-3 rounded-lg text-[13px] font-medium transition-colors flex items-center justify-center gap-2 border border-zinc-700">
+                                <i class="ph ph-copy"></i>
+                                Skopiuj prompt dla Claude Code
+                            </button>
+
+                            <div class="mt-4 flex items-center gap-2.5">
+                                <input id="pixel-landing-checkbox" type="checkbox" onchange="markLandingCodeAdded(this.checked)" class="w-4 h-4 rounded border-zinc-600 bg-zinc-900 text-fuchsia-500 focus:ring-fuchsia-500/30">
+                                <label for="pixel-landing-checkbox" class="text-[12px] text-zinc-400 cursor-pointer">
+                                    Kod fbq() dodany do landingu <span class="text-zinc-600">(zaznacz po przegraniu HTML do TakeDrop)</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Status końcowy -->
+                        <div id="pixel-step-done" class="hidden bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-5">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                    <i class="ph-fill ph-check-circle text-xl text-emerald-400"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="text-[14px] text-emerald-400 font-medium">Pixel gotowy</h4>
+                                    <p id="pixel-done-summary" class="text-[12px] text-zinc-400 mt-0.5">-</p>
+                                </div>
+                                <button onclick="switchTab('kampania')" class="bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 rounded-lg text-[12px] font-semibold transition-colors flex items-center gap-1.5">
+                                    Przejdź do Kampanii
+                                    <i class="ph ph-arrow-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div><!-- /tab-pixel -->
 
                     <!-- TAB: Kampania (Etap 4) — tylko status uruchomienia -->
                     <div id="tab-kampania" class="workflow-panel hidden">
@@ -5868,7 +5963,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, account_active, account_active_at, account_active_confirmed_by, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, pixel_configured, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
@@ -5967,6 +6062,19 @@
                         contentNav.innerHTML = '<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="Gotowe do udostępnienia"></i>';
                     } else {
                         contentNav.classList.add('hidden');
+                    }
+                }
+                // Pixel: zielony gdy pixel_id wpisany I kod fbq() dodany do landingu; żółty gdy tylko pixel_id
+                const pixelNav = document.getElementById('nav-check-pixel');
+                if (pixelNav) {
+                    if (adsNavStatus?.pixel_configured && adsNavStatus?.pixel_landing_code_added) {
+                        pixelNav.classList.remove('hidden');
+                        pixelNav.innerHTML = '<i class="ph-fill ph-check-circle text-emerald-400 text-sm" title="Pixel + kod fbq() w landingu"></i>';
+                    } else if (adsNavStatus?.pixel_configured) {
+                        pixelNav.classList.remove('hidden');
+                        pixelNav.innerHTML = '<i class="ph-fill ph-check-circle text-amber-400 text-sm" title="Pixel zapisany, kod fbq() jeszcze nie wgrany"></i>';
+                    } else {
+                        pixelNav.classList.add('hidden');
                     }
                 }
                 toggle('nav-check-kampania', !!adsNavStatus?.campaign_launched);
@@ -7749,7 +7857,7 @@
             const stage1Tabs = ['produkty', 'raporty', 'branding', 'strona', 'podsumowanie'];
             const stage2Tabs = ['scenariusze', 'profile', 'nagrania'];
             const stage3Tabs = ['takedrop', 'landing', 'legal', 'payment-gateway', 'test'];
-            const stage4Tabs = ['ad-account', 'budzet', 'content', 'kampania', 'raport'];
+            const stage4Tabs = ['ad-account', 'budzet', 'content', 'pixel', 'kampania', 'raport'];
             const stage5Tabs = ['optymalizacje', 'opinie'];
 
             if (stage1Tabs.includes(tabName)) {
@@ -7828,6 +7936,9 @@
                     break;
                 case 'content':
                     loadContentTab();
+                    break;
+                case 'pixel':
+                    loadPixelTab();
                     break;
                 case 'kampania':
                     loadKampaniaTab();
@@ -11534,6 +11645,39 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             launchedEl?.classList.add('hidden');
             warningEl?.classList.add('hidden');
 
+            // Gate: pixel musi być w pełni skonfigurowany (id + kod fbq w landingu)
+            // zanim odpalimy kampanię z optymalizacją na konwersje.
+            if (!adsData?.campaign_launched && !(adsData?.pixel_configured && adsData?.pixel_landing_code_added)) {
+                const tabRoot = document.getElementById('tab-kampania');
+                let gate = document.getElementById('kampania-pixel-gate');
+                if (!gate) {
+                    gate = document.createElement('div');
+                    gate.id = 'kampania-pixel-gate';
+                    gate.className = 'bg-amber-500/10 border border-amber-500/30 rounded-xl p-5';
+                    tabRoot.appendChild(gate);
+                }
+                const missingId = !adsData?.pixel_configured;
+                const missingCode = !adsData?.pixel_landing_code_added;
+                gate.innerHTML = `
+                    <div class="flex items-start gap-3">
+                        <i class="ph ph-warning text-amber-400 text-xl mt-0.5"></i>
+                        <div class="flex-1">
+                            <p class="text-[13px] text-amber-300 font-medium">Brakuje konfiguracji pixela</p>
+                            <ul class="text-[12px] text-zinc-400 mt-2 space-y-1 list-disc pl-4">
+                                ${missingId ? '<li>ID pixela Meta nie jest jeszcze zapisane</li>' : ''}
+                                ${missingCode ? '<li>Kod fbq() nie jest jeszcze wgrany do landingu (TakeDrop)</li>' : ''}
+                            </ul>
+                            <button onclick="switchTab('pixel')" class="mt-3 bg-amber-500 hover:bg-amber-400 text-zinc-950 px-3 py-1.5 rounded-lg text-[12px] font-semibold transition-colors inline-flex items-center gap-1.5">
+                                <i class="ph ph-broadcast"></i> Przejdź do kroku Pixel
+                            </button>
+                        </div>
+                    </div>`;
+                gate.classList.remove('hidden');
+                return;
+            }
+            // Pixel OK (albo kampania już uruchomiona) — usuń gate jeśli był
+            document.getElementById('kampania-pixel-gate')?.remove();
+
             const hasContent = adsData?.content_ready || adsData?.ad_creatives?.length > 0;
 
             if (adsData?.campaign_launched) {
@@ -14061,6 +14205,256 @@ Zwróć TYLKO JSON.`;
                 }
             }
         }
+
+        // ═══════════════════════════════════════════════════════════════════
+        // PIXEL TAB — Etap 4 / krok PRZED Kampanią
+        // ═══════════════════════════════════════════════════════════════════
+        // Pozwala wpisać Meta Pixel ID, wygenerować prompt dla Claude Code
+        // (dodaje fbq() do landingu) i zaznaczyć obie czynności jako done.
+
+        async function loadPixelTab() {
+            await ensureAdsData();
+
+            // Brand name — z workflow_branding.brand_info (do prompta + suggested name pixela)
+            let brandName = '';
+            try {
+                const { data: bi } = await supabaseClient.from('workflow_branding')
+                    .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
+                if (bi?.value) {
+                    const bv = typeof bi.value === 'string' ? JSON.parse(bi.value) : bi.value;
+                    brandName = bv?.name || '';
+                }
+            } catch (_) {}
+            if (!brandName) brandName = workflow?.customer_name || 'Marka';
+
+            // Slug landingu — z sales_page_url (preferencja) lub workflow_takedrop.landing_url
+            let landingSlug = extractLandingSlug(workflow?.sales_page_url);
+            let landingHost = '';
+            try {
+                const { data: td } = await supabaseClient.from('workflow_takedrop')
+                    .select('landing_url, account_email').eq('workflow_id', workflow.id).maybeSingle();
+                landingHost = td?.landing_url || '';
+                if (!landingSlug && landingHost) landingSlug = extractLandingSlug(landingHost);
+                window._pixelTabCtx = { brandName, landingSlug, landingHost, accountEmail: td?.account_email || '' };
+            } catch (_) {
+                window._pixelTabCtx = { brandName, landingSlug, landingHost: '', accountEmail: '' };
+            }
+            if (!landingSlug) landingSlug = 'slug-nieznany';
+
+            // Wypełnij pole input + suggested name pixela + ścieżka pliku
+            const input = document.getElementById('pixel-id-input');
+            if (input) input.value = adsData?.pixel_id || '';
+            const sugg = document.getElementById('pixel-suggested-name');
+            if (sugg) sugg.textContent = `"${brandName}"`;
+            const fileEl = document.getElementById('pixel-landing-file');
+            if (fileEl) fileEl.textContent = `landing-pages/${landingSlug}/index.html`;
+
+            renderPixelState();
+        }
+        window.loadPixelTab = loadPixelTab;
+
+        function renderPixelState() {
+            const badge = document.getElementById('pixel-status-badge');
+            const step2 = document.getElementById('pixel-step-prompt');
+            const doneBox = document.getElementById('pixel-step-done');
+            const checkbox = document.getElementById('pixel-landing-checkbox');
+
+            const hasId = !!adsData?.pixel_configured && !!adsData?.pixel_id;
+            const hasCode = !!adsData?.pixel_landing_code_added;
+
+            if (badge) {
+                if (hasId && hasCode) {
+                    badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[12px] font-medium">
+                        <i class="ph-fill ph-check-circle"></i> Pixel skonfigurowany — możesz przejść do Kampanii
+                    </span>`;
+                } else if (hasId) {
+                    badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[12px] font-medium">
+                        <i class="ph ph-clock"></i> ID zapisany — wgraj kod fbq() do landingu
+                    </span>`;
+                } else {
+                    badge.innerHTML = `<span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-500/10 border border-zinc-500/30 text-zinc-400 text-[12px] font-medium">
+                        <i class="ph ph-circle-dashed"></i> Pixel nie skonfigurowany
+                    </span>`;
+                }
+            }
+
+            // Krok 2 (generator promptu) aktywny dopiero gdy ID zapisane
+            if (step2) {
+                step2.classList.toggle('opacity-40', !hasId);
+                step2.classList.toggle('pointer-events-none', !hasId);
+            }
+            if (checkbox) checkbox.checked = hasCode;
+
+            // Status końcowy
+            if (doneBox) {
+                doneBox.classList.toggle('hidden', !(hasId && hasCode));
+                if (hasId && hasCode) {
+                    const summary = document.getElementById('pixel-done-summary');
+                    if (summary) summary.textContent = `Pixel ${adsData.pixel_id || ''} · kod fbq() w landingu`;
+                }
+            }
+        }
+
+        async function savePixelId() {
+            const input = document.getElementById('pixel-id-input');
+            const raw = (input?.value || '').trim();
+            if (!/^[0-9]{10,20}$/.test(raw)) {
+                showToast('ID pixela musi być liczbą (10-20 cyfr)', 'error');
+                return;
+            }
+            const btn = document.getElementById('pixel-save-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Zapisuję...'; }
+            try {
+                const nowIso = new Date().toISOString();
+                const { error } = await supabaseClient.from('workflow_ads').update({
+                    pixel_id: raw,
+                    pixel_configured: true,
+                    pixel_configured_at: adsData?.pixel_configured_at || nowIso
+                }).eq('workflow_id', workflow.id);
+                if (error) throw error;
+                adsData = { ...adsData, pixel_id: raw, pixel_configured: true, pixel_configured_at: adsData?.pixel_configured_at || nowIso };
+                renderPixelState();
+                showToast('ID pixela zapisany', 'success');
+                try { updateNavChecks(); } catch (_) {}
+            } catch (e) {
+                console.error('savePixelId', e);
+                showToast('Nie udało się zapisać: ' + e.message, 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Zapisz'; }
+            }
+        }
+        window.savePixelId = savePixelId;
+
+        async function markLandingCodeAdded(checked) {
+            try {
+                const nowIso = new Date().toISOString();
+                const patch = checked
+                    ? { pixel_landing_code_added: true, pixel_landing_code_added_at: nowIso }
+                    : { pixel_landing_code_added: false, pixel_landing_code_added_at: null };
+                const { error } = await supabaseClient.from('workflow_ads').update(patch).eq('workflow_id', workflow.id);
+                if (error) throw error;
+                adsData = { ...adsData, ...patch };
+                renderPixelState();
+                showToast(checked ? 'Oznaczone: kod wgrany' : 'Cofnięto oznaczenie', 'success');
+                try { updateNavChecks(); } catch (_) {}
+            } catch (e) {
+                console.error('markLandingCodeAdded', e);
+                showToast('Nie udało się zapisać: ' + e.message, 'error');
+                // Cofnij checkbox w UI
+                const cb = document.getElementById('pixel-landing-checkbox');
+                if (cb) cb.checked = !checked;
+            }
+        }
+        window.markLandingCodeAdded = markLandingCodeAdded;
+
+        function generatePixelPrompt() {
+            const ctx = window._pixelTabCtx || {};
+            const pixelId = adsData?.pixel_id;
+            if (!pixelId) {
+                showToast('Najpierw zapisz ID pixela', 'error');
+                return;
+            }
+            const slug = ctx.landingSlug || 'slug-nieznany';
+            const brand = ctx.brandName || 'Marka';
+            const host = ctx.landingHost || '';
+            const accountEmail = ctx.accountEmail || '';
+
+            // Budowa promptu — warunkowe linie przez push() (null/undefined wypadają filter'em),
+            // jawne '' pozostają jako puste linie separatorów.
+            // UWAGA: literalne </script> w template literal zamknęłoby <script> w workflow.html.
+            // Stąd '<\/script>' (escaped slash) — JS string OK, HTML parser nie widzi tagu.
+            const lines = [
+                `Dodaj kod Meta Pixel do landingu ${slug}.`,
+                ``,
+                `Workflow ID: ${workflow.id}`,
+                `Brand: ${brand}`,
+                `Slug landingu: ${slug}`,
+                `Pixel ID: ${pixelId}`,
+                host ? `Domena docelowa: ${host}` : null,
+                accountEmail ? `Konto TakeDrop: ${accountEmail}` : null,
+                ``,
+                `Zadanie:`,
+                ``,
+                `1. Otwórz tn-crm/landing-pages/${slug}/index.html`,
+                ``,
+                `2. W <head> (przed </head>) dodaj base pixel code:`,
+                ``,
+                `   <!-- Meta Pixel Code -->`,
+                `   <script>`,
+                `   !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?`,
+                `   n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;`,
+                `   n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;`,
+                `   t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,`,
+                `   document,'script','https://connect.facebook.net/en_US/fbevents.js');`,
+                `   fbq('init', '${pixelId}');`,
+                `   fbq('track', 'PageView');`,
+                `   <\/script>`,
+                `   <noscript><img height="1" width="1" style="display:none"`,
+                `     src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1"/></noscript>`,
+                `   <!-- End Meta Pixel Code -->`,
+                ``,
+                `3. Znajdź wszystkie CTA z linkiem do /checkout (grep "checkout?products="`,
+                `   lub po href). Do każdego dodaj inline onclick lub event handler:`,
+                ``,
+                `   onclick="fbq && fbq('track', 'InitiateCheckout');"`,
+                ``,
+                `   Możesz też zrobić to jednym addEventListener w <script> na końcu body,`,
+                `   selektorem na wszystkich elementach z href*="checkout?products=".`,
+                ``,
+                `4. NIE dodawaj eventu Purchase do landinga — Purchase odpala się`,
+                `   na stronie thank-you po zamówieniu w TakeDrop (jeśli TakeDrop ma`,
+                `   natywne wsparcie pixela, wpisujesz go w panelu sklepu;`,
+                `   jeśli nie — to osobny krok).`,
+                ``,
+                `5. Po zmianie:`,
+                `   - commit + push (auto-deploy Vercel)`,
+                `   - PRZYPOMNIJ MI że muszę przegrać HTML do TakeDrop CMS`,
+                host ? `     (domena ${host} idzie do TakeDrop, NIE Vercel)` : null,
+                `   - Otwórz plik gotowy do Ctrl+A`,
+                ``,
+                `Po wykonaniu wróć tutaj i potwierdź że plik gotowy do przegrania.`,
+                ``,
+                `(Wygenerowano z workflow ${workflow.id} · ${new Date().toLocaleString('pl-PL')})`,
+            ];
+            const finalPrompt = lines.filter(l => l !== null).join('\n');
+
+            navigator.clipboard.writeText(finalPrompt).then(() => {
+                showToast('Prompt skopiowany — wklej w Claude Code', 'success');
+            }).catch(err => {
+                console.error('clipboard', err);
+                // Fallback — pokaż w prompt() żeby user mógł sam skopiować
+                window.prompt('Skopiuj ręcznie (Ctrl+C, Enter):', finalPrompt);
+            });
+        }
+        window.generatePixelPrompt = generatePixelPrompt;
+
+        // Wyciąga slug z URL landingu, np.:
+        //   https://tn-crm.vercel.app/landing-pages/rysek/ → 'rysek'
+        //   https://tn-crm.vercel.app/rysek → 'rysek'
+        //   https://rysek.com.pl/ → 'rysek'
+        //   https://crm.tomekniedzwiecki.pl/lp/dentaflow → 'dentaflow'
+        function extractLandingSlug(url) {
+            if (!url) return '';
+            try {
+                const u = new URL(url.startsWith('http') ? url : 'https://' + url);
+                const path = u.pathname.replace(/\/+$/, '').replace(/^\/+/, '');
+                if (path) {
+                    const parts = path.split('/').filter(Boolean);
+                    // landing-pages/<slug>/ lub lp/<slug>/
+                    if (parts[0] === 'landing-pages' || parts[0] === 'lp') return parts[1] || '';
+                    // /<slug> (vercel preview)
+                    if (parts.length === 1) return parts[0];
+                    return parts[parts.length - 1];
+                }
+                // Brak path — slug z hosta (rysek.com.pl → rysek)
+                return u.hostname.split('.')[0];
+            } catch (_) {
+                return '';
+            }
+        }
+        // ═══════════════════════════════════════════════════════════════════
+        // /PIXEL TAB
+        // ═══════════════════════════════════════════════════════════════════
 
         window.loadKampaniaTab = loadKampaniaTab;
         window.loadContentTab = loadContentTab;
