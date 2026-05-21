@@ -486,8 +486,10 @@
                         <button onclick="switchTab('ad-account')" data-tab="ad-account" class="workflow-sidebar-btn">
                             <i class="ph ph-megaphone-simple"></i>
                             Konto reklamowe
-                            <span id="nav-badge-mcp" class="hidden ml-auto inline-flex items-center px-1.5 py-px rounded text-[10px] font-semibold leading-none bg-fuchsia-500/15 text-fuchsia-300 ring-1 ring-inset ring-fuchsia-400/25" title="Konto ma Ads MCP enabled">MCP</span>
-                            <span id="nav-check-ad-account" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                            <span class="ml-auto inline-flex items-center gap-1.5">
+                                <span id="nav-badge-mcp" class="hidden w-1.5 h-1.5 rounded-full bg-fuchsia-400 shadow-[0_0_6px_rgba(217,70,239,0.6)]" title="Ads MCP enabled — możesz uruchamiać kampanie przez Claude"></span>
+                                <span id="nav-check-ad-account" class="hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
+                            </span>
                         </button>
                         <button onclick="switchTab('budzet')" data-tab="budzet" class="workflow-sidebar-btn">
                             <i class="ph ph-wallet"></i>
@@ -2474,10 +2476,18 @@
                                     <div class="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                         <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
                                     </div>
-                                    <div>
-                                        <div class="text-[13px] text-emerald-400 font-medium">Klient doładował konto</div>
+                                    <div class="flex-1">
+                                        <div class="text-[13px] text-emerald-400 font-medium">Klient zaznaczył doładowanie konta</div>
                                         <div id="budzet-funded-date" class="text-[12px] text-[#888]">-</div>
                                     </div>
+                                </div>
+                                <div class="mt-3 pt-3 border-t border-emerald-500/20">
+                                    <p class="text-[12px] text-[#888] mb-2">Konto faktycznie nie zostało doładowane? Odznacz status i wyślij klientowi przypomnienie.</p>
+                                    <button onclick="markBudgetNotFunded()" id="budget-not-funded-btn"
+                                        class="px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                        <i class="ph ph-warning-circle"></i>
+                                        <span id="budget-not-funded-btn-label">Konto nie jest doładowane — wyślij maila</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -11656,6 +11666,74 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
         window.loadBudzetTab = loadBudzetTab;
+
+        // Admin oznacza, ze klient mimo kliknigcia "doladowano" w panelu NIE doladowal faktycznie konta.
+        // Cofa flage budget_funded, wysyla klientowi maila z przypomnieniem.
+        async function markBudgetNotFunded() {
+            if (!confirm('Oznaczyć, że konto NIE zostało doładowane?\n\n• Status zostanie cofnięty (klient zobaczy ponownie instrukcję doładowania)\n• Klient dostanie email z przypomnieniem żeby faktycznie doładował konto')) {
+                return;
+            }
+
+            const btn = document.getElementById('budget-not-funded-btn');
+            const label = document.getElementById('budget-not-funded-btn-label');
+            const originalLabel = label ? label.textContent : '';
+            if (btn) {
+                btn.disabled = true;
+                if (label) label.textContent = 'Wysyłanie...';
+            }
+
+            try {
+                if (!adsData?.id) throw new Error('Brak workflow_ads dla tego projektu');
+
+                const { error } = await supabaseClient
+                    .from('workflow_ads')
+                    .update({
+                        budget_funded: false,
+                        budget_funded_at: null
+                    })
+                    .eq('id', adsData.id);
+
+                if (error) throw error;
+
+                adsData.budget_funded = false;
+                adsData.budget_funded_at = null;
+
+                const clientName = workflow?.customer_name || workflow?.client_name || 'Kliencie';
+                const brandName = workflow?.brand_name || workflow?.offer_name || workflow?.name || 'Twój projekt';
+                const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}#reklamy`;
+
+                await supabaseClient.functions.invoke('automation-trigger', {
+                    body: {
+                        trigger_type: 'budget_not_funded',
+                        entity_type: 'workflow',
+                        entity_id: workflow.id,
+                        context: {
+                            workflowId: workflow.id,
+                            clientName,
+                            brandName,
+                            clientEmail: workflow?.customer_email,
+                            projectUrl
+                        }
+                    }
+                });
+
+                logActivity('budget_not_funded', 'Oznaczono że konto reklamowe nie zostało doładowane — wysłano email do klienta', {
+                    workflow_ads_id: adsData.id
+                });
+
+                showToast('Status cofnięty, email wysłany do klienta', 'success');
+                loadBudzetTab();
+                updateNavChecks();
+            } catch (e) {
+                console.error('markBudgetNotFunded error', e);
+                showToast('Błąd: ' + (e.message || 'nieznany'), 'error');
+                if (btn) {
+                    btn.disabled = false;
+                    if (label) label.textContent = originalLabel;
+                }
+            }
+        }
+        window.markBudgetNotFunded = markBudgetNotFunded;
 
         // Kampania tab
         let researchPollInterval = null;
