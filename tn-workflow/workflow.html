@@ -486,6 +486,7 @@
                         <button onclick="switchTab('ad-account')" data-tab="ad-account" class="workflow-sidebar-btn">
                             <i class="ph ph-megaphone-simple"></i>
                             Konto reklamowe
+                            <span id="nav-badge-mcp" class="hidden ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30" title="Konto ma Ads MCP enabled">MCP</span>
                             <span id="nav-check-ad-account" class="ml-auto hidden"><i class="ph-fill ph-check-circle text-emerald-400 text-sm"></i></span>
                         </button>
                         <button onclick="switchTab('budzet')" data-tab="budzet" class="workflow-sidebar-btn">
@@ -2319,6 +2320,9 @@
 
                         <!-- Stage 4 active content -->
                         <div id="ad-account-content" class="hidden">
+                            <!-- Status: integracja Ads MCP (manual refresh przez Claude) -->
+                            <div id="ad-account-mcp-status" class="hidden mb-6"></div>
+
                             <!-- Status: Ready (admin confirmed) -->
                             <div id="ad-account-ready-status" class="hidden mb-6">
                                 <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
@@ -6029,7 +6033,7 @@
                     supabaseClient.from('workflow_reports').select('workflow_id, visible_to_client, type').eq('workflow_id', workflow.id).in('type', ['report_pdf', 'report_infographic', 'report_presentation', 'report_video']),
                     supabaseClient.from('workflow_video').select('*').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_takedrop').select('is_active, account_created, account_active, account_active_at, account_active_confirmed_by, landing_page_connected, legal_documents_ready, payment_gateway_ready, test_notified_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at').eq('workflow_id', workflow.id).maybeSingle(),
-                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, page_assigned, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').eq('workflow_id', workflow.id).maybeSingle(),
+                    supabaseClient.from('workflow_ads').select('is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, page_assigned, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent, meta_mcp_enabled, meta_mcp_checked_at').eq('workflow_id', workflow.id).maybeSingle(),
                     supabaseClient.from('workflow_optimization').select('is_active, cod_enabled, whatsapp_enabled, recovery_calls_done, reviews_product_url, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_email_sent_at, tools_ga_script, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes, tools_session_notes_at, tools_ready_at').eq('workflow_id', workflow.id).maybeSingle()
                 ]);
 
@@ -6116,6 +6120,8 @@
                 }
                 // Nav check requires ALL 4 granted: ad account + fanpage + instagram + phone (or admin marked as ready)
                 toggle('nav-check-ad-account', !!adsNavStatus?.ad_account_ready || (!!adsNavStatus?.partner_access_granted && !!adsNavStatus?.fanpage_access_granted && !!adsNavStatus?.instagram_access_granted && !!adsNavStatus?.phone_verified));
+                // Badge MCP gdy konto reklamowe ma Ads MCP enabled (manual refresh przez Claude)
+                toggle('nav-badge-mcp', !!adsNavStatus?.meta_mcp_enabled);
                 toggle('nav-check-budzet', !!adsNavStatus?.budget_funded);
                 // Content: żółty gdy wygenerowane ale nie udostępnione, zielony gdy udostępnione
                 const contentNav = document.getElementById('nav-check-content');
@@ -11125,6 +11131,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             adsData = data;
 
+            // Renderuj status MCP (manual refresh przez Claude)
+            try { renderAdAccountMcpStatus(); } catch (_) {}
+
             const notActiveEl = document.getElementById('ad-account-not-active');
             const contentEl = document.getElementById('ad-account-content');
             const readyStatusEl = document.getElementById('ad-account-ready-status');
@@ -11541,6 +11550,66 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
             }
         }
+
+        // Status integracji Ads MCP (manual refresh przez Claude — "sprawdz MCP" / "odswiez MCP")
+        function renderAdAccountMcpStatus() {
+            const box = document.getElementById('ad-account-mcp-status');
+            if (!box) return;
+            const enabled = adsData?.meta_mcp_enabled;
+            const checkedAt = adsData?.meta_mcp_checked_at;
+            const checkedLabel = checkedAt
+                ? new Date(checkedAt).toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+                : null;
+            const hint = '<div class="text-[11px] text-zinc-500 mt-1">Odświeżenie: powiedz Claude\'owi „sprawdź MCP"</div>';
+
+            if (enabled === true) {
+                box.innerHTML = `
+                    <div class="bg-fuchsia-500/10 border border-fuchsia-500/30 rounded-lg p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-fuchsia-500/20 flex items-center justify-center">
+                                <i class="ph ph-broadcast text-fuchsia-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[13px] text-fuchsia-400 font-semibold">MCP enabled</span>
+                                    <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider bg-fuchsia-500/20 text-fuchsia-300 border border-fuchsia-500/40">MCP</span>
+                                </div>
+                                <div class="text-[12px] text-zinc-400">Możesz tworzyć kampanie przez Claude (Ads MCP)${checkedLabel ? ` · sprawdzone ${checkedLabel}` : ''}</div>
+                            </div>
+                        </div>
+                    </div>`;
+            } else if (enabled === false) {
+                box.innerHTML = `
+                    <div class="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center">
+                                <i class="ph ph-clock text-amber-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-[13px] text-amber-400 font-medium">MCP rollout pending</div>
+                                <div class="text-[12px] text-zinc-400">Meta jeszcze nie wypchnęła Ads MCP dla tego konta${checkedLabel ? ` · sprawdzone ${checkedLabel}` : ''}</div>
+                                ${hint}
+                            </div>
+                        </div>
+                    </div>`;
+            } else {
+                box.innerHTML = `
+                    <div class="bg-zinc-800/50 border border-zinc-700/50 rounded-lg p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-full bg-zinc-700/50 flex items-center justify-center">
+                                <i class="ph ph-circle-dashed text-zinc-400 text-xl"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="text-[13px] text-zinc-300">Status MCP nieznany</div>
+                                <div class="text-[12px] text-zinc-500">Konto nie zostało jeszcze sprawdzone w Mecie${adsData?.meta_ad_account_id ? '' : ' (brak też meta_ad_account_id w bazie)'}</div>
+                                ${hint}
+                            </div>
+                        </div>
+                    </div>`;
+            }
+            box.classList.remove('hidden');
+        }
+        window.renderAdAccountMcpStatus = renderAdAccountMcpStatus;
 
         window.loadAdAccountTab = loadAdAccountTab;
         window.toggleAdAccountReady = toggleAdAccountReady;

@@ -771,7 +771,7 @@
             const [videoRes, takedropRes, adsRes, optRes] = await Promise.all([
                 supabaseClient.from('workflow_video').select('workflow_id, is_active, stage_accepted, video_shared, video_scenarios, social_profiles, video_links, skipped').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_takedrop').select('workflow_id, is_active, account_created, account_active, account_active_at, landing_page_connected, legal_documents_ready, legal_data, payment_gateway_ready, payment_gateway_credentials, test_accepted, test_feedback_sent').in('workflow_id', workflowIds),
-                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, page_assigned, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent').in('workflow_id', workflowIds),
+                supabaseClient.from('workflow_ads').select('workflow_id, is_active, ad_account_ready, partner_access_granted, fanpage_access_granted, instagram_access_granted, phone_verified, budget_funded, content_ready, content_shared_with_client, page_assigned, pixel_configured, pixel_takedrop_added, pixel_landing_code_added, campaign_launched, report_sent, meta_mcp_enabled').in('workflow_id', workflowIds),
                 supabaseClient.from('workflow_optimization').select('workflow_id, is_active, cod_enabled, cod_stock_confirmed, whatsapp_enabled, recovery_calls_done, reviews_count, reviews_shared_at, videos_inserted_at, videos_shared_at, tools_started_at, tools_ready_at, tools_ga_script_at, tools_ga_connected_at, tools_hotjar_script_at, tools_hotjar_connected_at, tools_session_notes_at').in('workflow_id', workflowIds)
             ]);
 
@@ -1891,6 +1891,9 @@
             if (stage === 4) {
                 const ads = w.ads_stage;
                 const nextStep = getNextStep(w);
+                const mcpBadge = ads?.meta_mcp_enabled
+                    ? '<span class="text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded bg-fuchsia-500/15 text-fuchsia-400 border border-fuchsia-500/30 ml-1" title="Ads MCP enabled">MCP</span>'
+                    : '';
 
                 let stepName = 'Reklamy';
                 let status = 'W trakcie';
@@ -1972,7 +1975,7 @@
                     <div class="py-2">
                         <div class="flex items-center gap-2 text-[11px]">
                             <i class="${icon}"></i>
-                            <span class="text-white font-medium">${stepName}</span>
+                            <span class="text-white font-medium">${stepName}</span>${mcpBadge}
                             ${ownerBadge}
                             <span class="text-zinc-500">·</span>
                             <span class="text-zinc-400">${status}</span>
