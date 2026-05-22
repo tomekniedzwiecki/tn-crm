@@ -891,12 +891,14 @@
             const offerFilter = document.getElementById('offer-filter').value;
             const sortFilter = document.getElementById('sort-filter').value;
 
+            const hasSearch = !!(searchTerm && searchTerm.trim());
+
             filteredWorkflows = workflows.filter(w => {
                 // Smart search filter
                 const searchMatch = matchesSearch(w, searchTerm);
 
-                // Status filter
-                const statusMatch = !statusFilter || w.status === statusFilter;
+                // Status filter — pomijany gdy user szuka po imieniu/telefonie/etc.
+                const statusMatch = hasSearch || !statusFilter || w.status === statusFilter;
 
                 // Offer filter
                 const offerMatch = !offerFilter || w.offer_name === offerFilter;

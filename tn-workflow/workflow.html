@@ -277,6 +277,8 @@
 
     <!-- Main -->
     <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Full-width status alert (paused / cancelled) -->
+        <div id="status-alert" class="hidden w-full"></div>
         <!-- Header -->
         <header class="h-14 glass-header flex items-center px-4 md:px-6 sticky top-0 z-30">
             <div class="flex items-center gap-3 min-w-0">
@@ -6465,6 +6467,26 @@
             statusBadge.className = `px-3 py-1 rounded-lg text-xs font-medium ${statusInfo.style}`;
             statusBadge.textContent = statusInfo.label;
             renderStatusActions();
+
+            // Full-width status bar for paused / cancelled — sits above header
+            const statusAlert = document.getElementById('status-alert');
+            if (statusAlert) {
+                if (workflow.status === 'paused' || workflow.status === 'cancelled') {
+                    const isPaused = workflow.status === 'paused';
+                    const tone = isPaused
+                        ? { bg: 'bg-amber-500', text: 'text-black', icon: 'ph-pause-circle-fill', label: 'PROJEKT WSTRZYMANY', sub: 'Prace zatrzymane.' }
+                        : { bg: 'bg-red-600',   text: 'text-white', icon: 'ph-x-circle-fill',     label: 'PROJEKT ANULOWANY', sub: 'Projekt zamknięty.' };
+                    statusAlert.className = `w-full ${tone.bg} ${tone.text} px-4 md:px-6 py-4 flex items-center justify-center gap-3 shadow-lg`;
+                    statusAlert.innerHTML = `
+                        <i class="ph-fill ${tone.icon} text-3xl"></i>
+                        <span class="text-xl md:text-2xl font-extrabold tracking-wider uppercase">${tone.label}</span>
+                        <span class="hidden sm:inline text-sm md:text-base font-medium opacity-80">— ${tone.sub}</span>
+                    `;
+                } else {
+                    statusAlert.className = 'hidden w-full';
+                    statusAlert.innerHTML = '';
+                }
+            }
 
             // Password status
             const hasPassword = !!workflow.client_password_hash;
