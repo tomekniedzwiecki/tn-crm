@@ -6474,13 +6474,54 @@
                 if (workflow.status === 'paused' || workflow.status === 'cancelled') {
                     const isPaused = workflow.status === 'paused';
                     const tone = isPaused
-                        ? { bg: 'bg-amber-500', text: 'text-black', icon: 'ph-pause-circle-fill', label: 'PROJEKT WSTRZYMANY', sub: 'Prace zatrzymane.' }
-                        : { bg: 'bg-red-600',   text: 'text-white', icon: 'ph-x-circle-fill',     label: 'PROJEKT ANULOWANY', sub: 'Projekt zamknięty.' };
-                    statusAlert.className = `w-full ${tone.bg} ${tone.text} px-4 md:px-6 py-4 flex items-center justify-center gap-3 shadow-lg`;
+                        ? {
+                            grad: 'from-amber-500/15 via-amber-500/8 to-amber-500/15',
+                            border: 'border-amber-500/30',
+                            ring: 'ring-amber-500/20',
+                            dot: 'bg-amber-400',
+                            dotGlow: 'shadow-[0_0_12px_rgba(251,191,36,0.8)]',
+                            iconBg: 'bg-amber-500/15 ring-1 ring-amber-500/40',
+                            iconText: 'text-amber-300',
+                            icon: 'ph-pause-circle-fill',
+                            title: 'text-amber-200',
+                            label: 'Projekt wstrzymany',
+                            sub: 'Prace zatrzymane — wznów ze zmianą statusu w menu projektu.'
+                          }
+                        : {
+                            grad: 'from-red-500/15 via-red-500/8 to-red-500/15',
+                            border: 'border-red-500/30',
+                            ring: 'ring-red-500/20',
+                            dot: 'bg-red-400',
+                            dotGlow: 'shadow-[0_0_12px_rgba(248,113,113,0.8)]',
+                            iconBg: 'bg-red-500/15 ring-1 ring-red-500/40',
+                            iconText: 'text-red-300',
+                            icon: 'ph-x-circle-fill',
+                            title: 'text-red-200',
+                            label: 'Projekt anulowany',
+                            sub: 'Projekt zamknięty — dalsze prace wstrzymane.'
+                          };
+                    statusAlert.className = `w-full bg-gradient-to-r ${tone.grad} border-y ${tone.border} backdrop-blur-sm px-4 md:px-8 py-4`;
                     statusAlert.innerHTML = `
-                        <i class="ph-fill ${tone.icon} text-3xl"></i>
-                        <span class="text-xl md:text-2xl font-extrabold tracking-wider uppercase">${tone.label}</span>
-                        <span class="hidden sm:inline text-sm md:text-base font-medium opacity-80">— ${tone.sub}</span>
+                        <div class="flex items-center gap-4 max-w-6xl mx-auto">
+                            <div class="relative flex-shrink-0">
+                                <div class="w-11 h-11 rounded-xl ${tone.iconBg} flex items-center justify-center">
+                                    <i class="ph-fill ${tone.icon} text-2xl ${tone.iconText}"></i>
+                                </div>
+                                <span class="absolute -top-0.5 -right-0.5 flex h-2.5 w-2.5">
+                                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full ${tone.dot} opacity-75"></span>
+                                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 ${tone.dot} ${tone.dotGlow}"></span>
+                                </span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 mb-0.5">
+                                    <span class="text-[10px] font-mono uppercase tracking-[0.18em] ${tone.iconText} opacity-70">Status</span>
+                                    <span class="text-[10px] ${tone.iconText} opacity-40">·</span>
+                                    <span class="text-[10px] font-mono uppercase tracking-[0.18em] ${tone.iconText} opacity-70">${isPaused ? 'paused' : 'cancelled'}</span>
+                                </div>
+                                <div class="${tone.title} text-lg md:text-xl font-semibold tracking-tight leading-tight">${tone.label}</div>
+                                <div class="${tone.iconText} text-xs md:text-sm opacity-80 mt-0.5">${tone.sub}</div>
+                            </div>
+                        </div>
                     `;
                 } else {
                     statusAlert.className = 'hidden w-full';
