@@ -2134,11 +2134,33 @@
             }
 
             try {
-                // Delete installments first (foreign key)
-                await supabaseClient
+                // Najpierw pobierz ID rat tego harmonogramu — orders.installment_id ma FK bez ON DELETE,
+                // wiec trzeba je wyzerowac zanim DELETE na payment_installments nie poleci na FK violation.
+                const { data: scheduleInstallments, error: instFetchError } = await supabaseClient
+                    .from('payment_installments')
+                    .select('id')
+                    .eq('schedule_id', scheduleId);
+
+                if (instFetchError) throw instFetchError;
+
+                const installmentIds = (scheduleInstallments || []).map(i => i.id);
+
+                if (installmentIds.length > 0) {
+                    const { error: ordersNullError } = await supabaseClient
+                        .from('orders')
+                        .update({ installment_id: null })
+                        .in('installment_id', installmentIds);
+
+                    if (ordersNullError) throw ordersNullError;
+                }
+
+                // Delete installments (FK do orders juz odlinkowane)
+                const { error: instDeleteError } = await supabaseClient
                     .from('payment_installments')
                     .delete()
                     .eq('schedule_id', scheduleId);
+
+                if (instDeleteError) throw instDeleteError;
 
                 // Delete schedule
                 const { error } = await supabaseClient
