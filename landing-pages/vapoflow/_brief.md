@@ -1,8 +1,8 @@
-# Design Brief — STYMEO
+# Design Brief — VAPOFLOW
 
 <!-- Workflow UUID: 7ffc2803-3a11-4b7c-9696-d4209c1aa84b -->
 <!-- Klient: Damian Mordalski (Mordalski Analytics) -->
-<!-- Produkt: Stymeo — ręczna parownica wysokociśnieniowa 1500W, 3 bar, 100°C, 200g -->
+<!-- Produkt: VapoFlow — ręczna parownica wysokociśnieniowa 1500W, 3 bar, 100°C, 200g -->
 
 ## 1. Kierunek manifesta (z 01-direction.md)
 
@@ -14,7 +14,7 @@
 - [ ] Rugged Heritage — workwear, outdoor, tools & trades (kafina)
 - [x] **Nowy: Steam Apothecary** (adaptacja Apothecary Label z paletą cyan klienta)
 
-**Uzasadnienie wyboru:** Stymeo to utility-precision product z agresywnym claimem (100°C, 3 bar, 200 g, zero chemii) — paleta klienta (Steam Cyan #00C2D4 + Deep Graphite #1A1F2E + Cloud White #F5F9FA) pcha w stronę technical apothecary, nie editorial. Tagline klienta „Tylko woda. Tylko czystość." czyta się jak etykieta składnika („H₂O — 100%, bez dodatków") — to dokładnie język Apothecary Label.
+**Uzasadnienie wyboru:** VapoFlow to utility-precision product z agresywnym claimem (100°C, 3 bar, 200 g, zero chemii) — paleta klienta (Steam Cyan #00C2D4 + Deep Graphite #1A1F2E + Cloud White #F5F9FA) pcha w stronę technical apothecary, nie editorial. Tagline klienta „Tylko woda. Tylko czystość." czyta się jak etykieta składnika („H₂O — 100%, bez dodatków") — to dokładnie język Apothecary Label.
 
 ## 2. Moodboard — 3 realne marki referencyjne (SPOZA landing-pages/)
 
@@ -54,11 +54,11 @@
 
 - **Już istnieje (Apothecary Label):** `steamla/`, `postawnik/`, `calmfur/` — wszystkie używają tego samego stylu w ostatnich 6 miesiącach.
 - **Steamla** (najbliższy — TEN SAM produkt parownica): używała headline „H₂O — jedyny składnik" + spec-label block 12vw z gigantyczną literą H₂O.
-- **Czego unikam w Stymeo (signature differentiation):**
-  - **NIE** kopiuję spec-label „H₂O 100%" jako pojedynczej gigantycznej litery — Stymeo użyje **„CHEMIA: 0%"** (negative spec) jako sygnaturę.
+- **Czego unikam w VapoFlow (signature differentiation):**
+  - **NIE** kopiuję spec-label „H₂O 100%" jako pojedynczej gigantycznej litery — VapoFlow użyje **„CHEMIA: 0%"** (negative spec) jako sygnaturę.
   - **NIE** stosuję paper white `#FAFAF7` Apothecary — paleta klienta ma `#F5F9FA` (lekko ciemniejsze, z cyan undertone).
   - **NIE** używam `IBM Plex Sans` — paleta typograficzna klienta (Plus Jakarta).
-  - **NIE** stamp badge ani LOT/BATCH labels jako sec-meta (steamla użyła `LOT 2026-Q2`) — Stymeo użyje `INDEKS · 100°C · 3 BAR · 200 G · 0% CHEMII` jako tech-strip.
+  - **NIE** stamp badge ani LOT/BATCH labels jako sec-meta (steamla użyła `LOT 2026-Q2`) — VapoFlow użyje `INDEKS · 100°C · 3 BAR · 200 G · 0% CHEMII` jako tech-strip.
 
 ## 7. Test anty-generic (4 pytania — wszystkie TAK)
 
@@ -135,7 +135,7 @@ Match z wybranym stylem: **7/7**. Argumentacja: DNA identyczne z DNA kotwiczący
 - Header (sticky, solid white #F5F9FA, NIE rgba+backdrop)
 - Mobile Menu
 - Hero (H1 Split z spec-stack)
-- Sec Meta Strip („STYMEO · PAROWNICA HANDHELD · 100°C · 3 BAR · 200 G · 0% CHEMII")
+- Sec Meta Strip („VAPOFLOW · PAROWNICA HANDHELD · 100°C · 3 BAR · 200 G · 0% CHEMII")
 - Spec Label Big („CHEMIA: 0%" — sygnaturowa)
 - Features as Spec Rows (F3 Linear, 6 wierszy)
 - How It Works (3-step minimal: woda → 15 s → para)
@@ -182,12 +182,12 @@ js_effects_count:
 2. **Mid — „CHEMIA: 0%" oversized negative spec block (signature)**
    - **Lokalizacja:** Po hero, przed features, full-width centered.
    - **Element:** Ramka 2px solid graphite, padding 56px, gigantyczne „0%" w clamp(80px, 14vw, 220px), pod nim lista wymienionych negatywów („CHEMIA · DETERGENTY · ZAPACHY · KONSERWANTY"), poniżej spec-table z 4 wierszami.
-   - **Uniqueness:** Negative spec (czego NIE ma) zamiast positive spec (co MA) — pierwszy raz w `landing-pages/`. Steamla użyła „H₂O 100%" pozytywnie, Stymeo używa „CHEMIA 0%" negatywnie — to ten sam fakt, ale inny conversion angle.
+   - **Uniqueness:** Negative spec (czego NIE ma) zamiast positive spec (co MA) — pierwszy raz w `landing-pages/`. Steamla użyła „H₂O 100%" pozytywnie, VapoFlow używa „CHEMIA 0%" negatywnie — to ten sam fakt, ale inny conversion angle.
    - **Implementation:** ETAP 2 (HTML).
 
 3. **Conversion zone — Comparison table parownica vs chemia detergentowa (full-width 1200px)**
    - **Lokalizacja:** Tuż przed offer box, anchor decision point.
-   - **Element:** Tabela 2-column z 6 wierszami: Czas / Koszt na sprzątanie / Chemia w domu z dzieckiem / Bakterie / Fugi / Alergie. Lewa kolumna Stymeo (cyan check + konkretna wartość), prawa „Detergenty + ścierki" (graphite cross + wartość).
+   - **Element:** Tabela 2-column z 6 wierszami: Czas / Koszt na sprzątanie / Chemia w domu z dzieckiem / Bakterie / Fugi / Alergie. Lewa kolumna VapoFlow (cyan check + konkretna wartość), prawa „Detergenty + ścierki" (graphite cross + wartość).
    - **Uniqueness:** Comparison table jest rzadkością w Apothecary landingach (steamla nie ma); tu staje się głównym conversion driverem przed CTA.
    - **Implementation:** ETAP 2 (HTML) + ETAP 4 polish (sub-styling cyan/graphite).
 
