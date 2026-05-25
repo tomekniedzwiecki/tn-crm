@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     takedrop: {
         label: 'Etap 3 - Konfiguracja sklepu',
         description: 'Maile związane z konfiguracją TakeDrop',
-        templates: ['takedrop_activated', 'landing_page_connected', 'test_ready']
+        templates: ['takedrop_activated', 'takedrop_account_rejected', 'landing_page_connected', 'test_ready']
     },
     reklamy: {
         label: 'Etap 4 - Reklamy',
@@ -159,6 +159,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy admin aktywuje zakładkę TakeDrop',
         icon: 'ph-storefront',
         color: 'sky'
+    },
+    'takedrop_account_rejected': {
+        name: 'Hasło TakeDrop niepoprawne',
+        description: 'Wysyłany gdy admin cofnie aktywację konta TakeDrop bo hasło wpisane przez klienta nie działa',
+        icon: 'ph-warning-circle',
+        color: 'amber'
     },
     'landing_page_connected': {
         name: 'Strona podłączona',
@@ -308,6 +314,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'video_activated', label: 'Aktywuj Video' },
         { value: 'scenarios_shared', label: 'Scenariusze udostępnione' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
+        { value: 'takedrop_account_revoked', label: 'Cofnięcie aktywacji TakeDrop (złe hasło)' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
@@ -352,6 +359,7 @@ const TRIGGER_DEFINITIONS = {
     scenarios_shared: { label: 'Scenariusze udostępnione', icon: 'ph-film-script', color: 'cyan' },
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
+    takedrop_account_revoked: { label: 'Cofnięcie aktywacji TakeDrop (złe hasło)', icon: 'ph-warning-circle', color: 'amber' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy

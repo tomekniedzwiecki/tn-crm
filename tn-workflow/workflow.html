@@ -9601,6 +9601,27 @@
 
                 if (error) throw error;
                 showToast(active ? 'Konto oznaczone jako aktywne' : 'Aktywacja konta cofnięta', 'success');
+
+                if (!active && workflow?.customer_email) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: 'takedrop_account_revoked',
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName: (workflow.customer_name || '').split(' ')[0],
+                                    brandName: workflow.brand_name || '',
+                                    projectUrl: `https://crm.tomekniedzwiecki.pl/client-projekt?id=${workflow.id}`
+                                }
+                            }
+                        });
+                    } catch (te) {
+                        console.warn('automation-trigger takedrop_account_revoked failed (kontynuujemy):', te);
+                    }
+                }
+
                 await loadTakeDrop();
             } catch (err) {
                 console.error('Error toggling account_active:', err);

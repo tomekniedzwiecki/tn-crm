@@ -43,6 +43,7 @@ const VALID_EMAIL_TYPES = [
   'video_activated',
   // Etap 3 - TakeDrop
   'takedrop_activated',
+  'takedrop_account_rejected',
   'takedrop_welcome',
   'landing_page_connected',
   'test_ready',
@@ -89,6 +90,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   video_activated: 'Czas na nagranie materiałów video!',
   // Etap 3 - TakeDrop
   takedrop_activated: 'Załóż konto na platformie sklepowej',
+  takedrop_account_rejected: 'Hasło do TakeDrop niepoprawne — popraw je w panelu',
   takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!',
   // Etap 4 - Reklamy
   ads_activated: 'Ruszamy z reklamami — etap 4 aktywowany!',
@@ -105,8 +107,8 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   videos_reminder: 'Przypomnienie: czekamy na Twoje nagrania video 🎬',
   videos_skipped: 'Etap nagrań video pominięty — idziemy dalej',
   tools_started: 'Ostatni krok Etapu 5 — narzędzia analityczne 🔧',
-  tools_script_received: '{{clientName}} przesłał skrypt {{toolName}} do osadzenia 🔧',
-  tools_notes_received: '{{clientName}} wpisał uwagi po analizie sesji 📝',
+  tools_script_received: '{{clientName}} ({{brandName}}) przesłał skrypt {{toolName}} do osadzenia 🔧',
+  tools_notes_received: '{{clientName}} ({{brandName}}) wpisał uwagi po analizie sesji 📝',
   tools_completed: 'Etap 5 zakończony — lecimy dalej 🚀',
   analysis_started: 'Hotjar zbiera już sesje — czas na analizę 📊'
 }
@@ -365,10 +367,18 @@ Deno.serve(async (req) => {
 
       console.log('[send-email] Template found, subject:', subject.substring(0, 50), 'body length:', body.length)
 
+      // Build admin workflow URL (used in admin-notification templates like tools_notes_received)
+      const adminUrl = data.adminUrl
+        || (data.workflowId ? `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${data.workflowId}` : '')
+
       // Prepare data for variable replacement
       const templateData: Record<string, any> = {
         email: data.email,
         clientName: data.clientName || 'Cześć',
+        brandName: data.brandName || '',
+        workflowId: data.workflowId || '',
+        adminUrl,
+        toolName: data.toolName || '',
         offerName: data.offerName || '',
         offerPrice: data.offerPrice,
         pdfUrl: data.pdfUrl || '',
