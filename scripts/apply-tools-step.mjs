@@ -55,10 +55,10 @@ async function ensureFlow(triggerType, name, description, emailType, toAdmin = f
     await upsertSetting('email_template_tools_started_subject', 'Ostatni krok Etapu 5 — narzędzia analityczne 🔧');
     await upsertSetting('email_template_tools_started_body', TOOLS_STARTED_BODY);
 
-    await upsertSetting('email_template_tools_script_received_subject', '{{clientName}} przesłał skrypt {{toolName}} do osadzenia 🔧');
+    await upsertSetting('email_template_tools_script_received_subject', '{{clientName}} ({{brandName}}) przesłał skrypt {{toolName}} do osadzenia 🔧');
     await upsertSetting('email_template_tools_script_received_body', TOOLS_SCRIPT_RECEIVED_BODY);
 
-    await upsertSetting('email_template_tools_notes_received_subject', '{{clientName}} wpisał uwagi po analizie sesji 📝');
+    await upsertSetting('email_template_tools_notes_received_subject', '{{clientName}} ({{brandName}}) wpisał uwagi po analizie sesji 📝');
     await upsertSetting('email_template_tools_notes_received_body', TOOLS_NOTES_RECEIVED_BODY);
 
     await upsertSetting('email_template_tools_completed_subject', 'Etap 5 zakończony — lecimy dalej 🚀');

@@ -421,6 +421,10 @@ async function processActionStep(
       email: recipientEmail,
       clientName: context.clientName || context.customer_name,
       brandName: context.brandName,
+      // For admin-notification templates that link back to the workflow in the admin panel
+      workflowId: context.workflowId || (execution.entity_type === 'workflow' ? execution.entity_id : undefined),
+      adminUrl: context.adminUrl,
+      toolName: context.toolName,
       offerName: context.offerName || context.offer_name,
       offerPrice: context.offerPrice || context.amount,
       validUntil: context.validUntil || context.valid_until,
