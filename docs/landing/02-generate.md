@@ -865,6 +865,36 @@ Każdy landing MA mieć subtelną animację W TLE sekcji hero, dopasowaną do pr
 
 ---
 
+## 🔌 context7 MCP — anti-halucynacja dla rzadkich CSS
+
+> Wprowadzone 2026-05-21. Standardowe CSS (grid, flex, animation, transform) Claude zna bezbłędnie. **Ale przy nowych / niszowych properties łatwo halucynuje składnię** — np. `@container queries` ma 2 składnie (range queries vs style queries), `view-timeline` ma 3 typy (`scroll`, `view`, named), `anchor-positioning` jeszcze nie jest w wszystkich przeglądarkach. Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+**Kiedy wywołać context7 PRZED napisaniem CSS:**
+
+| CSS property / API | Czemu context7 | Min browser support sprawdź |
+|---|---|---|
+| `@container queries` (`@container (min-width: ...)`) | 2 składnie: size queries vs style queries (różne reguły) | Chrome 105+, Safari 16+ |
+| `view-timeline:` / `animation-timeline:` | 3 typy timeline'ów + `view-timeline-axis` + `view-timeline-inset` | Chrome 115+, Safari NIE jeszcze |
+| `anchor-name:` / `position-anchor:` | Eksperymentalne — Chrome 125+ only, brak Safari/Firefox | Sprawdź czy fallback |
+| `:has()` selector | Działa wszędzie od 2023, ale specifity calc'a zaskakuje | Chrome 105+, Safari 15.4+ |
+| `subgrid` | `grid-template-columns: subgrid` semantyka różna od regular grid | Chrome 117+, Safari 16+ |
+| `text-wrap: balance/pretty` | Zachowanie różne na headline'ach vs paragraph | Chrome 114+, Safari 17.4+ |
+| `field-sizing: content` | Auto-resize input/textarea | Chrome 123+, Safari NIE |
+| `scrollbar-gutter:` | `stable` vs `stable both-edges` różnice | Chrome 94+, Safari 14+ |
+| `overscroll-behavior:` | `contain` vs `none` różnice | wszędzie OK ale często mylone |
+
+**Wywołanie:**
+```
+context7.resolve-library-id(name="MDN Web Docs" lub "CSS specification")
+context7.query-docs(library_id=<id>, query="view-timeline syntax for scroll progress animation")
+```
+
+**Co dostajesz:** aktualne docs MDN + przykłady kodu + browser support matrix + caveaty. **Nie zgaduj składni — pobierz.**
+
+**Kiedy NIE używać:** standardowe CSS (display, flex, grid, position, transform, animation, transition, color, border, padding/margin) — Claude zna. Wywołanie context7 dla tych = waste of tokens.
+
+---
+
 ## JavaScript — 5 obowiązkowych JS effects w ETAP 2
 
 > **Wszystkie 5 effects MUSZĄ być w każdym landingu** (DESIGN D.1 + verify-landing.sh Grupa 7). Dodawaj je razem z HTML w ETAP 2, nie odkładaj do ETAP 4.

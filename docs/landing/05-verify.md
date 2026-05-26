@@ -110,7 +110,153 @@ Pierwsze uruchomienie pobiera Chromium (~150 MB, ~1 min).
 
 ---
 
-## Krok 3 — Screenshoty 3 viewports
+## Krok 2.5 — **chrome-devtools MCP audit (PREFEROWANY, gdy MCP dostępny)** 🔌
+
+> Wprowadzone 2026-05-21 — chrome-devtools MCP daje to czego `verify-landing.sh` grep nie wyłapie: **żywe interakcje, console errors, performance metrics, fade-in opacity stan po load**. Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+**Kiedy ten krok:** jeśli `mcp__chrome-devtools__*` tools są dostępne w sesji (sprawdź `ToolSearch` z `select:` jeśli niepewny). Jeśli nie — pomiń, idź do Kroku 3 (Playwright bash fallback).
+
+**URL do auditu:** local file `file:///c:/repos_tn/tn-crm/landing-pages/[slug]/index.html` LUB live preview po deploy `https://tn-crm.vercel.app/landing-pages/[slug]/`. Preferuj live URL — wtedy Vercel deploy też weryfikowany.
+
+### 2.5.1 — Console errors gate
+
+```
+chrome-devtools.navigate(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
+chrome-devtools.wait_for_events(event=load)
+chrome-devtools.console_messages(level=error)
+```
+
+**Reguła:** ZERO `error`-level messages. Najczęstsze winowajcy:
+- Brakujący asset (404 z `attachments/landing/[slug]/`) — sprawdź upload do Supabase Storage
+- `Uncaught ReferenceError` w toolkit script (zła konfiguracja `ConversionToolkit.init`)
+- CORS na zewnętrzne assety (fontów, opinii AliExpress)
+- Mixed content (http:// asset na https:// stronie)
+
+**FAIL → STOP**, napraw zanim deploy.
+
+### 2.5.2 — Performance metrics (LCP/CLS/FCP/INP)
+
+```
+chrome-devtools.record_traces(url=..., emulate=mobile)
+chrome-devtools.analyze_insights()
+chrome-devtools.lighthouse_audits(categories=['performance'], throttling='mobile_3g_fast')
+```
+
+**Targets (zgodne z [`reference/pagespeed.md`](reference/pagespeed.md) sekcja 1):**
+
+| Metryka | Target mobile | Target desktop |
+|---|---|---|
+| **LCP** | < 2.5s | < 1.5s |
+| **CLS** | < 0.1 | < 0.05 |
+| **FCP** | < 1.8s | < 1.0s |
+| **INP** | < 200ms | < 100ms |
+| **Performance score** | ≥ 90 | ≥ 95 |
+
+**Diagnoza częstych problemów:**
+- LCP > 2.5s → hero image bez `fetchpriority="high"` LUB nie-WebP / nie-/render/image/ URL
+- CLS > 0.1 → `<img>` bez `width`/`height` LUB fonty bez `display=swap`
+- FCP > 1.8s → blokujące fonty (brak `preconnect`) LUB inline CSS > 50KB
+
+**FAIL → wróć do `pagespeed.md` checklist sekcja 8.**
+
+### 2.5.3 — Smoke test interakcji (krytyczne — grep tego NIE łapie)
+
+Headline: każdy click below jest **autonomicznym testem** — failure jednego nie blokuje pozostałych, ale loguj wszystkie jako WARN/FAIL.
+
+```
+# 1. CTA hero scrolluje do #offer
+chrome-devtools.click(selector='.hero .btn-primary')
+chrome-devtools.wait_for_events(event=scroll_end, timeout=2000)
+chrome-devtools.gather_metrics(metrics=['scroll_y'])
+# Oczekiwane: scroll_y > 0 i offer-box w viewport
+```
+
+```
+# 2. Sticky CTA mobile (375×812) klikalny
+chrome-devtools.new_page(viewport={width:375, height:812})
+chrome-devtools.navigate(url=...)
+chrome-devtools.wait_for_events(event=load)
+chrome-devtools.click(selector='.sticky-cta, .ct-mobile-bar')
+# Oczekiwane: scroll do #offer LUB modal opens
+```
+
+```
+# 3. Reels lightbox otwiera + zamyka (jeśli landing ma sekcję reels)
+chrome-devtools.click(selector='.reels-card:first-child')
+chrome-devtools.wait_for_events(event=animation_end, timeout=1500)
+chrome-devtools.snapshot(name='reels_lightbox_open')
+chrome-devtools.click(selector='.reels-lightbox-close')
+chrome-devtools.wait_for_events(event=animation_end, timeout=1500)
+chrome-devtools.snapshot(name='reels_lightbox_closed')
+# Oczekiwane: snapshot 1 ma .reels-lightbox.open, snapshot 2 NIE
+```
+
+```
+# 4. FAQ accordion otwiera się
+chrome-devtools.click(selector='.faq-item:first-child .faq-question')
+chrome-devtools.snapshot(name='faq_open')
+# Oczekiwane: .faq-item ma class .active LUB .faq-answer height > 0
+```
+
+```
+# 5. Mobile menu (hamburger)
+chrome-devtools.new_page(viewport={width:375, height:812})
+chrome-devtools.navigate(url=...)
+chrome-devtools.click(selector='#hamburger, .hamburger')
+chrome-devtools.snapshot(name='mobile_menu_open')
+# Oczekiwane: #mobileMenu ma class .open / .active
+```
+
+### 2.5.4 — Fade-in opacity check (safety #2 — żywy)
+
+`verify-landing.sh` sprawdza ŻE `html.js` gate istnieje. **Chrome-devtools MCP sprawdza CZY działa.** Najgroźniejszy bug w historii landingów: cała strona ivory plama bo `.fade-in{opacity:0}` bez safety timeout.
+
+```
+chrome-devtools.navigate(url=...)
+chrome-devtools.wait_for_events(event=load)
+chrome-devtools.script_evaluation(code=`
+  const els = document.querySelectorAll('.fade-in');
+  const invisible = Array.from(els).filter(el => {
+    const cs = window.getComputedStyle(el);
+    return parseFloat(cs.opacity) < 0.1;
+  });
+  ({
+    total: els.length,
+    invisible_count: invisible.length,
+    invisible_above_fold: invisible.filter(el => el.getBoundingClientRect().top < window.innerHeight).length
+  })
+`)
+```
+
+**Reguła:** `invisible_above_fold` musi być **0**. Każdy fade-in element widoczny w pierwszym viewporcie MUSI być visible po load (po IntersectionObserver + safety timeout 3s). Jeśli > 0 → fade-in bug, wracaj do safety #2.
+
+### 2.5.5 — Screenshoty 3 viewports przez MCP (zamiast bash scriptu)
+
+```
+chrome-devtools.new_page(viewport={width:1440, height:900})
+chrome-devtools.navigate(url=...)
+chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/desktop_full.png')
+
+chrome-devtools.new_page(viewport={width:768, height:1024})
+chrome-devtools.navigate(url=...)
+chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/tablet_full.png')
+
+chrome-devtools.new_page(viewport={width:375, height:812})
+chrome-devtools.navigate(url=...)
+chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/mobile_full.png')
+```
+
+Po tym pomiń Krok 3 (Playwright screenshoty) — masz już artefakty. Przejdź do Kroku 4 (Read screenshots).
+
+### 2.5.6 — Cleanup
+
+```
+chrome-devtools.close_page()  # zamknij wszystkie otwarte taby
+```
+
+---
+
+## Krok 3 — Screenshoty 3 viewports (Playwright fallback, gdy MCP niedostępny)
 
 ```bash
 bash scripts/screenshot-landing.sh [slug]
@@ -237,6 +383,11 @@ Nie commituj skryptów screenshot do repo — są utility.
 
 | Warunek | Akcja | Max retry | Fallback |
 |---------|-------|-----------|----------|
+| chrome-devtools MCP niedostępny | Pomiń Krok 2.5, użyj Playwright bash (Krok 3) | — | kontynuuj normalnie |
+| **chrome-devtools console errors > 0** | Zdiagnozuj per typ (404, ReferenceError, CORS), napraw, re-test | 3 | **STOP + raport, NIE deploy** |
+| **chrome-devtools LCP > 4s mobile** | Sprawdź hero image (`fetchpriority`, format WebP, `/render/image/`), `preconnect` fontów | 2 | Kontynuuj jako WARN, deploy ale poinformuj usera |
+| **chrome-devtools `invisible_above_fold` > 0 (fade-in bug)** | Napraw per safety #2 — `html.js` gate + safety timeout filtrujący `rect.top` | 2 | **STOP + raport, NIE deploy (krytyczne — ivory plama)** |
+| chrome-devtools click smoke test fail (CTA / reels / FAQ) | Sprawdź event handler w JS, re-test | 2 | Kontynuuj jako WARN, raport |
 | Playwright nie działa | `npm install -D playwright && npx playwright install chromium` | 1 | STOP — wymaga manual install |
 | Screenshot pokazuje pustą stronę (ivory plama) | fade-in bug — napraw per safety #2 | 2 | STOP + raport |
 | Screenshot bug nieznany | Ręczny fix ostatniego diffa, re-shoot | 2 | STOP + pokaż screenshot userowi |

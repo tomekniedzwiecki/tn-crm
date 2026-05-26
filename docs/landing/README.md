@@ -53,6 +53,18 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 | [`reels-procedure.md`](reels-procedure.md) | Dodanie / aktualizacja sekcji Reels (video TikTok/Instagram/YouTube). **MP4-based + phash dedup** — NIE używaj YT iframe ani embed.js (5 udokumentowanych błędów) |
 | [`CHANGELOG.md`](CHANGELOG.md) | Historia zmian procedury (v1→v3) |
 
+### 🔌 MCP integrations (zainstalowane 2026-05-21)
+
+| MCP | Etap | Rola | Komenda startowa |
+|-----|------|------|-------------------|
+| **chrome-devtools** | ETAP 5, 6, pagespeed | Console errors + LCP/CLS/FCP + smoke test interakcji + fade-in opacity check + 3 viewport screenshots. **Drop-in replacement dla `screenshot-landing.sh`** | dostępny w nowej sesji Claude (po `claude mcp add chrome-devtools`) |
+| **context7** | ETAP 2, 4 | Anti-halucynacja dla rzadkich CSS properties (`@container queries`, `view-timeline`, `anchor-positioning`, `:has()`, `subgrid`, `text-wrap`). Wywołaj `resolve-library-id` + `query-docs` zamiast zgadywać składnię | dostępny w nowej sesji |
+| **magic** (21st.dev) | ❌ NIGDY w pipeline | TYLKO research do rozbudowy Style Atlas / `motion-library.md`. NIE generuj kodu na konkretny landing (React + framer-motion + shadcn = wrong stack + AI slop dla polskich DR landingów) | wywoływane wyłącznie ręcznie na żądanie usera |
+
+**Restart sesji wymagany** po `claude mcp add` — tools są deferred i ładują się przy starcie. Pełna konfiguracja per MCP w pamięci: [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+**Fallback:** każdy etap który używa chrome-devtools MCP ma fallback na bash script (`screenshot-landing.sh`, ręczne LCP/CLS w PageSpeed Insights). MCP wzmacnia, nie zastępuje pipeline.
+
 ### Skrypty pomocnicze
 
 | Skrypt | Cel |
@@ -146,6 +158,7 @@ Landingi to **preview dla klienta** (demo sprzedażowe), nie produkcja. Pre-comm
 
 ### Kompletność
 - [ ] `_brief.md` istnieje i jest valid (`verify-brief.sh` exit 0)
+- [ ] **`_brief.md` ma sekcję 11 Wow Moments** (3 explicit wow moments zidentyfikowane w ETAP 4, każdy z lokalizacją + element + uniqueness reason + implementation status) — patrz [`04-design.md` sekcja 1](04-design.md)
 - [ ] 14 sekcji obecnych (header → footer)
 - [ ] 10-14 placeholderów z briefem fotografa LUB AI images podstawione
 - [ ] Logo z workflow (przycięte sharp().trim, pełny URL Supabase)

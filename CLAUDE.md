@@ -104,8 +104,18 @@ Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zost
 - `scripts/verify-brief.sh [slug]` — walidacja briefa PRZED ETAP 2 (BLOKUJE jeśli niekompletny)
 - `scripts/verify-landing.sh [slug]` — ~33 grep checks (target: ≥15/18 PASS)
 - `scripts/verify-all-landings.sh` — regression check na 6 baseline'ach
-- `scripts/screenshot-landing.sh [slug]` — Playwright 3 viewports
+- `scripts/screenshot-landing.sh [slug]` — Playwright 3 viewports (fallback gdy MCP niedostępny)
 - `scripts/landing-autorun.sh [UUID]` — entry-point AUTO-RUN mode (KROK 16 v3)
+
+**🔌 MCP integrations dla landingów (zainstalowane 2026-05-21):**
+
+| MCP | Etap | Rola |
+|---|---|---|
+| **chrome-devtools** | ETAP 5 (verify), ETAP 6 (mobile), pagespeed.md | Console errors, LCP/CLS/FCP, smoke test interakcji (CTA scroll, reels lightbox, sticky-cta), fade-in opacity check, 3 viewporty. **Drop-in replacement dla `screenshot-landing.sh`** — używaj MCP gdy dostępne, fallback na bash gdy nie |
+| **context7** | ETAP 2 (generate), ETAP 4 (design) | Wywołaj `resolve-library-id` + `query-docs` gdy używasz rzadkich/nowych CSS properties (`@container queries`, `view-timeline`, `anchor-positioning`, `:has()`, `subgrid`, `text-wrap: balance/pretty`). Anti-halucynacja składni |
+| **magic** (21st.dev) | TYLKO research, NIGDY w pipeline | Wyłącznie ręczne wywołanie gdy user prosi o "zerknij na 21st.dev co tam jest dla X" w kontekście rozbudowy Style Atlas / motion-library. **Generuje React + framer-motion + shadcn/ui = wrong stack + AI slop dla polskich DR landingów** — NIE używaj do generowania kodu na konkretny landing |
+
+Patrz: [`mcp-landing-tools.md`](../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md) w memory + sekcja "MCP integrations" w [`docs/landing/README.md`](docs/landing/README.md).
 
 **KRYTYCZNE:**
 - **NIE wybieraj kierunku „z presetu" przed audytem produktu** — to był root cause refactoru 2026-04 (dryf Editorial↔Panoramic Calm bez danych)

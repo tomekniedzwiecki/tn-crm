@@ -317,6 +317,42 @@ https://pagespeed.web.dev/analysis?url=https://tn-crm.vercel.app/landing-pages/[
 - Mobile: **90+** (minimum 85)
 - Desktop: **95+** (minimum 90)
 
+### 🔌 chrome-devtools MCP — pre-deploy lokalny pomiar (PREFEROWANY)
+
+> Wprowadzone 2026-05-21. PageSpeed Insights jest **post-deploy** — czekasz aż Vercel postawi URL, dopiero testujesz. Chrome-devtools MCP mierzy LCP/CLS/FCP/INP **lokalnie z `file://`** zanim push'niesz. Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+```
+chrome-devtools.new_page(viewport={width:375, height:812, isMobile:true})
+chrome-devtools.navigate(url=file:///c:/repos_tn/tn-crm/landing-pages/[slug]/index.html)
+chrome-devtools.record_traces(throttling='mobile_3g_fast')
+chrome-devtools.analyze_insights()
+```
+
+**ALTERNATYWNIE Lighthouse audit (pełniejszy raport z rekomendacjami):**
+```
+chrome-devtools.lighthouse_audits(
+  url='https://tn-crm.vercel.app/landing-pages/[slug]/',
+  categories=['performance', 'accessibility', 'best-practices', 'seo'],
+  throttling='mobile_3g_fast',
+  emulate='mobile'
+)
+```
+
+**Czego szukać w wyniku:**
+
+| Metryka | Threshold (FAIL) | Co naprawić |
+|---|---|---|
+| LCP | > 2.5s | Hero image: `fetchpriority="high"`, format WebP, `/render/image/?format=webp&width=1200&quality=85`, preload w `<head>` |
+| CLS | > 0.1 | Wszystkie `<img>` z `width`+`height`, fonty z `display=swap`, brak `font-size` zmieniającego się po load |
+| FCP | > 1.8s | `preconnect` do fonts.googleapis.com + fonts.gstatic.com (crossorigin), inline critical CSS, defer JS |
+| INP | > 200ms | Heavy JS w event handlerach, throttle scroll listenery, użyj `requestAnimationFrame` |
+| Total Blocking Time | > 300ms | Defer wszystkie non-critical scripts, conversion-toolkit z `defer` |
+| Render-blocking resources | ≥ 1 | Wszystkie scripts z `defer` lub na końcu `<body>`, fonty z `display=swap` |
+
+**Iteracja:** napraw najgorszą metrykę, re-run audit, powtórz aż wszystkie w zielonym. **Każdy fix zwykle zmienia score o 5-15 punktów.**
+
+**Fallback:** jeśli MCP niedostępny — `https://pagespeed.web.dev/` po deploy (wolniej, wymaga live URL).
+
 ---
 
 ## 9. Przykład optymalnego `<head>`

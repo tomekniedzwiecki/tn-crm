@@ -97,6 +97,20 @@ Ref 3: Linear → kolorowe gradienty w detalach (radial gradient w rogu karty, n
 
 **Zabronione referencje:** inne landingi z `landing-pages/` (zamknięta pętla), Midjourney gallery (AI slop), Dribbble (trend slop), generyczne „modern minimalist" template'y.
 
+### 🔌 21st.dev / magic MCP — kiedy zerknąć, kiedy NIE
+
+> **TYLKO research, NIGDY do generowania kodu na ten landing.** Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+[21st.dev/s](https://21st.dev/s) ma bibliotekę kilkudziesięciu animowanych komponentów (bento, hero variants, motion patterns). Można na nią zerknąć **wyłącznie** gdy:
+
+✅ **OK use case:** „brakuje mi nowego motion effect do `motion-library.md`" / „chcę nowy hero variant H11 do `section-variants.md`" → spojrzeć na komponent 21st.dev, **podchwycić zasadę ruchu**, **przepisać w vanilla HTML/CSS** zgodnie ze Style Atlas + safety rules.
+
+❌ **ZAKAZANE:** wywołać `magic` MCP do generowania komponentu na konkretny landing. Generuje React + framer-motion + shadcn/ui + Inter font + gradient mesh + glassmorphism = **wrong stack + AI slop dla polskich DR konwersji**. Niemożliwe do wstawienia bez 100% przepisania, a jak przepisujesz to po co używałeś?
+
+❌ **ZAKAZANE jako "ref" w briefie:** nie dodawaj 21st.dev komponentu do listy 3 referencji marek (Krok 2). Referencje to **realne marki** (Dyson, Aesop, Linear) — nie biblioteki UI.
+
+**Heurystyka praktyczna:** 21st.dev = źródło inspiracji do rozbudowy procedury (raz na sezon). NIE jest narzędziem do tego landingu. Jeśli się skusisz „zerknąć żeby zobaczyć co tam mają" — pamiętaj że każda minuta tam to risk pójścia w generic SaaS aesthetic zamiast premium polskiej direct response.
+
 ---
 
 ## Krok 3 — Design Manifesto (5 linijek)

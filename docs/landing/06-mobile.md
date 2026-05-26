@@ -18,11 +18,96 @@
 2. Otwórz mobile_hero.png + mobile_900.png + 1800 + 2700
 3. Przejdź checklist poniżej sekcja po sekcji
 4. Popraw wszystkie znalezione problemy w index.html
-5. Re-run: bash scripts/screenshot-landing.sh [slug]
+5. Re-run: bash scripts/screenshot-landing.sh [slug]   LUB chrome-devtools MCP (patrz niżej)
 6. Ponownie obejrzyj mobile_*.png → jeśli OK, idź do commit
 ```
 
 **Iteruj aż mobile_full.png wygląda jak "premium appka", nie "desktop wciśnięty w iPhone'a".**
+
+### 🔌 chrome-devtools MCP — żywy mobile audit (PREFEROWANY)
+
+> Wprowadzone 2026-05-21 — żywy mobile test łapie to czego screenshot nie pokaże: touch events, hamburger expand, sticky-cta vs footer overlap, scroll jank. Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
+
+```
+# Setup mobile viewport
+chrome-devtools.new_page(viewport={width:375, height:812, isMobile:true, hasTouch:true})
+chrome-devtools.navigate(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
+chrome-devtools.wait_for_events(event=load)
+```
+
+**A. Touch target sizes (obszar A z checklisty)** — sprawdź computed style wszystkich CTA naraz:
+```
+chrome-devtools.script_evaluation(code=`
+  const ctas = document.querySelectorAll('.btn-primary, .cta-button, .sticky-cta, .ct-mobile-bar button, .nav-link');
+  Array.from(ctas).map(el => {
+    const r = el.getBoundingClientRect();
+    return { sel: el.className, w: Math.round(r.width), h: Math.round(r.height), small: r.height < 44 };
+  }).filter(x => x.small)
+`)
+```
+Wynik MUSI być `[]` (zero elementów < 44px wysokości).
+
+**B. Overflow-x leaks (obszar H — najczęstszy mobile bug):**
+```
+chrome-devtools.script_evaluation(code=`
+  const docW = document.documentElement.clientWidth;
+  Array.from(document.body.querySelectorAll('*')).filter(el => {
+    const r = el.getBoundingClientRect();
+    return r.right > docW + 1;  // 1px tolerancja na sub-pixel
+  }).map(el => ({
+    tag: el.tagName,
+    sel: el.className || el.id,
+    overflow: Math.round(el.getBoundingClientRect().right - docW)
+  })).slice(0, 10)
+`)
+```
+Wynik MUSI być `[]`. Najczęstsi winowajcy: editorial numerals `::before` bez `overflow:hidden` na sekcji-parencie, `width:100vw` przy scrollbarze, `position:absolute; left:-X` poza overflow:hidden.
+
+**C. Sticky CTA vs footer overlap:**
+```
+chrome-devtools.script_evaluation(code=`
+  window.scrollTo(0, document.body.scrollHeight);
+  const sticky = document.querySelector('.sticky-cta, .ct-mobile-bar');
+  const footer = document.querySelector('footer');
+  if (!sticky || !footer) return { sticky: !!sticky, footer: !!footer };
+  const stickyRect = sticky.getBoundingClientRect();
+  const footerRect = footer.getBoundingClientRect();
+  return {
+    sticky_bottom: Math.round(stickyRect.bottom),
+    footer_visible_top: Math.round(footerRect.top),
+    overlapping: stickyRect.top < footerRect.bottom && stickyRect.bottom > footerRect.top
+  }
+`)
+```
+`overlapping: false` wymagane. Jeśli `true` — body musi mieć `padding-bottom` równy wysokości sticky-cta + 24px buforu.
+
+**D. Hamburger menu opens (obszar F):**
+```
+chrome-devtools.click(selector='#hamburger, .hamburger')
+chrome-devtools.wait_for_events(event=animation_end, timeout=600)
+chrome-devtools.script_evaluation(code=`
+  const menu = document.querySelector('#mobileMenu, .mobile-menu');
+  const cs = window.getComputedStyle(menu);
+  return {
+    open_class: menu.classList.contains('open') || menu.classList.contains('active'),
+    visible: parseFloat(cs.opacity) > 0.5 && cs.display !== 'none',
+    transform: cs.transform
+  }
+`)
+```
+Oczekiwane: `open_class: true, visible: true`. Po teście zamknij: `chrome-devtools.click(selector='#mobileMenu .mobile-link:first-child')`.
+
+**E. Mobile screenshoty (zamiast bash screencap):**
+```
+chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/mobile_full.png')
+# Mid-scroll capture:
+chrome-devtools.script_evaluation(code='window.scrollTo(0, 900)')
+chrome-devtools.screenshots(full_page=false, save_to='C:/tmp/[slug]_shots/mobile_900.png')
+chrome-devtools.script_evaluation(code='window.scrollTo(0, 1800)')
+chrome-devtools.screenshots(full_page=false, save_to='C:/tmp/[slug]_shots/mobile_1800.png')
+```
+
+**Fallback:** jeśli MCP niedostępny — `bash scripts/screenshot-landing.sh [slug]` + ręczna inspekcja w DevTools.
 
 ---
 
