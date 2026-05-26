@@ -60,16 +60,136 @@ Obowiązkowe — Conversion Toolkit wymaga, użytkownik scrollujący powinien mi
 
 ---
 
-## 1. Analiza obecnego stanu
+## 1. WOW MOMENTS — Identify & Audit (OBOWIĄZKOWE) 🎯
 
-Przed zmianami odpowiedz:
-1. **Czy strona wygląda jak szablon?** (generyczna, przewidywalna, "widziałem to 100 razy")
-2. **Co jest charakterystyczne dla tej marki?** (kolory, ton, energia)
-3. **Jaki jest jeden element, który ktoś zapamięta?** (jeśli nie ma — musisz go stworzyć)
+> **Wprowadzone 2026-05-21.** Najczęstszy powód że premium landing wygląda "ok ale generic": ma wszystkie checklist elementy (header solid, offer box, trust bar, motion library, Style Atlas pick) **ale nie ma 1 elementu którego klient nie zapomni**. To są **wow moments** — konkretne, nazywalne, niemożliwe do zastąpienia.
+>
+> **Reguła:** każdy landing MUSI mieć **dokładnie 3 wow moments** (nie 1, nie 5):
+> - **1 = niewystarczające** — klient zobaczy raz, zapomni
+> - **5+ = za dużo** — żaden nie staje się signature, chaos
+> - **3 = magiczna liczba** — jeden per strefa: hero zone (above-fold), mid zone (problem-solution-comparison), conversion zone (offer-CTA-FAQ)
+
+### Krok 1.1 — Identify aktualne wow moments
+
+Otwórz landing screenshoty (`C:/tmp/[slug]_shots/*`) i policz: **co zostaje w głowie po 30 sekundach scrollowania?**
+
+Dla każdego znalezionego wow moment zapisz w `landing-pages/[slug]/_brief.md` jako sekcja 11:
+
+```markdown
+## 11. Wow Moments (audyt z ETAP 4)
+
+### Wow Moment 1
+- **Strefa:** hero zone | mid zone | conversion zone
+- **Lokalizacja:** sekcja Nº 0X — [nazwa sekcji]
+- **Element:** [konkret co widać — np. "oversized editorial numeral Nº 01 w hero z italic em na słowie KLUCZOWY"]
+- **Czemu unique:** [czego inne premium landingi NIE robią w tym miejscu — np. "Linear / Stripe nie używają magazine numbering, Aesop nie używa italic em jako accent"]
+- **Implementation status:** ✅ obecny w HTML / ⚠️ częściowo zaimplementowany / ❌ planowany ale brak
+
+### Wow Moment 2
+[ten sam format]
+
+### Wow Moment 3
+[ten sam format]
+```
+
+### Krok 1.2 — Jeśli mniej niż 3 → DODAJ teraz (Edit tool)
+
+Wybierz brakujące z banku poniżej (per strefa, jeden ze strefy z luką). **Każdy wow moment to konkret HTML/CSS który da się wskazać w kodzie**, nie "wygląda premium".
+
+### Bank wow moments per strefa
+
+#### Hero zone (above-fold, pierwsze 3 sek wrażenie)
+
+| Wow moment | Implementation | Anti-pattern (NIE liczy się jako wow) |
+|---|---|---|
+| **Editorial monumental numeral** | `<div class="hero-numeral">Nº 01</div>` z `font-size: clamp(180px, 28vw, 380px)` w tle hero, opacity 0.12, parallax z safety capture | "duży headline" — to baseline, nie wow |
+| **Italic em accent w headline** | 1-2 słowa w `<em>` z dedykowanym fontem (Fraunces SOFT 90, Cormorant italic), font-weight różne od reszty | Pogrubione słowa — generic |
+| **Handwritten signature / scribble** | SVG path z handwritten "tagline" lub signature klienta pod headline (np. "— Tomek N." font Caveat) | Cursive font na całym headline — overdone |
+| **Split-screen hero z asymetryczną proporcją** | 60/40 lub 70/30 grid (nigdy 50/50), jedna strona bez padding, edge-to-edge | 50/50 split — generic |
+| **Single oversized stat z context narrative** | `<div class="hero-stat">5600 <em>Pa</em></div>` + paragraf 2-zdaniowy obok, font-size stat min 120px | Stat counter row — overused |
+| **Vertical orientation hero text** | Headline rotated -90deg jako side bar (Japanese magazine style) | — |
+| **Hero z odręczną mapą / diagramem schematycznym** | SVG illustration product anatomy + text labels, nie photograph | Render 3D produktu — generic |
+
+#### Mid zone (problem / solution / comparison)
+
+| Wow moment | Implementation | Anti-pattern |
+|---|---|---|
+| **Custom comparison grid 60/40 lub 70/30** | `.comparison-grid { grid-template-columns: 3fr 2fr }` zamiast 1fr 1fr, dominant column z wider padding | Standard 50/50 z checkmarks |
+| **Quote pull między sekcjami** | `<blockquote class="pull-quote">` na CAŁĄ szerokość containera (full-bleed), italic, max-width 800px center | Quote w karcie z avatar — generic |
+| **Asymetryczny bento z 1 dominant tile** | Grid 3-col z `.tile-hero { grid-column: span 2; grid-row: span 2 }` i unique aspect-ratio na tej karcie | Bento 2×2 wszystkie identyczne |
+| **Narrative scroll text** | Sticky text po lewej + scroll-changing right column (3 stany) — F6 wariant | Generic features grid |
+| **Editorial chapter divider** | Section break z "Rozdział II — [tytuł]" w manuscript style, generous padding 200px | `<hr>` lub thin border — generic |
+| **Before/after slider** | Interactive `<input type=range>` z divider który ujawnia 2 stany produktu | Two photos side-by-side static |
+| **Comparison jako wertykalna timeline** | "Wczoraj" → "Teraz" jako oś czasu z dotami, nie tabela | Cells matrix — overused |
+
+#### Conversion zone (offer / FAQ / final CTA)
+
+| Wow moment | Implementation | Anti-pattern |
+|---|---|---|
+| **Animated border beam wokół offer box** | `::before` z linear gradient brand colors, animation `border-beam 3s linear infinite` (patterns.md #14) | Solid border — baseline |
+| **Final CTA z gigantic numeral background** | Identyczne jak hero numeral ale w sekcji końcowej (`Nº 10` na 380px), dark bg | Generic dark CTA banner |
+| **Founder note pre-offer** | Personal handwritten-style paragraph + signature + face photo (50×50) tuż przed offer box | Generic "100% gwarancja" badge |
+| **Offer box jako magazine page** | Treat offer jak page from catalog — kolumna "Specyfikacja" z font-mono, kolumna "Co dostajesz" z editorial italic | Standard product card |
+| **Risk reversal jako manifest** | "Jeśli nie zadziała w 30 dni, oddamy 100% + 50zł" jako separate sekcja przed offer, dark bg z gold accent | Small print "30-day guarantee" |
+| **FAQ jako blockquote conversation** | Każde pytanie jako pull-quote od persony (z imieniem) + odpowiedź jako reply, NIE accordion | Standard accordion |
+| **Sticky offer pricing summary** | Floating side panel z aktualną ceną + savings widoczny przez całą stronę conversion zone (desktop only) | Sticky CTA button — common |
+
+### Krok 1.3 — Quality test każdego wow moment
+
+Dla każdego z 3 wybranych wow moments odpowiedz **TAK** na wszystkie 5:
+
+1. **Czy mogę wskazać konkretne linie HTML/CSS realizujące ten moment?** (jeśli nie → to nie wow, to życzenie)
+2. **Czy ten moment przeżyłby zmianę brandingu na inną markę bez modyfikacji?** Jeśli TAK → za generyczny, wymień na coś brand-specific
+3. **Czy ten moment występuje na ≥3 z 6 obecnych baseline'ów (paromia/vitrix/h2vital/pupilnik/vibestrike/kafina)?** Jeśli TAK → to baseline pattern, nie wow. Wymień
+4. **Czy ten moment dałoby się sfotografować jako "the moment" tego landingu?** (jeden screenshot który mówi "to ten landing", nie "to premium landing")
+5. **Czy klient za 6 miesięcy opisałby ten landing wymieniając ten moment?** ("ten z gigantyczną dwudziestką w hero", "ten z handwritten od Tomka", "ten z timeline porównaniem")
+
+Jeśli któreś NIE → ten moment nie kwalifikuje się. Wybierz z banku inny.
+
+### Krok 1.4 — Anti-patterns (NIE są wow moments)
+
+❌ Te elementy mają wszystkie premium landingi — **nie liczą się** jako wow moment nawet jeśli są na twoim landingu:
+
+- Header solid #FFFFFF (safety #9 — baseline)
+- Offer box z badged "Bestseller" (każdy ma)
+- Trust bar z ikonami (każdy ma)
+- Sticky CTA mobile (każdy ma)
+- Fade-in animations (każdy ma)
+- Number counters (każdy ma — 5 JS effects baseline)
+- Magnetic CTA buttons (baseline)
+- Bento grid features (baseline F1)
+- 5-gwiazdkowy testimonial grid (baseline T1)
+- FAQ accordion (baseline)
+- Final CTA gradient banner (baseline)
+
+**Jeśli twój "wow moment" jest na tej liście — to nie wow, to checkbox. Wymień.**
+
+### Krok 1.5 — Wzorce klasycznej kompozycji (inspiracja jeśli wszystkie z banku już użyte)
+
+Te kompozycje są **stare** (50-100 lat) i wciąż uderzające — używaj ich jako fundament jeśli bank wyczerpany:
+
+| Kompozycja | Skąd | Implementation idea |
+|---|---|---|
+| **Złoty podział na headline + visual** | malarstwo holenderskie | grid 1.618fr 1fr, headline w lewej kolumnie z minimum padding-top, visual edge-to-edge prawej |
+| **Rule of thirds w hero** | photography classique | Subject (produkt lub osoba) w przecięciu linii 1/3, NIE w środku |
+| **Manuscript margin notes** | średniowieczne kodeksy | Side annotations (`.margin-note`) z editorial italic font-size 14px obok main copy, asymmetric padding |
+| **Cinema panavision crop** | Hitchcock, Kubrick | hero z aspect-ratio 21:9, ekstremalna szerokość, subject w trzeciej części dolnej |
+| **Japanese hanging scroll** | tokonoma aesthetic | Wertykalna sekcja z dużym pustym top i akcentem w dolnej trzeciej |
+| **Bauhaus geometric grid** | typografia 1930s | 12-column grid widoczny — celowo wystawione linie i pola jako część designu |
+| **Editorial drop cap** | gazety XIX w. | Pierwsza litera akapitu manifesto 5× większa, multicolumn text wrap |
 
 ---
 
-## 2. Wybór kierunku estetycznego
+## 2. Analiza obecnego stanu (audyt podstawowy)
+
+Przed kolejnymi zmianami designu odpowiedz (już nie pierwszy pass — wow moments są wyżej):
+1. **Czy strona poza wow moments wygląda jak szablon?** (generyczna, przewidywalna)
+2. **Co jest charakterystyczne dla tej marki?** (kolory, ton, energia — poza wow)
+3. **Czy 3 wow moments są równomiernie rozłożone (hero zone + mid zone + conversion zone)?**
+
+---
+
+## 3. Wybór kierunku estetycznego
 
 Strona musi mieć **ODWAŻNY, SPÓJNY KIERUNEK**. Wybierz jeden:
 
@@ -116,7 +236,7 @@ Nº 01 Hero (asymetryczny, oversized numeral w tle) · Nº 02 Manifesto (sticky 
 
 ---
 
-## 3. Checklist elementów do dopracowania
+## 4. Checklist elementów do dopracowania
 
 ### A. Typografia — NIE UŻYWAJ GENERYCZNYCH FONTÓW
 
@@ -607,7 +727,7 @@ new IntersectionObserver(([e])=>{
 
 ---
 
-## 4. Proces dopracowania
+## 5. Proces dopracowania
 
 ### Krok 1: Audit
 Przejrzyj całą stronę i zanotuj:
@@ -807,7 +927,7 @@ Przejdź sekcja po sekcji i dopracuj:
 
 ---
 
-## 5. Anty-wzorce (NIE RÓB TEGO)
+## 6. Anty-wzorce (NIE RÓB TEGO)
 
 - ❌ Wszystkie sekcje z tym samym paddingiem i layoutem
 - ❌ Karty które różnią się tylko treścią
@@ -821,7 +941,7 @@ Przejdź sekcja po sekcji i dopracuj:
 
 ---
 
-## 6. Checklist przed zakończeniem
+## 7. Checklist przed zakończeniem
 
 - [ ] Strona ma wyraźny kierunek estetyczny
 - [ ] Jest przynajmniej jeden "wow moment"
@@ -833,7 +953,7 @@ Przejdź sekcja po sekcji i dopracuj:
 
 ---
 
-## 7. Raport dla użytkownika
+## 8. Raport dla użytkownika
 
 Po zakończeniu przedstaw:
 
