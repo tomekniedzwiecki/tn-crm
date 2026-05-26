@@ -446,7 +446,8 @@ async function processActionStep(
       checkoutUrl: context.checkoutUrl,
       // TakeDrop specific
       landingDomain: context.landingDomain,
-      landingPageUrl: context.landingPageUrl
+      landingPageUrl: context.landingPageUrl,
+      gatewayName: context.gatewayName
     }
 
     // Call send-email function with retry logic

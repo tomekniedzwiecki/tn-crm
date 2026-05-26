@@ -46,6 +46,7 @@ const VALID_EMAIL_TYPES = [
   'takedrop_account_rejected',
   'takedrop_welcome',
   'landing_page_connected',
+  'payment_gateway_required',
   'test_ready',
   // Etap 4 - Reklamy
   'ads_activated',
@@ -92,6 +93,7 @@ const FALLBACK_SUBJECTS: Record<string, string> = {
   takedrop_activated: 'Załóż konto na platformie sklepowej',
   takedrop_account_rejected: 'Hasło do TakeDrop niepoprawne — popraw je w panelu',
   takedrop_welcome: 'Witaj w TakeDrop — zaczynamy etap 3!',
+  payment_gateway_required: '{{clientName}}, czas na bramkę płatności ({{gatewayName}})',
   // Etap 4 - Reklamy
   ads_activated: 'Ruszamy z reklamami — etap 4 aktywowany!',
   partner_step_completed: 'Konto reklamowe gotowe!',

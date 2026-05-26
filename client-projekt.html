@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026052501';
+        const APP_VERSION = '2026052601';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -11584,6 +11584,30 @@
                 // Re-render dashboard boxes
                 if (typeof renderEtap3DokumentyBox === 'function') {
                     renderEtap3DokumentyBox();
+                }
+
+                // Trigger automation: legal_data_submitted (mail o bramce platnosci)
+                try {
+                    const hasNip = !!(dataToSave?.nip && String(dataToSave.nip).trim().length > 0);
+                    const gatewayName = hasNip ? 'PayU' : 'Stripe';
+                    const clientName = (workflow.customer_name || '').split(' ')[0] || 'Cześć';
+                    const projectUrl = `https://crm.tomekniedzwiecki.pl/projekt/${workflow.unique_token}`;
+                    await supabaseClient.functions.invoke('automation-trigger', {
+                        body: {
+                            trigger_type: 'legal_data_submitted',
+                            entity_type: 'workflow',
+                            entity_id: workflow.id,
+                            context: {
+                                email: workflow.customer_email,
+                                clientName,
+                                gatewayName,
+                                projectUrl
+                            }
+                        }
+                    });
+                    console.log('Automation trigger fired: legal_data_submitted');
+                } catch (triggerErr) {
+                    console.error('Automation trigger error (legal_data_submitted):', triggerErr);
                 }
 
                 showToast('Dane zapisane!', 'success');

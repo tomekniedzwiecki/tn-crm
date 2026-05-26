@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     takedrop: {
         label: 'Etap 3 - Konfiguracja sklepu',
         description: 'Maile związane z konfiguracją TakeDrop',
-        templates: ['takedrop_activated', 'takedrop_account_rejected', 'landing_page_connected', 'test_ready']
+        templates: ['takedrop_activated', 'takedrop_account_rejected', 'landing_page_connected', 'payment_gateway_required', 'test_ready']
     },
     reklamy: {
         label: 'Etap 4 - Reklamy',
@@ -171,6 +171,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         description: 'Wysyłany gdy strona zostanie podłączona do TakeDrop',
         icon: 'ph-link',
         color: 'sky'
+    },
+    'payment_gateway_required': {
+        name: 'Bramka płatności wymagana',
+        description: 'Wysyłany gdy klient złoży dane prawne — informacja o konieczności konfiguracji PayU/Stripe',
+        icon: 'ph-credit-card',
+        color: 'purple'
     },
     'test_ready': {
         name: 'Test sklepu gotowy',
