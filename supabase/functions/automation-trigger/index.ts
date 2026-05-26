@@ -106,7 +106,7 @@ Deno.serve(async (req) => {
     // Find active flows matching this trigger type
     const { data: flows, error: flowsError } = await supabase
       .from('automation_flows')
-      .select('id, name, trigger_filters')
+      .select('id, name, trigger_filters, allow_repeat')
       .eq('trigger_type', trigger_type)
       .eq('is_active', true)
 
@@ -139,30 +139,40 @@ Deno.serve(async (req) => {
         flow_name: flow.name
       }]
 
-      // Try to insert with ON CONFLICT DO NOTHING (atomic operation)
+      // Dedupe per (flow, entity): dla flow.allow_repeat=false skip jesli juz
+      // istnieje wczesniejsza execution. Dla allow_repeat=true zawsze INSERT
+      // (admin moze odpalic wielokrotnie: cofniecie aktywacji TakeDrop,
+      // ponowne zlozenie legal_data, etc).
+      if (!flow.allow_repeat) {
+        const { data: existing } = await supabase
+          .from('automation_executions')
+          .select('id')
+          .eq('flow_id', flow.id)
+          .eq('entity_type', entity_type)
+          .eq('entity_id', entity_id)
+          .limit(1)
+          .maybeSingle()
+
+        if (existing) {
+          console.log(`[automation-trigger] Execution already exists for flow ${flow.id} (allow_repeat=false), skipping`)
+          continue
+        }
+      }
+
       const { data: execution, error: execError } = await supabase
         .from('automation_executions')
-        .upsert({
+        .insert({
           flow_id: flow.id,
           entity_type,
           entity_id,
           status: 'pending',
           context: executionContext,
           logs: executionLogs
-        }, {
-          onConflict: 'flow_id,entity_type,entity_id',
-          ignoreDuplicates: true
         })
         .select('id, status')
         .single()
 
-      // If insert returned null (duplicate existed), skip
-      if (!execution) {
-        console.log(`[automation-trigger] Execution already exists for flow ${flow.id}, skipping`)
-        continue
-      }
-
-      if (execError) {
+      if (execError || !execution) {
         console.error(`[automation-trigger] Failed to create execution for flow ${flow.id}:`, execError)
         continue
       }
