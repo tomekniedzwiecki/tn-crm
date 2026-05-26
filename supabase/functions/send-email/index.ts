@@ -400,6 +400,7 @@ Deno.serve(async (req) => {
         // TakeDrop
         landingDomain: data.landingDomain || '',
         landingPageUrl: data.landingPageUrl || '',
+        gatewayName: data.gatewayName || '',
         // Ad report variables
         client_name: data.client_name || data.clientName || 'Kliencie',
         project_name: data.project_name || data.offerName || '',
