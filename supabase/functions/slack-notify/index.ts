@@ -4,6 +4,7 @@
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
   'https://tomekniedzwiecki.pl',
+  'https://www.tomekniedzwiecki.pl',
   'http://localhost:3000',
 ]
 
@@ -29,6 +30,7 @@ Deno.serve(async (req) => {
     // Get webhook URLs from secrets
     const webhookNewLead = Deno.env.get('slack_webhook_new_lead')
     const webhookActivity = Deno.env.get('slack_webhook_activity')
+    const webhookZwolnieLead = Deno.env.get('slack_webhook_zwolnie_lead')
 
     // Parse request body
     const { type, data } = await req.json()
@@ -44,6 +46,11 @@ Deno.serve(async (req) => {
       case 'new_lead':
         webhookUrl = webhookNewLead
         message = formatNewLeadMessage(data)
+        break
+
+      case 'zwolnie_lead':
+        webhookUrl = webhookZwolnieLead
+        message = formatZwolnieLeadMessage(data)
         break
 
       case 'offer_viewed':
@@ -870,4 +877,156 @@ function formatCheckoutStartedMessage(data: {
       }
     ]
   }
+}
+
+// =====================================================
+// ZWOLNIE LEAD — formularz /zwolnie/ na tomekniedzwiecki.pl
+// Tabela: public.zwolnie_leads
+// =====================================================
+
+function formatZwolnieLeadMessage(data: {
+  lead_id?: string
+  contact_name?: string
+  contact_email?: string
+  contact_phone?: string
+  company?: string
+  website?: string
+  industry?: string
+  team_size?: string
+  payroll?: string
+  budget?: string
+  problem?: string
+  attachments_total?: number
+  attachments_uploaded?: number
+}) {
+  const industryLabels: Record<string, string> = {
+    'ecommerce':   'E-commerce / sklep online',
+    'uslugi':      'Usługi (B2B / B2C)',
+    'produkcja':   'Produkcja / fabryka',
+    'handel-b2b':  'Handel B2B / hurtownia',
+    'tech':        'Tech / SaaS / software',
+    'prawo':       'Kancelaria / doradztwo',
+    'finanse':     'Finanse / księgowość',
+    'medyczne':    'Medyczne / wellness',
+    'inna':        'Inna'
+  }
+
+  const teamSizeLabels: Record<string, string> = {
+    '1-5':    '1-5 osób',
+    '6-15':   '6-15 osób',
+    '16-50':  '16-50 osób',
+    '51-150': '51-150 osób',
+    '150+':   '150+ osób'
+  }
+
+  const payrollLabels: Record<string, string> = {
+    '<50k':       'do 50 000 zł',
+    '50-150k':    '50 - 150 tys. zł',
+    '150-500k':   '150 - 500 tys. zł',
+    '500k-1.5M':  '500 tys. - 1,5 mln zł',
+    '1.5M+':      'powyżej 1,5 mln zł',
+    'nie-chce':   'nie chce podawać'
+  }
+
+  const budgetLabels: Record<string, string> = {
+    '<20k':     'do 20 000 zł',
+    '20-50k':   '20 - 50 tys. zł',
+    '50-150k':  '50 - 150 tys. zł',
+    '150-500k': '150 - 500 tys. zł',
+    '500k+':    'powyżej 500 tys. zł',
+    'nie-wiem': 'nie wie — prosi o propozycję'
+  }
+
+  const headerName = data.contact_name ? `*${data.contact_name}*` : '*(bez imienia)*'
+  const emailLine = data.contact_email ? ` · ${data.contact_email}` : ''
+  const phoneLine = data.contact_phone ? ` · ${data.contact_phone}` : ''
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '🔥 Nowy lead z /zwolnie/', emoji: true }
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}` }
+    }
+  ]
+
+  const firmFields: any[] = []
+  if (data.company) {
+    firmFields.push({ type: 'mrkdwn', text: `*Firma:*\n${data.company}` })
+  }
+  if (data.website) {
+    const url = /^https?:\/\//i.test(data.website) ? data.website : `https://${data.website}`
+    firmFields.push({ type: 'mrkdwn', text: `*WWW:*\n<${url}|${data.website}>` })
+  }
+  if (data.industry) {
+    firmFields.push({ type: 'mrkdwn', text: `*Branża:*\n${industryLabels[data.industry] || data.industry}` })
+  }
+  if (firmFields.length > 0) {
+    blocks.push({ type: 'section', fields: firmFields })
+  }
+
+  const scaleFields: any[] = []
+  if (data.team_size) {
+    scaleFields.push({ type: 'mrkdwn', text: `*Zespół:*\n${teamSizeLabels[data.team_size] || data.team_size}` })
+  }
+  if (data.payroll) {
+    scaleFields.push({ type: 'mrkdwn', text: `*Pensje/mies.:*\n${payrollLabels[data.payroll] || data.payroll}` })
+  }
+  if (data.budget) {
+    scaleFields.push({ type: 'mrkdwn', text: `*Budżet:*\n${budgetLabels[data.budget] || data.budget}` })
+  }
+  if (scaleFields.length > 0) {
+    blocks.push({ type: 'section', fields: scaleFields })
+  }
+
+  if (data.problem) {
+    blocks.push({
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: `*Co ma zniknąć z roboty:*\n${data.problem.substring(0, 1500)}${data.problem.length > 1500 ? '…' : ''}`
+      }
+    })
+  }
+
+  if (data.attachments_total && data.attachments_total > 0) {
+    const uploaded = data.attachments_uploaded || 0
+    const failed = data.attachments_total - uploaded
+    const attachText = failed > 0
+      ? `📎 ${uploaded}/${data.attachments_total} załączników (${failed} nie zapisało się)`
+      : `📎 ${data.attachments_total} załącznik${data.attachments_total === 1 ? '' : data.attachments_total < 5 ? 'i' : 'ów'}`
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: attachText }]
+    })
+  }
+
+  if (data.contact_phone) {
+    let waPhone = data.contact_phone.replace(/[\s\-\(\)]/g, '')
+    if (waPhone.startsWith('0')) waPhone = '48' + waPhone.substring(1)
+    if (!waPhone.startsWith('+') && !waPhone.startsWith('48')) waPhone = '48' + waPhone
+    waPhone = waPhone.replace('+', '')
+
+    blocks.push({
+      type: 'actions',
+      elements: [{
+        type: 'button',
+        text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true },
+        url: `https://wa.me/${waPhone}`,
+        action_id: 'whatsapp'
+      }]
+    })
+  }
+
+  blocks.push({
+    type: 'context',
+    elements: [{
+      type: 'mrkdwn',
+      text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.lead_id ? ` · id: \`${data.lead_id.substring(0, 8)}\`` : ''}`
+    }]
+  })
+
+  return { blocks }
 }
