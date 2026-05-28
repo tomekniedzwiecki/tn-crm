@@ -321,6 +321,10 @@
                         <i class="ph ph-envelope text-[13px] flex-shrink-0 opacity-70"></i>
                         <span id="hdr-email-text" class="truncate"></span>
                     </button>
+                    <button type="button" id="hdr-td-email" onclick="copyTakedropEmail()" class="hidden inline-flex items-center gap-1.5 h-8 px-2 rounded-md text-[12px] text-zinc-500 hover:text-white hover:bg-white/5 transition-colors max-w-[240px]" title="Email do konfiguracji TakeDrop (różny od emaila klienta) — kliknij aby skopiować">
+                        <i class="ph ph-gear text-[13px] flex-shrink-0 opacity-70"></i>
+                        <span id="hdr-td-email-text" class="truncate"></span>
+                    </button>
                     <a id="hdr-whatsapp" href="#" target="_blank" rel="noopener" class="hidden inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-500 hover:text-emerald-400 hover:bg-white/5 transition-colors" title="Otwórz WhatsApp">
                         <i class="ph ph-whatsapp-logo text-[16px]"></i>
                     </a>
@@ -6367,6 +6371,23 @@
         }
         window.copyCustomerEmail = copyCustomerEmail;
 
+        async function copyTakedropEmail() {
+            const email = takeDropData?.account_email;
+            if (!email) return;
+            try {
+                await navigator.clipboard.writeText(email);
+                showToast(`Skopiowano (TakeDrop): ${email}`, 'success');
+            } catch {
+                const ta = document.createElement('textarea');
+                ta.value = email; ta.style.position = 'fixed'; ta.style.left = '-9999px';
+                document.body.appendChild(ta); ta.select();
+                try { document.execCommand('copy'); showToast(`Skopiowano (TakeDrop): ${email}`, 'success'); }
+                catch { showToast('Nie udało się skopiować', 'error'); }
+                document.body.removeChild(ta);
+            }
+        }
+        window.copyTakedropEmail = copyTakedropEmail;
+
         function updateHeaderQuickActions() {
             if (!workflow) return;
             let anyInfoVisible = false;
@@ -6379,6 +6400,18 @@
                 anyInfoVisible = true;
             } else if (emailEl) {
                 emailEl.classList.add('hidden');
+            }
+            // TakeDrop config email (kółko zębate) — tylko gdy różny od emaila klienta
+            const tdEmailEl = document.getElementById('hdr-td-email');
+            const tdEmailText = document.getElementById('hdr-td-email-text');
+            const tdEmail = takeDropData?.account_email;
+            const clientEmail = workflow.customer_email;
+            if (tdEmailEl && tdEmail && tdEmail.trim().toLowerCase() !== (clientEmail || '').trim().toLowerCase()) {
+                if (tdEmailText) tdEmailText.textContent = tdEmail;
+                tdEmailEl.classList.remove('hidden');
+                anyInfoVisible = true;
+            } else if (tdEmailEl) {
+                tdEmailEl.classList.add('hidden');
             }
             // WhatsApp
             const waEl = document.getElementById('hdr-whatsapp');
@@ -9646,6 +9679,9 @@
                         .eq('id', takeDropData.id);
 
                     if (error) throw error;
+                    takeDropData.account_email = email || null;
+                    takeDropData.account_password = password || null;
+                    takeDropData.notes = notes || null;
                 } else {
                     const { data, error } = await supabaseClient
                         .from('workflow_takedrop')
@@ -9662,6 +9698,7 @@
                     takeDropData = data;
                 }
 
+                if (typeof updateHeaderQuickActions === 'function') updateHeaderQuickActions();
                 showToast('Dane zapisane', 'success');
             } catch (err) {
                 console.error('Error saving TakeDrop:', err);
