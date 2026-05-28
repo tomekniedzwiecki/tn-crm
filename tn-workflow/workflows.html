@@ -476,7 +476,9 @@
         let brandNames = {}; // Brand names for search
         let selectedStatusStages = new Set(); // For filtering by missing status stages
         let ownerFilter = 'all'; // 'all', 'mine', 'client'
-        let deadlineSettings = {}; // deadline per step from settings
+        let deadlineBusinessDays = 3; // jedna wartość dla wszystkich kroków (dni robocze)
+        const DEADLINE_STEPS = new Set(['contract', 'product', 'report', 'branding', 'salespage', 'scenario']);
+        const lazyDeadlineWrites = new Set(); // workflow_id+stepKey aktualnie zapisywane, żeby nie dublować
 
         let teamMembers = [];
         let currentMember = null;
@@ -1716,47 +1718,62 @@
             `;
         }
 
-        // Calculate deadline info for current step
-        function getStepDeadlineInfo(w, stepKey) {
-            const deadlineDays = deadlineSettings[stepKey];
-            if (!deadlineDays) return null; // no deadline set
-
-            // Check if deadline was reset for this step
-            const resetDate = w.deadline_resets?.[stepKey];
-            let startDate = null;
-
-            if (resetDate) {
-                // Use reset date as start
-                startDate = resetDate;
-            } else {
-                // Determine start date based on step
-                switch (stepKey) {
-                    case 'contract':
-                        startDate = w.started_at;
-                        break;
-                    case 'product':
-                        startDate = w.products_shared_at || w.started_at;
-                        break;
-                    case 'report':
-                        startDate = w.started_at; // simplified
-                        break;
-                    case 'branding':
-                        startDate = w.started_at; // simplified
-                        break;
-                    case 'salespage':
-                        startDate = w.branding_shared_at || w.started_at;
-                        break;
-                    case 'scenario':
-                        startDate = w.sales_page_shared_at;
-                        break;
-                }
+        // Liczy dni robocze (pon-pt) między dwiema datami. Sam dzień startowy nie liczy się jako "minięty".
+        function businessDaysBetween(start, end) {
+            const cur = new Date(start);
+            cur.setHours(0, 0, 0, 0);
+            const last = new Date(end);
+            last.setHours(0, 0, 0, 0);
+            let days = 0;
+            while (cur < last) {
+                cur.setDate(cur.getDate() + 1);
+                const dow = cur.getDay();
+                if (dow !== 0 && dow !== 6) days++;
             }
+            return days;
+        }
 
-            if (!startDate) return null;
+        // Lazy zapisuje deadline_resets[stepKey] = NOW gdy projekt po raz pierwszy
+        // jest widziany w danym kroku. Idempotentne, tło, nie blokuje renderu.
+        async function ensureStepStart(workflow, stepKey, isoNow) {
+            const dedupKey = `${workflow.workflow_id}:${stepKey}`;
+            if (lazyDeadlineWrites.has(dedupKey)) return;
+            lazyDeadlineWrites.add(dedupKey);
+
+            const updatedResets = { ...(workflow.deadline_resets || {}), [stepKey]: isoNow };
+            try {
+                const { error } = await supabaseClient
+                    .from('workflows')
+                    .update({ deadline_resets: updatedResets })
+                    .eq('id', workflow.workflow_id);
+                if (error) {
+                    console.error('Lazy deadline init failed:', error);
+                    lazyDeadlineWrites.delete(dedupKey);
+                    return;
+                }
+                workflow.deadline_resets = updatedResets;
+            } catch (err) {
+                console.error('Lazy deadline init exception:', err);
+                lazyDeadlineWrites.delete(dedupKey);
+            }
+        }
+
+        // Calculate deadline info for current step (3 dni robocze od wejścia w krok)
+        function getStepDeadlineInfo(w, stepKey) {
+            if (!DEADLINE_STEPS.has(stepKey)) return null;
+            const deadlineDays = deadlineBusinessDays;
+            if (!deadlineDays) return null;
+
+            let startDate = w.deadline_resets?.[stepKey];
+            if (!startDate) {
+                // Pierwszy widok tego kroku — zegar startuje od teraz, zapisujemy w tle
+                startDate = new Date().toISOString();
+                ensureStepStart(w, stepKey, startDate);
+            }
 
             const start = new Date(startDate);
             const now = new Date();
-            const daysPassed = Math.floor((now - start) / (1000 * 60 * 60 * 24));
+            const daysPassed = businessDaysBetween(start, now);
             const daysRemaining = deadlineDays - daysPassed;
 
             return {
@@ -2371,7 +2388,7 @@
                         const text = isOverdue ? `${Math.abs(daysRemaining)}d po terminie` : `za ${daysRemaining}d`;
                         // Make clickable to reset deadline (only if overdue or close to deadline)
                         if (isOverdue || daysRemaining <= 3) {
-                            deadlineHtml = `<button onclick="resetDeadline(event, '${w.workflow_id}', '${nextStep}')" class="flex items-center gap-1 ${color} hover:bg-white/5 px-1 py-0.5 rounded transition-colors" title="Kliknij aby zresetować (za 2 dni)"><i class="ph ph-clock"></i>${text}</button>`;
+                            deadlineHtml = `<button onclick="resetDeadline(event, '${w.workflow_id}', '${nextStep}')" class="flex items-center gap-1 ${color} hover:bg-white/5 px-1 py-0.5 rounded transition-colors" title="Kliknij aby zresetować zegar (${deadlineBusinessDays} dni roboczych od teraz)"><i class="ph ph-clock"></i>${text}</button>`;
                         } else {
                             deadlineHtml = `<span class="flex items-center gap-1 ${color}"><i class="ph ph-clock"></i>${text}</span>`;
                         }
@@ -2387,7 +2404,7 @@
                 let waitingBadge = '';
                 if (isWaitingForClient) {
                     const waitingDays = w.video_activated_at
-                        ? Math.floor((new Date() - new Date(w.video_activated_at)) / (1000 * 60 * 60 * 24))
+                        ? Math.max(0, Math.floor((new Date() - new Date(w.video_activated_at)) / (1000 * 60 * 60 * 24)))
                         : 0;
                     const daysText = waitingDays === 0 ? 'dziś' : waitingDays === 1 ? '1 dzień' : `${waitingDays} dni`;
                     waitingBadge = `<span class="flex items-center gap-1 text-cyan-400" title="Video udostępnione - czekam na klienta od ${daysText}"><i class="ph ph-hourglass"></i>Czekam ${daysText}</span>`;
@@ -2539,23 +2556,14 @@
         async function resetDeadline(event, workflowId, stepKey) {
             event.preventDefault();
             event.stopPropagation();
-            console.log('resetDeadline called:', workflowId, stepKey);
 
-            // Calculate date that will result in 2 days remaining
-            // New start date = today - (deadlineDays - 2)
-            const deadlineDays = deadlineSettings[stepKey] || 2;
-            const today = new Date();
-            const newStartDate = new Date(today);
-            newStartDate.setDate(newStartDate.getDate() - (deadlineDays - 2));
-            const newStartDateStr = newStartDate.toISOString().split('T')[0];
+            // Reset = zegar startuje od zera (pełne N dni roboczych)
+            const newStartDateStr = new Date().toISOString();
 
             try {
-                // Get current deadline_resets
                 const workflow = workflows.find(w => w.workflow_id === workflowId);
-                console.log('Found workflow:', workflow ? 'yes' : 'no', workflow?.deadline_resets);
                 const currentResets = workflow?.deadline_resets || {};
                 const updatedResets = { ...currentResets, [stepKey]: newStartDateStr };
-                console.log('Updating deadline_resets to:', updatedResets);
 
                 const { data, error } = await supabaseClient
                     .from('workflows')
@@ -3168,14 +3176,12 @@
             try {
                 const { data } = await supabaseClient
                     .from('settings')
-                    .select('key, value')
-                    .in('key', ['deadline_contract', 'deadline_product', 'deadline_report', 'deadline_branding', 'deadline_salespage', 'deadline_scenario']);
+                    .select('value')
+                    .eq('key', 'deadline_step_business_days')
+                    .maybeSingle();
 
-                deadlineSettings = {};
-                (data || []).forEach(s => {
-                    const step = s.key.replace('deadline_', '');
-                    deadlineSettings[step] = parseInt(s.value) || null;
-                });
+                const parsed = parseInt(data?.value);
+                if (parsed > 0) deadlineBusinessDays = parsed;
             } catch (err) {
                 console.error('Error loading deadline settings:', err);
             }
