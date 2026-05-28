@@ -578,6 +578,58 @@
         // Sent offers state
         let sentOffers = [];
 
+        // Pipeline stages (loaded from settings, used for lead status badges in Sent tab)
+        const DEFAULT_PIPELINE_STAGES = [
+            { id: 'new', name: 'Nowy', order: 0 },
+            { id: 'contacted', name: 'Skontaktowany', order: 1 },
+            { id: 'qualified', name: 'Zakwalifikowany', order: 2 },
+            { id: 'proposal', name: 'Blisko zakupu', order: 3 },
+            { id: 'negotiation', name: 'Domykanie', order: 4 }
+        ];
+        let pipelineStages = [...DEFAULT_PIPELINE_STAGES];
+        let pipelineStagesLoaded = false;
+
+        async function loadPipelineSettings() {
+            if (pipelineStagesLoaded) return;
+            const { data, error } = await supabaseClient
+                .from('settings')
+                .select('*')
+                .eq('key', 'pipeline_stages')
+                .single();
+            if (!error && data?.value) {
+                try { pipelineStages = JSON.parse(data.value); }
+                catch (e) { pipelineStages = [...DEFAULT_PIPELINE_STAGES]; }
+            }
+            pipelineStagesLoaded = true;
+        }
+
+        function getLeadStatusBadge(status) {
+            if (!status) return '';
+            const stageColors = [
+                { bg: 'bg-zinc-800', text: 'text-zinc-300', border: 'border-zinc-700' },
+                { bg: 'bg-blue-500/10', text: 'text-blue-400', border: 'border-blue-500/20' },
+                { bg: 'bg-violet-500/10', text: 'text-violet-400', border: 'border-violet-500/20' },
+                { bg: 'bg-amber-500/10', text: 'text-amber-400', border: 'border-amber-500/20' },
+                { bg: 'bg-orange-500/10', text: 'text-orange-400', border: 'border-orange-500/20' },
+                { bg: 'bg-cyan-500/10', text: 'text-cyan-400', border: 'border-cyan-500/20' },
+                { bg: 'bg-pink-500/10', text: 'text-pink-400', border: 'border-pink-500/20' }
+            ];
+            if (status === 'won') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-green-500/20 bg-green-500/10 text-green-400 text-[10px] font-medium" title="Pipeline">Wygrany</span>`;
+            }
+            if (status === 'lost') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-[10px] font-medium" title="Pipeline">Przegrany</span>`;
+            }
+            if (status === 'abandoned') {
+                return `<span class="inline-flex items-center px-2 py-0.5 rounded border border-zinc-500/20 bg-zinc-500/10 text-zinc-400 text-[10px] font-medium" title="Pipeline">Porzucony</span>`;
+            }
+            const stageIndex = pipelineStages.findIndex(s => s.id === status);
+            const stage = stageIndex >= 0 ? pipelineStages[stageIndex] : null;
+            const colors = stage ? stageColors[stageIndex % stageColors.length] : stageColors[0];
+            const label = stage?.name || status;
+            return `<span class="inline-flex items-center px-2 py-0.5 rounded border ${colors.border} ${colors.bg} ${colors.text} text-[10px] font-medium" title="Pipeline">${label}</span>`;
+        }
+
         // Tab switching
         function switchTab(tabName) {
             currentTab = tabName;
@@ -1185,6 +1237,9 @@
             document.getElementById('sent-list').innerHTML = '';
             document.getElementById('sent-empty').classList.add('hidden');
 
+            // Load pipeline stages (for lead status badges)
+            await loadPipelineSettings();
+
             // Fetch client_offers with lead data
             const { data: clientOffers, error } = await supabaseClient
                 .from('client_offers')
@@ -1198,7 +1253,7 @@
                     view_history,
                     valid_until,
                     created_at,
-                    leads!inner(id, name, email, company, phone),
+                    leads!inner(id, name, email, company, phone, status),
                     offers!inner(id, name, price)
                 `)
                 .order('created_at', { ascending: false });
@@ -1690,10 +1745,11 @@
                     <div class="flex flex-col md:flex-row md:items-center gap-4">
                         <!-- Lead info -->
                         <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2 mb-1">
+                            <div class="flex flex-wrap items-center gap-2 mb-1">
                                 <a href="${getLeadPath(lead.id)}" class="font-medium text-white hover:text-amber-400 transition-colors truncate">
                                     ${lead.name || lead.company || lead.email || 'Bez nazwy'}
                                 </a>
+                                ${getLeadStatusBadge(lead.status)}
                                 ${so.isReturning ? `<span class="px-1.5 py-0.5 text-[10px] rounded bg-cyan-500/20 text-cyan-400 border border-cyan-500/30" title="Kolejna oferta dla tego leada">
                                     <i class="ph ph-arrow-counter-clockwise"></i> powrót
                                 </span>` : ''}
