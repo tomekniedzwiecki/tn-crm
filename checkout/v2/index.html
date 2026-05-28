@@ -893,6 +893,20 @@
             margin-top: 8px;
         }
 
+        .v-blik-inline-pay {
+            display: none;
+            width: 100%;
+            margin-top: 16px;
+            opacity: 0;
+            transform: translateY(-6px);
+            transition: opacity 220ms ease, transform 220ms ease;
+        }
+        .v-blik-inline-pay.show {
+            display: inline-flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
         /* Info hint inside method body */
         .v-method-hint {
             font-size: 13px;
@@ -1689,6 +1703,10 @@
                                         <i class="ph ph-warning-circle"></i><span>Wpisz 6-cyfrowy kod BLIK</span>
                                     </div>
                                     <p class="v-blik-hint" id="v-blik-hint">Wpisz kod z aplikacji bankowej</p>
+                                    <button type="button" class="v-pay-btn v-blik-inline-pay" id="v-blik-inline-pay" aria-hidden="true">
+                                        <i class="ph ph-lock-simple"></i>
+                                        <span id="v-blik-inline-pay-text">Zapłać teraz</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -2084,6 +2102,7 @@ function setMethodRow(rowKey) {
     }
 
     updatePayButton();
+    if (typeof updateBlikCode === 'function') updateBlikCode();
 }
 
 // Init method accordion listeners
@@ -2106,6 +2125,12 @@ function updateBlikCode() {
         input.classList.toggle('filled', !!input.value);
     });
     blikCodeHidden.value = code;
+    const inlineBtn = $('v-blik-inline-pay');
+    if (inlineBtn) {
+        const ready = code.length === 6 && selectedMethod === 'blik';
+        inlineBtn.classList.toggle('show', ready);
+        inlineBtn.setAttribute('aria-hidden', ready ? 'false' : 'true');
+    }
 }
 
 blikDigits.forEach((input, idx) => {
@@ -2359,6 +2384,8 @@ function updatePayButton() {
 
     $('v-pay-desktop-text').textContent = desktopText;
     $('v-pay-bar-text').textContent = desktopText;
+    const inlineText = $('v-blik-inline-pay-text');
+    if (inlineText) inlineText.textContent = `Zapłać teraz — ${price}`;
 
     // Pay bar price (sticky bottom)
     const barAmount = $('v-pay-bar-amount');
@@ -2469,6 +2496,7 @@ async function pollPaymentStatus(orderId, transactionId) {
 // ═══════════════════════════════════════════════════════════════════
 $('v-form').addEventListener('submit', (e) => { e.preventDefault(); handleSubmit(); });
 $('v-pay-bar-btn').addEventListener('click', () => handleSubmit());
+$('v-blik-inline-pay').addEventListener('click', () => handleSubmit());
 
 async function handleSubmit() {
     if (!currentOffer && !isCustomPayment) return;
