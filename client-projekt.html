@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026052601';
+        const APP_VERSION = '2026052801';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -1101,6 +1101,140 @@
             .dash-main {
                 margin-left: 0;
             }
+        }
+
+        /* Step3 Guide Drawer (Etap 4 - przewodnik krok-po-kroku) */
+        #step3-guide-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        #step3-guide-backdrop.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        #step3-guide-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 560px;
+            max-width: 100vw;
+            background: #0a0a0a;
+            border-left: 1px solid #1a1a1a;
+            z-index: 91;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+            display: flex;
+            flex-direction: column;
+            box-shadow: -20px 0 40px -10px rgba(0,0,0,0.5);
+        }
+        #step3-guide-drawer.open {
+            transform: translateX(0);
+        }
+        #step3-guide-drawer .guide-body {
+            flex: 1;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 24px;
+        }
+        #step3-guide-drawer .guide-body::-webkit-scrollbar { width: 6px; }
+        #step3-guide-drawer .guide-body::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+        @media (max-width: 640px) {
+            #step3-guide-drawer { width: 100vw; }
+            #step3-guide-drawer .guide-body { padding: 16px; }
+        }
+        .guide-step-block {
+            position: relative;
+            padding: 16px 16px 16px 56px;
+            background: linear-gradient(135deg, rgba(244,63,94,0.04), rgba(244,63,94,0.01));
+            border: 1px solid rgba(244,63,94,0.12);
+            border-radius: 14px;
+            margin-bottom: 12px;
+        }
+        .guide-step-block .step-num {
+            position: absolute;
+            left: 16px;
+            top: 16px;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f43f5e, #e11d48);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(244,63,94,0.25);
+        }
+        .guide-faq details {
+            border: 1px solid #1f1f1f;
+            border-radius: 10px;
+            background: #0d0d0d;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+        .guide-faq summary {
+            padding: 12px 14px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            color: #d4d4d8;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.15s;
+        }
+        .guide-faq summary::-webkit-details-marker { display: none; }
+        .guide-faq summary::before {
+            content: '+';
+            color: #f43f5e;
+            font-size: 18px;
+            font-weight: 600;
+            width: 16px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .guide-faq details[open] summary::before { content: '−'; }
+        .guide-faq summary:hover { background: #131313; }
+        .guide-faq .faq-content {
+            padding: 0 14px 14px 40px;
+            font-size: 12.5px;
+            color: #a1a1aa;
+            line-height: 1.6;
+        }
+        .guide-mini-screen {
+            background: #050505;
+            border: 1px solid #1a1a1a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 11.5px;
+            color: #71717a;
+            font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+            margin: 10px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .guide-mini-screen .breadcrumb {
+            color: #f43f5e;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .guide-mini-screen .target {
+            color: #fafafa;
+            background: rgba(244,63,94,0.12);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            border: 1px solid rgba(244,63,94,0.3);
         }
     </style>
 </head>
@@ -4100,6 +4234,12 @@
                                             </ol>
                                         </div>
 
+                                        <button onclick="openStep3Guide('ad-account')" type="button"
+                                                class="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-lg text-[12px] font-medium transition-all mb-2">
+                                            <i class="ph ph-book-open-text text-rose-400"></i>
+                                            Jak to zrobić krok po kroku?
+                                        </button>
+
                                         <button onclick="confirmAdAccountAccess()" id="confirm-ad-account-btn"
                                                 class="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-black py-2 rounded-lg text-[12px] font-semibold transition-all">
                                             <i class="ph ph-check"></i>
@@ -4139,6 +4279,12 @@
                                                 <li><span class="text-rose-400">3.</span> Zaznacz <strong class="text-zinc-300">„Pełna kontrola"</strong> → Zapisz</li>
                                             </ol>
                                         </div>
+
+                                        <button onclick="openStep3Guide('fanpage')" type="button"
+                                                class="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-lg text-[12px] font-medium transition-all mb-2">
+                                            <i class="ph ph-book-open-text text-rose-400"></i>
+                                            Jak to zrobić krok po kroku?
+                                        </button>
 
                                         <button onclick="confirmFanpageAccess()" id="confirm-fanpage-btn"
                                                 class="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-black py-2 rounded-lg text-[12px] font-semibold transition-all">
@@ -4180,6 +4326,12 @@
                                             </ol>
                                         </div>
 
+                                        <button onclick="openStep3Guide('instagram')" type="button"
+                                                class="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-lg text-[12px] font-medium transition-all mb-2">
+                                            <i class="ph ph-book-open-text text-rose-400"></i>
+                                            Jak to zrobić krok po kroku?
+                                        </button>
+
                                         <button onclick="confirmInstagramAccess()" id="confirm-instagram-btn"
                                                 class="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-black py-2 rounded-lg text-[12px] font-semibold transition-all">
                                             <i class="ph ph-check"></i>
@@ -4213,18 +4365,18 @@
                                         <!-- Instructions -->
                                         <div id="step3d-content" class="text-[11px] text-zinc-400 mb-3">
                                             <ol class="space-y-1">
-                                                <li><span class="text-rose-400">1.</span> Kliknij przycisk poniżej aby otworzyć ustawienia</li>
-                                                <li><span class="text-rose-400">2.</span> Kliknij <strong class="text-zinc-300">"Dane osobowe"</strong></li>
-                                                <li><span class="text-rose-400">3.</span> Wybierz <strong class="text-zinc-300">"Informacje kontaktowe"</strong></li>
-                                                <li><span class="text-rose-400">4.</span> Dodaj numer telefonu i <strong class="text-zinc-300">potwierdź kodem SMS</strong></li>
+                                                <li><span class="text-rose-400">1.</span> Otwórz Ustawienia firmy Meta → <strong class="text-zinc-300">"Informacje o firmie"</strong></li>
+                                                <li><span class="text-rose-400">2.</span> Sekcja <strong class="text-zinc-300">"Informacje kontaktowe"</strong> → Edytuj</li>
+                                                <li><span class="text-rose-400">3.</span> Dodaj numer w formacie <strong class="text-zinc-300">+48 XXX XXX XXX</strong></li>
+                                                <li><span class="text-rose-400">4.</span> Kliknij <strong class="text-zinc-300">"Zweryfikuj"</strong> i wpisz kod z SMS</li>
                                             </ol>
                                         </div>
 
-                                        <a href="https://business.facebook.com/latest/settings/business_info" target="_blank"
-                                           class="w-full flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-400 text-white py-2 rounded-lg text-[12px] font-semibold transition-all mb-2">
-                                            <i class="ph ph-arrow-square-out"></i>
-                                            Otwórz ustawienia Meta
-                                        </a>
+                                        <button onclick="openStep3Guide('phone')" type="button"
+                                                class="w-full flex items-center justify-center gap-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-700 text-zinc-200 py-2 rounded-lg text-[12px] font-medium transition-all mb-2">
+                                            <i class="ph ph-book-open-text text-rose-400"></i>
+                                            Jak to zrobić krok po kroku?
+                                        </button>
 
                                         <button onclick="confirmPhoneVerified()" id="confirm-phone-btn"
                                                 class="w-full flex items-center justify-center gap-2 bg-white hover:bg-zinc-100 text-black py-2 rounded-lg text-[12px] font-semibold transition-all">
@@ -15138,6 +15290,395 @@
                 }
             }
         })();
+    </script>
+
+    <!-- ===== Step 3 Guide Drawer (Etap 4 / Konto reklamowe — przewodnik krok-po-kroku) ===== -->
+    <div id="step3-guide-backdrop" onclick="closeStep3Guide()"></div>
+    <aside id="step3-guide-drawer" role="dialog" aria-modal="true" aria-labelledby="step3-guide-title">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-zinc-800 flex items-start gap-3 flex-shrink-0">
+            <div id="step3-guide-icon" class="w-10 h-10 rounded-xl bg-rose-500/15 flex items-center justify-center flex-shrink-0">
+                <i class="ph ph-megaphone-simple text-rose-400 text-xl"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="text-[11px] text-rose-400 uppercase tracking-wider font-semibold mb-0.5" id="step3-guide-eyebrow">Przewodnik</div>
+                <h2 id="step3-guide-title" class="text-[17px] font-semibold text-white leading-tight">—</h2>
+            </div>
+            <button onclick="closeStep3Guide()" aria-label="Zamknij" class="w-9 h-9 rounded-lg hover:bg-zinc-800 flex items-center justify-center text-zinc-400 hover:text-white transition flex-shrink-0">
+                <i class="ph ph-x text-lg"></i>
+            </button>
+        </div>
+
+        <!-- Scrollable body -->
+        <div class="guide-body" id="step3-guide-body">
+            <!-- Subtitle / Po co to robisz -->
+            <div id="step3-guide-why" class="bg-cyan-500/8 border border-cyan-500/20 rounded-xl p-4 mb-5">
+                <div class="flex items-start gap-2.5">
+                    <i class="ph-fill ph-info text-cyan-400 text-[16px] mt-0.5 flex-shrink-0"></i>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[11px] font-semibold text-cyan-300 uppercase tracking-wider mb-1">Po co to robisz?</div>
+                        <p id="step3-guide-why-text" class="text-[12.5px] text-zinc-300 leading-relaxed">—</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Zanim zaczniesz -->
+            <div id="step3-guide-prereq-wrap" class="mb-5">
+                <div class="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-2">Zanim zaczniesz</div>
+                <ul id="step3-guide-prereq" class="space-y-1.5 text-[12.5px] text-zinc-300"></ul>
+            </div>
+
+            <!-- Business ID hero -->
+            <div id="step3-guide-id-wrap" class="bg-gradient-to-br from-rose-500/10 to-transparent border border-rose-500/20 rounded-xl p-4 mb-5">
+                <div class="text-[10px] text-rose-300 uppercase tracking-wider font-semibold mb-2">Moje Business ID — będzie potrzebne</div>
+                <div class="flex items-center gap-3 flex-wrap">
+                    <div class="text-[22px] font-mono text-white tracking-wider font-bold">737839566050751</div>
+                    <button onclick="copyGuideBusinessId(this)" class="flex items-center gap-2 bg-rose-500 hover:bg-rose-400 text-white px-3 py-1.5 rounded-lg text-[12px] font-semibold transition">
+                        <i class="ph ph-copy"></i><span>Kopiuj</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Kroki -->
+            <div class="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-3">Krok po kroku</div>
+            <div id="step3-guide-steps" class="mb-6"></div>
+
+            <!-- FAQ -->
+            <div class="text-[11px] text-zinc-500 uppercase tracking-wider font-semibold mb-3">Coś nie działa?</div>
+            <div id="step3-guide-faq" class="guide-faq mb-6"></div>
+
+            <!-- Final help block -->
+            <div class="bg-zinc-900/60 border border-zinc-800 rounded-xl p-4 text-[12px] text-zinc-400">
+                <div class="flex items-start gap-2.5">
+                    <i class="ph ph-chat-circle-text text-zinc-500 text-[16px] mt-0.5"></i>
+                    <p>Utknąłeś? Napisz mi na <a href="mailto:tomekniedzwiecki@gmail.com" class="text-rose-400 hover:text-rose-300 underline underline-offset-2">tomekniedzwiecki@gmail.com</a> albo na WhatsApp — przejdziemy to razem. Lepiej spytać niż się męczyć 2h.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer CTA -->
+        <div class="px-6 py-4 border-t border-zinc-800 flex-shrink-0 flex flex-col sm:flex-row gap-2 bg-[#080808]">
+            <a id="step3-guide-open-link" href="#" target="_blank" rel="noopener"
+               class="flex-1 flex items-center justify-center gap-2 bg-rose-500 hover:bg-rose-400 text-white py-2.5 rounded-lg text-[13px] font-semibold transition">
+                <i class="ph ph-arrow-square-out"></i><span id="step3-guide-open-label">Otwórz Meta</span>
+            </a>
+            <button id="step3-guide-done-btn" onclick="confirmStep3FromGuide()" class="flex-1 flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-400 text-black py-2.5 rounded-lg text-[13px] font-semibold transition">
+                <i class="ph ph-check-circle"></i> Mam to zrobione
+            </button>
+        </div>
+    </aside>
+
+    <script>
+        // ===== Step 3 Guide Drawer — content & logic =====
+        const STEP3_GUIDES = {
+            'ad-account': {
+                icon: 'ph-credit-card',
+                eyebrow: 'Krok 1 z 4 · Konto reklamowe',
+                title: 'Daj mi dostęp do Twojego konta reklamowego',
+                why: 'Z poziomu mojego Business Managera odpalę i będę optymalizował kampanie. Ty pozostajesz właścicielem konta, płacisz bezpośrednio do Meta z własnej karty — ja tylko zarządzam ustawieniami, budżetami i reklamami.',
+                prereq: [
+                    'Konto Meta Business Suite (jeśli nie masz — wróć do kroku 1 wyżej)',
+                    'Konto reklamowe w Twoim Business Managerze, w walucie PLN',
+                    'Login i hasło do Facebooka — będziesz potwierdzać tożsamość'
+                ],
+                openUrl: 'https://business.facebook.com/latest/settings/business_partners',
+                openLabel: 'Otwórz Partnerów w Meta',
+                doneAction: 'ad-account',
+                steps: [
+                    {
+                        title: 'Otwórz Ustawienia firmy → Partnerzy',
+                        screen: { breadcrumb: 'business.facebook.com → ⚙️ Ustawienia → Lewa kolumna', target: 'Partnerzy' },
+                        body: 'Po lewej stronie zobaczysz długą listę kategorii (Użytkownicy, Konta, Domeny…). Przewiń w dół do sekcji <strong>„Konta"</strong> i kliknij <strong>„Partnerzy"</strong>. Jeśli nie widzisz tej zakładki — kliknij niebieski przycisk „Otwórz Partnerów w Meta" na dole tego okna.',
+                        tip: 'Jeśli wylądujesz w menu osobistym Facebooka (z lewej widzisz „Skróty", „Strony") — to złe miejsce. Wróć i wejdź przez business.facebook.com, nie facebook.com.'
+                    },
+                    {
+                        title: 'Kliknij niebieski przycisk „Dodaj"',
+                        screen: { breadcrumb: 'Partnerzy → góra strony', target: '+ Dodaj' },
+                        body: 'Po prawej, nad listą, jest niebieski przycisk <strong>„Dodaj"</strong>. Po kliknięciu rozwinie się menu z opcjami — wybierz <strong>„Daj partnerowi dostęp do swoich assetów"</strong> (NIE „Poproś partnera o dostęp do jego assetów" — to odwrotny kierunek).',
+                        tip: 'Pomyl te dwa kierunki łatwo. Ty dajesz dostęp mnie do Twojego konta. Czyli „Daj partnerowi dostęp".'
+                    },
+                    {
+                        title: 'Wklej moje Business ID',
+                        screen: { breadcrumb: 'Okno dialogowe „Dodaj partnera"', target: 'Pole: Wprowadź Business ID partnera' },
+                        body: 'Wyskoczy okno z polem na ID. <strong>Skopiuj ID powyżej</strong> (przycisk „Kopiuj") i wklej w to pole. Po wklejeniu Meta automatycznie pokaże mój profil firmy do potwierdzenia. Kliknij „Dalej".',
+                        tip: 'Pole jest <strong>tylko na liczby</strong>. Nie wpisuj „Tomek Niedźwiecki" — wyszukiwarka nie zadziała w tej sekcji. Tylko numer ID.'
+                    },
+                    {
+                        title: 'Wybierz konto reklamowe i nadaj „Pełną kontrolę"',
+                        screen: { breadcrumb: 'Następny ekran kreatora', target: 'Konta reklamowe → zaznacz swoje → Pełna kontrola' },
+                        body: 'Meta pokaże listę Twoich assetów pogrupowaną na sekcje (Konta reklamowe, Strony, Konta na Instagramie). Rozwiń sekcję <strong>„Konta reklamowe"</strong>, zaznacz swoje konto checkboxem, a po prawej w panelu uprawnień wybierz <strong>„Pełna kontrola"</strong>.',
+                        tip: 'Możesz w tym samym przejściu zaznaczyć też Stronę (fanpage) i Instagram — wtedy załatwisz 3 kroki za jednym razem. Patrz „Szybka droga" w głównym widoku.'
+                    },
+                    {
+                        title: 'Zatwierdź zaproszenie',
+                        screen: { breadcrumb: 'Ostatni ekran kreatora', target: 'Przycisk: Zaproś' },
+                        body: 'Kliknij <strong>„Zaproś"</strong>. Meta wyświetli komunikat „Zaproszenie wysłane". Po mojej stronie zaakceptuję dostęp w ciągu 24h (zazwyczaj w kilka minut). Wróć tutaj i kliknij <strong>„Mam to zrobione"</strong> na dole tego panelu.',
+                        tip: 'Czasem Meta poprosi o ponowne zalogowanie albo SMS — to standardowa weryfikacja. Daj się przeklikać do końca.'
+                    }
+                ],
+                faq: [
+                    { q: 'Nie widzę zakładki „Partnerzy" w lewej kolumnie', a: 'Prawdopodobnie jesteś w starym interfejsie albo w menu osobistym. Otwórz <strong>business.facebook.com/latest/settings/</strong>. Jeśli dalej nic — Twoje konto reklamowe nie jest jeszcze w Business Managerze. Wróć do kroku 1 i dodaj je tam.' },
+                    { q: 'Wpisałem ID, ale Meta mówi „Nie znaleziono firmy"', a: 'Sprawdź czy wkleiłeś <strong>tylko cyfry, bez spacji</strong>. Skopiuj jeszcze raz przyciskiem powyżej. Jeśli dalej błąd — czasem Meta cache\'uje, daj 2-3 minuty i spróbuj ponownie.' },
+                    { q: 'Nie pojawia się opcja „Pełna kontrola"', a: 'Jesteś w sekcji „Pracownicy" albo „Dodaj osoby" — to inny przepływ. Wróć i upewnij się że jesteś w <strong>„Partnerzy"</strong>. Tylko tam są uprawnienia per-asset z opcją Pełna kontrola.' },
+                    { q: 'Konto reklamowe jest na moim prywatnym Facebooku, nie w BM', a: 'W Business Suite wejdź w <strong>Ustawienia → Konta → Konta reklamowe → Dodaj → Dodaj istniejące konto reklamowe</strong>. Wklej ID konta reklamowego (znajdziesz w Menedżerze reklam, góra strony). Po dodaniu wróć do tego kroku.' },
+                    { q: 'Czy będę widział co robisz na koncie?', a: 'Tak — wszystkie kampanie, budżety, statystyki są widoczne na Twoim koncie. Pełna transparentność. Płatność idzie z Twojej karty wpisanej w Meta, ja nie mam dostępu do pieniędzy.' }
+                ]
+            },
+            'fanpage': {
+                icon: 'ph-facebook-logo',
+                eyebrow: 'Krok 2 z 4 · Fanpage',
+                title: 'Daj mi dostęp do Twojego fanpage',
+                why: 'Reklamy Meta muszą być publikowane z konkretnego fanpage — bez tego dostępu nie odpalę kampanii. Dodatkowo Meta używa fanpage do ocenia wiarygodności reklamy, więc to musi być Twój fanpage, nie mój.',
+                prereq: [
+                    'Fanpage firmy na Facebooku (jeśli nie masz — załóż go najpierw, to 2 minuty)',
+                    'Fanpage musi być w Twoim Business Managerze (NIE tylko na prywatnym FB)',
+                    'Dostęp administratora do fanpage'
+                ],
+                openUrl: 'https://business.facebook.com/latest/settings/business_partners',
+                openLabel: 'Otwórz Partnerów w Meta',
+                doneAction: 'fanpage',
+                steps: [
+                    {
+                        title: 'Sprawdź czy fanpage jest w Twoim Business Managerze',
+                        screen: { breadcrumb: 'Ustawienia firmy → Konta', target: 'Strony' },
+                        body: 'Wejdź w <strong>Ustawienia firmy → Konta → Strony</strong>. Powinieneś zobaczyć tam swój fanpage na liście. Jeśli go nie ma — kliknij „Dodaj → Dodaj istniejącą stronę" i wpisz nazwę swojego fanpage. Musisz być administratorem żeby to zrobiło.',
+                        tip: 'Jeśli fanpage jest „tylko na prywatnym Facebooku" — najpierw przenieś go do BM. Inaczej nie dasz się go udostępnić ani uruchomić reklam.'
+                    },
+                    {
+                        title: 'Otwórz „Partnerzy" w Ustawieniach firmy',
+                        screen: { breadcrumb: 'business.facebook.com → ⚙️ Ustawienia → Konta', target: 'Partnerzy' },
+                        body: 'Po lewej stronie, w sekcji „Konta", kliknij <strong>„Partnerzy"</strong>. To ta sama zakładka co przy koncie reklamowym — jeśli już mnie tu dodałeś, zobaczysz mnie na liście.',
+                        tip: 'Jeśli mnie widzisz na liście Partnerów, możesz pominąć ten przepływ i edytować moje uprawnienia — kliknij na mój profil → „Dodaj assety" → wybierz fanpage.'
+                    },
+                    {
+                        title: 'Dodaj fanpage do moich uprawnień',
+                        screen: { breadcrumb: 'Partnerzy → mój profil', target: 'Dodaj assety → Strony' },
+                        body: 'Jeśli mnie nie ma na liście — kliknij „Dodaj" i wklej moje Business ID (skopiuj wyżej). Następnie w kreatorze rozwiń sekcję <strong>„Strony"</strong>, zaznacz swój fanpage checkboxem i wybierz <strong>„Pełna kontrola"</strong>.',
+                        tip: 'Jeśli już dodałeś mnie wcześniej (przy koncie reklamowym) — kliknij na mój profil partnerski → „Dodaj assety" → wybierz Strony → fanpage → Pełna kontrola.'
+                    },
+                    {
+                        title: 'Zatwierdź i wróć',
+                        screen: { breadcrumb: 'Kreator', target: 'Zaproś / Zapisz' },
+                        body: 'Kliknij <strong>„Zaproś"</strong> (lub „Zapisz" jeśli dodajesz do istniejącego partnera). Meta zatwierdzi natychmiast — strony nie wymagają potwierdzenia z drugiej strony jak konta reklamowe. Wróć i kliknij <strong>„Mam to zrobione"</strong>.',
+                        tip: null
+                    }
+                ],
+                faq: [
+                    { q: 'Mój fanpage jest na prywatnym FB, nie widzę go w BM', a: 'Wejdź w <strong>Ustawienia firmy → Konta → Strony → Dodaj → Dodaj istniejącą stronę</strong>. Wpisz nazwę. Musisz być administratorem strony żeby Meta pozwoliło ją zaimportować. Po dodaniu wróć do tego kroku.' },
+                    { q: 'Nie mam jeszcze fanpage — co teraz?', a: 'Załóż go w 2 minuty: <strong>facebook.com/pages/create</strong> → wpisz nazwę firmy → kategoria → gotowe. Następnie wróć do tego przewodnika.' },
+                    { q: 'Nie widzę opcji „Pełna kontrola" przy stronie', a: 'Upewnij się że jesteś w sekcji <strong>„Partnerzy"</strong>, nie „Osoby/Pracownicy". Pełna kontrola jest tylko w przepływie partnerskim. W przepływie pracowniczym są inne nazwy uprawnień.' },
+                    { q: 'Czy muszę usuwać innych administratorów fanpage?', a: 'Nie. Możesz mieć wiele osób z dostępem. Ja będę administrował tylko reklamami, nie ruszam Twoich postów ani Messengera.' }
+                ]
+            },
+            'instagram': {
+                icon: 'ph-instagram-logo',
+                eyebrow: 'Krok 3 z 4 · Instagram',
+                title: 'Daj mi dostęp do Twojego Instagrama',
+                why: 'Część reklam Meta będzie publikowana na Instagramie (Stories, Reels, feed). Bez dostępu do konta IG nie zrobię tych formatów — a właśnie one konwertują dla większości sklepów dropshippingowych.',
+                prereq: [
+                    'Konto Instagram firmowe lub twórcy (NIE prywatne — Meta nie pozwala na reklamy z konta prywatnego)',
+                    'Konto IG połączone z Twoim fanpage (jeśli jeszcze nie — patrz FAQ)',
+                    'Login do Instagrama'
+                ],
+                openUrl: 'https://business.facebook.com/latest/settings/business_partners',
+                openLabel: 'Otwórz Partnerów w Meta',
+                doneAction: 'instagram',
+                steps: [
+                    {
+                        title: 'Upewnij się że IG jest firmowy i połączony z fanpage',
+                        screen: { breadcrumb: 'Aplikacja Instagram → Profil → ⚙️', target: 'Konto → Przełącz na konto profesjonalne' },
+                        body: 'Jeśli Twój Instagram jest prywatny — w aplikacji IG wejdź w <strong>Ustawienia → Konto → Przełącz na konto profesjonalne</strong> → wybierz „Firma". Następnie w sekcji „Strona" połącz go z Twoim fanpage.',
+                        tip: 'Jeśli to już zrobiłeś wcześniej — pomijasz ten krok. Sprawdź: na swoim profilu IG widzisz „Centrum profesjonalne"? Jeśli tak, jest dobrze.'
+                    },
+                    {
+                        title: 'Dodaj IG do Business Managera',
+                        screen: { breadcrumb: 'business.facebook.com → ⚙️ → Konta', target: 'Konta na Instagramie → Dodaj' },
+                        body: 'W Ustawieniach firmy → <strong>Konta → Konta na Instagramie</strong> → kliknij <strong>„Dodaj"</strong>. Zaloguj się swoim Instagramem (login + hasło). Meta podpięcie Twoje konto.',
+                        tip: 'Czasem Instagram prosi o kod weryfikacyjny SMS lub email — to normalne, daj się przeklikać.'
+                    },
+                    {
+                        title: 'Otwórz „Partnerzy" i dodaj mi dostęp do IG',
+                        screen: { breadcrumb: 'Ustawienia firmy → Konta → Partnerzy', target: 'Mój profil → Dodaj assety → Konta na Instagramie' },
+                        body: 'Wróć do <strong>„Partnerzy"</strong>. Jeśli już mnie tam masz — kliknij na mój profil → „Dodaj assety" → sekcja <strong>„Konta na Instagramie"</strong> → zaznacz Twoje IG → wybierz <strong>„Pełna kontrola"</strong>. Jeśli mnie nie ma — dodaj mnie ID-em (jak przy koncie reklamowym), w kreatorze zaznacz IG.',
+                        tip: null
+                    },
+                    {
+                        title: 'Zatwierdź i wróć',
+                        screen: { breadcrumb: 'Kreator', target: 'Zapisz / Zaproś' },
+                        body: 'Kliknij <strong>„Zapisz"</strong>. Meta zatwierdzi natychmiast. Wróć tutaj i kliknij <strong>„Mam to zrobione"</strong>.',
+                        tip: null
+                    }
+                ],
+                faq: [
+                    { q: 'Mam prywatny Instagram, nie firmowy — co teraz?', a: 'Przełącz na konto profesjonalne. W aplikacji IG: <strong>Profil → menu ☰ → Ustawienia i prywatność → Typ konta i narzędzia → Przełącz na konto profesjonalne</strong>. Wybierz „Firma" (nie „Twórca"). Zajmuje 30 sekund i nic nie tracisz.' },
+                    { q: 'Nie pamiętam hasła do Instagrama', a: 'Zresetuj przez „Zapomniałem hasła" w aplikacji IG. Po zalogowaniu wróć do tego kroku.' },
+                    { q: 'Czy IG musi być połączony z fanpage?', a: 'Tak. W Centrum profesjonalnym na IG: kliknij „Połącz stronę" lub „Połącz z Facebookiem" → wybierz swój fanpage. Bez tego Meta nie pozwoli na reklamy.' },
+                    { q: 'Nie chcę żebyś widział moje DM-y', a: 'I nie zobaczę. Pełna kontrola w kontekście reklam dotyczy tylko reklam i statystyk. Twoje wiadomości prywatne, posty, znaczniki — to wszystko pozostaje wyłącznie u Ciebie.' }
+                ]
+            },
+            'phone': {
+                icon: 'ph-phone',
+                eyebrow: 'Krok 4 z 4 · Numer telefonu',
+                title: 'Dodaj zweryfikowany numer telefonu do BM',
+                why: 'Meta wymaga zweryfikowanego numeru telefonu w Business Managerze przed uruchomieniem pierwszej kampanii — bez tego konto trafia w „ograniczone" i reklamy nie startują. Bez SMS-a, bez weryfikacji, bez reklam.',
+                prereq: [
+                    'Aktywny numer telefonu komórkowego (do odbioru SMS-a z kodem)',
+                    'Dostęp do Business Managera (jeśli już skonfigurowałeś poprzednie kroki, masz)'
+                ],
+                openUrl: 'https://business.facebook.com/latest/settings/business_info',
+                openLabel: 'Otwórz Dane firmy Meta',
+                doneAction: 'phone',
+                steps: [
+                    {
+                        title: 'Otwórz „Informacje o firmie"',
+                        screen: { breadcrumb: 'business.facebook.com → ⚙️ → Lewa kolumna', target: 'Informacje o firmie' },
+                        body: 'Po lewej stronie Ustawień firmy znajdź <strong>„Informacje o firmie"</strong> (zwykle na samej górze listy). Albo użyj niebieskiego przycisku poniżej — przeniesie Cię od razu.',
+                        tip: null
+                    },
+                    {
+                        title: 'Znajdź sekcję „Informacje kontaktowe"',
+                        screen: { breadcrumb: 'Informacje o firmie → przewiń w dół', target: 'Informacje kontaktowe → Edytuj' },
+                        body: 'Przewiń stronę w dół. Zobaczysz nagłówek <strong>„Informacje kontaktowe"</strong>. Kliknij <strong>„Edytuj"</strong> obok.',
+                        tip: 'W nowszym UI sekcja może się nazywać „Dane osobowe" — efekt ten sam, kliknij Edytuj.'
+                    },
+                    {
+                        title: 'Dodaj numer telefonu',
+                        screen: { breadcrumb: 'Formularz', target: 'Pole: Numer telefonu' },
+                        body: 'Wpisz swój numer w formacie międzynarodowym: <strong>+48 XXX XXX XXX</strong>. Zapisz.',
+                        tip: 'Bez +48 Meta czasem nie wyśle SMS-a. Jeśli numer już tam jest, ale nieoznaczony jako zweryfikowany — przejdź do następnego kroku.'
+                    },
+                    {
+                        title: 'Zweryfikuj kodem SMS',
+                        screen: { breadcrumb: 'Po zapisaniu', target: 'Przycisk: Zweryfikuj' },
+                        body: 'Obok numeru pojawi się przycisk <strong>„Zweryfikuj"</strong>. Kliknij. Meta wyśle SMS z 6-cyfrowym kodem. Wpisz kod w okno weryfikacji.',
+                        tip: 'SMS przychodzi w ciągu minuty. Jeśli nie przyszedł po 2 min — kliknij „Wyślij ponownie". Sprawdź czy numer jest aktywny.'
+                    },
+                    {
+                        title: 'Wróć i potwierdź',
+                        screen: { breadcrumb: 'Tutaj', target: 'Mam to zrobione' },
+                        body: 'Po pomyślnej weryfikacji obok numeru pojawi się zielony znaczek lub napis „Zweryfikowano". Wróć tutaj i kliknij <strong>„Mam to zrobione"</strong>.',
+                        tip: null
+                    }
+                ],
+                faq: [
+                    { q: 'SMS nie przychodzi', a: 'Sprawdź: 1) numer w formacie <strong>+48</strong>, 2) telefon ma zasięg, 3) nie blokujesz nieznanych nadawców. Po 5 min spróbuj „Wyślij ponownie". Jeśli dalej nic — zmień metodę weryfikacji na <strong>email</strong> (też Meta akceptuje).' },
+                    { q: 'Czy muszę używać prywatnego numeru?', a: 'Nie. Wystarczy każdy numer komórkowy, na który możesz odebrać SMS. Może być firmowy.' },
+                    { q: 'Mam już numer zweryfikowany, ale Meta dalej blokuje reklamy', a: 'Sprawdź czy numer jest <strong>w sekcji „Informacje o firmie"</strong>, a nie tylko na profilu osobistym. To dwa różne miejsca. Musi być w BM.' },
+                    { q: 'Jeden numer dla wielu Business Managerów?', a: 'Tak, ten sam numer może być w wielu BM-ach. Bez problemu.' }
+                ]
+            }
+        };
+
+        let _step3CurrentKey = null;
+
+        function openStep3Guide(key) {
+            const guide = STEP3_GUIDES[key];
+            if (!guide) return;
+            _step3CurrentKey = key;
+
+            // Header
+            const iconEl = document.querySelector('#step3-guide-icon i');
+            if (iconEl) iconEl.className = 'ph ' + guide.icon + ' text-rose-400 text-xl';
+            document.getElementById('step3-guide-eyebrow').textContent = guide.eyebrow;
+            document.getElementById('step3-guide-title').textContent = guide.title;
+
+            // Why
+            document.getElementById('step3-guide-why-text').textContent = guide.why;
+
+            // Prereq
+            const prereqEl = document.getElementById('step3-guide-prereq');
+            prereqEl.innerHTML = guide.prereq.map(p =>
+                '<li class="flex items-start gap-2"><i class="ph ph-check-circle text-emerald-400 text-[14px] mt-0.5 flex-shrink-0"></i><span>' + p + '</span></li>'
+            ).join('');
+
+            // Steps
+            const stepsEl = document.getElementById('step3-guide-steps');
+            stepsEl.innerHTML = guide.steps.map((s, i) => `
+                <div class="guide-step-block">
+                    <div class="step-num">${i + 1}</div>
+                    <h4 class="text-[14px] font-semibold text-white mb-1.5">${s.title}</h4>
+                    ${s.screen ? `
+                    <div class="guide-mini-screen">
+                        <div class="breadcrumb">${s.screen.breadcrumb}</div>
+                        <span class="target">${s.screen.target}</span>
+                    </div>` : ''}
+                    <p class="text-[12.5px] text-zinc-300 leading-relaxed">${s.body}</p>
+                    ${s.tip ? `
+                    <div class="mt-2.5 pt-2.5 border-t border-rose-500/10 flex items-start gap-2 text-[11.5px] text-amber-300/90">
+                        <i class="ph-fill ph-lightbulb text-amber-400 text-[13px] mt-0.5 flex-shrink-0"></i>
+                        <span><strong class="text-amber-200">Tip:</strong> ${s.tip}</span>
+                    </div>` : ''}
+                </div>
+            `).join('');
+
+            // FAQ
+            const faqEl = document.getElementById('step3-guide-faq');
+            faqEl.innerHTML = guide.faq.map(f => `
+                <details>
+                    <summary>${f.q}</summary>
+                    <div class="faq-content">${f.a}</div>
+                </details>
+            `).join('');
+
+            // CTA
+            const openLink = document.getElementById('step3-guide-open-link');
+            openLink.href = guide.openUrl;
+            document.getElementById('step3-guide-open-label').textContent = guide.openLabel;
+
+            // Show
+            document.getElementById('step3-guide-backdrop').classList.add('open');
+            document.getElementById('step3-guide-drawer').classList.add('open');
+            document.body.style.overflow = 'hidden';
+
+            // Scroll body to top
+            document.getElementById('step3-guide-body').scrollTop = 0;
+        }
+
+        function closeStep3Guide() {
+            document.getElementById('step3-guide-backdrop').classList.remove('open');
+            document.getElementById('step3-guide-drawer').classList.remove('open');
+            document.body.style.overflow = '';
+            _step3CurrentKey = null;
+        }
+
+        function copyGuideBusinessId(btn) {
+            navigator.clipboard.writeText('737839566050751').then(() => {
+                const span = btn.querySelector('span');
+                const orig = span.textContent;
+                span.textContent = 'Skopiowano!';
+                btn.classList.add('bg-emerald-500');
+                btn.classList.remove('bg-rose-500', 'hover:bg-rose-400');
+                setTimeout(() => {
+                    span.textContent = orig;
+                    btn.classList.remove('bg-emerald-500');
+                    btn.classList.add('bg-rose-500', 'hover:bg-rose-400');
+                }, 1800);
+            });
+        }
+
+        function confirmStep3FromGuide() {
+            const action = _step3CurrentKey;
+            closeStep3Guide();
+            // Małe opóźnienie żeby zamknięcie drawera nie ginęło wizualnie pod toastem
+            setTimeout(() => {
+                if (action === 'ad-account' && typeof confirmAdAccountAccess === 'function') confirmAdAccountAccess();
+                else if (action === 'fanpage' && typeof confirmFanpageAccess === 'function') confirmFanpageAccess();
+                else if (action === 'instagram' && typeof confirmInstagramAccess === 'function') confirmInstagramAccess();
+                else if (action === 'phone' && typeof confirmPhoneVerified === 'function') confirmPhoneVerified();
+            }, 200);
+        }
+
+        // ESC zamyka
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && document.getElementById('step3-guide-drawer')?.classList.contains('open')) {
+                closeStep3Guide();
+            }
+        });
+
+        window.openStep3Guide = openStep3Guide;
+        window.closeStep3Guide = closeStep3Guide;
+        window.copyGuideBusinessId = copyGuideBusinessId;
+        window.confirmStep3FromGuide = confirmStep3FromGuide;
     </script>
 </body>
 </html>
