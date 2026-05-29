@@ -2280,7 +2280,10 @@
                     name: 'Strona',
                     icon: 'ph-browser',
                     done: !!w.sales_page_shared_at,
-                    inProgress: false
+                    inProgress: false,
+                    // Strona gotowa (jest już link) ale nieprzekazana klientowi → akcja: udostępnij.
+                    // Bez linka zostaje "Do zrobienia" (strona jeszcze nie powstała).
+                    readyToShare: !!w.sales_page_url && !w.sales_page_shared_at
                 });
 
                 // Find next item to do (first not done)
@@ -2300,9 +2303,22 @@
                     `;
                 }
 
-                const statusText = nextItem.inProgress ? 'W trakcie' : 'Do zrobienia';
-                const statusColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-400';
-                const iconColor = nextItem.inProgress ? 'text-amber-400' : 'text-zinc-500';
+                // "Udostępnij" gdy element jest zrobiony, ale czeka na przekazanie klientowi
+                // (np. Strona ma już link sales_page_url, a sales_page_shared_at jest puste).
+                let statusText, statusColor, iconColor;
+                if (nextItem.readyToShare) {
+                    statusText = 'Udostępnij';
+                    statusColor = 'text-cyan-400';
+                    iconColor = 'text-cyan-400';
+                } else if (nextItem.inProgress) {
+                    statusText = 'W trakcie';
+                    statusColor = 'text-amber-400';
+                    iconColor = 'text-amber-400';
+                } else {
+                    statusText = 'Do zrobienia';
+                    statusColor = 'text-zinc-400';
+                    iconColor = 'text-zinc-500';
+                }
 
                 // Owner badge
                 const isClientTask = nextItem.name === 'Produkt';
