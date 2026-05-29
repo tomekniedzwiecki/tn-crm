@@ -120,10 +120,11 @@ Patrz: [`mcp-landing-tools.md`](../../Users/tomek/.claude/projects/c--repos-tn/m
 **KRYTYCZNE:**
 - **NIE wybieraj kierunku „z presetu" przed audytem produktu** — to był root cause refactoru 2026-04 (dryf Editorial↔Panoramic Calm bez danych)
 - **Manifesto MUSI być zapisany PRZED generowaniem HTML** — `verify-brief.sh` to wymusza
+- ⛔ **Zdjęcia AI = OPT-IN, NIGDY automatycznie w AUTO-RUN** (safety #11, incydent Linovo 2026-05-29). Domyślny deliverable = **placeholdery z 4-polowym briefem fotografa**; klient wstawia realne zdjęcia. Generuj obrazy `generate-image` TYLKO gdy user wyraźnie poprosi, i tylko ściśle wg referencji produktu (anti-drift — model dorabia cechy, których realny produkt nie ma).
 - **STOP conditions (tylko te 3 zatrzymują auto-deploy):**
   1. `verify-landing.sh` <15/18 PASS (safety violation)
   2. `verify-all-landings.sh` zepsuły inny landing (regression)
-  3. Brak zdjęć AI **i** placeholder-briefów (szkielet zamiast landinga)
+  3. Brak placeholder-briefów (szkielet zamiast landinga — zdjęcia AI NIE są wymagane)
 
 Wzorce: `landing-pages/paromia/` (Editorial/Luxury), `landing-pages/vitrix/` (Panoramic Calm), `landing-pages/h2vital/` (Organic), `landing-pages/pupilnik/` (Playful), `landing-pages/vibestrike/` (Retro-Futuristic), `landing-pages/kafina/` (Rugged Heritage).
 

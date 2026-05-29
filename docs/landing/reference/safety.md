@@ -365,6 +365,23 @@ curl -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/attachm
 
 ---
 
+## 11. ⛔ Zdjęcia AI = OPT-IN, NIGDY automatycznie
+
+**Zasada bezwzględna (incydent Linovo 2026-05-29):** w AUTO-RUN **NIE generuj zdjęć AI**. Domyślnym i jedynym automatycznym deliverable są **placeholdery z 4-polowym briefem fotografa** (reguła #4). Klient/fotograf wstawia **realne** zdjęcia produktu.
+
+**Dlaczego:**
+- **Drift produktu** — model (Gemini/GPT-image) z luźnego promptu („premium minimalist") dorabia cechy, których realny produkt NIE ma (np. drewniana rączka zamiast całej białej obudowy) → landing pokazuje produkt, którego klient **nie sprzedaje**. To wprowadza w błąd kupującego. Patrz memory `feedback-product-reference-from-db.md` (drift kształtu).
+- Placeholder z briefem jest **uczciwy** i czeka na prawdziwe zdjęcie; wygenerowany „ładny" obraz złego wariantu jest gorszy niż brak zdjęcia.
+
+**Kiedy WOLNO wygenerować obrazy AI (wszystkie warunki naraz):**
+1. **Użytkownik wyraźnie poprosił** o zdjęcia AI dla tego landingu (nie domyślnie, nie „przy okazji").
+2. Prompt jest **ściśle spięty z referencją** (`workflow_products.image_url`): obejrzyj referencję, opisz geometrię/materiał/kolor 1:1, zakaż zmian („no changes to shape, handle, color, branding").
+3. Po generacji **obejrzyj każdy obraz** i porównaj z referencją — drift = odrzuć i nie wstawiaj.
+
+**Grep/Process control:** brak twardego grepa (to reguła procesowa). Egzekwowana świadomie w ETAP 2/4 + STOP condition: jeśli kusi Cię generacja bez prośby usera → STOP, zostaw placeholdery.
+
+---
+
 ## Grep control — automatic enforcement
 
 Każda reguła ma odpowiadający check w `scripts/verify-landing.sh`. Pełna tabela 18 checks → [`05-verify.md`](../05-verify.md).

@@ -216,7 +216,7 @@ ai-generated/[slug]/
 
 **Jak włączyć:** edge function `generate-image` musi dostać parameter `custom_filename`. Obecnie używa `Date.now()_index.ext` — kompatybilność wstecz.
 
-W AUTO-RUN mode obrazy generują się w tle przez `scripts/generate-landing-images.sh` (uruchamiany przez `landing-autorun.sh`). Patrz [`README.md`](README.md) sekcja AUTO-RUN.
+> ⛔ **W AUTO-RUN NIE generuj zdjęć AI automatycznie** (safety #11, incydent Linovo 2026-05-29). Domyślny deliverable = **placeholdery z briefem fotografa**. Generacja obrazów (`scripts/generate-landing-images.sh` / `generate-image`) jest **OPT-IN** — tylko gdy użytkownik wyraźnie o to poprosi, a prompt jest ściśle spięty z referencją produktu (anti-drift). Patrz [`reference/safety.md` #11](reference/safety.md).
 
 ---
 
@@ -856,12 +856,13 @@ Każdy landing MA mieć subtelną animację W TLE sekcji hero, dopasowaną do pr
 4. **Testimonials avatars** — prawdziwe lub stockowe, spójne oświetlenie, twarze do kamery
 5. **Offer zestaw** — wszystkie elementy widoczne, flat lay lub lekko pod kątem
 
-### Alternatywy gdy brak zdjęć
+### Gdy brak realnych zdjęć — kolejność (placeholdery = DOMYŚLNIE)
 
-- Stockowe (Unsplash, Pexels)
-- AI generated (Midjourney, DALL-E, własna edge function `generate-image`)
-- Mockupy produktowe
-- W ostateczności: placeholder-briefy 4-polowe → klient dostarcza
+1. **Placeholder-briefy 4-polowe → klient dostarcza realne zdjęcia** ← **DOMYŚLNY deliverable AUTO-RUN** (safety #11). Tak kończysz landing, jeśli user nie poprosił o nic innego.
+2. Mockupy produktowe / realne zdjęcia z `workflow_branding` (jeśli przedstawiają TEN produkt).
+3. **AI generated** (`generate-image`) — **OPT-IN, tylko na wyraźną prośbę usera** + prompt ściśle spięty z referencją produktu (anti-drift, safety #11 + `feedback-product-reference-from-db.md`). NIE generuj „przy okazji" w AUTO-RUN.
+
+> Anty-wzorzec: wygenerowany „ładny" obraz pokazujący wariant produktu, którego klient nie sprzedaje (drift kształtu) jest **gorszy** niż placeholder. Placeholder jest uczciwy; zły render wprowadza kupującego w błąd.
 
 ---
 

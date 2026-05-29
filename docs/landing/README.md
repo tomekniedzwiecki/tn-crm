@@ -113,7 +113,7 @@ ETAP 6 — MOBILE (polish 375px)      — autonomous
 ═══ PRE-DEPLOY VALIDATION (auto, bez human gate) ══
 - verify-landing.sh ≥15/18 PASS
 - verify-all-landings.sh regression OK
-- Zdjęcia AI ≥5/11 lub placeholder-briefy
+- Placeholder-briefy 4-polowe obecne (zdjęcia AI NIE są generowane w AUTO-RUN — OPT-IN, safety #11)
 ═══════════════════════════════════════════════════
   ↓ (jeśli 3/3 OK)
 [AUTO] git add + commit + push → Vercel deploy
@@ -132,9 +132,11 @@ ETAP 6 — MOBILE (polish 375px)      — autonomous
 
 1. **`verify-landing.sh` <15/18 PASS** — safety violation, landing nie spełnia minimum jakości
 2. **`verify-all-landings.sh` zepsuł inny landing** — regression w istniejącym preview
-3. **Brak zdjęć AI **i** brak placeholder-briefów** — landing wyglądałby jak szkielet
+3. **Brak placeholder-briefów** — landing wyglądałby jak szkielet (placeholdery to domyślny deliverable; zdjęcia AI NIE są wymagane)
 
-We wszystkich innych przypadkach (AI timeout, częściowe fail, nietypowy kierunek) — Claude kontynuuje, deployuje, raportuje niedociągnięcia w finalnym outputcie.
+We wszystkich innych przypadkach (nietypowy kierunek, częściowe fail) — Claude kontynuuje, deployuje, raportuje niedociągnięcia w finalnym outputcie.
+
+> ⛔ **Zdjęcia AI = OPT-IN, NIGDY automatycznie** (safety #11, incydent Linovo 2026-05-29). AUTO-RUN kończy landing na placeholderach z briefem fotografa — klient wstawia realne zdjęcia produktu. Generuj obrazy TYLKO gdy user wyraźnie poprosi, i tylko ściśle wg referencji produktu (anti-drift).
 
 ### Rationale (z [`feedback-landing-auto-deploy.md`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/feedback-landing-auto-deploy.md))
 
