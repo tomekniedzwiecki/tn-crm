@@ -91,6 +91,22 @@ case "$STYLE_ID" in
     check_forbidden "Nº [0-9]" "Nº numeracja eyebrow (Editorial zakaz)"
     ;;
 
+  clinical-warmth)
+    check_required "Cormorant Garamond" "Display font Cormorant Garamond"
+    check_required "Manrope" "Label font Manrope"
+    check_required "#F7F4ED|#f7f4ed" "Ciepły papier #F7F4ED"
+    check_required "class=\"[^\"]*spec-label" "Primitive spec-label section"
+    check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
+    check_forbidden "IBM Plex" "IBM Plex (sterile lab zakaz)"
+    check_forbidden "Archivo Black" "Archivo Black (poster zakaz)"
+    check_forbidden "Caveat" "Caveat script (zakaz)"
+    check_forbidden "class=\"[^\"]*hero-numeral" "Oversized italic numeral hero (Editorial zakaz)"
+    check_forbidden "class=\"[^\"]*js-split" "Split headline char-by-char (zakaz)"
+    check_forbidden "class=\"[^\"]*js-parallax" "Parallax (zakaz)"
+    check_forbidden "class=\"[^\"]*magnetic" "Magnetic CTA (za DTC/playful)"
+    check_forbidden "class=\"[^\"]*js-tilt" "Tilt 3D (psuje powagę kliniczną)"
+    ;;
+
   poster-utility)
     check_required "Archivo Black" "Display font Archivo Black"
     check_required "class=\"[^\"]*poster-claim|class=\"[^\"]*hero-poster" "Primitive poster-claim lub hero-poster"

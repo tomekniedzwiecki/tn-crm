@@ -171,6 +171,7 @@ Auto-paste z pliku stylu do briefa. Ta sekcja staje się kontraktem na cały lan
 | Dark Academia | `dark-academia.md` | ritual·expression·feeling·solo·quiet·tradition·intimate | Book covers Penguin Classics, Everlane (older), Margaret Howell |
 | Cottagecore Botanical | `cottagecore-botanical.md` | ritual·expression·feeling·dual·quiet·tradition·intimate | Sezane, Doen, Daylesford |
 | Outdoorsy Expedition | `outdoorsy-expedition.md` | utility·balanced·evidence·dual·moderate·tradition·public | Patagonia, Snow Peak, Topo Designs |
+| Clinical Warmth | `clinical-warmth.md` | utility·precision·evidence·solo·quiet·present·intimate | Aesop, Necessaire, Bang & Olufsen, Maude |
 
 ### Kolejne style (planned, Faza 2)
 Y2K Nostalgia, Memphis, Vaporwave, Neo-Brutalism, Terminal, Newsroom, Chinese Wuxia, Athletic Wear, Biophilic, Soft Bauhaus, Neo-Mongolia, Japanese Supermarket.
