@@ -16,6 +16,7 @@ umowy/
 1. **NIGDY nie modyfikuj wzoru** `umowa-budowa-sklepu.html` bez wyraźnej prośby użytkownika
 2. **Wzór jest publiczny** - dostępny pod `https://crm.tomekniedzwiecki.pl/umowy/umowa-budowa-sklepu.html`
 3. **Umowy klientów są prywatne** - folder `umowy/klienci/` jest w `.gitignore`
+4. **Dwa różne mechanizmy umów** — plikowy (ta procedura: `umowy/klienci/*.html`) ORAZ panelowy (własny HTML wklejany w panelu workflow → kolumna `workflows.contract_custom_html`, podstawiany przez tokeny `{{...}}`). Przy umowie z panelu czytaj sekcję **„⚠️ Umowa z własnym HTML w panelu"** poniżej — ma własne pułapki.
 
 ## Procedura tworzenia umowy dla klienta
 
@@ -78,3 +79,61 @@ Użytkownik: "Zrób umowę dla Jana Kowalskiego, obniż kary o 30%"
 | Kary umowne | § 3A ust. 9 (2500 zł) i ust. 14 (50000 zł) |
 | Spółka z o.o. | § 3A ust. 10-12 (sekcja C) |
 | Sprzedaż sklepu | § 3A ust. 17-18 (sekcja E) |
+
+---
+
+## ⚠️ Umowa z własnym HTML w panelu (`contract_custom_html`)
+
+To **osobny mechanizm** od plików w `umowy/klienci/`. W panelu workflow (zakładka Umowy → „Edytuj HTML") można wkleić własny HTML, który zapisuje się do kolumny `workflows.contract_custom_html` i **nadpisuje** domyślny szablon. Dane klienta podstawiane są przez tokeny `{{...}}` w `generateContract()` ([`workflow.html`](tn-workflow/workflow.html) ~`18540`) oraz `prepareContractHtml()` ([`client-projekt.html`](client-projekt.html)).
+
+### Dostępne tokeny (składnia: WYŁĄCZNIE `{{token}}`)
+
+| Token | Źródło |
+|---|---|
+| `{{imie_nazwisko}}` | `workflow.customer_name` |
+| `{{firma_linia}}` | `" / " + customer_company` lub puste |
+| `{{firma}}` | `customer_company` |
+| `{{nip}}` | `client_nip` |
+| `{{pesel}}` | `client_pesel` |
+| `{{dowod}}` / `{{nr_dowodu}}` | `client_id_number` |
+| `{{adres}}` | ulica + kod + miasto (złożone) |
+| `{{ulica}}` `{{miasto}}` `{{kod_pocztowy}}` `{{kraj}}` | pola `client_*` |
+| `{{email}}` | `customer_email` |
+| `{{telefon}}` | `customer_phone` |
+| `{{nr_umowy}}` | `contract_number` lub pierwsze 8 znaków id |
+| `{{data_zawarcia}}` `{{data}}` `{{data_dzis}}` | dzisiejsza data |
+| `{{data_rozpoczecia}}` | `started_at` lub dziś |
+| `{{kwota}}` / `{{cena}}` | suma rat lub `amount` |
+| `{{nazwa_oferty}}` | `offer_name` |
+| `{{warunki_platnosci}}` | wygenerowany blok rat (tylko admin) |
+| `{{nr_punkt_konto}}` | "3" lub "5" zależnie od rat (tylko admin) |
+
+`{{warunki_platnosci}}` i `{{nr_punkt_konto}}` podstawia tylko panel admina, NIE strona klienta.
+
+### 🪤 PUŁAPKA: spieczone placeholdery (zdarzyło się u Pawła Wróblewskiego 2026-05-29)
+
+Przycisk „Edytuj HTML" ładuje do edytora **już podstawiony wynik** `generateContract()`, NIE surowy szablon. „Zapisz" zapisuje to do `contract_custom_html`. Jeśli zapiszesz gdy dane klienta są niekompletne → tokeny `{{...}}` zapisują się jako **puste `&nbsp;` lub literalne wartości i znikają na zawsze**. Potem, mimo wypełnionych danych, nic się nie podstawia.
+
+**Reguła:** edytując umowę w panelu ZAWSZE zostawiaj surowe tokeny `{{...}}`, NIE wpisuj realnych danych na nie. Wklejaj wzór z placeholderami, nie podstawiony render.
+
+**Diagnoza:** brak placeholderów danych osobowych = spieczone.
+```sql
+SELECT regexp_matches(contract_custom_html, '\{\{[^}]+\}\}','g')
+FROM workflows WHERE id = '<workflow_id>';
+```
+
+**Naprawa:** przywróć tokeny przez `replace()` (wzorce ze `umowy/umowa-budowa-sklepu.html`), pojedynczo per pełna linia `<p>...</p>` żeby nie trafić w boks Wykonawcy:
+```sql
+UPDATE workflows SET contract_custom_html =
+  replace(replace( contract_custom_html,
+    '<p>PESEL: <span class="field-short">&nbsp;</span></p>',
+    '<p>PESEL: <span class="field-short">{{pesel}}</span></p>'),
+    '<p>Adres:<br><span class="field">&nbsp;</span></p>',
+    '<p>Adres:<br><span class="field">{{adres}}</span></p>')
+WHERE id = '<workflow_id>';
+```
+Przed UPDATE policz `count(*)` każdego ciągu — musi = 1 (inaczej trafisz też w sekcję Wykonawcy/Tomka, która ma dane na sztywno). Po zmianie zasymuluj render i sprawdź `leftover_placeholders = 0`.
+
+### Generowanie odpala się tylko gdy jest „źródło umowy"
+
+Podgląd/PDF generuje się przez helper `hasContractSource()` = jest zmapowany szablon (`CONTRACT_TEMPLATES[offer_id]`) **LUB** `contract_custom_html`. Klient na ofercie BEZ zmapowanego szablonu, z własnym HTML, działa dopiero po fixie z 2026-05-29 (`workflow.html` 18377/18384, 7358/7433/7592). Strona klienta (`prepareContractHtml`) nie miała tej blokady.

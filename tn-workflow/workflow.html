@@ -7355,7 +7355,7 @@
                 closeCreateScheduleModal();
                 await loadPaymentSchedule();
                 // Regenerate contract to include schedule
-                if (contractTemplateUrl) generateContract();
+                if (hasContractSource()) generateContract();
 
             } catch (err) {
                 console.error('Save schedule error:', err);
@@ -7430,7 +7430,7 @@
                 showToast('Harmonogram usunięty', 'success');
                 renderPaymentSchedule();
                 // Regenerate contract without schedule
-                if (contractTemplateUrl) generateContract();
+                if (hasContractSource()) generateContract();
 
             } catch (err) {
                 console.error('Delete schedule error:', err);
@@ -7589,7 +7589,7 @@
                 showToast('Harmonogram powiązany z workflow', 'success');
                 await loadPaymentSchedule();
                 // Regenerate contract to include schedule
-                if (contractTemplateUrl) generateContract();
+                if (hasContractSource()) generateContract();
 
             } catch (err) {
                 console.error('Link schedule error:', err);
@@ -18256,6 +18256,11 @@ PODSUMOWANIE wyświetl na końcu:
 
         let isEditingContract = false;
 
+        // Umowę można wygenerować z mapowanego szablonu (URL) LUB z własnego HTML wklejonego w panelu
+        function hasContractSource() {
+            return !!(contractTemplateUrl || (workflow && workflow.contract_custom_html));
+        }
+
         async function loadContractData() {
             if (!workflow) return;
 
@@ -18373,15 +18378,15 @@ PODSUMOWANIE wyświetl na końcu:
             document.getElementById('contract-generation-section').classList.toggle('hidden', !hasData || isSigned);
             document.getElementById('signed-section').classList.toggle('hidden', !isSigned);
 
-            // Update no template warning
-            if (hasData && !contractTemplateUrl) {
+            // Update no template warning (własny HTML też liczy się jako szablon)
+            if (hasData && !hasContractSource()) {
                 document.getElementById('no-template-warning').classList.remove('hidden');
             } else {
                 document.getElementById('no-template-warning').classList.add('hidden');
             }
 
-            // Generate contract preview
-            if (hasData && contractTemplateUrl) {
+            // Generate contract preview — także dla klientów z własnym HTML (bez mapowanego URL)
+            if (hasData && hasContractSource()) {
                 generateContract();
             }
 
