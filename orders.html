@@ -182,6 +182,10 @@
                     <i class="ph ph-download-simple"></i>
                     Eksport CSV
                 </button>
+                <button onclick="exportAccounting()" title="Opłacone zamówienia bez faktury za poprzedni miesiąc (osoby bez działalności)" class="hidden md:flex text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-700 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors items-center gap-2">
+                    <i class="ph ph-receipt"></i>
+                    Eksport księgowość
+                </button>
                 <button onclick="openOrderModal()" class="bg-white text-black hover:bg-zinc-200 px-3 md:px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                     <i class="ph ph-plus md:mr-1"></i>
                     <span class="hidden md:inline">Nowe zamówienie</span>
@@ -234,6 +238,11 @@
                             <option value="bank_transfer">Przelew bankowy</option>
                             <option value="installments">Raty</option>
                             <option value="cash">Gotówka</option>
+                        </select>
+                        <select id="filter-invoice" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none min-w-[160px]">
+                            <option value="">Wszystkie faktury</option>
+                            <option value="needed">Wymaga faktury</option>
+                            <option value="issued">Faktura wystawiona</option>
                         </select>
                         <input type="date" id="filter-date-from" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none">
                         <input type="date" id="filter-date-to" class="bg-zinc-900 border border-zinc-800 text-zinc-300 text-xs rounded-lg px-3 py-2.5 focus:border-zinc-600 focus:outline-none">
@@ -572,6 +581,7 @@
             const search = document.getElementById('filter-search').value.trim().toLowerCase();
             const status = document.getElementById('filter-status').value;
             const source = document.getElementById('filter-source').value;
+            const invoice = document.getElementById('filter-invoice').value;
             const dateFrom = document.getElementById('filter-date-from').value;
             const dateTo = document.getElementById('filter-date-to').value;
 
@@ -584,8 +594,16 @@
             if (search) {
                 query = query.or(`customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,order_number.ilike.%${search}%,description.ilike.%${search}%`);
             }
-            if (status) {
-                query = query.eq('status', status);
+            // "Wymaga faktury" = opłacone zamówienie bez wystawionej faktury → wymusza status 'paid'
+            if (invoice === 'needed') {
+                query = query.eq('status', 'paid').is('invoice_number', null);
+            } else {
+                if (status) {
+                    query = query.eq('status', status);
+                }
+                if (invoice === 'issued') {
+                    query = query.not('invoice_number', 'is', null);
+                }
             }
             if (source) {
                 query = query.eq('payment_source', source);
@@ -922,6 +940,7 @@
             const hasFilters = document.getElementById('filter-search').value ||
                 document.getElementById('filter-status').value ||
                 document.getElementById('filter-source').value ||
+                document.getElementById('filter-invoice').value ||
                 document.getElementById('filter-date-from').value ||
                 document.getElementById('filter-date-to').value;
 
@@ -932,6 +951,7 @@
             document.getElementById('filter-search').value = '';
             document.getElementById('filter-status').value = '';
             document.getElementById('filter-source').value = '';
+            document.getElementById('filter-invoice').value = '';
             document.getElementById('filter-date-from').value = '';
             document.getElementById('filter-date-to').value = '';
             currentPage = 1;
@@ -1580,6 +1600,122 @@
             showToast('Eksport zakończony');
         }
 
+        // Eksport dla księgowości — opłacone zamówienia BEZ wystawionej faktury za POPRZEDNI miesiąc.
+        // Zamówienia z NIP rozliczane są przez Fakturownię (tam wystawiamy FV), więc do księgowości
+        // przekazujemy opłacone zamówienia osób bez działalności (bez faktury VAT).
+        // GUARD: jeśli któreś opłacone zamówienie Z NIP nie ma jeszcze faktury — blokujemy eksport,
+        // bo najpierw trzeba wystawić FV w Fakturowni (inaczej księgowość dostanie niekompletne dane).
+        async function exportAccounting() {
+            // Zakres: poprzedni miesiąc kalendarzowy, wg daty płatności (paid_at)
+            const now = new Date();
+            const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const end = new Date(now.getFullYear(), now.getMonth(), 1); // 1. dzień bieżącego miesiąca (wyłącznie)
+            const monthLabel = start.toLocaleDateString('pl-PL', { year: 'numeric', month: 'long' });
+            const fileMonth = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+
+            showToast(`Pobieram zamówienia za ${monthLabel}...`);
+
+            // Wszystkie OPŁACONE zamówienia z poprzedniego miesiąca (wg paid_at).
+            // limit() podnosi domyślny pułap PostgREST (1000) — i wykrywamy ewentualne obcięcie,
+            // żeby księgowość nigdy nie dostała niekompletnych danych po cichu.
+            const ROW_CAP = 5000;
+            const { data, error } = await supabaseClient
+                .from('orders')
+                .select('*')
+                .eq('status', 'paid')
+                .gte('paid_at', start.toISOString())
+                .lt('paid_at', end.toISOString())
+                .order('paid_at', { ascending: true })
+                .limit(ROW_CAP);
+
+            if (error) {
+                console.error('Accounting export error:', error);
+                showToast('Błąd pobierania danych: ' + error.message);
+                return;
+            }
+
+            const paidOrders = data || [];
+            if (paidOrders.length >= ROW_CAP) {
+                alert(`Eksport przerwany: pobrano ${paidOrders.length} zamówień (limit ${ROW_CAP}). Dane mogą być niekompletne — skontaktuj się z deweloperem.`);
+                return;
+            }
+
+            // "Ma podany NIP" = pole NIP niepuste (nie tylko poprawny 10-cyfrowy) — bardziej
+            // defensywnie: błędnie wpisany NIP też zablokuje, zamiast wpuścić firmę do eksportu osób prywatnych.
+            const hasNip = o => o.customer_nip && o.customer_nip.trim() !== '';
+
+            // GUARD: opłacone zamówienia z NIP, które nie mają jeszcze wystawionej faktury
+            const blockers = paidOrders.filter(o => hasNip(o) && !o.invoice_number);
+            if (blockers.length > 0) {
+                const list = blockers
+                    .map(o => `• ${o.order_number} — ${o.customer_company || o.customer_name || o.customer_email} (NIP ${o.customer_nip})`)
+                    .join('\n');
+                alert(
+                    `Nie można wygenerować eksportu dla księgowości za ${monthLabel}.\n\n` +
+                    `${blockers.length} opłacone zamówienie(-a) z NIP nie ma(ją) wystawionej faktury VAT. ` +
+                    `Wystaw je najpierw w Fakturowni, a następnie ponów eksport:\n\n${list}`
+                );
+                showToast(`Blokada: ${blockers.length} zamówień z NIP bez faktury`);
+                return;
+            }
+
+            // Eksport = opłacone zamówienia bez faktury i bez NIP (osoby bez działalności).
+            // !hasNip to druga linia obrony — po przejściu guardu i tak nie ma już NIP-ów bez faktury.
+            const exportOrders = paidOrders.filter(o => !o.invoice_number && !hasNip(o));
+            if (exportOrders.length === 0) {
+                showToast(`Brak opłaconych zamówień bez faktury za ${monthLabel}`);
+                return;
+            }
+
+            const total = exportOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+
+            if (!confirm(
+                `Eksport dla księgowości za ${monthLabel}\n\n` +
+                `Zamówień (opłacone, osoby prywatne bez faktury): ${exportOrders.length}\n` +
+                `Suma: ${total.toFixed(2)} zł\n\n` +
+                `Wygenerować plik CSV?`
+            )) {
+                return;
+            }
+
+            // Format pod polski Excel: separator ';', przecinek dziesiętny.
+            // csvCell: ucieka cudzysłowy oraz neutralizuje wstrzyknięcie formuł (=,+,-,@) wiodącym apostrofem.
+            const money = v => (parseFloat(v) || 0).toFixed(2).replace('.', ',');
+            const csvCell = v => {
+                let s = String(v ?? '');
+                if (/^[=+\-@]/.test(s)) s = "'" + s;
+                return `"${s.replace(/"/g, '""')}"`;
+            };
+
+            const headers = ['Nr zamówienia', 'Data płatności', 'Email', 'Nazwa', 'Firma', 'Telefon', 'NIP', 'Opis', 'Kwota (zł)', 'Źródło płatności', 'Referencja'];
+            const rows = exportOrders.map(o => [
+                o.order_number,
+                o.paid_at ? new Date(o.paid_at).toLocaleDateString('pl-PL') : '',
+                o.customer_email,
+                o.customer_name || '',
+                o.customer_company || '',
+                o.customer_phone || '',
+                o.customer_nip || '',
+                o.description || '',
+                money(o.amount),
+                SOURCE_CONFIG[o.payment_source]?.label || o.payment_source || '',
+                o.payment_reference || ''
+            ]);
+            // Wiersz podsumowania
+            rows.push(['', '', '', '', '', '', '', 'SUMA', money(total), '', '']);
+
+            const csv = [headers, ...rows].map(row => row.map(csvCell).join(';')).join('\r\n');
+            const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ksiegowosc_${fileMonth}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showToast(`Eksport księgowość: ${exportOrders.length} zamówień za ${monthLabel}`);
+        }
+
         // Audit log
         async function logAuditActivity(action_type, entity_type, entity_id, entity_identifier, old_value, new_value) {
             if (!currentMember) return;
@@ -1626,6 +1762,11 @@
         });
 
         document.getElementById('filter-source').addEventListener('change', () => {
+            currentPage = 1;
+            loadOrders();
+        });
+
+        document.getElementById('filter-invoice').addEventListener('change', () => {
             currentPage = 1;
             loadOrders();
         });
