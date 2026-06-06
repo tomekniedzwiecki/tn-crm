@@ -594,9 +594,12 @@
             if (search) {
                 query = query.or(`customer_email.ilike.%${search}%,customer_name.ilike.%${search}%,order_number.ilike.%${search}%,description.ilike.%${search}%`);
             }
-            // "Wymaga faktury" = opłacone zamówienie bez wystawionej faktury → wymusza status 'paid'
+            // "Wymaga faktury" = opłacone zamówienie Z NIP bez wystawionej faktury VAT.
+            // FV wymagają tylko zamówienia z NIP (idą do księgowości przez Fakturownię);
+            // osoby prywatne bez NIP faktury nie wymagają. Wymusza status 'paid'.
             if (invoice === 'needed') {
-                query = query.eq('status', 'paid').is('invoice_number', null);
+                query = query.eq('status', 'paid').is('invoice_number', null)
+                    .not('customer_nip', 'is', null).neq('customer_nip', '');
             } else {
                 if (status) {
                     query = query.eq('status', status);
