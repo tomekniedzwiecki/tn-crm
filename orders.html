@@ -1670,12 +1670,28 @@
                 return;
             }
 
-            const total = exportOrders.reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0);
+            // VAT liczony identycznie jak w Fakturowni (supabase/functions/fakturownia-invoice):
+            // order.amount = BRUTTO, płaska stawka 23%, netto = brutto/1.23, vat = brutto - netto.
+            const VAT_RATE = 23;
+            const r2 = n => Math.round(n * 100) / 100;
+            const vatBreakdown = o => {
+                const brutto = parseFloat(o.amount) || 0;
+                const netto = r2(brutto / (1 + VAT_RATE / 100));
+                return { netto, vat: r2(brutto - netto), brutto };
+            };
+
+            const sums = exportOrders.reduce((acc, o) => {
+                const b = vatBreakdown(o);
+                acc.netto += b.netto; acc.vat += b.vat; acc.brutto += b.brutto;
+                return acc;
+            }, { netto: 0, vat: 0, brutto: 0 });
 
             if (!confirm(
                 `Eksport dla księgowości za ${monthLabel}\n\n` +
                 `Zamówień (opłacone, osoby prywatne bez faktury): ${exportOrders.length}\n` +
-                `Suma: ${total.toFixed(2)} zł\n\n` +
+                `Netto: ${r2(sums.netto).toFixed(2)} zł\n` +
+                `VAT ${VAT_RATE}%: ${r2(sums.vat).toFixed(2)} zł\n` +
+                `Brutto: ${r2(sums.brutto).toFixed(2)} zł\n\n` +
                 `Wygenerować plik CSV?`
             )) {
                 return;
@@ -1690,22 +1706,28 @@
                 return `"${s.replace(/"/g, '""')}"`;
             };
 
-            const headers = ['Nr zamówienia', 'Data płatności', 'Email', 'Nazwa', 'Firma', 'Telefon', 'NIP', 'Opis', 'Kwota (zł)', 'Źródło płatności', 'Referencja'];
-            const rows = exportOrders.map(o => [
-                o.order_number,
-                o.paid_at ? new Date(o.paid_at).toLocaleDateString('pl-PL') : '',
-                o.customer_email,
-                o.customer_name || '',
-                o.customer_company || '',
-                o.customer_phone || '',
-                o.customer_nip || '',
-                o.description || '',
-                money(o.amount),
-                SOURCE_CONFIG[o.payment_source]?.label || o.payment_source || '',
-                o.payment_reference || ''
-            ]);
+            const headers = ['Nr zamówienia', 'Data płatności', 'Email', 'Nazwa', 'Firma', 'Telefon', 'NIP', 'Opis', 'Netto (zł)', 'VAT (zł)', 'Stawka VAT', 'Brutto (zł)', 'Źródło płatności', 'Referencja'];
+            const rows = exportOrders.map(o => {
+                const b = vatBreakdown(o);
+                return [
+                    o.order_number,
+                    o.paid_at ? new Date(o.paid_at).toLocaleDateString('pl-PL') : '',
+                    o.customer_email,
+                    o.customer_name || '',
+                    o.customer_company || '',
+                    o.customer_phone || '',
+                    o.customer_nip || '',
+                    o.description || '',
+                    money(b.netto),
+                    money(b.vat),
+                    `${VAT_RATE}%`,
+                    money(b.brutto),
+                    SOURCE_CONFIG[o.payment_source]?.label || o.payment_source || '',
+                    o.payment_reference || ''
+                ];
+            });
             // Wiersz podsumowania
-            rows.push(['', '', '', '', '', '', '', 'SUMA', money(total), '', '']);
+            rows.push(['', '', '', '', '', '', '', 'SUMA', money(sums.netto), money(sums.vat), '', money(sums.brutto), '', '']);
 
             const csv = [headers, ...rows].map(row => row.map(csvCell).join(';')).join('\r\n');
             const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
