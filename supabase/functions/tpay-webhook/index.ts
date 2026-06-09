@@ -780,8 +780,12 @@ Deno.serve(async (req) => {
       // Send TikTok Events API event
       await sendTikTokConversion(order, supabase)
 
-      // Send Google Ads conversion (uploadClickConversions z wartoscia)
-      await sendGoogleConversion(order, supabase)
+      // Google Ads zakup: WYLACZONE celowo. Konwersje zakupu liczymy WYLACZNIE przez
+      // import GA4 'purchase' (akcja "tomekniedzwiecki.pl (web) purchase"), zeby nie
+      // liczyc tej samej transakcji dwa razy (import GA4 + uploadClickConversions).
+      // Funkcja sendGoogleConversion zostaje w kodzie — odkomentuj jesli kiedys chcesz
+      // wrocic do uploadu po gclid zamiast importu GA4.
+      // await sendGoogleConversion(order, supabase)
 
       // Send GA4 purchase server-side (Measurement Protocol) — backup gdy browser purchase nie zdazy
       await sendGA4Purchase(order)

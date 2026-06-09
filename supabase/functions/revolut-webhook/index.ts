@@ -630,7 +630,9 @@ Deno.serve(async (req) => {
           await sendSlackPaidNotification({ ...order, payment_source: 'revolut' }, supabase)
           await sendMetaConversion(order, supabase)
           await sendTikTokConversion(order, supabase)
-          await sendGoogleConversion(order, supabase)
+          // Google Ads zakup WYLACZONE celowo — liczymy zakup tylko importem GA4 'purchase'
+          // (anty double-count). Funkcja zostaje w kodzie; odkomentuj by wrocic do uploadu po gclid.
+          // await sendGoogleConversion(order, supabase)
           await sendGA4Purchase(order)
 
           if (order.discount_code_id) {
