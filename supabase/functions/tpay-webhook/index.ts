@@ -708,6 +708,27 @@ Deno.serve(async (req) => {
       paidAt = new Date().toISOString()
       console.log('[tpay-webhook] Payment successful!')
 
+      // Podlinkuj leada po mailu jesli brak (checkout ustawia lead_id tylko gdy ?lead_id w URL).
+      // Bez tego konwersje nie znajda gclid/fbclid w lead_tracking, a zakup pada jako "direct".
+      if (!order.lead_id && order.customer_email) {
+        try {
+          const { data: leadMatch } = await supabase
+            .from('leads')
+            .select('id')
+            .eq('email', order.customer_email.toLowerCase().trim())
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle()
+          if (leadMatch?.id) {
+            order.lead_id = leadMatch.id
+            await supabase.from('orders').update({ lead_id: leadMatch.id }).eq('id', order.id)
+            console.log('[tpay-webhook] Linked order to lead by email:', leadMatch.id)
+          }
+        } catch (linkErr) {
+          console.error('[tpay-webhook] Lead link error:', linkErr)
+        }
+      }
+
       // Send Slack notification for successful payment
       await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
 
