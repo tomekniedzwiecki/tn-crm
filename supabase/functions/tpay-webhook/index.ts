@@ -425,7 +425,7 @@ async function getGoogleAccessToken(): Promise<string | null> {
   }
 }
 
-// Send Purchase event to Google Ads Enhanced Conversions
+// Send Purchase conversion to Google Ads via uploadClickConversions (tworzy konwersje z wartoscia)
 async function sendGoogleConversion(order: any, supabase: any) {
   const customerId = Deno.env.get('GOOGLE_ADS_CUSTOMER_ID')?.replace(/-/g, '')
   const developerToken = Deno.env.get('GOOGLE_ADS_DEVELOPER_TOKEN')
@@ -486,29 +486,32 @@ async function sendGoogleConversion(order: any, supabase: any) {
       userIdentifiers.push({ addressInfo })
     }
 
-    // Build conversion adjustment for enhanced conversions
-    const conversionTime = new Date().toISOString().replace('T', ' ').split('.')[0] + ' +0100'
+    // uploadClickConversions wymaga gclid ALBO userIdentifiers — sam orderId nie wystarczy.
+    // Bez zadnego z nich Google odrzuci konwersje, wiec pomijamy.
+    if (!gclid && userIdentifiers.length === 0) {
+      console.log('[google] Brak gclid i danych uzytkownika — pomijam (nie ma jak atrybuowac)')
+      return
+    }
 
-    const conversionAdjustment: any = {
+    // Czas konwersji w UTC (+00:00) — unikamy bledow DST (PL: +01:00 zima / +02:00 lato)
+    const conversionDateTime = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '') + '+00:00'
+
+    // uploadClickConversions TWORZY konwersje z wartoscia (odpowiednik Meta CAPI Purchase),
+    // w przeciwienstwie do uploadConversionAdjustments/ENHANCEMENT ktore tylko wzbogacalo istniejaca.
+    const clickConversion: any = {
       conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
-      adjustmentType: 'ENHANCEMENT',
-      orderId: order.order_number,
-      adjustmentDateTime: conversionTime,
-      userIdentifiers: userIdentifiers.length > 0 ? userIdentifiers : undefined,
-      restatementValue: {
-        adjustedValue: parseFloat(order.amount) / 1.23, // netto
-        currencyCode: 'PLN'
-      }
+      conversionDateTime,
+      conversionValue: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
+      currencyCode: 'PLN',
+      orderId: order.order_number, // dedup po stronie Google
+      userIdentifiers: userIdentifiers.length > 0 ? userIdentifiers : undefined
     }
 
     if (gclid) {
-      conversionAdjustment.gclidDateTimePair = {
-        gclid: gclid,
-        conversionDateTime: conversionTime
-      }
+      clickConversion.gclid = gclid
     }
 
-    const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:uploadConversionAdjustments`
+    const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:uploadClickConversions`
 
     console.log('[google] Sending conversion:', JSON.stringify({
       order_id: order.order_number,
@@ -527,7 +530,7 @@ async function sendGoogleConversion(order: any, supabase: any) {
         'login-customer-id': customerId
       },
       body: JSON.stringify({
-        conversionAdjustments: [conversionAdjustment],
+        conversions: [clickConversion],
         partialFailure: true
       })
     })
@@ -714,7 +717,7 @@ Deno.serve(async (req) => {
       // Send TikTok Events API event
       await sendTikTokConversion(order, supabase)
 
-      // Send Google Ads Enhanced Conversion
+      // Send Google Ads conversion (uploadClickConversions z wartoscia)
       await sendGoogleConversion(order, supabase)
 
       // Increment discount code usage only on successful payment

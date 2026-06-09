@@ -325,24 +325,30 @@ async function sendGoogleConversion(order: any, supabase: any) {
       userIdentifiers.push({ addressInfo })
     }
 
-    const conversionTime = new Date().toISOString().replace('T', ' ').split('.')[0] + ' +0100'
-    const conversionAdjustment: any = {
+    // uploadClickConversions wymaga gclid ALBO userIdentifiers — sam orderId nie wystarczy.
+    if (!gclid && userIdentifiers.length === 0) {
+      console.log('[google] Brak gclid i danych uzytkownika — pomijam (nie ma jak atrybuowac)')
+      return
+    }
+
+    // Czas konwersji w UTC (+00:00) — unikamy bledow DST (PL: +01:00 zima / +02:00 lato)
+    const conversionDateTime = new Date().toISOString().replace('T', ' ').replace(/\.\d+Z$/, '') + '+00:00'
+
+    // uploadClickConversions TWORZY konwersje z wartoscia (odpowiednik Meta CAPI Purchase)
+    const clickConversion: any = {
       conversionAction: `customers/${customerId}/conversionActions/${conversionActionId}`,
-      adjustmentType: 'ENHANCEMENT',
-      orderId: order.order_number,
-      adjustmentDateTime: conversionTime,
-      userIdentifiers: userIdentifiers.length > 0 ? userIdentifiers : undefined,
-      restatementValue: {
-        adjustedValue: parseFloat(order.amount) / 1.23,
-        currencyCode: 'PLN'
-      }
+      conversionDateTime,
+      conversionValue: parseFloat(order.amount) / 1.23, // netto (bez VAT 23%)
+      currencyCode: 'PLN',
+      orderId: order.order_number, // dedup po stronie Google
+      userIdentifiers: userIdentifiers.length > 0 ? userIdentifiers : undefined
     }
 
     if (gclid) {
-      conversionAdjustment.gclidDateTimePair = { gclid, conversionDateTime: conversionTime }
+      clickConversion.gclid = gclid
     }
 
-    const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:uploadConversionAdjustments`
+    const url = `https://googleads.googleapis.com/${GOOGLE_ADS_API_VERSION}/customers/${customerId}:uploadClickConversions`
 
     const response = await fetch(url, {
       method: 'POST',
@@ -353,7 +359,7 @@ async function sendGoogleConversion(order: any, supabase: any) {
         'login-customer-id': customerId
       },
       body: JSON.stringify({
-        conversionAdjustments: [conversionAdjustment],
+        conversions: [clickConversion],
         partialFailure: true
       })
     })
