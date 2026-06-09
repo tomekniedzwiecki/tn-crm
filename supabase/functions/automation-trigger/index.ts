@@ -88,6 +88,44 @@ Deno.serve(async (req) => {
       }
     }
 
+    // === GA4 lead-lifecycle (server-side Measurement Protocol) ===
+    // Świadomie PRZED sprawdzeniem automations_master_enabled — to analityka, nie automatyzacja,
+    // więc musi działać nawet gdy master switch jest off. Wysyła:
+    //   qualify_lead       — wejście w lejek sprzedażowy (status 'qualified'/"Oferta" i głębiej),
+    //   close_convert_lead — deal wygrany (status 'won').
+    // user_id = lead_id — spójnie z tpay-webhook (purchase) i checkout/success.html, więc GA4 składa
+    // jeden user journey: lead -> qualify -> convert -> purchase. Daje Google czysty sygnał jakości
+    // (vs ~96% szum z form_complete: ~100 'won' na 1000+ leadów).
+    if (trigger_type === 'lead_status_changed' && entity_type === 'lead') {
+      try {
+        const newStatus = String(filters?.status || enrichedContext.expected_status || '').trim()
+        const prevStatus = String(context.previous_status || '').trim()
+        const QUALIFIED_STAGES = ['qualified', 'proposal', 'negotiation', 'stage_6']
+        const enteredWon = newStatus === 'won' && prevStatus !== 'won'
+        // Fire raz, przy WEJŚCIU w lejek kwalifikacji (obsługuje też skok np. new -> proposal).
+        const enteredQualified = QUALIFIED_STAGES.includes(newStatus) && !QUALIFIED_STAGES.includes(prevStatus)
+
+        if (enteredWon || enteredQualified) {
+          // deal_value -> value-based bidding (jeśli znane). Enrichment mógł go nie pobrać,
+          // gdy caller (pipeline.html) podał email w context -> dociągnij bezpośrednio.
+          let dealValue = enrichedContext.deal_value
+          if (dealValue === undefined || dealValue === null) {
+            const { data: l } = await supabase.from('leads').select('deal_value').eq('id', entity_id).maybeSingle()
+            dealValue = l?.deal_value
+          }
+          await sendGA4LeadEvent(entity_id, enteredWon ? 'close_convert_lead' : 'qualify_lead', {
+            lead_status: newStatus,
+            previous_status: prevStatus || undefined,
+            value: (dealValue != null && Number(dealValue) > 0) ? Number(dealValue) : undefined,
+            currency: 'PLN'
+          })
+        }
+      } catch (ga4Err) {
+        console.error('[automation-trigger] GA4 lead event error:', ga4Err)
+        // Nie przerywaj — analityka jest drugorzędna względem automatyzacji.
+      }
+    }
+
     // Check if automations are globally enabled
     const { data: masterSetting } = await supabase
       .from('settings')
@@ -246,4 +284,33 @@ function matchesFilters(flowFilters: Record<string, any> | null, triggerFilters:
   }
 
   return true
+}
+
+// GA4 Measurement Protocol — zdarzenia cyklu życia leada (qualify_lead / close_convert_lead).
+// client_id i user_id = lead_id (spójnie z tpay-webhook sendGA4Purchase oraz user_id w success.html
+// i /zapisy) -> GA4 skleja cały journey jednego użytkownika: lead -> qualify -> convert -> purchase.
+async function sendGA4LeadEvent(leadId: string, eventName: string, params: Record<string, any>) {
+  const apiSecret = Deno.env.get('GA4_API_SECRET')
+  const measurementId = Deno.env.get('GA4_MEASUREMENT_ID') || 'G-W8CLDSHVFC'
+  if (!apiSecret) {
+    console.log('[ga4] GA4_API_SECRET not configured, skipping lead event:', eventName)
+    return
+  }
+  // engagement_time_msec + session_id wymagane, by GA4 zarejestrował event z Measurement Protocol.
+  const cleanParams: Record<string, any> = { engagement_time_msec: 100, session_id: String(Date.now()) }
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') cleanParams[k] = v
+  }
+  const payload = {
+    client_id: `${leadId}.0`,
+    user_id: String(leadId),
+    events: [{ name: eventName, params: cleanParams }]
+  }
+  try {
+    const url = `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`
+    const resp = await fetch(url, { method: 'POST', body: JSON.stringify(payload) })
+    console.log('[ga4] MP lead event sent:', JSON.stringify({ leadId, eventName, status: resp.status }))
+  } catch (err) {
+    console.error('[ga4] MP lead event error:', err)
+  }
 }
