@@ -65,6 +65,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="/components/source-classifier.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -325,7 +326,7 @@
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('id, order_number, amount, description, status, installment_id, workflow_id')
+                    .select('id, order_number, amount, description, status, installment_id, workflow_id, lead_id, leads(lead_tracking(gclid,gbraid,wbraid,gad_source,fbclid,ttclid,utm_source,utm_medium,network))')
                     .eq('id', orderId)
                     .single();
 
@@ -359,16 +360,24 @@
                     if (!alreadySent && order.status === 'paid') {
                         const value = parseFloat(order.amount) / 1.23; // netto
                         const transactionId = order.order_number;
+                        // Kanal pozyskania (z lead_tracking leada powiazanego z zamowieniem)
+                        const leadTracking = order.leads && order.leads.lead_tracking && order.leads.lead_tracking[0];
+                        const trafficChannel = (typeof classifySource === 'function' && leadTracking)
+                            ? classifySource(leadTracking).channel : 'organic';
 
                         // GA4 purchase event
                         if (typeof gtag !== 'undefined') {
+                            // User-ID: domyka petle lead->purchase w GA4 (cross-session)
+                            if (order.lead_id) gtag('set', { user_id: order.lead_id });
                             gtag('event', 'purchase', {
                                 transaction_id: transactionId,
                                 value: value,
                                 currency: 'PLN',
+                                traffic_channel: trafficChannel,
                                 items: [{
                                     item_id: order.id,
                                     item_name: order.description,
+                                    item_category: 'oferta_awe',
                                     price: value,
                                     quantity: 1
                                 }]
@@ -396,7 +405,7 @@
                                 content_id: transactionId,
                                 content_name: order.description,
                                 content_type: 'product'
-                            });
+                            }, { event_id: order.id }); // event_id == webhook -> dedup browser<->Events API
                             console.log('[TikTok] CompletePayment event sent:', transactionId);
                         }
 
