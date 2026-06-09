@@ -569,6 +569,8 @@ async function sendGA4Purchase(order: any) {
           transaction_id: order.order_number, // == browser -> GA4 dedup
           value: value,
           currency: 'PLN',
+          engagement_time_msec: 100, // wymagane by GA4 zarejestrowal/pokazal event MP
+          session_id: String(Date.now()),
           items: [{
             item_id: order.id,
             item_name: order.description,
