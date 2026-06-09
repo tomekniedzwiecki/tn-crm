@@ -375,6 +375,38 @@ async function sendGoogleConversion(order: any, supabase: any) {
   }
 }
 
+// GA4 purchase server-side (Measurement Protocol) — backup gdy browser purchase nie zdazy.
+// GA4 dedupuje purchase po transaction_id (=order_number), brak podwojnego liczenia z browserem.
+async function sendGA4Purchase(order: any) {
+  const apiSecret = Deno.env.get('GA4_API_SECRET')
+  const measurementId = Deno.env.get('GA4_MEASUREMENT_ID') || 'G-W8CLDSHVFC'
+  if (!apiSecret) {
+    console.log('[ga4] GA4_API_SECRET not configured, skipping')
+    return
+  }
+  try {
+    const value = parseFloat(order.amount) / 1.23
+    const clientId = `${order.lead_id || order.id}.0`
+    const payload = {
+      client_id: clientId,
+      events: [{
+        name: 'purchase',
+        params: {
+          transaction_id: order.order_number,
+          value: value,
+          currency: 'PLN',
+          items: [{ item_id: order.id, item_name: order.description, item_category: 'oferta_awe', price: value, quantity: 1 }]
+        }
+      }]
+    }
+    const url = `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`
+    const resp = await fetch(url, { method: 'POST', body: JSON.stringify(payload) })
+    console.log('[ga4] MP purchase sent:', JSON.stringify({ order_id: order.order_number, value, status: resp.status }))
+  } catch (err) {
+    console.error('[ga4] MP purchase error:', err)
+  }
+}
+
 // ═══════════════════════════════════════════════════════════════
 // Revolut HMAC-SHA256 signature verification
 // ═══════════════════════════════════════════════════════════════
@@ -597,6 +629,7 @@ Deno.serve(async (req) => {
           await sendMetaConversion(order, supabase)
           await sendTikTokConversion(order, supabase)
           await sendGoogleConversion(order, supabase)
+          await sendGA4Purchase(order)
 
           if (order.discount_code_id) {
             try {

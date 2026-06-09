@@ -547,6 +547,46 @@ async function sendGoogleConversion(order: any, supabase: any) {
   }
 }
 
+// GA4 purchase server-side (Measurement Protocol). Backup, gdy browser purchase (success.html)
+// nie zdazy/zostanie zablokowany. GA4 deduplikuje purchase po transaction_id (=order_number),
+// wiec nie ma podwojnego liczenia z eventem przegladarki.
+async function sendGA4Purchase(order: any) {
+  const apiSecret = Deno.env.get('GA4_API_SECRET')
+  const measurementId = Deno.env.get('GA4_MEASUREMENT_ID') || 'G-W8CLDSHVFC'
+  if (!apiSecret) {
+    console.log('[ga4] GA4_API_SECRET not configured, skipping')
+    return
+  }
+  try {
+    const value = parseFloat(order.amount) / 1.23 // netto (spojnie z browserem i pozostalymi platformami)
+    // client_id wymagany przez MP; deterministyczny z zamowienia. Dedup i tak po transaction_id.
+    const clientId = `${order.lead_id || order.id}.0`
+    const payload = {
+      client_id: clientId,
+      events: [{
+        name: 'purchase',
+        params: {
+          transaction_id: order.order_number, // == browser -> GA4 dedup
+          value: value,
+          currency: 'PLN',
+          items: [{
+            item_id: order.id,
+            item_name: order.description,
+            item_category: 'oferta_awe',
+            price: value,
+            quantity: 1
+          }]
+        }
+      }]
+    }
+    const url = `https://www.google-analytics.com/mp/collect?measurement_id=${measurementId}&api_secret=${apiSecret}`
+    const resp = await fetch(url, { method: 'POST', body: JSON.stringify(payload) })
+    console.log('[ga4] MP purchase sent:', JSON.stringify({ order_id: order.order_number, value, status: resp.status }))
+  } catch (err) {
+    console.error('[ga4] MP purchase error:', err)
+  }
+}
+
 // Timing-safe string comparison to prevent timing attacks
 function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) {
@@ -740,6 +780,9 @@ Deno.serve(async (req) => {
 
       // Send Google Ads conversion (uploadClickConversions z wartoscia)
       await sendGoogleConversion(order, supabase)
+
+      // Send GA4 purchase server-side (Measurement Protocol) — backup gdy browser purchase nie zdazy
+      await sendGA4Purchase(order)
 
       // Increment discount code usage only on successful payment
       if (order.discount_code_id) {
