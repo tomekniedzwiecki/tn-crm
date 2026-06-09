@@ -607,8 +607,9 @@
         // DATA PROCESSING
         // ============================================
         function determineSource(order) {
-            // Manual override takes priority
-            if (order.manual_source) {
+            // Manual override — tylko jesli to ZNANY kanal. Inaczej (np. bledne 'bank_transfer')
+            // bySource[source] bylby undefined i agregacja by sie wywalila.
+            if (order.manual_source && SOURCES[order.manual_source]) {
                 return order.manual_source;
             }
 
@@ -673,7 +674,8 @@
                 if (!order.lead_id) noLeadId++;
                 else if (!order.leads?.lead_tracking?.[0]) noTracking++;
 
-                const source = determineSource(order);
+                const rawSource = determineSource(order);
+                const source = analyticsData.bySource[rawSource] ? rawSource : 'organic';
                 const total = toNetto(parseFloat(order.amount) || 0);
 
                 analyticsData.bySource[source].revenue += total;
@@ -685,7 +687,8 @@
             // Count leads by source
             let tiktokDebug = [];
             analyticsData.leads.forEach(lead => {
-                const source = determineLeadSource(lead);
+                const rawSource = determineLeadSource(lead);
+                const source = analyticsData.bySource[rawSource] ? rawSource : 'organic';
                 analyticsData.bySource[source].leads++;
                 if (lead.tracking?.ttclid) {
                     tiktokDebug.push({ email: lead.email, ttclid: lead.tracking.ttclid });
