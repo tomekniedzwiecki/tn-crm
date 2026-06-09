@@ -137,6 +137,9 @@
                     <button onclick="switchTab('ads')" data-tab="ads" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
                         <i class="ph ph-megaphone mr-1.5"></i>Reklama
                     </button>
+                    <button onclick="switchTab('command')" data-tab="command" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
+                        <i class="ph ph-strategy mr-1.5"></i>Centrum Dowodzenia
+                    </button>
                     <button onclick="switchTab('leasing')" data-tab="leasing" class="tab-btn px-4 py-2 rounded-lg text-sm font-medium text-zinc-400 border border-transparent whitespace-nowrap">
                         <i class="ph ph-car mr-1.5"></i>Leasing
                     </button>
@@ -552,6 +555,118 @@
                         <i class="ph ph-car text-4xl text-zinc-700 mb-3"></i>
                         <div class="text-zinc-500">Brak aktywnych umow leasingowych</div>
                         <div class="text-xs text-zinc-600 mt-1">Uruchom migracje SQL aby dodac dane</div>
+                    </div>
+                </div>
+
+                <!-- ==================== COMMAND CENTER TAB ==================== -->
+                <div id="command-tab" class="hidden">
+                    <!-- Header -->
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+                        <div>
+                            <h2 class="text-lg font-semibold text-white flex items-center gap-2">
+                                <i class="ph ph-strategy text-teal-400"></i>Centrum Dowodzenia Marketingowego
+                            </h2>
+                            <p class="text-sm text-zinc-500">Konto Meta „Tomek" &middot; okres 2026 (1.01&ndash;9.06) &middot; <span id="cmd-sync" class="text-zinc-600">&mdash;</span></p>
+                        </div>
+                        <div class="flex items-center gap-5">
+                            <div class="text-right">
+                                <div class="text-2xl font-mono text-teal-400" id="cmd-blended-roas">&mdash;</div>
+                                <div class="text-xs text-zinc-500">blended ROAS</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-2xl font-mono text-white" id="cmd-total-value">&mdash;</div>
+                                <div class="text-xs text-zinc-500">sprzeda&zacute; / <span id="cmd-total-spend">&mdash;</span></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Alerts -->
+                    <div class="mb-6">
+                        <div class="flex items-center gap-2 mb-2 text-sm text-zinc-400">
+                            <i class="ph ph-warning-circle text-amber-400"></i> Alerty
+                        </div>
+                        <div id="cmd-alerts" class="space-y-2">
+                            <div class="text-zinc-600 text-sm">Ladowanie...</div>
+                        </div>
+                    </div>
+
+                    <!-- Two-layer KPI -->
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-gradient-to-br from-sky-500/5 to-transparent border border-sky-500/15 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-4">
+                                <i class="ph ph-megaphone text-sky-400"></i>
+                                <h3 class="text-base font-semibold text-sky-300">Wizerunek <span class="text-xs text-zinc-500 font-normal">(g&oacute;ra lejka)</span></h3>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div><div class="text-xl font-mono text-white" id="cmd-img-spend">&mdash;</div><div class="text-xs text-zinc-500">wydatek</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-img-reach">&mdash;</div><div class="text-xs text-zinc-500">zasi&eogon;g (suma)</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-img-thru">&mdash;</div><div class="text-xs text-zinc-500">ThruPlay</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-img-freq">&mdash;</div><div class="text-xs text-zinc-500">&sacute;r. cz&eogon;stotliwo&sacute;&cacute;</div></div>
+                            </div>
+                            <p class="text-[11px] text-zinc-600 mt-3">Oceniaj po zasi&eogon;gu / ThruPlay / freq &mdash; NIE po ROAS.</p>
+                        </div>
+                        <div class="bg-gradient-to-br from-teal-500/5 to-transparent border border-teal-500/15 rounded-xl p-5">
+                            <div class="flex items-center gap-2 mb-4">
+                                <i class="ph ph-target text-teal-400"></i>
+                                <h3 class="text-base font-semibold text-teal-300">Konwersja <span class="text-xs text-zinc-500 font-normal">(d&oacute;&l; lejka)</span></h3>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div><div class="text-xl font-mono text-teal-400" id="cmd-conv-roas">&mdash;</div><div class="text-xs text-zinc-500">ROAS</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-conv-purch">&mdash;</div><div class="text-xs text-zinc-500">zakupy</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-conv-value">&mdash;</div><div class="text-xs text-zinc-500">warto&sacute;&cacute;</div></div>
+                                <div><div class="text-xl font-mono text-white" id="cmd-conv-reg">&mdash;</div><div class="text-xs text-zinc-500">rejestracje</div></div>
+                                <div class="col-span-2"><div class="text-xl font-mono text-white" id="cmd-conv-cpr">&mdash;</div><div class="text-xs text-zinc-500">koszt rejestracji</div></div>
+                            </div>
+                            <p class="text-[11px] text-zinc-600 mt-3">Rejestracje wg Meta &mdash; zweryfikuj z CRM (rozjazd 32 vs 673).</p>
+                        </div>
+                    </div>
+
+                    <!-- Trend chart -->
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4 mb-6">
+                        <h3 class="text-base font-semibold text-white mb-4">Trend miesi&eogon;czny &mdash; wydatek i ROAS</h3>
+                        <div class="h-64"><canvas id="cmd-trend-chart"></canvas></div>
+                    </div>
+
+                    <!-- Campaigns table -->
+                    <div class="bg-zinc-950/50 border border-white/5 rounded-xl overflow-hidden mb-6">
+                        <div class="p-4 border-b border-white/5"><h3 class="text-base font-semibold text-white">Kampanie</h3></div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-zinc-900/50 text-zinc-500 text-xs">
+                                    <tr class="border-b border-white/5">
+                                        <th class="text-left py-3 px-4">Kampania</th>
+                                        <th class="text-left py-3 px-4">Warstwa</th>
+                                        <th class="text-right py-3 px-4">Wydatek</th>
+                                        <th class="text-right py-3 px-4">Freq</th>
+                                        <th class="text-left py-3 px-4">Wynik</th>
+                                        <th class="text-right py-3 px-4">ROAS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cmd-campaigns"><tr><td colspan="6" class="text-center py-8 text-zinc-600">Ladowanie...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Demo + Placement -->
+                    <div class="grid md:grid-cols-2 gap-4 mb-6">
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <h3 class="text-base font-semibold text-white mb-3">Demografia <span class="text-xs text-zinc-500 font-normal">(ROAS wg wieku)</span></h3>
+                            <div id="cmd-demo" class="space-y-2.5"></div>
+                        </div>
+                        <div class="bg-zinc-950/50 border border-white/5 rounded-xl p-4">
+                            <h3 class="text-base font-semibold text-white mb-1">Placement</h3>
+                            <p class="text-[11px] text-zinc-600 mb-3">ROAS w optyce sprzeda&zacute;y (nie dotyczy rolek wizerunkowych)</p>
+                            <div id="cmd-placement" class="space-y-2.5"></div>
+                        </div>
+                    </div>
+
+                    <!-- Recommendations -->
+                    <div class="bg-gradient-to-br from-violet-500/5 to-transparent border border-violet-500/15 rounded-xl p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-robot text-violet-400"></i>
+                            <h3 class="text-base font-semibold text-violet-200">Rekomendacje Claude</h3>
+                        </div>
+                        <div id="cmd-reco" class="space-y-3"><div class="text-zinc-600 text-sm">Ladowanie...</div></div>
                     </div>
                 </div>
 
@@ -1046,6 +1161,7 @@
             document.getElementById('recurring-tab').classList.toggle('hidden', tab !== 'recurring');
             document.getElementById('monthly-tab').classList.toggle('hidden', tab !== 'monthly');
             document.getElementById('ads-tab').classList.toggle('hidden', tab !== 'ads');
+            document.getElementById('command-tab').classList.toggle('hidden', tab !== 'command');
             document.getElementById('leasing-tab').classList.toggle('hidden', tab !== 'leasing');
 
             // Update add button
@@ -1059,7 +1175,7 @@
                 addBtn.classList.remove('hidden');
                 addBtn.onclick = () => openOneTimeModal();
                 addBtnText.textContent = 'Dodaj jednorazowy';
-            } else if (tab === 'ads' || tab === 'leasing') {
+            } else if (tab === 'ads' || tab === 'leasing' || tab === 'command') {
                 addBtn.classList.add('hidden');
             }
 
@@ -1069,6 +1185,8 @@
                 loadAdsData();
             } else if (tab === 'leasing') {
                 loadLeasingData();
+            } else if (tab === 'command') {
+                loadCommandData();
             }
         }
 
@@ -1859,6 +1977,248 @@
         }
 
         // ============================================
+        // COMMAND CENTER (Centrum Dowodzenia Marketingowego)
+        // ============================================
+        let cmdTrendChart = null;
+
+        function fmtRoas(v) {
+            if (v === null || v === undefined || v === '') return '—';
+            return (Math.round(parseFloat(v) * 100) / 100).toString().replace('.', ',') + 'x';
+        }
+        function fmtInt(v) {
+            return new Intl.NumberFormat('pl-PL').format(Math.round(parseFloat(v) || 0));
+        }
+
+        const OBJECTIVE_LABEL = {
+            'OUTCOME_SALES': { t: 'Sprzedaż', c: 'text-teal-300 bg-teal-500/15' },
+            'OUTCOME_AWARENESS': { t: 'Świadomość', c: 'text-sky-300 bg-sky-500/15' },
+            'OUTCOME_ENGAGEMENT': { t: 'Zaangażowanie', c: 'text-sky-300 bg-sky-500/15' },
+            'LINK_CLICKS': { t: 'Ruch', c: 'text-amber-300 bg-amber-500/15' }
+        };
+        const LAYER_LABEL = {
+            'conversion': { t: 'Konwersja', c: 'text-teal-400' },
+            'image': { t: 'Wizerunek', c: 'text-sky-400' },
+            'traffic': { t: 'Ruch', c: 'text-amber-400' }
+        };
+
+        async function loadCommandData() {
+            const [months, campaigns, demo, placement, alerts, reco] = await Promise.all([
+                supabaseClient.from('tn_ad_metrics_daily').select('*').eq('period_type', 'month').eq('level', 'account').order('date'),
+                supabaseClient.from('tn_ad_metrics_daily').select('*').eq('period_type', 'ytd').eq('level', 'campaign').order('spend', { ascending: false }),
+                supabaseClient.from('tn_ad_metrics_daily').select('*').eq('breakdown_dim', 'age').order('spend', { ascending: false }),
+                supabaseClient.from('tn_ad_metrics_daily').select('*').eq('breakdown_dim', 'placement').order('spend', { ascending: false }),
+                supabaseClient.from('tn_ad_alerts').select('*').eq('status', 'open'),
+                supabaseClient.from('tn_ad_recommendations').select('*').in('status', ['new', 'accepted']).order('priority')
+            ]);
+
+            const camps = campaigns.data || [];
+            renderCmdSummary(camps, months.data || []);
+            renderCmdKpi(camps);
+            renderCmdTrend(months.data || []);
+            renderCmdCampaigns(camps);
+            renderCmdDemo(demo.data || []);
+            renderCmdPlacement(placement.data || []);
+            renderCmdAlerts(alerts.data || []);
+            renderCmdReco(reco.data || []);
+        }
+
+        function renderCmdSummary(camps, months) {
+            const spend = camps.reduce((s, c) => s + parseFloat(c.spend || 0), 0);
+            const value = camps.reduce((s, c) => s + parseFloat(c.purchase_value || 0), 0);
+            document.getElementById('cmd-total-spend').textContent = formatMoney(spend);
+            document.getElementById('cmd-total-value').textContent = formatMoney(value);
+            document.getElementById('cmd-blended-roas').textContent = spend > 0 ? fmtRoas(value / spend) : '—';
+            let sync = '';
+            for (const r of camps.concat(months)) { if (r.synced_at && r.synced_at > sync) sync = r.synced_at; }
+            document.getElementById('cmd-sync').textContent = sync
+                ? ('zasilane przez Claude · ' + new Date(sync).toLocaleDateString('pl-PL'))
+                : 'zasilane przez Claude';
+        }
+
+        function renderCmdKpi(camps) {
+            const conv = camps.filter(c => c.layer === 'conversion');
+            const img = camps.filter(c => c.layer === 'image' || c.layer === 'traffic');
+
+            const imgSpend = img.reduce((s, c) => s + parseFloat(c.spend || 0), 0);
+            const imgReach = img.reduce((s, c) => s + parseInt(c.reach || 0), 0);
+            const imgThru = img.reduce((s, c) => s + parseInt(c.thruplays || 0), 0);
+            const imgImp = img.reduce((s, c) => s + parseInt(c.impressions || 0), 0);
+            const imgFreq = imgReach > 0 ? imgImp / imgReach : 0;
+            document.getElementById('cmd-img-spend').textContent = formatMoney(imgSpend);
+            document.getElementById('cmd-img-reach').textContent = fmtInt(imgReach);
+            document.getElementById('cmd-img-thru').textContent = fmtInt(imgThru);
+            document.getElementById('cmd-img-freq').textContent = imgFreq > 0 ? imgFreq.toFixed(1).replace('.', ',') : '—';
+
+            const convSpend = conv.reduce((s, c) => s + parseFloat(c.spend || 0), 0);
+            const convValue = conv.reduce((s, c) => s + parseFloat(c.purchase_value || 0), 0);
+            const convPurch = conv.reduce((s, c) => s + parseInt(c.purchases || 0), 0);
+            const convReg = conv.reduce((s, c) => s + parseInt(c.registrations || 0), 0);
+            document.getElementById('cmd-conv-roas').textContent = convSpend > 0 ? fmtRoas(convValue / convSpend) : '—';
+            document.getElementById('cmd-conv-purch').textContent = fmtInt(convPurch);
+            document.getElementById('cmd-conv-value').textContent = formatMoney(convValue);
+            document.getElementById('cmd-conv-reg').textContent = fmtInt(convReg);
+            document.getElementById('cmd-conv-cpr').textContent = convReg > 0 ? formatMoney(convSpend / convReg) : '—';
+        }
+
+        function renderCmdTrend(months) {
+            const ctx = document.getElementById('cmd-trend-chart');
+            if (!ctx) return;
+            const labels = months.map(m => new Date(m.date).toLocaleDateString('pl-PL', { month: 'short' }));
+            const spend = months.map(m => parseFloat(m.spend || 0));
+            const roas = months.map(m => parseFloat(m.roas || 0));
+            if (cmdTrendChart) cmdTrendChart.destroy();
+            cmdTrendChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels,
+                    datasets: [
+                        { type: 'bar', label: 'Wydatek', data: spend, backgroundColor: 'rgba(20,184,166,0.35)', borderColor: 'rgb(20,184,166)', borderWidth: 1, yAxisID: 'y' },
+                        { type: 'line', label: 'ROAS', data: roas, borderColor: 'rgb(167,139,250)', backgroundColor: 'rgb(167,139,250)', borderWidth: 2, tension: 0.3, pointRadius: 4, yAxisID: 'y1' }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#a1a1aa' } } },
+                    scales: {
+                        x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                        y: { position: 'left', grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#71717a' } },
+                        y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#a78bfa' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        function renderCmdCampaigns(camps) {
+            const tb = document.getElementById('cmd-campaigns');
+            if (!camps.length) { tb.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-zinc-600">Brak danych</td></tr>'; return; }
+            tb.innerHTML = camps.map(c => {
+                const obj = OBJECTIVE_LABEL[c.objective] || { t: c.objective || '—', c: 'text-zinc-400 bg-white/5' };
+                const lay = LAYER_LABEL[c.layer] || { t: '—', c: 'text-zinc-400' };
+                const isSales = c.layer === 'conversion';
+                const roasCell = isSales
+                    ? `<span class="font-mono ${parseFloat(c.roas) >= 3 ? 'text-teal-400' : 'text-zinc-300'}">${fmtRoas(c.roas)}</span>`
+                    : '<span class="text-zinc-600">—</span>';
+                let wynik = '—';
+                if (c.result_type === 'registration') wynik = fmtInt(c.registrations) + ' rejestracji';
+                else if (c.result_type === 'thruplay') wynik = fmtInt(c.thruplays) + ' ThruPlay';
+                else if (c.result_type === 'landing_page_view') wynik = fmtInt(c.results) + ' wejść';
+                else if (c.result_type === 'post_engagement') wynik = fmtInt(c.results) + ' zaangażowań';
+                else if (c.result_type === 'link_click') wynik = fmtInt(c.results) + ' klików';
+                else if (c.result_type === 'purchase') wynik = fmtInt(c.purchases) + ' zakup';
+                const freq = c.frequency ? parseFloat(c.frequency).toFixed(1).replace('.', ',') : '—';
+                const freqCls = parseFloat(c.frequency) > 8 ? 'text-amber-400' : 'text-zinc-400';
+                return `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td class="py-3 px-4">
+                            <div class="text-white">${c.campaign_name}</div>
+                            <span class="badge ${obj.c} mt-1 inline-block">${obj.t}</span>
+                        </td>
+                        <td class="py-3 px-4"><span class="${lay.c} text-xs">${lay.t}</span></td>
+                        <td class="py-3 px-4 text-right font-mono text-zinc-300">${formatMoney(c.spend)}</td>
+                        <td class="py-3 px-4 text-right font-mono ${freqCls}">${freq}</td>
+                        <td class="py-3 px-4 text-zinc-400 text-xs">${wynik}</td>
+                        <td class="py-3 px-4 text-right">${roasCell}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function renderCmdBars(elId, rows, highlightValue, highlightColor, baseColor) {
+            const el = document.getElementById(elId);
+            if (!rows.length) { el.innerHTML = '<div class="text-zinc-600 text-sm">Brak danych</div>'; return; }
+            const maxRoas = Math.max(...rows.map(r => parseFloat(r.roas || 0)), 1);
+            el.innerHTML = rows.map(r => {
+                const roas = parseFloat(r.roas || 0);
+                const pct = Math.round((roas / maxRoas) * 100);
+                const hl = r.breakdown_value === highlightValue;
+                const name = r.breakdown_value.charAt(0).toUpperCase() + r.breakdown_value.slice(1).replace('_', ' ');
+                return `
+                    <div>
+                        <div class="flex justify-between text-xs mb-1">
+                            <span class="${hl ? highlightColor + ' font-medium' : 'text-zinc-400'}">${name}${hl ? ' ★' : ''}</span>
+                            <span class="font-mono text-zinc-400">${fmtRoas(r.roas)} · ${formatMoney(r.spend)} · ${fmtInt(r.purchases)} zak.</span>
+                        </div>
+                        <div class="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full ${hl ? highlightColor.replace('text-', 'bg-') : baseColor}" style="width:${pct}%"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        function renderCmdDemo(rows) { renderCmdBars('cmd-demo', rows, '35-44', 'text-amber-300', 'bg-teal-500/60'); }
+        function renderCmdPlacement(rows) { renderCmdBars('cmd-placement', rows, 'facebook', 'text-teal-300', 'bg-zinc-600'); }
+
+        const SEVERITY = {
+            'ACTION': { c: 'border-rose-500/30 bg-rose-500/10 text-rose-300', i: 'ph-lightning' },
+            'ALERT': { c: 'border-red-500/30 bg-red-500/10 text-red-300', i: 'ph-warning' },
+            'WARN': { c: 'border-amber-500/30 bg-amber-500/10 text-amber-300', i: 'ph-warning-circle' },
+            'INFO': { c: 'border-sky-500/20 bg-sky-500/5 text-sky-300', i: 'ph-info' }
+        };
+
+        function renderCmdAlerts(rows) {
+            const el = document.getElementById('cmd-alerts');
+            if (!rows.length) { el.innerHTML = '<div class="text-zinc-600 text-sm">Brak otwartych alertów</div>'; return; }
+            const order = { ACTION: 0, ALERT: 1, WARN: 2, INFO: 3 };
+            rows.sort((a, b) => (order[a.severity] ?? 9) - (order[b.severity] ?? 9));
+            el.innerHTML = rows.map(a => {
+                const s = SEVERITY[a.severity] || SEVERITY.INFO;
+                return `
+                    <div class="flex items-start gap-2 border ${s.c} rounded-lg px-3 py-2 text-sm">
+                        <i class="ph ${s.i} mt-0.5"></i>
+                        <div class="flex-1">
+                            ${a.related_entity ? `<span class="font-medium">${a.related_entity}:</span> ` : ''}<span class="text-zinc-300">${a.message}</span>
+                        </div>
+                        <button onclick="resolveAlert(${a.id})" class="text-zinc-500 hover:text-white text-xs flex-shrink-0" title="Odhacz">✓</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        const RECO_TYPE = {
+            'scale': { t: 'Skaluj', c: 'text-teal-300 bg-teal-500/15' },
+            'kill': { t: 'Wyłącz', c: 'text-rose-300 bg-rose-500/15' },
+            'refresh': { t: 'Odśwież', c: 'text-amber-300 bg-amber-500/15' },
+            'budget_shift': { t: 'Budżet', c: 'text-amber-300 bg-amber-500/15' },
+            'content_plan': { t: 'Content', c: 'text-violet-300 bg-violet-500/15' },
+            'insight': { t: 'Wgląd', c: 'text-sky-300 bg-sky-500/15' }
+        };
+
+        function renderCmdReco(rows) {
+            const el = document.getElementById('cmd-reco');
+            if (!rows.length) { el.innerHTML = '<div class="text-zinc-600 text-sm">Brak rekomendacji</div>'; return; }
+            el.innerHTML = rows.map(r => {
+                const t = RECO_TYPE[r.type] || RECO_TYPE.insight;
+                const accepted = r.status === 'accepted';
+                return `
+                    <div class="border border-white/5 rounded-lg p-3 ${accepted ? 'bg-teal-500/5' : ''}">
+                        <div class="flex items-start justify-between gap-2">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="badge ${t.c}">${t.t}</span>
+                                <span class="text-white font-medium text-sm">${r.title}</span>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                ${accepted
+                                    ? '<span class="text-teal-400 text-xs">✓ przyjęte</span>'
+                                    : `<button onclick="updateReco(${r.id}, 'accepted')" class="text-teal-400 hover:text-teal-300 text-xs px-2 py-1 rounded border border-teal-500/20">Przyjmij</button>`}
+                                <button onclick="updateReco(${r.id}, 'dismissed')" class="text-zinc-500 hover:text-zinc-300 text-xs px-2 py-1 rounded border border-white/5">Odrzuć</button>
+                            </div>
+                        </div>
+                        ${r.body ? `<p class="text-xs text-zinc-400 mt-2">${r.body}</p>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function updateReco(id, status) {
+            const { error } = await supabaseClient.from('tn_ad_recommendations').update({ status }).eq('id', id);
+            if (!error) loadCommandData();
+        }
+        async function resolveAlert(id) {
+            const { error } = await supabaseClient.from('tn_ad_alerts').update({ status: 'resolved', resolved_at: new Date().toISOString() }).eq('id', id);
+            if (!error) loadCommandData();
+        }
+
+        // ============================================
         // INIT
         // ============================================
         async function init() {
@@ -1889,6 +2249,10 @@
 
             populateMonthFilter();
             await loadRecurringCosts();
+
+            if (location.hash === '#reklamy' || location.hash === '#command') {
+                switchTab('command');
+            }
         }
 
         init();
