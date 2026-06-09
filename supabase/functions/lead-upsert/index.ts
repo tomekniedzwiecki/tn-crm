@@ -179,29 +179,6 @@ Deno.serve(async (req) => {
       isNewLead = true
       console.log(`Created new lead: ${email} (id: ${leadId})`)
 
-      // Save tracking data if provided
-      if (data.tracking && Object.keys(data.tracking).length > 0) {
-        try {
-          const trackingRecord: Record<string, any> = {
-            lead_id: leadId,
-            ...data.tracking
-          }
-
-          const { error: trackingError } = await supabase
-            .from('lead_tracking')
-            .insert([trackingRecord])
-
-          if (trackingError) {
-            console.error('Failed to save tracking data:', trackingError)
-          } else {
-            console.log(`Saved tracking data for lead ${leadId}`)
-          }
-        } catch (trackingErr) {
-          console.error('Error saving tracking data:', trackingErr)
-          // Don't fail the request - lead is created, tracking is secondary
-        }
-      }
-
       // Trigger lead_created automation
       try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")
@@ -227,6 +204,33 @@ Deno.serve(async (req) => {
       } catch (triggerErr) {
         console.error('Failed to trigger automation:', triggerErr)
         // Don't fail the request - lead is created, automation is not critical
+      }
+    }
+
+    // Save/refresh tracking data for BOTH new and existing leads (upsert po lead_id).
+    // Wczesniej zapisywane TYLKO przy tworzeniu leada — returning lead wracajacy
+    // z nowego klikniecia reklamy gubil swiezy gclid/fbclid (luka atrybucji).
+    // onConflict aktualizuje tylko kolumny obecne w payloadzie (klucze z getTracking),
+    // wiec istniejace click-ID nie sa kasowane przez pozniejsza wizyte bez parametrow.
+    if (data.tracking && Object.keys(data.tracking).length > 0) {
+      try {
+        const trackingRecord: Record<string, any> = {
+          lead_id: leadId,
+          ...data.tracking
+        }
+
+        const { error: trackingError } = await supabase
+          .from('lead_tracking')
+          .upsert([trackingRecord], { onConflict: 'lead_id' })
+
+        if (trackingError) {
+          console.error('Failed to upsert tracking data:', trackingError)
+        } else {
+          console.log(`Upserted tracking data for lead ${leadId} (new: ${isNewLead})`)
+        }
+      } catch (trackingErr) {
+        console.error('Error upserting tracking data:', trackingErr)
+        // Don't fail the request - lead is saved, tracking is secondary
       }
     }
 
