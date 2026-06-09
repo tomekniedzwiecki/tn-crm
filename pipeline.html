@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="components/shared-sidebar.js"></script>
+    <script src="components/source-classifier.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -569,20 +570,12 @@
             return colors[index];
         }
 
+        // Klasyfikacja kanalu -> components/source-classifier.js (wspolna). Pola tracking sa plaskie na lead.
         function getSource(lead) {
-            if (lead.gclid || lead.gbraid || lead.wbraid) return 'google';
-            if (lead.fbclid) return 'meta';
-            if (lead.ttclid) return 'tiktok';
-            if (lead.utm_source === 'manual') return 'manual';
-            if (lead.utm_source) {
-                const src = lead.utm_source.toLowerCase();
-                if (src.includes('google')) return 'google';
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return 'meta';
-                if (src.includes('tiktok')) return 'tiktok';
-                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
-            }
-            if (lead.utm_medium === 'email') return 'email';
-            return 'organic';
+            if (lead.utm_source === 'manual') return 'manual'; // recznie dodane leady (utm_source='manual')
+            if (typeof classifySource !== 'function') return 'organic';
+            const ch = classifySource(lead).channel;
+            return ch === 'youtube' ? 'google' : ch; // pipeline nie ma osobnego kubelka YouTube (= Google Ads)
         }
 
         let filteredLeads = [];

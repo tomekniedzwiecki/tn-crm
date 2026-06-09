@@ -11,6 +11,7 @@
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="../components/shared-sidebar.js"></script>
+    <script src="../components/source-classifier.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -607,45 +608,14 @@
         // DATA PROCESSING
         // ============================================
         function determineSource(order) {
-            // Manual override — tylko jesli to ZNANY kanal. Inaczej (np. bledne 'bank_transfer')
-            // bySource[source] bylby undefined i agregacja by sie wywalila.
+            // Manual override — tylko jesli to ZNANY kanal (inaczej bySource[source] undefined -> crash).
             if (order.manual_source && SOURCES[order.manual_source]) {
                 return order.manual_source;
             }
-
-            const tracking = order.leads?.lead_tracking?.[0];
-
-            if (!tracking) {
-                return 'organic';
+            // Wspolny klasyfikator (components/source-classifier.js); .channel pasuje do kluczy SOURCES.
+            if (typeof classifySource === 'function') {
+                return classifySource(order.leads?.lead_tracking?.[0] || {}).channel;
             }
-
-            // Google Ads
-            if (tracking.gclid || tracking.gbraid || tracking.wbraid || tracking.gad_source) {
-                // Check for YouTube
-                if (tracking.network === 'v') return 'youtube';
-                if (tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') return 'youtube';
-                return 'google';
-            }
-
-            // Meta
-            if (tracking.fbclid) return 'meta';
-
-            // TikTok
-            if (tracking.ttclid) return 'tiktok';
-
-            // UTM source fallback
-            if (tracking.utm_source) {
-                const src = tracking.utm_source.toLowerCase();
-                if (src.includes('youtube')) return 'youtube';
-                if (src.includes('google')) return 'google';
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta') || src.includes('instagram')) return 'meta';
-                if (src.includes('tiktok')) return 'tiktok';
-                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
-            }
-
-            // Email medium
-            if (tracking.utm_medium === 'email') return 'email';
-
             return 'organic';
         }
 
@@ -722,37 +692,10 @@
         }
 
         function determineLeadSource(lead) {
-            const tracking = lead.tracking;
-
-            if (!tracking) {
-                return 'organic';
+            // Wspolny klasyfikator (components/source-classifier.js); .channel pasuje do kluczy SOURCES.
+            if (typeof classifySource === 'function') {
+                return classifySource(lead.tracking || {}).channel;
             }
-
-            // Google Ads
-            if (tracking.gclid || tracking.gbraid || tracking.wbraid || tracking.gad_source) {
-                if (tracking.network === 'v') return 'youtube';
-                if (tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') return 'youtube';
-                return 'google';
-            }
-
-            // Meta
-            if (tracking.fbclid) return 'meta';
-
-            // TikTok
-            if (tracking.ttclid) return 'tiktok';
-
-            // UTM source fallback
-            if (tracking.utm_source) {
-                const src = tracking.utm_source.toLowerCase();
-                if (src.includes('youtube')) return 'youtube';
-                if (src.includes('google')) return 'google';
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta') || src.includes('instagram')) return 'meta';
-                if (src.includes('tiktok')) return 'tiktok';
-                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return 'email';
-            }
-
-            if (tracking.utm_medium === 'email') return 'email';
-
             return 'organic';
         }
 

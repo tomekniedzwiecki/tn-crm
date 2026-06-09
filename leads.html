@@ -13,6 +13,7 @@
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="components/shared-sidebar.js"></script>
+    <script src="components/source-classifier.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -714,42 +715,25 @@
 
         // Marketing Source - skad lead trafil na strone (atrybucja marketingowa)
         // Note: tracking data jest w tabeli lead_tracking, nie w leads
+        // Style per key (wyglad badge). Klasyfikacja kanalu -> components/source-classifier.js (wspolna).
+        const SOURCE_STYLE = {
+            youtube:        { color: 'text-red-400',     bg: 'bg-red-500/10',     border: 'border-red-500/20' },
+            google_display: { color: 'text-blue-400',    bg: 'bg-blue-500/10',    border: 'border-blue-500/20' },
+            google_search:  { color: 'text-yellow-400',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20' },
+            google:         { color: 'text-yellow-400',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20' },
+            meta:           { color: 'text-blue-400',    bg: 'bg-blue-500/10',    border: 'border-blue-500/20' },
+            tiktok:         { color: 'text-pink-400',    bg: 'bg-pink-500/10',    border: 'border-pink-500/20' },
+            email:          { color: 'text-purple-400',  bg: 'bg-purple-500/10',  border: 'border-purple-500/20' },
+            organic:        { color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' }
+        };
+
         // Dla listy pokazujemy dane z tracking jesli sa zaladowane
         function getMarketingSource(lead) {
-            const tracking = lead.tracking || {};
-
-            // Google Ads - rozroznienie typow kampanii
-            if (tracking.gclid || tracking.gbraid || tracking.wbraid) {
-                // Sprawdz network type (v=video/YouTube, d=display, g/s=search)
-                if (tracking.network === 'v' || tracking.utm_medium === 'youtube' || tracking.utm_medium === 'video') {
-                    return { name: 'YouTube', key: 'youtube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
-                }
-                if (tracking.network === 'd') {
-                    return { name: 'Display', key: 'google_display', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
-                }
-                if (tracking.network === 'g' || tracking.network === 's') {
-                    return { name: 'Search', key: 'google_search', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
-                }
-                // Default Google Ads
-                return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
-            }
-
-            if (tracking.fbclid) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
-            if (tracking.ttclid) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
-
-            // UTM source detection
-            if (tracking.utm_source) {
-                const src = tracking.utm_source.toLowerCase();
-                if (src.includes('youtube')) return { name: 'YouTube', key: 'youtube', color: 'text-red-400', bg: 'bg-red-500/10', border: 'border-red-500/20' };
-                if (src.includes('google')) return { name: 'Google', key: 'google', color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/20' };
-                if (src.includes('facebook') || src.includes('fb') || src.includes('meta')) return { name: 'Meta', key: 'meta', color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' };
-                if (src.includes('tiktok')) return { name: 'TikTok', key: 'tiktok', color: 'text-pink-400', bg: 'bg-pink-500/10', border: 'border-pink-500/20' };
-                if (src.includes('mailerlite') || src.includes('email') || src.includes('newsletter')) return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
-            }
-            if (tracking.utm_medium === 'email') return { name: 'Email', key: 'email', color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/20' };
-
-            // Default: organic
-            return { name: 'Organic', key: 'organic', color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20' };
+            const r = (typeof classifySource === 'function')
+                ? classifySource(lead.tracking || {})
+                : { channel: 'organic', key: 'organic', name: 'Organic' };
+            const st = SOURCE_STYLE[r.key] || SOURCE_STYLE.organic;
+            return { name: r.name, key: r.key, channel: r.channel, color: st.color, bg: st.bg, border: st.border };
         }
 
         // Backwards compatibility alias
@@ -907,7 +891,7 @@
             while (hasMoreTracking) {
                 const { data: trackingData } = await supabaseClient
                     .from('lead_tracking')
-                    .select('lead_id, gclid, gbraid, wbraid, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network, campaignid, adgroupid, creative, placement')
+                    .select('lead_id, gclid, gbraid, wbraid, gad_source, fbclid, ttclid, utm_source, utm_medium, utm_campaign, network, campaignid, adgroupid, creative, placement')
                     .range(trackingPage * pageSize, (trackingPage + 1) * pageSize - 1);
 
                 if (trackingData && trackingData.length > 0) {
@@ -983,7 +967,10 @@
                 // Marketing Source
                 if (sourceFilter) {
                     const src = getMarketingSource(lead);
-                    if (src.key !== sourceFilter) return false;
+                    // Filtr po grubym kanale (dropdown ma google/meta/tiktok/email/organic).
+                    // YouTube traktujemy jak Google Ads (brak osobnej opcji), wiec lapie sie pod "Google Ads".
+                    const ch = src.channel === 'youtube' ? 'google' : src.channel;
+                    if (ch !== sourceFilter) return false;
                 }
 
                 // Date
@@ -1641,7 +1628,7 @@
                 while (hasMore) {
                     const { data, error } = await supabaseClient
                         .from('leads')
-                        .select('email, status, lead_source, gad_source, campaignid, phone, created_at')
+                        .select('email, status, campaignid, phone, created_at, lead_tracking(gclid,gbraid,wbraid,gad_source,fbclid,ttclid,utm_source,utm_medium,network)')
                         .range(page * pageSize, (page + 1) * pageSize - 1)
                         .order('created_at', { ascending: false });
 
@@ -1662,7 +1649,7 @@
                     ...allLeads.map(l => [
                         l.email || '',
                         l.status || 'new',
-                        l.lead_source || l.gad_source || 'direct',
+                        (typeof classifySource === 'function' ? classifySource((l.lead_tracking && l.lead_tracking[0]) || {}).name : 'Organic'),
                         l.campaignid || '',
                         l.phone || '',
                         l.created_at || ''
