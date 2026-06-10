@@ -129,7 +129,7 @@ Sztywne "5 + 5" się nie skaluje. Poniżej 24 formaty — wybieraj 10 dopasowany
 | 9 | **Testimonial** | dla dzieci, wellness | "7 dni, tablet leży" — konkret nad patosem |
 | 10 | **Dramatyczna transformacja** | przed/po: ból, sprzątanie | maksymalny kontrast |
 | 21 | **Day in the life (długi)** | dla dzieci, lifestyle, B2B | 60-90 sek handheld, bez scenariusza, timestampy |
-| 22 | **Duet / Stitch** | wszystko — szczególnie dla debiutantów | reakcja na viral o kontekście produktu = darmowy reach |
+| 22 | **Duet / Stitch** | wszystko — szczególnie dla debiutantów | reakcja na viral = darmowy reach. **v3: scenariusz MUSI zawierać w `action` gotową frazę wyszukiwania TikTok + kryteria wyboru virala (≥500k wyświetleń, ostatnie 30 dni, polskojęzyczny)** — „duet na jakiś viral” jest niewykonalne dla klienta |
 | 23 | **Partner reveal** | dla dzieci, prezenty, dom | partner/członek rodziny nagrywa i reaguje z offu |
 
 ### BEZ TWARZY (`showFace: false` — klient nie w kadrze):
@@ -381,11 +381,31 @@ curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflo
 201 nie znaczy, że trafiło do WŁAŚCIWEGO workflow): policz scenariusze w odpowiedzi
 powyższego curla i porównaj `workflow_id` z $WID.
 
+**PLAN NAGRANIOWY (v3 — atakuje główny failure mode: klient odkłada nagrywanie):**
+po insercie wygeneruj krótki plan grupujący 10 scenariuszy w **1-2 sesje zdjęciowe**
+(to samo miejsce + rekwizyty + strój = nagrywaj pod rząd) i podaj go w raporcie —
+Tomek wkleja go do maila przy przekazaniu etapu klientowi. Format:
+
+```
+## Plan nagraniowy — [Brand] (2 sesje, łącznie ~60-90 min)
+
+### Sesja 1 — [miejsce, np. kuchnia/salon, światło dzienne] (~40 min)
+Rekwizyty: [lista]. Strój: [casualowy/dowolny].
+Kolejność: #3 → #1 → #7 → #9 → #5  (od najłatwiejszego — rozgrzewka bez twarzy)
+
+### Sesja 2 — [miejsce] (~30 min)
+Rekwizyty: [...]
+Kolejność: #2 → #4 → #6 → #8 → #10
+
+Zasada: nie oceniaj nagrań między ujęciami — nagraj wszystko, wybierzesz wieczorem.
+```
+
 Poinformuj użytkownika:
 - Ile scenariuszy wstawiono (10)
-- Dystrybucja lejka (3/4/3)
+- Dystrybucja lejka (wg awareness)
 - Dystrybucja twarzy (5/5 lub inna)
 - Lista formatów użytych
+- **Plan nagraniowy (blok wyżej — do wklejenia w mail klientowi)**
 - Link do portalu klienta
 
 ---
