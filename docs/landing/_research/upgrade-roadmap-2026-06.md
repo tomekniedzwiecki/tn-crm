@@ -1,149 +1,182 @@
-# Roadmapa v5.0 — podniesienie procedury landing pages (FINAL)
+# Plan rozwoju procedury landing pages — v5.0 FINAL
 
-> Wersja dopracowana 2026-06-10. Skonsolidowana z [upgrade-plan-2026-06.md](upgrade-plan-2026-06.md)
-> (38 zweryfikowanych propozycji, oznaczanych dalej #N) + domknięcie 5 luk krytyka kompletności (GAP-1…5).
-> Po deduplikacji: **29 pozycji w 6 fazach**. Status: DO WDROŻENIA fazami, każda faza = osobny commit + wpis w CHANGELOG.
-
----
-
-## Zasady globalne wdrożenia (obowiązują każdą fazę)
-
-1. **Rollout WARN→FAIL**: każdy NOWY check w verify-landing.sh / verify-style-lock.sh startuje jako WARN.
-   Podniesienie do FAIL dopiero gdy: (a) 6 baseline'ów przechodzi, (b) 5 kolejnych nowych landingów nie
-   wygenerowało false positive. To anty-powtórka incydentu style-lock (check, którego nikt nie spełnia →
-   `--no-verify` jako norma → wyłączony CAŁY bezpiecznik).
-2. **Regression po każdej fazie**: `verify-all-landings.sh` + re-run `verify-landing.sh` na cervana, linovo,
-   kafina (świeży korpus — nowe checki muszą wykrywać udokumentowane błędy z audytu, nie wymyślone).
-3. **Każda zmiana procedury przechodzi META-GATE budżetowy** (#13): rozliczenie w budżetach Scrollability
-   (liczby/dense/breathing) + 4 pytania feature-fit. Element addytywny bez wskazania zamiennika = odrzuć.
-4. **CHANGELOG.md** aktualizowany per faza (konwencja istnieje). Całość = wersja v5.0.
-5. Wdrożenie w normalnych sesjach (bez multi-agent workflow) — to edycje docs + bash, koszt tokenowy znikomy.
+> Wersja ostateczna 2026-06-10. Zastępuje wcześniejszy szkic roadmapy. Źródła: analiza wieloagentowa
+> (56 agentów — audyt procedury + kod/screenshoty landingów + research CRO/design/DR/mobile/DTC),
+> 38 zweryfikowanych propozycji w [upgrade-plan-2026-06.md](upgrade-plan-2026-06.md) (#1-#38),
+> 5 luk krytyka kompletności (GAP-1…5), 6 dźwigni spoza audytu (A-F).
+>
+> **Naczelna zasada: żadna pozycja nie wchodzi „bo można". Każda ma zadeklarowany efekt w konkretnym
+> wymiarze i sposób, w jaki poznamy, że zadziałała.**
 
 ---
 
-## FAZA 0 — Naprawa enforcement (FUNDAMENT — bez tego nowe reguły to fikcja)
+## Wymiary efektywności (każda pozycja planu mapuje się na ≥1)
 
-**Cel: `git commit` landingu przechodzi pre-commit hook BEZ `--no-verify` na 6 baseline'ach + cervana/linovo.**
+| | Wymiar | Co znaczy „lepiej" | Jak mierzymy |
+|---|--------|--------------------|--------------|
+| **W1** | Demo jako narzędzie sprzedaży Tomka | klient widzi landing i chce współpracować; dwa dema obok siebie nie wyglądają jak szablon | ocena vision-rubric (1.7), fingerprint collisions = 0, test before/after (program pomiaru) |
+| **W2** | Konwersja żywych sklepów (Etap 5) | landingi z ruchem Meta konwertują lepiej | ROAS/koszt zakupu z pętli 5.4, kwartalne porównanie |
+| **W3** | Bezpieczeństwo prawne klienta | zero fabrykowanego social proof / ukrytych kosztów / wadliwych zgód przenoszonych na klienta | grep-checki = 0 FAIL; audyt żywych landingów zamknięty |
+| **W4** | Koszt i czas pipeline'u | mniej minut i tokenów per landing (od 2026-06-22 tokeny płatne: $10/$50 za 1M) | czas AUTO-RUN, wynik eksperymentu Manus (5.1) |
+| **W5** | Trwałość systemu | reguły, które się EGZEKWUJĄ; zero dryfu docs↔skrypty; zero `--no-verify` jako normy | commit bez `--no-verify` na całym korpusie; verify-docs w hooku |
 
-| ID | Zadanie | Źródło | Pliki |
-|----|---------|--------|-------|
-| 0.1 | **Jeden kanoniczny próg gate'u**: linia `GATE: PASS/FAIL/WARN-EXCEEDED` + exit code w verify-landing.sh; usunięcie 4 sprzecznych liczb („≥15/18", „~63/≥60", „18 checks", „~33 checks") z 8 plików — w tym `landing-autorun.sh` (faktyczny prompt AUTO-RUN) | #26 | verify-landing.sh, README, CLAUDE.md, 01/03/03-5/05, landing-autorun.sh |
-| 0.2 | **verify-style-lock.sh hybrydowy**: REQUIRED tokeny parsowane z `_brief.md` sekcja 10 (format maszynowy `lock-font-*:`/`lock-hex:` — legalizuje paletę klienta), FORBIDDEN hardcoded per styl (anty-samoatestacja), reguła pierwszeństwa brand>Atlas, backward-compat dla starych briefów. Plus nowa grupa „Style Lock compliance" w verify-landing.sh: zakazy z 10.4/10.5 grepowane NA HTML (linovo miał sticky-cta mimo zakazu w briefie) | #28, #15 | verify-style-lock.sh, verify-landing.sh, 01-direction.md |
-| 0.3 | **Motion: koniec wojny Grupa 7 ↔ Motion Budget**: usunąć globalne „magnetic≥2/tilt≥2/parallax≥1" i „wszystkie 5 JS effects w każdym landingu"; jedyne źródło = `js_effects_required/forbidden` stylu z STYLE LOCK; naprawić tabelę fallbacków w section-variants.md (każe dodawać efekty wbrew lockowi) | #14 | 02-generate.md, verify-landing.sh, section-variants.md |
-| 0.4 | **Docs hygiene — sweep sprzeczności + verify-docs.sh**: (a) odwrócenie checków `subset=latin-ext` (ma być 0, nie ≥1) w 4 miejscach; (b) usunięcie „za pobraniem"/PayPo z przykładowych snippetów H.1-H.3; (c) czystka legacy 04-design.md sekcja 3 (re-wybór kierunku — duplikuje Atlas) i sekcja 5 Krok 2+4 (floating emoji, glow ring, obowiązkowe wavy dividers = AI-slop sprzeczny z własną tabelą anty-AI); (d) routing „ETAP 2.5"→„3.5"; (e) verify-docs.sh w pre-commit: zakazane tokeny w samej procedurze | #34, #18 | 03-review, 04-design, 05-verify, patterns, pagespeed, install-landing-hooks, nowy verify-docs.sh |
-| 0.5 | **GAP-2 — jedna spec struktury strony**: 02-generate.md mówi naraz „14 sekcji", tabela ma 15 pozycji, akapit „reszta 11 sekcji" wylicza 12 nazw, tabele zdjęć odwołują się do nieistniejących Gallery/Personas. Ujednolicić do JEDNEJ kanonicznej tabeli (sekcja → wariant → wymagane klasy → placeholdery) i wszystkie pozostałe miejsca zamienić na pointer | GAP-2 | 02-generate.md |
+## Zasady wdrożenia (obowiązują wszystkie fazy)
 
-**Effort: 1 sesja. To warunek wstępny — każda następna faza dokłada checki do naprawionego enforcement.**
-
----
-
-## FAZA 1 — Konwersja: moment decyzji (quick wins na żywym landingu)
-
-**Cel: demo, w którym klient klika „Zamawiam" i NIC nie zgrzyta — działający CTA, pełny koszt, trust przy przycisku, zero fabrykacji.**
-
-| ID | Zadanie | Źródło |
-|----|---------|--------|
-| 1.1 | **Self-contained gate + wycięcie Conversion Toolkit**: FAIL na `<script src>` względny/crm/CDN (allowlist trackingu Etap 5: gtm, contentsquare = WARN dla żywych landingów); usunięcie całej sekcji „Conversion Toolkit" z 02-generate.md (martwy skrypt po wklejeniu do TakeDrop + fake live-visitors/stock = Omnibus); checklist: „ZERO zewnętrznych script src" | #1, #27 |
-| 1.2 | **Standard demo-CTA**: primary CTA w Offer NIGDY martwy — realny checkout URL (wzorzec kafina) ALBO `data-demo-modal` z inline overlayem „Tu zostanie wpięty koszyk TakeDrop" (mockup tylko BLIK/karta/przelew). FAIL na `href="#"` w offer-CTA (linovo: główny przycisk skakał na górę strony) | #6 |
-| 1.3 | **Trust-microcopy przy final CTA**: `.cta-trust` pod primary CTA final-cta („✓ 30 dni na zwrot · ✓ BLIK / karta / przelew"); hero opcjonalnie bez liczby; sticky bar WYKLUCZONY; powtórzona liczba liczy się RAZ do budżetu 8-12 | #4 |
-| 1.4 | **Sticky CTA kanon**: gating dwuwarunkowy (hero-CTA poza viewportem AND offer-box poza viewportem; wzorzec lensora:1090), `id="hero-cta"`/`id="offer-box"` dla deterministycznego grepa, cena w barze, `padding-bottom: calc(84px + env(safe-area-inset-bottom))`, stack WA/reviews bottom:88px. Jedno źródło: 04-design H.7, patterns.md tylko pointer | #11 |
-| 1.5 | **Linia dostawy w offer box**: obowiązkowa `.offer-shipping` pod ceną — domyślnie „Darmowa dostawa · InPost / DPD / kurier" (wariant z safety.md); konkretna kwota TYLKO gdy podana explicite; bez deklaracji czasu (czas tylko w FAQ „7-14 dni"). Ukryte koszty = 48% porzuceń (Baymard) | #12 |
-| 1.6 | **Uczciwy social proof**: (a) rating demo w paśmie **4,6-4,8** (research: zaufanie peakuje 4,2-4,7, spada przy 5,0; ujednolicić — stara propozycja seedowała „4.9/5", to korekta); (b) liczba opinii = z `workflow_reviews` ALBO `data-placeholder="reviews"` + przypis [n] do stopki-disclaimera „dane poglądowe, faza wprowadzenia" (wzorzec już jest w cervana:846); (c) FAIL na literały VOGUE/FORBES/ELLE/WIRED/NYT; (d) T6 = ściana certyfikatów wyłącznie jako placeholdery .ph z briefem „tylko faktycznie posiadane atesty" | #2, #37 |
-
-**Effort: 1 sesja. Wszystko grep-owalne, snippety wskazane w pełnym planie.**
+1. **Rollout WARN→FAIL**: nowy check startuje jako WARN; FAIL dopiero po przejściu 6 baseline'ów + 5 nowych landingów bez false positive. (Anty-powtórka incydentu style-lock: nierealny check → `--no-verify` jako norma → wyłączony cały bezpiecznik.)
+2. **Regression po każdej fazie**: `verify-all-landings.sh` + re-run na cervana/linovo/kafina — nowe checki muszą wykrywać udokumentowane błędy z audytu.
+3. **META-GATE budżetowy** (#13): każdy element konwersyjny rozlicza się z budżetów Scrollability (liczby/dense/breathing) + 4 pytania feature-fit; addytywny bez zamiennika = odrzuć. Lekcja Conversion Atlas.
+4. **CHANGELOG.md** per faza; całość = v5.0. Wdrożenie w zwykłych sesjach (bez multi-agent) — wyjątki oznaczone.
 
 ---
 
-## FAZA 2 — Konwersja: treść, prawda liczb, perswazja
+# FAZA 0 — Enforcement (W5) — warunek wstępny wszystkiego
 
-**Cel: copy zakotwiczone w realnym kliencie i realnym produkcie — koniec zamkniętego obiegu AI i fabrykowanych liczb.**
+**Efekt: reguły procedury przestają być deklaracjami. Kryterium: `git commit` landingu przechodzi pre-commit hook BEZ `--no-verify` na 6 baseline'ach + cervana/linovo.**
 
-| ID | Zadanie | Źródło |
-|----|---------|--------|
-| 2.1 | **GAP-1 — Big Idea + mechanizm + poziom świadomości (NOWY krok 1.7 w 01-direction.md)**: przed manifesto agent ustala: (a) JEDNĄ big idea („dlaczego ten produkt, dlaczego teraz" w 1 zdaniu), (b) unique mechanism (CO w produkcie sprawia, że obietnica jest wiarygodna — z opisu/spec produktu, nie wymyślone), (c) poziom świadomości rynku wg Schwartza (unaware / problem-aware / solution-aware / product-aware) wyprowadzony z kategorii i ceny. Konsekwencje DETERMINISTYCZNE: problem-aware → landing otwiera Problem przed benefitami, hero = pain-hook; solution-aware → hero = mechanizm + dowód; product-aware → hero = oferta + differentiator. Zapis do `_brief.md` sekcja „Big Idea" (3 linie, grep-owalne `big-idea:`/`mechanism:`/`awareness:`), verify-brief.sh: FAIL gdy brak. To największa dźwignia konwersyjna z całej analizy — łuk perswazyjny przestaje być identyczny dla każdego produktu | GAP-1 |
-| 2.2 | **VOC — język klienta**: Krok 1.6 w 01-direction.md, warunkowy z fallbackiem: workflow_reviews → fetch searchEvaluation.do po source_url (read-only) → „VOC: BRAK DANYCH". 5-15 dosłownych fraz w koszykach pain/benefit/obiekcje; twardy filtr fraz o dostawie/wysyłce (kolizja z zakazem „24h"); prompt Manusa rozszerzony o „używaj fraz z VOC" | #9 |
-| 2.3 | **Mapa obiekcji + objection timing**: `_brief.md` sekcja „Mapa obiekcji" — 5 obiekcji w formacie `[obiekcja] → sekcja: X → rozbrojenie: 1 zdanie`, min 1 produkt-specyficzna spoza 4 kanonicznych; rozbrojenie inline = PRZEPISANIE istniejącego zdania (max +1 linia, 0 nowych liczb); FAQ coverage gate (3 z 4 kategorii słownikowych, scoped do sekcji FAQ); copy.md: usunąć modelowaną obietnicę „1-3 dni" | #3, #36 |
-| 2.4 | **Liczby kanoniczne + verify-offer-math.mjs**: sekcja briefu `wartość \| jednostka \| źródło` (źródło = konkretne pole bazy/raportu); nowy skrypt node: spójność cen hero↔offer↔sticky↔final (parser z polskim separatorem tysięcy „1 599 zł"), stara−nowa=savings, % rabatu ±1 p.p., spójność claimów czasowych per kontekst słowny (cervana: „od pierwszej nocy" vs „~3 noce"); anti-fabrication: liczba-sierota w widocznym tekście = FAIL (whitelist z briefu + auto-seed: cena, savings, 14 dni, 30 dni, rating). Wpięcie w verify-landing.sh (nie w apply-copy — ten nie odpala dla wszystkich stylów) | #10, #5, #30 |
-| 2.5 | **List od założyciela** (founder note): opcjonalny-domyślny breathing moment w strefie social proof (NIE 15. sekcja); 3-4 zdania 1. osobą wg szkieletu „problem u klientów → frustracja → dlaczego WYBRAŁEM ten produkt"; twardy zakaz czasowników twórczych (projektowałem/stworzyłem — to dropshipping) i wymyślonych biografii; placeholder portretu z briefem; imię z workflow (legal_data), nigdy zmyślone | #8 |
-| 2.6 | **META-GATE budżetowy w 02-generate.md** (formalizacja zasady globalnej nr 3): pod-akapit przy Scrollability Rules — każdy nowy element konwersyjny rozlicza się z budżetów + 4 pytania feature-fit; dopisek lekcji do banerów wycofania w `_research/` (Conversion Atlas przewidział własną porażkę w risks i nikt tego nie gate'ował) | #13 |
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 0.1 | **Jeden kanoniczny próg gate'u** — linia `GATE: PASS/FAIL/WARN-EXCEEDED` + exit code; usunięcie 4 sprzecznych liczb z 8 plików (w tym landing-autorun.sh = faktyczny prompt AUTO-RUN) | zamyka furtkę racjonalizacji FAIL-i przez autonomicznego agenta | #26 |
+| 0.2 | **verify-style-lock.sh hybrydowy** — REQUIRED z `_brief.md` (legalizuje paletę klienta), FORBIDDEN hardcoded per styl, backward-compat + nowa grupa „Style Lock compliance" w verify-landing (zakazy briefu grepowane NA HTML — linovo miał sticky-cta mimo zakazu) | koniec rutynowego `--no-verify`; deklaracje briefu = rzeczywistość | #28, #15 |
+| 0.3 | **Motion Budget zamiast globalnych progów** — usunąć „magnetic≥2/tilt≥2/5 effects wszędzie" (4 style Atlasu ich ZAKAZUJĄ); jedyne źródło = STYLE LOCK stylu; fix tabeli fallbacków | usuwa wbudowany konflikt, który uczył pipeline omijania weryfikacji | #14 |
+| 0.4 | **Docs hygiene + verify-docs.sh** — odwrócenie checków latin-ext (4 miejsca), usunięcie „za pobraniem"/PayPo ze snippetów H, czystka legacy 04-design (sekcja 3 re-wybór kierunku; sekcja 5: floating emoji/glow ring/wavy dividers), routing 2.5→3.5; verify-docs.sh w pre-commit przeciw nawrotom | agent kopiuje snippety DOSŁOWNIE — procedura nie może łamać własnych zakazów | #34, #18 |
+| 0.5 | **Jedna spec struktury strony** — 02-generate.md: „14 sekcji" vs tabela 15 vs „reszta 11" z 12 nazwami + tabele zdjęć do nieistniejących sekcji → JEDNA kanoniczna tabela, reszta pointery | deterministyczny build-target dla agenta | GAP-2 |
 
-**Effort: 1-2 sesje. 2.1 wymaga najwięcej projektowania — zrobić jako pierwsze w fazie, bo wpływa na szablon briefu, który rozszerzają 2.2-2.4.**
-
----
-
-## FAZA 3 — Wizual: anty-sztanca i świeżość
-
-**Cel: dwa landingi z portfolio pokazane obok siebie NIE wyglądają jak ten sam szablon — leksykalnie, strukturalnie ani motion-owo.**
-
-| ID | Zadanie | Źródło |
-|----|---------|--------|
-| 3.1 | **Anty-AI-slop lint** (style-lock-aware): FAIL na hexy #6366f1/#8b5cf6/#a855f7/#7c3aed gdy NIE występują w briefie (paleta brandu legalizuje); FAIL na Inter/Roboto/Arial w `--font-display`/`h1` (wyjątek: swiss-grid lockuje Helvetica/Inter); WARN na uniform radius >80% (z wykluczeniem 0 i 50%); rozszerzenie tabeli anty-AI-generic w 02-generate.md | #16 |
-| 3.2 | **Wow Moments maszynowo weryfikowalne**: pole `pattern-id:` + `selector:` per wow moment w briefie sekcja 11; verify-landing grepuje selektory na HTML; blocklist selektorów-baseline (`.hero`, `.offer-box`… — anty-gaming); ledger `wow-usage.jsonl` (JSONL append — odporny na merge przy równoległych sesjach) z regułą rotacji per styl | #21 |
-| 3.3 | **Template-fingerprint + rozszerzony regression**: verify-freshness.sh — kolizje ≥4 dosłownych fraz (≥4 słowa, h1/h2/h3/eyebrow/CTA) z JEDNYM istniejącym landingiem = FAIL z wypisaniem fraz i sluga; blacklist potwierdzonych sztanc („Zanim zamówisz", „Co mówią ci, którzy"); zakaz rabatu „zawsze równo 100 zł". verify-all-landings.sh: zamrożona szóstka zostaje exit-gate, dodatkowa sekcja WARN-only „extended" = 3 najnowsze briefy + `scripts/live-landings.txt` (landingi z żywą kampanią — dziś STOP condition #2 chroni 14% portfolio i pomija strony, które zarabiają) | #22, #33 |
-| 3.4 | **Placeholdery: ph--bg + anty-monotonia**: placeholder jako tło pod nakładką dostaje klasę `ph--bg` (brief fotografa → komentarz `<!-- PH-BRIEF: -->`, koniec tekstu-na-tekście jak w linovo); reguła sąsiedztwa przeciw „monotonnemu ciągowi beżowych ramek"; screenshot QA zaczyna od y=0 (hero nigdy nie był oglądany w całości) | #24 |
-| 3.5 | **Token dyferencjacji per landing**: 3 osie (radius/eyebrow/divider) z zakresów stylu, derywacja `cksum(slug) mod N` — deterministyczna, weryfikowalna w verify-brief; landing #2 w tym samym stylu przestaje być bitową kopią #1. *Opcjonalne — wdrożyć dopiero gdy 3.1-3.3 nie wystarczą (najmniejszy zysk/złożoność w fazie)* | #25 |
-| 3.6 | **Konsolidacja motion + scroll-driven animations**: jedno źródło per-stylowej prawdy = `## 10. Motion Budget` w plikach stylu (rozszerzone o `css_effects_allowed/forbidden` z nazwami keyframes); motion-library.md = jedyna książka przepisów (wchłania patterns #17-21, jeden kanoniczny fade-in); parallax/scroll-progress przepisane na `animation-timeline: view()/scroll()` w `@supports` (Baseline 2025, poza main thread = zysk INP) | #17 |
-| 3.7 | **GAP-4 — generalizacja blacklist copy + fix dark-academia**: (a) AI_POETIC personifikacja przez WZORZEC gramatyczny (`(rzeczownik produktowy), któr[ya] (rozumie\|wie\|pamięta\|dba\|czeka\|zna)`) zamiast listy 7 rzeczowników; dodać „zasługujesz na", „pozwól sobie"; licznik budżetu „masz dość" max 1× (deklarowany, dziś nieliczony); (b) dark-academia: złagodzić Copy Voice stylu — rejestr literacki TYLKO w eyebrow/cytatach/dekoracjach, body copy i CTA pozostają DR (inaczej scoring DNA wybierający ten styl = deterministyczna pętla FAIL w AUTO-RUN) | GAP-4 |
-| 3.8 | **GAP-5 — determinizm drzewa wariantów**: warunki drzewa („premium AGD z mocną liczbą spec", „smart home") zmapowane na KONKRETNE pola briefu (Product DNA osie + price point + kategoria) — dwa runy na tym samym produkcie = to samo hero; domknięcie pasma 800-1000 zł; USUNĄĆ z docs instrukcję „edytuj brief sekcji 1, żeby wymusić H4" (instrukcja gamingu audytowalności) | GAP-5 |
-
-**Effort: 1-2 sesje.**
+**1 sesja.**
 
 ---
 
-## FAZA 4 — QA: mobile, performance, compliance
+# FAZA 1 — Demo, które sprzedaje (W1 + W3)
 
-**Cel: to, co „WYMAGANE", jest mierzone skryptem, nie deklaracją.**
+**Efekt: klient klika po demie i NIC nie zgrzyta — działający CTA, pełny koszt, trust przy przycisku, zero fabrykacji, strona OCENIONA wizualnie, nie tylko „niezepsuta".**
 
-| ID | Zadanie | Źródło |
-|----|---------|--------|
-| 4.1 | **Gate „zadeklarowane = zbudowane"**: warianty sekcji z briefu weryfikowane na HTML przez „Klasę identyfikującą (FROZEN)" per wariant (jedna niemodyfikowalna klasa, np. H10→`hero-ba`); cross-check deklaracji z `allowed_variants` stylu; wow-selectory (3.2) i motion budget (0.3) domknięte na HTML. Rollout WARN→FAIL wg zasady globalnej | #29 |
-| 4.2 | **ETAP 6 obliczeniowy**: nowy `verify-mobile.mjs` (Playwright file://, NIE chrome-devtools MCP — nie widzi local) na 360/375/412px: headline_visible, CTA in-first-viewport LUB sticky present, hero_visual ≤60vh, per-element overflow (rect.right > docW+1, nie scrollWidth — overflow-x:hidden maskuje), touch targets; artefakt `_mobile-review.md` zamiast 5 niefalsyfikowalnych pytań. Above-fold mobile = najważniejsza reguła DR przy 60-70% ruchu | #31 |
-| 4.3 | **Lighthouse post-deploy + porządek w MCP**: obowiązkowy `lighthouse_audit` mobile na live URL PO pushu, PRZED „done" (Performance <90 = WARN → po baseline z 10 landingów FAIL; Accessibility <90 = WARN — pierwszy check kontrastu w pipeline); globalna poprawa wymyślonych nazw pseudo-API na realne MCP tools; no-JS regression test w fallbacku Playwright (landing nie może iść na deploy z ReferenceError) | #35 |
-| 4.4 | **GAP-3 — RODO baseline**: (a) kanoniczny snippet consent do patterns.md: banner z RÓWNORZĘDNĄ opcją „Odrzuć", zero auto-zgody „kontynuując wyrażasz zgodę"; w demo bez trackingu banner w ogóle zbędny — generować go TYLKO gdy landing ma GTM/pixel (większość demo: brak banneru = brak problemu); (b) og:image 1200×630 zamiast logo; (c) `aria-expanded` w FAQ accordion; (d) **JEDNORAZOWY audyt poza procedurą**: cookie bannery żywych landingów klienckich (kafina, h2vital, parova, silktip, innerscan-v2) — kafina jako żywy sklep z auto-zgodą to realne ryzyko klienta, nie hipoteza | GAP-3 |
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 1.1 | **Self-contained gate + wycięcie Conversion Toolkit** — FAIL na `<script src>` (allowlist gtm/contentsquare dla żywych jako WARN); usunięcie sekcji Toolkit z docs (martwy skrypt po copy-paste do TakeDrop + fake live-visitors/stock) | W3 + W5: demo działa po wklejeniu do CMS; zero fejk-widgetów | #1, #27 |
+| 1.2 | **Standard demo-CTA** — primary CTA nigdy martwy: checkout URL albo `data-demo-modal` z overlayem „tu wpinamy koszyk TakeDrop" (mockup tylko BLIK/karta/przelew); FAIL na `href="#"` | W1: najgorszy moment porażki demo (linovo: główny przycisk skakał na górę) znika | #6 |
+| 1.3 | **Trust-microcopy przy final CTA** — `.cta-trust`: „✓ 30 dni na zwrot · ✓ BLIK / karta / przelew"; sticky wykluczony; powtórzona liczba liczy się raz | W2: +12-19% CR wg researchu; BLIK = 72% preferencji PL | #4 |
+| 1.4 | **Sticky CTA kanon** — gating dwuwarunkowy (po hero-CTA, znika przy offer-box; wzorzec lensora:1090), `id="hero-cta"`/`id="offer-box"`, cena w barze, safe-area padding, stack 88px | W2: +8-15% CR mobile bez kanibalizacji hero; fix buga w samym kanonicznym snippecie | #11 |
+| 1.5 | **Linia dostawy w offer box** — `.offer-shipping` pod ceną („Darmowa dostawa · InPost / DPD / kurier"); kwota tylko gdy podana explicite; bez czasu (czas w FAQ) | W2 + W3: ukryte koszty = 48% porzuceń (Baymard) | #12 |
+| 1.6 | **Uczciwy social proof** — rating demo 4,6-4,8 (research: peak zaufania 4,2-4,7, spadek przy 5,0 — korekta niespójności propozycji, które seedowały „4.9"); liczby opinii z workflow_reviews ALBO data-placeholder + przypis do stopki-disclaimera (wzorzec cervana:846); FAIL na VOGUE/FORBES/fake certy | W3: klient nie wkleja ryzyka Omnibus/UOKiK do sklepu; W1: wiarygodność | #2, #37 |
+| 1.7 | **NOWE — Vision critique w ETAP 5** — po screenshotach obowiązkowa OCENA wizualna wg rubryki (hero: pierwsze wrażenie 1-5; hierarchia; premium-vs-AI-template; spójność; mobile) → wynik do `_brief.md` sekcja QA + **max 3 konkretne poprawki → re-render → re-score**. Próg: średnia <3,5 = popraw przed deployem (nie STOP — raportuj). Dziś QA sprawdza tylko „czy nie zepsute" — nikt nie patrzy, czy strona jest ŁADNA | W1: jedyny mechanizm łapiący „technicznie poprawne, ale brzydkie"; koszt ~1 ocena obrazu/landing | dźwignia B |
 
-**Effort: 1-2 sesje (4.4d = osobna szybka sesja audytowa).**
-
----
-
-## FAZA 5 — Rozbudowa (duże projekty, po ustabilizowaniu faz 0-4)
-
-| ID | Zadanie | Źródło |
-|----|---------|--------|
-| 5.1 | **Tier 2 wariantów dolnego lejka**: Problem P1-P4 / How It Works W1-W3 / Comparison C1-C3 (zawsze vs KATEGORIA, nigdy nazwany konkurent) / Offer O1-O3 — w formacie Tier 1 (metadane + frozen class + wiersz drzewa first-match-wins). Guardraile O2 multipack: tylko produkt zużywalny/parowalny <300 zł, ceny pakietów z formuły w metadanych (zakaz ad hoc), komentarz DEMO-PRICING. Każdy wariant musi przechodzić istniejące generyczne checki Grupy 11. Sztanca siedzi dokładnie tam, gdzie zapada decyzja zakupowa | #7, #19 |
-| 5.2 | **Style Atlas — świeżość evidence-cluster**: 4 style zapowiedziane w clusters.md a nieistniejące (newsroom-print, field-manual, specification-sheet, receipt-print) z pełną schemą + OBOWIĄZKOWO gałęzie case w verify-style-lock.sh (default = exit 1 „Nieznany style ID" — bez tego powtórka incydentu clinical-warmth); sync clusters.md (clinical-warmth do mapy); scoring DNA z LRU anti-repetition (działa zawsze, nie tylko przy remisie — podobne produkty utility nie dostają w kółko tych samych 3 stylów) | #20 |
-| 5.3 | **Kontrakt data-copy**: atrybut `data-copy="hero_h1"` na elementach tekstowych → extract/apply-copy.mjs niezależne od stylu (dziś Manus działa w pełni tylko dla paradygmatu Editorial); submit Manusa równolegle z ETAP 4 przez run_in_background (skraca pipeline ~10 min); check warunkowy (≥1 data-copy → wymagaj ≥20; zero → WARN legacy, nie FAIL — inaczej baseline'y blokują każdy deploy). Domyka też borderline „copy z ETAP 4/6 omija Manusa" | #32 |
-| 5.4 | **Typografia 2026**: sekcja „Font trend map" w Atlas README (GT Sectra→Fraunces, Monument→Unbounded, Obviously→Bricolage Grotesque; wszystkie latin-ext z datą weryfikacji) — TYLKO dla nowych stylów (zakaz podmiany fontów w istniejących 15 — STYLE LOCK); wiersz drzewa „produkt z 1 dominującą liczbą → hero type-led" zamiast nowego H11 | #23 |
-| 5.5 | **Feedback loop performance (poza AUTO-RUN)**: `landing-performance-stats.sh` (bash: brief→styl/warianty/liczba liczb) + procedura sekcja B w `_research/performance.md` (Claude na żądanie: ROAS/koszt zakupu przez ads_insights dla `meta_mcp_enabled=true`, z kolumną link_verified). Jedyna droga, by progi Scrollability i drzewo wariantów skalibrować DANYMI zamiast jedną jakościową porażką. Rytm: raz w miesiącu, na żądanie | #38 |
-
-**Effort: 2-3 sesje. 5.1 i 5.2 to głównie pisanie wariantów/stylów — dobre kandydatury na pojedynczy mały workflow (fan-out po wariantach), reszta solo.**
+**1 sesja.**
 
 ---
 
-## Co celowo POMINIĘTE lub zdegradowane (świadome decyzje)
+# FAZA 2 — Treść i prawda (W1 + W2)
+
+**Efekt: copy zakotwiczone w realnym kliencie i realnym produkcie; łuk perswazyjny dopasowany do rynku, nie jeden dla wszystkich.**
+
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 2.1 | **Big Idea + mechanizm + poziom świadomości (nowy Krok 1.7 w 01-direction.md)** — przed manifesto: (a) JEDNA big idea, (b) unique mechanism z opisu/spec produktu (nie wymyślony), (c) poziom świadomości wg Schwartza z kategorii+ceny. Konsekwencje DETERMINISTYCZNE: problem-aware → Problem przed benefitami + pain-hook hero; solution-aware → mechanizm+dowód w hero; product-aware → oferta+differentiator w hero. Zapis grep-owalny (`big-idea:`/`mechanism:`/`awareness:`), gate w verify-brief | **największa pojedyncza dźwignia konwersyjna analizy** — koniec identycznego łuku Problem→Solution→Proof→Offer dla produktu kupowanego z bólu i z ciekawości | GAP-1 |
+| 2.2 | **VOC — język klienta** — Krok 1.6: workflow_reviews → fetch opinii AliExpress po source_url → fallback „BRAK DANYCH"; 5-15 dosłownych fraz (pain/benefit/obiekcje); filtr fraz o dostawie; prompt copy-review rozszerzony o VOC | W1+W2: copy brzmi jak myśli klienta (research: VOC bije wymyślone); przerywa zamknięty obieg AI (persona z report_pdf = output tego samego LLM) | #9 |
+| 2.3 | **Mapa obiekcji + objection timing** — sekcja briefu: 5 obiekcji `[obiekcja] → sekcja → rozbrojenie 1 zdanie`, min 1 produkt-specyficzna; rozbrojenie inline = PRZEPISANIE istniejącego zdania (0 nowych liczb); FAQ coverage gate; usunąć modelowaną obietnicę „1-3 dni" z copy.md | W2: „missing objection timing" = najczęstszy błąd wg researchu; W3: koniec niewykonalnych obietnic dostawy | #3, #36 |
+| 2.4 | **Liczby kanoniczne + verify-offer-math.mjs** — każda liczba na landingu ma źródło (`wartość \| jednostka \| źródło` w briefie); skrypt: spójność cen hero↔offer↔sticky↔final (parser „1 599 zł"), stara−nowa=savings, rabat ±1 p.p., spójność claimów czasowych per kontekst (cervana: „od pierwszej nocy" vs „~3 noce"); liczba-sierota = FAIL | W3+W1: tekstowy odpowiednik zabezpieczenia po incydencie Linovo; rozjazd cen = trust-killer w momencie decyzji | #10, #5, #30 |
+| 2.5 | **List od założyciela** — opcjonalny-domyślny breathing moment w strefie social proof; szkielet „problem u klientów → frustracja → dlaczego WYBRAŁEM"; zakaz czasowników twórczych (dropshipping!) i zmyślonych biografii; imię z workflow | W1+W2: polska twarz vs anonimowe Temu (+15-28% CR wg researchu DTC) | #8 |
+| 2.6 | **NOWE — Przewodnik fotograficzny dla klienta (deliverable)** — generowany z briefów placeholderów jednostronicowy `foto-przewodnik.md`/HTML: „10 zdjęć telefonem — kadr, światło, tło, po jednym na sekcję" + mapka który placeholder = które zdjęcie. Dołączany do raportu końcowego AUTO-RUN | W1+W2: **największy sufit wizualny żywych landingów to placeholdery, których klient nie podmienia** — to jedyna pozycja planu, która atakuje to bezpośrednio | dźwignia F |
+| 2.7 | **META-GATE budżetowy w 02-generate.md** — formalizacja zasady wdrożeniowej nr 3 + dopisek lekcji do banerów wycofania w `_research/` | W5: Conversion Atlas przewidział własną porażkę w „risks" i nikt tego nie gate'ował | #13 |
+
+**1-2 sesje. 2.1 najpierw (zmienia szablon briefu, który rozszerzają 2.2-2.4).**
+
+---
+
+# FAZA 3 — Anty-sztanca (W1)
+
+**Efekt: dwa landingi z portfolio obok siebie NIE wyglądają jak ten sam szablon — leksykalnie, strukturalnie, motion-owo. Kryterium: fingerprint collisions = 0 na nowych landingach.**
+
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 3.1 | **Anty-AI-slop lint** (style-lock-aware) — FAIL: fiolety #6366f1/#8b5cf6/#a855f7/#7c3aed spoza palety briefu, Inter/Roboto/Arial w display (wyjątek swiss-grid); WARN: uniform radius >80% (excl. 0 i 50%) | sygnatura AI-slop koreluje wg researchu z konwersją niższą do 91% | #16 |
+| 3.2 | **Wow Moments weryfikowalne** — `pattern-id:` + `selector:` w briefie, grep na HTML, blocklist selektorów-baseline (anty-gaming), ledger `wow-usage.jsonl` z rotacją per styl | „3 nazywalne elementy" przestają być teatrem samooceny | #21 |
+| 3.3 | **Template-fingerprint + rozszerzony regression** — kolizje ≥4 dosłownych fraz z JEDNYM landingiem = FAIL (z wypisaniem fraz+sluga); blacklist sztanc („Zanim zamówisz" 3/3, rabat zawsze „100 zł"); verify-all-landings: zamrożona szóstka = exit-gate + sekcja WARN „extended" (3 najnowsze + `live-landings.txt` — dziś regression chroni 14% portfolio i POMIJA strony, które zarabiają) | klient porównujący 2 dema rozpoznaje sztancę po TEKŚCIE, nie palecie | #22, #33 |
+| 3.4 | **Placeholdery: ph--bg + anty-monotonia + screenshot od y=0** — placeholder-tło bez widocznego briefu (tekst-na-tekście w linovo), reguła sąsiedztwa (monotonny ciąg beżowych ramek), hero wreszcie oglądane w całości | realne bugi z audytu wizualnego znikają z dem | #24 |
+| 3.5 | **Konsolidacja motion + CSS scroll-driven animations** — jedno źródło = Motion Budget stylów (+`css_effects_allowed/forbidden`); motion-library = jedyna książka przepisów, jeden kanoniczny fade-in; parallax/progress na `animation-timeline` w `@supports` (poza main thread = INP) | W1+W2: koniec dwóch sprzecznych taksonomii; nowoczesny standard 2026 za darmo w wydajności | #17 |
+| 3.6 | **Generalizacja blacklist copy + fix dark-academia** — personifikacja wzorcem gramatycznym zamiast listy 7 rzeczowników; +„zasługujesz na"/„pozwól sobie"; budżet „masz dość" realnie liczony; dark-academia: rejestr literacki TYLKO w eyebrow/cytatach, body copy DR (inaczej deterministyczna pętla FAIL w AUTO-RUN) | W5+W1: blacklisty przestają być incydentowe; styl przestaje być miną | GAP-4 |
+| 3.7 | **Determinizm drzewa wariantów** — warunki zmapowane na pola briefu (Product DNA+cena+kategoria); domknięcie pasma 800-1000 zł; USUNĄĆ instrukcję „edytuj brief, żeby wymusić H4" | W5: dwa runy na tym samym produkcie = to samo hero; koniec instrukcji gamingu | GAP-5 |
+| 3.8 | **NOWE — Swipe corpus (seed)** — katalog `_research/swipe/`: 15-20 anotowanych referencji z realnych top DTC/awwwards (screenshot/URL + notatka „co brać: typografia/layout/motion/sekcja"); ETAP 1 Krok 2 cytuje z korpusu zamiast z pamięci modelu; odświeżanie kwartalne (zadanie cykliczne, NIE w AUTO-RUN) | W1: moodboard z prawdziwych, aktualnych wzorców — anty-zamknięta-pętla | dźwignia E |
+
+**1-2 sesje (3.8: pojedyncza sesja researchowa z WebSearch).**
+
+---
+
+# FAZA 4 — QA i compliance (W2 + W3)
+
+**Efekt: „WYMAGANE" jest mierzone skryptem; ryzyko prawne żywych landingów zamknięte.**
+
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 4.1 | **Gate „zadeklarowane = zbudowane"** — warianty z briefu weryfikowane przez „Klasę identyfikującą (FROZEN)" per wariant; cross-check z allowed_variants stylu; wow-selectory i motion domknięte na HTML | W5: brief przestaje być fikcją literacką (linovo: sticky mimo zakazu; cervana: 3 infinite animacje przy budżecie „subtle") | #29 |
+| 4.2 | **ETAP 6 obliczeniowy** — `verify-mobile.mjs` (Playwright file://; chrome-devtools MCP nie widzi local) na 360/375/412: headline visible, CTA/sticky in-fold, hero ≤60vh, per-element overflow (nie scrollWidth!), touch targets; artefakt `_mobile-review.md` zamiast 5 niefalsyfikowalnych pytań | W2: above-fold mobile = najważniejsza reguła DR przy 60-70% ruchu, dziś bez gate'u | #31 |
+| 4.3 | **Lighthouse post-deploy** — `lighthouse_audit` mobile na live URL przed „done" (Perf <90 = WARN → FAIL po baseline z 10 landingów; A11y <90 = WARN — pierwszy check kontrastu); fix wymyślonych nazw MCP tools; no-JS regression w fallbacku | W2: 0,1 s szybciej = +8,4% konwersji (research); landing nie idzie na deploy z ReferenceError i LCP 6 s | #35 |
+| 4.4 | **RODO baseline + audyt żywych** — (a) consent TYLKO gdy landing ma tracking (demo bez GTM/pixela = bez banneru w ogóle — najczystsze rozwiązanie); kanoniczny snippet z równorzędnym „Odrzuć"; (b) og:image 1200×630; (c) aria-expanded w FAQ; (d) **jednorazowy audyt cookie żywych landingów** (kafina = żywy sklep z auto-zgodą „kontynuując wyrażasz zgodę" — realne ryzyko klienta) | W3: ryzyko prawne przestaje przechodzić na klientów | GAP-3 |
+
+**1-2 sesje (4.4d = osobna krótka sesja audytowa z fixami).**
+
+---
+
+# FAZA 5 — Skala i koszt (W4 + W2 + W1)
+
+**Efekt: pipeline szybszy i tańszy; różnorodność tam, gdzie zapada decyzja zakupowa. Kolejność w fazie NIE jest przypadkowa — tani eksperyment decyduje o dużym projekcie.**
+
+| ID | Zadanie | Efekt | Źródło |
+|----|---------|-------|--------|
+| 5.1 | **NAJPIERW — eksperyment: wewnętrzny copy-judge vs Manus** — na 3 landingach równolegle: Manus (obecny flow) vs Claude-judge (playbook DR + VOC + mapa obiekcji z F2 jako kontekst, edycja bezpośrednio w HTML). Porównanie jakości (rubryka z 1.7 + ocena Tomka) i czasu. **Decyzja bramkowa: jeśli judge ≥ Manus → wdrażamy judge, Manus zostaje fallbackiem, a projekt 5.2 (data-copy) SKREŚLAMY** — kontrakt data-copy istnieje głównie po to, żeby Manus działał dla wszystkich 15 stylów | W4: −10-15 min pipeline'u, zero zależności od kredytów Manusa (udokumentowane awarie), zero zewnętrznego kosztu; potencjalnie kasuje największy projekt fazy | dźwignia D |
+| 5.2 | *(WARUNKOWE — tylko jeśli 5.1 wskaże Manusa)* **Kontrakt data-copy** — `data-copy="hero_h1"` na elementach tekstowych, extract/apply niezależne od stylu, submit Manusa równolegle z ETAP 4, check warunkowy (legacy = WARN) | W4+W1: jedyny mechanizm jakości literackiej działa dla 15 stylów, nie tylko Editorial | #32 |
+| 5.3 | **Tier 2 wariantów dolnego lejka** — Problem P1-P4 / How W1-W3 / Comparison C1-C3 (zawsze vs kategoria) / Offer O1-O3; format Tier 1 (metadane+frozen class+drzewo). Guardraile multipack O2: tylko zużywalny/parowalny <300 zł, ceny z formuły (zakaz ad hoc), DEMO-PRICING comment | W1+W2: środek i dół strony to dziś klon 1:1 — sztanca dokładnie tam, gdzie zapada decyzja; multipack = najszybsza dźwignia AOV | #7, #19 |
+| 5.4 | **Feedback loop performance** — `landing-performance-stats.sh` (brief→styl/warianty/liczby) + procedura ROAS/koszt zakupu przez ads_insights dla `meta_mcp_enabled=true` (z link_verified); output do `_research/performance.md`; rytm kwartalny | W2: progi Scrollability i drzewo wariantów po raz pierwszy skalibrowane DANYMI, nie jedną jakościową porażką | #38 |
+| 5.5 | **Style Atlas: świeżość evidence-cluster** — 4 brakujące style (newsroom-print, field-manual, specification-sheet, receipt-print) + OBOWIĄZKOWO gałęzie w verify-style-lock (default = exit 1 — anty-powtórka clinical-warmth); sync clusters.md; LRU anti-repetition (nie tylko przy remisie); przy okazji: font trend map (Fraunces/Unbounded/Bricolage, tylko dla NOWYCH stylów) + wiersz drzewa „1 dominująca liczba → hero type-led" | W1: klienci dropshippingowi = głównie mid-price utility → wszyscy lądują dziś w 3 stylach evidence | #20, #23 |
+
+**2-3 sesje. 5.3 i 5.5 (pisanie 13 wariantów + 4 stylów) = dobry kandydat na JEDEN mały workflow fan-out; reszta solo.**
+
+---
+
+# Eksperymenty opcjonalne (świadomy koszt, po 2026-06-22 za zgodą)
+
+| ID | Eksperyment | Kiedy uruchomić | Koszt |
+|----|-------------|-----------------|-------|
+| E1 | **Multi-kandydat hero z sędzią** (dźwignia C) — 2-3 warianty hero/kierunku, screenshot, wybór judge'em | TYLKO jeśli vision-rubric (1.7) systematycznie daje <4/5 mimo faz 1-3 — wtedy single-shot jest sufitem | ~2× tokenów etapu hero |
+| E2 | **A/B realny na żywym sklepie** — dwa warianty sekcji Offer dla jednego klienta Etap 5 z ruchem | po 2 kwartałach danych z 5.4, na 1 sklepie za zgodą klienta | mały, ale wymaga ruchu |
+
+---
+
+# Program pomiaru — jak poznamy, że CAŁOŚĆ działa
+
+1. **Test before/after (po F2 i po F3):** wybrać 2 istniejące workflow → przegenerować landingi nową procedurą → postawić obok starych na Vercel → ocena: vision-rubric + ślepa ocena Tomka („który byś pokazał klientowi?"). To jest główny dowód efektu W1.
+2. **Twarde liczniki per faza:** F0 = 0 commitów z `--no-verify` (grep git log); F1 = 0 martwych CTA / 0 social proof bez disclaimera na nowych landingach; F3 = 0 fingerprint collisions; F5 = czas AUTO-RUN przed/po (cel: ≤25 min mimo nowych checków — vision critique i verify-mobile dodają ~3-4 min, eksperyment Manus może odjąć 10-15).
+3. **Kwartalnie (z 5.4):** tabela styl/warianty × ROAS — pierwsza empiryczna kalibracja progów; aktualizacja swipe corpus (3.8); przegląd WARN-ów extended-regression.
+4. **Kryterium końcowe programu:** nowy landing wygenerowany w pełnym AUTO-RUN przechodzi wszystkie gate'y bez interwencji, dostaje ≥4/5 w vision-rubric i nie dzieli żadnej frazy-sztancy z korpusem — w ≤30 min.
+
+---
+
+# Celowo pominięte / wycięte (żeby nikt nie „przywrócił" w dobrej wierze)
 
 | Pozycja | Decyzja | Powód |
 |---------|---------|-------|
-| motion_profile jako nowy mechanizm w briefie (#14 oryginał) | ODRZUCONE przez weryfikatora | duplikował istniejący Style Lock load v4.0; zostaje sama naprawa docs (0.3) |
-| Linia progu „Brakuje Ci X zł do darmowej dostawy" (#12 oryginał) | WYCIĘTE | fabrykowany próg + mechanika koszyka bez koszyka |
-| Token dyferencjacji (3.5) | OPCJONALNE | najmniejszy stosunek zysku do złożoności; najpierw sprawdzić, czy 3.1-3.3 wystarczą |
-| Widoczny marker [PRZYKŁAD] przy social proof | WYCIĘTE | psuje premium feel demo; marker maszynowy = data-placeholder, ludzki = przypis+stopka |
-| Pula wariantów F/T dla stylów evidence/quiet ([F3]-only) | ODŁOŻONE do po 5.1 | Tier 2 najpierw pokaże, czy problem nadal istnieje |
-| Guardraile H9 video (preload, LCP) | ODŁOŻONE | brak właściciela w propozycjach; dopisać przy najbliższej zmianie w reels-procedure.md |
+| motion_profile jako nowy mechanizm briefu | ODRZUCONE | duplikował Style Lock load v4.0; została naprawa docs (0.3) |
+| „Brakuje Ci X zł do darmowej dostawy" | WYCIĘTE | fabrykowany próg + mechanika koszyka bez koszyka |
+| Token dyferencjacji per landing (hash sluga) | BACKLOG | najmniejszy zysk/złożoność; wraca TYLKO jeśli po F3 fingerprint nadal łapie kolizje strukturalne |
+| Widoczny marker [PRZYKŁAD] przy social proof | WYCIĘTE | psuje premium feel demo; maszynowy = data-placeholder, ludzki = przypis+stopka |
+| Quiz Funnel, Conversion Atlas (re-wdrożenie) | ZAMKNIĘTE | przetestowane i wycofane; META-GATE pilnuje, by nie wróciły w przebraniu |
+| Pula wariantów F/T dla stylów evidence/quiet | ODŁOŻONE | po 5.3 i danych z 5.4 — może problem zniknie sam |
+| Guardraile H9 video (preload/LCP) | ODŁOŻONE | dopisać przy najbliższej zmianie reels-procedure.md |
+| JSON-LD Product/FAQPage | WYCIĘTE z 4.4 | landingi demo nie mają SEO (deklarowane wprost w FAQ procedury) — schema bez ruchu organicznego to robienie dla robienia; wraca tylko dla żywych sklepów na życzenie |
 
 ---
 
-## Kolejność i zależności
+# Kadencja i zależności
 
 ```
-FAZA 0 (enforcement) ──► FAZA 1 (moment decyzji) ──► FAZA 2 (treść/liczby)
-        │                                                    │
-        └──► FAZA 3 (anty-sztanca) ─────────────────────────►├──► FAZA 5 (rozbudowa)
-        └──► FAZA 4 (QA/compliance) ────────────────────────►┘
+TYDZIEŃ 1:  F0 (enforcement) ──► F1 (demo+vision critique)
+TYDZIEŃ 2:  F2 (treść/prawda — Big Idea najpierw)
+TYDZIEŃ 3:  F3 i F4 (równolegle/dowolna kolejność) + audyt RODO żywych
+TYDZIEŃ 4+: F5 (najpierw eksperyment 5.1 → decyzja o 5.2; potem 5.3/5.5)
+KWARTALNIE: pętla 5.4 (ROAS) + odświeżenie swipe corpus + przegląd WARN-ów
 ```
 
-- FAZA 0 jest twardym warunkiem wstępnym wszystkiego (nowe checki w zepsutym enforcement = teatr).
-- FAZY 1-2 sekwencyjnie (2 rozszerza szablon briefu zmieniany w 1).
-- FAZY 3 i 4 niezależne od 1-2 i od siebie — można równolegle / w dowolnej kolejności po F0.
-- FAZA 5 na końcu (5.1 zależy od 4.1 frozen-class; 5.3 od stabilnego pipeline'u).
+- F0 = twardy warunek wstępny (nowe checki w zepsutym enforcement to teatr).
+- F1→F2 sekwencyjnie (F2 rozszerza szablon briefu).
+- F3 ⊥ F4 — niezależne od siebie i od F1-F2 (po F0).
+- W F5 eksperyment 5.1 PRZED projektem 5.2 — wynik taniego testu może skasować drogi projekt.
 
-**Szczegółowe specyfikacje każdej pozycji** (dokładne zakresy zmian, linie plików, treści checków po korektach weryfikatorów): [upgrade-plan-2026-06.md](upgrade-plan-2026-06.md), pozycje #1-#38.
+**Szczegółowe specyfikacje** (dokładne zakresy, linie plików, treści checków po korektach weryfikatorów): [upgrade-plan-2026-06.md](upgrade-plan-2026-06.md) #1-#38.
