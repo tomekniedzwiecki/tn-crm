@@ -185,7 +185,7 @@
 
 ```html
 <!-- Skrypty na KOŃCU body, z defer -->
-<script defer src="/landing-pages/shared/conversion-toolkit.js"></script>
+<!-- v5.0: ZERO zewnętrznych script src — cały JS inline (self-contained dla TakeDrop) -->
 
 <!-- Inline JS — tylko niezbędne -->
 <script>
@@ -346,7 +346,7 @@ chrome-devtools.lighthouse_audits(
 | CLS | > 0.1 | Wszystkie `<img>` z `width`+`height`, fonty z `display=swap`, brak `font-size` zmieniającego się po load |
 | FCP | > 1.8s | `preconnect` do fonts.googleapis.com + fonts.gstatic.com (crossorigin), inline critical CSS, defer JS |
 | INP | > 200ms | Heavy JS w event handlerach, throttle scroll listenery, użyj `requestAnimationFrame` |
-| Total Blocking Time | > 300ms | Defer wszystkie non-critical scripts, conversion-toolkit z `defer` |
+| Total Blocking Time | > 300ms | Inline JS na koniec body; defer nie dotyczy (zero zewnętrznych skryptów) |
 | Render-blocking resources | ≥ 1 | Wszystkie scripts z `defer` lub na końcu `<body>`, fonty z `display=swap` |
 
 **Iteracja:** napraw najgorszą metrykę, re-run audit, powtórz aż wszystkie w zielonym. **Każdy fix zwykle zmienia score o 5-15 punktów.**

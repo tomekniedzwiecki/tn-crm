@@ -1043,30 +1043,39 @@
 
 ---
 
-## T6 — Press logos + 1 cytat (editorial authority)
+## T6 — Ściana atestów / certyfikatów + 1 cytat (authority) — przepisany v5.0
 
-**Kiedy:** produkt PR-owany, wspomniany w mediach. Zero „5 gwiazdek", za to Vogue/NYT/Elle logos + 1 krótki cytat z magazynu.
+**Kiedy:** produkt z REALNYMI certyfikatami/atestami (z `workflow_products` / dostawcy).
 
-**Kategoria:** editorial, premium, PR-backed launch.
+> **⛔ v5.0: NIGDY zaszyte logotypy prasy (VOGUE/NYT/ELLE/WIRED/FORBES).** Produkt
+> dropshippingowy klienta NIE był w tych mediach — klient wkleja demo do sklepu i bierze
+> na siebie fabrykowany authority claim (Omnibus/UOKiK; verify-landing Grupa 10h).
+> Zamiast prasy: ściana atestów WYŁĄCZNIE jako placeholdery `.ph` z briefem
+> „wstaw TYLKO certyfikaty, które produkt faktycznie posiada (źródło: workflow_products
+> / dostawca) — wpisanie atestu bez potwierdzenia = claim zdrowotny, ryzyko UOKiK".
+> Nazwy przykładowe (CE, OEKO-TEX) tylko w komentarzu HTML, NIGDY jako renderowany tekst.
 
-**Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` (logo magazynów = placeholder).
+**Kategoria:** evidence, premium, produkt z papierami.
+
+**Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` (atest = placeholder).
 
 ```html
 <section class="testimonials social-proof personas">
   <div class="container">
     <div class="press-wall">
-      <div class="eyebrow center">Nº 07 · W mediach</div>
-      <h2 class="press-headline">Nagrodzone przez redakcje, <em>nie kupione recenzjami.</em></h2>
+      <div class="eyebrow center">Certyfikaty i atesty</div>
+      <h2 class="press-headline">Potwierdzone dokumentami, <em>nie obietnicami.</em></h2>
       <div class="press-logos">
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">VOGUE</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">NYT</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">ELLE</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">WIRED</div></div></div>
-        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">FORBES</div></div></div>
+        <!-- Brief: wstaw TYLKO faktycznie posiadane atesty (źródło: workflow_products/dostawca).
+             Przykłady KATEGORII (nie wpisuj bez potwierdzenia!): znak zgodności, certyfikat tkanin,
+             atest higieniczny. Fabrykowany atest = claim zdrowotny, ryzyko UOKiK. -->
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">ATEST 1</div><div class="ph-note">logo certyfikatu z dokumentów produktu</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">ATEST 2</div><div class="ph-note">logo certyfikatu z dokumentów produktu</div></div></div>
+        <div class="press-logo voice-figure avatar-figure testi-avatar-figure persona-figure"><div class="ph"><div class="ph-mark">ATEST 3</div><div class="ph-note">logo certyfikatu z dokumentów produktu</div></div></div>
       </div>
       <blockquote class="press-quote">
-        „[Cytat z jednego z magazynów, 2-3 zdania, z konkretną recenzją]"
-        <cite>— [Nazwa magazynu], [rok]</cite>
+        „[Cytat z realnej opinii klienta LUB zdanie ze specyfikacji — NIE wymyślony cytat z magazynu]"
+        <cite>— [źródło: opinia #N / specyfikacja]</cite>
       </blockquote>
     </div>
   </div>

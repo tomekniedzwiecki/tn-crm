@@ -56,7 +56,7 @@ Wyjątek: logo klienta jest bez napisu (tylko symbol) i marka jest mało znana �
 - Bez hide-on-scroll JavaScript
 - Z-index ≥ 100
 
-Obowiązkowe — Conversion Toolkit wymaga, użytkownik scrollujący powinien mieć CTA w headerze stale dostępne.
+Obowiązkowe — użytkownik scrollujący powinien mieć CTA w headerze stale dostępne.
 
 ---
 
@@ -522,12 +522,19 @@ Stara cena w strikethrough MUSI być najniższą ceną z ostatnich 30 dni. Inacz
 
 **Baymard:** strony z 1-3 typami trust signals konwertują +23% lepiej; z 7+ typami konwertują -8% (cognitive clutter). Dobierz świadomie.
 
-**Optimal stack (5 typów) dla landingów PL:**
-1. **Rating + liczba opinii** NAD CTA: `★★★★★ 4.8/5 · 1 247 opinii` (+270% konwersji na high-ticket wg Baymard)
+**Optimal stack (6 typów) dla landingów PL:**
+1. **Rating + liczba opinii** NAD CTA: `★★★★★ 4,7/5 · 1 247 opinii` (+270% konwersji na high-ticket wg Baymard).
+   **Rating demo w paśmie 4,6-4,8** — NIE 4,9-5,0 (Spiegel/Northwestern: zaufanie peakuje 4,2-4,7, SPADA przy idealnej 5,0).
+   **Liczba opinii**: z `workflow_reviews` jeśli są; inaczej `data-placeholder="reviews"` na elemencie + dyskretny przypis `[1]`
+   do stopki: „Ocena i liczba opinii mają charakter poglądowy (faza wprowadzenia produktu) — do podmiany na realne dane sklepu"
+   (wzorzec cervana). BEZ widocznego markera [PRZYKŁAD] w sekcji — psuje premium feel demo.
 2. **Gwarancja** POD CTA — 1 linia: `🛡️ 30 dni na zwrot · bez pytań` (+21% visible MBG per Conversion Fanatics)
-3. **Trust strip** z 3 ikonami + 1-liner: Darmowa wysyłka · 30 dni zwrotu · 2 lata gwarancji
-4. **Payment logos** strip grayscale: **BLIK pierwsze** (PL-first), Visa, MC, Przelewy24, Apple Pay — max 6, wszystkie ~18-20px wysokości
-5. **Social proof** jako dynamic counter (jeśli mamy prawdziwe dane): `Popular — 23 zamówienia w 24h`
+3. **Linia dostawy `.offer-shipping`** BEZPOŚREDNIO POD blokiem ceny (OBOWIĄZKOWA od v5.0 — ukryte koszty = 48% porzuceń, Baymard #1):
+   domyślnie `Darmowa dostawa · InPost / DPD / kurier`; konkretna kwota/próg WYŁĄCZNIE gdy explicite podana w briefie — NIGDY wymyślona;
+   bez deklaracji czasu (czas dostawy tylko w FAQ jako „7-14 dni")
+4. **Trust strip** z 3 ikonami + 1-liner: Darmowa dostawa · 30 dni zwrotu · 2 lata gwarancji
+5. **Payment logos** strip grayscale: **BLIK pierwsze** (PL-first), Visa, MC, Przelewy24, Apple Pay — max 6, wszystkie ~18-20px wysokości
+6. **Social proof** jako dynamic counter (jeśli mamy prawdziwe dane): `Popular — 23 zamówienia w 24h`
 
 **⚠️ TN-specyfic ZAKAZ** (zob. [MEMORY.md feedback-payment-methods](~/.claude/projects/c--repos-tn/memory/feedback-payment-methods.md)):
 W `offer-payments` strip **NIGDY nie umieszczaj**:
@@ -541,13 +548,21 @@ Research rekomenduje BNPL jako winning pattern (5/7 premium brands). Dla TN to N
 **Placement reguła Baymard:** guarantee **pod** CTA (nie nad), shipping **obok ceny**, reviews **nad** CTA.
 
 ```html
-<!-- Rating nad CTA -->
+<!-- Rating nad CTA (pasmo 4,6-4,8; liczba opinii z data-placeholder + przypis [1] do stopki) -->
 <div class="offer-rating">
   <span class="stars">★★★★★</span>
-  <span>4.8/5 · <strong>1 247</strong> opinii</span>
+  <span>4,7/5 · <strong data-placeholder="reviews">1 247</strong> opinii<sup><a href="#footnote-reviews">[1]</a></sup></span>
 </div>
 
-<!-- CTA -->
+<!-- Cena + OBOWIĄZKOWA linia dostawy pod nią (v5.0) -->
+<div class="offer-price-block">
+  <span class="offer-price-old">199 zł</span>
+  <span class="offer-price-now">149 zł</span>
+  <span class="offer-price-save">-25%</span>
+</div>
+<p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+
+<!-- CTA (primary NIGDY martwy — patrz „Demo-CTA" niżej i patterns.md demo-checkout) -->
 <button class="cta-primary magnetic">Zamawiam — 149 zł</button>
 
 <!-- Guarantee pod CTA -->
@@ -646,14 +661,26 @@ if (promo.endsAt && (promo.endsAt - Date.now()) < 7*24*3600*1000) showTimer();
 .sticky-cta .btn{flex:1;min-height:56px;font-size:17px;font-weight:700}
 ```
 
+**Gating DWUWARUNKOWY (kanon v5.0 — JEDYNY dozwolony wzorzec):** pasek widoczny gdy
+hero-CTA wyszedł z viewportu **ORAZ** offer box nie jest w viewporcie. Pasek widoczny od 0px
+zasłania hero-CTA i kanibalizuje pierwszy ekran (realny bug linovo). Hero przycisk MUSI mieć
+`id="hero-cta"`, offer box `id="offer-box"` — deterministyczny grep niezależny od klas stylu.
+
 ```js
-// Show sticky po scroll poza main offer
-const mainCTA = document.querySelector('.offer-box');
+// Kanon v5.0: dwa IntersectionObservery (wzorzec sprawdzony: lensora:1090, cervana:953)
+const heroCta = document.getElementById('hero-cta');
+const offerBox = document.getElementById('offer-box');
 const stickyBar = document.querySelector('.sticky-cta');
-new IntersectionObserver(([e])=>{
-  stickyBar.classList.toggle('visible', !e.isIntersecting);
-},{threshold:0.1}).observe(mainCTA);
+let heroPast = false, offerVisible = false;
+const sync = () => stickyBar.classList.toggle('visible', heroPast && !offerVisible);
+new IntersectionObserver(([e]) => { heroPast = !e.isIntersecting; sync(); }, {threshold: 0}).observe(heroCta);
+new IntersectionObserver(([e]) => { offerVisible = e.isIntersecting; sync(); }, {threshold: 0.1}).observe(offerBox);
 ```
+
+**Pamiętaj o stacku floating widgets:** na ≤720px WA/reviews-side → `bottom:88px`,
+stories-bar → `top:60px` (memory: feedback-landing-mobile-floating-stack). Footer:
+`body { padding-bottom: calc(84px + env(safe-area-inset-bottom)) }` w media query mobile,
+żeby sticky nie zasłaniał stopki.
 
 **Mobile — WSZYSTKIE benefity widoczne** (nie collapse). "Pokaż więcej" dla długich specyfikacji/FAQ, NIGDY dla sprzedażowych benefits (bounce).
 
@@ -679,18 +706,63 @@ new IntersectionObserver(([e])=>{
 - [ ] **Price anchoring** — stara cena GRAY strikethrough, nowa 48-64px bold
 - [ ] **Savings dual display** — badge "-X%" + tekst "Oszczędzasz N zł"
 - [ ] **EU Omnibus compliance** — stara cena = najniższa z 30 dni (nie sztucznie zawyżona)
+- [ ] **Linia dostawy `.offer-shipping`** pod ceną (v5.0 — domyślnie „Darmowa dostawa · InPost / DPD / kurier")
 - [ ] **CTA button** — text "Zamawiam — 149 zł" (akcja + value) albo benefit-driven
+- [ ] **Primary CTA NIE jest martwy** — realny checkout URL albo `data-demo-modal` (H.11)
 - [ ] **Guarantee microcopy POD CTA** — konkretna liczba dni ("30 dni na zwrot · bez pytań")
-- [ ] **Trust strip** 3 ikony + 1-liner (darmowa wysyłka / zwrot / gwarancja)
+- [ ] **Trust strip** 3 ikony + 1-liner (darmowa dostawa / zwrot / gwarancja)
 - [ ] **Payment logos** grayscale, BLIK pierwsze (PL-first), max 6
-- [ ] **Rating + liczba opinii** nad CTA (jeśli mamy prawdziwe dane)
+- [ ] **Rating 4,6-4,8 + liczba opinii** nad CTA (realne dane LUB data-placeholder + przypis do stopki-disclaimera)
 - [ ] **Bestseller/Popular sticker** corner top-right (jeśli uzasadniony danymi)
 - [ ] **Single dominant CTA** — nie 2 równorzędne
-- [ ] **Mobile sticky CTA** 56px+, full-width, visible po scroll poza main offer
+- [ ] **Mobile sticky CTA** 56px+, full-width, gating DWUWARUNKOWY (H.7), cena w barze
+- [ ] **`.cta-trust` w final CTA** (H.10)
 - [ ] **Benefit bulletów 3-5** — benefit→feature→emotion, nie feature-only
 - [ ] **Zero fake urgency** (timer bez real endDate, stock bez realnego)
 - [ ] **Zero pre-checked upsells**
-- [ ] **Magnetic CTA** dla pointer-fine (+prefers-reduced-motion respected)
+- [ ] **Magnetic CTA** dla pointer-fine (+prefers-reduced-motion respected) — TYLKO gdy Motion Budget stylu dopuszcza
+
+#### H.10 — Trust-microcopy przy final CTA (`.cta-trust`) — v5.0
+
+Trust przy OSTATNIEJ decyzji, nie w stopce. Research zbieżny z 3 źródeł: gwarancja
+bezpośrednio przy przycisku +12-19% CR (BuildGrowScale), badge płatności +8-14%,
+BLIK = 72% preferencji PL (Gemius) — najtańszy sygnał „prawdziwy polski sklep".
+
+**Zakres (wąski — NIE stempluj pod każdym CTA):**
+- **Offer box** — bez zmian (H.3 już kanonizuje gwarancję pod CTA + BLIK-first)
+- **Final CTA** — WYMAGANE: pod primary CTA jedna linia `.cta-trust`:
+  `✓ 30 dni na zwrot · ✓ BLIK / karta / przelew` (max 2 elementy, 12-13px, inline-SVG checkmarki)
+- **Hero** — OPCJONALNIE i BEZ liczby: `✓ BLIK / karta / przelew` (budżet hero 1-2 liczb
+  zostaje dla mocnej liczby produktu)
+- **Sticky bar** — WYKLUCZONY (H.7: tylko cena + button)
+
+**Budżet Scrollability:** identyczna powtórzona liczba („30 dni" z offer boxu) liczy się RAZ.
+
+```html
+<p class="cta-trust">
+  <svg class="ct-check" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> 30 dni na zwrot
+  <span class="ct-sep">·</span>
+  <svg class="ct-check" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> BLIK / karta / przelew
+</p>
+```
+```css
+.cta-trust{font-size:13px;opacity:.85;display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px}
+.cta-trust .ct-check{flex:none}
+```
+
+#### H.11 — Demo-CTA: primary CTA NIGDY martwy — v5.0
+
+Kryterium sukcesu landingu-demo = perceived quality dla klienta. Martwy główny przycisk
+(`href="#"` → skok na górę strony — realny bug linovo) to najgorszy możliwy moment porażki
+na pokazie. Kanoniczny markup (jeden, bez wariantów):
+
+1. **Workflow ma realny checkout URL** (wzorzec kafina) → `href="https://..."`
+2. **Brak URL** → `href="#" data-demo-modal` + inline snippet `demo-checkout`
+   z `reference/patterns.md` (#24 Demo-Checkout Modal): handler robi `preventDefault()` i otwiera overlay
+   „Tu zostanie wpięty koszyk Twojego sklepu TakeDrop" z mini-mockupem koszyka
+   (mockup pokazuje WYŁĄCZNIE BLIK/kartę/przelew — zakazy treściowe obowiązują).
+
+CTA w hero/sticky scrollują do `#offer-box` — bez zmian.
 
 ---
 

@@ -128,7 +128,7 @@ chrome-devtools.console_messages(level=error)
 
 **Reguła:** ZERO `error`-level messages. Najczęstsze winowajcy:
 - Brakujący asset (404 z `attachments/landing/[slug]/`) — sprawdź upload do Supabase Storage
-- `Uncaught ReferenceError` w toolkit script (zła konfiguracja `ConversionToolkit.init`)
+- `Uncaught ReferenceError` w inline JS (literówka w nazwie funkcji, brak elementu DOM)
 - CORS na zewnętrzne assety (fontów, opinii AliExpress)
 - Mixed content (http:// asset na https:// stronie)
 
@@ -326,6 +326,37 @@ cd /c/repos_tn/tn-crm && node _shoot.mjs
 - [ ] `html.js` class jest dodana (DevTools → `<html class="js">`)
 - [ ] Fade-in faktycznie fade'uje (nie pop) — scroll powoli i patrz
 - [ ] Bez JS (wyłącz w DevTools) → strona nadal pokazuje całą treść above-fold
+
+---
+
+## Krok 5.1 — VISION CRITIQUE: ocena estetyczna wg rubryki (v5.0, OBOWIĄZKOWY)
+
+> Krok 5 sprawdza „czy nie jest zepsute". Ten krok sprawdza **„czy jest ŁADNE"** —
+> jedyny mechanizm w pipeline łapiący „technicznie poprawne, ale brzydkie".
+> Koszt: ~1 ocena obrazów per landing.
+
+Po obejrzeniu screenshotów (Krok 4) oceń landing w 5 osiach, **1-5 każda**:
+
+| Oś | Pytanie | 1 (źle) | 5 (świetnie) |
+|----|---------|---------|--------------|
+| **Hero / pierwsze wrażenie** | Czy w 3 sek wiadomo CO to i DLA KOGO, i czy chce się scrollować? | generic szablon, ściana tekstu | natychmiastowy hook wizualny + jasna obietnica |
+| **Hierarchia wizualna** | Czy oko wie gdzie patrzeć (1 dominanta per viewport)? | wszystko krzyczy równo | wyraźny rytm dominant |
+| **Premium vs AI-template** | Czy wygląda jak strona MARKI czy jak wygenerowany szablon? | uniform radius, równe karty, „czysto ale nijako" | nazywalne signature elementy, charakter |
+| **Spójność stylu** | Czy całość trzyma STYLE LOCK (typografia/paleta/tempo)? | sekcje z różnych światów | jeden świat od hero po footer |
+| **Mobile 375px** | Czy mobile czyta się jak ZAPROJEKTOWANY, nie zeskalowany? | ciasno, przypadkowe łamania | przemyślany rytm, fold z hookiem |
+
+**Procedura:**
+1. Oceń każdą oś (desktop_full + mobile_full + hero close-up). Bądź surowy — 3 = „poprawne, nie zachwyca".
+2. Zapisz wynik do `_brief.md` jako sekcja `## QA — Vision rubric`:
+   `hero: N · hierarchia: N · premium: N · spójność: N · mobile: N · średnia: N.N`
+   plus JEDNO zdanie „co najbardziej ciągnie w dół".
+3. **Średnia < 3,5** → wypisz **MAX 3 konkretne poprawki** (nazwij element + co zmienić),
+   wprowadź je (Edit), zrób ponowny screenshot zmienionej strefy i re-score.
+   Jedna iteracja poprawek — potem kontynuuj (raportuj wynik, NIE STOP).
+4. **Średnia ≥ 3,5** → kontynuuj do Kroku 6.
+
+**Anty-gaming:** ocena dotyczy SCREENSHOTÓW, nie kodu. Nie podnoś oceny „bo wszystkie
+checki przeszły" — rubryka mierzy wrażenie, checki mierzą poprawność. To dwa różne wymiary.
 
 ---
 

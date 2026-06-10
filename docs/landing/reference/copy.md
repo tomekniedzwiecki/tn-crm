@@ -727,6 +727,25 @@ Bez pytań. Zero ryzyka po Twojej stronie."
 
 # Część 3 — Conversion Boosters (5 krytycznych elementów)
 
+## 0. RATING POLICY + linia dostawy (v5.0 — OBOWIĄZKOWE)
+
+**Rating demo: pasmo 4,6-4,8 — NIGDY 4,9-5,0.** Research (Spiegel/Northwestern): purchase
+likelihood peakuje przy 4,2-4,7 i SPADA przy idealnej 5,0 (czyta się jako fake). Idealna
+ocena to anty-trust.
+
+**Liczba opinii:** z `workflow_reviews` jeśli są; inaczej element z `data-placeholder="reviews"`
++ dyskretny przypis `[1]` do stopki: „Ocena i liczba opinii mają charakter poglądowy (faza
+wprowadzenia produktu) — do podmiany na realne dane sklepu". NIGDY goła zmyślona liczba bez
+disclaimera (klient wkleja demo do sklepu = bierze na siebie Omnibus/UOKiK).
+
+**Linia dostawy `.offer-shipping`** bezpośrednio pod ceną (Baymard: ukryte koszty = 48% porzuceń):
+- DOMYŚLNIE: `Darmowa dostawa · InPost / DPD / kurier` (wariant zatwierdzony w safety.md)
+- Konkretna kwota / próg WYŁĄCZNIE gdy explicite podane w briefie — NIGDY wymyślone
+- BEZ czasu dostawy przy cenie (czas tylko w FAQ jako „7-14 dni")
+
+**Trust-microcopy `.cta-trust`** pod primary CTA w final-cta (NIE w stopce, NIE w sticky):
+`✓ 30 dni na zwrot · ✓ BLIK / karta / przelew` — wzorzec 04-design.md H.10.
+
 ## 1. Above-the-fold Checklist
 
 > **ZASADA 3 SEKUND**: Masz 3 sekundy, żeby przekonać użytkownika do zostania. Wszystko co najważniejsze MUSI być widoczne bez scrollowania.

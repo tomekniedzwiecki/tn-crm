@@ -252,7 +252,21 @@ p{color:#33405A}
 .offer-price-now{font-family:var(--font-display);font-size:48px;font-weight:600;color:var(--ink);line-height:1}
 .offer-price-old{font-size:21px;color:var(--slate);text-decoration:line-through}
 .save-badge{background:rgba(14,122,110,.12);color:var(--primary);font-family:var(--font-label);font-weight:700;font-size:13px;letter-spacing:.04em;padding:5px 12px;border-radius:30px}
-.save-text{font-size:14px;color:var(--primary);font-weight:600;margin-bottom:22px}
+.save-text{font-size:14px;color:var(--primary);font-weight:600;margin-bottom:8px}
+.offer-shipping{font-size:13px;color:var(--slate);margin:0 0 18px;letter-spacing:.02em}
+.cta-trust{font-size:13px;opacity:.9;display:flex;gap:8px;align-items:center;justify-content:center;margin-top:14px;color:#fff}
+.cta-trust svg{flex:none}
+.demo-modal{position:fixed;inset:0;background:rgba(14,18,30,.55);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.demo-modal[hidden]{display:none}
+.demo-modal-box{background:#fff;border-radius:14px;max-width:380px;width:100%;padding:28px;position:relative;text-align:center;box-shadow:0 30px 60px -20px rgba(14,18,30,.4)}
+.demo-modal-close{position:absolute;top:10px;right:14px;background:none;border:0;font-size:26px;cursor:pointer;line-height:1;color:var(--ink)}
+.demo-modal-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin:0 0 6px}
+.demo-modal-box h3{font-size:21px;margin:0 0 6px}
+.demo-cart{border:1px solid #E7EDF1;border-radius:10px;margin:16px 0;padding:14px;text-align:left}
+.demo-cart-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.demo-cart-total{border-top:1px solid #E7EDF1;margin-top:6px;padding-top:10px;font-size:16px}
+.demo-cart-pay{margin-top:10px;font-size:12px;opacity:.7;text-align:center}
+.demo-modal-note{font-size:12px;opacity:.65;margin:0}
 .offer-cta{width:100%;font-size:17px;padding:18px 30px;margin-bottom:14px}
 .offer-guarantee{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#45526E;justify-content:center;text-align:center;line-height:1.5}
 .offer-guarantee svg{flex-shrink:0;color:var(--primary)}
@@ -780,7 +794,8 @@ html.js .js-counter{display:inline-block;font-variant-numeric:tabular-nums}
             <span class="save-badge">−33%</span>
           </div>
           <p class="save-text">Oszczędzasz 100 zł — cena startowa nowej kolekcji.</p>
-          <a href="#oferta" class="offer-cta btn btn-primary">Zamów Cervanę — 199 zł</a>
+          <p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+          <a href="#" data-demo-modal class="offer-cta btn btn-primary">Zamów Cervanę — 199 zł</a>
           <div class="offer-guarantee">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
             <span>30 dni na zwrot bez pytań · zwrot 100% ceny, jeśli ból nie minie</span>
@@ -816,6 +831,7 @@ html.js .js-counter{display:inline-block;font-variant-numeric:tabular-nums}
     <h2>Regeneracja nie powinna wymagać niczego poza tym, że się kładziesz</h2>
     <p>Dołącz do ponad 8 200 osób, które zaczynają dzień bez sztywnego karku. Przetestuj Cervanę przez 30 nocy bez ryzyka.</p>
     <a href="#oferta" class="btn btn-light">Zamów — 199 zł</a>
+    <p class="cta-trust"><svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> 30 dni na zwrot <span class="ct-sep">·</span> <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> BLIK / karta / przelew</p>
   </div>
 </section>
 
@@ -960,6 +976,34 @@ const closeCookie = () => { localStorage.setItem('cervana_cookies','1'); cookieB
 if (!localStorage.getItem('cervana_cookies')) setTimeout(() => cookieBanner.classList.add('show'), 1800);
 document.getElementById('cookieAccept').addEventListener('click', closeCookie);
 document.getElementById('cookieDecline').addEventListener('click', closeCookie);
+
+// ===== Demo-checkout modal (v5.0, patterns.md #24 — primary CTA nigdy martwy) =====
+(function(){
+  var modal = document.getElementById('demo-modal');
+  if (!modal) return;
+  document.querySelectorAll('[data-demo-modal]').forEach(function(btn){
+    btn.addEventListener('click', function(e){ e.preventDefault(); modal.hidden = false; document.body.style.overflow = 'hidden'; });
+  });
+  function closeModal(){ modal.hidden = true; document.body.style.overflow = ''; }
+  modal.querySelector('.demo-modal-close').addEventListener('click', closeModal);
+  modal.addEventListener('click', function(e){ if (e.target === modal) closeModal(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+})();
 </script>
+
+<div class="demo-modal" id="demo-modal" hidden>
+  <div class="demo-modal-box">
+    <button class="demo-modal-close" aria-label="Zamknij">×</button>
+    <p class="demo-modal-eyebrow">Podgląd demo</p>
+    <h3>Tu zostanie wpięty koszyk Twojego sklepu</h3>
+    <div class="demo-cart">
+      <div class="demo-cart-row"><span>Poduszka Cervana × 1</span><strong>199 zł</strong></div>
+      <div class="demo-cart-row"><span>Dostawa</span><span>Darmowa</span></div>
+      <div class="demo-cart-row demo-cart-total"><span>Razem</span><strong>199 zł</strong></div>
+      <div class="demo-cart-pay">BLIK · karta · przelew</div>
+    </div>
+    <p class="demo-modal-note">Po podpięciu sklepu TakeDrop przycisk prowadzi do prawdziwego koszyka.</p>
+  </div>
+</div>
 </body>
 </html>

@@ -1095,6 +1095,60 @@ Pattern 23 wymaga `.final-cta-figure` wewnątrz sekcji `.cta-banner` / `.final-c
 
 ---
 
+## 24. Demo-Checkout Modal (primary CTA nigdy martwy) — v5.0
+
+> **Kiedy:** workflow NIE ma realnego checkout URL. Primary CTA w sekcji Offer dostaje
+> `data-demo-modal` zamiast martwego `href="#"` (04-design.md H.11). Inline, self-contained,
+> ~15 linii vanilla JS. Mockup pokazuje WYŁĄCZNIE BLIK/kartę/przelew (zakazy treściowe).
+
+```html
+<a href="#" data-demo-modal class="offer-cta">Zamawiam — 149 zł</a>
+
+<div class="demo-modal" id="demo-modal" hidden>
+  <div class="demo-modal-box">
+    <button class="demo-modal-close" aria-label="Zamknij">×</button>
+    <p class="demo-modal-eyebrow">Podgląd demo</p>
+    <h3>Tu zostanie wpięty koszyk Twojego sklepu</h3>
+    <div class="demo-cart">
+      <div class="demo-cart-row"><span>[Produkt] × 1</span><strong>149 zł</strong></div>
+      <div class="demo-cart-row demo-cart-ship"><span>Dostawa</span><span>Darmowa</span></div>
+      <div class="demo-cart-row demo-cart-total"><span>Razem</span><strong>149 zł</strong></div>
+      <div class="demo-cart-pay">BLIK · karta · przelew</div>
+    </div>
+    <p class="demo-modal-note">Po podpięciu sklepu TakeDrop przycisk prowadzi do prawdziwego koszyka.</p>
+  </div>
+</div>
+```
+
+```css
+.demo-modal{position:fixed;inset:0;background:rgba(10,12,16,.55);display:flex;align-items:center;justify-content:center;z-index:300;padding:20px}
+.demo-modal[hidden]{display:none}
+.demo-modal-box{background:#fff;border-radius:14px;max-width:380px;width:100%;padding:28px;position:relative;text-align:center}
+.demo-modal-close{position:absolute;top:10px;right:14px;background:none;border:0;font-size:26px;cursor:pointer;line-height:1}
+.demo-modal-eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;opacity:.6;margin:0 0 6px}
+.demo-cart{border:1px solid #e5e5e5;border-radius:10px;margin:16px 0;padding:14px;text-align:left}
+.demo-cart-row{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
+.demo-cart-total{border-top:1px solid #e5e5e5;margin-top:6px;padding-top:10px;font-size:16px}
+.demo-cart-pay{margin-top:10px;font-size:12px;opacity:.7;text-align:center}
+.demo-modal-note{font-size:12px;opacity:.65;margin:0}
+```
+
+```js
+(function(){
+  var modal = document.getElementById('demo-modal');
+  if (!modal) return;
+  document.querySelectorAll('[data-demo-modal]').forEach(function(btn){
+    btn.addEventListener('click', function(e){ e.preventDefault(); modal.hidden = false; document.body.style.overflow = 'hidden'; });
+  });
+  function close(){ modal.hidden = true; document.body.style.overflow = ''; }
+  modal.querySelector('.demo-modal-close').addEventListener('click', close);
+  modal.addEventListener('click', function(e){ if (e.target === modal) close(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape' && !modal.hidden) close(); });
+})();
+```
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".

@@ -468,6 +468,101 @@ check "Zero fake urgency (tylko dziś / zostało X szt.)" "0" "$FAKEURGENCY"
 STICKY=$(grep -cE 'class="[^"]*sticky-cta[^"]*"' "$FILE" || true)
 check "Sticky CTA mobile obecny" "1" "$([ "$STICKY" -ge 1 ] && echo 1 || echo 0)" "warn"
 
+# ─── 10. Moment decyzji & self-contained (v5.0) ───
+# ROLLOUT: wszystkie checki tej grupy = WARN do czasu przejścia 5 nowych landingów
+# bez false positive (zasada rolloutu README), potem podnieś severity na FAIL.
+echo ""
+echo "🎯 10. Moment decyzji & self-contained (v5.0 — rollout WARN→FAIL)"
+
+# 10a. Self-contained: zewnętrzne <script src> są MARTWE po copy-paste do CMS TakeDrop
+#      Allowlist: tracking żywych sklepów Etap 5 (gtm, contentsquare) — dodawany PO podpięciu
+EXT_SRC=$(grep -oE '<script[^>]+src="[^"]*"' "$FILE" | grep -vE 'googletagmanager\.com|t\.contentsquare\.net' | wc -l)
+if [ "$EXT_SRC" -eq 0 ]; then
+  echo "  ✅ Self-contained: zero zewnętrznych <script src> (cały JS inline)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  $EXT_SRC zewnętrznych <script src> — martwe po wklejeniu do TakeDrop (feedback-landing-self-contained)"
+  WARN=$((WARN + 1))
+fi
+
+# 10b. Conversion Toolkit — wycofany v5.0 (zewnętrzny skrypt + fake social proof = Omnibus)
+CT=$(grep -ciE 'conversion-?toolkit' "$FILE" || true)
+if [ "$CT" -eq 0 ]; then
+  echo "  ✅ Zero referencji Conversion Toolkit (wycofany v5.0)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  $CT referencji conversion-toolkit — usuń (zewnętrzny skrypt, fake live-visitors/stock)"
+  WARN=$((WARN + 1))
+fi
+
+# 10c. Demo-CTA: primary CTA w sekcji Offer NIE może być martwy href="#"
+#      Dozwolone: realny URL checkoutu LUB href="#..."/{{CHECKOUT_URL}} z data-demo-modal
+OFFER_SECTION=$(awk '/<section[^>]*class="[^"]*(offer|pakiet|zestaw|package|product-offer)[^"]*"/,/<\/section>/' "$FILE")
+OFFER_DEAD=$(echo "$OFFER_SECTION" | grep -oE '<a[^>]*class="[^"]*(offer-cta|offer-btn|btn-primary)[^"]*"[^>]*>' | grep -E 'href="#"' | grep -vc 'data-demo-modal' || true)
+if [ "$OFFER_DEAD" -eq 0 ]; then
+  echo "  ✅ Demo-CTA: primary CTA w Offer nie jest martwy (URL lub data-demo-modal)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Martwy primary CTA w Offer (href=\"#\" bez data-demo-modal) — najgorszy moment porażki demo (wzorzec: patterns.md #24 demo-checkout)"
+  WARN=$((WARN + 1))
+fi
+
+# 10d. Trust-microcopy przy final CTA (.cta-trust) — research: gwarancja przy przycisku +12-19% CR
+FINAL_TRUST=$(awk '/<section[^>]*class="[^"]*(final-cta|cta-banner|final|closing-cta|last-cta)[^"]*"/,/<\/section>/' "$FILE" | grep -cE 'class="[^"]*cta-trust' || true)
+if [ "$FINAL_TRUST" -ge 1 ]; then
+  echo "  ✅ Final CTA ma .cta-trust (zwrot + płatności przy przycisku)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Final CTA bez .cta-trust — dodaj '✓ 30 dni na zwrot · ✓ BLIK / karta / przelew' (04-design H.10)"
+  WARN=$((WARN + 1))
+fi
+
+# 10e. Linia dostawy w offer box (.offer-shipping) — ukryte koszty = 48% porzuceń (Baymard)
+SHIP=$(grep -cE 'class="[^"]*offer-shipping' "$FILE" || true)
+if [ "$SHIP" -ge 1 ]; then
+  echo "  ✅ Offer box ma linię dostawy (.offer-shipping)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Offer box bez .offer-shipping — dodaj 'Darmowa dostawa · InPost / DPD / kurier' pod ceną (04-design H.3)"
+  WARN=$((WARN + 1))
+fi
+
+# 10f. Sticky CTA gating — pasek widoczny od 0px kanibalizuje hero (kanon H.7: dwuwarunkowy IO)
+if [ "$STICKY" -ge 1 ] 2>/dev/null || grep -qE 'class="[^"]*sticky-cta' "$FILE"; then
+  IO_GATE=$(grep -cE "IntersectionObserver" "$FILE" || true)
+  if [ "$IO_GATE" -ge 1 ]; then
+    echo "  ✅ Sticky CTA ma gating (IntersectionObserver)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Sticky CTA bez gatingu IO — widoczny od 0px zasłania hero-CTA (kanon 04-design H.7)"
+    WARN=$((WARN + 1))
+  fi
+fi
+
+# 10g. Uczciwy social proof: liczby opinii/rating wymagają disclaimera (Omnibus/UOKiK)
+SP_NUM=$(grep -oiE "[0-9][0-9 .]{0,6}(opini|recenzj|zadowolonych klient)" "$FILE" | wc -l)
+SP_DISC=$(grep -ciE "charakter poglądowy|faza wprowadzenia|dane poglądowe" "$FILE" || true)
+if [ "$SP_NUM" -eq 0 ]; then
+  echo "  ✅ Social proof bez fabrykowanych liczb (framing 'pierwsze opinie' OK)"
+  PASS=$((PASS + 1))
+elif [ "$SP_DISC" -ge 1 ]; then
+  echo "  ✅ Liczby social proof z disclaimerem poglądowym w stopce"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Liczby opinii BEZ disclaimera — klient wklei fejk do sklepu (Omnibus; wzorzec cervana: stopka 'dane poglądowe')"
+  WARN=$((WARN + 1))
+fi
+
+# 10h. Fake press/cert logos — claim bez pokrycia = UOKiK
+PRESS=$(grep -cE "VOGUE|FORBES|ELLE|WIRED|\bNYT\b" "$FILE" || true)
+if [ "$PRESS" -eq 0 ]; then
+  echo "  ✅ Zero fabrykowanych logotypów prasy"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  $PRESS logotypów prasy (VOGUE/FORBES/...) — fabrykowany authority claim, usuń lub zamień na placeholdery certyfikatów"
+  WARN=$((WARN + 1))
+fi
+
 # ─── 11. Section completeness — wszystkie 14 sekcji obecne ───
 echo ""
 echo "🧱 11. Kompletność sekcji (wszystkie 14)"

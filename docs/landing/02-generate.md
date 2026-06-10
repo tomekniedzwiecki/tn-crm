@@ -1142,109 +1142,26 @@ processLogo();
 
 ---
 
-## Conversion Toolkit (CRO)
+## Self-contained — ZERO zewnętrznych skryptów (v5.0)
 
-**ZAWSZE dodawaj Conversion Toolkit** do każdego landing page, aby zwiększyć konwersję.
+> **Usunięto (v5.0): sekcję „Conversion Toolkit (CRO)".** Nakazywała zewnętrzny
+> `<script src="/landing-pages/shared/conversion-toolkit.js">` — martwy po copy-paste
+> do CMS TakeDrop (landing trafia do klienta jako JEDEN plik), a jego komponenty
+> (fake live visitors, stock counter `initial:20`, evergreen countdown) to fabrykowany
+> social proof = ryzyko UOKiK/Omnibus przenoszone na klienta + dokładnie ta „ciężkość",
+> za którą wycofano Conversion Atlas. Memory: `feedback-landing-self-contained.md`.
 
-### Komponenty dostępne w toolkit
+**Twarde zasady:**
 
-| Komponent | Wpływ na konwersję |
-|-----------|-------------------|
-| Exit Intent Popup | +15-20% |
-| Urgency Timer (evergreen 24h) | +9-15% |
-| Stock Counter | +10-12% |
-| Social Proof Toast | +5-8% |
-| Live Visitors | +3-5% |
-| Floating CTA | +5-10% |
-| Progress Bar | engagement |
-
-### Integracja
-
-Dodaj przed `</body>`:
-
-```html
-<script src="/landing-pages/shared/conversion-toolkit.js"></script>
-<script>
-  document.addEventListener('DOMContentLoaded', function() {
-    ConversionToolkit.init({
-      brand: {
-        primary: '[KOLOR-ACCENT]',
-        secondary: '[KOLOR-PRIMARY]',
-        name: '[NAZWA-MARKI]',
-        ctaUrl: '#offer'
-      },
-      exitPopup: {
-        enabled: true,
-        headline: 'Czekaj! Nie przegap tej okazji',
-        subheadline: '[OFERTA SPECJALNA]',
-        ctaText: 'Odbierz ofertę',
-        dismissText: 'Nie, dziękuję'
-      },
-      urgency: {
-        enabled: true,
-        countdown: { enabled: true, position: 'both', text: 'Oferta wygasa za:' },
-        stock: { enabled: true, initial: 20, min: 3 }
-      },
-      socialProof: {
-        enabled: true,
-        liveVisitors: { enabled: true },
-        recentPurchases: { enabled: true }
-      },
-      scrollCTA: { enabled: true, text: 'Zamów teraz', pulse: true },
-      progressBar: { enabled: true },
-      extraCTAs: { enabled: true }
-    });
-  });
-</script>
-```
-
-Pełna dokumentacja: `/landing-pages/shared/README.md`.
-
-**WAŻNE:** Toolkit automatycznie dodaje klasę `ct-has-urgency-bar` do body i przesuwa header o 52px (44px na mobile). Header landing page MUSI mieć `position: fixed; top: 0;` aby to działało.
-
-### Co landing page MUSI mieć (dla integracji z toolkit)
-
-#### 1. Header z `position: fixed`
-```css
-.header {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-  background: #FFFFFF;
-}
-```
-
-#### 2. Hero z padding dla headera
-```css
-.hero { padding-top: [wysokość headera + margines]; }
-
-/* Toolkit AUTOMATYCZNIE doda: */
-/* body.ct-has-urgency-bar .header { top: 52px; } */
-/* body.ct-has-urgency-bar { padding-top: 52px; } */
-```
-
-Jeśli chcesz dodatkowy padding w hero dla urgency bar:
-```css
-body.ct-has-urgency-bar .hero {
-  padding-top: [bazowy padding + ~50px];
-}
-```
-
-#### 3. NIE dodawaj własnego sticky CTA
-Toolkit ma wbudowany `mobileBar` — nie twórz duplikatu `.sticky-cta`!
-
-### Breakpoints Reference
-
-| Breakpoint | Urgency Bar | Header Offset | Komponenty |
-|------------|-------------|---------------|------------|
-| >768px (desktop) | 52px | top: 52px | Floating CTA, Sticky Bar |
-| ≤768px (mobile) | 44px | top: 44px | Mobile Bottom Bar |
-| ≤480px (small) | 44px | top: 44px | Mniejsze fonty/spacing |
-
-### Częste błędy do unikania
-
-1. **Duplikat CTA** — nie dodawaj `.sticky-cta` gdy używasz toolkit
-2. **Header bez `position: fixed`** — toolkit wymaga
-3. **Nadpisywanie stylów toolkit** — nie pisz własnych dla `.ct-*` klas
-4. **Brak padding w hero** — hero musi mieć padding na header
+1. **Cały JS inline** w `index.html`. ZERO `<script src>` — względnych, do crm.*, do CDN
+   (unpkg/jsdelivr). Landing musi działać identycznie po wklejeniu do TakeDrop.
+2. **Sticky CTA mobile budujesz INLINE** wg kanonu H.7 w `04-design.md` (gating
+   dwuwarunkowy + stack floating widgets bottom:88px na ≤720px).
+3. **Zero fake-elementów konwersyjnych**: live visitors, stock countery z palca,
+   evergreen countdown = ZAKAZ (Omnibus). Realne elementy konwersyjne (trust przy CTA,
+   linia dostawy, gwarancja) → `04-design.md` sekcja H.
+4. Wyjątek (TYLKO żywe sklepy Etap 5, dodawane PO podpięciu sklepu, nie w generacji):
+   tracking GTM / pixel — wtedy też Cookie Banner (patrz kanoniczna tabela 14 sekcji).
 
 ---
 
@@ -1261,7 +1178,7 @@ Toolkit ma wbudowany `mobileBar` — nie twórz duplikatu `.sticky-cta`!
 - [ ] **Placeholdery z briefem fotografa** dla wszystkich brakujących obrazów (4-polowe!)
 - [ ] CTA buttony linkują do #offer
 - [ ] Meta tags (title, description, OG image z pełnym URL)
-- [ ] **Conversion Toolkit zintegrowany**
+- [ ] **ZERO zewnętrznych `<script src>`** — landing jest copy-paste do TakeDrop; cały JS inline (v5.0)
 - [ ] **PageSpeed Optimization** (preconnect, fetchpriority, lazy loading) — patrz [`reference/pagespeed.md`](reference/pagespeed.md)
 - [ ] **Header `#FFFFFF` solid** (NIE rgba+backdrop) — patrz safety.md #9
 - [ ] **Fonty z ``** — patrz safety.md #10
