@@ -322,15 +322,15 @@ https://pagespeed.web.dev/analysis?url=https://tn-crm.vercel.app/landing-pages/[
 > Wprowadzone 2026-05-21. PageSpeed Insights jest **post-deploy** — czekasz aż Vercel postawi URL, dopiero testujesz. Chrome-devtools MCP mierzy LCP/CLS/FCP/INP **lokalnie z `file://`** zanim push'niesz. Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).
 
 ```
-chrome-devtools.new_page(viewport={width:375, height:812, isMobile:true})
-chrome-devtools.navigate(url=file:///c:/repos_tn/tn-crm/landing-pages/[slug]/index.html)
-chrome-devtools.record_traces(throttling='mobile_3g_fast')
-chrome-devtools.analyze_insights()
+mcp__chrome-devtools__new_page(...) + emulate(375x812, mobile)
+mcp__chrome-devtools__navigate_page(url=file:///c:/repos_tn/tn-crm/landing-pages/[slug]/index.html)
+mcp__chrome-devtools__performance_start_trace(reload=true, autoStop=true)
+mcp__chrome-devtools__performance_analyze_insight(...)
 ```
 
 **ALTERNATYWNIE Lighthouse audit (pełniejszy raport z rekomendacjami):**
 ```
-chrome-devtools.lighthouse_audits(
+mcp__chrome-devtools__lighthouse_audit(
   url='https://tn-crm.vercel.app/landing-pages/[slug]/',
   categories=['performance', 'accessibility', 'best-practices', 'seo'],
   throttling='mobile_3g_fast',

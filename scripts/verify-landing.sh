@@ -900,6 +900,39 @@ if [ -f "$BRIEF" ] && grep -q "^## 11\." "$BRIEF"; then
   fi
 fi
 
+# ─── 15. Zadeklarowane = zbudowane: warianty sekcji (v5.0 — rollout WARN→FAIL) ───
+# Deklaracja w briefie sekcji 9 (`- **Hero:** H4 ...`) → klasa FROZEN w HTML.
+if [ -f "$BRIEF" ] && grep -qE "^## 9\." "$BRIEF"; then
+  echo ""
+  echo "🧩 15. Zadeklarowane = zbudowane (warianty z briefu sekcji 9)"
+  SEC9=$(awk '/^## 9\./,/^## 10\.|^---$/' "$BRIEF" | tr -d '\r')
+  frozen_class() {
+    case "$1" in
+      H1) echo hero-v-split;; H2) echo hero-v-fullbleed;; H3) echo hero-v-dashboard;;
+      H4) echo hero-v-numeral;; H5) echo hero-v-typo;; H6) echo hero-v-persona;;
+      H7) echo hero-v-macro;; H8) echo hero-v-price;; H9) echo hero-v-video;; H10) echo hero-v-ba;;
+      F1) echo feat-v-bento;; F2) echo feat-v-asym;; F3) echo feat-v-linear;;
+      F4) echo feat-v-mockups;; F5) echo feat-v-scroll;; F6) echo feat-v-sticky;;
+      T1) echo testi-v-grid;; T2) echo testi-v-ba;; T3) echo testi-v-video;;
+      T4) echo testi-v-ugc;; T5) echo testi-v-single;; T6) echo testi-v-certs;;
+      *) echo "";;
+    esac
+  }
+  for kind in Hero Features Testimonials; do
+    VID=$(echo "$SEC9" | grep -oE "\*\*$kind:\*\*[[:space:]]*[HFT][0-9]{1,2}" | head -1 | grep -oE "[HFT][0-9]{1,2}" || true)
+    [ -z "$VID" ] && continue
+    FC=$(frozen_class "$VID")
+    [ -z "$FC" ] && continue
+    if grep -qE "class=\"[^\"]*$FC" "$FILE"; then
+      echo "  ✅ $kind: $VID zadeklarowany → klasa $FC obecna"
+      PASS=$((PASS + 1))
+    else
+      echo "  ⚠️  $kind: brief deklaruje $VID, ale klasa FROZEN '$FC' NIEOBECNA w HTML (deklaracja ≠ realizacja; landingi sprzed v5.0 — dopisz klasę do <section>)"
+      WARN=$((WARN + 1))
+    fi
+  done
+fi
+
 # ─── Summary ───
 echo ""
 echo "═══════════════════════════════════════════════════════════"

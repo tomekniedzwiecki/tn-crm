@@ -136,9 +136,9 @@ Pierwsze uruchomienie pobiera Chromium (~150 MB, ~1 min).
 ### 2.5.1 — Console errors gate
 
 ```
-chrome-devtools.navigate(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
-chrome-devtools.wait_for_events(event=load)
-chrome-devtools.console_messages(level=error)
+mcp__chrome-devtools__navigate_page(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
+mcp__chrome-devtools__navigate_page(url=...) — load czeka automatycznie; na elementy: mcp__chrome-devtools__wait_for(text=...)
+mcp__chrome-devtools__list_console_messages() — filtruj level=error
 ```
 
 **Reguła:** ZERO `error`-level messages. Najczęstsze winowajcy:
@@ -152,9 +152,9 @@ chrome-devtools.console_messages(level=error)
 ### 2.5.2 — Performance metrics (LCP/CLS/FCP/INP)
 
 ```
-chrome-devtools.record_traces(url=..., emulate=mobile)
-chrome-devtools.analyze_insights()
-chrome-devtools.lighthouse_audits(categories=['performance'], throttling='mobile_3g_fast')
+mcp__chrome-devtools__performance_start_trace(reload=true, autoStop=true) — po emulate mobile
+mcp__chrome-devtools__performance_analyze_insight(...)
+mcp__chrome-devtools__lighthouse_audit (kategorie performance+accessibility, emulacja mobile)
 ```
 
 **Targets (zgodne z [`reference/pagespeed.md`](reference/pagespeed.md) sekcja 1):**
@@ -180,45 +180,45 @@ Headline: każdy click below jest **autonomicznym testem** — failure jednego n
 
 ```
 # 1. CTA hero scrolluje do #offer
-chrome-devtools.click(selector='.hero .btn-primary')
-chrome-devtools.wait_for_events(event=scroll_end, timeout=2000)
-chrome-devtools.gather_metrics(metrics=['scroll_y'])
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '.hero .btn-primary')
+mcp__chrome-devtools__evaluate_script(...) + pauza ~500ms (event scroll_end NIE istnieje w MCP)
+mcp__chrome-devtools__evaluate_script(() => window.scrollY)
 # Oczekiwane: scroll_y > 0 i offer-box w viewport
 ```
 
 ```
 # 2. Sticky CTA mobile (375×812) klikalny
-chrome-devtools.new_page(viewport={width:375, height:812})
-chrome-devtools.navigate(url=...)
-chrome-devtools.wait_for_events(event=load)
-chrome-devtools.click(selector='.sticky-cta, .ct-mobile-bar')
+mcp__chrome-devtools__new_page(...) + mcp__chrome-devtools__emulate(viewport 375x812, mobile, touch)
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__navigate_page(url=...) — load czeka automatycznie; na elementy: mcp__chrome-devtools__wait_for(text=...)
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '.sticky-cta, .ct-mobile-bar')
 # Oczekiwane: scroll do #offer LUB modal opens
 ```
 
 ```
 # 3. Reels lightbox otwiera + zamyka (jeśli landing ma sekcję reels)
-chrome-devtools.click(selector='.reels-card:first-child')
-chrome-devtools.wait_for_events(event=animation_end, timeout=1500)
-chrome-devtools.snapshot(name='reels_lightbox_open')
-chrome-devtools.click(selector='.reels-lightbox-close')
-chrome-devtools.wait_for_events(event=animation_end, timeout=1500)
-chrome-devtools.snapshot(name='reels_lightbox_closed')
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '.reels-card:first-child')
+pauza ~1500ms przez evaluate_script (event animation_end NIE istnieje w MCP)
+mcp__chrome-devtools__take_screenshot(nazwa: 'reels_lightbox_open')
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '.reels-lightbox-close')
+pauza ~1500ms przez evaluate_script (event animation_end NIE istnieje w MCP)
+mcp__chrome-devtools__take_screenshot(nazwa: 'reels_lightbox_closed')
 # Oczekiwane: snapshot 1 ma .reels-lightbox.open, snapshot 2 NIE
 ```
 
 ```
 # 4. FAQ accordion otwiera się
-chrome-devtools.click(selector='.faq-item:first-child .faq-question')
-chrome-devtools.snapshot(name='faq_open')
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '.faq-item:first-child .faq-question')
+mcp__chrome-devtools__take_screenshot(nazwa: 'faq_open')
 # Oczekiwane: .faq-item ma class .active LUB .faq-answer height > 0
 ```
 
 ```
 # 5. Mobile menu (hamburger)
-chrome-devtools.new_page(viewport={width:375, height:812})
-chrome-devtools.navigate(url=...)
-chrome-devtools.click(selector='#hamburger, .hamburger')
-chrome-devtools.snapshot(name='mobile_menu_open')
+mcp__chrome-devtools__new_page(...) + mcp__chrome-devtools__emulate(viewport 375x812, mobile, touch)
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '#hamburger, .hamburger')
+mcp__chrome-devtools__take_screenshot(nazwa: 'mobile_menu_open')
 # Oczekiwane: #mobileMenu ma class .open / .active
 ```
 
@@ -227,9 +227,9 @@ chrome-devtools.snapshot(name='mobile_menu_open')
 `verify-landing.sh` sprawdza ŻE `html.js` gate istnieje. **Chrome-devtools MCP sprawdza CZY działa.** Najgroźniejszy bug w historii landingów: cała strona ivory plama bo `.fade-in{opacity:0}` bez safety timeout.
 
 ```
-chrome-devtools.navigate(url=...)
-chrome-devtools.wait_for_events(event=load)
-chrome-devtools.script_evaluation(code=`
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__navigate_page(url=...) — load czeka automatycznie; na elementy: mcp__chrome-devtools__wait_for(text=...)
+mcp__chrome-devtools__evaluate_script(function=`
   const els = document.querySelectorAll('.fade-in');
   const invisible = Array.from(els).filter(el => {
     const cs = window.getComputedStyle(el);
@@ -248,17 +248,17 @@ chrome-devtools.script_evaluation(code=`
 ### 2.5.5 — Screenshoty 3 viewports przez MCP (zamiast bash scriptu)
 
 ```
-chrome-devtools.new_page(viewport={width:1440, height:900})
-chrome-devtools.navigate(url=...)
-chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/desktop_full.png')
+mcp__chrome-devtools__new_page(...) + emulate(1440x900)
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__take_screenshot(fullPage=true, plik: 'C:/tmp/[slug]_shots/desktop_full.png')
 
-chrome-devtools.new_page(viewport={width:768, height:1024})
-chrome-devtools.navigate(url=...)
-chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/tablet_full.png')
+mcp__chrome-devtools__new_page(...) + emulate(768x1024)
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__take_screenshot(fullPage=true, plik: 'C:/tmp/[slug]_shots/tablet_full.png')
 
-chrome-devtools.new_page(viewport={width:375, height:812})
-chrome-devtools.navigate(url=...)
-chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/mobile_full.png')
+mcp__chrome-devtools__new_page(...) + mcp__chrome-devtools__emulate(viewport 375x812, mobile, touch)
+mcp__chrome-devtools__navigate_page(url=...)
+mcp__chrome-devtools__take_screenshot(fullPage=true, plik: 'C:/tmp/[slug]_shots/mobile_full.png')
 ```
 
 Po tym pomiń Krok 3 (Playwright screenshoty) — masz już artefakty. Przejdź do Kroku 4 (Read screenshots).
@@ -266,7 +266,7 @@ Po tym pomiń Krok 3 (Playwright screenshoty) — masz już artefakty. Przejdź 
 ### 2.5.6 — Cleanup
 
 ```
-chrome-devtools.close_page()  # zamknij wszystkie otwarte taby
+mcp__chrome-devtools__close_page()  # zamknij wszystkie otwarte taby
 ```
 
 ---
@@ -422,6 +422,28 @@ Nie commituj skryptów screenshot do repo — są utility.
 | **Trust strip rozjeżdża się** | Mobile: każdy element w nowej linii | `.trust-item { white-space:nowrap }` + na ≤900px `flex-direction:column` | patterns #15 |
 | **„Ł" w UPPERCASE wychodzi nad belkę** | Italiana renderuje L jak apostrof | Wymień Italiana → Cormorant Garamond | safety #7 |
 | **Header rgba+backdrop nieczytelny mobile** | Słaby kontrast nad treścią | `background: #FFFFFF` solid | safety #9 |
+
+---
+
+## Krok 8 — Lighthouse mobile PO deployu (v5.0, OBOWIĄZKOWY przed "done")
+
+Kolejność: commit+push → poczekaj na Vercel → audit na LIVE URL → fix+re-push jeśli trzeba.
+
+```
+mcp__chrome-devtools__navigate_page(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
+mcp__chrome-devtools__lighthouse_audit (kategorie: performance + accessibility, emulacja mobile)
+```
+
+| Wynik | Severity (rollout) | Akcja |
+|---|---|---|
+| Performance < 90 | **WARN** (po baseline z 10 landingów → FAIL; data wpisania progu: TBD) | wykonaj checklist [`reference/pagespeed.md`](reference/pagespeed.md), re-push |
+| Accessibility < 90 | **WARN** — pierwszy check kontrastu w pipeline | popraw kontrasty/aria, re-push |
+| MCP niedostępny | SKIP z adnotacją `LIGHTHOUSE: SKIPPED (no MCP)` w raporcie końcowym | AUTO-RUN kontynuuje — Playwright fallback NIE zastępuje Lighthouse i nie udajemy, że tak |
+
+**No-JS regression (fallback Playwright, gdy MCP brak):** uruchom `screenshot-landing.sh`
+— skrypt loguje błędy konsoli; dodatkowo otwórz stronę z wyłączonym JS (Playwright
+`javaScriptEnabled: false`) i sprawdź, że treść above-fold jest widoczna (safety #2 gate).
+Landing NIE może iść na deploy z `ReferenceError` w JS.
 
 ---
 

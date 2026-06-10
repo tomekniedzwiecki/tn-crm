@@ -1149,6 +1149,56 @@ Pattern 23 wymaga `.final-cta-figure` wewnątrz sekcji `.cta-banner` / `.final-c
 
 ---
 
+## 25. Cookie Consent — kanon RODO (v5.0; TYLKO gdy landing ma tracking)
+
+> **Demo bez GTM/pixela = BEZ banneru w ogóle** (kanoniczna tabela 14 sekcji, 02-generate).
+> Banner dotyczy WYŁĄCZNIE żywych sklepów Etap 5 z podpiętym trackingiem.
+> ⛔ NIGDY auto-zgoda „Kontynuując korzystanie wyrażasz zgodę" ani banner z samym „Akceptuję"
+> — opcja ODRZUĆ musi być RÓWNORZĘDNA (ten sam rozmiar/waga przycisku). Ryzyko RODO
+> przechodzi na klienta końcowego (audyt 2026-06: kafina = żywy sklep z auto-zgodą).
+
+```html
+<div class="cookie-banner" id="cookieBanner">
+  <p>Używamy plików cookie do analityki i mierzenia skuteczności reklam.
+     <a href="/polityka-prywatnosci">Dowiedz się więcej</a></p>
+  <div class="cookie-actions">
+    <button class="cookie-btn cookie-accept" id="cookieAccept">Akceptuję</button>
+    <button class="cookie-btn cookie-decline" id="cookieDecline">Odrzucam</button>
+  </div>
+</div>
+```
+
+```css
+.cookie-banner{position:fixed;left:16px;right:16px;bottom:16px;z-index:250;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:12px;padding:18px;box-shadow:0 12px 40px -12px rgba(0,0,0,.25);display:none;max-width:520px;margin:0 auto}
+.cookie-banner.show{display:block}
+.cookie-banner p{font-size:13.5px;line-height:1.55;margin:0 0 12px}
+.cookie-actions{display:flex;gap:10px}
+.cookie-btn{flex:1;padding:12px;font-size:13px;font-weight:600;border-radius:8px;cursor:pointer;min-height:44px}
+.cookie-accept{background:var(--primary);color:#fff;border:0}
+.cookie-decline{background:#fff;color:inherit;border:1px solid rgba(0,0,0,.25)} /* RÓWNORZĘDNY rozmiar! */
+```
+
+```js
+// Tracking odpala się DOPIERO po zgodzie (consent-gated):
+const consent = localStorage.getItem('cookie_consent'); // 'granted' | 'denied' | null
+if (!consent) setTimeout(() => document.getElementById('cookieBanner').classList.add('show'), 1500);
+if (consent === 'granted') initTracking(); // GTM/pixel TYLKO tutaj
+document.getElementById('cookieAccept').addEventListener('click', () => {
+  localStorage.setItem('cookie_consent', 'granted');
+  document.getElementById('cookieBanner').classList.remove('show');
+  initTracking();
+});
+document.getElementById('cookieDecline').addEventListener('click', () => {
+  localStorage.setItem('cookie_consent', 'denied'); // ZAPAMIĘTANA odmowa — banner nie wraca
+  document.getElementById('cookieBanner').classList.remove('show');
+});
+```
+
+**Powiązane minimum a11y/meta (v5.0):** FAQ accordion z `aria-expanded` na przycisku pytania;
+`og:image` docelowo dedykowane 1200×630 (logo OK tylko jako fallback w demo).
+
+---
+
 ## Kiedy NIE używać tych patternów
 
 - **Sportowa/tech/gaming** marka → kierunek retro-futuristic, brutalist. Te patterny są za „miękkie".

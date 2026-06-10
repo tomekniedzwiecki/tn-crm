@@ -9,7 +9,7 @@
 
 **Nie-warianty (Tier 3):** Offer box, Header, Footer, FAQ, Final CTA, Sticky CTA, Cookie Banner — te pozostają standardowe (patrz [`02-generate.md`](../02-generate.md)). Zmieniać je = ryzyko dla konwersji.
 
-**Klasy CSS — konwencja:** każdy wariant zawiera w nagłówku **„Klasy wymagane"** — muszą być obecne żeby `verify-landing.sh` przeszedł. Resztę klas (lokalnych dla wariantu) możesz modyfikować.
+**Klasy CSS — konwencja:** każdy wariant zawiera w nagłówku **„Klasy wymagane"** (muszą być obecne żeby `verify-landing.sh` przeszedł) oraz **„Klasę identyfikującą (FROZEN)"** `*-v-*` (v5.0) — ta JEDNA klasa jest NIEMODYFIKOWALNA: po niej verify-landing sprawdza zgodność deklaracji z briefu sekcji 9 z faktycznym HTML („zadeklarowane = zbudowane"). Resztę klas (lokalnych dla wariantu) możesz modyfikować.
 
 ---
 
@@ -24,6 +24,7 @@
 **Price:** wszystkie.
 
 **Klasy wymagane:** `<section class="hero">`, wewnątrz `class="... hero-figure hero-product"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-split` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero">
@@ -69,6 +70,7 @@
 **Price:** mid-premium (800+).
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-image"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-fullbleed` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-fullbleed">
@@ -115,6 +117,7 @@
 **Price:** premium (1000+).
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-mockup"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-dashboard` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero">
@@ -170,6 +173,7 @@
 **Price:** premium-luxury (1500+).
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-numeral` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 > Pełen snippet w [`patterns.md` #1 Oversized Editorial Numeral](patterns.md). Tu skrócona wersja:
 
@@ -216,6 +220,7 @@
 **Price:** wszystkie (copy-driven).
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure"` (zdjęcie mniejsze, poniżej headline).
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-typo` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-oversized">
@@ -262,6 +267,7 @@
 **Price:** mid-premium.
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-image"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-persona` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-portrait">
@@ -311,6 +317,7 @@
 **Price:** premium-luxury.
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-image"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-macro` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-macro">
@@ -354,6 +361,7 @@
 **Price:** budget-mid (<800 zł).
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-product"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-price` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-price">
@@ -412,6 +420,7 @@
 **Price:** premium-luxury.
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-image"` (placeholder na video poster).
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-video` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-video">
@@ -460,6 +469,7 @@
 **Price:** wszystkie.
 
 **Klasy wymagane:** `<section class="hero">`, `class="... hero-figure hero-image"` (przynajmniej 1 placeholder).
+**Klasa identyfikująca (FROZEN, v5.0):** `hero-v-ba` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="hero hero-ba">
@@ -527,6 +537,7 @@
 **Liczba features:** dokładnie 4.
 
 **Klasy wymagane:** `<section class="solution">` lub `class="solution bento"`, min 4 `<div class="tile ...">` z placeholder inside.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-bento` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="solution">
@@ -563,6 +574,7 @@
 **Liczba features:** 5-6.
 
 **Klasy wymagane:** `<section class="solution">`, min 4 `<article class="tile ...">`.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-asym` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 > Pełen snippet: [`patterns.md` #5 Asymmetric Bento](patterns.md). Tu struktura:
 
@@ -604,6 +616,7 @@
 **Liczba features:** 3-5.
 
 **Klasy wymagane:** `<section class="solution features">`, min 4 `<div class="tile ...">` lub `<article class="feature-row">`.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-linear` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="solution features">
@@ -660,6 +673,7 @@
 **Liczba features:** 4.
 
 **Klasy wymagane:** `<section class="solution features">`, min 4 `<div class="tile ...">` z bento-image.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-mockups` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="solution features">
@@ -712,6 +726,7 @@
 **Liczba features:** 6-10.
 
 **Klasy wymagane:** `<section class="solution features">`, min 4 tile.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-scroll` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="solution features">
@@ -754,6 +769,7 @@
 **Liczba features:** 3-4 „beats".
 
 **Klasy wymagane:** `<section class="solution features">`, ≥4 bento-image placeholderów wewnątrz.
+**Klasa identyfikująca (FROZEN, v5.0):** `feat-v-sticky` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="solution features">
@@ -819,6 +835,7 @@
 **Kategoria:** wszystkie (default).
 
 **Klasy wymagane:** `<section class="testimonials voices personas">`, ≥2 `class="... testi-avatar-figure"` lub `avatar-figure`/`voice-figure`.
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-grid` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials voices personas">
@@ -864,6 +881,7 @@
 **Kategoria:** transformation, productivity, cost-saving, wellness measurable.
 
 **Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-ba` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials social-proof personas">
@@ -918,6 +936,7 @@
 **Kategoria:** lifestyle, beauty, fitness, high-trust products z video production.
 
 **Klasy wymagane:** `<section class="testimonials voices personas">`, ≥2 `class="... voice-figure"` (thumbnail video = placeholder).
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-video` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials voices personas">
@@ -968,6 +987,7 @@
 **Kategoria:** beauty, fashion DTC, food/drink lifestyle, community brand.
 
 **Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` lub `voice-figure`.
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-ugc` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials social-proof personas">
@@ -1008,6 +1028,7 @@
 **Kategoria:** premium, luxury, endorsed product z 1 strong voice.
 
 **Klasy wymagane:** `<section class="testimonials voices personas">`, 1+ `class="... testi-avatar-figure"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-single` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials voices personas">
@@ -1058,6 +1079,7 @@
 **Kategoria:** evidence, premium, produkt z papierami.
 
 **Klasy wymagane:** `<section class="testimonials social-proof personas">`, ≥2 `class="... avatar-figure"` (atest = placeholder).
+**Klasa identyfikująca (FROZEN, v5.0):** `testi-v-certs` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
 
 ```html
 <section class="testimonials social-proof personas">
@@ -1183,7 +1205,10 @@ Po wyborze 3 wariantów dopisz na końcu `_brief.md` sekcję:
 - **Testimonials:** T2 Before/After ze statsami — transformacja mierzalna (czas / koszt / bezpieczeństwo)
 ```
 
-To nie jest blokujące dla verify-brief (sekcja opcjonalna), ale zalecane dla dokumentacji decyzji.
+**v5.0:** sekcja 9 jest PARSOWANA przez verify-landing („zadeklarowane = zbudowane"):
+deklaracja `- **Hero:** H4 ...` mapuje się na klasę FROZEN `hero-v-numeral`, która MUSI być
+w HTML (rollout: WARN → FAIL). Analogicznie Features/Testimonials. Dlatego format linii
+musi zaczynać się dokładnie od `- **Hero:** H<N>` / `- **Features:** F<N>` / `- **Testimonials:** T<N>`.
 
 ---
 

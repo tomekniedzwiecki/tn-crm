@@ -14,6 +14,10 @@
 ## Workflow
 
 ```
+0. node scripts/verify-mobile.mjs [slug]               ← v5.0: OBLICZENIOWY gate (360/375/412)
+   — h1+CTA in-fold, hero ≤60vh, per-element overflow, tap targets ≥40px
+   — artefakt: landing-pages/[slug]/_mobile-review.md (commitowany)
+   — silnik: Playwright file:// (chrome-devtools MCP NIE widzi local — feedback-chrome-devtools-local-server-unreachable)
 1. Otwórz C:/tmp/[slug]_shots/mobile_full.png          (Read tool)
 2. Otwórz mobile_hero.png + mobile_900.png + 1800 + 2700
 3. Przejdź checklist poniżej sekcja po sekcji
@@ -30,14 +34,14 @@
 
 ```
 # Setup mobile viewport
-chrome-devtools.new_page(viewport={width:375, height:812, isMobile:true, hasTouch:true})
-chrome-devtools.navigate(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
-chrome-devtools.wait_for_events(event=load)
+mcp__chrome-devtools__new_page(...) + mcp__chrome-devtools__emulate(viewport 375x812x3, mobile, touch — NIGDY resize_page, memory feedback-chrome-devtools-resize-unreliable)
+mcp__chrome-devtools__navigate_page(url=https://tn-crm.vercel.app/landing-pages/[slug]/)
+mcp__chrome-devtools__navigate_page(url=...) — load czeka automatycznie; na elementy: mcp__chrome-devtools__wait_for(text=...)
 ```
 
 **A. Touch target sizes (obszar A z checklisty)** — sprawdź computed style wszystkich CTA naraz:
 ```
-chrome-devtools.script_evaluation(code=`
+mcp__chrome-devtools__evaluate_script(function=`
   const ctas = document.querySelectorAll('.btn-primary, .cta-button, .sticky-cta, .ct-mobile-bar button, .nav-link');
   Array.from(ctas).map(el => {
     const r = el.getBoundingClientRect();
@@ -49,7 +53,7 @@ Wynik MUSI być `[]` (zero elementów < 44px wysokości).
 
 **B. Overflow-x leaks (obszar H — najczęstszy mobile bug):**
 ```
-chrome-devtools.script_evaluation(code=`
+mcp__chrome-devtools__evaluate_script(function=`
   const docW = document.documentElement.clientWidth;
   Array.from(document.body.querySelectorAll('*')).filter(el => {
     const r = el.getBoundingClientRect();
@@ -65,7 +69,7 @@ Wynik MUSI być `[]`. Najczęstsi winowajcy: editorial numerals `::before` bez `
 
 **C. Sticky CTA vs footer overlap:**
 ```
-chrome-devtools.script_evaluation(code=`
+mcp__chrome-devtools__evaluate_script(function=`
   window.scrollTo(0, document.body.scrollHeight);
   const sticky = document.querySelector('.sticky-cta, .ct-mobile-bar');
   const footer = document.querySelector('footer');
@@ -83,9 +87,9 @@ chrome-devtools.script_evaluation(code=`
 
 **D. Hamburger menu opens (obszar F):**
 ```
-chrome-devtools.click(selector='#hamburger, .hamburger')
-chrome-devtools.wait_for_events(event=animation_end, timeout=600)
-chrome-devtools.script_evaluation(code=`
+mcp__chrome-devtools__click(uid z take_snapshot; selektor: '#hamburger, .hamburger')
+pauza ~600ms (event animation_end NIE istnieje w MCP)
+mcp__chrome-devtools__evaluate_script(function=`
   const menu = document.querySelector('#mobileMenu, .mobile-menu');
   const cs = window.getComputedStyle(menu);
   return {
@@ -95,16 +99,16 @@ chrome-devtools.script_evaluation(code=`
   }
 `)
 ```
-Oczekiwane: `open_class: true, visible: true`. Po teście zamknij: `chrome-devtools.click(selector='#mobileMenu .mobile-link:first-child')`.
+Oczekiwane: `open_class: true, visible: true`. Po teście zamknij: `mcp__chrome-devtools__click(uid z take_snapshot; selektor: '#mobileMenu .mobile-link:first-child')`.
 
 **E. Mobile screenshoty (zamiast bash screencap):**
 ```
-chrome-devtools.screenshots(full_page=true, save_to='C:/tmp/[slug]_shots/mobile_full.png')
+mcp__chrome-devtools__take_screenshot(fullPage=true, plik: 'C:/tmp/[slug]_shots/mobile_full.png')
 # Mid-scroll capture:
-chrome-devtools.script_evaluation(code='window.scrollTo(0, 900)')
-chrome-devtools.screenshots(full_page=false, save_to='C:/tmp/[slug]_shots/mobile_900.png')
-chrome-devtools.script_evaluation(code='window.scrollTo(0, 1800)')
-chrome-devtools.screenshots(full_page=false, save_to='C:/tmp/[slug]_shots/mobile_1800.png')
+mcp__chrome-devtools__evaluate_script(function='window.scrollTo(0, 900)')
+mcp__chrome-devtools__take_screenshot(fullPage=false, plik: 'C:/tmp/[slug]_shots/mobile_900.png')
+mcp__chrome-devtools__evaluate_script(function='window.scrollTo(0, 1800)')
+mcp__chrome-devtools__take_screenshot(fullPage=false, plik: 'C:/tmp/[slug]_shots/mobile_1800.png')
 ```
 
 **Fallback:** jeśli MCP niedostępny — `bash scripts/screenshot-landing.sh [slug]` + ręczna inspekcja w DevTools.
@@ -465,9 +469,18 @@ Obejrzyj ponownie **mobile_full.png** + 3 mid-scroll viewporty. Kontynuuj iterac
 
 ---
 
-## Finalna mobile certyfikacja
+## Finalna mobile certyfikacja (v5.0 — obliczeniowa + jakościowa)
 
-Przed commitem odpowiedz TAK na wszystkie 5:
+**Warstwa 1 — OBLICZENIOWA (artefakt, nie deklaracja):**
+
+```bash
+node scripts/verify-mobile.mjs [slug]   # GATE: PASS wymagane (rollout: WARN dopuszczalny z adnotacją)
+```
+
+Wynik trafia do `landing-pages/[slug]/_mobile-review.md` — to artefakt certyfikacji
+(falsyfikowalny: liczby, selektory, viewporty), commitowany z landingiem.
+
+**Warstwa 2 — JAKOŚCIOWA (5 pytań — uzupełnia, nie zastępuje):**
 
 1. **Wrzuciłbym to na swój Instagram?** Ma być eye-candy, nie "CMS template"
 2. **Klient otworzyłby portfel w 30 sek?** Hero + CTA + trust + cena — wszystko above-fold or 1 scroll
