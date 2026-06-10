@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
     // Check if lead already exists
     const { data: existingLead, error: selectError } = await supabase
       .from('leads')
-      .select('id, created_at')
+      .select('id, created_at, status, activities')
       .eq('email', email)
       .maybeSingle()
 
@@ -121,6 +121,23 @@ Deno.serve(async (req) => {
       const hasSurveyData = data.weekly_hours || data.target_income || data.current_income || data.budget || data.experience
       if (hasSurveyData) {
         updates.survey_completed_at = new Date().toISOString()
+      }
+
+      // Returning lead: lead z terminalnego statusu lost/abandoned ktory ponownie
+      // wysyla zgloszenie wraca do "Nowy" — inaczej zostaje w starej kolumnie
+      // pipeline i nikt go nie widzi. Statusy aktywne (contacted/negotiation/...)
+      // oraz won NIE sa resetowane, zeby nie psuc trwajacej sprzedazy.
+      const REVIVE_FROM: Record<string, string> = { lost: 'Przegrany', abandoned: 'Porzucony' }
+      if (existingLead.status && REVIVE_FROM[existingLead.status]) {
+        updates.status = 'new'
+        updates.activities = [...(existingLead.activities || []), {
+          type: 'status_change',
+          content: `Status zmieniony: ${REVIVE_FROM[existingLead.status]} → Nowy (ponowne zgłoszenie z formularza)`,
+          created_at: new Date().toISOString(),
+          performed_by: null,
+          performed_by_name: 'System'
+        }]
+        console.log(`Reviving lead ${email} from status "${existingLead.status}" to "new"`)
       }
 
       if (Object.keys(updates).length > 0) {

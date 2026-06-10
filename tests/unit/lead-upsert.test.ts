@@ -208,6 +208,91 @@ describe('lead-upsert', () => {
   })
 
   /**
+   * TEST-LEAD-006: Returning lead - reset statusu lost/abandoned do "new"
+   * HIGH - lead wracajacy po miesiacach nie moze utknac w starej kolumnie pipeline
+   */
+  it('TEST-LEAD-006: should revive lost/abandoned lead to status "new" on resubmission', async () => {
+    const testEmail = generateTestEmail()
+    createdEmails.push(testEmail)
+
+    // Create lead
+    const response1 = await fetch(`${FUNCTIONS_URL}/lead-upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, name: 'Returning Lead' }),
+    })
+    const result1 = await response1.json()
+    createdLeadIds.push(result1.lead_id)
+
+    // Simulate abandonment (admin moved lead to terminal status months ago)
+    const serviceClient = createServiceClient()
+    await serviceClient
+      .from('leads')
+      .update({ status: 'abandoned' })
+      .eq('id', result1.lead_id)
+
+    // Lead resubmits the form
+    const response2 = await fetch(`${FUNCTIONS_URL}/lead-upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, name: 'Returning Lead' }),
+    })
+    const result2 = await response2.json()
+    expect(result2.success).toBe(true)
+    expect(result2.is_new).toBe(false)
+    expect(result2.lead_id).toBe(result1.lead_id)
+
+    // Status reset to "new" + activity logged
+    const { data: lead } = await serviceClient
+      .from('leads')
+      .select('status, activities')
+      .eq('id', result1.lead_id)
+      .single()
+
+    expect(lead?.status).toBe('new')
+    const lastActivity = (lead?.activities || []).slice(-1)[0]
+    expect(lastActivity?.type).toBe('status_change')
+    expect(lastActivity?.content).toContain('Nowy')
+  })
+
+  /**
+   * TEST-LEAD-007: Statusy aktywne i won NIE sa resetowane przy resubmisji
+   * HIGH - resubmisja nie moze cofac leada bedacego w trakcie sprzedazy
+   */
+  it('TEST-LEAD-007: should NOT reset active/won status on resubmission', async () => {
+    const testEmail = generateTestEmail()
+    createdEmails.push(testEmail)
+
+    const response1 = await fetch(`${FUNCTIONS_URL}/lead-upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, name: 'Active Lead' }),
+    })
+    const result1 = await response1.json()
+    createdLeadIds.push(result1.lead_id)
+
+    const serviceClient = createServiceClient()
+    await serviceClient
+      .from('leads')
+      .update({ status: 'negotiation' })
+      .eq('id', result1.lead_id)
+
+    await fetch(`${FUNCTIONS_URL}/lead-upsert`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail, name: 'Active Lead' }),
+    })
+
+    const { data: lead } = await serviceClient
+      .from('leads')
+      .select('status')
+      .eq('id', result1.lead_id)
+      .single()
+
+    expect(lead?.status).toBe('negotiation')
+  })
+
+  /**
    * Test dodatkowy: pola opcjonalne
    * Note: Not all fields may be persisted by lead-upsert - test what is available
    */
