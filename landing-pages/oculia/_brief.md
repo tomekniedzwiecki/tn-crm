@@ -168,3 +168,19 @@ Secondary signal: 4.8/5 z 1 247 opinii · 30 dni testu
 - Nº 08 — PYTANIA (FAQ)
 - Nº 09 — ZAMÓWIENIE (offer)
 - Final CTA → Footer
+
+---
+
+## 12. PHOTO SYSTEM (generowanie obrazów AI — 2026-06-10)
+
+> Referencja produktu (re-hostowana): `attachments/landing/oculia/product-ref.jpg`
+> Produkt: biały, błyszczący, składany masażer oczu (typu wizjer/gogle), szary regulowany pasek z tkaniny, panel kontrolny z czarnym wyświetlaczem LED z zielonymi ikonkami + przyciski M/power w miedziano-złotej ramce. Wewnątrz szare poduszki (grzewcze + powietrzne). Składany 180°.
+
+**Lighting:** miękkie naturalne światło boczne 45° z prawej; wieczorem ciepła lampka gold; do packshotów dyfuzyjne top-left. Bez studyjnej ostrości.
+**Paleta w scenach:** tła paper cream #F5F1EA; akcenty sage green #4F6E5C (aksamit fotela, podtony cieni); copper #C88B65 jako subtelny refleks; ink #1F2420 cienie; mist gray #A5AFA8 tkaniny.
+**Kadrowanie:** editorial, dużo negative space, produkt w dolnej/centralnej tercji, figure+figcaption.
+**Post:** 35mm film (Portra 400 / Eterna), subtelny grain, mild halation, lekko zdesaturowane ciepło.
+**Persona:** Magdalena, 34, manager, Warszawa — naturalny makijaż, spokój, oczy zamknięte.
+**Negatywy:** zero tekstu/watermarków, zero neonu, zero 3D-render/CGI look, zero stock-uśmiechów, zero zmyślonych przycisków/portów spoza referencji.
+
+**Wygenerowane sloty (10):** hero 4:5 · solution/product 1:1 · bento G·01 grafen 16:9 · bento G·02 poduszki 3:2 · bento G·03 panel 3:2 · bento G·04 mobilność 3:2 · how 1/2/3 4:3 · final-cta bg 16:9 (abstrakcyjne, bez referencji). Testimonials = inicjały M/S/E (twarzy NIE generujemy — etyka).
