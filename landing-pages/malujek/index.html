@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>document.documentElement.classList.add('js')</script>
+<title>Malujek — robot rysujący dla dzieci, bez ekranu</title>
+<meta name="description" content="Robot skanuje kartę, mówi słowo po angielsku i rysuje je na papierze. Dziecko ćwiczy rękę i pierwsze słowa — bez ekranu. 100 kart, gwarancja 30 dni.">
+<link rel="icon" type="image/png" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/malujek/favicon.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Malujek — robot rysujący dla dzieci">
+<meta property="og:description" content="Papier zamiast ekranu. Robot rysuje, dziecko naśladuje, Ty masz chwilę dla siebie.">
+<meta property="og:image" content="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/malujek/og.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#FAF6EF; --paper-2:#F3EEE1; --sage:#9CBF9A; --sage-deep:#74996F; --sage-soft:rgba(156,191,154,.16);
+  --coral:#FF8A75; --coral-deep:#EF6A52; --ink:#2B3A4A; --ink-soft:#46586A; --sky:#4FA8DC; --muted:#8A93A0;
+  --rule:rgba(43,58,74,.12); --rule-2:rgba(43,58,74,.07);
+  --font-display:'Nunito',system-ui,sans-serif; --font-body:'Nunito',system-ui,sans-serif; --script:'Caveat',cursive;
+  --shadow-card:0 18px 44px -22px rgba(43,58,74,.28); --shadow-soft:0 10px 30px -18px rgba(43,58,74,.22);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.65;font-size:17px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+h1,h2,h3,h4{font-family:var(--font-display);font-weight:800;line-height:1.12;letter-spacing:-.01em}
+img{max-width:100%;display:block}
+a{color:inherit;text-decoration:none}
+.container{max-width:1180px;margin:0 auto;padding:0 26px}
+.eyebrow{font-family:var(--script);font-size:25px;color:var(--coral-deep);line-height:1.3;font-weight:700;display:inline-block}
+.section-pad{padding:118px 0}
+.lead{font-size:19px;color:var(--ink-soft);line-height:1.7}
+.script-accent{font-family:var(--script);font-weight:700;color:var(--coral-deep);font-size:1.06em;line-height:.9}
+
+/* fade-in (safety gate) */
+html.js .fade-in{opacity:0;transform:translateY(34px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+html.js .fade-in.visible{opacity:1;transform:translateY(0)}
+@media (prefers-reduced-motion:reduce){html.js .fade-in{opacity:1;transform:none;transition:none}}
+
+/* botanical corner */
+.botanical-corner{position:absolute;width:104px;height:104px;opacity:.5;pointer-events:none;z-index:0}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;font-family:var(--font-display);font-weight:800;font-size:16px;line-height:1.3;padding:16px 28px;border-radius:999px;cursor:pointer;border:none;transition:transform .25s cubic-bezier(.34,1.4,.5,1),box-shadow .25s;position:relative;overflow:hidden}
+.btn-primary{background:var(--coral);color:#fff;box-shadow:0 14px 26px -12px rgba(239,106,82,.7)}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 20px 34px -12px rgba(239,106,82,.8)}
+.btn-primary::after{content:'';position:absolute;top:0;left:-120%;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);animation:shimmer 4.5s infinite}
+@keyframes shimmer{0%{left:-120%}60%,100%{left:220%}}
+.btn-ghost{background:transparent;color:var(--ink);border:1.5px solid var(--rule);font-weight:700}
+.btn-ghost:hover{border-color:var(--sage-deep);background:var(--sage-soft)}
+
+/* HEADER */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:#FFFFFF;border-bottom:1px solid var(--rule)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
+.logo img{height:46px;width:auto}
+.nav{display:flex;align-items:center;gap:34px}
+.nav-link{font-weight:700;font-size:15px;color:var(--ink-soft);line-height:1.4;transition:color .2s}
+.nav-link:hover{color:var(--coral-deep)}
+.header .btn{padding:11px 22px;font-size:15px}
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:10px;min-width:46px;min-height:46px;align-items:center;justify-content:center}
+.hamburger span{width:24px;height:2.5px;background:var(--ink);border-radius:2px;transition:.3s}
+.hamburger.active span:nth-child(1){transform:translateY(7.5px) rotate(45deg)}
+.hamburger.active span:nth-child(2){opacity:0}
+.hamburger.active span:nth-child(3){transform:translateY(-7.5px) rotate(-45deg)}
+
+/* MOBILE MENU */
+.mobile-menu{position:fixed;inset:0;background:var(--paper);z-index:99;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;transform:translateX(100%);transition:transform .35s ease;opacity:0}
+.mobile-menu.open{transform:translateX(0);opacity:1}
+.mobile-link{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--ink)}
+.mobile-menu .btn{margin-top:14px}
+
+/* HERO */
+.hero{position:relative;padding:128px 0 84px;overflow:hidden;background:
+  radial-gradient(120% 90% at 88% 8%, rgba(79,168,220,.10), transparent 55%),
+  radial-gradient(90% 80% at 0% 100%, var(--sage-soft), transparent 60%), var(--paper)}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:54px;align-items:center;position:relative;z-index:1}
+.hero h1{font-size:clamp(40px,5.6vw,68px);font-weight:900;margin:14px 0 8px}
+.hero-accent-wrap{position:relative;display:inline-block}
+.hero-scribble{position:absolute;left:-4px;bottom:-16px;width:104%;height:26px;overflow:visible}
+.hero-scribble path{fill:none;stroke:var(--coral);stroke-width:5;stroke-linecap:round;stroke-dasharray:520;stroke-dashoffset:520;animation:draw 1.5s .5s cubic-bezier(.6,.1,.3,1) forwards}
+@keyframes draw{to{stroke-dashoffset:0}}
+@media (prefers-reduced-motion:reduce){.hero-scribble path{animation:none;stroke-dashoffset:0}}
+.hero-sub{font-size:19.5px;color:var(--ink-soft);max-width:530px;margin:26px 0 30px;line-height:1.66}
+.hero-cta-row{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.hero-chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:30px}
+.chip{display:inline-flex;align-items:center;gap:9px;background:#fff;border:1px solid var(--rule);border-radius:999px;padding:9px 16px;font-weight:800;font-size:14px;box-shadow:var(--shadow-soft)}
+.chip b{color:var(--sage-deep);font-size:16px}
+.chip.alt b{color:var(--coral-deep)}
+.chip.sky b{color:var(--sky)}
+.hero-visual{position:relative}
+.hero-figure{position:relative;border-radius:26px;overflow:hidden;box-shadow:var(--shadow-card);border:6px solid #fff;aspect-ratio:1/1}
+.hero-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+.hero-card-badge{position:absolute;right:-18px;top:34px;background:#fff;border-radius:16px;padding:12px 16px;box-shadow:var(--shadow-card);display:flex;align-items:center;gap:11px;z-index:2;border:1px solid var(--rule-2)}
+.hero-card-badge .fox{width:40px;height:40px;border-radius:10px;background:var(--sage-soft);display:grid;place-items:center;font-size:22px}
+.hero-card-badge small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px;line-height:1.4}
+.hero-card-badge strong{font-size:15px}
+.hero-spec-mobile{display:none}
+.hero-trust-mini{margin-top:20px;font-size:13px;color:var(--muted);font-weight:700;display:flex;align-items:center;gap:8px}
+.hero-trust-mini svg{color:var(--sage-deep)}
+
+/* TRUST BAR */
+.trust-bar{background:var(--paper-2);border-top:1px solid var(--rule-2);border-bottom:1px solid var(--rule-2);padding:26px 0}
+.trust-items{display:flex;justify-content:center;align-items:center;gap:18px;flex-wrap:nowrap}
+.trust-item{display:inline-flex;align-items:center;gap:12px;padding:8px 14px;flex-shrink:0;white-space:nowrap}
+.trust-ic{width:42px;height:42px;border-radius:12px;background:#fff;border:1px solid var(--rule-2);display:grid;place-items:center;color:var(--sage-deep);flex-shrink:0}
+.trust-item strong{display:block;font-size:13.5px;line-height:1.4;white-space:nowrap}
+.trust-item span{display:block;font-size:12px;color:var(--muted);white-space:nowrap;font-weight:600}
+
+/* sec heading */
+.sec-head{max-width:680px}
+.sec-head.center{margin:0 auto;text-align:center}
+.sec-head h2{font-size:clamp(30px,3.8vw,44px);font-weight:900;margin:10px 0 14px}
+
+/* PROBLEM */
+.problem{background:var(--paper);position:relative}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;margin-top:14px}
+.stat-row{display:flex;gap:18px;margin:30px 0 6px;flex-wrap:wrap}
+.stat-card{background:#fff;border:1px solid var(--rule-2);border-radius:18px;padding:22px 24px;flex:1;min-width:160px;box-shadow:var(--shadow-soft)}
+.stat-num{font-family:var(--font-display);font-weight:900;font-size:42px;line-height:1;color:var(--ink)}
+.stat-num em{font-style:normal;color:var(--coral-deep);font-size:24px}
+.stat-card p{font-size:14px;color:var(--ink-soft);margin-top:8px;font-weight:600}
+.problem-figure{position:relative;border-radius:24px;overflow:hidden;box-shadow:var(--shadow-card);border:6px solid #fff;aspect-ratio:4/5}
+.problem-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+.figure-caption{position:absolute;left:14px;bottom:14px;right:14px;background:rgba(255,255,255,.94);border-radius:14px;padding:11px 15px;font-family:var(--script);font-size:21px;color:var(--ink);font-weight:700;line-height:1.2}
+
+/* FEATURES (recipe cards F2 asym) */
+.features{background:linear-gradient(180deg,var(--paper) 0%, var(--sage-soft) 100%)}
+.feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:26px;margin-top:50px}
+.feature-card{background:#fff;border:1px solid var(--rule-2);border-radius:22px;overflow:hidden;box-shadow:var(--shadow-soft);display:flex;flex-direction:column;transition:transform .3s cubic-bezier(.34,1.3,.5,1),box-shadow .3s}
+.feature-card:hover{transform:translateY(-6px);box-shadow:var(--shadow-card)}
+.feature-card.span2{grid-column:span 2;flex-direction:row}
+.feature-card.span2-rev{flex-direction:row-reverse}
+.tile-figure{aspect-ratio:4/3;background:var(--paper-2);overflow:hidden;position:relative}
+.feature-card.span2 .tile-figure{aspect-ratio:auto;width:46%;min-height:280px;flex-shrink:0}
+.tile-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+.tile-body{padding:28px 30px 32px;flex:1;display:flex;flex-direction:column;justify-content:center}
+.feature-card.span2 .tile-body{padding:42px 44px}
+.tile-kicker{font-family:var(--script);font-size:21px;color:var(--sage-deep);font-weight:700;line-height:1.2}
+.feature-card h3{font-size:23px;margin:4px 0 9px}
+.feature-card.span2 h3{font-size:29px}
+.feature-card p{color:var(--ink-soft);font-size:15.5px;line-height:1.6}
+/* placeholder */
+.ph{position:relative;overflow:hidden;background:repeating-linear-gradient(135deg,#fff,#fff 12px,#f6f1e6 12px,#f6f1e6 24px);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:7px;padding:22px;text-align:center;height:100%}
+.ph-mark{font-family:var(--font-display);font-weight:900;font-size:30px;color:var(--sage);opacity:.7}
+.ph-title{font-weight:800;font-size:15px;color:var(--ink)}
+.ph-size{font-family:var(--script);font-size:17px;color:var(--coral-deep);font-weight:700}
+.ph-note{font-size:12.5px;color:var(--muted);max-width:280px;line-height:1.5;font-weight:600}
+
+/* GALLERY (fridge wow2) */
+.gallery{background:var(--paper)}
+.fridge-gallery{display:grid;grid-template-columns:1.15fr .85fr;gap:48px;align-items:center;margin-top:18px}
+.gal-figure{position:relative;border-radius:24px;overflow:hidden;box-shadow:var(--shadow-card);border:6px solid #fff;aspect-ratio:1/1}
+.gal-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+.gallery-tags{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px}
+.gal-tag{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--rule);border-radius:12px;padding:9px 14px;font-weight:800;font-size:14px;box-shadow:var(--shadow-soft)}
+.gal-tag span{font-size:18px}
+
+/* HOW (W1 horizontal) */
+.how{background:linear-gradient(180deg,var(--sage-soft) 0%, var(--paper) 100%)}
+.how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:50px;position:relative}
+.how-step{background:#fff;border:1px solid var(--rule-2);border-radius:22px;overflow:hidden;box-shadow:var(--shadow-soft);display:flex;flex-direction:column}
+.step-figure{aspect-ratio:4/3;overflow:hidden;background:var(--paper-2)}
+.step-figure img{width:100%;height:100%;object-fit:cover;object-position:center}
+.how-step-body{padding:26px 26px 30px}
+.how-step-num{width:40px;height:40px;border-radius:12px;background:var(--coral);color:#fff;font-family:var(--font-display);font-weight:900;font-size:20px;display:grid;place-items:center;margin-bottom:14px;box-shadow:0 8px 16px -8px rgba(239,106,82,.7)}
+.how-step h3{font-size:21px;margin-bottom:8px}
+.how-step p{color:var(--ink-soft);font-size:15px}
+
+/* COMPARISON (C1 table) */
+.comparison{background:var(--paper)}
+.comp-wrap{margin-top:46px;overflow-x:auto;border-radius:22px;box-shadow:var(--shadow-soft);border:1px solid var(--rule-2)}
+table.comp{width:100%;border-collapse:collapse;background:#fff;min-width:640px}
+table.comp th,table.comp td{padding:18px 20px;text-align:left;font-size:14.5px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+table.comp thead th{font-family:var(--font-display);font-weight:800;font-size:15px;color:var(--ink);background:var(--paper-2)}
+table.comp thead th.win{background:var(--sage);color:#fff;border-radius:0}
+table.comp td:first-child,table.comp th:first-child{font-weight:800;color:var(--ink)}
+table.comp td.win{background:var(--sage-soft);font-weight:700;color:var(--ink)}
+table.comp tr:last-child td{border-bottom:none}
+.comp-badge{display:inline-block;font-family:var(--script);font-size:18px;color:var(--coral-deep);font-weight:700;margin-left:6px}
+
+/* TESTIMONIALS (T1 grid) */
+.testimonials{background:linear-gradient(180deg,var(--paper) 0%, var(--paper-2) 100%)}
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:48px}
+.testi-card{background:#fff;border:1px solid var(--rule-2);border-radius:22px;padding:30px 28px;box-shadow:var(--shadow-soft);display:flex;flex-direction:column}
+.testi-quote-mark{font-family:var(--script);font-size:54px;color:var(--sage);line-height:.5;height:26px}
+.testi-stars{color:var(--coral);font-size:15px;letter-spacing:2px;margin:6px 0 12px}
+.voice-quote{font-size:16px;color:var(--ink);line-height:1.62;flex:1}
+.testi-author{display:flex;align-items:center;gap:13px;margin-top:20px;padding-top:18px;border-top:1px solid var(--rule-2)}
+.testi-avatar-figure{width:52px;height:52px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--sage-soft);background:var(--paper-2)}
+.testi-avatar-figure .ph{padding:4px}
+.testi-avatar-figure .ph-mark{font-size:15px}
+.testi-author b{font-size:15px;display:block}
+.testi-author span{font-size:13px;color:var(--muted);font-weight:600}
+
+/* ROBOT NOTE (wow3) */
+.note-sec{background:var(--paper-2);position:relative}
+.robot-note{max-width:660px;margin:0 auto;background:#fff;border-radius:18px;padding:42px 46px;box-shadow:var(--shadow-card);position:relative;text-align:center;transform:rotate(-1.1deg)}
+.robot-note::before,.robot-note::after{content:'';position:absolute;top:-14px;width:120px;height:30px;background:rgba(156,191,154,.55);border:1px dashed rgba(116,153,111,.5)}
+.robot-note::before{left:36px;transform:rotate(-6deg)}
+.robot-note::after{right:36px;transform:rotate(5deg)}
+.robot-note .rn-eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:1.5px;font-size:12px;color:var(--sky);line-height:1.4}
+.robot-note p{font-family:var(--script);font-size:30px;line-height:1.4;color:var(--ink);font-weight:700;margin:12px 0}
+.robot-note .rn-sign{font-family:var(--script);font-size:26px;color:var(--coral-deep);font-weight:700;margin-top:6px}
+
+/* OFFER (O3 guarantee) */
+.offer{background:var(--paper);position:relative}
+.offer-box{max-width:720px;margin:18px auto 0;background:#fff;border-radius:28px;box-shadow:var(--shadow-card);position:relative;overflow:hidden;border:1px solid var(--rule-2)}
+.offer-box::before{content:'';position:absolute;top:0;left:0;right:0;height:5px;background:linear-gradient(90deg,var(--sage),var(--coral),var(--sky))}
+.offer-sticker{position:absolute;top:22px;right:-2px;background:var(--coral);color:#fff;font-weight:800;font-size:13px;padding:7px 18px 7px 16px;border-radius:8px 0 0 8px;transform:rotate(-2deg);box-shadow:0 8px 16px -8px rgba(239,106,82,.7);z-index:3;letter-spacing:.3px}
+.offer-inner{padding:42px 44px 46px}
+.offer-rating{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--ink-soft);font-weight:700}
+.offer-rating .stars{color:var(--coral);letter-spacing:2px;font-size:16px}
+.offer-rating sup a{color:var(--muted);font-size:10px}
+.offer-title{font-size:30px;font-weight:900;margin:14px 0 6px}
+.offer-lede{color:var(--ink-soft);font-size:16px;margin-bottom:24px}
+.offer-image{border-radius:18px;overflow:hidden;margin-bottom:24px;aspect-ratio:16/9;background:var(--paper-2)}
+.offer-list{list-style:none;margin:6px 0 26px;display:grid;gap:13px}
+.offer-list li{display:flex;gap:12px;align-items:flex-start;font-size:15.5px;color:var(--ink)}
+.offer-list svg{flex:none;color:var(--sage-deep);margin-top:3px}
+.offer-list li b{font-weight:800}
+.offer-price-block{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.offer-price-old{color:var(--muted);text-decoration:line-through;font-size:23px;font-weight:600}
+.offer-price-now{color:var(--ink);font-size:54px;font-weight:900;line-height:1;letter-spacing:-.02em}
+.offer-price-save{background:#FDE7E1;color:var(--coral-deep);font-weight:800;font-size:14px;padding:5px 11px;border-radius:8px;transform:rotate(-3deg);align-self:center}
+.offer-save-text{color:var(--sage-deep);font-weight:800;font-size:14.5px;margin-top:7px}
+.offer-shipping{font-size:14px;color:var(--ink-soft);margin-top:10px;font-weight:600;display:flex;align-items:center;gap:7px}
+.offer-shipping svg{color:var(--sage-deep)}
+.offer-cta{display:flex;width:100%;margin:24px 0 0;font-size:19px;padding:19px 28px}
+.offer-guarantee{text-align:center;font-size:14px;color:var(--ink-soft);margin-top:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.offer-guarantee svg{color:var(--sage-deep)}
+.trust-strip{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-top:24px;padding-top:22px;border-top:1px solid var(--rule-2)}
+.trust-strip span{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);font-weight:700}
+.trust-strip svg{color:var(--sage-deep)}
+.payment-logos{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:20px}
+.pay{font-weight:800;font-size:12px;color:var(--muted);background:var(--paper-2);border:1px solid var(--rule-2);border-radius:7px;padding:6px 11px;letter-spacing:.4px}
+
+/* FAQ */
+.faq{background:linear-gradient(180deg,var(--paper-2) 0%, var(--paper) 100%)}
+.faq-list{max-width:780px;margin:46px auto 0}
+.faq-item{background:#fff;border:1px solid var(--rule-2);border-radius:16px;margin-bottom:14px;overflow:hidden;box-shadow:var(--shadow-soft)}
+.faq-q{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:21px 24px;cursor:pointer;font-family:var(--font-display);font-weight:800;font-size:17px;list-style:none}
+.faq-q::-webkit-details-marker{display:none}
+.faq-ic{width:26px;height:26px;flex:none;border-radius:50%;background:var(--sage-soft);color:var(--sage-deep);display:grid;place-items:center;font-weight:900;font-size:18px;transition:transform .3s}
+.faq-item[open] .faq-ic{transform:rotate(45deg);background:var(--coral);color:#fff}
+.faq-a{padding:0 24px 22px;color:var(--ink-soft);font-size:15.5px;line-height:1.65}
+
+/* FINAL CTA */
+.final-cta{position:relative;padding:0;overflow:hidden}
+.final-cta-figure{position:relative;min-height:460px;display:grid;place-items:center;text-align:center}
+.final-cta-figure img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 35%;z-index:0}
+.final-cta-overlay{position:absolute;inset:0;background:linear-gradient(180deg,rgba(43,58,74,.34),rgba(43,58,74,.66));z-index:1}
+.final-cta-content{position:relative;z-index:2;color:#fff;max-width:640px;padding:90px 26px}
+.final-cta-content .eyebrow{color:#FFD9CF}
+.final-cta-content h2{color:#fff;font-size:clamp(30px,4.2vw,46px);font-weight:900;margin:8px 0 16px}
+.final-cta-content p{color:rgba(255,255,255,.92);font-size:18px;margin-bottom:28px}
+.cta-trust{font-size:13px;color:rgba(255,255,255,.92);display:flex;gap:10px;align-items:center;justify-content:center;margin-top:18px;flex-wrap:wrap;font-weight:700}
+.cta-trust .ct-check{flex:none}
+.cta-trust .ct-sep{opacity:.6}
+
+/* FOOTER */
+.footer{background:var(--ink);color:rgba(255,255,255,.78);padding:64px 0 30px}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px}
+.footer-brand img{height:40px;filter:brightness(0) invert(1);margin-bottom:16px}
+.footer-brand p{font-size:14.5px;max-width:330px;line-height:1.6}
+.footer-col h4{font-family:var(--font-display);font-weight:800;font-size:14px;color:#fff;text-transform:uppercase;letter-spacing:1px;line-height:1.4;margin-bottom:16px}
+.footer-col a{display:block;font-size:14.5px;margin-bottom:10px;transition:color .2s}
+.footer-col a:hover{color:var(--sage)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid rgba(255,255,255,.13);font-size:12.5px;color:rgba(255,255,255,.5);line-height:1.7}
+.footer-bottom a{color:rgba(255,255,255,.7);text-decoration:underline}
+
+/* STICKY CTA */
+.sticky-cta{position:fixed;bottom:0;left:0;right:0;padding:12px 16px calc(12px + env(safe-area-inset-bottom));background:#fff;box-shadow:0 -6px 22px rgba(43,58,74,.13);z-index:80;display:flex;gap:14px;align-items:center;transform:translateY(110%);transition:transform .28s ease-out;border-top:1px solid var(--rule)}
+.sticky-cta.visible{transform:translateY(0)}
+.sticky-cta .sc-price{font-weight:900;font-size:19px;white-space:nowrap;line-height:1.1}
+.sticky-cta .sc-price small{display:block;font-size:11px;color:var(--muted);font-weight:700;text-decoration:line-through}
+.sticky-cta .btn{flex:1;min-height:54px;font-size:16px}
+
+/* DEMO MODAL */
+.demo-modal{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:22px}
+.demo-modal.open{display:flex}
+.demo-backdrop{position:absolute;inset:0;background:rgba(43,58,74,.55);backdrop-filter:blur(3px)}
+.demo-card{position:relative;background:#fff;border-radius:22px;max-width:420px;width:100%;padding:34px 32px;box-shadow:var(--shadow-card);text-align:center}
+.demo-card h3{font-size:22px;margin-bottom:10px}
+.demo-card p{color:var(--ink-soft);font-size:15px;margin-bottom:20px}
+.demo-cart{background:var(--paper-2);border-radius:14px;padding:18px;text-align:left;font-size:14px;margin-bottom:20px}
+.demo-cart .dc-row{display:flex;justify-content:space-between;padding:6px 0;font-weight:700}
+.demo-cart .dc-pay{display:flex;gap:8px;margin-top:12px}
+.demo-close{position:absolute;top:14px;right:16px;background:none;border:none;font-size:24px;cursor:pointer;color:var(--muted);line-height:1}
+
+/* RESPONSIVE */
+@media (max-width:980px){
+  .hero-grid{grid-template-columns:1fr;gap:38px}
+  .problem-grid{grid-template-columns:1fr;gap:34px}
+  .fridge-gallery{grid-template-columns:1fr;gap:30px}
+  .feat-grid{grid-template-columns:1fr}
+  .feature-card.span2,.feature-card.span2-rev{grid-column:span 1;flex-direction:column}
+  .feature-card.span2 .tile-figure,.feature-card.span2-rev .tile-figure{width:100%;aspect-ratio:16/9;min-height:0}
+  .how-steps{grid-template-columns:1fr}
+  .testi-grid{grid-template-columns:1fr}
+  .footer-grid{grid-template-columns:1fr 1fr}
+}
+@media (max-width:768px){
+  .nav,.header .btn.btn-primary{display:none}
+  .hamburger{display:flex}
+  .section-pad{padding:78px 0}
+  .hero{padding:104px 0 60px}
+  .trust-items{flex-direction:column;gap:14px}
+  .hero-media,.hero-figure{max-height:60vh}
+  .hero-card-badge{right:12px;top:auto;bottom:14px}
+  .btn-primary,.offer-cta,.hero-cta-row .btn{width:100%}
+  .hero-cta-row{flex-direction:column}
+  body{padding-bottom:calc(80px + env(safe-area-inset-bottom))}
+  .footer-grid{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  body{font-size:16px}
+  .container{padding:0 18px}
+  .offer-inner{padding:30px 22px 34px}
+  .offer-price-now{font-size:44px}
+  .robot-note{padding:34px 24px}
+  .robot-note p{font-size:25px}
+  .hero h1{font-size:34px}
+  .stat-row{gap:12px}
+}
+</style>
+</head>
+<body id="top">
+
+<!-- 1. HEADER -->
+<header class="header">
+  <div class="container header-inner">
+    <a href="#top" class="logo" aria-label="Malujek — strona główna">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/malujek/logo.png" alt="Malujek" width="104" height="46">
+    </a>
+    <nav class="nav">
+      <a href="#jak" class="nav-link">Jak działa</a>
+      <a href="#galeria" class="nav-link">Co narysuje</a>
+      <a href="#opinie" class="nav-link">Opinie</a>
+      <a href="#faq" class="nav-link">Pytania</a>
+      <a href="#offer-box" class="btn btn-primary">Zamów Malujka</a>
+    </nav>
+    <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<!-- 2. MOBILE MENU -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#jak" class="mobile-link">Jak działa</a>
+  <a href="#galeria" class="mobile-link">Co narysuje</a>
+  <a href="#opinie" class="mobile-link">Opinie</a>
+  <a href="#faq" class="mobile-link">Pytania</a>
+  <a href="#offer-box" class="btn btn-primary mobile-link">Zamów Malujka</a>
+</div>
+
+<!-- 3. HERO (H1 split) -->
+<section class="hero hero-v-split">
+  <svg class="botanical-corner" style="top:90px;left:-26px;transform:rotate(-10deg)" viewBox="0 0 100 100" aria-hidden="true">
+    <path d="M12,92 Q34,64 52,46 Q72,26 90,12" stroke="#9CBF9A" stroke-width="2" fill="none"/>
+    <path d="M40,54 q-12,-4 -18,6 q14,4 18,-6" fill="#9CBF9A"/>
+    <path d="M60,34 q-10,-6 -18,2 q12,6 18,-2" fill="#9CBF9A"/>
+    <circle cx="52" cy="46" r="3.4" fill="#FF8A75"/>
+  </svg>
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <span class="eyebrow fade-in">Mały robot, wielkie talenty</span>
+      <h1 class="fade-in">Twoje dziecko rysuje
+        <span class="hero-accent-wrap"><span class="script-accent">swój talent</span>
+          <svg class="hero-scribble" viewBox="0 0 300 24" aria-hidden="true"><path d="M6,15 C58,5 116,22 172,11 C224,1 268,18 295,9"/></svg>
+        </span>
+      </h1>
+      <p class="hero-sub fade-in">Mały robot skanuje kartę, mówi słowo po angielsku i kreśli je na papierze — kreska po kresce. Dziecko naśladuje go prawdziwym pisakiem. A Ty w końcu masz chwilę dla siebie.</p>
+      <div class="hero-cta-row fade-in">
+        <a href="#offer-box" id="hero-cta" class="btn btn-primary">Zamów Malujka — 199 zł</a>
+        <a href="#jak" class="btn btn-ghost">Zobacz, jak działa</a>
+      </div>
+      <div class="hero-chips fade-in">
+        <span class="chip"><b>0 minut</b> przed ekranem</span>
+        <span class="chip alt"><b>100 kart</b> do rysowania</span>
+        <span class="chip sky"><b>od 3 lat</b> · język ENG</span>
+      </div>
+      <p class="hero-trust-mini fade-in">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg>
+        BLIK / karta / przelew · 30 dni na zwrot
+      </p>
+    </div>
+    <div class="hero-visual fade-in">
+      <div class="hero-media">
+        <div class="hero-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/hero.webp?width=900&quality=82&format=webp" alt="Dziecko rysuje na papierze obok robota Malujek z kartą lisa" width="900" height="900" fetchpriority="high">
+        </div>
+        <div class="hero-card-badge">
+          <span class="fox">🦊</span>
+          <span><small>Karta</small><strong>fox · lis</strong></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. TRUST BAR (light) -->
+<section class="trust-bar" aria-label="Dlaczego rodzice ufają Malujkowi">
+  <div class="container">
+    <div class="trust-items">
+      <div class="trust-item">
+        <span class="trust-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></span>
+        <div><strong>Bezpieczny materiał</strong><span>Nietoksyczny ABS, zaokrąglone krawędzie</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 10h18M8 18v3M16 18v3"/></svg></span>
+        <div><strong>Zero ekranu</strong><span>Rysunek na papierze, prawdziwy pisak</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M16 4l5 1-1 5"/></svg></span>
+        <div><strong>30 dni na zwrot</strong><span>Bez pytań, gdy nie podejdzie</span></div>
+      </div>
+      <div class="trust-item">
+        <span class="trust-ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h18l-2 13H5L3 7z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg></span>
+        <div><strong>Polska obsługa</strong><span>Pomoc i gwarancja po polsku</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 5. PROBLEM (P1 stat) -->
+<section class="problem prob-v-stat section-pad" id="problem">
+  <div class="container">
+    <div class="problem-grid">
+      <div class="problem-copy">
+        <span class="eyebrow fade-in">Znasz to uczucie?</span>
+        <div class="sec-head"><h2 class="fade-in">Włączasz bajkę, żeby napić się kawy — i czujesz się winna</h2></div>
+        <p class="lead fade-in">Tablet kupuje Ci dziesięć minut spokoju, ale zostaje po nim poczucie porażki. Wiesz, że nadmiar ekranu opóźnia mowę i rozprasza uwagę. Tylko co zrobić, gdy po ośmiu godzinach pracy brakuje sił na kolejną zabawę?</p>
+        <div class="stat-row fade-in">
+          <div class="stat-card">
+            <div class="stat-num">129<em> min</em></div>
+            <p>Tyle średnio dziennie patrzy w ekran dwulatek — ponad dwa razy więcej, niż zaleca WHO.</p>
+          </div>
+          <div class="stat-card">
+            <div class="stat-num">60<em> min</em></div>
+            <p>Tyle ekranu dziennie to bezpieczny limit według WHO. Reszta dnia może być na papierze.</p>
+          </div>
+        </div>
+      </div>
+      <div class="problem-figure fade-in">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/relief.webp?width=720&quality=82&format=webp" alt="Mama pije kawę, dziecko w tle rysuje z robotem Malujek" width="720" height="900" loading="lazy">
+        <div class="figure-caption">Tak wygląda popołudnie bez walki o tablet.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 6. SOLUTION / FEATURES (F2 asym) -->
+<section class="features feat-v-asym section-pad" id="dlaczego">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Papier zamiast ekranu</span>
+      <h2 class="fade-in">Cztery rzeczy, które robi Malujek — a tablet nigdy nie zrobi</h2>
+    </div>
+    <div class="feat-grid">
+      <article class="feature-card span2 fade-in">
+        <div class="tile-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/draw-boat.webp?width=760&quality=82&format=webp" alt="Robot Malujek kreśli pisakiem żaglówkę na papierze" width="760" height="760" loading="lazy">
+        </div>
+        <div class="tile-body">
+          <span class="tile-kicker">prawdziwa kreska, nie piksele</span>
+          <h3>Rysuje pisakiem na papierze, przy świetle dziennym</h3>
+          <p>Malujek nie rzuca konturu na ścianę i nie potrzebuje przyciemnionego pokoju. Mechanicznie kreśli kształt na kartce — zwierzę, pojazd, literę — a dziecko obrysowuje go i koloruje własnym pisakiem. Ręka uczy się prowadzić linię, oko śledzi ruch. To ćwiczenie motoryki, nie bierne patrzenie.</p>
+        </div>
+      </article>
+      <article class="feature-card fade-in">
+        <div class="tile-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/robot.webp?width=560&quality=82&format=webp" alt="Zbliżenie robota Malujek z pisakiem" width="560" height="560" loading="lazy">
+        </div>
+        <div class="tile-body">
+          <span class="tile-kicker">spokojny przyjaciel</span>
+          <h3>Mówi słowo po angielsku</h3>
+          <p>Przy każdej karcie Malujek wymawia nazwę po angielsku — fox, rocket, boat. Pierwsze słowa wchodzą mimochodem, przy zabawie.</p>
+        </div>
+      </article>
+      <article class="feature-card fade-in">
+        <div class="tile-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/album.webp?width=620&quality=82&format=webp" alt="Album z rysunkami: lis i lepszy lis po kilku tygodniach" width="620" height="465" loading="lazy">
+        </div>
+        <div class="tile-body">
+          <span class="tile-kicker">widać postęp</span>
+          <h3>Talent, który rośnie tydzień po tygodniu</h3>
+          <p>Pierwszy lis jest krzywy, dziesiąty — pewny. Odkładacie rysunki do albumu i widzicie, jak ręka dziecka staje się stabilniejsza.</p>
+        </div>
+      </article>
+      <article class="feature-card span2 span2-rev fade-in">
+        <div class="tile-figure ph img-placeholder" role="img" aria-label="Brief zdjęcia: 100 kart edukacyjnych">
+          <div class="ph-mark">100</div>
+          <div class="ph-title">100 kart w wachlarzu</div>
+          <div class="ph-size">flat-lay · 4:3</div>
+          <div class="ph-note">Talia 100 kart rozłożona wachlarzem na kremowym papierze, widoczne ilustracje zwierząt i pojazdów. Naturalne, miękkie światło z góry.</div>
+        </div>
+        <div class="tile-body">
+          <span class="tile-kicker">na długie miesiące</span>
+          <h3>100 kart, godziny skupienia</h3>
+          <p>Zwierzęta, pojazdy, kształty, litery. Dość wariantów, by zabawa nie znudziła się po tygodniu — i wciąż coś nowego do narysowania.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- GALLERY — Co narysuje (Wow Moment 2: fridge) -->
+<section class="gallery section-pad" id="galeria">
+  <div class="container">
+    <div class="fridge-gallery">
+      <div class="gal-figure fade-in">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/fridge.webp?width=760&quality=82&format=webp" alt="Lodówka pełna dziecięcych rysunków: lis, rakieta, żaglówka, słońce" width="760" height="760" loading="lazy">
+      </div>
+      <div class="gal-copy">
+        <span class="eyebrow fade-in">Ściana dumy</span>
+        <div class="sec-head"><h2 class="fade-in">Za miesiąc Twoja lodówka wygląda tak</h2></div>
+        <p class="lead fade-in">Lis, rakieta, żaglówka, słońce — narysowane ręką dziecka, podpisane jego imieniem. Każdy magnes to dowód, że popołudnie spędziło z pisakiem, a nie z tabletem.</p>
+        <div class="gallery-tags fade-in">
+          <span class="gal-tag"><span>🦊</span> lis</span>
+          <span class="gal-tag"><span>🚀</span> rakieta</span>
+          <span class="gal-tag"><span>⛵</span> żaglówka</span>
+          <span class="gal-tag"><span>☀️</span> słońce</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. HOW IT WORKS (W1 horizontal) -->
+<section class="how how-v-horizontal section-pad" id="jak">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Trzy kroki — tak proste, że dziecko robi to samo</span>
+      <h2 class="fade-in">Jak działa Malujek</h2>
+    </div>
+    <div class="how-steps">
+      <div class="how-step fade-in">
+        <div class="step-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/hero.webp?width=540&quality=80&format=webp" alt="Dziecko wkłada kartę do robota Malujek" width="540" height="405" loading="lazy">
+        </div>
+        <div class="how-step-body">
+          <div class="how-step-num">1</div>
+          <h3>Włóż jedną ze 100 kart</h3>
+          <p>Dziecko wybiera kartę — lis, rakieta, litera — i wsuwa ją w Malujka. Robot rozpoznaje ją w ułamku sekundy.</p>
+        </div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="step-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/draw-boat.webp?width=540&quality=80&format=webp" alt="Robot Malujek mówi słowo i rysuje kształt na papierze" width="540" height="405" loading="lazy">
+        </div>
+        <div class="how-step-body">
+          <div class="how-step-num">2</div>
+          <h3>Malujek mówi i rysuje</h3>
+          <p>Robot wymawia słowo po angielsku i kreśli kształt pisakiem na kartce — spokojnie, linia po linii.</p>
+        </div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="step-figure">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/results.webp?width=540&quality=80&format=webp" alt="Gotowe pokolorowane rysunki dziecka obok kawy" width="540" height="405" loading="lazy">
+        </div>
+        <div class="how-step-body">
+          <div class="how-step-num">3</div>
+          <h3>Dziecko naśladuje i koloruje</h3>
+          <p>Maluch obrysowuje linie własnym pisakiem i koloruje dzieło. Ty w tym czasie kończysz kawę na ciepło.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. COMPARISON (C1 table) -->
+<section class="comparison comp-v-table section-pad" id="porownanie">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Czym różni się od reszty</span>
+      <h2 class="fade-in">Malujek na tle tego, co znajdziesz w sieci</h2>
+    </div>
+    <div class="comp-wrap fade-in">
+      <table class="comp">
+        <thead>
+          <tr>
+            <th>Co ważne dla rodzica</th>
+            <th>Projektory świetlne</th>
+            <th>Roboty bez marki z Allegro</th>
+            <th class="win">Malujek <span class="comp-badge">✻</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Jak powstaje rysunek</td>
+            <td>Rzuca kontur światłem — trzeba przyciemnić pokój</td>
+            <td>Różnie, część działa tylko z aplikacją w telefonie</td>
+            <td class="win">Kreśli pisakiem na papierze, przy świetle dziennym</td>
+          </tr>
+          <tr>
+            <td>Ekran w zabawie</td>
+            <td>Często wymaga apki na telefonie rodzica</td>
+            <td>Bywa wbudowany ekran</td>
+            <td class="win">Zero ekranu — papier i prawdziwy pisak</td>
+          </tr>
+          <tr>
+            <td>Dodatkowe koszty</td>
+            <td>Płatne subskrypcje w aplikacji</td>
+            <td>Loteria — czasem dokupujesz wkłady</td>
+            <td class="win">100 kart w zestawie, bez subskrypcji</td>
+          </tr>
+          <tr>
+            <td>Bezpieczeństwo i pomoc</td>
+            <td>Zależy od producenta</td>
+            <td>Anonimowy sprzedawca, brak polskiej obsługi</td>
+            <td class="win">Marka, gwarancja i wsparcie po polsku</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 9. TESTIMONIALS (T1 grid) -->
+<section class="testimonials testi-v-grid section-pad" id="opinie">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Głosy rodziców</span>
+      <h2 class="fade-in">Co zmienia się w domu po tygodniu</h2>
+    </div>
+    <div class="testi-grid">
+      <div class="testi-card fade-in">
+        <div class="testi-quote-mark">„</div>
+        <div class="testi-stars">★★★★★</div>
+        <p class="voice-quote">Pierwszy raz od miesięcy wypiłam całą kawę na ciepło. Tymek przez godzinę rysował lisa i powtarzał „fox" — bez awantury o tablet, bez marudzenia. Po prostu siedział i tworzył.</p>
+        <div class="testi-author">
+          <div class="testi-avatar-figure"><div class="ph"><div class="ph-mark">MK</div></div></div>
+          <div><b>Marta K.</b><span>mama 5-letniego Tymka</span></div>
+        </div>
+      </div>
+      <div class="testi-card fade-in">
+        <div class="testi-quote-mark">„</div>
+        <div class="testi-stars">★★★★★</div>
+        <p class="voice-quote">Kupiłem wnuczce na urodziny zamiast kolejnego plastiku, który psuje się po tygodniu. Efekt był natychmiastowy — rozpakowała, włożyła kartę i już rysowała. Córka mówi, że to najlepszy prezent, jaki dałem.</p>
+        <div class="testi-author">
+          <div class="testi-avatar-figure"><div class="ph"><div class="ph-mark">RZ</div></div></div>
+          <div><b>Roman Z.</b><span>dziadek 4-letniej Zosi</span></div>
+        </div>
+      </div>
+      <div class="testi-card fade-in">
+        <div class="testi-quote-mark">„</div>
+        <div class="testi-stars">★★★★★</div>
+        <p class="voice-quote">Bałam się, że znudzi się po dwóch dniach jak wszystko inne. Minął miesiąc i Zuzia wciąż wyciąga nowe karty. Przy okazji łapie angielskie słówka — ostatnio sama powiedziała „rocket", zanim narysowała rakietę.</p>
+        <div class="testi-author">
+          <div class="testi-avatar-figure"><div class="ph"><div class="ph-mark">AP</div></div></div>
+          <div><b>Aneta P.</b><span>mama 6-letniej Zuzi</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ROBOT NOTE (Wow Moment 3) -->
+<section class="note-sec section-pad">
+  <div class="container">
+    <div class="robot-note fade-in">
+      <div class="rn-eyebrow">List od Malujka</div>
+      <p>Cześć! Jestem Malujek. Od dziś rysujemy razem — kreska po kresce. Pokażę Twojemu dziecku lisa, rakietę i żaglówkę, a po drodze kilka angielskich słów.</p>
+      <div class="rn-sign">— Malujek 🤖</div>
+    </div>
+  </div>
+</section>
+
+<!-- 11. OFFER (O3 guarantee) -->
+<section class="offer offer-v-guarantee section-pad" id="offer">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Zestaw startowy</span>
+      <h2 class="fade-in">Wszystko, czego dziecko potrzebuje, by zacząć rysować</h2>
+    </div>
+    <div class="offer-box fade-in" id="offer-box">
+      <span class="offer-sticker">NAJCZĘŚCIEJ WYBIERANE</span>
+      <svg class="botanical-corner" style="bottom:18px;right:18px;transform:rotate(160deg)" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M12,92 Q34,64 52,46 Q72,26 90,12" stroke="#9CBF9A" stroke-width="2" fill="none"/>
+        <path d="M40,54 q-12,-4 -18,6 q14,4 18,-6" fill="#9CBF9A"/>
+        <circle cx="52" cy="46" r="3.4" fill="#FF8A75"/>
+      </svg>
+      <div class="offer-inner">
+        <div class="offer-rating">
+          <span class="stars">★★★★★</span>
+          <span>4,7/5 · <strong data-placeholder="reviews">1 247</strong> opinii<sup><a href="#footnote-reviews">[1]</a></sup></span>
+        </div>
+        <h3 class="offer-title">Zestaw Malujek — Pełny Start</h3>
+        <p class="offer-lede">Robot, 100 kart i wszystko, co potrzebne, w jednym pudełku. Wyjmujesz i bawicie się od razu.</p>
+        <div class="offer-image ph img-placeholder" role="img" aria-label="Brief zdjęcia: zestaw produktu">
+          <div class="ph-mark">O</div>
+          <div class="ph-title">Zestaw rozłożony</div>
+          <div class="ph-size">flat-lay · 16:9</div>
+          <div class="ph-note">Robot Malujek, talia 100 kart, dwa markery i kabel USB-C ułożone płasko na kremowym papierze, widok z góry, miękkie naturalne światło.</div>
+        </div>
+        <ul class="offer-list">
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg><span><b>Robot Malujek</b> — skanuje karty, mówi po angielsku i rysuje pisakiem</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg><span><b>100 kart edukacyjnych</b> — zwierzęta, pojazdy, kształty i litery</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg><span><b>Markery i kabel USB-C</b> — ładowanie poza zasięgiem dziecka, bez szukania baterii</span></li>
+          <li><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M5 13l4 4L19 7"/></svg><span><b>Gwarancja 30 dni</b> — jeśli dziecko nie pokocha robota, oddajemy pieniądze</span></li>
+        </ul>
+        <div class="offer-price-block">
+          <span class="offer-price-old">249 zł</span>
+          <span class="offer-price-now">199 zł</span>
+          <span class="offer-price-save">-20%</span>
+        </div>
+        <div class="offer-save-text">Oszczędzasz 50 zł w cenie startowej</div>
+        <p class="offer-shipping">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
+          Darmowa dostawa · InPost / DPD / kurier
+        </p>
+        <a href="#" class="offer-cta btn btn-primary" data-demo-modal>Zamawiam — 199 zł</a>
+        <p class="offer-guarantee">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          30 dni na zwrot · bez pytań · płatność BLIK, karta, przelew
+        </p>
+        <div class="trust-strip">
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/></svg> Darmowa dostawa</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-9-9"/><path d="M16 4l5 1-1 5"/></svg> 30 dni zwrotu</span>
+          <span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Bezpieczny dla dzieci</span>
+        </div>
+        <div class="payment-logos">
+          <span class="pay">BLIK</span><span class="pay">VISA</span><span class="pay">Mastercard</span><span class="pay">Przelewy24</span><span class="pay">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 10. FAQ -->
+<section class="faq section-pad" id="faq">
+  <div class="container">
+    <div class="sec-head center">
+      <span class="eyebrow fade-in">Zanim klikniesz</span>
+      <h2 class="fade-in">Pytania, które zadają rodzice</h2>
+    </div>
+    <div class="faq-list">
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Od jakiego wieku jest Malujek? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Malujek jest przeznaczony dla dzieci od 3 lat. Najmłodsze obrysowują grube linie i kolorują, starsze ćwiczą litery i pierwsze angielskie słowa. Im więcej dziecko rysuje, tym pewniejsza staje się jego ręka — robot rośnie razem z nim.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Czy to nie kolejny ekran w przebraniu? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Nie. Malujek nie ma ekranu i nie potrzebuje aplikacji w telefonie. Cała zabawa dzieje się na papierze — robot kreśli kształt pisakiem, a dziecko trzyma w dłoni prawdziwy marker i naśladuje ruch. To właśnie odwrotność biernego patrzenia w tablet.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Czy 4-latek obsłuży go sam? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Tak. Obsługa to trzy proste kroki: dziecko wkłada kartę, słucha słowa i naśladuje rysunek. Nie ma skomplikowanego montażu ani ustawień — wyjmujesz z pudełka, ładujesz przez USB-C i bawicie się od razu. Większość dzieci ogarnia to po pierwszej karcie.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Czy jest bezpieczny dla dziecka? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Malujek jest wykonany z nietoksycznego tworzywa ABS o zaokrąglonych krawędziach, bez ostrych elementów. Ładowanie odbywa się przez USB-C, a część zasilająca jest poza zasięgiem dziecka. To zabawka zaprojektowana z myślą o codziennej zabawie maluchów.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Co dokładnie jest w zestawie? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">W pudełku znajdziesz robota Malujek, komplet 100 kart edukacyjnych (zwierzęta, pojazdy, kształty, litery), markery do rysowania oraz kabel USB-C do ładowania. To wszystko, czego dziecko potrzebuje, by zacząć rysować jeszcze tego samego dnia.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Jak wygląda dostawa i zwrot? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Przesyłkę wysyłamy InPostem, DPD lub kurierem — dostawa jest darmowa i dociera w 7–14 dni roboczych od zaksięgowania wpłaty. Jeśli zabawka nie spodoba się dziecku, masz 30 dni na zwrot bez podawania powodu i bez zadawania pytań.</div>
+      </details>
+      <details class="faq-item fade-in">
+        <summary class="faq-q">Jak mogę zapłacić? <span class="faq-ic">+</span></summary>
+        <div class="faq-a">Płatność jest szybka i bezpieczna: BLIK, karta (Visa, Mastercard), Przelewy24 oraz Apple Pay. Wybierasz wygodną dla siebie metodę przy składaniu zamówienia, a płatność księguje się od razu, więc paczka rusza bez zbędnego czekania.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- 12. FINAL CTA -->
+<section class="final-cta" id="final">
+  <div class="final-cta-figure">
+    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/landing/malujek/tote.webp?width=1280&quality=80&format=webp" alt="Torba Malujek z rysunkami dziecka w przedpokoju" width="1280" height="1280" loading="lazy">
+    <div class="final-cta-overlay"></div>
+    <div class="final-cta-content">
+      <span class="eyebrow">Mały robot, wielkie talenty</span>
+      <h2>Daj dziecku pisak zamiast pilota</h2>
+      <p>Zacznij od pierwszej karty. Lis dziś, rakieta jutro — a Ty znów masz chwilę dla siebie.</p>
+      <a href="#offer-box" class="btn btn-primary">Zamów Malujka — 199 zł</a>
+      <p class="cta-trust">
+        <svg class="ct-check" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> 30 dni na zwrot
+        <span class="ct-sep">·</span>
+        <svg class="ct-check" viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> BLIK / karta / przelew
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/malujek/logo.png" alt="Malujek">
+        <p>Mały robot, który uczy rysować i mówić pierwsze angielskie słowa — bez ekranu, na prawdziwym papierze. Dla dzieci, które chcą tworzyć, i rodziców, którzy chcą chwili spokoju.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Malujek</h4>
+        <a href="#jak">Jak działa</a>
+        <a href="#galeria">Co narysuje</a>
+        <a href="#porownanie">Porównanie</a>
+        <a href="#opinie">Opinie</a>
+        <a href="#faq">Pytania</a>
+      </div>
+      <div class="footer-col">
+        <h4>Zakup</h4>
+        <a href="#offer-box">Zamów zestaw</a>
+        <a href="#faq">Dostawa i zwroty</a>
+        <a href="#faq">Płatności</a>
+        <a href="#faq">Gwarancja 30 dni</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <p id="footnote-reviews">[1] Ocena i liczba opinii mają charakter poglądowy (faza wprowadzenia produktu) — do podmiany na realne dane sklepu po pierwszych zamówieniach.</p>
+      <p style="margin-top:8px">© 2026 Malujek. Wszystkie prawa zastrzeżone. Zabawka edukacyjna dla dzieci od 3 lat.</p>
+    </div>
+  </div>
+</footer>
+
+<!-- 14. STICKY CTA -->
+<div class="sticky-cta" id="stickyCta">
+  <div class="sc-price">199 zł <small>249 zł</small></div>
+  <a href="#offer-box" class="btn btn-primary">Zamów Malujka</a>
+</div>
+
+<!-- DEMO MODAL -->
+<div class="demo-modal" id="demoModal" role="dialog" aria-modal="true" aria-label="Podgląd koszyka">
+  <div class="demo-backdrop" data-demo-close></div>
+  <div class="demo-card">
+    <button class="demo-close" data-demo-close aria-label="Zamknij">×</button>
+    <h3>Tu wepniemy koszyk Twojego sklepu</h3>
+    <p>To strona poglądowa. Po wpięciu do sklepu TakeDrop ten przycisk poprowadzi prosto do koszyka i bezpiecznej płatności.</p>
+    <div class="demo-cart">
+      <div class="dc-row"><span>Zestaw Malujek — Pełny Start</span><span>199 zł</span></div>
+      <div class="dc-row" style="font-weight:600;color:var(--muted)"><span>Dostawa</span><span>0 zł</span></div>
+      <div class="dc-pay">
+        <span class="pay">BLIK</span><span class="pay">VISA</span><span class="pay">Przelewy24</span>
+      </div>
+    </div>
+    <a href="#offer-box" class="btn btn-primary" style="width:100%" data-demo-close>Wróć do oferty</a>
+  </div>
+</div>
+
+<script>
+// Fade-in observer (safety gate + position-filtered timeout)
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver((es) => es.forEach(e => {
+    if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); }
+  }), { threshold: 0.1, rootMargin: '0px 0px -80px 0px' });
+  document.querySelectorAll('.fade-in').forEach(el => io.observe(el));
+  setTimeout(() => {
+    document.querySelectorAll('.fade-in:not(.visible)').forEach(el => {
+      const rect = el.getBoundingClientRect();
+      if (rect.top < window.innerHeight) el.classList.add('visible');
+    });
+  }, 3000);
+} else {
+  document.querySelectorAll('.fade-in').forEach(el => el.classList.add('visible'));
+}
+
+// Hamburger
+const hamburger = document.getElementById('hamburger');
+const mobileMenu = document.getElementById('mobileMenu');
+hamburger.addEventListener('click', () => {
+  hamburger.classList.toggle('active');
+  mobileMenu.classList.toggle('open');
+});
+document.querySelectorAll('.mobile-link').forEach(link => {
+  link.addEventListener('click', () => {
+    hamburger.classList.remove('active');
+    mobileMenu.classList.remove('open');
+  });
+});
+
+// Sticky CTA — dual-gated (hero-cta out AND offer-box not visible)
+(function(){
+  const heroCta = document.getElementById('hero-cta');
+  const offerBox = document.getElementById('offer-box');
+  const stickyBar = document.getElementById('stickyCta');
+  if (!heroCta || !offerBox || !stickyBar) return;
+  let heroPast = false, offerVisible = false;
+  const sync = () => stickyBar.classList.toggle('visible', heroPast && !offerVisible);
+  new IntersectionObserver(([e]) => { heroPast = !e.isIntersecting; sync(); }, {threshold: 0}).observe(heroCta);
+  new IntersectionObserver(([e]) => { offerVisible = e.isIntersecting; sync(); }, {threshold: 0.1}).observe(offerBox);
+})();
+
+// Demo checkout modal
+(function(){
+  const modal = document.getElementById('demoModal');
+  document.querySelectorAll('[data-demo-modal]').forEach(btn => {
+    btn.addEventListener('click', (e) => { e.preventDefault(); modal.classList.add('open'); });
+  });
+  modal.querySelectorAll('[data-demo-close]').forEach(el => {
+    el.addEventListener('click', () => modal.classList.remove('open'));
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') modal.classList.remove('open'); });
+})();
+</script>
+</body>
+</html>
