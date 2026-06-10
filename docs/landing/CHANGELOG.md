@@ -1,5 +1,114 @@
 # Changelog — Landing Page Procedure
 
+## [v5.0] — 2026-06-10 — „Efektywność w wielu wymiarach" (pełne wdrożenie roadmapy)
+
+> Geneza: wieloagentowa analiza 2026-06-10 (56 agentów: audyt procedury + kod/screenshoty
+> landingów + research CRO/design/DR/mobile/DTC) → 38 zweryfikowanych propozycji + 5 luk
+> krytyka kompletności. Pełne specyfikacje: `_research/upgrade-plan-2026-06.md`,
+> roadmapa: `_research/upgrade-roadmap-2026-06.md`. Wdrożone w 5 fazach
+> (commity: dda9962 → 2b29bc9 → 4e935b4 → d6b86af → 5c21835 → ab3de83).
+
+### FAZA 0 — Enforcement (fundament)
+- **Kanoniczny GATE**: `GATE: PASS/FAIL/WARN-EXCEEDED` + exit code = JEDYNE źródło prawdy
+  o wyniku verify-landing; usunięte 4 sprzeczne progi liczbowe („≥15/18", „≥60 PASS"…)
+  z 8 plików (w tym landing-autorun.sh = faktyczny prompt AUTO-RUN)
+- **verify-style-lock.sh hybrydowy**: REQUIRED tokeny z maszynowych linii `lock-*` w
+  `_brief.md` sekcji 10 (legalizuje paletę/fonty BRANDU — koniec rutynowego `--no-verify`),
+  FORBIDDEN hardcoded per styl (anty-samoatestacja), pierwszeństwo brand>Atlas, grandfathering
+  briefów sprzed v4.0; tryb BRIEF-LOCK
+- **Motion Budget zamiast globalnych progów JS**: wymagane efekty WYŁĄCZNIE z
+  `js_effects_required` stylu (4 style ZAKAZYWAŁY efektów, których verify żądał globalnie —
+  wbudowany konflikt uczył pipeline omijania gate'ów)
+- **Docs hygiene + verify-docs.sh w pre-commit**: odwrócone checki latin-ext, wycięte
+  PayPo/„za pobraniem" ze snippetów H, czystka legacy 04-design (sekcja 3 re-wyboru kierunku,
+  floating emoji/wavy dividers), routing 2.5→3.5; strażnik przeciw nawrotom sprzeczności
+- **Kanoniczna tabela 14 sekcji** (GAP-2): jedna spec struktury zamiast 14-vs-15-vs-12;
+  Cookie Banner poza 14 (TYLKO przy trackingu, z równorzędnym Odrzuć)
+- **Zasada rolloutu WARN→FAIL** dla każdego nowego checka (6 baseline + 5 landingów bez FP)
+
+### FAZA 1 — Demo, które sprzedaje
+- **Wycięty Conversion Toolkit** (zewnętrzny skrypt martwy po copy-paste do TakeDrop +
+  fake live-visitors/stock = Omnibus); twardy kanon self-contained
+- **Grupa 10 verify „Moment decyzji"**: zewnętrzne script src, demo-CTA (martwy `href="#"`
+  = realny bug linovo), `.cta-trust` przy final CTA, `.offer-shipping` pod ceną, gating
+  dwuwarunkowy sticky (IO hero+offer), uczciwy social proof (disclaimer/fake press)
+- **Kanony H.10 (cta-trust) i H.11 (demo-CTA)** + pattern #24 Demo-Checkout Modal
+- **Rating policy 4,6-4,8** (peak zaufania wg researchu — nie 4,9-5,0)
+- **VISION CRITIQUE (Krok 5.1 ETAP 5)**: rubryka 5 osi 1-5 ze screenshotów, wynik do briefu,
+  <3,5 → max 3 poprawki + re-score — pierwszy mechanizm łapiący „poprawne, ale brzydkie"
+- T6 przepisany: ściana atestów-placeholderów zamiast fabrykowanych logotypów prasy
+- Naprawione landingi: linovo (martwy CTA→modal, rating, disclaimer, founder-verb),
+  cervana (shipping, cta-trust, demo-modal)
+
+### FAZA 2 — Treść i prawda
+- **Krok 1.6 VOC**: dosłowne frazy z realnych opinii (workflow_reviews → AliExpress →
+  jawny fallback) — przerwany zamknięty obieg AI
+- **Krok 1.7 Big Idea + mechanism + awareness (Schwartz)** z DETERMINISTYCZNYMI
+  konsekwencjami dla hero i kolejności sekcji (GAP-1 — największa dźwignia konwersyjna)
+- **Sekcje briefu 12 (Mapa obiekcji — objection timing inline) i 13 (Big Idea/VOC/Liczby
+  kanoniczne)** + gate w verify-brief
+- **verify-offer-math.mjs**: spójność cen hero↔offer↔sticky↔final (parser „1 599 zł"),
+  stara−nowa=savings, % ±1 p.p., claimy czasowe per pojęcie, anti-fabrication liczb vs brief
+- **Founder note canon** (zakaz czasowników twórczych — dropshipping!) + META-GATE budżetowy
+- **generate-foto-przewodnik.mjs**: deliverable dla klienta z briefów placeholderów
+  (atak na największy sufit wizualny — niepodmienione placeholdery)
+- Manus prompt: VOC + mapa obiekcji + ZAKAZ wymyślania liczb; uczciwe „7-14 dni" w FAQ
+
+### FAZA 3 — Anty-sztanca
+- **Grupa 14 anti-AI-slop** (style-lock-aware): fiolety spoza palety briefu, Inter/Roboto
+  jako display, uniform radius >80%
+- **verify-freshness.sh**: kolizje ≥4 dosłownych fraz per para landingów + blacklista sztanc
+  (złapał realnie: „Zanim zamówisz" 3/3, „Oszczędzasz 100 zł" w 10 landingach!)
+- **Wow Moments maszynowe**: pola `pattern-id:`/`selector:` + grep na HTML + blocklist
+  baseline + ledger rotacji `wow-usage.jsonl`
+- **ph--bg** (brief tła → komentarz PH-BRIEF; koniec tekstu-na-tekście) + anty-monotonia
+  + screenshot od y=0 (hero wreszcie oglądane)
+- **motion-library = kanon** + CSS scroll-driven animations (@supports animation-timeline —
+  poza main thread, zysk INP)
+- Personifikacja wzorcem gramatycznym (nie listą 7 rzeczowników) + budżet „masz dość" liczony
+  + „zasługujesz na/pozwól sobie"; dark-academia Copy Voice dwuwarstwowy (GAP-4)
+- **Determinizm drzewa wariantów** (GAP-5): warunki zmapowane na pola briefu, usunięta
+  instrukcja gamingu „edytuj brief żeby wymusić H4"
+- **Swipe corpus** seed: 20 anotowanych referencji DTC + 5 wzorców przekrojowych
+  (`_research/swipe/`) — moodboard z realnych źródeł zamiast pamięci modelu
+
+### FAZA 4 — QA i compliance
+- **Frozen classes** (`hero-v-*`/`feat-v-*`/`testi-v-*`…) per wariant + **Grupa 15
+  „zadeklarowane = zbudowane"** (brief sekcja 9 ↔ HTML)
+- **verify-mobile.mjs**: obliczeniowy gate 360/375/412 (h1+CTA in-fold, hero ≤60vh,
+  per-element overflow z filtrem klipowania, tap targets ≥40px) + artefakt `_mobile-review.md`
+  — od razu złapał i naprawił realne bugi (sticky overflow linovo, hamburger 31px oba)
+- **Lighthouse post-deploy (Krok 8)** + realne nazwy MCP tools zamiast pseudo-API
+  (wait_for_events/record_traces/lighthouse_audits nie istniały)
+- **Kanon cookie consent #25** (równorzędne Odrzuć + consent-gating) + **audyt RODO 5 żywych
+  landingów** (`_research/rodo-audyt-zywych-2026-06.md`; fix kafina; retrofit = decyzja Tomka)
+
+### FAZA 5 — Skala
+- **13 wariantów Tier 2**: P1-P4 (Problem), W1-W3 (How), C1-C3 (Comparison — ZAWSZE vs
+  kategoria), O1-O3 (Offer, w tym multipack z deterministyczną formułą −10%/−15%) + drzewo
+  deterministyczne + frozen classes → razem **35 wariantów**
+- **4 nowe style evidence-cluster** (anty-konwergencja — dane: clinical-kitchen+H3/F4/T2 ×4):
+  newsroom-print, field-manual, specification-sheet, receipt-print (+ case'y style-lock,
+  indeks, clusters sync z clinical-warmth) → razem **19 stylów**
+- **LRU anti-repetition ZAWSZE** (nie tylko tie-break): top-1 użyty w 2 ostatnich ∧ runner-up
+  −1 → runner-up
+- **Copy-judge ścieżka B** + protokół eksperymentu vs Manus (3 landingi, decyzja bramkowa —
+  rozstrzyga los projektu data-copy): `_research/copy-judge-experiment.md`
+- **Pętla kalibracyjna**: landing-performance-stats.sh (warstwa A) + procedura ROAS przez
+  MCP Meta (warstwa B) → `_research/performance.md`; kwartalnie
+- **verify-all-landings v5.0**: snapshot „nie pogarszaj" (baseline-fails.txt) + sekcja
+  extended WARN-only (3 najnowsze + live-landings.txt — wcześniej regression chronił 14%
+  portfolio i pomijał strony, które zarabiają)
+- Font trend map (foundry→Google latin-ext) + wiersz type-led hero w drzewie
+
+### Otwarte (świadomie — wymagają danych/decyzji)
+- Eksperyment copy-judge vs Manus (3 landingi) → decyzja o data-copy
+- Podniesienie WARN→FAIL nowych checków (po 5 landingach bez false positive)
+- Retrofit consent-gating 5 żywych sklepów (decyzja biznesowa — wpływ na atrybucję kampanii)
+- Lighthouse próg Performance FAIL (po baseline z 10 landingów)
+- Kwartalnie: pętla ROAS + odświeżenie swipe corpus
+
+
 ## [v4.5] — 2026-05-18
 
 ### Added — Migracja URL Supabase na /render/image/ (cache 1 rok + WebP -23%)

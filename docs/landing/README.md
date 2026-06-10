@@ -1,6 +1,6 @@
-# Landing Page Procedure — TN CRM (v4.2)
+# Landing Page Procedure — TN CRM (v5.0)
 
-> Ostatnia aktualizacja: 2026-05-18 (v4.2 — patrz [CHANGELOG.md](CHANGELOG.md))
+> Ostatnia aktualizacja: 2026-06-10 (v5.0 — pełne wdrożenie roadmapy „efektywność w wielu wymiarach"; patrz [CHANGELOG.md](CHANGELOG.md))
 >
 > **Aktualne komponenty v5.0:** Style Atlas (19 stylów, deterministyczny pick przez Product DNA + LRU anti-repetition) · STYLE LOCK z maszynowymi lock-* (branding > Atlas) · 35 wariantów sekcji (Tier 2: Problem/How/Comparison/Offer) · kanoniczny GATE/exit-code · Grupa 10 „moment decyzji" + 14 anti-AI-slop + 15 zadeklarowane=zbudowane · vision critique + verify-mobile.mjs + verify-offer-math.mjs · Big Idea/VOC/liczby kanoniczne w briefie · Scrollability Rules (max 8-12 liczb, 3 breathing)
 >
@@ -78,6 +78,12 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 | `scripts/screenshot-landing.sh [slug]` | Playwright screenshoty 3 viewporty |
 | `scripts/landing-autorun.sh [UUID]` | Entry-point AUTO-RUN mode |
 | `scripts/generate-landing-images.sh [UUID] [SLUG]` | Background AI image generation |
+| `scripts/verify-offer-math.mjs [slug]` | **v5.0** — spójność cen/claimów czasowych + anti-fabrication liczb vs brief (rollout WARN; docelowo --strict) |
+| `scripts/verify-mobile.mjs [slug]` | **v5.0** — obliczeniowy gate mobilny 360/375/412 (in-fold, hero ≤60vh, overflow, tap targets) + artefakt `_mobile-review.md` |
+| `scripts/verify-freshness.sh [slug]` | **v5.0** — template-fingerprint: kolizje leksykalne per para + blacklista sztanc |
+| `scripts/verify-docs.sh` | **v5.0** — spójność SAMEJ procedury (w pre-commit przy staged docs/scripts) |
+| `scripts/generate-foto-przewodnik.mjs [slug] [brand]` | **v5.0** — przewodnik fotograficzny dla klienta z briefów placeholderów (deliverable) |
+| `scripts/landing-performance-stats.sh` | **v5.0** — warstwa A pętli kalibracyjnej (styl/warianty/liczby per landing → `_research/performance.md`) |
 | `scripts/extract-copy.mjs [slug] [outFile]` | ETAP 3.5 — wyciąga copy z index.html do JSON (Playwright) |
 | `scripts/review-copy-manus.sh [slug]` | ETAP 3.5 — Manus copy rewrite (submit + poll 15 min) |
 | `scripts/apply-copy.mjs [slug]` | ETAP 3.5 — aplikuje rewritten JSON do index.html |
