@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script>document.documentElement.classList.add('js')</script>
+<title>Badaczek — mikroskop cyfrowy dla małych odkrywców</title>
+<meta name="description" content="Kieszonkowy mikroskop cyfrowy dla dzieci, powiększenie 1000× na własnym ekranie. Bez aplikacji i internetu — ekran, który pokazuje dziecku świat.">
+<meta property="og:title" content="Badaczek — mikroskop cyfrowy dla małych odkrywców">
+<meta property="og:description" content="Powiększa świat 1000× na własnym ekranie. Bez aplikacji, bez internetu. Każdy spacer staje się wyprawą badawczą.">
+<meta property="og:image" content="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/badaczek/logo.png">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sage:#7C9C74; --sage-rgb:124,156,116;
+  --terracotta:#C97B5D; --terracotta-rgb:201,123,93;
+  --amber:#E8A94B; --amber-rgb:232,169,75;
+  --ink:#2E3528; --ink-rgb:46,53,40;
+  --stone:#8B8678; --stone-rgb:139,134,120;
+  --paper:#F7F4EC; --paper-2:#EFEADD; --paper-3:#E6E0CF;
+  --white:#FFFFFF;
+  --rule:rgba(46,53,40,0.10);
+  --sage-soft:rgba(124,156,116,0.10);
+  --primary:var(--sage); --primary-rgb:var(--sage-rgb);
+  --font-display:'Nunito',system-ui,sans-serif;
+  --font-body:'Nunito',system-ui,sans-serif;
+  --font-accent:'Caveat',cursive;
+  --shadow-sm:0 4px 16px rgba(46,53,40,0.06);
+  --shadow-md:0 14px 38px rgba(124,156,116,0.16);
+  --shadow-lg:0 26px 60px rgba(46,53,40,0.14);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--font-body);background:var(--paper);color:var(--ink);line-height:1.65;font-size:17px;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.container{max-width:1180px;margin:0 auto;padding:0 24px}
+h1,h2,h3{font-family:var(--font-display);font-weight:800;letter-spacing:-0.02em;line-height:1.1}
+h2{font-size:clamp(30px,4.4vw,46px)}
+h3{font-size:22px;font-weight:800}
+p{color:rgba(46,53,40,0.82)}
+em{font-style:normal;color:var(--terracotta)}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+section{position:relative}
+
+/* eyebrow / labels */
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-display);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:0.16em;line-height:1.5;color:var(--sage)}
+.eyebrow::before{content:"";width:22px;height:2px;background:var(--amber);border-radius:2px}
+.eyebrow.center{justify-content:center}
+.kicker-hand{font-family:var(--font-accent);font-weight:700;font-size:26px;color:var(--terracotta);line-height:1;transform:rotate(-3deg);display:inline-block}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;font-family:var(--font-display);font-weight:800;font-size:16px;border-radius:999px;padding:16px 28px;cursor:pointer;border:none;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .25s,background .25s;line-height:1.2}
+.btn-primary{background:var(--terracotta);color:#fff;box-shadow:0 12px 26px rgba(201,123,93,0.34)}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 18px 34px rgba(201,123,93,0.44)}
+.btn-secondary{background:transparent;color:var(--ink);border:2px solid var(--rule)}
+.btn-secondary:hover{border-color:var(--sage);background:var(--sage-soft)}
+.btn-block{width:100%}
+
+/* fade-in (gated) */
+html.js .fade-in{opacity:0;transform:translateY(30px);transition:opacity .8s cubic-bezier(.22,1,.36,1),transform .8s cubic-bezier(.22,1,.36,1)}
+html.js .fade-in.visible{opacity:1;transform:translateY(0)}
+@media(prefers-reduced-motion:reduce){html.js .fade-in{opacity:1;transform:none;transition:none}}
+
+/* placeholders */
+.ph{position:relative;overflow:hidden;width:100%;height:100%;background:linear-gradient(135deg,var(--paper-2),var(--paper-3));display:flex;align-items:center;justify-content:center;flex-direction:column;gap:9px;padding:22px;text-align:center;border-radius:inherit}
+.ph-mark{font-family:var(--font-display);font-weight:900;font-size:30px;color:rgba(124,156,116,0.6)}
+.ph-title{font-weight:800;font-size:14px;color:var(--ink)}
+.ph-size{font-family:var(--font-accent);font-size:16px;color:var(--terracotta)}
+.ph-note{font-size:12px;color:var(--stone);max-width:280px;line-height:1.5}
+
+/* section heads */
+.section-head{max-width:680px;margin-bottom:48px}
+.section-head.center{margin-left:auto;margin-right:auto;text-align:center}
+.section-head h2{margin-top:14px}
+.section-head p{margin-top:14px;font-size:18px}
+
+/* leaf divider */
+.leaf-divider{display:block;width:100%;height:40px;color:var(--paper)}
+
+/* ============ HEADER ============ */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:#FFFFFF;border-bottom:1px solid var(--rule)}
+.header-inner{display:flex;align-items:center;justify-content:space-between;height:72px}
+.logo{display:flex;align-items:center}
+.logo img{height:34px;width:auto}
+.nav{display:flex;align-items:center;gap:30px}
+.nav-link{font-weight:700;font-size:15px;color:var(--ink);line-height:1.4;transition:color .2s}
+.nav-link:hover{color:var(--sage)}
+.header-cta{font-family:var(--font-display);font-weight:800;font-size:14px;line-height:1.4;background:var(--sage);color:#fff;padding:11px 20px;border-radius:999px;transition:transform .2s}
+.header-cta:hover{transform:translateY(-2px)}
+.hamburger{display:none;flex-direction:column;justify-content:center;align-items:center;gap:5px;background:none;border:none;cursor:pointer;padding:10px;min-width:44px;min-height:44px}
+.hamburger span{width:24px;height:2px;background:var(--ink);border-radius:2px;transition:.3s}
+
+/* ============ MOBILE MENU ============ */
+.mobile-menu{position:fixed;inset:0;z-index:200;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;transform:translateY(-100%);transition:transform .4s cubic-bezier(.22,1,.36,1);visibility:hidden}
+.mobile-menu.open{transform:translateY(0);visibility:visible}
+.mobile-menu a{font-family:var(--font-display);font-weight:800;font-size:26px;color:var(--ink)}
+.mobile-menu .btn-primary{font-size:18px;margin-top:10px}
+.mobile-close{position:absolute;top:24px;right:24px;background:none;border:none;font-size:34px;color:var(--ink);cursor:pointer;line-height:1}
+
+/* ============ HERO (H6 persona) ============ */
+.hero{padding:128px 0 90px;background:radial-gradient(120% 90% at 80% 0%,rgba(232,169,75,0.10) 0%,transparent 55%),radial-gradient(90% 80% at 0% 100%,rgba(124,156,116,0.12) 0%,transparent 55%),var(--paper)}
+.hero-grid{display:grid;grid-template-columns:1.04fr 1fr;gap:60px;align-items:center}
+.hero h1{font-size:clamp(38px,5.4vw,62px);font-weight:900;margin:18px 0 22px}
+.hero-sub{font-size:19px;max-width:520px;line-height:1.6;color:rgba(46,53,40,0.78)}
+.hero-cta-row{display:flex;gap:14px;flex-wrap:wrap;margin:30px 0 22px}
+.hero-chips{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.hero-chip{display:inline-flex;align-items:center;gap:7px;background:var(--white);border:1px solid var(--rule);border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;color:var(--ink);box-shadow:var(--shadow-sm)}
+.hero-chip b{color:var(--sage)}
+.hero-quote{margin-top:8px;padding:16px 20px;background:var(--white);border-radius:18px;border:1px solid var(--rule);box-shadow:var(--shadow-sm);font-size:15px;line-height:1.55;color:var(--ink);max-width:460px}
+.hero-quote cite{display:block;font-style:normal;font-size:13px;color:var(--stone);margin-top:8px;font-weight:700}
+.hero-rating{display:inline-flex;align-items:center;gap:8px;margin-bottom:4px;font-size:14px;color:var(--stone);font-weight:700}
+.hero-rating .stars{color:var(--amber);letter-spacing:2px;font-size:15px}
+.hero-figure-wrap{position:relative}
+.hero-figure{aspect-ratio:4/5;border-radius:30px;overflow:hidden;background:var(--white);box-shadow:var(--shadow-lg);border:1px solid var(--rule)}
+/* WOW 1: lens-reveal */
+.lens-reveal{position:absolute;bottom:-26px;left:-26px;width:184px;height:184px;border-radius:50%;background:var(--ink);box-shadow:var(--shadow-lg),0 0 0 10px rgba(247,244,236,0.9);overflow:hidden;display:flex;align-items:center;justify-content:center;z-index:3}
+.lens-reveal .lens-inner{position:absolute;inset:8px;border-radius:50%;background:radial-gradient(circle at 50% 35%,#9ec48f 0%,#7C9C74 40%,#3f5a3a 100%);overflow:hidden}
+.lens-reveal .lens-mag{position:relative;z-index:2;text-align:center;color:#fff}
+.lens-reveal .lens-mag .lm-num{font-family:var(--font-display);font-weight:900;font-size:34px;line-height:1;text-shadow:0 2px 8px rgba(0,0,0,.4)}
+.lens-reveal .lens-mag .lm-label{font-family:var(--font-accent);font-weight:700;font-size:19px;margin-top:2px;text-shadow:0 2px 6px rgba(0,0,0,.4)}
+.lens-reveal::before,.lens-reveal::after{content:"";position:absolute;z-index:3;background:rgba(255,255,255,0.55)}
+.lens-reveal::before{left:50%;top:14%;bottom:14%;width:1px;transform:translateX(-.5px)}
+.lens-reveal::after{top:50%;left:14%;right:14%;height:1px;transform:translateY(-.5px)}
+.lens-ring{position:absolute;inset:0;border-radius:50%;border:3px solid rgba(232,169,75,0.85);z-index:4;pointer-events:none}
+.lens-dot{position:absolute;width:7px;height:7px;border-radius:50%;background:#fff;opacity:.8;z-index:4}
+.hero-note{position:absolute;top:-8px;right:6px;z-index:4;font-family:var(--font-accent);font-weight:700;font-size:23px;color:var(--terracotta);transform:rotate(5deg);max-width:160px;text-align:center;line-height:1.05}
+.hero-note svg{display:block;margin:2px auto 0;width:54px;color:var(--terracotta)}
+
+/* ============ TRUST BAR ============ */
+.trust{padding:26px 0;background:var(--white);border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.trust-items{display:flex;justify-content:center;align-items:stretch;gap:14px;flex-wrap:nowrap}
+.trust-item{display:inline-flex;align-items:center;gap:12px;padding:8px 16px;flex-shrink:0;white-space:nowrap}
+.trust-icon{width:42px;height:42px;flex-shrink:0;border-radius:13px;background:var(--sage-soft);display:flex;align-items:center;justify-content:center;color:var(--sage)}
+.trust-icon svg{width:22px;height:22px}
+.trust-text strong{display:block;font-family:var(--font-display);font-weight:800;font-size:14px;white-space:nowrap}
+.trust-text span{font-size:12.5px;color:var(--stone);white-space:nowrap}
+
+/* ============ PROBLEM ============ */
+.problem{padding:104px 0;background:var(--paper)}
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center}
+.problem h2{margin-bottom:20px}
+.problem p{font-size:18px;margin-bottom:18px;line-height:1.7}
+.problem .agitate{display:inline-flex;align-items:baseline;gap:12px;margin-top:8px;padding:18px 22px;background:var(--white);border-radius:18px;border:1px solid var(--rule);box-shadow:var(--shadow-sm)}
+.problem .agitate .big{font-family:var(--font-display);font-weight:900;font-size:42px;color:var(--terracotta);line-height:1}
+.problem .agitate .lbl{font-size:14px;color:var(--stone);max-width:230px;line-height:1.4}
+.problem-figure{aspect-ratio:4/3;border-radius:26px;overflow:hidden;box-shadow:var(--shadow-md);border:1px solid var(--rule)}
+
+/* ============ SOLUTION / BENTO (F1) ============ */
+.solution{padding:104px 0;background:var(--white)}
+.bento{display:grid;grid-template-columns:1fr 1fr;gap:22px}
+.tile{background:var(--paper);border:1px solid var(--rule);border-radius:24px;padding:0;overflow:hidden;display:flex;flex-direction:column;transition:transform .3s,box-shadow .3s;position:relative}
+.tile:hover{transform:translateY(-5px);box-shadow:var(--shadow-md)}
+.bento-image{aspect-ratio:16/10;overflow:hidden}
+.tile-body{padding:28px 30px 32px;flex:1}
+.tile-tag{display:inline-block;font-family:var(--font-display);font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--sage);margin-bottom:10px}
+.tile h3{margin-bottom:9px}
+.tile p{font-size:15.5px;line-height:1.6}
+.tile:nth-child(2) .tile-tag{color:var(--terracotta)}
+.tile:nth-child(3) .tile-tag{color:var(--amber)}
+.tile:nth-child(4) .tile-tag{color:var(--sage)}
+/* WOW 2: field-note */
+.field-note{font-family:var(--font-accent);font-weight:700;color:var(--terracotta);line-height:1.05;position:absolute;z-index:5;pointer-events:none}
+.tile .field-note{font-size:21px;top:14px;right:16px;transform:rotate(6deg);max-width:120px;text-align:right}
+
+/* ============ HOW IT WORKS ============ */
+.how{padding:104px 0;background:var(--paper);overflow:hidden}
+.how-steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px;margin-top:14px}
+.how-step{background:var(--white);border:1px solid var(--rule);border-radius:24px;padding:0;overflow:hidden;position:relative}
+.how-step-image{aspect-ratio:4/3;overflow:hidden}
+.how-step-body{padding:26px 28px 30px}
+.how-step-number{position:absolute;top:14px;left:14px;z-index:4;width:44px;height:44px;border-radius:50%;background:var(--terracotta);color:#fff;font-family:var(--font-display);font-weight:900;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm)}
+.how-step:nth-child(2) .how-step-number{background:var(--sage)}
+.how-step:nth-child(3) .how-step-number{background:var(--amber);color:var(--ink)}
+.how-step h3{margin-bottom:8px}
+.how-step p{font-size:15px}
+.how-step .field-note{font-size:20px;bottom:108px;right:18px;transform:rotate(-5deg);max-width:130px;text-align:right}
+
+/* ============ COMPARISON ============ */
+.comparison{padding:104px 0;background:var(--white)}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:26px;max-width:980px;margin:0 auto}
+.comparison-card{background:var(--paper);border:1px solid var(--rule);border-radius:24px;padding:38px}
+.comparison-card.highlight{background:linear-gradient(180deg,rgba(124,156,116,0.08),var(--white));border:2px solid var(--sage);box-shadow:var(--shadow-md);position:relative}
+.comparison-card .cc-tag{font-family:var(--font-display);font-weight:800;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--stone);margin-bottom:6px}
+.comparison-card.highlight .cc-tag{color:var(--sage)}
+.comparison-card h3{font-size:24px;margin-bottom:18px}
+.comparison-card ul{list-style:none}
+.comparison-card li{padding:11px 0 11px 26px;position:relative;font-size:15.5px;color:rgba(46,53,40,0.82);border-bottom:1px dashed var(--rule)}
+.comparison-card li:last-child{border-bottom:none}
+.comparison-card li::before{content:"";position:absolute;left:0;top:18px;width:10px;height:10px;border-radius:50%;background:var(--stone);opacity:.5}
+.comparison-card.highlight li::before{background:var(--sage);opacity:1}
+.cc-badge{position:absolute;top:-14px;right:24px;background:var(--amber);color:var(--ink);font-family:var(--font-display);font-weight:800;font-size:12px;padding:6px 14px;border-radius:999px;transform:rotate(-2deg);box-shadow:var(--shadow-sm)}
+
+/* ============ TESTIMONIALS (T1) ============ */
+.testimonials{padding:104px 0;background:var(--paper)}
+.rating-strip{display:inline-flex;align-items:center;gap:10px;margin-top:14px;font-size:15px;color:var(--stone);font-weight:700}
+.rating-strip .stars{color:var(--amber);letter-spacing:2px;font-size:17px}
+.voices-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:8px}
+.voice-card{background:var(--white);border:1px solid var(--rule);border-radius:24px;padding:30px;box-shadow:var(--shadow-sm);display:flex;flex-direction:column}
+.voice-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.voice-avatar{width:60px;height:60px;border-radius:50%;overflow:hidden;background:var(--sage-soft);flex-shrink:0;border:2px solid var(--white);box-shadow:var(--shadow-sm)}
+.voice-stars{color:var(--amber);letter-spacing:1px;font-size:14px}
+.voice-quote{font-size:15.5px;line-height:1.62;color:var(--ink);margin-bottom:16px;flex:1}
+.voice-cite{font-size:13.5px;color:var(--stone)}
+.voice-cite b{color:var(--ink);font-weight:800;display:block;font-size:14.5px}
+
+/* ============ FOUNDER NOTE (WOW 3) ============ */
+.founder{padding:30px 0 0;background:var(--paper)}
+.founder-note{max-width:920px;margin:0 auto;background:var(--white);border:1px solid var(--rule);border-radius:28px;padding:40px 44px;box-shadow:var(--shadow-md);display:grid;grid-template-columns:130px 1fr;gap:30px;align-items:center;position:relative;overflow:hidden}
+.founder-note::before{content:"";position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:var(--sage-soft)}
+.founder-portrait{width:130px;height:130px;border-radius:50%;overflow:hidden;border:3px solid var(--paper-2);box-shadow:var(--shadow-sm);position:relative;z-index:2}
+.founder-body{position:relative;z-index:2}
+.founder-body .eyebrow{margin-bottom:12px}
+.founder-body p{font-size:17px;line-height:1.66;color:var(--ink)}
+.founder-sign{font-family:var(--font-accent);font-weight:700;font-size:34px;color:var(--terracotta);margin-top:10px;line-height:1}
+.founder-role{font-size:13px;color:var(--stone);font-weight:700}
+
+/* ============ OFFER ============ */
+.offer{padding:90px 0 104px;background:var(--white)}
+.offer-box{max-width:600px;margin:40px auto 0;background:var(--paper);border:1px solid var(--rule);border-radius:30px;padding:14px;box-shadow:var(--shadow-lg);position:relative}
+.offer-box::before{content:"";position:absolute;inset:0;border-radius:30px;padding:2px;background:linear-gradient(135deg,var(--sage),var(--amber),var(--terracotta));-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;opacity:.5}
+.offer-sticker{position:absolute;top:-15px;right:26px;z-index:5;background:var(--terracotta);color:#fff;font-family:var(--font-display);font-weight:800;font-size:12px;padding:7px 15px;border-radius:999px;transform:rotate(-3deg);box-shadow:var(--shadow-sm)}
+.offer-inner{background:var(--white);border-radius:22px;padding:36px 36px 38px}
+.offer-image{aspect-ratio:16/9;border-radius:18px;overflow:hidden;margin-bottom:22px}
+.offer-rating{display:flex;align-items:center;gap:9px;font-size:14px;color:var(--stone);font-weight:700;margin-bottom:12px}
+.offer-rating .stars{color:var(--amber);letter-spacing:2px;font-size:16px}
+.offer-rating sup a{color:var(--stone);font-size:10px}
+.offer-title{font-size:26px;font-weight:900;margin-bottom:6px}
+.offer-lede{font-size:15px;color:var(--stone);margin-bottom:20px}
+.offer-price-block{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.offer-price-old{font-size:23px;color:#9ca3af;text-decoration:line-through;font-weight:700}
+.offer-price-now{font-family:var(--font-display);font-weight:900;font-size:54px;color:var(--ink);line-height:1;letter-spacing:-.02em}
+.offer-price-save{background:rgba(201,123,93,0.15);color:var(--terracotta);font-weight:800;font-size:14px;padding:5px 11px;border-radius:8px;transform:rotate(-3deg)}
+.offer-save-text{color:var(--sage);font-weight:800;font-size:14px;margin-top:6px}
+.offer-shipping{font-size:14px;color:var(--stone);margin-top:8px;display:flex;align-items:center;gap:7px}
+.offer-list{list-style:none;margin:22px 0 4px;border-top:1px solid var(--rule);padding-top:22px}
+.offer-list li{display:flex;align-items:flex-start;gap:12px;padding:8px 0;font-size:15.5px;color:var(--ink)}
+.offer-list li svg{width:20px;height:20px;color:var(--sage);flex-shrink:0;margin-top:2px}
+.offer-list li b{font-weight:800}
+.offer-cta{margin-top:24px;font-size:19px;padding:19px 28px}
+.offer-guarantee{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13.5px;color:var(--stone);margin-top:14px;text-align:center;font-weight:600}
+.trust-strip{display:flex;justify-content:center;flex-wrap:wrap;gap:18px;margin-top:22px;padding-top:22px;border-top:1px solid var(--rule)}
+.trust-strip span{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:700;color:var(--ink)}
+.trust-strip svg{width:18px;height:18px;color:var(--sage)}
+.payment-logos{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:9px;margin-top:20px}
+.pay-chip{font-family:var(--font-display);font-weight:800;font-size:12px;letter-spacing:.04em;color:var(--stone);background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:7px 12px}
+.pay-chip.blik{color:#fff;background:var(--ink);border-color:var(--ink)}
+
+/* ============ FINAL CTA ============ */
+.final-cta{padding:110px 0;position:relative;overflow:hidden;background:var(--ink)}
+.final-cta-figure{position:absolute;inset:0;z-index:0;opacity:.32}
+.final-cta-figure .ph{background:linear-gradient(135deg,#3a4233,#2E3528)}
+.final-cta-figure .ph-mark,.final-cta-figure .ph-title,.final-cta-figure .ph-size,.final-cta-figure .ph-note{display:none}
+.final-cta .container{position:relative;z-index:2;text-align:center}
+.final-cta .kicker-hand{color:var(--amber)}
+.final-cta h2{color:var(--paper);margin:12px 0 16px;max-width:720px;margin-left:auto;margin-right:auto}
+.final-cta p{color:rgba(247,244,236,0.82);font-size:18px;max-width:540px;margin:0 auto 30px}
+.final-cta .btn-primary{font-size:19px;padding:19px 36px}
+.cta-trust{font-size:13px;color:rgba(247,244,236,0.8);display:flex;gap:10px;align-items:center;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.cta-trust .ct-check{flex:none;color:var(--amber)}
+.cta-trust .ct-sep{opacity:.5}
+
+/* ============ FOOTER ============ */
+.footer{background:var(--paper-2);padding:64px 0 30px;border-top:1px solid var(--rule)}
+.footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;margin-bottom:40px}
+.footer-brand img{height:32px;margin-bottom:14px}
+.footer-brand p{font-size:14px;color:var(--stone);max-width:300px}
+.footer-tag{font-family:var(--font-accent);font-weight:700;font-size:22px;color:var(--sage);margin-bottom:6px}
+.footer-col h4{font-family:var(--font-display);font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.1em;line-height:1.4;margin-bottom:16px;color:var(--ink)}
+.footer-col a,.footer-col p{display:block;font-size:14.5px;color:var(--stone);margin-bottom:10px;transition:color .2s}
+.footer-col a:hover{color:var(--sage)}
+.footer-bottom{border-top:1px solid var(--rule);padding-top:24px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--stone)}
+.footnote{font-size:11.5px;color:var(--stone);max-width:760px;margin-top:14px;line-height:1.5}
+
+/* ============ STICKY CTA ============ */
+.sticky-cta{position:fixed;bottom:0;left:0;right:0;z-index:90;background:#fff;box-shadow:0 -6px 20px rgba(46,53,40,0.10);padding:12px 16px calc(12px + env(safe-area-inset-bottom));display:none;gap:12px;align-items:center;justify-content:space-between;transform:translateY(110%);transition:transform .28s cubic-bezier(.22,1,.36,1)}
+.sticky-cta.visible{transform:translateY(0)}
+.sticky-price{display:flex;flex-direction:column;line-height:1.1}
+.sticky-price .sp-old{font-size:13px;color:#9ca3af;text-decoration:line-through;font-weight:700}
+.sticky-price .sp-now{font-family:var(--font-display);font-weight:900;font-size:21px;color:var(--ink)}
+.sticky-cta .btn-primary{flex:1;max-width:62%;min-height:54px;font-size:16px}
+
+/* ============ RESPONSIVE ============ */
+@media(max-width:900px){
+  .hero-grid{grid-template-columns:1fr;gap:38px}
+  .hero-figure-wrap{max-width:420px;margin:0 auto}
+  .problem-grid{grid-template-columns:1fr;gap:32px}
+  .bento{grid-template-columns:1fr}
+  .how-steps{grid-template-columns:1fr;gap:18px}
+  .comparison-grid{grid-template-columns:1fr}
+  .voices-grid{grid-template-columns:1fr}
+  .founder-note{grid-template-columns:1fr;text-align:center;padding:34px 26px}
+  .founder-portrait{margin:0 auto}
+  .footer-grid{grid-template-columns:1fr 1fr}
+}
+@media(max-width:768px){
+  .nav{display:none}
+  .header-cta{display:none}
+  .hamburger{display:flex}
+  .trust-items{flex-direction:column;align-items:center;gap:14px}
+  .how-step .field-note{position:static;display:inline-block;margin-top:10px;text-align:left;transform:rotate(-2deg)}
+  .sticky-cta{display:flex}
+  body{padding-bottom:88px}
+}
+@media(max-width:480px){
+  body{font-size:16px}
+  .container{padding:0 18px}
+  .hero{padding:104px 0 64px}
+  .hero h1{font-size:clamp(30px,8.5vw,40px)}
+  .hero-sub{font-size:17px}
+  .hero-figure{max-height:64vh}
+  .hero-cta-row{flex-direction:column}
+  .hero-cta-row .btn{width:100%}
+  .lens-reveal{width:128px;height:128px;bottom:-16px;left:-12px}
+  .lens-reveal .lens-mag .lm-num{font-size:24px}
+  .hero-note{font-size:18px;top:-4px}
+  .problem,.solution,.how,.comparison,.testimonials,.offer{padding:72px 0}
+  .problem .agitate .big{font-size:34px}
+  .offer-inner{padding:26px 22px 30px}
+  .offer-price-now{font-size:44px}
+  .tile .field-note{font-size:18px}
+  .footer-grid{grid-template-columns:1fr;gap:28px}
+  .section-head{margin-bottom:34px}
+  .btn{width:100%}
+  .hero-cta-row .btn,.offer-cta{width:100%}
+}
+@media(max-width:380px){
+  .sticky-price .sp-now{font-size:18px}
+  .sticky-cta .btn-primary{font-size:15px;padding:14px 16px}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ 1. HEADER ============ -->
+<header class="header">
+  <div class="container header-inner">
+    <a href="#top" class="logo" aria-label="Badaczek — strona główna">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/badaczek/logo.png" alt="Badaczek" width="170" height="34">
+    </a>
+    <nav class="nav">
+      <a href="#funkcje" class="nav-link">Funkcje</a>
+      <a href="#jak" class="nav-link">Jak działa</a>
+      <a href="#opinie" class="nav-link">Opinie</a>
+      <a href="#faq" class="nav-link">FAQ</a>
+    </nav>
+    <a href="#offer-box" class="header-cta">Zamów Badaczka</a>
+    <button class="hamburger" aria-label="Otwórz menu" id="hamburger">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ============ 2. MOBILE MENU ============ -->
+<div class="mobile-menu" id="mobileMenu" role="dialog" aria-label="Menu">
+  <button class="mobile-close" id="mobileClose" aria-label="Zamknij menu">&times;</button>
+  <a href="#funkcje" class="mm-link">Funkcje</a>
+  <a href="#jak" class="mm-link">Jak działa</a>
+  <a href="#opinie" class="mm-link">Opinie</a>
+  <a href="#faq" class="mm-link">FAQ</a>
+  <a href="#offer-box" class="btn btn-primary mm-link">Zamów Badaczka</a>
+</div>
+
+<!-- ============ 3. HERO (H6 persona) ============ -->
+<section class="hero hero-portrait hero-v-persona" id="top">
+  <div class="container hero-grid">
+    <div class="hero-left">
+      <div class="eyebrow">Badaczek · mikroskop dla małych odkrywców</div>
+      <h1>Pokaż dziecku świat, <em>którego nie widać</em></h1>
+      <div class="hero-rating"><span class="stars">★★★★★</span> 4,7/5 · pierwsze opinie rodziców</div>
+      <p class="hero-sub">Kieszonkowy mikroskop, który powiększa świat 1000× na własnym ekranie — bez aplikacji i bez internetu. Naładujesz go przez USB-C i działa do 2 godzin w terenie.</p>
+      <div class="hero-chips">
+        <span class="hero-chip"><b>1000×</b> powiększenie</span>
+        <span class="hero-chip">ekran IPS 2″</span>
+        <span class="hero-chip">bez aplikacji</span>
+      </div>
+      <div class="hero-cta-row">
+        <a href="#offer-box" class="btn btn-primary magnetic" id="hero-cta">Zamów Badaczka →</a>
+        <a href="#jak" class="btn btn-secondary">Zobacz jak działa</a>
+      </div>
+      <blockquote class="hero-quote">
+        „Bałam się, że to kolejny ekran. A on od tygodnia ogląda liście, sól i własny włos — i ciągnie mnie, żebym patrzyła razem z nim."
+        <cite>— Anna, mama Stasia (6 lat)</cite>
+      </blockquote>
+    </div>
+    <div class="hero-right">
+      <div class="hero-figure-wrap">
+        <div class="hero-figure hero-image">
+          <div class="ph">
+            <div class="ph-mark">P · HERO</div>
+            <div class="ph-title">Dziecko + rodzic z Badaczkiem w plenerze</div>
+            <div class="ph-size">1000 × 1400 · pionowy 5:7</div>
+            <div class="ph-note">ŻÓŁTY ręczny mikroskop cyfrowy (2″ ekran, karbowany żółty uchwyt, przezroczysta podstawa z pierścieniem LED). Dziecko 5-7 lat przykłada go do liścia/kwiatu, rodzic patrzy na ekran obok. Naturalne światło, park/ogród, ciepłe barwy ziemi. Zero stock-uśmiechów.</div>
+          </div>
+        </div>
+        <!-- WOW 1: okno powiększenia (lens-reveal) -->
+        <div class="lens-reveal" aria-hidden="true">
+          <div class="lens-inner"></div>
+          <div class="lens-ring"></div>
+          <span class="lens-dot" style="top:9px;left:50%;transform:translateX(-50%)"></span>
+          <span class="lens-dot" style="bottom:9px;left:50%;transform:translateX(-50%)"></span>
+          <span class="lens-dot" style="left:9px;top:50%;transform:translateY(-50%)"></span>
+          <span class="lens-dot" style="right:9px;top:50%;transform:translateY(-50%)"></span>
+          <div class="lens-mag">
+            <span class="lm-num">1000×</span>
+            <span class="lm-label">i widać wszystko</span>
+          </div>
+        </div>
+        <div class="hero-note" aria-hidden="true">to samo oko, inny świat
+          <svg viewBox="0 0 60 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 4 C 20 22, 40 22, 56 9"/><path d="M50 4 L57 9 L49 14"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4. TRUST BAR ============ -->
+<section class="trust">
+  <div class="container">
+    <div class="trust-items">
+      <div class="trust-item">
+        <div class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z"/></svg></div>
+        <div class="trust-text"><strong>2 lata gwarancji</strong><span>polska obsługa</span></div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v4h4"/></svg></div>
+        <div class="trust-text"><strong>30 dni na zwrot</strong><span>bez pytań</span></div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18"/></svg></div>
+        <div class="trust-text"><strong>Bezpieczna płatność</strong><span>BLIK · karta · przelew</span></div>
+      </div>
+      <div class="trust-item">
+        <div class="trust-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 13l4 4L19 7"/></svg></div>
+        <div class="trust-text"><strong>Gotowy od razu</strong><span>bez instalacji</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5. PROBLEM ============ -->
+<section class="problem">
+  <div class="container problem-grid">
+    <div class="problem-text fade-in">
+      <div class="eyebrow">Znasz to uczucie</div>
+      <h2>Znów popołudnie w telefonie?</h2>
+      <p>Dziecko siada z bajką albo krótkim filmikiem „na chwilę" — i mija godzina. Ty czujesz, że to nie służy ani jego koncentracji, ani Waszej relacji. Ale odebranie telefonu kończy się płaczem, a kolejna plastikowa zabawka i tak ląduje w pudle po pięciu minutach.</p>
+      <p>Problem nie jest w ekranie. Problem jest w tym, <em>co</em> dziecko na nim ogląda — algorytm, który tylko przewija dalej.</p>
+      <div class="agitate">
+        <span class="big">„jeszcze chwilę"</span>
+        <span class="lbl">— i znika całe popołudnie. Bierne przewijanie skraca uwagę, zamiast ją budować.</span>
+      </div>
+    </div>
+    <div class="problem-figure fade-in">
+      <div class="ph">
+        <div class="ph-mark">P · PROBLEM</div>
+        <div class="ph-title">Dziecko zgarbione nad telefonem</div>
+        <div class="ph-size">800 × 600 · 4:3</div>
+        <div class="ph-note">Stan „przed": dziecko bierne przy ekranie telefonu, przygaszone światło, zamknięta postawa. Bez dramatyzowania — oddaje codzienną scenę, którą rodzic rozpozna.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6. SOLUTION / BENTO (F1) ============ -->
+<section class="solution feat-v-bento" id="funkcje">
+  <div class="container">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Poznaj Badaczka</div>
+      <h2>Ekran, który <em>otwiera</em> dziecku świat</h2>
+      <p>To samo zaciekawienie, które trzymało dziecko przy telefonie — tylko skierowane na liść paproci, kryształ soli i skrzydło muchy.</p>
+    </div>
+    <div class="bento">
+      <article class="tile fade-in">
+        <span class="field-note" aria-hidden="true">bez Wi-Fi!</span>
+        <div class="bento-image">
+          <div class="ph">
+            <div class="ph-mark">B1</div>
+            <div class="ph-title">Mikroskop na parapecie, bez telefonu obok</div>
+            <div class="ph-size">640 × 360 · 16:10</div>
+            <div class="ph-note">Żółty Badaczek stoi na parapecie, dziecko zagląda w ekran. Brak telefonu/tabletu w kadrze — podkreśla „bez aplikacji".</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <span class="tile-tag">Spokojna technologia</span>
+          <h3>Bez aplikacji, bez internetu, bez powiadomień</h3>
+          <p>Włączasz i działa. Żadnego konta, parowania z telefonem ani dźwięków, które proszą o „jeszcze jeden filmik". Ekran, który nie odciąga od świata — kieruje na niego.</p>
+        </div>
+      </article>
+      <article class="tile fade-in">
+        <span class="field-note" aria-hidden="true">1000×!</span>
+        <div class="bento-image">
+          <div class="ph">
+            <div class="ph-mark">B2</div>
+            <div class="ph-title">Zbliżenie ekranu: powiększony liść/owad</div>
+            <div class="ph-size">640 × 360 · 16:10</div>
+            <div class="ph-note">Makro 2″ ekranu Badaczka z wyraźnie powiększonym obiektem (żyłki liścia, oko muchy). Pokazuje jakość obrazu i efekt „wow".</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <span class="tile-tag">Powiększenie 1000×</span>
+          <h3>Pokazuje to, czego nie widać gołym okiem</h3>
+          <p>Ziarnko piasku staje się głazem, a kropla wody — całym akwarium pełnym życia. Powiększenie, które zaskakuje nawet dorosłych i podsuwa pytania „a co to?".</p>
+        </div>
+      </article>
+      <article class="tile fade-in">
+        <span class="field-note" aria-hidden="true">we dwoje</span>
+        <div class="bento-image">
+          <div class="ph">
+            <div class="ph-mark">B3</div>
+            <div class="ph-title">Rodzic i dziecko patrzą na jeden ekran</div>
+            <div class="ph-size">640 × 360 · 16:10</div>
+            <div class="ph-note">Dwie głowy pochylone nad jasnym ekranem IPS Badaczka, oboje uśmiechnięci z zaciekawienia. Pokazuje wspólne oglądanie (kąt 178°).</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <span class="tile-tag">Ekran IPS 2″</span>
+          <h3>Oglądacie razem — bez mrużenia oka</h3>
+          <p>Zamiast jednego oka przy okularze tradycyjnego mikroskopu — jasny ekran o szerokim kącie 178°. Dziecko i rodzic patrzą na to samo w tej samej chwili.</p>
+        </div>
+      </article>
+      <article class="tile fade-in">
+        <span class="field-note" aria-hidden="true">do plecaka</span>
+        <div class="bento-image">
+          <div class="ph">
+            <div class="ph-mark">B4</div>
+            <div class="ph-title">Badaczek ze smyczą, w dłoni dziecka w parku</div>
+            <div class="ph-size">640 × 360 · 16:10</div>
+            <div class="ph-note">Żółty mikroskop na smyczy, trzymany w dłoni dziecka w terenie (las/park). Pokazuje mobilność i kieszonkowy format.</div>
+          </div>
+        </div>
+        <div class="tile-body">
+          <span class="tile-tag">Kieszonkowy · USB-C</span>
+          <h3>Mieści się w dłoni, jedzie na każdą wyprawę</h3>
+          <p>Lekki, na smyczy, ładowany jak telefon przez USB-C — do 2 godzin badania w terenie. Spacer do parku zamienia się w wyprawę badawczą.</p>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 7. HOW IT WORKS ============ -->
+<section class="how" id="jak">
+  <div class="container">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Trzy kroki</div>
+      <h2>Prosty tak, że poradzi sobie <em>czterolatek</em></h2>
+      <p>Gotowy od razu po wyjęciu z pudełka — bez instalacji, bez konta, bez instrukcji na pół godziny.</p>
+    </div>
+    <div class="how-steps">
+      <div class="how-step fade-in">
+        <div class="how-step-number">1</div>
+        <div class="how-step-image">
+          <div class="ph">
+            <div class="ph-mark">H1</div>
+            <div class="ph-title">Dziecko włącza Badaczka jednym przyciskiem</div>
+            <div class="ph-size">600 × 450 · 4:3</div>
+            <div class="ph-note">Dłoń dziecka naciska przycisk na żółtym uchwycie, ekran się rozświetla. Kontekst domowy/ogród, naturalne światło.</div>
+          </div>
+        </div>
+        <div class="how-step-body">
+          <h3>Włącz</h3>
+          <p>Jeden przycisk i ekran się zapala. Pierścień ośmiu diod LED sam doświetla próbkę.</p>
+        </div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="how-step-number">2</div>
+        <div class="how-step-image">
+          <div class="ph">
+            <div class="ph-mark">H2</div>
+            <div class="ph-title">Przyłożenie soczewki do liścia/kwiatu</div>
+            <div class="ph-size">600 × 450 · 4:3</div>
+            <div class="ph-note">Przezroczysta podstawa Badaczka przyłożona do liścia lub płatka kwiatu. Ujęcie z procesu, ręce dziecka.</div>
+          </div>
+        </div>
+        <div class="how-step-body">
+          <h3>Przyłóż</h3>
+          <p>Przykładasz soczewkę do liścia, monety albo kociej sierści — i kręcisz ostrość pokrętłem.</p>
+          <span class="field-note" aria-hidden="true">liść → dżungla</span>
+        </div>
+      </div>
+      <div class="how-step fade-in">
+        <div class="how-step-number">3</div>
+        <div class="how-step-image">
+          <div class="ph">
+            <div class="ph-mark">H3</div>
+            <div class="ph-title">Dziecko z zachwytem patrzy na ekran</div>
+            <div class="ph-size">600 × 450 · 4:3</div>
+            <div class="ph-note">Twarz dziecka oświetlona ekranem, mina zachwytu. Na ekranie powiększony obraz. Moment odkrycia — wynik, nie czynność.</div>
+          </div>
+        </div>
+        <div class="how-step-body">
+          <h3>Odkrywaj</h3>
+          <p>Świat z bliska pojawia się na ekranie. Zdjęcia i filmy zapisują się na karcie — możecie wracać do odkryć.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 8. COMPARISON ============ -->
+<section class="comparison">
+  <div class="container">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Dlaczego nie tańszy z marketplace</div>
+      <h2>Dwa różne <em>pomysły</em> na mikroskop dla dziecka</h2>
+    </div>
+    <div class="comparison-grid">
+      <div class="comparison-card fade-in">
+        <div class="cc-tag">Tani mikroskop z marketplace</div>
+        <h3>Zabawka na kilka dni</h3>
+        <ul>
+          <li>Tradycyjny okular — trzeba mrużyć jedno oko, dziecko szybko się zniechęca i odkłada.</li>
+          <li>Zdjęcia produktu prosto z fabryki, krzykliwy plastik, brak pomysłu na markę.</li>
+          <li>Anonimowy sprzedawca — gdy coś nie działa, zostajesz z problemem sam.</li>
+          <li>Kupujesz samo urządzenie. Reszta to domysły, co i jak oglądać.</li>
+        </ul>
+      </div>
+      <div class="comparison-card highlight fade-in">
+        <span class="cc-badge">Badaczek</span>
+        <div class="cc-tag">Narzędzie do odkrywania</div>
+        <h3>Wraca się do niego tygodniami</h3>
+        <ul>
+          <li>Jasny ekran IPS — oglądacie razem, bez mrużenia oka i zezowania.</li>
+          <li>Spokojna technologia: bez aplikacji, bez sieci, bez krzyku — ekran, który kieruje na świat.</li>
+          <li>Polska obsługa, 2 lata gwarancji i 30 dni na zwrot — masz do kogo napisać.</li>
+          <li>Pełen zestaw odkrywcy z „Dziennikiem Badacza", który podpowiada, co obejrzeć.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 9. TESTIMONIALS (T1) ============ -->
+<section class="testimonials voices personas testi-v-grid" id="opinie">
+  <div class="container">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Opinie rodziców i dziadków</div>
+      <h2>Trzy domy, trzy <em>konkretne</em> zmiany</h2>
+      <div class="rating-strip"><span class="stars">★★★★★</span> <b>4,7 / 5</b> · pierwsze opinie rodziców</div>
+    </div>
+    <div class="voices-grid">
+      <article class="voice-card fade-in">
+        <div class="voice-top">
+          <div class="voice-avatar testi-avatar-figure avatar-figure persona-figure">
+            <div class="ph"><div class="ph-mark">AK</div></div>
+          </div>
+          <div>
+            <div class="voice-cite"><b>Anna K.</b>mama, Wrocław</div>
+            <div class="voice-stars">★★★★★</div>
+          </div>
+        </div>
+        <blockquote class="voice-quote">„Syn sam z siebie odkłada telefon i biega po ogrodzie z Badaczkiem. Wczoraj pół godziny oglądaliśmy razem skrzydło motyla — dawno nie widziałam u niego takiego skupienia."</blockquote>
+        <div class="voice-cite">Kupiła dla syna (7 lat)</div>
+      </article>
+      <article class="voice-card fade-in">
+        <div class="voice-top">
+          <div class="voice-avatar testi-avatar-figure avatar-figure persona-figure">
+            <div class="ph"><div class="ph-mark">JW</div></div>
+          </div>
+          <div>
+            <div class="voice-cite"><b>Jadwiga W.</b>babcia, Poznań</div>
+            <div class="voice-stars">★★★★★</div>
+          </div>
+        </div>
+        <blockquote class="voice-quote">„Szukałam prezentu, który nie wyląduje w kącie po tygodniu. Wnuczka zabiera Badaczka wszędzie, a córka odetchnęła, bo to wreszcie ekran, który czegoś uczy. Wzięłam od razu z pudełkiem na prezent."</blockquote>
+        <div class="voice-cite">Prezent dla wnuczki (5 lat)</div>
+      </article>
+      <article class="voice-card fade-in">
+        <div class="voice-top">
+          <div class="voice-avatar testi-avatar-figure avatar-figure persona-figure">
+            <div class="ph"><div class="ph-mark">MS</div></div>
+          </div>
+          <div>
+            <div class="voice-cite"><b>Marta S.</b>mama dwójki, Gdańsk</div>
+            <div class="voice-stars">★★★★★</div>
+          </div>
+        </div>
+        <blockquote class="voice-quote">„Czterolatek obsługuje sam — włącza, przykłada, patrzy. Bałam się, że za trudne, a to prostsze niż jego ulubiona aplikacja. Najlepsze, że młodszy ogląda razem ze starszym na jednym ekranie."</blockquote>
+        <div class="voice-cite">Dzieci 4 i 8 lat</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WOW 3: FOUNDER NOTE ============ -->
+<section class="founder">
+  <div class="container">
+    <div class="founder-note fade-in">
+      <div class="founder-portrait">
+        <div class="ph">
+          <div class="ph-mark">T·O</div>
+          <div class="ph-title">Portret właściciela</div>
+          <div class="ph-size">260 × 260</div>
+          <div class="ph-note">Prawdziwa osoba, naturalne światło, ciepło — NIE stock, NIE garnitur-LinkedIn. Najlepiej z dzieckiem lub z Badaczkiem w dłoni.</div>
+        </div>
+      </div>
+      <div class="founder-body">
+        <div class="eyebrow">Słowo od właściciela sklepu</div>
+        <p>Prowadzę mały sklep i długo szukałem czegoś, co odciągnie moją córkę od telefonu — bez awantury. Postawiłem na Badaczka, bo to jedyny ekran, który nie zabiera dziecka światu, tylko mu go pokazuje. Sprowadzam i sam testuję każdą sztukę, zanim trafi do Ciebie.</p>
+        <div class="founder-sign">Tomek</div>
+        <div class="founder-role">Tomasz Orzechowski · właściciel sklepu</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 11. OFFER ============ -->
+<section class="offer" id="oferta">
+  <div class="container">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Zestaw Małego Badacza</div>
+      <h2>Wszystko, czego trzeba do <em>pierwszej wyprawy</em></h2>
+    </div>
+    <div class="offer-box fade-in" id="offer-box">
+      <span class="offer-sticker">Najczęściej wybierane</span>
+      <div class="offer-inner">
+        <div class="offer-image">
+          <div class="ph">
+            <div class="ph-mark">O</div>
+            <div class="ph-title">Cały zestaw rozłożony — flat lay</div>
+            <div class="ph-size">800 × 450 · 16:9</div>
+            <div class="ph-note">Flat lay na tle barw ziemi: żółty mikroskop Badaczek, smycz, kabel USB-C, karta microSD, „Dziennik Badacza" (notes), zestaw preparatów. Widać kompletność zestawu.</div>
+          </div>
+        </div>
+        <div class="offer-rating">
+          <span class="stars">★★★★★</span>
+          <span>4,7/5 · <strong data-placeholder="reviews">pierwsze opinie</strong><sup><a href="#footnote-reviews">[1]</a></sup></span>
+        </div>
+        <h3 class="offer-title">Zestaw Małego Badacza</h3>
+        <p class="offer-lede">Mikroskop Badaczek z kompletem akcesoriów — gotowy do odkrywania prosto z pudełka.</p>
+        <div class="offer-price-block">
+          <span class="offer-price-old">199 zł</span>
+          <span class="offer-price-now">149 zł</span>
+          <span class="offer-price-save">−25%</span>
+        </div>
+        <div class="offer-save-text">Oszczędzasz 50 zł</div>
+        <p class="offer-shipping">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="14" height="11" rx="1"/><path d="M15 9h4l3 3v5h-7"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+          Darmowa dostawa · InPost / DPD / kurier
+        </p>
+        <ul class="offer-list">
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span><b>Mikroskop Badaczek 1000×</b> — ekran IPS 2″, pierścień LED, ostrość pokrętłem</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span><b>Kabel USB-C i smycz</b> — ładujesz jak telefon, nosisz na każdą wyprawę</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span><b>Karta pamięci</b> — zdjęcia i filmy z odkryć zostają na pamiątkę</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span><b>„Dziennik Badacza" + preparaty</b> — podpowiada, co obejrzeć, żeby zacząć od razu</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg><span><b>2 lata gwarancji i polska obsługa</b> — masz do kogo napisać</span></li>
+        </ul>
+        <a href="#offer-box" class="offer-cta btn btn-primary btn-block magnetic" data-demo-modal>Zamawiam — 149 zł</a>
+        <p class="offer-guarantee">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z"/></svg>
+          30 dni na zwrot · bez pytań · płatność BLIK, kartą lub przelewem
+        </p>
+        <div class="trust-strip">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="6" width="14" height="11" rx="1"/><path d="M15 9h4l3 3v5h-7"/></svg> Darmowa dostawa</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v4h4"/></svg> 30 dni zwrotu</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 3v6c0 5-3.4 8.5-8 11-4.6-2.5-8-6-8-11V5z"/></svg> 2 lata gwarancji</span>
+        </div>
+        <div class="payment-logos">
+          <span class="pay-chip blik">BLIK</span>
+          <span class="pay-chip">VISA</span>
+          <span class="pay-chip">Mastercard</span>
+          <span class="pay-chip">Przelewy24</span>
+          <span class="pay-chip">Apple&nbsp;Pay</span>
+          <span class="pay-chip">Google&nbsp;Pay</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 10. FAQ ============ -->
+<section class="faq" id="faq" style="padding:24px 0 104px;background:var(--white)">
+  <div class="container" style="max-width:820px">
+    <div class="section-head center fade-in">
+      <div class="eyebrow center">Pytania rodziców</div>
+      <h2>Zanim wyruszycie na <em>pierwszą wyprawę</em></h2>
+    </div>
+    <div class="faq-list">
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Czy to nie kolejny ekran, który zaszkodzi oczom? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Badaczek ma ekran IPS o szerokim kącie 178°, na który patrzy się z dystansu — inaczej niż na telefon trzymany przy twarzy. Pierścień LED świeci w stronę próbki, nie w oczy dziecka. Co ważniejsze: nie ma tu aplikacji, sieci ani powiększeń, które gonią uwagę — dziecko patrzy na liść i kroplę wody, nie na algorytm.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Dla jakiego wieku jest Badaczek? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Dzieci od mniej więcej 3 do 11 lat. Młodsze potrzebują na początku pomocy z ostrością, a już czterolatek po chwili obsługuje go sam: włącza jednym przyciskiem, przykłada i patrzy na ekranie. Nie ma menu po angielsku ani konta do założenia — działa od razu po wyjęciu z pudełka.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Czy obraz na małym ekranie jest naprawdę wyraźny? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Tak — 2-calowy ekran IPS daje żywe kolory i szeroki kąt widzenia, więc dziecko i rodzic widzą to samo bez mrużenia oka. Powiększenie sięga 1000×, a osiem diod LED doświetla próbkę, dzięki czemu nawet drobne struktury (żyłki liścia, ziarno soli) są czytelne. Zdjęcia i krótkie filmy zapisują się na karcie pamięci.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Jak długo działa na jednym ładowaniu? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Wbudowany akumulator wystarcza na około 2 godziny ciągłego oglądania, a ładujesz go zwykłym kablem USB-C — tak samo jak telefon. Możesz go też podpiąć do powerbanka na dłuższej wyprawie. Dzięki temu Badaczek jedzie z dzieckiem do parku, lasu czy na działkę, a nie tylko stoi na biurku.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">Kiedy dostanę przesyłkę? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Standardowo w 7–14 dni roboczych od zaksięgowania wpłaty. Dostajesz numer śledzenia i widzisz paczkę na każdym etapie. Dostawa jest darmowa — InPostem, DPD lub kurierem. Jeśli zależy Ci na konkretnym terminie (prezent, urodziny), napisz przed zamówieniem, a podpowiemy najbezpieczniejszą opcję.</p></div>
+      </div>
+      <div class="faq-item">
+        <button class="faq-q" aria-expanded="false">A jeśli się nie spodoba? <span class="faq-ic">+</span></button>
+        <div class="faq-a"><p>Masz 30 dni na testy. Jeśli Badaczek nie spełni oczekiwań — odsyłasz, a my zwracamy pieniądze. Bez pytań i bez tłumaczenia się. Dodatkowo każdy zestaw obejmuje 2 lata gwarancji i polską obsługę, więc gdy cokolwiek przestanie działać, masz do kogo napisać. Ryzyko jest po naszej stronie, nie Twojej.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 12. FINAL CTA ============ -->
+<section class="final-cta">
+  <div class="final-cta-figure">
+    <div class="ph">
+      <div class="ph-mark">CTA</div><div class="ph-title">Panorama: dziecko bada łąkę o zachodzie</div><div class="ph-size">2400 × 1000</div><div class="ph-note">Szeroki, ciepły kadr lifestyle.</div>
+    </div>
+  </div>
+  <div class="container">
+    <span class="kicker-hand">wielkie odkrycia zaczynają się od małych rzeczy</span>
+    <h2>Daj dziecku ekran, który pokazuje świat</h2>
+    <p>Zamiast kolejnego popołudnia w telefonie — pierwsza wyprawa badawcza już w ten weekend.</p>
+    <a href="#offer-box" class="btn btn-primary magnetic">Zamów Zestaw Małego Badacza →</a>
+    <p class="cta-trust">
+      <svg class="ct-check" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> 30 dni na zwrot
+      <span class="ct-sep">·</span>
+      <svg class="ct-check" viewBox="0 0 16 16" width="13" height="13" aria-hidden="true"><path fill="currentColor" d="M6.5 12L2 7.5l1.4-1.4 3.1 3.1 6.1-6.1L14 4.5z"/></svg> BLIK / karta / przelew
+    </p>
+  </div>
+</section>
+
+<!-- ============ 13. FOOTER ============ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/badaczek/logo.png" alt="Badaczek" width="160" height="32">
+        <div class="footer-tag">Mały badacz, wielkie odkrycia</div>
+        <p>Kieszonkowy mikroskop cyfrowy, który zamienia każdy spacer w wyprawę badawczą — bez aplikacji, bez internetu.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Badaczek</h4>
+        <a href="#funkcje">Funkcje</a>
+        <a href="#jak">Jak działa</a>
+        <a href="#opinie">Opinie</a>
+        <a href="#faq">FAQ</a>
+        <a href="#offer-box">Zamów</a>
+      </div>
+      <div class="footer-col">
+        <h4>Kontakt</h4>
+        <p>Polska obsługa klienta</p>
+        <a href="mailto:kontakt@badaczek.pl">kontakt@badaczek.pl</a>
+        <p>30 dni na zwrot · 2 lata gwarancji</p>
+        <p>Płatność: BLIK, karta, przelew</p>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2026 Badaczek. Wszystkie prawa zastrzeżone.</span>
+      <span>Regulamin · Polityka prywatności</span>
+    </div>
+    <p class="footnote" id="footnote-reviews">[1] Ocena i liczba opinii mają charakter poglądowy (faza wprowadzenia produktu) — do podmiany na realne dane sklepu po zebraniu pierwszych recenzji.</p>
+  </div>
+</footer>
+
+<!-- ============ 14. STICKY CTA ============ -->
+<div class="sticky-cta" id="stickyCta">
+  <div class="sticky-price">
+    <span class="sp-old">199 zł</span>
+    <span class="sp-now">149 zł</span>
+  </div>
+  <a href="#offer-box" class="btn btn-primary magnetic">Zamów Badaczka</a>
+</div>
+
+<script>
+(function(){
+  // ----- Mobile menu -----
+  var ham=document.getElementById('hamburger'),mm=document.getElementById('mobileMenu'),mc=document.getElementById('mobileClose');
+  function openMenu(){mm.classList.add('open')}
+  function closeMenu(){mm.classList.remove('open')}
+  if(ham)ham.addEventListener('click',openMenu);
+  if(mc)mc.addEventListener('click',closeMenu);
+  Array.prototype.forEach.call(document.querySelectorAll('.mm-link'),function(a){a.addEventListener('click',closeMenu)});
+
+  // ----- Fade-in (safety-gated) -----
+  var faded=document.querySelectorAll('.fade-in');
+  if('IntersectionObserver' in window){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target)}})},{threshold:0.1,rootMargin:'0px 0px -80px 0px'});
+    faded.forEach(function(el){io.observe(el)});
+    setTimeout(function(){
+      document.querySelectorAll('.fade-in:not(.visible)').forEach(function(el){
+        var rect=el.getBoundingClientRect();
+        if(rect.top<window.innerHeight)el.classList.add('visible');
+      });
+    },3000);
+  }else{
+    faded.forEach(function(el){el.classList.add('visible')});
+  }
+
+  // ----- FAQ accordion -----
+  Array.prototype.forEach.call(document.querySelectorAll('.faq-q'),function(btn){
+    btn.addEventListener('click',function(){
+      var item=btn.parentElement,open=item.classList.contains('open');
+      Array.prototype.forEach.call(document.querySelectorAll('.faq-item.open'),function(it){
+        it.classList.remove('open');it.querySelector('.faq-q').setAttribute('aria-expanded','false');
+      });
+      if(!open){item.classList.add('open');btn.setAttribute('aria-expanded','true');}
+    });
+  });
+
+  // ----- Magnetic CTA (pointer-fine only) -----
+  if(window.matchMedia&&window.matchMedia('(hover:hover) and (pointer:fine)').matches&&!window.matchMedia('(prefers-reduced-motion:reduce)').matches){
+    Array.prototype.forEach.call(document.querySelectorAll('.magnetic'),function(el){
+      el.addEventListener('mousemove',function(e){
+        var r=el.getBoundingClientRect();
+        el.style.transform='translate('+((e.clientX-r.left-r.width/2)*0.18)+'px,'+((e.clientY-r.top-r.height/2)*0.18-2)+'px)';
+      });
+      el.addEventListener('mouseleave',function(){el.style.transform=''});
+    });
+  }
+
+  // ----- Sticky CTA: dual IntersectionObserver gating -----
+  var heroCta=document.getElementById('hero-cta'),offerBox=document.getElementById('offer-box'),sticky=document.getElementById('stickyCta');
+  if(heroCta&&offerBox&&sticky&&'IntersectionObserver' in window){
+    var heroPast=false,offerVisible=false;
+    var sync=function(){sticky.classList.toggle('visible',heroPast&&!offerVisible)};
+    new IntersectionObserver(function(e){heroPast=!e[0].isIntersecting;sync()},{threshold:0}).observe(heroCta);
+    new IntersectionObserver(function(e){offerVisible=e[0].isIntersecting;sync()},{threshold:0.1}).observe(offerBox);
+  }
+
+  // ----- Demo checkout modal -----
+  Array.prototype.forEach.call(document.querySelectorAll('[data-demo-modal]'),function(el){
+    el.addEventListener('click',function(ev){
+      ev.preventDefault();
+      var o=document.createElement('div');
+      o.style.cssText='position:fixed;inset:0;z-index:300;background:rgba(46,53,40,.55);display:flex;align-items:center;justify-content:center;padding:24px';
+      o.innerHTML='<div style="background:#fff;border-radius:24px;max-width:380px;padding:32px;text-align:center;font-family:Nunito,sans-serif"><div style="font-family:Caveat,cursive;font-weight:700;font-size:30px;color:#C97B5D;margin-bottom:6px">Prawie gotowe!</div><p style="color:#2E3528;font-size:15px;line-height:1.6;margin-bottom:18px">Tu wepnie się koszyk Twojego sklepu — płatność <b>BLIK, kartą lub przelewem</b>. To demo strony sprzedażowej.</p><button style="background:#C97B5D;color:#fff;border:none;border-radius:999px;padding:14px 26px;font-weight:800;font-size:16px;cursor:pointer">Rozumiem</button></div>';
+      o.addEventListener('click',function(){document.body.removeChild(o)});
+      document.body.appendChild(o);
+    });
+  });
+})();
+</script>
+<style>
+.faq-item{background:var(--paper);border:1px solid var(--rule);border-radius:18px;margin-bottom:14px;overflow:hidden;transition:box-shadow .25s}
+.faq-item.open{box-shadow:var(--shadow-sm);background:var(--white)}
+.faq-q{width:100%;display:flex;align-items:center;justify-content:space-between;gap:16px;text-align:left;background:none;border:none;cursor:pointer;padding:20px 24px;font-family:var(--font-display);font-weight:800;font-size:16.5px;color:var(--ink);line-height:1.4}
+.faq-ic{flex-shrink:0;width:28px;height:28px;border-radius:50%;background:var(--sage-soft);color:var(--sage);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;transition:transform .3s}
+.faq-item.open .faq-ic{transform:rotate(45deg);background:var(--sage);color:#fff}
+.faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease}
+.faq-item.open .faq-a{max-height:340px}
+.faq-a p{padding:0 24px 22px;font-size:15.5px;line-height:1.7;color:rgba(46,53,40,0.82)}
+</style>
+</body>
+</html>
