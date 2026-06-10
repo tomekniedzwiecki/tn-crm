@@ -141,9 +141,14 @@ słabych tygodni.
 1. INSERT `workflow_ad_reports` (report_data + denormalizacja spend/revenue/roas/purchases,
    period_from/to) — dopiero GOTOWY raport (zasada #2).
 2. UPDATE `workflow_ads`: `report_data` (cache), `report_generated_at`, `last_auto_report_at`.
-3. Mail: istniejący `send-email` type=`ad_report` (template w `email_templates` — po upgradzie
-   o sekcje summary/next_steps + deep-link `client-projekt.html?token=...#raport`).
-4. **NIE** ustawiaj `sent_to_client`/`report_sent` ręcznie — to robi flow wysyłki.
+3. **Mail wysyłaj OD RAZU po zapisie** (decyzja Tomka 2026-06-10 — raport bez maila to raport
+   niedostarczony): `POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/send-email`
+   (apikey = sb_publishable), body `{type:'ad_report', data:{email, client_name (imię),
+   project_name (marka), period_from/to, spend, revenue, roas, purchases, clicks, impressions,
+   add_to_cart, initiate_checkout, currency, client_token (workflows.unique_token), summary,
+   next_steps[], checkout_funnel|null}}`. Dane klienta: `workflows.customer_email/customer_name/unique_token`.
+   UWAGA: template w `settings` (klucz `email_template_ad_report_body`), NIE w `email_templates` (legacy).
+4. Po wysyłce ustaw `workflow_ad_reports.sent_to_client+sent_at` i `workflow_ads.report_sent+report_sent_at`.
 
 ## Prerekwizyty / eskalacje (sekcja w każdym raporcie wewnętrznym)
 
