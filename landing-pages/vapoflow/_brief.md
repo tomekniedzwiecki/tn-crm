@@ -209,4 +209,32 @@ js_effects_count:
 
 ---
 
+## 13. Photo System (AI images, 2026-06-10)
+
+### Referencja produktu (PRAWDA — anti-drift)
+URL: `https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/vapoflow/product-ref.jpg`
+Realny produkt = **zestaw**: biała kompaktowa baza (kwadratowy korpus, ciemny panel dotykowy na górze, czarna kratka wentylacyjna z przodu, półprzezroczysty zbiornik wody na dole) + **czarno-szary pistolet ręczny połączony z bazą czarnym karbowanym wężem** (dysza z mosiężną końcówką). Akcesoria: metalowa lanca, nakładka z mikrofibrą, płaska czarna nakładka, 3 szczotki okrągłe, kabel zasilający. ⚠️ Pistolet NIGDY sam — zawsze wąż + baza w kadrze (lub baza tuż za kadrem z widocznym wężem).
+
+### Lighting
+Czyste, chłodne światło dzienne z dużego okna (cool-toned morning), miękkie cienie. ZERO golden hour, ZERO warm gradients.
+
+### Paleta w scenach
+- Tła: jasne wnętrza — białe/jasnoszare kafle, Cloud White ściany, jasne blaty
+- Akcenty: graphite/black (sprzęt), pojedynczy subtelny cyan element (ręcznik, kubek) max 1× per kadr
+- Czego unikamy: ciepłe pomarańcze, drewno miodowe, neon, clutter
+
+### Kadrowanie
+Geometric, clean, lekko off-center, dużo negative space. Persony half-body, kroki = tylko ręce/przedramiona.
+
+### Post-processing
+35mm film (Portra 400), subtle grain, neutral-cool grading, mild halation.
+
+### Negatywy — NIGDY
+- Tekst / etykiety / watermarki w kadrze
+- Stock body language (uśmiech do kamery, pointing)
+- Butelki detergentów w kadrze (WYJĄTEK: sekcja Problem — tam celowo)
+- Produkt przeprojektowany (inna geometria niż referencja)
+
+---
+
 **Status briefa:** ✅ kompletny, gotowy do `verify-brief.sh`.
