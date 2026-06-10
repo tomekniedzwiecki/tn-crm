@@ -1699,11 +1699,17 @@
                             </div>
                             <div id="takedrop-active-meta" class="hidden text-[12px] text-[#666] mb-3"></div>
                             <div class="flex flex-wrap gap-2">
-                                <button id="takedrop-force-active-btn" onclick="adminToggleAccountActive(true)" class="hidden inline-flex items-center gap-1.5 text-[12px] text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-500/50 rounded-md px-3 py-1.5 transition-colors">
+                                <button id="takedrop-force-active-btn" onclick="adminForceAccountActive()" class="hidden inline-flex items-center gap-1.5 text-[12px] text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-500/50 rounded-md px-3 py-1.5 transition-colors">
                                     <i class="ph ph-check-circle"></i> Wymuś jako aktywne
                                 </button>
-                                <button id="takedrop-revoke-active-btn" onclick="adminToggleAccountActive(false)" class="hidden inline-flex items-center gap-1.5 text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 rounded-md px-3 py-1.5 transition-colors">
-                                    <i class="ph ph-x-circle"></i> Cofnij — konto nieaktywne
+                                <button id="takedrop-revoke-password-btn" onclick="adminRevokeAccountActive('wrong_password')" class="hidden inline-flex items-center gap-1.5 text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 rounded-md px-3 py-1.5 transition-colors" title="Cofnij aktywację + mail do klienta: hasło w panelu nie działa">
+                                    <i class="ph ph-password"></i> Cofnij — złe hasło (mail)
+                                </button>
+                                <button id="takedrop-revoke-inactive-btn" onclick="adminRevokeAccountActive('account_inactive')" class="hidden inline-flex items-center gap-1.5 text-[12px] text-amber-400 hover:text-amber-300 border border-amber-500/30 hover:border-amber-500/50 rounded-md px-3 py-1.5 transition-colors" title="Cofnij aktywację + mail do klienta: konto nieaktywne, podepnij kartę">
+                                    <i class="ph ph-credit-card"></i> Cofnij — brak karty (mail)
+                                </button>
+                                <button id="takedrop-revoke-silent-btn" onclick="adminRevokeAccountActive('silent')" class="hidden inline-flex items-center gap-1.5 text-[12px] text-[#888] hover:text-white border border-[#333] hover:border-[#555] rounded-md px-3 py-1.5 transition-colors" title="Tylko zmiana statusu — klient nie dostaje żadnego maila">
+                                    <i class="ph ph-x-circle"></i> Cofnij bez maila
                                 </button>
                             </div>
                         </div>
@@ -9581,7 +9587,8 @@
             const badge = document.getElementById('takedrop-active-badge');
             const meta = document.getElementById('takedrop-active-meta');
             const forceBtn = document.getElementById('takedrop-force-active-btn');
-            const revokeBtn = document.getElementById('takedrop-revoke-active-btn');
+            const revokeBtns = ['takedrop-revoke-password-btn', 'takedrop-revoke-inactive-btn', 'takedrop-revoke-silent-btn']
+                .map(id => document.getElementById(id));
             if (!section || !badge) return;
 
             // Pokaż dopiero gdy klient założył konto (Step 2)
@@ -9604,70 +9611,106 @@
                     meta.textContent = `Potwierdzono: ${date} · ${by}`;
                 }
                 forceBtn?.classList.add('hidden');
-                revokeBtn?.classList.remove('hidden');
+                revokeBtns.forEach(btn => btn?.classList.remove('hidden'));
             } else {
                 badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span class="text-[13px] text-amber-400">Czeka na potwierdzenie klienta</span>';
                 meta?.classList.add('hidden');
                 forceBtn?.classList.remove('hidden');
-                revokeBtn?.classList.add('hidden');
+                revokeBtns.forEach(btn => btn?.classList.add('hidden'));
             }
         }
 
-        async function adminToggleAccountActive(active) {
+        async function adminForceAccountActive() {
             if (!takeDropData) {
                 showToast('Brak rekordu TakeDrop', 'error');
                 return;
             }
-            const confirmMsg = active
-                ? 'Wymusić status „aktywne"? Klient będzie mógł przejść do strony sprzedażowej.'
-                : 'Cofnąć status aktywacji? Klient ponownie musi potwierdzić że konto działa, strona sprzedażowa zostanie ukryta.';
-            if (!confirm(confirmMsg)) return;
+            if (!confirm('Wymusić status „aktywne"? Klient będzie mógł przejść do strony sprzedażowej.')) return;
 
             try {
                 const { error } = await supabaseClient
                     .from('workflow_takedrop')
                     .update({
-                        account_active: active,
-                        account_active_at: active ? new Date().toISOString() : null,
-                        account_active_confirmed_by: active ? 'admin' : null
+                        account_active: true,
+                        account_active_at: new Date().toISOString(),
+                        account_active_confirmed_by: 'admin'
                     })
                     .eq('id', takeDropData.id);
 
                 if (error) throw error;
-                showToast(active ? 'Konto oznaczone jako aktywne' : 'Aktywacja konta cofnięta', 'success');
+                showToast('Konto oznaczone jako aktywne', 'success');
+                await loadTakeDrop();
+            } catch (err) {
+                console.error('Error forcing account_active:', err);
+                showToast('Błąd: ' + err.message, 'error');
+            }
+        }
 
-                // Mail „złe hasło" TYLKO za zgodą — cofnięcie aktywacji może mieć inny powód
-                // (karta niepodpięta, blokada billingu, pomyłka), a szablon mówi konkretnie o haśle.
-                if (!active && workflow?.customer_email) {
-                    const sendRejectedMail = confirm(
-                        'Wysłać klientowi maila „Hasło do TakeDrop niepoprawne — popraw je w panelu"?\n\n' +
-                        'OK — wyślij (hasło z panelu faktycznie nie działa)\n' +
-                        'Anuluj — tylko cofnij status, BEZ maila'
-                    );
-                    if (sendRejectedMail) {
-                        try {
-                            await supabaseClient.functions.invoke('automation-trigger', {
-                                body: {
-                                    trigger_type: 'takedrop_account_revoked',
-                                    entity_type: 'workflow',
-                                    entity_id: workflow.id,
-                                    context: {
-                                        email: workflow.customer_email,
-                                        clientName: (workflow.customer_name || '').split(' ')[0],
-                                        brandName: workflow.brand_name || '',
-                                        projectUrl: `https://crm.tomekniedzwiecki.pl/client-projekt?id=${workflow.id}`
-                                    }
+        // Cofnięcie aktywacji z powodem — każdy powód ma własny mail do klienta:
+        //   'wrong_password'   → takedrop_account_revoked  (mail: hasło w panelu nie działa)
+        //   'account_inactive' → takedrop_account_inactive (mail: konto nieaktywne — podepnij kartę)
+        //   'silent'           → bez maila (pomyłka / powód poza szablonami)
+        async function adminRevokeAccountActive(reason) {
+            if (!takeDropData) {
+                showToast('Brak rekordu TakeDrop', 'error');
+                return;
+            }
+            const REVOKE_REASONS = {
+                wrong_password: {
+                    trigger: 'takedrop_account_revoked',
+                    mailInfo: 'Klient dostanie maila: „Hasło do TakeDrop niepoprawne — popraw je w panelu".'
+                },
+                account_inactive: {
+                    trigger: 'takedrop_account_inactive',
+                    mailInfo: 'Klient dostanie maila: „Konto TakeDrop nieaktywne — podepnij kartę w panelu".'
+                },
+                silent: {
+                    trigger: null,
+                    mailInfo: 'Klient NIE dostanie żadnego maila.'
+                }
+            };
+            const cfg = REVOKE_REASONS[reason] || REVOKE_REASONS.silent;
+            if (!confirm(
+                'Cofnąć status aktywacji? Klient ponownie musi potwierdzić że konto działa, strona sprzedażowa zostanie ukryta.\n\n' +
+                cfg.mailInfo
+            )) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('workflow_takedrop')
+                    .update({
+                        account_active: false,
+                        account_active_at: null,
+                        account_active_confirmed_by: null
+                    })
+                    .eq('id', takeDropData.id);
+
+                if (error) throw error;
+                showToast('Aktywacja konta cofnięta', 'success');
+
+                if (cfg.trigger && workflow?.customer_email) {
+                    try {
+                        await supabaseClient.functions.invoke('automation-trigger', {
+                            body: {
+                                trigger_type: cfg.trigger,
+                                entity_type: 'workflow',
+                                entity_id: workflow.id,
+                                context: {
+                                    email: workflow.customer_email,
+                                    clientName: (workflow.customer_name || '').split(' ')[0],
+                                    brandName: workflow.brand_name || '',
+                                    projectUrl: `https://crm.tomekniedzwiecki.pl/client-projekt?id=${workflow.id}`
                                 }
-                            });
-                        } catch (te) {
-                            console.warn('automation-trigger takedrop_account_revoked failed (kontynuujemy):', te);
-                        }
+                            }
+                        });
+                    } catch (te) {
+                        console.warn(`automation-trigger ${cfg.trigger} failed (kontynuujemy):`, te);
                     }
                 }
 
                 await loadTakeDrop();
             } catch (err) {
-                console.error('Error toggling account_active:', err);
+                console.error('Error revoking account_active:', err);
                 showToast('Błąd: ' + err.message, 'error');
             }
         }
@@ -10347,7 +10390,8 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.loadTakeDrop = loadTakeDrop;
         window.toggleTakeDropActive = toggleTakeDropActive;
         window.saveTakeDropCredentials = saveTakeDropCredentials;
-        window.adminToggleAccountActive = adminToggleAccountActive;
+        window.adminForceAccountActive = adminForceAccountActive;
+        window.adminRevokeAccountActive = adminRevokeAccountActive;
         window.togglePasswordVisibility = togglePasswordVisibility;
         window.toggleLandingPageConnected = toggleLandingPageConnected;
         window.generateLandingPrompt = generateLandingPrompt;

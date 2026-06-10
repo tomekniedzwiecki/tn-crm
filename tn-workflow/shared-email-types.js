@@ -37,7 +37,7 @@ const EMAIL_TEMPLATE_CATEGORIES = {
     takedrop: {
         label: 'Etap 3 - Konfiguracja sklepu',
         description: 'Maile związane z konfiguracją TakeDrop',
-        templates: ['takedrop_activated', 'takedrop_account_rejected', 'landing_page_connected', 'payment_gateway_required', 'test_ready']
+        templates: ['takedrop_activated', 'takedrop_account_rejected', 'takedrop_account_inactive', 'landing_page_connected', 'payment_gateway_required', 'test_ready']
     },
     reklamy: {
         label: 'Etap 4 - Reklamy',
@@ -164,6 +164,12 @@ const EMAIL_TEMPLATE_DEFINITIONS = {
         name: 'Hasło TakeDrop niepoprawne',
         description: 'Wysyłany gdy admin cofnie aktywację konta TakeDrop bo hasło wpisane przez klienta nie działa',
         icon: 'ph-warning-circle',
+        color: 'amber'
+    },
+    'takedrop_account_inactive': {
+        name: 'Konto TakeDrop nieaktywne (brak karty)',
+        description: 'Wysyłany gdy admin cofnie aktywację konta TakeDrop bo konto jest nieaktywne — brak podpiętej karty / blokada billingu',
+        icon: 'ph-credit-card',
         color: 'amber'
     },
     'landing_page_connected': {
@@ -321,6 +327,7 @@ const TRIGGERS_BY_CATEGORY = {
         { value: 'scenarios_shared', label: 'Scenariusze udostępnione' },
         { value: 'takedrop_activated', label: 'Aktywuj TakeDrop' },
         { value: 'takedrop_account_revoked', label: 'Cofnięcie aktywacji TakeDrop (złe hasło)' },
+        { value: 'takedrop_account_inactive', label: 'Cofnięcie aktywacji TakeDrop (brak karty)' },
         { value: 'landing_page_connected', label: 'Strona podłączona' },
         { value: 'test_ready', label: 'Test sklepu gotowy' },
         { value: 'ads_activated', label: 'Konfiguracja konta reklamowego' },
@@ -366,6 +373,7 @@ const TRIGGER_DEFINITIONS = {
     // Etap 3 - TakeDrop
     takedrop_activated: { label: 'Aktywuj TakeDrop', icon: 'ph-storefront', color: 'sky' },
     takedrop_account_revoked: { label: 'Cofnięcie aktywacji TakeDrop (złe hasło)', icon: 'ph-warning-circle', color: 'amber' },
+    takedrop_account_inactive: { label: 'Cofnięcie aktywacji TakeDrop (brak karty)', icon: 'ph-credit-card', color: 'amber' },
     landing_page_connected: { label: 'Strona podłączona', icon: 'ph-link', color: 'sky' },
     test_ready: { label: 'Test sklepu gotowy', icon: 'ph-browser', color: 'cyan' },
     // Etap 4 - Reklamy
