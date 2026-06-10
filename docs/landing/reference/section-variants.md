@@ -1108,7 +1108,29 @@
 **Pierwsza pasująca reguła z góry tabeli wygrywa.** Jeśli produkt pasuje do kilku warunków (np. „premium AGD z aplikacją" = Smart home ✓ + Premium AGD ✓), wybierasz wariant z **pierwszej pasującej linii**, nie „najlepszej" (to byłoby subiektywne). Default (ostatni wiersz) włącza się **tylko** jeśli żadna wcześniejsza reguła nie pasuje.
 
 **Przykład:** Dyson V15 (premium AGD + aplikacja) → Smart home linia 1 wygrywa → **H3 Dashboard mockup**.
-Jeśli chcesz wymusić H4 Editorial numerał — edytuj brief sekcji 1 (Kierunek) tak, żeby „Smart home" nie pasowało (np. zaznacz Editorial/Luxury).
+
+> **v5.0 (GAP-5):** usunięto instrukcję „edytuj brief, żeby wymusić inny wariant" — brief
+> jest AUDYTOWALNYM zapisem produktu, nie dźwignią do gamingu drzewa. Jeśli wynik drzewa
+> wydaje się zły, to znaczy że WARUNKI w tabeli wymagają poprawki (zmień procedurę, nie brief).
+
+## Kanoniczne mapowanie warunków → pola briefu (v5.0 — determinizm)
+
+Warunki tabel NIE są osądami „na oko" — każdy mapuje się na konkretne pola briefu.
+**Dwa runy na tym samym produkcie MUSZĄ dać ten sam wariant.**
+
+| Fraza warunku | Definicja deterministyczna (pola briefu) |
+|---|---|
+| „Smart home / IoT / app-controlled" | produkt MA aplikację/łączność w spec (`workflow_products.description` zawiera app/Bluetooth/Wi-Fi/sterowanie) |
+| „Premium AGD >1500 zł" | kategoria funkcjonalna AGD ∧ cena > 1500 zł |
+| „mocna liczba spec" | sekcja 13.3 briefu ma ≥1 liczbę techniczną z jednostką (kPa/BAR/W/dB/strefy) o wartości wyróżniającej |
+| „Value/budget (<800 zł)" | cena < 800 zł |
+| **pasmo 800-1500 zł (domknięte v5.0)** | NIE jest „value" ani „premium >1500" — przechodzi do kolejnych reguł (lifestyle/persona/transformation), default H1 |
+| „Transformation product" | `big-idea:`/VOC zawiera mierzalną zmianę stanu przed→po (sekcja 13) |
+| „persona-driven" | `awareness: problem-aware` ∧ persona z sekcji 5 jest osią big-idea |
+| „comparison shopper" | `awareness: product-aware` (sekcja 13.1) |
+| „bold copy / editorial manifesto" | styl Atlasu z briefu ∈ {editorial-print, poster-utility, brutalist-diy} |
+| „aktywny UGC / video assets" | workflow MA realne assety (reels w `workflow_video.video_links` / zdjęcia opinii) — NIE „mógłby mieć" |
+| „PR-backed" | workflow MA realne certyfikaty/publikacje w `workflow_products`/raporcie — NIE domniemane |
 
 ## Hero (wybierz 1 z 10)
 

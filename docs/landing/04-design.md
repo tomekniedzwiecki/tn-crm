@@ -83,6 +83,8 @@ Dla każdego znalezionego wow moment zapisz w `landing-pages/[slug]/_brief.md` j
 - **Lokalizacja:** sekcja Nº 0X — [nazwa sekcji]
 - **Element:** [konkret co widać — np. "oversized editorial numeral Nº 01 w hero z italic em na słowie KLUCZOWY"]
 - **Czemu unique:** [czego inne premium landingi NIE robią w tym miejscu — np. "Linear / Stripe nie używają magazine numbering, Aesop nie używa italic em jako accent"]
+- pattern-id: [kanoniczne ID z banku, np. hero-numeral / pull-quote / border-beam — lub custom-NAZWA]
+- selector: [.klasa-css obecna w HTML, np. .compare-timeline — verify grepuje ją na index.html]
 - **Implementation status:** ✅ obecny w HTML / ⚠️ częściowo zaimplementowany / ❌ planowany ale brak
 
 ### Wow Moment 2
@@ -91,6 +93,17 @@ Dla każdego znalezionego wow moment zapisz w `landing-pages/[slug]/_brief.md` j
 ### Wow Moment 3
 [ten sam format]
 ```
+
+> **v5.0 — maszynowa weryfikacja + rotacja:**
+> 1. Pola `pattern-id:` i `selector:` są OBOWIĄZKOWE. verify-landing grepuje każdy
+>    zadeklarowany selector na index.html — brak = WARN (rollout)→FAIL.
+> 2. **Blocklist selektorów-baseline** (deklaracja ich = gaming, nie wow): `.hero`,
+>    `.offer-box`, `.sticky-cta`, `.trust-strip`, `.faq`, `.tile`, `.js-counter`, `.magnetic`.
+> 3. **Ledger rotacji** [`reference/wow-usage.jsonl`](reference/wow-usage.jsonl): na końcu
+>    ETAP 4 dopisz JEDNĄ linię JSONL: `{"slug":"X","pattern_ids":["a","b","c"],"style":"Y"}`
+>    (append — format liniowy minimalizuje konflikty przy równoległych sesjach).
+>    **Reguła rotacji:** jeśli pattern-id wystąpił w 2 OSTATNICH wpisach ledgera dla tego
+>    samego stylu → wybierz inny wzorzec z banku (anty-powtarzalność signature elementów).
 
 ### Krok 1.2 — Jeśli mniej niż 3 → DODAJ teraz (Edit tool)
 
@@ -272,9 +285,14 @@ Product DNA pick z 15 stylów Atlasu) i zapisany w `_brief.md` **sekcja 10 STYLE
 - [ ] Animacje są płynne (60fps, transform/opacity only)
 - [ ] **Wszystko respektuje `prefers-reduced-motion: reduce`**
 
-### D.1 OBOWIĄZKOWA paleta JS effects
+### D.1 Paleta JS effects — WYŁĄCZNIE wg Motion Budget stylu (v5.0)
 
-Od teraz **każdy landing MUSI mieć minimum 4 JS effects** (bez nich wygląda statycznie, jak plik PDF):
+> **Usunięto (v5.0): mandat „minimum 4 JS effects"** — 4 style Atlasu (apothecary,
+> clinical-warmth, swiss-grid, dark-academia) te efekty ZAKAZUJĄ. Obowiązuje WYŁĄCZNIE
+> `js_effects_required` / `js_effects_forbidden` z STYLE LOCK (plik stylu sekcja 10;
+> verify-landing Grupa 7 egzekwuje oba kierunki).
+> **Jedyna książka przepisów motion:** [`reference/motion-library.md`](reference/motion-library.md)
+> (kanon v5.0). Tabela niżej = mapa klasa→snippet dla efektów DOZWOLONYCH przez styl:
 
 | # | Efekt | Klasa / hook | Gdzie użyć | Referencja |
 |---|---|---|---|---|

@@ -1,4 +1,11 @@
-# Motion Library — 8 efektów do landing page (subtle/moderate budget)
+# Motion Library — KANONICZNA książka przepisów motion (v5.0)
+
+> **v5.0:** ten plik to JEDYNA książka przepisów motion. Per-stylowa prawda o tym,
+> CO wolno = `## 10. Motion Budget` w plikach style-atlas (parsowane przez verify-landing
+> Grupa 7). 04-design D.1/D.2 i patterns #17-21 są pointerami tutaj — przy rozbieżności
+> snippetów obowiązuje wersja z TEGO pliku.
+
+## 8 efektów bazowych do landing page (subtle/moderate budget)
 
 > **Dlaczego ta biblioteka istnieje (2026-05-20):** OraVibe (dentaflow) i Auriko pokazały że landingi z dobranym zestawem mikro-animacji wyglądają o klasę bardziej premium niż czyste statyczne strony. Bez tych efektów landing wygląda jak "wireframe". Z nimi — jak product page Anker / Withings / DJI.
 >
@@ -334,3 +341,72 @@ if ('IntersectionObserver' in window) {
 ## Changelog
 
 - 2026-05-20 — utworzony, v1.0. Wyciągnięte z auriko (Clinical Kitchen) i dentaflow (premium tech).
+
+
+---
+
+## 9. CSS Scroll-Driven Animations — standard v5.0 (zamiast JS scroll listenerów)
+
+> **Baseline 2025** (Chrome/Edge 115+, Safari 26+, Firefox za flagą → progressive enhancement
+> przez `@supports` z fallbackiem). Animacja jedzie POZA main thread = zysk INP/PageSpeed —
+> JS scroll listenery z `getBoundingClientRect()` per frame to dokładnie to, co psuje INP
+> na content-heavy stronach z inline JS.
+
+### 9a. Scroll-progress bar (czysty CSS — zero JS)
+
+```css
+@supports (animation-timeline: scroll()) {
+  .scroll-progress {
+    position: fixed; top: 0; left: 0; height: 3px; width: 100%;
+    background: var(--primary); transform-origin: 0 50%;
+    transform: scaleX(0);
+    animation: grow-progress linear forwards;
+    animation-timeline: scroll(root);
+    z-index: 200;
+  }
+  @keyframes grow-progress { to { transform: scaleX(1); } }
+}
+/* Fallback bez @supports: brak paska (progressive enhancement — nie buduj wersji JS) */
+```
+
+### 9b. Parallax numeral przez view() (zamiast JS pattern #21)
+
+```css
+@supports (animation-timeline: view()) {
+  .hero-numeral, .finale-numeral {
+    animation: numeral-drift linear both;
+    animation-timeline: view();
+    animation-range: entry 0% exit 100%;
+  }
+  @keyframes numeral-drift {
+    from { transform: translateY(40px); }
+    to   { transform: translateY(-40px); }
+  }
+}
+/* Gdy brak wsparcia: numeral statyczny (akceptowalne) LUB legacy JS z patterns #21
+   — ale NIGDY oba naraz. Styl zakazujący .js-parallax może używać wersji CSS view()
+   tylko jeśli jego Motion Budget dopuszcza ruch tła (sprawdź css_effects w pliku stylu). */
+```
+
+### 9c. Fade-in reveal przez view() (lżejsza alternatywa dla IO przy prostych sekcjach)
+
+```css
+@supports (animation-timeline: view()) {
+  .sd-reveal {
+    animation: sd-fade linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 60%;
+  }
+  @keyframes sd-fade { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+}
+```
+
+> ⚠️ Fade-in GŁÓWNY (safety #2 z html.js gate + timeout) zostaje na IntersectionObserver —
+> ma udokumentowany failure mode i safety net. `.sd-reveal` to dodatek dla mikro-elementów.
+
+### 9d. Kanoniczny fade-in (jedyna wersja — duplikaty w patterns #11 wskazują tutaj)
+
+Wersja z podwójnym safety timeoutem (2500ms gate + filtrowanie po pozycji
+`getBoundingClientRect()` jednorazowo, nie per-frame) — pełny snippet w
+[`patterns.md` #11](patterns.md), treść kanoniczna = ta używana przez verify-landing
+Grupy 4 (html.js gate + safety timeout). Nie twórz trzeciej wariacji.

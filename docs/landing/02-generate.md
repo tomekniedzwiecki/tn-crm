@@ -825,6 +825,27 @@ Każdy landing MA mieć subtelną animację W TLE sekcji hero, dopasowaną do pr
 
 > **Każdy placeholder to BRIEF dla fotografa** — patrz [`reference/safety.md` #4](reference/safety.md). NIE pisz „TODO" ani „Hero Image" — pisz 4-polowy brief z kontekstem.
 
+### Placeholder jako TŁO sekcji — klasa `ph--bg` (v5.0)
+
+Gdy placeholder służy jako **tło pod nakładką** (wrapper `final-cta-figure` / `cta-figure` /
+`bg-figure` lub element `position:absolute; inset:0`):
+
+1. Dodaj klasę `ph--bg` — wizualnie zostaje TYLKO faktura/kolor (pola ph-mark/title/size/note
+   ukryte: `.ph--bg > div { display:none }`), bo **tekst briefu prześwitujący przez nakładkę
+   nakłada się na treść sekcji** (realny bug linovo: tekst-na-tekście w liście założyciela).
+2. 4-polowy brief NIE znika (to deliverable!) — przenosi się do komentarza HTML
+   **wewnątrz elementu**: `<!-- PH-BRIEF: [mark] | [title] | [size] | [note] -->`
+   (czyta go też `generate-foto-przewodnik.mjs`).
+3. Framed placeholder OBOK tekstu (nie pod spodem) = zwykły `.ph`, bez zmian.
+
+### Anty-monotonia placeholderów (v5.0)
+
+Środek strony nie może być „monotonnym ciągiem beżowych ramek" (audyt wizualny linovo,
+y5000-y9000). Reguła sąsiedztwa: **dwa sąsiadujące placeholdery różnią się min 1 z:**
+proporcją (4:5 vs 16:9 vs 1:1), skalą (full-width vs karta), traktowaniem (framed vs
+ph--bg vs okrągły avatar). Sprawdzasz na screenshotach w ETAP 5 (vision critique, oś
+„hierarchia wizualna").
+
 ---
 
 ## Wymagane zdjęcia na landing page (10-14 sztuk)

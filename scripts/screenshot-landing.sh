@@ -64,8 +64,8 @@ for (const v of viewports) {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: \`\${out}/\${v.name}_full.png\`, fullPage: true });
   // Mid-scroll viewports dla debugowania specific sections
-  for (const y of [900, 2000, 3500, 5000, 7000, 9000]) {
-    if (y < h) {
+  for (const y of [0, 900, 2000, 3500, 5000, 7000, 9000]) {  // v5.0: y=0 — hero MUSI być oglądane w pełnym viewport
+    if (y === 0 || y < h) {
       await page.evaluate((yy) => window.scrollTo(0, yy), y);
       await page.waitForTimeout(300);
       await page.screenshot({ path: \`\${out}/\${v.name}_y\${y}.png\`, fullPage: false });

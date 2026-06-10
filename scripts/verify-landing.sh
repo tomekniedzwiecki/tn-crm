@@ -421,6 +421,25 @@ check "Zero purple prose (metafory/aforyzmy)" "0" "$PURPLE"
 AI_POETIC=$(grep -ciE "\boddaj[eą]\s+(ci\s+)?(wieczór|wieczor|spokój|spokoj|kontrol[eę]|wolność|wolnosc|czas|poranek|poranki)\b|\bodkupuj(esz|esz\s+swoj)|\bwracaj\s+do\s+(wieczoru|siebie|domu|spokoju)\b|\b(mop|robot|odkurzacz|szczotka|krem|kawa|herbata)\s+(jeszcze\s+)?(nie\s+)?(zdj[ąa]ł|zdejmuje|czeka|tęskni|tesni|rozumie|wita|zaprasza|otwiera|chce|wzdycha|szepcze|śpi|spi|marzy)\b|który\s+(oddaje|przywraca|odkupuje)\s+(ci|tobie|twój|twoj)|a\s+ty\s+masz\s+(wieczór|wieczor|spokój|spokoj|czas)\s*[✱✦★]?" "$FILE" || true)
 check "Zero anti-AI-poetic (oddaje wieczór / mop zdjął butów / wracaj do X)" "0" "$AI_POETIC"
 
+# v5.0 GAP-4: personifikacja WZORCEM GRAMATYCZNYM (dowolny rzeczownik produktowy + czasownik
+# mentalny) zamiast incydentowej listy 7 rzeczowników — "parownica, która rozumie jedwab" też łapane
+AI_PERSONIF=$(grep -ciE "[a-ząćęłńóśźż]{3,},?\s+(która?|który|które)\s+(rozumie|wie,?\s|pamięta|pamieta|czuje|dba\s+o\s+(ciebie|twoje)|czeka\s+na\s+(ciebie|twój)|zna\s+(twoje|twój)|troszczy)" "$FILE" || true)
+check "Zero personifikacji produktu (X, która rozumie/wie/pamięta...)" "0" "$AI_PERSONIF"
+
+# v5.0 GAP-4: "zasługujesz na" / "pozwól sobie" — puste odpustowe frazy AI
+AI_INDULGE=$(grep -ciE "zasługujesz\s+na|zaslugujesz\s+na|pozwól\s+sobie|pozwol\s+sobie" "$FILE" || true)
+check "Zero 'zasługujesz na / pozwól sobie' (odpustowe frazy AI)" "0" "$AI_INDULGE"
+
+# v5.0 GAP-4: budżet "masz dość" max 1× per landing (deklarowany od dawna, dotąd NIE liczony)
+MASZ_DOSC=$(grep -ciE "masz\s+dość|masz\s+dosc|masz\s+już\s+dość" "$FILE" || true)
+if [ "$MASZ_DOSC" -le 1 ]; then
+  echo "  ✅ Budżet 'masz dość' ≤1 ($MASZ_DOSC)"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  'masz dość' ×$MASZ_DOSC — budżet to max 1 na landing (pain-hook traci moc przy powtórce)"
+  WARN=$((WARN + 1))
+fi
+
 # ─── 9. Offer Box 2026 (DESIGN.md sekcja H) ───
 echo ""
 echo "💰 9. Offer Box / CTA (DESIGN.md sekcja H.9)"
@@ -784,6 +803,101 @@ if [ -f "$BRIEF" ]; then
 else
   echo "  ⚠️  _brief.md BRAK — ETAP 1 DIRECTION nie wykonany"
   WARN=$((WARN + 1))
+fi
+
+# ─── 14. Anti-AI-slop visual (v5.0 — rollout WARN→FAIL) ───
+# Research (925studios): sygnatura AI-slop = Inter + fioletowe gradienty + uniform radius;
+# strony z nią konwertują do 91% gorzej. Checki STYLE-LOCK-AWARE (czytają _brief.md).
+echo ""
+echo "🤖 14. Anti-AI-slop visual (v5.0)"
+
+# 14a. Fiolety AI-slop — PASS gdy hex jest w briefie (fioletowy brand klienta legalny)
+SLOP_HEX_FOUND=""
+for hex in 6366f1 8b5cf6 a855f7 7c3aed; do
+  if grep -qiE "#$hex" "$FILE"; then
+    if [ -f "$BRIEF" ] && grep -qiE "#$hex" "$BRIEF"; then
+      : # hex z palety brandu — legalny
+    else
+      SLOP_HEX_FOUND="$SLOP_HEX_FOUND #$hex"
+    fi
+  fi
+done
+if [ -z "$SLOP_HEX_FOUND" ]; then
+  echo "  ✅ Zero fioletów AI-slop spoza palety briefu"
+  PASS=$((PASS + 1))
+else
+  echo "  ⚠️  Fiolety AI-slop spoza briefu:$SLOP_HEX_FOUND (sygnatura generycznego AI — zamień na paletę brandu)"
+  WARN=$((WARN + 1))
+fi
+
+# 14b. Inter/Roboto/Arial/Open Sans jako font DISPLAY (wyjątek: swiss-grid lockuje Helvetica/Inter)
+if [ "$STYLE_ID" = "swiss-grid" ]; then
+  echo "  ✅ Font display: wyjątek swiss-grid (Helvetica/Inter locked)"
+  PASS=$((PASS + 1))
+else
+  DISPLAY_SLOP=$(grep -cE -- "--font-display:[^;]*(Inter|Roboto|Arial|Open Sans)|--display:[^;]*(Inter|Roboto|Arial|Open Sans)" "$FILE" || true)
+  if [ "$DISPLAY_SLOP" -eq 0 ]; then
+    echo "  ✅ Font display bez Inter/Roboto/Arial (AI-slop default)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Inter/Roboto/Arial jako --font-display — sygnatura AI-slop; display ma budować charakter (Inter OK jako body)"
+    WARN=$((WARN + 1))
+  fi
+fi
+
+# 14c. Uniform radius >80% identycznych wartości (excl. 0 i 50% — brutalist/avatary legalne)
+RADII=$(grep -oE "border-radius:\s*[0-9]+px" "$FILE" | grep -oE "[0-9]+" | grep -vE "^0$" || true)
+N_RADII=$(echo "$RADII" | grep -c . || true)
+if [ "$N_RADII" -ge 5 ]; then
+  TOP_COUNT=$(echo "$RADII" | sort | uniq -c | sort -rn | head -1 | awk '{print $1}')
+  PCT=$((TOP_COUNT * 100 / N_RADII))
+  if [ "$PCT" -le 80 ]; then
+    echo "  ✅ Border-radius zróżnicowany (dominanta $PCT% z $N_RADII)"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Uniform radius: $PCT% wartości identycznych — sygnatura szablonu (różnicuj: karty vs przyciski vs badge)"
+    WARN=$((WARN + 1))
+  fi
+fi
+
+# 14d. Template-fingerprint (verify-freshness.sh — kolizje leksykalne z korpusem)
+if [ -f "scripts/verify-freshness.sh" ]; then
+  FRESH_OUT=$(bash scripts/verify-freshness.sh "$SLUG" 2>&1 || true)
+  if echo "$FRESH_OUT" | grep -q "^GATE: PASS"; then
+    echo "  ✅ Freshness: zero sztancy leksykalnej"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  Freshness: kolizje leksykalne —"
+    echo "$FRESH_OUT" | grep "⚠️" | head -3 | sed 's/^/   /'
+    WARN=$((WARN + 1))
+  fi
+fi
+
+# 14e. Wow Moments — zadeklarowane selektory MUSZĄ istnieć w HTML (v5.0)
+if [ -f "$BRIEF" ] && grep -q "^## 11\." "$BRIEF"; then
+  WOW_SELECTORS=$(awk '/^## 11\./,/^## 12\.|^---$/' "$BRIEF" | tr -d '\r' | grep -E "^-?\s*selector:" | sed -E 's/^-?\s*selector:\s*//; s/[[:space:]]+$//' | grep -v "^\[" || true)
+  BLOCKLIST="^\.(hero|offer-box|sticky-cta|trust-strip|faq|tile|js-counter|magnetic)$"
+  if [ -z "$WOW_SELECTORS" ]; then
+    echo "  ⚠️  Wow Moments: brak pól 'selector:' w briefie sekcji 11 (v5.0 — wymagane do maszynowej weryfikacji)"
+    WARN=$((WARN + 1))
+  else
+    WOW_OK=1
+    while IFS= read -r sel; do
+      [ -z "$sel" ] && continue
+      if echo "$sel" | grep -qE "$BLOCKLIST"; then
+        echo "  ⚠️  Wow selector '$sel' jest klasą BASELINE (blocklist) — to nie wow moment, to fundament"
+        WARN=$((WARN + 1)); WOW_OK=0; continue
+      fi
+      CLS=$(echo "$sel" | sed 's/^\.//')
+      if grep -qE "class=\"[^\"]*$CLS" "$FILE"; then
+        : # obecny
+      else
+        echo "  ⚠️  Wow selector '$sel' zadeklarowany w briefie, NIEOBECNY w HTML (deklaracja ≠ realizacja)"
+        WARN=$((WARN + 1)); WOW_OK=0
+      fi
+    done <<< "$WOW_SELECTORS"
+    [ "$WOW_OK" = "1" ] && { echo "  ✅ Wow Moments: wszystkie zadeklarowane selektory obecne w HTML"; PASS=$((PASS + 1)); }
+  fi
 fi
 
 # ─── Summary ───

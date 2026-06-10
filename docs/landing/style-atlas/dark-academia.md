@@ -144,11 +144,22 @@ js_effects_count:
 
 ## 11. Copy Voice
 
-- **Register:** literary + formal + timeless
-- **Sentence length:** medium-long (15-25 słów), dopuszczalne bardziej złożone zdania
-- **Person:** 2-osoba (Ty/Twój) lub 3-osoba (bezosobowo)
-- **Allowed:** archaizmy („zaprawdę", „wszak"), klasyczne metafory
-- **Forbidden:** korporacyjne, power words
+> **v5.0 (GAP-4 fix):** dawna wersja nakazywała rejestr literacki + archaizmy + metafory
+> dla CAŁEGO copy — co kolidowało DETERMINISTYCZNIE z grepami anty-purple-prose ETAP 3
+> (agent w AUTO-RUN, któremu scoring DNA wskazał ten styl, wpadał w pętlę FAIL).
+> Rozdzielenie: literackość żyje w DEKORACJACH, body copy i CTA pozostają DR.
+
+- **Register dwuwarstwowy:**
+  - **eyebrow / chapter-num / cytaty / dekoracje:** literacki, dozwolone archaizmy
+    („§ Liber primus", „Rozdział II") i klasyczne odwołania — to ornament, nie perswazja
+  - **body copy / benefity / FAQ / CTA / offer:** polski direct response jak w każdym
+    stylu — konkret, liczba z briefu, 2 osoba; ZERO metafor emocji i aforyzmów
+- **Sentence length:** body 10-18 słów; dekoracje mogą dłużej
+- **Person:** 2-osoba (Ty/Twój)
+- **Allowed (TYLKO w warstwie dekoracyjnej):** numeracja rozdziałów, łacińskie etykiety,
+  cytat klasyka jako pull-quote Z PODPISEM źródła
+- **Forbidden:** korporacyjne, power words, archaizmy w body/CTA („zaprawdę kupuj" = nie),
+  personifikacja produktu, aforyzmy-domknięcia
 
 ## 12. Example Snippet
 

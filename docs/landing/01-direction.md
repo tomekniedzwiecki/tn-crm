@@ -147,6 +147,12 @@ Ref 3: Linear → kolorowe gradienty w detalach (radial gradient w rogu karty, n
 
 **Zabronione referencje:** inne landingi z `landing-pages/` (zamknięta pętla), Midjourney gallery (AI slop), Dribbble (trend slop), generyczne „modern minimalist" template'y.
 
+**🗂️ SWIPE CORPUS (v5.0 — preferowane źródło):** [`_research/swipe/swipe-corpus-2026-Q2.md`](../landing/_research/swipe/swipe-corpus-2026-Q2.md)
+— ~20 anotowanych, ZWERYFIKOWANYCH referencji (Co brać / Czego NIE brać / Pasuje do stylów)
++ 5 wzorców przekrojowych. Cytuj z korpusu zamiast z pamięci modelu — każda pozycja ma
+wskazane techniki odtwarzalne w czystym CSS/HTML. Tabela kategorii niżej = fallback,
+gdy korpus nie ma nic dla kategorii produktu. Odświeżanie korpusu: kwartalnie (poza AUTO-RUN).
+
 ### 🔌 21st.dev / magic MCP — kiedy zerknąć, kiedy NIE
 
 > **TYLKO research, NIGDY do generowania kodu na ten landing.** Patrz [`mcp-landing-tools`](../../../Users/tomek/.claude/projects/c--repos-tn/memory/mcp-landing-tools.md).

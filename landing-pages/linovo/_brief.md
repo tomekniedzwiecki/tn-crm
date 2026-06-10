@@ -136,5 +136,11 @@ js_effects_count: { counter_min: 0, tilt_min: 0, parallax_min: 0 }
 ## 11. Wow Moments (3 explicit — ETAP 4)
 
 1. **Hero zone — mosiężny szew + asymetryczny pakshot w oddechu:** pionowa nić brass „zszywa" headline z metką „26 sek. do gotowości"; produkt z prawej w dużym marginesie papieru. Unikalne, bo żaden inny landing nie używa sartorialnego szwu jako struktury.
+- pattern-id: brass-seam-hero
+- selector: .hero-spec
 2. **Mid — „Linia w każdej tkaninie":** sekcja-oddech (single statement, padding 160px) z trzema słowami-tkaninami (jedwab · len · kaszmir) rozłożonymi w pionie przy brass hairline; cisza zamiast tabeli specyfikacji.
+- pattern-id: fabric-breath-statement
+- selector: .fabrics
 3. **Conversion — cichy offer-box w ramce brass:** offer otoczony 1px mosiężną ramką (border-beam zastąpiony statycznym szwem, zgodnie z motion=still), cena-kotwica przekreślona + „Oszczędzasz", trust strip bez ikon-krzykaczy, gwarancja 90 dni jako mikrokopia.
+- pattern-id: quiet-brass-offer-frame
+- selector: .offer-incl
