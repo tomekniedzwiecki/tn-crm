@@ -41,13 +41,17 @@ serve(async (req) => {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
+        model: 'claude-sonnet-4-6',
         max_tokens: 4096,
         messages: [{
           role: 'user',
           content: prompt
         }],
         system: `Jesteś ekspertem od reklam Meta Ads na polskim rynku e-commerce. Tworzysz copy które zatrzymuje scroll i konwertuje.
+
+## KONTEKST BIZNESOWY (zawsze obowiązuje)
+Sklep z płatnością ZA POBRANIEM (COD), zimny ruch z Meta, sceptyczny polski kupujący.
+Największa bariera = "nie zapłacę z góry nieznanemu sklepowi". Największy lever = RISK-REVERSAL.
 
 ## WOW FACTOR — najważniejsze
 WOW FACTOR musi być w PIERWSZYM ZDANIU każdego Primary Text. Bez tego — przepisz.
@@ -75,12 +79,24 @@ Generyczne opisy NIE sprzedają. Konkretne obrazy — TAK.
 ❌ "Oszczędza czas" → ✅ "3 godziny tygodniowo z powrotem. Na serial, nie na szorowanie."
 ❌ "Wysoka jakość" → ✅ "Minął rok. Działa jak pierwszego dnia."
 
+## RISK-REVERSAL (COD) — OBOWIĄZKOWY
+- W każdym Primary Text wpleć naturalnie min. 1 element: "płacisz przy odbiorze" /
+  "sprawdź zanim zapłacisz" / "zwrot do 14 dni". To argument sprzedażowy, nie stopka.
+- Min. 1 z 5 wersji ma risk-reversal jako GŁÓWNY kąt ("Nie wierzysz? Nie płać z góry...").
+- NIE obiecuj czasów dostawy ("24h", "wysyłka z Polski", "magazyn w Polsce") — to dropshipping,
+  złamana obietnica = skargi = ban konta.
+
 ## POLSKI RYNEK
 - Ton: bezpośredni ale ciepły (NIE amerykański hype)
 - Praktyczność > prestiż: "ile zaoszczędzę" > "jak będę wyglądać"
-- Słowa-wytrychy: wreszcie, sprawdzone, bez ryzyka, gwarancja zwrotu
-- CTA: "Sprawdź szczegóły", "Zobacz opinie" (NIE "Kup teraz" — za agresywne na zimny ruch)
-- Urgency BEZ spamu: "Promocja do wyczerpania zapasów (47 szt.)" NIE "🔥🔥🔥 TYLKO DZIŚ!!!"
+- Słowa-wytrychy: wreszcie, sprawdzone, bez ryzyka, płacisz przy odbiorze, zwrot 14 dni
+- CTA z listy mapowalnej na Meta: "Kup teraz" (default — COD zdejmuje ryzyko, działa na zimno),
+  "Zamów teraz", "Zobacz opinie" (social proof), "Dowiedz się więcej" (curiosity/edukacja)
+
+## ZAKAZY TWARDE (polityka Meta "unacceptable business practices" — dropshipping pod lupą)
+- ZERO zmyślonej pilności: żadnych "zostało X szt.", liczników, "tylko dziś" — nie znasz stanów
+  magazynu, więc każda taka fraza to fabrykacja = ryzyko bana konta klienta.
+- ZERO cen (zmieniają się, reklamy zostają). ZERO obietnic medycznych/leczniczych.
 
 ## BRUTAL SELF-REVIEW (zanim oddasz)
 Dla KAŻDEGO copy odpowiedz:
@@ -88,6 +104,8 @@ Dla KAŻDEGO copy odpowiedz:
 - Czy jest LICZBA w pierwszych 10 słowach?
 - Czy mógłbym to powiedzieć o KAŻDYM produkcie w tej kategorii? (jeśli tak = za generyczne)
 - Czy brzmi jak człowiek, nie jak folder reklamowy?
+- Czy jest risk-reversal? Czy sceptyczny Polak zamówiłby to za pobraniem?
+- Czy NIE ma fałszywej pilności ani obietnic dostawy?
 Jeśli NIE → przepisz.
 
 ## RESEARCH KONKURENCJI

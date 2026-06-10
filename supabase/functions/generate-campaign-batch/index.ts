@@ -276,12 +276,20 @@ LANDING PAGE: ${landingUrl || 'brak'}`
   }
 
   textPrompt += `\n===== ZADANIE =====
-Wygeneruj 5 wersji reklamy Meta Ads. Każda wersja = COPY + IMAGE PROMPT.
+Wygeneruj 5 wersji reklamy Meta Ads. Każda wersja = jeden spójny KONCEPT: COPY + IMAGE PROMPT + VIDEO HOOK.
+Grafika musi GRAĆ z copy (ten sam kąt, ta sama obietnica) — nie losowy obrazek do tekstu.
 
 COPY:
-- Primary Text: hook w pierwszych 125 znakach. Headline: 27-40 znaków. Description: 25-30 znaków.
-- NIE podawaj cen. CTA: "Sprawdź szczegóły" / "Zobacz opinie". Ton: bezpośredni, ciepły, polski rynek.
+- Primary Text: hook w pierwszych 125 znakach (99% nie klika "See more"). Headline: 27-40 znaków. Description: 25-30 znaków.
+- NIE podawaj cen. Ton: bezpośredni, ciepły, polski rynek.
+- CTA z listy: "Kup teraz" (default — COD zdejmuje ryzyko) / "Zamów teraz" / "Zobacz opinie" / "Dowiedz się więcej".
+- RISK-REVERSAL: w każdym Primary Text min. 1 element ("płacisz przy odbiorze" / "sprawdź zanim zapłacisz" / "zwrot 14 dni"); 1 z 5 wersji ma to jako główny kąt.
+- ZERO zmyślonej pilności (stany magazynowe, liczniki) i ZERO obietnic czasu dostawy.
 - Dobierz kąty na podstawie LUK konkurencji.
+
+VIDEO HOOK (dla każdej wersji — pod przyszłe wideo 9:16 Reels i jako brief dla klienta):
+Opisz PIERWSZE 3 SEKUNDY wideo w tym samym koncepcie: co widać w kadrze (pion 9:16) + tekst na ekranie (PO POLSKU).
+Widz decyduje w 3 sekundy — hook musi zatrzymać kciuk. 1-2 zdania, konkret.
 
 IMAGE PROMPT (dla każdej wersji):
 Generator obrazów (Gemini Nano Banana) dostanie referencyjne zdjęcie produktu + Twój prompt.
@@ -343,7 +351,7 @@ ZASADY KOŃCOWE:
 - Jeśli dodajesz tekst na obrazie, pisz PO POLSKU (to reklama dla Polaków)
 
 JSON:
-{"wow_factor":"...","target_group":"konkretna persona","product_name":"${productName}","landing_url":"${landingUrl}","versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"...","image_prompt":"krótki prompt 3-4 zdania, max 60 słów, dopasowany format z listy 6"}]}
+{"wow_factor":"...","target_group":"konkretna persona","product_name":"${productName}","landing_url":"${landingUrl}","risk_reversal":["elementy risk-reversal użyte w copy, np. płatność przy odbiorze","zwrot 14 dni"],"versions":[{"angle":"...","primary_text":"...","headline":"...","description":"...","cta":"Kup teraz","image_prompt":"krótki prompt 3-4 zdania, max 60 słów, dopasowany format z listy 6","video_hook":"pierwsze 3 sekundy wideo 9:16: kadr + polski tekst na ekranie"}]}
 Zwróć TYLKO JSON.`
 
   // Buduj messages — z obrazem jeśli jest
@@ -375,16 +383,35 @@ Zwróć TYLKO JSON.`
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-6',
       max_tokens: 8192,
       messages: [{ role: 'user', content: userContent }],
       system: `Jesteś art directorem i copywriterem kampanii Meta Ads na polskim rynku e-commerce.
 
+KONTEKST BIZNESOWY (zawsze obowiązuje):
+Sklep z płatnością ZA POBRANIEM (COD), zimny ruch z Meta, sceptyczny polski kupujący.
+Największa bariera = "nie zapłacę z góry nieznanemu sklepowi". Największy lever = RISK-REVERSAL.
+
 COPY:
 - WOW FACTOR w pierwszym zdaniu każdego Primary Text
 - Emocjonalna konkretność > generyki. "3 minuty do pełnej mocy" > "szybko działa"
-- Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny.
-- Polski rynek: bezpośredni ale ciepły. Nie "KUP TERAZ" — "Sprawdź szczegóły"
+- Liczby > przymiotniki. Każdy kąt NAPRAWDĘ inny (koncept, nie parafraza).
+- Polski rynek: bezpośredni ale ciepły, zero amerykańskiego hype'u.
+
+RISK-REVERSAL (COD) — OBOWIĄZKOWY:
+- W każdym Primary Text wpleć naturalnie min. 1 element: "płacisz przy odbiorze" /
+  "sprawdź zanim zapłacisz" / "zwrot do 14 dni". To nie stopka — to argument sprzedażowy.
+- Min. 1 z 5 wersji ma risk-reversal jako GŁÓWNY kąt (np. "Nie wierzysz? Nie płać z góry...").
+- NIE obiecuj czasów dostawy ("24h", "wysyłka z Polski", "magazyn w Polsce") — to dropshipping,
+  złamana obietnica = skargi = ban konta.
+
+CTA — tylko wartości mapowalne na Meta (COD zdejmuje ryzyko, więc "Kup teraz" DZIAŁA na zimno):
+- "Kup teraz" (default dla większości wersji) | "Zamów teraz" | "Zobacz opinie" (dla social proof) | "Dowiedz się więcej" (dla curiosity/edukacji)
+
+ZAKAZY TWARDE (polityka Meta "unacceptable business practices" — dropshipping jest pod lupą):
+- ZERO zmyślonej pilności: żadnych "zostało X szt.", liczników, "tylko dziś", "ostatnia szansa"
+  jeśli nie są PRAWDZIWE (a nie znasz stanów magazynu — więc nie pisz ich wcale).
+- ZERO cen (zmieniają się, reklamy zostają). ZERO obietnic medycznych/leczniczych.
 
 IMAGE PROMPTS — pisz dla Gemini Nano Banana, nie dla człowieka:
 

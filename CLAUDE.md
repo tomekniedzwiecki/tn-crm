@@ -128,14 +128,26 @@ Patrz: [`mcp-landing-tools.md`](../../Users/tomek/.claude/projects/c--repos-tn/m
 
 Wzorce: `landing-pages/paromia/` (Editorial/Luxury), `landing-pages/vitrix/` (Panoramic Calm), `landing-pages/h2vital/` (Organic), `landing-pages/pupilnik/` (Playful), `landing-pages/vibestrike/` (Retro-Futuristic), `landing-pages/kafina/` (Rugged Heritage).
 
-### Generowanie copy reklamowego Meta Ads
+### Generowanie contentu reklamowego Meta Ads (v2 — COD)
 **Plik:** `CLAUDE_ADS_COPY_PROCEDURE.md`
 
-Kiedy uzytkownik mowi "zrob copy reklamowe dla workflow X":
-1. Przeczytaj `CLAUDE_ADS_COPY_PROCEDURE.md`
-2. Pobierz dane workflow z Supabase (branding, produkty, landing page URL)
-3. Wygeneruj 5 wersji copy z roznymi katami (Pain Point, Transformation, Social Proof, Urgency, Curiosity)
-4. Kazda wersja: Primary Text + Headline + Description + CTA
+Kiedy uzytkownik mowi "zrob copy reklamowe / content reklamowy dla workflow X":
+1. Przeczytaj `CLAUDE_ADS_COPY_PROCEDURE.md` (v2, 2026-06-10)
+2. Produkcyjnie content robi pipeline `generate-campaign-batch` (research Manus -> 5 KONCEPTOW:
+   copy + image_prompt + video_hook -> grafiki Gemini z referencja produktu); fallback `generate-ad-copy`
+3. Zasady v2: risk-reversal COD obowiazkowy ("placisz przy odbiorze", "zwrot 14 dni"),
+   CTA default "Kup teraz" (COD zdejmuje ryzyko), ZERO zmyslonej pilnosci i obietnic dostawy,
+   kazda wersja = spojny koncept (copy+wizual+video hook), hook w 125 znakach
+4. Po zmianie promptow w edge functions -> deploy reczny (`--no-verify-jwt`)
+
+### Zakladanie kampanii Meta Ads przez MCP
+**Plik:** `CLAUDE_MCP_CAMPAIGN_PROCEDURE.md`
+
+Kiedy uzytkownik mowi „utworz kampanie MCP dla workflow X" / „zaloz kampanie przez MCP":
+1. Przeczytaj `CLAUDE_MCP_CAMPAIGN_PROCEDURE.md` — odtwarza spec „Pakietu Claude Cowork"
+   (BRIEF z `workflow.html`), ale buduje kampanie bezposrednio przez Meta MCP zamiast agenta przegladarkowego.
+2. Gate'y: konto reklamowe (mapuj po marce, potwierdz), strona FB podpieta pod konto, pixel, metoda platnosci.
+3. Wszystko PAUSED — publikacja wylacznie recznie przez Tomka.
 
 ## Supabase Edge Functions
 
