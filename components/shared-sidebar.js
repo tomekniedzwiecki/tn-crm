@@ -50,6 +50,7 @@ const NAV_ITEMS_CRM = [
 const NAV_ITEMS_WORKFLOW = [
     { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty' },
     { id: 'products', icon: 'ph-package', label: 'Produkty' },
+    { id: 'products-v2', icon: 'ph-flask', label: 'Produkty V2' },
     { id: 'kampanie', icon: 'ph-chart-line-up', label: 'Kampanie', showCount: true, countHiddenAtZero: true },
     { id: 'automations', icon: 'ph-lightning', label: 'Automatyzacje' },
     { id: 'email-templates', icon: 'ph-file-code', label: 'Szablony emaili' },

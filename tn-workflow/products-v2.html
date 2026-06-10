@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Produkty V2</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .rec-card:hover {
+            border-color: rgba(255,255,255,0.15);
+            transform: translateY(-1px);
+        }
+
+        /* Score ring */
+        .score-ring { position: relative; width: 52px; height: 52px; }
+        .score-ring svg { transform: rotate(-90deg); }
+        .score-ring .score-num {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 500;
+        }
+
+        .dim-bar { height: 6px; border-radius: 3px; background: rgba(255,255,255,0.07); overflow: hidden; }
+        .dim-bar > div { height: 100%; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">produkty v2</span></span>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="openFrameworkModal()" class="text-zinc-400 hover:text-white border border-zinc-800 hover:border-zinc-600 px-3 py-1.5 rounded-lg text-xs transition-colors flex items-center gap-1.5">
+                    <i class="ph ph-strategy"></i>
+                    Framework
+                </button>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+                <!-- Title & Stats -->
+                <div class="flex items-start justify-between mb-2 flex-wrap gap-4">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Produkty V2</h1>
+                        <p class="text-zinc-500">Rekomendacje zweryfikowane researchem: popyt, marża, konkurencja, ryzyka, opłacalność reklam.</p>
+                    </div>
+                    <div id="round-badge" class="text-right hidden">
+                        <div class="text-xs font-mono text-zinc-500 mb-1">runda researchu</div>
+                        <div class="text-sm font-mono text-emerald-400" id="round-label">—</div>
+                    </div>
+                </div>
+
+                <!-- Stats strip -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-8 mt-6">
+                    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-emerald-400" id="stat-recommended">—</div>
+                        <div class="text-xs text-zinc-500 mt-1">Rekomendowane</div>
+                    </div>
+                    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-amber-400" id="stat-conditional">—</div>
+                        <div class="text-xs text-zinc-500 mt-1">Warunkowe</div>
+                    </div>
+                    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white" id="stat-margin">—</div>
+                        <div class="text-xs text-zinc-500 mt-1">Śr. marża kontryb. (rekomendowane)</div>
+                    </div>
+                    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+                        <div class="text-2xl font-semibold text-white" id="stat-rejected">—</div>
+                        <div class="text-xs text-zinc-500 mt-1">Odrzucone (przebadane)</div>
+                    </div>
+                </div>
+
+                <!-- Filters -->
+                <div class="flex items-center gap-3 mb-6 flex-wrap">
+                    <div class="relative flex-1 max-w-md min-w-[220px]">
+                        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+                        <input id="search-input" type="text" placeholder="Szukaj rekomendacji..." class="w-full bg-zinc-900 border border-zinc-800 rounded-lg pl-10 pr-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600 placeholder-zinc-600" oninput="applyFilters()">
+                    </div>
+                    <select id="verdict-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="">Wszystkie werdykty</option>
+                        <option value="recommended">Rekomendowane</option>
+                        <option value="conditional">Warunkowe</option>
+                        <option value="rejected">Odrzucone</option>
+                    </select>
+                    <select id="category-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="">Wszystkie kategorie</option>
+                    </select>
+                    <select id="status-filter" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="">Wszystkie statusy</option>
+                        <option value="draft">Szkic</option>
+                        <option value="published">Opublikowane</option>
+                        <option value="promoted">W katalogu</option>
+                        <option value="archived">Zarchiwizowane</option>
+                    </select>
+                    <select id="sort-select" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-2.5 text-sm text-white outline-none focus:border-zinc-600" onchange="applyFilters()">
+                        <option value="score">Sortuj: wynik</option>
+                        <option value="margin">Sortuj: marża</option>
+                        <option value="price">Sortuj: cena</option>
+                        <option value="newest">Sortuj: najnowsze</option>
+                    </select>
+                </div>
+
+                <!-- Grid -->
+                <div id="recs-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+                <div id="empty-state" class="hidden py-16 text-center">
+                    <i class="ph ph-flask text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Brak rekomendacji w tej rundzie</p>
+                    <p class="text-zinc-600 text-xs font-mono">Uruchom research: „odśwież rekomendacje produktów" w Claude</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div id="detail-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onclick="if(event.target===this)closeDetailModal()">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-4xl shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
+                <h2 id="detail-title" class="text-sm font-medium text-white flex items-center gap-2 min-w-0">
+                    <i class="ph ph-flask text-emerald-400 flex-shrink-0"></i>
+                    <span class="truncate">Szczegóły rekomendacji</span>
+                </h2>
+                <button onclick="closeDetailModal()" class="text-zinc-500 hover:text-white transition-colors flex-shrink-0">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div id="detail-body" class="p-5 overflow-y-auto flex-1"></div>
+            <div id="detail-actions" class="flex gap-3 px-5 py-4 border-t border-white/5 bg-zinc-900/50 flex-shrink-0 flex-wrap"></div>
+        </div>
+    </div>
+
+    <!-- Framework Modal -->
+    <div id="framework-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50" onclick="if(event.target===this)closeFrameworkModal()">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-3xl shadow-2xl max-h-[92vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-strategy text-violet-400"></i>
+                    Framework scoringu — jak weryfikujemy produkty
+                </h2>
+                <button onclick="closeFrameworkModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div id="framework-body" class="p-5 overflow-y-auto flex-1 text-sm"></div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="hidden fixed bottom-6 right-6 bg-zinc-900 border border-white/10 rounded-lg px-4 py-3 text-sm text-white shadow-2xl z-[60]"></div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let recs = [];
+        let filteredRecs = [];
+        let framework = null;
+        let currentMember = null;
+        let isAdmin = false;
+
+        const verdictMeta = {
+            recommended: { text: 'Rekomendowany', class: 'bg-emerald-500/20 text-emerald-400', ring: '#34d399' },
+            conditional: { text: 'Warunkowy', class: 'bg-amber-500/20 text-amber-400', ring: '#fbbf24' },
+            rejected:    { text: 'Odrzucony', class: 'bg-red-500/20 text-red-400', ring: '#f87171' },
+        };
+        const statusMeta = {
+            draft:     { text: 'Szkic', class: 'bg-zinc-700/40 text-zinc-400' },
+            published: { text: 'Opublikowany', class: 'bg-cyan-500/20 text-cyan-400' },
+            promoted:  { text: 'W katalogu', class: 'bg-violet-500/20 text-violet-400' },
+            archived:  { text: 'Archiwum', class: 'bg-zinc-800 text-zinc-500' },
+        };
+
+        function showToast(msg, type = 'success') {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.className = `fixed bottom-6 right-6 border rounded-lg px-4 py-3 text-sm shadow-2xl z-[60] ${type === 'error' ? 'bg-red-950 border-red-500/30 text-red-200' : 'bg-zinc-900 border-white/10 text-white'}`;
+            t.classList.remove('hidden');
+            setTimeout(() => t.classList.add('hidden'), 3500);
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMember(session.user.id);
+            return session;
+        }
+
+        async function loadTeamMember(userId) {
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const members = data || [];
+            currentMember = members.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+            Sidebar.showAdminNav(isAdmin);
+        }
+
+        async function loadData() {
+            const [recsRes, fwRes] = await Promise.all([
+                supabaseClient.from('product_recommendations').select('*').order('total_score', { ascending: false, nullsFirst: false }),
+                supabaseClient.from('settings').select('value').eq('key', 'product_research_framework').maybeSingle(),
+            ]);
+            if (recsRes.error) { console.error(recsRes.error); showToast('Błąd ładowania: ' + recsRes.error.message, 'error'); return; }
+            recs = recsRes.data || [];
+            try { framework = fwRes.data?.value ? JSON.parse(fwRes.data.value) : null; } catch (e) { framework = null; }
+
+            // Round badge: latest round
+            const rounds = [...new Set(recs.map(r => r.research_round).filter(Boolean))].sort().reverse();
+            if (rounds.length) {
+                document.getElementById('round-badge').classList.remove('hidden');
+                document.getElementById('round-label').textContent = rounds[0];
+            }
+
+            // Categories filter
+            const cats = [...new Set(recs.map(r => r.category).filter(Boolean))].sort();
+            const catSel = document.getElementById('category-filter');
+            catSel.innerHTML = '<option value="">Wszystkie kategorie</option>' + cats.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+
+            renderStats();
+            applyFilters();
+        }
+
+        function renderStats() {
+            const active = recs.filter(r => r.status !== 'archived');
+            const rec = active.filter(r => r.verdict === 'recommended');
+            const cond = active.filter(r => r.verdict === 'conditional');
+            const rej = recs.filter(r => r.verdict === 'rejected');
+            document.getElementById('stat-recommended').textContent = rec.length;
+            document.getElementById('stat-conditional').textContent = cond.length;
+            document.getElementById('stat-rejected').textContent = rej.length;
+            const margins = rec.map(r => parseFloat(r.contribution_margin_pln)).filter(v => !isNaN(v));
+            document.getElementById('stat-margin').textContent = margins.length
+                ? Math.round(margins.reduce((a, b) => a + b, 0) / margins.length) + ' zł'
+                : '—';
+        }
+
+        function applyFilters() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const verdictF = document.getElementById('verdict-filter').value;
+            const catF = document.getElementById('category-filter').value;
+            const statusF = document.getElementById('status-filter').value;
+            const sort = document.getElementById('sort-select').value;
+
+            filteredRecs = recs.filter(r => {
+                if (verdictF && r.verdict !== verdictF) return false;
+                if (catF && r.category !== catF) return false;
+                if (statusF && r.status !== statusF) return false;
+                if (!statusF && r.status === 'archived') return false; // domyślnie chowamy archiwum
+                if (search) {
+                    const txt = [r.name, r.category, r.problem_statement, r.target_audience].filter(Boolean).join(' ').toLowerCase();
+                    if (!txt.includes(search)) return false;
+                }
+                return true;
+            });
+
+            filteredRecs.sort((a, b) => {
+                if (sort === 'margin') return (parseFloat(b.contribution_margin_pln) || 0) - (parseFloat(a.contribution_margin_pln) || 0);
+                if (sort === 'price') return (parseFloat(b.retail_price_pln) || 0) - (parseFloat(a.retail_price_pln) || 0);
+                if (sort === 'newest') return new Date(b.researched_at) - new Date(a.researched_at);
+                return (parseFloat(b.total_score) || 0) - (parseFloat(a.total_score) || 0);
+            });
+
+            renderGrid();
+        }
+
+        function esc(s) {
+            return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+        function fmtPln(v) {
+            const n = parseFloat(v);
+            return isNaN(n) ? '—' : (Math.round(n * 100) / 100).toLocaleString('pl-PL') + ' zł';
+        }
+
+        function scoreRing(score, color) {
+            const s = Math.max(0, Math.min(100, parseFloat(score) || 0));
+            const r = 22, c = 2 * Math.PI * r;
+            const off = c * (1 - s / 100);
+            return `
+                <div class="score-ring" title="TN Product Score: ${s}/100">
+                    <svg width="52" height="52" viewBox="0 0 52 52">
+                        <circle cx="26" cy="26" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="4"/>
+                        <circle cx="26" cy="26" r="${r}" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}"/>
+                    </svg>
+                    <div class="score-num" style="color:${color}">${Math.round(s)}</div>
+                </div>`;
+        }
+
+        function renderGrid() {
+            const grid = document.getElementById('recs-grid');
+            const empty = document.getElementById('empty-state');
+
+            if (!filteredRecs.length) {
+                grid.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            grid.innerHTML = filteredRecs.map(r => {
+                const v = verdictMeta[r.verdict] || verdictMeta.conditional;
+                const st = statusMeta[r.status] || statusMeta.draft;
+                const margin = parseFloat(r.contribution_margin_pln);
+                const hardFails = Array.isArray(r.hard_fails) ? r.hard_fails : [];
+                return `
+                    <div class="rec-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden transition-all cursor-pointer" onclick="openDetailModal('${r.id}')">
+                        <div class="p-4">
+                            <div class="flex items-start gap-3 mb-3">
+                                ${scoreRing(r.total_score, v.ring)}
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${v.class}">${v.text}</span>
+                                        <span class="px-2 py-0.5 rounded-md text-[10px] font-medium ${st.class}">${st.text}</span>
+                                    </div>
+                                    <h4 class="text-white font-medium text-sm leading-tight" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(r.name)}</h4>
+                                    <div class="text-zinc-500 text-[11px] font-mono mt-0.5">${esc(r.category)}</div>
+                                </div>
+                            </div>
+                            ${r.problem_statement ? `<p class="text-zinc-400 text-xs leading-relaxed mb-3" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(r.problem_statement)}</p>` : ''}
+                            <div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
+                                <div>
+                                    <div class="text-[10px] text-zinc-600 font-mono uppercase">Cena</div>
+                                    <div class="text-white text-xs font-medium">${fmtPln(r.retail_price_pln)}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-zinc-600 font-mono uppercase">Marża/szt.</div>
+                                    <div class="${!isNaN(margin) && margin >= 80 ? 'text-emerald-400' : 'text-white'} text-xs font-medium">${fmtPln(r.contribution_margin_pln)}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[10px] text-zinc-600 font-mono uppercase">Max CPA</div>
+                                    <div class="text-white text-xs font-medium">${fmtPln(r.max_cpa_pln)}</div>
+                                </div>
+                            </div>
+                            ${hardFails.length ? `<div class="mt-2 text-[11px] text-red-400 flex items-center gap-1"><i class="ph ph-warning"></i> ${hardFails.length} hard-fail</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============ DETAIL MODAL ============
+        function openDetailModal(id) {
+            const r = recs.find(x => x.id === id);
+            if (!r) return;
+            const v = verdictMeta[r.verdict] || verdictMeta.conditional;
+            const scores = r.scores && typeof r.scores === 'object' ? r.scores : {};
+            const evidence = Array.isArray(r.evidence) ? r.evidence : [];
+            const adAngles = Array.isArray(r.ad_angles) ? r.ad_angles : [];
+            const hardFails = Array.isArray(r.hard_fails) ? r.hard_fails : [];
+            const demand = r.demand_signals && typeof r.demand_signals === 'object' ? r.demand_signals : {};
+            const altSources = Array.isArray(r.source_alternatives) ? r.source_alternatives : [];
+
+            document.querySelector('#detail-title span').textContent = r.name;
+
+            const dimOrder = framework?.scoring_framework?.dimensions?.map(d => d.key) || Object.keys(scores);
+            const dimName = k => framework?.scoring_framework?.dimensions?.find(d => d.key === k)?.name_pl || k;
+
+            const scoreRows = dimOrder.filter(k => scores[k]).map(k => {
+                const s = scores[k];
+                const pct = s.max ? (s.score / s.max) * 100 : 0;
+                const col = pct >= 70 ? '#34d399' : pct >= 45 ? '#fbbf24' : '#f87171';
+                return `
+                    <div class="mb-3">
+                        <div class="flex justify-between items-baseline mb-1">
+                            <span class="text-zinc-300 text-xs">${esc(dimName(k))}</span>
+                            <span class="font-mono text-xs" style="color:${col}">${s.score}/${s.max}</span>
+                        </div>
+                        <div class="dim-bar"><div style="width:${pct}%;background:${col}"></div></div>
+                        ${s.rationale ? `<p class="text-zinc-500 text-[11px] mt-1 leading-relaxed">${esc(s.rationale)}</p>` : ''}
+                    </div>`;
+            }).join('');
+
+            const econRows = [
+                ['Cena detaliczna', fmtPln(r.retail_price_pln)],
+                ['COGS (produkt + dostawa z Chin)', fmtPln(r.cogs_pln)],
+                ['Wysyłka krajowa', fmtPln(r.shipping_cost_pln)],
+                ['Marża kontrybucyjna / szt.', fmtPln(r.contribution_margin_pln)],
+                ['Maksymalny opłacalny CPA', fmtPln(r.max_cpa_pln)],
+                ['Break-even ROAS', r.breakeven_roas ? parseFloat(r.breakeven_roas).toLocaleString('pl-PL') : '—'],
+                ['Mnożnik cena/COGS', r.margin_multiple ? parseFloat(r.margin_multiple).toLocaleString('pl-PL') + '×' : '—'],
+            ].map(([l, val]) => `<tr class="border-t border-white/5"><td class="py-2 text-zinc-500 text-xs">${l}</td><td class="py-2 text-right text-white text-xs font-mono">${val}</td></tr>`).join('');
+
+            const evidenceHtml = evidence.map(e => `
+                <div class="border border-white/5 rounded-lg p-3 mb-2 bg-zinc-900/40">
+                    <div class="flex items-center gap-2 mb-1 flex-wrap">
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-zinc-800 text-zinc-400">${esc(e.type || 'dowód')}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[10px] font-mono ${e.confidence === 'high' ? 'bg-emerald-500/15 text-emerald-400' : e.confidence === 'medium' ? 'bg-amber-500/15 text-amber-400' : 'bg-zinc-800 text-zinc-500'}">${esc(e.confidence || '?')}</span>
+                    </div>
+                    <p class="text-zinc-300 text-xs leading-relaxed">${esc(e.claim)}</p>
+                    ${e.source_url ? `<a href="${esc(e.source_url)}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-[11px] font-mono break-all" onclick="event.stopPropagation()">${esc(e.source_url)}</a>` : ''}
+                </div>`).join('');
+
+            const anglesHtml = adAngles.map(a => `
+                <div class="border border-white/5 rounded-lg p-3 mb-2 bg-zinc-900/40">
+                    <div class="text-white text-xs font-medium mb-0.5">${esc(a.angle || a)}</div>
+                    ${a.audience ? `<div class="text-zinc-500 text-[11px]">Grupa: ${esc(a.audience)}</div>` : ''}
+                    ${a.hook ? `<div class="text-zinc-400 text-[11px] italic mt-1">„${esc(a.hook)}"</div>` : ''}
+                </div>`).join('');
+
+            const demandHtml = Object.entries(demand).map(([k, val]) => `
+                <div class="flex gap-2 py-1.5 border-t border-white/5">
+                    <span class="text-zinc-500 text-xs font-mono whitespace-nowrap">${esc(k)}</span>
+                    <span class="text-zinc-300 text-xs">${esc(typeof val === 'string' ? val : JSON.stringify(val))}</span>
+                </div>`).join('');
+
+            document.getElementById('detail-body').innerHTML = `
+                <div class="grid md:grid-cols-2 gap-6">
+                    <div>
+                        <div class="flex items-center gap-4 mb-4">
+                            ${scoreRing(r.total_score, v.ring)}
+                            <div>
+                                <span class="px-2 py-1 rounded-md text-[11px] font-medium ${v.class}">${v.text}</span>
+                                <div class="text-zinc-500 text-[11px] font-mono mt-1">${esc(r.category)} · ${esc(r.research_round || '')}</div>
+                            </div>
+                        </div>
+                        ${r.verdict_reason ? `<p class="text-zinc-300 text-xs leading-relaxed mb-4 border-l-2 pl-3" style="border-color:${v.ring}">${esc(r.verdict_reason)}</p>` : ''}
+
+                        ${r.problem_statement ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Problem który rozwiązuje</h3><p class="text-zinc-300 text-xs leading-relaxed mb-4">${esc(r.problem_statement)}</p>` : ''}
+                        ${r.target_audience ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Grupa docelowa</h3><p class="text-zinc-300 text-xs leading-relaxed mb-4">${esc(r.target_audience)}</p>` : ''}
+                        ${r.description ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Opis</h3><p class="text-zinc-400 text-xs leading-relaxed mb-4">${esc(r.description)}</p>` : ''}
+                        ${r.brand_potential ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Potencjał marki</h3><p class="text-zinc-300 text-xs leading-relaxed mb-4">${esc(r.brand_potential)}</p>` : ''}
+
+                        <h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Unit economics</h3>
+                        <table class="w-full mb-1"><tbody>${econRows}</tbody></table>
+                        ${r.economics_notes ? `<p class="text-zinc-500 text-[11px] leading-relaxed mb-4">${esc(r.economics_notes)}</p>` : ''}
+
+                        ${r.source_url ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5 mt-4">Zaopatrzenie</h3><a href="${esc(r.source_url)}" target="_blank" class="text-cyan-400 hover:text-cyan-300 text-xs font-mono break-all">${esc(r.source_url)}</a>` : ''}
+                        ${altSources.length ? `<div class="mt-2">${altSources.map(s => `<div class="text-[11px] text-zinc-400 font-mono break-all">• <a href="${esc(s.url)}" target="_blank" class="text-cyan-500 hover:text-cyan-300">${esc(s.url)}</a> ${s.price_pln ? '(' + fmtPln(s.price_pln) + ')' : ''} ${s.notes ? '— ' + esc(s.notes) : ''}</div>`).join('')}</div>` : ''}
+                    </div>
+                    <div>
+                        <h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Scoring per wymiar</h3>
+                        ${scoreRows || '<p class="text-zinc-600 text-xs mb-3">Brak rozbicia scoringu</p>'}
+
+                        ${hardFails.length ? `<h3 class="text-red-400 text-[10px] font-mono uppercase tracking-wider mb-1.5 mt-4">Hard-faile</h3>${hardFails.map(h => `<div class="text-red-300 text-xs mb-1 flex gap-1.5"><i class="ph ph-x-circle mt-0.5"></i>${esc(h)}</div>`).join('')}` : ''}
+                        ${r.risk_notes ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5 mt-4">Ryzyka</h3><p class="text-amber-200/80 text-xs leading-relaxed mb-3">${esc(r.risk_notes)}</p>` : ''}
+                        ${r.competition_notes ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5 mt-4">Konkurencja</h3><p class="text-zinc-400 text-xs leading-relaxed mb-3">${esc(r.competition_notes)}</p>` : ''}
+                        ${demandHtml ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5 mt-4">Sygnały popytu</h3>${demandHtml}` : ''}
+                        ${anglesHtml ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2 mt-4">Kąty reklamowe</h3>${anglesHtml}` : ''}
+                        ${evidenceHtml ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2 mt-4">Dowody (${evidence.length})</h3>${evidenceHtml}` : ''}
+                    </div>
+                </div>
+            `;
+
+            // Actions
+            const actions = [];
+            if (r.status === 'draft') actions.push(`<button onclick="setRecStatus('${r.id}','published')" class="bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-megaphone"></i>Opublikuj dla klientów</button>`);
+            if (r.status === 'published') actions.push(`<button onclick="setRecStatus('${r.id}','draft')" class="text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg text-sm transition-colors">Cofnij do szkicu</button>`);
+            if (r.status !== 'promoted' && r.verdict !== 'rejected') actions.push(`<button onclick="promoteToCatalog('${r.id}')" class="bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1.5"><i class="ph ph-arrow-fat-line-up"></i>Awansuj do katalogu</button>`);
+            if (r.status !== 'archived') actions.push(`<button onclick="setRecStatus('${r.id}','archived')" class="text-zinc-400 hover:text-zinc-200 border border-zinc-800 hover:border-zinc-600 px-4 py-2 rounded-lg text-sm transition-colors">Archiwizuj</button>`);
+            else actions.push(`<button onclick="setRecStatus('${r.id}','draft')" class="text-zinc-300 border border-zinc-700 hover:border-zinc-500 px-4 py-2 rounded-lg text-sm transition-colors">Przywróć z archiwum</button>`);
+
+            document.getElementById('detail-actions').innerHTML = `<div class="flex-1"></div>` + actions.join('');
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        async function setRecStatus(id, status) {
+            const { error } = await supabaseClient.from('product_recommendations').update({ status, updated_at: new Date().toISOString() }).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            const r = recs.find(x => x.id === id);
+            if (r) r.status = status;
+            renderStats(); applyFilters();
+            closeDetailModal();
+            showToast('Status zmieniony: ' + (statusMeta[status]?.text || status));
+        }
+
+        async function promoteToCatalog(id) {
+            const r = recs.find(x => x.id === id);
+            if (!r) return;
+            if (!confirm(`Awansować „${r.name}" do globalnego katalogu produktów?`)) return;
+
+            const { data: inserted, error } = await supabaseClient.from('workflow_products').insert({
+                workflow_id: null,
+                name: r.name,
+                description: r.problem_statement || r.description || null,
+                image_url: r.image_url || null,
+                source_url: r.source_url || null,
+                price: r.retail_price_pln || null,
+                currency: 'PLN',
+                wholesale_price: r.cogs_pln || null,
+                status: 'proposal',
+                is_active: true,
+            }).select().single();
+
+            if (error) { showToast('Błąd awansu: ' + error.message, 'error'); return; }
+
+            const { error: e2 } = await supabaseClient.from('product_recommendations')
+                .update({ status: 'promoted', promoted_product_id: inserted.id, updated_at: new Date().toISOString() })
+                .eq('id', id);
+            if (e2) { showToast('Produkt dodany, ale nie zapisano statusu: ' + e2.message, 'error'); return; }
+
+            r.status = 'promoted'; r.promoted_product_id = inserted.id;
+            renderStats(); applyFilters();
+            closeDetailModal();
+            showToast('Produkt awansowany do katalogu');
+        }
+
+        // ============ FRAMEWORK MODAL ============
+        function openFrameworkModal() {
+            const body = document.getElementById('framework-body');
+            if (!framework) {
+                body.innerHTML = '<p class="text-zinc-500 text-sm">Framework nie został jeszcze zapisany. Uruchom research w Claude: „odśwież rekomendacje produktów".</p>';
+            } else {
+                const dims = framework.scoring_framework?.dimensions || [];
+                const scen = framework.unit_economics_model?.scenarios || [];
+                const cats = framework.category_shortlist || [];
+                const anti = framework.anti_criteria || [];
+                const blacklist = framework.saturated_blacklist || [];
+                body.innerHTML = `
+                    ${framework.executive_summary ? `<p class="text-zinc-300 text-xs leading-relaxed mb-5">${esc(framework.executive_summary)}</p>` : ''}
+
+                    <h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2">Wymiary scoringu (suma wag = 100)</h3>
+                    ${dims.map(d => `
+                        <div class="border border-white/5 rounded-lg p-3 mb-2 bg-zinc-900/40">
+                            <div class="flex justify-between items-baseline mb-1">
+                                <span class="text-white text-xs font-medium">${esc(d.name_pl)}</span>
+                                <span class="text-emerald-400 font-mono text-xs">${d.weight} pkt</span>
+                            </div>
+                            <p class="text-zinc-400 text-[11px] leading-relaxed mb-1">${esc(d.what_it_measures)}</p>
+                            <p class="text-zinc-500 text-[11px] leading-relaxed"><span class="text-zinc-400 font-medium">Weryfikacja:</span> ${esc(d.how_to_verify)}</p>
+                            ${(d.red_flags || []).length ? `<div class="mt-1.5">${d.red_flags.map(f => `<span class="inline-block bg-red-500/10 text-red-400 text-[10px] rounded px-1.5 py-0.5 mr-1 mb-1">${esc(f)}</span>`).join('')}</div>` : ''}
+                        </div>`).join('')}
+                    ${framework.scoring_framework?.verdict_thresholds ? `<p class="text-zinc-400 text-[11px] leading-relaxed mt-2 mb-4"><span class="text-zinc-300 font-medium">Progi werdyktów:</span> ${esc(framework.scoring_framework.verdict_thresholds)}</p>` : ''}
+
+                    ${scen.length ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2 mt-5">Scenariusze cenowe (unit economics)</h3>
+                    <table class="w-full mb-2 text-xs">
+                        <thead><tr class="text-zinc-500 text-[10px] font-mono uppercase">
+                            <th class="text-left py-1.5">Cena</th><th class="text-right">Max COGS</th><th class="text-right">Marża kontryb.</th><th class="text-right">Max CPA</th><th class="text-right">BE ROAS</th>
+                        </tr></thead>
+                        <tbody>${scen.map(s => `<tr class="border-t border-white/5 text-zinc-300">
+                            <td class="py-1.5 font-mono">${s.retail_price_pln} zł</td>
+                            <td class="text-right font-mono">${s.max_cogs_pln} zł</td>
+                            <td class="text-right font-mono text-emerald-400">${s.est_contribution_pln} zł</td>
+                            <td class="text-right font-mono">${s.max_cpa_pln} zł</td>
+                            <td class="text-right font-mono">${s.breakeven_roas}</td>
+                        </tr>`).join('')}</tbody>
+                    </table>` : ''}
+                    ${framework.unit_economics_model?.breakeven_formula ? `<p class="text-zinc-500 text-[11px] leading-relaxed mb-4 font-mono bg-zinc-900/60 border border-white/5 rounded-lg p-3">${esc(framework.unit_economics_model.breakeven_formula)}</p>` : ''}
+
+                    ${cats.length ? `<h3 class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-2 mt-5">Kategorie z potencjałem</h3>
+                    ${cats.map((c, i) => `<div class="flex gap-2 py-1.5 border-t border-white/5"><span class="text-zinc-600 font-mono text-[11px] w-5">${i + 1}.</span><div><span class="text-white text-xs font-medium">${esc(c.category)}</span><p class="text-zinc-500 text-[11px] leading-relaxed">${esc(c.rationale)}</p></div></div>`).join('')}` : ''}
+
+                    ${anti.length ? `<h3 class="text-red-400 text-[10px] font-mono uppercase tracking-wider mb-2 mt-5">Twarde dyskwalifikatory</h3>${anti.map(a => `<div class="text-zinc-300 text-[11px] mb-1 flex gap-1.5"><i class="ph ph-x-circle text-red-400 mt-0.5"></i>${esc(a)}</div>`).join('')}` : ''}
+                    ${blacklist.length ? `<h3 class="text-amber-400 text-[10px] font-mono uppercase tracking-wider mb-2 mt-5">Nisze przesycone (unikać)</h3>${blacklist.map(b => `<span class="inline-block bg-amber-500/10 text-amber-300 text-[10px] rounded px-1.5 py-0.5 mr-1 mb-1">${esc(b)}</span>`).join('')}` : ''}
+                `;
+            }
+            document.getElementById('framework-modal').classList.remove('hidden');
+        }
+        function closeFrameworkModal() {
+            document.getElementById('framework-modal').classList.add('hidden');
+        }
+
+        // Init
+        (async () => {
+            const session = await checkAuth();
+            if (session) await loadData();
+        })();
+    </script>
+</body>
+</html>
