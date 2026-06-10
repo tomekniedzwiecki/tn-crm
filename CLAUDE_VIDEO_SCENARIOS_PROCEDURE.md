@@ -1,4 +1,8 @@
-# Procedura: Generowanie scenariuszy video TikTok
+# Procedura: Generowanie scenariuszy video TikTok (v3 — 2026-06-10)
+
+> **v3:** wejścia z briefu landingu v5.0 (VOC = gotowe hooki, awareness → lejek/formaty,
+> liczby kanoniczne = anty-fabrykacja w skryptach MÓWIONYCH), twardy gate
+> `scripts/verify-video-scenarios.mjs` przed insertem, fix race tmp-file.
 
 > **Zasada nadrzędna**: scenariusz = **content strategy dopasowana do produktu, nagrywającego i widza**. Nie jedna formuła ("DRAMA! RANT!") dla wszystkich. Dramat działa dla wellness/bólu, a topi się na mikroskopie dla dzieci albo B2B.
 
@@ -177,6 +181,16 @@ Nie generuj 10 niezależnych video. Myśl o tym jak o content planie profilu na 
 
 **Oznacz `funnelStage`** w każdym scenariuszu.
 
+### Korekta lejka i formatów przez `awareness:` (v3 — z briefu 13.1)
+
+| `awareness:` | Lejek (A/Cons/Conv) | Przesunięcie formatów |
+|---|---|---|
+| `problem-aware` | **4/4/2** — widz nie zna rozwiązań, najpierw zatrzymać i nazwać ból | więcej: 17 (edukacja-szok), 24 (POV-text bólu), 1/7 (POV/reakcja); mniej conversion |
+| `solution-aware` (default) | **3/4/3** | standardowa macierz sekcji 4 |
+| `product-aware` | **2/4/4** — widz porównuje, dawaj dowody i differentiator | więcej: 6 (sceptyk), 13 (split/porównanie), 18 (test 24h), 20 (demo), 9 (testimonial) |
+
+Brak briefu / brak `awareness:` → default 3/4/3.
+
 ---
 
 ## 6. Proces generowania — 6 kroków
@@ -203,7 +217,25 @@ curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_reports?workf
 curl -sL "<sales_page_url>" | head -c 20000
 ```
 
-**Wyciągnij z landing page**:
+```bash
+# 5. BRIEF LANDINGU (v3 — NAJBOGATSZE źródło; brief zawiera workflow UUID w komentarzu)
+SLUG_DIR=$(grep -rl "$WID" landing-pages/*/_brief.md 2>/dev/null | head -1)
+[ -n "$SLUG_DIR" ] && cat "$SLUG_DIR"
+```
+
+**Z briefu landingu (jeśli istnieje — landingi v5.0 mają sekcje 12-13) wyciągnij:**
+- **Sekcja 13.2 „Język klienta (VOC)"** — DOSŁOWNE frazy klientów z realnych opinii.
+  **To są gotowe hooki**: brzmią jak człowiek, nie jak copywriter — dokładnie to, czego
+  wymaga sekcja 0. Min. 4/10 hooków buduj NA frazach VOC (dosłownie lub lekko adaptowane
+  do mowy). Brak VOC w briefie („VOC: BRAK DANYCH") → hooki z testimoniali landingu.
+- **Sekcja 13.1 `awareness:`** — steruje lejkiem i formatami (tabele niżej).
+- **Sekcja 13.3 „Liczby kanoniczne"** — JEDYNE liczby dozwolone w `script`/`textOverlay`/
+  `caption`. Klient mówiący na kamerze liczbę bez pokrycia = publiczna fabrykacja
+  (gorsza niż tekst na landingu — nie da się jej „poprawić commitem").
+- **Sekcja 12 „Mapa obiekcji"** — obiekcje = tematy scenariuszy consideration
+  (każda obiekcja to naturalny film „a co z X?").
+
+**Wyciągnij z landing page** (fallback, gdy brak briefu — stare landingi):
 - Hero headline (to jest najsilniejszy hook produktu)
 - Problem framing (jak pain jest opisany)
 - USP i bullet points
@@ -217,10 +249,12 @@ Wypisz dla użytkownika:
 ```
 Produkt: <nazwa>
 Archetyp: <z sekcji 2.1>
+Awareness: <problem/solution/product-aware z briefu 13.1; brak briefu → dedukcja>
 Nagrywa: <imię> (<płeć>), widz: <kto>
 Emocje dominujące: <2-3>
-Główne angle z landing: <3 hooki>
-Formaty wybrane: <10 numerów z sekcji 3>
+VOC: <liczba fraz z briefu 13.2 | BRAK>
+Główne angle: <3 hooki — min. tyle z VOC, ile się da>
+Formaty wybrane: <10 numerów z sekcji 3, skorygowane o awareness — sekcja 5>
 ```
 
 **NIE pytaj użytkownika o potwierdzenie**. Od razu przejdź do generacji. Jeśli user chce zmianę, odezwie się.
@@ -289,11 +323,32 @@ Zanim wstawisz do bazy, sprawdź **każdy scenariusz**:
 - [ ] Max 2 scenariusze z tej samej rodziny (talking-head/testimonial/storytime to JEDNA rodzina „klient mówi do kamery")
 - [ ] Min 1 format 2026-trend (21 day-in-life / 22 duet/stitch / 23 partner reveal / 24 POV-text)
 
+**Prawda liczb i język klienta (v3):**
+- [ ] KAŻDA liczba w `script`/`textOverlay`/`caption` pochodzi z liczb kanonicznych briefu
+      (sekcja 13.3) — albo scenariusz nie ma liczb wcale (też dobrze)
+- [ ] Min. 4/10 hooków zbudowane na frazach VOC (jeśli VOC dostępne)
+- [ ] Lejek zgodny z awareness (tabela w sekcji 5), nie sztywne 3/4/3
+
 Jeśli cokolwiek nie spełnia — popraw scenariusz przed insertem.
+
+### Krok 4.5: GATE — verify-video-scenarios.mjs (v3, OBOWIĄZKOWY przed insertem)
+
+Checklist wyżej to samokontrola; gate ją EGZEKWUJE (lekcja landing v5.0:
+deklaracja ≠ enforcement):
+
+```bash
+node scripts/verify-video-scenarios.mjs "c:/tmp/video_scenarios_$WID.json" "$SLUG_DIR"
+# GATE: PASS (exit 0)  → insert
+# GATE: FAIL (exit 1)  → popraw scenariusze, NIE insertuj
+# GATE: WARN (exit 2)  → przejrzyj wypisane wątpliwości (copywriter-ese heurystyki), potem insert
+```
 
 ### Krok 5: Insert via Supabase API
 
-Zapisz JSON do `c:/tmp/video_scenarios.json`:
+Zapisz JSON do `c:/tmp/video_scenarios_$WID.json`
+(**v3: ZAWSZE z UUID w nazwie** — generyczna nazwa to race condition: równoległa sesja
+nadpisuje plik i POST wysyła scenariusze do CUDZEGO workflow; ta sama mina co
+feedback-branding-tmp-file-race):
 
 ```json
 {
@@ -312,7 +367,7 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video
   -H "Authorization: Bearer $KEY" \
   -H "Content-Type: application/json" \
   -H "Prefer: resolution=merge-duplicates,return=minimal" \
-  -d @c:/tmp/video_scenarios.json
+  -d @c:/tmp/video_scenarios_$WID.json
 ```
 
 ### Krok 6: Weryfikacja + raport
@@ -321,6 +376,10 @@ curl -s -X POST "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video
 curl -s "https://yxmavwkwnfuphjqbelws.supabase.co/rest/v1/workflow_video?workflow_id=eq.$WID&select=workflow_id,is_active,video_scenarios" \
   -H "apikey: $KEY" -H "Authorization: Bearer $KEY" | head -c 500
 ```
+
+**Zweryfikuj per WORKFLOW** (nie „czy insert zwrócił 201" — lekcja branding race:
+201 nie znaczy, że trafiło do WŁAŚCIWEGO workflow): policz scenariusze w odpowiedzi
+powyższego curla i porównaj `workflow_id` z $WID.
 
 Poinformuj użytkownika:
 - Ile scenariuszy wstawiono (10)
@@ -381,6 +440,13 @@ Poinformuj użytkownika:
 4. **Cover frame**: klient otwiera swój profil i widzi 10 identycznych minek → brak klikalności. Stąd `coverFrame` jako oddzielna instrukcja.
 5. **Mikrosz 2026-04 (audyt autentyczności)**: druga iteracja — pierwsze 10 scenariuszy wyglądało poprawnie strukturalnie, ale 4 z 10 były copywriter-ese (literackie metafory, paralelizmy, manifesty LinkedIn). Agent-audytor wyłapał, że Daniel-elektryk nie powie „Pierwsza cisza w domu od miesiąca" ani „Nie wiem, kiedy stałem się dzieckiem". Stąd sekcja 0 (reguła złota) + czerwone flagi + Copywriter-ese detector.
 6. **Mikrosz 2026-04 (trend 2026)**: nie używaliśmy formatów dominujących parenting TikTok Q1 2026: duet/stitch (darmowy reach), POV-text story, partner reveal, day-in-the-life. Stąd formaty 21-24 — szczególnie dla debiutujących klientów w niche „rodzice kontra ekrany".
+8. **(v3) Generyczny tmp-file = race**: `c:/tmp/video_scenarios.json` bez UUID →
+   równoległa sesja nadpisuje → scenariusze lądują w cudzym workflow (analogiczny
+   incydent: branding, memory feedback-branding-tmp-file-race). Zawsze `_$WID` w nazwie
+   + weryfikacja per workflow po insercie.
+9. **(v3) Fabrykacja liczb w skryptach mówionych**: liczba bez pokrycia wypowiedziana
+   przez klienta na kamerze jest PUBLICZNA i nieodwracalna (gorzej niż tekst na landingu).
+   Whitelist = liczby kanoniczne briefu (13.3); egzekwuje verify-video-scenarios.mjs.
 7. **Klienci-niedoświadczeni vs talking head**: talking head (format 5) i storytime (3) najłatwiej wpadają w copywriter-ese u niedoświadczonych klientów. Stąd regula max 1 × talking-head i priorytet formatów „aktorsko lekkich" (reakcja, POV-text, duet, partner reveal).
 
 ---

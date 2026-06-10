@@ -16,9 +16,23 @@ Trzy zasady fundamentalne:
 
 ---
 
-## Autonomia — nie pytaj o nic
+## ⛔ URUCHOMIENIE = WYŁĄCZNIE OPT-IN (safety #11, incydent Linovo 2026-05-29)
 
-Gdy użytkownik wywołuje procedurę, wykonaj **wszystkie kroki do końca** bez zatrzymywania się. Czytaj, generuj, edytuj, commituj, pushuj. Użytkownik oczekuje gotowego rezultatu, nie statusu.
+Tę procedurę wykonujesz **TYLKO gdy user WYRAŹNIE poprosi o wygenerowanie obrazów**
+(„wygeneruj zdjęcia dla X", „zrób obrazy AI dla landingu Y"). NIGDY automatycznie
+w AUTO-RUN landingu — tam domyślny deliverable to PLACEHOLDERY z 4-polowym briefem
+fotografa (+ od v5.0: `foto-przewodnik.md` dla klienta).
+
+**Dlaczego:** incydent Linovo — model dorobił produktowi drewnianą rączkę, której realny
+(cały biały) produkt nie ma. Każdy obraz MUSI być ściśle wg referencji produktu
+(pattern „Shape Constraint" — patterns.md #22; referencja z `workflow_products.image_url`
+przez `selected_product_id`, memory feedback-product-reference-from-db).
+
+## Autonomia — PO opt-inie nie pytaj o nic
+
+Gdy user JUŻ wywołał procedurę (opt-in powyżej spełniony), wykonaj **wszystkie kroki
+do końca** bez zatrzymywania się. Czytaj, generuj, edytuj, commituj, pushuj.
+Użytkownik oczekuje gotowego rezultatu, nie statusu.
 
 ---
 
