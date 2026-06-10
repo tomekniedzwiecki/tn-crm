@@ -51,6 +51,11 @@
 - **Test pixela na żywym sklepie** (gdy PageView podejrzanie niski): PowerShell
   `Invoke-WebRequest <domena>` + regex `fbq\('init'` i `connect\.facebook\.net` — zero trafień
   = pixel fizycznie niewpięty (SPRAYCRAFT 2026-06-10: 0 wystąpień przy 700 klikach/mies.).
+- ⚠️ **`ads_get_dataset_stats` zwraca SUROWE eventy**: web pixel + CAPI liczone PODWÓJNIE
+  (dedup robi atrybucja, nie stats) + cały ruch sklepu (też organiczny). Do mikro-lejka używaj
+  **proporcji**, nie absolutów; do `purchases` w raporcie używaj danych ATRYBUOWANYCH (historia
+  raportów / insights), nigdy surowych z dataset stats (H2VITAL: 80 raw vs 29 attributed).
+  `checkout_funnel` wstawiaj tylko gdy okres raportu ≈ okno stats (max 28 dni) i proporcje są spójne.
 - **PEŁNA ŚCIEŻKA EVENTÓW (sklepy TakeDrop, potwierdzone w Events Manager 2026-06-10):**
   checkout TakeDrop emituje `PageView, ViewContent, ViewCart, AddToCart, RemoveFromCart,
   InitiateCheckout, AddShippingInfo, AddPaymentInfo, Purchase` — przy czym **`Purchase` idzie
@@ -94,7 +99,7 @@ Złota reguła: CTR >1,5% a konwersji brak = prawie nigdy problem kreacji — sz
 | Sytuacja | Reguła | Akcja MCP |
 |---|---|---|
 | Przegrana reklama | spend ≥ 2× target CPA **AND** ≥7 dni **AND** CPA > 1,75× target (przy braku purchases: koszt/IC > 1,75× targetu IC) | `ads_update_entity` → PAUSED |
-| Zwycięzca stabilny ≥3 dni | budżet +20%, max 60 zł/dzień | `ads_update_entity` budżet kampanii |
+| Zwycięzca stabilny ≥3 dni | budżet +20%, max 60 zł/dzień | `ads_update_entity` budżet kampanii — ⚠️ **WYMUSZA PAUSED** (`status_forced_to_paused:true`): NATYCHMIAST po edycji `ads_activate_entity` na kampanii (H2VITAL 2026-06-10, pauza ~15 s). Budżet w groszach (3600 = 36 zł) |
 | Fatigue (KROK 3 pkt 7) | nowy koncept z `ad_copies.versions` (pipeline contentu) | `ads_create_creative`+`ads_create_ad`, stary PAUSED |
 | CTR <0,8% po wydaniu 2× target CPA | wyjątek od reguły 72h — kill natychmiast | jw. |
 | Tracking zepsuty / budżet >limit / landing fix | **eskalacja do Tomka** (TakeDrop handoff wg procedury) | brak — prerekwizyt w raporcie |
