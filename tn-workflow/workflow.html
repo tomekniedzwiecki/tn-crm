@@ -2537,6 +2537,7 @@
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <h3 class="text-[14px] font-semibold text-white">Content kampanii</h3>
                                         <span id="content-status-pill" class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium">—</span>
+                                        <span id="content-client-chip" class="hidden"></span>
                                     </div>
                                     <p id="content-status-meta" class="text-[11px] text-zinc-500 mt-0.5 truncate">Automatyczny pipeline: research → copy → kreacje</p>
                                 </div>
@@ -2639,8 +2640,8 @@
                                         <span class="text-[13px] font-bold text-cyan-300">1</span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <h4 class="text-[14px] font-semibold text-white">Grupy odbiorców <span class="text-zinc-500 font-normal">· 2</span></h4>
-                                        <p class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj zestaw reklam × 2</p>
+                                        <h4 class="text-[14px] font-semibold text-white">Grupy odbiorców <span id="step-adsets-count" class="text-zinc-500 font-normal"></span></h4>
+                                        <p id="step-adsets-hint" class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj zestawy reklam</p>
                                     </div>
                                     <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
                                 </summary>
@@ -2654,8 +2655,8 @@
                                         <span class="text-[13px] font-bold text-emerald-300">2</span>
                                     </div>
                                     <div class="flex-1 min-w-0">
-                                        <h4 class="text-[14px] font-semibold text-white">Reklamy <span class="text-zinc-500 font-normal">· 5 × 2 grupy</span></h4>
-                                        <p class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj 5 reklam do każdego zestawu</p>
+                                        <h4 class="text-[14px] font-semibold text-white">Reklamy <span id="step-ads-count" class="text-zinc-500 font-normal"></span></h4>
+                                        <p id="step-ads-hint" class="text-[11px] text-zinc-500">W Ads Managerze: Dodaj reklamy do każdego zestawu</p>
                                     </div>
                                     <i class="ph ph-caret-down text-zinc-500 group-open:rotate-180 transition-transform"></i>
                                 </summary>
@@ -2702,9 +2703,6 @@
                             </div>
                         </details>
 
-                        <!-- legacy holder (niewidoczny) -->
-                        <div id="copies-results" class="hidden"><div id="copies-versions"></div></div>
-                        <div id="creatives-results" class="hidden"><div id="creatives-grid"></div></div>
 
                     </div><!-- /tab-content -->
 
@@ -2967,6 +2965,9 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Przeniesienie kampanii do Meta: prompt MCP / pakiet Claude Cowork (render: renderKampaniaHandoff) -->
+                        <div id="kampania-handoff" class="hidden mb-4"></div>
 
                         <div id="kampania-pending" class="bg-zinc-900/50 border border-white/5 rounded-xl p-6">
                             <div class="flex items-center gap-4 mb-4">
@@ -11834,7 +11835,6 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
         window.markBudgetNotFunded = markBudgetNotFunded;
 
         // Kampania tab
-        let researchPollInterval = null;
         let pipelineRunning = false;
 
         async function ensureAdsData() {
@@ -11858,7 +11858,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const hasAny = hasResearch || hasCopies || hasCreatives;
             const bgPipelineRunning = adsData?.campaign_pipeline_status === 'running';
 
-            const startEl = document.getElementById('pipeline-start');
+            const startEl = document.getElementById('content-empty-state');
             const progressEl = document.getElementById('pipeline-progress');
             const overallStatus = document.getElementById('pipeline-overall-status');
             const navCheck = document.getElementById('nav-check-content');
@@ -11894,7 +11894,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 }
                 startBackgroundPipelinePolling();
             } else if (!pipelineRunning) {
-                startEl?.classList.remove('hidden');
+                // Widoczność empty-state rozstrzyga renderContentTab() (zależnie od hasAny)
                 progressEl?.classList.add('hidden');
                 const btn = document.getElementById('btn-run-pipeline');
                 if (btn && hasAny) {
@@ -11960,6 +11960,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             pendingEl?.classList.add('hidden');
             launchedEl?.classList.add('hidden');
             warningEl?.classList.add('hidden');
+            document.getElementById('kampania-handoff')?.classList.add('hidden');
 
             // Gate: 4 kroki Pixela (ID + strona FB + TakeDrop + landing) muszą być done zanim odpalimy kampanię.
             const pixelFullyReady = adsData?.pixel_configured && adsData?.page_assigned && adsData?.pixel_takedrop_added && adsData?.pixel_landing_code_added;
@@ -12000,6 +12001,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
 
             const hasContent = adsData?.content_ready || adsData?.ad_creatives?.length > 0;
 
+            // Ścieżki przeniesienia kampanii do Meta (prompt MCP / pakiet Cowork)
+            renderKampaniaHandoff(hasContent);
+
             if (adsData?.campaign_launched) {
                 launchedEl?.classList.remove('hidden');
                 navCheck?.classList.remove('hidden');
@@ -12019,6 +12023,55 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 // Ostrzeżenie jeśli brak contentu
                 if (!hasContent) warningEl?.classList.remove('hidden');
             }
+        }
+
+        // ---- PRZENIESIENIE KAMPANII DO META (prompt MCP / pakiet Claude Cowork) ----
+        function renderKampaniaHandoff(hasContent) {
+            const el = document.getElementById('kampania-handoff');
+            if (!el) return;
+            if (!hasContent || adsData?.campaign_launched) { el.classList.add('hidden'); return; }
+            const mcpEnabled = adsData?.meta_mcp_enabled === true;
+            const coworkSelected = getCoworkSelectedIndexes().length;
+            const coworkReady = coworkSelected === 2;
+            el.innerHTML = `
+                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-xl bg-violet-500/10 flex items-center justify-center shrink-0"><i class="ph ph-paper-plane-right text-violet-300"></i></div>
+                        <div>
+                            <h4 class="text-[14px] font-medium text-white">Przenieś kampanię do Meta</h4>
+                            <p class="text-[12px] text-zinc-500 mt-0.5">Materiały z zakładki Content — wybierz ścieżkę. Wszystko ląduje jako PAUSED, publikujesz ręcznie.</p>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div class="bg-zinc-900/60 border ${mcpEnabled ? 'border-emerald-500/25' : 'border-white/5'} rounded-xl p-4 flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-terminal-window text-emerald-300"></i>
+                                <span class="text-[13px] font-semibold text-white">Kampania MCP</span>
+                                ${mcpEnabled
+                                    ? '<span class="text-[9px] px-1.5 py-px rounded bg-emerald-500/15 text-emerald-300 font-semibold">MCP OK</span>'
+                                    : '<span class="text-[9px] px-1.5 py-px rounded bg-amber-500/15 text-amber-300 font-semibold" title="Konto nie ma potwierdzonego dostępu MCP — Claude zweryfikuje na starcie">MCP niepotwierdzone</span>'}
+                            </div>
+                            <p class="text-[11px] text-zinc-500 flex-1 leading-snug">Claude Code buduje kampanię bezpośrednio przez Meta MCP (wg CLAUDE_MCP_CAMPAIGN_PROCEDURE.md).</p>
+                            <button onclick="copyMcpCampaignPrompt()" class="bg-gradient-to-r from-emerald-600/80 to-teal-600/80 hover:from-emerald-500 hover:to-teal-500 text-white px-3 py-2 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all">
+                                <i class="ph ph-copy"></i> Kopiuj prompt dla Claude
+                            </button>
+                        </div>
+                        <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 flex flex-col gap-2">
+                            <div class="flex items-center gap-2">
+                                <i class="ph ph-robot text-orange-300"></i>
+                                <span class="text-[13px] font-semibold text-white">Pakiet Claude Cowork</span>
+                                <span class="text-[9px] px-1.5 py-px rounded ${coworkReady ? 'bg-emerald-500/15 text-emerald-300' : 'bg-zinc-800 text-zinc-400'} font-semibold">★ ${coworkSelected}/2</span>
+                            </div>
+                            <p class="text-[11px] text-zinc-500 flex-1 leading-snug">ZIP: BRIEF + 2 kreacje ★ — Claude Cowork wyklikuje kampanię w Ads Managerze.${coworkReady ? '' : ` Zaznacz 2 kreacje gwiazdką w zakładce <button onclick="switchTab('content')" class="text-cyan-400 hover:text-cyan-300 underline">Content</button>.`}</p>
+                            <button onclick="exportClaudeCoworkZip()" ${coworkReady ? '' : 'disabled'} class="${coworkReady
+                                ? 'bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 text-white'
+                                : 'bg-zinc-800/40 text-zinc-500 cursor-not-allowed opacity-70'} px-3 py-2 rounded-lg text-[12px] font-semibold flex items-center justify-center gap-1.5 transition-all">
+                                <i class="ph ph-file-zip"></i> Pobierz pakiet ZIP
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+            el.classList.remove('hidden');
         }
 
         // ---- PIPELINE: RESEARCH → COPY → CREATIVES ----
@@ -12083,7 +12136,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             const includeCreatives = document.getElementById('pipeline-include-creatives')?.checked;
 
             // Pokaż progress, schowaj start
-            document.getElementById('pipeline-start')?.classList.add('hidden');
+            document.getElementById('content-empty-state')?.classList.add('hidden');
             document.getElementById('pipeline-progress')?.classList.remove('hidden');
 
             const overallStatus = document.getElementById('pipeline-overall-status');
@@ -12116,7 +12169,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 console.error('Pipeline start error:', err);
                 showToast('Błąd uruchamiania pipeline: ' + err.message, 'error');
                 pipelineRunning = false;
-                document.getElementById('pipeline-start')?.classList.remove('hidden');
+                document.getElementById('content-empty-state')?.classList.remove('hidden');
                 document.getElementById('pipeline-progress')?.classList.add('hidden');
             }
         }
@@ -12164,42 +12217,12 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                     if (fresh.competitor_research && !fresh.competitor_research.parse_error) {
                         renderResearchResults(fresh.competitor_research);
                     }
-                    if (fresh.ad_copies?.versions?.length) {
-                        renderCopiesResults(fresh.ad_copies);
-                    }
-                    if (fresh.ad_creatives?.length) {
-                        renderCreativesResults(fresh.ad_creatives);
-                    }
                 } catch (err) {
                     console.error('BG pipeline poll error:', err);
                 }
             }, 10000); // co 10 sek
         }
 
-        // Zachowaj stary polling na wypadek refresha strony
-        function startResearchPolling() {
-            if (researchPollInterval) return;
-            researchPollInterval = setInterval(async () => {
-                if (!adsData?.competitor_research_task_id) {
-                    clearInterval(researchPollInterval);
-                    researchPollInterval = null;
-                    return;
-                }
-                try {
-                    const { data } = await supabaseClient.functions.invoke('manus-research-result', {
-                        body: { task_id: adsData.competitor_research_task_id, workflow_id: workflow.id }
-                    });
-                    if (data?.status === 'completed' || data?.status === 'expired') {
-                        clearInterval(researchPollInterval);
-                        researchPollInterval = null;
-                        const { data: fresh } = await supabaseClient.from('workflow_ads').select('*').eq('workflow_id', workflow.id).maybeSingle();
-                        if (fresh) adsData = fresh;
-                        loadContentTab();
-                        updateNavChecks();
-                    }
-                } catch (err) { console.error('Research poll:', err); }
-            }, 30000);
-        }
 
         function renderResearchResults(data) {
             document.getElementById('research-results')?.classList.remove('hidden');
@@ -12254,323 +12277,11 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             }
         }
 
-        // ---- COPY REKLAMOWE ----
-
-        function renderCopiesResults(data) {
-            document.getElementById('copies-results')?.classList.remove('hidden');
-            // WOW Factor
-            const wowEl = document.getElementById('copies-wow-factor');
-            const wowText = document.getElementById('copies-wow-text');
-            if (data.wow_factor && wowEl && wowText) {
-                wowEl.classList.remove('hidden');
-                wowText.textContent = data.wow_factor;
-            }
-
-            // Versions
-            const versionsEl = document.getElementById('copies-versions');
-            if (!versionsEl || !data.versions) return;
-
-            const angleColors = {
-                'Pain Point': 'red', 'Transformation': 'blue', 'Social Proof': 'amber',
-                'Urgency': 'orange', 'Curiosity': 'violet', 'Health': 'emerald', 'Time': 'cyan', 'Money': 'yellow'
-            };
-
-            // Guard: versions must be array
-            let versions = data.versions;
-            if (!Array.isArray(versions)) {
-                if (versions && typeof versions === 'object') {
-                    versions = Object.values(versions).filter(v => v && typeof v === 'object');
-                } else {
-                    versions = [];
-                }
-            }
-            if (versions.length === 0) {
-                versionsEl.innerHTML = '<p class="text-[12px] text-zinc-500 italic">Brak wersji do wyświetlenia</p>';
-                return;
-            }
-
-            // Kolumnowy layout do wklejania w Meta Ads Manager — 5 kolumn obok siebie
-            const creatives = Array.isArray(adsData?.ad_creatives) ? adsData.ad_creatives : [];
-            versionsEl.className = 'flex gap-3 overflow-x-auto pb-3 snap-x snap-mandatory';
-            versionsEl.innerHTML = versions.map((v, i) => {
-                const color = angleColors[v.angle] || 'zinc';
-                const creative = creatives[i];
-                const imgUrl = creative?.url;
-                const safePrimary = escapeHtml(v.primary_text || '');
-                const safeHeadline = escapeHtml(v.headline || '');
-                const safeDescription = escapeHtml(v.description || '');
-                const safeCta = escapeHtml(v.cta || '');
-                return `
-                <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-3 flex-shrink-0 w-[320px] snap-start flex flex-col gap-2">
-                    <!-- Header -->
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="text-[11px] font-bold text-zinc-500">#${i + 1}</span>
-                            <span class="text-[10px] px-2 py-0.5 rounded-full bg-${color}-500/20 text-${color}-300 whitespace-nowrap">${escapeHtml(v.angle || '')}</span>
-                        </div>
-                        <button onclick="copySingleAdCopy(${i})" class="text-[10px] text-zinc-400 hover:text-white flex items-center gap-1 px-2 py-1 rounded bg-zinc-800/50 hover:bg-zinc-700/50 border border-zinc-700/50 whitespace-nowrap">
-                            <i class="ph ph-copy"></i> Wszystko
-                        </button>
-                    </div>
-
-                    <!-- Grafika -->
-                    ${imgUrl ? `
-                    <div class="relative group rounded-lg overflow-hidden border border-white/5 bg-zinc-800">
-                        <img src="${escapeHtml(imgUrl)}" class="w-full aspect-square object-cover" loading="lazy">
-                        <button onclick="copyCreativeUrl(${i})" class="absolute top-2 right-2 text-[10px] px-2 py-1 rounded bg-black/60 backdrop-blur text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i class="ph ph-copy"></i> URL
-                        </button>
-                        <a href="${escapeHtml(imgUrl)}" download class="absolute bottom-2 right-2 text-[10px] px-2 py-1 rounded bg-black/60 backdrop-blur text-white hover:bg-black/80 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <i class="ph ph-download-simple"></i> Pobierz
-                        </a>
-                    </div>` : `
-                    <div class="rounded-lg bg-zinc-800 aspect-square flex items-center justify-center">
-                        <i class="ph ph-image text-4xl text-zinc-600"></i>
-                    </div>`}
-
-                    <!-- Primary Text -->
-                    <div class="bg-zinc-800/40 rounded-lg p-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Primary Text</label>
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-[9px] text-zinc-600">${(v.primary_text || '').length}</span>
-                                <button onclick="copyAdField(${i}, 'primary_text')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
-                            </div>
-                        </div>
-                        <p class="text-[11px] text-zinc-200 leading-snug whitespace-pre-wrap">${safePrimary}</p>
-                    </div>
-
-                    <!-- Headline -->
-                    <div class="bg-zinc-800/40 rounded-lg p-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Headline</label>
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-[9px] ${(v.headline || '').length > 40 ? 'text-amber-400' : 'text-zinc-600'}">${(v.headline || '').length}</span>
-                                <button onclick="copyAdField(${i}, 'headline')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
-                            </div>
-                        </div>
-                        <p class="text-[12px] text-white font-medium leading-snug">${safeHeadline}</p>
-                    </div>
-
-                    <!-- Description -->
-                    <div class="bg-zinc-800/40 rounded-lg p-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">Description</label>
-                            <div class="flex items-center gap-1.5">
-                                <span class="text-[9px] text-zinc-600">${(v.description || '').length}</span>
-                                <button onclick="copyAdField(${i}, 'description')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
-                            </div>
-                        </div>
-                        <p class="text-[11px] text-zinc-300 leading-snug">${safeDescription}</p>
-                    </div>
-
-                    <!-- CTA -->
-                    ${v.cta ? `
-                    <div class="bg-zinc-800/40 rounded-lg p-2">
-                        <div class="flex items-center justify-between mb-1">
-                            <label class="text-[9px] text-zinc-500 uppercase tracking-wider">CTA</label>
-                            <button onclick="copyAdField(${i}, 'cta')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button>
-                        </div>
-                        <span class="inline-block text-[11px] px-2 py-1 rounded bg-cyan-500/20 text-cyan-300">${safeCta}</span>
-                    </div>` : ''}
-                </div>`;
-            }).join('');
-        }
-
-        function copyAdField(index, field) {
-            const v = adsData?.ad_copies?.versions?.[index];
-            if (!v) return;
-            const text = v[field] || '';
-            navigator.clipboard.writeText(text).then(() => {
-                showToast(`${field} skopiowany!`, 'success');
-            });
-        }
-        window.copyAdField = copyAdField;
-
-        function copySingleAdCopy(index) {
-            const copies = adsData?.ad_copies?.versions;
-            if (!copies || !copies[index]) return;
-            const v = copies[index];
-            const text = `Primary Text:\n${v.primary_text}\n\nHeadline:\n${v.headline}\n\nDescription:\n${v.description}\n\nCTA: ${v.cta || 'Sprawdź szczegóły'}`;
-            navigator.clipboard.writeText(text).then(() => {
-                showToast(`Copy #${index + 1} skopiowane!`, 'success');
-            });
-        }
-
-        async function generateAdCopies() {
-            // Pobierz dane do generowania copy
-            const [brandingRes, productsRes] = await Promise.all([
-                supabaseClient.from('workflow_branding').select('type, value, title, notes')
-                    .eq('workflow_id', workflow.id).in('type', ['brand_info']),
-                supabaseClient.from('workflow_products').select('name, description')
-                    .eq('workflow_id', workflow.id)
-            ]);
-
-            const brandInfo = brandingRes.data?.find(b => b.type === 'brand_info');
-            let brandVal = {};
-            if (brandInfo?.value) {
-                brandVal = typeof brandInfo.value === 'string' ? JSON.parse(brandInfo.value) : brandInfo.value;
-            }
-
-            const product = productsRes.data?.[0] || {};
-            const researchData = adsData?.competitor_research;
-            const landingUrl = workflow?.landing_page_url || '';
-
-            const prompt = buildAdCopyPrompt(brandVal, product, researchData, landingUrl);
-
-            const { data, error } = await supabaseClient.functions.invoke('generate-ad-copy', {
-                body: { workflow_id: workflow.id, prompt }
-            });
-
-            if (error) throw error;
-            if (!data?.success) throw new Error(data?.error || 'Błąd generowania copy');
-
-            const adCopies = data.ad_copies;
-            if (!adsData) adsData = {};
-            adsData.ad_copies = adCopies;
-            adsData.ad_copies_generated_at = new Date().toISOString();
-
-            renderCopiesResults(adCopies);
-        }
-
-        function buildAdCopyPrompt(brand, product, research, landingUrl) {
-            const brandName = brand.name || product.name || 'Nieznana marka';
-            const productName = product.name || brand.name || 'Nieznany produkt';
-            const description = brand.description || product.description || '';
-
-            let prompt = `MARKA: ${brandName}
-TAGLINE: ${brand.tagline || ''}
-OPIS: ${description}
-PRODUKT: ${productName}${product.description ? '\nOPIS PRODUKTU: ' + product.description : ''}
-LANDING PAGE: ${landingUrl || 'brak'}`;
-
-            // Pełne dane z researchu — reklamy konkurencji + analiza
-            if (research && !research.parse_error) {
-                // Top 5 reklam konkurencji z pełnymi tekstami
-                if (research.competitors?.length) {
-                    const topAds = research.competitors.slice(0, 5);
-                    prompt += `\n\n===== REKLAMY KONKURENCJI (z Facebook Ad Library) =====
-Oto co AKTUALNIE puszcza konkurencja. Przeanalizuj ich hooki, kąty i słabości:
-`;
-                    topAds.forEach((c, i) => {
-                        prompt += `\n[${i + 1}] ${c.brand || '?'} (${c.format || '?'}, kąt: ${c.angle || '?'})
-Headline: ${c.headline || '-'}
-Tekst: ${c.ad_text || '-'}
-`;
-                    });
-                }
-
-                // Analiza rynku
-                if (research.common_angles?.length) {
-                    prompt += `\nNAJCZĘSTSZE KĄTY KONKURENCJI:\n${research.common_angles.map(a => '- ' + a).join('\n')}`;
-                }
-                if (research.gaps?.length) {
-                    prompt += `\n\nLUKI KONKURENCJI (wykorzystaj to!):\n${research.gaps.map(g => '- ' + g).join('\n')}`;
-                }
-                if (research.recommendations?.length) {
-                    prompt += `\n\nREKOMENDACJE DLA ${brandName}:\n${research.recommendations.map(r => '- ' + r).join('\n')}`;
-                }
-            }
-
-            prompt += `\n\n===== ZADANIE =====
-
-Na podstawie powyższych danych wygeneruj 5 wersji copy reklamowego.
-
-KROK 1 — WOW FACTOR:
-Jaki JEDEN fakt o ${productName} jest tak zaskakujący, że ktoś MUSI się zatrzymać?
-- Porównaj z konkurencją: co jest 2x/3x/10x lepsze?
-- Szukaj LICZB, nie przymiotników
-- Test kawiarnianego stolika: powiedziałbyś to znajomemu?
-- ZASADA: jeśli hook brzmi jak z folderu reklamowego — jest ZŁY
-
-KROK 2 — DOBIERZ KĄTY:
-NIE kopiuj kątów konkurencji. Na podstawie LUK i REKOMENDACJI dobierz 5 RÓŻNYCH kątów.
-Każdy kąt musi być naprawdę inny (nie parafrazuj tego samego).
-Możliwe kąty: Pain Point, Transformation, Social Proof, Curiosity, Myth-Busting, Technologia, Porównanie, Zdrowie, Czas, Pieniądze — ale wybierz te, które mają sens dla tego produktu.
-
-KROK 3 — NAPISZ COPY:
-Dla każdej wersji:
-- Primary Text: HOOK w pierwszych 125 znakach (99% NIE klika "See more"). Emocjonalna konkretność, nie generyki.
-- Headline: 27-40 znaków (>50 = -30% CTR)
-- Description: 25-30 znaków
-
-ZASADY:
-- NIE podawaj cen (zmieniają się, reklamy zostają)
-- Ton: bezpośredni ale ciepły, polski rynek
-- CTA z listy: "Kup teraz" (default — sklep COD, płatność przy odbiorze zdejmuje ryzyko), "Zamów teraz", "Zobacz opinie" (social proof), "Dowiedz się więcej" (curiosity)
-- RISK-REVERSAL: w każdym Primary Text min. 1 element ("płacisz przy odbiorze" / "sprawdź zanim zapłacisz" / "zwrot 14 dni"); 1 z 5 wersji ma to jako główny kąt
-- ZERO zmyślonej pilności (stany magazynowe, liczniki, "tylko dziś") i ZERO obietnic czasu dostawy ("24h", "magazyn w Polsce")
-- Konkretne liczby > przymiotniki ("3 minuty" > "szybko")
-- Pokaż, nie mów: "Twoje dziecko pije wodę z kranu. Ile w niej chloru?" > "Czysta woda bez zanieczyszczeń"
-
-ZWRÓĆ JSON:
-{
-  "wow_factor": "konkretny WOW factor z liczbami",
-  "target_group": "dla kogo (wiek, problemy, styl życia)",
-  "product_name": "${productName}",
-  "landing_url": "${landingUrl || ''}",
-  "risk_reversal": ["elementy risk-reversal użyte w copy"],
-  "versions": [
-    {
-      "angle": "nazwa kąta",
-      "primary_text": "pełny tekst reklamowy (hook w pierwszych 125 znakach!)",
-      "headline": "nagłówek (27-40 znaków)",
-      "description": "opis (25-30 znaków)",
-      "cta": "tekst CTA z listy",
-      "video_hook": "pierwsze 3 sekundy wideo 9:16: kadr + polski tekst na ekranie"
-    }
-  ]
-}
-
-Zwróć TYLKO JSON.`;
-
-            return prompt;
-        }
-
-        // ---- KREACJE GRAFICZNE ----
-
-        function renderCreativesResults(creatives) {
-            document.getElementById('creatives-results')?.classList.remove('hidden');
-            const gridEl = document.getElementById('creatives-grid');
-            if (!gridEl) return;
-
-            const typeLabels = {
-                lifestyle: 'Lifestyle', problem: 'Problem', before_after: 'Before/After',
-                closeup: 'Close-up', bundle: 'Zestaw'
-            };
-
-            gridEl.innerHTML = creatives.map((c, i) => `
-                <div class="relative group rounded-xl overflow-hidden border border-white/5 bg-zinc-900/50">
-                    <img src="${escapeHtml(c.url)}" alt="${escapeHtml(c.type || '')}" class="w-full aspect-square object-cover" loading="lazy" id="creative-img-${i}">
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div class="absolute bottom-0 left-0 right-0 p-3">
-                            <span class="text-[11px] font-medium text-white">${escapeHtml(c.type || '')}</span>
-                            <div class="flex flex-wrap gap-1.5 mt-1.5">
-                                <a href="${escapeHtml(c.url)}" target="_blank" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
-                                    <i class="ph ph-arrow-square-out"></i> Otwórz
-                                </a>
-                                <button onclick="copyCreativeUrl(${i})" class="text-[10px] px-2 py-1 rounded bg-white/10 text-white hover:bg-white/20 transition-colors">
-                                    <i class="ph ph-copy"></i> URL
-                                </button>
-                                <button onclick="regenerateCreative(${i})" id="btn-regen-${i}" class="text-[10px] px-2 py-1 rounded bg-pink-500/20 text-pink-300 hover:bg-pink-500/30 transition-colors">
-                                    <i class="ph ph-arrows-clockwise"></i> Nowa
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
 
         function copyToClipboard(text) {
             navigator.clipboard.writeText(text).then(() => showToast('Skopiowano!', 'success'));
         }
 
-        function copyCreativeUrl(index) {
-            const url = adsData?.ad_creatives?.[index]?.url;
-            if (url) copyToClipboard(url);
-        }
-        window.copyCreativeUrl = copyCreativeUrl;
 
         // ===================================================================
         // ==== NEW CONTENT TAB ORCHESTRATOR + GALLERY + DRAWER + EXPORT ====
@@ -12631,9 +12342,7 @@ Zwróć TYLKO JSON.`;
             // Toggle flagi w lokalnym stanie
             creatives[index] = { ...creatives[index], selected_for_cowork: !current };
             adsData.ad_creatives = creatives;
-            renderCreativeGallery();
             try { renderContentStepper(); } catch (_) {}
-            updateContentStatusBar();
             // Zapis do bazy (fire-and-forget, ale z error handlingiem)
             try {
                 const { error } = await supabaseClient
@@ -12662,22 +12371,34 @@ Zwróć TYLKO JSON.`;
             const ready = creatives.length > 0 || versions.length > 0;
             const shared = !!adsData?.content_shared_with_client;
 
-            // pill
+            // pill — stan MATERIAŁÓW (generowanie/błąd/gotowe/brak), NIE status wysyłki do klienta
             if (running) {
                 pill.textContent = 'Generowanie...';
                 pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-300 font-medium';
             } else if (failed) {
                 pill.textContent = 'Błąd';
                 pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 font-medium';
-            } else if (shared) {
-                pill.textContent = 'Wysłane do klienta';
-                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium';
             } else if (ready) {
-                pill.textContent = 'Gotowe do wysłania';
-                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 font-medium';
+                pill.textContent = 'Materiały gotowe';
+                pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-medium';
             } else {
                 pill.textContent = 'Brak materiałów';
                 pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 font-medium';
+            }
+
+            // chip — jednorazowy fakt udostępnienia klientowi (z datą), żeby nie wyglądało na trwającą wysyłkę
+            const clientChip = document.getElementById('content-client-chip');
+            if (clientChip) {
+                if (shared) {
+                    const sharedWhen = adsData?.content_shared_at ? fmtPlDateTime(adsData.content_shared_at) : '';
+                    clientChip.innerHTML = `<i class="ph ph-check text-[10px]"></i> Klient ma dostęp${sharedWhen ? ' · ' + sharedWhen : ''}`;
+                    clientChip.className = 'inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300/90 font-medium';
+                } else if (ready && !running) {
+                    clientChip.innerHTML = '<i class="ph ph-eye-slash text-[10px]"></i> Nieudostępnione klientowi';
+                    clientChip.className = 'inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300/90 font-medium';
+                } else {
+                    clientChip.className = 'hidden';
+                }
             }
 
             // meta
@@ -12687,8 +12408,7 @@ Zwróć TYLKO JSON.`;
                     if (creatives.length) parts.push(`${creatives.length} kreacji`);
                     if (versions.length) parts.push(`${versions.length} wersji copy`);
                     const when = adsData?.ad_creatives_generated_at || adsData?.ad_copies_generated_at;
-                    if (when) parts.push(fmtPlDateTime(when));
-                    if (shared && adsData?.content_shared_at) parts.push(`→ klient ${fmtPlDateTime(adsData.content_shared_at)}`);
+                    if (when) parts.push('wygenerowano ' + fmtPlDateTime(when));
                     meta.textContent = parts.join(' · ');
                 } else if (running) {
                     meta.textContent = 'Pipeline działa w tle — odśwież za chwilę';
@@ -12711,49 +12431,16 @@ Zwróć TYLKO JSON.`;
                 b.onclick = () => shareContentWithClient(true);
                 b.className = 'text-[11px] text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5';
                 b.innerHTML = '<i class="ph ph-paper-plane-tilt"></i> Wyślij ponownie';
+                b.title = 'Odśwież udostępnienie (email do klienta się nie zdubluje)';
                 actions.appendChild(b);
             }
-            if (ready) {
-                const meta = document.createElement('button');
-                meta.onclick = () => exportMetaBulkZip(true);
-                meta.className = 'text-[11px] text-zinc-200 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-white/5 flex items-center gap-1.5';
-                meta.innerHTML = '<i class="ph ph-file-zip"></i> Pakiet Meta';
-                meta.title = 'ZIP: XLSX + 5 PNG — pełna kampania z reklamami (może wymagać ręcznej publikacji dla nowych kont, błąd #3738001)';
-                actions.appendChild(meta);
-
-                const cowork = document.createElement('button');
-                const coworkSelected = getCoworkSelectedIndexes().length;
-                const coworkReady = coworkSelected === 2;
-                cowork.onclick = exportClaudeCoworkZip;
-                cowork.disabled = !coworkReady;
-                cowork.className = coworkReady
-                    ? 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-orange-600/80 to-amber-600/80 hover:from-orange-500 hover:to-amber-500 border border-orange-500/30 flex items-center gap-1.5'
-                    : 'text-[11px] text-zinc-500 px-3 py-1.5 rounded-lg bg-zinc-800/40 border border-white/5 flex items-center gap-1.5 cursor-not-allowed opacity-70';
-                cowork.innerHTML = `<i class="ph ph-robot"></i> Pakiet Claude Cowork ${coworkReady ? '' : `(${coworkSelected}/2 ★)`}`;
-                cowork.title = coworkReady
-                    ? 'ZIP: BRIEF.txt + 2 wybrane grafiki dla Claude Cowork.'
-                    : `Zaznacz 2 kreacje gwiazdką ★ w galerii powyżej zanim wygenerujesz pakiet. Obecnie wybrano: ${coworkSelected}/2.`;
-                actions.appendChild(cowork);
-
-                // Kampania MCP — kopiuje gotowy prompt dla Claude Code (procedura CLAUDE_MCP_CAMPAIGN_PROCEDURE.md)
-                const mcp = document.createElement('button');
-                const mcpEnabled = adsData?.meta_mcp_enabled === true;
-                mcp.onclick = copyMcpCampaignPrompt;
-                mcp.className = mcpEnabled
-                    ? 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600/80 to-teal-600/80 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/30 flex items-center gap-1.5'
-                    : 'text-[11px] text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-amber-500/30 flex items-center gap-1.5';
-                mcp.innerHTML = `<i class="ph ph-terminal-window"></i> Kampania MCP${mcpEnabled ? '' : ' ⚠'}`;
-                mcp.title = mcpEnabled
-                    ? 'Kopiuje prompt dla Claude Code — zbuduje kampanię przez Meta MCP wg CLAUDE_MCP_CAMPAIGN_PROCEDURE.md (wszystko PAUSED).'
-                    : 'Konto nie ma potwierdzonego dostępu MCP (sprawdź status MCP w kroku Konto reklamowe). Prompt i tak się skopiuje — Claude zweryfikuje dostęp na starcie.';
-                actions.appendChild(mcp);
-            }
+            // Przeniesienie kampanii do Meta (prompt MCP / pakiet Cowork) mieszka w zakładce Kampania.
             if (ready || failed) {
                 const del = document.createElement('button');
                 del.id = 'btn-reset-content';
                 del.onclick = () => resetCampaignContent();
-                del.className = 'text-[11px] text-red-300 hover:text-white px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/80 border border-red-500/30 flex items-center gap-1.5';
-                del.innerHTML = '<i class="ph ph-trash"></i> Usuń content';
+                del.className = 'w-8 h-8 flex items-center justify-center text-zinc-500 hover:text-white rounded-lg bg-zinc-800/40 hover:bg-red-500/80 border border-white/5 transition-colors';
+                del.innerHTML = '<i class="ph ph-trash"></i>';
                 del.title = 'Usuń research, copy i kreacje — pozwoli wygenerować od nowa';
                 actions.appendChild(del);
             }
@@ -12826,8 +12513,6 @@ Zwróć TYLKO JSON.`;
 
                 // Schowaj sekcje resztek
                 document.getElementById('research-results')?.classList.add('hidden');
-                document.getElementById('copies-results')?.classList.add('hidden');
-                document.getElementById('creatives-results')?.classList.add('hidden');
                 document.getElementById('pipeline-progress')?.classList.add('hidden');
 
                 showToast('Content usunięty — możesz wygenerować od nowa', 'success');
@@ -12841,106 +12526,6 @@ Zwróć TYLKO JSON.`;
         }
         window.resetCampaignContent = resetCampaignContent;
 
-        // ---- GALLERY ----
-        function renderCreativeGallery() {
-            const section = document.getElementById('content-gallery-section');
-            const grid = document.getElementById('gallery-grid');
-            const countEl = document.getElementById('gallery-count');
-            if (!section || !grid) return;
-            const creatives = getCreatives();
-            const versions = getVersions();
-            if (!creatives.length) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            const selectedCount = getCoworkSelectedIndexes().length;
-            if (countEl) {
-                countEl.innerHTML = `· ${creatives.length} · <span class="${selectedCount === 2 ? 'text-amber-400' : 'text-zinc-500'}">do Cowork: <b>${selectedCount}/2</b></span>`;
-            }
-            grid.innerHTML = creatives.map((c, i) => {
-                const v = versions[i] || {};
-                const a = angleStyle(v.angle || c.type);
-                const selected = !!c.selected_for_cowork;
-                return `
-                    <div class="group relative text-left bg-zinc-900/50 hover:bg-zinc-900 border ${selected ? 'border-amber-500/60 ring-2 ring-amber-500/30' : 'border-white/5 hover:border-violet-500/40'} rounded-2xl overflow-hidden transition-all hover:-translate-y-0.5">
-                        <button type="button" onclick="openCreativeDrawer(${i})" class="block w-full text-left focus-visible:ring-2 focus-visible:ring-cyan-500/40 focus:outline-none">
-                            <div class="relative aspect-square bg-zinc-800 overflow-hidden">
-                                <img src="${escapeHtml(c.url || '')}" alt="${escapeHtml(v.headline || c.filename || '')}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]">
-                                <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
-                                <div class="absolute top-2 left-2 flex items-center gap-1.5">
-                                    <span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/60 backdrop-blur text-white">#${i + 1}</span>
-                                    <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} backdrop-blur">${escapeHtml(a.label)}</span>
-                                </div>
-                            </div>
-                            <div class="p-2.5">
-                                <p class="text-[12px] font-medium text-white line-clamp-1">${escapeHtml(v.headline || c.filename || 'Kreacja ' + (i + 1))}</p>
-                                <p class="text-[10px] text-zinc-500 line-clamp-1 mt-0.5">${escapeHtml((v.primary_text || '').slice(0, 80))}</p>
-                            </div>
-                        </button>
-                        <button type="button" onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${selected ? 'Odznacz z Cowork' : 'Zaznacz do Cowork (max 2)'}" class="absolute top-2 right-2 z-10 w-8 h-8 rounded-full ${selected ? 'bg-amber-500 text-white' : 'bg-black/60 backdrop-blur text-zinc-200 hover:bg-amber-500/80 hover:text-white'} flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-amber-400">
-                            <i class="ph ${selected ? 'ph-star-fill' : 'ph-star'} text-[15px]"></i>
-                        </button>
-                        <button type="button" id="btn-gallery-regen-${i}" onclick="event.stopPropagation(); regenerateCreative(${i})" title="Zrób nową grafikę (na podstawie zdjęcia produktu)" class="absolute top-2 right-12 z-10 w-8 h-8 rounded-full bg-black/60 backdrop-blur text-pink-200 hover:bg-pink-500/80 hover:text-white flex items-center justify-center transition-all focus-visible:ring-2 focus-visible:ring-pink-400">
-                            <i class="ph ph-arrows-clockwise text-[15px]"></i>
-                        </button>
-                    </div>`;
-            }).join('');
-        }
-
-        // ---- COPY TABLE ----
-        function renderCopyTable() {
-            const section = document.getElementById('content-copy-section');
-            const body = document.getElementById('copy-table-body');
-            if (!section || !body) return;
-            const versions = getVersions();
-            const wowEl = document.getElementById('copies-wow-factor');
-            const wowText = document.getElementById('copies-wow-text');
-            if (adsData?.ad_copies?.wow_factor && wowEl && wowText) {
-                wowText.textContent = adsData.ad_copies.wow_factor;
-                wowEl.classList.remove('hidden');
-            }
-            if (!versions.length) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            body.innerHTML = versions.map((v, i) => {
-                const a = angleStyle(v.angle);
-                const primary = v.primary_text || '';
-                const primaryLen = primary.length;
-                const headlineLen = (v.headline || '').length;
-                const lenCls = primaryLen > 125 ? 'text-amber-400' : 'text-zinc-500';
-                return `
-                <div class="copy-row group">
-                    <div class="grid grid-cols-[40px_110px_1fr_90px_40px] gap-3 px-4 py-3 items-center hover:bg-zinc-900/40 cursor-pointer transition-colors" onclick="toggleCopyRow(${i})">
-                        <span class="text-[11px] font-bold text-zinc-500">#${i + 1}</span>
-                        <span class="text-[10px] px-2 py-0.5 rounded-full ${a.cls} truncate text-center">${escapeHtml(a.label)}</span>
-                        <div class="min-w-0">
-                            <p class="text-[12px] font-semibold text-white truncate">${escapeHtml(v.headline || '—')}</p>
-                            <p class="text-[11px] text-zinc-400 line-clamp-1">${escapeHtml(primary)}</p>
-                        </div>
-                        <div class="text-right text-[10px] ${lenCls} tabular-nums">${primaryLen}/125 · ${headlineLen}/40</div>
-                        <button onclick="event.stopPropagation(); openCreativeDrawer(${i})" class="justify-self-end w-7 h-7 rounded-md bg-zinc-800/60 hover:bg-zinc-700/60 text-zinc-300 hover:text-white flex items-center justify-center" title="Otwórz drawer"><i class="ph ph-arrow-square-out text-xs"></i></button>
-                    </div>
-                    <div class="copy-row-expanded hidden px-4 pb-3 pt-0">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            <div class="bg-zinc-800/40 border border-white/5 rounded-lg p-2.5">
-                                <div class="flex items-center justify-between mb-1"><span class="text-[9px] uppercase tracking-wider text-zinc-500">Primary</span><button onclick="copyAdField(${i}, 'primary_text')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button></div>
-                                <p class="text-[11px] text-zinc-100 leading-relaxed whitespace-pre-wrap">${escapeHtml(primary)}</p>
-                            </div>
-                            <div class="bg-zinc-800/40 border border-white/5 rounded-lg p-2.5">
-                                <div class="flex items-center justify-between mb-1"><span class="text-[9px] uppercase tracking-wider text-zinc-500">Description</span><button onclick="copyAdField(${i}, 'description')" class="text-[10px] text-zinc-400 hover:text-white"><i class="ph ph-copy"></i></button></div>
-                                <p class="text-[11px] text-zinc-200 leading-snug">${escapeHtml(v.description || '')}</p>
-                                ${v.cta ? `<div class="mt-2 flex items-center gap-1.5"><span class="text-[9px] uppercase tracking-wider text-zinc-500">CTA:</span><span class="text-[11px] px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300">${escapeHtml(v.cta)}</span></div>` : ''}
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-            }).join('');
-        }
-        function toggleCopyRow(i) {
-            const rows = document.querySelectorAll('#copy-table-body .copy-row');
-            const r = rows[i];
-            if (!r) return;
-            const ex = r.querySelector('.copy-row-expanded');
-            ex?.classList.toggle('hidden');
-        }
-        window.toggleCopyRow = toggleCopyRow;
 
         // ---- DRAWER ----
         let drawerIndex = 0;
@@ -13072,172 +12657,11 @@ Zwróć TYLKO JSON.`;
             });
             return window[globalName];
         }
-        async function exportMetaBulkZip(withAds = true) {
-            const creatives = getCreatives();
-            const versions = getVersions();
-            if (!creatives.length && !versions.length) { showToast('Brak materiałów', 'error'); return; }
-            showToast('Buduję pakiet Meta...', 'info');
-            try {
-                const [JSZipLib, XLSXLib] = await Promise.all([
-                    loadLib('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js', 'JSZip'),
-                    loadLib('https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js', 'XLSX'),
-                ]);
-                const zip = new JSZipLib();
-                // Landing URL: priorytet = prawdziwy sklep klienta (workflow_takedrop.domain/landing_url),
-                // bo to on odbiera ruch z reklam i ma pixel. Dopiero fallbackiem jest wewnętrzna
-                // landing page (workflows.sales_page_url) i na końcu campaign_spec.
-                const normalizeUrl = (u) => {
-                    if (!u) return '';
-                    const s = String(u).trim();
-                    if (!s) return '';
-                    return /^https?:\/\//i.test(s) ? s : `https://${s.replace(/^\/+/, '')}`;
-                };
-                let landingUrl = '';
-                try {
-                    const { data: td } = await supabaseClient.from('workflow_takedrop')
-                        .select('domain, landing_url, checkout_link').eq('workflow_id', workflow.id).maybeSingle();
-                    landingUrl = normalizeUrl(td?.landing_url || td?.domain || td?.checkout_link || '');
-                } catch (_) {}
-                if (!landingUrl) {
-                    try {
-                        const { data: freshWf } = await supabaseClient.from('workflows')
-                            .select('sales_page_url').eq('id', workflow.id).maybeSingle();
-                        landingUrl = normalizeUrl(freshWf?.sales_page_url || '');
-                    } catch (_) {}
-                }
-                if (!landingUrl) landingUrl = normalizeUrl(adsData?.campaign_spec?.campaign?.landing_url || '');
-                // Campaign spec z adsData lub fallback
-                const spec = adsData?.campaign_spec || null;
-                const campaignName = spec?.campaign?.name || `${workflow?.customer_name || 'Kampania'} — Launch`;
-                const dailyBudget = spec?.campaign?.daily_budget_total || 10;
-                const adSets = Array.isArray(spec?.ad_sets) && spec.ad_sets.length >= 2
-                    ? spec.ad_sets
-                    : [
-                        { name: campaignName + ' — Grupa A', age_min: 25, age_max: 55, gender: 'all', interests: [], creatives: [0, 1, 2, 3, 4] },
-                        { name: campaignName + ' — Grupa B', age_min: 25, age_max: 55, gender: 'all', interests: [], creatives: [0, 1, 2, 3, 4] },
-                    ];
-
-                // Nagłówki Meta Bulk Import — human-readable labels (Meta NIE akceptuje API enumów w XLSX!)
-                // Placement/Interests pomijamy — admin doda ręcznie w Ads Managerze (bo kolumna Interests w XLSX ma
-                // nietrywialny format z ID-kami z katalogu targetingu, a Advantage+ jest defaultem gdy Placement pusty).
-                const headers = [
-                    'Campaign Name','Campaign Objective','Campaign Daily Budget','Campaign Status','Buying Type','Campaign Bid Strategy',
-                    'Ad Set Name','Ad Set Run Status','Optimization Goal','Billing Event',
-                    'Age Min','Age Max','Gender','Countries',
-                    'Ad Name','Creative Type','Title','Body','Link Description','Call to Action','Link','Image File Name',
-                    'Beneficiary','Payer',
-                ];
-
-                // Beneficjent = nazwa marki z brandingu (wymagane dla EU/DSA). Płatnika NIE dodajemy —
-                // bez kolumny Payor Meta przyjmuje domyślnie że płatnik = reklamodawca (checkbox 'różnią się' wyłączony).
-                let beneficiary = '';
-                try {
-                    const { data: brandingRow } = await supabaseClient.from('workflow_branding')
-                        .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
-                    if (brandingRow?.value) {
-                        const bv = typeof brandingRow.value === 'string' ? JSON.parse(brandingRow.value) : brandingRow.value;
-                        beneficiary = bv?.name || '';
-                    }
-                } catch (_) {}
-                if (!beneficiary) beneficiary = spec?.campaign?.name?.replace(/\s*—.*$/, '').trim() || workflow?.offer_name || workflow?.customer_name || 'Marka';
-                const genderMap = { all: 'All', female: 'Women', male: 'Men' };
-                // CTA: Meta akceptuje "Learn More", "Shop Now", "Sign Up", "See Menu" itd.
-                // Manus zwraca po polsku ("Sprawdź szczegóły") — mapujemy na bezpieczny default.
-                // Meta wymaga API enuma (UPPER_SNAKE_CASE) w kolumnie Call to Action
-                const ctaMap = {
-                    'sprawdź szczegóły': 'LEARN_MORE',
-                    'sprawdz szczegoly': 'LEARN_MORE',
-                    'zobacz opinie': 'SEE_MORE',
-                    'kup teraz': 'SHOP_NOW',
-                    'zamów': 'ORDER_NOW',
-                    'zamów teraz': 'ORDER_NOW',
-                    'zapisz się': 'SIGN_UP',
-                    'dowiedz się więcej': 'LEARN_MORE',
-                    'zobacz szczegóły': 'SEE_DETAILS',
-                    'zobacz więcej': 'SEE_MORE',
-                };
-                const allowedCta = new Set(['SHOP_NOW','LEARN_MORE','SIGN_UP','BOOK_NOW','CONTACT_US','DOWNLOAD','GET_OFFER','SUBSCRIBE','ORDER_NOW','BUY_NOW','SEE_MORE','SEE_DETAILS','APPLY_NOW','GET_QUOTE']);
-                const mapCta = (raw) => {
-                    const k = String(raw || '').toLowerCase().trim();
-                    if (!k) return 'LEARN_MORE';
-                    if (ctaMap[k]) return ctaMap[k];
-                    const upper = k.toUpperCase().replace(/\s+/g, '_');
-                    if (allowedCta.has(upper)) return upper;
-                    return 'LEARN_MORE';
-                };
-                const rows = [];
-                // Reguła: KAŻDA grupa odbiorców dostaje WSZYSTKIE 5 kreacji (A/B test pełny).
-                // Dla withAds=false generujemy tylko 1 wiersz per ad set bez reklam — Meta utworzy
-                // kampanię + grupy odbiorców, reklamy admin doda ręcznie.
-                const allCreativeIdxs = creatives.map((_, i) => i);
-                adSets.forEach((as, asi) => {
-                    const pushRow = (ci) => {
-                        const c = ci != null ? creatives[ci] : null;
-                        const v = ci != null ? versions[ci] : null;
-                        rows.push([
-                            campaignName, 'Outcome Sales', dailyBudget, 'Paused', 'Auction', 'Lowest Cost',
-                            as.name || `Grupa ${asi + 1}`, 'Paused', 'OFFSITE_CONVERSIONS', 'IMPRESSIONS',
-                            as.age_min || 25, as.age_max || 55, genderMap[as.gender] || 'All', 'PL',
-                            withAds ? `${as.name || ('Grupa ' + (asi + 1))} — #${ci + 1}` : '',
-                            withAds ? 'Link Page Post Ad' : '',
-                            withAds ? (v?.headline || '').slice(0, 40) : '',
-                            withAds ? (v?.primary_text || '') : '',
-                            withAds ? (v?.description || '').slice(0, 30) : '',
-                            withAds ? mapCta(v?.cta) : '',
-                            withAds ? landingUrl : '',
-                            withAds ? (c?.filename || '') : '',
-                            beneficiary,
-                            beneficiary,
-                        ]);
-                    };
-                    if (withAds && allCreativeIdxs.length) {
-                        allCreativeIdxs.forEach(ci => pushRow(ci));
-                    } else {
-                        pushRow(null); // pojedynczy wiersz tylko z kampanią + ad setem
-                    }
-                });
-
-                const ws = XLSXLib.utils.aoa_to_sheet([headers, ...rows]);
-                const wb = XLSXLib.utils.book_new();
-                XLSXLib.utils.book_append_sheet(wb, ws, 'Ads');
-                const xlsxBuf = XLSXLib.write(wb, { bookType: 'xlsx', type: 'array' });
-                const xlsxName = withAds ? 'kampania_meta.xlsx' : 'kampania_meta_struktura.xlsx';
-                zip.file(xlsxName, xlsxBuf);
-                zip.file('README.txt', withAds
-                    ? `Import do Meta Ads Manager (pełna kampania):\n\n1. Rozpakuj ZIP do folderu.\n2. Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → wybierz ${xlsxName}.\n3. Meta podpina 5 plików PNG z tego folderu automatycznie (Image File Name).\n4. Po imporcie uzupełnij ręcznie w Ads Managerze:\n   - Zainteresowania (Interests) — w adminie CRM\n   - Pixel Meta + zdarzenie Purchase\n5. Status: Paused → opublikuj po review.\n\nBudżet: ${dailyBudget} zł/dzień (CBO).\nCel: Outcome Sales. Placement: Advantage+. Strategia: Lowest Cost.\n`
-                    : `Import STRUKTURY kampanii (tylko kampania + 2 grupy odbiorców, bez reklam):\n\n1. Ads Manager → Reklamy → Importuj → Plik tekstowy lub Excel → ${xlsxName}.\n2. Meta utworzy 1 kampanię + 2 ad sety w statusie Paused.\n3. Dla każdego ad seta dodaj reklamy RĘCZNIE w Ads Managerze:\n   - Kliknij ad set → Utwórz nową reklamę\n   - Wybierz format (Jedna grafika), wgraj 5 PNG-ów z osobnego pakietu kreacji\n   - Wklej Primary Text / Headline / Description / CTA z panelu CRM (zakładka Content, drawer kreacji)\n4. Opublikuj.\n\nTen plik obchodzi ograniczenie Meta #3738001 (bulk publish zablokowany dla nowych kont) — publikacja struktury bez reklam jest dozwolona od razu.\n\nBudżet: ${dailyBudget} zł/dzień (CBO). Cel: Outcome Sales. Placement: Advantage+.\n`);
-
-                // PNG tylko w pełnej paczce
-                if (withAds) {
-                    for (const c of creatives) {
-                        if (!c?.url) continue;
-                        try {
-                            const res = await fetch(c.url);
-                            const blob = await res.blob();
-                            zip.file(c.filename || 'creative.png', blob);
-                        } catch (e) { console.error('img', e); }
-                    }
-                }
-
-                const out = await zip.generateAsync({ type: 'blob' });
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(out);
-                const suffix = withAds ? '_meta_ads' : '_meta_struktura';
-                a.download = `${(workflow?.customer_name || 'kampania').replace(/\s+/g, '_')}${suffix}.zip`;
-                document.body.appendChild(a); a.click(); a.remove();
-                setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-                showToast('Pakiet Meta pobrany!', 'success');
-            } catch (e) {
-                console.error('exportMetaBulkZip', e);
-                showToast('Błąd eksportu: ' + e.message, 'error');
-            }
-        }
-        window.exportMetaBulkZip = exportMetaBulkZip;
 
         // ---- EXPORT CLAUDE COWORK PACKAGE (BRIEF.md + kreacje + dane.json) ----
         // Claude Cowork = rozszerzenie Chrome, w którym Claude wyklikuje kampanię
-        // w Ads Managerze na podstawie briefu. Format ZUPEŁNIE INNY niż XLSX Meta:
-        // zamiast strukturalnego importu — instrukcja krok-po-kroku dla agenta.
+        // w Ads Managerze na podstawie briefu (instrukcja krok-po-kroku dla agenta).
+        // Przycisk mieszka w zakładce Kampania (renderKampaniaHandoff).
         async function exportClaudeCoworkZip() {
             const allCreatives = getCreatives();
             const allVersions = getVersions();
@@ -13246,7 +12670,7 @@ Zwróć TYLKO JSON.`;
             // Filtruj do TYLKO zaznaczonych do Cowork (dokładnie 2 — walidacja przed)
             const selectedIdx = getCoworkSelectedIndexes();
             if (selectedIdx.length !== 2) {
-                showToast(`Zaznacz dokładnie 2 kreacje gwiazdką ★ w galerii. Aktualnie: ${selectedIdx.length}/2.`, 'error');
+                showToast(`Zaznacz dokładnie 2 kreacje gwiazdką ★ w zakładce Content (przy reklamach). Aktualnie: ${selectedIdx.length}/2.`, 'error');
                 return;
             }
             const creatives = selectedIdx.map(i => allCreatives[i]);
@@ -13876,63 +13300,6 @@ Zwróć TYLKO JSON.`;
         }
         window.copyMcpCampaignPrompt = copyMcpCampaignPrompt;
 
-        // ---- FB POST PREVIEW (jak u klienta) ----
-        function renderFbPostPreview() {
-            const section = document.getElementById('content-preview-section');
-            const feed = document.getElementById('content-preview-feed');
-            if (!section || !feed) return;
-            const versions = getVersions();
-            const creatives = getCreatives();
-            const n = Math.max(versions.length, creatives.length);
-            if (!n) { section.classList.add('hidden'); return; }
-            section.classList.remove('hidden');
-            const brandName = adsData?.ad_copies?.brand_name || adsData?.ad_copies?.product_name || workflow?.offer_name || 'Twoja marka';
-            const brandInitial = brandName.charAt(0).toUpperCase();
-            const landingUrl = adsData?.campaign_spec?.campaign?.landing_url || adsData?.ad_copies?.landing_url || workflow?.sales_page_url || '';
-            const displayDomain = landingUrl ? (landingUrl.replace(/^https?:\/\//, '').split('/')[0].toUpperCase()) : '';
-
-            const items = [];
-            for (let i = 0; i < n; i++) {
-                const v = versions[i] || {};
-                const c = creatives[i] || {};
-                const primary = escapeHtml(v.primary_text || '');
-                const primaryShort = primary.length > 160 ? primary.substring(0, 157) + '…' : primary;
-                const headline = escapeHtml(v.headline || '');
-                const description = escapeHtml(v.description || '');
-                const cta = escapeHtml(v.cta || 'Sprawdź szczegóły');
-                const angleLabel = angleStyle(v.angle || c.type).label;
-                const imgUrl = c.url && c.url.startsWith('http') ? escapeHtml(c.url) : '';
-                items.push(`
-                <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden shadow-sm text-zinc-900">
-                    <div class="p-3 flex items-center gap-2">
-                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center text-white font-bold text-[14px] flex-shrink-0">${escapeHtml(brandInitial)}</div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[13px] font-semibold text-zinc-900 truncate">${escapeHtml(brandName)}</p>
-                            <p class="text-[10px] text-zinc-500">Sponsorowane · <i class="ph ph-globe text-[9px]"></i></p>
-                        </div>
-                        <span class="text-[9px] font-bold text-zinc-400">#${i + 1}</span>
-                        <span class="text-[9px] px-1.5 py-0.5 rounded-full bg-violet-100 text-violet-700 uppercase tracking-wide whitespace-nowrap">${escapeHtml(angleLabel)}</span>
-                    </div>
-                    ${primaryShort ? `<p class="px-3 pb-2 text-[13px] text-zinc-800 whitespace-pre-wrap leading-snug">${primaryShort}</p>` : ''}
-                    ${imgUrl ? `
-                    <a href="${imgUrl}" target="_blank" class="block bg-zinc-100 cursor-zoom-in">
-                        <img src="${imgUrl}" alt="" class="w-full aspect-square object-cover" loading="lazy">
-                    </a>` : `
-                    <div class="bg-zinc-100 aspect-square flex items-center justify-center">
-                        <i class="ph ph-image text-5xl text-zinc-300"></i>
-                    </div>`}
-                    <div class="p-3 bg-zinc-50 flex items-center justify-between border-t border-zinc-200 gap-2">
-                        <div class="min-w-0 flex-1">
-                            ${displayDomain ? `<p class="text-[9px] text-zinc-500 uppercase tracking-wide truncate">${escapeHtml(displayDomain)}</p>` : ''}
-                            ${headline ? `<p class="text-[12px] text-zinc-900 font-semibold truncate leading-tight">${headline}</p>` : ''}
-                            ${description ? `<p class="text-[10px] text-zinc-600 truncate">${description}</p>` : ''}
-                        </div>
-                        <button class="bg-zinc-200 text-zinc-900 text-[11px] font-semibold px-3 py-1.5 rounded whitespace-nowrap flex-shrink-0">${cta}</button>
-                    </div>
-                </div>`);
-            }
-            feed.innerHTML = items.join('');
-        }
 
         // ---- DOGENERUJ KAMPANIĘ (follow-up do Manusa) ----
         async function askManusForCampaign() {
@@ -13963,7 +13330,7 @@ Zwróć TYLKO JSON.`;
                     if (fetched?.ok && fetched.campaign_spec) {
                         adsData.campaign_spec = fetched.campaign_spec;
                         adsData.campaign_spec_at = new Date().toISOString();
-                        renderCampaignSpec();
+                        renderContentStepper();
                         showToast('Specyfikacja kampanii gotowa!', 'success');
                         return;
                     }
@@ -13979,30 +13346,9 @@ Zwróć TYLKO JSON.`;
         window.askManusForCampaign = askManusForCampaign;
 
         // ===================================================================
-        // ==== CONTENT STEPPER: 3-step asystent do ręcznego tworzenia w Meta
+        // ==== CONTENT STEPPER: asystent do ręcznego tworzenia w Meta (grupy + reklamy)
         // ===================================================================
 
-        function stepperProgressKey() { return `content-progress-${workflow?.id}`; }
-        function loadStepperProgress() {
-            try { return JSON.parse(localStorage.getItem(stepperProgressKey()) || '{}'); } catch { return {}; }
-        }
-        function saveStepperProgress(p) {
-            try { localStorage.setItem(stepperProgressKey(), JSON.stringify(p)); } catch {}
-        }
-        function markStepperDone(key, value = true) {
-            const p = loadStepperProgress();
-            p[key] = value;
-            saveStepperProgress(p);
-            renderContentStepper();
-        }
-        window.markStepperDone = markStepperDone;
-
-        function resetStepperProgress() {
-            if (!confirm('Zacząć tworzenie kampanii od nowa? Lokalny postęp zostanie wyczyszczony.')) return;
-            try { localStorage.removeItem(stepperProgressKey()); } catch {}
-            renderContentStepper();
-        }
-        window.resetStepperProgress = resetStepperProgress;
 
         // Klik-do-kopiowania pojedynczego pola
         function copyStepperField(el, value) {
@@ -14070,7 +13416,15 @@ Zwróć TYLKO JSON.`;
             const section = document.getElementById('content-stepper');
             if (!section) return;
             section.classList.remove('hidden');
-            const progress = loadStepperProgress();
+
+            // Dynamiczne liczniki w nagłówkach kroków (zamiast zahardkodowanych "2" i "5 × 2")
+            const adSetCount = getAdSets().length;
+            const adCount = Math.max(getVersions().length, getCreatives().length);
+            const setText = (id, t) => { const e = document.getElementById(id); if (e) e.textContent = t; };
+            setText('step-adsets-count', adSetCount ? `· ${adSetCount}` : '');
+            setText('step-adsets-hint', adSetCount ? `W Ads Managerze: Dodaj zestaw reklam × ${adSetCount}` : 'Brak specyfikacji grup odbiorców');
+            setText('step-ads-count', adCount ? `· ${adCount}${adSetCount ? ` × ${adSetCount} grupy` : ''}` : '');
+            setText('step-ads-hint', adCount ? `W Ads Managerze: Dodaj ${adCount} reklam do każdego zestawu` : 'Brak reklam — wygeneruj copy + kreacje');
 
             // Fetch takedrop dla landing_url
             let landingUrl = '';
@@ -14082,49 +13436,38 @@ Zwróć TYLKO JSON.`;
             if (!landingUrl) landingUrl = normalizeUrl(workflow?.sales_page_url || getSpec().campaign?.landing_url || '');
 
             // ---- Step 1: Grupy odbiorców ----
-            renderStepAdSets(progress);
+            renderStepAdSets();
 
             // ---- Step 2: Reklamy ----
-            renderStepAds(landingUrl, progress);
+            renderStepAds(landingUrl);
         }
         window.renderContentStepper = renderContentStepper;
 
-        // ---- Step 1 body ----
-        function renderStepCampaign(brandName, progress) {
-            const body = document.getElementById('step-campaign-body');
-            if (!body) return;
-            const camp = getSpec().campaign || {};
-            const campName = camp.name || `${brandName} — Launch`;
-            const budget = camp.daily_budget_total || 10;
-            const done = !!progress.campaign;
-
-            body.innerHTML = `
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    ${copyFieldHtml('Cel kampanii', 'Sprzedaż', { info: true })}
-                    ${copyFieldHtml('Nazwa kampanii', campName)}
-                    ${copyFieldHtml('Strategia budżetu', 'Budżet kampanii (CBO)', { info: true })}
-                    ${copyFieldHtml('Dzienny budżet', String(budget))}
-                    ${copyFieldHtml('Strategia oferty', 'Najniższy koszt', { info: true })}
-                    ${copyFieldHtml('Beneficjent', brandName)}
-                    ${copyFieldHtml('Płatnik', brandName)}
-                    ${copyFieldHtml('Status', 'Wstrzymana (na start)', { info: true })}
-                </div>
-                `;
-        }
 
         // ---- Step 2 body ----
-        function renderStepAdSets(progress) {
+        function renderStepAdSets() {
             const body = document.getElementById('step-adsets-body');
             if (!body) return;
             const adSets = getAdSets();
-            if (!adSets.length) { body.innerHTML = '<p class="text-[12px] text-zinc-500 italic col-span-full">Brak specyfikacji grup odbiorców — wygeneruj przez Manusa.</p>'; return; }
-            const progAdsets = progress.adsets || [];
+            if (!adSets.length) {
+                // Brak spec — jeśli jest wątek Manusa, pokaż CTA do dogenerowania (dawny renderCampaignSpec)
+                body.innerHTML = adsData?.manus_full_task_id ? `
+                <div class="col-span-full bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[13px] font-semibold text-white">Brak specyfikacji grup — dogeneruj kampanię</p>
+                        <p class="text-[11px] text-zinc-400 mt-0.5">Manus ma kontekst z tego wątku — dopyta o 2 grupy odbiorców, budżet 10 zł/dzień CBO, cel Sprzedaż, Advantage+.</p>
+                    </div>
+                    <button id="btn-ask-campaign" onclick="askManusForCampaign()" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-4 py-2 rounded-lg text-[12px] font-semibold flex items-center gap-2 shrink-0 shadow-lg shadow-violet-500/20">
+                        <i class="ph ph-sparkle"></i> Dogeneruj kampanię
+                    </button>
+                </div>` : '<p class="text-[12px] text-zinc-500 italic col-span-full">Brak specyfikacji grup odbiorców — wygeneruj przez Manusa.</p>';
+                return;
+            }
             body.innerHTML = adSets.map((as, i) => {
                 const letter = String.fromCharCode(65 + i);
                 const interests = Array.isArray(as.interests) ? as.interests : [];
                 const behaviors = Array.isArray(as.behaviors) ? as.behaviors : [];
                 const genderPl = as.gender === 'female' ? 'Kobiety' : as.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
-                const done = !!progAdsets[i];
                 return `
                 <div class="bg-zinc-900/40 border border-white/10 rounded-2xl p-4">
                     <div class="flex items-center gap-2 mb-3">
@@ -14170,18 +13513,10 @@ Zwróć TYLKO JSON.`;
                 </div>`;
             }).join('');
         }
-        function toggleAdsetDone(i, value) {
-            const p = loadStepperProgress();
-            p.adsets = p.adsets || [];
-            p.adsets[i] = value;
-            saveStepperProgress(p);
-            renderContentStepper();
-        }
-        window.toggleAdsetDone = toggleAdsetDone;
 
         // ---- Step 3 body ----
         let currentAdIndex = 0;
-        function renderStepAds(landingUrl, progress) {
+        function renderStepAds(landingUrl) {
             const nav = document.getElementById('step-ads-nav');
             const body = document.getElementById('step-ads-body');
             if (!nav || !body) return;
@@ -14190,13 +13525,11 @@ Zwróć TYLKO JSON.`;
             const n = Math.max(versions.length, creatives.length);
             if (!n) { body.innerHTML = '<p class="text-[12px] text-zinc-500 italic">Brak reklam — wygeneruj copy + kreacje.</p>'; nav.innerHTML = ''; return; }
             if (currentAdIndex >= n) currentAdIndex = 0;
-            const progAds = progress.ads || [];
 
             // Nav tabs
             const coworkSelected = getCoworkSelectedIndexes().length;
             nav.innerHTML = Array.from({ length: n }).map((_, i) => {
                 const active = i === currentAdIndex;
-                const done = !!progAds[i];
                 const v = versions[i] || {};
                 const c = creatives[i] || {};
                 const angleLabel = angleStyle(v.angle).label;
@@ -14218,7 +13551,6 @@ Zwróć TYLKO JSON.`;
                     <button onclick="setCurrentAd(${i})" class="px-3 py-2 text-left flex items-center gap-2">
                         <span class="text-[11px] font-bold ${starred ? 'text-amber-200' : (active ? 'text-violet-200' : 'text-zinc-400')}">#${i + 1}</span>
                         <span class="text-[10px] ${starred ? 'text-amber-100' : (active ? 'text-zinc-200' : 'text-zinc-500')}">${escapeHtml(angleLabel)}</span>
-                        ${done ? '<i class="ph ph-check-circle text-emerald-400 text-[13px]"></i>' : ''}
                     </button>
                     <button onclick="event.stopPropagation(); toggleCoworkSelect(${i})" title="${starred ? 'Odznacz z Cowork' : `Zaznacz do Cowork (wybrano ${coworkSelected}/2)`}" class="px-2.5 flex items-center justify-center border-l ${starred ? 'border-amber-400/40 bg-amber-400/10 text-amber-300' : (active ? 'border-violet-500/40 text-zinc-500 hover:text-amber-400' : 'border-white/5 text-zinc-500 hover:text-amber-400')} transition-colors">
                         <i class="ph ${starred ? 'ph-star-fill' : 'ph-star'} text-[14px]"></i>
@@ -14233,7 +13565,6 @@ Zwróć TYLKO JSON.`;
             const cta = v.cta || 'Dowiedz się więcej';
             const imgUrl = c.url || '';
             const displayDomain = landingUrl ? landingUrl.replace(/^https?:\/\//i, '').split('/')[0] : '';
-            const done = !!progAds[i];
             body.innerHTML = `
             <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr_240px] gap-4">
                 <!-- Kolumna 1: grafika -->
@@ -14282,101 +13613,8 @@ Zwróć TYLKO JSON.`;
             </div>`;
         }
         function setCurrentAd(i) { currentAdIndex = i; renderContentStepper(); }
-        function toggleAdDone(i, value) {
-            const p = loadStepperProgress();
-            p.ads = p.ads || [];
-            p.ads[i] = value;
-            saveStepperProgress(p);
-            if (value) {
-                const n = Math.max(getVersions().length, getCreatives().length);
-                if (i + 1 < n) currentAdIndex = i + 1;
-            }
-            renderContentStepper();
-        }
         window.setCurrentAd = setCurrentAd;
-        window.toggleAdDone = toggleAdDone;
 
-        // ---- CAMPAIGN SPEC RENDERER ----
-        function renderCampaignSpec() {
-            const section = document.getElementById('content-campaign-section');
-            const body = document.getElementById('campaign-spec-body');
-            const chip = document.getElementById('campaign-meta-chip');
-            const chipText = document.getElementById('campaign-meta-text');
-            if (!section || !body) return;
-            const spec = adsData?.campaign_spec;
-            const hasSpec = spec && Array.isArray(spec.ad_sets) && spec.ad_sets.length > 0;
-            const hasContent = getCreatives().length > 0 || getVersions().length > 0;
-            const hasManus = !!adsData?.manus_full_task_id;
-
-            // Pokaż CTA do dogenerowania jeśli brak spec ale mamy manus thread
-            if (!hasSpec && hasContent && hasManus) {
-                section.classList.remove('hidden');
-                chip?.classList.add('hidden');
-                body.innerHTML = `
-                    <div class="lg:col-span-3 bg-gradient-to-br from-violet-500/10 to-cyan-500/10 border border-violet-500/20 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center gap-4">
-                        <div class="w-10 h-10 rounded-xl bg-violet-500/20 flex items-center justify-center shrink-0"><i class="ph ph-sparkle text-violet-300"></i></div>
-                        <div class="flex-1 min-w-0">
-                            <p class="text-[13px] font-semibold text-white">Masz już content, dogeneruj kampanię</p>
-                            <p class="text-[11px] text-zinc-400 mt-0.5">Manus ma kontekst z tego wątku — dopyta się o 2 grupy odbiorców, budżet 10 zł/dzień CBO, cel Sprzedaż, Advantage+.</p>
-                        </div>
-                        <button id="btn-ask-campaign" onclick="askManusForCampaign()" class="bg-gradient-to-r from-violet-600 to-cyan-600 hover:from-violet-500 hover:to-cyan-500 text-white px-4 py-2 rounded-lg text-[12px] font-semibold flex items-center gap-2 shrink-0 shadow-lg shadow-violet-500/20">
-                            <i class="ph ph-sparkle"></i> Dogeneruj kampanię
-                        </button>
-                    </div>`;
-                return;
-            }
-            if (!hasSpec) {
-                section.classList.add('hidden');
-                return;
-            }
-            section.classList.remove('hidden');
-            const camp = spec.campaign || {};
-            if (chip && chipText) {
-                chipText.textContent = `${camp.daily_budget_total || 10} zł/dzień · CBO · Advantage+`;
-                chip.classList.remove('hidden');
-            }
-
-            const campCard = `
-                <div class="bg-zinc-900/50 border border-violet-500/20 rounded-2xl p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-8 h-8 rounded-lg bg-violet-500/15 flex items-center justify-center"><i class="ph ph-megaphone-simple text-violet-300"></i></div>
-                        <span class="text-[11px] uppercase tracking-wider text-violet-300 font-semibold">Kampania</span>
-                    </div>
-                    <p class="text-[14px] font-semibold text-white mb-2 truncate" title="${escapeHtml(camp.name || '')}">${escapeHtml(camp.name || 'Kampania')}</p>
-                    <dl class="space-y-1.5 text-[11px]">
-                        <div class="flex justify-between"><dt class="text-zinc-500">Cel</dt><dd class="text-zinc-200">${escapeHtml(camp.objective || 'OUTCOME_SALES')}</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Budżet/dzień</dt><dd class="text-emerald-300 font-semibold">${camp.daily_budget_total || 10} zł</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Optymalizacja</dt><dd class="text-zinc-200">${escapeHtml(camp.optimization_goal || 'OFFSITE_CONVERSIONS')}</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Placement</dt><dd class="text-zinc-200">Advantage+</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Status</dt><dd><span class="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">${escapeHtml(camp.status || 'PAUSED')}</span></dd></div>
-                    </dl>
-                </div>`;
-
-            const adSetCards = spec.ad_sets.map((as, i) => {
-                const letter = String.fromCharCode(65 + i);
-                const interests = Array.isArray(as.interests) ? as.interests : [];
-                const creativeIdxs = Array.isArray(as.creatives) ? as.creatives : [];
-                const genderLabel = as.gender === 'female' ? 'Kobiety' : as.gender === 'male' ? 'Mężczyźni' : 'Wszyscy';
-                return `
-                <div class="bg-zinc-900/50 border border-white/5 rounded-2xl p-4">
-                    <div class="flex items-center gap-2 mb-3">
-                        <div class="w-8 h-8 rounded-lg bg-cyan-500/15 flex items-center justify-center"><span class="text-[12px] font-bold text-cyan-300">${letter}</span></div>
-                        <span class="text-[11px] uppercase tracking-wider text-cyan-300 font-semibold">Grupa ${letter}</span>
-                    </div>
-                    <p class="text-[13px] font-semibold text-white mb-2 line-clamp-2">${escapeHtml(as.name || 'Grupa ' + letter)}</p>
-                    <dl class="space-y-1.5 text-[11px] mb-3">
-                        <div class="flex justify-between"><dt class="text-zinc-500">Wiek</dt><dd class="text-zinc-200">${as.age_min || 25}–${as.age_max || 55}</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Płeć</dt><dd class="text-zinc-200">${genderLabel}</dd></div>
-                        <div class="flex justify-between"><dt class="text-zinc-500">Kraj</dt><dd class="text-zinc-200">Polska</dd></div>
-                    </dl>
-                    ${interests.length ? `<div class="mb-3"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Interests</div><div class="flex flex-wrap gap-1">${interests.slice(0, 8).map(x => `<span class="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800/80 text-zinc-300">${escapeHtml(x)}</span>`).join('')}</div></div>` : ''}
-                    ${creativeIdxs.length ? `<div class="mb-2"><div class="text-[10px] uppercase tracking-wider text-zinc-500 mb-1.5">Kreacje</div><div class="flex flex-wrap gap-1">${creativeIdxs.map(ci => `<button onclick="openCreativeDrawer(${ci})" class="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 hover:bg-violet-500/25">#${ci + 1}</button>`).join('')}</div></div>` : ''}
-                    ${as.rationale ? `<p class="text-[10px] text-zinc-500 italic border-t border-white/5 pt-2 mt-2 line-clamp-3">${escapeHtml(as.rationale)}</p>` : ''}
-                </div>`;
-            }).join('');
-
-            body.innerHTML = campCard + adSetCards;
-        }
 
         // ---- ORCHESTRATOR ----
         function renderContentTab() {
@@ -14407,106 +13645,6 @@ Zwróć TYLKO JSON.`;
         }
         window.renderContentTab = renderContentTab;
 
-        async function generateAdCreatives(onProgress) {
-            // Pobierz dane produktu (zdjęcie referencyjne)
-            const { data: products } = await supabaseClient
-                .from('workflow_products')
-                .select('name, description, image_url')
-                .eq('workflow_id', workflow.id);
-
-            const product = products?.[0] || {};
-            const refImageUrl = product.image_url || null;
-
-            // Pobierz brand info
-            const { data: brandingArr } = await supabaseClient
-                .from('workflow_branding')
-                .select('type, value')
-                .eq('workflow_id', workflow.id)
-                .eq('type', 'brand_info');
-
-            let brandVal = {};
-            const branding = brandingArr?.[0];
-            if (branding?.value) {
-                brandVal = typeof branding.value === 'string' ? JSON.parse(branding.value) : branding.value;
-            }
-
-            const productDesc = product.description || brandVal.description || '';
-            const productName = product.name || brandVal.name || '';
-
-            const creativeTypes = [
-                {
-                    type: 'lifestyle',
-                    prompt: `A person happily using ${productName} in a modern, bright home interior. The product (${productDesc}) is clearly visible and being used naturally. Lifestyle advertising photography, warm natural lighting, photorealistic. No text, no captions, no labels, no watermarks.`
-                },
-                {
-                    type: 'problem',
-                    prompt: `A frustrated person struggling with a common problem that ${productName} solves. ${productDesc ? 'Context: ' + productDesc : ''} Tense expression, messy situation. Documentary style photography, natural lighting. Shows the real struggle. No text, no captions, no labels, no watermarks.`
-                },
-                {
-                    type: 'before_after',
-                    prompt: `Split view comparison: LEFT side shows a messy/problematic situation (dirty, broken, struggling). RIGHT side shows the clean/perfect result after using ${productName}. Dramatic difference. Professional advertising photography, transformation reveal style. No text, no captions, no labels, no watermarks.`
-                },
-                {
-                    type: 'closeup',
-                    prompt: `Detailed close-up of ${productName}. ${productDesc ? productDesc : 'Premium product'}. Studio product photography on a clean surface, soft professional lighting, premium aesthetic. Sharp focus on product details. E-commerce style. No text, no captions, no labels, no watermarks.`
-                },
-                {
-                    type: 'bundle',
-                    prompt: `Complete product set of ${productName} with all accessories neatly arranged on a clean surface. Premium unboxing aesthetic, all items visible. Studio product photography, e-commerce style, white/light background. No text, no captions, no labels, no watermarks.`
-                }
-            ];
-
-            const creatives = [];
-
-            for (let i = 0; i < creativeTypes.length; i++) {
-                const ct = creativeTypes[i];
-                if (onProgress) onProgress(i + 1, creativeTypes.length);
-
-                try {
-                    const body = {
-                        prompt: ct.prompt,
-                        count: 1,
-                        workflow_id: workflow.id,
-                        type: `ad_${ct.type}`
-                    };
-
-                    if (refImageUrl) {
-                        body.reference_images = [{ url: refImageUrl, type: 'product' }];
-                    }
-
-                    const { data, error } = await supabaseClient.functions.invoke('generate-image', { body });
-
-                    if (error) throw error;
-                    if (data?.images?.[0]?.url) {
-                        creatives.push({
-                            type: ct.type,
-                            url: data.images[0].url,
-                            prompt: ct.prompt,
-                            generated_at: new Date().toISOString()
-                        });
-                    }
-                } catch (imgErr) {
-                    console.error(`Error generating ${ct.type}:`, imgErr);
-                }
-            }
-
-            // Zapisz do bazy
-            if (creatives.length > 0) {
-                await supabaseClient
-                    .from('workflow_ads')
-                    .update({
-                        ad_creatives: creatives,
-                        ad_creatives_generated_at: new Date().toISOString()
-                    })
-                    .eq('workflow_id', workflow.id);
-
-                if (!adsData) adsData = {};
-                adsData.ad_creatives = creatives;
-                adsData.ad_creatives_generated_at = new Date().toISOString();
-            }
-
-            renderCreativesResults(creatives);
-        }
 
         // ---- MARK CAMPAIGN LAUNCHED ----
 
@@ -14903,9 +14041,7 @@ Zwróć TYLKO JSON.`;
         window.loadContentTab = loadContentTab;
         window.markCampaignLaunched = markCampaignLaunched;
         window.runCampaignPipeline = runCampaignPipeline;
-        window.copySingleAdCopy = copySingleAdCopy;
         window.copyToClipboard = copyToClipboard;
-        window.copyCreativeUrl = copyCreativeUrl;
         window.regenerateCreative = regenerateCreative;
 
         async function regenerateCreative(index) {
@@ -14915,20 +14051,12 @@ Zwróć TYLKO JSON.`;
                 return;
             }
 
-            // Wszystkie miejsca w UI gdzie ten sam index może mieć przycisk regen:
-            // 1) galeria miniatur (renderCreativeGallery), 2) drawer (gdy otwarty na tym i),
-            // 3) stepper „Reklamy" (renderStepAds — ale tylko aktywna reklama jest renderowana).
-            const galleryBtn = document.getElementById(`btn-gallery-regen-${index}`);
+            // Miejsca w UI gdzie ten sam index może mieć przycisk regen:
+            // 1) drawer (gdy otwarty na tym i), 2) stepper „Reklamy" (renderowana tylko aktywna reklama).
             const drawerBtn = (typeof drawerIndex !== 'undefined' && drawerIndex === index)
                 ? document.getElementById('drawer-regen-btn') : null;
             const stepBtn = document.getElementById(`btn-step-regen-${index}`);
             const setBusy = (busy) => {
-                if (galleryBtn) {
-                    galleryBtn.disabled = busy;
-                    galleryBtn.innerHTML = busy
-                        ? '<i class="ph ph-spinner animate-spin text-[15px]"></i>'
-                        : '<i class="ph ph-arrows-clockwise text-[15px]"></i>';
-                }
                 [drawerBtn, stepBtn].forEach(b => {
                     if (!b) return;
                     b.disabled = busy;
@@ -14987,8 +14115,7 @@ Zwróć TYLKO JSON.`;
                         .update({ ad_creatives: adsData.ad_creatives })
                         .eq('workflow_id', workflow.id);
 
-                    // Odśwież widoki — siatkę i stepper „Reklamy" zawsze, drawer tylko gdy otwarty na tym i
-                    try { renderCreativeGallery(); } catch (_) {}
+                    // Odśwież widoki — stepper „Reklamy" zawsze, drawer tylko gdy otwarty na tym i
                     try { renderContentStepper(); } catch (_) {}
                     if (typeof drawerIndex !== 'undefined' && drawerIndex === index) {
                         try { renderDrawerContent(); } catch (_) {}
