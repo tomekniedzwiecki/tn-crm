@@ -67,6 +67,56 @@ Skopiuj z sekcji „Grupa docelowa" raportu dosłownie:
 - **Bezpośredni konkurenci** (wpisz 3 marki) — ich estetyka = czego Twój landing NIE może przypominać
 - **AI-slop patterns** (zawsze unikaj): purple-to-blue gradient, checkmark ✓ tabele, neon glow orbs na wszystkim, generic bento z identycznymi kartami, border-left: 4px solid
 
+### 1.6 — VOC: język klienta z realnych opinii (v5.0)
+
+> Audyt produktu bez tego kroku to **zamknięty obieg AI**: persona z report_pdf, który sam
+> jest outputem LLM. VOC = jedyny zewnętrzny sygnał rynkowy w pipeline. Research
+> (Copyhackers/CXL): copy „ukradzione" z języka klientów bije wymyślone, bo brzmi jak
+> myśli czytelnika.
+
+**Źródła w kolejności (krok WARUNKOWY z jawnym fallbackiem):**
+1. **`workflow_reviews`** — jeśli `count > 0` dla workflow (przypadek regeneracji po Etapie 5)
+2. **Opinie AliExpress** — jednorazowy read-only fetch z `feedback.aliexpress.com/pc/searchEvaluation.do`
+   po `workflow_products.source_url` (procedura i pułapki jak w ETAP 5/Krok 2 w workflow.html).
+   NIE zapisuj do workflow_reviews — to robi Etap 5.
+3. **Brak source_url / fetch fail / <5 użytecznych opinii** → wpisz w sekcji briefu jedną linię
+   `VOC: BRAK DANYCH — [powód]` i kontynuuj pipeline (zero STOP).
+
+**Z opinii wyciągnij 5-15 DOSŁOWNYCH fraz** do `_brief.md` sekcji „Język klienta (VOC)",
+w trzech koszykach: **pain / benefit / obiekcje**. Wypełniaj TYLKO koszyki, na które są
+realne frazy (pain w opiniach marketplace często nie istnieje — NIE fabrykuj).
+
+**TWARDY FILTR:** odrzucaj frazy o dostawie / wysyłce / paczce / sprzedawcy (kolizja
+z zakazem „24h / magazyn PL") oraz frazy o cenie z perspektywy AliExpress (inny price point).
+
+**Użycie:** frazy VOC = surowiec dla headline'ów, benefitów, testimoniali i mapy obiekcji
+(sekcja 12). Hero powinno powtarzać obietnicę głównej frazy benefit (message match z reklamą).
+
+### 1.7 — Big Idea + mechanizm + poziom świadomości rynku (v5.0, NAJWAŻNIEJSZY KROK KONWERSYJNY)
+
+> Bez tego kroku łuk perswazyjny (Problem→Solution→Proof→Offer) jest IDENTYCZNY dla
+> produktu kupowanego z bólu i z ciekawości. To była największa luka konwersyjna audytu.
+
+Ustal i zapisz do `_brief.md` sekcji „Big Idea" (3 linie, format maszynowy):
+
+1. **`big-idea:`** — JEDNA idea sprzedażowa w 1 zdaniu („dlaczego ten produkt, dlaczego teraz").
+   Test: czy da się ją powiedzieć klientowi w windzie i wzbudzić „aha"?
+2. **`mechanism:`** — unique mechanism: CO konkretnie w produkcie czyni obietnicę wiarygodną
+   (z opisu/spec produktu — NIE wymyślone; to anty-Linovo dla treści). Np. „ceramiczna stopa
+   30 kPa", „5 stref o różnej gęstości pianki".
+3. **`awareness:`** — poziom świadomości rynku wg Schwartza, wyprowadzony z kategorii + ceny:
+   - `problem-aware` — klient zna ból, nie zna rozwiązań (innowacyjne gadżety, nowe kategorie)
+   - `solution-aware` — zna typ rozwiązania, nie zna produktu (większość AGD/wellness)
+   - `product-aware` — porównuje konkretne produkty (nasycone kategorie, niski ticket)
+
+**Konsekwencje DETERMINISTYCZNE (wybierasz w ETAP 2, nie „wedle uznania"):**
+
+| `awareness:` | Hero | Kolejność sekcji |
+|---|---|---|
+| `problem-aware` | pain-hook (nazwany ból + obietnica) | **Problem PRZED benefitami**, agitacja mocniejsza |
+| `solution-aware` | mechanizm + dowód (liczba spec) | standardowa (Problem krótszy, Solution rozbudowane) |
+| `product-aware` | oferta + differentiator w hero | Comparison wyżej (zaraz po Solution), Offer szybciej |
+
 ---
 
 ## Krok 2 — Moodboard z 3 realnych marek (NIE z naszej biblioteki)
@@ -246,7 +296,7 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 # Edytuj wszystkie 8 sekcji
 ```
 
-**Struktura `_brief.md`** (8 sekcji obowiązkowych + sekcja 9 opcjonalna):
+**Struktura `_brief.md`** (sekcje 1-8 + 10 obowiązkowe; 9, 11-13 wg opisu):
 
 1. Kierunek manifesta (z 6 presetów lub „nowy")
 2. Moodboard — 3 realne marki referencyjne (spoza landing-pages/)
@@ -256,7 +306,28 @@ cp landing-pages/_templates/_brief.template.md landing-pages/$SLUG/_brief.md
 6. Anty-referencje (co JUŻ JEST w `landing-pages/`, czego NIE powtarzasz)
 7. Test anty-generic (4 odpowiedzi TAK)
 8. Signature element
-9. **Warianty sekcji** (opcjonalne — wybór Hero/Features/Testimonials z [`reference/section-variants.md`](reference/section-variants.md). Dopisywane autonomicznie przez Claude w ETAP 2 przed generowaniem HTML)
+9. **Warianty sekcji** (wybór Hero/Features/Testimonials z [`reference/section-variants.md`](reference/section-variants.md). Dopisywane autonomicznie przez Claude w ETAP 2 przed generowaniem HTML)
+10. **STYLE LOCK** (Krok 9a — Style ID + maszynowe linie `lock-*` + MUSZĄ/NIE WOLNO)
+11. **Wow Moments** (ETAP 4 — 3 explicit wow moments)
+12. **Mapa obiekcji (v5.0, OBOWIĄZKOWA)** — 5 najmocniejszych obiekcji dla TEGO produktu,
+    każda w jednej grep-owalnej linii: `- [obiekcja] → sekcja: [nazwa] → rozbrojenie: [1 zdanie]`.
+    Wymogi: min 1 obiekcja produkt-specyficzna SPOZA 4 kanonicznych (cena / jakość vs tańsze
+    z Allegro/Ali / czas dostawy / zwrot-gwarancja), wyprowadzona z Product DNA lub VOC.
+    **Reguła budżetowa:** rozbrojenie inline = PRZEPISANIE istniejącego zdania sekcji
+    (max +1 krótka linia per sekcja, ZERO nowych liczb ponad budżet Scrollability —
+    preferuj reuse liczb już obecnych). FAQ tylko domyka skróty — obiekcję rozbrajaj
+    W MIEJSCU jej powstawania (objection timing).
+13. **Big Idea + VOC + Liczby kanoniczne (v5.0, OBOWIĄZKOWE)** — trzy bloki maszynowe:
+    - `big-idea:` / `mechanism:` / `awareness:` (Krok 1.7)
+    - „Język klienta (VOC)" — 5-15 dosłownych fraz w koszykach pain/benefit/obiekcje
+      LUB linia `VOC: BRAK DANYCH — [powód]` (Krok 1.6)
+    - „Liczby kanoniczne" — KAŻDA liczba planowana na landing jako wiersz
+      `wartość | jednostka | źródło` (źródło = konkretne pole: workflow_products.description,
+      report PDF str. N, opinia #N, specyfikacja AliExpress). Whitelist auto-seed: cena
+      i oszczędność z oferty, „14 dni" (zwrot ustawowy), „30 dni" (gwarancja jeśli w ofercie),
+      rating z pasma 4,6-4,8. **Liczba-sierota w copy = USUŃ albo dopisz do briefu
+      Z weryfikowalnym źródłem; dopisanie bez źródła ZABRONIONE** (tekstowy odpowiednik
+      incydentu Linovo).
 
 **NIE używaj `/c/tmp/`** — `_brief.md` jest commitowany razem z landingiem (persystentny brief projektu).
 

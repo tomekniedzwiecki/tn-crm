@@ -128,7 +128,7 @@ TRYB: AUTO-RUN FULL autonomous (landingi to preview dla klienta, nie produkcja).
 - Finalny output: link https://tn-crm.vercel.app/landing-pages/$SLUG/ + raport
 
 FLOW (wykonaj w tej kolejności):
-1. ETAP 1 DIRECTION → _brief.md (8 sekcji) + verify-brief.sh
+1. ETAP 1 DIRECTION → _brief.md (sekcje 1-13: audyt+VOC 1.6+Big Idea 1.7+Style Lock+obiekcje+liczby) + verify-brief.sh
 2. ETAP 2 GENERATE:
    a. Wybierz 3 warianty sekcji z docs/landing/reference/section-variants.md
       (Hero z 10, Features z 6, Testimonials z 6 — drzewo decyzyjne rozdział 4,
@@ -151,9 +151,14 @@ FLOW (wykonaj w tej kolejności):
        per landing z sekcją opinii)
    Bez kroku (a): mobile LCP >5s. Bez kroku (b): reviews ładują się 1448KB każdy.
 7. ETAP 5 VERIFY → bash scripts/screenshot-landing.sh $SLUG + obejrzyj screenshoty
+   + VISION CRITIQUE (05-verify.md Krok 5.1): rubryka 5 osi 1-5, wynik do _brief.md,
+     średnia <3,5 → max 3 poprawki → re-score (1 iteracja)
+   + node scripts/verify-offer-math.mjs $SLUG (spójność cen/claimów/liczb)
 8. ETAP 6 MOBILE polish 375px
-9. bash scripts/verify-all-landings.sh (regression)
-10. git add + commit + push (landingi w scope feedback-landing-auto-deploy.md)
+9. node scripts/generate-foto-przewodnik.mjs $SLUG [BRAND] (przewodnik foto dla klienta
+   — deliverable, commitowany razem z landingiem, LINK W RAPORCIE KOŃCOWYM)
+10. bash scripts/verify-all-landings.sh (regression)
+11. git add + commit + push (landingi w scope feedback-landing-auto-deploy.md)
 
 DEFAULT DECYZJE (bez pytania):
 - verify-brief.sh fail po 3 próbach → STOP + raport

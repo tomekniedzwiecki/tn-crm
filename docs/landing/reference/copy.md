@@ -574,11 +574,15 @@ P: "Jaki jest czas dostawy?"
 O: "Czas realizacji zamówienia wynosi od 2 do 5 dni roboczych,
 w zależności od dostępności produktu i lokalizacji odbiorcy."
 
-DOBRZE (ludzki):
+DOBRZE (ludzki + UCZCIWY — dropshipping to realnie 7-14 dni):
 P: "Kiedy dostanę przesyłkę?"
-O: "Przesyłka dociera w 1–3 dni robocze od zaksięgowania wpłaty.
-Dostawa kurierem jest darmowa."
+O: "Standardowo 7–14 dni roboczych od zaksięgowania wpłaty — dostajesz
+numer śledzenia i widzisz paczkę na każdym etapie. Dostawa jest darmowa."
 ```
+
+**⚠️ v5.0:** NIGDY „1-3 dni" / „2-5 dni" — to niewykonalna obietnica przy dropshippingu
+(przyszła reklamacja klienta). Jedyny dozwolony czas dostawy = „7-14 dni" i TYLKO w FAQ
+(nigdy przy cenie — tam tylko `.offer-shipping` bez czasu).
 
 **⚠️** NIE pisz „wysyłamy w 24h" ani „magazyn w Polsce" — patrz [`reference/safety.md` reguła #6](safety.md).
 

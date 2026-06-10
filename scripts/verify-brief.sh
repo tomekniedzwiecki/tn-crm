@@ -105,6 +105,63 @@ if [ "$NIEWOLNO_COUNT" -lt 3 ]; then
   FAIL=1
 fi
 
+# ═══ v5.0: sekcje 12 (Mapa obiekcji) i 13 (Big Idea + VOC + Liczby kanoniczne) ═══
+# Gate dla NOWYCH briefów (template v5.0 je zawiera); stare briefy nie przechodzą przez
+# verify-brief retroaktywnie (gate działa tylko ETAP 1→2).
+
+# 12. Mapa obiekcji: nagłówek + ≥5 linii z "→ sekcja:"
+if ! grep -q "^## 12\. Mapa obiekcji" "$BRIEF"; then
+  echo "❌ Brak sekcji: 12. Mapa obiekcji (v5.0)"
+  FAIL=1
+else
+  OBJ_COUNT=$(awk '/^## 12\. Mapa obiekcji/,/^## 13\.|^---/' "$BRIEF" | grep -cE "→ sekcja:" || true)
+  OBJ_PLACEHOLDERS=$(awk '/^## 12\. Mapa obiekcji/,/^## 13\.|^---/' "$BRIEF" | grep -cE "\[obiekcja" || true)
+  if [ "$OBJ_COUNT" -lt 5 ]; then
+    echo "❌ Sekcja 12: tylko $OBJ_COUNT/5 obiekcji w formacie '[obiekcja] → sekcja: X → rozbrojenie: ...'"
+    FAIL=1
+  elif [ "$OBJ_PLACEHOLDERS" -gt 0 ]; then
+    echo "❌ Sekcja 12: $OBJ_PLACEHOLDERS niewypełnionych placeholderów [obiekcja...]"
+    FAIL=1
+  else
+    echo "  ✅ Mapa obiekcji: $OBJ_COUNT obiekcji"
+  fi
+fi
+
+# 13. Big Idea: linie maszynowe big-idea/mechanism/awareness + VOC + liczby kanoniczne
+if ! grep -q "^## 13\." "$BRIEF"; then
+  echo "❌ Brak sekcji: 13. Big Idea + VOC + Liczby kanoniczne (v5.0)"
+  FAIL=1
+else
+  SEC13=$(awk '/^## 13\./,/^## 14\.|^---$/' "$BRIEF" | tr -d '\r')
+  for key in big-idea mechanism awareness; do
+    LINE=$(echo "$SEC13" | grep -E "^${key}:" | head -1 || true)
+    if [ -z "$LINE" ]; then
+      echo "❌ Sekcja 13: brak linii '${key}:'"
+      FAIL=1
+    elif echo "$LINE" | grep -qE "\["; then
+      echo "❌ Sekcja 13: '${key}:' ma niewypełniony placeholder"
+      FAIL=1
+    fi
+  done
+  AWARENESS=$(echo "$SEC13" | grep -E "^awareness:" | head -1 | sed 's/^awareness:[[:space:]]*//' || true)
+  if [ -n "$AWARENESS" ] && ! echo "$AWARENESS" | grep -qE "^(problem-aware|solution-aware|product-aware)"; then
+    echo "❌ Sekcja 13: awareness musi być jednym z: problem-aware / solution-aware / product-aware (jest: $AWARENESS)"
+    FAIL=1
+  fi
+  if ! echo "$SEC13" | grep -qE "VOC|pain:|benefit:"; then
+    echo "❌ Sekcja 13: brak bloku VOC (frazy LUB linia 'VOC: BRAK DANYCH — powód')"
+    FAIL=1
+  fi
+  NUM_ROWS=$(echo "$SEC13" | grep -cE "^\|[^|]+\|[^|]+\|[^|]+\|" || true)
+  if [ "$NUM_ROWS" -lt 3 ]; then
+    echo "❌ Sekcja 13: tabela Liczb kanonicznych ma $NUM_ROWS wierszy (min 3 z nagłówkiem)"
+    FAIL=1
+  fi
+  if [ "$FAIL" -eq 0 ]; then
+    echo "  ✅ Big Idea (awareness: ${AWARENESS:-?}) + VOC + liczby kanoniczne"
+  fi
+fi
+
 if [ "$FAIL" -eq 1 ]; then
   echo ""
   echo "Brief niekompletny — NIE przechodź do ETAP 2 (docs/landing/02-generate.md)"

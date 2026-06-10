@@ -99,6 +99,21 @@ Każdy check odpowiada konkretnej regule z [`reference/safety.md`](reference/saf
 
 ---
 
+## Krok 1.5 — verify-offer-math (v5.0, spójność liczb)
+
+```bash
+node scripts/verify-offer-math.mjs [slug]          # rollout: raport WARN
+# docelowo (po 5 landingach bez false positive): --strict
+```
+
+Sprawdza: (a) cena aktualna/stara identyczna w hero↔offer↔sticky↔final, stara−nowa=savings,
+% rabatu ±1 p.p. (parser obsługuje „1 599 zł"); (b) claimy czasowe spójne per pojęcie
+(zwrot ≠ gwarancja ≠ test — rozjazd W OBRĘBIE pojęcia = problem; geneza: cervana „od
+pierwszej nocy" vs „~3 noce"); (c) anti-fabrication: liczby z jednostką bez pokrycia
+w `_brief.md` sekcji 13.3 = sieroty do usunięcia/uźródłowienia.
+
+---
+
 ## Krok 2 — Sprawdź że Playwright jest zainstalowany
 
 ```bash

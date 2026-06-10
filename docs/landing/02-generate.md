@@ -310,6 +310,43 @@ Glassnova ma 23 liczb, oculia/steamla po 31. To jest 2-4× więcej niż powinno.
 
 **Patrz pełny research:** [`_research/conversion-atlas-research.md`](_research/conversion-atlas-research.md) (oznaczone WYCOFANE — używaj tylko jako lesson learned).
 
+### META-GATE: budżet dla nowych elementów konwersyjnych (v5.0)
+
+> Dotyczy ZMIAN PROCEDURY i elementów dodawanych ad-hoc do landingu — NIE jest checkpointem
+> per-landing. Geneza: plan integracji Conversion Atlas przewidział własną porażkę w sekcji
+> „risks" i mimo to wszedł w test, bo risks były apendyksem, nie gate-em.
+
+Każdy NOWY element konwersyjny (proponowany do procedury albo dodawany ad-hoc) MUSI mieć
+rozliczenie w budżetach Scrollability:
+1. ile liczb z puli 8-12 zużywa (identyczna powtórzona liczba liczy się RAZ),
+2. czy jest elementem dense/heavy (limit 2 per landing),
+3. czy zjada czy dostarcza breathing moment,
+4. **co ZASTĘPUJE** — element addytywny bez pokrycia w budżecie i bez wskazania
+   zamiennika = odrzuć domyślnie (koszt zerowy lub net-dodający breathing może
+   przejść z samą deklaracją).
+
+Dla propozycji zmian PROCEDURY dodatkowo 4 pytania feature-fit: (a) czy zmienia coś
+WIDOCZNEGO dla klienta? (b) czy da się zweryfikować skryptem? (c) czy działa dla
+wszystkich 16 stylów Atlasu? (d) czy NIE jest powtórką wycofanego mechanizmu w przebraniu?
+
+### Founder note — opcjonalny-domyślny breathing moment (v5.0)
+
+Wzorzec potwierdzony (linovo): sekcja `.founder-note` jako **wariant strefy social proof**
+(po benefitach, przed/zamiast części testimoniali) — NIE dodatkowa 15. sekcja. Research:
+marki DTC z widocznym założycielem +15-28% CR; polska twarz właściciela = naturalny
+differentiator vs anonimowe Temu.
+
+- 3-4 zdania w 1. osobie, szkielet: **problem który widziałem u klientów → frustracja
+  istniejącymi rozwiązaniami → dlaczego WYBRAŁEM ten produkt do mojego sklepu → podpis imieniem**
+- ⛔ **ZAKAZ czasowników twórczych**: projektowałem / stworzyłem / opracowałem /
+  wyprodukowałem — klient NIE jest producentem (dropshipping; fabrykowana biografia
+  = tekstowy Linovo). Dozwolone: wybrałem, testowałem, sprowadzam, postawiłem na.
+- ⛔ Zero wymyślonych konkretów biograficznych (lata doświadczeń, historie rodzinne)
+- Zero liczb w tekście widocznym (breathing moment — nie zjada puli 8-12)
+- Imię WYŁĄCZNIE z workflow (`legal_data` / customer_name) — NIGDY zmyślone
+- Placeholder portretu z 4-polowym briefem („prawdziwa osoba, naturalne światło,
+  NIE stock, NIE garnitur-LinkedIn")
+
 ---
 
 ## ⚠️ Wszystkie 14 sekcji są OBOWIĄZKOWE

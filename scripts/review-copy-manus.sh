@@ -92,6 +92,18 @@ Max 10 słów (mobile max 6). Trafia w ból LUB obiecuje wynik. Formule:
 - Formuła: „[WĄTPLIWOŚĆ]. [CO ZROBIŁEM]. [KONKRETNY WYNIK]. [EMOCJA]."
 - Bez sentymentalizmu typu „zmieniło moje życie"
 
+## VOC + Liczby kanoniczne (v5.0 — brief sekcje 12-13, doklejone niżej)
+- **UŻYWAJ dosłownych fraz z „Język klienta (VOC)"** w headline'ach, benefitach
+  i testimonialach — język klienta bije wymyślony, bo brzmi jak jego myśli.
+- **Mapa obiekcji (sekcja 12):** rozbrajaj obiekcję W SEKCJI wskazanej w mapie,
+  przez PRZEPISANIE istniejącego zdania (nie dodawaj nowych elementów).
+- ⛔ **ZAKAZ WYMYŚLANIA LICZB.** Wolno Ci używać WYŁĄCZNIE liczb z tabeli
+  „Liczby kanoniczne" (sekcja 13.3 briefu). „Liczby > przymiotniki" znaczy:
+  użyj liczby Z TABELI zamiast przymiotnika — NIE: wymyśl liczbę. Liczba spoza
+  tabeli = REJECT całego rewrite (weryfikowane skryptem po Twojej stronie odpowiedzi).
+- Awareness z sekcji 13.1 (`problem/solution/product-aware`) steruje hero:
+  problem-aware → pain-hook; solution-aware → mechanizm+liczba; product-aware → oferta.
+
 # KONTEKST MARKI (z _brief.md)
 
 PROMPT_END

@@ -141,3 +141,40 @@ js_effects_required: [...]
 js_effects_forbidden: [...]
 js_effects_count: { counter_min: N, ... }
 ```
+
+
+## 12. Mapa obiekcji (v5.0, OBOWIĄZKOWA)
+
+<!-- 5 najmocniejszych obiekcji dla TEGO produktu. Format grep-owalny, jedna linia per obiekcja.
+     Min 1 produkt-specyficzna SPOZA kanonu (cena / jakość vs Allegro/Ali / dostawa / zwrot).
+     Rozbrojenie inline = PRZEPISANIE istniejącego zdania sekcji (0 nowych liczb). -->
+- [obiekcja 1] → sekcja: [nazwa sekcji] → rozbrojenie: [1 zdanie]
+- [obiekcja 2] → sekcja: [nazwa] → rozbrojenie: [1 zdanie]
+- [obiekcja 3] → sekcja: [nazwa] → rozbrojenie: [1 zdanie]
+- [obiekcja 4] → sekcja: [nazwa] → rozbrojenie: [1 zdanie]
+- [obiekcja 5 — produkt-specyficzna] → sekcja: [nazwa] → rozbrojenie: [1 zdanie]
+
+## 13. Big Idea + VOC + Liczby kanoniczne (v5.0, OBOWIĄZKOWE)
+
+### 13.1 Big Idea (Krok 1.7)
+big-idea: [JEDNA idea sprzedażowa w 1 zdaniu]
+mechanism: [CO w produkcie czyni obietnicę wiarygodną — ze spec, NIE wymyślone]
+awareness: [problem-aware | solution-aware | product-aware]
+
+### 13.2 Język klienta — VOC (Krok 1.6)
+<!-- 5-15 DOSŁOWNYCH fraz z opinii (workflow_reviews / AliExpress po source_url).
+     Filtr: bez fraz o dostawie/wysyłce/sprzedawcy. Brak danych → jedna linia niżej. -->
+- pain: „[dosłowna fraza]"
+- benefit: „[dosłowna fraza]"
+- obiekcja: „[dosłowna fraza]"
+<!-- LUB: VOC: BRAK DANYCH — [powód] -->
+
+### 13.3 Liczby kanoniczne
+<!-- KAŻDA liczba planowana na landing. Liczba-sierota w copy = usuń albo dopisz TUTAJ ze źródłem. -->
+| wartość | jednostka | źródło |
+|---------|-----------|--------|
+| [199] | zł (cena) | oferta workflow |
+| [100] | zł (oszczędność) | oferta workflow |
+| 14 | dni (zwrot ustawowy) | prawo konsumenckie |
+| 4,7 | /5 rating | pasmo 4,6-4,8 (copy.md cz.3 §0) + disclaimer stopka |
+| [__] | [__] | [workflow_products.description / report PDF str. N / opinia #N] |

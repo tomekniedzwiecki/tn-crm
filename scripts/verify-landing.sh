@@ -563,6 +563,20 @@ else
   WARN=$((WARN + 1))
 fi
 
+# 10i. verify-offer-math.mjs (v5.0) — spójność cen/claimów/liczb (rollout: WARN)
+if command -v node >/dev/null 2>&1 && [ -f "scripts/verify-offer-math.mjs" ]; then
+  OM_OUT=$(node scripts/verify-offer-math.mjs "$SLUG" 2>&1 || true)
+  OM_GATE=$(echo "$OM_OUT" | grep "^GATE" | head -1)
+  if echo "$OM_GATE" | grep -q "PASS"; then
+    echo "  ✅ offer-math: spójność cen/claimów/liczb OK"
+    PASS=$((PASS + 1))
+  else
+    echo "  ⚠️  offer-math: $OM_GATE"
+    echo "$OM_OUT" | grep -E "⚠️|❌" | head -4 | sed 's/^/     /'
+    WARN=$((WARN + 1))
+  fi
+fi
+
 # ─── 11. Section completeness — wszystkie 14 sekcji obecne ───
 echo ""
 echo "🧱 11. Kompletność sekcji (wszystkie 14)"
