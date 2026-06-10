@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Centrum Kampanii</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#050505">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        ::selection { background: white; color: black; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        details > summary { list-style: none; cursor: pointer; }
+        details > summary::-webkit-details-marker { display: none; }
+        details[open] .details-chevron { transform: rotate(90deg); }
+        .details-chevron { transition: transform 0.15s ease; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <!-- Header -->
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white">
+                    <i class="ph ph-list text-xl"></i>
+                </button>
+                <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">kampanie</span></span>
+            </div>
+        </header>
+
+        <!-- Content -->
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+
+                <!-- Title & Stats -->
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+                    <div>
+                        <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Centrum Kampanii</h1>
+                        <p class="text-zinc-500">Wszystkie kampanie Meta klientów, blokery i akcje w jednym widoku.</p>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-emerald-400" id="stat-active">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">aktywne</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-rose-400" id="stat-paused">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">wstrzymane</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-amber-400" id="stat-blockers">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">blokery</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading state -->
+                <div id="loading-state" class="py-20 text-center">
+                    <i class="ph ph-spinner text-3xl text-zinc-600 animate-spin"></i>
+                    <p class="text-zinc-600 text-xs font-mono mt-3">Ładowanie kampanii...</p>
+                </div>
+
+                <!-- Empty state (whole page) -->
+                <div id="page-empty-state" class="hidden py-20 text-center">
+                    <i class="ph ph-chart-line-up text-4xl text-zinc-700 mb-3"></i>
+                    <p class="text-zinc-400 text-sm mb-1">Brak aktywnych kampanii</p>
+                    <p class="text-zinc-600 text-xs font-mono">Kampanie pojawią się tutaj, gdy klienci wystartują z reklamami</p>
+                </div>
+
+                <!-- Main content -->
+                <div id="page-content" class="hidden space-y-8">
+
+                    <!-- SEKCJA: Wymaga akcji -->
+                    <section>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-warning-circle text-amber-400"></i>
+                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Wymaga akcji</h2>
+                            <span id="action-count-badge" class="hidden text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5"></span>
+                        </div>
+                        <div id="action-section" class="bg-zinc-900/50 border border-amber-500/20 rounded-xl overflow-hidden">
+                            <div id="action-list"></div>
+                            <div id="action-empty" class="hidden px-5 py-6 text-center">
+                                <p class="text-zinc-500 text-sm">Brak otwartych blokerów — nikt nie trzyma piłki.</p>
+                            </div>
+                        </div>
+                        <details id="claude-queue" class="hidden mt-2">
+                            <summary class="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-1 py-1">
+                                <i class="ph ph-caret-right details-chevron"></i>
+                                <span>W kolejce u Claude (<span id="claude-queue-count">0</span>)</span>
+                            </summary>
+                            <div id="claude-queue-list" class="mt-2 bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden"></div>
+                        </details>
+                    </section>
+
+                    <!-- SEKCJA: Tabela kampanii -->
+                    <section>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-table text-zinc-400"></i>
+                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Kampanie</h2>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left">
+                                    <thead>
+                                        <tr class="border-b border-white/5 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
+                                            <th class="px-4 py-3 font-medium">Marka</th>
+                                            <th class="px-4 py-3 font-medium">Status</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Budżet/dzień</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Ostatni raport</th>
+                                            <th class="px-4 py-3 font-medium">Wynik</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Wąskie gardło</th>
+                                            <th class="px-4 py-3 font-medium">Blokery</th>
+                                            <th class="px-4 py-3 font-medium"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="campaigns-table-body"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- SEKCJA: Feed ostatnich akcji -->
+                    <section>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-lightning text-zinc-400"></i>
+                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Ostatnie akcje</h2>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
+                            <div id="actions-feed"></div>
+                            <div id="actions-feed-empty" class="hidden py-6 text-center">
+                                <i class="ph ph-clock-counter-clockwise text-2xl text-zinc-700 mb-2"></i>
+                                <p class="text-zinc-500 text-sm">Brak zarejestrowanych akcji — pojawią się po pierwszych raportach.</p>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let adsRows = [];                 // przefiltrowane wiersze workflow_ads
+        let brandMap = {};                // workflow_id -> nazwa marki
+        let customerMap = {};             // workflow_id -> customer_name
+        let currentMember = null;
+        let isAdmin = false;
+
+        // ============ HELPERS ============
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function todayStr() {
+            const d = new Date();
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
+
+        function relDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso);
+            if (isNaN(d.getTime())) return '—';
+            const now = new Date();
+            const a = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            const b = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const diff = Math.round((b - a) / 86400000);
+            if (diff <= 0) return 'dziś';
+            if (diff === 1) return 'wczoraj';
+            return diff + ' dni temu';
+        }
+
+        function dateOnly(iso) {
+            if (!iso || typeof iso !== 'string') return '';
+            return iso.slice(0, 10);
+        }
+
+        function brandName(workflowId) {
+            return brandMap[workflowId] || '—';
+        }
+
+        function getBlockers(row) {
+            return Array.isArray(row.blockers) ? row.blockers : [];
+        }
+
+        function getCampaignState(row) {
+            const cs = row.ad_account_data && row.ad_account_data.campaign_state;
+            return (cs && typeof cs === 'object') ? cs : null;
+        }
+
+        function getReport(row) {
+            const r = row.report_data;
+            return (r && typeof r === 'object') ? r : null;
+        }
+
+        function openBlockersCount(row) {
+            return getBlockers(row).filter(b => b && !b.resolved && (b.owner === 'tomek' || b.owner === 'klient')).length;
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity 0.3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        // ============ AUTH ============
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) {
+                window.location.href = Sidebar.getLoginPath();
+                return null;
+            }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            await loadTeamMember(session.user.id);
+            // Badge reset: zapamiętaj wizytę w Centrum Kampanii
+            try { localStorage.setItem('tn_kampanie_last_seen', new Date().toISOString()); } catch (_) {}
+            return session;
+        }
+
+        async function loadTeamMember(userId) {
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const members = data || [];
+            currentMember = members.find(m => m.user_id === userId);
+            isAdmin = currentMember?.role === 'admin';
+            if (currentMember) {
+                Sidebar.setUserName(currentMember.name);
+                Sidebar.setUserColor(currentMember.color);
+                Sidebar.setupProfileClick();
+            }
+            Sidebar.showAdminNav(isAdmin);
+        }
+
+        // ============ DATA ============
+
+        async function loadData() {
+            const { data: ads, error } = await supabaseClient
+                .from('workflow_ads')
+                .select('workflow_id, meta_ad_account_id, blockers, report_generated_at, target_cpa, campaign_launched, ad_account_data, report_data');
+
+            if (error) {
+                console.error('Error loading workflow_ads:', error);
+                showToast('Błąd ładowania kampanii: ' + error.message, 'error');
+                document.getElementById('loading-state').classList.add('hidden');
+                return;
+            }
+
+            // Tylko wiersze, gdzie cokolwiek się dzieje
+            adsRows = (ads || []).filter(row =>
+                getCampaignState(row) !== null ||
+                row.report_generated_at != null ||
+                getBlockers(row).length > 0 ||
+                row.campaign_launched === true
+            );
+
+            const ids = adsRows.map(r => r.workflow_id).filter(Boolean);
+
+            if (ids.length > 0) {
+                const [wfRes, brRes] = await Promise.all([
+                    supabaseClient.from('workflows').select('id, offer_name, customer_name').in('id', ids),
+                    supabaseClient.from('workflow_branding').select('workflow_id, title').eq('type', 'brand_info').in('workflow_id', ids)
+                ]);
+
+                (wfRes.data || []).forEach(w => {
+                    customerMap[w.id] = w.customer_name || '';
+                    if (!brandMap[w.id]) brandMap[w.id] = w.offer_name || '';
+                });
+                (brRes.data || []).forEach(b => {
+                    if (b.title) brandMap[b.workflow_id] = b.title;
+                });
+            }
+
+            document.getElementById('loading-state').classList.add('hidden');
+
+            if (adsRows.length === 0) {
+                document.getElementById('page-empty-state').classList.remove('hidden');
+                return;
+            }
+
+            document.getElementById('page-content').classList.remove('hidden');
+            renderAll();
+        }
+
+        function renderAll() {
+            renderStats();
+            renderActionSection();
+            renderTable();
+            renderActionsFeed();
+        }
+
+        // ============ STATS ============
+
+        function renderStats() {
+            let active = 0, paused = 0, blockers = 0;
+            adsRows.forEach(row => {
+                const cs = getCampaignState(row);
+                if (cs && cs.status === 'ACTIVE') active++;
+                if (cs && cs.status === 'PAUSED') paused++;
+                getBlockers(row).forEach(b => {
+                    if (b && !b.resolved && b.owner !== 'claude') blockers++;
+                });
+            });
+            document.getElementById('stat-active').textContent = active;
+            document.getElementById('stat-paused').textContent = paused;
+            document.getElementById('stat-blockers').textContent = blockers;
+        }
+
+        // ============ WYMAGA AKCJI ============
+
+        function renderActionSection() {
+            const items = [];   // { wid, idx, blocker }
+            const claudeItems = [];
+
+            adsRows.forEach(row => {
+                getBlockers(row).forEach((b, idx) => {
+                    if (!b || b.resolved) return;
+                    if (b.owner === 'tomek' || b.owner === 'klient') {
+                        items.push({ wid: row.workflow_id, idx, blocker: b });
+                    } else if (b.owner === 'claude') {
+                        claudeItems.push({ wid: row.workflow_id, blocker: b });
+                    }
+                });
+            });
+
+            // sort: tomek najpierw, potem klient, w grupach po created (najstarsze pierwsze)
+            const ownerRank = { tomek: 0, klient: 1 };
+            items.sort((a, b) => {
+                const r = (ownerRank[a.blocker.owner] ?? 2) - (ownerRank[b.blocker.owner] ?? 2);
+                if (r !== 0) return r;
+                return String(a.blocker.created || '').localeCompare(String(b.blocker.created || ''));
+            });
+
+            const list = document.getElementById('action-list');
+            const empty = document.getElementById('action-empty');
+            const badge = document.getElementById('action-count-badge');
+
+            if (items.length === 0) {
+                list.innerHTML = '';
+                empty.classList.remove('hidden');
+                badge.classList.add('hidden');
+            } else {
+                empty.classList.add('hidden');
+                badge.textContent = items.length;
+                badge.classList.remove('hidden');
+
+                list.innerHTML = items.map(item => {
+                    const b = item.blocker;
+                    const isTomek = b.owner === 'tomek';
+                    const ownerBadge = isTomek
+                        ? '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0">Ty</span>'
+                        : '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 flex-shrink-0">Klient</span>';
+                    return `
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                            <span class="text-white font-medium flex-shrink-0">${escapeHtml(brandName(item.wid))}</span>
+                            <span class="text-zinc-300 flex-1 min-w-[200px]">${escapeHtml(b.task)}</span>
+                            ${ownerBadge}
+                            <span class="text-zinc-600 text-xs font-mono flex-shrink-0">${escapeHtml(b.created || '')}</span>
+                            <a href="workflow.html?id=${encodeURIComponent(item.wid)}" class="text-zinc-400 hover:text-white text-xs transition-colors flex-shrink-0">otwórz →</a>
+                            <button onclick="resolveBlocker('${escapeHtml(item.wid)}', ${item.idx})" class="text-emerald-500 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 px-2.5 py-1 rounded-lg text-xs transition-colors flex-shrink-0">
+                                <i class="ph ph-check mr-1"></i>Zrobione
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            // W kolejce u Claude (zwinięte)
+            const claudeQueue = document.getElementById('claude-queue');
+            const claudeList = document.getElementById('claude-queue-list');
+            if (claudeItems.length === 0) {
+                claudeQueue.classList.add('hidden');
+                claudeList.innerHTML = '';
+            } else {
+                claudeQueue.classList.remove('hidden');
+                document.getElementById('claude-queue-count').textContent = claudeItems.length;
+                claudeList.innerHTML = claudeItems.map(item => `
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 border-b border-white/5 last:border-b-0">
+                        <span class="text-zinc-300 font-medium flex-shrink-0">${escapeHtml(brandName(item.wid))}</span>
+                        <span class="text-zinc-500 flex-1 min-w-[200px]">${escapeHtml(item.blocker.task)}</span>
+                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25 flex-shrink-0">Claude</span>
+                        <span class="text-zinc-600 text-xs font-mono flex-shrink-0">${escapeHtml(item.blocker.created || '')}</span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        async function resolveBlocker(workflowId, blockerIndex) {
+            const row = adsRows.find(r => r.workflow_id === workflowId);
+            if (!row) return;
+            const blockers = getBlockers(row);
+            if (!blockers[blockerIndex]) return;
+
+            // kopia całej tablicy, resolved po indeksie ORYGINALNEJ tablicy
+            const updated = blockers.map((b, i) => i === blockerIndex ? { ...b, resolved: todayStr() } : b);
+
+            const { error } = await supabaseClient
+                .from('workflow_ads')
+                .update({ blockers: updated })
+                .eq('workflow_id', workflowId);
+
+            if (error) {
+                console.error('Error resolving blocker:', error);
+                showToast('Błąd zapisu: ' + error.message, 'error');
+                return;
+            }
+
+            row.blockers = updated;
+            renderAll();
+            showToast('Bloker oznaczony jako zrobiony', 'success');
+            if (window.Sidebar && window.Sidebar.refreshKampanieBadge) {
+                window.Sidebar.refreshKampanieBadge(supabaseClient);
+            }
+        }
+
+        // ============ TABELA ============
+
+        const BOTTLENECK_LABELS = {
+            tracking: { text: 'pomiar (pixel)', class: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
+            creative: { text: 'kreacje', class: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
+            landing:  { text: 'strona', class: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
+            checkout: { text: 'kasa', class: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
+        };
+
+        function renderTable() {
+            const tbody = document.getElementById('campaigns-table-body');
+
+            const sorted = [...adsRows].sort((a, b) => {
+                const rank = (row) => {
+                    if (openBlockersCount(row) > 0) return 0;
+                    const cs = getCampaignState(row);
+                    if (cs && cs.status === 'ACTIVE') return 1;
+                    return 2;
+                };
+                const r = rank(a) - rank(b);
+                if (r !== 0) return r;
+                // w grupach po report_generated_at desc, null-e na końcu
+                const ra = a.report_generated_at || '';
+                const rb = b.report_generated_at || '';
+                return rb.localeCompare(ra);
+            });
+
+            tbody.innerHTML = sorted.map(row => {
+                const wid = row.workflow_id;
+                const cs = getCampaignState(row);
+                const report = getReport(row);
+
+                // Status
+                let statusHtml;
+                if (cs && cs.status === 'ACTIVE') {
+                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>';
+                } else if (cs && cs.status === 'PAUSED') {
+                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">PAUSED</span>';
+                } else if (cs && cs.status) {
+                    statusHtml = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10">${escapeHtml(cs.status)}</span>`;
+                } else if (row.campaign_launched === true) {
+                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-white/10">URUCHOMIONA</span>';
+                } else {
+                    statusHtml = '<span class="text-zinc-600">—</span>';
+                }
+                const stateDate = cs && cs.updated_at ? `<div class="text-[10px] text-zinc-600 font-mono mt-1">stan z ${escapeHtml(dateOnly(cs.updated_at))}</div>` : '';
+
+                // Budżet
+                const budget = (cs && typeof cs.daily_budget === 'number')
+                    ? `<span class="text-zinc-200 font-mono">${escapeHtml(String(cs.daily_budget))} zł</span>`
+                    : '<span class="text-zinc-600">—</span>';
+
+                // Ostatni raport
+                let reportHtml = '<span class="text-zinc-600">—</span>';
+                if (row.report_generated_at) {
+                    const period = report && report.period && typeof report.period === 'object' ? report.period : null;
+                    const periodHtml = period && (period.from || period.to)
+                        ? `<div class="text-[10px] text-zinc-600 font-mono mt-1">${escapeHtml(period.from || '?')} – ${escapeHtml(period.to || '?')}</div>`
+                        : '';
+                    reportHtml = `<span class="text-zinc-300">${escapeHtml(relDate(row.report_generated_at))}</span>${periodHtml}`;
+                }
+
+                // Wynik
+                let resultHtml = '<span class="text-zinc-600">—</span>';
+                if (report) {
+                    const purchases = typeof report.purchases === 'number' ? report.purchases : null;
+                    const clicks = typeof report.clicks === 'number' ? report.clicks : null;
+                    if (purchases !== null && purchases > 0) {
+                        const roas = typeof report.roas === 'number' ? report.roas.toFixed(2) : escapeHtml(String(report.roas ?? '?'));
+                        resultHtml = `<span class="text-emerald-400">ROAS ${roas} · ${purchases} zam.</span>`;
+                    } else if (purchases === 0 && clicks !== null && clicks > 0) {
+                        resultHtml = `<span class="text-zinc-400">${clicks} klik. · 0 zam.</span>`;
+                    }
+                }
+
+                // Wąskie gardło
+                let bottleneckHtml = '<span class="text-zinc-600">—</span>';
+                if (report && report.bottleneck && report.bottleneck !== 'none') {
+                    const bn = BOTTLENECK_LABELS[report.bottleneck];
+                    bottleneckHtml = bn
+                        ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${bn.class}">${escapeHtml(bn.text)}</span>`
+                        : `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10">${escapeHtml(report.bottleneck)}</span>`;
+                }
+
+                // Blokery (wszystkie nierozwiązane)
+                const unresolvedCount = getBlockers(row).filter(b => b && !b.resolved).length;
+                const blockersHtml = unresolvedCount > 0
+                    ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">${unresolvedCount}</span>`
+                    : '<span class="text-zinc-600">—</span>';
+
+                const customer = customerMap[wid] || '';
+
+                return `
+                    <tr class="border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                        <td class="px-4 py-3.5 align-top">
+                            <div class="text-white font-medium">${escapeHtml(brandName(wid))}</div>
+                            ${customer ? `<div class="text-xs text-zinc-500 mt-0.5">${escapeHtml(customer)}</div>` : ''}
+                        </td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${statusHtml}${stateDate}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${budget}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${reportHtml}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${resultHtml}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${bottleneckHtml}</td>
+                        <td class="px-4 py-3.5 align-top">${blockersHtml}</td>
+                        <td class="px-4 py-3.5 align-top text-right">
+                            <a href="workflow.html?id=${encodeURIComponent(wid)}" class="text-zinc-500 hover:text-white transition-colors" title="Otwórz workflow">
+                                <i class="ph ph-arrow-square-out text-base"></i>
+                            </a>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ============ FEED OSTATNICH AKCJI ============
+
+        function renderActionsFeed() {
+            const feed = document.getElementById('actions-feed');
+            const empty = document.getElementById('actions-feed-empty');
+
+            let actions = [];
+            adsRows.forEach(row => {
+                const report = getReport(row);
+                if (!report || !Array.isArray(report.actions)) return;
+                report.actions.forEach(a => {
+                    if (!a || typeof a !== 'object') return;
+                    actions.push({
+                        marka: brandName(row.workflow_id),
+                        date: a.date || '',
+                        what: a.what || '',
+                        why: a.why || '',
+                        executed: a.executed === true
+                    });
+                });
+            });
+
+            actions.sort((a, b) => String(b.date).localeCompare(String(a.date)));
+            actions = actions.slice(0, 20);
+
+            if (actions.length === 0) {
+                feed.innerHTML = '';
+                empty.classList.remove('hidden');
+                return;
+            }
+            empty.classList.add('hidden');
+
+            feed.innerHTML = `
+                <div class="relative pl-5">
+                    <div class="absolute left-[5px] top-2 bottom-2 w-px bg-white/5"></div>
+                    ${actions.map(a => `
+                        <div class="relative pb-5 last:pb-0">
+                            <div class="absolute -left-5 top-1.5 w-[11px] h-[11px] rounded-full border-2 ${a.executed ? 'bg-emerald-500 border-emerald-500/40' : 'bg-zinc-700 border-zinc-600/40'}"></div>
+                            <div class="flex flex-wrap items-baseline gap-x-2">
+                                <span class="text-white font-medium">${escapeHtml(a.marka)}</span>
+                                <span class="text-zinc-600 text-[10px] font-mono">${escapeHtml(relDate(a.date))}</span>
+                            </div>
+                            <div class="text-zinc-300 mt-0.5">${escapeHtml(a.what)}</div>
+                            ${a.why ? `<div class="text-zinc-500 text-xs mt-0.5">${escapeHtml(a.why)}</div>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        // ============ INIT ============
+
+        async function init() {
+            const session = await checkAuth();
+            if (session) {
+                await loadData();
+                // Odśwież badge w sidebarze po wizycie (lastSeen już zapisane w checkAuth)
+                if (window.Sidebar && window.Sidebar.refreshKampanieBadge) {
+                    window.Sidebar.refreshKampanieBadge(supabaseClient);
+                }
+            }
+        }
+        init();
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>

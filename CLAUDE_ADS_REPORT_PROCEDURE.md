@@ -140,7 +140,11 @@ słabych tygodni.
 
 1. INSERT `workflow_ad_reports` (report_data + denormalizacja spend/revenue/roas/purchases,
    period_from/to) — dopiero GOTOWY raport (zasada #2).
-2. UPDATE `workflow_ads`: `report_data` (cache), `report_generated_at`, `last_auto_report_at`.
+2. UPDATE `workflow_ads`: `report_data` (cache), `report_generated_at`, `last_auto_report_at`,
+   **`blockers`** (jsonb: `[{task, owner: "tomek"|"klient"|"claude", created, resolved}]` — dodaj nowe,
+   oznacz `resolved` załatwione; zasilają Centrum Kampanii i badge w menu) oraz
+   **`ad_account_data.campaign_state`** (`{status, daily_budget, campaign_id, campaign_name, updated_at}`
+   — aktualizuj przy KAŻDEJ akcji na kampanii: pauza/wznowienie/budżet; Centrum pokazuje ten stan).
 3. **Mail wysyłaj OD RAZU po zapisie** (decyzja Tomka 2026-06-10 — raport bez maila to raport
    niedostarczony): `POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/send-email`
    (apikey = sb_publishable), body `{type:'ad_report', data:{email, client_name (imię),

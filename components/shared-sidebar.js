@@ -50,6 +50,7 @@ const NAV_ITEMS_CRM = [
 const NAV_ITEMS_WORKFLOW = [
     { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty' },
     { id: 'products', icon: 'ph-package', label: 'Produkty' },
+    { id: 'kampanie', icon: 'ph-chart-line-up', label: 'Kampanie', showCount: true, countHiddenAtZero: true },
     { id: 'automations', icon: 'ph-lightning', label: 'Automatyzacje' },
     { id: 'email-templates', icon: 'ph-file-code', label: 'Szablony emaili' },
     { id: 'email-log', icon: 'ph-envelope', label: 'Historia emaili' },
@@ -519,7 +520,8 @@ function renderSidebar(config = {}) {
 
         let countHtml = '';
         if (item.showCount) {
-            countHtml = `<span id="nav-${item.id}-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5">0</span>`;
+            const hideZero = item.countHiddenAtZero ? ' hidden' : '';
+            countHtml = `<span id="nav-${item.id}-count" class="ml-auto text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded font-mono border border-white/5${hideZero}">0</span>`;
         }
 
         // Build correct href based on app (bez .html - Vercel ma rewrites)
@@ -738,6 +740,37 @@ function setupLogout(supabaseClient) {
             window.location.href = getLoginPath();
         });
     }
+    // Badge "Kampanie" (TN Workflow) — setupLogout to jedyny punkt, gdzie każda strona
+    // przekazuje supabaseClient, więc badge ładuje się wszędzie bez zmian w stronach
+    if (_currentAppId === 'workflow') loadWorkflowCampaignBadge(supabaseClient);
+}
+
+// Badge "Kampanie": nierozwiązane blokery (owner tomek/klient) + raporty nowsze niż
+// ostatnia wizyta w Centrum Kampanii (localStorage tn_kampanie_last_seen)
+async function loadWorkflowCampaignBadge(supabaseClient) {
+    const el = document.getElementById('nav-kampanie-count');
+    if (!el || !supabaseClient) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('workflow_ads')
+            .select('blockers, report_generated_at');
+        if (error || !data) return;
+        const lastSeen = localStorage.getItem('tn_kampanie_last_seen') || '1970-01-01';
+        let count = 0;
+        data.forEach(row => {
+            (Array.isArray(row.blockers) ? row.blockers : []).forEach(b => {
+                if (b && !b.resolved && b.owner !== 'claude') count++;
+            });
+            if (row.report_generated_at && row.report_generated_at > lastSeen) count++;
+        });
+        el.textContent = count;
+        if (count > 0) {
+            el.classList.remove('hidden', 'bg-zinc-800', 'text-zinc-400', 'border-white/5');
+            el.classList.add('bg-amber-500/20', 'text-amber-400', 'border-amber-500/30');
+        } else {
+            el.classList.add('hidden');
+        }
+    } catch (_) { /* badge jest opcjonalny — nie blokuj strony */ }
 }
 
 function setupProfileClick() {
@@ -781,6 +814,7 @@ window.Sidebar = {
     setUserName,
     setUserColor,
     setLeadsCount,
+    refreshKampanieBadge: loadWorkflowCampaignBadge,
     setupLogout,
     setupProfileClick,
     getPagePath,
