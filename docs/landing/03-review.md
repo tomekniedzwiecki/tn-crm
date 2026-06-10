@@ -7,7 +7,7 @@
 
 Ta procedura jest **obowiązkowa** — nie kończ pracy nad landingiem bez jej wykonania.
 
-**Po PASS (≥60 PASS / 0 FAIL) →** przejdź do [`03-5-copy-review.md`](03-5-copy-review.md) (Manus rewrite purple prose) **PRZED** ETAP 4 DESIGN. Verify-landing sprawdza anti-patterns i długości, ale NIE ocenia jakości copy — Manus to robi.
+**Po `GATE: PASS` →** przejdź do [`03-5-copy-review.md`](03-5-copy-review.md) (Manus rewrite purple prose) **PRZED** ETAP 4 DESIGN. Verify-landing sprawdza anti-patterns i długości, ale NIE ocenia jakości copy — Manus to robi.
 
 ---
 
@@ -75,8 +75,8 @@ grep -cE "<img[^>]*style=\"[^\"]*(height|width|aspect-ratio):" "$FILE"
 echo "OG image ma pełny Supabase URL (powinno być 1):"
 grep -cE 'property="og:image"[^>]*yxmavwkwnfuphjqbelws' "$FILE"
 
-# 13. Fonty z latin-ext dla polskich znaków
-echo "Fonty z subset=latin-ext (powinno być 1):"
+# 13. Google Fonts BEZ subset=latin-ext (anty-wzorzec — patrz reference/safety.md #10)
+echo "Fonty z subset=latin-ext (powinno być 0 — anty-wzorzec, USUŃ jeśli obecny):"
 grep -cE "subset=latin-ext" "$FILE"
 
 # 14. Brief placeholders (każdy MUSI mieć 'Brief: ' — 4-polowy format)
@@ -106,7 +106,7 @@ grep -cE "grid-row\s*:\s*span 2" "$FILE"
 | Safety timeout fade-in | 1 | dodaj `setTimeout(...fade-in..., 2500)` |
 | Inline img sizing | 0 | przenieś do CSS (PATTERN 16) |
 | OG image full URL | 1 | zastąp `/landing-pages/...` pełnym Supabase URL |
-| subset=latin-ext | 1 | dodaj `&subset=latin-ext` do URL Google Fonts |
+| subset=latin-ext | **0** | USUŃ `&subset=latin-ext` z URL Google Fonts (anty-wzorzec: okrojony TTF bez unicode-range → polskie znaki fallback na cursive; safety #10) |
 | grid-row span 2 | 0 lub parzyste wypełnienie | ryzyko pustych komórek — policz tiles × span (PATTERN 16) |
 
 **NIE przechodź dalej** dopóki każda kontrola nie jest zielona.
@@ -259,7 +259,7 @@ Landing MUSI odzwierciedlać ustalenia z raportu. Sprawdź:
 
 ### 4.A Podstawowa technika
 - [ ] Logo ma pełny URL Supabase (nie względny)
-- [ ] Fonty mają `&subset=latin-ext` (polskie znaki)
+- [ ] Fonty BEZ `&subset=latin-ext` (anty-wzorzec — psuje polskie znaki, safety #10)
 - [ ] Hero image ma `fetchpriority="high"` (bez `loading="lazy"`)
 - [ ] Wszystkie `<img>` mają `width` i `height` (CLS)
 - [ ] `preconnect` do fonts.googleapis.com i fonts.gstatic.com
@@ -336,7 +336,7 @@ Sprawdź czy każda sekcja ma **własny** aspect-ratio, NIE globalne wymuszenie 
 Po przejściu checklisty:
 
 1. **Jeśli są braki w treściach** — popraw je i przejdź ponownie przez sekcje z problemami
-2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 2.5: DIRECTION** (`01-direction.md`)
+2. **Jeśli treści OK** — **PRZEJDŹ DO ETAPU 3.5: COPY REVIEW** (`03-5-copy-review.md`), potem ETAP 4 DESIGN
 
 Kolejność: ETAP 3 (treści OK) → **ETAP 2 (manifesto kierunku)** → ETAP 4 (design polish) → ETAP 5 (Playwright) → commit.
 

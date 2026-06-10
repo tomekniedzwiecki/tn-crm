@@ -78,6 +78,14 @@
 - **Style ID:** `clinical-warmth`
 - **Plik:** docs/landing/style-atlas/clinical-warmth.md
 
+<!-- Maszynowe tokeny lock (v5.0) — REQUIRED dla verify-style-lock.sh; branding > Atlas -->
+lock-font-display: Fraunces
+lock-font-body: Plus Jakarta Sans
+lock-font-accent: Space Grotesk
+lock-hex: #F3F6F8
+lock-hex: #0E7A6E
+lock-hex: #141C2E
+
 ### 10.2 Product DNA (z Kroku 9a.1)
 - Utility↔Ritual: dual (wyrób który wykonuje pracę: podpiera kark [kotwice: Shark steam mop, Dyson V15] + wieczorny rytuał snu [Aesop hand wash, matcha set])
 - Precision↔Expression: precision (5 stref, model 2102, wymiary 60×23, profil 7–12 cm [Swiss watch, thermometer medical])

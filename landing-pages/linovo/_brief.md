@@ -83,6 +83,14 @@ dużo oddechu, paleta lnu, jeden mosiężny akcent, elegancki serif. Tempo: **ci
 - **Style ID:** `japandi-serenity`
 - **Plik:** [`docs/landing/style-atlas/japandi-serenity.md`](../../docs/landing/style-atlas/japandi-serenity.md)
 
+<!-- Maszynowe tokeny lock (v5.0) — REQUIRED dla verify-style-lock.sh; branding > Atlas -->
+lock-font-display: Cormorant Garamond
+lock-font-body: Inter
+lock-font-accent: Josefin Sans
+lock-hex: #F4EEE3
+lock-hex: #1F3A3D
+lock-hex: #C99A4E
+
 ### 10.2 Product DNA (z Kroku 9a.1)
 - Utility↔Ritual: **ritual** (kotwice: Aesop hand wash, Matcha ceremony — poranny rytuał garderoby, dystans od „utility AliExpress")
 - Precision↔Expression: **precision** (Swiss watch, Sous-vide — ceramiczna stopa, 30 kPa, 26 s jako dowód; powściągliwość)

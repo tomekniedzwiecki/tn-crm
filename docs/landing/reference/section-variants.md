@@ -1200,15 +1200,22 @@ To nie jest blokujące dla verify-brief (sekcja opcjonalna), ale zalecane dla do
 
 ### Reguła uzupełniania fallbacków (OBOWIĄZKOWE w Kroku 4 ETAP 2)
 
-Po złożeniu HTML z wybranymi wariantami, **policz wystąpienia każdego z 5 JS effects** w całym pliku. Jeśli pokrycie nie spełnia verify:
+> **v5.0: NAJPIERW Motion Budget stylu, POTEM ta tabela.** Wymagane są WYŁĄCZNIE efekty
+> z `js_effects_required` pliku stylu (STYLE LOCK sekcja 10, minima z `js_effects_count`).
+> Efektu z `js_effects_forbidden` **NIGDY nie dodawaj jako fallback** — to FAIL verify Grupa 7
+> (dawna wersja tej tabeli kazała dodawać magnetic/split wbrew lockowi apothecary/clinical-warmth
+> /swiss-grid/dark-academia → uczyło to pipeline `--no-verify`).
 
-| Brak | Gdzie dodać fallback |
+Po złożeniu HTML z wybranymi wariantami policz wystąpienia **wymaganych przez styl** efektów.
+Jeśli któryś jest poniżej minimum, dodaj go w tych miejscach:
+
+| Brakujący WYMAGANY efekt | Gdzie dodać fallback |
 |------|----------------------|
-| **`.js-counter` <2** | Hero stats (jeśli H nie ma) **lub** Offer box „Oszczędzasz <span class="js-counter" data-target="400">0</span> zł" + Problem section z dużą liczbą statystyki |
-| **`.js-tilt` <2** | Trust Bar icons (owiń 2+ `.trust-item` w `.js-tilt`) **lub** How It Works kroki (każdy `.how-step` dostaje `.js-tilt`) |
-| **`.js-parallax` <1** | Problem section — numeral w tle (stylizowany jak [patterns.md #21](patterns.md#21-parallax-numerals)) **lub** Final CTA bg-number |
-| **`.magnetic` <2** | Dodaj do sticky-cta + offer-cta (poza hero) |
-| **`.js-split` <1** | Niemożliwe (każdy wariant H ma js-split na h1) — jeśli brak, dodaj do h1 hero |
+| **`.js-counter`** | Hero stats (jeśli H nie ma) **lub** Offer box „Oszczędzasz <span class="js-counter" data-target="400">0</span> zł" + Problem section z dużą liczbą statystyki |
+| **`.js-tilt`** | Trust Bar icons (owiń 2+ `.trust-item` w `.js-tilt`) **lub** How It Works kroki (każdy `.how-step` dostaje `.js-tilt`) |
+| **`.js-parallax`** | Problem section — numeral w tle (stylizowany jak [patterns.md #21](patterns.md#21-parallax-numerals)) **lub** Final CTA bg-number |
+| **`.magnetic`** | Dodaj do sticky-cta + offer-cta (poza hero) |
+| **`.js-split`** | h1 hero (warianty H mają go domyślnie — ale TYLKO gdy styl dopuszcza) |
 
 ### Weryfikacja
 
@@ -1218,9 +1225,8 @@ Po uzupełnieniu fallbacków uruchom:
 bash scripts/verify-landing.sh [slug]
 ```
 
-Grupa 7 „JS effects" musi być 100% zielona. Jeśli nie — dodaj brakujące klasy w miejscach zgodnie z tabelą powyżej.
-
-**Nie zignoruj tego kroku** — jest główną przyczyną FAIL verify przy kombinacjach non-default wariantów (np. H5 + F3 + T4).
+Grupa 7 „JS effects" musi być 100% zielona (zgodność z Motion Budgetem w OBA kierunki:
+wymagane obecne ≥ min, zakazane nieobecne).
 
 ### ⚠️ HARD RULE dla js-split: word-by-word, NIE char-by-char
 

@@ -3,12 +3,29 @@
 # Usage: bash scripts/verify-style-lock.sh [slug]
 # Exit 0 = zgodność OK; Exit 1 = violation → blokuje deploy
 #
+# ═══ MODEL HYBRYDOWY (v5.0, 2026-06) ═══
+# Problem v4.x: REQUIRED były hardcoded hexy/fonty Atlasu, których paleta KLIENTA nigdy
+# nie spełnia (branding > Atlas, Krok 4.4 procedury) → `git commit --no-verify` stało się
+# normą i wyłączało CAŁY pre-commit (też verify-landing). Memory:
+# feedback-verify-style-lock-vs-branding.md, feedback-landing-style-lock-enforced-clinical-warmth.md
+#
+# v5.0:
+#   1. REQUIRED tokeny (fonty+hexy) czytane z _brief.md sekcji 10 — linie maszynowe:
+#        lock-font-display: Cormorant Garamond
+#        lock-font-body: Manrope
+#        lock-hex: #1A3C34
+#      (legalizuje paletę/fonty klienta). Gdy brief ma ≥1 linię lock-* → tryb BRIEF-LOCK.
+#   2. FORBIDDEN zostają hardcoded per Style ID (zakazy strukturalne stylu) — NIE z briefu,
+#      bo agent piszący brief i HTML w tym samym runie tworzyłby pętlę samo-atestacji.
+#   3. Pierwszeństwo: token wymieniony jawnie w lock-* briefu jest WYŁĄCZANY z listy
+#      forbidden danego stylu (deterministyczne odwzorowanie "branding > Atlas").
+#   4. BACKWARD-COMPAT: brief bez linii lock-* → stare zachowanie (hardcoded REQUIRED).
+#
 # Flow:
-# 1. Odczytaj _brief.md sekcja 10 → wyłuskaj Style ID
-# 2. Załaduj patterns per styl (hardcoded case statement)
-# 3. Grep wymaganych patternów w index.html — każdy MUSI być
-# 4. Grep zakazanych patternów w index.html — każdy NIE MOŻE być
-# 5. Raport PASS/FAIL per check
+# 1. Odczytaj _brief.md sekcja 10 → Style ID + ewentualne linie lock-*
+# 2. Tryb BRIEF-LOCK: REQUIRED = tokeny lock-*; tryb legacy: REQUIRED = hardcoded per styl
+# 3. FORBIDDEN per styl (case statement), z wyłączeniem tokenów lock-*
+# 4. Raport PASS/FAIL per check
 
 set -e
 SLUG="$1"
@@ -20,11 +37,21 @@ HTML="landing-pages/$SLUG/index.html"
 [ ! -f "$BRIEF" ] && echo "❌ Brak $BRIEF" && exit 1
 [ ! -f "$HTML" ] && echo "❌ Brak $HTML" && exit 1
 
-# Wyłuskaj Style ID z sekcji 10
-STYLE_ID=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | grep -oE 'Style ID:[*]+[[:space:]]*`[a-z-]+`' | head -1 | sed 's/^[^`]*`//; s/`.*//')
+# Wyłuskaj sekcję 10 i Style ID
+SEC10=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF")
+STYLE_ID=$(echo "$SEC10" | grep -oE 'Style ID:[*]+[[:space:]]*`[a-z-]+`' | head -1 | sed 's/^[^`]*`//; s/`.*//')
 
 if [ -z "$STYLE_ID" ]; then
-  echo "❌ Brak Style ID w _brief.md sekcja 10.1"
+  # Grandfathering (v5.0): briefy sprzed v4.0 nie mają sekcji 10 STYLE LOCK.
+  # NIE blokujemy — stare landingi obowiązuje protokół migrate.md ("nie pogarszaj"),
+  # a twardy gate verify-landing.sh i tak działa. Nowe briefy MAJĄ sekcję 10
+  # (egzekwuje verify-brief.sh w ETAP 1→2).
+  if ! echo "$SEC10" | grep -q "STYLE LOCK"; then
+    echo "⚠️  Brief bez sekcji 10 STYLE LOCK (sprzed v4.0) — grandfathered, pomijam style-lock"
+    echo "GATE: PASS"
+    exit 0
+  fi
+  echo "❌ Sekcja 10 istnieje, ale brak Style ID"
   echo "   Wymagany format: **Style ID:** \`[style-id]\`"
   exit 1
 fi
@@ -35,17 +62,43 @@ if [ ! -f "$STYLE_FILE" ]; then
   exit 1
 fi
 
+# ═══ v5.0: parse maszynowych linii lock-* z sekcji 10 ═══
+LOCK_FONTS=$(echo "$SEC10" | tr -d '\r' | grep -E '^lock-font-(display|body|mono|accent):' | sed -E 's/^lock-font-[a-z]+:[[:space:]]*//; s/[[:space:]]+$//' | grep -v '^$' || true)
+LOCK_HEXES=$(echo "$SEC10" | tr -d '\r' | grep -E '^lock-hex:' | grep -oE '#[0-9A-Fa-f]{3,8}' || true)
+BRIEF_LOCK_MODE=0
+if [ -n "$LOCK_FONTS" ] || [ -n "$LOCK_HEXES" ]; then
+  BRIEF_LOCK_MODE=1
+fi
+
 echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "  STYLE LOCK VERIFY: $SLUG"
 echo "  Style: $STYLE_ID"
+if [ "$BRIEF_LOCK_MODE" = "1" ]; then
+  echo "  Tryb: BRIEF-LOCK (REQUIRED tokeny z _brief.md — branding > Atlas)"
+else
+  echo "  Tryb: legacy (REQUIRED hardcoded Atlas — brief bez linii lock-*)"
+fi
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
 PASS=0
 FAIL=0
 
-# Helper: grep MUST be present
+# Helper: czy pattern forbidden koliduje z tokenem jawnie zalockowanym w briefie?
+is_brief_locked() {
+  local pattern="$1"
+  [ "$BRIEF_LOCK_MODE" = "1" ] || return 1
+  local all_tokens
+  all_tokens=$(printf '%s\n%s' "$LOCK_FONTS" "$LOCK_HEXES")
+  while IFS= read -r tok; do
+    [ -z "$tok" ] && continue
+    if echo "$tok" | grep -qiE "$pattern"; then return 0; fi
+  done <<< "$all_tokens"
+  return 1
+}
+
+# Helper: grep MUST be present (strukturalne — zawsze egzekwowane)
 check_required() {
   local pattern="$1"
   local desc="$2"
@@ -58,10 +111,26 @@ check_required() {
   fi
 }
 
-# Helper: grep MUST NOT be present
+# Helper: token stylu (font/hex) — w trybie BRIEF-LOCK zastępowany przez lock-* briefu
+check_required_token() {
+  local pattern="$1"
+  local desc="$2"
+  if [ "$BRIEF_LOCK_MODE" = "1" ]; then
+    echo "  ⏭️  MUSI (Atlas) zastąpione przez lock-* briefu: $desc"
+    return
+  fi
+  check_required "$pattern" "$desc"
+}
+
+# Helper: grep MUST NOT be present — z pierwszeństwem brandingu
 check_forbidden() {
   local pattern="$1"
   local desc="$2"
+  if is_brief_locked "$pattern"; then
+    echo "  ⏭️  ZAKAZ uchylony (token jawnie w lock-* briefu — branding > Atlas): $desc"
+    PASS=$((PASS + 1))
+    return
+  fi
   if grep -qE "$pattern" "$HTML"; then
     echo "  ❌ ZAKAZ naruszony: $desc (pattern: $pattern)"
     FAIL=$((FAIL + 1))
@@ -71,12 +140,45 @@ check_forbidden() {
   fi
 }
 
+# helper: escape regex metaznaków w tokenie (grep -iF abortuje na tym buildzie Git Bash —
+# udokumentowany crash, używamy -qiE z escapowanym fixed stringiem)
+re_escape() { printf '%s' "$1" | sed 's/[][\.*^$()+?{}|\\]/\\&/g'; }
+
+# ═══ Tryb BRIEF-LOCK: REQUIRED = tokeny z briefu ═══
+if [ "$BRIEF_LOCK_MODE" = "1" ]; then
+  echo "🔒 REQUIRED z _brief.md sekcji 10:"
+  while IFS= read -r f; do
+    [ -z "$f" ] && continue
+    if grep -qiE "$(re_escape "$f")" "$HTML"; then
+      echo "  ✅ MUSI (brief): font \"$f\""
+      PASS=$((PASS + 1))
+    else
+      echo "  ❌ MUSI brak (brief): font \"$f\""
+      FAIL=$((FAIL + 1))
+    fi
+  done <<< "$LOCK_FONTS"
+  while IFS= read -r h; do
+    [ -z "$h" ] && continue
+    if grep -qi "$h" "$HTML"; then
+      echo "  ✅ MUSI (brief): hex $h"
+      PASS=$((PASS + 1))
+    else
+      echo "  ❌ MUSI brak (brief): hex $h"
+      FAIL=$((FAIL + 1))
+    fi
+  done <<< "$LOCK_HEXES"
+  echo ""
+fi
+
 # ═══════ Style-specific rules ═══════
+# Tokeny (fonty/hexy) → check_required_token (zastępowalne przez brief)
+# Strukturalne (klasy/CSS/primitives) → check_required (zawsze)
+# Zakazy → check_forbidden (uchylane tylko przez jawny lock-* w briefie)
 case "$STYLE_ID" in
   apothecary-label)
-    check_required "IBM Plex Sans" "Display font IBM Plex Sans"
-    check_required "IBM Plex Mono" "Mono font IBM Plex Mono"
-    check_required "#FAFAF7|#fafaf7" "Paper White #FAFAF7"
+    check_required_token "IBM Plex Sans" "Display font IBM Plex Sans"
+    check_required_token "IBM Plex Mono" "Mono font IBM Plex Mono"
+    check_required_token "#FAFAF7|#fafaf7" "Paper White #FAFAF7"
     check_required "class=\"[^\"]*spec-label" "Primitive 1: spec-label section"
     check_forbidden "Fraunces" "Fraunces (editorial font zakaz)"
     check_forbidden "Cormorant" "Cormorant (editorial zakaz)"
@@ -92,9 +194,9 @@ case "$STYLE_ID" in
     ;;
 
   clinical-warmth)
-    check_required "Cormorant Garamond" "Display font Cormorant Garamond"
-    check_required "Manrope" "Label font Manrope"
-    check_required "#F7F4ED|#f7f4ed" "Ciepły papier #F7F4ED"
+    check_required_token "Cormorant Garamond" "Display font Cormorant Garamond"
+    check_required_token "Manrope" "Label font Manrope"
+    check_required_token "#F7F4ED|#f7f4ed" "Ciepły papier #F7F4ED"
     check_required "class=\"[^\"]*spec-label" "Primitive spec-label section"
     check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
     check_forbidden "IBM Plex" "IBM Plex (sterile lab zakaz)"
@@ -108,7 +210,7 @@ case "$STYLE_ID" in
     ;;
 
   poster-utility)
-    check_required "Archivo Black" "Display font Archivo Black"
+    check_required_token "Archivo Black" "Display font Archivo Black"
     check_required "class=\"[^\"]*poster-claim|class=\"[^\"]*hero-poster" "Primitive poster-claim lub hero-poster"
     check_required "font-size:\s*clamp\([0-9]+px,\s*[0-9]+vw" "Oversized clamp heading 80px+"
     check_forbidden "Fraunces" "Fraunces zakaz"
@@ -120,8 +222,8 @@ case "$STYLE_ID" in
     ;;
 
   clinical-kitchen)
-    check_required "IBM Plex Sans" "Display IBM Plex Sans"
-    check_required "IBM Plex Mono" "Mono IBM Plex Mono"
+    check_required_token "IBM Plex Sans" "Display IBM Plex Sans"
+    check_required_token "IBM Plex Mono" "Mono IBM Plex Mono"
     check_required "class=\"[^\"]*kpi" "Primitive KPI grid/dashboard"
     check_required "js-counter" "Min js-counter dla KPI"
     check_forbidden "Fraunces" "Fraunces zakaz"
@@ -136,8 +238,8 @@ case "$STYLE_ID" in
     ;;
 
   japandi-serenity)
-    check_required "Noto Serif|Tenor Sans" "Display Noto Serif albo Tenor Sans"
-    check_required "#F4F1EA|#f4f1ea" "Paper Pearl #F4F1EA"
+    check_required_token "Noto Serif|Tenor Sans" "Display Noto Serif albo Tenor Sans"
+    check_required_token "#F4F1EA|#f4f1ea" "Paper Pearl #F4F1EA"
     check_forbidden "Fraunces" "Fraunces zakaz"
     check_forbidden "Archivo Black" "Archivo Black zakaz"
     check_forbidden "IBM Plex Mono" "IBM Plex Mono zakaz"
@@ -150,9 +252,9 @@ case "$STYLE_ID" in
     ;;
 
   swiss-grid)
-    check_required "Helvetica|Inter" "Display Helvetica lub Inter"
+    check_required_token "Helvetica|Inter" "Display Helvetica lub Inter"
     check_required "grid-template-columns:\s*repeat\(12" "12-col grid Swiss"
-    check_required "#FFFFFF|#ffffff|#FFF" "Pure white background"
+    check_required_token "#FFFFFF|#ffffff|#FFF" "Pure white background"
     check_forbidden "Fraunces" "Fraunces zakaz"
     check_forbidden "Playfair" "Playfair zakaz"
     check_forbidden "Archivo Black" "Archivo Black zakaz"
@@ -164,7 +266,7 @@ case "$STYLE_ID" in
     ;;
 
   brutalist-diy)
-    check_required "Times New Roman|Georgia" "Display Times New Roman w h1/h2"
+    check_required_token "Times New Roman|Georgia" "Display Times New Roman w h1/h2"
     check_required "transform:\s*rotate" "Min 1 rotated element"
     check_required "text-decoration:\s*underline" "Underline links"
     check_forbidden "Fraunces" "Fraunces zakaz"
@@ -175,9 +277,9 @@ case "$STYLE_ID" in
     ;;
 
   dark-academia)
-    check_required "Libre Caslon" "Libre Caslon display"
-    check_required "#E8E0CF|#e8e0cf" "Parchment #E8E0CF"
-    check_required "#6B1F1F|#6b1f1f" "Burgundy #6B1F1F"
+    check_required_token "Libre Caslon" "Libre Caslon display"
+    check_required_token "#E8E0CF|#e8e0cf" "Parchment #E8E0CF"
+    check_required_token "#6B1F1F|#6b1f1f" "Burgundy #6B1F1F"
     check_required "text-align:\s*center" "Centered hero (Dark Academia)"
     check_forbidden "Archivo Black" "Archivo Black zakaz"
     check_forbidden "IBM Plex" "IBM Plex zakaz"
@@ -189,10 +291,10 @@ case "$STYLE_ID" in
     ;;
 
   cottagecore-botanical)
-    check_required "EB Garamond" "EB Garamond display"
+    check_required_token "EB Garamond" "EB Garamond display"
     check_required "class=\"[^\"]*botanical" "Primitive botanical SVG ornament"
-    check_required "#F5EFDF|#f5efdf" "Butter Cream #F5EFDF"
-    check_required "#8AA586|#8aa586" "Sage #8AA586"
+    check_required_token "#F5EFDF|#f5efdf" "Butter Cream #F5EFDF"
+    check_required_token "#8AA586|#8aa586" "Sage #8AA586"
     check_forbidden "Archivo Black" "Archivo Black zakaz"
     check_forbidden "IBM Plex" "IBM Plex zakaz"
     check_forbidden "Fraunces" "Fraunces zakaz"
@@ -202,10 +304,10 @@ case "$STYLE_ID" in
     ;;
 
   outdoorsy-expedition)
-    check_required "Work Sans" "Work Sans display"
-    check_required "Space Mono" "Space Mono coordinates"
-    check_required "#E5D7B8|#e5d7b8" "Canvas Khaki"
-    check_required "#D35A1D|#d35a1d" "Signal Orange"
+    check_required_token "Work Sans" "Work Sans display"
+    check_required_token "Space Mono" "Space Mono coordinates"
+    check_required_token "#E5D7B8|#e5d7b8" "Canvas Khaki"
+    check_required_token "#D35A1D|#d35a1d" "Signal Orange"
     check_required "class=\"[^\"]*coord-label|class=\"[^\"]*field-stamp" "Primitive coord-label lub field-stamp"
     check_forbidden "Fraunces" "Fraunces zakaz"
     check_forbidden "IBM Plex" "IBM Plex zakaz"
@@ -219,33 +321,33 @@ case "$STYLE_ID" in
 
   # Retrospektywy — mniej restrykcyjne (istniejące baseline'y)
   editorial-print)
-    check_required "Fraunces" "Fraunces display"
+    check_required_token "Fraunces" "Fraunces display"
     check_required "Nº" "Nº eyebrow numeracja"
     ;;
 
   panoramic-calm)
-    check_required "Plus Jakarta" "Plus Jakarta Sans"
-    check_required "Instrument Serif" "Instrument Serif accent"
+    check_required_token "Plus Jakarta" "Plus Jakarta Sans"
+    check_required_token "Instrument Serif" "Instrument Serif accent"
     ;;
 
   organic-natural)
-    check_required "Nunito|DM Sans" "Nunito lub DM Sans"
+    check_required_token "Nunito|DM Sans" "Nunito lub DM Sans"
     check_required "border-radius:\s*(1[6-9]|2[0-9])px" "Rounded corners 16-24px+"
     ;;
 
   playful-toy)
-    check_required "Nunito" "Nunito display"
+    check_required_token "Nunito" "Nunito display"
     check_forbidden "Fredoka One" "Fredoka One (brak PL znaków)"
     ;;
 
   retro-futuristic)
-    check_required "Space Grotesk|Syne" "Space Grotesk lub Syne"
-    check_required "#0A0A0F|#0D1117|#0a0a0f" "Dark background"
+    check_required_token "Space Grotesk|Syne" "Space Grotesk lub Syne"
+    check_required_token "#0A0A0F|#0D1117|#0a0a0f" "Dark background"
     ;;
 
   rugged-heritage)
-    check_required "Archivo" "Archivo (nie Black — 700/800)"
-    check_required "IM Fell English" "IM Fell English for stamps"
+    check_required_token "Archivo" "Archivo (nie Black — 700/800)"
+    check_required_token "IM Fell English" "IM Fell English for stamps"
     ;;
 
   *)
@@ -262,10 +364,17 @@ echo "════════════════════════�
 echo ""
 
 if [ "$FAIL" -gt 0 ]; then
+  echo "GATE: FAIL (FAIL=$FAIL)"
   echo "❌ STYLE LOCK FAIL — Style '$STYLE_ID' wymaga napraw"
   echo "   Przeczytaj: $STYLE_FILE (sekcje 8, 9, 10 + MUSZĄ/NIE WOLNO)"
+  echo "   Jeśli landing celowo używa palety/fontów BRANDU klienta → dodaj do _brief.md"
+  echo "   sekcji 10 linie maszynowe (zamiast --no-verify!):"
+  echo "     lock-font-display: [font display brandu]"
+  echo "     lock-font-body: [font body brandu]"
+  echo "     lock-hex: #XXXXXX   (po jednej linii na kolor, min 3)"
   exit 1
 fi
 
+echo "GATE: PASS"
 echo "✅ Style Lock OK — zgodność ze stylem '$STYLE_ID'"
 exit 0

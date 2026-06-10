@@ -93,6 +93,16 @@ Jeśli nic podobnego nie ma — wpisz „brak istniejącego landinga w tym kieru
 - **Style ID:** [nazwa pliku bez .md, np. `apothecary-label`]
 - **Plik:** [`docs/landing/style-atlas/[style-id].md`](../../docs/landing/style-atlas/)
 
+<!-- Maszynowe tokeny lock (v5.0, OBOWIĄZKOWE) — REQUIRED dla verify-style-lock.sh.
+     Wpisz FAKTYCZNE fonty i hexy użyte w landingu (paleta BRANDU jeśli różna od Atlasu —
+     branding > Atlas; token wpisany tutaj uchyla też zakaz Atlasu na ten token).
+     Format: dokładnie tak jak niżej, bez backticków, jedna wartość per linia. -->
+lock-font-display: [font display, np. Fraunces]
+lock-font-body: [font body, np. Inter]
+lock-hex: #[hex tła/paper]
+lock-hex: #[hex primary brandu]
+lock-hex: #[hex ink/akcentu]
+
 ### 10.2 Product DNA (z Kroku 9a.1)
 - Utility↔Ritual: __
 - Precision↔Expression: __

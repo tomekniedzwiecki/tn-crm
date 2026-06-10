@@ -28,7 +28,7 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 |---|------|------|
 | 1 | [`01-direction.md`](01-direction.md) | **DIRECTION** — audyt + manifesto + baseline + verify-brief |
 | 2 | [`02-generate.md`](02-generate.md) | **GENERATE** — HTML zgodny z briefem (po valid briefie) |
-| 3 | [`03-review.md`](03-review.md) | **REVIEW** — weryfikacja treści (~63 grep checks) |
+| 3 | [`03-review.md`](03-review.md) | **REVIEW** — weryfikacja treści (grep checks; gate = exit code) |
 | 3.5 | [`03-5-copy-review.md`](03-5-copy-review.md) | **COPY REVIEW** — Manus rewrite purple prose → direct response |
 | 4 | [`04-design.md`](04-design.md) | **DESIGN** — polish + offer box (sekcja H) |
 | 5 | [`05-verify.md`](05-verify.md) | **VERIFY** — Playwright screenshoty 3 viewporty |
@@ -71,7 +71,7 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 |--------|-----|
 | `scripts/generate-reels.py --workflow-id <UUID> --slug <slug>` | **Reels: pobiera MP4 z TT/IG/YT, dedupuje przez phash, uploaduje do Supabase, drukuje HTML.** Wymaga `pip install yt-dlp imagehash Pillow` + node |
 | `scripts/verify-brief.sh [slug]` | Walidacja `_brief.md` przed ETAP 2 (BLOKUJE jeśli niekompletny) |
-| `scripts/verify-landing.sh [slug]` | ~63 grep checks na index.html (target: ≥60 PASS, **0 FAIL obowiązkowe przed commitem**) |
+| `scripts/verify-landing.sh [slug]` | grep checks na index.html — **gate = linia `GATE:` / exit code: 0 PASS · 1 FAIL (STOP, NIE commit/deploy) · 2 WARN-EXCEEDED (kontynuuj + odnotuj)** |
 | `scripts/audit-landing-aspect-ratios.sh [slug]` | **CSS aspect-ratio vs `<img>` width/height** — łapie obcięcia z `object-fit: cover` przed wdrożeniem (target: 0 mismatch) |
 | `scripts/install-landing-hooks.sh` | **Instaluje git pre-commit hook** egzekwujący verify-landing 0 FAIL przed commitem (opt-in) |
 | `scripts/verify-all-landings.sh` | Regression check na 6 baseline'ach |
@@ -99,7 +99,7 @@ ETAP 1 — DIRECTION (manifesto)      — autonomous
   ↓
 ETAP 2 — GENERATE (HTML)            — autonomous
   ↓
-ETAP 3 — REVIEW (treść, 63 grep)    — autonomous
+ETAP 3 — REVIEW (treść, grep checks) — autonomous
   ↓
 ETAP 3.5 — COPY REVIEW (Manus)      — autonomous (~5-15 min)
   [bash scripts/review-copy-manus.sh + node scripts/apply-copy.mjs]
@@ -111,7 +111,7 @@ ETAP 5 — VERIFY (Playwright)        — autonomous
 ETAP 6 — MOBILE (polish 375px)      — autonomous
   ↓
 ═══ PRE-DEPLOY VALIDATION (auto, bez human gate) ══
-- verify-landing.sh ≥15/18 PASS
+- verify-landing.sh GATE: PASS (exit 0)
 - verify-all-landings.sh regression OK
 - Placeholder-briefy 4-polowe obecne (zdjęcia AI NIE są generowane w AUTO-RUN — OPT-IN, safety #11)
 ═══════════════════════════════════════════════════
@@ -126,11 +126,22 @@ ETAP 6 — MOBILE (polish 375px)      — autonomous
 
 ---
 
+## Zasada rolloutu nowych checków (v5.0 — OBOWIĄZKOWA)
+
+Każdy NOWY check w `verify-landing.sh` / `verify-style-lock.sh` startuje jako **WARN**.
+Podniesienie do FAIL dopiero gdy: (a) 6 baseline'ów przechodzi, (b) 5 kolejnych nowych
+landingów nie wygenerowało false positive. Anty-powtórka incydentu style-lock v4.1:
+nierealny check → `--no-verify` jako norma → wyłączony CAŁY pre-commit bezpiecznik.
+Gdy verify-style-lock FAIL-uje na palecie brandu klienta → dodaj linie `lock-*` do
+`_brief.md` sekcji 10 (branding > Atlas), NIGDY `--no-verify`.
+
+---
+
 ## AUTO-RUN protocol (FULL autonomous)
 
 ### STOP conditions (tylko te 3 zatrzymują auto-deploy)
 
-1. **`verify-landing.sh` <15/18 PASS** — safety violation, landing nie spełnia minimum jakości
+1. **`verify-landing.sh` GATE: FAIL (exit 1)** — safety violation, landing nie spełnia minimum jakości
 2. **`verify-all-landings.sh` zepsuł inny landing** — regression w istniejącym preview
 3. **Brak placeholder-briefów** — landing wyglądałby jak szkielet (placeholdery to domyślny deliverable; zdjęcia AI NIE są wymagane)
 
@@ -168,7 +179,7 @@ Landingi to **preview dla klienta** (demo sprzedażowe), nie produkcja. Pre-comm
 - [ ] PageSpeed checklist (preconnect, fetchpriority, lazy loading)
 
 ### Verification
-- [ ] `verify-landing.sh` ≥15/18 PASS
+- [ ] `verify-landing.sh` GATE: PASS
 - [ ] Playwright screenshoty 3 viewports (desktop/tablet/mobile)
 - [ ] Mobile 5/5 certyfikacja (06-mobile.md)
 - [ ] `verify-all-landings.sh` — regression OK (lub akceptowalne known issues)

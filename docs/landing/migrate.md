@@ -93,7 +93,7 @@ Jeśli verify już teraz failuje — zapisz state i nie pogarszaj.
 ### 5. Re-run verify + Playwright po zmianach
 
 ```bash
-bash scripts/verify-landing.sh [slug]   # musi zostać ≥15/18 PASS lub być nie gorzej niż before
+bash scripts/verify-landing.sh [slug]   # GATE nie może się pogorszyć vs before (PASS zostaje PASS; liczba FAIL nie rośnie)
 bash scripts/screenshot-landing.sh [slug]   # wizualna weryfikacja
 ```
 
@@ -138,7 +138,7 @@ grep -oE "ai-generated/[a-z-]+/[0-9_a-z-]+\.(jpg|png|webp)" landing-pages/[slug]
 | Warunek | Akcja | Max retry | Fallback |
 |---------|-------|-----------|----------|
 | Stary landing nie ma `_brief.md` | Wykonaj migrate.md Use case 1 | 1 | STOP, zapytaj usera |
-| verify-landing.sh przed zmianą <15/18 | Zaakceptuj jako baseline (nie pogarszaj) | — | kontynuuj |
+| verify-landing.sh przed zmianą GATE: FAIL | Zaakceptuj jako baseline (nie pogarszaj) | — | kontynuuj |
 | Modyfikacja zepsuła inny check (regression) | Cofnij zmianę, popraw inaczej | 2 | STOP + diff |
 | User prosi o zmianę manifesta | Zaktualizuj `_brief.md` Decisions log | — | kontynuuj |
 

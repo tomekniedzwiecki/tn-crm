@@ -69,7 +69,7 @@ Gdy słyszysz którąkolwiek frazę → **otwórz [`docs/landing/README.md`](doc
 
 **⛔ HARD RULE: Verify-landing 0 FAIL OBOWIĄZKOWE przed commitem**
 
-Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zostało wdrożone ze stanem łamiącym 10+ safety rules (brak html.js gate, brak subset=latin-ext, zakazana fraza dropshipping, zero 5 JS effects, brak OG image URL). Procedura deklarowała ale NIE egzekwowała.
+Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zostało wdrożone ze stanem łamiącym 10+ safety rules (brak html.js gate, zakazana fraza dropshipping, zero wymaganych JS effects, brak OG image URL). Procedura deklarowała ale NIE egzekwowała.
 
 **Zasady bezwzględne:**
 1. **NIE commituj landingu** (`landing-pages/[slug]/index.html`) jeśli `bash scripts/verify-landing.sh [slug]` zwraca ≥1 FAIL
@@ -83,7 +83,7 @@ Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zost
 |---|------|------|
 | 1 | [`docs/landing/01-direction.md`](docs/landing/01-direction.md) | **DIRECTION** — manifesto + baseline + verify-brief gate |
 | 2 | [`docs/landing/02-generate.md`](docs/landing/02-generate.md) | **GENERATE** — HTML zgodny z briefem |
-| 3 | [`docs/landing/03-review.md`](docs/landing/03-review.md) | **REVIEW** — weryfikacja treści (~63 grep checks) |
+| 3 | [`docs/landing/03-review.md`](docs/landing/03-review.md) | **REVIEW** — weryfikacja treści (grep checks; gate = exit code) |
 | 3.5 | [`docs/landing/03-5-copy-review.md`](docs/landing/03-5-copy-review.md) | **COPY REVIEW** — Manus rewrite purple prose → direct response |
 | 4 | [`docs/landing/04-design.md`](docs/landing/04-design.md) | **DESIGN** — polish + offer box |
 | 5 | [`docs/landing/05-verify.md`](docs/landing/05-verify.md) | **VERIFY** — Playwright screenshoty 3 viewporty |
@@ -102,7 +102,7 @@ Empirycznie wykryte 2026-04-20: `landing-pages/kidsnap/` (commit `732f117`) zost
 
 **Skrypty pomocnicze:**
 - `scripts/verify-brief.sh [slug]` — walidacja briefa PRZED ETAP 2 (BLOKUJE jeśli niekompletny)
-- `scripts/verify-landing.sh [slug]` — ~33 grep checks (target: ≥15/18 PASS)
+- `scripts/verify-landing.sh [slug]` — grep checks (gate = exit code: 0 PASS · 1 FAIL · 2 WARN-EXCEEDED)
 - `scripts/verify-all-landings.sh` — regression check na 6 baseline'ach
 - `scripts/screenshot-landing.sh [slug]` — Playwright 3 viewports (fallback gdy MCP niedostępny)
 - `scripts/landing-autorun.sh [UUID]` — entry-point AUTO-RUN mode (KROK 16 v3)
@@ -122,7 +122,7 @@ Patrz: [`mcp-landing-tools.md`](../../Users/tomek/.claude/projects/c--repos-tn/m
 - **Manifesto MUSI być zapisany PRZED generowaniem HTML** — `verify-brief.sh` to wymusza
 - ⛔ **Zdjęcia AI = OPT-IN, NIGDY automatycznie w AUTO-RUN** (safety #11, incydent Linovo 2026-05-29). Domyślny deliverable = **placeholdery z 4-polowym briefem fotografa**; klient wstawia realne zdjęcia. Generuj obrazy `generate-image` TYLKO gdy user wyraźnie poprosi, i tylko ściśle wg referencji produktu (anti-drift — model dorabia cechy, których realny produkt nie ma).
 - **STOP conditions (tylko te 3 zatrzymują auto-deploy):**
-  1. `verify-landing.sh` <15/18 PASS (safety violation)
+  1. `verify-landing.sh` GATE: FAIL — exit 1 (safety violation)
   2. `verify-all-landings.sh` zepsuły inny landing (regression)
   3. Brak placeholder-briefów (szkielet zamiast landinga — zdjęcia AI NIE są wymagane)
 

@@ -22,7 +22,7 @@ Historycznie (do 2026-04) ten etap był „2.5" — uruchamiany PO wygenerowaniu
 ## Output
 
 - `landing-pages/[slug]/_brief.md` — **commitowany** (persystentny brief projektu)
-- Zdecydowany baseline (`paromia` / `vitrix` / `h2vital` / `pupilnik` / `vibestrike` / `kafina`) **LUB** decyzja `MODE=forge`
+- Decyzja `MODE=forge` — ZAWSZE (kopiowanie baseline usunięte w v3.1, memory feedback-landing-always-forge.md)
 - `bash scripts/verify-brief.sh [slug]` exit 0 (wymagane do przejścia do ETAP 2)
 
 ---
@@ -391,7 +391,7 @@ bash scripts/verify-brief.sh $SLUG
 | 0. Walidacja | (`landing-autorun.sh` lub `02-generate.md` ETAP 0) | Bash check Supabase |
 | **1. Direction** | **ten plik (`01-direction.md`)** | **manifesto + baseline + verify-brief** |
 | 2. Generate | [`02-generate.md`](02-generate.md) | HTML zgodny z briefem |
-| 3. Review | [`03-review.md`](03-review.md) | weryfikacja treści (18 grep checks) |
+| 3. Review | [`03-review.md`](03-review.md) | weryfikacja treści (gate = exit code verify-landing.sh) |
 | 4. Design polish | [`04-design.md`](04-design.md) | implementacja manifesto + offer box |
 | 5. Verify | [`05-verify.md`](05-verify.md) | Playwright 3 viewporty |
 | 6. Mobile | [`06-mobile.md`](06-mobile.md) | mobile polish 375px |

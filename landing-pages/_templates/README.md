@@ -36,5 +36,5 @@ Wszystkie obowiązkowe fragmenty są opisane w [`docs/landing/reference/safety.m
 
 ```bash
 bash scripts/verify-brief.sh [slug]    # przed ETAP 2
-bash scripts/verify-landing.sh [slug]  # po ETAP 4 (target ≥15/18)
+bash scripts/verify-landing.sh [slug]  # po ETAP 4 (gate = exit code)
 ```

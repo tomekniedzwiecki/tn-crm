@@ -15,7 +15,7 @@
    Bez tego kroku **dokumentacja decyzji nie istnieje** — audit wariantów niemożliwy, Claude w następnej iteracji (np. fix copy, modify design) nie wie które warianty zostały wybrane.
 4. **Pobierz logo + obrazy** (Supabase — instrukcje niżej).
 5. **Zbuduj HTML** — 14 sekcji w kolejności, 3 wybrane warianty podmieniają ich odpowiedniki w szkielecie. **SKOPIUJ faktyczne HTML+CSS snippetów** z `section-variants.md` (nie tylko nazwę wariantu — cały kod). Wypełnij placeholdery treścią z briefa + raportu PDF.
-6. **Sprawdź pokrycie 5 JS effects** — Verify wymaga `.js-split ≥1`, `.js-counter ≥2`, `.magnetic ≥2`. (`.js-tilt ≥2` i `.js-parallax ≥1` są teraz WARN, nie FAIL — celowe pominięcie w Rugged/industrial kierunkach jest OK). Patrz [`reference/section-variants.md` rozdział 6](reference/section-variants.md#6-js-effects-coverage).
+6. **Sprawdź pokrycie JS effects wg Motion Budget stylu** — obowiązkowe są WYŁĄCZNIE efekty z `js_effects_required` pliku stylu (STYLE LOCK sekcja 10; minima z `js_effects_count`). Efekt z `js_effects_forbidden` obecny w landingu = FAIL verify-landing Grupa 7. NIE ma globalnej listy „5 obowiązkowych" — 4 style Atlasu (apothecary, clinical-warmth, swiss-grid, dark-academia) ZAKAZUJĄ split/magnetic/tilt.
 7. **Zapisz** `landing-pages/[slug]/index.html`.
 8. **Uruchom `verify-landing.sh`** — jeśli FAIL (nie WARN), napraw przed deployem.
 
@@ -322,14 +322,17 @@ Glassnova ma 23 liczb, oculia/steamla po 31. To jest 2-4× więcej niż powinno.
 
 > Memory: `feedback-landing-placeholder-per-section.md`. **KAŻDA sekcja wizualna MUSI mieć placeholder zdjęcia z 4-polowym briefem.** Nie wystarczy sam hero. `verify-landing.sh` Grupa `1a. Placeholder per section` sprawdza osobno:
 >
-> | Sekcja | Min | Klasa CSS | Opis fotografii |
+> | Sekcja (z kanonicznej tabeli 14) | Min | Klasa CSS | Opis fotografii |
 > |--------|-----|-----------|------------------|
 > | **Hero** | 1 | `hero-figure` / `hero-image` / `hero-product` | Packshot produktu, lifestyle |
-> | **Gallery** | 5–6 | `gal-figure` / `bento-image` / `gallery-image` | Detail + context shots |
-> | **Personas** | 3 | `persona-figure` / `persona-image` | Persona w kontekście użycia |
+> | **Solution / Features** (figury w bento/stack) | 3–6 (wg wariantu F) | `tile-figure` / `bento-image` / `gal-figure` | Detail + context shots |
 > | **Testimonials** | 2–4 | `testi-avatar-figure` / `voice-figure` / `avatar-figure` | Zdjęcie twarzy klienta 112×112 |
-> | **Procedure / How** | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
+> | **How It Works** | 3 | `step-figure` / `step-image` / `how-figure` | Ujęcie z wykonywania kroku |
+> | **Problem** (opcjonalnie) | 0–1 | `problem-figure` | Wizualizacja stanu „przed" |
 > | **Final CTA** | 1 (opcjonalne) | `final-cta-figure` / `cta-figure` / `bg-figure` | Panorama / bg image |
+>
+> (Dawne nazwy „Gallery"/„Personas" z wersji ≤v4.x = figury wewnątrz Solution/Features
+> i opcjonalna podsekcja „Dla kogo" — NIE są osobnymi sekcjami z kanonicznej tabeli 14.)
 >
 > **Częsty błąd (do 2026-04):** testimonial avatary jako gradient kółka z inicjałami (MK, PB itd.) zamiast placeholder na zdjęcie → fotograf nie dostaje briefu na te ujęcia → po podstawieniu zdjęć produktowych testimonials nadal wyglądają „puste". Każdy avatar i każdy krok how-it-works potrzebuje briefu.
 
@@ -374,31 +377,39 @@ Glassnova ma 23 liczb, oculia/steamla po 31. To jest 2-4× więcej niż powinno.
 3. Osadź w szkielecie 14 sekcji (pozostałe 11 sekcji = standard)
 4. Wypełnij placeholdery treścią z briefa + raportu PDF
 
-**Reszta 11 sekcji** (Header, Mobile Menu, Trust Bar, Problem, How It Works, Comparison, FAQ, Offer, CTA Banner, Footer, Sticky CTA, Cookie Banner) → klasyczny układ z tego pliku niżej. **Nie wariantuj ich** — to fundament konwersji.
+**Reszta 11 sekcji** (Header, Mobile Menu, Trust Bar, Problem, How It Works, Comparison, FAQ, Offer, Final CTA, Footer, Sticky CTA) → klasyczny układ wg kanonicznej tabeli „Architektura strony (14 sekcji)" niżej. **Nie wariantuj ich** — to fundament konwersji. (Cookie Banner = warunkowy dodatek, poza 14 — patrz tabela.)
 
 ---
 
-## Architektura strony (14 sekcji)
+## Architektura strony (14 sekcji) — KANONICZNA TABELA
 
-Każdy landing składa się z tych sekcji w kolejności. **3 z nich (Hero, Solution, Testimonials) wybierasz jako wariant z [`section-variants.md`](reference/section-variants.md) — pozostałe 11 standardowe**:
+> **To jest JEDYNE źródło prawdy o strukturze strony** (v5.0). Lista 1:1 z checkami
+> `verify-landing.sh` Grupa 11. Wszystkie inne wzmianki o liczbie/nazwach sekcji w docs
+> są pointerami tutaj.
 
-| # | Sekcja | Funkcja | Elementy |
-|---|--------|---------|----------|
-| 1 | **Header** | Nawigacja | Logo, linki (Funkcje, Opinie, FAQ), CTA button, hamburger mobile |
-| 2 | **Mobile Menu** | Nawigacja mobilna | Fullscreen overlay z linkami |
-| 3 | **Hero** | Pierwsze wrażenie | Headline, subheadline, dual CTA, badges, hero image, glow effects |
-| 4 | **Trust Bar** | Budowanie zaufania | 4-5 ikon z wartościami (gwarancja, dostawa, etc.) |
-| 5 | **Problem** | PAS: Agitacja | Headline z pytaniem, opis bólu, statystyki, wizualizacja |
-| 6 | **Solution (Bento)** | Prezentacja produktu | Grid 2x2 z features, spotlight hover effect |
-| 7 | **How It Works** | Edukacja | 3 kroki z ikonami i opisami |
-| 8 | **Comparison** | Wyższość vs konkurencja | Dwie karty / tabela porównawcza |
-| 9 | **Social Proof** | Dowód społeczny | Marquee z logami, karty z opiniami |
-| 10 | **FAQ** | Eliminacja obiekcji | Accordion z 5-7 pytaniami |
-| 11 | **Offer** | Finalizacja | Product box z ceną, lista zawartości, CTA, gwarancja |
-| 12 | **CTA Banner** | Ostatnia szansa | Prosty headline + CTA |
-| 13 | **Footer** | Informacje | 3 kolumny: brand, linki, kontakt |
-| 14 | **Sticky CTA** | Mobile conversion | Przyklejony przycisk na dole (tylko mobile) |
-| 15 | **Cookie Banner** | Compliance | RODO zgoda |
+Każdy landing składa się z tych 14 sekcji w kolejności. **3 z nich (Hero, Solution, Testimonials) wybierasz jako wariant z [`section-variants.md`](reference/section-variants.md) — pozostałe 11 standardowe**:
+
+| # | Sekcja | Wariant? | Funkcja | Elementy |
+|---|--------|----------|---------|----------|
+| 1 | **Header** | — | Nawigacja | Logo, linki (Funkcje, Opinie, FAQ), CTA button, hamburger mobile |
+| 2 | **Mobile Menu** | — | Nawigacja mobilna | Fullscreen overlay z linkami |
+| 3 | **Hero** | H1-H10 | Pierwsze wrażenie | Headline, subheadline, dual CTA, hero image placeholder |
+| 4 | **Trust Bar** | — | Budowanie zaufania | 4-5 ikon z wartościami (gwarancja, płatności, zwrot) |
+| 5 | **Problem** | — | PAS: Agitacja | Headline z pytaniem, opis bólu, statystyki, wizualizacja |
+| 6 | **Solution / Features** | F1-F6 | Prezentacja produktu | Bento/stack/cards wg wariantu |
+| 7 | **How It Works** | — | Edukacja | 3 kroki z ikonami i opisami |
+| 8 | **Comparison** | — | Wyższość vs kategoria | Dwie karty / tabela porównawcza (NIGDY nazwany konkurent) |
+| 9 | **Testimonials / Social Proof** | T1-T6 | Dowód społeczny | Opinie wg wariantu |
+| 10 | **FAQ** | — | Eliminacja obiekcji | Accordion z 5-7 pytaniami |
+| 11 | **Offer** | — | Finalizacja | Product box z ceną, lista zawartości, CTA, gwarancja, linia dostawy |
+| 12 | **Final CTA** | — | Ostatnia szansa | Prosty headline + CTA + cta-trust |
+| 13 | **Footer** | — | Informacje | 3 kolumny: brand, linki, kontakt |
+| 14 | **Sticky CTA** | — | Mobile conversion | Przyklejony przycisk na dole (tylko mobile; chyba że Style Lock zakazuje) |
+
+**Cookie Banner NIE wlicza się do 14 sekcji** — to warunkowy dodatek compliance: generuj
+**TYLKO gdy landing zawiera tracking** (GTM / pixel — landingi demo go NIE mają → bez banneru).
+Jeśli generujesz: banner MUSI mieć równorzędną opcję „Odrzuć" (zero auto-zgody „kontynuując
+wyrażasz zgodę" — ryzyko RODO przechodzi na klienta).
 
 > **Copy per sekcja** — szczegółowe wytyczne w [`reference/copy.md` Część 2](reference/copy.md).
 
@@ -896,9 +907,9 @@ context7.query-docs(library_id=<id>, query="view-timeline syntax for scroll prog
 
 ---
 
-## JavaScript — 5 obowiązkowych JS effects w ETAP 2
+## JavaScript — JS effects wg Motion Budget stylu (ETAP 2)
 
-> **Wszystkie 5 effects MUSZĄ być w każdym landingu** (DESIGN D.1 + verify-landing.sh Grupa 7). Dodawaj je razem z HTML w ETAP 2, nie odkładaj do ETAP 4.
+> **Obowiązkowe są WYŁĄCZNIE efekty dozwolone przez Motion Budget stylu z STYLE LOCK** (plik stylu sekcja 10: `js_effects_required` zadaje minimum, `js_effects_forbidden` wyklucza — verify-landing Grupa 7 egzekwuje OBA kierunki). Dodawaj wymagane efekty razem z HTML w ETAP 2, nie odkładaj do ETAP 4. Snippety wszystkich efektów niżej — implementuj TYLKO te, których styl wymaga/dopuszcza.
 
 | # | Effect | Klasa | Gdzie | Pattern |
 |---|---|---|---|---|

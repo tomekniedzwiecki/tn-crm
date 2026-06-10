@@ -79,6 +79,20 @@ else
   fi
 fi
 
+# Sekcja 10 (v5.0): maszynowe linie lock-* — REQUIRED tokeny dla verify-style-lock.sh
+# Nowe briefy MUSZĄ je mieć (template v5.0 je zawiera); puste placeholdery [..] = niewypełnione
+LOCK_LINES=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | tr -d '\r' | grep -cE '^lock-(font-[a-z]+|hex):' || true)
+LOCK_PLACEHOLDERS=$(awk '/^## 10\. STYLE LOCK/,/^## 11\.|^---/' "$BRIEF" | tr -d '\r' | grep -cE '^lock-(font-[a-z]+|hex):.*\[' || true)
+if [ "$LOCK_LINES" -eq 0 ]; then
+  echo "❌ Sekcja 10: brak maszynowych linii lock-* (v5.0) — dodaj lock-font-display/lock-font-body + min 3× lock-hex z FAKTYCZNYMI tokenami landingu"
+  FAIL=1
+elif [ "$LOCK_PLACEHOLDERS" -gt 0 ]; then
+  echo "❌ Sekcja 10: $LOCK_PLACEHOLDERS linii lock-* ma niewypełnione placeholdery [..]"
+  FAIL=1
+else
+  echo "  ✅ Lock tokens: $LOCK_LINES linii lock-*"
+fi
+
 # Sekcja 10: sprawdź że 10.3 MUSZĄ i 10.4 NIE WOLNO wypełnione (min 3 bullet points każde)
 MUSZA_COUNT=$(awk '/^### 10\.3 MUSZĄ/,/^### 10\.4/' "$BRIEF" | grep -cE "^- " || true)
 NIEWOLNO_COUNT=$(awk '/^### 10\.4 NIE WOLNO/,/^### 10\.5/' "$BRIEF" | grep -cE "^- " || true)

@@ -5,7 +5,7 @@
 > **Memory:** `feedback-landing-no-purple-prose.md` — ZAKAZ literary flourish w copy.
 
 ## Kiedy uruchomić
-Po **ETAP 3 REVIEW** (gdy `verify-landing.sh` zwraca ≥60 PASS / 0 FAIL), **PRZED** ETAP 4 DESIGN.
+Po **ETAP 3 REVIEW** (gdy `verify-landing.sh` kończy się `GATE: PASS`), **PRZED** ETAP 4 DESIGN.
 
 ## Dlaczego obowiązkowy
 `verify-landing.sh` sprawdza **anti-patterns** (czego NIE ma być) i **długości** (headline ≤10 słów, FAQ ≥80 znaków), ale NIE ocenia czy copy faktycznie sprzedaje. Copy napisany przez Claude'a w ETAP 2 często ma:
@@ -61,7 +61,7 @@ bash scripts/verify-landing.sh [slug]
 
 Po Manus rewrite może zmienić się liczba słów w headline lub długości FAQ answers — re-run sprawdzi czy nadal PASS.
 
-**Target:** ≥60 PASS / 0 FAIL.
+**Target:** `GATE: PASS` (exit 0) z verify-landing.sh.
 
 ## Co Manus dostaje w promptcie
 
@@ -82,8 +82,8 @@ Pełny prompt generowany przez `scripts/review-copy-manus.sh`:
 - „niekompromisowa jakość", „prawdziwa esencja", „duch przygody" → puste słowa
 
 ### Zakazy biznesowe (safety)
-- „24h wysyłka" / „magazyn w Polsce" / „D+1"
-- „za pobraniem" / „COD" / „raty" / „PayPo" / „Klarna" / „Twisto"
+- ZAKAZ: „24h wysyłka" / „magazyn w Polsce" / „D+1"
+- ZAKAZ: „za pobraniem" / „COD" / „raty" / „PayPo" / „Klarna" / „Twisto"
 - „tylko dziś" / „zostało X sztuk" (fake urgency)
 
 ### Wzorzec sekcji Problem

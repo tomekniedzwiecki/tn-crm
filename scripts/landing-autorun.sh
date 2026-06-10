@@ -135,12 +135,12 @@ FLOW (wykonaj w tej kolejności):
       pierwsza pasująca reguła z góry wygrywa)
    b. Zaloguj wybory w _brief.md sekcja 9 (opcjonalna, ale zalecana)
    c. Zbuduj index.html (14 sekcji — 3 wybrane warianty + 11 standardowych
-      + 5 JS effects + placeholders per-section)
-3. ETAP 3 REVIEW → bash scripts/verify-landing.sh $SLUG (cel: ≥60 PASS / 0 FAIL)
+      + JS effects wg Motion Budget stylu + placeholders per-section)
+3. ETAP 3 REVIEW → bash scripts/verify-landing.sh $SLUG (cel: GATE: PASS)
 4. ETAP 3.5 COPY REVIEW (Manus) — OBOWIĄZKOWY:
    a. bash scripts/review-copy-manus.sh $SLUG   (5-15 min, blocking poll)
    b. node scripts/apply-copy.mjs $SLUG
-   c. bash scripts/verify-landing.sh $SLUG (re-verify — nadal ≥60 PASS)
+   c. bash scripts/verify-landing.sh $SLUG (re-verify — nadal GATE: PASS)
 5. ETAP 4 DESIGN polish (już w HTML z ETAP 2 — tutaj tylko drobne poprawki per manifest)
 6. ETAP 4.5 OPTIMIZE IMAGES (OBOWIĄZKOWE 2 kroki):
    a. node scripts/optimize-landing-images.mjs $SLUG
@@ -162,15 +162,16 @@ DEFAULT DECYZJE (bez pytania):
 - Manus task timeout (>15 min w ETAP 3.5) → STOP, deploy z oryginalnym copy + flag w commit msg
 - Manus zwraca error → retry 1x, jeśli znów error → STOP
 - regression (verify-all-landings) fail → STOP, raport, NIE deploy
-- **verify-landing.sh ≥1 FAIL → STOP, raport, NIE commit/deploy (safety/quality violation — hard rule)**
-- verify-landing.sh <60 PASS → STOP, raport, NIE deploy
+- **verify-landing.sh GATE: FAIL (exit 1) → STOP, raport, NIE commit/deploy (safety/quality violation — hard rule)**
 - Wszystko inne → kontynuuj, deploy, raportuj niedociągnięcia w podsumowaniu
 
 PRE-COMMIT CHECK (obligatoryjne przed 'git add'):
   bash scripts/verify-landing.sh $SLUG
-  # Tylko gdy SUMMARY pokazuje ❌ 0 (FAIL = 0) → git add + commit
-  # Jeśli ≥1 FAIL — napraw PRZED commitem
-  # Możesz mieć WARN (opcjonalne aesthetic choices) — nie blokują
+  # Gate = WYŁĄCZNIE linia GATE / exit code:
+  #   GATE: PASS (exit 0)          → git add + commit
+  #   GATE: FAIL (exit 1)          → napraw PRZED commitem (NIE --no-verify!)
+  #   GATE: WARN-EXCEEDED (exit 2) → commit OK + odnotuj WARN-y w raporcie końcowym
+  # NIE interpretuj liczbowych progów (≥N PASS) — liczba checków zmienia się między wersjami
 
 Punkt startu: docs/landing/01-direction.md
 

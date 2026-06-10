@@ -93,7 +93,11 @@ STYLE_REQUIRES_BENTO=1
 STYLE_REQUIRES_HOW_STEPS=1
 STYLE_REQUIRES_SOLUTION_BENTO=1
 
+HAS_STYLE=0
+REQ_SPLIT=0; REQ_COUNTER=0; REQ_MAGNETIC=0; REQ_TILT=0; REQ_PARALLAX=0
+SPLIT_MIN=1; COUNTER_MIN=1; MAGNETIC_MIN=1; TILT_MIN=1; PARALLAX_MIN=1
 if [ -n "$STYLE_ID" ] && [ -f "docs/landing/style-atlas/$STYLE_ID.md" ]; then
+  HAS_STYLE=1
   STYLE_FILE="docs/landing/style-atlas/$STYLE_ID.md"
   MOTION=$(awk '/^## 10\. Motion Budget/,/^## 11\./' "$STYLE_FILE" || true)
   # Parse tylko js_effects_forbidden (nie required)
@@ -104,6 +108,25 @@ if [ -n "$STYLE_ID" ] && [ -f "docs/landing/style-atlas/$STYLE_ID.md" ]; then
   echo "$MOTION_FORBIDDEN" | grep -q "\.magnetic" && STYLE_ALLOWS_MAGNETIC=0 || true
   echo "$MOTION_FORBIDDEN" | grep -q "\.js-tilt" && STYLE_ALLOWS_TILT=0 || true
   echo "$MOTION_FORBIDDEN" | grep -q "\.js-counter" && STYLE_ALLOWS_COUNTER=0 || true
+
+  # v5.0: REQUIRED efekty WYŁĄCZNIE z js_effects_required stylu (koniec globalnych progów —
+  # poprzednio verify żądał magnetic≥2/tilt≥2/parallax≥1 globalnie, podczas gdy 4 style je ZAKAZUJĄ)
+  MOTION_REQUIRED=$(echo "$MOTION" | awk '/js_effects_required:/,/js_effects_forbidden:|js_effects_count:|^[[:space:]]*```[[:space:]]*$/')
+  echo "$MOTION_REQUIRED" | grep -q "\.js-split"    && REQ_SPLIT=1    || true
+  echo "$MOTION_REQUIRED" | grep -q "\.js-counter"  && REQ_COUNTER=1  || true
+  echo "$MOTION_REQUIRED" | grep -q "\.magnetic"    && REQ_MAGNETIC=1 || true
+  echo "$MOTION_REQUIRED" | grep -q "\.js-tilt"     && REQ_TILT=1     || true
+  echo "$MOTION_REQUIRED" | grep -q "\.js-parallax" && REQ_PARALLAX=1 || true
+  _min() { echo "$MOTION" | grep -oE "$1:[[:space:]]*[0-9]+" | grep -oE '[0-9]+' | head -1; }
+  v=$(_min split_min);    [ -n "$v" ] && SPLIT_MIN=$v
+  v=$(_min counter_min);  [ -n "$v" ] && COUNTER_MIN=$v
+  v=$(_min magnetic_min); [ -n "$v" ] && MAGNETIC_MIN=$v
+  v=$(_min tilt_min);     [ -n "$v" ] && TILT_MIN=$v
+  v=$(_min parallax_min); [ -n "$v" ] && PARALLAX_MIN=$v
+  # min 0 w js_effects_count = efekt opcjonalny, nie wymagany
+  [ "$SPLIT_MIN" = "0" ] && REQ_SPLIT=0; [ "$COUNTER_MIN" = "0" ] && REQ_COUNTER=0
+  [ "$MAGNETIC_MIN" = "0" ] && REQ_MAGNETIC=0; [ "$TILT_MIN" = "0" ] && REQ_TILT=0
+  [ "$PARALLAX_MIN" = "0" ] && REQ_PARALLAX=0
 
   # Section Architecture forbidden
   SECARCH=$(awk '/^## 8\. Section/,/^## 9\./' "$STYLE_FILE" || true)
@@ -336,80 +359,43 @@ else
   FAIL=$((FAIL + 1))
 fi
 
-# ─── 7. JS effects coverage (5 obowiązkowych, DESIGN.md D.1) ───
+# ─── 7. JS effects coverage (v5.0 — STEROWANE Motion Budgetem stylu, NIE globalnie) ───
+# Semantyka per efekt:
+#   - w js_effects_forbidden stylu → obecny = FAIL, brak = PASS
+#   - w js_effects_required stylu  → poniżej min z js_effects_count = FAIL
+#   - w żadnym                     → neutralny (informacyjnie, bez liczenia)
+# Brak _brief.md / brak pliku stylu → tryb RELAKS (informacyjne WARN, bez FAIL).
 echo ""
-if [ "$NO_BRIEF" = "1" ]; then
-  echo "✨ 7. JS effects (RELAKS — brak _brief.md, Style Lock niemożliwy)"
+if [ "$NO_BRIEF" = "1" ] || [ "$HAS_STYLE" = "0" ]; then
+  echo "✨ 7. JS effects (RELAKS — brak _brief.md lub pliku stylu, Motion Budget nieznany)"
 else
-  echo "✨ 7. JS effects (adaptowane per Style Lock)"
-fi
-JSSPLIT=$(grep -cE 'class="[^"]*js-split[^"]*"' "$FILE" || true)
-if [ "$STYLE_ALLOWS_SPLIT" = "0" ]; then
-  # Styl zakazuje — grep OBECNY = fail, brak = pass
-  if [ "$JSSPLIT" -eq 0 ]; then echo "  ✅ Split (.js-split) nieobecny (zgodnie ze Style Lock)"; PASS=$((PASS + 1));
-  else echo "  ❌ Split (.js-split) obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
-elif [ "$NO_BRIEF" = "1" ]; then
-  if [ "$JSSPLIT" -ge 1 ]; then echo "  ✅ Split (.js-split) obecny ($JSSPLIT)"; PASS=$((PASS + 1));
-  else echo "  ⚠️  Split (.js-split) brak — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
-else
-  check "Split headline (.js-split) na h1 hero" "1" "$([ "$JSSPLIT" -ge 1 ] && echo 1 || echo 0)"
+  echo "✨ 7. JS effects (wg Motion Budget stylu $STYLE_ID)"
 fi
 
-JSCOUNT=$(grep -cE 'class="[^"]*js-counter[^"]*"' "$FILE" || true)
-if [ "$STYLE_ALLOWS_COUNTER" = "0" ]; then
-  if [ "$JSCOUNT" -eq 0 ]; then echo "  ✅ Counter (.js-counter) nieobecny (Style Lock)"; PASS=$((PASS + 1));
-  else echo "  ❌ Counter obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
-elif [ "$NO_BRIEF" = "1" ]; then
-  if [ "$JSCOUNT" -ge 2 ]; then echo "  ✅ Number counters ($JSCOUNT)"; PASS=$((PASS + 1));
-  else echo "  ⚠️  Number counters (.js-counter) <2 — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
-else
-  check_range "Number counters (.js-counter) ≥ 2" 2 20 "$JSCOUNT"
-fi
-
-MAGNET=$(grep -cE 'class="[^"]*magnetic[^"]*"' "$FILE" || true)
-if [ "$STYLE_ALLOWS_MAGNETIC" = "0" ]; then
-  if [ "$MAGNET" -eq 0 ]; then echo "  ✅ Magnetic (.magnetic) nieobecny (Style Lock)"; PASS=$((PASS + 1));
-  else echo "  ❌ Magnetic obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
-elif [ "$NO_BRIEF" = "1" ]; then
-  if [ "$MAGNET" -ge 2 ]; then echo "  ✅ Magnetic CTA ($MAGNET)"; PASS=$((PASS + 1));
-  else echo "  ⚠️  Magnetic CTA (.magnetic) <2 — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
-else
-  check_range "Magnetic CTA (.magnetic) ≥ 2" 2 20 "$MAGNET"
-fi
-
-# js-tilt + js-parallax = opcjonalne aesthetic effects (niektóre kierunki celowo ich nie używają, np. Rugged Heritage = industrial bez ruchu)
-if [ "$STYLE_ALLOWS_TILT" = "0" ]; then
-  JSTILT_CHECK=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
-  if [ "$JSTILT_CHECK" -eq 0 ]; then echo "  ✅ Tilt (.js-tilt) nieobecny (Style Lock)"; PASS=$((PASS + 1));
-  else echo "  ❌ Tilt obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
-fi
-if [ "$STYLE_ALLOWS_PARALLAX" = "0" ]; then
-  JSPAR_CHECK=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
-  if [ "$JSPAR_CHECK" -eq 0 ]; then echo "  ✅ Parallax (.js-parallax) nieobecny (Style Lock)"; PASS=$((PASS + 1));
-  else echo "  ❌ Parallax obecny ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
-fi
-# Oryginalne JSTILT/JSPARALLAX WARN — pomijane gdy Style Lock zakazuje (już obsłużone wyżej)
-if [ "$STYLE_ALLOWS_TILT" = "1" ]; then
-  JSTILT=$(grep -cE 'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$FILE" || true)
-  if [ "$JSTILT" -ge 2 ]; then
-    echo "  ✅ Tile 3D Tilt (.js-tilt) ≥ 2 ($JSTILT)"
-    PASS=$((PASS + 1))
+# helper: jeden efekt wg semantyki forbidden/required/neutral
+check_effect() {
+  local name="$1" pattern="$2" allows="$3" required="$4" min="$5"
+  local n
+  n=$(grep -cE "$pattern" "$FILE" || true)
+  if [ "$allows" = "0" ]; then
+    if [ "$n" -eq 0 ]; then echo "  ✅ $name nieobecny (Style Lock zakazuje)"; PASS=$((PASS + 1));
+    else echo "  ❌ $name obecny ($n) ale Style Lock zabrania"; FAIL=$((FAIL + 1)); fi
+  elif [ "$NO_BRIEF" = "1" ] || [ "$HAS_STYLE" = "0" ]; then
+    if [ "$n" -ge 1 ]; then echo "  ✅ $name obecny ($n)"; PASS=$((PASS + 1));
+    else echo "  ⚠️  $name brak — bez Style Lock check informacyjny"; WARN=$((WARN + 1)); fi
+  elif [ "$required" = "1" ]; then
+    if [ "$n" -ge "$min" ]; then echo "  ✅ $name ≥ $min ($n) — wymagany przez Motion Budget"; PASS=$((PASS + 1));
+    else echo "  ❌ $name poniżej minimum Motion Budget (wymagane ≥$min, jest $n)"; FAIL=$((FAIL + 1)); fi
   else
-    echo "  ⚠️  Tile 3D Tilt (.js-tilt) ≥ 2 (got $JSTILT) — opcjonalne"
-    WARN=$((WARN + 1))
+    echo "  ℹ️  $name: neutralny wg Motion Budget ($n obecnych) — opcjonalny"
   fi
-fi
+}
 
-if [ "$STYLE_ALLOWS_PARALLAX" = "1" ]; then
-  JSPARALLAX=$(grep -cE 'class="[^"]*js-parallax[^"]*"' "$FILE" || true)
-  if [ "$JSPARALLAX" -ge 1 ]; then
-    echo "  ✅ Parallax numerals (.js-parallax) ≥ 1"
-    PASS=$((PASS + 1))
-  else
-    echo "  ⚠️  Parallax numerals (.js-parallax) ≥ 1 (got 0) — opcjonalne"
-    WARN=$((WARN + 1))
-  fi
-fi
+check_effect "Split headline (.js-split)"     'class="[^"]*js-split[^"]*"'                          "$STYLE_ALLOWS_SPLIT"    "$REQ_SPLIT"    "$SPLIT_MIN"
+check_effect "Number counters (.js-counter)"  'class="[^"]*js-counter[^"]*"'                        "$STYLE_ALLOWS_COUNTER"  "$REQ_COUNTER"  "$COUNTER_MIN"
+check_effect "Magnetic CTA (.magnetic)"       'class="[^"]*magnetic[^"]*"'                          "$STYLE_ALLOWS_MAGNETIC" "$REQ_MAGNETIC" "$MAGNETIC_MIN"
+check_effect "Tile 3D Tilt (.js-tilt)"        'class="[^"]*js-tilt[^"]*"|class="[^"]*tile-tilt[^"]*"' "$STYLE_ALLOWS_TILT"   "$REQ_TILT"     "$TILT_MIN"
+check_effect "Parallax (.js-parallax)"        'class="[^"]*js-parallax[^"]*"'                       "$STYLE_ALLOWS_PARALLAX" "$REQ_PARALLAX" "$PARALLAX_MIN"
 
 # ─── 8. Copy anti-patterns ───
 echo ""
@@ -687,7 +673,7 @@ if [ -f "$BRIEF" ]; then
     WARN=$((WARN + 1))
   fi
 else
-  echo "  ⚠️  _brief.md BRAK — ETAP 2.5 DIRECTION nie wykonany"
+  echo "  ⚠️  _brief.md BRAK — ETAP 1 DIRECTION nie wykonany"
   WARN=$((WARN + 1))
 fi
 
@@ -698,13 +684,23 @@ echo "  SUMMARY: ✅ $PASS · ⚠️  $WARN · ❌ $FAIL"
 echo "═══════════════════════════════════════════════════════════"
 echo ""
 
+# ─── GATE (v5.0) — JEDYNE źródło prawdy o wyniku ───
+# Semantyka (kanoniczna — wszystkie docs odwołują się TYLKO tutaj):
+#   GATE: PASS           (exit 0) → przejdź dalej w pipeline (deploy na końcu)
+#   GATE: FAIL           (exit 1) → STOP + raport, NIE commit/deploy
+#   GATE: WARN-EXCEEDED  (exit 2) → kontynuuj, odnotuj WARN-y w raporcie końcowym
+# NIE używaj liczbowych progów typu "≥15/18" / "≥60 PASS" — liczba checków
+# zmienia się między wersjami skryptu, exit code nie.
 if [ "$FAIL" -gt 0 ]; then
+  echo "GATE: FAIL (FAIL=$FAIL)"
   echo "❌ FAIL — napraw problemy przed deployem"
   exit 1
 elif [ "$WARN" -gt 3 ]; then
+  echo "GATE: WARN-EXCEEDED (WARN=$WARN)"
   echo "⚠️  Za dużo warningów — przejrzyj raport"
   exit 2
 else
+  echo "GATE: PASS"
   echo "✅ Landing gotowy do ETAP 4 (Playwright visual verify)"
   echo ""
   echo "Następny krok:"

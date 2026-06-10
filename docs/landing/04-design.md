@@ -155,7 +155,7 @@ Jeśli któreś NIE → ten moment nie kwalifikuje się. Wybierz z banku inny.
 - Trust bar z ikonami (każdy ma)
 - Sticky CTA mobile (każdy ma)
 - Fade-in animations (każdy ma)
-- Number counters (każdy ma — 5 JS effects baseline)
+- Number counters (jeśli Motion Budget stylu je dopuszcza)
 - Magnetic CTA buttons (baseline)
 - Bento grid features (baseline F1)
 - 5-gwiazdkowy testimonial grid (baseline T1)
@@ -189,50 +189,17 @@ Przed kolejnymi zmianami designu odpowiedz (już nie pierwszy pass — wow momen
 
 ---
 
-## 3. Wybór kierunku estetycznego
+## 3. Kierunek estetyczny = STYLE LOCK z briefu (NIE re-wybieraj!)
 
-Strona musi mieć **ODWAŻNY, SPÓJNY KIERUNEK**. Wybierz jeden:
+Kierunek estetyczny został już wybrany w **ETAP 1** (01-direction.md Krok 9a — deterministyczny
+Product DNA pick z 15 stylów Atlasu) i zapisany w `_brief.md` **sekcja 10 STYLE LOCK**.
 
-| Kierunek | Charakterystyka | Dla jakich produktów | Referencje |
-|----------|-----------------|---------------------|-------------|
-| **Editorial/Luxury** ⭐ | Oversized serif, magazine numbering (Nº 01–10), asymetria, ciepłe neutralne tła, rzadki gold accent | Premium AGD, kosmetyki, home, lifestyle, travel | `landing-pages/paromia/` |
-| **Playful/Toy-like** | Zaokrąglone kształty, żywe kolory, bounce animations | Pet care, dzieci, gadżety | `landing-pages/pupilnik/` |
-| **Brutalist/Raw** | Mocne kontrasty, surowe fonty, grid-breaking | Tech, startupy, edgy | — |
-| **Organic/Natural** | Miękkie gradienty, naturalne kolory, fluid shapes | Wellness, eko, zdrowie | `landing-pages/h2vital/` |
-| **Retro-Futuristic** | Neon na ciemnym, glitch, cyber vibes | Gaming, tech, młody target | `landing-pages/vibestrike/` |
+**NIE re-wybieraj kierunku w ETAP 4.** Tokeny, palety, primitives i snippety stylu →
+`docs/landing/style-atlas/<styl>.md`. Cross-section snippety → `reference/patterns.md`.
 
-**ZAPISZ WYBRANY KIERUNEK** — wszystkie decyzje muszą być z nim spójne.
-
-### Editorial/Luxury — preset (kopiuj-wklej)
-
-Dla produktów premium/lifestyle/AGD. Wzorzec referencyjny: `landing-pages/paromia/`.
-
-**Fonty:**
-- Display: **Fraunces** (variable, `opsz 144, SOFT 30–90`) — headlines
-- Editorial: **Cormorant Garamond** (300/400) — eyebrows, page numbers, captions
-  ⚠️ NIE używaj `Italiana` — ma uszkodzony glif polskiej „Ł" w uppercase
-  (kreska wystaje nad literę). Szczegóły w `02-generate.md` lekcja #6.
-- Body: **Inter** — czytelny neutralny
-
-**Kolorystyka:**
-- Tła: Bone Ivory `#F5F1EA` / `#FAF7F2` / `#EEE8DE` — warstwy ciepłego papieru
-- Ink: `#1A1A1F` (ciemny z nutą granatu, nie czysty czarny)
-- Primary: kolor marki (np. Steam Teal `#1E6F7A`)
-- Gold accent: `#C9A961` — rzadko, tylko w specsheet/final CTA
-
-**Sekcje** (10 + header/footer):
-Nº 01 Hero (asymetryczny, oversized numeral w tle) · Nº 02 Manifesto (sticky left + pull quote right) · Nº 03 Atelier/Features (asymmetric bento z 1 ciemną hero-tile) · Nº 04 Rytuał (3 akty z okrągłymi rzymskimi, linią łączącą) · Nº 05 Spec Sheet (ciemne tło) · Nº 06 Comparison (Poprzedni wiek vs Nowy standard) · Nº 07 Głosy (pull quotes, jedna featured ciemna) · Nº 08 FAQ (sticky-side layout) · Nº 09 Oferta · Nº 10 Final CTA (ciemny z gigantyczną cyfrą w tle).
-
-**Rytm tła:** jasno / jasno / jasno / jasno / **CIEMNO** / jasno / jasno / jasno / jasno / **CIEMNO** / **CIEMNO** (footer). Min. 2 ciemne pasy między jasnymi — to tempo redakcyjne.
-
-**Signature elements:**
-1. Magazine numbering (eyebrow `Nº 03 — Atelier`)
-2. Oversized editorial numeral w hero i final CTA
-3. Tile page numbers (`01 / 06` w rogu karty)
-4. FIG. 01 caption pod hero visual
-5. Italic em na kluczowych słowach (1–2 per headline, Fraunces `SOFT 90`)
-
-**Wszystkie snippety HTML/CSS** → `reference/patterns.md` (14 gotowych wzorców).
+> Usunięto (v5.0): tabelę 5 kierunków i preset Editorial/Luxury — duplikowały Style Atlas
+> (preset = `style-atlas/editorial-print.md`; ostrzeżenie Italiana-Ł = `reference/safety.md` #7)
+> i tworzyły trzecie, sprzeczne źródło prawdy o kierunku.
 
 ---
 
@@ -501,7 +468,7 @@ Kolejność wzroku w offer boxie:
 │                                     │
 │ 199 zł  → 149 zł        [-25%]      │
 │        Oszczędzasz 50 zł            │
-│ lub 3 raty po 50 zł z PayPo         │
+│ Darmowa dostawa · InPost / DPD      │
 │                                     │
 │ ✓ Benefit 1 (benefit→feature→emo)  │
 │ ✓ Benefit 2                         │
@@ -584,7 +551,7 @@ Research rekomenduje BNPL jako winning pattern (5/7 premium brands). Dla TN to N
 <button class="cta-primary magnetic">Zamawiam — 149 zł</button>
 
 <!-- Guarantee pod CTA -->
-<p class="offer-guarantee">🛡️ 30 dni na zwrot · bez pytań · Płatność BLIK, karta, za pobraniem</p>
+<p class="offer-guarantee">🛡️ 30 dni na zwrot · bez pytań · Płatność BLIK, karta, przelew</p>
 
 <!-- Trust strip -->
 <div class="trust-strip">
@@ -735,86 +702,17 @@ Przejrzyj całą stronę i zanotuj:
 - Co można wzmocnić?
 - Gdzie brakuje charakteru?
 
-### Krok 2: Hero jako priorytet — CENTRALNA KOMPOZYCJA
+### Krok 2: Hero jako priorytet
 
-Hero to 80% pierwszego wrażenia. **NIE RÓB** standardowego 2-kolumnowego layoutu (tekst + obraz).
+Hero to 80% pierwszego wrażenia. **Kompozycja hero = wybrany wariant H1-H10 z
+`reference/section-variants.md`** (zadeklarowany w `_brief.md` sekcja 9) + tokeny stylu
+z `_brief.md` sekcja 10 STYLE LOCK. NIE buduj hero „z głowy" w ETAP 4 — tu tylko polish
+zadeklarowanego wariantu (spacing, typografia, placeholder, microcopy).
 
-**Zamiast tego użyj CENTRALNEJ KOMPOZYCJI:**
-
-```
-┌─────────────────────────────────────────────┐
-│        🐾  floating decorations  💕         │
-│                                             │
-│            [badge - centered]               │
-│         [headline - centered]               │
-│        [subheadline - centered]             │
-│           [CTA buttons]                     │
-│                                             │
-│    ┌─────────────────────────┐              │
-│    │   floating    PRODUCT   floating      │
-│    │   badges ───► [image] ◄─── badges    │
-│    │               + glow                   │
-│    │               + ring                   │
-│    └─────────────────────────┘              │
-│                                             │
-│         animated particles                  │
-└─────────────────────────────────────────────┘
-```
-
-**Wymagane elementy Hero:**
-
-1. **Floating decorations** w tle (emoji/ikony związane z produktem)
-   - 5-8 elementów z `animation: float Xs ease-in-out infinite`
-   - Różne rozmiary, pozycje, animation-delay
-
-2. **Animated gradient orbs** (pseudo-elements ::before/::after)
-   - Duże koła z radial-gradient
-   - Subtelna animacja ruchu
-
-3. **Produkt w centrum** z efektami:
-   - **Glow ring** - pulsująca poświata
-   - **Rotating ring** - obracający się dashed border z ikoną
-   - **3D float animation** - produkt "unosi się"
-   - **Hover**: zatrzymanie animacji + scale
-
-4. **Feature badges** wokół produktu
-   - 4 badge'e w rogach
-   - Każdy z ikoną (emoji) + krótki tekst
-   - Floating animation
-
-5. **Animated particles** (opcjonalne, wg produktu)
-   - Np. cząsteczki sierści dla pet care
-   - Animacja "ssania" w stronę produktu
-
-6. **Wavy divider** pod Hero
-   - SVG wave zamiast prostej linii
-   - 2 warstwy z różnymi kolorami
-
-**CSS do skopiowania:**
-```css
-.hero {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-}
-
-.hero-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-
-.hero-product {
-  animation: productFloat 4s ease-in-out infinite;
-}
-
-@keyframes productFloat {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-15px); }
-}
-```
+> Usunięto (v5.0): obowiązkową „centralną kompozycję" z floating emoji, glow ring,
+> rotating ring i particles — to relikt sprzed Style Atlas wymuszający estetykę
+> Playful/AI-slop na każdy landing (sprzeczny z tabelą anty-AI w 02-generate.md
+> i z zakazem layoutu 2-kolumnowego, który jest fundamentem stylów editorial).
 
 ### Krok 3: Dopracowanie KAŻDEJ sekcji (nie tylko Hero!)
 
@@ -856,20 +754,13 @@ Hero to 80% pierwszego wrażenia. **NIE RÓB** standardowego 2-kolumnowego layou
 - Dekoracyjne elementy (logo duże, emoji)
 - Social icons z hover effects
 
-### Krok 4: Wavy dividers między sekcjami
+### Krok 4: Dividery między sekcjami — wg stylu, NIE domyślnie wavy
 
-**NIE UŻYWAJ** prostych linii ani border-top/bottom.
+Motyw dividera definiuje **plik stylu Atlas** (sekcja primitives) — np. editorial = cienka
+linia/rule, apothecary = perforacja, japandi = mosiężny szew, playful = wavy SVG.
 
-**UŻYWAJ** SVG wave dividers:
-```html
-<div class="wavy-divider">
-  <svg viewBox="0 0 1440 120" preserveAspectRatio="none">
-    <path fill="#FEF7ED" d="M0,64 C360,120 720,0 1080,64 C1260,96 1380,80 1440,64 L1440,120 L0,120 Z"/>
-  </svg>
-</div>
-```
-
-Dodaj między: Hero→Trust, Problem→Solution, Testimonials→Offer
+> Usunięto (v5.0): obowiązkowe wavy dividers — pasują wyłącznie do stylów playful/organic,
+> a wymuszane globalnie łamały STYLE LOCK pozostałych 12 stylów.
 
 ### Krok 5: MOBILE — OBOWIĄZKOWE DOPRACOWANIE
 

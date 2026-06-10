@@ -16,7 +16,7 @@
 bash scripts/verify-landing.sh [slug]
 ```
 
-**Target:** ≥15/18 PASS (z ~33 testów część jest warn, nie fail).
+**Target:** `GATE: PASS` z verify-landing.sh (exit 0 = 0 FAIL i ≤3 WARN). `GATE: WARN-EXCEEDED` (exit 2) = kontynuuj + odnotuj w raporcie. NIE używaj liczbowych progów — liczba checków zmienia się między wersjami, exit code nie.
 
 ### Co sprawdza `verify-landing.sh` — 10 grup checks (~33 testy)
 
@@ -56,7 +56,7 @@ Każdy check odpowiada konkretnej regule z [`reference/safety.md`](reference/saf
 | Check | Reguła | Test |
 |---|---|---|
 | OG image = pełny URL Supabase | safety #10 | `grep og:image.*yxmavwkwnfuphjqbelws` |
-| Fonty z `subset=latin-ext` | safety #10 | `grep subset=latin-ext` ≥ 1 |
+| Fonty BEZ `subset=latin-ext` | safety #10 | `grep subset=latin-ext` = 0 (anty-wzorzec) |
 | Meta title ≤ 60 znaków | SEO | length `<title>` |
 | Meta description ≤ 160 znaków | SEO | length meta description |
 
@@ -391,7 +391,7 @@ Nie commituj skryptów screenshot do repo — są utility.
 | Playwright nie działa | `npm install -D playwright && npx playwright install chromium` | 1 | STOP — wymaga manual install |
 | Screenshot pokazuje pustą stronę (ivory plama) | fade-in bug — napraw per safety #2 | 2 | STOP + raport |
 | Screenshot bug nieznany | Ręczny fix ostatniego diffa, re-shoot | 2 | STOP + pokaż screenshot userowi |
-| `verify-landing.sh` < 15/18 PASS | Fix per-check, re-run | 3 | **STOP + raport, NIE deploy (safety violation)** |
+| `verify-landing.sh` `GATE: FAIL` (exit 1) | Fix per-check, re-run | 3 | **STOP + raport, NIE deploy (safety violation)** |
 | Trust strip rozjeżdża się na mobile | Apply patterns #15 fix | 2 | kontynuuj do ETAP 6 |
 
 ---
