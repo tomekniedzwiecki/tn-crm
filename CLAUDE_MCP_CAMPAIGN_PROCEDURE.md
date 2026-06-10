@@ -14,15 +14,21 @@
 1. **Content** (→ `CLAUDE_ADS_COPY_PROCEDURE.md` v2): pipeline `generate-campaign-batch` =
    research Manus → 5 spójnych KONCEPTÓW (copy z risk-reversal COD + image_prompt + video_hook)
    → grafiki Gemini z referencją produktu. Wynik w `workflow_ads.ad_copies` + `ad_creatives`.
-2. **Kampania** (ten plik): gate'y → kampania → 1 grupa → kreacje+reklamy z konceptów → PAUSED → raport.
+2. **Kampania** (ten plik): gate'y → kampania → 1 grupa → kreacje+reklamy z konceptów →
+   grupa+reklamy ACTIVE, kampania PAUSED → raport.
 
 ---
 
 ## ZASADY BEZWZGLĘDNE
 
-1. **Wszystko tworzysz PAUSED.** Publikacja = wyłącznie Tomek ręcznie po review.
-2. **Nie dotykaj metody płatności.** Bez karty `ads_create_ad` pada (`No Payment Method`, subcode
-   `1359188`) — kreacje się utworzą, reklamy nie. Zgłoś, nie naprawiaj.
+1. **Kampania PAUSED, grupa + reklamy ACTIVE** (decyzja Tomka 2026-06-10). Dzieci ze statusem ACTIVE
+   nie emitują, dopóki rodzic-kampania jest PAUSED — a publikacja to wtedy JEDEN przełącznik (kampania)
+   zamiast siedmiu. Tworzenie idzie PAUSED (API tak tworzy), po zbudowaniu włącz `ads_activate_entity`
+   na ad secie i każdej reklamie. Publikacja kampanii = wyłącznie Tomek ręcznie po review.
+2. **Nie dotykaj metody płatności.** Bez karty `ads_create_ad` MOŻE paść (`No Payment Method`, subcode
+   `1359188` — Trenbox) — ale nie zawsze (Doodlo 2026-06-10: 5 reklam PAUSED utworzonych mimo
+   `has_payment_method=false`; weryfikacja karty przesunięta na aktywację). Próbuj utworzyć, zgłoś kartę
+   jako prerekwizyt publikacji, nie naprawiaj.
 3. **Potwierdź konto przed pierwszym zapisem** (zła kampania = budżet klienta X na koncie Y).
 4. **Beneficjent/Płatnik (DSA)** wymagane na każdej grupie w EU — beneficjent = marka klienta, płatnik = podmiot finansujący.
 5. **Nie blokuj się na „idealnym".** Jeśli brakuje CAPI/wideo/custom eventów — zbuduj to, co się da,
@@ -35,7 +41,7 @@
 | Parametr | Stare (v1/cowork) | **NOWE (v2)** | Dlaczego |
 |---|---|---|---|
 | Liczba grup | 2 demograficzne | **1 szeroka** | budżet/ad set < próg nauki → wieczna „Learning Limited"; konsolidacja = gęstszy sygnał |
-| Event optymalizacji | Purchase od startu | **drabina: ViewContent → AddToCart → Purchase → Delivered** | nowy pixel ma ~0 zakupów/tydz; Purchase nigdy nie wyjdzie z nauki |
+| Event optymalizacji | Purchase od startu | **drabina: InitiatedCheckout → Purchase → Delivered** | decyzja Tomka 2026-06-10: NIE ViewContent/AddToCart — zbierają tani ruch klikaczy bez intencji; IC = najniższy event z realną intencją zakupu. Purchase od startu nadal NIE (nowy pixel ~0 zakupów/tydz) |
 | Targetowanie | wiek/płeć twarde (adv_audience=0) | **broad + Advantage+ Audience ON** | broad to default 2025-2026; „kreacja jest targetowaniem" |
 | Budżet | 10 zł sztywno | **realny próg 40-60 zł/dzień; 10 zł = „tani sygnał, nie licz na zakupy"** | (CPA×50)/7; 10 zł nie kupi 10 zakupów/tydz |
 | Liczba reklam | 5 ×2 grupy = 10 | **3-5 RÓŻNYCH konceptów w 1 grupie** | różnorodność > wolumen (Andromeda); 10 reklam na 10 zł = każda głodzona |
@@ -61,8 +67,12 @@ Kampania konwersyjna bez tego = spalony budżet. Każdy ❌ to STOP / prerekwizy
    POTWIERDŹ z Tomkiem, zapisz. `is_ads_mcp_enabled=true`, `account_status=ACTIVE`.
    Zapamiętaj `has_payment_method`, `min_daily_budget_cents`.
 2. **Strona FB** — `ads_get_ad_account_pages`; jeśli `[]` → strona niepodpięta (reklam nie zrobisz).
-   Strony w BM klienta są niewidoczne przez MCP — poproś Tomka o `page_id` LUB przypięcie strony do konta.
-   Strona zwykle nazywa się jak marka (wyjątki się zdarzają — Trenbox=„Sfera AI").
+   Strony w BM klienta są niewidoczne przez MCP (`ads_get_pages_for_business` na BM klienta = Authorization Error)
+   — poproś Tomka o `page_id` LUB przypięcie strony do konta. **Prosząc o page_id ZAWSZE podaj bezpośredni link:**
+   `https://business.facebook.com/latest/settings/pages?business_id=737839566050751` (BM Tomka — widzi tam
+   też strony klientów udostępnione partnersko; kolumna „Identyfikator" = page_id). Strona zwykle nazywa się
+   jak marka (wyjątki się zdarzają — Trenbox=„Sfera AI").
+   UWAGA: `page_id` z BM klienta DZIAŁA w `ads_create_creative`/`ads_create_ad` (zweryfikowane: Doodlo 2026-06-10).
    **Page warm-up:** strona NIE może być pusta — 3-5 postów organicznych + zdjęcia + About/kontakt.
 3. **Pixel + zdarzenia** — `ads_get_datasets` → dataset marki. **`ads_get_dataset_stats` — czy
    w ogóle odpala JAKIKOLWIEK event?** 0 zdarzeń = tracking zepsuty, NIE delivery. Sprawdź też
@@ -92,7 +102,14 @@ nieosiągalne, zostań przy manualnym CBO. ASC rozważ tylko dla breakout sklepu
 billing_event: IMPRESSIONS, optimization_goal: OFFSITE_CONVERSIONS,
 conversion_locations: WEBSITE, destination_type: WEBSITE,
 promoted_object: {"pixel_id":"<PIXEL>","custom_event_type":"<EVENT Z DRABINY — KROK 5>"},
-targeting: {"geo_locations":{"countries":["PL"]},"age_min":18,"age_max":65}
+targeting: {"geo_locations":{"countries":["PL"],"location_types":["home","recent"]},"age_min":18,"age_max":65}
+            // location_types ZAWSZE jawnie ["home","recent"]! Bez tego API zapisuje usunięty typ
+            //   „osoby mieszkające w lokalizacji" (home solo) i Ads Manager blokuje publikację błędem
+            //   #1870194 („opcja targetowania na podstawie lokalizacji została usunięta") — Doodlo 2026-06-10.
+            // Fix po fakcie: ads_update_entity z pełnym targeting + location_types ["home","recent"]
+            //   MOŻE NIE WYSTARCZYĆ — u Doodlo UI dalej pokazywał stary typ mimo success z API.
+            //   Ostatecznie poproś Tomka: Ads Manager → grupa odbiorców → Lokalizacje → przełącz na
+            //   PIERWSZĄ opcję („Osoby mieszkające w tej lokalizacji lub niedawno ją odwiedzające").
             // płeć: pomiń (wszyscy) chyba że produkt jednoznacznie damski/męski → "genders":[2]/[1]
             // Advantage+ Audience ON: NIE ustawiaj advantage_audience=0 (broad to default)
 dsa_beneficiary: "<MARKA>", dsa_payor: "<podmiot finansujący>"
@@ -107,13 +124,19 @@ Dobierz `custom_event_type` wg tego, co pixel REALNIE odpala (z `ads_get_dataset
 
 | Stan pixela | `custom_event_type` | Kiedy |
 |---|---|---|
-| 0 historii / świeży, niski budżet | **`CONTENT_VIEW`** (ViewContent) | start — odpala 20-100× częściej niż Purchase, karmi algorytm |
-| Jest ruch, trochę koszyków | **`ADD_TO_CART`** | gdy ATC ~15-30/tydz; bliżej intencji, wciąż gęsty |
+| 0 historii / świeży | **`INITIATED_CHECKOUT`** | **START (decyzja Tomka 2026-06-10).** NIE ViewContent ani AddToCart — optymalizacja na nie zbiera tanich klikaczy bez intencji (śmieciowy ruch). IC = przejście do kasy, najniższy event o realnej intencji zakupowej |
 | ≥ ~10-15 (idealnie 50) zakupów/tydz + budżet ≥ CPA | **`PURCHASE`** | dopiero gdy wolumen pozwala wyjść z nauki |
 | Dojrzałe + CAPI „Delivered" | **custom „Confirmed/Delivered"** | tnie RTO; uczy na płacących, nie no-show |
 
+- ⚠️ **Enum:** `INITIATED_CHECKOUT` (z „D"), NIE „INITIATE_CHECKOUT" — zły enum zwraca mylący
+  `INTERNAL` error bez wskazania przyczyny (Doodlo 2026-06-10).
+- ⚠️ **Eventu NIE zmienisz po utworzeniu ad setu** (error 100/3260011 „Can't Make Edits to Published
+  Ad Set" — dotyczy też PAUSED). Graduacja/zmiana = NOWY ad set (kreacje reużyj przez `creative_id`,
+  reklamy utwórz na nowo), stary przemianuj na `*-OLD-DO-USUNIECIA` (MCP nie ma delete; Tomek kasuje w Ads Manager).
 - **Próg nauki:** ~50 zdarzeń/ad set/7 dni (Meta obniżyła minimum wyjścia do ~10 od poł. 2024, ale
-  ~50 to nadal realny cel stabilności). Przy 10 zł/dzień na Purchase = nieosiągalne → dlatego startujesz niżej.
+  ~50 to nadal realny cel stabilności). Konsekwencja startu na IC: przy 10 zł/dzień to ~1-6 IC/tydz →
+  wieczna „Learning Limited". To świadomy trade-off (jakość ruchu > szybkość nauki) — tym bardziej
+  **budżet 40-60 zł/dzień to minimum**, żeby IC w ogóle karmił algorytm.
 - **Od dnia 1, niezależnie od optymalizacji:** wysyłaj custom event „PurchaseConfirmed/Delivered"
   przez CAPI przy potwierdzeniu zamówienia — budujesz dataset pod późniejsze przełączenie (zero downside).
 - **Graduacja resetuje naukę** — przy zmianie eventu zaplanuj nowy okres nauki.
@@ -149,11 +172,15 @@ call_to_action_type: SHOP_NOW,  name: "<marka> — <angle> #<i>"
 
 ## KROK 8 — Reklamy (`ads_create_ad`) + audiencje retargetingu
 
-- `ads_create_ad`: `ad_set_id`, `ad_name`, `creative: {"creative_id":"<id>"}`. Wszystko PAUSED.
+- `ads_create_ad`: `ad_set_id`, `ad_name`, `creative: {"creative_id":"<id>"}`. Po utworzeniu włącz
+  reklamy i ad set przez `ads_activate_entity` (kampania zostaje PAUSED — patrz zasada #1).
 - **Retargeting od dnia 1 — tylko PRE-TWORZENIE pul, NIE płatny ad set:** `ads_create_custom_audience`
   (WEBSITE) dla: All visitors 180d, ViewContent 180d, AddToCart 180d, InitiateCheckout 180d
   (+ ENGAGEMENT: zaangażowani na FB/IG — napełniają się bez ruchu na stronie). Pule są puste na
   starcie i napełniają się z prospectingu. Płatny retargeting włącz dopiero przy ~300-1000+ userach.
+  **PUŁAPKA:** gdy pixel żyje w INNYM BM niż konto reklamowe (np. pixel w BM Tomka, konto w BM klienta),
+  `ads_create_custom_audience` pada z `INTERNAL` (non-retryable) — Doodlo 2026-06-10. Wtedy pule = prerekwizyt
+  (Tomek ręcznie w Ads Manager lub po udostępnieniu pixela do BM konta).
 
 ## KROK 9 — Zapis w CRM + raport + PREREKWIZYTY
 
@@ -210,5 +237,14 @@ Zbudowane v1 (PAUSED): kampania `120254314521770595` (CBO 10 zł, 2 grupy, Purch
 na brak karty (subcode 1359188). **Pixel ma 0 zdarzeń/7 dni → kampania jest ślepa.**
 
 **Co zmienić pod v2:** (1) skonsolidować do 1 szerokiej grupy; (2) zmienić event z Purchase na
-`CONTENT_VIEW`; (3) doań UTM-y do linków; (4) **najpierw naprawić tracking** — pixel nic nie zbiera,
-więc nawet po dodaniu karty kampania nie ma sygnału. Bez kroku (4) reszta jest kosmetyką.
+`INITIATED_CHECKOUT` (= nowy ad set — eventu nie da się edytować); (3) dodać UTM-y do linków;
+(4) **najpierw naprawić tracking** — pixel nic nie zbiera, więc nawet po dodaniu karty kampania
+nie ma sygnału. Bez kroku (4) reszta jest kosmetyką.
+
+## Worked example #2 — Doodlo (workflow 46cb4f0b, 2026-06-10, pierwsza kampania wg v2.1)
+
+Konto „Doodlo PL" `2021242195486085` (BM klienta DoodloPl), strona `1171912009334193` (page_id podany
+przez Tomka z linku BM), pixel `1327151336097514` (0 zdarzeń — świeży). Kampania `120250450175050635`
+(CBO 10 zł) + ad set `120250450932190635` (broad PL, INITIATED_CHECKOUT) + 5 kreacji + 5 reklam, wszystko
+PAUSED. Wnioski wpisane wyżej: reklamy przeszły bez karty; WCA padły (pixel w BM Tomka vs konto w BM
+klienta); event po utworzeniu nieedytowalny → pierwszy ad set (CONTENT_VIEW) przemianowany do usunięcia.

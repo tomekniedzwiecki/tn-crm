@@ -375,6 +375,43 @@ Deno.serve(async (req) => {
       const adminUrl = data.adminUrl
         || (data.workflowId ? `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${data.workflowId}` : '')
 
+      // ── Ad report: bloki narracyjne (raporty MCP) ──────────────────────
+      // Puste stringi przy braku danych = pełna kompatybilność ze starymi raportami Manus.
+      const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      const purchasesNum = Number(data.purchases) || 0
+      const summaryBlock = data.summary
+        ? `<div style="background-color:#0d1f17;border-left:3px solid #10b981;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px;"><p style="margin:0;color:#d4d4d8;font-size:14px;line-height:1.7;">${esc(data.summary)}</p></div>`
+        : ''
+      // Hero: ROAS tylko gdy są zakupy; pre-revenue pokazuje ruch zamiast "0.00x"
+      const heroBlock = purchasesNum > 0
+        ? `<div style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);border-radius:12px;padding:28px;margin-bottom:24px;text-align:center;"><p style="margin:0 0 8px 0;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">ROAS</p><p style="margin:0;color:#ffffff;font-size:48px;font-weight:700;line-height:1;">${esc(data.roas || '0.00')}x</p></div>`
+        : `<div style="background-color:#18181b;border:1px solid #262626;border-radius:12px;padding:28px;margin-bottom:24px;text-align:center;"><p style="margin:0 0 8px 0;color:#737373;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">Wejścia do sklepu z reklam</p><p style="margin:0;color:#ffffff;font-size:48px;font-weight:700;line-height:1;">${esc(data.clicks || 0)}</p></div>`
+      // Mikro-lejek kasy (TakeDrop: IC → dane dostawy → płatność → zakup)
+      const cf = data.checkout_funnel
+      let funnelBlock = ''
+      if (cf && Number(cf.initiate_checkout) > 0) {
+        const steps: Array<[string, number]> = ([
+          ['Do kasy', cf.initiate_checkout],
+          ['Dane dostawy', cf.add_shipping_info],
+          ['Płatność', cf.add_payment_info],
+          ['Zakup', cf.purchases],
+        ] as Array<[string, unknown]>)
+          .filter(([, v]) => v !== undefined && v !== null)
+          .map(([l, v]) => [l, Number(v)] as [string, number])
+        const cells = steps.map(([label, v], i) => {
+          const prev = i > 0 ? steps[i - 1][1] : 0
+          const pct = i > 0 && prev > 0 ? `<br><span style="color:#737373;font-size:10px;">${Math.round((v / prev) * 100)}%</span>` : ''
+          return `<td align="center" style="padding:8px 2px;"><p style="margin:0 0 2px 0;color:#737373;font-size:10px;text-transform:uppercase;">${esc(label)}</p><p style="margin:0;color:#ffffff;font-size:18px;font-weight:600;line-height:1.3;">${v}${pct}</p></td>`
+        }).join('<td align="center" style="color:#525252;font-size:14px;">→</td>')
+        funnelBlock = `<div style="background-color:#141416;border-radius:8px;padding:14px 10px;margin-bottom:24px;"><p style="margin:0 0 6px 10px;color:#737373;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Ścieżka w kasie</p><table width="100%" cellpadding="0" cellspacing="0"><tr>${cells}</tr></table></div>`
+      }
+      const nextStepsArr: string[] = Array.isArray(data.next_steps) ? data.next_steps.filter(Boolean) : []
+      const nextStepsBlock = nextStepsArr.length
+        ? `<div style="background-color:#18181b;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><p style="margin:0 0 8px 0;color:#10b981;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Plan na kolejny tydzień</p>${nextStepsArr.map((s) => `<p style="margin:0 0 6px 0;color:#d4d4d8;font-size:13px;line-height:1.6;">• ${esc(s)}</p>`).join('')}</div>`
+        : ''
+      const reportUrl = data.report_url
+        || (data.client_token ? `https://crm.tomekniedzwiecki.pl/client-projekt.html?token=${data.client_token}#raport` : (data.projectUrl || ''))
+
       // Prepare data for variable replacement
       const templateData: Record<string, any> = {
         email: data.email,
@@ -417,7 +454,13 @@ Deno.serve(async (req) => {
         add_to_cart: data.add_to_cart || 0,
         initiate_checkout: data.initiate_checkout || 0,
         currency: data.currency || 'PLN',
-        client_token: data.client_token || ''
+        client_token: data.client_token || '',
+        // Ad report v2 (MCP) — bloki HTML budowane wyżej, puste dla starych raportów
+        summary_block: summaryBlock,
+        hero_block: heroBlock,
+        funnel_block: funnelBlock,
+        next_steps_block: nextStepsBlock,
+        report_url: reportUrl
       }
 
       // Replace variables in subject and body

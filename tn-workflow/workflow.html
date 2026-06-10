@@ -6,7 +6,7 @@
     <title>TN CRM - Projekt</title>
     <script>
         // Auto-reload when new version is deployed (cache-bust)
-        const ADMIN_APP_VERSION = '2026041525';
+        const ADMIN_APP_VERSION = '2026061001';
         const _storedAdminVersion = localStorage.getItem('tn-admin-version');
         if (_storedAdminVersion && _storedAdminVersion !== ADMIN_APP_VERSION) {
             localStorage.setItem('tn-admin-version', ADMIN_APP_VERSION);
@@ -3088,11 +3088,16 @@
 
                         <!-- Stats cards (hidden until data loaded) -->
                         <div id="raport-stats-section" class="hidden mb-6">
+                            <!-- MCP: podsumowanie dla klienta + zdrowie pixela (renderowane dynamicznie, tylko gdy raport ma te pola) -->
+                            <div id="raport-mcp-summary" class="hidden mb-5"></div>
+                            <div id="raport-pixel-health" class="hidden mb-5"></div>
+
                             <!-- Header with period -->
                             <div class="flex items-center justify-between mb-5">
                                 <h4 class="text-[13px] font-medium text-white flex items-center gap-2">
                                     <i class="ph ph-storefront text-violet-400"></i>
                                     Wyniki e-commerce
+                                    <span id="raport-source-badge"></span>
                                 </h4>
                                 <div class="flex items-center gap-2 text-[11px] text-zinc-500">
                                     <i class="ph ph-calendar"></i>
@@ -3197,6 +3202,8 @@
                                         <div id="raport-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
                                     </div>
                                 </div>
+                                <!-- MCP: mikro-lejek kasy (renderowany dynamicznie, tylko gdy raport ma checkout_funnel) -->
+                                <div id="raport-checkout-funnel" class="hidden"></div>
                             </div>
 
                             <!-- Ruch / Traffic -->
@@ -3265,6 +3272,9 @@
                                     </table>
                                 </div>
                             </div>
+
+                            <!-- MCP: akcje wykonane / learningi / next steps (renderowane dynamicznie, tylko gdy raport ma te pola) -->
+                            <div id="raport-mcp-details" class="hidden mt-5 space-y-5"></div>
                         </div>
 
                         <!-- Historia raportów -->
@@ -14263,7 +14273,7 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                 lastFetchDateEl.textContent = new Date(adsData.report_data.fetched_at).toLocaleDateString('pl-PL', {
                     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
                 });
-                sourceEl.textContent = adsData.report_data.source === 'manus' ? 'Manus' : 'Ręcznie';
+                sourceEl.textContent = adsData.report_data.source === 'mcp' ? 'MCP' : (adsData.report_data.source === 'manus' ? 'Manus' : 'Ręcznie');
             } else if (lastFetchEl) {
                 lastFetchEl.classList.add('hidden');
             }
@@ -14460,6 +14470,240 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
             } else {
                 campaignsList?.classList.add('hidden');
             }
+
+            // MCP report extensions (backward compat: stare raporty Manus bez tych pól renderują się jak dotychczas)
+            renderMcpReportSections(data);
+        }
+
+        // =============================================
+        // MCP REPORT SECTIONS (summary, pixel health, checkout funnel, actions/learnings/next steps)
+        // Każda sekcja warunkowa — brak pola w report_data = sekcja ukryta i wyczyszczona.
+        // =============================================
+        function renderMcpReportSections(data) {
+            // --- Badge źródła przy nagłówku statystyk ---
+            const srcBadgeEl = document.getElementById('raport-source-badge');
+            if (srcBadgeEl) {
+                if (data.source === 'mcp') {
+                    srcBadgeEl.innerHTML = '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">MCP</span>';
+                } else if (data.source === 'manus') {
+                    srcBadgeEl.innerHTML = '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 uppercase tracking-wider">Manus</span>';
+                } else {
+                    srcBadgeEl.innerHTML = '';
+                }
+            }
+
+            // --- Podsumowanie (trafi do klienta) + badge fazy + badge bottleneck ---
+            const summaryEl = document.getElementById('raport-mcp-summary');
+            if (summaryEl) {
+                if (data.summary) {
+                    const phaseLabels = { learning: 'Faza nauki', first_sales: 'Pierwsze sprzedaże', scaling: 'Skalowanie' };
+                    let phaseBadge = '';
+                    if (data.phase && phaseLabels[data.phase]) {
+                        const phaseLabel = data.roadmap_day
+                            ? `${phaseLabels[data.phase]} — dzień ${data.roadmap_day} z 90`
+                            : phaseLabels[data.phase];
+                        phaseBadge = `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-300 border border-violet-500/20"><i class="ph ph-flag"></i> ${escapeHtml(phaseLabel)}</span>`;
+                    }
+                    const bottleneckLabels = {
+                        tracking: 'Wąskie gardło: pomiar (pixel)',
+                        creative: 'Wąskie gardło: kreacje',
+                        landing: 'Wąskie gardło: strona',
+                        checkout: 'Wąskie gardło: koszyk/zaufanie'
+                    };
+                    let bottleneckBadge = '';
+                    if (data.bottleneck && bottleneckLabels[data.bottleneck]) {
+                        bottleneckBadge = `<span class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20"><i class="ph ph-warning"></i> ${escapeHtml(bottleneckLabels[data.bottleneck])}</span>`;
+                    }
+                    summaryEl.innerHTML = `
+                        <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-4">
+                            <div class="flex items-center justify-between gap-2 flex-wrap mb-2">
+                                <div class="text-[10px] text-zinc-600 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i class="ph ph-chat-text"></i>
+                                    Podsumowanie (trafi do klienta)
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-wrap">${phaseBadge}${bottleneckBadge}</div>
+                            </div>
+                            <p class="text-[13px] text-zinc-300 leading-relaxed">${escapeHtml(data.summary)}</p>
+                        </div>`;
+                    summaryEl.classList.remove('hidden');
+                } else {
+                    summaryEl.innerHTML = '';
+                    summaryEl.classList.add('hidden');
+                }
+            }
+
+            // --- Pixel health (ostrzeżenie tylko gdy status !== 'ok') ---
+            const pixelEl = document.getElementById('raport-pixel-health');
+            if (pixelEl) {
+                const ph = data.pixel_health;
+                if (ph && ph.status && ph.status !== 'ok') {
+                    const isDead = ph.status === 'dead';
+                    const boxClass = isDead ? 'bg-rose-500/10 border-rose-500/30' : 'bg-amber-500/10 border-amber-500/30';
+                    const iconClass = isDead ? 'text-rose-400' : 'text-amber-400';
+                    const title = isDead ? 'Pixel nie zbiera danych' : 'Pixel działa słabo';
+                    const chips = [];
+                    if (ph.pageview_7d !== undefined && ph.pageview_7d !== null) {
+                        chips.push(`<span class="text-[10px] px-2 py-0.5 rounded bg-black/30 border border-white/5 text-zinc-300">PageView 7d: <b class="${iconClass}">${Number(ph.pageview_7d).toLocaleString('pl-PL')}</b></span>`);
+                    }
+                    if (ph.emq !== undefined && ph.emq !== null) {
+                        chips.push(`<span class="text-[10px] px-2 py-0.5 rounded bg-black/30 border border-white/5 text-zinc-300">EMQ: <b class="${iconClass}">${escapeHtml(String(ph.emq))}</b></span>`);
+                    }
+                    pixelEl.innerHTML = `
+                        <div class="${boxClass} border rounded-xl p-4">
+                            <div class="flex items-start gap-3">
+                                <i class="ph-fill ph-warning-circle ${iconClass} text-xl mt-0.5"></i>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                                        <span class="text-[13px] font-medium ${iconClass}">${title}</span>
+                                        ${chips.join('')}
+                                    </div>
+                                    ${ph.note ? `<p class="text-[12px] text-zinc-400 leading-relaxed">${escapeHtml(ph.note)}</p>` : ''}
+                                </div>
+                            </div>
+                        </div>`;
+                    pixelEl.classList.remove('hidden');
+                } else {
+                    pixelEl.innerHTML = '';
+                    pixelEl.classList.add('hidden');
+                }
+            }
+
+            // --- Mikro-lejek kasy (checkout_funnel) ---
+            const cfEl = document.getElementById('raport-checkout-funnel');
+            if (cfEl) {
+                const cf = data.checkout_funnel;
+                if (cf && typeof cf === 'object') {
+                    const steps = [
+                        { key: 'initiate_checkout', label: 'Przejście do kasy' },
+                        { key: 'add_shipping_info', label: 'Dane dostawy' },
+                        { key: 'add_payment_info', label: 'Płatność' },
+                        { key: 'purchases', label: 'Zakup' }
+                    ];
+                    let prev = null;
+                    let biggestDrop = 0;
+                    let biggestDropIdx = -1;
+                    const computed = steps.map((s, i) => {
+                        const val = Number(cf[s.key]) || 0;
+                        let pct = null;
+                        if (i > 0 && prev > 0) {
+                            pct = val / prev * 100;
+                            const drop = 100 - pct;
+                            if (drop > biggestDrop) { biggestDrop = drop; biggestDropIdx = i; }
+                        }
+                        prev = val;
+                        return { label: s.label, val, pct };
+                    });
+                    cfEl.innerHTML = `
+                        <div class="text-[10px] text-zinc-600 uppercase tracking-wider mt-4 mb-2 flex items-center gap-1.5">
+                            <i class="ph ph-credit-card"></i>
+                            Mikro-lejek kasy
+                        </div>
+                        <div class="flex items-center gap-2 overflow-x-auto pb-2">
+                            ${computed.map((s, i) => {
+                                const isDrop = i === biggestDropIdx;
+                                const isLast = i === computed.length - 1;
+                                const cardClass = isDrop
+                                    ? 'bg-amber-500/10 border-amber-500/40'
+                                    : (isLast ? 'bg-emerald-900/30 border-emerald-800/50' : 'bg-zinc-900/50 border-zinc-800');
+                                const valClass = isDrop ? 'text-amber-400' : (isLast ? 'text-emerald-400' : 'text-zinc-300');
+                                let pctText;
+                                if (i === 0) pctText = '100%';
+                                else if (s.pct === null) pctText = '—';
+                                else pctText = s.pct.toFixed(0) + '% poprzedniego';
+                                const dropTag = isDrop
+                                    ? `<div class="text-[9px] text-amber-400 font-medium mt-0.5">▼ największy drop (−${biggestDrop.toFixed(0)}%)</div>`
+                                    : '';
+                                const caret = i > 0 ? '<i class="ph ph-caret-right text-zinc-700 flex-shrink-0"></i>' : '';
+                                return `${caret}
+                                    <div class="flex-1 min-w-[110px] border rounded-xl p-3 text-center ${cardClass}">
+                                        <div class="text-[10px] text-zinc-500 uppercase mb-1">${s.label}</div>
+                                        <div class="text-xl font-bold ${valClass}">${s.val.toLocaleString('pl-PL')}</div>
+                                        <div class="text-[10px] ${isDrop ? 'text-amber-400/80' : 'text-zinc-600'}">${pctText}</div>
+                                        ${dropTag}
+                                    </div>`;
+                            }).join('')}
+                        </div>`;
+                    cfEl.classList.remove('hidden');
+                } else {
+                    cfEl.innerHTML = '';
+                    cfEl.classList.add('hidden');
+                }
+            }
+
+            // --- Akcje wykonane / Learningi / Next steps ---
+            const detailsEl = document.getElementById('raport-mcp-details');
+            if (detailsEl) {
+                const actions = Array.isArray(data.actions) ? data.actions.filter(a => a && (a.what || a.why)) : [];
+                const learnings = Array.isArray(data.learnings) ? data.learnings.filter(Boolean) : [];
+                const nextSteps = Array.isArray(data.next_steps) ? data.next_steps.filter(Boolean) : [];
+                let html = '';
+
+                if (actions.length > 0) {
+                    html += `
+                        <div>
+                            <div class="text-[10px] text-zinc-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="ph ph-check-square"></i>
+                                Akcje wykonane
+                            </div>
+                            <div class="space-y-2">
+                                ${actions.map(a => {
+                                    const dateStr = a.date ? new Date(a.date).toLocaleDateString('pl-PL') : '';
+                                    const icon = a.executed === false
+                                        ? '<i class="ph ph-circle text-zinc-600 mt-0.5 flex-shrink-0"></i>'
+                                        : '<i class="ph-fill ph-check-circle text-emerald-400 mt-0.5 flex-shrink-0"></i>';
+                                    return `
+                                    <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 flex items-start gap-2.5">
+                                        ${icon}
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="text-[13px] text-white">${escapeHtml(a.what || '')}</span>
+                                                ${dateStr ? `<span class="text-[10px] text-zinc-600 flex-shrink-0">${escapeHtml(dateStr)}</span>` : ''}
+                                            </div>
+                                            ${a.why ? `<div class="text-[11px] text-zinc-500 mt-0.5">${escapeHtml(a.why)}</div>` : ''}
+                                        </div>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>`;
+                }
+
+                if (learnings.length > 0) {
+                    html += `
+                        <div>
+                            <div class="text-[10px] text-zinc-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="ph ph-lightbulb"></i>
+                                Learningi
+                            </div>
+                            <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 space-y-2">
+                                ${learnings.map(l => `
+                                    <div class="flex items-start gap-2">
+                                        <i class="ph ph-lightbulb text-amber-400 mt-0.5 flex-shrink-0"></i>
+                                        <span class="text-[12px] text-zinc-400 leading-relaxed">${escapeHtml(typeof l === 'string' ? l : JSON.stringify(l))}</span>
+                                    </div>`).join('')}
+                            </div>
+                        </div>`;
+                }
+
+                if (nextSteps.length > 0) {
+                    html += `
+                        <div>
+                            <div class="text-[10px] text-zinc-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                <i class="ph ph-arrow-bend-down-right"></i>
+                                Next steps
+                            </div>
+                            <div class="bg-zinc-900/50 border border-zinc-800 rounded-xl p-3 space-y-2">
+                                ${nextSteps.map(s => `
+                                    <div class="flex items-start gap-2">
+                                        <i class="ph ph-arrow-right text-violet-400 mt-0.5 flex-shrink-0"></i>
+                                        <span class="text-[12px] text-zinc-400 leading-relaxed">${escapeHtml(typeof s === 'string' ? s : JSON.stringify(s))}</span>
+                                    </div>`).join('')}
+                            </div>
+                        </div>`;
+                }
+
+                detailsEl.innerHTML = html;
+                detailsEl.classList.toggle('hidden', html === '');
+            }
         }
 
         async function markReportSent() {
@@ -14506,6 +14750,9 @@ Jeśli brakuje sekcji z linkami prawnymi, dodaj je w footer-bottom lub footer-le
                             add_to_cart: reportData.add_to_cart || 0,
                             initiate_checkout: reportData.initiate_checkout || 0,
                             currency: reportData.currency || 'PLN',
+                            summary: reportData.summary || '',
+                            next_steps: Array.isArray(reportData.next_steps) ? reportData.next_steps : [],
+                            checkout_funnel: reportData.checkout_funnel || null,
                             workflow_id: workflow.id,
                             client_token: workflow.unique_token || ''
                         }
@@ -17432,6 +17679,13 @@ PODSUMOWANIE wyświetl na końcu:
                         ? '<i class="ph ph-check-circle text-emerald-400" title="Wysłany do klienta"></i>'
                         : '<i class="ph ph-clock text-zinc-500" title="Niewysłany"></i>';
 
+                    const historySource = report.report_data?.source;
+                    const sourceBadge = historySource === 'mcp'
+                        ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider">MCP</span>'
+                        : (historySource === 'manus'
+                            ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700 uppercase tracking-wider">Manus</span>'
+                            : '');
+
                     const reportCurrency = report.report_data?.currency || 'PLN';
                     const spendFormatted = (() => {
                         try {
@@ -17446,7 +17700,7 @@ PODSUMOWANIE wyświetl na końcu:
                              onclick="loadReportFromHistory('${report.id}')">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <div class="text-[12px] text-zinc-300">${periodFrom} - ${periodTo}</div>
+                                    <div class="text-[12px] text-zinc-300 flex items-center gap-1.5">${periodFrom} - ${periodTo} ${sourceBadge}</div>
                                     <div class="text-[11px] text-zinc-600 mt-1">
                                         Wydatki: ${spendFormatted}
                                         • Zakupy: ${report.purchases || 0}
