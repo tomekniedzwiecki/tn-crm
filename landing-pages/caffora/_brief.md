@@ -80,3 +80,46 @@ Dodatkowo: **Nº 01-10 w nagłówkach sekcji** w Space Mono 700 12px uppercase (
 | Border-radius globalny | 4px (precyzja, instrument, NIE bouncy) |
 | Shadow styl | Brass-tinted warm: `0 12px 32px rgba(156, 107, 62, 0.15)` |
 | Divider między sekcjami | Numbered: `Nº 01 — RYTUAŁ` w Space Mono 700 12px, NIE linie |
+
+---
+
+## Photo System (Krok 2 — generowanie obrazów AI, 2026-06-10)
+
+**Kierunek:** Brass Ritual (Snow Peak × Bialetti × Leica). Produkt = instrument, nie gadżet.
+
+### Reference produktu
+- Hostowana: `landing/caffora/product-ref.jpg` (oryginał z AliExpress, re-host na Supabase)
+- Geometria: matowo-czarny cylindryczny przenośny ekspres, lekko rozszerzany górny rant, JEDEN okrągły przycisk power świecący na zielono na środku korpusu, mała ikona baterii pod nim, perforowana (kropkowana) sekcja w dolnej 1/3, czarna głowica zaparzająca u dołu, przezroczysty akrylowy stojak + szklanka. Czysty czarny korpus, ZERO nadruków/logo (napisy „DENOKIN/20Bar/3-in-1" to overlay, NIE produkt).
+
+### Lighting
+Dramatyczne pojedyncze światło boczno-tylne 45°, spotlighting w stylu katalogu Leica. Głębokie kontrolowane cienie. Ciepłe brass-tinted highlighty (#9C6B3E). Sceny ciemne (hero/offer): deep charcoal #1A1A1C void + brass vignette w prawym dolnym rogu. Sceny lifestyle/outdoor: naturalne kierunkowe światło poranne, chłodny ambient z jednym ciepłym brass akcentem.
+
+### Paleta w scenach
+- Tła: deep charcoal #1A1A1C, matowa czerń, ciepły papier #F5EFE6, espresso-brown, ciemne drewno kampera
+- Akcenty: mosiądz #9C6B3E (crema, rim light, metalowe detale), cream #E8D5B7, zielony glow przycisku
+- Unikamy: neon, teal, nasycone kolory podstawowe, golden-hour pomarańczowe gradienty
+
+### Kadrowanie
+Produkt-centryczne, off-center, dużo negative space (instrument photography). 35–60mm.
+
+### Post-processing
+35mm film (Kodak Portra 400 / Fujifilm Eterna), subtelny grain, mild halation, lekkie niedoskonałości, candid documentary — nie studyjny render.
+
+### Negatywy — NIGDY
+Tekst/napisy/watermarki, neon glow, stock-photo body language, twarze persony w testimonialach (zostają inicjały M/A/P), wymyślone przyciski/porty/LED których nie ma na referencji.
+
+### Matryca slotów (10 obrazów)
+| # | Slot | Selektor | aspect_ratio | Ref produktu? |
+|---|------|----------|--------------|---------------|
+| 1 | Hero | `.hero-figure` | 4:5 | TAK |
+| 2 | Problem | `.problem-figure` | 4:5 | NIE (stara droga — kubek ze stacji) |
+| 3 | Bento tile-hero | `.tile-hero .tile-figure` | 16:9¹ | TAK |
+| 4 | Bento tile — grzanie | `.tile-figure-sm` | 16:9¹ | TAK |
+| 5 | Bento tile — USB-C | `.tile-figure-sm` | 16:9¹ | TAK |
+| 6 | Bento tile — plecak | `.tile-figure-sm` | 16:9¹ | TAK |
+| 7 | Rytuał I — napełnij | `.act-figure` | 4:3 | TAK |
+| 8 | Rytuał II — włącz | `.act-figure` | 4:3 | TAK |
+| 9 | Rytuał III — zalej | `.act-figure` | 4:3 | TAK |
+| 10 | Offer packshot | `.offer-figure` | 16:9 | TAK |
+
+¹ CSS `.tile-figure`/`.tile-figure-sm` zmienione z `16/10` → `16/9` (Gemini nie wspiera 16:10; drift 0% po zmianie).
