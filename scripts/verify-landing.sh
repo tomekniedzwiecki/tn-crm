@@ -915,11 +915,15 @@ if [ -f "$BRIEF" ] && grep -qE "^## 9\." "$BRIEF"; then
       F4) echo feat-v-mockups;; F5) echo feat-v-scroll;; F6) echo feat-v-sticky;;
       T1) echo testi-v-grid;; T2) echo testi-v-ba;; T3) echo testi-v-video;;
       T4) echo testi-v-ugc;; T5) echo testi-v-single;; T6) echo testi-v-certs;;
+      P1) echo prob-v-stat;; P2) echo prob-v-story;; P3) echo prob-v-cost;; P4) echo prob-v-visual;;
+      W1) echo how-v-horizontal;; W2) echo how-v-timeline;; W3) echo how-v-spec;;
+      C1) echo comp-v-table;; C2) echo comp-v-cards;; C3) echo comp-v-bar;;
+      O1) echo offer-v-single;; O2) echo offer-v-multipack;; O3) echo offer-v-guarantee;;
       *) echo "";;
     esac
   }
-  for kind in Hero Features Testimonials; do
-    VID=$(echo "$SEC9" | grep -oE "\*\*$kind:\*\*[[:space:]]*[HFT][0-9]{1,2}" | head -1 | grep -oE "[HFT][0-9]{1,2}" || true)
+  for kind in Hero Features Testimonials Problem How Comparison Offer; do
+    VID=$(echo "$SEC9" | grep -oE "\*\*$kind:\*\*[[:space:]]*[HFTPWCO][0-9]{1,2}" | head -1 | grep -oE "[HFTPWCO][0-9]{1,2}" || true)
     [ -z "$VID" ] && continue
     FC=$(frozen_class "$VID")
     [ -z "$FC" ] && continue

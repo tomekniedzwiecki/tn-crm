@@ -17,11 +17,12 @@ Style które używają technical sans (IBM Plex Sans / Helvetica / Inter), neutr
 evidence:
   - apothecary-label   # IBM Plex Sans + spec-label primitive
   - clinical-kitchen   # IBM Plex Sans + KPI dashboard
+  - clinical-warmth    # Cormorant + ciepły papier + autorytet medyczny (dodany v5.0 do mapy — istniał od 2026-05-29)
   - swiss-grid         # Helvetica + 12-col modular grid
-  - newsroom-print     # Arial/Times + newspaper layout (NEW v4.3)
-  - field-manual       # blueprint navy+orange + monospace (NEW v4.3)
-  - specification-sheet # engineering isometric (NEW v4.3)
-  - receipt-print      # thermal printer monospace (NEW v4.3)
+  - newsroom-print     # masthead + rule lines + datownik (ZREALIZOWANY v5.0 — wcześniej widmo z v4.3)
+  - field-manual       # kratka miernicza + MIL numeracja + khaki/orange (ZREALIZOWANY v5.0)
+  - specification-sheet # karta katalogowa + mono wartości + hairlines (ZREALIZOWANY v5.0)
+  - receipt-print      # taśma paragonu + mono + perforacja (ZREALIZOWANY v5.0)
 ```
 
 **Kiedy klaster wybierany:** mid-price utility produkty (parownice, roboty, masażery, akcesoria pet, beauty gadgets). DNA: `utility · precision · evidence`.
@@ -97,6 +98,7 @@ japandi:
 style_to_cluster:
   apothecary-label: evidence
   clinical-kitchen: evidence
+  clinical-warmth: evidence
   swiss-grid: evidence
   newsroom-print: evidence
   field-manual: evidence

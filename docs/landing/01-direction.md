@@ -361,14 +361,30 @@ Na bazie `brand_info`, `report_pdf`, `workflow_products` odpowiedz na 7 osi z [`
 
 ### 9a.2 — Algorytmiczny Style Pick
 
-Dla każdego z 15 stylów w [`style-atlas/`](style-atlas/) oblicz match:
+Dla każdego z 19 stylów w [`style-atlas/`](style-atlas/) oblicz match:
 
 ```
 match = count(DNA dimensions gdzie styl ma = wartość produktu) / 7
 ```
 
-Top-3 score'y = kandydaci. **Pierwszy w rankingu wygrywa.** Tie-break (gdy 2+ style mają ten sam match):
-1. Sprawdź ostatnie 10 landingów w `landing-pages/` (grep `## 1. Kierunek` w `_brief.md`) — **wyklucz style które były użyte 2× lub więcej w ostatnich 5 landingach** (anti-repetition)
+Top-3 score'y = kandydaci. **Pierwszy w rankingu wygrywa**, z regułą LRU niżej.
+
+**LRU anti-repetition (v5.0 — działa ZAWSZE, nie tylko przy remisie):**
+Dotychczas anti-repetition odpalał się wyłącznie przy tie-breaku — gdy ten sam styl
+wygrywał czysto dla podobnych produktów (typowe: mid-price utility → evidence-cluster),
+powtarzalność nie była niczym blokowana (potwierdzenie w danych: H3/F4/T2 + clinical-kitchen
+w 4 landingach z rzędu — `bash scripts/landing-performance-stats.sh`).
+
+1. Ustal 2 OSTATNIE wygenerowane landingi: `ls -t landing-pages/*/_brief.md | head -2`
+   i odczytaj ich Style ID (sekcja 10.1).
+2. Jeśli Top-1 == styl użyty w OBU ostatnich landingach **ORAZ** runner-up ma match
+   gorszy o ≤1 punkt → **wybierz runner-upa** (zapisz w 9a.3: „LRU: top-1 [styl] użyty
+   w 2 ostatnich; runner-up [styl] match −1").
+3. Jeśli runner-up gorszy o ≥2 punkty → Top-1 zostaje (dopasowanie > świeżość) —
+   ale odnotuj w briefie linię `LRU-override: match-gap ≥2`.
+
+Tie-break (gdy 2+ style mają ten sam match):
+1. Wyklucz style użyte 2× lub więcej w ostatnich 5 landingach
 2. Jeśli nadal tie — weź styl z niższym `style_id` alphabetycznie (deterministyczne)
 
 **Przykład dla Steamla:**

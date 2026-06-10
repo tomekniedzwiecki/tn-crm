@@ -1,4 +1,4 @@
-# ETAP 3.5 — COPY REVIEW (Manus): rewrite purple prose → direct response
+# ETAP 3.5 — COPY REVIEW: rewrite purple prose → direct response
 
 > **Safety rules:** [`reference/safety.md`](reference/safety.md) — reguła #6 (zakazane frazy), #7 (diakrytyki).
 > **Copy reference:** [`reference/copy.md`](reference/copy.md) — Senior Copywriter Playbook.
@@ -6,6 +6,37 @@
 
 ## Kiedy uruchomić
 Po **ETAP 3 REVIEW** (gdy `verify-landing.sh` kończy się `GATE: PASS`), **PRZED** ETAP 4 DESIGN.
+
+## Dwie ścieżki (v5.0 — EKSPERYMENT w toku, patrz `_research/copy-judge-experiment.md`)
+
+| | Ścieżka A — Manus (dotychczasowa) | Ścieżka B — wewnętrzny copy-judge (v5.0) |
+|---|---|---|
+| Wykonawca | zewnętrzna AI (edge function manus-ask) | Claude w TEJ samej sesji, świeże spojrzenie wg promptu niżej |
+| Czas | 5-15 min (polling) | ~2-3 min |
+| Zależności | kredyty Manusa (znane awarie: feedback-manus-credit-limit), apply-copy.mjs (niekompatybilny z apothecary/clinical!) | zero — Edit bezpośrednio na HTML |
+| Status | DOMYŚLNA do czasu rozstrzygnięcia eksperymentu | równolegle na 3 kolejnych landingach |
+
+**Protokół eksperymentu:** na 3 kolejnych landingach wykonaj OBA (A na kopii copy, B na żywym
+HTML), porównaj rubryką vision-critique + oceną Tomka. **Decyzja bramkowa:** jeśli B ≥ A →
+B zostaje domyślną, Manus = fallback, a projekt „kontrakt data-copy" (5.2 roadmapy) SKREŚLAMY.
+
+### Ścieżka B — procedura wewnętrznego copy-judge
+
+1. Przeczytaj `reference/copy.md` (CAŁY — zwłaszcza Anti-AI-poetic + Część 3 §0) oraz
+   `_brief.md` sekcje 12 (mapa obiekcji) i 13 (Big Idea/VOC/liczby kanoniczne).
+2. Wciel się w rolę: **zewnętrzny senior copywriter DR (15 lat, polski e-commerce), który
+   widzi ten landing PIERWSZY raz i jest opłacany od znalezionych słabości** — nie autor
+   broniący swojego tekstu.
+3. Przejdź sekcja po sekcji (hero → footer) i dla KAŻDEGO bloku tekstu zadaj 4 pytania:
+   (a) czy jest konkret zamiast przymiotnika? (b) czy liczba pochodzi z sekcji 13.3?
+   (c) czy fraza brzmi jak VOC czy jak LLM? (d) czy obiekcja z mapy 12 jest rozbrojona
+   w TEJ sekcji, jeśli mapa ją tu przypisuje?
+4. Przepisz słabe bloki Edit-em BEZPOŚREDNIO w index.html (zero extract/apply —
+   działa dla wszystkich 19 stylów). Te same twarde zasady co prompt Manusa
+   (w `scripts/review-copy-manus.sh` — przeczytaj sekcję TWARDE ZASADY).
+5. Wypisz diff-raport: ile bloków zmienione, 3 przykłady przed→po.
+6. Re-run: `bash scripts/verify-landing.sh [slug]` + `node scripts/verify-offer-math.mjs [slug]`
+   (anti-fabrication wyłapie, gdybyś dodał liczbę spoza briefu — Cię też obowiązuje!).
 
 ## Dlaczego obowiązkowy
 `verify-landing.sh` sprawdza **anti-patterns** (czego NIE ma być) i **długości** (headline ≤10 słów, FAQ ≥80 znaków), ale NIE ocenia czy copy faktycznie sprzedaje. Copy napisany przez Claude'a w ETAP 2 często ma:

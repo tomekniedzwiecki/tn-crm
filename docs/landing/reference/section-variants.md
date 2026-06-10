@@ -1,4 +1,4 @@
-# Section Variants — biblioteka wariantów per sekcja
+# Section Variants — biblioteka wariantów per sekcja (35: 10 hero + 6 features + 6 testimonials + 13 Tier 2 v5.0)
 
 **Cel:** zamiast jednego układu każdej sekcji — bank wariantów, z którego Claude autonomicznie wybiera **jeden** per sekcja na bazie kategorii produktu + persony + price point.
 
@@ -1159,6 +1159,7 @@ Warunki tabel NIE są osądami „na oko" — każdy mapuje się na konkretne po
 | Warunki | Wybierz |
 |---------|---------|
 | Smart home / IoT / app-controlled | **H3 Dashboard mockup** |
+| Produkt z 1 dominującą liczbą spec ∧ styl dopuszcza loud typografię (poster/brutalist/newsroom/edgy) | **H5 Oversized typography (type-led)** — typografia ZAMIAST hero image (stock w hero = najsłabszy wariant wg researchu) |
 | Premium AGD >1500 zł z mocną liczbą spec | **H4 Editorial numerał** |
 | Premium AGD lifestyle bez jednej killer-liczby | **H2 Full-bleed lifestyle** |
 | Craft / luxury / materialową estetyką | **H7 Product macro** |
@@ -1190,6 +1191,47 @@ Warunki tabel NIE są osądami „na oko" — każdy mapuje się na konkretne po
 | Premium/luxury/endorsed 1 strong voice | **T5 Single hero testimonial** |
 | PR-backed z logo magazynów / editorial | **T6 Press logos + 1 cytat** |
 | **Default** (standard DTC) | **T1 Voices quote grid** |
+
+## Tier 2 (v5.0) — Problem / How It Works / Comparison / Offer
+
+> Dotychczas dolny lejek był klonem 1:1 na każdym landingu — sztanca dokładnie tam,
+> gdzie zapada decyzja zakupowa. Wybór tak samo first-match-wins; loguj w briefie sekcji 9
+> liniami `- **Problem:** P2 ...` / `- **How:** W1 ...` / `- **Comparison:** C1 ...` / `- **Offer:** O1 ...`.
+
+### Problem (wybierz 1 z 4)
+
+| Warunki (deterministyczne — mapowanie wyżej) | Wybierz |
+|---------|---------|
+| `awareness: problem-aware` ∧ liczba kosztu problemu w sekcji 13.3 briefu | **P1 Stat-led** |
+| `awareness: problem-aware` ∧ codzienny moment użycia (Krok 1.4 = codzienność) ∧ brak liczby kosztu | **P2 Mini-narracja dnia** |
+| `awareness: product-aware` ∧ ≥2 liczby kosztu status quo w 13.3 | **P3 Koszt bezczynności** |
+| transformation product (definicja wyżej) ∧ realne foto „przed" możliwe | **P4 Wizualny stan-przed** |
+| **Default** | **P1** jeśli jest liczba w 13.3, inaczej **P2** |
+
+### How It Works (wybierz 1 z 3)
+
+| Warunki | Wybierz |
+|---------|---------|
+| styl ∈ evidence-cluster (apothecary/clinical-*/swiss/spec-sheet/field-manual/newsroom/receipt) | **W3 Spec-strip** |
+| kroki mają naturalne foto z użycia (placeholder briefy sensowne per krok) | **W2 Pionowy timeline z foto** |
+| **Default** | **W1 3 kroki poziome** |
+
+### Comparison (wybierz 1 z 3) — ⛔ ZAWSZE vs KATEGORIA, nigdy nazwany konkurent
+
+| Warunki | Wybierz |
+|---------|---------|
+| ≥4 porównywalne cechy w spec produktu ∧ `awareness: product-aware` | **C1 Tabela ✓/✗** |
+| porównanie emocjonalne (życie z vs bez), `problem-aware` | **C2 Karty z/bez** |
+| styl quiet (japandi/clinical-warmth) ∧ 1 dominująca metryka | **C3 Spec-bar** |
+| **Default** | **C1** |
+
+### Offer (wybierz 1 z 3)
+
+| Warunki | Wybierz |
+|---------|---------|
+| produkt zużywalny/parowalny ∧ cena jednostkowa <300 zł (guardraile O2 w wariancie!) | **O2 Multipack** |
+| styl quiet/evidence ∧ `awareness: product-aware` (risk-reversal jako differentiator) | **O3 Guarantee-led** |
+| **Default** | **O1 Single (kanon H)** |
 
 ---
 
@@ -1317,3 +1359,992 @@ document.querySelectorAll('.js-split').forEach(el => {
   }, 100);
 });
 ```
+
+---
+
+# 7. PROBLEM — 4 warianty
+
+> Budżet scrollability dla sekcji Problem ([`02-generate.md`](../02-generate.md)): **1-2 liczby** (jedna konkretna konsekwencja). P1 i P3 zużywają budżet liczbowy, P2 i P4 to breathing momenty (zero metryk). Grupa 11 verify-landing łapie sekcję po regexie `problem|pain|agitation` — każdy wariant ma `<section class="problem ...">`.
+
+## P1 — Stat-led (jedna brutalna liczba problemu)
+
+**Kiedy:** brief ma JEDNĄ wiarygodną, kanoniczną liczbę kosztu problemu (czas, pieniądze, powtórzenia) i persona reaguje na konkret. Dense-lite: max 2 liczby w sekcji (duża liczba + jedna w agitacji) — mieści się w budżecie Problem 1-2.
+
+**Kategoria:** AGD/cleaning, tools, produktywność, wszystko co oszczędza czas lub pieniądze.
+**Awareness (brief 13.1):** problem-aware z liczbą.
+**Persona emotion:** frustration → urgency.
+
+**Klasy wymagane:** `<section class="problem">` (Grupa 11: `problem|pain|agitation`), wewnątrz `class="prob-stat-num"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `prob-v-stat` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="problem problem-stat prob-v-stat">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 02 · Problem</div>
+      <h2>[Nazwij problem wprost] <em>[kluczowe 2 słowa]</em>.</h2>
+    </div>
+    <div class="prob-stat-grid">
+      <div class="prob-stat-left">
+        <div class="prob-stat-num">[N]<span class="prob-stat-unit">[min / zł / razy]</span></div>
+        <div class="prob-stat-caption">[czego dotyczy liczba — np. „tyle czasu dziennie zabiera Ci X”]</div>
+      </div>
+      <div class="prob-stat-right">
+        <p class="prob-agitation">[Zdanie 1: co konkretnie się dzieje i co to kosztuje — akcja + skutek, bez metafor].</p>
+        <p class="prob-agitation">[Zdanie 2: co się stanie za [N] miesięcy, jeśli nic się nie zmieni — ostatnia liczba w tej sekcji].</p>
+        <div class="prob-stat-bar"><span class="prob-stat-bar-fill"></span></div>
+        <div class="prob-stat-bar-label">[podpis wizualizacji — opisowy, bez nowej liczby]</div>
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.problem-stat{padding:120px 0;background:var(--paper)}
+.prob-stat-grid{display:grid;grid-template-columns:1fr 1.15fr;gap:64px;align-items:center}
+.prob-stat-num{font-family:var(--font-display);font-size:clamp(88px,12vw,168px);font-weight:400;line-height:.9;letter-spacing:-.04em;color:var(--ink)}
+.prob-stat-unit{font-size:.24em;font-family:var(--font-accent);letter-spacing:.08em;color:var(--primary);margin-left:8px}
+.prob-stat-caption{margin-top:16px;font-family:var(--font-accent);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink);opacity:.6;max-width:320px}
+.prob-agitation{font-family:var(--font-body);font-size:18px;line-height:1.65;color:var(--ink);margin-bottom:16px;max-width:480px}
+.prob-stat-bar{height:8px;border-radius:999px;background:var(--rule);overflow:hidden;margin-top:28px;max-width:420px}
+.prob-stat-bar-fill{display:block;height:100%;width:72%;background:var(--primary);border-radius:999px}
+.prob-stat-bar-label{margin-top:10px;font-family:var(--font-accent);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink);opacity:.55}
+@media(max-width:768px){.problem-stat{padding:80px 0}.prob-stat-grid{grid-template-columns:1fr;gap:32px}.prob-stat-num{font-size:clamp(72px,22vw,110px)}}
+```
+
+**Kiedy NIE używać:** gdy brief nie ma zweryfikowanej liczby problemu — liczba dorobiona na potrzeby sekcji to FAIL wiarygodności (wtedy P2 lub P4). Nie łącz z liczbowym hero (H4/H8), jeśli budżet 8-12 liczb na landing przestaje się domykać.
+
+---
+
+## P2 — Mini-narracja dnia (scena 7:30 rano)
+
+**Kiedy:** persona przeżywa problem codziennie w konkretnym momencie dnia i kupuje emocją, nie spec-sheetem. Breathing moment (liczy się do min 3 per landing). ZERO liczb-metryk — godzina w narracji („7:30”) to scenografia, nie metryka, i nie wlicza się do budżetu liczb.
+
+**Kategoria:** home/family, wellness, beauty, pet, produkty „codziennej ulgi”.
+**Awareness (brief 13.1):** problem-aware emocjonalny.
+**Persona emotion:** zmęczenie / rezygnacja → rozpoznanie siebie.
+
+**Klasy wymagane:** `<section class="problem">` (Grupa 11: `problem|pain|agitation`), wewnątrz `class="prob-story-figure"` z placeholderem.
+**Klasa identyfikująca (FROZEN, v5.0):** `prob-v-story` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="problem problem-story prob-v-story">
+  <div class="container prob-story-grid">
+    <div class="prob-story-text">
+      <div class="eyebrow">Nº 02 · Codzienna scena</div>
+      <p class="prob-story-time">[7:30] · [miejsce — np. kuchnia]</p>
+      <p class="prob-story-lead">[Zdanie 1: konkretna godzina + fizyczna czynność persony, czas teraźniejszy, 2. osoba — np. „Jest 7:30. Trzeci raz wycierasz ten sam blat, bo…”].</p>
+      <p class="prob-story-body">[Zdanie 2: co konkretnie idzie nie tak — przedmiot, czynność, skutek. Bez metafor i personifikacji.]</p>
+      <p class="prob-story-body">[Zdanie 3: czego persona przez to dziś nie zrobi — konkret z planu dnia, bez liczb.]</p>
+      <p class="prob-story-punch">[Zdanie 4: punchline nazywająca problem wprost — krótko, jak polski copywriter DR, nie aforyzm.]</p>
+    </div>
+    <div class="prob-story-figure">
+      <div class="ph">
+        <div class="ph-mark">P</div>
+        <div class="ph-title">Scena „przed” z życia persony</div>
+        <div class="ph-size">1000 × 1250 (4:5, pion)</div>
+        <div class="ph-note">Reportażowy kadr dokładnie tej sceny z narracji: [miejsce] o poranku, persona w trakcie [czynność z problemem]. Naturalne światło zza okna, lekki nieład, zero pozowania i zero uśmiechu do kamery.</div>
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.problem-story{padding:140px 0;background:var(--paper)}
+.prob-story-grid{display:grid;grid-template-columns:1.1fr 1fr;gap:64px;align-items:center}
+.prob-story-time{font-family:var(--font-accent);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--primary);margin:18px 0 20px}
+.prob-story-lead{font-family:var(--font-display);font-size:clamp(24px,3vw,34px);line-height:1.35;color:var(--ink);margin-bottom:20px}
+.prob-story-body{font-family:var(--font-body);font-size:17px;line-height:1.7;color:var(--ink);opacity:.75;margin-bottom:14px;max-width:480px}
+.prob-story-punch{font-family:var(--font-display);font-style:italic;font-size:20px;line-height:1.5;color:var(--ink);margin-top:24px;padding-left:18px;border-left:2px solid var(--primary);max-width:440px}
+.prob-story-figure{aspect-ratio:4/5;border-radius:16px;overflow:hidden}
+@media(max-width:768px){.problem-story{padding:80px 0}.prob-story-grid{grid-template-columns:1fr;gap:32px}.prob-story-lead{font-size:clamp(22px,6vw,28px)}.prob-story-figure{max-height:440px}}
+```
+
+**Kiedy NIE używać:** dla comparison shoppera / persony solution-aware, która porównuje parametry — scena ją spowalnia zamiast przekonywać (wtedy P1 lub P3). Też gdy landing ma już 3+ breathing momentów, a brakuje mu twardego dowodu problemu.
+
+---
+
+## P3 — Koszt bezczynności (rachunek za status quo)
+
+**Kiedy:** persona value-seeking/sceptyczna, a status quo ma policzalny koszt. **Wszystkie 3 liczby (2 pozycje + suma) MUSZĄ pochodzić z liczb kanonicznych briefu** — żadnych kwot dorabianych na potrzeby rachunku. 3 liczby przekraczają standardowy budżet sekcji Problem (1-2), więc traktuj P3 jako sekcję dense: kompensuj zerem liczb w How it works i max 1 w Features.
+
+**Kategoria:** produkty oszczędzające pieniądze/czas, zamienniki droższych nawyków, narzędzia kończące powtarzalne zakupy.
+**Awareness (brief 13.1):** problem-aware z liczbą.
+**Persona emotion:** skepticism / value-seeking → policzony wstyd status quo.
+
+**Klasy wymagane:** `<section class="problem">` (Grupa 11: `problem|pain|agitation`), wewnątrz `class="prob-receipt"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `prob-v-cost` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="problem problem-cost prob-v-cost">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 02 · Koszt status quo</div>
+      <h2>Nic nie robiąc, <em>też płacisz</em>.</h2>
+    </div>
+    <div class="prob-receipt">
+      <div class="prob-receipt-head">Rachunek za [problem] — co miesiąc</div>
+      <!-- Budżet liczb: pozycja 1 + pozycja 2 + suma = 3. Pozycja 3 celowo bez kwoty. -->
+      <div class="prob-receipt-row"><span>[Pozycja 1 — np. środki / wymiany / poprawki]</span><span class="prob-receipt-dots"></span><span class="prob-receipt-amount">[N] zł</span></div>
+      <div class="prob-receipt-row"><span>[Pozycja 2 — np. stracone godziny przeliczone wg briefu]</span><span class="prob-receipt-dots"></span><span class="prob-receipt-amount">[N] zł</span></div>
+      <div class="prob-receipt-row"><span>[Pozycja 3 — koszt niepoliczalny, np. „[skutek] przy każdym użyciu”]</span><span class="prob-receipt-dots"></span><span class="prob-receipt-amount">—</span></div>
+      <div class="prob-receipt-total"><span>Razem, miesiąc w miesiąc</span><span class="prob-receipt-sum">[suma] zł+</span></div>
+    </div>
+    <p class="prob-receipt-note">[1 zdanie zestawiające rachunek z jednorazowym zakupem — opisowo, BEZ kolejnej liczby; cenę pokazuje sekcja Offer].</p>
+  </div>
+</section>
+```
+
+```css
+.problem-cost{padding:120px 0}
+.prob-receipt{max-width:560px;margin:0 auto;background:var(--paper);border:1px solid var(--rule);border-radius:16px;padding:36px 32px}
+.prob-receipt-head{font-family:var(--font-accent);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);opacity:.6;padding-bottom:16px;border-bottom:1px dashed var(--rule)}
+.prob-receipt-row{display:flex;align-items:baseline;gap:12px;padding:16px 0;border-bottom:1px dashed var(--rule);font-family:var(--font-body);font-size:16px;line-height:1.45;color:var(--ink)}
+.prob-receipt-dots{flex:1;min-width:24px;border-bottom:1px dotted var(--rule);transform:translateY(-4px)}
+.prob-receipt-amount{font-family:var(--font-accent);font-weight:600;white-space:nowrap;color:var(--ink)}
+.prob-receipt-total{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:22px;font-family:var(--font-display);font-size:20px;color:var(--ink)}
+.prob-receipt-sum{font-size:32px;font-weight:600;letter-spacing:-.02em;color:var(--primary)}
+.prob-receipt-note{text-align:center;margin:24px auto 0;max-width:480px;font-size:15px;line-height:1.6;color:var(--ink);opacity:.7}
+@media(max-width:768px){.problem-cost{padding:80px 0}.prob-receipt{padding:28px 20px}.prob-receipt-total{font-size:18px}.prob-receipt-sum{font-size:26px}}
+```
+
+**Kiedy NIE używać:** gdy kosztu status quo nie da się uczciwie wyprowadzić z liczb kanonicznych briefu (kategorie czysto emocjonalne: prezent, rytuał beauty) — wtedy P2/P4. Nie łącz z hero H8 (cena w hero): dwa „rachunki” na górze strony robią landing transakcyjnym, zanim zbuduje desire.
+
+---
+
+## P4 — Wizualny stan-przed (placeholder-dowód)
+
+**Kiedy:** problem jest WIDOCZNY (brud, bałagan, zużycie, splątanie) i jedno zdjęcie mówi więcej niż akapit. Breathing moment (dominujące zdjęcie, zero liczb) — liczy się do min 3 per landing.
+
+**Kategoria:** cleaning, organizacja, ogród, renowacja, pielęgnacja powierzchni — wszystko z fotografowalnym „przed”.
+**Awareness (brief 13.1):** problem-aware emocjonalny.
+**Persona emotion:** rozpoznanie własnego problemu na zdjęciu → ulga, że jest nazwany.
+
+**Klasy wymagane:** `<section class="problem">` (Grupa 11: `problem|pain|agitation`), wewnątrz `class="prob-visual-frame"` z placeholderem i `class="prob-pains"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `prob-v-visual` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="problem problem-visual prob-v-visual">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 02 · Stan obecny</div>
+      <h2>[Nazwij to, co widać] <em>[kluczowe 2 słowa]</em>.</h2>
+    </div>
+    <figure class="prob-visual-figure">
+      <div class="prob-visual-frame">
+        <div class="ph">
+          <div class="ph-mark">P</div>
+          <div class="ph-title">Stan „przed” — wizualny dowód problemu</div>
+          <div class="ph-size">1920 × 1080 (16:9, pełna szerokość kontenera)</div>
+          <div class="ph-note">Realny, niewyretuszowany kadr problemu z briefu (np. zaschnięte zacieki, splątane kable, zniszczona powierzchnia). Światło dzienne, bez stylizacji — ma wyglądać jak zdjęcie z telefonu klienta, nie jak stock.</div>
+        </div>
+      </div>
+      <figcaption class="prob-visual-caption">[1 zdanie: co dokładnie widać i dlaczego ten stan wraca — konkret, bez liczb].</figcaption>
+    </figure>
+    <ul class="prob-pains">
+      <li>[Pain 1 — moment z dnia: czasownik + przedmiot, max 8 słów]</li>
+      <li>[Pain 2 — co trzeba powtarzać / co przestaje działać]</li>
+      <li>[Pain 3 — czego persona unika przez ten stan]</li>
+    </ul>
+  </div>
+</section>
+```
+
+```css
+.problem-visual{padding:120px 0}
+.prob-visual-figure{margin:0}
+.prob-visual-frame{aspect-ratio:16/9;border-radius:20px;overflow:hidden}
+.prob-visual-caption{margin-top:14px;font-family:var(--font-display);font-style:italic;font-size:15px;line-height:1.55;color:var(--ink);opacity:.65;max-width:640px}
+.prob-pains{list-style:none;margin:40px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.prob-pains li{position:relative;min-height:44px;padding:18px 20px 18px 46px;background:var(--paper);border:1px solid var(--rule);border-radius:12px;font-family:var(--font-body);font-size:15px;line-height:1.5;color:var(--ink)}
+.prob-pains li::before{content:"×";position:absolute;left:18px;top:14px;font-family:var(--font-display);font-size:20px;line-height:1.4;color:var(--primary)}
+@media(max-width:768px){.problem-visual{padding:80px 0}.prob-visual-frame{aspect-ratio:4/3;border-radius:12px}.prob-pains{grid-template-columns:1fr;gap:12px}}
+```
+
+**Kiedy NIE używać:** dla produktów bez fotografowalnego „przed” (suplementy, sen, usługi, efekty odczuwalne, ale niewidoczne) — zmyślony lub stockowy kadr „przed” podważa wiarygodność całego landingu; wtedy P2. Też gdy hero to H10 (Before/After) — drugi „stan przed” dubluje przekaz.
+
+---
+
+---
+
+# 4. HOW IT WORKS — 3 warianty
+
+## W1 — 3 kroki poziome (klasyk z ikonami)
+
+**Kiedy:** default dla produktów o prostej obsłudze (zamów → przygotuj → używaj). Najszybszy do zeskanowania wzrokiem — klient w 5 sekund rozumie, że „to jest proste".
+
+**Kategoria:** wszystkie (default).
+
+**Klasy wymagane:** `<section class="how">` z `id="how"` (cel linku „Zobacz jak działa" z hero), dokładnie 3× `<article class="how-step">`.
+**Klasa identyfikująca (FROZEN, v5.0):** `how-v-horizontal` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="how how-v-horizontal" id="how">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 04 · Jak to działa</div>
+      <h2>[Headline o prostocie] <em>[kluczowe 2 słowa]</em>.</h2>
+    </div>
+    <div class="how-grid">
+      <article class="how-step">
+        <div class="how-step-num">01</div>
+        <div class="how-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 8 12 3 3 8v8l9 5 9-5V8Z"/><path d="m3 8 9 5 9-5"/><path d="M12 13v8"/></svg>
+        </div>
+        <h3 class="how-step-title">[Krok 1 — czasownik, np. Zamawiasz]</h3>
+        <p>[1 zdanie: co robi użytkownik — bez obietnic czasu dostawy].</p>
+      </article>
+      <article class="how-step">
+        <div class="how-step-num">02</div>
+        <div class="how-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M12 3v8"/><path d="M6.3 7.6a7.5 7.5 0 1 0 11.4 0"/></svg>
+        </div>
+        <h3 class="how-step-title">[Krok 2 — czasownik, np. Włączasz]</h3>
+        <p>[1 zdanie: pierwsze użycie, podkreśl że bez instrukcji/narzędzi].</p>
+      </article>
+      <article class="how-step">
+        <div class="how-step-num">03</div>
+        <div class="how-step-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8.5 12.5 2.5 2.5 4.5-5.5"/></svg>
+        </div>
+        <h3 class="how-step-title">[Krok 3 — efekt, np. Widzisz różnicę]</h3>
+        <p>[1 zdanie: po czym użytkownik pozna, że działa].</p>
+      </article>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.how{padding:120px 0}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:32px}
+.how-step{position:relative;padding:36px 28px;background:var(--paper);border:1px solid var(--rule);border-radius:20px;text-align:center}
+.how-grid .how-step:not(:last-child)::after{content:"→";position:absolute;top:50%;right:-26px;transform:translateY(-50%);font-family:var(--font-display);font-size:22px;font-style:italic;color:var(--primary);z-index:1}
+.how-step-num{font-family:var(--font-mono);font-size:11px;letter-spacing:.2em;color:var(--muted);margin-bottom:16px}
+.how-step-icon{width:56px;height:56px;margin:0 auto 20px;border-radius:50%;background:var(--paper);border:1px solid var(--rule);color:var(--primary);display:flex;align-items:center;justify-content:center}
+.how-step-icon svg{width:26px;height:26px}
+.how-step-title{font-family:var(--font-display);font-size:21px;font-weight:500;letter-spacing:-.01em;margin-bottom:10px}
+.how-step p{font-family:var(--font-body);font-size:15px;color:var(--muted);line-height:1.6;max-width:280px;margin:0 auto}
+@media(max-width:768px){.how{padding:80px 0}.how-grid{grid-template-columns:1fr;gap:20px}.how-grid .how-step:not(:last-child)::after{top:auto;bottom:-24px;right:50%;transform:translateX(50%) rotate(90deg)}}
+```
+
+**Kiedy NIE używać:** gdy kroki wymagają wizualnej demonstracji (montaż, wieloetapowy rytuał użycia, produkt nieintuicyjny) — ikona nie udźwignie, weź W2 z foto. Dla stylów evidence/clinical/swiss-grid okrągłe ikony w kartach wyglądają obco — weź W3.
+
+---
+
+## W2 — Pionowy timeline z foto
+
+**Kiedy:** produkt z procesem, który trzeba POKAZAĆ (montaż, przygotowanie, rytuał pielęgnacji, urządzenie z kilkoma fazami pracy). Persona problem-aware musi zobaczyć, że „dam radę". Foto kroków = 1 z 3 wymaganych lifestyle photos (SCROLLABILITY).
+
+**Kategoria:** AGD z przygotowaniem, beauty/wellness z rytuałem, narzędzia, produkty z montażem.
+
+**Klasy wymagane:** `<section class="how">` z `id="how"`, dokładnie 3× `<article class="how-step">`, każdy krok z `class="step-figure"` (placeholder 4-polowy).
+**Klasa identyfikująca (FROZEN, v5.0):** `how-v-timeline` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="how how-v-timeline" id="how">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 04 · Jak to działa</div>
+      <h2>[Headline o procesie] <em>[kluczowe]</em>.</h2>
+    </div>
+    <div class="timeline-track">
+      <article class="how-step timeline-step">
+        <div class="timeline-card">
+          <h3>[Krok 1 — czasownik]</h3>
+          <p>[1-2 zdania: co robi użytkownik i dlaczego to proste].</p>
+        </div>
+        <div class="timeline-dot">1</div>
+        <div class="step-figure">
+          <div class="ph">
+            <div class="ph-mark">K1</div>
+            <div class="ph-title">Krok 1 w użyciu</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Ręce użytkownika wykonują krok 1 (np. napełnienie, montaż), zbliżenie, kontekst domowy, naturalne światło.</div>
+          </div>
+        </div>
+      </article>
+      <article class="how-step timeline-step">
+        <div class="timeline-card">
+          <h3>[Krok 2 — czasownik]</h3>
+          <p>[1-2 zdania: co robi produkt, co widzi użytkownik w trakcie].</p>
+        </div>
+        <div class="timeline-dot">2</div>
+        <div class="step-figure">
+          <div class="ph">
+            <div class="ph-mark">K2</div>
+            <div class="ph-title">Krok 2 — produkt w trakcie pracy</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Produkt w działaniu, widoczny efekt pracy (para, ruch, piana), kadr z boku, bez twarzy.</div>
+          </div>
+        </div>
+      </article>
+      <article class="how-step timeline-step">
+        <div class="timeline-card">
+          <h3>[Krok 3 — efekt]</h3>
+          <p>[1-2 zdania: po czym użytkownik pozna efekt końcowy].</p>
+        </div>
+        <div class="timeline-dot">3</div>
+        <div class="step-figure">
+          <div class="ph">
+            <div class="ph-mark">K3</div>
+            <div class="ph-title">Krok 3 — efekt końcowy</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Efekt po użyciu w tym samym kadrze co K1, użytkownik rozmyty w tle, światło dzienne.</div>
+          </div>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.how-v-timeline{padding:120px 0}
+.timeline-track{position:relative;display:flex;flex-direction:column;gap:72px}
+.timeline-track::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--rule);transform:translateX(-50%)}
+.timeline-step{position:relative;display:grid;grid-template-columns:1fr 64px 1fr;gap:24px;align-items:center}
+.timeline-dot{grid-column:2;grid-row:1;justify-self:center;width:44px;height:44px;border-radius:50%;background:var(--primary);color:var(--paper);font-family:var(--font-display);font-size:18px;font-weight:500;display:flex;align-items:center;justify-content:center;z-index:1}
+.timeline-card{grid-column:1;grid-row:1;text-align:right}
+.timeline-step .step-figure{grid-column:3;grid-row:1}
+.timeline-step:nth-child(even) .timeline-card{grid-column:3;text-align:left}
+.timeline-step:nth-child(even) .step-figure{grid-column:1}
+.timeline-card h3{font-family:var(--font-display);font-size:24px;font-weight:500;letter-spacing:-.01em;margin-bottom:10px}
+.timeline-card p{font-family:var(--font-body);font-size:15px;color:var(--muted);line-height:1.65;max-width:380px;display:inline-block}
+.step-figure{aspect-ratio:4/3;border-radius:16px;overflow:hidden;background:var(--paper);border:1px solid var(--rule)}
+@media(max-width:768px){.how-v-timeline{padding:80px 0}.timeline-track{gap:48px}.timeline-track::before{left:22px;transform:none}.timeline-step{grid-template-columns:44px 1fr;gap:16px;align-items:start}.timeline-dot{grid-column:1;grid-row:1}.timeline-card,.timeline-step:nth-child(even) .timeline-card{grid-column:2;grid-row:1;text-align:left}.timeline-card p{display:block;max-width:none}.timeline-step .step-figure,.timeline-step:nth-child(even) .step-figure{grid-column:2;grid-row:2;margin-top:8px}}
+```
+
+**Kiedy NIE używać:** gdy kroki są trywialne (zamów → odbierz → używaj) — 3 zdjęcia do oczywistości marnują scroll i budżet fotografa, weź W1. Nie używaj też, gdy landing ma już komplet placeholderów figure w Features (F3/F6) — dwie foto-ciężkie sekcje obok siebie spowalniają stronę.
+
+---
+
+## W3 — Numerowany spec-strip (techniczny, evidence)
+
+**Kiedy:** style evidence / clinical-warmth / swiss-grid i produkty techniczne, gdzie precyzja procedury sprzedaje (urządzenia pomiarowe, filtracja, sprzęt warsztatowy). Czyta się jak kartka ze specyfikacji — zero ozdobników.
+
+**Kategoria:** evidence, clinical, swiss, precision tools, tech z procedurą.
+
+**Klasy wymagane:** `<section class="how">` z `id="how"`, dokładnie 3× `<article class="how-step spec-step">`.
+**Klasa identyfikująca (FROZEN, v5.0):** `how-v-spec` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="how how-v-spec" id="how">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 04 · Procedura</div>
+      <h2>[Headline o procedurze] <em>[kluczowe]</em>.</h2>
+    </div>
+    <div class="spec-steps">
+      <!-- SCROLLABILITY: budżet liczb How It Works = 0. [parametr] wypełnij liczbą TYLKO gdy
+           globalny budżet 8-12 liczb na landing nie jest wyczerpany — inaczej wpisz frazę
+           bez cyfr (np. „bez narzędzi", „jedna dłoń", „gotowe od razu"). -->
+      <article class="how-step spec-step">
+        <div class="spec-step-num">01</div>
+        <div class="spec-step-body">
+          <h3>[Krok 1 — czasownik, co robi użytkownik]</h3>
+          <p>[1 zdanie: jak przebiega i po czym poznasz, że gotowe].</p>
+        </div>
+        <div class="spec-step-param">[parametr lub fraza bez cyfr]</div>
+      </article>
+      <article class="how-step spec-step">
+        <div class="spec-step-num">02</div>
+        <div class="spec-step-body">
+          <h3>[Krok 2 — czasownik]</h3>
+          <p>[1 zdanie: co dzieje się w urządzeniu/produkcie].</p>
+        </div>
+        <div class="spec-step-param">[parametr lub fraza bez cyfr]</div>
+      </article>
+      <article class="how-step spec-step">
+        <div class="spec-step-num">03</div>
+        <div class="spec-step-body">
+          <h3>[Krok 3 — efekt]</h3>
+          <p>[1 zdanie: mierzalny lub widoczny rezultat].</p>
+        </div>
+        <div class="spec-step-param">[parametr lub fraza bez cyfr]</div>
+      </article>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.how-v-spec{padding:120px 0}
+.spec-steps{border-top:1px solid var(--rule)}
+.spec-step{display:grid;grid-template-columns:96px 1fr auto;gap:32px;align-items:center;padding:36px 0;border-bottom:1px solid var(--rule)}
+.spec-step-num{font-family:var(--font-mono);font-size:clamp(36px,4vw,52px);font-weight:400;line-height:1;letter-spacing:-.02em;color:var(--primary)}
+.spec-step-body h3{font-family:var(--font-display);font-size:22px;font-weight:500;letter-spacing:-.01em;margin-bottom:8px}
+.spec-step-body p{font-family:var(--font-body);font-size:15px;color:var(--muted);line-height:1.6;max-width:520px}
+.spec-step-param{font-family:var(--font-mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);border:1px solid var(--rule);border-radius:999px;padding:10px 16px;white-space:nowrap;text-align:right}
+@media(max-width:768px){.how-v-spec{padding:80px 0}.spec-step{grid-template-columns:64px 1fr;gap:16px;padding:28px 0}.spec-step-num{font-size:32px}.spec-step-param{grid-column:2;justify-self:start;text-align:left}}
+```
+
+**Kiedy NIE używać:** dla ciepłych stylów lifestyle/beauty/food — spec-strip wygląda jak instrukcja serwisowa i zabija desire. Jeśli wypełnisz wszystkie 3 parametry liczbami, sekcja staje się trzecim „dense" kandydatem — przy 2 już obecnych (KPI/spec table/versus) zostaw frazy bez cyfr albo weź W1.
+
+---
+
+# 7. COMPARISON — 3 warianty (sekcja Nº 08)
+
+### Reguła C — zawsze vs KATEGORIA
+
+> ⛔ Porównanie budujesz ZAWSZE jako „[Marka] vs zwykłe [kategoria produktu]" lub „vs stary sposób" — **NIGDY nazwany konkurent** (marka, model, sklep, „tańsze zamienniki z [serwis]"). Nazwany konkurent = ryzyko z ustawy o zwalczaniu nieuczciwej konkurencji (reklama porównawcza, art. 16 u.z.n.k.). Reguła obejmuje nagłówki, komórki tabeli, alt-texty, aria-label i briefy fotografa. Kolumna/karta „zwykłe [kategoria]" opisuje cechy KATEGORII, nie konkretnego produktu z rynku.
+
+## C1 — Tabela ✓/✗ (porównanie cech)
+
+**Kiedy:** najmocniejsza sekcja konwersyjna dla comparison shoppera — klient świadomy produktu, porównuje przed zakupem. Produkt ma ≥4 wyraźne przewagi cechowe nad kategorią.
+
+**Kategoria:** wszystkie z konkretnymi przewagami (AGD, tools, tech, value products).
+**Persona emotion:** skepticism, value-seeking.
+**Price:** wszystkie (najlepiej budget-mid, gdzie klient porównuje).
+
+**Klasy wymagane:** `<section class="comparison">` (łapane przez verify-landing Grupa 11), wewnątrz `class="vs-table"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `comp-v-table` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="comparison comp-v-table">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 08 · Porównanie</div>
+      <h2>[Marka] vs zwykłe [kategoria]. <em>Cecha po cesze.</em></h2>
+    </div>
+    <div class="vs-table-wrap">
+      <table class="vs-table">
+        <thead>
+          <tr>
+            <th class="vs-col-feature">Co porównujesz</th>
+            <th>Zwykłe [kategoria]</th>
+            <th class="vs-col-brand">[Marka]</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 4-6 wierszy. Max 2-3 liczby w CAŁEJ tabeli (SCROLLABILITY) — reszta ✓/✗ + 2-4 słowa.
+               Kolumna „zwykłe" opisuje KATEGORIĘ, nigdy nazwany produkt konkurenta (Reguła C). -->
+          <tr><td>[Cecha 1 — np. czas montażu]</td><td><span class="vs-x">✗</span> [jak wypada zwykłe]</td><td class="vs-col-brand"><span class="vs-check">✓</span> [konkret marki, np. 3 min]</td></tr>
+          <tr><td>[Cecha 2 — funkcja]</td><td><span class="vs-x">✗</span> [brak / wymaga dokupienia]</td><td class="vs-col-brand"><span class="vs-check">✓</span> [w zestawie]</td></tr>
+          <tr><td>[Cecha 3 — materiał/mechanizm]</td><td><span class="vs-x">✗</span> [słabszy odpowiednik]</td><td class="vs-col-brand"><span class="vs-check">✓</span> [konkret materiału]</td></tr>
+          <tr><td>[Cecha 4 — akcesoria]</td><td><span class="vs-x">✗</span> [kupujesz osobno]</td><td class="vs-col-brand"><span class="vs-check">✓</span> [w cenie]</td></tr>
+          <tr><td>[Cecha 5 — zwrot]</td><td><span class="vs-x">✗</span> [standard sklepu]</td><td class="vs-col-brand"><span class="vs-check">✓</span> [30 dni na zwrot]</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="vs-swipe-hint">← Przesuń tabelę →</p>
+    <div class="vs-cta-row">
+      <a href="#offer" class="btn-primary">Zamów [Marka] →</a>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.vs-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -24px;padding:0 24px}
+.vs-table{width:100%;min-width:600px;border-collapse:separate;border-spacing:0;background:var(--paper);border:1px solid var(--rule);border-radius:16px;overflow:hidden}
+.vs-table th,.vs-table td{padding:16px 20px;text-align:left;font-family:var(--font-body);font-size:15px;line-height:1.45;color:var(--ink);border-bottom:1px solid var(--rule)}
+.vs-table thead th{font-family:var(--font-accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.vs-table tbody tr:last-child td{border-bottom:none}
+.vs-table td:first-child{font-weight:600}
+.vs-table .vs-col-brand{position:relative;font-weight:600}
+.vs-table .vs-col-brand::before{content:"";position:absolute;inset:0;background:var(--primary);opacity:.08;pointer-events:none}
+.vs-table thead .vs-col-brand{color:var(--primary)}
+.vs-check{color:var(--primary);font-weight:700;margin-right:6px}
+.vs-x{color:var(--muted);margin-right:6px}
+.vs-swipe-hint{display:none;text-align:center;font-family:var(--font-accent);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:12px}
+.vs-cta-row{text-align:center;margin-top:32px}
+.vs-cta-row .btn-primary{display:inline-flex;align-items:center;min-height:48px}
+@media(max-width:768px){.vs-table-wrap{margin:0 -16px;padding:0 16px}.vs-table th,.vs-table td{padding:13px 14px;font-size:14px}.vs-swipe-hint{display:block}}
+```
+
+**Kiedy NIE używać:** to sekcja **dense** (SCROLLABILITY: max 2 dense/landing) — nie łącz z KPI dashboardem + spec table w jednym landingu. Nie używaj też, gdy produkt ma <4 realne przewagi (puste ✗ wyglądają jak strawman) ani w stylach quiet/japandi/clinical (tam C3).
+
+---
+
+## C2 — Karty „z produktem vs bez" (emocjonalne)
+
+**Kiedy:** zakup emocjonalny, problem-aware persona — klient kupuje zmianę codzienności, nie specyfikację. Dwie sceny: życie bez produktu vs z produktem.
+
+**Kategoria:** transformation, lifestyle, home, wellness, produkty „ulgi od frustracji".
+**Persona emotion:** frustracja → ulga, anxiety → reassurance.
+**Price:** wszystkie.
+
+**Klasy wymagane:** `<section class="comparison">` (łapane przez verify-landing Grupa 11), wewnątrz 2× `class="vs-card"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `comp-v-cards` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="comparison comp-v-cards">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 08 · Porównanie</div>
+      <h2>Bez i z [Marka]. <em>Ta sama czynność, dwa wyniki.</em></h2>
+    </div>
+    <!-- Max 2 liczby ŁĄCZNIE w obu kartach (SCROLLABILITY). Bullety = akcja + konkret, zero poetyki. -->
+    <div class="vs-cards">
+      <article class="vs-card vs-without">
+        <div class="vs-card-tag">Zwykłe [kategoria]</div>
+        <div class="vs-card-figure">
+          <div class="ph">
+            <div class="ph-mark">B</div>
+            <div class="ph-title">Scena „bez" — pain point</div>
+            <div class="ph-size">800 × 600</div>
+            <div class="ph-note">Realna scena problemu starym sposobem. Światło płaskie, kadr IDENTYCZNY jak w karcie „z" obok.</div>
+          </div>
+        </div>
+        <ul class="vs-list">
+          <li><span class="vs-x">✗</span> [Pain 1 — co zabiera czas]</li>
+          <li><span class="vs-x">✗</span> [Pain 2 — co się nie udaje]</li>
+          <li><span class="vs-x">✗</span> [Pain 3 — co trzeba powtarzać/dokupywać]</li>
+        </ul>
+      </article>
+      <article class="vs-card vs-with">
+        <div class="vs-card-tag">Z [Marka]</div>
+        <div class="vs-card-figure">
+          <div class="ph">
+            <div class="ph-mark">Z</div>
+            <div class="ph-title">Scena „z [Marka]" — efekt</div>
+            <div class="ph-size">800 × 600</div>
+            <div class="ph-note">Ten sam kadr co „bez", produkt w użyciu, efekt widoczny. Światło cieplejsze, scena uporządkowana.</div>
+          </div>
+        </div>
+        <ul class="vs-list">
+          <li><span class="vs-check">✓</span> [Gain 1 — akcja + liczba, np. gotowe w 12 min]</li>
+          <li><span class="vs-check">✓</span> [Gain 2 — co odpada z listy obowiązków]</li>
+          <li><span class="vs-check">✓</span> [Gain 3 — efekt, który widać]</li>
+        </ul>
+        <a href="#offer" class="btn-primary vs-card-cta">Wybieram [Marka] →</a>
+      </article>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.vs-cards{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch}
+.vs-card{background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:28px;display:flex;flex-direction:column;gap:18px}
+.vs-card-tag{font-family:var(--font-accent);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.vs-card-figure{aspect-ratio:4/3;border-radius:12px;overflow:hidden}
+.vs-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.vs-list li{font-family:var(--font-body);font-size:15px;line-height:1.5;display:flex;gap:10px;align-items:flex-start}
+.vs-without .vs-card-figure{filter:grayscale(.55) contrast(.92)}
+.vs-without .vs-list li{color:var(--muted)}
+.vs-with{border:2px solid var(--primary)}
+.vs-with .vs-card-tag{color:var(--primary)}
+.vs-with .vs-list li{color:var(--ink);font-weight:500}
+.vs-card-cta{margin-top:auto;display:inline-flex;align-items:center;justify-content:center;min-height:48px}
+.vs-check{color:var(--primary);font-weight:700}
+.vs-x{color:var(--muted)}
+@media(max-width:768px){.vs-cards{grid-template-columns:1fr;gap:16px}.vs-card{padding:22px}}
+```
+
+**Kiedy NIE używać:** gdy przewaga produktu jest czysto techniczna/mierzalna i klient jest product-aware (porównuje parametry — wtedy C1). Nie używaj też, gdy landing ma już hero H10 Before/After — dwie sekcje „przed/po" obok siebie to redundancja.
+
+---
+
+## C3 — Jednowierszowy spec-bar (minimalny, quiet)
+
+**Kiedy:** produkt z JEDNĄ killer-metryką, gdzie więcej = lepiej (moc, zasięg, liczba cykli, m² na jednym ładowaniu). Styl quiet — porównanie szepcze, nie krzyczy.
+
+**Kategoria:** premium minimal, japandi, clinical, quiet luxury.
+**Persona emotion:** connoisseur, desire (bez agresywnej sprzedaży).
+**Price:** mid-premium.
+
+**Klasy wymagane:** `<section class="comparison">` (łapane przez verify-landing Grupa 11), wewnątrz `class="vs-bar"`.
+**Klasa identyfikująca (FROZEN, v5.0):** `comp-v-bar` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="comparison comp-v-bar">
+  <div class="container">
+    <div class="vs-bar-head">
+      <div class="eyebrow">Nº 08 · Porównanie</div>
+      <h2>Zwykłe [kategoria] vs [Marka]. <em>Jedna miara wystarczy.</em></h2>
+    </div>
+    <!-- Wybierz metrykę, w której WIĘCEJ = LEPIEJ — pasek marki MUSI być dłuższy.
+         Dokładnie 2 liczby w całej sekcji. Szary odcinek = gdzie kończy kategoria. -->
+    <div class="vs-bar" role="img" aria-label="Zwykłe [kategoria]: [N] [jednostka]. [Marka]: [3×N] [jednostka].">
+      <div class="vs-bar-side">
+        <div class="vs-bar-name">Zwykłe [kategoria]</div>
+        <div class="vs-bar-val">[N] [jednostka]</div>
+      </div>
+      <div class="vs-bar-meter">
+        <div class="vs-bar-old" style="width:30%"></div>
+      </div>
+      <div class="vs-bar-side is-brand">
+        <div class="vs-bar-name">[Marka]</div>
+        <div class="vs-bar-val">[3×N] [jednostka]</div>
+      </div>
+    </div>
+    <p class="vs-bar-note">[1 zdanie: mechanizm odpowiadający za różnicę — bez claimów zdrowotnych].</p>
+  </div>
+</section>
+```
+
+```css
+.comp-v-bar .container{max-width:880px}
+.vs-bar-head{text-align:center;margin-bottom:48px}
+.vs-bar-head .eyebrow{justify-content:center}
+.vs-bar{display:grid;grid-template-columns:auto 1fr auto;gap:24px;align-items:center;padding:28px 0;border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+.vs-bar-name{font-family:var(--font-accent);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;white-space:nowrap}
+.vs-bar-val{font-family:var(--font-display);font-size:24px;color:var(--ink);white-space:nowrap}
+.vs-bar-side.is-brand{text-align:right}
+.vs-bar-side.is-brand .vs-bar-name{color:var(--primary)}
+.vs-bar-side.is-brand .vs-bar-val{color:var(--primary);font-weight:600}
+.vs-bar-meter{position:relative;height:8px;border-radius:999px;background:var(--primary);min-width:120px}
+.vs-bar-old{position:absolute;left:0;top:0;bottom:0;border-radius:999px 0 0 999px;background:var(--rule)}
+.vs-bar-note{text-align:center;font-family:var(--font-body);font-size:14px;color:var(--muted);margin-top:24px;max-width:520px;margin-left:auto;margin-right:auto}
+@media(max-width:768px){.vs-bar{grid-template-columns:1fr;gap:14px;padding:24px 0}.vs-bar-side.is-brand{text-align:left}}
+```
+
+**Kiedy NIE używać:** gdy produkt nie ma jednej metryki typu „więcej = lepiej" (np. przewaga to czas — krótszy pasek marki czyta się jako przegrana) albo gdy przewag jest ≥4 i klient porównuje cechy (wtedy C1). Nie używaj w stylach głośnych/retro — jeden cichy pasek ginie między gęstymi sekcjami.
+
+---
+
+---
+
+# 4. OFFER — 3 warianty
+
+> Offer box = 80% konwersji po Hero ([`04-design.md` sekcja H](../04-design.md) — kanon OBOWIĄZKOWY). Warianty O różnią się układem, ale **każdy zawiera pełną anatomię H**: stara cena przekreślona + savings badge + „Oszczędzasz N zł" + `.offer-shipping` pod ceną + rating 4,6-4,8 z `data-placeholder` i przypisem [1] + guarantee pod CTA + trust strip + BLIK-first payment + primary CTA z `data-demo-modal` (nigdy martwy, H.11). Budżet liczb sekcji Offer: 2-3 (cena, oszczędność, dni gwarancji) — patrz SCROLLABILITY RULES w [`02-generate.md`](../02-generate.md).
+
+## O1 — Single offer box (kanon H, DEFAULT)
+
+**Kiedy:** default dla każdego landingu z jednym produktem / jednym zestawem. Pełna anatomia H.1 Z-pattern w jednej karcie — wariant referencyjny, w 100% zgodny z kanonem H. Jeśli żaden guardrail O2/O3 nie pasuje → bierzesz O1.
+
+**Kategoria:** wszystkie (default).
+**Price:** wszystkie.
+
+**Klasy wymagane:** `<section class="offer" id="offer">`, karta `class="offer-box" id="offer-box"` (id wymagane przez dwuwarunkowy gating sticky-CTA, H.7), wewnątrz: `offer-rating` + `stars`, `offer-price-old`, `save-badge`, `save-text` („Oszczędzasz N zł"), `offer-shipping`, `offer-cta` z `href="#" data-demo-modal` (albo realny checkout URL — H.11), `offer-guarantee`, `trust-strip`, `pay-row` (BLIK pierwszy).
+**Klasa identyfikująca (FROZEN, v5.0):** `offer-v-single` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="offer offer-v-single" id="offer">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 11 · Oferta</div>
+      <h2>[Headline oferty: co dostaje + 1 korzyść] <em>[kluczowe]</em>.</h2>
+    </div>
+    <div class="offer-box" id="offer-box">
+      <span class="offer-badge">Bestseller · −25%</span><!-- sticker tylko jeśli uzasadniony danymi (H.6) -->
+      <div class="offer-grid">
+        <div class="offer-visual">
+          <figure class="offer-figure">
+            <div class="ph">
+              <div class="ph-mark">O</div>
+              <div class="ph-title">Zestaw oferty (show-what-you-get)</div>
+              <div class="ph-size">1000 × 1250 (4:5)</div>
+              <div class="ph-note">Wszystko co klient dostaje w pudełku: produkt + akcesoria + opakowanie. Flat-lay lub lekki kąt, jasne tło, miękkie światło.</div>
+            </div>
+          </figure>
+        </div>
+        <div class="offer-main">
+          <div class="offer-rating">
+            <span class="stars">★★★★★</span>
+            <span>4,7/5 · <strong data-placeholder="reviews">1 247</strong> opinii<sup><a href="#footnote-reviews">[1]</a></sup></span>
+          </div>
+          <!-- Przypis [1] do stopki: „Ocena i liczba opinii mają charakter poglądowy (faza wprowadzenia produktu) — do podmiany na realne dane sklepu." (H.3, wzorzec cervana) -->
+          <h3>[Nazwa produktu / zestawu]</h3>
+          <p class="offer-lede">[Lede max 12 słów: problem → rozwiązanie].</p>
+          <div class="price-row">
+            <span class="offer-price-old">199 zł</span>
+            <span class="offer-price-now">149 zł</span>
+            <span class="save-badge">−25%</span>
+          </div>
+          <p class="save-text">Oszczędzasz 50 zł</p>
+          <p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+          <ul class="offer-includes">
+            <li>[Benefit 1: benefit → feature → emocja, np. „Filtr 27 dB — dziecko śpi mimo hałasu wesela"]</li>
+            <li>[Benefit 2]</li>
+            <li>[Benefit 3]</li>
+            <li>[Benefit 4 — max 5 pozycji]</li>
+          </ul>
+          <a href="#" data-demo-modal class="offer-cta magnetic">Zamawiam — 149 zł</a>
+          <!-- Handler data-demo-modal: patterns.md #24 Demo-Checkout Modal (H.11). Gdy workflow ma realny checkout URL → podmień href, usuń data-demo-modal. -->
+          <div class="offer-guarantee">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+            <span>30 dni na zwrot · bez pytań</span>
+          </div>
+          <div class="trust-strip">
+            <div><b>Darmowa</b> dostawa</div>
+            <div><b>30 dni</b> na zwrot</div>
+            <div><b>2 lata</b> gwarancji</div>
+          </div>
+          <div class="pay-row">
+            <span class="pay-chip">BLIK</span>
+            <span class="pay-chip">Visa / Mastercard</span>
+            <span class="pay-chip">Przelewy24</span>
+            <span class="pay-chip">Apple Pay</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.offer{padding:120px 0}
+.offer-box{position:relative;max-width:960px;margin:0 auto;background:var(--paper);border:1px solid var(--rule);border-radius:24px;overflow:hidden}
+.offer-badge{position:absolute;top:18px;right:18px;z-index:2;padding:8px 14px;background:var(--accent,var(--primary));color:#fff;border-radius:8px;font-family:var(--font-body);font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;transform:rotate(-3deg)}
+.offer-grid{display:grid;grid-template-columns:1fr 1.1fr}
+.offer-visual{position:relative;min-height:480px}
+.offer-figure{position:absolute;inset:0;margin:0;overflow:hidden}
+.offer-main{padding:48px 44px}
+.offer-rating{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-bottom:16px}
+.offer-rating .stars{color:var(--accent,var(--primary));font-size:15px;letter-spacing:2px}
+.offer-main h3{font-family:var(--font-display);font-size:30px;font-weight:500;letter-spacing:-.02em;color:var(--ink);margin-bottom:8px}
+.offer-lede{font-size:15px;color:var(--muted);line-height:1.5;margin-bottom:22px}
+.price-row{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.offer-price-old{font-size:22px;color:var(--muted);text-decoration:line-through}
+.offer-price-now{font-family:var(--font-display);font-size:clamp(44px,5vw,56px);font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.save-badge{padding:5px 11px;background:var(--accent,var(--primary));color:#fff;border-radius:999px;font-size:12px;font-weight:700;transform:rotate(-3deg)}
+.save-text{font-size:14px;font-weight:600;color:var(--primary);margin-top:8px}
+.offer-shipping{font-size:13px;color:var(--muted);margin:6px 0 22px}
+.offer-includes{list-style:none;padding:0;margin:0 0 26px;display:flex;flex-direction:column;gap:10px}
+.offer-includes li{position:relative;padding-left:26px;font-size:15px;line-height:1.5;color:var(--ink)}
+.offer-includes li::before{content:"✓";position:absolute;left:0;color:var(--primary);font-weight:700}
+.offer-cta{display:flex;align-items:center;justify-content:center;width:100%;min-height:58px;background:var(--primary);color:#fff;border-radius:14px;font-family:var(--font-body);font-size:17px;font-weight:700;text-decoration:none;transition:transform .2s,box-shadow .2s}
+.offer-cta:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.15)}
+.offer-guarantee{display:flex;gap:9px;align-items:center;justify-content:center;font-size:13px;color:var(--muted);margin-top:14px}
+.trust-strip{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--rule);margin-top:26px;padding-top:18px;font-size:12px;color:var(--muted);text-align:center}
+.trust-strip b{color:var(--ink)}
+.pay-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.pay-chip{padding:6px 12px;border:1px solid var(--rule);border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+@media(max-width:768px){.offer{padding:80px 0}.offer-grid{grid-template-columns:1fr}.offer-visual{min-height:0}.offer-figure{position:relative;aspect-ratio:4/3}.offer-main{padding:32px 22px}.offer-price-now{font-size:40px}.offer-price-old{font-size:18px}.trust-strip{flex-direction:column;gap:8px;text-align:left}}
+```
+
+**Kiedy NIE używać:** w zasadzie nigdy — to bezpieczny default. Ustępuje tylko O2 (gdy spełnione OBA guardraile multipacka i celem kampanii jest AOV) lub O3 (gdy ruch jest product-aware i główną obiekcją jest ryzyko zakupu).
+
+---
+
+## O2 — Multipack 1/2/3 szt. (dźwignia AOV)
+
+**Kiedy:** dźwignia AOV. GUARDRAILE: (a) wybieraj TYLKO gdy produkt zużywalny/parowalny ORAZ cena jednostkowa <300 zł — inaczej first-match spada do O1; (b) ceny pakietów liczone DETERMINISTYCZNIE z ceny jednostkowej wg formuły: 2 szt = 2×cena −10%, 3 szt = 3×cena −15% (zaokrąglone do pełnych zł w dół), ZAKAZ wymyślania kwot ad hoc; (c) obowiązkowy komentarz `<!-- DEMO-PRICING: ceny pakietów z formuły -10%/-15%, do akceptacji klienta -->` w HTML.
+
+**Kategoria:** consumables (kosmetyki, suplementy, wkłady, filtry), produkty parowalne (wkładki, skarpetki kompresyjne, akcesoria kupowane „dla dwojga / na zapas").
+**Price:** budget-mid (<300 zł/szt. — twardy guardrail (a)).
+**Budżet liczb:** multipack to sekcja dense — zjada ~6-8 z landingowego budżetu 8-12 liczb. Reszta landingu musi być lżejsza (Hero 1 liczba, Features 0-1).
+
+**Klasy wymagane:** `<section class="offer" id="offer">`, wrapper kart `id="offer-box"`, `offer-rating` + `stars`, `offer-price-old` (suma cen jednostkowych, przekreślona), `save-badge`, `save-text`, `offer-shipping`, featured CTA `class="offer-cta ..."` z `data-demo-modal`, `offer-guarantee`, `trust-strip`, `pay-row` (BLIK pierwszy).
+**Klasa identyfikująca (FROZEN, v5.0):** `offer-v-multipack` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+Przykład formuły dla ceny jednostkowej 149 zł: 2 szt = 298 −10% = **268 zł**; 3 szt = 447 −15% = **379 zł** (floor do pełnych zł). Przekreślona „stara cena" pakietu = suma cen jednostkowych (referencja realna, zgodna z EU Omnibus).
+
+```html
+<section class="offer offer-v-multipack" id="offer">
+  <!-- DEMO-PRICING: ceny pakietów z formuły -10%/-15%, do akceptacji klienta -->
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 11 · Oferta</div>
+      <h2>[Headline: im więcej, tym taniej] <em>[kluczowe]</em>.</h2>
+      <div class="offer-rating">
+        <span class="stars">★★★★★</span>
+        <span>4,7/5 · <strong data-placeholder="reviews">1 247</strong> opinii<sup><a href="#footnote-reviews">[1]</a></sup></span>
+      </div>
+    </div>
+    <div class="packs-grid" id="offer-box">
+      <article class="pack-card">
+        <figure class="pack-figure">
+          <div class="ph">
+            <div class="ph-mark">1</div>
+            <div class="ph-title">Packshot 1 szt.</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Jedna sztuka produktu. Ten sam kadr, tło i światło co pozostałe pakiety — różnica tylko w liczbie sztuk.</div>
+          </div>
+        </figure>
+        <h3 class="pack-name">1 sztuka</h3>
+        <div class="pack-price-row"><span class="pack-price">149 zł</span></div>
+        <p class="pack-unit">[na start / na próbę]</p>
+        <a href="#" data-demo-modal class="pack-cta">Wybieram — 149 zł</a>
+      </article>
+      <article class="pack-card pack-featured">
+        <span class="pack-flag">Najczęściej wybierane</span>
+        <figure class="pack-figure">
+          <div class="ph">
+            <div class="ph-mark">2</div>
+            <div class="ph-title">Packshot 2 szt.</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Dwie sztuki obok siebie — identyczna kompozycja jak karta 1 szt.</div>
+          </div>
+        </figure>
+        <h3 class="pack-name">2 sztuki</h3>
+        <div class="pack-price-row">
+          <span class="offer-price-old">298 zł</span>
+          <span class="pack-price">268 zł</span>
+          <span class="save-badge">−10%</span>
+        </div>
+        <p class="save-text">Oszczędzasz 30 zł · 134 zł/szt.</p>
+        <a href="#" data-demo-modal class="offer-cta magnetic">Zamawiam 2 szt. — 268 zł</a>
+      </article>
+      <article class="pack-card">
+        <figure class="pack-figure">
+          <div class="ph">
+            <div class="ph-mark">3</div>
+            <div class="ph-title">Packshot 3 szt.</div>
+            <div class="ph-size">800 × 600 (4:3)</div>
+            <div class="ph-note">Trzy sztuki w spójnej kompozycji serii — to samo tło i światło.</div>
+          </div>
+        </figure>
+        <h3 class="pack-name">3 sztuki</h3>
+        <div class="pack-price-row">
+          <span class="offer-price-old">447 zł</span>
+          <span class="pack-price">379 zł</span>
+          <span class="save-badge">−15%</span>
+        </div>
+        <p class="save-text">Oszczędzasz 68 zł</p>
+        <a href="#" data-demo-modal class="pack-cta">Wybieram — 379 zł</a>
+      </article>
+    </div>
+    <div class="offer-meta">
+      <p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+      <div class="offer-guarantee">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+        <span>30 dni na zwrot · bez pytań · dotyczy każdego pakietu</span>
+      </div>
+      <div class="trust-strip">
+        <div><b>Darmowa</b> dostawa</div>
+        <div><b>30 dni</b> na zwrot</div>
+        <div><b>2 lata</b> gwarancji</div>
+      </div>
+      <div class="pay-row">
+        <span class="pay-chip">BLIK</span>
+        <span class="pay-chip">Visa / Mastercard</span>
+        <span class="pay-chip">Przelewy24</span>
+        <span class="pay-chip">Apple Pay</span>
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.offer{padding:120px 0}
+.offer .section-head .offer-rating{display:flex;justify-content:center;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-top:14px}
+.offer-rating .stars{color:var(--accent,var(--primary));font-size:15px;letter-spacing:2px}
+.packs-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;max-width:1040px;margin:0 auto;align-items:stretch}
+.pack-card{position:relative;display:flex;flex-direction:column;background:var(--paper);border:1px solid var(--rule);border-radius:20px;padding:28px 22px;text-align:center}
+.pack-featured{border:2px solid var(--primary);transform:translateY(-10px)}
+.pack-flag{position:absolute;top:-14px;left:50%;transform:translateX(-50%);white-space:nowrap;padding:6px 14px;background:var(--primary);color:#fff;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+.pack-figure{margin:0 0 18px;aspect-ratio:4/3;border-radius:12px;overflow:hidden}
+.pack-name{font-family:var(--font-display);font-size:21px;font-weight:500;color:var(--ink);margin-bottom:6px}
+.pack-price-row{display:flex;justify-content:center;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 0 4px}
+.offer-price-old{font-size:17px;color:var(--muted);text-decoration:line-through}
+.pack-price{font-family:var(--font-display);font-size:34px;font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.pack-featured .pack-price{font-size:42px}
+.save-badge{padding:4px 10px;background:var(--accent,var(--primary));color:#fff;border-radius:999px;font-size:11px;font-weight:700;transform:rotate(-3deg)}
+.save-text{font-size:13px;font-weight:600;color:var(--primary);margin-bottom:18px}
+.pack-unit{font-size:13px;color:var(--muted);margin-bottom:18px}
+.pack-cta{margin-top:auto;display:flex;align-items:center;justify-content:center;min-height:50px;border:1.5px solid var(--ink);border-radius:12px;color:var(--ink);font-size:15px;font-weight:700;text-decoration:none}
+.pack-featured .offer-cta{margin-top:auto;display:flex;align-items:center;justify-content:center;min-height:56px;background:var(--primary);color:#fff;border-radius:12px;font-size:16px;font-weight:700;text-decoration:none}
+.offer-meta{max-width:1040px;margin:32px auto 0;text-align:center}
+.offer-shipping{font-size:13px;color:var(--muted);margin-bottom:12px}
+.offer-guarantee{display:flex;gap:9px;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.trust-strip{display:flex;justify-content:center;gap:32px;border-top:1px solid var(--rule);margin-top:22px;padding-top:18px;font-size:12px;color:var(--muted)}
+.trust-strip b{color:var(--ink)}
+.pay-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.pay-chip{padding:6px 12px;border:1px solid var(--rule);border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+@media(max-width:900px){.offer{padding:80px 0}.packs-grid{grid-template-columns:1fr;max-width:420px}.pack-featured{transform:none;order:-1;margin-top:14px}.trust-strip{flex-direction:column;gap:8px;align-items:center}}
+```
+
+**Kiedy NIE używać:** produkty trwałe kupowane raz na lata (AGD, elektronika, meble) i wszystko ≥300 zł/szt. — wybór pakietu dodaje friction i tłumi konwersję zamiast podnosić AOV. Nie używaj też, gdy klient nie zatwierdził polityki rabatowej — ceny z formuły to DEMO do akceptacji, nie cennik.
+
+---
+
+## O3 — Guarantee-led (gwarancja jako nagłówek boxu)
+
+**Kiedy:** risk-reversal NAD ceną — „30 dni testu. Nie działa — oddajemy 100%." jako nagłówek karty (wzorzec Ridge „99 dni" ze swipe corpus), dopiero potem cena+CTA. Dla stylów quiet/evidence (clinical-warmth, apothecary, swiss-grid) i ruchu product-aware (remarketing, klient zna produkt — ostatnią obiekcją jest ryzyko, nie cena).
+
+**Kategoria:** wellness, health, ortopedia, produkty „nie uwierzę, dopóki nie sprawdzę na sobie".
+**Persona emotion:** skepticism / risk-aversion.
+**Price:** mid-premium (200+).
+
+**Klasy wymagane:** `<section class="offer" id="offer">`, karta `class="offer-box offer-gbox" id="offer-box"`, `offer-rating` + `stars`, `offer-price-old`, `save-badge`, `save-text`, `offer-shipping`, `offer-cta` z `data-demo-modal` (albo realny checkout URL — H.11), `offer-guarantee` (mikro-gwarancja POD CTA zostaje mimo nagłówka — wymóg H.3), `trust-strip`, `pay-row` (BLIK pierwszy).
+**Klasa identyfikująca (FROZEN, v5.0):** `offer-v-guarantee` — dodaj do `<section>`; NIEMODYFIKOWALNA (verify-landing mapuje deklarację z briefu sekcji 9 na tę klasę).
+
+```html
+<section class="offer offer-v-guarantee" id="offer">
+  <div class="container">
+    <div class="section-head">
+      <div class="eyebrow">Nº 11 · Oferta</div>
+      <h2>[Headline oferty] <em>[kluczowe]</em>.</h2>
+    </div>
+    <div class="offer-box offer-gbox" id="offer-box">
+      <div class="gbox-head">
+        <h3>30 dni testu. Nie działa — oddajemy 100%.</h3>
+        <p>Używasz [produkt] u siebie przez 30 dni. Odeślesz — zwracamy pełną kwotę. Bez formularzy, bez pytań.</p>
+      </div>
+      <div class="gbox-body">
+        <figure class="gbox-figure">
+          <div class="ph">
+            <div class="ph-mark">G</div>
+            <div class="ph-title">Produkt w użyciu (lifestyle)</div>
+            <div class="ph-size">1000 × 625 (16:10)</div>
+            <div class="ph-note">Produkt w realnym użyciu w domu klienta — spokojny kadr, naturalne światło, zero studyjnego packshotu. Obraz ma uwiarygadniać obietnicę testu.</div>
+          </div>
+        </figure>
+        <div class="offer-rating">
+          <span class="stars">★★★★★</span>
+          <span>4,7/5 · <strong data-placeholder="reviews">1 247</strong> opinii<sup><a href="#footnote-reviews">[1]</a></sup></span>
+        </div>
+        <p class="gbox-product">[Nazwa produktu / zestawu]</p>
+        <ul class="offer-includes">
+          <li>[Benefit 1: benefit → feature → emocja]</li>
+          <li>[Benefit 2]</li>
+          <li>[Benefit 3 — w tym wariancie max 3, gwarancja gra pierwsze skrzypce]</li>
+        </ul>
+        <div class="price-row">
+          <span class="offer-price-old">199 zł</span>
+          <span class="offer-price-now">149 zł</span>
+          <span class="save-badge">−25%</span>
+        </div>
+        <p class="save-text">Oszczędzasz 50 zł</p>
+        <p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+        <a href="#" data-demo-modal class="offer-cta">Zamawiam — 149 zł</a>
+        <div class="offer-guarantee">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8-8 10-4.5-2-8-5-8-10V6l8-4z"/><path d="M9 12l2 2 4-4"/></svg>
+          <span>Zwrot 100% w ciągu 30 dni · bez pytań</span>
+        </div>
+        <div class="trust-strip">
+          <div><b>Darmowa</b> dostawa</div>
+          <div><b>30 dni</b> na zwrot</div>
+          <div><b>2 lata</b> gwarancji</div>
+        </div>
+        <div class="pay-row">
+          <span class="pay-chip">BLIK</span>
+          <span class="pay-chip">Visa / Mastercard</span>
+          <span class="pay-chip">Przelewy24</span>
+          <span class="pay-chip">Apple Pay</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+```
+
+```css
+.offer{padding:120px 0}
+.offer-gbox{max-width:600px;margin:0 auto;background:var(--paper);border:1px solid var(--rule);border-radius:24px;overflow:hidden}
+.gbox-head{background:var(--ink);color:var(--paper);padding:36px 40px;text-align:center}
+.gbox-head h3{font-family:var(--font-display);font-size:clamp(24px,3.2vw,32px);font-weight:500;line-height:1.25;letter-spacing:-.02em;color:inherit}
+.gbox-head p{font-size:14px;line-height:1.55;opacity:.82;margin-top:12px;max-width:420px;margin-left:auto;margin-right:auto}
+.gbox-body{padding:36px 40px;text-align:center}
+.gbox-figure{margin:0 0 22px;aspect-ratio:16/10;border-radius:14px;overflow:hidden}
+.offer-rating{display:flex;justify-content:center;align-items:center;gap:10px;font-size:13px;color:var(--muted);margin-bottom:10px}
+.offer-rating .stars{color:var(--accent,var(--primary));font-size:15px;letter-spacing:2px}
+.gbox-product{font-family:var(--font-display);font-size:24px;font-weight:500;color:var(--ink);margin-bottom:18px}
+.offer-includes{list-style:none;padding:0;margin:0 auto 24px;max-width:400px;display:flex;flex-direction:column;gap:9px;text-align:left}
+.offer-includes li{position:relative;padding-left:26px;font-size:15px;line-height:1.5;color:var(--ink)}
+.offer-includes li::before{content:"✓";position:absolute;left:0;color:var(--primary);font-weight:700}
+.price-row{display:flex;justify-content:center;align-items:baseline;gap:14px;flex-wrap:wrap}
+.offer-price-old{font-size:20px;color:var(--muted);text-decoration:line-through}
+.offer-price-now{font-family:var(--font-display);font-size:clamp(42px,5vw,52px);font-weight:600;line-height:1;letter-spacing:-.02em;color:var(--ink)}
+.save-badge{padding:5px 11px;background:var(--accent,var(--primary));color:#fff;border-radius:999px;font-size:12px;font-weight:700;transform:rotate(-3deg)}
+.save-text{font-size:14px;font-weight:600;color:var(--primary);margin-top:8px}
+.offer-shipping{font-size:13px;color:var(--muted);margin:6px 0 22px}
+.offer-cta{display:flex;align-items:center;justify-content:center;width:100%;min-height:58px;background:var(--primary);color:#fff;border-radius:14px;font-family:var(--font-body);font-size:17px;font-weight:700;text-decoration:none;transition:transform .2s,box-shadow .2s}
+.offer-cta:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(0,0,0,.15)}
+.offer-guarantee{display:flex;gap:9px;align-items:center;justify-content:center;font-size:13px;color:var(--muted);margin-top:14px}
+.trust-strip{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--rule);margin-top:26px;padding-top:18px;font-size:12px;color:var(--muted)}
+.trust-strip b{color:var(--ink)}
+.pay-row{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.pay-chip{padding:6px 12px;border:1px solid var(--rule);border-radius:999px;font-size:11px;font-weight:600;letter-spacing:.04em;color:var(--muted)}
+@media(max-width:768px){.offer{padding:80px 0}.gbox-head{padding:28px 22px}.gbox-body{padding:28px 20px}.offer-price-now{font-size:40px}.trust-strip{flex-direction:column;gap:8px;text-align:left}}
+```
+
+**Kiedy NIE używać:** impulse low-ticket (<100 zł), gdzie ryzyko nie jest obiekcją — gwarancja nad ceną osłabia anchor cenowy i spowalnia decyzję; wtedy O1. Nie używaj też, jeśli sklep klienta nie obsługuje realnie 30-dniowego zwrotu ze 100% refundacją — obietnica z nagłówka musi być pokryta operacyjnie, inaczej to dark pattern (H.8).

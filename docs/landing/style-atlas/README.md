@@ -173,8 +173,16 @@ Auto-paste z pliku stylu do briefa. Ta sekcja staje się kontraktem na cały lan
 | Outdoorsy Expedition | `outdoorsy-expedition.md` | utility·balanced·evidence·dual·moderate·tradition·public | Patagonia, Snow Peak, Topo Designs |
 | Clinical Warmth | `clinical-warmth.md` | utility·precision·evidence·solo·quiet·present·intimate | Aesop, Necessaire, Bang & Olufsen, Maude |
 
-### Kolejne style (planned, Faza 2)
-Y2K Nostalgia, Memphis, Vaporwave, Neo-Brutalism, Terminal, Newsroom, Chinese Wuxia, Athletic Wear, Biophilic, Soft Bauhaus, Neo-Mongolia, Japanese Supermarket.
+### Nowe style v5.0 (4) — dodane 2026-06-10 (rozszerzenie evidence-cluster — anty-konwergencja)
+| Styl | Plik | DNA | Refs |
+|------|------|-----|------|
+| Newsroom Print | `newsroom-print.md` | utility·precision·evidence·dual·loud·present·public | The Economist, NYT front page, Bloomberg Businessweek, Morning Brew |
+| Field Manual | `field-manual.md` | utility·precision·evidence·solo·moderate·present·public | US Army Field Manuals, Leatherman, Best Made Co., GoRuck |
+| Specification Sheet | `specification-sheet.md` | utility·precision·evidence·solo·quiet·future·intimate | Teenage Engineering, Bosch Professional, Hilti, Keychron |
+| Receipt Print | `receipt-print.md` | utility·precision·evidence·solo·moderate·present·intimate | Receiptify, Square POS, SSENSE, Muji price tags |
+
+### Kolejne style (planned, Faza 3)
+Y2K Nostalgia, Memphis, Vaporwave, Neo-Brutalism, Terminal, Chinese Wuxia, Athletic Wear, Biophilic, Soft Bauhaus, Neo-Mongolia, Japanese Supermarket.
 
 ---
 
@@ -202,6 +210,27 @@ Y2K Nostalgia, Memphis, Vaporwave, Neo-Brutalism, Terminal, Newsroom, Chinese Wu
 - **`verify-landing.sh`** — nowa grupa 14 „Style Lock compliance" (planned Faza 2)
 
 ---
+
+## Font trend map — „trend foundry → darmowy Google Font latin-ext" (v5.0)
+
+> ZAKRES: WYŁĄCZNIE tworzenie NOWYCH stylów Atlasu. ⛔ Zakaz podmiany fontów w istniejących
+> stylach — STYLE LOCK egzekwuje dosłowne tokeny; refresh fontu = niezgodność z wdrożonymi
+> landingami. Wszystkie odpowiedniki zweryfikowane pod latin-ext (data: 2026-06-10);
+> przed użyciem nowego fontu i tak sprawdź ą/ę/ł w specimen Google Fonts.
+
+| Trend foundry (płatny, 2025-26) | Darmowy odpowiednik (Google, latin-ext) | Charakter |
+|---|---|---|
+| GT Sectra | **Fraunces** (variable: opsz/SOFT/WONK) | chunky serif z pazurem — anty-AI-slop display |
+| Monument Extended | **Unbounded** | szeroki display grotesk, loud/edgy |
+| Obviously | **Bricolage Grotesque** | charakterny grotesk variable |
+| Canela | **Instrument Serif** | cienki editorial serif na akcenty |
+| Reckless | **Gloock** | wysoki kontrast display serif |
+| Lyon Text | **Libre Caslon Text** | książkowy text serif (dark-academia) |
+| Söhne | **Schibsted Grotesk** | neutralny premium grotesk |
+| ABC Diatype Mono | **Space Mono / JetBrains Mono** | mono do danych/spec |
+
+Liczbowe „lifty" typografii z researchu traktuj jako KIERUNKOWE (bez własnej walidacji
+empirycznej) — decyzję podejmuj po vision-critique, nie po cytacie z artykułu.
 
 ## Jak dodać nowy styl
 

@@ -350,6 +350,39 @@ case "$STYLE_ID" in
     check_required_token "IM Fell English" "IM Fell English for stamps"
     ;;
 
+  # ═══ Nowe style v5.0 (evidence-cluster — FAZA 5) ═══
+  newsroom-print)
+    check_required_token "Oswald" "Display font Oswald"
+    check_required "class=\"[^\"]*news-masthead" "Primitive 1: news-masthead belka z rule"
+    check_forbidden "IBM Plex" "IBM Plex (clinical/apothecary zakaz)"
+    check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
+    check_forbidden "Caveat" "Caveat zakaz"
+    ;;
+
+  field-manual)
+    check_required_token "Saira Condensed" "Display font Saira Condensed"
+    check_required "class=\"[^\"]*fm-fig" "Primitive 1: fm-fig figura FIG. N"
+    check_forbidden "IBM Plex" "IBM Plex (apothecary/clinical zakaz)"
+    check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
+    check_forbidden "Caveat" "Caveat zakaz"
+    ;;
+
+  specification-sheet)
+    check_required_token "Space Grotesk" "Display font Space Grotesk"
+    check_required "class=\"[^\"]*sheet-row" "Primitive sheet-row (wiersz specyfikacji z jednostką)"
+    check_forbidden "IBM Plex" "IBM Plex (Apothecary/Clinical Kitchen zakaz)"
+    check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
+    check_forbidden "#0A0A0F|#0a0a0f" "Dark bg retro-futuristic (zakaz — to jasny styl evidence)"
+    ;;
+
+  receipt-print)
+    check_required_token "Space Mono" "Display font Space Mono"
+    check_required "class=\"[^\"]*rcpt-line" "Primitive 1: rcpt-line (linia paragonu z ceną)"
+    check_forbidden "IBM Plex" "IBM Plex (apothecary/clinical zakaz)"
+    check_forbidden "Fraunces" "Fraunces (editorial zakaz)"
+    check_forbidden "Cormorant" "Cormorant (editorial zakaz)"
+    ;;
+
   *)
     echo "⚠️  Nieznany style ID: $STYLE_ID"
     echo "   Dodaj case statement w verify-style-lock.sh"

@@ -327,7 +327,7 @@ rozliczenie w budżetach Scrollability:
 
 Dla propozycji zmian PROCEDURY dodatkowo 4 pytania feature-fit: (a) czy zmienia coś
 WIDOCZNEGO dla klienta? (b) czy da się zweryfikować skryptem? (c) czy działa dla
-wszystkich 16 stylów Atlasu? (d) czy NIE jest powtórką wycofanego mechanizmu w przebraniu?
+wszystkich 19 stylów Atlasu? (d) czy NIE jest powtórką wycofanego mechanizmu w przebraniu?
 
 ### Founder note — opcjonalny-domyślny breathing moment (v5.0)
 

@@ -2,7 +2,7 @@
 
 > Ostatnia aktualizacja: 2026-05-18 (v4.2 — patrz [CHANGELOG.md](CHANGELOG.md))
 >
-> **Aktualne v4.x kompoenty:** Style Atlas (15 stylów, deterministyczny pick przez Product DNA) · Sekcja 10 STYLE LOCK w `_brief.md` · `verify-style-lock.sh` · `landing-style-stats.sh` anti-repetition · Scrollability Rules (max 8-12 liczb/landing, 3 breathing momenty)
+> **Aktualne komponenty v5.0:** Style Atlas (19 stylów, deterministyczny pick przez Product DNA + LRU anti-repetition) · STYLE LOCK z maszynowymi lock-* (branding > Atlas) · 35 wariantów sekcji (Tier 2: Problem/How/Comparison/Offer) · kanoniczny GATE/exit-code · Grupa 10 „moment decyzji" + 14 anti-AI-slop + 15 zadeklarowane=zbudowane · vision critique + verify-mobile.mjs + verify-offer-math.mjs · Big Idea/VOC/liczby kanoniczne w briefie · Scrollability Rules (max 8-12 liczb, 3 breathing)
 >
 > **Wycofane:** Conversion Atlas v4.2 + Quiz Funnel v4.3 (research w `_research/` — Conversion Atlas testowany w kwietniu 2026, spowodował „ciężkie i nieprzyjemne" landingi, Scrollability Rules przejęły jego rolę)
 
@@ -42,7 +42,7 @@ Gdy słyszysz którąkolwiek frazę → wykonuj wszystkie 7 etapów autonomiczni
 | [`reference/copy.md`](reference/copy.md) | Senior Copywriter Playbook + Conversion Boosters |
 | [`reference/pagespeed.md`](reference/pagespeed.md) | Optymalizacja wydajności (90+ mobile) |
 | [`reference/patterns.md`](reference/patterns.md) | 22 cross-section signature snippetów (kopiuj-wklej) |
-| [`reference/section-variants.md`](reference/section-variants.md) | **22 warianty per-sekcja** (10 hero + 6 features + 6 testimonials) + drzewo decyzyjne autonomicznego wyboru |
+| [`reference/section-variants.md`](reference/section-variants.md) | **35 wariantów per-sekcja** (10 hero + 6 features + 6 testimonials + 13 Tier 2 v5.0: 4 problem + 3 how + 3 comparison + 3 offer) + drzewo decyzyjne autonomicznego wyboru |
 | [`reference/motion-library.md`](reference/motion-library.md) | **8 motion effects** (shimmer/pulse-glow/bouncy/grain/spotlight/KPI stagger/scroll bar/live signal) + Style Lock compatibility matrix |
 
 ### Specjalne przypadki
