@@ -33,6 +33,12 @@
 4. **Beneficjent/Płatnik (DSA)** wymagane na każdej grupie w EU — beneficjent = marka klienta, płatnik = podmiot finansujący.
 5. **Nie blokuj się na „idealnym".** Jeśli brakuje CAPI/wideo/custom eventów — zbuduj to, co się da,
    i wypisz prerekwizyty (sekcja 9). Lepszy działający szkielet + lista braków niż nic.
+6. **Klient ma rolki? → DWIE kampanie** (decyzja Tomka 2026-06-10, Kafina). Jeśli workflow ma video
+   od klienta (`workflow_video.video_links` / MP4 w `attachments/landing/<slug>/reels/` po dedupie
+   z `generate-reels.py`) — twórz OD RAZU dwie kampanie: `<marka>-static-ic-<RRRR-MM>` (grafiki
+   z `ad_creatives`) + `<marka>-reels-ic-<RRRR-MM>` (reklamy wideo z rolek, KROK 6b). Każda z własną
+   1 szeroką grupą i tym samym eventem optymalizacji. Budżet dzienny per kampania = ten z dyspozycji
+   Tomka (uwaga: 2 kampanie = 2× spend gdy obie włączone — zaznacz w raporcie). Brak video → tylko statyczna.
 
 ---
 
@@ -125,7 +131,8 @@ Dobierz `custom_event_type` wg tego, co pixel REALNIE odpala (z `ads_get_dataset
 | Stan pixela | `custom_event_type` | Kiedy |
 |---|---|---|
 | 0 historii / świeży | **`INITIATED_CHECKOUT`** | **START (decyzja Tomka 2026-06-10).** NIE ViewContent ani AddToCart — optymalizacja na nie zbiera tanich klikaczy bez intencji (śmieciowy ruch). IC = przejście do kasy, najniższy event o realnej intencji zakupowej |
-| ≥ ~10-15 (idealnie 50) zakupów/tydz + budżet ≥ CPA | **`PURCHASE`** | dopiero gdy wolumen pozwala wyjść z nauki |
+| Pixel z HISTORIĄ zakupów (sklep już sprzedaje) | **`PURCHASE`** od startu | audyt 2026-06-10: H2VITAL na Purchase od dnia 1 = ROAS 5+; kryterium to ZDROWIE pixela, nie wiek |
+| ≥5 zakupów/tydz przez 2 kolejne tygodnie LUB ≥20 łącznie | **`PURCHASE`** (graduacja z IC) | stary próg 10-15/tydz nieosiągalny w portfelu (p90 = 1 zakup/raport); CAPI Purchase płynie od dnia 1 niezależnie od eventu optymalizacji, więc dataset rośnie zawsze |
 | Dojrzałe + CAPI „Delivered" | **custom „Confirmed/Delivered"** | tnie RTO; uczy na płacących, nie no-show |
 
 - ⚠️ **Enum:** `INITIATED_CHECKOUT` (z „D"), NIE „INITIATE_CHECKOUT" — zły enum zwraca mylący
@@ -159,6 +166,22 @@ call_to_action_type: SHOP_NOW,  name: "<marka> — <angle> #<i>"
   Włącz bezpieczne (jasność/kontrast, muzyka, dopasowanie proporcji), **WYŁĄCZ generatywne**
   (generowanie/rozszerzanie obrazu, podmiana tła) — psują wierność produktu = zwroty COD. Audytuj draft przed publikacją.
 - **image_url = publiczny URL Supabase** (Meta auto-fetch, zero ręcznego uploadu — przewaga nad cowork).
+
+## KROK 6b — Reklamy WIDEO z rolek klienta (druga kampania, zasada #6)
+
+⚠️ **MCP NIE MA uploadu video** (`ads_create_creative` z video wymaga `video_id` = video już
+w bibliotece konta; narzędzia upload brak — stan 2026-06). Flow:
+
+1. `ads_get_ad_videos(ad_account_id)` — jeśli rolki już wgrane, bierz `video_id` i idź do pkt 3.
+2. Jeśli `[]` → **ręczny upload przez Tomka** (jedyny ręczny krok): podaj mu URL-e MP4
+   (Supabase `attachments/landing/<slug>/reels/reel-{N}.mp4` — po dedupie, NIE 12 oryginałów)
+   + link do biblioteki: `https://business.facebook.com/asset_library/ad_account_videos/?act=<KONTO>`
+   (fallback ręczny: Ads Manager → menu ☰ „Wszystkie narzędzia" → Biblioteka zasobów → Filmy → Wgraj).
+   Zbuduj kampanię+grupę OD RAZU (szkielet czeka tylko na reklamy), reklamy dokończ po wgraniu.
+3. Po uploadzie: `ads_get_ad_videos` → zmapuj video_id→rolka (po `title` = nazwa pliku),
+   `ads_create_creative` z `video_id` + **`image_url` = thumbnail rolki** (`reel-{N}.jpg` z tego samego
+   folderu Supabase — wymagany dla video ads) + `message`/`headline` z konceptów + SHOP_NOW + link z UTM.
+4. `ads_create_ad` per kreacja + `ads_activate_entity` (grupa+reklamy ACTIVE, kampania PAUSED).
 
 ## KROK 7 — UTM-y na linku (obowiązkowo)
 

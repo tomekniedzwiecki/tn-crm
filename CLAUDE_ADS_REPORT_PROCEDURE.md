@@ -32,8 +32,14 @@
   `report_data` (poprzedni raport → porównanie t/t), `last_auto_report_at` → okres bieżący
   (od dnia po ostatnim raporcie do wczoraj; pierwszy raport = 7 dni wstecz).
 - `workflow_branding` (`type='brand_info'`): marka. `workflow_takedrop.landing_url`: domena sklepu.
-- **Target CPA**: `workflow_ads.target_cpa` jeśli jest; fallback = cena produktu × 0,3;
-  brak ceny → ustal z Tomkiem przy pierwszym raporcie i zapisz. Bez targetu kill-rule nie działa.
+- **Target CPA**: `workflow_ads.target_cpa` jeśli jest; definicja: **AOV × marża_brutto × 0,5**
+  (AOV = revenue/purchases z historii raportów gdy ≥5 zakupów, inaczej cena z landingu).
+  Brak danych o marży → cena × 0,3 jako GÓRNA granica, oznacz jako tymczasowy w `blockers`
+  do potwierdzenia z Tomkiem. UWAGA: `workflow_products.price` jest PUSTE w całym portfelu —
+  cenę bierz z landingu/raportów. Bez targetu kill-rule nie działa (audyt: target był w 2/24!).
+- **Okres raportu**: od dnia po `MAX(period_to)` z `workflow_ad_reports` (to samo źródło co
+  legacy cron = jedna prawda) do WCZORAJ. Raporty całościowe oznaczaj `period_type:'lifetime'`
+  w report_data i wykluczaj z benchmarku portfelowego (nakładają się na tygodniówki).
 
 ## KROK 2 — Dane przez MCP (okres: od ostatniego raportu, max 28 dni dla pixel stats)
 
@@ -51,11 +57,22 @@
 - **Test pixela na żywym sklepie** (gdy PageView podejrzanie niski): PowerShell
   `Invoke-WebRequest <domena>` + regex `fbq\('init'` i `connect\.facebook\.net` — zero trafień
   = pixel fizycznie niewpięty (SPRAYCRAFT 2026-06-10: 0 wystąpień przy 700 klikach/mies.).
-- ⚠️ **`ads_get_dataset_stats` zwraca SUROWE eventy**: web pixel + CAPI liczone PODWÓJNIE
-  (dedup robi atrybucja, nie stats) + cały ruch sklepu (też organiczny). Do mikro-lejka używaj
-  **proporcji**, nie absolutów; do `purchases` w raporcie używaj danych ATRYBUOWANYCH (historia
-  raportów / insights), nigdy surowych z dataset stats (H2VITAL: 80 raw vs 29 attributed).
-  `checkout_funnel` wstawiaj tylko gdy okres raportu ≈ okno stats (max 28 dni) i proporcje są spójne.
+- ⚠️ **WSZYSTKIE top-level metryki raportu (purchases, revenue, IC, clicks) = ATRYBUOWANE
+  z Ads Managera** (`ads_get_ad_entities` z time_range), NIGDY `dataset_stats`. Dataset stats =
+  wyłącznie sanity-check zdrowia pixela, zawsze z breakdownem `event_source`: web+CAPI liczone
+  PODWÓJNIE (dedup robi atrybucja, nie stats — kafina: 136 raw vs 74 WEB vs 57 attributed),
+  do tego cały ruch sklepu (organiczny). Proporcje mikro-lejka licz TYLKO między eventami z tego
+  samego event_source (Purchase bywa CAPI-only, reszta web+CAPI → przekłamanie 2×).
+  `checkout_funnel` wstawiaj gdy |okres raportu − okno stats| ≤ 2 dni; okres >28 dni → null.
+- ⚠️ **IC jest NIEJEDNORODNE w portfelu**: część landingów (kafina, doodlo, trenbox, kidsnap,
+  sprzatek, zoomik, rysek) strzela fbq IC na KLIK w CTA + drugi IC z kasy TakeDrop = dubel;
+  h2vital i reszta tylko z kasy. Do czasu ujednolicenia (handler → trackCustom('ClickToCheckout'))
+  porównuj IC między sklepami wyłącznie z liczb atrybuowanych i z tą poprawką w głowie.
+- ⚠️ **Cohort labels z `ads_insights_performance_trend` NIE są źródłem prawdy o konfiguracji**
+  (SPRAYCRAFT: label „messaging_down_funnel_purchase" przy realnym `fb_pixel_purchase`).
+  `optimization_goal`/promoted_object weryfikuj WYŁĄCZNIE przez `ads_get_ad_entities` level=adset.
+- ⚠️ **Benchmark portfelowy**: licz jako `SUM(link_clicks)/SUM(impressions)` z report_data (SQL),
+  NIGDY `AVG(ctr)` — pole ctr w raportach Manusa to all-clicks CTR (bywa 12,7% przy realnym 1,4%).
 - **PEŁNA ŚCIEŻKA EVENTÓW (sklepy TakeDrop, potwierdzone w Events Manager 2026-06-10):**
   checkout TakeDrop emituje `PageView, ViewContent, ViewCart, AddToCart, RemoveFromCart,
   InitiateCheckout, AddShippingInfo, AddPaymentInfo, Purchase` — przy czym **`Purchase` idzie
@@ -65,15 +82,23 @@
 
 ## KROK 3 — Diagnoza lejka: SEKWENCYJNIE, pierwsza metryka poza normą = wąskie gardło tygodnia
 
-**0. Tracking (nadrzędne):** PageView/tydz < 20% × link_clicks/tydz → **TRACKING ZEPSUTY** —
+**0. Tracking (nadrzędne #1):** PageView/tydz < 20% × link_clicks/tydz → **TRACKING ZEPSUTY** —
 kampania ślepa, wszystkie dalsze metryki niewiarygodne. Fix pixela = akcja #1, reszta diagnozy
-ma status „wstępna". (Zdrowo: LPV ≥ 60% link_clicks.)
+ma status „wstępna". (Zdrowo: LPV ≥ 60% link_clicks.) ALE zanim ogłosisz „pixel niewpięty":
+`ads_get_dataset_stats` z `aggregation=event_source` i `url` — CAPI (SERVER) może płynąć mimo
+braku `fbq` w HTML (SPRAYCRAFT: TakeDrop CAPI działało, gdy homepage nie miał pixela).
+
+**0b. Wynik końcowy (nadrzędne #2):** jeśli CPA ≤ target_cpa LUB ROAS ≥ break-even (z marży;
+default 3,0) w bieżącym I poprzednim okresie → **bottleneck: none**. Metryki poza normą odnotuj
+w learnings jako watch-list, NIE jako wąskie gardło. Sekwencja niżej służy szukaniu przyczyny
+ZŁEGO wyniku — nie generowaniu problemów przy zdrowym (audyt 2026-06-10: H2VITAL CPM 51 zł
+przy ROAS 5+ to cecha purchase-optymalizacji na mikrobudżecie, nie problem).
 
 | Kolejność | Metryka | Norma (PL, portfel TN) | Poza normą → wąskie gardło |
 |---|---|---|---|
-| 1 | CPM | 15–40 zł | aukcja/audience (rzadkie przy broad) |
-| 2 | CTR (link) | ≥1,5% dobre; <0,8% problem | **KREACJA** — rotacja konceptu |
-| 3 | CPC | <1,00 zł OK | pochodna 1+2 |
+| 1 | CPM | 30–80 zł (portfel p25-p90: 42-79) | TYLKO gdy >80-90 zł ORAZ CTR/wynik też poza normą → aukcja/audience; samo wysokie CPM = informacja, nie bottleneck |
+| 2 | CTR (link!) | ≥1,5% dobre; <0,8% problem | **KREACJA** — rotacja konceptu. UWAGA: licz z `actions:link_click`, NIE z pola `clicks` (all clicks zawyża ~1,6×) |
+| 3 | CPC | <1,50 zł informacyjnie | pochodna 1+2 — NIE jest krokiem decyzyjnym |
 | 4 | link_clicks→LPV | ≥60% | **TRACKING albo LANDING** (wolny load / redirect) |
 | 5 | LPV→IC | ≥5–10% | **LANDING** (oferta, zaufanie COD, mismatch obietnicy) |
 | 6 | IC→Purchase | ≥25–40% | **CHECKOUT** — rozbij na mikro-kroki (niżej) |
@@ -98,8 +123,9 @@ Złota reguła: CTR >1,5% a konwersji brak = prawie nigdy problem kreacji — sz
 
 | Sytuacja | Reguła | Akcja MCP |
 |---|---|---|
-| Przegrana reklama | spend ≥ 2× target CPA **AND** ≥7 dni **AND** CPA > 1,75× target (przy braku purchases: koszt/IC > 1,75× targetu IC) | `ads_update_entity` → PAUSED |
-| Zwycięzca stabilny ≥3 dni | budżet +20%, max 60 zł/dzień | `ads_update_entity` budżet kampanii — ⚠️ **WYMUSZA PAUSED** (`status_forced_to_paused:true`): NATYCHMIAST po edycji `ads_activate_entity` na kampanii (H2VITAL 2026-06-10, pauza ~15 s). Budżet w groszach (3600 = 36 zł) |
+| Przegrana reklama | spend ≥ 2× target CPA **AND** ≥7 dni **AND** CPA > 1,75× target. Brak purchases: koszt/IC > 1,75× **target_IC** (= target_cpa × 0,3). **IC=0 przy spend ≥2× targetu: NAJPIERW pixel_health — tracking dead/weak = kill rule ZAWIESZONA** (pixel kłamie, decyzja po realnych zamówieniach COD); tracking zdrowy i IC=0 → kill | `ads_update_entity` → PAUSED |
+| Zwycięzca stabilny ≥3 dni | budżet +20%, max 60 zł/dzień. **GATE: sprawdź `campaign_state.updated_at` + actions[] poprzedniego raportu — jeśli budżet rósł w ostatnich 7 dniach, NIE podnoś** (limit +20%/TYDZIEŃ od ostatniej podwyżki; reguła „+20%/72h" z procedury kampanii dotyczy ręcznego skalowania przez Tomka, nie autonomii). Decyzję opieraj o **trailing 7d kończący się WCZORAJ** (nie o ostatnią tygodniówkę — attribution lag dopisuje wstecz, ale okna sprzed 4 dni to nie „ostatni tydzień") | `ads_update_entity` budżet kampanii — ⚠️ **WYMUSZA PAUSED** (`status_forced_to_paused:true`): NATYCHMIAST po edycji `ads_activate_entity` na kampanii (H2VITAL 2026-06-10, pauza ~15 s). Budżet w groszach (3600 = 36 zł) |
+| Wznowienie po pauzie | ≤7 dni pauzy → nauka zachowana, wznawiaj śmiało. >7 dni → traktuj jak NOWĄ kampanię (learning od zera, reguła 72h, faza=learning w raporcie). Po hard-killu strukturalnym (pixel/kasa): po fixie root-cause preferuj nowy ad set z reużytymi `creative_id` | `ads_activate_entity` |
 | Fatigue (KROK 3 pkt 7) | nowy koncept z `ad_copies.versions` (pipeline contentu) | `ads_create_creative`+`ads_create_ad`, stary PAUSED |
 | CTR <0,8% po wydaniu 2× target CPA | wyjątek od reguły 72h — kill natychmiast | jw. |
 | Tracking zepsuty / budżet >limit / landing fix | **eskalacja do Tomka** (TakeDrop handoff wg procedury) | brak — prerekwizyt w raporcie |
@@ -129,6 +155,11 @@ Nowe pola (`source:'mcp'`):
   "next_steps": ["1-3 punkty na przyszły tydzień"]
 }
 ```
+
+**Metryki niemierzalne = `null`, nigdy 0**: gdy pixel_health dead/weak lub LPV < 20% link_clicks →
+`landing_page_views: null` (+ wyjaśnienie w summary „pomiar w naprawie, nie brak ruchu");
+analogicznie atc/ic/purchases z martwego pixela. Panel pokazuje wtedy „—", a 0 przy setkach
+kliknięć wprowadza klienta w błąd (audyt: 9/62 raportów z LPV=0 przy >50 klikach).
 
 Zasady treści `summary` (i maila): liczby ZAWSZE z oceną („CTR 5,3% — ponad 3× typowa norma
 sklepów"), lejek obrazowo (wyświetlenia = przechodnie, kliknięcia = wchodzą do sklepu, IC =

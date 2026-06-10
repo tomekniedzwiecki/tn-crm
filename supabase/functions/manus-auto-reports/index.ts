@@ -40,6 +40,11 @@ serve(async (req) => {
       `)
       .eq('auto_reports_enabled', true)
       .not('meta_ad_account_id', 'is', null)
+      // Konta z meta_mcp_enabled=true obsługuje tygodniowy raport MCP (CLAUDE_ADS_REPORT_PROCEDURE.md)
+      // — Manus zostaje fallbackiem TYLKO dla kont bez MCP, inaczej klient dostaje 2 raporty/tydz.
+      .eq('meta_mcp_enabled', false)
+      // Bez wystartowanej kampanii nie ma czego raportować (gate naprawia nocne puste taski Manusa)
+      .eq('campaign_launched', true)
 
     if (fetchError) {
       console.error('Error fetching workflows:', fetchError)
