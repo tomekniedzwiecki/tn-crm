@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>document.documentElement.classList.add('js')</script>
+
+  <title>Okofon — okulary AI z tłumaczem 144 języków</title>
+  <meta name="description" content="Okulary przeciwsłoneczne, słuchawki open-ear i tłumacz AI 144 języków w jednej oprawce poniżej 40 g. Patrz, słuchaj, rozumiej.">
+
+  <meta property="og:title" content="Okofon — tłumacz AI, open-ear, UV400 w jednej oprawce">
+  <meta property="og:description" content="144 języki prosto do ucha. Trzy urządzenia w jednej oprawce poniżej 40 gramów.">
+  <meta property="og:image" content="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/landing/okofon/og.jpg">
+  <meta property="og:type" content="product">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --display:'Space Grotesk', system-ui, sans-serif;
+      --body:'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono:'JetBrains Mono', 'Courier New', monospace;
+
+      --carbon:#0B0F14;       /* tło strony */
+      --surface:#11161D;      /* panele */
+      --surface-2:#161C25;    /* głębsze karty */
+      --hairline:#232A33;     /* 1px linie */
+      --hairline-2:#2E3742;
+      --ink:#F4F7FA;          /* tekst główny */
+      --ink-dim:#AEB7C2;      /* tekst drugorzędny */
+      --meta:#6E7886;         /* jednostki, podpisy */
+      --neon:#00C2FF;         /* marker wartości */
+      --neon-rgb:0,194,255;
+      --violet:#7B61FF;       /* rzadki drugi akcent */
+      --container:1080px;
+    }
+
+    *{margin:0;padding:0;box-sizing:border-box;}
+    html{scroll-behavior:smooth;}
+    body{
+      font-family:var(--body);
+      background:var(--carbon);
+      color:var(--ink);
+      line-height:1.6;
+      -webkit-font-smoothing:antialiased;
+      overflow-x:hidden;
+    }
+    .container{max-width:var(--container);margin:0 auto;padding:0 32px;}
+    section{position:relative;}
+
+    h1,h2,h3,h4{font-family:var(--display);font-weight:700;letter-spacing:-0.02em;line-height:1.1;color:var(--ink);}
+    a{color:inherit;text-decoration:none;}
+    em{font-style:normal;color:var(--neon);}
+
+    /* uppercase mikro-typografia — line-height dla polskich diakrytyków */
+    .eyebrow,.sec-num,.doc-head span,.trust-item strong,.btn,.nav-link,.header-cta,
+    .mobile-link,.feat-key,.sheet-unit,.figure-cap,.cert-label,.tag,.kicker{
+      line-height:1.45;
+    }
+
+    /* ============ HEADER (solid dark, bez backdrop-filter) ============ */
+    .header{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      background:#0B0F14;
+      border-bottom:1px solid var(--hairline);
+    }
+    .header-inner{max-width:var(--container);margin:0 auto;padding:14px 32px;display:flex;align-items:center;justify-content:space-between;gap:24px;}
+    .logo{display:flex;align-items:center;}
+    .logo svg{display:block;height:26px;width:auto;}
+    .nav{display:flex;align-items:center;gap:30px;}
+    .nav-link{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink-dim);transition:color .2s;}
+    .nav-link:hover{color:var(--neon);}
+    .header-cta{
+      font-family:var(--mono);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:0.1em;
+      padding:11px 20px;background:var(--neon);color:#04121A;border-radius:2px;transition:transform .2s, box-shadow .2s;
+    }
+    .header-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(var(--neon-rgb),0.35);}
+    .hamburger{display:none;flex-direction:column;gap:5px;background:none;border:0;cursor:pointer;padding:6px;}
+    .hamburger span{width:24px;height:2px;background:var(--ink);transition:.3s;}
+
+    /* ============ MOBILE MENU ============ */
+    .mobile-menu{
+      position:fixed;inset:0;z-index:200;background:#0B0F14;
+      display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px;
+      transform:translateX(100%);transition:transform .35s cubic-bezier(.7,0,.2,1);
+    }
+    .mobile-menu.open{transform:translateX(0);}
+    .mobile-close{position:absolute;top:22px;right:26px;background:none;border:0;color:var(--ink);font-size:30px;cursor:pointer;line-height:1;}
+    .mobile-link{font-family:var(--display);font-size:26px;font-weight:700;color:var(--ink);padding:12px 0;text-transform:uppercase;letter-spacing:0.02em;}
+    .mobile-link:nth-child(odd){color:var(--neon);}
+    .mobile-menu .header-cta{margin-top:24px;font-size:14px;padding:15px 30px;}
+
+    /* ============ BUTTONS ============ */
+    .btn{
+      display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:13px;font-weight:600;
+      text-transform:uppercase;letter-spacing:0.08em;padding:16px 30px;border-radius:2px;cursor:pointer;
+      transition:transform .2s, box-shadow .2s, background .2s;
+    }
+    .btn-primary{background:var(--neon);color:#04121A;}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 10px 30px rgba(var(--neon-rgb),0.4);}
+    .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--hairline-2);}
+    .btn-ghost:hover{border-color:var(--neon);color:var(--neon);}
+    .btn-arrow::after{content:'→';font-family:var(--body);}
+
+    /* ============ DOC-HEAD STRIP (sygnatura) ============ */
+    .doc-head{
+      display:flex;flex-wrap:wrap;gap:6px 26px;padding:11px 0;
+      border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);
+      font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;text-transform:uppercase;color:var(--meta);
+    }
+    .doc-head span:nth-child(2){color:var(--neon);}
+
+    /* eyebrow + numerowane nagłówki sekcji */
+    .eyebrow{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.18em;color:var(--neon);display:inline-block;margin-bottom:18px;}
+    .sec-head{font-size:clamp(28px,4.4vw,46px);font-weight:700;letter-spacing:-0.03em;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;}
+    .sec-num{font-family:var(--mono);font-size:0.42em;font-weight:600;color:var(--neon);}
+    .sec-sub{color:var(--ink-dim);font-family:var(--body);font-size:17px;line-height:1.65;max-width:620px;margin-top:20px;}
+
+    /* ============ PLACEHOLDER (dark) ============ */
+    .ph{
+      position:relative;overflow:hidden;background:
+        linear-gradient(135deg, var(--surface) 0%, var(--surface-2) 100%);
+      border:1px solid var(--hairline);
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;
+      padding:26px;text-align:center;border-radius:6px;
+    }
+    .ph::after{content:'';position:absolute;inset:0;background:radial-gradient(circle at 70% 20%, rgba(var(--neon-rgb),0.10), transparent 60%);pointer-events:none;}
+    .ph-mark{font-family:var(--mono);font-size:11px;letter-spacing:0.2em;color:var(--neon);opacity:.85;}
+    .ph-title{font-family:var(--display);font-weight:500;font-size:15px;color:var(--ink);}
+    .ph-size{font-family:var(--mono);font-size:11px;color:var(--meta);}
+    .ph-note{font-size:12.5px;color:var(--ink-dim);max-width:300px;line-height:1.5;}
+
+    /* ============ HERO ============ */
+    .hero{padding:140px 0 100px;overflow:hidden;}
+    .hero-bg{position:absolute;inset:0;pointer-events:none;z-index:0;}
+    .hero-bg .glow{position:absolute;top:-10%;right:-8%;width:760px;height:760px;border-radius:50%;
+      background:radial-gradient(circle, rgba(var(--neon-rgb),0.16) 0%, transparent 62%);}
+    .hero-bg .grid-lines{position:absolute;inset:0;
+      background-image:linear-gradient(var(--hairline) 1px, transparent 1px),linear-gradient(90deg, var(--hairline) 1px, transparent 1px);
+      background-size:64px 64px;opacity:.18;mask-image:radial-gradient(circle at 70% 30%, #000 0%, transparent 70%);
+      -webkit-mask-image:radial-gradient(circle at 70% 30%, #000 0%, transparent 70%);}
+    .hero .container{position:relative;z-index:1;}
+    .hero-doc{margin-bottom:40px;}
+    .hero-grid{display:grid;grid-template-columns:1.05fr 0.95fr;gap:60px;align-items:center;}
+    .hero h1{font-size:clamp(38px,5.4vw,66px);line-height:1.02;}
+    .hero-sub{color:var(--ink-dim);font-size:clamp(16px,1.5vw,19px);line-height:1.65;margin:24px 0 8px;max-width:520px;}
+    .hero-cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-top:30px;}
+    .hero-spec-stack{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px;}
+    .hero-spec{border:1px solid var(--hairline);border-radius:4px;padding:12px 16px;background:rgba(255,255,255,0.015);}
+    .hero-spec b{font-family:var(--mono);font-size:14px;color:var(--neon);display:block;letter-spacing:0.02em;}
+    .hero-spec span{font-size:11px;color:var(--meta);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.08em;}
+
+    .sheet-figure{position:relative;}
+    .figure-frame{border:1px solid var(--hairline);background:linear-gradient(160deg, var(--surface) 0%, #0C1117 100%);padding:30px;border-radius:8px;}
+    .figure-cap{font-family:var(--mono);font-size:10.5px;letter-spacing:0.14em;color:var(--meta);margin-top:12px;text-transform:uppercase;}
+
+    /* dim-line (signature) */
+    .dim-line{position:relative;height:1px;background:var(--neon);margin:30px auto 34px;width:78%;box-shadow:0 0 8px rgba(var(--neon-rgb),0.5);}
+    .dim-line::before,.dim-line::after{content:'';position:absolute;top:-3.5px;border-top:4px solid transparent;border-bottom:4px solid transparent;}
+    .dim-line::before{left:0;border-right:7px solid var(--neon);}
+    .dim-line::after{right:0;border-left:7px solid var(--neon);}
+    .dim-label{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-family:var(--mono);font-size:11px;color:var(--neon);background:var(--carbon);padding:0 10px;white-space:nowrap;}
+
+    /* ============ TRUST STRIP ============ */
+    .trust{padding:0 0 30px;}
+    .trust-strip{display:flex;justify-content:space-between;gap:18px;flex-wrap:nowrap;border:1px solid var(--hairline);border-radius:6px;background:var(--surface);padding:18px 26px;}
+    .trust-item{display:inline-flex;align-items:center;gap:11px;flex-shrink:0;white-space:nowrap;}
+    .trust-item .ti-glyph{width:8px;height:8px;border-radius:50%;background:var(--neon);box-shadow:0 0 8px rgba(var(--neon-rgb),0.6);flex-shrink:0;}
+    .trust-item strong{display:block;font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:0.06em;color:var(--ink);}
+    .trust-item span{display:block;font-size:11.5px;color:var(--meta);}
+
+    /* ============ SECTION SHELL ============ */
+    .sec{padding:120px 0;border-top:1px solid var(--hairline);}
+    .sec-doc{margin-bottom:46px;}
+
+    /* PROBLEM */
+    .problem-grid{display:grid;grid-template-columns:1fr 0.85fr;gap:56px;align-items:center;}
+    .stat-mega{font-family:var(--display);font-weight:700;font-size:clamp(80px,13vw,160px);line-height:.9;color:var(--neon);letter-spacing:-0.04em;text-shadow:0 0 40px rgba(var(--neon-rgb),0.25);}
+    .stat-cap{font-family:var(--mono);font-size:12px;text-transform:uppercase;letter-spacing:0.1em;color:var(--meta);margin-top:10px;}
+    .problem-list{list-style:none;margin-top:30px;display:grid;gap:14px;}
+    .problem-list li{display:flex;gap:14px;align-items:flex-start;color:var(--ink-dim);font-size:15.5px;}
+    .problem-list li::before{content:'—';color:var(--neon);font-family:var(--mono);flex-shrink:0;}
+    .problem-figure{margin-top:0;}
+
+    /* FEATURES — F3 linear stack */
+    .feat-block{display:grid;grid-template-columns:0.95fr 1.05fr;gap:48px;align-items:center;padding:46px 0;border-top:1px solid var(--hairline);}
+    .feat-block:nth-child(even) .feat-body{order:2;}
+    .feat-h{font-size:clamp(24px,3vw,34px);margin-bottom:16px;}
+    .feat-lead{color:var(--ink-dim);font-size:16px;line-height:1.7;margin-bottom:22px;}
+    .feat-spec-list{list-style:none;display:grid;gap:0;border-top:1px solid var(--hairline);}
+    .feat-row{display:flex;align-items:baseline;gap:14px;padding:11px 0;border-bottom:1px solid var(--hairline);}
+    .feat-key{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--meta);min-width:150px;}
+    .feat-val{font-family:var(--body);font-weight:600;font-size:15px;color:var(--ink);}
+    .feat-val .hl{color:var(--neon);font-family:var(--mono);}
+
+    /* SPEC SHEET */
+    .spec-grid{display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:start;}
+    .sheet-spec{list-style:none;}
+    .sheet-row{display:flex;align-items:baseline;gap:16px;padding:14px 0;border-bottom:1px solid var(--hairline);}
+    .sheet-key{font-family:var(--body);font-size:15px;font-weight:500;color:var(--ink-dim);}
+    .sheet-leader{flex:1;border-bottom:1px dotted var(--hairline-2);transform:translateY(-4px);}
+    .sheet-value{font-family:var(--mono);font-size:16px;font-weight:600;color:var(--neon);font-variant-numeric:tabular-nums;white-space:nowrap;}
+    .sheet-unit{font-family:var(--mono);font-size:11px;color:var(--meta);margin-left:5px;text-transform:uppercase;}
+
+    /* HOW IT WORKS — W3 spec strip */
+    .how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;}
+    .how-step{border:1px solid var(--hairline);border-radius:8px;padding:26px;background:var(--surface);position:relative;}
+    .how-step-num{font-family:var(--mono);font-size:13px;color:var(--neon);letter-spacing:0.1em;}
+    .how-step-figure{margin:18px 0;}
+    .how-step h3{font-size:19px;margin-bottom:10px;}
+    .how-step p{color:var(--ink-dim);font-size:14.5px;line-height:1.6;}
+
+    /* COMPARISON — C1 table */
+    .comp-wrap{overflow-x:auto;border:1px solid var(--hairline);border-radius:8px;}
+    .comp-table{width:100%;border-collapse:collapse;min-width:680px;}
+    .comp-table th,.comp-table td{text-align:left;padding:18px 20px;border-bottom:1px solid var(--hairline);font-size:14px;vertical-align:top;}
+    .comp-table thead th{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;color:var(--meta);background:var(--surface);}
+    .comp-table th.col-win,.comp-table td.col-win{background:rgba(var(--neon-rgb),0.06);color:var(--ink);}
+    .comp-table thead th.col-win{color:var(--neon);}
+    .comp-table .rk{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--meta);}
+    .comp-table td{color:var(--ink-dim);}
+    .comp-table td.col-win{font-weight:600;}
+
+    /* TESTIMONIALS — T6 certs + voices */
+    .cert-strip{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:48px;}
+    .cert{display:flex;align-items:center;gap:10px;border:1px solid var(--hairline);border-radius:4px;padding:12px 18px;background:var(--surface);}
+    .cert b{font-family:var(--mono);font-size:14px;color:var(--neon);}
+    .cert-label{font-size:11px;color:var(--meta);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.06em;}
+    .voices{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;}
+    .voice{border:1px solid var(--hairline);border-radius:8px;padding:26px;background:var(--surface);display:flex;flex-direction:column;gap:18px;}
+    .voice-stars{color:var(--neon);font-size:14px;letter-spacing:2px;}
+    .voice-quote{font-size:15px;line-height:1.65;color:var(--ink);}
+    .voice-foot{display:flex;align-items:center;gap:12px;margin-top:auto;}
+    .testi-avatar-figure{width:46px;height:46px;border-radius:50%;flex-shrink:0;overflow:hidden;}
+    .testi-avatar-figure .ph{width:100%;height:100%;padding:4px;border-radius:50%;}
+    .testi-avatar-figure .ph-mark{font-size:9px;}
+    .voice-meta b{display:block;font-family:var(--display);font-size:14px;color:var(--ink);}
+    .voice-meta span{font-size:11.5px;color:var(--meta);font-family:var(--mono);}
+    .testi-note{margin-top:24px;font-family:var(--mono);font-size:11px;color:var(--meta);letter-spacing:0.04em;}
+
+    /* FAQ */
+    .faq-list{max-width:840px;margin:0 auto;}
+    .faq-item{border-bottom:1px solid var(--hairline);}
+    .faq-q{width:100%;background:none;border:0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:20px;
+      padding:24px 0;text-align:left;font-family:var(--display);font-weight:500;font-size:18px;color:var(--ink);}
+    .faq-q::after{content:'+';font-family:var(--mono);color:var(--neon);font-size:22px;transition:transform .3s;flex-shrink:0;}
+    .faq-item.open .faq-q::after{transform:rotate(45deg);}
+    .faq-a{max-height:0;overflow:hidden;transition:max-height .35s ease;}
+    .faq-a-inner{padding:0 0 24px;color:var(--ink-dim);font-size:15px;line-height:1.7;max-width:720px;}
+
+    /* OFFER */
+    .offer{background:var(--surface);}
+    .offer-box{position:relative;max-width:760px;margin:0 auto;border:1px solid var(--hairline-2);border-radius:14px;background:var(--surface-2);padding:44px;overflow:hidden;}
+    .offer-box::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--neon),var(--violet),var(--neon));background-size:200% 100%;animation:beam 4s linear infinite;}
+    @keyframes beam{0%{background-position:0 0;}100%{background-position:200% 0;}}
+    .offer-badge{display:inline-block;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.1em;color:#04121A;background:var(--neon);padding:6px 14px;border-radius:100px;margin-bottom:22px;}
+    .offer-image{margin:0 0 26px;}
+    .offer-title{font-size:clamp(26px,3.4vw,36px);margin-bottom:18px;}
+    .offer-incl{list-style:none;display:grid;gap:11px;margin:24px 0;}
+    .offer-incl li{display:flex;gap:12px;align-items:flex-start;color:var(--ink-dim);font-size:15px;}
+    .offer-incl li::before{content:'▪';color:var(--neon);}
+    .offer-price-row{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin:26px 0 6px;}
+    .offer-price-old{font-family:var(--mono);font-size:20px;color:var(--meta);text-decoration:line-through;}
+    .offer-price-now{font-family:var(--display);font-weight:700;font-size:48px;color:var(--ink);letter-spacing:-0.02em;}
+    .offer-price-now .cur{font-size:24px;color:var(--neon);margin-left:4px;}
+    .offer-price-save{font-family:var(--mono);font-size:12px;font-weight:600;color:#04121A;background:var(--neon);padding:6px 12px;border-radius:100px;}
+    .offer-save-text{font-size:13.5px;color:var(--ink-dim);margin-bottom:22px;}
+    .offer-save-text b{color:var(--neon);}
+    .offer-rating{display:flex;align-items:center;gap:10px;margin-bottom:22px;}
+    .offer-rating .stars{color:var(--neon);letter-spacing:2px;}
+    .offer-rating span{font-size:13px;color:var(--meta);font-family:var(--mono);}
+    .offer-cta{width:100%;justify-content:center;font-size:15px;padding:19px;}
+    .offer-shipping{font-family:var(--mono);font-size:12px;color:var(--ink-dim);text-align:center;margin-top:16px;letter-spacing:0.04em;}
+    .offer-trust{display:flex;justify-content:center;flex-wrap:wrap;gap:10px 16px;margin-top:18px;}
+    .offer-trust span{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--meta);}
+    .offer-guarantee{text-align:center;font-size:13px;color:var(--ink-dim);margin-top:18px;padding-top:18px;border-top:1px solid var(--hairline);}
+    .offer-guarantee b{color:var(--ink);}
+
+    /* FINAL CTA */
+    .final-cta{padding:130px 0;text-align:center;border-top:1px solid var(--hairline);position:relative;overflow:hidden;}
+    .final-cta-figure{position:absolute;inset:0;z-index:0;}
+    .final-cta-figure .ph{width:100%;height:100%;border:0;border-radius:0;opacity:.5;}
+    .final-cta .container{position:relative;z-index:1;}
+    .final-cta h2{font-size:clamp(32px,5vw,56px);margin-bottom:24px;}
+    .cta-trust{font-family:var(--mono);font-size:12px;color:var(--ink-dim);margin-top:24px;letter-spacing:0.04em;}
+    .cta-trust b{color:var(--neon);}
+
+    /* FOOTER */
+    footer{border-top:1px solid var(--hairline);padding:64px 0 40px;background:#080B0F;}
+    .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;}
+    .footer-brand .logo{margin-bottom:16px;}
+    .footer-brand p{color:var(--meta);font-size:13.5px;line-height:1.7;max-width:340px;}
+    .footer-col h4{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:0.12em;color:var(--ink);margin-bottom:16px;}
+    .footer-col a{display:block;color:var(--ink-dim);font-size:14px;margin-bottom:10px;transition:color .2s;}
+    .footer-col a:hover{color:var(--neon);}
+    .footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid var(--hairline);display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;}
+    .footer-bottom p,.footer-disclaimer{font-family:var(--mono);font-size:11px;color:var(--meta);letter-spacing:0.03em;}
+    .footer-disclaimer{max-width:680px;line-height:1.6;margin-top:14px;}
+
+    /* STICKY CTA (mobile) */
+    .sticky-cta{position:fixed;left:0;right:0;bottom:0;z-index:90;display:none;align-items:center;justify-content:space-between;gap:14px;
+      padding:12px 18px;background:#0B0F14;border-top:1px solid var(--hairline);transform:translateY(110%);transition:transform .35s;}
+    .sticky-cta.show{transform:translateY(0);}
+    .sticky-cta .sc-price b{font-family:var(--display);font-size:18px;color:var(--ink);}
+    .sticky-cta .sc-price span{font-family:var(--mono);font-size:11px;color:var(--meta);display:block;text-transform:uppercase;letter-spacing:0.06em;}
+    .sticky-cta .btn{padding:13px 22px;font-size:13px;}
+
+    /* FADE-IN (safety-gated) */
+    html.js .fade-in{opacity:0;transform:translateY(34px);transition:opacity .8s ease, transform .8s ease;}
+    html.js .fade-in.visible{opacity:1;transform:translateY(0);}
+
+    /* ============ RESPONSIVE ============ */
+    @media (max-width:900px){
+      .hero-grid,.problem-grid,.spec-grid,.feat-block,.feat-block:nth-child(even) .feat-body{grid-template-columns:1fr;}
+      .feat-block:nth-child(even) .feat-body{order:0;}
+      .how-grid,.voices{grid-template-columns:1fr;}
+      .footer-grid{grid-template-columns:1fr 1fr;}
+      .trust-strip{flex-wrap:wrap;gap:16px;}
+      .nav{display:none;}
+      .header-cta{display:none;}
+      .hamburger{display:flex;}
+    }
+    @media (max-width:768px){
+      .hero{padding:120px 0 70px;}
+      .feat-block{padding:36px 0;}
+      .voices{grid-template-columns:1fr;}
+    }
+    @media (max-width:480px){
+      .container{padding:0 20px;}
+      .header-inner{padding:13px 20px;}
+      .sec{padding:80px 0;}
+      .hero{padding:108px 0 56px;}
+      .hero-figure-wrap{max-height:62vh;overflow:hidden;}
+      .hero h1{font-size:clamp(32px,9vw,42px);}
+      .hero-cta-row{flex-direction:column;}
+      .hero-cta-row .btn{width:100%;justify-content:center;}
+      .offer-box{padding:28px 22px;}
+      .offer-price-now{font-size:40px;}
+      .footer-grid{grid-template-columns:1fr;}
+      .doc-head{font-size:9.5px;gap:5px 16px;}
+      .stat-mega{font-size:clamp(72px,24vw,110px);}
+      .sticky-cta{display:flex;}
+      .final-cta{padding:90px 0;}
+    }
+    @media (max-width:380px){
+      .container{padding:0 16px;}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============ 1. HEADER ============ -->
+  <header class="header">
+    <div class="header-inner">
+      <a href="#" class="logo" aria-label="Okofon">
+        <svg viewBox="0 0 168 26" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Okofon">
+          <circle cx="13" cy="13" r="9.5" fill="none" stroke="#00C2FF" stroke-width="2.4"/>
+          <circle cx="13" cy="13" r="3.4" fill="#00C2FF"/>
+          <path d="M25 13 q4 -7 8 0 q4 7 8 0" fill="none" stroke="#00C2FF" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+          <text x="50" y="19" font-family="Space Grotesk, sans-serif" font-size="19" font-weight="700" letter-spacing="1" fill="#F4F7FA">OKOFON</text>
+        </svg>
+      </a>
+      <nav class="nav">
+        <a href="#specyfikacja" class="nav-link">Specyfikacja</a>
+        <a href="#funkcje" class="nav-link">Funkcje</a>
+        <a href="#porownanie" class="nav-link">Porównanie</a>
+        <a href="#faq" class="nav-link">FAQ</a>
+      </nav>
+      <a href="#oferta" class="header-cta">Zamów · 249 zł</a>
+      <button class="hamburger" id="hamburger" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ 2. MOBILE MENU ============ -->
+  <div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-close" id="mobileClose" aria-label="Zamknij">×</button>
+    <a href="#specyfikacja" class="mobile-link">Specyfikacja</a>
+    <a href="#funkcje" class="mobile-link">Funkcje</a>
+    <a href="#porownanie" class="mobile-link">Porównanie</a>
+    <a href="#faq" class="mobile-link">FAQ</a>
+    <a href="#oferta" class="header-cta">Zamów · 249 zł</a>
+  </div>
+
+  <!-- ============ 3. HERO (H1 split) ============ -->
+  <section class="hero hero-v-split">
+    <div class="hero-bg" aria-hidden="true">
+      <div class="glow"></div>
+      <div class="grid-lines"></div>
+    </div>
+    <div class="container">
+      <div class="doc-head hero-doc">
+        <span>KARTA PRODUKTU</span><span>DOK. OKF-XG89</span><span>REV 1.0</span><span>2026-06</span>
+      </div>
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <h1><em>144 języki</em> prosto do ucha. Bez telefonu w dłoni.</h1>
+          <p class="hero-sub">Okulary przeciwsłoneczne, słuchawki open-ear i tłumacz AI — w jednej oprawce poniżej 40 gramów. Patrzysz przed siebie, słyszysz wszystko, rozumiesz każdego.</p>
+          <div class="hero-cta-row">
+            <a href="#oferta" class="btn btn-primary btn-arrow">Zamów Okofon · 249 zł</a>
+            <a href="#specyfikacja" class="btn btn-ghost">Zobacz specyfikację</a>
+          </div>
+          <div class="hero-spec-stack">
+            <div class="hero-spec"><b>144 jęz.</b><span>tłumacz AI</span></div>
+            <div class="hero-spec"><b>&lt; 40 g</b><span>open-ear</span></div>
+            <div class="hero-spec"><b>UV400</b><span>filtr CE</span></div>
+          </div>
+        </div>
+        <div class="hero-figure-wrap">
+          <figure class="sheet-figure hero-figure">
+            <div class="figure-frame">
+              <div class="ph" style="aspect-ratio:4/3;">
+                <div class="ph-mark">P · HERO</div>
+                <div class="ph-title">Okofon — pół-profil 3/4</div>
+                <div class="ph-size">1200 × 900 · pozioma 4:3</div>
+                <div class="ph-note">Czarne pół-ramkowe okulary z grubymi zausznikami (głośniki open-ear), ciemna soczewka. Ujęcie 45° od tyłu-boku na czarnym tle z neonową poświatą. Realny produkt, bez dorabiania detali.</div>
+              </div>
+            </div>
+            <div class="dim-line"><span class="dim-label">waga: <span class="js-counter" data-target="38">38</span> g</span></div>
+            <figcaption class="figure-cap">RYS. 1 — WIDOK OGÓLNY · OPRAWKA XG89</figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. TRUST BAR (doc strip, bez ikon w kółkach) ============ -->
+  <section class="trust">
+    <div class="container">
+      <div class="trust-strip fade-in">
+        <div class="trust-item"><span class="ti-glyph"></span><div><strong>30 dni</strong><span>na zwrot bez pytań</span></div></div>
+        <div class="trust-item"><span class="ti-glyph"></span><div><strong>UV400</strong><span>certyfikowany filtr</span></div></div>
+        <div class="trust-item"><span class="ti-glyph"></span><div><strong>Darmowa dostawa</strong><span>InPost · DPD · kurier</span></div></div>
+        <div class="trust-item"><span class="ti-glyph"></span><div><strong>BLIK / karta</strong><span>bezpieczna płatność</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. PROBLEM (P1 stat-led) ============ -->
+  <section class="sec problem prob-v-stat" id="problem">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>1.0 · PROBLEM</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <div class="problem-grid">
+        <div class="fade-in">
+          <span class="eyebrow">Dlaczego dwa gadżety to o jeden za dużo</span>
+          <h2 class="sec-head"><span class="sec-num">1.0</span> Zamknięte słuchawki odcinają Cię od ulicy.</h2>
+          <div class="stat-mega"><span class="js-counter" data-target="100">100</span>%</div>
+          <p class="stat-cap">dźwięków otoczenia tracisz, gdy włączysz aktywną redukcję szumów</p>
+          <ul class="problem-list">
+            <li>Na rowerze i w biegu nie słyszysz nadjeżdżającego auta — odcięcie od dźwięków drogi to loteria.</li>
+            <li>Dokanałowe „pchełki" uciskają, swędzą i wypadają od potu po kilku godzinach.</li>
+            <li>Za granicą wpatrujesz się w ekran translatora zamiast patrzeć rozmówcy w oczy.</li>
+            <li>Okulary, słuchawki i zestaw głośnomówiący — trzy rzeczy, które ciągle nosisz osobno.</li>
+          </ul>
+        </div>
+        <figure class="problem-figure fade-in">
+          <div class="ph" style="aspect-ratio:4/5;">
+            <div class="ph-mark">P · PROBLEM</div>
+            <div class="ph-title">Plątanina kabli vs. wolne ręce</div>
+            <div class="ph-size">800 × 1000 · pionowa 4:5</div>
+            <div class="ph-note">Rowerzysta miejski o zmierzchu — dłoń przy zauszniku okularów, w tle rozmyte światła aut. Pokazuje świadomość otoczenia. Naturalne światło, chłodna tonacja.</div>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. SOLUTION / FEATURES (F3 linear stack) ============ -->
+  <section class="sec solution features feat-v-linear" id="funkcje">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>2.0 · FUNKCJE</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Cztery funkcje, jedna oprawka</span>
+      <h2 class="sec-head"><span class="sec-num">2.0</span> Co dokładnie robi Okofon</h2>
+
+      <div class="feat-block fade-in">
+        <div class="feat-body">
+          <h3 class="feat-h">Tłumacz AI prosto do ucha</h3>
+          <p class="feat-lead">Mowa rozmówcy wraca do Ciebie już przetłumaczona — bez wpatrywania się w ekran. Patrzysz w oczy, nie w telefon.</p>
+          <ul class="feat-spec-list">
+            <li class="feat-row"><span class="feat-key">Liczba języków</span><span class="feat-val"><span class="hl">144</span></span></li>
+            <li class="feat-row"><span class="feat-key">Tryb</span><span class="feat-val">rozmowa dwukierunkowa</span></li>
+            <li class="feat-row"><span class="feat-key">Gdzie słyszysz</span><span class="feat-val">prosto do ucha, open-ear</span></li>
+          </ul>
+        </div>
+        <figure class="gal-figure">
+          <div class="ph" style="aspect-ratio:4/3;">
+            <div class="ph-mark">B · FUNKCJA 1</div>
+            <div class="ph-title">Rozmowa za granicą</div>
+            <div class="ph-size">640 × 480 · pozioma 4:3</div>
+            <div class="ph-note">Osoba w kawiarni rozmawia z kimś naprzeciwko, na twarzy Okofon. Telefon leży na stole — nieużywany. Pokazuje tłumaczenie bez ekranu.</div>
+          </div>
+        </figure>
+      </div>
+
+      <div class="feat-block fade-in">
+        <div class="feat-body">
+          <h3 class="feat-h">Open-ear: dźwięk bez zatkanych uszu</h3>
+          <p class="feat-lead">Dwa głośniki kierunkowe prowadzą dźwięk do ucha. Nic nie wchodzi do kanału słuchowego — koniec z uciskiem i bólem po godzinach.</p>
+          <ul class="feat-spec-list">
+            <li class="feat-row"><span class="feat-key">Konstrukcja</span><span class="feat-val">otwarte ucho (open-ear)</span></li>
+            <li class="feat-row"><span class="feat-key">Nacisk na kanał</span><span class="feat-val">zero</span></li>
+            <li class="feat-row"><span class="feat-key">Głośniki</span><span class="feat-val"><span class="hl">2</span> kierunkowe</span></li>
+          </ul>
+        </div>
+        <figure class="gal-figure">
+          <div class="ph" style="aspect-ratio:4/3;">
+            <div class="ph-mark">B · FUNKCJA 2</div>
+            <div class="ph-title">Detal zausznika z głośnikiem</div>
+            <div class="ph-size">640 × 480 · pozioma 4:3</div>
+            <div class="ph-note">Makro zausznika Okofon z widocznym kierunkowym głośnikiem przy uchu. Czarne tworzywo, neonowy refleks. Pokazuje brak wkładki dokanałowej.</div>
+          </div>
+        </figure>
+      </div>
+
+      <div class="feat-block fade-in">
+        <div class="feat-body">
+          <h3 class="feat-h">Pełny nasłuch = bezpieczeństwo</h3>
+          <p class="feat-lead">Słuchasz podcastu i jednocześnie słyszysz ruch uliczny. Reagujesz ułamki sekundy wcześniej, bo nic nie zagłusza otoczenia.</p>
+          <ul class="feat-spec-list">
+            <li class="feat-row"><span class="feat-key">Świadomość otoczenia</span><span class="feat-val">zachowana</span></li>
+            <li class="feat-row"><span class="feat-key">Rower / bieg</span><span class="feat-val">słyszysz nadjeżdżające auta</span></li>
+            <li class="feat-row"><span class="feat-key">Wodoodporność</span><span class="feat-val"><span class="hl">IPX4</span> (deszcz, pot)</span></li>
+          </ul>
+        </div>
+        <figure class="gal-figure">
+          <div class="ph" style="aspect-ratio:4/3;">
+            <div class="ph-mark">B · FUNKCJA 3</div>
+            <div class="ph-title">Bieg / rower na świeżym powietrzu</div>
+            <div class="ph-size">640 × 480 · pozioma 4:3</div>
+            <div class="ph-note">Biegacz lub rowerzysta szosowy na drodze, Okofon na twarzy. Dynamiczne ujęcie z boku, słońce nisko. Pokazuje open-ear w ruchu.</div>
+          </div>
+        </figure>
+      </div>
+
+      <div class="feat-block fade-in">
+        <div class="feat-body">
+          <h3 class="feat-h">Trzy urządzenia w jednym</h3>
+          <p class="feat-lead">Przestajesz pamiętać o okularach, słuchawkach i zestawie do auta. Zakładasz raz rano — jak zwykłe okulary.</p>
+          <ul class="feat-spec-list">
+            <li class="feat-row"><span class="feat-key">Okulary przeciwsłoneczne</span><span class="feat-val"><span class="hl">UV400</span>, filtr CE</span></li>
+            <li class="feat-row"><span class="feat-key">Słuchawki</span><span class="feat-val">open-ear Bluetooth</span></li>
+            <li class="feat-row"><span class="feat-key">Zestaw głośnomówiący</span><span class="feat-val"><span class="hl">2</span> mikrofony</span></li>
+          </ul>
+        </div>
+        <figure class="gal-figure">
+          <div class="ph" style="aspect-ratio:4/3;">
+            <div class="ph-mark">B · FUNKCJA 4</div>
+            <div class="ph-title">Flat-lay zestawu</div>
+            <div class="ph-size">640 × 480 · pozioma 4:3</div>
+            <div class="ph-note">Okofon obok etui, kabla USB-C i ściereczki, top-down na czarnym tle. Jedno urządzenie zastępujące trzy. Światło studyjne, neonowy akcent.</div>
+          </div>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SPEC SHEET (sygnaturowa tabela) ============ -->
+  <section class="sec" id="specyfikacja">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>2.5 · SPECYFIKACJA</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Zmierzone, nie deklarowane na ślepo</span>
+      <h2 class="sec-head"><span class="sec-num">2.5</span> Specyfikacja techniczna</h2>
+      <div class="spec-grid" style="margin-top:40px;">
+        <ul class="sheet-spec fade-in">
+          <li class="sheet-row"><span class="sheet-key">Tłumacz AI — języki</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value"><span class="js-counter" data-target="144">144</span><span class="sheet-unit">jęz.</span></span></li>
+          <li class="sheet-row"><span class="sheet-key">Waga oprawki (od)</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">38<span class="sheet-unit">g</span></span></li>
+          <li class="sheet-row"><span class="sheet-key">Czas pracy (do)</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">6<span class="sheet-unit">godz.</span></span></li>
+          <li class="sheet-row"><span class="sheet-key">Pełne ładowanie (ok.)</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">60<span class="sheet-unit">min</span></span></li>
+          <li class="sheet-row"><span class="sheet-key">Złącze ładowania</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">USB-C</span></li>
+          <li class="sheet-row"><span class="sheet-key">Filtr UV</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">UV400</span></li>
+          <li class="sheet-row"><span class="sheet-key">Wodoodporność</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">IPX4</span></li>
+          <li class="sheet-row"><span class="sheet-key">Łączność</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">Bluetooth 5.3</span></li>
+          <li class="sheet-row"><span class="sheet-key">Mikrofony</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">2<span class="sheet-unit">szt.</span></span></li>
+          <li class="sheet-row"><span class="sheet-key">Głośniki kierunkowe</span><span class="sheet-leader" aria-hidden="true"></span><span class="sheet-value">2<span class="sheet-unit">szt.</span></span></li>
+        </ul>
+        <figure class="sheet-figure fade-in">
+          <div class="figure-frame">
+            <div class="ph" style="aspect-ratio:1/1;">
+              <div class="ph-mark">P · RYS. 2</div>
+              <div class="ph-title">Okofon — widok z góry</div>
+              <div class="ph-size">900 × 900 · kwadrat 1:1</div>
+              <div class="ph-note">Top-down na rozłożonej oprawce, zausznikami na zewnątrz. Czarne tło, równe światło. Posłuży jako baza do linii wymiarowych.</div>
+            </div>
+          </div>
+          <div class="dim-line" style="width:88%;"><span class="dim-label">rozstaw zauszników</span></div>
+          <figcaption class="figure-cap">RYS. 2 — RZUT Z GÓRY · WYMIAROWANIE</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. HOW IT WORKS (W3 spec strip) ============ -->
+  <section class="sec how-v-spec" id="jak-dziala">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>3.0 · OBSŁUGA</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Trzy kroki, zero instrukcji na 40 stron</span>
+      <h2 class="sec-head"><span class="sec-num">3.0</span> Jak to działa</h2>
+      <div class="how-grid" style="margin-top:44px;">
+        <div class="how-step fade-in">
+          <div class="how-step-num">KROK 01</div>
+          <figure class="how-step-figure">
+            <div class="ph" style="aspect-ratio:4/3;">
+              <div class="ph-mark">H1 · KROK 1</div>
+              <div class="ph-title">Parowanie z aplikacją</div>
+              <div class="ph-size">600 × 450 · 4:3</div>
+              <div class="ph-note">Dłonie zakładające Okofon, w tle ekran telefonu z aplikacją. Naturalne światło, kontekst domu.</div>
+            </div>
+          </figure>
+          <h3>Zakładasz jak zwykłe okulary</h3>
+          <p>Parujesz raz z darmową aplikacją. Od tej chwili Okofon łączy się sam, gdy go założysz.</p>
+        </div>
+        <div class="how-step fade-in">
+          <div class="how-step-num">KROK 02</div>
+          <figure class="how-step-figure">
+            <div class="ph" style="aspect-ratio:4/3;">
+              <div class="ph-mark">H2 · KROK 2</div>
+              <div class="ph-title">Dotyk zausznika</div>
+              <div class="ph-size">600 × 450 · 4:3</div>
+              <div class="ph-note">Makro palca dotykającego zausznika. Pokazuje sterowanie gestem. Czarne tworzywo, neonowy refleks.</div>
+            </div>
+          </figure>
+          <h3>Dotykasz zausznika</h3>
+          <p>Jednym dotknięciem odbierasz połączenie, włączasz muzykę albo uruchamiasz tłumacza. Bez wyjmowania telefonu.</p>
+        </div>
+        <div class="how-step fade-in">
+          <div class="how-step-num">KROK 03</div>
+          <figure class="how-step-figure">
+            <div class="ph" style="aspect-ratio:4/3;">
+              <div class="ph-mark">H3 · KROK 3</div>
+              <div class="ph-title">Słyszysz prosto do ucha</div>
+              <div class="ph-size">600 × 450 · 4:3</div>
+              <div class="ph-note">Profil osoby w ruchu miejskim z lekkim uśmiechem. Pokazuje komfort i świadomość otoczenia.</div>
+            </div>
+          </figure>
+          <h3>Słyszysz wszystko prosto do ucha</h3>
+          <p>Rozmowa, podcast albo przetłumaczone zdanie trafiają do ucha — a Ty nadal słyszysz świat dookoła.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 8. COMPARISON (C1 table) ============ -->
+  <section class="sec comparison comp-v-table" id="porownanie">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>4.0 · PORÓWNANIE</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Ta sama funkcja, trzy różne ceny</span>
+      <h2 class="sec-head"><span class="sec-num">4.0</span> Okofon na tle rynku</h2>
+      <p class="sec-sub">Generyki z Allegro są tanie, ale bez tłumacza AI i certyfikowanego UV400. Premium daje to samo doświadczenie za trzy razy więcej. Okofon celuje dokładnie w środek.</p>
+      <div class="comp-wrap fade-in" style="margin-top:40px;">
+        <table class="comp-table">
+          <thead>
+            <tr>
+              <th>Cecha</th>
+              <th>Audio-okulary z Allegro<br><span class="rk">99–259 zł</span></th>
+              <th>Premium (Ray-Ban Meta)<br><span class="rk">1449–2199 zł</span></th>
+              <th class="col-win">Okofon<br><span class="rk">249 zł</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="rk">Tłumacz AI 144 jęz.</td>
+              <td>rzadko, zwykle brak</td>
+              <td>zależnie od modelu</td>
+              <td class="col-win">tak, prosto do ucha</td>
+            </tr>
+            <tr>
+              <td class="rk">Filtr UV400 z atestem</td>
+              <td>zwykle bez deklaracji</td>
+              <td>tak</td>
+              <td class="col-win">tak, wg EN ISO 12312-1</td>
+            </tr>
+            <tr>
+              <td class="rk">Audio open-ear</td>
+              <td>czasem, jeden głośnik</td>
+              <td>tak</td>
+              <td class="col-win">2 głośniki kierunkowe</td>
+            </tr>
+            <tr>
+              <td class="rk">Waga oprawki</td>
+              <td>różnie, często ciężkie</td>
+              <td>45–50 g</td>
+              <td class="col-win">od 38 g</td>
+            </tr>
+            <tr>
+              <td class="rk">Cena</td>
+              <td>99–259 zł</td>
+              <td>1449–2199 zł</td>
+              <td class="col-win">249 zł</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 9. TESTIMONIALS (T6 certs + voices) ============ -->
+  <section class="sec testimonials testi-v-certs" id="opinie">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>5.0 · ATESTY I OPINIE</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Normy, które potwierdzają specyfikację</span>
+      <h2 class="sec-head"><span class="sec-num">5.0</span> Atesty i pierwsze opinie</h2>
+
+      <div class="cert-strip fade-in" style="margin-top:40px;">
+        <div class="cert"><b>UV400</b><span class="cert-label">filtr · EN ISO 12312-1</span></div>
+        <div class="cert"><b>CE</b><span class="cert-label">oznakowanie zgodności</span></div>
+        <div class="cert"><b>RoHS</b><span class="cert-label">bez metali ciężkich</span></div>
+        <div class="cert"><b>IPX4</b><span class="cert-label">odporność na deszcz i pot</span></div>
+      </div>
+
+      <div class="voices">
+        <div class="voice fade-in">
+          <div class="voice-stars">★★★★★</div>
+          <p class="voice-quote">Założyłem je do marynarki we Frankfurcie i na plażę w Tajlandii — w obu miejscach po prostu rozumiałem ludzi, bez wpatrywania się w telefon. Wreszcie jedno urządzenie zamiast trzech.</p>
+          <div class="voice-foot">
+            <figure class="testi-avatar-figure">
+              <div class="ph"><div class="ph-mark">M</div></div>
+            </figure>
+            <div class="voice-meta"><b>Marcin, 40</b><span>właściciel firmy · podróże</span></div>
+          </div>
+        </div>
+        <div class="voice fade-in">
+          <div class="voice-stars">★★★★★</div>
+          <p class="voice-quote">Na rowerze szosowym słyszę nadjeżdżające auta i jednocześnie swój podcast. Dokanałowe pchełki wypadały mi od potu — te trzymają się oprawki i w ogóle nie uciskają uszu.</p>
+          <div class="voice-foot">
+            <figure class="testi-avatar-figure">
+              <div class="ph"><div class="ph-mark">K</div></div>
+            </figure>
+            <div class="voice-meta"><b>Karolina, 35</b><span>bieganie · rower szosowy</span></div>
+          </div>
+        </div>
+        <div class="voice fade-in">
+          <div class="voice-stars">★★★★★</div>
+          <p class="voice-quote">Sześć godzin w trasie, połączenia odbieram dotknięciem zausznika, a słońce nie oślepia. Koniec z asymetrycznym bólem ucha od jednej słuchawki na pół dnia jazdy.</p>
+          <div class="voice-foot">
+            <figure class="testi-avatar-figure">
+              <div class="ph"><div class="ph-mark">K</div></div>
+            </figure>
+            <div class="voice-meta"><b>Krzysztof, 50</b><span>przedstawiciel handlowy</span></div>
+          </div>
+        </div>
+      </div>
+      <p class="testi-note">Opinie z fazy wprowadzenia produktu — charakter poglądowy.</p>
+    </div>
+  </section>
+
+  <!-- ============ 10. FAQ ============ -->
+  <section class="sec faq" id="faq">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>6.0 · FAQ</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <span class="eyebrow">Zanim zapytasz</span>
+      <h2 class="sec-head" style="margin-bottom:44px;"><span class="sec-num">6.0</span> Najczęstsze pytania</h2>
+      <div class="faq-list">
+        <div class="faq-item">
+          <button class="faq-q">Czy dźwięk open-ear słychać dla otoczenia i czy gra dobrze na zewnątrz?</button>
+          <div class="faq-a"><div class="faq-a-inner">Dwa głośniki kierunkowe prowadzą dźwięk wprost do Twojego ucha, więc osoby obok słyszą znikomy szept nawet przy sporej głośności. Na zewnątrz dźwięk jest czysty, a Ty zachowujesz pełny nasłuch ruchu drogowego — to główna przewaga konstrukcji open-ear nad zamkniętymi słuchawkami.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Jak działa tłumaczenie i ile języków obsługuje?</button>
+          <div class="faq-a"><div class="faq-a-inner">Tłumacz AI obsługuje 144 języki w trybie dwukierunkowym. Mowa rozmówcy wraca do Ciebie już przetłumaczona prosto do ucha przez aplikację — nie musisz wpatrywać się w ekran ani podawać telefonu drugiej osobie. Patrzysz rozmówcy w oczy, a Okofon robi swoje w tle.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Na ile starcza bateria i jak długo trwa ładowanie?</button>
+          <div class="faq-a"><div class="faq-a-inner">Na jednym ładowaniu Okofon pracuje do 6 godzin ciągłego słuchania i rozmów, co spokojnie pokrywa dzień w trasie albo długi trening. Pełne naładowanie zajmuje około 60 minut przez standardowe złącze USB-C — tym samym kablem, którego używasz do telefonu.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Czy oprawka będzie pasować na moją głowę i co ze zwrotem?</button>
+          <div class="faq-a"><div class="faq-a-inner">Oprawka z elastycznego, lekkiego tworzywa (od 38 g) dopasowuje się do większości kształtów twarzy i opiera się wyłącznie na nosie oraz małżowinie usznej. Jeśli mimo to nie będzie leżeć idealnie, masz 30 dni na zwrot bez podawania powodu — odsyłasz produkt i odzyskujesz pieniądze.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Czy Okofon jest odporny na deszcz i pot?</button>
+          <div class="faq-a"><div class="faq-a-inner">Tak. Oprawka ma klasę odporności IPX4, czyli wytrzymuje rozpryski wody, deszcz i pot podczas treningu. Nie jest przeznaczona do zanurzania ani pływania, ale spokojnie przetrwa intensywną jazdę na rowerze w mżawce czy bieganie w upale.</div></div>
+        </div>
+        <div class="faq-item">
+          <button class="faq-q">Kiedy otrzymam przesyłkę?</button>
+          <div class="faq-a"><div class="faq-a-inner">Przesyłka dociera w 1–3 dni robocze od zaksięgowania wpłaty. Wysyłamy kurierem InPost, DPD lub paczkomatem — dostawa jest darmowa. O każdym etapie informujemy mailem z numerem do śledzenia, więc wiesz dokładnie, gdzie jest Twoje zamówienie.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 11. OFFER (O1 single) ============ -->
+  <section class="sec offer offer-v-single" id="oferta">
+    <div class="container">
+      <div class="doc-head sec-doc"><span>SEKCJA</span><span>7.0 · ZAMÓWIENIE</span><span>DOK. OKF-XG89</span><span>REV 1.0</span></div>
+      <div class="offer-box fade-in">
+        <span class="offer-badge">Zestaw startowy</span>
+        <div class="offer-image">
+          <div class="ph" style="aspect-ratio:16/9;">
+            <div class="ph-mark">O · ZESTAW</div>
+            <div class="ph-title">Okofon + etui + akcesoria</div>
+            <div class="ph-size">800 × 450 · 16:9</div>
+            <div class="ph-note">Flat-lay całego zestawu na czarnym tle: okulary, magnetyczne etui, ściereczka z mikrofibry, kabel USB-C. Top-down, neonowy akcent światła.</div>
+          </div>
+        </div>
+        <h3 class="offer-title">Okofon — inteligentne okulary AI</h3>
+        <ul class="offer-incl">
+          <li>Okulary Okofon (tłumacz AI · open-ear · UV400)</li>
+          <li>Magnetyczne etui ochronne typu hard-box</li>
+          <li>Ściereczka z mikrofibry z logo</li>
+          <li>Kabel ładujący USB-C</li>
+          <li>Instrukcja po polsku + dostęp do aplikacji</li>
+        </ul>
+
+        <div class="offer-price-row">
+          <span class="offer-price-old">349 zł</span>
+          <span class="offer-price-now">249<span class="cur">zł</span></span>
+          <span class="offer-price-save">-29%</span>
+        </div>
+        <p class="offer-save-text">Cena startowa na premierę. Płacisz <b>100 zł mniej</b> niż w cenniku — tyle oszczędzasz, zamawiając teraz.</p>
+
+        <div class="offer-rating">
+          <span class="stars">★★★★★</span>
+          <span>4,7 / 5 · faza wprowadzenia</span>
+        </div>
+
+        <a href="#" class="offer-cta btn btn-primary" data-demo-modal>Zamów Okofon · 249 zł</a>
+        <p class="offer-shipping">Darmowa dostawa · InPost / DPD / kurier</p>
+        <div class="offer-trust">
+          <span>BLIK</span><span>Przelewy24</span><span>Karta VISA / MC</span><span>Apple / Google Pay</span>
+        </div>
+        <p class="offer-guarantee"><b>30 dni na zwrot bez pytań</b> · bezpieczna płatność · polska obsługa</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 12. FINAL CTA ============ -->
+  <section class="final-cta">
+    <figure class="final-cta-figure" aria-hidden="true">
+      <div class="ph">
+        <!-- PH-BRIEF: BG | Panorama lifestyle | 1920×1080 | Osoba w ruchu miejskim o zachodzie słońca z Okofon, szeroki kadr, chłodna tonacja, dużo czerni -->
+      </div>
+    </figure>
+    <div class="container">
+      <span class="eyebrow">Trzy urządzenia. Jedna oprawka.</span>
+      <h2>Patrz przed siebie. Słysz wszystko. Rozumiej każdego.</h2>
+      <a href="#oferta" class="btn btn-primary btn-arrow" style="font-size:15px;padding:18px 34px;">Zamów Okofon · 249 zł</a>
+      <p class="cta-trust"><b>✓</b> 30 dni na zwrot &nbsp;·&nbsp; <b>✓</b> BLIK / karta / przelew &nbsp;·&nbsp; <b>✓</b> darmowa dostawa</p>
+    </div>
+  </section>
+
+  <!-- ============ 13. FOOTER ============ -->
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-brand">
+          <a href="#" class="logo" aria-label="Okofon">
+            <svg viewBox="0 0 168 26" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Okofon">
+              <circle cx="13" cy="13" r="9.5" fill="none" stroke="#00C2FF" stroke-width="2.4"/>
+              <circle cx="13" cy="13" r="3.4" fill="#00C2FF"/>
+              <path d="M25 13 q4 -7 8 0 q4 7 8 0" fill="none" stroke="#00C2FF" stroke-width="2" stroke-linecap="round" opacity="0.85"/>
+              <text x="50" y="19" font-family="Space Grotesk, sans-serif" font-size="19" font-weight="700" letter-spacing="1" fill="#F4F7FA">OKOFON</text>
+            </svg>
+          </a>
+          <p>Inteligentne okulary AI: tłumacz 144 języków, dźwięk open-ear i certyfikowany filtr UV400 — w jednej oprawce poniżej 40 gramów.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Produkt</h4>
+          <a href="#funkcje">Funkcje</a>
+          <a href="#specyfikacja">Specyfikacja</a>
+          <a href="#porownanie">Porównanie</a>
+          <a href="#oferta">Zamów</a>
+        </div>
+        <div class="footer-col">
+          <h4>Pomoc</h4>
+          <a href="#faq">FAQ</a>
+          <a href="#opinie">Opinie</a>
+          <a href="mailto:kontakt@okofon.pl">kontakt@okofon.pl</a>
+          <a href="#oferta">Zwroty 30 dni</a>
+        </div>
+      </div>
+      <p class="footer-disclaimer">Oceny i opinie prezentowane na stronie mają charakter poglądowy i pochodzą z fazy wprowadzenia produktu. Specyfikacja techniczna zgodna z deklaracją producenta modelu XG89; ostateczne parametry potwierdza dokumentacja dołączona do produktu.</p>
+      <div class="footer-bottom">
+        <p>© 2026 Okofon. Wszelkie prawa zastrzeżone.</p>
+        <p>DOK. OKF-XG89 · REV 1.0 · 2026-06</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ============ 14. STICKY CTA (mobile) ============ -->
+  <div class="sticky-cta" id="stickyCta">
+    <div class="sc-price"><b>249 zł</b><span>Okofon · darmowa dostawa</span></div>
+    <a href="#oferta" class="btn btn-primary">Zamów</a>
+  </div>
+
+  <script>
+    // Hamburger / mobile menu
+    var hb = document.getElementById('hamburger');
+    var mm = document.getElementById('mobileMenu');
+    var mc = document.getElementById('mobileClose');
+    if (hb) hb.addEventListener('click', function(){ mm.classList.add('open'); });
+    if (mc) mc.addEventListener('click', function(){ mm.classList.remove('open'); });
+    document.querySelectorAll('.mobile-link, .mobile-menu .header-cta').forEach(function(l){
+      l.addEventListener('click', function(){ mm.classList.remove('open'); });
+    });
+
+    // FAQ accordion
+    document.querySelectorAll('.faq-item').forEach(function(item){
+      var q = item.querySelector('.faq-q');
+      var a = item.querySelector('.faq-a');
+      q.addEventListener('click', function(){
+        var isOpen = item.classList.contains('open');
+        document.querySelectorAll('.faq-item').forEach(function(i){
+          i.classList.remove('open');
+          i.querySelector('.faq-a').style.maxHeight = null;
+        });
+        if (!isOpen){ item.classList.add('open'); a.style.maxHeight = a.scrollHeight + 'px'; }
+      });
+    });
+
+    // Number counters
+    function runCounter(el){
+      var target = parseInt(el.getAttribute('data-target'), 10);
+      if (isNaN(target)) return;
+      var dur = 1200, start = null;
+      function step(ts){
+        if (!start) start = ts;
+        var p = Math.min((ts - start) / dur, 1);
+        el.textContent = Math.floor(p * target).toString();
+        if (p < 1) requestAnimationFrame(step); else el.textContent = target.toString();
+      }
+      requestAnimationFrame(step);
+    }
+
+    // Fade-in + counters via IntersectionObserver (safety-gated)
+    if ('IntersectionObserver' in window){
+      var io = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){ e.target.classList.add('visible'); io.unobserve(e.target); }
+        });
+      }, { threshold: 0.12, rootMargin: '0px 0px -80px 0px' });
+      document.querySelectorAll('.fade-in').forEach(function(el){ io.observe(el); });
+
+      var cio = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (e.isIntersecting){ runCounter(e.target); cio.unobserve(e.target); }
+        });
+      }, { threshold: 0.6 });
+      document.querySelectorAll('.js-counter').forEach(function(el){ cio.observe(el); });
+
+      // Safety fallback: po 3s pokaż TYLKO elementy, które user powinien już widzieć
+      setTimeout(function(){
+        document.querySelectorAll('.fade-in:not(.visible)').forEach(function(el){
+          var rect = el.getBoundingClientRect();
+          if (rect.top < window.innerHeight) el.classList.add('visible');
+        });
+      }, 3000);
+    } else {
+      document.querySelectorAll('.fade-in').forEach(function(el){ el.classList.add('visible'); });
+    }
+
+    // Sticky CTA — gated po przewinięciu hero (dwuwarunkowy IntersectionObserver)
+    var hero = document.querySelector('.hero');
+    var sticky = document.getElementById('stickyCta');
+    var offer = document.getElementById('oferta');
+    if (hero && sticky && 'IntersectionObserver' in window){
+      var sObs = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){
+          if (!e.isIntersecting && e.boundingClientRect.top < 0){ sticky.classList.add('show'); }
+          else { sticky.classList.remove('show'); }
+        });
+      }, { threshold: 0 });
+      sObs.observe(hero);
+      if (offer){
+        var oObs = new IntersectionObserver(function(entries){
+          entries.forEach(function(e){ if (e.isIntersecting) sticky.classList.remove('show'); });
+        }, { threshold: 0.2 });
+        oObs.observe(offer);
+      }
+    }
+
+    // Demo checkout modal (placeholder — realny checkout podłącza klient)
+    document.querySelectorAll('[data-demo-modal]').forEach(function(btn){
+      btn.addEventListener('click', function(ev){
+        ev.preventDefault();
+        alert('To wersja demonstracyjna strony. Tutaj klient podłącza koszyk / checkout (BLIK, Przelewy24, karta).');
+      });
+    });
+  </script>
+</body>
+</html>
