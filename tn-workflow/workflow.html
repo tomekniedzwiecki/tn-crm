@@ -9636,23 +9636,32 @@
                 if (error) throw error;
                 showToast(active ? 'Konto oznaczone jako aktywne' : 'Aktywacja konta cofnięta', 'success');
 
+                // Mail „złe hasło" TYLKO za zgodą — cofnięcie aktywacji może mieć inny powód
+                // (karta niepodpięta, blokada billingu, pomyłka), a szablon mówi konkretnie o haśle.
                 if (!active && workflow?.customer_email) {
-                    try {
-                        await supabaseClient.functions.invoke('automation-trigger', {
-                            body: {
-                                trigger_type: 'takedrop_account_revoked',
-                                entity_type: 'workflow',
-                                entity_id: workflow.id,
-                                context: {
-                                    email: workflow.customer_email,
-                                    clientName: (workflow.customer_name || '').split(' ')[0],
-                                    brandName: workflow.brand_name || '',
-                                    projectUrl: `https://crm.tomekniedzwiecki.pl/client-projekt?id=${workflow.id}`
+                    const sendRejectedMail = confirm(
+                        'Wysłać klientowi maila „Hasło do TakeDrop niepoprawne — popraw je w panelu"?\n\n' +
+                        'OK — wyślij (hasło z panelu faktycznie nie działa)\n' +
+                        'Anuluj — tylko cofnij status, BEZ maila'
+                    );
+                    if (sendRejectedMail) {
+                        try {
+                            await supabaseClient.functions.invoke('automation-trigger', {
+                                body: {
+                                    trigger_type: 'takedrop_account_revoked',
+                                    entity_type: 'workflow',
+                                    entity_id: workflow.id,
+                                    context: {
+                                        email: workflow.customer_email,
+                                        clientName: (workflow.customer_name || '').split(' ')[0],
+                                        brandName: workflow.brand_name || '',
+                                        projectUrl: `https://crm.tomekniedzwiecki.pl/client-projekt?id=${workflow.id}`
+                                    }
                                 }
-                            }
-                        });
-                    } catch (te) {
-                        console.warn('automation-trigger takedrop_account_revoked failed (kontynuujemy):', te);
+                            });
+                        } catch (te) {
+                            console.warn('automation-trigger takedrop_account_revoked failed (kontynuujemy):', te);
+                        }
                     }
                 }
 
