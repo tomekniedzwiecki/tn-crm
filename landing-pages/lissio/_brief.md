@@ -183,3 +183,29 @@ js_effects_count:
 | Border-radius globalny | 8px (umiarkowany, paper feel — NIE 0 jak Swiss, NIE 24px jak playful) |
 | Shadow styl | `0 10px 30px rgba(46,42,38,0.12)` warm ink shadow, NIE czarna |
 | Divider między sekcjami | Magazine page numbers Nº 01–10 w right-top corner sekcji + 1px gold line `#C9A57C` opacity 0.3 (tylko między dwoma sekcjami premium: hero/trust, offer/final) |
+
+---
+
+## 12. Photo System (Krok 2 — generowanie obrazów AI)
+
+**Kierunek:** Editorial/Luxury „Milano Atelier" (Loro Piana × Bottega Veneta).
+
+### Lighting
+Miękkie boczne światło z dużego okna, ciepły mediolański poranek, delikatne długie cienie. Restraint — nie studyjne, nie HDR.
+
+### Paleta w scenach
+- Tła: cream paper #F5F1EA, ivory, jasne drewno wieszaka, len/jedwab w odcieniach kości słoniowej
+- Akcenty: warm gold #C9A57C subtelnie — zegarek, biżuteria, etui welurowe, ciepły refleks
+- Unikamy: zimny błękit, neon, golden-hour pomarańcz, czarne tła (poza unbox dark)
+
+### Kadrowanie
+Asymetria 60/40 (nigdy 50/50), produkt w dolnej/bocznej tercji, dużo negative space. Editorial magazine.
+
+### Post-processing
+35mm film (Kodak Portra 400), subtelny grain, mild halation, lekko off-center hand-held.
+
+### Negatywy — NIGDY
+- Logo Xiaomi/Mijia (to rebrand Lissio — produkt unbranded)
+- Tekst, watermark, etykiety
+- Stock-photo uśmiechy, palec wskazujący produkt
+- Wymyślone funkcje (LED zmieniający kolor, dodatkowe przyciski) — tylko to co na referencji
