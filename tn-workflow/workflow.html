@@ -12734,6 +12734,19 @@ Zwróć TYLKO JSON.`;
                     ? 'ZIP: BRIEF.txt + 2 wybrane grafiki dla Claude Cowork.'
                     : `Zaznacz 2 kreacje gwiazdką ★ w galerii powyżej zanim wygenerujesz pakiet. Obecnie wybrano: ${coworkSelected}/2.`;
                 actions.appendChild(cowork);
+
+                // Kampania MCP — kopiuje gotowy prompt dla Claude Code (procedura CLAUDE_MCP_CAMPAIGN_PROCEDURE.md)
+                const mcp = document.createElement('button');
+                const mcpEnabled = adsData?.meta_mcp_enabled === true;
+                mcp.onclick = copyMcpCampaignPrompt;
+                mcp.className = mcpEnabled
+                    ? 'text-[11px] text-white px-3 py-1.5 rounded-lg bg-gradient-to-r from-emerald-600/80 to-teal-600/80 hover:from-emerald-500 hover:to-teal-500 border border-emerald-500/30 flex items-center gap-1.5'
+                    : 'text-[11px] text-zinc-300 hover:text-white px-3 py-1.5 rounded-lg bg-zinc-800/60 hover:bg-zinc-700/60 border border-amber-500/30 flex items-center gap-1.5';
+                mcp.innerHTML = `<i class="ph ph-terminal-window"></i> Kampania MCP${mcpEnabled ? '' : ' ⚠'}`;
+                mcp.title = mcpEnabled
+                    ? 'Kopiuje prompt dla Claude Code — zbuduje kampanię przez Meta MCP wg CLAUDE_MCP_CAMPAIGN_PROCEDURE.md (wszystko PAUSED).'
+                    : 'Konto nie ma potwierdzonego dostępu MCP (sprawdź status MCP w kroku Konto reklamowe). Prompt i tak się skopiuje — Claude zweryfikuje dostęp na starcie.';
+                actions.appendChild(mcp);
             }
             if (ready || failed) {
                 const del = document.createElement('button');
@@ -13821,6 +13834,47 @@ Zwróć TYLKO JSON.`;
             }
         }
         window.exportClaudeCoworkZip = exportClaudeCoworkZip;
+
+        // ---- KAMPANIA MCP (prompt dla Claude Code) ----
+        // Kopiuje do schowka gotowy prompt, który w Claude Code odpala procedurę
+        // tn-crm/CLAUDE_MCP_CAMPAIGN_PROCEDURE.md (trigger: "Utwórz kampanię MCP dla workflow X").
+        async function copyMcpCampaignPrompt() {
+            // Marka jak w Pakiecie Cowork: brand_info → offer_name → customer_name
+            let brand = '';
+            try {
+                const { data: brandingRow } = await supabaseClient.from('workflow_branding')
+                    .select('value').eq('workflow_id', workflow.id).eq('type', 'brand_info').maybeSingle();
+                if (brandingRow?.value) {
+                    const bv = typeof brandingRow.value === 'string' ? JSON.parse(brandingRow.value) : brandingRow.value;
+                    brand = bv?.name || '';
+                }
+            } catch (_) {}
+            if (!brand) brand = workflow?.offer_name || workflow?.customer_name || '';
+
+            const mcpStatus = adsData?.meta_mcp_enabled === true
+                ? 'MCP potwierdzone na koncie'
+                : 'UWAGA: status MCP konta niepotwierdzony — zweryfikuj na starcie (ads_get_ad_accounts)';
+
+            const prompt = [
+                `Utwórz kampanię MCP dla workflow ${workflow.id}${brand ? ` (marka: ${brand})` : ''}.`,
+                ``,
+                `Wykonaj wg tn-crm/CLAUDE_MCP_CAMPAIGN_PROCEDURE.md (v2.1):`,
+                `1. Pobierz dane z Supabase (ad_copies, ad_creatives, landing, pixel). ${mcpStatus}.`,
+                `2. Gate'y pre-flight: konto reklamowe (pokaż mi mapowanie do potwierdzenia), strona FB podpięta pod konto, pixel ODPALA eventy (ads_get_dataset_stats), metoda płatności.`,
+                `3. Kampania: OUTCOME_SALES, CBO, Lowest Cost + 1 SZEROKA grupa (PL, broad + Advantage+); event optymalizacji wg drabiny (świeży pixel = CONTENT_VIEW, nie Purchase).`,
+                `4. Kreacje i reklamy z ad_copies.versions (CTA wg mapy enum, landing z UTM-ami).`,
+                `5. WSZYSTKO PAUSED — nie publikuj. Na końcu: raport (ID kampanii/grup/reklam, link Ads Manager) + lista blokerów/prerekwizytów.`,
+            ].join('\n');
+
+            try {
+                await navigator.clipboard.writeText(prompt);
+                showToast('Prompt skopiowany — wklej w Claude Code i wyślij', 'success');
+            } catch (_) {
+                // Fallback gdy clipboard API niedostępne (np. brak HTTPS)
+                window.prompt('Skopiuj prompt ręcznie (Ctrl+C):', prompt);
+            }
+        }
+        window.copyMcpCampaignPrompt = copyMcpCampaignPrompt;
 
         // ---- FB POST PREVIEW (jak u klienta) ----
         function renderFbPostPreview() {
