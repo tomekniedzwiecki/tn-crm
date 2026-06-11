@@ -35,7 +35,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
 const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
-const MAX_IMAGES_PER_SESSION = 3
+const MAX_IMAGES_PER_SESSION = 5     // pierwszy podgląd + 4 darmowe poprawki
+const MAX_IMAGES_PER_IP_PER_DAY = 12 // anty-abuse: mnożenie sesji nie omija limitu kosztów
 const STORAGE_BUCKET = 'attachments'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -57,12 +58,12 @@ function buildImagePrompt(brief: Record<string, unknown>): string {
     ? brief.ekrany.filter((e) => typeof e === 'string').slice(0, 6).join(', ')
     : ''
   return [
-    `Makieta poglądowa (UI concept) aplikacji webowej SaaS „${s(brief.nazwa) || 'Narzędzie'}".`,
-    `Dla kogo: ${s(brief.dla_kogo)}. Problem, który rozwiązuje: ${s(brief.problem)}.`,
-    `Co robi: ${s(brief.opis)}.`,
-    `Pokaż nowoczesny, czysty interfejs aplikacji w oknie przeglądarki: dashboard z bocznym menu${ekrany ? `, widoczne sekcje: ${ekrany}` : ''}.`,
-    'Język interfejsu: polski. Styl: jasny, profesjonalny, minimalistyczny SaaS, realistyczny zrzut ekranu.',
-    'Bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.',
+    `Pełnoekranowy zrzut interfejsu aplikacji webowej SaaS „${s(brief.nazwa) || 'Narzędzie'}" — widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
+    `Przeznaczenie: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. Funkcja główna: ${s(brief.opis)}.`,
+    'DESIGN: premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach, wykresach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).',
+    `LAYOUT: wąski lewy sidebar z liniowymi ikonami i etykietami sekcji${ekrany ? ` (${ekrany})` : ''}; górna belka z wyszukiwarką i awatarem; główny obszar: 3-4 karty KPI z dużymi liczbami, elegancki wykres z gradientowym wypełnieniem, poniżej tabela rekordów ze statusami jako kolorowe badge (niebieski/zielony/bursztynowy).`,
+    'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum.',
+    'JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, spójny zestaw ikon liniowych, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.',
   ].join(' ')
 }
 
@@ -170,6 +171,26 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_podgladow' }, 429, corsHeaders)
     }
 
+    // Limit dzienny per IP — sumujemy podglądy ze wszystkich sesji tego IP,
+    // żeby mnożenie sessionId nie omijało limitu per sesja (każdy obraz kosztuje)
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+    if (ip) {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: ipRows, error: ipError } = await supabase
+        .from('spar_sessions')
+        .select('image_count')
+        .eq('ip', ip)
+        .gte('created_at', dayAgo)
+      if (ipError) {
+        console.error('[spar-image] ip limit query error:', ipError)
+      } else {
+        const total = (ipRows || []).reduce((s, r) => s + ((r.image_count as number) || 0), 0)
+        if (total >= MAX_IMAGES_PER_IP_PER_DAY) {
+          return jsonResponse({ error: 'limit_podgladow_dzienny' }, 429, corsHeaders)
+        }
+      }
+    }
+
     const bytes = await generateImage(OPENAI_API_KEY, buildImagePrompt(brief))
 
     const path = `spar/${sessionId}/podglad-${imageCount + 1}.png`
@@ -192,7 +213,8 @@ Deno.serve(async (req) => {
       .eq('id', sessionId)
     if (updateError) console.error('[spar-image] session update error:', updateError)
 
-    return jsonResponse({ url }, 200, corsHeaders)
+    // remaining = ile darmowych poprawek zostało (frontend pokazuje licznik)
+    return jsonResponse({ url, remaining: MAX_IMAGES_PER_SESSION - (imageCount + 1) }, 200, corsHeaders)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[spar-image] ERROR:', msg)
