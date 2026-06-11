@@ -153,30 +153,50 @@ const SCORE_SCHEMA = {
 // ---------------- PHASE 1: KANDYDACI ----------------
 phase('Kandydaci')
 
-const cats = (fw.category_shortlist || []).slice(0, MAX_CATS)
-log(`Generuje kandydatow dla ${cats.length} kategorii (${PER_CAT}/kategorie)`)
+const cats = (A.categories_override || fw.category_shortlist || []).slice(0, MAX_CATS)
+log(`Generuje kandydatow dla ${cats.length} kategorii (${PER_CAT}/kategorie)${A.categories_override ? ' [override]' : ''}`)
 
 const generated = await parallel(cats.map(c => () =>
   agent(`${BIZ_CONTEXT}
 
-ZADANIE: Znajdz ${PER_CAT} NAJLEPSZYCH kandydatow produktowych w kategorii: "${c.category}".
-Uzasadnienie kategorii z researchu: ${c.rationale}
-Grupa docelowa kategorii: ${c.target_audience}
-Przykladowe produkty (inspiracja, mozesz wyjsc poza nie): ${JSON.stringify(c.example_products)}
+ZADANIE: Znajdz ${PER_CAT} kandydatow produktowych w obszarze: "${c.category}".
+Kontekst obszaru: ${c.rationale}
+Grupa docelowa: ${c.target_audience}
+Inspiracja (mozesz i POWINIENES wyjsc poza nie — to nie lista do skopiowania): ${JSON.stringify(c.example_products)}
 
 ${ECON_CONTEXT}
 
-METODA (dla KAZDEGO kandydata wykonaj wszystkie kroki):
-1. WebSearch po polsku: czy ten produkt jest kupowany w PL, jakie problemy z nim ludzie maja, jak go szukaja
-2. Sprawdz ceny na Allegro (WebFetch allegro.pl/listing?string=... lub WebSearch site:allegro.pl) — po ile chodzi, ile ofert, czy sa "super sprzedawcy"
-3. Znajdz zrodlo na AliExpress (WebSearch site:aliexpress.com lub WebFetch) — cena + szacunkowa wysylka do PL = COGS w PLN (kurs ~4 zl/USD, konserwatywnie)
-4. Zaproponuj cene detaliczna 100-250 zl ktora daje marze zgodna z modelem ekonomicznym (min. 3x COGS)
-5. Zbierz dowody popytu (min. 2 na kandydata, z confidence)
-6. Wymysl 2-3 katy reklamowe pod Meta Ads (polski rynek, direct response)
+⚠️ NAJWAZNIEJSZA LEKCJA Z POPRZEDNIEJ RUNDY: 24 oczywiste produkty (poduszki, legowiska, organizery, moskitiery)
+zostaly ODRZUCONE, bo KAZDY mial bliznika 1:1 na Allegro 2-5x taniej. Model "tani AliExpress + ladny landing 3x"
+NIE DZIALA dla niczego generycznego, co da sie latwo nazwac i wygooglac. Twoim zadaniem jest znalezc produkty z MOATEM.
 
-WYMAGANIA TWARDE: cena detaliczna realna 100-250 zl, marza min. 3x COGS, produkt rozwiazuje problem (nie gadzet),
-da sie pokazac efekt na wideo/zdjeciu, nie wymaga rozmiarowki, nie jest kruchy, nie ma claims medycznych.
-Kandydaci maja byc ROZNI od siebie (nie 3 warianty tego samego).`,
+DEFINICJA MOATU (kandydat MUSI miec przynajmniej jeden, inaczej go NIE zglaszaj):
+(A) BRAK bliznika 1:1 na Allegro — nikt nie sprzedaje funkcjonalnie identycznego produktu, albo tylko marginalne oferty
+(B) WSCHODZACY TREND — produkt dopiero wchodzi na rynek PL, Allegro jeszcze nie nasycone (sprawdz Google Trends rosnacy)
+(C) UNIKALNY FORMAT/SYSTEM/ZESTAW — kompozycja/mechanizm, ktorego nie kupisz gotowego (trudny do porownania cenowego 1:1)
+(D) SPECJALIZACJA PASJONACKA — waska grupa o wysokiej gotowosci placenia, niski wolumen Allegro, wysoka intencja
+
+METODA (dla KAZDEGO potencjalnego kandydata, w tej kolejnosci):
+1. SYGNAL POPYTU — sprawdz Meta Ad Library (kraj=PL): co polskie marki PLN reklamuja DLUGO (30+ dni = rentowne), ale
+   przez NIEWIELU graczy (1-3, nie sieci EUR/USD). To produkty z dowiedzionym popytem i WOLNYM miejscem. Zainspiruj sie, NIE kopiuj 1:1.
+2. ⛔ BRAMKA ALLEGRO (rob to ZANIM zgloisz kandydata): wyszukaj produkt na Allegro (WebSearch site:allegro.pl + WebFetch).
+   Jesli istnieje funkcjonalnie IDENTYCZNY produkt tanszy niz ~60% Twojej ceny docelowej → ODRZUC tego kandydata, szukaj innego.
+   W polu allegro_price_check OPISZ co znalazles i DLACZEGO Twoj kandydat nie jest bliznikiem 1:1 (jaki ma moat).
+3. ZRODLO + COGS — znajdz na AliExpress/Alibaba realna cene, policz landed COGS w PLN (kurs ~4 zl/USD + fracht, konserwatywnie).
+4. CENA + MARZA — cena docelowa 179-249 zl (NIE 149 — za ciasno), landed COGS <=60-75 zl, markup >=3,3x. Jesli markup <3,3x → ODRZUC.
+5. DOWODY POPYTU — min. 2, z dzialajacymi URL i confidence (Meta Ad Library, Allegro sprzedaze, Google Trends, fora).
+6. MOAT — w polu brand_potential napisz WPROST ktory z moatow (A/B/C/D) i dlaczego klient NIE porowna go w 10 sekund na Allegro.
+7. KATY REKLAMOWE — 2-3 katy Meta Ads (problem-solution, polski DR), BEZ claimow medycznych/before-after ciala.
+
+WYMAGANIA TWARDE (kandydat lamiacy KTOREKOLWIEK = nie zglaszaj go w ogole):
+- ma realny MOAT (A/B/C/D) potwierdzony bramka Allegro w kroku 2
+- cena 179-249 zl, markup >=3,3x na landed COGS
+- bez elektroniki/baterii, bez zabawek dzieciecych, bez claimow medycznych, bez rozmiarowki, nie kruchy
+- da sie pokazac efekt w 3-sek wideo BEZ before/after ciala
+- NIE jest na blackliscie przesyconych: ${JSON.stringify(BLACKLIST)}
+
+Lepiej zglosic 1 kandydata z prawdziwym moatem niz 3 generyczne. Jesli w tym obszarze nie znajdziesz NIC z moatem — zwroc pusta liste candidates.
+Kandydaci maja byc ROZNI od siebie.`,
     { label: `gen:${c.category.slice(0, 30)}`, phase: 'Kandydaci', schema: CANDIDATE_SCHEMA })
     .then(r => r ? r.candidates.map(x => ({ ...x, category: c.category })) : [])
 ))
@@ -245,6 +265,53 @@ refuted=true jesli: naruszone anty-kryterium, kategoria wysokiego ryzyka prawneg
   },
 ]
 
+// Deterministyczne unit economics wg wzoru frameworku (s=0.4, r=0.1, W=16, F=5, Dret=30, pay=0.015, Bret=5)
+function computeEconomics(cogs, retail) {
+  const C = Number(cogs), P = Number(retail)
+  if (!isFinite(C) || !isFinite(P) || P <= 0) return {}
+  const s = 0.40, r = 0.10, W = 16, F = 5, Dret = 30, pay = 0.015, Bret = 5
+  const realized = 1 - s * r
+  const cm = P * realized - C * realized - W - s * F - s * r * Dret - (1 - s) * pay * P - Bret
+  const round2 = x => Math.round(x * 100) / 100
+  return {
+    cogs_pln: round2(C),
+    retail_price_pln: round2(P),
+    shipping_cost_pln: W,
+    contribution_margin_pln: round2(cm),
+    max_cpa_pln: round2(cm * 0.8),
+    breakeven_roas: cm > 0 ? round2((P * realized) / cm) : null,
+    margin_multiple: round2(P / C),
+    economics_notes: 'Wyliczone deterministycznie ze wzoru frameworku (COD 40%, odmowy 10%, paczkomat 16 zl). Scoring AISA niepelny — do potwierdzenia analiza wymiarow.',
+  }
+}
+
+// Fallback rekordu gdy scoring AI padnie (np. limit): zachowaj kandydata z danymi generatora + werdyktami sceptykow
+function fallbackRecord(vc) {
+  const c = vc.candidate
+  const econ = computeEconomics(c.cogs_estimate_pln, c.retail_price_pln)
+  const refuts = (vc.verdicts || []).filter(v => v.refuted)
+  const blockers = refuts.filter(v => v.severity === 'blocker')
+  let verdict = 'conditional'
+  if (blockers.length) verdict = 'rejected'
+  const hard_fails = blockers.map(v => `${v.lens}: ${v.findings}`.slice(0, 300))
+  const risk = (vc.verdicts || []).filter(v => v.lens === 'ryzyko').map(v => v.findings).join(' ')
+  return {
+    ...c,
+    scores: {},
+    total_score: null,
+    verdict,
+    verdict_reason: refuts.length
+      ? `Scoring AI niepelny (limit). Sceptycy zglosili ${refuts.length} zastrzezen (${refuts.map(v => v.lens).join(', ')}). Wymaga domknięcia analizy.`
+      : 'Scoring AI niepelny (limit) — kandydat wygenerowany, ekonomia policzona, weryfikacja wymiarow do uzupelnienia.',
+    hard_fails,
+    risk_notes: risk || null,
+    unit_economics: econ,
+    demand_signals: {},
+    _verdicts: vc.verdicts,
+    _partial: true,
+  }
+}
+
 const scored = await pipeline(
   candidates,
   // Stage 1: 3 sceptykow rownolegle
@@ -278,13 +345,15 @@ ZASADY:
 - demand_signals: zbuduj mape {allegro, google_trends, meta_ads, tiktok, inne} z najtwardszych dowodow
 - verdict_reason: 2-3 zdania PO POLSKU, rzeczowo`,
       { label: `scoring:${vc.candidate.name.slice(0, 24)}`, phase: 'Scoring', schema: SCORE_SCHEMA, model: 'opus' })
-      .then(s => s ? ({ ...vc.candidate, ...s, _verdicts: vc.verdicts, _had_blockers: blockers.length }) : null)
+      .then(s => s ? ({ ...vc.candidate, ...s, _verdicts: vc.verdicts, _had_blockers: blockers.length }) : fallbackRecord(vc))
+      .catch(() => fallbackRecord(vc))
   }
 )
 
 const final = scored.filter(Boolean)
 const counts = { recommended: 0, conditional: 0, rejected: 0 }
+const partial = final.filter(f => f._partial).length
 final.forEach(f => { counts[f.verdict] = (counts[f.verdict] || 0) + 1 })
-log(`Scoring zakonczony: ${counts.recommended} recommended / ${counts.conditional} conditional / ${counts.rejected} rejected`)
+log(`Scoring zakonczony: ${counts.recommended} recommended / ${counts.conditional} conditional / ${counts.rejected} rejected${partial ? ` (${partial} partial — scoring AI niepelny)` : ''}`)
 
-return { round: ROUND, counts, scored: final }
+return { round: ROUND, counts, partial, scored: final, raw_candidates: candidates }
