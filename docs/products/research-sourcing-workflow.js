@@ -237,8 +237,55 @@ WYMAGANIA TWARDE:
 Znajdz ${PER_CAT} kandydatow. Lepiej zglosic 1 z prawdziwym first-mover oknem niz 3 ktore juz sa w PL.
 Jesli w tym obszarze wszystko juz przyszlo do PL — zwroc pusta liste.`
 
+const BUNDLE_LTV = A.mode === 'bundle_ltv'
+
+// TRYB BUNDLE+LTV: zestaw startowy wokol hobby + edukacja + powracajace zakupy (LTV).
+const bundleLtvPrompt = c => `${BIZ_CONTEXT}
+
+${ECON_CONTEXT}
+
+🎯 MODEL BUNDLE+LTV+EDUKACJA. NIE sprzedajesz pojedynczego produktu (39 takich juz odrzucono — kazdy na Allegro taniej).
+Projektujesz ZESTAW STARTOWY wokol HOBBY/RYTUALU dla ZAANGAZOWANEJ POLSKIEJ SPOLECZNOSCI, z EDUKACJA jako bariera
+i LTV przez POWRACAJACE ZAKUPY (materialy eksploatacyjne, akcesoria, kursy). Komponenty MOGA byc dostepne osobno na
+Allegro — to OCZEKIWANE i NIE dyskwalifikuje. Przewaga = kompletny zestaw-z-onboardingiem + marka + spolecznosc + LTV.
+
+OBSZAR (hobby): "${c.category}"
+Kontekst: ${c.rationale}
+Spolecznosc: ${c.target_audience}
+Inspiracja zestawow: ${JSON.stringify(c.example_products)}
+
+METODA (dla KAZDEGO kandydata-zestawu):
+1. ⛔ ZWERYFIKUJ POLSKA SPOLECZNOSC (hard gate) — WebSearch: polskie grupy FB/fora tego hobby. Ile czlonkow? Jak aktywne
+   (posty dziennie)? Czy edukuja sie nawzajem (= popyt na onboarding)? Jesli BRAK aktywnej polskiej spolecznosci 30k+ → ODRZUC obszar.
+2. ZAPROJEKTUJ ZESTAW STARTOWY — 3-6 komponentow ktore rozwiazuja "od czego zaczac" dla wchodzacego w hobby. Znajdz komponenty
+   na AliExpress/Alibaba, policz landed COGS zestawu (suma + clo 3 EUR/poz + fracht). Zestaw ma byc LEAN (markup >=2,5x przy 149-249 zl).
+3. ZAPROJEKTUJ EDUKACJE — jaki onboarding (e-przewodnik / mini-kurs / dostep do grupy) czyni zestaw nieporownywalnym z luznymi
+   komponentami i buduje zaufanie do nowej marki? To Twoja bariera (kosztowna do skopiowania, ~0 COGS, wysoka percepcja wartosci).
+4. ⛔ ZIDENTYFIKUJ LTV (hard gate) — jakie POWRACAJACE zakupy klient zrobi w 12 mies? (materialy eksploatacyjne, akcesoria,
+   kolejne kursy). Oszacuj LTV = marza_zestawu + powracajace. Jesli BRAK realnej powracalnosci (czysto jednorazowy zakup) → ODRZUC.
+5. BRAMKA KONKURENCJI — czy ktos JUZ sprzedaje IDENTYCZNY markowy ZESTAW-z-edukacja w PL taniej? (sprawdz; pojedyncze komponenty
+   na Allegro to NIE problem). Jesli 3+ markowe zestawy-z-onboardingiem → ODRZUC.
+6. CENA — zestaw 149-249 zl. Markup zestawu >=2,5x. Max CPA liczony z LTV (LTV*0,6), nie z pojedynczej marzy.
+7. DOWODY — min. 2: dowod zaangazowanej spolecznosci PL (grupa+rozmiar) + dowod powracalnosci/LTV (co klient dokupuje).
+8. KATY REKLAMOWE — 2-3 katy: "zacznij [hobby] — wszystko w jednym pudelku", rytual/tozsamosc, demo procesu (satisfying).
+
+WYMAGANIA TWARDE:
+- aktywna polska spolecznosc 30k+ (zweryfikowana)
+- realna powracalnosc/LTV >=200 zl (zidentyfikowane konkretne powracajace zakupy)
+- zestaw 149-249 zl, markup >=2,5x na landed COGS
+- bez komponentow elektronicznych/baterii, bez zabawek, bez claimow medycznych
+- proces hobby pokazywalny atrakcyjnie w 3-sek wideo
+- NIE na blackliscie: ${JSON.stringify(BLACKLIST)}
+- kontakt z zywnoscia → odnotuj wymog DoC 1935/2004
+
+W polach uzyj: name = nazwa ZESTAWU; problem_statement = "od czego zaczac w [hobby]" + bolaczki wchodzacego;
+brand_potential = spolecznosc + edukacja-bariera + sciezka LTV (co dokupuje); allegro_price_check = czy markowy ZESTAW-z-edukacja
+juz jest (nie pojedyncze komponenty); notes = sklad zestawu + projekcja LTV + co powracajace.
+
+Znajdz ${PER_CAT} zestawow. Lepiej 1 z silna spolecznoscia i realnym LTV niz 3 bez powracalnosci.`
+
 const generated = await parallel(cats.map(c => () =>
-  agent(FIRST_MOVER ? firstMoverPrompt(c) : standardGenPrompt(c),
+  agent(BUNDLE_LTV ? bundleLtvPrompt(c) : (FIRST_MOVER ? firstMoverPrompt(c) : standardGenPrompt(c)),
     { label: `gen:${c.category.slice(0, 30)}`, phase: 'Kandydaci', schema: CANDIDATE_SCHEMA })
     .then(r => r ? r.candidates.map(x => ({ ...x, category: c.category })) : [])
 ))
@@ -259,10 +306,26 @@ candidates = candidates.filter(c => {
 log(`Po dedup: ${candidates.length} kandydatow idzie do weryfikacji`)
 
 // ---------------- PHASE 2+3: WERYFIKACJA + SCORING (pipeline per kandydat) ----------------
+const BUNDLE = A.mode === 'bundle_ltv'
+
 const LENSES = [
   {
     key: 'marza',
-    prompt: c => `${BIZ_CONTEXT}\n${ECON_CONTEXT}
+    prompt: c => BUNDLE ? `${BIZ_CONTEXT}\n${ECON_CONTEXT}
+
+Jestes SCEPTYKIEM EKONOMII ZESTAWU + LTV (model bundle+LTV). OBAL oplacalnosc tego ZESTAWU. WAZNE: w tym modelu
+dostepnosc pojedynczych KOMPONENTOW na Allegro NIE jest powodem odrzucenia (to oczekiwane). Atakuj LTV i markup ZESTAWU:
+KANDYDAT (zestaw): ${JSON.stringify(c)}
+
+Sprawdz przez WebSearch/WebFetch:
+1. Czy landed COGS ZESTAWU jest realny? Znajdz ceny komponentow na AliExpress/Alibaba (+clo 3 EUR/poz +fracht). Skoryguj w adjusted_numbers.
+2. Markup zestawu: cena/landed_COGS >= 2,5x? Jesli <2,5x → problem.
+3. ⚠️ LTV — NAJWAZNIEJSZE: czy deklarowana powracalnosc jest REALNA? Czy klient FAKTYCZNIE dokupi materialy/akcesoria/kursy
+   (a nie kupi raz i zapomni)? Zweryfikuj: czy te materialy eksploatacyjne istnieja, czy hobby wymusza powtarzalnosc.
+   Oszacuj realistyczne LTV (12 mies). Max CPA = LTV*0,6. Czy >= realny CPA 50-100 zl?
+4. ⛔ KLUCZOWY TEST: czy IDENTYCZNY markowy ZESTAW-z-edukacja jest juz w PL taniej? (NIE pojedyncze komponenty — gotowy zestaw z onboardingiem). Jesli tak → blocker.
+refuted=true jesli: brak realnej powracalnosci (LTV<150 zl), LUB markup zestawu <2,5x, LUB identyczny markowy zestaw-z-edukacja taniej w PL.
+NIE odrzucaj za samo "komponenty dostepne na Allegro" — to model bundle, nie produkt-first.` : `${BIZ_CONTEXT}\n${ECON_CONTEXT}
 
 Jestes SCEPTYKIEM MARZY. Twoim zadaniem jest OBALIC oplacalnosc tego kandydata. Szukaj aktywnie powodow do odrzucenia:
 KANDYDAT: ${JSON.stringify(c)}
@@ -277,7 +340,20 @@ Jesli watpliwosc — refuted=true (wolimy odrzucic dobrego niz przepuscic zlego)
   },
   {
     key: 'popyt',
-    prompt: c => `${BIZ_CONTEXT}
+    prompt: c => BUNDLE ? `${BIZ_CONTEXT}
+
+Jestes SCEPTYKIEM SPOLECZNOSCI I POWRACALNOSCI (model bundle+LTV). OBAL zalozenie, ze istnieje zaangazowana polska
+spolecznosc tego hobby z realna powtarzalnoscia zakupow:
+KANDYDAT (zestaw): ${JSON.stringify(c)}
+
+Sprawdz przez WebSearch/WebFetch:
+1. Czy polska SPOLECZNOSC jest realna i AKTYWNA? Zweryfikuj grupy FB/fora — faktyczny rozmiar (30k+?), aktywnosc (posty dziennie?),
+   czy ludzie sie edukuja (= popyt na onboarding). Deklaracje generatora moga byc zawyzone — sprawdz.
+2. Czy hobby ma realny RYTUAL/POWTARZALNOSC napedzajaca LTV? Czy klient wraca po materialy, czy to jednorazowy kaprys?
+3. Czy gotowosc placenia jest realna (czy ta spolecznosc faktycznie WYDAJE na sprzet/akcesoria, czy tylko gada)?
+4. Czy hobby ROSNIE czy WYMIERA (Google Trends)? Czy nie jest to chwilowa moda po szczycie?
+5. Czy zestaw startowy trafia w realny problem "od czego zaczac", czy to wydumana potrzeba?
+refuted=true jesli: spolecznosc mala/nieaktywna/zawyzona, LUB brak realnej powtarzalnosci zakupow, LUB niska realna gotowosc placenia, LUB hobby po szczycie.`  : `${BIZ_CONTEXT}
 
 Jestes SCEPTYKIEM POPYTU. Twoim zadaniem jest OBALIC istnienie realnego popytu na tego kandydata w Polsce:
 KANDYDAT: ${JSON.stringify(c)}
@@ -296,14 +372,14 @@ refuted=true jesli: dowody popytu sa zmyslone/niewiarygodne, LUB brak sladow rea
 
 Jestes SCEPTYKIEM RYZYKA (prawnego, platformowego, operacyjnego i nasycenia). OBAL tego kandydata:
 KANDYDAT: ${JSON.stringify(c)}
-
+${BUNDLE ? '\nUWAGA (model bundle+LTV): nasycenie oceniaj dla MARKOWYCH ZESTAWOW-z-edukacja, NIE dla pojedynczych komponentow (te moga byc na Allegro — to oczekiwane). Regulatory sprawdz dla KAZDEGO komponentu zestawu.\n' : ''}
 Sprawdz:
 1. Meta Ads policy: czy reklama tego produktu wymaga claims zdrowotnych/before-after/sensacji? (ban risk)
-2. Certyfikacje/prawo: CE, RED (elektronika radiowa), EN71 (zabawki), baterie litowe, kontakt z zywnoscia, GPSR, "wyrob medyczny" — czy ten produkt wpada w ryzykowna kategorie?
-3. Nasycenie: ile polskich sklepow JUZ reklamuje ten produkt w Meta Ad Library / sprzedaje na Allegro? Dziesiatki kopii = spalona nisza
-4. Operacyjnie: kruchy? ciezki? rozmiarowka? wysoka awaryjnosc (zwroty)? skomplikowana obsluga (instrukcje, montaz)?
+2. Certyfikacje/prawo: CE, RED (elektronika radiowa), EN71 (zabawki), baterie litowe, kontakt z zywnoscia (DoC 1935/2004), GPSR, "wyrob medyczny" — czy ${BUNDLE ? 'ktorykolwiek komponent zestawu' : 'ten produkt'} wpada w ryzykowna kategorie?
+3. Nasycenie: ile polskich sklepow JUZ ${BUNDLE ? 'sprzedaje IDENTYCZNY markowy ZESTAW-z-onboardingiem' : 'reklamuje ten produkt w Meta Ad Library / sprzedaje na Allegro'}? ${BUNDLE ? '3+ markowe zestawy = nasycone (pojedyncze komponenty luzem NIE licza sie)' : 'Dziesiatki kopii = spalona nisza'}
+4. Operacyjnie: ${BUNDLE ? 'komponent kruchy (szklo/ceramika)? gabaryt zestawu? zlozonosc kompletacji?' : 'kruchy? ciezki? rozmiarowka? wysoka awaryjnosc (zwroty)? skomplikowana obsluga (instrukcje, montaz)?'}
 5. Anty-kryteria frameworku: ${JSON.stringify(ANTI)} — czy ktores naruszone? Jesli tak, wypisz w findings DOKLADNIE ktore.
-refuted=true jesli: naruszone anty-kryterium, kategoria wysokiego ryzyka prawnego, oczywiste przesycenie rynku, lub powazny problem operacyjny.`,
+refuted=true jesli: naruszone anty-kryterium (hard-fail), kategoria wysokiego ryzyka prawnego, ${BUNDLE ? 'przesycenie MARKOWYMI ZESTAWAMI' : 'oczywiste przesycenie rynku'}, lub powazny problem operacyjny.`,
   },
 ]
 
