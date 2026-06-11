@@ -54,7 +54,10 @@ const MAX_MESSAGES_PER_HOUR = 60      // wiadomości/h per sesja (COUNT spar_mes
 const MAX_SESSIONS_PER_HOUR_PER_IP = 10 // nowych sesji/h per IP (anty-abuse: mnożenie sessionId)
 const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy maila (bramka inline w czacie)
 const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.1'
-const OPENAI_MAX_COMPLETION_TOKENS = 1500
+// 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
+// przekroczyć 1500 — ucięty </projekt> = parseProjekt zwraca null i brief
+// NIE trafia do bazy (podgląd się nie generuje mimo zapowiedzi w tekście)
+const OPENAI_MAX_COMPLETION_TOKENS = 3000
 
 // ── Cache system promptów (mapa per klucz settings, 5 min) ───────────────────
 const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000
@@ -141,12 +144,18 @@ function parseVerdict(fullText: string): VerdictResult {
 // (model może iterować podgląd po uwagach klienta)
 function parseProjekt(fullText: string): Record<string, unknown> | null {
   const matches = [...fullText.matchAll(/<projekt>([\s\S]*?)<\/projekt>/g)]
-  if (!matches.length) return null
+  if (!matches.length) {
+    if (fullText.includes('<projekt>')) {
+      // otwarty marker bez domknięcia = odpowiedź ucięta (limit tokenów / przerwany stream)
+      console.error('[spar-chat] marker <projekt> NIEDOMKNIĘTY — odpowiedź ucięta? len:', fullText.length)
+    }
+    return null
+  }
   try {
     const parsed = JSON.parse(matches[matches.length - 1][1])
     return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
   } catch (err) {
-    console.error('[spar-chat] błąd parsowania markera projekt:', err)
+    console.error('[spar-chat] błąd parsowania markera projekt:', err, '| inner:', matches[matches.length - 1][1].slice(0, 300))
     return null
   }
 }
