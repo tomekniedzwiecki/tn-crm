@@ -213,7 +213,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, image_count')
+      .select('id, preview_brief, image_count, preview_images')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -273,14 +273,22 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_zapisu' }, 500, corsHeaders)
     }
 
-    // Atomowy zapis (4 równoległe generacje — bez wyścigu na read-modify-write)
+    // Atomowy zapis (4 równoległe generacje — bez wyścigu na read-modify-write);
+    // RPC przenosi poprzednią wersję widoku do preview_history (nic nie przepada)
     const { data: newCount, error: rpcError } = await supabase
       .rpc('spar_record_image', { p_session: sessionId, p_view: view, p_url: url })
     if (rpcError) console.error('[spar-image] rpc spar_record_image error:', rpcError)
     const count = typeof newCount === 'number' ? newCount : imageCount + 1
 
+    // archived: URL zastąpionej wersji — frontend dopisuje ją do lokalnego
+    // archiwum nawet, gdy nie znał poprzedniego stanu (np. po powrocie z linku)
+    const prevImages = (session.preview_images || {}) as Record<string, unknown>
+    const prevUrl = typeof prevImages[view] === 'string' && prevImages[view] !== url
+      ? prevImages[view] as string
+      : null
+
     // remaining = ile obrazów-poprawek zostało w puli sesji
-    return jsonResponse({ url, view, remaining: Math.max(0, MAX_IMAGES_PER_SESSION - count) }, 200, corsHeaders)
+    return jsonResponse({ url, view, archived: prevUrl, remaining: Math.max(0, MAX_IMAGES_PER_SESSION - count) }, 200, corsHeaders)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[spar-image] ERROR:', msg)
