@@ -300,6 +300,80 @@
         details.side > summary .chev { transition: transform 0.3s var(--ease); }
         details.side[open] > summary .chev { transform: rotate(180deg); color: var(--accent); }
 
+        /* Siatka podglądów + lightbox (spójny ze sparingiem) */
+        .pv-thumb {
+            position: relative;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: zoom-in;
+            background: rgba(5,6,10,0.6);
+            transition: border-color 0.2s ease;
+        }
+        .pv-thumb:hover { border-color: rgba(77,159,255,0.5); }
+        .pv-thumb img { width: 100%; aspect-ratio: 3/2; object-fit: cover; display: block; }
+        .pv-thumb span {
+            position: absolute; left: 6px; top: 6px;
+            padding: 3px 8px; border-radius: 999px;
+            font-size: 10px; font-weight: 700;
+            color: var(--text-strong);
+            background: rgba(5,6,10,0.8);
+            border: 1px solid var(--glass-border);
+            pointer-events: none;
+        }
+        .lightbox {
+            position: fixed; inset: 0; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            padding: clamp(16px, 4vw, 40px);
+            background: rgba(3,3,6,0.9);
+            -webkit-backdrop-filter: blur(16px);
+            backdrop-filter: blur(16px);
+            animation: fadeIn 0.25s ease;
+            cursor: zoom-out;
+        }
+        .lightbox img {
+            max-width: min(1280px, 94vw); max-height: 80vh; width: auto;
+            border-radius: 14px; border: 1px solid var(--glass-border);
+            box-shadow: 0 40px 120px -30px rgba(0,0,0,0.9);
+            cursor: default;
+        }
+        .lightbox__x {
+            position: absolute; top: 14px; right: 14px; z-index: 3;
+            width: 46px; height: 46px; border-radius: 50%;
+            display: grid; place-items: center;
+            color: var(--text-strong);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background 0.25s ease, border-color 0.25s ease;
+        }
+        .lightbox__x:hover { background: var(--accent-soft); border-color: var(--accent); }
+        .lightbox__x svg { width: 20px; height: 20px; }
+        .lightbox__nav {
+            position: absolute; top: 50%; transform: translateY(-50%); z-index: 3;
+            width: 48px; height: 48px; border-radius: 50%;
+            display: grid; place-items: center;
+            color: var(--text-strong);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid var(--glass-border);
+            cursor: pointer;
+            transition: background 0.25s ease, border-color 0.25s ease;
+        }
+        .lightbox__nav:hover { background: var(--accent-soft); border-color: var(--accent); }
+        .lightbox__nav svg { width: 22px; height: 22px; }
+        .lightbox__nav--l { left: 12px; }
+        .lightbox__nav--r { right: 12px; }
+        .lightbox__caption {
+            position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 3;
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 18px; border-radius: 999px;
+            background: rgba(5,6,10,0.82);
+            border: 1px solid var(--glass-border);
+            font-size: 14px; font-weight: 700; color: var(--text-strong);
+            white-space: nowrap; max-width: 92vw;
+        }
+        .lightbox__caption small { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+
         .aurora {
             position: fixed; inset: 0; pointer-events: none; z-index: 0;
             background:
@@ -422,10 +496,8 @@
                     <i class="ph-bold ph-caret-down chev text-zinc-500"></i>
                 </summary>
                 <div id="p-preview-wrap" class="px-3 pb-3">
-                    <a id="p-preview-link" href="#" target="_blank" rel="noopener" class="block rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors">
-                        <img id="p-preview" src="" alt="Podgląd narzędzia" class="w-full block">
-                    </a>
-                    <p class="text-[11px] text-zinc-500 mt-2 px-1">Poglądowy obraz z rozmowy — makieta będzie klikalna, ekran po ekranie.</p>
+                    <div id="p-previews" class="grid grid-cols-2 gap-2"></div>
+                    <p class="text-[11px] text-zinc-500 mt-2 px-1">Poglądowe ekrany z rozmowy — kliknij, aby powiększyć. Makieta będzie klikalna, ekran po ekranie.</p>
                 </div>
                 <div id="p-preview-empty" class="px-5 pb-4 text-zinc-500 text-[12.5px] hidden">Podgląd nie został jeszcze wygenerowany — wróć do rozmowy, pokażę Ci go tam.</div>
             </details>
@@ -548,6 +620,89 @@
                 val + '</div>';
         });
         el('p-karta').innerHTML = html || '<p class="text-zinc-500 text-[12.5px]">Karta uzupełni się po zakończeniu rozmowy definiującej.</p>';
+    }
+
+    /* ============================================================
+       PODGLĄDY — 4 widoki narzędzia + lightbox (podpis, strzałki, X)
+       ============================================================ */
+    var VIEW_META = [
+        ['panel', 'Pulpit narzędzia'],
+        ['glowna', 'Główna funkcja'],
+        ['dodatkowa', 'Dodatkowa funkcja'],
+        ['landing', 'Strona sprzedażowa']
+    ];
+    var previewItems = [];
+
+    function renderPreviews(p) {
+        previewItems = [];
+        var imgs = (p.preview_images && typeof p.preview_images === 'object') ? p.preview_images : {};
+        VIEW_META.forEach(function (vm) {
+            if (typeof imgs[vm[0]] === 'string') previewItems.push({ view: vm[0], label: vm[1], url: imgs[vm[0]] });
+        });
+        // stare sesje: pojedynczy preview_image_url
+        if (!previewItems.length && p.preview_image_url) {
+            previewItems.push({ view: 'panel', label: 'Podgląd narzędzia', url: p.preview_image_url });
+        }
+        if (!previewItems.length) {
+            el('p-preview-wrap').classList.add('hidden');
+            el('p-preview-empty').classList.remove('hidden');
+            return;
+        }
+        var wrap = el('p-previews');
+        wrap.className = previewItems.length === 1 ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-2 gap-2';
+        wrap.innerHTML = previewItems.map(function (it, i) {
+            return '<div class="pv-thumb" data-i="' + i + '">' +
+                '<img src="' + esc(it.url) + '" alt="' + esc(it.label) + '" loading="lazy">' +
+                '<span>' + esc(it.label) + '</span></div>';
+        }).join('');
+        wrap.querySelectorAll('.pv-thumb').forEach(function (t) {
+            t.addEventListener('click', function () { openLightbox(parseInt(t.dataset.i, 10)); });
+        });
+    }
+
+    function openLightbox(startIdx) {
+        if (document.getElementById('pv-lightbox') || !previewItems.length) return;
+        var idx = Math.max(0, Math.min(previewItems.length - 1, startIdx || 0));
+        var nav = previewItems.length > 1;
+        var lb = document.createElement('div');
+        lb.className = 'lightbox';
+        lb.id = 'pv-lightbox';
+        lb.setAttribute('role', 'dialog');
+        lb.innerHTML =
+            '<button type="button" class="lightbox__x" id="pv-lb-close" aria-label="Zamknij">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"></path></svg></button>' +
+            (nav
+                ? '<button type="button" class="lightbox__nav lightbox__nav--l" id="pv-lb-prev" aria-label="Poprzedni ekran">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"></path></svg></button>' +
+                  '<button type="button" class="lightbox__nav lightbox__nav--r" id="pv-lb-next" aria-label="Następny ekran">' +
+                  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"></path></svg></button>'
+                : '') +
+            '<img src="" alt="">' +
+            '<div class="lightbox__caption"><span id="pv-lb-cap"></span>' + (nav ? '<small id="pv-lb-count"></small>' : '') + '</div>';
+        document.body.appendChild(lb);
+        var img = lb.querySelector('img');
+        function paint() {
+            var it = previewItems[idx];
+            img.src = it.url;
+            img.alt = it.label;
+            lb.querySelector('#pv-lb-cap').textContent = it.label;
+            if (nav) lb.querySelector('#pv-lb-count').textContent = (idx + 1) + ' / ' + previewItems.length;
+        }
+        function step(d) { idx = (idx + d + previewItems.length) % previewItems.length; paint(); }
+        function close() { lb.remove(); document.removeEventListener('keydown', onKey); }
+        function onKey(e) {
+            if (e.key === 'Escape') close();
+            else if (nav && e.key === 'ArrowLeft') step(-1);
+            else if (nav && e.key === 'ArrowRight') step(1);
+        }
+        lb.addEventListener('click', function (e) { if (e.target === lb) close(); });
+        lb.querySelector('#pv-lb-close').addEventListener('click', close);
+        if (nav) {
+            lb.querySelector('#pv-lb-prev').addEventListener('click', function () { step(-1); });
+            lb.querySelector('#pv-lb-next').addEventListener('click', function () { step(1); });
+        }
+        document.addEventListener('keydown', onKey);
+        paint();
     }
 
     function renderFeedback(list) {
@@ -999,13 +1154,7 @@
         el('back-to-chat').href = chatUrl();
         setStepper(done);
 
-        if (p.preview_image_url) {
-            el('p-preview').src = p.preview_image_url;
-            el('p-preview-link').href = p.preview_image_url;
-        } else {
-            el('p-preview-wrap').classList.add('hidden');
-            el('p-preview-empty').classList.remove('hidden');
-        }
+        renderPreviews(p);
 
         renderKarta(p);
         renderFeedback(d.feedback);

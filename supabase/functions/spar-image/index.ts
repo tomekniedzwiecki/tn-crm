@@ -3,9 +3,14 @@
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (frontend wywołuje bez tokena JWT):
 //   npx supabase functions deploy spar-image --no-verify-jwt
 //
-// Flow: spar-chat zapisuje brief z markera <projekt> w spar_sessions.preview_brief
-// i emituje event spar_projekt -> frontend woła ten endpoint -> generujemy obraz
-// (OpenAI Images API), wrzucamy do storage (bucket attachments, public) i zwracamy URL.
+// Flow v2 (4 WIDOKI): spar-chat zapisuje brief z markera <projekt> (z polem
+// "widoki": panel/glowna/dodatkowa/landing) w spar_sessions.preview_brief i
+// emituje event spar_projekt -> frontend woła ten endpoint RÓWNOLEGLE po jednym
+// widoku ({sessionId, view}) -> generujemy obraz (OpenAI Images API), wrzucamy
+// do storage i zapisujemy atomowo przez RPC spar_record_image (równoległe
+// wywołania nie mogą się ścigać na image_count/preview_images).
+//
+// Limity: 8 obrazów/sesja = 4 startowe widoki + 4 poprawki; 20/dobę/IP.
 //
 // Sekrety:
 //   OPENAI_API_KEY     — klucz OpenAI (już ustawiony)
@@ -35,9 +40,12 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
 const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
-const MAX_IMAGES_PER_SESSION = 5     // pierwszy podgląd + 4 darmowe poprawki
-const MAX_IMAGES_PER_IP_PER_DAY = 12 // anty-abuse: mnożenie sesji nie omija limitu kosztów
+const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
+const MAX_IMAGES_PER_IP_PER_DAY = 20 // anty-abuse: mnożenie sesji nie omija limitu kosztów
 const STORAGE_BUCKET = 'attachments'
+
+const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing'] as const
+type ViewKey = typeof VIEWS[number]
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -52,25 +60,64 @@ function jsonResponse(
   })
 }
 
-function buildImagePrompt(brief: Record<string, unknown>): string {
-  const s = (v: unknown) => (typeof v === 'string' ? v.slice(0, 300) : '')
-  const ekrany = Array.isArray(brief.ekrany)
-    ? brief.ekrany.filter((e) => typeof e === 'string').slice(0, 6).join(', ')
-    : ''
-  // Wytyczne wizualne rozmówcy (pole "styl" z markera <projekt>) mają
-  // PIERWSZEŃSTWO przed domyślnym dark-mode — user może chcieć jasny motyw,
-  // inne kolory, prostszy układ itd.
+// Wspólny design system dla WSZYSTKICH widoków jednej sesji — to on trzyma
+// spójność między obrazami (gpt-image nie ma seedów; spójność = identyczny,
+// bardzo konkretny opis stylu w każdym prompcie).
+function buildStyleBlock(brief: Record<string, unknown>): string {
   const styl = typeof brief.styl === 'string' ? brief.styl.trim().slice(0, 500) : ''
-  const designLine = styl
-    ? `DESIGN — WYTYCZNE KLIENTA (PRIORYTET, zastosuj je dokładnie): ${styl}. Niezależnie od nich utrzymaj jakość premium SaaS: czysta siatka, spójna paleta, zaokrąglenia 12-16px, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).`
-    : 'DESIGN: premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach, wykresach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).'
+  if (styl) {
+    return `DESIGN SYSTEM (IDENTYCZNY na wszystkich widokach tego narzędzia — wytyczne klienta mają PRIORYTET, zastosuj je dokładnie): ${styl}. Niezależnie od nich utrzymaj jakość premium SaaS: czysta siatka, jedna spójna paleta, zaokrąglenia 12-16px, dużo światła między elementami, nowoczesna typografia sans-serif (Inter), spójny zestaw ikon liniowych.`
+  }
+  return 'DESIGN SYSTEM (IDENTYCZNY na wszystkich widokach tego narzędzia): premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter), spójny zestaw ikon liniowych.'
+}
+
+function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string {
+  const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const widoki = (brief.widoki && typeof brief.widoki === 'object')
+    ? brief.widoki as Record<string, unknown>
+    : {}
+  const viewDesc = s(widoki[view], 700)
+  const nazwa = s(brief.nazwa) || 'Narzędzie'
+  const kontekst = `Narzędzie „${nazwa}" dla: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. ${s(brief.opis)}`
+  const styleBlock = buildStyleBlock(brief)
+  const jakosc = 'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum. JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.'
+
+  if (view === 'landing') {
+    const ekrany = Array.isArray(brief.ekrany)
+      ? brief.ekrany.filter((e) => typeof e === 'string').slice(0, 4).join(', ')
+      : ''
+    return [
+      `Pełnoekranowy zrzut STRONY SPRZEDAŻOWEJ (marketing landing page) produktu „${nazwa}" — widok wprost, full-bleed, bez ramki przeglądarki.`,
+      kontekst,
+      viewDesc
+        ? `ZAWARTOŚĆ STRONY (z ustaleń z klientem, odwzoruj wiernie): ${viewDesc}`
+        : `ZAWARTOŚĆ STRONY: hero z mocnym polskim nagłówkiem-obietnicą rozwiązania problemu, podtytuł, przycisk CTA, obok ukośnie osadzony zrzut interfejsu narzędzia; niżej pasek zaufania i sekcja 3 korzyści z ikonami${ekrany ? ` (nawiązujące do: ${ekrany})` : ''}.`,
+      styleBlock,
+      'To strona WWW sprzedająca narzędzie (typografia marketingowa, sekcje, dużo oddechu) — NIE ekran aplikacji; zrzut interfejsu pojawia się tylko jako element hero.',
+      jakosc,
+    ].join(' ')
+  }
+
+  const viewIntro: Record<Exclude<ViewKey, 'landing'>, string> = {
+    panel: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — GŁÓWNY PULPIT (przegląd najważniejszych informacji). Widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
+    glowna: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — EKRAN GŁÓWNEJ FUNKCJI W UŻYCIU (moment, w którym narzędzie rozwiązuje problem użytkownika). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
+    dodatkowa: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — EKRAN DODATKOWEJ FUNKCJI. Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
+  }
+
+  const fallbackLayout: Record<Exclude<ViewKey, 'landing'>, string> = {
+    panel: 'LAYOUT: wąski lewy sidebar z liniowymi ikonami i etykietami sekcji; górna belka z wyszukiwarką i awatarem; główny obszar: 3-4 karty z najważniejszymi liczbami, czytelna lista spraw/rekordów ze statusami jako kolorowe badge.',
+    glowna: 'LAYOUT: jeden duży ekran roboczy głównej funkcji — formularz/lista/edytor w akcji, z wypełnionymi danymi i widocznym kolejnym krokiem użytkownika; wąski lewy sidebar nawigacji.',
+    dodatkowa: 'LAYOUT: jeden ekran roboczy dodatkowej funkcji z wypełnionymi danymi; wąski lewy sidebar nawigacji.',
+  }
+
   return [
-    `Pełnoekranowy zrzut interfejsu aplikacji webowej SaaS „${s(brief.nazwa) || 'Narzędzie'}" — widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
-    `Przeznaczenie: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. Funkcja główna: ${s(brief.opis)}.`,
-    designLine,
-    `LAYOUT: wąski lewy sidebar z liniowymi ikonami i etykietami sekcji${ekrany ? ` (${ekrany})` : ''}; górna belka z wyszukiwarką i awatarem; główny obszar: 3-4 karty KPI z dużymi liczbami, elegancki wykres z gradientowym wypełnieniem, poniżej tabela rekordów ze statusami jako kolorowe badge (niebieski/zielony/bursztynowy).`,
-    'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum.',
-    'JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, spójny zestaw ikon liniowych, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.',
+    viewIntro[view],
+    kontekst,
+    viewDesc
+      ? `ZAWARTOŚĆ EKRANU (z ustaleń z klientem, odwzoruj wiernie i szczegółowo): ${viewDesc}`
+      : fallbackLayout[view],
+    styleBlock,
+    jakosc,
   ].join(' ')
 }
 
@@ -141,7 +188,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_konfiguracji' }, 500, corsHeaders)
     }
 
-    let body: { sessionId?: string }
+    let body: { sessionId?: string; view?: string }
     try {
       body = await req.json()
     } catch {
@@ -151,6 +198,10 @@ Deno.serve(async (req) => {
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, corsHeaders)
     }
+    // Brak/nieznany view (stare frontendy) -> 'panel'
+    const view: ViewKey = (VIEWS as readonly string[]).includes(body.view || '')
+      ? body.view as ViewKey
+      : 'panel'
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -198,9 +249,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    const bytes = await generateImage(OPENAI_API_KEY, buildImagePrompt(brief))
+    const bytes = await generateImage(OPENAI_API_KEY, buildImagePrompt(brief, view))
 
-    const path = `spar/${sessionId}/podglad-${imageCount + 1}.png`
+    // Nazwa pliku per widok + timestamp wersji (upsert nadpisuje poprzednią
+    // wersję tego samego widoku tylko gdy nazwa identyczna — wersjonujemy)
+    const path = `spar/${sessionId}/podglad-${view}-${Date.now()}.png`
     const { error: uploadError } = await supabase.storage
       .from(STORAGE_BUCKET)
       .upload(path, bytes, { contentType: 'image/png', upsert: true })
@@ -214,14 +267,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_zapisu' }, 500, corsHeaders)
     }
 
-    const { error: updateError } = await supabase
-      .from('spar_sessions')
-      .update({ preview_image_url: url, image_count: imageCount + 1, updated_at: new Date().toISOString() })
-      .eq('id', sessionId)
-    if (updateError) console.error('[spar-image] session update error:', updateError)
+    // Atomowy zapis (4 równoległe generacje — bez wyścigu na read-modify-write)
+    const { data: newCount, error: rpcError } = await supabase
+      .rpc('spar_record_image', { p_session: sessionId, p_view: view, p_url: url })
+    if (rpcError) console.error('[spar-image] rpc spar_record_image error:', rpcError)
+    const count = typeof newCount === 'number' ? newCount : imageCount + 1
 
-    // remaining = ile darmowych poprawek zostało (frontend pokazuje licznik)
-    return jsonResponse({ url, remaining: MAX_IMAGES_PER_SESSION - (imageCount + 1) }, 200, corsHeaders)
+    // remaining = ile obrazów-poprawek zostało w puli sesji
+    return jsonResponse({ url, view, remaining: Math.max(0, MAX_IMAGES_PER_SESSION - count) }, 200, corsHeaders)
   } catch (error) {
     const msg = error instanceof Error ? error.message : String(error)
     console.error('[spar-image] ERROR:', msg)

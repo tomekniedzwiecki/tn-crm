@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, image_count, lead_id, created_at')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, image_count, lead_id, created_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -137,6 +137,7 @@ Deno.serve(async (req) => {
         ekrany: Array.isArray(brief.ekrany) ? brief.ekrany : [],
         karta,
         preview_image_url: session.preview_image_url || null,
+        preview_images: session.preview_images || null,
         image_count: session.image_count || 0,
         verdict: session.verdict || null,
         status: session.status || 'active',
