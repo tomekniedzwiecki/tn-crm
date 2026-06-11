@@ -28,7 +28,7 @@
     </script>
     <style>
         body { background: #000; color: #e5e5e5; }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: #555; }
@@ -47,10 +47,11 @@
         }
         .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
 
-        details > summary { list-style: none; cursor: pointer; }
-        details > summary::-webkit-details-marker { display: none; }
-        details[open] .details-chevron { transform: rotate(90deg); }
-        .details-chevron { transition: transform 0.15s ease; }
+        .range-btn { transition: all .15s ease; }
+        .range-btn.active { background: rgba(139,92,246,.2); color: #c4b5fd; border-color: rgba(139,92,246,.4); }
+        .chev { transition: transform .15s ease; }
+        .row-open .chev { transform: rotate(90deg); }
+        input[type="date"] { color-scheme: dark; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -75,28 +76,49 @@
             <div class="max-w-7xl mx-auto animate-enter">
 
                 <!-- Title & Stats -->
-                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-8">
+                <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4 mb-6">
                     <div>
                         <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Centrum Kampanii</h1>
-                        <p class="text-zinc-500">Wszystkie kampanie Meta klientów, blokery i akcje w jednym widoku.</p>
+                        <p class="text-zinc-500">Wszystkie kampanie Meta klientów — liczby i wyniki w jednym widoku.</p>
                         <button id="copy-prompt-btn" onclick="openPromptModal()" class="mt-3 inline-flex items-center gap-2 bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/30 rounded-lg px-4 py-2.5 text-sm font-medium transition-colors">
                             <i class="ph ph-sparkle text-base"></i> Pracuj nad kampaniami z Claude
                         </button>
                     </div>
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                    <div class="grid grid-cols-2 sm:flex sm:items-center gap-2 flex-shrink-0">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center min-w-[78px]">
                             <div class="text-xl font-semibold text-emerald-400" id="stat-active">–</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">aktywne</div>
                         </div>
-                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center min-w-[78px]">
                             <div class="text-xl font-semibold text-rose-400" id="stat-paused">–</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">wstrzymane</div>
                         </div>
-                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
-                            <div class="text-xl font-semibold text-amber-400" id="stat-blockers">–</div>
-                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">blokery</div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center min-w-[110px]">
+                            <div class="text-xl font-semibold text-white" id="stat-spend">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">wydatki (okres)</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center min-w-[90px]">
+                            <div class="text-xl font-semibold text-white" id="stat-purchases">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">zakupy (okres)</div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Filtr dat -->
+                <div class="flex flex-wrap items-center gap-2 mb-6">
+                    <div class="flex items-center gap-1 bg-zinc-900/50 border border-white/5 rounded-lg p-1">
+                        <button class="range-btn px-3 py-1.5 rounded-md text-xs text-zinc-400 border border-transparent hover:text-white" data-preset="7d" onclick="setPreset('7d')">7 dni</button>
+                        <button class="range-btn px-3 py-1.5 rounded-md text-xs text-zinc-400 border border-transparent hover:text-white" data-preset="14d" onclick="setPreset('14d')">14 dni</button>
+                        <button class="range-btn px-3 py-1.5 rounded-md text-xs text-zinc-400 border border-transparent hover:text-white" data-preset="30d" onclick="setPreset('30d')">30 dni</button>
+                        <button class="range-btn px-3 py-1.5 rounded-md text-xs text-zinc-400 border border-transparent hover:text-white" data-preset="all" onclick="setPreset('all')">Wszystko</button>
+                    </div>
+                    <div class="flex items-center gap-1.5 bg-zinc-900/50 border border-white/5 rounded-lg px-2 py-1">
+                        <input type="date" id="range-from" class="bg-transparent text-xs text-zinc-300 focus:outline-none" onchange="onCustomChange()">
+                        <span class="text-zinc-600 text-xs">–</span>
+                        <input type="date" id="range-to" class="bg-transparent text-xs text-zinc-300 focus:outline-none" onchange="onCustomChange()">
+                    </div>
+                    <span id="range-label" class="text-zinc-600 text-xs font-mono"></span>
+                    <span id="range-loading" class="hidden text-zinc-600 text-xs font-mono"><i class="ph ph-spinner animate-spin"></i> ładuję…</span>
                 </div>
 
                 <!-- Loading state -->
@@ -115,48 +137,21 @@
                 <!-- Main content -->
                 <div id="page-content" class="hidden space-y-8">
 
-                    <!-- SEKCJA: Wymaga akcji -->
-                    <section>
-                        <div class="flex items-center gap-2 mb-3">
-                            <i class="ph ph-warning-circle text-amber-400"></i>
-                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Wymaga akcji</h2>
-                            <span id="action-count-badge" class="hidden text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5"></span>
+                    <!-- Banner: brak danych dziennych -->
+                    <div id="no-daily-banner" class="hidden bg-amber-500/10 border border-amber-500/25 rounded-xl px-5 py-3.5 flex items-start gap-3">
+                        <i class="ph ph-info text-amber-400 text-lg mt-0.5"></i>
+                        <div class="text-sm text-amber-200/90">
+                            Dzienne dane nie zostały jeszcze pobrane — tabela pokazuje liczby z <strong>ostatniego raportu</strong> każdej kampanii.
+                            Kliknij <span class="text-violet-300">„Pracuj nad kampaniami z Claude"</span> i poproś o backfill dzienny, a filtr po datach zacznie działać precyzyjnie.
                         </div>
-                        <div id="action-section" class="bg-zinc-900/50 border border-amber-500/20 rounded-xl overflow-hidden">
-                            <div id="action-list"></div>
-                            <div id="action-empty" class="hidden px-5 py-6 text-center">
-                                <p class="text-zinc-500 text-sm">Brak otwartych blokerów — nikt nie trzyma piłki.</p>
-                            </div>
-                        </div>
-                        <details id="claude-queue" class="hidden mt-2">
-                            <summary class="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-300 transition-colors px-1 py-1">
-                                <i class="ph ph-caret-right details-chevron"></i>
-                                <span>W kolejce u Claude (<span id="claude-queue-count">0</span>)</span>
-                            </summary>
-                            <div id="claude-queue-list" class="mt-2 bg-zinc-900/30 border border-white/5 rounded-xl overflow-hidden"></div>
-                        </details>
-                    </section>
-
-                    <!-- SEKCJA: Kolejka akcji (campaign_actions) -->
-                    <section>
-                        <div class="flex items-center gap-2 mb-3">
-                            <i class="ph ph-robot text-violet-400"></i>
-                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Kolejka akcji (wykonuje Claude)</h2>
-                            <span id="queue-count-badge" class="hidden text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5"></span>
-                        </div>
-                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
-                            <div id="queue-list"></div>
-                            <div id="queue-empty" class="hidden px-5 py-6 text-center">
-                                <p class="text-zinc-500 text-sm">Brak akcji w kolejce — wszystko wykonane.</p>
-                            </div>
-                        </div>
-                    </section>
+                    </div>
 
                     <!-- SEKCJA: Tabela kampanii -->
                     <section>
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-table text-zinc-400"></i>
                             <h2 class="text-sm font-medium text-white uppercase tracking-wider">Kampanie</h2>
+                            <span class="text-zinc-600 text-xs font-mono">— kliknij wiersz, aby rozwinąć</span>
                         </div>
                         <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
                             <div class="overflow-x-auto">
@@ -165,12 +160,15 @@
                                         <tr class="border-b border-white/5 text-[10px] font-mono uppercase tracking-wider text-zinc-500">
                                             <th class="px-4 py-3 font-medium">Marka</th>
                                             <th class="px-4 py-3 font-medium">Status</th>
-                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Budżet/dzień</th>
-                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Ostatni raport</th>
-                                            <th class="px-4 py-3 font-medium">Wynik</th>
-                                            <th class="px-4 py-3 font-medium whitespace-nowrap">Wąskie gardło</th>
-                                            <th class="px-4 py-3 font-medium">Blokery</th>
-                                            <th class="px-4 py-3 font-medium"></th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Budżet/d</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Wydatki</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Wyśw.</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Klik. (link)</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">CTR</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">CPC</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Zakupy</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right">ROAS</th>
+                                            <th class="px-4 py-3 font-medium w-8"></th>
                                         </tr>
                                     </thead>
                                     <tbody id="campaigns-table-body"></tbody>
@@ -179,17 +177,18 @@
                         </div>
                     </section>
 
-                    <!-- SEKCJA: Feed ostatnich akcji -->
+                    <!-- SEKCJA: Changelog (tylko dla mnie) -->
                     <section>
                         <div class="flex items-center gap-2 mb-3">
                             <i class="ph ph-lightning text-zinc-400"></i>
                             <h2 class="text-sm font-medium text-white uppercase tracking-wider">Ostatnie akcje</h2>
+                            <span class="text-zinc-600 text-xs font-mono">— changelog, tylko dla Ciebie</span>
                         </div>
                         <div class="bg-zinc-900/50 border border-white/5 rounded-xl p-5">
                             <div id="actions-feed"></div>
                             <div id="actions-feed-empty" class="hidden py-6 text-center">
                                 <i class="ph ph-clock-counter-clockwise text-2xl text-zinc-700 mb-2"></i>
-                                <p class="text-zinc-500 text-sm">Brak zarejestrowanych akcji — pojawią się po pierwszych raportach.</p>
+                                <p class="text-zinc-500 text-sm">Brak zarejestrowanych akcji — pojawią się, gdy coś zrobimy w kampaniach.</p>
                             </div>
                         </div>
                     </section>
@@ -206,30 +205,38 @@
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
 
-        let adsRows = [];                 // przefiltrowane wiersze workflow_ads
+        let adsRows = [];                 // wiersze workflow_ads (z czymkolwiek aktywnym)
+        let adsRowMap = {};               // workflow_id -> wiersz
         let brandMap = {};                // workflow_id -> nazwa marki
-        let actionsQueue = [];            // campaign_actions (kolejka + dziennik)
         let customerMap = {};             // workflow_id -> customer_name
+        let dailyByWf = {};               // workflow_id -> [wiersze campaign_daily_stats w zakresie]
+        let aggMap = {};                  // workflow_id -> zagregowane metryki w zakresie
+        let changelog = [];               // campaign_actions (najnowsze)
         let currentMember = null;
         let isAdmin = false;
+        const openRows = new Set();       // rozwinięte wiersze (workflow_id)
+
+        // zakres dat
+        let rangePreset = '30d';
+        let rangeFrom = '';
+        let rangeTo = '';
 
         // ============ HELPERS ============
 
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
             return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#39;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
         }
-
         function todayStr() {
             const d = new Date();
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         }
-
+        function isoDaysAgo(n) {
+            const d = new Date(); d.setDate(d.getDate() - n);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        }
         function relDate(iso) {
             if (!iso) return '—';
             const d = new Date(iso);
@@ -242,33 +249,28 @@
             if (diff === 1) return 'wczoraj';
             return diff + ' dni temu';
         }
-
         function dateOnly(iso) {
             if (!iso || typeof iso !== 'string') return '';
             return iso.slice(0, 10);
         }
-
-        function brandName(workflowId) {
-            return brandMap[workflowId] || '—';
-        }
-
-        function getBlockers(row) {
-            return Array.isArray(row.blockers) ? row.blockers : [];
-        }
-
+        function brandName(workflowId) { return brandMap[workflowId] || '—'; }
         function getCampaignState(row) {
-            const cs = row.ad_account_data && row.ad_account_data.campaign_state;
+            const cs = row && row.ad_account_data && row.ad_account_data.campaign_state;
             return (cs && typeof cs === 'object') ? cs : null;
         }
-
         function getReport(row) {
-            const r = row.report_data;
+            const r = row && row.report_data;
             return (r && typeof r === 'object') ? r : null;
         }
-
-        function openBlockersCount(row) {
-            return getBlockers(row).filter(b => b && !b.resolved && (b.owner === 'tomek' || b.owner === 'klient')).length;
+        // formatery liczb (pl-PL); null/undefined/'Not available' -> "—"
+        function hasVal(v) {
+            return v !== null && v !== undefined && v !== '' &&
+                !(typeof v === 'string' && v.toLowerCase().includes('not available'));
         }
+        function moneyPL(n) { return (Number(n) || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'; }
+        function intPL(n) { return Math.round(Number(n) || 0).toLocaleString('pl-PL'); }
+        function num2(n) { return (Number(n) || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function pctPL(n) { return (Number(n) || 0).toLocaleString('pl-PL', { maximumFractionDigits: 2 }) + '%'; }
 
         function showToast(message, type = 'info') {
             const toast = document.createElement('div');
@@ -283,17 +285,12 @@
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) {
-                window.location.href = Sidebar.getLoginPath();
-                return null;
-            }
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
             Sidebar.setUserEmail(session.user.email.split('@')[0]);
             await loadTeamMember(session.user.id);
-            // Badge reset: zapamiętaj wizytę w Centrum Kampanii
             try { localStorage.setItem('tn_kampanie_last_seen', new Date().toISOString()); } catch (_) {}
             return session;
         }
-
         async function loadTeamMember(userId) {
             const { data } = await supabaseClient.from('team_members').select('*');
             const members = data || [];
@@ -307,12 +304,80 @@
             Sidebar.showAdminNav(isAdmin);
         }
 
+        // ============ ZAKRES DAT ============
+
+        function minCampaignStart() {
+            let min = null;
+            adsRows.forEach(row => {
+                const cs = getCampaignState(row);
+                const s = cs && cs.start_time ? dateOnly(cs.start_time) : null;
+                if (s && (!min || s < min)) min = s;
+            });
+            return min || '2026-01-01';
+        }
+        function computeRange() {
+            if (rangePreset === '7d') { rangeFrom = isoDaysAgo(6); rangeTo = todayStr(); }
+            else if (rangePreset === '14d') { rangeFrom = isoDaysAgo(13); rangeTo = todayStr(); }
+            else if (rangePreset === '30d') { rangeFrom = isoDaysAgo(29); rangeTo = todayStr(); }
+            else if (rangePreset === 'all') { rangeFrom = minCampaignStart(); rangeTo = todayStr(); }
+            // 'custom' -> rangeFrom/rangeTo już ustawione
+        }
+        function persistRange() {
+            try { localStorage.setItem('tn_kampanie_range', JSON.stringify({ preset: rangePreset, from: rangeFrom, to: rangeTo })); } catch (_) {}
+        }
+        function loadPersistedRange() {
+            try {
+                const raw = localStorage.getItem('tn_kampanie_range');
+                if (raw) {
+                    const o = JSON.parse(raw);
+                    if (o && o.preset) { rangePreset = o.preset; rangeFrom = o.from || ''; rangeTo = o.to || ''; }
+                }
+            } catch (_) {}
+        }
+        function syncRangeUI() {
+            document.querySelectorAll('.range-btn').forEach(b => {
+                b.classList.toggle('active', b.dataset.preset === rangePreset);
+            });
+            const fromEl = document.getElementById('range-from');
+            const toEl = document.getElementById('range-to');
+            if (fromEl) fromEl.value = rangeFrom;
+            if (toEl) toEl.value = rangeTo;
+            const lbl = document.getElementById('range-label');
+            if (lbl) lbl.textContent = rangeFrom && rangeTo ? `${rangeFrom} → ${rangeTo}` : '';
+        }
+        async function setPreset(p) {
+            rangePreset = p;
+            computeRange();
+            persistRange();
+            syncRangeUI();
+            await reloadRange();
+        }
+        async function onCustomChange() {
+            const f = document.getElementById('range-from').value;
+            const t = document.getElementById('range-to').value;
+            if (!f || !t) return;
+            rangePreset = 'custom';
+            rangeFrom = f; rangeTo = t;
+            if (rangeFrom > rangeTo) { const x = rangeFrom; rangeFrom = rangeTo; rangeTo = x; }
+            persistRange();
+            syncRangeUI();
+            await reloadRange();
+        }
+        async function reloadRange() {
+            const ld = document.getElementById('range-loading');
+            if (ld) ld.classList.remove('hidden');
+            await loadDailyStats();
+            computeAggregates();
+            renderAll();
+            if (ld) ld.classList.add('hidden');
+        }
+
         // ============ DATA ============
 
         async function loadData() {
             const { data: ads, error } = await supabaseClient
                 .from('workflow_ads')
-                .select('workflow_id, meta_ad_account_id, blockers, report_generated_at, target_cpa, campaign_launched, ad_account_data, report_data');
+                .select('workflow_id, meta_ad_account_id, report_generated_at, target_cpa, campaign_launched, ad_account_data, report_data');
 
             if (error) {
                 console.error('Error loading workflow_ads:', error);
@@ -321,39 +386,34 @@
                 return;
             }
 
-            // Tylko wiersze, gdzie cokolwiek się dzieje
             adsRows = (ads || []).filter(row =>
                 getCampaignState(row) !== null ||
                 row.report_generated_at != null ||
-                getBlockers(row).length > 0 ||
                 row.campaign_launched === true
             );
+            adsRowMap = {};
+            adsRows.forEach(r => { adsRowMap[r.workflow_id] = r; });
 
             const ids = adsRows.map(r => r.workflow_id).filter(Boolean);
-
             if (ids.length > 0) {
                 const [wfRes, brRes] = await Promise.all([
                     supabaseClient.from('workflows').select('id, offer_name, customer_name').in('id', ids),
                     supabaseClient.from('workflow_branding').select('workflow_id, title').eq('type', 'brand_info').in('workflow_id', ids)
                 ]);
-
                 (wfRes.data || []).forEach(w => {
                     customerMap[w.id] = w.customer_name || '';
                     if (!brandMap[w.id]) brandMap[w.id] = w.offer_name || '';
                 });
-                (brRes.data || []).forEach(b => {
-                    if (b.title) brandMap[b.workflow_id] = b.title;
-                });
+                (brRes.data || []).forEach(b => { if (b.title) brandMap[b.workflow_id] = b.title; });
             }
 
-            // Kolejka akcji (campaign_actions) — kolejka decyzji + dziennik wykonanych
+            // changelog (campaign_actions — wszystkie, najnowsze pierwsze)
             const acRes = await supabaseClient
                 .from('campaign_actions')
                 .select('*')
-                .neq('status', 'rejected')
                 .order('created_at', { ascending: false })
-                .limit(30);
-            actionsQueue = acRes.error ? [] : (acRes.data || []);
+                .limit(40);
+            changelog = acRes.error ? [] : (acRes.data || []);
 
             document.getElementById('loading-state').classList.add('hidden');
 
@@ -361,387 +421,353 @@
                 document.getElementById('page-empty-state').classList.remove('hidden');
                 return;
             }
-
             document.getElementById('page-content').classList.remove('hidden');
+
+            // zakres + dzienne dane
+            loadPersistedRange();
+            computeRange();
+            syncRangeUI();
+            await loadDailyStats();
+            computeAggregates();
             renderAll();
+        }
+
+        // pobierz campaign_daily_stats dla zakresu (paginacja — PostgREST ucina po 1000)
+        async function loadDailyStats() {
+            dailyByWf = {};
+            const ids = adsRows.map(r => r.workflow_id).filter(Boolean);
+            if (!ids.length || !rangeFrom || !rangeTo) return;
+            let from = 0; const page = 1000; let done = false;
+            while (!done) {
+                const { data, error } = await supabaseClient
+                    .from('campaign_daily_stats')
+                    .select('workflow_id, campaign_id, campaign_name, stat_date, spend, impressions, reach, clicks, link_clicks, purchases, purchase_value, purchase_roas, cpc, cpm, ctr, frequency')
+                    .in('workflow_id', ids)
+                    .gte('stat_date', rangeFrom)
+                    .lte('stat_date', rangeTo)
+                    .order('stat_date', { ascending: true })
+                    .range(from, from + page - 1);
+                if (error) { console.error('daily stats error', error); break; }
+                (data || []).forEach(r => {
+                    (dailyByWf[r.workflow_id] = dailyByWf[r.workflow_id] || []).push(r);
+                });
+                if (!data || data.length < page) done = true; else from += page;
+            }
+        }
+
+        function computeAggregates() {
+            aggMap = {};
+            adsRows.forEach(row => { aggMap[row.workflow_id] = aggregateRange(row.workflow_id); });
+        }
+
+        // agregacja zakresu z dziennych; fallback: ostatni raport (report_data)
+        function aggregateRange(wid) {
+            const rows = dailyByWf[wid] || [];
+            if (rows.length) {
+                let spend = 0, impr = 0, clicks = 0, lc = 0, pur = 0, pv = 0;
+                rows.forEach(r => {
+                    spend += Number(r.spend) || 0;
+                    impr += Number(r.impressions) || 0;
+                    clicks += Number(r.clicks) || 0;
+                    lc += Number(r.link_clicks) || 0;
+                    pur += Number(r.purchases) || 0;
+                    pv += Number(r.purchase_value) || 0;
+                });
+                return {
+                    source: 'daily', days: rows.length,
+                    spend, impressions: impr, clicks, link_clicks: lc, purchases: pur, purchase_value: pv,
+                    ctr: impr > 0 ? (lc / impr * 100) : 0,
+                    cpc: lc > 0 ? (spend / lc) : 0,
+                    cpm: impr > 0 ? (spend / impr * 1000) : 0,
+                    roas: spend > 0 ? (pv / spend) : 0,
+                    reach: null, daily: rows
+                };
+            }
+            // fallback: ostatni raport
+            const r = getReport(adsRowMap[wid]) || {};
+            const lc = hasVal(r.link_clicks) ? Number(r.link_clicks) : (hasVal(r.clicks) ? Number(r.clicks) : 0);
+            const impr = Number(r.impressions) || 0;
+            const spend = Number(r.spend) || 0;
+            const pv = Number(r.purchase_value) || 0;
+            return {
+                source: 'report', days: 0,
+                spend, impressions: impr, clicks: Number(r.clicks) || 0, link_clicks: lc,
+                purchases: Number(r.purchases) || 0, purchase_value: pv,
+                ctr: hasVal(r.ctr) ? Number(r.ctr) : (impr > 0 ? lc / impr * 100 : 0),
+                cpc: hasVal(r.cpc) ? Number(r.cpc) : (lc > 0 ? spend / lc : 0),
+                cpm: hasVal(r.cpm) ? Number(r.cpm) : (impr > 0 ? spend / impr * 1000 : 0),
+                roas: hasVal(r.roas) ? Number(r.roas) : (spend > 0 ? pv / spend : 0),
+                reach: hasVal(r.reach) ? Number(r.reach) : null, daily: []
+            };
         }
 
         function renderAll() {
             renderStats();
-            renderActionSection();
-            renderQueue();
             renderTable();
-            renderActionsFeed();
-        }
-
-        // ============ KOLEJKA AKCJI (campaign_actions) ============
-
-        function renderQueue() {
-            const list = document.getElementById('queue-list');
-            const empty = document.getElementById('queue-empty');
-            const badge = document.getElementById('queue-count-badge');
-            if (!list) return;
-
-            const proposedCount = actionsQueue.filter(a => a.status === 'proposed').length;
-            if (badge) {
-                if (proposedCount > 0) { badge.textContent = proposedCount + ' do decyzji'; badge.classList.remove('hidden'); }
-                else { badge.classList.add('hidden'); }
-            }
-
-            if (actionsQueue.length === 0) {
-                list.innerHTML = '';
-                if (empty) empty.classList.remove('hidden');
-                return;
-            }
-            if (empty) empty.classList.add('hidden');
-
-            // proposed na górze, potem reszta
-            const order = { proposed: 0, approved: 1, executing: 2, failed: 3, executed: 4 };
-            const sorted = [...actionsQueue].sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5));
-
-            list.innerHTML = sorted.map(a => {
-                const brand = escapeHtml(brandName(a.workflow_id));
-                const title = escapeHtml(a.title || a.type || 'Akcja');
-                const reason = a.reason ? `<p class="text-zinc-500 text-xs mt-1 leading-relaxed">${escapeHtml(a.reason)}</p>` : '';
-                let right = '';
-                if (a.status === 'proposed') {
-                    right = `<div class="flex gap-2 flex-shrink-0">
-                        <button onclick="approveAction('${escapeHtml(a.id)}')" class="text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 px-3 py-1 rounded-lg text-xs transition-colors whitespace-nowrap">✓ Zatwierdź</button>
-                        <button onclick="rejectAction('${escapeHtml(a.id)}')" class="text-zinc-500 hover:text-zinc-300 border border-white/10 hover:border-white/20 px-3 py-1 rounded-lg text-xs transition-colors whitespace-nowrap">✕ Odrzuć</button>
-                    </div>`;
-                } else if (a.status === 'approved') {
-                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0 whitespace-nowrap">zatwierdzona — czeka na Claude${a.approved_at ? ' · ' + escapeHtml(dateOnly(a.approved_at)) : ''}</span>`;
-                } else if (a.status === 'executing') {
-                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 flex-shrink-0">w trakcie</span>`;
-                } else if (a.status === 'executed') {
-                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0 whitespace-nowrap">wykonano${a.executed_at ? ' · ' + escapeHtml(dateOnly(a.executed_at)) : ''}</span>`;
-                } else if (a.status === 'failed') {
-                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0">błąd</span>`;
-                }
-                const result = (a.status === 'executed' || a.status === 'failed') && a.execution_result
-                    ? `<p class="text-zinc-600 text-[11px] mt-1 font-mono">${escapeHtml(a.execution_result)}</p>` : '';
-                return `<div class="flex items-start justify-between gap-4 px-5 py-3.5 border-b border-white/5 last:border-b-0">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2 flex-wrap">
-                            <span class="text-white font-medium text-sm">${title}</span>
-                            <span class="text-[10px] font-mono text-zinc-500 bg-zinc-800/60 px-1.5 py-0.5 rounded">${brand}</span>
-                        </div>
-                        ${reason}${result}
-                    </div>
-                    ${right}
-                </div>`;
-            }).join('');
-        }
-
-        async function approveAction(id) {
-            const { error } = await supabaseClient
-                .from('campaign_actions')
-                .update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: 'tomek' })
-                .eq('id', id).eq('status', 'proposed');
-            if (error) { showToast('Błąd zatwierdzenia: ' + error.message, 'error'); return; }
-            const a = actionsQueue.find(x => x.id === id);
-            if (a) { a.status = 'approved'; a.approved_at = new Date().toISOString(); }
-            renderQueue();
-            showToast('Zatwierdzona — Claude wykona przy najbliższej sesji', 'success');
-        }
-
-        async function rejectAction(id) {
-            const { error } = await supabaseClient
-                .from('campaign_actions')
-                .update({ status: 'rejected', approved_at: new Date().toISOString(), approved_by: 'tomek' })
-                .eq('id', id).eq('status', 'proposed');
-            if (error) { showToast('Błąd odrzucenia: ' + error.message, 'error'); return; }
-            actionsQueue = actionsQueue.filter(x => x.id !== id);
-            renderQueue();
-            showToast('Akcja odrzucona', 'info');
+            renderChangelog();
+            // banner gdy żadna kampania nie ma danych dziennych
+            const anyDaily = adsRows.some(r => (aggMap[r.workflow_id] || {}).source === 'daily');
+            const banner = document.getElementById('no-daily-banner');
+            if (banner) banner.classList.toggle('hidden', anyDaily);
         }
 
         // ============ STATS ============
 
         function renderStats() {
-            let active = 0, paused = 0, blockers = 0;
+            let active = 0, paused = 0, spend = 0, purchases = 0;
             adsRows.forEach(row => {
                 const cs = getCampaignState(row);
                 if (cs && cs.status === 'ACTIVE') active++;
                 if (cs && cs.status === 'PAUSED') paused++;
-                getBlockers(row).forEach(b => {
-                    if (b && !b.resolved && b.owner !== 'claude') blockers++;
-                });
+                const a = aggMap[row.workflow_id];
+                if (a) { spend += a.spend || 0; purchases += a.purchases || 0; }
             });
             document.getElementById('stat-active').textContent = active;
             document.getElementById('stat-paused').textContent = paused;
-            document.getElementById('stat-blockers').textContent = blockers;
-        }
-
-        // ============ WYMAGA AKCJI ============
-
-        function renderActionSection() {
-            const items = [];   // { wid, idx, blocker }
-            const claudeItems = [];
-
-            adsRows.forEach(row => {
-                getBlockers(row).forEach((b, idx) => {
-                    if (!b || b.resolved) return;
-                    if (b.owner === 'tomek' || b.owner === 'klient') {
-                        items.push({ wid: row.workflow_id, idx, blocker: b });
-                    } else if (b.owner === 'claude') {
-                        claudeItems.push({ wid: row.workflow_id, blocker: b });
-                    }
-                });
-            });
-
-            // sort: tomek najpierw, potem klient, w grupach po created (najstarsze pierwsze)
-            const ownerRank = { tomek: 0, klient: 1 };
-            items.sort((a, b) => {
-                const r = (ownerRank[a.blocker.owner] ?? 2) - (ownerRank[b.blocker.owner] ?? 2);
-                if (r !== 0) return r;
-                return String(a.blocker.created || '').localeCompare(String(b.blocker.created || ''));
-            });
-
-            const list = document.getElementById('action-list');
-            const empty = document.getElementById('action-empty');
-            const badge = document.getElementById('action-count-badge');
-
-            if (items.length === 0) {
-                list.innerHTML = '';
-                empty.classList.remove('hidden');
-                badge.classList.add('hidden');
-            } else {
-                empty.classList.add('hidden');
-                badge.textContent = items.length;
-                badge.classList.remove('hidden');
-
-                list.innerHTML = items.map(item => {
-                    const b = item.blocker;
-                    const isTomek = b.owner === 'tomek';
-                    const ownerBadge = isTomek
-                        ? '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0">Ty</span>'
-                        : '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 flex-shrink-0">Klient</span>';
-                    return `
-                        <div class="flex flex-wrap items-center gap-x-3 gap-y-2 px-5 py-3.5 border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors">
-                            <span class="text-white font-medium flex-shrink-0">${escapeHtml(brandName(item.wid))}</span>
-                            <span class="text-zinc-300 flex-1 min-w-[200px]">${escapeHtml(b.task)}</span>
-                            ${ownerBadge}
-                            <span class="text-zinc-600 text-xs font-mono flex-shrink-0">${escapeHtml(b.created || '')}</span>
-                            <a href="workflow.html?id=${encodeURIComponent(item.wid)}" class="text-zinc-400 hover:text-white text-xs transition-colors flex-shrink-0">otwórz →</a>
-                            <button onclick="resolveBlocker('${escapeHtml(item.wid)}', ${item.idx})" class="text-emerald-500 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 px-2.5 py-1 rounded-lg text-xs transition-colors flex-shrink-0">
-                                <i class="ph ph-check mr-1"></i>Zrobione
-                            </button>
-                        </div>
-                    `;
-                }).join('');
-            }
-
-            // W kolejce u Claude (zwinięte)
-            const claudeQueue = document.getElementById('claude-queue');
-            const claudeList = document.getElementById('claude-queue-list');
-            if (claudeItems.length === 0) {
-                claudeQueue.classList.add('hidden');
-                claudeList.innerHTML = '';
-            } else {
-                claudeQueue.classList.remove('hidden');
-                document.getElementById('claude-queue-count').textContent = claudeItems.length;
-                claudeList.innerHTML = claudeItems.map(item => `
-                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 px-5 py-3 border-b border-white/5 last:border-b-0">
-                        <span class="text-zinc-300 font-medium flex-shrink-0">${escapeHtml(brandName(item.wid))}</span>
-                        <span class="text-zinc-500 flex-1 min-w-[200px]">${escapeHtml(item.blocker.task)}</span>
-                        <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-400 border border-violet-500/25 flex-shrink-0">Claude</span>
-                        <span class="text-zinc-600 text-xs font-mono flex-shrink-0">${escapeHtml(item.blocker.created || '')}</span>
-                    </div>
-                `).join('');
-            }
-        }
-
-        async function resolveBlocker(workflowId, blockerIndex) {
-            const row = adsRows.find(r => r.workflow_id === workflowId);
-            if (!row) return;
-            const blockers = getBlockers(row);
-            if (!blockers[blockerIndex]) return;
-
-            // kopia całej tablicy, resolved po indeksie ORYGINALNEJ tablicy
-            const updated = blockers.map((b, i) => i === blockerIndex ? { ...b, resolved: todayStr() } : b);
-
-            const { error } = await supabaseClient
-                .from('workflow_ads')
-                .update({ blockers: updated })
-                .eq('workflow_id', workflowId);
-
-            if (error) {
-                console.error('Error resolving blocker:', error);
-                showToast('Błąd zapisu: ' + error.message, 'error');
-                return;
-            }
-
-            row.blockers = updated;
-            renderAll();
-            showToast('Bloker oznaczony jako zrobiony', 'success');
-            if (window.Sidebar && window.Sidebar.refreshKampanieBadge) {
-                window.Sidebar.refreshKampanieBadge(supabaseClient);
-            }
+            document.getElementById('stat-spend').textContent = moneyPL(spend);
+            document.getElementById('stat-purchases').textContent = intPL(purchases);
         }
 
         // ============ TABELA ============
 
-        const BOTTLENECK_LABELS = {
-            tracking: { text: 'pomiar (pixel)', class: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
-            creative: { text: 'kreacje', class: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
-            landing:  { text: 'strona', class: 'bg-amber-500/15 text-amber-400 border-amber-500/25' },
-            checkout: { text: 'kasa', class: 'bg-rose-500/15 text-rose-400 border-rose-500/25' },
-        };
+        function statusBadge(row) {
+            const cs = getCampaignState(row);
+            if (cs && cs.status === 'ACTIVE') return '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>';
+            if (cs && cs.status === 'PAUSED') return '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">PAUSED</span>';
+            if (cs && cs.status) return `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10">${escapeHtml(cs.status)}</span>`;
+            if (row.campaign_launched === true) return '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-white/10">URUCHOMIONA</span>';
+            return '<span class="text-zinc-600">—</span>';
+        }
 
         function renderTable() {
             const tbody = document.getElementById('campaigns-table-body');
 
             const sorted = [...adsRows].sort((a, b) => {
-                const rank = (row) => {
-                    if (openBlockersCount(row) > 0) return 0;
-                    const cs = getCampaignState(row);
-                    if (cs && cs.status === 'ACTIVE') return 1;
-                    return 2;
-                };
-                const r = rank(a) - rank(b);
-                if (r !== 0) return r;
-                // w grupach po report_generated_at desc, null-e na końcu
-                const ra = a.report_generated_at || '';
-                const rb = b.report_generated_at || '';
-                return rb.localeCompare(ra);
+                const sa = (aggMap[a.workflow_id] || {}).spend || 0;
+                const sb = (aggMap[b.workflow_id] || {}).spend || 0;
+                if (sb !== sa) return sb - sa;
+                const csa = getCampaignState(a), csb = getCampaignState(b);
+                const ra = csa && csa.status === 'ACTIVE' ? 0 : 1;
+                const rb = csb && csb.status === 'ACTIVE' ? 0 : 1;
+                return ra - rb;
             });
 
             tbody.innerHTML = sorted.map(row => {
                 const wid = row.workflow_id;
                 const cs = getCampaignState(row);
-                const report = getReport(row);
-
-                // Status
-                let statusHtml;
-                if (cs && cs.status === 'ACTIVE') {
-                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">ACTIVE</span>';
-                } else if (cs && cs.status === 'PAUSED') {
-                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">PAUSED</span>';
-                } else if (cs && cs.status) {
-                    statusHtml = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10">${escapeHtml(cs.status)}</span>`;
-                } else if (row.campaign_launched === true) {
-                    statusHtml = '<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-white/10">URUCHOMIONA</span>';
-                } else {
-                    statusHtml = '<span class="text-zinc-600">—</span>';
-                }
-                const stateDate = cs && cs.updated_at ? `<div class="text-[10px] text-zinc-600 font-mono mt-1">stan z ${escapeHtml(dateOnly(cs.updated_at))}</div>` : '';
-
-                // Budżet
-                const budget = (cs && typeof cs.daily_budget === 'number')
-                    ? `<span class="text-zinc-200 font-mono">${escapeHtml(String(cs.daily_budget))} zł</span>`
-                    : '<span class="text-zinc-600">—</span>';
-
-                // Ostatni raport
-                let reportHtml = '<span class="text-zinc-600">—</span>';
-                if (row.report_generated_at) {
-                    const period = report && report.period && typeof report.period === 'object' ? report.period : null;
-                    const periodHtml = period && (period.from || period.to)
-                        ? `<div class="text-[10px] text-zinc-600 font-mono mt-1">${escapeHtml(period.from || '?')} – ${escapeHtml(period.to || '?')}</div>`
-                        : '';
-                    reportHtml = `<span class="text-zinc-300">${escapeHtml(relDate(row.report_generated_at))}</span>${periodHtml}`;
-                }
-
-                // Wynik
-                let resultHtml = '<span class="text-zinc-600">—</span>';
-                if (report) {
-                    const purchases = typeof report.purchases === 'number' ? report.purchases : null;
-                    const clicks = typeof report.clicks === 'number' ? report.clicks : null;
-                    if (purchases !== null && purchases > 0) {
-                        const roas = typeof report.roas === 'number' ? report.roas.toFixed(2) : escapeHtml(String(report.roas ?? '?'));
-                        resultHtml = `<span class="text-emerald-400">ROAS ${roas} · ${purchases} zam.</span>`;
-                    } else if (purchases === 0 && clicks !== null && clicks > 0) {
-                        resultHtml = `<span class="text-zinc-400">${clicks} klik. · 0 zam.</span>`;
-                    }
-                }
-
-                // Wąskie gardło
-                let bottleneckHtml = '<span class="text-zinc-600">—</span>';
-                if (report && report.bottleneck && report.bottleneck !== 'none') {
-                    const bn = BOTTLENECK_LABELS[report.bottleneck];
-                    bottleneckHtml = bn
-                        ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${bn.class}">${escapeHtml(bn.text)}</span>`
-                        : `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-white/10">${escapeHtml(report.bottleneck)}</span>`;
-                }
-
-                // Blokery (wszystkie nierozwiązane)
-                const unresolvedCount = getBlockers(row).filter(b => b && !b.resolved).length;
-                const blockersHtml = unresolvedCount > 0
-                    ? `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">${unresolvedCount}</span>`
-                    : '<span class="text-zinc-600">—</span>';
-
+                const a = aggMap[wid] || {};
                 const customer = customerMap[wid] || '';
+                const isOpen = openRows.has(wid);
 
-                return `
-                    <tr class="border-b border-white/5 last:border-b-0 hover:bg-white/[0.02] transition-colors">
+                const budget = (cs && typeof cs.daily_budget === 'number')
+                    ? `<span class="text-zinc-300 font-mono">${escapeHtml(String(cs.daily_budget))} zł</span>`
+                    : '<span class="text-zinc-600">—</span>';
+
+                const purchasesCell = a.purchases > 0
+                    ? `<span class="text-emerald-400 font-mono">${intPL(a.purchases)}</span>`
+                    : `<span class="text-zinc-500 font-mono">0</span>`;
+                const roasCell = (a.purchases > 0 && a.roas)
+                    ? `<span class="text-emerald-400 font-mono">${num2(a.roas)}</span>`
+                    : '<span class="text-zinc-600">—</span>';
+                const srcDot = a.source === 'report'
+                    ? '<span title="z ostatniego raportu (brak danych dziennych w zakresie)" class="text-amber-500/70 ml-1">*</span>'
+                    : '';
+
+                const mainRow = `
+                    <tr class="border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-pointer ${isOpen ? 'row-open bg-white/[0.02]' : ''}" onclick="toggleRow('${escapeHtml(wid)}')">
                         <td class="px-4 py-3.5 align-top">
                             <div class="text-white font-medium">${escapeHtml(brandName(wid))}</div>
                             ${customer ? `<div class="text-xs text-zinc-500 mt-0.5">${escapeHtml(customer)}</div>` : ''}
                         </td>
-                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${statusHtml}${stateDate}</td>
-                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${budget}</td>
-                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${reportHtml}</td>
-                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${resultHtml}</td>
-                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${bottleneckHtml}</td>
-                        <td class="px-4 py-3.5 align-top">${blockersHtml}</td>
-                        <td class="px-4 py-3.5 align-top text-right">
-                            <a href="workflow.html?id=${encodeURIComponent(wid)}" class="text-zinc-500 hover:text-white transition-colors" title="Otwórz workflow">
-                                <i class="ph ph-arrow-square-out text-base"></i>
-                            </a>
-                        </td>
-                    </tr>
-                `;
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap">${statusBadge(row)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${budget}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-200 font-mono">${moneyPL(a.spend)}${srcDot}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${intPL(a.impressions)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${intPL(a.link_clicks)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${pctPL(a.ctr)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${moneyPL(a.cpc)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${purchasesCell}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${roasCell}</td>
+                        <td class="px-4 py-3.5 align-top text-right"><i class="ph ph-caret-right chev text-zinc-500"></i></td>
+                    </tr>`;
+
+                const detailRow = `
+                    <tr id="detail-${escapeHtml(wid)}" class="${isOpen ? '' : 'hidden'} bg-black/40 border-b border-white/5">
+                        <td colspan="11" class="px-4 py-5">${isOpen ? renderRowDetail(wid) : ''}</td>
+                    </tr>`;
+
+                return mainRow + detailRow;
             }).join('');
         }
 
-        // ============ FEED OSTATNICH AKCJI ============
+        function toggleRow(wid) {
+            const detail = document.getElementById('detail-' + wid);
+            if (!detail) return;
+            if (openRows.has(wid)) {
+                openRows.delete(wid);
+                detail.classList.add('hidden');
+                detail.querySelector('td').innerHTML = '';
+            } else {
+                openRows.add(wid);
+                detail.classList.remove('hidden');
+                detail.querySelector('td').innerHTML = renderRowDetail(wid);
+            }
+            // klasa row-open na wierszu głównym (poprzednie rodzeństwo)
+            const main = detail.previousElementSibling;
+            if (main) main.classList.toggle('row-open', openRows.has(wid));
+            if (main) main.classList.toggle('bg-white/[0.02]', openRows.has(wid));
+        }
 
-        function renderActionsFeed() {
+        function metricCard(label, value, accent) {
+            return `<div class="bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2.5">
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${escapeHtml(label)}</div>
+                <div class="text-base font-semibold ${accent || 'text-white'} font-mono">${value}</div>
+            </div>`;
+        }
+
+        function renderRowDetail(wid) {
+            const row = adsRowMap[wid];
+            const a = aggMap[wid] || {};
+            const cs = getCampaignState(row);
+            const report = getReport(row) || {};
+            const srcLabel = a.source === 'daily'
+                ? `dane dzienne · ${a.days} dni w zakresie ${rangeFrom} → ${rangeTo}`
+                : 'z ostatniego raportu (brak danych dziennych w zakresie)';
+
+            // --- Metryki okresu ---
+            const cards = [
+                metricCard('Wydatki', moneyPL(a.spend)),
+                metricCard('Wyświetlenia', intPL(a.impressions)),
+                metricCard('Zasięg', a.reach != null ? intPL(a.reach) : '—'),
+                metricCard('Kliknięcia (link)', intPL(a.link_clicks)),
+                metricCard('CTR', pctPL(a.ctr)),
+                metricCard('CPC', moneyPL(a.cpc)),
+                metricCard('CPM', moneyPL(a.cpm)),
+                metricCard('Zakupy', intPL(a.purchases), a.purchases > 0 ? 'text-emerald-400' : 'text-zinc-400'),
+                metricCard('Wartość zakupów', a.purchase_value > 0 ? moneyPL(a.purchase_value) : '—', a.purchase_value > 0 ? 'text-emerald-400' : 'text-zinc-400'),
+                metricCard('ROAS', (a.purchases > 0 && a.roas) ? num2(a.roas) : '—', a.purchases > 0 ? 'text-emerald-400' : 'text-zinc-400'),
+            ].join('');
+
+            // --- Dzienny rozkład (jeśli są dane dzienne) ---
+            let dailyHtml = '';
+            if (a.source === 'daily' && a.daily && a.daily.length) {
+                const maxSpend = Math.max(...a.daily.map(d => Number(d.spend) || 0), 0.01);
+                const rowsHtml = [...a.daily].reverse().map(d => {
+                    const sp = Number(d.spend) || 0;
+                    const w = Math.max(2, sp / maxSpend * 100);
+                    return `<div class="flex items-center gap-3 py-1">
+                        <span class="text-[11px] text-zinc-500 font-mono w-20 flex-shrink-0">${escapeHtml(d.stat_date)}</span>
+                        <div class="flex-1 h-2 rounded-full bg-zinc-800 overflow-hidden"><div class="h-full bg-violet-500/40 rounded-full" style="width:${w}%"></div></div>
+                        <span class="text-[11px] text-zinc-300 font-mono w-20 text-right flex-shrink-0">${moneyPL(sp)}</span>
+                        <span class="text-[11px] text-zinc-500 font-mono w-14 text-right flex-shrink-0">${intPL(d.link_clicks)} kl.</span>
+                        <span class="text-[11px] ${(Number(d.purchases)||0)>0?'text-emerald-400':'text-zinc-600'} font-mono w-12 text-right flex-shrink-0">${intPL(d.purchases)} z.</span>
+                    </div>`;
+                }).join('');
+                dailyHtml = `
+                    <div class="mt-5">
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Dzienny rozkład (wydatki)</div>
+                        <div class="max-h-56 overflow-y-auto pr-2">${rowsHtml}</div>
+                    </div>`;
+            }
+
+            // --- Lejek z ostatniego raportu (mid-funnel z pixela) ---
+            let funnelHtml = '';
+            if (report && (report.impressions || report.purchases !== undefined)) {
+                const period = report.period && typeof report.period === 'object' ? report.period : null;
+                const periodLabel = period && (period.from || period.to) ? `${period.from || '?'} – ${period.to || '?'}` : (report.generated_at ? dateOnly(report.generated_at) : '');
+                const lc = hasVal(report.link_clicks) ? report.link_clicks : report.clicks;
+                const fr = [
+                    ['Wyświetlenia reklam', report.impressions],
+                    ['Kliknięcia w link', lc],
+                    ['Wejścia na stronę', report.landing_page_views],
+                    ['Obejrzeli produkt', report.view_content],
+                    ['Dodali do koszyka', report.add_to_cart],
+                    ['Przeszli do kasy', report.initiate_checkout],
+                    ['Dane dostawy', report.add_shipping_info],
+                    ['Płatność', report.add_payment_info],
+                    ['Zakup', report.purchases]
+                ];
+                const top = Number(report.impressions) || 0;
+                const fRows = fr.map(([label, val], i) => {
+                    const isLast = i === fr.length - 1;
+                    const present = hasVal(val);
+                    const n = present ? Number(val) : null;
+                    const valTxt = present ? n.toLocaleString('pl-PL') : '—';
+                    const w = (present && top > 0) ? Math.max(2, Math.min(100, n / top * 100)) : 0;
+                    return `<div class="px-3 py-2">
+                        <div class="flex items-center justify-between gap-3 mb-1">
+                            <span class="text-[12px] text-zinc-400">${escapeHtml(label)}</span>
+                            <span class="text-[13px] font-bold font-mono ${isLast ? 'text-emerald-400' : 'text-white'}">${valTxt}</span>
+                        </div>
+                        <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div class="h-full ${isLast ? 'bg-emerald-500/50' : 'bg-violet-500/40'} rounded-full" style="width:${w}%"></div></div>
+                    </div>`;
+                }).join('');
+                funnelHtml = `
+                    <div class="mt-5">
+                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Lejek konwersji ${periodLabel ? `<span class="text-zinc-600 normal-case">· ostatni raport ${escapeHtml(periodLabel)}</span>` : ''}</div>
+                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg divide-y divide-white/5">${fRows}</div>
+                    </div>`;
+            }
+
+            const targetCpa = (typeof row.target_cpa === 'number' && row.target_cpa > 0)
+                ? `<span class="text-zinc-500">target CPA: <span class="text-zinc-300 font-mono">${num2(row.target_cpa)} zł</span></span>` : '';
+
+            return `
+                <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
+                    <span class="text-[11px] font-mono text-zinc-500">${escapeHtml(srcLabel)}</span>
+                    <div class="flex items-center gap-4 text-[11px]">
+                        ${targetCpa}
+                        <a href="workflow.html?id=${encodeURIComponent(wid)}" class="text-zinc-400 hover:text-white transition-colors" onclick="event.stopPropagation()">otwórz workflow <i class="ph ph-arrow-square-out"></i></a>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">${cards}</div>
+                ${dailyHtml}
+                ${funnelHtml}`;
+        }
+
+        // ============ CHANGELOG (Ostatnie akcje — tylko dla mnie) ============
+
+        function renderChangelog() {
             const feed = document.getElementById('actions-feed');
             const empty = document.getElementById('actions-feed-empty');
 
-            let actions = [];
-            adsRows.forEach(row => {
-                const report = getReport(row);
-                if (!report || !Array.isArray(report.actions)) return;
-                report.actions.forEach(a => {
-                    if (!a || typeof a !== 'object') return;
-                    actions.push({
-                        marka: brandName(row.workflow_id),
-                        date: a.date || '',
-                        what: a.what || '',
-                        why: a.why || '',
-                        executed: a.executed === true
-                    });
-                });
-            });
-
-            actions.sort((a, b) => String(b.date).localeCompare(String(a.date)));
-            actions = actions.slice(0, 20);
-
-            if (actions.length === 0) {
+            if (!changelog.length) {
                 feed.innerHTML = '';
                 empty.classList.remove('hidden');
                 return;
             }
             empty.classList.add('hidden');
 
+            const statusMeta = {
+                executed: { dot: 'bg-emerald-500 border-emerald-500/40', badge: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', label: 'wykonano' },
+                failed:   { dot: 'bg-rose-500 border-rose-500/40', badge: 'bg-rose-500/20 text-rose-400 border-rose-500/30', label: 'błąd' },
+                proposed: { dot: 'bg-zinc-600 border-zinc-500/40', badge: 'bg-zinc-700/40 text-zinc-400 border-white/10', label: 'propozycja' },
+                approved: { dot: 'bg-amber-500 border-amber-500/40', badge: 'bg-amber-500/20 text-amber-400 border-amber-500/30', label: 'zatwierdzona' },
+                executing:{ dot: 'bg-sky-500 border-sky-500/40', badge: 'bg-sky-500/20 text-sky-400 border-sky-500/30', label: 'w trakcie' },
+            };
+
             feed.innerHTML = `
                 <div class="relative pl-5">
                     <div class="absolute left-[5px] top-2 bottom-2 w-px bg-white/5"></div>
-                    ${actions.map(a => `
-                        <div class="relative pb-5 last:pb-0">
-                            <div class="absolute -left-5 top-1.5 w-[11px] h-[11px] rounded-full border-2 ${a.executed ? 'bg-emerald-500 border-emerald-500/40' : 'bg-zinc-700 border-zinc-600/40'}"></div>
-                            <div class="flex flex-wrap items-baseline gap-x-2">
-                                <span class="text-white font-medium">${escapeHtml(a.marka)}</span>
-                                <span class="text-zinc-600 text-[10px] font-mono">${escapeHtml(relDate(a.date))}</span>
+                    ${changelog.map(a => {
+                        const m = statusMeta[a.status] || statusMeta.executed;
+                        const when = a.executed_at || a.approved_at || a.created_at;
+                        const brand = escapeHtml(brandName(a.workflow_id));
+                        const title = escapeHtml(a.title || a.type || 'Akcja');
+                        const reason = a.reason ? `<div class="text-zinc-500 text-xs mt-0.5">${escapeHtml(a.reason)}</div>` : '';
+                        const result = a.execution_result ? `<div class="text-zinc-600 text-[11px] mt-0.5 font-mono">${escapeHtml(a.execution_result)}</div>` : '';
+                        return `<div class="relative pb-5 last:pb-0">
+                            <div class="absolute -left-5 top-1.5 w-[11px] h-[11px] rounded-full border-2 ${m.dot}"></div>
+                            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                                <span class="text-white font-medium">${title}</span>
+                                <span class="text-[10px] font-mono text-zinc-500 bg-zinc-800/60 px-1.5 py-0.5 rounded">${brand}</span>
+                                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border ${m.badge}">${m.label}</span>
+                                <span class="text-zinc-600 text-[10px] font-mono">${escapeHtml(relDate(when))}</span>
                             </div>
-                            <div class="text-zinc-300 mt-0.5">${escapeHtml(a.what)}</div>
-                            ${a.why ? `<div class="text-zinc-500 text-xs mt-0.5">${escapeHtml(a.why)}</div>` : ''}
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+                            ${reason}${result}
+                        </div>`;
+                    }).join('')}
+                </div>`;
         }
 
         // ============ INIT ============
@@ -750,7 +776,6 @@
             const session = await checkAuth();
             if (session) {
                 await loadData();
-                // Odśwież badge w sidebarze po wizycie (lastSeen już zapisane w checkAuth)
                 if (window.Sidebar && window.Sidebar.refreshKampanieBadge) {
                     window.Sidebar.refreshKampanieBadge(supabaseClient);
                 }
@@ -770,7 +795,7 @@
                 <h3 class="text-white font-medium flex items-center gap-2"><i class="ph ph-sparkle text-violet-400"></i> Prompt do wklejenia Claude</h3>
                 <button onclick="closePromptModal()" class="text-zinc-500 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            <p class="text-zinc-500 text-xs mb-3">Skopiuj i wklej w rozmowie z Claude — od razu będzie wiedział, co robimy i jaki jest stan kampanii.</p>
+            <p class="text-zinc-500 text-xs mb-3">Skopiuj i wklej w rozmowie z Claude — przeanalizuje cały portfel i przedstawi Ci wnioski oraz proponowane akcje. Nic nie wykona bez Twojej decyzji.</p>
             <textarea id="prompt-text" readonly class="w-full h-72 bg-black/40 border border-white/10 rounded-lg p-3 text-[12px] text-zinc-200 font-mono resize-none focus:outline-none focus:border-violet-500/50"></textarea>
             <div class="flex gap-2 mt-3">
                 <button onclick="copyPromptText(false)" class="flex-1 bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 border border-violet-500/30 rounded-lg px-4 py-2 text-sm font-medium transition-colors">Kopiuj do schowka</button>
@@ -780,49 +805,59 @@
     </div>
 
     <script>
-        // Prompt startowy: buduje się ze stanu wczytanego na stronie (adsRows/actionsQueue/brandMap)
+        // Prompt startowy: most panel -> rozmowa. Tryb: PRZEDSTAW WNIOSKI i czekaj na decyzję.
         function buildCampaignPrompt() {
             const now = new Date();
-            const brand = (wid) => (typeof brandName === 'function' ? brandName(wid) : (brandMap[wid] || wid));
-            const cs = (typeof getCampaignState === 'function') ? getCampaignState : ((r) => (r.ad_account_data && r.ad_account_data.campaign_state) || null);
-            const bl = (typeof getBlockers === 'function') ? getBlockers : ((r) => Array.isArray(r.blockers) ? r.blockers : []);
-            const rows = (typeof adsRows !== 'undefined' && Array.isArray(adsRows)) ? adsRows : [];
-            const queue = (typeof actionsQueue !== 'undefined' && Array.isArray(actionsQueue)) ? actionsQueue : [];
-            const active = [], needRep = [], claudeBlk = [];
-            rows.forEach(row => {
-                const state = cs(row);
-                const isActive = (state && state.status === 'ACTIVE') || row.campaign_launched === true;
-                if (isActive) active.push(brand(row.workflow_id));
-                const rg = row.report_generated_at ? new Date(row.report_generated_at) : null;
-                const stale = !rg || (now - rg) / 86400000 >= 7;
-                if (isActive && stale) needRep.push(brand(row.workflow_id));
-                (bl(row) || []).forEach(b => { if (b && !b.resolved && b.owner === 'claude') claudeBlk.push(brand(row.workflow_id) + ': ' + (b.task || '')); });
-            });
-            const approved = queue.filter(a => a.status === 'approved').map(a => brand(a.workflow_id) + ': ' + (a.title || a.type));
-            const L = (arr) => arr.length ? arr.map(x => '• ' + x).join('\n') : '• — brak';
             const stamp = now.toISOString().slice(0, 16).replace('T', ' ');
-            return [
-                'Pracujemy nad kampaniami reklamowymi klientów (Meta Ads, Centrum Kampanii).',
+            const rows = (typeof adsRows !== 'undefined' && Array.isArray(adsRows)) ? adsRows : [];
+            let active = 0, paused = 0, totSpend = 0, totPur = 0;
+            const spenders = [];
+            rows.forEach(row => {
+                const cs = getCampaignState(row);
+                if (cs && cs.status === 'ACTIVE') active++;
+                if (cs && cs.status === 'PAUSED') paused++;
+                const a = (typeof aggMap !== 'undefined' && aggMap[row.workflow_id]) || {};
+                totSpend += a.spend || 0; totPur += a.purchases || 0;
+                spenders.push({ b: brandName(row.workflow_id), spend: a.spend || 0, pur: a.purchases || 0, roas: a.roas || 0 });
+            });
+            spenders.sort((x, y) => y.spend - x.spend);
+            const top = spenders.slice(0, 6).filter(s => s.spend > 0).map(s =>
+                `• ${s.b}: ${moneyPL(s.spend)}` + (s.pur > 0 ? ` · ${s.pur} zak. · ROAS ${num2(s.roas)}` : ' · 0 zak.'));
+            const anyDaily = rows.some(r => ((typeof aggMap !== 'undefined' && aggMap[r.workflow_id]) || {}).source === 'daily');
+            const L = (arr) => arr.length ? arr.join('\n') : '• —';
+
+            const lines = [
+                'Pracujemy nad kampaniami reklamowymi klientów (Meta Ads). Pracujemy TU, w tej rozmowie — panel /tn-workflow/kampanie to tylko lustro do odczytu.',
                 '',
-                'ZASADY — przeczytaj najpierw w repo tn-crm:',
-                '- tn-crm/CLAUDE_CAMPAIGN_OPS.md (playbook: rola, mapa systemu, kolejka campaign_actions, pulapki MCP, eskalacje)',
-                '- tn-crm/CLAUDE_ADS_REPORT_PROCEDURE.md (tygodniowy raport + diagnoza + decyzje)',
-                'Tryb: decyzje ustalamy w rozmowie po kolei; wykonujesz od razu przez Meta MCP i meldujesz; panel /tn-workflow/kampanie to lustro tylko-do-odczytu. Mail do klienta = TYLKO liczby + lejek. Autonomia: pauzy/rotacje/budzet do +20%/tydz i 60 zl/dzien sam; reszta — pytasz mnie. Przed akcja na koncie sprawdz obce zmiany <48h.',
+                'NAJPIERW przeczytaj w repo tn-crm:',
+                '- CLAUDE_CAMPAIGN_OPS.md (rola, mapa systemu, dane dzienne campaign_daily_stats, changelog, pulapki MCP, eskalacje)',
+                '- CLAUDE_ADS_REPORT_PROCEDURE.md (raport tygodniowy + diagnoza)',
                 '',
-                'STAN NA ' + stamp + ' (snapshot z panelu — zweryfikuj swiezy stan w Supabase):',
-                'Kampanie aktywne: ' + active.length,
+                'TRYB PRACY (wazne):',
+                '- Przeanalizuj CALY portfel i przedstaw mi WNIOSKI: co dziala, co przepala kase, co jest zablokowane (kasa/pixel/strona), gdzie jest najwiekszy potencjal.',
+                '- Zaproponuj konkretne akcje USZEREGOWANE wg waznosci — kazda z uzasadnieniem liczbowym i przewidywanym efektem.',
+                '- NIE WYKONUJ niczego bez mojej zgody — nawet rzeczy w granicach autonomii (pauzy, budzet +-20%/60 zl). Ustalamy kazda decyzje po kolei.',
+                '- Mail do klienta = TYLKO liczby + lejek (zero narracji).',
+                '- Przed jakakolwiek akcja na koncie Meta sprawdz zmiany z innych sesji (<48h).',
+                '- Po wykonaniu czegokolwiek zaloguj wpis do campaign_actions (status=executed) — to moj changelog w panelu.',
                 '',
-                'Do raportu tygodniowego (brak raportu lub >7 dni):',
-                L(needRep),
+                'DANE NA START (pobierz swieze — nie ufaj snapshotowi):',
+                '- Supabase: workflow_ads (stan/budzet/ostatni report_data), campaign_daily_stats (DZIENNE metryki per kampania), workflow_ad_reports (historia), campaign_actions (changelog).',
+                '- Meta MCP: ads_get_ad_entities (level=campaign, time_increment=1 -> dzienny rozklad), ads_get_dataset_stats (lejek z pixela).'
+            ];
+            if (!anyDaily) {
+                lines.push('- UWAGA: campaign_daily_stats jest PUSTE -> zacznij od backfillu dziennego (ads_get_ad_entities time_increment=1 od startu kampanii) i upsert do campaign_daily_stats, zeby filtr po datach w panelu zaczal dzialac.');
+            }
+            lines.push(
                 '',
-                'Akcje zatwierdzone w kolejce (do wykonania):',
-                L(approved),
+                'SNAPSHOT Z PANELU (' + stamp + ', zakres ' + (rangeFrom || '?') + ' -> ' + (rangeTo || '?') + ' — zweryfikuj):',
+                'Aktywne: ' + active + ' · Wstrzymane: ' + paused + ' · Wydatki w okresie: ' + moneyPL(totSpend) + ' · Zakupy: ' + intPL(totPur),
+                'Najwieksi wydajacy (okres):',
+                L(top),
                 '',
-                'Otwarte zadania po Twojej stronie (blokery owner=claude):',
-                L(claudeBlk),
-                '',
-                'ZACZNIJ OD: pobierz aktualny stan z Supabase (workflow_ads, campaign_actions status=approved, workflow_ad_reports), zsynchronizuj z powyzszym, podsumuj co proponujesz i w jakiej kolejnosci — i ruszamy, ustalajac ze mna kazda decyzje z osadem.'
-            ].join('\n');
+                'ZACZNIJ OD: pobierz swieze dane, zsynchronizuj ze snapshotem i przedstaw mi ranking obserwacji + proponowanych akcji. Czekaj na moja decyzje przy kazdej.'
+            );
+            return lines.join('\n');
         }
         function openPromptModal() {
             const t = document.getElementById('prompt-text');
