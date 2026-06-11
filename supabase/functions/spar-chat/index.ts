@@ -611,8 +611,11 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Własny event SSE doklejony po streamie Anthropic
-          const meta = { verdict: verdict.verdict, leadId }
+          // Własny event SSE doklejony po streamie Anthropic.
+          // emailKnown: sesja ma już maila po stronie serwera — frontend przy
+          // powrocie z linku ?id= nie zna go lokalnie i bez tej flagi pokazywałby
+          // bramkę o imię/mail DRUGI raz.
+          const meta = { verdict: verdict.verdict, leadId, emailKnown: !!effectiveEmail }
           controller.enqueue(
             encoder.encode(`event: spar_meta\ndata: ${JSON.stringify(meta)}\n\n`),
           )
@@ -636,7 +639,7 @@ Deno.serve(async (req) => {
           }
           try {
             controller.enqueue(
-              encoder.encode(`event: spar_meta\ndata: ${JSON.stringify({ verdict: null, leadId: null })}\n\n`),
+              encoder.encode(`event: spar_meta\ndata: ${JSON.stringify({ verdict: null, leadId: null, emailKnown: !!effectiveEmail })}\n\n`),
             )
           } catch {
             // klient mógł się rozłączyć — ignoruj
