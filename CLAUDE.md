@@ -128,15 +128,6 @@ Patrz: [`mcp-landing-tools.md`](../../Users/tomek/.claude/projects/c--repos-tn/m
 
 Wzorce: `landing-pages/paromia/` (Editorial/Luxury), `landing-pages/vitrix/` (Panoramic Calm), `landing-pages/h2vital/` (Organic), `landing-pages/pupilnik/` (Playful), `landing-pages/vibestrike/` (Retro-Futuristic), `landing-pages/kafina/` (Rugged Heritage).
 
-### Produkty V2 — research i rekomendacje produktowe
-**Plik:** `docs/products/PRODUCT_RESEARCH_PROCEDURE.md`
-
-Kiedy uzytkownik mowi „odswiez rekomendacje produktow" / „znajdz nowe produkty do katalogu" / „research produktow V2":
-1. Przeczytaj procedure — framework scoringu w `settings.product_research_framework`, rekomendacje w `product_recommendations`
-2. Uruchom workflow sourcingu: `docs/products/research-sourcing-workflow.js` (generatorzy per kategoria → 3 sceptykow per kandydat → scoring)
-3. INSERT wynikow jako `draft` (NIGDY nie publikuj bez decyzji Tomka), archiwizuj przeterminowane (valid_until)
-4. UI: `tn-workflow/products-v2.html` — przeglad, publikacja, awans do katalogu `workflow_products`
-
 ### Generowanie contentu reklamowego Meta Ads (v2 — COD)
 **Plik:** `CLAUDE_ADS_COPY_PROCEDURE.md`
 
