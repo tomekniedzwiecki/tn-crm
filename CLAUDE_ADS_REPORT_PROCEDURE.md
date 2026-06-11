@@ -178,11 +178,19 @@ słabych tygodni.
    — aktualizuj przy KAŻDEJ akcji na kampanii: pauza/wznowienie/budżet; Centrum pokazuje ten stan).
 3. **Mail wysyłaj OD RAZU po zapisie** (decyzja Tomka 2026-06-10 — raport bez maila to raport
    niedostarczony): `POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/send-email`
-   (apikey = sb_publishable), body `{type:'ad_report', data:{email, client_name (imię),
-   project_name (marka), period_from/to, spend, revenue, roas, purchases, clicks, impressions,
-   add_to_cart, initiate_checkout, currency, client_token (workflows.unique_token), summary,
-   next_steps[], checkout_funnel|null}}`. Dane klienta: `workflows.customer_email/customer_name/unique_token`.
-   UWAGA: template w `settings` (klucz `email_template_ad_report_body`), NIE w `email_templates` (legacy).
+   (apikey = sb_publishable), body `{type:'ad_report', data:{...}}`.
+   **KLIENT WIDZI TYLKO LICZBY UŁOŻONE W LEJEK — ZERO narracji/komentarzy/planów** (decyzja Tomka
+   2026-06-11; narracja=summary/actions/next_steps zostaje w `report_data` dla NAS: panel admina + rozmowa).
+   Pola `data` (mail v3): `email, client_name (imię), project_name (marka), period_from/to, currency,
+   client_token` + **REKLAMY:** `spend, impressions, reach, ctr, cpc, cpm, link_clicks (lub clicks)`
+   + **LEJEK (eventy):** `landing_page_views, view_content, add_to_cart, initiate_checkout,
+   add_shipping_info, add_payment_info, purchases` + **PRZYCHÓD (tylko gdy purchases>0):** `revenue, roas`.
+   Wartości niemierzone = pomiń pole / `null` → mail pokaże „—". `summary`/`next_steps` można dosłać
+   (zignorowane w mailu). Funnel events bierz z `ads_get_dataset_stats` za okres (pixel sklepu),
+   metryki reklamowe z `ads_get_ad_entities`. Template: `settings` klucz `email_template_ad_report_body`
+   (buduje bloki `{{metrics_block}}{{funnel_block}}{{revenue_block}}{{cta_block}}` w send-email).
+   Panel klienta (`client-projekt.html#raport`, link „Zobacz pełny raport") też pokazuje tylko liczby+lejek
+   — sekcje narracyjne tam wyłączone (`if(...&&false)`); panel ADMINA (`workflow.html`) pokazuje pełną narrację.
 4. Po wysyłce ustaw `workflow_ad_reports.sent_to_client+sent_at` i `workflow_ads.report_sent+report_sent_at`.
 
 ## Prerekwizyty / eskalacje (sekcja w każdym raporcie wewnętrznym)

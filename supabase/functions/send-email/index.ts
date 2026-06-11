@@ -375,42 +375,65 @@ Deno.serve(async (req) => {
       const adminUrl = data.adminUrl
         || (data.workflowId ? `https://crm.tomekniedzwiecki.pl/tn-workflow/workflow?id=${data.workflowId}` : '')
 
-      // ── Ad report: bloki narracyjne (raporty MCP) ──────────────────────
-      // Puste stringi przy braku danych = pełna kompatybilność ze starymi raportami Manus.
+      // ── Ad report: CZYSTE LICZBY + LEJEK (klient widzi TYLKO liczby; narracja/diagnoza jest wewnętrzna) ──
+      // Decyzja Tomka 2026-06-11: mail = liczby z okresu ułożone w lejek, jak Manus. Zero komentarzy/planów.
       const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+      const cur = data.currency || 'PLN'
       const purchasesNum = Number(data.purchases) || 0
-      const summaryBlock = data.summary
-        ? `<div style="background-color:#0d1f17;border-left:3px solid #10b981;border-radius:0 8px 8px 0;padding:16px 20px;margin-bottom:24px;"><p style="margin:0;color:#d4d4d8;font-size:14px;line-height:1.7;">${esc(data.summary)}</p></div>`
+      const hasVal = (v: unknown) => v !== null && v !== undefined && v !== '' && !(typeof v === 'string' && v.toLowerCase().includes('not available'))
+      const numPL = (v: unknown) => Number(v).toLocaleString('pl-PL')
+      const moneyPL = (v: unknown) => hasVal(v) ? `${Number(v).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${cur}` : '—'
+      const pctPL = (v: unknown) => hasVal(v) ? `${Number(v).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} %` : '—'
+      const intPL = (v: unknown) => hasVal(v) ? numPL(v) : '—'
+
+      // REKLAMY — metryki z Meta
+      const mRow = (label: string, val: string) =>
+        `<tr><td style="padding:9px 0;border-bottom:1px solid #1f1f22;color:#a1a1aa;font-size:13px;">${esc(label)}</td><td style="padding:9px 0;border-bottom:1px solid #1f1f22;color:#ffffff;font-size:14px;font-weight:600;text-align:right;">${val}</td></tr>`
+      const metricsBlock =
+        '<p style="margin:0 0 10px 0;color:#10b981;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Reklamy</p>' +
+        '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">' +
+        mRow('Wydatki', moneyPL(data.spend)) +
+        mRow('Wyświetlenia', intPL(data.impressions)) +
+        mRow('Zasięg', intPL(data.reach)) +
+        mRow('CTR', pctPL(data.ctr)) +
+        mRow('CPC', moneyPL(data.cpc)) +
+        mRow('CPM', moneyPL(data.cpm)) +
+        '</table>'
+
+      // LEJEK — od wyświetlenia reklamy do zakupu (góra z Meta, środek/dół z pixela sklepu)
+      const linkClicks = hasVal(data.link_clicks) ? data.link_clicks : data.clicks
+      const funnelRows: Array<[string, unknown]> = [
+        ['Wyświetlenia reklam', data.impressions],
+        ['Kliknięcia w link', linkClicks],
+        ['Wejścia na stronę', data.landing_page_views],
+        ['Obejrzeli produkt', data.view_content],
+        ['Dodali do koszyka', data.add_to_cart],
+        ['Przeszli do kasy', data.initiate_checkout],
+        ['Dane dostawy', data.add_shipping_info],
+        ['Płatność', data.add_payment_info],
+        ['Zakup', data.purchases]
+      ]
+      const fRow = (label: string, val: unknown, last: boolean) =>
+        `<tr><td style="padding:10px 14px;${last ? '' : 'border-bottom:1px solid #1f1f22;'}color:#d4d4d8;font-size:13px;">${esc(label)}</td><td style="padding:10px 14px;${last ? '' : 'border-bottom:1px solid #1f1f22;'}color:#ffffff;font-size:15px;font-weight:700;text-align:right;">${intPL(val)}</td></tr>`
+      const funnelBlock =
+        '<p style="margin:0 0 10px 0;color:#10b981;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;">Lejek</p>' +
+        '<table width="100%" cellpadding="0" cellspacing="0" style="background-color:#141416;border-radius:10px;margin-bottom:28px;">' +
+        funnelRows.map(([l, v], i) => fRow(l, v, i === funnelRows.length - 1)).join('') +
+        '</table>'
+
+      // PRZYCHÓD / ROAS — tylko gdy są zakupy (decyzja Tomka 2026-06-11)
+      const revenueBlock = purchasesNum > 0
+        ? '<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;"><tr>'
+          + `<td width="50%" style="padding:18px;background:linear-gradient(135deg,#059669,#10b981);border-radius:10px 0 0 10px;"><p style="margin:0 0 4px 0;color:rgba(255,255,255,.8);font-size:11px;text-transform:uppercase;letter-spacing:1px;">Przychód</p><p style="margin:0;color:#fff;font-size:22px;font-weight:700;">${moneyPL(data.revenue)}</p></td>`
+          + `<td width="50%" style="padding:18px;background:#0d3d2a;border-radius:0 10px 10px 0;"><p style="margin:0 0 4px 0;color:rgba(255,255,255,.8);font-size:11px;text-transform:uppercase;letter-spacing:1px;">ROAS</p><p style="margin:0;color:#fff;font-size:22px;font-weight:700;">${esc(data.roas ?? '0')}×</p></td>`
+          + '</tr></table>'
         : ''
-      // Hero: ROAS tylko gdy są zakupy; pre-revenue pokazuje ruch zamiast "0.00x"
-      const heroBlock = purchasesNum > 0
-        ? `<div style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);border-radius:12px;padding:28px;margin-bottom:24px;text-align:center;"><p style="margin:0 0 8px 0;color:rgba(255,255,255,0.8);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">ROAS</p><p style="margin:0;color:#ffffff;font-size:48px;font-weight:700;line-height:1;">${esc(data.roas || '0.00')}x</p></div>`
-        : `<div style="background-color:#18181b;border:1px solid #262626;border-radius:12px;padding:28px;margin-bottom:24px;text-align:center;"><p style="margin:0 0 8px 0;color:#737373;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;">Wejścia do sklepu z reklam</p><p style="margin:0;color:#ffffff;font-size:48px;font-weight:700;line-height:1;">${esc(data.clicks || 0)}</p></div>`
-      // Mikro-lejek kasy (TakeDrop: IC → dane dostawy → płatność → zakup)
-      const cf = data.checkout_funnel
-      let funnelBlock = ''
-      if (cf && Number(cf.initiate_checkout) > 0) {
-        const steps: Array<[string, number]> = ([
-          ['Do kasy', cf.initiate_checkout],
-          ['Dane dostawy', cf.add_shipping_info],
-          ['Płatność', cf.add_payment_info],
-          ['Zakup', cf.purchases],
-        ] as Array<[string, unknown]>)
-          .filter(([, v]) => v !== undefined && v !== null)
-          .map(([l, v]) => [l, Number(v)] as [string, number])
-        const cells = steps.map(([label, v], i) => {
-          const prev = i > 0 ? steps[i - 1][1] : 0
-          const pct = i > 0 && prev > 0 ? `<br><span style="color:#737373;font-size:10px;">${Math.round((v / prev) * 100)}%</span>` : ''
-          return `<td align="center" style="padding:8px 2px;"><p style="margin:0 0 2px 0;color:#737373;font-size:10px;text-transform:uppercase;">${esc(label)}</p><p style="margin:0;color:#ffffff;font-size:18px;font-weight:600;line-height:1.3;">${v}${pct}</p></td>`
-        }).join('<td align="center" style="color:#525252;font-size:14px;">→</td>')
-        funnelBlock = `<div style="background-color:#141416;border-radius:8px;padding:14px 10px;margin-bottom:24px;"><p style="margin:0 0 6px 10px;color:#737373;font-size:11px;text-transform:uppercase;letter-spacing:1px;">Ścieżka w kasie</p><table width="100%" cellpadding="0" cellspacing="0"><tr>${cells}</tr></table></div>`
-      }
-      const nextStepsArr: string[] = Array.isArray(data.next_steps) ? data.next_steps.filter(Boolean) : []
-      const nextStepsBlock = nextStepsArr.length
-        ? `<div style="background-color:#18181b;border-radius:8px;padding:16px 20px;margin-bottom:24px;"><p style="margin:0 0 8px 0;color:#10b981;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:1px;">Plan na kolejny tydzień</p>${nextStepsArr.map((s) => `<p style="margin:0 0 6px 0;color:#d4d4d8;font-size:13px;line-height:1.6;">• ${esc(s)}</p>`).join('')}</div>`
-        : ''
+
       const reportUrl = data.report_url
         || (data.client_token ? `https://crm.tomekniedzwiecki.pl/client-projekt.html?token=${data.client_token}#raport` : (data.projectUrl || ''))
+      const ctaBlock = reportUrl
+        ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:8px;"><tr><td align="center"><a href="${esc(reportUrl)}" style="display:inline-block;background:linear-gradient(135deg,#10b981,#059669);color:#ffffff;text-decoration:none;padding:14px 30px;border-radius:8px;font-size:14px;font-weight:600;">Zobacz pełny raport →</a></td></tr></table>`
+        : ''
 
       // Prepare data for variable replacement
       const templateData: Record<string, any> = {
@@ -455,11 +478,11 @@ Deno.serve(async (req) => {
         initiate_checkout: data.initiate_checkout || 0,
         currency: data.currency || 'PLN',
         client_token: data.client_token || '',
-        // Ad report v2 (MCP) — bloki HTML budowane wyżej, puste dla starych raportów
-        summary_block: summaryBlock,
-        hero_block: heroBlock,
+        // Ad report v3 (2026-06-11) — TYLKO liczby + lejek, zero narracji
+        metrics_block: metricsBlock,
         funnel_block: funnelBlock,
-        next_steps_block: nextStepsBlock,
+        revenue_block: revenueBlock,
+        cta_block: ctaBlock,
         report_url: reportUrl
       }
 
