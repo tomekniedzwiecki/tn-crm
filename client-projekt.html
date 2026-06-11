@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026061101';
+        const APP_VERSION = '2026061102';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -4914,9 +4914,6 @@
                             </div>
                         </div>
 
-                        <!-- MCP: Podsumowanie tygodnia (renderowane warunkowo, tylko raporty z rd.summary) -->
-                        <div id="raport-mcp-summary" class="hidden mb-6"></div>
-
                         <!-- Main metrics - big cards -->
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                             <div class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-5 text-center">
@@ -4966,7 +4963,6 @@
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
                                 <div class="text-[10px] text-[#777] uppercase mb-1">CTR</div>
                                 <div id="raport-client-ctr" class="text-[14px] font-medium text-[#888]">-</div>
-                                <div id="raport-client-ctr-benchmark" class="hidden text-[10px] text-[#666] mt-0.5"></div>
                             </div>
                             <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg p-3 text-center">
                                 <div class="text-[10px] text-[#777] uppercase mb-1">Koszt/zakup</div>
@@ -4974,35 +4970,14 @@
                             </div>
                         </div>
 
-                        <!-- Lejek konwersji (bez "Do koszyka") -->
+                        <!-- Lejek konwersji — 9 kroków, jak w mailu -->
                         <div class="mb-6">
                             <div class="text-[11px] text-[#777] uppercase tracking-wide mb-3 flex items-center gap-2">
                                 <i class="ph ph-funnel"></i>
                                 Lejek konwersji
                             </div>
-                            <div id="raport-client-funnel-row" class="flex items-center gap-2 overflow-x-auto pb-2">
-                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#777] uppercase mb-1">Kliknięcia</div>
-                                    <div id="raport-client-funnel-clicks" class="text-xl font-bold text-[#888]">-</div>
-                                    <div class="text-[10px] text-[#666]">100%</div>
-                                </div>
-                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#777] uppercase mb-1">Do kasy</div>
-                                    <div id="raport-client-funnel-checkout" class="text-xl font-bold text-amber-400">-</div>
-                                    <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#777]">-</div>
-                                </div>
-                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                <div class="flex-1 min-w-[100px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-emerald-400/70 uppercase mb-1">Zakupy</div>
-                                    <div id="raport-client-funnel-purchases" class="text-xl font-bold text-emerald-400">-</div>
-                                    <div id="raport-client-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
-                                </div>
-                            </div>
+                            <div id="raport-client-funnel" class="bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl divide-y divide-[#161616]"></div>
                         </div>
-
-                        <!-- MCP: akcje / wnioski / plan (renderowane warunkowo) -->
-                        <div id="raport-mcp-sections" class="hidden"></div>
 
                         <!-- Campaigns breakdown -->
                         <div id="raport-campaigns-client" class="hidden">
@@ -13433,46 +13408,6 @@
             setEl('raport-detail-period', `${periodFrom} - ${periodTo}`);
             setEl('raport-detail-created', new Date(report.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }));
 
-            // === MCP: Podsumowanie tygodnia + badge fazy + wąskie gardło ===
-            // Tylko raporty z rd.summary (source: mcp). Stare raporty Manus — box ukryty.
-            const summaryBox = document.getElementById('raport-mcp-summary');
-            if (summaryBox) { summaryBox.classList.add('hidden'); summaryBox.innerHTML = ''; }
-            // Klient: tylko liczby — narracja (summary/faza/wąskie gardło) jest wewnętrzna (decyzja Tomka 2026-06-11)
-            if (summaryBox && false) {
-                if (data.summary) {
-                    const phaseNames = { learning: 'Faza nauki', first_sales: 'Pierwsze sprzedaże', scaling: 'Skalowanie' };
-                    const phaseName = phaseNames[data.phase] || '';
-                    const roadmapDay = Number(data.roadmap_day) || 0;
-                    const phaseLabel = phaseName ? (roadmapDay > 0 ? `${phaseName} — dzień ${roadmapDay} z 90` : phaseName) : '';
-                    const bottleneckLabels = {
-                        tracking: 'Wąskie gardło: pomiar (pixel)',
-                        creative: 'Wąskie gardło: kreacje',
-                        landing: 'Wąskie gardło: strona',
-                        checkout: 'Wąskie gardło: koszyk/zaufanie'
-                    };
-                    const bottleneckLabel = bottleneckLabels[data.bottleneck] || '';
-                    summaryBox.innerHTML = `
-                        <div class="bg-[#0d0d0d] border border-[#1a1a1a] border-l-2 border-l-emerald-500/60 rounded-xl p-5">
-                            <div class="flex items-center justify-between gap-3 flex-wrap mb-3">
-                                <div class="text-[11px] text-emerald-400/80 uppercase tracking-wider flex items-center gap-2">
-                                    <i class="ph ph-chat-circle-text"></i>
-                                    Podsumowanie tygodnia
-                                </div>
-                                <div class="flex items-center gap-2 flex-wrap">
-                                    ${phaseLabel ? `<span class="px-2 py-0.5 rounded-full bg-violet-500/15 border border-violet-500/30 text-violet-400 text-[11px] font-medium whitespace-nowrap">${escapeHtml(phaseLabel)}</span>` : ''}
-                                    ${bottleneckLabel ? `<span class="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 text-[11px] font-medium whitespace-nowrap">${escapeHtml(bottleneckLabel)}</span>` : ''}
-                                </div>
-                            </div>
-                            <p class="text-[14px] text-[#ccc] leading-relaxed">${escapeHtml(data.summary)}</p>
-                        </div>
-                    `;
-                    summaryBox.classList.remove('hidden');
-                } else {
-                    summaryBox.innerHTML = '';
-                    summaryBox.classList.add('hidden');
-                }
-            }
-
             // Main metrics
             const spend = Number(data.spend) || 0;
             const revenue = Number(data.revenue) || 0;
@@ -13503,195 +13438,42 @@
             setEl('raport-client-ctr', ctr.toFixed(2) + '%');
             setEl('raport-client-cpc', fmtCurrency(costPerPurchase));
 
-            // === MCP: benchmark CTR (adnotacja + kolor wartości) ===
-            const ctrEl = document.getElementById('raport-client-ctr');
-            const ctrBenchEl = document.getElementById('raport-client-ctr-benchmark');
-            if (ctrEl) {
-                // Reset do stanu domyślnego (nawigacja MCP -> Manus)
-                ctrEl.classList.remove('text-emerald-400', 'text-rose-400');
-                ctrEl.classList.add('text-[#888]');
-            }
-            if (ctrBenchEl) {
-                ctrBenchEl.innerText = '';
-                ctrBenchEl.classList.add('hidden');
-            }
-            const benchCtr = Number(data.benchmark?.ctr_portfolio) || 0;
-            if (false /* klient: tylko liczby — bez adnotacji "vs norma" i kolorów oceny (2026-06-11) */) {
-                const mcpCtr = Number(data.ctr) || 0;
-                ctrBenchEl.innerText = `vs ~${benchCtr.toLocaleString('pl-PL', { maximumFractionDigits: 1 })}% norma`;
-                ctrBenchEl.classList.remove('hidden');
-                if (mcpCtr >= 1.5) {
-                    ctrEl.classList.remove('text-[#888]');
-                    ctrEl.classList.add('text-emerald-400');
-                } else if (mcpCtr < 0.8) {
-                    ctrEl.classList.remove('text-[#888]');
-                    ctrEl.classList.add('text-rose-400');
-                }
-            }
-
-            // Funnel (bez "Do koszyka")
-            const initiateCheckout = Number(data.initiate_checkout) || 0;
-            const funnelRow = document.getElementById('raport-client-funnel-row');
-            const cf = (data.checkout_funnel && typeof data.checkout_funnel === 'object') ? data.checkout_funnel : null;
-
-            if (funnelRow && cf) {
-                // === MCP: rozszerzony lejek z mikro-krokami kasy ===
-                const steps = [
-                    { label: 'Kliknięcia', value: clicks },
-                    { label: 'Przejście do kasy', value: Number(cf.initiate_checkout ?? data.initiate_checkout) || 0 },
-                    { label: 'Dane dostawy', value: Number(cf.add_shipping_info) || 0 },
-                    { label: 'Płatność', value: Number(cf.add_payment_info) || 0 },
-                    { label: 'Zakup', value: Number(cf.purchases ?? purchases) || 0 }
+            // === Lejek konwersji — 9 kroków, identyczne z mailem (wartości z report_data; "—" gdy niemierzone) ===
+            const funnelEl = document.getElementById('raport-client-funnel');
+            if (funnelEl) {
+                const hv = (v) => v !== null && v !== undefined && v !== '' && !(typeof v === 'string' && v.toLowerCase().includes('not available'));
+                const linkClicks = hv(data.link_clicks) ? data.link_clicks : data.clicks;
+                const fr = [
+                    ['Wyświetlenia reklam', data.impressions],
+                    ['Kliknięcia w link', linkClicks],
+                    ['Wejścia na stronę', data.landing_page_views],
+                    ['Obejrzeli produkt', data.view_content],
+                    ['Dodali do koszyka', data.add_to_cart],
+                    ['Przeszli do kasy', data.initiate_checkout],
+                    ['Dane dostawy', data.add_shipping_info],
+                    ['Płatność', data.add_payment_info],
+                    ['Zakup', data.purchases]
                 ];
-                // % względem POPRZEDNIEGO kroku; największy drop liczony tylko w mikro-krokach kasy
-                // (klik -> kasa to naturalnie duży spadek, nie jest "wąskim gardłem" formularza)
-                const rates = steps.map((s, i) => {
-                    if (i === 0) return null;
-                    const prev = steps[i - 1].value;
-                    return prev > 0 ? (s.value / prev * 100) : null;
-                });
-                let biggestDropIdx = -1, biggestDrop = 0;
-                for (let i = 2; i < steps.length; i++) {
-                    if (rates[i] === null) continue;
-                    const drop = 100 - rates[i];
-                    if (drop > biggestDrop) { biggestDrop = drop; biggestDropIdx = i; }
-                }
-                funnelRow.innerHTML = steps.map((s, i) => {
-                    const isLast = i === steps.length - 1;
-                    const isDrop = i === biggestDropIdx;
-                    const boxClass = isDrop ? 'bg-amber-500/10 border-amber-500/40'
-                        : isLast ? 'bg-emerald-500/10 border-emerald-500/30'
-                        : 'bg-[#0d0d0d] border-[#1a1a1a]';
-                    const labelClass = isDrop ? 'text-amber-400/80' : isLast ? 'text-emerald-400/70' : 'text-[#777]';
-                    const valueClass = isDrop ? 'text-amber-400' : isLast ? 'text-emerald-400' : 'text-[#888]';
-                    const rateClass = isDrop ? 'text-amber-500/80' : isLast ? 'text-emerald-500/70' : 'text-[#666]';
-                    const rateText = i === 0 ? '100%' : (rates[i] === null ? '—' : rates[i].toFixed(1).replace('.', ',') + '%');
-                    const arrow = i > 0 ? `<i class="ph ph-caret-right ${isDrop ? 'text-amber-500/60' : 'text-[#333]'} flex-shrink-0"></i>` : '';
-                    return `${arrow}
-                        <div class="flex-1 min-w-[96px] ${boxClass} border rounded-xl p-3 text-center">
-                            <div class="text-[10px] ${labelClass} uppercase mb-1 leading-tight">${s.label}</div>
-                            <div class="text-lg font-bold ${valueClass}">${s.value.toLocaleString('pl-PL')}</div>
-                            <div class="text-[10px] ${rateClass}">${rateText}${isDrop ? ' · tu tracimy najwięcej' : ''}</div>
+                const top = Number(data.impressions) || 0;
+                funnelEl.innerHTML = fr.map(([label, val], i) => {
+                    const isLast = i === fr.length - 1;
+                    const present = hv(val);
+                    const n = present ? Number(val) : null;
+                    const valTxt = present ? n.toLocaleString('pl-PL') : '—';
+                    const w = (present && top > 0) ? Math.max(2, Math.min(100, n / top * 100)) : 0;
+                    const barColor = isLast ? 'bg-emerald-500/50' : 'bg-violet-500/40';
+                    const valColor = isLast ? 'text-emerald-400' : 'text-white';
+                    return `
+                        <div class="px-4 py-3">
+                            <div class="flex items-center justify-between gap-3 mb-1.5">
+                                <span class="text-[12px] text-[#999]">${escapeHtml(label)}</span>
+                                <span class="text-[15px] font-bold ${valColor}">${valTxt}</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-[#161616] overflow-hidden">
+                                <div class="h-full ${barColor} rounded-full" style="width:${w}%"></div>
+                            </div>
                         </div>`;
                 }).join('');
-            } else if (funnelRow) {
-                // Klasyczny 3-stopniowy lejek (raporty bez checkout_funnel) — markup identyczny jak dotychczas
-                const checkoutRate = clicks > 0 ? (initiateCheckout / clicks * 100) : 0;
-                const purchaseRate = clicks > 0 ? (purchases / clicks * 100) : 0;
-                funnelRow.innerHTML = `
-                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#777] uppercase mb-1">Kliknięcia</div>
-                                    <div id="raport-client-funnel-clicks" class="text-xl font-bold text-[#888]">-</div>
-                                    <div class="text-[10px] text-[#666]">100%</div>
-                                </div>
-                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                <div class="flex-1 min-w-[100px] bg-[#0d0d0d] border border-[#1a1a1a] rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-[#777] uppercase mb-1">Do kasy</div>
-                                    <div id="raport-client-funnel-checkout" class="text-xl font-bold text-amber-400">-</div>
-                                    <div id="raport-client-funnel-checkout-rate" class="text-[10px] text-[#777]">-</div>
-                                </div>
-                                <i class="ph ph-caret-right text-[#333] flex-shrink-0"></i>
-                                <div class="flex-1 min-w-[100px] bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-4 text-center">
-                                    <div class="text-[10px] text-emerald-400/70 uppercase mb-1">Zakupy</div>
-                                    <div id="raport-client-funnel-purchases" class="text-xl font-bold text-emerald-400">-</div>
-                                    <div id="raport-client-funnel-purchases-rate" class="text-[10px] text-emerald-500/70">-</div>
-                                </div>`;
-                setEl('raport-client-funnel-clicks', clicks.toLocaleString('pl-PL'));
-                setEl('raport-client-funnel-checkout', initiateCheckout.toLocaleString('pl-PL'));
-                setEl('raport-client-funnel-checkout-rate', checkoutRate.toFixed(1) + '%');
-                setEl('raport-client-funnel-purchases', purchases.toLocaleString('pl-PL'));
-                setEl('raport-client-funnel-purchases-rate', purchaseRate.toFixed(1) + '%');
-            }
-
-            // === MCP: Co zrobiliśmy / Czego się nauczyliśmy / Plan na przyszły tydzień ===
-            const mcpSections = document.getElementById('raport-mcp-sections');
-            if (mcpSections) { mcpSections.classList.add('hidden'); mcpSections.innerHTML = ''; }
-            // Klient: tylko liczby — sekcje "co zrobiliśmy / learnings / plan" są wewnętrzne (2026-06-11)
-            if (mcpSections && false) {
-                let sectionsHtml = '';
-
-                const fmtActionDate = (d) => {
-                    try {
-                        const dt = new Date(d);
-                        return isNaN(dt.getTime()) ? '' : dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' });
-                    } catch (e) { return ''; }
-                };
-
-                // a) Co zrobiliśmy w tym tygodniu (tylko executed === true)
-                const executedActions = Array.isArray(data.actions)
-                    ? data.actions.filter(a => a && a.executed === true && a.what)
-                    : [];
-                if (executedActions.length > 0) {
-                    sectionsHtml += `
-                        <div class="mb-6">
-                            <div class="text-[11px] text-[#777] uppercase tracking-wide mb-3 flex items-center gap-2">
-                                <i class="ph ph-wrench"></i>
-                                Co zrobiliśmy w tym tygodniu
-                            </div>
-                            <div class="space-y-2">
-                                ${executedActions.map(a => {
-                                    const dateLabel = a.date ? fmtActionDate(a.date) : '';
-                                    return `
-                                    <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-4 py-3 flex items-start gap-3">
-                                        <i class="ph-fill ph-check-circle text-emerald-400 text-[16px] mt-0.5 flex-shrink-0"></i>
-                                        <div class="min-w-0">
-                                            <div class="text-[13px] text-[#ccc] leading-relaxed">${escapeHtml(a.what)}${dateLabel ? ` <span class="text-[11px] text-[#555] ml-1 whitespace-nowrap">${escapeHtml(dateLabel)}</span>` : ''}</div>
-                                            ${a.why ? `<div class="text-[12px] text-[#777] mt-0.5 leading-relaxed">${escapeHtml(a.why)}</div>` : ''}
-                                        </div>
-                                    </div>`;
-                                }).join('')}
-                            </div>
-                        </div>`;
-                }
-
-                // b) Czego się nauczyliśmy
-                const learnings = Array.isArray(data.learnings)
-                    ? data.learnings.filter(l => typeof l === 'string' && l.trim())
-                    : [];
-                if (learnings.length > 0) {
-                    sectionsHtml += `
-                        <div class="mb-6">
-                            <div class="text-[11px] text-[#777] uppercase tracking-wide mb-3 flex items-center gap-2">
-                                <i class="ph ph-lightbulb"></i>
-                                Czego się nauczyliśmy
-                            </div>
-                            <div class="space-y-2">
-                                ${learnings.map(l => `
-                                    <div class="bg-[#0a0a0a] border border-[#1a1a1a]/50 rounded-lg px-4 py-3 flex items-start gap-3">
-                                        <i class="ph ph-lightbulb text-amber-400/80 text-[15px] mt-0.5 flex-shrink-0"></i>
-                                        <span class="text-[13px] text-[#aaa] leading-relaxed">${escapeHtml(l)}</span>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>`;
-                }
-
-                // c) Plan na przyszły tydzień (najważniejsza wizualnie)
-                const nextSteps = Array.isArray(data.next_steps)
-                    ? data.next_steps.filter(s => typeof s === 'string' && s.trim())
-                    : [];
-                if (nextSteps.length > 0) {
-                    sectionsHtml += `
-                        <div class="mb-6">
-                            <div class="bg-gradient-to-r from-violet-500/15 to-transparent border border-violet-500/30 rounded-xl p-5">
-                                <div class="text-[11px] text-violet-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                                    <i class="ph ph-rocket-launch"></i>
-                                    Plan na przyszły tydzień
-                                </div>
-                                <div class="space-y-2.5">
-                                    ${nextSteps.map((s, i) => `
-                                        <div class="flex items-start gap-3">
-                                            <span class="w-5 h-5 rounded-full bg-violet-500/20 text-violet-400 text-[11px] font-semibold flex items-center justify-center flex-shrink-0 mt-0.5">${i + 1}</span>
-                                            <span class="text-[13px] text-[#ccc] leading-relaxed">${escapeHtml(s)}</span>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </div>`;
-                }
-
-                mcpSections.innerHTML = sectionsHtml;
-                mcpSections.classList.toggle('hidden', sectionsHtml === '');
             }
 
             // Campaigns breakdown
