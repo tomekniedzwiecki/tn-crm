@@ -153,7 +153,12 @@ koncie; **Vitrix** — obca zmiana konfiguracji; **SilkTip** — obca pauza ad s
 
 ## 7. KOMUNIKACJA Z KLIENTEM
 
-**Styl `summary` (= treść maila):** 3–5 zdań PL; każda liczba Z OCENĄ („CTR 5,3% — ponad 3×
+**Mail i panel klienta = TYLKO liczby ułożone w lejek (decyzja Tomka 2026-06-11), ZERO narracji** —
+Reklamy (spend/CTR/CPC/CPM) + lejek eventów (wyświetlenia→zakup) + przychód/ROAS tylko gdy purchases>0.
+Payload i bloki: KROK 7 procedury raportowej. Narracja `summary`/`actions`/`next_steps` jest WEWNĘTRZNA
+(panel admina + ta rozmowa), NIE trafia do klienta.
+
+**Styl `summary` (TYLKO wewnętrznie — do decyzji, NIE mail):** 3–5 zdań PL; każda liczba Z OCENĄ („CTR 5,3% — ponad 3×
 norma sklepów"); **słabe wyniki wprost + plan naprawczy w TYM SAMYM akapicie** (nigdy nie
 chowaj w tabeli); zawsze pozycja na roadmapie 30/60/90 dni. Szczegóły i zakazy (data dump,
 vanity metrics, obiecywanie ROAS) → KROK 6 procedury raportowej.
