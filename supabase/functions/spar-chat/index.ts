@@ -119,6 +119,20 @@ function parseVerdict(fullText: string): VerdictResult {
   return { verdict: null, karta: null }
 }
 
+// Marker podglądu: <projekt>{...brief...}</projekt> — bierzemy OSTATNI z odpowiedzi
+// (model może iterować podgląd po uwagach klienta)
+function parseProjekt(fullText: string): Record<string, unknown> | null {
+  const matches = [...fullText.matchAll(/<projekt>([\s\S]*?)<\/projekt>/g)]
+  if (!matches.length) return null
+  try {
+    const parsed = JSON.parse(matches[matches.length - 1][1])
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : null
+  } catch (err) {
+    console.error('[spar-chat] błąd parsowania markera projekt:', err)
+    return null
+  }
+}
+
 // Zwięzły opis Karty Problemu do notatki leada
 function buildLeadNotes(profession: string, karta: Record<string, unknown> | null): string {
   const lines: string[] = ['Sparing /stworze — werdykt: ZIELONY']
@@ -191,6 +205,7 @@ async function persistAfterStream(
   turnsBefore: number,
   verdict: VerdictResult,
   leadId: string | null,
+  projekt: Record<string, unknown> | null,
 ): Promise<void> {
   try {
     if (assistantText.trim()) {
@@ -210,6 +225,9 @@ async function persistAfterStream(
     }
     if (leadId) {
       update.lead_id = leadId
+    }
+    if (projekt) {
+      update.preview_brief = projekt
     }
     const { error: sessError } = await supabase
       .from('spar_sessions')
@@ -453,10 +471,10 @@ Deno.serve(async (req) => {
       async start(controller) {
         let assistantText = ''
         let persisted = false
-        const schedulePersist = (verdict: VerdictResult, leadId: string | null): Promise<void> | null => {
+        const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)
@@ -500,6 +518,14 @@ Deno.serve(async (req) => {
 
           // Stream zakończony — finalizacja
           const verdict = parseVerdict(assistantText)
+          const projekt = parseProjekt(assistantText)
+
+          // Marker podglądu -> event dla frontendu (strona woła spar-image)
+          if (projekt) {
+            controller.enqueue(
+              encoder.encode(`event: spar_projekt\ndata: ${JSON.stringify(projekt)}\n\n`),
+            )
+          }
 
           // Zielony werdykt -> lead (id musi trafić do spar_meta, więc PRZED eventem).
           // Werdykt pada wiele tur po bramce, więc effectiveEmail praktycznie zawsze
@@ -526,14 +552,14 @@ Deno.serve(async (req) => {
           )
 
           // Zapis do bazy PO zakończeniu streamu — waitUntil z fallbackiem
-          const persistPromise = schedulePersist(verdict, leadId)
+          const persistPromise = schedulePersist(verdict, leadId, projekt)
           if (persistPromise) await persistPromise
         } catch (err) {
           console.error('[spar-chat] stream passthrough error:', err)
           // Klient mógł przerwać stream (zamknięta karta) — zapisz to, co już
           // wygenerowano, żeby historia rozmowy nie gubiła odpowiedzi asystenta.
           try {
-            const persistPromise = schedulePersist(parseVerdict(assistantText), null)
+            const persistPromise = schedulePersist(parseVerdict(assistantText), null, parseProjekt(assistantText))
             if (persistPromise) await persistPromise
           } catch (persistErr) {
             console.error('[spar-chat] persist after abort error:', persistErr)
