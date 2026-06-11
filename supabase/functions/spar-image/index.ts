@@ -41,7 +41,9 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
 const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
 const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
-const MAX_IMAGES_PER_IP_PER_DAY = 20 // anty-abuse: mnożenie sesji nie omija limitu kosztów
+// Dzienny limit per IP (anty-abuse). Na czas testów rozwojowych podniesiony
+// przez default 200 — PRZED kampanią reklamową ustawić env SPAR_IMG_IP_DAILY=20.
+const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || '200', 10)
 const STORAGE_BUCKET = 'attachments'
 
 const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing'] as const
@@ -80,7 +82,7 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string
   const nazwa = s(brief.nazwa) || 'Narzędzie'
   const kontekst = `Narzędzie „${nazwa}" dla: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. ${s(brief.opis)}`
   const styleBlock = buildStyleBlock(brief)
-  const jakosc = 'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum. JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.'
+  const jakosc = 'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; zero lorem ipsum. TYPOGRAFIA I TEKST (kluczowe dla czytelności): MAŁO tekstu, DUŻE czytelne etykiety; teksty pomocnicze maksymalnie 2-4 słowa, żadnych długich zdań w interfejsie; powtarzalne elementy (wiersze list, karty) ogranicz do 4-6 sztuk — lepiej mniej, a większe; bezbłędna polszczyzna z poprawnymi znakami diakrytycznymi (ą, ć, ę, ł, ń, ó, ś, ź, ż). JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.'
   // To MAŁE, skupione narzędzie — obraz nie może sugerować rozbudowanego systemu
   const prostota = 'PROSTOTA (twarda zasada): to małe, skupione narzędzie rozwiązujące JEDEN problem — pokaż wyłącznie elementy opisane wyżej. Minimalna nawigacja: wąski pasek górny albo lista maks 3-4 pozycji; ŻADNYCH rozbudowanych sidebarów z wieloma modułami, dodatkowych zakładek, wykresów-ozdobników ani paneli sugerujących duży system klasy CRM/ERP. Dużo światła, jeden wyraźny cel ekranu.'
 
@@ -96,6 +98,7 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string
         : `ZAWARTOŚĆ STRONY: hero z mocnym polskim nagłówkiem-obietnicą rozwiązania problemu, podtytuł, przycisk CTA, obok ukośnie osadzony zrzut interfejsu narzędzia; niżej pasek zaufania i sekcja 3 korzyści z ikonami${ekrany ? ` (nawiązujące do: ${ekrany})` : ''}.`,
       styleBlock,
       'To strona WWW sprzedająca narzędzie (typografia marketingowa, sekcje, dużo oddechu) — NIE ekran aplikacji; zrzut interfejsu pojawia się tylko jako element hero.',
+      'KADR: pokaż GÓRNĄ część strony — hero wypełnia większość kadru (wielki, czytelny nagłówek), pod nim pasek zaufania i zajawka sekcji korzyści. NIE ściskaj całej długiej strony w jeden kadr — mniej sekcji, większa typografia.',
       jakosc,
     ].join(' ')
   }
@@ -137,7 +140,7 @@ async function generateImage(apiKey: string, prompt: string): Promise<Uint8Array
         model,
         prompt,
         size: '1536x1024',
-        quality: 'medium',
+        quality: Deno.env.get('SPAR_IMAGE_QUALITY') || 'medium',
         n: 1,
       }),
     })
