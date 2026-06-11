@@ -57,10 +57,17 @@ function buildImagePrompt(brief: Record<string, unknown>): string {
   const ekrany = Array.isArray(brief.ekrany)
     ? brief.ekrany.filter((e) => typeof e === 'string').slice(0, 6).join(', ')
     : ''
+  // Wytyczne wizualne rozmówcy (pole "styl" z markera <projekt>) mają
+  // PIERWSZEŃSTWO przed domyślnym dark-mode — user może chcieć jasny motyw,
+  // inne kolory, prostszy układ itd.
+  const styl = typeof brief.styl === 'string' ? brief.styl.trim().slice(0, 500) : ''
+  const designLine = styl
+    ? `DESIGN — WYTYCZNE KLIENTA (PRIORYTET, zastosuj je dokładnie): ${styl}. Niezależnie od nich utrzymaj jakość premium SaaS: czysta siatka, spójna paleta, zaokrąglenia 12-16px, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).`
+    : 'DESIGN: premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach, wykresach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).'
   return [
     `Pełnoekranowy zrzut interfejsu aplikacji webowej SaaS „${s(brief.nazwa) || 'Narzędzie'}" — widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
     `Przeznaczenie: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. Funkcja główna: ${s(brief.opis)}.`,
-    'DESIGN: premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach, wykresach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter).',
+    designLine,
     `LAYOUT: wąski lewy sidebar z liniowymi ikonami i etykietami sekcji${ekrany ? ` (${ekrany})` : ''}; górna belka z wyszukiwarką i awatarem; główny obszar: 3-4 karty KPI z dużymi liczbami, elegancki wykres z gradientowym wypełnieniem, poniżej tabela rekordów ze statusami jako kolorowe badge (niebieski/zielony/bursztynowy).`,
     'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum.',
     'JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, spójny zestaw ikon liniowych, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.',
