@@ -134,6 +134,21 @@
                         </details>
                     </section>
 
+                    <!-- SEKCJA: Kolejka akcji (campaign_actions) -->
+                    <section>
+                        <div class="flex items-center gap-2 mb-3">
+                            <i class="ph ph-robot text-violet-400"></i>
+                            <h2 class="text-sm font-medium text-white uppercase tracking-wider">Kolejka akcji (wykonuje Claude)</h2>
+                            <span id="queue-count-badge" class="hidden text-[10px] font-mono bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full px-2 py-0.5"></span>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl overflow-hidden">
+                            <div id="queue-list"></div>
+                            <div id="queue-empty" class="hidden px-5 py-6 text-center">
+                                <p class="text-zinc-500 text-sm">Brak akcji w kolejce — wszystko wykonane.</p>
+                            </div>
+                        </div>
+                    </section>
+
                     <!-- SEKCJA: Tabela kampanii -->
                     <section>
                         <div class="flex items-center gap-2 mb-3">
@@ -190,6 +205,7 @@
 
         let adsRows = [];                 // przefiltrowane wiersze workflow_ads
         let brandMap = {};                // workflow_id -> nazwa marki
+        let actionsQueue = [];            // campaign_actions (kolejka + dziennik)
         let customerMap = {};             // workflow_id -> customer_name
         let currentMember = null;
         let isAdmin = false;
@@ -327,6 +343,15 @@
                 });
             }
 
+            // Kolejka akcji (campaign_actions) — kolejka decyzji + dziennik wykonanych
+            const acRes = await supabaseClient
+                .from('campaign_actions')
+                .select('*')
+                .neq('status', 'rejected')
+                .order('created_at', { ascending: false })
+                .limit(30);
+            actionsQueue = acRes.error ? [] : (acRes.data || []);
+
             document.getElementById('loading-state').classList.add('hidden');
 
             if (adsRows.length === 0) {
@@ -341,8 +366,91 @@
         function renderAll() {
             renderStats();
             renderActionSection();
+            renderQueue();
             renderTable();
             renderActionsFeed();
+        }
+
+        // ============ KOLEJKA AKCJI (campaign_actions) ============
+
+        function renderQueue() {
+            const list = document.getElementById('queue-list');
+            const empty = document.getElementById('queue-empty');
+            const badge = document.getElementById('queue-count-badge');
+            if (!list) return;
+
+            const proposedCount = actionsQueue.filter(a => a.status === 'proposed').length;
+            if (badge) {
+                if (proposedCount > 0) { badge.textContent = proposedCount + ' do decyzji'; badge.classList.remove('hidden'); }
+                else { badge.classList.add('hidden'); }
+            }
+
+            if (actionsQueue.length === 0) {
+                list.innerHTML = '';
+                if (empty) empty.classList.remove('hidden');
+                return;
+            }
+            if (empty) empty.classList.add('hidden');
+
+            // proposed na górze, potem reszta
+            const order = { proposed: 0, approved: 1, executing: 2, failed: 3, executed: 4 };
+            const sorted = [...actionsQueue].sort((a, b) => (order[a.status] ?? 5) - (order[b.status] ?? 5));
+
+            list.innerHTML = sorted.map(a => {
+                const brand = escapeHtml(brandName(a.workflow_id));
+                const title = escapeHtml(a.title || a.type || 'Akcja');
+                const reason = a.reason ? `<p class="text-zinc-500 text-xs mt-1 leading-relaxed">${escapeHtml(a.reason)}</p>` : '';
+                let right = '';
+                if (a.status === 'proposed') {
+                    right = `<div class="flex gap-2 flex-shrink-0">
+                        <button onclick="approveAction('${escapeHtml(a.id)}')" class="text-emerald-400 hover:text-emerald-300 border border-emerald-500/30 hover:border-emerald-400/50 px-3 py-1 rounded-lg text-xs transition-colors whitespace-nowrap">✓ Zatwierdź</button>
+                        <button onclick="rejectAction('${escapeHtml(a.id)}')" class="text-zinc-500 hover:text-zinc-300 border border-white/10 hover:border-white/20 px-3 py-1 rounded-lg text-xs transition-colors whitespace-nowrap">✕ Odrzuć</button>
+                    </div>`;
+                } else if (a.status === 'approved') {
+                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 flex-shrink-0 whitespace-nowrap">zatwierdzona — czeka na Claude${a.approved_at ? ' · ' + escapeHtml(dateOnly(a.approved_at)) : ''}</span>`;
+                } else if (a.status === 'executing') {
+                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30 flex-shrink-0">w trakcie</span>`;
+                } else if (a.status === 'executed') {
+                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex-shrink-0 whitespace-nowrap">wykonano${a.executed_at ? ' · ' + escapeHtml(dateOnly(a.executed_at)) : ''}</span>`;
+                } else if (a.status === 'failed') {
+                    right = `<span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 flex-shrink-0">błąd</span>`;
+                }
+                const result = (a.status === 'executed' || a.status === 'failed') && a.execution_result
+                    ? `<p class="text-zinc-600 text-[11px] mt-1 font-mono">${escapeHtml(a.execution_result)}</p>` : '';
+                return `<div class="flex items-start justify-between gap-4 px-5 py-3.5 border-b border-white/5 last:border-b-0">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-white font-medium text-sm">${title}</span>
+                            <span class="text-[10px] font-mono text-zinc-500 bg-zinc-800/60 px-1.5 py-0.5 rounded">${brand}</span>
+                        </div>
+                        ${reason}${result}
+                    </div>
+                    ${right}
+                </div>`;
+            }).join('');
+        }
+
+        async function approveAction(id) {
+            const { error } = await supabaseClient
+                .from('campaign_actions')
+                .update({ status: 'approved', approved_at: new Date().toISOString(), approved_by: 'tomek' })
+                .eq('id', id).eq('status', 'proposed');
+            if (error) { showToast('Błąd zatwierdzenia: ' + error.message, 'error'); return; }
+            const a = actionsQueue.find(x => x.id === id);
+            if (a) { a.status = 'approved'; a.approved_at = new Date().toISOString(); }
+            renderQueue();
+            showToast('Zatwierdzona — Claude wykona przy najbliższej sesji', 'success');
+        }
+
+        async function rejectAction(id) {
+            const { error } = await supabaseClient
+                .from('campaign_actions')
+                .update({ status: 'rejected', approved_at: new Date().toISOString(), approved_by: 'tomek' })
+                .eq('id', id).eq('status', 'proposed');
+            if (error) { showToast('Błąd odrzucenia: ' + error.message, 'error'); return; }
+            actionsQueue = actionsQueue.filter(x => x.id !== id);
+            renderQueue();
+            showToast('Akcja odrzucona', 'info');
         }
 
         // ============ STATS ============
