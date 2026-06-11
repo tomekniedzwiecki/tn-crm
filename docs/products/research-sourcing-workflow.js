@@ -156,8 +156,9 @@ phase('Kandydaci')
 const cats = (A.categories_override || fw.category_shortlist || []).slice(0, MAX_CATS)
 log(`Generuje kandydatow dla ${cats.length} kategorii (${PER_CAT}/kategorie)${A.categories_override ? ' [override]' : ''}`)
 
-const generated = await parallel(cats.map(c => () =>
-  agent(`${BIZ_CONTEXT}
+const FIRST_MOVER = A.mode === 'first_mover'
+
+const standardGenPrompt = c => `${BIZ_CONTEXT}
 
 ZADANIE: Znajdz ${PER_CAT} kandydatow produktowych w obszarze: "${c.category}".
 Kontekst obszaru: ${c.rationale}
@@ -196,7 +197,48 @@ WYMAGANIA TWARDE (kandydat lamiacy KTOREKOLWIEK = nie zglaszaj go w ogole):
 - NIE jest na blackliscie przesyconych: ${JSON.stringify(BLACKLIST)}
 
 Lepiej zglosic 1 kandydata z prawdziwym moatem niz 3 generyczne. Jesli w tym obszarze nie znajdziesz NIC z moatem — zwroc pusta liste candidates.
-Kandydaci maja byc ROZNI od siebie.`,
+Kandydaci maja byc ROZNI od siebie.`
+
+// TRYB FIRST-MOVER: arbitraz trendu — produkt JUZ wygrywa na Zachodzie, ale jeszcze NIE MA go w PL.
+const firstMoverPrompt = c => `${BIZ_CONTEXT}
+
+${ECON_CONTEXT}
+
+🎯 TWOJA METODA TO TREND ARBITRAGE (FIRST-MOVER). NIE wymyslasz "rozwiazania problemu" — bo 36 takich produktow juz odrzucono:
+KAZDY mial bliznika na polskim Allegro (czesto pod inna polska nazwa). Polski rynek produktow problem-solving jest DOJRZALY.
+Jedyna luka, w ktorej "tani produkt z AliExpress + marka" realnie dziala, to PRODUKTY KTORE JUZ EKSPLODUJA NA ZACHODZIE,
+ale JESZCZE NIE DOTARLY do polskiego Allegro i Meta. Twoj moat to CZAS (first-mover), nie unikalnosc.
+
+OBSZAR POSZUKIWAN (zrodlo trendow, nie kategoria do skopiowania): "${c.category}"
+Wskazowka: ${c.rationale}
+
+METODA (wykonaj DOKLADNIE, uzyj narzedzi Meta Ad Library przez ToolSearch: ads_library_search):
+1. SKAN ZACHODU — przez Meta Ad Library (ad_library_search) i WebSearch znajdz produkty fizyczne 100-250 zl (20-60 USD/EUR),
+   ktore w USA/UK/DE/AU sa AKTYWNIE i INTENSYWNIE reklamowane TERAZ (duzo aktywnych reklam, wiele kreacji, mlode kampanie =
+   rosnacy trend), w niszach: ${JSON.stringify(c.example_products)}. Szukaj sygnalu "wlasnie sie rozkreca", nie "od 3 lat ten sam".
+2. ⛔ BRAMKA POLSKA (KLUCZOWA — rob ZANIM zgloisz): sprawdz czy produkt JESZCZE NIE jest w PL:
+   (a) Meta Ad Library kraj=PL — czy ktos go reklamuje w PLN? Jesli >2-3 graczy PLN → JUZ przyszedl, ODRZUC.
+   (b) Allegro (WebSearch site:allegro.pl) — czy jest funkcjonalny bliznik? Jesli TAK i tanio → ODRZUC.
+   Zglaszasz TYLKO produkty z DOWODEM zachodniego popytu I pustym/prawie pustym polem w PL. To jest Twoj moat (typ B, timing).
+3. SPRAWDZ POLSKA NAZWE — produkt moze byc w PL pod INNA nazwa (lekcja: "odzyskiwacz przynet" = po polsku "odczepiacz", i BYL na Allegro).
+   Wyszukaj 3-4 mozliwe polskie nazwy/synonimy ZANIM uznasz pole za puste. To krytyczne — falszywa pustka zabila poprzednia runde.
+4. ZRODLO + COGS — AliExpress/Alibaba, landed COGS w PLN (kurs ~4 zl + fracht + clo 3 EUR/poz od 01.07.2026, konserwatywnie).
+5. CENA + MARZA — 179-249 zl, COGS <=60-75 zl, markup >=3,3x. Markup <3,3x → ODRZUC.
+6. DOWODY — min. 2: dowod zachodniego popytu (Meta Ad Library zagranica / TikTok / sklepy) + dowod pustego pola PL.
+7. WHY-NOW — w brand_potential napisz: dlaczego TERAZ (jaki trend), dlaczego PL jeszcze puste, i czemu klient nie porowna na Allegro.
+
+WYMAGANIA TWARDE:
+- DOWOD zachodniego popytu (rosnacy, nie wygasly) + PUSTE/prawie puste pole PL (sprawdzone pod roznymi polskimi nazwami)
+- cena 179-249 zl, markup >=3,3x
+- bez elektroniki/baterii, bez zabawek dzieciecych, bez claimow medycznych, bez rozmiarowki, nie kruchy
+- efekt w 3-sek wideo BEZ before/after ciala
+- NIE na blackliscie: ${JSON.stringify(BLACKLIST)}
+
+Znajdz ${PER_CAT} kandydatow. Lepiej zglosic 1 z prawdziwym first-mover oknem niz 3 ktore juz sa w PL.
+Jesli w tym obszarze wszystko juz przyszlo do PL — zwroc pusta liste.`
+
+const generated = await parallel(cats.map(c => () =>
+  agent(FIRST_MOVER ? firstMoverPrompt(c) : standardGenPrompt(c),
     { label: `gen:${c.category.slice(0, 30)}`, phase: 'Kandydaci', schema: CANDIDATE_SCHEMA })
     .then(r => r ? r.candidates.map(x => ({ ...x, category: c.category })) : [])
 ))
