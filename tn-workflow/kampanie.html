@@ -166,6 +166,8 @@
                                             <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Klik. (link)</th>
                                             <th class="px-4 py-3 font-medium whitespace-nowrap text-right">CTR</th>
                                             <th class="px-4 py-3 font-medium whitespace-nowrap text-right">CPC</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right" title="Wejścia na stronę — pixel, ostatnie 7 dni">Wejścia⁷</th>
+                                            <th class="px-4 py-3 font-medium whitespace-nowrap text-right" title="Przejścia do kasy — pixel, ostatnie 7 dni">Kasa⁷</th>
                                             <th class="px-4 py-3 font-medium whitespace-nowrap text-right">Zakupy</th>
                                             <th class="px-4 py-3 font-medium whitespace-nowrap text-right">ROAS</th>
                                             <th class="px-4 py-3 font-medium w-8"></th>
@@ -261,6 +263,10 @@
         function getReport(row) {
             const r = row && row.report_data;
             return (r && typeof r === 'object') ? r : null;
+        }
+        function getFunnelStats(row) {
+            const f = row && row.ad_account_data && row.ad_account_data.funnel_stats;
+            return (f && typeof f === 'object') ? f : null;
         }
         // formatery liczb (pl-PL); null/undefined/'Not available' -> "—"
         function hasVal(v) {
@@ -563,6 +569,18 @@
                     ? `<span class="text-zinc-300 font-mono">${escapeHtml(String(cs.daily_budget))} zł</span>`
                     : '<span class="text-zinc-600">—</span>';
 
+                const fs = getFunnelStats(row);
+                let entriesCell = '<span class="text-zinc-600">—</span>';
+                let checkoutCell = '<span class="text-zinc-600">—</span>';
+                if (fs) {
+                    if (fs.pixel_alive === false) {
+                        entriesCell = '<span class="text-rose-400 text-[11px] font-mono whitespace-nowrap" title="Pixel nie wysyła żadnych eventów — pomiar martwy">pixel ✗</span>';
+                        checkoutCell = '<span class="text-rose-400/60 font-mono">—</span>';
+                    } else {
+                        entriesCell = `<span class="text-zinc-300 font-mono">${intPL(fs.landing_page_views)}</span>`;
+                        checkoutCell = `<span class="${(Number(fs.initiate_checkout)||0) > 0 ? 'text-amber-300' : 'text-zinc-500'} font-mono">${intPL(fs.initiate_checkout)}</span>`;
+                    }
+                }
                 const purchasesCell = a.purchases > 0
                     ? `<span class="text-emerald-400 font-mono">${intPL(a.purchases)}</span>`
                     : `<span class="text-zinc-500 font-mono">0</span>`;
@@ -586,6 +604,8 @@
                         <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${intPL(a.link_clicks)}</td>
                         <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${pctPL(a.ctr)}</td>
                         <td class="px-4 py-3.5 align-top whitespace-nowrap text-right text-zinc-300 font-mono">${moneyPL(a.cpc)}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${entriesCell}</td>
+                        <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${checkoutCell}</td>
                         <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${purchasesCell}</td>
                         <td class="px-4 py-3.5 align-top whitespace-nowrap text-right">${roasCell}</td>
                         <td class="px-4 py-3.5 align-top text-right"><i class="ph ph-caret-right chev text-zinc-500"></i></td>
@@ -593,7 +613,7 @@
 
                 const detailRow = `
                     <tr id="detail-${escapeHtml(wid)}" class="${isOpen ? '' : 'hidden'} bg-black/40 border-b border-white/5">
-                        <td colspan="11" class="px-4 py-5">${isOpen ? renderRowDetail(wid) : ''}</td>
+                        <td colspan="13" class="px-4 py-5">${isOpen ? renderRowDetail(wid) : ''}</td>
                     </tr>`;
 
                 return mainRow + detailRow;
@@ -670,43 +690,65 @@
                     </div>`;
             }
 
-            // --- Lejek z ostatniego raportu (mid-funnel z pixela) ---
+            // --- Lejek sklepu: świeże dane pixela (7 dni) z fallbackiem na ostatni raport ---
             let funnelHtml = '';
-            if (report && (report.impressions || report.purchases !== undefined)) {
-                const period = report.period && typeof report.period === 'object' ? report.period : null;
-                const periodLabel = period && (period.from || period.to) ? `${period.from || '?'} – ${period.to || '?'}` : (report.generated_at ? dateOnly(report.generated_at) : '');
-                const lc = hasVal(report.link_clicks) ? report.link_clicks : report.clicks;
-                const fr = [
-                    ['Wyświetlenia reklam', report.impressions],
-                    ['Kliknięcia w link', lc],
-                    ['Wejścia na stronę', report.landing_page_views],
-                    ['Obejrzeli produkt', report.view_content],
-                    ['Dodali do koszyka', report.add_to_cart],
-                    ['Przeszli do kasy', report.initiate_checkout],
-                    ['Dane dostawy', report.add_shipping_info],
-                    ['Płatność', report.add_payment_info],
-                    ['Zakup', report.purchases]
-                ];
-                const top = Number(report.impressions) || 0;
-                const fRows = fr.map(([label, val], i) => {
-                    const isLast = i === fr.length - 1;
-                    const present = hasVal(val);
-                    const n = present ? Number(val) : null;
-                    const valTxt = present ? n.toLocaleString('pl-PL') : '—';
-                    const w = (present && top > 0) ? Math.max(2, Math.min(100, n / top * 100)) : 0;
-                    return `<div class="px-3 py-2">
-                        <div class="flex items-center justify-between gap-3 mb-1">
-                            <span class="text-[12px] text-zinc-400">${escapeHtml(label)}</span>
-                            <span class="text-[13px] font-bold font-mono ${isLast ? 'text-emerald-400' : 'text-white'}">${valTxt}</span>
-                        </div>
-                        <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div class="h-full ${isLast ? 'bg-emerald-500/50' : 'bg-violet-500/40'} rounded-full" style="width:${w}%"></div></div>
-                    </div>`;
-                }).join('');
-                funnelHtml = `
-                    <div class="mt-5">
-                        <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Lejek konwersji ${periodLabel ? `<span class="text-zinc-600 normal-case">· ostatni raport ${escapeHtml(periodLabel)}</span>` : ''}</div>
-                        <div class="bg-zinc-900/40 border border-white/5 rounded-lg divide-y divide-white/5">${fRows}</div>
-                    </div>`;
+            const fstats = getFunnelStats(row);
+            const fsrc = fstats || report;
+            if (fsrc) {
+                const isPixel = !!fstats;
+                const periodLabel = isPixel
+                    ? `pixel · ${fstats.period_from} – ${fstats.period_to} · łącznie z ruchem organicznym`
+                    : (report.period && typeof report.period === 'object' ? `ostatni raport ${report.period.from || '?'} – ${report.period.to || '?'}` : 'ostatni raport');
+                if (isPixel && fstats.pixel_alive === false) {
+                    funnelHtml = `
+                        <div class="mt-5">
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Lejek sklepu</div>
+                            <div class="bg-rose-500/10 border border-rose-500/25 rounded-lg px-4 py-3 text-[13px] text-rose-300">
+                                <i class="ph ph-warning mr-1.5"></i>Pixel nie wysyła żadnych eventów — lejek sklepu jest niemierzalny. Kampania wydaje pieniądze na ślepo.
+                            </div>
+                        </div>`;
+                } else {
+                    const lc = hasVal(fsrc.link_clicks) ? fsrc.link_clicks : fsrc.clicks;
+                    const fr = isPixel ? [
+                        ['Wejścia na stronę', fstats.landing_page_views],
+                        ['Obejrzeli produkt', fstats.view_content],
+                        ['Dodali do koszyka', fstats.add_to_cart],
+                        ['Przeszli do kasy', fstats.initiate_checkout],
+                        ['Dane dostawy', fstats.add_shipping_info],
+                        ['Płatność', fstats.add_payment_info],
+                        ['Zakup', fstats.purchases]
+                    ] : [
+                        ['Wyświetlenia reklam', report.impressions],
+                        ['Kliknięcia w link', lc],
+                        ['Wejścia na stronę', report.landing_page_views],
+                        ['Obejrzeli produkt', report.view_content],
+                        ['Dodali do koszyka', report.add_to_cart],
+                        ['Przeszli do kasy', report.initiate_checkout],
+                        ['Dane dostawy', report.add_shipping_info],
+                        ['Płatność', report.add_payment_info],
+                        ['Zakup', report.purchases]
+                    ];
+                    const top = Math.max(...fr.map(([, v]) => hasVal(v) ? Number(v) : 0), 1);
+                    const fRows = fr.map(([label, val], i) => {
+                        const isLast = i === fr.length - 1;
+                        const present = hasVal(val);
+                        const n = present ? Number(val) : null;
+                        const valTxt = present ? n.toLocaleString('pl-PL') : '—';
+                        const w = present ? Math.max(2, Math.min(100, n / top * 100)) : 0;
+                        return `<div class="px-3 py-2">
+                            <div class="flex items-center justify-between gap-3 mb-1">
+                                <span class="text-[12px] text-zinc-400">${escapeHtml(label)}</span>
+                                <span class="text-[13px] font-bold font-mono ${isLast ? 'text-emerald-400' : 'text-white'}">${valTxt}</span>
+                            </div>
+                            <div class="h-1.5 rounded-full bg-zinc-800 overflow-hidden"><div class="h-full ${isLast ? 'bg-emerald-500/50' : 'bg-violet-500/40'} rounded-full" style="width:${w}%"></div></div>
+                        </div>`;
+                    }).join('');
+                    funnelHtml = `
+                        <div class="mt-5">
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Lejek sklepu <span class="text-zinc-600 normal-case">· ${escapeHtml(periodLabel)}</span></div>
+                            <div class="bg-zinc-900/40 border border-white/5 rounded-lg divide-y divide-white/5">${fRows}</div>
+                        </div>`;
+                }
             }
 
             const targetCpa = (typeof row.target_cpa === 'number' && row.target_cpa > 0)
@@ -823,6 +865,8 @@
             spenders.sort((x, y) => y.spend - x.spend);
             const top = spenders.slice(0, 6).filter(s => s.spend > 0).map(s =>
                 `• ${s.b}: ${moneyPL(s.spend)}` + (s.pur > 0 ? ` · ${s.pur} zak. · ROAS ${num2(s.roas)}` : ' · 0 zak.'));
+            const deadPixels = rows.filter(r => { const f = getFunnelStats(r); return f && f.pixel_alive === false; })
+                .map(r => brandName(r.workflow_id));
             const anyDaily = rows.some(r => ((typeof aggMap !== 'undefined' && aggMap[r.workflow_id]) || {}).source === 'daily');
             const L = (arr) => arr.length ? arr.join('\n') : '• —';
 
@@ -854,6 +898,7 @@
                 'Aktywne: ' + active + ' · Wstrzymane: ' + paused + ' · Wydatki w okresie: ' + moneyPL(totSpend) + ' · Zakupy: ' + intPL(totPur),
                 'Najwieksi wydajacy (okres):',
                 L(top),
+                ...(deadPixels.length ? ['', 'MARTWE PIXELE (kampania wydaje bez pomiaru!): ' + deadPixels.join(', ')] : []),
                 '',
                 'ZACZNIJ OD: pobierz swieze dane, zsynchronizuj ze snapshotem i przedstaw mi ranking obserwacji + proponowanych akcji. Czekaj na moja decyzje przy kazdej.'
             );
