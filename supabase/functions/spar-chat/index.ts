@@ -14,6 +14,14 @@
 // Streaming: OpenAI /v1/chat/completions (stream) NORMALIZOWANY server-side do
 // formatu content_block_delta/text_delta + własny event "spar_meta" na końcu —
 // frontend ma jeden kontrakt SSE niezależnie od providera (łatwa podmiana GPT/Claude).
+//
+// TRYBY (body.mode):
+//   'sparing'    (default) — lejek definiowania projektu (tomekniedzwiecki.pl/stworze/sparing/)
+//   'wspolpraca'           — drugi czat w PANELU PROJEKTU (crm: stworze-projekt.html):
+//                            rozmowa o modelu współpracy, cel = zamówienie makiety.
+//                            Wymaga istniejącej sesji Z projektem; prompt z klucza
+//                            'stworze_wspolpraca_prompt'; historia w spar_messages
+//                            z channel='wspolpraca'; bez markerów <projekt>/<werdykt>.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -21,6 +29,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
   'https://www.tomekniedzwiecki.pl',
+  'https://crm.tomekniedzwiecki.pl',
+  'https://tn-crm.vercel.app',
   'http://localhost:3000',
   'http://localhost:5500',
   'http://127.0.0.1:5500',
@@ -46,9 +56,15 @@ const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy maila (bra
 const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.1'
 const OPENAI_MAX_COMPLETION_TOKENS = 1500
 
-// ── Cache system promptu (zmienna modułowa, 5 min) ───────────────────────────
+// ── Cache system promptów (mapa per klucz settings, 5 min) ───────────────────
 const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000
-let promptCache: { value: string; fetchedAt: number } | null = null
+const promptCache = new Map<string, { value: string; fetchedAt: number }>()
+
+const PROMPT_KEYS: Record<string, string> = {
+  sparing: 'stworze_sparing_prompt',
+  wspolpraca: 'stworze_wspolpraca_prompt',
+}
+const MAX_COLLAB_TURNS = 30 // tur asystenta w kanale wspolpraca (osobna pula od sparingu)
 
 interface SparChatRequest {
   sessionId: string
@@ -58,6 +74,7 @@ interface SparChatRequest {
   name?: string | null
   message: string
   tracking?: Record<string, unknown> | null
+  mode?: string
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -74,15 +91,16 @@ function jsonResponse(
   })
 }
 
-// Pobierz system prompt z settings (service role) z cachem modułowym
-async function getSystemPrompt(supabase: ReturnType<typeof createClient>): Promise<string | null> {
-  if (promptCache && Date.now() - promptCache.fetchedAt < PROMPT_CACHE_TTL_MS) {
-    return promptCache.value
+// Pobierz system prompt z settings (service role) z cachem modułowym per klucz
+async function getSystemPrompt(supabase: ReturnType<typeof createClient>, key: string): Promise<string | null> {
+  const cached = promptCache.get(key)
+  if (cached && Date.now() - cached.fetchedAt < PROMPT_CACHE_TTL_MS) {
+    return cached.value
   }
   const { data, error } = await supabase
     .from('settings')
     .select('value')
-    .eq('key', 'stworze_sparing_prompt')
+    .eq('key', key)
     .maybeSingle()
 
   if (error) {
@@ -93,7 +111,7 @@ async function getSystemPrompt(supabase: ReturnType<typeof createClient>): Promi
   if (!value || typeof value !== 'string' || !value.trim()) {
     return null
   }
-  promptCache = { value, fetchedAt: Date.now() }
+  promptCache.set(key, { value, fetchedAt: Date.now() })
   return value
 }
 
@@ -206,12 +224,13 @@ async function persistAfterStream(
   verdict: VerdictResult,
   leadId: string | null,
   projekt: Record<string, unknown> | null,
+  channel: string,
 ): Promise<void> {
   try {
     if (assistantText.trim()) {
       const { error: msgError } = await supabase
         .from('spar_messages')
-        .insert({ session_id: sessionId, role: 'assistant', content: assistantText })
+        .insert({ session_id: sessionId, role: 'assistant', content: assistantText, channel })
       if (msgError) console.error('[spar-chat] insert assistant message error:', msgError)
     }
 
@@ -280,6 +299,8 @@ Deno.serve(async (req) => {
     const name = (body.name || '').trim() || null
     const message = (body.message || '').trim()
     const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : null
+    const mode = body.mode === 'wspolpraca' ? 'wspolpraca' : 'sparing'
+    const isCollab = mode === 'wspolpraca'
 
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, corsHeaders)
@@ -301,23 +322,30 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
-    // ── System prompt z settings (cache 5 min) ───────────────────────────────
-    const systemPrompt = await getSystemPrompt(supabase)
+    // ── System prompt z settings (cache 5 min, klucz per tryb) ───────────────
+    const promptKey = PROMPT_KEYS[mode]
+    const systemPrompt = await getSystemPrompt(supabase, promptKey)
     if (!systemPrompt) {
-      console.error('[spar-chat] brak klucza stworze_sparing_prompt w settings')
+      console.error(`[spar-chat] brak klucza ${promptKey} w settings`)
       return jsonResponse({ error: 'brak_promptu' }, 500, corsHeaders)
     }
 
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name')
+      .select('id, turns, profession, problem_hint, email, name, verdict, problem_summary, preview_brief, preview_image_url')
       .eq('id', sessionId)
       .maybeSingle()
 
     if (sessionError) {
       console.error('[spar-chat] session fetch error:', sessionError)
       return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+    }
+
+    // Tryb wspolpraca: rozmowa o współpracy istnieje tylko nad zdefiniowanym
+    // projektem — sesja musi istnieć i mieć kartę lub brief (jak spar-project).
+    if (isCollab && (!existingSession || (!existingSession.problem_summary && !existingSession.preview_brief))) {
+      return jsonResponse({ error: 'brak_projektu' }, 404, corsHeaders)
     }
 
     let turnsBefore = 0
@@ -375,14 +403,31 @@ Deno.serve(async (req) => {
     }
 
     // ── Limity (przed wywołaniem Claude) ─────────────────────────────────────
-    if (turnsBefore >= MAX_TURNS) {
+    if (isCollab) {
+      // Osobna pula tur dla czatu współpracy (licznik sesji `turns` jest globalny)
+      const { count: collabTurns, error: collabCountError } = await supabase
+        .from('spar_messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .eq('channel', 'wspolpraca')
+        .eq('role', 'assistant')
+      if (collabCountError) {
+        console.error('[spar-chat] collab turns count error:', collabCountError)
+        return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+      }
+      if ((collabTurns ?? 0) >= MAX_COLLAB_TURNS) {
+        return jsonResponse({ error: 'limit_tur' }, 429, corsHeaders)
+      }
+    } else if (turnsBefore >= MAX_TURNS) {
       return jsonResponse({ error: 'limit_tur' }, 429, corsHeaders)
     }
 
     // Bramka kontaktu (backstop server-side; frontend pokazuje formularz wcześniej):
     // bez maila rozmowa nie przechodzi dalej niż MAX_TURNS_BEZ_KONTAKTU tur.
+    // W trybie wspolpraca działa od pierwszej wiadomości (mail i tak konieczny
+    // przed zamówieniem makiety — panel kieruje wtedy z powrotem do rozmowy).
     const effectiveEmail = (existingSession?.email as string | null | undefined) || email || null
-    if (!effectiveEmail && turnsBefore >= MAX_TURNS_BEZ_KONTAKTU) {
+    if (!effectiveEmail && (isCollab || turnsBefore >= MAX_TURNS_BEZ_KONTAKTU)) {
       return jsonResponse({ error: 'wymagany_email' }, 403, corsHeaders)
     }
 
@@ -401,11 +446,12 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_wiadomosci' }, 429, corsHeaders)
     }
 
-    // ── Historia rozmowy (przed dopisaniem nowej wiadomości) ─────────────────
+    // ── Historia rozmowy (przed dopisaniem nowej wiadomości; per kanał) ──────
     const { data: history, error: historyError } = await supabase
       .from('spar_messages')
       .select('role, content')
       .eq('session_id', sessionId)
+      .eq('channel', mode)
       .order('id', { ascending: true })
 
     if (historyError) {
@@ -416,7 +462,7 @@ Deno.serve(async (req) => {
     // ── Append wiadomości usera ──────────────────────────────────────────────
     const { error: userMsgError } = await supabase
       .from('spar_messages')
-      .insert({ session_id: sessionId, role: 'user', content: message })
+      .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
     if (userMsgError) {
       console.error('[spar-chat] insert user message error:', userMsgError)
       return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
@@ -432,8 +478,26 @@ Deno.serve(async (req) => {
     // — wartości z requestu. Osobny blok system PO bloku cache'owanym
     // (cache_control wyznacza granicę prefiksu — duży prompt dalej się cache'uje).
     const sessionProfession = (existingSession?.profession as string | null | undefined) || profession || null
-    const sessionContext =
+    let sessionContext =
       `KONTEKST SESJI — profesja rozmówcy: ${sessionProfession || 'jeszcze nieustalona — ustal w pierwszych turach, czym rozmówca się zajmuje'}.`
+
+    if (isCollab) {
+      // Czat współpracy zna projekt: brief (nazwa/opis) + karta + stan werdyktu.
+      const brief = (existingSession?.preview_brief || {}) as Record<string, unknown>
+      const karta = existingSession?.problem_summary as Record<string, unknown> | null
+      const firstName = typeof existingSession?.name === 'string' && existingSession.name
+        ? (existingSession.name as string).split(' ')[0]
+        : null
+      const ctx: string[] = [
+        `KONTEKST SESJI — rozmawiasz w panelu projektu.`,
+        `Imię rozmówcy: ${firstName || 'nieznane'}. Profesja: ${sessionProfession || 'nieznana'}.`,
+        `Projekt: ${(brief.nazwa as string) || 'bez nazwy'} — ${(brief.opis as string) || 'brak opisu'}.`,
+        `Karta projektu (JSON): ${karta ? JSON.stringify(karta) : 'jeszcze niedomknięta — rozmowa definiująca trwa'}.`,
+        `Stan: ${existingSession?.verdict === 'zielony' ? 'projekt zdefiniowany (werdykt zielony) — można zamawiać makietę' : 'projekt w trakcie definiowania — do zamówienia makiety potrzebne dokończenie rozmowy definiującej'}.`,
+        `Podgląd graficzny: ${existingSession?.preview_image_url ? 'wygenerowany, widoczny w panelu' : 'brak'}.`,
+      ]
+      sessionContext = ctx.join('\n')
+    }
 
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
     // gpt-5.x: max_completion_tokens (NIE max_tokens), bez temperature.
@@ -474,7 +538,7 @@ Deno.serve(async (req) => {
         const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)
@@ -516,9 +580,11 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Stream zakończony — finalizacja
-          const verdict = parseVerdict(assistantText)
-          const projekt = parseProjekt(assistantText)
+          // Stream zakończony — finalizacja. Markery <projekt>/<werdykt> żyją
+          // tylko w sparingu; czat współpracy ich nie wysyła (a gdyby model
+          // halucynował — nie nadpisujemy nimi karty projektu).
+          const verdict = isCollab ? { verdict: null, karta: null } as VerdictResult : parseVerdict(assistantText)
+          const projekt = isCollab ? null : parseProjekt(assistantText)
 
           // Marker podglądu -> event dla frontendu (strona woła spar-image)
           if (projekt) {
@@ -559,7 +625,11 @@ Deno.serve(async (req) => {
           // Klient mógł przerwać stream (zamknięta karta) — zapisz to, co już
           // wygenerowano, żeby historia rozmowy nie gubiła odpowiedzi asystenta.
           try {
-            const persistPromise = schedulePersist(parseVerdict(assistantText), null, parseProjekt(assistantText))
+            const persistPromise = schedulePersist(
+              isCollab ? { verdict: null, karta: null } : parseVerdict(assistantText),
+              null,
+              isCollab ? null : parseProjekt(assistantText),
+            )
             if (persistPromise) await persistPromise
           } catch (persistErr) {
             console.error('[spar-chat] persist after abort error:', persistErr)

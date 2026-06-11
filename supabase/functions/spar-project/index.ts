@@ -113,6 +113,16 @@ Deno.serve(async (req) => {
       .limit(MAX_FEEDBACK_PER_SESSION)
     if (fErr) console.error('[spar-project] feedback fetch error:', fErr)
 
+    // Historia czatu współpracy (panel odtwarza rozmowę po odświeżeniu)
+    const { data: collabMessages, error: cmErr } = await supabase
+      .from('spar_messages')
+      .select('role, content')
+      .eq('session_id', sessionId)
+      .eq('channel', 'wspolpraca')
+      .order('id', { ascending: true })
+      .limit(80)
+    if (cmErr) console.error('[spar-project] collab messages fetch error:', cmErr)
+
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const karta = (session.problem_summary || null) as Record<string, unknown> | null
     const firstName = typeof session.name === 'string' && session.name
@@ -135,6 +145,7 @@ Deno.serve(async (req) => {
         created_at: session.created_at,
       },
       feedback: feedback || [],
+      wspolpraca: collabMessages || [],
     }, 200, cors)
   } catch (e) {
     console.error('[spar-project] ERROR:', e)
