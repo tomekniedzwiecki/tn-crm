@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel projektu — Stworzę | Tomek Niedźwiecki</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" type="image/svg+xml" href="https://tomekniedzwiecki.pl/img/favicon.svg">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        accent: '#4d9fff',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: #4d9fff; color: #061320; }
+
+        .glass-header {
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-enter { animation: fadeIn 0.4s ease-out forwards; }
+
+        .panel-card {
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%);
+            border: 1px solid rgba(255,255,255,0.08);
+            transition: border-color 0.2s ease;
+        }
+        .panel-card:hover { border-color: rgba(255,255,255,0.14); }
+
+        .cta-card {
+            background:
+                linear-gradient(#0a0a0e, #0a0a0e) padding-box,
+                linear-gradient(140deg, rgba(77,159,255,0.65), rgba(77,159,255,0.12) 45%, rgba(0,217,126,0.35)) border-box;
+            border: 1px solid transparent;
+            box-shadow: 0 0 60px -22px rgba(77,159,255,0.35);
+        }
+        .btn-accent {
+            background: linear-gradient(135deg, #6db3ff 0%, #4d9fff 50%, #2f7fe6 100%);
+            color: #061320;
+            box-shadow: 0 8px 32px -8px rgba(77,159,255,0.45);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 14px 40px -10px rgba(77,159,255,0.6); }
+
+        .step-done .step-dot { background: #4d9fff; border-color: #4d9fff; color: #061320; }
+        .step-now .step-dot {
+            border-color: rgba(77,159,255,0.7);
+            color: #4d9fff;
+            box-shadow: 0 0 0 4px rgba(77,159,255,0.1), 0 0 18px rgba(77,159,255,0.3);
+        }
+        .step-now .step-label { color: #fff; }
+        .aurora {
+            position: fixed; inset: 0; pointer-events: none; z-index: 0;
+            background:
+                radial-gradient(ellipse 50% 36% at 16% -6%, rgba(77,159,255,0.1) 0%, transparent 65%),
+                radial-gradient(ellipse 44% 32% at 90% 110%, rgba(99,91,255,0.06) 0%, transparent 70%);
+        }
+    </style>
+</head>
+<body class="min-h-screen font-sans text-sm tracking-tight antialiased">
+
+<div class="aurora" aria-hidden="true"></div>
+
+<!-- Header -->
+<header class="glass-header sticky top-0 z-30 h-16 flex items-center justify-between px-4 md:px-8">
+    <div class="flex items-center gap-3 min-w-0">
+        <img src="https://tomekniedzwiecki.pl/img/logo/tn-logo-icon-88.png" alt="" class="w-7 h-7" style="filter: drop-shadow(0 0 12px rgba(77,159,255,0.35));">
+        <div class="flex items-center gap-2 text-zinc-500 truncate">
+            <span class="text-zinc-400 hidden sm:inline" style="font-family:'Instrument Serif',Georgia,serif;font-style:italic;font-size:17px;">Stworzę</span>
+            <span class="text-zinc-700 hidden sm:inline">/</span>
+            <span class="text-white font-medium truncate">panel projektu</span>
+        </div>
+    </div>
+    <a id="back-to-chat" href="https://tomekniedzwiecki.pl/stworze/sparing/" class="text-zinc-400 hover:text-white border border-zinc-700 hover:border-zinc-500 px-3 md:px-4 py-2 rounded-lg text-sm transition-colors flex items-center gap-1.5">
+        <i class="ph ph-chat-circle-dots"></i>
+        <span class="hidden md:inline">Wróć do rozmowy</span>
+    </a>
+</header>
+
+<!-- Stany -->
+<div id="state-loading" class="relative z-10 max-w-5xl mx-auto px-4 md:px-8 py-24 text-center text-zinc-500">
+    <i class="ph ph-circle-notch animate-spin text-2xl text-accent"></i>
+    <p class="mt-3">Wczytuję Twój projekt…</p>
+</div>
+<div id="state-error" class="relative z-10 max-w-xl mx-auto px-4 md:px-8 py-24 text-center hidden">
+    <i class="ph ph-compass text-3xl text-zinc-600"></i>
+    <h1 class="text-xl font-bold text-white mt-4">Nie znalazłem tego projektu</h1>
+    <p class="text-zinc-400 mt-2">Link mógł się uciąć albo projekt jeszcze nie powstał. Wróć do rozmowy — panel otwiera się po przygotowaniu podsumowania projektu.</p>
+    <a href="https://tomekniedzwiecki.pl/stworze/sparing/" class="btn-accent inline-flex items-center gap-2 font-bold rounded-full px-6 py-3 mt-6">
+        <i class="ph ph-chat-circle-dots"></i> Przejdź do rozmowy
+    </a>
+</div>
+
+<!-- Treść -->
+<main id="panel" class="relative z-10 max-w-6xl mx-auto px-4 md:px-8 py-8 md:py-12 hidden">
+
+    <!-- Tytuł -->
+    <div class="animate-enter mb-8">
+        <p class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-accent mb-2">Twój produkt cyfrowy</p>
+        <h1 id="p-nazwa" class="text-2xl md:text-4xl font-extrabold tracking-tight text-white">…</h1>
+        <p id="p-opis" class="text-zinc-400 mt-2 max-w-2xl"></p>
+    </div>
+
+    <!-- Roadmapa -->
+    <div class="panel-card rounded-2xl p-5 md:p-6 mb-6 animate-enter">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="roadmap">
+            <div class="flex items-center gap-3 step-done">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0"><i class="ph-bold ph-check"></i></span>
+                <div><div class="step-label font-semibold text-zinc-300">Rozmowa</div><div class="text-[11px] text-zinc-500">projekt zdefiniowany</div></div>
+            </div>
+            <div class="flex items-center gap-3 step-now">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0">2</span>
+                <div><div class="step-label font-semibold text-zinc-300">Makieta</div><div class="text-[11px] text-zinc-500">klikalna wersja — do zamówienia</div></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0 text-zinc-500">3</span>
+                <div><div class="step-label font-semibold text-zinc-500">Budowa</div><div class="text-[11px] text-zinc-600">działająca wersja</div></div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0 text-zinc-500">4</span>
+                <div><div class="step-label font-semibold text-zinc-500">Start</div><div class="text-[11px] text-zinc-600">sprzedajesz swojej branży</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid lg:grid-cols-5 gap-6 items-start">
+
+        <!-- LEWA: karta + podgląd -->
+        <div class="lg:col-span-3 space-y-6">
+
+            <!-- Podgląd -->
+            <section class="panel-card rounded-2xl overflow-hidden animate-enter">
+                <div class="px-5 py-4 border-b border-white/5 flex items-center justify-between">
+                    <h2 class="font-bold text-white flex items-center gap-2"><i class="ph ph-monitor-play text-accent"></i> Podgląd narzędzia</h2>
+                    <span id="p-imgcount" class="text-[11px] text-zinc-500 font-mono"></span>
+                </div>
+                <div id="p-preview-wrap" class="p-3">
+                    <a id="p-preview-link" href="#" target="_blank" rel="noopener" class="block rounded-xl overflow-hidden border border-white/10 hover:border-accent/50 transition-colors">
+                        <img id="p-preview" src="" alt="Podgląd narzędzia" class="w-full block">
+                    </a>
+                    <p class="text-[11.5px] text-zinc-500 mt-2 px-1">Podgląd poglądowy z rozmowy — kliknij, aby otworzyć w pełnym rozmiarze. Klikalna makieta powstaje na bazie karty projektu i Twoich uwag.</p>
+                </div>
+                <div id="p-preview-empty" class="p-6 text-zinc-500 text-center hidden">Podgląd nie został jeszcze wygenerowany — wróć do rozmowy, pokażę Ci go tam.</div>
+            </section>
+
+            <!-- Karta projektu -->
+            <section class="panel-card rounded-2xl animate-enter">
+                <div class="px-5 py-4 border-b border-white/5">
+                    <h2 class="font-bold text-white flex items-center gap-2"><i class="ph ph-identification-card text-accent"></i> Karta projektu</h2>
+                </div>
+                <div id="p-karta" class="p-5 grid sm:grid-cols-2 gap-x-6 gap-y-4"></div>
+            </section>
+        </div>
+
+        <!-- PRAWA: CTA + uwagi -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- CTA: makieta -->
+            <section class="cta-card rounded-2xl p-6 animate-enter">
+                <p class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-accent mb-2">Następny krok</p>
+                <h2 class="text-xl font-extrabold text-white">Klikalna makieta Twojego narzędzia</h2>
+                <ul class="mt-4 space-y-2.5 text-zinc-300">
+                    <li class="flex gap-2.5"><i class="ph-bold ph-check-circle text-accent mt-0.5"></i> Dokładna, klikalna makieta — z uwzględnieniem wszystkich uwag z tej strony</li>
+                    <li class="flex gap-2.5"><i class="ph-bold ph-check-circle text-accent mt-0.5"></i> Wideo-walkthrough: ekran po ekranie, z decyzjami</li>
+                    <li class="flex gap-2.5"><i class="ph-bold ph-check-circle text-accent mt-0.5"></i> Wycena budowy działającej wersji — konkretna kwota</li>
+                    <li class="flex gap-2.5"><i class="ph-bold ph-check-circle text-accent mt-0.5"></i> Gotowa w 7 dni roboczych</li>
+                </ul>
+                <div class="mt-4 p-3 rounded-xl border border-dashed border-zinc-700 text-[12.5px] text-zinc-400">
+                    <strong class="text-zinc-200">Zadatek 500 zł</strong> — odliczany w 100% od ceny budowy. Budowa od 14 000 zł brutto + 20% udziałów: zarabiam wtedy, gdy Twoje narzędzie zarabia.
+                </div>
+                <a id="cta-makieta" href="#" target="_blank" rel="noopener" class="btn-accent w-full inline-flex items-center justify-center gap-2 font-extrabold rounded-full px-6 py-4 mt-5 text-[15px]">
+                    Zamawiam makietę → 500 zł
+                </a>
+                <p class="text-[11.5px] text-zinc-500 text-center mt-3">Płatność online: BLIK, karta lub przelew. Otworzy się w nowej karcie.</p>
+            </section>
+
+            <!-- Uwagi / propozycje -->
+            <section class="panel-card rounded-2xl animate-enter">
+                <div class="px-5 py-4 border-b border-white/5">
+                    <h2 class="font-bold text-white flex items-center gap-2"><i class="ph ph-chats-circle text-accent"></i> Twoje uwagi i propozycje</h2>
+                    <p class="text-[12px] text-zinc-500 mt-1">Wszystko, co tu zapiszesz, trafia prosto do briefu makiety.</p>
+                </div>
+                <div class="p-5">
+                    <form id="fb-form" class="space-y-3">
+                        <textarea id="fb-text" rows="3" maxlength="1000" placeholder="Np. zamiast wykresu wolę listę zaległości. Dodaj eksport do PDF…"
+                            class="w-full rounded-xl bg-black/40 border border-zinc-700 focus:border-accent focus:ring-2 focus:ring-accent/20 outline-none p-3 text-[14px] text-white placeholder-zinc-600 resize-y"></textarea>
+                        <button type="submit" id="fb-submit" class="btn-accent w-full rounded-full font-bold px-5 py-3 inline-flex items-center justify-center gap-2">
+                            <i class="ph-bold ph-paper-plane-right"></i> Dodaj uwagę
+                        </button>
+                    </form>
+                    <div id="fb-list" class="mt-5 space-y-3"></div>
+                    <p id="fb-empty" class="text-zinc-600 text-[12.5px] mt-4 hidden">Jeszcze pusto — poklikaj po podglądzie i karcie, zapisz wszystko, co przychodzi Ci do głowy.</p>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <p class="text-center text-zinc-600 text-[12px] mt-10">© 2026 <a class="hover:text-zinc-400" href="https://tomekniedzwiecki.pl/">tomekniedzwiecki.pl</a> · Zbuduję · Zwolnię · Stworzę</p>
+</main>
+
+<script>
+(function () {
+    'use strict';
+    var API = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/spar-project';
+    var CHECKOUT_BASE = 'https://crm.tomekniedzwiecki.pl/checkout/v2/';
+    var OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076'; // "Pierwsza Makieta — Stworzę" (500 zł)
+
+    var sessionId = new URLSearchParams(location.search).get('id') || '';
+    var leadId = null;
+
+    function el(id) { return document.getElementById(id); }
+    function esc(s) {
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function show(id) {
+        ['state-loading', 'state-error', 'panel'].forEach(function (x) {
+            el(x).classList.toggle('hidden', x !== id);
+        });
+    }
+    function timeAgo(iso) {
+        var s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+        if (s < 60) return 'przed chwilą';
+        if (s < 3600) return Math.floor(s / 60) + ' min temu';
+        if (s < 86400) return Math.floor(s / 3600) + ' godz. temu';
+        return Math.floor(s / 86400) + ' dni temu';
+    }
+
+    function api(payload) {
+        return fetch(API, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(Object.assign({ sessionId: sessionId }, payload))
+        }).then(function (r) {
+            return r.json().then(function (d) {
+                if (!r.ok) { var e = new Error('api'); e.code = d && d.error; throw e; }
+                return d;
+            });
+        });
+    }
+
+    var KARTA_FIELDS = [
+        ['problem', 'Problem', 'ph-target'],
+        ['dla_kogo', 'Dla kogo', 'ph-users-three'],
+        ['kto_placi', 'Kto płaci', 'ph-hand-coins'],
+        ['dzisiejsze_obejscie', 'Dzisiejsze obejście', 'ph-wrench'],
+        ['ekrany', 'Ekrany narzędzia', 'ph-squares-four'],
+        ['kanaly_dystrybucji', 'Kanały dotarcia', 'ph-megaphone'],
+        ['sygnal_budzetu', 'Sygnał budżetu', 'ph-coins'],
+        ['konkurencja', 'Konkurencja', 'ph-binoculars'],
+        ['ryzyka', 'Ryzyka', 'ph-warning-diamond']
+    ];
+
+    function renderKarta(p) {
+        var karta = p.karta || {};
+        if (!karta.dla_kogo && p.dla_kogo) karta.dla_kogo = p.dla_kogo;
+        if ((!karta.ekrany || !karta.ekrany.length) && p.ekrany && p.ekrany.length) karta.ekrany = p.ekrany;
+        var html = '';
+        KARTA_FIELDS.forEach(function (f) {
+            var v = karta[f[0]];
+            if (v === null || v === undefined || v === '' || (Array.isArray(v) && !v.length)) return;
+            var val = Array.isArray(v)
+                ? '<div class="flex flex-wrap gap-1.5 mt-1">' + v.map(function (x) {
+                    return '<span class="px-2.5 py-1 rounded-full border border-zinc-700 bg-white/[0.03] text-[12px] text-zinc-300">' + esc(x) + '</span>';
+                }).join('') + '</div>'
+                : '<div class="text-zinc-200 text-[13.5px] mt-0.5">' + esc(v) + '</div>';
+            html += '<div' + (Array.isArray(v) || f[0] === 'problem' || f[0] === 'dzisiejsze_obejscie' ? ' class="sm:col-span-2"' : '') + '>' +
+                '<div class="text-[10.5px] font-bold uppercase tracking-[0.1em] text-zinc-500 flex items-center gap-1.5"><i class="ph ' + f[2] + ' text-accent"></i>' + f[1] + '</div>' +
+                val + '</div>';
+        });
+        el('p-karta').innerHTML = html || '<p class="text-zinc-500">Karta uzupełni się po zakończeniu rozmowy.</p>';
+    }
+
+    function renderFeedback(list) {
+        var wrap = el('fb-list');
+        wrap.innerHTML = (list || []).map(function (f) {
+            return '<div class="rounded-xl border border-white/5 bg-white/[0.02] p-3">' +
+                '<p class="text-zinc-200 text-[13.5px] whitespace-pre-wrap">' + esc(f.text) + '</p>' +
+                '<p class="text-[11px] text-zinc-600 mt-1.5 font-mono">' + timeAgo(f.created_at) + '</p></div>';
+        }).join('');
+        el('fb-empty').classList.toggle('hidden', !!(list && list.length));
+    }
+
+    function render(d) {
+        var p = d.projekt;
+        leadId = p.lead_id;
+        el('p-nazwa').textContent = p.nazwa;
+        el('p-opis').textContent = p.opis || '';
+        document.title = p.nazwa + ' — panel projektu | Stworzę';
+
+        if (p.preview_image_url) {
+            el('p-preview').src = p.preview_image_url;
+            el('p-preview-link').href = p.preview_image_url;
+            el('p-imgcount').textContent = 'wersje podglądu: ' + (p.image_count || 1);
+        } else {
+            el('p-preview-wrap').classList.add('hidden');
+            el('p-preview-empty').classList.remove('hidden');
+        }
+
+        renderKarta(p);
+        renderFeedback(d.feedback);
+
+        var cta = CHECKOUT_BASE + '?offer=' + encodeURIComponent(OFFER_ID);
+        if (leadId) cta += '&lead=' + encodeURIComponent(leadId);
+        el('cta-makieta').href = cta;
+
+        show('panel');
+    }
+
+    el('fb-form').addEventListener('submit', function (e) {
+        e.preventDefault();
+        var txt = el('fb-text').value.trim();
+        if (!txt) return;
+        var btn = el('fb-submit');
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+        api({ action: 'feedback', text: txt }).then(function (d) {
+            el('fb-text').value = '';
+            renderFeedback(d.feedback);
+        }).catch(function (err) {
+            alert(err.code === 'limit_uwag'
+                ? 'Limit uwag osiągnięty — najważniejsze już mam, resztę omówimy przy makiecie.'
+                : 'Nie udało się zapisać uwagi — spróbuj ponownie.');
+        }).finally(function () {
+            btn.disabled = false;
+            btn.style.opacity = '';
+        });
+    });
+
+    if (!sessionId) { show('state-error'); return; }
+    api({ action: 'get' }).then(render).catch(function () { show('state-error'); });
+})();
+</script>
+
+</body>
+</html>
