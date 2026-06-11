@@ -81,6 +81,8 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string
   const kontekst = `Narzędzie „${nazwa}" dla: ${s(brief.dla_kogo)}. Rozwiązuje: ${s(brief.problem)}. ${s(brief.opis)}`
   const styleBlock = buildStyleBlock(brief)
   const jakosc = 'TREŚCI: realistyczne polskie dane przykładowe dopasowane do tej branży — prawdziwie brzmiące nazwy, imiona, daty, kwoty w zł; krótkie poprawne polskie etykiety; zero lorem ipsum. JAKOŚĆ: dopracowanie jak top shot z Dribbble/Behance, pixel-perfect, miękkie cienie i głębia, bez ludzi, bez logotypów firm trzecich, bez znaków wodnych.'
+  // To MAŁE, skupione narzędzie — obraz nie może sugerować rozbudowanego systemu
+  const prostota = 'PROSTOTA (twarda zasada): to małe, skupione narzędzie rozwiązujące JEDEN problem — pokaż wyłącznie elementy opisane wyżej. Minimalna nawigacja: wąski pasek górny albo lista maks 3-4 pozycji; ŻADNYCH rozbudowanych sidebarów z wieloma modułami, dodatkowych zakładek, wykresów-ozdobników ani paneli sugerujących duży system klasy CRM/ERP. Dużo światła, jeden wyraźny cel ekranu.'
 
   if (view === 'landing') {
     const ekrany = Array.isArray(brief.ekrany)
@@ -99,15 +101,15 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string
   }
 
   const viewIntro: Record<Exclude<ViewKey, 'landing'>, string> = {
-    panel: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — GŁÓWNY PULPIT (przegląd najważniejszych informacji). Widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
-    glowna: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — EKRAN GŁÓWNEJ FUNKCJI W UŻYCIU (moment, w którym narzędzie rozwiązuje problem użytkownika). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
-    dodatkowa: `Pełnoekranowy zrzut interfejsu aplikacji webowej „${nazwa}" — EKRAN DODATKOWEJ FUNKCJI. Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
+    panel: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — GŁÓWNY PULPIT (jeden rzut oka na najważniejsze). Widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
+    glowna: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — EKRAN GŁÓWNEJ FUNKCJI W UŻYCIU (moment, w którym narzędzie rozwiązuje problem użytkownika). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
+    dodatkowa: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — DRUGI EKRAN wspierający główną funkcję (np. lista, szczegóły, ustawienia). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami ani osobny moduł — to ekran roboczy tego samego, małego narzędzia.`,
   }
 
   const fallbackLayout: Record<Exclude<ViewKey, 'landing'>, string> = {
-    panel: 'LAYOUT: wąski lewy sidebar z liniowymi ikonami i etykietami sekcji; górna belka z wyszukiwarką i awatarem; główny obszar: 3-4 karty z najważniejszymi liczbami, czytelna lista spraw/rekordów ze statusami jako kolorowe badge.',
-    glowna: 'LAYOUT: jeden duży ekran roboczy głównej funkcji — formularz/lista/edytor w akcji, z wypełnionymi danymi i widocznym kolejnym krokiem użytkownika; wąski lewy sidebar nawigacji.',
-    dodatkowa: 'LAYOUT: jeden ekran roboczy dodatkowej funkcji z wypełnionymi danymi; wąski lewy sidebar nawigacji.',
+    panel: 'LAYOUT: prosty pulpit z jednym celem — wąski pasek górny z nazwą narzędzia, 2-3 kluczowe liczby w prostych kartach, pod spodem JEDNA czytelna lista najważniejszych spraw ze statusami; bez sidebara, bez wykresów.',
+    glowna: 'LAYOUT: jeden duży ekran roboczy głównej funkcji — formularz/lista/edytor w akcji, z wypełnionymi danymi i widocznym kolejnym krokiem użytkownika; nawigacja tylko jako wąski pasek górny.',
+    dodatkowa: 'LAYOUT: jeden ekran wspierający główną funkcję (lista albo widok szczegółu) z wypełnionymi danymi; nawigacja tylko jako wąski pasek górny.',
   }
 
   return [
@@ -117,6 +119,7 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string
       ? `ZAWARTOŚĆ EKRANU (z ustaleń z klientem, odwzoruj wiernie i szczegółowo): ${viewDesc}`
       : fallbackLayout[view],
     styleBlock,
+    prostota,
     jakosc,
   ].join(' ')
 }

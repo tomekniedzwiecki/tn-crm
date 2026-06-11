@@ -151,6 +151,28 @@ function parseProjekt(fullText: string): Record<string, unknown> | null {
   }
 }
 
+// Scal nowy marker <projekt> z briefem w bazie. Model przy poprawce potrafi
+// wysłać OKROJONY marker (np. tylko widoki.glowna + zmien) — proste nadpisanie
+// kasowałoby styl i opisy pozostałych widoków, a kolejne generacje traciłyby
+// spójność (ustalenia z rozmowy znikałyby z grafik).
+function mergeBrief(
+  oldBrief: Record<string, unknown> | null,
+  fresh: Record<string, unknown>,
+): Record<string, unknown> {
+  const old = oldBrief && typeof oldBrief === 'object' ? oldBrief : {}
+  const merged: Record<string, unknown> = { ...old, ...fresh }
+  const oldW = (old.widoki && typeof old.widoki === 'object') ? old.widoki as Record<string, unknown> : {}
+  const freshW = (fresh.widoki && typeof fresh.widoki === 'object') ? fresh.widoki as Record<string, unknown> : {}
+  merged.widoki = { ...oldW, ...freshW }
+  if ((typeof fresh.styl !== 'string' || !fresh.styl.trim()) && typeof old.styl === 'string') {
+    merged.styl = old.styl
+  }
+  if ((!Array.isArray(fresh.insighty) || !fresh.insighty.length) && Array.isArray(old.insighty)) {
+    merged.insighty = old.insighty
+  }
+  return merged
+}
+
 // Zwięzły opis Karty Problemu do notatki leada
 function buildLeadNotes(profession: string, karta: Record<string, unknown> | null): string {
   const lines: string[] = ['Sparing /stworze — werdykt: ZIELONY']
@@ -584,12 +606,28 @@ Deno.serve(async (req) => {
           // tylko w sparingu; czat współpracy ich nie wysyła (a gdyby model
           // halucynował — nie nadpisujemy nimi karty projektu).
           const verdict = isCollab ? { verdict: null, karta: null } as VerdictResult : parseVerdict(assistantText)
-          const projekt = isCollab ? null : parseProjekt(assistantText)
+          const projektFresh = isCollab ? null : parseProjekt(assistantText)
+          let projekt: Record<string, unknown> | null = null
 
-          // Marker podglądu -> event dla frontendu (strona woła spar-image)
-          if (projekt) {
+          if (projektFresh) {
+            projekt = mergeBrief(
+              (existingSession?.preview_brief as Record<string, unknown> | null) ?? null,
+              projektFresh,
+            )
+            // ZAPIS PRZED eventem spar_projekt: frontend na ten event natychmiast
+            // woła spar-image, a ten czyta brief Z BAZY — bez zapisu tutaj
+            // generowanie ścigałoby się z persistem i rysowało stary/pusty brief.
+            const { error: briefErr } = await supabase
+              .from('spar_sessions')
+              .update({ preview_brief: projekt, updated_at: new Date().toISOString() })
+              .eq('id', sessionId)
+            if (briefErr) console.error('[spar-chat] brief pre-save error:', briefErr)
+
+            // Event niesie zmergowany brief, ale "zmien" zawsze z TEJ tury
+            // (stare zmien generowałoby zły podzbiór widoków po stronie frontendu)
+            const eventPayload = { ...projekt, zmien: projektFresh.zmien }
             controller.enqueue(
-              encoder.encode(`event: spar_projekt\ndata: ${JSON.stringify(projekt)}\n\n`),
+              encoder.encode(`event: spar_projekt\ndata: ${JSON.stringify(eventPayload)}\n\n`),
             )
           }
 
@@ -628,10 +666,13 @@ Deno.serve(async (req) => {
           // Klient mógł przerwać stream (zamknięta karta) — zapisz to, co już
           // wygenerowano, żeby historia rozmowy nie gubiła odpowiedzi asystenta.
           try {
+            const freshAbort = isCollab ? null : parseProjekt(assistantText)
             const persistPromise = schedulePersist(
               isCollab ? { verdict: null, karta: null } : parseVerdict(assistantText),
               null,
-              isCollab ? null : parseProjekt(assistantText),
+              freshAbort
+                ? mergeBrief((existingSession?.preview_brief as Record<string, unknown> | null) ?? null, freshAbort)
+                : null,
             )
             if (persistPromise) await persistPromise
           } catch (persistErr) {
