@@ -66,6 +66,8 @@
         }
         .btn-accent:hover { transform: translateY(-1px); box-shadow: 0 14px 40px -10px rgba(77,159,255,0.6); }
 
+        .step-label { color: #a1a1aa; }
+        .step-done .step-label { color: #d4d4d8; }
         .step-done .step-dot { background: #4d9fff; border-color: #4d9fff; color: #061320; }
         .step-now .step-dot {
             border-color: rgba(77,159,255,0.7);
@@ -128,13 +130,13 @@
     <!-- Roadmapa -->
     <div class="panel-card rounded-2xl p-5 md:p-6 mb-6 animate-enter">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="roadmap">
-            <div class="flex items-center gap-3 step-done">
-                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0"><i class="ph-bold ph-check"></i></span>
-                <div><div class="step-label font-semibold text-zinc-300">Rozmowa</div><div class="text-[11px] text-zinc-500">projekt zdefiniowany</div></div>
+            <div id="rm-rozmowa" class="flex items-center gap-3">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0"><i id="rm-rozmowa-ico" class="ph-bold ph-check"></i></span>
+                <div><div class="step-label font-semibold">Rozmowa</div><div id="rm-rozmowa-sub" class="text-[11px] text-zinc-500">projekt zdefiniowany</div></div>
             </div>
-            <div class="flex items-center gap-3 step-now">
-                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0">2</span>
-                <div><div class="step-label font-semibold text-zinc-300">Makieta</div><div class="text-[11px] text-zinc-500">klikalna wersja — do zamówienia</div></div>
+            <div id="rm-makieta" class="flex items-center gap-3">
+                <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0 text-zinc-500">2</span>
+                <div><div class="step-label font-semibold">Makieta</div><div id="rm-makieta-sub" class="text-[11px] text-zinc-600">klikalna wersja</div></div>
             </div>
             <div class="flex items-center gap-3">
                 <span class="step-dot w-8 h-8 rounded-full border border-zinc-700 grid place-items-center text-xs font-bold shrink-0 text-zinc-500">3</span>
@@ -179,8 +181,18 @@
         <!-- PRAWA: CTA + uwagi -->
         <div class="lg:col-span-2 space-y-6">
 
+            <!-- CTA: dokończ rozmowę (projekt bez werdyktu) -->
+            <section id="cta-finish" class="cta-card rounded-2xl p-6 animate-enter hidden">
+                <p class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-accent mb-2">Następny krok</p>
+                <h2 class="text-xl font-extrabold text-white">Dokończmy Twój projekt</h2>
+                <p class="text-zinc-400 mt-3">Rozmowa nie jest jeszcze domknięta — brakuje kilku ustaleń, żeby karta projektu była kompletna i mogła powstać makieta. To dosłownie parę kliknięć.</p>
+                <a id="cta-finish-link" href="https://tomekniedzwiecki.pl/stworze/sparing/" class="btn-accent w-full inline-flex items-center justify-center gap-2 font-extrabold rounded-full px-6 py-4 mt-5 text-[15px]">
+                    <i class="ph-bold ph-chat-circle-dots"></i> Wracam do rozmowy
+                </a>
+            </section>
+
             <!-- CTA: makieta -->
-            <section class="cta-card rounded-2xl p-6 animate-enter">
+            <section id="cta-makieta-card" class="cta-card rounded-2xl p-6 animate-enter">
                 <p class="text-[11px] font-extrabold uppercase tracking-[0.18em] text-accent mb-2">Następny krok</p>
                 <h2 class="text-xl font-extrabold text-white">Klikalna makieta Twojego narzędzia</h2>
                 <ul class="mt-4 space-y-2.5 text-zinc-300">
@@ -310,6 +322,22 @@
         el('p-nazwa').textContent = p.nazwa;
         el('p-opis').textContent = p.opis || '';
         document.title = p.nazwa + ' — panel projektu | Stworzę';
+
+        // Stan projektu: zadatek/makieta dopiero PO domkniętej rozmowie
+        var done = p.verdict === 'zielony';
+        el('cta-makieta-card').classList.toggle('hidden', !done);
+        el('cta-finish').classList.toggle('hidden', done);
+        var chatUrl = 'https://tomekniedzwiecki.pl/stworze/sparing/?id=' + encodeURIComponent(sessionId);
+        el('cta-finish-link').href = chatUrl;
+        el('back-to-chat').href = chatUrl;
+
+        var rmR = el('rm-rozmowa'), rmM = el('rm-makieta');
+        rmR.classList.toggle('step-done', done);
+        rmR.classList.toggle('step-now', !done);
+        el('rm-rozmowa-ico').className = done ? 'ph-bold ph-check' : 'ph-bold ph-chats-circle';
+        el('rm-rozmowa-sub').textContent = done ? 'projekt zdefiniowany' : 'w trakcie — dokończ rozmowę';
+        rmM.classList.toggle('step-now', done);
+        el('rm-makieta-sub').textContent = done ? 'klikalna wersja — do zamówienia' : 'dostępna po rozmowie';
 
         if (p.preview_image_url) {
             el('p-preview').src = p.preview_image_url;
