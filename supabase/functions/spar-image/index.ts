@@ -11,6 +11,8 @@
 // wywołania nie mogą się ścigać na image_count/preview_images).
 //
 // Limity: 8 obrazów/sesja = 4 startowe widoki + 4 poprawki; 20/dobę/IP.
+// Widok 'podsumowanie' (infografika karty) ma osobny limit 3 wersji/sesja
+// i nie zużywa puli image_count.
 //
 // Sekrety:
 //   OPENAI_API_KEY     — klucz OpenAI (już ustawiony)
@@ -46,8 +48,11 @@ const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
 const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || '200', 10)
 const STORAGE_BUCKET = 'attachments'
 
-const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing'] as const
+const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie'] as const
 type ViewKey = typeof VIEWS[number]
+// 'podsumowanie' = infografika karty projektu — nie zużywa puli image_count
+// (RPC pomija inkrement); własny limit wersji per sesja:
+const MAX_SUMMARY_VERSIONS = 3
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -73,7 +78,38 @@ function buildStyleBlock(brief: Record<string, unknown>): string {
   return 'DESIGN SYSTEM (IDENTYCZNY na wszystkich widokach tego narzędzia): premium dark-mode SaaS klasy Linear/Stripe/Vercel — tło grafitowo-czarne #0B0D12, panele glassmorphism z subtelnymi obramowaniami rgba(255,255,255,0.08), elektryczny niebieski akcent #4D9FFF na przyciskach i aktywnych elementach, zaokrąglenia 12-16px, czysta siatka, dużo światła między elementami, nowoczesna typografia sans-serif (Inter), spójny zestaw ikon liniowych.'
 }
 
-function buildImagePrompt(brief: Record<string, unknown>, view: ViewKey): string {
+// Infografika „Projekt w pigułce" — graficzne podsumowanie KARTY projektu
+// (dla kogo, kto płaci, jak radzą sobie dziś, pierwsza wersja, rynek).
+// Regenerowana po każdej poprawce projektu (karta się zmienia), stare wersje
+// trafiają do preview_history jak przy ekranach.
+function buildSummaryPrompt(
+  brief: Record<string, unknown>,
+  karta: Record<string, unknown>,
+): string {
+  const s = (v: unknown, max = 220) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const list = (v: unknown, n = 4) => Array.isArray(v)
+    ? v.filter((x) => typeof x === 'string').slice(0, n).join(', ')
+    : ''
+  const nazwa = s(brief.nazwa, 80) || 'Narzędzie'
+  const fakty: string[] = []
+  if (karta.problem) fakty.push(`PROBLEM (główny hook, wyróżnij): "${s(karta.problem)}"`)
+  if (karta.dla_kogo || karta.profesja) fakty.push(`DLA KOGO: ${s(karta.dla_kogo) || s(karta.profesja)}`)
+  if (karta.kto_placi) fakty.push(`KTO PŁACI: ${s(karta.kto_placi)}`)
+  if (karta.sygnal_budzetu) fakty.push(`BUDŻET: ${s(karta.sygnal_budzetu)}`)
+  if (karta.dzisiejsze_obejscie) fakty.push(`DZIŚ RADZĄ SOBIE: ${s(karta.dzisiejsze_obejscie)}`)
+  if (list(karta.ekrany)) fakty.push(`PIERWSZA WERSJA — EKRANY: ${list(karta.ekrany)}`)
+  if (list(karta.kanaly_dystrybucji, 3)) fakty.push(`KANAŁY DOTARCIA: ${list(karta.kanaly_dystrybucji, 3)}`)
+  if (karta.konkurencja) fakty.push(`KONKURENCJA: ${s(karta.konkurencja)}`)
+  return [
+    `Elegancka POZIOMA INFOGRAFIKA podsumowująca projekt narzędzia „${nazwa}" — one-pager w stylu premium pitch-deck slide / product canvas. Pełny kadr, bez ramki przeglądarki.`,
+    `UKŁAD: duży tytuł „${nazwa}" u góry; pod nim wyeksponowany cytat problemu; reszta jako siatka 4-6 zwięzłych kart z ikonami liniowymi i KRÓTKIMI etykietami (nagłówek karty 1-3 słowa + treść maks 6-8 słów). To podsumowanie BIZNESOWE — żadnych zrzutów interfejsu aplikacji, wykresów-ozdobników ani ludzi.`,
+    `TREŚĆ KART (odwzoruj wiernie, skracaj mądrze): ${fakty.join('; ')}.`,
+    buildStyleBlock(brief),
+    'TYPOGRAFIA I TEKST: bardzo mało tekstu, duże czytelne napisy, bezbłędna polszczyzna z poprawnymi znakami diakrytycznymi (ą, ć, ę, ł, ń, ó, ś, ź, ż); zero lorem ipsum, zero angielskich słów. JAKOŚĆ: dopracowanie jak top shot z Dribbble, pixel-perfect, miękkie cienie, spójna hierarchia, bez logotypów firm trzecich i znaków wodnych.',
+  ].join(' ')
+}
+
+function buildImagePrompt(brief: Record<string, unknown>, view: Exclude<ViewKey, 'podsumowanie'>): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const widoki = (brief.widoki && typeof brief.widoki === 'object')
     ? brief.widoki as Record<string, unknown>
@@ -213,7 +249,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, image_count, preview_images')
+      .select('id, preview_brief, image_count, preview_images, preview_history, problem_summary')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -231,7 +267,21 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_projektu' }, 400, corsHeaders)
     }
     const imageCount = (session.image_count as number | null) ?? 0
-    if (imageCount >= MAX_IMAGES_PER_SESSION) {
+    const karta = session.problem_summary as Record<string, unknown> | null
+    if (view === 'podsumowanie') {
+      // Infografika karty: wymaga karty (werdykt), własny limit wersji —
+      // nie zjada puli ekranów (RPC nie inkrementuje image_count)
+      if (!karta) {
+        return jsonResponse({ error: 'brak_karty' }, 400, corsHeaders)
+      }
+      const histObj = (session.preview_history || {}) as Record<string, unknown>
+      const histLen = Array.isArray(histObj['podsumowanie']) ? (histObj['podsumowanie'] as unknown[]).length : 0
+      const imgsObj = (session.preview_images || {}) as Record<string, unknown>
+      const hasCurrent = typeof imgsObj['podsumowanie'] === 'string' ? 1 : 0
+      if (histLen + hasCurrent >= MAX_SUMMARY_VERSIONS) {
+        return jsonResponse({ error: 'limit_podsumowan' }, 429, corsHeaders)
+      }
+    } else if (imageCount >= MAX_IMAGES_PER_SESSION) {
       return jsonResponse({ error: 'limit_podgladow' }, 429, corsHeaders)
     }
 
@@ -255,7 +305,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    const bytes = await generateImage(OPENAI_API_KEY, buildImagePrompt(brief, view))
+    const prompt = view === 'podsumowanie'
+      ? buildSummaryPrompt(brief, karta as Record<string, unknown>)
+      : buildImagePrompt(brief, view)
+    const bytes = await generateImage(OPENAI_API_KEY, prompt)
 
     // Nazwa pliku per widok + timestamp wersji (upsert nadpisuje poprzednią
     // wersję tego samego widoku tylko gdy nazwa identyczna — wersjonujemy)
