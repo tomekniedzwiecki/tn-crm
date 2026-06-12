@@ -223,6 +223,10 @@ async function createTpayTransaction(
 ): Promise<TpayTransactionResponse> {
   const baseUrl = useSandbox ? TPAY_SANDBOX_URL : TPAY_API_URL
 
+  // Tpay odrzuca payer.name krotsze niz 3 znaki (kod not_valid)
+  const trimmedName = (params.name || '').trim()
+  const payerName = trimmedName.length >= 3 ? trimmedName : 'Klient'
+
   const payload: Record<string, any> = {
     amount: params.amount,
     description: params.description,
@@ -230,7 +234,7 @@ async function createTpayTransaction(
     lang: 'pl',
     payer: {
       email: params.email,
-      name: params.name || '',
+      name: payerName,
       phone: params.phone || '',
     },
     callbacks: {

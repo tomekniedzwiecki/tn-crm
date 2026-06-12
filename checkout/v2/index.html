@@ -1645,8 +1645,9 @@
                                 <div class="v-error-msg" id="v-phone-err"><i class="ph ph-warning-circle"></i><span>Podaj poprawny numer</span></div>
                             </div>
                             <div>
-                                <label class="v-label" for="v-name">Imię i nazwisko</label>
-                                <input type="text" id="v-name" class="v-input" placeholder="Jan Kowalski" autocomplete="name">
+                                <label class="v-label" for="v-name">Imię i nazwisko <span class="req">*</span></label>
+                                <input type="text" id="v-name" class="v-input" placeholder="Jan Kowalski" autocomplete="name" required>
+                                <div class="v-error-msg" id="v-name-err"><i class="ph ph-warning-circle"></i><span>Podaj imię i nazwisko (min. 3 znaki)</span></div>
                             </div>
                         </div>
 
@@ -2338,6 +2339,12 @@ function validateForm() {
     if (!phone || !validatePhone(phone)) {
         showFieldError('v-phone', 'v-phone-err'); valid = false;
     } else { clearFieldError('v-phone', 'v-phone-err'); }
+
+    // Tpay wymaga payer.name >= 3 znaki
+    const name = $('v-name').value.trim();
+    if (name.length < 3) {
+        showFieldError('v-name', 'v-name-err'); valid = false;
+    } else { clearFieldError('v-name', 'v-name-err'); }
 
     if (selectedMethod === 'blik') {
         const code = $('v-blik-code').value.trim();
