@@ -13,6 +13,12 @@
 //   abandoned_chat     — email jest, brak werdyktu, ostatnia aktywność 3–48 h temu
 //   verdict_no_payment — zielony werdykt, brak wpłaty, cisza 20–96 h
 //   paid_welcome       — wpłata 500 zł wykryta (wysyłka przy nadaniu paid_at)
+//   landing_ready      — działająca strona narzędzia zbudowana ≥15 min temu
+//   raport_ready       — raport potencjału rynku policzony ≥15 min temu
+//     (artefakty CELOWO z opóźnieniem — decyzja Tomka 2026-06-12: followup
+//      „coś się dla Ciebie zbudowało" zamiast natychmiastowego maila, gdy
+//      user jeszcze siedzi na stronie; max 1 artefakt-mail per sesja per run
+//      → naturalna sekwencja: najpierw strona, ~30 min później raport)
 //
 // Wysyłka przez send-email (Resend, format direct + sygnatura Tomka),
 // okno 8:00–20:00 Europe/Warsaw, max 30 maili/run.
@@ -56,6 +62,8 @@ interface SessionRow {
   verdict: string | null
   preview_brief: Record<string, unknown> | null
   business_plan: Record<string, unknown> | null
+  market_report: Record<string, unknown> | null
+  landing_url: string | null
   lead_id: string | null
   paid_at: string | null
   last_user_at: string | null
@@ -120,6 +128,38 @@ function buildEmail(kind: string, s: SessionRow): { subject: string; html: strin
         <p>Jeśli to nie ten moment — w porządku, projekt zostaje zapisany.
         Jeśli jednak chcesz go ruszyć: rezerwacja to 500 zł, <strong>w pełni zwrotne</strong>.</p>
         ${btn(chatLink(s.id, 'verdict_last_call', '#projekt'), 'Wracam do projektu →')}
+      `),
+    }
+  }
+  if (kind === 'landing_ready') {
+    return {
+      subject: `${nazwa} ma już swoją stronę — zobacz ją w przeglądarce`,
+      html: emailHtml(`
+        <p>${hi}</p>
+        <p>Po naszej rozmowie zbudowała się strona Twojego narzędzia <strong>${nazwa}</strong>.
+        To nie jest grafika ani makieta — to <strong>działająca strona</strong>: otwórz ją,
+        przewiń, poklikaj. Spokojnie możesz podesłać link znajomym z branży.</p>
+        ${btn(s.landing_url || chatLink(s.id, 'landing_ready', '#projekt-marka'), 'Otwieram stronę →')}
+        <p style="font-size:13.5px;color:#555;">Całość projektu — ekrany, kartę i resztę —
+        znajdziesz jak zawsze <a href="${chatLink(s.id, 'landing_ready', '#projekt-marka')}" style="color:#2f6bdd;">w swoim panelu</a>.</p>
+      `),
+    }
+  }
+  if (kind === 'raport_ready') {
+    const r = s.market_report || {}
+    const teza = typeof r.teza === 'string' ? r.teza : ''
+    const nKonk = Array.isArray(r.konkurenci) ? r.konkurenci.length : 0
+    const nSrc = Array.isArray(r.zrodla) ? r.zrodla.length : 0
+    return {
+      subject: `${nazwa}: raport potencjału rynku gotowy`,
+      html: emailHtml(`
+        <p>${hi}</p>
+        <p>Sprawdziłem rynek wokół projektu <strong>${nazwa}</strong> — w internecie,
+        nie „z głowy": ${nKonk ? `${nKonk} najbliższych konkurentów z realnymi cenami, ` : ''}wielkość niszy
+        i trendy${nSrc ? `, wszystko z ${nSrc} podlinkowanymi źródłami` : ''}.</p>
+        ${teza ? `<p style="border-left:3px solid #4d9fff;padding:2px 0 2px 14px;color:#444;">${teza}</p>` : ''}
+        <p>Pełny raport — z oknem rynkowym i wnioskami dla pierwszej wersji — czeka w Twoim panelu:</p>
+        ${btn(chatLink(s.id, 'raport_ready', '#rynek'), 'Zobacz raport rynku →')}
       `),
     }
   }
@@ -193,7 +233,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, lead_id, paid_at, last_user_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -263,6 +303,41 @@ Deno.serve(async (req) => {
     // ── Pozostałe follow-upy tylko w oknie 8–20 Europe/Warsaw ─────────────
     if (!inWindow) {
       return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
+    }
+
+    // ── 1c) ARTEFAKTY GOTOWE: strona / raport zbudowane 15 min – 7 dni temu.
+    //        Czas budowy strony = timestamp t= z landing_url; czas raportu =
+    //        market_report._meta.at. Max JEDEN artefakt-mail per sesja per
+    //        run (strona ma pierwszeństwo — mocniejszy hook) ───────────────
+    const ARTIFACT_DELAY_MS = 15 * 60 * 1000
+    const ARTIFACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000
+    function artifactReady(ts: number | null): boolean {
+      return !!ts && now - ts >= ARTIFACT_DELAY_MS && now - ts <= ARTIFACT_MAX_AGE_MS
+    }
+    function landingTs(url: string | null): number | null {
+      const m = (url || '').match(/[?&]t=(\d{10,16})/)
+      return m ? parseInt(m[1], 10) : null
+    }
+    function raportTs(r: Record<string, unknown> | null): number | null {
+      const meta = r && r._meta as Record<string, unknown> | undefined
+      const at = meta && typeof meta.at === 'string' ? Date.parse(meta.at) : NaN
+      return Number.isFinite(at) ? at : null
+    }
+    const { data: artifacts, error: artErr } = await supabase
+      .from('spar_sessions')
+      .select(SESSION_COLS)
+      .eq('is_test', false)
+      .not('email', 'is', null)
+      .or('landing_url.not.is.null,market_report.not.is.null')
+      .limit(60)
+    if (artErr) console.error('[spar-followups] artifacts fetch error:', artErr)
+    for (const s of (artifacts || []) as SessionRow[]) {
+      if (s.landing_url && artifactReady(landingTs(s.landing_url))) {
+        if (await sendOnce('landing_ready', s)) continue // raport w kolejnym runie
+      }
+      if (s.market_report && artifactReady(raportTs(s.market_report))) {
+        await sendOnce('raport_ready', s)
+      }
     }
 
     // ── 2) ABANDONED: email jest, brak domkniętego werdyktu (NULL lub żółty
