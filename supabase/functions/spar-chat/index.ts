@@ -89,9 +89,15 @@ interface SparChatRequest {
 const CHAT_PRICES: Record<string, { input: number; cached: number; output: number }> = {
   'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.1': { input: 1.25, cached: 0.125, output: 10 },
+  'gpt-4o': { input: 2.5, cached: 1.25, output: 10 },
+  'gpt-4o-mini': { input: 0.15, cached: 0.075, output: 0.6 },
 }
 function chatCostUsd(model: string, input: number, cached: number, output: number): number {
-  const p = CHAT_PRICES[model] || CHAT_PRICES['gpt-5.5']
+  let p = CHAT_PRICES[model]
+  if (!p) {
+    console.warn(`[spar-chat] nieznany model w cenniku: ${model} — liczę po stawkach gpt-5.5 (dopisz do CHAT_PRICES!)`)
+    p = CHAT_PRICES['gpt-5.5']
+  }
   const freshIn = Math.max(0, input - cached)
   return (freshIn * p.input + cached * p.cached + output * p.output) / 1_000_000
 }
@@ -308,6 +314,22 @@ async function persistAfterStream(
         meta: { channel },
       })
       if (usageErr) console.error('[spar-chat] usage insert error:', usageErr)
+    } else if (assistantText.trim()) {
+      // Stream przerwany przez klienta — chunk z usage nie dotarł. Logujemy
+      // SZACOWANY koszt outputu (≈4 znaki/token; input nieznany → pomijamy),
+      // z flagą estimated — lepsze niż cicha dziura w kosztach
+      const estOut = Math.round(assistantText.length / 4)
+      const { error: abortUsageErr } = await supabase.from('spar_usage').insert({
+        session_id: sessionId,
+        kind: 'chat',
+        model: OPENAI_MODEL,
+        input_tokens: 0,
+        cached_tokens: 0,
+        output_tokens: estOut,
+        cost_usd: chatCostUsd(OPENAI_MODEL, 0, 0, estOut),
+        meta: { channel, aborted: true, estimated: true },
+      })
+      if (abortUsageErr) console.error('[spar-chat] aborted usage insert error:', abortUsageErr)
     }
 
     const update: Record<string, unknown> = {
@@ -413,7 +435,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, verdict, problem_summary, preview_brief, preview_image_url')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -432,12 +454,19 @@ Deno.serve(async (req) => {
     if (existingSession) {
       turnsBefore = existingSession.turns ?? 0
 
-      // Kontakt z bramki inline: dopisz mail/imię/telefon do sesji, gdy przyszły
-      // po raz pierwszy (+ metadane OAuth, jeśli rozmówca logował się kontem)
-      if (email && !existingSession.email) {
-        const contactUpdate: Record<string, unknown> = { email, name, updated_at: new Date().toISOString() }
-        if (phone) contactUpdate.phone = phone
-        if (authUserId) { contactUpdate.auth_user_id = authUserId; contactUpdate.auth_provider = authProvider }
+      // Kontakt z bramki inline: każde pole dopisywane NIEZALEŻNIE, gdy przyszło
+      // a sesja go nie ma (telefon/OAuth potrafią dojść później niż mail —
+      // np. stara sesja sprzed bramki v2 albo powrót z logowania Google)
+      const contactUpdate: Record<string, unknown> = {}
+      if (email && !existingSession.email) contactUpdate.email = email
+      if (name && !existingSession.name) contactUpdate.name = name
+      if (phone && !existingSession.phone) contactUpdate.phone = phone
+      if (authUserId && !existingSession.auth_user_id) {
+        contactUpdate.auth_user_id = authUserId
+        contactUpdate.auth_provider = authProvider
+      }
+      if (Object.keys(contactUpdate).length) {
+        contactUpdate.updated_at = new Date().toISOString()
         const { error: contactError } = await supabase
           .from('spar_sessions')
           .update(contactUpdate)

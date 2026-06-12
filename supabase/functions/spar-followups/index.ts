@@ -114,17 +114,29 @@ function buildEmail(kind: string, s: SessionRow): { subject: string; html: strin
 }
 
 Deno.serve(async (req) => {
-  if (req.method !== 'POST' && req.method !== 'GET') {
+  if (req.method !== 'POST') {
     return jsonResponse({ error: 'metoda_niedozwolona' }, 405)
   }
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500)
+
+    // Funkcja jest --no-verify-jwt (woła ją pg_cron przez pg_net) — sekret
+    // w nagłówku odcina anonimowe triggerowanie runów z internetu
+    const cronSecret = Deno.env.get('SPAR_CRON_SECRET')
+    if (cronSecret && req.headers.get('x-cron-secret') !== cronSecret) {
+      return jsonResponse({ error: 'unauthorized' }, 401)
+    }
+
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
     const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, abandoned_chat: 0, verdict_no_payment: 0 }
     let mailBudget = MAX_PER_RUN
+    // Okno wysyłek 8–20 PL dotyczy WSZYSTKICH maili (też paid_welcome);
+    // sync płatności (paid_at + lead won) działa niezależnie od pory
+    const hour = warsawHour()
+    const inWindow = hour >= 8 && hour < 20
 
     // claim → send → (rollback przy błędzie). Zwraca true gdy mail poszedł.
     async function sendOnce(kind: string, s: SessionRow): Promise<boolean> {
@@ -173,7 +185,8 @@ Deno.serve(async (req) => {
         .select('lead_id, paid_at, status, description')
         .in('lead_id', leadIds as string[])
         .eq('status', 'paid')
-        .ilike('description', '%Stworzę%')
+        // wariant bez "ę" łapie ręcznie tworzone zamówienia z literówką
+        .or('description.ilike.%Stworzę%,description.ilike.%Stworze%')
       if (ordersErr) console.error('[spar-followups] orders fetch error:', ordersErr)
 
       const paidByLead = new Map<string, string>()
@@ -196,18 +209,34 @@ Deno.serve(async (req) => {
           .eq('id', s.lead_id)
           .neq('status', 'won')
         if (wonErr) console.error('[spar-followups] lead won update error:', wonErr)
-        await sendOnce('paid_welcome', s)
       }
-    }
-
-    // ── Maile follow-up tylko w oknie 8–20 Europe/Warsaw ──────────────────
-    const hour = warsawHour()
-    if (hour < 8 || hour >= 20) {
-      return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
     }
 
     const now = Date.now()
     const hoursAgo = (h: number) => new Date(now - h * 3600 * 1000).toISOString()
+
+    // ── 1b) WELCOME po wpłacie — osobny krok oparty o paid_at (nie o pętlę
+    //        sync), żeby nocny sync nie "zjadał" maila: poranny run znajdzie
+    //        opłacone sesje bez wysłanego paid_welcome i nadrobi ──────────
+    if (inWindow) {
+      const { data: paidRecent, error: prErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .not('paid_at', 'is', null)
+        .not('email', 'is', null)
+        .gte('paid_at', hoursAgo(72))
+        .limit(40)
+      if (prErr) console.error('[spar-followups] paid recent fetch error:', prErr)
+      for (const s of (paidRecent || []) as SessionRow[]) {
+        await sendOnce('paid_welcome', s)
+      }
+    }
+
+    // ── Pozostałe follow-upy tylko w oknie 8–20 Europe/Warsaw ─────────────
+    if (!inWindow) {
+      return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
+    }
 
     // ── 2) ABANDONED: email jest, brak domkniętego werdyktu (NULL lub żółty
     //        = rozmowa w toku), cisza 3–48 h ──────────────────────────────

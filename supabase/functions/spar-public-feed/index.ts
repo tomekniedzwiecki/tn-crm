@@ -29,7 +29,9 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-const CACHE_TTL_MS = 10 * 60 * 1000
+// 60 s (nie 10 min): oznaczenie sesji jako testowej w panelu musi szybko
+// zdjąć ją z publicznego feedu na stronie głównej
+const CACHE_TTL_MS = 60 * 1000
 const FEED_LIMIT = 12
 let cache: { data: unknown; at: number } | null = null
 

@@ -188,8 +188,14 @@ Deno.serve(async (req) => {
       const prices: Record<string, { i: number; c: number; o: number }> = {
         'gpt-5.5': { i: 5, c: 0.5, o: 30 },
         'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
+        'gpt-4o': { i: 2.5, c: 1.25, o: 10 },
+        'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 },
       }
-      const p = prices[OPENAI_MODEL] || prices['gpt-5.5']
+      let p = prices[OPENAI_MODEL]
+      if (!p) {
+        console.warn(`[spar-plan] nieznany model w cenniku: ${OPENAI_MODEL} — stawki gpt-5.5`)
+        p = prices['gpt-5.5']
+      }
       await supabase.from('spar_usage').insert({
         session_id: sessionId,
         kind: 'plan',

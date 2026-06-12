@@ -165,8 +165,9 @@ function buildImagePrompt(brief: Record<string, unknown>, view: Exclude<ViewKey,
   ].join(' ')
 }
 
-// Wywołanie OpenAI Images API; przy błędzie nieznanego modelu — fallback
-async function generateImage(apiKey: string, prompt: string): Promise<Uint8Array> {
+// Wywołanie OpenAI Images API; przy błędzie nieznanego modelu — fallback.
+// Zwraca też model FAKTYCZNIE użyty (po fallbacku) — do logu kosztów.
+async function generateImage(apiKey: string, prompt: string): Promise<{ bytes: Uint8Array; usedModel: string }> {
   const call = async (model: string): Promise<Response> =>
     fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
@@ -183,6 +184,7 @@ async function generateImage(apiKey: string, prompt: string): Promise<Uint8Array
       }),
     })
 
+  let usedModel = IMAGE_MODEL
   let res = await call(IMAGE_MODEL)
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
@@ -191,6 +193,7 @@ async function generateImage(apiKey: string, prompt: string): Promise<Uint8Array
     if (modelProblem && IMAGE_MODEL !== IMAGE_MODEL_FALLBACK && /model/i.test(errText)) {
       console.log(`[spar-image] fallback na ${IMAGE_MODEL_FALLBACK}`)
       res = await call(IMAGE_MODEL_FALLBACK)
+      usedModel = IMAGE_MODEL_FALLBACK
       if (!res.ok) {
         const fbText = await res.text().catch(() => '')
         console.error(`[spar-image] fallback error:`, res.status, fbText.slice(0, 500))
@@ -210,7 +213,7 @@ async function generateImage(apiKey: string, prompt: string): Promise<Uint8Array
   const bin = atob(b64)
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
-  return bytes
+  return { bytes, usedModel }
 }
 
 Deno.serve(async (req) => {
@@ -287,21 +290,29 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_podgladow' }, 429, corsHeaders)
     }
 
-    // Limit dzienny per IP — sumujemy podglądy ze wszystkich sesji tego IP,
-    // żeby mnożenie sessionId nie omijało limitu per sesja (każdy obraz kosztuje)
+    // Limit dzienny per IP — liczymy obrazy WYGENEROWANE w ostatnich 24 h
+    // (spar_usage.created_at) dla wszystkich sesji tego IP. Liczenie po
+    // image_count sesji z created_at łatwo było ominąć starą sesją (>24 h),
+    // bo image_count to licznik kumulatywny, a filtr patrzył na wiek sesji.
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
     if (ip) {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      const { data: ipRows, error: ipError } = await supabase
+      const { data: ipSessions, error: ipError } = await supabase
         .from('spar_sessions')
-        .select('image_count')
+        .select('id')
         .eq('ip', ip)
-        .gte('created_at', dayAgo)
       if (ipError) {
-        console.error('[spar-image] ip limit query error:', ipError)
-      } else {
-        const total = (ipRows || []).reduce((s, r) => s + ((r.image_count as number) || 0), 0)
-        if (total >= MAX_IMAGES_PER_IP_PER_DAY) {
+        console.error('[spar-image] ip sessions query error:', ipError)
+      } else if (ipSessions && ipSessions.length) {
+        const { count: imgCount, error: usageErr2 } = await supabase
+          .from('spar_usage')
+          .select('id', { count: 'exact', head: true })
+          .eq('kind', 'image')
+          .in('session_id', ipSessions.map((r) => r.id))
+          .gte('created_at', dayAgo)
+        if (usageErr2) {
+          console.error('[spar-image] ip usage count error:', usageErr2)
+        } else if ((imgCount ?? 0) >= MAX_IMAGES_PER_IP_PER_DAY) {
           return jsonResponse({ error: 'limit_podgladow_dzienny' }, 429, corsHeaders)
         }
       }
@@ -310,7 +321,7 @@ Deno.serve(async (req) => {
     const prompt = view === 'podsumowanie'
       ? buildSummaryPrompt(brief, karta as Record<string, unknown>)
       : buildImagePrompt(brief, view)
-    const bytes = await generateImage(OPENAI_API_KEY, prompt)
+    const { bytes, usedModel } = await generateImage(OPENAI_API_KEY, prompt)
 
     // Nazwa pliku per widok + timestamp wersji (upsert nadpisuje poprzednią
     // wersję tego samego widoku tylko gdy nazwa identyczna — wersjonujemy)
@@ -333,7 +344,7 @@ Deno.serve(async (req) => {
     const { error: usageErr } = await supabase.from('spar_usage').insert({
       session_id: sessionId,
       kind: 'image',
-      model: IMAGE_MODEL,
+      model: usedModel,
       images: 1,
       cost_usd: IMAGE_COST_USD[quality] ?? IMAGE_COST_USD.medium,
       meta: { view, quality },

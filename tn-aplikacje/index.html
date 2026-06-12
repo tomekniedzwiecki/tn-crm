@@ -289,7 +289,8 @@ function renderDashboard() {
   const paid = vis.filter((s) => s.paid_at);
   const totalCost = vis.reduce((sum, s) => sum + costOf(s), 0);
   const cost7 = within7.reduce((sum, s) => sum + costOf(s), 0);
-  const avgCost = vis.length ? totalCost / vis.filter((s) => costOf(s) > 0).length || 0 : 0;
+  const withCost = vis.filter((s) => costOf(s) > 0).length;
+  const avgCost = withCost ? totalCost / withCost : 0;
 
   const kpi = [
     { label: 'Sesje (7 dni / razem)', val: `${within7.length} / ${vis.length}`, icon: 'ph-chats-circle', tone: 'text-blue-400' },
@@ -404,8 +405,9 @@ function renderSesje() {
     if (!q) return true;
     return [projName(s), s.email, s.phone, s.profession, s.name].some((v) => v && String(v).toLowerCase().includes(q));
   });
-  $('sesje-count').textContent = rows.length + ' sesji';
-  $('sesje-rows').innerHTML = rows.slice(0, 400).map((s) => {
+  const visRows = rows.slice(0, 400);
+  $('sesje-count').textContent = rows.length > 400 ? `${visRows.length} z ${rows.length} sesji (zawęź wyszukiwaniem)` : `${rows.length} sesji`;
+  $('sesje-rows').innerHTML = visRows.map((s) => {
     const st = STAGES.find((x) => x.id === stageOf(s));
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>

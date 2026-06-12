@@ -2564,6 +2564,9 @@ async function handleSubmit() {
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 payment_source: paymentSource,
                 notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
+                // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
+                consent_digital_service: stworzeConsentRequired ? true : null,
+                consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2581,7 +2584,10 @@ async function handleSubmit() {
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 status: 'pending',
                 payment_source: paymentSource,
-                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
+                // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
+                consent_digital_service: stworzeConsentRequired ? true : null,
+                consented_at: stworzeConsentRequired ? new Date().toISOString() : null
             };
 
             if (isCustomPayment && customPaymentLeadId) {
@@ -2690,17 +2696,21 @@ function setupStworzeConsent(offer) {
     document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = STWORZE_REGULAMIN);
     const payBtn = $('v-pay-desktop');
     if (!payBtn || $('stworze-consent')) return;
+    // UWAGA: checkbox MUSI stać POZA .v-form-cta — ta sekcja na mobile ma
+    // display:none (płatność idzie ze sticky pay-bara), a zgoda musi być
+    // widoczna i zaznaczalna także na telefonie
+    const ctaWrap = payBtn.closest('.v-form-cta') || payBtn;
     const box = document.createElement('label');
     box.id = 'stworze-consent-box';
     box.style.cssText = 'display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;font-size:12.5px;line-height:1.55;color:#a1a1aa;cursor:pointer;';
     box.innerHTML = '<input type="checkbox" id="stworze-consent" style="margin-top:2.5px;accent-color:#4d9fff;flex-shrink:0;">' +
         '<span>Chcę, aby przygotowanie planu przedsięwzięcia rozpoczęło się od razu — wyrażam zgodę na wykonanie usługi przed upływem 14-dniowego terminu odstąpienia. Znam <a href="' + STWORZE_REGULAMIN + '" target="_blank" style="color:#4d9fff;">regulamin</a>: opłata 500 zł jest w pełni zwrotna, jeśli nie wejdziemy we współpracę.</span>';
-    payBtn.parentNode.insertBefore(box, payBtn);
+    ctaWrap.parentNode.insertBefore(box, ctaWrap);
     const err = document.createElement('div');
     err.id = 'stworze-consent-err';
     err.style.cssText = 'display:none;color:#f87171;font-size:12px;margin:-2px 0 8px;';
     err.textContent = 'Zaznacz zgodę, żeby przejść do płatności.';
-    payBtn.parentNode.insertBefore(err, payBtn);
+    ctaWrap.parentNode.insertBefore(err, ctaWrap);
 }
 
 function validateStworzeConsent() {
