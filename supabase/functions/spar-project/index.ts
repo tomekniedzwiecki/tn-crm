@@ -5,11 +5,15 @@
 //
 // Akcje (POST JSON):
 //   { sessionId, action: 'get' }                  -> sanitized projekt + feedback[]
+//                                                    (+ historia sparingu, gdy JWT właściciela)
 //   { sessionId, action: 'feedback', text }       -> dodaje uwagę, zwraca feedback[]
+//   { action: 'list' }                            -> rozmowy KONTA (wymaga JWT w Authorization)
 //
 // Model dostępu: sessionId (uuid z localStorage usera) działa jak token —
 // jak linki klienckie w tn-crm. Czytamy/piszemy service_role'em; panel
 // dostaje tylko zsanityzowany podzbiór pól (bez ip, bez pełnego e-maila).
+// Dane przekraczające ten model (lista rozmów, historia czatu) wymagają
+// zweryfikowanego JWT konta (Supabase Auth).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -21,6 +25,8 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
   'http://localhost:5500',
   'http://127.0.0.1:5500',
+  'http://localhost:5503',
+  'http://127.0.0.1:5503',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -35,6 +41,33 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_FEEDBACK_PER_SESSION = 30
 const MAX_FEEDBACK_LENGTH = 1000
+const MAX_LIST_SESSIONS = 30
+const MAX_HISTORY_MESSAGES = 200
+
+// Konto z JWT w Authorization (Supabase Auth) — null gdy brak/nieważny token
+async function verifyAuthUser(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+): Promise<{ id: string } | null> {
+  const m = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)
+  if (!m) return null
+  const token = m[1].trim()
+  if (!token || token.startsWith('sb_publishable_') || token.startsWith('sb_secret_')) return null
+  try {
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data?.user) return null
+    return { id: data.user.id }
+  } catch (err) {
+    console.error('[spar-project] auth getUser error:', err)
+    return null
+  }
+}
+
+// Nazwa rozmowy do listy konta (jak projName w panelu TN Aplikacje)
+function sessionTitle(brief: Record<string, unknown> | null, profession: string | null): string {
+  if (brief && typeof brief.nazwa === 'string' && brief.nazwa.trim()) return brief.nazwa.trim()
+  return profession || 'Rozmowa bez nazwy'
+}
 
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
@@ -62,15 +95,47 @@ Deno.serve(async (req) => {
 
     const sessionId = (body.sessionId || '').trim()
     const action = (body.action || 'get').trim()
+
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    const authUser = await verifyAuthUser(req, supabase)
+
+    // ── action 'list': rozmowy zalogowanego konta (cross-device) ─────────────
+    if (action === 'list') {
+      if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
+      const { data: rows, error: listErr } = await supabase
+        .from('spar_sessions')
+        .select('id, profession, verdict, status, turns, created_at, updated_at, preview_brief, preview_images')
+        .eq('auth_user_id', authUser.id)
+        .order('updated_at', { ascending: false, nullsFirst: false })
+        .limit(MAX_LIST_SESSIONS)
+      if (listErr) {
+        console.error('[spar-project] list error:', listErr)
+        return jsonResponse({ error: 'blad_serwera' }, 500, cors)
+      }
+      const sessions = (rows || []).map((r) => {
+        const brief = (r.preview_brief || null) as Record<string, unknown> | null
+        const imgs = (r.preview_images || {}) as Record<string, unknown>
+        return {
+          id: r.id,
+          nazwa: sessionTitle(brief, r.profession as string | null),
+          verdict: r.verdict || null,
+          status: r.status || 'active',
+          turns: r.turns || 0,
+          thumb: typeof imgs.panel === 'string' ? imgs.panel : (typeof imgs.glowna === 'string' ? imgs.glowna : null),
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        }
+      })
+      return jsonResponse({ sessions }, 200, cors)
+    }
+
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, lead_id, created_at')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, lead_id, created_at, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -123,6 +188,23 @@ Deno.serve(async (req) => {
       .limit(80)
     if (cmErr) console.error('[spar-project] collab messages fetch error:', cmErr)
 
+    // Historia GŁÓWNEJ rozmowy (sparing) — tylko dla zweryfikowanego WŁAŚCICIELA
+    // sesji (JWT). Pozwala odtworzyć rozmowę po zalogowaniu na innym urządzeniu;
+    // sam sessionId (link ?id=) historii nie dostaje.
+    let sparingMessages: { role: string; content: string }[] | null = null
+    const ownerId = (session.auth_user_id as string | null) || null
+    if (authUser && ownerId && authUser.id === ownerId) {
+      const { data: sm, error: smErr } = await supabase
+        .from('spar_messages')
+        .select('role, content')
+        .eq('session_id', sessionId)
+        .eq('channel', 'sparing')
+        .order('id', { ascending: true })
+        .limit(MAX_HISTORY_MESSAGES)
+      if (smErr) console.error('[spar-project] sparing messages fetch error:', smErr)
+      else sparingMessages = (sm || []) as { role: string; content: string }[]
+    }
+
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const karta = (session.problem_summary || null) as Record<string, unknown> | null
     // business_plan bez _meta (licznik generacji to wewnętrzna kuchnia)
@@ -155,6 +237,10 @@ Deno.serve(async (req) => {
       },
       feedback: feedback || [],
       wspolpraca: collabMessages || [],
+      // null = brak uprawnień (anonimowy dostęp przez sessionId); [] = właściciel bez wiadomości
+      historia: sparingMessages,
+      // front po zalogowaniu wie, czy rozmowa należy do tego konta
+      wlasciciel: !!(authUser && ownerId && authUser.id === ownerId),
     }, 200, cors)
   } catch (e) {
     console.error('[spar-project] ERROR:', e)

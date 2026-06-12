@@ -36,6 +36,8 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5503',
+  'http://127.0.0.1:5503',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -52,7 +54,11 @@ const MAX_TURNS = 30                  // tur asystenta per sesja
 const MAX_MESSAGE_LENGTH = 2000       // znaków per wiadomość
 const MAX_MESSAGES_PER_HOUR = 60      // wiadomości/h per sesja (COUNT spar_messages)
 const MAX_SESSIONS_PER_HOUR_PER_IP = 10 // nowych sesji/h per IP (anty-abuse: mnożenie sessionId)
-const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy maila (bramka inline w czacie)
+const MAX_SESSIONS_PER_DAY_PER_USER = parseInt(Deno.env.get('SPAR_SESSIONS_USER_DAILY') || '10', 10) // nowych sesji/dobę per konto
+const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy konta/maila (bramka inline w czacie)
+// SPAR_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
+// false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
+const REQUIRE_ACCOUNT = (Deno.env.get('SPAR_REQUIRE_ACCOUNT') || 'false') === 'true'
 const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.1'
 // 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
 // przekroczyć 1500 — ucięty </projekt> = parseProjekt zwraca null i brief
@@ -79,10 +85,68 @@ interface SparChatRequest {
   message: string
   tracking?: Record<string, unknown> | null
   mode?: string
-  // metadane logowania OAuth (Google/Facebook przez Supabase Auth) — spinają
-  // sesję sparingu z kontem; nie służą do autoryzacji (ta jest sessionId-based)
+  // DEPRECATED (2026-06-12): tożsamość konta idzie WYŁĄCZNIE z JWT w nagłówku
+  // Authorization (verifyAuthUser) — pola z body były spoofowalne i są ignorowane
   authUserId?: string | null
   authProvider?: string | null
+  // Cloudflare Turnstile — wymagany przy tworzeniu NOWEJ sesji bez zalogowania
+  // (anty-bot); weryfikacja wyłączona, gdy brak TURNSTILE_SECRET_KEY w env
+  turnstileToken?: string | null
+}
+
+// ── Konto z JWT (Supabase Auth) ───────────────────────────────────────────────
+// Jedyne wiarygodne źródło tożsamości: access_token usera w Authorization.
+// Brak nagłówka / nie-userowy token (publishable key) / nieważny JWT → null
+// (rozmowa anonimowa — dozwolona do bramki).
+interface AuthUser { id: string; email: string | null; name: string | null; provider: string | null }
+
+async function verifyAuthUser(
+  req: Request,
+  supabase: ReturnType<typeof createClient>,
+): Promise<AuthUser | null> {
+  const m = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)
+  if (!m) return null
+  const token = m[1].trim()
+  if (!token || token.startsWith('sb_publishable_') || token.startsWith('sb_secret_')) return null
+  try {
+    const { data, error } = await supabase.auth.getUser(token)
+    if (error || !data?.user) return null
+    const u = data.user
+    const meta = (u.user_metadata || {}) as Record<string, unknown>
+    const appMeta = (u.app_metadata || {}) as Record<string, unknown>
+    return {
+      id: u.id,
+      email: u.email || null,
+      name: (typeof meta.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim().slice(0, 120)
+        : (typeof meta.name === 'string' && meta.name.trim()) ? meta.name.trim().slice(0, 120) : null,
+      provider: typeof appMeta.provider === 'string' ? appMeta.provider.slice(0, 30) : null,
+    }
+  } catch (err) {
+    console.error('[spar-chat] auth getUser error:', err)
+    return null
+  }
+}
+
+// ── Cloudflare Turnstile (anty-bot na nowe sesje anonimowe) ──────────────────
+// Fail-open przy awarii weryfikatora (bot protection to warstwa, nie ściana —
+// padnięty Cloudflare nie może blokować całego lejka).
+async function verifyTurnstile(token: string | null | undefined, ip: string | null): Promise<boolean> {
+  const secret = Deno.env.get('TURNSTILE_SECRET_KEY')
+  if (!secret) return true // rollout bez kluczy: weryfikacja wyłączona
+  if (!token || typeof token !== 'string' || token.length > 2048) return false
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, response: token, remoteip: ip || undefined }),
+    })
+    const data = await res.json()
+    if (!data?.success) console.warn('[spar-chat] turnstile odrzucony:', JSON.stringify(data?.['error-codes'] || []))
+    return !!data?.success
+  } catch (err) {
+    console.error('[spar-chat] turnstile verify error (fail-open):', err)
+    return true
+  }
 }
 
 // ── Cennik USD per 1M tokenów (logowanie kosztów do spar_usage) ──────────────
@@ -407,8 +471,7 @@ Deno.serve(async (req) => {
     const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : null
     const mode = body.mode === 'wspolpraca' ? 'wspolpraca' : 'sparing'
     const isCollab = mode === 'wspolpraca'
-    const authUserId = (body.authUserId && UUID_RE.test(body.authUserId)) ? body.authUserId : null
-    const authProvider = (body.authProvider || '').trim().slice(0, 30) || null
+    // body.authUserId / body.authProvider: DEPRECATED, ignorowane (patrz verifyAuthUser)
 
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, corsHeaders)
@@ -429,6 +492,9 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // ── Konto z JWT (Authorization) — body.authUserId jest ignorowane ────────
+    const authUser = await verifyAuthUser(req, supabase)
 
     // ── System prompt z settings (cache 5 min, klucz per tryb) ───────────────
     const promptKey = PROMPT_KEYS[mode]
@@ -456,21 +522,32 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_projektu' }, 404, corsHeaders)
     }
 
+    // ── Własność sesji: rozmowa przypięta do konta wymaga JWT tego konta ─────
+    // (link ?id= przestaje działać jak hasło). Kanał wspolpraca zostaje
+    // sessionId-based — działa z panelu projektu bez logowania klienta.
+    const sessionOwnerId = (existingSession?.auth_user_id as string | null | undefined) || null
+    if (!isCollab && sessionOwnerId && (!authUser || authUser.id !== sessionOwnerId)) {
+      return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+    }
+
     let turnsBefore = 0
     if (existingSession) {
       turnsBefore = existingSession.turns ?? 0
 
       // Kontakt z bramki inline: każde pole dopisywane NIEZALEŻNIE, gdy przyszło
       // a sesja go nie ma (telefon/OAuth potrafią dojść później niż mail —
-      // np. stara sesja sprzed bramki v2 albo powrót z logowania Google)
+      // np. stara sesja sprzed bramki v2 albo powrót z logowania Google).
+      // Konto (JWT) ma pierwszeństwo przed polami z body.
       const contactUpdate: Record<string, unknown> = {}
-      if (email && !existingSession.email) contactUpdate.email = email
-      if (name && !existingSession.name) contactUpdate.name = name
-      if (phone && !existingSession.phone) contactUpdate.phone = phone
-      if (authUserId && !existingSession.auth_user_id) {
-        contactUpdate.auth_user_id = authUserId
-        contactUpdate.auth_provider = authProvider
+      if (authUser && !existingSession.auth_user_id) {
+        contactUpdate.auth_user_id = authUser.id
+        contactUpdate.auth_provider = authUser.provider
       }
+      const incomingEmail = (authUser?.email || email) || null
+      const incomingName = (authUser?.name || name) || null
+      if (incomingEmail && !existingSession.email) contactUpdate.email = incomingEmail
+      if (incomingName && !existingSession.name) contactUpdate.name = incomingName
+      if (phone && !existingSession.phone) contactUpdate.phone = phone
       if (Object.keys(contactUpdate).length) {
         contactUpdate.updated_at = new Date().toISOString()
         const { error: contactError } = await supabase
@@ -481,6 +558,15 @@ Deno.serve(async (req) => {
       }
     } else {
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+
+      // Anty-bot: nowa sesja BEZ zalogowania wymaga tokena Turnstile.
+      // Zalogowany użytkownik (ważny JWT) jest już zweryfikowany — bez captchy.
+      if (!authUser) {
+        const human = await verifyTurnstile(body.turnstileToken, ip)
+        if (!human) {
+          return jsonResponse({ error: 'weryfikacja_bot' }, 403, corsHeaders)
+        }
+      }
 
       // Anty-abuse: limit NOWYCH sesji per IP (rate-limit per sesję da się ominąć
       // mnożeniem sessionId — ten limit zamyka tę furtkę)
@@ -500,6 +586,21 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Limit nowych sesji per KONTO/dobę (IP łatwo zmienić, konto trudniej)
+      if (authUser) {
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { count: userSessions, error: userCountError } = await supabase
+          .from('spar_sessions')
+          .select('id', { count: 'exact', head: true })
+          .eq('auth_user_id', authUser.id)
+          .gte('created_at', dayAgo)
+        if (userCountError) {
+          console.error('[spar-chat] user rate-limit count error:', userCountError)
+        } else if ((userSessions ?? 0) >= MAX_SESSIONS_PER_DAY_PER_USER) {
+          return jsonResponse({ error: 'limit_sesji' }, 429, corsHeaders)
+        }
+      }
+
       // upsert + ignoreDuplicates: odporne na wyścig dwóch równoległych requestów
       const { error: insertError } = await supabase
         .from('spar_sessions')
@@ -508,11 +609,11 @@ Deno.serve(async (req) => {
             id: sessionId,
             profession: profession || null,
             problem_hint: problemHint,
-            email: email || null,
-            name,
+            email: email || authUser?.email || null,
+            name: name || authUser?.name || null,
             phone,
-            auth_user_id: authUserId,
-            auth_provider: authUserId ? authProvider : null,
+            auth_user_id: authUser?.id || null,
+            auth_provider: authUser?.provider || null,
             tracking,
             ip,
             last_user_at: new Date().toISOString(),
@@ -549,9 +650,13 @@ Deno.serve(async (req) => {
     // bez maila rozmowa nie przechodzi dalej niż MAX_TURNS_BEZ_KONTAKTU tur.
     // W trybie wspolpraca działa od pierwszej wiadomości (mail i tak konieczny
     // przed zamówieniem makiety — panel kieruje wtedy z powrotem do rozmowy).
-    const effectiveEmail = (existingSession?.email as string | null | undefined) || email || null
-    if (!effectiveEmail && (isCollab || turnsBefore >= MAX_TURNS_BEZ_KONTAKTU)) {
-      return jsonResponse({ error: 'wymagany_email' }, 403, corsHeaders)
+    const effectiveEmail = (existingSession?.email as string | null | undefined) || email || authUser?.email || null
+    // Bramkę przechodzi: zweryfikowane konto (JWT teraz albo sesja już przypięta),
+    // a w okresie przejściowym (REQUIRE_ACCOUNT=false) także sam e-mail jak dotąd.
+    const hasAccount = !!authUser || !!sessionOwnerId
+    const gateSatisfied = REQUIRE_ACCOUNT ? hasAccount : (hasAccount || !!effectiveEmail)
+    if (!gateSatisfied && (isCollab || turnsBefore >= MAX_TURNS_BEZ_KONTAKTU)) {
+      return jsonResponse({ error: REQUIRE_ACCOUNT ? 'wymagane_konto' : 'wymagany_email' }, 403, corsHeaders)
     }
 
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()

@@ -29,6 +29,8 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1:5500',
   'http://localhost:5173',
   'http://127.0.0.1:5173',
+  'http://localhost:5503',
+  'http://127.0.0.1:5503',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -48,6 +50,9 @@ const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
 // Dzienny limit per IP (anty-abuse). Na czas testów rozwojowych podniesiony
 // przez default 200 — PRZED kampanią reklamową ustawić env SPAR_IMG_IP_DAILY=20.
 const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || '200', 10)
+// Dzienny limit per KONTO (auth_user_id) — IP łatwo zmienić, konto trudniej.
+// Na czas testów default 200; PRZED kampanią ustawić env SPAR_IMG_USER_DAILY=20.
+const MAX_IMAGES_PER_USER_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_USER_DAILY') || '200', 10)
 const STORAGE_BUCKET = 'attachments'
 
 const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie'] as const
@@ -284,7 +289,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, image_count, preview_images, preview_history, problem_summary')
+      .select('id, preview_brief, image_count, preview_images, preview_history, problem_summary, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -343,6 +348,32 @@ Deno.serve(async (req) => {
         if (usageErr2) {
           console.error('[spar-image] ip usage count error:', usageErr2)
         } else if ((imgCount ?? 0) >= MAX_IMAGES_PER_IP_PER_DAY) {
+          return jsonResponse({ error: 'limit_podgladow_dzienny' }, 429, corsHeaders)
+        }
+      }
+    }
+
+    // Limit dzienny per KONTO — obrazy z 24 h zliczane po WSZYSTKICH sesjach
+    // przypiętych do auth_user_id (nowa rozmowa nie resetuje puli konta)
+    const ownerId = (session.auth_user_id as string | null) || null
+    if (ownerId) {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: ownerSessions, error: ownerErr } = await supabase
+        .from('spar_sessions')
+        .select('id')
+        .eq('auth_user_id', ownerId)
+      if (ownerErr) {
+        console.error('[spar-image] owner sessions query error:', ownerErr)
+      } else if (ownerSessions && ownerSessions.length) {
+        const { count: ownerImgCount, error: ownerUsageErr } = await supabase
+          .from('spar_usage')
+          .select('id', { count: 'exact', head: true })
+          .eq('kind', 'image')
+          .in('session_id', ownerSessions.map((r) => r.id))
+          .gte('created_at', dayAgo)
+        if (ownerUsageErr) {
+          console.error('[spar-image] owner usage count error:', ownerUsageErr)
+        } else if ((ownerImgCount ?? 0) >= MAX_IMAGES_PER_USER_PER_DAY) {
           return jsonResponse({ error: 'limit_podgladow_dzienny' }, 429, corsHeaders)
         }
       }
