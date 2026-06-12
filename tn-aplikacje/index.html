@@ -256,6 +256,22 @@ function stageOf(s) {
 function projName(s) {
   return (s.preview_brief && s.preview_brief.nazwa) || s.profession || 'Rozmowa bez nazwy';
 }
+// ── Design zaprojektowany przez AI pod projekt (preview_brief.design) ──
+// Kropki akcentów na listach + blok w modalu = szybki podgląd, czy GPT
+// nie wraca do ulubionych kolorów (analiza rozkładu designów w czasie)
+const designOf = (s) => (s.preview_brief && s.preview_brief.design && typeof s.preview_brief.design === 'object') ? s.preview_brief.design : null;
+const hexOf = (txt) => { const m = String(txt || '').match(/#[0-9a-fA-F]{3,8}\b/); return m ? m[0] : null; };
+function accentDot(s) {
+  const d = designOf(s);
+  const hex = d && hexOf(d.akcent);
+  if (!hex) return '';
+  return `<span class="inline-block w-2.5 h-2.5 rounded-full border border-white/25 align-middle mr-1.5" style="background:${hex}" title="${esc(d.kierunek || 'akcent ' + hex)}"></span>`;
+}
+function designSwatch(label, txt) {
+  if (!txt) return '';
+  const hex = hexOf(txt);
+  return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-white/[0.04] border border-white/5 text-[10px] text-zinc-400" title="${esc(txt)}">${hex ? `<span class="w-3.5 h-3.5 rounded border border-white/20 shrink-0" style="background:${hex}"></span>` : ''}${label}${hex ? ` <span class="font-mono text-zinc-500">${hex}</span>` : ''}</span>`;
+}
 function visibleSessions() {
   return sessions.filter((s) => (showTests || !s.is_test));
 }
@@ -351,7 +367,7 @@ function sessionRowMini(s) {
   const st = STAGES.find((x) => x.id === stageOf(s));
   return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left">
     <span class="w-2 h-2 rounded-full ${st.dot} shrink-0"></span>
-    <span class="text-sm text-white truncate">${esc(projName(s))}</span>
+    <span class="text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
     <span class="text-xs text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
     <span class="ml-auto text-xs font-mono text-zinc-400 shrink-0">${costOf(s) ? fmtPln(costOf(s)) : ''}</span>
     <span class="text-[11px] text-zinc-600 shrink-0 w-20 text-right">${timeAgo(s.created_at)}</span>
@@ -426,7 +442,7 @@ function renderSesje() {
     const st = STAGES.find((x) => x.id === stageOf(s));
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
-      <td class="px-4 py-2.5 text-white">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
+      <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(s.email || '—')}${s.phone ? `<div class="text-zinc-600">${esc(s.phone)}</div>` : ''}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
@@ -571,6 +587,24 @@ async function openSession(id) {
       <div class="flex justify-between"><span class="text-zinc-500 text-xs">Ostatnia aktywność</span><span class="text-xs text-white">${timeAgo(s.last_user_at)}</span></div>
       ${s.lead_id ? `<a class="text-xs text-blue-400 hover:underline" target="_blank" href="/leads?id=${s.lead_id}">Lead w TN CRM →</a>` : ''}
     </div>
+    ${(() => {
+      const d = designOf(s);
+      if (!d) return '';
+      const styl = s.preview_brief && s.preview_brief.styl;
+      return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-palette mr-1 text-zinc-600"></i>Design (projekt AI)</div>
+        ${d.kierunek ? `<div class="text-xs text-zinc-300 mb-2.5">${esc(d.kierunek)}</div>` : ''}
+        <div class="flex flex-wrap gap-1.5 mb-2.5">
+          ${designSwatch('tło', d.tlo)}${designSwatch('karty', d.powierzchnia)}${designSwatch('akcent', d.akcent)}${designSwatch('akcent 2', d.akcent2)}
+        </div>
+        <div class="space-y-1 text-[11px] text-zinc-500">
+          ${d.geometria ? `<div><span class="text-zinc-600">Geometria:</span> ${esc(d.geometria)}</div>` : ''}
+          ${d.typografia ? `<div><span class="text-zinc-600">Typografia:</span> ${esc(d.typografia)}</div>` : ''}
+          ${d.podpis ? `<div><span class="text-zinc-600">Podpis:</span> ${esc(d.podpis)}</div>` : ''}
+          ${styl ? `<div class="pt-1 text-amber-400/80"><span class="text-zinc-600">Życzenia klienta:</span> ${esc(styl)}</div>` : ''}
+        </div>
+      </div>`;
+    })()}
     ${imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
       <div class="grid grid-cols-2 gap-2">${imgKeys.map((k) => `
