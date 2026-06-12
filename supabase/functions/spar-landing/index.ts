@@ -158,6 +158,76 @@ function buildUserPrompt(
   return parts.join('\n\n')
 }
 
+// ── Mail „strona gotowa" ─────────────────────────────────────────────────────
+// Osobny mail po zbudowaniu landinga (decyzja Tomka 2026-06-12) — budowa trwa
+// ~3 min i część osób zamyka kartę przed końcem. Idempotencja jak
+// w spar-followups: claim w spar_emails UNIQUE(session_id, kind); sesje
+// testowe pomijane. Wysyłka przez send-email (Resend).
+const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
+
+function emailBtn(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0" style="margin:22px 0;"><tr><td style="border-radius:999px;background:linear-gradient(135deg,#6db3ff,#4d9fff);">
+    <a href="${href}" style="display:inline-block;padding:13px 30px;color:#061320;font-weight:700;font-size:15px;text-decoration:none;">${label}</a>
+  </td></tr></table>`
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+interface MailInfo {
+  email: string | null
+  name: string | null
+  leadId: string | null
+  isTest: boolean
+}
+
+async function sendLandingEmail(
+  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
+  sessionId: string,
+  mail: MailInfo,
+  brief: Record<string, unknown>,
+  viewUrl: string,
+): Promise<void> {
+  try {
+    if (!mail.email || mail.isTest) return
+    const { data: claim, error: claimErr } = await supabase
+      .from('spar_emails')
+      .upsert([{ session_id: sessionId, kind: 'landing_ready', email: mail.email }],
+        { onConflict: 'session_id,kind', ignoreDuplicates: true })
+      .select('id')
+    if (claimErr) { console.error('[spar-landing] mail claim error:', claimErr); return }
+    if (!claim || !claim.length) return // mail już poszedł (kolejna wersja strony)
+
+    const imie = (mail.name || '').trim().split(' ')[0]
+    const nazwa = (typeof brief.nazwa === 'string' && brief.nazwa) ? brief.nazwa : 'Twoje narzędzie'
+    const panelLink = `${SPARING_URL}?id=${sessionId}&utm_source=email&utm_medium=transactional&utm_campaign=landing_ready#projekt-marka`
+    const subject = `${nazwa} ma już swoją stronę — zobacz ją w przeglądarce`
+    const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a1a1a;max-width:560px;">
+      <p>${imie ? `Cześć ${escHtml(imie)}!` : 'Cześć!'}</p>
+      <p>Strona Twojego narzędzia <strong>${escHtml(nazwa)}</strong> właśnie się zbudowała.
+      To nie jest grafika ani makieta — to <strong>działająca strona</strong>: otwórz ją,
+      przewiń, poklikaj. Spokojnie możesz podesłać link znajomym z branży.</p>
+      ${emailBtn(viewUrl, 'Otwieram stronę →')}
+      <p style="font-size:13.5px;color:#555;">Całość projektu — ekrany, kartę i resztę —
+      znajdziesz jak zawsze <a href="${panelLink}" style="color:#2f6bdd;">w swoim panelu</a>.</p>
+    </div>`
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+      body: JSON.stringify({ to: mail.email, subject, html, lead_id: mail.leadId || undefined }),
+    })
+    if (!res.ok) {
+      console.error('[spar-landing] send-email error:', res.status, await res.text().catch(() => ''))
+      await supabase.from('spar_emails').delete().eq('session_id', sessionId).eq('kind', 'landing_ready')
+    }
+  } catch (e) {
+    console.error('[spar-landing] mail error:', e)
+  }
+}
+
 // Model potrafi mimo zakazu owinąć odpowiedź w ```html — zdejmujemy płotki
 // i ucinamy wszystko przed <!DOCTYPE / po </html>.
 function extractHtml(raw: string): string | null {
@@ -189,6 +259,7 @@ async function generateAndStore(
   plan: Record<string, unknown> | null,
   storagePath: string,
   viewUrl: string,
+  mail: MailInfo,
 ): Promise<void> {
   const startedAt = Date.now()
   try {
@@ -267,6 +338,9 @@ async function generateAndStore(
       .update({ landing_url: viewUrl, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (sessErr) console.error('[spar-landing] landing_url save error:', sessErr)
+
+    // osobny mail „strona gotowa" (idempotentny — tylko pierwsza wersja)
+    await sendLandingEmail(supabase, Deno.env.get('SUPABASE_URL') || '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '', sessionId, mail, brief, viewUrl)
     console.log(`[spar-landing] OK ${sessionId} ${storagePath} ${html.length}B ${Date.now() - startedAt}ms`)
   } catch (err) {
     console.error('[spar-landing] background ERROR:', err instanceof Error ? err.message : String(err))
@@ -310,7 +384,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, business_plan, verdict, landing_url')
+      .select('id, preview_brief, business_plan, verdict, landing_url, email, name, lead_id, is_test')
       .eq('id', sessionId)
       .maybeSingle()
     if (sessionError) {
@@ -383,6 +457,12 @@ Deno.serve(async (req) => {
       supabase, OPENAI_API_KEY, sessionId,
       brief, session.business_plan as Record<string, unknown> | null,
       storagePath, viewUrl,
+      {
+        email: (session.email as string | null) || null,
+        name: (session.name as string | null) || null,
+        leadId: (session.lead_id as string | null) || null,
+        isTest: !!session.is_test,
+      },
     )
     // deno-lint-ignore no-explicit-any
     const runtime = (globalThis as any).EdgeRuntime

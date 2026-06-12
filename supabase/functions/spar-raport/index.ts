@@ -111,6 +111,72 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez tekstu przed/po):
 }`
 }
 
+// ── Mail „raport gotowy" ─────────────────────────────────────────────────────
+// Osobny mail po wygenerowaniu raportu (decyzja Tomka 2026-06-12) — raport
+// liczy się ~2 min i część osób zamyka kartę przed końcem. Idempotencja jak
+// w spar-followups: claim w spar_emails UNIQUE(session_id, kind); sesje
+// testowe pomijane. Wysyłka przez send-email (Resend).
+const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
+
+function emailBtn(href: string, label: string): string {
+  return `<table cellpadding="0" cellspacing="0" style="margin:22px 0;"><tr><td style="border-radius:999px;background:linear-gradient(135deg,#6db3ff,#4d9fff);">
+    <a href="${href}" style="display:inline-block;padding:13px 30px;color:#061320;font-weight:700;font-size:15px;text-decoration:none;">${label}</a>
+  </td></tr></table>`
+}
+
+function escHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+}
+
+async function sendRaportEmail(
+  supabase: ReturnType<typeof createClient>,
+  supabaseUrl: string,
+  serviceKey: string,
+  session: { id: string; email: string | null; name: string | null; lead_id: string | null; is_test: boolean | null },
+  brief: Record<string, unknown>,
+  raport: Record<string, unknown>,
+): Promise<void> {
+  try {
+    if (!session.email || session.is_test) return
+    const { data: claim, error: claimErr } = await supabase
+      .from('spar_emails')
+      .upsert([{ session_id: session.id, kind: 'raport_ready', email: session.email }],
+        { onConflict: 'session_id,kind', ignoreDuplicates: true })
+      .select('id')
+    if (claimErr) { console.error('[spar-raport] mail claim error:', claimErr); return }
+    if (!claim || !claim.length) return // mail już poszedł (regeneracja raportu)
+
+    const imie = (session.name || '').trim().split(' ')[0]
+    const nazwa = (typeof brief.nazwa === 'string' && brief.nazwa) ? brief.nazwa : 'Twoje narzędzie'
+    const teza = typeof raport.teza === 'string' ? raport.teza : ''
+    const nKonk = Array.isArray(raport.konkurenci) ? raport.konkurenci.length : 0
+    const nSrc = Array.isArray(raport.zrodla) ? raport.zrodla.length : 0
+    const link = `${SPARING_URL}?id=${session.id}&utm_source=email&utm_medium=transactional&utm_campaign=raport_ready#rynek`
+    const subject = `${nazwa}: raport potencjału rynku gotowy`
+    const html = `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a1a1a;max-width:560px;">
+      <p>${imie ? `Cześć ${escHtml(imie)}!` : 'Cześć!'}</p>
+      <p>Sprawdziłem rynek wokół projektu <strong>${escHtml(nazwa)}</strong> — w internecie,
+      nie „z głowy": ${nKonk ? `${nKonk} najbliższych konkurentów z realnymi cenami, ` : ''}wielkość niszy
+      i trendy${nSrc ? `, wszystko z ${nSrc} podlinkowanymi źródłami` : ''}.</p>
+      ${teza ? `<p style="border-left:3px solid #4d9fff;padding:2px 0 2px 14px;color:#444;">${escHtml(teza)}</p>` : ''}
+      <p>Pełny raport — z oknem rynkowym i wnioskami dla pierwszej wersji — czeka w Twoim panelu:</p>
+      ${emailBtn(link, 'Zobacz raport rynku →')}
+    </div>`
+    const res = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+      body: JSON.stringify({ to: session.email, subject, html, lead_id: session.lead_id || undefined }),
+    })
+    if (!res.ok) {
+      console.error('[spar-raport] send-email error:', res.status, await res.text().catch(() => ''))
+      // zwolnij claim — kolejna generacja/wywołanie spróbuje ponownie
+      await supabase.from('spar_emails').delete().eq('session_id', session.id).eq('kind', 'raport_ready')
+    }
+  } catch (e) {
+    console.error('[spar-raport] mail error:', e)
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 function saneRaport(r: any): boolean {
   return !!r && typeof r === 'object'
@@ -161,7 +227,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, problem_summary, market_report')
+      .select('id, preview_brief, problem_summary, market_report, email, name, lead_id, is_test')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -270,6 +336,11 @@ Deno.serve(async (req) => {
       .update({ market_report: toSave, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (updErr) console.error('[spar-raport] save error:', updErr)
+
+    // osobny mail „raport gotowy" (idempotentny — tylko pierwsza generacja)
+    await sendRaportEmail(supabase, SUPABASE_URL, SERVICE_KEY,
+      session as { id: string; email: string | null; name: string | null; lead_id: string | null; is_test: boolean | null },
+      brief, raport)
 
     return jsonResponse({ raport, cached: false }, 200, cors)
   } catch (e) {
