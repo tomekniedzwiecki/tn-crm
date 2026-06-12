@@ -11,8 +11,9 @@
 // wywołania nie mogą się ścigać na image_count/preview_images).
 //
 // Limity: 8 obrazów/sesja = 4 startowe widoki + 4 poprawki; 20/dobę/IP.
-// Widok 'podsumowanie' (infografika karty) ma osobny limit 3 wersji/sesja
-// i nie zużywa puli image_count.
+// Widoki extra ('podsumowanie' — infografika karty; 'sklep' i 'telefon' —
+// zestaw "marka istnieje") mają osobny limit 3 wersji/sesja per widok
+// i nie zużywają puli image_count.
 //
 // Sekrety:
 //   OPENAI_API_KEY     — klucz OpenAI (już ustawiony)
@@ -55,11 +56,15 @@ const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || 
 const MAX_IMAGES_PER_USER_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_USER_DAILY') || '200', 10)
 const STORAGE_BUCKET = 'attachments'
 
-const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie'] as const
+const VIEWS = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie', 'sklep', 'telefon'] as const
 type ViewKey = typeof VIEWS[number]
-// 'podsumowanie' = infografika karty projektu — nie zużywa puli image_count
-// (RPC pomija inkrement); własny limit wersji per sesja:
-const MAX_SUMMARY_VERSIONS = 3
+// Widoki EXTRA nie zużywają puli image_count (RPC pomija inkrement),
+// każdy ma własny limit wersji per sesja:
+//   'podsumowanie' — infografika karty projektu (wymaga karty/werdyktu)
+//   'sklep'        — zestaw "marka istnieje": karta aplikacji w sklepie
+//   'telefon'      — zestaw "marka istnieje": lifestyle shot z telefonem w dłoni
+const EXTRA_VIEWS: readonly ViewKey[] = ['podsumowanie', 'sklep', 'telefon']
+const MAX_EXTRA_VERSIONS = 3
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -146,7 +151,43 @@ function buildSummaryPrompt(
   ].join(' ')
 }
 
-function buildImagePrompt(brief: Record<string, unknown>, view: Exclude<ViewKey, 'podsumowanie'>): string {
+// Zestaw "marka istnieje" — psychologia własności: pomysłodawca widzi swój
+// produkt tam, gdzie żyją prawdziwe aplikacje (sklep) i w prawdziwych rękach
+// grupy docelowej (telefon). Generyczny sklep mobilny — ŻADNYCH logotypów
+// Apple/Google (znaki firm trzecich).
+function buildStorePrompt(brief: Record<string, unknown>): string {
+  const s = (v: unknown, max = 220) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const nazwa = s(brief.nazwa, 80) || 'Narzędzie'
+  return [
+    `Elegancki marketingowy mockup: nowoczesny smartfon ustawiony pionowo na środku kadru, na ekranie otwarta KARTA PRODUKTU aplikacji „${nazwa}" w mobilnym sklepie z aplikacjami (generyczny, czysty design sklepu — bez logotypów Apple, Google ani nazw realnych sklepów).`,
+    `NA KARCIE SKLEPU: duża kwadratowa ikona aplikacji (zaprojektuj ją z design systemu poniżej — prosta, zapamiętywalna, bez tekstu w ikonie), obok nazwa „${nazwa}" i krótki polski podtytuł oddający obietnicę: „${s(brief.problem, 120)}"; pod spodem wiersz ocen (4,9 i pięć gwiazdek, liczba opinii), przycisk „Zainstaluj", niżej 2-3 pionowe miniatury zrzutów ekranu aplikacji (uproszczone, spójne z design systemem) i początek krótkiego opisu po polsku.`,
+    `Dla kogo: ${s(brief.dla_kogo)}. ${s(brief.opis, 200)}`,
+    `TŁO KADRU: miękkie, rozświetlone tło w kolorach marki (gradient/poświata z palety design systemu), delikatny cień pod telefonem — kompozycja jak hero z premium strony produktowej.`,
+    buildStyleBlock(brief),
+    'TYPOGRAFIA I TEKST: bardzo mało tekstu, duże czytelne napisy, bezbłędna polszczyzna z poprawnymi znakami diakrytycznymi (ą, ć, ę, ł, ń, ó, ś, ź, ż); zero lorem ipsum, zero angielskich słów. JAKOŚĆ: pixel-perfect, fotorealistyczny telefon, miękkie cienie, bez ludzi, bez znaków wodnych, bez logotypów firm trzecich.',
+  ].join(' ')
+}
+
+function buildPhonePrompt(brief: Record<string, unknown>): string {
+  const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const widoki = (brief.widoki && typeof brief.widoki === 'object')
+    ? brief.widoki as Record<string, unknown>
+    : {}
+  const nazwa = s(brief.nazwa, 80) || 'Narzędzie'
+  const panelDesc = s(widoki.panel, 500) || s(widoki.glowna, 500)
+  return [
+    `Fotorealistyczne zdjęcie lifestyle w naturalnym świetle: dłoń osoby z grupy docelowej (${s(brief.dla_kogo)}) trzyma nowoczesny smartfon, na którym otwarta jest aplikacja „${nazwa}". Kadr zza ramienia / zbliżenie na dłoń z telefonem — twarz osoby NIE jest widoczna albo mocno rozmyta w tle.`,
+    `TŁO: autentyczne, lekko rozmyte (bokeh) środowisko codziennej pracy tej grupy zawodowej — dobierz scenerię naturalnie do profesji; głębia ostrości jak z obiektywu 50mm f/1.8.`,
+    `EKRAN TELEFONU (ostry, czytelny, to bohater zdjęcia): mobilna wersja głównego ekranu aplikacji${panelDesc ? ` — ${panelDesc}` : ''} — uproszczona do 3-4 dużych elementów, realistyczne polskie dane.`,
+    buildStyleBlock(brief),
+    'TYPOGRAFIA NA EKRANIE: mało tekstu, duże etykiety, bezbłędna polszczyzna z poprawnymi znakami diakrytycznymi (ą, ć, ę, ł, ń, ó, ś, ź, ż). JAKOŚĆ: realizm fotografii edytorialnej (nie render 3D), naturalna skóra dłoni, poprawna anatomia dłoni z pięcioma palcami, miękkie naturalne światło, bez logotypów firm trzecich, bez znaków wodnych.',
+  ].join(' ')
+}
+
+// Ekrany robocze narzędzia (pula image_count) — bez widoków EXTRA
+type ScreenView = 'panel' | 'glowna' | 'dodatkowa' | 'landing'
+
+function buildImagePrompt(brief: Record<string, unknown>, view: ScreenView): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const widoki = (brief.widoki && typeof brief.widoki === 'object')
     ? brief.widoki as Record<string, unknown>
@@ -176,13 +217,13 @@ function buildImagePrompt(brief: Record<string, unknown>, view: Exclude<ViewKey,
     ].join(' ')
   }
 
-  const viewIntro: Record<Exclude<ViewKey, 'landing'>, string> = {
+  const viewIntro: Record<Exclude<ScreenView, 'landing'>, string> = {
     panel: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — GŁÓWNY PULPIT (jeden rzut oka na najważniejsze). Widok wprost, full-bleed, bez ramki przeglądarki i bez tła dookoła.`,
     glowna: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — EKRAN GŁÓWNEJ FUNKCJI W UŻYCIU (moment, w którym narzędzie rozwiązuje problem użytkownika). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami — to konkretny ekran roboczy jednej funkcji.`,
     dodatkowa: `Pełnoekranowy zrzut interfejsu PROSTEJ aplikacji webowej „${nazwa}" — DRUGI EKRAN wspierający główną funkcję (np. lista, szczegóły, ustawienia). Widok wprost, full-bleed, bez ramki przeglądarki. To NIE jest dashboard z wykresami ani osobny moduł — to ekran roboczy tego samego, małego narzędzia.`,
   }
 
-  const fallbackLayout: Record<Exclude<ViewKey, 'landing'>, string> = {
+  const fallbackLayout: Record<Exclude<ScreenView, 'landing'>, string> = {
     panel: 'LAYOUT: prosty pulpit z jednym celem — wąski pasek górny z nazwą narzędzia, 2-3 kluczowe liczby w prostych kartach, pod spodem JEDNA czytelna lista najważniejszych spraw ze statusami; bez sidebara, bez wykresów.',
     glowna: 'LAYOUT: jeden duży ekran roboczy głównej funkcji — formularz/lista/edytor w akcji, z wypełnionymi danymi i widocznym kolejnym krokiem użytkownika; nawigacja tylko jako wąski pasek górny.',
     dodatkowa: 'LAYOUT: jeden ekran wspierający główną funkcję (lista albo widok szczegółu) z wypełnionymi danymi; nawigacja tylko jako wąski pasek górny.',
@@ -308,17 +349,18 @@ Deno.serve(async (req) => {
     }
     const imageCount = (session.image_count as number | null) ?? 0
     const karta = session.problem_summary as Record<string, unknown> | null
-    if (view === 'podsumowanie') {
-      // Infografika karty: wymaga karty (werdykt), własny limit wersji —
-      // nie zjada puli ekranów (RPC nie inkrementuje image_count)
-      if (!karta) {
+    if (EXTRA_VIEWS.includes(view)) {
+      // Widoki extra: własny limit wersji per widok — nie zjadają puli ekranów
+      // (RPC nie inkrementuje image_count). 'podsumowanie' dodatkowo wymaga
+      // karty (infografika rysuje treść karty projektu po werdykcie).
+      if (view === 'podsumowanie' && !karta) {
         return jsonResponse({ error: 'brak_karty' }, 400, corsHeaders)
       }
       const histObj = (session.preview_history || {}) as Record<string, unknown>
-      const histLen = Array.isArray(histObj['podsumowanie']) ? (histObj['podsumowanie'] as unknown[]).length : 0
+      const histLen = Array.isArray(histObj[view]) ? (histObj[view] as unknown[]).length : 0
       const imgsObj = (session.preview_images || {}) as Record<string, unknown>
-      const hasCurrent = typeof imgsObj['podsumowanie'] === 'string' ? 1 : 0
-      if (histLen + hasCurrent >= MAX_SUMMARY_VERSIONS) {
+      const hasCurrent = typeof imgsObj[view] === 'string' ? 1 : 0
+      if (histLen + hasCurrent >= MAX_EXTRA_VERSIONS) {
         return jsonResponse({ error: 'limit_podsumowan' }, 429, corsHeaders)
       }
     } else if (imageCount >= MAX_IMAGES_PER_SESSION) {
@@ -381,7 +423,11 @@ Deno.serve(async (req) => {
 
     const prompt = view === 'podsumowanie'
       ? buildSummaryPrompt(brief, karta as Record<string, unknown>)
-      : buildImagePrompt(brief, view)
+      : view === 'sklep'
+        ? buildStorePrompt(brief)
+        : view === 'telefon'
+          ? buildPhonePrompt(brief)
+          : buildImagePrompt(brief, view as ScreenView)
     const { bytes, usedModel } = await generateImage(OPENAI_API_KEY, prompt)
 
     // Nazwa pliku per widok + timestamp wersji (upsert nadpisuje poprzednią
