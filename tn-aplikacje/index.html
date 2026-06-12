@@ -265,7 +265,7 @@ async function loadAll() {
   while (true) {
     const { data, error } = await supabaseClient
       .from('spar_sessions')
-      .select('id, created_at, updated_at, last_user_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, tracking, auth_provider')
+      .select('id, created_at, updated_at, last_user_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, tracking, auth_provider')
       .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
@@ -570,7 +570,11 @@ async function openSession(id) {
     </label>
     <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
       <input type="checkbox" ${s.showcase ? 'checked' : ''} onchange="toggleShowcase('${s.id}', this.checked)" class="accent-blue-500">
-      pokazuj w przykładach na stronie głównej (feed)
+      pokazuj w przykładach mimo statusu testowego (showcase)
+    </label>
+    <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
+      <input type="checkbox" ${s.hidden_from_feed ? 'checked' : ''} onchange="toggleHidden('${s.id}', this.checked)" class="accent-red-500">
+      ukryj z inspiracji i strony głównej
     </label>`;
 }
 function closeModal() { $('modal').classList.add('hidden'); }
@@ -587,7 +591,14 @@ async function toggleShowcase(id, val) {
   if (error) { toast('Błąd zapisu'); console.error(error); return; }
   const s = sessions.find((x) => x.id === id);
   if (s) s.showcase = val;
-  toast(val ? 'Dodano do przykładów na stronie głównej (feed odświeży się do 60 s)' : 'Zdjęto z przykładów');
+  toast(val ? 'Dodano do przykładów (feed odświeży się do 60 s)' : 'Zdjęto z przykładów');
+}
+async function toggleHidden(id, val) {
+  const { error } = await supabaseClient.from('spar_sessions').update({ hidden_from_feed: val }).eq('id', id);
+  if (error) { toast('Błąd zapisu'); console.error(error); return; }
+  const s = sessions.find((x) => x.id === id);
+  if (s) s.hidden_from_feed = val;
+  toast(val ? 'Ukryto z publicznych inspiracji (do 60 s)' : 'Projekt znów widoczny w inspiracjach');
 }
 
 // ── Zakładki ──

@@ -32,7 +32,10 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 // 60 s (nie 10 min): oznaczenie sesji jako testowej w panelu musi szybko
 // zdjąć ją z publicznego feedu na stronie głównej
 const CACHE_TTL_MS = 60 * 1000
-const FEED_LIMIT = 12
+// podstrona /aplikacja/inspiracje/ pokazuje wszystko (bez sztucznego limitu);
+// strona główna bierze z tego pierwsze kilka pozycji
+const FEED_LIMIT = 100
+const VIEW_ORDER = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie'] as const
 let cache: { data: unknown; at: number } | null = null
 
 Deno.serve(async (req) => {
@@ -54,32 +57,56 @@ Deno.serve(async (req) => {
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-    // Ostatnie realne sesje z wygenerowanym panelem; testowe wykluczone,
-    // CHYBA że oznaczone showcase (ręcznie wybrane przykłady z panelu admina)
+    // Wszystkie realne sesje z grafikami; testowe wykluczone CHYBA że showcase;
+    // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji
     const { data, error } = await supabase
       .from('spar_sessions')
       .select('preview_brief, preview_images, created_at')
       .or('is_test.eq.false,showcase.eq.true')
+      .eq('hidden_from_feed', false)
       .not('preview_images', 'is', null)
       .order('created_at', { ascending: false })
-      .limit(FEED_LIMIT * 3)
+      .limit(FEED_LIMIT * 2)
 
     if (error) {
       console.error('[spar-public-feed] fetch error:', error)
       return new Response(JSON.stringify({ error: 'blad_serwera' }), { status: 500, headers: cors })
     }
 
-    const projekty: { nazwa: string; img: string }[] = []
+    const VIEW_LABELS: Record<string, string> = {
+      panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa funkcja',
+      landing: 'Strona sprzedażowa', podsumowanie: 'Projekt w pigułce',
+    }
+    interface FeedItem {
+      nazwa: string
+      img: string
+      generated_at: string
+      imgs: { view: string; label: string; url: string }[]
+    }
+    const projekty: FeedItem[] = []
     const seen = new Set<string>()
     for (const row of data || []) {
-      const imgs = (row.preview_images || {}) as Record<string, unknown>
-      const img = (typeof imgs.panel === 'string' && imgs.panel)
-        || (typeof imgs.glowna === 'string' && imgs.glowna) || null
+      const imgsObj = (row.preview_images || {}) as Record<string, unknown>
       const brief = (row.preview_brief || {}) as Record<string, unknown>
       const nazwa = typeof brief.nazwa === 'string' ? brief.nazwa.slice(0, 60) : null
-      if (!img || !nazwa || seen.has(nazwa)) continue
+      if (!nazwa || seen.has(nazwa)) continue
+      const imgs: FeedItem['imgs'] = []
+      let maxTs = 0
+      for (const view of VIEW_ORDER) {
+        const url = imgsObj[view]
+        if (typeof url !== 'string' || !url) continue
+        imgs.push({ view, label: VIEW_LABELS[view] || view, url })
+        const m = url.match(/-(\d{13})\.png/)
+        if (m) maxTs = Math.max(maxTs, parseInt(m[1], 10))
+      }
+      if (!imgs.length) continue
       seen.add(nazwa)
-      projekty.push({ nazwa, img })
+      projekty.push({
+        nazwa,
+        img: imgs[0].url, // wsteczna zgodność (strona główna)
+        generated_at: maxTs ? new Date(maxTs).toISOString() : (row.created_at as string),
+        imgs,
+      })
       if (projekty.length >= FEED_LIMIT) break
     }
 
