@@ -12,21 +12,24 @@ const APPS = [
     { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
     { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
-    { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' }
+    { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
+    { id: 'aplikacje', name: 'TN Aplikacje', icon: 'ph-rocket-launch', color: 'bg-blue-500 text-white', defaultPage: 'index' }
 ];
 
 const APP_BASES = {
     crm: '',
     workflow: '/tn-workflow',
     todo: '/tn-todo',
-    biznes: '/tn-biznes'
+    biznes: '/tn-biznes',
+    aplikacje: '/tn-aplikacje'
 };
 
 const APP_AVATAR_COLORS = {
     crm: 'from-emerald-600 to-emerald-700',
     workflow: 'from-emerald-600 to-emerald-700',
     todo: 'from-violet-600 to-violet-700',
-    biznes: 'from-amber-500 to-amber-600'
+    biznes: 'from-amber-500 to-amber-600',
+    aplikacje: 'from-blue-600 to-blue-700'
 };
 
 // ============================================
@@ -63,6 +66,12 @@ const NAV_ITEMS_TODO = [
     { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki' },
 ];
 
+// TN Aplikacje (lejek Stworzę) — panel jest single-page z wewnętrznymi
+// zakładkami (Dashboard/Pipeline/Sesje/Koszty/Ustawienia w treści)
+const NAV_ITEMS_APLIKACJE = [
+    { id: 'index', icon: 'ph-rocket-launch', label: 'Stworzę' },
+];
+
 const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
     { id: 'analytics', icon: 'ph-chart-bar', label: 'Analytics' },
@@ -79,6 +88,7 @@ function getNavItemsForApp(appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
         case 'todo': return NAV_ITEMS_TODO;
         case 'biznes': return NAV_ITEMS_BIZNES;
+        case 'aplikacje': return NAV_ITEMS_APLIKACJE;
         default: return NAV_ITEMS_CRM;
     }
 }
@@ -445,6 +455,7 @@ function detectCurrentApp() {
     if (path.includes('/tn-todo')) return 'todo';
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
+    if (path.includes('/tn-aplikacje')) return 'aplikacje';
     return 'crm';
 }
 

@@ -179,6 +179,29 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
     const data = await res.json()
+    // Koszt wywołania → spar_usage (panel TN Aplikacje)
+    try {
+      const u = data?.usage || {}
+      const input = u.prompt_tokens || 0
+      const cached = u.prompt_tokens_details?.cached_tokens || 0
+      const output = u.completion_tokens || 0
+      const prices: Record<string, { i: number; c: number; o: number }> = {
+        'gpt-5.5': { i: 5, c: 0.5, o: 30 },
+        'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
+      }
+      const p = prices[OPENAI_MODEL] || prices['gpt-5.5']
+      await supabase.from('spar_usage').insert({
+        session_id: sessionId,
+        kind: 'plan',
+        model: OPENAI_MODEL,
+        input_tokens: input,
+        cached_tokens: cached,
+        output_tokens: output,
+        cost_usd: (Math.max(0, input - cached) * p.i + cached * p.c + output * p.o) / 1_000_000,
+      })
+    } catch (uErr) {
+      console.error('[spar-plan] usage insert error:', uErr)
+    }
     const content = data?.choices?.[0]?.message?.content
     let plan: Record<string, unknown>
     try {

@@ -75,9 +75,31 @@ interface SparChatRequest {
   problemHint?: string | null
   email: string
   name?: string | null
+  phone?: string | null
   message: string
   tracking?: Record<string, unknown> | null
   mode?: string
+  // metadane logowania OAuth (Google/Facebook przez Supabase Auth) — spinają
+  // sesję sparingu z kontem; nie służą do autoryzacji (ta jest sessionId-based)
+  authUserId?: string | null
+  authProvider?: string | null
+}
+
+// ── Cennik USD per 1M tokenów (logowanie kosztów do spar_usage) ──────────────
+const CHAT_PRICES: Record<string, { input: number; cached: number; output: number }> = {
+  'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
+  'gpt-5.1': { input: 1.25, cached: 0.125, output: 10 },
+}
+function chatCostUsd(model: string, input: number, cached: number, output: number): number {
+  const p = CHAT_PRICES[model] || CHAT_PRICES['gpt-5.5']
+  const freshIn = Math.max(0, input - cached)
+  return (freshIn * p.input + cached * p.cached + output * p.output) / 1_000_000
+}
+
+interface StreamUsage {
+  prompt_tokens?: number
+  completion_tokens?: number
+  prompt_tokens_details?: { cached_tokens?: number }
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -210,6 +232,7 @@ async function createLeadForGreenVerdict(
   payload: {
     email: string
     name: string | null
+    phone: string | null
     profession: string
     karta: Record<string, unknown> | null
     tracking: Record<string, unknown> | null
@@ -225,7 +248,10 @@ async function createLeadForGreenVerdict(
       body: JSON.stringify({
         email: payload.email,
         name: payload.name,
-        source: 'stworze',
+        phone: payload.phone || undefined,
+        // FIX 2026-06-13: wcześniej szło jako `source` (pole nieczytane przez
+        // lead-upsert) — leady ze Stworzę lądowały jako lead_source='website'
+        lead_source: 'stworze',
         notes: buildLeadNotes(payload.profession, payload.karta),
         tracking: payload.tracking,
       }),
@@ -246,7 +272,7 @@ async function createLeadForGreenVerdict(
   }
 }
 
-// Zapis po zakończeniu streamu: wiadomość asystenta + update sesji
+// Zapis po zakończeniu streamu: wiadomość asystenta + update sesji + koszt
 async function persistAfterStream(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -256,6 +282,7 @@ async function persistAfterStream(
   leadId: string | null,
   projekt: Record<string, unknown> | null,
   channel: string,
+  usage: StreamUsage | null,
 ): Promise<void> {
   try {
     if (assistantText.trim()) {
@@ -265,9 +292,28 @@ async function persistAfterStream(
       if (msgError) console.error('[spar-chat] insert assistant message error:', msgError)
     }
 
+    // Koszt tej tury (stream_options.include_usage) → spar_usage (panel TN Aplikacje)
+    if (usage) {
+      const input = usage.prompt_tokens || 0
+      const cached = usage.prompt_tokens_details?.cached_tokens || 0
+      const output = usage.completion_tokens || 0
+      const { error: usageErr } = await supabase.from('spar_usage').insert({
+        session_id: sessionId,
+        kind: 'chat',
+        model: OPENAI_MODEL,
+        input_tokens: input,
+        cached_tokens: cached,
+        output_tokens: output,
+        cost_usd: chatCostUsd(OPENAI_MODEL, input, cached, output),
+        meta: { channel },
+      })
+      if (usageErr) console.error('[spar-chat] usage insert error:', usageErr)
+    }
+
     const update: Record<string, unknown> = {
       turns: turnsBefore + 1,
       updated_at: new Date().toISOString(),
+      last_user_at: new Date().toISOString(),
     }
     if (verdict.verdict) {
       update.verdict = verdict.verdict
@@ -328,10 +374,13 @@ Deno.serve(async (req) => {
     const problemHint = (body.problemHint || '').trim() || null
     const email = (body.email || '').toLowerCase().trim()
     const name = (body.name || '').trim() || null
+    const phone = (body.phone || '').replace(/[^\d+ \-()]/g, '').trim().slice(0, 30) || null
     const message = (body.message || '').trim()
     const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : null
     const mode = body.mode === 'wspolpraca' ? 'wspolpraca' : 'sparing'
     const isCollab = mode === 'wspolpraca'
+    const authUserId = (body.authUserId && UUID_RE.test(body.authUserId)) ? body.authUserId : null
+    const authProvider = (body.authProvider || '').trim().slice(0, 30) || null
 
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, corsHeaders)
@@ -364,7 +413,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, verdict, problem_summary, preview_brief, preview_image_url')
+      .select('id, turns, profession, problem_hint, email, name, phone, verdict, problem_summary, preview_brief, preview_image_url')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -383,11 +432,15 @@ Deno.serve(async (req) => {
     if (existingSession) {
       turnsBefore = existingSession.turns ?? 0
 
-      // Kontakt z bramki inline: dopisz mail/imię do sesji, gdy przyszły po raz pierwszy
+      // Kontakt z bramki inline: dopisz mail/imię/telefon do sesji, gdy przyszły
+      // po raz pierwszy (+ metadane OAuth, jeśli rozmówca logował się kontem)
       if (email && !existingSession.email) {
+        const contactUpdate: Record<string, unknown> = { email, name, updated_at: new Date().toISOString() }
+        if (phone) contactUpdate.phone = phone
+        if (authUserId) { contactUpdate.auth_user_id = authUserId; contactUpdate.auth_provider = authProvider }
         const { error: contactError } = await supabase
           .from('spar_sessions')
-          .update({ email, name, updated_at: new Date().toISOString() })
+          .update(contactUpdate)
           .eq('id', sessionId)
         if (contactError) console.error('[spar-chat] contact update error:', contactError)
       }
@@ -422,8 +475,12 @@ Deno.serve(async (req) => {
             problem_hint: problemHint,
             email: email || null,
             name,
+            phone,
+            auth_user_id: authUserId,
+            auth_provider: authUserId ? authProvider : null,
             tracking,
             ip,
+            last_user_at: new Date().toISOString(),
           }],
           { onConflict: 'id', ignoreDuplicates: true },
         )
@@ -542,6 +599,8 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         stream: true,
+        // usage w ostatnim chunku streamu — bez tego nie policzymy kosztu tury
+        stream_options: { include_usage: true },
         max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
         messages: [
           { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
@@ -565,11 +624,12 @@ Deno.serve(async (req) => {
     const outStream = new ReadableStream<Uint8Array>({
       async start(controller) {
         let assistantText = ''
+        let usage: StreamUsage | null = null
         let persisted = false
         const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)
@@ -597,6 +657,7 @@ Deno.serve(async (req) => {
                   console.error('[spar-chat] OpenAI stream error:', JSON.stringify(evt.error))
                   throw new Error('openai_stream_error')
                 }
+                if (evt?.usage) usage = evt.usage as StreamUsage // ostatni chunk (include_usage)
                 const delta = evt?.choices?.[0]?.delta?.content
                 if (typeof delta === 'string' && delta.length) {
                   assistantText += delta
@@ -649,6 +710,7 @@ Deno.serve(async (req) => {
               leadId = await createLeadForGreenVerdict(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
                 email: effectiveEmail,
                 name: name || ((existingSession?.name as string | null | undefined) ?? null),
+                phone: phone || ((existingSession?.phone as string | null | undefined) ?? null),
                 profession: sessionProfession || 'nieznana',
                 karta: verdict.karta,
                 tracking,

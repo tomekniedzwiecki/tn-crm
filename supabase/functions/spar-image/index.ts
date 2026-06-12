@@ -42,6 +42,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
 const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
+// Koszt USD jednego obrazu 1536x1024 per quality (logowanie do spar_usage)
+const IMAGE_COST_USD: Record<string, number> = { low: 0.011, medium: 0.041, high: 0.167 }
 const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
 // Dzienny limit per IP (anty-abuse). Na czas testów rozwojowych podniesiony
 // przez default 200 — PRZED kampanią reklamową ustawić env SPAR_IMG_IP_DAILY=20.
@@ -325,6 +327,18 @@ Deno.serve(async (req) => {
     if (!url) {
       return jsonResponse({ error: 'blad_zapisu' }, 500, corsHeaders)
     }
+
+    // Koszt obrazu → spar_usage (panel TN Aplikacje liczy z tego PLN)
+    const quality = Deno.env.get('SPAR_IMAGE_QUALITY') || 'medium'
+    const { error: usageErr } = await supabase.from('spar_usage').insert({
+      session_id: sessionId,
+      kind: 'image',
+      model: IMAGE_MODEL,
+      images: 1,
+      cost_usd: IMAGE_COST_USD[quality] ?? IMAGE_COST_USD.medium,
+      meta: { view, quality },
+    })
+    if (usageErr) console.error('[spar-image] usage insert error:', usageErr)
 
     // Atomowy zapis (4 równoległe generacje — bez wyścigu na read-modify-write);
     // RPC przenosi poprzednią wersję widoku do preview_history (nic nie przepada)

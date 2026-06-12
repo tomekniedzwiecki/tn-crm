@@ -2359,6 +2359,8 @@ function validateForm() {
     }
 
     // Implicit consent — klik 'Zaplac' = akceptacja regulaminu (statement pod buttonem w pay bar)
+    // Stworzę: dodatkowo wymagany checkbox zgody na usługę cyfrową przed upływem 14 dni
+    if (!validateStworzeConsent()) valid = false;
     return valid;
 }
 
@@ -2561,7 +2563,7 @@ async function handleSubmit() {
                 discount_amount: appliedDiscount ? appliedDiscount.discount_amount : null,
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 payment_source: paymentSource,
-                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`,
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2579,7 +2581,7 @@ async function handleSubmit() {
                 discount_code_id: appliedDiscount ? appliedDiscount.id : null,
                 status: 'pending',
                 payment_source: paymentSource,
-                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}`
+                notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`
             };
 
             if (isCustomPayment && customPaymentLeadId) {
@@ -2669,7 +2671,46 @@ function setupOfferDisplay(offer) {
         $('v-installments-monthly').textContent = formatPrice(calculateInstallment(offer.price));
     }
 
+    setupStworzeConsent(offer);
     updatePayButton();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// STWORZĘ — rezerwacja współpracy: dedykowany regulamin + WYMAGANY
+// checkbox zgody na wykonanie usługi cyfrowej przed upływem 14 dni
+// (konsument; bez tej zgody nie wolno zacząć przygotowania planu)
+// ═══════════════════════════════════════════════════════════════════
+const STWORZE_OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076';
+const STWORZE_REGULAMIN = 'https://tomekniedzwiecki.pl/stworze/regulamin/';
+let stworzeConsentRequired = false;
+
+function setupStworzeConsent(offer) {
+    if (offer.id !== STWORZE_OFFER_ID) return;
+    stworzeConsentRequired = true;
+    document.querySelectorAll('.v-link-regulamin').forEach(a => a.href = STWORZE_REGULAMIN);
+    const payBtn = $('v-pay-desktop');
+    if (!payBtn || $('stworze-consent')) return;
+    const box = document.createElement('label');
+    box.id = 'stworze-consent-box';
+    box.style.cssText = 'display:flex;gap:10px;align-items:flex-start;margin:14px 0 4px;font-size:12.5px;line-height:1.55;color:#a1a1aa;cursor:pointer;';
+    box.innerHTML = '<input type="checkbox" id="stworze-consent" style="margin-top:2.5px;accent-color:#4d9fff;flex-shrink:0;">' +
+        '<span>Chcę, aby przygotowanie planu przedsięwzięcia rozpoczęło się od razu — wyrażam zgodę na wykonanie usługi przed upływem 14-dniowego terminu odstąpienia. Znam <a href="' + STWORZE_REGULAMIN + '" target="_blank" style="color:#4d9fff;">regulamin</a>: opłata 500 zł jest w pełni zwrotna, jeśli nie wejdziemy we współpracę.</span>';
+    payBtn.parentNode.insertBefore(box, payBtn);
+    const err = document.createElement('div');
+    err.id = 'stworze-consent-err';
+    err.style.cssText = 'display:none;color:#f87171;font-size:12px;margin:-2px 0 8px;';
+    err.textContent = 'Zaznacz zgodę, żeby przejść do płatności.';
+    payBtn.parentNode.insertBefore(err, payBtn);
+}
+
+function validateStworzeConsent() {
+    if (!stworzeConsentRequired) return true;
+    const cb = $('stworze-consent');
+    const ok = !!(cb && cb.checked);
+    const err = $('stworze-consent-err');
+    if (err) err.style.display = ok ? 'none' : 'block';
+    if (!ok && cb) cb.closest('label').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return ok;
 }
 
 async function loadOffer() {

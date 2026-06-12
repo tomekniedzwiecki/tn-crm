@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TN Aplikacje — Stworzę</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { background: #050505; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+  .animate-enter { animation: fadeIn 0.4s ease both; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .tab-active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.08); }
+  .bar { transition: height 0.5s cubic-bezier(0.16,1,0.3,1); }
+  .msg-user { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); }
+  .msg-ai { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); }
+</style>
+</head>
+<body class="text-zinc-200 min-h-screen flex">
+
+<aside id="sidebar" class="w-[280px] shrink-0 bg-zinc-950 border-r border-white/5 min-h-screen hidden md:block"></aside>
+
+<main class="flex-1 min-w-0">
+  <header class="sticky top-0 z-30 px-6 py-4 border-b border-white/5" style="background: rgba(5,5,5,0.8); backdrop-filter: blur(12px);">
+    <div class="flex items-center justify-between gap-4 flex-wrap">
+      <div class="flex items-center gap-3">
+        <button id="btn-mobile-menu" class="md:hidden text-zinc-400"><i class="ph ph-list text-xl"></i></button>
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
+          <i class="ph-bold ph-rocket-launch text-white text-sm"></i>
+        </div>
+        <div>
+          <h1 class="text-white font-semibold leading-tight">TN Aplikacje</h1>
+          <p class="text-[11px] text-zinc-500 leading-tight">lejek Stworzę — sesje, leady, koszty</p>
+        </div>
+      </div>
+      <nav class="flex items-center gap-1.5 text-sm" id="tabs">
+        <button data-tab="dashboard" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chart-pie mr-1.5"></i>Dashboard</button>
+        <button data-tab="pipeline" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-kanban mr-1.5"></i>Pipeline</button>
+        <button data-tab="sesje" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
+        <button data-tab="koszty" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
+        <button data-tab="ustawienia" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear mr-1.5"></i></button>
+      </nav>
+    </div>
+  </header>
+
+  <div id="loading" class="p-12 text-center text-zinc-500"><i class="ph ph-circle-notch animate-spin text-2xl"></i><div class="mt-2 text-sm">Wczytuję dane lejka…</div></div>
+
+  <!-- ════════ DASHBOARD ════════ -->
+  <section id="view-dashboard" class="hidden p-6 space-y-6">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="kpi-grid"></div>
+    <div class="grid lg:grid-cols-2 gap-4">
+      <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-medium text-sm"><i class="ph ph-funnel mr-1.5 text-blue-400"></i>Lejek konwersji</h3>
+          <span class="text-[11px] text-zinc-500">bez sesji testowych</span>
+        </div>
+        <div id="funnel" class="space-y-2"></div>
+      </div>
+      <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-white font-medium text-sm"><i class="ph ph-chart-bar mr-1.5 text-blue-400"></i>Koszty AI — ostatnie 14 dni</h3>
+          <span class="text-[11px] text-zinc-500" id="chart-total"></span>
+        </div>
+        <div id="cost-chart" class="flex items-end gap-1.5 h-36"></div>
+        <div id="cost-chart-labels" class="flex gap-1.5 mt-1.5"></div>
+      </div>
+    </div>
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <h3 class="text-white font-medium text-sm mb-4"><i class="ph ph-clock-counter-clockwise mr-1.5 text-blue-400"></i>Ostatnie sesje</h3>
+      <div id="recent-sessions" class="space-y-1.5"></div>
+    </div>
+  </section>
+
+  <!-- ════════ PIPELINE ════════ -->
+  <section id="view-pipeline" class="hidden p-6">
+    <div class="flex gap-3 overflow-x-auto pb-4" id="pipeline-cols"></div>
+  </section>
+
+  <!-- ════════ SESJE ════════ -->
+  <section id="view-sesje" class="hidden p-6">
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <div class="relative flex-1 min-w-[220px] max-w-sm">
+        <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
+        <input id="search" type="text" placeholder="Szukaj: nazwa, email, telefon, profesja…"
+          class="w-full bg-zinc-900/60 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/40">
+      </div>
+      <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
+        <input type="checkbox" id="show-tests" class="accent-blue-500"> pokaż testowe
+      </label>
+      <span id="sesje-count" class="text-xs text-zinc-500 ml-auto"></span>
+    </div>
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+              <th class="px-4 py-3">Data</th>
+              <th class="px-4 py-3">Projekt</th>
+              <th class="px-4 py-3">Osoba</th>
+              <th class="px-4 py-3">Etap</th>
+              <th class="px-4 py-3 text-right">Tury</th>
+              <th class="px-4 py-3 text-right">Grafiki</th>
+              <th class="px-4 py-3 text-right">Koszt</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="sesje-rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ════════ KOSZTY ════════ -->
+  <section id="view-koszty" class="hidden p-6 space-y-4">
+    <div class="flex items-end gap-3 flex-wrap">
+      <label class="text-xs text-zinc-500">Od<br><input type="date" id="cost-from" class="mt-1 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 text-sm text-white"></label>
+      <label class="text-xs text-zinc-500">Do<br><input type="date" id="cost-to" class="mt-1 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 text-sm text-white"></label>
+      <button id="cost-apply" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition">Pokaż</button>
+      <div class="flex gap-1.5 text-xs">
+        <button class="cost-preset px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white" data-days="7">7 dni</button>
+        <button class="cost-preset px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white" data-days="30">30 dni</button>
+        <button class="cost-preset px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white" data-days="90">90 dni</button>
+      </div>
+      <div class="ml-auto text-right">
+        <div class="text-[11px] text-zinc-500 uppercase tracking-wider">Suma zakresu</div>
+        <div class="text-2xl font-bold text-white" id="cost-range-total">—</div>
+        <div class="text-[11px] text-zinc-500" id="cost-range-usd"></div>
+      </div>
+    </div>
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+            <th class="px-4 py-3">Dzień</th>
+            <th class="px-4 py-3 text-right">Rozmowy (chat)</th>
+            <th class="px-4 py-3 text-right">Grafiki</th>
+            <th class="px-4 py-3 text-right">Plany</th>
+            <th class="px-4 py-3 text-right">Razem USD</th>
+            <th class="px-4 py-3 text-right">Razem PLN</th>
+          </tr>
+        </thead>
+        <tbody id="koszty-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ════════ USTAWIENIA ════════ -->
+  <section id="view-ustawienia" class="hidden p-6 max-w-xl space-y-4">
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <h3 class="text-white font-medium text-sm mb-1"><i class="ph ph-currency-dollar mr-1.5 text-blue-400"></i>Kurs USD → PLN</h3>
+      <p class="text-xs text-zinc-500 mb-3">Koszty AI są logowane w USD — panel przelicza je tym kursem.</p>
+      <div class="flex gap-2">
+        <input type="number" step="0.01" min="1" id="rate-input" class="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white w-28">
+        <button id="rate-save" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition">Zapisz</button>
+      </div>
+    </div>
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5 text-sm text-zinc-400 space-y-2">
+      <h3 class="text-white font-medium text-sm"><i class="ph ph-info mr-1.5 text-blue-400"></i>Limity i konfiguracja (env Supabase)</h3>
+      <p><code class="text-blue-300">SPAR_OPENAI_MODEL</code> — model czatu (teraz gpt-5.5)</p>
+      <p><code class="text-blue-300">SPAR_IMG_IP_DAILY</code> — dzienny limit obrazów per IP (produkcyjnie: 20)</p>
+      <p><code class="text-blue-300">SPAR_IMAGE_QUALITY</code> — low / medium / high (koszt $0.011 / $0.041 / $0.167 za obraz)</p>
+      <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min (abandoned 3–48 h, werdykt bez wpłaty 20–96 h, wpłata → welcome + lead „won").</p>
+    </div>
+  </section>
+</main>
+
+<!-- ════════ MODAL SZCZEGÓŁU SESJI ════════ -->
+<div id="modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this)closeModal()">
+  <div class="max-w-5xl mx-auto my-8 bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-zinc-950/95 backdrop-blur z-10">
+      <div>
+        <h2 class="text-white font-semibold" id="m-title">Sesja</h2>
+        <p class="text-xs text-zinc-500" id="m-sub"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a id="m-open" href="#" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz wizytówkę</a>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-lg border border-white/10 text-zinc-400 hover:text-white"><i class="ph ph-x"></i></button>
+      </div>
+    </div>
+    <div class="grid lg:grid-cols-5 gap-0">
+      <div class="lg:col-span-3 border-r border-white/5 max-h-[70vh] overflow-y-auto p-5 space-y-2.5" id="m-chat"></div>
+      <div class="lg:col-span-2 max-h-[70vh] overflow-y-auto p-5 space-y-4" id="m-side"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="hidden fixed bottom-5 right-5 z-[60] bg-zinc-900 border border-white/10 text-white text-sm px-4 py-2.5 rounded-xl shadow-2xl"></div>
+
+<script src="../components/shared-sidebar.js"></script>
+<script>
+const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SPARING_URL = 'https://tomekniedzwiecki.pl/stworze/sparing/';
+
+let sessions = [];          // spar_sessions (wszystkie, z paginacją)
+let costsBySession = {};    // session_id -> {cost_usd, calls, images, ...}
+let usdPln = 4.0;
+let activeTab = 'dashboard';
+let showTests = false;
+let search = '';
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtPln = (usd) => (usd * usdPln).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+const fmtUsd = (usd) => '$' + usd.toFixed(usd < 1 ? 3 : 2);
+const timeAgo = (iso) => {
+  if (!iso) return '—';
+  const m = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (m < 60) return m + ' min temu';
+  const h = Math.round(m / 60);
+  if (h < 48) return h + ' h temu';
+  return Math.round(h / 24) + ' dni temu';
+};
+const fmtDate = (iso) => iso ? new Date(iso).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+function toast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 2600);
+}
+
+// ── Etap pipeline wyliczany z danych (jak PLAN-PRODUKCYJNY.md) ──
+const STAGES = [
+  { id: 'talk',    name: 'Rozmowa',        icon: 'ph-chat-circle',   color: 'text-zinc-400',    dot: 'bg-zinc-500' },
+  { id: 'lead',    name: 'Lead (e-mail)',  icon: 'ph-user-plus',     color: 'text-sky-400',     dot: 'bg-sky-500' },
+  { id: 'project', name: 'Projekt',        icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
+  { id: 'green',   name: 'Zielony werdykt',icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
+  { id: 'paid',    name: 'Opłacone 500 zł',icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
+];
+function stageOf(s) {
+  if (s.paid_at) return 'paid';
+  if (s.verdict === 'zielony') return 'green';
+  if (s.preview_images && Object.keys(s.preview_images).length) return 'project';
+  if (s.email) return 'lead';
+  return 'talk';
+}
+function projName(s) {
+  return (s.preview_brief && s.preview_brief.nazwa) || s.profession || 'Rozmowa bez nazwy';
+}
+function visibleSessions() {
+  return sessions.filter((s) => (showTests || !s.is_test));
+}
+
+// ── Ładowanie danych ──
+async function loadAll() {
+  // paginacja — PostgREST tnie do 1000 wierszy
+  const all = [];
+  const pageSize = 1000;
+  let page = 0;
+  while (true) {
+    const { data, error } = await supabaseClient
+      .from('spar_sessions')
+      .select('id, created_at, updated_at, last_user_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, tracking, auth_provider')
+      .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1);
+    if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
+    if (!data || !data.length) break;
+    all.push(...data);
+    if (data.length < pageSize) break;
+    page++;
+  }
+  sessions = all;
+
+  const [{ data: costs }, { data: rateRow }] = await Promise.all([
+    supabaseClient.rpc('spar_session_costs'),
+    supabaseClient.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
+  ]);
+  costsBySession = {};
+  (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
+  if (rateRow && rateRow.value) usdPln = parseFloat(rateRow.value) || 4.0;
+  $('rate-input').value = usdPln.toFixed(2);
+}
+const costOf = (s) => (costsBySession[s.id] ? Number(costsBySession[s.id].cost_usd) : 0);
+
+// ── DASHBOARD ──
+function renderDashboard() {
+  const vis = sessions.filter((s) => !s.is_test);
+  const now = Date.now();
+  const d7 = now - 7 * 864e5;
+  const within7 = vis.filter((s) => new Date(s.created_at).getTime() >= d7);
+  const leads = vis.filter((s) => s.email);
+  const projects = vis.filter((s) => s.preview_images && Object.keys(s.preview_images).length);
+  const greens = vis.filter((s) => s.verdict === 'zielony');
+  const paid = vis.filter((s) => s.paid_at);
+  const totalCost = vis.reduce((sum, s) => sum + costOf(s), 0);
+  const cost7 = within7.reduce((sum, s) => sum + costOf(s), 0);
+  const avgCost = vis.length ? totalCost / vis.filter((s) => costOf(s) > 0).length || 0 : 0;
+
+  const kpi = [
+    { label: 'Sesje (7 dni / razem)', val: `${within7.length} / ${vis.length}`, icon: 'ph-chats-circle', tone: 'text-blue-400' },
+    { label: 'Leady (e-mail)', val: leads.length, icon: 'ph-user-plus', tone: 'text-sky-400' },
+    { label: 'Zielone werdykty', val: greens.length, icon: 'ph-check-circle', tone: 'text-emerald-400' },
+    { label: 'Opłacone 500 zł', val: paid.length, icon: 'ph-currency-circle-dollar', tone: 'text-amber-400' },
+    { label: 'Koszt AI — 7 dni', val: fmtPln(cost7), icon: 'ph-wallet', tone: 'text-blue-400' },
+    { label: 'Koszt AI — razem', val: fmtPln(totalCost), icon: 'ph-stack', tone: 'text-blue-400' },
+    { label: 'Śr. koszt rozmowy', val: avgCost ? fmtPln(avgCost) : '—', icon: 'ph-calculator', tone: 'text-zinc-400' },
+    { label: 'Przychód (rezerwacje)', val: (paid.length * 500).toLocaleString('pl-PL') + ' zł', icon: 'ph-trend-up', tone: 'text-emerald-400' },
+  ];
+  $('kpi-grid').innerHTML = kpi.map((k) => `
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 animate-enter">
+      <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${k.icon} ${k.tone}"></i>${k.label}</div>
+      <div class="text-xl font-bold text-white mt-1.5">${k.val}</div>
+    </div>`).join('');
+
+  // lejek
+  const steps = [
+    ['Rozmowy', vis.length],
+    ['Podany e-mail', leads.length],
+    ['Wygenerowany projekt', projects.length],
+    ['Zielony werdykt', greens.length],
+    ['Wpłata 500 zł', paid.length],
+  ];
+  const max = Math.max(1, vis.length);
+  $('funnel').innerHTML = steps.map(([label, n], i) => {
+    const pct = vis.length ? Math.round((n / max) * 100) : 0;
+    const conv = i === 0 ? '' : steps[i - 1][1] ? ` <span class="text-zinc-600">(${Math.round((n / Math.max(1, steps[i - 1][1])) * 100)}%)</span>` : '';
+    return `<div>
+      <div class="flex justify-between text-xs mb-1"><span class="text-zinc-400">${label}</span><span class="text-white font-medium">${n}${conv}</span></div>
+      <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400" style="width:${pct}%"></div></div>
+    </div>`;
+  }).join('');
+
+  // wykres 14 dni
+  renderCostChart();
+
+  // ostatnie sesje
+  $('recent-sessions').innerHTML = vis.slice(0, 8).map(sessionRowMini).join('') || '<div class="text-sm text-zinc-600">Brak sesji.</div>';
+}
+
+function sessionRowMini(s) {
+  const st = STAGES.find((x) => x.id === stageOf(s));
+  return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left">
+    <span class="w-2 h-2 rounded-full ${st.dot} shrink-0"></span>
+    <span class="text-sm text-white truncate">${esc(projName(s))}</span>
+    <span class="text-xs text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
+    <span class="ml-auto text-xs font-mono text-zinc-400 shrink-0">${costOf(s) ? fmtPln(costOf(s)) : ''}</span>
+    <span class="text-[11px] text-zinc-600 shrink-0 w-20 text-right">${timeAgo(s.created_at)}</span>
+  </button>`;
+}
+
+async function renderCostChart() {
+  const to = new Date(); const from = new Date(Date.now() - 13 * 864e5);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  const { data, error } = await supabaseClient.rpc('spar_costs_daily', { p_from: iso(from), p_to: iso(to) });
+  if (error) { console.error(error); return; }
+  const byDay = {};
+  (data || []).forEach((r) => { byDay[r.day] = (byDay[r.day] || 0) + Number(r.cost_usd); });
+  const days = [];
+  for (let i = 13; i >= 0; i--) days.push(iso(new Date(Date.now() - i * 864e5)));
+  const max = Math.max(0.01, ...days.map((d) => byDay[d] || 0));
+  let total = 0;
+  $('cost-chart').innerHTML = days.map((d) => {
+    const v = byDay[d] || 0; total += v;
+    const h = Math.max(2, Math.round((v / max) * 100));
+    return `<div class="flex-1 flex flex-col justify-end h-full" title="${d}: ${fmtPln(v)}">
+      <div class="bar w-full rounded-t bg-gradient-to-t from-blue-700/60 to-blue-400/80" style="height:${h}%"></div>
+    </div>`;
+  }).join('');
+  $('cost-chart-labels').innerHTML = days.map((d) => `<div class="flex-1 text-center text-[9px] text-zinc-600">${d.slice(8)}</div>`).join('');
+  $('chart-total').textContent = '14 dni: ' + fmtPln(total);
+}
+
+// ── PIPELINE ──
+function renderPipeline() {
+  const vis = visibleSessions();
+  $('pipeline-cols').innerHTML = STAGES.map((st) => {
+    const items = vis.filter((s) => stageOf(s) === st.id);
+    const cards = items.slice(0, 60).map((s) => {
+      const initials = (s.name || s.email || '?').trim().slice(0, 2).toUpperCase();
+      return `<div onclick="openSession('${s.id}')" class="group bg-zinc-900/60 border border-white/5 rounded-lg p-3 cursor-pointer hover:border-white/15 hover:-translate-y-0.5 transition animate-enter">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[11px] font-bold shrink-0">${esc(initials)}</div>
+          <div class="flex-1 min-w-0">
+            <div class="font-medium text-white text-sm truncate">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] text-zinc-600">TEST</span>' : ''}</div>
+            <div class="text-[11px] text-zinc-500 truncate">${esc(s.email || s.profession || '—')}</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-white/5 text-[11px]">
+          <span class="font-mono text-zinc-400">${costOf(s) ? fmtPln(costOf(s)) : '—'}</span>
+          <span class="text-zinc-600">${timeAgo(s.last_user_at || s.created_at)}</span>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="w-[270px] shrink-0">
+      <div class="flex items-center gap-2 px-1 mb-2.5">
+        <i class="ph ${st.icon} ${st.color}"></i>
+        <span class="text-sm font-medium text-white">${st.name}</span>
+        <span class="ml-auto text-xs text-zinc-500 font-mono">${items.length}</span>
+      </div>
+      <div class="space-y-2">${cards || '<div class="text-xs text-zinc-700 px-1">pusto</div>'}</div>
+    </div>`;
+  }).join('');
+}
+
+// ── SESJE (tabela) ──
+function renderSesje() {
+  const q = search.toLowerCase();
+  const rows = visibleSessions().filter((s) => {
+    if (!q) return true;
+    return [projName(s), s.email, s.phone, s.profession, s.name].some((v) => v && String(v).toLowerCase().includes(q));
+  });
+  $('sesje-count').textContent = rows.length + ' sesji';
+  $('sesje-rows').innerHTML = rows.slice(0, 400).map((s) => {
+    const st = STAGES.find((x) => x.id === stageOf(s));
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
+      <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
+      <td class="px-4 py-2.5 text-white">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
+      <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(s.email || '—')}${s.phone ? `<div class="text-zinc-600">${esc(s.phone)}</div>` : ''}</td>
+      <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
+      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || 0}</td>
+      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.image_count || 0}</td>
+      <td class="px-4 py-2.5 text-right text-white font-mono text-xs">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
+      <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak sesji.</td></tr>';
+}
+
+// ── KOSZTY (zakres dat) ──
+async function renderKoszty() {
+  const from = $('cost-from').value, to = $('cost-to').value;
+  if (!from || !to) return;
+  const { data, error } = await supabaseClient.rpc('spar_costs_daily', { p_from: from, p_to: to });
+  if (error) { console.error(error); toast('Błąd ładowania kosztów'); return; }
+  const byDay = {};
+  (data || []).forEach((r) => {
+    byDay[r.day] = byDay[r.day] || { chat: 0, image: 0, plan: 0 };
+    byDay[r.day][r.kind] = Number(r.cost_usd);
+  });
+  const days = Object.keys(byDay).sort().reverse();
+  let totalUsd = 0;
+  $('koszty-rows').innerHTML = days.map((d) => {
+    const r = byDay[d];
+    const sum = r.chat + r.image + r.plan;
+    totalUsd += sum;
+    return `<tr class="border-b border-white/[0.03]">
+      <td class="px-4 py-2.5 text-white text-xs">${d}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.chat)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.image)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.plan)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-300">${fmtUsd(sum)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs text-white">${fmtPln(sum)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak kosztów w zakresie.</td></tr>';
+  $('cost-range-total').textContent = fmtPln(totalUsd);
+  $('cost-range-usd').textContent = fmtUsd(totalUsd) + ' · kurs ' + usdPln.toFixed(2);
+}
+
+// ── SZCZEGÓŁ SESJI ──
+const MARKER_RE = /<(opcje|opcje_multi|suwak|ranking|styl_wybor|sekcje|karuzela|blysk|kamien|makieta|projekt|werdykt)>[\s\S]*?(<\/\1>|$)/g;
+function cleanMsg(content) {
+  let out = content;
+  const verdict = content.match(/<werdykt>([\s\S]*?)<\/werdykt>/);
+  out = out.replace(MARKER_RE, '').trim();
+  let badge = '';
+  if (verdict) {
+    try { badge = `<div class="mt-1.5 text-[10px] uppercase tracking-wider text-emerald-400">werdykt: ${esc(JSON.parse(verdict[1]).kolor)}</div>`; } catch (e) { /* ignore */ }
+  }
+  if (content.includes('<projekt>')) badge += '<div class="mt-1 text-[10px] uppercase tracking-wider text-violet-400">+ brief projektu (generowanie ekranów)</div>';
+  return esc(out).replace(/\n/g, '<br>') + badge;
+}
+
+async function openSession(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s) return;
+  $('modal').classList.remove('hidden');
+  $('m-title').textContent = projName(s);
+  $('m-sub').textContent = `${s.email || 'bez e-maila'}${s.phone ? ' · ' + s.phone : ''}${s.auth_provider ? ' · konto: ' + s.auth_provider : ''} · ${fmtDate(s.created_at)}`;
+  $('m-open').href = SPARING_URL + '?projekt=' + id;
+  $('m-chat').innerHTML = '<div class="text-zinc-500 text-sm">Wczytuję transkrypt…</div>';
+  $('m-side').innerHTML = '';
+
+  const [{ data: msgs }, { data: usage }, { data: emails }] = await Promise.all([
+    supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
+    supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
+    supabaseClient.from('spar_emails').select('kind, sent_at').eq('session_id', id),
+  ]);
+
+  $('m-chat').innerHTML = (msgs || []).map((m) => `
+    <div class="border rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'msg-user ml-8' : 'msg-ai mr-8'}">
+      <div class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'} mb-1">${m.role === 'user' ? 'Rozmówca' : 'AI'}${m.channel === 'wspolpraca' ? ' · współpraca' : ''}</div>
+      <div class="text-zinc-200">${cleanMsg(m.content)}</div>
+    </div>`).join('') || '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>';
+
+  // panel boczny: koszt, etap, grafiki, usage, maile, akcje
+  const totalUsd = (usage || []).reduce((sum, u) => sum + Number(u.cost_usd), 0);
+  const st = STAGES.find((x) => x.id === stageOf(s));
+  const imgs = s.preview_images || {};
+  const imgKeys = Object.keys(imgs);
+
+  $('m-side').innerHTML = `
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Koszt tej rozmowy</div>
+      <div class="text-2xl font-bold text-white">${fmtPln(totalUsd)}</div>
+      <div class="text-xs text-zinc-500">${fmtUsd(totalUsd)} · ${(usage || []).length} wywołań AI</div>
+      <div class="mt-3 space-y-1 text-xs">${(usage || []).map((u) => `
+        <div class="flex justify-between text-zinc-400">
+          <span>${u.kind}${u.kind === 'image' ? ' (' + esc((u.images || 1) + '×') + ')' : ''} <span class="text-zinc-600">${u.kind === 'chat' ? (u.input_tokens + 'in/' + u.output_tokens + 'out') : ''}</span></span>
+          <span class="font-mono">${fmtPln(Number(u.cost_usd))}</span>
+        </div>`).join('')}</div>
+    </div>
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 text-sm space-y-1.5">
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Etap</span><span class="${st.color} text-xs">${st.name}</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Werdykt</span><span class="text-xs text-white">${esc(s.verdict || '—')}</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Tury</span><span class="text-xs text-white">${s.turns || 0}</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Wpłata 500 zł</span><span class="text-xs ${s.paid_at ? 'text-amber-400' : 'text-zinc-600'}">${s.paid_at ? fmtDate(s.paid_at) : 'brak'}</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Ostatnia aktywność</span><span class="text-xs text-white">${timeAgo(s.last_user_at)}</span></div>
+      ${s.lead_id ? `<a class="text-xs text-blue-400 hover:underline" target="_blank" href="/leads?id=${s.lead_id}">Lead w TN CRM →</a>` : ''}
+    </div>
+    ${imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
+      <div class="grid grid-cols-2 gap-2">${imgKeys.map((k) => `
+        <a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition">
+          <img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=300&quality=70'}" alt="${esc(k)}" loading="lazy" class="aspect-[3/2] object-cover w-full">
+          <div class="text-[10px] text-zinc-500 px-1.5 py-1">${esc(k)}</div>
+        </a>`).join('')}</div>
+    </div>` : ''}
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Follow-upy mailowe</div>
+      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span>${esc(e.kind)}</span><span>${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
+    </div>
+    <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
+      <input type="checkbox" ${s.is_test ? 'checked' : ''} onchange="toggleTest('${s.id}', this.checked)" class="accent-blue-500">
+      sesja testowa (poza metrykami i follow-upami)
+    </label>`;
+}
+function closeModal() { $('modal').classList.add('hidden'); }
+async function toggleTest(id, val) {
+  const { error } = await supabaseClient.from('spar_sessions').update({ is_test: val }).eq('id', id);
+  if (error) { toast('Błąd zapisu'); console.error(error); return; }
+  const s = sessions.find((x) => x.id === id);
+  if (s) s.is_test = val;
+  toast(val ? 'Oznaczono jako testową' : 'Przywrócono do metryk');
+  renderActive();
+}
+
+// ── Zakładki ──
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
+  ['dashboard', 'pipeline', 'sesje', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
+  try { history.replaceState(null, '', location.pathname + (tab === 'dashboard' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
+  renderActive();
+}
+function renderActive() {
+  if (activeTab === 'dashboard') renderDashboard();
+  if (activeTab === 'pipeline') renderPipeline();
+  if (activeTab === 'sesje') renderSesje();
+  if (activeTab === 'koszty') renderKoszty();
+}
+
+// ── Init ──
+async function init() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { window.location.href = Sidebar.getLoginPath(); return; }
+  Sidebar.render({ appId: 'aplikacje' });
+  Sidebar.setUserEmail(session.user.email);
+
+  // domyślny zakres kosztów: 30 dni
+  const iso = (d) => d.toISOString().slice(0, 10);
+  $('cost-to').value = iso(new Date());
+  $('cost-from').value = iso(new Date(Date.now() - 29 * 864e5));
+
+  await loadAll();
+  $('loading').classList.add('hidden');
+
+  const hash = (location.hash || '').slice(1);
+  switchTab(['pipeline', 'sesje', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
+
+  document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+  $('search').addEventListener('input', (e) => { search = e.target.value; renderSesje(); });
+  $('show-tests').addEventListener('change', (e) => { showTests = e.target.checked; renderActive(); });
+  $('cost-apply').addEventListener('click', renderKoszty);
+  document.querySelectorAll('.cost-preset').forEach((b) => b.addEventListener('click', () => {
+    $('cost-to').value = iso(new Date());
+    $('cost-from').value = iso(new Date(Date.now() - (parseInt(b.dataset.days, 10) - 1) * 864e5));
+    renderKoszty();
+  }));
+  $('rate-save').addEventListener('click', async () => {
+    const v = parseFloat($('rate-input').value);
+    if (!v || v < 1) { toast('Nieprawidłowy kurs'); return; }
+    const { error } = await supabaseClient.from('settings').upsert([{ key: 'usd_pln_rate', value: v.toFixed(2) }], { onConflict: 'key' });
+    if (error) { toast('Błąd zapisu kursu'); console.error(error); return; }
+    usdPln = v;
+    toast('Kurs zapisany: ' + v.toFixed(2));
+    renderActive();
+  });
+  $('btn-mobile-menu')?.addEventListener('click', () => $('sidebar').classList.toggle('open'));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+}
+init();
+</script>
+</body>
+</html>
