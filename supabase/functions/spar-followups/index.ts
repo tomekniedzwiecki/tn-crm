@@ -55,6 +55,7 @@ interface SessionRow {
   name: string | null
   verdict: string | null
   preview_brief: Record<string, unknown> | null
+  business_plan: Record<string, unknown> | null
   lead_id: string | null
   paid_at: string | null
   last_user_at: string | null
@@ -94,6 +95,31 @@ function buildEmail(kind: string, s: SessionRow): { subject: string; html: strin
         przygotowuję wtedy osobiście plan przedsięwzięcia i odzywam się do Ciebie.
         Nie wchodzimy we współpracę — oddaję całość.</p>
         ${btn(chatLink(s.id, 'verdict_no_payment', '#projekt-plan'), 'Zobacz projekt i plan przychodu →')}
+      `),
+    }
+  }
+  if (kind === 'verdict_last_call') {
+    // ostatni dzwonek — inny kąt: liczby z planu przychodu (jeśli policzony)
+    let liczby = ''
+    const plan = s.business_plan
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) {
+      const goal = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>
+      if (typeof goal.mies === 'number' && typeof goal.klienci === 'number') {
+        const mies = Math.round(goal.mies).toLocaleString('pl-PL')
+        liczby = `<p>Dla przypomnienia jedna liczba z Twojego planu: przy ${goal.klienci} klientach
+        to około <strong>${mies} zł miesięcznie</strong> — a pierwszych 50 klientów pozyskuję ja.</p>`
+      }
+    }
+    return {
+      subject: `${nazwa} — domykam miejsce na ten projekt`,
+      html: emailHtml(`
+        <p>${hi}</p>
+        <p>Tydzień temu Twój projekt <strong>${nazwa}</strong> dostał zielony werdykt.
+        Karta, ekrany i plan przychodu wciąż czekają w panelu — nic nie przepadło.</p>
+        ${liczby}
+        <p>Jeśli to nie ten moment — w porządku, projekt zostaje zapisany.
+        Jeśli jednak chcesz go ruszyć: rezerwacja to 500 zł, <strong>w pełni zwrotne</strong>.</p>
+        ${btn(chatLink(s.id, 'verdict_last_call', '#projekt'), 'Wracam do projektu →')}
       `),
     }
   }
@@ -167,7 +193,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, lead_id, paid_at, last_user_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, lead_id, paid_at, last_user_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -268,6 +294,23 @@ Deno.serve(async (req) => {
     if (npErr) console.error('[spar-followups] no-payment fetch error:', npErr)
     for (const s of (noPay || []) as SessionRow[]) {
       await sendOnce('verdict_no_payment', s)
+    }
+
+    // ── 4) OSTATNI DZWONEK: zielony bez wpłaty, cisza 5–8 dni (drugi,
+    //        ostatni follow-up tego wątku — inny kąt: liczby z planu) ──────
+    const { data: lastCall, error: lcErr } = await supabase
+      .from('spar_sessions')
+      .select(SESSION_COLS)
+      .eq('is_test', false)
+      .eq('verdict', 'zielony')
+      .is('paid_at', null)
+      .not('email', 'is', null)
+      .gte('last_user_at', hoursAgo(192))
+      .lte('last_user_at', hoursAgo(120))
+      .limit(60)
+    if (lcErr) console.error('[spar-followups] last-call fetch error:', lcErr)
+    for (const s of (lastCall || []) as SessionRow[]) {
+      await sendOnce('verdict_last_call', s)
     }
 
     return jsonResponse({ ok: true, sent }, 200)

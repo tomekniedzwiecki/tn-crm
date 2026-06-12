@@ -25,7 +25,11 @@ npx supabase secrets set SPAR_IMAGE_QUALITY=medium    # low|medium|high
 - Cron: pg_cron jobid 22, co 30 min. Okno wysyłek 8–20 Europe/Warsaw.
 - Rodzaje: `abandoned_chat` (mail jest, brak werdyktu/żółty, cisza 3–48 h),
   `verdict_no_payment` (zielony, brak wpłaty, cisza 20–96 h),
+  `verdict_last_call` (zielony, brak wpłaty, cisza 5–8 dni — drugi i ostatni
+  follow-up wątku, z kwotą z planu przychodu),
   `paid_welcome` (wykryta wpłata; przy okazji `leads.status='won'` + `paid_at`).
+- Cron wysyła z nagłówkiem `x-cron-secret` (env `SPAR_CRON_SECRET`); ręczny
+  trigger bez sekretu dostanie 401.
 - Idempotencja: UNIQUE(session_id, kind) w `spar_emails` — max 1 mail rodzaju per sesja.
 - Treści maili: w kodzie spar-followups (buildEmail). Wysyłka przez send-email (Resend).
 - Wyłączenie crona: `SELECT cron.unschedule('spar-followups-cron');`

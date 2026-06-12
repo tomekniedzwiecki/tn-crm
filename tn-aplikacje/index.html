@@ -41,6 +41,7 @@
         <button data-tab="dashboard" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chart-pie mr-1.5"></i>Dashboard</button>
         <button data-tab="pipeline" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-kanban mr-1.5"></i>Pipeline</button>
         <button data-tab="sesje" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
+        <button data-tab="generowania" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Generowania</button>
         <button data-tab="koszty" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
         <button data-tab="ustawienia" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear mr-1.5"></i></button>
       </nav>
@@ -112,6 +113,15 @@
         </table>
       </div>
     </div>
+  </section>
+
+  <!-- ════════ GENEROWANIA (galeria wszystkich obrazów) ════════ -->
+  <section id="view-generowania" class="hidden p-6">
+    <div class="flex items-center gap-3 mb-4 flex-wrap">
+      <span class="text-sm text-zinc-400">Wszystkie wygenerowane ekrany — najnowsze pierwsze. Klik otwiera sesję.</span>
+      <span id="gen-count" class="text-xs text-zinc-500 ml-auto"></span>
+    </div>
+    <div id="gen-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3"></div>
   </section>
 
   <!-- ════════ KOSZTY ════════ -->
@@ -422,6 +432,35 @@ function renderSesje() {
   }).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak sesji.</td></tr>';
 }
 
+// ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
+const VIEW_LABELS = { panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa', landing: 'Landing', podsumowanie: 'Pigułka' };
+function renderGenerowania() {
+  const imgs = [];
+  visibleSessions().forEach((s) => {
+    const push = (url, view, old) => {
+      // timestamp wersji jest w nazwie pliku: podglad-<view>-<ms>.png
+      const m = String(url).match(/-(\d{13})\.png/);
+      imgs.push({ url, view, old, sid: s.id, name: projName(s), ts: m ? parseInt(m[1], 10) : new Date(s.created_at).getTime() });
+    };
+    Object.entries(s.preview_images || {}).forEach(([v, u]) => { if (typeof u === 'string') push(u, v, false); });
+    Object.entries(s.preview_history || {}).forEach(([v, arr]) => (Array.isArray(arr) ? arr : []).forEach((u) => push(u, v, true)));
+  });
+  imgs.sort((a, b) => b.ts - a.ts);
+  const shown = imgs.slice(0, 150);
+  $('gen-count').textContent = imgs.length > shown.length ? `${shown.length} z ${imgs.length} obrazów` : `${imgs.length} obrazów`;
+  $('gen-grid').innerHTML = shown.map((g) => `
+    <button onclick="openSession('${g.sid}')" class="group text-left bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden hover:border-blue-500/40 transition animate-enter ${g.old ? 'opacity-60 hover:opacity-100' : ''}">
+      <img src="${esc(g.url).replace('/object/public/', '/render/image/public/')}?format=webp&width=420&quality=70" loading="lazy" decoding="async" class="aspect-[3/2] object-cover w-full">
+      <div class="px-2.5 py-2">
+        <div class="text-xs text-white truncate">${esc(g.name)}</div>
+        <div class="flex justify-between text-[10px] text-zinc-500 mt-0.5">
+          <span>${VIEW_LABELS[g.view] || esc(g.view)}${g.old ? ' · starsza wersja' : ''}</span>
+          <span>${fmtDate(new Date(g.ts).toISOString())}</span>
+        </div>
+      </div>
+    </button>`).join('') || '<div class="col-span-full text-center text-zinc-600 text-sm py-10">Jeszcze żadnych generowań.</div>';
+}
+
 // ── KOSZTY (zakres dat) ──
 async function renderKoszty() {
   const from = $('cost-from').value, to = $('cost-to').value;
@@ -544,7 +583,7 @@ async function toggleTest(id, val) {
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
-  ['dashboard', 'pipeline', 'sesje', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
+  ['dashboard', 'pipeline', 'sesje', 'generowania', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
   try { history.replaceState(null, '', location.pathname + (tab === 'dashboard' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
   renderActive();
 }
@@ -552,6 +591,7 @@ function renderActive() {
   if (activeTab === 'dashboard') renderDashboard();
   if (activeTab === 'pipeline') renderPipeline();
   if (activeTab === 'sesje') renderSesje();
+  if (activeTab === 'generowania') renderGenerowania();
   if (activeTab === 'koszty') renderKoszty();
 }
 
@@ -571,7 +611,7 @@ async function init() {
   $('loading').classList.add('hidden');
 
   const hash = (location.hash || '').slice(1);
-  switchTab(['pipeline', 'sesje', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
+  switchTab(['pipeline', 'sesje', 'generowania', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('search').addEventListener('input', (e) => { search = e.target.value; renderSesje(); });
