@@ -8,11 +8,11 @@ flow mailowe Resend, redesign strony głównej.
 
 | Co | Gdzie | Dlaczego |
 |---|---|---|
-| Strona główna /stworze + sparing | `tomekniedzwiecki.pl/stworze/` | marka — domena główna (decyzja Tomka) |
+| Strona główna /stworze + sparing | `tomekniedzwiecki.pl/aplikacja/` | marka — domena główna (decyzja Tomka) |
 | Panel admina TN Aplikacje | `tn-crm/tn-aplikacje/index.html` | obok tn-workflow; deploy crm.tomekniedzwiecki.pl |
 | Edge functions | `tn-crm/supabase/functions/spar-*` | jeden projekt Supabase yxmavwkwnfuphjqbelws |
 | Migracje | `tn-crm/supabase/migrations/2026*_stworze_*.sql` | jw. |
-| Dokumentacja | `tn-crm/docs/stworze/` | ten plik + maile |
+| Dokumentacja | `tn-crm/docs/aplikacja/` | ten plik + maile |
 | Prompt sparingu | `c:\tmp\stworze-sparing-prompt-v1.md` → settings DB | NIE do repo (tn-crm publiczne!) |
 
 ## DB (migracja 20260613_stworze_produkcja.sql)

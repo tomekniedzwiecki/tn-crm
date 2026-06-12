@@ -1,4 +1,4 @@
-// spar-chat — sparing AI dla lejka "Stworzę" (tomekniedzwiecki.pl/stworze)
+// spar-chat — sparing AI dla lejka "Stworzę" (tomekniedzwiecki.pl/aplikacja)
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (frontend wywołuje bez tokena JWT):
 //   npx supabase functions deploy spar-chat --no-verify-jwt
@@ -16,7 +16,7 @@
 // frontend ma jeden kontrakt SSE niezależnie od providera (łatwa podmiana GPT/Claude).
 //
 // TRYBY (body.mode):
-//   'sparing'    (default) — lejek definiowania projektu (tomekniedzwiecki.pl/stworze/sparing/)
+//   'sparing'    (default) — lejek definiowania projektu (tomekniedzwiecki.pl/aplikacja/sparing/)
 //   'wspolpraca'           — drugi czat w PANELU PROJEKTU (crm: stworze-projekt.html):
 //                            rozmowa o modelu współpracy, cel = zamówienie makiety.
 //                            Wymaga istniejącej sesji Z projektem; prompt z klucza
@@ -212,7 +212,7 @@ function mergeBrief(
 
 // Zwięzły opis Karty Problemu do notatki leada
 function buildLeadNotes(profession: string, karta: Record<string, unknown> | null): string {
-  const lines: string[] = ['Sparing /stworze — werdykt: ZIELONY']
+  const lines: string[] = ['Sparing /aplikacja — werdykt: ZIELONY']
   const k = karta || {}
   const field = (label: string, value: unknown) => {
     if (value === null || value === undefined || value === '') return

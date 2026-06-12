@@ -1,4 +1,4 @@
-// spar-public-feed — ostatnie wygenerowane projekty dla strony tomekniedzwiecki.pl/stworze
+// spar-public-feed — ostatnie wygenerowane projekty dla strony tomekniedzwiecki.pl/aplikacja
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt:
 //   npx supabase functions deploy spar-public-feed --no-verify-jwt

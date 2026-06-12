@@ -1,4 +1,4 @@
-// spar-image — podgląd graficzny narzędzia dla lejka "Stworzę" (tomekniedzwiecki.pl/stworze)
+// spar-image — podgląd graficzny narzędzia dla lejka "Stworzę" (tomekniedzwiecki.pl/aplikacja)
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (frontend wywołuje bez tokena JWT):
 //   npx supabase functions deploy spar-image --no-verify-jwt

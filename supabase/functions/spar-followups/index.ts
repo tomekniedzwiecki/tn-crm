@@ -19,7 +19,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const SPARING_URL = 'https://tomekniedzwiecki.pl/stworze/sparing/'
+const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
 const MAX_PER_RUN = 30
 
 function jsonResponse(body: Record<string, unknown>, status: number): Response {

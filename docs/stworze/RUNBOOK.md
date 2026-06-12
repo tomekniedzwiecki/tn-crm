@@ -38,14 +38,14 @@ npx supabase secrets set SPAR_IMAGE_QUALITY=medium    # low|medium|high
 Rezerwacja = oferta `a1656695-db0d-4ae7-b107-230832042076` (500 zł). Zamówienia
 rozpoznawane po `orders.description ILIKE '%Stworzę%'` + `lead_id`. Checkout v2 dla tej
 oferty pokazuje WYMAGANY checkbox zgody (usługa cyfrowa przed upływem 14 dni) i linkuje
-`tomekniedzwiecki.pl/stworze/regulamin/`.
+`tomekniedzwiecki.pl/aplikacja/regulamin/`.
 
 ## OAuth (Google / Facebook) — konfiguracja po stronie Tomka
 1. Supabase Dashboard → Authentication → Providers → Google: wklej Client ID + Secret
    (Google Cloud Console → OAuth client, redirect: `https://yxmavwkwnfuphjqbelws.supabase.co/auth/v1/callback`).
 2. To samo dla Facebook (App ID + Secret z developers.facebook.com).
 3. Authentication → URL Configuration → Redirect URLs: dodaj
-   `https://tomekniedzwiecki.pl/stworze/sparing/**`.
+   `https://tomekniedzwiecki.pl/aplikacja/sparing/**`.
 Bez tej konfiguracji przyciski w bramce zwrócą błąd providera — formularz ręczny
 (imię+mail+telefon) działa niezależnie.
 
