@@ -7,11 +7,13 @@
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt:
 //   npx supabase functions deploy spar-landing --no-verify-jwt
 //
-// STATUS: PILOT (2026-06-12) — wywołanie wymaga nagłówka x-admin-secret równego
-// env SPAR_CRON_SECRET (admin-only; bez tego każdy mógłby palić tokeny gpt-5.5
-// naszym kluczem). Przed podpięciem do frontendu sparingu: zamienić gate na
-// sesyjny (wymóg preview_brief + werdykt zielony) + limity per sesja/IP jak
-// w spar-image.
+// DOSTĘP (od 2026-06-12 wieczór, integracja z frontendem sparingu):
+//   - sesyjny: sesja musi mieć preview_brief ORAZ zielony werdykt (landing
+//     to element pakietu po domkniętej rozmowie); limity: 3/sesja (z
+//     spar_usage kind='landing') + 5/dobę/IP — endpoint publiczny, każde
+//     wywołanie pali ~$0.45 na gpt-5.5
+//   - admin: nagłówek x-admin-secret == SPAR_CRON_SECRET omija werdykt
+//     i limit IP (rerolle z panelu / testy)
 //
 // Flow: POST {sessionId} → 202 {status:'started', url} natychmiast; generacja
 // (1-4 min) leci w tle przez EdgeRuntime.waitUntil — bramka Supabase ucina
@@ -58,6 +60,7 @@ const LANDING_MODEL = Deno.env.get('SPAR_LANDING_MODEL') || 'gpt-5.5'
 // HTML landinga to 15-25k tokenów + reasoning; 3000 ze spar-chat by ucięło plik
 const MAX_COMPLETION_TOKENS = 40000
 const MAX_LANDINGS_PER_SESSION = 3
+const MAX_LANDINGS_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_LANDING_IP_DAILY') || '5', 10)
 const STORAGE_BUCKET = 'attachments'
 
 // Cennik USD per 1M tokenów (jak w spar-chat) — do logu kosztów w spar_usage
@@ -257,6 +260,13 @@ async function generateAndStore(
       },
     })
     if (usageErr) console.error('[spar-landing] usage insert error:', usageErr)
+
+    // landing_url w sesji — frontend i spar-project wiedzą, że strona istnieje
+    const { error: sessErr } = await supabase
+      .from('spar_sessions')
+      .update({ landing_url: viewUrl, updated_at: new Date().toISOString() })
+      .eq('id', sessionId)
+    if (sessErr) console.error('[spar-landing] landing_url save error:', sessErr)
     console.log(`[spar-landing] OK ${sessionId} ${storagePath} ${html.length}B ${Date.now() - startedAt}ms`)
   } catch (err) {
     console.error('[spar-landing] background ERROR:', err instanceof Error ? err.message : String(err))
@@ -283,10 +293,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_konfiguracji' }, 500, corsHeaders)
     }
 
-    // PILOT: tylko admin (patrz nagłówek pliku)
-    if (req.headers.get('x-admin-secret') !== ADMIN_SECRET) {
-      return jsonResponse({ error: 'brak_dostepu' }, 401, corsHeaders)
-    }
+    const isAdmin = req.headers.get('x-admin-secret') === ADMIN_SECRET
 
     let body: { sessionId?: string }
     try {
@@ -303,7 +310,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, business_plan')
+      .select('id, preview_brief, business_plan, verdict, landing_url')
       .eq('id', sessionId)
       .maybeSingle()
     if (sessionError) {
@@ -317,6 +324,17 @@ Deno.serve(async (req) => {
     if (!brief) {
       return jsonResponse({ error: 'brak_projektu' }, 400, corsHeaders)
     }
+    // Landing = element pakietu po domkniętej rozmowie (zielony werdykt);
+    // admin może wcześniej (testy / rerolle)
+    if (!isAdmin && session.verdict !== 'zielony') {
+      return jsonResponse({ error: 'brak_werdyktu' }, 400, corsHeaders)
+    }
+    // Istniejąca strona wraca bez generacji (czyste urządzenie woła ensure*
+    // zanim sync przyniesie landing_url — wyścig paliłby ~$0.45/wywołanie);
+    // nową wersję wymusza tylko admin
+    if (!isAdmin && typeof session.landing_url === 'string' && session.landing_url) {
+      return jsonResponse({ status: 'exists', viewUrl: session.landing_url }, 200, corsHeaders)
+    }
 
     const { count: landingCount, error: countErr } = await supabase
       .from('spar_usage')
@@ -327,6 +345,32 @@ Deno.serve(async (req) => {
       console.error('[spar-landing] usage count error:', countErr)
     } else if ((landingCount ?? 0) >= MAX_LANDINGS_PER_SESSION) {
       return jsonResponse({ error: 'limit_landingow' }, 429, corsHeaders)
+    }
+
+    // Limit dzienny per IP — landingi z 24 h po wszystkich sesjach tego IP
+    // (wzorzec spar-image; liczone z spar_usage.created_at, nie z wieku sesji)
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+    if (!isAdmin && ip) {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: ipSessions, error: ipErr } = await supabase
+        .from('spar_sessions')
+        .select('id')
+        .eq('ip', ip)
+      if (ipErr) {
+        console.error('[spar-landing] ip sessions query error:', ipErr)
+      } else if (ipSessions && ipSessions.length) {
+        const { count: ipCount, error: ipUsageErr } = await supabase
+          .from('spar_usage')
+          .select('id', { count: 'exact', head: true })
+          .eq('kind', 'landing')
+          .in('session_id', ipSessions.map((r) => r.id))
+          .gte('created_at', dayAgo)
+        if (ipUsageErr) {
+          console.error('[spar-landing] ip usage count error:', ipUsageErr)
+        } else if ((ipCount ?? 0) >= MAX_LANDINGS_PER_IP_PER_DAY) {
+          return jsonResponse({ error: 'limit_landingow_dzienny' }, 429, corsHeaders)
+        }
+      }
     }
 
     const ts = Date.now()

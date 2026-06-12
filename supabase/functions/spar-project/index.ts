@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, lead_id, created_at, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, landing_url, lead_id, created_at, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -207,11 +207,16 @@ Deno.serve(async (req) => {
 
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const karta = (session.problem_summary || null) as Record<string, unknown> | null
-    // business_plan bez _meta (licznik generacji to wewnętrzna kuchnia)
+    // business_plan / market_report bez _meta (licznik generacji to wewnętrzna kuchnia)
     let bizplan: Record<string, unknown> | null = null
     if (session.business_plan && typeof session.business_plan === 'object') {
       const { _meta: _drop, ...rest } = session.business_plan as Record<string, unknown>
       bizplan = rest
+    }
+    let raport: Record<string, unknown> | null = null
+    if (session.market_report && typeof session.market_report === 'object') {
+      const { _meta: _drop, ...rest } = session.market_report as Record<string, unknown>
+      raport = rest
     }
     const firstName = typeof session.name === 'string' && session.name
       ? session.name.split(' ')[0]
@@ -229,6 +234,8 @@ Deno.serve(async (req) => {
         preview_history: session.preview_history || null,
         image_count: session.image_count || 0,
         business_plan: bizplan,
+        market_report: raport,
+        landing_url: session.landing_url || null,
         verdict: session.verdict || null,
         status: session.status || 'active',
         lead_id: session.lead_id || null,

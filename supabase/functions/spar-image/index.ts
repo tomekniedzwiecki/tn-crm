@@ -311,7 +311,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_konfiguracji' }, 500, corsHeaders)
     }
 
-    let body: { sessionId?: string; view?: string }
+    let body: { sessionId?: string; view?: string; force?: boolean }
     try {
       body = await req.json()
     } catch {
@@ -360,6 +360,15 @@ Deno.serve(async (req) => {
       const histLen = Array.isArray(histObj[view]) ? (histObj[view] as unknown[]).length : 0
       const imgsObj = (session.preview_images || {}) as Record<string, unknown>
       const hasCurrent = typeof imgsObj[view] === 'string' ? 1 : 0
+      // Bez force: istniejący obraz wraca z cache — frontend na czystym
+      // urządzeniu woła ensure* zanim sync przyniesie URL-e (wyścig paliłby
+      // wersje i tokeny). Regeneracja (np. pigułka po poprawce) = force:true.
+      if (!body.force && hasCurrent) {
+        return jsonResponse({
+          url: imgsObj[view] as string, view, archived: null,
+          remaining: Math.max(0, MAX_IMAGES_PER_SESSION - imageCount), cached: true,
+        }, 200, corsHeaders)
+      }
       if (histLen + hasCurrent >= MAX_EXTRA_VERSIONS) {
         return jsonResponse({ error: 'limit_podsumowan' }, 429, corsHeaders)
       }
