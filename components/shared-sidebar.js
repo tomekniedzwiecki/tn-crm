@@ -69,7 +69,7 @@ const NAV_ITEMS_TODO = [
 // TN Aplikacje (lejek Stworzę) — panel jest single-page z wewnętrznymi
 // zakładkami (Dashboard/Pipeline/Sesje/Koszty/Ustawienia w treści)
 const NAV_ITEMS_APLIKACJE = [
-    { id: 'index', icon: 'ph-rocket-launch', label: 'Stworzę' },
+    { id: 'index', icon: 'ph-rocket-launch', label: 'Aplikacja' },
 ];
 
 const NAV_ITEMS_BIZNES = [

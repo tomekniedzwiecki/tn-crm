@@ -211,8 +211,9 @@ Deno.serve(async (req) => {
         .select('lead_id, paid_at, status, description')
         .in('lead_id', leadIds as string[])
         .eq('status', 'paid')
-        // wariant bez "ę" łapie ręcznie tworzone zamówienia z literówką
-        .or('description.ilike.%Stworzę%,description.ilike.%Stworze%')
+        // %Aplikacja% = obecna nazwa oferty (rebranding 2026-06-13);
+        // warianty Stworzę/Stworze łapią starsze zamówienia i literówki
+        .or('description.ilike.%Aplikacja%,description.ilike.%Stworzę%,description.ilike.%Stworze%')
       if (ordersErr) console.error('[spar-followups] orders fetch error:', ordersErr)
 
       const paidByLead = new Map<string, string>()
