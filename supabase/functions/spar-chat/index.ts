@@ -204,6 +204,12 @@ function mergeBrief(
   if ((typeof fresh.styl !== 'string' || !fresh.styl.trim()) && typeof old.styl === 'string') {
     merged.styl = old.styl
   }
+  // design (decyzje projektowe AI: tła/akcenty/typografia) — jak styl: okrojony
+  // marker poprawki nie może go skasować, bo kolejne generacje straciłyby spójność
+  if ((!fresh.design || typeof fresh.design !== 'object' || Array.isArray(fresh.design))
+    && old.design && typeof old.design === 'object' && !Array.isArray(old.design)) {
+    merged.design = old.design
+  }
   if ((!Array.isArray(fresh.insighty) || !fresh.insighty.length) && Array.isArray(old.insighty)) {
     merged.insighty = old.insighty
   }

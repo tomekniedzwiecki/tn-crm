@@ -72,8 +72,38 @@ function jsonResponse(
 // Wspólny design system dla WSZYSTKICH widoków jednej sesji — to on trzyma
 // spójność między obrazami (gpt-image nie ma seedów; spójność = identyczny,
 // bardzo konkretny opis stylu w każdym prompcie).
+//
+// Źródłem jest brief.design — obiekt z decyzjami projektowymi, które model
+// czatu PROJEKTUJE indywidualnie pod każdy projekt na podstawie rozmowy
+// (tło/akcenty z hexami, geometria, typografia, element podpisowy). Bez tego
+// obiektu wszystkie podglądy zbiegały do jednego wzorca „granatowy SaaS na
+// bieli" — projekty społeczności są oglądane obok siebie, muszą się różnić.
+// brief.styl = życzenia wizualne KLIENTA (priorytet nad designem od AI).
 function buildStyleBlock(brief: Record<string, unknown>): string {
   const styl = typeof brief.styl === 'string' ? brief.styl.trim().slice(0, 500) : ''
+  const design = (brief.design && typeof brief.design === 'object' && !Array.isArray(brief.design))
+    ? brief.design as Record<string, unknown>
+    : null
+  const d = (k: string, max = 200) =>
+    (design && typeof design[k] === 'string' ? (design[k] as string).trim().slice(0, max) : '')
+
+  if (design && d('tlo') && d('akcent')) {
+    const parts: string[] = []
+    if (d('kierunek')) parts.push(`charakter: ${d('kierunek')}`)
+    parts.push(`tło aplikacji: ${d('tlo')}`)
+    if (d('powierzchnia')) parts.push(`karty i panele: ${d('powierzchnia')}`)
+    parts.push(`kolor akcji (przyciski, aktywne elementy): ${d('akcent')}`)
+    if (d('akcent2')) parts.push(`drugi akcent (statusy, wyróżnienia): ${d('akcent2')}`)
+    if (d('geometria')) parts.push(`geometria: ${d('geometria')}`)
+    if (d('typografia')) parts.push(`typografia: ${d('typografia')}`)
+    if (d('podpis')) parts.push(`element podpisowy tego narzędzia (musi być widoczny): ${d('podpis')}`)
+    const base = `DESIGN SYSTEM TEGO NARZĘDZIA (zaprojektowany indywidualnie — odwzoruj DOKŁADNIE i IDENTYCZNIE na wszystkich widokach): ${parts.join('; ')}. Jakość premium: czysta siatka, jedna spójna paleta wyprowadzona z powyższych kolorów, dużo światła między elementami, spójny zestaw ikon dopasowany do charakteru.`
+    return styl
+      ? `${base} WYTYCZNE KLIENTA (PRIORYTET — w razie konfliktu nadpisują design system): ${styl}.`
+      : base
+  }
+
+  // Fallback dla sesji bez brief.design (starsze rozmowy / ucięty marker)
   if (styl) {
     return `DESIGN SYSTEM (IDENTYCZNY na wszystkich widokach tego narzędzia — wytyczne klienta mają PRIORYTET, zastosuj je dokładnie): ${styl}. Niezależnie od nich utrzymaj jakość premium SaaS: czysta siatka, jedna spójna paleta, zaokrąglenia 12-16px, dużo światła między elementami, nowoczesna typografia sans-serif (Inter), spójny zestaw ikon liniowych.`
   }
@@ -132,7 +162,7 @@ function buildImagePrompt(brief: Record<string, unknown>, view: Exclude<ViewKey,
       `Pełnoekranowy zrzut STRONY SPRZEDAŻOWEJ (marketing landing page) produktu „${nazwa}" — widok wprost, full-bleed, bez ramki przeglądarki.`,
       kontekst,
       viewDesc
-        ? `ZAWARTOŚĆ STRONY (z ustaleń z klientem, odwzoruj wiernie): ${viewDesc}`
+        ? `ZAWARTOŚĆ I KOMPOZYCJA STRONY (zaprojektowana pod ten projekt — odwzoruj wiernie, ŁĄCZNIE z opisanym układem hero): ${viewDesc}`
         : `ZAWARTOŚĆ STRONY: hero z mocnym polskim nagłówkiem-obietnicą rozwiązania problemu, podtytuł, przycisk CTA, obok ukośnie osadzony zrzut interfejsu narzędzia; niżej pasek zaufania i sekcja 3 korzyści z ikonami${ekrany ? ` (nawiązujące do: ${ekrany})` : ''}.`,
       styleBlock,
       'To strona WWW sprzedająca narzędzie (typografia marketingowa, sekcje, dużo oddechu) — NIE ekran aplikacji; zrzut interfejsu pojawia się tylko jako element hero.',
