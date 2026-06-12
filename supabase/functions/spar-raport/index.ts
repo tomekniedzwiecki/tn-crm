@@ -197,6 +197,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_generacji' }, 429, cors)
     }
 
+    // Lock: research trwa ~2 min i kosztuje ~$0.85 — reload/drugi tab nie może
+    // odpalić duplikatu (test 2026-06-12: ×3); pending → frontend dociąga syncem
+    const { data: lock } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'raport', p_ttl_sec: 300 })
+    if (!lock) return jsonResponse({ pending: true }, 202, cors)
+
     // ── OpenAI Responses API + web_search ────────────────────────────────────
     const res = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
@@ -214,6 +219,7 @@ Deno.serve(async (req) => {
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
       console.error('[spar-raport] openai error:', res.status, errText.slice(0, 500))
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'raport' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
     const data = await res.json()
@@ -265,6 +271,7 @@ Deno.serve(async (req) => {
     const raport = extractJson(text)
     if (!raport || !saneRaport(raport)) {
       console.error('[spar-raport] raport nie przeszedł sanity-check:', String(text).slice(0, 300))
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'raport' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
 
@@ -274,6 +281,7 @@ Deno.serve(async (req) => {
       .update({ market_report: toSave, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (updErr) console.error('[spar-raport] save error:', updErr)
+    await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'raport' })
 
     return jsonResponse({ raport, cached: false }, 200, cors)
   } catch (e) {

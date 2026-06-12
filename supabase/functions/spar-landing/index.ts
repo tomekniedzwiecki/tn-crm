@@ -363,13 +363,18 @@ async function generateAndStore(
   viewUrl: string,
 ): Promise<void> {
   const startedAt = Date.now()
+  const releaseLock = async () => {
+    const { error } = await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'landing' })
+    if (error) console.error('[spar-landing] release lock error:', error)
+  }
   try {
     // ── PASS 1: generator ──
     const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, plan), null)
-    if (!gen.content) return
+    if (!gen.content) { await releaseLock(); return }
     const html1 = extractHtml(gen.content)
     if (!html1) {
       console.error('[spar-landing] pass1 bez kompletnego HTML, finish:', gen.finish, 'len:', gen.content.length)
+      await releaseLock()
       return
     }
     const issues = validateHtml(html1, brief, plan)
@@ -387,16 +392,19 @@ async function generateAndStore(
     const uploadError = await upload(html1)
     if (uploadError) {
       console.error('[spar-landing] upload error:', uploadError)
+      await releaseLock()
       return
     }
     const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath)
 
-    // Publikacja wersji 1: landing_url + mail (krytyk podmieni plik w tle)
+    // Publikacja wersji 1: landing_url + mail (krytyk podmieni plik w tle).
+    // Lock można zwolnić — od teraz kolejne POST-y dostają status 'exists'.
     const { error: sessErr } = await supabase
       .from('spar_sessions')
       .update({ landing_url: viewUrl, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (sessErr) console.error('[spar-landing] landing_url save error:', sessErr)
+    await releaseLock()
 
     // Log kosztów pass 1 (panel TN Aplikacje); pass 2 dopisuje się UPDATE'em
     const meta: Record<string, unknown> = {
@@ -440,6 +448,7 @@ async function generateAndStore(
     }
   } catch (err) {
     console.error('[spar-landing] background ERROR:', err instanceof Error ? err.message : String(err))
+    await releaseLock()
   }
 }
 
@@ -628,6 +637,11 @@ Deno.serve(async (req) => {
     } else if ((landingCount ?? 0) >= MAX_LANDINGS_PER_SESSION) {
       return jsonResponse({ error: 'limit_landingow' }, 429, corsHeaders)
     }
+
+    // Lock: budowa trwa ~3,5 min i kosztuje ~$0.55 — reload/drugi tab nie może
+    // odpalić duplikatu (test 2026-06-12: ×3); pending → frontend dociąga syncem
+    const { data: genLock } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'landing', p_ttl_sec: 480 })
+    if (!genLock) return jsonResponse({ status: 'pending' }, 202, corsHeaders)
 
     // Limit dzienny per IP — landingi z 24 h po wszystkich sesjach tego IP
     // (wzorzec spar-image; liczone z spar_usage.created_at, nie z wieku sesji)

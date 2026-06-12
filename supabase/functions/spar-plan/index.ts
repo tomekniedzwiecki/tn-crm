@@ -160,6 +160,14 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_generacji' }, 429, cors)
     }
 
+    // Lock: równoległe wywołania (drugi tab, reload w trakcie) nie odpalają
+    // drugiej generacji — dostają pending, frontend dociąga wynik syncem
+    const { data: lock } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'plan', p_ttl_sec: 180 })
+    if (!lock) return jsonResponse({ pending: true }, 202, cors)
+
+    // gpt-5.5: reasoning liczy się do max_completion_tokens — 1600 bywało
+    // w całości zjadane przez reasoning (pusty content → 502 w pętli);
+    // effort 'low' wystarcza do prostych wyliczeń i skraca czas
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -170,12 +178,14 @@ Deno.serve(async (req) => {
         model: OPENAI_MODEL,
         messages: [{ role: 'user', content: buildPlanPrompt(brief, karta) }],
         response_format: { type: 'json_object' },
-        max_completion_tokens: 1600,
+        max_completion_tokens: 5000,
+        reasoning_effort: 'low',
       }),
     })
     if (!res.ok) {
       const errText = await res.text().catch(() => '')
       console.error('[spar-plan] openai error:', res.status, errText.slice(0, 500))
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
     const data = await res.json()
@@ -213,11 +223,14 @@ Deno.serve(async (req) => {
     try {
       plan = JSON.parse(content)
     } catch {
-      console.error('[spar-plan] niepoprawny JSON od modelu:', String(content).slice(0, 300))
+      console.error('[spar-plan] niepoprawny JSON od modelu, finish:',
+        data?.choices?.[0]?.finish_reason, String(content).slice(0, 300))
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
     if (!sanePlan(plan)) {
       console.error('[spar-plan] plan nie przeszedł sanity-check:', JSON.stringify(plan).slice(0, 300))
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
 
@@ -227,6 +240,7 @@ Deno.serve(async (req) => {
       .update({ business_plan: toSave, updated_at: new Date().toISOString() })
       .eq('id', sessionId)
     if (uErr) console.error('[spar-plan] save error:', uErr)
+    await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
 
     return jsonResponse({ plan, cached: false }, 200, cors)
   } catch (e) {
