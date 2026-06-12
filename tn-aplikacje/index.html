@@ -334,7 +334,7 @@ async function loadAll() {
   const [{ data: costs }, { data: rateRow }, { data: mailRows }] = await Promise.all([
     supabaseClient.rpc('spar_session_costs'),
     supabaseClient.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
-    supabaseClient.from('spar_emails').select('session_id, kind, email, created_at').order('created_at', { ascending: false }).limit(500),
+    supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at').order('sent_at', { ascending: false }).limit(500),
   ]);
   costsBySession = {};
   (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
@@ -737,7 +737,7 @@ function mailQueue() {
 function renderMaile() {
   // KPI per rodzaj (30 dni) — dynamicznie ze wszystkich kindów w danych
   const d30 = Date.now() - 30 * 864e5;
-  const recent = mails.filter((m) => new Date(m.created_at).getTime() >= d30);
+  const recent = mails.filter((m) => new Date(m.sent_at).getTime() >= d30);
   const byKind = {};
   recent.forEach((m) => { byKind[m.kind] = (byKind[m.kind] || 0) + 1; });
   const kinds = Object.keys(byKind).sort((a, b) => byKind[b] - byKind[a]);
@@ -773,7 +773,7 @@ function renderMaile() {
     ? mails.map((m) => {
         const s = bySession[m.session_id];
         return `<tr class="border-b border-white/5 hover:bg-white/[0.03] transition">
-          <td class="px-4 py-3 text-zinc-400 whitespace-nowrap">${fmtDate(m.created_at)}</td>
+          <td class="px-4 py-3 text-zinc-400 whitespace-nowrap">${fmtDate(m.sent_at)}</td>
           <td class="px-4 py-3">${mailBadge(m.kind)}</td>
           <td class="px-4 py-3 text-white">${s ? accentDot(s) + esc(projName(s)) : '<span class="text-zinc-600">—</span>'}</td>
           <td class="px-4 py-3 text-zinc-400">${esc(m.email || '')}</td>
