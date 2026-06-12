@@ -54,12 +54,12 @@ Deno.serve(async (req) => {
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
-    // Ostatnie realne sesje z wygenerowanym panelem (testowe wykluczone);
-    // bierzemy z zapasem — część może nie mieć panelu albo nazwy
+    // Ostatnie realne sesje z wygenerowanym panelem; testowe wykluczone,
+    // CHYBA że oznaczone showcase (ręcznie wybrane przykłady z panelu admina)
     const { data, error } = await supabase
       .from('spar_sessions')
       .select('preview_brief, preview_images, created_at')
-      .eq('is_test', false)
+      .or('is_test.eq.false,showcase.eq.true')
       .not('preview_images', 'is', null)
       .order('created_at', { ascending: false })
       .limit(FEED_LIMIT * 3)
