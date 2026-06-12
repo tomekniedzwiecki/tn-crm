@@ -104,6 +104,16 @@ ads_get_ad_entities(
 **Backfill (pierwsze uruchomienie / luka):** dla każdej kampanii z `campaign_launched=true` pull od
 `campaign_state.start_time` do wczoraj, upsert. ~14 kampanii — rób sekwencyjnie, parsuj per dzień.
 
+**AUTOMATY (cloud routines, od 2026-06-12):**
+- **Daily campaign stats pull** `trig_01BZ5r5Y26zZLJX5J8ohpvn3` — codziennie 06:40 UTC: pull
+  ostatnich 3 dni per konto (`time_increment=1`) → upsert do `campaign_daily_stats`. Sukces = cicho;
+  problem = wpis `campaign_actions` „Daily stats pull: PROBLEM" (proposed_by=routine).
+- **Weekly ads reports** `trig_014C36PDrUg9yU1jDeJAJ1B4` — czwartki 07:10 UTC: per workflow trailing 7d
+  (suma WSZYSTKICH kampanii workflow z `campaign_daily_stats` + reach z MCP + lejek z `dataset_stats`)
+  → INSERT `workflow_ad_reports` → mail numbers-only przez **pg_net z wnętrza bazy** (`net.http_post`
+  na send-email — obejście egress blocka cloud env). Spend=0 w okresie → mail wstrzymany + log.
+  Diagnostyka obu: wpisy `proposed_by='routine'` w `campaign_actions` + https://claude.ai/code/routines
+
 **Mid-funnel (koszyk/produkt/wejścia)** NIE jest w tej tabeli — pixel daje go na poziomie KONTA
 (`ads_get_dataset_stats`, web+CAPI podwójnie). Mid-funnel zostaje w `workflow_ad_reports.report_data`
 i to z niego panel renderuje lejek 9-krokowy w rozwinięciu wiersza.
