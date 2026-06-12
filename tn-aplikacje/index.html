@@ -15,6 +15,8 @@
   .animate-enter { animation: fadeIn 0.4s ease both; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .tab-active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.08); }
+  .no-scrollbar { scrollbar-width: none; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
   .bar { transition: height 0.5s cubic-bezier(0.16,1,0.3,1); }
   .msg-user { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.25); }
   .msg-ai { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.06); }
@@ -37,13 +39,13 @@
           <p class="text-[11px] text-zinc-500 leading-tight">lejek Aplikacja — sesje, leady, koszty</p>
         </div>
       </div>
-      <nav class="flex items-center gap-1.5 text-sm" id="tabs">
-        <button data-tab="dashboard" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chart-pie mr-1.5"></i>Dashboard</button>
-        <button data-tab="pipeline" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-kanban mr-1.5"></i>Pipeline</button>
-        <button data-tab="sesje" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
-        <button data-tab="generowania" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Generowania</button>
-        <button data-tab="koszty" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
-        <button data-tab="ustawienia" class="tab-btn px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear mr-1.5"></i></button>
+      <nav class="flex items-center gap-1.5 text-sm max-w-full overflow-x-auto no-scrollbar" id="tabs">
+        <button data-tab="dashboard" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chart-pie mr-1.5"></i>Dashboard</button>
+        <button data-tab="pipeline" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-kanban mr-1.5"></i>Pipeline</button>
+        <button data-tab="sesje" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
+        <button data-tab="generowania" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Generowania</button>
+        <button data-tab="koszty" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
+        <button data-tab="ustawienia" aria-label="Ustawienia" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear"></i></button>
       </nav>
     </div>
   </header>
@@ -78,7 +80,7 @@
 
   <!-- ════════ PIPELINE ════════ -->
   <section id="view-pipeline" class="hidden p-6">
-    <div class="flex gap-3 overflow-x-auto pb-4" id="pipeline-cols"></div>
+    <div class="grid grid-flow-col auto-cols-[minmax(230px,1fr)] gap-3 overflow-x-auto pb-4" id="pipeline-cols"></div>
   </section>
 
   <!-- ════════ SESJE ════════ -->
@@ -179,8 +181,9 @@
 </main>
 
 <!-- ════════ MODAL SZCZEGÓŁU SESJI ════════ -->
-<div id="modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto" onclick="if(event.target===this)closeModal()">
-  <div class="max-w-5xl mx-auto my-8 bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
+<div id="modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto">
+  <div class="min-h-full flex items-center justify-center p-4 md:p-6" onclick="if(event.target===this)closeModal()">
+  <div class="w-full max-w-5xl bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
     <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-zinc-950/95 backdrop-blur z-10">
       <div>
         <h2 class="text-white font-semibold" id="m-title">Sesja</h2>
@@ -188,13 +191,14 @@
       </div>
       <div class="flex items-center gap-2">
         <a id="m-open" href="#" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz wizytówkę</a>
-        <button onclick="closeModal()" class="w-8 h-8 rounded-lg border border-white/10 text-zinc-400 hover:text-white"><i class="ph ph-x"></i></button>
+        <button onclick="closeModal()" aria-label="Zamknij" class="w-8 h-8 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-x"></i></button>
       </div>
     </div>
     <div class="grid lg:grid-cols-5 gap-0">
-      <div class="lg:col-span-3 border-r border-white/5 max-h-[70vh] overflow-y-auto p-5 space-y-2.5" id="m-chat"></div>
-      <div class="lg:col-span-2 max-h-[70vh] overflow-y-auto p-5 space-y-4" id="m-side"></div>
+      <div class="lg:col-span-3 border-r border-white/5 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-2.5" id="m-chat"></div>
+      <div class="lg:col-span-2 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-4" id="m-side"></div>
     </div>
+  </div>
   </div>
 </div>
 
@@ -368,8 +372,9 @@ async function renderCostChart() {
   $('cost-chart').innerHTML = days.map((d) => {
     const v = byDay[d] || 0; total += v;
     const h = Math.max(2, Math.round((v / max) * 100));
-    return `<div class="flex-1 flex flex-col justify-end h-full" title="${d}: ${fmtPln(v)}">
-      <div class="bar w-full rounded-t bg-gradient-to-t from-blue-700/60 to-blue-400/80" style="height:${h}%"></div>
+    const dayPl = new Date(d + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' });
+    return `<div class="flex-1 flex flex-col justify-end h-full group cursor-default" title="${dayPl} — ${fmtPln(v)}">
+      <div class="bar w-full rounded-t bg-gradient-to-t from-blue-700/60 to-blue-400/80 group-hover:from-blue-600 group-hover:to-blue-300 transition-colors" style="height:${h}%"></div>
     </div>`;
   }).join('');
   $('cost-chart-labels').innerHTML = days.map((d) => `<div class="flex-1 text-center text-[9px] text-zinc-600">${d.slice(8)}</div>`).join('');
@@ -397,13 +402,13 @@ function renderPipeline() {
         </div>
       </div>`;
     }).join('');
-    return `<div class="w-[270px] shrink-0">
+    return `<div class="min-w-0">
       <div class="flex items-center gap-2 px-1 mb-2.5">
         <i class="ph ${st.icon} ${st.color}"></i>
-        <span class="text-sm font-medium text-white">${st.name}</span>
+        <span class="text-sm font-medium text-white truncate">${st.name}</span>
         <span class="ml-auto text-xs text-zinc-500 font-mono">${items.length}</span>
       </div>
-      <div class="space-y-2">${cards || '<div class="text-xs text-zinc-700 px-1">pusto</div>'}</div>
+      <div class="space-y-2">${cards || '<div class="border border-dashed border-white/10 rounded-lg py-8 text-center text-xs text-zinc-600">pusto</div>'}</div>
     </div>`;
   }).join('');
 }
@@ -424,8 +429,8 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-white">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(s.email || '—')}${s.phone ? `<div class="text-zinc-600">${esc(s.phone)}</div>` : ''}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
-      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || 0}</td>
-      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.image_count || 0}</td>
+      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
+      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.image_count || '<span class="text-zinc-700">0</span>'}</td>
       <td class="px-4 py-2.5 text-right text-white font-mono text-xs">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
       <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
     </tr>`;
@@ -434,6 +439,14 @@ function renderSesje() {
 
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
 const VIEW_LABELS = { panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa', landing: 'Landing', podsumowanie: 'Pigułka' };
+const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan' };
+const EMAIL_LABELS = {
+  abandoned_chat: 'Porzucona rozmowa',
+  verdict_no_payment: 'Werdykt bez wpłaty',
+  verdict_last_call: 'Ostatnie przypomnienie',
+  paid_welcome: 'Powitanie po wpłacie',
+};
+const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
 function renderGenerowania() {
   const imgs = [];
   visibleSessions().forEach((s) => {
@@ -450,7 +463,7 @@ function renderGenerowania() {
   $('gen-count').textContent = imgs.length > shown.length ? `${shown.length} z ${imgs.length} obrazów` : `${imgs.length} obrazów`;
   $('gen-grid').innerHTML = shown.map((g) => `
     <button onclick="openSession('${g.sid}')" class="group text-left bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden hover:border-blue-500/40 transition animate-enter ${g.old ? 'opacity-60 hover:opacity-100' : ''}">
-      <img src="${esc(g.url).replace('/object/public/', '/render/image/public/')}?format=webp&width=420&quality=70" loading="lazy" decoding="async" class="aspect-[3/2] object-cover w-full">
+      <img src="${esc(g.url).replace('/object/public/', '/render/image/public/')}?format=webp&width=420&quality=70" loading="lazy" decoding="async" alt="${esc(g.name)} — ${VIEW_LABELS[g.view] || esc(g.view)}" class="aspect-[3/2] object-contain bg-white w-full">
       <div class="px-2.5 py-2">
         <div class="text-xs text-white truncate">${esc(g.name)}</div>
         <div class="flex justify-between text-[10px] text-zinc-500 mt-0.5">
@@ -474,15 +487,21 @@ async function renderKoszty() {
   });
   const days = Object.keys(byDay).sort().reverse();
   let totalUsd = 0;
+  const fmtDay = (d) => {
+    const dt = new Date(d + 'T12:00:00');
+    return dt.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })
+      + ` <span class="text-zinc-600">${dt.toLocaleDateString('pl-PL', { weekday: 'short' })}</span>`;
+  };
+  const cellUsd = (v) => v ? `<span class="text-zinc-400">${fmtUsd(v)}</span>` : `<span class="text-zinc-700">${fmtUsd(0)}</span>`;
   $('koszty-rows').innerHTML = days.map((d) => {
     const r = byDay[d];
     const sum = r.chat + r.image + r.plan;
     totalUsd += sum;
-    return `<tr class="border-b border-white/[0.03]">
-      <td class="px-4 py-2.5 text-white text-xs">${d}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.chat)}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.image)}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-400">${fmtUsd(r.plan)}</td>
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02]">
+      <td class="px-4 py-2.5 text-white text-xs whitespace-nowrap">${fmtDay(d)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.chat)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.image)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.plan)}</td>
       <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-300">${fmtUsd(sum)}</td>
       <td class="px-4 py-2.5 text-right font-mono text-xs text-white">${fmtPln(sum)}</td>
     </tr>`;
@@ -537,16 +556,16 @@ async function openSession(id) {
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Koszt tej rozmowy</div>
       <div class="text-2xl font-bold text-white">${fmtPln(totalUsd)}</div>
-      <div class="text-xs text-zinc-500">${fmtUsd(totalUsd)} · ${(usage || []).length} wywołań AI</div>
+      <div class="text-xs text-zinc-500">${fmtUsd(totalUsd)} · ${(usage || []).length} ${plural((usage || []).length, 'wywołanie', 'wywołania', 'wywołań')} AI</div>
       <div class="mt-3 space-y-1 text-xs">${(usage || []).map((u) => `
         <div class="flex justify-between text-zinc-400">
-          <span>${u.kind}${u.kind === 'image' ? ' (' + esc((u.images || 1) + '×') + ')' : ''} <span class="text-zinc-600">${u.kind === 'chat' ? (u.input_tokens + 'in/' + u.output_tokens + 'out') : ''}</span></span>
+          <span>${KIND_LABELS[u.kind] || esc(u.kind)}${u.kind === 'image' ? ' (' + esc((u.images || 1) + '×') + ')' : ''} <span class="text-zinc-600">${u.kind === 'chat' ? (u.input_tokens + 'in/' + u.output_tokens + 'out') : ''}</span></span>
           <span class="font-mono">${fmtPln(Number(u.cost_usd))}</span>
         </div>`).join('')}</div>
     </div>
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 text-sm space-y-1.5">
       <div class="flex justify-between"><span class="text-zinc-500 text-xs">Etap</span><span class="${st.color} text-xs">${st.name}</span></div>
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Werdykt</span><span class="text-xs text-white">${esc(s.verdict || '—')}</span></div>
+      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Werdykt</span><span class="text-xs ${{zielony:'text-emerald-400',zolty:'text-amber-400',czerwony:'text-red-400'}[s.verdict] || 'text-white'}">${{zielony:'zielony',zolty:'żółty',czerwony:'czerwony'}[s.verdict] || esc(s.verdict || '—')}</span></div>
       <div class="flex justify-between"><span class="text-zinc-500 text-xs">Tury</span><span class="text-xs text-white">${s.turns || 0}</span></div>
       <div class="flex justify-between"><span class="text-zinc-500 text-xs">Wpłata 500 zł</span><span class="text-xs ${s.paid_at ? 'text-amber-400' : 'text-zinc-600'}">${s.paid_at ? fmtDate(s.paid_at) : 'brak'}</span></div>
       <div class="flex justify-between"><span class="text-zinc-500 text-xs">Ostatnia aktywność</span><span class="text-xs text-white">${timeAgo(s.last_user_at)}</span></div>
@@ -556,13 +575,13 @@ async function openSession(id) {
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
       <div class="grid grid-cols-2 gap-2">${imgKeys.map((k) => `
         <a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition">
-          <img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=300&quality=70'}" alt="${esc(k)}" loading="lazy" class="aspect-[3/2] object-cover w-full">
-          <div class="text-[10px] text-zinc-500 px-1.5 py-1">${esc(k)}</div>
+          <img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=300&quality=70'}" alt="${VIEW_LABELS[k] || esc(k)}" loading="lazy" class="aspect-[3/2] object-contain bg-white w-full">
+          <div class="text-[10px] text-zinc-500 px-1.5 py-1">${VIEW_LABELS[k] || esc(k)}</div>
         </a>`).join('')}</div>
     </div>` : ''}
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Follow-upy mailowe</div>
-      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span>${esc(e.kind)}</span><span>${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
+      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span><i class="ph ph-envelope-simple mr-1 text-zinc-600"></i>${EMAIL_LABELS[e.kind] || esc(e.kind)}</span><span class="text-zinc-500">${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
     </div>
     <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
       <input type="checkbox" ${s.is_test ? 'checked' : ''} onchange="toggleTest('${s.id}', this.checked)" class="accent-blue-500">
@@ -623,6 +642,7 @@ async function init() {
   if (!session) { window.location.href = Sidebar.getLoginPath(); return; }
   Sidebar.render({ appId: 'aplikacje' });
   Sidebar.setUserEmail(session.user.email);
+  Sidebar.setUserName((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email);
 
   // domyślny zakres kosztów: 30 dni
   const iso = (d) => d.toISOString().slice(0, 10);
@@ -638,10 +658,15 @@ async function init() {
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('search').addEventListener('input', (e) => { search = e.target.value; renderSesje(); });
   $('show-tests').addEventListener('change', (e) => { showTests = e.target.checked; renderActive(); });
-  $('cost-apply').addEventListener('click', renderKoszty);
+  const markPreset = (btn) => document.querySelectorAll('.cost-preset').forEach((p) => {
+    p.classList.toggle('tab-active', p === btn);
+  });
+  $('cost-apply').addEventListener('click', () => { markPreset(null); renderKoszty(); });
+  ['cost-from', 'cost-to'].forEach((id) => $(id).addEventListener('change', () => markPreset(null)));
   document.querySelectorAll('.cost-preset').forEach((b) => b.addEventListener('click', () => {
     $('cost-to').value = iso(new Date());
     $('cost-from').value = iso(new Date(Date.now() - (parseInt(b.dataset.days, 10) - 1) * 864e5));
+    markPreset(b);
     renderKoszty();
   }));
   $('rate-save').addEventListener('click', async () => {
