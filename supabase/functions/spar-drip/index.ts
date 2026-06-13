@@ -228,11 +228,30 @@ Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string, "sms": string}. su
   } catch (e) { console.error('[spar-drip] email gen error:', e instanceof Error ? e.message : String(e)); return null }
 }
 
-// Link do panelu w SMS — CZYSTY, na własnej domenie (marka z przodu = wiarygodnie).
-// BEZ utm/parametrów śledzących — w SMS widać surowy URL, a „utm_source=sms" wygląda
-// jak spam/scam. Kliknięcia liczymy trackingiem SMSAPI (po aktywacji shortenera).
-function smsLink(sid: string): string {
-  return `${SPARING_URL}?id=${sid}`
+// Brandowany KRÓTKI link do panelu: tomekniedzwiecki.pl/p/{code} (rewrite Vercel
+// → edge fn spar-go → 302 do panelu). Krótko, marka, zero UUID i utm w treści SMS
+// (utm dokleja spar-go server-side). Kod = jeden na sesję (spar_short_links).
+const SHORT_BASE = 'https://tomekniedzwiecki.pl'
+function shortLink(code: string): string { return `${SHORT_BASE}/p/${code}` }
+// Kod bez mylących znaków (0/O/1/l/I). 7 znaków z 54-znakowego alfabetu ≈ 1e12.
+function randCode(len = 7): string {
+  const a = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+  const buf = new Uint8Array(len); crypto.getRandomValues(buf)
+  let out = ''; for (let i = 0; i < len; i++) out += a[buf[i] % a.length]
+  return out
+}
+// Pobierz/utwórz krótki kod dla sesji (idempotentne, odporne na równoległy insert).
+async function getOrCreateShortCode(supabase: ReturnType<typeof createClient>, sid: string): Promise<string> {
+  const { data: ex } = await supabase.from('spar_short_links').select('code').eq('session_id', sid).maybeSingle()
+  if (ex && ex.code) return ex.code as string
+  for (let i = 0; i < 3; i++) {
+    const code = randCode()
+    const { error } = await supabase.from('spar_short_links').insert({ code, session_id: sid })
+    if (!error) return code
+    const { data: again } = await supabase.from('spar_short_links').select('code').eq('session_id', sid).maybeSingle()
+    if (again && again.code) return again.code as string   // równoległy insert — użyj istniejącego
+  }
+  return randCode()   // skrajna ostateczność
 }
 // Statyczny fallback SMS (gdy GPT nie dał pola sms) — bez polskich znaków.
 // deno-lint-ignore no-explicit-any
@@ -258,11 +277,10 @@ const GSM_MAP: Record<string, string> = {
 function gsmSafe(str: string): string {
   return String(str || '').split('').map((c) => (c in GSM_MAP ? GSM_MAP[c] : c)).join('')
 }
-// Złóż finalny SMS: tekst (GPT lub statyczny), GSM-safe, + link w nowej linii.
-// deno-lint-ignore no-explicit-any
-function composeSms(text: string, s: any): string {
+// Złóż finalny SMS: tekst (GPT lub statyczny), GSM-safe, + krótki link w nowej linii.
+function composeSms(text: string, code: string): string {
   const clean = gsmSafe((text || '').trim()).replace(/\s+$/g, '')
-  return `${clean}\n${smsLink(s.id)}`.slice(0, 320)
+  return `${clean}\n${shortLink(code)}`.slice(0, 320)
 }
 
 // Mail reveala: cache w spar_reveals.meta.email -> GPT (raz) -> fallback statyczny.
@@ -287,7 +305,8 @@ async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal:
     email = staticReveal(s, key, viewUrl, reserveUrl)
     smsText = staticSms(s, key)
   }
-  const sms = composeSms(smsText, s)
+  const code = await getOrCreateShortCode(supabase, s.id)
+  const sms = composeSms(smsText, code)
   try { if (reveal.id) await supabase.from('spar_reveals').update({ meta: { ...(reveal.meta || {}), email: { subject: email.subject, html: email.html, model, at: new Date().toISOString() }, sms: { text: sms, model: gen && gen.sms ? model : null, at: new Date().toISOString() } }, updated_at: new Date().toISOString() }).eq('id', reveal.id) } catch (cErr) { console.error('[spar-drip] email cache:', cErr) }
   return email
 }
@@ -295,11 +314,12 @@ async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal:
 // Treść SMS reaktywacyjnego dla danej odsłony: cache meta.sms (złożony przy mailu)
 // -> fallback statyczny. SMS leci +24h po mailu, więc meta.sms zwykle już istnieje.
 // deno-lint-ignore no-explicit-any
-function getRevealSms(reveal: any, s: any): string {
+async function getRevealSms(supabase: ReturnType<typeof createClient>, reveal: any, s: any): Promise<string> {
   const cached = reveal && reveal.meta && reveal.meta.sms
   if (cached && typeof cached.text === 'string' && cached.text.trim()) return cached.text
   const key = (reveal && reveal.key) || 'rynek'
-  return composeSms(staticSms(s, key), s)
+  const code = await getOrCreateShortCode(supabase, s.id)
+  return composeSms(staticSms(s, key), code)
 }
 
 // Wyślij SMS przez funkcję send-sms (autoryzacja x-cron-secret). Zwraca wynik JSON.
@@ -585,7 +605,7 @@ Deno.serve(async (req) => {
         if (inactive < 86400000) continue                              // aktywny w ostatniej dobie → SMS redundantny
         if (inactive >= LOST_WINDOW_DAYS * 86400000) continue          // przegrany — nie zaczepiamy
         const { data: rv } = await supabase.from('spar_reveals').select('key, meta').eq('session_id', em.session_id).eq('email_kind', em.kind).maybeSingle()
-        const text = getRevealSms(rv || { key: (em.kind as string).replace('reveal_', ''), meta: null }, s)
+        const text = await getRevealSms(supabase, rv || { key: (em.kind as string).replace('reveal_', ''), meta: null }, s)
         const res = await sendSms(CRON_SECRET, s.phone as string, text)
         await supabase.from('spar_sms').insert({
           session_id: s.id, kind: em.kind, phone: s.phone, message: text,
