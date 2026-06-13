@@ -36,27 +36,38 @@
         </div>
         <div>
           <h1 class="text-white font-semibold leading-tight">TN Aplikacje</h1>
-          <p class="text-[11px] text-zinc-500 leading-tight">lejek Aplikacja — sesje, leady, koszty</p>
+          <p class="text-[11px] text-zinc-500 leading-tight">lejek Aplikacja — leady, sekwencja, koszty</p>
         </div>
       </div>
-      <nav class="flex items-center gap-1.5 text-sm max-w-full overflow-x-auto no-scrollbar" id="tabs">
-        <button data-tab="dashboard" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chart-pie mr-1.5"></i>Dashboard</button>
-        <button data-tab="pipeline" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-kanban mr-1.5"></i>Pipeline</button>
-        <button data-tab="sesje" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
-        <button data-tab="generowania" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Generowania</button>
-        <button data-tab="maile" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-envelope mr-1.5"></i>Maile</button>
-        <button data-tab="sekwencja" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-flow-arrow mr-1.5"></i>Sekwencja</button>
-        <button data-tab="koszty" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
-        <button data-tab="ustawienia" aria-label="Ustawienia" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear"></i></button>
-      </nav>
+      <div class="flex items-center gap-2 flex-wrap">
+        <nav class="flex items-center gap-1 text-sm max-w-full overflow-x-auto no-scrollbar" id="tabs">
+          <button data-tab="przeglad" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-squares-four mr-1.5"></i>Przegląd</button>
+          <button data-tab="leady" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-users-three mr-1.5"></i>Leady</button>
+          <button data-tab="komunikacja" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-flow-arrow mr-1.5"></i>Komunikacja</button>
+          <button data-tab="koszty" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
+          <button data-tab="galeria" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Galeria</button>
+          <button data-tab="ustawienia" aria-label="Ustawienia" class="tab-btn shrink-0 whitespace-nowrap px-3 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear"></i></button>
+        </nav>
+        <button id="global-refresh" title="Odśwież dane" class="shrink-0 w-9 h-9 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrows-clockwise"></i></button>
+      </div>
     </div>
   </header>
 
   <div id="loading" class="p-12 text-center text-zinc-500"><i class="ph ph-circle-notch animate-spin text-2xl"></i><div class="mt-2 text-sm">Wczytuję dane lejka…</div></div>
 
-  <!-- ════════ DASHBOARD ════════ -->
-  <section id="view-dashboard" class="hidden p-6 space-y-6">
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="kpi-grid"></div>
+  <!-- ════════ PRZEGLĄD (command center) ════════ -->
+  <section id="view-przeglad" class="hidden p-6 space-y-5">
+    <div class="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-4 gap-3" id="kpi-grid"></div>
+
+    <!-- WYMAGA UWAGI — actionable inbox -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-target mr-1.5 text-emerald-400"></i>Wymaga uwagi</h3>
+        <span class="text-[11px] text-zinc-500">leady warte ruchu — kliknij, by otworzyć</span>
+      </div>
+      <div class="grid md:grid-cols-3 gap-3" id="attention-cols"></div>
+    </div>
+
     <div class="grid lg:grid-cols-2 gap-4">
       <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
         <div class="flex items-center justify-between mb-4">
@@ -75,30 +86,31 @@
       </div>
     </div>
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
-      <h3 class="text-white font-medium text-sm mb-4"><i class="ph ph-clock-counter-clockwise mr-1.5 text-blue-400"></i>Ostatnie sesje</h3>
+      <h3 class="text-white font-medium text-sm mb-4"><i class="ph ph-clock-counter-clockwise mr-1.5 text-blue-400"></i>Ostatnia aktywność</h3>
       <div id="recent-sessions" class="space-y-1.5"></div>
     </div>
   </section>
 
-  <!-- ════════ PIPELINE ════════ -->
-  <section id="view-pipeline" class="hidden p-6">
-    <div class="grid grid-flow-col auto-cols-[minmax(230px,1fr)] gap-3 overflow-x-auto pb-4" id="pipeline-cols"></div>
-  </section>
-
-  <!-- ════════ SESJE ════════ -->
-  <section id="view-sesje" class="hidden p-6">
-    <div class="flex items-center gap-3 mb-4 flex-wrap">
+  <!-- ════════ LEADY (lista + tablica, filtry, zaangażowanie) ════════ -->
+  <section id="view-leady" class="hidden p-6">
+    <div class="flex items-center gap-2.5 mb-3 flex-wrap">
       <div class="relative flex-1 min-w-[220px] max-w-sm">
         <i class="ph ph-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500"></i>
         <input id="search" type="text" placeholder="Szukaj: nazwa, email, telefon, profesja…"
           class="w-full bg-zinc-900/60 border border-white/5 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-blue-500/40">
       </div>
+      <div class="inline-flex rounded-lg border border-white/10 overflow-hidden" id="leady-viewtoggle">
+        <button data-view="table" class="lv-toggle px-3 py-2 text-xs text-zinc-400 hover:text-white transition"><i class="ph ph-rows mr-1"></i>Tabela</button>
+        <button data-view="board" class="lv-toggle px-3 py-2 text-xs text-zinc-400 hover:text-white transition border-l border-white/10"><i class="ph ph-kanban mr-1"></i>Tablica</button>
+      </div>
       <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none">
-        <input type="checkbox" id="show-tests" class="accent-blue-500"> pokaż testowe
+        <input type="checkbox" id="show-tests" class="accent-blue-500"> testowe
       </label>
-      <span id="sesje-count" class="text-xs text-zinc-500 ml-auto"></span>
+      <span id="sesje-count" class="text-xs text-zinc-500 ml-auto whitespace-nowrap"></span>
     </div>
-    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+    <div class="flex items-center gap-1.5 mb-4 flex-wrap" id="leady-filters"></div>
+
+    <div id="leady-table" class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -107,8 +119,8 @@
               <th class="px-4 py-3">Projekt</th>
               <th class="px-4 py-3">Osoba</th>
               <th class="px-4 py-3">Etap</th>
+              <th class="px-4 py-3">Sygnał</th>
               <th class="px-4 py-3 text-right">Tury</th>
-              <th class="px-4 py-3 text-right">Grafiki</th>
               <th class="px-4 py-3 text-right">Koszt</th>
               <th class="px-4 py-3"></th>
             </tr>
@@ -117,10 +129,11 @@
         </table>
       </div>
     </div>
+    <div id="pipeline-cols" class="hidden grid grid-flow-col auto-cols-[minmax(240px,1fr)] gap-3 overflow-x-auto pb-4"></div>
   </section>
 
-  <!-- ════════ GENEROWANIA (galeria wszystkich obrazów) ════════ -->
-  <section id="view-generowania" class="hidden p-6">
+  <!-- ════════ GALERIA (wszystkie wygenerowane obrazy) ════════ -->
+  <section id="view-galeria" class="hidden p-6">
     <div class="flex items-center gap-3 mb-4 flex-wrap">
       <span class="text-sm text-zinc-400">Wszystkie wygenerowane ekrany — najnowsze pierwsze. Klik otwiera sesję.</span>
       <span id="gen-count" class="text-xs text-zinc-500 ml-auto"></span>
@@ -128,45 +141,13 @@
     <div id="gen-grid" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3"></div>
   </section>
 
-  <!-- ════════ MAILE (followupy z spar_emails — każdy nowy kind pojawia się sam) ════════ -->
-  <section id="view-maile" class="hidden p-6 space-y-5">
-    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3" id="mail-kpi"></div>
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
-      <div class="flex items-center justify-between mb-3">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-hourglass-medium mr-1.5 text-amber-400"></i>W kolejce do wysyłki</h3>
-        <span class="text-[11px] text-zinc-500">odsłony artefaktów (rynek/strona/economics/reklamy/prototyp) → zakładka »Sekwencja«</span>
-      </div>
-      <div id="mail-queue" class="space-y-1.5"></div>
-    </div>
-    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
-      <div class="flex items-center justify-between px-4 pt-4">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-paper-plane-tilt mr-1.5 text-blue-400"></i>Wysłane</h3>
-        <span id="mail-count" class="text-xs text-zinc-500"></span>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm">
-          <thead>
-            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
-              <th class="px-4 py-3">Data</th>
-              <th class="px-4 py-3">Rodzaj</th>
-              <th class="px-4 py-3">Projekt</th>
-              <th class="px-4 py-3">Odbiorca</th>
-              <th class="px-4 py-3"></th>
-            </tr>
-          </thead>
-          <tbody id="mail-rows"></tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- ════════ SEKWENCJA ODKRYWANIA (drip artefaktów: spar_reveals + reveal_* maile) ════════ -->
-  <section id="view-sekwencja" class="hidden p-6 space-y-5">
+  <!-- ════════ KOMUNIKACJA (sekwencja odkrywania + wszystkie maile) ════════ -->
+  <section id="view-komunikacja" class="hidden p-6 space-y-5">
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h3 class="text-white font-medium text-sm"><i class="ph ph-flow-arrow mr-1.5 text-blue-400"></i>Sekwencja odkrywania</h3>
-          <p class="text-xs text-zinc-500 mt-1 max-w-2xl">Po zielonym werdykcie nie wysypujemy wszystkiego naraz — odkrywamy artefakty po kolei (prototyp → rynek → unit economics → strona → reklamy), każdy osobnym mailem z akcją do panelu i CTA rezerwacji 500 zł. Od 2. odsłony dalsze idą <strong>tylko gdy lead jest zaangażowany</strong> (otworzył maila albo wszedł do panelu) — zimny lead = pauza, nie palimy generowania.</p>
+          <p class="text-xs text-zinc-500 mt-1 max-w-2xl">Po zielonym werdykcie odkrywamy artefakty po kolei (rynek → economics → strona → reklamy → <strong>prototyp na finał</strong>), każdy osobnym mailem z CTA rezerwacji 500 zł. Od 2. odsłony dalej idzie <strong>tylko zaangażowany</strong> lead — zimny = pauza. Pełne testy projektu znajdziesz też w karcie leada.</p>
         </div>
         <button id="sekw-refresh" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition"><i class="ph ph-arrows-clockwise mr-1.5"></i>Odśwież</button>
       </div>
@@ -221,18 +202,34 @@
       </div>
     </div>
 
-    <!-- DRILL-DOWN: pojedynczy projekt + testy -->
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
-      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-magnifying-glass mr-1.5 text-blue-400"></i>Podgląd i testy pojedynczego projektu</h3>
-        <div class="flex items-center gap-2">
-          <select id="sekw-project" class="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white min-w-[240px]">
-            <option value="">— wybierz projekt —</option>
-          </select>
-          <button id="sekw-seed" class="px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition" title="Utwórz wiersze planu dla tego projektu"><i class="ph ph-list-plus mr-1"></i>Utwórz plan</button>
+    <!-- WSZYSTKIE MAILE — pełny log (drip + followupy) z otwarciami -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-envelope-open mr-1.5 text-sky-400"></i>Wszystkie maile — 30 dni</h3>
+        <span class="text-[11px] text-zinc-500">testy pojedynczego projektu → karta leada (zakładka »Leady«)</span>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4" id="mail-kpi"></div>
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+        <div class="flex items-center justify-between px-4 pt-4">
+          <h3 class="text-white font-medium text-sm"><i class="ph ph-paper-plane-tilt mr-1.5 text-blue-400"></i>Wysłane</h3>
+          <span id="mail-count" class="text-xs text-zinc-500"></span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+                <th class="px-4 py-3">Data</th>
+                <th class="px-4 py-3">Rodzaj</th>
+                <th class="px-4 py-3">Projekt</th>
+                <th class="px-4 py-3">Odbiorca</th>
+                <th class="px-4 py-3 text-center">Otwarty</th>
+                <th class="px-4 py-3"></th>
+              </tr>
+            </thead>
+            <tbody id="mail-rows"></tbody>
+          </table>
         </div>
       </div>
-      <div id="sekw-detail" class="text-sm text-zinc-500">Wybierz projekt, aby zobaczyć jego oś czasu, zaangażowanie i przetestować maile.</div>
     </div>
   </section>
 
@@ -341,13 +338,34 @@
 <script>
 const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
-const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/';
+
+// Tryb DEMO (?demo=1) — renderuje panel na danych mock, bez auth i sieci.
+// Służy do wizualnego przeglądu układu (file:// / podgląd). Pokazuje wyłącznie
+// dane fikcyjne; realnej bazy nie dotyka.
+const DEMO = /[?&]demo/.test(location.search);
+function mockBuilder(rows) {
+  const b = {}; const ret = () => b;
+  ['select','order','eq','neq','is','not','like','ilike','in','gte','lte','or','limit','range','upsert','update','insert','delete'].forEach((m) => { b[m] = ret; });
+  b.maybeSingle = () => Promise.resolve({ data: rows[0] || null, error: null });
+  b.single = b.maybeSingle;
+  b.then = (res) => res({ data: rows, error: null });
+  return b;
+}
+function mockClient() {
+  return {
+    from: (t) => mockBuilder(((window.__MOCK || {})[t] || []).slice()),
+    rpc: (name) => Promise.resolve({ data: ((window.__MOCK || {})['rpc:' + name] || []), error: null }),
+    auth: { getSession: () => Promise.resolve({ data: { session: { user: { email: 'demo@tn.pl', user_metadata: {} } } } }) },
+  };
+}
+const supabaseClient = DEMO ? mockClient() : window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let sessions = [];          // spar_sessions (wszystkie, z paginacją)
 let costsBySession = {};    // session_id -> {cost_usd, calls, images, ...}
 let mails = [];             // spar_emails (wysłane followupy, najnowsze pierwsze)
 let mailKindsBySession = {}; // session_id -> Set(kind) — do wyliczania kolejki
+let mailsBySession = {};     // session_id -> [maile] (z otwarciami) — do zaangażowania
 let usdPln = 4.0;
 let activeTab = 'dashboard';
 let showTests = false;
@@ -366,6 +384,7 @@ const timeAgo = (iso) => {
   return Math.round(h / 24) + ' dni temu';
 };
 const fmtDate = (iso) => iso ? new Date(iso).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—';
+const untilStr = (ms) => { const m = Math.round((ms - Date.now()) / 60000); if (m < 60) return 'za ' + Math.max(0, m) + ' min'; const h = Math.round(m / 60); if (h < 48) return 'za ' + h + ' h'; return 'za ' + Math.round(h / 24) + ' dni'; };
 function toast(msg) {
   const t = $('toast');
   t.textContent = msg;
@@ -420,7 +439,7 @@ async function loadAll() {
   while (true) {
     const { data, error } = await supabaseClient
       .from('spar_sessions')
-      .select('id, created_at, updated_at, last_user_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, tracking, auth_provider, landing_url, raport_meta:market_report->_meta')
+      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, tracking, auth_provider, landing_url, raport_meta:market_report->_meta')
       .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
@@ -434,7 +453,7 @@ async function loadAll() {
   const [{ data: costs }, { data: rateRow }, { data: mailRows }] = await Promise.all([
     supabaseClient.rpc('spar_session_costs'),
     supabaseClient.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
-    supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at').order('sent_at', { ascending: false }).limit(500),
+    supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at, opened_at, clicked_at').order('sent_at', { ascending: false }).limit(800),
   ]);
   costsBySession = {};
   (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
@@ -442,11 +461,41 @@ async function loadAll() {
   $('rate-input').value = usdPln.toFixed(2);
   mails = mailRows || [];
   mailKindsBySession = {};
+  mailsBySession = {};
   mails.forEach((m) => {
     (mailKindsBySession[m.session_id] = mailKindsBySession[m.session_id] || new Set()).add(m.kind);
+    (mailsBySession[m.session_id] = mailsBySession[m.session_id] || []).push(m);
   });
 }
 const costOf = (s) => (costsBySession[s.id] ? Number(costsBySession[s.id].cost_usd) : 0);
+
+// ── Zaangażowanie (lustro serwerowego isEngaged z spar-drip) ──
+// hot = zielony, nieopłacony, aktywny w oknie; cold = zielony, nieopłacony, ucichł.
+const ENGAGE_DAYS = 10;
+function lastTouchOf(s) {
+  const t = [s.last_panel_at, s.last_user_at].map((x) => x ? new Date(x).getTime() : 0);
+  let best = Math.max(t[0], t[1]);
+  (mailsBySession[s.id] || []).forEach((m) => { if (m.opened_at) best = Math.max(best, new Date(m.opened_at).getTime()); });
+  return best || 0;
+}
+function isEngaged(s) {
+  const win = Date.now() - ENGAGE_DAYS * 864e5;
+  return lastTouchOf(s) >= win;
+}
+function revealOpens(s) {
+  return (mailsBySession[s.id] || []).filter((m) => /^reveal_/.test(m.kind) && m.opened_at).length;
+}
+// Klasyfikacja leada do listy/skrzynki „Wymaga uwagi"
+function leadSignal(s) {
+  if (s.paid_at) return { key: 'paid', label: 'opłacony', tone: 'amber', icon: 'ph-currency-circle-dollar' };
+  if (s.verdict === 'zielony') {
+    if (isEngaged(s)) return { key: 'hot', label: 'gorący', tone: 'emerald', icon: 'ph-fire' };
+    return { key: 'cold', label: 'wystygł', tone: 'sky', icon: 'ph-snowflake' };
+  }
+  if (s.verdict === 'zolty' || s.verdict === 'czerwony') return { key: 'verdict', label: 'werdykt', tone: 'zinc', icon: 'ph-flag' };
+  if (s.email) return { key: 'lead', label: 'lead', tone: 'zinc', icon: 'ph-user' };
+  return { key: 'talk', label: 'rozmowa', tone: 'zinc', icon: 'ph-chat-circle' };
+}
 
 // ── DASHBOARD ──
 function renderDashboard() {
@@ -538,9 +587,10 @@ async function renderCostChart() {
   $('chart-total').textContent = '14 dni: ' + fmtPln(total);
 }
 
-// ── PIPELINE ──
+// ── LEADY: tablica (kanban po etapach) ──
 function renderPipeline() {
-  const vis = visibleSessions();
+  const vis = leadList();
+  $('sesje-count').textContent = `${vis.length} ${plural(vis.length, 'lead', 'leady', 'leadów')}`;
   $('pipeline-cols').innerHTML = STAGES.map((st) => {
     const items = vis.filter((s) => stageOf(s) === st.id);
     const cards = items.slice(0, 60).map((s) => {
@@ -570,15 +620,11 @@ function renderPipeline() {
   }).join('');
 }
 
-// ── SESJE (tabela) ──
+// ── LEADY: tabela ──
 function renderSesje() {
-  const q = search.toLowerCase();
-  const rows = visibleSessions().filter((s) => {
-    if (!q) return true;
-    return [projName(s), s.email, s.phone, s.profession, s.name].some((v) => v && String(v).toLowerCase().includes(q));
-  });
+  const rows = leadList();
   const visRows = rows.slice(0, 400);
-  $('sesje-count').textContent = rows.length > 400 ? `${visRows.length} z ${rows.length} sesji (zawęź wyszukiwaniem)` : `${rows.length} sesji`;
+  $('sesje-count').textContent = rows.length > 400 ? `${visRows.length} z ${rows.length} (zawęź wyszukiwaniem)` : `${rows.length} ${plural(rows.length, 'lead', 'leady', 'leadów')}`;
   $('sesje-rows').innerHTML = visRows.map((s) => {
     const st = STAGES.find((x) => x.id === stageOf(s));
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
@@ -586,12 +632,12 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(s.email || '—')}${s.phone ? `<div class="text-zinc-600">${esc(s.phone)}</div>` : ''}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
+      <td class="px-4 py-2.5">${signalBadge(s)}</td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
-      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.image_count || '<span class="text-zinc-700">0</span>'}</td>
       <td class="px-4 py-2.5 text-right text-white font-mono text-xs">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
       <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak sesji.</td></tr>';
+  }).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak leadów dla tego filtra.</td></tr>';
 }
 
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
@@ -758,8 +804,15 @@ async function openSession(id) {
         </a>`).join('')}</div>
     </div>` : ''}
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Follow-upy mailowe</div>
-      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span><i class="ph ph-envelope-simple mr-1 text-zinc-600"></i>${EMAIL_LABELS[e.kind] || esc(e.kind)}</span><span class="text-zinc-500">${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
+      <div class="flex items-center justify-between mb-2.5">
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-flow-arrow mr-1 text-blue-400"></i>Sekwencja odkrywania</div>
+        ${(s.verdict === 'zielony' || s.paid_at) ? `<button onclick="seedLeadDrip('${s.id}')" class="text-[11px] text-zinc-400 hover:text-white border border-white/10 rounded-md px-2 py-0.5 transition" title="Utwórz/odśwież plan odsłon"><i class="ph ph-list-plus mr-1"></i>plan</button>` : ''}
+      </div>
+      <div id="m-drip" class="text-xs text-zinc-500">${(s.verdict === 'zielony' || s.paid_at) ? '<i class="ph ph-circle-notch animate-spin mr-1"></i>wczytuję sekwencję…' : 'Sekwencja rusza po zielonym werdykcie — wtedy zobaczysz tu oś czasu odsłon i testy maili.'}</div>
+    </div>
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Inne maile (follow-upy)</div>
+      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span><i class="ph ph-envelope-simple mr-1 text-zinc-600"></i>${EMAIL_LABELS[e.kind] || mailKind(e.kind).label}</span><span class="text-zinc-500">${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
     </div>
     <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
       <input type="checkbox" ${s.is_test ? 'checked' : ''} onchange="toggleTest('${s.id}', this.checked)" class="accent-blue-500">
@@ -773,6 +826,8 @@ async function openSession(id) {
       <input type="checkbox" ${s.hidden_from_feed ? 'checked' : ''} onchange="toggleHidden('${s.id}', this.checked)" class="accent-red-500">
       ukryj z inspiracji i strony głównej
     </label>`;
+
+  if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(id, 'm-drip');
 }
 function closeModal() { $('modal').classList.add('hidden'); }
 async function toggleTest(id, val) {
@@ -842,36 +897,23 @@ function renderMaile() {
       }).join('')
     : '<div class="col-span-full text-sm text-zinc-500">Jeszcze żaden followup nie wyszedł.</div>';
 
-  // kolejka
-  const q = mailQueue();
-  $('mail-queue').innerHTML = q.length
-    ? q.map((item) => `
-      <button onclick="openSession('${item.s.id}')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left">
-        ${mailBadge(item.kind)}
-        <span class="text-sm text-white truncate">${accentDot(item.s)}${esc(projName(item.s))}</span>
-        <span class="text-xs text-zinc-500 truncate">${esc(item.s.email || '')}</span>
-        <span class="ml-auto text-xs ${item.ready ? 'text-amber-400' : 'text-zinc-500'} whitespace-nowrap">
-          ${item.ready ? '<i class="ph ph-clock mr-1"></i>wyśle następny run' : 'gotowy od ' + fmtDate(new Date(item.readyAt).toISOString())}
-        </span>
-      </button>`).join('')
-    : '<div class="text-sm text-zinc-500 px-1">Odsłony artefaktów planuje i wysyła teraz drip — podgląd i testy w zakładce <strong class="text-zinc-300">Sekwencja</strong>.</div>';
-
-  // wysłane
-  $('mail-count').textContent = mails.length + (mails.length === 500 ? '+ (ostatnie 500)' : '');
+  // wysłane (z otwarciami)
+  $('mail-count').textContent = mails.length + (mails.length >= 800 ? '+ (ostatnie 800)' : '');
   const bySession = {};
   sessions.forEach((s) => { bySession[s.id] = s; });
   $('mail-rows').innerHTML = mails.length
     ? mails.map((m) => {
         const s = bySession[m.session_id];
-        return `<tr class="border-b border-white/5 hover:bg-white/[0.03] transition">
+        return `<tr class="border-b border-white/5 hover:bg-white/[0.03] transition cursor-pointer" ${s ? `onclick="openSession('${s.id}')"` : ''}>
           <td class="px-4 py-3 text-zinc-400 whitespace-nowrap">${fmtDate(m.sent_at)}</td>
           <td class="px-4 py-3">${mailBadge(m.kind)}</td>
           <td class="px-4 py-3 text-white">${s ? accentDot(s) + esc(projName(s)) : '<span class="text-zinc-600">—</span>'}</td>
           <td class="px-4 py-3 text-zinc-400">${esc(m.email || '')}</td>
-          <td class="px-4 py-3 text-right">${s ? `<button onclick="openSession('${s.id}')" class="text-xs text-blue-400 hover:text-blue-300">sesja →</button>` : ''}</td>
+          <td class="px-4 py-3 text-center">${yesNo(m.opened_at)}</td>
+          <td class="px-4 py-3 text-right">${s ? '<i class="ph ph-caret-right text-zinc-600"></i>' : ''}</td>
         </tr>`;
       }).join('')
-    : '<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-500 text-sm">Brak wysłanych maili.</td></tr>';
+    : '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-500 text-sm">Brak wysłanych maili.</td></tr>';
 }
 
 // ── SEKWENCJA ODKRYWANIA (drip artefaktów) ──
@@ -899,6 +941,7 @@ const yesNo = (ts) => ts ? `<span class="text-emerald-400" title="${esc(fmtDate(
 
 let sekwBusy = false;
 async function callDrip(payload) {
+  if (DEMO) return (window.__MOCK_DRIP || {});
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) { toast('Brak sesji — zaloguj się ponownie'); throw new Error('no session'); }
   const res = await fetch(SUPABASE_URL + '/functions/v1/spar-drip', {
@@ -926,7 +969,7 @@ async function renderSekwencja() {
   const rv = reveals || [], rm = remails || [];
 
   // Plan-line
-  $('sekw-plan-line').textContent = ['prototyp +1 dz.', 'rynek +3 dz.', 'economics +5 dz.', 'strona +8 dz.', 'reklamy +11 dz.'].join(' · ');
+  $('sekw-plan-line').textContent = ['rynek +1 dz.', 'economics +3 dz.', 'strona +5 dz.', 'reklamy +8 dz.', 'prototyp +11 dz.'].join(' · ');
 
   // KPI
   const sentEmails = rm.filter((m) => m.sent_at);
@@ -968,7 +1011,7 @@ async function renderSekwencja() {
   $('sekw-queue-count').textContent = queue.length + ' pozycji';
   $('sekw-queue-rows').innerHTML = queue.length ? queue.map((r) => {
     const due = new Date(r.due_at).getTime();
-    const when = r.status === 'paused' ? 'wstrzymane' : (due <= now ? '<span class="text-amber-400">gotowe do wysyłki</span>' : 'za ' + timeAgo(r.due_at).replace(' temu', ''));
+    const when = r.status === 'paused' ? 'wstrzymane' : (due <= now ? '<span class="text-amber-400">gotowe do wysyłki</span>' : untilStr(due));
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="selectSekwProject('${r.session_id}')">
       <td class="px-4 py-2.5 text-xs whitespace-nowrap"><div class="text-zinc-300">${fmtDate(r.due_at)}</div><div class="text-[10px] text-zinc-600">${when}</div></td>
       <td class="px-4 py-2.5">${revChip(r.key)}</td>
@@ -978,35 +1021,19 @@ async function renderSekwencja() {
       <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
     </tr>`;
   }).join('') : '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak zaplanowanych odsłon — pojawią się po zielonych werdyktach.</td></tr>';
-
-  // Lista projektów do drill-downu: zielone (nie-test, nieopłacone) + te z istniejącym planem
-  const greenSel = visibleSessions().filter((s) => s.verdict === 'zielony' && !s.paid_at);
-  const inPlan = new Map();
-  rv.forEach((r) => { if (!inPlan.has(r.session_id)) inPlan.set(r.session_id, sessLabel(r.sess)); });
-  greenSel.forEach((s) => inPlan.set(s.id, projName(s)));
-  const opts = Array.from(inPlan.entries()).sort((a, b) => a[1].localeCompare(b[1], 'pl'));
-  const sel = $('sekw-project');
-  const cur = sel.value;
-  sel.innerHTML = '<option value="">— wybierz projekt —</option>' + opts.map(([id, label]) => `<option value="${id}">${esc(label)}</option>`).join('');
-  if (cur && inPlan.has(cur)) sel.value = cur;
-  if (sekwSid) await renderProjectDetail(sekwSid);
 }
 
-let sekwSid = '';
-async function selectSekwProject(sid) {
-  sekwSid = sid;
-  switchTab('sekwencja');
-  const sel = $('sekw-project');
-  if (sel) { if (![...sel.options].some((o) => o.value === sid)) { const s = sessions.find((x) => x.id === sid); const o = document.createElement('option'); o.value = sid; o.textContent = s ? projName(s) : sid; sel.appendChild(o); } sel.value = sid; }
-  await renderProjectDetail(sid);
-  $('sekw-detail').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
+// Wejście z tabel Komunikacji → otwiera kartę leada (oś czasu + testy w modalu)
+function selectSekwProject(sid) { openSession(sid); }
 
-async function renderProjectDetail(sid) {
-  if (!sid) { $('sekw-detail').innerHTML = 'Wybierz projekt, aby zobaczyć jego oś czasu, zaangażowanie i przetestować maile.'; return; }
-  $('sekw-detail').innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję plan projektu…</div>';
+// Oś czasu odsłon + testy — renderowane do wskazanego kontenera (karta leada)
+async function renderProjectDetail(sid, targetId) {
+  const tgt = $(targetId || 'm-drip');
+  if (!tgt) return;
+  if (!sid) { tgt.innerHTML = ''; return; }
+  tgt.innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…</div>';
   let data;
-  try { data = await callDrip({ action: 'status', sessionId: sid }); } catch (e) { $('sekw-detail').innerHTML = `<div class="text-rose-400 text-sm">Błąd: ${esc(e.message)}</div>`; return; }
+  try { data = await callDrip({ action: 'status', sessionId: sid }); } catch (e) { tgt.innerHTML = `<div class="text-rose-400 text-sm">Błąd sekwencji: ${esc(e.message)}</div>`; return; }
   const s = data.session;
   const emailByKind = {};
   (data.emails || []).forEach((e) => { emailByKind[e.kind] = e; });
@@ -1056,8 +1083,8 @@ async function renderProjectDetail(sid) {
     </div>`;
   }).join('');
 
-  $('sekw-detail').innerHTML = head + `<div class="-mt-1">${rows}</div>
-    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>„Podgląd" pokazuje maila bez wysyłki. „Wyślij testowo" odpala generację (jeśli trzeba) i wysyła realnie na adres odbiorcy — z pominięciem bramki i terminu.</div>`;
+  tgt.innerHTML = head + `<div class="-mt-1">${rows}</div>
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>„Podgląd" (oko) pokazuje maila bez wysyłki. „Wyślij testowo" (samolot) odpala generację i wysyła realnie na adres odbiorcy — z pominięciem bramki i terminu.</div>`;
 }
 
 let mmCtx = null;
@@ -1092,82 +1119,250 @@ async function fireSend(sid, key) {
     if (j.result === 'generating') { toast('Artefakt się generuje — ponów wysyłkę za chwilę'); }
     else if (j.result === 'sent') { toast('Wysłano ✓'); }
     else { toast('Wynik: ' + (j.result || j.info || '—')); }
-    await renderSekwencja();
+    // odśwież oś czasu w otwartej karcie leada; jeśli widoczna Komunikacja — i ją
+    if (!$('modal').classList.contains('hidden') && $('m-drip')) renderProjectDetail(sid, 'm-drip');
+    if (activeTab === 'komunikacja') renderKomunikacja();
   } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
 }
-async function seedSekwProject() {
-  const sid = $('sekw-project').value;
-  if (!sid) { toast('Najpierw wybierz projekt'); return; }
-  try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); sekwSid = sid; await renderSekwencja(); }
+async function seedLeadDrip(sid) {
+  try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); renderProjectDetail(sid, 'm-drip'); }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 
+// ── Wspólne: sygnał leada + filtrowana lista ──
+const TONE_TXT = { emerald: 'text-emerald-400', amber: 'text-amber-400', sky: 'text-sky-400', zinc: 'text-zinc-400' };
+const TONE_CHIP = {
+  emerald: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+  amber: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+  sky: 'text-sky-400 border-sky-400/30 bg-sky-400/10',
+  zinc: 'text-zinc-400 border-white/10 bg-white/5',
+};
+function signalBadge(s) {
+  const g = leadSignal(s);
+  return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${TONE_CHIP[g.tone]}"><i class="ph ${g.icon}"></i>${g.label}</span>`;
+}
+// Lista leadów po filtrze szybkim + wyszukiwarce
+function leadList() {
+  const q = search.toLowerCase();
+  return visibleSessions().filter((s) => {
+    if (q && ![projName(s), s.email, s.phone, s.profession, s.name].some((v) => v && String(v).toLowerCase().includes(q))) return false;
+    if (leadyFilter === 'all') return true;
+    if (leadyFilter === 'paid') return !!s.paid_at;
+    if (leadyFilter === 'green') return s.verdict === 'zielony';
+    if (leadyFilter === 'lead') return !!s.email && !s.paid_at;
+    return leadSignal(s).key === leadyFilter;
+  });
+}
+
+// ── PRZEGLĄD ──
+function renderPrzeglad() {
+  renderDashboard();
+  renderAttention();
+}
+function attentionRow(s, right) {
+  const g = leadSignal(s);
+  return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/5 transition text-left">
+    <i class="ph ${g.icon} ${TONE_TXT[g.tone]} shrink-0"></i>
+    <span class="min-w-0 flex-1">
+      <span class="block text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
+      <span class="block text-[11px] text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
+    </span>
+    <span class="text-[11px] text-zinc-500 shrink-0 text-right">${right || ''}</span>
+  </button>`;
+}
+function attentionCol(title, icon, tone, items, empty) {
+  const head = `<div class="flex items-center justify-between mb-2">
+    <span class="inline-flex items-center gap-1.5 text-xs font-medium ${TONE_TXT[tone]}"><i class="ph ${icon}"></i>${title}</span>
+    <span class="text-[11px] text-zinc-600">${items.length}</span></div>`;
+  const body = items.length ? items.slice(0, 7).map((it) => attentionRow(it.s, it.right)).join('')
+    + (items.length > 7 ? `<div class="text-[11px] text-zinc-600 px-2.5 pt-1">+ ${items.length - 7} więcej</div>` : '')
+    : `<div class="text-xs text-zinc-600 px-2.5 py-3">${empty}</div>`;
+  return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3.5">${head}${body}</div>`;
+}
+function renderAttention() {
+  const vis = sessions.filter((s) => !s.is_test);
+  const now = Date.now();
+  const hot = vis.filter((s) => leadSignal(s).key === 'hot')
+    .map((s) => ({ s, t: lastTouchOf(s), right: revealOpens(s) ? `${revealOpens(s)}× otwarty` : timeAgo(new Date(lastTouchOf(s)).toISOString()) }))
+    .sort((a, b) => b.t - a.t);
+  const cold = vis.filter((s) => leadSignal(s).key === 'cold')
+    .map((s) => ({ s, t: lastTouchOf(s), right: 'cisza ' + timeAgo(new Date(lastTouchOf(s) || Date.parse(s.created_at)).toISOString()).replace(' temu', '') }))
+    .sort((a, b) => b.t - a.t);
+  const paid = vis.filter((s) => s.paid_at && now - Date.parse(s.paid_at) < 14 * 864e5)
+    .map((s) => ({ s, t: Date.parse(s.paid_at), right: fmtDate(s.paid_at) }))
+    .sort((a, b) => b.t - a.t);
+  $('attention-cols').innerHTML =
+    attentionCol('Gorące — działaj', 'ph-fire', 'emerald', hot, 'Brak gorących leadów. Wróć po nowych werdyktach.')
+    + attentionCol('Wystygli — do reaktywacji', 'ph-snowflake', 'sky', cold, 'Nikt nie wystygł — dobrze.')
+    + attentionCol('Świeże wpłaty (14 dni)', 'ph-currency-circle-dollar', 'amber', paid, 'Brak nowych rezerwacji.');
+}
+
+// ── LEADY ──
+const LEAD_FILTERS = [
+  { key: 'all', label: 'Wszystkie', icon: 'ph-stack' },
+  { key: 'hot', label: 'Gorące', icon: 'ph-fire' },
+  { key: 'cold', label: 'Wystygli', icon: 'ph-snowflake' },
+  { key: 'green', label: 'Zielony werdykt', icon: 'ph-check-circle' },
+  { key: 'lead', label: 'Z e-mailem', icon: 'ph-user' },
+  { key: 'paid', label: 'Opłaceni', icon: 'ph-currency-circle-dollar' },
+];
+function renderLeadyFilters() {
+  const base = visibleSessions();
+  const count = (k) => base.filter((s) => {
+    if (k === 'all') return true;
+    if (k === 'paid') return !!s.paid_at;
+    if (k === 'green') return s.verdict === 'zielony';
+    if (k === 'lead') return !!s.email && !s.paid_at;
+    return leadSignal(s).key === k;
+  }).length;
+  $('leady-filters').innerHTML = LEAD_FILTERS.map((f) => {
+    const on = leadyFilter === f.key;
+    return `<button data-filter="${f.key}" class="lead-chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition ${on ? 'tab-active text-white border-white/10' : 'text-zinc-400 border-white/10 hover:text-white'}">
+      <i class="ph ${f.icon}"></i>${f.label}<span class="text-[10px] ${on ? 'text-zinc-300' : 'text-zinc-600'}">${count(f.key)}</span></button>`;
+  }).join('');
+  $('leady-filters').querySelectorAll('.lead-chip').forEach((b) => b.addEventListener('click', () => { leadyFilter = b.dataset.filter; renderLeady(); }));
+}
+function renderLeady() {
+  document.querySelectorAll('.lv-toggle').forEach((b) => b.classList.toggle('tab-active', b.dataset.view === leadyView));
+  document.querySelectorAll('.lv-toggle').forEach((b) => b.classList.toggle('text-white', b.dataset.view === leadyView));
+  renderLeadyFilters();
+  const board = leadyView === 'board';
+  $('leady-table').classList.toggle('hidden', board);
+  $('pipeline-cols').classList.toggle('hidden', !board);
+  if (board) renderPipeline(); else renderSesje();
+}
+
+// ── KOMUNIKACJA (sekwencja + maile) ──
+function renderKomunikacja() {
+  renderSekwencja();
+  renderMaile();
+}
+
 // ── Zakładki ──
+const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia'];
+let leadyView = 'table';   // 'table' | 'board'
+let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
 function switchTab(tab) {
+  if (!VIEWS.includes(tab)) tab = 'przeglad';
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
-  ['dashboard', 'pipeline', 'sesje', 'generowania', 'maile', 'sekwencja', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
-  try { history.replaceState(null, '', location.pathname + (tab === 'dashboard' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
+  VIEWS.forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
+  try { history.replaceState(null, '', location.pathname + (tab === 'przeglad' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
   renderActive();
 }
 function renderActive() {
-  if (activeTab === 'dashboard') renderDashboard();
-  if (activeTab === 'pipeline') renderPipeline();
-  if (activeTab === 'sesje') renderSesje();
-  if (activeTab === 'generowania') renderGenerowania();
-  if (activeTab === 'maile') renderMaile();
-  if (activeTab === 'sekwencja') renderSekwencja();
+  if (activeTab === 'przeglad') renderPrzeglad();
+  if (activeTab === 'leady') renderLeady();
+  if (activeTab === 'komunikacja') renderKomunikacja();
+  if (activeTab === 'galeria') renderGenerowania();
   if (activeTab === 'koszty') renderKoszty();
 }
 
 // ── Init ──
 async function init() {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) { window.location.href = Sidebar.getLoginPath(); return; }
-  Sidebar.render({ appId: 'aplikacje' });
-  Sidebar.setUserEmail(session.user.email);
-  Sidebar.setUserName((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email);
+  const iso = (d) => d.toISOString().slice(0, 10);
+  if (!DEMO) {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (!session) { window.location.href = Sidebar.getLoginPath(); return; }
+    if (window.Sidebar) {
+      Sidebar.render({ appId: 'aplikacje' });
+      Sidebar.setUserEmail(session.user.email);
+      Sidebar.setUserName((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email);
+    }
+  } else {
+    seedDemo();
+    if ($('sidebar')) $('sidebar').classList.add('hidden');
+  }
 
   // domyślny zakres kosztów: 30 dni
-  const iso = (d) => d.toISOString().slice(0, 10);
   $('cost-to').value = iso(new Date());
   $('cost-from').value = iso(new Date(Date.now() - 29 * 864e5));
 
-  await loadAll();
+  if (!DEMO) await loadAll();
   $('loading').classList.add('hidden');
 
-  const hash = (location.hash || '').slice(1);
-  switchTab(['pipeline', 'sesje', 'generowania', 'maile', 'sekwencja', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
+  const hash = (location.hash || '').replace(/[^a-z]/g, '');
+  switchTab(VIEWS.includes(hash) ? hash : 'przeglad');
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
-  $('search').addEventListener('input', (e) => { search = e.target.value; renderSesje(); });
+  $('search').addEventListener('input', (e) => { search = e.target.value; renderLeady(); });
   $('show-tests').addEventListener('change', (e) => { showTests = e.target.checked; renderActive(); });
-  const markPreset = (btn) => document.querySelectorAll('.cost-preset').forEach((p) => {
-    p.classList.toggle('tab-active', p === btn);
+  // Leady: przełącznik tabela/tablica
+  document.querySelectorAll('.lv-toggle').forEach((b) => b.addEventListener('click', () => { leadyView = b.dataset.view; renderLeady(); }));
+  $('global-refresh')?.addEventListener('click', async () => {
+    if (DEMO) { renderActive(); return; }
+    const ic = $('global-refresh').querySelector('i'); ic.classList.add('animate-spin');
+    await loadAll(); renderActive(); ic.classList.remove('animate-spin'); toast('Odświeżono');
   });
+  const markPreset = (btn) => document.querySelectorAll('.cost-preset').forEach((p) => p.classList.toggle('tab-active', p === btn));
   $('cost-apply').addEventListener('click', () => { markPreset(null); renderKoszty(); });
   ['cost-from', 'cost-to'].forEach((id) => $(id).addEventListener('change', () => markPreset(null)));
   document.querySelectorAll('.cost-preset').forEach((b) => b.addEventListener('click', () => {
     $('cost-to').value = iso(new Date());
     $('cost-from').value = iso(new Date(Date.now() - (parseInt(b.dataset.days, 10) - 1) * 864e5));
-    markPreset(b);
-    renderKoszty();
+    markPreset(b); renderKoszty();
   }));
   $('rate-save').addEventListener('click', async () => {
     const v = parseFloat($('rate-input').value);
     if (!v || v < 1) { toast('Nieprawidłowy kurs'); return; }
     const { error } = await supabaseClient.from('settings').upsert([{ key: 'usd_pln_rate', value: v.toFixed(2) }], { onConflict: 'key' });
     if (error) { toast('Błąd zapisu kursu'); console.error(error); return; }
-    usdPln = v;
-    toast('Kurs zapisany: ' + v.toFixed(2));
-    renderActive();
+    usdPln = v; toast('Kurs zapisany: ' + v.toFixed(2)); renderActive();
   });
-  $('sekw-refresh')?.addEventListener('click', () => renderSekwencja());
-  $('sekw-seed')?.addEventListener('click', seedSekwProject);
-  $('sekw-project')?.addEventListener('change', (e) => { sekwSid = e.target.value; renderProjectDetail(sekwSid); });
+  $('sekw-refresh')?.addEventListener('click', () => renderKomunikacja());
   $('mm-send')?.addEventListener('click', () => { if (mmCtx) { const ctx = mmCtx; closeMailModal(); fireSend(ctx.sid, ctx.key); } });
   $('btn-mobile-menu')?.addEventListener('click', () => $('sidebar').classList.toggle('open'));
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMailModal(); } });
+}
+
+// ── DEMO: dane fikcyjne do wizualnego przeglądu układu (?demo=1) ──
+function seedDemo() {
+  const day = 864e5; const now = Date.now();
+  const iso = (ms) => new Date(ms).toISOString();
+  const mk = (o) => Object.assign({ status: 'active', turns: 0, image_count: 0, preview_images: {}, is_test: false }, o);
+  sessions = [
+    mk({ id: 's1', name: 'Tomasz Wnuk', email: 'tomasz@coachpro.pl', phone: '600100200', created_at: iso(now - 5 * day), last_user_at: iso(now - 5 * day), last_panel_at: iso(now - 6 * 36e5), verdict: 'zielony', turns: 14, image_count: 4, preview_brief: { nazwa: 'CoachKeep', opis: 'Przypomina trenerom, z kim odezwać się przez WhatsApp.', design: { kierunek: 'ciepły, zaufany', akcent: '#4d9fff' } } }),
+    mk({ id: 's2', name: 'Anna Lis', email: 'anna@studiolis.pl', created_at: iso(now - 9 * day), last_user_at: iso(now - 9 * day), last_panel_at: iso(now - 8 * day), verdict: 'zielony', turns: 11, image_count: 3, preview_brief: { nazwa: 'RezerwAI', opis: 'Rezerwacje dla małych gabinetów.' } }),
+    mk({ id: 's3', name: 'Marek Dąb', email: 'marek@dabconsulting.pl', created_at: iso(now - 2 * day), last_user_at: iso(now - 2 * day), last_panel_at: iso(now - 30 * 6e4), verdict: 'zielony', turns: 18, image_count: 5, paid_at: iso(now - 1 * day), preview_brief: { nazwa: 'OfertaFlow' } }),
+    mk({ id: 's4', name: 'Kasia Nowak', email: 'kasia@nowak.pl', created_at: iso(now - 1 * day), last_user_at: iso(now - 20 * 36e5), verdict: 'zolty', turns: 6, image_count: 1, preview_brief: { nazwa: 'PlanDnia' } }),
+    mk({ id: 's5', name: '', email: 'lead@example.com', created_at: iso(now - 4 * 36e5), last_user_at: iso(now - 4 * 36e5), verdict: null, turns: 3, preview_brief: { nazwa: 'Bez nazwy' } }),
+    mk({ id: 's6', name: 'Piotr Zięba', email: 'piotr@zieba.io', created_at: iso(now - 14 * day), last_user_at: iso(now - 14 * day), verdict: 'zielony', turns: 9, image_count: 4, preview_brief: { nazwa: 'FakturBot' } }),
+    mk({ id: 's7', name: 'Ola Wój', email: '', created_at: iso(now - 30 * 6e4), last_user_at: iso(now - 30 * 6e4), verdict: null, turns: 1, preview_brief: { nazwa: 'Rozmowa' } }),
+    mk({ id: 's8', name: 'Demo Test', email: 't@t.pl', created_at: iso(now - 50 * day), verdict: 'zielony', is_test: true, turns: 20, preview_brief: { nazwa: 'TEST' } }),
+  ];
+  costsBySession = { s1: { cost_usd: 1.34 }, s2: { cost_usd: 0.92 }, s3: { cost_usd: 1.61 }, s4: { cost_usd: 0.21 }, s5: { cost_usd: 0.04 }, s6: { cost_usd: 1.12 }, s7: { cost_usd: 0.01 } };
+  mails = [
+    { session_id: 's1', kind: 'reveal_rynek', email: 'tomasz@coachpro.pl', sent_at: iso(now - 4 * day), opened_at: iso(now - 4 * day + 36e5), clicked_at: iso(now - 4 * day + 2 * 36e5) },
+    { session_id: 's1', kind: 'reveal_economics', email: 'tomasz@coachpro.pl', sent_at: iso(now - 2 * day), opened_at: iso(now - 2 * day + 5e6), clicked_at: null },
+    { session_id: 's2', kind: 'reveal_rynek', email: 'anna@studiolis.pl', sent_at: iso(now - 8 * day), opened_at: null, clicked_at: null },
+    { session_id: 's3', kind: 'reveal_rynek', email: 'marek@dabconsulting.pl', sent_at: iso(now - 1 * day), opened_at: iso(now - 1 * day + 36e5), clicked_at: iso(now - 1 * day + 2 * 36e5) },
+    { session_id: 's4', kind: 'abandoned_chat', email: 'kasia@nowak.pl', sent_at: iso(now - 12 * 36e5), opened_at: iso(now - 11 * 36e5), clicked_at: null },
+    { session_id: 's3', kind: 'paid_welcome', email: 'marek@dabconsulting.pl', sent_at: iso(now - 20 * 36e5), opened_at: iso(now - 19 * 36e5), clicked_at: null },
+  ];
+  mailKindsBySession = {}; mailsBySession = {};
+  mails.forEach((m) => { (mailKindsBySession[m.session_id] = mailKindsBySession[m.session_id] || new Set()).add(m.kind); (mailsBySession[m.session_id] = mailsBySession[m.session_id] || []).push(m); });
+  // reveale + maile dla zakładki Komunikacja (renderSekwencja czyta z bazy=mock)
+  const sessEmbed = (sid) => { const s = sessions.find((x) => x.id === sid); return { name: s.name, email: s.email, preview_brief: s.preview_brief, is_test: s.is_test, paid_at: s.paid_at }; };
+  const mockReveals = [
+    { id: 'r1', session_id: 's1', key: 'rynek', seq: 1, status: 'sent', due_at: iso(now - 4 * day), sent_at: iso(now - 4 * day), email_kind: 'reveal_rynek', sess: sessEmbed('s1') },
+    { id: 'r2', session_id: 's1', key: 'economics', seq: 2, status: 'sent', due_at: iso(now - 2 * day), sent_at: iso(now - 2 * day), email_kind: 'reveal_economics', sess: sessEmbed('s1') },
+    { id: 'r3', session_id: 's1', key: 'landing', seq: 3, status: 'pending', due_at: iso(now + 1 * day), email_kind: 'reveal_landing', sess: sessEmbed('s1') },
+    { id: 'r4', session_id: 's1', key: 'prototyp', seq: 5, status: 'pending', due_at: iso(now + 6 * day), email_kind: 'reveal_prototyp', sess: sessEmbed('s1') },
+    { id: 'r5', session_id: 's2', key: 'economics', seq: 2, status: 'paused', due_at: iso(now - 2 * day), email_kind: 'reveal_economics', sess: sessEmbed('s2') },
+    { id: 'r6', session_id: 's6', key: 'gtm', seq: 4, status: 'generating', due_at: iso(now - 6 * 36e5), email_kind: 'reveal_gtm', sess: sessEmbed('s6') },
+  ];
+  const revealMails = mails.filter((m) => /^reveal_/.test(m.kind)).map((m) => Object.assign({}, m, { sess: sessEmbed(m.session_id) }));
+  window.__MOCK = {
+    spar_reveals: mockReveals,
+    spar_emails: revealMails,
+    'rpc:spar_costs_daily': (() => { const out = []; for (let i = 13; i >= 0; i--) { const d = new Date(now - i * day).toISOString().slice(0, 10); ['chat', 'image', 'plan', 'prototype'].forEach((k) => out.push({ day: d, kind: k, cost_usd: Math.round((Math.sin(i) + 1.5) * (k === 'image' ? 0.6 : 0.25) * 100) / 100 })); } return out; })(),
+  };
+  window.__MOCK_DRIP = {
+    session: { name: 'Tomasz Wnuk', email: 'tomasz@coachpro.pl', last_panel_at: iso(now - 6 * 36e5), last_user_at: iso(now - 5 * day), verdict: 'zielony', paid_at: null, engaged: true },
+    reveals: mockReveals.filter((r) => r.session_id === 's1'),
+    emails: mails.filter((m) => m.session_id === 's1'),
+    plan: [{ key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' }, { key: 'economics', seq: 2, day: 3, emailKind: 'reveal_economics' }, { key: 'landing', seq: 3, day: 5, emailKind: 'reveal_landing' }, { key: 'gtm', seq: 4, day: 8, emailKind: 'reveal_gtm' }, { key: 'prototyp', seq: 5, day: 11, emailKind: 'reveal_prototyp' }],
+  };
 }
 init();
 </script>
