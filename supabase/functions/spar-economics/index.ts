@@ -199,6 +199,19 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
 
+    // Spójność: cena_bazowa (napędza cały rachunek i kafel) MUSI równać się
+    // cenie tieru „polecany" — model czasem je rozjeżdża. Ufamy cennikowi.
+    try {
+      // deno-lint-ignore no-explicit-any
+      const tiery = (eco.cennik as any)?.tiery
+      // deno-lint-ignore no-explicit-any
+      if (Array.isArray(tiery) && eco.wejscia) {
+        const ref = tiery.find((t: any) => t && t.polecany && typeof t.cena === 'number')
+          || tiery.find((t: any) => t && typeof t.cena === 'number')
+        if (ref) (eco.wejscia as Record<string, unknown>).cena_bazowa = ref.cena
+      }
+    } catch { /* zostaw jak jest */ }
+
     const toSave = { ...eco, _meta: { gen: genCount + 1, at: new Date().toISOString(), model: OPENAI_MODEL } }
     const { error: uErr } = await supabase.from('spar_sessions').update({ economics: toSave, updated_at: new Date().toISOString() }).eq('id', sessionId)
     if (uErr) console.error('[spar-economics] save error:', uErr)
