@@ -46,33 +46,14 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
   })
 }
 
-function buildPlanPrompt(brief: Record<string, unknown>, karta: Record<string, unknown>): string {
-  const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
-  const list = (v: unknown) => Array.isArray(v)
-    ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
-    : ''
-  const fakty: string[] = []
-  fakty.push(`Narzędzie: „${s(brief.nazwa, 80) || 'Narzędzie'}" — ${s(brief.opis)}`)
-  if (karta.problem) fakty.push(`Problem: ${s(karta.problem)}`)
-  if (karta.dla_kogo || karta.profesja) fakty.push(`Dla kogo: ${s(karta.dla_kogo) || s(karta.profesja)}`)
-  if (karta.kto_placi) fakty.push(`Kto płaci: ${s(karta.kto_placi)}`)
-  if (karta.sygnal_budzetu) fakty.push(`Sygnał budżetu z rozmowy: ${s(karta.sygnal_budzetu)}`)
-  if (karta.dzisiejsze_obejscie) fakty.push(`Dzisiejsze obejście: ${s(karta.dzisiejsze_obejscie)}`)
-  if (list(karta.ekrany)) fakty.push(`Zakres pierwszej wersji: ${list(karta.ekrany)}`)
-  if (list(karta.kanaly_dystrybucji)) fakty.push(`Kanały dotarcia: ${list(karta.kanaly_dystrybucji)}`)
-  if (karta.konkurencja) fakty.push(`Konkurencja: ${s(karta.konkurencja)}`)
-  if (list(karta.ryzyka)) fakty.push(`Ryzyka: ${list(karta.ryzyka)}`)
-
-  return `Jesteś analitykiem, który robi WSTĘPNE wyliczenia przychodu dla narzędzia SaaS w polskiej niszy. Piszesz po polsku, prosto, do praktyka z branży (nie do inwestora).
-
-KARTA PROJEKTU:
-${fakty.join('\n')}
+// Stały prompt systemowy (cache'owalny — bez danych sesji)
+const SYSTEM_PROMPT = `Jesteś analitykiem, który robi WSTĘPNE wyliczenia przychodu dla narzędzia SaaS w polskiej niszy. Piszesz po polsku, prosto, do praktyka z branży (nie do inwestora).
 
 KONTEKST WSPÓŁPRACY (stały, nie zmieniaj): narzędzie buduje zespół Tomka za 30 000 zł dzielone pół na pół (właściciel wnosi 15 000 zł). Przez pierwsze ~pół roku Tomek osobiście prowadzi sprzedaż do pierwszych 50 płacących klientów — potem właściciel przejmuje rozkręcony biznes.
 
 ZADANIE: policz wstępny plan przychodu. Ton: optymistyczny, ale REALNY — żadnych kosmicznych liczb; ceny i wielkość rynku muszą brzmieć wiarygodnie dla kogoś, kto zna tę branżę od środka. Jeżeli czegoś nie ma w karcie (typowa cena rynkowa, liczba firm w Polsce), oszacuj z własnej wiedzy o polskim rynku i dopisz to do założeń. Kwoty w zł, zaokrąglone po ludzku (149, nie 147,30).
 
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
+Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
 {
   "model_przychodu": "nazwa modelu, np. abonament miesięczny per salon",
   "cena": 149,
@@ -88,6 +69,40 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
   "rok2_potencjal": "jedno zdanie: realny miesięczny przychód w roku 2 przy utrzymaniu tempa (konkretna kwota zł/mies.)",
   "zalozenia": ["3 do 5 krótkich założeń, w tym te doszacowane z wiedzy o rynku"]
 }`
+
+function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>): string {
+  const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const list = (v: unknown) => Array.isArray(v)
+    ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
+    : ''
+  const fakty: string[] = []
+  fakty.push(`Narzędzie: „${s(brief.nazwa, 80) || 'Narzędzie'}" — ${s(brief.opis)}`)
+  if (karta.problem) fakty.push(`Problem: ${s(karta.problem)}`)
+  if (karta.dla_kogo || karta.profesja) fakty.push(`Dla kogo: ${s(karta.dla_kogo) || s(karta.profesja)}`)
+  if (karta.kto_placi) fakty.push(`Kto płaci: ${s(karta.kto_placi)}`)
+  if (karta.sygnal_budzetu) fakty.push(`Sygnał budżetu z rozmowy: ${s(karta.sygnal_budzetu)}`)
+  if (karta.dzisiejsze_obejscie) fakty.push(`Dzisiejsze obejście: ${s(karta.dzisiejsze_obejscie)}`)
+  if (list(karta.ekrany)) fakty.push(`Zakres pierwszej wersji: ${list(karta.ekrany)}`)
+  if (list(karta.kanaly_dystrybucji)) fakty.push(`Kanały dotarcia: ${list(karta.kanaly_dystrybucji)}`)
+  if (karta.konkurencja) fakty.push(`Konkurencja: ${s(karta.konkurencja)}`)
+  if (list(karta.ryzyka)) fakty.push(`Ryzyka: ${list(karta.ryzyka)}`)
+  return `KARTA PROJEKTU:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
+}
+
+// Jedno wywołanie; zwraca {obj, usage}. Loguje koszt każdej próby osobno.
+async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
+  })
+  if (!res.ok) { console.error('[spar-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
+  const data = await res.json()
+  const u = data?.usage || {}
+  const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
+  const content = data?.choices?.[0]?.message?.content
+  try { return { obj: JSON.parse(content), usage } }
+  catch { console.error('[spar-plan] niepoprawny JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage } }
 }
 
 // deno-lint-ignore no-explicit-any
@@ -165,71 +180,26 @@ Deno.serve(async (req) => {
     const { data: lock } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'plan', p_ttl_sec: 180 })
     if (!lock) return jsonResponse({ pending: true }, 202, cors)
 
-    // gpt-5.5: reasoning liczy się do max_completion_tokens — 1600 bywało
-    // w całości zjadane przez reasoning (pusty content → 502 w pętli);
-    // effort 'low' wystarcza do prostych wyliczeń i skraca czas
-    const res = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        messages: [{ role: 'user', content: buildPlanPrompt(brief, karta) }],
-        response_format: { type: 'json_object' },
-        max_completion_tokens: 5000,
-        reasoning_effort: 'low',
-      }),
-    })
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      console.error('[spar-plan] openai error:', res.status, errText.slice(0, 500))
-      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
-      return jsonResponse({ error: 'blad_generowania' }, 502, cors)
+    // Koszt każdej próby → spar_usage. reasoning 'low' wystarcza do wyliczeń.
+    const prices: Record<string, { i: number; c: number; o: number }> = {
+      'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
+      'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 },
     }
-    const data = await res.json()
-    // Koszt wywołania → spar_usage (panel TN Aplikacje)
-    try {
-      const u = data?.usage || {}
-      const input = u.prompt_tokens || 0
-      const cached = u.prompt_tokens_details?.cached_tokens || 0
-      const output = u.completion_tokens || 0
-      const prices: Record<string, { i: number; c: number; o: number }> = {
-        'gpt-5.5': { i: 5, c: 0.5, o: 30 },
-        'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
-        'gpt-4o': { i: 2.5, c: 1.25, o: 10 },
-        'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 },
-      }
-      let p = prices[OPENAI_MODEL]
-      if (!p) {
-        console.warn(`[spar-plan] nieznany model w cenniku: ${OPENAI_MODEL} — stawki gpt-5.5`)
-        p = prices['gpt-5.5']
-      }
-      await supabase.from('spar_usage').insert({
-        session_id: sessionId,
-        kind: 'plan',
-        model: OPENAI_MODEL,
-        input_tokens: input,
-        cached_tokens: cached,
-        output_tokens: output,
-        cost_usd: (Math.max(0, input - cached) * p.i + cached * p.c + output * p.o) / 1_000_000,
-      })
-    } catch (uErr) {
-      console.error('[spar-plan] usage insert error:', uErr)
+    const logUsage = async (usage: { i: number; c: number; o: number } | null) => {
+      if (!usage) return
+      try { const p = prices[OPENAI_MODEL] || prices['gpt-5.5']; await supabase.from('spar_usage').insert({ session_id: sessionId, kind: 'plan', model: OPENAI_MODEL, input_tokens: usage.i, cached_tokens: usage.c, output_tokens: usage.o, cost_usd: (Math.max(0, usage.i - usage.c) * p.i + usage.c * p.c + usage.o * p.o) / 1_000_000 }) } catch (uErr) { console.error('[spar-plan] usage insert error:', uErr) }
     }
-    const content = data?.choices?.[0]?.message?.content
-    let plan: Record<string, unknown>
-    try {
-      plan = JSON.parse(content)
-    } catch {
-      console.error('[spar-plan] niepoprawny JSON od modelu, finish:',
-        data?.choices?.[0]?.finish_reason, String(content).slice(0, 300))
-      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
-      return jsonResponse({ error: 'blad_generowania' }, 502, cors)
+    // Auto-retry ×1 na pustą/niepoprawną odpowiedź
+    const user = buildUser(brief, karta)
+    let plan: Record<string, unknown> | null = null
+    for (let attempt = 0; attempt < 2 && !plan; attempt++) {
+      const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
+      await logUsage(usage)
+      if (obj && sanePlan(obj)) plan = obj
+      else if (attempt === 0) console.warn('[spar-plan] próba 1 nieudana — ponawiam')
     }
-    if (!sanePlan(plan)) {
-      console.error('[spar-plan] plan nie przeszedł sanity-check:', JSON.stringify(plan).slice(0, 300))
+    if (!plan) {
+      console.error('[spar-plan] obie próby nieudane')
       await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'plan' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
