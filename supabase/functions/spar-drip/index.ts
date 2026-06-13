@@ -228,9 +228,11 @@ Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string, "sms": string}. su
   } catch (e) { console.error('[spar-drip] email gen error:', e instanceof Error ? e.message : String(e)); return null }
 }
 
-// Link do panelu w SMS — krótki, z atrybucją sms (bez UTM-bloatu, oszczędzamy znaki).
+// Link do panelu w SMS — CZYSTY, na własnej domenie (marka z przodu = wiarygodnie).
+// BEZ utm/parametrów śledzących — w SMS widać surowy URL, a „utm_source=sms" wygląda
+// jak spam/scam. Kliknięcia liczymy trackingiem SMSAPI (po aktywacji shortenera).
 function smsLink(sid: string): string {
-  return `${SPARING_URL}?id=${sid}&utm_source=sms`
+  return `${SPARING_URL}?id=${sid}`
 }
 // Statyczny fallback SMS (gdy GPT nie dał pola sms) — bez polskich znaków.
 // deno-lint-ignore no-explicit-any
