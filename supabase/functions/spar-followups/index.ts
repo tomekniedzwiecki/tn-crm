@@ -72,6 +72,18 @@ function mdToHtml(body: string, viewUrl: string | null, reserveUrl: string | nul
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${inner}</div>`
 }
 
+// Podgląd 1:1 — finalny HTML z doklejoną stopką (send-email preview), bez wysyłki.
+async function withSignature(SUPABASE_URL: string, SERVICE_KEY: string, subject: string, html: string, to: string | null): Promise<string> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ to: to || 'podglad@example.com', subject, html, preview: true }),
+    })
+    if (r.ok) { const j = await r.json(); if (j && typeof j.html === 'string') return j.html }
+  } catch { /* ignore */ }
+  return html
+}
+
 interface SessionRow {
   id: string
   email: string | null
@@ -134,8 +146,16 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
   return { goal: 'Osoba właśnie zarezerwowała wspólną rozmowę (zapłaciła 500 zł, w pełni zwrotne). Podziękuj ciepło i osobiście, potwierdź że bierzesz jej projekt na warsztat: przygotowujesz plan przedsięwzięcia (zakres v1, model przychodów, droga do 50 klientów, harmonogram) i odzywasz się osobiście w 2–3 dni robocze. Bez sprzedaży, krótko. Linku nie musisz dawać.', facts: `narzędzie: ${n}` }
 }
 
-const EMAIL_SYSTEM = `Jesteś Tomkiem Niedźwieckim. Piszesz krótkiego, OSOBISTEGO maila (follow-up) do osoby, która projektowała z Twoim AI pomysł na własne narzędzie (SaaS). Ma wyglądać, jakbyś napisał go z palca w skrzynce — nie marketing.
-ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, bez emoji, bez clickbaitu, bez przesadnych obietnic — styl brutalnie szczery, system > magia. Jeśli to pasuje, odnieś się konkretnie do JEGO pomysłu (nazwa, 1 szczegół). NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
+const SITUATION = `KONTEKST SYTUACJI:
+- To lejek „Aplikacja": osoba rozmawiała z Twoim AI i zaprojektowała pomysł na WŁASNE narzędzie (SaaS). To dopiero ETAP PLANOWANIA — nic nie jest jeszcze realnie zbudowane; pokazywane artefakty to plan/dowód, nie gotowy produkt.
+- Rezerwacja (500 zł, w pełni zwrotna) to PIERWSZY KROK do współpracy: umawia wspólną rozmowę z Tobą (Tomkiem), na której osobiście przedstawiasz plan wdrożenia i jak moglibyście to razem zbudować. To umówienie rozmowy, nie zakup produktu.
+- Pisz uczciwie, że to plan/projekt („zaprojektowaliśmy", „policzyłem"). Konkretny cel TEGO maila masz w sekcji CEL — trzymaj się go.`
+
+const EMAIL_SYSTEM = `${SITUATION}
+
+JAK MASZ PISAĆ:
+Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila (follow-up) — jakbyś usiadł, spojrzał na JEGO pomysł i napisał z palca w skrzynce. Nie marketing.
+ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, emoji, clickbaitu i przesady — styl brutalnie szczery, system > magia. Jeśli to pasuje, wpleć 1 KONKRET z jego pomysłu (nazwa narzędzia + jeden szczegół/liczba) — nie ogólnik. NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
 LINKI: jeśli w kontekście podano link do podglądu, wstaw go RAZ jako [naturalny tekst](LINK_VIEW). Jeśli podano link do rezerwacji, możesz go delikatnie wpleść jako [tekst](LINK_RESERVE). Nie wymyślaj żadnych adresów. Jeśli żaden link nie pasuje (np. samo podziękowanie) — nie dawaj linku.
 Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
 
@@ -223,7 +243,7 @@ Deno.serve(async (req) => {
         landing_url: 'https://twojenarzedzie.pl', lead_id: null, paid_at: null, last_user_at: null, last_panel_at: null,
       } as unknown as SessionRow
       const kinds = ['abandoned_chat', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
-      const templates = kinds.map((k) => { const { subject, html } = staticEmail(k, sample); return { group: 'followup', kind: k, subject, html, disabled: DISABLED.includes(k) } })
+      const templates = await Promise.all(kinds.map(async (k) => { const { subject, html } = staticEmail(k, sample); return { group: 'followup', kind: k, subject, html: await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, null), disabled: DISABLED.includes(k) } }))
       return jsonResponse({ templates }, 200)
     }
 

@@ -503,6 +503,12 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Tryb PODGLĄDU — zwróć złożony HTML (z doklejoną stopką/sygnaturą) BEZ wysyłki.
+    // Dzięki temu podgląd w panelu jest 1:1 z tym, co dostanie odbiorca.
+    if (reqBody.preview === true) {
+      return new Response(JSON.stringify({ success: true, preview: true, subject: finalSubject, html: finalBody }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 })
+    }
+
     // Validate recipient email
     if (!isValidEmail(recipientEmail)) {
       throw new Error(`Nieprawidłowy adres email: ${recipientEmail}`)

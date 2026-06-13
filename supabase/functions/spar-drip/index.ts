@@ -58,6 +58,14 @@ function checkoutLink(leadId: string | null): string {
 const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 
+// Kontekst sytuacji dla GPT — żeby rozumiał gdzie jesteśmy i po co jest ten mail.
+const SITUATION = `KONTEKST SYTUACJI (zrozum dobrze, gdzie jesteśmy):
+- To lejek „Aplikacja": osoba porozmawiała z Twoim AI i zaprojektowała pomysł na WŁASNE narzędzie/aplikację (SaaS) w swojej niszy.
+- To dopiero ETAP PLANOWANIA — nic nie jest jeszcze realnie zbudowane ani wdrożone. Artefakty, które jej pokazujesz (raport rynku, model finansowy, strona, plan sprzedaży, klikalny prototyp), to PLAN i dowód, że pomysł ma sens — nie gotowy produkt.
+- Cel tego maila: sprytnie i bez nachalności podgrzać zainteresowanie i pchnąć ją w stronę REZERWACJI. Rezerwacja (500 zł, w pełni zwrotna) to PIERWSZY KROK do współpracy: rezerwuje wspólną rozmowę z Tobą (Tomkiem), na której osobiście przedstawiasz plan wdrożenia i jak moglibyście to razem zbudować. To NIE zakup produktu — to umówienie rozmowy.
+- Model (NIE tłumacz go w mailu — to na rozmowę): jeśli ruszacie, budujesz to z nią, finansujesz część, prowadzisz sprzedaż do pierwszych ~50 klientów, potem przekazujesz stery. W mailu masz tylko zaciekawić i delikatnie zaprosić do rezerwacji rozmowy.
+- Pisz UCZCIWIE, że to plan/projekt: „zaprojektowaliśmy", „policzyłem", „tak mogłoby to wyglądać" — nie udawaj, że produkt już istnieje.`
+
 function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
 // Body od GPT (zwykły tekst) -> minimalny HTML „jak pisany w skrzynce".
@@ -123,25 +131,30 @@ async function revealView(supabase: ReturnType<typeof createClient>, s: any, key
   return panelLink(s.id, 'reveal_gtm', '#projekt-gtm')
 }
 
-// Cel maila + prawdziwe dane z tego etapu (do promptu GPT i fallbacku)
+function clipJson(o: unknown, n: number): string { try { const t = JSON.stringify(o); return t && t !== '{}' && t !== 'null' ? t.slice(0, n) : '' } catch { return '' } }
+
+// Cel maila + PRAWDZIWE dane z tego etapu (surowe, by GPT cytował konkrety).
 // deno-lint-ignore no-explicit-any
 function revealBrief(s: any, key: string): { goal: string; facts: string } {
   const r = s.market_report || {}, p = s.business_plan || {}, e = s.economics || {}, g = s.gtm || {}
   if (key === 'rynek') {
-    const oc = typeof r.ocena_potencjalu === 'string' ? r.ocena_potencjalu : ''
-    const nk = Array.isArray(r.konkurenci) ? r.konkurenci.length : 0
-    return { goal: 'Ogłaszasz, że zrobiłeś realny research rynku (w internecie, nie „z głowy"): konkurenci z cenami, wielkość niszy, trendy, z podlinkowanymi źródłami. Zachęć, żeby otworzył raport.', facts: [oc && `ocena potencjału: ${oc}`, nk && `${nk} konkurentów z cenami`, typeof r.teza === 'string' && r.teza && `Twoja teza po researchu: ${r.teza}`].filter(Boolean).join('; ') }
+    return {
+      goal: 'Ogłaszasz, że zrobiłeś realny research rynku (w internecie, nie „z głowy"). Pokaż, że patrzyłeś na JEGO niszę: nawiąż do konkretnego konkurenta i jego ceny albo do oceny potencjału z uzasadnieniem. Zachęć, żeby otworzył raport.',
+      facts: clipJson({ teza: r.teza, ocena_potencjalu: r.ocena_potencjalu, uzasadnienie: r.ocena_uzasadnienie, konkurenci: Array.isArray(r.konkurenci) ? r.konkurenci.slice(0, 4) : undefined, rynek: r.rynek, trendy: Array.isArray(r.trendy) ? r.trendy.slice(0, 3) : undefined, wnioski: Array.isArray(r.co_to_oznacza) ? r.co_to_oznacza.slice(0, 4) : undefined }, 2600),
+    }
   }
   if (key === 'economics') {
-    const cena = typeof p.cena === 'number' ? `${p.cena} ${p.cena_jednostka || 'zł/mies.'}` : ''
-    const cac = e.wejscia && typeof e.wejscia.cac === 'number' ? `CAC ~${e.wejscia.cac} zł` : ''
-    return { goal: 'Ogłaszasz, że policzyłeś, czy to się spina: model cenowy, koszt pozyskania klienta, wartość klienta, moment zwrotu budowy i droga do 50 klientów. W panelu są suwaki do pokręcenia.', facts: [cena && `cena: ${cena}`, cac].filter(Boolean).join('; ') }
+    return {
+      goal: 'Ogłaszasz, że policzyłeś, czy to się spina. Pokaż, że patrzyłeś na liczby JEGO modelu: nawiąż do konkretnej ceny/tieru, CAC, albo momentu zwrotu budowy. Wspomnij, że w panelu są suwaki, plus droga do 50 klientów.',
+      facts: clipJson({ cennik: e.cennik, wejscia: e.wejscia, komentarz: e.komentarz, cena_z_planu: p.cena, kamienie: Array.isArray(p.kamienie) ? p.kamienie : undefined }, 2400),
+    }
   }
-  if (key === 'landing') return { goal: 'Ogłaszasz, że zbudowała się DZIAŁAJĄCA strona sprzedażowa jego narzędzia — prawdziwa strona w przeglądarce, nie grafika. Można ją otworzyć, przewinąć, pokazać znajomym z branży.', facts: '' }
-  if (key === 'prototyp') return { goal: 'To FINAŁ sekwencji i najmocniejszy element. Ogłaszasz KLIKALNY, działający prototyp jego narzędzia — nie obrazek, działająca apka (można kliknąć, wpisać, zobaczyć jak reaguje). Nawiąż delikatnie, że przeszliście już przez rynek, liczby, stronę i plan sprzedaży, a to zostawiłeś na koniec. To dobry moment, by delikatnie zaprosić do rezerwacji wspólnej rozmowy. Niech wejdzie i kliknie.', facts: '' }
-  const nk = g.playbook && Array.isArray(g.playbook.kanaly) ? g.playbook.kanaly.length : 0
-  const nr = g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.length : 0
-  return { goal: 'Ogłaszasz konkretny plan zdobycia pierwszych klientów: gdzie oni są (kanały), gotowe skrypty i odpowiedzi na obiekcje, oraz gotowe reklamy z kreacjami.', facts: [nk && `${nk} kanałów`, nr && `${nr} gotowych reklam`].filter(Boolean).join('; ') }
+  if (key === 'landing') return { goal: 'Ogłaszasz, że zbudowała się DZIAŁAJĄCA strona sprzedażowa jego narzędzia — prawdziwa strona w przeglądarce, nie grafika. Można ją otworzyć, przewinąć, pokazać znajomym z branży. Jeśli pasuje, nawiąż do tego, co strona ma sprzedawać (problem/dla kogo).', facts: '' }
+  if (key === 'prototyp') return { goal: 'To FINAŁ sekwencji i najmocniejszy element. Ogłaszasz KLIKALNY, działający prototyp jego narzędzia — nie obrazek, działająca apka. Jeśli znasz konkretną funkcję/ekran, zaproś, żeby właśnie to kliknął i sprawdził. Nawiąż delikatnie, że przeszliście już przez rynek, liczby, stronę i plan sprzedaży, a to zostawiłeś na koniec. To dobry moment, by delikatnie zaprosić do rezerwacji wspólnej rozmowy.', facts: '' }
+  return {
+    goal: 'Ogłaszasz konkretny plan zdobycia pierwszych klientów. Pokaż, że jest konkretny: nawiąż do realnego kanału z planu albo do jednego z gotowych konceptów reklam.',
+    facts: clipJson({ kanaly: g.playbook && Array.isArray(g.playbook.kanaly) ? g.playbook.kanaly.slice(0, 5) : undefined, obiekcje: g.playbook && Array.isArray(g.playbook.obiekcje) ? g.playbook.obiekcje.slice(0, 3) : undefined, reklamy: g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.slice(0, 3).map((x: Record<string, unknown>) => ({ koncept: x.koncept, naglowek: x.naglowek })) : undefined }, 2200),
+  }
 }
 
 // Statyczny fallback (plain, „z palca") — gdy GPT niedostępny + do galerii szablonów.
@@ -168,19 +181,25 @@ async function generateRevealEmail(s: any, key: string, viewUrl: string, reserve
   const brief = revealBrief(s, key)
   const b = s.preview_brief || {}
   const karta = (s.problem_summary || {}) as Record<string, unknown>
+  const ekrany = Array.isArray(b.ekrany) ? b.ekrany.slice(0, 6).map((x: unknown) => typeof x === 'string' ? x : (((x as Record<string, unknown>) || {}).nazwa || '')).filter(Boolean).join(', ') : ''
+  const kartaTxt = clipJson(karta, 900)
   const ctx = [
     `Narzędzie: ${toolName(s)}`,
     typeof b.opis === 'string' && b.opis && `Opis: ${b.opis}`,
     typeof b.dla_kogo === 'string' && b.dla_kogo && `Dla kogo: ${b.dla_kogo}`,
-    typeof karta.problem === 'string' && karta.problem && `Problem, który rozwiązuje: ${karta.problem}`,
-    brief.facts && `Dane z tego etapu: ${brief.facts}`,
+    ekrany && `Ekrany/funkcje narzędzia: ${ekrany}`,
+    kartaTxt && `Karta projektu (problem, klienci, zakres): ${kartaTxt}`,
     firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
   ].filter(Boolean).join('\n')
-  const SYSTEM = `Jesteś Tomkiem Niedźwieckim. Piszesz krótkiego, OSOBISTEGO maila do osoby, która zaprojektowała z Twoim AI pomysł na własne narzędzie (SaaS). Ma wyglądać, jakbyś napisał go z palca w skrzynce — nie marketing.
-ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (3–5 krótkich akapitów). Bez korpomowy, bez emoji, bez clickbaitu, bez przesadnych obietnic — Twój styl jest brutalnie szczery, system ważniejszy niż magia. Odnieś się KONKRETNIE do JEGO pomysłu: użyj nazwy narzędzia i 1–2 prawdziwych szczegółów z kontekstu (problem, dla kogo, liczba, ocena). Ma być czuć, że piszesz o TYM pomyśle. NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
-LINKI: wstaw dokładnie JEDEN link do podglądu jako [naturalny tekst](LINK_VIEW), wpleciony w zdanie. Opcjonalnie, DELIKATNIE i max raz, możesz wspomnieć o rezerwacji wspólnej rozmowy (500 zł, w pełni zwrotne, rozpoczyna pracę) jako [tekst](LINK_RESERVE) — tylko jeśli naturalnie pasuje. Nie wymyślaj żadnych innych adresów.
-Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, budzi ciekawość, bez wielkich liter i wykrzykników, najlepiej nawiązuje do jego pomysłu. body: sam tekst maila z \\n między akapitami.`
-  const user = `KONTEKST POMYSŁU:\n${ctx}\n\nCEL TEGO MAILA: ${brief.goal}`
+  const SYSTEM = `${SITUATION}
+
+JAK MASZ PISAĆ:
+Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila — jakbyś OSOBIŚCIE usiadł, przejrzał JEGO plan i napisał z palca w skrzynce. Nie marketing, nie szablon.
+NAJWAŻNIEJSZE: ma być czuć, że naprawdę patrzyłeś na TEN plan. Wpleć 1–2 KONKRETY z danych: nazwa realnego konkurenta i jego cena, konkretna liczba (cena, CAC, przychód przy X klientach, miesiąc zwrotu), konkretny kanał, konkretna funkcja/ekran. ŻADNYCH ogólników bez konkretu. Maksymalnie 1 konkret na akapit, naturalnie wpleciony — nie wyliczanka.
+STYL: po polsku, na „Ty", ciepło i bezpośrednio. KRÓTKO (3–5 krótkich akapitów). Bez korpomowy, emoji, clickbaitu i przesady — jesteś brutalnie szczery (jak nisza wąska albo coś ryzykowne, możesz to nazwać). NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów.
+LINKI: dokładnie JEDEN link do podglądu jako [naturalny tekst](LINK_VIEW), wpleciony w zdanie. Skoro celem jest pchnięcie do rezerwacji — jeśli naturalnie pasuje, raz wpleć [tekst](LINK_RESERVE) (rezerwacja = umówienie rozmowy z Tobą, 500 zł w pełni zwrotne, pierwszy krok do wspólnej budowy). Bez nachalności. Nie wymyślaj adresów.
+Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, najlepiej z detalem z jego planu, bez wielkich liter i wykrzykników. body: tekst z \\n między akapitami.`
+  const user = `DANE TEGO LEADA I JEGO POMYSŁU:\n${ctx}\n\nPRAWDZIWE DANE Z TEGO ETAPU (cytuj stąd konkrety):\n${brief.facts || '(brak dodatkowych — oprzyj się na pomyśle i karcie)'}\n\nCEL TEGO MAILA: ${brief.goal}`
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -259,6 +278,19 @@ async function seedReveals(supabase: ReturnType<typeof createClient>, sid: strin
     due_at: new Date(verdictAt + r.day * 86400000).toISOString(), status: 'pending',
   }))
   await supabase.from('spar_reveals').upsert(rows, { onConflict: 'session_id,key', ignoreDuplicates: true })
+}
+
+// Podgląd 1:1 — składa finalny HTML (z doklejoną stopką) przez send-email (preview),
+// bez wysyłki. Dzięki temu admin widzi dokładnie to, co dostanie odbiorca.
+async function withSignature(SUPABASE_URL: string, SERVICE_KEY: string, subject: string, html: string, to: string | null): Promise<string> {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
+      body: JSON.stringify({ to: to || 'podglad@example.com', subject, html, preview: true }),
+    })
+    if (r.ok) { const j = await r.json(); if (j && typeof j.html === 'string') return j.html }
+  } catch { /* ignore */ }
+  return html
 }
 
 // Wyślij reveal-mail (idempotentnie przez spar_emails). Zwraca true gdy poszedł.
@@ -364,9 +396,10 @@ Deno.serve(async (req) => {
         const result = await processReveal(supabase, SUPABASE_URL, SERVICE_KEY, s, target)
         return jsonResponse({ ok: true, key: target.key, result, sent: result === 'sent' }, 200)
       }
-      // podgląd bez wysyłki — ten sam mail, który pójdzie (cache w meta)
+      // podgląd bez wysyłki — ten sam mail, który pójdzie (cache w meta) + stopka 1:1
       const { subject, html } = await getRevealEmail(supabase, target, s)
-      return jsonResponse({ ok: true, key: target.key, result: 'preview', preview: { subject, html, to: s.email } }, 200)
+      const finalHtml = await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, s.email)
+      return jsonResponse({ ok: true, key: target.key, result: 'preview', preview: { subject, html: finalHtml, to: s.email } }, 200)
     }
 
     // ── action: templates (ADMIN — galeria szablonów reveali, dane przykładowe) ──
@@ -379,7 +412,7 @@ Deno.serve(async (req) => {
       for (const r of REVEAL_PLAN) {
         const viewUrl = await revealView(supabase, sample, r.key)
         const { subject, html } = staticReveal(sample, r.key, viewUrl, checkoutLink(null))
-        out.push({ group: 'drip', kind: r.emailKind, key: r.key, seq: r.seq, subject, html })
+        out.push({ group: 'drip', kind: r.emailKind, key: r.key, seq: r.seq, subject, html: await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, null) })
       }
       return jsonResponse({ templates: out }, 200)
     }
