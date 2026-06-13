@@ -184,6 +184,7 @@
             <th class="px-4 py-3 text-right">Rozmowy (chat)</th>
             <th class="px-4 py-3 text-right">Grafiki</th>
             <th class="px-4 py-3 text-right">Plany</th>
+            <th class="px-4 py-3 text-right">Panele</th>
             <th class="px-4 py-3 text-right">Razem USD</th>
             <th class="px-4 py-3 text-right">Razem PLN</th>
           </tr>
@@ -496,7 +497,7 @@ function renderSesje() {
 
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
 const VIEW_LABELS = { panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa', landing: 'Landing', podsumowanie: 'Pigułka' };
-const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan' };
+const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan', raport: 'raport rynku', landing: 'strona', prototype: 'panel (prototyp)' };
 const EMAIL_LABELS = {
   abandoned_chat: 'Porzucona rozmowa',
   verdict_no_payment: 'Werdykt bez wpłaty',
@@ -537,10 +538,12 @@ async function renderKoszty() {
   if (!from || !to) return;
   const { data, error } = await supabaseClient.rpc('spar_costs_daily', { p_from: from, p_to: to });
   if (error) { console.error(error); toast('Błąd ładowania kosztów'); return; }
+  // Sumujemy WSZYSTKIE rodzaje (chat/image/plan/raport/landing/prototype…),
+  // nie tylko trzy — inaczej „Razem" zaniżało koszt o strony, raporty i panele.
   const byDay = {};
   (data || []).forEach((r) => {
-    byDay[r.day] = byDay[r.day] || { chat: 0, image: 0, plan: 0 };
-    byDay[r.day][r.kind] = Number(r.cost_usd);
+    byDay[r.day] = byDay[r.day] || {};
+    byDay[r.day][r.kind] = (byDay[r.day][r.kind] || 0) + Number(r.cost_usd);
   });
   const days = Object.keys(byDay).sort().reverse();
   let totalUsd = 0;
@@ -552,17 +555,18 @@ async function renderKoszty() {
   const cellUsd = (v) => v ? `<span class="text-zinc-400">${fmtUsd(v)}</span>` : `<span class="text-zinc-700">${fmtUsd(0)}</span>`;
   $('koszty-rows').innerHTML = days.map((d) => {
     const r = byDay[d];
-    const sum = r.chat + r.image + r.plan;
+    const sum = Object.values(r).reduce((a, b) => a + b, 0); // pełny koszt dnia
     totalUsd += sum;
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02]">
       <td class="px-4 py-2.5 text-white text-xs whitespace-nowrap">${fmtDay(d)}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.chat)}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.image)}</td>
-      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.plan)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.chat || 0)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.image || 0)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.plan || 0)}</td>
+      <td class="px-4 py-2.5 text-right font-mono text-xs">${cellUsd(r.prototype || 0)}</td>
       <td class="px-4 py-2.5 text-right font-mono text-xs text-zinc-300">${fmtUsd(sum)}</td>
       <td class="px-4 py-2.5 text-right font-mono text-xs text-white">${fmtPln(sum)}</td>
     </tr>`;
-  }).join('') || '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak kosztów w zakresie.</td></tr>';
+  }).join('') || '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak kosztów w zakresie.</td></tr>';
   $('cost-range-total').textContent = fmtPln(totalUsd);
   $('cost-range-usd').textContent = fmtUsd(totalUsd) + ' · kurs ' + usdPln.toFixed(2);
 }
