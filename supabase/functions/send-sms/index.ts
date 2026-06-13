@@ -28,6 +28,19 @@ function json(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
 
+// GSM-7 safe: transliteruje znaki spoza podstawowego GSM (polskie diakrytyki,
+// typograficzne cudzysłowy „"''«», myślniki – —, wielokropek …, nbsp), które
+// inaczej wymuszają kodowanie UCS-2 (70 zn./segment zamiast 160 = drożej).
+const GSM_MAP: Record<string, string> = {
+  'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+  'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z',
+  '„': '"', '”': '"', '“': '"', '‟': '"', '«': '"', '»': '"',
+  '‚': "'", '’': "'", '‘': "'", '‛': "'", '–': '-', '—': '-', '‑': '-', '…': '...', ' ': ' ',
+}
+function gsmSafe(str: unknown): string {
+  return String(str || '').split('').map((c) => (c in GSM_MAP ? GSM_MAP[c] : c)).join('')
+}
+
 // Numer → format SMSAPI (same cyfry z prefiksem kraju, PL = 48XXXXXXXXX).
 function normalizePhone(raw: unknown): string | null {
   let d = String(raw || '').replace(/\D/g, '')
@@ -65,7 +78,7 @@ Deno.serve(async (req: Request) => {
     // ── WYSYŁKA ──
     if (action === 'send') {
       const to = normalizePhone(body.to)
-      const message = String(body.message || '').trim()
+      const message = gsmSafe(String(body.message || '').trim())   // kuloodporne na UCS-2
       const test = body.test === true
       if (!to) return json({ error: 'zly_numer' }, 400)
       if (!message) return json({ error: 'pusta_tresc' }, 400)
