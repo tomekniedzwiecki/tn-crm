@@ -19,7 +19,91 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_GENERATIONS = 4
 const OPENAI_MODEL = Deno.env.get('SPAR_GTM_MODEL') || 'gpt-5.5'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+// Banery reklam — gpt-image-2 (jak spar-image). Koszt per quality do spar_usage.
+const STORAGE_BUCKET = 'attachments'
+const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
+const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
+const IMAGE_QUALITY = Deno.env.get('SPAR_GTM_BANNER_QUALITY') || 'medium'
+const IMAGE_COST_USD: Record<string, number> = { low: 0.011, medium: 0.041, high: 0.167 }
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response { return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } }) }
+
+// Rozmiar banera wg formatu reklamy
+function sizeForFormat(format: string): string {
+  const f = (format || '').toLowerCase()
+  if (f.includes('9:16') || f.includes('reel') || f.includes('stories') || f.includes('pion')) return '1024x1536'
+  return '1024x1024'
+}
+// Prompt kreacji reklamowej z wizual_brief + paleta marki + kontekst produktu
+function buildBannerPrompt(reklama: Record<string, unknown>, brief: Record<string, unknown>, nazwa: string): string {
+  const s = (v: unknown, max = 400) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const design = (brief.design && typeof brief.design === 'object' && !Array.isArray(brief.design)) ? brief.design as Record<string, unknown> : null
+  const d = (k: string) => (design && typeof design[k] === 'string' ? (design[k] as string).slice(0, 40) : '')
+  const paleta = (d('tlo') && d('akcent')) ? `Paleta marki: tło ${d('tlo')}, akcent ${d('akcent')}${d('akcent2') ? `, drugi akcent ${d('akcent2')}` : ''}. ` : ''
+  return [
+    `Profesjonalna KREACJA REKLAMOWA (baner social media) dla polskiego narzędzia SaaS „${nazwa}". Format do kanału: ${s(reklama.format, 30) || 'feed 1:1'}.`,
+    reklama.naglowek ? `Główny nagłówek na grafice (krótki, czytelny, po polsku, bezbłędnie): „${s(reklama.naglowek, 80)}".` : '',
+    `SCENA (odwzoruj wiernie): ${s(reklama.wizual_brief, 500)}`,
+    paleta + `Styl: nowoczesny, czysty, premium — jak reklama dobrego produktu SaaS; spójny z paletą marki. Realistyczny mockup interfejsu aplikacji z krótkimi POLSKIMI etykietami. Bez stockowych uśmiechniętych ludzi, bez clipartów, bez znaków wodnych. Tekst na grafice minimalny i poprawny ortograficznie.`,
+    `Kompozycja zostawia oddech na nagłówek; mocny kontrast, czytelność na małym ekranie telefonu.`,
+  ].filter(Boolean).join(' ')
+}
+// Generacja jednego obrazu; zwraca bytes + użyty model (fallback przy braku modelu)
+async function genBanner(apiKey: string, prompt: string, size: string): Promise<{ bytes: Uint8Array; usedModel: string }> {
+  const call = (model: string) => fetch('https://api.openai.com/v1/images/generations', {
+    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+    body: JSON.stringify({ model, prompt, size, quality: IMAGE_QUALITY, n: 1 }),
+  })
+  let usedModel = IMAGE_MODEL
+  let res = await call(IMAGE_MODEL)
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '')
+    console.error(`[spar-gtm] ${IMAGE_MODEL} img error:`, res.status, errText.slice(0, 300))
+    if ((res.status === 400 || res.status === 404) && /model/i.test(errText)) { res = await call(IMAGE_MODEL_FALLBACK); usedModel = IMAGE_MODEL_FALLBACK; if (!res.ok) throw new Error('img_error') }
+    else throw new Error('img_error')
+  }
+  const data = await res.json()
+  const b64 = data?.data?.[0]?.b64_json
+  if (!b64 || typeof b64 !== 'string') throw new Error('img_no_b64')
+  const bin = atob(b64); const bytes = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+  return { bytes, usedModel }
+}
+// Tło: generuje 3 banery, zapisuje banner_url w gtm.reklamy, aktualizuje sesję.
+async function generateBanners(supabase: ReturnType<typeof createClient>, apiKey: string, sessionId: string): Promise<void> {
+  try {
+    const { data: session } = await supabase.from('spar_sessions').select('preview_brief, gtm').eq('id', sessionId).maybeSingle()
+    if (!session || !session.gtm) { console.error('[spar-gtm] banners: brak gtm'); return }
+    const brief = (session.preview_brief || {}) as Record<string, unknown>
+    const nazwa = (typeof brief.nazwa === 'string' && brief.nazwa.trim()) ? brief.nazwa.trim() : 'narzędzie'
+    const gtm = session.gtm as Record<string, unknown>
+    const pakiet = (gtm.pakiet || {}) as Record<string, unknown>
+    const reklamy = Array.isArray(pakiet.reklamy) ? pakiet.reklamy as Record<string, unknown>[] : []
+    let changed = false
+    for (let i = 0; i < reklamy.length && i < 3; i++) {
+      const r = reklamy[i]
+      if (!r || typeof r !== 'object' || (typeof r.banner_url === 'string' && r.banner_url)) continue
+      try {
+        const size = sizeForFormat(typeof r.format === 'string' ? r.format : '')
+        const { bytes, usedModel } = await genBanner(apiKey, buildBannerPrompt(r, brief, nazwa), size)
+        const path = `spar/${sessionId}/reklama-${i + 1}-${Date.now()}.png`
+        const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, bytes, { contentType: 'image/png', upsert: true })
+        if (upErr) { console.error('[spar-gtm] banner upload error:', upErr); continue }
+        const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(path)
+        if (pub?.publicUrl) {
+          r.banner_url = pub.publicUrl; r.banner_size = size; changed = true
+          await supabase.from('spar_usage').insert({ session_id: sessionId, kind: 'image', model: usedModel, images: 1, cost_usd: IMAGE_COST_USD[IMAGE_QUALITY] ?? IMAGE_COST_USD.medium, meta: { view: 'ad_banner', idx: i + 1, quality: IMAGE_QUALITY } })
+          // zapisujemy po KAŻDYM banerze — frontend widzi je pojawiające się stopniowo
+          await supabase.from('spar_sessions').update({ gtm, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        }
+      } catch (e) { console.error('[spar-gtm] banner', i + 1, 'error:', e instanceof Error ? e.message : String(e)) }
+    }
+    await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_banners' })
+    console.log(`[spar-gtm] banners done ${sessionId} changed=${changed}`)
+  } catch (err) {
+    console.error('[spar-gtm] banners ERROR:', err instanceof Error ? err.message : String(err))
+    await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_banners' })
+  }
+}
 
 const SYSTEM_PROMPT = `Jesteś szefem sprzedaży i marketingu, który wielokrotnie wprowadzał na polski rynek niszowe narzędzia SaaS B2B od zera do pierwszych klientów. Tworzysz konkretny, wykonalny plan zdobycia pierwszych klientów ORAZ gotowe materiały sprzedażowe. Piszesz po polsku, językiem grupy docelowej, zero korpomowy, zero lania wody.
 
@@ -118,11 +202,23 @@ Deno.serve(async (req) => {
   try {
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY'); const SUPABASE_URL = Deno.env.get('SUPABASE_URL'); const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!OPENAI_API_KEY || !SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500, cors)
-    let body: { sessionId?: string; force?: boolean }
+    let body: { sessionId?: string; force?: boolean; action?: string }
     try { body = await req.json() } catch { return jsonResponse({ error: 'nieprawidlowy_json' }, 400, cors) }
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+
+    // ── action 'banners': wygeneruj 3 kreacje reklam w tle (gpt-image-2) ──
+    if (body.action === 'banners') {
+      const { data: lock } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'gtm_banners', p_ttl_sec: 300 })
+      if (!lock) return jsonResponse({ status: 'pending' }, 202, cors)
+      const task = generateBanners(supabase, OPENAI_API_KEY, sessionId)
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime
+      if (rt?.waitUntil) rt.waitUntil(task); else task.catch(() => {})
+      return jsonResponse({ status: 'started' }, 202, cors)
+    }
+
     const { data: session, error: sErr } = await supabase.from('spar_sessions').select('id, preview_brief, problem_summary, business_plan, market_report, gtm').eq('id', sessionId).maybeSingle()
     if (sErr) { console.error('[spar-gtm] session fetch error:', sErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)

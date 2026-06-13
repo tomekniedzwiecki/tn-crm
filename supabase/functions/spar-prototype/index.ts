@@ -371,9 +371,10 @@ async function generateAndStore(
     if (error) console.error('[spar-prototype] release lock error:', error)
   }
   try {
-    // reasoning 'high' — jakość wizualna jest kryterium decyzyjnym dla klienta,
-    // więc generator planuje kod „na najwyższym biegu" (wariant A, 2026-06-13)
-    const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, screens.length > 0), 'high', screens)
+    // pass1 reasoning DOMYŚLNY (null) — sprawdzona, niecięta konfiguracja
+    // ('high'/'medium' przy 48k zjadały budżet na reasoning → pusty output bez
+    // </html>). Skok jakości daje design-first prompt + krytyk 'medium'.
+    const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, screens.length > 0), null, screens)
     if (!gen.content) { await releaseLock(); return }
     const html1 = extractHtml(gen.content)
     if (!html1) {
