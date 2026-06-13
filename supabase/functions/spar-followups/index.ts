@@ -189,14 +189,41 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500)
 
-    // Funkcja jest --no-verify-jwt (woła ją pg_cron przez pg_net) — sekret
-    // w nagłówku odcina anonimowe triggerowanie runów z internetu
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+
+    // Funkcja jest --no-verify-jwt (woła ją pg_cron przez pg_net). Cron = sekret
+    // w nagłówku; admin (panel) = x-admin-secret LUB ważny JWT zalogowanego admina.
     const cronSecret = Deno.env.get('SPAR_CRON_SECRET')
-    if (cronSecret && req.headers.get('x-cron-secret') !== cronSecret) {
-      return jsonResponse({ error: 'unauthorized' }, 401)
+    const isCron = !!(cronSecret && req.headers.get('x-cron-secret') === cronSecret)
+    let isAdmin = !!(cronSecret && req.headers.get('x-admin-secret') === cronSecret)
+    let body: { action?: string } = {}
+    try { body = await req.json() } catch { /* cron bez body */ }
+    if (!isAdmin && !isCron) {
+      const auth = req.headers.get('Authorization') || ''
+      const token = auth.startsWith('Bearer ') ? auth.slice(7) : ''
+      if (token && token !== SERVICE_KEY) {
+        try { const { data: u } = await supabase.auth.getUser(token); if (u?.user?.id) isAdmin = true } catch { /* nie-admin */ }
+      }
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    // ── action: preview (ADMIN — galeria szablonów follow-upów, dane przykładowe) ──
+    if (body.action === 'preview') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const DISABLED = ['verdict_no_payment', 'landing_ready', 'raport_ready']
+      const sample: SessionRow = {
+        id: '00000000-0000-0000-0000-000000000000', email: 'przyklad@email.pl', name: 'Anna Kowalska',
+        verdict: 'zielony', preview_brief: { nazwa: 'TwojeNarzędzie' },
+        business_plan: { kamienie: [{ mies: 18000, klienci: 50 }] },
+        market_report: { teza: 'Nisza jest realna, a konkurencja rozdrobniona.', konkurenci: [1, 2, 3], zrodla: [1, 2, 3, 4] },
+        landing_url: 'https://twojenarzedzie.pl', lead_id: null, paid_at: null, last_user_at: null, last_panel_at: null,
+      } as unknown as SessionRow
+      const kinds = ['abandoned_chat', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
+      const templates = kinds.map((k) => { const { subject, html } = buildEmail(k, sample); return { group: 'followup', kind: k, subject, html, disabled: DISABLED.includes(k) } })
+      return jsonResponse({ templates }, 200)
+    }
+
+    // Run crona: tylko cron-secret lub admin
+    if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
     const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, abandoned_chat: 0, verdict_no_payment: 0 }
     let mailBudget = MAX_PER_RUN

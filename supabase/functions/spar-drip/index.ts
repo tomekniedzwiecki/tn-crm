@@ -175,6 +175,21 @@ async function buildReveal(supabase: ReturnType<typeof createClient>, key: strin
   }
 }
 
+// Przykładowa sesja do PODGLĄDU szablonów (bez realnego leada) — id-zero, więc
+// prototypeUrl/landing nie znajdą się w bazie i wskoczą sensowne fallbacki.
+// deno-lint-ignore no-explicit-any
+function sampleSession(): any {
+  return {
+    id: '00000000-0000-0000-0000-000000000000',
+    email: 'przyklad@email.pl', name: 'Anna Kowalska', lead_id: null, paid_at: null,
+    preview_brief: { nazwa: 'TwojeNarzędzie' },
+    market_report: { teza: 'Nisza jest realna, a konkurencja rozdrobniona — jest miejsce na prostsze, tańsze narzędzie.', ocena_potencjalu: 'umiarkowany' },
+    business_plan: { cena: 149, cena_jednostka: 'zł/mies.', kamienie: [{ mies: 18000, klienci: 50 }] },
+    economics: {}, gtm: { playbook: { kanaly: [1, 2, 3] }, pakiet: { reklamy: [{ banner_url: '' }, { banner_url: '' }, { banner_url: '' }] } },
+    landing_url: null,
+  }
+}
+
 const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, created_at, is_test'
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
@@ -305,6 +320,18 @@ Deno.serve(async (req) => {
       }
       // podgląd bez wysyłki
       return jsonResponse({ ok: true, key: target.key, result: 'preview', preview: { subject, html, to: s.email } }, 200)
+    }
+
+    // ── action: templates (ADMIN — galeria szablonów reveali, dane przykładowe) ──
+    if (body.action === 'templates') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const sample = sampleSession()
+      const out: { group: string; kind: string; key: string; seq: number; subject: string; html: string }[] = []
+      for (const r of REVEAL_PLAN) {
+        const { subject, html } = await buildReveal(supabase, r.key, sample)
+        out.push({ group: 'drip', kind: r.emailKind, key: r.key, seq: r.seq, subject, html })
+      }
+      return jsonResponse({ templates: out }, 200)
     }
 
     // ── CRON RUN ──

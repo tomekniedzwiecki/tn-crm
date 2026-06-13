@@ -231,6 +231,15 @@
         </div>
       </div>
     </div>
+
+    <!-- SZABLONY WIADOMOŚCI — podgląd całego flow powiadamiania -->
+    <div>
+      <div class="flex items-center justify-between mb-2.5">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-envelope-simple-open mr-1.5 text-violet-400"></i>Szablony wiadomości — cały flow</h3>
+        <span class="text-[11px] text-zinc-500">podgląd na danych przykładowych · klik = pełny mail</span>
+      </div>
+      <div id="szablony-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>
+    </div>
   </section>
 
   <!-- ════════ KOSZTY ════════ -->
@@ -1133,8 +1142,9 @@ function openMailModal(preview, sid, key) {
   $('mm-subject').textContent = preview.subject || '—';
   $('mm-to').textContent = preview.to ? ('Do: ' + preview.to) : 'Brak adresu odbiorcy';
   $('mm-frame').srcdoc = preview.html || '<p>brak treści</p>';
+  // przycisk wysyłki tylko gdy jest realny odbiorca (reveal leada); dla szablonu — chowamy
+  $('mm-send').classList.toggle('hidden', !preview.to);
   $('mm-send').disabled = !preview.to;
-  $('mm-send').classList.toggle('opacity-40', !preview.to);
   $('mailmodal').classList.remove('hidden');
 }
 function closeMailModal() { $('mailmodal').classList.add('hidden'); $('mm-frame').srcdoc = ''; mmCtx = null; }
@@ -1262,10 +1272,65 @@ function renderLeady() {
   if (board) renderPipeline(); else renderSesje();
 }
 
-// ── KOMUNIKACJA (sekwencja + maile) ──
+// ── KOMUNIKACJA (sekwencja + maile + szablony) ──
 function renderKomunikacja() {
   renderSekwencja();
   renderMaile();
+  loadSzablony();
+}
+
+// Wywołanie dowolnej funkcji edge z autoryzacją zalogowanego admina (JWT)
+async function callFn(fnName, payload) {
+  if (DEMO) return (window.__MOCK_FN && window.__MOCK_FN[fnName]) || {};
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { toast('Brak sesji — zaloguj się ponownie'); throw new Error('no session'); }
+  const res = await fetch(SUPABASE_URL + '/functions/v1/' + fnName, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(payload),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+  return j;
+}
+
+let templatesCache = null;
+async function loadSzablony(force) {
+  const grid = $('szablony-grid');
+  if (!grid) return;
+  if (templatesCache && !force) { renderSzablonyGrid(); return; }
+  grid.innerHTML = '<div class="col-span-full text-sm text-zinc-500 py-4"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję szablony…</div>';
+  try {
+    const [a, b] = await Promise.all([callFn('spar-drip', { action: 'templates' }), callFn('spar-followups', { action: 'preview' })]);
+    templatesCache = [...((a && a.templates) || []), ...((b && b.templates) || [])];
+    renderSzablonyGrid();
+  } catch (e) { grid.innerHTML = `<div class="col-span-full text-sm text-rose-400 py-4">Błąd wczytywania szablonów: ${esc(e.message)}</div>`; }
+}
+function tplMeta(t) {
+  if (t.group === 'drip') { const m = revMeta(t.kind); return { label: m.label, icon: m.icon, tone: m.tone, tag: 'sekwencja' }; }
+  const m = mailKind(t.kind); return { label: m.label, icon: m.icon, tone: m.tone.split(' ')[0], tag: 'follow-up' };
+}
+function renderSzablonyGrid() {
+  if (!templatesCache) return;
+  $('szablony-grid').innerHTML = templatesCache.map((t, i) => {
+    const m = tplMeta(t);
+    return `<button data-tpl="${i}" class="text-left bg-zinc-900/60 border border-white/5 rounded-xl p-4 hover:border-blue-500/40 hover:-translate-y-0.5 transition animate-enter ${t.disabled ? 'opacity-55' : ''}">
+      <div class="flex items-center gap-2 mb-2">
+        <i class="ph ${m.icon} ${m.tone}"></i>
+        <span class="text-xs font-medium text-white truncate">${esc(m.label)}</span>
+        ${t.disabled ? '<span class="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500 shrink-0">wyłączony</span>' : `<span class="ml-auto text-[9px] text-zinc-600 shrink-0">${m.tag}</span>`}
+      </div>
+      <div class="text-[11px] text-zinc-400 leading-snug" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">${esc(t.subject)}</div>
+      <div class="text-[10px] text-blue-400 mt-2.5"><i class="ph ph-eye mr-1"></i>Podgląd maila</div>
+    </button>`;
+  }).join('');
+  $('szablony-grid').querySelectorAll('[data-tpl]').forEach((b) => b.addEventListener('click', () => openTemplate(parseInt(b.dataset.tpl, 10))));
+}
+function openTemplate(i) {
+  const t = templatesCache && templatesCache[i];
+  if (!t) return;
+  openMailModal({ subject: t.subject, html: t.html, to: null }, null, null);
+  $('mm-to').textContent = 'Szablon „' + tplMeta(t).label + '" — dane przykładowe' + (t.disabled ? ' · wyłączony' : '');
 }
 
 // ── Zakładki ──
@@ -1394,6 +1459,24 @@ function seedDemo() {
     reveals: mockReveals.filter((r) => r.session_id === 's1'),
     emails: mails.filter((m) => m.session_id === 's1'),
     plan: [{ key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' }, { key: 'economics', seq: 2, day: 3, emailKind: 'reveal_economics' }, { key: 'landing', seq: 3, day: 5, emailKind: 'reveal_landing' }, { key: 'gtm', seq: 4, day: 8, emailKind: 'reveal_gtm' }, { key: 'prototyp', seq: 5, day: 11, emailKind: 'reveal_prototyp' }],
+  };
+  const demoMail = (t) => `<div style="font-family:sans-serif;font-size:15px;color:#1a1a1a;max-width:560px"><p>Cześć Anna!</p><p>${t}</p><p style="color:#888;font-size:13px">— Tomek</p></div>`;
+  window.__MOCK_FN = {
+    'spar-drip': { templates: [
+      { group: 'drip', kind: 'reveal_rynek', key: 'rynek', subject: 'TwojeNarzędzie: sprawdziłem Twój rynek (realny research)', html: demoMail('Sprawdziłem rynek wokół TwojeNarzędzie — konkurenci z cenami, wielkość niszy, trendy.') },
+      { group: 'drip', kind: 'reveal_economics', key: 'economics', subject: 'TwojeNarzędzie: czy to się spina finansowo? Policzyłem', html: demoMail('Policzyłem model cenowy, koszt pozyskania klienta i moment zwrotu budowy.') },
+      { group: 'drip', kind: 'reveal_landing', key: 'landing', subject: 'TwojeNarzędzie ma już stronę sprzedażową — zobacz', html: demoMail('Zbudowała się działająca strona sprzedażowa Twojego narzędzia.') },
+      { group: 'drip', kind: 'reveal_gtm', key: 'gtm', subject: 'TwojeNarzędzie: gdzie znaleźć pierwszych klientów (+ reklamy)', html: demoMail('Plan zdobycia pierwszych klientów: kanały, skrypty, gotowe reklamy.') },
+      { group: 'drip', kind: 'reveal_prototyp', key: 'prototyp', subject: 'TwojeNarzędzie — na koniec zostawiłem najlepsze: dotknij aplikacji', html: demoMail('Klikalny prototyp Twojego narzędzia — działająca apka, nie obrazek.') },
+    ] },
+    'spar-followups': { templates: [
+      { group: 'followup', kind: 'abandoned_chat', subject: 'Twój projekt narzędzia czeka dokończony w połowie', html: demoMail('Zacząłeś projektować narzędzie i zatrzymaliśmy się w pół drogi.'), disabled: false },
+      { group: 'followup', kind: 'verdict_no_payment', subject: 'TwojeNarzędzie: karta projektu i plan gotowe', html: demoMail('(wyłączony — zastąpiony reveal_*)'), disabled: true },
+      { group: 'followup', kind: 'verdict_last_call', subject: 'TwojeNarzędzie — domykam miejsce na ten projekt', html: demoMail('Tydzień temu projekt dostał zielony werdykt. Domykam miejsce.'), disabled: false },
+      { group: 'followup', kind: 'landing_ready', subject: 'TwojeNarzędzie ma już swoją stronę', html: demoMail('(wyłączony — drip)'), disabled: true },
+      { group: 'followup', kind: 'raport_ready', subject: 'TwojeNarzędzie: raport potencjału rynku gotowy', html: demoMail('(wyłączony — drip)'), disabled: true },
+      { group: 'followup', kind: 'paid_welcome', subject: 'Rezerwacja przyjęta — co teraz?', html: demoMail('Dzięki za rezerwację! Przygotowuję plan przedsięwzięcia.'), disabled: false },
+    ] },
   };
 }
 init();
