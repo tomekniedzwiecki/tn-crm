@@ -45,6 +45,7 @@
         <button data-tab="sesje" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-chats-circle mr-1.5"></i>Sesje</button>
         <button data-tab="generowania" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Generowania</button>
         <button data-tab="maile" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-envelope mr-1.5"></i>Maile</button>
+        <button data-tab="sekwencja" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-flow-arrow mr-1.5"></i>Sekwencja</button>
         <button data-tab="koszty" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
         <button data-tab="ustawienia" aria-label="Ustawienia" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear"></i></button>
       </nav>
@@ -159,6 +160,82 @@
     </div>
   </section>
 
+  <!-- ════════ SEKWENCJA ODKRYWANIA (drip artefaktów: spar_reveals + reveal_* maile) ════════ -->
+  <section id="view-sekwencja" class="hidden p-6 space-y-5">
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h3 class="text-white font-medium text-sm"><i class="ph ph-flow-arrow mr-1.5 text-blue-400"></i>Sekwencja odkrywania</h3>
+          <p class="text-xs text-zinc-500 mt-1 max-w-2xl">Po zielonym werdykcie nie wysypujemy wszystkiego naraz — odkrywamy artefakty po kolei (prototyp → rynek → unit economics → strona → reklamy), każdy osobnym mailem z akcją do panelu i CTA rezerwacji 500 zł. Od 2. odsłony dalsze idą <strong>tylko gdy lead jest zaangażowany</strong> (otworzył maila albo wszedł do panelu) — zimny lead = pauza, nie palimy generowania.</p>
+        </div>
+        <button id="sekw-refresh" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition"><i class="ph ph-arrows-clockwise mr-1.5"></i>Odśwież</button>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4" id="sekw-kpi"></div>
+      <div class="mt-3 text-[11px] text-zinc-600">Kadencja od werdyktu: <span id="sekw-plan-line"></span> · cron co 30 min (okno 8–20).</div>
+    </div>
+
+    <!-- WYSŁANE: kiedy i do kogo -->
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 pt-4">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-paper-plane-tilt mr-1.5 text-emerald-400"></i>Co i kiedy wysłaliśmy — dla kogo</h3>
+        <span id="sekw-sent-count" class="text-xs text-zinc-500"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+              <th class="px-4 py-3">Wysłano</th>
+              <th class="px-4 py-3">Odsłona</th>
+              <th class="px-4 py-3">Projekt</th>
+              <th class="px-4 py-3">Odbiorca</th>
+              <th class="px-4 py-3 text-center">Otwarty</th>
+              <th class="px-4 py-3 text-center">Klik</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="sekw-sent-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ZAPLANOWANE / W TOKU -->
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 pt-4">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-hourglass-medium mr-1.5 text-amber-400"></i>Zaplanowane i w toku</h3>
+        <span id="sekw-queue-count" class="text-xs text-zinc-500"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+              <th class="px-4 py-3">Termin</th>
+              <th class="px-4 py-3">Odsłona</th>
+              <th class="px-4 py-3">Projekt</th>
+              <th class="px-4 py-3">Odbiorca</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="sekw-queue-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DRILL-DOWN: pojedynczy projekt + testy -->
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="flex items-center justify-between gap-3 flex-wrap mb-4">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-magnifying-glass mr-1.5 text-blue-400"></i>Podgląd i testy pojedynczego projektu</h3>
+        <div class="flex items-center gap-2">
+          <select id="sekw-project" class="bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-sm text-white min-w-[240px]">
+            <option value="">— wybierz projekt —</option>
+          </select>
+          <button id="sekw-seed" class="px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition" title="Utwórz wiersze planu dla tego projektu"><i class="ph ph-list-plus mr-1"></i>Utwórz plan</button>
+        </div>
+      </div>
+      <div id="sekw-detail" class="text-sm text-zinc-500">Wybierz projekt, aby zobaczyć jego oś czasu, zaangażowanie i przetestować maile.</div>
+    </div>
+  </section>
+
   <!-- ════════ KOSZTY ════════ -->
   <section id="view-koszty" class="hidden p-6 space-y-4">
     <div class="flex items-end gap-3 flex-wrap">
@@ -231,6 +308,28 @@
     <div class="grid lg:grid-cols-5 gap-0">
       <div class="lg:col-span-3 border-r border-white/5 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-2.5" id="m-chat"></div>
       <div class="lg:col-span-2 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-4" id="m-side"></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- ════════ MODAL PODGLĄDU MAILA (reveal) ════════ -->
+<div id="mailmodal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto">
+  <div class="min-h-full flex items-center justify-center p-4 md:p-6" onclick="if(event.target===this)closeMailModal()">
+  <div class="w-full max-w-xl bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
+      <div class="min-w-0">
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500">Podgląd maila — bez wysyłki</div>
+        <h2 class="text-white font-semibold text-sm truncate" id="mm-subject">—</h2>
+        <p class="text-xs text-zinc-500 truncate" id="mm-to"></p>
+      </div>
+      <button onclick="closeMailModal()" aria-label="Zamknij" class="shrink-0 w-8 h-8 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="p-4 bg-zinc-100">
+      <iframe id="mm-frame" class="w-full rounded-lg bg-white" style="height:62vh;border:0" sandbox=""></iframe>
+    </div>
+    <div class="flex items-center justify-end gap-2 px-5 py-3 border-t border-white/5">
+      <button id="mm-send" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition"><i class="ph ph-paper-plane-tilt mr-1.5"></i>Wyślij testowo do odbiorcy</button>
     </div>
   </div>
   </div>
@@ -787,11 +886,239 @@ function renderMaile() {
     : '<tr><td colspan="5" class="px-4 py-8 text-center text-zinc-500 text-sm">Brak wysłanych maili.</td></tr>';
 }
 
+// ── SEKWENCJA ODKRYWANIA (drip artefaktów) ──
+const REVEAL_META = {
+  prototyp:  { label: 'Klikalny prototyp',    icon: 'ph-cursor-click',   tone: 'text-violet-400' },
+  rynek:     { label: 'Raport rynku',         icon: 'ph-chart-line-up',  tone: 'text-sky-400' },
+  economics: { label: 'Unit economics',       icon: 'ph-calculator',     tone: 'text-emerald-400' },
+  landing:   { label: 'Strona sprzedażowa',   icon: 'ph-globe',          tone: 'text-blue-400' },
+  gtm:       { label: 'Plan + reklamy',       icon: 'ph-megaphone',      tone: 'text-amber-400' },
+};
+const REVEAL_STATUS = {
+  pending:    { label: 'czeka',                cls: 'text-zinc-300 bg-white/5 border-white/10' },
+  generating: { label: 'generuję artefakt',    cls: 'text-sky-400 bg-sky-400/10 border-sky-400/30' },
+  ready:      { label: 'gotowy do wysyłki',     cls: 'text-emerald-300 bg-emerald-400/10 border-emerald-400/30' },
+  sent:       { label: 'wysłany',               cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
+  paused:     { label: 'pauza — zimny lead',    cls: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
+  skipped:    { label: 'pominięty',             cls: 'text-zinc-500 bg-white/5 border-white/10' },
+};
+const revKey = (k) => (k || '').replace('reveal_', '');
+function revMeta(k) { return REVEAL_META[revKey(k)] || { label: revKey(k), icon: 'ph-circle', tone: 'text-zinc-400' }; }
+function revChip(k) { const m = revMeta(k); return `<span class="inline-flex items-center gap-1.5 text-xs ${m.tone}"><i class="ph ${m.icon}"></i>${esc(m.label)}</span>`; }
+function statusBadge(st) { const s = REVEAL_STATUS[st] || { label: st, cls: 'text-zinc-400 bg-white/5 border-white/10' }; return `<span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-medium ${s.cls}">${esc(s.label)}</span>`; }
+function sessLabel(sess) { return (sess && ((sess.preview_brief && sess.preview_brief.nazwa) || sess.name)) || '—'; }
+const yesNo = (ts) => ts ? `<span class="text-emerald-400" title="${esc(fmtDate(ts))}"><i class="ph ph-check-circle"></i></span>` : '<span class="text-zinc-700"><i class="ph ph-minus"></i></span>';
+
+let sekwBusy = false;
+async function callDrip(payload) {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { toast('Brak sesji — zaloguj się ponownie'); throw new Error('no session'); }
+  const res = await fetch(SUPABASE_URL + '/functions/v1/spar-drip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(payload),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { throw new Error(j.error || ('HTTP ' + res.status)); }
+  return j;
+}
+
+async function renderSekwencja() {
+  // Globalne tabele — bezpośrednio z bazy (rola authenticated, RLS admin-read).
+  const [{ data: reveals, error: e1 }, { data: remails, error: e2 }] = await Promise.all([
+    supabaseClient.from('spar_reveals')
+      .select('id, session_id, key, seq, status, due_at, generated_at, sent_at, email_kind, sess:spar_sessions(name, email, preview_brief, is_test, paid_at)')
+      .order('due_at', { ascending: true }),
+    supabaseClient.from('spar_emails')
+      .select('session_id, kind, email, sent_at, opened_at, clicked_at, sess:spar_sessions(name, preview_brief)')
+      .like('kind', 'reveal_%').order('sent_at', { ascending: false }).limit(300),
+  ]);
+  if (e1) console.error(e1);
+  if (e2) console.error(e2);
+  const rv = reveals || [], rm = remails || [];
+
+  // Plan-line
+  $('sekw-plan-line').textContent = ['prototyp +1 dz.', 'rynek +3 dz.', 'economics +5 dz.', 'strona +8 dz.', 'reklamy +11 dz.'].join(' · ');
+
+  // KPI
+  const sentEmails = rm.filter((m) => m.sent_at);
+  const opened = sentEmails.filter((m) => m.opened_at).length;
+  const inSeq = new Set(rv.filter((r) => !(r.sess && (r.sess.is_test || r.sess.paid_at))).map((r) => r.session_id)).size;
+  const paused = rv.filter((r) => r.status === 'paused').length;
+  const inProgress = rv.filter((r) => r.status === 'generating').length;
+  const openRate = sentEmails.length ? Math.round((opened / sentEmails.length) * 100) : 0;
+  const kpi = [
+    { label: 'Projekty w sekwencji', val: inSeq, icon: 'ph-users-three', tone: 'text-blue-400' },
+    { label: 'Odsłony wysłane', val: sentEmails.length, icon: 'ph-paper-plane-tilt', tone: 'text-emerald-400' },
+    { label: 'Otwieralność', val: openRate + '%', icon: 'ph-envelope-open', tone: 'text-sky-400' },
+    { label: 'W generowaniu', val: inProgress, icon: 'ph-circle-notch', tone: 'text-violet-400' },
+    { label: 'Pauza (zimni)', val: paused, icon: 'ph-pause-circle', tone: 'text-amber-400' },
+  ];
+  $('sekw-kpi').innerHTML = kpi.map((k) => `
+    <div class="bg-zinc-950/60 border border-white/5 rounded-xl p-3.5">
+      <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${k.icon} ${k.tone}"></i>${k.label}</div>
+      <div class="text-xl font-bold text-white mt-1.5">${k.val}</div>
+    </div>`).join('');
+
+  // WYSŁANE — kiedy i do kogo
+  $('sekw-sent-count').textContent = sentEmails.length + (rm.length === 300 ? '+ (ostatnie 300)' : '');
+  $('sekw-sent-rows').innerHTML = sentEmails.length ? sentEmails.map((m) => `
+    <tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="openSession('${m.session_id}')">
+      <td class="px-4 py-2.5 text-zinc-300 whitespace-nowrap text-xs">${fmtDate(m.sent_at)}</td>
+      <td class="px-4 py-2.5">${revChip(m.kind)}</td>
+      <td class="px-4 py-2.5 text-white text-xs">${esc(sessLabel(m.sess))}</td>
+      <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(m.email || '—')}</td>
+      <td class="px-4 py-2.5 text-center">${yesNo(m.opened_at)}</td>
+      <td class="px-4 py-2.5 text-center">${yesNo(m.clicked_at)}</td>
+      <td class="px-4 py-2.5 text-right"><button onclick="event.stopPropagation();selectSekwProject('${m.session_id}')" class="text-xs text-blue-400 hover:text-blue-300">oś czasu →</button></td>
+    </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">Jeszcze nic nie wysłano w sekwencji.</td></tr>';
+
+  // ZAPLANOWANE / W TOKU
+  const now = Date.now();
+  const queue = rv.filter((r) => ['pending', 'generating', 'ready', 'paused'].includes(r.status) && !(r.sess && (r.sess.is_test || r.sess.paid_at)))
+    .sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
+  $('sekw-queue-count').textContent = queue.length + ' pozycji';
+  $('sekw-queue-rows').innerHTML = queue.length ? queue.map((r) => {
+    const due = new Date(r.due_at).getTime();
+    const when = r.status === 'paused' ? 'wstrzymane' : (due <= now ? '<span class="text-amber-400">gotowe do wysyłki</span>' : 'za ' + timeAgo(r.due_at).replace(' temu', ''));
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="selectSekwProject('${r.session_id}')">
+      <td class="px-4 py-2.5 text-xs whitespace-nowrap"><div class="text-zinc-300">${fmtDate(r.due_at)}</div><div class="text-[10px] text-zinc-600">${when}</div></td>
+      <td class="px-4 py-2.5">${revChip(r.key)}</td>
+      <td class="px-4 py-2.5 text-white text-xs">${esc(sessLabel(r.sess))}</td>
+      <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc((r.sess && r.sess.email) || '—')}</td>
+      <td class="px-4 py-2.5">${statusBadge(r.status)}</td>
+      <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak zaplanowanych odsłon — pojawią się po zielonych werdyktach.</td></tr>';
+
+  // Lista projektów do drill-downu: zielone (nie-test, nieopłacone) + te z istniejącym planem
+  const greenSel = visibleSessions().filter((s) => s.verdict === 'zielony' && !s.paid_at);
+  const inPlan = new Map();
+  rv.forEach((r) => { if (!inPlan.has(r.session_id)) inPlan.set(r.session_id, sessLabel(r.sess)); });
+  greenSel.forEach((s) => inPlan.set(s.id, projName(s)));
+  const opts = Array.from(inPlan.entries()).sort((a, b) => a[1].localeCompare(b[1], 'pl'));
+  const sel = $('sekw-project');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">— wybierz projekt —</option>' + opts.map(([id, label]) => `<option value="${id}">${esc(label)}</option>`).join('');
+  if (cur && inPlan.has(cur)) sel.value = cur;
+  if (sekwSid) await renderProjectDetail(sekwSid);
+}
+
+let sekwSid = '';
+async function selectSekwProject(sid) {
+  sekwSid = sid;
+  switchTab('sekwencja');
+  const sel = $('sekw-project');
+  if (sel) { if (![...sel.options].some((o) => o.value === sid)) { const s = sessions.find((x) => x.id === sid); const o = document.createElement('option'); o.value = sid; o.textContent = s ? projName(s) : sid; sel.appendChild(o); } sel.value = sid; }
+  await renderProjectDetail(sid);
+  $('sekw-detail').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+async function renderProjectDetail(sid) {
+  if (!sid) { $('sekw-detail').innerHTML = 'Wybierz projekt, aby zobaczyć jego oś czasu, zaangażowanie i przetestować maile.'; return; }
+  $('sekw-detail').innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję plan projektu…</div>';
+  let data;
+  try { data = await callDrip({ action: 'status', sessionId: sid }); } catch (e) { $('sekw-detail').innerHTML = `<div class="text-rose-400 text-sm">Błąd: ${esc(e.message)}</div>`; return; }
+  const s = data.session;
+  const emailByKind = {};
+  (data.emails || []).forEach((e) => { emailByKind[e.kind] = e; });
+  // mapuj plan (kanon) -> wiersz reveala (jeśli istnieje)
+  const byKey = {};
+  (data.reveals || []).forEach((r) => { byKey[r.key] = r; });
+  const plan = data.plan || [];
+
+  const engaged = s && s.engaged;
+  const head = `
+    <div class="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-white/5">
+      <div class="min-w-0">
+        <div class="text-white font-medium">${esc(s ? (s.name || '—') : '—')}</div>
+        <div class="text-xs text-zinc-500">${esc((s && s.email) || 'bez e-maila')}</div>
+      </div>
+      <span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${engaged ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' : 'text-amber-400 border-amber-400/30 bg-amber-400/10'}">
+        <i class="ph ${engaged ? 'ph-fire' : 'ph-snowflake'} mr-1.5"></i>${engaged ? 'zaangażowany — sekwencja leci' : 'zimny — dalsze odsłony wstrzymane'}
+      </span>
+      <div class="ml-auto flex items-center gap-3 text-[11px] text-zinc-500">
+        <span title="ostatnie wejście do panelu"><i class="ph ph-device-mobile mr-1"></i>panel: ${s ? timeAgo(s.last_panel_at) : '—'}</span>
+        <span title="ostatnia aktywność w rozmowie"><i class="ph ph-chat-circle mr-1"></i>rozmowa: ${s ? timeAgo(s.last_user_at) : '—'}</span>
+      </div>
+    </div>`;
+
+  const rows = plan.map((p) => {
+    const r = byKey[p.key];
+    const em = emailByKind[p.emailKind];
+    const status = r ? r.status : 'pending';
+    const sentLine = em && em.sent_at
+      ? `Wysłano ${fmtDate(em.sent_at)} → ${esc((s && s.email) || '')}` + (em.opened_at ? ' · <span class="text-emerald-400">otwarty</span>' : ' · <span class="text-zinc-500">nieotwarty</span>') + (em.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : '')
+      : (r && r.due_at ? `Termin: ${fmtDate(r.due_at)}` : `Kadencja: dzień +${p.day} od werdyktu`);
+    const m = revMeta(p.key);
+    return `
+    <div class="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-0">
+      <div class="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 ${m.tone}"><i class="ph ${m.icon}"></i></div>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-sm text-white font-medium">${p.seq}. ${esc(m.label)}</span>
+          ${statusBadge(status)}
+        </div>
+        <div class="text-[11px] text-zinc-500 mt-0.5">${sentLine}</div>
+      </div>
+      <div class="flex items-center gap-1.5 shrink-0">
+        <button onclick="firePreview('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition" title="Podejrzyj maila bez wysyłki"><i class="ph ph-eye"></i></button>
+        <button onclick="fireSend('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-[11px] transition" title="Wyślij testowo teraz (z pominięciem bramki)"><i class="ph ph-paper-plane-tilt"></i></button>
+      </div>
+    </div>`;
+  }).join('');
+
+  $('sekw-detail').innerHTML = head + `<div class="-mt-1">${rows}</div>
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>„Podgląd" pokazuje maila bez wysyłki. „Wyślij testowo" odpala generację (jeśli trzeba) i wysyła realnie na adres odbiorcy — z pominięciem bramki i terminu.</div>`;
+}
+
+let mmCtx = null;
+async function firePreview(sid, key) {
+  if (sekwBusy) return; sekwBusy = true;
+  toast('Przygotowuję podgląd…');
+  try {
+    const j = await callDrip({ action: 'fire', sessionId: sid, key });
+    if (j.result === 'generating') { toast('Artefakt jeszcze się generuje — ponów za chwilę'); return; }
+    if (!j.preview) { toast('Brak podglądu (' + (j.info || j.result || '—') + ')'); return; }
+    openMailModal(j.preview, sid, key);
+  } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
+}
+function openMailModal(preview, sid, key) {
+  mmCtx = { sid, key, to: preview.to };
+  $('mm-subject').textContent = preview.subject || '—';
+  $('mm-to').textContent = preview.to ? ('Do: ' + preview.to) : 'Brak adresu odbiorcy';
+  $('mm-frame').srcdoc = preview.html || '<p>brak treści</p>';
+  $('mm-send').disabled = !preview.to;
+  $('mm-send').classList.toggle('opacity-40', !preview.to);
+  $('mailmodal').classList.remove('hidden');
+}
+function closeMailModal() { $('mailmodal').classList.add('hidden'); $('mm-frame').srcdoc = ''; mmCtx = null; }
+async function fireSend(sid, key) {
+  const s = sessions.find((x) => x.id === sid);
+  const who = s ? (s.email || projName(s)) : sid;
+  if (!confirm(`Wysłać testowo odsłonę „${revMeta(key).label}" realnie na adres ${who}?\n\nTo prawdziwa wysyłka (idempotentna — jeśli już wysłana, nie zdubluje).`)) return;
+  if (sekwBusy) return; sekwBusy = true;
+  toast('Wysyłam…');
+  try {
+    const j = await callDrip({ action: 'fire', sessionId: sid, key, send: true });
+    if (j.result === 'generating') { toast('Artefakt się generuje — ponów wysyłkę za chwilę'); }
+    else if (j.result === 'sent') { toast('Wysłano ✓'); }
+    else { toast('Wynik: ' + (j.result || j.info || '—')); }
+    await renderSekwencja();
+  } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
+}
+async function seedSekwProject() {
+  const sid = $('sekw-project').value;
+  if (!sid) { toast('Najpierw wybierz projekt'); return; }
+  try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); sekwSid = sid; await renderSekwencja(); }
+  catch (e) { toast('Błąd: ' + e.message); }
+}
+
 // ── Zakładki ──
 function switchTab(tab) {
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
-  ['dashboard', 'pipeline', 'sesje', 'generowania', 'maile', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
+  ['dashboard', 'pipeline', 'sesje', 'generowania', 'maile', 'sekwencja', 'koszty', 'ustawienia'].forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
   try { history.replaceState(null, '', location.pathname + (tab === 'dashboard' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
   renderActive();
 }
@@ -801,6 +1128,7 @@ function renderActive() {
   if (activeTab === 'sesje') renderSesje();
   if (activeTab === 'generowania') renderGenerowania();
   if (activeTab === 'maile') renderMaile();
+  if (activeTab === 'sekwencja') renderSekwencja();
   if (activeTab === 'koszty') renderKoszty();
 }
 
@@ -821,7 +1149,7 @@ async function init() {
   $('loading').classList.add('hidden');
 
   const hash = (location.hash || '').slice(1);
-  switchTab(['pipeline', 'sesje', 'generowania', 'maile', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
+  switchTab(['pipeline', 'sesje', 'generowania', 'maile', 'sekwencja', 'koszty', 'ustawienia'].includes(hash) ? hash : 'dashboard');
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('search').addEventListener('input', (e) => { search = e.target.value; renderSesje(); });
@@ -846,8 +1174,12 @@ async function init() {
     toast('Kurs zapisany: ' + v.toFixed(2));
     renderActive();
   });
+  $('sekw-refresh')?.addEventListener('click', () => renderSekwencja());
+  $('sekw-seed')?.addEventListener('click', seedSekwProject);
+  $('sekw-project')?.addEventListener('change', (e) => { sekwSid = e.target.value; renderProjectDetail(sekwSid); });
+  $('mm-send')?.addEventListener('click', () => { if (mmCtx) { const ctx = mmCtx; closeMailModal(); fireSend(ctx.sid, ctx.key); } });
   $('btn-mobile-menu')?.addEventListener('click', () => $('sidebar').classList.toggle('open'));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMailModal(); } });
 }
 init();
 </script>
