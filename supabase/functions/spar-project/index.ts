@@ -135,7 +135,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, landing_url, lead_id, created_at, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, created_at, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -218,6 +218,16 @@ Deno.serve(async (req) => {
       const { _meta: _drop, ...rest } = session.market_report as Record<string, unknown>
       raport = rest
     }
+    let economics: Record<string, unknown> | null = null
+    if (session.economics && typeof session.economics === 'object') {
+      const { _meta: _drop, ...rest } = session.economics as Record<string, unknown>
+      economics = rest
+    }
+    let gtm: Record<string, unknown> | null = null
+    if (session.gtm && typeof session.gtm === 'object') {
+      const { _meta: _drop, ...rest } = session.gtm as Record<string, unknown>
+      gtm = rest
+    }
     const firstName = typeof session.name === 'string' && session.name
       ? session.name.split(' ')[0]
       : null
@@ -235,6 +245,8 @@ Deno.serve(async (req) => {
         image_count: session.image_count || 0,
         business_plan: bizplan,
         market_report: raport,
+        economics: economics,
+        gtm: gtm,
         landing_url: session.landing_url || null,
         verdict: session.verdict || null,
         status: session.status || 'active',
