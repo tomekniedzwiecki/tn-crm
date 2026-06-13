@@ -42,11 +42,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Sekwencja odkrywania (musi zgadzać się z planem w spar-drip): kadencja dni
 // od werdyktu (proxy: created_at). Panel bramkuje widoczność wg statusu odsłon.
 const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
-  { key: 'prototyp', seq: 1, day: 1, emailKind: 'reveal_prototyp' },
-  { key: 'rynek', seq: 2, day: 3, emailKind: 'reveal_rynek' },
-  { key: 'economics', seq: 3, day: 5, emailKind: 'reveal_economics' },
-  { key: 'landing', seq: 4, day: 8, emailKind: 'reveal_landing' },
-  { key: 'gtm', seq: 5, day: 11, emailKind: 'reveal_gtm' },
+  { key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' },
+  { key: 'economics', seq: 2, day: 3, emailKind: 'reveal_economics' },
+  { key: 'landing', seq: 3, day: 5, emailKind: 'reveal_landing' },
+  { key: 'gtm', seq: 4, day: 8, emailKind: 'reveal_gtm' },
+  { key: 'prototyp', seq: 5, day: 11, emailKind: 'reveal_prototyp' }, // finał — najmocniejszy argument
 ]
 const MAX_FEEDBACK_PER_SESSION = 30
 const MAX_FEEDBACK_LENGTH = 1000

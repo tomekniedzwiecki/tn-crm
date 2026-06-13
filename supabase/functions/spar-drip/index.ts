@@ -24,12 +24,15 @@ const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${nam
 
 // Plan sekwencji — kolejność + kadencja (dni od zielonego werdyktu).
 // day = kiedy reveal staje się due; gate bramkuje od R2 w górę.
+// Prototyp (klikalne, działające narzędzie) celowo NA KOŃCU — to najmocniejszy
+// argument, finał sekwencji dla niezdecydowanych. Wcześniej budujemy kontekst:
+// rynek → opłacalność → strona → sprzedaż, a potem „dotknij swojej aplikacji".
 const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
-  { key: 'prototyp', seq: 1, day: 1, emailKind: 'reveal_prototyp' },
-  { key: 'rynek', seq: 2, day: 3, emailKind: 'reveal_rynek' },
-  { key: 'economics', seq: 3, day: 5, emailKind: 'reveal_economics' },
-  { key: 'landing', seq: 4, day: 8, emailKind: 'reveal_landing' },
-  { key: 'gtm', seq: 5, day: 11, emailKind: 'reveal_gtm' },
+  { key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' },
+  { key: 'economics', seq: 2, day: 3, emailKind: 'reveal_economics' },
+  { key: 'landing', seq: 3, day: 5, emailKind: 'reveal_landing' },
+  { key: 'gtm', seq: 4, day: 8, emailKind: 'reveal_gtm' },
+  { key: 'prototyp', seq: 5, day: 11, emailKind: 'reveal_prototyp' },
 ]
 const ENGAGE_WINDOW_DAYS = 10   // aktywność w panelu/rozmowie w tym oknie = zaangażowany
 const MAX_FIRES_PER_RUN = 12
@@ -116,10 +119,10 @@ async function buildReveal(supabase: ReturnType<typeof createClient>, key: strin
   if (key === 'prototyp') {
     const url = (await prototypeUrl(supabase, s.id)) || panelLink(s.id, 'reveal_prototyp', '#projekt-prototyp')
     return {
-      subject: `${nazwa} — Twoja aplikacja właśnie ożyła (klikalna)`,
+      subject: `${nazwa} — na koniec zostawiłem najlepsze: dotknij swojej aplikacji`,
       html: emailWrap(`<p>${hi}</p>
-        <p>Mam coś, co Cię zaskoczy. Zbudowałem <strong>klikalny prototyp</strong> Twojego narzędzia <strong>${nazwa}</strong> — to nie obrazek ani makieta, tylko działająca aplikacja: wejdź, kliknij, wpisz coś i zobacz, jak reaguje.</p>
-        <p>Tak będzie wyglądać i działać Twój produkt.</p>`,
+        <p>Przeszliśmy przez rynek, liczby, stronę i plan sprzedaży. Na koniec zostawiłem to, co robi największe wrażenie: <strong>klikalny prototyp</strong> Twojego narzędzia <strong>${nazwa}</strong>.</p>
+        <p>To nie obrazek ani makieta, tylko działająca aplikacja — wejdź, kliknij, wpisz coś i zobacz, jak reaguje. Tak będzie wyglądać i działać Twój produkt.</p>`,
         s.id, lead, url, 'Dotknij swojej aplikacji →'),
     }
   }
