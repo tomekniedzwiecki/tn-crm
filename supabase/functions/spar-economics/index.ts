@@ -37,6 +37,8 @@ Zasady liczb:
 - Marża brutto SaaS: zwykle 80-90%.
 - Budżet reklam/mies.: realny dla jednoosobowego startu (1000-3000 zł).
 
+JĘZYK W TEKSTACH WIDOCZNYCH DLA KLIENTA (model, dla_kogo, funkcje, expansion, cac_uzasadnienie, churn_uzasadnienie, zalozenia, komentarz) — BARDZO WAŻNE: odbiorca to osoba DOPIERO wchodząca w biznes, NIE zna żargonu. Pisz prosto, po ludzku. ZAKAZ słów: CAC, LTV, MRR, ARPU, churn, CPL, konwersja, retencja, unit economics, payback. Mów konkretem: zamiast „CAC" → „koszt zdobycia jednego klienta"; zamiast „churn 4%" → „co miesiąc odchodzi mniej więcej co dwudziesty piąty klient"; zamiast „konwersja lead→klient 10%" → „mniej więcej co dziesiąta zainteresowana osoba kupuje". Nazwy pól JSON zostaw bez zmian — chodzi tylko o teksty słowne.
+
 Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
 {
   "cennik": {
@@ -53,7 +55,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
     "cena_bazowa": 199,
     "marza_proc": 85,
     "cac": 280,
-    "cac_uzasadnienie": "1 zdanie, np. przy CPL ~28 zł i konwersji lead→klient ~10%",
+    "cac_uzasadnienie": "1 zdanie PROSTYM językiem, np. z reklam wychodzi, że zdobycie jednego płacącego klienta kosztuje około tyle",
     "churn_mies_proc": 4,
     "churn_uzasadnienie": "1 zdanie",
     "budzet_reklam_mies": 1500,
