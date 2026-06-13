@@ -218,11 +218,11 @@
       </div>
     </div>
 
-    <!-- WSZYSTKIE MAILE — pełny log (drip + followupy) z otwarciami -->
+    <!-- FOLLOW-UPY — log maili POZA sekwencją odkrywania (reveale są w sekcji »Sekwencja« powyżej) -->
     <div>
       <div class="flex items-center justify-between mb-2.5">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-envelope-open mr-1.5 text-sky-400"></i>Wszystkie maile — 30 dni</h3>
-        <span class="text-[11px] text-zinc-500">testy pojedynczego projektu → karta leada (zakładka »Leady«)</span>
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-envelope-open mr-1.5 text-sky-400"></i>Follow-upy (poza sekwencją) — 30 dni</h3>
+        <span class="text-[11px] text-zinc-500">maile sekwencji → sekcja »Sekwencja« powyżej · testy pojedynczego projektu → karta leada</span>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4" id="mail-kpi"></div>
       <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
@@ -839,6 +839,7 @@ function renderLeadTabs() {
   $('lead-tabs').innerHTML = LEAD_TABS.map((t) => `<button data-leadtab="${t.id}" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-medium border-b-2 transition ${leadTab === t.id ? 'border-blue-500 text-white' : 'border-transparent text-zinc-400 hover:text-white'}"><i class="ph ${t.icon} text-base"></i>${t.label}</button>`).join('');
   $('lead-tabs').querySelectorAll('[data-leadtab]').forEach((b) => b.addEventListener('click', () => { leadTab = b.dataset.leadtab; renderLeadTabs(); renderLeadTab(); }));
 }
+function switchLeadTab(id) { leadTab = id; renderLeadTabs(); renderLeadTab(); }
 function renderLeadTab() {
   if (!leadData) return;
   const b = $('lead-body'); const s = leadData.s;
@@ -919,9 +920,15 @@ function leadSekwencjaHTML() {
   </div>`;
 }
 function leadMaileHTML() {
-  const { emails } = leadData;
-  if (!emails.length) return '<div class="text-zinc-600 text-sm">Żaden mail jeszcze nie wyszedł do tego leada.</div>';
-  return `<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+  // Tu pokazujemy TYLKO follow-upy. Maile sekwencji odkrywania (reveal_*) mają
+  // własną oś czasu w zakładce »Sekwencja« — nie dublujemy ich tutaj.
+  const emails = (leadData.emails || []).filter((e) => !isRevealKind(e.kind));
+  const revCount = (leadData.emails || []).length - emails.length;
+  const note = revCount
+    ? `<div class="text-[11px] text-zinc-500 mb-2.5 flex items-center gap-1.5"><i class="ph ph-flow-arrow text-blue-400"></i>${revCount} ${plural(revCount, 'mail sekwencji odkrywania', 'maile sekwencji odkrywania', 'maili sekwencji odkrywania')} — w zakładce <button onclick="switchLeadTab('sekwencja')" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">Sekwencja</button>.</div>`
+    : '';
+  if (!emails.length) return `${note}<div class="text-zinc-600 text-sm">Żaden follow-up jeszcze nie wyszedł do tego leada.</div>`;
+  return `${note}<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
     <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
       <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Otwarty</th><th class="px-4 py-3 text-center">Klik</th></tr></thead><tbody>
     ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.opened_at)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.clicked_at)}</td></tr>`).join('')}
@@ -991,17 +998,28 @@ const MAIL_KINDS = {
   landing_ready:      { label: 'Strona gotowa',      tone: 'text-blue-400 border-blue-400/30 bg-blue-400/10',        icon: 'ph-globe' },
   raport_ready:       { label: 'Raport gotowy',      tone: 'text-violet-400 border-violet-400/30 bg-violet-400/10',  icon: 'ph-chart-line-up' },
 };
+// reveal_* = sekwencja odkrywania (osobny widok »Sekwencja«), NIE follow-up.
+const isRevealKind = (k) => /^reveal_/.test(k || '');
+// Rodzaje wyłączone (historyczne) — drip przejął ich rolę 2026-06-13.
+// Mogą jeszcze wisieć w logu z wcześniejszych wysyłek; oznaczamy je „wyłączony".
+const LEGACY_KINDS = new Set(['raport_ready', 'landing_ready', 'verdict_no_payment']);
 function mailKind(kind) {
   return MAIL_KINDS[kind] || { label: kind, tone: 'text-zinc-400 border-white/10 bg-white/5', icon: 'ph-envelope' };
 }
 function mailBadge(kind) {
   const k = mailKind(kind);
-  return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-medium ${k.tone}"><i class="ph ${k.icon}"></i>${esc(k.label)}</span>`;
+  const legacy = LEGACY_KINDS.has(kind)
+    ? '<span class="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium text-zinc-500 border border-white/10 bg-white/5" title="Rodzaj wyłączony 2026-06-13 — zastąpiony sekwencją odkrywania. To wpis historyczny.">wyłączony</span>'
+    : '';
+  return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-medium ${k.tone}"><i class="ph ${k.icon}"></i>${esc(k.label)}</span>${legacy}`;
 }
 function renderMaile() {
+  // Ten log = TYLKO follow-upy. Maile sekwencji (reveal_*) mają własny widok
+  // »Sekwencja« powyżej — nie dublujemy ich tutaj, żeby nie mylić logu.
+  const fmails = mails.filter((m) => !isRevealKind(m.kind));
   // KPI per rodzaj (30 dni) — dynamicznie ze wszystkich kindów w danych
   const d30 = Date.now() - 30 * 864e5;
-  const recent = mails.filter((m) => new Date(m.sent_at).getTime() >= d30);
+  const recent = fmails.filter((m) => new Date(m.sent_at).getTime() >= d30);
   const byKind = {};
   recent.forEach((m) => { byKind[m.kind] = (byKind[m.kind] || 0) + 1; });
   const kinds = Object.keys(byKind).sort((a, b) => byKind[b] - byKind[a]);
@@ -1009,18 +1027,18 @@ function renderMaile() {
     ? kinds.map((k) => {
         const km = mailKind(k);
         return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 animate-enter">
-          <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${km.icon} ${km.tone.split(' ')[0]}"></i>${esc(km.label)}</div>
+          <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${km.icon} ${km.tone.split(' ')[0]}"></i>${esc(km.label)}${LEGACY_KINDS.has(k) ? ' <span class="text-[10px] text-zinc-600">(wył.)</span>' : ''}</div>
           <div class="text-xl font-bold text-white mt-1.5">${byKind[k]}<span class="text-[11px] font-normal text-zinc-500 ml-1.5">30 dni</span></div>
         </div>`;
       }).join('')
     : '<div class="col-span-full text-sm text-zinc-500">Jeszcze żaden followup nie wyszedł.</div>';
 
   // wysłane (z otwarciami)
-  $('mail-count').textContent = mails.length + (mails.length >= 800 ? '+ (ostatnie 800)' : '');
+  $('mail-count').textContent = fmails.length + (fmails.length >= 800 ? '+ (ostatnie 800)' : '');
   const bySession = {};
   sessions.forEach((s) => { bySession[s.id] = s; });
-  $('mail-rows').innerHTML = mails.length
-    ? mails.map((m) => {
+  $('mail-rows').innerHTML = fmails.length
+    ? fmails.map((m) => {
         const s = bySession[m.session_id];
         return `<tr class="border-b border-white/5 hover:bg-white/[0.03] transition cursor-pointer" ${s ? `onclick="openSession('${s.id}')"` : ''}>
           <td class="px-4 py-3 text-zinc-400 whitespace-nowrap">${fmtDate(m.sent_at)}</td>
