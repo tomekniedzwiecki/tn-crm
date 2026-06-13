@@ -134,7 +134,7 @@
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-center justify-between mb-3">
         <h3 class="text-white font-medium text-sm"><i class="ph ph-hourglass-medium mr-1.5 text-amber-400"></i>W kolejce do wysyłki</h3>
-        <span class="text-[11px] text-zinc-500">artefakty gotowe ≥15 min — cron co 30 min, okno 8-20</span>
+        <span class="text-[11px] text-zinc-500">odsłony artefaktów (rynek/strona/economics/reklamy/prototyp) → zakładka »Sekwencja«</span>
       </div>
       <div id="mail-queue" class="space-y-1.5"></div>
     </div>
@@ -820,22 +820,10 @@ function mailBadge(kind) {
 // Kolejka artefaktów: gotowe (strona/raport), mail jeszcze nie wyszedł.
 // Odbicie logiki spar-followups: ≥15 min od budowy, max 7 dni, nie-testowe.
 function mailQueue() {
-  const now = Date.now();
-  const DELAY = 15 * 60e3, MAX_AGE = 7 * 864e5;
-  const out = [];
-  sessions.forEach((s) => {
-    if (s.is_test || !s.email) return;
-    const sent = mailKindsBySession[s.id] || new Set();
-    const push = (kind, ts) => {
-      if (sent.has(kind) || !ts || now - ts > MAX_AGE) return;
-      out.push({ s, kind, readyAt: ts + DELAY, ready: now - ts >= DELAY });
-    };
-    const lt = (String(s.landing_url || '').match(/[?&]t=(\d{10,16})/) || [])[1];
-    if (s.landing_url) push('landing_ready', lt ? parseInt(lt, 10) : null);
-    const rAt = s.raport_meta && s.raport_meta.at ? Date.parse(s.raport_meta.at) : NaN;
-    if (s.raport_meta) push('raport_ready', Number.isFinite(rAt) ? rAt : null);
-  });
-  return out.sort((a, b) => a.readyAt - b.readyAt);
+  // Maile o artefaktach (raport/strona) przejął drip „sekwencja odkrywania" —
+  // ich kolejkę i statusy widać w zakładce »Sekwencja«. Tu nic nie przewidujemy,
+  // żeby nie pokazywać wysyłek, które już nie wychodzą z tego systemu.
+  return [];
 }
 function renderMaile() {
   // KPI per rodzaj (30 dni) — dynamicznie ze wszystkich kindów w danych
@@ -866,7 +854,7 @@ function renderMaile() {
           ${item.ready ? '<i class="ph ph-clock mr-1"></i>wyśle następny run' : 'gotowy od ' + fmtDate(new Date(item.readyAt).toISOString())}
         </span>
       </button>`).join('')
-    : '<div class="text-sm text-zinc-500 px-1">Kolejka pusta — wszystko wysłane.</div>';
+    : '<div class="text-sm text-zinc-500 px-1">Odsłony artefaktów planuje i wysyła teraz drip — podgląd i testy w zakładce <strong class="text-zinc-300">Sekwencja</strong>.</div>';
 
   // wysłane
   $('mail-count').textContent = mails.length + (mails.length === 500 ? '+ (ostatnie 500)' : '');

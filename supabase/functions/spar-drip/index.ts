@@ -185,8 +185,10 @@ async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Pro
   const lp = s.last_panel_at ? Date.parse(s.last_panel_at) : 0
   const lu = s.last_user_at ? Date.parse(s.last_user_at) : 0
   if (lp >= win || lu >= win) return true
+  // otwarcie reveala liczy się TYLKO w oknie — inaczej jeden klik sprzed
+  // tygodni trzymałby zimnego leada „gorącym" w nieskończoność
   const { count } = await supabase.from('spar_emails').select('id', { count: 'exact', head: true })
-    .eq('session_id', s.id).like('kind', 'reveal_%').not('opened_at', 'is', null)
+    .eq('session_id', s.id).like('kind', 'reveal_%').gte('opened_at', new Date(win).toISOString())
   return (count ?? 0) > 0
 }
 

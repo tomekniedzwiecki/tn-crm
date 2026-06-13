@@ -67,6 +67,7 @@ interface SessionRow {
   lead_id: string | null
   paid_at: string | null
   last_user_at: string | null
+  last_panel_at: string | null
 }
 
 function firstName(s: SessionRow): string {
@@ -233,7 +234,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -305,40 +306,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
     }
 
-    // ── 1c) ARTEFAKTY GOTOWE: strona / raport zbudowane 15 min – 7 dni temu.
-    //        Czas budowy strony = timestamp t= z landing_url; czas raportu =
-    //        market_report._meta.at. Max JEDEN artefakt-mail per sesja per
-    //        run (strona ma pierwszeństwo — mocniejszy hook) ───────────────
-    const ARTIFACT_DELAY_MS = 15 * 60 * 1000
-    const ARTIFACT_MAX_AGE_MS = 7 * 24 * 3600 * 1000
-    function artifactReady(ts: number | null): boolean {
-      return !!ts && now - ts >= ARTIFACT_DELAY_MS && now - ts <= ARTIFACT_MAX_AGE_MS
-    }
-    function landingTs(url: string | null): number | null {
-      const m = (url || '').match(/[?&]t=(\d{10,16})/)
-      return m ? parseInt(m[1], 10) : null
-    }
-    function raportTs(r: Record<string, unknown> | null): number | null {
-      const meta = r && r._meta as Record<string, unknown> | undefined
-      const at = meta && typeof meta.at === 'string' ? Date.parse(meta.at) : NaN
-      return Number.isFinite(at) ? at : null
-    }
-    const { data: artifacts, error: artErr } = await supabase
-      .from('spar_sessions')
-      .select(SESSION_COLS)
-      .eq('is_test', false)
-      .not('email', 'is', null)
-      .or('landing_url.not.is.null,market_report.not.is.null')
-      .limit(60)
-    if (artErr) console.error('[spar-followups] artifacts fetch error:', artErr)
-    for (const s of (artifacts || []) as SessionRow[]) {
-      if (s.landing_url && artifactReady(landingTs(s.landing_url))) {
-        if (await sendOnce('landing_ready', s)) continue // raport w kolejnym runie
-      }
-      if (s.market_report && artifactReady(raportTs(s.market_report))) {
-        await sendOnce('raport_ready', s)
-      }
-    }
+    // ── 1c) ARTEFAKTY GOTOWE (raport_ready / landing_ready) — WYŁĄCZONE ───
+    //   Od 2026-06-13 pielęgnację zielonych leadów przejął drip „sekwencja
+    //   odkrywania" (spar-drip): rynek/strona są generowane i ogłaszane mailem
+    //   (reveal_rynek / reveal_landing) dopiero przy odsłonie, z bramką
+    //   zaangażowania. Te followupy odpalały się na samo istnienie artefaktu —
+    //   po wprowadzeniu dripu DUBLOWAŁY reveale. Zostawione tu świadomie jako
+    //   ślad; nie przywracać bez wyłączenia odpowiednika w spar-drip.
 
     // ── 2) ABANDONED: email jest, brak domkniętego werdyktu (NULL lub żółty
     //        = rozmowa w toku), cisza 3–48 h ──────────────────────────────
@@ -356,24 +330,17 @@ Deno.serve(async (req) => {
       await sendOnce('abandoned_chat', s)
     }
 
-    // ── 3) ZIELONY WERDYKT BEZ WPŁATY: cisza 20–96 h ──────────────────────
-    const { data: noPay, error: npErr } = await supabase
-      .from('spar_sessions')
-      .select(SESSION_COLS)
-      .eq('is_test', false)
-      .eq('verdict', 'zielony')
-      .is('paid_at', null)
-      .not('email', 'is', null)
-      .gte('last_user_at', hoursAgo(96))
-      .lte('last_user_at', hoursAgo(20))
-      .limit(60)
-    if (npErr) console.error('[spar-followups] no-payment fetch error:', npErr)
-    for (const s of (noPay || []) as SessionRow[]) {
-      await sendOnce('verdict_no_payment', s)
-    }
+    // ── 3) ZIELONY WERDYKT BEZ WPŁATY (verdict_no_payment) — WYŁĄCZONE ────
+    //   Odpalało się 20–96 h po rozmowie, czyli wprost w czasie pierwszych
+    //   odsłon dripu (rynek +1 dz., economics +3 dz.) → dwójka maili w tym
+    //   samym oknie. Generyczny nudge zastąpiły bogatsze reveale dripu.
 
-    // ── 4) OSTATNI DZWONEK: zielony bez wpłaty, cisza 5–8 dni (drugi,
-    //        ostatni follow-up tego wątku — inny kąt: liczby z planu) ──────
+    // ── 4) OSTATNI DZWONEK (verdict_last_call): JEDYNY domykacz, który
+    //   zostaje — ale tylko dla ZIMNYCH leadów. Drip pauzuje niezaangażowanych
+    //   po 1. odsłonie; ten mail (cisza w rozmowie 5–8 dni + brak wizyt w
+    //   panelu) to ostatnia próba reaktywacji scarcity, by „przekonać
+    //   nieprzekonanych". Zaangażowanych (świeża wizyta w panelu) pomijamy —
+    //   ich obsługuje drip, nie dublujemy. ─────────────────────────────────
     const { data: lastCall, error: lcErr } = await supabase
       .from('spar_sessions')
       .select(SESSION_COLS)
@@ -385,7 +352,10 @@ Deno.serve(async (req) => {
       .lte('last_user_at', hoursAgo(120))
       .limit(60)
     if (lcErr) console.error('[spar-followups] last-call fetch error:', lcErr)
+    const PANEL_WARM_MS = 7 * 24 * 3600 * 1000
     for (const s of (lastCall || []) as SessionRow[]) {
+      // zaangażowany w panelu = drip go pielęgnuje, nie dublujemy domykaczem
+      if (s.last_panel_at && now - Date.parse(s.last_panel_at) < PANEL_WARM_MS) continue
       await sendOnce('verdict_last_call', s)
     }
 
