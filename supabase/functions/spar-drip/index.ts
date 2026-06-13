@@ -54,26 +54,24 @@ function panelLink(sid: string, campaign: string, hash = ''): string {
 function checkoutLink(leadId: string | null): string {
   return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=drip`
 }
-function btn(href: string, label: string, primary = true): string {
-  const bg = primary ? 'linear-gradient(135deg,#6db3ff,#4d9fff)' : '#101216'
-  const col = primary ? '#061320' : '#cfe0ff'
-  const bord = primary ? '' : 'border:1px solid #2b3a52;'
-  return `<table cellpadding="0" cellspacing="0" style="margin:14px 0 4px;"><tr><td style="border-radius:999px;background:${bg};${bord}">
-    <a href="${href}" style="display:inline-block;padding:13px 28px;color:${col};font-weight:700;font-size:15px;text-decoration:none;">${label}</a>
-  </td></tr></table>`
-}
-function emailWrap(inner: string, sid: string, leadId: string | null, viewHref: string, viewLabel: string): string {
-  // Każdy mail: treść + akcja „zobacz" + CTA rezerwacji 500 zł (start budowy).
-  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a1a1a;max-width:560px;">
-    ${inner}
-    ${btn(viewHref, viewLabel, true)}
-    <div style="margin-top:26px;padding-top:18px;border-top:1px solid #e6e9ef;font-size:14px;color:#3a3a3a;">
-      <p style="margin:0 0 4px;">Chcesz, żebyśmy ruszyli z tym razem i żebym <strong>zbudował ten biznes</strong> z Tobą?</p>
-      <p style="margin:0;color:#555;">Zaczynamy od rezerwacji wspólnej rozmowy — 500 zł, <strong>w pełni zwrotne</strong>. Przygotowuję wtedy osobiście plan przedsięwzięcia i odzywam się do Ciebie.</p>
-      ${btn(checkoutLink(leadId), 'Zarezerwuję rozmowę → 500 zł', false)}
-    </div>
-    <p style="margin-top:24px;color:#888;font-size:13px;">— Tomek</p>
-  </div>`
+// Model do personalizacji treści maili (tani gpt-5.1; ~kilka groszy/mail).
+const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
+const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+
+function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
+
+// Body od GPT (zwykły tekst) -> minimalny HTML „jak pisany w skrzynce".
+// Linki TYLKO przez tokeny [tekst](LINK_VIEW)/[tekst](LINK_RESERVE) — żadnych
+// wymyślonych adresów, żadnych buttonów. Podpis dokleja send-email.
+function mdToHtml(body: string, viewUrl: string, reserveUrl: string | null): string {
+  let t = escHtml(body || '')
+  t = t.replace(/\[([^\]]+)\]\(LINK_VIEW\)/g, (_m, l) => `<a href="${viewUrl}" style="color:#2563eb;">${l}</a>`)
+  t = t.replace(/\[([^\]]+)\]\(LINK_RESERVE\)/g, (_m, l) => reserveUrl ? `<a href="${reserveUrl}" style="color:#2563eb;">${l}</a>` : String(l))
+  t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1') // resztki markdown -> sam tekst
+  if (t.indexOf(viewUrl) < 0) t += `\n\nZobacz tutaj: <a href="${viewUrl}" style="color:#2563eb;">${viewUrl}</a>`
+  const paras = t.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+  const inner = paras.map((p) => `<p style="margin:0 0 14px;">${p.replace(/\n/g, '<br>')}</p>`).join('')
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${inner}</div>`
 }
 
 // deno-lint-ignore no-explicit-any
@@ -115,69 +113,111 @@ async function triggerGeneration(key: string, sid: string, serviceKey: string): 
   } catch (e) { console.error('[spar-drip] trigger', key, 'error:', e instanceof Error ? e.message : String(e)) }
 }
 
-// Treść reveal-maila per artefakt
+// Adres podglądu artefaktu (link „zobacz" w mailu)
 // deno-lint-ignore no-explicit-any
-async function buildReveal(supabase: ReturnType<typeof createClient>, key: string, s: any): Promise<{ subject: string; html: string }> {
-  const hi = firstName(s) ? `Cześć ${firstName(s)}!` : 'Cześć!'
-  const nazwa = toolName(s)
-  const lead = s.lead_id || null
-  if (key === 'prototyp') {
-    const url = (await prototypeUrl(supabase, s.id)) || panelLink(s.id, 'reveal_prototyp', '#projekt-prototyp')
-    return {
-      subject: `${nazwa} — na koniec zostawiłem najlepsze: dotknij swojej aplikacji`,
-      html: emailWrap(`<p>${hi}</p>
-        <p>Przeszliśmy przez rynek, liczby, stronę i plan sprzedaży. Na koniec zostawiłem to, co robi największe wrażenie: <strong>klikalny prototyp</strong> Twojego narzędzia <strong>${nazwa}</strong>.</p>
-        <p>To nie obrazek ani makieta, tylko działająca aplikacja — wejdź, kliknij, wpisz coś i zobacz, jak reaguje. Tak będzie wyglądać i działać Twój produkt.</p>`,
-        s.id, lead, url, 'Dotknij swojej aplikacji →'),
-    }
-  }
+async function revealView(supabase: ReturnType<typeof createClient>, s: any, key: string): Promise<string> {
+  if (key === 'prototyp') return (await prototypeUrl(supabase, s.id)) || panelLink(s.id, 'reveal_prototyp', '#projekt-prototyp')
+  if (key === 'landing') return (s.landing_url as string) || panelLink(s.id, 'reveal_landing', '#projekt-strona')
+  if (key === 'rynek') return panelLink(s.id, 'reveal_rynek', '#rynek')
+  if (key === 'economics') return panelLink(s.id, 'reveal_economics', '#projekt-economics')
+  return panelLink(s.id, 'reveal_gtm', '#projekt-gtm')
+}
+
+// Cel maila + prawdziwe dane z tego etapu (do promptu GPT i fallbacku)
+// deno-lint-ignore no-explicit-any
+function revealBrief(s: any, key: string): { goal: string; facts: string } {
+  const r = s.market_report || {}, p = s.business_plan || {}, e = s.economics || {}, g = s.gtm || {}
   if (key === 'rynek') {
-    const r = s.market_report || {}
-    const teza = typeof r.teza === 'string' ? r.teza : ''
     const oc = typeof r.ocena_potencjalu === 'string' ? r.ocena_potencjalu : ''
-    return {
-      subject: `${nazwa}: sprawdziłem Twój rynek (realny research)`,
-      html: emailWrap(`<p>${hi}</p>
-        <p>Sprawdziłem rynek wokół <strong>${nazwa}</strong> — w internecie, nie „z głowy": konkurenci z cenami, wielkość niszy, trendy, wszystko z podlinkowanymi źródłami.${oc ? ` Ocena potencjału: <strong>${oc}</strong>.` : ''}</p>
-        ${teza ? `<p style="border-left:3px solid #4d9fff;padding:2px 0 2px 14px;color:#444;">${teza}</p>` : ''}`,
-        s.id, lead, panelLink(s.id, 'reveal_rynek', '#rynek'), 'Zobacz raport rynku →'),
-    }
+    const nk = Array.isArray(r.konkurenci) ? r.konkurenci.length : 0
+    return { goal: 'Ogłaszasz, że zrobiłeś realny research rynku (w internecie, nie „z głowy"): konkurenci z cenami, wielkość niszy, trendy, z podlinkowanymi źródłami. Zachęć, żeby otworzył raport.', facts: [oc && `ocena potencjału: ${oc}`, nk && `${nk} konkurentów z cenami`, typeof r.teza === 'string' && r.teza && `Twoja teza po researchu: ${r.teza}`].filter(Boolean).join('; ') }
   }
   if (key === 'economics') {
-    const p = s.business_plan || {}
-    const cena = typeof p.cena === 'number' ? `${p.cena} ${typeof p.cena_jednostka === 'string' ? p.cena_jednostka : 'zł/mies.'}` : ''
-    return {
-      subject: `${nazwa}: czy to się spina finansowo? Policzyłem`,
-      html: emailWrap(`<p>${hi}</p>
-        <p>Najważniejsze pytanie przy każdym biznesie: <strong>czy to się spina</strong>. Policzyłem model cenowy${cena ? ` (cena ${cena})` : ''}, koszt pozyskania klienta, wartość klienta i moment, w którym zwraca się budowa.</p>
-        <p>W panelu możesz pokręcić suwakami i zobaczyć, jak liczby zmieniają się przy Twoich założeniach — łącznie z drogą do 50 klientów.</p>`,
-        s.id, lead, panelLink(s.id, 'reveal_economics', '#projekt-economics'), 'Sprawdź, czy to się spina →'),
-    }
+    const cena = typeof p.cena === 'number' ? `${p.cena} ${p.cena_jednostka || 'zł/mies.'}` : ''
+    const cac = e.wejscia && typeof e.wejscia.cac === 'number' ? `CAC ~${e.wejscia.cac} zł` : ''
+    return { goal: 'Ogłaszasz, że policzyłeś, czy to się spina: model cenowy, koszt pozyskania klienta, wartość klienta, moment zwrotu budowy i droga do 50 klientów. W panelu są suwaki do pokręcenia.', facts: [cena && `cena: ${cena}`, cac].filter(Boolean).join('; ') }
   }
-  if (key === 'landing') {
-    const url = s.landing_url || panelLink(s.id, 'reveal_landing', '#projekt-strona')
-    return {
-      subject: `${nazwa} ma już stronę sprzedażową — zobacz`,
-      html: emailWrap(`<p>${hi}</p>
-        <p>Zbudowała się <strong>działająca strona sprzedażowa</strong> Twojego narzędzia <strong>${nazwa}</strong>. To prawdziwa strona w przeglądarce, nie grafika — otwórz, przewiń, pokaż znajomym z branży.</p>`,
-        s.id, lead, url, 'Otwieram stronę →'),
-    }
+  if (key === 'landing') return { goal: 'Ogłaszasz, że zbudowała się DZIAŁAJĄCA strona sprzedażowa jego narzędzia — prawdziwa strona w przeglądarce, nie grafika. Można ją otworzyć, przewinąć, pokazać znajomym z branży.', facts: '' }
+  if (key === 'prototyp') return { goal: 'To FINAŁ sekwencji i najmocniejszy element. Ogłaszasz KLIKALNY, działający prototyp jego narzędzia — nie obrazek, działająca apka (można kliknąć, wpisać, zobaczyć jak reaguje). Nawiąż delikatnie, że przeszliście już przez rynek, liczby, stronę i plan sprzedaży, a to zostawiłeś na koniec. To dobry moment, by delikatnie zaprosić do rezerwacji wspólnej rozmowy. Niech wejdzie i kliknie.', facts: '' }
+  const nk = g.playbook && Array.isArray(g.playbook.kanaly) ? g.playbook.kanaly.length : 0
+  const nr = g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.length : 0
+  return { goal: 'Ogłaszasz konkretny plan zdobycia pierwszych klientów: gdzie oni są (kanały), gotowe skrypty i odpowiedzi na obiekcje, oraz gotowe reklamy z kreacjami.', facts: [nk && `${nk} kanałów`, nr && `${nr} gotowych reklam`].filter(Boolean).join('; ') }
+}
+
+// Statyczny fallback (plain, „z palca") — gdy GPT niedostępny + do galerii szablonów.
+// deno-lint-ignore no-explicit-any
+function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string | null): { subject: string; html: string } {
+  const im = firstName(s) ? ` ${firstName(s)}` : ''
+  const n = toolName(s)
+  const M: Record<string, { subject: string; body: string }> = {
+    rynek: { subject: `${n}: sprawdziłem Twój rynek`, body: `Cześć${im}!\n\nSprawdziłem rynek wokół ${n} — naprawdę, w internecie, nie „z głowy": konkurenci z cenami, wielkość niszy, trendy, wszystko z linkami do źródeł.\n\nMożesz zobaczyć cały raport [tutaj](LINK_VIEW). Ciekaw jestem, co o nim powiesz.` },
+    economics: { subject: `${n}: czy to się spina?`, body: `Cześć${im}!\n\nPoliczyłem najważniejszą rzecz przy każdym biznesie — czy ${n} się spina: cena, koszt pozyskania klienta, ile klient jest wart i kiedy zwraca się budowa.\n\nW panelu możesz [pokręcić suwakami](LINK_VIEW) i zobaczyć, jak liczby zmieniają się przy Twoich założeniach.` },
+    landing: { subject: `${n} ma już stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona sprzedażowa ${n} — to prawdziwa strona w przeglądarce, nie grafika.\n\n[Otwórz ją tutaj](LINK_VIEW), przewiń, możesz nawet pokazać komuś z branży i zapytać, co myśli.` },
+    gtm: { subject: `${n}: skąd wziąć pierwszych klientów`, body: `Cześć${im}!\n\nPrzygotowałem konkretny plan zdobycia pierwszych klientów dla ${n}: gdzie oni są, gotowe skrypty, odpowiedzi na obiekcje i gotowe reklamy z kreacjami.\n\nWszystko jest [tutaj](LINK_VIEW).` },
+    prototyp: { subject: `${n} — dotknij swojej aplikacji`, body: `Cześć${im}!\n\nPrzeszliśmy przez rynek, liczby, stronę i plan sprzedaży — a na koniec zostawiłem to, co robi największe wrażenie.\n\nZbudowałem klikalny prototyp ${n}. To nie obrazek — działająca apka: [wejdź, kliknij, wpisz coś](LINK_VIEW) i zobacz, jak reaguje. Tak będzie wyglądać Twój produkt.` },
   }
-  // gtm
-  const g = s.gtm || {}
-  const nKan = g.playbook && Array.isArray(g.playbook.kanaly) ? g.playbook.kanaly.length : 0
-  const nRek = g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.length : 0
-  const banner = (() => {
-    const r = g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.find((x: Record<string, unknown>) => typeof x?.banner_url === 'string' && x.banner_url) : null
-    return r ? (r.banner_url as string) : null
-  })()
-  return {
-    subject: `${nazwa}: gdzie znaleźć pierwszych klientów (+ gotowe reklamy)`,
-    html: emailWrap(`<p>${hi}</p>
-      <p>Przygotowałem konkretny plan zdobycia pierwszych klientów dla <strong>${nazwa}</strong>: ${nKan ? `${nKan} miejsc, gdzie już są (z pierwszym ruchem), ` : ''}gotowe skrypty, obiekcje z odpowiedziami${nRek ? ` i <strong>${nRek} gotowe reklamy</strong> — z copy i kreacjami` : ''}.</p>
-      ${banner ? `<p><img src="${banner}" alt="Przykładowa kreacja reklamy" style="width:100%;max-width:420px;border-radius:12px;border:1px solid #e6e9ef;"></p>` : ''}`,
-    s.id, lead, panelLink(s.id, 'reveal_gtm', '#projekt-gtm'), 'Zobacz plan sprzedaży →'),
+  const m = M[key] || M.rynek
+  return { subject: m.subject, html: mdToHtml(m.body, viewUrl, reserveUrl) }
+}
+
+// GPT-personalizowany mail (zwraca null przy błędzie -> fallback statyczny)
+// deno-lint-ignore no-explicit-any
+async function generateRevealEmail(s: any, key: string, viewUrl: string, reserveUrl: string | null): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey) return null
+  const brief = revealBrief(s, key)
+  const b = s.preview_brief || {}
+  const karta = (s.problem_summary || {}) as Record<string, unknown>
+  const ctx = [
+    `Narzędzie: ${toolName(s)}`,
+    typeof b.opis === 'string' && b.opis && `Opis: ${b.opis}`,
+    typeof b.dla_kogo === 'string' && b.dla_kogo && `Dla kogo: ${b.dla_kogo}`,
+    typeof karta.problem === 'string' && karta.problem && `Problem, który rozwiązuje: ${karta.problem}`,
+    brief.facts && `Dane z tego etapu: ${brief.facts}`,
+    firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
+  ].filter(Boolean).join('\n')
+  const SYSTEM = `Jesteś Tomkiem Niedźwieckim. Piszesz krótkiego, OSOBISTEGO maila do osoby, która zaprojektowała z Twoim AI pomysł na własne narzędzie (SaaS). Ma wyglądać, jakbyś napisał go z palca w skrzynce — nie marketing.
+ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (3–5 krótkich akapitów). Bez korpomowy, bez emoji, bez clickbaitu, bez przesadnych obietnic — Twój styl jest brutalnie szczery, system ważniejszy niż magia. Odnieś się KONKRETNIE do JEGO pomysłu: użyj nazwy narzędzia i 1–2 prawdziwych szczegółów z kontekstu (problem, dla kogo, liczba, ocena). Ma być czuć, że piszesz o TYM pomyśle. NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
+LINKI: wstaw dokładnie JEDEN link do podglądu jako [naturalny tekst](LINK_VIEW), wpleciony w zdanie. Opcjonalnie, DELIKATNIE i max raz, możesz wspomnieć o rezerwacji wspólnej rozmowy (500 zł, w pełni zwrotne, rozpoczyna pracę) jako [tekst](LINK_RESERVE) — tylko jeśli naturalnie pasuje. Nie wymyślaj żadnych innych adresów.
+Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, budzi ciekawość, bez wielkich liter i wykrzykników, najlepiej nawiązuje do jego pomysłu. body: sam tekst maila z \\n między akapitami.`
+  const user = `KONTEKST POMYSŁU:\n${ctx}\n\nCEL TEGO MAILA: ${brief.goal}`
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 1200, reasoning_effort: 'low' }),
+    })
+    if (!res.ok) { console.error('[spar-drip] email openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return null }
+    const data = await res.json()
+    const u = data?.usage || {}
+    const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
+    const obj = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const subject = typeof obj.subject === 'string' && obj.subject.trim() ? obj.subject.trim() : null
+    const body = typeof obj.body === 'string' && obj.body.trim() ? obj.body.trim() : null
+    if (!subject || !body) return null
+    return { subject, html: mdToHtml(body, viewUrl, reserveUrl), usage }
+  } catch (e) { console.error('[spar-drip] email gen error:', e instanceof Error ? e.message : String(e)); return null }
+}
+
+// Mail reveala: cache w spar_reveals.meta.email -> GPT (raz) -> fallback statyczny.
+// Dzięki cache podgląd == wysyłka i koszt GPT pada tylko raz na odsłonę.
+// deno-lint-ignore no-explicit-any
+async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal: any, s: any): Promise<{ subject: string; html: string }> {
+  const cached = reveal && reveal.meta && reveal.meta.email
+  if (cached && typeof cached.subject === 'string' && typeof cached.html === 'string') return { subject: cached.subject, html: cached.html }
+  const key = reveal.key
+  const viewUrl = await revealView(supabase, s, key)
+  const reserveUrl = s.email ? checkoutLink(s.lead_id || null) : null
+  let email: { subject: string; html: string }
+  let model: string | null = null
+  const gen = await generateRevealEmail(s, key, viewUrl, reserveUrl)
+  if (gen) {
+    email = { subject: gen.subject, html: gen.html }; model = OPENAI_MODEL
+    if (gen.usage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'reveal_email', key } }) } catch (uErr) { console.error('[spar-drip] email usage insert:', uErr) } }
+  } else {
+    email = staticReveal(s, key, viewUrl, reserveUrl)
   }
+  try { if (reveal.id) await supabase.from('spar_reveals').update({ meta: { ...(reveal.meta || {}), email: { subject: email.subject, html: email.html, model, at: new Date().toISOString() } }, updated_at: new Date().toISOString() }).eq('id', reveal.id) } catch (cErr) { console.error('[spar-drip] email cache:', cErr) }
+  return email
 }
 
 // Przykładowa sesja do PODGLĄDU szablonów (bez realnego leada) — id-zero, więc
@@ -195,7 +235,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, created_at, is_test'
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
@@ -223,13 +263,14 @@ async function seedReveals(supabase: ReturnType<typeof createClient>, sid: strin
 
 // Wyślij reveal-mail (idempotentnie przez spar_emails). Zwraca true gdy poszedł.
 // deno-lint-ignore no-explicit-any
-async function sendReveal(supabase: ReturnType<typeof createClient>, SUPABASE_URL: string, SERVICE_KEY: string, emailKind: string, s: any): Promise<boolean> {
+async function sendReveal(supabase: ReturnType<typeof createClient>, SUPABASE_URL: string, SERVICE_KEY: string, reveal: any, s: any): Promise<boolean> {
   if (!s.email) return false
+  const emailKind = reveal.email_kind
   const { data: claim, error: claimErr } = await supabase.from('spar_emails')
     .upsert([{ session_id: s.id, kind: emailKind, email: s.email }], { onConflict: 'session_id,kind', ignoreDuplicates: true }).select('id')
   if (claimErr) { console.error('[spar-drip] claim error:', claimErr); return false }
   if (!claim || !claim.length) return true // już wysłany
-  const { subject, html } = await buildReveal(supabase, emailKind.replace('reveal_', ''), s)
+  const { subject, html } = await getRevealEmail(supabase, reveal, s)
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
@@ -256,7 +297,7 @@ async function processReveal(supabase: ReturnType<typeof createClient>, SUPABASE
     return 'generating'
   }
   if (!reveal.generated_at) await supabase.from('spar_reveals').update({ generated_at: new Date().toISOString() }).eq('id', reveal.id)
-  const ok = await sendReveal(supabase, SUPABASE_URL, SERVICE_KEY, reveal.email_kind, s)
+  const ok = await sendReveal(supabase, SUPABASE_URL, SERVICE_KEY, reveal, s)
   if (ok) { await supabase.from('spar_reveals').update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', reveal.id); return 'sent' }
   return 'ready'
 }
@@ -319,22 +360,25 @@ Deno.serve(async (req) => {
       // upewnij się, że artefakt istnieje (generuj jeśli brak) — żeby podgląd miał treść
       const ready = await artifactReady(supabase, target.key, s)
       if (!ready) { await triggerGeneration(target.key, sid, SERVICE_KEY); await supabase.from('spar_reveals').update({ status: 'generating', updated_at: new Date().toISOString() }).eq('id', target.id); return jsonResponse({ ok: true, key: target.key, result: 'generating', info: 'artefakt w generacji — ponów za chwilę' }, 200) }
-      const { subject, html } = await buildReveal(supabase, target.email_kind.replace('reveal_', ''), s)
       if (body.send) {
         const result = await processReveal(supabase, SUPABASE_URL, SERVICE_KEY, s, target)
-        return jsonResponse({ ok: true, key: target.key, result, sent: result === 'sent', subject }, 200)
+        return jsonResponse({ ok: true, key: target.key, result, sent: result === 'sent' }, 200)
       }
-      // podgląd bez wysyłki
+      // podgląd bez wysyłki — ten sam mail, który pójdzie (cache w meta)
+      const { subject, html } = await getRevealEmail(supabase, target, s)
       return jsonResponse({ ok: true, key: target.key, result: 'preview', preview: { subject, html, to: s.email } }, 200)
     }
 
     // ── action: templates (ADMIN — galeria szablonów reveali, dane przykładowe) ──
     if (body.action === 'templates') {
       if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      // Galeria pokazuje STYL/strukturę (statyczny szablon, bez kosztu GPT).
+      // Realne maile per lead są personalizowane przez GPT (podgląd w karcie leada).
       const sample = sampleSession()
       const out: { group: string; kind: string; key: string; seq: number; subject: string; html: string }[] = []
       for (const r of REVEAL_PLAN) {
-        const { subject, html } = await buildReveal(supabase, r.key, sample)
+        const viewUrl = await revealView(supabase, sample, r.key)
+        const { subject, html } = staticReveal(sample, r.key, viewUrl, checkoutLink(null))
         out.push({ group: 'drip', kind: r.emailKind, key: r.key, seq: r.seq, subject, html })
       }
       return jsonResponse({ templates: out }, 200)
