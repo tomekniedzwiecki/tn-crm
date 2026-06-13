@@ -730,6 +730,43 @@ function cleanMsg(content) {
   return esc(out).replace(/\n/g, '<br>') + badge;
 }
 
+// Karta „Artefakty projektu" w modalu — daje adminowi BEZPOŚREDNI podgląd
+// wszystkiego, co zbudowaliśmy (landing, prototyp, reklamy + skróty raportu/
+// economics/gtm/planu), z pominięciem bramkowania, które ukrywa to przed klientem.
+function artefaktyHTML(s, art, protoUrl) {
+  art = art || {};
+  const land = art.landing_url || s.landing_url || null;
+  const rap = (art.market_report && typeof art.market_report === 'object') ? art.market_report : null;
+  const eco = (art.economics && typeof art.economics === 'object') ? art.economics : null;
+  const gtm = (art.gtm && typeof art.gtm === 'object') ? art.gtm : null;
+  const plan = (art.business_plan && typeof art.business_plan === 'object') ? art.business_plan : null;
+  const banners = (gtm && gtm.pakiet && Array.isArray(gtm.pakiet.reklamy)) ? gtm.pakiet.reklamy.filter((r) => r && r.banner_url).map((r) => r.banner_url) : [];
+  if (!(land || protoUrl || rap || eco || gtm || plan)) return '';
+  const zl = (n) => Math.round(n).toLocaleString('pl-PL');
+  const openRow = (icon, tone, label, url, sub) => `<a href="${esc(url)}" target="_blank" rel="noopener" class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 hover:border-blue-500/40 transition group">
+      <i class="ph ${icon} ${tone}"></i><span class="flex-1 min-w-0"><span class="block text-xs text-white">${label}</span><span class="block text-[10px] text-zinc-500 truncate">${esc(sub)}</span></span>
+      <i class="ph ph-arrow-square-out text-zinc-500 group-hover:text-white"></i></a>`;
+  const infoRow = (icon, tone, label, sub) => `<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
+      <i class="ph ${icon} ${tone}"></i><span class="flex-1 min-w-0"><span class="block text-xs text-white">${label}</span><span class="block text-[10px] text-zinc-500 truncate">${esc(sub)}</span></span>
+      <i class="ph ph-check-circle text-emerald-500/70"></i></div>`;
+  let rows = '';
+  if (protoUrl) rows += openRow('ph-cursor-click', 'text-violet-400', 'Klikalny prototyp', protoUrl, 'działająca apka — otwórz ↗');
+  if (land) rows += openRow('ph-globe', 'text-blue-400', 'Strona sprzedażowa', land, String(land).replace(/^https?:\/\//, ''));
+  if (rap) { const oc = typeof rap.ocena_potencjalu === 'string' ? rap.ocena_potencjalu : ''; const nk = Array.isArray(rap.konkurenci) ? rap.konkurenci.length : 0; rows += infoRow('ph-chart-line-up', 'text-sky-400', 'Raport rynku', [oc && ('ocena: ' + oc), nk && (nk + ' konkurentów')].filter(Boolean).join(' · ') || 'gotowy'); }
+  if (eco) { const w = eco.wejscia || {}; const cb = typeof w.cena_bazowa === 'number' ? ('cena ' + zl(w.cena_bazowa) + ' zł/mies.') : ''; const cac = typeof w.cac === 'number' ? ('CAC ' + zl(w.cac) + ' zł') : ''; rows += infoRow('ph-calculator', 'text-emerald-400', 'Unit economics — czy się spina', [cb, cac].filter(Boolean).join(' · ') || 'policzone'); }
+  if (gtm) { const nk = gtm.playbook && Array.isArray(gtm.playbook.kanaly) ? gtm.playbook.kanaly.length : 0; const nr = gtm.pakiet && Array.isArray(gtm.pakiet.reklamy) ? gtm.pakiet.reklamy.length : 0; rows += infoRow('ph-megaphone', 'text-amber-400', 'Sprzedaż + reklamy', [nk && (nk + ' kanałów'), nr && (nr + ' reklam')].filter(Boolean).join(' · ') || 'gotowe'); }
+  if (plan) { const km = Array.isArray(plan.kamienie) && plan.kamienie.length ? plan.kamienie[plan.kamienie.length - 1] : null; const sub = km && typeof km.mies === 'number' ? ('cel: ' + zl(km.mies) + ' zł/mies. przy ' + (km.klienci || '?') + ' klientach') : 'policzony'; rows += infoRow('ph-chart-bar', 'text-blue-400', 'Plan przychodu', sub); }
+  const bannerHtml = banners.length ? `<div class="mt-2.5"><div class="text-[10px] text-zinc-600 mb-1.5">Kreacje reklam (${banners.length}) — kliknij, by powiększyć</div>
+      <div class="grid grid-cols-3 gap-2">${banners.slice(0, 6).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener" class="block rounded-lg overflow-hidden border border-white/10 hover:border-amber-400/50 transition"><img src="${esc(u)}" loading="lazy" class="aspect-square object-cover w-full bg-zinc-800"></a>`).join('')}</div></div>` : '';
+  return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+    <div class="flex items-center justify-between mb-2.5">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-package mr-1 text-blue-400"></i>Artefakty projektu</div>
+      <a href="${SPARING_URL}?projekt=${s.id}" target="_blank" rel="noopener" class="text-[11px] text-zinc-400 hover:text-white">wizytówka ↗</a>
+    </div>
+    <div class="space-y-1.5">${rows}</div>${bannerHtml}
+  </div>`;
+}
+
 async function openSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
@@ -740,11 +777,14 @@ async function openSession(id) {
   $('m-chat').innerHTML = '<div class="text-zinc-500 text-sm">Wczytuję transkrypt…</div>';
   $('m-side').innerHTML = '';
 
-  const [{ data: msgs }, { data: usage }, { data: emails }] = await Promise.all([
+  const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }] = await Promise.all([
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at').eq('session_id', id),
+    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm').eq('id', id).maybeSingle(),
+    supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
   ]);
+  const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
 
   $('m-chat').innerHTML = (msgs || []).map((m) => `
     <div class="border rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'msg-user ml-8' : 'msg-ai mr-8'}">
@@ -795,6 +835,7 @@ async function openSession(id) {
         </div>
       </div>`;
     })()}
+    ${artefaktyHTML(s, art, protoUrl)}
     ${imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
       <div class="grid grid-cols-2 gap-2">${imgKeys.map((k) => `
@@ -1344,6 +1385,8 @@ function seedDemo() {
   window.__MOCK = {
     spar_reveals: mockReveals,
     spar_emails: revealMails,
+    spar_sessions: [{ landing_url: 'https://coachkeep.pl', business_plan: { kamienie: [{ mies: 18000, klienci: 50 }] }, market_report: { ocena_potencjalu: 'umiarkowany', konkurenci: [1, 2, 3] }, economics: { wejscia: { cena_bazowa: 149, cac: 90 } }, gtm: { playbook: { kanaly: [1, 2, 3, 4] }, pakiet: { reklamy: [{ banner_url: 'https://placehold.co/300x300/1e293b/93c5fd?text=Reklama+1' }, { banner_url: 'https://placehold.co/300x300/1e293b/86efac?text=Reklama+2' }, { banner_url: 'https://placehold.co/300x300/1e293b/fcd34d?text=Reklama+3' }] } } }],
+    spar_usage: [{ kind: 'prototype', cost_usd: 1.11, meta: { url: 'https://tomekniedzwiecki.pl/aplikacja/podglad/?sid=demo&k=prototyp' } }],
     'rpc:spar_costs_daily': (() => { const out = []; for (let i = 13; i >= 0; i--) { const d = new Date(now - i * day).toISOString().slice(0, 10); ['chat', 'image', 'plan', 'prototype'].forEach((k) => out.push({ day: d, kind: k, cost_usd: Math.round((Math.sin(i) + 1.5) * (k === 'image' ? 0.6 : 0.25) * 100) / 100 })); } return out; })(),
   };
   window.__MOCK_DRIP = {
