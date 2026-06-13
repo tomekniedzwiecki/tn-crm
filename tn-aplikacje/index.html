@@ -872,14 +872,6 @@ function mailBadge(kind) {
   const k = mailKind(kind);
   return `<span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] font-medium ${k.tone}"><i class="ph ${k.icon}"></i>${esc(k.label)}</span>`;
 }
-// Kolejka artefaktów: gotowe (strona/raport), mail jeszcze nie wyszedł.
-// Odbicie logiki spar-followups: ≥15 min od budowy, max 7 dni, nie-testowe.
-function mailQueue() {
-  // Maile o artefaktach (raport/strona) przejął drip „sekwencja odkrywania" —
-  // ich kolejkę i statusy widać w zakładce »Sekwencja«. Tu nic nie przewidujemy,
-  // żeby nie pokazywać wysyłek, które już nie wychodzą z tego systemu.
-  return [];
-}
 function renderMaile() {
   // KPI per rodzaj (30 dni) — dynamicznie ze wszystkich kindów w danych
   const d30 = Date.now() - 30 * 864e5;
@@ -1001,7 +993,7 @@ async function renderSekwencja() {
       <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(m.email || '—')}</td>
       <td class="px-4 py-2.5 text-center">${yesNo(m.opened_at)}</td>
       <td class="px-4 py-2.5 text-center">${yesNo(m.clicked_at)}</td>
-      <td class="px-4 py-2.5 text-right"><button onclick="event.stopPropagation();selectSekwProject('${m.session_id}')" class="text-xs text-blue-400 hover:text-blue-300">oś czasu →</button></td>
+      <td class="px-4 py-2.5 text-right"><button onclick="event.stopPropagation();openSession('${m.session_id}')" class="text-xs text-blue-400 hover:text-blue-300">oś czasu →</button></td>
     </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">Jeszcze nic nie wysłano w sekwencji.</td></tr>';
 
   // ZAPLANOWANE / W TOKU
@@ -1012,7 +1004,7 @@ async function renderSekwencja() {
   $('sekw-queue-rows').innerHTML = queue.length ? queue.map((r) => {
     const due = new Date(r.due_at).getTime();
     const when = r.status === 'paused' ? 'wstrzymane' : (due <= now ? '<span class="text-amber-400">gotowe do wysyłki</span>' : untilStr(due));
-    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="selectSekwProject('${r.session_id}')">
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="openSession('${r.session_id}')">
       <td class="px-4 py-2.5 text-xs whitespace-nowrap"><div class="text-zinc-300">${fmtDate(r.due_at)}</div><div class="text-[10px] text-zinc-600">${when}</div></td>
       <td class="px-4 py-2.5">${revChip(r.key)}</td>
       <td class="px-4 py-2.5 text-white text-xs">${esc(sessLabel(r.sess))}</td>
@@ -1022,9 +1014,6 @@ async function renderSekwencja() {
     </tr>`;
   }).join('') : '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak zaplanowanych odsłon — pojawią się po zielonych werdyktach.</td></tr>';
 }
-
-// Wejście z tabel Komunikacji → otwiera kartę leada (oś czasu + testy w modalu)
-function selectSekwProject(sid) { openSession(sid); }
 
 // Oś czasu odsłon + testy — renderowane do wskazanego kontenera (karta leada)
 async function renderProjectDetail(sid, targetId) {
