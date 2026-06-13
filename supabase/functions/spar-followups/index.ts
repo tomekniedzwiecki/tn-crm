@@ -28,10 +28,15 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
 const MAX_PER_RUN = 30
 
+const CORS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret, x-cron-secret',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { 'Content-Type': 'application/json' },
+    headers: { ...CORS, 'Content-Type': 'application/json' },
   })
 }
 
@@ -181,6 +186,7 @@ function buildEmail(kind: string, s: SessionRow): { subject: string; html: strin
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') {
     return jsonResponse({ error: 'metoda_niedozwolona' }, 405)
   }

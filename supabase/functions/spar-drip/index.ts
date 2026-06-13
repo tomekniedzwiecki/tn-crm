@@ -37,8 +37,13 @@ const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[
 const ENGAGE_WINDOW_DAYS = 10   // aktywność w panelu/rozmowie w tym oknie = zaangażowany
 const MAX_FIRES_PER_RUN = 12
 
+const CORS: Record<string, string> = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret, x-cron-secret',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+}
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
 function warsawHour(): number {
   return parseInt(new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date()), 10)
@@ -257,6 +262,7 @@ async function processReveal(supabase: ReturnType<typeof createClient>, SUPABASE
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return jsonResponse({ error: 'metoda_niedozwolona' }, 405)
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL'); const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')

@@ -311,29 +311,16 @@
       <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min (abandoned 3–48 h, werdykt bez wpłaty 20–96 h, wpłata → welcome + lead „won").</p>
     </div>
   </section>
-</main>
 
-<!-- ════════ MODAL SZCZEGÓŁU SESJI ════════ -->
-<div id="modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto">
-  <div class="min-h-full flex items-center justify-center p-4 md:p-6" onclick="if(event.target===this)closeModal()">
-  <div class="w-full max-w-5xl bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
-    <div class="flex items-center justify-between px-6 py-4 border-b border-white/5 sticky top-0 bg-zinc-950/95 backdrop-blur z-10">
-      <div>
-        <h2 class="text-white font-semibold" id="m-title">Sesja</h2>
-        <p class="text-xs text-zinc-500" id="m-sub"></p>
-      </div>
-      <div class="flex items-center gap-2">
-        <a id="m-open" href="#" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz wizytówkę</a>
-        <button onclick="closeModal()" aria-label="Zamknij" class="w-8 h-8 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-x"></i></button>
-      </div>
+  <!-- ════════ KARTA LEADA (pełnoekranowy widok z zakładkami) ════════ -->
+  <section id="view-lead" class="hidden">
+    <div class="sticky top-14 z-20 px-4 md:px-6 pt-4 pb-0 border-b border-white/5" style="background: rgba(5,5,5,0.92); backdrop-filter: blur(12px);">
+      <div id="lead-head"></div>
+      <div id="lead-tabs" class="flex items-center gap-1 mt-3 -mb-px overflow-x-auto no-scrollbar"></div>
     </div>
-    <div class="grid lg:grid-cols-5 gap-0">
-      <div class="lg:col-span-3 border-r border-white/5 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-2.5" id="m-chat"></div>
-      <div class="lg:col-span-2 lg:max-h-[min(70vh,calc(100vh-180px))] overflow-y-auto p-5 space-y-4" id="m-side"></div>
-    </div>
-  </div>
-  </div>
-</div>
+    <div id="lead-body" class="p-4 md:p-6"></div>
+  </section>
+</main>
 
 <!-- ════════ MODAL PODGLĄDU MAILA (reveal) ════════ -->
 <div id="mailmodal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm overflow-y-auto">
@@ -668,12 +655,6 @@ function renderSesje() {
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
 const VIEW_LABELS = { panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa', landing: 'Landing', podsumowanie: 'Pigułka' };
 const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan', raport: 'raport rynku', landing: 'strona', prototype: 'panel (prototyp)', economics: 'unit economics', gtm: 'go-to-market' };
-const EMAIL_LABELS = {
-  abandoned_chat: 'Porzucona rozmowa',
-  verdict_no_payment: 'Werdykt bez wpłaty',
-  verdict_last_call: 'Ostatnie przypomnienie',
-  paid_welcome: 'Powitanie po wpłacie',
-};
 const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
 function renderGenerowania() {
   const imgs = [];
@@ -792,117 +773,194 @@ function artefaktyHTML(s, art, protoUrl) {
   </div>`;
 }
 
+// ── KARTA LEADA (pełnoekranowy widok z zakładkami) ──
+let leadData = null;        // {s, msgs, usage, emails, art, protoUrl, totalUsd}
+let leadTab = 'przeglad';
+let prevTab = 'leady';
+let leadLoadingId = null;
+const LEAD_TABS = [
+  { id: 'przeglad', icon: 'ph-identification-card', label: 'Przegląd' },
+  { id: 'rozmowa', icon: 'ph-chats-circle', label: 'Rozmowa' },
+  { id: 'artefakty', icon: 'ph-package', label: 'Artefakty' },
+  { id: 'sekwencja', icon: 'ph-flow-arrow', label: 'Sekwencja' },
+  { id: 'maile', icon: 'ph-envelope', label: 'Maile' },
+  { id: 'koszty', icon: 'ph-wallet', label: 'Koszty' },
+  { id: 'akcje', icon: 'ph-sliders-horizontal', label: 'Akcje' },
+];
+
 async function openSession(id) {
   const s = sessions.find((x) => x.id === id);
   if (!s) return;
-  $('modal').classList.remove('hidden');
-  $('m-title').textContent = projName(s);
-  $('m-sub').textContent = `${s.email || 'bez e-maila'}${s.phone ? ' · ' + s.phone : ''}${s.auth_provider ? ' · konto: ' + s.auth_provider : ''} · ${fmtDate(s.created_at)}`;
-  $('m-open').href = SPARING_URL + '?projekt=' + id;
-  $('m-chat').innerHTML = '<div class="text-zinc-500 text-sm">Wczytuję transkrypt…</div>';
-  $('m-side').innerHTML = '';
+  if (activeTab) prevTab = activeTab;
+  VIEWS.forEach((t) => $('view-' + t).classList.add('hidden'));
+  $('view-lead').classList.remove('hidden');
+  document.querySelectorAll('#appnav .tab-btn').forEach((b) => b.classList.remove('tab-active'));
+  $('section-title').textContent = projName(s);
+  closeNav();
+  try { window.scrollTo({ top: 0 }); } catch (e) { /* ignore */ }
+  leadTab = 'przeglad';
+  leadLoadingId = id;
+  renderLeadHead(s);
+  renderLeadTabs();
+  $('lead-body').innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję kartę leada…</div>';
 
   const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }] = await Promise.all([
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
-    supabaseClient.from('spar_emails').select('kind, sent_at').eq('session_id', id),
+    supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at').eq('session_id', id).order('sent_at', { ascending: false }),
     supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
   ]);
+  if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
+  leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], art: art || {}, protoUrl, totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
+  renderLeadTab();
+}
+function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; switchTab(prevTab || 'leady'); }
 
-  $('m-chat').innerHTML = (msgs || []).map((m) => `
+function renderLeadHead(s) {
+  $('lead-head').innerHTML = `
+    <div class="flex items-start gap-3 flex-wrap">
+      <button onclick="closeLead()" class="shrink-0 mt-0.5 w-9 h-9 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/25 flex items-center justify-center transition" title="Wróć do listy"><i class="ph ph-arrow-left"></i></button>
+      <div class="min-w-0 flex-1">
+        <div class="flex items-center gap-2 flex-wrap">
+          <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
+          ${signalBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
+        </div>
+        <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''} · ${fmtDate(s.created_at)}</div>
+      </div>
+      <div class="flex items-center gap-2 shrink-0">
+        ${s.lead_id ? `<a href="/leads?id=${s.lead_id}" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-blue-400 text-xs hover:border-blue-500/40 transition">Lead w CRM →</a>` : ''}
+        <a href="${SPARING_URL}?projekt=${s.id}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Wizytówka</a>
+      </div>
+    </div>`;
+}
+function renderLeadTabs() {
+  $('lead-tabs').innerHTML = LEAD_TABS.map((t) => `<button data-leadtab="${t.id}" class="shrink-0 inline-flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-medium border-b-2 transition ${leadTab === t.id ? 'border-blue-500 text-white' : 'border-transparent text-zinc-400 hover:text-white'}"><i class="ph ${t.icon} text-base"></i>${t.label}</button>`).join('');
+  $('lead-tabs').querySelectorAll('[data-leadtab]').forEach((b) => b.addEventListener('click', () => { leadTab = b.dataset.leadtab; renderLeadTabs(); renderLeadTab(); }));
+}
+function renderLeadTab() {
+  if (!leadData) return;
+  const b = $('lead-body'); const s = leadData.s;
+  if (leadTab === 'przeglad') b.innerHTML = leadOverviewHTML();
+  else if (leadTab === 'rozmowa') b.innerHTML = leadChatHTML();
+  else if (leadTab === 'artefakty') b.innerHTML = leadArtefaktyHTML();
+  else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
+  else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
+  else if (leadTab === 'koszty') b.innerHTML = leadKosztyHTML();
+  else if (leadTab === 'akcje') b.innerHTML = leadAkcjeHTML();
+}
+function leadOverviewHTML() {
+  const { s, totalUsd, usage } = leadData;
+  const st = STAGES.find((x) => x.id === stageOf(s));
+  const sig = leadSignal(s); const eng = isEngaged(s);
+  const vT = { zielony: 'zielony', zolty: 'żółty', czerwony: 'czerwony' }[s.verdict] || (s.verdict || '—');
+  const vC = { zielony: 'text-emerald-400', zolty: 'text-amber-400', czerwony: 'text-red-400' }[s.verdict] || 'text-white';
+  const card = (label, val, sub, icon, tone) => `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+    <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${icon} ${tone}"></i>${label}</div>
+    <div class="text-lg font-bold text-white mt-1.5">${val}</div>${sub ? `<div class="text-[11px] text-zinc-500 mt-0.5">${sub}</div>` : ''}</div>`;
+  const d = designOf(s); const styl = s.preview_brief && s.preview_brief.styl;
+  return `<div class="space-y-5 max-w-5xl">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      ${card('Koszt rozmowy', fmtPln(totalUsd), fmtUsd(totalUsd) + ' · ' + usage.length + ' AI', 'ph-wallet', 'text-blue-400')}
+      ${card('Etap', st.name, '', st.icon, st.color)}
+      ${card('Werdykt', `<span class="${vC}">${vT}</span>`, s.turns + ' tur', 'ph-flag', 'text-zinc-400')}
+      ${card('Zaangażowanie', eng ? '<span class="text-emerald-400">gorący</span>' : '<span class="text-sky-400">zimny</span>', 'panel: ' + timeAgo(s.last_panel_at), eng ? 'ph-fire' : 'ph-snowflake', eng ? 'text-emerald-400' : 'text-sky-400')}
+      ${card('Wpłata 500 zł', s.paid_at ? '<span class="text-amber-400">opłacony</span>' : 'brak', s.paid_at ? fmtDate(s.paid_at) : '', 'ph-currency-circle-dollar', 'text-amber-400')}
+      ${card('Ostatnia rozmowa', timeAgo(s.last_user_at), '', 'ph-chat-circle', 'text-zinc-400')}
+      ${card('Otwarcia odsłon', revealOpens(s) + '×', 'maile reveal', 'ph-envelope-open', 'text-sky-400')}
+      ${card('Sygnał', sig.label, '', sig.icon, TONE_TXT[sig.tone])}
+    </div>
+    ${d ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5 max-w-xl">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-palette mr-1 text-zinc-600"></i>Design (projekt AI)</div>
+      ${d.kierunek ? `<div class="text-sm text-zinc-300 mb-3">${esc(d.kierunek)}</div>` : ''}
+      <div class="flex flex-wrap gap-1.5 mb-2.5">${designSwatch('tło', d.tlo)}${designSwatch('karty', d.powierzchnia)}${designSwatch('akcent', d.akcent)}${designSwatch('akcent 2', d.akcent2)}</div>
+      <div class="space-y-1 text-[11px] text-zinc-500">
+        ${d.geometria ? `<div><span class="text-zinc-600">Geometria:</span> ${esc(d.geometria)}</div>` : ''}
+        ${d.typografia ? `<div><span class="text-zinc-600">Typografia:</span> ${esc(d.typografia)}</div>` : ''}
+        ${styl ? `<div class="pt-1 text-amber-400/80"><span class="text-zinc-600">Życzenia klienta:</span> ${esc(styl)}</div>` : ''}
+      </div></div>` : ''}
+  </div>`;
+}
+function leadChatHTML() {
+  const { msgs } = leadData;
+  return `<div class="max-w-3xl space-y-2.5">${msgs.length ? msgs.map((m) => `
     <div class="border rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'msg-user ml-8' : 'msg-ai mr-8'}">
       <div class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'} mb-1">${m.role === 'user' ? 'Rozmówca' : 'AI'}${m.channel === 'wspolpraca' ? ' · współpraca' : ''}</div>
       <div class="text-zinc-200">${cleanMsg(m.content)}</div>
-    </div>`).join('') || '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>';
-
-  // panel boczny: koszt, etap, grafiki, usage, maile, akcje
-  const totalUsd = (usage || []).reduce((sum, u) => sum + Number(u.cost_usd), 0);
-  const st = STAGES.find((x) => x.id === stageOf(s));
-  const imgs = s.preview_images || {};
-  const imgKeys = Object.keys(imgs);
-
-  $('m-side').innerHTML = `
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Koszt tej rozmowy</div>
-      <div class="text-2xl font-bold text-white">${fmtPln(totalUsd)}</div>
-      <div class="text-xs text-zinc-500">${fmtUsd(totalUsd)} · ${(usage || []).length} ${plural((usage || []).length, 'wywołanie', 'wywołania', 'wywołań')} AI</div>
-      <div class="mt-3 space-y-1 text-xs">${(usage || []).map((u) => `
-        <div class="flex justify-between text-zinc-400">
-          <span>${KIND_LABELS[u.kind] || esc(u.kind)}${u.kind === 'image' ? ' (' + esc((u.images || 1) + '×') + ')' : ''} <span class="text-zinc-600">${u.kind === 'chat' ? (u.input_tokens + 'in/' + u.output_tokens + 'out') : ''}</span></span>
-          <span class="font-mono">${fmtPln(Number(u.cost_usd))}</span>
-        </div>`).join('')}</div>
-    </div>
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 text-sm space-y-1.5">
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Etap</span><span class="${st.color} text-xs">${st.name}</span></div>
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Werdykt</span><span class="text-xs ${{zielony:'text-emerald-400',zolty:'text-amber-400',czerwony:'text-red-400'}[s.verdict] || 'text-white'}">${{zielony:'zielony',zolty:'żółty',czerwony:'czerwony'}[s.verdict] || esc(s.verdict || '—')}</span></div>
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Tury</span><span class="text-xs text-white">${s.turns || 0}</span></div>
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Wpłata 500 zł</span><span class="text-xs ${s.paid_at ? 'text-amber-400' : 'text-zinc-600'}">${s.paid_at ? fmtDate(s.paid_at) : 'brak'}</span></div>
-      <div class="flex justify-between"><span class="text-zinc-500 text-xs">Ostatnia aktywność</span><span class="text-xs text-white">${timeAgo(s.last_user_at)}</span></div>
-      ${s.lead_id ? `<a class="text-xs text-blue-400 hover:underline" target="_blank" href="/leads?id=${s.lead_id}">Lead w TN CRM →</a>` : ''}
-    </div>
-    ${(() => {
-      const d = designOf(s);
-      if (!d) return '';
-      const styl = s.preview_brief && s.preview_brief.styl;
-      return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-        <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-palette mr-1 text-zinc-600"></i>Design (projekt AI)</div>
-        ${d.kierunek ? `<div class="text-xs text-zinc-300 mb-2.5">${esc(d.kierunek)}</div>` : ''}
-        <div class="flex flex-wrap gap-1.5 mb-2.5">
-          ${designSwatch('tło', d.tlo)}${designSwatch('karty', d.powierzchnia)}${designSwatch('akcent', d.akcent)}${designSwatch('akcent 2', d.akcent2)}
-        </div>
-        <div class="space-y-1 text-[11px] text-zinc-500">
-          ${d.geometria ? `<div><span class="text-zinc-600">Geometria:</span> ${esc(d.geometria)}</div>` : ''}
-          ${d.typografia ? `<div><span class="text-zinc-600">Typografia:</span> ${esc(d.typografia)}</div>` : ''}
-          ${d.podpis ? `<div><span class="text-zinc-600">Podpis:</span> ${esc(d.podpis)}</div>` : ''}
-          ${styl ? `<div class="pt-1 text-amber-400/80"><span class="text-zinc-600">Życzenia klienta:</span> ${esc(styl)}</div>` : ''}
-        </div>
-      </div>`;
-    })()}
-    ${artefaktyHTML(s, art, protoUrl)}
-    ${imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
-      <div class="grid grid-cols-2 gap-2">${imgKeys.map((k) => `
-        <a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition">
-          <img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=300&quality=70&resize=contain'}" alt="${VIEW_LABELS[k] || esc(k)}" loading="lazy" class="aspect-[3/2] object-contain bg-white w-full">
-          <div class="text-[10px] text-zinc-500 px-1.5 py-1">${VIEW_LABELS[k] || esc(k)}</div>
-        </a>`).join('')}</div>
-    </div>` : ''}
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-      <div class="flex items-center justify-between mb-2.5">
-        <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-flow-arrow mr-1 text-blue-400"></i>Sekwencja odkrywania</div>
-        ${(s.verdict === 'zielony' || s.paid_at) ? `<button onclick="seedLeadDrip('${s.id}')" class="text-[11px] text-zinc-400 hover:text-white border border-white/10 rounded-md px-2 py-0.5 transition" title="Utwórz/odśwież plan odsłon"><i class="ph ph-list-plus mr-1"></i>plan</button>` : ''}
-      </div>
-      <div id="m-drip" class="text-xs text-zinc-500">${(s.verdict === 'zielony' || s.paid_at) ? '<i class="ph ph-circle-notch animate-spin mr-1"></i>wczytuję sekwencję…' : 'Sekwencja rusza po zielonym werdykcie — wtedy zobaczysz tu oś czasu odsłon i testy maili.'}</div>
-    </div>
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Inne maile (follow-upy)</div>
-      ${(emails || []).length ? (emails || []).map((e) => `<div class="flex justify-between text-xs text-zinc-400"><span><i class="ph ph-envelope-simple mr-1 text-zinc-600"></i>${EMAIL_LABELS[e.kind] || mailKind(e.kind).label}</span><span class="text-zinc-500">${fmtDate(e.sent_at)}</span></div>`).join('') : '<div class="text-xs text-zinc-600">żaden nie wysłany</div>'}
-    </div>
-    <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
-      <input type="checkbox" ${s.is_test ? 'checked' : ''} onchange="toggleTest('${s.id}', this.checked)" class="accent-blue-500">
-      sesja testowa (poza metrykami i follow-upami)
-    </label>
-    <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
-      <input type="checkbox" ${s.showcase ? 'checked' : ''} onchange="toggleShowcase('${s.id}', this.checked)" class="accent-blue-500">
-      pokazuj w przykładach mimo statusu testowego (showcase)
-    </label>
-    <label class="flex items-center gap-2 text-xs text-zinc-400 cursor-pointer select-none px-1">
-      <input type="checkbox" ${s.hidden_from_feed ? 'checked' : ''} onchange="toggleHidden('${s.id}', this.checked)" class="accent-red-500">
-      ukryj z inspiracji i strony głównej
-    </label>`;
-
-  if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(id, 'm-drip');
+    </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>'}</div>`;
 }
-function closeModal() { $('modal').classList.add('hidden'); }
+function leadArtefaktyHTML() {
+  const { s, art, protoUrl } = leadData;
+  const land = art.landing_url || s.landing_url || null;
+  const imgs = s.preview_images || {}; const imgKeys = Object.keys(imgs);
+  const rows = artefaktyHTML(s, art, protoUrl);
+  const frame = (title, url) => `<div class="bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden">
+    <div class="flex items-center justify-between px-4 py-2.5 border-b border-white/5"><span class="text-xs text-white font-medium">${title}</span><a href="${esc(url)}" target="_blank" rel="noopener" class="text-[11px] text-blue-400 hover:text-blue-300">otwórz na pełnym ekranie ↗</a></div>
+    <iframe src="${esc(url)}" loading="lazy" class="w-full bg-white" style="height:62vh;border:0"></iframe></div>`;
+  const ekrany = imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+    <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${imgKeys.map((k) => `<a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition"><img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=400&quality=70&resize=contain'}" alt="${VIEW_LABELS[k] || esc(k)}" loading="lazy" class="aspect-[3/2] object-contain bg-white w-full"><div class="text-[10px] text-zinc-500 px-1.5 py-1">${VIEW_LABELS[k] || esc(k)}</div></a>`).join('')}</div></div>` : '';
+  if (!rows && !imgKeys.length) return '<div class="text-zinc-600 text-sm">Brak artefaktów — pojawią się po zielonym werdykcie i odsłonach sekwencji.</div>';
+  const hasFrames = protoUrl || land;
+  return `<div class="grid ${hasFrames ? 'lg:grid-cols-2' : ''} gap-4 items-start max-w-6xl">
+    <div class="space-y-4">${rows}${ekrany}</div>
+    ${hasFrames ? `<div class="space-y-4">${protoUrl ? frame('Klikalny prototyp', protoUrl) : ''}${land ? frame('Strona sprzedażowa', land) : ''}</div>` : ''}
+  </div>`;
+}
+function leadSekwencjaHTML() {
+  const { s } = leadData; const can = s.verdict === 'zielony' || s.paid_at;
+  return `<div class="max-w-3xl">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm text-white font-medium"><i class="ph ph-flow-arrow mr-1.5 text-blue-400"></i>Sekwencja odkrywania</div>
+      ${can ? `<button onclick="seedLeadDrip('${s.id}')" class="text-xs text-zinc-300 hover:text-white border border-white/10 rounded-lg px-3 py-1.5 transition"><i class="ph ph-list-plus mr-1"></i>Utwórz/odśwież plan</button>` : ''}
+    </div>
+    <div id="lead-drip" class="text-sm text-zinc-500">${can ? '<i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…' : 'Sekwencja rusza po zielonym werdykcie — wtedy zobaczysz tu oś czasu odsłon i testy maili.'}</div>
+  </div>`;
+}
+function leadMaileHTML() {
+  const { emails } = leadData;
+  if (!emails.length) return '<div class="text-zinc-600 text-sm">Żaden mail jeszcze nie wyszedł do tego leada.</div>';
+  return `<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+    <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+      <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Otwarty</th><th class="px-4 py-3 text-center">Klik</th></tr></thead><tbody>
+    ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.opened_at)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.clicked_at)}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function leadKosztyHTML() {
+  const { usage, totalUsd } = leadData;
+  return `<div class="max-w-2xl space-y-4">
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1">Koszt tej rozmowy</div>
+      <div class="text-3xl font-bold text-white">${fmtPln(totalUsd)}</div>
+      <div class="text-xs text-zinc-500">${fmtUsd(totalUsd)} · ${usage.length} ${plural(usage.length, 'wywołanie', 'wywołania', 'wywołań')} AI</div>
+    </div>
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5"><th class="px-4 py-3">Typ</th><th class="px-4 py-3">Model</th><th class="px-4 py-3 text-right">Tokeny</th><th class="px-4 py-3 text-right">Koszt</th></tr></thead><tbody>
+      ${usage.length ? usage.map((u) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-300 text-xs">${KIND_LABELS[u.kind] || esc(u.kind)}${u.kind === 'image' ? ' (' + (u.images || 1) + '×)' : ''}</td><td class="px-4 py-2.5 text-zinc-500 text-xs">${esc(u.model || '—')}</td><td class="px-4 py-2.5 text-right text-zinc-500 text-xs font-mono">${u.kind === 'chat' ? (u.input_tokens + '/' + u.output_tokens) : '—'}</td><td class="px-4 py-2.5 text-right text-white text-xs font-mono">${fmtPln(Number(u.cost_usd))}</td></tr>`).join('') : '<tr><td colspan="4" class="px-4 py-6 text-center text-zinc-600 text-sm">Brak wywołań.</td></tr>'}
+      </tbody></table></div>
+  </div>`;
+}
+function leadAkcjeHTML() {
+  const { s } = leadData;
+  const row = (checked, onchange, label, accent) => `<label class="flex items-center gap-3 p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 cursor-pointer select-none hover:border-white/10 transition"><input type="checkbox" ${checked ? 'checked' : ''} onchange="${onchange}" class="${accent} w-4 h-4"><span class="text-sm text-zinc-300">${label}</span></label>`;
+  return `<div class="max-w-xl space-y-2.5">
+    ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
+    ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase)', 'accent-blue-500')}
+    ${row(s.hidden_from_feed, `toggleHidden('${s.id}', this.checked)`, 'Ukryj z inspiracji i strony głównej', 'accent-red-500')}
+  </div>`;
+}
+function afterToggle(id) {
+  const s = sessions.find((x) => x.id === id);
+  if (s && leadData && leadData.s.id === id && !$('view-lead').classList.contains('hidden')) renderLeadHead(s);
+}
 async function toggleTest(id, val) {
   const { error } = await supabaseClient.from('spar_sessions').update({ is_test: val }).eq('id', id);
   if (error) { toast('Błąd zapisu'); console.error(error); return; }
   const s = sessions.find((x) => x.id === id);
   if (s) s.is_test = val;
   toast(val ? 'Oznaczono jako testową' : 'Przywrócono do metryk');
-  renderActive();
+  afterToggle(id);
 }
 async function toggleShowcase(id, val) {
   const { error } = await supabaseClient.from('spar_sessions').update({ showcase: val }).eq('id', id);
@@ -910,6 +968,7 @@ async function toggleShowcase(id, val) {
   const s = sessions.find((x) => x.id === id);
   if (s) s.showcase = val;
   toast(val ? 'Dodano do przykładów (feed odświeży się do 60 s)' : 'Zdjęto z przykładów');
+  afterToggle(id);
 }
 async function toggleHidden(id, val) {
   const { error } = await supabaseClient.from('spar_sessions').update({ hidden_from_feed: val }).eq('id', id);
@@ -917,6 +976,7 @@ async function toggleHidden(id, val) {
   const s = sessions.find((x) => x.id === id);
   if (s) s.hidden_from_feed = val;
   toast(val ? 'Ukryto z publicznych inspiracji (do 60 s)' : 'Projekt znów widoczny w inspiracjach');
+  afterToggle(id);
 }
 
 // ── MAILE (followupy) ──
@@ -1083,7 +1143,7 @@ async function renderSekwencja() {
 
 // Oś czasu odsłon + testy — renderowane do wskazanego kontenera (karta leada)
 async function renderProjectDetail(sid, targetId) {
-  const tgt = $(targetId || 'm-drip');
+  const tgt = $(targetId || 'lead-drip');
   if (!tgt) return;
   if (!sid) { tgt.innerHTML = ''; return; }
   tgt.innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…</div>';
@@ -1176,12 +1236,12 @@ async function fireSend(sid, key) {
     else if (j.result === 'sent') { toast('Wysłano ✓'); }
     else { toast('Wynik: ' + (j.result || j.info || '—')); }
     // odśwież oś czasu w otwartej karcie leada; jeśli widoczna Komunikacja — i ją
-    if (!$('modal').classList.contains('hidden') && $('m-drip')) renderProjectDetail(sid, 'm-drip');
+    if (!$('view-lead').classList.contains('hidden') && $('lead-drip')) renderProjectDetail(sid, 'lead-drip');
     if (activeTab === 'komunikacja') renderKomunikacja();
   } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
 }
 async function seedLeadDrip(sid) {
-  try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); renderProjectDetail(sid, 'm-drip'); }
+  try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); renderProjectDetail(sid, 'lead-drip'); }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 
@@ -1359,6 +1419,7 @@ function switchTab(tab) {
   if (!VIEWS.includes(tab)) tab = 'przeglad';
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
+  $('view-lead').classList.add('hidden');
   VIEWS.forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
   const st = $('section-title'); if (st) st.textContent = SECTION_LABELS[tab] || '';
   try { history.replaceState(null, '', location.pathname + (tab === 'przeglad' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
@@ -1433,7 +1494,12 @@ async function init() {
     try { await supabaseClient.auth.signOut(); } catch (e) { /* i tak przekieruj */ }
     window.location.href = (window.Sidebar ? Sidebar.getLoginPath() : '/');
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMailModal(); closeNav(); } });
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (!$('mailmodal').classList.contains('hidden')) { closeMailModal(); }
+    else if (!$('view-lead').classList.contains('hidden')) { closeLead(); }
+    closeNav();
+  });
 }
 
 // ── DEMO: dane fikcyjne do wizualnego przeglądu układu (?demo=1) ──
