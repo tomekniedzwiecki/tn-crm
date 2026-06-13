@@ -105,9 +105,12 @@ async function generateBanners(supabase: ReturnType<typeof createClient>, apiKey
   }
 }
 
+// Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
+let MODEL_BLOCK = ''
+
 const SYSTEM_PROMPT = `Jesteś szefem sprzedaży i marketingu, który wielokrotnie wprowadzał na polski rynek niszowe narzędzia SaaS B2B od zera do pierwszych klientów. Tworzysz konkretny, wykonalny plan zdobycia pierwszych klientów ORAZ gotowe materiały sprzedażowe. Piszesz po polsku, językiem grupy docelowej, zero korpomowy, zero lania wody.
 
-KONTEKST: właściciel pomysłu po starcie ma sam (z pomocą Tomka) zdobyć pierwszych płacących klientów. Potrzebuje wiedzieć DOKŁADNIE gdzie ich szukać i mieć gotowe materiały, żeby ruszyć pierwszego dnia — nie ogólniki typu „buduj markę w social media".
+KONTEKST: to playbook zdobycia pierwszych 50 stałych klientów. W modelu współpracy (patrz blok „MODEL BIZNESOWY APLIKACJA" na początku promptu) pierwsze ~pół roku sprzedaż osobiście prowadzi Tomek, a właściciel uczy się od środka i przejmuje rozkręcanie po oddaniu sterów. Materiały mają być gotowe do realnego użycia od pierwszego dnia: DOKŁADNIE gdzie szukać klientów i co wkleić — nie ogólniki typu „buduj markę w social media".
 
 ZASADY:
 - Kanały: podaj KONKRETNE miejsca, gdzie ta grupa już jest (realistyczne nazwy grup FB, fora/subreddity, stowarzyszenia branżowe, katalogi, wydarzenia, miejsca offline). Dla każdego: czemu tam i jaki PIERWSZY ruch wykonać. Bez wymyślania nieistniejących, konkretnych URL-i — opisz miejsce tak, by dało się je znaleźć.
@@ -184,7 +187,7 @@ async function callOnce(apiKey: string, user: string, maxTokens: number): Promis
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
   if (!res.ok) { console.error('[spar-gtm] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
   const data = await res.json()
@@ -207,6 +210,7 @@ Deno.serve(async (req) => {
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
 
     // ── action 'banners': wygeneruj 3 kreacje reklam w tle (gpt-image-2) ──
     if (body.action === 'banners') {

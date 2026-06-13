@@ -46,10 +46,13 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
   })
 }
 
+// Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
+let MODEL_BLOCK = ''
+
 // Stały prompt systemowy (cache'owalny — bez danych sesji)
 const SYSTEM_PROMPT = `Jesteś analitykiem, który robi WSTĘPNE wyliczenia przychodu dla narzędzia SaaS w polskiej niszy. Piszesz po polsku, prosto, do praktyka z branży (nie do inwestora).
 
-KONTEKST WSPÓŁPRACY (stały, nie zmieniaj): narzędzie buduje zespół Tomka za 30 000 zł dzielone pół na pół (właściciel wnosi 15 000 zł). Przez pierwsze ~pół roku Tomek osobiście prowadzi sprzedaż do pierwszych 50 płacących klientów — potem właściciel przejmuje rozkręcony biznes.
+KONTEKST WSPÓŁPRACY (stały, nie zmieniaj): bierz go WYŁĄCZNIE z bloku „MODEL BIZNESOWY APLIKACJA" doklejonego na początku tego promptu — klient płaci za budowę wg tieru (nie ma podziału 50/50), a Tomek przez pierwsze ~pół roku osobiście prowadzi sprzedaż do pierwszych 50 stałych klientów, potem właściciel przejmuje rozkręcony biznes.
 
 ZADANIE: policz wstępny plan przychodu. Ton: optymistyczny, ale REALNY — żadnych kosmicznych liczb; ceny i wielkość rynku muszą brzmieć wiarygodnie dla kogoś, kto zna tę branżę od środka. Jeżeli czegoś nie ma w karcie (typowa cena rynkowa, liczba firm w Polsce), oszacuj z własnej wiedzy o polskim rynku i dopisz to do założeń. Kwoty w zł, zaokrąglone po ludzku (149, nie 147,30).
 
@@ -65,7 +68,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
     {"klienci": 50, "mies": 7450, "etap": "przejmujesz stery"}
   ],
   "rynek": "1-2 zdania: ile takich firm/odbiorców działa w Polsce i jakim ułamkiem rynku jest 50 klientów (ma pokazać, że 50 to realny, mały kawałek)",
-  "zwrot_wkladu": "jedno zdanie: po ilu miesiącach od startu sprzedaży skumulowany przychód przekracza wkład 15 000 zł",
+  "zwrot_wkladu": "jedno zdanie: po ilu miesiącach od startu sprzedaży skumulowany przychód przekracza koszt budowy, który płaci właściciel (cena z tieru — przyjmij ok. 12 500 zł, jeśli nie znasz dokładnej)",
   "rok2_potencjal": "jedno zdanie: realny miesięczny przychód w roku 2 przy utrzymaniu tempa (konkretna kwota zł/mies.)",
   "zalozenia": ["3 do 5 krótkich założeń, w tym te doszacowane z wiedzy o rynku"]
 }`
@@ -94,7 +97,7 @@ async function callOnce(apiKey: string, user: string, maxTokens: number): Promis
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
   if (!res.ok) { console.error('[spar-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
   const data = await res.json()
@@ -141,6 +144,7 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
       .select('id, preview_brief, problem_summary, business_plan')

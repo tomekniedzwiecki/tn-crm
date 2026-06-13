@@ -23,10 +23,13 @@ const OPENAI_MODEL = Deno.env.get('SPAR_ECONOMICS_MODEL') || 'gpt-5.1'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response { return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } }) }
 
+// Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
+let MODEL_BLOCK = ''
+
 // ── Stały prompt systemowy (cache'owalny — bez danych sesji) ──
 const SYSTEM_PROMPT = `Jesteś doświadczonym operatorem SaaS i analitykiem unit economics dla polskich nisz. Projektujesz model cenowy i realne wejścia do rachunku opłacalności narzędzia, które dopiero powstaje. Piszesz po polsku, do praktyka — konkretnie, bez korpomowy.
 
-KONTEKST (stały): narzędzie buduje zespół Tomka za 30 000 zł (właściciel wnosi 15 000 zł, drugie 15 000 zł Tomek). Przez ~pół roku Tomek prowadzi sprzedaż do pierwszych 50 płacących klientów. Cel: pokazać właścicielowi, że to się SPINA finansowo — uczciwie, realnymi liczbami, nie hurraoptymizmem.
+KONTEKST (stały): zasady modelu i liczby oferty bierz WYŁĄCZNIE z bloku „MODEL BIZNESOWY APLIKACJA" doklejonego na początku tego promptu (klient płaci za budowę wg tieru, a Tomek przez ~pół roku prowadzi sprzedaż do pierwszych 50 stałych klientów). Cel: pokazać właścicielowi, że to się SPINA finansowo — uczciwie, realnymi liczbami, nie hurraoptymizmem.
 
 ZADANIE: zaprojektuj cennik (2-3 tiery) i podaj REALNE wejścia do rachunku. NIE licz LTV, payback ani symulacji — to policzy aplikacja. Twoja rola: wiarygodne liczby i ich uzasadnienie z realiów polskiego rynku SaaS B2B.
 
@@ -59,7 +62,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
     "churn_mies_proc": 4,
     "churn_uzasadnienie": "1 zdanie",
     "budzet_reklam_mies": 1500,
-    "koszt_budowy": 30000
+    "koszt_budowy": 12500
   },
   "zalozenia": ["3-5 krótkich, uczciwych założeń, w tym te doszacowane z wiedzy o rynku"],
   "komentarz": "1-2 zdania: czy i dlaczego to się spina (albo co jest największym ryzykiem dla opłacalności)"
@@ -97,7 +100,7 @@ async function callOnce(apiKey: string, user: string, maxTokens: number): Promis
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
   if (!res.ok) { console.error('[spar-economics] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
   const data = await res.json()
@@ -120,6 +123,7 @@ Deno.serve(async (req) => {
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
     const { data: session, error: sErr } = await supabase.from('spar_sessions').select('id, preview_brief, problem_summary, business_plan, economics').eq('id', sessionId).maybeSingle()
     if (sErr) { console.error('[spar-economics] session fetch error:', sErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)

@@ -66,8 +66,11 @@ const SITUATION = `KONTEKST SYTUACJI (zrozum dobrze, gdzie jesteśmy):
 - To lejek „Aplikacja": osoba porozmawiała z Twoim AI i zaprojektowała pomysł na WŁASNE narzędzie/aplikację (SaaS) w swojej niszy.
 - To dopiero ETAP PLANOWANIA — nic nie jest jeszcze realnie zbudowane ani wdrożone. Artefakty, które jej pokazujesz (raport rynku, model finansowy, strona, plan sprzedaży, klikalny prototyp), to PLAN i dowód, że pomysł ma sens — nie gotowy produkt.
 - Cel tego maila: sprytnie i bez nachalności podgrzać zainteresowanie i pchnąć ją w stronę REZERWACJI. Rezerwacja (500 zł, w pełni zwrotna) to PIERWSZY KROK do współpracy: rezerwuje wspólną rozmowę z Tobą (Tomkiem), na której osobiście przedstawiasz plan wdrożenia i jak moglibyście to razem zbudować. To NIE zakup produktu — to umówienie rozmowy.
-- Model (NIE tłumacz go w mailu — to na rozmowę): jeśli ruszacie, budujesz to z nią, finansujesz część, prowadzisz sprzedaż do pierwszych ~50 klientów, potem przekazujesz stery. W mailu masz tylko zaciekawić i delikatnie zaprosić do rezerwacji rozmowy.
+- Model współpracy (NIE tłumacz go w mailu wprost — to na rozmowę): trzymaj się ŚCIŚLE bloku „MODEL BIZNESOWY APLIKACJA" w tym kontekście systemowym. W mailu masz tylko zaciekawić i delikatnie zaprosić do rezerwacji rozmowy.
 - Pisz UCZCIWIE, że to plan/projekt: „zaprojektowaliśmy", „policzyłem", „tak mogłoby to wyglądać" — nie udawaj, że produkt już istnieje.`
+
+// Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
+let MODEL_BLOCK = ''
 
 function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
@@ -195,6 +198,8 @@ async function generateRevealEmail(s: any, key: string, viewUrl: string, reserve
     firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
   ].filter(Boolean).join('\n')
   const SYSTEM = `${SITUATION}
+
+${MODEL_BLOCK}
 
 JAK MASZ PISAĆ:
 Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila — jakbyś OSOBIŚCIE usiadł, przejrzał JEGO plan i napisał z palca w skrzynce. Nie marketing, nie szablon.
@@ -421,6 +426,7 @@ Deno.serve(async (req) => {
     const CRON_SECRET = Deno.env.get('SPAR_CRON_SECRET')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
 
     let body: { action?: string; sessionId?: string; key?: string; send?: boolean } = {}
     try { body = await req.json() } catch { /* cron bez body */ }
