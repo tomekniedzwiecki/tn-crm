@@ -39,6 +39,15 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Sekwencja odkrywania (musi zgadzać się z planem w spar-drip): kadencja dni
+// od werdyktu (proxy: created_at). Panel bramkuje widoczność wg statusu odsłon.
+const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
+  { key: 'prototyp', seq: 1, day: 1, emailKind: 'reveal_prototyp' },
+  { key: 'rynek', seq: 2, day: 3, emailKind: 'reveal_rynek' },
+  { key: 'economics', seq: 3, day: 5, emailKind: 'reveal_economics' },
+  { key: 'landing', seq: 4, day: 8, emailKind: 'reveal_landing' },
+  { key: 'gtm', seq: 5, day: 11, emailKind: 'reveal_gtm' },
+]
 const MAX_FEEDBACK_PER_SESSION = 30
 const MAX_FEEDBACK_LENGTH = 1000
 const MAX_LIST_SESSIONS = 30
@@ -135,7 +144,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, created_at, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -232,6 +241,29 @@ Deno.serve(async (req) => {
       ? session.name.split(' ')[0]
       : null
 
+    // ── Sekwencja odkrywania ──────────────────────────────────────────────
+    // Wejście do panelu = sygnał zaangażowania → stempluj last_panel_at (bramka
+    // dripa odblokowuje dalsze odsłony / wznawia zapauzowane). Tylko dla 'get'.
+    const isGreen = session.verdict === 'zielony'
+    const isPaid = !!session.paid_at
+    let revealsMap: Record<string, string> = {}
+    if (action === 'get') {
+      supabase.from('spar_sessions').update({ last_panel_at: new Date().toISOString() }).eq('id', sessionId)
+        .then(() => {}, (e: unknown) => console.error('[spar-project] last_panel_at stamp error:', e))
+      if (isGreen && !isPaid) {
+        // Eager-seed planu (idempotentne) — żeby bramkowanie działało od razu po
+        // werdykcie, nie dopiero po przebiegu crona dripa.
+        const verdictAt = Date.parse(session.created_at as string) || Date.now()
+        const seedRows = REVEAL_PLAN.map((r) => ({
+          session_id: sessionId, key: r.key, seq: r.seq, email_kind: r.emailKind,
+          due_at: new Date(verdictAt + r.day * 86400000).toISOString(), status: 'pending',
+        }))
+        await supabase.from('spar_reveals').upsert(seedRows, { onConflict: 'session_id,key', ignoreDuplicates: true })
+      }
+      const { data: rvs } = await supabase.from('spar_reveals').select('key, status').eq('session_id', sessionId)
+      for (const r of rvs || []) revealsMap[(r as { key: string }).key] = (r as { status: string }).status
+    }
+
     return jsonResponse({
       projekt: {
         nazwa: (brief.nazwa as string) || 'Twoje narzędzie',
@@ -251,6 +283,8 @@ Deno.serve(async (req) => {
         verdict: session.verdict || null,
         status: session.status || 'active',
         lead_id: session.lead_id || null,
+        paid_at: session.paid_at || null,
+        reveals: revealsMap,
         imie: firstName,
         created_at: session.created_at,
       },
