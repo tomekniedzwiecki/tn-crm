@@ -15,6 +15,14 @@
   .animate-enter { animation: fadeIn 0.4s ease both; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .tab-active { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.08); }
+  #appnav-overlay { display: none; }
+  /* Menu boczne: na mobile chowa się w off-canvas drawer */
+  @media (max-width: 767px) {
+    #appnav { position: fixed; left: 0; top: 0; bottom: 0; height: 100%; transform: translateX(-100%); transition: transform 0.28s ease; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
+    #appnav.open { transform: translateX(0); }
+    #appnav-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 45; opacity: 0; visibility: hidden; transition: opacity 0.28s ease, visibility 0.28s ease; }
+    #appnav-overlay.open { opacity: 1; visibility: visible; }
+  }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .bar { transition: height 0.5s cubic-bezier(0.16,1,0.3,1); }
@@ -24,33 +32,41 @@
 </head>
 <body class="text-zinc-200 min-h-screen flex">
 
-<aside id="sidebar" class="w-[280px] shrink-0 bg-zinc-950 border-r border-white/5 min-h-screen hidden md:block"></aside>
+<!-- ════════ LEWE MENU (boczne, z obsługą mobile) ════════ -->
+<aside id="appnav" class="flex flex-col w-60 shrink-0 bg-zinc-950 border-r border-white/5 h-screen sticky top-0 z-50">
+  <div class="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0">
+    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shrink-0">
+      <i class="ph-bold ph-rocket-launch text-white text-sm"></i>
+    </div>
+    <div class="min-w-0">
+      <div class="text-white font-semibold text-sm leading-tight truncate">TN Aplikacje</div>
+      <div class="text-[10px] text-zinc-500 leading-tight truncate">lejek Aplikacja</div>
+    </div>
+  </div>
+  <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" id="tabs">
+    <button data-tab="przeglad" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-squares-four text-lg shrink-0"></i><span>Przegląd</span></button>
+    <button data-tab="leady" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-users-three text-lg shrink-0"></i><span>Leady</span></button>
+    <button data-tab="komunikacja" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-flow-arrow text-lg shrink-0"></i><span>Komunikacja</span></button>
+    <button data-tab="koszty" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-wallet text-lg shrink-0"></i><span>Koszty</span></button>
+    <button data-tab="galeria" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-images text-lg shrink-0"></i><span>Galeria</span></button>
+    <button data-tab="ustawienia" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-gear text-lg shrink-0"></i><span>Ustawienia</span></button>
+  </nav>
+  <div class="border-t border-white/5 p-3 shrink-0">
+    <a href="/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-white hover:bg-white/5 transition mb-1"><i class="ph ph-arrow-left text-base"></i>Wróć do TN CRM</a>
+    <div class="flex items-center gap-2.5 px-2 py-1.5">
+      <div id="nav-avatar" class="w-8 h-8 rounded-full bg-gradient-to-b from-blue-600 to-blue-700 border border-white/10 flex items-center justify-center text-xs font-medium text-white shrink-0">--</div>
+      <div class="flex-1 min-w-0"><div id="nav-user-name" class="text-xs font-medium text-zinc-200 truncate">—</div><div id="nav-user-email" class="text-[10px] text-zinc-500 truncate"></div></div>
+      <button id="nav-logout" title="Wyloguj" class="p-1.5 text-zinc-500 hover:text-white transition shrink-0"><i class="ph ph-sign-out text-base"></i></button>
+    </div>
+  </div>
+</aside>
+<div id="appnav-overlay"></div>
 
 <main class="flex-1 min-w-0">
-  <header class="sticky top-0 z-30 px-6 py-4 border-b border-white/5" style="background: rgba(5,5,5,0.8); backdrop-filter: blur(12px);">
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-      <div class="flex items-center gap-3">
-        <button id="btn-mobile-menu" class="md:hidden text-zinc-400"><i class="ph ph-list text-xl"></i></button>
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center">
-          <i class="ph-bold ph-rocket-launch text-white text-sm"></i>
-        </div>
-        <div>
-          <h1 class="text-white font-semibold leading-tight">TN Aplikacje</h1>
-          <p class="text-[11px] text-zinc-500 leading-tight">lejek Aplikacja — leady, sekwencja, koszty</p>
-        </div>
-      </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <nav class="flex items-center gap-1 text-sm max-w-full overflow-x-auto no-scrollbar" id="tabs">
-          <button data-tab="przeglad" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-squares-four mr-1.5"></i>Przegląd</button>
-          <button data-tab="leady" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-users-three mr-1.5"></i>Leady</button>
-          <button data-tab="komunikacja" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-flow-arrow mr-1.5"></i>Komunikacja</button>
-          <button data-tab="koszty" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-wallet mr-1.5"></i>Koszty</button>
-          <button data-tab="galeria" class="tab-btn shrink-0 whitespace-nowrap px-3.5 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-images mr-1.5"></i>Galeria</button>
-          <button data-tab="ustawienia" aria-label="Ustawienia" class="tab-btn shrink-0 whitespace-nowrap px-3 py-2 rounded-lg border border-transparent text-zinc-400 hover:text-white transition"><i class="ph ph-gear"></i></button>
-        </nav>
-        <button id="global-refresh" title="Odśwież dane" class="shrink-0 w-9 h-9 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrows-clockwise"></i></button>
-      </div>
-    </div>
+  <header class="sticky top-0 z-30 px-4 md:px-6 h-14 flex items-center gap-3 border-b border-white/5" style="background: rgba(5,5,5,0.8); backdrop-filter: blur(12px);">
+    <button id="btn-mobile-menu" aria-label="Menu" class="md:hidden w-9 h-9 -ml-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition"><i class="ph ph-list text-xl"></i></button>
+    <h1 id="section-title" class="text-white font-semibold text-base">Przegląd</h1>
+    <button id="global-refresh" title="Odśwież dane" class="ml-auto shrink-0 w-9 h-9 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition flex items-center justify-center"><i class="ph ph-arrows-clockwise"></i></button>
   </header>
 
   <div id="loading" class="p-12 text-center text-zinc-500"><i class="ph ph-circle-notch animate-spin text-2xl"></i><div class="mt-2 text-sm">Wczytuję dane lejka…</div></div>
@@ -1335,14 +1351,18 @@ function openTemplate(i) {
 
 // ── Zakładki ──
 const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia'];
+const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia' };
 let leadyView = 'table';   // 'table' | 'board'
 let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
+function closeNav() { $('appnav')?.classList.remove('open'); $('appnav-overlay')?.classList.remove('open'); }
 function switchTab(tab) {
   if (!VIEWS.includes(tab)) tab = 'przeglad';
   activeTab = tab;
   document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('tab-active', b.dataset.tab === tab));
   VIEWS.forEach((t) => $('view-' + t).classList.toggle('hidden', t !== tab));
+  const st = $('section-title'); if (st) st.textContent = SECTION_LABELS[tab] || '';
   try { history.replaceState(null, '', location.pathname + (tab === 'przeglad' ? '' : '#' + tab)); } catch (e) { /* ignore */ }
+  closeNav();
   renderActive();
 }
 function renderActive() {
@@ -1356,17 +1376,17 @@ function renderActive() {
 // ── Init ──
 async function init() {
   const iso = (d) => d.toISOString().slice(0, 10);
+  const initialsOf = (n) => { const p = (n || '').trim().split(/\s+/); return (p.length >= 2 ? (p[0][0] + p[p.length - 1][0]) : (n || '?').slice(0, 2)).toUpperCase(); };
+  const setNavUser = (name, email) => { $('nav-user-name').textContent = name || '—'; $('nav-user-email').textContent = email || ''; $('nav-avatar').textContent = initialsOf(name || email); };
   if (!DEMO) {
     const { data: { session } } = await supabaseClient.auth.getSession();
-    if (!session) { window.location.href = Sidebar.getLoginPath(); return; }
-    if (window.Sidebar) {
-      Sidebar.render({ appId: 'aplikacje' });
-      Sidebar.setUserEmail(session.user.email);
-      Sidebar.setUserName((session.user.user_metadata && session.user.user_metadata.full_name) || session.user.email);
-    }
+    if (!session) { window.location.href = (window.Sidebar ? Sidebar.getLoginPath() : '/'); return; }
+    const email = session.user.email;
+    const nm = (session.user.user_metadata && session.user.user_metadata.full_name) || email;
+    setNavUser(nm, email);
   } else {
     seedDemo();
-    if ($('sidebar')) $('sidebar').classList.add('hidden');
+    setNavUser('Demo Admin', 'demo@tn.pl');
   }
 
   // domyślny zakres kosztów: 30 dni
@@ -1406,8 +1426,14 @@ async function init() {
   });
   $('sekw-refresh')?.addEventListener('click', () => renderKomunikacja());
   $('mm-send')?.addEventListener('click', () => { if (mmCtx) { const ctx = mmCtx; closeMailModal(); fireSend(ctx.sid, ctx.key); } });
-  $('btn-mobile-menu')?.addEventListener('click', () => $('sidebar').classList.toggle('open'));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMailModal(); } });
+  $('btn-mobile-menu')?.addEventListener('click', () => { $('appnav').classList.toggle('open'); $('appnav-overlay').classList.toggle('open'); });
+  $('appnav-overlay')?.addEventListener('click', closeNav);
+  $('nav-logout')?.addEventListener('click', async () => {
+    if (DEMO) { toast('Tryb demo — wylogowanie nieaktywne'); return; }
+    try { await supabaseClient.auth.signOut(); } catch (e) { /* i tak przekieruj */ }
+    window.location.href = (window.Sidebar ? Sidebar.getLoginPath() : '/');
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeModal(); closeMailModal(); closeNav(); } });
 }
 
 // ── DEMO: dane fikcyjne do wizualnego przeglądu układu (?demo=1) ──
