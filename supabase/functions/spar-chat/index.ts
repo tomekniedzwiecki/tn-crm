@@ -547,7 +547,9 @@ Deno.serve(async (req) => {
       const incomingName = (authUser?.name || name) || null
       if (incomingEmail && !existingSession.email) contactUpdate.email = incomingEmail
       if (incomingName && !existingSession.name) contactUpdate.name = incomingName
-      if (phone && !existingSession.phone) contactUpdate.phone = phone
+      // Numer oddany przez bramkę, która jawnie informuje o SMS-ach o projekcie
+      // („…czasem wyślemy SMS… STOP wypisuje") = zgoda przez wyraźną informację.
+      if (phone && !existingSession.phone) { contactUpdate.phone = phone; contactUpdate.sms_consent_at = new Date().toISOString() }
       if (Object.keys(contactUpdate).length) {
         contactUpdate.updated_at = new Date().toISOString()
         const { error: contactError } = await supabase
@@ -612,6 +614,7 @@ Deno.serve(async (req) => {
             email: email || authUser?.email || null,
             name: name || authUser?.name || null,
             phone,
+            sms_consent_at: phone ? new Date().toISOString() : null,   // zgoda przez info przy bramce
             auth_user_id: authUser?.id || null,
             auth_provider: authUser?.provider || null,
             tracking,

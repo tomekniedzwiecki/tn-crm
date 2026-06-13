@@ -178,7 +178,7 @@ function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string |
 
 // GPT-personalizowany mail (zwraca null przy błędzie -> fallback statyczny)
 // deno-lint-ignore no-explicit-any
-async function generateRevealEmail(s: any, key: string, viewUrl: string, reserveUrl: string | null): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
+async function generateRevealEmail(s: any, key: string, viewUrl: string, reserveUrl: string | null): Promise<{ subject: string; html: string; sms: string | null; usage: { i: number; c: number; o: number } | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
   const brief = revealBrief(s, key)
@@ -202,7 +202,8 @@ NAJWAŻNIEJSZE: ma być czuć, że naprawdę patrzyłeś na TEN plan. Wpleć 1�
 STYL: po polsku, na „Ty", ciepło i bezpośrednio. KRÓTKO (3–5 krótkich akapitów). Bez korpomowy, emoji, clickbaitu i przesady — jesteś brutalnie szczery (jak nisza wąska albo coś ryzykowne, możesz to nazwać). NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów.
 JĘZYK — BARDZO WAŻNE: to osoby, które DOPIERO chcą wejść w taki biznes i NIE znają żargonu. Pisz prosto, po ludzku. ZAKAZ skrótów i pojęć typu: CAC, LTV, churn, MRR, ARPU, retencja, konwersja, unit economics, runway, payback. Jeśli oddajesz sens liczby — powiedz to zwykłymi słowami: zamiast „CAC 280 zł" → „zdobycie jednego klienta kosztuje około 280 zł"; zamiast „churn 5%/mies." → „co miesiąc odpada mniej więcej co dwudziesty klient"; zamiast „LTV/wartość klienta" → „ile średnio zostawia jeden klient, zanim odejdzie". Liczby tłumacz na konkret, nie na skrót.
 LINKI: dokładnie JEDEN link do podglądu jako [naturalny tekst](LINK_VIEW), wpleciony w zdanie. Skoro celem jest pchnięcie do rezerwacji — jeśli naturalnie pasuje, raz wpleć [tekst](LINK_RESERVE) (rezerwacja = umówienie rozmowy z Tobą, 500 zł w pełni zwrotne, pierwszy krok do wspólnej budowy). Bez nachalności. Nie wymyślaj adresów.
-Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, najlepiej z detalem z jego planu, bez wielkich liter i wykrzykników. body: tekst z \\n między akapitami.`
+SMS (osobne pole) — krótki SMS reaktywacyjny do tego, kto NIE otworzył tego maila; ma go ściągnąć z powrotem do panelu. ŻELAZNE zasady: maksymalnie 155 znaków; BEZ polskich znaków diakrytycznych (pisz "a" nie "ą", "e" nie "ę", "l" nie "ł", "s" nie "ś" itd. — diakrytyki podnoszą koszt SMS); BEZ linku (link dokleimy sami, nie wstawiaj URL ani placeholdera); nawiąż jednym konkretem do JEGO pomysłu/tego artefaktu; po ludzku, na "Ty"; zasugeruj, że w panelu to czeka i że może pogadac o wspolpracy; podpisz krotko "~Tomek". Bez wielkich krzyczacych liter, bez emoji, bez wykrzyknikow.
+Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string, "sms": string}. subject: krótki (do ~55 znaków), konkretny, najlepiej z detalem z jego planu, bez wielkich liter i wykrzykników. body: tekst z \\n między akapitami. sms: jak wyżej.`
   const user = `DANE TEGO LEADA I JEGO POMYSŁU:\n${ctx}\n\nPRAWDZIWE DANE Z TEGO ETAPU (cytuj stąd konkrety):\n${brief.facts || '(brak dodatkowych — oprzyj się na pomyśle i karcie)'}\n\nCEL TEGO MAILA: ${brief.goal}`
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -216,13 +217,36 @@ Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki 
     const obj = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
     const subject = typeof obj.subject === 'string' && obj.subject.trim() ? obj.subject.trim() : null
     const body = typeof obj.body === 'string' && obj.body.trim() ? obj.body.trim() : null
+    const sms = typeof obj.sms === 'string' && obj.sms.trim() ? obj.sms.trim() : null
     if (!subject || !body) return null
-    return { subject, html: mdToHtml(body, viewUrl, reserveUrl), usage }
+    return { subject, html: mdToHtml(body, viewUrl, reserveUrl), sms, usage }
   } catch (e) { console.error('[spar-drip] email gen error:', e instanceof Error ? e.message : String(e)); return null }
+}
+
+// Link do panelu w SMS — krótki, z atrybucją sms (bez UTM-bloatu, oszczędzamy znaki).
+function smsLink(sid: string): string {
+  return `${SPARING_URL}?id=${sid}&utm_source=sms`
+}
+// Statyczny fallback SMS (gdy GPT nie dał pola sms) — bez polskich znaków.
+// deno-lint-ignore no-explicit-any
+function staticSms(s: any, key: string): string {
+  const imie = firstName(s)
+  const co: Record<string, string> = {
+    rynek: 'raport Twojego rynku', economics: 'wyliczenie oplacalnosci',
+    landing: 'Twoja strona', gtm: 'plan sprzedazy', prototyp: 'klikalny prototyp narzedzia',
+  }
+  const what = co[key] || 'nowy material'
+  return `${imie ? 'Czesc ' + imie + '! ' : 'Czesc! '}W panelu czeka ${what}. Zajrzyj, a jesli chcesz pogadac o wspolpracy - wejdz w zakladke Wspolpraca. ~Tomek`
+}
+// Złóż finalny SMS: tekst (GPT lub statyczny) + doklejony link do panelu.
+// deno-lint-ignore no-explicit-any
+function composeSms(text: string, s: any): string {
+  return `${(text || '').trim()} Panel: ${smsLink(s.id)}`.slice(0, 320)
 }
 
 // Mail reveala: cache w spar_reveals.meta.email -> GPT (raz) -> fallback statyczny.
 // Dzięki cache podgląd == wysyłka i koszt GPT pada tylko raz na odsłonę.
+// Przy okazji jednego strzału GPT cache'ujemy też SMS reaktywacyjny (meta.sms).
 // deno-lint-ignore no-explicit-any
 async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal: any, s: any): Promise<{ subject: string; html: string }> {
   const cached = reveal && reveal.meta && reveal.meta.email
@@ -232,15 +256,41 @@ async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal:
   const reserveUrl = s.email ? checkoutLink(s.lead_id || null) : null
   let email: { subject: string; html: string }
   let model: string | null = null
+  let smsText: string
   const gen = await generateRevealEmail(s, key, viewUrl, reserveUrl)
   if (gen) {
     email = { subject: gen.subject, html: gen.html }; model = OPENAI_MODEL
+    smsText = gen.sms || staticSms(s, key)
     if (gen.usage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'reveal_email', key } }) } catch (uErr) { console.error('[spar-drip] email usage insert:', uErr) } }
   } else {
     email = staticReveal(s, key, viewUrl, reserveUrl)
+    smsText = staticSms(s, key)
   }
-  try { if (reveal.id) await supabase.from('spar_reveals').update({ meta: { ...(reveal.meta || {}), email: { subject: email.subject, html: email.html, model, at: new Date().toISOString() } }, updated_at: new Date().toISOString() }).eq('id', reveal.id) } catch (cErr) { console.error('[spar-drip] email cache:', cErr) }
+  const sms = composeSms(smsText, s)
+  try { if (reveal.id) await supabase.from('spar_reveals').update({ meta: { ...(reveal.meta || {}), email: { subject: email.subject, html: email.html, model, at: new Date().toISOString() }, sms: { text: sms, model: gen && gen.sms ? model : null, at: new Date().toISOString() } }, updated_at: new Date().toISOString() }).eq('id', reveal.id) } catch (cErr) { console.error('[spar-drip] email cache:', cErr) }
   return email
+}
+
+// Treść SMS reaktywacyjnego dla danej odsłony: cache meta.sms (złożony przy mailu)
+// -> fallback statyczny. SMS leci +24h po mailu, więc meta.sms zwykle już istnieje.
+// deno-lint-ignore no-explicit-any
+function getRevealSms(reveal: any, s: any): string {
+  const cached = reveal && reveal.meta && reveal.meta.sms
+  if (cached && typeof cached.text === 'string' && cached.text.trim()) return cached.text
+  const key = (reveal && reveal.key) || 'rynek'
+  return composeSms(staticSms(s, key), s)
+}
+
+// Wyślij SMS przez funkcję send-sms (autoryzacja x-cron-secret). Zwraca wynik JSON.
+async function sendSms(CRON_SECRET: string, to: string, message: string): Promise<{ ok?: boolean; id?: string; points?: number; status?: string; error?: unknown } | null> {
+  try {
+    const r = await fetch(FN('send-sms'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET },
+      body: JSON.stringify({ action: 'send', to, message }),
+    })
+    return await r.json().catch(() => null)
+  } catch (e) { console.error('[spar-drip] sms send error:', e instanceof Error ? e.message : String(e)); return null }
 }
 
 // Przykładowa sesja do PODGLĄDU szablonów (bez realnego leada) — id-zero, więc
@@ -487,7 +537,41 @@ Deno.serve(async (req) => {
       // pomiędzy (3–7 dni ciszy) → zostaje w pauzie
     }
 
-    return jsonResponse({ ok: true, processed, fired }, 200)
+    // 4) SMS reaktywacyjny: mail odsłony sprzed >24h, NIEOTWARTY, lead nie-przegrany,
+    //    z numerem + zgodą (bez opt-out), SMS jeszcze nie poszedł → wyślij przez send-sms.
+    //    Cały przebieg za flagą SMS_ENABLED (przed pełną aktywacją konta SMSAPI = OFF).
+    const SMS_ENABLED = (Deno.env.get('SMS_ENABLED') || '') === '1'
+    let smsSent = 0
+    if (SMS_ENABLED && CRON_SECRET) {
+      const dayAgo = new Date(Date.now() - 86400000).toISOString()
+      const { data: unopened } = await supabase.from('spar_emails')
+        .select('session_id, kind, sent_at')
+        .like('kind', 'reveal_%').is('opened_at', null).lte('sent_at', dayAgo)
+        .order('sent_at', { ascending: false }).limit(80)
+      for (const em of unopened || []) {
+        if (smsSent >= MAX_FIRES_PER_RUN) break
+        const { count: smsDone } = await supabase.from('spar_sms').select('id', { count: 'exact', head: true }).eq('session_id', em.session_id).eq('kind', em.kind)
+        if (smsDone) continue   // już wysłany SMS dla tej odsłony
+        const { data: s } = await supabase.from('spar_sessions').select('id, name, email, phone, verdict, paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out').eq('id', em.session_id).maybeSingle()
+        if (!s || s.is_test || s.paid_at || s.verdict !== 'zielony') continue
+        if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue   // brak numeru/zgody albo opt-out
+        const inactive = Date.now() - await lastActivityMs(supabase, s)
+        if (inactive >= LOST_WINDOW_DAYS * 86400000) continue          // przegrany — nie zaczepiamy
+        const { data: rv } = await supabase.from('spar_reveals').select('key, meta').eq('session_id', em.session_id).eq('email_kind', em.kind).maybeSingle()
+        const text = getRevealSms(rv || { key: (em.kind as string).replace('reveal_', ''), meta: null }, s)
+        const res = await sendSms(CRON_SECRET, s.phone as string, text)
+        await supabase.from('spar_sms').insert({
+          session_id: s.id, kind: em.kind, phone: s.phone, message: text,
+          smsapi_id: res && res.id ? res.id : null,
+          points: res && typeof res.points === 'number' ? res.points : null,
+          status: res && res.ok ? (res.status || 'SENT') : 'ERROR',
+          meta: res && res.ok ? null : { error: res ? res.error : 'no_response' },
+        })
+        if (res && res.ok) smsSent++
+      }
+    }
+
+    return jsonResponse({ ok: true, processed, fired, smsSent }, 200)
   } catch (e) {
     console.error('[spar-drip] ERROR:', e)
     return jsonResponse({ error: 'blad_serwera' }, 500)

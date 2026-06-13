@@ -167,8 +167,8 @@
         </div>
         <button id="sekw-refresh" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition"><i class="ph ph-arrows-clockwise mr-1.5"></i>Odśwież</button>
       </div>
-      <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4" id="sekw-kpi"></div>
-      <div class="mt-3 text-[11px] text-zinc-600">Kadencja od werdyktu: <span id="sekw-plan-line"></span> · cron co 30 min (okno 8–20).</div>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4" id="sekw-kpi"></div>
+      <div class="mt-3 text-[11px] text-zinc-600">Kadencja od werdyktu: <span id="sekw-plan-line"></span> · cron co 30 min (okno 8–20). SMS reaktywacyjny leci +24 h po mailu, jeśli nieotwarty.</div>
     </div>
 
     <!-- ŚCIĄGA / MANUAL — jak działa sekwencja (rozwijane) -->
@@ -212,6 +212,12 @@
         </div>
 
         <div>
+          <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5">SMS reaktywacyjne (drugi kanał)</div>
+          Jeśli ktoś <strong>nie otworzy maila odsłony przez 24 h</strong>, dostaje krótki SMS z linkiem do panelu (przypomnienie + „pogadajmy o współpracy"). Treść pisze ten sam GPT co maila (bez polskich znaków, ≤300 zn.). SMS leci <strong>tylko</strong> do osób z numerem i zgodą (oddały numer po informacji przy bramce) i respektuje STOP. Dzięki temu łapiemy tych, co nie czytają maili (~75%).
+          <div class="text-[11px] text-zinc-500 mt-2">Wysyłka przez SMSAPI (nadawca „Tomek/TN"); cały kanał za flagą <code>SMS_ENABLED</code> — włączamy po pełnej aktywacji konta. Log wysyłek: tabela „SMS reaktywacyjne" niżej oraz oś czasu w karcie leada.</div>
+        </div>
+
+        <div>
           <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5">Statusy odsłon</div>
           <div class="flex flex-wrap gap-x-4 gap-y-1 text-[12px] text-zinc-400">
             <span><strong class="text-zinc-300">czeka</strong> — zaplanowana, czeka na termin</span>
@@ -246,6 +252,30 @@
             </tr>
           </thead>
           <tbody id="sekw-sent-rows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- SMS REAKTYWACYJNE — kiedy i do kogo (jak maile) -->
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+      <div class="flex items-center justify-between px-4 pt-4">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-chat-circle-text mr-1.5 text-teal-400"></i>SMS reaktywacyjne — kiedy i do kogo</h3>
+        <span id="sekw-sms-count" class="text-xs text-zinc-500"></span>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+              <th class="px-4 py-3">Wysłano</th>
+              <th class="px-4 py-3">Po odsłonie</th>
+              <th class="px-4 py-3">Projekt</th>
+              <th class="px-4 py-3">Numer</th>
+              <th class="px-4 py-3 text-center">Klik</th>
+              <th class="px-4 py-3">Status</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody id="sekw-sms-rows"></tbody>
         </table>
       </div>
     </div>
@@ -1147,17 +1177,21 @@ async function callDrip(payload) {
 
 async function renderSekwencja() {
   // Globalne tabele — bezpośrednio z bazy (rola authenticated, RLS admin-read).
-  const [{ data: reveals, error: e1 }, { data: remails, error: e2 }] = await Promise.all([
+  const [{ data: reveals, error: e1 }, { data: remails, error: e2 }, { data: smsRows, error: e3 }] = await Promise.all([
     supabaseClient.from('spar_reveals')
       .select('id, session_id, key, seq, status, due_at, generated_at, sent_at, email_kind, sess:spar_sessions(name, email, preview_brief, is_test, paid_at)')
       .order('due_at', { ascending: true }),
     supabaseClient.from('spar_emails')
       .select('session_id, kind, email, sent_at, opened_at, clicked_at, sess:spar_sessions(name, preview_brief)')
       .like('kind', 'reveal_%').order('sent_at', { ascending: false }).limit(300),
+    supabaseClient.from('spar_sms')
+      .select('session_id, kind, phone, status, points, clicked_at, created_at, sess:spar_sessions(name, preview_brief)')
+      .order('created_at', { ascending: false }).limit(300),
   ]);
   if (e1) console.error(e1);
   if (e2) console.error(e2);
-  const rv = reveals || [], rm = remails || [];
+  if (e3) console.error(e3);
+  const rv = reveals || [], rm = remails || [], sms = smsRows || [];
 
   // Plan-line
   $('sekw-plan-line').textContent = ['rynek +1 dz.', 'economics +2 dz.', 'strona +4 dz.', 'reklamy +5 dz.', 'prototyp +7 dz.'].join(' · ');
@@ -1169,10 +1203,12 @@ async function renderSekwencja() {
   const paused = rv.filter((r) => r.status === 'paused').length;
   const inProgress = rv.filter((r) => r.status === 'generating').length;
   const openRate = sentEmails.length ? Math.round((opened / sentEmails.length) * 100) : 0;
+  const smsOk = sms.filter((x) => x.status && x.status !== 'ERROR');
   const kpi = [
     { label: 'Projekty w sekwencji', val: inSeq, icon: 'ph-users-three', tone: 'text-blue-400' },
     { label: 'Odsłony wysłane', val: sentEmails.length, icon: 'ph-paper-plane-tilt', tone: 'text-emerald-400' },
     { label: 'Otwieralność', val: openRate + '%', icon: 'ph-envelope-open', tone: 'text-sky-400' },
+    { label: 'SMS reaktywacyjne', val: smsOk.length, icon: 'ph-chat-circle-text', tone: 'text-teal-400' },
     { label: 'W generowaniu', val: inProgress, icon: 'ph-circle-notch', tone: 'text-violet-400' },
     { label: 'Pauza (zimni)', val: paused, icon: 'ph-pause-circle', tone: 'text-amber-400' },
   ];
@@ -1194,6 +1230,22 @@ async function renderSekwencja() {
       <td class="px-4 py-2.5 text-center">${yesNo(m.clicked_at)}</td>
       <td class="px-4 py-2.5 text-right"><button onclick="event.stopPropagation();openSession('${m.session_id}')" class="text-xs text-blue-400 hover:text-blue-300">oś czasu →</button></td>
     </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">Jeszcze nic nie wysłano w sekwencji.</td></tr>';
+
+  // SMS REAKTYWACYJNE — kiedy i do kogo
+  $('sekw-sms-count').textContent = sms.length ? (sms.length + (sms.length === 300 ? '+ (ostatnie 300)' : '')) : 'jeszcze żadnego';
+  $('sekw-sms-rows').innerHTML = sms.length ? sms.map((x) => {
+    const err = x.status === 'ERROR';
+    const stTone = err ? 'text-rose-400 bg-rose-400/10 border-rose-400/30' : 'text-teal-300 bg-teal-400/10 border-teal-400/30';
+    return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.02] cursor-pointer" onclick="openSession('${x.session_id}')">
+      <td class="px-4 py-2.5 text-zinc-300 whitespace-nowrap text-xs">${fmtDate(x.created_at)}</td>
+      <td class="px-4 py-2.5">${revChip(x.kind)}</td>
+      <td class="px-4 py-2.5 text-white text-xs">${esc(sessLabel(x.sess))}</td>
+      <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(x.phone || '—')}</td>
+      <td class="px-4 py-2.5 text-center">${yesNo(x.clicked_at)}</td>
+      <td class="px-4 py-2.5"><span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-medium ${stTone}">${esc(x.status || '—')}</span></td>
+      <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
+    </tr>`;
+  }).join('') : '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">SMS-y ruszą po włączeniu kanału (flaga SMS_ENABLED).</td></tr>';
 
   // ZAPLANOWANE / W TOKU
   const now = Date.now();
@@ -1229,6 +1281,9 @@ async function renderProjectDetail(sid, targetId) {
   const byKey = {};
   (data.reveals || []).forEach((r) => { byKey[r.key] = r; });
   const plan = data.plan || [];
+  // SMS reaktywacyjne tej sesji (po kind = ten sam co mail odsłony)
+  const smsByKind = {};
+  if (!DEMO) { try { const { data: srows } = await supabaseClient.from('spar_sms').select('kind, status, phone, created_at, clicked_at').eq('session_id', sid); (srows || []).forEach((x) => { smsByKind[x.kind] = x; }); } catch (smsErr) { console.error(smsErr); } }
 
   const engaged = s && s.engaged;
   const head = `
@@ -1254,6 +1309,8 @@ async function renderProjectDetail(sid, targetId) {
       ? `Wysłano ${fmtDate(em.sent_at)} → ${esc((s && s.email) || '')}` + (em.opened_at ? ' · <span class="text-emerald-400">otwarty</span>' : ' · <span class="text-zinc-500">nieotwarty</span>') + (em.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : '')
       : (r && r.due_at ? `Termin: ${fmtDate(r.due_at)}` : `Kadencja: dzień +${p.day} od werdyktu`);
     const m = revMeta(p.key);
+    const sx = smsByKind[p.emailKind];
+    const smsLine = sx ? `<div class="text-[11px] mt-0.5 ${sx.status === 'ERROR' ? 'text-rose-400' : 'text-teal-400'}"><i class="ph ph-chat-circle-text mr-1"></i>SMS ${sx.status === 'ERROR' ? 'błąd' : 'wysłany'} ${fmtDate(sx.created_at)}${sx.phone ? ' → ' + esc(sx.phone) : ''}${sx.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : ''}</div>` : '';
     return `
     <div class="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-0">
       <div class="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 ${m.tone}"><i class="ph ${m.icon}"></i></div>
@@ -1263,6 +1320,7 @@ async function renderProjectDetail(sid, targetId) {
           ${statusBadge(status)}
         </div>
         <div class="text-[11px] text-zinc-500 mt-0.5">${sentLine}</div>
+        ${smsLine}
       </div>
       <div class="flex items-center gap-1.5 shrink-0">
         <button onclick="firePreview('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition" title="Podejrzyj maila bez wysyłki"><i class="ph ph-eye"></i></button>
