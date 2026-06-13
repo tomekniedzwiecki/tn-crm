@@ -27,14 +27,17 @@ const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${nam
 // Prototyp (klikalne, działające narzędzie) celowo NA KOŃCU — to najmocniejszy
 // argument, finał sekwencji dla niezdecydowanych. Wcześniej budujemy kontekst:
 // rynek → opłacalność → strona → sprzedaż, a potem „dotknij swojej aplikacji".
+// Kadencja skompresowana do ~tygodnia (2026-06-13): lead najgorętszy tuż po
+// werdykcie, finał (prototyp) ma trafić póki ciepły. Odstępy 1–2 dni.
 const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
   { key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' },
-  { key: 'economics', seq: 2, day: 3, emailKind: 'reveal_economics' },
-  { key: 'landing', seq: 3, day: 5, emailKind: 'reveal_landing' },
-  { key: 'gtm', seq: 4, day: 8, emailKind: 'reveal_gtm' },
-  { key: 'prototyp', seq: 5, day: 11, emailKind: 'reveal_prototyp' },
+  { key: 'economics', seq: 2, day: 2, emailKind: 'reveal_economics' },
+  { key: 'landing', seq: 3, day: 4, emailKind: 'reveal_landing' },
+  { key: 'gtm', seq: 4, day: 5, emailKind: 'reveal_gtm' },
+  { key: 'prototyp', seq: 5, day: 7, emailKind: 'reveal_prototyp' },
 ]
-const ENGAGE_WINDOW_DAYS = 10   // aktywność w panelu/rozmowie w tym oknie = zaangażowany
+const ENGAGE_WINDOW_DAYS = 3    // brak aktywności dłużej niż to → PAUZA kolejnych odsłon (odwracalne)
+const LOST_WINDOW_DAYS = 7      // brak aktywności dłużej niż to → PRZEGRANY (twardy koniec, bez wznawiania)
 const MAX_FIRES_PER_RUN = 12
 
 const CORS: Record<string, string> = {
@@ -260,16 +263,27 @@ const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
 // deno-lint-ignore no-explicit-any
-async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Promise<boolean> {
-  const win = Date.now() - ENGAGE_WINDOW_DAYS * 86400000
+// Najświeższy sygnał aktywności leada (ms): wejście do panelu, aktywność w
+// rozmowie albo otwarcie któregoś maila sekwencji. To jedno źródło prawdy dla
+// obu progów — „stygnący" (pauza) i „przegrany" (twardy koniec).
+async function lastActivityMs(supabase: ReturnType<typeof createClient>, s: any): Promise<number> {
   const lp = s.last_panel_at ? Date.parse(s.last_panel_at) : 0
   const lu = s.last_user_at ? Date.parse(s.last_user_at) : 0
-  if (lp >= win || lu >= win) return true
-  // otwarcie reveala liczy się TYLKO w oknie — inaczej jeden klik sprzed
-  // tygodni trzymałby zimnego leada „gorącym" w nieskończoność
-  const { count } = await supabase.from('spar_emails').select('id', { count: 'exact', head: true })
-    .eq('session_id', s.id).like('kind', 'reveal_%').gte('opened_at', new Date(win).toISOString())
-  return (count ?? 0) > 0
+  let m = Math.max(lp || 0, lu || 0)
+  const { data } = await supabase.from('spar_emails').select('opened_at')
+    .eq('session_id', s.id).like('kind', 'reveal_%').not('opened_at', 'is', null)
+    .order('opened_at', { ascending: false }).limit(1)
+  if (data && data[0] && data[0].opened_at) m = Math.max(m, Date.parse(data[0].opened_at as string))
+  return m
+}
+async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Promise<boolean> {
+  return (Date.now() - await lastActivityMs(supabase, s)) < ENGAGE_WINDOW_DAYS * 86400000
+}
+// Zamknij leada-przegranego: wszystkie nie-wysłane odsłony → 'skipped'
+// (koniec wysyłki, generowania i wznawiania). Idempotentne.
+async function closeLost(supabase: ReturnType<typeof createClient>, sid: string, nowIso: string): Promise<void> {
+  await supabase.from('spar_reveals').update({ status: 'skipped', updated_at: nowIso })
+    .eq('session_id', sid).in('status', ['pending', 'generating', 'paused'])
 }
 
 // Utwórz wiersze planu dla sesji (idempotentne)
@@ -437,28 +451,40 @@ Deno.serve(async (req) => {
       .select('*').in('status', ['pending', 'generating']).lte('due_at', nowIso).order('due_at').limit(120)
     let fired = 0
     const processed: Record<string, number> = {}
+    const lostNow = new Set<string>()
     for (const rv of due || []) {
       if (fired >= MAX_FIRES_PER_RUN) break
+      if (lostNow.has(rv.session_id)) continue   // sesja już zamknięta w tym przebiegu
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
       if (!s || s.is_test || !s.email || s.paid_at || s.verdict !== 'zielony') continue
-      // R1 leci zawsze; R2+ wymaga zaangażowania, inaczej PAUZA
+      // R1 leci zawsze. R2+ zależy od aktywności:
+      //  • cisza ≥ LOST_WINDOW (7 dni) → PRZEGRANY: zamykamy całą resztę sekwencji
+      //  • cisza ≥ ENGAGE_WINDOW (3 dni) → PAUZA (odwracalna)
+      //  • inaczej → wysyłamy/generujemy
       if (rv.seq > 1 && rv.status === 'pending') {
-        const engaged = await isEngaged(supabase, s)
-        if (!engaged) { await supabase.from('spar_reveals').update({ status: 'paused', updated_at: nowIso }).eq('id', rv.id); continue }
+        const inactive = Date.now() - await lastActivityMs(supabase, s)
+        if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
+        if (inactive >= ENGAGE_WINDOW_DAYS * 86400000) { await supabase.from('spar_reveals').update({ status: 'paused', updated_at: nowIso }).eq('id', rv.id); continue }
       }
       const result = await processReveal(supabase, SUPABASE_URL, SERVICE_KEY, s, rv)
       processed[result] = (processed[result] || 0) + 1
       if (result === 'sent') fired++
     }
 
-    // 3) wznowienie: zapauzowane reveale, których lead znów się zaangażował
+    // 3) zapauzowane reveale: wznów (wrócił), zamknij (przegrany) albo zostaw
     const { data: paused } = await supabase.from('spar_reveals').select('*').eq('status', 'paused').limit(120)
+    const closedLost = new Set<string>()
     for (const rv of paused || []) {
+      if (closedLost.has(rv.session_id)) continue
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
       if (!s || s.paid_at || s.verdict !== 'zielony') continue
-      if (await isEngaged(supabase, s)) {
-        await supabase.from('spar_reveals').update({ status: 'pending', due_at: nowIso, updated_at: nowIso }).eq('id', rv.id)
+      const inactive = Date.now() - await lastActivityMs(supabase, s)
+      if (inactive >= LOST_WINDOW_DAYS * 86400000) {
+        await closeLost(supabase, s.id, nowIso); closedLost.add(s.id)   // przegrany → koniec
+      } else if (inactive < ENGAGE_WINDOW_DAYS * 86400000) {
+        await supabase.from('spar_reveals').update({ status: 'pending', due_at: nowIso, updated_at: nowIso }).eq('id', rv.id)  // wrócił → wznów
       }
+      // pomiędzy (3–7 dni ciszy) → zostaje w pauzie
     }
 
     return jsonResponse({ ok: true, processed, fired }, 200)
