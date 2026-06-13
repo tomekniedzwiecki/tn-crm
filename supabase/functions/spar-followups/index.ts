@@ -46,18 +46,30 @@ function warsawHour(): number {
   }).format(new Date()), 10)
 }
 
+const CHECKOUT_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
+const OFFER_ID = Deno.env.get('SPAR_OFFER_ID') || 'a1656695-db0d-4ae7-b107-230832042076'
+const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
+const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+
 function chatLink(sessionId: string, campaign: string, hash = ''): string {
   return `${SPARING_URL}?id=${sessionId}&utm_source=email&utm_medium=followup&utm_campaign=${campaign}${hash}`
 }
-
-function btn(href: string, label: string): string {
-  return `<table cellpadding="0" cellspacing="0" style="margin:22px 0;"><tr><td style="border-radius:999px;background:linear-gradient(135deg,#6db3ff,#4d9fff);">
-    <a href="${href}" style="display:inline-block;padding:13px 30px;color:#061320;font-weight:700;font-size:15px;text-decoration:none;">${label}</a>
-  </td></tr></table>`
+function checkoutLink(leadId: string | null): string {
+  return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=followup`
 }
+function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
-function emailHtml(inner: string): string {
-  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.65;color:#1a1a1a;max-width:560px;">${inner}</div>`
+// Body (zwykły tekst) -> minimalny HTML „jak pisany w skrzynce". Linki TYLKO
+// przez tokeny [tekst](LINK_VIEW)/[tekst](LINK_RESERVE). Podpis dokleja send-email.
+function mdToHtml(body: string, viewUrl: string | null, reserveUrl: string | null): string {
+  let t = escHtml(body || '')
+  if (viewUrl) t = t.replace(/\[([^\]]+)\]\(LINK_VIEW\)/g, (_m, l) => `<a href="${viewUrl}" style="color:#2563eb;">${l}</a>`)
+  t = t.replace(/\[([^\]]+)\]\(LINK_RESERVE\)/g, (_m, l) => reserveUrl ? `<a href="${reserveUrl}" style="color:#2563eb;">${l}</a>` : String(l))
+  t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+  if (viewUrl && t.indexOf(viewUrl) < 0) t += `\n\nWszystko jest w Twoim panelu: <a href="${viewUrl}" style="color:#2563eb;">${viewUrl}</a>`
+  const paras = t.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+  const inner = paras.map((p) => `<p style="margin:0 0 14px;">${p.replace(/\n/g, '<br>')}</p>`).join('')
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${inner}</div>`
 }
 
 interface SessionRow {
@@ -83,106 +95,93 @@ function toolName(s: SessionRow): string {
   return n || 'Twoje narzędzie'
 }
 
-function buildEmail(kind: string, s: SessionRow): { subject: string; html: string } {
-  const hi = firstName(s) ? `Cześć ${firstName(s)}!` : 'Cześć!'
-  const nazwa = toolName(s)
-  if (kind === 'abandoned_chat') {
-    return {
-      subject: `Twój projekt narzędzia czeka dokończony w połowie`,
-      html: emailHtml(`
-        <p>${hi}</p>
-        <p>Zacząłeś projektować swoje narzędzie w rozmowie z moim AI — i zatrzymaliśmy się w pół drogi.
-        Cała rozmowa jest zapisana, wracasz dokładnie w to samo miejsce.</p>
-        <p>Kilka minut dzieli Cię od karty projektu i pierwszych ekranów.</p>
-        ${btn(chatLink(s.id, 'abandoned_chat'), 'Wracam do rozmowy →')}
-      `),
-    }
+function followupView(kind: string, s: SessionRow): string {
+  if (kind === 'landing_ready') return s.landing_url || chatLink(s.id, 'landing_ready', '#projekt-strona')
+  if (kind === 'raport_ready') return chatLink(s.id, 'raport_ready', '#rynek')
+  if (kind === 'verdict_no_payment') return chatLink(s.id, 'verdict_no_payment', '#projekt-plan')
+  if (kind === 'verdict_last_call') return chatLink(s.id, 'verdict_last_call', '#projekt')
+  if (kind === 'paid_welcome') return chatLink(s.id, 'paid_welcome')
+  return chatLink(s.id, 'abandoned_chat')
+}
+function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
+function reserveFor(kind: string, s: SessionRow): string | null { return (kind === 'verdict_last_call' || kind === 'verdict_no_payment') ? checkoutLink(s.lead_id) : null }
+
+// Statyczny mail (plain, „z palca") — gallery podglądu + fallback gdy GPT off.
+function staticEmail(kind: string, s: SessionRow): { subject: string; html: string } {
+  const im = firstName(s) ? ` ${firstName(s)}` : ''
+  const n = toolName(s)
+  const T: Record<string, { subject: string; body: string }> = {
+    abandoned_chat: { subject: 'Twój projekt czeka dokończony w połowie', body: `Cześć${im}!\n\nZacząłeś projektować swoje narzędzie w rozmowie z moim AI i zatrzymaliśmy się w pół drogi. Cała rozmowa jest zapisana — wracasz dokładnie w to samo miejsce.\n\nKilka minut dzieli Cię od karty projektu i pierwszych ekranów. [Dokończmy to](LINK_VIEW).` },
+    verdict_no_payment: { subject: `${n}: projekt i plan czekają`, body: `Cześć${im}!\n\nProjekt ${n} ma zielony werdykt — karta, ekrany i wstępny plan przychodu czekają w panelu.\n\nKolejny krok to rezerwacja wspólnej rozmowy (500 zł, w pełni zwrotne): przygotowuję wtedy osobiście plan przedsięwzięcia. Możesz [zarezerwować ją tutaj](LINK_RESERVE), a [projekt zobaczysz w panelu](LINK_VIEW).` },
+    verdict_last_call: { subject: `${n} — domykam miejsce na ten projekt`, body: `Cześć${im}!\n\nTydzień temu ${n} dostał zielony werdykt. Karta, ekrany i plan wciąż czekają w panelu — nic nie przepadło.\n\nJeśli to nie ten moment — w porządku, projekt zostaje zapisany. A jeśli chcesz go ruszyć, [rezerwacja](LINK_RESERVE) to 500 zł, w pełni zwrotne.` },
+    landing_ready: { subject: `${n} ma już swoją stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona ${n} — nie grafika, prawdziwa strona w przeglądarce. [Otwórz ją](LINK_VIEW), przewiń, możesz pokazać znajomym z branży.` },
+    raport_ready: { subject: `${n}: raport rynku gotowy`, body: `Cześć${im}!\n\nSprawdziłem rynek wokół ${n} — w internecie, nie „z głowy": konkurenci z cenami, wielkość niszy, trendy, z podlinkowanymi źródłami. Cały raport jest [tutaj](LINK_VIEW).` },
+    paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${n} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów, droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
   }
-  if (kind === 'verdict_no_payment') {
-    return {
-      subject: `${nazwa}: karta projektu i plan przychodu gotowe`,
-      html: emailHtml(`
-        <p>${hi}</p>
-        <p>Projekt <strong>${nazwa}</strong> ma zielony werdykt — karta projektu, ekrany
-        i wstępny plan przychodu czekają w Twoim panelu.</p>
-        <p>Następny krok to rezerwacja wspólnej rozmowy (500 zł, <strong>w pełni zwrotne</strong>):
-        przygotowuję wtedy osobiście plan przedsięwzięcia i odzywam się do Ciebie.
-        Nie wchodzimy we współpracę — oddaję całość.</p>
-        ${btn(chatLink(s.id, 'verdict_no_payment', '#projekt-plan'), 'Zobacz projekt i plan przychodu →')}
-      `),
-    }
-  }
+  const t = T[kind] || T.abandoned_chat
+  return { subject: t.subject, html: mdToHtml(t.body, viewFor(kind, s), reserveFor(kind, s)) }
+}
+
+// Cel maila + dane (do GPT) dla kindów, które warto personalizować.
+function followupBrief(kind: string, s: SessionRow): { goal: string; facts: string } {
+  const n = toolName(s)
+  if (kind === 'abandoned_chat') return { goal: 'Osoba zaczęła projektować z Twoim AI pomysł na własne narzędzie i PRZERWAŁA w połowie (jeszcze przed werdyktem). Napisz krótko, ciepło, bez nacisku: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od karty projektu i pierwszych ekranów. Zachęć delikatnie do powrotu. Jeśli nazwa narzędzia jest generyczna („Twoje narzędzie"), pisz o „Twoim pomyśle".', facts: `narzędzie/temat: ${n}` }
   if (kind === 'verdict_last_call') {
-    // ostatni dzwonek — inny kąt: liczby z planu przychodu (jeśli policzony)
-    let liczby = ''
-    const plan = s.business_plan
-    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) {
-      const goal = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>
-      if (typeof goal.mies === 'number' && typeof goal.klienci === 'number') {
-        const mies = Math.round(goal.mies).toLocaleString('pl-PL')
-        liczby = `<p>Dla przypomnienia jedna liczba z Twojego planu: przy ${goal.klienci} klientach
-        to około <strong>${mies} zł miesięcznie</strong> — a pierwszych 50 klientów pozyskuję ja.</p>`
-      }
-    }
-    return {
-      subject: `${nazwa} — domykam miejsce na ten projekt`,
-      html: emailHtml(`
-        <p>${hi}</p>
-        <p>Tydzień temu Twój projekt <strong>${nazwa}</strong> dostał zielony werdykt.
-        Karta, ekrany i plan przychodu wciąż czekają w panelu — nic nie przepadło.</p>
-        ${liczby}
-        <p>Jeśli to nie ten moment — w porządku, projekt zostaje zapisany.
-        Jeśli jednak chcesz go ruszyć: rezerwacja to 500 zł, <strong>w pełni zwrotne</strong>.</p>
-        ${btn(chatLink(s.id, 'verdict_last_call', '#projekt'), 'Wracam do projektu →')}
-      `),
-    }
+    const plan = s.business_plan; let liczba = ''
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
+    return { goal: 'To OSTATNI follow-up tego wątku (≈tydzień po zielonym werdykcie, cisza). Inny kąt niż wcześniej: lekka „domykam miejsce" + konkret. Przypomnij, że projekt dostał zielony werdykt i czeka w panelu. Bez nacisku: jeśli to nie moment — OK, projekt zostaje zapisany; jeśli chce ruszyć, rezerwacja 500 zł w pełni zwrotna. Delikatnie wpleć link do rezerwacji.', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
   }
-  if (kind === 'landing_ready') {
-    return {
-      subject: `${nazwa} ma już swoją stronę — zobacz ją w przeglądarce`,
-      html: emailHtml(`
-        <p>${hi}</p>
-        <p>Po naszej rozmowie zbudowała się strona Twojego narzędzia <strong>${nazwa}</strong>.
-        To nie jest grafika ani makieta — to <strong>działająca strona</strong>: otwórz ją,
-        przewiń, poklikaj. Spokojnie możesz podesłać link znajomym z branży.</p>
-        ${btn(s.landing_url || chatLink(s.id, 'landing_ready', '#projekt-marka'), 'Otwieram stronę →')}
-        <p style="font-size:13.5px;color:#555;">Całość projektu — ekrany, kartę i resztę —
-        znajdziesz jak zawsze <a href="${chatLink(s.id, 'landing_ready', '#projekt-marka')}" style="color:#2f6bdd;">w swoim panelu</a>.</p>
-      `),
-    }
-  }
-  if (kind === 'raport_ready') {
-    const r = s.market_report || {}
-    const teza = typeof r.teza === 'string' ? r.teza : ''
-    const nKonk = Array.isArray(r.konkurenci) ? r.konkurenci.length : 0
-    const nSrc = Array.isArray(r.zrodla) ? r.zrodla.length : 0
-    return {
-      subject: `${nazwa}: raport potencjału rynku gotowy`,
-      html: emailHtml(`
-        <p>${hi}</p>
-        <p>Sprawdziłem rynek wokół projektu <strong>${nazwa}</strong> — w internecie,
-        nie „z głowy": ${nKonk ? `${nKonk} najbliższych konkurentów z realnymi cenami, ` : ''}wielkość niszy
-        i trendy${nSrc ? `, wszystko z ${nSrc} podlinkowanymi źródłami` : ''}.</p>
-        ${teza ? `<p style="border-left:3px solid #4d9fff;padding:2px 0 2px 14px;color:#444;">${teza}</p>` : ''}
-        <p>Pełny raport — z oknem rynkowym i wnioskami dla pierwszej wersji — czeka w Twoim panelu:</p>
-        ${btn(chatLink(s.id, 'raport_ready', '#rynek'), 'Zobacz raport rynku →')}
-      `),
+  return { goal: 'Osoba właśnie zarezerwowała wspólną rozmowę (zapłaciła 500 zł, w pełni zwrotne). Podziękuj ciepło i osobiście, potwierdź że bierzesz jej projekt na warsztat: przygotowujesz plan przedsięwzięcia (zakres v1, model przychodów, droga do 50 klientów, harmonogram) i odzywasz się osobiście w 2–3 dni robocze. Bez sprzedaży, krótko. Linku nie musisz dawać.', facts: `narzędzie: ${n}` }
+}
+
+const EMAIL_SYSTEM = `Jesteś Tomkiem Niedźwieckim. Piszesz krótkiego, OSOBISTEGO maila (follow-up) do osoby, która projektowała z Twoim AI pomysł na własne narzędzie (SaaS). Ma wyglądać, jakbyś napisał go z palca w skrzynce — nie marketing.
+ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, bez emoji, bez clickbaitu, bez przesadnych obietnic — styl brutalnie szczery, system > magia. Jeśli to pasuje, odnieś się konkretnie do JEGO pomysłu (nazwa, 1 szczegół). NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
+LINKI: jeśli w kontekście podano link do podglądu, wstaw go RAZ jako [naturalny tekst](LINK_VIEW). Jeśli podano link do rezerwacji, możesz go delikatnie wpleść jako [tekst](LINK_RESERVE). Nie wymyślaj żadnych adresów. Jeśli żaden link nie pasuje (np. samo podziękowanie) — nie dawaj linku.
+Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
+
+async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: string | null, reserveUrl: string | null): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey) return null
+  const brief = followupBrief(kind, s)
+  const b = s.preview_brief || {}
+  const links = [viewUrl && 'jest link do podglądu (LINK_VIEW)', reserveUrl && 'jest link do rezerwacji (LINK_RESERVE)'].filter(Boolean).join('; ') || 'brak linków'
+  const ctx = [
+    `Narzędzie: ${toolName(s)}`,
+    typeof b.opis === 'string' && b.opis && `Opis: ${b.opis}`,
+    typeof b.dla_kogo === 'string' && b.dla_kogo && `Dla kogo: ${b.dla_kogo}`,
+    brief.facts && `Dane: ${brief.facts}`,
+    firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
+    `Dostępne linki: ${links}`,
+  ].filter(Boolean).join('\n')
+  const user = `KONTEKST:\n${ctx}\n\nCEL TEGO MAILA: ${brief.goal}`
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: EMAIL_SYSTEM }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 1000, reasoning_effort: 'low' }),
+    })
+    if (!res.ok) { console.error('[spar-followups] email openai', res.status); return null }
+    const data = await res.json()
+    const u = data?.usage || {}
+    const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
+    const obj = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const subject = typeof obj.subject === 'string' && obj.subject.trim() ? obj.subject.trim() : null
+    const body = typeof obj.body === 'string' && obj.body.trim() ? obj.body.trim() : null
+    if (!subject || !body) return null
+    return { subject, html: mdToHtml(body, viewUrl, reserveUrl), usage }
+  } catch (e) { console.error('[spar-followups] email gen error:', e instanceof Error ? e.message : String(e)); return null }
+}
+
+// GPT dla sensownych kindów (abandoned/last_call/welcome) + log kosztu; reszta statyczna.
+async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow): Promise<{ subject: string; html: string }> {
+  const GPT_KINDS = ['abandoned_chat', 'verdict_last_call', 'paid_welcome']
+  if (GPT_KINDS.includes(kind)) {
+    const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s))
+    if (gen) {
+      if (gen.usage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'followup_email', kind } }) } catch (uErr) { console.error('[spar-followups] email usage:', uErr) } }
+      return { subject: gen.subject, html: gen.html }
     }
   }
-  // paid_welcome
-  return {
-    subject: `Rezerwacja przyjęta — co teraz?`,
-    html: emailHtml(`
-      <p>${hi}</p>
-      <p>Dzięki za rezerwację! Projekt <strong>${nazwa}</strong> trafia teraz na moje biurko —
-      przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów,
-      droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście
-      w ciągu 2–3 dni roboczych.</p>
-      <p>Przypominam: 500 zł jest w pełni zwrotne — jeśli którykolwiek z nas uzna,
-      że to nie ten moment, oddaję całość.</p>
-      <p>Do usłyszenia,<br>Tomek</p>
-    `),
-  }
+  return staticEmail(kind, s)
 }
 
 Deno.serve(async (req) => {
@@ -224,7 +223,7 @@ Deno.serve(async (req) => {
         landing_url: 'https://twojenarzedzie.pl', lead_id: null, paid_at: null, last_user_at: null, last_panel_at: null,
       } as unknown as SessionRow
       const kinds = ['abandoned_chat', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
-      const templates = kinds.map((k) => { const { subject, html } = buildEmail(k, sample); return { group: 'followup', kind: k, subject, html, disabled: DISABLED.includes(k) } })
+      const templates = kinds.map((k) => { const { subject, html } = staticEmail(k, sample); return { group: 'followup', kind: k, subject, html, disabled: DISABLED.includes(k) } })
       return jsonResponse({ templates }, 200)
     }
 
@@ -248,7 +247,7 @@ Deno.serve(async (req) => {
       if (claimErr) { console.error('[spar-followups] claim error:', claimErr); return false }
       if (!claim || !claim.length) return false // już wysłany wcześniej
 
-      const { subject, html } = buildEmail(kind, s)
+      const { subject, html } = await getEmailFor(supabase, kind, s)
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
