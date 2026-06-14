@@ -42,7 +42,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 // Sekwencja odkrywania (musi zgadzać się z planem w spar-drip): kadencja dni
 // od werdyktu (proxy: created_at). Panel bramkuje widoczność wg statusu odsłon.
 const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
-  { key: 'rynek', seq: 1, day: 1, emailKind: 'reveal_rynek' },
+  { key: 'rynek', seq: 1, day: 0, emailKind: 'reveal_rynek' }, // day 0 = mail od razu (rynek widoczny od razu w panelu)
   { key: 'economics', seq: 2, day: 2, emailKind: 'reveal_economics' },
   { key: 'landing', seq: 3, day: 4, emailKind: 'reveal_landing' },
   { key: 'gtm', seq: 4, day: 5, emailKind: 'reveal_gtm' },
