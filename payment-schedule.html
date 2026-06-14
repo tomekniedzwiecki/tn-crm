@@ -275,7 +275,14 @@
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Token portalu (z ?token=) leci w nagłówku x-wf-token do PostgREST — RLS zawęża
+        // dostęp do workflow o tym tokenie (i powiązanych harmonogramów). Neutralne dopóki
+        // polityki są USING(true) — bezpiecznie wdrożyć przed zaciśnięciem RLS.
+        const __WF_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL, SUPABASE_ANON_KEY,
+            __WF_TOKEN ? { global: { headers: { 'x-wf-token': __WF_TOKEN } } } : undefined
+        );
 
         let workflow = null;
         let schedule = null;

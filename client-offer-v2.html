@@ -2061,7 +2061,14 @@
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Token oferty (z ?token=) leci w nagłówku x-offer-token do PostgREST — RLS (po
+        // zaciśnięciu) zawęża client_offers do oferty o tym tokenie. Neutralne dopóki
+        // polityki są USING(true) — bezpiecznie wdrożyć przed zmianą RLS.
+        const __OFFER_TOKEN = new URLSearchParams(window.location.search).get('token') || '';
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL, SUPABASE_ANON_KEY,
+            __OFFER_TOKEN ? { global: { headers: { 'x-offer-token': __OFFER_TOKEN } } } : undefined
+        );
 
         const DEPOSIT_AMOUNT = 500;
 

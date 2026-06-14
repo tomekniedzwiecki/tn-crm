@@ -5714,7 +5714,16 @@
 
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
-        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Token portalu (z URL /projekt/<token>) leci w nagłówku x-wf-token do PostgREST.
+        // RLS (po wdrożeniu zaciśnięcia) ogranicza odczyt/zapis WYŁĄCZNIE do workflow o tym
+        // tokenie — koniec enumeracji i zapisu do cudzego workflow. Działa też w admin_preview
+        // (ścieżka też zawiera /projekt/<token>). Dopóki polityki są USING(true) — nagłówek
+        // jest neutralny (nic nie psuje), więc bezpiecznie wdrożyć PRZED zmianą RLS.
+        const __WF_TOKEN = (window.location.pathname.match(/\/projekt\/([a-f0-9]+)/i) || [])[1] || '';
+        const supabaseClient = window.supabase.createClient(
+            SUPABASE_URL, SUPABASE_ANON_KEY,
+            __WF_TOKEN ? { global: { headers: { 'x-wf-token': __WF_TOKEN } } } : undefined
+        );
 
         let workflow = null;
         let milestones = [];
