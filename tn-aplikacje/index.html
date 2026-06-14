@@ -309,6 +309,8 @@
         <h3 class="text-white font-medium text-sm"><i class="ph ph-envelope-open mr-1.5 text-sky-400"></i>Follow-upy (poza sekwencją) — 30 dni</h3>
         <span class="text-[11px] text-zinc-500">maile sekwencji → sekcja »Sekwencja« powyżej · testy pojedynczego projektu → karta leada</span>
       </div>
+      <!-- Skuteczność reaktywacji rozmów w toku (abandoned 3 maile + SMS powrotu) -->
+      <div id="reeng-stats" class="mb-4"></div>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4" id="mail-kpi"></div>
       <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
         <div class="flex items-center justify-between px-4 pt-4">
@@ -393,7 +395,7 @@
       <p><code class="text-blue-300">SPAR_OPENAI_MODEL</code> — model czatu (teraz gpt-5.5)</p>
       <p><code class="text-blue-300">SPAR_IMG_IP_DAILY</code> — dzienny limit obrazów per IP (produkcyjnie: 20)</p>
       <p><code class="text-blue-300">SPAR_IMAGE_QUALITY</code> — low / medium / high (koszt $0.011 / $0.041 / $0.167 za obraz)</p>
-      <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min (abandoned 3–48 h, werdykt bez wpłaty 20–96 h, wpłata → welcome + lead „won").</p>
+      <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min. Reaktywacja rozmów w toku: 3 maile (~3h / 24h / 48h, treść GPT pod realny fragment rozmowy; #3 tylko gdy otwarto #1 lub #2) + SMS powrotu z ekranu badania/ekranów (<code>SMS_ENABLED</code>, beacon wyjścia). Bramka między-kanałowa ≥10h. Wpłata → welcome + lead „won".</p>
     </div>
   </section>
 
@@ -1482,8 +1484,42 @@ function renderLeady() {
 // ── KOMUNIKACJA (sekwencja + maile + szablony) ──
 function renderKomunikacja() {
   renderSekwencja();
+  renderReengStats();
   renderMaile();
   loadSzablony();
+}
+
+// Skuteczność reaktywacji rozmów W TOKU: 3 maile abandoned + SMS powrotu.
+// Dane z spar-followups action:'stats' (lifetime). Otwarcia/kliknięcia z Resend.
+async function renderReengStats() {
+  const box = $('reeng-stats'); if (!box) return;
+  box.innerHTML = '<div class="text-xs text-zinc-500 py-2"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę skuteczność reaktywacji…</div>';
+  let j; try { j = await callFn('spar-followups', { action: 'stats' }); }
+  catch (e) { box.innerHTML = `<div class="text-xs text-rose-400 py-2">Błąd statystyk: ${esc(e.message)}</div>`; return; }
+  const a = (j && j.abandoned) || {}, pk = a.perKind || {}, ss = a.sessions || {}, sms = (j && j.sms) || {};
+  const pct = (n, d) => d ? Math.round((n / d) * 100) + '%' : '—';
+  const tile = (label, big, sub, accent) => `<div class="bg-zinc-900/60 border border-white/5 rounded-xl px-3.5 py-3">
+      <div class="text-[11px] text-zinc-500 truncate">${esc(label)}</div>
+      <div class="text-xl font-bold ${accent || 'text-white'}">${big}</div>
+      <div class="text-[10px] text-zinc-500 truncate">${esc(sub || '')}</div></div>`;
+  const mailT = (kind, label) => { const x = pk[kind] || { sent: 0, opened: 0, clicked: 0 }; return tile(label, x.sent, `otw. ${pct(x.opened, x.sent)} · klik. ${pct(x.clicked, x.sent)}`); };
+  const smsT = (kind, label) => { const x = sms[kind] || { sent: 0, clicked: 0 }; return tile(label, x.sent, `klik. ${pct(x.clicked, x.sent)}`); };
+  const base = ss.emailed || 0;
+  box.innerHTML =
+    '<div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-arrow-u-up-left mr-1 text-amber-400"></i>Reaktywacja rozmów w toku</div>' +
+    '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-2">' +
+      mailT('abandoned_chat', 'Mail #1 (~3h)') +
+      mailT('abandoned_chat_2', 'Mail #2 (~24h)') +
+      mailT('abandoned_chat_3', 'Mail #3 (~48h)') +
+      smsT('sms_badanie_back', 'SMS badanie') +
+      smsT('sms_ekrany_back', 'SMS ekrany') +
+    '</div>' +
+    '<div class="grid grid-cols-2 md:grid-cols-4 gap-3">' +
+      tile('Dostały mail', base, 'unikalne rozmowy') +
+      tile('Wróciły do rozmowy', ss.returned || 0, pct(ss.returned || 0, base) + ' z mailowanych', 'text-sky-300') +
+      tile('Zielony werdykt', ss.green || 0, pct(ss.green || 0, base) + ' z mailowanych', 'text-emerald-300') +
+      tile('Zapłaciły', ss.paid || 0, pct(ss.paid || 0, base) + ' z mailowanych', 'text-emerald-400') +
+    '</div>';
 }
 
 // Wywołanie dowolnej funkcji edge z autoryzacją zalogowanego admina (JWT)

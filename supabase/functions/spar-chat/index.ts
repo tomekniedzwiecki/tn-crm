@@ -92,6 +92,10 @@ interface SparChatRequest {
   // Cloudflare Turnstile — wymagany przy tworzeniu NOWEJ sesji bez zalogowania
   // (anty-bot); weryfikacja wyłączona, gdy brak TURNSTILE_SECRET_KEY w env
   turnstileToken?: string | null
+  // Beacon „wyszedł z ekranu generowania" (pagehide/visibilitychange) — bez
+  // message; stempluje left_screen_at/left_screen dla precyzyjnego SMS powrotu
+  event?: string | null
+  screen?: string | null
 }
 
 // ── Konto z JWT (Supabase Auth) ───────────────────────────────────────────────
@@ -427,6 +431,162 @@ async function persistAfterStream(
   }
 }
 
+// ── BRAMKA POTENCJAŁU (GA) ───────────────────────────────────────────────────
+// Instrukcja wstrzykiwana do sessionContext (kanał sparing): model po domknięciu
+// rdzenia wystawia <ocena> zamiast samodzielnego werdyktu/podglądu, a backend
+// odpala spar-assess i steruje drugą turą. Trzymana w kodzie (nie w 31k promptcie
+// settings) — to mechanika bramki, nie głos; łatwa do tuningu/rewersji.
+const GATE_INSTRUCTION = `[OCENA POTENCJAŁU — KROK OBOWIĄZKOWY PRZED PODGLĄDEM]
+Gdy rdzeń narzędzia jest z grubsza zdefiniowany (wiesz: co robi, dla kogo, kto płaci, 1–2 ekrany), NIE oceniaj sam, czy to dobry biznes, i NIE pokazuj jeszcze podglądu. Zamiast tego napisz JEDNO naturalne zdanie do rozmówcy w stylu „Daj mi chwilę — sprawdzę na żywo Twój rynek i konkurencję", a potem wystaw marker w osobnej linii:
+<ocena>{"nazwa":"…","opis":"…","problem":"…","dla_kogo":"…","kto_placi":"…","dzisiejsze_obejscie":"…","ekrany":["…","…"],"konkurencja":"…"}</ocena>
+i ZAKOŃCZ turę (nic po markerze). Wynik badania dostaniesz w następnej turze i wtedy poprowadzisz dalej — potwierdzasz kierunek i pokazujesz podgląd albo prowadzisz do mocniejszej wersji. Oceniaj, gdy masz materiał; powtórz, jeśli pomysł istotnie się zmienił.`
+
+// Wstrzykiwane w turze PO „zielonym" badaniu, gdy rozmówca zareagował na
+// zaproponowane wyostrzenie — wtedy (i dopiero wtedy) pokazujemy podgląd.
+const PREVIEW_AFTER_GATE_INSTRUCTION = `[PODGLĄD PO DOPRACOWANIU KIERUNKU]
+Po badaniu rynku rozmówca właśnie zareagował na zaproponowane wyostrzenie narzędzia. Jeśli akceptuje lub doprecyzował kierunek — POKAŻ teraz, jak to może wyglądać: wystaw marker <projekt>{…} wg ustaleń (uwzględnij wyostrzenie z badania; rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn). Zielony <werdykt> wystaw jak zwykle, po podglądzie/akceptacji. Jeśli rozmówca chce ZUPEŁNIE innego kierunku — krótko dopytaj, zamiast wymuszać podgląd. NIE wystawiaj już markera <ocena>.`
+
+// Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
+async function runGate(
+  supabaseUrl: string,
+  serviceKey: string,
+  projekt: Record<string, unknown>,
+  sessionId: string,
+  onProgress?: (label: string) => void,
+): Promise<Record<string, unknown> | null> {
+  const url = `${supabaseUrl}/functions/v1/spar-assess`
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` }
+  // Próba STREAMOWANA — realny postęp przez onProgress (etykiety wg wyszukań).
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ projekt, sessionId, stream: true }) })
+    if (res.ok && res.body) {
+      const reader = res.body.getReader()
+      const dec = new TextDecoder()
+      let buf = ''
+      let ocena: Record<string, unknown> | null = null
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buf += dec.decode(value, { stream: true })
+        let i
+        while ((i = buf.indexOf('\n\n')) >= 0) {
+          const evt = buf.slice(0, i); buf = buf.slice(i + 2)
+          let ev = ''; let ds = ''
+          for (const line of evt.split('\n')) {
+            if (line.startsWith('event:')) ev = line.slice(6).trim()
+            else if (line.startsWith('data:')) ds += line.slice(5).replace(/^ /, '')
+          }
+          if (!ds) continue
+          let d: Record<string, unknown> | null = null
+          try { d = JSON.parse(ds) } catch { continue }
+          if (ev === 'progress' && d?.label && onProgress) { try { onProgress(String(d.label)) } catch { /* ignore */ } }
+          else if (ev === 'verdict' && d?.ocena && typeof d.ocena === 'object') { ocena = d.ocena as Record<string, unknown> }
+        }
+      }
+      if (ocena) return ocena
+      console.error('[spar-chat] spar-assess stream: brak werdyktu → fallback buforowany')
+    } else {
+      console.error('[spar-chat] spar-assess stream HTTP:', res.status)
+    }
+  } catch (err) {
+    console.error('[spar-chat] runGate stream exception → fallback:', err)
+  }
+  // FALLBACK: buforowany strzał (pewny werdykt, bez postępu). Gwarantuje, że
+  // bramka nie pada przez kruchość streamu — niezawodność zachowana.
+  try {
+    const res2 = await fetch(url, { method: 'POST', headers, body: JSON.stringify({ projekt, sessionId }) })
+    if (!res2.ok) { console.error('[spar-chat] spar-assess fallback HTTP:', res2.status); return null }
+    const data = await res2.json()
+    return (data && typeof data.ocena === 'object') ? data.ocena as Record<string, unknown> : null
+  } catch (err) {
+    console.error('[spar-chat] runGate fallback exception:', err)
+    return null
+  }
+}
+
+// Instrukcja sterowania dla DRUGIEJ tury (po badaniu rynku). Tu mieszka jakość
+// podpowiedzi: przy nie-zielonym ZAWSZE <opcje> prowadzące w stronę kierunku.
+function buildSteerInstruction(o: Record<string, unknown>): string {
+  const ocena = String(o.ocena || '')
+  const kierunek = String(o.kierunek || '')
+  const rynek = String(o.odczyt_rynku || '')
+  const konk = String(o.konkurencja || '')
+  const powody = Array.isArray(o.powody) ? (o.powody as unknown[]).map(String).join(' • ') : ''
+  const zrodla = Array.isArray(o.zrodla)
+    ? (o.zrodla as Record<string, unknown>[]).slice(0, 4).map((z) => String(z?.tytul || '')).filter(Boolean).join(', ')
+    : ''
+  const platnosc = String(o.platnosc || '')
+  const wspolne = `DANE Z BADANIA RYNKU (na żywo, REALNE — wykorzystaj je, to nie zgadywanie): ocena=${ocena}. Rynek/nisza: ${rynek} Konkurencja+ceny: ${konk} Czy ktoś płaci: ${platnosc} Powody: ${powody}. Najmocniejszy kąt/luka: ${kierunek}${zrodla ? ` Źródła: ${zrodla}.` : ''}
+Ten krok ma REALNIE POMÓC, nie tylko powiedzieć „ok / nie ok". Odezwij się jednym naturalnym komunikatem (BEZ markera <ocena>), który ZACZYNA od 2–3 KONKRETNYCH wniosków z badania — najwięksi konkurenci z cenami, wielkość niszy, największa LUKA — krótko, z liczbami, po ludzku. Dopiero na tej podstawie prowadź dalej.`
+  if (ocena === 'mocny') {
+    return `${wspolne}
+TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie aplikacji wynikające z luki: „Dlatego proponuję, żeby narzędzie …" — co podkreślić / dodać / odjąć, by trafić dokładnie w tę lukę (rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn).
+NIE wystawiaj jeszcze <projekt> ani <werdykt> — najpierw chcemy JEDNĄ rundę dopracowania kierunku z rozmówcą (podgląd ekranów pokażesz w następnej turze). Zakończ podpowiedziami: marker <opcje>["Tak, w tę stronę","Wolę inny akcent","Pokaż, jak to wygląda"] — tak, by rozmówca miał realny wpływ na wyostrzenie.`
+  }
+  return `${wspolne}
+TO JESZCZE NIE JEST ZIELONE — NIE wystawiaj podglądu <projekt> ani zielonego <werdykt>. Po wnioskach przekaż „${kierunek}" jako MOCNĄ, pewną rekomendację (nie jako porażkę — jako „mam dla Ciebie lepszą wersję, bo dane pokazują…"), wprost wyprowadzoną z tych danych.
+ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/bólu, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.`
+}
+
+// Druga tura streamowana do TEGO samego kanału SSE (kontynuacja dymka).
+async function streamSecondCall(
+  controller: ReadableStreamDefaultController<Uint8Array>,
+  encoder: TextEncoder,
+  apiKey: string,
+  model: string,
+  msgs: { role: string; content: string }[],
+): Promise<{ text: string; usage: StreamUsage | null }> {
+  let text = ''
+  let usage: StreamUsage | null = null
+  try {
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        // Druga tura (sterowanie) niesie preambułę + pełny <projekt> z 4 widokami —
+        // większy limit niż zwykła tura, by marker <projekt> się nie uciął (ucięty
+        // </projekt> = brak podglądu = „generowanie nie działa").
+        model, stream: true, stream_options: { include_usage: true },
+        max_completion_tokens: 5000, messages: msgs,
+      }),
+    })
+    if (!resp.ok || !resp.body) {
+      console.error('[spar-chat] second call HTTP error:', resp.status)
+      return { text, usage }
+    }
+    const reader = resp.body.getReader()
+    const decoder = new TextDecoder()
+    let buf = ''
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buf += decoder.decode(value, { stream: true })
+      let idx
+      while ((idx = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, idx).replace(/\r$/, '')
+        buf = buf.slice(idx + 1)
+        if (!line.startsWith('data: ')) continue
+        const payload = line.slice(6)
+        if (payload === '[DONE]') continue
+        try {
+          const evt = JSON.parse(payload)
+          if (evt?.usage) usage = evt.usage as StreamUsage
+          const delta = evt?.choices?.[0]?.delta?.content
+          if (typeof delta === 'string' && delta.length) {
+            text += delta
+            controller.enqueue(encoder.encode(
+              `data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: delta } })}\n\n`,
+            ))
+          }
+        } catch { /* niepełna linia */ }
+      }
+    }
+  } catch (err) {
+    console.error('[spar-chat] streamSecondCall exception:', err)
+  }
+  return { text, usage }
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req.headers.get('origin'))
 
@@ -476,6 +636,17 @@ Deno.serve(async (req) => {
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, corsHeaders)
     }
+
+    // ── Beacon „wyszedł z ekranu generowania" — bez message, wczesny return ──
+    //   Wołany z pagehide/visibilitychange, gdy user opuszcza kartę będąc na
+    //   ekranie badania rynku lub generowania ekranów. Stempluje left_screen_at,
+    //   z czego spar-followups robi precyzyjny SMS powrotu (a nie z heurystyki).
+    if (body.event === 'leave_screen') {
+      const screen = (body.screen === 'ekrany' || body.screen === 'badanie') ? body.screen : null
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      await sb.from('spar_sessions').update({ left_screen_at: new Date().toISOString(), left_screen: screen, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      return jsonResponse({ ok: true }, 200, corsHeaders)
+    }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po
     // MAX_TURNS_BEZ_KONTAKTU turach). Jeśli pola przyszły — walidujemy format.
     if (email && (email.length > 320 || !EMAIL_RE.test(email))) {
@@ -507,7 +678,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -730,6 +901,24 @@ Deno.serve(async (req) => {
       sessionContext = ctx.join('\n')
     }
 
+    // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend
+    // odpala spar-assess i steruje drugą turą wg wyniku (tylko kanał sparing).
+    // Jeśli poprzednia tura zamknęła badanie „zielonym" i czekamy na podgląd po
+    // dopracowaniu kierunku — wstrzykujemy instrukcję podglądu zamiast bramki
+    // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
+    if (!isCollab) {
+      const asmt = existingSession?.assessment as Record<string, unknown> | null
+      if (asmt && asmt.awaiting_preview === true) {
+        sessionContext += `\n\n${PREVIEW_AFTER_GATE_INSTRUCTION}`
+        supabase.from('spar_sessions')
+          .update({ assessment: { ...asmt, awaiting_preview: false }, updated_at: new Date().toISOString() })
+          .eq('id', sessionId)
+          .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] clear awaiting_preview error:', error) })
+      } else {
+        sessionContext += `\n\n${GATE_INSTRUCTION}`
+      }
+    }
+
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
     // gpt-5.x: max_completion_tokens (NIE max_tokens), bez temperature.
     // OpenAI cache'uje powtarzalny prefiks promptu automatycznie.
@@ -815,10 +1004,56 @@ Deno.serve(async (req) => {
             }
           }
 
+          // ── BRAMKA POTENCJAŁU (GA) ─────────────────────────────────────────
+          // Gdy model domknął rdzeń i wystawił <ocena>, odpalamy realny research
+          // (spar-assess) i DRUGĄ turą model steruje wg wyniku. Werdykt z bramki.
+          let gateOcena: Record<string, unknown> | null = null
+          if (!isCollab) {
+            const om = assistantText.match(/<ocena>([\s\S]*?)<\/ocena>/)
+            if (om) {
+              try {
+                const projektDoOceny = JSON.parse(om[1]) as Record<string, unknown>
+                controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'badam' })}\n\n`))
+                gateOcena = await runGate(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, projektDoOceny, sessionId, (label) => {
+                  try { controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'progress', label })}\n\n`)) } catch { /* klient rozłączony */ }
+                })
+                if (gateOcena) {
+                  await supabase.from('spar_sessions')
+                    .update({ assessment: { ...gateOcena, at: new Date().toISOString(), awaiting_preview: gateOcena.ocena === 'mocny' }, updated_at: new Date().toISOString() })
+                    .eq('id', sessionId)
+                  controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'gotowe', ocena: gateOcena })}\n\n`))
+                  const second = await streamSecondCall(controller, encoder, OPENAI_API_KEY, OPENAI_MODEL, [
+                    { role: 'system', content: `${systemPrompt}\n\n${sessionContext}\n\n${buildSteerInstruction(gateOcena)}` },
+                    ...messages,
+                    { role: 'assistant', content: assistantText },
+                    { role: 'user', content: '[SYSTEM] Wynik badania rynku gotowy — zareaguj zgodnie z instrukcją STEROWANIA.' },
+                  ])
+                  assistantText += '\n' + second.text
+                  if (second.usage) {
+                    const u2 = second.usage
+                    const inp = u2.prompt_tokens || 0, cch = u2.prompt_tokens_details?.cached_tokens || 0, out = u2.completion_tokens || 0
+                    supabase.from('spar_usage').insert({
+                      session_id: sessionId, kind: 'chat', model: OPENAI_MODEL,
+                      input_tokens: inp, cached_tokens: cch, output_tokens: out,
+                      cost_usd: chatCostUsd(OPENAI_MODEL, inp, cch, out), meta: { channel: mode, phase: 'steer' },
+                    }).then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] steer usage insert error:', error) })
+                  }
+                }
+              } catch (gErr) {
+                console.error('[spar-chat] bramka/ocena error:', gErr)
+              }
+            }
+          }
+
           // Stream zakończony — finalizacja. Markery <projekt>/<werdykt> żyją
           // tylko w sparingu; czat współpracy ich nie wysyła (a gdyby model
           // halucynował — nie nadpisujemy nimi karty projektu).
           const verdict = isCollab ? { verdict: null, karta: null } as VerdictResult : parseVerdict(assistantText)
+          // Twarda bramka: zielony przechodzi tylko z oceną „mocny" z badania rynku.
+          if (gateOcena && verdict.verdict === 'zielony' && gateOcena.ocena !== 'mocny') {
+            console.log('[spar-chat] hard-gate downgrade zielony→zolty (ocena=', gateOcena.ocena, ')')
+            verdict.verdict = 'zolty'
+          }
           const projektFresh = isCollab ? null : parseProjekt(assistantText)
           let projekt: Record<string, unknown> | null = null
 

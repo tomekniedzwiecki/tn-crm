@@ -10,7 +10,13 @@
 //     + leads.status='won' (pipeline CRM spójny z rzeczywistością)
 //
 // Scenariusze (sesje testowe is_test=true ZAWSZE pomijane):
-//   abandoned_chat     — email jest, brak werdyktu, ostatnia aktywność 3–48 h temu
+//   abandoned_chat{,_2,_3} — SEKWENCJA 3 maili dla rozmowy W TOKU (verdict
+//        NULL/żółty, bez wpłaty); okna od ostatniej aktywności ~3h/24h/48h,
+//        treść GPT pod realny fragment rozmowy (fetchConvo); kolejność wymusza
+//        liczba już wysłanych, bramka między-kanałowa ≥10h od ostatniego dotyku
+//   sms_badanie_back / sms_ekrany_back — SMS powrotu (gated SMS_ENABLED), gdy
+//        user wyszedł z badania (assessment) lub ekranów (preview_brief) 20min–4h
+//        temu; tylko telefon + zgoda + brak opt-out; ta sama bramka ≥10h
 //   verdict_no_payment — zielony werdykt, brak wpłaty, cisza 20–96 h
 //   paid_welcome       — wpłata 500 zł wykryta (wysyłka przy nadaniu paid_at)
 //   landing_ready      — działająca strona narzędzia zbudowana ≥15 min temu
@@ -50,9 +56,18 @@ const CHECKOUT_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
 const OFFER_ID = Deno.env.get('SPAR_OFFER_ID') || 'a1656695-db0d-4ae7-b107-230832042076'
 const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+// Bezpiecznik na czas budowy (SMSAPI rusza w pn.). Gdy '0'/brak — blok SMS się
+// NIE odpala (żadnych przedwczesnych claimów w spar_emails). send-sms dodatkowo
+// odrzuca realną wysyłkę bez własnego SMS_ENABLED — dwie niezależne bramki.
+const SMS_ENABLED = (Deno.env.get('SMS_ENABLED') || '') === '1'
 
 function chatLink(sessionId: string, campaign: string, hash = ''): string {
   return `${SPARING_URL}?id=${sessionId}&utm_source=email&utm_medium=followup&utm_campaign=${campaign}${hash}`
+}
+// Krótki link do SMS (UUID i tak zjada ~36 zn. — bez utm_medium/campaign,
+// żeby zmieścić się w 1–2 segmentach GSM).
+function smsLink(sessionId: string): string {
+  return `${SPARING_URL}?id=${sessionId}&utm_source=sms`
 }
 function checkoutLink(leadId: string | null): string {
   return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=followup`
@@ -61,12 +76,12 @@ function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp
 
 // Body (zwykły tekst) -> minimalny HTML „jak pisany w skrzynce". Linki TYLKO
 // przez tokeny [tekst](LINK_VIEW)/[tekst](LINK_RESERVE). Podpis dokleja send-email.
-function mdToHtml(body: string, viewUrl: string | null, reserveUrl: string | null): string {
+function mdToHtml(body: string, viewUrl: string | null, reserveUrl: string | null, viewFallback = 'Wszystko jest w Twoim panelu'): string {
   let t = escHtml(body || '')
   if (viewUrl) t = t.replace(/\[([^\]]+)\]\(LINK_VIEW\)/g, (_m, l) => `<a href="${viewUrl}" style="color:#2563eb;">${l}</a>`)
   t = t.replace(/\[([^\]]+)\]\(LINK_RESERVE\)/g, (_m, l) => reserveUrl ? `<a href="${reserveUrl}" style="color:#2563eb;">${l}</a>` : String(l))
   t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-  if (viewUrl && t.indexOf(viewUrl) < 0) t += `\n\nWszystko jest w Twoim panelu: <a href="${viewUrl}" style="color:#2563eb;">${viewUrl}</a>`
+  if (viewUrl && t.indexOf(viewUrl) < 0) t += `\n\n${viewFallback}: <a href="${viewUrl}" style="color:#2563eb;">${viewUrl}</a>`
   const paras = t.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
   const inner = paras.map((p) => `<p style="margin:0 0 14px;">${p.replace(/\n/g, '<br>')}</p>`).join('')
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${inner}</div>`
@@ -97,6 +112,69 @@ interface SessionRow {
   paid_at: string | null
   last_user_at: string | null
   last_panel_at: string | null
+  assessment: Record<string, unknown> | null
+  phone: string | null
+  sms_consent_at: string | null
+  sms_opt_out: boolean | null
+  left_screen_at: string | null
+  left_screen: string | null
+}
+
+// Ostatnie wymiany rozmowy (kanał sparing) → zwięzły kontekst do GPT, żeby mail
+// realnie nawiązywał do TEGO, co padło, a nie był generyczny. Markery <ocena>/
+// <projekt> i tagi HTML wycinamy; każdą wiadomość przycinamy do ~280 zn.
+async function fetchConvo(supabase: ReturnType<typeof createClient>, sessionId: string): Promise<string> {
+  try {
+    const { data } = await supabase
+      .from('spar_messages')
+      .select('role, content')
+      .eq('session_id', sessionId)
+      .eq('channel', 'sparing')
+      .order('id', { ascending: false })
+      .limit(6)
+    if (!data || !data.length) return ''
+    const rows = (data as { role: string; content: string }[]).reverse()
+    return rows.map((m) => {
+      const clean = String(m.content || '')
+        .replace(/<(ocena|projekt)>[\s\S]*?<\/\1>/g, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 280)
+      return `${m.role === 'user' ? 'On/Ona' : 'Ty (AI)'}: ${clean}`
+    }).filter((l) => l.length > 12).join('\n')
+  } catch { return '' }
+}
+
+// Dotyki per sesja z OBU kanałów: maile (spar_emails.sent_at) + SMS
+// (spar_sms.created_at). Zbiór wysłanych kindów + czas ostatniego dotyku.
+// Służy do (a) liczenia, ile maili z sekwencji już poszło, (b) bramki
+// MIĘDZY-KANAŁOWEJ (nie wysyłaj maila tuż po SMS i odwrotnie).
+async function loadTouches(supabase: ReturnType<typeof createClient>, ids: string[]): Promise<Map<string, { kinds: Set<string>; last: number; opened: Set<string> }>> {
+  const m = new Map<string, { kinds: Set<string>; last: number; opened: Set<string> }>()
+  if (!ids.length) return m
+  const get = (sid: string) => {
+    let e = m.get(sid)
+    if (!e) { e = { kinds: new Set<string>(), last: 0, opened: new Set<string>() }; m.set(sid, e) }
+    return e
+  }
+  const add = (sid: string, kind: string, ts: string | null) => {
+    const e = get(sid); e.kinds.add(kind)
+    const t = ts ? Date.parse(ts) : 0
+    if (t > e.last) e.last = t
+  }
+  const [emails, sms] = await Promise.all([
+    supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at').in('session_id', ids),
+    supabase.from('spar_sms').select('session_id, kind, created_at').in('session_id', ids),
+  ])
+  if (emails.error) console.error('[spar-followups] loadTouches emails error:', emails.error)
+  if (sms.error) console.error('[spar-followups] loadTouches sms error:', sms.error)
+  for (const r of (emails.data || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null }[]) {
+    add(r.session_id, r.kind, r.sent_at)
+    if (r.opened_at) get(r.session_id).opened.add(r.kind)
+  }
+  for (const r of (sms.data || []) as { session_id: string; kind: string; created_at: string }[]) add(r.session_id, r.kind, r.created_at)
+  return m
 }
 
 function firstName(s: SessionRow): string {
@@ -113,7 +191,7 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'verdict_no_payment') return chatLink(s.id, 'verdict_no_payment', '#projekt-plan')
   if (kind === 'verdict_last_call') return chatLink(s.id, 'verdict_last_call', '#projekt')
   if (kind === 'paid_welcome') return chatLink(s.id, 'paid_welcome')
-  return chatLink(s.id, 'abandoned_chat')
+  return chatLink(s.id, kind) // abandoned_chat / abandoned_chat_2 / abandoned_chat_3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
 function reserveFor(kind: string, s: SessionRow): string | null { return (kind === 'verdict_last_call' || kind === 'verdict_no_payment') ? checkoutLink(s.lead_id) : null }
@@ -124,6 +202,8 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
   const n = toolName(s)
   const T: Record<string, { subject: string; body: string }> = {
     abandoned_chat: { subject: 'Twój projekt czeka dokończony w połowie', body: `Cześć${im}!\n\nZacząłeś projektować swoje narzędzie w rozmowie z moim AI i zatrzymaliśmy się w pół drogi. Cała rozmowa jest zapisana — wracasz dokładnie w to samo miejsce.\n\nKilka minut dzieli Cię od karty projektu i pierwszych ekranów. [Dokończmy to](LINK_VIEW).` },
+    abandoned_chat_2: { subject: 'Co czeka na Ciebie za darmo', body: `Cześć${im}!\n\nWczoraj zaczęliśmy projektować Twoje narzędzie i utknęliśmy w pół drogi. Chcę tylko, żebyś wiedział, co dokładnie czeka, jeśli dokończymy rozmowę: sprawdzenie Twojego rynku i konkurencji na żywo, karta projektu i pierwsze ekrany narzędzia. To realna robota — nic za nią nie płacisz.\n\nTo Ty masz na tym skorzystać. Jak będziesz miał chwilę, [wróć i dokończ](LINK_VIEW).` },
+    abandoned_chat_3: { subject: 'Zostawiam Twój projekt zapisany', body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — to ostatnia wiadomość w tej sprawie. Twój projekt jest zapisany i wraca dokładnie tam, gdzie skończyliśmy. Drzwi są otwarte, decyzja należy do Ciebie.\n\nJeśli kiedyś zechcesz to ruszyć, [link masz tutaj](LINK_VIEW).` },
     verdict_no_payment: { subject: `${n}: projekt i plan czekają`, body: `Cześć${im}!\n\nProjekt ${n} ma zielony werdykt — karta, ekrany i wstępny plan przychodu czekają w panelu.\n\nKolejny krok to rezerwacja wspólnej rozmowy (500 zł, w pełni zwrotne): przygotowuję wtedy osobiście plan przedsięwzięcia. Możesz [zarezerwować ją tutaj](LINK_RESERVE), a [projekt zobaczysz w panelu](LINK_VIEW).` },
     verdict_last_call: { subject: `${n} — domykam miejsce na ten projekt`, body: `Cześć${im}!\n\nTydzień temu ${n} dostał zielony werdykt. Karta, ekrany i plan wciąż czekają w panelu — nic nie przepadło.\n\nJeśli to nie ten moment — w porządku, projekt zostaje zapisany. A jeśli chcesz go ruszyć, [rezerwacja](LINK_RESERVE) to 500 zł, w pełni zwrotne.` },
     landing_ready: { subject: `${n} ma już swoją stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona ${n} — nie grafika, prawdziwa strona w przeglądarce. [Otwórz ją](LINK_VIEW), przewiń, możesz pokazać znajomym z branży.` },
@@ -131,13 +211,16 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${n} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów, droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
   }
   const t = T[kind] || T.abandoned_chat
-  return { subject: t.subject, html: mdToHtml(t.body, viewFor(kind, s), reserveFor(kind, s)) }
+  const fallback = kind.startsWith('abandoned_chat') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
+  return { subject: t.subject, html: mdToHtml(t.body, viewFor(kind, s), reserveFor(kind, s), fallback) }
 }
 
 // Cel maila + dane (do GPT) dla kindów, które warto personalizować.
 function followupBrief(kind: string, s: SessionRow): { goal: string; facts: string } {
   const n = toolName(s)
-  if (kind === 'abandoned_chat') return { goal: 'Osoba zaczęła projektować z Twoim AI pomysł na własne narzędzie i PRZERWAŁA w połowie (jeszcze przed werdyktem). Napisz krótko, ciepło, bez nacisku: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od karty projektu i pierwszych ekranów. Zachęć delikatnie do powrotu. Jeśli nazwa narzędzia jest generyczna („Twoje narzędzie"), pisz o „Twoim pomyśle".', facts: `narzędzie/temat: ${n}` }
+  if (kind === 'abandoned_chat') return { goal: 'Osoba zaczęła projektować z Twoim AI pomysł na własne narzędzie i PRZERWAŁA w połowie (jeszcze przed werdyktem). To pierwszy, lekki sygnał ~3h później. Jeśli masz FRAGMENT ROZMOWY — nawiąż do tego, na czym konkretnie skończyliście. Napisz krótko, ciepło, bez nacisku: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od karty projektu i pierwszych ekranów narzędzia (wszystko za darmo). Zachęć delikatnie do powrotu. Jeśli nazwa narzędzia jest generyczna („Twoje narzędzie"), pisz o „Twoim pomyśle".', facts: `narzędzie/temat: ${n}` }
+  if (kind === 'abandoned_chat_2') return { goal: 'Drugi follow-up (~następnego dnia, wciąż cisza). INNY kąt niż pierwszy: konkretnie przypomnij, CO ta osoba dostaje ZA DARMO, jeśli dokończy rozmowę — sprawdzenie jej rynku i konkurencji na żywo, kartę projektu i pierwsze ekrany jej narzędzia. To realna robota, którą normalnie się zleca i płaci. Ustaw to jako JEJ korzyść („to Ty na tym zyskujesz"), nie jako Twoją prośbę. Jeśli masz fragment rozmowy, nawiąż do jej pomysłu. Spokojnie, bez nacisku, bez „wróć proszę".', facts: `narzędzie/temat: ${n}` }
+  if (kind === 'abandoned_chat_3') return { goal: 'Trzeci i OSTATNI follow-up tego wątku (~2 dni, cisza). Krótko i z godnością: zostawiasz projekt zapisany, drzwi otwarte, decyzja należy do niej. Możesz wpleść JEDNO wciągające pytanie nawiązujące do jej pomysłu z rozmowy, które naturalnie zachęci do powrotu. Zero desperacji, zero wyrzutów — to ma być lekka, ostatnia wiadomość. Zostaw link do powrotu.', facts: `narzędzie/temat: ${n}` }
   if (kind === 'verdict_last_call') {
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
@@ -157,21 +240,30 @@ JAK MASZ PISAĆ:
 Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila (follow-up) — jakbyś usiadł, spojrzał na JEGO pomysł i napisał z palca w skrzynce. Nie marketing.
 ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, emoji, clickbaitu i przesady — styl brutalnie szczery, system > magia. Jeśli to pasuje, wpleć 1 KONKRET z jego pomysłu (nazwa narzędzia + jeden szczegół/liczba) — nie ogólnik. NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
 JĘZYK — WAŻNE: to osoby dopiero wchodzące w biznes, NIE znają żargonu. ZAKAZ pojęć: CAC, LTV, churn, MRR, retencja, konwersja, unit economics, runway. Liczby tłumacz po ludzku (np. zamiast „CAC" → „koszt zdobycia jednego klienta").
-LINKI: jeśli w kontekście podano link do podglądu, wstaw go RAZ jako [naturalny tekst](LINK_VIEW). Jeśli podano link do rezerwacji, możesz go delikatnie wpleść jako [tekst](LINK_RESERVE). Nie wymyślaj żadnych adresów. Jeśli żaden link nie pasuje (np. samo podziękowanie) — nie dawaj linku.
+TON — WAŻNE: nie błagaj i nie naciskaj. To Ty dajesz tej osobie szansę na własne narzędzie — ona ma z niej skorzystać, nie odwrotnie. Zero desperacji i „wróć proszę". Jeśli w kontekście jest FRAGMENT ROZMOWY, nawiąż do tego, co realnie padło (jej pomysł, jej słowa) — tak, żeby było widać, że to ciąg dalszy JEJ wątku, a nie masowy mail. Nie cytuj rozmowy dosłownie ani nie streszczaj jej punkt po punkcie — po prostu pisz tak, jakbyś ją pamiętał.
+LINKI: jeśli w kontekście jest LINK_VIEW, wstaw go RAZ jako [naturalny tekst](LINK_VIEW) — ale jego ZNACZENIE bierz z kontekstu (powrót do rozmowy ALBO podgląd projektu) i NIE obiecuj rzeczy, których kontekst nie potwierdza. Jeśli jest LINK_RESERVE, możesz go delikatnie wpleść jako [tekst](LINK_RESERVE). Nie wymyślaj żadnych adresów. Jeśli żaden link nie pasuje (np. samo podziękowanie) — nie dawaj linku.
 Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
 
-async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: string | null, reserveUrl: string | null): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
+async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: string | null, reserveUrl: string | null, convo = ''): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
   const brief = followupBrief(kind, s)
   const b = s.preview_brief || {}
-  const links = [viewUrl && 'jest link do podglądu (LINK_VIEW)', reserveUrl && 'jest link do rezerwacji (LINK_RESERVE)'].filter(Boolean).join('; ') || 'brak linków'
+  const resume = kind.startsWith('abandoned_chat')
+  const links = resume
+    // Segment „w toku": pomysł NIE jest jeszcze zbudowany — link wraca do ROZMOWY,
+    // nie do gotowego projektu. Bez tego model dopisuje „masz podgląd ekranów".
+    ? 'LINK_VIEW = powrót do ROZMOWY (czatu) w tym samym miejscu. To NIE jest gotowy projekt/panel/podgląd — karta projektu, badanie rynku i ekrany POWSTANĄ DOPIERO, gdy dokończy rozmowę. NIE pisz, że coś „czeka w panelu" / „masz podgląd ekranów/planu". Opisz link jako „wróć do rozmowy" / „dokończ".'
+    : ([viewUrl && 'jest link do podglądu projektu (LINK_VIEW)', reserveUrl && 'jest link do rezerwacji (LINK_RESERVE)'].filter(Boolean).join('; ') || 'brak linków')
+  const tn = toolName(s)
+  const hasName = !!tn && tn !== 'Twoje narzędzie'
   const ctx = [
-    `Narzędzie: ${toolName(s)}`,
+    hasName ? `Narzędzie: ${tn}` : 'Pomysł nie ma JESZCZE nazwy — NIE wymyślaj nazwy i NIE używaj „Twoje narzędzie" jako nazwy własnej (np. w cudzysłowie). Pisz „Twój pomysł" albo opisz go po dziedzinie z rozmowy.',
     typeof b.opis === 'string' && b.opis && `Opis: ${b.opis}`,
     typeof b.dla_kogo === 'string' && b.dla_kogo && `Dla kogo: ${b.dla_kogo}`,
     brief.facts && `Dane: ${brief.facts}`,
     firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
+    convo && `FRAGMENT ROZMOWY (ostatnie wiadomości — nawiąż do tego konkretnie):\n${convo}`,
     `Dostępne linki: ${links}`,
   ].filter(Boolean).join('\n')
   const user = `KONTEKST:\n${ctx}\n\nCEL TEGO MAILA: ${brief.goal}`
@@ -188,15 +280,16 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
     const subject = typeof obj.subject === 'string' && obj.subject.trim() ? obj.subject.trim() : null
     const body = typeof obj.body === 'string' && obj.body.trim() ? obj.body.trim() : null
     if (!subject || !body) return null
-    return { subject, html: mdToHtml(body, viewUrl, reserveUrl), usage }
+    return { subject, html: mdToHtml(body, viewUrl, reserveUrl, resume ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'), usage }
   } catch (e) { console.error('[spar-followups] email gen error:', e instanceof Error ? e.message : String(e)); return null }
 }
 
 // GPT dla sensownych kindów (abandoned/last_call/welcome) + log kosztu; reszta statyczna.
 async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow): Promise<{ subject: string; html: string }> {
-  const GPT_KINDS = ['abandoned_chat', 'verdict_last_call', 'paid_welcome']
+  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'verdict_last_call', 'paid_welcome']
   if (GPT_KINDS.includes(kind)) {
-    const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s))
+    const convo = kind.startsWith('abandoned_chat') ? await fetchConvo(supabase, s.id) : ''
+    const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s), convo)
     if (gen) {
       if (gen.usage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'followup_email', kind } }) } catch (uErr) { console.error('[spar-followups] email usage:', uErr) } }
       return { subject: gen.subject, html: gen.html }
@@ -242,16 +335,57 @@ Deno.serve(async (req) => {
         business_plan: { kamienie: [{ mies: 18000, klienci: 50 }] },
         market_report: { teza: 'Nisza jest realna, a konkurencja rozdrobniona.', konkurenci: [1, 2, 3], zrodla: [1, 2, 3, 4] },
         landing_url: 'https://twojenarzedzie.pl', lead_id: null, paid_at: null, last_user_at: null, last_panel_at: null,
+        assessment: null, phone: null, sms_consent_at: null, sms_opt_out: null,
       } as unknown as SessionRow
-      const kinds = ['abandoned_chat', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
+      const kinds = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
       const templates = await Promise.all(kinds.map(async (k) => { const { subject, html } = staticEmail(k, sample); return { group: 'followup', kind: k, subject, html: await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, null), disabled: DISABLED.includes(k) } }))
       return jsonResponse({ templates }, 200)
+    }
+
+    // ── action: stats (ADMIN — skuteczność lejka abandoned + SMS) ─────────
+    if (body.action === 'stats') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const EK = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3']
+      const SK = ['sms_badanie_back', 'sms_ekrany_back']
+      const { data: erows } = await supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at, clicked_at').in('kind', EK)
+      const { data: srows } = await supabase.from('spar_sms').select('session_id, kind, clicked_at').in('kind', SK)
+      const mkE = () => ({ sent: 0, opened: 0, clicked: 0 })
+      const perKind: Record<string, { sent: number; opened: number; clicked: number }> = {}
+      for (const k of EK) perKind[k] = mkE()
+      const firstSent = new Map<string, number>()
+      for (const r of (erows || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null; clicked_at: string | null }[]) {
+        const p = perKind[r.kind]; if (!p) continue
+        p.sent++; if (r.opened_at) p.opened++; if (r.clicked_at) p.clicked++
+        const ts = r.sent_at ? Date.parse(r.sent_at) : 0
+        const cur = firstSent.get(r.session_id)
+        if (ts && (cur === undefined || ts < cur)) firstSent.set(r.session_id, ts)
+      }
+      const smsKind: Record<string, { sent: number; clicked: number }> = {}
+      for (const k of SK) smsKind[k] = { sent: 0, clicked: 0 }
+      for (const r of (srows || []) as { kind: string; clicked_at: string | null }[]) { const p = smsKind[r.kind]; if (!p) continue; p.sent++; if (r.clicked_at) p.clicked++ }
+      // Konwersja na poziomie sesji: spośród osób, które dostały KTÓRYKOLWIEK
+      // mail abandoned — ile wróciło do rozmowy (aktywność po 1. mailu), doszło
+      // do werdyktu, zostało „zielonych", zapłaciło.
+      const ids = [...firstSent.keys()]
+      const sess = { emailed: ids.length, returned: 0, reachedVerdict: 0, green: 0, paid: 0 }
+      for (let i = 0; i < ids.length; i += 200) {
+        const chunk = ids.slice(i, i + 200)
+        const { data: ss } = await supabase.from('spar_sessions').select('id, verdict, paid_at, last_user_at').in('id', chunk)
+        for (const x of (ss || []) as { id: string; verdict: string | null; paid_at: string | null; last_user_at: string | null }[]) {
+          const fs = firstSent.get(x.id) || 0
+          if (x.last_user_at && Date.parse(x.last_user_at) > fs) sess.returned++
+          if (x.verdict) sess.reachedVerdict++
+          if (x.verdict === 'zielony') sess.green++
+          if (x.paid_at) sess.paid++
+        }
+      }
+      return jsonResponse({ abandoned: { perKind, sessions: sess }, sms: smsKind }, 200)
     }
 
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, abandoned_chat: 0, verdict_no_payment: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–20 PL dotyczy WSZYSTKICH maili (też paid_welcome);
     // sync płatności (paid_at + lead won) działa niezależnie od pory
@@ -276,6 +410,9 @@ Deno.serve(async (req) => {
           body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined }),
         })
         if (!res.ok) throw new Error(`send-email ${res.status}: ${await res.text()}`)
+        // backfill resend_id → resend-webhook stempluje opened_at/clicked_at
+        // (bramka zaangażowania dla #3). Bez tego otwarcia byłyby nieśledzone.
+        try { const j = await res.json(); const rid = j?.id || j?.resend_id || j?.data?.id; if (rid) await supabase.from('spar_emails').update({ resend_id: rid }).eq('session_id', s.id).eq('kind', kind) } catch { /* ignoruj */ }
         mailBudget--
         sent[kind] = (sent[kind] || 0) + 1
         return true
@@ -287,7 +424,35 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at'
+    // Wyślij SMS i zaloguj do spar_sms (wzorzec spar-drip: send → log).
+    // Dedup per (session_id, kind) zapewnia wołający (sprawdza touch-mapę) +
+    // UNIQUE w tabeli. Log piszemy TYLKO przy sukcesie — błąd zostawia kind
+    // otwarty na retry w kolejnym runie (w oknie). Gated przez SMS_ENABLED.
+    async function sendSmsOnce(kind: string, s: SessionRow, message: string): Promise<boolean> {
+      if (!SMS_ENABLED || !s.phone) return false
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/send-sms`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-cron-secret': cronSecret || '' },
+          body: JSON.stringify({ action: 'send', to: s.phone, message }),
+        })
+        const res = await r.json().catch(() => ({})) as Record<string, unknown>
+        if (!r.ok || !res.ok) throw new Error(`send-sms ${r.status}: ${JSON.stringify(res)}`)
+        await supabase.from('spar_sms').insert({
+          session_id: s.id, kind, phone: s.phone, message,
+          smsapi_id: res.id ? String(res.id) : null,
+          points: typeof res.points === 'number' ? res.points : null,
+          status: (res.status as string) || 'SENT',
+        })
+        sent[kind] = (sent[kind] || 0) + 1
+        return true
+      } catch (smsErr) {
+        console.error(`[spar-followups] sms ${kind} error:`, smsErr)
+        return false
+      }
+    }
+
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -367,20 +532,82 @@ Deno.serve(async (req) => {
     //   po wprowadzeniu dripu DUBLOWAŁY reveale. Zostawione tu świadomie jako
     //   ślad; nie przywracać bez wyłączenia odpowiednika w spar-drip.
 
-    // ── 2) ABANDONED: email jest, brak domkniętego werdyktu (NULL lub żółty
-    //        = rozmowa w toku), cisza 3–48 h ──────────────────────────────
+    // ── 2) ABANDONED: sekwencja 3 maili dla rozmów W TOKU (verdict NULL/żółty,
+    //        bez wpłaty). Okna od ostatniej aktywności: ~3h / ~24h / ~48h
+    //        (decyzja Tomka 2026-06-14: „3 maile w ciągu 3h + 21h + kolejnego
+    //        dnia"). Kolejność i odstęp wymusza LICZBA już wysłanych maili z
+    //        rodziny (emailsSent), nie sztywno „poprzedni kind" — dzięki temu
+    //        mail pominięty przez bramkę kanałów (SMS) i tak pójdzie we właściwej
+    //        kolejności, tylko później. Bramka MIĘDZY-KANAŁOWA: ≥10h od
+    //        ostatniego dotyku (mail LUB SMS), żeby nie przeciążać. Maile są
+    //        personalizowane pod realny fragment rozmowy (fetchConvo w GPT). ──
+    const ABANDON_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3']
+    const ABANDON_THRESH_H = [3, 24, 48]
+    const CHANNEL_GAP_MS = 10 * 3600 * 1000
     const { data: abandoned, error: abErr } = await supabase
       .from('spar_sessions')
       .select(SESSION_COLS)
       .eq('is_test', false)
       .or('verdict.is.null,verdict.eq.zolty')
+      .is('paid_at', null)
       .not('email', 'is', null)
-      .gte('last_user_at', hoursAgo(48))
+      .gte('last_user_at', hoursAgo(96))
       .lte('last_user_at', hoursAgo(3))
-      .limit(60)
+      .limit(80)
     if (abErr) console.error('[spar-followups] abandoned fetch error:', abErr)
-    for (const s of (abandoned || []) as SessionRow[]) {
-      await sendOnce('abandoned_chat', s)
+    const abandonRows = (abandoned || []) as SessionRow[]
+    const abTouches = await loadTouches(supabase, abandonRows.map((s) => s.id))
+    for (const s of abandonRows) {
+      const t = abTouches.get(s.id)
+      const emailsSent = ABANDON_KINDS.filter((k) => t?.kinds.has(k)).length
+      if (emailsSent >= ABANDON_KINDS.length) continue // wszystkie 3 już poszły
+      const hoursSince = s.last_user_at ? (now - Date.parse(s.last_user_at)) / 3_600_000 : 0
+      if (hoursSince < ABANDON_THRESH_H[emailsSent]) continue // za wcześnie na następny
+      if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+      // Bramka zaangażowania: NIE dosyłaj #3 (ostatniego), jeśli ani #1, ani #2
+      // nie zostały otwarte — zimny adres, 3. mail tylko psuje reputację nadawcy.
+      if (emailsSent === 2 && !t?.opened.has('abandoned_chat') && !t?.opened.has('abandoned_chat_2')) continue
+      await sendOnce(ABANDON_KINDS[emailsSent], s)
+    }
+
+    // ── 2b) SMS POWROTU (gated SMS_ENABLED) — odpalany REALNYM sygnałem wyjścia:
+    //        beacon `left_screen_at` (pagehide/visibilitychange na ekranie badania
+    //        rynku albo generowania ekranów), NIE samą heurystyką czasową. Warunki:
+    //        wyszedł 20 min – 4 h temu, NIE wrócił (last_user_at ≤ left_screen_at),
+    //        telefon + zgoda + brak opt-out, brak wpłaty. Rodzaj z `left_screen`
+    //        (fallback: preview_brief→ekrany, assessment→badanie). Raz na rodzaj
+    //        (dedup spar_sms), ta sama bramka między-kanałowa ≥10h. ─────────────
+    if (SMS_ENABLED) {
+      const { data: smsCands, error: smsErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .or('verdict.is.null,verdict.eq.zolty')
+        .is('paid_at', null)
+        .not('phone', 'is', null)
+        .not('sms_consent_at', 'is', null)
+        .not('left_screen_at', 'is', null)
+        .gte('left_screen_at', hoursAgo(4))
+        .lte('left_screen_at', hoursAgo(0.34)) // ≥ ~20 min od wyjścia
+        .limit(60)
+      if (smsErr) console.error('[spar-followups] sms cands error:', smsErr)
+      const smsRows = ((smsCands || []) as SessionRow[]).filter((s) => !s.sms_opt_out)
+      const smsTouch = await loadTouches(supabase, smsRows.map((s) => s.id))
+      for (const s of smsRows) {
+        // wrócił po wyjściu (aktywność po beaconie) → nie nudź SMS-em
+        if (s.last_user_at && s.left_screen_at && Date.parse(s.last_user_at) > Date.parse(s.left_screen_at)) continue
+        const t = smsTouch.get(s.id)
+        if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+        const hasPreview = !!(s.preview_brief && Object.keys(s.preview_brief).length)
+        const ekrany = s.left_screen === 'ekrany' || (s.left_screen !== 'badanie' && hasPreview)
+        if (ekrany) {
+          if (t?.kinds.has('sms_ekrany_back')) continue
+          await sendSmsOnce('sms_ekrany_back', s, `Tu Tomek. Pierwsze ekrany Twojego narzedzia sa juz gotowe do obejrzenia - wracasz dokladnie tam, gdzie skonczylismy: ${smsLink(s.id)}`)
+        } else {
+          if (t?.kinds.has('sms_badanie_back')) continue
+          await sendSmsOnce('sms_badanie_back', s, `Tu Tomek. Sprawdzilem na zywo Twoj rynek i konkurencje - mam konkretne wnioski. Wracasz w to samo miejsce w rozmowie: ${smsLink(s.id)}`)
+        }
+      }
     }
 
     // ── 3) ZIELONY WERDYKT BEZ WPŁATY (verdict_no_payment) — WYŁĄCZONE ────

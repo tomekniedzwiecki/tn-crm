@@ -374,6 +374,25 @@ async function lastActivityMs(supabase: ReturnType<typeof createClient>, s: any)
 async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Promise<boolean> {
   return (Date.now() - await lastActivityMs(supabase, s)) < ENGAGE_WINDOW_DAYS * 86400000
 }
+// Bramka MIĘDZY-KANAŁOWA (spójna z spar-followups): czas ostatniego dotyku z
+// INNEGO kanału — mail abandoned (kind ≠ reveal_*) lub dowolny SMS. Reveale są
+// strukturalnie ≥~1 dzień po werdykcie, więc to zapas bezpieczeństwa, by reveal
+// nie poszedł tuż po mailu/SMS gdyby harmonogram się kiedyś zmienił.
+const CROSS_CHANNEL_GAP_MS = 10 * 3600 * 1000
+// deno-lint-ignore no-explicit-any
+async function recentNonRevealTouchMs(supabase: ReturnType<typeof createClient>, sid: string): Promise<number> {
+  const since = new Date(Date.now() - CROSS_CHANNEL_GAP_MS).toISOString()
+  const [em, sm] = await Promise.all([
+    supabase.from('spar_emails').select('sent_at').eq('session_id', sid).not('kind', 'like', 'reveal_%').gte('sent_at', since).order('sent_at', { ascending: false }).limit(1),
+    supabase.from('spar_sms').select('created_at').eq('session_id', sid).gte('created_at', since).order('created_at', { ascending: false }).limit(1),
+  ])
+  let m = 0
+  const e = (em.data as { sent_at: string }[] | null)?.[0]?.sent_at
+  const c = (sm.data as { created_at: string }[] | null)?.[0]?.created_at
+  if (e) m = Math.max(m, Date.parse(e))
+  if (c) m = Math.max(m, Date.parse(c))
+  return m
+}
 // Zamknij leada-przegranego: wszystkie nie-wysłane odsłony → 'skipped'
 // (koniec wysyłki, generowania i wznawiania). Idempotentne.
 async function closeLost(supabase: ReturnType<typeof createClient>, sid: string, nowIso: string): Promise<void> {
@@ -553,6 +572,10 @@ Deno.serve(async (req) => {
       if (lostNow.has(rv.session_id)) continue   // sesja już zamknięta w tym przebiegu
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
       if (!s || s.is_test || !s.email || s.paid_at || s.verdict !== 'zielony') continue
+      // Bramka między-kanałowa: świeży dotyk mailem/SMS z innego kanału → odpuść
+      // ten przebieg (reveal zostaje pending/generating, ponowi się później).
+      const xTouch = await recentNonRevealTouchMs(supabase, s.id)
+      if (xTouch && Date.now() - xTouch < CROSS_CHANNEL_GAP_MS) continue
       // R1 leci zawsze. R2+ zależy od aktywności:
       //  • cisza ≥ LOST_WINDOW (7 dni) → PRZEGRANY: zamykamy całą resztę sekwencji
       //  • cisza ≥ ENGAGE_WINDOW (3 dni) → PAUZA (odwracalna)
