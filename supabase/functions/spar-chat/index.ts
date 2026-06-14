@@ -441,6 +441,17 @@ Gdy rdzeń narzędzia jest z grubsza zdefiniowany (wiesz: co robi, dla kogo, kto
 <ocena>{"nazwa":"…","opis":"…","problem":"…","dla_kogo":"…","kto_placi":"…","dzisiejsze_obejscie":"…","ekrany":["…","…"],"konkurencja":"…"}</ocena>
 i ZAKOŃCZ turę (nic po markerze). Wynik badania dostaniesz w następnej turze i wtedy poprowadzisz dalej — potwierdzasz kierunek i pokazujesz podgląd albo prowadzisz do mocniejszej wersji. Oceniaj, gdy masz materiał; powtórz, jeśli pomysł istotnie się zmienił.`
 
+// WYBÓR KIERUNKU — karty rozwidlenia (marker <kierunki>). Wstrzykiwane tylko
+// gdy SPAR_KIERUNKI_ENABLED=1 (bezpiecznik: front renderuje <kierunki> dopiero
+// po deployu redesignu; przed flipem flagi model nie zna markera → zero wycieków).
+const KIERUNKI_ENABLED = (Deno.env.get('SPAR_KIERUNKI_ENABLED') || '') === '1'
+const KIERUNKI_INSTRUCTION = `[WYBÓR KIERUNKU — KARTY ROZWIDLENIA (opcjonalne, NAJWYŻEJ RAZ)]
+Jeśli rozmówca podał SZEROKI lub niejednoznaczny obszar (np. branża/grupa bez sprecyzowanego rdzenia) i widzisz 2–3 RÓŻNE, sensowne kierunki narzędzia — zamiast wybierać jeden ZA niego, pokaż mu rozwidlenie do wyboru. Napisz JEDNO krótkie, naturalne zdanie (np. „Widzę tu 3 różne drogi — która jest najbliżej tego, co czujesz?"), a potem w osobnej linii wystaw marker:
+<kierunki>[{"nazwa":"krótka nazwa kierunku","opis":"jedno zdanie: co to narzędzie robi","tag":"3–4 słowa: czemu ciekawe","dalej":"1–2 zdania: co konkretnie zrobimy, jeśli wybierze ten kierunek","polecany":true}]</kierunki>
+i ZAKOŃCZ turę (nic po markerze). ZASADY: 2–3 pozycje; DOKŁADNIE jedna ma "polecany":true (Twoja rekomendacja — najbliżej pieniędzy / najszybciej do pierwszego płacącego); każdy kierunek wyraźnie INNY (nie warianty tego samego). NIE łącz z <opcje> w tej samej turze.
+KIEDY NIE UŻYWAĆ: gdy rozmówca ma już ostry, konkretny pomysł (jeden oczywisty kierunek — potwierdź i prowadź dalej normalnie); gdy dopracowujecie JUŻ wybrany kierunek; gdy nie ma 2 naprawdę różnych dróg. Najwyżej RAZ w rozmowie — to wybór strategicznej drogi, nie nawyk.
+PO WYBORZE: rozmówca odpisze „Wybieram kierunek: …". Potwierdź krótko ten wybór i prowadź dopracowanie TEGO kierunku ku rdzeniowi (potem normalnie bramka <ocena>).`
+
 // Wstrzykiwane w turze PO „zielonym" badaniu, gdy rozmówca zareagował na
 // zaproponowane wyostrzenie — wtedy (i dopiero wtedy) pokazujemy podgląd.
 const PREVIEW_AFTER_GATE_INSTRUCTION = `[PODGLĄD PO DOPRACOWANIU KIERUNKU]
@@ -916,6 +927,8 @@ Deno.serve(async (req) => {
           .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] clear awaiting_preview error:', error) })
       } else {
         sessionContext += `\n\n${GATE_INSTRUCTION}`
+        // Karty rozwidlenia kierunku — tylko gdy front je renderuje (flaga)
+        if (KIERUNKI_ENABLED) sessionContext += `\n\n${KIERUNKI_INSTRUCTION}`
       }
     }
 
