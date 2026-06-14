@@ -2541,6 +2541,8 @@ async function handleSubmit() {
         else if (selectedMethod === 'rev_card') paymentSource = 'revolut';
 
         let order;
+        // Sparing: powiązanie zakupu „kolejnej rozmowy" z kontem aplikacji (auth user)
+        const sparUserId = new URLSearchParams(window.location.search).get('spar_user_id') || null;
 
         // Try existing pending order for same email+description
         const { data: existingOrders } = await supabaseClient
@@ -2567,6 +2569,7 @@ async function handleSubmit() {
                 // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
                 consent_digital_service: stworzeConsentRequired ? true : null,
                 consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
+                spar_user_id: sparUserId,
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2587,7 +2590,8 @@ async function handleSubmit() {
                 notes: `Checkout v2: ${currentOffer.name} | Metoda: ${selectedMethod}${appliedDiscount ? ` | Kod: ${appliedDiscount.code}` : ''}${isCustomPayment ? ' | Custom payment' : ''}${stworzeConsentRequired ? ' | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK' : ''}`,
                 // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
                 consent_digital_service: stworzeConsentRequired ? true : null,
-                consented_at: stworzeConsentRequired ? new Date().toISOString() : null
+                consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
+                spar_user_id: sparUserId
             };
 
             if (isCustomPayment && customPaymentLeadId) {
@@ -2730,6 +2734,10 @@ async function loadOffer() {
     const customAmount = params.get('amount');
     const customDescription = params.get('description');
     const leadId = params.get('lead_id');
+
+    // Sparing: prefill e-maila kontem aplikacji (atrybucja i tak idzie po spar_user_id)
+    const sparEmail = params.get('spar_email');
+    if (sparEmail && $('v-email') && !$('v-email').value) $('v-email').value = sparEmail;
 
     upgradeWorkflowId = params.get('upgrade_workflow_id');
     upgradeToOfferId = params.get('upgrade_to_offer_id');

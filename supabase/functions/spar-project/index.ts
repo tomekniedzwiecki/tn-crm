@@ -108,6 +108,25 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const authUser = await verifyAuthUser(req, supabase)
 
+    // ── action 'conversations': ile DODATKOWYCH rozmów konto ma opłacone ─────
+    // (1. rozmowa darmowa; każda kolejna = zakup oferty „Aplikacja — kolejna
+    //  rozmowa" 49 zł albo grant admina = pseudo-order amount 0). Liczymy po
+    //  spar_user_id zapisanym przy checkout. Front: dozwolone = 1 + paid.
+    if (action === 'conversations') {
+      if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
+      const { count, error: convErr } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('spar_user_id', authUser.id)
+        .eq('status', 'paid')
+        .eq('description', 'Aplikacja — kolejna rozmowa')
+      if (convErr) {
+        console.error('[spar-project] conversations count error:', convErr)
+        return jsonResponse({ error: 'blad_serwera' }, 500, cors)
+      }
+      return jsonResponse({ paidConversations: count || 0 }, 200, cors)
+    }
+
     // ── action 'list': rozmowy zalogowanego konta (cross-device) ─────────────
     if (action === 'list') {
       if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
