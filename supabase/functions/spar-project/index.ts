@@ -57,7 +57,7 @@ const MAX_HISTORY_MESSAGES = 200
 async function verifyAuthUser(
   req: Request,
   supabase: ReturnType<typeof createClient>,
-): Promise<{ id: string } | null> {
+): Promise<{ id: string; email: string | null } | null> {
   const m = (req.headers.get('authorization') || '').match(/^Bearer\s+(.+)$/i)
   if (!m) return null
   const token = m[1].trim()
@@ -65,7 +65,7 @@ async function verifyAuthUser(
   try {
     const { data, error } = await supabase.auth.getUser(token)
     if (error || !data?.user) return null
-    return { id: data.user.id }
+    return { id: data.user.id, email: data.user.email || null }
   } catch (err) {
     console.error('[spar-project] auth getUser error:', err)
     return null
@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500, cors)
 
-    let body: { sessionId?: string; action?: string; text?: string }
+    let body: { sessionId?: string; action?: string; text?: string; email?: string }
     try {
       body = await req.json()
     } catch {
@@ -125,6 +125,41 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: 'blad_serwera' }, 500, cors)
       }
       return jsonResponse({ paidConversations: count || 0 }, 200, cors)
+    }
+
+    // ── action 'buy_conversation': utwórz pending order na „kolejną rozmowę" ──
+    // (BLIK inline w sparingu: front bierze orderId i woła tpay-create-transaction).
+    // Cena z oferty, e-mail z JWT, spar_user_id z JWT, skip_workflow=true (to nie
+    // budowa → bez workflow CRM). Webhook tpay oznaczy paid → conversations +1.
+    if (action === 'buy_conversation') {
+      if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
+      const CONVO_OFFER_ID = '2a1fbbfe-32fe-4aa3-9f96-3a812da103d4'
+      const { data: offer, error: offErr } = await supabase
+        .from('offers').select('id, name, price').eq('id', CONVO_OFFER_ID).maybeSingle()
+      if (offErr || !offer) {
+        console.error('[spar-project] buy_conversation offer error:', offErr)
+        return jsonResponse({ error: 'brak_oferty' }, 500, cors)
+      }
+      const email = (authUser.email || body.email || '').toString().trim()
+      if (!email) return jsonResponse({ error: 'brak_emaila' }, 400, cors)
+      const { data: order, error: ordErr } = await supabase
+        .from('orders')
+        .insert({
+          customer_email: email,
+          description: offer.name,
+          amount: offer.price,
+          status: 'pending',
+          payment_source: 'tpay',
+          spar_user_id: authUser.id,
+          skip_workflow: true,
+        })
+        .select('id')
+        .single()
+      if (ordErr || !order) {
+        console.error('[spar-project] buy_conversation insert error:', ordErr)
+        return jsonResponse({ error: 'blad_zamowienia' }, 500, cors)
+      }
+      return jsonResponse({ orderId: order.id, amount: offer.price }, 200, cors)
     }
 
     // ── action 'list': rozmowy zalogowanego konta (cross-device) ─────────────
