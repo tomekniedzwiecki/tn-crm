@@ -2570,6 +2570,7 @@ async function handleSubmit() {
                 consent_digital_service: stworzeConsentRequired ? true : null,
                 consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
                 spar_user_id: sparUserId,
+                skip_workflow: sparUserId ? true : null,
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2591,7 +2592,9 @@ async function handleSubmit() {
                 // Stworzę: strukturalny, datowany dowód zgody konsumenta (art. 15 u.p.k.)
                 consent_digital_service: stworzeConsentRequired ? true : null,
                 consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
-                spar_user_id: sparUserId
+                spar_user_id: sparUserId,
+                // zakup sparingu (kolejna rozmowa) NIE jest budową → nie twórz workflow CRM
+                skip_workflow: sparUserId ? true : null
             };
 
             if (isCustomPayment && customPaymentLeadId) {
