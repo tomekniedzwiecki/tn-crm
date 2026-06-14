@@ -180,6 +180,34 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
 
 Wymagania ilościowe: kanaly (za darmo) 5-7, platne 2-3, obiekcje 4-5, reklamy DOKŁADNIE 4 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
 
+// Prompt SAMYCH KANAŁÓW (zakładka „Gdzie szukać klientów") — niezależna regeneracja
+const CHANNELS_SYSTEM = `Jesteś ekspertem od zdobywania PIERWSZYCH klientów dla niszowych narzędzi SaaS w Polsce. Pokaż właścicielowi DOKŁADNIE gdzie szukać klientów — za darmo i przez płatne kampanie. Po polsku, językiem grupy, konkretnie, zero korpomowy, zero lania wody.
+
+ZASADY:
+- ZA DARMO (pole "kanaly"): 5-7 KONKRETNYCH miejsc, gdzie ta grupa JUŻ jest (grupy Facebook, fora/subreddity, społeczności, stowarzyszenia, katalogi, wydarzenia, miejsca offline). CEL: pokazać, że klientów jest PEŁNO w różnych miejscach. Dla każdego: czemu tam + PIERWSZY ruch (1 zdanie). Bez zmyślania konkretnych URL-i — opisz tak, by dało się znaleźć. Różnorodność miejsc ważniejsza niż liczba.
+- PŁATNIE (pole "platne"): 2-3 platformy reklamowe pasujące do grupy (Meta = Facebook+Instagram, Google, ew. inne). Dla każdej: KOGO targetować (zainteresowania/demografia/intencja — konkretnie) + 1 zdanie czemu. Gotowe kreacje są osobno.
+- "skrypt_dm": jedna gotowa, krótka (3-5 zdań), ludzka wiadomość pierwszego kontaktu do wklejenia. Najpierw wartość, nie „kup".
+
+Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
+{"playbook":{"kanaly":[{"miejsce":"...","typ":"grupa Facebook | forum/subreddit | społeczność | stowarzyszenie | katalog | wydarzenie | offline","wielkosc":"np. ~28 tys. członków","dlaczego":"1 zdanie","jak_zaczac":"pierwszy ruch, 1-2 zdania"}],"platne":[{"platforma":"Meta (Facebook + Instagram) | Google | inne","kogo":"konkretne targetowanie","dlaczego":"1 zdanie"}],"skrypt_dm":{"tresc":"gotowa wiadomość 3-5 zdań"}}}
+Wymagania: kanaly 5-7, platne 2-3.`
+
+// Prompt SAMYCH REKLAM (zakładka „Reklamy") — niezależna regeneracja
+const ADS_SYSTEM = `Jesteś szefem marketingu wprowadzającym niszowe narzędzia SaaS B2B na polski rynek. Tworzysz DOKŁADNIE 4 gotowe reklamy do narzędzia (różne KĄTY, nie warianty tego samego). Po polsku, językiem grupy, konkretnie.
+
+ZASADY:
+- 4 reklamy, każda spójny koncept: nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA, format. Grafikę generujemy automatycznie z realnego ekranu narzędzia — NIE pisz briefu wizualnego. To SaaS, nie e-commerce: ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje.
+- ANTY-AI-POETIC: pisz co narzędzie ROBI (akcja + efekt), nie co user ma POCZUĆ. Zero „odzyskaj spokój", „aplikacja, która rozumie".
+
+Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
+{"reklamy":[{"koncept":"nazwa kąta","naglowek":"maks 10 słów","tekst":"2-4 zdania","cta":"np. Wypróbuj za darmo","format":"feed 1:1 | reel 9:16 | karuzela"}]}
+Wymagania: reklamy DOKŁADNIE 4, każdy nagłówek ≤10 słów.`
+
+// deno-lint-ignore no-explicit-any
+function saneChannels(g: any): boolean { const p = g?.playbook; return !!p && typeof p === 'object' && Array.isArray(p.kanaly) && p.kanaly.length >= 2 }
+// deno-lint-ignore no-explicit-any
+function saneAds(g: any): boolean { const r = g?.reklamy; return Array.isArray(r) && r.length >= 1 && r.every((a: any) => !!a && typeof a.naglowek === 'string' && typeof a.tekst === 'string') }
+
 function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null, raport: Record<string, unknown> | null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const list = (v: unknown) => Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ') : ''
@@ -217,11 +245,11 @@ function qualityGtm(g: any): boolean {
   return r.every((a: any) => typeof a?.naglowek === 'string' && a.naglowek.trim().split(/\s+/).length <= 10)
 }
 
-async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
+async function callOnce(apiKey: string, system: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
+    body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + system }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
   if (!res.ok) { console.error('[spar-gtm] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
   const data = await res.json()
@@ -230,6 +258,11 @@ async function callOnce(apiKey: string, user: string, maxTokens: number): Promis
   const content = data?.choices?.[0]?.message?.content
   try { return { obj: JSON.parse(content), usage } }
   catch { console.error('[spar-gtm] zły JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage } }
+}
+
+async function logGtmUsage(supabase: ReturnType<typeof createClient>, sessionId: string, usage: { i: number; c: number; o: number } | null): Promise<void> {
+  if (!usage) return
+  try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.5']; await supabase.from('spar_usage').insert({ session_id: sessionId, kind: 'gtm', model: OPENAI_MODEL, input_tokens: usage.i, cached_tokens: usage.c, output_tokens: usage.o, cost_usd: (Math.max(0, usage.i - usage.c) * p.i + usage.c * p.c + usage.o * p.o) / 1_000_000 }) } catch (uErr) { console.error('[spar-gtm] usage insert error:', uErr) }
 }
 
 Deno.serve(async (req) => {
@@ -267,6 +300,60 @@ Deno.serve(async (req) => {
     if (!karta) return jsonResponse({ error: 'brak_karty' }, 400, cors)
     const existing = session.gtm as Record<string, unknown> | null
     const meta = (existing && existing._meta) as Record<string, unknown> | null
+
+    // ── action 'regen_channels': SAME kanały + płatne (zakładka „Gdzie szukać klientów"), ZACHOWAJ reklamy ──
+    if (body.action === 'regen_channels') {
+      const chCount = (meta && typeof meta.gen_ch === 'number') ? meta.gen_ch : 0
+      if (chCount >= MAX_GENERATIONS && existing) { const { _meta: _d, ...gtm } = existing; return jsonResponse({ gtm, cached: true }, 200, cors) }
+      const { data: lockC } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'gtm_ch', p_ttl_sec: 200 })
+      if (!lockC) return jsonResponse({ pending: true }, 202, cors)
+      const userC = buildUser(brief, karta, plan, raport)
+      let bestC: Record<string, unknown> | null = null
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { obj, usage } = await callOnce(OPENAI_API_KEY, CHANNELS_SYSTEM, userC, 3500 + attempt * 1000)
+        await logGtmUsage(supabase, sessionId, usage)
+        if (obj && saneChannels(obj)) { bestC = obj; break }
+      }
+      if (!bestC) { await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_ch' }); return jsonResponse({ error: 'blad_generowania' }, 502, cors) }
+      const curC = (existing || {}) as Record<string, unknown>
+      const curPb = (curC.playbook && typeof curC.playbook === 'object') ? curC.playbook as Record<string, unknown> : {}
+      const npb = (bestC.playbook && typeof bestC.playbook === 'object') ? bestC.playbook as Record<string, unknown> : bestC
+      const mergedPb = { ...curPb, kanaly: npb.kanaly, platne: npb.platne, skrypt_dm: npb.skrypt_dm }
+      const mergedC = { ...curC, playbook: mergedPb, _meta: { ...(meta || {}), gen_ch: chCount + 1, at_ch: new Date().toISOString() } }
+      await supabase.from('spar_sessions').update({ gtm: mergedC, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_ch' })
+      const { _meta: _d2, ...gtmC } = mergedC
+      return jsonResponse({ gtm: gtmC, cached: false }, 200, cors)
+    }
+
+    // ── action 'regen_ads': SAME reklamy (zakładka „Reklamy") + nowe banery, ZACHOWAJ kanały ──
+    if (body.action === 'regen_ads') {
+      const adCount = (meta && typeof meta.gen_ads === 'number') ? meta.gen_ads : 0
+      if (adCount >= MAX_GENERATIONS && existing) { const { _meta: _d, ...gtm } = existing; return jsonResponse({ gtm, cached: true }, 200, cors) }
+      const { data: lockA } = await supabase.rpc('spar_claim_lock', { p_session: sessionId, p_key: 'gtm_ads', p_ttl_sec: 200 })
+      if (!lockA) return jsonResponse({ pending: true }, 202, cors)
+      const userA = buildUser(brief, karta, plan, raport)
+      let bestA: Record<string, unknown> | null = null
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { obj, usage } = await callOnce(OPENAI_API_KEY, ADS_SYSTEM, userA, 3000 + attempt * 1000)
+        await logGtmUsage(supabase, sessionId, usage)
+        if (obj && saneAds(obj)) { bestA = obj; if ((obj.reklamy as unknown[]).length === 4) break }
+      }
+      if (!bestA) { await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_ads' }); return jsonResponse({ error: 'blad_generowania' }, 502, cors) }
+      const curA = (existing || {}) as Record<string, unknown>
+      const curPk = (curA.pakiet && typeof curA.pakiet === 'object') ? curA.pakiet as Record<string, unknown> : {}
+      const mergedPk = { ...curPk, reklamy: bestA.reklamy }
+      const mergedA = { ...curA, pakiet: mergedPk, _meta: { ...(meta || {}), gen_ads: adCount + 1, at_ads: new Date().toISOString() } }
+      await supabase.from('spar_sessions').update({ gtm: mergedA, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_ads' })
+      const taskA = generateBanners(supabase, OPENAI_API_KEY, sessionId)
+      // deno-lint-ignore no-explicit-any
+      const rtA = (globalThis as any).EdgeRuntime
+      if (rtA?.waitUntil) rtA.waitUntil(taskA); else taskA.catch(() => {})
+      const { _meta: _d3, ...gtmA } = mergedA
+      return jsonResponse({ gtm: gtmA, cached: false, bannersStarted: true }, 200, cors)
+    }
+
     const genCount = (meta && typeof meta.gen === 'number') ? meta.gen : (existing ? 1 : 0)
     if (existing && !body.force) { const { _meta: _d, ...gtm } = existing; return jsonResponse({ gtm, cached: true }, 200, cors) }
     if (genCount >= MAX_GENERATIONS) { if (existing) { const { _meta: _d, ...gtm } = existing; return jsonResponse({ gtm, cached: true }, 200, cors) } return jsonResponse({ error: 'limit_generacji' }, 429, cors) }
@@ -282,7 +369,7 @@ Deno.serve(async (req) => {
     // (≠3 reklamy / za długi nagłówek). Trzymamy ostatni POPRAWNY jako fallback.
     let best: Record<string, unknown> | null = null
     for (let attempt = 0; attempt < 2; attempt++) {
-      const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 9000 + attempt * 1500)
+      const { obj, usage } = await callOnce(OPENAI_API_KEY, SYSTEM_PROMPT, user, 9000 + attempt * 1500)
       await logUsage(usage)
       if (obj && saneGtm(obj)) {
         best = obj
