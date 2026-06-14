@@ -446,10 +446,12 @@ i ZAKOŃCZ turę (nic po markerze). Wynik badania dostaniesz w następnej turze 
 // po deployu redesignu; przed flipem flagi model nie zna markera → zero wycieków).
 const KIERUNKI_ENABLED = (Deno.env.get('SPAR_KIERUNKI_ENABLED') || '') === '1'
 const KIERUNKI_INSTRUCTION = `[WYBÓR KIERUNKU — KARTY ROZWIDLENIA (opcjonalne, NAJWYŻEJ RAZ)]
-Jeśli rozmówca podał SZEROKI lub niejednoznaczny obszar (np. branża/grupa bez sprecyzowanego rdzenia) i widzisz 2–3 RÓŻNE, sensowne kierunki narzędzia — zamiast wybierać jeden ZA niego, pokaż mu rozwidlenie do wyboru. Napisz JEDNO krótkie, naturalne zdanie (np. „Widzę tu 3 różne drogi — która jest najbliżej tego, co czujesz?"), a potem w osobnej linii wystaw marker:
+Jeśli rozmówca podał SZEROKI lub niejednoznaczny obszar (np. branża/grupa bez sprecyzowanego rdzenia) i widzisz 2–3 RÓŻNE, sensowne kierunki narzędzia — zamiast wybierać jeden ZA niego, pokaż mu rozwidlenie. Napisz JEDNO krótkie, naturalne zdanie, w którym WSKAZUJESZ, na co wstępnie byś postawił, dodajesz, że sprawdzisz to na żywo, i zostawiasz wybór rozmówcy (np. „Wstępnie stawiałbym na odzysk odwołań — najbliżej pieniędzy — ale to Ty wybierasz; sprawdzę potem każdy wariant na żywo."). Potem w osobnej linii wystaw marker:
 <kierunki>[{"nazwa":"krótka nazwa kierunku","opis":"jedno zdanie: co to narzędzie robi","tag":"3–4 słowa: czemu ciekawe","dalej":"1–2 zdania: co konkretnie zrobimy, jeśli wybierze ten kierunek","polecany":true}]</kierunki>
-i ZAKOŃCZ turę (nic po markerze). ZASADY: 2–3 pozycje; DOKŁADNIE jedna ma "polecany":true (Twoja rekomendacja — najbliżej pieniędzy / najszybciej do pierwszego płacącego); każdy kierunek wyraźnie INNY (nie warianty tego samego). NIE łącz z <opcje> w tej samej turze.
-KIEDY NIE UŻYWAĆ: gdy rozmówca ma już ostry, konkretny pomysł (jeden oczywisty kierunek — potwierdź i prowadź dalej normalnie); gdy dopracowujecie JUŻ wybrany kierunek; gdy nie ma 2 naprawdę różnych dróg. Najwyżej RAZ w rozmowie — to wybór strategicznej drogi, nie nawyk.
+i ZAKOŃCZ turę (nic po markerze). ZASADY: DOKŁADNIE jedna pozycja ma "polecany":true (Twoja rekomendacja — najbliżej pieniędzy / najszybciej do pierwszego płacącego); każdy kierunek wyraźnie INNY (nie warianty tego samego). NIE łącz z <opcje> w tej samej turze.
+ILE POZYCJI: tylko tyle, ile jest NAPRAWDĘ różnych i sensownych — 2 w zupełności wystarczą, NIE dopychaj do 3 na siłę słabą alternatywą. Jeśli jeden kierunek wyraźnie dominuje — NIE pokazuj kart, po prostu poprowadź ten jeden.
+SZCZEROŚĆ: "polecany" i tag to Twoja WSTĘPNA intuicja przed badaniem — nie obiecuj pewności; realnie zweryfikujesz to dopiero bramką <ocena>.
+KIEDY NIE UŻYWAĆ: gdy rozmówca ma już ostry, konkretny pomysł; gdy dopracowujecie JUŻ wybrany kierunek; gdy nie ma 2 naprawdę różnych dróg. Najwyżej RAZ w rozmowie — to wybór strategicznej drogi, nie nawyk.
 PO WYBORZE: rozmówca odpisze „Wybieram kierunek: …". Potwierdź krótko ten wybór i prowadź dopracowanie TEGO kierunku ku rdzeniowi (potem normalnie bramka <ocena>).`
 
 // Wstrzykiwane w turze PO „zielonym" badaniu, gdy rozmówca zareagował na
