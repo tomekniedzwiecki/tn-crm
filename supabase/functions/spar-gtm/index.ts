@@ -143,7 +143,8 @@ const SYSTEM_PROMPT = `Jesteś szefem sprzedaży i marketingu, który wielokrotn
 KONTEKST: to playbook zdobycia pierwszych 50 stałych klientów. W modelu współpracy (patrz blok „MODEL BIZNESOWY APLIKACJA" na początku promptu) pierwsze ~pół roku sprzedaż osobiście prowadzi Tomek, a właściciel uczy się od środka i przejmuje rozkręcanie po oddaniu sterów. Materiały mają być gotowe do realnego użycia od pierwszego dnia: DOKŁADNIE gdzie szukać klientów i co wkleić — nie ogólniki typu „buduj markę w social media".
 
 ZASADY:
-- Kanały: podaj KONKRETNE miejsca, gdzie ta grupa już jest (realistyczne nazwy grup FB, fora/subreddity, stowarzyszenia branżowe, katalogi, wydarzenia, miejsca offline). Dla każdego: czemu tam i jaki PIERWSZY ruch wykonać. Bez wymyślania nieistniejących, konkretnych URL-i — opisz miejsce tak, by dało się je znaleźć.
+- ZA DARMO (od tego się zaczyna) — pole "kanaly": 5-7 KONKRETNYCH miejsc, gdzie ta grupa JUŻ jest (grupy Facebook, fora/subreddity, społeczności, stowarzyszenia branżowe, katalogi, wydarzenia, miejsca offline). CEL: pokazać właścicielowi, że klientów jest PEŁNO w różnych miejscach. Dla każdego: czemu tam i jaki PIERWSZY ruch. Bez wymyślania nieistniejących URL-i — opisz miejsce tak, by dało się je znaleźć. Różnorodność miejsc ważniejsza niż liczba.
+- PŁATNIE (kampanie reklamowe) — pole "platne": 2-3 platformy reklamowe pasujące do tej grupy (Meta = Facebook+Instagram, Google, ew. inne). Dla każdej: KOGO targetować (zainteresowania/demografia/intencja — konkretnie) i 1 zdanie czemu. Krótko — gotowe kreacje są osobno.
 - Skrypty: gotowe do wklejenia, krótkie, ludzkie, bez nachalności. Najpierw wartość, nie „kup".
 - Reklamy (DOKŁADNIE 4 różne KĄTY, nie warianty tego samego): każda to spójny koncept — nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA. Grafikę generujemy automatycznie z realnego ekranu narzędzia — NIE pisz briefu wizualnego. To reklama narzędzia SaaS (nie e-commerce): ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje + dowód mechaniki.
 - ANTY-AI-POETIC: pisz co narzędzie ROBI (akcja + efekt), nie co user ma POCZUĆ. Zero „odzyskaj spokój", „aplikacja, która rozumie".
@@ -154,6 +155,9 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
   "playbook": {
     "kanaly": [
       {"miejsce": "konkretna nazwa miejsca", "typ": "grupa Facebook | forum/subreddit | stowarzyszenie | katalog | wydarzenie | offline", "wielkosc": "np. ~28 tys. członków albo „kilkaset firm”", "dlaczego": "1 zdanie", "jak_zaczac": "konkretny pierwszy ruch — 1-2 zdania"}
+    ],
+    "platne": [
+      {"platforma": "Meta (Facebook + Instagram) | Google | inne", "kogo": "konkretne targetowanie (zainteresowania/demografia/intencja)", "dlaczego": "1 zdanie"}
     ],
     "skrypt_dm": {"kanal": "wiadomość prywatna / komentarz / DM", "tresc": "gotowy tekst pierwszego kontaktu, 3-5 zdań"},
     "skrypt_email": {"temat": "krótki temat", "tresc": "gotowy mail cold, 4-6 zdań"},
@@ -174,7 +178,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
   }
 }
 
-Wymagania ilościowe: kanaly 4-6, obiekcje 4-5, reklamy DOKŁADNIE 4 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
+Wymagania ilościowe: kanaly (za darmo) 5-7, platne 2-3, obiekcje 4-5, reklamy DOKŁADNIE 4 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
 
 function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null, raport: Record<string, unknown> | null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
