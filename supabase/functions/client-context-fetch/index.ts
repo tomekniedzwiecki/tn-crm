@@ -23,6 +23,14 @@ Deno.serve(async (req) => {
   const { customer_email } = body;
   if (!customer_email) return json({ error: "customer_email required" }, 400);
 
+  // AUTORYZACJA: narzedzie wewnetrzne (tylko tooling admina/Claude). Bez tego
+  // KAZDY z publishable key mogl po samym customer_email pobrac workflow +
+  // legal_data (PESEL/adres) + account_email TakeDrop + cache maili. Wymagamy
+  // sekretu SPAR_CRON_SECRET (jak send-sms/spar-drip).
+  const SECRET = Deno.env.get("SPAR_CRON_SECRET");
+  const authed = !!SECRET && (req.headers.get("x-admin-secret") === SECRET || req.headers.get("x-cron-secret") === SECRET);
+  if (!authed) return json({ error: "brak_autoryzacji" }, 401);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,

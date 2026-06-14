@@ -19,6 +19,14 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    // AUTORYZACJA: narzedzie wewnetrzne. Bez tego = SSRF (kazdy kaze serwerowi
+    // pobrac dowolny URL) + naduzycie. Wymagamy sekretu SPAR_CRON_SECRET.
+    const SECRET = Deno.env.get('SPAR_CRON_SECRET')
+    if (!SECRET || (req.headers.get('x-admin-secret') !== SECRET && req.headers.get('x-cron-secret') !== SECRET)) {
+      return new Response(JSON.stringify({ success: false, error: 'brak_autoryzacji' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
+
     console.log(`[scrape] Fetching ${url}`)
     const res = await fetch(url, {
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TNCrawler/1.0)' }

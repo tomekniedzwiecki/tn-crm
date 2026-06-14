@@ -45,6 +45,7 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     const userResp = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { 'Authorization': authHeader, 'apikey': supabaseAnonKey! }
@@ -52,6 +53,20 @@ Deno.serve(async (req) => {
     if (!userResp.ok) {
       return new Response(JSON.stringify({ error: 'Invalid token' }), {
         status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+    // TYLKO zespol (team_members). Sam fakt zalogowania NIE wystarcza — publiczna
+    // rejestracja w aplikacji sparingu daje role authenticated kazdemu z internetu,
+    // a faktury (PESEL/NIP/adresy/kwoty) sa enumerowalne po numerycznym invoice_id.
+    const authUser = await userResp.json().catch(() => null)
+    const tmResp = await fetch(
+      `${supabaseUrl}/rest/v1/team_members?select=user_id&user_id=eq.${authUser?.id}`,
+      { headers: { 'apikey': serviceKey!, 'Authorization': `Bearer ${serviceKey}` } }
+    )
+    const tmRows = await tmResp.json().catch(() => [])
+    if (!authUser?.id || !Array.isArray(tmRows) || tmRows.length === 0) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 

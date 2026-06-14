@@ -100,6 +100,12 @@ Deno.serve(async (req) => {
     return json({ error: "customer_email required" }, 400);
   }
 
+  // AUTORYZACJA: narzedzie wewnetrzne (zadna strona nie wola). Bez tego kazdy
+  // po dowolnym customer_email dostawal tematy/snippety korespondencji Gmail.
+  const SECRET = Deno.env.get("SPAR_CRON_SECRET");
+  const authed = !!SECRET && (req.headers.get("x-admin-secret") === SECRET || req.headers.get("x-cron-secret") === SECRET);
+  if (!authed) return json({ error: "brak_autoryzacji" }, 401);
+
   const password = Deno.env.get("GMAIL_APP_PASSWORD");
   if (!password) return json({ error: "GMAIL_APP_PASSWORD not configured" }, 500);
 

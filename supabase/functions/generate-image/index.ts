@@ -467,6 +467,40 @@ Deno.serve(async (req) => {
       })
     }
 
+    // AUTORYZACJA: funkcja pali platne API (OpenAI/Gemini) i pobiera dowolny
+    // reference_image_url (SSRF). Akceptujemy: service_role (woła generate-campaign-batch),
+    // JWT czlonka zespolu (workflow.html przez functions.invoke wysyla JWT admina),
+    // albo sekret SPAR_CRON_SECRET (tooling). Inaczej kazdy palilby nasze kredyty.
+    {
+      const SUPA_URL = Deno.env.get('SUPABASE_URL')!
+      const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY') || ''
+      const SECRET = Deno.env.get('SPAR_CRON_SECRET')
+      const authzRaw = req.headers.get('authorization') || ''
+      const token = authzRaw.replace(/^Bearer\s+/i, '')
+      let okAuth = token === SERVICE_KEY ||
+        (!!SECRET && (req.headers.get('x-admin-secret') === SECRET || req.headers.get('x-cron-secret') === SECRET))
+      if (!okAuth && token && token !== ANON_KEY) {
+        try {
+          const uResp = await fetch(`${SUPA_URL}/auth/v1/user`, { headers: { 'Authorization': authzRaw, 'apikey': ANON_KEY } })
+          if (uResp.ok) {
+            const u = await uResp.json()
+            if (u?.id) {
+              const tmResp = await fetch(`${SUPA_URL}/rest/v1/team_members?select=user_id&user_id=eq.${u.id}`,
+                { headers: { 'apikey': SERVICE_KEY, 'Authorization': `Bearer ${SERVICE_KEY}` } })
+              const tm = await tmResp.json().catch(() => [])
+              if (Array.isArray(tm) && tm.length > 0) okAuth = true
+            }
+          }
+        } catch (_) { /* fallthrough -> 401 */ }
+      }
+      if (!okAuth) {
+        return new Response(JSON.stringify({ error: 'brak_autoryzacji' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+    }
+
     // Supabase client — also used to read provider setting
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

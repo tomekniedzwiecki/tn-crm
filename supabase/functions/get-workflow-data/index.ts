@@ -26,6 +26,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // AUTORYZACJA: narzedzie wewnetrzne (zadna strona go nie wola). Bez tego kazdy
+    // z publishable key listowal workflowy (id, nazwisko, oferta) i po workflow_id
+    // czytal e-mail klienta. Wymagamy sekretu SPAR_CRON_SECRET (jak send-sms).
+    const SECRET = Deno.env.get('SPAR_CRON_SECRET')
+    const authed = !!SECRET && (req.headers.get('x-admin-secret') === SECRET || req.headers.get('x-cron-secret') === SECRET)
+    if (!authed) {
+      return new Response(JSON.stringify({ error: 'brak_autoryzacji' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, supabaseKey)

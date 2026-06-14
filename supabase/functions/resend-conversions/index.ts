@@ -135,6 +135,17 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // AUTORYZACJA: narzedzie wewnetrzne (zadna strona nie wola). Bez tego kazdy
+    // mogl re-firowac konwersje Purchase do Meta (zatruwa atrybucje) i enumerowac
+    // numery zamowien z odpowiedzi. Wymagamy sekretu SPAR_CRON_SECRET.
+    const SECRET = Deno.env.get('SPAR_CRON_SECRET')
+    const authed = !!SECRET && (req.headers.get('x-admin-secret') === SECRET || req.headers.get('x-cron-secret') === SECRET)
+    if (!authed) {
+      return new Response(JSON.stringify({ error: 'brak_autoryzacji' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""

@@ -21,6 +21,13 @@ Deno.serve(async (req) => {
     return json({ error: "threadId required (hex)" }, 400);
   }
 
+  // AUTORYZACJA: narzedzie wewnetrzne. Bez tego kazdy (chroniony tylko entropia
+  // threadId) wyciagal zalaczniki maili do publicznego bucketu.
+  const SECRET = Deno.env.get("SPAR_CRON_SECRET");
+  if (!SECRET || (req.headers.get("x-admin-secret") !== SECRET && req.headers.get("x-cron-secret") !== SECRET)) {
+    return json({ error: "brak_autoryzacji" }, 401);
+  }
+
   const password = Deno.env.get("GMAIL_APP_PASSWORD");
   if (!password) return json({ error: "GMAIL_APP_PASSWORD not configured" }, 500);
 
