@@ -33,32 +33,44 @@ function sizeForFormat(format: string): string {
   if (f.includes('9:16') || f.includes('reel') || f.includes('stories') || f.includes('pion')) return '1024x1536'
   return '1024x1024'
 }
-// Prompt kreacji reklamowej z wizual_brief + paleta marki + kontekst produktu
+// Prompt kreacji reklamowej — kreacja BUDOWANA WOKÓŁ realnego ekranu narzędzia
+// (ekran idzie jako obraz wejściowy do /images/edits; tu tylko instrukcja kompozycji)
 function buildBannerPrompt(reklama: Record<string, unknown>, brief: Record<string, unknown>, nazwa: string): string {
   const s = (v: unknown, max = 400) => (typeof v === 'string' ? v.slice(0, max) : '')
   const design = (brief.design && typeof brief.design === 'object' && !Array.isArray(brief.design)) ? brief.design as Record<string, unknown> : null
   const d = (k: string) => (design && typeof design[k] === 'string' ? (design[k] as string).slice(0, 40) : '')
   const paleta = (d('tlo') && d('akcent')) ? `Paleta marki: tło ${d('tlo')}, akcent ${d('akcent')}${d('akcent2') ? `, drugi akcent ${d('akcent2')}` : ''}. ` : ''
   return [
-    `Profesjonalna KREACJA REKLAMOWA (baner social media) dla polskiego narzędzia SaaS „${nazwa}". Format do kanału: ${s(reklama.format, 30) || 'feed 1:1'}.`,
-    reklama.naglowek ? `Główny nagłówek na grafice (krótki, czytelny, po polsku, bezbłędnie): „${s(reklama.naglowek, 80)}".` : '',
-    `SCENA (odwzoruj wiernie): ${s(reklama.wizual_brief, 500)}`,
-    paleta + `Styl: nowoczesny, czysty, premium — jak reklama dobrego produktu SaaS; spójny z paletą marki. Realistyczny mockup interfejsu aplikacji z krótkimi POLSKIMI etykietami. Bez stockowych uśmiechniętych ludzi, bez clipartów, bez znaków wodnych. Tekst na grafice minimalny i poprawny ortograficznie.`,
-    `Kompozycja zostawia oddech na nagłówek; mocny kontrast, czytelność na małym ekranie telefonu.`,
+    `Stwórz PROFESJONALNĄ KREACJĘ REKLAMOWĄ (baner social media) dla polskiego narzędzia SaaS „${nazwa}". Format kanału: ${s(reklama.format, 30) || 'feed 1:1'}.`,
+    `Dołączony obraz to PRAWDZIWY EKRAN tej aplikacji. Pokaż go WIERNIE i czytelnie — umieść NA PIERWSZYM PLANIE w czystym, nowoczesnym mockupie urządzenia (telefon lub okno przeglądarki). NIE przeprojektowuj, nie zmieniaj treści ekranu, nie dorysowuj fałszywego interfejsu.`,
+    reklama.koncept ? `Kąt reklamy: „${s(reklama.koncept, 60)}".` : '',
+    reklama.naglowek ? `Nagłówek na grafice (krótki, duży, czytelny, PO POLSKU, bezbłędnie ortograficznie): „${s(reklama.naglowek, 80)}".` : '',
+    paleta + `Styl: czysty, premium — jak reklama dobrego SaaS; tło spójne z paletą marki, dużo oddechu pod nagłówek. Bez stockowych ludzi, bez clipartów, bez znaków wodnych, bez zmyślonego/losowego tekstu. Mocny kontrast, czytelność na małym ekranie telefonu.`,
   ].filter(Boolean).join(' ')
 }
-// Generacja jednego obrazu; zwraca bytes + użyty model (fallback przy braku modelu)
-async function genBanner(apiKey: string, prompt: string, size: string): Promise<{ bytes: Uint8Array; usedModel: string }> {
-  const call = (model: string) => fetch('https://api.openai.com/v1/images/generations', {
-    method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-    body: JSON.stringify({ model, prompt, size, quality: IMAGE_QUALITY, n: 1 }),
-  })
+// Generacja jednego banera przez /images/edits — REALNY EKRAN jako obraz wejściowy
+// (gpt-image-2.0; fallback gpt-image-1 gdy model nie wspiera edits). zwraca bytes + model
+async function genBanner(apiKey: string, prompt: string, size: string, screenBytes: Uint8Array): Promise<{ bytes: Uint8Array; usedModel: string }> {
+  const call = (model: string) => {
+    const fd = new FormData()
+    fd.append('model', model)
+    fd.append('prompt', prompt)
+    fd.append('size', size)
+    fd.append('quality', IMAGE_QUALITY)
+    fd.append('n', '1')
+    fd.append('image', new Blob([screenBytes], { type: 'image/png' }), 'ekran.png')
+    // BEZ Content-Type — FormData ustawia multipart boundary samo
+    return fetch('https://api.openai.com/v1/images/edits', {
+      method: 'POST', headers: { 'Authorization': `Bearer ${apiKey}` }, body: fd,
+    })
+  }
   let usedModel = IMAGE_MODEL
   let res = await call(IMAGE_MODEL)
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
-    console.error(`[spar-gtm] ${IMAGE_MODEL} img error:`, res.status, errText.slice(0, 300))
-    if ((res.status === 400 || res.status === 404) && /model/i.test(errText)) { res = await call(IMAGE_MODEL_FALLBACK); usedModel = IMAGE_MODEL_FALLBACK; if (!res.ok) throw new Error('img_error') }
+    console.error(`[spar-gtm] ${IMAGE_MODEL} edit error:`, res.status, errText.slice(0, 300))
+    // 400/404 → spróbuj fallbackiem (np. gdy gpt-image-2.0 nie wspiera /images/edits)
+    if (res.status === 400 || res.status === 404) { res = await call(IMAGE_MODEL_FALLBACK); usedModel = IMAGE_MODEL_FALLBACK; if (!res.ok) { console.error('[spar-gtm] fallback edit error:', res.status, (await res.text().catch(() => '')).slice(0, 300)); throw new Error('img_error') } }
     else throw new Error('img_error')
   }
   const data = await res.json()
@@ -68,23 +80,41 @@ async function genBanner(apiKey: string, prompt: string, size: string): Promise<
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
   return { bytes, usedModel }
 }
-// Tło: generuje 3 banery, zapisuje banner_url w gtm.reklamy, aktualizuje sesję.
+// URL ekranu z preview_images (string albo {url})
+function screenUrl(v: unknown): string {
+  if (typeof v === 'string') return v
+  if (v && typeof v === 'object' && typeof (v as Record<string, unknown>).url === 'string') return (v as Record<string, unknown>).url as string
+  return ''
+}
+async function fetchScreenBytes(url: string): Promise<Uint8Array | null> {
+  try { const r = await fetch(url); if (!r.ok) return null; const ab = await r.arrayBuffer(); return new Uint8Array(ab) } catch { return null }
+}
+// Tło: generuje do 4 banerów Z REALNYCH EKRANÓW, zapisuje banner_url w gtm.reklamy.
 async function generateBanners(supabase: ReturnType<typeof createClient>, apiKey: string, sessionId: string): Promise<void> {
   try {
-    const { data: session } = await supabase.from('spar_sessions').select('preview_brief, gtm').eq('id', sessionId).maybeSingle()
+    const { data: session } = await supabase.from('spar_sessions').select('preview_brief, preview_images, gtm').eq('id', sessionId).maybeSingle()
     if (!session || !session.gtm) { console.error('[spar-gtm] banners: brak gtm'); return }
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const nazwa = (typeof brief.nazwa === 'string' && brief.nazwa.trim()) ? brief.nazwa.trim() : 'narzędzie'
     const gtm = session.gtm as Record<string, unknown>
     const pakiet = (gtm.pakiet || {}) as Record<string, unknown>
     const reklamy = Array.isArray(pakiet.reklamy) ? pakiet.reklamy as Record<string, unknown>[] : []
+    // realne ekrany, w kolejności „najlepsze do reklamy" (główna > panel > dodatkowa > landing > podsumowanie)
+    const imgs = (session.preview_images || {}) as Record<string, unknown>
+    const screens = ['glowna', 'panel', 'dodatkowa', 'landing', 'podsumowanie'].map((k) => screenUrl(imgs[k])).filter(Boolean)
+    if (!screens.length) { console.error('[spar-gtm] banners: brak ekranów — pomijam (edits wymaga obrazu)'); await supabase.rpc('spar_release_lock', { p_session: sessionId, p_key: 'gtm_banners' }); return }
+    const bytesCache: Record<string, Uint8Array | null> = {}
     let changed = false
-    for (let i = 0; i < reklamy.length && i < 3; i++) {
+    for (let i = 0; i < reklamy.length && i < 4; i++) {
       const r = reklamy[i]
       if (!r || typeof r !== 'object' || (typeof r.banner_url === 'string' && r.banner_url)) continue
+      const scUrl = screens[i % screens.length]
+      if (!(scUrl in bytesCache)) bytesCache[scUrl] = await fetchScreenBytes(scUrl)
+      const screenBytes = bytesCache[scUrl]
+      if (!screenBytes) { console.error('[spar-gtm] banner', i + 1, 'nie pobrano ekranu — pomijam'); continue }
       try {
         const size = sizeForFormat(typeof r.format === 'string' ? r.format : '')
-        const { bytes, usedModel } = await genBanner(apiKey, buildBannerPrompt(r, brief, nazwa), size)
+        const { bytes, usedModel } = await genBanner(apiKey, buildBannerPrompt(r, brief, nazwa), size, screenBytes)
         const path = `spar/${sessionId}/reklama-${i + 1}-${Date.now()}.png`
         const { error: upErr } = await supabase.storage.from(STORAGE_BUCKET).upload(path, bytes, { contentType: 'image/png', upsert: true })
         if (upErr) { console.error('[spar-gtm] banner upload error:', upErr); continue }
@@ -115,7 +145,7 @@ KONTEKST: to playbook zdobycia pierwszych 50 stałych klientów. W modelu wspó�
 ZASADY:
 - Kanały: podaj KONKRETNE miejsca, gdzie ta grupa już jest (realistyczne nazwy grup FB, fora/subreddity, stowarzyszenia branżowe, katalogi, wydarzenia, miejsca offline). Dla każdego: czemu tam i jaki PIERWSZY ruch wykonać. Bez wymyślania nieistniejących, konkretnych URL-i — opisz miejsce tak, by dało się je znaleźć.
 - Skrypty: gotowe do wklejenia, krótkie, ludzkie, bez nachalności. Najpierw wartość, nie „kup".
-- Reklamy (DOKŁADNIE 3 różne KĄTY, nie warianty tego samego): każda to spójny koncept — nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA, oraz brief wizualny (co ma być na grafice/wideo — dla fotografa/projektanta, NIE generujemy obrazu). To reklama narzędzia SaaS (nie e-commerce): ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje + dowód mechaniki.
+- Reklamy (DOKŁADNIE 4 różne KĄTY, nie warianty tego samego): każda to spójny koncept — nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA. Grafikę generujemy automatycznie z realnego ekranu narzędzia — NIE pisz briefu wizualnego. To reklama narzędzia SaaS (nie e-commerce): ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje + dowód mechaniki.
 - ANTY-AI-POETIC: pisz co narzędzie ROBI (akcja + efekt), nie co user ma POCZUĆ. Zero „odzyskaj spokój", „aplikacja, która rozumie".
 - Maile powitalne: sekwencja 3, każdy prowadzi do pierwszego realnego użycia / rozmowy.
 
@@ -131,7 +161,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
   },
   "pakiet": {
     "reklamy": [
-      {"koncept": "nazwa kąta, np. „Oszczędność czasu”", "naglowek": "maks 10 słów", "tekst": "2-4 zdania primary text", "cta": "np. Wypróbuj za darmo / Zobacz demo", "wizual_brief": "co na grafice/wideo — konkretnie, dla projektanta", "format": "feed 1:1 | reel 9:16 | karuzela"}
+      {"koncept": "nazwa kąta, np. „Oszczędność czasu”", "naglowek": "maks 10 słów", "tekst": "2-4 zdania primary text", "cta": "np. Wypróbuj za darmo / Zobacz demo", "format": "feed 1:1 | reel 9:16 | karuzela"}
     ],
     "posty": [
       {"haczyk": "pierwsza linia, która zatrzymuje scroll", "tresc": "post organiczny 3-5 zdań", "gdzie": "FB/LinkedIn/grupa branżowa"}
@@ -144,7 +174,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
   }
 }
 
-Wymagania ilościowe: kanaly 4-6, obiekcje 4-5, reklamy DOKŁADNIE 3 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
+Wymagania ilościowe: kanaly 4-6, obiekcje 4-5, reklamy DOKŁADNIE 4 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
 
 function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null, raport: Record<string, unknown> | null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
@@ -175,11 +205,11 @@ function saneGtm(g: any): boolean {
   if (!Array.isArray(k.maile_powitalne) || k.maile_powitalne.length < 1) return false
   return true
 }
-// Jakość (do decyzji o retry): dokładnie 3 reklamy + każdy nagłówek ≤10 słów.
+// Jakość (do decyzji o retry): dokładnie 4 reklamy + każdy nagłówek ≤10 słów.
 // deno-lint-ignore no-explicit-any
 function qualityGtm(g: any): boolean {
   const r = g?.pakiet?.reklamy
-  if (!Array.isArray(r) || r.length !== 3) return false
+  if (!Array.isArray(r) || r.length !== 4) return false
   return r.every((a: any) => typeof a?.naglowek === 'string' && a.naglowek.trim().split(/\s+/).length <= 10)
 }
 
