@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM | Zmiana hasła</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: { extend: {
+                fontFamily: { sans: ['Inter', 'sans-serif'], mono: ['JetBrains Mono', 'monospace'] },
+                colors: { bg: '#050505', surface: '#0A0A0A', border: '#27272a', txt: { main: '#EDEDED', muted: '#A1A1AA', faint: '#52525B' } },
+                animation: { 'fade-in': 'fadeIn 0.6s ease-out forwards' },
+                keyframes: { fadeIn: { '0%': { opacity: '0', transform: 'translateY(10px) scale(0.98)' }, '100%': { opacity: '1', transform: 'translateY(0) scale(1)' } } }
+            } }
+        }
+    </script>
+    <style>
+        body { background-color: #050505; color: #EDEDED; }
+        .bg-grid { background-size: 40px 40px; background-image: linear-gradient(to right, rgba(255,255,255,.03) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.03) 1px, transparent 1px); mask-image: radial-gradient(circle at center, black 30%, transparent 100%); }
+        .input-field { background: #0A0A0A; border: 1px solid #27272a; color: white; transition: all .2s; }
+        .input-field:focus { border-color: #52525B; box-shadow: 0 0 0 1px #52525B; outline: none; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden font-sans text-sm antialiased">
+
+    <div class="absolute inset-0 bg-grid pointer-events-none z-0"></div>
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/[0.015] blur-[120px] rounded-full pointer-events-none z-0"></div>
+
+    <main class="w-full max-w-[380px] mx-4 z-10 animate-fade-in flex flex-col items-center py-10">
+
+        <div class="text-center mb-8">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-tr from-zinc-900 to-black border border-border shadow-[0_0_30px_rgba(255,255,255,0.03)] mb-5">
+                <i class="ph-bold ph-key text-2xl text-white"></i>
+            </div>
+            <h1 class="text-xl font-semibold tracking-tight text-white">Zmiana hasła</h1>
+            <p id="subtitle" class="text-txt-muted text-sm mt-2">Ładowanie…</p>
+        </div>
+
+        <div class="w-full bg-black/40 backdrop-blur-xl border border-border rounded-xl p-6 shadow-2xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+            <!-- Ładowanie -->
+            <div id="state-loading" class="text-center py-6 text-txt-muted">
+                <i class="ph ph-circle-notch text-2xl animate-spin"></i>
+            </div>
+
+            <!-- Zmiana hasła (zalogowany lub sesja recovery z maila) -->
+            <form id="form-set" class="space-y-5 hidden">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] uppercase tracking-wider text-txt-faint font-semibold pl-1">Nowe hasło</label>
+                    <div class="relative">
+                        <i class="ph ph-lock absolute left-3 top-2.5 text-txt-faint"></i>
+                        <input type="password" id="new-pass" required minlength="8" autocomplete="new-password" placeholder="min. 8 znaków" class="input-field w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono placeholder:text-zinc-700">
+                    </div>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[10px] uppercase tracking-wider text-txt-faint font-semibold pl-1">Powtórz nowe hasło</label>
+                    <div class="relative">
+                        <i class="ph ph-lock absolute left-3 top-2.5 text-txt-faint"></i>
+                        <input type="password" id="new-pass2" required minlength="8" autocomplete="new-password" placeholder="••••••••••••" class="input-field w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono placeholder:text-zinc-700">
+                    </div>
+                </div>
+                <button type="submit" id="btn-set" class="w-full bg-white text-black font-medium text-sm py-2.5 rounded-lg hover:bg-zinc-200 transition-all mt-2 active:scale-[0.98]">
+                    Zapisz nowe hasło
+                </button>
+            </form>
+
+            <!-- Zapomniane hasło (wylogowany) -->
+            <form id="form-forgot" class="space-y-5 hidden">
+                <p class="text-txt-muted text-xs leading-relaxed">Nie jesteś zalogowany. Podaj e-mail konta — wyślemy link, pod którym ustawisz nowe hasło.</p>
+                <div class="space-y-1.5">
+                    <label class="text-[10px] uppercase tracking-wider text-txt-faint font-semibold pl-1">Adres e-mail</label>
+                    <div class="relative">
+                        <i class="ph ph-envelope-simple absolute left-3 top-2.5 text-txt-faint"></i>
+                        <input type="email" id="reset-email" required placeholder="twoj@email.com" class="input-field w-full rounded-lg pl-9 pr-3 py-2.5 text-sm font-mono placeholder:text-zinc-700">
+                    </div>
+                </div>
+                <button type="submit" id="btn-forgot" class="w-full bg-white text-black font-medium text-sm py-2.5 rounded-lg hover:bg-zinc-200 transition-all mt-2 active:scale-[0.98]">
+                    Wyślij link resetu
+                </button>
+            </form>
+
+            <div id="msg-error" class="hidden mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-xs text-center font-mono"></div>
+            <div id="msg-ok" class="hidden mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400 text-xs text-center"></div>
+        </div>
+
+        <a href="/dashboard" class="mt-6 w-full flex items-center justify-center gap-2 px-4 py-3 rounded-lg border border-white/10 hover:border-white/25 hover:bg-white/[0.03] transition-all text-sm text-white/80 hover:text-white">
+            <i class="ph ph-arrow-left text-base"></i>
+            <span>Wróć do panelu</span>
+        </a>
+        <p class="text-zinc-700 text-xs text-center mt-6 font-mono">Tomasz Niedźwiecki © 2026</p>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const $ = (id) => document.getElementById(id);
+        function showError(t) { $('msg-ok').classList.add('hidden'); const e = $('msg-error'); e.textContent = t; e.classList.remove('hidden'); }
+        function showOk(t) { $('msg-error').classList.add('hidden'); const e = $('msg-ok'); e.textContent = t; e.classList.remove('hidden'); }
+
+        // Tryb "ustaw nowe hasło" — gdy jest sesja (zalogowany ALBO recovery z maila)
+        function showSet(email) {
+            $('state-loading').classList.add('hidden');
+            $('form-forgot').classList.add('hidden');
+            $('form-set').classList.remove('hidden');
+            $('subtitle').textContent = email ? ('Konto: ' + email) : 'Ustaw nowe hasło do konta';
+        }
+        // Tryb "zapomniałem" — gdy brak sesji
+        function showForgot() {
+            $('state-loading').classList.add('hidden');
+            $('form-set').classList.add('hidden');
+            $('form-forgot').classList.remove('hidden');
+            $('subtitle').textContent = 'Zresetuj hasło do panelu';
+        }
+
+        // Link z maila resetu ustanawia zdarzenie PASSWORD_RECOVERY (sesja recovery)
+        supabaseClient.auth.onAuthStateChange((event, session) => {
+            if (event === 'PASSWORD_RECOVERY' && session) showSet(session.user && session.user.email);
+        });
+
+        async function init() {
+            // detectSessionInUrl (domyślnie ON) zdąży przetworzyć token z linku; dajemy mu chwilę
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session) showSet(session.user && session.user.email);
+            else showForgot();
+        }
+        init();
+
+        // Zapis nowego hasła
+        $('form-set').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const p1 = $('new-pass').value, p2 = $('new-pass2').value;
+            if (p1.length < 8) return showError('Hasło musi mieć min. 8 znaków.');
+            if (p1 !== p2) return showError('Hasła nie są takie same.');
+            const btn = $('btn-set'); btn.disabled = true; btn.textContent = 'Zapisywanie…';
+            const { error } = await supabaseClient.auth.updateUser({ password: p1 });
+            btn.disabled = false; btn.textContent = 'Zapisz nowe hasło';
+            if (error) { showError(error.message || 'Nie udało się zmienić hasła.'); return; }
+            $('form-set').classList.add('hidden');
+            showOk('Hasło zmienione. Za chwilę przejdziesz do panelu…');
+            setTimeout(() => { window.location.href = '/dashboard'; }, 1800);
+        });
+
+        // Wysyłka linku resetu (wylogowany)
+        $('form-forgot').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = $('reset-email').value.trim();
+            const btn = $('btn-forgot'); btn.disabled = true; btn.textContent = 'Wysyłanie…';
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
+                redirectTo: window.location.origin + '/zmiana-hasla'
+            });
+            btn.disabled = false; btn.textContent = 'Wyślij link resetu';
+            if (error) { showError(error.message || 'Nie udało się wysłać linku.'); return; }
+            showOk('Jeśli konto istnieje, wysłaliśmy link na podany e-mail. Otwórz go na tym urządzeniu i ustaw nowe hasło.');
+        });
+    </script>
+</body>
+</html>
