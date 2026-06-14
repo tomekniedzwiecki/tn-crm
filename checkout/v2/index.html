@@ -1906,6 +1906,12 @@
 const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Klient do operacji na `orders` z naglowkiem ograniczajacym odczyt do WLASNEGO
+// zamowienia (x-order-id) lub wlasnego adresu (x-customer-email). RLS blokuje
+// enumeracje wszystkich zamowien — naglowek jest neutralny dopoki polityka otwarta.
+function sbOrder(headers) {
+    return window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: headers } });
+}
 const MIN_INSTALLMENT_AMOUNT = 300;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2486,7 +2492,7 @@ async function pollPaymentStatus(orderId, transactionId) {
         attempts++;
         $('v-blik-timeout').textContent = 120 - (attempts * 2);
         try {
-            const { data: order } = await supabaseClient
+            const { data: order } = await sbOrder({ 'x-order-id': orderId })
                 .from('orders').select('status').eq('id', orderId).single();
             if (order?.status === 'paid') {
                 clearInterval(interval);
@@ -2545,7 +2551,7 @@ async function handleSubmit() {
         const sparUserId = new URLSearchParams(window.location.search).get('spar_user_id') || null;
 
         // Try existing pending order for same email+description
-        const { data: existingOrders } = await supabaseClient
+        const { data: existingOrders } = await sbOrder({ 'x-customer-email': email })
             .from('orders').select('*')
             .eq('customer_email', email)
             .eq('description', currentOffer.name)
@@ -2613,7 +2619,7 @@ async function handleSubmit() {
                 orderData.notes += ` | Installment ${installmentData?.installment_number || ''}/${installmentData?.schedule?.installments_count || ''}`;
             }
 
-            const { data: newOrder, error: orderErr } = await supabaseClient
+            const { data: newOrder, error: orderErr } = await sbOrder({ 'x-customer-email': email })
                 .from('orders').insert(orderData).select().single();
             if (orderErr) throw new Error('Błąd tworzenia zamówienia');
             order = newOrder;
@@ -2828,7 +2834,7 @@ async function loadOffer() {
     // Retry mode
     if (retryOrderId) {
         try {
-            const { data: existing } = await supabaseClient
+            const { data: existing } = await sbOrder({ 'x-order-id': retryOrderId })
                 .from('orders').select('*').eq('id', retryOrderId).eq('status', 'pending').single();
             if (existing) {
                 if (existing.skip_workflow === true) {
