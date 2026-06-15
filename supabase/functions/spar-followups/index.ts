@@ -153,12 +153,12 @@ async function fetchConvo(supabase: ReturnType<typeof createClient>, sessionId: 
 // (spar_sms.created_at). Zbiór wysłanych kindów + czas ostatniego dotyku.
 // Służy do (a) liczenia, ile maili z sekwencji już poszło, (b) bramki
 // MIĘDZY-KANAŁOWEJ (nie wysyłaj maila tuż po SMS i odwrotnie).
-async function loadTouches(supabase: ReturnType<typeof createClient>, ids: string[]): Promise<Map<string, { kinds: Set<string>; last: number; opened: Set<string> }>> {
-  const m = new Map<string, { kinds: Set<string>; last: number; opened: Set<string> }>()
+async function loadTouches(supabase: ReturnType<typeof createClient>, ids: string[]): Promise<Map<string, { kinds: Set<string>; last: number; opened: Set<string>; delivered: Set<string> }>> {
+  const m = new Map<string, { kinds: Set<string>; last: number; opened: Set<string>; delivered: Set<string> }>()
   if (!ids.length) return m
   const get = (sid: string) => {
     let e = m.get(sid)
-    if (!e) { e = { kinds: new Set<string>(), last: 0, opened: new Set<string>() }; m.set(sid, e) }
+    if (!e) { e = { kinds: new Set<string>(), last: 0, opened: new Set<string>(), delivered: new Set<string>() }; m.set(sid, e) }
     return e
   }
   const add = (sid: string, kind: string, ts: string | null) => {
@@ -167,14 +167,15 @@ async function loadTouches(supabase: ReturnType<typeof createClient>, ids: strin
     if (t > e.last) e.last = t
   }
   const [emails, sms] = await Promise.all([
-    supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at').in('session_id', ids),
+    supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at, delivered_at').in('session_id', ids),
     supabase.from('spar_sms').select('session_id, kind, created_at').in('session_id', ids),
   ])
   if (emails.error) console.error('[spar-followups] loadTouches emails error:', emails.error)
   if (sms.error) console.error('[spar-followups] loadTouches sms error:', sms.error)
-  for (const r of (emails.data || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null }[]) {
+  for (const r of (emails.data || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null; delivered_at: string | null }[]) {
     add(r.session_id, r.kind, r.sent_at)
     if (r.opened_at) get(r.session_id).opened.add(r.kind)
+    if (r.delivered_at) get(r.session_id).delivered.add(r.kind)
   }
   for (const r of (sms.data || []) as { session_id: string; kind: string; created_at: string }[]) add(r.session_id, r.kind, r.created_at)
   return m
@@ -383,15 +384,15 @@ Deno.serve(async (req) => {
       if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
       const EK = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3']
       const SK = ['sms_badanie_back', 'sms_ekrany_back']
-      const { data: erows } = await supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at, clicked_at').in('kind', EK)
+      const { data: erows } = await supabase.from('spar_emails').select('session_id, kind, sent_at, opened_at, clicked_at, delivered_at').in('kind', EK)
       const { data: srows } = await supabase.from('spar_sms').select('session_id, kind, clicked_at').in('kind', SK)
-      const mkE = () => ({ sent: 0, opened: 0, clicked: 0 })
-      const perKind: Record<string, { sent: number; opened: number; clicked: number }> = {}
+      const mkE = () => ({ sent: 0, opened: 0, clicked: 0, delivered: 0 })
+      const perKind: Record<string, { sent: number; opened: number; clicked: number; delivered: number }> = {}
       for (const k of EK) perKind[k] = mkE()
       const firstSent = new Map<string, number>()
-      for (const r of (erows || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null; clicked_at: string | null }[]) {
+      for (const r of (erows || []) as { session_id: string; kind: string; sent_at: string; opened_at: string | null; clicked_at: string | null; delivered_at: string | null }[]) {
         const p = perKind[r.kind]; if (!p) continue
-        p.sent++; if (r.opened_at) p.opened++; if (r.clicked_at) p.clicked++
+        p.sent++; if (r.opened_at) p.opened++; if (r.clicked_at) p.clicked++; if (r.delivered_at) p.delivered++
         const ts = r.sent_at ? Date.parse(r.sent_at) : 0
         const cur = firstSent.get(r.session_id)
         if (ts && (cur === undefined || ts < cur)) firstSent.set(r.session_id, ts)
@@ -607,9 +608,10 @@ Deno.serve(async (req) => {
       const hoursSince = s.last_user_at ? (now - Date.parse(s.last_user_at)) / 3_600_000 : 0
       if (hoursSince < ABANDON_THRESH_H[emailsSent]) continue // za wcześnie na następny
       if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
-      // Bramka zaangażowania: NIE dosyłaj #3 (ostatniego), jeśli ani #1, ani #2
-      // nie zostały otwarte — zimny adres, 3. mail tylko psuje reputację nadawcy.
-      if (emailsSent === 2 && !t?.opened.has('abandoned_chat') && !t?.opened.has('abandoned_chat_2')) continue
+      // Bramka reputacji: NIE dosyłaj #3 (ostatniego), jeśli ani #1, ani #2 nie
+      // zostały DOSTARCZONE — martwy/odbity adres, 3. mail tylko psuje reputację.
+      // (Otwarcia są wyłączone/niewiarygodne — opieramy się na pewnym `delivered_at`.)
+      if (emailsSent === 2 && !t?.delivered.has('abandoned_chat') && !t?.delivered.has('abandoned_chat_2')) continue
       await sendOnce(ABANDON_KINDS[emailsSent], s)
     }
 

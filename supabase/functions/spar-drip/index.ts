@@ -375,15 +375,12 @@ const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_
 // Najświeższy sygnał aktywności leada (ms): wejście do panelu, aktywność w
 // rozmowie albo otwarcie któregoś maila sekwencji. To jedno źródło prawdy dla
 // obu progów — „stygnący" (pauza) i „przegrany" (twardy koniec).
-async function lastActivityMs(supabase: ReturnType<typeof createClient>, s: any): Promise<number> {
+async function lastActivityMs(_supabase: ReturnType<typeof createClient>, s: any): Promise<number> {
+  // Sygnał aktywności = wejście do panelu + aktywność w rozmowie. Otwarcia maili
+  // celowo pominięte (wyłączone w Resend / niewiarygodne — false pos/neg).
   const lp = s.last_panel_at ? Date.parse(s.last_panel_at) : 0
   const lu = s.last_user_at ? Date.parse(s.last_user_at) : 0
-  let m = Math.max(lp || 0, lu || 0)
-  const { data } = await supabase.from('spar_emails').select('opened_at')
-    .eq('session_id', s.id).like('kind', 'reveal_%').not('opened_at', 'is', null)
-    .order('opened_at', { ascending: false }).limit(1)
-  if (data && data[0] && data[0].opened_at) m = Math.max(m, Date.parse(data[0].opened_at as string))
-  return m
+  return Math.max(lp || 0, lu || 0)
 }
 async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Promise<boolean> {
   return (Date.now() - await lastActivityMs(supabase, s)) < ENGAGE_WINDOW_DAYS * 86400000
@@ -637,8 +634,10 @@ Deno.serve(async (req) => {
       // pomiędzy (3–7 dni ciszy) → zostaje w pauzie
     }
 
-    // 4) SMS reaktywacyjny: mail odsłony sprzed >24h, NIEOTWARTY, lead nie-przegrany,
-    //    z numerem + zgodą (bez opt-out), SMS jeszcze nie poszedł → wyślij przez send-sms.
+    // 4) SMS reaktywacyjny: mail odsłony sprzed >24h, lead nie-przegrany, z numerem
+    //    + zgodą (bez opt-out), SMS jeszcze nie poszedł → wyślij przez send-sms.
+    //    Bramka „nieaktywny" liczona dalej przez lastActivityMs (panel + rozmowa),
+    //    NIE przez otwarcie maila (wyłączone/niewiarygodne).
     //    Cały przebieg za flagą SMS_ENABLED (przed pełną aktywacją konta SMSAPI = OFF).
     const SMS_ENABLED = (Deno.env.get('SMS_ENABLED') || '') === '1'
     let smsSent = 0
@@ -646,7 +645,7 @@ Deno.serve(async (req) => {
       const dayAgo = new Date(Date.now() - 86400000).toISOString()
       const { data: unopened } = await supabase.from('spar_emails')
         .select('session_id, kind, sent_at')
-        .like('kind', 'reveal_%').is('opened_at', null).lte('sent_at', dayAgo)
+        .like('kind', 'reveal_%').lte('sent_at', dayAgo)
         .order('sent_at', { ascending: false }).limit(80)
       for (const em of unopened || []) {
         if (smsSent >= MAX_FIRES_PER_RUN) break

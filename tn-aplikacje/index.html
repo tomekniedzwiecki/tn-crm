@@ -220,7 +220,7 @@
         <button id="sekw-refresh" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-xs transition"><i class="ph ph-arrows-clockwise mr-1.5"></i>Odśwież</button>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4" id="sekw-kpi"></div>
-      <div class="mt-3 text-[11px] text-zinc-600">Kadencja od werdyktu: <span id="sekw-plan-line"></span> · cron co 30 min (okno 8–20). SMS reaktywacyjny leci +24 h po mailu, jeśli nieotwarty.</div>
+      <div class="mt-3 text-[11px] text-zinc-600">Kadencja od werdyktu: <span id="sekw-plan-line"></span> · cron co 30 min (okno 8–20). SMS reaktywacyjny leci +24 h po mailu, jeśli lead nie wrócił (panel/rozmowa).</div>
     </div>
 
     <!-- ŚCIĄGA / MANUAL — jak działa sekwencja (rozwijane) -->
@@ -298,8 +298,7 @@
               <th class="px-4 py-3">Odsłona</th>
               <th class="px-4 py-3">Projekt</th>
               <th class="px-4 py-3">Odbiorca</th>
-              <th class="px-4 py-3 text-center">Otwarty</th>
-              <th class="px-4 py-3 text-center">Klik</th>
+              <th class="px-4 py-3 text-center">Dostarczony</th>
               <th class="px-4 py-3"></th>
             </tr>
           </thead>
@@ -377,7 +376,7 @@
                 <th class="px-4 py-3">Rodzaj</th>
                 <th class="px-4 py-3">Projekt</th>
                 <th class="px-4 py-3">Odbiorca</th>
-                <th class="px-4 py-3 text-center">Otwarty</th>
+                <th class="px-4 py-3 text-center">Dostarczony</th>
                 <th class="px-4 py-3"></th>
               </tr>
             </thead>
@@ -447,7 +446,7 @@
       <p><code class="text-blue-300">SPAR_OPENAI_MODEL</code> — model czatu (teraz gpt-5.5)</p>
       <p><code class="text-blue-300">SPAR_IMG_IP_DAILY</code> — dzienny limit obrazów per IP (produkcyjnie: 20)</p>
       <p><code class="text-blue-300">SPAR_IMAGE_QUALITY</code> — low / medium / high (koszt $0.011 / $0.041 / $0.167 za obraz)</p>
-      <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min. Reaktywacja rozmów w toku: 3 maile (~3h / 24h / 48h, treść GPT pod realny fragment rozmowy; #3 tylko gdy otwarto #1 lub #2) + SMS powrotu z ekranu badania/ekranów (<code>SMS_ENABLED</code>, beacon wyjścia). Bramka między-kanałowa ≥10h. Wpłata → welcome + lead „won".</p>
+      <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min. Reaktywacja rozmów w toku: 3 maile (~3h / 24h / 48h, treść GPT pod realny fragment rozmowy; #3 tylko gdy dostarczono #1 lub #2) + SMS powrotu z ekranu badania/ekranów (<code>SMS_ENABLED</code>, beacon wyjścia). Bramka między-kanałowa ≥10h. Wpłata → welcome + lead „won".</p>
     </div>
   </section>
 
@@ -604,7 +603,7 @@ async function loadAll() {
   const [{ data: costs }, { data: rateRow }, { data: mailRows }] = await Promise.all([
     supabaseClient.rpc('spar_session_costs'),
     supabaseClient.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
-    supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at, opened_at, clicked_at').order('sent_at', { ascending: false }).limit(800),
+    supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at, opened_at, clicked_at, delivered_at').order('sent_at', { ascending: false }).limit(800),
   ]);
   costsBySession = {};
   (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
@@ -624,17 +623,17 @@ const costOf = (s) => (costsBySession[s.id] ? Number(costsBySession[s.id].cost_u
 // hot = zielony, nieopłacony, aktywny w oknie; cold = zielony, nieopłacony, ucichł.
 const ENGAGE_DAYS = 10;
 function lastTouchOf(s) {
+  // Aktywność = wejście do panelu + aktywność w rozmowie. Otwarcia maili pominięte
+  // (wyłączone w Resend / niewiarygodne) — lustro serwerowego lastActivityMs.
   const t = [s.last_panel_at, s.last_user_at].map((x) => x ? new Date(x).getTime() : 0);
-  let best = Math.max(t[0], t[1]);
-  (mailsBySession[s.id] || []).forEach((m) => { if (m.opened_at) best = Math.max(best, new Date(m.opened_at).getTime()); });
-  return best || 0;
+  return Math.max(t[0], t[1]) || 0;
 }
 function isEngaged(s) {
   const win = Date.now() - ENGAGE_DAYS * 864e5;
   return lastTouchOf(s) >= win;
 }
-function revealOpens(s) {
-  return (mailsBySession[s.id] || []).filter((m) => /^reveal_/.test(m.kind) && m.opened_at).length;
+function revealDelivered(s) {
+  return (mailsBySession[s.id] || []).filter((m) => /^reveal_/.test(m.kind) && m.delivered_at).length;
 }
 // Klasyfikacja leada do listy/skrzynki „Wymaga uwagi"
 function leadSignal(s) {
@@ -948,7 +947,7 @@ async function openSession(id) {
   const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }] = await Promise.all([
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
-    supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at').eq('session_id', id).order('sent_at', { ascending: false }),
+    supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
     supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
   ]);
@@ -1028,7 +1027,7 @@ function leadOverviewHTML() {
       ${card('Zaangażowanie', eng ? '<span class="text-emerald-400">gorący</span>' : '<span class="text-sky-400">zimny</span>', 'panel: ' + timeAgo(s.last_panel_at), eng ? 'ph-fire' : 'ph-snowflake', eng ? 'text-emerald-400' : 'text-sky-400')}
       ${card('Wpłata 500 zł', s.paid_at ? '<span class="text-amber-400">opłacony</span>' : 'brak', s.paid_at ? fmtDate(s.paid_at) : '', 'ph-currency-circle-dollar', 'text-amber-400')}
       ${card('Ostatnia rozmowa', timeAgo(s.last_user_at), '', 'ph-chat-circle', 'text-zinc-400')}
-      ${card('Otwarcia odsłon', revealOpens(s) + '×', 'maile reveal', 'ph-envelope-open', 'text-sky-400')}
+      ${card('Dostarczone odsłony', revealDelivered(s) + '×', 'maile reveal', 'ph-envelope', 'text-sky-400')}
       ${card('Sygnał', sig.label, '', sig.icon, TONE_TXT[sig.tone])}
     </div>
     ${d ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5 max-w-xl">
@@ -1163,8 +1162,8 @@ function leadMaileHTML() {
   if (!emails.length) return `${note}<div class="text-zinc-600 text-sm">Żaden follow-up jeszcze nie wyszedł do tego leada.</div>`;
   return `${note}<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
     <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
-      <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Otwarty</th><th class="px-4 py-3 text-center">Klik</th></tr></thead><tbody>
-    ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.opened_at)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.clicked_at)}</td></tr>`).join('')}
+      <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Dostarczony</th></tr></thead><tbody>
+    ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.delivered_at)}</td></tr>`).join('')}
     </tbody></table></div>`;
 }
 function leadKosztyHTML() {
@@ -1297,7 +1296,7 @@ function renderMaile() {
           <td class="px-4 py-3">${mailBadge(m.kind)}</td>
           <td class="px-4 py-3 text-white">${s ? accentDot(s) + esc(projName(s)) : '<span class="text-zinc-600">—</span>'}</td>
           <td class="px-4 py-3 text-zinc-400">${esc(m.email || '')}</td>
-          <td class="px-4 py-3 text-center">${yesNo(m.opened_at)}</td>
+          <td class="px-4 py-3 text-center">${yesNo(m.delivered_at)}</td>
           <td class="px-4 py-3 text-right">${s ? '<i class="ph ph-caret-right text-zinc-600"></i>' : ''}</td>
         </tr>`;
       }).join('')
@@ -1349,7 +1348,7 @@ async function renderSekwencja() {
       .select('id, session_id, key, seq, status, due_at, generated_at, sent_at, email_kind, sess:spar_sessions(name, email, preview_brief, is_test, paid_at)')
       .order('due_at', { ascending: true }),
     supabaseClient.from('spar_emails')
-      .select('session_id, kind, email, sent_at, opened_at, clicked_at, sess:spar_sessions(name, preview_brief)')
+      .select('session_id, kind, email, sent_at, opened_at, clicked_at, delivered_at, sess:spar_sessions(name, preview_brief)')
       .like('kind', 'reveal_%').order('sent_at', { ascending: false }).limit(300),
     supabaseClient.from('spar_sms')
       .select('session_id, kind, phone, status, points, clicked_at, created_at, sess:spar_sessions(name, preview_brief)')
@@ -1365,16 +1364,16 @@ async function renderSekwencja() {
 
   // KPI
   const sentEmails = rm.filter((m) => m.sent_at);
-  const opened = sentEmails.filter((m) => m.opened_at).length;
+  const delivered = sentEmails.filter((m) => m.delivered_at).length;
   const inSeq = new Set(rv.filter((r) => !(r.sess && (r.sess.is_test || r.sess.paid_at))).map((r) => r.session_id)).size;
   const paused = rv.filter((r) => r.status === 'paused').length;
   const inProgress = rv.filter((r) => r.status === 'generating').length;
-  const openRate = sentEmails.length ? Math.round((opened / sentEmails.length) * 100) : 0;
+  const deliveryRate = sentEmails.length ? Math.round((delivered / sentEmails.length) * 100) : 0;
   const smsOk = sms.filter((x) => x.status && x.status !== 'ERROR');
   const kpi = [
     { label: 'Projekty w sekwencji', val: inSeq, icon: 'ph-users-three', tone: 'text-blue-400' },
     { label: 'Odsłony wysłane', val: sentEmails.length, icon: 'ph-paper-plane-tilt', tone: 'text-emerald-400' },
-    { label: 'Otwieralność', val: openRate + '%', icon: 'ph-envelope-open', tone: 'text-sky-400' },
+    { label: 'Dostarczalność', val: deliveryRate + '%', icon: 'ph-envelope', tone: 'text-sky-400' },
     { label: 'SMS reaktywacyjne', val: smsOk.length, icon: 'ph-chat-circle-text', tone: 'text-teal-400' },
     { label: 'W generowaniu', val: inProgress, icon: 'ph-circle-notch', tone: 'text-violet-400' },
     { label: 'Pauza (zimni)', val: paused, icon: 'ph-pause-circle', tone: 'text-amber-400' },
@@ -1393,10 +1392,9 @@ async function renderSekwencja() {
       <td class="px-4 py-2.5">${revChip(m.kind)}</td>
       <td class="px-4 py-2.5 text-white text-xs">${esc(sessLabel(m.sess))}</td>
       <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(m.email || '—')}</td>
-      <td class="px-4 py-2.5 text-center">${yesNo(m.opened_at)}</td>
-      <td class="px-4 py-2.5 text-center">${yesNo(m.clicked_at)}</td>
+      <td class="px-4 py-2.5 text-center">${yesNo(m.delivered_at)}</td>
       <td class="px-4 py-2.5 text-right"><button onclick="event.stopPropagation();openSession('${m.session_id}')" class="text-xs text-blue-400 hover:text-blue-300">oś czasu →</button></td>
-    </tr>`).join('') : '<tr><td colspan="7" class="px-4 py-8 text-center text-zinc-600 text-sm">Jeszcze nic nie wysłano w sekwencji.</td></tr>';
+    </tr>`).join('') : '<tr><td colspan="6" class="px-4 py-8 text-center text-zinc-600 text-sm">Jeszcze nic nie wysłano w sekwencji.</td></tr>';
 
   // SMS REAKTYWACYJNE — kiedy i do kogo
   $('sekw-sms-count').textContent = sms.length ? (sms.length + (sms.length === 300 ? '+ (ostatnie 300)' : '')) : 'jeszcze żadnego';
@@ -1477,11 +1475,11 @@ async function renderProjectDetail(sid, targetId) {
     // inaczej — planowaną datę wysyłki (due_at).
     const sentAt = (em && em.sent_at) || (r && r.status === 'sent' && r.sent_at) || null;
     const isSent = !!sentAt;
-    const openClick = em
-      ? (em.opened_at ? ' · <span class="text-emerald-400">otwarty</span>' : ' · <span class="text-zinc-500">nieotwarty</span>') + (em.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : '')
+    const deliv = em
+      ? (em.delivered_at ? ' · <span class="text-emerald-400">dostarczony</span>' : ' · <span class="text-zinc-500">brak potw. dostarczenia</span>')
       : '';
     const sentLine = isSent
-      ? `<span class="text-emerald-400"><i class="ph ph-check-circle mr-1"></i>Wysłano: ${fmtDate(sentAt)}</span>${(s && s.email) ? ' → ' + esc(s.email) : ''}${openClick}`
+      ? `<span class="text-emerald-400"><i class="ph ph-check-circle mr-1"></i>Wysłano: ${fmtDate(sentAt)}</span>${(s && s.email) ? ' → ' + esc(s.email) : ''}${deliv}`
       : (r && r.due_at ? `<i class="ph ph-clock mr-1 text-zinc-500"></i>Planowana wysyłka: ${fmtDate(r.due_at)}` : `Kadencja: +${p.h != null ? p.h + ' h' : (p.day != null ? p.day + ' dni' : '?')} od werdyktu`);
     // Po wysyłce: żadnej regeneracji ani test-wysyłki — tylko podgląd tego, co poszło.
     const actionsHtml = isSent
@@ -1610,7 +1608,7 @@ function renderAttention() {
   const vis = sessions.filter((s) => !s.is_test);
   const now = Date.now();
   const hot = vis.filter((s) => leadSignal(s).key === 'hot')
-    .map((s) => ({ s, t: lastTouchOf(s), right: revealOpens(s) ? `${revealOpens(s)}× otwarty` : timeAgo(new Date(lastTouchOf(s)).toISOString()) }))
+    .map((s) => ({ s, t: lastTouchOf(s), right: lastTouchOf(s) ? timeAgo(new Date(lastTouchOf(s)).toISOString()) : '—' }))
     .sort((a, b) => b.t - a.t);
   const cold = vis.filter((s) => leadSignal(s).key === 'cold')
     .map((s) => ({ s, t: lastTouchOf(s), right: 'cisza ' + timeAgo(new Date(lastTouchOf(s) || Date.parse(s.created_at)).toISOString()).replace(' temu', '') }))
@@ -1668,7 +1666,7 @@ function renderKomunikacja() {
 }
 
 // Skuteczność reaktywacji rozmów W TOKU: 3 maile abandoned + SMS powrotu.
-// Dane z spar-followups action:'stats' (lifetime). Otwarcia/kliknięcia z Resend.
+// Dane z spar-followups action:'stats' (lifetime). Dostarczalność z Resend (otwarcia/kliknięcia wyłączone).
 async function renderReengStats() {
   const box = $('reeng-stats'); if (!box) return;
   box.innerHTML = '<div class="text-xs text-zinc-500 py-2"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę skuteczność reaktywacji…</div>';
@@ -1680,7 +1678,7 @@ async function renderReengStats() {
       <div class="text-[11px] text-zinc-500 truncate">${esc(label)}</div>
       <div class="text-xl font-bold ${accent || 'text-white'}">${big}</div>
       <div class="text-[10px] text-zinc-500 truncate">${esc(sub || '')}</div></div>`;
-  const mailT = (kind, label) => { const x = pk[kind] || { sent: 0, opened: 0, clicked: 0 }; return tile(label, x.sent, `otw. ${pct(x.opened, x.sent)} · klik. ${pct(x.clicked, x.sent)}`); };
+  const mailT = (kind, label) => { const x = pk[kind] || { sent: 0, delivered: 0 }; return tile(label, x.sent, `dostarcz. ${pct(x.delivered, x.sent)}`); };
   const smsT = (kind, label) => { const x = sms[kind] || { sent: 0, clicked: 0 }; return tile(label, x.sent, `klik. ${pct(x.clicked, x.sent)}`); };
   const base = ss.emailed || 0;
   box.innerHTML =
