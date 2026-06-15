@@ -2762,14 +2762,15 @@ async function loadOffer() {
                     *,
                     schedule:payment_schedules(
                         *,
-                        lead:leads(id, email, phone, name, company, nip),
-                        workflow:workflows(id, offer_name)
+                        lead:leads(id, email, phone, name, company, nip)
                     )
                 `)
                 .eq('id', installmentId).single();
 
             if (instError || !instData) { showErrorState('Nie znaleziono raty.'); return; }
-            if (installmentWorkflowId && instData.schedule?.workflow?.id !== installmentWorkflowId) {
+            // workflows jest zabezpieczony tokenem (RLS) — bez ?token= embed by zwrócił null.
+            // Weryfikuj po kolumnie FK schedule.workflow_id (z payment_schedules(*)), nie po embedzie.
+            if (installmentWorkflowId && instData.schedule?.workflow_id !== installmentWorkflowId) {
                 showErrorState('Nieprawidłowy link.'); return;
             }
             if (instData.status === 'paid') { showErrorState('Ta rata została już opłacona.'); return; }

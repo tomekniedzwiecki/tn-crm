@@ -385,8 +385,7 @@
                         .from('payment_schedules')
                         .select(`
                             *,
-                            lead:leads(*),
-                            workflow:workflows(*)
+                            lead:leads(*)
                         `)
                         .eq('id', scheduleId)
                         .single();
@@ -397,7 +396,24 @@
 
                     schedule = scheduleData;
                     lead = scheduleData.lead;
-                    workflow = scheduleData.workflow;
+
+                    // workflows jest zabezpieczony tokenem (RLS) — bez ?token= embed zwróciłby null.
+                    // Minimalne dane klienta/oferty pobieramy przez SECURITY DEFINER RPC (bez unique_token).
+                    const { data: pub } = await supabaseClient
+                        .rpc('payment_schedule_public', { p_schedule_id: scheduleId });
+                    const meta = Array.isArray(pub) ? pub[0] : pub;
+                    if (meta) {
+                        workflow = { id: meta.workflow_id, offer_name: meta.offer_name };
+                        if (!lead) {
+                            lead = {
+                                id: null,
+                                name: meta.client_name,
+                                email: meta.client_email,
+                                phone: meta.client_phone,
+                                company: meta.client_company
+                            };
+                        }
+                    }
                 }
                 // Option 2: Load by workflow token
                 else if (token) {
