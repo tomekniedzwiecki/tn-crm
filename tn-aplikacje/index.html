@@ -467,7 +467,7 @@
   <div class="w-full max-w-xl bg-zinc-950 border border-white/10 rounded-2xl overflow-hidden animate-enter">
     <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/5">
       <div class="min-w-0">
-        <div class="text-[11px] uppercase tracking-wider text-zinc-500">Podgląd maila — bez wysyłki</div>
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500" id="mm-kicker">Podgląd maila — bez wysyłki</div>
         <h2 class="text-white font-semibold text-sm truncate" id="mm-subject">—</h2>
         <p class="text-xs text-zinc-500 truncate" id="mm-to"></p>
       </div>
@@ -1472,9 +1472,22 @@ async function renderProjectDetail(sid, targetId) {
     const r = byKey[p.key];
     const em = emailByKind[p.emailKind];
     const status = r ? r.status : 'pending';
-    const sentLine = em && em.sent_at
-      ? `Wysłano ${fmtDate(em.sent_at)} → ${esc((s && s.email) || '')}` + (em.opened_at ? ' · <span class="text-emerald-400">otwarty</span>' : ' · <span class="text-zinc-500">nieotwarty</span>') + (em.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : '')
-      : (r && r.due_at ? `Termin: ${fmtDate(r.due_at)}` : `Kadencja: dzień +${p.day} od werdyktu`);
+    // „Wysłane" = jest rekord maila ALBO reveal oznaczony sent (znacznik czasu na
+    // samym reveal, gdy mail nie ma osobnego wpisu). Wtedy pokazujemy KIEDY poszło;
+    // inaczej — planowaną datę wysyłki (due_at).
+    const sentAt = (em && em.sent_at) || (r && r.status === 'sent' && r.sent_at) || null;
+    const isSent = !!sentAt;
+    const openClick = em
+      ? (em.opened_at ? ' · <span class="text-emerald-400">otwarty</span>' : ' · <span class="text-zinc-500">nieotwarty</span>') + (em.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : '')
+      : '';
+    const sentLine = isSent
+      ? `<span class="text-emerald-400"><i class="ph ph-check-circle mr-1"></i>Wysłano: ${fmtDate(sentAt)}</span>${(s && s.email) ? ' → ' + esc(s.email) : ''}${openClick}`
+      : (r && r.due_at ? `<i class="ph ph-clock mr-1 text-zinc-500"></i>Planowana wysyłka: ${fmtDate(r.due_at)}` : `Kadencja: dzień +${p.day} od werdyktu`);
+    // Po wysyłce: żadnej regeneracji ani test-wysyłki — tylko podgląd tego, co poszło.
+    const actionsHtml = isSent
+      ? `<button onclick="firePreview('${sid}','${p.key}',true)" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition inline-flex items-center gap-1" title="Pokaż dokładnie to, co zostało wysłane (bez regeneracji)"><i class="ph ph-envelope-open"></i>Wysłany mail</button>`
+      : `<button onclick="firePreview('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition" title="Podejrzyj maila bez wysyłki"><i class="ph ph-eye"></i></button>
+        <button onclick="fireSend('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-[11px] transition" title="Wyślij testowo teraz (z pominięciem bramki)"><i class="ph ph-paper-plane-tilt"></i></button>`;
     const m = revMeta(p.key);
     const sx = smsByKind[p.emailKind];
     const smsLine = sx ? `<div class="text-[11px] mt-0.5 ${sx.status === 'ERROR' ? 'text-rose-400' : 'text-teal-400'}"><i class="ph ph-chat-circle-text mr-1"></i>SMS ${sx.status === 'ERROR' ? 'błąd' : 'wysłany'} ${fmtDate(sx.created_at)}${sx.phone ? ' → ' + esc(sx.phone) : ''}${sx.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : ''}</div>` : '';
@@ -1489,36 +1502,36 @@ async function renderProjectDetail(sid, targetId) {
         <div class="text-[11px] text-zinc-500 mt-0.5">${sentLine}</div>
         ${smsLine}
       </div>
-      <div class="flex items-center gap-1.5 shrink-0">
-        <button onclick="firePreview('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition" title="Podejrzyj maila bez wysyłki"><i class="ph ph-eye"></i></button>
-        <button onclick="fireSend('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-[11px] transition" title="Wyślij testowo teraz (z pominięciem bramki)"><i class="ph ph-paper-plane-tilt"></i></button>
-      </div>
+      <div class="flex items-center gap-1.5 shrink-0">${actionsHtml}</div>
     </div>`;
   }).join('');
 
   tgt.innerHTML = head + `<div class="-mt-1">${rows}</div>
-    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>„Podgląd" (oko) pokazuje maila bez wysyłki. „Wyślij testowo" (samolot) odpala generację i wysyła realnie na adres odbiorcy — z pominięciem bramki i terminu.</div>`;
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>Niewysłane: „Podgląd" (oko) pokazuje maila bez wysyłki, „Wyślij testowo" (samolot) odpala generację i wysyła realnie na adres odbiorcy z pominięciem bramki i terminu. Wysłane: „Wysłany mail" pokazuje dokładnie to, co poszło — bez regeneracji i bez ponownej wysyłki.</div>`;
 }
 
 let mmCtx = null;
-async function firePreview(sid, key) {
+async function firePreview(sid, key, readOnly) {
   if (sekwBusy) return; sekwBusy = true;
-  toast('Przygotowuję podgląd…');
+  toast(readOnly ? 'Wczytuję wysłany mail…' : 'Przygotowuję podgląd…');
   try {
     const j = await callDrip({ action: 'fire', sessionId: sid, key });
     if (j.result === 'generating') { toast('Artefakt jeszcze się generuje — ponów za chwilę'); return; }
     if (!j.preview) { toast('Brak podglądu (' + (j.info || j.result || '—') + ')'); return; }
-    openMailModal(j.preview, sid, key);
+    openMailModal(j.preview, sid, key, readOnly);
   } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
 }
-function openMailModal(preview, sid, key) {
+function openMailModal(preview, sid, key, readOnly) {
   mmCtx = { sid, key, to: preview.to };
   $('mm-subject').textContent = preview.subject || '—';
   $('mm-to').textContent = preview.to ? ('Do: ' + preview.to) : 'Brak adresu odbiorcy';
   $('mm-frame').srcdoc = preview.html || '<p>brak treści</p>';
-  // przycisk wysyłki tylko gdy jest realny odbiorca (reveal leada); dla szablonu — chowamy
-  $('mm-send').classList.toggle('hidden', !preview.to);
-  $('mm-send').disabled = !preview.to;
+  // przycisk wysyłki tylko gdy jest realny odbiorca (reveal leada) ORAZ nie oglądamy
+  // już wysłanego maila (readOnly) — wysłanego nie wysyłamy ponownie
+  const canSend = !!preview.to && !readOnly;
+  const kicker = $('mm-kicker'); if (kicker) kicker.textContent = readOnly ? 'Wysłany mail — dokładnie to, co poszło' : 'Podgląd maila — bez wysyłki';
+  $('mm-send').classList.toggle('hidden', !canSend);
+  $('mm-send').disabled = !canSend;
   $('mailmodal').classList.remove('hidden');
 }
 function closeMailModal() { $('mailmodal').classList.add('hidden'); $('mm-frame').srcdoc = ''; mmCtx = null; }
