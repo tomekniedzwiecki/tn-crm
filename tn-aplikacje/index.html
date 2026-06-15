@@ -1802,8 +1802,15 @@ async function init() {
   if (!DEMO) await loadAll();
   $('loading').classList.add('hidden');
 
-  const hash = (location.hash || '').replace(/[^a-z]/g, '');
-  switchTab(VIEWS.includes(hash) ? hash : 'przeglad');
+  // Deep-link do karty leada: #lead-<sessionId> (np. z powiadomienia Slack #sparing)
+  const leadMatch = (location.hash || '').match(/^#lead-([0-9a-f-]{36})$/i);
+  if (leadMatch) {
+    switchTab('leady');
+    openSession(leadMatch[1]);
+  } else {
+    const hash = (location.hash || '').replace(/[^a-z]/g, '');
+    switchTab(VIEWS.includes(hash) ? hash : 'przeglad');
+  }
 
   setInterval(refreshLeadChat, LEAD_CHAT_POLL_MS);   // podgląd rozmów na żywo
 

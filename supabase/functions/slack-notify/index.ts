@@ -31,6 +31,8 @@ Deno.serve(async (req) => {
     const webhookNewLead = Deno.env.get('slack_webhook_new_lead')
     const webhookActivity = Deno.env.get('slack_webhook_activity')
     const webhookZwolnieLead = Deno.env.get('slack_webhook_zwolnie_lead')
+    // Lejek Sparing/Aplikacja → kanał #sparing
+    const webhookSparing = Deno.env.get('slack_webhook_sparing')
 
     // Parse request body
     const { type, data } = await req.json()
@@ -76,6 +78,16 @@ Deno.serve(async (req) => {
       case 'offer_expired_attempt':
         webhookUrl = webhookActivity
         message = formatOfferExpiredAttemptMessage(data)
+        break
+
+      case 'spar_contact':
+        webhookUrl = webhookSparing
+        message = formatSparContactMessage(data)
+        break
+
+      case 'spar_green':
+        webhookUrl = webhookSparing
+        message = formatSparGreenMessage(data)
         break
 
       default:
@@ -1025,6 +1037,197 @@ function formatZwolnieLeadMessage(data: {
     elements: [{
       type: 'mrkdwn',
       text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.lead_id ? ` · id: \`${data.lead_id.substring(0, 8)}\`` : ''}`
+    }]
+  })
+
+  return { blocks }
+}
+
+// =====================================================
+// SPARING / APLIKACJA — lejek /aplikacja (tabela spar_sessions)
+// Kanał #sparing. Karta leada w panelu: tn-aplikacje/index#lead-<sessionId>
+// =====================================================
+
+// Normalizacja telefonu do linku wa.me (PL domyślnie)
+function waLink(phone: string): string | null {
+  let p = phone.replace(/[\s\-\(\)]/g, '')
+  if (!p) return null
+  if (p.startsWith('0')) p = '48' + p.substring(1)
+  if (!p.startsWith('+') && !p.startsWith('48')) p = '48' + p
+  p = p.replace('+', '')
+  return `https://wa.me/${p}`
+}
+
+// Deep-link do karty leada w panelu TN Aplikacje
+function sparLeadLink(sessionId?: string): string | null {
+  if (!sessionId) return null
+  return `https://crm.tomekniedzwiecki.pl/tn-aplikacje/index#lead-${sessionId}`
+}
+
+// Przyciski akcji wspólne dla obu typów: karta w CRM + WhatsApp
+function sparActionButtons(sessionId?: string, phone?: string): any[] {
+  const elements: any[] = []
+  const crm = sparLeadLink(sessionId)
+  if (crm) {
+    elements.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '📋 Otwórz w CRM', emoji: true },
+      url: crm,
+      action_id: 'view_spar_lead'
+    })
+  }
+  if (phone) {
+    const wa = waLink(phone)
+    if (wa) {
+      elements.push({
+        type: 'button',
+        text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true },
+        url: wa,
+        style: 'primary',
+        action_id: 'whatsapp'
+      })
+    }
+  }
+  return elements
+}
+
+// Krótkie podsumowanie projektu z Karty Problemu (zielony) lub briefu (kontakt)
+function sparProjectSummary(data: {
+  project_name?: string
+  project_desc?: string
+  karta?: Record<string, unknown> | null
+}): string | null {
+  const k = data.karta || {}
+  const pick = (v: unknown): string => {
+    if (v === null || v === undefined) return ''
+    return (Array.isArray(v) ? v.join(', ') : String(v)).trim()
+  }
+  const parts: string[] = []
+  const name = pick(data.project_name) || pick(k.nazwa)
+  const desc = pick(data.project_desc) || pick(k.opis)
+  if (name) parts.push(`*${name}*`)
+  if (desc) parts.push(desc)
+
+  const detail = (label: string, v: unknown) => {
+    const t = pick(v)
+    if (t) parts.push(`*${label}:* ${t.substring(0, 220)}`)
+  }
+  detail('Problem', k.problem)
+  detail('Dla kogo', k.dla_kogo || k.kto)
+  detail('Kto płaci', k.kto_placi)
+  detail('Ekrany', k.ekrany)
+
+  if (!parts.length) return null
+  return parts.join('\n')
+}
+
+function formatSparContactMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  profession?: string
+  project_name?: string
+  project_desc?: string
+  karta?: Record<string, unknown> | null
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '🆕 Sparing — lead zostawił kontakt', emoji: true }
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}` }
+    }
+  ]
+
+  if (data.profession) {
+    blocks.push({
+      type: 'section',
+      fields: [{ type: 'mrkdwn', text: `*Profesja:*\n${data.profession.substring(0, 200)}` }]
+    })
+  }
+
+  const summary = sparProjectSummary(data)
+  if (summary) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: `🧩 *Projekt (w toku):*\n${summary}` }
+    })
+  } else {
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: '🧩 Projekt jeszcze nie zdefiniowany — rozmowa w toku.' }]
+    })
+  }
+
+  const actions = sparActionButtons(data.session_id, data.phone)
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+
+  blocks.push({
+    type: 'context',
+    elements: [{
+      type: 'mrkdwn',
+      text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+    }]
+  })
+
+  return { blocks }
+}
+
+function formatSparGreenMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  profession?: string
+  project_name?: string
+  project_desc?: string
+  karta?: Record<string, unknown> | null
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '🟢 Sparing — ZIELONY werdykt (warto pisać)', emoji: true }
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}` }
+    }
+  ]
+
+  if (data.profession) {
+    blocks.push({
+      type: 'section',
+      fields: [{ type: 'mrkdwn', text: `*Profesja:*\n${data.profession.substring(0, 200)}` }]
+    })
+  }
+
+  const summary = sparProjectSummary(data)
+  if (summary) {
+    blocks.push({
+      type: 'section',
+      text: { type: 'mrkdwn', text: `🧩 *Projekt:*\n${summary}` }
+    })
+  }
+
+  const actions = sparActionButtons(data.session_id, data.phone)
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+
+  blocks.push({
+    type: 'context',
+    elements: [{
+      type: 'mrkdwn',
+      text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
     }]
   })
 
