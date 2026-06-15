@@ -118,6 +118,9 @@ interface SessionRow {
   sms_opt_out: boolean | null
   left_screen_at: string | null
   left_screen: string | null
+  problem_summary: Record<string, unknown> | null
+  economics: Record<string, unknown> | null
+  created_at: string | null
 }
 
 // Ostatnie wymiany rozmowy (kanał sparing) → zwięzły kontekst do GPT, żeby mail
@@ -191,10 +194,12 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'verdict_no_payment') return chatLink(s.id, 'verdict_no_payment', '#projekt-plan')
   if (kind === 'verdict_last_call') return chatLink(s.id, 'verdict_last_call', '#projekt')
   if (kind === 'paid_welcome') return chatLink(s.id, 'paid_welcome')
+  if (kind === 'komplet_gotowy') return chatLink(s.id, 'komplet_gotowy', '#projekt')
+  if (kind.startsWith('nurture_')) return chatLink(s.id, kind, '#projekt')
   return chatLink(s.id, kind) // abandoned_chat / abandoned_chat_2 / abandoned_chat_3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
-function reserveFor(kind: string, s: SessionRow): string | null { return (kind === 'verdict_last_call' || kind === 'verdict_no_payment') ? checkoutLink(s.lead_id) : null }
+function reserveFor(kind: string, s: SessionRow): string | null { return (kind === 'verdict_last_call' || kind === 'verdict_no_payment' || kind === 'nurture_4' || kind === 'nurture_5' || kind === 'nurture_6') ? checkoutLink(s.lead_id) : null }
 
 // Statyczny mail (plain, „z palca") — gallery podglądu + fallback gdy GPT off.
 function staticEmail(kind: string, s: SessionRow): { subject: string; html: string } {
@@ -208,6 +213,13 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     verdict_last_call: { subject: `${n} — domykam miejsce na ten projekt`, body: `Cześć${im}!\n\nTydzień temu ${n} dostał zielony werdykt. Karta, ekrany i plan wciąż czekają w panelu — nic nie przepadło.\n\nJeśli to nie ten moment — w porządku, projekt zostaje zapisany. A jeśli chcesz go ruszyć, [rezerwacja](LINK_RESERVE) to 500 zł, w pełni zwrotne.` },
     landing_ready: { subject: `${n} ma już swoją stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona ${n} — nie grafika, prawdziwa strona w przeglądarce. [Otwórz ją](LINK_VIEW), przewiń, możesz pokazać znajomym z branży.` },
     raport_ready: { subject: `${n}: raport rynku gotowy`, body: `Cześć${im}!\n\nSprawdziłem rynek wokół ${n} — w internecie, nie „z głowy": konkurenci z cenami, wielkość niszy, trendy, z podlinkowanymi źródłami. Cały raport jest [tutaj](LINK_VIEW).` },
+    komplet_gotowy: { subject: `${n}: cały projekt gotowy w panelu`, body: `Cześć${im}!\n\nDomknęliśmy ${n} — i to nie jeden ekran, tylko komplet: karta projektu, ekrany narzędzia, sprawdzony na żywo rynek z konkurencją, policzona opłacalność i plan, gdzie szukać pierwszych klientów. Wszystko za darmo, czeka w panelu.\n\n[Wejdź i zobacz](LINK_VIEW) — a jak coś wymaga doprecyzowania, po prostu napisz.` },
+    nurture_1: { subject: `Wracam myślami do ${n}`, body: `Cześć${im}!\n\nMyślałem jeszcze o problemie, który ${n} rozwiązuje — to realnie uwiera w codziennej pracy, dlatego ten pomysł ma sens. Cały projekt nadal czeka [w panelu](LINK_VIEW), nic nie przepadło.` },
+    nurture_2: { subject: `${n}: czy to się spina`, body: `Cześć${im}!\n\nWróciłem do liczb ${n} — przy rozsądnej liczbie klientów to potrafi się sensownie spinać co miesiąc. [Masz to policzone w panelu](LINK_VIEW). Jak chcesz, możemy pogadać, jak to realnie zbudować.` },
+    nurture_3: { subject: `${n} a moment na rynku`, body: `Cześć${im}!\n\nSprawdzałem rynek wokół ${n} — jest realna luka i to dobry moment, żeby ją zająć, zanim zrobi to ktoś inny. [Cały raport jest w panelu](LINK_VIEW).` },
+    nurture_4: { subject: `Jak zbudowalibyśmy ${n} razem`, body: `Cześć${im}!\n\nGdybyś chciał ruszyć ${n}, ryzyko po Twojej stronie jest małe: ja buduję i pomagam rozkręcić sprzedaż, a zarabiam dopiero z wyniku. Pierwszy krok to po prostu wspólna rozmowa — [rezerwacja](LINK_RESERVE) to 500 zł, w pełni zwrotne.` },
+    nurture_5: { subject: `Co Cię powstrzymuje przed ${n}?`, body: `Cześć${im}!\n\nZgaduję, że gdzieś z tyłu głowy siedzi „nie mam czasu tego ogarniać" albo „a co, jeśli nie wyjdzie". Uczciwie: budowę i całą techniczną stronę biorę na siebie, zaczynamy mało, a 500 zł jest w pełni zwrotne — więc realne ryzyko po Twojej stronie jest naprawdę małe.\n\nJeśli to jedyne, co Cię trzyma, [po prostu pogadajmy](LINK_RESERVE).` },
+    nurture_6: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie będę się naprzykrzał — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Jeśli kiedyś zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${n} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów, droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
   }
   const t = T[kind] || T.abandoned_chat
@@ -221,6 +233,30 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
   if (kind === 'abandoned_chat') return { goal: 'Osoba zaczęła projektować z Twoim AI pomysł na własne narzędzie i PRZERWAŁA w połowie (jeszcze przed werdyktem). To pierwszy, lekki sygnał ~3h później. Jeśli masz FRAGMENT ROZMOWY — nawiąż do tego, na czym konkretnie skończyliście. Napisz krótko, ciepło, bez nacisku: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od karty projektu i pierwszych ekranów narzędzia (wszystko za darmo). Zachęć delikatnie do powrotu. Jeśli nazwa narzędzia jest generyczna („Twoje narzędzie"), pisz o „Twoim pomyśle".', facts: `narzędzie/temat: ${n}` }
   if (kind === 'abandoned_chat_2') return { goal: 'Drugi follow-up (~następnego dnia, wciąż cisza). INNY kąt niż pierwszy: konkretnie przypomnij, CO ta osoba dostaje ZA DARMO, jeśli dokończy rozmowę — sprawdzenie jej rynku i konkurencji na żywo, kartę projektu i pierwsze ekrany jej narzędzia. To realna robota, którą normalnie się zleca i płaci. Ustaw to jako JEJ korzyść („to Ty na tym zyskujesz"), nie jako Twoją prośbę. Jeśli masz fragment rozmowy, nawiąż do jej pomysłu. Spokojnie, bez nacisku, bez „wróć proszę".', facts: `narzędzie/temat: ${n}` }
   if (kind === 'abandoned_chat_3') return { goal: 'Trzeci i OSTATNI follow-up tego wątku (~2 dni, cisza). Krótko i z godnością: zostawiasz projekt zapisany, drzwi otwarte, decyzja należy do niej. Możesz wpleść JEDNO wciągające pytanie nawiązujące do jej pomysłu z rozmowy, które naturalnie zachęci do powrotu. Zero desperacji, zero wyrzutów — to ma być lekka, ostatnia wiadomość. Zostaw link do powrotu.', facts: `narzędzie/temat: ${n}` }
+  if (kind.startsWith('nurture_')) {
+    const k = s.problem_summary as Record<string, unknown> | null
+    const f = (key: string) => (k && typeof k[key] === 'string') ? k[key] as string : ''
+    const plan = s.business_plan; let liczba = ''
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
+    const mr = s.market_report as Record<string, unknown> | null
+    const teza = mr && typeof mr.teza === 'string' ? (mr.teza as string).slice(0, 220) : ''
+    const base = [`narzędzie: ${n}`, f('dla_kogo') && `dla kogo: ${f('dla_kogo')}`, f('kto_placi') && `kto płaci: ${f('kto_placi')}`].filter(Boolean).join('; ')
+    // Wspólna zasada serii: GĘSTO nie długo + jeden konkret + jedno CTA.
+    const dens = 'GĘSTO, NIE DŁUGO (2–3 krótkie akapity). KAŻDY mail MUSI nieść JEDEN konkret/nową myśl — NIE samo „czeka w panelu" jako jedyną treść — i kończyć się JEDNYM jasnym CTA. '
+    if (kind === 'nurture_1') return { goal: dens + 'Seria #1 (~4 dni po werdykcie). Kąt: PROBLEM. Nawiąż do ich konkretnej sytuacji (z karty) i uderz JEDNĄ rzeczą, która otwiera oczy — np. ile ten problem realnie zżera czasu/pieniędzy (oszacuj zdroworozsądkowo, bez zmyślania twardych danych). CTA miękkie: zerknij na projekt w panelu.', facts: [base, f('problem') && `problem: ${f('problem')}`, f('dzisiejsze_obejscie') && `jak radzą dziś: ${f('dzisiejsze_obejscie')}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_2') return { goal: dens + 'Seria #2 (~7 dni). Kąt: PIENIĄDZE. Pokaż liczbę z planu po ludzku + JEDEN wniosek („to się może spinać, bo…"). ZERO żargonu. CTA: zobacz plan w panelu / „pogadajmy, jak to zbudować".', facts: [base, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_3') return { goal: dens + 'Seria #3 (~11 dni). Kąt: RYNEK/TERAZ. JEDNA myśl o luce + czemu moment jest dobry (z tezy badania). CTA: zobacz raport rynku w panelu.', facts: [base, teza && `teza rynku: ${teza}`, f('konkurencja') && `konkurencja: ${f('konkurencja')}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_4') return { goal: dens + 'Seria #4 (~15 dni). Kąt: JAK BUDUJEMY RAZEM. JEDNA myśl rozbrajająca ryzyko (Tomek bierze na siebie budowę i rozkręcenie sprzedaży, zarabia dopiero z wyniku), pierwszy krok = wspólna rozmowa (500 zł, w pełni zwrotne). CTA: zarezerwuj rozmowę.', facts: base }
+    if (kind === 'nurture_5') return { goal: dens + 'Seria #5 (~19 dni). Kąt: ROZBROJENIE OBIEKCJI. Nazwij WPROST jeden najczęstszy opór osoby dopiero wchodzącej w biznes (np. „nie mam czasu tego ogarniać" ALBO „a co, jeśli nie wyjdzie" ALBO „brzmi skomplikowanie") i szczerze go rozpuść — bez defensywy, po ludzku: budowę i ryzyko techniczne biorę na siebie, zaczynamy mało, 500 zł jest zwrotne. JEDNA obiekcja, nie lista. CTA: zarezerwuj rozmowę.', facts: base }
+    return { goal: dens + 'Seria #6 OSTATNI, z godnością. „Zostawiam projekt otwarty, kiedy będziesz gotowy". Wpleć JEDNO wciągające pytanie nawiązujące do ich pomysłu. Delikatny link do rezerwacji. Zero desperacji, zero wyrzutów — ciepła klamra.', facts: [base, f('problem') && `problem: ${f('problem')}`].filter(Boolean).join('; ') }
+  }
+  if (kind === 'komplet_gotowy') {
+    const plan = s.business_plan; let liczba = ''
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
+    const mr = s.market_report as Record<string, unknown> | null
+    const teza = mr && typeof mr.teza === 'string' ? mr.teza : ''
+    return { goal: 'Świeży zielony werdykt — projekt jest KOMPLETNY i CZEKA W PANELU za darmo: karta, ekrany, sprawdzony NA ŻYWO rynek+konkurencja, policzona opłacalność, plan gdzie szukać klientów. Cel TEGO maila: ŚCIĄGNĄĆ DO PANELU, żeby to zobaczył (NIE sprzedawaj jeszcze rezerwacji). Krótko, z energią „domknęliśmy to, wejdź zobacz". Wpleć JEDEN twardy konkret (liczba z planu albo teza z rynku). Link do panelu.', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`, teza && `teza rynku: ${teza.slice(0, 200)}`].filter(Boolean).join('; ') }
+  }
   if (kind === 'verdict_last_call') {
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
@@ -286,8 +322,8 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
 
 // GPT dla sensownych kindów (abandoned/last_call/welcome) + log kosztu; reszta statyczna.
 async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow): Promise<{ subject: string; html: string }> {
-  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'verdict_last_call', 'paid_welcome']
-  if (GPT_KINDS.includes(kind)) {
+  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome']
+  if (GPT_KINDS.includes(kind) || kind.startsWith('nurture_')) {
     const convo = kind.startsWith('abandoned_chat') ? await fetchConvo(supabase, s.id) : ''
     const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s), convo)
     if (gen) {
@@ -385,7 +421,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–20 PL dotyczy WSZYSTKICH maili (też paid_welcome);
     // sync płatności (paid_at + lead won) działa niezależnie od pory
@@ -452,7 +488,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, created_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -523,6 +559,13 @@ Deno.serve(async (req) => {
     if (!inWindow) {
       return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
     }
+
+    // ── 1d) KOMPLET GOTOWY — WYŁĄCZONE (2026-06-15, decyzja Tomka) ─────────────
+    //   Zbiorcze ogłoszenie „cały projekt w panelu" zastąpione przez 3 osobne
+    //   odsłony rynek/economics/gtm w spar-drip (każda własnym mailem w krótkim
+    //   odstępie). To one są teraz driverem do panelu. Szablon zostaje (podgląd
+    //   w adminie), ale cron go nie wysyła, by lead nie dostał 4 maili naraz.
+    // (blok wysyłki usunięty — patrz REVEAL_PLAN w spar-drip)
 
     // ── 1c) ARTEFAKTY GOTOWE (raport_ready / landing_ready) — WYŁĄCZONE ───
     //   Od 2026-06-13 pielęgnację zielonych leadów przejął drip „sekwencja
@@ -615,28 +658,35 @@ Deno.serve(async (req) => {
     //   odsłon dripu (rynek +1 dz., economics +3 dz.) → dwójka maili w tym
     //   samym oknie. Generyczny nudge zastąpiły bogatsze reveale dripu.
 
-    // ── 4) OSTATNI DZWONEK (verdict_last_call): JEDYNY domykacz, który
-    //   zostaje — ale tylko dla ZIMNYCH leadów. Drip pauzuje niezaangażowanych
-    //   po 1. odsłonie; ten mail (cisza w rozmowie 5–8 dni + brak wizyt w
-    //   panelu) to ostatnia próba reaktywacji scarcity, by „przekonać
-    //   nieprzekonanych". Zaangażowanych (świeża wizyta w panelu) pomijamy —
-    //   ich obsługuje drip, nie dublujemy. ─────────────────────────────────
-    const { data: lastCall, error: lcErr } = await supabase
+    // ── 4) SERIA PIELĘGNACJI (nurture_1..5): ciepłe, kontekstowe maile GPT do
+    //   zielonych-niepłatnych, oparte o TO CO USTALILIŚMY W CZACIE/PROJEKCIE
+    //   (karta=problem_summary, plan, rynek) — NIEzależnie od zachowania w panelu.
+    //   Odstępy od created_at: ~4/7/11/16/22 dni (po hot-finale day 0–2). Kolejność
+    //   wymusza liczba już wysłanych (jak w abandoned). Bramka między-kanałowa ≥10h.
+    //   „Nie odpuszczamy, ale bez nachalności" — nurture_5 = ciepła klamra (zastępuje
+    //   dawny verdict_last_call/scarcity). Reguły głosu/żargonu/anty-desperacji w EMAIL_SYSTEM.
+    const NURTURE_KINDS = ['nurture_1', 'nurture_2', 'nurture_3', 'nurture_4', 'nurture_5', 'nurture_6']
+    const NURTURE_THRESH_D = [4, 7, 11, 15, 19, 24]
+    const { data: nurtureRows, error: nuErr } = await supabase
       .from('spar_sessions')
       .select(SESSION_COLS)
       .eq('is_test', false)
       .eq('verdict', 'zielony')
       .is('paid_at', null)
       .not('email', 'is', null)
-      .gte('last_user_at', hoursAgo(192))
-      .lte('last_user_at', hoursAgo(120))
-      .limit(60)
-    if (lcErr) console.error('[spar-followups] last-call fetch error:', lcErr)
-    const PANEL_WARM_MS = 7 * 24 * 3600 * 1000
-    for (const s of (lastCall || []) as SessionRow[]) {
-      // zaangażowany w panelu = drip go pielęgnuje, nie dublujemy domykaczem
-      if (s.last_panel_at && now - Date.parse(s.last_panel_at) < PANEL_WARM_MS) continue
-      await sendOnce('verdict_last_call', s)
+      .gte('created_at', hoursAgo(26 * 24)) // nie starsze niż cała seria (+bufor)
+      .limit(80)
+    if (nuErr) console.error('[spar-followups] nurture fetch error:', nuErr)
+    const nurRows = (nurtureRows || []) as SessionRow[]
+    const nurTouch = await loadTouches(supabase, nurRows.map((s) => s.id))
+    for (const s of nurRows) {
+      const t = nurTouch.get(s.id)
+      const sentCount = NURTURE_KINDS.filter((k) => t?.kinds.has(k)).length
+      if (sentCount >= NURTURE_KINDS.length) continue // cała seria poszła
+      const daysSince = s.created_at ? (now - Date.parse(s.created_at)) / 86_400_000 : 0
+      if (daysSince < NURTURE_THRESH_D[sentCount]) continue // za wcześnie na następny
+      if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+      await sendOnce(NURTURE_KINDS[sentCount], s)
     }
 
     return jsonResponse({ ok: true, sent }, 200)

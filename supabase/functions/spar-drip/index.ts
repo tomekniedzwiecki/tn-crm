@@ -29,15 +29,29 @@ const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${nam
 // rynek → opłacalność → strona → sprzedaż, a potem „dotknij swojej aplikacji".
 // Kadencja skompresowana do ~tygodnia (2026-06-13): lead najgorętszy tuż po
 // werdykcie, finał (prototyp) ma trafić póki ciepły. Odstępy 1–2 dni.
-const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
-  { key: 'rynek', seq: 1, day: 0, emailKind: 'reveal_rynek' }, // day 0 = mail od razu (rynek widoczny od razu w panelu)
-  { key: 'economics', seq: 2, day: 2, emailKind: 'reveal_economics' },
-  { key: 'landing', seq: 3, day: 4, emailKind: 'reveal_landing' },
-  { key: 'gtm', seq: 4, day: 5, emailKind: 'reveal_gtm' },
-  { key: 'prototyp', seq: 5, day: 7, emailKind: 'reveal_prototyp' },
+// v2 „drip tanich + bramka drogich" (2026-06-15, decyzja Tomka):
+//  • TANIE (rynek/economics/gtm) — generowane od razu i wysyłane KAŻDY OSOBNYM
+//    mailem w krótkim odstępie (0h / 5h / 10h od werdyktu), BEZ bramki — to one
+//    są driverem do panelu i przerywają pętlę „nie zaangażuje się, bo nie dostał
+//    maila". Zastępują jeden zbiorczy „komplet gotowy" (wyłączony w spar-followups).
+//  • GATED (landing/prototyp) — DROGIE (~$0,45/szt.); ~day 1/2, generowane i
+//    wysyłane TYLKO gdy lead realnie wszedł do panelu (last_panel_at) i nie
+//    zapłacił. Brak zaangażowania → nie palimy kasy.
+// Offsety w GODZINACH od werdyktu (sub-dobowe, by tanie maile nie szły naraz).
+const REVEAL_PLAN: { key: string; seq: number; h: number; emailKind: string }[] = [
+  { key: 'rynek', seq: 1, h: 0, emailKind: 'reveal_rynek' },
+  { key: 'economics', seq: 2, h: 5, emailKind: 'reveal_economics' },
+  { key: 'gtm', seq: 3, h: 10, emailKind: 'reveal_gtm' },
+  { key: 'landing', seq: 4, h: 24, emailKind: 'reveal_landing' },
+  { key: 'prototyp', seq: 5, h: 48, emailKind: 'reveal_prototyp' },
 ]
+const GATED_KEYS = new Set(['landing', 'prototyp'])           // drogie: tylko przy zaangażowaniu
 const ENGAGE_WINDOW_DAYS = 3    // brak aktywności dłużej niż to → PAUZA kolejnych odsłon (odwracalne)
 const LOST_WINDOW_DAYS = 7      // brak aktywności dłużej niż to → PRZEGRANY (twardy koniec, bez wznawiania)
+// Min. odstęp między DWOMA odsłonami tej samej sesji — twardy bezpiecznik na
+// wypadek „nadrabiania" wielu zaległych due naraz (cron stał, lead zaseedowany
+// wstecz). Offsety planu i tak są ≥5h, więc normalnie nie kąsa.
+const REVEAL_MIN_GAP_MS = 4 * 3600 * 1000
 const MAX_FIRES_PER_RUN = 12
 
 const CORS: Record<string, string> = {
@@ -374,6 +388,14 @@ async function lastActivityMs(supabase: ReturnType<typeof createClient>, s: any)
 async function isEngaged(supabase: ReturnType<typeof createClient>, s: any): Promise<boolean> {
   return (Date.now() - await lastActivityMs(supabase, s)) < ENGAGE_WINDOW_DAYS * 86400000
 }
+// Czas ostatniej WYSŁANEJ odsłony tej sesji (ms) — do wymuszenia min. odstępu
+// między dwoma odsłonami (anti-burst przy nadrabianiu zaległych due).
+async function lastRevealSentMs(supabase: ReturnType<typeof createClient>, sid: string): Promise<number> {
+  const { data } = await supabase.from('spar_reveals').select('sent_at')
+    .eq('session_id', sid).eq('status', 'sent').not('sent_at', 'is', null)
+    .order('sent_at', { ascending: false }).limit(1)
+  return data && data[0] && data[0].sent_at ? Date.parse(data[0].sent_at as string) : 0
+}
 // Bramka MIĘDZY-KANAŁOWA (spójna z spar-followups): czas ostatniego dotyku z
 // INNEGO kanału — mail abandoned (kind ≠ reveal_*) lub dowolny SMS. Reveale są
 // strukturalnie ≥~1 dzień po werdykcie, więc to zapas bezpieczeństwa, by reveal
@@ -404,7 +426,7 @@ async function closeLost(supabase: ReturnType<typeof createClient>, sid: string,
 async function seedReveals(supabase: ReturnType<typeof createClient>, sid: string, verdictAt: number): Promise<void> {
   const rows = REVEAL_PLAN.map((r) => ({
     session_id: sid, key: r.key, seq: r.seq, email_kind: r.emailKind,
-    due_at: new Date(verdictAt + r.day * 86400000).toISOString(), status: 'pending',
+    due_at: new Date(verdictAt + r.h * 3600000).toISOString(), status: 'pending',
   }))
   await supabase.from('spar_reveals').upsert(rows, { onConflict: 'session_id,key', ignoreDuplicates: true })
 }
@@ -458,6 +480,8 @@ async function processReveal(supabase: ReturnType<typeof createClient>, SUPABASE
     return 'generating'
   }
   if (!reveal.generated_at) await supabase.from('spar_reveals').update({ generated_at: new Date().toISOString() }).eq('id', reveal.id)
+  // v2: KAŻDA odsłona (też rynek/economics/gtm) idzie osobnym mailem. Tanie nie
+  // są już ciche — to one budują zaangażowanie i prowadzą do panelu.
   const ok = await sendReveal(supabase, SUPABASE_URL, SERVICE_KEY, reveal, s)
   if (ok) { await supabase.from('spar_reveals').update({ status: 'sent', sent_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', reveal.id); return 'sent' }
   return 'ready'
@@ -567,6 +591,7 @@ Deno.serve(async (req) => {
     let fired = 0
     const processed: Record<string, number> = {}
     const lostNow = new Set<string>()
+    const sentThisRun = new Set<string>()   // max 1 odsłona / sesję / przebieg
     for (const rv of due || []) {
       if (fired >= MAX_FIRES_PER_RUN) break
       if (lostNow.has(rv.session_id)) continue   // sesja już zamknięta w tym przebiegu
@@ -576,18 +601,24 @@ Deno.serve(async (req) => {
       // ten przebieg (reveal zostaje pending/generating, ponowi się później).
       const xTouch = await recentNonRevealTouchMs(supabase, s.id)
       if (xTouch && Date.now() - xTouch < CROSS_CHANNEL_GAP_MS) continue
-      // R1 leci zawsze. R2+ zależy od aktywności:
-      //  • cisza ≥ LOST_WINDOW (7 dni) → PRZEGRANY: zamykamy całą resztę sekwencji
-      //  • cisza ≥ ENGAGE_WINDOW (3 dni) → PAUZA (odwracalna)
-      //  • inaczej → wysyłamy/generujemy
-      if (rv.seq > 1 && rv.status === 'pending') {
+      // TANIE (rynek/economics/gtm): wysyłamy zawsze (front-load, driver do panelu).
+      // GATED (landing/prototyp): DROGIE — generuj/wyślij TYLKO gdy lead realnie
+      // wszedł do panelu (last_panel_at). Brak zaangażowania → nie pal kasy; zostaw
+      // pending (wejdzie kiedyś → wygeneruje się). Twardo zimny po LOST_WINDOW →
+      // zamknij, żeby reveal nie wisiał w nieskończoność.
+      if (GATED_KEYS.has(rv.key)) {
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
-        if (inactive >= ENGAGE_WINDOW_DAYS * 86400000) { await supabase.from('spar_reveals').update({ status: 'paused', updated_at: nowIso }).eq('id', rv.id); continue }
+        if (!s.last_panel_at) continue   // nie wszedł do panelu → NIE generuj drogiego artefaktu
       }
+      // Anti-burst: jedna odsłona na sesję na przebieg + min. odstęp od poprzedniej
+      // wysłanej (chroni przed serią maili przy nadrabianiu zaległych due).
+      if (sentThisRun.has(rv.session_id)) continue
+      const lastRev = await lastRevealSentMs(supabase, s.id)
+      if (lastRev && Date.now() - lastRev < REVEAL_MIN_GAP_MS) continue
       const result = await processReveal(supabase, SUPABASE_URL, SERVICE_KEY, s, rv)
       processed[result] = (processed[result] || 0) + 1
-      if (result === 'sent') fired++
+      if (result === 'sent') { fired++; sentThisRun.add(rv.session_id) }
     }
 
     // 3) zapauzowane reveale: wznów (wrócił), zamknij (przegrany) albo zostaw
