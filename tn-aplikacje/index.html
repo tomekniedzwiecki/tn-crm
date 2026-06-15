@@ -917,6 +917,8 @@ let leadData = null;        // {s, msgs, usage, emails, art, protoUrl, totalUsd}
 let leadTab = 'przeglad';
 let prevTab = 'leady';
 let leadLoadingId = null;
+const LEAD_CHAT_POLL_MS = 4000;   // auto-odświeżanie podglądu rozmowy na żywo
+let leadChatSig = '';
 const LEAD_TABS = [
   { id: 'przeglad', icon: 'ph-identification-card', label: 'Przegląd' },
   { id: 'rozmowa', icon: 'ph-chats-circle', label: 'Rozmowa' },
@@ -955,7 +957,25 @@ async function openSession(id) {
   leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], art: art || {}, protoUrl, totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
   renderLeadTab();
 }
-function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; switchTab(prevTab || 'leady'); }
+function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; switchTab(prevTab || 'leady'); }
+
+// Podgląd rozmowy na żywo — dociąga nowe wiadomości bez przeładowania strony
+function chatSig(msgs) { const n = msgs.length; const last = n ? msgs[n - 1] : null; return n + '|' + (last ? (last.created_at || '') + '|' + (last.content || '').length : ''); }
+async function refreshLeadChat() {
+  if (DEMO || document.hidden) return;
+  if (!leadData || leadTab !== 'rozmowa') return;
+  if ($('view-lead').classList.contains('hidden')) return;
+  const id = leadData.s.id;
+  const { data: msgs, error } = await supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true });
+  if (error || !msgs) return;
+  if (!leadData || leadData.s.id !== id || leadTab !== 'rozmowa' || $('view-lead').classList.contains('hidden')) return; // user zdążył przejść gdzie indziej
+  const sig = chatSig(msgs);
+  if (sig === leadChatSig) return;          // brak zmian — nie przerysowuj
+  const grew = msgs.length > leadData.msgs.length;
+  leadData.msgs = msgs;
+  renderLeadTab();                          // ustawi też leadChatSig
+  if (grew) { try { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); } catch (e) { /* ignore */ } }
+}
 
 function renderLeadHead(s) {
   $('lead-head').innerHTML = `
@@ -983,7 +1003,7 @@ function renderLeadTab() {
   if (!leadData) return;
   const b = $('lead-body'); const s = leadData.s;
   if (leadTab === 'przeglad') b.innerHTML = leadOverviewHTML();
-  else if (leadTab === 'rozmowa') b.innerHTML = leadChatHTML();
+  else if (leadTab === 'rozmowa') { b.innerHTML = leadChatHTML(); leadChatSig = chatSig(leadData.msgs); }
   else if (leadTab === 'artefakty') b.innerHTML = leadArtefaktyHTML();
   else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
   else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
@@ -1024,11 +1044,18 @@ function leadOverviewHTML() {
 }
 function leadChatHTML() {
   const { msgs } = leadData;
-  return `<div class="max-w-3xl space-y-2.5">${msgs.length ? msgs.map((m) => `
+  const live = `<div class="flex items-center gap-2 mb-3 text-[11px] text-zinc-500">
+      <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Na żywo</span>
+      <span>${msgs.length} ${plural(msgs.length, 'wiadomość', 'wiadomości', 'wiadomości')} · auto-odświeżanie co ${LEAD_CHAT_POLL_MS / 1000} s</span>
+    </div>`;
+  return `<div class="max-w-3xl">${live}<div class="space-y-2.5">${msgs.length ? msgs.map((m) => `
     <div class="border rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'msg-user ml-8' : 'msg-ai mr-8'}">
-      <div class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'} mb-1">${m.role === 'user' ? 'Rozmówca' : 'AI'}${m.channel === 'wspolpraca' ? ' · współpraca' : ''}</div>
+      <div class="flex items-center justify-between gap-3 mb-1">
+        <span class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'}">${m.role === 'user' ? 'Rozmówca' : 'AI'}${m.channel === 'wspolpraca' ? ' · współpraca' : ''}</span>
+        ${m.created_at ? `<span class="text-[10px] text-zinc-600 shrink-0">${fmtDate(m.created_at)}</span>` : ''}
+      </div>
       <div class="text-zinc-200">${cleanMsg(m.content)}</div>
-    </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>'}</div>`;
+    </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>'}</div></div>`;
 }
 function leadArtefaktyHTML() {
   const { s, art, protoUrl } = leadData;
@@ -1697,6 +1724,8 @@ async function init() {
 
   const hash = (location.hash || '').replace(/[^a-z]/g, '');
   switchTab(VIEWS.includes(hash) ? hash : 'przeglad');
+
+  setInterval(refreshLeadChat, LEAD_CHAT_POLL_MS);   // podgląd rozmów na żywo
 
   document.querySelectorAll('.tab-btn').forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
   $('search').addEventListener('input', (e) => { search = e.target.value; renderLeady(); });
