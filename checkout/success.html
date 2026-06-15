@@ -326,9 +326,20 @@
                 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { global: { headers: { 'x-order-id': orderId } } });
                 const { data: order } = await supabaseClient
                     .from('orders')
-                    .select('id, order_number, amount, description, status, installment_id, lead_id, leads(lead_tracking(gclid,gbraid,wbraid,gad_source,fbclid,ttclid,utm_source,utm_medium,network))')
+                    .select('id, order_number, amount, description, status, installment_id, lead_id')
                     .eq('id', orderId)
                     .single();
+
+                // Tracking atrybucji: leads/lead_tracking nie sa anon-readable (RLS) -> embed
+                // zwracal null. SECURITY DEFINER RPC zwraca parametry kliku dla tego zamowienia.
+                let orderTracking = null;
+                if (order?.lead_id) {
+                    try {
+                        const { data: trk } = await supabaseClient
+                            .rpc('order_conversion_tracking', { p_order_id: orderId });
+                        orderTracking = Array.isArray(trk) ? trk[0] : trk;
+                    } catch {}
+                }
 
                 // Check if this is an installment payment
                 if (order?.installment_id) {
@@ -361,7 +372,7 @@
                         const value = parseFloat(order.amount) / 1.23; // netto
                         const transactionId = order.order_number;
                         // Kanal pozyskania (z lead_tracking leada powiazanego z zamowieniem)
-                        const leadTracking = order.leads && order.leads.lead_tracking && order.leads.lead_tracking[0];
+                        const leadTracking = orderTracking;
                         const trafficChannel = (typeof classifySource === 'function' && leadTracking)
                             ? classifySource(leadTracking).channel : 'organic';
 

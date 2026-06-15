@@ -2242,12 +2242,18 @@ async function applyDiscountCode() {
     try {
         const { data: dc } = await supabaseClient
             .from('discount_codes')
-            .select('client_offer_id, client_offers(custom_price)')
+            .select('client_offer_id')
             .eq('id', result.id).single();
-        if (dc?.client_offer_id && dc?.client_offers?.custom_price) {
-            basePrice = parseFloat(dc.client_offers.custom_price);
-            currentOffer.price = basePrice;
-            $('v-summary-price').textContent = formatPrice(basePrice);
+        if (dc?.client_offer_id) {
+            // client_offers token-gated (x-offer-token), checkout go nie ma -> przez RPC.
+            const { data: co } = await supabaseClient
+                .rpc('client_offer_public', { p_client_offer_id: dc.client_offer_id });
+            const cp = (Array.isArray(co) ? co[0] : co)?.custom_price;
+            if (cp) {
+                basePrice = parseFloat(cp);
+                currentOffer.price = basePrice;
+                $('v-summary-price').textContent = formatPrice(basePrice);
+            }
         }
     } catch {}
 
