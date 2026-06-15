@@ -568,7 +568,33 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_konfiguracji' }, 500, corsHeaders)
     }
 
-    const isAdmin = req.headers.get('x-admin-secret') === ADMIN_SECRET
+    let isAdmin = req.headers.get('x-admin-secret') === ADMIN_SECRET
+    // Panel TN Aplikacje (przeglądarka) nie zna sekretu — autoryzuje się JWT
+    // zalogowanego admina. Samo zalogowanie NIE wystarcza: publiczna rejestracja
+    // w sparingu daje rolę authenticated każdemu z internetu, więc wymagamy
+    // wpisu w team_members (wzorzec invoice-pdf). Admin omija werdykt i limity.
+    if (!isAdmin) {
+      const auth = req.headers.get('Authorization') || ''
+      if (auth.startsWith('Bearer ')) {
+        try {
+          const ANON = Deno.env.get('SUPABASE_ANON_KEY') || SUPABASE_SERVICE_ROLE_KEY
+          const uResp = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
+            headers: { Authorization: auth, apikey: ANON },
+          })
+          if (uResp.ok) {
+            const u = await uResp.json().catch(() => null)
+            if (u?.id) {
+              const tmResp = await fetch(
+                `${SUPABASE_URL}/rest/v1/team_members?select=user_id&user_id=eq.${u.id}`,
+                { headers: { apikey: SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` } },
+              )
+              const tm = await tmResp.json().catch(() => [])
+              if (Array.isArray(tm) && tm.length > 0) isAdmin = true
+            }
+          }
+        } catch { /* nie-admin — lecimy ścieżką sesyjną */ }
+      }
+    }
 
     let body: { sessionId?: string; action?: string; path?: string }
     try {

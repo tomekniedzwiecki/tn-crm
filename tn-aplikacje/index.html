@@ -1068,12 +1068,79 @@ function leadArtefaktyHTML() {
   const ekrany = imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
     <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
     <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${imgKeys.map((k) => `<a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition"><img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=400&quality=70&resize=contain'}" alt="${VIEW_LABELS[k] || esc(k)}" loading="lazy" class="aspect-[3/2] object-contain bg-white w-full"><div class="text-[10px] text-zinc-500 px-1.5 py-1">${VIEW_LABELS[k] || esc(k)}</div></a>`).join('')}</div></div>` : '';
-  if (!rows && !imgKeys.length) return '<div class="text-zinc-600 text-sm">Brak artefaktów — pojawią się po zielonym werdykcie i odsłonach sekwencji.</div>';
+  // Pasek admina — generowanie na żądanie (omija werdykt/limity przez JWT zespołu).
+  // Zawsze widoczny, także zanim powstaną pierwsze artefakty.
+  const actions = `<div class="bg-zinc-900/40 border border-white/5 rounded-xl p-3.5 mb-4 flex flex-wrap items-center gap-2">
+    <span class="text-[11px] uppercase tracking-wider text-zinc-500 mr-1 inline-flex items-center gap-1.5"><i class="ph ph-lightning text-amber-400"></i>Generuj na żądanie · tylko admin</span>
+    <button id="gen-landing" onclick="genArtifact('landing')" class="px-3.5 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-xs transition"><i class="ph ph-globe mr-1.5"></i>${land ? 'Przegeneruj landing' : 'Wygeneruj landing'}</button>
+    <button id="gen-prototype" onclick="genArtifact('prototype')" class="px-3.5 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-xs transition"><i class="ph ph-cursor-click mr-1.5"></i>${protoUrl ? 'Przegeneruj prototyp' : 'Wygeneruj prototyp panelu'}</button>
+    <span class="text-[11px] text-zinc-600 basis-full sm:basis-auto sm:ml-auto">~$0,45 / generacja · 1–4 min</span>
+  </div>`;
+  if (!rows && !imgKeys.length) return `${actions}<div class="text-zinc-600 text-sm">Brak artefaktów — wygeneruj landing lub prototyp powyżej, albo poczekaj na zielony werdykt i odsłony sekwencji.</div>`;
   const hasFrames = protoUrl || land;
-  return `<div class="grid ${hasFrames ? 'lg:grid-cols-2' : ''} gap-4 items-start max-w-6xl">
+  return `${actions}<div class="grid ${hasFrames ? 'lg:grid-cols-2' : ''} gap-4 items-start max-w-6xl">
     <div class="space-y-4">${rows}${ekrany}</div>
     ${hasFrames ? `<div class="space-y-4">${protoUrl ? frame('Klikalny prototyp', protoUrl) : ''}${land ? frame('Strona sprzedażowa', land) : ''}</div>` : ''}
   </div>`;
+}
+// ── Generowanie artefaktu na żądanie (admin) ──
+// callFn wysyła JWT zalogowanego admina; edge function weryfikuje team_members
+// i omija werdykt/limity. spar-* zwraca 202 natychmiast, generacja leci w tle
+// (1-4 min) — odpytujemy gotowość: landing przez kolumnę landing_url, prototyp
+// przez action:'status'. Pętla ograniczona licznikiem (brak sierot).
+let genBusy = false;
+function setGenBtns(busy) {
+  ['gen-landing', 'gen-prototype'].forEach((id) => { const b = $(id); if (b) { b.disabled = busy; b.classList.toggle('opacity-40', busy); b.classList.toggle('pointer-events-none', busy); } });
+}
+async function genArtifact(kind) {
+  if (!leadData) return;
+  if (genBusy) { toast('Poczekaj — generowanie w toku'); return; }
+  const s = leadData.s;
+  const fn = kind === 'landing' ? 'spar-landing' : 'spar-prototype';
+  const nazwa = kind === 'landing' ? 'strony sprzedażowej' : 'prototypu panelu';
+  const prev = kind === 'landing'
+    ? ((leadData.art && leadData.art.landing_url) || s.landing_url || '')
+    : (leadData.protoUrl || '');
+  genBusy = true; setGenBtns(true);
+  toast('Start generowania ' + nazwa + ' — to potrwa 1–4 min');
+  try {
+    await callFn(fn, { sessionId: s.id });
+  } catch (e) {
+    genBusy = false; setGenBtns(false);
+    toast('Błąd startu: ' + e.message);
+    return;
+  }
+  const sid = s.id;
+  let tries = 0;
+  const tick = async () => {
+    if (!leadData || leadData.s.id !== sid) { genBusy = false; return; } // user przeszedł gdzie indziej
+    tries++;
+    let url = '';
+    try {
+      if (kind === 'landing') {
+        const { data } = await supabaseClient.from('spar_sessions').select('landing_url').eq('id', sid).maybeSingle();
+        url = (data && data.landing_url) || '';
+      } else {
+        const j = await callFn('spar-prototype', { sessionId: sid, action: 'status' });
+        url = (j && j.viewUrl) || '';
+      }
+    } catch (e) { /* przejściowy blip — próbujemy dalej */ }
+    if (url && url !== prev) {
+      if (kind === 'landing') { leadData.art = Object.assign({}, leadData.art, { landing_url: url }); leadData.s.landing_url = url; }
+      else { leadData.protoUrl = url; }
+      genBusy = false; setGenBtns(false);
+      toast('Gotowe ✓ — ' + nazwa);
+      if (leadTab === 'artefakty') renderLeadTab();
+      return;
+    }
+    if (tries >= 40) { // ~5 min @ 7,5 s
+      genBusy = false; setGenBtns(false);
+      toast('Generowanie trwa dłużej niż zwykle — odśwież kartę za chwilę');
+      return;
+    }
+    setTimeout(tick, 7500);
+  };
+  setTimeout(tick, 8000);
 }
 function leadSekwencjaHTML() {
   const { s } = leadData; const can = s.verdict === 'zielony' || s.paid_at;
