@@ -843,9 +843,15 @@
                 hasMore = data && data.length === pageSize;
             }
 
+            // Leady ze Stworzę (lead_source='stworze') NIE pokazujemy tu — mają
+            // własny panel /tn-aplikacje (źródło: spar_sessions). Filtr null-safe
+            // (zostają leady bez source). Wiersz w 'leads' istnieje dla linkowania
+            // rezerwacji/automatyzacji, ale nie zaśmieca tej listy.
+            const visibleLeads = allLeads.filter(l => (l.lead_source || '') !== 'stworze');
+
             // Sort by survey_completed_at first (most recent survey submissions at top)
             // Then by created_at for leads without survey
-            leads = allLeads.sort((a, b) => {
+            leads = visibleLeads.sort((a, b) => {
                 const dateA = a.survey_completed_at || a.created_at;
                 const dateB = b.survey_completed_at || b.created_at;
                 return new Date(dateB) - new Date(dateA);
@@ -1628,14 +1634,15 @@
                 while (hasMore) {
                     const { data, error } = await supabaseClient
                         .from('leads')
-                        .select('email, status, campaignid, phone, created_at, lead_tracking(gclid,gbraid,wbraid,gad_source,fbclid,ttclid,utm_source,utm_medium,network)')
+                        .select('email, status, campaignid, phone, created_at, lead_source, lead_tracking(gclid,gbraid,wbraid,gad_source,fbclid,ttclid,utm_source,utm_medium,network)')
                         .range(page * pageSize, (page + 1) * pageSize - 1)
                         .order('created_at', { ascending: false });
 
                     if (error) throw error;
 
                     if (data && data.length > 0) {
-                        allLeads.push(...data);
+                        // bez leadów ze Stworzę (osobny panel /tn-aplikacje)
+                        allLeads.push(...data.filter(l => (l.lead_source || '') !== 'stworze'));
                         page++;
                         btn.innerHTML = `<i class="ph ph-circle-notch animate-spin"></i> ${allLeads.length} leadów...`;
                     }
@@ -1814,7 +1821,7 @@
             const [leadsResult, campaignsResult] = await Promise.all([
                 supabaseClient
                     .from('leads')
-                    .select('id, email, phone, status, created_at, survey_completed_at, name, company')
+                    .select('id, email, phone, status, created_at, survey_completed_at, name, company, lead_source')
                     .or(`email.ilike.%${query}%,phone.ilike.%${query}%`)
                     .order('created_at', { ascending: false })
                     .limit(10),
@@ -1826,7 +1833,7 @@
                     .limit(10)
             ]);
 
-            const leadsData = leadsResult.data || [];
+            const leadsData = (leadsResult.data || []).filter(l => (l.lead_source || '') !== 'stworze'); // Stworzę → /tn-aplikacje
             const campaignsData = campaignsResult.data || [];
 
             // Filter out campaigns that are already leads
