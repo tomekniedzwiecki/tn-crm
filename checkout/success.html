@@ -376,6 +376,14 @@
                         const trafficChannel = (typeof classifySource === 'function' && leadTracking)
                             ? classifySource(leadTracking).channel : 'organic';
 
+                        // Rozroznienie lejka po opisie zamowienia (orders nie ma offer_id).
+                        //  - rezerwacja Stworze 500 zl = "Rezerwacja wspolpracy — Stworze" (isReservation)
+                        //  - dokup rozmowy 49 zl    = "Aplikacja — kolejna rozmowa"     (isApp, NIE rezerwacja)
+                        //  - /zbuduje               = "Zadatek: Budowa sklepu ..."       (build, bez zmian)
+                        const isApp = /stworz|aplikacj/i.test(order.description || '');
+                        const isReservation = isApp && /rezerwacj|wspolprac|współprac|stworz/i.test(order.description || '');
+                        const persona = isApp ? 'stworze' : 'build';
+
                         // GA4 purchase event
                         if (typeof gtag !== 'undefined') {
                             // User-ID: domyka petle lead->purchase w GA4 (cross-session)
@@ -385,15 +393,28 @@
                                 value: value,
                                 currency: 'PLN',
                                 traffic_channel: trafficChannel,
+                                persona: persona,
                                 items: [{
                                     item_id: order.id,
                                     item_name: order.description,
-                                    item_category: 'oferta_awe',
+                                    item_category: isReservation ? 'rezerwacja_stworze' : (isApp ? 'rozmowa_stworze' : 'oferta_awe'),
                                     price: value,
                                     quantity: 1
                                 }]
                             });
                             console.log('[GA4] Purchase event sent:', transactionId);
+                            // Czysta konwersja lejka Stworze — TYLKO rezerwacja 500 zl (nie dokup rozmowy 49 zl).
+                            // Ads importuje app_reservation zamiast generycznego purchase (brak mieszania z /zbuduje).
+                            if (isReservation) {
+                                gtag('event', 'app_reservation', {
+                                    transaction_id: transactionId,
+                                    value: value,
+                                    currency: 'PLN',
+                                    persona: 'stworze',
+                                    traffic_channel: trafficChannel
+                                });
+                                console.log('[GA4] app_reservation event sent:', transactionId);
+                            }
                         }
 
                         // Meta Purchase event (browser-side for deduplication)
