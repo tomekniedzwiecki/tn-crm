@@ -2879,12 +2879,21 @@ async function loadOffer() {
         const clientOfferId = params.get('client_offer');
         if (clientOfferId) {
             try {
-                const { data: clientOffer } = await supabaseClient
-                    .from('client_offers')
-                    .select('custom_price, leads(email, phone, name, company, nip)')
-                    .eq('id', clientOfferId).single();
+                // client_offers jest zabezpieczony tokenem (RLS x-offer-token), którego checkout
+                // nie ma. SECURITY DEFINER RPC zwraca custom_price + dane do prefilla (bez tokenu).
+                const { data: co } = await supabaseClient
+                    .rpc('client_offer_public', { p_client_offer_id: clientOfferId });
+                const clientOffer = Array.isArray(co) ? co[0] : co;
                 if (clientOffer?.custom_price) currentOffer.price = parseFloat(clientOffer.custom_price);
-                if (clientOffer?.leads) prefillCustomerForm(clientOffer.leads);
+                if (clientOffer?.lead_email || clientOffer?.lead_phone) {
+                    prefillCustomerForm({
+                        email: clientOffer.lead_email,
+                        phone: clientOffer.lead_phone,
+                        name: clientOffer.lead_name,
+                        company: clientOffer.lead_company,
+                        nip: clientOffer.lead_nip
+                    });
+                }
             } catch {}
         }
 
