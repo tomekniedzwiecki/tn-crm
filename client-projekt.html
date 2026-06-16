@@ -9,7 +9,7 @@
     <title>Twoj projekt - tomekniedzwiecki.pl</title>
     <script>
         // Auto-reload when new version is deployed
-        const APP_VERSION = '2026061102';
+        const APP_VERSION = '2026061602';
         const storedVersion = localStorage.getItem('tn-client-version');
         if (storedVersion && storedVersion !== APP_VERSION) {
             localStorage.setItem('tn-client-version', APP_VERSION);
@@ -3879,7 +3879,8 @@
 
                     <!-- Success State (hidden by default) -->
                     <div id="legal-docs-success" class="hidden">
-                        <div class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
+                        <!-- Etap: dane zapisane, dokumenty w przygotowaniu -->
+                        <div id="legal-docs-success-pending" class="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
                             <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
                                 <i class="ph-fill ph-check-circle text-emerald-400 text-3xl"></i>
                             </div>
@@ -3894,6 +3895,26 @@
                                 </span>
                                 <span class="px-3 py-1.5 bg-amber-500/20 rounded-full text-[12px] text-amber-400">
                                     <i class="ph ph-clock mr-1"></i>Polityka cookies
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Etap: dokumenty dodane do sklepu -->
+                        <div id="legal-docs-in-shop" class="hidden bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-6 text-center">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                                <i class="ph-fill ph-storefront text-emerald-400 text-3xl"></i>
+                            </div>
+                            <h3 class="text-white font-medium text-lg mb-2">Dokumenty dodane do sklepu</h3>
+                            <p class="text-[#888] text-sm mb-6">Regulamin, polityka prywatności i warunki dostawy są już dodane do Twojego sklepu. Masz to z głowy.</p>
+                            <div class="flex flex-wrap justify-center gap-2">
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph-fill ph-check mr-1"></i>Regulamin
+                                </span>
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph-fill ph-check mr-1"></i>Polityka prywatności
+                                </span>
+                                <span class="px-3 py-1.5 bg-emerald-500/20 rounded-full text-[12px] text-emerald-400">
+                                    <i class="ph-fill ph-check mr-1"></i>Warunki dostawy
                                 </span>
                             </div>
                         </div>
@@ -11403,7 +11424,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('id, is_active, account_created, account_created_at, account_active, account_active_at, account_active_confirmed_by, account_email, account_password, landing_page_connected, landing_page_connected_at, legal_documents_ready, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
+                    .select('id, is_active, account_created, account_created_at, account_active, account_active_at, account_active_confirmed_by, account_email, account_password, landing_page_connected, landing_page_connected_at, landing_url, legal_documents_ready, legal_documents_in_shop, legal_documents_in_shop_at, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -11588,6 +11609,11 @@
                 if (takeDropData.legal_documents_ready) {
                     form.classList.add('hidden');
                     success.classList.remove('hidden');
+
+                    // Przełącz między "w przygotowaniu" a "dodane do sklepu"
+                    const inShop = !!takeDropData.legal_documents_in_shop;
+                    document.getElementById('legal-docs-success-pending')?.classList.toggle('hidden', inShop);
+                    document.getElementById('legal-docs-in-shop')?.classList.toggle('hidden', !inShop);
                 }
             }
         }
@@ -12082,9 +12108,11 @@
         }
 
         function renderPgStep3(gateway) {
-            const domain = takeDropData?.domain;
-            const shopUrl = domain
-                ? (domain.startsWith('http') ? domain : `https://${domain}`)
+            // Adres sklepu — to samo źródło co header panelu admina:
+            // domena sklepu, a w razie braku landing_url / strona sprzedażowa.
+            const rawShop = (takeDropData?.domain || takeDropData?.landing_url || workflow?.sales_page_url || '').trim();
+            const shopUrl = rawShop
+                ? (rawShop.startsWith('http') ? rawShop : `https://${rawShop}`)
                 : '#';
 
             return `

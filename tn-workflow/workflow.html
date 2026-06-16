@@ -2143,6 +2143,18 @@
                                 <i class="ph-fill ph-check-circle text-emerald-400 text-xl"></i>
                             </div>
                         </div>
+
+                        <!-- Documents added to shop (manual admin confirmation, visible to client) -->
+                        <div id="legal-in-shop-wrap" class="hidden mt-6">
+                            <label class="flex items-start gap-3 bg-[#111] border border-[#222] rounded-lg p-4 cursor-pointer hover:border-[#333] transition-colors">
+                                <input type="checkbox" id="legal-in-shop-checkbox" onchange="toggleLegalInShop(this.checked)" class="mt-0.5 w-4 h-4 accent-emerald-500 cursor-pointer shrink-0">
+                                <div class="min-w-0">
+                                    <div class="text-[13px] text-white font-medium">Dokumenty dodane do sklepu</div>
+                                    <div class="text-[12px] text-[#666] mt-0.5">Zaznacz, gdy regulamin, polityka prywatności i warunki dostawy zostały dodane do sklepu klienta. Klient zobaczy tę informację w swoim panelu.</div>
+                                    <div id="legal-in-shop-date" class="text-[11px] text-emerald-400/70 mt-1 hidden"></div>
+                                </div>
+                            </label>
+                        </div>
                     </div><!-- /tab-legal -->
 
                     <!-- TAB: Bramka płatności (Etap 3) -->
@@ -9460,6 +9472,23 @@
                 }
             }
 
+            // "Dokumenty dodane do sklepu" checkbox — widoczne dopiero po zapisaniu dokumentów
+            const inShopWrap = document.getElementById('legal-in-shop-wrap');
+            const inShopCheckbox = document.getElementById('legal-in-shop-checkbox');
+            const inShopDate = document.getElementById('legal-in-shop-date');
+            if (inShopWrap) {
+                inShopWrap.classList.toggle('hidden', !takeDropData?.legal_documents_ready);
+            }
+            if (inShopCheckbox) {
+                inShopCheckbox.checked = !!takeDropData?.legal_documents_in_shop;
+                if (takeDropData?.legal_documents_in_shop && takeDropData?.legal_documents_in_shop_at && inShopDate) {
+                    inShopDate.textContent = 'Oznaczone: ' + new Date(takeDropData.legal_documents_in_shop_at).toLocaleString('pl-PL');
+                    inShopDate.classList.remove('hidden');
+                } else if (inShopDate) {
+                    inShopDate.classList.add('hidden');
+                }
+            }
+
             // Show nav checkmark only if documents are actually ready
             if (takeDropData?.legal_documents_ready) {
                 if (navCheck) navCheck.classList.remove('hidden');
@@ -9529,6 +9558,46 @@
         }
 
         window.allowClientLegalReEdit = allowClientLegalReEdit;
+
+        async function toggleLegalInShop(checked) {
+            const checkbox = document.getElementById('legal-in-shop-checkbox');
+            try {
+                const payload = {
+                    legal_documents_in_shop: checked,
+                    legal_documents_in_shop_at: checked ? new Date().toISOString() : null
+                };
+
+                if (takeDropData?.id) {
+                    const { error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .update(payload)
+                        .eq('id', takeDropData.id);
+                    if (error) throw error;
+                    Object.assign(takeDropData, payload);
+                } else {
+                    const { data, error } = await supabaseClient
+                        .from('workflow_takedrop')
+                        .insert({ workflow_id: workflow.id, ...payload })
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    takeDropData = data;
+                }
+
+                logActivity(
+                    checked ? 'legal_documents_in_shop' : 'legal_documents_in_shop_unset',
+                    checked ? 'Oznaczono: dokumenty prawne dodane do sklepu klienta' : 'Odznaczono: dokumenty prawne dodane do sklepu klienta'
+                );
+                showToast(checked ? 'Oznaczono jako dodane do sklepu' : 'Odznaczono', 'success');
+                renderLegalClientData();
+            } catch (err) {
+                console.error('Error toggling legal in shop:', err);
+                showToast('Błąd zapisu', 'error');
+                if (checkbox) checkbox.checked = !checked; // revert
+            }
+        }
+
+        window.toggleLegalInShop = toggleLegalInShop;
 
         async function toggleTakeDropActive() {
             const isActive = document.getElementById('takedrop-active').checked;
