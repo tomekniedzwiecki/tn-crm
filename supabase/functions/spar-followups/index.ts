@@ -75,8 +75,9 @@ function chatLink(sessionId: string, campaign: string, hash = ''): string {
 function smsLink(sessionId: string): string {
   return `${SPARING_URL}?id=${sessionId}&utm_source=sms`
 }
-// Próg SMS „powrotu" — godziny od ostatniej aktywności (po serii maili 3h/24h/48h).
-const ABANDON_SMS_THRESH_H = 50
+// Próg SMS „powrotu" — godziny od ostatniej aktywności. 24h PO OSTATNIM MAILU:
+// seria maili to 3h/24h/48h, więc ostatni (#3) jest na +48h → SMS na +72h.
+const ABANDON_SMS_THRESH_H = 72
 // GSM-7 safe: transliteracja znaków spoza podstawowego GSM (polskie diakrytyki,
 // typograficzne cudzysłowy/myślniki/…), które inaczej wymuszają UCS-2 (drożej).
 const GSM_MAP: Record<string, string> = {
@@ -419,7 +420,7 @@ JĘZYK: to osoby dopiero wchodzące w biznes — ZERO żargonu (CAC, LTV, churn,
 TON: nie błagaj, nie naciskaj, zero „wróć proszę". Nawiąż do tego, co realnie padło w rozmowie (jego pomysł, jego słowa) — ma być czuć ciąg dalszy JEGO wątku, nie masowy mail. Nie cytuj dosłownie ani nie streszczaj punkt po punkcie.
 ARTEFAKTY (rynek, opłacalność, strona, plan sprzedaży, KLIKALNY prototyp) JESZCZE NIE ISTNIEJĄ — to NAGRODA za dokończenie rozmowy. Opisuj je jako to, co SIĘ ZBUDUJE / odblokuje, KIEDY dokończy — NIGDY że już są albo „czekają w panelu".
 LINKI: w KAŻDYM mailu wstaw DOKŁADNIE RAZ [naturalny tekst](LINK_VIEW) = powrót do ROZMOWY w to samo miejsce (NIE gotowy projekt). Nie wymyślaj adresów.
-SMS (osobne pole „sms"): JEDEN krótki SMS „powrotu", który poleci ~2 dni po mailach, jeśli osoba dalej milczy. Ma wzbudzić CIEKAWOŚĆ i ściągnąć ją z powrotem, żeby DOKOŃCZYŁA rozmowę (to kilka minut). Nawiąż do JEJ pomysłu jednym konkretem. NIE obiecuj rzeczy „gotowych w panelu" — rozmowa nie została dokończona, artefakty dopiero powstaną. ŻELAZNE zasady kodowania: BEZ polskich znaków diakrytycznych (pisz „a" nie „ą", „l" nie „ł", „s" nie „ś" itd.); TYLKO ASCII (proste " ' - . ,); ABSOLUTNY ZAKAZ typograficznych „ ” ' ' – — …; BEZ linku/URL (dokleimy sami); 150–200 znaków; po ludzku, na „Ty"; podpis krótko „~Tomek"; bez wielkich krzyczących liter, emoji i wykrzykników.
+SMS (osobne pole „sms"): JEDEN krótki SMS „powrotu", który poleci ~dzień po ostatnim mailu, jeśli osoba dalej milczy. Ma wzbudzić CIEKAWOŚĆ i ściągnąć ją z powrotem, żeby DOKOŃCZYŁA rozmowę (to kilka minut). Nawiąż do JEJ pomysłu jednym konkretem. NIE obiecuj rzeczy „gotowych w panelu" — rozmowa nie została dokończona, artefakty dopiero powstaną. ŻELAZNE zasady kodowania: BEZ polskich znaków diakrytycznych (pisz „a" nie „ą", „l" nie „ł", „s" nie „ś" itd.); TYLKO ASCII (proste " ' - . ,); ABSOLUTNY ZAKAZ typograficznych „ ” ' ' – — …; BEZ linku/URL (dokleimy sami); 150–200 znaków; po ludzku, na „Ty"; podpis krótko „~Tomek"; bez wielkich krzyczących liter, emoji i wykrzykników.
 Zwróć WYŁĄCZNIE JSON: {"emails":[{"seq":1,"subject":...,"body":...},{"seq":2,...},{"seq":3,...}],"sms":string}. subject: krótki (≤~55 zn.), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
 
 // Jeden GPT-call → 3 maile + 1 SMS sekwencji powrotu. Zwraca {emails,sms} (lub null).
@@ -855,7 +856,8 @@ Deno.serve(async (req) => {
     }
 
     // ── 2a-SMS) SMS POWROTU sekwencji — pre-generowany (kind=abandoned_sms),
-    //   wysyłany ~+50h po serii maili, TYLKO gdy lead dalej milczy. Treść 1:1 z
+    //   wysyłany ~24h po ostatnim mailu (+72h od aktywności), TYLKO gdy lead dalej
+    //   milczy. Treść 1:1 z
     //   zapisanej; telefon+zgoda, nie zielony/nie zapłacił/nie wstrzymany; bramka
     //   międzykanałowa ≥10h. „Cisza" = brak aktywności od ≥ progu (wrócił → pomiń). ──
     if (SMS_ENABLED) {

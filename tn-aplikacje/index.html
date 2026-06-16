@@ -994,7 +994,7 @@ function renderLeadHead(s) {
       </div>
       <div class="flex items-center gap-2 shrink-0">
         ${s.lead_id ? `<a href="/leads?id=${s.lead_id}" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-blue-400 text-xs hover:border-blue-500/40 transition">Lead w CRM →</a>` : ''}
-        <a href="${PROJEKT_URL}?sid=${s.id}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Otwórz panel projektu dokładnie tak, jak widzi go klient (read-only)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</a>
+        <button onclick="openClientPreview('${s.id}')" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Otwórz panel projektu dokładnie tak, jak widzi go klient (podgląd admina, read-only)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</button>
         <a href="${SPARING_URL}?projekt=${s.id}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Wizytówka</a>
       </div>
     </div>`;
@@ -1280,7 +1280,7 @@ async function renderLeadSms(sid) {
     <div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-4 py-3">
       <div class="flex items-center gap-2 flex-wrap mb-1"><span class="text-sm text-white font-medium">SMS powrotu</span>${aSmsBadge}</div>
       <div class="text-xs text-zinc-300 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 whitespace-pre-wrap break-words">${esc(aSms.sms || '—')}</div>
-      <div class="text-[11px] text-zinc-600 mt-1.5">Krótki link doklejany jest automatycznie przy wysyłce. Leci ~+50 h po serii maili, tylko gdy lead dalej milczy (+ telefon, zgoda).</div>
+      <div class="text-[11px] text-zinc-600 mt-1.5">Krótki link doklejany jest automatycznie przy wysyłce. Leci ~24 h po ostatnim mailu, tylko gdy lead dalej milczy (+ telefon, zgoda).</div>
     </div>` : '';
 
   const reveals = (leadData.emails || []).filter((e) => /^reveal_/.test(e.kind) && e.sent_at);
@@ -1306,7 +1306,7 @@ async function renderLeadSms(sid) {
     ${rows.length ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Wysłane (${rows.length})</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-4">${sent}</div>` : '<div class="text-zinc-600 text-sm mb-4">Żaden SMS jeszcze nie wyszedł do tego leada.</div>'}
     ${planned ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Zaplanowane (reaktywacja odsłon)</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4">${planned}</div>` : ''}
     ${note}
-    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>SMS powrotu = 1 SMS sekwencji powrotu (~+50 h, gdy cisza). Reaktywacja odsłon leci ~24 h po mailu odsłony (po zielonym werdykcie). „Powrót: badanie/ekrany" idą, gdy ktoś wyjdzie z rozmowy w trakcie. Wszystko tylko 8–23.</div>`;
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>SMS powrotu = 1 SMS sekwencji powrotu (~24 h po ostatnim mailu, gdy cisza). Reaktywacja odsłon leci ~24 h po mailu odsłony (po zielonym werdykcie). „Powrót: badanie/ekrany" idą, gdy ktoś wyjdzie z rozmowy w trakcie. Wszystko tylko 8–23.</div>`;
 }
 function leadKosztyHTML() {
   const { usage, totalUsd } = leadData;
