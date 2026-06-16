@@ -45,7 +45,7 @@ const ENGAGE_WINDOW_DAYS = 3    // brak aktywności dłużej niż to → PAUZA k
 const LOST_WINDOW_DAYS = 7      // brak aktywności dłużej niż to → PRZEGRANY (twardy koniec, bez wznawiania)
 // Min. odstęp między DWOMA odsłonami tej samej sesji — bezpiecznik na „nadrabianie"
 // wielu zaległych due naraz (lead z wieczora/nocy: rynek/economics/gtm wpadają rano
-// w jedno okno 8–20). 90 min => 3 zaległe rozłożą się na ~3h rano, nie w serię i nie
+// w jedno okno 8–23). 90 min => 3 zaległe rozłożą się na ~3h rano, nie w serię i nie
 // na cały dzień. Świeży lead w godzinach ma odstępy 5h/5h, więc i tak nie kąsa.
 const REVEAL_MIN_GAP_MS = 90 * 60 * 1000
 const MAX_FIRES_PER_RUN = 12
@@ -587,9 +587,9 @@ Deno.serve(async (req) => {
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
     const hour = warsawHour()
     // SEED działa 24/7 (plan reveali istnieje od razu po werdykcie — panel i bramki
-    // działają też w nocy), ale WYSYŁKA maili i SMS tylko w oknie 8–20 PL (decyzja
-    // Tomka 2026-06-16). Lead z wieczora dostaje pierwszy mail rano, w kolejności.
-    const inWindow = hour >= 8 && hour < 20
+    // działają też w nocy), ale WYSYŁKA maili i SMS tylko w oknie 8–23 PL (cutoff 23,
+    // decyzja Tomka 2026-06-16 — łapie wieczorne odsłony, póki lead gorący).
+    const inWindow = hour >= 8 && hour < 23
 
     // 1) seed: zielone sesje bez planu
     const { data: green } = await supabase.from('spar_sessions')
@@ -599,7 +599,7 @@ Deno.serve(async (req) => {
       if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
     }
 
-    // Poza oknem 8–20: plan zaseedowany, ale nic nie wysyłamy do rana.
+    // Poza oknem 8–23: plan zaseedowany, ale nic nie wysyłamy do rana.
     if (!inWindow) return jsonResponse({ ok: true, quiet_hours: true, seeded: (green || []).length }, 200)
 
     // 2) przetwórz due reveale (pending/generating, due_at<=now) z bramką

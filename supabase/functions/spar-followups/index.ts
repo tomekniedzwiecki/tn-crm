@@ -27,7 +27,7 @@
 //      → naturalna sekwencja: najpierw strona, ~30 min później raport)
 //
 // Wysyłka przez send-email (Resend, format direct + sygnatura Tomka),
-// okno 8:00–20:00 Europe/Warsaw, max 30 maili/run.
+// okno 8:00–23:00 Europe/Warsaw, max 30 maili/run.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -575,10 +575,11 @@ Deno.serve(async (req) => {
 
     const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
-    // Okno wysyłek 8–20 PL dotyczy WSZYSTKICH maili (też paid_welcome);
-    // sync płatności (paid_at + lead won) działa niezależnie od pory
+    // Okno wysyłek 8–23 PL dotyczy WSZYSTKICH maili (też paid_welcome); cutoff 23
+    // (decyzja Tomka 2026-06-16) łapie wieczornych porzucaczy, póki pamiętają
+    // rozmowę. Sync płatności (paid_at + lead won) działa niezależnie od pory.
     const hour = warsawHour()
-    const inWindow = hour >= 8 && hour < 20
+    const inWindow = hour >= 8 && hour < 23
 
     // claim → send → (rollback przy błędzie). Zwraca true gdy mail poszedł.
     async function sendOnce(kind: string, s: SessionRow, prebuilt?: { subject: string; html: string }): Promise<boolean> {
@@ -709,7 +710,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Pozostałe follow-upy tylko w oknie 8–20 Europe/Warsaw ─────────────
+    // ── Pozostałe follow-upy tylko w oknie 8–23 Europe/Warsaw ─────────────
     if (!inWindow) {
       return jsonResponse({ ok: true, quiet_hours: true, sent }, 200)
     }
