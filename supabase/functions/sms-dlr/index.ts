@@ -15,6 +15,14 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const DELIVERED = new Set(['DELIVERED'])
 const FAILED = new Set(['UNDELIVERED', 'EXPIRED', 'REJECTED', 'UNKNOWN', 'ERROR', 'FAILED'])
+// SMSAPI wysyła status DLR albo TEKSTOWO (DELIVERED/UNDELIVERED/…), albo
+// NUMERYCZNIE (push-DLR — tak robi konto Tomka, stąd „404"). Mapujemy kody
+// SMSAPI na nazwy. Potwierdzone: 403=SENT (z dokumentacji SMSAPI), kody
+// sekwencyjne → 404=DELIVERED, 405=UNDELIVERED, 406=FAILED, 402=EXPIRED.
+const NUM_STATUS: Record<string, string> = {
+  '401': 'QUEUE', '402': 'EXPIRED', '403': 'SENT', '404': 'DELIVERED',
+  '405': 'UNDELIVERED', '406': 'FAILED', '407': 'REJECTED', '408': 'UNKNOWN', '409': 'QUEUE',
+}
 
 function ok(): Response { return new Response('ok', { status: 200 }) }
 
@@ -42,7 +50,9 @@ Deno.serve(async (req: Request) => {
     }
 
     const msgId = params.MsgId || params.msg_id || params.id || ''
-    const status = (params.status || params.STATUS || '').toString().toUpperCase()
+    const rawStatus = (params.status || params.STATUS || '').toString().toUpperCase()
+    // numeryczny kod SMSAPI → nazwa; tekstowy zostaje jak jest
+    const status = /^\d+$/.test(rawStatus) ? (NUM_STATUS[rawStatus] || rawStatus) : rawStatus
     if (!msgId) return ok()   // brak id — nic do zrobienia, ale potwierdź (bez retry)
 
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
