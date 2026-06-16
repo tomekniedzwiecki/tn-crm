@@ -16,6 +16,7 @@
 //   wszystkie akcje admina wymagają nagłówka x-admin-secret == SPAR_CRON_SECRET.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { REVEAL_PLAN, PANEL_VISITS_GATE } from "../_shared/spar-reveal-plan.ts";
 
 const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
 const CHECKOUT_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
@@ -38,20 +39,15 @@ const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${nam
 //    wysyłane TYLKO gdy lead realnie wszedł do panelu (last_panel_at) i nie
 //    zapłacił. Brak zaangażowania → nie palimy kasy.
 // Offsety w GODZINACH od werdyktu (sub-dobowe, by tanie maile nie szły naraz).
-const REVEAL_PLAN: { key: string; seq: number; h: number; emailKind: string }[] = [
-  { key: 'rynek', seq: 1, h: 0, emailKind: 'reveal_rynek' },
-  { key: 'economics', seq: 2, h: 5, emailKind: 'reveal_economics' },
-  { key: 'gtm', seq: 3, h: 10, emailKind: 'reveal_gtm' },
-  { key: 'landing', seq: 4, h: 24, emailKind: 'reveal_landing' },
-  { key: 'prototyp', seq: 5, h: 48, emailKind: 'reveal_prototyp' },
-]
-const GATED_KEYS = new Set(['landing', 'prototyp'])           // drogie: tylko przy zaangażowaniu
+// REVEAL_PLAN + bramki (gate per reveal) = JEDNO źródło w ../_shared/spar-reveal-plan.ts
+// (import wyżej). Tu już NIE definiujemy planu — rozjazd kopii był źródłem bugów.
 const ENGAGE_WINDOW_DAYS = 3    // brak aktywności dłużej niż to → PAUZA kolejnych odsłon (odwracalne)
 const LOST_WINDOW_DAYS = 7      // brak aktywności dłużej niż to → PRZEGRANY (twardy koniec, bez wznawiania)
-// Min. odstęp między DWOMA odsłonami tej samej sesji — twardy bezpiecznik na
-// wypadek „nadrabiania" wielu zaległych due naraz (cron stał, lead zaseedowany
-// wstecz). Offsety planu i tak są ≥5h, więc normalnie nie kąsa.
-const REVEAL_MIN_GAP_MS = 4 * 3600 * 1000
+// Min. odstęp między DWOMA odsłonami tej samej sesji — bezpiecznik na „nadrabianie"
+// wielu zaległych due naraz (lead z wieczora/nocy: rynek/economics/gtm wpadają rano
+// w jedno okno 8–20). 90 min => 3 zaległe rozłożą się na ~3h rano, nie w serię i nie
+// na cały dzień. Świeży lead w godzinach ma odstępy 5h/5h, więc i tak nie kąsa.
+const REVEAL_MIN_GAP_MS = 90 * 60 * 1000
 const MAX_FIRES_PER_RUN = 12
 
 const CORS: Record<string, string> = {
@@ -367,7 +363,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, created_at, is_test'
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
@@ -516,7 +512,7 @@ Deno.serve(async (req) => {
       const { data: reveals } = await supabase.from('spar_reveals').select('*').eq('session_id', sid).order('seq')
       const { data: emails } = await supabase.from('spar_emails').select('kind, sent_at, opened_at, clicked_at').eq('session_id', sid).like('kind', 'reveal_%')
       const engaged = s ? await isEngaged(supabase, s) : false
-      return jsonResponse({ session: s ? { email: s.email, name: s.name, last_panel_at: s.last_panel_at, last_user_at: s.last_user_at, verdict: s.verdict, paid_at: s.paid_at, engaged } : null, reveals: reveals || [], emails: emails || [], plan: REVEAL_PLAN }, 200)
+      return jsonResponse({ session: s ? { email: s.email, name: s.name, last_panel_at: s.last_panel_at, last_user_at: s.last_user_at, panel_visits: s.panel_visits, seen_landing_at: s.seen_landing_at, verdict: s.verdict, paid_at: s.paid_at, engaged } : null, reveals: reveals || [], emails: emails || [], plan: REVEAL_PLAN }, 200)
     }
 
     // ── action: seed ──
@@ -571,7 +567,10 @@ Deno.serve(async (req) => {
     // ── CRON RUN ──
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
     const hour = warsawHour()
-    if (hour < 8 || hour >= 20) return jsonResponse({ ok: true, quiet_hours: true }, 200)
+    // SEED działa 24/7 (plan reveali istnieje od razu po werdykcie — panel i bramki
+    // działają też w nocy), ale WYSYŁKA maili i SMS tylko w oknie 8–20 PL (decyzja
+    // Tomka 2026-06-16). Lead z wieczora dostaje pierwszy mail rano, w kolejności.
+    const inWindow = hour >= 8 && hour < 20
 
     // 1) seed: zielone sesje bez planu
     const { data: green } = await supabase.from('spar_sessions')
@@ -581,10 +580,13 @@ Deno.serve(async (req) => {
       if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
     }
 
+    // Poza oknem 8–20: plan zaseedowany, ale nic nie wysyłamy do rana.
+    if (!inWindow) return jsonResponse({ ok: true, quiet_hours: true, seeded: (green || []).length }, 200)
+
     // 2) przetwórz due reveale (pending/generating, due_at<=now) z bramką
     const nowIso = new Date().toISOString()
     const { data: due } = await supabase.from('spar_reveals')
-      .select('*').in('status', ['pending', 'generating']).lte('due_at', nowIso).order('due_at').limit(120)
+      .select('*').in('status', ['pending', 'generating']).lte('due_at', nowIso).order('due_at').order('seq').limit(120)
     let fired = 0
     const processed: Record<string, number> = {}
     const lostNow = new Set<string>()
@@ -598,15 +600,18 @@ Deno.serve(async (req) => {
       // ten przebieg (reveal zostaje pending/generating, ponowi się później).
       const xTouch = await recentNonRevealTouchMs(supabase, s.id)
       if (xTouch && Date.now() - xTouch < CROSS_CHANNEL_GAP_MS) continue
-      // TANIE (rynek/economics/gtm): wysyłamy zawsze (front-load, driver do panelu).
-      // GATED (landing/prototyp): DROGIE — generuj/wyślij TYLKO gdy lead realnie
-      // wszedł do panelu (last_panel_at). Brak zaangażowania → nie pal kasy; zostaw
-      // pending (wejdzie kiedyś → wygeneruje się). Twardo zimny po LOST_WINDOW →
-      // zamknij, żeby reveal nie wisiał w nieskończoność.
-      if (GATED_KEYS.has(rv.key)) {
+      // Bramka zaangażowania per reveal (plan w _shared): landing wymaga >=2
+      // ODRĘBNYCH wizyt w panelu (panel_visits), prototyp — obejrzenia strony
+      // sprzedażowej (seen_landing_at). Transakcyjne (rynek/economics/gtm) = 'none',
+      // wysyłane zawsze. Brak zaangażowania → zostaw pending (nie pal kasy na drogi
+      // artefakt); twardo zimny po LOST_WINDOW → zamknij, by reveal nie wisiał wiecznie.
+      const step = REVEAL_PLAN.find((p) => p.key === rv.key)
+      const gate = step ? step.gate : 'none'
+      if (gate !== 'none') {
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
-        if (!s.last_panel_at) continue   // nie wszedł do panelu → NIE generuj drogiego artefaktu
+        if (gate === 'visits2' && (s.panel_visits || 0) < PANEL_VISITS_GATE) continue       // <2 wizyt → czekaj
+        if (gate === 'seen_landing' && !s.seen_landing_at) continue                          // nie zobaczył strony → czekaj
       }
       // Anti-burst: jedna odsłona na sesję na przebieg + min. odstęp od poprzedniej
       // wysłanej (chroni przed serią maili przy nadrabianiu zaległych due).

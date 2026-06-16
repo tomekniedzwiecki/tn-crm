@@ -924,6 +924,7 @@ const LEAD_TABS = [
   { id: 'artefakty', icon: 'ph-package', label: 'Artefakty' },
   { id: 'sekwencja', icon: 'ph-flow-arrow', label: 'Sekwencja' },
   { id: 'maile', icon: 'ph-envelope', label: 'Maile' },
+  { id: 'sms', icon: 'ph-chat-circle-text', label: 'SMS' },
   { id: 'koszty', icon: 'ph-wallet', label: 'Koszty' },
   { id: 'akcje', icon: 'ph-sliders-horizontal', label: 'Akcje' },
 ];
@@ -1006,6 +1007,7 @@ function renderLeadTab() {
   else if (leadTab === 'artefakty') b.innerHTML = leadArtefaktyHTML();
   else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
   else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
+  else if (leadTab === 'sms') { b.innerHTML = leadSmsHTML(); renderLeadSms(leadData.s.id); }
   else if (leadTab === 'koszty') b.innerHTML = leadKosztyHTML();
   else if (leadTab === 'akcje') b.innerHTML = leadAkcjeHTML();
 }
@@ -1165,6 +1167,75 @@ function leadMaileHTML() {
       <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Dostarczony</th></tr></thead><tbody>
     ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.delivered_at)}</td></tr>`).join('')}
     </tbody></table></div>`;
+}
+// ── Zakładka SMS leada: wysłane (treść + doręczenie + klik) + zaplanowane ──
+function leadSmsHTML() {
+  return `<div class="max-w-3xl">
+    <div class="flex items-center justify-between mb-3">
+      <div class="text-sm text-white font-medium"><i class="ph ph-chat-circle-text mr-1.5 text-teal-400"></i>SMS-y leada</div>
+      <span class="text-[11px] text-zinc-500">nadawca: Niedzwiecki · okno 8–20</span>
+    </div>
+    <div id="lead-sms" class="text-sm text-zinc-500"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję SMS-y…</div>
+  </div>`;
+}
+function smsKindLabel(kind) {
+  if (kind === 'sms_badanie_back') return 'Powrót: badanie rynku';
+  if (kind === 'sms_ekrany_back') return 'Powrót: ekrany';
+  const k = String(kind || '').replace(/^reveal_/, '');
+  const M = { rynek: 'Reaktywacja: raport rynku', economics: 'Reaktywacja: opłacalność', gtm: 'Reaktywacja: plan sprzedaży', landing: 'Reaktywacja: strona', prototyp: 'Reaktywacja: prototyp' };
+  return M[k] || ('SMS: ' + esc(k));
+}
+function smsDelivBadge(x) {
+  if (x.delivered_at) return `<span class="text-emerald-400"><i class="ph ph-check-circle mr-0.5"></i>dostarczony ${fmtDate(x.delivered_at)}</span>`;
+  if (x.status === 'ERROR') return `<span class="text-rose-400"><i class="ph ph-x-circle mr-0.5"></i>błąd wysyłki</span>`;
+  if (x.dlr_status && /UNDELIV|EXPIR|REJEC|FAIL|UNKNOWN/.test(x.dlr_status)) return `<span class="text-rose-400"><i class="ph ph-warning-circle mr-0.5"></i>${esc(String(x.dlr_status).toLowerCase())}</span>`;
+  return `<span class="text-zinc-500"><i class="ph ph-paper-plane-tilt mr-0.5"></i>wysłany, oczekuje potwierdzenia</span>`;
+}
+async function renderLeadSms(sid) {
+  const tgt = $('lead-sms'); if (!tgt) return;
+  let rows = [], sess = null;
+  try {
+    const [{ data: srows }, { data: ss }] = await Promise.all([
+      supabaseClient.from('spar_sms').select('kind, message, phone, status, smsapi_id, delivered_at, dlr_status, clicked_at, created_at').eq('session_id', sid).order('created_at', { ascending: false }),
+      supabaseClient.from('spar_sessions').select('phone, sms_consent_at, sms_opt_out, paid_at').eq('id', sid).maybeSingle(),
+    ]);
+    rows = srows || []; sess = ss || null;
+  } catch (e) { tgt.innerHTML = `<div class="text-rose-400 text-sm">Błąd: ${esc(e.message)}</div>`; return; }
+  if (!leadData || leadData.s.id !== sid) return;
+
+  const sent = rows.map((x) => `
+    <div class="py-3 border-b border-white/[0.04] last:border-0">
+      <div class="flex items-center gap-2 flex-wrap mb-1">
+        <span class="text-sm text-white font-medium">${smsKindLabel(x.kind)}</span>
+        <span class="text-[11px] text-zinc-500">${fmtDate(x.created_at)}</span>
+        ${x.phone ? `<span class="text-[11px] text-zinc-500">→ ${esc(x.phone)}</span>` : ''}
+        ${x.clicked_at ? '<span class="text-[11px] text-emerald-400">· klik w link</span>' : ''}
+      </div>
+      <div class="text-[11px] mb-1.5">${smsDelivBadge(x)}</div>
+      <div class="text-xs text-zinc-300 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 whitespace-pre-wrap break-words">${esc(x.message || '—')}</div>
+    </div>`).join('');
+
+  const sentKinds = new Set(rows.map((r) => r.kind));
+  const hasContact = !!(sess && sess.phone && sess.sms_consent_at && !sess.sms_opt_out && !sess.paid_at);
+  const reveals = (leadData.emails || []).filter((e) => /^reveal_/.test(e.kind) && e.sent_at);
+  const planned = hasContact ? reveals.filter((e) => !sentKinds.has(e.kind)).map((e) => {
+    const due = new Date(new Date(e.sent_at).getTime() + 24 * 3600 * 1000);
+    return `<div class="py-2.5 border-b border-white/[0.04] last:border-0 flex items-center gap-2 flex-wrap">
+      <i class="ph ph-clock text-zinc-500"></i>
+      <span class="text-sm text-zinc-300">${smsKindLabel(e.kind)}</span>
+      <span class="text-[11px] text-zinc-500">poleci ~${fmtDate(due.toISOString())}, jeśli lead nie wróci do panelu (okno 8–20)</span>
+    </div>`;
+  }).join('') : '';
+
+  const note = !hasContact
+    ? `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-info mr-1"></i>${sess && sess.paid_at ? 'Lead zapłacił — SMS-y wstrzymane.' : (sess && sess.sms_opt_out ? 'Lead wypisał się z SMS (opt-out).' : 'Brak numeru lub zgody SMS — reaktywacja nie poleci.')}</div>`
+    : '';
+
+  tgt.innerHTML = `
+    ${rows.length ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Wysłane (${rows.length})</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-4">${sent}</div>` : '<div class="text-zinc-600 text-sm mb-4">Żaden SMS jeszcze nie wyszedł do tego leada.</div>'}
+    ${planned ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Zaplanowane (reaktywacja)</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4">${planned}</div>` : ''}
+    ${note}
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>Reaktywacja leci ~24 h po mailu odsłony, jeśli lead nie wróci do panelu (max 1 SMS/48 h, tylko 8–20). „Powrót: badanie/ekrany" idą, gdy ktoś wyjdzie z rozmowy w trakcie.</div>`;
 }
 function leadKosztyHTML() {
   const { usage, totalUsd } = leadData;
@@ -1448,7 +1519,7 @@ async function renderProjectDetail(sid, targetId) {
   const plan = data.plan || [];
   // SMS reaktywacyjne tej sesji (po kind = ten sam co mail odsłony)
   const smsByKind = {};
-  if (!DEMO) { try { const { data: srows } = await supabaseClient.from('spar_sms').select('kind, status, phone, created_at, clicked_at').eq('session_id', sid); (srows || []).forEach((x) => { smsByKind[x.kind] = x; }); } catch (smsErr) { console.error(smsErr); } }
+  if (!DEMO) { try { const { data: srows } = await supabaseClient.from('spar_sms').select('kind, message, status, phone, created_at, clicked_at, delivered_at, dlr_status').eq('session_id', sid); (srows || []).forEach((x) => { smsByKind[x.kind] = x; }); } catch (smsErr) { console.error(smsErr); } }
 
   const engaged = s && s.engaged;
   const head = `
@@ -1488,7 +1559,8 @@ async function renderProjectDetail(sid, targetId) {
         <button onclick="fireSend('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-[11px] transition" title="Wyślij testowo teraz (z pominięciem bramki)"><i class="ph ph-paper-plane-tilt"></i></button>`;
     const m = revMeta(p.key);
     const sx = smsByKind[p.emailKind];
-    const smsLine = sx ? `<div class="text-[11px] mt-0.5 ${sx.status === 'ERROR' ? 'text-rose-400' : 'text-teal-400'}"><i class="ph ph-chat-circle-text mr-1"></i>SMS ${sx.status === 'ERROR' ? 'błąd' : 'wysłany'} ${fmtDate(sx.created_at)}${sx.phone ? ' → ' + esc(sx.phone) : ''}${sx.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : ''}</div>` : '';
+    const smsDeliv = sx ? (sx.delivered_at ? ' · <span class="text-emerald-400">dostarczony</span>' : (sx.dlr_status && /UNDELIV|EXPIR|REJEC|FAIL|UNKNOWN/.test(sx.dlr_status) ? ' · <span class="text-rose-400">' + esc(String(sx.dlr_status).toLowerCase()) + '</span>' : (sx.status === 'ERROR' ? '' : ' · <span class="text-zinc-500">w drodze</span>'))) : '';
+    const smsLine = sx ? `<div class="text-[11px] mt-0.5 ${sx.status === 'ERROR' ? 'text-rose-400' : 'text-teal-400'}" title="${esc(sx.message || '')}"><i class="ph ph-chat-circle-text mr-1"></i>SMS ${sx.status === 'ERROR' ? 'błąd' : 'wysłany'} ${fmtDate(sx.created_at)}${sx.phone ? ' → ' + esc(sx.phone) : ''}${smsDeliv}${sx.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : ''} · <button onclick="switchLeadTab('sms')" class="underline underline-offset-2 hover:text-white">treść</button></div>` : '';
     return `
     <div class="flex items-start gap-3 py-3 border-b border-white/[0.04] last:border-0">
       <div class="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center shrink-0 ${m.tone}"><i class="ph ${m.icon}"></i></div>

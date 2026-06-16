@@ -16,6 +16,7 @@
 // zweryfikowanego JWT konta (Supabase Auth).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { REVEAL_PLAN, VISIT_DEBOUNCE_MS } from "../_shared/spar-reveal-plan.ts";
 
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
@@ -39,15 +40,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-// Sekwencja odkrywania (musi zgadzać się z planem w spar-drip): kadencja dni
-// od werdyktu (proxy: created_at). Panel bramkuje widoczność wg statusu odsłon.
-const REVEAL_PLAN: { key: string; seq: number; day: number; emailKind: string }[] = [
-  { key: 'rynek', seq: 1, day: 0, emailKind: 'reveal_rynek' }, // day 0 = mail od razu (rynek widoczny od razu w panelu)
-  { key: 'economics', seq: 2, day: 2, emailKind: 'reveal_economics' },
-  { key: 'landing', seq: 3, day: 4, emailKind: 'reveal_landing' },
-  { key: 'gtm', seq: 4, day: 5, emailKind: 'reveal_gtm' },
-  { key: 'prototyp', seq: 5, day: 7, emailKind: 'reveal_prototyp' }, // finał — najmocniejszy argument (kadencja skompresowana 2026-06-13)
-]
+// Sekwencja odkrywania: JEDNO źródło w ../_shared/spar-reveal-plan.ts (import wyżej),
+// wspólne z spar-drip. Eager-seed (action 'get') i cron-seed dają te same due_at (h).
 const MAX_FEEDBACK_PER_SESSION = 30
 const MAX_FEEDBACK_LENGTH = 1000
 const MAX_LIST_SESSIONS = 30
@@ -198,7 +192,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, last_panel_at, panel_visits, seen_landing_at, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -209,6 +203,19 @@ Deno.serve(async (req) => {
     // Panel istnieje tylko dla sesji, w których jest już projekt (karta lub brief)
     if (!session || (!session.problem_summary && !session.preview_brief)) {
       return jsonResponse({ error: 'brak_projektu' }, 404, cors)
+    }
+
+    // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do
+    //    zakładki 'strona' albo otworzył landing). Bramka prototypu (plan w _shared).
+    //    Stempluj RAZ i tylko gdy strona realnie istnieje (jest co oglądać) — pusta
+    //    zakładka nie może przedwcześnie odblokować prototypu. Idempotentne, lekkie.
+    if (action === 'seen_landing') {
+      if (session.landing_url && !session.seen_landing_at) {
+        const { error: slErr } = await supabase.from('spar_sessions')
+          .update({ seen_landing_at: new Date().toISOString() }).eq('id', sessionId)
+        if (slErr) console.error('[spar-project] seen_landing stamp error:', slErr)
+      }
+      return jsonResponse({ ok: true, seen: !!session.landing_url }, 200, cors)
     }
 
     if (action === 'feedback') {
@@ -302,15 +309,26 @@ Deno.serve(async (req) => {
     const isPaid = !!session.paid_at
     let revealsMap: Record<string, string> = {}
     if (action === 'get') {
-      supabase.from('spar_sessions').update({ last_panel_at: new Date().toISOString() }).eq('id', sessionId)
-        .then(() => {}, (e: unknown) => console.error('[spar-project] last_panel_at stamp error:', e))
+      // Wejście do panelu = sygnał zaangażowania. last_panel_at stempluj ZAWSZE
+      // (najświeższy dotyk), ale panel_visits inkrementuj tylko gdy to ODRĘBNA wizyta
+      // (poprzednie wejście >30 min temu lub brak) — inaczej polling i odświeżenia
+      // („get" leci wielokrotnie podczas generowania) zawyżałyby licznik. Bramka
+      // landing (strona sprzedażowa) wymaga panel_visits >= 2.
+      const lastPanelMs = session.last_panel_at ? Date.parse(session.last_panel_at as string) : 0
+      const nowMs = Date.now()
+      const isNewVisit = !lastPanelMs || (nowMs - lastPanelMs) > VISIT_DEBOUNCE_MS
+      const visitPatch: Record<string, unknown> = { last_panel_at: new Date(nowMs).toISOString() }
+      if (isNewVisit) visitPatch.panel_visits = ((session.panel_visits as number) || 0) + 1
+      supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
+        .then(() => {}, (e: unknown) => console.error('[spar-project] panel visit stamp error:', e))
       if (isGreen && !isPaid) {
         // Eager-seed planu (idempotentne) — żeby bramkowanie działało od razu po
-        // werdykcie, nie dopiero po przebiegu crona dripa.
+        // werdykcie, nie dopiero po przebiegu crona dripa. Kadencja w GODZINACH (h)
+        // z _shared/spar-reveal-plan.ts (jedno źródło z spar-drip).
         const verdictAt = Date.parse(session.created_at as string) || Date.now()
         const seedRows = REVEAL_PLAN.map((r) => ({
           session_id: sessionId, key: r.key, seq: r.seq, email_kind: r.emailKind,
-          due_at: new Date(verdictAt + r.day * 86400000).toISOString(), status: 'pending',
+          due_at: new Date(verdictAt + r.h * 3600000).toISOString(), status: 'pending',
         }))
         await supabase.from('spar_reveals').upsert(seedRows, { onConflict: 'session_id,key', ignoreDuplicates: true })
       }

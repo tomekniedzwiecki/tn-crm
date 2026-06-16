@@ -91,6 +91,11 @@ Deno.serve(async (req: Request) => {
       params.set('format', 'json')
       params.set('normalize', '1')        // transliteruj ewentualne PL znaki → GSM-7 (taniej, 1 znak = 1)
       params.set('encoding', 'utf-8')
+      // Raport doręczenia (DLR): SMSAPI wywoła sms-dlr ze statusem doręczenia
+      // (token w URL autoryzuje callback). Tylko realna wysyłka — test nie generuje
+      // raportu. SUPABASE_URL jest automatycznie w env edge functions.
+      const SB_URL = Deno.env.get('SUPABASE_URL')
+      if (!test && SB_URL && SECRET) params.set('notify_url', `${SB_URL}/functions/v1/sms-dlr?token=${encodeURIComponent(SECRET)}`)
       if (test) params.set('test', '1')
 
       const r = await fetch(`${SMSAPI_BASE}/sms.do`, {
