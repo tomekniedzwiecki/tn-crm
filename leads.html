@@ -1833,7 +1833,10 @@
                     .limit(10)
             ]);
 
-            const leadsData = (leadsResult.data || []).filter(l => (l.lead_source || '') !== 'stworze'); // Stworzę → /tn-aplikacje
+            // Wyszukiwarka znajduje WSZYSTKICH (też leady ze Stworzę) — lookup po
+            // numerze/e-mailu nie może prowadzić w ślepy zaułek. Odchudzona jest tylko
+            // lista (loadLeads) i eksport; tu celowo BEZ filtra lead_source.
+            const leadsData = leadsResult.data || [];
             const campaignsData = campaignsResult.data || [];
 
             // Filter out campaigns that are already leads
