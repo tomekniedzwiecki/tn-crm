@@ -34,6 +34,12 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/'
 const MAX_PER_RUN = 30
 
+// Sekwencja powrotu (rozmowa W TOKU): 3 maile, progi w GODZINACH od ostatniej
+// aktywności. Treść generowana RAZ (jeden prompt → 3 maile) i zapisana w
+// spar_abandoned_emails jako „do wysłania"; cron wysyła dokładnie zapisaną treść.
+const ABANDON_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3']
+const ABANDON_THRESH_H = [3, 24, 48]
+
 const CORS: Record<string, string> = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-admin-secret, x-cron-secret',
@@ -231,9 +237,25 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
 // Cel maila + dane (do GPT) dla kindów, które warto personalizować.
 function followupBrief(kind: string, s: SessionRow): { goal: string; facts: string } {
   const n = toolName(s)
-  if (kind === 'abandoned_chat') return { goal: 'Osoba zaczęła projektować z Twoim AI pomysł na własne narzędzie i PRZERWAŁA w połowie (jeszcze przed werdyktem). To pierwszy, lekki sygnał ~3h później. Jeśli masz FRAGMENT ROZMOWY — nawiąż do tego, na czym konkretnie skończyliście. Napisz krótko, ciepło, bez nacisku: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od karty projektu i pierwszych ekranów narzędzia (wszystko za darmo). Zachęć delikatnie do powrotu. Jeśli nazwa narzędzia jest generyczna („Twoje narzędzie"), pisz o „Twoim pomyśle".', facts: `narzędzie/temat: ${n}` }
-  if (kind === 'abandoned_chat_2') return { goal: 'Drugi follow-up (~następnego dnia, wciąż cisza). INNY kąt niż pierwszy: konkretnie przypomnij, CO ta osoba dostaje ZA DARMO, jeśli dokończy rozmowę — sprawdzenie jej rynku i konkurencji na żywo, kartę projektu i pierwsze ekrany jej narzędzia. To realna robota, którą normalnie się zleca i płaci. Ustaw to jako JEJ korzyść („to Ty na tym zyskujesz"), nie jako Twoją prośbę. Jeśli masz fragment rozmowy, nawiąż do jej pomysłu. Spokojnie, bez nacisku, bez „wróć proszę".', facts: `narzędzie/temat: ${n}` }
-  if (kind === 'abandoned_chat_3') return { goal: 'Trzeci i OSTATNI follow-up tego wątku (~2 dni, cisza). Krótko i z godnością: zostawiasz projekt zapisany, drzwi otwarte, decyzja należy do niej. Możesz wpleść JEDNO wciągające pytanie nawiązujące do jej pomysłu z rozmowy, które naturalnie zachęci do powrotu. Zero desperacji, zero wyrzutów — to ma być lekka, ostatnia wiadomość. Zostaw link do powrotu.', facts: `narzędzie/temat: ${n}` }
+  // ── ABANDONED (rozmowa W TOKU, przed werdyktem): 3 maile = eskalacja
+  //    argumentów-artefaktów. Artefakty (rynek, opłacalność, strona, plan
+  //    sprzedaży, KLIKALNY prototyp) JESZCZE NIE ISTNIEJĄ — to NAGRODA za
+  //    dokończenie rozmowy, NIE coś, co „czeka w panelu" (guard w `links`
+  //    pilnuje, by model nie napisał, że już jest gotowe). Każdy mail wyciąga
+  //    INNY mocny argument: #1 kontekst+lekki haczyk, #2 co dostajesz za darmo,
+  //    #3 najmocniejszy pojedynczy hak = klikalny prototyp. ──
+  if (kind.startsWith('abandoned_chat')) {
+    const k = s.problem_summary as Record<string, unknown> | null
+    const f = (key: string) => (k && typeof k[key] === 'string') ? k[key] as string : ''
+    const abFacts = [`narzędzie/temat: ${n}`, f('dla_kogo') && `dla kogo: ${f('dla_kogo')}`, f('problem') && `problem: ${f('problem')}`, f('dzisiejsze_obejscie') && `jak radzą dziś: ${f('dzisiejsze_obejscie')}`].filter(Boolean).join('; ')
+    // Wspólne reguły serii: zawsze nawiąż do TEGO, co realnie padło (fragment
+    // rozmowy), zawsze nieś JEDEN mocny argument-artefakt, mów o artefaktach
+    // jako o tym, co SIĘ ZBUDUJE / co odblokuje po dokończeniu — NIE że już jest.
+    const wspolne = ' Nawiąż do tego, na czym KONKRETNIE skończyliście (z fragmentu rozmowy) i jednym zdaniem przypomnij, czym jest to narzędzie i jaką niesie obietnicę. Artefakty opisuj jako to, co SIĘ ZBUDUJE / co odblokuje, KIEDY dokończy rozmowę — NIGDY że już jest gotowe albo „czeka w panelu". Jeśli nazwa jest generyczna („Twoje narzędzie") — pisz o „Twoim pomyśle". Bez nacisku i „wróć proszę".'
+    if (kind === 'abandoned_chat') return { goal: 'PIERWSZY, lekki sygnał (~3h po przerwaniu, jeszcze przed werdyktem). Krótko i ciepło: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od dokończenia. JEDEN lekki, mocny haczyk: zaraz po dokończeniu sprawdzam na żywo TWÓJ rynek i konkurencję (realnie, w internecie). To wszystko za darmo.' + wspolne, facts: abFacts }
+    if (kind === 'abandoned_chat_2') return { goal: 'DRUGI follow-up (~następnego dnia, wciąż cisza). INNY kąt niż pierwszy: konkretnie wylicz, CO ta osoba DOSTAJE ZA DARMO, kiedy dokończy rozmowę — wymień 2–3 artefakty po imieniu: sprawdzony NA ŻYWO rynek i konkurencja (realni gracze z cenami, luka do zajęcia), policzona opłacalność (czy miesięczny abonament się spina), działająca strona sprzedażowa narzędzia. To realna robota, którą normalnie się zleca i płaci. Ustaw to jako JEJ korzyść („to Ty na tym zyskujesz"), nie Twoją prośbę.' + wspolne, facts: abFacts }
+    return { goal: 'TRZECI i OSTATNI follow-up (~2 dni, cisza). Zagraj NAJMOCNIEJSZYM pojedynczym argumentem: KLIKALNY prototyp narzędzia — działająca apka (nie obrazek), w której kliknie i sprawdzi swój pomysł od środka — to się zbuduje, gdy dokończy rozmowę. Z godnością: projekt zapisany, drzwi otwarte, decyzja należy do niej. Wpleć JEDNO wciągające pytanie nawiązujące do jej pomysłu z rozmowy. Zero desperacji, zero wyrzutów — lekka, ostatnia wiadomość.' + wspolne, facts: abFacts }
+  }
   if (kind.startsWith('nurture_')) {
     const k = s.problem_summary as Record<string, unknown> | null
     const f = (key: string) => (k && typeof k[key] === 'string') ? k[key] as string : ''
@@ -322,17 +344,100 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
 }
 
 // GPT dla sensownych kindów (abandoned/last_call/welcome) + log kosztu; reszta statyczna.
-async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow): Promise<{ subject: string; html: string }> {
+// logUsage=false → PODGLĄD w adminie: generuj treść, ale NIE zaliczaj kosztu do
+// statystyk (inaczej każde otwarcie podglądu zawyżałoby koszt rozmowy).
+async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow, logUsage = true): Promise<{ subject: string; html: string }> {
   const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome']
   if (GPT_KINDS.includes(kind) || kind.startsWith('nurture_')) {
     const convo = kind.startsWith('abandoned_chat') ? await fetchConvo(supabase, s.id) : ''
     const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s), convo)
     if (gen) {
-      if (gen.usage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'followup_email', kind } }) } catch (uErr) { console.error('[spar-followups] email usage:', uErr) } }
+      if (gen.usage && logUsage) { try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: gen.usage.i, cached_tokens: gen.usage.c, output_tokens: gen.usage.o, cost_usd: (Math.max(0, gen.usage.i - gen.usage.c) * p.i + gen.usage.c * p.c + gen.usage.o * p.o) / 1_000_000, meta: { view: 'followup_email', kind } }) } catch (uErr) { console.error('[spar-followups] email usage:', uErr) } }
       return { subject: gen.subject, html: gen.html }
     }
   }
   return staticEmail(kind, s)
+}
+
+// System prompt dla CAŁEJ trójki w jednym strzale (taniej niż 3 osobne calle).
+const SEQUENCE_SYSTEM = `${SITUATION}
+
+PISZESZ JEDNĄ SEKWENCJĘ 3 MAILI „powrotu do rozmowy" do TEJ SAMEJ osoby (rozmowa z Twoim AI urwała się przed werdyktem). Mają iść po sobie w odstępie ~kilku godzin / dnia: mail 2 to kolejna próba, mail 3 jest ostatni. KAŻDY ma INNY mocny argument (wg swojego CELU) — NIE powtarzaj tych samych zdań ani tego samego argumentu między mailami.
+JAK MASZ PISAĆ (każdy mail):
+Jesteś Tomkiem Niedźwieckim, piszesz krótko i OSOBIŚCIE — jakbyś usiadł, spojrzał na JEGO pomysł i napisał z palca w skrzynce. Nie marketing.
+ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, emoji, clickbaitu, przesady. Wpleć 1 KONKRET z jego pomysłu/rozmowy (nazwa, szczegół, branża) — nie ogólnik. NIE podpisuj się ani nie dawaj stopki (dokleja się automatycznie). Bez nagłówków, list i buttonów.
+JĘZYK: to osoby dopiero wchodzące w biznes — ZERO żargonu (CAC, LTV, churn, MRR, retencja, konwersja…). Liczby tłumacz po ludzku.
+TON: nie błagaj, nie naciskaj, zero „wróć proszę". Nawiąż do tego, co realnie padło w rozmowie (jego pomysł, jego słowa) — ma być czuć ciąg dalszy JEGO wątku, nie masowy mail. Nie cytuj dosłownie ani nie streszczaj punkt po punkcie.
+ARTEFAKTY (rynek, opłacalność, strona, plan sprzedaży, KLIKALNY prototyp) JESZCZE NIE ISTNIEJĄ — to NAGRODA za dokończenie rozmowy. Opisuj je jako to, co SIĘ ZBUDUJE / odblokuje, KIEDY dokończy — NIGDY że już są albo „czekają w panelu".
+LINKI: w KAŻDYM mailu wstaw DOKŁADNIE RAZ [naturalny tekst](LINK_VIEW) = powrót do ROZMOWY w to samo miejsce (NIE gotowy projekt). Nie wymyślaj adresów.
+Zwróć WYŁĄCZNIE JSON: {"emails":[{"seq":1,"subject":...,"body":...},{"seq":2,...},{"seq":3,...}]}. subject: krótki (≤~55 zn.), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
+
+// Jeden GPT-call → 3 maile sekwencji powrotu. Zwraca [{kind,seq,subject,html}] (lub null).
+// deno-lint-ignore no-explicit-any
+async function generateAbandonedSequence(supabase: ReturnType<typeof createClient>, s: SessionRow, convo: string): Promise<{ kind: string; seq: number; subject: string; html: string }[] | null> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey) return null
+  const b = s.preview_brief || {}
+  const tn = toolName(s)
+  const hasName = !!tn && tn !== 'Twoje narzędzie'
+  const facts = followupBrief('abandoned_chat', s).facts
+  const ctx = [
+    hasName ? `Narzędzie: ${tn}` : 'Pomysł nie ma JESZCZE nazwy — NIE wymyślaj nazwy i NIE używaj „Twoje narzędzie" jako nazwy własnej. Pisz „Twój pomysł" albo opisz go po dziedzinie z rozmowy.',
+    typeof b.opis === 'string' && b.opis && `Opis: ${b.opis}`,
+    typeof b.dla_kogo === 'string' && b.dla_kogo && `Dla kogo: ${b.dla_kogo}`,
+    facts && `Dane: ${facts}`,
+    firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
+    convo && `FRAGMENT ROZMOWY (ostatnie wiadomości — nawiąż do tego konkretnie):\n${convo}`,
+  ].filter(Boolean).join('\n')
+  const zadania = ABANDON_KINDS.map((k, i) => `MAIL ${i + 1} (${k}):\n${followupBrief(k, s).goal}`).join('\n\n')
+  const user = `KONTEKST:\n${ctx}\n\nNAPISZ 3 MAILE WG CELÓW (każdy inny mocny argument):\n\n${zadania}`
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: SEQUENCE_SYSTEM }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 2400, reasoning_effort: 'low' }),
+    })
+    if (!res.ok) { console.error('[spar-followups] sequence openai', res.status); return null }
+    const data = await res.json()
+    const u = data?.usage || {}
+    // log kosztu RAZ (cała trójka jednym callem)
+    try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('spar_usage').insert({ session_id: s.id, kind: 'email', model: OPENAI_MODEL, input_tokens: u.prompt_tokens || 0, cached_tokens: u.prompt_tokens_details?.cached_tokens || 0, output_tokens: u.completion_tokens || 0, cost_usd: (Math.max(0, (u.prompt_tokens || 0) - (u.prompt_tokens_details?.cached_tokens || 0)) * p.i + (u.prompt_tokens_details?.cached_tokens || 0) * p.c + (u.completion_tokens || 0) * p.o) / 1_000_000, meta: { view: 'abandoned_sequence' } }) } catch (uErr) { console.error('[spar-followups] sequence usage:', uErr) }
+    const obj = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const arr = Array.isArray(obj.emails) ? obj.emails : []
+    const out: { kind: string; seq: number; subject: string; html: string }[] = []
+    for (let i = 0; i < ABANDON_KINDS.length; i++) {
+      const kind = ABANDON_KINDS[i]
+      const e = arr.find((x: Record<string, unknown>) => Number(x.seq) === i + 1) || arr[i]
+      const subject = e && typeof e.subject === 'string' && e.subject.trim() ? e.subject.trim() : null
+      const body = e && typeof e.body === 'string' && e.body.trim() ? e.body.trim() : null
+      if (!subject || !body) return null
+      out.push({ kind, seq: i + 1, subject, html: mdToHtml(body, followupView(kind, s), null, 'Wróć do rozmowy tutaj') })
+    }
+    return out
+  } catch (e) { console.error('[spar-followups] sequence gen error:', e instanceof Error ? e.message : String(e)); return null }
+}
+
+// Pre-generuj i ZAPISZ całą trójkę (idempotentnie, raz na sesję). GPT jednym
+// strzałem; gdy padnie — statyczny fallback (zawsze coś zapiszemy „do wysłania").
+// scheduled_at = orientacyjna godzina (last_user_at + próg) do pokazania w adminie.
+async function ensureAbandonedRows(supabase: ReturnType<typeof createClient>, s: SessionRow): Promise<void> {
+  const { data: ex } = await supabase.from('spar_abandoned_emails').select('id').eq('session_id', s.id).limit(1)
+  if (ex && ex.length) return
+  const convo = await fetchConvo(supabase, s.id)
+  let seq = await generateAbandonedSequence(supabase, s, convo)
+  if (!seq) seq = ABANDON_KINDS.map((k, i) => { const e = staticEmail(k, s); return { kind: k, seq: i + 1, subject: e.subject, html: e.html } })
+  const base = s.last_user_at ? Date.parse(s.last_user_at) : Date.now()
+  const rows = seq.map((e) => ({
+    session_id: s.id, kind: e.kind, seq: e.seq, subject: e.subject, html: e.html,
+    status: 'pending', scheduled_at: new Date(base + ABANDON_THRESH_H[e.seq - 1] * 3600000).toISOString(),
+  }))
+  const { error } = await supabase.from('spar_abandoned_emails').upsert(rows, { onConflict: 'session_id,kind', ignoreDuplicates: true })
+  if (error) console.error('[spar-followups] ensureAbandonedRows insert:', error)
+  // Reconcile z sesjami „w locie": kindy wysłane jeszcze starą drogą (są w
+  // spar_emails) oznacz od razu jako 'sent', żeby nie wisiały jako „do wysłania".
+  const { data: alreadySent } = await supabase.from('spar_emails').select('kind, sent_at').eq('session_id', s.id).in('kind', ABANDON_KINDS)
+  for (const e of (alreadySent || []) as { kind: string; sent_at: string | null }[]) {
+    await supabase.from('spar_abandoned_emails').update({ status: 'sent', sent_at: e.sent_at }).eq('session_id', s.id).eq('kind', e.kind).neq('status', 'sent')
+  }
 }
 
 Deno.serve(async (req) => {
@@ -377,6 +482,52 @@ Deno.serve(async (req) => {
       const kinds = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'verdict_no_payment', 'verdict_last_call', 'landing_ready', 'raport_ready', 'paid_welcome']
       const templates = await Promise.all(kinds.map(async (k) => { const { subject, html } = staticEmail(k, sample); return { group: 'followup', kind: k, subject, html: await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, null), disabled: DISABLED.includes(k) } }))
       return jsonResponse({ templates }, 200)
+    }
+
+    // ── action: preview_session (ADMIN — podgląd treści follow-upa dla
+    //    konkretnego leada). Dla sekwencji powrotu (abandoned_chat*) zwraca
+    //    DOKŁADNIE zapisaną treść (spar_abandoned_emails) — 1:1 z tym, co
+    //    pójdzie/poszło. Dla pozostałych (nurture itd., nie cache'owane) —
+    //    odtwarza na żywo (bez wysyłki, bez logowania kosztu). ──
+    if (body.action === 'preview_session') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const sid = ((body as { sessionId?: string }).sessionId || '').trim()
+      const kind = ((body as { kind?: string }).kind || '').trim()
+      if (!sid || !kind) return jsonResponse({ error: 'brak_parametrow' }, 400)
+      const { data: s } = await supabase.from('spar_sessions')
+        .select('id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, created_at')
+        .eq('id', sid).maybeSingle()
+      if (!s) return jsonResponse({ error: 'brak_sesji' }, 404)
+      // sekwencja powrotu → zapisana treść (bez regeneracji)
+      if (kind.startsWith('abandoned_chat')) {
+        const { data: row } = await supabase.from('spar_abandoned_emails').select('subject, html, status, scheduled_at, sent_at').eq('session_id', sid).eq('kind', kind).maybeSingle()
+        if (row) {
+          const r = row as { subject: string; html: string; status: string; scheduled_at: string | null; sent_at: string | null }
+          const finalHtml = await withSignature(SUPABASE_URL, SERVICE_KEY, r.subject, r.html, (s.email as string | null) || null)
+          return jsonResponse({ ok: true, kind, stored: true, status: r.status, scheduled_at: r.scheduled_at, sent_at: r.sent_at, preview: { subject: r.subject, html: finalHtml, to: s.email } }, 200)
+        }
+        // brak zapisanego wiersza (np. lead jeszcze przed progiem 3h) — odtwórz podgląd
+      }
+      const { subject, html } = await getEmailFor(supabase, kind, s as unknown as SessionRow, false)
+      const finalHtml = await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html, (s.email as string | null) || null)
+      return jsonResponse({ ok: true, kind, stored: false, preview: { subject, html: finalHtml, to: s.email } }, 200)
+    }
+
+    // ── action: generate_abandoned (ADMIN — wymuś pre-generację sekwencji
+    //    powrotu TERAZ, bez czekania na próg 3h/okno). Idempotentne: jeśli
+    //    wiersze już są, zwraca istniejące. Po wygenerowaniu zwraca całą trójkę
+    //    (status + planowana godzina + treść) do podglądu w karcie leada. ──
+    if (body.action === 'generate_abandoned') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const sid = ((body as { sessionId?: string }).sessionId || '').trim()
+      if (!sid) return jsonResponse({ error: 'brak_parametrow' }, 400)
+      const { data: s } = await supabase.from('spar_sessions')
+        .select('id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, created_at')
+        .eq('id', sid).maybeSingle()
+      if (!s) return jsonResponse({ error: 'brak_sesji' }, 404)
+      await ensureAbandonedRows(supabase, s as unknown as SessionRow)
+      const { data: rows } = await supabase.from('spar_abandoned_emails').select('kind, seq, subject, status, scheduled_at, sent_at').eq('session_id', sid).order('seq')
+      return jsonResponse({ ok: true, rows: rows || [] }, 200)
     }
 
     // ── action: stats (ADMIN — skuteczność lejka abandoned + SMS) ─────────
@@ -430,7 +581,7 @@ Deno.serve(async (req) => {
     const inWindow = hour >= 8 && hour < 20
 
     // claim → send → (rollback przy błędzie). Zwraca true gdy mail poszedł.
-    async function sendOnce(kind: string, s: SessionRow): Promise<boolean> {
+    async function sendOnce(kind: string, s: SessionRow, prebuilt?: { subject: string; html: string }): Promise<boolean> {
       if (!s.email || mailBudget <= 0) return false
       const { data: claim, error: claimErr } = await supabase
         .from('spar_emails')
@@ -439,7 +590,9 @@ Deno.serve(async (req) => {
       if (claimErr) { console.error('[spar-followups] claim error:', claimErr); return false }
       if (!claim || !claim.length) return false // już wysłany wcześniej
 
-      const { subject, html } = await getEmailFor(supabase, kind, s)
+      // prebuilt = treść wcześniej WYGENEROWANA i ZAPISANA (sekwencja powrotu):
+      // wysyłamy dokładnie ją, bez regeneracji. Inaczej (nurture itd.) — getEmailFor.
+      const { subject, html } = prebuilt || await getEmailFor(supabase, kind, s)
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
@@ -585,9 +738,26 @@ Deno.serve(async (req) => {
     //        kolejności, tylko później. Bramka MIĘDZY-KANAŁOWA: ≥10h od
     //        ostatniego dotyku (mail LUB SMS), żeby nie przeciążać. Maile są
     //        personalizowane pod realny fragment rozmowy (fetchConvo w GPT). ──
-    const ABANDON_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3']
-    const ABANDON_THRESH_H = [3, 24, 48]
     const CHANNEL_GAP_MS = 10 * 3600 * 1000
+
+    // ── 2a) STOP sekwencji powrotu: lead, który doszedł do ZIELONEGO werdyktu
+    //   (wrócił i dokończył), zapłacił albo ma ręczne wstrzymanie — nie dostaje
+    //   już maili abandoned (pielęgnację przejmuje drip odkrywania). Domknij jego
+    //   niewysłane wiersze jako 'cancelled'. Zbiór pending jest mały (tylko żywe
+    //   sekwencje), więc to tanie. ──
+    const { data: pend } = await supabase.from('spar_abandoned_emails').select('session_id').eq('status', 'pending')
+    const pendIds = [...new Set(((pend || []) as { session_id: string }[]).map((r) => r.session_id))]
+    if (pendIds.length) {
+      const { data: ss } = await supabase.from('spar_sessions').select('id, verdict, paid_at, sequence_cancelled_at').in('id', pendIds)
+      const stopIds = ((ss || []) as { id: string; verdict: string | null; paid_at: string | null; sequence_cancelled_at: string | null }[])
+        .filter((x) => x.verdict === 'zielony' || x.paid_at || x.sequence_cancelled_at).map((x) => x.id)
+      if (stopIds.length) await supabase.from('spar_abandoned_emails').update({ status: 'cancelled' }).in('session_id', stopIds).eq('status', 'pending')
+    }
+
+    // ── 2b) Sekwencja powrotu (rozmowa W TOKU): pre-generuj trójkę jednym
+    //   promptem i ZAPISZ jako „do wysłania", potem wyślij DOKŁADNIE zapisaną
+    //   treść w progach ~3h/24h/48h od ostatniej aktywności. Kolejność wymusza
+    //   liczba już wysłanych (emailsSent). Bramka międzykanałowa ≥10h. ──
     const { data: abandoned, error: abErr } = await supabase
       .from('spar_sessions')
       .select(SESSION_COLS)
@@ -603,6 +773,8 @@ Deno.serve(async (req) => {
     const abandonRows = (abandoned || []) as SessionRow[]
     const abTouches = await loadTouches(supabase, abandonRows.map((s) => s.id))
     for (const s of abandonRows) {
+      // pre-generacja całej trójki (raz na sesję) — od razu widoczne w adminie
+      await ensureAbandonedRows(supabase, s)
       const t = abTouches.get(s.id)
       const emailsSent = ABANDON_KINDS.filter((k) => t?.kinds.has(k)).length
       if (emailsSent >= ABANDON_KINDS.length) continue // wszystkie 3 już poszły
@@ -611,9 +783,16 @@ Deno.serve(async (req) => {
       if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
       // Bramka reputacji: NIE dosyłaj #3 (ostatniego), jeśli ani #1, ani #2 nie
       // zostały DOSTARCZONE — martwy/odbity adres, 3. mail tylko psuje reputację.
-      // (Otwarcia są wyłączone/niewiarygodne — opieramy się na pewnym `delivered_at`.)
       if (emailsSent === 2 && !t?.delivered.has('abandoned_chat') && !t?.delivered.has('abandoned_chat_2')) continue
-      await sendOnce(ABANDON_KINDS[emailsSent], s)
+      const kind = ABANDON_KINDS[emailsSent]
+      // wczytaj ZAPISANĄ treść (pending) i wyślij dokładnie ją
+      const { data: row } = await supabase.from('spar_abandoned_emails').select('subject, html, status').eq('session_id', s.id).eq('kind', kind).maybeSingle()
+      if (!row || row.status === 'cancelled') continue
+      const ok = await sendOnce(kind, s, { subject: row.subject as string, html: row.html as string })
+      if (ok) {
+        const { data: em } = await supabase.from('spar_emails').select('resend_id').eq('session_id', s.id).eq('kind', kind).maybeSingle()
+        await supabase.from('spar_abandoned_emails').update({ status: 'sent', sent_at: new Date().toISOString(), resend_id: (em as { resend_id: string | null } | null)?.resend_id || null }).eq('session_id', s.id).eq('kind', kind)
+      }
     }
 
     // ── 2b) SMS POWROTU (gated SMS_ENABLED) — odpalany REALNYM sygnałem wyjścia:

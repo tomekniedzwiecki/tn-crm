@@ -945,16 +945,17 @@ async function openSession(id) {
   renderLeadTabs();
   $('lead-body').innerHTML = '<div class="text-zinc-500 text-sm"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję kartę leada…</div>';
 
-  const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }] = await Promise.all([
+  const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }, { data: abandoned }] = await Promise.all([
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
     supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
+    supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
-  leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], art: art || {}, protoUrl, totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
+  leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], abandoned: abandoned || [], art: art || {}, protoUrl, totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
   leadData.s.sequence_cancelled_at = (art && art.sequence_cancelled_at) || null;
   renderLeadTab();
 }
@@ -1162,20 +1163,51 @@ function leadSekwencjaHTML() {
     <div id="lead-drip" class="text-sm text-zinc-500">${can ? '<i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…' : 'Sekwencja odsłon rusza po zielonym werdykcie. Wcześniej (rozmowa w toku) lecą tylko przypominające follow-upy — „Wstrzymaj sekwencję" zatrzymuje też je.'}</div>
   </div>`;
 }
+const ABANDON_KIND_LABEL = { abandoned_chat: 'Powrót #1 (~3h)', abandoned_chat_2: 'Powrót #2 (~24h)', abandoned_chat_3: 'Powrót #3 (~48h)' };
+function abandonStatusBadge(r) {
+  if (r.status === 'sent') return `<span class="text-emerald-400 text-[11px]"><i class="ph ph-check-circle mr-0.5"></i>wysłany ${fmtDate(r.sent_at)}</span>`;
+  if (r.status === 'cancelled') return `<span class="text-zinc-500 text-[11px]"><i class="ph ph-prohibit mr-0.5"></i>anulowany (zielony werdykt / wrócił)</span>`;
+  return `<span class="text-amber-400 text-[11px]"><i class="ph ph-clock mr-0.5"></i>do wysłania ~${fmtDate(r.scheduled_at)}${r.seq > 1 ? ', jeśli nie wróci' : ''}</span>`;
+}
+// Blok „Sekwencja powrotu" — 3 maile abandoned, PRE-WYGENEROWANE i zapisane 1:1.
+function leadAbandonHTML(sid) {
+  const rows = (leadData.abandoned || []).slice().sort((a, b) => a.seq - b.seq);
+  const head = `<div class="flex items-center justify-between mb-2">
+      <div class="text-sm text-white font-medium"><i class="ph ph-arrow-u-up-left mr-1.5 text-amber-400"></i>Sekwencja powrotu (3 maile)</div>
+      ${rows.length ? '' : `<button onclick="generateAbandoned('${sid}')" class="text-xs text-amber-300 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5 transition inline-flex items-center gap-1"><i class="ph ph-magic-wand"></i>Wygeneruj teraz</button>`}
+    </div>`;
+  if (!rows.length) return `${head}<div class="text-zinc-600 text-sm mb-4">Jeszcze nie wygenerowano. System tworzy je automatycznie ~3h po ostatniej aktywności (jeden prompt → 3 maile, zapisane jako „do wysłania"). Możesz wymusić teraz przyciskiem powyżej.</div>`;
+  const items = rows.map((r) => `
+    <div class="py-3 border-b border-white/[0.04] last:border-0">
+      <div class="flex items-center gap-2 flex-wrap mb-1">
+        <span class="text-sm text-white font-medium">${ABANDON_KIND_LABEL[r.kind] || esc(r.kind)}</span>
+        ${abandonStatusBadge(r)}
+        <button onclick="previewFollowup('${sid}','${esc(r.kind)}')" title="Podgląd zapisanej treści" class="ml-auto w-7 h-7 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-eye"></i></button>
+      </div>
+      <div class="text-xs text-zinc-400 truncate">${esc(r.subject || '—')}</div>
+    </div>`).join('');
+  return `${head}<div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-2">${items}</div>
+    <div class="text-[11px] text-zinc-600 mb-5"><i class="ph ph-info mr-1"></i>Treść jest zapisana z góry i wysyłana 1:1 (bez regeneracji). Sekwencja zatrzymuje się, gdy lead wróci i dojdzie do zielonego werdyktu (przejmuje ją wtedy sekwencja odkrywania).</div>`;
+}
 function leadMaileHTML() {
-  // Tu pokazujemy TYLKO follow-upy. Maile sekwencji odkrywania (reveal_*) mają
-  // własną oś czasu w zakładce »Sekwencja« — nie dublujemy ich tutaj.
-  const emails = (leadData.emails || []).filter((e) => !isRevealKind(e.kind));
-  const revCount = (leadData.emails || []).length - emails.length;
+  const sid = leadData.s.id;
+  // 1) sekwencja powrotu (abandoned) — własny blok z zapisaną treścią 1:1.
+  // 2) pozostałe follow-upy (nurture/welcome…) — log z spar_emails (treść regen).
+  // Maile sekwencji odkrywania (reveal_*) mają oś czasu w zakładce »Sekwencja«.
+  const emails = (leadData.emails || []).filter((e) => !isRevealKind(e.kind) && !/^abandoned_chat/.test(e.kind));
+  const revCount = (leadData.emails || []).filter((e) => isRevealKind(e.kind)).length;
   const note = revCount
     ? `<div class="text-[11px] text-zinc-500 mb-2.5 flex items-center gap-1.5"><i class="ph ph-flow-arrow text-blue-400"></i>${revCount} ${plural(revCount, 'mail sekwencji odkrywania', 'maile sekwencji odkrywania', 'maili sekwencji odkrywania')} — w zakładce <button onclick="switchLeadTab('sekwencja')" class="text-blue-400 hover:text-blue-300 underline underline-offset-2">Sekwencja</button>.</div>`
     : '';
-  if (!emails.length) return `${note}<div class="text-zinc-600 text-sm">Żaden follow-up jeszcze nie wyszedł do tego leada.</div>`;
-  return `${note}<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+  const followLog = !emails.length
+    ? `<div class="text-zinc-600 text-sm">Brak innych follow-upów (poza sekwencją powrotu powyżej).</div>`
+    : `<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
     <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
-      <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Dostarczony</th></tr></thead><tbody>
-    ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.delivered_at)}</td></tr>`).join('')}
-    </tbody></table></div>`;
+      <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Dostarczony</th><th class="px-4 py-3 text-center">Treść</th></tr></thead><tbody>
+    ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.delivered_at)}</td><td class="px-4 py-2.5 text-center"><button onclick="previewFollowup('${sid}','${esc(e.kind)}')" title="Podgląd treści (odtworzona na żywo)" class="w-7 h-7 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-eye"></i></button></td></tr>`).join('')}
+    </tbody></table></div>
+    <div class="max-w-3xl mt-2 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>Te follow-upy nie są cache'owane — podgląd odtwarza treść na żywo (wysłany egzemplarz mógł brzmieć minimalnie inaczej).</div>`;
+  return `<div class="max-w-3xl">${leadAbandonHTML(sid)}<div class="text-sm text-white font-medium mb-2"><i class="ph ph-envelope mr-1.5 text-sky-400"></i>Pozostałe follow-upy</div>${note}${followLog}</div>`;
 }
 // ── Zakładka SMS leada: wysłane (treść + doręczenie + klik) + zaplanowane ──
 function leadSmsHTML() {
@@ -1590,6 +1622,31 @@ async function renderProjectDetail(sid, targetId) {
 }
 
 let mmCtx = null;
+// Podgląd treści follow-upa (poza sekwencją) dla realnego leada — generuje przez
+// spar-followups (preview_session), bez wysyłki i bez logowania kosztu. readOnly →
+// modal bez przycisku wysyłki (follow-upy idą automatem z crona, nie ręcznie stąd).
+let fuBusy = false;
+async function previewFollowup(sid, kind) {
+  if (fuBusy) return; fuBusy = true;
+  toast('Wczytuję treść maila…');
+  try {
+    const j = await callFn('spar-followups', { action: 'preview_session', sessionId: sid, kind });
+    if (!j.preview) { toast('Brak podglądu (' + (j.error || '—') + ')'); return; }
+    // abandoned → treść zapisana 1:1; reszta → odtworzona na żywo
+    const kicker = j.stored ? 'Treść sekwencji powrotu — zapisana 1:1' : 'Treść follow-upa — odtworzona na żywo';
+    openMailModal(j.preview, sid, kind, true, kicker);
+  } catch (e) { toast('Błąd: ' + e.message); } finally { fuBusy = false; }
+}
+// Wymuś pre-generację sekwencji powrotu TERAZ (3 maile jednym promptem) i odśwież kartę.
+async function generateAbandoned(sid) {
+  if (fuBusy) return; fuBusy = true;
+  toast('Generuję 3 maile sekwencji powrotu…');
+  try {
+    const j = await callFn('spar-followups', { action: 'generate_abandoned', sessionId: sid });
+    if (j.rows) { leadData.abandoned = j.rows; toast('Wygenerowano ✓'); if (leadData && leadData.s.id === sid && leadTab === 'maile') renderLeadTab(); }
+    else toast('Nie udało się (' + (j.error || '—') + ')');
+  } catch (e) { toast('Błąd: ' + e.message); } finally { fuBusy = false; }
+}
 async function firePreview(sid, key, readOnly) {
   if (sekwBusy) return; sekwBusy = true;
   toast(readOnly ? 'Wczytuję wysłany mail…' : 'Przygotowuję podgląd…');
@@ -1600,7 +1657,7 @@ async function firePreview(sid, key, readOnly) {
     openMailModal(j.preview, sid, key, readOnly);
   } catch (e) { toast('Błąd: ' + e.message); } finally { sekwBusy = false; }
 }
-function openMailModal(preview, sid, key, readOnly) {
+function openMailModal(preview, sid, key, readOnly, kickerText) {
   mmCtx = { sid, key, to: preview.to };
   $('mm-subject').textContent = preview.subject || '—';
   $('mm-to').textContent = preview.to ? ('Do: ' + preview.to) : 'Brak adresu odbiorcy';
@@ -1608,7 +1665,7 @@ function openMailModal(preview, sid, key, readOnly) {
   // przycisk wysyłki tylko gdy jest realny odbiorca (reveal leada) ORAZ nie oglądamy
   // już wysłanego maila (readOnly) — wysłanego nie wysyłamy ponownie
   const canSend = !!preview.to && !readOnly;
-  const kicker = $('mm-kicker'); if (kicker) kicker.textContent = readOnly ? 'Wysłany mail — dokładnie to, co poszło' : 'Podgląd maila — bez wysyłki';
+  const kicker = $('mm-kicker'); if (kicker) kicker.textContent = kickerText || (readOnly ? 'Wysłany mail — dokładnie to, co poszło' : 'Podgląd maila — bez wysyłki');
   $('mm-send').classList.toggle('hidden', !canSend);
   $('mm-send').disabled = !canSend;
   $('mailmodal').classList.remove('hidden');
