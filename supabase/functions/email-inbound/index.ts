@@ -9,6 +9,7 @@ const corsHeaders = {
 
 // Weryfikacja podpisu webhook z Resend (Svix)
 async function verifyWebhookSignature(
+  id: string,
   payload: string,
   signature: string,
   timestamp: string,
@@ -17,7 +18,8 @@ async function verifyWebhookSignature(
   try {
     // Resend/Svix używa formatu: v1,signature
     const signatures = signature.split(" ");
-    const signedPayload = `${timestamp}.${payload}`;
+    // Svix podpisuje: `${svix-id}.${svix-timestamp}.${body}` — svix-id jest WYMAGANY.
+    const signedPayload = `${id}.${timestamp}.${payload}`;
 
     // Secret jest w formacie "whsec_..." - trzeba usunąć prefix i zdekodować z base64
     const secretBytes = Uint8Array.from(atob(secret.replace("whsec_", "")), c => c.charCodeAt(0));
@@ -58,7 +60,7 @@ Deno.serve(async (req) => {
 
     // Verify signature if secret is configured
     if (webhookSecret) {
-      if (!svixSignature || !svixTimestamp) {
+      if (!svixId || !svixSignature || !svixTimestamp) {
         console.error("[email-inbound] Missing signature headers - rejecting");
         return new Response(JSON.stringify({ success: false, error: "Missing signature" }), {
           status: 401,
@@ -66,7 +68,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const isValid = await verifyWebhookSignature(bodyText, svixSignature, svixTimestamp, webhookSecret);
+      const isValid = await verifyWebhookSignature(svixId, bodyText, svixSignature, svixTimestamp, webhookSecret);
       if (!isValid) {
         console.error("[email-inbound] Invalid signature - rejecting");
         return new Response(JSON.stringify({ success: false, error: "Invalid signature" }), {
