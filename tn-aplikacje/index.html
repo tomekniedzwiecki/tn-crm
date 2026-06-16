@@ -949,12 +949,13 @@ async function openSession(id) {
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
-    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm').eq('id', id).maybeSingle(),
+    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
   leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], art: art || {}, protoUrl, totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
+  leadData.s.sequence_cancelled_at = (art && art.sequence_cancelled_at) || null;
   renderLeadTab();
 }
 function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; switchTab(prevTab || 'leady'); }
@@ -1145,12 +1146,20 @@ async function genArtifact(kind) {
 }
 function leadSekwencjaHTML() {
   const { s } = leadData; const can = s.verdict === 'zielony' || s.paid_at;
+  const cancelled = !!s.sequence_cancelled_at;
+  const toggleBtn = cancelled
+    ? `<button onclick="resumeLeadDrip('${s.id}')" class="text-xs text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-1.5 transition inline-flex items-center gap-1"><i class="ph ph-play"></i>Wznów sekwencję</button>`
+    : `<button onclick="cancelLeadDrip('${s.id}')" class="text-xs text-zinc-400 hover:text-rose-300 hover:border-rose-500/30 border border-white/10 rounded-lg px-3 py-1.5 transition inline-flex items-center gap-1" title="Zatrzymaj automatyczne maile, SMS i generowanie dla tego leada (można wznowić)"><i class="ph ph-pause"></i>Wstrzymaj sekwencję</button>`;
   return `<div class="max-w-3xl">
-    <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center justify-between gap-2 mb-3">
       <div class="text-sm text-white font-medium"><i class="ph ph-flow-arrow mr-1.5 text-blue-400"></i>Sekwencja odkrywania</div>
-      ${can ? `<button onclick="seedLeadDrip('${s.id}')" class="text-xs text-zinc-300 hover:text-white border border-white/10 rounded-lg px-3 py-1.5 transition"><i class="ph ph-list-plus mr-1"></i>Utwórz/odśwież plan</button>` : ''}
+      <div class="flex items-center gap-2">
+        ${toggleBtn}
+        ${can && !cancelled ? `<button onclick="seedLeadDrip('${s.id}')" class="text-xs text-zinc-300 hover:text-white border border-white/10 rounded-lg px-3 py-1.5 transition"><i class="ph ph-list-plus mr-1"></i>Utwórz/odśwież plan</button>` : ''}
+      </div>
     </div>
-    <div id="lead-drip" class="text-sm text-zinc-500">${can ? '<i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…' : 'Sekwencja rusza po zielonym werdykcie — wtedy zobaczysz tu oś czasu odsłon i testy maili.'}</div>
+    ${cancelled ? `<div class="mb-3 text-[11px] text-zinc-400 flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-lg px-3 py-2"><i class="ph ph-pause-circle text-amber-400"></i>Automatyczne maile, SMS i generowanie wstrzymane dla tego leada. Ręczne generowanie z karty nadal działa.</div>` : ''}
+    <div id="lead-drip" class="text-sm text-zinc-500">${can ? '<i class="ph ph-circle-notch animate-spin mr-1.5"></i>Wczytuję sekwencję…' : 'Sekwencja odsłon rusza po zielonym werdykcie. Wcześniej (rozmowa w toku) lecą tylko przypominające follow-upy — „Wstrzymaj sekwencję" zatrzymuje też je.'}</div>
   </div>`;
 }
 function leadMaileHTML() {
@@ -1522,25 +1531,20 @@ async function renderProjectDetail(sid, targetId) {
   if (!DEMO) { try { const { data: srows } = await supabaseClient.from('spar_sms').select('kind, message, status, phone, created_at, clicked_at, delivered_at, dlr_status').eq('session_id', sid); (srows || []).forEach((x) => { smsByKind[x.kind] = x; }); } catch (smsErr) { console.error(smsErr); } }
 
   const engaged = s && s.engaged;
-  const cancelled = !!(s && s.sequence_cancelled_at);
   const head = `
-    <div class="flex flex-wrap items-center gap-3 mb-1 pb-4 border-b border-white/5">
+    <div class="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-white/5">
       <div class="min-w-0">
         <div class="text-white font-medium">${esc(s ? (s.name || '—') : '—')}</div>
         <div class="text-xs text-zinc-500">${esc((s && s.email) || 'bez e-maila')}</div>
       </div>
-      ${cancelled
-        ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] text-zinc-300 border-white/15 bg-white/5"><i class="ph ph-pause-circle mr-1.5"></i>sekwencja wstrzymana</span>`
-        : `<span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${engaged ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' : 'text-amber-400 border-amber-400/30 bg-amber-400/10'}"><i class="ph ${engaged ? 'ph-fire' : 'ph-snowflake'} mr-1.5"></i>${engaged ? 'zaangażowany — sekwencja leci' : 'zimny — dalsze odsłony wstrzymane'}</span>`}
+      <span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${engaged ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' : 'text-amber-400 border-amber-400/30 bg-amber-400/10'}">
+        <i class="ph ${engaged ? 'ph-fire' : 'ph-snowflake'} mr-1.5"></i>${engaged ? 'zaangażowany — sekwencja leci' : 'zimny — dalsze odsłony wstrzymane'}
+      </span>
       <div class="ml-auto flex items-center gap-3 text-[11px] text-zinc-500">
         <span title="ostatnie wejście do panelu"><i class="ph ph-device-mobile mr-1"></i>panel: ${s ? timeAgo(s.last_panel_at) : '—'}</span>
         <span title="ostatnia aktywność w rozmowie"><i class="ph ph-chat-circle mr-1"></i>rozmowa: ${s ? timeAgo(s.last_user_at) : '—'}</span>
-        ${cancelled
-          ? `<button onclick="resumeLeadDrip('${sid}')" class="px-2.5 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 transition inline-flex items-center gap-1"><i class="ph ph-play"></i>Wznów sekwencję</button>`
-          : `<button onclick="cancelLeadDrip('${sid}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-rose-300 hover:border-rose-500/30 transition inline-flex items-center gap-1" title="Zatrzymaj automatyczne maile, SMS i generowanie dla tego leada (można wznowić)"><i class="ph ph-pause"></i>Wstrzymaj sekwencję</button>`}
       </div>
-    </div>
-    ${cancelled ? `<div class="mb-4 mt-2 text-[11px] text-zinc-500 flex items-center gap-1.5"><i class="ph ph-info text-amber-400"></i>Automatyczne maile, SMS i generowanie wstrzymane dla tego leada. Ręczne generowanie z karty nadal działa.</div>` : `<div class="mb-3"></div>`}`;
+    </div>`;
 
   const rows = plan.map((p) => {
     const r = byKey[p.key];
@@ -1632,11 +1636,11 @@ async function seedLeadDrip(sid) {
 }
 async function cancelLeadDrip(sid) {
   if (!confirm('Wstrzymać sekwencję dla tego leada?\n\nZatrzyma automatyczne maile, SMS i generowanie odsłon. Ręczne generowanie z karty nadal działa, a sekwencję można później wznowić.')) return;
-  try { await callDrip({ action: 'cancel', sessionId: sid }); toast('Sekwencja wstrzymana ✓'); renderProjectDetail(sid, 'lead-drip'); }
+  try { await callDrip({ action: 'cancel', sessionId: sid }); toast('Sekwencja wstrzymana ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = new Date().toISOString(); renderLeadTab(); } }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 async function resumeLeadDrip(sid) {
-  try { await callDrip({ action: 'resume', sessionId: sid }); toast('Sekwencja wznowiona ✓'); renderProjectDetail(sid, 'lead-drip'); }
+  try { await callDrip({ action: 'resume', sessionId: sid }); toast('Sekwencja wznowiona ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = null; renderLeadTab(); } }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 
