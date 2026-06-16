@@ -953,7 +953,7 @@ async function openSession(id) {
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
     supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
-    supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
+    supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
@@ -1173,8 +1173,9 @@ function abandonStatusBadge(r) {
   return `<span class="text-amber-400 text-[11px]"><i class="ph ph-clock mr-0.5"></i>do wysłania ~${fmtDate(r.scheduled_at)}${r.seq > 1 ? ', jeśli nie wróci' : ''}</span>`;
 }
 // Blok „Sekwencja powrotu" — 3 maile abandoned, PRE-WYGENEROWANE i zapisane 1:1.
+// (Wiersz abandoned_sms = SMS powrotu — pokazywany w zakładce SMS, nie tutaj.)
 function leadAbandonHTML(sid) {
-  const rows = (leadData.abandoned || []).slice().sort((a, b) => a.seq - b.seq);
+  const rows = (leadData.abandoned || []).filter((r) => r.kind !== 'abandoned_sms').slice().sort((a, b) => a.seq - b.seq);
   const head = `<div class="flex items-center justify-between mb-2">
       <div class="text-sm text-white font-medium"><i class="ph ph-arrow-u-up-left mr-1.5 text-amber-400"></i>Sekwencja powrotu (3 maile)</div>
       ${rows.length ? '' : `<button onclick="generateAbandoned('${sid}')" class="text-xs text-amber-300 hover:bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-1.5 transition inline-flex items-center gap-1"><i class="ph ph-magic-wand"></i>Wygeneruj teraz</button>`}
@@ -1225,6 +1226,7 @@ function leadSmsHTML() {
 function smsKindLabel(kind) {
   if (kind === 'sms_badanie_back') return 'Powrót: badanie rynku';
   if (kind === 'sms_ekrany_back') return 'Powrót: ekrany';
+  if (kind === 'abandoned_sms') return 'Sekwencja powrotu (SMS)';
   const k = String(kind || '').replace(/^reveal_/, '');
   const M = { rynek: 'Reaktywacja: raport rynku', economics: 'Reaktywacja: opłacalność', gtm: 'Reaktywacja: plan sprzedaży', landing: 'Reaktywacja: strona', prototyp: 'Reaktywacja: prototyp' };
   return M[k] || ('SMS: ' + esc(k));
@@ -1237,15 +1239,19 @@ function smsDelivBadge(x) {
 }
 async function renderLeadSms(sid) {
   const tgt = $('lead-sms'); if (!tgt) return;
-  let rows = [], sess = null;
+  let rows = [], sess = null, revRows = [];
   try {
-    const [{ data: srows }, { data: ss }] = await Promise.all([
+    const [{ data: srows }, { data: ss }, { data: rv }] = await Promise.all([
       supabaseClient.from('spar_sms').select('kind, message, phone, status, smsapi_id, delivered_at, dlr_status, clicked_at, created_at').eq('session_id', sid).order('created_at', { ascending: false }),
       supabaseClient.from('spar_sessions').select('phone, sms_consent_at, sms_opt_out, paid_at').eq('id', sid).maybeSingle(),
+      supabaseClient.from('spar_reveals').select('kind, meta').eq('session_id', sid),
     ]);
-    rows = srows || []; sess = ss || null;
+    rows = srows || []; sess = ss || null; revRows = rv || [];
   } catch (e) { tgt.innerHTML = `<div class="text-rose-400 text-sm">Błąd: ${esc(e.message)}</div>`; return; }
   if (!leadData || leadData.s.id !== sid) return;
+  // cache tekstu SMS reaktywacji (meta.sms.text) per kind maila odsłony (reveal_*)
+  const revealSmsText = {};
+  revRows.forEach((r) => { const t = r.meta && r.meta.sms && r.meta.sms.text; if (t) revealSmsText['reveal_' + r.kind] = t; });
 
   const sent = rows.map((x) => `
     <div class="py-3 border-b border-white/[0.04] last:border-0">
@@ -1261,25 +1267,46 @@ async function renderLeadSms(sid) {
 
   const sentKinds = new Set(rows.map((r) => r.kind));
   const hasContact = !!(sess && sess.phone && sess.sms_consent_at && !sess.sms_opt_out && !sess.paid_at);
+
+  // ── SMS sekwencji powrotu (abandoned_sms) — pre-generowany, podgląd treści 1:1 ──
+  const aSms = (leadData.abandoned || []).find((r) => r.kind === 'abandoned_sms');
+  const aSmsBadge = !aSms ? '' : (aSms.status === 'sent'
+    ? `<span class="text-emerald-400 text-[11px]"><i class="ph ph-check-circle mr-0.5"></i>wysłany ${fmtDate(aSms.sent_at)}</span>`
+    : aSms.status === 'cancelled'
+      ? `<span class="text-zinc-500 text-[11px]"><i class="ph ph-prohibit mr-0.5"></i>anulowany</span>`
+      : `<span class="text-amber-400 text-[11px]"><i class="ph ph-clock mr-0.5"></i>do wysłania ~${fmtDate(aSms.scheduled_at)}, jeśli cisza</span>`);
+  const abandonSmsBlock = aSms ? `
+    <div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Sekwencja powrotu (SMS)</div>
+    <div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-4 py-3">
+      <div class="flex items-center gap-2 flex-wrap mb-1"><span class="text-sm text-white font-medium">SMS powrotu</span>${aSmsBadge}</div>
+      <div class="text-xs text-zinc-300 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 whitespace-pre-wrap break-words">${esc(aSms.sms || '—')}</div>
+      <div class="text-[11px] text-zinc-600 mt-1.5">Krótki link doklejany jest automatycznie przy wysyłce. Leci ~+50 h po serii maili, tylko gdy lead dalej milczy (+ telefon, zgoda).</div>
+    </div>` : '';
+
   const reveals = (leadData.emails || []).filter((e) => /^reveal_/.test(e.kind) && e.sent_at);
   const planned = hasContact ? reveals.filter((e) => !sentKinds.has(e.kind)).map((e) => {
     const due = new Date(new Date(e.sent_at).getTime() + 24 * 3600 * 1000);
-    return `<div class="py-2.5 border-b border-white/[0.04] last:border-0 flex items-center gap-2 flex-wrap">
-      <i class="ph ph-clock text-zinc-500"></i>
-      <span class="text-sm text-zinc-300">${smsKindLabel(e.kind)}</span>
-      <span class="text-[11px] text-zinc-500">poleci ~${fmtDate(due.toISOString())}, jeśli lead nie wróci do panelu (okno 8–23)</span>
+    const txt = revealSmsText[e.kind];
+    return `<div class="py-2.5 border-b border-white/[0.04] last:border-0">
+      <div class="flex items-center gap-2 flex-wrap mb-1">
+        <i class="ph ph-clock text-zinc-500"></i>
+        <span class="text-sm text-zinc-300">${smsKindLabel(e.kind)}</span>
+        <span class="text-[11px] text-zinc-500">poleci ~${fmtDate(due.toISOString())}, jeśli lead nie wróci (okno 8–23)</span>
+      </div>
+      ${txt ? `<div class="text-xs text-zinc-300 bg-zinc-900/60 border border-white/5 rounded-lg px-3 py-2 whitespace-pre-wrap break-words">${esc(txt)}</div>` : '<div class="text-[11px] text-zinc-600">treść wygeneruje się przy wysyłce odsłony</div>'}
     </div>`;
   }).join('') : '';
 
   const note = !hasContact
-    ? `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-info mr-1"></i>${sess && sess.paid_at ? 'Lead zapłacił — SMS-y wstrzymane.' : (sess && sess.sms_opt_out ? 'Lead wypisał się z SMS (opt-out).' : 'Brak numeru lub zgody SMS — reaktywacja nie poleci.')}</div>`
+    ? `<div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-info mr-1"></i>${sess && sess.paid_at ? 'Lead zapłacił — SMS-y wstrzymane.' : (sess && sess.sms_opt_out ? 'Lead wypisał się z SMS (opt-out).' : 'Brak numeru lub zgody SMS — SMS nie poleci.')}</div>`
     : '';
 
   tgt.innerHTML = `
+    ${abandonSmsBlock}
     ${rows.length ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Wysłane (${rows.length})</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4 mb-4">${sent}</div>` : '<div class="text-zinc-600 text-sm mb-4">Żaden SMS jeszcze nie wyszedł do tego leada.</div>'}
-    ${planned ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Zaplanowane (reaktywacja)</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4">${planned}</div>` : ''}
+    ${planned ? `<div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Zaplanowane (reaktywacja odsłon)</div><div class="bg-zinc-900/40 border border-white/5 rounded-xl px-4">${planned}</div>` : ''}
     ${note}
-    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>Reaktywacja leci ~24 h po mailu odsłony, jeśli lead nie wróci do panelu (max 1 SMS/48 h, tylko 8–23). „Powrót: badanie/ekrany" idą, gdy ktoś wyjdzie z rozmowy w trakcie.</div>`;
+    <div class="mt-3 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>SMS powrotu = 1 SMS sekwencji powrotu (~+50 h, gdy cisza). Reaktywacja odsłon leci ~24 h po mailu odsłony (po zielonym werdykcie). „Powrót: badanie/ekrany" idą, gdy ktoś wyjdzie z rozmowy w trakcie. Wszystko tylko 8–23.</div>`;
 }
 function leadKosztyHTML() {
   const { usage, totalUsd } = leadData;

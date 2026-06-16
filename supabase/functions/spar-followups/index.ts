@@ -75,6 +75,55 @@ function chatLink(sessionId: string, campaign: string, hash = ''): string {
 function smsLink(sessionId: string): string {
   return `${SPARING_URL}?id=${sessionId}&utm_source=sms`
 }
+// Próg SMS „powrotu" — godziny od ostatniej aktywności (po serii maili 3h/24h/48h).
+const ABANDON_SMS_THRESH_H = 50
+// GSM-7 safe: transliteracja znaków spoza podstawowego GSM (polskie diakrytyki,
+// typograficzne cudzysłowy/myślniki/…), które inaczej wymuszają UCS-2 (drożej).
+const GSM_MAP: Record<string, string> = {
+  'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z',
+  'Ą': 'A', 'Ć': 'C', 'Ę': 'E', 'Ł': 'L', 'Ń': 'N', 'Ó': 'O', 'Ś': 'S', 'Ź': 'Z', 'Ż': 'Z',
+  '„': '"', '”': '"', '“': '"', '‟': '"', '«': '"', '»': '"',
+  '‚': "'", '’': "'", '‘': "'", '‛': "'", '–': '-', '—': '-', '‑': '-', '…': '...',
+}
+function gsmSafe(str: unknown): string {
+  return String(str || '').split('').map((c) => (c in GSM_MAP ? GSM_MAP[c] : c)).join('')
+}
+// Brandowany krótki link do SMS: tomekniedzwiecki.pl/p/{code} (rewrite → spar-go).
+// Jeden kod na sesję (spar_short_links), odporny na równoległy insert.
+const SHORT_BASE = 'https://tomekniedzwiecki.pl'
+function shortLink(code: string): string { return `${SHORT_BASE}/p/${code}` }
+function randCode(len = 7): string {
+  const a = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
+  const buf = new Uint8Array(len); crypto.getRandomValues(buf)
+  let out = ''; for (let i = 0; i < len; i++) out += a[buf[i] % a.length]
+  return out
+}
+async function getOrCreateShortCode(supabase: ReturnType<typeof createClient>, sid: string): Promise<string> {
+  const { data: ex } = await supabase.from('spar_short_links').select('code').eq('session_id', sid).maybeSingle()
+  if (ex && ex.code) return ex.code as string
+  for (let i = 0; i < 3; i++) {
+    const code = randCode()
+    const { error } = await supabase.from('spar_short_links').insert({ code, session_id: sid })
+    if (!error) return code
+    const { data: again } = await supabase.from('spar_short_links').select('code').eq('session_id', sid).maybeSingle()
+    if (again && again.code) return again.code as string
+  }
+  return randCode()
+}
+// Złóż finalny SMS: tekst (GSM-safe) + krótki link w nowej linii, max 2 segmenty.
+function composeSms(text: string, code: string): string {
+  const link = shortLink(code)
+  const max = 306 - link.length - 1
+  const clean = gsmSafe((text || '').trim()).replace(/\s+$/g, '').slice(0, max)
+  return `${clean}\n${link}`
+}
+// Statyczny fallback SMS „powrotu" (gdy GPT nie dał pola sms) — bez PL znaków.
+function staticAbandonedSms(s: SessionRow): string {
+  const imie = firstName(s)
+  const n = toolName(s)
+  const co = n && n !== 'Twoje narzędzie' ? gsmSafe(n) : 'Twoj pomysl'
+  return `${imie ? 'Czesc ' + gsmSafe(imie) + '! ' : 'Czesc! '}Zaczelismy projektowac ${co} i zatrzymalismy sie w pol drogi. Wrocisz dokladnie w to samo miejsce - dokonczenie to kilka minut. ~Tomek`
+}
 function checkoutLink(leadId: string | null): string {
   return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=followup`
 }
@@ -370,11 +419,12 @@ JĘZYK: to osoby dopiero wchodzące w biznes — ZERO żargonu (CAC, LTV, churn,
 TON: nie błagaj, nie naciskaj, zero „wróć proszę". Nawiąż do tego, co realnie padło w rozmowie (jego pomysł, jego słowa) — ma być czuć ciąg dalszy JEGO wątku, nie masowy mail. Nie cytuj dosłownie ani nie streszczaj punkt po punkcie.
 ARTEFAKTY (rynek, opłacalność, strona, plan sprzedaży, KLIKALNY prototyp) JESZCZE NIE ISTNIEJĄ — to NAGRODA za dokończenie rozmowy. Opisuj je jako to, co SIĘ ZBUDUJE / odblokuje, KIEDY dokończy — NIGDY że już są albo „czekają w panelu".
 LINKI: w KAŻDYM mailu wstaw DOKŁADNIE RAZ [naturalny tekst](LINK_VIEW) = powrót do ROZMOWY w to samo miejsce (NIE gotowy projekt). Nie wymyślaj adresów.
-Zwróć WYŁĄCZNIE JSON: {"emails":[{"seq":1,"subject":...,"body":...},{"seq":2,...},{"seq":3,...}]}. subject: krótki (≤~55 zn.), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
+SMS (osobne pole „sms"): JEDEN krótki SMS „powrotu", który poleci ~2 dni po mailach, jeśli osoba dalej milczy. Ma wzbudzić CIEKAWOŚĆ i ściągnąć ją z powrotem, żeby DOKOŃCZYŁA rozmowę (to kilka minut). Nawiąż do JEJ pomysłu jednym konkretem. NIE obiecuj rzeczy „gotowych w panelu" — rozmowa nie została dokończona, artefakty dopiero powstaną. ŻELAZNE zasady kodowania: BEZ polskich znaków diakrytycznych (pisz „a" nie „ą", „l" nie „ł", „s" nie „ś" itd.); TYLKO ASCII (proste " ' - . ,); ABSOLUTNY ZAKAZ typograficznych „ ” ' ' – — …; BEZ linku/URL (dokleimy sami); 150–200 znaków; po ludzku, na „Ty"; podpis krótko „~Tomek"; bez wielkich krzyczących liter, emoji i wykrzykników.
+Zwróć WYŁĄCZNIE JSON: {"emails":[{"seq":1,"subject":...,"body":...},{"seq":2,...},{"seq":3,...}],"sms":string}. subject: krótki (≤~55 zn.), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
 
-// Jeden GPT-call → 3 maile sekwencji powrotu. Zwraca [{kind,seq,subject,html}] (lub null).
+// Jeden GPT-call → 3 maile + 1 SMS sekwencji powrotu. Zwraca {emails,sms} (lub null).
 // deno-lint-ignore no-explicit-any
-async function generateAbandonedSequence(supabase: ReturnType<typeof createClient>, s: SessionRow, convo: string): Promise<{ kind: string; seq: number; subject: string; html: string }[] | null> {
+async function generateAbandonedSequence(supabase: ReturnType<typeof createClient>, s: SessionRow, convo: string): Promise<{ emails: { kind: string; seq: number; subject: string; html: string }[]; sms: string | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
   const b = s.preview_brief || {}
@@ -412,7 +462,8 @@ async function generateAbandonedSequence(supabase: ReturnType<typeof createClien
       if (!subject || !body) return null
       out.push({ kind, seq: i + 1, subject, html: mdToHtml(body, followupView(kind, s), null, 'Wróć do rozmowy tutaj') })
     }
-    return out
+    const sms = typeof obj.sms === 'string' && obj.sms.trim() ? gsmSafe(obj.sms.trim()) : null
+    return { emails: out, sms }
   } catch (e) { console.error('[spar-followups] sequence gen error:', e instanceof Error ? e.message : String(e)); return null }
 }
 
@@ -423,13 +474,20 @@ async function ensureAbandonedRows(supabase: ReturnType<typeof createClient>, s:
   const { data: ex } = await supabase.from('spar_abandoned_emails').select('id').eq('session_id', s.id).limit(1)
   if (ex && ex.length) return
   const convo = await fetchConvo(supabase, s.id)
-  let seq = await generateAbandonedSequence(supabase, s, convo)
-  if (!seq) seq = ABANDON_KINDS.map((k, i) => { const e = staticEmail(k, s); return { kind: k, seq: i + 1, subject: e.subject, html: e.html } })
+  const gen = await generateAbandonedSequence(supabase, s, convo)
+  const emails = gen?.emails || ABANDON_KINDS.map((k, i) => { const e = staticEmail(k, s); return { kind: k, seq: i + 1, subject: e.subject, html: e.html } })
+  const smsText = gen?.sms || staticAbandonedSms(s)
   const base = s.last_user_at ? Date.parse(s.last_user_at) : Date.now()
-  const rows = seq.map((e) => ({
+  // deno-lint-ignore no-explicit-any
+  const rows: Record<string, any>[] = emails.map((e) => ({
     session_id: s.id, kind: e.kind, seq: e.seq, subject: e.subject, html: e.html,
     status: 'pending', scheduled_at: new Date(base + ABANDON_THRESH_H[e.seq - 1] * 3600000).toISOString(),
   }))
+  // SMS „powrotu" — osobny wiersz (kind abandoned_sms, seq 4), ~+50h, po serii maili.
+  rows.push({
+    session_id: s.id, kind: 'abandoned_sms', seq: 4, subject: null, html: null, sms: smsText,
+    status: 'pending', scheduled_at: new Date(base + ABANDON_SMS_THRESH_H * 3600000).toISOString(),
+  })
   const { error } = await supabase.from('spar_abandoned_emails').upsert(rows, { onConflict: 'session_id,kind', ignoreDuplicates: true })
   if (error) console.error('[spar-followups] ensureAbandonedRows insert:', error)
   // Reconcile z sesjami „w locie": kindy wysłane jeszcze starą drogą (są w
@@ -526,7 +584,7 @@ Deno.serve(async (req) => {
         .eq('id', sid).maybeSingle()
       if (!s) return jsonResponse({ error: 'brak_sesji' }, 404)
       await ensureAbandonedRows(supabase, s as unknown as SessionRow)
-      const { data: rows } = await supabase.from('spar_abandoned_emails').select('kind, seq, subject, status, scheduled_at, sent_at').eq('session_id', sid).order('seq')
+      const { data: rows } = await supabase.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', sid).order('seq')
       return jsonResponse({ ok: true, rows: rows || [] }, 200)
     }
 
@@ -793,6 +851,36 @@ Deno.serve(async (req) => {
       if (ok) {
         const { data: em } = await supabase.from('spar_emails').select('resend_id').eq('session_id', s.id).eq('kind', kind).maybeSingle()
         await supabase.from('spar_abandoned_emails').update({ status: 'sent', sent_at: new Date().toISOString(), resend_id: (em as { resend_id: string | null } | null)?.resend_id || null }).eq('session_id', s.id).eq('kind', kind)
+      }
+    }
+
+    // ── 2a-SMS) SMS POWROTU sekwencji — pre-generowany (kind=abandoned_sms),
+    //   wysyłany ~+50h po serii maili, TYLKO gdy lead dalej milczy. Treść 1:1 z
+    //   zapisanej; telefon+zgoda, nie zielony/nie zapłacił/nie wstrzymany; bramka
+    //   międzykanałowa ≥10h. „Cisza" = brak aktywności od ≥ progu (wrócił → pomiń). ──
+    if (SMS_ENABLED) {
+      const { data: smsDue } = await supabase.from('spar_abandoned_emails')
+        .select('session_id, sms, status').eq('kind', 'abandoned_sms').eq('status', 'pending')
+        .lte('scheduled_at', new Date(now).toISOString()).limit(40)
+      const dueIds = [...new Set(((smsDue || []) as { session_id: string }[]).map((r) => r.session_id))]
+      if (dueIds.length) {
+        const { data: ss } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('is_test', false).in('id', dueIds)
+        const byId = new Map(((ss || []) as SessionRow[]).map((x) => [x.id, x]))
+        const smsTouchA = await loadTouches(supabase, dueIds)
+        for (const r of (smsDue || []) as { session_id: string; sms: string | null }[]) {
+          const s = byId.get(r.session_id)
+          if (!s || s.paid_at || (s.verdict && s.verdict !== 'zolty') || s.sequence_cancelled_at) continue
+          if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue
+          const lastAct = s.last_user_at ? Date.parse(s.last_user_at) : 0
+          if (!lastAct || (now - lastAct) < ABANDON_SMS_THRESH_H * 3600000) continue   // wrócił/za wcześnie → pomiń
+          const tt = smsTouchA.get(s.id)
+          if (tt && tt.last && now - tt.last < CHANNEL_GAP_MS) continue                 // świeży dotyk z innego kanału
+          if (tt?.kinds.has('abandoned_sms')) { await supabase.from('spar_abandoned_emails').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('session_id', s.id).eq('kind', 'abandoned_sms'); continue }
+          const code = await getOrCreateShortCode(supabase, s.id)
+          const msg = composeSms(r.sms || staticAbandonedSms(s), code)
+          const ok = await sendSmsOnce('abandoned_sms', s, msg)
+          if (ok) await supabase.from('spar_abandoned_emails').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('session_id', s.id).eq('kind', 'abandoned_sms')
+        }
       }
     }
 
