@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, last_panel_at, panel_visits, seen_landing_at, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -203,6 +203,93 @@ Deno.serve(async (req) => {
     // Panel istnieje tylko dla sesji, w których jest już projekt (karta lub brief)
     if (!session || (!session.problem_summary && !session.preview_brief)) {
       return jsonResponse({ error: 'brak_projektu' }, 404, cors)
+    }
+
+    // ── action 'public': READ-ONLY podgląd dla galerii inspiracji — ZERO PII ──
+    //    Pokazujemy WYŁĄCZNIE KOMPLETNE projekty: zielony werdykt + nie-test +
+    //    nie-ukryty (hidden_from_feed) + gotowa strona (landing_url) ORAZ klikalny
+    //    prototyp. Świeży projekt z samymi grafikami panelu NIE wchodzi — efekt
+    //    „wow" wymaga kompletu. Output BEZ PII: bez imienia, e-maila, uwag, rozmowy,
+    //    lead_id, paid_at — czego endpoint nie wyśle, tego front nie pokaże.
+    if (action === 'public') {
+      const { data: protoRow } = await supabase.from('spar_usage')
+        .select('meta').eq('session_id', sessionId).eq('kind', 'prototype')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      const protoMeta = (protoRow?.meta || null) as Record<string, unknown> | null
+      const protoUrl = protoMeta && typeof protoMeta.url === 'string' ? protoMeta.url as string : null
+      if (session.verdict !== 'zielony' || session.is_test || session.hidden_from_feed || !session.landing_url || !protoUrl) {
+        return jsonResponse({ error: 'niedostepny' }, 404, cors)
+      }
+      const pBrief = (session.preview_brief || {}) as Record<string, unknown>
+      const stripMeta = (o: unknown): Record<string, unknown> | null => {
+        if (!o || typeof o !== 'object') return null
+        const { _meta: _drop, ...rest } = o as Record<string, unknown>
+        return rest
+      }
+      return jsonResponse({ projekt: {
+        nazwa: (pBrief.nazwa as string) || 'Narzędzie',
+        opis: (pBrief.opis as string) || null,
+        dla_kogo: (pBrief.dla_kogo as string) || null,
+        ekrany: Array.isArray(pBrief.ekrany) ? pBrief.ekrany : [],
+        karta: (session.problem_summary as Record<string, unknown> | null) || null,
+        preview_image_url: session.preview_image_url || null,
+        preview_images: session.preview_images || null,
+        preview_history: session.preview_history || null,
+        image_count: session.image_count || 0,
+        business_plan: stripMeta(session.business_plan),
+        market_report: stripMeta(session.market_report),
+        economics: stripMeta(session.economics),
+        gtm: stripMeta(session.gtm),
+        landing_url: session.landing_url,
+        prototyp_url: protoUrl,
+        verdict: 'zielony',
+        created_at: session.created_at,
+      } }, 200, cors)
+    }
+
+    // ── action 'admin_get': READ-ONLY podgląd panelu dla ADMINA (panel TN Aplikacje) ──
+    //    Jak 'public', ale BEZ bramki kompletności i restrykcji galerii — admin widzi
+    //    panel KAŻDEGO leada (też niedomknięty: bez landinga/prototypu/werdyktu).
+    //    KRYTYCZNE: ZERO efektów ubocznych — NIE stempluje last_panel_at / panel_visits /
+    //    nie seeduje reveals (inaczej podgląd admina psułby bramkowanie dripa leada).
+    //    Autoryzacja: JWT członka zespołu (team_members) — sam 'authenticated' nie wystarcza
+    //    (publiczna rejestracja w sparingu daje tę rolę każdemu; wzorzec invoice-pdf/spar-landing).
+    //    Kształt 'projekt' 1:1 z 'public' → renderer /aplikacja/projekt/ działa bez przeróbek.
+    if (action === 'admin_get') {
+      if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
+      const { data: tm } = await supabase
+        .from('team_members').select('user_id').eq('user_id', authUser.id).maybeSingle()
+      if (!tm) return jsonResponse({ error: 'brak_uprawnien' }, 403, cors)
+      const { data: protoRow } = await supabase.from('spar_usage')
+        .select('meta').eq('session_id', sessionId).eq('kind', 'prototype')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      const protoMeta = (protoRow?.meta || null) as Record<string, unknown> | null
+      const protoUrl = protoMeta && typeof protoMeta.url === 'string' ? protoMeta.url as string : null
+      const pBrief = (session.preview_brief || {}) as Record<string, unknown>
+      const stripMeta = (o: unknown): Record<string, unknown> | null => {
+        if (!o || typeof o !== 'object') return null
+        const { _meta: _drop, ...rest } = o as Record<string, unknown>
+        return rest
+      }
+      return jsonResponse({ projekt: {
+        nazwa: (pBrief.nazwa as string) || 'Narzędzie',
+        opis: (pBrief.opis as string) || null,
+        dla_kogo: (pBrief.dla_kogo as string) || null,
+        ekrany: Array.isArray(pBrief.ekrany) ? pBrief.ekrany : [],
+        karta: (session.problem_summary as Record<string, unknown> | null) || null,
+        preview_image_url: session.preview_image_url || null,
+        preview_images: session.preview_images || null,
+        preview_history: session.preview_history || null,
+        image_count: session.image_count || 0,
+        business_plan: stripMeta(session.business_plan),
+        market_report: stripMeta(session.market_report),
+        economics: stripMeta(session.economics),
+        gtm: stripMeta(session.gtm),
+        landing_url: session.landing_url || null,
+        prototyp_url: protoUrl,
+        verdict: session.verdict || null,
+        created_at: session.created_at,
+      } }, 200, cors)
     }
 
     // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do

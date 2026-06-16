@@ -981,6 +981,20 @@ async function refreshLeadChat() {
   if (grew) { try { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); } catch (e) { /* ignore */ } }
 }
 
+// Podgląd panelu projektu tak, jak widzi go klient — przekazujemy JWT zalogowanego
+// admina w hashu (#admin=), bo strona żyje na tomekniedzwiecki.pl (inny origin, brak
+// wspólnej sesji Supabase). spar-project weryfikuje team_members i zwraca dane ungated
+// bez efektów ubocznych. Tab otwieramy SYNCHRONICZNIE (gest usera) i dopiero potem
+// dostawiamy URL — inaczej popup-blocker ubiłby okno po await getSession().
+function openClientPreview(sid) {
+  const w = window.open('about:blank', '_blank');
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    const tok = session && session.access_token;
+    if (!tok) { if (w) w.close(); toast('Brak sesji — zaloguj się ponownie'); return; }
+    const url = PROJEKT_URL + '?sid=' + encodeURIComponent(sid) + '#admin=' + encodeURIComponent(tok);
+    if (w) w.location = url; else window.open(url, '_blank');
+  }).catch(() => { if (w) w.close(); toast('Nie udało się otworzyć podglądu'); });
+}
 function renderLeadHead(s) {
   $('lead-head').innerHTML = `
     <div class="flex items-start gap-3 flex-wrap">
