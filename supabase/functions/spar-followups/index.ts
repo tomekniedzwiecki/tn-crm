@@ -489,7 +489,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, created_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, created_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
     const { data: unpaid, error: unpaidErr } = await supabase
@@ -594,6 +594,7 @@ Deno.serve(async (req) => {
       .eq('is_test', false)
       .or('verdict.is.null,verdict.eq.zolty')
       .is('paid_at', null)
+      .is('sequence_cancelled_at', null)
       .not('email', 'is', null)
       .gte('last_user_at', hoursAgo(96))
       .lte('last_user_at', hoursAgo(3))
@@ -629,6 +630,7 @@ Deno.serve(async (req) => {
         .eq('is_test', false)
         .or('verdict.is.null,verdict.eq.zolty')
         .is('paid_at', null)
+        .is('sequence_cancelled_at', null)
         .not('phone', 'is', null)
         .not('sms_consent_at', 'is', null)
         .not('left_screen_at', 'is', null)
@@ -675,6 +677,7 @@ Deno.serve(async (req) => {
       .eq('is_test', false)
       .eq('verdict', 'zielony')
       .is('paid_at', null)
+      .is('sequence_cancelled_at', null)
       .not('email', 'is', null)
       .gte('created_at', hoursAgo(26 * 24)) // nie starsze niż cała seria (+bufor)
       .limit(80)

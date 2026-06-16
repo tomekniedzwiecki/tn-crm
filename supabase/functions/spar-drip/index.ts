@@ -363,7 +363,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test'
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
@@ -512,7 +512,7 @@ Deno.serve(async (req) => {
       const { data: reveals } = await supabase.from('spar_reveals').select('*').eq('session_id', sid).order('seq')
       const { data: emails } = await supabase.from('spar_emails').select('kind, sent_at, opened_at, clicked_at').eq('session_id', sid).like('kind', 'reveal_%')
       const engaged = s ? await isEngaged(supabase, s) : false
-      return jsonResponse({ session: s ? { email: s.email, name: s.name, last_panel_at: s.last_panel_at, last_user_at: s.last_user_at, panel_visits: s.panel_visits, seen_landing_at: s.seen_landing_at, verdict: s.verdict, paid_at: s.paid_at, engaged } : null, reveals: reveals || [], emails: emails || [], plan: REVEAL_PLAN }, 200)
+      return jsonResponse({ session: s ? { email: s.email, name: s.name, last_panel_at: s.last_panel_at, last_user_at: s.last_user_at, panel_visits: s.panel_visits, seen_landing_at: s.seen_landing_at, verdict: s.verdict, paid_at: s.paid_at, sequence_cancelled_at: s.sequence_cancelled_at, engaged } : null, reveals: reveals || [], emails: emails || [], plan: REVEAL_PLAN }, 200)
     }
 
     // ── action: seed ──
@@ -549,6 +549,25 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, key: target.key, result: 'preview', preview: { subject, html: finalHtml, to: s.email } }, 200)
     }
 
+    // ── action: cancel / resume (ADMIN — ręczne wstrzymanie/wznowienie automatu) ──
+    //    cancel: wstrzymuje sekwencję + follow-upy + SMS (flaga sequence_cancelled_at)
+    //    i zamyka niewysłane odsłony. NIE blokuje ręcznego generowania z karty leada.
+    //    resume: zdejmuje flagę i wznawia niewysłane odsłony (skipped → pending).
+    if (body.action === 'cancel' || body.action === 'resume') {
+      if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
+      const sid = (body.sessionId || '').trim()
+      if (!sid) return jsonResponse({ error: 'brak_sesji' }, 400)
+      const nowIso = new Date().toISOString()
+      if (body.action === 'cancel') {
+        await supabase.from('spar_sessions').update({ sequence_cancelled_at: nowIso, updated_at: nowIso }).eq('id', sid)
+        await closeLost(supabase, sid, nowIso)   // pending/generating/paused → skipped
+        return jsonResponse({ ok: true, cancelled: true }, 200)
+      }
+      await supabase.from('spar_sessions').update({ sequence_cancelled_at: null, updated_at: nowIso }).eq('id', sid)
+      await supabase.from('spar_reveals').update({ status: 'pending', updated_at: nowIso }).eq('session_id', sid).eq('status', 'skipped')
+      return jsonResponse({ ok: true, cancelled: false }, 200)
+    }
+
     // ── action: templates (ADMIN — galeria szablonów reveali, dane przykładowe) ──
     if (body.action === 'templates') {
       if (!isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
@@ -574,7 +593,7 @@ Deno.serve(async (req) => {
 
     // 1) seed: zielone sesje bez planu
     const { data: green } = await supabase.from('spar_sessions')
-      .select('id, created_at').eq('is_test', false).eq('verdict', 'zielony').is('paid_at', null).limit(200)
+      .select('id, created_at').eq('is_test', false).eq('verdict', 'zielony').is('paid_at', null).is('sequence_cancelled_at', null).limit(200)
     for (const g of green || []) {
       const { count } = await supabase.from('spar_reveals').select('id', { count: 'exact', head: true }).eq('session_id', g.id)
       if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
@@ -595,7 +614,7 @@ Deno.serve(async (req) => {
       if (fired >= MAX_FIRES_PER_RUN) break
       if (lostNow.has(rv.session_id)) continue   // sesja już zamknięta w tym przebiegu
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.is_test || !s.email || s.paid_at || s.verdict !== 'zielony') continue
+      if (!s || s.is_test || !s.email || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
       // Bramka między-kanałowa: świeży dotyk mailem/SMS z innego kanału → odpuść
       // ten przebieg (reveal zostaje pending/generating, ponowi się później).
       const xTouch = await recentNonRevealTouchMs(supabase, s.id)
@@ -629,7 +648,7 @@ Deno.serve(async (req) => {
     for (const rv of paused || []) {
       if (closedLost.has(rv.session_id)) continue
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.paid_at || s.verdict !== 'zielony') continue
+      if (!s || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
       const inactive = Date.now() - await lastActivityMs(supabase, s)
       if (inactive >= LOST_WINDOW_DAYS * 86400000) {
         await closeLost(supabase, s.id, nowIso); closedLost.add(s.id)   // przegrany → koniec
@@ -660,8 +679,8 @@ Deno.serve(async (req) => {
         // nie może zamienić się w serię SMS-ów pod rząd).
         const { count: recentSms } = await supabase.from('spar_sms').select('id', { count: 'exact', head: true }).eq('session_id', em.session_id).gte('created_at', new Date(Date.now() - 2 * 86400000).toISOString())
         if (recentSms) continue
-        const { data: s } = await supabase.from('spar_sessions').select('id, name, email, phone, verdict, paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out').eq('id', em.session_id).maybeSingle()
-        if (!s || s.is_test || s.paid_at || s.verdict !== 'zielony') continue
+        const { data: s } = await supabase.from('spar_sessions').select('id, name, email, phone, verdict, paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out, sequence_cancelled_at').eq('id', em.session_id).maybeSingle()
+        if (!s || s.is_test || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
         if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue   // brak numeru/zgody albo opt-out
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive < 86400000) continue                              // aktywny w ostatniej dobie → SMS redundantny

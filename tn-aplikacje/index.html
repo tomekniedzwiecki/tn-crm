@@ -1522,20 +1522,25 @@ async function renderProjectDetail(sid, targetId) {
   if (!DEMO) { try { const { data: srows } = await supabaseClient.from('spar_sms').select('kind, message, status, phone, created_at, clicked_at, delivered_at, dlr_status').eq('session_id', sid); (srows || []).forEach((x) => { smsByKind[x.kind] = x; }); } catch (smsErr) { console.error(smsErr); } }
 
   const engaged = s && s.engaged;
+  const cancelled = !!(s && s.sequence_cancelled_at);
   const head = `
-    <div class="flex flex-wrap items-center gap-3 mb-4 pb-4 border-b border-white/5">
+    <div class="flex flex-wrap items-center gap-3 mb-1 pb-4 border-b border-white/5">
       <div class="min-w-0">
         <div class="text-white font-medium">${esc(s ? (s.name || '—') : '—')}</div>
         <div class="text-xs text-zinc-500">${esc((s && s.email) || 'bez e-maila')}</div>
       </div>
-      <span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${engaged ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' : 'text-amber-400 border-amber-400/30 bg-amber-400/10'}">
-        <i class="ph ${engaged ? 'ph-fire' : 'ph-snowflake'} mr-1.5"></i>${engaged ? 'zaangażowany — sekwencja leci' : 'zimny — dalsze odsłony wstrzymane'}
-      </span>
+      ${cancelled
+        ? `<span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] text-zinc-300 border-white/15 bg-white/5"><i class="ph ph-pause-circle mr-1.5"></i>sekwencja wstrzymana</span>`
+        : `<span class="inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${engaged ? 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10' : 'text-amber-400 border-amber-400/30 bg-amber-400/10'}"><i class="ph ${engaged ? 'ph-fire' : 'ph-snowflake'} mr-1.5"></i>${engaged ? 'zaangażowany — sekwencja leci' : 'zimny — dalsze odsłony wstrzymane'}</span>`}
       <div class="ml-auto flex items-center gap-3 text-[11px] text-zinc-500">
         <span title="ostatnie wejście do panelu"><i class="ph ph-device-mobile mr-1"></i>panel: ${s ? timeAgo(s.last_panel_at) : '—'}</span>
         <span title="ostatnia aktywność w rozmowie"><i class="ph ph-chat-circle mr-1"></i>rozmowa: ${s ? timeAgo(s.last_user_at) : '—'}</span>
+        ${cancelled
+          ? `<button onclick="resumeLeadDrip('${sid}')" class="px-2.5 py-1.5 rounded-lg border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10 transition inline-flex items-center gap-1"><i class="ph ph-play"></i>Wznów sekwencję</button>`
+          : `<button onclick="cancelLeadDrip('${sid}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-rose-300 hover:border-rose-500/30 transition inline-flex items-center gap-1" title="Zatrzymaj automatyczne maile, SMS i generowanie dla tego leada (można wznowić)"><i class="ph ph-pause"></i>Wstrzymaj sekwencję</button>`}
       </div>
-    </div>`;
+    </div>
+    ${cancelled ? `<div class="mb-4 mt-2 text-[11px] text-zinc-500 flex items-center gap-1.5"><i class="ph ph-info text-amber-400"></i>Automatyczne maile, SMS i generowanie wstrzymane dla tego leada. Ręczne generowanie z karty nadal działa.</div>` : `<div class="mb-3"></div>`}`;
 
   const rows = plan.map((p) => {
     const r = byKey[p.key];
@@ -1623,6 +1628,15 @@ async function fireSend(sid, key) {
 }
 async function seedLeadDrip(sid) {
   try { await callDrip({ action: 'seed', sessionId: sid }); toast('Plan utworzony ✓'); renderProjectDetail(sid, 'lead-drip'); }
+  catch (e) { toast('Błąd: ' + e.message); }
+}
+async function cancelLeadDrip(sid) {
+  if (!confirm('Wstrzymać sekwencję dla tego leada?\n\nZatrzyma automatyczne maile, SMS i generowanie odsłon. Ręczne generowanie z karty nadal działa, a sekwencję można później wznowić.')) return;
+  try { await callDrip({ action: 'cancel', sessionId: sid }); toast('Sekwencja wstrzymana ✓'); renderProjectDetail(sid, 'lead-drip'); }
+  catch (e) { toast('Błąd: ' + e.message); }
+}
+async function resumeLeadDrip(sid) {
+  try { await callDrip({ action: 'resume', sessionId: sid }); toast('Sekwencja wznowiona ✓'); renderProjectDetail(sid, 'lead-drip'); }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 
