@@ -15,13 +15,10 @@
 // formatu content_block_delta/text_delta + własny event "spar_meta" na końcu —
 // frontend ma jeden kontrakt SSE niezależnie od providera (łatwa podmiana GPT/Claude).
 //
-// TRYBY (body.mode):
-//   'sparing'    (default) — lejek definiowania projektu (tomekniedzwiecki.pl/aplikacja/sparing/)
-//   'wspolpraca'           — drugi czat w PANELU PROJEKTU (crm: stworze-projekt.html):
-//                            rozmowa o modelu współpracy, cel = zamówienie makiety.
-//                            Wymaga istniejącej sesji Z projektem; prompt z klucza
-//                            'stworze_wspolpraca_prompt'; historia w spar_messages
-//                            z channel='wspolpraca'; bez markerów <projekt>/<werdykt>.
+// TRYB: 'sparing' — lejek definiowania projektu (tomekniedzwiecki.pl/aplikacja/sparing/).
+//   Po zielonym werdykcie ten sam czat przechodzi w fazę współpracy (sekcja
+//   PRZEŁAMYWANIE OBIEKCJI w prompcie + COLLAB_PHASE_INSTRUCTION). Dawny osobny
+//   tryb 'wspolpraca' (stary model 20%/30k, niepodłączony) USUNIĘTY 2026-06-16.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
@@ -56,6 +53,8 @@ const MAX_MESSAGES_PER_HOUR = 60      // wiadomości/h per sesja (COUNT spar_mes
 const MAX_SESSIONS_PER_HOUR_PER_IP = 10 // nowych sesji/h per IP (anty-abuse: mnożenie sessionId)
 const MAX_SESSIONS_PER_DAY_PER_USER = parseInt(Deno.env.get('SPAR_SESSIONS_USER_DAILY') || '10', 10) // nowych sesji/dobę per konto
 const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy konta/maila (bramka inline w czacie)
+const MAX_TURNS_HARD_GATE = 7        // #10: twardy backstop — kontakt wymuszany najpóźniej po tylu turach,
+                                     // nawet bez podglądu (normalnie pytamy DOPIERO po pierwszym <projekt>)
 // SPAR_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
 // false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
 const REQUIRE_ACCOUNT = (Deno.env.get('SPAR_REQUIRE_ACCOUNT') || 'false') === 'true'
@@ -71,9 +70,7 @@ const promptCache = new Map<string, { value: string; fetchedAt: number }>()
 
 const PROMPT_KEYS: Record<string, string> = {
   sparing: 'stworze_sparing_prompt',
-  wspolpraca: 'stworze_wspolpraca_prompt',
 }
-const MAX_COLLAB_TURNS = 30 // tur asystenta w kanale wspolpraca (osobna pula od sparingu)
 
 interface SparChatRequest {
   sessionId: string
@@ -135,6 +132,9 @@ async function verifyAuthUser(
 // Fail-open przy awarii weryfikatora (bot protection to warstwa, nie ściana —
 // padnięty Cloudflare nie może blokować całego lejka).
 async function verifyTurnstile(token: string | null | undefined, ip: string | null): Promise<boolean> {
+  // Przełącznik operacyjny (TYLKO na czas testów E2E): SPAR_TURNSTILE_OFF=true
+  // wyłącza weryfikację anty-bota dla wszystkich. Pamiętaj wrócić na false.
+  if ((Deno.env.get('SPAR_TURNSTILE_OFF') || '') === 'true') return true
   const secret = Deno.env.get('TURNSTILE_SECRET_KEY')
   if (!secret) return true // rollout bez kluczy: weryfikacja wyłączona
   if (!token || typeof token !== 'string' || token.length > 2048) return false
@@ -264,6 +264,12 @@ function mergeBrief(
   oldBrief: Record<string, unknown> | null,
   fresh: Record<string, unknown>,
 ): Record<string, unknown> {
+  // #E: pełny pivot — model oznacza nowy <projekt> "reset":true → podgląd OD ZERA,
+  // bez mergowania resztek poprzedniego pomysłu (ekrany/styl/design/insighty).
+  if (fresh && fresh.reset === true) {
+    const { reset: _r, ...rest } = fresh
+    return rest
+  }
   const old = oldBrief && typeof oldBrief === 'object' ? oldBrief : {}
   const merged: Record<string, unknown> = { ...old, ...fresh }
   const oldW = (old.widoki && typeof old.widoki === 'object') ? old.widoki as Record<string, unknown> : {}
@@ -352,6 +358,108 @@ async function createLeadForGreenVerdict(
   }
 }
 
+// ── Powiadomienia Slack #sparing ─────────────────────────────────────────────
+// Wysyłka przez edge function slack-notify (centralne formatowanie + sekret
+// webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
+// wywrócić rozmowy, więc tylko logujemy.
+async function postSlackSparing(
+  type: 'spar_contact' | 'spar_green',
+  data: Record<string, unknown>,
+): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[spar-chat] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${key}`,
+      },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[spar-chat] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[spar-chat] slack-notify ${type} exception:`, err)
+  }
+}
+
+// Lead zostawił JEDNOCZEŚNIE e-mail i telefon → #sparing (raz na sesję).
+// Stempel + warunki w jednym atomowym UPDATE: tylko gdy oba pola wypełnione
+// i jeszcze nie powiadomiono — wygrany wiersz = nasze powiadomienie (domyka też
+// równoległe requesty). Wołane po każdym dopisaniu kontaktu.
+async function maybeNotifyContactSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('spar_sessions')
+      .update({ slack_contact_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_contact_notified_at', null)
+      .not('email', 'is', null)
+      .not('phone', 'is', null)
+      .eq('is_test', false)
+      .select('id, email, name, phone, profession, problem_summary, preview_brief')
+    if (error) { console.error('[spar-chat] contact slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    await postSlackSparing('spar_contact', {
+      session_id: s.id,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      profession: s.profession ?? null,
+      project_name: brief?.nazwa ?? null,
+      project_desc: brief?.opis ?? null,
+      karta: (s.problem_summary && typeof s.problem_summary === 'object') ? s.problem_summary : null,
+    })
+  } catch (err) {
+    console.error('[spar-chat] maybeNotifyContactSlack exception:', err)
+  }
+}
+
+// Sesja dostała werdykt „zielony" → #sparing (raz na sesję).
+async function maybeNotifyGreenSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  payload: {
+    email: string | null
+    name: string | null
+    phone: string | null
+    profession: string | null
+    karta: Record<string, unknown> | null
+    brief: Record<string, unknown> | null
+  },
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('spar_sessions')
+      .update({ slack_green_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_green_notified_at', null)
+      .eq('is_test', false)
+      .select('id')
+    if (error) { console.error('[spar-chat] green slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const brief = payload.brief
+    await postSlackSparing('spar_green', {
+      session_id: sessionId,
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone,
+      profession: payload.profession,
+      project_name: brief?.nazwa ?? null,
+      project_desc: brief?.opis ?? null,
+      karta: payload.karta,
+    })
+  } catch (err) {
+    console.error('[spar-chat] maybeNotifyGreenSlack exception:', err)
+  }
+}
+
 // Zapis po zakończeniu streamu: wiadomość asystenta + update sesji + koszt
 async function persistAfterStream(
   supabase: ReturnType<typeof createClient>,
@@ -411,6 +519,9 @@ async function persistAfterStream(
       updated_at: new Date().toISOString(),
       last_user_at: new Date().toISOString(),
     }
+    // #4: protokół biernego rozmówcy — model po daniu szansy wystawia <bierny>,
+    // a my oznaczamy sesję jako bierną (panel filtruje takie leady).
+    if (/<bierny\s*\/?>/.test(assistantText)) update.status = 'bierny'
     if (verdict.verdict) {
       update.verdict = verdict.verdict
       update.problem_summary = verdict.karta
@@ -458,6 +569,13 @@ PO WYBORZE: rozmówca odpisze „Wybieram kierunek: …". Potwierdź krótko ten
 // zaproponowane wyostrzenie — wtedy (i dopiero wtedy) pokazujemy podgląd.
 const PREVIEW_AFTER_GATE_INSTRUCTION = `[PODGLĄD PO DOPRACOWANIU KIERUNKU]
 Po badaniu rynku rozmówca właśnie zareagował na zaproponowane wyostrzenie narzędzia. Jeśli akceptuje lub doprecyzował kierunek — POKAŻ teraz, jak to może wyglądać: wystaw marker <projekt>{…} wg ustaleń (uwzględnij wyostrzenie z badania; rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn). Zielony <werdykt> wystaw jak zwykle, po podglądzie/akceptacji. Jeśli rozmówca chce ZUPEŁNIE innego kierunku — krótko dopytaj, zamiast wymuszać podgląd. NIE wystawiaj już markera <ocena>.`
+
+// Wstrzykiwane PO zielonym werdykcie (mode sparing) — ZAMIAST bramki oceny.
+// Trzyma agenta w fazie współpracy (rezerwacja + przełamywanie obiekcji), zamiast
+// ciągnąć go z powrotem do badania pomysłu. Mechanika w kodzie (nie w 41k prompcie)
+// — łatwa do tuningu/rewersji. Treść retoryki (bank obiekcji) jest w prompcie.
+const COLLAB_PHASE_INSTRUCTION = `[FAZA WSPÓŁPRACY — PO ZIELONYM WERDYKCIE]
+Projekt jest już zdefiniowany (werdykt zielony) — karta i ekrany są w panelu obok. NIE wracaj do badania pomysłu i NIE wystawiaj już markera <ocena>; głównym tematem jest teraz WSPÓŁPRACA, a następny krok to rezerwacja wspólnej rozmowy. Trzymaj się sekcji „OFERTA I WSPÓŁPRACA" oraz „PRZEŁAMYWANIE OBIEKCJI": gdy wyczuwasz wahanie lub obawę, rozwiewaj ją jak doradca, nie sprzedawca — zwięźle (2–4 zdania, jeden wątek). Jeśli rozmówca naprawdę chce zmienić pomysł, możesz odesłać do dokończenia rozmowy definiującej; domyślnie jednak rozmawiacie o tym, jak zbudować to razem.`
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
 async function runGate(
@@ -530,7 +648,7 @@ function buildSteerInstruction(o: Record<string, unknown>): string {
     : ''
   const platnosc = String(o.platnosc || '')
   const wspolne = `DANE Z BADANIA RYNKU (na żywo, REALNE — wykorzystaj je, to nie zgadywanie): ocena=${ocena}. Rynek/nisza: ${rynek} Konkurencja+ceny: ${konk} Czy ktoś płaci: ${platnosc} Powody: ${powody}. Najmocniejszy kąt/luka: ${kierunek}${zrodla ? ` Źródła: ${zrodla}.` : ''}
-Ten krok ma REALNIE POMÓC, nie tylko powiedzieć „ok / nie ok". Odezwij się jednym naturalnym komunikatem (BEZ markera <ocena>), który ZACZYNA od 2–3 KONKRETNYCH wniosków z badania — najwięksi konkurenci z cenami, wielkość niszy, największa LUKA — krótko, z liczbami, po ludzku. Dopiero na tej podstawie prowadź dalej.`
+Ten krok ma REALNIE POMÓC, nie tylko powiedzieć „ok / nie ok". Odezwij się jednym naturalnym komunikatem (BEZ markera <ocena>), który ZACZYNA od 2–3 KONKRETNYCH wniosków z badania — najwięksi konkurenci z cenami, wielkość niszy, największa LUKA — krótko, po ludzku, z ORIENTACYJNYMI przedziałami (nie udawaj precyzji); dokładną liczbę podaj tylko, gdy jesteś jej pewien ze źródła, a gdy nie — powiedz ogólnie, bez liczby. Dopiero na tej podstawie prowadź dalej.`
   if (ocena === 'mocny') {
     return `${wspolne}
 TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie aplikacji wynikające z luki: „Dlatego proponuję, żeby narzędzie …" — co podkreślić / dodać / odjąć, by trafić dokładnie w tę lukę (rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn).
@@ -539,6 +657,36 @@ NIE wystawiaj jeszcze <projekt> ani <werdykt> — najpierw chcemy JEDNĄ rundę 
   return `${wspolne}
 TO JESZCZE NIE JEST ZIELONE — NIE wystawiaj podglądu <projekt> ani zielonego <werdykt>. Po wnioskach przekaż „${kierunek}" jako MOCNĄ, pewną rekomendację (nie jako porażkę — jako „mam dla Ciebie lepszą wersję, bo dane pokazują…"), wprost wyprowadzoną z tych danych.
 ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/bólu, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.`
+}
+
+// #1: retry na przejściowy błąd OpenAI (429/5xx/sieć) — pojedynczy blip nie może
+// gubić całej tury rozmowy (audyt 2026-06-14: realny 502 w środku rozmowy).
+// Zwraca Response z NIEKONSUMOWANYM body (dla streamu).
+async function openaiFetchRetry(init: RequestInit, label: string, attempts = 3): Promise<Response> {
+  let last = ''
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', init)
+      if (res.ok) return res
+      if ((res.status === 429 || res.status >= 500) && i < attempts - 1) {
+        last = `HTTP ${res.status}`
+        try { await res.body?.cancel() } catch { /* zwolnij połączenie */ }
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
+        console.warn(`[spar-chat] ${label} retry ${i + 1} po ${last}`)
+        continue
+      }
+      return res // nieretryowalny albo ostatnia próba — oddaj, caller obsłuży !ok
+    } catch (err) {
+      last = String(err)
+      if (i < attempts - 1) {
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)))
+        console.warn(`[spar-chat] ${label} retry ${i + 1} po wyjątku ${last}`)
+        continue
+      }
+      throw err
+    }
+  }
+  throw new Error('openaiFetchRetry exhausted')
 }
 
 // Druga tura streamowana do TEGO samego kanału SSE (kontynuacja dymka).
@@ -552,7 +700,7 @@ async function streamSecondCall(
   let text = ''
   let usage: StreamUsage | null = null
   try {
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const resp = await openaiFetchRetry({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -562,9 +710,9 @@ async function streamSecondCall(
         model, stream: true, stream_options: { include_usage: true },
         max_completion_tokens: 5000, messages: msgs,
       }),
-    })
+    }, 'chat-steer')
     if (!resp.ok || !resp.body) {
-      console.error('[spar-chat] second call HTTP error:', resp.status)
+      console.error('[spar-chat] second call HTTP error po retry:', resp.status)
       return { text, usage }
     }
     const reader = resp.body.getReader()
@@ -642,8 +790,7 @@ Deno.serve(async (req) => {
     const phone = (body.phone || '').replace(/[^\d+ \-()]/g, '').trim().slice(0, 30) || null
     const message = (body.message || '').trim()
     const tracking = body.tracking && typeof body.tracking === 'object' ? body.tracking : null
-    const mode = body.mode === 'wspolpraca' ? 'wspolpraca' : 'sparing'
-    const isCollab = mode === 'wspolpraca'
+    const mode = 'sparing'   // jedyny tryb (relikt mode=wspolpraca usunięty 2026-06-16)
     // body.authUserId / body.authProvider: DEPRECATED, ignorowane (patrz verifyAuthUser)
 
     if (!sessionId || !UUID_RE.test(sessionId)) {
@@ -658,6 +805,45 @@ Deno.serve(async (req) => {
       const screen = (body.screen === 'ekrany' || body.screen === 'badanie') ? body.screen : null
       const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
       await sb.from('spar_sessions').update({ left_screen_at: new Date().toISOString(), left_screen: screen, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      return jsonResponse({ ok: true }, 200, corsHeaders)
+    }
+
+    // ── Zapis kontaktu z bramki BEZ wiadomości ──
+    //   Wołany po domknięciu bramki, zwłaszcza gdy werdykt już padł i kolejnej
+    //   tury może nie być. Bez tego telefon/konto z bramki nie trafiłyby do bazy
+    //   (contactUpdate niżej działa tylko w toku wiadomości). Te same reguły:
+    //   pola dopisujemy tylko gdy puste, konto z JWT ma pierwszeństwo,
+    //   sesja przypięta do konta przyjmuje zmianę tylko od właściciela.
+    if (body.event === 'contact') {
+      if (email && (email.length > 320 || !EMAIL_RE.test(email))) {
+        return jsonResponse({ error: 'nieprawidlowy_email' }, 400, corsHeaders)
+      }
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const au = await verifyAuthUser(req, sb)
+      const { data: sess } = await sb
+        .from('spar_sessions')
+        .select('id, email, name, phone, auth_user_id')
+        .eq('id', sessionId)
+        .maybeSingle()
+      if (!sess) return jsonResponse({ ok: false }, 200, corsHeaders)
+      const ownerId = (sess.auth_user_id as string | null) || null
+      if (ownerId && (!au || au.id !== ownerId)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      }
+      const upd: Record<string, unknown> = {}
+      if (au && !sess.auth_user_id) { upd.auth_user_id = au.id; upd.auth_provider = au.provider }
+      const inEmail = (au?.email || email) || null
+      const inName = (au?.name || name) || null
+      if (inEmail && !sess.email) upd.email = inEmail
+      if (inName && !sess.name) upd.name = inName
+      if (phone && !sess.phone) { upd.phone = phone; upd.sms_consent_at = new Date().toISOString() }
+      if (Object.keys(upd).length) {
+        upd.updated_at = new Date().toISOString()
+        await sb.from('spar_sessions').update(upd).eq('id', sessionId)
+      }
+      // E-mail + telefon razem → powiadom #sparing (raz na sesję; helper sam
+      // sprawdza oba pola i dedup, więc bezpieczne nawet bez zmiany powyżej)
+      await maybeNotifyContactSlack(sb, sessionId)
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po
@@ -700,17 +886,10 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
     }
 
-    // Tryb wspolpraca: rozmowa o współpracy istnieje tylko nad zdefiniowanym
-    // projektem — sesja musi istnieć i mieć kartę lub brief (jak spar-project).
-    if (isCollab && (!existingSession || (!existingSession.problem_summary && !existingSession.preview_brief))) {
-      return jsonResponse({ error: 'brak_projektu' }, 404, corsHeaders)
-    }
-
     // ── Własność sesji: rozmowa przypięta do konta wymaga JWT tego konta ─────
-    // (link ?id= przestaje działać jak hasło). Kanał wspolpraca zostaje
-    // sessionId-based — działa z panelu projektu bez logowania klienta.
+    // (link ?id= przestaje działać jak hasło).
     const sessionOwnerId = (existingSession?.auth_user_id as string | null | undefined) || null
-    if (!isCollab && sessionOwnerId && (!authUser || authUser.id !== sessionOwnerId)) {
+    if (sessionOwnerId && (!authUser || authUser.id !== sessionOwnerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
     }
 
@@ -741,6 +920,11 @@ Deno.serve(async (req) => {
           .update(contactUpdate)
           .eq('id', sessionId)
         if (contactError) console.error('[spar-chat] contact update error:', contactError)
+        // Jeśli ta tura dopięła e-mail lub telefon — sprawdź czy lead ma już
+        // komplet kontaktu i ewentualnie powiadom #sparing (dedup w helperze).
+        if ('email' in contactUpdate || 'phone' in contactUpdate) {
+          await maybeNotifyContactSlack(supabase, sessionId)
+        }
       }
     } else {
       const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
@@ -814,35 +998,23 @@ Deno.serve(async (req) => {
     }
 
     // ── Limity (przed wywołaniem Claude) ─────────────────────────────────────
-    if (isCollab) {
-      // Osobna pula tur dla czatu współpracy (licznik sesji `turns` jest globalny)
-      const { count: collabTurns, error: collabCountError } = await supabase
-        .from('spar_messages')
-        .select('id', { count: 'exact', head: true })
-        .eq('session_id', sessionId)
-        .eq('channel', 'wspolpraca')
-        .eq('role', 'assistant')
-      if (collabCountError) {
-        console.error('[spar-chat] collab turns count error:', collabCountError)
-        return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
-      }
-      if ((collabTurns ?? 0) >= MAX_COLLAB_TURNS) {
-        return jsonResponse({ error: 'limit_tur' }, 429, corsHeaders)
-      }
-    } else if (turnsBefore >= MAX_TURNS) {
+    if (turnsBefore >= MAX_TURNS) {
       return jsonResponse({ error: 'limit_tur' }, 429, corsHeaders)
     }
 
     // Bramka kontaktu (backstop server-side; frontend pokazuje formularz wcześniej):
     // bez maila rozmowa nie przechodzi dalej niż MAX_TURNS_BEZ_KONTAKTU tur.
-    // W trybie wspolpraca działa od pierwszej wiadomości (mail i tak konieczny
-    // przed zamówieniem makiety — panel kieruje wtedy z powrotem do rozmowy).
     const effectiveEmail = (existingSession?.email as string | null | undefined) || email || authUser?.email || null
     // Bramkę przechodzi: zweryfikowane konto (JWT teraz albo sesja już przypięta),
     // a w okresie przejściowym (REQUIRE_ACCOUNT=false) także sam e-mail jak dotąd.
     const hasAccount = !!authUser || !!sessionOwnerId
     const gateSatisfied = REQUIRE_ACCOUNT ? hasAccount : (hasAccount || !!effectiveEmail)
-    if (!gateSatisfied && (isCollab || turnsBefore >= MAX_TURNS_BEZ_KONTAKTU)) {
+    // #10: nie wymuszaj kontaktu, zanim rozmówca zobaczył pierwszy podgląd („wow”) —
+    // chyba że rozmowa wlecze się bez podglądu (twardy backstop MAX_TURNS_HARD_GATE).
+    const previewShown = !!existingSession?.preview_brief
+    const contactDue = (turnsBefore >= MAX_TURNS_BEZ_KONTAKTU && previewShown)
+      || turnsBefore >= MAX_TURNS_HARD_GATE
+    if (!gateSatisfied && contactDue) {
       return jsonResponse({ error: REQUIRE_ACCOUNT ? 'wymagane_konto' : 'wymagany_email' }, 403, corsHeaders)
     }
 
@@ -896,32 +1068,19 @@ Deno.serve(async (req) => {
     let sessionContext =
       `KONTEKST SESJI — profesja rozmówcy: ${sessionProfession || 'jeszcze nieustalona — ustal w pierwszych turach, czym rozmówca się zajmuje'}.`
 
-    if (isCollab) {
-      // Czat współpracy zna projekt: brief (nazwa/opis) + karta + stan werdyktu.
-      const brief = (existingSession?.preview_brief || {}) as Record<string, unknown>
-      const karta = existingSession?.problem_summary as Record<string, unknown> | null
-      const firstName = typeof existingSession?.name === 'string' && existingSession.name
-        ? (existingSession.name as string).split(' ')[0]
-        : null
-      const ctx: string[] = [
-        `KONTEKST SESJI — rozmawiasz w panelu projektu.`,
-        `Imię rozmówcy: ${firstName || 'nieznane'}. Profesja: ${sessionProfession || 'nieznana'}.`,
-        `Projekt: ${(brief.nazwa as string) || 'bez nazwy'} — ${(brief.opis as string) || 'brak opisu'}.`,
-        `Karta projektu (JSON): ${karta ? JSON.stringify(karta) : 'jeszcze niedomknięta — rozmowa definiująca trwa'}.`,
-        `Stan: ${existingSession?.verdict === 'zielony' ? 'projekt zdefiniowany (werdykt zielony) — można zamawiać makietę' : 'projekt w trakcie definiowania — do zamówienia makiety potrzebne dokończenie rozmowy definiującej'}.`,
-        `Podgląd graficzny: ${existingSession?.preview_image_url ? 'wygenerowany, widoczny w panelu' : 'brak'}.`,
-      ]
-      sessionContext = ctx.join('\n')
-    }
-
     // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend
     // odpala spar-assess i steruje drugą turą wg wyniku (tylko kanał sparing).
     // Jeśli poprzednia tura zamknęła badanie „zielonym" i czekamy na podgląd po
     // dopracowaniu kierunku — wstrzykujemy instrukcję podglądu zamiast bramki
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
-    if (!isCollab) {
+    {
       const asmt = existingSession?.assessment as Record<string, unknown> | null
-      if (asmt && asmt.awaiting_preview === true) {
+      if (existingSession?.verdict === 'zielony') {
+        // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
+        // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
+        // Bez tego GATE_INSTRUCTION ciągnął agenta z powrotem do <ocena>.
+        sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
+      } else if (asmt && asmt.awaiting_preview === true) {
         sessionContext += `\n\n${PREVIEW_AFTER_GATE_INSTRUCTION}`
         supabase.from('spar_sessions')
           .update({ assessment: { ...asmt, awaiting_preview: false }, updated_at: new Date().toISOString() })
@@ -937,28 +1096,34 @@ Deno.serve(async (req) => {
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
     // gpt-5.x: max_completion_tokens (NIE max_tokens), bez temperature.
     // OpenAI cache'uje powtarzalny prefiks promptu automatycznie.
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        stream: true,
-        // usage w ostatnim chunku streamu — bez tego nie policzymy kosztu tury
-        stream_options: { include_usage: true },
-        max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
-        messages: [
-          { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
-          ...messages,
-        ],
-      }),
-    })
+    let openaiResponse: Response
+    try {
+      openaiResponse = await openaiFetchRetry({
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: OPENAI_MODEL,
+          stream: true,
+          // usage w ostatnim chunku streamu — bez tego nie policzymy kosztu tury
+          stream_options: { include_usage: true },
+          max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
+          messages: [
+            { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
+            ...messages,
+          ],
+        }),
+      }, 'chat-main')
+    } catch (err) {
+      console.error('[spar-chat] OpenAI fetch wyjątek po retry:', err)
+      return jsonResponse({ error: 'blad_ai' }, 502, corsHeaders)
+    }
 
     if (!openaiResponse.ok || !openaiResponse.body) {
       const errorText = await openaiResponse.text().catch(() => '')
-      console.error('[spar-chat] OpenAI API error:', openaiResponse.status, errorText)
+      console.error('[spar-chat] OpenAI API error po retry:', openaiResponse.status, errorText)
       return jsonResponse({ error: 'blad_ai' }, 502, corsHeaders)
     }
 
@@ -1023,7 +1188,7 @@ Deno.serve(async (req) => {
           // Gdy model domknął rdzeń i wystawił <ocena>, odpalamy realny research
           // (spar-assess) i DRUGĄ turą model steruje wg wyniku. Werdykt z bramki.
           let gateOcena: Record<string, unknown> | null = null
-          if (!isCollab) {
+          {
             const om = assistantText.match(/<ocena>([\s\S]*?)<\/ocena>/)
             if (om) {
               try {
@@ -1063,13 +1228,13 @@ Deno.serve(async (req) => {
           // Stream zakończony — finalizacja. Markery <projekt>/<werdykt> żyją
           // tylko w sparingu; czat współpracy ich nie wysyła (a gdyby model
           // halucynował — nie nadpisujemy nimi karty projektu).
-          const verdict = isCollab ? { verdict: null, karta: null } as VerdictResult : parseVerdict(assistantText)
+          const verdict = parseVerdict(assistantText)
           // Twarda bramka: zielony przechodzi tylko z oceną „mocny" z badania rynku.
           if (gateOcena && verdict.verdict === 'zielony' && gateOcena.ocena !== 'mocny') {
             console.log('[spar-chat] hard-gate downgrade zielony→zolty (ocena=', gateOcena.ocena, ')')
             verdict.verdict = 'zolty'
           }
-          const projektFresh = isCollab ? null : parseProjekt(assistantText)
+          const projektFresh = parseProjekt(assistantText)
           let projekt: Record<string, unknown> | null = null
 
           if (projektFresh) {
@@ -1080,9 +1245,22 @@ Deno.serve(async (req) => {
             // ZAPIS PRZED eventem spar_projekt: frontend na ten event natychmiast
             // woła spar-image, a ten czyta brief Z BAZY — bez zapisu tutaj
             // generowanie ścigałoby się z persistem i rysowało stary/pusty brief.
+            const briefUpdate: Record<string, unknown> = { preview_brief: projekt, updated_at: new Date().toISOString() }
+            // Pełny pivot (<projekt> "reset":true): brief budowany OD ZERA, więc
+            // pochodne artefakty opisują już NIEISTNIEJĄCY pomysł. Czyścimy analizy
+            // (regenerują się leniwie dla nowej wizji przy wejściu w zakładkę) — inaczej
+            // panel pokazywałby raport/ekonomię/GTM/stronę starego pomysłu. Makiet nie
+            // ruszamy: front i tak je przerysowuje na event spar_projekt.
+            if (projektFresh.reset === true) {
+              briefUpdate.market_report = null
+              briefUpdate.economics = null
+              briefUpdate.gtm = null
+              briefUpdate.landing_url = null
+              briefUpdate.business_plan = null
+            }
             const { error: briefErr } = await supabase
               .from('spar_sessions')
-              .update({ preview_brief: projekt, updated_at: new Date().toISOString() })
+              .update(briefUpdate)
               .eq('id', sessionId)
             if (briefErr) console.error('[spar-chat] brief pre-save error:', briefErr)
 
@@ -1108,6 +1286,15 @@ Deno.serve(async (req) => {
                 karta: verdict.karta,
                 tracking,
               })
+              if (!leadId) {
+                // #2: zielony werdykt z mailem, a lead się NIE utworzył = cichy ubytek leada.
+                // Zostaw twardy sygnał (log [ALERT] + flaga w sesji do panelu/zapytania).
+                console.error('[spar-chat] [ALERT] zielony werdykt NIE utworzył leada — session:', sessionId, 'email:', effectiveEmail)
+                supabase.from('spar_sessions')
+                  .update({ lead_error: `lead-upsert bez lead_id @ ${new Date().toISOString()}` })
+                  .eq('id', sessionId)
+                  .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] lead_error stamp failed:', error) })
+              }
             } else {
               console.error('[spar-chat] zielony werdykt bez maila w sesji:', sessionId)
             }
@@ -1125,14 +1312,27 @@ Deno.serve(async (req) => {
           // Zapis do bazy PO zakończeniu streamu — waitUntil z fallbackiem
           const persistPromise = schedulePersist(verdict, leadId, projekt)
           if (persistPromise) await persistPromise
+
+          // Zielony werdykt → powiadom #sparing (raz na sesję, dedup w helperze).
+          // Brief z TEJ tury (lub zapisany w sesji) daje nazwę/opis do podsumowania.
+          if (verdict.verdict === 'zielony') {
+            await maybeNotifyGreenSlack(supabase, sessionId, {
+              email: effectiveEmail,
+              name: name || ((existingSession?.name as string | null | undefined) ?? null),
+              phone: phone || ((existingSession?.phone as string | null | undefined) ?? null),
+              profession: sessionProfession || 'nieznana',
+              karta: verdict.karta,
+              brief: projekt ?? ((existingSession?.preview_brief as Record<string, unknown> | null) ?? null),
+            })
+          }
         } catch (err) {
           console.error('[spar-chat] stream passthrough error:', err)
           // Klient mógł przerwać stream (zamknięta karta) — zapisz to, co już
           // wygenerowano, żeby historia rozmowy nie gubiła odpowiedzi asystenta.
           try {
-            const freshAbort = isCollab ? null : parseProjekt(assistantText)
+            const freshAbort = parseProjekt(assistantText)
             const persistPromise = schedulePersist(
-              isCollab ? { verdict: null, karta: null } : parseVerdict(assistantText),
+              parseVerdict(assistantText),
               null,
               freshAbort
                 ? mergeBrief((existingSession?.preview_brief as Record<string, unknown> | null) ?? null, freshAbort)
