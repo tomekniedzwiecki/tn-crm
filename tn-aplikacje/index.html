@@ -522,6 +522,7 @@ let costsBySession = {};    // session_id -> {cost_usd, calls, images, ...}
 let mails = [];             // spar_emails (wysłane followupy, najnowsze pierwsze)
 let mailKindsBySession = {}; // session_id -> Set(kind) — do wyliczania kolejki
 let mailsBySession = {};     // session_id -> [maile] (z otwarciami) — do zaangażowania
+let avatarByUser = {};       // auth_user_id -> avatar_url (tylko logowani przez Google)
 let usdPln = 4.0;
 let activeTab = 'dashboard';
 let showTests = false;
@@ -619,13 +620,16 @@ async function loadAll() {
   }
   sessions = all;
 
-  const [{ data: costs }, { data: rateRow }, { data: mailRows }] = await Promise.all([
+  const [{ data: costs }, { data: rateRow }, { data: mailRows }, { data: avatars }] = await Promise.all([
     supabaseClient.rpc('spar_session_costs'),
     supabaseClient.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
     supabaseClient.from('spar_emails').select('session_id, kind, email, sent_at, opened_at, clicked_at, delivered_at').order('sent_at', { ascending: false }).limit(800),
+    supabaseClient.rpc('spar_session_avatars'),  // avatary Google (zespół-only, SECURITY DEFINER)
   ]);
   costsBySession = {};
   (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
+  avatarByUser = {};
+  (avatars || []).forEach((a) => { if (a.auth_user_id && a.avatar_url) avatarByUser[a.auth_user_id] = a.avatar_url; });
   if (rateRow && rateRow.value) usdPln = parseFloat(rateRow.value) || 4.0;
   $('rate-input').value = usdPln.toFixed(2);
   mails = mailRows || [];
@@ -637,6 +641,19 @@ async function loadAll() {
   });
 }
 const costOf = (s) => (costsBySession[s.id] ? Number(costsBySession[s.id].cost_usd) : 0);
+
+// ── Avatar konta: zdjęcie Google (gdy logowano przez Google), inaczej inicjały ──
+function avatarPhoto(s) { return (s.auth_provider === 'google' && s.auth_user_id && avatarByUser[s.auth_user_id]) || null; }
+function avatarImg(url, px) { return `<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" loading="lazy" class="rounded-full object-cover shrink-0 border border-white/10" style="width:${px}px;height:${px}px" title="Konto Google">`; }
+// Tylko zdjęcie Google (pusto, gdy brak) — do gęstych miejsc (tabela)
+function avatarThumb(s, px) { const u = avatarPhoto(s); return u ? avatarImg(u, px) : ''; }
+// Zawsze coś (zdjęcie albo inicjały) — do kart, gdzie awatar jest stałym elementem
+function avatarBlock(s, px) {
+  const u = avatarPhoto(s);
+  if (u) return avatarImg(u, px);
+  const initials = (s.name || s.email || '?').trim().slice(0, 2).toUpperCase();
+  return `<div class="rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold shrink-0" style="width:${px}px;height:${px}px;font-size:${Math.round(px * 0.34)}px">${esc(initials)}</div>`;
+}
 
 // ── Zaangażowanie (lustro serwerowego isEngaged z spar-drip) ──
 // hot = zielony, nieopłacony, aktywny w oknie; cold = zielony, nieopłacony, ucichł.
@@ -763,11 +780,10 @@ function renderPipeline() {
   $('pipeline-cols').innerHTML = STAGES.map((st) => {
     const items = vis.filter((s) => stageOf(s) === st.id);
     const cards = items.slice(0, 60).map((s) => {
-      const initials = (s.name || s.email || '?').trim().slice(0, 2).toUpperCase();
       const manual = s.pipeline_override && STAGE_IDS.includes(s.pipeline_override);
       return `<div draggable="true" ondragstart="onCardDrag(event,'${s.id}')" ondragend="onCardDragEnd()" onclick="openSession('${s.id}')" class="pipe-card group bg-zinc-900/60 border border-white/5 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:-translate-y-0.5 transition animate-enter" title="Przeciągnij, aby zmienić etap">
         <div class="flex items-center gap-2.5">
-          <div class="w-8 h-8 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[11px] font-bold shrink-0">${esc(initials)}</div>
+          ${avatarBlock(s, 32)}
           <div class="flex-1 min-w-0">
             <div class="font-medium text-white text-sm truncate">${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] text-zinc-600">TEST</span>' : ''}</div>
             <div class="text-[11px] text-zinc-500 truncate">${esc(s.email || s.profession || '—')}</div>
@@ -800,7 +816,7 @@ function renderSesje() {
     return `<tr class="border-b border-white/[0.03] hover:bg-white/[0.03] cursor-pointer" onclick="openSession('${s.id}')">
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
-      <td class="px-4 py-2.5 text-zinc-400 text-xs">${esc(s.email || '—')}${s.phone ? `<div class="text-zinc-600">${esc(s.phone)}</div>` : ''}</td>
+      <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
       <td class="px-4 py-2.5">${signalBadge(s)}</td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
@@ -1018,6 +1034,7 @@ function renderLeadHead(s) {
   $('lead-head').innerHTML = `
     <div class="flex items-start gap-3 flex-wrap">
       <button onclick="closeLead()" class="shrink-0 mt-0.5 w-9 h-9 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/25 flex items-center justify-center transition" title="Wróć do listy"><i class="ph ph-arrow-left"></i></button>
+      ${avatarBlock(s, 40)}
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
