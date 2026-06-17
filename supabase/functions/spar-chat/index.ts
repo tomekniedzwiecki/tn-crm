@@ -471,6 +471,7 @@ async function persistAfterStream(
   projekt: Record<string, unknown> | null,
   channel: string,
   usage: StreamUsage | null,
+  isPaid: boolean = false,
 ): Promise<void> {
   try {
     if (assistantText.trim()) {
@@ -522,6 +523,15 @@ async function persistAfterStream(
     // #4: protokół biernego rozmówcy — model po daniu szansy wystawia <bierny>,
     // a my oznaczamy sesję jako bierną (panel filtruje takie leady).
     if (/<bierny\s*\/?>/.test(assistantText)) update.status = 'bierny'
+    // Rezygnacja POTWIERDZONA przez rozmówcę (marker <rezygnacja/>, wystawiany
+    // tylko przy jednoznacznej, wyraźnej intencji wg RESIGNATION_INSTRUCTION) →
+    // etap lejka „przegrany: zrezygnował" + wstrzymanie automatu maili/SMS (jak
+    // ręczny przycisk). Pomijamy opłaconych (nie wyrzucaj ich z „Opłacone").
+    // Service-role omija grant kolumnowy.
+    if (!isPaid && /<rezygnacja\s*\/?>/.test(assistantText)) {
+      update.pipeline_override = 'resigned'
+      update.sequence_cancelled_at = new Date().toISOString()
+    }
     if (verdict.verdict) {
       update.verdict = verdict.verdict
       update.problem_summary = verdict.karta
@@ -576,6 +586,17 @@ Po badaniu rynku rozmówca właśnie zareagował na zaproponowane wyostrzenie na
 // — łatwa do tuningu/rewersji. Treść retoryki (bank obiekcji) jest w prompcie.
 const COLLAB_PHASE_INSTRUCTION = `[FAZA WSPÓŁPRACY — PO ZIELONYM WERDYKCIE]
 Projekt jest już zdefiniowany (werdykt zielony) — karta i ekrany są w panelu obok. NIE wracaj do badania pomysłu i NIE wystawiaj już markera <ocena>; głównym tematem jest teraz WSPÓŁPRACA, a następny krok to rezerwacja wspólnej rozmowy. Trzymaj się sekcji „OFERTA I WSPÓŁPRACA" oraz „PRZEŁAMYWANIE OBIEKCJI": gdy wyczuwasz wahanie lub obawę, rozwiewaj ją jak doradca, nie sprzedawca — zwięźle (2–4 zdania, jeden wątek). Jeśli rozmówca naprawdę chce zmienić pomysł, możesz odesłać do dokończenia rozmowy definiującej; domyślnie jednak rozmawiacie o tym, jak zbudować to razem.`
+
+// REZYGNACJA — bezpieczne, DWUSTOPNIOWE oznaczenie „zrezygnował". Model NIE
+// oznacza od razu: najpierw upewnia się co do intencji, marker <rezygnacja/>
+// wystawia DOPIERO po wyraźnym potwierdzeniu w kolejnej turze. Backend mapuje
+// marker na etap lejka „przegrany: zrezygnował" + wstrzymuje automat maili/SMS.
+// Mechanika w kodzie (nie w prompcie settings) — łatwa do tuningu/rewersji.
+const RESIGNATION_INSTRUCTION = `[REZYGNACJA — OZNACZ TYLKO PRZY JEDNOZNACZNEJ, WYRAŹNEJ INTENCJI]
+„Rezygnacja" = rozmówca WPROST chce zakończyć temat: rezygnuje z pomysłu albo ze współpracy, nie chce dalej. To NIE jest rezygnacja, gdy: odrzuca konkretną funkcję, kierunek albo cenę; waha się; „musi to przemyśleć"; narzeka; pyta dalej; chce węższego/innego narzędzia. W takich razach normalnie pomagaj lub dopytuj i NIE oznaczaj.
+• Sygnał MIĘKKI lub niejasny (zniechęcenie, cena, „nie wiem", „muszę pomyśleć") — NIE oznaczaj. Najpierw zareaguj po ludzku JEDNYM zdaniem, które rozbraja obawę i zostawia otwarte drzwi; marker wystaw dopiero, jeśli w odpowiedzi rozmówca POTWIERDZI wprost, że kończy.
+• Rezygnacja WPROST i jednoznaczna (np. „rezygnuję", „dziękuję, to nie dla mnie", „nie jestem zainteresowany", „odpuszczam to") — NIE przepytuj po raz drugi: pożegnaj się ciepło JEDNYM zdaniem (zostaw otwarte drzwi na powrót), a w OSOBNEJ, OSTATNIEJ linii wystaw marker <rezygnacja/> — nic po nim.
+W razie realnej wątpliwości NIE oznaczaj.`
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
 async function runGate(
@@ -877,7 +898,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment, paid_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1091,6 +1112,8 @@ Deno.serve(async (req) => {
         // Karty rozwidlenia kierunku — tylko gdy front je renderuje (flaga)
         if (KIERUNKI_ENABLED) sessionContext += `\n\n${KIERUNKI_INSTRUCTION}`
       }
+      // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
+      sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
     }
 
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
@@ -1141,7 +1164,7 @@ Deno.serve(async (req) => {
         const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage, !!existingSession?.paid_at)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)

@@ -885,12 +885,13 @@ const MARKER_RE = /<(opcje|opcje_multi|suwak|ranking|styl_wybor|sekcje|karuzela|
 function cleanMsg(content) {
   let out = content;
   const verdict = content.match(/<werdykt>([\s\S]*?)<\/werdykt>/);
-  out = out.replace(MARKER_RE, '').trim();
+  out = out.replace(MARKER_RE, '').replace(/<(rezygnacja|bierny)\s*\/?>/g, '').trim();
   let badge = '';
   if (verdict) {
     try { badge = `<div class="mt-1.5 text-[10px] uppercase tracking-wider text-emerald-400">werdykt: ${esc(JSON.parse(verdict[1]).kolor)}</div>`; } catch (e) { /* ignore */ }
   }
   if (content.includes('<projekt>')) badge += '<div class="mt-1 text-[10px] uppercase tracking-wider text-violet-400">+ brief projektu (generowanie ekranów)</div>';
+  if (/<rezygnacja\s*\/?>/.test(content)) badge += '<div class="mt-1 text-[10px] uppercase tracking-wider text-orange-400">rezygnacja potwierdzona → etap „Zrezygnował"</div>';
   return esc(out).replace(/\n/g, '<br>') + badge;
 }
 
