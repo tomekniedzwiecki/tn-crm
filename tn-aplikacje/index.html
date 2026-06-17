@@ -39,6 +39,8 @@
 </script>
 <script src="https://unpkg.com/@phosphor-icons/web"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Wspólny klasyfikator źródła ruchu (ten sam co leads.html / pipeline.html / analytics.html) -->
+<script src="../components/source-classifier.js"></script>
 <style>
   :root { color-scheme: dark; }
   body { background: #000; font-family: 'Geist','Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; letter-spacing: -0.011em; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
@@ -191,6 +193,7 @@
               <th class="px-4 py-3">Data</th>
               <th class="px-4 py-3">Projekt</th>
               <th class="px-4 py-3">Osoba</th>
+              <th class="px-4 py-3">Źródło</th>
               <th class="px-4 py-3">Etap</th>
               <th class="px-4 py-3">Sygnał</th>
               <th class="px-4 py-3 text-right">Tury</th>
@@ -683,6 +686,73 @@ function leadSignal(s) {
   return { key: 'talk', label: 'rozmowa', tone: 'zinc', icon: 'ph-chat-circle' };
 }
 
+// ── ŹRÓDŁO POZYSKANIA (atrybucja) ──
+// Klasyfikacja: components/source-classifier.js (wspólna z leads/pipeline/analytics).
+// Wejście = spar_sessions.tracking (click-ID/UTM zebrane na froncie sparingu).
+const SRC_STYLE = {
+  youtube:        'text-red-400 bg-red-500/10 border-red-500/20',
+  google_display: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  google_search:  'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  google:         'text-amber-400 bg-amber-500/10 border-amber-500/20',
+  meta:           'text-blue-400 bg-blue-500/10 border-blue-500/20',
+  tiktok:         'text-pink-400 bg-pink-500/10 border-pink-500/20',
+  email:          'text-violet-400 bg-violet-500/10 border-violet-500/20',
+  organic:        'text-zinc-400 bg-white/5 border-white/10',
+};
+const SRC_ICON = {
+  youtube: 'ph-youtube-logo', google_display: 'ph-google-logo', google_search: 'ph-google-logo',
+  google: 'ph-google-logo', meta: 'ph-meta-logo', tiktok: 'ph-tiktok-logo',
+  email: 'ph-envelope-simple', organic: 'ph-compass',
+};
+function srcInfo(s) {
+  const r = (typeof classifySource === 'function')
+    ? classifySource((s && s.tracking) || {})
+    : { channel: 'organic', key: 'organic', name: 'Organic' };
+  return Object.assign({}, r, { cls: SRC_STYLE[r.key] || SRC_STYLE.organic, icon: SRC_ICON[r.key] || SRC_ICON.organic });
+}
+// Krótki tytuł (tooltip): kampania / source / medium, jeśli są.
+function srcTitle(s) {
+  const t = (s && s.tracking) || {};
+  const bits = [];
+  if (t.utm_campaign) bits.push('kampania: ' + t.utm_campaign);
+  if (t.utm_source) bits.push('source: ' + t.utm_source);
+  if (t.utm_medium) bits.push('medium: ' + t.utm_medium);
+  ['gclid', 'fbclid', 'ttclid', 'gbraid', 'wbraid', 'msclkid'].forEach((k) => { if (t[k]) bits.push(k); });
+  return bits.length ? bits.join(' · ') : 'Brak parametrów kampanii (bezpośrednio / organic)';
+}
+function sourceBadge(s) {
+  const i = srcInfo(s);
+  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium ${i.cls}" title="${esc(srcTitle(s))}"><i class="ph ${i.icon}"></i>${esc(i.name)}</span>`;
+}
+// Pełny rozkład zebranych parametrów (karta leada). Pokazujemy tylko obecne klucze.
+function sourceDetailHTML(s) {
+  const i = srcInfo(s);
+  const t = (s && s.tracking) || {};
+  const LABELS = {
+    utm_source: 'utm_source', utm_medium: 'utm_medium', utm_campaign: 'Kampania (utm_campaign)',
+    utm_content: 'utm_content', utm_term: 'utm_term', utm_id: 'utm_id',
+    gclid: 'gclid (Google)', gbraid: 'gbraid (Google)', wbraid: 'wbraid (Google)', gad_source: 'gad_source',
+    fbclid: 'fbclid (Meta)', ttclid: 'ttclid (TikTok)', msclkid: 'msclkid (Bing)',
+    campaignid: 'campaignid', adgroupid: 'adgroupid', creative: 'creative', keyword: 'keyword',
+    matchtype: 'matchtype', device: 'device', network: 'network', placement: 'placement', ref: 'ref',
+  };
+  const order = Object.keys(LABELS);
+  const rows = order.filter((k) => t[k] != null && t[k] !== '').map((k) =>
+    `<div class="flex gap-2 min-w-0"><span class="text-zinc-600 shrink-0">${LABELS[k]}:</span><span class="text-zinc-300 font-mono text-[11px] truncate" title="${esc(String(t[k]))}">${esc(String(t[k]))}</span></div>`).join('');
+  const lp = t.landing_page ? `<div class="flex gap-2 min-w-0"><span class="text-zinc-600 shrink-0">Strona wejścia:</span><a href="${esc(String(t.landing_page))}" target="_blank" rel="noopener" class="text-blue-400 hover:text-blue-300 truncate" title="${esc(String(t.landing_page))}">${esc(String(t.landing_page))}</a></div>` : '';
+  const rf = t.referrer ? `<div class="flex gap-2 min-w-0"><span class="text-zinc-600 shrink-0">Referrer:</span><span class="text-zinc-300 truncate" title="${esc(String(t.referrer))}">${esc(String(t.referrer))}</span></div>` : '';
+  const empty = !rows && !lp && !rf;
+  return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5 max-w-xl">
+    <div class="flex items-center justify-between mb-2.5">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-broadcast mr-1 text-zinc-600"></i>Źródło pozyskania</div>
+      ${sourceBadge(s)}
+    </div>
+    ${empty
+      ? '<div class="text-[12px] text-zinc-500">Brak parametrów kampanii — lead wszedł bezpośrednio lub z ruchu organicznego (żaden click-ID/UTM nie dotarł do sparingu).</div>'
+      : `<div class="space-y-1 text-[12px]">${rows}${lp}${rf}</div>`}
+  </div>`;
+}
+
 // ── DASHBOARD ──
 function renderDashboard() {
   const vis = sessions.filter((s) => !s.is_test);
@@ -817,13 +887,14 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
+      <td class="px-4 py-2.5">${sourceBadge(s)}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
       <td class="px-4 py-2.5">${signalBadge(s)}</td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
       <td class="px-4 py-2.5 text-right text-white font-mono text-xs">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
       <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
     </tr>`;
-  }).join('') || '<tr><td colspan="8" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak leadów dla tego filtra.</td></tr>';
+  }).join('') || '<tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak leadów dla tego filtra.</td></tr>';
 }
 
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
@@ -1087,6 +1158,7 @@ function leadOverviewHTML() {
       ${card('Dostarczone odsłony', revealDelivered(s) + '×', 'maile reveal', 'ph-envelope', 'text-sky-400')}
       ${card('Sygnał', sig.label, '', sig.icon, TONE_TXT[sig.tone])}
     </div>
+    ${sourceDetailHTML(s)}
     ${d ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5 max-w-xl">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-palette mr-1 text-zinc-600"></i>Design (projekt AI)</div>
       ${d.kierunek ? `<div class="text-sm text-zinc-300 mb-3">${esc(d.kierunek)}</div>` : ''}
