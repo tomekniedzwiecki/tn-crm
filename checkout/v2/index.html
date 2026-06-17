@@ -2555,6 +2555,9 @@ async function handleSubmit() {
         let order;
         // Sparing: powiązanie zakupu „kolejnej rozmowy" z kontem aplikacji (auth user)
         const sparUserId = new URLSearchParams(window.location.search).get('spar_user_id') || null;
+        // Rezerwacja Aplikacja: lead_id z linku per-lead → zamówienie wiąże się z konkretnym
+        // leadem, dzięki czemu webhook/cron oznacza paid_at na właściwej sesji sparingu.
+        const urlLeadId = new URLSearchParams(window.location.search).get('lead_id') || null;
 
         // Try existing pending order for same email+description
         const { data: existingOrders } = await sbOrder({ 'x-customer-email': email })
@@ -2583,6 +2586,7 @@ async function handleSubmit() {
                 consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
                 spar_user_id: sparUserId,
                 skip_workflow: sparUserId ? true : null,
+                ...(urlLeadId ? { lead_id: urlLeadId } : {}),
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2611,6 +2615,8 @@ async function handleSubmit() {
 
             if (isCustomPayment && customPaymentLeadId) {
                 orderData.lead_id = customPaymentLeadId;
+            } else if (urlLeadId) {
+                orderData.lead_id = urlLeadId;
             }
 
             if (upgradeWorkflowId && upgradeToOfferId) {

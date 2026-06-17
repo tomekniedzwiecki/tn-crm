@@ -497,6 +497,17 @@
 const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
 const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/';
+// Rezerwacja 500 zł (zwrotna) — oferta + checkout. Link per-lead niesie spar_email + lead_id,
+// dzięki czemu zamówienie wiąże się z konkretną sesją i webhook/cron oznacza paid_at automatycznie.
+const RESERVATION_OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076';
+const CHECKOUT_BASE = 'https://crm.tomekniedzwiecki.pl/checkout/v2/';
+function reservationUrl(s) {
+  let u = CHECKOUT_BASE + '?offer=' + encodeURIComponent(RESERVATION_OFFER_ID);
+  if (s.email) u += '&spar_email=' + encodeURIComponent(s.email);
+  if (s.lead_id) u += '&lead_id=' + encodeURIComponent(s.lead_id);
+  u += '&sid=' + encodeURIComponent(s.id);
+  return u;
+}
 const PROJEKT_URL = 'https://tomekniedzwiecki.pl/aplikacja/projekt/';
 
 // Tryb DEMO (?demo=1) — renderuje panel na danych mock, bez auth i sieci.
@@ -558,7 +569,7 @@ const STAGES = [
   { id: 'lead',     name: 'Lead (e-mail)',   icon: 'ph-user-plus',     color: 'text-sky-400',     dot: 'bg-sky-500' },
   { id: 'project',  name: 'Projekt',         icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
   { id: 'green',    name: 'Zielony werdykt', icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
-  { id: 'paid',     name: 'Opłacone 500 zł', icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
+  { id: 'paid',     name: 'Rezerwacja',      icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
   // Kategoria „przegrane" — etapy ustawiane WYŁĄCZNIE ręcznie (przycisk w karcie
   // leada lub przeciągnięcie w tablicy), zapisywane w spar_sessions.pipeline_override.
   { id: 'resigned', name: 'Zrezygnował',     icon: 'ph-hand-waving',   color: 'text-orange-400',  dot: 'bg-orange-500', lost: true },
@@ -777,7 +788,7 @@ function renderDashboard() {
     { label: 'Sesje (7 dni / razem)', val: `${within7.length} / ${vis.length}`, icon: 'ph-chats-circle', tone: 'text-blue-400' },
     { label: 'Leady (e-mail)', val: leads.length, icon: 'ph-user-plus', tone: 'text-sky-400' },
     { label: 'Zielone werdykty', val: greens.length, icon: 'ph-check-circle', tone: 'text-emerald-400' },
-    { label: 'Opłacone 500 zł', val: paid.length, icon: 'ph-currency-circle-dollar', tone: 'text-amber-400' },
+    { label: 'Rezerwacja', val: paid.length, icon: 'ph-currency-circle-dollar', tone: 'text-amber-400' },
     { label: 'Koszt AI — 7 dni', val: fmtPln(cost7), icon: 'ph-wallet', tone: 'text-blue-400' },
     { label: 'Koszt AI — razem', val: fmtPln(totalCost), icon: 'ph-stack', tone: 'text-blue-400' },
     { label: 'Śr. koszt rozmowy', val: avgCost ? fmtPln(avgCost) : '—', icon: 'ph-calculator', tone: 'text-zinc-400' },
@@ -795,7 +806,7 @@ function renderDashboard() {
     ['Podany e-mail', leads.length],
     ['Wygenerowany projekt', projects.length],
     ['Zielony werdykt', greens.length],
-    ['Wpłata 500 zł', paid.length],
+    ['Rezerwacja', paid.length],
   ];
   const max = Math.max(1, vis.length);
   $('funnel').innerHTML = steps.map(([label, n], i) => {
@@ -1158,7 +1169,7 @@ function leadOverviewHTML() {
       ${card('Etap', st.name, '', st.icon, st.color)}
       ${card('Werdykt', `<span class="${vC}">${vT}</span>`, s.turns + ' tur', 'ph-flag', 'text-zinc-400')}
       ${card('Zaangażowanie', eng ? '<span class="text-emerald-400">gorący</span>' : '<span class="text-sky-400">zimny</span>', 'panel: ' + timeAgo(s.last_panel_at), eng ? 'ph-fire' : 'ph-snowflake', eng ? 'text-emerald-400' : 'text-sky-400')}
-      ${card('Wpłata 500 zł', s.paid_at ? '<span class="text-amber-400">opłacony</span>' : 'brak', s.paid_at ? fmtDate(s.paid_at) : '', 'ph-currency-circle-dollar', 'text-amber-400')}
+      ${card('Rezerwacja', s.paid_at ? '<span class="text-amber-400">opłacona</span>' : 'brak', s.paid_at ? fmtDate(s.paid_at) : '', 'ph-currency-circle-dollar', 'text-amber-400')}
       ${card('Ostatnia rozmowa', timeAgo(s.last_user_at), '', 'ph-chat-circle', 'text-zinc-400')}
       ${card('Dostarczone odsłony', revealDelivered(s) + '×', 'maile reveal', 'ph-envelope', 'text-sky-400')}
       ${card('Sygnał', sig.label, '', sig.icon, TONE_TXT[sig.tone])}
@@ -1480,8 +1491,22 @@ function leadAkcjeHTML() {
         </div>
       </div>`
     : `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 text-[12px] text-zinc-500"><i class="ph ph-gift mr-1"></i>Darmowe rozmowy: konto niezalogowane (brak auth_user_id) — grant będzie możliwy, gdy klient założy konto.</div>`;
+  const resUrl = reservationUrl(s);
+  const reservBox = `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5">
+    <div class="text-sm text-zinc-300 mb-1"><i class="ph ph-currency-circle-dollar mr-1 text-amber-400"></i>Rezerwacja 500 zł (zwrotna)</div>
+    <div class="text-[11px] text-zinc-500 mb-2.5">Indywidualny link tego leada — wyślij mu go (e-mail/WhatsApp). Po opłaceniu sesja oznaczy się jako <span class="text-amber-400">Rezerwacja</span> automatycznie (link niesie e-mail i lead_id, więc wpłata trafia dokładnie do tej osoby).</div>
+    <div class="flex items-center gap-2 mb-2">
+      <input id="resv-link" type="text" readonly value="${esc(resUrl)}" class="flex-1 min-w-0 px-2.5 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-300 text-[11px] font-mono" onclick="this.select()">
+      <button onclick="copyReservation('${s.id}')" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-200 hover:text-white hover:border-blue-500/40 text-xs transition"><i class="ph ph-copy mr-1"></i>Kopiuj</button>
+      <a href="${esc(resUrl)}" target="_blank" rel="noopener" class="shrink-0 px-3 py-2 rounded-lg border border-white/10 text-zinc-200 hover:text-white hover:border-white/25 text-xs transition"><i class="ph ph-arrow-square-out"></i></a>
+    </div>
+    ${s.paid_at
+      ? `<div class="flex items-center justify-between gap-2 text-[12px]"><span class="text-amber-400"><i class="ph ph-check-circle mr-1"></i>Opłacona ${esc(fmtDate(s.paid_at))}</span><button onclick="setReservationPaid('${s.id}', false)" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 text-xs transition">Cofnij oznaczenie</button></div>`
+      : `<button onclick="setReservationPaid('${s.id}', true)" class="w-full px-3.5 py-2 rounded-lg border border-amber-500/30 text-amber-400 hover:bg-amber-500/10 text-xs transition"><i class="ph ph-hand-coins mr-1.5"></i>Oznacz jako opłaconą ręcznie</button>`}
+  </div>`;
   return `<div class="max-w-xl space-y-2.5">
     ${stageBox}
+    ${reservBox}
     ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
     ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase)', 'accent-blue-500')}
     ${row(s.hidden_from_feed, `toggleHidden('${s.id}', this.checked)`, 'Ukryj z inspiracji i strony głównej', 'accent-red-500')}
@@ -1499,6 +1524,28 @@ async function grantConvos(authUserId, email) {
 function afterToggle(id) {
   const s = sessions.find((x) => x.id === id);
   if (s && leadData && leadData.s.id === id && !$('view-lead').classList.contains('hidden')) renderLeadHead(s);
+}
+function copyReservation(id) {
+  const s = sessions.find((x) => x.id === id); if (!s) return;
+  const url = reservationUrl(s);
+  const done = () => toast('Skopiowano link rezerwacji');
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done).catch(() => { const i = $('resv-link'); if (i) { i.select(); document.execCommand('copy'); done(); } });
+  else { const i = $('resv-link'); if (i) { i.select(); document.execCommand('copy'); done(); } }
+}
+// Ręczne oznaczenie rezerwacji (fallback/override). Automatyczne oznaczanie robi
+// tpay-webhook (real-time) + spar-followups (cron, safety-net) — patrz reservationUrl().
+async function setReservationPaid(id, val) {
+  const paidAt = val ? new Date().toISOString() : null;
+  const { error } = await supabaseClient.from('spar_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', id);
+  if (error) { toast('Błąd zapisu: ' + (error.message || '')); console.error(error); return; }
+  const s = sessions.find((x) => x.id === id);
+  if (s) {
+    s.paid_at = paidAt;
+    // pipeline CRM: lead wygrany (best-effort — przy braku uprawnień po prostu pomijamy)
+    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'won' }).eq('id', s.lead_id).neq('status', 'won'); } catch (e) { /* ignore */ } }
+  }
+  toast(val ? 'Oznaczono rezerwację jako opłaconą' : 'Cofnięto oznaczenie rezerwacji');
+  if (leadData && leadData.s.id === id) { leadData.s.paid_at = paidAt; renderLeadHead(leadData.s); renderLeadTab(); }
 }
 async function toggleTest(id, val) {
   const { error } = await supabaseClient.from('spar_sessions').update({ is_test: val }).eq('id', id);
