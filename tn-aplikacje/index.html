@@ -52,6 +52,10 @@
   .animate-enter { animation: fadeIn 0.4s ease both; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
   .tab-active { background: #161616; color: #fff; border-color: #2e2e2e; }
+  /* Tablica leadów: drop-zone podświetlana przy przeciąganiu karty */
+  .pipe-col { padding: 6px; margin: -6px; }
+  .pipe-col.drag-over { background: rgba(0,112,243,0.06); box-shadow: inset 0 0 0 1px rgba(0,112,243,0.4); }
+  .pipe-card.dragging { opacity: 0.5; }
   /* Geist: płaskie powierzchnie zamiast szkła — nadpisujemy inline blur nagłówków */
   .geist-bar { background: rgba(10,10,10,0.85) !important; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .msg-user { background: rgba(0,112,243,0.10); border-color: rgba(0,112,243,0.28); }
@@ -546,18 +550,31 @@ function toast(msg) {
 
 // ── Etap pipeline wyliczany z danych (jak PLAN-PRODUKCYJNY.md) ──
 const STAGES = [
-  { id: 'talk',    name: 'Rozmowa',        icon: 'ph-chat-circle',   color: 'text-zinc-400',    dot: 'bg-zinc-500' },
-  { id: 'lead',    name: 'Lead (e-mail)',  icon: 'ph-user-plus',     color: 'text-sky-400',     dot: 'bg-sky-500' },
-  { id: 'project', name: 'Projekt',        icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
-  { id: 'green',   name: 'Zielony werdykt',icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
-  { id: 'paid',    name: 'Opłacone 500 zł',icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
+  { id: 'talk',     name: 'Rozmowa',         icon: 'ph-chat-circle',   color: 'text-zinc-400',    dot: 'bg-zinc-500' },
+  { id: 'lead',     name: 'Lead (e-mail)',   icon: 'ph-user-plus',     color: 'text-sky-400',     dot: 'bg-sky-500' },
+  { id: 'project',  name: 'Projekt',         icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
+  { id: 'green',    name: 'Zielony werdykt', icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
+  { id: 'paid',     name: 'Opłacone 500 zł', icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
+  // Kategoria „przegrane" — etapy ustawiane WYŁĄCZNIE ręcznie (przycisk w karcie
+  // leada lub przeciągnięcie w tablicy), zapisywane w spar_sessions.pipeline_override.
+  { id: 'resigned', name: 'Zrezygnował',     icon: 'ph-hand-waving',   color: 'text-orange-400',  dot: 'bg-orange-500', lost: true },
+  { id: 'lost',     name: 'Przegrany',       icon: 'ph-x-circle',      color: 'text-rose-400',    dot: 'bg-rose-500',   lost: true },
 ];
-function stageOf(s) {
+const STAGE_IDS = STAGES.map((x) => x.id);
+const LOST_STAGE_IDS = STAGES.filter((x) => x.lost).map((x) => x.id);
+// Etap wyliczany z danych (lejek automatyczny — bez ręcznego nadpisania).
+function derivedStageOf(s) {
   if (s.paid_at) return 'paid';
   if (s.verdict === 'zielony') return 'green';
   if (s.preview_images && Object.keys(s.preview_images).length) return 'project';
   if (s.email) return 'lead';
   return 'talk';
+}
+// Etap pokazywany w lejku: ręczne nadpisanie (pipeline_override) ma pierwszeństwo,
+// inaczej wyliczamy z danych. Override trzyma też kategorię „przegrane".
+function stageOf(s) {
+  if (s.pipeline_override && STAGE_IDS.includes(s.pipeline_override)) return s.pipeline_override;
+  return derivedStageOf(s);
 }
 function projName(s) {
   return (s.preview_brief && s.preview_brief.nazwa) || s.profession || 'Rozmowa bez nazwy';
@@ -591,7 +608,7 @@ async function loadAll() {
   while (true) {
     const { data, error } = await supabaseClient
       .from('spar_sessions')
-      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, tracking, auth_provider, auth_user_id, landing_url, raport_meta:market_report->_meta')
+      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, raport_meta:market_report->_meta')
       .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
@@ -747,7 +764,8 @@ function renderPipeline() {
     const items = vis.filter((s) => stageOf(s) === st.id);
     const cards = items.slice(0, 60).map((s) => {
       const initials = (s.name || s.email || '?').trim().slice(0, 2).toUpperCase();
-      return `<div onclick="openSession('${s.id}')" class="group bg-zinc-900/60 border border-white/5 rounded-lg p-3 cursor-pointer hover:border-white/15 hover:-translate-y-0.5 transition animate-enter">
+      const manual = s.pipeline_override && STAGE_IDS.includes(s.pipeline_override);
+      return `<div draggable="true" ondragstart="onCardDrag(event,'${s.id}')" ondragend="onCardDragEnd()" onclick="openSession('${s.id}')" class="pipe-card group bg-zinc-900/60 border border-white/5 rounded-lg p-3 cursor-grab active:cursor-grabbing hover:border-white/15 hover:-translate-y-0.5 transition animate-enter" title="Przeciągnij, aby zmienić etap">
         <div class="flex items-center gap-2.5">
           <div class="w-8 h-8 rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white text-[11px] font-bold shrink-0">${esc(initials)}</div>
           <div class="flex-1 min-w-0">
@@ -757,17 +775,17 @@ function renderPipeline() {
         </div>
         <div class="flex items-center justify-between mt-2.5 pt-2 border-t border-white/5 text-[11px]">
           <span class="font-mono text-zinc-400">${costOf(s) ? fmtPln(costOf(s)) : '—'}</span>
-          <span class="text-zinc-600">${timeAgo(s.last_user_at || s.created_at)}</span>
+          <span class="text-zinc-600">${manual ? '<i class="ph ph-hand-pointing text-zinc-500" title="Etap ustawiony ręcznie"></i> ' : ''}${timeAgo(s.last_user_at || s.created_at)}</span>
         </div>
       </div>`;
     }).join('');
-    return `<div class="min-w-0">
+    return `<div class="pipe-col min-w-0 rounded-xl transition" data-stage="${st.id}" ondragover="onColOver(event)" ondragleave="onColLeave(event)" ondrop="onColDrop(event,'${st.id}')">
       <div class="flex items-center gap-2 px-1 mb-2.5">
         <i class="ph ${st.icon} ${st.color}"></i>
         <span class="text-sm font-medium text-white truncate">${st.name}</span>
         <span class="ml-auto text-xs text-zinc-500 font-mono">${items.length}</span>
       </div>
-      <div class="space-y-2">${cards || '<div class="border border-dashed border-white/10 rounded-lg py-8 text-center text-xs text-zinc-600">pusto</div>'}</div>
+      <div class="space-y-2 min-h-[60px]">${cards || '<div class="border border-dashed border-white/10 rounded-lg py-8 text-center text-xs text-zinc-600">upuść tutaj</div>'}</div>
     </div>`;
   }).join('');
 }
@@ -1339,6 +1357,24 @@ function leadKosztyHTML() {
 function leadAkcjeHTML() {
   const { s } = leadData;
   const row = (checked, onchange, label, accent) => `<label class="flex items-center gap-3 p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 cursor-pointer select-none hover:border-white/10 transition"><input type="checkbox" ${checked ? 'checked' : ''} onchange="${onchange}" class="${accent} w-4 h-4"><span class="text-sm text-zinc-300">${label}</span></label>`;
+  // ── Etap w lejku (ręczne nadpisanie, w tym kategoria „przegrane") ──
+  const curStage = stageOf(s);
+  const st = STAGES.find((x) => x.id === curStage) || STAGES[0];
+  const manual = !!(s.pipeline_override && STAGE_IDS.includes(s.pipeline_override));
+  const lostBtn = (id) => {
+    const sg = STAGES.find((x) => x.id === id);
+    const on = curStage === id;
+    return `<button onclick="setStage('${s.id}','${id}')" class="px-3.5 py-2 rounded-lg border text-xs transition inline-flex items-center gap-1.5 ${on ? sg.color + ' border-current bg-white/[0.04]' : 'text-zinc-300 border-white/10 hover:text-white hover:border-white/25'}"><i class="ph ${sg.icon}"></i>${sg.name}${on ? ' ✓' : ''}</button>`;
+  };
+  const stageBox = `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5">
+    <div class="text-sm text-zinc-300 mb-1"><i class="ph ph-flag mr-1 text-zinc-400"></i>Etap w lejku</div>
+    <div class="text-[11px] text-zinc-500 mb-2.5">Teraz: <span class="${st.color}">${st.name}</span> · ${manual ? 'ustawiony ręcznie' : 'automatyczny (z danych)'}. Oznacz jako przegrany, gdy temat jest stracony — dla leadów w sekwencji wstrzyma to także automat maili/SMS.</div>
+    <div class="flex flex-wrap gap-2">
+      ${lostBtn('resigned')}
+      ${lostBtn('lost')}
+      ${manual ? `<button onclick="setStage('${s.id}','${derivedStageOf(s)}')" class="px-3.5 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 text-xs transition inline-flex items-center gap-1.5"><i class="ph ph-arrow-counter-clockwise"></i>Przywróć automatyczny</button>` : ''}
+    </div>
+  </div>`;
   const grantBox = s.auth_user_id
     ? `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5">
         <div class="text-sm text-zinc-300 mb-1"><i class="ph ph-gift mr-1 text-emerald-400"></i>Darmowe kolejne rozmowy</div>
@@ -1350,6 +1386,7 @@ function leadAkcjeHTML() {
       </div>`
     : `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 text-[12px] text-zinc-500"><i class="ph ph-gift mr-1"></i>Darmowe rozmowy: konto niezalogowane (brak auth_user_id) — grant będzie możliwy, gdy klient założy konto.</div>`;
   return `<div class="max-w-xl space-y-2.5">
+    ${stageBox}
     ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
     ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase)', 'accent-blue-500')}
     ${row(s.hidden_from_feed, `toggleHidden('${s.id}', this.checked)`, 'Ukryj z inspiracji i strony głównej', 'accent-red-500')}
@@ -1391,6 +1428,55 @@ async function toggleHidden(id, val) {
   if (s) s.hidden_from_feed = val;
   toast(val ? 'Ukryto z publicznych inspiracji (do 60 s)' : 'Projekt znów widoczny w inspiracjach');
   afterToggle(id);
+}
+
+// ── Ręczne przeniesienie leada między etapami (override) ──
+// Zapisuje pipeline_override. Przeniesienie na etap równy wyliczonemu z danych
+// kasuje nadpisanie (wraca „automatyczny"). Przeniesienie na „przegrany"/„zrezygnował"
+// dodatkowo wstrzymuje automat (sekwencja + follow-upy + SMS) — bo lost lead nie
+// powinien dalej dostawać maili. Wstrzymanie jest best-effort: zmiana etapu udaje się
+// niezależnie od tego, czy spar-drip odpowie.
+async function setStage(id, stageId) {
+  const s = sessions.find((x) => x.id === id);
+  if (!s || !STAGE_IDS.includes(stageId)) return;
+  if (stageOf(s) === stageId) return; // już tam jest
+  const override = (stageId === derivedStageOf(s)) ? null : stageId;
+  const { error } = await supabaseClient.from('spar_sessions').update({ pipeline_override: override }).eq('id', id);
+  if (error) { toast('Błąd zapisu etapu'); console.error(error); return; }
+  s.pipeline_override = override;
+  const stName = (STAGES.find((x) => x.id === stageId) || {}).name || stageId;
+  toast(override ? ('Przeniesiono do: ' + stName) : ('Etap automatyczny: ' + stName));
+  // „przegrany": wstrzymaj automat, żeby nie wysyłał dalej do straconego leada.
+  // Dotyczy tylko aktywnych w sekwencji (zielony, nieopłacony) — dla reszty no-op.
+  if (LOST_STAGE_IDS.includes(stageId) && s.verdict === 'zielony' && !s.paid_at) {
+    callDrip({ action: 'cancel', sessionId: id })
+      .then(() => toast('Sekwencja wstrzymana (lead przegrany)'))
+      .catch((e) => { console.error('cancel drip', e); toast('Etap zapisany, ale nie udało się wstrzymać sekwencji'); });
+  }
+  // Odśwież widoki, których dotyczy etap
+  if (!$('view-leady').classList.contains('hidden')) renderLeady();
+  if (leadData && leadData.s.id === id && !$('view-lead').classList.contains('hidden')) { renderLeadHead(s); renderLeadTab(); }
+}
+
+// Drag & drop kart w tablicy (kanban). dragSid trzyma id przeciąganej sesji;
+// dataTransfer jest zapasowym kanałem (gdy zmienna zniknie między zdarzeniami).
+let dragSid = null;
+function onCardDrag(e, id) {
+  dragSid = id;
+  try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); } catch (err) { /* ignore */ }
+}
+function onCardDragEnd() {
+  dragSid = null;
+  document.querySelectorAll('.pipe-col.drag-over').forEach((c) => c.classList.remove('drag-over'));
+}
+function onColOver(e) { e.preventDefault(); try { e.dataTransfer.dropEffect = 'move'; } catch (err) { /* ignore */ } e.currentTarget.classList.add('drag-over'); }
+function onColLeave(e) { e.currentTarget.classList.remove('drag-over'); }
+function onColDrop(e, stageId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const id = dragSid || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+  dragSid = null;
+  if (id) setStage(id, stageId);
 }
 
 // ── MAILE (followupy) ──
@@ -1796,7 +1882,9 @@ function attentionCol(title, icon, tone, items, empty) {
   return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3.5">${head}${body}</div>`;
 }
 function renderAttention() {
-  const vis = sessions.filter((s) => !s.is_test);
+  // Ręcznie oznaczone „przegrane" (resigned/lost) nie wracają na listy akcji —
+  // nie ma sensu reaktywować leada, którego sam zamknąłeś.
+  const vis = sessions.filter((s) => !s.is_test && !LOST_STAGE_IDS.includes(stageOf(s)));
   const now = Date.now();
   const hot = vis.filter((s) => leadSignal(s).key === 'hot')
     .map((s) => ({ s, t: lastTouchOf(s), right: lastTouchOf(s) ? timeAgo(new Date(lastTouchOf(s)).toISOString()) : '—' }))
