@@ -724,6 +724,11 @@ function sourceBadge(s) {
   const i = srcInfo(s);
   return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium ${i.cls}" title="${esc(srcTitle(s))}"><i class="ph ${i.icon}"></i>${esc(i.name)}</span>`;
 }
+// Kompaktowy wariant (sama ikona kanału + tooltip) — do gęstych list, np. skrzynki „Wymaga uwagi".
+function sourceMini(s) {
+  const i = srcInfo(s);
+  return `<i class="ph ${i.icon} ${i.cls.split(' ')[0]} text-sm" title="Źródło: ${esc(i.name)} — ${esc(srcTitle(s))}"></i>`;
+}
 // Pełny rozkład zebranych parametrów (karta leada). Pokazujemy tylko obecne klucze.
 function sourceDetailHTML(s) {
   const i = srcInfo(s);
@@ -1109,7 +1114,7 @@ function renderLeadHead(s) {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
-          ${signalBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
+          ${signalBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
         </div>
         <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''} · ${fmtDate(s.created_at)}</div>
       </div>
@@ -1959,7 +1964,7 @@ function attentionRow(s, right) {
       <span class="block text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
       <span class="block text-[11px] text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
     </span>
-    <span class="text-[11px] text-zinc-500 shrink-0 text-right">${right || ''}</span>
+    <span class="shrink-0 text-right flex items-center gap-2">${sourceMini(s)}<span class="text-[11px] text-zinc-500">${right || ''}</span></span>
   </button>`;
 }
 function attentionCol(title, icon, tone, items, empty) {
