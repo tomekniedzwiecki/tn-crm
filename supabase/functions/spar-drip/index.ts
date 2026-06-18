@@ -363,7 +363,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test'
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
@@ -593,7 +593,7 @@ Deno.serve(async (req) => {
 
     // 1) seed: zielone sesje bez planu
     const { data: green } = await supabase.from('spar_sessions')
-      .select('id, created_at').eq('is_test', false).eq('verdict', 'zielony').is('paid_at', null).is('sequence_cancelled_at', null).limit(200)
+      .select('id, created_at').eq('is_test', false).eq('verdict', 'zielony').is('paid_at', null).is('full_paid_at', null).is('sequence_cancelled_at', null).limit(200)
     for (const g of green || []) {
       const { count } = await supabase.from('spar_reveals').select('id', { count: 'exact', head: true }).eq('session_id', g.id)
       if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
@@ -614,7 +614,7 @@ Deno.serve(async (req) => {
       if (fired >= MAX_FIRES_PER_RUN) break
       if (lostNow.has(rv.session_id)) continue   // sesja już zamknięta w tym przebiegu
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.is_test || !s.email || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
+      if (!s || s.is_test || !s.email || s.paid_at || s.full_paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
       // Bramka między-kanałowa: świeży dotyk mailem/SMS z innego kanału → odpuść
       // ten przebieg (reveal zostaje pending/generating, ponowi się później).
       const xTouch = await recentNonRevealTouchMs(supabase, s.id)
@@ -648,7 +648,7 @@ Deno.serve(async (req) => {
     for (const rv of paused || []) {
       if (closedLost.has(rv.session_id)) continue
       const { data: s } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
+      if (!s || s.paid_at || s.full_paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
       const inactive = Date.now() - await lastActivityMs(supabase, s)
       if (inactive >= LOST_WINDOW_DAYS * 86400000) {
         await closeLost(supabase, s.id, nowIso); closedLost.add(s.id)   // przegrany → koniec
@@ -679,8 +679,8 @@ Deno.serve(async (req) => {
         // nie może zamienić się w serię SMS-ów pod rząd).
         const { count: recentSms } = await supabase.from('spar_sms').select('id', { count: 'exact', head: true }).eq('session_id', em.session_id).gte('created_at', new Date(Date.now() - 2 * 86400000).toISOString())
         if (recentSms) continue
-        const { data: s } = await supabase.from('spar_sessions').select('id, name, email, phone, verdict, paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out, sequence_cancelled_at').eq('id', em.session_id).maybeSingle()
-        if (!s || s.is_test || s.paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
+        const { data: s } = await supabase.from('spar_sessions').select('id, name, email, phone, verdict, paid_at, full_paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out, sequence_cancelled_at').eq('id', em.session_id).maybeSingle()
+        if (!s || s.is_test || s.paid_at || s.full_paid_at || s.verdict !== 'zielony' || s.sequence_cancelled_at) continue
         if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue   // brak numeru/zgody albo opt-out
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive < 86400000) continue                              // aktywny w ostatniej dobie → SMS redundantny

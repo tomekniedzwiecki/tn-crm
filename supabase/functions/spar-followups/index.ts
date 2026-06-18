@@ -166,6 +166,7 @@ interface SessionRow {
   landing_url: string | null
   lead_id: string | null
   paid_at: string | null
+  full_paid_at: string | null
   last_user_at: string | null
   last_panel_at: string | null
   assessment: Record<string, unknown> | null
@@ -702,35 +703,45 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, created_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, created_at'
 
-    // ── 1) SYNC PŁATNOŚCI: orders(paid, Stworzę) → paid_at + lead won + welcome ──
+    // ── 1) SYNC PŁATNOŚCI: orders(paid, Rezerwacja Aplikacja) → paid_at + lead won + welcome ──
+    // Safety-net dla webhooka (tpay-webhook oznacza paid_at w czasie rzeczywistym; ten cron
+    // nadrabia, gdyby webhook nie trafił). Dopasowanie po lead_id LUB po e-mailu — sesje bez
+    // lead_id (wpłata przed zielonym werdyktem) wcześniej były tu pomijane. Zawężone do
+    // REZERWACJI (description ma „rezerwacj"), żeby nie łapać zakupu „kolejnej rozmowy" (49 zł).
     const { data: unpaid, error: unpaidErr } = await supabase
       .from('spar_sessions')
       .select(SESSION_COLS)
       .eq('is_test', false)
       .is('paid_at', null)
-      .not('lead_id', 'is', null)
+      .not('email', 'is', null)
     if (unpaidErr) console.error('[spar-followups] unpaid fetch error:', unpaidErr)
 
     if (unpaid && unpaid.length) {
-      const leadIds = unpaid.map((s) => s.lead_id).filter(Boolean)
       const { data: paidOrders, error: ordersErr } = await supabase
         .from('orders')
-        .select('lead_id, paid_at, status, description')
-        .in('lead_id', leadIds as string[])
+        .select('lead_id, customer_email, paid_at, status, description')
         .eq('status', 'paid')
+        .gte('paid_at', new Date(Date.now() - 180 * 864e5).toISOString())
         // %Aplikacja% = obecna nazwa oferty (rebranding 2026-06-13);
         // warianty Stworzę/Stworze łapią starsze zamówienia i literówki
         .or('description.ilike.%Aplikacja%,description.ilike.%Stworzę%,description.ilike.%Stworze%')
       if (ordersErr) console.error('[spar-followups] orders fetch error:', ordersErr)
 
+      // tylko REZERWACJE (nie „kolejna rozmowa" 49 zł, która też ma „Aplikacja" w nazwie)
+      const resOrders = (paidOrders || []).filter((o) => /rezerwacj/i.test((o.description as string) || ''))
       const paidByLead = new Map<string, string>()
-      for (const o of paidOrders || []) {
-        if (o.lead_id) paidByLead.set(o.lead_id as string, (o.paid_at as string) || new Date().toISOString())
+      const paidByEmail = new Map<string, string>()
+      for (const o of resOrders) {
+        const at = (o.paid_at as string) || new Date().toISOString()
+        if (o.lead_id) paidByLead.set(o.lead_id as string, at)
+        if (o.customer_email) paidByEmail.set((o.customer_email as string).toLowerCase().trim(), at)
       }
       for (const s of (unpaid as SessionRow[])) {
-        const paidAt = s.lead_id ? paidByLead.get(s.lead_id) : null
+        const paidAt = (s.lead_id && paidByLead.get(s.lead_id))
+          || (s.email && paidByEmail.get(s.email.toLowerCase().trim()))
+          || null
         if (!paidAt) continue
         const { error: updErr } = await supabase
           .from('spar_sessions')
@@ -739,12 +750,14 @@ Deno.serve(async (req) => {
         if (updErr) { console.error('[spar-followups] paid_at update error:', updErr); continue }
         sent.paid_sync++
         // pipeline CRM: lead wygrany
-        const { error: wonErr } = await supabase
-          .from('leads')
-          .update({ status: 'won' })
-          .eq('id', s.lead_id)
-          .neq('status', 'won')
-        if (wonErr) console.error('[spar-followups] lead won update error:', wonErr)
+        if (s.lead_id) {
+          const { error: wonErr } = await supabase
+            .from('leads')
+            .update({ status: 'won' })
+            .eq('id', s.lead_id)
+            .neq('status', 'won')
+          if (wonErr) console.error('[spar-followups] lead won update error:', wonErr)
+        }
       }
     }
 
@@ -808,9 +821,9 @@ Deno.serve(async (req) => {
     const { data: pend } = await supabase.from('spar_abandoned_emails').select('session_id').eq('status', 'pending')
     const pendIds = [...new Set(((pend || []) as { session_id: string }[]).map((r) => r.session_id))]
     if (pendIds.length) {
-      const { data: ss } = await supabase.from('spar_sessions').select('id, verdict, paid_at, sequence_cancelled_at').in('id', pendIds)
-      const stopIds = ((ss || []) as { id: string; verdict: string | null; paid_at: string | null; sequence_cancelled_at: string | null }[])
-        .filter((x) => x.verdict === 'zielony' || x.paid_at || x.sequence_cancelled_at).map((x) => x.id)
+      const { data: ss } = await supabase.from('spar_sessions').select('id, verdict, paid_at, full_paid_at, sequence_cancelled_at').in('id', pendIds)
+      const stopIds = ((ss || []) as { id: string; verdict: string | null; paid_at: string | null; full_paid_at: string | null; sequence_cancelled_at: string | null }[])
+        .filter((x) => x.verdict === 'zielony' || x.paid_at || x.full_paid_at || x.sequence_cancelled_at).map((x) => x.id)
       if (stopIds.length) await supabase.from('spar_abandoned_emails').update({ status: 'cancelled' }).in('session_id', stopIds).eq('status', 'pending')
     }
 
@@ -824,6 +837,7 @@ Deno.serve(async (req) => {
       .eq('is_test', false)
       .or('verdict.is.null,verdict.eq.zolty')
       .is('paid_at', null)
+      .is('full_paid_at', null)
       .is('sequence_cancelled_at', null)
       .not('email', 'is', null)
       .gte('last_user_at', hoursAgo(96))
@@ -871,7 +885,7 @@ Deno.serve(async (req) => {
         const smsTouchA = await loadTouches(supabase, dueIds)
         for (const r of (smsDue || []) as { session_id: string; sms: string | null }[]) {
           const s = byId.get(r.session_id)
-          if (!s || s.paid_at || (s.verdict && s.verdict !== 'zolty') || s.sequence_cancelled_at) continue
+          if (!s || s.paid_at || s.full_paid_at || (s.verdict && s.verdict !== 'zolty') || s.sequence_cancelled_at) continue
           if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue
           const lastAct = s.last_user_at ? Date.parse(s.last_user_at) : 0
           if (!lastAct || (now - lastAct) < ABANDON_SMS_THRESH_H * 3600000) continue   // wrócił/za wcześnie → pomiń
@@ -900,6 +914,7 @@ Deno.serve(async (req) => {
         .eq('is_test', false)
         .or('verdict.is.null,verdict.eq.zolty')
         .is('paid_at', null)
+        .is('full_paid_at', null)
         .is('sequence_cancelled_at', null)
         .not('phone', 'is', null)
         .not('sms_consent_at', 'is', null)
@@ -947,6 +962,7 @@ Deno.serve(async (req) => {
       .eq('is_test', false)
       .eq('verdict', 'zielony')
       .is('paid_at', null)
+      .is('full_paid_at', null)
       .is('sequence_cancelled_at', null)
       .not('email', 'is', null)
       .gte('created_at', hoursAgo(26 * 24)) // nie starsze niż cała seria (+bufor)
