@@ -615,14 +615,16 @@ async function extractKnowhowAsync(
     const tryParse = (s: string) => { try { const p = JSON.parse(s) as { items?: unknown }; if (Array.isArray(p?.items)) items = p.items as Array<Record<string, unknown>> } catch (_e) { /* ignore */ } }
     tryParse(content)
     if (!items.length) { const m = content.match(/\{[\s\S]*\}/); if (m) tryParse(m[0]) }
-    const VALID = new Set(['wniosek', 'wymaganie', 'link', 'zalacznik', 'uwaga', 'cytat', 'intel_cenowy'])
+    const VALID = new Set(['wniosek', 'wymaganie', 'link', 'zalacznik', 'uwaga', 'cytat', 'intel_cenowy', 'luka', 'decyzja', 'sprzecznosc', 'zalozenie'])
+    const SCOPES = new Set(['v1', 'pozniej', 'poza', 'nieznane'])
     const rows = items
       .filter((it) => it && typeof it.content === 'string' && (it.content as string).trim() && VALID.has(it.kind as string))
-      .slice(0, 8)
+      .slice(0, 12)
       .map((it) => ({
         session_id: sessionId,
         lead_id: leadId,
         kind: it.kind as string,
+        scope: SCOPES.has(it.scope as string) ? (it.scope as string) : null,
         source_tag: it.source_tag === 'research' ? 'research' : 'klient',
         content: String(it.content).slice(0, 1000),
         url: (it.kind === 'link' && typeof it.url === 'string') ? (it.url as string).slice(0, 2000) : null,
@@ -636,6 +638,47 @@ async function extractKnowhowAsync(
     await refreshKnowhowSummary(supabase, sessionId, leadId, ideaSource)
   } catch (e) {
     console.error('[spar-chat] extractKnowhowAsync error:', e)
+  }
+}
+
+// HANDOFF PACK: przy domknięciu etapu buduje pakiet wykonawczy do budowy v1
+// (dla Tomka, niewidoczny dla klienta). Czyta wszystkie elementy + kartę projektu.
+async function generateHandoffPack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const apiKey = Deno.env.get('OPENAI_API_KEY')
+    if (!apiKey) return
+    const { data: sess } = await supabase.from('spar_sessions').select('problem_summary, preview_brief, lead_id').eq('id', sessionId).maybeSingle()
+    const { data: itemsRaw } = await supabase.from('spar_knowhow_items').select('kind, scope, source_tag, content, url').eq('session_id', sessionId).order('created_at', { ascending: true })
+    const items = (itemsRaw || []) as Array<Record<string, unknown>>
+    const card = (sess?.problem_summary as Record<string, unknown> | null) || (sess?.preview_brief as Record<string, unknown> | null) || {}
+    if (!items.length && !Object.keys(card).length) return
+    const itemsTxt = items.map((i) => `- [${i.kind}${i.scope ? '/' + i.scope : ''}] ${i.content}${i.url ? ' (' + i.url + ')' : ''}`).join('\n')
+    const userMsg = `KARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 1500)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 8000)}`
+    const res = await openaiFetchRetry({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        max_completion_tokens: 6000,
+        messages: [ { role: 'system', content: HANDOFF_PROMPT }, { role: 'user', content: userMsg } ],
+      }),
+    }, 'knowhow-handoff')
+    if (!res.ok) { console.error('[spar-chat] handoff http', res.status); return }
+    const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
+    const text = data?.choices?.[0]?.message?.content || ''
+    if (text.trim()) {
+      await supabase.from('spar_knowhow_summary').upsert({
+        session_id: sessionId,
+        lead_id: (sess?.lead_id as string | null) ?? null,
+        handoff_pack: text.trim(),
+        handoff_generated_at: new Date().toISOString(),
+      }, { onConflict: 'session_id' })
+    }
+  } catch (e) {
+    console.error('[spar-chat] generateHandoffPack error:', e)
   }
 }
 
@@ -716,11 +759,25 @@ function knowhowInstruction(ideaSource: string): string {
 const IDEA_SOURCE_HINT = `[ŹRÓDŁO POMYSŁU — PRZY WERDYKCIE] Gdy wystawiasz <werdykt>, dołącz do jego JSON pole "zrodlo": "wlasny" (rdzeń pomysłu wymyślił rozmówca / zna branżę od środka), "ai" (to TY zaproponowałeś pomysł, rozmówca przyszedł bez sprecyzowanego), albo "wspolny" (powstał wspólnie). Np.: <werdykt>{"kolor":"zielony","zrodlo":"wlasny","karta":{...}}</werdykt>.`
 
 // Prompt cichej ekstrakcji (extractKnowhowAsync): zamienia ostatnią wymianę na fakty.
-const KNOWHOW_EXTRACT_PROMPT = `Jesteś analitykiem. Z poniższej OSTATNIEJ WYMIANY rozmowy wyodrębnij NOWE, konkretne fakty warte zapisania do dossier projektu — takie, które pomogą zbudować pierwszą wersję aplikacji. Zwróć WYŁĄCZNIE JSON: {"items":[{"kind":"...","source_tag":"...","content":"...","url":"..."}]}.
-kind ∈ "wymaganie" (twarde wymaganie funkcjonalne) | "wniosek" (istotny fakt/tło branżowe) | "intel_cenowy" (ceny/konkurencja) | "link" (URL podany przez rozmówcę) | "cytat" (mocny, charakterystyczny cytat rozmówcy) | "uwaga".
-source_tag: "klient" gdy fakt pochodzi od rozmówcy; "research" gdy to ogólna wiedza/rynek.
+const KNOWHOW_EXTRACT_PROMPT = `Jesteś analitykiem budującym dossier projektu z rozmowy. Z poniższej OSTATNIEJ WYMIANY wyodrębnij NOWE, konkretne elementy przydatne do zbudowania pierwszej wersji aplikacji. Zwróć WYŁĄCZNIE JSON: {"items":[{"kind":"...","scope":"...","source_tag":"...","content":"...","url":"..."}]}.
+kind:
+- "wymaganie" — twarde wymaganie funkcjonalne
+- "wniosek" — istotny fakt / tło branżowe
+- "intel_cenowy" — ceny / konkurencja
+- "link" — URL podany przez rozmówcę (wtedy wypełnij url)
+- "cytat" — mocny, charakterystyczny cytat rozmówcy
+- "luka" — czego jeszcze NIE wiadomo, a trzeba ustalić do budowy (sformułuj jako konkretne pytanie)
+- "decyzja" — otwarta decyzja do podjęcia (np. "PDF czy widok online?")
+- "sprzecznosc" — rozmówca powiedział dwie sprzeczne rzeczy (opisz obie: "wcześniej X, teraz Y")
+- "zalozenie" — przyjęte założenie, niepotwierdzone wprost przez rozmówcę
+- "uwaga" — inna ważna notatka
+scope: TYLKO dla "wymaganie"/"wniosek" (dla reszty pomiń): "v1" (rdzeń pierwszej wersji) | "pozniej" (dobre, ale nie do v1) | "poza" (poza zakresem) | "nieznane".
+source_tag: "klient" gdy od rozmówcy; "research" gdy ogólna wiedza/rynek.
 content: jedno zwięzłe zdanie po polsku. url: tylko dla kind="link".
-Zapisuj TYLKO konkrety warte zapamiętania (twarde wymagania, liczby, nazwy, realne przykłady, linki, wyjątki branżowe). Pomijaj uprzejmości, ogólniki i pytania asystenta. Jeśli nic wartościowego nie padło — zwróć {"items":[]}.`
+Zapisuj TYLKO konkrety warte zapamiętania. Pomijaj uprzejmości, ogólniki i pytania asystenta. Jeśli nic nowego nie padło — zwróć {"items":[]}.`
+
+// Prompt generujący HANDOFF PACK (pakiet wykonawczy dla Tomka) przy domknięciu etapu.
+const HANDOFF_PROMPT = `Jesteś analitykiem. Na podstawie KARTY PROJEKTU i ZEBRANYCH ELEMENTÓW zbuduj zwięzły HANDOFF PACK do budowy pierwszej wersji aplikacji. Markdown po polsku, konkretnie i krótko. Sekcje: 1) Definicja v1 (1 zdanie), 2) Dla kogo, 3) Główny workflow v1 (kroki), 4) Role/użytkownicy, 5) Encje/dane, 6) Ekrany v1, 7) Reguły biznesowe i wyjątki, 8) Integracje, 9) MUST-HAVE v1, 10) Poza zakresem / na później, 11) Otwarte decyzje, 12) Ryzyka i luki. Opieraj się WYŁĄCZNIE na dostarczonych danych — gdzie brak informacji, napisz „do ustalenia". Nie wymyślaj.`
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
 async function runGate(
@@ -1003,6 +1060,11 @@ Deno.serve(async (req) => {
       const now = new Date().toISOString()
       await sb.from('spar_sessions').update({ knowhow_closed_at: now, updated_at: now }).eq('id', sessionId)
       await sb.from('spar_knowhow_summary').upsert({ session_id: sessionId, lead_id: (sess.lead_id as string | null) || null, status: 'closed', closed_at: now }, { onConflict: 'session_id' })
+      // Handoff pack w tle (nie blokuje odpowiedzi na przycisk)
+      const erHp = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+      const hpPromise = generateHandoffPack(sb, sessionId)
+      if (erHp && typeof erHp.waitUntil === 'function') erHp.waitUntil(hpPromise)
+      else hpPromise.catch((e) => console.error('[spar-chat] handoff bg error:', e))
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po

@@ -1095,8 +1095,8 @@ async function openSession(id) {
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
-    supabaseClient.from('spar_knowhow_items').select('id, kind, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').eq('session_id', id).order('created_at', { ascending: false }),
-    supabaseClient.from('spar_knowhow_summary').select('status, items_count, wymagania_count, zalaczniki_count, summary_text, summary_ai_generated_at, idea_source').eq('session_id', id).maybeSingle(),
+    supabaseClient.from('spar_knowhow_items').select('id, kind, scope, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').eq('session_id', id).order('created_at', { ascending: false }),
+    supabaseClient.from('spar_knowhow_summary').select('status, items_count, wymagania_count, zalaczniki_count, summary_text, summary_ai_generated_at, idea_source, handoff_pack, handoff_generated_at').eq('session_id', id).maybeSingle(),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
@@ -1198,6 +1198,8 @@ function leadWiedzaHTML() {
   const srcTag = (t) => t === 'klient'
     ? '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">od klienta</span>'
     : '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-sky-500/10 text-sky-400 border-sky-500/20">do researchu</span>';
+  const SCOPE = { v1: ['v1', 'bg-blue-500/10 text-blue-300 border-blue-500/25'], pozniej: ['później', 'bg-zinc-500/10 text-zinc-300 border-zinc-500/25'], poza: ['poza zakresem', 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'], nieznane: ['zakres?', 'bg-zinc-500/10 text-zinc-400 border-zinc-500/20'] };
+  const scopeTag = (sc) => { const x = SCOPE[sc]; return x ? `<span class="text-[10px] px-1.5 py-0.5 rounded border ${x[1]}">${x[0]}</span>` : ''; };
   const stage = !s.full_paid_at ? 'Przed pełną płatnością'
     : (s.knowhow_closed_at ? 'Zamknięty → budowa' : 'Aktywny — zbieranie');
   const stageCls = !s.full_paid_at ? 'text-zinc-400'
@@ -1209,7 +1211,7 @@ function leadWiedzaHTML() {
           <div class="text-sm text-zinc-200 break-words">${esc(i.content)}</div>
           ${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300 break-all"><i class="ph ph-link mr-1"></i>${esc(i.url)}</a>` : ''}
           ${i.file_path ? `<a href="${esc(khStorageUrl(i.file_path))}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>` : (i.kind === 'zalacznik' ? '<div class="text-[11px] text-amber-400/80 mt-0.5"><i class="ph ph-hourglass-medium mr-1"></i>obiecane — oczekuje na plik</div>' : '')}
-          <div class="mt-1.5 flex items-center gap-2">${srcTag(i.source_tag)}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
+          <div class="mt-1.5 flex items-center gap-2 flex-wrap">${i.scope ? scopeTag(i.scope) : ''}${srcTag(i.source_tag)}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
         </div>
         <button onclick="deleteWiedzaItem('${i.id}')" class="shrink-0 w-7 h-7 text-zinc-600 hover:text-red-400 hover:bg-white/5 rounded-lg flex items-center justify-center transition" title="Usuń element"><i class="ph ph-trash text-sm"></i></button>
       </div>`;
@@ -1220,6 +1222,13 @@ function leadWiedzaHTML() {
       <div class="space-y-2">${list.map(row).join('') || `<div class="text-[12px] text-zinc-600">${empty}</div>`}</div>
     </div>`;
   };
+  const handoffHtml = sum.handoff_pack ? `<div class="bg-zinc-900/60 border border-blue-500/25 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[11px] uppercase tracking-wider text-blue-300"><i class="ph ph-package mr-1"></i>Handoff pack — gotowe do budowy</div>
+        ${sum.handoff_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(sum.handoff_generated_at)}</span>` : ''}
+      </div>
+      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${esc(sum.handoff_pack)}</div>
+    </div>` : '';
 
   return `<div class="space-y-5 max-w-4xl">
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
@@ -1245,11 +1254,17 @@ function leadWiedzaHTML() {
       <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${sum.summary_text ? esc(sum.summary_text) : '<span class="text-zinc-600">Brak podsumowania — pojawi się, gdy rozmowa dostarczy materiał.</span>'}</div>
     </div>
 
+    ${handoffHtml}
+
     ${block('Wymagania funkcjonalne', 'ph-list-checks', 'wymaganie', 'Brak wymagań.')}
     ${block('Wnioski / tło branżowe', 'ph-lightbulb', 'wniosek', 'Brak wniosków.')}
     ${block('Intel cenowy / konkurencja', 'ph-currency-circle-dollar', 'intel_cenowy', 'Brak.')}
     ${block('Linki', 'ph-link-simple', 'link', 'Brak linków.')}
     ${block('Załączniki', 'ph-paperclip', 'zalacznik', 'Brak załączników.')}
+    ${block('Decyzje do podjęcia', 'ph-git-branch', 'decyzja', 'Brak otwartych decyzji.')}
+    ${block('Luki / pytania do ustalenia', 'ph-question', 'luka', 'Brak luk.')}
+    ${block('Sprzeczności', 'ph-warning-octagon', 'sprzecznosc', 'Brak sprzeczności.')}
+    ${block('Założenia (do potwierdzenia)', 'ph-flag', 'zalozenie', 'Brak założeń.')}
 
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2.5"><i class="ph ph-push-pin text-zinc-600 mr-1"></i>Ważne uwagi <span class="text-zinc-600">(${by('uwaga').length})</span></div>
