@@ -1242,6 +1242,10 @@ Deno.serve(async (req) => {
         // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
         // nie ocena. Wariant zależny od źródła pomysłu (insider/AI/wspólny).
         sessionContext += `\n\n${knowhowInstruction(ideaSource)}`
+        // Wstrzyknij kartę projektu, żeby AI niezawodnie wiedziało, co budujemy
+        // (nie pytało o ustalone) — niezależnie od długości historii rozmowy.
+        const khCard = (existingSession?.problem_summary as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null)
+        if (khCard) sessionContext += `\n\n[CO JUŻ WIEMY O PROJEKCIE — nie pytaj o to ponownie, to ustalone]\n${JSON.stringify(khCard).slice(0, 1600)}`
       } else if (existingSession?.verdict === 'zielony') {
         // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
