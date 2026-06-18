@@ -771,6 +771,97 @@ Deno.serve(async (req) => {
         }
       }
 
+      // ── REZERWACJA APLIKACJA: oznacz sesję sparingu jako opłaconą w CZASIE RZECZYWISTYM ──
+      // Dotychczas robił to tylko cron spar-followups (paid_sync, co 30 min) → lead pojawiał
+      // się w „Rezerwacja" z opóźnieniem do pół godziny. Tu dopasowujemy sesję od razu:
+      // najpierw po lead_id (link per-lead z CRM go niesie), potem fallback po e-mailu
+      // (sesje bez lead_id, np. wpłata przed zielonym werdyktem). Idempotentne (tylko gdy paid_at IS NULL).
+      try {
+        const desc = (order.description || '').toLowerCase()
+        const isAplikacjaReservation = desc.includes('rezerwacj') && (desc.includes('aplikac') || desc.includes('stworz'))
+        if (isAplikacjaReservation) {
+          let sess: { id: string; lead_id: string | null } | null = null
+          if (order.lead_id) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .eq('lead_id', order.lead_id)
+              .is('paid_at', null)
+              .eq('is_test', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            sess = data || null
+          }
+          if (!sess && order.customer_email) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .ilike('email', order.customer_email.trim())
+              .is('paid_at', null)
+              .eq('is_test', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            sess = data || null
+          }
+          if (sess) {
+            await supabase.from('spar_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', sess.id)
+            console.log('[tpay-webhook] Reservation → spar_session marked paid:', sess.id)
+            const leadId = sess.lead_id || order.lead_id
+            if (leadId) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+          } else {
+            console.log('[tpay-webhook] Reservation paid but no matching unpaid spar_session (lead_id/email):', order.lead_id, order.customer_email)
+          }
+        }
+      } catch (sparErr) {
+        console.error('[tpay-webhook] spar_session reservation sync error:', sparErr)
+      }
+
+      // ── PEŁNA PŁATNOŚĆ APLIKACJA: oznacz full_paid_at → odmraża etap KNOW-HOW ──
+      // Lustro logiki rezerwacji powyżej. Pełna płatność = opłacony order oferty
+      // "Budowa aplikacji — …" (offer_type=full). Idempotentne (full_paid_at IS NULL).
+      try {
+        const descF = (order.description || '').toLowerCase()
+        const isAplikacjaFull = descF.includes('budowa aplikacji')
+        if (isAplikacjaFull) {
+          let sessF: { id: string; lead_id: string | null } | null = null
+          if (order.lead_id) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .eq('lead_id', order.lead_id)
+              .is('full_paid_at', null)
+              .eq('is_test', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            sessF = data || null
+          }
+          if (!sessF && order.customer_email) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .ilike('email', order.customer_email.trim())
+              .is('full_paid_at', null)
+              .eq('is_test', false)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .maybeSingle()
+            sessF = data || null
+          }
+          if (sessF) {
+            await supabase.from('spar_sessions').update({ full_paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', sessF.id)
+            await supabase.from('spar_knowhow_summary').upsert({ session_id: sessF.id, lead_id: sessF.lead_id || order.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
+            console.log('[tpay-webhook] Full payment → spar_session full_paid_at set (know-how):', sessF.id)
+          } else {
+            console.log('[tpay-webhook] Full payment but no matching spar_session (full_paid_at null):', order.lead_id, order.customer_email)
+          }
+        }
+      } catch (fullErr) {
+        console.error('[tpay-webhook] spar_session full payment sync error:', fullErr)
+      }
+
       // Send Slack notification for successful payment
       await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
 

@@ -9,11 +9,17 @@
 //   { sessionId, action: 'feedback', text }       -> dodaje uwagę, zwraca feedback[]
 //   { action: 'list' }                            -> rozmowy KONTA (wymaga JWT w Authorization)
 //
-// Model dostępu: sessionId (uuid z localStorage usera) działa jak token —
-// jak linki klienckie w tn-crm. Czytamy/piszemy service_role'em; panel
-// dostaje tylko zsanityzowany podzbiór pól (bez ip, bez pełnego e-maila).
-// Dane przekraczające ten model (lista rozmów, historia czatu) wymagają
-// zweryfikowanego JWT konta (Supabase Auth).
+// Model dostępu:
+//  • Sesja PRZYPIĘTA DO KONTA (auth_user_id != null): zawartość panelu dostaje
+//    WYŁĄCZNIE zweryfikowany właściciel (JWT). Sam link ?id= NIE wystarcza —
+//    przestaje działać jak hasło (lustrzane odbicie spar-chat). Dotyczy akcji
+//    'get' / 'feedback' / 'seen_landing'.
+//  • Sesja ANONIMOWA (auth_user_id == null, np. darmowa pierwsza rozmowa bez
+//    konta): nadal działa po sessionId (uuid z localStorage), jak dotychczas.
+//  • 'public' = read-only galeria inspiracji (zero PII, bramka kompletności).
+//  • 'admin_get' / 'list' / 'conversations' = wymagają JWT (team_members / konta).
+// Czytamy/piszemy service_role'em; panel dostaje zsanityzowany podzbiór pól
+// (bez ip, bez pełnego e-maila).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { REVEAL_PLAN, VISIT_DEBOUNCE_MS } from "../_shared/spar-reveal-plan.ts";
@@ -192,7 +198,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -292,6 +298,19 @@ Deno.serve(async (req) => {
       } }, 200, cors)
     }
 
+    // ── Własność sesji: rozmowa przypięta do konta wymaga JWT tego konta ──────
+    //    (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
+    //    Akcje 'public' (galeria, zero PII) i 'admin_get' (JWT team_members) mają
+    //    własny model dostępu i zwróciły wynik wyżej. Poniżej zostają akcje
+    //    właściciela ('seen_landing', 'feedback', 'get') zwracające pełną zawartość
+    //    panelu (karta, brief, plan, raport, economics, gtm, strona, uwagi, rozmowa).
+    //    Sesja anonimowa (auth_user_id == null, np. darmowa pierwsza rozmowa bez
+    //    konta) nadal działa po sessionId — jak w spar-chat.
+    const ownerId = (session.auth_user_id as string | null) || null
+    if (ownerId && (!authUser || authUser.id !== ownerId)) {
+      return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    }
+
     // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do
     //    zakładki 'strona' albo otworzył landing). Bramka prototypu (plan w _shared).
     //    Stempluj RAZ i tylko gdy strona realnie istnieje (jest co oglądać) — pusta
@@ -349,7 +368,6 @@ Deno.serve(async (req) => {
     // sesji (JWT). Pozwala odtworzyć rozmowę po zalogowaniu na innym urządzeniu;
     // sam sessionId (link ?id=) historii nie dostaje.
     let sparingMessages: { role: string; content: string }[] | null = null
-    const ownerId = (session.auth_user_id as string | null) || null
     if (authUser && ownerId && authUser.id === ownerId) {
       const { data: sm, error: smErr } = await supabase
         .from('spar_messages')
@@ -443,6 +461,9 @@ Deno.serve(async (req) => {
         status: session.status || 'active',
         lead_id: session.lead_id || null,
         paid_at: session.paid_at || null,
+        full_paid_at: session.full_paid_at || null,
+        knowhow_closed_at: session.knowhow_closed_at || null,
+        idea_source: session.idea_source || null,
         reveals: revealsMap,
         imie: firstName,
         created_at: session.created_at,
