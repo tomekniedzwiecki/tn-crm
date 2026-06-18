@@ -501,14 +501,12 @@ const SPARING_URL = 'https://tomekniedzwiecki.pl/aplikacja/sparing/';
 // dzięki czemu zamówienie wiąże się z konkretną sesją i webhook/cron oznacza paid_at automatycznie.
 const RESERVATION_OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076';
 const CHECKOUT_BASE = 'https://crm.tomekniedzwiecki.pl/checkout/v2/';
-// Pakiety budowy aplikacji — te same 3 tiery dla KAŻDEGO leada (jawny cennik: ta sama
-// cena za ten sam zakres). Kwota brutto pobierana przez checkout siedzi w offers.price;
+// Budowa aplikacji — JEDNA cena dla KAŻDEGO leada (decyzja 2026-06-18, zniesione tiery
+// Start/Standard/Rozszerzony). Kwota brutto pobierana przez checkout siedzi w offers.price;
 // netto/brutto poniżej służą tylko do wyświetlenia. `name` musi 1:1 zgadzać się z offers.name
-// (po nim dopasowujemy opłacone zamówienia z tabeli orders).
+// (po nim dopasowujemy opłacone zamówienia z tabeli orders — dlatego NIE zmieniamy go).
 const BUILD_OFFERS = [
-  { id: 'c8ee3772-9992-4086-9d9e-5078b2a20b4a', name: 'Budowa aplikacji — START',       label: 'START',       net: 9000,  gross: 11070, note: '1 rola, 1 główny ekran, strona z szablonu — bez automatyzacji i statystyk. „Działa i sprzedaje, bez bajerów."' },
-  { id: '6d88d636-b1b3-40c2-ba5b-12bdbfe07b4d', name: 'Budowa aplikacji — STANDARD',    label: 'STANDARD',    net: 12500, gross: 15375, note: 'Wiele ról (właściciel + jego klienci), pełny panel, 2-3 ekrany, automatyzacje, strona pod markę, statystyki. „Kompletne narzędzie."' },
-  { id: '8491ec30-403e-490c-be1b-f18e9f12fc29', name: 'Budowa aplikacji — ROZSZERZONY', label: 'ROZSZERZONY', net: 16000, gross: 19680, note: 'Standard + coś ponad: druga funkcja/moduł, integracja z tym, co już masz, albo większe ustalenie.', from: true },
+  { id: '6d88d636-b1b3-40c2-ba5b-12bdbfe07b4d', name: 'Budowa aplikacji — STANDARD', label: 'BUDOWA APLIKACJI', net: 12500, gross: 15375, note: 'Kompletne, działające narzędzie wg ustalonego zakresu: panel klienta i admina, płatności i subskrypcje, główna funkcja + 1-2 wspierające, strona pod markę, automatyzacje, statystyki, RODO, hosting.' },
 ];
 // Link checkout per-lead: niesie e-mail + lead_id, więc wpłata wiąże się dokładnie z tą osobą.
 function offerUrl(s, offerId) {
@@ -635,7 +633,7 @@ async function loadAll() {
   while (true) {
     const { data, error } = await supabaseClient
       .from('spar_sessions')
-      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, raport_meta:market_report->_meta')
+      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, raport_meta:market_report->_meta')
       .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
@@ -1064,6 +1062,7 @@ const LEAD_TABS = [
   { id: 'platnosci', icon: 'ph-credit-card', label: 'Płatności' },
   { id: 'koszty', icon: 'ph-wallet', label: 'Koszty' },
   { id: 'akcje', icon: 'ph-sliders-horizontal', label: 'Akcje' },
+  { id: 'dossier', icon: 'ph-books', label: 'Dossier' },
 ];
 
 async function openSession(id) {
@@ -1088,7 +1087,7 @@ async function openSession(id) {
     ? supabaseClient.from('orders').select('description, amount, status, paid_at, created_at').or(ordersFilter).order('created_at', { ascending: false })
     : Promise.resolve({ data: [] });
 
-  const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }, { data: abandoned }, { data: orders }] = await Promise.all([
+  const [{ data: msgs }, { data: usage }, { data: emails }, { data: art }, { data: protoRow }, { data: abandoned }, { data: orders }, { data: khItems }, { data: khSummary }] = await Promise.all([
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
@@ -1096,11 +1095,14 @@ async function openSession(id) {
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
+    supabaseClient.from('spar_knowhow_items').select('id, kind, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').eq('session_id', id).order('created_at', { ascending: false }),
+    supabaseClient.from('spar_knowhow_summary').select('status, items_count, wymagania_count, zalaczniki_count, summary_text, summary_ai_generated_at, idea_source').eq('session_id', id).maybeSingle(),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
   leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], abandoned: abandoned || [], art: art || {}, protoUrl, orders: orders || [], totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
   leadData.s.sequence_cancelled_at = (art && art.sequence_cancelled_at) || null;
+  leadData.dossier = { items: khItems || [], summary: khSummary || null };
   renderLeadTab();
 }
 function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; switchTab(prevTab || 'leady'); }
@@ -1173,6 +1175,125 @@ function renderLeadTab() {
   else if (leadTab === 'platnosci') b.innerHTML = leadPlatnosciHTML();
   else if (leadTab === 'koszty') b.innerHTML = leadKosztyHTML();
   else if (leadTab === 'akcje') b.innerHTML = leadAkcjeHTML();
+  else if (leadTab === 'dossier') b.innerHTML = leadDossierHTML();
+}
+
+// ── Zakładka DOSSIER (know-how): podsumowanie tego, co ustaliła rozmowa + linki/załączniki ──
+function khStorageUrl(path) {
+  const clean = String(path || '').replace(/^attachments\//, '');
+  try { return supabaseClient.storage.from('attachments').getPublicUrl(clean).data.publicUrl; }
+  catch (e) { return '#'; }
+}
+function leadDossierHTML() {
+  const { s, dossier } = leadData;
+  const sum = (dossier && dossier.summary) || {};
+  const items = (dossier && dossier.items) || [];
+  const by = (k) => items.filter((i) => i.kind === k);
+  const idea = s.idea_source || sum.idea_source || 'wlasny';
+  const IDEA = ({
+    wlasny:  { label: 'Pomysł własny (insider)', cls: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25', icon: 'ph-user-focus' },
+    ai:      { label: 'Pomysł podsunięty przez AI', cls: 'bg-violet-500/10 text-violet-300 border-violet-500/25', icon: 'ph-sparkle' },
+    wspolny: { label: 'Wspólny (hybryda)', cls: 'bg-amber-500/10 text-amber-300 border-amber-500/25', icon: 'ph-users-three' },
+  })[idea] || { label: 'Pomysł własny (insider)', cls: 'bg-cyan-500/10 text-cyan-300 border-cyan-500/25', icon: 'ph-user-focus' };
+  const srcTag = (t) => t === 'klient'
+    ? '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">od klienta</span>'
+    : '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-sky-500/10 text-sky-400 border-sky-500/20">do researchu</span>';
+  const stage = !s.full_paid_at ? 'Przed pełną płatnością'
+    : (s.knowhow_closed_at ? 'Know-how zamknięty → build' : 'Know-how aktywny');
+  const stageCls = !s.full_paid_at ? 'text-zinc-400'
+    : (s.knowhow_closed_at ? 'text-emerald-400' : 'text-blue-400');
+
+  const row = (i) => `
+      <div class="flex items-start gap-2.5 p-3 rounded-lg bg-black/30 border border-white/5">
+        <div class="min-w-0 flex-1">
+          <div class="text-sm text-zinc-200 break-words">${esc(i.content)}</div>
+          ${i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300 break-all"><i class="ph ph-link mr-1"></i>${esc(i.url)}</a>` : ''}
+          ${i.file_path ? `<a href="${esc(khStorageUrl(i.file_path))}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>` : (i.kind === 'zalacznik' ? '<div class="text-[11px] text-amber-400/80 mt-0.5"><i class="ph ph-hourglass-medium mr-1"></i>obiecane — oczekuje na plik</div>' : '')}
+          <div class="mt-1.5 flex items-center gap-2">${srcTag(i.source_tag)}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
+        </div>
+        <button onclick="deleteDossierItem('${i.id}')" class="shrink-0 w-7 h-7 text-zinc-600 hover:text-red-400 hover:bg-white/5 rounded-lg flex items-center justify-center transition" title="Usuń element"><i class="ph ph-trash text-sm"></i></button>
+      </div>`;
+  const block = (title, icon, kind, empty) => {
+    const list = by(kind);
+    return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500 mb-2.5"><i class="ph ${icon} text-zinc-600"></i>${title} <span class="text-zinc-600">(${list.length})</span></div>
+      <div class="space-y-2">${list.map(row).join('') || `<div class="text-[12px] text-zinc-600">${empty}</div>`}</div>
+    </div>`;
+  };
+
+  return `<div class="space-y-5 max-w-4xl">
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 flex-wrap">
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-medium ${IDEA.cls}"><i class="ph ${IDEA.icon}"></i>${IDEA.label}</span>
+        <span class="text-[12px] text-zinc-500">Etap: <span class="${stageCls} font-medium">${stage}</span></span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] text-zinc-500">Źródło pomysłu:</span>
+        <select onchange="updateIdeaSource('${s.id}', this.value)" class="bg-black/40 border border-white/10 text-zinc-200 text-xs rounded-lg px-2.5 py-1.5 focus:border-blue-500/40 outline-none">
+          <option value="wlasny" ${idea === 'wlasny' ? 'selected' : ''}>własny (insider)</option>
+          <option value="ai" ${idea === 'ai' ? 'selected' : ''}>AI</option>
+          <option value="wspolny" ${idea === 'wspolny' ? 'selected' : ''}>wspólny</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-note text-zinc-600 mr-1"></i>Podsumowanie know-how</div>
+        ${sum.summary_ai_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(sum.summary_ai_generated_at)}</span>` : ''}
+      </div>
+      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${sum.summary_text ? esc(sum.summary_text) : '<span class="text-zinc-600">Brak podsumowania — pojawi się, gdy rozmowa know-how dostarczy materiał.</span>'}</div>
+    </div>
+
+    ${block('Wymagania funkcjonalne', 'ph-list-checks', 'wymaganie', 'Brak wymagań.')}
+    ${block('Wnioski / tło branżowe', 'ph-lightbulb', 'wniosek', 'Brak wniosków.')}
+    ${block('Intel cenowy / konkurencja', 'ph-currency-circle-dollar', 'intel_cenowy', 'Brak.')}
+    ${block('Linki', 'ph-link-simple', 'link', 'Brak linków.')}
+    ${block('Załączniki', 'ph-paperclip', 'zalacznik', 'Brak załączników.')}
+
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2.5"><i class="ph ph-push-pin text-zinc-600 mr-1"></i>Ważne uwagi <span class="text-zinc-600">(${by('uwaga').length})</span></div>
+      <div class="space-y-2 mb-3">${by('uwaga').map(row).join('') || '<div class="text-[12px] text-zinc-600">Brak uwag.</div>'}</div>
+      <div class="flex items-center gap-2">
+        <input id="dossier-note-input" type="text" placeholder="Dodaj uwagę (widoczna tylko dla Ciebie)…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-200 text-sm focus:border-blue-500/40 outline-none" onkeydown="if(event.key==='Enter')addDossierNote('${s.id}')">
+        <button onclick="addDossierNote('${s.id}')" class="shrink-0 bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Dodaj</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function updateIdeaSource(id, val) {
+  const { error } = await supabaseClient.from('spar_sessions').update({ idea_source: val }).eq('id', id);
+  if (error) { toast('Błąd zapisu źródła pomysłu'); console.error(error); return; }
+  if (leadData && leadData.s.id === id) {
+    leadData.s.idea_source = val;
+    if (leadData.dossier && leadData.dossier.summary) leadData.dossier.summary.idea_source = val;
+    renderLeadTab();
+  }
+  const sx = sessions.find((x) => x.id === id); if (sx) sx.idea_source = val;
+  toast('Zmieniono źródło pomysłu');
+}
+
+async function addDossierNote(sid) {
+  const inp = $('dossier-note-input'); const txt = ((inp && inp.value) || '').trim();
+  if (!txt) return;
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  const uid = session && session.user && session.user.id;
+  const s = leadData.s;
+  const { data, error } = await supabaseClient.from('spar_knowhow_items')
+    .insert({ session_id: sid, lead_id: s.lead_id || null, kind: 'uwaga', source_tag: 'research', content: txt, created_by: uid })
+    .select('id, kind, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').single();
+  if (error) { toast('Błąd dodawania uwagi'); console.error(error); return; }
+  leadData.dossier.items.unshift(data);
+  renderLeadTab(); toast('Dodano uwagę');
+}
+
+async function deleteDossierItem(itemId) {
+  if (!confirm('Usunąć ten element dossier?')) return;
+  const { error } = await supabaseClient.from('spar_knowhow_items').delete().eq('id', itemId);
+  if (error) { toast('Błąd usuwania'); console.error(error); return; }
+  leadData.dossier.items = leadData.dossier.items.filter((i) => i.id !== itemId);
+  renderLeadTab(); toast('Usunięto element');
 }
 function leadOverviewHTML() {
   const { s, totalUsd, usage } = leadData;
@@ -1516,7 +1637,7 @@ function leadAkcjeHTML() {
     <div class="flex items-center justify-between gap-2">
       <div>
         <div class="text-sm text-zinc-300"><i class="ph ph-credit-card mr-1 text-blue-400"></i>Płatności</div>
-        <div class="text-[11px] text-zinc-500 mt-0.5">Link rezerwacji 500 zł + pakiety budowy (START / STANDARD / ROZSZERZONY) — w zakładce <span class="text-blue-400">Płatności</span>.</div>
+        <div class="text-[11px] text-zinc-500 mt-0.5">Link rezerwacji 500 zł + budowa aplikacji (12 500 zł netto) — w zakładce <span class="text-blue-400">Płatności</span>.</div>
       </div>
       <i class="ph ph-arrow-right text-zinc-500"></i>
     </div>
@@ -1589,7 +1710,7 @@ function leadPlatnosciHTML() {
     ${reservationBoxHTML(s)}
     <div class="text-[11px] uppercase tracking-wider text-zinc-500 pt-1.5 pl-0.5">Pakiety budowy aplikacji</div>
     ${tierCards}
-    <div class="text-[10px] text-zinc-600 leading-relaxed pt-0.5">Ceny brutto zawierają VAT 23% (kwota pobierana przez checkout). Cennik jest jawny i jednakowy dla wszystkich — pakiet wynika z zakresu, nie z negocjacji. ROZSZERZONY ma kwotę wejściową „od"; przy szerszym zakresie ustal wyższą cenę przed wysłaniem linku.</div>
+    <div class="text-[10px] text-zinc-600 leading-relaxed pt-0.5">Cena brutto zawiera VAT 23% (kwota pobierana przez checkout). Jedna cena dla wszystkich: 12 500 zł netto / 15 375 zł brutto za ustalony zakres. Szerszy zakres ustal indywidualnie w rozmowie/umowie — nie na cenniku.</div>
   </div>`;
 }
 function copyOfferLink(inputId) {
