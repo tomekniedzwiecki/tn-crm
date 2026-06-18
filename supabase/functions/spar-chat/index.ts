@@ -217,6 +217,7 @@ async function getSystemPrompt(supabase: ReturnType<typeof createClient>, key: s
 interface VerdictResult {
   verdict: 'zielony' | 'zolty' | 'czerwony' | null
   karta: Record<string, unknown> | null
+  idea_source?: 'wlasny' | 'ai' | 'wspolny' | null
 }
 
 // Marker werdyktu: <werdykt>{"kolor":"...","karta":{...}}</werdykt>
@@ -226,8 +227,10 @@ function parseVerdict(fullText: string): VerdictResult {
   try {
     const parsed = JSON.parse(match[1])
     const kolor = parsed?.kolor
+    const zrodlo = parsed?.zrodlo
+    const idea = (zrodlo === 'wlasny' || zrodlo === 'ai' || zrodlo === 'wspolny') ? zrodlo : null
     if (kolor === 'zielony' || kolor === 'zolty' || kolor === 'czerwony') {
-      return { verdict: kolor, karta: parsed?.karta ?? null }
+      return { verdict: kolor, karta: parsed?.karta ?? null, idea_source: idea }
     }
     console.error('[spar-chat] nieznany kolor werdyktu:', kolor)
   } catch (err) {
@@ -536,6 +539,7 @@ async function persistAfterStream(
       update.verdict = verdict.verdict
       update.problem_summary = verdict.karta
     }
+    if (verdict.idea_source) update.idea_source = verdict.idea_source
     if (leadId) {
       update.lead_id = leadId
     }
@@ -549,6 +553,89 @@ async function persistAfterStream(
     if (sessError) console.error('[spar-chat] update session error:', sessError)
   } catch (err) {
     console.error('[spar-chat] persistAfterStream exception:', err)
+  }
+}
+
+// ── KNOW-HOW: cicha ekstrakcja wiedzy z ostatniej wymiany (tryb dopracowania) ──
+// Wołane w tle (waitUntil) PO odpowiedzi, tylko w trybie know-how. Drugi, krótki
+// call modelu wyciąga konkrety z ostatniej tury i zapisuje do spar_knowhow_items.
+// Brak markerów w treści czatu → front nietknięty; błąd = zero wpływu na rozmowę.
+async function refreshKnowhowSummary(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  leadId: string | null,
+  ideaSource: string,
+): Promise<void> {
+  try {
+    const { data } = await supabase.from('spar_knowhow_items').select('kind').eq('session_id', sessionId)
+    const rows = (data || []) as Array<{ kind: string }>
+    await supabase.from('spar_knowhow_summary').upsert({
+      session_id: sessionId,
+      lead_id: leadId,
+      status: 'active',
+      items_count: rows.length,
+      wymagania_count: rows.filter((r) => r.kind === 'wymaganie').length,
+      zalaczniki_count: rows.filter((r) => r.kind === 'zalacznik').length,
+      idea_source: ideaSource,
+    }, { onConflict: 'session_id' })
+  } catch (e) {
+    console.error('[spar-chat] refreshKnowhowSummary error:', e)
+  }
+}
+
+async function extractKnowhowAsync(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  leadId: string | null,
+  ideaSource: string,
+  userMsg: string,
+  assistantMsg: string,
+  problemSummary: Record<string, unknown> | null,
+  apiKey: string,
+): Promise<void> {
+  try {
+    const ctx = problemSummary ? `KONTEKST PROJEKTU (nie wyodrębniaj z tego — to już wiemy): ${JSON.stringify(problemSummary).slice(0, 900)}\n\n` : ''
+    const transcript = `ROZMÓWCA: ${userMsg}\n\nASYSTENT: ${assistantMsg}`
+    const res = await openaiFetchRetry({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        max_completion_tokens: 700,
+        messages: [
+          { role: 'system', content: KNOWHOW_EXTRACT_PROMPT },
+          { role: 'user', content: `${ctx}OSTATNIA WYMIANA:\n${transcript}` },
+        ],
+      }),
+    }, 'knowhow-extract')
+    if (!res.ok) { console.error('[spar-chat] knowhow-extract http', res.status); return }
+    const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
+    const content = data?.choices?.[0]?.message?.content || ''
+    let items: Array<Record<string, unknown>> = []
+    const tryParse = (s: string) => { try { const p = JSON.parse(s) as { items?: unknown }; if (Array.isArray(p?.items)) items = p.items as Array<Record<string, unknown>> } catch (_e) { /* ignore */ } }
+    tryParse(content)
+    if (!items.length) { const m = content.match(/\{[\s\S]*\}/); if (m) tryParse(m[0]) }
+    const VALID = new Set(['wniosek', 'wymaganie', 'link', 'zalacznik', 'uwaga', 'cytat', 'intel_cenowy'])
+    const rows = items
+      .filter((it) => it && typeof it.content === 'string' && (it.content as string).trim() && VALID.has(it.kind as string))
+      .slice(0, 8)
+      .map((it) => ({
+        session_id: sessionId,
+        lead_id: leadId,
+        kind: it.kind as string,
+        source_tag: it.source_tag === 'research' ? 'research' : 'klient',
+        content: String(it.content).slice(0, 1000),
+        url: (it.kind === 'link' && typeof it.url === 'string') ? (it.url as string).slice(0, 2000) : null,
+        created_by: null,
+        meta: { auto: true },
+      }))
+    if (rows.length) {
+      const { error } = await supabase.from('spar_knowhow_items').insert(rows)
+      if (error) { console.error('[spar-chat] knowhow insert error:', error); return }
+    }
+    await refreshKnowhowSummary(supabase, sessionId, leadId, ideaSource)
+  } catch (e) {
+    console.error('[spar-chat] extractKnowhowAsync error:', e)
   }
 }
 
@@ -597,6 +684,42 @@ const RESIGNATION_INSTRUCTION = `[REZYGNACJA — OZNACZ TYLKO PRZY JEDNOZNACZNEJ
 • Sygnał MIĘKKI lub niejasny (zniechęcenie, cena, „nie wiem", „muszę pomyśleć") — NIE oznaczaj. Najpierw zareaguj po ludzku JEDNYM zdaniem, które rozbraja obawę i zostawia otwarte drzwi; marker wystaw dopiero, jeśli w odpowiedzi rozmówca POTWIERDZI wprost, że kończy.
 • Rezygnacja WPROST i jednoznaczna (np. „rezygnuję", „dziękuję, to nie dla mnie", „nie jestem zainteresowany", „odpuszczam to") — NIE przepytuj po raz drugi: pożegnaj się ciepło JEDNYM zdaniem (zostaw otwarte drzwi na powrót), a w OSOBNEJ, OSTATNIEJ linii wystaw marker <rezygnacja/> — nic po nim.
 W razie realnej wątpliwości NIE oznaczaj.`
+
+// ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
+// Włączany WYŁĄCZNIE serwerowo, gdy spar_sessions.full_paid_at IS NOT NULL i
+// knowhow_closed_at IS NULL. Dla każdej innej sesji ta gałąź nie istnieje —
+// sparing pozostaje niezmieniony. Zbieranie wiedzy do spar_knowhow_* odbywa się
+// CICHO w tle (extractKnowhowAsync), bez markerów w treści czatu.
+const KNOWHOW_BASE = `[TRYB DOPRACOWANIA WIZJI — ZBIERANIE, NIE OCENA]
+Projekt jest opłacony i zatwierdzony. To etap PO werdykcie, akceptacji i pełnej płatności — wcześniejsze instrukcje z tej rozmowy o ocenie pomysłu, werdykcie, podglądzie, bramce, rezerwacji i sprzedaży JUŻ NIE OBOWIĄZUJĄ w tym trybie; zignoruj je. NIE wystawiaj markerów <ocena>, <werdykt>, <projekt> ani <kierunki>. Twoja rola: NIE oceniasz pomysłu, nie pokazujesz podglądu, nie sprzedajesz, nie prowadzisz do rezerwacji. Jesteś jak SPOWIEDNIK — cierpliwie słuchasz, dajesz rozmówcy się wygadać, dopytujesz — ale cały czas pilnujesz, żeby zbierać to, co realnie przyda się do zbudowania pierwszej (i z czasem lepszej) wersji aplikacji. Cel: wyciągnąć MAKSIMUM jego know-how. Wiesz już, co budujemy — nie pytaj o to, co już ustalone.
+JAK PROWADZISZ:
+• Daj mu mówić. Aktywnie zachęcaj do rozwinięcia: „opowiedz o ostatnim takim przypadku", „jak to wygląda dziś krok po kroku?", „na przykład?". Nie ucinaj — im więcej powie, tym lepiej. Słuchasz więcej, niż mówisz.
+• Jeden wątek na raz, zero ogólników — drąż do konkretu.
+• Bądź proaktywny: podpowiadaj, co się przyda („wrzuć przykładową wycenę, którą wysyłasz klientom", „podaj link do narzędzia, którego dziś używasz", „masz starą wersję? podeślij").
+• Wyłapuj twarde wymagania (np. „przełącznik VAT 23%/8% w cenniku") i wyjątki, o których wie tylko ktoś z branży.
+• Łagodnie pilnuj kierunku: gdy rozmowa schodzi na rzeczy nieistotne dla budowy, delikatnie wracaj do tego, co pomoże zrobić produkt.
+• Twoje wypowiedzi krótkie (1–4 zdania, zwykle jedno pytanie) — żeby zostawić przestrzeń jemu. Jego wypowiedzi mogą być długie i o to właśnie chodzi.
+• Zero presji, rozmowa na raty — może wracać przez kilka dni.
+DOMKNIĘCIE ETAPU — WYRAŹNA OPCJA: gdy wątek się wyczerpuje albo rozmówca nie ma już nic nowego, jasno postaw to jako wybór: np. „Jeśli to wszystko, co masz na teraz — możemy domknąć ten etap i ruszam z budową. A jak coś Ci jeszcze przyjdzie do głowy, wróć tu, kiedy chcesz." NIE naciskaj na zamknięcie — po prostu zawsze trzymaj tę opcję widoczną i łatwą do wybrania.`
+
+const KNOWHOW_SRC_WLASNY = `[ŹRÓDŁO POMYSŁU: WŁASNY — INSIDER] Rozmówca zna tę branżę od środka. Wyciskaj jego wiedzę: realne ceny, workflow, narzędzia, wyjątki, na czym wszyscy się wykładają. Proś o jego materiały (wyceny, stare narzędzia, szablony).`
+const KNOWHOW_SRC_AI = `[ŹRÓDŁO POMYSŁU: PODSUNĘŁA GO AI] Rozmówca prawdopodobnie NIE jest ekspertem tej branży — nie wyciskaj wiedzy, której może nie mieć. Ustal raczej: dlaczego ten pomysł go przekonuje, co go napędza, jakie ma realne możliwości prowadzenia tego (czas, budżet, zaangażowanie), czego się obawia. Wiedzę branżową uzupełnimy researchem.`
+const KNOWHOW_SRC_WSPOLNY = `[ŹRÓDŁO POMYSŁU: WSPÓLNE] Rozmówca zna część tematu, część dołożyła AI. Drąż tam, gdzie ma realne doświadczenie; resztę traktuj jak do uzupełnienia researchem.`
+
+function knowhowInstruction(ideaSource: string): string {
+  const src = ideaSource === 'ai' ? KNOWHOW_SRC_AI : ideaSource === 'wspolny' ? KNOWHOW_SRC_WSPOLNY : KNOWHOW_SRC_WLASNY
+  return `${KNOWHOW_BASE}\n${src}`
+}
+
+// Hint dołączany TYLKO w trybie sparingu: przy <werdykt> model dorzuca pole "zrodlo".
+const IDEA_SOURCE_HINT = `[ŹRÓDŁO POMYSŁU — PRZY WERDYKCIE] Gdy wystawiasz <werdykt>, dołącz do jego JSON pole "zrodlo": "wlasny" (rdzeń pomysłu wymyślił rozmówca / zna branżę od środka), "ai" (to TY zaproponowałeś pomysł, rozmówca przyszedł bez sprecyzowanego), albo "wspolny" (powstał wspólnie). Np.: <werdykt>{"kolor":"zielony","zrodlo":"wlasny","karta":{...}}</werdykt>.`
+
+// Prompt cichej ekstrakcji (extractKnowhowAsync): zamienia ostatnią wymianę na fakty.
+const KNOWHOW_EXTRACT_PROMPT = `Jesteś analitykiem. Z poniższej OSTATNIEJ WYMIANY rozmowy wyodrębnij NOWE, konkretne fakty warte zapisania do dossier projektu — takie, które pomogą zbudować pierwszą wersję aplikacji. Zwróć WYŁĄCZNIE JSON: {"items":[{"kind":"...","source_tag":"...","content":"...","url":"..."}]}.
+kind ∈ "wymaganie" (twarde wymaganie funkcjonalne) | "wniosek" (istotny fakt/tło branżowe) | "intel_cenowy" (ceny/konkurencja) | "link" (URL podany przez rozmówcę) | "cytat" (mocny, charakterystyczny cytat rozmówcy) | "uwaga".
+source_tag: "klient" gdy fakt pochodzi od rozmówcy; "research" gdy to ogólna wiedza/rynek.
+content: jedno zwięzłe zdanie po polsku. url: tylko dla kind="link".
+Zapisuj TYLKO konkrety warte zapamiętania (twarde wymagania, liczby, nazwy, realne przykłady, linki, wyjątki branżowe). Pomijaj uprzejmości, ogólniki i pytania asystenta. Jeśli nic wartościowego nie padło — zwróć {"items":[]}.`
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
 async function runGate(
@@ -867,6 +990,20 @@ Deno.serve(async (req) => {
       await maybeNotifyContactSlack(sb, sessionId)
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
+
+    // ── Domknięcie etapu „Dopracowanie wizji" (know-how) — przycisk „To już wszystko" ──
+    if (body.event === 'knowhow_close') {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const au = await verifyAuthUser(req, sb)
+      const { data: sess } = await sb.from('spar_sessions').select('id, lead_id, auth_user_id').eq('id', sessionId).maybeSingle()
+      if (!sess) return jsonResponse({ ok: false }, 200, corsHeaders)
+      const ownerId = (sess.auth_user_id as string | null) || null
+      if (ownerId && (!au || au.id !== ownerId)) return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      const now = new Date().toISOString()
+      await sb.from('spar_sessions').update({ knowhow_closed_at: now, updated_at: now }).eq('id', sessionId)
+      await sb.from('spar_knowhow_summary').upsert({ session_id: sessionId, lead_id: (sess.lead_id as string | null) || null, status: 'closed', closed_at: now }, { onConflict: 'session_id' })
+      return jsonResponse({ ok: true }, 200, corsHeaders)
+    }
     // Czat startuje BEZ maila i BEZ profesji (czat-first; bramka inline po
     // MAX_TURNS_BEZ_KONTAKTU turach). Jeśli pola przyszły — walidujemy format.
     if (email && (email.length > 320 || !EMAIL_RE.test(email))) {
@@ -898,7 +1035,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment, paid_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -913,6 +1050,11 @@ Deno.serve(async (req) => {
     if (sessionOwnerId && (!authUser || authUser.id !== sessionOwnerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
     }
+
+    // ── Tryb „Dopracowanie wizji" (know-how): po pełnej płatności, do zamknięcia ──
+    // Włączany WYŁĄCZNIE serwerowo. Dla nieopłaconych sesji = false (sparing bez zmian).
+    const isKnowHowMode = !!(existingSession?.full_paid_at) && !(existingSession?.knowhow_closed_at)
+    const ideaSource = ((existingSession?.idea_source as string | null | undefined) || 'wlasny')
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1019,7 +1161,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Limity (przed wywołaniem Claude) ─────────────────────────────────────
-    if (turnsBefore >= MAX_TURNS) {
+    if (!isKnowHowMode && turnsBefore >= MAX_TURNS) {
       return jsonResponse({ error: 'limit_tur' }, 429, corsHeaders)
     }
 
@@ -1035,7 +1177,7 @@ Deno.serve(async (req) => {
     const previewShown = !!existingSession?.preview_brief
     const contactDue = (turnsBefore >= MAX_TURNS_BEZ_KONTAKTU && previewShown)
       || turnsBefore >= MAX_TURNS_HARD_GATE
-    if (!gateSatisfied && contactDue) {
+    if (!isKnowHowMode && !gateSatisfied && contactDue) {
       return jsonResponse({ error: REQUIRE_ACCOUNT ? 'wymagane_konto' : 'wymagany_email' }, 403, corsHeaders)
     }
 
@@ -1096,7 +1238,11 @@ Deno.serve(async (req) => {
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
     {
       const asmt = existingSession?.assessment as Record<string, unknown> | null
-      if (existingSession?.verdict === 'zielony') {
+      if (isKnowHowMode) {
+        // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
+        // nie ocena. Wariant zależny od źródła pomysłu (insider/AI/wspólny).
+        sessionContext += `\n\n${knowhowInstruction(ideaSource)}`
+      } else if (existingSession?.verdict === 'zielony') {
         // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
         // Bez tego GATE_INSTRUCTION ciągnął agenta z powrotem do <ocena>.
@@ -1114,6 +1260,8 @@ Deno.serve(async (req) => {
       }
       // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
+      // Sparing: poproś model, by przy werdykcie dołączył źródło pomysłu (idea_source).
+      if (!isKnowHowMode) sessionContext += `\n\n${IDEA_SOURCE_HINT}`
     }
 
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
@@ -1335,6 +1483,15 @@ Deno.serve(async (req) => {
           // Zapis do bazy PO zakończeniu streamu — waitUntil z fallbackiem
           const persistPromise = schedulePersist(verdict, leadId, projekt)
           if (persistPromise) await persistPromise
+
+          // Tryb know-how: cicha ekstrakcja wiedzy z tej wymiany → Baza wiedzy (w tle).
+          if (isKnowHowMode && assistantText.trim()) {
+            const khLead = ((existingSession?.lead_id as string | null | undefined) ?? leadId) ?? null
+            const khPromise = extractKnowhowAsync(supabase, sessionId, khLead, ideaSource, message, assistantText, (existingSession?.problem_summary as Record<string, unknown> | null) ?? null, OPENAI_API_KEY)
+            const erKh = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+            if (erKh && typeof erKh.waitUntil === 'function') erKh.waitUntil(khPromise)
+            else khPromise.catch((e) => console.error('[spar-chat] knowhow extract bg error:', e))
+          }
 
           // Zielony werdykt → powiadom #sparing (raz na sesję, dedup w helperze).
           // Brief z TEJ tury (lub zapisany w sesji) daje nazwę/opis do podsumowania.
