@@ -1062,7 +1062,7 @@ const LEAD_TABS = [
   { id: 'platnosci', icon: 'ph-credit-card', label: 'Płatności' },
   { id: 'koszty', icon: 'ph-wallet', label: 'Koszty' },
   { id: 'akcje', icon: 'ph-sliders-horizontal', label: 'Akcje' },
-  { id: 'dossier', icon: 'ph-books', label: 'Dossier' },
+  { id: 'wiedza', icon: 'ph-books', label: 'Baza wiedzy' },
 ];
 
 async function openSession(id) {
@@ -1102,7 +1102,7 @@ async function openSession(id) {
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
   leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], abandoned: abandoned || [], art: art || {}, protoUrl, orders: orders || [], totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
   leadData.s.sequence_cancelled_at = (art && art.sequence_cancelled_at) || null;
-  leadData.dossier = { items: khItems || [], summary: khSummary || null };
+  leadData.wiedza = { items: khItems || [], summary: khSummary || null };
   renderLeadTab();
 }
 function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; switchTab(prevTab || 'leady'); }
@@ -1175,19 +1175,19 @@ function renderLeadTab() {
   else if (leadTab === 'platnosci') b.innerHTML = leadPlatnosciHTML();
   else if (leadTab === 'koszty') b.innerHTML = leadKosztyHTML();
   else if (leadTab === 'akcje') b.innerHTML = leadAkcjeHTML();
-  else if (leadTab === 'dossier') b.innerHTML = leadDossierHTML();
+  else if (leadTab === 'wiedza') b.innerHTML = leadWiedzaHTML();
 }
 
-// ── Zakładka DOSSIER (know-how): podsumowanie tego, co ustaliła rozmowa + linki/załączniki ──
+// ── Zakładka BAZA WIEDZY: podsumowanie tego, co ustaliła rozmowa + wymagania/linki/załączniki ──
 function khStorageUrl(path) {
   const clean = String(path || '').replace(/^attachments\//, '');
   try { return supabaseClient.storage.from('attachments').getPublicUrl(clean).data.publicUrl; }
   catch (e) { return '#'; }
 }
-function leadDossierHTML() {
-  const { s, dossier } = leadData;
-  const sum = (dossier && dossier.summary) || {};
-  const items = (dossier && dossier.items) || [];
+function leadWiedzaHTML() {
+  const { s, wiedza } = leadData;
+  const sum = (wiedza && wiedza.summary) || {};
+  const items = (wiedza && wiedza.items) || [];
   const by = (k) => items.filter((i) => i.kind === k);
   const idea = s.idea_source || sum.idea_source || 'wlasny';
   const IDEA = ({
@@ -1199,7 +1199,7 @@ function leadDossierHTML() {
     ? '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-emerald-500/10 text-emerald-400 border-emerald-500/20">od klienta</span>'
     : '<span class="text-[10px] px-1.5 py-0.5 rounded border bg-sky-500/10 text-sky-400 border-sky-500/20">do researchu</span>';
   const stage = !s.full_paid_at ? 'Przed pełną płatnością'
-    : (s.knowhow_closed_at ? 'Know-how zamknięty → build' : 'Know-how aktywny');
+    : (s.knowhow_closed_at ? 'Zamknięty → budowa' : 'Aktywny — zbieranie');
   const stageCls = !s.full_paid_at ? 'text-zinc-400'
     : (s.knowhow_closed_at ? 'text-emerald-400' : 'text-blue-400');
 
@@ -1211,7 +1211,7 @@ function leadDossierHTML() {
           ${i.file_path ? `<a href="${esc(khStorageUrl(i.file_path))}" target="_blank" rel="noopener" class="text-[12px] text-blue-400 hover:text-blue-300"><i class="ph ph-download-simple mr-1"></i>Pobierz plik</a>` : (i.kind === 'zalacznik' ? '<div class="text-[11px] text-amber-400/80 mt-0.5"><i class="ph ph-hourglass-medium mr-1"></i>obiecane — oczekuje na plik</div>' : '')}
           <div class="mt-1.5 flex items-center gap-2">${srcTag(i.source_tag)}<span class="text-[10px] text-zinc-600">${fmtDate(i.created_at)}</span></div>
         </div>
-        <button onclick="deleteDossierItem('${i.id}')" class="shrink-0 w-7 h-7 text-zinc-600 hover:text-red-400 hover:bg-white/5 rounded-lg flex items-center justify-center transition" title="Usuń element"><i class="ph ph-trash text-sm"></i></button>
+        <button onclick="deleteWiedzaItem('${i.id}')" class="shrink-0 w-7 h-7 text-zinc-600 hover:text-red-400 hover:bg-white/5 rounded-lg flex items-center justify-center transition" title="Usuń element"><i class="ph ph-trash text-sm"></i></button>
       </div>`;
   const block = (title, icon, kind, empty) => {
     const list = by(kind);
@@ -1239,10 +1239,10 @@ function leadDossierHTML() {
 
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-center justify-between mb-2">
-        <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-note text-zinc-600 mr-1"></i>Podsumowanie know-how</div>
+        <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-note text-zinc-600 mr-1"></i>Podsumowanie</div>
         ${sum.summary_ai_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(sum.summary_ai_generated_at)}</span>` : ''}
       </div>
-      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${sum.summary_text ? esc(sum.summary_text) : '<span class="text-zinc-600">Brak podsumowania — pojawi się, gdy rozmowa know-how dostarczy materiał.</span>'}</div>
+      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${sum.summary_text ? esc(sum.summary_text) : '<span class="text-zinc-600">Brak podsumowania — pojawi się, gdy rozmowa dostarczy materiał.</span>'}</div>
     </div>
 
     ${block('Wymagania funkcjonalne', 'ph-list-checks', 'wymaganie', 'Brak wymagań.')}
@@ -1255,8 +1255,8 @@ function leadDossierHTML() {
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2.5"><i class="ph ph-push-pin text-zinc-600 mr-1"></i>Ważne uwagi <span class="text-zinc-600">(${by('uwaga').length})</span></div>
       <div class="space-y-2 mb-3">${by('uwaga').map(row).join('') || '<div class="text-[12px] text-zinc-600">Brak uwag.</div>'}</div>
       <div class="flex items-center gap-2">
-        <input id="dossier-note-input" type="text" placeholder="Dodaj uwagę (widoczna tylko dla Ciebie)…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-200 text-sm focus:border-blue-500/40 outline-none" onkeydown="if(event.key==='Enter')addDossierNote('${s.id}')">
-        <button onclick="addDossierNote('${s.id}')" class="shrink-0 bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Dodaj</button>
+        <input id="wiedza-note-input" type="text" placeholder="Dodaj uwagę (widoczna tylko dla Ciebie)…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-200 text-sm focus:border-blue-500/40 outline-none" onkeydown="if(event.key==='Enter')addWiedzaNote('${s.id}')">
+        <button onclick="addWiedzaNote('${s.id}')" class="shrink-0 bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Dodaj</button>
       </div>
     </div>
   </div>`;
@@ -1267,15 +1267,15 @@ async function updateIdeaSource(id, val) {
   if (error) { toast('Błąd zapisu źródła pomysłu'); console.error(error); return; }
   if (leadData && leadData.s.id === id) {
     leadData.s.idea_source = val;
-    if (leadData.dossier && leadData.dossier.summary) leadData.dossier.summary.idea_source = val;
+    if (leadData.wiedza && leadData.wiedza.summary) leadData.wiedza.summary.idea_source = val;
     renderLeadTab();
   }
   const sx = sessions.find((x) => x.id === id); if (sx) sx.idea_source = val;
   toast('Zmieniono źródło pomysłu');
 }
 
-async function addDossierNote(sid) {
-  const inp = $('dossier-note-input'); const txt = ((inp && inp.value) || '').trim();
+async function addWiedzaNote(sid) {
+  const inp = $('wiedza-note-input'); const txt = ((inp && inp.value) || '').trim();
   if (!txt) return;
   const { data: { session } } = await supabaseClient.auth.getSession();
   const uid = session && session.user && session.user.id;
@@ -1284,15 +1284,15 @@ async function addDossierNote(sid) {
     .insert({ session_id: sid, lead_id: s.lead_id || null, kind: 'uwaga', source_tag: 'research', content: txt, created_by: uid })
     .select('id, kind, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').single();
   if (error) { toast('Błąd dodawania uwagi'); console.error(error); return; }
-  leadData.dossier.items.unshift(data);
+  leadData.wiedza.items.unshift(data);
   renderLeadTab(); toast('Dodano uwagę');
 }
 
-async function deleteDossierItem(itemId) {
-  if (!confirm('Usunąć ten element dossier?')) return;
+async function deleteWiedzaItem(itemId) {
+  if (!confirm('Usunąć ten element bazy wiedzy?')) return;
   const { error } = await supabaseClient.from('spar_knowhow_items').delete().eq('id', itemId);
   if (error) { toast('Błąd usuwania'); console.error(error); return; }
-  leadData.dossier.items = leadData.dossier.items.filter((i) => i.id !== itemId);
+  leadData.wiedza.items = leadData.wiedza.items.filter((i) => i.id !== itemId);
   renderLeadTab(); toast('Usunięto element');
 }
 function leadOverviewHTML() {
