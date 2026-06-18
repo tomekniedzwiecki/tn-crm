@@ -1091,7 +1091,7 @@ async function openSession(id) {
     supabaseClient.from('spar_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('spar_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
-    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at').eq('id', id).maybeSingle(),
+    supabaseClient.from('spar_sessions').select('landing_url, business_plan, market_report, economics, gtm, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source').eq('id', id).maybeSingle(),
     supabaseClient.from('spar_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
@@ -1102,6 +1102,13 @@ async function openSession(id) {
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
   leadData = { s, msgs: msgs || [], usage: usage || [], emails: emails || [], abandoned: abandoned || [], art: art || {}, protoUrl, orders: orders || [], totalUsd: (usage || []).reduce((a, u) => a + Number(u.cost_usd), 0) };
   leadData.s.sequence_cancelled_at = (art && art.sequence_cancelled_at) || null;
+  // Świeże pola etapu z bazy (sessions cache bywa sprzed płatności/zamknięcia) —
+  // żeby badge „Etap" w zakładce Baza wiedzy nie pokazywał nieaktualnego stanu.
+  if (art) {
+    leadData.s.full_paid_at = art.full_paid_at || null;
+    leadData.s.knowhow_closed_at = art.knowhow_closed_at || null;
+    if (art.idea_source) leadData.s.idea_source = art.idea_source;
+  }
   leadData.wiedza = { items: khItems || [], summary: khSummary || null };
   renderLeadTab();
 }
@@ -1246,13 +1253,13 @@ function leadWiedzaHTML() {
       </div>
     </div>
 
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+    ${sum.summary_text ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-center justify-between mb-2">
         <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-note text-zinc-600 mr-1"></i>Podsumowanie</div>
         ${sum.summary_ai_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(sum.summary_ai_generated_at)}</span>` : ''}
       </div>
-      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${sum.summary_text ? esc(sum.summary_text) : '<span class="text-zinc-600">Brak podsumowania — pojawi się, gdy rozmowa dostarczy materiał.</span>'}</div>
-    </div>
+      <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${esc(sum.summary_text)}</div>
+    </div>` : ''}
 
     ${handoffHtml}
 

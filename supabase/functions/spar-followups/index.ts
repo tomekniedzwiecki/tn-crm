@@ -715,6 +715,7 @@ Deno.serve(async (req) => {
       .select(SESSION_COLS)
       .eq('is_test', false)
       .is('paid_at', null)
+      .is('full_paid_at', null) // po pełnej płatności (know-how) nie cofamy do etapu rezerwacji
       .not('email', 'is', null)
     if (unpaidErr) console.error('[spar-followups] unpaid fetch error:', unpaidErr)
 
@@ -773,6 +774,7 @@ Deno.serve(async (req) => {
         .select(SESSION_COLS)
         .eq('is_test', false)
         .not('paid_at', 'is', null)
+        .is('full_paid_at', null) // welcome dotyczy rezerwacji; po pełnej płatności klient jest już w know-how
         .not('email', 'is', null)
         .gte('paid_at', hoursAgo(72))
         .limit(40)

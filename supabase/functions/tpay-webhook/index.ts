@@ -855,7 +855,10 @@ Deno.serve(async (req) => {
             await supabase.from('spar_knowhow_summary').upsert({ session_id: sessF.id, lead_id: sessF.lead_id || order.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
             console.log('[tpay-webhook] Full payment → spar_session full_paid_at set (know-how):', sessF.id)
           } else {
-            console.log('[tpay-webhook] Full payment but no matching spar_session (full_paid_at null):', order.lead_id, order.customer_email)
+            // Pełna płatność za budowę, ale nie dopasowano sesji → etap know-how się
+            // NIE odmrozi. Twardy [ALERT] w logach (jak lead_error w spar-chat), żeby
+            // Tomek ręcznie przypiął full_paid_at z karty leada.
+            console.error('[tpay-webhook] [ALERT] Full payment „budowa aplikacji" bez dopasowanej spar_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
           }
         }
       } catch (fullErr) {

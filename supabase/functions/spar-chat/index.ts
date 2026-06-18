@@ -475,9 +475,13 @@ async function persistAfterStream(
   channel: string,
   usage: StreamUsage | null,
   isPaid: boolean = false,
+  ephemeral: boolean = false,
 ): Promise<void> {
   try {
-    if (assistantText.trim()) {
+    // ephemeral = zaczepka „wróć do rozmowy" (know-how resume): NIE zapisuj jej do
+    // historii i NIE ruszaj sesji (turns/last_user_at/werdykt) — to nie tura usera.
+    // Koszt (usage) i tak rejestrujemy poniżej.
+    if (!ephemeral && assistantText.trim()) {
       const { error: msgError } = await supabase
         .from('spar_messages')
         .insert({ session_id: sessionId, role: 'assistant', content: assistantText, channel })
@@ -517,6 +521,8 @@ async function persistAfterStream(
       })
       if (abortUsageErr) console.error('[spar-chat] aborted usage insert error:', abortUsageErr)
     }
+
+    if (ephemeral) return // zaczepka: koszt zapisany, sesji nie dotykamy
 
     const update: Record<string, unknown> = {
       turns: turnsBefore + 1,
@@ -569,10 +575,13 @@ async function refreshKnowhowSummary(
   try {
     const { data } = await supabase.from('spar_knowhow_items').select('kind').eq('session_id', sessionId)
     const rows = (data || []) as Array<{ kind: string }>
+    // UWAGA: NIE ustawiamy tu `status`. Tła ekstrakcja leci też „po fakcie" (po
+    // knowhow_closed_at — isKnowHowMode = full_paid_at zostaje true), a sztywne
+    // status:'active' cofało 'closed' z knowhow_close → sprzeczny wiersz. Status
+    // jest własnością wyłącznie knowhow_close / tpay-webhook (start='active').
     await supabase.from('spar_knowhow_summary').upsert({
       session_id: sessionId,
       lead_id: leadId,
-      status: 'active',
       items_count: rows.length,
       wymagania_count: rows.filter((r) => r.kind === 'wymaganie').length,
       zalaczniki_count: rows.filter((r) => r.kind === 'zalacznik').length,
@@ -650,13 +659,21 @@ async function generateHandoffPack(
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) return
-    const { data: sess } = await supabase.from('spar_sessions').select('problem_summary, preview_brief, lead_id').eq('id', sessionId).maybeSingle()
+    const { data: sess } = await supabase.from('spar_sessions').select('problem_summary, preview_brief, lead_id, idea_source').eq('id', sessionId).maybeSingle()
     const { data: itemsRaw } = await supabase.from('spar_knowhow_items').select('kind, scope, source_tag, content, url').eq('session_id', sessionId).order('created_at', { ascending: true })
     const items = (itemsRaw || []) as Array<Record<string, unknown>>
     const card = (sess?.problem_summary as Record<string, unknown> | null) || (sess?.preview_brief as Record<string, unknown> | null) || {}
     if (!items.length && !Object.keys(card).length) return
+    // Źródło pomysłu kształtuje cały etap (insider/AI/wspólny) → pakiet wykonawczy
+    // musi je znać (kto wnosi wiedzę branżową: klient czy research Tomka).
+    const srcMap: Record<string, string> = {
+      wlasny: 'WŁASNY (klient zna branżę od środka — insider; jego wiedza jest wiążąca)',
+      ai: 'PODSUNĘŁA AI (klient NIE jest ekspertem branży — wiedzę branżową bierze na siebie Tomek/research)',
+      wspolny: 'WSPÓLNY (część wiedzy od klienta, część z researchu)',
+    }
+    const srcLabel = srcMap[(sess?.idea_source as string | null) || 'wlasny'] || srcMap.wlasny
     const itemsTxt = items.map((i) => `- [${i.kind}${i.scope ? '/' + i.scope : ''}] ${i.content}${i.url ? ' (' + i.url + ')' : ''}`).join('\n')
-    const userMsg = `KARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 1500)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 8000)}`
+    const userMsg = `ŹRÓDŁO POMYSŁU: ${srcLabel}\n\nKARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 1500)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 8000)}`
     const res = await openaiFetchRetry({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -755,6 +772,17 @@ function knowhowInstruction(ideaSource: string): string {
   const src = ideaSource === 'ai' ? KNOWHOW_SRC_AI : ideaSource === 'wspolny' ? KNOWHOW_SRC_WSPOLNY : KNOWHOW_SRC_WLASNY
   return `${KNOWHOW_BASE}\n${src}`
 }
+
+// Zaczepka po powrocie do rozmowy („wróć do rozmowy"): rozmówca nie odpowiada na
+// konkretne pytanie — to AI ma go miło przywitać i podsunąć, co JESZCZE warto
+// dopowiedzieć, patrząc na to, co już ustalone vs. czego brakuje do budowy.
+const KNOWHOW_RESUME_INSTRUCTION = `[POWRÓT DO ROZMOWY — TWOJA ZACZEPKA]
+Rozmówca właśnie wrócił do tej rozmowy (kliknął „wróć do rozmowy") i nie odpowiada na żadne konkretne pytanie. To NIE jest jego wiadomość — to Twój moment, żeby go ciepło zaczepić. Zrób dokładnie to:
+1) 1 zdanie powitania-powrotu, naturalnie (np. „Hej, dobrze Cię znów widzieć — chcesz coś jeszcze dopowiedzieć do projektu?").
+2) Spójrz na historię tej rozmowy i kartę projektu i wskaż 2–3 KONKRETNE rzeczy, których jeszcze NIE omówiliście, a realnie przydadzą się do zbudowania pierwszej wersji. Wybieraj LUKI (czego brakuje), NIE powtarzaj ustalonego. Podaj je jako lekką propozycję, nie listę obowiązków.
+3) Zero presji i zero odpytywania z wiedzy branżowej — pamiętaj o modelu operatora: research i realia branży bierzesz na siebie, pytasz tylko o to, co siedzi w głowie KLIENTA (jego przykłady, preferencje, decyzje, materiały).
+Na końcu dołącz <opcje>["...","...","..."]</opcje> — 2–4 krótkie, klikalne podpowiedzi tematów do dorzucenia (każda ≤ ~40 znaków, konkretna, wynikająca z luk). Nie dawaj opcji „to wszystko" — od domknięcia etapu jest osobny przycisk.
+Całość krótko: maks 4–5 zdań. Bez nagłówków, bez markerów <ocena>/<werdykt>/<projekt>.`
 
 // Hint dołączany TYLKO w trybie sparingu: przy <werdykt> model dorzuca pole "zrodlo".
 const IDEA_SOURCE_HINT = `[ŹRÓDŁO POMYSŁU — PRZY WERDYKCIE] Gdy wystawiasz <werdykt>, dołącz do jego JSON pole "zrodlo": "wlasny" (rdzeń pomysłu wymyślił rozmówca / zna branżę od środka), "ai" (to TY zaproponowałeś pomysł, rozmówca przyszedł bez sprecyzowanego), albo "wspolny" (powstał wspólnie). Np.: <werdykt>{"kolor":"zielony","zrodlo":"wlasny","karta":{...}}</werdykt>.`
@@ -1059,7 +1087,14 @@ Deno.serve(async (req) => {
       const ownerId = (sess.auth_user_id as string | null) || null
       if (ownerId && (!au || au.id !== ownerId)) return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
       const now = new Date().toISOString()
-      await sb.from('spar_sessions').update({ knowhow_closed_at: now, updated_at: now }).eq('id', sessionId)
+      // Idempotencja: domknij i odpal drogi handoff TYLKO przy pierwszym zamknięciu.
+      // Atomowy claim (WHERE knowhow_closed_at IS NULL) chroni przed podwójnym
+      // klikiem / retry sieciowym / ponownym wejściem „po fakcie" — inaczej każdy
+      // re-call regenerowałby handoff (call modelu 6000 tok.) i nadpisywał poprzedni.
+      const { data: claimed } = await sb.from('spar_sessions')
+        .update({ knowhow_closed_at: now, updated_at: now })
+        .eq('id', sessionId).is('knowhow_closed_at', null).select('id')
+      if (!claimed || !claimed.length) return jsonResponse({ ok: true, already: true }, 200, corsHeaders)
       await sb.from('spar_knowhow_summary').upsert({ session_id: sessionId, lead_id: (sess.lead_id as string | null) || null, status: 'closed', closed_at: now }, { onConflict: 'session_id' })
       // Handoff pack w tle (nie blokuje odpowiedzi na przycisk)
       const erHp = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
@@ -1076,7 +1111,7 @@ Deno.serve(async (req) => {
     if (profession && profession.length > 200) {
       return jsonResponse({ error: 'brak_profesji' }, 400, corsHeaders)
     }
-    if (!message) {
+    if (!message && body.knowhowResume !== true) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -1115,10 +1150,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
     }
 
-    // ── Tryb „Dopracowanie wizji" (know-how): po pełnej płatności, do zamknięcia ──
+    // ── Tryb „Dopracowanie wizji" (know-how): po pełnej płatności ────────────────
     // Włączany WYŁĄCZNIE serwerowo. Dla nieopłaconych sesji = false (sparing bez zmian).
-    const isKnowHowMode = !!(existingSession?.full_paid_at) && !(existingSession?.knowhow_closed_at)
+    // UWAGA: zostaje WŁĄCZONY także po zamknięciu etapu (knowhow_closed_at) — klient
+    // może dopisać szczegóły „po fakcie" i to dalej spowiednik + ekstrakcja, NIE
+    // powrót do pre-paymentowego łowcy problemu (werdykty/bramka kontaktu/MAX_TURNS).
+    const isKnowHowMode = !!(existingSession?.full_paid_at)
+    const knowhowClosed = !!(existingSession?.knowhow_closed_at)
     const ideaSource = ((existingSession?.idea_source as string | null | undefined) || 'wlasny')
+    // Zaczepka „wróć do rozmowy" — generujemy proaktywną wiadomość AI bez tury usera.
+    // Sensowna tylko w trybie know-how; w innych sesjach ignorujemy (i odrzucamy pustkę).
+    const knowhowResume = body.knowhowResume === true && isKnowHowMode
+    if (body.knowhowResume === true && !isKnowHowMode) {
+      return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
+    }
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1274,17 +1319,22 @@ Deno.serve(async (req) => {
     }
 
     // ── Append wiadomości usera ──────────────────────────────────────────────
-    const { error: userMsgError } = await supabase
-      .from('spar_messages')
-      .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
-    if (userMsgError) {
-      console.error('[spar-chat] insert user message error:', userMsgError)
-      return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+    // Zaczepka know-how (knowhowResume): brak realnej wiadomości usera → NIE zapisujemy
+    // jej do historii. Model dostaje syntetyczny wyzwalacz jako ostatnią turę.
+    if (!knowhowResume) {
+      const { error: userMsgError } = await supabase
+        .from('spar_messages')
+        .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
+      if (userMsgError) {
+        console.error('[spar-chat] insert user message error:', userMsgError)
+        return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+      }
     }
 
+    const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: message },
+      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : message },
     ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne
@@ -1310,6 +1360,12 @@ Deno.serve(async (req) => {
         // (nie pytało o ustalone) — niezależnie od długości historii rozmowy.
         const khCard = (existingSession?.problem_summary as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null)
         if (khCard) sessionContext += `\n\n[CO JUŻ WIEMY O PROJEKCIE — nie pytaj o to ponownie, to ustalone]\n${JSON.stringify(khCard).slice(0, 1600)}`
+        // Etap formalnie domknięty (klient kliknął „to już wszystko") — Tomek ma komplet
+        // i rusza z budową. Jeśli klient mimo to coś dopisze: podziękuj, dopytaj krótko o
+        // jeden szczegół i potwierdź, że dopisujesz to do projektu. Bez ponaglania.
+        if (knowhowClosed) sessionContext += `\n\n[ETAP DOPRACOWANIA JUŻ DOMKNIĘTY] Klient zamknął ten etap, a Tomek zaczął budowę. Każda nowa wiadomość to bonusowy szczegół „po fakcie". Reaguj krótko i ciepło: podziękuj, w razie potrzeby dopytaj o jedną rzecz i zapewnij, że trafia to do projektu. Nie zachęcaj do przedłużania rozmowy.`
+        // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
+        if (knowhowResume) sessionContext += `\n\n${KNOWHOW_RESUME_INSTRUCTION}`
       } else if (existingSession?.verdict === 'zielony') {
         // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
@@ -1380,7 +1436,7 @@ Deno.serve(async (req) => {
         const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage, !!existingSession?.paid_at)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage, !!existingSession?.paid_at, knowhowResume)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)
@@ -1464,16 +1520,18 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Stream zakończony — finalizacja. Markery <projekt>/<werdykt> żyją
-          // tylko w sparingu; czat współpracy ich nie wysyła (a gdyby model
-          // halucynował — nie nadpisujemy nimi karty projektu).
-          const verdict = parseVerdict(assistantText)
+          // Stream zakończony — finalizacja. Markery <projekt>/<werdykt> należą do
+          // sparingu (badanie pomysłu). W trybie know-how są ZAKAZANE w prompcie, ale
+          // gdyby model je halucynował, NIE wolno ich tu przetwarzać: parseProjekt
+          // potrafi przez reset:true wyzerować artefakty (raport/economics/gtm/landing)
+          // OPŁACONEGO projektu, a zielony werdykt odpaliłby lead/Slack. Twardo gasimy.
+          const verdict = isKnowHowMode ? { verdict: null, karta: null, idea_source: null } as VerdictResult : parseVerdict(assistantText)
           // Twarda bramka: zielony przechodzi tylko z oceną „mocny" z badania rynku.
           if (gateOcena && verdict.verdict === 'zielony' && gateOcena.ocena !== 'mocny') {
             console.log('[spar-chat] hard-gate downgrade zielony→zolty (ocena=', gateOcena.ocena, ')')
             verdict.verdict = 'zolty'
           }
-          const projektFresh = parseProjekt(assistantText)
+          const projektFresh = isKnowHowMode ? null : parseProjekt(assistantText)
           let projekt: Record<string, unknown> | null = null
 
           if (projektFresh) {
@@ -1553,7 +1611,8 @@ Deno.serve(async (req) => {
           if (persistPromise) await persistPromise
 
           // Tryb know-how: cicha ekstrakcja wiedzy z tej wymiany → Baza wiedzy (w tle).
-          if (isKnowHowMode && assistantText.trim()) {
+          // Zaczepka (knowhowResume) nie niesie treści usera → nie ma czego ekstrahować.
+          if (isKnowHowMode && !knowhowResume && assistantText.trim()) {
             const khLead = ((existingSession?.lead_id as string | null | undefined) ?? leadId) ?? null
             const khPromise = extractKnowhowAsync(supabase, sessionId, khLead, ideaSource, message, assistantText, (existingSession?.problem_summary as Record<string, unknown> | null) ?? null, OPENAI_API_KEY)
             const erKh = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
@@ -1578,9 +1637,10 @@ Deno.serve(async (req) => {
           // Klient mógł przerwać stream (zamknięta karta) — zapisz to, co już
           // wygenerowano, żeby historia rozmowy nie gubiła odpowiedzi asystenta.
           try {
-            const freshAbort = parseProjekt(assistantText)
+            // Także na ścieżce abort: w know-how nie tykamy markerów (patrz finalizacja).
+            const freshAbort = isKnowHowMode ? null : parseProjekt(assistantText)
             const persistPromise = schedulePersist(
-              parseVerdict(assistantText),
+              isKnowHowMode ? { verdict: null, karta: null } : parseVerdict(assistantText),
               null,
               freshAbort
                 ? mergeBrief((existingSession?.preview_brief as Record<string, unknown> | null) ?? null, freshAbort)

@@ -426,10 +426,12 @@ Deno.serve(async (req) => {
       if (isNewVisit) visitPatch.panel_visits = ((session.panel_visits as number) || 0) + 1
       supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
         .then(() => {}, (e: unknown) => console.error('[spar-project] panel visit stamp error:', e))
-      if (isGreen && !isPaid) {
+      if (isGreen && !isPaid && !session.full_paid_at) {
         // Eager-seed planu (idempotentne) — żeby bramkowanie działało od razu po
         // werdykcie, nie dopiero po przebiegu crona dripa. Kadencja w GODZINACH (h)
         // z _shared/spar-reveal-plan.ts (jedno źródło z spar-drip).
+        // Po pełnej płatności (know-how) NIE seedujemy — spójnie z gate'em seed-query
+        // w spar-drip (.is('full_paid_at', null)); inaczej martwe 'pending' śmiecą KPI.
         const verdictAt = Date.parse(session.created_at as string) || Date.now()
         const seedRows = REVEAL_PLAN.map((r) => ({
           session_id: sessionId, key: r.key, seq: r.seq, email_kind: r.emailKind,
