@@ -566,6 +566,23 @@ async function persistAfterStream(
 // Wołane w tle (waitUntil) PO odpowiedzi, tylko w trybie know-how. Drugi, krótki
 // call modelu wyciąga konkrety z ostatniej tury i zapisuje do spar_knowhow_items.
 // Brak markerów w treści czatu → front nietknięty; błąd = zero wpływu na rozmowę.
+// Trwały ślad błędu ścieżki know-how (ekstrakcja/handoff) — żeby cicha awaria nie
+// zostawiała Tomka z pustą Bazą wiedzy bez sygnału. Wzór jak spar_sessions.lead_error.
+async function stampKnowhowError(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  leadId: string | null,
+  field: 'extract_error' | 'handoff_error',
+  msg: string,
+): Promise<void> {
+  try {
+    const patch: Record<string, unknown> = { session_id: sessionId, lead_id: leadId }
+    patch[field] = msg.slice(0, 300)
+    patch[field === 'extract_error' ? 'extract_error_at' : 'handoff_error_at'] = new Date().toISOString()
+    await supabase.from('spar_knowhow_summary').upsert(patch, { onConflict: 'session_id' })
+  } catch (e) { console.error('[spar-chat] stampKnowhowError', field, e) }
+}
+
 async function refreshKnowhowSummary(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -586,6 +603,8 @@ async function refreshKnowhowSummary(
       wymagania_count: rows.filter((r) => r.kind === 'wymaganie').length,
       zalaczniki_count: rows.filter((r) => r.kind === 'zalacznik').length,
       idea_source: ideaSource,
+      extract_error: null,    // udany przebieg ekstrakcji czyści poprzedni błąd
+      extract_error_at: null,
     }, { onConflict: 'session_id' })
   } catch (e) {
     console.error('[spar-chat] refreshKnowhowSummary error:', e)
@@ -617,7 +636,7 @@ async function extractKnowhowAsync(
         ],
       }),
     }, 'knowhow-extract')
-    if (!res.ok) { console.error('[spar-chat] knowhow-extract http', res.status); return }
+    if (!res.ok) { console.error('[spar-chat] knowhow-extract http', res.status); await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', `OpenAI HTTP ${res.status}`); return }
     const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
     const content = data?.choices?.[0]?.message?.content || ''
     let items: Array<Record<string, unknown>> = []
@@ -642,11 +661,12 @@ async function extractKnowhowAsync(
       }))
     if (rows.length) {
       const { error } = await supabase.from('spar_knowhow_items').insert(rows)
-      if (error) { console.error('[spar-chat] knowhow insert error:', error); return }
+      if (error) { console.error('[spar-chat] knowhow insert error:', error); await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', `insert: ${error.message || '?'}`); return }
     }
     await refreshKnowhowSummary(supabase, sessionId, leadId, ideaSource)
   } catch (e) {
     console.error('[spar-chat] extractKnowhowAsync error:', e)
+    await stampKnowhowError(supabase, sessionId, leadId, 'extract_error', String(e))
   }
 }
 
@@ -683,19 +703,26 @@ async function generateHandoffPack(
         messages: [ { role: 'system', content: HANDOFF_PROMPT }, { role: 'user', content: userMsg } ],
       }),
     }, 'knowhow-handoff')
-    if (!res.ok) { console.error('[spar-chat] handoff http', res.status); return }
+    const hpLead = (sess?.lead_id as string | null) ?? null
+    if (!res.ok) { console.error('[spar-chat] handoff http', res.status); await stampKnowhowError(supabase, sessionId, hpLead, 'handoff_error', `OpenAI HTTP ${res.status}`); return }
     const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
     const text = data?.choices?.[0]?.message?.content || ''
     if (text.trim()) {
       await supabase.from('spar_knowhow_summary').upsert({
         session_id: sessionId,
-        lead_id: (sess?.lead_id as string | null) ?? null,
+        lead_id: hpLead,
         handoff_pack: text.trim(),
         handoff_generated_at: new Date().toISOString(),
+        handoff_error: null,    // udana generacja czyści poprzedni błąd
+        handoff_error_at: null,
       }, { onConflict: 'session_id' })
+    } else {
+      // 200 OK, ale pusta treść = handoff się nie wygenerował (deliverable znika cicho)
+      await stampKnowhowError(supabase, sessionId, hpLead, 'handoff_error', 'pusta odpowiedź modelu')
     }
   } catch (e) {
     console.error('[spar-chat] generateHandoffPack error:', e)
+    await stampKnowhowError(supabase, sessionId, null, 'handoff_error', String(e))
   }
 }
 

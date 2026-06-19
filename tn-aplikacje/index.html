@@ -1096,7 +1096,7 @@ async function openSession(id) {
     supabaseClient.from('spar_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
     supabaseClient.from('spar_knowhow_items').select('id, kind, scope, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').eq('session_id', id).order('created_at', { ascending: false }),
-    supabaseClient.from('spar_knowhow_summary').select('status, items_count, wymagania_count, zalaczniki_count, summary_text, summary_ai_generated_at, idea_source, handoff_pack, handoff_generated_at').eq('session_id', id).maybeSingle(),
+    supabaseClient.from('spar_knowhow_summary').select('status, items_count, wymagania_count, zalaczniki_count, summary_text, summary_ai_generated_at, idea_source, handoff_pack, handoff_generated_at, extract_error, extract_error_at, handoff_error, handoff_error_at').eq('session_id', id).maybeSingle(),
   ]);
   if (leadLoadingId !== id) return; // user zdążył przejść gdzie indziej
   const protoUrl = (protoRow && protoRow.meta && typeof protoRow.meta.url === 'string') ? protoRow.meta.url : null;
@@ -1237,6 +1237,16 @@ function leadWiedzaHTML() {
       <div class="text-sm text-zinc-300 leading-relaxed whitespace-pre-line">${esc(sum.handoff_pack)}</div>
     </div>` : '';
 
+  // Sygnał awarii zbierania wiedzy (ekstrakcja/handoff padały) — inaczej pusta/chuda
+  // Baza wiedzy wygląda jak „cicha, zdrowa rozmowa". Czyszczone przy udanym przebiegu.
+  const khErrs = [];
+  if (sum.extract_error) khErrs.push(`Ekstrakcja dossier: ${sum.extract_error}${sum.extract_error_at ? ' · ' + fmtDate(sum.extract_error_at) : ''}`);
+  if (sum.handoff_error) khErrs.push(`Handoff pack: ${sum.handoff_error}${sum.handoff_error_at ? ' · ' + fmtDate(sum.handoff_error_at) : ''}`);
+  const khErrHtml = khErrs.length ? `<div class="bg-red-500/10 border border-red-500/30 rounded-xl p-4">
+      <div class="flex items-center gap-2 text-[12px] font-semibold text-red-300 mb-1.5"><i class="ph ph-warning-octagon"></i>Ostatni przebieg zbierania wiedzy padł — Baza wiedzy może być niekompletna</div>
+      <div class="text-[12px] text-red-300/80 whitespace-pre-line">${esc(khErrs.join('\n'))}</div>
+    </div>` : '';
+
   return `<div class="space-y-5 max-w-4xl">
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center gap-2.5 flex-wrap">
@@ -1252,6 +1262,8 @@ function leadWiedzaHTML() {
         </select>
       </div>
     </div>
+
+    ${khErrHtml}
 
     ${sum.summary_text ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
       <div class="flex items-center justify-between mb-2">
