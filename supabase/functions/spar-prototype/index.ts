@@ -37,6 +37,7 @@
 //          SPAR_CRON_SECRET (admin, współdzielony ze spar-landing/followups).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -55,7 +56,11 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 
 const PROTOTYPE_MODEL = Deno.env.get('SPAR_PROTOTYPE_MODEL') || 'gpt-5.5'
-const MAX_COMPLETION_TOKENS = 40000
+// gpt-5.5 to model rozumujący — tokeny reasoningu liczą się DO max_completion_tokens.
+// Przy 40000 większe apki nie miały budżetu na dokończenie HTML (reasoning zjadał pulę
+// → output bez </html> → walidacja odrzucała → cichy brak prototypu). Udane buildy
+// historycznie miały 56–61k completion. Podbite, żeby reasoning + pełny HTML się mieściły.
+const MAX_COMPLETION_TOKENS = parseInt(Deno.env.get('SPAR_PROTOTYPE_MAX_TOKENS') || '64000', 10)
 const MAX_PROTOTYPES_PER_SESSION = 3
 const MAX_PROTOTYPES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_PROTOTYPE_IP_DAILY') || '5', 10)
 const STORAGE_BUCKET = 'attachments'
@@ -355,6 +360,26 @@ async function latestPrototypeUrl(
   return url || null
 }
 
+// Trwały ślad NIEUDANEJ generacji (kind='prototype_error' — osobny kind, NIE koliduje
+// z latestPrototypeUrl). Bez tego awarie były całkowicie ciche: kafel wisiał „Buduję…",
+// a w bazie zero sygnału. reason: no_content | incomplete_html | upload | exception
+async function recordPrototypeFail(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  reason: string,
+  detail: Record<string, unknown>,
+): Promise<void> {
+  try {
+    await supabase.from('spar_usage').insert({
+      session_id: sessionId,
+      kind: 'prototype_error',
+      model: PROTOTYPE_MODEL,
+      meta: { reason, ...detail },
+    })
+    console.error('[spar-prototype] FAIL', reason, JSON.stringify(detail))
+  } catch (e) { console.error('[spar-prototype] recordPrototypeFail error:', e) }
+}
+
 // ── Generacja w tle (2-pass, wzorzec spar-landing) ──
 async function generateAndStore(
   supabase: ReturnType<typeof createClient>,
@@ -375,10 +400,14 @@ async function generateAndStore(
     // ('high'/'medium' przy 48k zjadały budżet na reasoning → pusty output bez
     // </html>). Skok jakości daje design-first prompt + krytyk 'medium'.
     const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, screens.length > 0), null, screens)
-    if (!gen.content) { await releaseLock(); return }
+    if (!gen.content) {
+      await recordPrototypeFail(supabase, sessionId, 'no_content', { finish: gen.finish, output_tokens: gen.output, duration_ms: Date.now() - startedAt })
+      await releaseLock(); return
+    }
     const html1 = extractHtml(gen.content)
     if (!html1) {
       console.error('[spar-prototype] pass1 bez kompletnego HTML, finish:', gen.finish, 'len:', gen.content.length)
+      await recordPrototypeFail(supabase, sessionId, 'incomplete_html', { finish: gen.finish, content_len: gen.content.length, output_tokens: gen.output, duration_ms: Date.now() - startedAt })
       await releaseLock()
       return
     }
@@ -391,7 +420,7 @@ async function generateAndStore(
         contentType: 'text/html; charset=utf-8',
         upsert: true,
       })
-    if (upErr) { console.error('[spar-prototype] upload error:', upErr); await releaseLock(); return }
+    if (upErr) { console.error('[spar-prototype] upload error:', upErr); await recordPrototypeFail(supabase, sessionId, 'upload', { error: String((upErr as { message?: string }).message || upErr), duration_ms: Date.now() - startedAt }); await releaseLock(); return }
     const { data: pub } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(storagePath)
 
     // Publikacja wersji 1: wpis usage z meta.url = sygnał gotowości dla frontendu
@@ -435,6 +464,7 @@ async function generateAndStore(
     }
   } catch (err) {
     console.error('[spar-prototype] background ERROR:', err instanceof Error ? err.message : String(err))
+    await recordPrototypeFail(supabase, sessionId, 'exception', { error: err instanceof Error ? err.message : String(err), duration_ms: Date.now() - startedAt })
     await releaseLock()
   }
 }
@@ -578,6 +608,17 @@ Deno.serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+
+    // Bramka właściciela (PRZED 'status'/budową; admin omija — panel TN Aplikacje
+    // generuje na żądanie): sesja przypięta do konta wymaga JWT tego konta,
+    // link ?id= przestaje działać jak hasło (lustrzane odbicie spar-chat).
+    if (!isAdmin) {
+      const authUser = await verifyAuthUser(req, supabase)
+      const { data: own } = await supabase.from('spar_sessions').select('auth_user_id').eq('id', sessionId).maybeSingle()
+      if (own && ownerDenied(own.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      }
+    }
 
     // ── action 'status': frontend poll o gotowy URL ──
     if (body.action === 'status') {
