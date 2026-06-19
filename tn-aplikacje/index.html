@@ -2268,6 +2268,7 @@ function leadList() {
   const q = search.toLowerCase();
   return visibleSessions().filter((s) => {
     if (q && ![projName(s), s.email, s.phone, s.profession, s.name].some((v) => v && String(v).toLowerCase().includes(q))) return false;
+    if (leadySource !== 'all' && srcInfo(s).channel !== leadySource) return false;
     if (leadyFilter === 'all') return true;
     if (leadyFilter === 'paid') return !!s.paid_at;
     if (leadyFilter === 'green') return s.verdict === 'zielony';
@@ -2339,12 +2340,19 @@ function renderLeadyFilters() {
     if (k === 'lead') return !!s.email && !s.paid_at;
     return leadSignal(s).key === k;
   }).length;
-  $('leady-filters').innerHTML = LEAD_FILTERS.map((f) => {
+  const chips = LEAD_FILTERS.map((f) => {
     const on = leadyFilter === f.key;
     return `<button data-filter="${f.key}" class="lead-chip inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs transition ${on ? 'tab-active text-white border-white/10' : 'text-zinc-400 border-white/10 hover:text-white'}">
       <i class="ph ${f.icon}"></i>${f.label}<span class="text-[10px] ${on ? 'text-zinc-300' : 'text-zinc-600'}">${count(f.key)}</span></button>`;
   }).join('');
+  // Filtr ŹRÓDŁA pozyskania (kanał z classifySource) — niezależny od filtra szybkiego (AND).
+  const srcCount = (k) => base.filter((s) => k === 'all' || srcInfo(s).channel === k).length;
+  const srcSel = `<select id="leady-src" title="Źródło pozyskania" class="ml-auto bg-black/40 border border-white/10 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:border-blue-500/40 outline-none">
+    ${SRC_CHANNELS.map((c) => `<option value="${c.key}" ${leadySource === c.key ? 'selected' : ''}>${c.label} (${srcCount(c.key)})</option>`).join('')}</select>`;
+  $('leady-filters').innerHTML = chips + srcSel;
   $('leady-filters').querySelectorAll('.lead-chip').forEach((b) => b.addEventListener('click', () => { leadyFilter = b.dataset.filter; renderLeady(); }));
+  const srcEl = $('leady-src');
+  if (srcEl) srcEl.addEventListener('change', (e) => { leadySource = e.target.value; renderLeady(); });
 }
 function renderLeady() {
   document.querySelectorAll('.lv-toggle').forEach((b) => b.classList.toggle('tab-active', b.dataset.view === leadyView));
@@ -2456,6 +2464,17 @@ const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawie
 const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia' };
 let leadyView = 'table';   // 'table' | 'board'
 let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
+let leadySource = 'all';   // kanał pozyskania: all|meta|tiktok|google|youtube|email|organic
+// Kanały z classifySource (components/source-classifier.js) — wspólny słownik.
+const SRC_CHANNELS = [
+  { key: 'all', label: 'Wszystkie źródła' },
+  { key: 'meta', label: 'Meta' },
+  { key: 'tiktok', label: 'TikTok' },
+  { key: 'google', label: 'Google' },
+  { key: 'youtube', label: 'YouTube' },
+  { key: 'email', label: 'Email' },
+  { key: 'organic', label: 'Bezpośrednio / organic' },
+];
 function closeNav() { $('appnav')?.classList.remove('open'); $('appnav-overlay')?.classList.remove('open'); }
 function switchTab(tab) {
   if (!VIEWS.includes(tab)) tab = 'przeglad';
