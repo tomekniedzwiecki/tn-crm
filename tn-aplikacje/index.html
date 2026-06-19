@@ -1052,6 +1052,38 @@ let prevTab = 'leady';
 let leadLoadingId = null;
 const LEAD_CHAT_POLL_MS = 4000;   // auto-odświeżanie podglądu rozmowy na żywo
 let leadChatSig = '';
+// Podział rozmowy na ETAPY (jeden kanał 'sparing', ale fazy w czasie):
+//  pomysł (do zielonego werdyktu) → warunki/współpraca (po werdykcie, przed pełną
+//  płatnością) → dopracowanie wizji (po full_paid_at, know-how). Picker w zakładce
+//  Rozmowa; domyślnie najdalszy obecny etap.
+const CHAT_STAGES = [
+  { key: 'pomysl', label: 'Pomysł' },
+  { key: 'wspolpraca', label: 'Warunki / współpraca' },
+  { key: 'knowhow', label: 'Dopracowanie wizji' },
+];
+const CHAT_STAGE_LABEL = { pomysl: 'pomysł', wspolpraca: 'warunki', knowhow: 'dopracowanie' };
+let leadChatStage = null;       // wybrany filtr etapu ('pomysl'|'wspolpraca'|'knowhow'|'all')
+let leadChatStageLead = null;   // dla którego leada ustawiony (reset przy zmianie leada)
+// Zwraca funkcję phaseOf(msg,i) + liczność faz dla bieżącego leada
+function leadChatPhases() {
+  const { msgs, s } = leadData;
+  const paidTs = s && s.full_paid_at ? Date.parse(s.full_paid_at) : null;
+  let verdictIdx = -1;
+  for (let i = 0; i < msgs.length; i++) {
+    const c = msgs[i].content || '';
+    if (msgs[i].role === 'assistant' && c.indexOf('<werdykt>') >= 0 && /"kolor"\s*:\s*"zielony"/.test(c)) { verdictIdx = i; break; }
+  }
+  const phases = msgs.map((m, i) => {
+    const t = m.created_at ? Date.parse(m.created_at) : 0;
+    if (paidTs && t >= paidTs) return 'knowhow';
+    if (verdictIdx >= 0 && i > verdictIdx) return 'wspolpraca';
+    return 'pomysl';
+  });
+  const counts = { pomysl: 0, wspolpraca: 0, knowhow: 0 };
+  phases.forEach((p) => { counts[p]++; });
+  return { phases, counts };
+}
+function setLeadChatStage(k) { leadChatStage = k; renderLeadTab(); }
 const LEAD_TABS = [
   { id: 'przeglad', icon: 'ph-identification-card', label: 'Przegląd' },
   { id: 'rozmowa', icon: 'ph-chats-circle', label: 'Rozmowa' },
@@ -1112,7 +1144,7 @@ async function openSession(id) {
   leadData.wiedza = { items: khItems || [], summary: khSummary || null };
   renderLeadTab();
 }
-function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; switchTab(prevTab || 'leady'); }
+function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; leadChatStageLead = null; switchTab(prevTab || 'leady'); }
 
 // Podgląd rozmowy na żywo — dociąga nowe wiadomości bez przeładowania strony
 function chatSig(msgs) { const n = msgs.length; const last = n ? msgs[n - 1] : null; return n + '|' + (last ? (last.created_at || '') + '|' + (last.content || '').length : ''); }
@@ -1363,19 +1395,36 @@ function leadOverviewHTML() {
   </div>`;
 }
 function leadChatHTML() {
-  const { msgs } = leadData;
+  const { msgs, s } = leadData;
+  const { phases, counts } = leadChatPhases();
+  const present = CHAT_STAGES.filter((st) => counts[st.key] > 0);
+  const furthest = present.length ? present[present.length - 1].key : 'pomysl';
+  // Reset filtra przy zmianie leada / gdy wybrany etap zniknął → najdalszy obecny.
+  if (leadChatStageLead !== s.id) { leadChatStage = furthest; leadChatStageLead = s.id; }
+  if (leadChatStage !== 'all' && !counts[leadChatStage]) leadChatStage = furthest;
+
+  const showPicker = present.length > 1;
+  const pill = (key, label, n) => `<button onclick="setLeadChatStage('${key}')" class="px-2.5 py-1 rounded-full text-[11px] border transition ${leadChatStage === key ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'text-zinc-400 border-white/10 hover:text-white hover:border-white/25'}">${label}${n != null ? ` <span class="opacity-60">${n}</span>` : ''}</button>`;
+  const picker = showPicker ? `<div class="flex flex-wrap items-center gap-1.5 mb-3">
+      <span class="text-[10px] uppercase tracking-wider text-zinc-600 mr-1">Etap rozmowy:</span>
+      ${present.map((st) => pill(st.key, st.label, counts[st.key])).join('')}
+      ${pill('all', 'Wszystko', msgs.length)}
+    </div>` : '';
+
+  const items = msgs.map((m, i) => ({ m, phase: phases[i] }))
+    .filter((x) => leadChatStage === 'all' || x.phase === leadChatStage);
   const live = `<div class="flex items-center gap-2 mb-3 text-[11px] text-zinc-500">
       <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>Na żywo</span>
-      <span>${msgs.length} ${plural(msgs.length, 'wiadomość', 'wiadomości', 'wiadomości')} · auto-odświeżanie co ${LEAD_CHAT_POLL_MS / 1000} s</span>
+      <span>${items.length}${leadChatStage !== 'all' && showPicker ? '/' + msgs.length : ''} ${plural(msgs.length, 'wiadomość', 'wiadomości', 'wiadomości')} · auto-odświeżanie co ${LEAD_CHAT_POLL_MS / 1000} s</span>
     </div>`;
-  return `<div class="max-w-3xl">${live}<div class="space-y-2.5">${msgs.length ? msgs.map((m) => `
+  return `<div class="max-w-3xl">${live}${picker}<div class="space-y-2.5">${items.length ? items.map(({ m, phase }) => `
     <div class="border rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${m.role === 'user' ? 'msg-user ml-8' : 'msg-ai mr-8'}">
       <div class="flex items-center justify-between gap-3 mb-1">
-        <span class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'}">${m.role === 'user' ? 'Rozmówca' : 'AI'}${m.channel === 'wspolpraca' ? ' · współpraca' : ''}</span>
+        <span class="text-[10px] uppercase tracking-wider ${m.role === 'user' ? 'text-blue-400' : 'text-zinc-500'}">${m.role === 'user' ? 'Rozmówca' : 'AI'}${leadChatStage === 'all' ? ` · ${CHAT_STAGE_LABEL[phase]}` : ''}</span>
         ${m.created_at ? `<span class="text-[10px] text-zinc-600 shrink-0">${fmtDate(m.created_at)}</span>` : ''}
       </div>
       <div class="text-zinc-200">${cleanMsg(m.content)}</div>
-    </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości.</div>'}</div></div>`;
+    </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości w tym etapie.</div>'}</div></div>`;
 }
 function leadArtefaktyHTML() {
   const { s, art, protoUrl } = leadData;
