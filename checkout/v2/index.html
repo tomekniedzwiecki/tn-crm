@@ -2558,6 +2558,9 @@ async function handleSubmit() {
         // Rezerwacja Aplikacja: lead_id z linku per-lead → zamówienie wiąże się z konkretnym
         // leadem, dzięki czemu webhook/cron oznacza paid_at na właściwej sesji sparingu.
         const urlLeadId = new URLSearchParams(window.location.search).get('lead_id') || null;
+        // sid = dokładna sesja sparingu (rezerwacja: front; pełna płatność: panel admina).
+        // Twardy link order→sesja, żeby webhook nie zgadywał „najnowszej po e-mailu".
+        const sparSid = new URLSearchParams(window.location.search).get('sid') || null;
 
         // Try existing pending order for same email+description
         const { data: existingOrders } = await sbOrder({ 'x-customer-email': email })
@@ -2587,6 +2590,7 @@ async function handleSubmit() {
                 spar_user_id: sparUserId,
                 skip_workflow: sparUserId ? true : null,
                 ...(urlLeadId ? { lead_id: urlLeadId } : {}),
+                ...(sparSid ? { spar_session_id: sparSid } : {}),
                 updated_at: new Date().toISOString()
             }).eq('id', order.id);
             order.amount = effectivePrice;
@@ -2609,6 +2613,7 @@ async function handleSubmit() {
                 consent_digital_service: stworzeConsentRequired ? true : null,
                 consented_at: stworzeConsentRequired ? new Date().toISOString() : null,
                 spar_user_id: sparUserId,
+                ...(sparSid ? { spar_session_id: sparSid } : {}),
                 // zakup sparingu (kolejna rozmowa) NIE jest budową → nie twórz workflow CRM
                 skip_workflow: sparUserId ? true : null
             };

@@ -746,9 +746,15 @@ Deno.serve(async (req) => {
     let paidAt = order.paid_at
 
     if (trStatus === TPAY_STATUS.TRUE || trStatus === 'correct' || trStatus === 'paid') {
+      // Idempotencja: TPay PONAWIA notyfikacje TRUE. Efekty uboczne (Slack, konwersje
+      // Meta/TikTok/GA4, licznik użyć kodu rabatowego) MUSZĄ polecieć tylko przy
+      // PIERWSZYM zaksięgowaniu — inaczej retry zawyża uses_count rabatu i dubluje
+      // powiadomienia. Wzorzec jak w revolut-webhook. Synchronizacje spar_session
+      // zostają poza guardem (są idempotentne przez .is(paid_at/full_paid_at,null)).
+      const alreadyPaid = order.status === 'paid' && !!order.paid_at
       newStatus = 'paid'
-      paidAt = new Date().toISOString()
-      console.log('[tpay-webhook] Payment successful!')
+      if (!order.paid_at) paidAt = new Date().toISOString() // nie nadpisuj istniejącego paid_at przy retry
+      console.log('[tpay-webhook] Payment successful!', alreadyPaid ? '(duplikat notyfikacji — pomijam efekty uboczne)' : '')
 
       // Podlinkuj leada po mailu jesli brak (checkout ustawia lead_id tylko gdy ?lead_id w URL).
       // Bez tego konwersje nie znajda gclid/fbclid w lead_tracking, a zakup pada jako "direct".
@@ -781,7 +787,18 @@ Deno.serve(async (req) => {
         const isAplikacjaReservation = desc.includes('rezerwacj') && (desc.includes('aplikac') || desc.includes('stworz'))
         if (isAplikacjaReservation) {
           let sess: { id: string; lead_id: string | null } | null = null
-          if (order.lead_id) {
+          // 1) Twardy link order→sesja (sid z checkoutu) — pewny, bez zgadywania.
+          if (order.spar_session_id) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .eq('id', order.spar_session_id)
+              .is('paid_at', null)
+              .maybeSingle()
+            sess = data || null
+          }
+          // 2) Fallback po lead_id, 3) po e-mailu (najnowsza nieopłacona).
+          if (!sess && order.lead_id) {
             const { data } = await supabase
               .from('spar_sessions')
               .select('id, lead_id')
@@ -826,7 +843,18 @@ Deno.serve(async (req) => {
         const isAplikacjaFull = descF.includes('budowa aplikacji')
         if (isAplikacjaFull) {
           let sessF: { id: string; lead_id: string | null } | null = null
-          if (order.lead_id) {
+          // 1) Twardy link order→sesja (sid z checkoutu) — pewny, bez zgadywania.
+          if (order.spar_session_id) {
+            const { data } = await supabase
+              .from('spar_sessions')
+              .select('id, lead_id')
+              .eq('id', order.spar_session_id)
+              .is('full_paid_at', null)
+              .maybeSingle()
+            sessF = data || null
+          }
+          // 2) Fallback po lead_id, 3) po e-mailu (najnowsza bez full_paid_at).
+          if (!sessF && order.lead_id) {
             const { data } = await supabase
               .from('spar_sessions')
               .select('id, lead_id')
@@ -865,32 +893,35 @@ Deno.serve(async (req) => {
         console.error('[tpay-webhook] spar_session full payment sync error:', fullErr)
       }
 
-      // Send Slack notification for successful payment
-      await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
+      // Efekty uboczne TYLKO przy pierwszym zaksięgowaniu (patrz alreadyPaid wyżej).
+      if (!alreadyPaid) {
+        // Send Slack notification for successful payment
+        await sendSlackPaidNotification({ ...order, payment_source: order.payment_source || 'tpay' }, supabase)
 
-      // Send Meta Conversions API event
-      await sendMetaConversion(order, supabase)
+        // Send Meta Conversions API event
+        await sendMetaConversion(order, supabase)
 
-      // Send TikTok Events API event
-      await sendTikTokConversion(order, supabase)
+        // Send TikTok Events API event
+        await sendTikTokConversion(order, supabase)
 
-      // Google Ads zakup: WYLACZONE celowo. Konwersje zakupu liczymy WYLACZNIE przez
-      // import GA4 'purchase' (akcja "tomekniedzwiecki.pl (web) purchase"), zeby nie
-      // liczyc tej samej transakcji dwa razy (import GA4 + uploadClickConversions).
-      // Funkcja sendGoogleConversion zostaje w kodzie — odkomentuj jesli kiedys chcesz
-      // wrocic do uploadu po gclid zamiast importu GA4.
-      // await sendGoogleConversion(order, supabase)
+        // Google Ads zakup: WYLACZONE celowo. Konwersje zakupu liczymy WYLACZNIE przez
+        // import GA4 'purchase' (akcja "tomekniedzwiecki.pl (web) purchase"), zeby nie
+        // liczyc tej samej transakcji dwa razy (import GA4 + uploadClickConversions).
+        // Funkcja sendGoogleConversion zostaje w kodzie — odkomentuj jesli kiedys chcesz
+        // wrocic do uploadu po gclid zamiast importu GA4.
+        // await sendGoogleConversion(order, supabase)
 
-      // Send GA4 purchase server-side (Measurement Protocol) — backup gdy browser purchase nie zdazy
-      await sendGA4Purchase(order)
+        // Send GA4 purchase server-side (Measurement Protocol) — backup gdy browser purchase nie zdazy
+        await sendGA4Purchase(order)
 
-      // Increment discount code usage only on successful payment
-      if (order.discount_code_id) {
-        try {
-          await supabase.rpc('use_discount_code', { p_code_id: order.discount_code_id })
-          console.log('[tpay-webhook] Discount code usage incremented:', order.discount_code_id)
-        } catch (discountErr) {
-          console.error('[tpay-webhook] Failed to increment discount code usage:', discountErr)
+        // Increment discount code usage only on successful payment
+        if (order.discount_code_id) {
+          try {
+            await supabase.rpc('use_discount_code', { p_code_id: order.discount_code_id })
+            console.log('[tpay-webhook] Discount code usage incremented:', order.discount_code_id)
+          } catch (discountErr) {
+            console.error('[tpay-webhook] Failed to increment discount code usage:', discountErr)
+          }
         }
       }
     } else if (trStatus === TPAY_STATUS.FALSE || trStatus === 'error' || trStatus === 'failed') {
