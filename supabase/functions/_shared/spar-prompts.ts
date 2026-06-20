@@ -46,6 +46,16 @@ export const SPAR_PROMPTS: PromptDef[] = [
   { key: 'aplikacja_knowhow_extract', label: 'Spowiednik — cicha ekstrakcja wiedzy', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 200, max: 6000, note: 'Zamienia ostatnią wymianę na konkrety (spar_knowhow_items). Zawiera kontrakt JSON — ostrożnie.' },
   { key: 'aplikacja_knowhow_handoff', label: 'Spowiednik — pakiet wykonawczy (handoff)', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 100, max: 6000, note: 'Brief v1 dla zespołu przy domknięciu etapu.' },
   { key: 'aplikacja_knowhow_idea_source_hint', label: 'Spowiednik — hint źródła pomysłu (przy werdykcie)', group: 'Etap 3 — Spowiednik (know-how)', stage: '1', editable: true, min: 50, max: 4000, note: 'Przy <werdykt> model dołącza pole „zrodlo" (wlasny/ai/wspolny).' },
+  // Deliverables (generatory po zielonym werdykcie). Treść czytana w handlerach (load z settings).
+  { key: 'aplikacja_prompt_plan_system', label: 'Plan przychodu — system prompt', group: 'Deliverables — generatory', stage: '2', editable: true, min: 500, max: 8000, note: 'Jak liczony wstępny plan przychodu (model/cena/kamienie/zwrot).' },
+  { key: 'aplikacja_prompt_economics_system', label: 'Opłacalność (economics) — system prompt', group: 'Deliverables — generatory', stage: '2', editable: true, min: 500, max: 8000, note: 'Jak liczone tiery cen + unit economics (CAC/churn/marża).' },
+  { key: 'aplikacja_prompt_gtm_system', label: 'GTM (playbook) — system prompt', group: 'Deliverables — generatory', stage: '2', editable: true, min: 500, max: 8000, note: 'Główny playbook zdobycia 50 klientów (kanały, skrypty, obiekcje).' },
+  { key: 'aplikacja_prompt_gtm_channels', label: 'GTM — kanały (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 200, max: 6000, note: 'Zakładka „Gdzie szukać klientów" — kanały akwizycji.' },
+  { key: 'aplikacja_prompt_gtm_ads', label: 'GTM — reklamy 4 kąty (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 200, max: 6000, note: 'Zakładka „Reklamy" — 4 gotowe reklamy w 4 kątach.' },
+  { key: 'aplikacja_prompt_landing_system', label: 'Landing — generator (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 800, max: 12000, note: 'Jak powstaje strona sprzedażowa narzędzia (HTML, copy, struktura). Zawiera przykłady kodu (backticki) — ostrożnie.' },
+  { key: 'aplikacja_prompt_landing_critic', label: 'Landing — krytyk/art director (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 400, max: 8000, note: 'Drugi przebieg podnoszący jakość landinga.' },
+  { key: 'aplikacja_prompt_prototype_system', label: 'Prototyp — generator (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 1000, max: 16000, note: 'Jak powstaje klikalny prototyp narzędzia (HTML/JS). Zawiera przykłady kodu — ostrożnie.' },
+  { key: 'aplikacja_prompt_prototype_critic', label: 'Prototyp — krytyk (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 400, max: 8000, note: 'Drugi przebieg (audyt + polishing) prototypu.' },
 ];
 
 // Mapa key→def (szybki lookup w walidacji zapisu).

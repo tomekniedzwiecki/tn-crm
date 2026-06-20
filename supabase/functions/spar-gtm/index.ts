@@ -9,6 +9,7 @@
 // odpowiedź (jakość: dokładnie 3 reklamy + nagłówki ≤10 słów). Limit 4 gen/sesja.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
 
 const ALLOWED_ORIGINS = ['https://tomekniedzwiecki.pl','https://www.tomekniedzwiecki.pl','https://crm.tomekniedzwiecki.pl','https://tn-crm.vercel.app','http://localhost:5500','http://127.0.0.1:5500']
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -138,70 +139,13 @@ async function generateBanners(supabase: ReturnType<typeof createClient>, apiKey
 // Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
 let MODEL_BLOCK = ''
 
-const SYSTEM_PROMPT = `Jesteś szefem sprzedaży i marketingu, który wielokrotnie wprowadzał na polski rynek niszowe narzędzia SaaS B2B od zera do pierwszych klientów. Tworzysz konkretny, wykonalny plan zdobycia pierwszych klientów ORAZ gotowe materiały sprzedażowe. Piszesz po polsku, językiem grupy docelowej, zero korpomowy, zero lania wody.
-
-KONTEKST: to playbook zdobycia pierwszych 50 stałych klientów. W modelu współpracy (patrz blok „MODEL BIZNESOWY APLIKACJA" na początku promptu) pierwsze ~pół roku sprzedaż osobiście prowadzi Tomek, a właściciel uczy się od środka i przejmuje rozkręcanie po oddaniu sterów. Materiały mają być gotowe do realnego użycia od pierwszego dnia: DOKŁADNIE gdzie szukać klientów i co wkleić — nie ogólniki typu „buduj markę w social media".
-
-ZASADY:
-- ZA DARMO (od tego się zaczyna) — pole "kanaly": 5-7 KONKRETNYCH miejsc, gdzie ta grupa JUŻ jest (grupy Facebook, fora/subreddity, społeczności, stowarzyszenia branżowe, katalogi, wydarzenia, miejsca offline). CEL: pokazać właścicielowi, że klientów jest PEŁNO w różnych miejscach. Dla każdego: czemu tam i jaki PIERWSZY ruch. Bez wymyślania nieistniejących URL-i — opisz miejsce tak, by dało się je znaleźć. Różnorodność miejsc ważniejsza niż liczba.
-- PŁATNIE (kampanie reklamowe) — pole "platne": 2-3 platformy reklamowe pasujące do tej grupy (Meta = Facebook+Instagram, Google, ew. inne). Dla każdej: KOGO targetować (zainteresowania/demografia/intencja — konkretnie) i 1 zdanie czemu. Krótko — gotowe kreacje są osobno.
-- Skrypty: gotowe do wklejenia, krótkie, ludzkie, bez nachalności. Najpierw wartość, nie „kup".
-- Reklamy (DOKŁADNIE 4 różne KĄTY, nie warianty tego samego): każda to spójny koncept — nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA. Grafikę generujemy automatycznie z realnego ekranu narzędzia — NIE pisz briefu wizualnego. To reklama narzędzia SaaS (nie e-commerce): ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje + dowód mechaniki.
-- ANTY-AI-POETIC: pisz co narzędzie ROBI (akcja + efekt), nie co user ma POCZUĆ. Zero „odzyskaj spokój", „aplikacja, która rozumie".
-- Maile powitalne: sekwencja 3, każdy prowadzi do pierwszego realnego użycia / rozmowy.
-
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
-{
-  "playbook": {
-    "kanaly": [
-      {"miejsce": "konkretna nazwa miejsca", "typ": "grupa Facebook | forum/subreddit | stowarzyszenie | katalog | wydarzenie | offline", "wielkosc": "np. ~28 tys. członków albo „kilkaset firm”", "dlaczego": "1 zdanie", "jak_zaczac": "konkretny pierwszy ruch — 1-2 zdania"}
-    ],
-    "platne": [
-      {"platforma": "Meta (Facebook + Instagram) | Google | inne", "kogo": "konkretne targetowanie (zainteresowania/demografia/intencja)", "dlaczego": "1 zdanie"}
-    ],
-    "skrypt_dm": {"kanal": "wiadomość prywatna / komentarz / DM", "tresc": "gotowy tekst pierwszego kontaktu, 3-5 zdań"},
-    "skrypt_email": {"temat": "krótki temat", "tresc": "gotowy mail cold, 4-6 zdań"},
-    "obiekcje": [{"obiekcja": "realna obiekcja grupy docelowej", "odpowiedz": "krótka, konkretna odpowiedź"}]
-  },
-  "pakiet": {
-    "reklamy": [
-      {"koncept": "nazwa kąta, np. „Oszczędność czasu”", "naglowek": "maks 10 słów", "tekst": "2-4 zdania primary text", "cta": "np. Wypróbuj za darmo / Zobacz demo", "format": "feed 1:1 | reel 9:16 | karuzela"}
-    ],
-    "posty": [
-      {"haczyk": "pierwsza linia, która zatrzymuje scroll", "tresc": "post organiczny 3-5 zdań", "gdzie": "FB/LinkedIn/grupa branżowa"}
-    ],
-    "maile_powitalne": [
-      {"kiedy": "od razu po zapisie", "temat": "...", "tresc": "3-5 zdań, prowadzi do pierwszego użycia"},
-      {"kiedy": "dzień 2", "temat": "...", "tresc": "..."},
-      {"kiedy": "dzień 5", "temat": "...", "tresc": "..."}
-    ]
-  }
-}
-
-Wymagania ilościowe: kanaly (za darmo) 5-7, platne 2-3, obiekcje 4-5, reklamy DOKŁADNIE 4 (różne kąty, każdy nagłówek ≤10 słów), posty 2-3, maile_powitalne 3.`
+let SYSTEM_PROMPT = ''
 
 // Prompt SAMYCH KANAŁÓW (zakładka „Gdzie szukać klientów") — niezależna regeneracja
-const CHANNELS_SYSTEM = `Jesteś ekspertem od zdobywania PIERWSZYCH klientów dla niszowych narzędzi SaaS w Polsce. Pokaż właścicielowi DOKŁADNIE gdzie szukać klientów — za darmo i przez płatne kampanie. Po polsku, językiem grupy, konkretnie, zero korpomowy, zero lania wody.
-
-ZASADY:
-- ZA DARMO (pole "kanaly"): 5-7 KONKRETNYCH miejsc, gdzie ta grupa JUŻ jest (grupy Facebook, fora/subreddity, społeczności, stowarzyszenia, katalogi, wydarzenia, miejsca offline). CEL: pokazać, że klientów jest PEŁNO w różnych miejscach. Dla każdego: czemu tam + PIERWSZY ruch (1 zdanie). Bez zmyślania konkretnych URL-i — opisz tak, by dało się znaleźć. Różnorodność miejsc ważniejsza niż liczba.
-- PŁATNIE (pole "platne"): 2-3 platformy reklamowe pasujące do grupy (Meta = Facebook+Instagram, Google, ew. inne). Dla każdej: KOGO targetować (zainteresowania/demografia/intencja — konkretnie) + 1 zdanie czemu. Gotowe kreacje są osobno.
-- "skrypt_dm": jedna gotowa, krótka (3-5 zdań), ludzka wiadomość pierwszego kontaktu do wklejenia. Najpierw wartość, nie „kup".
-
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
-{"playbook":{"kanaly":[{"miejsce":"...","typ":"grupa Facebook | forum/subreddit | społeczność | stowarzyszenie | katalog | wydarzenie | offline","wielkosc":"np. ~28 tys. członków","dlaczego":"1 zdanie","jak_zaczac":"pierwszy ruch, 1-2 zdania"}],"platne":[{"platforma":"Meta (Facebook + Instagram) | Google | inne","kogo":"konkretne targetowanie","dlaczego":"1 zdanie"}],"skrypt_dm":{"tresc":"gotowa wiadomość 3-5 zdań"}}}
-Wymagania: kanaly 5-7, platne 2-3.`
+let CHANNELS_SYSTEM = ''
 
 // Prompt SAMYCH REKLAM (zakładka „Reklamy") — niezależna regeneracja
-const ADS_SYSTEM = `Jesteś szefem marketingu wprowadzającym niszowe narzędzia SaaS B2B na polski rynek. Tworzysz DOKŁADNIE 4 gotowe reklamy do narzędzia (różne KĄTY, nie warianty tego samego). Po polsku, językiem grupy, konkretnie.
-
-ZASADY:
-- 4 reklamy, każda spójny koncept: nagłówek (MAKS 10 słów, trafia w ból), tekst główny (2-4 zdania), CTA, format. Grafikę generujemy automatycznie z realnego ekranu narzędzia — NIE pisz briefu wizualnego. To SaaS, nie e-commerce: ZAKAZ zmyślonej pilności, fałszywych liczb, obietnic „za pobraniem/dostawa 24h". Zamiast tego: konkretny ból + jak narzędzie go zdejmuje.
-- ANTY-AI-POETIC: pisz co narzędzie ROBI (akcja + efekt), nie co user ma POCZUĆ. Zero „odzyskaj spokój", „aplikacja, która rozumie".
-
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown):
-{"reklamy":[{"koncept":"nazwa kąta","naglowek":"maks 10 słów","tekst":"2-4 zdania","cta":"np. Wypróbuj za darmo","format":"feed 1:1 | reel 9:16 | karuzela"}]}
-Wymagania: reklamy DOKŁADNIE 4, każdy nagłówek ≤10 słów.`
+let ADS_SYSTEM = ''
 
 // deno-lint-ignore no-explicit-any
 function saneChannels(g: any): boolean { const p = g?.playbook; return !!p && typeof p === 'object' && Array.isArray(p.kanaly) && p.kanaly.length >= 2 }
@@ -277,7 +221,18 @@ Deno.serve(async (req) => {
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    // Bramka właściciela (PRZED jakąkolwiek generacją/odczytem, też 'banners'):
+    // sesja przypięta do konta wymaga JWT tego konta — link ?id= przestaje
+    // działać jak hasło (lustrzane odbicie spar-chat).
+    {
+      const authUser = await verifyAuthUser(req, supabase)
+      const { data: own } = await supabase.from('spar_sessions').select('auth_user_id').eq('id', sessionId).maybeSingle()
+      if (own && ownerDenied(own.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+    }
     if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
+    if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['aplikacja_prompt_gtm_system', 'aplikacja_prompt_gtm_channels', 'aplikacja_prompt_gtm_ads']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('aplikacja_prompt_gtm_system'); CHANNELS_SYSTEM = __pv('aplikacja_prompt_gtm_channels'); ADS_SYSTEM = __pv('aplikacja_prompt_gtm_ads') } catch (_e) { /* fallback: puste prompty */ } }
 
     // ── action 'banners': wygeneruj 3 kreacje reklam w tle (gpt-image-2) ──
     if (body.action === 'banners') {

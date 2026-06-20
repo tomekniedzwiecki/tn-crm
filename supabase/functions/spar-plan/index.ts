@@ -15,6 +15,7 @@
 // projektu (karta się zmienia); limit 4 generacji/sesja (_meta.gen).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -50,30 +51,9 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
 let MODEL_BLOCK = ''
 
 // Stały prompt systemowy (cache'owalny — bez danych sesji)
-const SYSTEM_PROMPT = `Jesteś analitykiem, który robi WSTĘPNE wyliczenia przychodu dla narzędzia SaaS w polskiej niszy. Piszesz po polsku, prosto, do praktyka z branży (nie do inwestora).
+let SYSTEM_PROMPT = ''
 
-KONTEKST WSPÓŁPRACY (stały, nie zmieniaj): bierz go WYŁĄCZNIE z bloku „MODEL BIZNESOWY APLIKACJA" doklejonego na początku tego promptu — klient płaci za budowę wg tieru (nie ma podziału 50/50), a Tomek przez pierwsze ~pół roku osobiście prowadzi sprzedaż do pierwszych 50 stałych klientów, potem właściciel przejmuje rozkręcony biznes.
-
-ZADANIE: policz wstępny plan przychodu. Ton: optymistyczny, ale REALNY — żadnych kosmicznych liczb; ceny i wielkość rynku muszą brzmieć wiarygodnie dla kogoś, kto zna tę branżę od środka. Jeżeli czegoś nie ma w karcie (typowa cena rynkowa, liczba firm w Polsce), oszacuj z własnej wiedzy o polskim rynku i dopisz to do założeń. Kwoty w zł, zaokrąglone po ludzku (149, nie 147,30).
-
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
-{
-  "model_przychodu": "nazwa modelu, np. abonament miesięczny per salon",
-  "cena": 149,
-  "cena_jednostka": "zł/mies.",
-  "cena_uzasadnienie": "jedno zdanie skąd ta cena (sygnał budżetu / ceny rynkowe)",
-  "kamienie": [
-    {"klienci": 10, "mies": 1490, "etap": "pierwsi klienci — sprzedaje Tomek"},
-    {"klienci": 25, "mies": 3725, "etap": "rozpędzona sprzedaż"},
-    {"klienci": 50, "mies": 7450, "etap": "przejmujesz stery"}
-  ],
-  "rynek": "1-2 zdania: ile takich firm/odbiorców działa w Polsce i jakim ułamkiem rynku jest 50 klientów (ma pokazać, że 50 to realny, mały kawałek)",
-  "zwrot_wkladu": "jedno zdanie: po ilu miesiącach od startu sprzedaży skumulowany przychód przekracza koszt budowy, który płaci właściciel (cena z tieru — przyjmij ok. 12 500 zł, jeśli nie znasz dokładnej)",
-  "rok2_potencjal": "jedno zdanie: realny miesięczny przychód w roku 2 przy utrzymaniu tempa (konkretna kwota zł/mies.)",
-  "zalozenia": ["3 do 5 krótkich założeń, w tym te doszacowane z wiedzy o rynku"]
-}`
-
-function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>): string {
+function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, assessment: Record<string, unknown> | null = null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const list = (v: unknown) => Array.isArray(v)
     ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
@@ -89,6 +69,9 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
   if (list(karta.kanaly_dystrybucji)) fakty.push(`Kanały dotarcia: ${list(karta.kanaly_dystrybucji)}`)
   if (karta.konkurencja) fakty.push(`Konkurencja: ${s(karta.konkurencja)}`)
   if (list(karta.ryzyka)) fakty.push(`Ryzyka: ${list(karta.ryzyka)}`)
+  // Spójność liczb: badanie rynku z bramki (to samo, co rozmówca usłyszał w czacie) —
+  // pole „rynek" w planie MA być z tym zgodne, nie wymyślone od nowa.
+  if (assessment && typeof assessment.odczyt_rynku === 'string') fakty.push(`Badanie rynku z rozmowy (UŻYJ tych liczb/przedziałów w polu „rynek", nie podawaj innych): ${s(assessment.odczyt_rynku, 400)}`)
   return `KARTA PROJEKTU:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
 }
 
@@ -145,9 +128,10 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
+    if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['aplikacja_prompt_plan_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('aplikacja_prompt_plan_system') } catch (_e) { /* fallback: puste prompty */ } }
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, problem_summary, business_plan')
+      .select('id, preview_brief, problem_summary, business_plan, assessment, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -156,8 +140,16 @@ Deno.serve(async (req) => {
     }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
 
+    // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
+    // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
+    const authUser = await verifyAuthUser(req, supabase)
+    if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+      return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    }
+
     const karta = session.problem_summary as Record<string, unknown> | null
     const brief = (session.preview_brief || {}) as Record<string, unknown>
+    const assessment = session.assessment as Record<string, unknown> | null
     if (!karta) {
       // plan liczymy dopiero, gdy jest karta (werdykt) — gate jak w spar-image
       return jsonResponse({ error: 'brak_karty' }, 400, cors)
@@ -194,7 +186,7 @@ Deno.serve(async (req) => {
       try { const p = prices[OPENAI_MODEL] || prices['gpt-5.5']; await supabase.from('spar_usage').insert({ session_id: sessionId, kind: 'plan', model: OPENAI_MODEL, input_tokens: usage.i, cached_tokens: usage.c, output_tokens: usage.o, cost_usd: (Math.max(0, usage.i - usage.c) * p.i + usage.c * p.c + usage.o * p.o) / 1_000_000 }) } catch (uErr) { console.error('[spar-plan] usage insert error:', uErr) }
     }
     // Auto-retry ×1 na pustą/niepoprawną odpowiedź
-    const user = buildUser(brief, karta)
+    const user = buildUser(brief, karta, assessment)
     let plan: Record<string, unknown> | null = null
     for (let attempt = 0; attempt < 2 && !plan; attempt++) {
       const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)

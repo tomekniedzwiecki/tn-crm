@@ -11,6 +11,7 @@
 // idzie w `user`. Auto-retry ×1 na pustą/niepoprawną odpowiedź. Limit 4 gen/sesja.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
 
 const ALLOWED_ORIGINS = ['https://tomekniedzwiecki.pl','https://www.tomekniedzwiecki.pl','https://crm.tomekniedzwiecki.pl','https://tn-crm.vercel.app','http://localhost:5500','http://127.0.0.1:5500']
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -27,48 +28,7 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
 let MODEL_BLOCK = ''
 
 // ── Stały prompt systemowy (cache'owalny — bez danych sesji) ──
-const SYSTEM_PROMPT = `Jesteś doświadczonym operatorem SaaS i analitykiem unit economics dla polskich nisz. Projektujesz model cenowy i realne wejścia do rachunku opłacalności narzędzia, które dopiero powstaje. Piszesz po polsku, do praktyka — konkretnie, bez korpomowy.
-
-KONTEKST (stały): zasady modelu i liczby oferty bierz WYŁĄCZNIE z bloku „MODEL BIZNESOWY APLIKACJA" doklejonego na początku tego promptu (klient płaci za budowę wg tieru, a Tomek przez ~pół roku prowadzi sprzedaż do pierwszych 50 stałych klientów). Cel: pokazać właścicielowi, że to się SPINA finansowo — uczciwie, realnymi liczbami, nie hurraoptymizmem.
-
-ZADANIE: zaprojektuj cennik (2-3 tiery) i podaj REALNE wejścia do rachunku. NIE licz LTV, payback ani symulacji — to policzy aplikacja. Twoja rola: wiarygodne liczby i ich uzasadnienie z realiów polskiego rynku SaaS B2B.
-
-Zasady liczb:
-- Ceny zaokrąglone po ludzku (99, 149, 199, 299), spójne z sygnałem budżetu i cenami w tej niszy.
-- CAC: oszacuj realnie dla polskiego B2B z reklam Meta/Google — typowo koszt leada 15-40 zł i konwersja lead→klient 5-12%, co daje CAC ~150-600 zł. Uzasadnij krótko skąd liczba.
-- Churn miesięczny: realny dla małego B2B SaaS w tej niszy (zwykle 2-6%/mies.). Uzasadnij.
-- Marża brutto SaaS: zwykle 80-90%.
-- Budżet reklam/mies.: realny dla jednoosobowego startu (1000-3000 zł).
-
-JĘZYK W TEKSTACH WIDOCZNYCH DLA KLIENTA (model, dla_kogo, funkcje, expansion, cac_uzasadnienie, churn_uzasadnienie, zalozenia, komentarz) — BARDZO WAŻNE: odbiorca to osoba DOPIERO wchodząca w biznes, NIE zna żargonu. Pisz prosto, po ludzku. ZAKAZ słów: CAC, LTV, MRR, ARPU, churn, CPL, konwersja, retencja, unit economics, payback. Mów konkretem: zamiast „CAC" → „koszt zdobycia jednego klienta"; zamiast „churn 4%" → „co miesiąc odchodzi mniej więcej co dwudziesty piąty klient"; zamiast „konwersja lead→klient 10%" → „mniej więcej co dziesiąta zainteresowana osoba kupuje". Nazwy pól JSON zostaw bez zmian — chodzi tylko o teksty słowne.
-
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown), dokładnie wg schematu:
-{
-  "cennik": {
-    "model": "krótko, np. abonament miesięczny per gabinet",
-    "trial_dni": 14,
-    "rabat_roczny_proc": 20,
-    "tiery": [
-      {"nazwa": "Start", "cena": 99, "jednostka": "zł/mies.", "dla_kogo": "1 zdanie", "funkcje": ["3-5 krótkich pozycji"], "polecany": false},
-      {"nazwa": "Pro", "cena": 199, "jednostka": "zł/mies.", "dla_kogo": "1 zdanie", "funkcje": ["..."], "polecany": true}
-    ],
-    "expansion": "1-2 zdania: jak rośnie przychód z jednego klienta w czasie (upgrade tieru, dodatkowe stanowiska, dodatki)"
-  },
-  "wejscia": {
-    "cena_bazowa": 199,
-    "marza_proc": 85,
-    "cac": 280,
-    "cac_uzasadnienie": "1 zdanie PROSTYM językiem, np. z reklam wychodzi, że zdobycie jednego płacącego klienta kosztuje około tyle",
-    "churn_mies_proc": 4,
-    "churn_uzasadnienie": "1 zdanie",
-    "budzet_reklam_mies": 1500,
-    "koszt_budowy": 12500
-  },
-  "zalozenia": ["3-5 krótkich, uczciwych założeń, w tym te doszacowane z wiedzy o rynku"],
-  "komentarz": "1-2 zdania: czy i dlaczego to się spina (albo co jest największym ryzykiem dla opłacalności)"
-}
-
-cena_bazowa MUSI równać się cenie tieru oznaczonego "polecany": true.`
+let SYSTEM_PROMPT = ''
 
 function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
@@ -80,7 +40,7 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
   if (karta.kto_placi) fakty.push(`Kto płaci: ${s(karta.kto_placi)}`)
   if (karta.sygnal_budzetu) fakty.push(`Sygnał budżetu z rozmowy: ${s(karta.sygnal_budzetu)}`)
   if (list(karta.ekrany)) fakty.push(`Zakres pierwszej wersji: ${list(karta.ekrany)}`)
-  if (plan && typeof plan.cena === 'number') fakty.push(`Wstępna cena z planu przychodu: ${plan.cena} ${s(plan.cena_jednostka, 20) || 'zł/mies.'} (${s(plan.model_przychodu, 80)})`)
+  if (plan && typeof plan.cena === 'number') fakty.push(`GŁÓWNA CENA już pokazana klientowi w zakładce „Plan przychodu": ${plan.cena} ${s(plan.cena_jednostka, 20) || 'zł/mies.'} (${s(plan.model_przychodu, 80)}). Tier „polecany" MUSI mieć DOKŁADNIE tę cenę; pozostałe tiery zbuduj wokół niej (taniej/drożej). NIE zmieniaj tej głównej ceny — inaczej zakładki przeczą sobie.`)
   return `PROJEKT:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
 }
 
@@ -124,9 +84,18 @@ Deno.serve(async (req) => {
     if (!sessionId || !UUID_RE.test(sessionId)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
-    const { data: session, error: sErr } = await supabase.from('spar_sessions').select('id, preview_brief, problem_summary, business_plan, economics').eq('id', sessionId).maybeSingle()
+    if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['aplikacja_prompt_economics_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('aplikacja_prompt_economics_system') } catch (_e) { /* fallback: puste prompty */ } }
+    const { data: session, error: sErr } = await supabase.from('spar_sessions').select('id, preview_brief, problem_summary, business_plan, economics, auth_user_id').eq('id', sessionId).maybeSingle()
     if (sErr) { console.error('[spar-economics] session fetch error:', sErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
+    // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
+    // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
+    {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+    }
     const karta = session.problem_summary as Record<string, unknown> | null
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const plan = session.business_plan as Record<string, unknown> | null
@@ -164,7 +133,11 @@ Deno.serve(async (req) => {
       if (Array.isArray(tiery) && eco.wejscia) {
         // deno-lint-ignore no-explicit-any
         const ref = tiery.find((t: any) => t && t.polecany && typeof t.cena === 'number') || tiery.find((t: any) => t && typeof t.cena === 'number')
-        if (ref) (eco.wejscia as Record<string, unknown>).cena_bazowa = ref.cena
+        // #2: spójność cen między zakładkami — kotwiczymy w cenie z „Planu przychodu"
+        // (już pokazanej klientowi); polecany tier + cena_bazowa = plan.cena.
+        const planCena = plan && typeof plan.cena === 'number' ? plan.cena as number : null
+        if (ref && planCena) (ref as Record<string, unknown>).cena = planCena
+        if (ref) (eco.wejscia as Record<string, unknown>).cena_bazowa = (ref as Record<string, unknown>).cena
       }
     } catch { /* zostaw */ }
 
