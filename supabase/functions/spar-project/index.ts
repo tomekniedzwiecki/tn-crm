@@ -52,6 +52,9 @@ const MAX_FEEDBACK_PER_SESSION = 30
 const MAX_FEEDBACK_LENGTH = 1000
 const MAX_LIST_SESSIONS = 30
 const MAX_HISTORY_MESSAGES = 200
+// Opis zamówienia „kolejnej rozmowy" — JEDNO źródło dla insertu (buy_conversation)
+// i liczenia limitu (action 'conversations'). NIE używać offer.name (edytowalne w DB).
+const CONVO_DESCRIPTION = 'Aplikacja — kolejna rozmowa'
 
 // Konto z JWT w Authorization (Supabase Auth) — null gdy brak/nieważny token
 async function verifyAuthUser(
@@ -119,7 +122,7 @@ Deno.serve(async (req) => {
         .select('id', { count: 'exact', head: true })
         .eq('spar_user_id', authUser.id)
         .eq('status', 'paid')
-        .eq('description', 'Aplikacja — kolejna rozmowa')
+        .eq('description', CONVO_DESCRIPTION) // INWARIANT: identyczny literał wstawia buy_conversation (NIE offer.name)
       if (convErr) {
         console.error('[spar-project] conversations count error:', convErr)
         return jsonResponse({ error: 'blad_serwera' }, 500, cors)
@@ -146,7 +149,9 @@ Deno.serve(async (req) => {
         .from('orders')
         .insert({
           customer_email: email,
-          description: offer.name,
+          // STAŁY opis — MUSI być identyczny z CONVO_DESCRIPTION w action 'conversations' (liczenie limitu).
+          // NIE offer.name: zmiana nazwy oferty w DB rozspójniłaby liczenie (user płaci, a limit nie rośnie).
+          description: CONVO_DESCRIPTION,
           amount: offer.price,
           status: 'pending',
           payment_source: 'tpay',

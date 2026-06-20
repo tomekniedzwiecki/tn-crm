@@ -39,6 +39,8 @@
 //   SPAR_CRON_SECRET    — sekret admina (współdzielony ze spar-followups)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -259,7 +261,7 @@ async function openaiChat(
     ],
   }
   if (reasoningEffort) body.reasoning_effort = reasoningEffort
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -627,7 +629,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, business_plan, verdict, landing_url')
+      .select('id, preview_brief, business_plan, verdict, landing_url, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
     if (sessionError) {
@@ -636,6 +638,15 @@ Deno.serve(async (req) => {
     }
     if (!session) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, corsHeaders)
+    }
+    // Bramka właściciela (admin omija — panel TN Aplikacje generuje na żądanie):
+    // sesja przypięta do konta wymaga JWT tego konta, link ?id= przestaje
+    // działać jak hasło (lustrzane odbicie spar-chat).
+    if (!isAdmin) {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      }
     }
     const brief = session.preview_brief as Record<string, unknown> | null
     if (!brief) {

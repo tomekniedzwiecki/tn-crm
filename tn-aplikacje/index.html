@@ -109,6 +109,7 @@
     <button data-tab="koszty" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-wallet text-lg shrink-0"></i><span>Koszty</span></button>
     <button data-tab="galeria" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-images text-lg shrink-0"></i><span>Galeria</span></button>
     <button data-tab="ustawienia" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-gear text-lg shrink-0"></i><span>Ustawienia</span></button>
+    <button data-tab="zrodlo" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-seal-check text-lg shrink-0"></i><span>Źródło prawdy</span></button>
   </nav>
   <div class="border-t border-white/5 p-3 shrink-0">
     <a href="/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-white hover:bg-white/5 transition mb-1"><i class="ph ph-arrow-left text-base"></i>Wróć do TN CRM</a>
@@ -455,6 +456,51 @@
       <p><code class="text-blue-300">SPAR_IMG_IP_DAILY</code> — dzienny limit obrazów per IP (produkcyjnie: 20)</p>
       <p><code class="text-blue-300">SPAR_IMAGE_QUALITY</code> — low / medium / high (koszt $0.011 / $0.041 / $0.167 za obraz)</p>
       <p class="text-xs text-zinc-600 pt-2">Pełna instrukcja: <code>docs/stworze/RUNBOOK.md</code> w repo tn-crm. Follow-upy mailowe: cron co 30 min. Reaktywacja rozmów w toku: 3 maile (~3h / 24h / 48h, treść GPT pod realny fragment rozmowy; #3 tylko gdy dostarczono #1 lub #2) + SMS powrotu z ekranu badania/ekranów (<code>SMS_ENABLED</code>, beacon wyjścia). Bramka między-kanałowa ≥10h. Wpłata → welcome + lead „won".</p>
+    </div>
+  </section>
+
+  <!-- ════════ ŹRÓDŁO PRAWDY (etapy + edycja faktów/promptu) ════════ -->
+  <section id="view-zrodlo" class="hidden p-6 max-w-3xl space-y-4">
+    <!-- ETAPY LEJKA -->
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <h3 class="text-white font-medium text-sm mb-3"><i class="ph ph-steps mr-1.5 text-blue-400"></i>Etapy lejka</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg p-3"><div class="text-white font-medium">1 · Rozmowa o pomyśle</div><div class="text-xs text-zinc-500 mt-1">6 kamieni → karta + ekrany → zielony werdykt. Wyzwalacz: <code class="text-blue-300">verdict ≠ zielony</code></div></div>
+        <div class="bg-zinc-950 border border-white/10 rounded-lg p-3"><div class="text-white font-medium">2 · Współpraca + rezerwacja</div><div class="text-xs text-zinc-500 mt-1">model, obiekcje, rezerwacja 500 zł. Wyzwalacz: <code class="text-blue-300">verdict = zielony</code></div></div>
+        <div class="bg-zinc-950 border border-white/10 rounded-lg p-3"><div class="text-white font-medium">3 · Spowiednik / know-how</div><div class="text-xs text-zinc-500 mt-1">zbiórka know-how po <strong>PEŁNEJ</strong> płatności. Wyzwalacz: <code class="text-blue-300">full_paid_at</code></div></div>
+        <div class="bg-zinc-950 border border-white/10 rounded-lg p-3"><div class="text-white font-medium">4 · Budowa (handoff)</div><div class="text-xs text-zinc-500 mt-1">komplet → handoff_pack dla zespołu. Wyzwalacz: <code class="text-blue-300">knowhow_closed_at</code></div></div>
+      </div>
+      <p class="text-xs text-zinc-600 mt-3">Pełna mapa systemu: <code>docs/stworze/SYSTEM-APLIKACJA.md</code></p>
+    </div>
+
+    <!-- FAKTY OFERTY (SSOT) -->
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-seal-check mr-1.5 text-emerald-400"></i>Fakty oferty — źródło prawdy</h3>
+        <span id="zr-mb-len" class="text-xs text-zinc-500"></span>
+      </div>
+      <p class="text-xs text-zinc-500 mb-3">Zasila maile dripowe i plany (drip / economics / gtm / plan). Zapis robi automatyczny backup poprzedniej wersji.</p>
+      <textarea id="zr-mb" rows="14" spellcheck="false" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono leading-relaxed"></textarea>
+      <div class="flex items-center gap-3 mt-2">
+        <button data-zr-save="aplikacja_model_biznesowy" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition">Zapisz fakty</button>
+        <span data-zr-status="aplikacja_model_biznesowy" class="text-xs text-zinc-500"></span>
+      </div>
+      <div data-zr-backups="aplikacja_model_biznesowy" class="text-xs text-zinc-600 mt-2"></div>
+    </div>
+
+    <!-- PROMPT CZATU -->
+    <div class="bg-zinc-900/60 border border-amber-500/20 rounded-xl p-5">
+      <div class="flex items-center justify-between mb-1">
+        <h3 class="text-white font-medium text-sm"><i class="ph ph-warning mr-1.5 text-amber-400"></i>Prompt czatu sparingu</h3>
+        <span id="zr-pr-len" class="text-xs text-zinc-500"></span>
+      </div>
+      <p class="text-xs text-amber-300/80 mb-3">Uwaga: steruje <strong>żywymi</strong> rozmowami. Zawiera markery i retorykę — nieostrożna zmiana psuje czat. Każdy zapis robi backup; w razie wpadki przywróć poprzednią wersję.</p>
+      <textarea id="zr-pr" rows="20" spellcheck="false" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono leading-relaxed"></textarea>
+      <div class="flex items-center gap-3 mt-2">
+        <button data-zr-save="stworze_sparing_prompt" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition">Zapisz prompt</button>
+        <span data-zr-status="stworze_sparing_prompt" class="text-xs text-zinc-500"></span>
+      </div>
+      <div data-zr-backups="stworze_sparing_prompt" class="text-xs text-zinc-600 mt-2"></div>
     </div>
   </section>
 
@@ -2460,8 +2506,8 @@ function openTemplate(i) {
 }
 
 // ── Zakładki ──
-const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia'];
-const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia' };
+const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia', 'zrodlo'];
+const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia', zrodlo: 'Źródło prawdy' };
 let leadyView = 'table';   // 'table' | 'board'
 let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
 let leadySource = 'all';   // kanał pozyskania: all|meta|tiktok|google|youtube|email|organic
@@ -2493,6 +2539,62 @@ function renderActive() {
   if (activeTab === 'komunikacja') renderKomunikacja();
   if (activeTab === 'galeria') renderGenerowania();
   if (activeTab === 'koszty') renderKoszty();
+  if (activeTab === 'zrodlo') renderZrodlo();
+}
+
+// ── Źródło prawdy: podgląd + edycja faktów oferty i promptu (gate team_members) ──
+const ZR_KEYS = { aplikacja_model_biznesowy: { ta: 'zr-mb', len: 'zr-mb-len' }, stworze_sparing_prompt: { ta: 'zr-pr', len: 'zr-pr-len' } };
+let zrLoaded = false;
+async function callAdminSettings(payload) {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) throw new Error('brak sesji');
+  const res = await fetch(SUPABASE_URL + '/functions/v1/spar-admin-settings', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(payload),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
+  return j;
+}
+function zrRenderBackups(key, list) {
+  const el = document.querySelector('[data-zr-backups="' + key + '"]');
+  if (!el) return;
+  el.innerHTML = (list && list.length)
+    ? 'Ostatnie backupy: ' + list.map((k) => '<code class="text-zinc-500">' + k.replace(key + '_backup_', '') + '</code>').join(' · ')
+    : '';
+}
+async function renderZrodlo() {
+  if (zrLoaded) return;
+  if (DEMO) { toast('Tryb demo — edycja źródła nieaktywna'); return; }
+  try {
+    const j = await callAdminSettings({ action: 'get' });
+    for (const key in ZR_KEYS) {
+      const cfg = ZR_KEYS[key], ta = $(cfg.ta), lenEl = $(cfg.len);
+      if (ta) { ta.value = (j.values && j.values[key]) || ''; ta.oninput = () => { if (lenEl) lenEl.textContent = ta.value.length + ' zn.'; }; }
+      if (lenEl) lenEl.textContent = (((j.values && j.values[key]) || '').length) + ' zn.';
+      zrRenderBackups(key, (j.backups || {})[key]);
+    }
+    zrLoaded = true;
+  } catch (e) { toast('Błąd wczytania: ' + e.message); console.error(e); }
+}
+async function zrSave(key) {
+  const cfg = ZR_KEYS[key]; if (!cfg) return;
+  const ta = $(cfg.ta); if (!ta) return;
+  const statusEl = document.querySelector('[data-zr-status="' + key + '"]');
+  const btn = document.querySelector('[data-zr-save="' + key + '"]');
+  if (btn) btn.disabled = true;
+  if (statusEl) { statusEl.textContent = 'Zapisuję…'; statusEl.className = 'text-xs text-zinc-400'; }
+  try {
+    const j = await callAdminSettings({ action: 'save', key, value: ta.value });
+    if (statusEl) { statusEl.textContent = 'Zapisano ✓ (backup ' + String(j.backupKey || '').replace(key + '_backup_', '') + ')'; statusEl.className = 'text-xs text-emerald-400'; }
+    toast('Zapisano');
+    const g = await callAdminSettings({ action: 'get' });
+    zrRenderBackups(key, (g.backups || {})[key]);
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = 'Błąd: ' + e.message; statusEl.className = 'text-xs text-red-400'; }
+    toast('Błąd zapisu: ' + e.message);
+  } finally { if (btn) btn.disabled = false; }
 }
 
 // ── Init ──
@@ -2555,6 +2657,7 @@ async function init() {
     if (error) { toast('Błąd zapisu kursu'); console.error(error); return; }
     usdPln = v; toast('Kurs zapisany: ' + v.toFixed(2)); renderActive();
   });
+  document.querySelectorAll('[data-zr-save]').forEach((b) => b.addEventListener('click', () => zrSave(b.dataset.zrSave)));
   $('sekw-refresh')?.addEventListener('click', () => renderKomunikacja());
   $('mm-send')?.addEventListener('click', () => { if (mmCtx) { const ctx = mmCtx; closeMailModal(); fireSend(ctx.sid, ctx.key); } });
   $('btn-mobile-menu')?.addEventListener('click', () => { $('appnav').classList.toggle('open'); $('appnav-overlay').classList.toggle('open'); });

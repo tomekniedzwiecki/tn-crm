@@ -22,6 +22,8 @@
 //   SPAR_RAPORT_MODEL  — opcjonalny override (default: SPAR_OPENAI_MODEL -> gpt-5.5)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -56,7 +58,7 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
   })
 }
 
-function buildRaportPrompt(brief: Record<string, unknown>, karta: Record<string, unknown>): string {
+function buildRaportPrompt(brief: Record<string, unknown>, karta: Record<string, unknown>, assessment: Record<string, unknown> | null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const list = (v: unknown) => Array.isArray(v)
     ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
@@ -70,11 +72,26 @@ function buildRaportPrompt(brief: Record<string, unknown>, karta: Record<string,
   if (list(karta.ekrany)) fakty.push(`Zakres pierwszej wersji: ${list(karta.ekrany)}`)
   if (karta.konkurencja) fakty.push(`Konkurencja wskazana w rozmowie: ${s(karta.konkurencja)}`)
 
+  // Reuse wyniku bramki potencjału (spar-assess) jako punktu wyjścia: spójność
+  // z tym, co usłyszał rozmówca + mniej duplikatu researchu. Null = stara sesja.
+  const a = assessment && typeof assessment === 'object' ? assessment : null
+  const aZrodla = a && Array.isArray(a.zrodla)
+    ? (a.zrodla as Record<string, unknown>[]).slice(0, 5).map((z) => `${s(z?.tytul, 80)}${z?.url ? ' (' + s(z.url, 120) + ')' : ''}`).filter((x) => x.trim()).join('; ')
+    : ''
+  const blokBramki = a ? `
+PUNKT WYJŚCIA — wstępne badanie rynku w rozmowie JUŻ to ustaliło (zachowaj SPÓJNOŚĆ; potwierdź i POGŁĘB, nie zaczynaj od zera, nie zaprzeczaj bez nowego źródła):
+- Konkurencja: ${s(a.konkurencja, 600)}
+- Wielkość/charakter niszy: ${s(a.odczyt_rynku, 500)}
+- Najmocniejszy kąt / luka: ${s(a.kierunek, 600)}
+- Czy ktoś płaci: ${s(a.platnosc, 400)}${aZrodla ? '\n- Źródła z bramki: ' + aZrodla : ''}
+Masz już nazwanych konkurentów i ceny — NIE szukaj ich od zera. Wyszukiwań użyj OSZCZĘDNIE, tylko by UZUPEŁNIĆ (świeższe liczby niszy, brakujący konkurent, trendy) i potwierdzić. Rozwiń powyższe w pełną analizę, spójną z tym, co usłyszał rozmówca.
+` : ''
+
   return `Jesteś analitykiem rynku SaaS przygotowującym ZWIĘZŁY raport potencjału dla pomysłodawcy narzędzia w polskiej niszy. Piszesz po polsku, rzeczowo i bez tonu sprzedażowego — jak analityk, nie jak copywriter. Zero wykrzykników, zero superlatyw („niesamowity", „rewolucyjny"); potencjał mają pokazywać LICZBY i FAKTY ze źródeł.
 
 PROJEKT:
 ${fakty.join('\n')}
-
+${blokBramki}
 ZADANIE — zrób realny research w internecie (web search; szukaj po polsku I angielsku) i ustal:
 1. Wielkość grupy docelowej w Polsce (liczby z możliwie świeżych źródeł: GUS, raporty branżowe, portale branżowe).
 2. Konkurencję: 3-5 ISTNIEJĄCYCH narzędzi najbliższych temu projektowi (po nazwie, z realnymi cenami). Najpierw polskie; gdy brak polskich — zagraniczne z adnotacją w polu kraj. Dla każdego: czym jest i jaka luka dzieli je od tego projektu (np. brak polskiej wersji, cena dla dużych firm, kombajn zamiast jednej funkcji).
@@ -83,6 +100,7 @@ ZADANIE — zrób realny research w internecie (web search; szukaj po polsku I a
 
 ZASADY WIARYGODNOŚCI (kluczowe):
 - Każda liczba i każdy konkurent musi pochodzić z wyszukiwania; jeśli czegoś nie znalazłeś — napisz wprost „brak danych", nie zmyślaj.
+- Każdą liczbę cytuj DOKŁADNIE jak w źródle (jednostka, zakres, czego dotyczy); NIE podawaj w raporcie dwóch sprzecznych wartości dla tej samej wielkości, a danych z różnych źródeł nie mieszaj w jedną liczbę. Nie zawężaj „psy i koty" do „psy" ani „placówki gastronomiczne" do „restauracje" bez źródła wprost na węższą grupę.
 - Bądź uczciwy: jeśli konkurencja jest silna albo nisza mała, napisz to w zastrzeżeniach. Raport z samymi plusami jest niewiarygodny.
 - Liczby podawaj po ludzku („ok. 15–25 tys."), kwoty w zł (ceny zagraniczne przelicz i zaznacz).
 - Indeksy w polach "zrodla" odwołują się do tablicy głównej "zrodla" (numeracja od 1).
@@ -165,7 +183,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session, error: sErr } = await supabase
       .from('spar_sessions')
-      .select('id, preview_brief, problem_summary, market_report')
+      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -173,6 +191,13 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'blad_serwera' }, 500, cors)
     }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
+
+    // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
+    // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
+    const authUser = await verifyAuthUser(req, supabase)
+    if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+      return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    }
 
     const karta = session.problem_summary as Record<string, unknown> | null
     const brief = (session.preview_brief || {}) as Record<string, unknown>
@@ -203,7 +228,7 @@ Deno.serve(async (req) => {
     if (!lock) return jsonResponse({ pending: true }, 202, cors)
 
     // ── OpenAI Responses API + web_search ────────────────────────────────────
-    const res = await fetch('https://api.openai.com/v1/responses', {
+    const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -212,7 +237,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         tools: [{ type: 'web_search' }],
-        input: buildRaportPrompt(brief, karta),
+        input: buildRaportPrompt(brief, karta, (session.assessment as Record<string, unknown> | null) ?? null),
         max_output_tokens: MAX_OUTPUT_TOKENS,
       }),
     })

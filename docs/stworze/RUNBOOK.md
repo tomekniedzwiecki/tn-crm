@@ -1,5 +1,7 @@
 # Stworzę — RUNBOOK operacyjny
 
+> Architektura, etapy i protokół zmian → **`SYSTEM-APLIKACJA.md`**. Ten plik = operacje (cennik, secrets, OAuth, sesje testowe).
+
 ## Panel admina
 `https://crm.tomekniedzwiecki.pl/tn-aplikacje` (zakładka „TN Aplikacje" w przełączniku
 produktów CRM). Dashboard = KPI + lejek + koszty 14 dni; Pipeline = 5 etapów
@@ -22,7 +24,7 @@ npx supabase secrets set SPAR_IMAGE_QUALITY=medium    # low|medium|high
 ```
 
 ## Follow-upy mailowe (spar-followups)
-- Cron: pg_cron jobid 22, co 30 min. Okno wysyłek 8–20 Europe/Warsaw.
+- Cron: pg_cron **jobid 23** (`spar-followups-cron`), co 30 min. Drip = osobny **jobid 24** (`spar-drip-cron`, :15/:45). Okno wysyłek 8–23 PL. (Aktualna sekwencja maili → `SYSTEM-APLIKACJA.md` §6–7; lista kindów niżej jest częściowo historyczna.)
 - Rodzaje: `abandoned_chat` (mail jest, brak werdyktu/żółty, cisza 3–48 h),
   `verdict_no_payment` (zielony, brak wpłaty, cisza 20–96 h),
   `verdict_last_call` (zielony, brak wpłaty, cisza 5–8 dni — drugi i ostatni

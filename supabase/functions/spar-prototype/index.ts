@@ -38,6 +38,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -303,7 +304,7 @@ async function openaiChat(
     ],
   }
   if (reasoningEffort) body.reasoning_effort = reasoningEffort
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify(body),
