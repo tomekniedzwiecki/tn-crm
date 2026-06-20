@@ -94,6 +94,11 @@
   /* przycisk akcji destrukcyjnej (wstrzymaj/usuń) — czerwony tint, czytelny sygnał */
   .btn-danger { color: #ef6f73; border-color: rgba(229,72,77,0.3); background: rgba(229,72,77,0.08); }
   .btn-danger:hover { background: rgba(229,72,77,0.18); color: #f5a3a5; }
+  /* pasek szybkich akcji w nagłówku karty leada */
+  .qbtn { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 11px; border-radius: 8px; border: 1px solid #2e2e2e; color: #d4d4d4; transition: all 0.15s; white-space: nowrap; }
+  .qbtn:hover { color: #fff; border-color: #454545; background: rgba(255,255,255,0.05); }
+  .qbtn-danger { color: #ef6f73; border-color: rgba(229,72,77,0.3); }
+  .qbtn-danger:hover { color: #f5a3a5; border-color: rgba(229,72,77,0.5); background: rgba(229,72,77,0.12); }
 </style>
 </head>
 <body class="text-zinc-200 min-h-screen flex">
@@ -1185,6 +1190,7 @@ async function openSession(id) {
     if (art.idea_source) leadData.s.idea_source = art.idea_source;
   }
   leadData.wiedza = { items: khItems || [], summary: khSummary || null };
+  renderLeadHead(leadData.s); // odśwież nagłówek + pasek akcji świeżym stanem (paid/cancelled/etap)
   renderLeadTab();
 }
 function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; leadChatStageLead = null; switchTab(prevTab || 'leady'); }
@@ -1238,7 +1244,29 @@ function renderLeadHead(s) {
         <button onclick="openClientPreview('${s.id}')" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Otwórz panel projektu dokładnie tak, jak widzi go klient (podgląd admina, read-only)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</button>
         <a href="${SPARING_URL}?projekt=${s.id}" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Wizytówka</a>
       </div>
-    </div>`;
+    </div>
+    ${leadQuickBar(s)}`;
+}
+// Pasek szybkich akcji — najczęstsze ruchy Tomka w jednym miejscu (bez wchodzenia
+// w zakładki Akcje/Płatności/Sekwencja). Kontekstowy: pokazuje to, co ma sens na etapie.
+function leadQuickBar(s) {
+  const paid = !!s.paid_at;
+  const cancelled = !!s.sequence_cancelled_at;
+  const inSeq = (s.verdict === 'zielony' || paid) && !s.knowhow_closed_at;
+  const isLost = LOST_STAGE_IDS.includes(stageOf(s));
+  const b = [];
+  if (!paid) b.push(`<button class="qbtn" onclick="copyReservation('${s.id}')" title="Skopiuj indywidualny link rezerwacji 500 zł (do maila/WhatsApp)"><i class="ph ph-link"></i>Kopiuj link rezerwacji</button>`);
+  b.push(paid
+    ? `<span class="qbtn" style="color:#5cbf6e;border-color:rgba(61,148,80,0.35);background:rgba(61,148,80,0.1);cursor:default"><i class="ph ph-check-circle"></i>Rezerwacja opłacona</span>`
+    : `<button class="qbtn" onclick="setReservationPaid('${s.id}',true)" title="Ręcznie oznacz rezerwację jako opłaconą (fallback webhooka)"><i class="ph ph-currency-circle-dollar"></i>Oznacz opłaconą</button>`);
+  if (inSeq) b.push(cancelled
+    ? `<button class="qbtn" style="color:#5cbf6e;border-color:rgba(61,148,80,0.3)" onclick="resumeLeadDrip('${s.id}')"><i class="ph ph-play"></i>Wznów sekwencję</button>`
+    : `<button class="qbtn qbtn-danger" onclick="cancelLeadDrip('${s.id}')"><i class="ph ph-pause"></i>Wstrzymaj sekwencję</button>`);
+  if (!isLost && !paid) {
+    b.push(`<button class="qbtn" onclick="setStage('${s.id}','resigned')" title="Oznacz: zrezygnował (wstrzymuje automat)"><i class="ph ph-hand-waving"></i>Zrezygnował</button>`);
+    b.push(`<button class="qbtn qbtn-danger" onclick="setStage('${s.id}','lost')" title="Oznacz: przegrany (wstrzymuje automat)"><i class="ph ph-x-circle"></i>Przegrany</button>`);
+  }
+  return `<div class="flex items-center gap-1.5 flex-wrap mt-3">${b.join('')}</div>`;
 }
 function renderLeadTabs() {
   let lastGroup = null;
@@ -2303,11 +2331,11 @@ async function seedLeadDrip(sid) {
 }
 async function cancelLeadDrip(sid) {
   if (!confirm('Wstrzymać sekwencję dla tego leada?\n\nZatrzyma automatyczne maile, SMS i generowanie odsłon. Ręczne generowanie z karty nadal działa, a sekwencję można później wznowić.')) return;
-  try { await callDrip({ action: 'cancel', sessionId: sid }); toast('Sekwencja wstrzymana ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = new Date().toISOString(); renderLeadTab(); } }
+  try { await callDrip({ action: 'cancel', sessionId: sid }); toast('Sekwencja wstrzymana ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = new Date().toISOString(); renderLeadHead(leadData.s); renderLeadTab(); } }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 async function resumeLeadDrip(sid) {
-  try { await callDrip({ action: 'resume', sessionId: sid }); toast('Sekwencja wznowiona ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = null; renderLeadTab(); } }
+  try { await callDrip({ action: 'resume', sessionId: sid }); toast('Sekwencja wznowiona ✓'); if (leadData && leadData.s.id === sid) { leadData.s.sequence_cancelled_at = null; renderLeadHead(leadData.s); renderLeadTab(); } }
   catch (e) { toast('Błąd: ' + e.message); }
 }
 
