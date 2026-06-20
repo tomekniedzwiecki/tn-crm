@@ -633,7 +633,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, paid_welcome: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–23 PL dotyczy WSZYSTKICH maili (też paid_welcome); cutoff 23
     // (decyzja Tomka 2026-06-16) łapie wieczornych porzucaczy, póki pamiętają
@@ -760,6 +760,43 @@ Deno.serve(async (req) => {
           if (wonErr) console.error('[spar-followups] lead won update error:', wonErr)
         }
       }
+    }
+
+    // ── 1-full) SYNC PEŁNEJ PŁATNOŚCI: orders("budowa aplikacji", paid) → full_paid_at + know-how ──
+    // Safety-net dla webhooka (lustro synca rezerwacji wyżej). Pełna płatność za budowę odmraża
+    // etap spowiednika; gdyby tpay-webhook nie trafił, klient ZAPŁACIŁ ~12k, a know-how się nie
+    // odmraża i nikt by tego nie wykrył. Idempotentne (.is full_paid_at null). Iterujemy po
+    // RZADKICH zamówieniach budowy, nie po wszystkich sesjach. Działa 24/7 (niezależnie od okna).
+    const { data: fullOrders, error: fullOrdErr } = await supabase
+      .from('orders')
+      .select('lead_id, customer_email, paid_at, description')
+      .eq('status', 'paid')
+      .gte('paid_at', new Date(Date.now() - 180 * 864e5).toISOString())
+      .ilike('description', '%budowa aplikacji%')
+    if (fullOrdErr) console.error('[spar-followups] full orders fetch error:', fullOrdErr)
+    for (const o of (fullOrders || []) as { lead_id: string | null; customer_email: string | null; paid_at: string | null }[]) {
+      let sessF: { id: string; lead_id: string | null } | null = null
+      if (o.lead_id) {
+        const { data } = await supabase.from('spar_sessions').select('id, lead_id')
+          .eq('lead_id', o.lead_id).is('full_paid_at', null).eq('is_test', false)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        sessF = (data as { id: string; lead_id: string | null } | null) || null
+      }
+      if (!sessF && o.customer_email) {
+        const { data } = await supabase.from('spar_sessions').select('id, lead_id')
+          .ilike('email', o.customer_email.trim()).is('full_paid_at', null).eq('is_test', false)
+          .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        sessF = (data as { id: string; lead_id: string | null } | null) || null
+      }
+      if (!sessF) continue
+      const at = o.paid_at || new Date().toISOString()
+      const { error: fUpdErr } = await supabase.from('spar_sessions')
+        .update({ full_paid_at: at, updated_at: new Date().toISOString() }).eq('id', sessF.id)
+      if (fUpdErr) { console.error('[spar-followups] full_paid_at update error:', fUpdErr); continue }
+      await supabase.from('spar_knowhow_summary')
+        .upsert({ session_id: sessF.id, lead_id: sessF.lead_id || o.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
+      sent.full_paid_sync++
+      console.log('[spar-followups] full_paid_at safety-net set (know-how):', sessF.id)
     }
 
     const now = Date.now()
