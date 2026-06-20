@@ -76,7 +76,11 @@ state.stage = state.khClosed ? 'build'
 
 **Konflikt liczb:** wygrywa `aplikacja_model_biznesowy`. Pełny protokół propagacji faktów oferty → nagłówek `aplikacja-faq-klienci.md`.
 
-**Edycja z panelu (2026-06-20):** zakładka „Źródło prawdy" w `tn-aplikacje` edytuje `aplikacja_model_biznesowy` i `stworze_sparing_prompt` przez `spar-admin-settings` (gate team_members, whitelist kluczy, limity sanity, auto-backup `<key>_backup_RRRRMMDDHHMMSS` przed zapisem). NIE zastępuje protokołu propagacji — po edycji faktów z panelu nadal trzeba zsynchronizować pozostałe powierzchnie (prompt vs blok DB to wciąż 2 kopie).
+**Edycja z panelu (2026-06-20):** zakładka „Źródło prawdy" w `tn-aplikacje` edytuje prompty z rejestru `_shared/spar-prompts.ts` przez `spar-admin-settings` (gate team_members, limity sanity, auto-backup `<key>_backup_RRRRMMDDHHMMSS`). Panel i funkcja renderują się Z REJESTRU → dodanie promptu = wpis w rejestrze + seed + odczyt w kodzie, zero zmian w panelu.
+
+**Single-source promptów (plan F0–F5, [[aplikacja-prompty-single-source]]):** treść strojalna modelu przenoszona z kodu do `settings` (stałe USUNIĘTE; kontrakty JSON/markery zostają w kodzie). Zrobione: **F0** (rejestr + panel dynamiczny), **F1** spowiednik — 8 kluczy `aplikacja_knowhow_*` (KNOWHOW_BASE/SRC_*/RESUME/EXTRACT/HANDOFF/IDEA_SOURCE_HINT) czytane przez `spar-chat` (`ensureKnowhowPrompts`). Do zrobienia: F2 deliverables · F3 maile · F4 instrukcje etapów spar-chat (GATE/KIERUNKI/COLLAB/RESIGNATION) · F5 front + docs read-only. Migracja: `scripts/{seed,wire}-*-prompts.mjs` (fidelity 1:1).
+
+Uwaga: to NIE zastępuje protokołu propagacji faktów — `aplikacja_model_biznesowy` (fakty) wciąż żyje też w sekcji `# FAQ OFERTY` promptu czatu i w `aplikacja-faq-klienci.md`.
 
 ---
 
