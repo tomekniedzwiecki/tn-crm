@@ -622,6 +622,7 @@ async function extractKnowhowAsync(
   apiKey: string,
 ): Promise<void> {
   try {
+    await ensureKnowhowPrompts(supabase)
     const ctx = problemSummary ? `KONTEKST PROJEKTU (nie wyodrębniaj z tego — to już wiemy): ${JSON.stringify(problemSummary).slice(0, 900)}\n\n` : ''
     const transcript = `ROZMÓWCA: ${userMsg}\n\nASYSTENT: ${assistantMsg}`
     const res = await openaiFetchRetry({
@@ -631,7 +632,7 @@ async function extractKnowhowAsync(
         model: OPENAI_MODEL,
         max_completion_tokens: 700,
         messages: [
-          { role: 'system', content: KNOWHOW_EXTRACT_PROMPT },
+          { role: 'system', content: KH.extract },
           { role: 'user', content: `${ctx}OSTATNIA WYMIANA:\n${transcript}` },
         ],
       }),
@@ -679,6 +680,7 @@ async function generateHandoffPack(
   try {
     const apiKey = Deno.env.get('OPENAI_API_KEY')
     if (!apiKey) return
+    await ensureKnowhowPrompts(supabase)
     const { data: sess } = await supabase.from('spar_sessions').select('problem_summary, preview_brief, lead_id, idea_source').eq('id', sessionId).maybeSingle()
     const { data: itemsRaw } = await supabase.from('spar_knowhow_items').select('kind, scope, source_tag, content, url').eq('session_id', sessionId).order('created_at', { ascending: true })
     const items = (itemsRaw || []) as Array<Record<string, unknown>>
@@ -700,7 +702,7 @@ async function generateHandoffPack(
       body: JSON.stringify({
         model: OPENAI_MODEL,
         max_completion_tokens: 6000,
-        messages: [ { role: 'system', content: HANDOFF_PROMPT }, { role: 'user', content: userMsg } ],
+        messages: [ { role: 'system', content: KH.handoff }, { role: 'user', content: userMsg } ],
       }),
     }, 'knowhow-handoff')
     const hpLead = (sess?.lead_id as string | null) ?? null
@@ -777,63 +779,30 @@ W razie realnej wątpliwości NIE oznaczaj.`
 // knowhow_closed_at IS NULL. Dla każdej innej sesji ta gałąź nie istnieje —
 // sparing pozostaje niezmieniony. Zbieranie wiedzy do spar_knowhow_* odbywa się
 // CICHO w tle (extractKnowhowAsync), bez markerów w treści czatu.
-const KNOWHOW_BASE = `[TRYB DOPRACOWANIA WIZJI — ZBIERANIE, NIE OCENA]
-Projekt jest opłacony i zatwierdzony. To etap PO werdykcie, akceptacji i pełnej płatności — wcześniejsze instrukcje z tej rozmowy o ocenie pomysłu, werdykcie, podglądzie, bramce, rezerwacji i sprzedaży JUŻ NIE OBOWIĄZUJĄ w tym trybie; zignoruj je. NIE wystawiaj markerów <ocena>, <werdykt>, <projekt> ani <kierunki>. Twoja rola: NIE oceniasz pomysłu, nie pokazujesz podglądu, nie sprzedajesz, nie prowadzisz do rezerwacji. POMYSŁ JEST JUŻ WYBRANY I OPŁACONY — NIGDY nie sugeruj zmiany pomysłu ani branży; NIGDY nie wymagaj od rozmówcy kontaktów, „dojść" do ludzi z branży ani wiedzy, której może nie mieć; gdy rozmówca czegoś nie wie, wiedzę bierzesz NA SIEBIE (Ty + research), zamiast go do niej zmuszać. Jesteś jak SPOWIEDNIK — cierpliwie słuchasz, dajesz rozmówcy się wygadać, dopytujesz — ale cały czas pilnujesz, żeby zbierać to, co realnie przyda się do zbudowania pierwszej (i z czasem lepszej) wersji aplikacji. Cel: wyciągnąć MAKSIMUM jego know-how. Wiesz już, co budujemy — nie pytaj o to, co już ustalone.
-JAK PROWADZISZ:
-• Daj mu mówić. Aktywnie zachęcaj do rozwinięcia: „opowiedz o ostatnim takim przypadku", „jak to wygląda dziś krok po kroku?", „na przykład?". Nie ucinaj — im więcej powie, tym lepiej. Słuchasz więcej, niż mówisz.
-• Jeden wątek na raz, zero ogólników — drąż do konkretu.
-• Bądź proaktywny — sugeruj, nie tylko pytaj: co 2–3 tury SAM podsuń brakujące elementy lub materiały („typowe rzeczy, które łatwo przeoczyć przy takim narzędziu, to X i Y — pasują?", „wrzuć przykładową wycenę, którą wysyłasz klientom", „podaj link do narzędzia, którego dziś używasz", „masz starą wersję? podeślij"). Gdy rozmówca poda link albo obieca plik — krótko potwierdź, że zapisujesz to jako materiał referencyjny.
-• Urozmaicaj rytm — NIE kończ każdej tury jednym pytaniem. Czasem daj mini-podsumowanie tego, co już wiesz; czasem 2 krótkie opcje do wyboru; czasem obserwację bez pytania. To ma być rozmowa, nie ankieta.
-• Wyłapuj twarde wymagania (np. „przełącznik VAT 23%/8% w cenniku") i wyjątki, o których wie tylko ktoś z branży.
-• Łagodnie pilnuj kierunku: gdy rozmowa schodzi na rzeczy nieistotne dla budowy, delikatnie wracaj do tego, co pomoże zrobić produkt.
-• Twoje wypowiedzi krótkie (1–4 zdania, zwykle jedno pytanie) — żeby zostawić przestrzeń jemu. Jego wypowiedzi mogą być długie i o to właśnie chodzi.
-• Zero presji, rozmowa na raty — może wracać przez kilka dni.
-DOMKNIĘCIE ETAPU — WYRAŹNA OPCJA: gdy rozmówca sygnalizuje koniec („chyba tyle", „na razie wystarczy", „co dalej?") albo wątek się wyczerpuje — NIE dorzucaj kolejnego pytania. Zamiast tego: (1) podsumuj krótko w 3–5 punktach, co konkretnie udało się zebrać (żeby rozmówca czuł, że nic nie ginie), (2) jasno postaw wybór: „Jeśli to wszystko na teraz — domykamy etap i ruszam z budową; a jak coś Ci jeszcze przyjdzie do głowy, wróć tu, kiedy chcesz." NIE naciskaj na zamknięcie — zostaw je łatwe do wybrania, ale i otwarte drzwi do kontynuacji.`
-
-const KNOWHOW_SRC_WLASNY = `[ŹRÓDŁO POMYSŁU: WŁASNY — INSIDER] Rozmówca zna tę branżę od środka. Wyciskaj jego wiedzę: realne ceny, workflow, narzędzia, wyjątki, na czym wszyscy się wykładają. Proś o jego materiały (wyceny, stare narzędzia, szablony).`
-const KNOWHOW_SRC_AI = `[ŹRÓDŁO POMYSŁU: PODSUNĘŁA GO AI — ROZMÓWCA NIE JEST EKSPERTEM TEJ BRANŻY] Pomysł podsunąłeś TY, więc wiedzę branżową bierzesz NA SIEBIE (Ty + research, w tym ten z werdyktu). Rozmówca NIE zna branży od środka i NIE musi. ABSOLUTNY ZAKAZ: nie każ mu „znać produktu", nie wymagaj realiów z branży, nie proś, by zdobył kontakt ani materiały od kogoś z branży („znajdź kogoś z recepcji" itp.), i NIGDY nie sugeruj powrotu do „branży, którą zna" — to łamie umowę.
-Gdy mówi „nie wiem / to Ty to wymyśliłeś" — potwierdź spokojnie: „Jasne, wiedzę o branży biorę na siebie — od Ciebie potrzebuję czegoś innego." I zbieraj TYLKO to, co rozmówca realnie ma: co go w tym pomyśle przekonuje, ile czasu i budżetu może włożyć, jak wyobraża sobie prowadzenie tego po przekazaniu sterów, czego się obawia, preferencje co do prostoty i stylu. Wiedzę branżową (procesy, realia, wymagania) podsuwaj SAM jako hipotezy: „zwykle wygląda to tak: … — brzmi sensownie u Ciebie?", a on tylko potwierdza lub koryguje.`
-const KNOWHOW_SRC_WSPOLNY = `[ŹRÓDŁO POMYSŁU: WSPÓLNE] Rozmówca zna część tematu, część dołożyła AI. Drąż tam, gdzie ma realne doświadczenie; tego, czego nie wie, NIE wymagaj — uzupełniasz researchem. Zadaj też co najmniej jedno pytanie o JEGO wkład i motywację (co sam wnosi, dlaczego akurat ta nisza), ale bez naciskania na wiedzę czy kontakty, których może nie mieć.`
-
-function knowhowInstruction(ideaSource: string): string {
-  const src = ideaSource === 'ai' ? KNOWHOW_SRC_AI : ideaSource === 'wspolny' ? KNOWHOW_SRC_WSPOLNY : KNOWHOW_SRC_WLASNY
-  return `${KNOWHOW_BASE}\n${src}`
+// ── Prompty SPOWIEDNIKA (know-how) — JEDYNE źródło = settings (klucze aplikacja_knowhow_*).
+// Ładowane raz na cold-start (ensureKnowhowPrompts); pusty fallback to bezpiecznik, nie treść.
+// Edycja z panelu „Źródło prawdy". (Faza 1 single-source 2026-06-20.)
+let KH_LOADED = false
+const KH = { base: '', src_wlasny: '', src_ai: '', src_wspolny: '', resume: '', extract: '', handoff: '', idea_hint: '' }
+async function ensureKnowhowPrompts(supabase: ReturnType<typeof createClient>): Promise<void> {
+  if (KH_LOADED) return
+  try {
+    const { data } = await supabase.from('settings').select('key, value').in('key', [
+      'aplikacja_knowhow_base', 'aplikacja_knowhow_src_wlasny', 'aplikacja_knowhow_src_ai', 'aplikacja_knowhow_src_wspolny',
+      'aplikacja_knowhow_resume', 'aplikacja_knowhow_extract', 'aplikacja_knowhow_handoff', 'aplikacja_knowhow_idea_source_hint',
+    ])
+    const v = (k: string) => ((data || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''
+    KH.base = v('aplikacja_knowhow_base'); KH.src_wlasny = v('aplikacja_knowhow_src_wlasny'); KH.src_ai = v('aplikacja_knowhow_src_ai')
+    KH.src_wspolny = v('aplikacja_knowhow_src_wspolny'); KH.resume = v('aplikacja_knowhow_resume'); KH.extract = v('aplikacja_knowhow_extract')
+    KH.handoff = v('aplikacja_knowhow_handoff'); KH.idea_hint = v('aplikacja_knowhow_idea_source_hint')
+    KH_LOADED = true
+  } catch (e) { console.error('[spar-chat] ensureKnowhowPrompts', e) }
 }
+function knowhowInstruction(ideaSource: string): string {
+  const src = ideaSource === 'ai' ? KH.src_ai : ideaSource === 'wspolny' ? KH.src_wspolny : KH.src_wlasny
+  return `${KH.base}\n${src}`
 
-// Zaczepka po powrocie do rozmowy („wróć do rozmowy"): rozmówca nie odpowiada na
-// konkretne pytanie — to AI ma go miło przywitać i podsunąć, co JESZCZE warto
-// dopowiedzieć, patrząc na to, co już ustalone vs. czego brakuje do budowy.
-const KNOWHOW_RESUME_INSTRUCTION = `[POWRÓT DO ROZMOWY — TWOJA ZACZEPKA]
-Rozmówca właśnie wrócił do tej rozmowy (kliknął „wróć do rozmowy") i nie odpowiada na żadne konkretne pytanie. To NIE jest jego wiadomość — to Twój moment, żeby go ciepło zaczepić. Zrób dokładnie to:
-1) 1 zdanie powitania-powrotu, naturalnie (np. „Hej, dobrze Cię znów widzieć — chcesz coś jeszcze dopowiedzieć do projektu?").
-2) Spójrz na historię tej rozmowy i kartę projektu i wskaż 2–3 KONKRETNE rzeczy, których jeszcze NIE omówiliście, a realnie przydadzą się do zbudowania pierwszej wersji. Wybieraj LUKI (czego brakuje), NIE powtarzaj ustalonego. Podaj je jako lekką propozycję, nie listę obowiązków.
-3) Zero presji i zero odpytywania z wiedzy branżowej — pamiętaj o modelu operatora: research i realia branży bierzesz na siebie, pytasz tylko o to, co siedzi w głowie KLIENTA (jego przykłady, preferencje, decyzje, materiały).
-Na końcu dołącz <opcje>["...","...","..."]</opcje> — 2–4 krótkie, klikalne podpowiedzi tematów do dorzucenia (każda ≤ ~40 znaków, konkretna, wynikająca z luk). Nie dawaj opcji „to wszystko" — od domknięcia etapu jest osobny przycisk.
-Całość krótko: maks 4–5 zdań. Bez nagłówków, bez markerów <ocena>/<werdykt>/<projekt>.`
-
-// Hint dołączany TYLKO w trybie sparingu: przy <werdykt> model dorzuca pole "zrodlo".
-const IDEA_SOURCE_HINT = `[ŹRÓDŁO POMYSŁU — PRZY WERDYKCIE] Gdy wystawiasz <werdykt>, dołącz do jego JSON pole "zrodlo": "wlasny" (rdzeń pomysłu wymyślił rozmówca / zna branżę od środka), "ai" (to TY zaproponowałeś pomysł, rozmówca przyszedł bez sprecyzowanego), albo "wspolny" (powstał wspólnie). Np.: <werdykt>{"kolor":"zielony","zrodlo":"wlasny","karta":{...}}</werdykt>.`
-
-// Prompt cichej ekstrakcji (extractKnowhowAsync): zamienia ostatnią wymianę na fakty.
-const KNOWHOW_EXTRACT_PROMPT = `Jesteś analitykiem budującym dossier projektu z rozmowy. Z poniższej OSTATNIEJ WYMIANY wyodrębnij NOWE, konkretne elementy przydatne do zbudowania pierwszej wersji aplikacji. Zwróć WYŁĄCZNIE JSON: {"items":[{"kind":"...","scope":"...","source_tag":"...","content":"...","url":"..."}]}.
-kind:
-- "wymaganie" — twarde wymaganie funkcjonalne
-- "wniosek" — istotny fakt / tło branżowe
-- "intel_cenowy" — ceny / konkurencja
-- "link" — URL podany przez rozmówcę (wtedy wypełnij url)
-- "cytat" — mocny, charakterystyczny cytat rozmówcy
-- "luka" — czego jeszcze NIE wiadomo, a trzeba ustalić do budowy (sformułuj jako konkretne pytanie)
-- "decyzja" — otwarta decyzja do podjęcia (np. "PDF czy widok online?")
-- "sprzecznosc" — rozmówca powiedział dwie sprzeczne rzeczy (opisz obie: "wcześniej X, teraz Y")
-- "zalozenie" — przyjęte założenie, niepotwierdzone wprost przez rozmówcę
-- "uwaga" — inna ważna notatka
-scope: TYLKO dla "wymaganie"/"wniosek" (dla reszty pomiń): "v1" (rdzeń pierwszej wersji) | "pozniej" (dobre, ale nie do v1) | "poza" (poza zakresem) | "nieznane".
-source_tag: "klient" gdy od rozmówcy; "research" gdy ogólna wiedza/rynek.
-content: jedno zwięzłe zdanie po polsku. url: tylko dla kind="link".
-Zapisuj TYLKO konkrety warte zapamiętania. Pomijaj uprzejmości, ogólniki i pytania asystenta. Jeśli nic nowego nie padło — zwróć {"items":[]}.`
-
-// Prompt generujący HANDOFF PACK (pakiet wykonawczy dla Tomka) przy domknięciu etapu.
-const HANDOFF_PROMPT = `Jesteś analitykiem. Na podstawie KARTY PROJEKTU i ZEBRANYCH ELEMENTÓW zbuduj zwięzły HANDOFF PACK do budowy pierwszej wersji aplikacji. Markdown po polsku, konkretnie i krótko. Sekcje: 1) Definicja v1 (1 zdanie), 2) Dla kogo, 3) Główny workflow v1 (kroki), 4) Role/użytkownicy, 5) Encje/dane, 6) Ekrany v1, 7) Reguły biznesowe i wyjątki, 8) Integracje, 9) MUST-HAVE v1, 10) Poza zakresem / na później, 11) Otwarte decyzje, 12) Ryzyka i luki. Opieraj się WYŁĄCZNIE na dostarczonych danych — gdzie brak informacji, napisz „do ustalenia". Nie wymyślaj.`
+}
 
 // Wywołanie bramki spar-assess (server-to-server). Zwraca obiekt oceny lub null.
 async function runGate(
@@ -1378,6 +1347,7 @@ Deno.serve(async (req) => {
     // dopracowaniu kierunku — wstrzykujemy instrukcję podglądu zamiast bramki
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
     {
+      await ensureKnowhowPrompts(supabase)
       const asmt = existingSession?.assessment as Record<string, unknown> | null
       if (isKnowHowMode) {
         // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
@@ -1392,7 +1362,7 @@ Deno.serve(async (req) => {
         // jeden szczegół i potwierdź, że dopisujesz to do projektu. Bez ponaglania.
         if (knowhowClosed) sessionContext += `\n\n[ETAP DOPRACOWANIA JUŻ DOMKNIĘTY] Klient zamknął ten etap, a Tomek zaczął budowę. Każda nowa wiadomość to bonusowy szczegół „po fakcie". Reaguj krótko i ciepło: podziękuj, w razie potrzeby dopytaj o jedną rzecz i zapewnij, że trafia to do projektu. Nie zachęcaj do przedłużania rozmowy.`
         // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
-        if (knowhowResume) sessionContext += `\n\n${KNOWHOW_RESUME_INSTRUCTION}`
+        if (knowhowResume) sessionContext += `\n\n${KH.resume}`
       } else if (existingSession?.verdict === 'zielony') {
         // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
@@ -1412,7 +1382,7 @@ Deno.serve(async (req) => {
       // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
       // Sparing: poproś model, by przy werdykcie dołączył źródło pomysłu (idea_source).
-      if (!isKnowHowMode) sessionContext += `\n\n${IDEA_SOURCE_HINT}`
+      if (!isKnowHowMode) sessionContext += `\n\n${KH.idea_hint}`
     }
 
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────

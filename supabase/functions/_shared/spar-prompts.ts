@@ -37,6 +37,15 @@ export const SPAR_PROMPTS: PromptDef[] = [
     editable: true, min: 2000, max: 120000,
     note: 'Steruje ŻYWYMI rozmowami. Zawiera markery i retorykę — nieostrożna zmiana psuje czat.',
   },
+  // Etap 3 — Spowiednik (know-how). Treść czytana przez spar-chat (ensureKnowhowPrompts).
+  { key: 'aplikacja_knowhow_base', label: 'Spowiednik — baza (jak prowadzi)', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 200, max: 8000, note: 'Rdzeń trybu „Dopracowanie wizji" po pełnej płatności: zbieranie, nie ocena.' },
+  { key: 'aplikacja_knowhow_src_wlasny', label: 'Spowiednik — wariant: pomysł własny', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 50, max: 4000, note: 'Gdy klient zna branżę od środka (insider).' },
+  { key: 'aplikacja_knowhow_src_ai', label: 'Spowiednik — wariant: pomysł od AI', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 50, max: 4000, note: 'Gdy pomysł podsunęła AI — wiedzę branżową bierze na siebie Tomek/research.' },
+  { key: 'aplikacja_knowhow_src_wspolny', label: 'Spowiednik — wariant: wspólny', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 50, max: 4000, note: 'Część wiedzy od klienta, część z researchu.' },
+  { key: 'aplikacja_knowhow_resume', label: 'Spowiednik — powrót do rozmowy', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 100, max: 6000, note: 'Proaktywna zaczepka po „wróć do rozmowy".' },
+  { key: 'aplikacja_knowhow_extract', label: 'Spowiednik — cicha ekstrakcja wiedzy', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 200, max: 6000, note: 'Zamienia ostatnią wymianę na konkrety (spar_knowhow_items). Zawiera kontrakt JSON — ostrożnie.' },
+  { key: 'aplikacja_knowhow_handoff', label: 'Spowiednik — pakiet wykonawczy (handoff)', group: 'Etap 3 — Spowiednik (know-how)', stage: '3', editable: true, min: 100, max: 6000, note: 'Brief v1 dla zespołu przy domknięciu etapu.' },
+  { key: 'aplikacja_knowhow_idea_source_hint', label: 'Spowiednik — hint źródła pomysłu (przy werdykcie)', group: 'Etap 3 — Spowiednik (know-how)', stage: '1', editable: true, min: 50, max: 4000, note: 'Przy <werdykt> model dołącza pole „zrodlo" (wlasny/ai/wspolny).' },
 ];
 
 // Mapa key→def (szybki lookup w walidacji zapisu).
