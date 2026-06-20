@@ -473,35 +473,8 @@
       <p class="text-xs text-zinc-600 mt-3">Pełna mapa systemu: <code>docs/stworze/SYSTEM-APLIKACJA.md</code></p>
     </div>
 
-    <!-- FAKTY OFERTY (SSOT) -->
-    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5">
-      <div class="flex items-center justify-between mb-1">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-seal-check mr-1.5 text-emerald-400"></i>Fakty oferty — źródło prawdy</h3>
-        <span id="zr-mb-len" class="text-xs text-zinc-500"></span>
-      </div>
-      <p class="text-xs text-zinc-500 mb-3">Zasila maile dripowe i plany (drip / economics / gtm / plan). Zapis robi automatyczny backup poprzedniej wersji.</p>
-      <textarea id="zr-mb" rows="14" spellcheck="false" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono leading-relaxed"></textarea>
-      <div class="flex items-center gap-3 mt-2">
-        <button data-zr-save="aplikacja_model_biznesowy" class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium transition">Zapisz fakty</button>
-        <span data-zr-status="aplikacja_model_biznesowy" class="text-xs text-zinc-500"></span>
-      </div>
-      <div data-zr-backups="aplikacja_model_biznesowy" class="text-xs text-zinc-600 mt-2"></div>
-    </div>
-
-    <!-- PROMPT CZATU -->
-    <div class="bg-zinc-900/60 border border-amber-500/20 rounded-xl p-5">
-      <div class="flex items-center justify-between mb-1">
-        <h3 class="text-white font-medium text-sm"><i class="ph ph-warning mr-1.5 text-amber-400"></i>Prompt czatu sparingu</h3>
-        <span id="zr-pr-len" class="text-xs text-zinc-500"></span>
-      </div>
-      <p class="text-xs text-amber-300/80 mb-3">Uwaga: steruje <strong>żywymi</strong> rozmowami. Zawiera markery i retorykę — nieostrożna zmiana psuje czat. Każdy zapis robi backup; w razie wpadki przywróć poprzednią wersję.</p>
-      <textarea id="zr-pr" rows="20" spellcheck="false" class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono leading-relaxed"></textarea>
-      <div class="flex items-center gap-3 mt-2">
-        <button data-zr-save="stworze_sparing_prompt" class="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium transition">Zapisz prompt</button>
-        <span data-zr-status="stworze_sparing_prompt" class="text-xs text-zinc-500"></span>
-      </div>
-      <div data-zr-backups="stworze_sparing_prompt" class="text-xs text-zinc-600 mt-2"></div>
-    </div>
+    <!-- KARTY PROMPTÓW (render dynamiczny z rejestru _shared/spar-prompts.ts) -->
+    <div id="zr-cards" class="space-y-4"><div class="text-sm text-zinc-500">Wczytuję…</div></div>
   </section>
 
   <!-- ════════ KARTA LEADA (pełnoekranowy widok z zakładkami) ════════ -->
@@ -2542,8 +2515,9 @@ function renderActive() {
   if (activeTab === 'zrodlo') renderZrodlo();
 }
 
-// ── Źródło prawdy: podgląd + edycja faktów oferty i promptu (gate team_members) ──
-const ZR_KEYS = { aplikacja_model_biznesowy: { ta: 'zr-mb', len: 'zr-mb-len' }, stworze_sparing_prompt: { ta: 'zr-pr', len: 'zr-pr-len' } };
+// ── Źródło prawdy: dynamiczny podgląd + edycja promptów z rejestru (gate team_members) ──
+const ZR_ESC = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[m]));
+const ZR_ACCENTS = { emerald: 'bg-emerald-600 hover:bg-emerald-500', amber: 'bg-amber-600 hover:bg-amber-500', blue: 'bg-blue-600 hover:bg-blue-500' };
 let zrLoaded = false;
 async function callAdminSettings(payload) {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -2557,42 +2531,56 @@ async function callAdminSettings(payload) {
   if (!res.ok) throw new Error(j.error || ('HTTP ' + res.status));
   return j;
 }
-function zrRenderBackups(key, list) {
-  const el = document.querySelector('[data-zr-backups="' + key + '"]');
-  if (!el) return;
-  el.innerHTML = (list && list.length)
-    ? 'Ostatnie backupy: ' + list.map((k) => '<code class="text-zinc-500">' + k.replace(key + '_backup_', '') + '</code>').join(' · ')
-    : '';
+function zrBackupsHtml(key, list) {
+  return (list && list.length) ? 'Backupy: ' + list.map((b) => '<code class="text-zinc-600">' + ZR_ESC(b.replace(key + '_backup_', '')) + '</code>').join(' · ') : '';
+}
+function zrCardHtml(p) {
+  const accent = ZR_ACCENTS[p.key === 'aplikacja_model_biznesowy' ? 'emerald' : (p.stage === '1' ? 'amber' : 'blue')] || ZR_ACCENTS.blue;
+  const rows = p.max > 20000 ? 20 : (p.max > 4000 ? 14 : 8);
+  const ro = p.editable === false;
+  return '<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-5" data-zr-card="' + ZR_ESC(p.key) + '">'
+    + '<div class="flex items-center justify-between mb-1"><h4 class="text-white font-medium text-sm">' + ZR_ESC(p.label)
+    + ' <span class="text-xs text-zinc-600">· ' + ZR_ESC(p.key) + '</span></h4><span class="text-xs text-zinc-500" data-zr-len>' + (p.len || 0) + ' zn.</span></div>'
+    + (p.note ? '<p class="text-xs text-zinc-500 mb-2">' + ZR_ESC(p.note) + '</p>' : '')
+    + '<textarea data-zr-ta rows="' + rows + '" spellcheck="false" ' + (ro ? 'readonly ' : '') + 'class="w-full bg-zinc-950 border border-white/10 rounded-lg px-3 py-2 text-xs text-white font-mono leading-relaxed">' + ZR_ESC(p.value) + '</textarea>'
+    + (ro ? '<div class="text-xs text-zinc-600 mt-2">Read-only (kontrakt kodu / dokumentacja).</div>'
+          : '<div class="flex items-center gap-3 mt-2"><button data-zr-save class="px-4 py-2 rounded-lg ' + accent + ' text-white text-sm font-medium transition">Zapisz</button><span class="text-xs text-zinc-500" data-zr-status></span></div><div class="text-xs text-zinc-600 mt-2" data-zr-backups>' + zrBackupsHtml(p.key, p.backups) + '</div>')
+    + '</div>';
 }
 async function renderZrodlo() {
-  if (zrLoaded) return;
-  if (DEMO) { toast('Tryb demo — edycja źródła nieaktywna'); return; }
+  if (zrLoaded || DEMO) { if (DEMO) toast('Tryb demo — edycja źródła nieaktywna'); return; }
+  const host = $('zr-cards'); if (!host) return;
+  host.innerHTML = '<div class="text-sm text-zinc-500">Wczytuję…</div>';
   try {
     const j = await callAdminSettings({ action: 'get' });
-    for (const key in ZR_KEYS) {
-      const cfg = ZR_KEYS[key], ta = $(cfg.ta), lenEl = $(cfg.len);
-      if (ta) { ta.value = (j.values && j.values[key]) || ''; ta.oninput = () => { if (lenEl) lenEl.textContent = ta.value.length + ' zn.'; }; }
-      if (lenEl) lenEl.textContent = (((j.values && j.values[key]) || '').length) + ' zn.';
-      zrRenderBackups(key, (j.backups || {})[key]);
-    }
+    const prompts = j.prompts || [];
+    const groups = [];
+    for (const p of prompts) { let g = groups.find((x) => x.group === p.group); if (!g) { g = { group: p.group, items: [] }; groups.push(g); } g.items.push(p); }
+    host.innerHTML = groups.map((g) => '<div><div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 mt-3">' + ZR_ESC(g.group) + '</div><div class="space-y-3">' + g.items.map(zrCardHtml).join('') + '</div></div>').join('');
+    host.querySelectorAll('[data-zr-card]').forEach((card) => {
+      const key = card.dataset.zrCard;
+      const ta = card.querySelector('[data-zr-ta]'), lenEl = card.querySelector('[data-zr-len]');
+      if (ta && lenEl) ta.addEventListener('input', () => { lenEl.textContent = ta.value.length + ' zn.'; });
+      const btn = card.querySelector('[data-zr-save]');
+      if (btn) btn.addEventListener('click', () => zrSave(key, card));
+    });
     zrLoaded = true;
-  } catch (e) { toast('Błąd wczytania: ' + e.message); console.error(e); }
+  } catch (e) { host.innerHTML = '<div class="text-sm text-red-400">Błąd: ' + ZR_ESC(e.message) + '</div>'; console.error(e); }
 }
-async function zrSave(key) {
-  const cfg = ZR_KEYS[key]; if (!cfg) return;
-  const ta = $(cfg.ta); if (!ta) return;
-  const statusEl = document.querySelector('[data-zr-status="' + key + '"]');
-  const btn = document.querySelector('[data-zr-save="' + key + '"]');
+async function zrSave(key, card) {
+  const ta = card.querySelector('[data-zr-ta]'); if (!ta) return;
+  const statusEl = card.querySelector('[data-zr-status]'), btn = card.querySelector('[data-zr-save]');
   if (btn) btn.disabled = true;
   if (statusEl) { statusEl.textContent = 'Zapisuję…'; statusEl.className = 'text-xs text-zinc-400'; }
   try {
     const j = await callAdminSettings({ action: 'save', key, value: ta.value });
     if (statusEl) { statusEl.textContent = 'Zapisano ✓ (backup ' + String(j.backupKey || '').replace(key + '_backup_', '') + ')'; statusEl.className = 'text-xs text-emerald-400'; }
-    toast('Zapisano');
+    toast('Zapisano: ' + key);
     const g = await callAdminSettings({ action: 'get' });
-    zrRenderBackups(key, (g.backups || {})[key]);
+    const p = (g.prompts || []).find((x) => x.key === key), bEl = card.querySelector('[data-zr-backups]');
+    if (bEl && p) bEl.innerHTML = zrBackupsHtml(key, p.backups);
   } catch (e) {
-    if (statusEl) { statusEl.textContent = 'Błąd: ' + e.message; statusEl.className = 'text-xs text-red-400'; }
+    if (statusEl) { statusEl.textContent = 'Błąd: ' + ZR_ESC(e.message); statusEl.className = 'text-xs text-red-400'; }
     toast('Błąd zapisu: ' + e.message);
   } finally { if (btn) btn.disabled = false; }
 }
@@ -2657,7 +2645,6 @@ async function init() {
     if (error) { toast('Błąd zapisu kursu'); console.error(error); return; }
     usdPln = v; toast('Kurs zapisany: ' + v.toFixed(2)); renderActive();
   });
-  document.querySelectorAll('[data-zr-save]').forEach((b) => b.addEventListener('click', () => zrSave(b.dataset.zrSave)));
   $('sekw-refresh')?.addEventListener('click', () => renderKomunikacja());
   $('mm-send')?.addEventListener('click', () => { if (mmCtx) { const ctx = mmCtx; closeMailModal(); fireSend(ctx.sid, ctx.key); } });
   $('btn-mobile-menu')?.addEventListener('click', () => { $('appnav').classList.toggle('open'); $('appnav-overlay').classList.toggle('open'); });

@@ -1,10 +1,12 @@
 // spar-admin-settings — podgląd i edycja „źródła prawdy" sparingu z panelu TN Aplikacje.
 // GATE: team_members (publiczna rejestracja sparingu daje rolę `authenticated` każdemu z
 // internetu — samo zalogowanie NIE wystarcza; wymagamy wpisu w team_members, wzorzec
-// spar-landing). Edytowalne TYLKO whitelistowane klucze. Każdy zapis robi BACKUP poprzedniej
-// wartości (<key>_backup_RRRRMMDDHHMMSS) PRZED UPDATE — rollback = przywrócenie backupu.
+// spar-landing). Edytowalne TYLKO klucze z rejestru ../_shared/spar-prompts.ts. Każdy zapis
+// robi BACKUP poprzedniej wartości (<key>_backup_RRRRMMDDHHMMSS) PRZED UPDATE.
+// Panel renderuje się Z REJESTRU (get zwraca manifest) → dodanie promptu = wpis w rejestrze.
 // Deploy: --no-verify-jwt (własna weryfikacja team_members).
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { SPAR_PROMPTS, SPAR_PROMPTS_BY_KEY } from "../_shared/spar-prompts.ts";
 
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
@@ -21,12 +23,6 @@ function cors(origin: string | null): Record<string, string> {
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
   };
 }
-
-// Klucze edytowalne z panelu + limity sanity (chronią przed przypadkowym wyczyszczeniem treści).
-const EDITABLE: Record<string, { label: string; min: number; max: number }> = {
-  aplikacja_model_biznesowy: { label: 'Fakty oferty (SSOT)', min: 200, max: 8000 },
-  stworze_sparing_prompt: { label: 'Prompt czatu sparingu', min: 2000, max: 120000 },
-};
 
 function json(body: Record<string, unknown>, status: number, c: Record<string, string>): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...c, 'Content-Type': 'application/json' } });
@@ -59,32 +55,30 @@ Deno.serve(async (req) => {
   let body: { action?: string; key?: string; value?: string };
   try { body = await req.json(); } catch { return json({ error: 'nieprawidlowy_json' }, 400, c); }
   const action = (body.action || 'get').trim();
-  const keys = Object.keys(EDITABLE);
+  const keys = SPAR_PROMPTS.map((p) => p.key);
 
-  // ── GET: aktualne wartości + lista backupów ───────────────────────────────
+  // ── GET: manifest promptów + aktualne wartości + backupy (panel renderuje z tego) ──
   if (action === 'get') {
     const { data: rows } = await supabase.from('settings').select('key, value').in('key', keys);
     const { data: bRows } = await supabase.from('settings').select('key').like('key', '%\_backup\_%');
-    const values: Record<string, string> = {};
-    const backups: Record<string, string[]> = {};
-    const meta: Record<string, { label: string; len: number }> = {};
-    for (const k of keys) {
-      values[k] = (rows || []).find((r: { key: string; value: string }) => r.key === k)?.value ?? '';
-      backups[k] = (bRows || [])
-        .map((r: { key: string }) => r.key)
-        .filter((bk: string) => bk.startsWith(k + '_backup_'))
-        .sort().reverse().slice(0, 8);
-      meta[k] = { label: EDITABLE[k].label, len: (values[k] || '').length };
-    }
-    return json({ values, backups, meta }, 200, c);
+    const valueOf = (k: string) => (rows || []).find((r: { key: string; value: string }) => r.key === k)?.value ?? '';
+    const backupsOf = (k: string) => (bRows || [])
+      .map((r: { key: string }) => r.key)
+      .filter((bk: string) => bk.startsWith(k + '_backup_'))
+      .sort().reverse().slice(0, 8);
+    const prompts = SPAR_PROMPTS.map((p) => {
+      const value = valueOf(p.key);
+      return { ...p, value, len: value.length, backups: backupsOf(p.key) };
+    });
+    return json({ prompts }, 200, c);
   }
 
   // ── SAVE: backup bieżącej wartości + UPDATE ────────────────────────────────
   if (action === 'save') {
     const key = (body.key || '').trim();
     const value = typeof body.value === 'string' ? body.value : '';
-    const rule = EDITABLE[key];
-    if (!rule) return json({ error: 'klucz_niedozwolony' }, 400, c);
+    const rule = SPAR_PROMPTS_BY_KEY[key];
+    if (!rule || !rule.editable) return json({ error: 'klucz_niedozwolony' }, 400, c);
     if (value.length < rule.min) return json({ error: `Treść za krótka (min ${rule.min} znaków — zabezpieczenie przed wyczyszczeniem).` }, 400, c);
     if (value.length > rule.max) return json({ error: `Treść za długa (max ${rule.max} znaków).` }, 400, c);
 
