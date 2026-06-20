@@ -45,7 +45,7 @@ User przechodzi etapy; etap jest **wyliczany z flag serwerowych**, nie trzymany 
 - Front: tryb nałożony na zakładkę Rozmowa (`.view--knowhow`); JS `buildKnowhowOpener`/`enterKnowhowChat`/`requestKnowhowNudge`/`playKnowhowIntro`/`playKnowhowOutro`/`cardBoxHTML` (sparing l. 10811–11060). Domknięcie = `event:'knowhow_close'` → `knowhow_closed_at`.
 
 ### Cross-cutting / infra
-`tpay-webhook` (płatności: 500 zł→`paid_at`, budowa→`full_paid_at`; **NIE RUSZAĆ**), `lead-upsert` (lead_source='stworze'), `send-email` (Resend), `send-sms` (SMSAPI), `slack-notify` (`slack_webhook_sparing`), `spar-go` (krótki link `/p/{code}`), `spar-public-feed` (feed dla `/aplikacja`, cache 60 s). Panel admina: `tn-crm/tn-aplikacje/`.
+`tpay-webhook` (płatności: 500 zł→`paid_at`, budowa→`full_paid_at`; **NIE RUSZAĆ**), `lead-upsert` (lead_source='stworze'), `send-email` (Resend), `send-sms` (SMSAPI), `slack-notify` (`slack_webhook_sparing`), `spar-go` (krótki link `/p/{code}`), `spar-public-feed` (feed dla `/aplikacja`, cache 60 s), `spar-admin-settings` (edycja faktów oferty + promptu z panelu, gate team_members, auto-backup). Panel admina: `tn-crm/tn-aplikacje/` (zakładka „Źródło prawdy" = mapa etapów + edytory SSOT).
 
 ---
 
@@ -75,6 +75,8 @@ state.stage = state.khClosed ? 'build'
 | Pełne odpowiedzi dla klientów (19 Q&A) + protokół faktów | `data-private/aplikacja-faq-klienci.md` | człowiek/Claude |
 
 **Konflikt liczb:** wygrywa `aplikacja_model_biznesowy`. Pełny protokół propagacji faktów oferty → nagłówek `aplikacja-faq-klienci.md`.
+
+**Edycja z panelu (2026-06-20):** zakładka „Źródło prawdy" w `tn-aplikacje` edytuje `aplikacja_model_biznesowy` i `stworze_sparing_prompt` przez `spar-admin-settings` (gate team_members, whitelist kluczy, limity sanity, auto-backup `<key>_backup_RRRRMMDDHHMMSS` przed zapisem). NIE zastępuje protokołu propagacji — po edycji faktów z panelu nadal trzeba zsynchronizować pozostałe powierzchnie (prompt vs blok DB to wciąż 2 kopie).
 
 ---
 
