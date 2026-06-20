@@ -56,6 +56,12 @@ export const SPAR_PROMPTS: PromptDef[] = [
   { key: 'aplikacja_prompt_landing_critic', label: 'Landing — krytyk/art director (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 400, max: 8000, note: 'Drugi przebieg podnoszący jakość landinga.' },
   { key: 'aplikacja_prompt_prototype_system', label: 'Prototyp — generator (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 1000, max: 16000, note: 'Jak powstaje klikalny prototyp narzędzia (HTML/JS). Zawiera przykłady kodu — ostrożnie.' },
   { key: 'aplikacja_prompt_prototype_critic', label: 'Prototyp — krytyk (system prompt)', group: 'Deliverables — generatory', stage: '2', editable: true, min: 400, max: 8000, note: 'Drugi przebieg (audyt + polishing) prototypu.' },
+  // Instrukcje etapów rozmowy (wstrzykiwane do promptu czatu wg fazy). Czytane przez spar-chat.
+  { key: 'aplikacja_etap_gate', label: 'Bramka oceny potencjału (GATE)', group: 'Instrukcje etapów rozmowy', stage: '1', editable: true, min: 100, max: 6000, note: 'Po domknięciu rdzenia: model wystawia <ocena> zamiast werdyktu.' },
+  { key: 'aplikacja_etap_kierunki', label: 'Karty wyboru kierunku (KIERUNKI)', group: 'Instrukcje etapów rozmowy', stage: '1', editable: true, min: 100, max: 6000, note: 'Rozwidlenie 2-3 wariantów narzędzia (gated SPAR_KIERUNKI_ENABLED).' },
+  { key: 'aplikacja_etap_preview_po_kierunku', label: 'Podgląd po dopracowaniu kierunku', group: 'Instrukcje etapów rozmowy', stage: '1', editable: true, min: 100, max: 6000, note: 'Po badaniu rynku + akceptacji kierunku → <projekt> + zielony werdykt.' },
+  { key: 'aplikacja_etap_wspolpraca', label: 'Faza współpracy (po zielonym werdykcie)', group: 'Instrukcje etapów rozmowy', stage: '2', editable: true, min: 100, max: 6000, note: 'Przejście z oceny w rezerwację + przełamywanie obiekcji.' },
+  { key: 'aplikacja_etap_rezygnacja', label: 'Detekcja rezygnacji', group: 'Instrukcje etapów rozmowy', stage: 'X', editable: true, min: 100, max: 6000, note: 'Dwustopniowy protokół oznaczania rezygnacji (<rezygnacja/>).' },
 ];
 
 // Mapa key→def (szybki lookup w walidacji zapisu).

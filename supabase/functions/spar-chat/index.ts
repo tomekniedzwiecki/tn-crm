@@ -733,46 +733,30 @@ async function generateHandoffPack(
 // rdzenia wystawia <ocena> zamiast samodzielnego werdyktu/podglądu, a backend
 // odpala spar-assess i steruje drugą turą. Trzymana w kodzie (nie w 31k promptcie
 // settings) — to mechanika bramki, nie głos; łatwa do tuningu/rewersji.
-const GATE_INSTRUCTION = `[OCENA POTENCJAŁU — KROK OBOWIĄZKOWY PRZED PODGLĄDEM]
-Gdy rdzeń narzędzia jest z grubsza zdefiniowany (wiesz: co robi, dla kogo, kto płaci, 1–2 ekrany), NIE oceniaj sam, czy to dobry biznes, i NIE pokazuj jeszcze podglądu. Zamiast tego napisz JEDNO naturalne zdanie do rozmówcy w stylu „Daj mi chwilę — sprawdzę na żywo Twój rynek i konkurencję", a potem wystaw marker w osobnej linii:
-<ocena>{"nazwa":"…","opis":"…","problem":"…","dla_kogo":"…","kto_placi":"…","dzisiejsze_obejscie":"…","ekrany":["…","…"],"konkurencja":"…"}</ocena>
-i ZAKOŃCZ turę (nic po markerze). Wynik badania dostaniesz w następnej turze i wtedy poprowadzisz dalej — potwierdzasz kierunek i pokazujesz podgląd albo prowadzisz do mocniejszej wersji. Oceniaj, gdy masz materiał; powtórz, jeśli pomysł istotnie się zmienił.`
+let GATE_INSTRUCTION = ''
 
 // WYBÓR KIERUNKU — karty rozwidlenia (marker <kierunki>). Wstrzykiwane tylko
 // gdy SPAR_KIERUNKI_ENABLED=1 (bezpiecznik: front renderuje <kierunki> dopiero
 // po deployu redesignu; przed flipem flagi model nie zna markera → zero wycieków).
 const KIERUNKI_ENABLED = (Deno.env.get('SPAR_KIERUNKI_ENABLED') || '') === '1'
-const KIERUNKI_INSTRUCTION = `[WYBÓR KIERUNKU — KARTY ROZWIDLENIA (opcjonalne, NAJWYŻEJ RAZ)]
-Jeśli rozmówca podał SZEROKI lub niejednoznaczny obszar (np. branża/grupa bez sprecyzowanego rdzenia) i widzisz 2–3 RÓŻNE, sensowne kierunki narzędzia — zamiast wybierać jeden ZA niego, pokaż mu rozwidlenie. Napisz JEDNO krótkie, naturalne zdanie, w którym WSKAZUJESZ, na co wstępnie byś postawił, dodajesz, że sprawdzisz to na żywo, i zostawiasz wybór rozmówcy (np. „Wstępnie stawiałbym na odzysk odwołań — najbliżej pieniędzy — ale to Ty wybierasz; sprawdzę potem każdy wariant na żywo."). Potem w osobnej linii wystaw marker:
-<kierunki>[{"nazwa":"krótka nazwa kierunku","opis":"jedno zdanie: co to narzędzie robi","tag":"3–4 słowa: czemu ciekawe","dalej":"1–2 zdania: co konkretnie zrobimy, jeśli wybierze ten kierunek","polecany":true}]</kierunki>
-i ZAKOŃCZ turę (nic po markerze). ZASADY: DOKŁADNIE jedna pozycja ma "polecany":true (Twoja rekomendacja — najbliżej pieniędzy / najszybciej do pierwszego płacącego); każdy kierunek wyraźnie INNY (nie warianty tego samego). NIE łącz z <opcje> w tej samej turze.
-ILE POZYCJI: tylko tyle, ile jest NAPRAWDĘ różnych i sensownych — 2 w zupełności wystarczą, NIE dopychaj do 3 na siłę słabą alternatywą. Jeśli jeden kierunek wyraźnie dominuje — NIE pokazuj kart, po prostu poprowadź ten jeden.
-SZCZEROŚĆ: "polecany" i tag to Twoja WSTĘPNA intuicja przed badaniem — nie obiecuj pewności; realnie zweryfikujesz to dopiero bramką <ocena>.
-KIEDY NIE UŻYWAĆ: gdy rozmówca ma już ostry, konkretny pomysł; gdy dopracowujecie JUŻ wybrany kierunek; gdy nie ma 2 naprawdę różnych dróg. Najwyżej RAZ w rozmowie — to wybór strategicznej drogi, nie nawyk.
-PO WYBORZE: rozmówca odpisze „Wybieram kierunek: …". Potwierdź krótko ten wybór i prowadź dopracowanie TEGO kierunku ku rdzeniowi (potem normalnie bramka <ocena>).`
+let KIERUNKI_INSTRUCTION = ''
 
 // Wstrzykiwane w turze PO „zielonym" badaniu, gdy rozmówca zareagował na
 // zaproponowane wyostrzenie — wtedy (i dopiero wtedy) pokazujemy podgląd.
-const PREVIEW_AFTER_GATE_INSTRUCTION = `[PODGLĄD PO DOPRACOWANIU KIERUNKU]
-Po badaniu rynku rozmówca właśnie zareagował na zaproponowane wyostrzenie narzędzia. Jeśli akceptuje lub doprecyzował kierunek — POKAŻ teraz, jak to może wyglądać: wystaw marker <projekt>{…} wg ustaleń (uwzględnij wyostrzenie z badania; rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn). Zielony <werdykt> wystaw jak zwykle, po podglądzie/akceptacji. Jeśli rozmówca chce ZUPEŁNIE innego kierunku — krótko dopytaj, zamiast wymuszać podgląd. NIE wystawiaj już markera <ocena>.`
+let PREVIEW_AFTER_GATE_INSTRUCTION = ''
 
 // Wstrzykiwane PO zielonym werdykcie (mode sparing) — ZAMIAST bramki oceny.
 // Trzyma agenta w fazie współpracy (rezerwacja + przełamywanie obiekcji), zamiast
 // ciągnąć go z powrotem do badania pomysłu. Mechanika w kodzie (nie w 41k prompcie)
 // — łatwa do tuningu/rewersji. Treść retoryki (bank obiekcji) jest w prompcie.
-const COLLAB_PHASE_INSTRUCTION = `[FAZA WSPÓŁPRACY — PO ZIELONYM WERDYKCIE]
-Projekt jest już zdefiniowany (werdykt zielony) — karta i ekrany są w panelu obok. NIE wracaj do badania pomysłu i NIE wystawiaj już markera <ocena>; głównym tematem jest teraz WSPÓŁPRACA, a następny krok to rezerwacja wspólnej rozmowy. Trzymaj się sekcji „OFERTA I WSPÓŁPRACA" oraz „PRZEŁAMYWANIE OBIEKCJI": gdy wyczuwasz wahanie lub obawę, rozwiewaj ją jak doradca, nie sprzedawca — zwięźle (2–4 zdania, jeden wątek). Jeśli rozmówca naprawdę chce zmienić pomysł, możesz odesłać do dokończenia rozmowy definiującej; domyślnie jednak rozmawiacie o tym, jak zbudować to razem.`
+let COLLAB_PHASE_INSTRUCTION = ''
 
 // REZYGNACJA — bezpieczne, DWUSTOPNIOWE oznaczenie „zrezygnował". Model NIE
 // oznacza od razu: najpierw upewnia się co do intencji, marker <rezygnacja/>
 // wystawia DOPIERO po wyraźnym potwierdzeniu w kolejnej turze. Backend mapuje
 // marker na etap lejka „przegrany: zrezygnował" + wstrzymuje automat maili/SMS.
 // Mechanika w kodzie (nie w prompcie settings) — łatwa do tuningu/rewersji.
-const RESIGNATION_INSTRUCTION = `[REZYGNACJA — OZNACZ TYLKO PRZY JEDNOZNACZNEJ, WYRAŹNEJ INTENCJI]
-„Rezygnacja" = rozmówca WPROST chce zakończyć temat: rezygnuje z pomysłu albo ze współpracy, nie chce dalej. To NIE jest rezygnacja, gdy: odrzuca konkretną funkcję, kierunek albo cenę; waha się; „musi to przemyśleć"; narzeka; pyta dalej; chce węższego/innego narzędzia. W takich razach normalnie pomagaj lub dopytuj i NIE oznaczaj.
-• Sygnał MIĘKKI lub niejasny (zniechęcenie, cena, „nie wiem", „muszę pomyśleć") — NIE oznaczaj. Najpierw zareaguj po ludzku JEDNYM zdaniem, które rozbraja obawę i zostawia otwarte drzwi; marker wystaw dopiero, jeśli w odpowiedzi rozmówca POTWIERDZI wprost, że kończy.
-• Rezygnacja WPROST i jednoznaczna (np. „rezygnuję", „dziękuję, to nie dla mnie", „nie jestem zainteresowany", „odpuszczam to") — NIE przepytuj po raz drugi: pożegnaj się ciepło JEDNYM zdaniem (zostaw otwarte drzwi na powrót), a w OSOBNEJ, OSTATNIEJ linii wystaw marker <rezygnacja/> — nic po nim.
-W razie realnej wątpliwości NIE oznaczaj.`
+let RESIGNATION_INSTRUCTION = ''
 
 // ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
 // Włączany WYŁĄCZNIE serwerowo, gdy spar_sessions.full_paid_at IS NOT NULL i
@@ -1348,6 +1332,7 @@ Deno.serve(async (req) => {
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
     {
       await ensureKnowhowPrompts(supabase)
+if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('settings').select('key, value').in('key', ['aplikacja_etap_gate', 'aplikacja_etap_kierunki', 'aplikacja_etap_preview_po_kierunku', 'aplikacja_etap_wspolpraca', 'aplikacja_etap_rezygnacja']); const __ev = (k: string) => ((__ep || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; GATE_INSTRUCTION = __ev('aplikacja_etap_gate'); KIERUNKI_INSTRUCTION = __ev('aplikacja_etap_kierunki'); PREVIEW_AFTER_GATE_INSTRUCTION = __ev('aplikacja_etap_preview_po_kierunku'); COLLAB_PHASE_INSTRUCTION = __ev('aplikacja_etap_wspolpraca'); RESIGNATION_INSTRUCTION = __ev('aplikacja_etap_rezygnacja') } catch (_e) { /* fallback: puste instrukcje */ } }
       const asmt = existingSession?.assessment as Record<string, unknown> | null
       if (isKnowHowMode) {
         // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
