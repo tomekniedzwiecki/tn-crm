@@ -142,6 +142,20 @@ Tani research zawsze 0h/5h/10h: **rynek** (`spar-raport`) → **economics** → 
 
 ---
 
+### ✅ Zrobione 2026-06-20
+Bug #1 (kolejna rozmowa — stała `CONVO_DESCRIPTION`) · Bug #2 (retry OpenAI w raport/landing/prototype/assess) · bezpieczeństwo bucketa `attachments` (SELECT→`team_members`) · **safety-net `full_paid_at`** (pełna płatność za budowę nadrabiana w `spar-followups`, gdy webhook nie trafi — wcześniej płacący ~12k mógł utknąć bez odmrożenia spowiednika) · sprzątnięty `c:\tmp` · panel „Źródło prawdy" (edycja SSOT).
+
+### Nowe z audytu porządkowego 2026-06-20 (perspektywy systemowe — do decyzji)
+- **Retencja danych / RODO:** brak czyszczenia porzuconych anon sesji + ich grafik w Storage (koszt + PII bezterminowo); brak ścieżki „usuń moje dane". → job retencyjny KONSERWATYWNY (anon, bez maila/płatności/showcase/feed, cisza >90 dni → usuń sesję + grafiki). Destrukcyjne — wymaga akceptacji polityki.
+- **Disaster recovery:** git ≠ live — część funkcji (`_shared/spar-owner.ts`, kilka `spar-*`) istnieje tylko na dysku + zdeployowana, NIE w git. Awaria dysku = ratunek tylko z Supabase. → „commit porządkujący".
+- **Observability:** zero alertu o awarii crona / runaway kosztów (był storm $0.59). → heartbeat + dzienny próg kosztu na Slack #sparing.
+- **DX rozwoju:** panel edytuje ŻYWY prompt 47k bez preview/testu. → harness testowy (sesja `is_test` + draft prompt).
+- **Dług promptu:** 47k z warstwami „NADRZĘDNE NAD WSZYSTKIM" — drogi (leci co turę) i trudny w utrzymaniu; refactor tylko świadomie.
+- **Duplikacja:** `projekt/index.html` = kopia 1:1 rendererów ze `sparing/index.html` (zmiana logiki w 2 miejscach).
+- **Poza sparingiem (dług):** leaked-password protection OFF (Auth Dashboard) · UPDATE-always-true na `tn_ad_alerts/recommendations/whatsapp_widget_status/workflow_reviews`.
+
+---
+
 ## 11. Mapa plików (gdzie wszystko żyje)
 
 - Edge functions: `tn-crm/supabase/functions/spar-*` (+ `_shared/spar-owner.ts`, `_shared/spar-reveal-plan.ts`).
