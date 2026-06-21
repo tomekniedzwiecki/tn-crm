@@ -1401,10 +1401,34 @@ function leadWiedzaHTML() {
 
     <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
       <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2.5"><i class="ph ph-push-pin text-zinc-600 mr-1"></i>Ważne uwagi <span class="text-zinc-600">(${by('uwaga').length})</span></div>
-      <div class="space-y-2 mb-3">${by('uwaga').map(row).join('') || '<div class="text-[12px] text-zinc-600">Brak uwag.</div>'}</div>
-      <div class="flex items-center gap-2">
-        <input id="wiedza-note-input" type="text" placeholder="Dodaj uwagę (widoczna tylko dla Ciebie)…" class="flex-1 min-w-0 px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-200 text-sm focus:border-blue-500/40 outline-none" onkeydown="if(event.key==='Enter')addWiedzaNote('${s.id}')">
-        <button onclick="addWiedzaNote('${s.id}')" class="shrink-0 bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors">Dodaj</button>
+      <div class="space-y-2">${by('uwaga').map(row).join('') || '<div class="text-[12px] text-zinc-600">Brak uwag.</div>'}</div>
+    </div>
+
+    <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
+      <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-1.5"><i class="ph ph-plus-circle text-zinc-600 mr-1"></i>Dodaj ręcznie do bazy wiedzy</div>
+      <div class="text-[11px] text-zinc-500 mb-2.5">Np. coś, co klient przekazał Ci osobiście (telefon, spotkanie). Trafi do wybranej kategorii i zasili handoff dla zespołu. Domyślnie „od klienta"; dla zwykłej notatki wybierz „notatka własna".</div>
+      <textarea id="wiedza-note-input" rows="2" placeholder="Treść — co ustaliliście / co przekazał klient…" class="w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-zinc-200 text-sm focus:border-blue-500/40 outline-none mb-2"></textarea>
+      <div class="flex items-center gap-2 flex-wrap">
+        <select id="wiedza-note-kind" title="Kategoria — gdzie trafi w bazie wiedzy" class="bg-black/40 border border-white/10 text-zinc-200 text-xs rounded-lg px-2.5 py-1.5 focus:border-blue-500/40 outline-none">
+          <option value="uwaga">Uwaga</option>
+          <option value="wymaganie">Wymaganie funkcjonalne</option>
+          <option value="wniosek">Wniosek / tło branżowe</option>
+          <option value="intel_cenowy">Intel cenowy / konkurencja</option>
+          <option value="decyzja">Decyzja do podjęcia</option>
+          <option value="zalozenie">Założenie (do potwierdzenia)</option>
+          <option value="luka">Luka / pytanie</option>
+        </select>
+        <select id="wiedza-note-source" title="Skąd pochodzi ta wiedza" class="bg-black/40 border border-white/10 text-zinc-200 text-xs rounded-lg px-2.5 py-1.5 focus:border-blue-500/40 outline-none">
+          <option value="klient" selected>od klienta</option>
+          <option value="research">notatka własna / do researchu</option>
+        </select>
+        <select id="wiedza-note-scope" title="Zakres (głównie dla wymagań)" class="bg-black/40 border border-white/10 text-zinc-200 text-xs rounded-lg px-2.5 py-1.5 focus:border-blue-500/40 outline-none">
+          <option value="">— zakres</option>
+          <option value="v1">v1</option>
+          <option value="pozniej">później</option>
+          <option value="poza">poza zakresem</option>
+        </select>
+        <button onclick="addWiedzaItem('${s.id}')" class="shrink-0 bg-white text-black hover:bg-zinc-200 px-4 py-2 rounded-lg text-sm font-medium transition-colors ml-auto">Dodaj</button>
       </div>
     </div>
   </div>`;
@@ -1422,18 +1446,24 @@ async function updateIdeaSource(id, val) {
   toast('Zmieniono źródło pomysłu');
 }
 
-async function addWiedzaNote(sid) {
+async function addWiedzaItem(sid) {
   const inp = $('wiedza-note-input'); const txt = ((inp && inp.value) || '').trim();
   if (!txt) return;
+  const kind = (($('wiedza-note-kind') || {}).value) || 'uwaga';
+  const source_tag = (($('wiedza-note-source') || {}).value) || 'klient';
+  const scopeVal = (($('wiedza-note-scope') || {}).value) || '';
   const { data: { session } } = await supabaseClient.auth.getSession();
   const uid = session && session.user && session.user.id;
   const s = leadData.s;
+  // created_by = uid → odróżnia wpis ręczny Tomka od cichej ekstrakcji AI (created_by null).
+  const rec = { session_id: sid, lead_id: s.lead_id || null, kind, source_tag, content: txt, created_by: uid };
+  if (scopeVal) rec.scope = scopeVal;
   const { data, error } = await supabaseClient.from('spar_knowhow_items')
-    .insert({ session_id: sid, lead_id: s.lead_id || null, kind: 'uwaga', source_tag: 'research', content: txt, created_by: uid })
-    .select('id, kind, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').single();
-  if (error) { toast('Błąd dodawania uwagi'); console.error(error); return; }
+    .insert(rec)
+    .select('id, kind, scope, source_tag, content, url, file_path, file_mime_type, meta, created_by, created_at').single();
+  if (error) { toast('Błąd dodawania do bazy wiedzy'); console.error(error); return; }
   leadData.wiedza.items.unshift(data);
-  renderLeadTab(); toast('Dodano uwagę');
+  renderLeadTab(); toast('Dodano do bazy wiedzy');
 }
 
 async function deleteWiedzaItem(itemId) {
