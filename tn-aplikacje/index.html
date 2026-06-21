@@ -500,6 +500,8 @@
       </div>
     </div>
 
+    <!-- FILTR PO ETAPIE LEJKA (zawęża karty promptów do wybranego etapu) -->
+    <div id="zr-filter" class="flex items-center gap-1.5 flex-wrap sticky top-14 z-10 py-2 -my-2 bg-black/80 backdrop-blur"></div>
     <!-- KARTY PROMPTÓW (render dynamiczny z rejestru _shared/spar-prompts.ts) -->
     <div id="zr-cards" class="space-y-4"><div class="text-sm text-zinc-500">Wczytuję…</div></div>
   </section>
@@ -2646,23 +2648,53 @@ function zrCardHtml(p) {
           : '<div class="flex items-center gap-3 mt-2"><button data-zr-save class="px-4 py-2 rounded-lg ' + accent + ' text-white text-sm font-medium transition">Zapisz</button><span class="text-xs text-zinc-500" data-zr-status></span></div><div class="text-xs text-zinc-600 mt-2" data-zr-backups>' + zrBackupsHtml(p.key, p.backups) + '</div>')
     + '</div>';
 }
+// Filtr po etapie lejka — zawęża karty promptów do wybranego etapu.
+const ZR_STAGES = [
+  { id: 'all', label: 'Wszystkie', match: () => true },
+  { id: '1', label: 'Etap 1 · Rozmowa', match: (s) => s === '1' },
+  { id: '2', label: 'Etap 2 · Współpraca', match: (s) => s === '2' },
+  { id: '3', label: 'Etap 3 · Spowiednik', match: (s) => s === '3' },
+  { id: 'base', label: 'Fundament / wszędzie', match: (s) => s === 'wszystkie' || s === 'X' },
+];
+let zrPrompts = [];
+let zrStage = 'all';
+function zrRenderFilter() {
+  const host = $('zr-filter'); if (!host) return;
+  host.innerHTML = ZR_STAGES.map((st) => {
+    const n = zrPrompts.filter((p) => st.match(p.stage)).length;
+    if (st.id !== 'all' && n === 0) return ''; // nie pokazuj pustych etapów
+    const active = zrStage === st.id;
+    return '<button data-zr-stage="' + st.id + '" class="px-3 py-1.5 rounded-lg text-xs font-medium border transition ' + (active ? 'bg-blue-600 border-blue-600 text-white' : 'border-white/10 text-zinc-400 hover:text-white hover:border-white/25') + '">' + ZR_ESC(st.label) + ' <span class="' + (active ? 'text-blue-200' : 'text-zinc-600') + '">' + n + '</span></button>';
+  }).join('');
+  host.querySelectorAll('[data-zr-stage]').forEach((b) => b.addEventListener('click', () => { zrStage = b.dataset.zrStage; zrRenderFilter(); zrRenderCards(); }));
+}
+function zrRenderCards() {
+  const host = $('zr-cards'); if (!host) return;
+  const st = ZR_STAGES.find((x) => x.id === zrStage) || ZR_STAGES[0];
+  const list = zrPrompts.filter((p) => st.match(p.stage));
+  const groups = [];
+  for (const p of list) { let g = groups.find((x) => x.group === p.group); if (!g) { g = { group: p.group, items: [] }; groups.push(g); } g.items.push(p); }
+  host.innerHTML = groups.length
+    ? groups.map((g) => '<div><div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 mt-3">' + ZR_ESC(g.group) + '</div><div class="space-y-3">' + g.items.map(zrCardHtml).join('') + '</div></div>').join('')
+    : '<div class="text-sm text-zinc-600 py-8 text-center">Brak promptów dla tego etapu.</div>';
+  host.querySelectorAll('[data-zr-card]').forEach((card) => {
+    const key = card.dataset.zrCard;
+    const ta = card.querySelector('[data-zr-ta]'), lenEl = card.querySelector('[data-zr-len]');
+    if (ta && lenEl) ta.addEventListener('input', () => { lenEl.textContent = ta.value.length + ' zn.'; });
+    const btn = card.querySelector('[data-zr-save]');
+    if (btn) btn.addEventListener('click', () => zrSave(key, card));
+  });
+}
 async function renderZrodlo() {
   if (zrLoaded || DEMO) { if (DEMO) toast('Tryb demo — edycja źródła nieaktywna'); return; }
   const host = $('zr-cards'); if (!host) return;
   host.innerHTML = '<div class="text-sm text-zinc-500">Wczytuję…</div>';
   try {
     const j = await callAdminSettings({ action: 'get' });
-    const prompts = j.prompts || [];
-    const groups = [];
-    for (const p of prompts) { let g = groups.find((x) => x.group === p.group); if (!g) { g = { group: p.group, items: [] }; groups.push(g); } g.items.push(p); }
-    host.innerHTML = groups.map((g) => '<div><div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2 mt-3">' + ZR_ESC(g.group) + '</div><div class="space-y-3">' + g.items.map(zrCardHtml).join('') + '</div></div>').join('');
-    host.querySelectorAll('[data-zr-card]').forEach((card) => {
-      const key = card.dataset.zrCard;
-      const ta = card.querySelector('[data-zr-ta]'), lenEl = card.querySelector('[data-zr-len]');
-      if (ta && lenEl) ta.addEventListener('input', () => { lenEl.textContent = ta.value.length + ' zn.'; });
-      const btn = card.querySelector('[data-zr-save]');
-      if (btn) btn.addEventListener('click', () => zrSave(key, card));
-    });
+    zrPrompts = j.prompts || [];
+    zrStage = 'all';
+    zrRenderFilter();
+    zrRenderCards();
     zrLoaded = true;
   } catch (e) { host.innerHTML = '<div class="text-sm text-red-400">Błąd: ' + ZR_ESC(e.message) + '</div>'; console.error(e); }
 }
