@@ -55,7 +55,7 @@ interface LeadData {
   budget?: string            // v2: liczba PLN jako string
   experience?: string
   open_question?: string     // v1: "czym się zajmujesz" (deprecated dla nowych)
-  lead_source?: 'website' | 'outreach' | 'manual'
+  lead_source?: 'website' | 'outreach' | 'manual' | 'stworze'
   // Tracking data
   tracking?: TrackingData
 }

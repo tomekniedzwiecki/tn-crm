@@ -302,10 +302,10 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
     // Wspólne reguły serii: zawsze nawiąż do TEGO, co realnie padło (fragment
     // rozmowy), zawsze nieś JEDEN mocny argument-artefakt, mów o artefaktach
     // jako o tym, co SIĘ ZBUDUJE / co odblokuje po dokończeniu — NIE że już jest.
-    const wspolne = ' Nawiąż do tego, na czym KONKRETNIE skończyliście (z fragmentu rozmowy) i jednym zdaniem przypomnij, czym jest to narzędzie i jaką niesie obietnicę. Artefakty opisuj jako to, co SIĘ ZBUDUJE / co odblokuje, KIEDY dokończy rozmowę — NIGDY że już jest gotowe albo „czeka w panelu". Jeśli nazwa jest generyczna („Twoje narzędzie") — pisz o „Twoim pomyśle". Bez nacisku i „wróć proszę".'
-    if (kind === 'abandoned_chat') return { goal: 'PIERWSZY, lekki sygnał (~3h po przerwaniu, jeszcze przed werdyktem). Krótko i ciepło: rozmowa jest zapisana, wraca dokładnie w to samo miejsce, dzieli ją kilka minut od dokończenia. JEDEN lekki, mocny haczyk: zaraz po dokończeniu sprawdzam na żywo TWÓJ rynek i konkurencję (realnie, w internecie). To wszystko za darmo.' + wspolne, facts: abFacts }
-    if (kind === 'abandoned_chat_2') return { goal: 'DRUGI follow-up (~następnego dnia, wciąż cisza). INNY kąt niż pierwszy: konkretnie wylicz, CO ta osoba DOSTAJE ZA DARMO, kiedy dokończy rozmowę — wymień 2–3 artefakty po imieniu: sprawdzony NA ŻYWO rynek i konkurencja (realni gracze z cenami, luka do zajęcia), policzona opłacalność (czy miesięczny abonament się spina), działająca strona sprzedażowa narzędzia. To realna robota, którą normalnie się zleca i płaci. Ustaw to jako JEJ korzyść („to Ty na tym zyskujesz"), nie Twoją prośbę.' + wspolne, facts: abFacts }
-    return { goal: 'TRZECI i OSTATNI follow-up (~2 dni, cisza). Zagraj NAJMOCNIEJSZYM pojedynczym argumentem: KLIKALNY prototyp narzędzia — działająca apka (nie obrazek), w której kliknie i sprawdzi swój pomysł od środka — to się zbuduje, gdy dokończy rozmowę. Z godnością: projekt zapisany, drzwi otwarte, decyzja należy do niej. Wpleć JEDNO wciągające pytanie nawiązujące do jej pomysłu z rozmowy. Zero desperacji, zero wyrzutów — lekka, ostatnia wiadomość.' + wspolne, facts: abFacts }
+    const wspolne = MAIL_CELE._wspolne || ''
+    if (kind === 'abandoned_chat') return { goal: (MAIL_CELE['abandoned_chat'] || '') + wspolne, facts: abFacts }
+    if (kind === 'abandoned_chat_2') return { goal: (MAIL_CELE['abandoned_chat_2'] || '') + wspolne, facts: abFacts }
+    return { goal: (MAIL_CELE['abandoned_chat_3'] || '') + wspolne, facts: abFacts }
   }
   if (kind.startsWith('nurture_')) {
     const k = s.problem_summary as Record<string, unknown> | null
@@ -316,47 +316,59 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
     const teza = mr && typeof mr.teza === 'string' ? (mr.teza as string).slice(0, 220) : ''
     const base = [`narzędzie: ${n}`, f('dla_kogo') && `dla kogo: ${f('dla_kogo')}`, f('kto_placi') && `kto płaci: ${f('kto_placi')}`].filter(Boolean).join('; ')
     // Wspólna zasada serii: GĘSTO nie długo + jeden konkret + jedno CTA.
-    const dens = 'GĘSTO, NIE DŁUGO (2–3 krótkie akapity). KAŻDY mail MUSI nieść JEDEN konkret/nową myśl — NIE samo „czeka w panelu" jako jedyną treść — i kończyć się JEDNYM jasnym CTA. '
-    if (kind === 'nurture_1') return { goal: dens + 'Seria #1 (~4 dni po werdykcie). Kąt: PROBLEM. Nawiąż do ich konkretnej sytuacji (z karty) i uderz JEDNĄ rzeczą, która otwiera oczy — np. ile ten problem realnie zżera czasu/pieniędzy (oszacuj zdroworozsądkowo, bez zmyślania twardych danych). CTA miękkie: zerknij na projekt w panelu.', facts: [base, f('problem') && `problem: ${f('problem')}`, f('dzisiejsze_obejscie') && `jak radzą dziś: ${f('dzisiejsze_obejscie')}`].filter(Boolean).join('; ') }
-    if (kind === 'nurture_2') return { goal: dens + 'Seria #2 (~7 dni). Kąt: PIENIĄDZE. Pokaż liczbę z planu po ludzku + JEDEN wniosek („to się może spinać, bo…"). ZERO żargonu. CTA: zobacz plan w panelu / „pogadajmy, jak to zbudować".', facts: [base, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
-    if (kind === 'nurture_3') return { goal: dens + 'Seria #3 (~11 dni). Kąt: RYNEK/TERAZ. JEDNA myśl o luce + czemu moment jest dobry (z tezy badania). CTA: zobacz raport rynku w panelu.', facts: [base, teza && `teza rynku: ${teza}`, f('konkurencja') && `konkurencja: ${f('konkurencja')}`].filter(Boolean).join('; ') }
-    if (kind === 'nurture_4') return { goal: dens + 'Seria #4 (~15 dni). Kąt: JAK BUDUJEMY RAZEM. JEDNA myśl rozbrajająca ryzyko (Tomek bierze na siebie budowę i rozkręcenie sprzedaży, zarabia dopiero z wyniku), pierwszy krok = wspólna rozmowa (500 zł, w pełni zwrotne). CTA: zarezerwuj rozmowę.', facts: base }
-    if (kind === 'nurture_5') return { goal: dens + 'Seria #5 (~19 dni). Kąt: ROZBROJENIE OBIEKCJI. Nazwij WPROST jeden najczęstszy opór osoby dopiero wchodzącej w biznes (np. „nie mam czasu tego ogarniać" ALBO „a co, jeśli nie wyjdzie" ALBO „brzmi skomplikowanie") i szczerze go rozpuść — bez defensywy, po ludzku: budowę i ryzyko techniczne biorę na siebie, zaczynamy mało, 500 zł jest zwrotne. JEDNA obiekcja, nie lista. CTA: zarezerwuj rozmowę.', facts: base }
-    return { goal: dens + 'Seria #6 OSTATNI, z godnością. „Zostawiam projekt otwarty, kiedy będziesz gotowy". Wpleć JEDNO wciągające pytanie nawiązujące do ich pomysłu. Delikatny link do rezerwacji. Zero desperacji, zero wyrzutów — ciepła klamra.', facts: [base, f('problem') && `problem: ${f('problem')}`].filter(Boolean).join('; ') }
+    const dens = MAIL_CELE._dens || ''
+    if (kind === 'nurture_1') return { goal: dens + (MAIL_CELE['nurture_1'] || ''), facts: [base, f('problem') && `problem: ${f('problem')}`, f('dzisiejsze_obejscie') && `jak radzą dziś: ${f('dzisiejsze_obejscie')}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_2') return { goal: dens + (MAIL_CELE['nurture_2'] || ''), facts: [base, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_3') return { goal: dens + (MAIL_CELE['nurture_3'] || ''), facts: [base, teza && `teza rynku: ${teza}`, f('konkurencja') && `konkurencja: ${f('konkurencja')}`].filter(Boolean).join('; ') }
+    if (kind === 'nurture_4') return { goal: dens + (MAIL_CELE['nurture_4'] || ''), facts: base }
+    if (kind === 'nurture_5') return { goal: dens + (MAIL_CELE['nurture_5'] || ''), facts: base }
+    return { goal: dens + (MAIL_CELE['nurture_6'] || ''), facts: [base, f('problem') && `problem: ${f('problem')}`].filter(Boolean).join('; ') }
   }
   if (kind === 'komplet_gotowy') {
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
     const mr = s.market_report as Record<string, unknown> | null
     const teza = mr && typeof mr.teza === 'string' ? mr.teza : ''
-    return { goal: 'Świeży zielony werdykt — projekt jest KOMPLETNY i CZEKA W PANELU za darmo: karta, ekrany, sprawdzony NA ŻYWO rynek+konkurencja, policzona opłacalność, plan gdzie szukać klientów. Cel TEGO maila: ŚCIĄGNĄĆ DO PANELU, żeby to zobaczył (NIE sprzedawaj jeszcze rezerwacji). Krótko, z energią „domknęliśmy to, wejdź zobacz". Wpleć JEDEN twardy konkret (liczba z planu albo teza z rynku). Link do panelu.', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`, teza && `teza rynku: ${teza.slice(0, 200)}`].filter(Boolean).join('; ') }
+    return { goal: MAIL_CELE['komplet_gotowy'] || '', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`, teza && `teza rynku: ${teza.slice(0, 200)}`].filter(Boolean).join('; ') }
   }
   if (kind === 'verdict_last_call') {
     const plan = s.business_plan; let liczba = ''
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
-    return { goal: 'To OSTATNI follow-up tego wątku (≈tydzień po zielonym werdykcie, cisza). Inny kąt niż wcześniej: lekka „domykam miejsce" + konkret. Przypomnij, że projekt dostał zielony werdykt i czeka w panelu. Bez nacisku: jeśli to nie moment — OK, projekt zostaje zapisany; jeśli chce ruszyć, rezerwacja 500 zł w pełni zwrotna. Delikatnie wpleć link do rezerwacji.', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+    return { goal: MAIL_CELE['verdict_last_call'] || '', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
   }
-  return { goal: 'Osoba właśnie zarezerwowała wspólną rozmowę (zapłaciła 500 zł, w pełni zwrotne). Podziękuj ciepło i osobiście, potwierdź że bierzesz jej projekt na warsztat: przygotowujesz plan przedsięwzięcia (zakres v1, model przychodów, droga do 50 klientów, harmonogram) i odzywasz się osobiście w 2–3 dni robocze. Bez sprzedaży, krótko. Linku nie musisz dawać.', facts: `narzędzie: ${n}` }
+  return { goal: MAIL_CELE['paid_welcome'] || '', facts: `narzędzie: ${n}` }
 }
 
-const SITUATION = `KONTEKST SYTUACJI:
-- To lejek „Aplikacja": osoba rozmawiała z Twoim AI i zaprojektowała pomysł na WŁASNE narzędzie (SaaS). To dopiero ETAP PLANOWANIA — nic nie jest jeszcze realnie zbudowane; pokazywane artefakty to plan/dowód, nie gotowy produkt.
-- Rezerwacja (500 zł, w pełni zwrotna) to PIERWSZY KROK do współpracy: umawia wspólną rozmowę z Tobą (Tomkiem), na której osobiście przedstawiasz plan wdrożenia i jak moglibyście to razem zbudować. To umówienie rozmowy, nie zakup produktu.
-- Pisz uczciwie, że to plan/projekt („zaprojektowaliśmy", „policzyłem"). Konkretny cel TEGO maila masz w sekcji CEL — trzymaj się go.`
-
-const EMAIL_SYSTEM = `${SITUATION}
-
-JAK MASZ PISAĆ:
-Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila (follow-up) — jakbyś usiadł, spojrzał na JEGO pomysł i napisał z palca w skrzynce. Nie marketing.
-ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, emoji, clickbaitu i przesady — styl brutalnie szczery, system > magia. Jeśli to pasuje, wpleć 1 KONKRET z jego pomysłu (nazwa narzędzia + jeden szczegół/liczba) — nie ogólnik. NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów — zwykły tekst akapitami.
-JĘZYK — WAŻNE: to osoby dopiero wchodzące w biznes, NIE znają żargonu. ZAKAZ pojęć: CAC, LTV, churn, MRR, retencja, konwersja, unit economics, runway. Liczby tłumacz po ludzku (np. zamiast „CAC" → „koszt zdobycia jednego klienta").
-TON — WAŻNE: nie błagaj i nie naciskaj. To Ty dajesz tej osobie szansę na własne narzędzie — ona ma z niej skorzystać, nie odwrotnie. Zero desperacji i „wróć proszę". Jeśli w kontekście jest FRAGMENT ROZMOWY, nawiąż do tego, co realnie padło (jej pomysł, jej słowa) — tak, żeby było widać, że to ciąg dalszy JEJ wątku, a nie masowy mail. Nie cytuj rozmowy dosłownie ani nie streszczaj jej punkt po punkcie — po prostu pisz tak, jakbyś ją pamiętał.
-LINKI: jeśli w kontekście jest LINK_VIEW, wstaw go RAZ jako [naturalny tekst](LINK_VIEW) — ale jego ZNACZENIE bierz z kontekstu (powrót do rozmowy ALBO podgląd projektu) i NIE obiecuj rzeczy, których kontekst nie potwierdza. Jeśli jest LINK_RESERVE, możesz go delikatnie wpleść jako [tekst](LINK_RESERVE). Nie wymyślaj żadnych adresów. Jeśli żaden link nie pasuje (np. samo podziękowanie) — nie dawaj linku.
-Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string}. subject: krótki (do ~55 znaków), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
+// ── Prompty maili: JEDNO źródło = settings (rejestr _shared/spar-prompts.ts).
+//    Ładowane raz na cold-start; pusty fallback = bezpiecznik (→ statyczny mail),
+//    NIE kopia treści. SITUATION wstawiana w {{SYTUACJA}} system-promptów. ──
+let MAIL_SITUATION = ''
+let EMAIL_SYSTEM = ''
+let SEQUENCE_SYSTEM = ''
+let MAIL_CELE: Record<string, string> = {}
+// SMS-y „powrotu z ekranu" (badanie/ekrany) — treść z settings, link w {{LINK}}.
+let SMS_BADANIE_BACK = ''
+let SMS_EKRANY_BACK = ''
+async function ensureMailPrompts(supabase: ReturnType<typeof createClient>): Promise<void> {
+  if (EMAIL_SYSTEM) return
+  try {
+    const { data } = await supabase.from('settings').select('key, value')
+      .in('key', ['aplikacja_mail_sytuacja', 'aplikacja_mail_email_system', 'aplikacja_mail_sequence_system', 'aplikacja_mail_cele', 'aplikacja_sms_badanie_back', 'aplikacja_sms_ekrany_back'])
+    const ev = (k: string) => ((data || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''
+    MAIL_SITUATION = ev('aplikacja_mail_sytuacja')
+    const sub = (t: string) => t.split('{{SYTUACJA}}').join(MAIL_SITUATION) // literalnie (bez $-magii replace)
+    EMAIL_SYSTEM = sub(ev('aplikacja_mail_email_system'))
+    SEQUENCE_SYSTEM = sub(ev('aplikacja_mail_sequence_system'))
+    SMS_BADANIE_BACK = ev('aplikacja_sms_badanie_back')
+    SMS_EKRANY_BACK = ev('aplikacja_sms_ekrany_back')
+    try { MAIL_CELE = JSON.parse(ev('aplikacja_mail_cele') || '{}') } catch (pErr) { console.error('[spar-followups] cele JSON parse:', pErr); MAIL_CELE = {} }
+  } catch (_e) { /* fallback: puste prompty → statyczny mail (bezpiecznik) */ }
+}
 
 async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: string | null, reserveUrl: string | null, convo = ''): Promise<{ subject: string; html: string; usage: { i: number; c: number; o: number } | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
+  if (!EMAIL_SYSTEM) return null // prompty z settings nie załadowane → statyczny fallback (bezpiecznik)
   const brief = followupBrief(kind, s)
   const b = s.preview_brief || {}
   const resume = kind.startsWith('abandoned_chat')
@@ -411,24 +423,14 @@ async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: stri
 }
 
 // System prompt dla CAŁEJ trójki w jednym strzale (taniej niż 3 osobne calle).
-const SEQUENCE_SYSTEM = `${SITUATION}
-
-PISZESZ JEDNĄ SEKWENCJĘ 3 MAILI „powrotu do rozmowy" do TEJ SAMEJ osoby (rozmowa z Twoim AI urwała się przed werdyktem). Mają iść po sobie w odstępie ~kilku godzin / dnia: mail 2 to kolejna próba, mail 3 jest ostatni. KAŻDY ma INNY mocny argument (wg swojego CELU) — NIE powtarzaj tych samych zdań ani tego samego argumentu między mailami.
-JAK MASZ PISAĆ (każdy mail):
-Jesteś Tomkiem Niedźwieckim, piszesz krótko i OSOBIŚCIE — jakbyś usiadł, spojrzał na JEGO pomysł i napisał z palca w skrzynce. Nie marketing.
-ZASADY: po polsku, na „Ty", ciepło i konkretnie. KRÓTKO (2–4 krótkie akapity). Bez korpomowy, emoji, clickbaitu, przesady. Wpleć 1 KONKRET z jego pomysłu/rozmowy (nazwa, szczegół, branża) — nie ogólnik. NIE podpisuj się ani nie dawaj stopki (dokleja się automatycznie). Bez nagłówków, list i buttonów.
-JĘZYK: to osoby dopiero wchodzące w biznes — ZERO żargonu (CAC, LTV, churn, MRR, retencja, konwersja…). Liczby tłumacz po ludzku.
-TON: nie błagaj, nie naciskaj, zero „wróć proszę". Nawiąż do tego, co realnie padło w rozmowie (jego pomysł, jego słowa) — ma być czuć ciąg dalszy JEGO wątku, nie masowy mail. Nie cytuj dosłownie ani nie streszczaj punkt po punkcie.
-ARTEFAKTY (rynek, opłacalność, strona, plan sprzedaży, KLIKALNY prototyp) JESZCZE NIE ISTNIEJĄ — to NAGRODA za dokończenie rozmowy. Opisuj je jako to, co SIĘ ZBUDUJE / odblokuje, KIEDY dokończy — NIGDY że już są albo „czekają w panelu".
-LINKI: w KAŻDYM mailu wstaw DOKŁADNIE RAZ [naturalny tekst](LINK_VIEW) = powrót do ROZMOWY w to samo miejsce (NIE gotowy projekt). Nie wymyślaj adresów.
-SMS (osobne pole „sms"): JEDEN krótki SMS „powrotu", który poleci ~dzień po ostatnim mailu, jeśli osoba dalej milczy. Ma wzbudzić CIEKAWOŚĆ i ściągnąć ją z powrotem, żeby DOKOŃCZYŁA rozmowę (to kilka minut). Nawiąż do JEJ pomysłu jednym konkretem. NIE obiecuj rzeczy „gotowych w panelu" — rozmowa nie została dokończona, artefakty dopiero powstaną. ŻELAZNE zasady kodowania: BEZ polskich znaków diakrytycznych (pisz „a" nie „ą", „l" nie „ł", „s" nie „ś" itd.); TYLKO ASCII (proste " ' - . ,); ABSOLUTNY ZAKAZ typograficznych „ ” ' ' – — …; BEZ linku/URL (dokleimy sami); 150–200 znaków; po ludzku, na „Ty"; podpis krótko „~Tomek"; bez wielkich krzyczących liter, emoji i wykrzykników.
-Zwróć WYŁĄCZNIE JSON: {"emails":[{"seq":1,"subject":...,"body":...},{"seq":2,...},{"seq":3,...}],"sms":string}. subject: krótki (≤~55 zn.), konkretny, bez wielkich liter i wykrzykników. body: sam tekst z \\n między akapitami.`
+// Treść w settings: aplikacja_mail_sequence_system (ładowana w ensureMailPrompts).
 
 // Jeden GPT-call → 3 maile + 1 SMS sekwencji powrotu. Zwraca {emails,sms} (lub null).
 // deno-lint-ignore no-explicit-any
 async function generateAbandonedSequence(supabase: ReturnType<typeof createClient>, s: SessionRow, convo: string): Promise<{ emails: { kind: string; seq: number; subject: string; html: string }[]; sms: string | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
+  if (!SEQUENCE_SYSTEM) return null // prompty z settings nie załadowane → statyczny fallback (bezpiecznik)
   const b = s.preview_brief || {}
   const tn = toolName(s)
   const hasName = !!tn && tn !== 'Twoje narzędzie'
@@ -511,6 +513,7 @@ Deno.serve(async (req) => {
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500)
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+    await ensureMailPrompts(supabase) // prompty maili z settings (raz na cold-start) — przed każdą generacją
 
     // Funkcja jest --no-verify-jwt (woła ją pg_cron przez pg_net). Cron = sekret
     // w nagłówku; admin (panel) = x-admin-secret LUB ważny JWT zalogowanego admina.
@@ -973,10 +976,12 @@ Deno.serve(async (req) => {
         const ekrany = s.left_screen === 'ekrany' || (s.left_screen !== 'badanie' && hasPreview)
         if (ekrany) {
           if (t?.kinds.has('sms_ekrany_back')) continue
-          await sendSmsOnce('sms_ekrany_back', s, `Tu Tomek. Pierwsze ekrany Twojego narzedzia sa juz gotowe do obejrzenia - wracasz dokladnie tam, gdzie skonczylismy: ${smsLink(s.id)}`)
+          if (!SMS_EKRANY_BACK) continue // treść z settings nie załadowana → pomiń (bezpiecznik)
+          await sendSmsOnce('sms_ekrany_back', s, gsmSafe(SMS_EKRANY_BACK).split('{{LINK}}').join(smsLink(s.id)))
         } else {
           if (t?.kinds.has('sms_badanie_back')) continue
-          await sendSmsOnce('sms_badanie_back', s, `Tu Tomek. Sprawdzilem na zywo Twoj rynek i konkurencje - mam konkretne wnioski. Wracasz w to samo miejsce w rozmowie: ${smsLink(s.id)}`)
+          if (!SMS_BADANIE_BACK) continue // treść z settings nie załadowana → pomiń (bezpiecznik)
+          await sendSmsOnce('sms_badanie_back', s, gsmSafe(SMS_BADANIE_BACK).split('{{LINK}}').join(smsLink(s.id)))
         }
       }
     }

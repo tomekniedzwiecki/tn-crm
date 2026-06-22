@@ -21,6 +21,7 @@
 //                        przy błędzie "model not found" automatyczny fallback gpt-image-1)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -47,10 +48,15 @@ const IMAGE_MODEL = Deno.env.get('SPAR_IMAGE_MODEL') || 'gpt-image-2'
 const IMAGE_MODEL_FALLBACK = 'gpt-image-1'
 // Koszt USD jednego obrazu 1536x1024 per quality (logowanie do spar_usage)
 const IMAGE_COST_USD: Record<string, number> = { low: 0.011, medium: 0.041, high: 0.167 }
-const MAX_IMAGES_PER_SESSION = 8     // 4 widoki startowe + 4 poprawki
-// Dzienny limit per IP (anty-abuse). Na czas testów rozwojowych podniesiony
-// przez default 200 — PRZED kampanią reklamową ustawić env SPAR_IMG_IP_DAILY=20.
-const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || '200', 10)
+const MAX_IMAGES_PER_SESSION = 16    // 4 widoki startowe + 12 poprawek (~3 rundy poprawek
+                                     // wizualnych; jedna uwaga „zrób cieplej" regeneruje 4 widoki)
+const STARTOWE_VIEWS = 4             // pierwsze 4 makiety = moment „wow" lejka — NIGDY nie blokuj
+                                     // ich dziennym capem IP/konta (patrz niżej)
+// Dzienny limit per IP (anty-abuse). UWAGA: cap zlicza obrazy ze WSZYSTKICH sesji
+// dzielących IP, więc za współdzielonym NAT-em (mobile/biuro/szkoła) realni userzy
+// się kumulują — NIE ustawiać zbyt nisko (20 było za mało; ~120 znosi normalny ruch).
+// Pierwsze STARTOWE_VIEWS makiety sesji są spod tego capu wyłączone.
+const MAX_IMAGES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_IP_DAILY') || '120', 10)
 // Dzienny limit per KONTO (auth_user_id) — IP łatwo zmienić, konto trudniej.
 // Na czas testów default 200; PRZED kampanią ustawić env SPAR_IMG_USER_DAILY=20.
 const MAX_IMAGES_PER_USER_PER_DAY = parseInt(Deno.env.get('SPAR_IMG_USER_DAILY') || '200', 10)
@@ -244,31 +250,56 @@ function buildImagePrompt(brief: Record<string, unknown>, view: ScreenView): str
 // Wywołanie OpenAI Images API; przy błędzie nieznanego modelu — fallback.
 // Zwraca też model FAKTYCZNIE użyty (po fallbacku) — do logu kosztów.
 async function generateImage(apiKey: string, prompt: string): Promise<{ bytes: Uint8Array; usedModel: string }> {
-  const call = async (model: string): Promise<Response> =>
-    fetch('https://api.openai.com/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model,
-        prompt,
-        size: '1536x1024',
-        quality: Deno.env.get('SPAR_IMAGE_QUALITY') || 'medium',
-        n: 1,
-      }),
-    })
+  const TRANSIENT = new Set([429, 500, 502, 503, 504])
+  const call = async (model: string): Promise<Response> => {
+    const ctrl = new AbortController()
+    const to = setTimeout(() => ctrl.abort(), 120000) // twardy timeout — request nie może wisieć w nieskończoność
+    try {
+      return await fetch('https://api.openai.com/v1/images/generations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model,
+          prompt,
+          size: '1536x1024',
+          quality: Deno.env.get('SPAR_IMAGE_QUALITY') || 'medium',
+          n: 1,
+        }),
+        signal: ctrl.signal,
+      })
+    } finally { clearTimeout(to) }
+  }
+  // Retry na błędy PRZEJŚCIOWE (429/5xx/sieć/timeout) — samoleczenie blipów OpenAI,
+  // żeby chwilowy problem nie kończył się komunikatem „nie udało się wygenerować".
+  const callRetry = async (model: string): Promise<Response> => {
+    let last: Response | null = null
+    for (let attempt = 0; attempt < 3; attempt++) {
+      if (attempt > 0) await new Promise((r) => setTimeout(r, 1200 * attempt))
+      try {
+        const r = await call(model)
+        if (r.ok || !TRANSIENT.has(r.status)) return r
+        last = r
+        console.error(`[spar-image] ${model} przejściowy ${r.status}, próba ${attempt + 1}/3`)
+      } catch (e) {
+        console.error(`[spar-image] ${model} sieć/timeout, próba ${attempt + 1}/3:`, e)
+        if (attempt === 2) throw new Error('openai_images_error')
+      }
+    }
+    return last as Response
+  }
 
   let usedModel = IMAGE_MODEL
-  let res = await call(IMAGE_MODEL)
+  let res = await callRetry(IMAGE_MODEL)
   if (!res.ok) {
     const errText = await res.text().catch(() => '')
     const modelProblem = res.status === 400 || res.status === 404
     console.error(`[spar-image] ${IMAGE_MODEL} error:`, res.status, errText.slice(0, 500))
     if (modelProblem && IMAGE_MODEL !== IMAGE_MODEL_FALLBACK && /model/i.test(errText)) {
       console.log(`[spar-image] fallback na ${IMAGE_MODEL_FALLBACK}`)
-      res = await call(IMAGE_MODEL_FALLBACK)
+      res = await callRetry(IMAGE_MODEL_FALLBACK)
       usedModel = IMAGE_MODEL_FALLBACK
       if (!res.ok) {
         const fbText = await res.text().catch(() => '')
@@ -290,6 +321,81 @@ async function generateImage(apiKey: string, prompt: string): Promise<{ bytes: U
   const bytes = new Uint8Array(bin.length)
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
   return { bytes, usedModel }
+}
+
+// ── Powiadomienie #sparing: galeria gotowych ekranów (raz na sesję) ──────────
+// Wzorzec 1:1 ze spar-chat (postSlackSparing). Błąd Slacka NIGDY nie wywraca
+// generacji obrazka — tylko logujemy.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[spar-image] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[spar-image] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[spar-image] slack-notify ${type} exception:`, err)
+  }
+}
+
+// Po skompletowaniu startowego zestawu ekranów → JEDNA wiadomość-galeria na
+// #sparing. Atomowy claim na slack_preview_notified_at domyka 4 równoległe
+// generacje (tylko jeden request wygra wiersz). is_test pomijane. Regeneracje/
+// poprawki nie pingują ponownie (kolumna już niepusta). Wołane tylko gdy nowy
+// image_count >= STARTOWE_VIEWS (komplet ekranów roboczych istnieje).
+async function maybeNotifyPreviewSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('spar_sessions')
+      .update({ slack_preview_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_preview_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, preview_brief, preview_images, landing_url')
+    if (error) { console.error('[spar-image] preview slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    const imgsObj = (s.preview_images && typeof s.preview_images === 'object') ? s.preview_images as Record<string, unknown> : {}
+    // Kolejność: ekrany robocze, potem widoki extra (jeśli już istnieją)
+    const order = ['panel', 'glowna', 'dodatkowa', 'landing', 'podsumowanie', 'sklep', 'telefon']
+    const images = order
+      .filter((v) => typeof imgsObj[v] === 'string' && imgsObj[v])
+      .map((v) => ({ view: v, url: imgsObj[v] as string }))
+    // Prototyp żyje w spar_usage (kind='prototype', meta.url) — brak kolumny
+    let prototypeUrl: string | null = null
+    try {
+      const { data: proto } = await supabase
+        .from('spar_usage')
+        .select('meta')
+        .eq('session_id', sessionId)
+        .eq('kind', 'prototype')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      const m = proto?.meta as Record<string, unknown> | undefined
+      if (m && typeof m.url === 'string') prototypeUrl = m.url
+    } catch (e) { console.error('[spar-image] prototype url lookup error:', e) }
+    await postSlackSparing('spar_preview', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: brief?.nazwa ?? null,
+      images,
+      landing_url: (typeof s.landing_url === 'string' && s.landing_url) ? s.landing_url : null,
+      prototype_url: prototypeUrl,
+    })
+  } catch (err) {
+    console.error('[spar-image] maybeNotifyPreviewSlack exception:', err)
+  }
 }
 
 Deno.serve(async (req) => {
@@ -341,6 +447,14 @@ Deno.serve(async (req) => {
     if (!session) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, corsHeaders)
     }
+    // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
+    // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
+    {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      }
+    }
     const brief = session.preview_brief as Record<string, unknown> | null
     if (!brief) {
       // brief zapisuje spar-chat z markera <projekt> — bez niego nie generujemy
@@ -381,7 +495,9 @@ Deno.serve(async (req) => {
     // image_count sesji z created_at łatwo było ominąć starą sesją (>24 h),
     // bo image_count to licznik kumulatywny, a filtr patrzył na wiek sesji.
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
-    if (ip) {
+    // #4: pierwsze STARTOWE_VIEWS makiety sesji (moment „wow") są spod capu IP wyłączone,
+    // żeby user za współdzielonym NAT-em nie stracił podglądu przez cudzy ruch.
+    if (ip && imageCount >= STARTOWE_VIEWS) {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       const { data: ipSessions, error: ipError } = await supabase
         .from('spar_sessions')
@@ -407,7 +523,8 @@ Deno.serve(async (req) => {
     // Limit dzienny per KONTO — obrazy z 24 h zliczane po WSZYSTKICH sesjach
     // przypiętych do auth_user_id (nowa rozmowa nie resetuje puli konta)
     const ownerId = (session.auth_user_id as string | null) || null
-    if (ownerId) {
+    // #4: jak wyżej — startowe makiety nie podlegają dziennemu capowi konta
+    if (ownerId && imageCount >= STARTOWE_VIEWS) {
       const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       const { data: ownerSessions, error: ownerErr } = await supabase
         .from('spar_sessions')
@@ -473,6 +590,17 @@ Deno.serve(async (req) => {
       .rpc('spar_record_image', { p_session: sessionId, p_view: view, p_url: url })
     if (rpcError) console.error('[spar-image] rpc spar_record_image error:', rpcError)
     const count = typeof newCount === 'number' ? newCount : imageCount + 1
+
+    // Komplet ekranów roboczych gotowy → jedna galeria na #sparing (dedup w
+    // maybeNotifyPreviewSlack). waitUntil — powiadomienie nie może opóźnić
+    // odpowiedzi do frontu ani zginąć po zwróceniu response.
+    if (count >= STARTOWE_VIEWS) {
+      const notifyTask = maybeNotifyPreviewSlack(supabase, sessionId)
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime
+      if (rt?.waitUntil) rt.waitUntil(notifyTask)
+      else await notifyTask.catch(() => {})
+    }
 
     // archived: URL zastąpionej wersji — frontend dopisuje ją do lokalnego
     // archiwum nawet, gdy nie znał poprzedniego stanu (np. po powrocie z linku)

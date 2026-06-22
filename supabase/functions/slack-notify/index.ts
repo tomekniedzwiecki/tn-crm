@@ -90,6 +90,11 @@ Deno.serve(async (req) => {
         message = formatSparGreenMessage(data)
         break
 
+      case 'spar_preview':
+        webhookUrl = webhookSparing
+        message = formatSparPreviewMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -1167,6 +1172,108 @@ function formatSparContactMessage(data: {
   }
 
   const actions = sparActionButtons(data.session_id, data.phone)
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+
+  blocks.push({
+    type: 'context',
+    elements: [{
+      type: 'mrkdwn',
+      text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}`
+    }]
+  })
+
+  return { blocks }
+}
+
+// Czytelna nazwa widoku ekranu (klucze z spar-image)
+const SPAR_VIEW_LABELS: Record<string, string> = {
+  panel: 'Pulpit',
+  glowna: 'Główny ekran',
+  dodatkowa: 'Dodatkowy ekran',
+  landing: 'Strona sprzedażowa',
+  podsumowanie: 'Projekt w pigułce',
+  sklep: 'W sklepie z aplikacjami',
+  telefon: 'W dłoni',
+}
+
+// Publiczny URL pliku PNG (…/storage/v1/object/public/…) → render endpoint
+// (…/storage/v1/render/image/public/…?width=600&resize=contain). resize=contain
+// OBOWIĄZKOWO — samo width tnie boki i Slack dostałby pionowy wycinek
+// (patrz pamięć: feedback-supabase-render-api-resize-contain).
+function toRenderUrl(publicUrl: string, width = 600): string {
+  if (typeof publicUrl !== 'string' || !publicUrl.includes('/storage/v1/object/public/')) return publicUrl
+  const base = publicUrl.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/')
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}width=${width}&resize=contain`
+}
+
+// Galeria wygenerowanych ekranów aplikacji (PNG ze spar-image) na #sparing.
+// Każdy ekran = osobny image block (Slack pokazuje miniaturę). Dodatkowo
+// przyciski: karta w CRM, WhatsApp oraz — jeśli istnieją — live landing i prototyp.
+function formatSparPreviewMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  images?: { view?: string; url?: string }[]
+  landing_url?: string | null
+  prototype_url?: string | null
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+
+  const blocks: any[] = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: '🎨 Sparing — podgląd aplikacji gotowy', emoji: true }
+    },
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` }
+    }
+  ]
+
+  // Slack: max ~50 bloków/wiadomość — ekranów jest 4-7, mieścimy się z zapasem.
+  const images = Array.isArray(data.images) ? data.images : []
+  for (const img of images) {
+    if (!img || typeof img.url !== 'string' || !img.url) continue
+    const label = SPAR_VIEW_LABELS[img.view || ''] || (img.view || 'Ekran')
+    blocks.push({
+      type: 'image',
+      title: { type: 'plain_text', text: label, emoji: false },
+      image_url: toRenderUrl(img.url),
+      alt_text: label,
+    })
+  }
+
+  if (!images.some((i) => i && typeof i.url === 'string' && i.url)) {
+    blocks.push({
+      type: 'context',
+      elements: [{ type: 'mrkdwn', text: '⚠️ Brak gotowych miniatur ekranów do pokazania.' }]
+    })
+  }
+
+  // Przyciski: karta w CRM + WhatsApp (wspólny helper) + live landing/prototyp
+  const actions = sparActionButtons(data.session_id, data.phone)
+  if (data.landing_url) {
+    actions.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '🌐 Zobacz stronę', emoji: true },
+      url: data.landing_url,
+      action_id: 'view_spar_landing',
+    })
+  }
+  if (data.prototype_url) {
+    actions.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '📱 Zobacz prototyp', emoji: true },
+      url: data.prototype_url,
+      action_id: 'view_spar_prototype',
+    })
+  }
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
 
   blocks.push({

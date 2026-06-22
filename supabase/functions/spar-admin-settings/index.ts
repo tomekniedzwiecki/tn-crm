@@ -81,6 +81,16 @@ Deno.serve(async (req) => {
     if (!rule || !rule.editable) return json({ error: 'klucz_niedozwolony' }, 400, c);
     if (value.length < rule.min) return json({ error: `Treść za krótka (min ${rule.min} znaków — zabezpieczenie przed wyczyszczeniem).` }, 400, c);
     if (value.length > rule.max) return json({ error: `Treść za długa (max ${rule.max} znaków).` }, 400, c);
+    // Klucze celów maili przechowują mapę JSON {kind→cel}. Pilnujemy poprawności,
+    // by literówka nie wyzerowała po cichu celów w runtime (loader robi JSON.parse).
+    if (key.endsWith('_cele')) {
+      try { const o = JSON.parse(value); if (!o || typeof o !== 'object' || Array.isArray(o)) throw new Error('nie-obiekt'); }
+      catch { return json({ error: 'Treść musi być poprawnym JSON-em (obiekt {klucz: "cel"}).' }, 400, c); }
+    }
+    // SMS „powrotu" MUSZĄ zawierać placeholder linku — inaczej SMS poszedłby bez adresu.
+    if (key.startsWith('aplikacja_sms_') && !value.includes('{{LINK}}')) {
+      return json({ error: 'Treść SMS musi zawierać {{LINK}} (tam wstawiany jest link do panelu).' }, 400, c);
+    }
 
     const { data: cur } = await supabase.from('settings').select('value').eq('key', key).maybeSingle();
     const stamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14); // RRRRMMDDHHMMSS

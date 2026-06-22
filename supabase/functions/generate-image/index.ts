@@ -135,7 +135,8 @@ async function generateWithOpenAI(
   count: number,
   apiKey: string,
   referenceImages?: { url: string; type: 'logo' | 'product' }[],
-  aspectRatio?: string
+  aspectRatio?: string,
+  quality: string = 'high'
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
   const model = 'gpt-image-2'
   const size = aspectRatioToOpenAISize(aspectRatio || '1:1')
@@ -202,7 +203,7 @@ async function generateWithOpenAI(
     form.append('prompt', finalPrompt)
     form.append('n', String(n))
     if (size !== 'auto') form.append('size', size)
-    form.append('quality', 'high')
+    form.append('quality', quality)
     for (const rb of refBlobs) {
       form.append('image[]', rb.blob, rb.filename)
     }
@@ -213,7 +214,7 @@ async function generateWithOpenAI(
       method: 'POST',
       headers: { 'Authorization': `Bearer ${apiKey}` },
       body: form,
-      signal: AbortSignal.timeout(120000)
+      signal: AbortSignal.timeout(240000)
     }).catch(err => {
       console.error(`OpenAI edits fetch FAILED after ${Date.now()-startEdits}ms:`, err.name, err.message)
       throw new Error(`OpenAI edits fetch error after ${Date.now()-startEdits}ms: ${err.name}: ${err.message}`)
@@ -240,7 +241,7 @@ async function generateWithOpenAI(
       model,
       prompt: finalPrompt,
       n,
-      quality: 'high'
+      quality
     }
     if (size !== 'auto') body.size = size
 
@@ -253,7 +254,7 @@ async function generateWithOpenAI(
         'Content-Type': 'application/json'
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120000)
+      signal: AbortSignal.timeout(240000)
     }).catch(err => {
       console.error(`OpenAI generations fetch FAILED after ${Date.now()-startGen}ms:`, err.name, err.message)
       throw new Error(`OpenAI generations fetch error after ${Date.now()-startGen}ms: ${err.name}: ${err.message}`)
@@ -449,7 +450,8 @@ Deno.serve(async (req) => {
 
   try {
     const body = await req.json()
-    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images, aspect_ratio, provider: providerOverride } = body
+    const { prompt, count = 1, workflow_id, type, reference_image_url, reference_images, aspect_ratio, provider: providerOverride, quality } = body
+    const finalQuality = ['low', 'medium', 'high'].includes(quality) ? quality : 'high'
 
     // Validate aspect_ratio against Gemini-supported values (GPT-image-2 path maps them internally)
     const ALLOWED_ASPECT_RATIOS = ['1:1', '2:3', '3:2', '3:4', '4:3', '4:5', '5:4', '9:16', '16:9', '21:9']
@@ -558,7 +560,7 @@ Deno.serve(async (req) => {
       if (!openaiKey) {
         throw new Error('Missing OPENAI_API_KEY - add it in Supabase Edge Functions Secrets')
       }
-      result = await generateWithOpenAI(prompt, count, openaiKey, refImages, finalAspectRatio)
+      result = await generateWithOpenAI(prompt, count, openaiKey, refImages, finalAspectRatio, finalQuality)
     } else {
       const apiKey = Deno.env.get('GOOGLE_AI_API_KEY')
       if (!apiKey) {

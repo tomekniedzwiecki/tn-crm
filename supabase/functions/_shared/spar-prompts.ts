@@ -62,6 +62,18 @@ export const SPAR_PROMPTS: PromptDef[] = [
   { key: 'aplikacja_etap_preview_po_kierunku', label: 'Podgląd po dopracowaniu kierunku', group: 'Instrukcje etapów rozmowy', stage: '1', editable: true, min: 100, max: 6000, note: 'Po badaniu rynku + akceptacji kierunku → <projekt> + zielony werdykt.' },
   { key: 'aplikacja_etap_wspolpraca', label: 'Faza współpracy (po zielonym werdykcie)', group: 'Instrukcje etapów rozmowy', stage: '2', editable: true, min: 100, max: 6000, note: 'Przejście z oceny w rezerwację + przełamywanie obiekcji.' },
   { key: 'aplikacja_etap_rezygnacja', label: 'Detekcja rezygnacji', group: 'Instrukcje etapów rozmowy', stage: 'X', editable: true, min: 100, max: 6000, note: 'Dwustopniowy protokół oznaczania rezygnacji (<rezygnacja/>).' },
+  // Maile follow-up (spar-followups). System-prompty zawierają placeholder {{SYTUACJA}} — NIE usuwaj go.
+  { key: 'aplikacja_mail_sytuacja', label: 'Follow-up — kontekst sytuacji', group: 'Maile — follow-up', stage: '1', editable: true, min: 100, max: 8000, note: 'Wspólny kontekst (SITUATION) wstawiany w {{SYTUACJA}} obu system-promptów follow-upów.' },
+  { key: 'aplikacja_mail_email_system', label: 'Follow-up — system prompt (pojedynczy mail)', group: 'Maile — follow-up', stage: '1', editable: true, min: 300, max: 12000, note: 'Głos/ton/żargon dla pojedynczych follow-upów (nurture, last_call, welcome). Zawiera {{SYTUACJA}}.' },
+  { key: 'aplikacja_mail_sequence_system', label: 'Follow-up — system prompt (sekwencja powrotu)', group: 'Maile — follow-up', stage: '1', editable: true, min: 300, max: 12000, note: 'Prompt dla sekwencji 3 maili „powrotu do rozmowy" + SMS. Zawiera {{SYTUACJA}}.' },
+  { key: 'aplikacja_mail_cele', label: 'Follow-up — cele maili (JSON)', group: 'Maile — follow-up', stage: '1', editable: true, min: 100, max: 16000, note: 'JSON: cel każdego maila po kind (+ _wspolne/_dens = reguły serii). Musi pozostać poprawnym JSON-em.' },
+  // Maile drip „sekwencja odkrywania" (spar-drip). System prompt: {{SYTUACJA}} + {{MODEL_BLOCK}}.
+  { key: 'aplikacja_drip_sytuacja', label: 'Drip — kontekst sytuacji', group: 'Maile — drip (odkrywanie)', stage: '2', editable: true, min: 100, max: 8000, note: 'Kontekst (SITUATION) wstawiany w {{SYTUACJA}} system-promptu dripu.' },
+  { key: 'aplikacja_drip_system', label: 'Drip — system prompt (reveale)', group: 'Maile — drip (odkrywanie)', stage: '2', editable: true, min: 300, max: 16000, note: 'Głos/ton/żargon maili odsłon (rynek/economics/landing/prototyp/gtm). Zawiera {{SYTUACJA}} i {{MODEL_BLOCK}} — NIE usuwaj.' },
+  { key: 'aplikacja_drip_cele', label: 'Drip — cele odsłon (JSON)', group: 'Maile — drip (odkrywanie)', stage: '2', editable: true, min: 100, max: 12000, note: 'JSON: cel maila każdej odsłony po kluczu (rynek/economics/landing/prototyp/gtm). Poprawny JSON.' },
+  // SMS reaktywacyjne „powrotu z ekranu" (spar-followups, gated SMS_ENABLED). Link w {{LINK}} — NIE usuwaj.
+  { key: 'aplikacja_sms_ekrany_back', label: 'SMS powrotu — ekrany', group: 'SMS — reaktywacja', stage: '1', editable: true, min: 20, max: 300, note: 'Gdy lead wyszedł z generowania ekranów. BEZ polskich znaków (auto-transliteracja), ≤~2 segmenty. Musi zawierać {{LINK}}.' },
+  { key: 'aplikacja_sms_badanie_back', label: 'SMS powrotu — badanie rynku', group: 'SMS — reaktywacja', stage: '1', editable: true, min: 20, max: 300, note: 'Gdy lead wyszedł z badania rynku. BEZ polskich znaków (auto-transliteracja), ≤~2 segmenty. Musi zawierać {{LINK}}.' },
 ];
 
 // Mapa key→def (szybki lookup w walidacji zapisu).

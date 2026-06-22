@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
     // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji
     const { data, error } = await supabase
       .from('spar_sessions')
-      .select('preview_brief, preview_images, created_at')
+      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at')
       .or('is_test.eq.false,showcase.eq.true')
       .eq('hidden_from_feed', false)
       .not('preview_images', 'is', null)
@@ -73,12 +73,29 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: 'blad_serwera' }), { status: 500, headers: cors })
     }
 
+    // Które z tych sesji mają KLIKALNY PROTOTYP (spar_usage kind=prototype) —
+    // ta sama bramka co publiczny widok /aplikacja/projekt: „complete" = zielony
+    // + strona sprzedażowa (landing_url) + prototyp. Tylko takie karty mogą
+    // prowadzić w głąb (inaczej /projekt zwróci 404). 1 zapytanie na całą stronę.
+    const rowIds = (data || []).map((r) => r.id as string).filter(Boolean)
+    const protoSet = new Set<string>()
+    if (rowIds.length) {
+      const { data: protos } = await supabase
+        .from('spar_usage')
+        .select('session_id')
+        .eq('kind', 'prototype')
+        .in('session_id', rowIds)
+      for (const p of protos || []) protoSet.add((p as { session_id: string }).session_id)
+    }
+
     const VIEW_LABELS: Record<string, string> = {
       panel: 'Pulpit', glowna: 'Główna funkcja', dodatkowa: 'Dodatkowa funkcja',
       landing: 'Strona sprzedażowa', podsumowanie: 'Projekt w pigułce',
     }
     interface FeedItem {
+      id: string
       nazwa: string
+      complete: boolean
       img: string
       generated_at: string
       imgs: { view: string; label: string; url: string }[]
@@ -101,8 +118,13 @@ Deno.serve(async (req) => {
       }
       if (!imgs.length) continue
       seen.add(nazwa)
+      // 1:1 z bramką publicznego /aplikacja/projekt (która odrzuca is_test): tylko
+      // realny, zielony, kompletny projekt może prowadzić w głąb — inaczej 404.
+      const complete = row.verdict === 'zielony' && !row.is_test && !!row.landing_url && protoSet.has(row.id as string)
       projekty.push({
+        id: row.id as string,
         nazwa,
+        complete, // zielony + strona + prototyp → karta prowadzi do pełnego /projekt
         img: imgs[0].url, // wsteczna zgodność (strona główna)
         generated_at: maxTs ? new Date(maxTs).toISOString() : (row.created_at as string),
         imgs,

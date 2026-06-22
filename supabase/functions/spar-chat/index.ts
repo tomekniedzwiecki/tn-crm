@@ -1114,7 +1114,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1353,6 +1353,13 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
         // Bez tego GATE_INSTRUCTION ciągnął agenta z powrotem do <ocena>.
         sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
+        // Wstrzyknij USTALONY projekt (zielony werdykt), żeby odpowiedzi o ofercie/
+        // zakresie/liście funkcji/cenie były precyzyjnie pod TEN projekt (ekrany,
+        // funkcja rdzeniowa, model przychodu) — a nie generyczne. FAQ OFERTY każe
+        // „brać z karty"; tu mu tę kartę realnie podajemy (analogicznie do trybu know-how).
+        const collabCard = (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
+        const collabPlan = existingSession?.business_plan as Record<string, unknown> | null
+        if (collabCard) sessionContext += `\n\n[USTALONY PROJEKT (zielony werdykt) — przy pytaniach o ofertę/zakres/„co wchodzi w cenę"/listę funkcji personalizuj DOKŁADNIE pod to: wymień stałą warstwę platformy + TE konkretne ekrany i funkcję rdzeniową, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}${collabPlan ? `\n[MODEL PRZYCHODU TEGO PROJEKTU]\n${JSON.stringify(collabPlan).slice(0, 600)}` : ''}`
       } else if (asmt && asmt.awaiting_preview === true) {
         sessionContext += `\n\n${PREVIEW_AFTER_GATE_INSTRUCTION}`
         supabase.from('spar_sessions')

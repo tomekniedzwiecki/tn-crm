@@ -71,13 +71,24 @@ function checkoutLink(leadId: string | null): string {
 const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 
-// Kontekst sytuacji dla GPT — żeby rozumiał gdzie jesteśmy i po co jest ten mail.
-const SITUATION = `KONTEKST SYTUACJI (zrozum dobrze, gdzie jesteśmy):
-- To lejek „Aplikacja": osoba porozmawiała z Twoim AI i zaprojektowała pomysł na WŁASNE narzędzie/aplikację (SaaS) w swojej niszy.
-- To dopiero ETAP PLANOWANIA — nic nie jest jeszcze realnie zbudowane ani wdrożone. Artefakty, które jej pokazujesz (raport rynku, model finansowy, strona, plan sprzedaży, klikalny prototyp), to PLAN i dowód, że pomysł ma sens — nie gotowy produkt.
-- Cel tego maila: sprytnie i bez nachalności podgrzać zainteresowanie i pchnąć ją w stronę REZERWACJI. Rezerwacja (500 zł, w pełni zwrotna) to PIERWSZY KROK do współpracy: rezerwuje wspólną rozmowę z Tobą (Tomkiem), na której osobiście przedstawiasz plan wdrożenia i jak moglibyście to razem zbudować. To NIE zakup produktu — to umówienie rozmowy.
-- Model współpracy (NIE tłumacz go w mailu wprost — to na rozmowę): trzymaj się ŚCIŚLE bloku „MODEL BIZNESOWY APLIKACJA" w tym kontekście systemowym. W mailu masz tylko zaciekawić i delikatnie zaprosić do rezerwacji rozmowy.
-- Pisz UCZCIWIE, że to plan/projekt: „zaprojektowaliśmy", „policzyłem", „tak mogłoby to wyglądać" — nie udawaj, że produkt już istnieje.`
+// Prompty dripu: JEDNO źródło = settings (rejestr _shared/spar-prompts.ts).
+// SITUATION + SYSTEM ładowane raz na cold-start (ensureDripPrompts). W szablonie
+// SYSTEM placeholdery {{SYTUACJA}} i {{MODEL_BLOCK}} podstawiane przy budowie promptu.
+// Pusty fallback = bezpiecznik (→ statyczny reveal), NIE kopia treści.
+let DRIP_SITUATION = ''
+let DRIP_SYSTEM = ''
+let DRIP_CELE: Record<string, string> = {}
+async function ensureDripPrompts(supabase: ReturnType<typeof createClient>): Promise<void> {
+  if (DRIP_SYSTEM) return
+  try {
+    const { data } = await supabase.from('settings').select('key, value')
+      .in('key', ['aplikacja_drip_sytuacja', 'aplikacja_drip_system', 'aplikacja_drip_cele'])
+    const ev = (k: string) => ((data || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''
+    DRIP_SITUATION = ev('aplikacja_drip_sytuacja')
+    DRIP_SYSTEM = ev('aplikacja_drip_system')
+    try { DRIP_CELE = JSON.parse(ev('aplikacja_drip_cele') || '{}') } catch (pErr) { console.error('[spar-drip] cele JSON parse:', pErr); DRIP_CELE = {} }
+  } catch (_e) { /* fallback: puste → statyczny reveal (bezpiecznik) */ }
+}
 
 // Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
 let MODEL_BLOCK = ''
@@ -155,20 +166,20 @@ function revealBrief(s: any, key: string): { goal: string; facts: string } {
   const r = s.market_report || {}, p = s.business_plan || {}, e = s.economics || {}, g = s.gtm || {}
   if (key === 'rynek') {
     return {
-      goal: 'Ogłaszasz, że zrobiłeś realny research rynku (w internecie, nie „z głowy"). Pokaż, że patrzyłeś na JEGO niszę: nawiąż do konkretnego konkurenta i jego ceny albo do oceny potencjału z uzasadnieniem. Zachęć, żeby otworzył raport.',
+      goal: DRIP_CELE['rynek'] || '',
       facts: clipJson({ teza: r.teza, ocena_potencjalu: r.ocena_potencjalu, uzasadnienie: r.ocena_uzasadnienie, konkurenci: Array.isArray(r.konkurenci) ? r.konkurenci.slice(0, 4) : undefined, rynek: r.rynek, trendy: Array.isArray(r.trendy) ? r.trendy.slice(0, 3) : undefined, wnioski: Array.isArray(r.co_to_oznacza) ? r.co_to_oznacza.slice(0, 4) : undefined }, 2600),
     }
   }
   if (key === 'economics') {
     return {
-      goal: 'Ogłaszasz, że policzyłeś, czy to się spina. Pokaż, że patrzyłeś na liczby JEGO modelu: nawiąż do konkretnej ceny/tieru, CAC, albo momentu zwrotu budowy. Wspomnij, że w panelu są suwaki, plus droga do 50 klientów.',
+      goal: DRIP_CELE['economics'] || '',
       facts: clipJson({ cennik: e.cennik, wejscia: e.wejscia, komentarz: e.komentarz, cena_z_planu: p.cena, kamienie: Array.isArray(p.kamienie) ? p.kamienie : undefined }, 2400),
     }
   }
-  if (key === 'landing') return { goal: 'Ogłaszasz, że zbudowała się DZIAŁAJĄCA strona sprzedażowa jego narzędzia — prawdziwa strona w przeglądarce, nie grafika. Można ją otworzyć, przewinąć, pokazać znajomym z branży. Jeśli pasuje, nawiąż do tego, co strona ma sprzedawać (problem/dla kogo).', facts: '' }
-  if (key === 'prototyp') return { goal: 'To FINAŁ sekwencji i najmocniejszy element. Ogłaszasz KLIKALNY, działający prototyp jego narzędzia — nie obrazek, działająca apka. Jeśli znasz konkretną funkcję/ekran, zaproś, żeby właśnie to kliknął i sprawdził. Nawiąż delikatnie, że przeszliście już przez rynek, liczby, stronę i plan sprzedaży, a to zostawiłeś na koniec. To dobry moment, by delikatnie zaprosić do rezerwacji wspólnej rozmowy.', facts: '' }
+  if (key === 'landing') return { goal: DRIP_CELE['landing'] || '', facts: '' }
+  if (key === 'prototyp') return { goal: DRIP_CELE['prototyp'] || '', facts: '' }
   return {
-    goal: 'Ogłaszasz konkretny plan zdobycia pierwszych klientów. Pokaż, że jest konkretny: nawiąż do realnego kanału z planu albo do jednego z gotowych konceptów reklam.',
+    goal: DRIP_CELE['gtm'] || '',
     facts: clipJson({ kanaly: g.playbook && Array.isArray(g.playbook.kanaly) ? g.playbook.kanaly.slice(0, 5) : undefined, obiekcje: g.playbook && Array.isArray(g.playbook.obiekcje) ? g.playbook.obiekcje.slice(0, 3) : undefined, reklamy: g.pakiet && Array.isArray(g.pakiet.reklamy) ? g.pakiet.reklamy.slice(0, 3).map((x: Record<string, unknown>) => ({ koncept: x.koncept, naglowek: x.naglowek })) : undefined }, 2200),
   }
 }
@@ -194,6 +205,7 @@ function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string |
 async function generateRevealEmail(s: any, key: string, viewUrl: string, reserveUrl: string | null): Promise<{ subject: string; html: string; sms: string | null; usage: { i: number; c: number; o: number } | null } | null> {
   const apiKey = Deno.env.get('OPENAI_API_KEY')
   if (!apiKey) return null
+  if (!DRIP_SYSTEM) return null // prompt z settings nie załadowany → statyczny reveal (bezpiecznik)
   const brief = revealBrief(s, key)
   const b = s.preview_brief || {}
   const karta = (s.problem_summary || {}) as Record<string, unknown>
@@ -207,18 +219,8 @@ async function generateRevealEmail(s: any, key: string, viewUrl: string, reserve
     kartaTxt && `Karta projektu (problem, klienci, zakres): ${kartaTxt}`,
     firstName(s) && `Imię odbiorcy: ${firstName(s)}`,
   ].filter(Boolean).join('\n')
-  const SYSTEM = `${SITUATION}
-
-${MODEL_BLOCK}
-
-JAK MASZ PISAĆ:
-Jesteś Tomkiem Niedźwieckim i piszesz krótkiego, OSOBISTEGO maila — jakbyś OSOBIŚCIE usiadł, przejrzał JEGO plan i napisał z palca w skrzynce. Nie marketing, nie szablon.
-NAJWAŻNIEJSZE: ma być czuć, że naprawdę patrzyłeś na TEN plan. Wpleć 1–2 KONKRETY z danych: nazwa realnego konkurenta i jego cena, konkretna liczba (cena, CAC, przychód przy X klientach, miesiąc zwrotu), konkretny kanał, konkretna funkcja/ekran. ŻADNYCH ogólników bez konkretu. Maksymalnie 1 konkret na akapit, naturalnie wpleciony — nie wyliczanka.
-STYL: po polsku, na „Ty", ciepło i bezpośrednio. KRÓTKO (3–5 krótkich akapitów). Bez korpomowy, emoji, clickbaitu i przesady — jesteś brutalnie szczery (jak nisza wąska albo coś ryzykowne, możesz to nazwać). NIE podpisuj się imieniem ani stopką (dokleja się automatycznie). Bez nagłówków, list i buttonów.
-JĘZYK — BARDZO WAŻNE: to osoby, które DOPIERO chcą wejść w taki biznes i NIE znają żargonu. Pisz prosto, po ludzku. ZAKAZ skrótów i pojęć typu: CAC, LTV, churn, MRR, ARPU, retencja, konwersja, unit economics, runway, payback. Jeśli oddajesz sens liczby — powiedz to zwykłymi słowami: zamiast „CAC 280 zł" → „zdobycie jednego klienta kosztuje około 280 zł"; zamiast „churn 5%/mies." → „co miesiąc odpada mniej więcej co dwudziesty klient"; zamiast „LTV/wartość klienta" → „ile średnio zostawia jeden klient, zanim odejdzie". Liczby tłumacz na konkret, nie na skrót.
-LINKI: dokładnie JEDEN link do podglądu jako [naturalny tekst](LINK_VIEW), wpleciony w zdanie. Skoro celem jest pchnięcie do rezerwacji — jeśli naturalnie pasuje, raz wpleć [tekst](LINK_RESERVE) (rezerwacja = umówienie rozmowy z Tobą, 500 zł w pełni zwrotne, pierwszy krok do wspólnej budowy). Bez nachalności. Nie wymyślaj adresów.
-SMS (osobne pole) — SMS reaktywacyjny do tego, kto NIE otworzył tego maila; ma wzbudzić CIEKAWOŚĆ i ściągnąć go z powrotem do panelu, żeby zobaczył ten materiał. ⛔ NAJWAŻNIEJSZE: SMS NIE wspomina o rozmowie, współpracy, wspolnej budowie, rezerwacji ani "dalszych krokach" — ANI SLOWEM (tym zajmuje sie panel; tu WYLACZNIE zaciekawiasz TRESCIA materialu). NIE WOLNO kończyć SMS-a propozycją/pytaniem o wspolprace — ZABRONIONE końcówki: "daj znac czy pogadamy/gadamy/budujemy/dogadamy", "pogadamy o wspolnej budowie", "czy dzialamy dalej", "umowmy sie", "porozmawiajmy", "zarezerwuj", "dalsze kroki", "czy wchodzisz". KONIEC SMS-a = SAMA lekka zacheta, zeby ZAJRZAL do materialu (np. "zerknij w panelu", "zobacz jak to wyszlo", "wejdz i sprawdz") — kropka, bez pytania o cokolwiek wiecej. DŁUGOŚĆ: celuj w 210–250 znaków tekstu (link ~40 znaków dokleimy sami — całość ~300, 2 segmenty SMS). CAŁĄ tę przestrzeń przeznacz na KONKRETY Z TEGO ARTEFAKTU — co dokładnie w nim jest, jaka liczba/wniosek/nazwa/element może go zaskoczyć albo realnie przydać (np. „w raporcie jest X graczy i luka w Y", „wyszlo Z zl marzy na pakiecie", „strona ma sekcje A i B", „prototyp pokazuje ekran C"). Im konkretniej pokażesz, CO go czeka w panelu, tym chętniej kliknie. ŻELAZNE zasady kodowania: BEZ polskich znaków diakrytycznych (pisz "a" nie "ą", "e" nie "ę", "l" nie "ł", "s" nie "ś" itd.); TYLKO zwykła interpunkcja ASCII — proste cudzysłowy " i ', myślnik -, kropka, przecinek; ABSOLUTNY ZAKAZ typograficznych znaków „ ” " ' ' – — … (psują kodowanie i kilkukrotnie podnoszą koszt); BEZ linku/URL/placeholdera (link dokleimy sami); po ludzku, na "Ty"; podpisz krotko "~Tomek". Bez wielkich krzyczacych liter, bez emoji, bez wykrzyknikow.
-Zwróć WYŁĄCZNIE JSON: {"subject": string, "body": string, "sms": string}. subject: krótki (do ~55 znaków), konkretny, najlepiej z detalem z jego planu, bez wielkich liter i wykrzykników. body: tekst z \\n między akapitami. sms: jak wyżej.`
+  // SYSTEM z settings (aplikacja_drip_system) — placeholdery podstawiane literalnie (bez $-magii replace).
+  const SYSTEM = DRIP_SYSTEM.split('{{SYTUACJA}}').join(DRIP_SITUATION).split('{{MODEL_BLOCK}}').join(MODEL_BLOCK)
   const user = `DANE TEGO LEADA I JEGO POMYSŁU:\n${ctx}\n\nPRAWDZIWE DANE Z TEGO ETAPU (cytuj stąd konkrety):\n${brief.facts || '(brak dodatkowych — oprzyj się na pomyśle i karcie)'}\n\nCEL TEGO MAILA: ${brief.goal}`
   try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -489,6 +491,7 @@ Deno.serve(async (req) => {
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500)
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'aplikacja_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
+    await ensureDripPrompts(supabase) // SITUATION/SYSTEM/cele dripu z settings (raz na cold-start)
 
     let body: { action?: string; sessionId?: string; key?: string; send?: boolean } = {}
     try { body = await req.json() } catch { /* cron bez body */ }
