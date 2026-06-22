@@ -42,7 +42,14 @@ export function paramFromHeader(headerVal: string, paramName: string): string | 
     const v = enc[1].trim().replace(/^"|"$/g, "");
     const parts = v.split("''");
     const raw = parts.length === 2 ? parts[1] : v;
-    return decodeURIComponent(raw);
+    // RFC 2231 value may be percent-encoded in a non-UTF-8 charset (e.g. iso-8859-2
+    // Polish filenames). decodeURIComponent throws URIError on such bytes — the name
+    // is sanitized downstream anyway, so fall back to the raw string instead of crashing.
+    try {
+      return decodeURIComponent(raw);
+    } catch {
+      return raw.replace(/%[0-9A-Fa-f]{2}/g, "_");
+    }
   }
   const m = headerVal.match(new RegExp(`${paramName}\\s*=\\s*"?([^";]+)"?`, "i"));
   return m ? m[1].trim() : null;
