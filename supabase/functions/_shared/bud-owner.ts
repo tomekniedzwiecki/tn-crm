@@ -41,3 +41,30 @@ export function ownerDenied(
   const ownerId = sessionAuthUserId || null;
   return !!(ownerId && (!authUser || authUser.id !== ownerId));
 }
+
+// Bramka ADMINA dla endpointów narzędziowych (biblioteka sklepów itp.):
+// wymaga ważnego JWT konta będącego w team_members. true = jest adminem.
+export async function isTeamMember(
+  req: Request,
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  const authUser = await verifyAuthUser(req, supabase);
+  if (!authUser) return false;
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("user_id")
+    .eq("user_id", authUser.id)
+    .maybeSingle();
+  return !error && !!data;
+}
+
+// Bramka admin z DRUGĄ ścieżką serwerową (sekret) — pod cron/automaty/testy
+// (wzorzec x-cron-secret jak w generate-image). true = wolno.
+export async function adminGate(
+  req: Request,
+  supabase: SupabaseClient,
+): Promise<boolean> {
+  const sec = Deno.env.get("BUD_TOOLS_SECRET") || "";
+  if (sec && req.headers.get("x-tools-secret") === sec) return true;
+  return await isTeamMember(req, supabase);
+}

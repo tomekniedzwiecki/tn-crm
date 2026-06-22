@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Biblioteka sklepów — AWE</title>
+<link rel="icon" type="image/png" href="https://tomekniedzwiecki.pl/img/logo/tn-logo-icon-88.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: {
+    fontFamily: { sans: ['Geist','Inter','ui-sans-serif','system-ui','sans-serif'], mono: ['Geist Mono','ui-monospace','Menlo','monospace'] },
+    colors: {
+      zinc: { 50:'#fafafa',100:'#f4f4f5',200:'#ededed',300:'#d4d4d4',400:'#a1a1a1',500:'#7e7e7e',600:'#5c5c5c',700:'#383838',800:'#2a2a2a',900:'#171717',950:'#0a0a0a' },
+      blue: { 300:'#6cb0ff',400:'#3291ff',500:'#1a82ff',600:'#0070f3',700:'#0061d5',800:'#004fb3',900:'#003a85' },
+      emerald: { 300:'#5cbf6e',400:'#45a557',500:'#3d9450',600:'#348047',700:'#2c6e3d' },
+      amber: { 300:'#f7b955',400:'#f5a623',500:'#e0941a',600:'#c47e12' },
+      rose: { 300:'#ef6f73',400:'#e5484d',500:'#d93a3f',600:'#c5343a' },
+    },
+  } } };
+</script>
+<script src="https://unpkg.com/@phosphor-icons/web"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { color-scheme: dark; }
+  body { background:#000; color:#ededed; font-family:'Geist','Inter',sans-serif; letter-spacing:-0.011em; -webkit-font-smoothing:antialiased; }
+  h1,h2,h3 { letter-spacing:-0.02em; }
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-thumb { background:#2e2e2e; border-radius:99px; }
+  :focus-visible { outline:2px solid #0070f3; outline-offset:2px; border-radius:6px; }
+  .geist-bar { background:rgba(10,10,10,0.85); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px); }
+  .card { background:#0d0d0d; border:1px solid #242424; border-radius:12px; }
+  .ipt { background:#0d0d0d; border:1px solid #2e2e2e; border-radius:8px; padding:7px 11px; font-size:13px; color:#ededed; }
+  .ipt:focus { border-color:#0070f3; outline:none; }
+  .btn { border-radius:8px; padding:7px 13px; font-size:13px; font-weight:500; border:1px solid #2e2e2e; background:#161616; color:#ededed; cursor:pointer; transition:background .15s,border-color .15s; }
+  .btn:hover { background:#1f1f1f; border-color:#383838; }
+  .btn-pri { background:#0070f3; border-color:#0070f3; color:#fff; }
+  .btn-pri:hover { background:#0061d5; }
+  .btn:disabled { opacity:.5; cursor:not-allowed; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:99px; border:1px solid #2e2e2e; }
+  tr.row:hover { background:rgba(255,255,255,.03); }
+  .ovl { position:fixed; inset:0; background:rgba(0,0,0,.6); backdrop-filter:blur(3px); z-index:40; }
+  .drawer { position:fixed; top:0; right:0; height:100%; width:min(980px,100%); background:#080808; border-left:1px solid #242424; z-index:50; overflow-y:auto; }
+  .pair-img { width:100%; aspect-ratio:1; object-fit:contain; background:#fff; border-radius:8px; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#161616; border:1px solid #383838; color:#ededed; padding:10px 18px; border-radius:10px; font-size:13px; z-index:80; opacity:0; transition:opacity .2s; }
+  .toast.show { opacity:1; }
+  .spin { display:inline-block; width:14px; height:14px; border:2px solid rgba(255,255,255,.25); border-top-color:#fff; border-radius:50%; animation:sp .7s linear infinite; vertical-align:-2px; }
+  @keyframes sp { to { transform:rotate(360deg); } }
+  .prod-approved { box-shadow:inset 0 0 0 1px #348047; }
+  .prod-rejected { opacity:.4; }
+</style>
+</head>
+<body>
+<!-- HEADER -->
+<header class="geist-bar sticky top-0 z-30 border-b border-white/5">
+  <div class="max-w-[1400px] mx-auto px-5 py-3 flex items-center gap-3 flex-wrap">
+    <div class="flex items-center gap-2.5 mr-auto">
+      <i class="ph ph-storefront text-xl text-blue-400"></i>
+      <h1 class="text-base font-semibold">Biblioteka sklepów-wzorców</h1>
+      <span id="count-badge" class="badge text-zinc-400"></span>
+    </div>
+    <!-- discovery -->
+    <select id="disco-market" class="ipt"><option value="US">🇺🇸 USA</option><option value="PL">🇵🇱 Polska</option></select>
+    <input id="disco-terms" class="ipt w-72" placeholder="nisze (po przecinku) — puste = domyślne">
+    <button id="btn-disco" class="btn btn-pri"><i class="ph ph-magnifying-glass"></i> Szukaj sklepów</button>
+  </div>
+  <div class="max-w-[1400px] mx-auto px-5 pb-3 flex items-center gap-2.5 flex-wrap">
+    <input id="search" class="ipt flex-1 min-w-[180px]" placeholder="Filtruj sklepy (nazwa / domena)…">
+    <select id="f-market" class="ipt"><option value="">Rynek: wszystkie</option><option value="US">USA</option><option value="PL">Polska</option></select>
+    <select id="f-status" class="ipt"><option value="active,candidate">Aktywne + kandydaci</option><option value="active">Aktywne</option><option value="candidate">Kandydaci</option><option value="archived">Archiwum</option><option value="">Wszystkie</option></select>
+    <label class="flex items-center gap-1.5 text-xs text-zinc-400"><input type="checkbox" id="f-unassigned"> tylko nieprzypisane</label>
+  </div>
+</header>
+
+<main class="max-w-[1400px] mx-auto px-5 py-5">
+  <div id="auth-msg" class="hidden card p-6 text-center text-zinc-400"></div>
+  <div id="stores-wrap" class="card overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="text-left text-xs text-zinc-500 border-b border-white/5">
+        <tr>
+          <th class="px-4 py-3 font-medium">Sklep</th>
+          <th class="px-3 py-3 font-medium">Rynek</th>
+          <th class="px-3 py-3 font-medium">Trend / świeżość</th>
+          <th class="px-3 py-3 font-medium">Lajki</th>
+          <th class="px-3 py-3 font-medium">Asort.</th>
+          <th class="px-3 py-3 font-medium">Zsource'owane</th>
+          <th class="px-3 py-3 font-medium">Status</th>
+          <th class="px-3 py-3 font-medium">Klient</th>
+          <th class="px-3 py-3 font-medium text-right">Akcje</th>
+        </tr>
+      </thead>
+      <tbody id="stores-rows"></tbody>
+    </table>
+    <div id="stores-empty" class="hidden p-10 text-center text-zinc-500 text-sm">Brak sklepów. Kliknij „Szukaj sklepów", aby zasilić bibliotekę.</div>
+  </div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+let JWT = null, STORES = [], OPEN_ID = null;
+const $ = id => document.getElementById(id);
+const esc = s => (s||'').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2600); }
+
+async function call(fn, body){
+  const r = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, { method:'POST',
+    headers:{ 'content-type':'application/json', 'apikey':SUPABASE_ANON_KEY, 'authorization':'Bearer '+JWT },
+    body: JSON.stringify(body) });
+  const j = await r.json().catch(()=>({error:'bład parsowania'}));
+  if (!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+
+async function init(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session){ window.location.href='/login.html?redirect=/sklepy'; return; }
+  JWT = session.access_token;
+  // sprawdź admina (team_members) — RLS i tak zablokuje, ale damy czytelny komunikat
+  const { data: tm } = await sb.from('team_members').select('user_id').eq('user_id', session.user.id).maybeSingle();
+  if (!tm){ $('stores-wrap').classList.add('hidden'); const a=$('auth-msg'); a.classList.remove('hidden'); a.textContent='Brak uprawnień — to narzędzie jest dla zespołu (team_members).'; return; }
+  bind();
+  await loadStores();
+}
+
+function bind(){
+  $('btn-disco').onclick = doDiscover;
+  $('search').oninput = renderStores;
+  $('f-market').onchange = loadStores;
+  $('f-status').onchange = loadStores;
+  $('f-unassigned').onchange = renderStores;
+}
+
+async function loadStores(){
+  let q = sb.from('bud_stores').select('*').order('gem_score',{ascending:false,nullsFirst:false});
+  const mk = $('f-market').value; if (mk) q = q.eq('market', mk);
+  const st = $('f-status').value;
+  if (st) q = q.in('status', st.split(','));
+  const { data, error } = await q;
+  if (error){ toast('Błąd: '+error.message); return; }
+  STORES = data||[];
+  renderStores();
+}
+
+function renderStores(){
+  const term = $('search').value.toLowerCase().trim();
+  const unassigned = $('f-unassigned').checked;
+  let rows = STORES.filter(s => {
+    if (unassigned && s.assigned_client_name) return false;
+    if (term && !((s.name||'').toLowerCase().includes(term) || (s.domain||'').toLowerCase().includes(term))) return false;
+    return true;
+  });
+  $('count-badge').textContent = rows.length + ' sklepów';
+  $('stores-empty').classList.toggle('hidden', rows.length>0);
+  $('stores-rows').innerHTML = rows.map(s => {
+    const sc = s.matched_count ? `<span class="text-emerald-400">${s.matched_count}</span><span class="text-zinc-600">/${s.sourced_count}</span>` : (s.sourced_count ? `<span class="text-zinc-400">0/${s.sourced_count}</span>` : '<span class="text-zinc-600">—</span>');
+    const stBadge = { active:'text-emerald-400 border-emerald-700', candidate:'text-zinc-400', archived:'text-zinc-600' }[s.status]||'text-zinc-400';
+    const cl = s.assigned_client_name ? `<span class="text-amber-400">${esc(s.assigned_client_name)}</span>` : '<span class="text-zinc-600">wolny</span>';
+    const days = s.newest_ad_at ? Math.round((Date.now()-new Date(s.newest_ad_at))/864e5) : null;
+    const hot = days!==null && days<=14;
+    const fresh = days===null ? '<span class="text-zinc-600">—</span>' : `<span class="${hot?'text-emerald-400':days<=45?'text-zinc-300':'text-zinc-500'}">${hot?'🔥 ':''}${days}d</span>`;
+    const gem = `<span class="font-mono text-xs ${(s.gem_score||0)>=45?'text-emerald-400':(s.gem_score||0)>=30?'text-zinc-300':'text-zinc-500'}">${Math.round(s.gem_score||0)}</span>`;
+    return `<tr class="row border-b border-white/[0.03] cursor-pointer" onclick="openStore('${s.id}')">
+      <td class="px-4 py-2.5"><div class="font-medium text-white">${esc(s.name)}</div><div class="text-xs text-zinc-500">${esc(s.domain||'')}</div></td>
+      <td class="px-3 py-2.5 text-zinc-400">${s.market||''}</td>
+      <td class="px-3 py-2.5">${gem} <span class="text-zinc-600 mx-1">·</span> ${fresh} <div class="text-[10px] text-zinc-600">wideo ${s.video_ratio||0}% · ${s.active_ads||0} reklam</div></td>
+      <td class="px-3 py-2.5 text-zinc-400">${(s.likes||0).toLocaleString('pl')}</td>
+      <td class="px-3 py-2.5 text-zinc-300">${s.assort_count||0}</td>
+      <td class="px-3 py-2.5">${sc}</td>
+      <td class="px-3 py-2.5"><span class="badge ${stBadge}">${s.status}</span></td>
+      <td class="px-3 py-2.5 text-xs">${cl}</td>
+      <td class="px-3 py-2.5 text-right" onclick="event.stopPropagation()">
+        <button class="btn !py-1 !px-2.5 text-xs" onclick="sourceStore('${s.id}',this)"><i class="ph ph-magic-wand"></i> Sourcuj</button>
+        <button class="btn !py-1 !px-2.5 text-xs" onclick="openStore('${s.id}')">Otwórz</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+async function doDiscover(){
+  const b = $('btn-disco'); const old = b.innerHTML; b.disabled=true; b.innerHTML='<span class="spin"></span> Szukam…';
+  try {
+    const terms = $('disco-terms').value.split(',').map(t=>t.trim()).filter(Boolean);
+    const body = { market: $('disco-market').value };
+    if (terms.length) body.terms = terms;
+    const j = await call('bud-store-discover', body);
+    toast(`Znaleziono ${j.found}, zapisano ${j.upserted} sklepów (przeskanowano ${j.pagesSeen} stron).`);
+    await loadStores();
+  } catch(e){ toast('Błąd discovery: '+e.message); }
+  b.disabled=false; b.innerHTML=old;
+}
+
+async function sourceStore(id, btn){
+  const old = btn ? btn.innerHTML : null; if (btn){ btn.disabled=true; btn.innerHTML='<span class="spin"></span>'; }
+  try {
+    const j = await call('bud-store-source', { store_id:id, limit:8 });
+    toast(j.sourced ? `Zsource'owano ${j.sourced}, dopasowano ${j.matched}. Łącznie: ${j.total_matched}/${j.total_sourced}.` : 'Brak nowych produktów do sourcingu.');
+    await loadStores();
+    if (OPEN_ID === id) await openStore(id, true);
+  } catch(e){ toast('Błąd sourcingu: '+e.message); }
+  if (btn){ btn.disabled=false; btn.innerHTML=old; }
+}
+
+async function openStore(id, keep){
+  OPEN_ID = id;
+  const s = STORES.find(x=>x.id===id); if(!s) return;
+  const { data: prods } = await sb.from('bud_store_products').select('*').eq('store_id', id).order('created_at',{ascending:true});
+  const matched = (prods||[]).filter(p=>p.match_status==='matched');
+  const nomatch = (prods||[]).filter(p=>p.match_status!=='matched');
+  if (!keep) document.body.insertAdjacentHTML('beforeend', `<div class="ovl" id="ovl" onclick="closeDrawer()"></div><div class="drawer" id="drawer"></div>`);
+  $('drawer').innerHTML = `
+    <div class="geist-bar sticky top-0 border-b border-white/5 px-6 py-4 flex items-center gap-3 z-10">
+      <div class="mr-auto">
+        <div class="text-lg font-semibold text-white">${esc(s.name)}</div>
+        <a href="https://${esc(s.domain)}" target="_blank" class="text-xs text-blue-400 hover:underline">${esc(s.domain)} ↗</a>
+        <span class="text-xs text-zinc-500 ml-2">${s.market} · ${(s.likes||0).toLocaleString('pl')}♥ · asortyment ${s.assort_count}</span>
+      </div>
+      <button class="btn" onclick="sourceStore('${s.id}',this)"><i class="ph ph-magic-wand"></i> Sourcuj kolejne 8</button>
+      <button class="btn" onclick="archiveStore('${s.id}')">${s.status==='archived'?'Przywróć':'Archiwizuj'}</button>
+      <button class="btn" onclick="closeDrawer()"><i class="ph ph-x"></i></button>
+    </div>
+    <div class="px-6 py-4 border-b border-white/5 flex items-center gap-2.5">
+      <i class="ph ph-user-circle text-zinc-500"></i>
+      <input id="assign-input" class="ipt flex-1" placeholder="Przypisz klientowi (nazwa) — anty-kanibalizacja" value="${esc(s.assigned_client_name||'')}">
+      <button class="btn btn-pri" onclick="assignStore('${s.id}')">Zapisz przypisanie</button>
+      ${s.assigned_at?`<span class="text-xs text-zinc-500">od ${new Date(s.assigned_at).toLocaleDateString('pl')}</span>`:''}
+    </div>
+    <div class="px-6 py-5">
+      <div class="text-xs text-zinc-500 mb-3">Dopasowane produkty (${matched.length}) — zaakceptuj parę zdjęć lub odrzuć:</div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">${matched.map(prodCard).join('') || '<div class="text-zinc-600 text-sm col-span-2">Brak dopasowań. Kliknij „Sourcuj kolejne 8".</div>'}</div>
+      ${nomatch.length?`<details class="mt-6"><summary class="text-xs text-zinc-500 cursor-pointer">Bez dopasowania (${nomatch.length}) — pokaż</summary>
+        <div class="mt-3 space-y-1.5">${nomatch.map(p=>`<div class="text-xs text-zinc-500 flex items-center gap-2"><span class="text-zinc-600">✗</span> ${esc(p.pl_name||p.source_title||'')} <a class="text-blue-400 hover:underline ml-auto" target="_blank" href="https://www.aliexpress.com/wholesale?SearchText=${encodeURIComponent(p.query||p.pl_name||'')}">szukaj ręcznie ↗</a></div>`).join('')}</div></details>`:''}
+    </div>`;
+}
+
+function prodCard(p){
+  const ring = p.review_status==='approved'?'prod-approved':(p.review_status==='rejected'?'prod-rejected':'');
+  return `<div class="card p-3 ${ring}" id="prod-${p.id}">
+    <div class="grid grid-cols-2 gap-3 mb-3">
+      <div><div class="text-[10px] text-zinc-500 mb-1">SKLEP-WZORZEC</div>
+        <a href="${esc(p.source_link)}" target="_blank"><img class="pair-img" src="${esc(p.source_img)}" loading="lazy" onerror="this.style.opacity=.2"></a>
+        <div class="text-xs text-zinc-300 mt-1.5 line-clamp-2">${esc(p.pl_name||p.source_title||'')}</div>
+      </div>
+      <div><div class="text-[10px] text-zinc-500 mb-1">ALIEXPRESS</div>
+        <a href="${esc(p.ali_link)}" target="_blank"><img class="pair-img" src="${esc(p.ali_img)}" loading="lazy" onerror="this.style.opacity=.2"></a>
+        <div class="text-xs text-zinc-400 mt-1.5 line-clamp-2">${esc((p.ali_title||'').slice(0,70))}</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-2 text-sm">
+      <span class="text-zinc-500 text-xs">koszt</span><span class="text-zinc-300">${p.ali_cost_pln} zł</span>
+      <span class="text-zinc-600">→</span><span class="text-zinc-500 text-xs">detal</span>
+      <input class="ipt !py-1 !px-2 w-20 text-sm" type="number" value="${p.ali_retail_pln}" onchange="setRetail('${p.id}',this.value)"> zł
+      <a href="${esc(p.ali_link)}" target="_blank" class="text-blue-400 text-xs ml-1 hover:underline">Ali ↗</a>
+      <div class="ml-auto flex gap-1.5">
+        <button class="btn !py-1 !px-3 text-xs ${p.review_status==='approved'?'btn-pri':''}" onclick="review('${p.id}','approved')"><i class="ph ph-check"></i></button>
+        <button class="btn !py-1 !px-3 text-xs ${p.review_status==='rejected'?'!bg-rose-600 !border-rose-600 !text-white':''}" onclick="review('${p.id}','rejected')"><i class="ph ph-x"></i></button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function review(id, status){
+  const { error } = await sb.from('bud_store_products').update({ review_status:status }).eq('id', id);
+  if (error){ toast('Błąd: '+error.message); return; }
+  const el = $('prod-'+id); el.classList.remove('prod-approved','prod-rejected');
+  if (status==='approved') el.classList.add('prod-approved'); else el.classList.add('prod-rejected');
+  if (OPEN_ID) openStore(OPEN_ID, true);
+}
+async function setRetail(id, val){
+  const v = parseInt(val)||0;
+  const { error } = await sb.from('bud_store_products').update({ ali_retail_pln:v }).eq('id', id);
+  toast(error?('Błąd: '+error.message):'Cena detaliczna zapisana.');
+}
+async function assignStore(id){
+  const name = $('assign-input').value.trim();
+  const patch = name ? { assigned_client_name:name, assigned_at:new Date().toISOString() } : { assigned_client_name:null, assigned_at:null };
+  const { error } = await sb.from('bud_stores').update(patch).eq('id', id);
+  if (error){ toast('Błąd: '+error.message); return; }
+  toast(name?('Przypisano: '+name):'Przypisanie usunięte.');
+  await loadStores();
+}
+async function archiveStore(id){
+  const s = STORES.find(x=>x.id===id); const ns = s.status==='archived'?'active':'archived';
+  const { error } = await sb.from('bud_stores').update({ status:ns }).eq('id', id);
+  if (error){ toast('Błąd: '+error.message); return; }
+  toast(ns==='archived'?'Zarchiwizowano.':'Przywrócono.');
+  closeDrawer(); await loadStores();
+}
+function closeDrawer(){ OPEN_ID=null; const o=$('ovl'),d=$('drawer'); if(o)o.remove(); if(d)d.remove(); }
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDrawer(); });
+
+init();
+</script>
+</body>
+</html>
