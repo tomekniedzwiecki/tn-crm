@@ -103,7 +103,6 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<div class="ttmodal" id="ttmodal" onclick="closeTT(event)"><span class="x" onclick="closeTT(event,true)">✕</span><div class="tbody" id="ttbody" onclick="event.stopPropagation()"></div></div>
 
 <script>
 const SUPABASE_URL='https://yxmavwkwnfuphjqbelws.supabase.co';
@@ -161,8 +160,8 @@ function rowHtml(x){
     </div>`;
   return `<div class="row ${x.status}" id="r-${x.id}">
     <div class="tt">
-      ${vid
-        ? `<div class="ttplayer" onclick="playTT('${vid}')">${x.cover?`<img loading=lazy src="${esc(x.cover)}">`:'<div style="aspect-ratio:9/16;background:#111;border-radius:10px"></div>'}<div class="playbtn">▶</div></div>`
+      ${x.tiktok_url
+        ? `<a class="ttplayer" href="${esc(x.tiktok_url)}" target="_blank" rel="noopener" title="Otwórz film na TikTok (nowa karta)">${x.cover?`<img loading=lazy src="${esc(x.cover)}">`:'<div style="aspect-ratio:9/16;background:#111;border-radius:10px"></div>'}<div class="playbtn">▶</div></a>`
         : (x.cover?`<img loading=lazy src="${esc(x.cover)}">`:'<div style="aspect-ratio:9/16;background:#111;border-radius:10px"></div>')}
       <div class="nm">${esc(x.pl_name)}</div>
       <div class="sig">🔥 ${Math.round(x.heat)} · 🎬 ${x.videos} · ▶ ${(x.max_plays/1e6).toFixed(1)}M ${days?'· '+days:''}</div>
@@ -196,10 +195,6 @@ function pick(id,link){ upd(id,{chosen_link:link,status:'approved'},'Zatwierdzon
 function customApprove(id){ const v=$('cl-'+id).value.trim(); if(!v){toast('Wklej link');return;} upd(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link ✓'); }
 function reject(id){ upd(id,{status:'rejected'},'Odrzucone'); }
 async function setCat(id,cat){ const { error }=await sb.from('bud_tt_products').update({category:cat}).eq('id',id); if(error){toast('Błąd: '+error.message);return;} const x=ROWS.find(r=>r.id===id); if(x)x.category=cat; toast('Kategoria: '+cat); }
-
-function playTT(vid){ $('ttbody').innerHTML=`<iframe src="https://www.tiktok.com/player/v1/${vid}?description=0&music_info=0&rel=0&controls=1" allow="autoplay; encrypted-media; fullscreen" allowfullscreen></iframe>`; $('ttmodal').classList.add('show'); }
-function closeTT(e,force){ if(force||(e&&e.target&&e.target.id==='ttmodal')){ $('ttmodal').classList.remove('show'); $('ttbody').innerHTML=''; } }
-document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeTT(null,true); });
 
 init();
 </script>
