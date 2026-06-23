@@ -113,6 +113,7 @@ const ANON='sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
 const sb=window.supabase.createClient(SUPABASE_URL,ANON);
 const $=id=>document.getElementById(id);
 const esc=s=>(''+(s||'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>{n=n||0; return n>=1000?(n/1000).toFixed(n>=10000?0:1).replace('.',',')+'k':String(n);};
 let ROWS=[], ME='', toastT;
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
@@ -169,8 +170,13 @@ function rowHtml(x){
         : (x.cover?`<img loading=lazy src="${esc(x.cover)}">`:'<div style="aspect-ratio:9/16;background:#111;border-radius:10px"></div>')}
       <div class="nm">${esc(x.pl_name)}</div>
       <div class="sig">🔥 ${Math.round(x.heat)} · 🎬 ${x.videos} · ▶ ${(x.max_plays/1e6).toFixed(1)}M ${days?'· '+days:''}</div>
-      <div class="sig" style="margin-top:3px">${(x.tags||[]).slice(0,3).map(t=>'#'+t).join(' ')}</div>
-      ${x.tiktok_url?`<a class="open" style="font-size:11px;color:#6cb0ff" href="${esc(x.tiktok_url)}" target="_blank">▶ Otwórz na TikTok</a>`:''}
+      <div class="sig" style="margin-top:2px">🔖 ${fmt(x.saves)} zapis. · 💬 ${fmt(x.comments)} · ❤️ ${((x.eng_rate||0)*100).toFixed(1)}%${x.is_ad?' · <span style="color:#f7b955">📣 reklamowany</span>':''}</div>
+      ${x.author?`<div class="sig" style="margin-top:2px">@${esc(x.author)}${x.author_followers?` · ${fmt(x.author_followers)} obs.`:''}</div>`:''}
+      <div class="sig" style="margin-top:2px">${(x.tags||[]).slice(0,3).map(t=>'#'+t).join(' ')}</div>
+      <div style="display:flex;gap:10px;margin-top:4px;flex-wrap:wrap">
+        ${x.tiktok_url?`<a class="open" style="font-size:11px;color:#6cb0ff" href="${esc(x.tiktok_url)}" target="_blank">▶ TikTok</a>`:''}
+        ${x.shop_url?`<a class="open" style="font-size:11px;color:#5cbf6e" href="${esc(x.shop_url)}" target="_blank">🛍️ TikTok Shop ↗</a>`:''}
+      </div>
     </div>
     <div>
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">

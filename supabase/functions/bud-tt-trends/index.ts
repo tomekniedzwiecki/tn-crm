@@ -71,11 +71,15 @@ async function viral(hashtag: string, pages: number): Promise<any[]> {
     const items = j?.search_item_list || []
     for (const it of items) {
       const a = it.aweme_info; if (!a) continue
+      const st = a.statistics || {}
       out.push({
-        kind: 'organic', tag: hashtag, seed: a.desc || '', plays: a.statistics?.play_count || 0,
-        diggs: a.statistics?.digg_count || 0, shares: a.statistics?.share_count || 0, comments: a.statistics?.comment_count || 0,
+        kind: 'organic', tag: hashtag, seed: a.desc || '', plays: st.play_count || 0,
+        diggs: st.digg_count || 0, shares: st.share_count || 0, comments: st.comment_count || 0, saves: st.collect_count || 0,
         created: a.create_time || 0,
-        cover: a.video?.cover || a.video?.origin_cover || '', originCover: a.video?.origin_cover || '', author: a.author?.unique_id || '', id: a.aweme_id || '',
+        cover: a.video?.cover || a.video?.origin_cover || '', originCover: a.video?.origin_cover || '',
+        author: a.author?.unique_id || '', authorNick: a.author?.nickname || '', followers: a.author?.follower_count || 0,
+        isAd: !!(a.is_ad || a.has_ever_advertised),
+        id: a.aweme_id || '',
         url: a.author?.unique_id && a.aweme_id ? `https://www.tiktok.com/@${a.author.unique_id}/video/${a.aweme_id}` : '',
         shop: a.shop_product_url || '',
       })
@@ -151,18 +155,21 @@ Deno.serve(async (req) => {
     const j = await scGet(`${B}/v1/tiktok/search/keyword?query=${encodeURIComponent(body.raw)}`)
     const items = j?.search_item_list || []
     const a0 = items[0]?.aweme_info || {}
-    const probe = items.slice(0, 14).map((it: any) => {
+    const probe = items.slice(0, 8).map((it: any) => {
       const a = it.aweme_info || {}
       return {
-        desc: (a.desc || '').slice(0, 60),
-        shop_product_url: a.shop_product_url || null,
+        desc: (a.desc || '').slice(0, 50),
+        stats: a.statistics || null,                                   // play/digg/comment/share/collect/...
+        author: a.author ? { uid: a.author.unique_id, nick: a.author.nickname, followers: a.author.follower_count, verify: a.author.custom_verify || a.author.enterprise_verify_reason } : null,
+        is_ad: a.is_ad, has_ever_advertised: a.has_ever_advertised,
+        music: a.music ? { title: a.music.title, author: a.music.author } : null,
+        video: a.video ? { duration: a.video.duration, ratio: a.video.ratio } : null,
+        create_time: a.create_time, region: a.region,
         products_info: a.products_info || null,
-        commerce_info: a.commerce_info ? Object.keys(a.commerce_info) : null,
-        anchors: (a.anchors || []).map((x: any) => ({ title: x.title, keyword: x.keyword, type: x.type })),
-        bottom_products: a.bottom_products || null,
+        shop_product_url: a.shop_product_url || null,
       }
     })
-    return new Response(JSON.stringify({ topKeys: Object.keys(a0).length, probe }, null, 2), { headers: { ...cors, 'content-type': 'application/json' } })
+    return new Response(JSON.stringify({ statKeys: Object.keys(a0.statistics || {}), authorKeys: Object.keys(a0.author || {}), probe }, null, 2), { headers: { ...cors, 'content-type': 'application/json' } })
   }
 
   // ── TRYB PRODUKTY: hashtagi+frazy → filmy → GPT wyłuskuje produkt → KLASTRY (ile filmów × świeżość × zaangażowanie) ──
@@ -174,12 +181,16 @@ Deno.serve(async (req) => {
     const minPlays = body.minPlays ?? 150000
     const limit = body.limit ?? 100
     const NOW = Math.floor(Date.now() / 1000)
+    const maxAge = (body.maxAgeDays ?? 60) * 86400   // wyklucz filmy starsze niż N dni (domyślnie 60)
     const cov = (c: any) => typeof c === 'string' ? c : (c?.url_list?.[0]) || ''
 
     const raw = (await pool(queries, 6, (t: string) => viral(t, pages))).flat()
     const byId = new Map<string, any>()
     for (const v of raw) { if (!v.id) continue; if (!byId.has(v.id) || byId.get(v.id).plays < v.plays) byId.set(v.id, v) }
-    let items = [...byId.values()].filter(v => v.plays >= minPlays && (v.seed || '').trim().length >= 8).sort((a, b) => b.plays - a.plays)
+    let items = [...byId.values()].filter(v =>
+      v.plays >= minPlays && (v.seed || '').trim().length >= 8 &&
+      v.created && (NOW - v.created) <= maxAge          // ≤60 dni
+    ).sort((a, b) => b.plays - a.plays)
     items = items.slice(0, body.scan ?? 280)
 
     const chunks: any[][] = []
@@ -195,19 +206,21 @@ Deno.serve(async (req) => {
       const key = norm(e.pl)
       if (!key) return
       let g = cl.get(key)
-      if (!g) { g = { pl: e.pl, q: e.q, category: e.category || 'Inne', videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, newest: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
-      g.videos++; g.plays += it.plays; g.comments += it.comments || 0; g.diggs += it.diggs || 0
-      if (it.plays > g.maxPlays) { g.maxPlays = it.plays; g.cover = cov(it.cover); g.originCover = cov(it.originCover); g.desc = it.seed }
+      if (!g) { g = { pl: e.pl, q: e.q, category: e.category || 'Inne', videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, shares: 0, saves: 0, newest: 0, isAd: false, authorNick: '', followers: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
+      g.videos++; g.plays += it.plays; g.comments += it.comments || 0; g.diggs += it.diggs || 0; g.shares += it.shares || 0; g.saves += it.saves || 0
+      if (it.isAd) g.isAd = true
+      if (it.plays > g.maxPlays) { g.maxPlays = it.plays; g.cover = cov(it.cover); g.originCover = cov(it.originCover); g.desc = it.seed; g.authorNick = it.authorNick || it.author; g.followers = it.followers || 0 }
       if ((it.created || 0) > g.newest) g.newest = it.created || 0
       g.tags.add(it.tag); if (it.url && g.urls.length < 3) g.urls.push(it.url); if (!g.shop && it.shop) g.shop = it.shop
     }))
 
-    // heat: liczba filmów (najmocniej) + świeżość + zaangażowanie
+    // heat: powtarzalność (najmocniej) + ZAPISY i komentarze (intencja zakupu) + engagement-rate (jakość) + skala + świeżość + walidacja reklamą
     const heat = (g: any) => {
-      const recency = g.newest ? (NOW - g.newest <= 30 * 86400 ? 4 : NOW - g.newest <= 90 * 86400 ? 2 : 0) : 0
-      return +(g.videos * 10 + Math.log10(g.plays + 1) * 2 + Math.log10(g.comments + 1) + recency).toFixed(2)
+      const eng = g.plays ? (g.diggs + g.comments + g.shares + g.saves) / g.plays : 0
+      const recency = g.newest ? (NOW - g.newest <= 14 * 86400 ? 5 : NOW - g.newest <= 30 * 86400 ? 3 : 1) : 0
+      return +(g.videos * 8 + Math.log10(g.saves + 1) * 4 + Math.log10(g.comments + 1) * 2 + Math.min(eng, 0.25) * 40 + Math.log10(g.plays + 1) * 1.5 + recency + (g.isAd ? 2 : 0)).toFixed(2)
     }
-    const final = [...cl.values()].map(g => ({ ...g, heat: heat(g) })).sort((a, b) => b.heat - a.heat).slice(0, limit)
+    const final = [...cl.values()].map(g => ({ ...g, heat: heat(g), eng_rate: g.plays ? +((g.diggs + g.comments + g.shares + g.saves) / g.plays).toFixed(4) : 0 })).sort((a, b) => b.heat - a.heat).slice(0, limit)
     const days = (ts: number) => ts ? Math.round((NOW - ts) / 86400) : null
 
     // OPCJONALNIE: znajdź każdy produkt na AliExpress od razu (rapid + vision-weryfikacja po okładce)
@@ -234,7 +247,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       scanned_videos: items.length, found_products: cl.size,
-      products: final.map(g => ({ pl: g.pl, q: g.q, category: g.category || 'Inne', heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
+      products: final.map(g => ({ pl: g.pl, q: g.q, category: g.category || 'Inne', heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, saves: g.saves, shares: g.shares, eng_rate: g.eng_rate, is_ad: g.isAd, author: g.authorNick, author_followers: g.followers, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
     }), { headers: { ...cors, 'content-type': 'application/json' } })
   }
 

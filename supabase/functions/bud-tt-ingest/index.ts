@@ -11,8 +11,10 @@ Deno.serve(async (req) => {
   if (!(await adminGate(req, supabase))) return new Response(JSON.stringify({ error: 'wymagane_logowanie_admin' }), { status: 403, headers: { ...cors, 'content-type': 'application/json' } })
 
   const body = await req.json().catch(() => ({}))
+  // purge: usuń stare nieprzejrzane wiersze (np. sprzed filtra 60 dni); zachowuje approved/rejected
+  if (body.purge) { await supabase.from('bud_tt_products').delete().eq('status', 'pending') }
   const prods = Array.isArray(body.products) ? body.products : []
-  if (!prods.length) return new Response(JSON.stringify({ error: 'brak_products' }), { status: 400, headers: { ...cors, 'content-type': 'application/json' } })
+  if (!prods.length) return new Response(JSON.stringify({ ok: true, purged: !!body.purge }), { headers: { ...cors, 'content-type': 'application/json' } })
 
   const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
   const rows = prods.map((p: any) => ({
@@ -23,10 +25,13 @@ Deno.serve(async (req) => {
     tiktok_url: p.tiktok_url || (p.tiktok_urls?.[0]) || null,
     cover: p.cover || null,
     videos: p.videos || 0, max_plays: p.max_plays || 0, total_plays: p.total_plays || 0,
-    comments: p.comments || 0, heat: p.heat || 0, newest_days: p.newest_days ?? null,
+    comments: p.comments || 0, saves: p.saves || 0, shares: p.shares || 0, eng_rate: p.eng_rate || 0,
+    is_ad: !!p.is_ad, author: p.author || null, author_followers: p.author_followers || 0,
+    heat: p.heat || 0, newest_days: p.newest_days ?? null,
     tags: p.tags || [],
     ali_candidates: p.ali_candidates || [],
     ali_search_url: p.ali_search_url || null,
+    shop_url: p.shop_url || null,
   })).filter((r: any) => r.key && r.pl_name)
 
   const { error, count } = await supabase.from('bud_tt_products').upsert(rows, { onConflict: 'key', count: 'exact' })
