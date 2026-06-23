@@ -58,7 +58,7 @@
   /* przycisk otwórz w AliExpress */
   .btn-ali{ background:#2a1500; border-color:#7a4a12; color:#f7b955; text-decoration:none; display:inline-flex; align-items:center; gap:3px; font-weight:600; }
   .btn-ali:hover{ background:#3a1d00; border-color:#c47e12; }
-</style>
+
   /* ─── MOBILE ─── */
   @media (max-width:760px){
     .wrap{ padding:0 12px; }
@@ -121,9 +121,10 @@ const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Ur
 async function init(){
   const { data:{session} } = await sb.auth.getSession();
   if(!session){ location.href='/login.html?redirect=/trendy'; return; }
-  const { data: tm } = await sb.from('team_members').select('user_id,name').eq('user_id',session.user.id).maybeSingle();
-  if(!tm){ $('loading').innerHTML='Brak uprawnień (tylko zespół).'; return; }
-  ME = tm.name || session.user.email;
+  const ALLOW=['93675a5a-ea02-488c-a6c2-4adf687ea435','7cd1830f-fca0-44d4-a419-7a822f77f919']; // tylko Maciek + Tomek
+  if(!ALLOW.includes(session.user.id)){ $('loading').innerHTML='Brak dostępu — ten widok jest tylko dla Maćka i Tomka.'; return; }
+  const { data: tm } = await sb.from('team_members').select('name').eq('user_id',session.user.id).maybeSingle();
+  ME = tm?.name || session.user.email;
   $('fcat').innerHTML = '<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
   $('q').oninput=render; $('fcat').onchange=render; $('fstatus').onchange=render; $('refresh').onclick=load;
   await load();
