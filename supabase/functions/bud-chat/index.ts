@@ -913,14 +913,21 @@ async function runGate(
 async function runProducts(
   supabaseUrl: string,
   serviceKey: string,
-  zadanie: { kategoria?: string; budzet?: string; styl?: string; wyklucz?: string[] },
+  zadanie: { kategoria?: string; budzet?: string; styl?: string; wyklucz?: string[]; adBuffer?: unknown[] },
   sessionId: string,
   track: string | null,
   page: number,
 ): Promise<Record<string, unknown>[]> {
   const url = `${supabaseUrl}/functions/v1/bud-products`
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` }
-  const body = JSON.stringify({ sessionId, track, page, ...zadanie })
+  // mode:'produkty' → tor AD-FIRST (ScrapeCreators→AliExpress ship-PL→GPT verify) w bud-products.
+  // ad_buffer = reklamy z PRE-WALIDACJI kierunku (jeśli są) → 0 dodatkowych kredytów ScrapeCreators.
+  // Gdy brak klucza ScrapeCreators, bud-products ignoruje mode i spada na stary tor (bezpiecznie).
+  const body = JSON.stringify({
+    sessionId, track, page, mode: 'produkty',
+    kategoria: zadanie.kategoria, budzet: zadanie.budzet, styl: zadanie.styl, wyklucz: zadanie.wyklucz,
+    ad_buffer: Array.isArray(zadanie.adBuffer) ? zadanie.adBuffer : [],
+  })
   const attempts = 2
   for (let i = 0; i < attempts; i++) {
     try {
@@ -949,6 +956,34 @@ async function runProducts(
   return []
 }
 
+// ── PRE-WALIDACJA KIERUNKÓW (karty): woła bud-products mode='kierunki' ───────
+// Dla listy {nazwa,fraza} sprawdza, które kierunki mają realne reklamy w PL (≥próg).
+// Zwraca [{nazwa, ok, count, ads}] — bud-chat pokazuje tylko ok=true (gwarancja „nigdy pusty"),
+// a ads zapisuje do bufora (discovery po wyborze nie pali kolejnych kredytów). Soft-fail [].
+async function runKierunki(
+  supabaseUrl: string,
+  serviceKey: string,
+  kierunki: Array<{ nazwa: string; fraza: string }>,
+  sessionId: string,
+): Promise<Array<{ nazwa: string; ok: boolean; count: number; ads: unknown[] }>> {
+  const url = `${supabaseUrl}/functions/v1/bud-products`
+  const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` }
+  const body = JSON.stringify({ sessionId, mode: 'kierunki', kierunki })
+  for (let i = 0; i < 2; i++) {
+    try {
+      const ctrl = new AbortController()
+      const to = setTimeout(() => { try { ctrl.abort() } catch { /* */ } }, 90_000)
+      let res: Response
+      try { res = await fetch(url, { method: 'POST', headers, body, signal: ctrl.signal }) } finally { clearTimeout(to) }
+      if (!res.ok) { console.error('[bud-chat] runKierunki HTTP:', res.status); try { await res.body?.cancel() } catch { /* */ } if (i < 1) { await new Promise((r) => setTimeout(r, 500)); continue } return [] }
+      const data = await res.json().catch(() => null)
+      const arr = (data && Array.isArray(data.kierunki)) ? data.kierunki : []
+      return arr.map((k: Record<string, unknown>) => ({ nazwa: String(k?.nazwa || ''), ok: k?.ok === true, count: Number(k?.count) || 0, ads: Array.isArray(k?.ads) ? k.ads : [] }))
+    } catch (err) { console.error('[bud-chat] runKierunki exception:', err); if (i < 1) { await new Promise((r) => setTimeout(r, 500)); continue } return [] }
+  }
+  return []
+}
+
 // Instrukcja sterowania dla DRUGIEJ tury (po badaniu rynku). Tu mieszka jakość
 // podpowiedzi: przy nie-zielonym ZAWSZE <opcje> prowadzące w stronę kierunku.
 function buildSteerInstruction(o: Record<string, unknown>): string {
@@ -965,12 +1000,12 @@ function buildSteerInstruction(o: Record<string, unknown>): string {
 Ten krok ma REALNIE POMÓC, nie tylko powiedzieć „ok / nie ok". Odezwij się jednym naturalnym komunikatem (BEZ markera <ocena>), który ZACZYNA od 2–3 KONKRETNYCH wniosków z badania — najwięksi konkurenci z cenami, wielkość niszy, największa LUKA — krótko, po ludzku, z ORIENTACYJNYMI przedziałami (nie udawaj precyzji); dokładną liczbę podaj tylko, gdy jesteś jej pewien ze źródła, a gdy nie — powiedz ogólnie, bez liczby. Dopiero na tej podstawie prowadź dalej.`
   if (ocena === 'mocny') {
     return `${wspolne}
-TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie aplikacji wynikające z luki: „Dlatego proponuję, żeby narzędzie …" — co podkreślić / dodać / odjąć, by trafić dokładnie w tę lukę (rdzeń + maks. 1–2 funkcje wspierające, NIGDY kombajn).
-NIE wystawiaj jeszcze <projekt> ani <werdykt> — najpierw chcemy JEDNĄ rundę dopracowania kierunku z rozmówcą (podgląd ekranów pokażesz w następnej turze). Zakończ podpowiedziami: marker <opcje>["Tak, w tę stronę","Wolę inny akcent","Pokaż, jak to wygląda"] — tak, by rozmówca miał realny wpływ na wyostrzenie.`
+TO ZIELONY KIERUNEK. Po wnioskach zaproponuj KONKRETNE wyostrzenie sklepu/marki wynikające z luki: „Dlatego proponuję, żeby sklep …" — jaki kąt podkreślić, komu dokładnie sprzedawać, czym odróżnić się od anonimowej konkurencji (rdzeń: jeden produkt-bohater + maks. 1–2 elementy wspierające, NIGDY hurtownia).
+NIE wystawiaj jeszcze <projekt> ani <werdykt> — najpierw chcemy JEDNĄ rundę dopracowania kierunku z rozmówcą (podgląd sklepu pokażesz w następnej turze). Zakończ podpowiedziami: marker <opcje>["Tak, w tę stronę","Wolę inny akcent","Pokaż, jak to wygląda"] — tak, by rozmówca miał realny wpływ na wyostrzenie.`
   }
   return `${wspolne}
 TO JESZCZE NIE JEST ZIELONE — NIE wystawiaj podglądu <projekt> ani zielonego <werdykt>. Po wnioskach przekaż „${kierunek}" jako MOCNĄ, pewną rekomendację (nie jako porażkę — jako „mam dla Ciebie lepszą wersję, bo dane pokazują…"), wprost wyprowadzoną z tych danych.
-ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/bólu, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.`
+ZAWSZE zakończ podpowiedziami: marker <opcje>["…","…","…"] z 2–4 krótkimi, klikalnymi odpowiedziami, które popychają DOKŁADNIE w stronę tego kierunku (zgoda na pivot, doprecyzowanie grupy/kąta, „drąż dalej"). Podpowiedzi mają brzmieć jak słowa rozmówcy, nie jak instrukcje.`
 }
 
 // #1: retry na przejściowy błąd OpenAI (429/5xx/sieć) — pojedynczy blip nie może
@@ -1506,14 +1541,11 @@ Deno.serve(async (req) => {
     // — wartości z requestu. Osobny blok system PO bloku cache'owanym
     // (cache_control wyznacza granicę prefiksu — duży prompt dalej się cache'uje).
     const sessionProfession = (existingSession?.profession as string | null | undefined) || profession || null
+    // JEDNO FLOW (picker-first): produkt wybiera rozmówca z karuzeli viralowych hitów,
+    // nie odkrywamy go z rozmowy. Router kierunków K1/K2/K3 wygaszony — NIE wstrzykujemy
+    // „WYBRANY KIERUNEK" ani nie każemy modelowi „ustalać, czym rozmówca się zajmuje".
     let sessionContext =
-      `KONTEKST SESJI — profesja rozmówcy: ${sessionProfession || 'jeszcze nieustalona — ustal w pierwszych turach, czym rozmówca się zajmuje'}.`
-
-    // ROUTER KIERUNKÓW: wstrzykujemy WYBRANY KIERUNEK do kontekstu, żeby prompt
-    // (z sekcjami per kierunek) wiedział, w którym trybie prowadzi rozmowę.
-    if (track) {
-      sessionContext += `\n\nWYBRANY KIERUNEK: ${TRACK_LABEL[track]}. Prowadź rozmowę zgodnie z instrukcją dla tego kierunku.`
-    }
+      `KONTEKST SESJI${sessionProfession ? ` — rozmówca wspomniał, że zajmuje się: ${sessionProfession}` : ''}.`
 
     // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend
     // odpala bud-assess i steruje drugą turą wg wyniku (tylko kanał sparing).
@@ -1695,6 +1727,49 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                 }
               } catch (gErr) {
                 console.error('[bud-chat] bramka/ocena error:', gErr)
+              }
+            }
+          }
+
+          // ── K1 KIERUNKI (karty pre-walidowane) ─────────────────────────────
+          // Model po złapaniu klimatu wystawia <kierunki_zadaj>{kierunki:[{nazwa,opis,fraza}]}.
+          // Pre-walidujemy każdy przez bud-products (mode:'kierunki') i pokazujemy TYLKO te z
+          // realnymi reklamami w PL (gwarancja „nigdy pusty"). Reklamy → bufor per kierunek
+          // (discovery po wyborze nie pali kolejnych kredytów ScrapeCreators). SSE bud_kierunki.
+          {
+            const km = assistantText.match(/<kierunki_zadaj>([\s\S]*?)<\/kierunki_zadaj>/)
+            if (km) {
+              try {
+                const parsedK = JSON.parse(km[1]) as { kierunki?: Array<{ nazwa?: string; opis?: string; fraza?: string }> }
+                const rawK = Array.isArray(parsedK.kierunki) ? parsedK.kierunki : []
+                const kier = rawK
+                  .map((k) => ({ nazwa: String(k?.nazwa || '').trim(), opis: String(k?.opis || '').trim(), fraza: String(k?.fraza || k?.nazwa || '').trim() }))
+                  .filter((k) => k.nazwa && k.fraza).slice(0, 4)
+                if (kier.length) {
+                  controller.enqueue(encoder.encode(`event: bud_kierunki\ndata: ${JSON.stringify({ status: 'szukam' })}\n\n`))
+                  const validated = await runKierunki(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, kier.map((k) => ({ nazwa: k.nazwa, fraza: k.fraza })), sessionId)
+                  // dopasuj walidację po nazwie, zachowaj opis z markera; zostaw tylko z pokryciem
+                  const okList = kier
+                    .map((k) => { const v = validated.find((x) => x.nazwa === k.nazwa); return { nazwa: k.nazwa, opis: k.opis, ok: !!(v && v.ok), ads: (v && v.ads) || [] } })
+                    .filter((k) => k.ok)
+                  // bufor reklam per kierunek → product_input.kierunki_bufory
+                  const { data: piK } = await supabase.from('bud_sessions').select('product_input').eq('id', sessionId).maybeSingle()
+                  const prevK = (piK?.product_input && typeof piK.product_input === 'object' && !Array.isArray(piK.product_input)) ? piK.product_input as Record<string, unknown> : {}
+                  const bufory: Record<string, unknown> = {}
+                  okList.forEach((k) => { bufory[k.nazwa] = k.ads })
+                  await supabase.from('bud_sessions').update({ product_input: { ...prevK, kierunki_bufory: bufory }, updated_at: new Date().toISOString() }).eq('id', sessionId)
+                  if (okList.length >= 1) {
+                    const cards = okList.map((k, i) => ({ nazwa: k.nazwa, opis: k.opis, polecany: i === 0 }))
+                    controller.enqueue(encoder.encode(`event: bud_kierunki\ndata: ${JSON.stringify({ status: 'gotowe', kierunki: cards })}\n\n`))
+                  } else {
+                    // żaden kierunek nie ma pokrycia → front nie pokazuje kart; model w treści
+                    // tury proponuje pójście szerzej / inny świat (instrukcja w prompcie).
+                    controller.enqueue(encoder.encode(`event: bud_kierunki\ndata: ${JSON.stringify({ status: 'brak' })}\n\n`))
+                  }
+                }
+              } catch (kErr) {
+                console.error('[bud-chat] kierunki error:', kErr)
+                try { controller.enqueue(encoder.encode(`event: bud_kierunki\ndata: ${JSON.stringify({ status: 'brak' })}\n\n`)) } catch { /* klient rozłączony */ }
               }
             }
           }
