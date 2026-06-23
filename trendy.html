@@ -50,7 +50,7 @@
   .ttplayer:hover .playbtn{ background:rgba(0,0,0,.45); }
   .ttmodal{ position:fixed; inset:0; background:rgba(0,0,0,.86); z-index:90; display:none; align-items:center; justify-content:center; }
   .ttmodal.show{ display:flex; }
-  .ttmodal .tbody{ width:min(605px,94vw); max-height:92vh; overflow:auto; }
+  .ttmodal .tbody{ width:auto; max-width:94vw; max-height:92vh; overflow:auto; }
   .ttmodal .tbody iframe{ border:0 !important; max-width:100%; }
   .ttmodal .tiktok-embed{ margin:0 !important; }
   .ttmodal .tload{ color:#9a9a9a; font-size:13px; text-align:center; padding:40px; }
@@ -200,15 +200,12 @@ function customApprove(id){ const v=$('cl-'+id).value.trim(); if(!v){toast('Wkle
 function reject(id){ upd(id,{status:'rejected'},'Odrzucone'); }
 async function setCat(id,cat){ const { error }=await sb.from('bud_tt_products').update({category:cat}).eq('id',id); if(error){toast('Błąd: '+error.message);return;} const x=ROWS.find(r=>r.id===id); if(x)x.category=cat; toast('Kategoria: '+cat); }
 
-// Oficjalny embed TikTok (blockquote .tiktok-embed + embed.js) — wg developers.tiktok.com, renderowany na żądanie.
+// Lekki player TikTok (player/v1) — samo wideo, bez paska społecznościowego/opisu/muzyki.
 function playTT(vid,url){
-  $('ttbody').innerHTML = `<blockquote class="tiktok-embed" cite="${url}" data-video-id="${vid}" style="max-width:605px;min-width:325px;margin:0">`
-    + `<section><a target="_blank" rel="noopener" href="${url}">Zobacz na TikTok ↗</a></section></blockquote>`
-    + `<div class="tload">Ładowanie odtwarzacza TikTok…</div>`;
+  const src=`https://www.tiktok.com/player/v1/${vid}?music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1`;
+  $('ttbody').innerHTML = `<iframe src="${src}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen style="width:min(330px,92vw);height:min(86vh,588px);border:0;border-radius:12px;background:#111"></iframe>`
+    + `<div style="text-align:center;margin-top:8px"><a href="${url}" target="_blank" rel="noopener" style="color:#6cb0ff;font-size:12px;text-decoration:none">Otwórz na TikTok ↗</a></div>`;
   $('ttmodal').classList.add('show');
-  document.querySelectorAll('script[data-ttembed]').forEach(s=>s.remove());
-  const s=document.createElement('script'); s.async=true; s.setAttribute('data-ttembed','1');
-  s.src='https://www.tiktok.com/embed.js?t='+Date.now(); document.body.appendChild(s);
 }
 function closeTT(e,force){ if(force||(e&&e.target&&e.target.id==='ttmodal')){ $('ttmodal').classList.remove('show'); $('ttbody').innerHTML=''; } }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeTT(null,true); });
