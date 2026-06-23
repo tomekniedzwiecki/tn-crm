@@ -22,21 +22,22 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promis
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, w)); return out
 }
 
-// GPT: z opisów filmów wyłuskaj POJEDYNCZY fizyczny produkt; odsiej kompilacje/kursy/clickbait
-async function extractProducts(descs: string[]): Promise<{ is_product: boolean, pl: string, q: string }[]> {
+// GPT: z opisów filmów wyłuskaj POJEDYNCZY fizyczny produkt + kategorię; odsiej kompilacje/kursy/clickbait
+const TT_CATS = ['Dom & Kuchnia', 'Sprzątanie', 'Auto', 'Tech & Gadżety', 'Zdrowie & Uroda', 'Zwierzęta', 'Dzieci & Zabawki', 'Sport & Outdoor', 'Biuro & Organizacja', 'Inne']
+async function extractProducts(descs: string[]): Promise<{ is_product: boolean, pl: string, q: string, category: string }[]> {
   const list = descs.map((d, i) => `${i}. ${d.replace(/\s+/g, ' ').slice(0, 160)}`).join('\n')
   try {
     const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: `Z każdego opisu filmu TikTok (#tiktokmademebuyit itp.) wyłuskaj JEDEN konkretny fizyczny produkt.\nZwróć JSON {"items":[{"is_product":bool,"pl":"krótka polska nazwa handlowa","q":"2-4 słowa EN do wyszukania na AliExpress (generyczny typ produktu)"}]} w TEJ SAMEJ kolejności i liczbie.\nis_product=false gdy: kompilacja wielu produktów ("that last one", "who is buying the first one", "3 things"), film o dropshippingu/kursie/zarabianiu, sama lista hashtagów bez produktu, clickbait bez konkretu, usługa/aplikacja.\nOpisy:\n${list}` }],
+        messages: [{ role: 'user', content: `Z każdego opisu filmu TikTok (#tiktokmademebuyit itp.) wyłuskaj JEDEN konkretny fizyczny produkt.\nZwróć JSON {"items":[{"is_product":bool,"pl":"krótka polska nazwa handlowa","q":"2-4 słowa EN do wyszukania na AliExpress (generyczny typ produktu)","category":"<jedna z: ${TT_CATS.join(' / ')}>"}]} w TEJ SAMEJ kolejności i liczbie.\nis_product=false gdy: kompilacja wielu produktów ("that last one", "who is buying the first one", "3 things"), film o dropshippingu/kursie/zarabianiu, sama lista hashtagów bez produktu, clickbait bez konkretu, usługa/aplikacja, ODZIEŻ lub etui do telefonu.\nOpisy:\n${list}` }],
       }),
     }, 'tt-extract')
-    if (!res.ok) return descs.map(() => ({ is_product: false, pl: '', q: '' }))
+    if (!res.ok) return descs.map(() => ({ is_product: false, pl: '', q: '', category: 'Inne' }))
     const j = await res.json()
     return JSON.parse(j.choices[0].message.content).items || []
-  } catch { return descs.map(() => ({ is_product: false, pl: '', q: '' })) }
+  } catch { return descs.map(() => ({ is_product: false, pl: '', q: '', category: 'Inne' })) }
 }
 
 async function scGet(url: string): Promise<any> {
@@ -194,7 +195,7 @@ Deno.serve(async (req) => {
       const key = norm(e.pl)
       if (!key) return
       let g = cl.get(key)
-      if (!g) { g = { pl: e.pl, q: e.q, videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, newest: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
+      if (!g) { g = { pl: e.pl, q: e.q, category: e.category || 'Inne', videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, newest: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
       g.videos++; g.plays += it.plays; g.comments += it.comments || 0; g.diggs += it.diggs || 0
       if (it.plays > g.maxPlays) { g.maxPlays = it.plays; g.cover = cov(it.cover); g.originCover = cov(it.originCover); g.desc = it.seed }
       if ((it.created || 0) > g.newest) g.newest = it.created || 0
@@ -233,7 +234,7 @@ Deno.serve(async (req) => {
 
     return new Response(JSON.stringify({
       scanned_videos: items.length, found_products: cl.size,
-      products: final.map(g => ({ pl: g.pl, q: g.q, heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
+      products: final.map(g => ({ pl: g.pl, q: g.q, category: g.category || 'Inne', heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
     }), { headers: { ...cors, 'content-type': 'application/json' } })
   }
 

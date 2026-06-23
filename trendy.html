@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radar trendów TikTok → AliExpress</title>
+<link rel="icon" type="image/png" href="https://tomekniedzwiecki.pl/img/logo/tn-logo-icon-88.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:#000; color:#ededed; font-family:'Geist','Inter',sans-serif; letter-spacing:-0.011em; -webkit-font-smoothing:antialiased; }
+  h1 { letter-spacing:-0.02em; }
+  ::-webkit-scrollbar { width:8px; height:8px; } ::-webkit-scrollbar-thumb { background:#2e2e2e; border-radius:99px; }
+  :focus-visible { outline:2px solid #0070f3; outline-offset:2px; border-radius:6px; }
+  .bar { position:sticky; top:0; z-index:30; background:rgba(10,10,10,.88); backdrop-filter:blur(8px); border-bottom:1px solid #242424; }
+  .wrap { max-width:1500px; margin:0 auto; padding:0 20px; }
+  .ipt,.sel { background:#0d0d0d; border:1px solid #2e2e2e; border-radius:8px; padding:7px 11px; font-size:13px; color:#ededed; }
+  .ipt:focus,.sel:focus { border-color:#0070f3; outline:none; }
+  .btn { border-radius:8px; padding:6px 12px; font-size:12px; font-weight:500; border:1px solid #2e2e2e; background:#161616; color:#ededed; cursor:pointer; transition:.15s; }
+  .btn:hover { background:#1f1f1f; border-color:#383838; }
+  .btn-ok { background:#348047; border-color:#3d9450; color:#fff; }
+  .btn-ok:hover { background:#3d9450; }
+  .btn-no:hover { background:#5c1f22; border-color:#c5343a; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:99px; border:1px solid #2e2e2e; white-space:nowrap; }
+  .row { display:grid; grid-template-columns:230px 1fr; gap:18px; padding:18px 0; border-bottom:1px solid #1a1a1a; }
+  .row.approved { background:rgba(52,128,71,.06); }
+  .row.rejected { opacity:.45; }
+  .tt img { width:100%; aspect-ratio:9/16; max-height:300px; object-fit:cover; border-radius:10px; background:#111; display:block; }
+  .tt .nm { font-size:14px; font-weight:600; margin:8px 0 4px; line-height:1.3; }
+  .sig { font-size:11px; color:#9a9a9a; }
+  .cands { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:10px; }
+  .cand { border:1px solid #242424; border-radius:10px; overflow:hidden; background:#0d0d0d; display:flex; flex-direction:column; }
+  .cand.picked { box-shadow:inset 0 0 0 2px #348047; border-color:#348047; }
+  .cand img { width:100%; aspect-ratio:1; object-fit:cover; background:#fff; display:block; }
+  .cand .ci { padding:7px 8px; font-size:11px; flex:1; display:flex; flex-direction:column; gap:5px; }
+  .cand .pr { color:#5cbf6e; font-family:'Geist Mono',monospace; font-weight:600; font-size:12px; }
+  .cand .ti { color:#a1a1a1; line-height:1.3; max-height:30px; overflow:hidden; }
+  .cand .row2 { display:flex; gap:6px; margin-top:auto; padding:0 8px 8px; }
+  .cand a.open { font-size:10px; color:#6cb0ff; text-decoration:none; align-self:center; }
+  .actions { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#161616; border:1px solid #383838; padding:10px 18px; border-radius:10px; font-size:13px; z-index:80; opacity:0; transition:.2s; }
+  .toast.show { opacity:1; }
+  .spin{display:inline-block;width:34px;height:34px;border:3px solid #222;border-top-color:#0070f3;border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="wrap" style="display:flex;align-items:center;gap:14px;padding-top:14px;padding-bottom:10px;flex-wrap:wrap">
+    <h1 style="font-size:17px;font-weight:600;margin:0;margin-right:auto">📈 Radar trendów TikTok → AliExpress</h1>
+    <span id="stat" class="badge" style="color:#9a9a9a"></span>
+    <input id="q" class="ipt" placeholder="Szukaj produktu…" style="width:200px">
+    <select id="fcat" class="sel"><option value="">Wszystkie kategorie</option></select>
+    <select id="fstatus" class="sel">
+      <option value="pending">Do weryfikacji</option>
+      <option value="approved">Zatwierdzone</option>
+      <option value="rejected">Odrzucone</option>
+      <option value="">Wszystkie</option>
+    </select>
+    <button id="refresh" class="btn">Odśwież</button>
+  </div>
+</header>
+
+<main class="wrap" id="main" style="padding-top:8px;padding-bottom:80px">
+  <div id="loading" style="text-align:center;padding:60px"><div class="spin"></div></div>
+  <div id="rows"></div>
+  <div id="empty" class="hidden" style="display:none;text-align:center;color:#666;padding:60px">Brak pozycji dla tego filtra.</div>
+</main>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const SUPABASE_URL='https://yxmavwkwnfuphjqbelws.supabase.co';
+const ANON='sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+const sb=window.supabase.createClient(SUPABASE_URL,ANON);
+const $=id=>document.getElementById(id);
+const esc=s=>(''+(s||'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let ROWS=[], ME='', toastT;
+function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+
+const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Biuro & Organizacja','Inne'];
+
+async function init(){
+  const { data:{session} } = await sb.auth.getSession();
+  if(!session){ location.href='/login.html?redirect=/trendy'; return; }
+  const { data: tm } = await sb.from('team_members').select('user_id,name').eq('user_id',session.user.id).maybeSingle();
+  if(!tm){ $('loading').innerHTML='Brak uprawnień (tylko zespół).'; return; }
+  ME = tm.name || session.user.email;
+  $('fcat').innerHTML = '<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
+  $('q').oninput=render; $('fcat').onchange=render; $('fstatus').onchange=render; $('refresh').onclick=load;
+  await load();
+}
+
+async function load(){
+  $('loading').style.display='block'; $('rows').innerHTML='';
+  const { data, error } = await sb.from('bud_tt_products').select('*').order('heat',{ascending:false});
+  $('loading').style.display='none';
+  if(error){ toast('Błąd: '+error.message); return; }
+  ROWS=data||[]; render();
+}
+
+function render(){
+  const term=$('q').value.toLowerCase().trim(), fc=$('fcat').value, fs=$('fstatus').value;
+  let r=ROWS.filter(x=>{
+    if(fc && x.category!==fc) return false;
+    if(fs && x.status!==fs) return false;
+    if(term && !(x.pl_name||'').toLowerCase().includes(term)) return false;
+    return true;
+  });
+  const appr=ROWS.filter(x=>x.status==='approved').length;
+  $('stat').textContent=`${ROWS.length} trendów · ${appr} zatwierdzonych · pokazuję ${r.length}`;
+  $('empty').style.display=r.length?'none':'block';
+  $('rows').innerHTML=r.map(rowHtml).join('');
+}
+
+function rowHtml(x){
+  const cands=(x.ali_candidates||[]);
+  const days = x.newest_days!=null ? `${x.newest_days}d` : '';
+  const catOpts=CATS.map(c=>`<option ${c===x.category?'selected':''}>${c}</option>`).join('');
+  const cand=c=>`<div class="cand ${x.chosen_link===c.link?'picked':''}">
+      <a href="${esc(c.link)}" target="_blank">${c.img?`<img loading=lazy src="${esc(c.img)}">`:'<div style="aspect-ratio:1;background:#111"></div>'}</a>
+      <div class="ci"><span class="pr">${esc(c.price||'cena?')}</span><span class="ti">${esc((c.title||'').slice(0,46))}</span></div>
+      <div class="row2"><button class="btn btn-ok" style="flex:1" onclick="pick('${x.id}','${esc(c.link)}')">✓ Wybierz</button><a class="open" href="${esc(c.link)}" target="_blank">↗</a></div>
+    </div>`;
+  return `<div class="row ${x.status}" id="r-${x.id}">
+    <div class="tt">
+      ${x.tiktok_url?`<a href="${esc(x.tiktok_url)}" target="_blank">`:''}${x.cover?`<img loading=lazy src="${esc(x.cover)}">`:'<div style="aspect-ratio:9/16;background:#111;border-radius:10px"></div>'}${x.tiktok_url?'</a>':''}
+      <div class="nm">${esc(x.pl_name)}</div>
+      <div class="sig">🔥 ${Math.round(x.heat)} · 🎬 ${x.videos} · ▶ ${(x.max_plays/1e6).toFixed(1)}M ${days?'· '+days:''}</div>
+      <div class="sig" style="margin-top:3px">${(x.tags||[]).slice(0,3).map(t=>'#'+t).join(' ')}</div>
+      ${x.tiktok_url?`<a class="open" style="font-size:11px;color:#6cb0ff" href="${esc(x.tiktok_url)}" target="_blank">▶ Otwórz na TikTok</a>`:''}
+    </div>
+    <div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <select class="sel" onchange="setCat('${x.id}',this.value)">${catOpts}</select>
+        <span class="badge" style="${x.status==='approved'?'color:#5cbf6e;border-color:#3d9450':x.status==='rejected'?'color:#ef6f73':'color:#9a9a9a'}">${x.status}${x.reviewed_by?' · '+esc(x.reviewed_by):''}</span>
+        ${x.ali_search_url?`<a class="open" style="font-size:11px;color:#6cb0ff" href="${esc(x.ali_search_url)}" target="_blank">wszystkie wyniki Ali ↗</a>`:''}
+      </div>
+      <div class="cands">${cands.length?cands.map(cand).join(''):'<div style="color:#666;font-size:13px;padding:8px 0">Brak kandydatów (kadr-haczyk lub w toku). Wklej własny link niżej.</div>'}</div>
+      <div class="actions">
+        <input class="ipt" id="cl-${x.id}" placeholder="…lub wklej własny link AliExpress" style="flex:1;min-width:220px" value="${esc(x.status==='approved'&&!cands.some(c=>c.link===x.chosen_link)?(x.chosen_link||''):'')}">
+        <button class="btn btn-ok" onclick="customApprove('${x.id}')">Zatwierdź własny</button>
+        <button class="btn btn-no" onclick="reject('${x.id}')">✗ Odrzuć</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function upd(id, patch, msg){
+  patch.reviewed_by=ME; patch.reviewed_at=new Date().toISOString();
+  const { error } = await sb.from('bud_tt_products').update(patch).eq('id',id);
+  if(error){ toast('Błąd: '+error.message); return; }
+  const x=ROWS.find(r=>r.id===id); if(x) Object.assign(x,patch);
+  toast(msg); render();
+}
+function pick(id,link){ upd(id,{chosen_link:link,status:'approved'},'Zatwierdzone ✓'); }
+function customApprove(id){ const v=$('cl-'+id).value.trim(); if(!v){toast('Wklej link');return;} upd(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link ✓'); }
+function reject(id){ upd(id,{status:'rejected'},'Odrzucone'); }
+async function setCat(id,cat){ const { error }=await sb.from('bud_tt_products').update({category:cat}).eq('id',id); if(error){toast('Błąd: '+error.message);return;} const x=ROWS.find(r=>r.id===id); if(x)x.category=cat; toast('Kategoria: '+cat); }
+
+init();
+</script>
+</body>
+</html>
