@@ -1,0 +1,258 @@
+// TikTok TREND RADAR (ScrapeCreators) — feed trendów: Top Ads (po CTR/lajkach) + wiralowe filmy
+// z hashtagów (po odtworzeniach). Zwraca produkty-trendy z metryką zaangażowania.
+// Admin-gated. (Sourcing na AliExpress = osobny krok.)
+import { adminGate } from '../_shared/bud-owner.ts'
+import { createClient } from 'jsr:@supabase/supabase-js@2'
+import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
+
+const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
+const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
+const MODEL = Deno.env.get('BUD_PRODUCTS_MODEL') || 'gpt-5.1'
+const B = 'https://api.scrapecreators.com'
+const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' }
+
+// Zestaw dzienny wg strategii: shopping + niszowe + problemowe (nie tylko przekopany tiktokmademebuyit)
+const DEFAULT_TAGS = ['tiktokmademebuyit', 'amazonfinds', 'tiktokshopfinds', 'thingsyoudidntknowyouneeded', 'problemsolvingproducts', 'viralfinds', 'homegadgets', 'kitchengadgets', 'cleaningtok', 'petfinds', 'travelmusthaves', 'cargadgets', 'coolgadgets', 'homefinds', 'usefulproducts']
+// Pełnotekstowe frazy (TikTok jak wyszukiwarka nieoczywistych produktów)
+const DEFAULT_PHRASES = ['things you didnt know you needed', 'products that solve everyday problems', 'useful gadgets for home', 'products that make life easier', 'small apartment must haves']
+
+async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length) as any; let idx = 0
+  async function w() { while (idx < items.length) { const i = idx++; out[i] = await fn(items[i], i) } }
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, w)); return out
+}
+
+// GPT: z opisów filmów wyłuskaj POJEDYNCZY fizyczny produkt; odsiej kompilacje/kursy/clickbait
+async function extractProducts(descs: string[]): Promise<{ is_product: boolean, pl: string, q: string }[]> {
+  const list = descs.map((d, i) => `${i}. ${d.replace(/\s+/g, ' ').slice(0, 160)}`).join('\n')
+  try {
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' },
+        messages: [{ role: 'user', content: `Z każdego opisu filmu TikTok (#tiktokmademebuyit itp.) wyłuskaj JEDEN konkretny fizyczny produkt.\nZwróć JSON {"items":[{"is_product":bool,"pl":"krótka polska nazwa handlowa","q":"2-4 słowa EN do wyszukania na AliExpress (generyczny typ produktu)"}]} w TEJ SAMEJ kolejności i liczbie.\nis_product=false gdy: kompilacja wielu produktów ("that last one", "who is buying the first one", "3 things"), film o dropshippingu/kursie/zarabianiu, sama lista hashtagów bez produktu, clickbait bez konkretu, usługa/aplikacja.\nOpisy:\n${list}` }],
+      }),
+    }, 'tt-extract')
+    if (!res.ok) return descs.map(() => ({ is_product: false, pl: '', q: '' }))
+    const j = await res.json()
+    return JSON.parse(j.choices[0].message.content).items || []
+  } catch { return descs.map(() => ({ is_product: false, pl: '', q: '' })) }
+}
+
+async function scGet(url: string): Promise<any> {
+  try { const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 22000); const r = await fetch(url, { headers: { 'x-api-key': SC }, signal: ctrl.signal }); clearTimeout(t); if (!r.ok) return null; return await r.json() } catch { return null }
+}
+
+// Top Ads (Creative Center) — browse US, sort po CTR; paginacja cursorem
+async function topAds(period: number, pages: number, order: string): Promise<any[]> {
+  const out: any[] = []; let cursor = 0
+  for (let p = 0; p < pages; p++) {
+    const cur = cursor > 0 ? `&cursor=${cursor}` : ''   // cursor=0 = invalid_parameter
+    const j = await scGet(`${B}/v1/tiktok/ad-library/search?region=US&period=${period}&order_by=${order}${cur}`)
+    const ads = j?.ads || []
+    for (const a of ads) out.push({
+      kind: 'ad', seed: a.ad_title || '', brand: a.brand_name || '', ctr: a.ctr || 0, like: a.like || 0,
+      cover: a.video_info?.cover || '', id: a.id, industry: a.industry_key || '',
+      video: a.video_info?.video_url?.['720p'] || a.video_info?.video_url?.['480p'] || Object.values(a.video_info?.video_url || {})[0] || '',
+    })
+    if (!j?.has_more) break
+    cursor = j.cursor || (cursor + ads.length)
+  }
+  return out
+}
+
+// Wiralowe filmy organiczne po hashtagu — po odtworzeniach
+async function viral(hashtag: string, pages: number): Promise<any[]> {
+  const out: any[] = []; let cursor = 0
+  for (let p = 0; p < pages; p++) {
+    const cur = cursor > 0 ? `&cursor=${cursor}` : ''
+    const j = await scGet(`${B}/v1/tiktok/search/keyword?query=${encodeURIComponent(hashtag)}${cur}`)
+    const items = j?.search_item_list || []
+    for (const it of items) {
+      const a = it.aweme_info; if (!a) continue
+      out.push({
+        kind: 'organic', tag: hashtag, seed: a.desc || '', plays: a.statistics?.play_count || 0,
+        diggs: a.statistics?.digg_count || 0, shares: a.statistics?.share_count || 0, comments: a.statistics?.comment_count || 0,
+        created: a.create_time || 0,
+        cover: a.video?.cover || a.video?.origin_cover || '', originCover: a.video?.origin_cover || '', author: a.author?.unique_id || '', id: a.aweme_id || '',
+        url: a.author?.unique_id && a.aweme_id ? `https://www.tiktok.com/@${a.author.unique_id}/video/${a.aweme_id}` : '',
+        shop: a.shop_product_url || '',
+      })
+    }
+    if (!j?.has_more) break
+    cursor = j.cursor || (cursor + items.length)
+  }
+  return out
+}
+
+// ── AliExpress sourcing (ten sam silnik co bud-store-source) ──
+const RAPID_KEY = Deno.env.get('BUD_ALIEXPRESS_RAPIDAPI_KEY') || ''
+const RAPID_HOST = 'aliexpress-true-api.p.rapidapi.com'
+const RATE = 4, MARKUP = 2.7, BAND_MIN = 8, BAND_MAX = 400
+async function rapid(q: string): Promise<any[]> {
+  const url = `https://${RAPID_HOST}/api/v3/products?keywords=${encodeURIComponent(q)}&page_size=8&target_currency=USD&country=PL&ship_to_country=PL&sort=LAST_VOLUME_DESC`
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 20000)
+    const r = await fetch(url, { headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': RAPID_HOST }, signal: ctrl.signal }); clearTimeout(t)
+    if (!r.ok) return []
+    const j = await r.json()
+    const arr = j?.data?.products?.product || j?.data?.products || j?.products?.product || j?.products || []
+    return (Array.isArray(arr) ? arr : []).map((p: any) => {
+      const usd = parseFloat(p.target_sale_price ?? p.sale_price ?? p.app_sale_price ?? 0) || 0
+      const id = String(p.product_id ?? p.productId ?? '')
+      return { id, title: p.product_title || '', img: p.product_main_image_url || (p.product_small_image_urls?.string?.[0]) || '', koszt: Math.round(usd * RATE), link: id ? `https://www.aliexpress.com/item/${id}.html` : '' }
+    }).filter((c: any) => c.img && c.id && c.koszt > 0)
+  } catch { return [] }
+}
+async function gptJson(content: any, label: string): Promise<any> {
+  try {
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content }] }) }, label)
+    if (!res.ok) return null
+    return JSON.parse((await res.json()).choices[0].message.content)
+  } catch { return null }
+}
+const imgParts = (urls: string[]) => urls.filter(Boolean).map(u => ({ type: 'image_url', image_url: { url: u } }))
+
+// VISION 1: z KADRU(ów) + opisu zbuduj precyzyjną frazę do AliExpress (nie z samego tekstu)
+async function analyzeVision(refs: string[], desc: string): Promise<{ q: string, q2: string, pl: string } | null> {
+  if (!refs.filter(Boolean).length) return null
+  const content: any[] = [
+    { type: 'text', text: `Film TikTok promuje JEDEN produkt. Opis: "${(desc || '').slice(0, 160)}".\nPatrząc na KADR(y) z filmu, podaj frazy do AliExpress opisujące DOKŁADNIE ten produkt (typ + widoczne cechy: kształt, sposób montażu, funkcja, liczba elementów).\nJSON: {"q":"<3-6 słów EN, konkretnie — nie ogólnik>","q2":"<szersza fraza 2-3 słowa, ogólny typ>","pl":"<krótka polska nazwa>"}` },
+    ...imgParts(refs),
+  ]
+  return await gptJson(content, 'tt-analyze')
+}
+
+// VISION 2: rygorystyczna weryfikacja po kadrach + kontekście opisu (BEZ fallbacku poza tą funkcją)
+async function visionVerify(refs: string[], cands: any[], name: string, desc: string): Promise<number> {
+  if (!refs.filter(Boolean).length || !cands.length) return -1
+  const content: any[] = [
+    { type: 'text', text: `Produkt z TikTok: "${name}". Opis filmu: "${(desc || '').slice(0, 140)}". Referencja — kadr(y) z filmu:` },
+    ...imgParts(refs),
+    { type: 'text', text: 'Kandydaci z AliExpress (po zdjęciu):' },
+  ]
+  cands.forEach((c, i) => { content.push({ type: 'text', text: `[${i}] ${c.title}` }); content.push({ type: 'image_url', image_url: { url: c.img } }) })
+  content.push({ type: 'text', text: 'Wskaż kandydata, który jest TYM SAMYM produktem (ta sama rzecz / typ / funkcja, nadający się jako źródło tego z filmu). Nie musi być identyczna fotka ani ten sam kolor. Wybierz najlepszy. -1 TYLKO gdy żaden to nie ten produkt. JSON: {"match":<idx|-1>}.' })
+  const o = await gptJson(content, 'tt-verify')
+  const m = o?.match
+  return typeof m === 'number' ? m : -1
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
+  const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+  if (!(await adminGate(req, supabase))) return new Response(JSON.stringify({ error: 'wymagane_logowanie_admin' }), { status: 403, headers: { ...cors, 'content-type': 'application/json' } })
+
+  const body = await req.json().catch(() => ({}))
+
+  // DEBUG: zrzut surowej struktury aweme dla hashtagu — szukamy pól produktowych (anchors/commerce/shop)
+  if (body.raw) {
+    const j = await scGet(`${B}/v1/tiktok/search/keyword?query=${encodeURIComponent(body.raw)}`)
+    const items = j?.search_item_list || []
+    const a0 = items[0]?.aweme_info || {}
+    const probe = items.slice(0, 14).map((it: any) => {
+      const a = it.aweme_info || {}
+      return {
+        desc: (a.desc || '').slice(0, 60),
+        shop_product_url: a.shop_product_url || null,
+        products_info: a.products_info || null,
+        commerce_info: a.commerce_info ? Object.keys(a.commerce_info) : null,
+        anchors: (a.anchors || []).map((x: any) => ({ title: x.title, keyword: x.keyword, type: x.type })),
+        bottom_products: a.bottom_products || null,
+      }
+    })
+    return new Response(JSON.stringify({ topKeys: Object.keys(a0).length, probe }, null, 2), { headers: { ...cors, 'content-type': 'application/json' } })
+  }
+
+  // ── TRYB PRODUKTY: hashtagi+frazy → filmy → GPT wyłuskuje produkt → KLASTRY (ile filmów × świeżość × zaangażowanie) ──
+  if (body.mode === 'products') {
+    const tags = (body.hashtags?.length ? body.hashtags : DEFAULT_TAGS).map((t: string) => t.replace(/^#/, '').toLowerCase())
+    const phrases: string[] = body.phrases?.length ? body.phrases : (body.usePhrases === false ? [] : DEFAULT_PHRASES)
+    const queries = [...tags, ...phrases]
+    const pages = body.pages ?? 2
+    const minPlays = body.minPlays ?? 150000
+    const limit = body.limit ?? 100
+    const NOW = Math.floor(Date.now() / 1000)
+    const cov = (c: any) => typeof c === 'string' ? c : (c?.url_list?.[0]) || ''
+
+    const raw = (await pool(queries, 6, (t: string) => viral(t, pages))).flat()
+    const byId = new Map<string, any>()
+    for (const v of raw) { if (!v.id) continue; if (!byId.has(v.id) || byId.get(v.id).plays < v.plays) byId.set(v.id, v) }
+    let items = [...byId.values()].filter(v => v.plays >= minPlays && (v.seed || '').trim().length >= 8).sort((a, b) => b.plays - a.plays)
+    items = items.slice(0, body.scan ?? 280)
+
+    const chunks: any[][] = []
+    for (let i = 0; i < items.length; i += 30) chunks.push(items.slice(i, i + 30))
+    const cleanedPerChunk = await pool(chunks, 4, (c: any[]) => extractProducts(c.map(x => x.seed)))
+
+    // klaster po produkcie (znormalizowana nazwa pl)
+    const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+    const cl = new Map<string, any>()
+    chunks.forEach((c, k) => c.forEach((it, jdx) => {
+      const e = cleanedPerChunk[k]?.[jdx]
+      if (!e?.is_product || !e.pl) return
+      const key = norm(e.pl)
+      if (!key) return
+      let g = cl.get(key)
+      if (!g) { g = { pl: e.pl, q: e.q, videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, newest: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
+      g.videos++; g.plays += it.plays; g.comments += it.comments || 0; g.diggs += it.diggs || 0
+      if (it.plays > g.maxPlays) { g.maxPlays = it.plays; g.cover = cov(it.cover); g.originCover = cov(it.originCover); g.desc = it.seed }
+      if ((it.created || 0) > g.newest) g.newest = it.created || 0
+      g.tags.add(it.tag); if (it.url && g.urls.length < 3) g.urls.push(it.url); if (!g.shop && it.shop) g.shop = it.shop
+    }))
+
+    // heat: liczba filmów (najmocniej) + świeżość + zaangażowanie
+    const heat = (g: any) => {
+      const recency = g.newest ? (NOW - g.newest <= 30 * 86400 ? 4 : NOW - g.newest <= 90 * 86400 ? 2 : 0) : 0
+      return +(g.videos * 10 + Math.log10(g.plays + 1) * 2 + Math.log10(g.comments + 1) + recency).toFixed(2)
+    }
+    const final = [...cl.values()].map(g => ({ ...g, heat: heat(g) })).sort((a, b) => b.heat - a.heat).slice(0, limit)
+    const days = (ts: number) => ts ? Math.round((NOW - ts) / 86400) : null
+
+    // OPCJONALNIE: znajdź każdy produkt na AliExpress od razu (rapid + vision-weryfikacja po okładce)
+    if (body.sourceToAli) {
+      const srcN = Math.min(final.length, body.sourceLimit ?? 30)
+      await pool(final.slice(0, srcN), 5, async (g: any) => {
+        const refs = [g.cover].filter(Boolean)   // tylko główny kadr — dodatkowy URL bywa odrzucany przez OpenAI (400)
+        // fraza budowana z OBRAZU+opisu (nie z samego tekstu) + szerszy wariant
+        const a = await analyzeVision(refs, g.desc)
+        const qs = [...new Set([a?.q, g.q, a?.q2].filter(Boolean))].slice(0, 2)
+        const seen = new Set<string>(); let cands: any[] = []
+        for (const q of qs) { for (const c of await rapid(q)) { if (!seen.has(c.id)) { seen.add(c.id); cands.push(c) } } }
+        cands = cands.filter((c: any) => c.koszt >= BAND_MIN && c.koszt <= BAND_MAX).slice(0, 12)
+        if (body.debug) g.aliDbg = { refs: refs.length, q: a?.q || null, q2: a?.q2 || null, qs, cands: cands.length, candTitles: cands.slice(0, 3).map((c: any) => c.title?.slice(0, 30)) }
+        if (!cands.length) return
+        const mi = await visionVerify(refs, cands, a?.pl || g.pl, g.desc)
+        if (body.debug) g.aliDbg.mi = mi
+        if (mi >= 0 && mi < cands.length) {   // TYLKO pewne dopasowanie — bez fallbacku
+          const c = cands[mi]
+          g.ali = { title: c.title, koszt: c.koszt, detal: Math.round(c.koszt * MARKUP), link: c.link, img: c.img, verified: true, q: qs[0] }
+        }
+      })
+    }
+
+    return new Response(JSON.stringify({
+      scanned_videos: items.length, found_products: cl.size,
+      products: final.map(g => ({ pl: g.pl, q: g.q, heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
+    }), { headers: { ...cors, 'content-type': 'application/json' } })
+  }
+
+  const period = body.period ?? 30
+  const adPages = body.adPages ?? 4
+  const hashtags: string[] = body.hashtags || ['tiktokmademebuyit', 'tiktokshopfinds', 'amazonfinds', 'coolgadgets']
+  const tagPages = body.tagPages ?? 2
+  const minPlays = body.minPlays ?? 300000
+
+  const ads = await topAds(period, adPages, body.order || 'ctr')
+  const vir = (await Promise.all(hashtags.map(h => viral(h, tagPages)))).flat().filter(v => v.plays >= minPlays)
+
+  // dedup organiczne po id
+  const seen = new Set<string>(); const organic: any[] = []
+  for (const v of vir.sort((a, b) => b.plays - a.plays)) { if (v.id && seen.has(v.id)) continue; if (v.id) seen.add(v.id); organic.push(v) }
+
+  return new Response(JSON.stringify({
+    ads_total: ads.length, organic_total: organic.length,
+    top_ads: ads.sort((a, b) => b.ctr - a.ctr).slice(0, body.limit || 40),
+    top_organic: organic.slice(0, body.limit || 40),
+  }), { headers: { ...cors, 'content-type': 'application/json' } })
+})
