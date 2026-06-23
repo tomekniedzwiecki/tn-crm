@@ -141,6 +141,12 @@
   .toast.show{opacity:1}
   .loader{display:flex;justify-content:center;padding:80px}.spin{width:36px;height:36px;border:3px solid #222;border-top-color:var(--gold);border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
   .empty{text-align:center;color:var(--dim2);padding:70px 20px;font-size:14px}
+  .pager{display:flex;align-items:center;justify-content:center;gap:14px;padding:22px 0 8px;flex-wrap:wrap}
+  .pager:empty{display:none}
+  .pgbtn{background:var(--surface);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s}
+  .pgbtn:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+  .pgbtn:disabled{opacity:.4;cursor:default}
+  .pginfo{font-size:12.5px;color:var(--dim)}.pginfo b{color:var(--text)}
 
   /* MOBILE */
   @media (max-width:680px){
@@ -181,6 +187,7 @@
   <div class="loader" id="loading"><div class="spin"></div></div>
   <div class="cards" id="cards"></div>
   <div class="empty" id="empty" style="display:none">Brak pozycji dla tego filtra.</div>
+  <div class="pager" id="pager"></div>
 </main>
 
 <div class="modal" id="modal" onclick="closeM(event)"><div class="mx" onclick="closeM(event,true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></div><div class="modalC" id="modalC" onclick="event.stopPropagation()"></div></div>
@@ -194,7 +201,7 @@ const $=id=>document.getElementById(id);
 const esc=s=>(''+(s||'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>{n=+n||0;return n>=1e6?(n/1e6).toFixed(1).replace('.',',')+'M':n>=1000?(n/1000).toFixed(n>=1e4?0:1).replace('.',',')+'k':String(n);};
 const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Biuro & Organizacja','Inne'];
-let ROWS=[], ME='', FSTAT='pending', toastT;
+let ROWS=[], ME='', FSTAT='pending', toastT, PAGE=0; const PER=20;
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 
 const I={
@@ -221,8 +228,8 @@ async function init(){
   const {data:tm}=await sb.from('team_members').select('name').eq('user_id',session.user.id).maybeSingle();
   ME=tm?.name||session.user.email;
   $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
-  $('q').oninput=render; $('fcat').onchange=render; $('refresh').onclick=load;
-  $('stseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('stseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FSTAT=b.dataset.s;render();});
+  $('q').oninput=()=>{PAGE=0;render()}; $('fcat').onchange=()=>{PAGE=0;render()}; $('refresh').onclick=load;
+  $('stseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('stseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FSTAT=b.dataset.s;PAGE=0;render();});
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeM(null,true)});
   await load();
 }
@@ -243,9 +250,23 @@ function render(){
   });
   const appr=ROWS.filter(x=>x.status==='approved').length, pend=ROWS.filter(x=>x.status==='pending').length;
   $('kpis').innerHTML=`<div class="kpi"><b>${ROWS.length}</b> trendów</div><div class="kpi"><b>${pend}</b> do weryf.</div><div class="kpi g"><b>${appr}</b> zatwierdzonych</div>`;
-  $('empty').style.display=r.length?'none':'block';
-  $('cards').innerHTML=r.map(card).join('');
+  // paginacja 20/stronę
+  const total=r.length, pages=Math.max(1,Math.ceil(total/PER));
+  if(PAGE>=pages)PAGE=pages-1; if(PAGE<0)PAGE=0;
+  const slice=r.slice(PAGE*PER,PAGE*PER+PER);
+  $('empty').style.display=total?'none':'block';
+  $('cards').innerHTML=slice.map(card).join('');
+  renderPager(total,pages);
 }
+function renderPager(total,pages){
+  const pg=$('pager');if(!pg)return;
+  if(total<=PER){pg.innerHTML='';return;}
+  const from=PAGE*PER+1,to=Math.min(total,PAGE*PER+PER);
+  pg.innerHTML=`<button class="pgbtn" ${PAGE<=0?'disabled':''} onclick="gotoPage(${PAGE-1})">‹ Poprzednia</button>`
+    +`<span class="pginfo">Strona <b>${PAGE+1}</b> z ${pages} · ${from}–${to} z ${total}</span>`
+    +`<button class="pgbtn" ${PAGE>=pages-1?'disabled':''} onclick="gotoPage(${PAGE+1})">Następna ›</button>`;
+}
+function gotoPage(p){PAGE=p;render();window.scrollTo({top:0,behavior:'smooth'});}
 function statTile(icon,val,lab,gold){return `<div class="stat${gold?' gold':''}"><div class="lab">${I[icon]}${lab}</div><div class="val mono">${val}</div></div>`;}
 function candHtml(x,c){return `<div class="cand${x.chosen_link===c.link?' picked':''}">
   <div class="cimg">${c.img?`<img loading=lazy src="${esc(c.img)}">`:''}${x.chosen_link===c.link?`<div class="pickedTag">${I.check}</div>`:''}</div>
