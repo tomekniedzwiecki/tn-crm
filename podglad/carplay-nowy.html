@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bezprzewodowy CarPlay w 60 sekund</title>
+  <style>
+    :root{
+      --bg:#020713;
+      --bg2:#051225;
+      --card:#07182b;
+      --card2:#06101d;
+      --line:#23435f;
+      --line2:#315a78;
+      --white:#f5f8ff;
+      --muted:#b9c6d8;
+      --soft:#7f8fa6;
+      --green:#93f21c;
+      --green2:#66c900;
+      --blue:#009dff;
+      --blue2:#004dff;
+      --danger:#ff6b4a;
+      --shadow-blue:0 0 22px rgba(0,157,255,.72), inset 0 0 18px rgba(0,157,255,.28);
+      --shadow-green:0 0 22px rgba(147,242,28,.55);
+      --radius:18px;
+      --radius2:28px;
+      --max:1160px;
+    }
+
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:Inter,Segoe UI,Roboto,Arial,sans-serif;
+      color:var(--white);
+      background:
+        radial-gradient(circle at 78% 8%, rgba(0,157,255,.26) 0 14%, transparent 34%),
+        radial-gradient(circle at 12% 24%, rgba(147,242,28,.12) 0 10%, transparent 32%),
+        linear-gradient(180deg,#01040b 0%,var(--bg) 42%,#01040b 100%);
+      padding-bottom:96px;
+      overflow-x:hidden;
+    }
+
+    body:before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      background:
+        linear-gradient(115deg,transparent 0 52%,rgba(0,157,255,.24) 53%,transparent 57%),
+        linear-gradient(112deg,transparent 0 58%,rgba(255,87,87,.18) 59%,transparent 62%),
+        radial-gradient(ellipse at 72% 18%,rgba(0,157,255,.18),transparent 34%);
+      opacity:.85;
+      z-index:-2;
+    }
+
+    img{max-width:100%;display:block}
+    .wrap{width:min(var(--max),calc(100% - 32px));margin:0 auto}
+    .section{padding:48px 0}
+    .section-tight{padding:28px 0}
+    .accent{color:var(--green)}
+    .blue{color:var(--blue)}
+    .muted{color:var(--muted)}
+    .center{text-align:center}
+
+    .sticky-cta{
+      position:fixed;
+      left:0;
+      right:0;
+      bottom:0;
+      z-index:50;
+      background:rgba(2,7,19,.86);
+      backdrop-filter:blur(16px);
+      border-top:1px solid rgba(0,157,255,.34);
+      box-shadow:0 -12px 40px rgba(0,0,0,.55),0 0 28px rgba(0,157,255,.16);
+      padding:10px 14px;
+    }
+    .sticky-inner{
+      width:min(var(--max),100%);
+      margin:0 auto;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .sticky-price small{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.1;
+    }
+    .sticky-price strong{
+      font-size:24px;
+      line-height:1;
+      color:var(--green);
+      font-weight:950;
+      font-style:italic;
+      letter-spacing:-.5px;
+      text-shadow:var(--shadow-green);
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:14px;
+      min-height:58px;
+      padding:0 28px;
+      border-radius:13px;
+      color:#fff;
+      text-decoration:none;
+      font-weight:950;
+      letter-spacing:1.3px;
+      text-transform:uppercase;
+      background:linear-gradient(180deg,#087cff 0%,#033cbd 100%);
+      border:1px solid #2dc0ff;
+      box-shadow:var(--shadow-blue);
+      position:relative;
+      isolation:isolate;
+      transition:transform .15s ease,filter .15s ease;
+      white-space:nowrap;
+    }
+    .btn:after{
+      content:"â€ş";
+      font-size:34px;
+      line-height:0;
+      margin-top:-2px;
+      font-weight:300;
+    }
+    .btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+    .btn-green{
+      background:linear-gradient(180deg,#9cff25 0%,#55b800 100%);
+      color:#061014;
+      border-color:#b6ff58;
+      box-shadow:var(--shadow-green);
+    }
+    .btn-green:after{color:#061014}
+    .sticky-cta .btn{min-height:50px;padding:0 20px;font-size:14px;border-radius:12px}
+
+    .top{
+      padding:24px 0 10px;
+      position:relative;
+      z-index:2;
+    }
+    .top-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:800;
+      color:var(--green);
+      letter-spacing:-.2px;
+    }
+    .logo{
+      width:44px;
+      height:44px;
+      border:1px dashed rgba(255,255,255,.82);
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      box-shadow:0 0 18px rgba(255,255,255,.08);
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:10px;
+      border:1px solid rgba(0,157,255,.35);
+      background:rgba(4,18,34,.54);
+      color:#eaf4ff;
+      border-radius:12px;
+      padding:11px 15px;
+      font-size:13px;
+    }
+    .dot{
+      width:14px;
+      height:14px;
+      border-radius:999px;
+      background:var(--green);
+      box-shadow:var(--shadow-green);
+      flex:0 0 auto;
+    }
+
+    .hero{
+      position:relative;
+      padding:34px 0 32px;
+      overflow:hidden;
+    }
+    .hero:after{
+      content:"";
+      position:absolute;
+      right:-16%;
+      top:4%;
+      width:74%;
+      height:56%;
+      background:
+        linear-gradient(100deg,transparent,rgba(0,157,255,.64),transparent 58%),
+        linear-gradient(102deg,transparent 20%,rgba(147,242,28,.35),transparent 65%),
+        linear-gradient(99deg,transparent 24%,rgba(255,92,92,.38),transparent 70%);
+      filter:blur(10px);
+      opacity:.65;
+      transform:skewY(-9deg);
+      z-index:-1;
+    }
+    .hero-grid{
+      display:grid;
+      gap:28px;
+      align-items:center;
+    }
+    .rating{
+      display:inline-flex;
+      align-items:center;
+      gap:9px;
+      color:#e9f3ff;
+      font-size:14px;
+      background:rgba(3,18,34,.68);
+      border:1px solid rgba(49,90,120,.75);
+      border-radius:999px;
+      padding:9px 13px;
+      margin-bottom:18px;
+    }
+    .stars{
+      color:var(--green);
+      letter-spacing:1px;
+      text-shadow:var(--shadow-green);
+      white-space:nowrap;
+    }
+    h1,h2,h3,p{margin-top:0}
+    h1{
+      font-size:clamp(42px,11vw,86px);
+      line-height:.94;
+      letter-spacing:-2.5px;
+      margin-bottom:18px;
+      text-transform:uppercase;
+      font-weight:1000;
+      font-style:italic;
+      text-shadow:0 3px 0 rgba(255,255,255,.08);
+    }
+    h1 .line{display:block}
+    h1 .green-word{
+      display:block;
+      color:var(--green);
+      font-size:1.18em;
+      text-shadow:0 0 26px rgba(147,242,28,.45);
+    }
+    .subtitle{
+      font-size:clamp(18px,2.4vw,24px);
+      line-height:1.45;
+      color:#dce7f7;
+      max-width:530px;
+      margin-bottom:24px;
+    }
+    .hero-actions{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-start;
+      gap:12px;
+      margin:22px 0 18px;
+    }
+    .price-row{
+      display:flex;
+      align-items:flex-end;
+      gap:14px;
+      flex-wrap:wrap;
+      margin-bottom:4px;
+    }
+    .old-price{
+      color:#8c98a8;
+      text-decoration:line-through;
+      font-size:20px;
+    }
+    .price{
+      color:var(--green);
+      font-size:clamp(38px,6vw,58px);
+      line-height:.9;
+      font-weight:1000;
+      font-style:italic;
+      letter-spacing:-1.5px;
+      text-shadow:var(--shadow-green);
+    }
+    .micro{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color:#c9d5e5;
+      font-size:14px;
+      line-height:1.35;
+    }
+    .micro svg{flex:0 0 auto}
+    .hero-visual{
+      position:relative;
+      min-height:330px;
+      display:grid;
+      place-items:center;
+    }
+    .product-orbit{
+      position:absolute;
+      width:min(88vw,520px);
+      aspect-ratio:1/.54;
+      bottom:10px;
+      border:1px solid rgba(0,157,255,.52);
+      border-radius:50%;
+      transform:perspective(600px) rotateX(66deg);
+      box-shadow:
+        0 0 0 18px rgba(0,157,255,.06),
+        0 0 0 48px rgba(0,157,255,.035),
+        inset 0 0 30px rgba(0,157,255,.4),
+        0 0 38px rgba(0,157,255,.48);
+    }
+    .hero-product-card{
+      position:relative;
+      width:min(82vw,430px);
+      border-radius:28px;
+      padding:16px;
+      background:linear-gradient(145deg,rgba(8,25,43,.76),rgba(1,5,12,.92));
+      border:1px solid rgba(61,102,132,.66);
+      box-shadow:0 28px 80px rgba(0,0,0,.72),0 0 40px rgba(0,157,255,.3);
+      transform:rotate(4deg);
+    }
+    .hero-product-card:before{
+      content:"";
+      position:absolute;
+      inset:-4px;
+      border-radius:30px;
+      background:linear-gradient(135deg,var(--blue),transparent 38%,var(--green));
+      z-index:-1;
+      filter:blur(2px);
+      opacity:.78;
+    }
+    .hero-product-card img{
+      border-radius:22px;
+      width:100%;
+      aspect-ratio:1/1;
+      object-fit:cover;
+      background:#07111f;
+    }
+
+    .trust-strip{
+      margin-top:28px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:0;
+      border:1px solid rgba(49,90,120,.78);
+      background:linear-gradient(90deg,rgba(5,21,37,.78),rgba(4,14,27,.68));
+      border-radius:16px;
+      overflow:hidden;
+      box-shadow:0 0 24px rgba(0,157,255,.1);
+    }
+    .trust-item{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:16px;
+      padding:18px;
+      min-height:86px;
+      border-bottom:1px solid rgba(49,90,120,.55);
+    }
+    .trust-item:last-child{border-bottom:0}
+    .trust-item svg{filter:drop-shadow(0 0 9px rgba(147,242,28,.8));flex:0 0 auto}
+    .trust-item strong{display:block;font-size:18px;line-height:1.25}
+    .trust-item span{display:block;color:var(--muted);font-size:13px;margin-top:3px}
+
+    .proof-bar{
+      border-top:1px solid rgba(0,157,255,.22);
+      border-bottom:1px solid rgba(0,157,255,.22);
+      background:rgba(1,9,19,.62);
+      padding:16px 0;
+    }
+    .proof-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .proof{
+      background:rgba(7,24,43,.72);
+      border:1px solid rgba(49,90,120,.62);
+      border-radius:14px;
+      padding:13px;
+      text-align:center;
+      min-height:72px;
+      display:grid;
+      place-items:center;
+    }
+    .proof strong{display:block;color:#fff;font-size:18px}
+    .proof span{display:block;color:var(--muted);font-size:13px;margin-top:4px}
+    .tag{
+      color:var(--green);
+      text-transform:uppercase;
+      font-weight:950;
+      font-style:italic;
+      letter-spacing:.7px;
+    }
+
+    .section-title{
+      text-align:center;
+      font-size:clamp(28px,5vw,42px);
+      line-height:1.08;
+      letter-spacing:1.4px;
+      margin-bottom:28px;
+      text-transform:uppercase;
+      font-weight:1000;
+      font-style:italic;
+    }
+    .section-title .accent{letter-spacing:1.8px}
+    .lead{
+      color:#d6e1ee;
+      font-size:18px;
+      line-height:1.65;
+      max-width:790px;
+      margin:0 auto 26px;
+      text-align:center;
+    }
+
+    .problem-card{
+      display:grid;
+      gap:18px;
+      background:
+        linear-gradient(90deg,rgba(4,14,27,.9),rgba(7,24,43,.62)),
+        radial-gradient(circle at 90% 15%,rgba(0,157,255,.18),transparent 32%);
+      border:1px solid rgba(49,90,120,.72);
+      border-radius:var(--radius);
+      padding:24px;
+      box-shadow:0 0 28px rgba(0,157,255,.08);
+    }
+    .problem-col{
+      padding:20px;
+      border-radius:16px;
+      background:rgba(0,0,0,.18);
+      border:1px solid rgba(49,90,120,.44);
+    }
+    .problem-col h3{
+      font-size:23px;
+      margin-bottom:12px;
+      font-style:italic;
+      text-transform:uppercase;
+      letter-spacing:.8px;
+    }
+    .problem-list{
+      margin:0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap:12px;
+      color:#dce7f7;
+      line-height:1.45;
+    }
+    .problem-list li{
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+    }
+    .mark{
+      width:24px;height:24px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto;font-weight:900;
+    }
+    .mark.bad{background:rgba(255,107,74,.12);color:#ff866d;border:1px solid rgba(255,107,74,.35)}
+    .mark.good{background:rgba(147,242,28,.13);color:var(--green);border:1px solid rgba(147,242,28,.42)}
+
+    .benefits{
+      display:grid;
+      gap:16px;
+    }
+    .benefit{
+      text-align:center;
+      padding:24px 18px;
+      border-radius:var(--radius);
+      border:1px solid transparent;
+      background:linear-gradient(var(--bg),var(--bg)) padding-box,linear-gradient(135deg,rgba(0,157,255,.6),rgba(147,242,28,.24)) border-box;
+      min-height:210px;
+      position:relative;
+      overflow:hidden;
+    }
+    .benefit:before{
+      content:"";
+      position:absolute;
+      inset:auto -30% -45% -30%;
+      height:80%;
+      background:radial-gradient(ellipse,rgba(0,157,255,.18),transparent 65%);
+      pointer-events:none;
+    }
+    .icon{
+      width:62px;
+      height:62px;
+      margin:0 auto 14px;
+      color:var(--blue);
+      filter:drop-shadow(0 0 11px rgba(0,157,255,.9));
+    }
+    .benefit h3{
+      font-size:20px;
+      margin-bottom:10px;
+      color:#fff;
+    }
+    .benefit p{
+      margin:0;
+      color:#cbd7e6;
+      line-height:1.5;
+      font-size:15px;
+    }
+
+    .usage-card{
+      display:grid;
+      gap:0;
+      overflow:hidden;
+      border-radius:var(--radius);
+      border:1px solid rgba(49,90,120,.78);
+      background:#06101d;
+      box-shadow:0 0 30px rgba(0,157,255,.1);
+    }
+    .usage-media{
+      min-height:250px;
+      background:#06101d;
+      position:relative;
+      overflow:hidden;
+    }
+    .usage-media:after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg,rgba(1,5,12,.82),rgba(1,5,12,.18) 58%,rgba(1,5,12,.55));
+      pointer-events:none;
+    }
+    .usage-media img{
+      width:100%;
+      height:100%;
+      min-height:250px;
+      object-fit:cover;
+    }
+    .steps{
+      padding:22px;
+      display:grid;
+      gap:14px;
+      background:linear-gradient(180deg,rgba(4,14,27,.94),rgba(2,7,19,.96));
+    }
+    .step{
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+    }
+    .num{
+      width:38px;height:38px;border-radius:12px;
+      flex:0 0 auto;
+      display:grid;place-items:center;
+      background:rgba(147,242,28,.12);
+      color:var(--green);
+      border:1px solid rgba(147,242,28,.5);
+      font-weight:1000;
+      box-shadow:var(--shadow-green);
+    }
+    .step h3{font-size:18px;margin-bottom:4px}
+    .step p{margin:0;color:#c6d2e2;line-height:1.45}
+
+    .compare{
+      display:grid;
+      gap:14px;
+    }
+    .compare-col{
+      border-radius:var(--radius);
+      border:1px solid rgba(49,90,120,.74);
+      background:rgba(6,18,32,.74);
+      overflow:hidden;
+    }
+    .compare-head{
+      padding:18px;
+      font-weight:950;
+      font-style:italic;
+      text-transform:uppercase;
+      letter-spacing:.8px;
+      background:rgba(0,157,255,.12);
+      border-bottom:1px solid rgba(49,90,120,.62);
+    }
+    .compare-col.best{
+      border-color:rgba(147,242,28,.58);
+      box-shadow:0 0 26px rgba(147,242,28,.12);
+    }
+    .compare-col.best .compare-head{
+      color:var(--green);
+      background:rgba(147,242,28,.1);
+    }
+    .compare-row{
+      display:flex;
+      gap:11px;
+      align-items:flex-start;
+      padding:15px 18px;
+      border-bottom:1px solid rgba(49,90,120,.34);
+      color:#d9e5f3;
+      line-height:1.45;
+    }
+    .compare-row:last-child{border-bottom:0}
+
+    .reviews-note{
+      text-align:center;
+      color:var(--muted);
+      font-size:14px;
+      margin:-12px 0 22px;
+    }
+    .reviews{
+      display:grid;
+      gap:18px;
+    }
+    .review{
+      border:1px solid rgba(49,90,120,.78);
+      background:linear-gradient(145deg,rgba(7,24,43,.78),rgba(3,11,21,.88));
+      border-radius:14px;
+      padding:20px;
+      position:relative;
+      min-height:190px;
+      box-shadow:0 0 22px rgba(0,157,255,.08);
+    }
+    .review .stars{font-size:19px;margin-bottom:12px}
+    .review p{
+      color:#d8e4f2;
+      line-height:1.55;
+      margin-bottom:16px;
+    }
+    .review-bottom{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+      margin-top:auto;
+    }
+    .name{color:#fff;font-weight:700}
+    .avatar{
+      width:52px;
+      height:52px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.75);
+      background:radial-gradient(circle at 38% 30%,#d8e7ff,#42546a 42%,#142033 70%);
+      display:grid;
+      place-items:center;
+      color:#dce7f7;
+      font-size:11px;
+      text-transform:uppercase;
+      flex:0 0 auto;
+    }
+
+    .guarantee{
+      border-radius:var(--radius2);
+      border:1px solid rgba(147,242,28,.42);
+      background:
+        radial-gradient(circle at 13% 18%,rgba(147,242,28,.17),transparent 34%),
+        linear-gradient(135deg,rgba(6,26,38,.92),rgba(3,10,20,.94));
+      padding:24px;
+      box-shadow:0 0 34px rgba(147,242,28,.11),0 0 34px rgba(0,157,255,.08);
+      display:grid;
+      gap:18px;
+      align-items:center;
+    }
+    .badge{
+      width:118px;
+      height:118px;
+      border-radius:999px;
+      display:grid;
+      place-items:center;
+      margin:0 auto;
+      color:var(--green);
+      border:2px solid rgba(147,242,28,.68);
+      background:rgba(147,242,28,.08);
+      box-shadow:var(--shadow-green);
+    }
+    .guarantee h2{
+      font-size:clamp(28px,4vw,40px);
+      line-height:1.1;
+      margin-bottom:12px;
+      text-transform:uppercase;
+      font-style:italic;
+      letter-spacing:.7px;
+    }
+    .guarantee p{
+      color:#d9e6f5;
+      line-height:1.6;
+      font-size:17px;
+      margin-bottom:16px;
+    }
+    .secure-icons{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:12px;
+      margin-top:16px;
+    }
+    .secure{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:12px;
+      border-radius:13px;
+      background:rgba(0,0,0,.22);
+      border:1px solid rgba(49,90,120,.46);
+      color:#eaf3ff;
+      font-size:14px;
+    }
+
+    .faq{
+      display:grid;
+      gap:12px;
+      max-width:900px;
+      margin:0 auto;
+    }
+    .faq-item{
+      padding:18px;
+      border-radius:15px;
+      border:1px solid rgba(49,90,120,.72);
+      background:rgba(7,24,43,.62);
+    }
+    .faq-item h3{
+      margin-bottom:8px;
+      font-size:18px;
+      color:#fff;
+    }
+    .faq-item p{
+      margin:0;
+      color:#c9d6e6;
+      line-height:1.55;
+    }
+
+    .final{
+      padding:34px 0 68px;
+    }
+    .final-card{
+      display:grid;
+      gap:24px;
+      align-items:center;
+      border-radius:var(--radius2);
+      border:1px solid rgba(49,90,120,.78);
+      background:
+        linear-gradient(100deg,rgba(2,7,19,.92),rgba(5,20,37,.7)),
+        radial-gradient(circle at 85% 15%,rgba(0,157,255,.22),transparent 34%);
+      padding:24px;
+      overflow:hidden;
+      position:relative;
+      box-shadow:0 0 36px rgba(0,157,255,.12);
+    }
+    .final-card:before{
+      content:"";
+      position:absolute;
+      right:-20%;
+      top:18%;
+      width:70%;
+      height:28%;
+      transform:rotate(-9deg);
+      background:linear-gradient(90deg,transparent,rgba(0,157,255,.44),rgba(147,242,28,.22),transparent);
+      filter:blur(10px);
+      opacity:.6;
+      pointer-events:none;
+    }
+    .final-img{
+      width:min(270px,72vw);
+      margin:0 auto;
+      border-radius:24px;
+      padding:10px;
+      border:1px solid rgba(49,90,120,.66);
+      background:rgba(4,14,27,.76);
+      box-shadow:0 24px 60px rgba(0,0,0,.55),0 0 30px rgba(0,157,255,.24);
+      transform:rotate(-6deg);
+    }
+    .final-img img{border-radius:18px;aspect-ratio:1/1;object-fit:cover}
+    .final h2{
+      font-size:clamp(29px,5vw,46px);
+      line-height:1.13;
+      font-weight:500;
+      margin-bottom:18px;
+    }
+    .kit{
+      margin:18px 0;
+      padding:0;
+      list-style:none;
+      display:grid;
+      gap:9px;
+      color:#d9e6f4;
+    }
+    .kit li{display:flex;gap:9px;align-items:flex-start}
+    .cta-stack{display:grid;gap:14px;align-content:center}
+
+    @media (min-width:680px){
+      body{padding-bottom:86px}
+      .trust-strip{grid-template-columns:repeat(3,1fr)}
+      .trust-item{border-bottom:0;border-right:1px solid rgba(49,90,120,.55)}
+      .trust-item:last-child{border-right:0}
+      .proof-grid{grid-template-columns:repeat(4,1fr)}
+      .benefits{grid-template-columns:repeat(2,1fr)}
+      .problem-card{grid-template-columns:1fr 1fr}
+      .compare{grid-template-columns:1fr 1fr}
+      .reviews{grid-template-columns:repeat(2,1fr)}
+      .secure-icons{grid-template-columns:repeat(3,1fr)}
+      .guarantee{grid-template-columns:140px 1fr}
+      .badge{margin:0}
+      .final-card{grid-template-columns:290px 1fr}
+      .sticky-cta .btn{min-width:210px}
+    }
+
+    @media (min-width:960px){
+      .hero-grid{grid-template-columns:1.02fr .98fr}
+      .hero{padding-top:46px}
+      .hero-visual{min-height:520px}
+      .benefits{grid-template-columns:repeat(4,1fr)}
+      .usage-card{grid-template-columns:1.25fr .75fr}
+      .usage-media{min-height:360px}
+      .usage-media img{min-height:360px}
+      .steps{padding:30px}
+      .reviews{grid-template-columns:repeat(5,1fr)}
+      .review{min-height:245px}
+      .review:nth-child(1),.review:nth-child(2),.review:nth-child(3){grid-column:auto}
+    }
+
+    @media (max-width:430px){
+      .wrap{width:min(var(--max),calc(100% - 24px))}
+      .brand span{font-size:14px}
+      .pill{font-size:12px;padding:9px 10px}
+      .hero-actions .btn{width:100%}
+      .sticky-price strong{font-size:21px}
+      .sticky-cta .btn{padding:0 15px;min-height:48px}
+      .btn{font-size:14px;padding:0 22px}
+    }
+  </style>
+</head>
+<body>
+  <div class="sticky-cta">
+    <div class="sticky-inner">
+      <div class="sticky-price">
+        <small>Adapter CarPlay</small>
+        <strong>199,00 zĹ‚</strong>
+      </div>
+      <a href="#" data-cta="kup" class="btn">Kup teraz</a>
+    </div>
+  </div>
+
+  <header class="top">
+    <div class="wrap top-row">
+      <div class="brand" aria-label="Adapter CarPlay">
+        <div class="logo">
+          <svg width="25" height="25" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M8 5.5v13l10-6.5-10-6.5Z" stroke="#fff" stroke-width="2" stroke-linejoin="round"/>
+            <path d="M12 2a10 10 0 1 0 9.2 6.1" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-dasharray="4 4"/>
+          </svg>
+        </div>
+        <span>Adapter CarPlay</span>
+      </div>
+      <div class="pill"><span class="dot"></span>Nowa technologia</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="wrap">
+        <div class="hero-grid">
+          <div>
+            <div class="rating">
+              <span class="stars">â?…â?…â?…â?…â?…</span>
+              <span>4,8/5 â€” 1 247 opinii</span>
+            </div>
+
+            <h1>
+              <span class="line">Bez kabli</span>
+              <span class="green-word">CarPlay</span>
+              <span class="line">w 60 sekund</span>
+            </h1>
+
+            <p class="subtitle">Adapter, ktĂłry zamienia przewodowy CarPlay w bezprzewodowy â€” podĹ‚Ä…cz raz i ruszaj bez ciÄ…gĹ‚ego szukania kabla.</p>
+
+            <div class="price-row">
+              <span class="old-price">299,00 zĹ‚</span>
+              <span class="price">199,00 zĹ‚</span>
+            </div>
+
+            <div class="hero-actions">
+              <a href="#" data-cta="kup" class="btn">Kup teraz</a>
+              <div class="micro">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="#93f21c" stroke-width="2"/>
+                  <path d="m8 12 2.5 2.5L16 9" stroke="#93f21c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                pĹ‚atnoĹ›Ä‡ przy odbiorze Â· 14 dni na zwrot
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-visual">
+            <div class="product-orbit"></div>
+            <div class="hero-product-card">
+              <img src="https://ae-pic-a1.aliexpress-media.com/kf/S587b9744c19b47a0b2588f1048b2b3ce1.jpg_480x480q75.jpg_.avif" loading="lazy" alt="Adapter do bezprzewodowego CarPlay">
+            </div>
+          </div>
+        </div>
+
+        <div class="trust-strip">
+          <div class="trust-item">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 15h3l2-6h6l2 6h3" stroke="#93f21c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M7 15v3m10-3v3M9 18h6" stroke="#93f21c" stroke-width="1.8" stroke-linecap="round"/>
+              <path d="M12 5v4" stroke="#93f21c" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <div>
+              <strong>PĹ‚atnoĹ›Ä‡ przy odbiorze</strong>
+              <span>PĹ‚acisz dopiero kurierowi</span>
+            </div>
+          </div>
+          <div class="trust-item">
+            <svg width="54" height="54" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M3 7h12v10H3V7Z" stroke="#93f21c" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M15 10h3l3 3v4h-6v-7Z" stroke="#93f21c" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="#93f21c" stroke-width="1.8"/>
+              <path d="M1 10h5M1 13h4" stroke="#93f21c" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <div>
+              <strong>WysyĹ‚ka pod TwĂłj adres</strong>
+              <span>Bez wychodzenia z domu</span>
+            </div>
+          </div>
+          <div class="trust-item">
+            <svg width="50" height="50" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 3 20 6.5v5.7c0 4.7-3.2 7.7-8 8.8-4.8-1.1-8-4.1-8-8.8V6.5L12 3Z" stroke="#93f21c" stroke-width="1.8"/>
+              <path d="m8 12 2.5 2.5L16 9" stroke="#93f21c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <div>
+              <strong>14 dni na zwrot</strong>
+              <span>Sprawdzasz bez presji</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="proof-bar">
+      <div class="wrap proof-grid">
+        <div class="proof">
+          <div><strong><span class="stars">â?…â?…â?…â?…â?…</span> 4,8/5</strong><span>Ĺ›rednia ocena</span></div>
+        </div>
+        <div class="proof">
+          <div><strong>1 247</strong><span>opinii klientĂłw</span></div>
+        </div>
+        <div class="proof">
+          <div><strong>8 500+</strong><span>zadowolonych kierowcĂłw</span></div>
+        </div>
+        <div class="proof">
+          <div><strong class="tag">Viralowy hit z TikToka</strong><span>bestseller w kategorii Auto</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <h2 class="section-title">Koniec z <span class="accent">kablem</span> przy kaĹĽdym starcie</h2>
+        <p class="lead">JeĹ›li Twoje auto ma przewodowy CarPlay, znasz ten rytuaĹ‚: telefon z kieszeni, kabel, port USB, plÄ…tanina przewodĂłw i rozĹ‚Ä…czanie przy kaĹĽdym ruchu. Ten adapter rozwiÄ…zuje to jednym podĹ‚Ä…czeniem.</p>
+
+        <div class="problem-card">
+          <div class="problem-col">
+            <h3>Przed adapterem</h3>
+            <ul class="problem-list">
+              <li><span class="mark bad">Ă—</span><span>Za kaĹĽdym razem podpinasz telefon kablem, nawet na krĂłtkiej trasie.</span></li>
+              <li><span class="mark bad">Ă—</span><span>Kabel przeszkadza, zuĹĽywa port i robi baĹ‚agan w kokpicie.</span></li>
+              <li><span class="mark bad">Ă—</span><span>CarPlay potrafi rozĹ‚Ä…czyÄ‡ siÄ™ przez poruszony przewĂłd.</span></li>
+            </ul>
+          </div>
+          <div class="problem-col">
+            <h3><span class="accent">Po podĹ‚Ä…czeniu</span></h3>
+            <ul class="problem-list">
+              <li><span class="mark good">âś“</span><span>Telefon zostaje w kieszeni, a CarPlay uruchamia siÄ™ bezprzewodowo.</span></li>
+              <li><span class="mark good">âś“</span><span>PodĹ‚Ä…czasz adapter do portu USB i konfigurujesz poĹ‚Ä…czenie w ok. 60 sekund.</span></li>
+              <li><span class="mark good">âś“</span><span>Korzystasz z map, muzyki, wiadomoĹ›ci i poĹ‚Ä…czeĹ„ bez kabli.</span></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="wrap">
+        <h2 class="section-title">Dlaczego <span class="accent">warto?</span></h2>
+
+        <div class="benefits">
+          <div class="benefit">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="m13 2-9 12h7l-1 8 10-13h-7l0-7Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+            </svg>
+            <h3>CarPlay bez wyjmowania telefonu</h3>
+            <p>Wsiadasz, odpalasz auto i korzystasz z nawigacji oraz muzyki bez podpinania kabla.</p>
+          </div>
+
+          <div class="benefit">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 13a10 10 0 0 1 14 0M8 16a6 6 0 0 1 8 0M11 19a2 2 0 0 1 2 0" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 21h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <h3>Stabilna Ĺ‚Ä…cznoĹ›Ä‡ na trasie</h3>
+            <p>Codzienna jazda bez przypadkowego rozĹ‚Ä…czenia przez dotkniÄ™ty lub zuĹĽyty przewĂłd.</p>
+          </div>
+
+          <div class="benefit">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M7 7h10v10H7V7Z" stroke="currentColor" stroke-width="1.9"/>
+              <path d="M4 10V8a4 4 0 0 1 4-4h2M14 4h2a4 4 0 0 1 4 4v2M20 14v2a4 4 0 0 1-4 4h-2M10 20H8a4 4 0 0 1-4-4v-2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+            </svg>
+            <h3>Plug & Play</h3>
+            <p>Bez rozbierania auta i bez aplikacji. Adapter wpinasz w port CarPlay i parujesz z iPhonem.</p>
+          </div>
+
+          <div class="benefit">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M4 14h16l-2-5a3 3 0 0 0-3-2H9a3 3 0 0 0-3 2l-2 5Z" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"/>
+              <path d="M6 14v4m12-4v4M7 18h10" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/>
+              <path d="M8 11h.01M16 11h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <h3>Pasuje do wiÄ™kszoĹ›ci aut</h3>
+            <p>DziaĹ‚a z wiÄ™kszoĹ›ciÄ… samochodĂłw, ktĂłre majÄ… fabryczny przewodowy Apple CarPlay.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <h2 class="section-title">Jak dziaĹ‚a <span class="accent">w uĹĽyciu?</span></h2>
+
+        <div class="usage-card">
+          <div class="usage-media">
+            <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-covers/7645788465069673741.jpg" loading="lazy" alt="Adapter CarPlay uĹĽywany w samochodzie">
+          </div>
+          <div class="steps">
+            <div class="step">
+              <div class="num">1</div>
+              <div>
+                <h3>PodĹ‚Ä…cz adapter</h3>
+                <p>Wepnij go do portu USB, ktĂłrego uĹĽywasz do przewodowego CarPlay.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="num">2</div>
+              <div>
+                <h3>Sparuj iPhoneâ€™a</h3>
+                <p>Wybierz adapter w Bluetooth/Wiâ€‘Fi i zatwierdĹş poĹ‚Ä…czenie na ekranie auta.</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="num">3</div>
+              <div>
+                <h3>JedĹş bez kabla</h3>
+                <p>Przy kolejnych uruchomieniach auta CarPlay Ĺ‚Ä…czy siÄ™ automatycznie.</p>
+              </div>
+            </div>
+            <a href="#" data-cta="kup" class="btn btn-green">Kup teraz</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="wrap">
+        <h2 class="section-title">Nasza marka vs <span class="accent">anonimowy odpowiednik</span></h2>
+        <p class="lead">Nie oczerniamy innych sprzedawcĂłw â€” po prostu pokazujemy, co ma znaczenie, gdy adapter ma dziaĹ‚aÄ‡ codziennie w Twoim aucie.</p>
+
+        <div class="compare">
+          <div class="compare-col best">
+            <div class="compare-head">Nasz adapter CarPlay</div>
+            <div class="compare-row"><span class="mark good">âś“</span><span>Selekcja pod kÄ…tem stabilnego dziaĹ‚ania z autami z przewodowym CarPlay.</span></div>
+            <div class="compare-row"><span class="mark good">âś“</span><span>14 dni na zwrot â€” sprawdzasz w swoim samochodzie bez presji.</span></div>
+            <div class="compare-row"><span class="mark good">âś“</span><span>Wsparcie przy pierwszym podĹ‚Ä…czeniu i jasna instrukcja konfiguracji.</span></div>
+            <div class="compare-row"><span class="mark good">âś“</span><span>PĹ‚atnoĹ›Ä‡ przy odbiorze â€” nie pĹ‚acisz z gĂłry, jeĹ›li nie chcesz.</span></div>
+          </div>
+
+          <div class="compare-col">
+            <div class="compare-head">Anonimowy odpowiednik z marketplace</div>
+            <div class="compare-row"><span class="mark bad">Ă—</span><span>Trudniej oceniÄ‡ wariant, kompatybilnoĹ›Ä‡ i realne wsparcie po zakupie.</span></div>
+            <div class="compare-row"><span class="mark bad">Ă—</span><span>Zwrot i kontakt bywajÄ… zaleĹĽne od konkretnego sprzedawcy.</span></div>
+            <div class="compare-row"><span class="mark bad">Ă—</span><span>Instrukcje czÄ™sto sÄ… skrĂłcone lub niejasne dla mniej technicznych osĂłb.</span></div>
+            <div class="compare-row"><span class="mark bad">Ă—</span><span>Nie zawsze dostÄ™pna jest pĹ‚atnoĹ›Ä‡ dopiero przy odbiorze przesyĹ‚ki.</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <h2 class="section-title">Co mĂłwiÄ… <span class="accent">klienci?</span></h2>
+        <div class="reviews-note">Szablon opinii â€” podmieĹ„ na realne recenzje klientĂłw.</div>
+
+        <div class="reviews">
+          <article class="review">
+            <div class="stars">â?…â?…â?…â?…â?…</div>
+            <p>â€žDziaĹ‚a od razu po podĹ‚Ä…czeniu. Zero kabli, CarPlay Ĺ‚Ä…czy siÄ™ automatycznie. WĹ‚aĹ›nie tego brakowaĹ‚o w aucie.â€ť</p>
+            <div class="review-bottom">
+              <span class="name">PaweĹ‚ K.</span>
+              <span class="avatar">foto</span>
+            </div>
+          </article>
+
+          <article class="review">
+            <div class="stars">â?…â?…â?…â?…â?…</div>
+            <p>â€žNajwiÄ™ksza rĂłĹĽnica? Telefon zostaje w kieszeni. Mapy i muzyka odpalajÄ… siÄ™ duĹĽo wygodniej niĹĽ wczeĹ›niej.â€ť</p>
+            <div class="review-bottom">
+              <span class="name">MichaĹ‚ R.</span>
+              <span class="avatar">foto</span>
+            </div>
+          </article>
+
+          <article class="review">
+            <div class="stars">â?…â?…â?…â?…â?…</div>
+            <p>â€žProsta konfiguracja. PodĹ‚Ä…czyĹ‚em, sparowaĹ‚em i dziaĹ‚a. Koniec z kablem wiszÄ…cym przy konsoli.â€ť</p>
+            <div class="review-bottom">
+              <span class="name">Tomasz L.</span>
+              <span class="avatar">foto</span>
+            </div>
+          </article>
+
+          <article class="review">
+            <div class="stars">â?…â?…â?…â?…â?…</div>
+            <p>â€žKupione do codziennych dojazdĂłw. Po wejĹ›ciu do auta CarPlay pojawia siÄ™ automatycznie, bez szukania przewodu.â€ť</p>
+            <div class="review-bottom">
+              <span class="name">Karolina M.</span>
+              <span class="avatar">foto</span>
+            </div>
+          </article>
+
+          <article class="review">
+            <div class="stars">â?…â?…â?…â?…â?…</div>
+            <p>â€žBaĹ‚em siÄ™ kompatybilnoĹ›ci, ale dziaĹ‚a z moim przewodowym CarPlay. Wygoda jest naprawdÄ™ duĹĽa.â€ť</p>
+            <div class="review-bottom">
+              <span class="name">Adam S.</span>
+              <span class="avatar">foto</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section-tight">
+      <div class="wrap">
+        <div class="guarantee">
+          <div class="badge" aria-hidden="true">
+            <svg width="74" height="74" viewBox="0 0 24 24" fill="none">
+              <path d="M12 3 20 6.5v5.7c0 4.7-3.2 7.7-8 8.8-4.8-1.1-8-4.1-8-8.8V6.5L12 3Z" stroke="currentColor" stroke-width="1.7"/>
+              <path d="m8 12 2.5 2.5L16.5 9" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+
+          <div>
+            <h2>Zero ryzyka z gĂłry</h2>
+            <p><strong>PĹ‚atnoĹ›Ä‡ przy odbiorze:</strong> pĹ‚acisz dopiero wtedy, gdy kurier przywiezie przesyĹ‚kÄ™. Do tego masz <strong>14 dni na zwrot</strong>, wiÄ™c moĹĽesz sprawdziÄ‡ adapter w swoim aucie.</p>
+
+            <div class="secure-icons">
+              <div class="secure">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 7h18v12H3V7Z" stroke="#93f21c" stroke-width="1.8"/>
+                  <path d="M3 11h18" stroke="#93f21c" stroke-width="1.8"/>
+                </svg>
+                Bezpieczna pĹ‚atnoĹ›Ä‡
+              </div>
+              <div class="secure">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M4 7h11v10H4V7Z" stroke="#93f21c" stroke-width="1.8"/>
+                  <path d="M15 10h3l2 3v4h-5v-7Z" stroke="#93f21c" stroke-width="1.8"/>
+                  <path d="M7 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm11 0a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z" stroke="#93f21c" stroke-width="1.8"/>
+                </svg>
+                WysyĹ‚ka pod TwĂłj adres
+              </div>
+              <div class="secure">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3 20 6.5v5.7c0 4.7-3.2 7.7-8 8.8-4.8-1.1-8-4.1-8-8.8V6.5L12 3Z" stroke="#93f21c" stroke-width="1.8"/>
+                </svg>
+                14 dni na zwrot
+              </div>
+            </div>
+
+            <div style="margin-top:18px">
+              <a href="#" data-cta="kup" class="btn">Kup teraz</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="wrap">
+        <h2 class="section-title">FAQ</h2>
+
+        <div class="faq">
+          <div class="faq-item">
+            <h3>Czy adapter pasuje do mojego auta?</h3>
+            <p>Adapter jest przeznaczony do samochodĂłw, ktĂłre majÄ… fabryczny przewodowy Apple CarPlay przez port USB. JeĹ›li obecnie uruchamiasz CarPlay po podĹ‚Ä…czeniu iPhoneâ€™a kablem, to jest wĹ‚aĹ›ciwy typ produktu do sprawdzenia.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Czy dziaĹ‚a z Android Auto?</h3>
+            <p>Ten produkt jest sprzedawany jako adapter do bezprzewodowego CarPlay dla iPhoneâ€™a. JeĹ›li potrzebujesz Android Auto, wybierz wariant przeznaczony konkretnie pod Android Auto.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Jak wyglÄ…da konfiguracja?</h3>
+            <p>PodĹ‚Ä…czasz adapter do portu USB CarPlay, parujesz iPhoneâ€™a przez Bluetooth/Wiâ€‘Fi i zatwierdzasz poĹ‚Ä…czenie na ekranie auta. Pierwsza konfiguracja zwykle zajmuje okoĹ‚o 60 sekund.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Jak pĹ‚acÄ™ za zamĂłwienie?</h3>
+            <p>MoĹĽesz wybraÄ‡ pĹ‚atnoĹ›Ä‡ przy odbiorze â€” pĹ‚acisz dopiero, gdy kurier przywiezie przesyĹ‚kÄ™. To wygodne rozwiÄ…zanie, jeĹ›li nie chcesz pĹ‚aciÄ‡ z gĂłry.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Czy mogÄ™ zwrĂłciÄ‡ adapter?</h3>
+            <p>Tak. Masz 14 dni na zwrot, wiÄ™c moĹĽesz sprawdziÄ‡, czy adapter speĹ‚nia Twoje oczekiwania i dziaĹ‚a poprawnie w Twoim samochodzie.</p>
+          </div>
+
+          <div class="faq-item">
+            <h3>Jak wyglÄ…da wysyĹ‚ka?</h3>
+            <p>ZamĂłwienie wysyĹ‚amy pod wskazany przez Ciebie adres. Po zĹ‚oĹĽeniu zamĂłwienia otrzymasz informacje potrzebne do odbioru przesyĹ‚ki.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="final">
+      <div class="wrap">
+        <div class="final-card">
+          <div class="final-img">
+            <img src="https://ae-pic-a1.aliexpress-media.com/kf/S587b9744c19b47a0b2588f1048b2b3ce1.jpg_480x480q75.jpg_.avif" loading="lazy" alt="Bezprzewodowy adapter CarPlay">
+          </div>
+
+          <div>
+            <h2>ZamieĹ„ przewodowy CarPlay w bezprzewodowy <span class="accent">juĹĽ dziĹ›</span></h2>
+
+            <div class="price-row">
+              <span class="old-price">299,00 zĹ‚</span>
+              <span class="price">199,00 zĹ‚</span>
+            </div>
+
+            <ul class="kit">
+              <li><span class="mark good">âś“</span><span>Adapter do bezprzewodowego CarPlay</span></li>
+              <li><span class="mark good">âś“</span><span>PrzewĂłd do poĹ‚Ä…czenia z portem USB</span></li>
+              <li><span class="mark good">âś“</span><span>Instrukcja szybkiego startu</span></li>
+            </ul>
+
+            <div class="cta-stack">
+              <a href="#" data-cta="kup" class="btn">ZamĂłw za pobraniem</a>
+              <div class="micro">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3 20 6v6c0 5-3.4 8-8 9-4.6-1-8-4-8-9V6l8-3Z" stroke="#93f21c" stroke-width="2"/>
+                  <path d="m8 12 2.5 2.5L16 9" stroke="#93f21c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                pĹ‚atnoĹ›Ä‡ przy odbiorze Â· 14 dni na zwrot Â· wysyĹ‚ka pod TwĂłj adres
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
