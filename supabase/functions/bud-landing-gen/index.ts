@@ -32,14 +32,19 @@ function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: 
   const korz = Array.isArray(ust?.korzysci) ? ust.korzysci.slice(0, 6).join('; ') : (Array.isArray(ust?.korzyści) ? ust.korzyści.slice(0, 6).join('; ') : '')
   const imgList = (images || []).slice(0, 6)
   // REALNE opinie + statystyki z AliExpress (ze snapshotu) — wiarygodność.
-  const reviews = (snap && Array.isArray((snap as any).reviews)) ? (snap as any).reviews.slice(0, 6) : []
+  // deno-lint-ignore no-explicit-any
+  const reviews = (snap && Array.isArray((snap as any).reviews)) ? (snap as any).reviews.slice(0, 9) : []
+  // deno-lint-ignore no-explicit-any
+  const revPhoto = reviews.filter((r: any) => r.images && r.images[0]).slice(0, 6)
+  // deno-lint-ignore no-explicit-any
+  const revText = reviews.filter((r: any) => !(r.images && r.images[0])).slice(0, 4)
   const rstats = (snap && (snap as any).review_stats) || null
   const statsLine = rstats && rstats.avg
     ? `STATYSTYKI OPINII (REALNE z AliExpress — użyj DOKŁADNIE tych liczb w pasku ocen hero i pasku social-proof): ocena ${String(rstats.avg).replace('.', ',')}/5, ${rstats.numRatings || 0} ocen${rstats.positivePct ? `, ${String(rstats.positivePct).replace('.', ',')}% pozytywnych` : ''}.`
     : `STATYSTYKI OPINII: brak realnych — użyj wiarygodnych przykładowych (★ ~4,7/5) z dopiskiem, że klient podmieni.`
-  const reviewsBlock = reviews.length
-    ? `OPINIE (REALNE, z AliExpress — UŻYJ ICH w sekcji opinii zamiast wymyślonych; brzmią wiarygodnie. Te z "img" pokaż z miniaturą zdjęcia klienta (loading="lazy"); imiona są zamaskowane — zostaw jak są):\n${reviews.map((r: any, i: number) => `${i + 1}. [${r.stars || 5}★] ${r.name || ''}: ${String(r.text_pl || r.text || '').slice(0, 240)}${(r.images && r.images[0]) ? `  img: ${r.images[0]}` : ''}`).join('\n')}`
-    : `OPINIE: brak realnych — wygeneruj 4-5 wiarygodnych szablonowych (gwiazdki, imię, miejsce na zdjęcie) jako placeholder do podmiany.`
+  const reviewsBlock = (revPhoto.length || revText.length)
+    ? `OPINIE ZE ZDJĘCIEM (REALNE — to RDZEŃ sekcji opinii; ZDJĘCIE KLIENTA jest BOHATEREM kafla, tekst to krótki podpis pod/na zdjęciu):\n${revPhoto.map((r: any, i: number) => `F${i + 1}. zdjecie=${r.images[0]} | ${r.stars || 5}★ | ${r.name || ''} | "${String(r.text_pl || r.text || '').slice(0, 150)}"`).join('\n')}${revText.length ? `\nOPINIE TEKSTOWE (REALNE — dodatkowe, mniejsze cytaty POD ścianą zdjęć):\n${revText.map((r: any, i: number) => `T${i + 1}. ${r.stars || 5}★ ${r.name || ''}: "${String(r.text_pl || r.text || '').slice(0, 160)}"`).join('\n')}` : ''}`
+    : `OPINIE: brak realnych — wygeneruj wiarygodny szablon (kilka kafli ze zdjęciem-placeholderem + tekst).`
   return `Jesteś elitarnym front-end developerem i copywriterem direct-response, specjalizującym się w WYSOKOKONWERTUJĄCYCH stronach jednoproduktowych w stylu topowych marek DTC z USA. Zbuduj KOMPLETNĄ, produkcyjnie bliską stronę sprzedażową dla „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. CEL NADRZĘDNY: maksymalna skuteczność sprzedaży tego JEDNEGO produktu — każdy element ma popychać do zakupu.
 
 USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
@@ -63,7 +68,11 @@ STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
 5. KORZYŚCI (3-4 — KORZYŚĆ, nie cecha; inline SVG ikony): co klient ZYSKUJE.
 6. JAK DZIAŁA / W UŻYCIU (2-3 kroki) + realne zdjęcie lifestyle.
 7. PORÓWNANIE „nasza marka vs anonimowy odpowiednik z Allegro/Amazon" (2 kolumny/tabela: jakość, gwarancja, wsparcie, marka) — BEZ oczerniania konkretnych firm.
-8. OPINIE KLIENTÓW — UŻYJ REALNYCH opinii podanych wyżej (gwiazdki, zamaskowane imię, treść PL; te z "img" pokaż z miniaturą zdjęcia klienta loading="lazy", klik = powiększenie). Realne opinie ze zdjęciami to najmocniejszy dowód — wyeksponuj je. Dopiero gdy brak realnych — szablon do podmiany.
+8. OPINIE — ŚCIANA ZDJĘĆ KLIENTÓW (NAJWAŻNIEJSZY dowód; styl jak aplikacje opinii w Shopify — Loox / Judge.me — gdzie ZDJĘCIE jest bohaterem, a tekst tylko podpisem):
+   • GŁÓWNY element to SIATKA DUŻYCH ZDJĘĆ KLIENTÓW (z listy „OPINIE ZE ZDJĘCIEM"). Każdy kafel: zdjęcie klienta WYPEŁNIA kafel (aspect-ratio 3:4 lub 1:1, object-fit:cover, zaokrąglone rogi) i ZAJMUJE ~75% kafla. Na dole zdjęcia półprzezroczysty gradient, a na nim (albo tuż pod) MAŁE: ★ gwiazdki + JEDNA linijka cytatu (truncate) + zamaskowane imię + „✓ zweryfikowany zakup". ZDJĘCIE DOMINUJE, tekst jest dodatkiem. Siatka: 2 kolumny na mobile, 3-4 na desktopie, drobny gap — efekt „ściany zdjęć od klientów".
+   • Klik w kafel → LIGHTBOX: duże zdjęcie + PEŁNY tekst opinii + gwiazdki + imię, ze strzałkami ‹ › i przyciskiem zamknięcia. Do tego (i tylko do tego) wolno użyć MINIMALNEGO inline <script>.
+   • POD ścianą zdjęć: 3-4 mniejsze cytaty TEKSTOWE (z listy „OPINIE TEKSTOWE") jako uzupełnienie — drobniejsze, drugorzędne.
+   • Użyj DOKŁADNIE realnych zdjęć (pole zdjecie=URL), realnych tekstów i zamaskowanych imion z list wyżej. Każde <img> opinii: loading="lazy" decoding="async". NIE wymyślaj zdjęć ani opinii. Gdy brak realnych — analogiczna ściana z placeholderami.
 9. RISK-REVERSAL / GWARANCJA przy CTA (z pieczęcią/badge): płatność przy odbiorze (płacisz, gdy kurier przywiezie — zero ryzyka z góry) + 14 dni na zwrot + ikony bezpiecznej płatności. To NASZ najmocniejszy, uczciwy atut — wyeksponuj.
 10. FAQ (5-6) — rozbij realne obiekcje (czy pasuje/jak działa, jak płacę, zwrot, wysyłka, dla kogo).
 11. KOŃCOWE CTA: powtórz korzyść + cena + co w zestawie + „Kup teraz / Zamów za pobraniem" + mikrocopy zaufania.
@@ -80,7 +89,7 @@ TWARDE ZAKAZY (marka Tomka):
 - Opinie to szablon do podmiany na realne (nie udawaj, że to zweryfikowane recenzje). Bez „pewnego zysku"/gwarantowanych efektów.
 
 TECHNICZNE:
-- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, zero zewnętrznych bibliotek/fontów/JS (system fonts; sticky CTA czystym CSS position:fixed). Mobile-first, lekka i szybka. Inline SVG do ikon.
+- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, ZERO zewnętrznych bibliotek/fontów (system fonts; sticky CTA czystym CSS position:fixed). Dozwolony jest WYŁĄCZNIE krótki inline <script> do lightboxu opinii (otwórz/zamknij/strzałki) — żadnych innych skryptów ani bibliotek. Mobile-first, lekka i szybka. Inline SVG do ikon.
 
 Zwróć WYŁĄCZNIE kod HTML (od <!DOCTYPE html> do </html>), bez komentarzy przed/po, bez bloków \`\`\`.`
 }
