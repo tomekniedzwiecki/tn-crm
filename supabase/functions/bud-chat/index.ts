@@ -58,7 +58,7 @@ const MAX_MESSAGES_PER_HOUR = 60      // wiadomości/h per sesja (COUNT bud_mess
 const MAX_SESSIONS_PER_HOUR_PER_IP = 10 // nowych sesji/h per IP (anty-abuse: mnożenie sessionId)
 const MAX_SESSIONS_PER_DAY_PER_USER = parseInt(Deno.env.get('BUD_SESSIONS_USER_DAILY') || '10', 10) // nowych sesji/dobę per konto
 const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy konta/maila (bramka inline w czacie)
-const MAX_TURNS_HARD_GATE = 7        // #10: twardy backstop — kontakt wymuszany najpóźniej po tylu turach,
+const MAX_TURNS_HARD_GATE = 12       // #10: twardy backstop — kontakt wymuszany najpóźniej po tylu turach,
                                      // nawet bez podglądu (normalnie pytamy DOPIERO po pierwszym <projekt>)
 // BUD_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
 // false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
@@ -1254,7 +1254,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1321,6 +1321,23 @@ Deno.serve(async (req) => {
           .eq('id', sessionId)
           .is('track', null)
         if (trackErr) console.error('[bud-chat] track update error:', trackErr)
+      }
+    }
+
+    // ── Nowy pipeline /sklep: wybór stylu makiety („Wybieram styl: X") → chosen_style ──
+    // Front wysyła LABEL; mapujemy na KLUCZ stylu (mockups[].style), bo bud-landing-gen
+    // dobiera makietę po kluczu. Brak dopasowania → zapis surowego tekstu (fallback).
+    {
+      const sm = message.match(/^\s*Wybieram styl:\s*(.+)$/i)
+      if (sm) {
+        try {
+          const want = sm[1].trim().toLowerCase()
+          const { data: ms } = await supabase.from('bud_sessions').select('mockups').eq('id', sessionId).maybeSingle()
+          const mocks = Array.isArray(ms?.mockups) ? ms!.mockups as Array<Record<string, unknown>> : []
+          const hit = mocks.find((m) => String(m.label || '').toLowerCase() === want || String(m.style || '').toLowerCase() === want)
+          const styl = (hit && typeof hit.style === 'string' && hit.style) ? hit.style : sm[1].trim().slice(0, 80)
+          await supabase.from('bud_sessions').update({ chosen_style: styl, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        } catch (e) { console.error('[bud-chat] błąd zapisu chosen_style:', e) }
       }
     }
 
@@ -1482,7 +1499,11 @@ Deno.serve(async (req) => {
     const gateSatisfied = REQUIRE_ACCOUNT ? hasAccount : (hasAccount || !!effectiveEmail)
     // #10: nie wymuszaj kontaktu, zanim rozmówca zobaczył pierwszy podgląd („wow”) —
     // chyba że rozmowa wlecze się bez podglądu (twardy backstop MAX_TURNS_HARD_GATE).
-    const previewShown = !!existingSession?.preview_brief
+    // „Wow" w nowym lejku /sklep = domknięte USTALENIA (zaraz potem lecą makiety) — wtedy
+    // prosimy o kontakt jako naturalna wymiana („zostaw email, przyślę makiety"). Stary
+    // preview_brief nigdy nie powstaje w nowym flow, więc bez tego bramka spadała na twardy
+    // licznik tur W ŚRODKU ustaleń (za wcześnie, przed jakimkolwiek efektem).
+    const previewShown = !!existingSession?.preview_brief || !!existingSession?.ustalenia
     const contactDue = (turnsBefore >= MAX_TURNS_BEZ_KONTAKTU && previewShown)
       || turnsBefore >= MAX_TURNS_HARD_GATE
     if (!isKnowHowMode && !gateSatisfied && contactDue) {
@@ -1570,28 +1591,25 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         if (knowhowClosed) sessionContext += `\n\n[ETAP DOPRACOWANIA JUŻ DOMKNIĘTY] Klient zamknął ten etap, a Tomek zaczął budowę. Każda nowa wiadomość to bonusowy szczegół „po fakcie". Reaguj krótko i ciepło: podziękuj, w razie potrzeby dopytaj o jedną rzecz i zapewnij, że trafia to do projektu. Nie zachęcaj do przedłużania rozmowy.`
         // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
         if (knowhowResume) sessionContext += `\n\n${KH.resume}`
-      } else if (existingSession?.verdict === 'zielony') {
-        // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
-        // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
-        // Bez tego GATE_INSTRUCTION ciągnął agenta z powrotem do <ocena>.
+      } else if (existingSession?.landing_html) {
+        // PO POKAZANIU SKLEPU (nowy pipeline /sklep): faza współpracy + rezerwacja
+        // (przełamywanie obiekcji, <makieta>). Nie bramkuj już niczym wcześniejszym.
         sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
-        // Wstrzyknij USTALONY projekt (zielony werdykt), żeby odpowiedzi o ofercie/
-        // zakresie/liście funkcji/cenie były precyzyjnie pod TEN projekt (ekrany,
-        // funkcja rdzeniowa, model przychodu) — a nie generyczne. FAQ OFERTY każe
-        // „brać z karty"; tu mu tę kartę realnie podajemy (analogicznie do trybu know-how).
-        const collabCard = (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
-        const collabPlan = existingSession?.business_plan as Record<string, unknown> | null
-        if (collabCard) sessionContext += `\n\n[USTALONY PROJEKT (zielony werdykt) — przy pytaniach o ofertę/zakres/„co wchodzi w cenę"/listę funkcji personalizuj DOKŁADNIE pod to: wymień stałą warstwę platformy + TE konkretne ekrany i funkcję rdzeniową, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}${collabPlan ? `\n[MODEL PRZYCHODU TEGO PROJEKTU]\n${JSON.stringify(collabPlan).slice(0, 600)}` : ''}`
-      } else if (asmt && asmt.awaiting_preview === true) {
-        sessionContext += `\n\n${PREVIEW_AFTER_GATE_INSTRUCTION}`
-        supabase.from('bud_sessions')
-          .update({ assessment: { ...asmt, awaiting_preview: false }, updated_at: new Date().toISOString() })
-          .eq('id', sessionId)
-          .then(({ error }: { error: unknown }) => { if (error) console.error('[bud-chat] clear awaiting_preview error:', error) })
+        // Wstrzyknij USTALENIA, żeby odpowiedzi o ofercie/zakresie/cenie były pod TEN biznes.
+        const collabCard = (existingSession?.ustalenia as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
+        if (collabCard) sessionContext += `\n\n[USTALENIA PROJEKTU — przy pytaniach o ofertę/zakres/„co wchodzi"/cenę personalizuj DOKŁADNIE pod to, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}`
       } else {
+        // NOWY PIPELINE /sklep — ETAP 2: raport → USTALENIA. Wstrzyknij raport (gdy gotowy),
+        // żeby ustalenia „dla kogo" były na nim oparte. GATE_INSTRUCTION (settings,
+        // budowanie_etap_gate) niesie teraz instrukcję etapu ustaleń. Stary <ocena>/kierunki OFF.
+        const rep = existingSession?.market_report as Record<string, unknown> | null
+        if (rep && typeof rep === 'object') {
+          const { _meta: _d, ...r } = rep
+          sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. Oprzyj ustalenia „dla kogo to jest" na jego realnych wnioskach (konkurenci, ceny, luka); odwołuj się do nich.]\n${JSON.stringify(r).slice(0, 2400)}`
+        } else {
+          sessionContext += `\n\n[RAPORT JESZCZE SIĘ GENERUJE — TWARDA ZASADA. Odpowiedz MAKSYMALNIE jednym–dwoma zdaniami, że raport się liczy i poprosisz o moment (możesz lekko podtrzymać rozmowę). CAŁKOWITY ZAKAZ: pisania o rynku/konkurencji/cenach/odbiorcach/„dla kogo", cytowania JAKICHKOLWIEK wniosków „z raportu", używania nawiasów kwadratowych [ ] ani placeholderów typu [X z raportu]. NIE zaczynaj ustaleń — poczekaj, aż raport będzie gotowy.]`
+        }
         sessionContext += `\n\n${GATE_INSTRUCTION}`
-        // Karty rozwidlenia kierunku — tylko gdy front je renderuje (flaga)
-        if (KIERUNKI_ENABLED) sessionContext += `\n\n${KIERUNKI_INSTRUCTION}`
       }
       // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
@@ -1686,6 +1704,26 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
               } catch (parseErr) {
                 if (parseErr instanceof Error && parseErr.message === 'openai_stream_error') throw parseErr
                 // niepełna/nie-JSON-owa linia — ignoruj
+              }
+            }
+          }
+
+          // ── USTALENIA (nowy pipeline /sklep) — model domknął „dla kogo to jest" ──
+          // Marker <ustalenia>{json}</ustalenia> → zapis do bud_sessions.ustalenia.
+          // Front (po wykryciu markera) odpala 4 makiety; bud-mockup czyta te ustalenia.
+          {
+            const um = assistantText.match(/<ustalenia>([\s\S]*?)<\/ustalenia>/)
+            if (um) {
+              let raw = um[1].trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
+              // wyłuskaj obiekt {…} nawet gdy model dokleił tekst przed/po
+              const a = raw.indexOf('{'), b = raw.lastIndexOf('}')
+              if (a !== -1 && b > a) raw = raw.slice(a, b + 1)
+              let ust: Record<string, unknown> | null = null
+              try { const p = JSON.parse(raw); if (p && typeof p === 'object' && !Array.isArray(p)) ust = p } catch { /* poniżej log */ }
+              if (ust) {
+                await supabase.from('bud_sessions').update({ ustalenia: ust, updated_at: new Date().toISOString() }).eq('id', sessionId)
+              } else {
+                console.error('[bud-chat] <ustalenia> nieparsowalne, surowe:', raw.slice(0, 300))
               }
             }
           }
