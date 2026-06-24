@@ -1715,11 +1715,34 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
             const um = assistantText.match(/<ustalenia>([\s\S]*?)<\/ustalenia>/)
             if (um) {
               let raw = um[1].trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '').trim()
-              // wyłuskaj obiekt {…} nawet gdy model dokleił tekst przed/po
-              const a = raw.indexOf('{'), b = raw.lastIndexOf('}')
-              if (a !== -1 && b > a) raw = raw.slice(a, b + 1)
+              // Wyłuskaj obiekt {…} przez BALANSOWANIE nawiasów (dopasuj domknięcie do
+              // pierwszego '{', z poszanowaniem stringów). Odporne na model dający
+              // nadmiarowy '}}' na końcu albo tekst przed/po — lastIndexOf('}') by to psuł.
+              const a = raw.indexOf('{')
+              if (a !== -1) {
+                let depth = 0, end = -1, inStr = false, esc = false
+                for (let i = a; i < raw.length; i++) {
+                  const ch = raw[i]
+                  if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false }
+                  else if (ch === '"') inStr = true
+                  else if (ch === '{') depth++
+                  else if (ch === '}') { depth--; if (depth === 0) { end = i; break } }
+                }
+                if (end !== -1) raw = raw.slice(a, end + 1)
+              }
               let ust: Record<string, unknown> | null = null
-              try { const p = JSON.parse(raw); if (p && typeof p === 'object' && !Array.isArray(p)) ust = p } catch { /* poniżej log */ }
+              try { const p = JSON.parse(raw); if (p && typeof p === 'object' && !Array.isArray(p)) ust = p } catch { /* fallback niżej */ }
+              // FALLBACK: model bywa daje niepoprawny JSON (niezaescape'owany " w wartości,
+              // podwójne }}). Ratujemy kluczowe pola regexem, żeby ustalenia nie przepadły
+              // (generatory makiet/landingu używają głównie dla_kogo/kat/ton_marki).
+              if (!ust) {
+                const g = (k: string): string | null => {
+                  const m = raw.match(new RegExp('"' + k + '"\\s*:\\s*"([\\s\\S]*?)"\\s*(?:,\\s*"\\w|\\}|\\])'))
+                  return m ? m[1].trim() : null
+                }
+                const dk = g('dla_kogo'), kt = g('kat'), tm = g('ton_marki'), nz = g('nazwa')
+                if (dk || kt || tm) ust = { dla_kogo: dk, kat: kt, ton_marki: tm, nazwa: nz, _repaired: true }
+              }
               if (ust) {
                 await supabase.from('bud_sessions').update({ ustalenia: ust, updated_at: new Date().toISOString() }).eq('id', sessionId)
               } else {
