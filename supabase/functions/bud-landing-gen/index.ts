@@ -22,7 +22,7 @@ function json(b: Record<string, unknown>, s: number, c: Record<string, string>):
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
 // deno-lint-ignore no-explicit-any
-function prompt(product: any, ust: any, snap: any, images: string[]): string {
+function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: string[] = []): string {
   const name = String(snap?.title || product?.nazwa || product?.name || 'produkt').slice(0, 160)
   const cat = String(product?.kategoria || product?.category || '').slice(0, 60)
   const dla = String(ust?.dla_kogo || '').slice(0, 240)
@@ -35,8 +35,10 @@ function prompt(product: any, ust: any, snap: any, images: string[]): string {
 
 USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
 
-ZDJĘCIA PRODUKTU (realne, z AliExpress — UŻYWAJ jako <img src="..." loading="lazy"> w hero i sekcjach produktu/lifestyle; NIE wymyślaj innych URL-i; placeholder TYLKO gdy realnie brak zdjęcia):
-${imgList.length ? imgList.map((u, i) => `${i + 1}. ${u}`).join('\n') : '(brak — użyj placeholderów [ Zdjęcie: … ])'}
+ZDJĘCIA DO UŻYCIA (jako <img src="..." loading="lazy">; NIE wymyślaj innych URL-i). Masz DWA rodzaje — używaj ich ZGODNIE Z PRZEZNACZENIEM, oszczędnie, żeby strona wyglądała jak prawdziwa marka, nie „wygenerowana AI":
+${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie) — wstaw w HERO oraz w sekcji „jak działa / w użyciu" (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
+${imgList.length ? `• PRODUKT (realne zdjęcia z AliExpress — DOKŁADNY wygląd produktu) — wstaw tam, gdzie pokazujesz SAM produkt: sekcja produktu, „przed/po", tabela porównania, dowód:\n${imgList.map((u, i) => `   P${i + 1}. ${u}`).join('\n')}` : '(brak realnych zdjęć — użyj placeholderów [ Zdjęcie: … ])'}
+ZASADA OBRAZÓW: nie wrzucaj zdjęcia do każdej sekcji — sekcje korzyści/porównania/FAQ/opinii działają lepiej na ikonach/tekście. Maks ~4-5 obrazów na całą stronę. Lifestyle do hero+użycia, realne foto do prezentacji produktu.
 
 WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? 'Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.' : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
 
@@ -70,6 +72,37 @@ TECHNICZNE:
 Zwróć WYŁĄCZNIE kod HTML (od <!DOCTYPE html> do </html>), bez komentarzy przed/po, bez bloków \`\`\`.`
 }
 
+// Generuje 1-2 fotorealistyczne ujęcia LIFESTYLE produktu (gpt-image-2) z WIELOMA
+// zdjęciami referencyjnymi z AliExpress (wierność produktu). Tylko kontekst/użycie —
+// detal produktu zostaje na realnych zdjęciach Ali. Null gdy się nie uda (HTML i tak ma realne foto).
+// deno-lint-ignore no-explicit-any
+async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[], product: any, ust: any): Promise<string[]> {
+  const refs = (refUrls || []).filter(Boolean).slice(0, 4).map((u) => ({ url: u, type: 'product' as const }))
+  if (!refs.length || !CRON) return []
+  const name = String(product?.name || product?.nazwa || '').slice(0, 100)
+  const dla = String(ust?.dla_kogo || 'codzienny użytkownik').slice(0, 140)
+  const kat = String(ust?.kat || ust?.kąt || '').slice(0, 160)
+  const base = `Fotorealistyczne zdjęcie produktowe LIFESTYLE. Pokaż DOKŁADNIE ten produkt z obrazów referencyjnych (ten sam kształt, kolor, zestaw) — nie zmieniaj go, nie wymyślaj wariantu. Produkt: ${name}. Naturalne światło, realna codzienna scena, estetyka jak prawdziwa sesja zdjęciowa marki e-commerce (NIE render 3D, NIE grafika AI, bez tekstu/logo/znaków wodnych/ramek).`
+  const scenes = [
+    `${base} Ujęcie HERO: produkt w użyciu przez odbiorcę (${dla}) w atrakcyjnym, aspiracyjnym kontekście — tak, by od razu było widać korzyść. Kadr czysty, miejsce na nałożenie nagłówka.`,
+    `${base} Ujęcie „w użyciu / jak działa": produkt w działaniu, z bliska w realnym kontekście pokazującym jego rolę${kat ? ` (${kat})` : ''}. Detal sceny, autentycznie.`,
+  ]
+  const one = async (scenePrompt: string): Promise<string | null> => {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
+        body: JSON.stringify({ prompt: scenePrompt, provider: 'gpt-image-2', quality: 'high', aspect_ratio: '1:1', type: 'lifestyle', count: 1, reference_images: refs }),
+      })
+      if (!r.ok) { console.error('[bud-landing-gen] lifestyle HTTP', r.status); return null }
+      const d = await r.json().catch(() => null)
+      const u = d?.images?.[0]?.url
+      return (u && typeof u === 'string' && !u.startsWith('data:')) ? u : null
+    } catch (e) { console.error('[bud-landing-gen] lifestyle err', e); return null }
+  }
+  const res = await Promise.all(scenes.map(one))
+  return res.filter((u): u is string => !!u)
+}
+
 function extractHtml(raw: string): string {
   let t = (raw || '').trim().replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/, '')
   const s = t.search(/<!doctype html|<html/i)
@@ -86,6 +119,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!
+    const CRON = Deno.env.get('SPAR_CRON_SECRET') || ''
     // deno-lint-ignore no-explicit-any
     let body: { sessionId?: string; product?: any; mockup_url?: string; force?: boolean }
     try { body = await req.json() } catch { return json({ error: 'nieprawidlowy_json' }, 400, c) }
@@ -124,7 +158,9 @@ Deno.serve(async (req) => {
     const genTask = (async () => {
       try {
         // deno-lint-ignore no-explicit-any
-        const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images) }]
+        // 1-2 fotorealistyczne ujęcia lifestyle z wielu zdjęć Ali (wierność) — do hero+użycia.
+        const lifestyle = await genLifestyle(SUPABASE_URL, CRON, images, product, ust)
+        const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle) }]
         if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
           method: 'POST',
