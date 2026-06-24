@@ -7,6 +7,59 @@
 // Gate: x-tools-secret (backend/backfill) LUB istniejąca sesja (front lejka).
 // Deploy: --no-verify-jwt.
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
+
+// Opinie AliExpress — publiczny endpoint feedback.aliexpress.com (bez auth/CORS z edge;
+// omija blokadę DSA UE). Priorytet: opinie ZE ZDJĘCIAMI, 4-5★, z tekstem, bez AIGC.
+// deno-lint-ignore no-explicit-any
+async function fetchAliReviews(productId: string): Promise<{ stats: any; reviews: any[] }> {
+  // deno-lint-ignore no-explicit-any
+  const out: any[] = []; let stats: any = null;
+  const pull = async (filter: string, pages: number) => {
+    for (let page = 1; page <= pages; page++) {
+      try {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 12000);
+        const r = await fetch(`https://feedback.aliexpress.com/pc/searchEvaluation.do?productId=${productId}&lang=en_US&country=US&page=${page}&pageSize=20&filter=${filter}&sort=complex_default`, { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) break;
+        const j = await r.json().catch(() => null); if (!j) break;
+        if (!stats) { const st = j.data?.productEvaluationStatistic || {}; stats = { avg: st.evarageStar ?? null, positivePct: st.evarageStarRage ?? null, numRatings: parseInt(j.displayMessage?.numRatings) || 0 }; }
+        // deno-lint-ignore no-explicit-any
+        for (const e of (j.data?.evaViewList || []) as any[]) {
+          const text = String(e.buyerTranslationFeedback || e.buyerFeedback || '').trim();
+          const stars = Math.round((e.buyerEval ?? 0) / 20);
+          if (!text || text.length < 12 || stars < 4 || e.aigc) continue;
+          out.push({ stars, name: String(e.buyerName || '').slice(0, 24), text: text.slice(0, 320), date: String(e.evaDate || ''), images: Array.isArray(e.images) ? e.images.slice(0, 3) : [] });
+        }
+        await new Promise((s) => setTimeout(s, 200));
+      } catch { break; }
+    }
+  };
+  await pull('withPic', 2);
+  if (out.filter((r) => r.images.length).length < 4) await pull('all', 2);
+  const seen = new Set<string>();
+  const uniq = out.filter((r) => { const k = r.name + '|' + r.text.slice(0, 40); if (seen.has(k)) return false; seen.add(k); return true; });
+  uniq.sort((a, b) => ((b.images.length ? 1 : 0) - (a.images.length ? 1 : 0)) || (b.stars - a.stars));
+  return { stats, reviews: uniq.slice(0, 12) };
+}
+
+// Tłumaczenie opinii na naturalny PL (gpt-5.1, 1 call). Fallback: oryginał.
+// deno-lint-ignore no-explicit-any
+async function translateReviewsPL(reviews: any[], key: string): Promise<any[]> {
+  if (!reviews.length || !key) return reviews.map((r) => ({ ...r, text_pl: r.text }));
+  try {
+    const payload = reviews.map((r, i) => ({ i, t: r.text }));
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
+      method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: 'gpt-5.1', reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: `Przetłumacz te opinie klientów na naturalny, potoczny polski (zachowaj sens i ton, zwięźle, bez upiększania i bez dodawania treści). Zwróć WYŁĄCZNIE JSON {"t":[{"i":0,"pl":"..."}]} w tej samej kolejności.\n${JSON.stringify(payload)}` }] }),
+    }, 'reviews-translate');
+    const d = await res.json();
+    // deno-lint-ignore no-explicit-any
+    const arr = (JSON.parse(d.choices?.[0]?.message?.content || '{}').t || []) as any[];
+    const map = new Map(arr.map((x) => [x.i, x.pl]));
+    return reviews.map((r, i) => ({ ...r, text_pl: String(map.get(i) || r.text) }));
+  } catch { return reviews.map((r) => ({ ...r, text_pl: r.text })); }
+}
 
 const ALLOWED = ['https://tomekniedzwiecki.pl', 'https://www.tomekniedzwiecki.pl', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
 function cors(o: string | null): Record<string, string> {
@@ -124,6 +177,7 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const RAPID_KEY = Deno.env.get('BUD_ALIEXPRESS_RAPIDAPI_KEY') || '';
+    const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || '';
     const TOOLS = Deno.env.get('BUD_TOOLS_SECRET') || '';
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -178,10 +232,23 @@ Deno.serve(async (req) => {
       product_id: id || null,
       source: detail ? 'detail' : (enr ? 'search' : 'have'),
       fetched_at: new Date().toISOString(),
+      // deno-lint-ignore no-explicit-any
+      reviews: [] as any[],
+      // deno-lint-ignore no-explicit-any
+      review_stats: null as any,
     };
 
+    // REALNE OPINIE z AliExpress (priorytet ze zdjęciami) + tłumaczenie PL — wiarygodność.
+    if (id) {
+      try {
+        const rv = await fetchAliReviews(id);
+        snapshot.review_stats = rv.stats;
+        snapshot.reviews = await translateReviewsPL(rv.reviews, OPENAI_KEY);
+      } catch (e) { console.warn('[bud-ali-snapshot] reviews err', String(e).slice(0, 80)); }
+    }
+
     await supabase.from('bud_tt_products').update({ ali_snapshot: snapshot }).eq('id', row.id);
-    return json({ snapshot, product_id: id }, 200, c);
+    return json({ snapshot, product_id: id, n_reviews: snapshot.reviews.length }, 200, c);
   } catch (e) {
     console.error('[bud-ali-snapshot] ERROR', e);
     return json({ error: 'blad_serwera' }, 500, c);

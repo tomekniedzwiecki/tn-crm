@@ -31,6 +31,15 @@ function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: 
   const brand = String(ust?.nazwa || ust?.brand || '').slice(0, 80)
   const korz = Array.isArray(ust?.korzysci) ? ust.korzysci.slice(0, 6).join('; ') : (Array.isArray(ust?.korzyści) ? ust.korzyści.slice(0, 6).join('; ') : '')
   const imgList = (images || []).slice(0, 6)
+  // REALNE opinie + statystyki z AliExpress (ze snapshotu) — wiarygodność.
+  const reviews = (snap && Array.isArray((snap as any).reviews)) ? (snap as any).reviews.slice(0, 6) : []
+  const rstats = (snap && (snap as any).review_stats) || null
+  const statsLine = rstats && rstats.avg
+    ? `STATYSTYKI OPINII (REALNE z AliExpress — użyj DOKŁADNIE tych liczb w pasku ocen hero i pasku social-proof): ocena ${String(rstats.avg).replace('.', ',')}/5, ${rstats.numRatings || 0} ocen${rstats.positivePct ? `, ${String(rstats.positivePct).replace('.', ',')}% pozytywnych` : ''}.`
+    : `STATYSTYKI OPINII: brak realnych — użyj wiarygodnych przykładowych (★ ~4,7/5) z dopiskiem, że klient podmieni.`
+  const reviewsBlock = reviews.length
+    ? `OPINIE (REALNE, z AliExpress — UŻYJ ICH w sekcji opinii zamiast wymyślonych; brzmią wiarygodnie. Te z "img" pokaż z miniaturą zdjęcia klienta (loading="lazy"); imiona są zamaskowane — zostaw jak są):\n${reviews.map((r: any, i: number) => `${i + 1}. [${r.stars || 5}★] ${r.name || ''}: ${String(r.text_pl || r.text || '').slice(0, 240)}${(r.images && r.images[0]) ? `  img: ${r.images[0]}` : ''}`).join('\n')}`
+    : `OPINIE: brak realnych — wygeneruj 4-5 wiarygodnych szablonowych (gwiazdki, imię, miejsce na zdjęcie) jako placeholder do podmiany.`
   return `Jesteś elitarnym front-end developerem i copywriterem direct-response, specjalizującym się w WYSOKOKONWERTUJĄCYCH stronach jednoproduktowych w stylu topowych marek DTC z USA. Zbuduj KOMPLETNĄ, produkcyjnie bliską stronę sprzedażową dla „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. CEL NADRZĘDNY: maksymalna skuteczność sprzedaży tego JEDNEGO produktu — każdy element ma popychać do zakupu.
 
 USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
@@ -41,17 +50,20 @@ ${imgList.length ? `• PRODUKT (realne zdjęcia z AliExpress — DOKŁADNY wygl
 ZASADA OBRAZÓW: nie wrzucaj zdjęcia do każdej sekcji — sekcje korzyści/porównania/FAQ/opinii działają lepiej na ikonach/tekście. Maks ~4-5 obrazów na całą stronę. Lifestyle do hero+użycia, realne foto do prezentacji produktu.
 WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): KAŻDY <img> ma mieć loading="lazy" (poza ewentualnym 1. obrazem hero), decoding="async" oraz ustaloną proporcję/wymiary (width+height albo aspect-ratio w CSS), żeby nie było przeskoku layoutu (CLS). Skaluj obrazy CSS-em do realnego rozmiaru kontenera (max-width:100%; height:auto) — NIE wyświetlaj wielkich zdjęć w małych ramkach. Nie dodawaj ciężkich teł-obrazów.
 
+${statsLine}
+${reviewsBlock}
+
 WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? 'Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.' : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
 
 STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
 1. STICKY DOLNY PASEK CTA (position:fixed na dole, zawsze widoczny zwł. na mobile): cena + przycisk „Kup teraz". KRYTYCZNE — klient nigdy nie szuka przycisku.
-2. HERO (test 3 sekund): nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ (np. „4,8/5 — X opinii").
-3. PASEK SOCIAL PROOF (zaraz pod hero): ★ ocena + liczba opinii + liczba zadowolonych klientów + uczciwy tag „viralowy hit z TikToka"/„bestseller". (Liczby to przykład — klient podmieni.)
+2. HERO (test 3 sekund): nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ z REALNYMI statystykami opinii (patrz STATYSTYKI OPINII wyżej).
+3. PASEK SOCIAL PROOF (zaraz pod hero): ★ ocena + liczba ocen (z realnych statystyk wyżej) + % pozytywnych + uczciwy tag „viralowy hit z TikToka". Używaj REALNYCH liczb, nie wymyślaj.
 4. PROBLEM → ROZWIĄZANIE: nazwij ból odbiorcy (z ustaleń), pokaż produkt jako rozwiązanie.
 5. KORZYŚCI (3-4 — KORZYŚĆ, nie cecha; inline SVG ikony): co klient ZYSKUJE.
 6. JAK DZIAŁA / W UŻYCIU (2-3 kroki) + realne zdjęcie lifestyle.
 7. PORÓWNANIE „nasza marka vs anonimowy odpowiednik z Allegro/Amazon" (2 kolumny/tabela: jakość, gwarancja, wsparcie, marka) — BEZ oczerniania konkretnych firm.
-8. OPINIE KLIENTÓW (4-5: gwiazdki, imię, miejsce na zdjęcie) — szablon do podmiany na realne.
+8. OPINIE KLIENTÓW — UŻYJ REALNYCH opinii podanych wyżej (gwiazdki, zamaskowane imię, treść PL; te z "img" pokaż z miniaturą zdjęcia klienta loading="lazy", klik = powiększenie). Realne opinie ze zdjęciami to najmocniejszy dowód — wyeksponuj je. Dopiero gdy brak realnych — szablon do podmiany.
 9. RISK-REVERSAL / GWARANCJA przy CTA (z pieczęcią/badge): płatność przy odbiorze (płacisz, gdy kurier przywiezie — zero ryzyka z góry) + 14 dni na zwrot + ikony bezpiecznej płatności. To NASZ najmocniejszy, uczciwy atut — wyeksponuj.
 10. FAQ (5-6) — rozbij realne obiekcje (czy pasuje/jak działa, jak płacę, zwrot, wysyłka, dla kogo).
 11. KOŃCOWE CTA: powtórz korzyść + cena + co w zestawie + „Kup teraz / Zamów za pobraniem" + mikrocopy zaufania.
