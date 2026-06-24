@@ -358,6 +358,11 @@ async function upd(id,patch,msg){
   if(error){toast('Błąd: '+error.message);return;}
   const x=ROWS.find(r=>r.id===id);if(x)Object.assign(x,patch);
   toast(msg);render();
+  // Po zatwierdzeniu: przenieś cover na TRWAŁY URL storage (cover z TikTok CDN to podpisany
+  // URL z krótkim TTL → w /sklep gnije w ~dobę). Fire-and-forget, świeży thumb przez oEmbed.
+  if(patch.status==='approved'&&x&&x.key){
+    try{sb.functions.invoke('bud-tt-rehost',{body:{keys:[x.key]}}).catch(()=>{});}catch(e){}
+  }
 }
 function pick(id,link){upd(id,{chosen_link:link,status:'approved'},'Zatwierdzone');}
 function customApprove(id){const v=$('cl-'+id).value.trim();if(!v){toast('Wklej link');return;}upd(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link');}
