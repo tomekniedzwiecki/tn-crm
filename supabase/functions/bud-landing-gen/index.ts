@@ -70,7 +70,7 @@ STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
 7. PORÓWNANIE „nasza marka vs anonimowy odpowiednik z Allegro/Amazon" (2 kolumny/tabela: jakość, gwarancja, wsparcie, marka) — BEZ oczerniania konkretnych firm.
 8. OPINIE — ŚCIANA ZDJĘĆ KLIENTÓW (NAJWAŻNIEJSZY dowód; styl jak aplikacje opinii w Shopify — Loox / Judge.me — gdzie ZDJĘCIE jest bohaterem, a tekst tylko podpisem):
    • GŁÓWNY element to SIATKA DUŻYCH ZDJĘĆ KLIENTÓW (z listy „OPINIE ZE ZDJĘCIEM"). Każdy kafel: zdjęcie klienta WYPEŁNIA kafel (aspect-ratio 3:4 lub 1:1, object-fit:cover, zaokrąglone rogi) i ZAJMUJE ~75% kafla. Na dole zdjęcia półprzezroczysty gradient, a na nim (albo tuż pod) MAŁE: ★ gwiazdki + JEDNA linijka cytatu (truncate) + zamaskowane imię + „✓ zweryfikowany zakup". ZDJĘCIE DOMINUJE, tekst jest dodatkiem. Siatka: 2 kolumny na mobile, 3-4 na desktopie, drobny gap — efekt „ściany zdjęć od klientów".
-   • Klik w kafel → LIGHTBOX: duże zdjęcie + PEŁNY tekst opinii + gwiazdki + imię, ze strzałkami ‹ › i przyciskiem zamknięcia. Do tego (i tylko do tego) wolno użyć MINIMALNEGO inline <script>.
+   • Klik w kafel → LIGHTBOX BEZ JS, techniką CSS „:target": kafel to <a href="#rev-N">, a osobny <div id="rev-N" class="lb"> (ukryty) pokazuje się przez regułę .lb:target{display:flex}. W lightboxie: duże zdjęcie + PEŁNY tekst opinii + gwiazdki + imię + „✓ zweryfikowany zakup"; zamknięcie to <a href="#" class="lb-close">✕</a> i klik w tło. Każda opinia ze zdjęciem ma swój #rev-N. ZERO JavaScriptu — wyłącznie CSS :target.
    • POD ścianą zdjęć: 3-4 mniejsze cytaty TEKSTOWE (z listy „OPINIE TEKSTOWE") jako uzupełnienie — drobniejsze, drugorzędne.
    • Użyj DOKŁADNIE realnych zdjęć (pole zdjecie=URL), realnych tekstów i zamaskowanych imion z list wyżej. Każde <img> opinii: loading="lazy" decoding="async". NIE wymyślaj zdjęć ani opinii. Gdy brak realnych — analogiczna ściana z placeholderami.
 9. RISK-REVERSAL / GWARANCJA przy CTA (z pieczęcią/badge): płatność przy odbiorze (płacisz, gdy kurier przywiezie — zero ryzyka z góry) + 14 dni na zwrot + ikony bezpiecznej płatności. To NASZ najmocniejszy, uczciwy atut — wyeksponuj.
@@ -89,7 +89,7 @@ TWARDE ZAKAZY (marka Tomka):
 - Opinie to szablon do podmiany na realne (nie udawaj, że to zweryfikowane recenzje). Bez „pewnego zysku"/gwarantowanych efektów.
 
 TECHNICZNE:
-- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, ZERO zewnętrznych bibliotek/fontów (system fonts; sticky CTA czystym CSS position:fixed). Dozwolony jest WYŁĄCZNIE krótki inline <script> do lightboxu opinii (otwórz/zamknij/strzałki) — żadnych innych skryptów ani bibliotek. Mobile-first, lekka i szybka. Inline SVG do ikon.
+- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, ZERO JavaScriptu i zero zewnętrznych bibliotek/fontów (system fonts). Sticky CTA i lightbox opinii realizujesz CZYSTYM CSS (position:fixed; lightbox przez :target). Mobile-first, lekka i szybka. Inline SVG do ikon.
 
 Zwróć WYŁĄCZNIE kod HTML (od <!DOCTYPE html> do </html>), bez komentarzy przed/po, bez bloków \`\`\`.`
 }
