@@ -39,6 +39,7 @@ ZDJĘCIA DO UŻYCIA (jako <img src="..." loading="lazy">; NIE wymyślaj innych U
 ${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie) — wstaw w HERO oraz w sekcji „jak działa / w użyciu" (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
 ${imgList.length ? `• PRODUKT (realne zdjęcia z AliExpress — DOKŁADNY wygląd produktu) — wstaw tam, gdzie pokazujesz SAM produkt: sekcja produktu, „przed/po", tabela porównania, dowód:\n${imgList.map((u, i) => `   P${i + 1}. ${u}`).join('\n')}` : '(brak realnych zdjęć — użyj placeholderów [ Zdjęcie: … ])'}
 ZASADA OBRAZÓW: nie wrzucaj zdjęcia do każdej sekcji — sekcje korzyści/porównania/FAQ/opinii działają lepiej na ikonach/tekście. Maks ~4-5 obrazów na całą stronę. Lifestyle do hero+użycia, realne foto do prezentacji produktu.
+WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): KAŻDY <img> ma mieć loading="lazy" (poza ewentualnym 1. obrazem hero), decoding="async" oraz ustaloną proporcję/wymiary (width+height albo aspect-ratio w CSS), żeby nie było przeskoku layoutu (CLS). Skaluj obrazy CSS-em do realnego rozmiaru kontenera (max-width:100%; height:auto) — NIE wyświetlaj wielkich zdjęć w małych ramkach. Nie dodawaj ciężkich teł-obrazów.
 
 WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? 'Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.' : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
 
@@ -100,7 +101,18 @@ async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[
     } catch (e) { console.error('[bud-landing-gen] lifestyle err', e); return null }
   }
   const res = await Promise.all(scenes.map(one))
-  return res.filter((u): u is string => !!u)
+  // OPTYMALIZACJA WAGI: surowe PNG z gpt-image-2 to ~1,4 MB — zabójcze dla LCP.
+  // Serwujemy przez Supabase render API (resize + kompresja + webp) → ~40-60 KB.
+  return res.filter((u): u is string => !!u).map((u) => optimizeImg(u, 1100, 72))
+}
+
+// Storage public URL → render (resize+quality+webp). resize=contain (sam width tnie boki).
+function optimizeImg(url: string, w = 1000, q = 72): string {
+  if (typeof url === 'string' && url.includes('/storage/v1/object/public/')) {
+    const sep = url.includes('?') ? '&' : '?'
+    return url.replace('/storage/v1/object/public/', '/storage/v1/render/image/public/') + `${sep}width=${w}&quality=${q}&resize=contain`
+  }
+  return url
 }
 
 function extractHtml(raw: string): string {
