@@ -91,7 +91,7 @@ async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[
     try {
       const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
-        body: JSON.stringify({ prompt: scenePrompt, provider: 'gpt-image-2', quality: 'high', aspect_ratio: '1:1', type: 'lifestyle', count: 1, reference_images: refs }),
+        body: JSON.stringify({ prompt: scenePrompt, provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '1:1', type: 'lifestyle', count: 1, reference_images: refs }),
       })
       if (!r.ok) { console.error('[bud-landing-gen] lifestyle HTTP', r.status); return null }
       const d = await r.json().catch(() => null)
