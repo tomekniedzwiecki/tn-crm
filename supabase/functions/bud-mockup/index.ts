@@ -48,14 +48,16 @@ Zwróć WYŁĄCZNIE JSON: {"styles":[{"key":"...","label":"...","brief":"..."}, 
 function imagePrompt(product: any, snap: any, ust: any, brief: string): string {
   const name = String(product?.name || product?.nazwa || snap?.title || 'produkt').slice(0, 120);
   const dla = String(ust?.dla_kogo || '').slice(0, 160);
-  return `Realistic VERTICAL (portrait) mockup of a professional one-product e-commerce landing page for the product in the reference image. This is a website design preview to show a client "this is how your store could look".
+  return `Realistic VERTICAL (portrait) mockup of a HIGH-CONVERTING one-product e-commerce landing page (US DTC style) for the product in the reference image. Website design preview to show a client "this is how your store could look".
 
 Product: ${name}.${dla ? ` Target customer: ${dla}.` : ''}
 Visual style for THIS mockup: ${brief}
 
-Layout top-to-bottom: 1) HERO — large attractive product shot + catchy Polish headline + short subtitle + clear CTA button "Kup teraz"; 2) trust bar (płatność przy odbiorze, darmowa dostawa, gwarancja zwrotu 14 dni); 3) BENEFITS with icons (3 points); 4) product in use (lifestyle); 5) customer REVIEWS with stars; 6) second CTA with price.
+CRITICAL: the product shown MUST faithfully match the reference image (same object, shape, color, set). Render the ACTUAL product, not a generic stand-in.
 
-Polish texts. Realistic interface (not a placeholder template). Consistent palette and typography per the style above. No foreign brand logos. High quality, sharp details.`;
+Layout top-to-bottom (conversion-optimized): 1) HERO — large product shot IN USE + benefit-led Polish headline (not the product name) + 1-line subtitle + ONE high-contrast CTA button "Kup teraz" + price + ★★★★★ rating with review count; 2) social-proof strip (stars, liczba opinii, „viralowy hit z TikToka"); 3) trust bar (płatność przy odbiorze · 14 dni na zwrot · bezpieczna płatność); 4) 3 BENEFITS with icons (benefit-led); 5) product in use / lifestyle; 6) customer REVIEWS with stars + avatars; 7) guarantee / risk-reversal block with a badge/seal; 8) final CTA with price. Suggest a sticky bottom bar with price + "Kup teraz".
+
+Polish texts. Realistic, premium interface (NOT a placeholder template). One consistent palette and typography per the style above; the CTA button must visually pop (high contrast). No foreign brand logos, no fake countdown timers. High quality, sharp, crisp UI.`;
 }
 
 Deno.serve(async (req) => {

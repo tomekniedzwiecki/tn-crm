@@ -15,7 +15,7 @@ function cors(o: string | null): Record<string, string> {
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MODEL = Deno.env.get('BUD_LANDING_MODEL') || 'gpt-5.5'
-const MAX_OUT = 24000
+const MAX_OUT = 32000
 function json(b: Record<string, unknown>, s: number, c: Record<string, string>): Response {
   return new Response(JSON.stringify(b), { status: s, headers: { ...c, 'Content-Type': 'application/json' } })
 }
@@ -31,22 +31,41 @@ function prompt(product: any, ust: any, snap: any, images: string[]): string {
   const brand = String(ust?.nazwa || ust?.brand || '').slice(0, 80)
   const korz = Array.isArray(ust?.korzysci) ? ust.korzysci.slice(0, 6).join('; ') : (Array.isArray(ust?.korzyści) ? ust.korzyści.slice(0, 6).join('; ') : '')
   const imgList = (images || []).slice(0, 6)
-  return `Jesteś topowym front-end developerem i copywriterem direct-response. Zbuduj KOMPLETNĄ, produkcyjnie gotową stronę sprzedażową (one-product landing page) dla produktu „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. To wersja BLISKA tej, która pójdzie na żywo.
+  return `Jesteś elitarnym front-end developerem i copywriterem direct-response, specjalizującym się w WYSOKOKONWERTUJĄCYCH stronach jednoproduktowych w stylu topowych marek DTC z USA. Zbuduj KOMPLETNĄ, produkcyjnie bliską stronę sprzedażową dla „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. CEL NADRZĘDNY: maksymalna skuteczność sprzedaży tego JEDNEGO produktu — każdy element ma popychać do zakupu.
 
-${product?.__hasMockup ? 'Do wiadomości dołączony jest OBRAZ WYBRANEJ MAKIETY — odwzoruj jego styl wizualny (paleta, typografia, charakter), układ i nastrój w realnym HTML/CSS.' : ''}
+USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
 
-USTALENIA (trzymaj się ich):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
-
-ZDJĘCIA PRODUKTU (realne, z AliExpress — UŻYJ ich jako <img src="...">, NIE wymyślaj URL-i):
+ZDJĘCIA PRODUKTU (realne, z AliExpress — UŻYWAJ jako <img src="..." loading="lazy"> w hero i sekcjach produktu/lifestyle; NIE wymyślaj innych URL-i; placeholder TYLKO gdy realnie brak zdjęcia):
 ${imgList.length ? imgList.map((u, i) => `${i + 1}. ${u}`).join('\n') : '(brak — użyj placeholderów [ Zdjęcie: … ])'}
 
-Wymagania:
-- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, zero zewnętrznych bibliotek/skryptów/fontów (system fonts). Responsywny (mobile-first).
-- Sekcje: hero (nagłówek + podtytuł + DUŻE zdjęcie produktu z listy wyżej + przycisk CTA), pasek zaufania (płatność przy odbiorze, dostawa, zwrot 14 dni), korzyści (3 z inline SVG), sekcja „w użyciu" (kolejne realne zdjęcie jeśli jest, inaczej placeholder), opinie klientów (3, gwiazdki), FAQ (3-4), sekcja końcowa CTA z ceną orientacyjną.
-- WSZYSTKIE przyciski CTA „Kup teraz" MUSZĄ być linkami: <a href="#" data-cta="kup" class="...">Kup teraz</a> — href podmienimy później na adres kasy. Tekst CTA: „Kup teraz".
-- Realne zdjęcia z listy wstaw w hero i sekcji produktu (loading="lazy"). Tam gdzie brak zdjęcia — placeholder <div> z podpisem „[ Zdjęcie: … ]". NIE wymyślaj innych URL-i.
-- Copy po polsku, direct-response: hak, korzyści, dowód, CTA. COD i zwrot 14 dni dozwolone. ZAKAZ zmyślonej pilności, fałszywych liczników i „dostawa 24h".
-- Estetyka spójna z wybraną makietą, czytelna typografia.
+WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? 'Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.' : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
+
+STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
+1. STICKY DOLNY PASEK CTA (position:fixed na dole, zawsze widoczny zwł. na mobile): cena + przycisk „Kup teraz". KRYTYCZNE — klient nigdy nie szuka przycisku.
+2. HERO (test 3 sekund): nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ (np. „4,8/5 — X opinii").
+3. PASEK SOCIAL PROOF (zaraz pod hero): ★ ocena + liczba opinii + liczba zadowolonych klientów + uczciwy tag „viralowy hit z TikToka"/„bestseller". (Liczby to przykład — klient podmieni.)
+4. PROBLEM → ROZWIĄZANIE: nazwij ból odbiorcy (z ustaleń), pokaż produkt jako rozwiązanie.
+5. KORZYŚCI (3-4 — KORZYŚĆ, nie cecha; inline SVG ikony): co klient ZYSKUJE.
+6. JAK DZIAŁA / W UŻYCIU (2-3 kroki) + realne zdjęcie lifestyle.
+7. PORÓWNANIE „nasza marka vs anonimowy odpowiednik z Allegro/Amazon" (2 kolumny/tabela: jakość, gwarancja, wsparcie, marka) — BEZ oczerniania konkretnych firm.
+8. OPINIE KLIENTÓW (4-5: gwiazdki, imię, miejsce na zdjęcie) — szablon do podmiany na realne.
+9. RISK-REVERSAL / GWARANCJA przy CTA (z pieczęcią/badge): płatność przy odbiorze (płacisz, gdy kurier przywiezie — zero ryzyka z góry) + 14 dni na zwrot + ikony bezpiecznej płatności. To NASZ najmocniejszy, uczciwy atut — wyeksponuj.
+10. FAQ (5-6) — rozbij realne obiekcje (czy pasuje/jak działa, jak płacę, zwrot, wysyłka, dla kogo).
+11. KOŃCOWE CTA: powtórz korzyść + cena + co w zestawie + „Kup teraz / Zamów za pobraniem" + mikrocopy zaufania.
+
+ZASADY KONWERSJI:
+- Korzyści ZAWSZE przed cechami; copy direct-response (hak → ból → rozwiązanie → dowód → CTA).
+- WSZYSTKIE przyciski CTA to linki: <a href="#" data-cta="kup" class="...">Kup teraz</a> (href podmienimy na adres kasy). Sticky pasek też.
+- ZERO nawigacji/menu/linków zewnętrznych/stopki z odnośnikami — nic, co wyprowadza ze strony; jedyne klikalne = CTA.
+- Trust layering: 2-3 sygnały zaufania nad foldem, kilka w środku, 2-3 przy końcowym CTA. CTA mocno kontrastowy.
+
+TWARDE ZAKAZY (marka Tomka):
+- ZAKAZ zmyślonej pilności: żadnych liczników odliczających, „tylko dziś", „zostały 2 sztuki".
+- ZAKAZ „dostawa w 24h" i „magazyn w Polsce" (sygnał dropshipu) — pisz neutralnie „wysyłka pod Twój adres".
+- Opinie to szablon do podmiany na realne (nie udawaj, że to zweryfikowane recenzje). Bez „pewnego zysku"/gwarantowanych efektów.
+
+TECHNICZNE:
+- Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, zero zewnętrznych bibliotek/fontów/JS (system fonts; sticky CTA czystym CSS position:fixed). Mobile-first, lekka i szybka. Inline SVG do ikon.
 
 Zwróć WYŁĄCZNIE kod HTML (od <!DOCTYPE html> do </html>), bez komentarzy przed/po, bez bloków \`\`\`.`
 }
