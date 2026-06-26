@@ -170,8 +170,50 @@
     return esc(out).replace(/\n/g, '<br>') + badge;
   }
 
+  // ── Ładowanie sesji (wspólny loader; różnice lejków wchodzą configiem) ──
+  // Wzorzec „zwróć dane": PanelCore ładuje, panel przypisuje do swoich zmiennych
+  // (bez przenoszenia własności stanu — najniższe ryzyko). cfg: {table, select,
+  // rpcCosts, rpcAvatars, emailsTable}. Zwraca komplet map gotowych do podstawienia.
+  async function loadSessions(supabase, cfg) {
+    const all = [];
+    const pageSize = 1000;
+    let page = 0;
+    while (true) {
+      const { data, error } = await supabase
+        .from(cfg.table)
+        .select(cfg.select)
+        .order('created_at', { ascending: false })
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
+      if (!data || !data.length) break;
+      all.push(...data);
+      if (data.length < pageSize) break;
+      page++;
+    }
+    const [{ data: costs }, { data: rateRow }, { data: mailRows }, { data: avatars }] = await Promise.all([
+      supabase.rpc(cfg.rpcCosts),
+      supabase.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle(),
+      supabase.from(cfg.emailsTable).select('session_id, kind, email, sent_at, opened_at, clicked_at, delivered_at').order('sent_at', { ascending: false }).limit(800),
+      supabase.rpc(cfg.rpcAvatars),
+    ]);
+    const costsBySession = {};
+    (costs || []).forEach((c) => { costsBySession[c.session_id] = c; });
+    const avatarByUser = {};
+    (avatars || []).forEach((a) => { if (a.auth_user_id && a.avatar_url) avatarByUser[a.auth_user_id] = a.avatar_url; });
+    const rate = (rateRow && rateRow.value) ? (parseFloat(rateRow.value) || 4.0) : null;
+    if (rate) setRate(rate);
+    const mails = mailRows || [];
+    const mailKindsBySession = {};
+    const mailsBySession = {};
+    mails.forEach((m) => {
+      (mailKindsBySession[m.session_id] = mailKindsBySession[m.session_id] || new Set()).add(m.kind);
+      (mailsBySession[m.session_id] = mailsBySession[m.session_id] || []).push(m);
+    });
+    return { sessions: all, costsBySession, avatarByUser, rate, mails, mailKindsBySession, mailsBySession };
+  }
+
   window.PanelCore = {
-    setRate, getRate,
+    setRate, getRate, loadSessions,
     $, esc, fmtPln, fmtZl, fmtUsd, timeAgo, fmtDate, untilStr, plural, toast,
     STAGES, STAGE_IDS, LOST_STAGE_IDS, derivedStageOf, stageOf, projName,
     designOf, hexOf, accentDot, designSwatch,
