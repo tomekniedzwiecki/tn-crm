@@ -177,6 +177,10 @@
   let _data = { sessions: [], costsBySession: {}, mailsBySession: {}, avatarByUser: {} };
   function setData(d) { _data = Object.assign(_data, d || {}); }
   const getSessions = () => _data.sessions;
+  // Kontekst wstrzykiwany raz przez panel (PanelCore nie zna globali panelu):
+  // {supabase, rpcCostsDaily, ...}. Używany przez render/akcje wymagające klienta/RPC.
+  let _cfg = {};
+  function initCtx(c) { _cfg = Object.assign(_cfg, c || {}); }
   const costOf = (s) => (_data.costsBySession[s.id] ? Number(_data.costsBySession[s.id].cost_usd) : 0);
 
   // ── Avatar konta: zdjęcie Google (gdy logowano przez Google), inaczej inicjały ──
@@ -253,8 +257,141 @@
     return out;
   }
 
+  // ── DASHBOARD / PRZEGLĄD (command-center) — identyczne w obu panelach ──
+  const TONE_TXT = { emerald: 'text-emerald-400', amber: 'text-amber-400', sky: 'text-sky-400', zinc: 'text-zinc-400' };
+  const TONE_CHIP = {
+    emerald: 'text-emerald-400 border-emerald-400/30 bg-emerald-400/10',
+    amber: 'text-amber-400 border-amber-400/30 bg-amber-400/10',
+    sky: 'text-sky-400 border-sky-400/30 bg-sky-400/10',
+    zinc: 'text-zinc-400 border-white/10 bg-white/5',
+  };
+  function renderDashboard() {
+    const sessions = getSessions();
+    const vis = sessions.filter((s) => !s.is_test);
+    const now = Date.now();
+    const d7 = now - 7 * 864e5;
+    const within7 = vis.filter((s) => new Date(s.created_at).getTime() >= d7);
+    const leads = vis.filter((s) => s.email);
+    const projects = vis.filter((s) => s.preview_images && Object.keys(s.preview_images).length);
+    const greens = vis.filter((s) => s.verdict === 'zielony');
+    const paid = vis.filter((s) => s.paid_at);
+    const totalCost = vis.reduce((sum, s) => sum + costOf(s), 0);
+    const cost7 = within7.reduce((sum, s) => sum + costOf(s), 0);
+    const withCost = vis.filter((s) => costOf(s) > 0).length;
+    const avgCost = withCost ? totalCost / withCost : 0;
+    const kpi = [
+      { label: 'Sesje (7 dni / razem)', val: `${within7.length} / ${vis.length}`, icon: 'ph-chats-circle', tone: 'text-blue-400' },
+      { label: 'Leady (e-mail)', val: leads.length, icon: 'ph-user-plus', tone: 'text-sky-400' },
+      { label: 'Zielone werdykty', val: greens.length, icon: 'ph-check-circle', tone: 'text-emerald-400' },
+      { label: 'Rezerwacja', val: paid.length, icon: 'ph-currency-circle-dollar', tone: 'text-amber-400' },
+      { label: 'Koszt AI — 7 dni', val: fmtPln(cost7), icon: 'ph-wallet', tone: 'text-blue-400' },
+      { label: 'Koszt AI — razem', val: fmtPln(totalCost), icon: 'ph-stack', tone: 'text-blue-400' },
+      { label: 'Śr. koszt rozmowy', val: avgCost ? fmtPln(avgCost) : '—', icon: 'ph-calculator', tone: 'text-zinc-400' },
+      { label: 'Przychód (rezerwacje)', val: (paid.length * 500).toLocaleString('pl-PL') + ' zł', icon: 'ph-trend-up', tone: 'text-emerald-400' },
+    ];
+    $('kpi-grid').innerHTML = kpi.map((k) => `
+      <div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4 animate-enter">
+        <div class="flex items-center gap-2 text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ${k.icon} ${k.tone}"></i>${k.label}</div>
+        <div class="text-xl font-bold text-white mt-1.5">${k.val}</div>
+      </div>`).join('');
+    const steps = [
+      ['Rozmowy', vis.length],
+      ['Podany e-mail', leads.length],
+      ['Wygenerowany projekt', projects.length],
+      ['Zielony werdykt', greens.length],
+      ['Rezerwacja', paid.length],
+    ];
+    const max = Math.max(1, vis.length);
+    $('funnel').innerHTML = steps.map(([label, n], i) => {
+      const pct = vis.length ? Math.round((n / max) * 100) : 0;
+      const conv = i === 0 ? '' : steps[i - 1][1] ? ` <span class="text-zinc-600">(${Math.round((n / Math.max(1, steps[i - 1][1])) * 100)}%)</span>` : '';
+      return `<div>
+        <div class="flex justify-between text-xs mb-1"><span class="text-zinc-400">${label}</span><span class="text-white font-medium">${n}${conv}</span></div>
+        <div class="h-2 rounded-full bg-white/5 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-blue-600 to-blue-400" style="width:${pct}%"></div></div>
+      </div>`;
+    }).join('');
+    renderCostChart();
+    $('recent-sessions').innerHTML = vis.slice(0, 8).map(sessionRowMini).join('') || '<div class="text-sm text-zinc-600">Brak sesji.</div>';
+  }
+
+  function sessionRowMini(s) {
+    const st = STAGES.find((x) => x.id === stageOf(s));
+    return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 transition text-left">
+      <span class="w-2 h-2 rounded-full ${st.dot} shrink-0"></span>
+      <span class="text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
+      <span class="text-xs text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
+      <span class="ml-auto text-xs font-mono text-zinc-400 shrink-0">${costOf(s) ? fmtPln(costOf(s)) : ''}</span>
+      <span class="text-[11px] text-zinc-600 shrink-0 w-20 text-right">${timeAgo(s.created_at)}</span>
+    </button>`;
+  }
+
+  async function renderCostChart() {
+    const to = new Date(); const from = new Date(Date.now() - 13 * 864e5);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const { data, error } = await _cfg.supabase.rpc(_cfg.rpcCostsDaily, { p_from: iso(from), p_to: iso(to) });
+    if (error) { console.error(error); return; }
+    const byDay = {};
+    (data || []).forEach((r) => { byDay[r.day] = (byDay[r.day] || 0) + Number(r.cost_usd); });
+    const days = [];
+    for (let i = 13; i >= 0; i--) days.push(iso(new Date(Date.now() - i * 864e5)));
+    const max = Math.max(0.01, ...days.map((d) => byDay[d] || 0));
+    let total = 0;
+    $('cost-chart').innerHTML = days.map((d) => {
+      const v = byDay[d] || 0; total += v;
+      const h = Math.max(2, Math.round((v / max) * 100));
+      const dayPl = new Date(d + 'T12:00:00').toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', weekday: 'long' });
+      return `<div class="flex-1 flex flex-col justify-end h-full group cursor-default" title="${dayPl} — ${fmtPln(v)}">
+        <div class="bar w-full rounded-t bg-gradient-to-t from-blue-700/60 to-blue-400/80 group-hover:from-blue-600 group-hover:to-blue-300 transition-colors" style="height:${h}%"></div>
+      </div>`;
+    }).join('');
+    $('cost-chart-labels').innerHTML = days.map((d) => `<div class="flex-1 text-center text-[9px] text-zinc-600">${d.slice(8)}</div>`).join('');
+    $('chart-total').textContent = '14 dni: ' + fmtPln(total);
+  }
+
+  function renderPrzeglad() { renderDashboard(); renderAttention(); }
+  function attentionRow(s, right) {
+    const g = leadSignal(s);
+    return `<button onclick="openSession('${s.id}')" class="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-white/5 transition text-left">
+      <i class="ph ${g.icon} ${TONE_TXT[g.tone]} shrink-0"></i>
+      <span class="min-w-0 flex-1">
+        <span class="block text-sm text-white truncate">${accentDot(s)}${esc(projName(s))}</span>
+        <span class="block text-[11px] text-zinc-500 truncate">${esc(s.email || 'bez e-maila')}</span>
+      </span>
+      <span class="shrink-0 text-right flex items-center gap-2">${sourceMini(s)}<span class="text-[11px] text-zinc-500">${right || ''}</span></span>
+    </button>`;
+  }
+  function attentionCol(title, icon, tone, items, empty) {
+    const head = `<div class="flex items-center justify-between mb-2">
+      <span class="inline-flex items-center gap-1.5 text-xs font-medium ${TONE_TXT[tone]}"><i class="ph ${icon}"></i>${title}</span>
+      <span class="text-[11px] text-zinc-600">${items.length}</span></div>`;
+    const body = items.length ? items.slice(0, 7).map((it) => attentionRow(it.s, it.right)).join('')
+      + (items.length > 7 ? `<div class="text-[11px] text-zinc-600 px-2.5 pt-1">+ ${items.length - 7} więcej</div>` : '')
+      : `<div class="text-xs text-zinc-600 px-2.5 py-3">${empty}</div>`;
+    return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-3.5">${head}${body}</div>`;
+  }
+  function renderAttention() {
+    const sessions = getSessions();
+    const vis = sessions.filter((s) => !s.is_test && !LOST_STAGE_IDS.includes(stageOf(s)));
+    const now = Date.now();
+    const hot = vis.filter((s) => leadSignal(s).key === 'hot')
+      .map((s) => ({ s, t: lastTouchOf(s), right: lastTouchOf(s) ? timeAgo(new Date(lastTouchOf(s)).toISOString()) : '—' }))
+      .sort((a, b) => b.t - a.t);
+    const cold = vis.filter((s) => leadSignal(s).key === 'cold')
+      .map((s) => ({ s, t: lastTouchOf(s), right: 'cisza ' + timeAgo(new Date(lastTouchOf(s) || Date.parse(s.created_at)).toISOString()).replace(' temu', '') }))
+      .sort((a, b) => b.t - a.t);
+    const paid = vis.filter((s) => s.paid_at && now - Date.parse(s.paid_at) < 14 * 864e5)
+      .map((s) => ({ s, t: Date.parse(s.paid_at), right: fmtDate(s.paid_at) }))
+      .sort((a, b) => b.t - a.t);
+    $('attention-cols').innerHTML =
+      attentionCol('Gorące — działaj', 'ph-fire', 'emerald', hot, 'Brak gorących leadów. Wróć po nowych werdyktach.')
+      + attentionCol('Wystygli — do reaktywacji', 'ph-snowflake', 'sky', cold, 'Nikt nie wystygł — dobrze.')
+      + attentionCol('Świeże wpłaty (14 dni)', 'ph-currency-circle-dollar', 'amber', paid, 'Brak nowych rezerwacji.');
+  }
+
   window.PanelCore = {
-    setRate, getRate, loadSessions, setData, getSessions,
+    setRate, getRate, loadSessions, setData, getSessions, initCtx,
+    TONE_TXT, TONE_CHIP,
+    renderDashboard, sessionRowMini, renderCostChart, renderPrzeglad, attentionRow, attentionCol, renderAttention,
     costOf, avatarPhoto, avatarImg, avatarThumb, avatarBlock,
     lastTouchOf, isEngaged, revealDelivered, leadSignal,
     $, esc, fmtPln, fmtZl, fmtUsd, timeAgo, fmtDate, untilStr, plural, toast,
