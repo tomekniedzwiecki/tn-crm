@@ -43,11 +43,14 @@
   .seg{display:flex;background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:3px;gap:2px}
   .seg button{border:0;background:transparent;color:var(--dim);font-size:12px;font-weight:500;padding:6px 12px;border-radius:6px;cursor:pointer;transition:.15s;white-space:nowrap}
   .seg button.on{background:var(--surface2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.04) inset}
+  .seg button .cnt{display:inline-block;min-width:17px;padding:0 5px;margin-left:5px;border-radius:99px;background:var(--line);color:var(--dim2);font-size:10.5px;font-weight:600;line-height:16px;text-align:center;vertical-align:1px}
+  .seg button.on .cnt{background:var(--line2);color:var(--text)}
   .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s}
   .btn:hover{border-color:#3a3a42;background:#1b1b1f}
   .btn-g{background:var(--green-d);border-color:#3d9450;color:#eafff0}
   .btn-g:hover{background:#368049}
   .btn-r:hover{background:#4a1a1d;border-color:var(--red);color:#ffd7d8}
+  .btn-dup:hover{background:#1a2433;border-color:var(--blue);color:#cfe3ff}
   .btn-ali{background:#2a1500;border-color:#7a4a12;color:var(--gold);font-weight:600}
   .btn-ali:hover{background:#3a1d00;border-color:#c47e12}
 
@@ -58,6 +61,8 @@
   .card:hover{border-color:#34343c}
   .card.approved{border-color:var(--green-d);background:linear-gradient(180deg,rgba(70,180,106,.05),transparent 120px)}
   .card.rejected{opacity:.5}
+  .card.duplicate{opacity:.6}
+  .card.duplicate .pname{text-decoration:line-through;text-decoration-color:var(--dim2);text-decoration-thickness:1px}
   .head{display:grid;grid-template-columns:150px 1fr;gap:18px;padding:18px;align-items:center}
 
   /* VIDEO */
@@ -124,6 +129,7 @@
   .stbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);margin-left:auto}
   .stbadge.approved{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.08)}
   .stbadge.rejected{color:var(--red);border-color:#5a2326}
+  .stbadge.duplicate{color:var(--blue);border-color:#234a6e;background:rgba(50,145,255,.08)}
 
   /* PLAYER MODAL */
   .modal{position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(6px);z-index:90;display:none;align-items:center;justify-content:center;padding:24px}
@@ -173,10 +179,11 @@
       <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input id="q" class="ipt" placeholder="Szukaj produktu…"></div>
       <select id="fcat" class="sel"><option value="">Wszystkie kategorie</option></select>
       <div class="seg" id="stseg">
-        <button data-s="pending" class="on">Do weryfikacji</button>
-        <button data-s="approved">Zatwierdzone</button>
-        <button data-s="rejected">Odrzucone</button>
-        <button data-s="">Wszystkie</button>
+        <button data-s="pending" class="on">Do weryfikacji<span class="cnt" data-c="pending"></span></button>
+        <button data-s="approved">Zatwierdzone<span class="cnt" data-c="approved"></span></button>
+        <button data-s="rejected">Odrzucone<span class="cnt" data-c="rejected"></span></button>
+        <button data-s="duplicate">Duplikaty<span class="cnt" data-c="duplicate"></span></button>
+        <button data-s="">Wszystkie<span class="cnt" data-c="all"></span></button>
       </div>
       <button id="refresh" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Odśwież</button>
     </div>
@@ -215,6 +222,7 @@ const I={
   user:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>',
   check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6 9 17l-5-5"/></svg>',
   x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>',
+  copy:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
   ext:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   store:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 7l1.5-3h17L22 7"/><path d="M2 7h20v3a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M4 10v10h16V10"/></svg>',
   tiktok:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 3a5 5 0 0 0 5 5v3a8 8 0 0 1-5-1.7V15a6 6 0 1 1-6-6v3a3 3 0 1 0 3 3V3z"/></svg>',
@@ -248,8 +256,10 @@ function render(){
     if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
     return true;
   });
-  const appr=ROWS.filter(x=>x.status==='approved').length, pend=ROWS.filter(x=>x.status==='pending').length;
-  $('kpis').innerHTML=`<div class="kpi"><b>${ROWS.length}</b> trendów</div><div class="kpi"><b>${pend}</b> do weryf.</div><div class="kpi g"><b>${appr}</b> zatwierdzonych</div>`;
+  const cnt={pending:0,approved:0,rejected:0,duplicate:0};
+  ROWS.forEach(x=>{if(cnt[x.status]!=null)cnt[x.status]++;});
+  document.querySelectorAll('#stseg .cnt').forEach(el=>{const k=el.dataset.c;el.textContent=k==='all'?ROWS.length:(cnt[k]||0);});
+  $('kpis').innerHTML=`<div class="kpi"><b>${ROWS.length}</b> trendów</div><div class="kpi"><b>${cnt.pending}</b> do weryf.</div><div class="kpi g"><b>${cnt.approved}</b> zatwierdzonych</div>`;
   // paginacja 20/stronę
   const total=r.length, pages=Math.max(1,Math.ceil(total/PER));
   if(PAGE>=pages)PAGE=pages-1; if(PAGE<0)PAGE=0;
@@ -316,7 +326,8 @@ function card(x){
         <input class="ipt" id="cl-${x.id}" placeholder="…lub wklej własny link do produktu" value="${esc(x.status==='approved'&&!cands.some(c=>c.link===x.chosen_link)?(x.chosen_link||''):'')}">
         <button class="btn btn-g" onclick="customApprove('${x.id}')">${I.check} Zatwierdź własny</button>
         <button class="btn btn-r" onclick="reject('${x.id}')">${I.x} Odrzuć</button>
-        <span class="stbadge ${x.status}">${x.status==='approved'?'Zatwierdzone':x.status==='rejected'?'Odrzucone':'Do weryfikacji'}${x.reviewed_by?' · '+esc(x.reviewed_by):''}</span>
+        <button class="btn btn-dup" onclick="markDup('${x.id}')" title="Ten produkt już był w radarze">${I.copy} Duplikat</button>
+        <span class="stbadge ${x.status}">${x.status==='approved'?'Zatwierdzone':x.status==='rejected'?'Odrzucone':x.status==='duplicate'?'Duplikat — już był':'Do weryfikacji'}${x.reviewed_by?' · '+esc(x.reviewed_by):''}</span>
       </div>
     </div>
   </div>`;
@@ -367,6 +378,7 @@ async function upd(id,patch,msg){
 function pick(id,link){upd(id,{chosen_link:link,status:'approved'},'Zatwierdzone');}
 function customApprove(id){const v=$('cl-'+id).value.trim();if(!v){toast('Wklej link');return;}upd(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link');}
 function reject(id){upd(id,{status:'rejected'},'Odrzucone');}
+function markDup(id){upd(id,{status:'duplicate'},'Oznaczone jako duplikat — już był');}
 async function setCat(id,cat){const{error}=await sb.from('bud_tt_products').update({category:cat}).eq('id',id);if(error){toast('Błąd: '+error.message);return;}const x=ROWS.find(r=>r.id===id);if(x)x.category=cat;toast('Kategoria: '+cat);}
 init();
 </script>
