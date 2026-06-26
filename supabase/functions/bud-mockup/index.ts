@@ -22,6 +22,17 @@ function json(b: Record<string, unknown>, s: number, c: Record<string, string>):
   return new Response(JSON.stringify(b), { status: s, headers: { ...c, 'Content-Type': 'application/json' } });
 }
 
+// fetch z twardym timeoutem — generate-image (gpt-image-2 medium) potrafi wisieć.
+// Bez tego JEDEN zawieszony obraz blokuje Promise.all i komplet makiet NIGDY się nie
+// zapisuje (front czeka do końca sesji). Z timeoutem worst-case = MS, a resztę i tak
+// zapisujemy cząstkowo (allSettled).
+async function fetchTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try { return await fetch(url, { ...init, signal: ctrl.signal }); }
+  finally { clearTimeout(t); }
+}
+
 // deno-lint-ignore no-explicit-any
 function stylesPrompt(product: any, snap: any, ust: any): string {
   const name = String(product?.name || product?.nazwa || snap?.title || 'produkt').slice(0, 120);
@@ -131,23 +142,29 @@ Deno.serve(async (req) => {
           styles = fb;
         }
 
-        // 2) 4 obrazy równolegle (gpt-image-2, medium — 4 podglądy do wyboru; finalna jakość w landingu)
-        const results = await Promise.all(styles.map(async (st) => {
-          try {
-            const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
-              method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
-              body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refUrl ? { reference_image_url: refUrl } : {}) }),
-            });
-            if (!r.ok) { console.error('[bud-mockup] gen HTTP', st.key, r.status); return null; }
-            const d = await r.json().catch(() => null);
-            const url = d?.images?.[0]?.url;
-            if (!url || typeof url !== 'string' || url.startsWith('data:')) { console.error('[bud-mockup] brak URL', st.key); return null; }
-            return { style: st.key, label: st.label, brief: st.brief, url };
-          } catch (e) { console.error('[bud-mockup] gen err', st.key, e); return null; }
+        // 2) 4 obrazy równolegle (gpt-image-2, medium — 4 podglądy do wyboru; finalna jakość w landingu).
+        // allSettled + twardy timeout 110s/obraz: jeden zawieszony/padnięty obraz NIE blokuje
+        // pozostałych ani nie wisi w nieskończoność. Zapisujemy cząstkowo (co najmniej 1).
+        const settled = await Promise.allSettled(styles.map(async (st) => {
+          const r = await fetchTimeout(`${SUPABASE_URL}/functions/v1/generate-image`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
+            body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refUrl ? { reference_image_url: refUrl } : {}) }),
+          }, 110_000);
+          if (!r.ok) throw new Error(`gen HTTP ${r.status}`);
+          const d = await r.json().catch(() => null);
+          const url = d?.images?.[0]?.url;
+          if (!url || typeof url !== 'string' || url.startsWith('data:')) throw new Error('brak URL');
+          return { style: st.key, label: st.label, brief: st.brief, url };
         }));
-        const mockups = results.filter(Boolean);
+        const mockups = settled
+          .map((s, i) => { if (s.status === 'fulfilled') return s.value; console.error('[bud-mockup] obraz padł', styles[i]?.key, String(s.reason).slice(0, 120)); return null; })
+          .filter(Boolean);
         if (mockups.length) {
+          // Zapis nawet gdy <4 — front pokaże to, co się udało (lepsze niż czekanie 6 min na komplet).
           await supabase.from('bud_sessions').update({ mockups }).eq('id', sessionId);
+          if (mockups.length < 4) console.warn('[bud-mockup] zapisano cząstkowo:', mockups.length, '/ 4');
+        } else {
+          console.error('[bud-mockup] 0 makiet — żaden obraz się nie wygenerował (front pokaże retry po timeoucie)');
         }
       } catch (e) {
         console.error('[bud-mockup] gen task error:', e);

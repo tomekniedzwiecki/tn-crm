@@ -95,6 +95,16 @@ Deno.serve(async (req) => {
         message = formatSparPreviewMessage(data)
         break
 
+      case 'bud_lead_error':
+        webhookUrl = webhookSparing
+        message = formatBudLeadErrorMessage(data)
+        break
+
+      case 'bud_knowhow_error':
+        webhookUrl = webhookSparing
+        message = formatBudKnowhowErrorMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -1284,6 +1294,67 @@ function formatSparPreviewMessage(data: {
     }]
   })
 
+  return { blocks }
+}
+
+// =====================================================
+// BUDOWANIE (/sklep) — CICHE AWARIE: lead nie zapisał się / handoff/know-how padł.
+// Kanał #sparing. Cel: Tomek widzi od razu, że płacący/zielony lead wymaga ręcznej
+// interwencji (zamiast odkrywać ubytek przypadkiem). Deep-link do panelu tn-sklep.
+// =====================================================
+
+function budLeadLink(sessionId?: string): string | null {
+  if (!sessionId) return null
+  return `https://crm.tomekniedzwiecki.pl/tn-sklep/index#lead-${sessionId}`
+}
+
+function formatBudLeadErrorMessage(data: {
+  session_id?: string
+  email?: string
+  name?: string
+  phone?: string
+  error?: string
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🛑 Budowa — LEAD NIE ZAPISAŁ SIĘ', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `Zielony werdykt + kontakt, ale lead NIE trafił do CRM. Wymaga ręcznego utworzenia.\n${headerName}${emailLine}${phoneLine}` } },
+  ]
+  if (data.error) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Błąd:*\n\`${String(data.error).slice(0, 280)}\`` } })
+  }
+  const link = budLeadLink(data.session_id)
+  const actions: any[] = []
+  if (link) actions.push({ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_bud_lead' })
+  if (data.phone) { const wa = waLink(data.phone); if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' }) }
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+function formatBudKnowhowErrorMessage(data: {
+  session_id?: string
+  lead_id?: string
+  error_type?: string
+  error_msg?: string
+  error?: string
+}) {
+  const typeLabel = data.error_type === 'handoff_error'
+    ? 'Pakiet wykonawczy (handoff) NIE wygenerował się'
+    : data.error_type === 'extract_error'
+      ? 'Ekstrakcja wiedzy (dossier) padła'
+      : 'Błąd etapu know-how'
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '⚠️ Budowa — KNOW-HOW: błąd po pełnej płatności', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `*${typeLabel}.* Płacący klient — sprawdź i wygeneruj ponownie z panelu.` } },
+  ]
+  const msg = data.error_msg || data.error
+  if (msg) blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Szczegóły:*\n\`${String(msg).slice(0, 280)}\`` } })
+  const link = budLeadLink(data.session_id)
+  if (link) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_bud_lead' }] })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}${data.lead_id ? ` · lead: \`${data.lead_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }
 }
 

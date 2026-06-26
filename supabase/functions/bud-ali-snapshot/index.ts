@@ -61,6 +61,43 @@ async function translateReviewsPL(reviews: any[], key: string): Promise<any[]> {
   } catch { return reviews.map((r) => ({ ...r, text_pl: r.text })); }
 }
 
+// Re-host zdjęć opinii do Supabase Storage — CDN AliExpress wygasa (404 = zabity
+// social proof na landingu). Bounded (max 10 obrazów/snapshot) + bezpieczne: każdy
+// błąd zostawia oryginalny URL, równolegle z krótkim timeoutem.
+// deno-lint-ignore no-explicit-any
+async function rehostReviewImages(supabase: ReturnType<typeof createClient>, reviews: any[], productId: string): Promise<any[]> {
+  const tasks: Array<() => Promise<void>> = [];
+  let budget = 10;
+  for (const r of reviews) {
+    if (!Array.isArray(r.images) || !r.images.length) continue;
+    r.images.forEach((url: string, i: number) => {
+      if (budget <= 0) return;
+      const slot = 10 - budget; budget--;
+      tasks.push(async () => {
+        try {
+          const u = String(url).startsWith('//') ? 'https:' + url : String(url);
+          if (!/^https?:\/\//.test(u)) return;
+          const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 8000);
+          const resp = await fetch(u, { signal: ctrl.signal }); clearTimeout(t);
+          if (!resp.ok) return;
+          const ct = resp.headers.get('content-type') || 'image/jpeg';
+          if (!ct.startsWith('image/')) return;
+          const buf = new Uint8Array(await resp.arrayBuffer());
+          if (buf.byteLength < 500 || buf.byteLength > 3_000_000) return;
+          const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : 'jpg';
+          const path = `bud-reviews/${productId}/${slot}-${i}.${ext}`;
+          const { error } = await supabase.storage.from('attachments').upload(path, buf, { contentType: ct, upsert: true });
+          if (error) { console.warn('[bud-ali-snapshot] rehost upload', error.message); return; }
+          const { data: pub } = supabase.storage.from('attachments').getPublicUrl(path);
+          if (pub?.publicUrl) r.images[i] = pub.publicUrl;
+        } catch { /* zostaw oryginał */ }
+      });
+    });
+  }
+  await Promise.allSettled(tasks.map((fn) => fn()));
+  return reviews;
+}
+
 const ALLOWED = ['https://tomekniedzwiecki.pl', 'https://www.tomekniedzwiecki.pl', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
 function cors(o: string | null): Record<string, string> {
   const origin = o && ALLOWED.includes(o) ? o : ALLOWED[0];
@@ -199,7 +236,6 @@ Deno.serve(async (req) => {
       .select('id, key, pl_name, query, chosen_link, ali_candidates, cover, ali_snapshot')
       .eq(byId ? 'id' : 'key', productKey).maybeSingle();
     if (!row) return json({ error: 'produkt_nieznany' }, 404, c);
-    if (!body.force && row.ali_snapshot) return json({ snapshot: row.ali_snapshot, cached: true }, 200, c);
 
     // ustal product_id + obraz produktu, który JUŻ mamy (chosen candidate)
     const cands = Array.isArray(row.ali_candidates) ? row.ali_candidates : [];
@@ -207,6 +243,17 @@ Deno.serve(async (req) => {
     const chosenCand = cands.find((x: any) => x && x.link === row.chosen_link) || cands[0] || null;
     const haveImg = String((chosenCand && chosenCand.img) || '').trim();
     const id = pid(body, chosenLink);
+
+    // CACHE: oddaj zapisany snapshot tylko gdy ŚWIEŻY (<14 dni) i dotyczy TEGO product_id.
+    // Zmiana linku Ali → inny produkt → odśwież, by opinie/zdjęcia nie pochodziły z innego
+    // towaru; stary snapshot (>14 dni) też odświeżamy (CDN opinii wygasa, rating się starzeje).
+    if (!body.force && row.ali_snapshot) {
+      const snap = row.ali_snapshot as Record<string, unknown>;
+      const fetchedAt = Date.parse(String(snap.fetched_at || '')) || 0;
+      const fresh = fetchedAt > 0 && (Date.now() - fetchedAt) < 14 * 24 * 60 * 60 * 1000;
+      const sameProduct = !id || !snap.product_id || String(snap.product_id) === id;
+      if (fresh && sameProduct) return json({ snapshot: snap, cached: true }, 200, c);
+    }
 
     // Złóż snapshot best-effort: detail (bonus: specy/warianty) + search-enrich (galeria/tytuł)
     // + obraz/cover, które już mamy. Nigdy nie failujemy twardo — zawsze zapiszemy minimum.
@@ -244,6 +291,9 @@ Deno.serve(async (req) => {
         const rv = await fetchAliReviews(id);
         snapshot.review_stats = rv.stats;
         snapshot.reviews = await translateReviewsPL(rv.reviews, OPENAI_KEY);
+        // Re-host zdjęć opinii → Storage (anti-wygasanie CDN Ali). Nigdy nie failuje snapshotu.
+        try { snapshot.reviews = await rehostReviewImages(supabase, snapshot.reviews, id); }
+        catch (e) { console.warn('[bud-ali-snapshot] rehost err', String(e).slice(0, 80)); }
       } catch (e) { console.warn('[bud-ali-snapshot] reviews err', String(e).slice(0, 80)); }
     }
 

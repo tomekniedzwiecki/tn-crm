@@ -817,7 +817,7 @@ Deno.serve(async (req) => {
               .ilike('email', order.customer_email.trim())
               .is('paid_at', null)
               .eq('is_test', false)
-              .order('created_at', { ascending: false })
+              .order('last_user_at', { ascending: false, nullsFirst: false }) // najnowsza AKTYWNA, nie najstarsza
               .limit(1)
               .maybeSingle()
             sess = data || null
@@ -873,7 +873,7 @@ Deno.serve(async (req) => {
               .ilike('email', order.customer_email.trim())
               .is('full_paid_at', null)
               .eq('is_test', false)
-              .order('created_at', { ascending: false })
+              .order('last_user_at', { ascending: false, nullsFirst: false }) // najnowsza AKTYWNA, nie najstarsza
               .limit(1)
               .maybeSingle()
             sessF = data || null
@@ -891,6 +891,52 @@ Deno.serve(async (req) => {
         }
       } catch (fullErr) {
         console.error('[tpay-webhook] spar_session full payment sync error:', fullErr)
+      }
+
+      // ── LEJEK BUDOWANIA (/sklep): synchronizacja bud_sessions ──
+      // KRYTYCZNE: dotąd tpay-webhook synchronizował WYŁĄCZNIE spar_sessions (aplikacja),
+      // więc bud_sessions.paid_at / full_paid_at NIGDY się nie ustawiały → rezerwacja
+      // budowania nie oznaczała sesji jako opłaconej, a pełna płatność nie odmrażała
+      // etapu know-how. Lustro logiki spar. Match: sid (twardy link order→sesja, pewny —
+      // ID bud i spar są z różnych tabel, więc match w bud_sessions = na pewno budowanie)
+      // > lead_id > e-mail (najnowsza aktywna: last_user_at DESC). Rezerwacja vs pełna
+      // płatność rozstrzygana KWOTĄ (rezerwacja = 500; budowa ≫ 1000). Idempotentne.
+      try {
+        const descB = (order.description || '').toLowerCase()
+        const isBudReservation = descB.includes('rezerwacj') && (descB.includes('zbuduj') || descB.includes('sklep') || descB.includes('biznes online'))
+        const amt = parseFloat(String(order.amount)) || 0
+        const isFull = amt >= 1000 // rezerwacja = 500 zł; pełna budowa ≫ 1000
+        const sid = order.spar_session_id || null
+        // deno-lint-ignore no-explicit-any
+        let bs: any = null
+        if (sid) {
+          const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').eq('id', sid).maybeSingle()
+          bs = data || null // gdy sid wskazuje spar (nie bud) → null → blok nic nie robi
+        }
+        if (!bs && isBudReservation && order.lead_id) {
+          const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').eq('lead_id', order.lead_id).is('paid_at', null).eq('is_test', false).order('last_user_at', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+          bs = data || null
+        }
+        if (!bs && isBudReservation && order.customer_email) {
+          const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').ilike('email', order.customer_email.trim()).is('paid_at', null).eq('is_test', false).order('last_user_at', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+          bs = data || null
+        }
+        if (bs) {
+          if (isFull && !bs.full_paid_at) {
+            await supabase.from('bud_sessions').update({ full_paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
+            await supabase.from('bud_knowhow_summary').upsert({ session_id: bs.id, lead_id: bs.lead_id || order.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
+            console.log('[tpay-webhook] Budowanie: pełna płatność → bud_session full_paid_at (know-how):', bs.id)
+          } else if (!bs.paid_at) {
+            await supabase.from('bud_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
+            console.log('[tpay-webhook] Budowanie: rezerwacja → bud_session paid_at:', bs.id)
+          }
+          const leadId = bs.lead_id || order.lead_id
+          if (leadId) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+        } else if (isBudReservation) {
+          console.error('[tpay-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
+        }
+      } catch (budErr) {
+        console.error('[tpay-webhook] bud_session sync error:', budErr)
       }
 
       // Efekty uboczne TYLKO przy pierwszym zaksięgowaniu (patrz alreadyPaid wyżej).

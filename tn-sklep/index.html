@@ -705,7 +705,7 @@ async function loadAll() {
   while (true) {
     const { data, error } = await supabaseClient
       .from('bud_sessions')
-      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, track, niche, product_input, problem_summary, raport_meta:market_report->_meta')
+      .select('id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, track, niche, product_input, problem_summary, raport_meta:market_report->_meta')
       .order('created_at', { ascending: false })
       .range(page * pageSize, (page + 1) * pageSize - 1);
     if (error) { console.error(error); toast('Błąd ładowania sesji'); break; }
@@ -1269,7 +1269,40 @@ function renderLeadHead(s) {
         <button onclick="openClientPreview('${s.id}')" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Podgląd jako klient (strona klienta budowania w przygotowaniu)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</button>
       </div>
     </div>
+    ${s.lead_error && !s.lead_id ? `<div class="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
+      <div class="flex items-center gap-1.5 text-[12px] font-semibold text-red-300 mb-1"><i class="ph ph-warning-circle"></i>Lead NIE zapisał się w CRM (cicha awaria)</div>
+      <div class="text-[12px] text-red-300/80 mb-2">Zielony werdykt + kontakt, ale lead-upsert nie zwrócił ID. <span class="text-red-300/60">${esc(s.lead_error)}</span></div>
+      <button onclick="retryCreateLead('${s.id}')" class="px-3 py-1.5 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-200 text-xs transition"><i class="ph ph-user-plus mr-1"></i>Utwórz leada ręcznie</button>
+    </div>` : ''}
     ${leadQuickBar(s)}`;
+}
+// Ręczne utworzenie leada po cichej awarii lead-upsert (panel = admin, ma uprawnienia).
+// Wstawia leada bezpośrednio + podpina lead_id do sesji + czyści lead_error.
+async function retryCreateLead(sid) {
+  const s = (sessions || []).find((x) => x.id === sid);
+  if (!s) { toast('Nie znaleziono sesji'); return; }
+  if (!s.email) { toast('Brak e-maila — nie ma czego podpiąć'); return; }
+  try {
+    // 1) Lead po e-mailu (jeśli już istnieje) lub utwórz nowy.
+    let leadId = null;
+    const { data: existing } = await supabaseClient.from('leads').select('id').ilike('email', s.email.trim()).order('created_at', { ascending: true }).limit(1).maybeSingle();
+    if (existing && existing.id) {
+      leadId = existing.id;
+    } else {
+      const { data: ins, error: insErr } = await supabaseClient.from('leads').insert({
+        email: s.email.trim(), name: s.name || null, phone: s.phone || null,
+        lead_source: 'budowanie', status: (s.paid_at ? 'won' : 'new'),
+      }).select('id').maybeSingle();
+      if (insErr) { console.error(insErr); toast('Błąd tworzenia leada: ' + (insErr.message || '')); return; }
+      leadId = ins && ins.id;
+    }
+    if (!leadId) { toast('Nie udało się utworzyć leada'); return; }
+    // 2) Podepnij do sesji + wyczyść błąd.
+    await supabaseClient.from('bud_sessions').update({ lead_id: leadId, lead_error: null }).eq('id', sid);
+    s.lead_id = leadId; s.lead_error = null;
+    toast('Lead utworzony i podpięty ✓');
+    if (typeof renderLeadHead === 'function') renderLeadHead(s);
+  } catch (e) { console.error(e); toast('Błąd: ' + (e.message || e)); }
 }
 // Pasek szybkich akcji — najczęstsze ruchy Tomka w jednym miejscu (bez wchodzenia
 // w zakładki Akcje/Płatności/Sekwencja). Kontekstowy: pokazuje to, co ma sens na etapie.
@@ -2454,6 +2487,8 @@ function leadList() {
     if (leadyFilter === 'paid') return !!s.paid_at;
     if (leadyFilter === 'green') return s.verdict === 'zielony';
     if (leadyFilter === 'lead') return !!s.email && !s.paid_at;
+    if (leadyFilter === 'orphans') return !!s.paid_at && !s.lead_id;
+    if (leadyFilter === 'lead_err') return !!s.lead_error && !s.lead_id;
     return leadSignal(s).key === leadyFilter;
   });
 }
@@ -2511,6 +2546,8 @@ const LEAD_FILTERS = [
   { key: 'green', label: 'Zielony werdykt', icon: 'ph-check-circle' },
   { key: 'lead', label: 'Z e-mailem', icon: 'ph-user' },
   { key: 'paid', label: 'Opłaceni', icon: 'ph-currency-circle-dollar' },
+  { key: 'orphans', label: 'Sieroty', icon: 'ph-warning-circle' },
+  { key: 'lead_err', label: 'Błąd leada', icon: 'ph-warning' },
 ];
 function renderLeadyFilters() {
   const base = visibleSessions();
@@ -2519,6 +2556,8 @@ function renderLeadyFilters() {
     if (k === 'paid') return !!s.paid_at;
     if (k === 'green') return s.verdict === 'zielony';
     if (k === 'lead') return !!s.email && !s.paid_at;
+    if (k === 'orphans') return !!s.paid_at && !s.lead_id;       // opłacone, ale bez leada w CRM
+    if (k === 'lead_err') return !!s.lead_error && !s.lead_id;   // cicha awaria lead-upsert
     return leadSignal(s).key === k;
   }).length;
   const chips = LEAD_FILTERS.map((f) => {

@@ -425,7 +425,7 @@ async function createLeadForGreenVerdict(
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green',
+  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -635,10 +635,21 @@ async function stampKnowhowError(
   msg: string,
 ): Promise<void> {
   try {
+    // Dedup alertu: sprawdź, czy ten błąd nie był już ustawiony (ekstrakcja leci co turę,
+    // przy padniętym OpenAI stemplowałaby co turę → spam). Alertujemy tylko przy zmianie null→błąd.
+    let wasEmpty = true
+    try {
+      const { data: prev } = await supabase.from('bud_knowhow_summary').select(field).eq('session_id', sessionId).maybeSingle()
+      wasEmpty = !((prev as Record<string, unknown> | null)?.[field])
+    } catch { /* brak wiersza = puste */ }
     const patch: Record<string, unknown> = { session_id: sessionId, lead_id: leadId }
     patch[field] = msg.slice(0, 300)
     patch[field === 'extract_error' ? 'extract_error_at' : 'handoff_error_at'] = new Date().toISOString()
     await supabase.from('bud_knowhow_summary').upsert(patch, { onConflict: 'session_id' })
+    if (wasEmpty) {
+      postSlackSparing('bud_knowhow_error', { session_id: sessionId, lead_id: leadId, error_type: field, error_msg: msg.slice(0, 300) })
+        .catch((e) => console.error('[bud-chat] knowhow_error slack:', e))
+    }
   } catch (e) { console.error('[bud-chat] stampKnowhowError', field, e) }
 }
 
@@ -816,6 +827,16 @@ let COLLAB_PHASE_INSTRUCTION = ''
 // marker na etap lejka „przegrany: zrezygnował" + wstrzymuje automat maili/SMS.
 // Mechanika w kodzie (nie w prompcie settings) — łatwa do tuningu/rewersji.
 let RESIGNATION_INSTRUCTION = ''
+
+// ── HARDKODOWANE FALLBACKI gate'ów ───────────────────────────────────────────
+// Używane WYŁĄCZNIE gdy load z settings padnie (awaria DB). Minimalne, ale
+// funkcjonalne: utrzymują mechanikę markerów (<ustalenia>, <rezygnacja/>, <makieta>)
+// żeby cicha awaria settings nie pozostawiła modelu bez prowadzenia.
+const FALLBACK_GATE_INSTRUCTION = `[ETAP USTALENIA] Gdy raport jest gotowy, przeprowadź KRÓTKĄ rozmowę ustalającą fundamenty marki pod TEN produkt: dla kogo dokładnie jest (konkretny avatar), główny kąt wyróżnienia, ton marki i robocza nazwa. Pytaj naturalnie, po jednym wątku. Gdy masz komplet, podsumuj i wystaw marker w osobnej linii:
+<ustalenia>{"dla_kogo":"...","kat":"...","ton_marki":"...","nazwa":"...","korzysci":["...","..."]}</ustalenia>
+JSON musi być POPRAWNY (tylko podwójne cudzysłowy, bez znaków sterujących). Po markerze front przechodzi do makiet.`
+const FALLBACK_RESIGNATION_INSTRUCTION = `[REZYGNACJA] Jeśli rozmówca wyraźnie sygnalizuje, że rezygnuje/nie jest zainteresowany, NIE oznaczaj od razu — dopytaj raz, czy na pewno chce zakończyć. Dopiero po wyraźnym potwierdzeniu w KOLEJNEJ turze wystaw w osobnej linii marker <rezygnacja/>. Nie wymuszaj, reaguj z szacunkiem.`
+const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany. Odpowiadaj na pytania o ofertę/zakres/cenę konkretnie pod ten biznes, spokojnie przełamuj obiekcje i — gdy rozmówca jest gotów — zaproponuj rezerwację wspólnej rozmowy z Tomkiem (500 zł, w pełni zwrotna), wystawiając w osobnej linii marker <makieta/>. Bez nacisku i bez fałszywej pilności.`
 
 // ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
 // Włączany WYŁĄCZNIE serwerowo, gdy bud_sessions.full_paid_at IS NOT NULL i
@@ -1575,7 +1596,13 @@ Deno.serve(async (req) => {
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
     {
       await ensureKnowhowPrompts(supabase)
-if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('settings').select('key, value').in('key', ['budowanie_etap_gate', 'budowanie_etap_kierunki', 'budowanie_etap_preview_po_kierunku', 'budowanie_etap_wspolpraca', 'budowanie_etap_rezygnacja']); const __ev = (k: string) => ((__ep || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; GATE_INSTRUCTION = __ev('budowanie_etap_gate'); KIERUNKI_INSTRUCTION = __ev('budowanie_etap_kierunki'); PREVIEW_AFTER_GATE_INSTRUCTION = __ev('budowanie_etap_preview_po_kierunku'); COLLAB_PHASE_INSTRUCTION = __ev('budowanie_etap_wspolpraca'); RESIGNATION_INSTRUCTION = __ev('budowanie_etap_rezygnacja') } catch (_e) { /* fallback: puste instrukcje */ } }
+if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('settings').select('key, value').in('key', ['budowanie_etap_gate', 'budowanie_etap_kierunki', 'budowanie_etap_preview_po_kierunku', 'budowanie_etap_wspolpraca', 'budowanie_etap_rezygnacja']); const __ev = (k: string) => ((__ep || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; GATE_INSTRUCTION = __ev('budowanie_etap_gate'); KIERUNKI_INSTRUCTION = __ev('budowanie_etap_kierunki'); PREVIEW_AFTER_GATE_INSTRUCTION = __ev('budowanie_etap_preview_po_kierunku'); COLLAB_PHASE_INSTRUCTION = __ev('budowanie_etap_wspolpraca'); RESIGNATION_INSTRUCTION = __ev('budowanie_etap_rezygnacja') } catch (_e) { /* fallback poniżej */ } }
+      // GUARD: gdy load z settings padł (awaria DB), instrukcje zostają puste →
+      // detektor rezygnacji omijany, etap ustaleń bez prowadzenia. Wstrzykujemy
+      // minimalny hardkod, żeby mechanika gate'ów NIGDY nie zniknęła całkowicie.
+      if (!GATE_INSTRUCTION) { console.error('[bud-chat] GATE_INSTRUCTION puste — hardkod fallback'); GATE_INSTRUCTION = FALLBACK_GATE_INSTRUCTION }
+      if (!RESIGNATION_INSTRUCTION) { console.error('[bud-chat] RESIGNATION_INSTRUCTION puste — hardkod fallback'); RESIGNATION_INSTRUCTION = FALLBACK_RESIGNATION_INSTRUCTION }
+      if (!COLLAB_PHASE_INSTRUCTION) { console.error('[bud-chat] COLLAB_PHASE_INSTRUCTION puste — hardkod fallback'); COLLAB_PHASE_INSTRUCTION = FALLBACK_COLLAB_INSTRUCTION }
       const asmt = existingSession?.assessment as Record<string, unknown> | null
       if (isKnowHowMode) {
         // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
@@ -1740,8 +1767,16 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                   const m = raw.match(new RegExp('"' + k + '"\\s*:\\s*"([\\s\\S]*?)"\\s*(?:,\\s*"\\w|\\}|\\])'))
                   return m ? m[1].trim() : null
                 }
+                // Tablica korzyści — best-effort: wyłuskaj stringi z [ ... ] (front oczekuje korzysci).
+                const garr = (k: string): string[] | null => {
+                  const m = raw.match(new RegExp('"' + k + '"\\s*:\\s*\\[([\\s\\S]*?)\\]'))
+                  if (!m) return null
+                  const items = (m[1].match(/"((?:[^"\\]|\\.)*)"/g) || []).map((s) => s.slice(1, -1).trim()).filter(Boolean)
+                  return items.length ? items : null
+                }
                 const dk = g('dla_kogo'), kt = g('kat'), tm = g('ton_marki'), nz = g('nazwa')
-                if (dk || kt || tm) ust = { dla_kogo: dk, kat: kt, ton_marki: tm, nazwa: nz, _repaired: true }
+                const kz = garr('korzysci') || garr('korzyści') || garr('benefits')
+                if (dk || kt || tm) ust = { dla_kogo: dk, kat: kt, ton_marki: tm, nazwa: nz, ...(kz ? { korzysci: kz } : {}), _repaired: true }
               }
               if (ust) {
                 await supabase.from('bud_sessions').update({ ustalenia: ust, updated_at: new Date().toISOString() }).eq('id', sessionId)
@@ -1981,10 +2016,24 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                 // #2: zielony werdykt z mailem, a lead się NIE utworzył = cichy ubytek leada.
                 // Zostaw twardy sygnał (log [ALERT] + flaga w sesji do panelu/zapytania).
                 console.error('[bud-chat] [ALERT] zielony werdykt NIE utworzył leada — session:', sessionId, 'email:', effectiveEmail)
+                const leadErrMsg = `lead-upsert bez lead_id @ ${new Date().toISOString()}`
                 supabase.from('bud_sessions')
-                  .update({ lead_error: `lead-upsert bez lead_id @ ${new Date().toISOString()}` })
+                  .update({ lead_error: leadErrMsg })
                   .eq('id', sessionId)
-                  .then(({ error }: { error: unknown }) => { if (error) console.error('[bud-chat] lead_error stamp failed:', error) })
+                  .is('lead_error', null)  // tylko pierwsze wystąpienie → jeden alert na sesję
+                  .select('id')
+                  .then(({ data: __claimed, error }: { data: unknown[] | null; error: unknown }) => {
+                    if (error) { console.error('[bud-chat] lead_error stamp failed:', error); return }
+                    // Alert #sparing TYLKO przy pierwszym oznaczeniu (claim wygrał).
+                    if (Array.isArray(__claimed) && __claimed.length) {
+                      postSlackSparing('bud_lead_error', {
+                        session_id: sessionId, email: effectiveEmail,
+                        name: name || ((existingSession?.name as string | null | undefined) ?? null),
+                        phone: phone || ((existingSession?.phone as string | null | undefined) ?? null),
+                        error: leadErrMsg,
+                      }).catch((e) => console.error('[bud-chat] lead_error slack:', e))
+                    }
+                  })
               }
             } else {
               console.error('[bud-chat] zielony werdykt bez maila w sesji:', sessionId)

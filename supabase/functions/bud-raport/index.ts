@@ -1,22 +1,17 @@
-// bud-raport — raport potencjału rynkowego sklepu z lejka "Zbuduję / Sklep"
-// (AWE — e-commerce fizyczny; tomekniedzwiecki.pl/sklep), zakładka „Potencjał rynku".
+// bud-raport — RAPORT STRATEGICZNY produktu z lejka "Zbuduję / Sklep" (AWE).
+// Dedykowany przewodnik dla osoby, która ZDECYDOWAŁA się sprzedawać dany
+// viralowy produkt: od wprowadzenia na rynek PL, przez budowę marki, po skalowanie.
 //
 // ⚠️ DEPLOY: ZAWSZE z flagą --no-verify-jwt (frontend wywołuje bez tokena JWT):
 //   npx supabase functions deploy bud-raport --no-verify-jwt
 //
-// POST { sessionId, force? } ->
+// POST { sessionId, product:{name,category,product_link,saves,plays,comments,...}, recipient?, force? } ->
 //   - jeśli market_report istnieje i !force -> zwraca zapisany (cached)
-//   - inaczej: REALNY research przez OpenAI Responses API z narzędziem
-//     web_search (konkurenci po nazwach z cenami detalicznymi w zł, wielkość
-//     rynku/popyt, trendy, sezonowość — z cytowanymi źródłami, nie z pamięci
-//     modelu), zapis w bud_sessions.market_report i zwrot
-//
-// Charakter raportu: profesjonalny i analityczny, ma pokazywać potencjał
-// produktu fizycznego liczbami i źródłami — bez tonu sprzedażowego.
-// Wiarygodność budują: realne nazwy konkurentów (sklepy/Allegro/Amazon/IG),
-// linki do źródeł i sekcja uczciwych zastrzeżeń. Gate jak bud-plan: wymaga
-// karty (zielony werdykt). Limit 3 generacji/sesja (_meta.gen) — web search
-// jest droższy niż plan.
+//   - inaczej: REALNY research (OpenAI Responses API + web_search) -> 6-sekcyjny
+//     przewodnik strategiczny (produkt+potencjał / problem+emocje / avatar /
+//     marka+5 nazw / plan marketingowy / skalowanie), personalizowany imieniem,
+//     zapis w bud_sessions.market_report i zwrot.
+//   Picker-first: produkt przychodzi z frontu (wybór z karuzeli) — NIE wymaga karty.
 //
 // Sekrety:
 //   OPENAI_API_KEY     — klucz OpenAI (już ustawiony)
@@ -48,7 +43,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 3
 const OPENAI_MODEL = Deno.env.get('BUD_RAPORT_MODEL') || Deno.env.get('BUD_OPENAI_MODEL') || 'gpt-5.5'
-const MAX_OUTPUT_TOKENS = 10000
+const MAX_OUTPUT_TOKENS = 14000
 // $10 / 1000 wywołań web_search (doliczane do kosztu tokenów)
 const WEB_SEARCH_CALL_USD = 0.01
 
@@ -59,103 +54,82 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
   })
 }
 
-function buildRaportPrompt(brief: Record<string, unknown>, karta: Record<string, unknown>, assessment: Record<string, unknown> | null): string {
-  const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
-  const list = (v: unknown) => Array.isArray(v)
-    ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
-    : ''
-  const fakty: string[] = []
-  fakty.push(`Sklep: „${s(brief.nazwa, 80) || 'Sklep'}" — ${s(brief.opis)}`)
-  if (karta.produkt || karta.problem) fakty.push(`Produkt / co sprzedaje: ${s(karta.produkt) || s(karta.problem)}`)
-  if (karta.dla_kogo || karta.profesja) fakty.push(`Grupa docelowa: ${s(karta.dla_kogo) || s(karta.profesja)}`)
-  if (karta.kto_placi) fakty.push(`Kto kupuje: ${s(karta.kto_placi)}`)
-  if (karta.dzisiejsze_obejscie) fakty.push(`Jak grupa kupuje dziś: ${s(karta.dzisiejsze_obejscie)}`)
-  if (list(karta.ekrany)) fakty.push(`Asortyment / zakres pierwszej oferty: ${list(karta.ekrany)}`)
-  if (karta.konkurencja) fakty.push(`Konkurencja wskazana w rozmowie: ${s(karta.konkurencja)}`)
+// deno-lint-ignore no-explicit-any
+function buildRaportPrompt(product: any, recipient: string): string {
+  const s = (v: unknown, max = 200) => (typeof v === 'string' ? v.slice(0, max) : '')
+  const n = (v: unknown) => Number(v) || 0
+  const name = s(product?.nazwa ?? product?.name, 160) || 'produkt'
+  const cat = s(product?.kategoria ?? product?.category, 80)
+  const link = s(product?.link ?? product?.product_link, 320)
+  const saves = n(product?.saves), plays = n(product?.plays), comments = n(product?.comments)
+  const dla = s(recipient, 80)
+  const sig = [plays ? `~${plays} wyświetleń` : '', saves ? `~${saves} zapisów` : '', comments ? `~${comments} komentarzy` : ''].filter(Boolean).join(', ')
 
-  // Reuse wyniku bramki potencjału (bud-assess) jako punktu wyjścia: spójność
-  // z tym, co usłyszał rozmówca + mniej duplikatu researchu. Null = stara sesja.
-  const a = assessment && typeof assessment === 'object' ? assessment : null
-  const aZrodla = a && Array.isArray(a.zrodla)
-    ? (a.zrodla as Record<string, unknown>[]).slice(0, 5).map((z) => `${s(z?.tytul, 80)}${z?.url ? ' (' + s(z.url, 120) + ')' : ''}`).filter((x) => x.trim()).join('; ')
-    : ''
-  const blokBramki = a ? `
-PUNKT WYJŚCIA — wstępne badanie rynku w rozmowie JUŻ to ustaliło (zachowaj SPÓJNOŚĆ; potwierdź i POGŁĘB, nie zaczynaj od zera, nie zaprzeczaj bez nowego źródła):
-- Konkurencja: ${s(a.konkurencja, 600)}
-- Wielkość/charakter rynku: ${s(a.odczyt_rynku, 500)}
-- Najmocniejszy kąt / luka: ${s(a.kierunek, 600)}
-- Czy ludzie to kupują: ${s(a.platnosc, 400)}${aZrodla ? '\n- Źródła z bramki: ' + aZrodla : ''}
-Masz już nazwanych konkurentów i ceny — NIE szukaj ich od zera. Wyszukiwań użyj OSZCZĘDNIE, tylko by UZUPEŁNIĆ (świeższe liczby rynku, brakujący konkurent, trendy, sezonowość) i potwierdzić. Rozwiń powyższe w pełną analizę, spójną z tym, co usłyszał rozmówca.
-` : ''
+  return `Jesteś czołowym STRATEGIEM e-commerce i brand-builderem. Przygotowujesz DEDYKOWANY raport strategiczny dla konkretnej osoby, która JUŻ ZDECYDOWAŁA, że chce sprzedawać poniższy produkt na rynku polskim. Raport to jej przewodnik: jak wprowadzić produkt, zbudować wokół niego markę i maksymalizować zyski. Po polsku, konkretnie, z energią praktyka — ma się go DOBRZE CZYTAĆ i realnie pomagać. Treściwy, ale NIE 50-stronicowy elaborat: każda sekcja zwarta, mięsista, bez lania wody i bez suchych jednolinijkowców.
 
-  return `Jesteś doświadczonym STRATEGIEM rynku e-commerce, który przygotowuje raport POTENCJAŁU dla osoby rozważającej wejście w konkretny produkt fizyczny (polski rynek, własny sklep internetowy). Ten produkt został już wstępnie WYSELEKCJONOWANY jako hit, który sprzedaje się właśnie teraz (viral na TikToku z realnym popytem) — więc punktem wyjścia jest „to już działa", a Twoim zadaniem jest pokazać SKALĘ tej szansy i otwartą drogę do zbudowania na nim marki.
+ODBIORCA RAPORTU: ${dla || '(klient)'}. Pisz tak, by czuł, że to przygotowane SPECJALNIE dla niego — zwracaj się bezpośrednio („Ty"), użyj jego imienia w "lead" i raz–dwa w treści (z umiarem, naturalnie). To ma być dedykowany dokument, nie szablon.
 
-CEL RAPORTU: po lekturze czytelnik ma poczuć, że to MOCNY produkt z dużym potencjałem i że warto w to wejść. To przekonanie budujesz FAKTAMI ustawionymi pod kątem szansy — nie pustym hype'em. Prowadzisz wzrok: silny popyt → otwarta luka → co konkretnie ma z tego czytelnik.
+PRODUKT:
+- Nazwa robocza: ${name}
+- Kategoria: ${cat || 'do ustalenia z analizy'}
+- Dowód popytu: to aktualny HIT na TikToku${sig ? ` (${sig})` : ''} — ludzie już masowo reagują, więc popyt jest realny (research ma potwierdzić skalę, nie zaczynać od zera).
+${link ? `- Referencja produktu (analiza cech, ceny, wariantów): ${link}` : ''}
 
-PROJEKT:
-${fakty.join('\n')}
-${blokBramki}
-ZADANIE — zrób realny research (web search; szukaj po polsku I angielsku) i zbuduj obraz OKAZJI:
-1. Popyt i wielkość rynku w Polsce — pokaż SKALĘ liczbami ze źródeł (trendy wyszukiwań, popularność na Allegro/Amazon, wzrost kategorii, dane branżowe). Wybieraj te ujęcia liczb, które pokazują, że rynek jest duży i rośnie.
-2. Konkurencja jako DOWÓD POPYTU: 3-5 sprzedawców tego (lub bardzo podobnego) produktu — po nazwie, z realnymi cenami DETALICZNYMI w zł (Allegro, Amazon.pl, sklepy w niszy, marki na IG/TikToku). Każdy konkurent = dowód, że ludzie JUŻ za to płacą; dla każdego nazwij LUKĘ (brak polskiej marki, słaba prezentacja, anonimowość produktu, zawyżona cena) = otwarte wejście dla tego sklepu.
-3. Luka / okno rynkowe — serce raportu: jakiej kombinacji (produkt + grupa + marka + cena) NIE MA dobrze obsłużonej na polskim rynku, więc jest miejsce na nową markę. Przedstaw to jako realne, OTWARTE OKNO — teraz.
-4. Trendy i wiatr w żagle: 2-3 zjawiska, które NAPĘDZAJĄ sprzedaż tego produktu (viral, rosnące zainteresowanie, zmiana zachowań kupujących), z liczbami.
-5. Marża: jeśli ze źródeł wynika atrakcyjny przedział marży detalicznej — pokaż go jako argument; jeśli nie da się ustalić, pomiń ten wątek (nie eksponuj słabych stron).
+KONTEKST BIZNESOWY (wpleć w strategię — to realny plan działania):
+- Start: dropshipping z AliExpress (pierwsze zamówienia, walidacja oferty bez ryzyka magazynu).
+- Docelowo: import przez agenta w Chinach z PEŁNYM brandingiem (własne opakowanie, logo na produkcie, wkładki do paczki, branded unboxing experience), a potem magazyn w Polsce (szybka wysyłka, wyższa marża).
+- Kanał sprzedaży: dedykowany landing page (one-product store).
+- Rynek docelowy: Polska.
 
-JAK BUDOWAĆ PRZEKONANIE (kluczowe):
-- Eksponuj to, co MOCNE: popyt, wzrost, skalę, sygnały „ludzie to kupują". Każdy fakt podawaj pod kątem „dlatego to szansa".
-- Konkurencję ZAWSZE ustawiaj jako potwierdzenie, że jest tu pieniądz (rynek udowodniony) + ich słabości jako Twoją przewagę — NIGDY jako mur nie do przejścia.
-- Na TYM etapie NIE rozwodzisz się nad ryzykami, nasyceniem, niską marżą ani trudnościami i NIE dajesz listy zastrzeżeń. Jeśli jakiś wymiar jest trudny — pomiń go albo przekształć w konstruktywne „na czym zbudować przewagę", nie strasz.
-- TON: pewny, rzeczowy, budujący zapał — ale wiarygodny. Bez tandetnych wykrzykników i pustych superlatywów rodem z reklamy („rewelacyjny!!!") — to brzmi jak naciągacz i ZABIJA zaufanie. Siła ma płynąć z konkretnych faktów ustawionych pod szansę.
-- ocena_potencjalu: wybierz NAJBARDZIEJ KORZYSTNĄ obronioną ocenę. Skoro to pre-wyselekcjonowany, aktualny hit z realnym popytem — domyślnie „wysoki"; „umiarkowany" tylko, gdy dane naprawdę nie dają podstaw do „wysoki". Graj na „wysoki".
+ZADANIE: zrób realny research (web_search, po polsku I angielsku — popyt, konkurencja w PL z cenami, trendy, słowa-klucze) i zbuduj kompletny przewodnik. Trzymaj się DOKŁADNIE tych 6 sekcji (w tej kolejności):
+1. PRODUKT I POTENCJAŁ RYNKOWY — co to za produkt i jak działa, dlaczego TERAZ, skala popytu w PL (liczby ze źródeł), kto już to sprzedaje i po ile (konkurenci po nazwie + ceny), największa LUKA = otwarte okno.
+2. PROBLEM, POTRZEBY I EMOCJE — jaki problem realnie rozwiązuje, jakie potrzeby zaspokaja; wypisz konkretne CZUŁE PUNKTY, w które warto uderzać, by klient poczuł SILNĄ potrzebę zakupu; jak grać na emocjach (strach/aspiracja/wygoda/duma/miłość do bliskich/zwierzęcia). Konkretne kąty, nie ogólniki.
+3. GRUPA DOCELOWA — zbuduj konkretny AVATAR (kto to, wiek, sytuacja życiowa, dzień z życia, język jakim mówi, gdzie bywa online, co go boli, co go kręci, co go powstrzymuje przed zakupem). Może 1 główny + 1 poboczny.
+4. MARKA I POZYCJONOWANIE — jak zbudować markę pod TEN produkt: zaproponuj 5 NAZW (PL i/lub EN, łatwe, z wolną szansą na domenę), do każdej 1 zdanie uzasadnienia; ton i styl komunikacji, wartości do eksponowania, pozycjonowanie (premium vs przystępne) i dlaczego.
+5. PLAN KOMUNIKACJI MARKETINGOWEJ — kanały (Meta/TikTok ads jako główny, organic TikTok, ewentualnie Google), 3-4 KĄTY reklamowe z przykładowymi hookami (gotowe do użycia), struktura lejka, oferta zdejmująca ryzyko (płatność przy odbiorze / gwarancja zwrotu), pomysły na kreacje (UGC, demo, before/after).
+6. STRATEGIA ROZWOJU I SKALOWANIA — droga: pierwsze zamówienia (dropship) → walidacja → import z brandingiem przez agenta → magazyn PL → skalowanie (rozszerzenie linii/zestawy/upsell, kolejne kanały, retencja i powracający klienci, ewentualnie eksport). Konkretne kamienie milowe.
 
-GRANICE (nie do złamania — chronią wiarygodność, nie tonują wymowy):
-- NIE zmyślaj liczb ani konkurentów — każda liczba z wyszukiwania (zmyślone dane łatwo obalić i zabijają zaufanie). Jeśli brak twardej liczby — opisz skalę jakościowo, bez podawania zmyślonej cyfry.
-- NIE obiecuj gwarantowanego zysku ani konkretnego dochodu czytelnika — pokazujesz POTENCJAŁ rynku, nie obietnicę wyniku.
-- Liczby po ludzku („ok. 15–25 tys."), kwoty w zł (ceny zagraniczne przelicz i zaznacz). Indeksy w "zrodla" odwołują się do tablicy "zrodla" (od 1).
+ZASADY:
+- Konkret i liczby ZE ŹRÓDEŁ (web_search). NIE zmyślaj liczb ani konkurentów — brak twardej danej = napisz jakościowo, bez fałszywej cyfry.
+- TON pod osobę, która WCHODZI w ten produkt: pewny, motywujący, pokazujący szansę i drogę — nie strasz, nie rób listy ryzyk. Ma dodawać energii i dawać plan.
+- Każda sekcja: kilka akapitów lub konkretne listy — w polu "tresc" MARKDOWN (### podnagłówki, **pogrubienia**, listy „- ", numerację). Nowe linie zapisuj jako \n. Poprawny JSON (jedna wartość = jeden string), tylko podwójne cudzysłowy.
+- Indeksy w "zrodla" sekcji odwołują się do głównej tablicy "zrodla" (od 1).
 
-Zwróć WYŁĄCZNIE poprawny JSON (bez markdown, bez tekstu przed/po):
+Zwróć WYŁĄCZNIE poprawny JSON (bez markdown wokół, bez tekstu przed/po):
 {
-  "teza": "jedno mocne, konkretne zdanie — najważniejszy powód, dla którego to duża szansa",
-  "ocena_potencjalu": "wysoki" | "umiarkowany" | "niszowy",
-  "ocena_uzasadnienie": "1-2 zdania budujące przekonanie, dlaczego potencjał jest taki wysoki — na faktach",
-  "rynek": {
-    "liczba": "skala rynku/popytu pokazana jak największa, ale obroniona ze źródła (np. „15–25 tys. sztuk/mies." lub wartość rynku)",
-    "kogo": "np. właściciele psów w Polsce szukający bezpieczeństwa w aucie",
-    "opis": "2-3 zdania o tym, jak DUŻY i ROSNĄCY jest rynek/popyt, z liczbami z researchu",
-    "zrodla": [1]
-  },
-  "konkurenci": [
-    { "nazwa": "...", "kanal": "Allegro / sklep / Amazon / IG (gdzie sprzedaje)", "cena": "np. od 89 zł", "czym_jest": "jedno zdanie", "luka": "czego mu brakuje = Twoje otwarte wejście", "zrodla": [2] }
+  "dla": "${dla}",
+  "naglowek": "Raport strategiczny — <krótka, ludzka nazwa produktu>",
+  "lead": "2-3 zdania mocnego, osobistego wprowadzenia bezpośrednio do odbiorcy (po imieniu): dlaczego to dobra decyzja i co znajdzie w tym raporcie",
+  "sekcje": [
+    {"tytul":"Produkt i potencjał rynkowy","tresc":"markdown…","zrodla":[1]},
+    {"tytul":"Problem, potrzeby i emocje","tresc":"markdown…"},
+    {"tytul":"Grupa docelowa — avatar","tresc":"markdown…"},
+    {"tytul":"Marka i pozycjonowanie","tresc":"markdown…","nazwy":["Nazwa 1","Nazwa 2","Nazwa 3","Nazwa 4","Nazwa 5"]},
+    {"tytul":"Plan komunikacji marketingowej","tresc":"markdown…"},
+    {"tytul":"Strategia rozwoju i skalowania","tresc":"markdown…"}
   ],
-  "luka_rynkowa": "3-4 zdania — jakie OKNO jest teraz otwarte na polską markę z tym produktem i dlaczego to realna szansa",
-  "marza": "atrakcyjny przedział marży detalicznej, jeśli wynika ze źródeł; inaczej pomiń ten wątek",
-  "sezonowosc": "1-2 zdania — najlepiej „popyt całoroczny / rosnący"; eksponuj stabilność popytu",
-  "trendy": [
-    { "tytul": "krótki", "opis": "1-2 zdania z liczbą — co NAPĘDZA sprzedaż tego produktu", "zrodla": [3] }
-  ],
-  "co_to_oznacza": ["3-4 KONKRETNE, motywujące wnioski dla czytelnika — co ta szansa znaczy dla JEGO sklepu: jak wejść, czym wygrać z konkurencją, dlaczego teraz jest dobry moment"],
   "zrodla": [ { "nr": 1, "tytul": "nazwa źródła", "url": "https://..." } ]
 }`
 }
 
 // Mail „raport gotowy" wysyła bud-followups (kind 'raport_ready') z celowym
-// opóźnieniem ≥15 min od _meta.at — followup „coś się dla Ciebie zbudowało"
-// zamiast natychmiastowego maila.
+// opóźnieniem ≥15 min od _meta.at.
 
 // deno-lint-ignore no-explicit-any
 function saneRaport(r: any): boolean {
+  // Prompt wymaga DOKŁADNIE 6 sekcji — odrzucamy niekompletny raport (regeneracja),
+  // żeby etap Ustalenia nie dostał urwanego dokumentu i nie zawieszał się na „raport
+  // niekompletny". gpt-5.5 wg sztywnego szablonu JSON niemal zawsze zwraca 6.
   return !!r && typeof r === 'object'
-    && typeof r.teza === 'string' && r.teza.length > 10
-    && !!r.rynek && typeof r.rynek === 'object'
-    && Array.isArray(r.konkurenci) && r.konkurenci.length >= 2
-    && typeof r.luka_rynkowa === 'string'
-    && Array.isArray(r.zrodla) && r.zrodla.length >= 2
+    && typeof r.lead === 'string' && r.lead.length > 10
+    && Array.isArray(r.sekcje) && r.sekcje.length >= 6
+    && r.sekcje.every((x: any) => x && typeof x.tytul === 'string' && typeof x.tresc === 'string' && x.tresc.length > 25)
+    && Array.isArray(r.zrodla)
 }
 
 // Model mimo zakazu potrafi owinąć JSON w płotki / dopisać zdanie
 function extractJson(raw: string): Record<string, unknown> | null {
-  let text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
+  const text = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
   const start = text.indexOf('{')
   const end = text.lastIndexOf('}')
   if (start === -1 || end <= start) return null
@@ -179,7 +153,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'brak_konfiguracji' }, 500, cors)
     }
 
-    let body: { sessionId?: string; force?: boolean }
+    // deno-lint-ignore no-explicit-any
+    let body: { sessionId?: string; force?: boolean; product?: any; recipient?: string }
     try {
       body = await req.json()
     } catch {
@@ -193,7 +168,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id')
+      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id, name')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -209,21 +184,40 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
+    // Picker-first: produkt z frontu (wybór z karuzeli). Fallback do karty (stary flow).
     const karta = session.problem_summary as Record<string, unknown> | null
-    const brief = (session.preview_brief || {}) as Record<string, unknown>
-    if (!karta) {
-      // raport liczymy dopiero, gdy jest karta (werdykt) — gate jak bud-plan
-      return jsonResponse({ error: 'brak_karty' }, 400, cors)
+    // deno-lint-ignore no-explicit-any
+    const bodyProduct = (body.product && typeof body.product === 'object') ? body.product as any : null
+    // deno-lint-ignore no-explicit-any
+    const product: any = bodyProduct || (karta ? { name: karta.produkt, category: (karta as any).nisza, product_link: null } : null)
+    if (!product || !(product.nazwa || product.name)) {
+      return jsonResponse({ error: 'brak_produktu' }, 400, cors)
     }
+    const recipient = (typeof body.recipient === 'string' && body.recipient.trim())
+      ? body.recipient.trim()
+      : (typeof (session as Record<string, unknown>).name === 'string' ? (session as Record<string, unknown>).name as string : '')
 
+    // Klucz cache per-PRODUKT: ten sam produkt = ten sam raport (reużycie między userami, bez TTL).
+    const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+    const productKey = String(product.id || product.product_id || norm(product.nazwa || product.name || '')) || sessionId
+
+    // 1) CACHE PRODUKTU (współdzielony) — hit = oddaj od razu (skopiuj też do sesji dla resume).
+    if (!body.force) {
+      const { data: pkg } = await supabase.from('bud_product_packages').select('report').eq('product_key', productKey).maybeSingle()
+      if (pkg && pkg.report) {
+        await supabase.from('bud_sessions').update({ market_report: pkg.report, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        const { _meta: _d, ...raport } = pkg.report as Record<string, unknown>
+        return jsonResponse({ raport, cached: true }, 200, cors)
+      }
+    }
+    // 2) CACHE SESJI (np. refresh tej samej rozmowy).
     const existing = session.market_report as Record<string, unknown> | null
-    const meta = (existing && existing._meta) as Record<string, unknown> | null
-    const genCount = (meta && typeof meta.gen === 'number') ? meta.gen : (existing ? 1 : 0)
-
     if (existing && !body.force) {
       const { _meta: _drop, ...raport } = existing
       return jsonResponse({ raport, cached: true }, 200, cors)
     }
+    const meta = (existing && existing._meta) as Record<string, unknown> | null
+    const genCount = (meta && typeof meta.gen === 'number') ? meta.gen : (existing ? 1 : 0)
     if (genCount >= MAX_GENERATIONS) {
       if (existing) {
         const { _meta: _drop2, ...raport } = existing
@@ -232,93 +226,96 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'limit_generacji' }, 429, cors)
     }
 
-    // Lock: research trwa ~2 min i kosztuje ~$0.85 — reload/drugi tab nie może
-    // odpalić duplikatu; pending → frontend dociąga syncem
-    const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'raport', p_ttl_sec: 300 })
+    // Lock: research trwa >150s — reload/drugi tab nie może odpalić duplikatu.
+    const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'raport', p_ttl_sec: 400 })
     if (!lock) return jsonResponse({ pending: true }, 202, cors)
 
-    // ── OpenAI Responses API + web_search ────────────────────────────────────
-    const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: OPENAI_MODEL,
-        tools: [{ type: 'web_search' }],
-        input: buildRaportPrompt(brief, karta, (session.assessment as Record<string, unknown> | null) ?? null),
-        max_output_tokens: MAX_OUTPUT_TOKENS,
-      }),
-    })
-    if (!res.ok) {
-      const errText = await res.text().catch(() => '')
-      console.error('[bud-raport] openai error:', res.status, errText.slice(0, 500))
-      await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' })
-      return jsonResponse({ error: 'blad_generowania' }, 502, cors)
-    }
-    const data = await res.json()
-
-    // Tekst końcowy + liczba wyszukiwań (do kosztu)
-    const output = Array.isArray(data?.output) ? data.output : []
-    const searchCalls = output.filter((o: Record<string, unknown>) => o?.type === 'web_search_call').length
-    let text = typeof data?.output_text === 'string' ? data.output_text : ''
-    if (!text) {
-      for (const item of output) {
-        if (item?.type === 'message' && Array.isArray(item.content)) {
-          for (const c of item.content) {
-            if (c?.type === 'output_text' && typeof c.text === 'string') text += c.text
+    // GENEROWANIE W TLE: pełny raport (web_search + gpt-5.5) trwa dłużej niż 150s
+    // bramki request/response (→ 504). Zwracamy 202 OD RAZU, a robotę kończymy
+    // przez EdgeRuntime.waitUntil. Gdy market_report się zapisze, kolejny POST
+    // (front pollinguje) zwróci wersję cached.
+    const genTask = (async () => {
+      try {
+        const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+          body: JSON.stringify({
+            model: OPENAI_MODEL,
+            tools: [{ type: 'web_search' }],
+            input: buildRaportPrompt(product, recipient),
+            max_output_tokens: MAX_OUTPUT_TOKENS,
+          }),
+        })
+        if (!res.ok) {
+          const errText = await res.text().catch(() => '')
+          console.error('[bud-raport] openai error:', res.status, errText.slice(0, 500))
+          return
+        }
+        const data = await res.json()
+        const output = Array.isArray(data?.output) ? data.output : []
+        const searchCalls = output.filter((o: Record<string, unknown>) => o?.type === 'web_search_call').length
+        let text = typeof data?.output_text === 'string' ? data.output_text : ''
+        if (!text) {
+          for (const item of output) {
+            if (item?.type === 'message' && Array.isArray(item.content)) {
+              for (const c of item.content) {
+                if (c?.type === 'output_text' && typeof c.text === 'string') text += c.text
+              }
+            }
           }
         }
+
+        try {
+          const u = data?.usage || {}
+          const input = u.input_tokens || 0
+          const cachedTok = u.input_tokens_details?.cached_tokens || 0
+          const out = u.output_tokens || 0
+          const prices: Record<string, { i: number; c: number; o: number }> = {
+            'gpt-5.5': { i: 5, c: 0.5, o: 30 },
+            'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
+          }
+          const p = prices[OPENAI_MODEL] || prices['gpt-5.5']
+          await supabase.from('bud_usage').insert({
+            session_id: sessionId, kind: 'raport', model: OPENAI_MODEL,
+            input_tokens: input, cached_tokens: cachedTok, output_tokens: out,
+            cost_usd: (Math.max(0, input - cachedTok) * p.i + cachedTok * p.c + out * p.o) / 1_000_000 + searchCalls * WEB_SEARCH_CALL_USD,
+            meta: { web_search_calls: searchCalls },
+          })
+        } catch (uErr) { console.error('[bud-raport] usage insert error:', uErr) }
+
+        const raport = extractJson(text)
+        if (!raport || !saneRaport(raport)) {
+          console.error('[bud-raport] sanity-check fail:', String(text).slice(0, 300))
+          return
+        }
+        const toSave = { ...raport, _meta: { gen: genCount + 1, at: new Date().toISOString(), model: OPENAI_MODEL, searches: searchCalls } }
+        const { error: updErr } = await supabase
+          .from('bud_sessions')
+          .update({ market_report: toSave, updated_at: new Date().toISOString() })
+          .eq('id', sessionId)
+        if (updErr) console.error('[bud-raport] save error:', updErr)
+        // CACHE PRODUKTU: zapisz raport pod kluczem produktu → kolejni userzy reużyją bez generowania.
+        try {
+          await supabase.from('bud_product_packages').upsert({
+            product_key: productKey,
+            product_name: String(product.nazwa || product.name || ''),
+            category: String(product.kategoria || product.category || ''),
+            report: toSave,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'product_key' })
+        } catch (pkgErr) { console.error('[bud-raport] product cache upsert error:', pkgErr) }
+      } catch (e) {
+        console.error('[bud-raport] gen task error:', e)
       }
-    }
+      // Locka NIE zwalniamy ręcznie — wygasa przez TTL (400s). Sukces i tak zwraca
+      // cached (sprawdzane PRZED claim locka), a brak release throttluje re-generacje
+      // po błędzie (anty-runaway: maks ~1 próba / 400s zamiast pętli drogich callów).
+    })()
 
-    // Koszt → bud_usage (kind='raport'; tokeny + $0.01 per wyszukiwanie)
-    try {
-      const u = data?.usage || {}
-      const input = u.input_tokens || 0
-      const cached = u.input_tokens_details?.cached_tokens || 0
-      const out = u.output_tokens || 0
-      const prices: Record<string, { i: number; c: number; o: number }> = {
-        'gpt-5.5': { i: 5, c: 0.5, o: 30 },
-        'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
-      }
-      let p = prices[OPENAI_MODEL]
-      if (!p) {
-        console.warn(`[bud-raport] nieznany model w cenniku: ${OPENAI_MODEL} — stawki gpt-5.5`)
-        p = prices['gpt-5.5']
-      }
-      await supabase.from('bud_usage').insert({
-        session_id: sessionId,
-        kind: 'raport',
-        model: OPENAI_MODEL,
-        input_tokens: input,
-        cached_tokens: cached,
-        output_tokens: out,
-        cost_usd: (Math.max(0, input - cached) * p.i + cached * p.c + out * p.o) / 1_000_000
-          + searchCalls * WEB_SEARCH_CALL_USD,
-        meta: { web_search_calls: searchCalls },
-      })
-    } catch (uErr) {
-      console.error('[bud-raport] usage insert error:', uErr)
-    }
+    // Kontynuuj robotę po zwróceniu odpowiedzi (Supabase Edge background task).
+    try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(genTask) } catch (_) { /* brak waitUntil — task i tak wystartował */ }
 
-    const raport = extractJson(text)
-    if (!raport || !saneRaport(raport)) {
-      console.error('[bud-raport] raport nie przeszedł sanity-check:', String(text).slice(0, 300))
-      await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' })
-      return jsonResponse({ error: 'blad_generowania' }, 502, cors)
-    }
-
-    const toSave = { ...raport, _meta: { gen: genCount + 1, at: new Date().toISOString(), model: OPENAI_MODEL, searches: searchCalls } }
-    const { error: updErr } = await supabase
-      .from('bud_sessions')
-      .update({ market_report: toSave, updated_at: new Date().toISOString() })
-      .eq('id', sessionId)
-    if (updErr) console.error('[bud-raport] save error:', updErr)
-    await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' })
-
-    return jsonResponse({ raport, cached: false }, 200, cors)
+    return jsonResponse({ pending: true }, 202, cors)
   } catch (e) {
     console.error('[bud-raport] ERROR:', e)
     return jsonResponse({ error: 'blad_serwera' }, 500, cors)

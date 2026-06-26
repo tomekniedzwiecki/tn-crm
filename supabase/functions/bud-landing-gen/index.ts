@@ -53,7 +53,7 @@ ZDJĘCIA DO UŻYCIA (jako <img src="..." loading="lazy">; NIE wymyślaj innych U
 ${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie) — wstaw w HERO oraz w sekcji „jak działa / w użyciu" (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
 ${imgList.length ? `• PRODUKT (realne zdjęcia z AliExpress — DOKŁADNY wygląd produktu) — wstaw tam, gdzie pokazujesz SAM produkt: sekcja produktu, „przed/po", tabela porównania, dowód:\n${imgList.map((u, i) => `   P${i + 1}. ${u}`).join('\n')}` : '(brak realnych zdjęć — użyj placeholderów [ Zdjęcie: … ])'}
 ZASADA OBRAZÓW: nie wrzucaj zdjęcia do każdej sekcji — sekcje korzyści/porównania/FAQ/opinii działają lepiej na ikonach/tekście. Maks ~4-5 obrazów na całą stronę. Lifestyle do hero+użycia, realne foto do prezentacji produktu.
-WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): KAŻDY <img> ma mieć loading="lazy" (poza ewentualnym 1. obrazem hero), decoding="async" oraz ustaloną proporcję/wymiary (width+height albo aspect-ratio w CSS), żeby nie było przeskoku layoutu (CLS). Skaluj obrazy CSS-em do realnego rozmiaru kontenera (max-width:100%; height:auto) — NIE wyświetlaj wielkich zdjęć w małych ramkach. Nie dodawaj ciężkich teł-obrazów.
+WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): obraz HERO (1.) ładuj NATYCHMIAST — loading="eager" fetchpriority="high"; KAŻDY pozostały <img> ma loading="lazy", decoding="async" oraz ustaloną proporcję/wymiary (width+height albo aspect-ratio w CSS), żeby nie było przeskoku layoutu (CLS). Skaluj obrazy CSS-em do realnego rozmiaru kontenera (max-width:100%; height:auto) — NIE wyświetlaj wielkich zdjęć w małych ramkach. Nie dodawaj ciężkich teł-obrazów. (Podane URL-e LIFESTYLE są już zoptymalizowane do webp — używaj ich bez zmian.)
 
 ${statsLine}
 ${reviewsBlock}
@@ -73,6 +73,7 @@ STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
    • Klik w kafel → LIGHTBOX BEZ JS, techniką CSS „:target": kafel to <a href="#rev-N">, a osobny <div id="rev-N" class="lb"> (ukryty) pokazuje się przez regułę .lb:target{display:flex}. W lightboxie: duże zdjęcie + PEŁNY tekst opinii + gwiazdki + imię + „✓ zweryfikowany zakup"; zamknięcie to <a href="#" class="lb-close">✕</a> i klik w tło. Każda opinia ze zdjęciem ma swój #rev-N. ZERO JavaScriptu — wyłącznie CSS :target.
    • POD ścianą zdjęć: 3-4 mniejsze cytaty TEKSTOWE (z listy „OPINIE TEKSTOWE") jako uzupełnienie — drobniejsze, drugorzędne.
    • Użyj DOKŁADNIE realnych zdjęć (pole zdjecie=URL), realnych tekstów i zamaskowanych imion z list wyżej. Każde <img> opinii: loading="lazy" decoding="async". NIE wymyślaj zdjęć ani opinii. Gdy brak realnych — analogiczna ściana z placeholderami.
+   • MINIMUM PEŁNEJ ŚCIANY: jeśli realnych opinii ZE ZDJĘCIEM jest mniej niż 3-4, UZUPEŁNIJ siatkę kafelkami z placeholderem-zdjęciem ([ Zdjęcie klienta ]) w spójnym stylu, by ściana wyglądała pełna (min. 4-6 kafli). Realne opinie ZAWSZE jako pierwsze; placeholderów NIE podpisuj zmyślonym cytatem ani gwiazdkami udającymi realną recenzję.
 9. RISK-REVERSAL / GWARANCJA przy CTA (z pieczęcią/badge): płatność przy odbiorze (płacisz, gdy kurier przywiezie — zero ryzyka z góry) + 14 dni na zwrot + ikony bezpiecznej płatności. To NASZ najmocniejszy, uczciwy atut — wyeksponuj.
 10. FAQ (5-6) — rozbij realne obiekcje (czy pasuje/jak działa, jak płacę, zwrot, wysyłka, dla kogo).
 11. KOŃCOWE CTA: powtórz korzyść + cena + co w zestawie + „Kup teraz / Zamów za pobraniem" + mikrocopy zaufania.
@@ -87,6 +88,7 @@ TWARDE ZAKAZY (marka Tomka):
 - ZAKAZ zmyślonej pilności: żadnych liczników odliczających, „tylko dziś", „zostały 2 sztuki".
 - ZAKAZ „dostawa w 24h" i „magazyn w Polsce" (sygnał dropshipu) — pisz neutralnie „wysyłka pod Twój adres".
 - Opinie to szablon do podmiany na realne (nie udawaj, że to zweryfikowane recenzje). Bez „pewnego zysku"/gwarantowanych efektów.
+- KATEGORIE WRAŻLIWE (zdrowie, suplementy, kosmetyki, „odchudzanie/wyszczuplanie", produkty dla dzieci, intymne): ZERO obietnic efektów zdrowotnych/leczniczych i medycznych — żadnych „leczy/wyleczy/gwarantowane rezultaty/-X kg/w tydzień". Mów o komforcie użytkowania i cechach produktu, nie składaj obietnic wyników. Bezpieczeństwo prawne ważniejsze niż mocniejszy nagłówek.
 
 TECHNICZNE:
 - Jeden plik HTML, SELF-CONTAINED: cały CSS w <style>, ZERO JavaScriptu i zero zewnętrznych bibliotek/fontów (system fonts). Sticky CTA i lightbox opinii realizujesz CZYSTYM CSS (position:fixed; lightbox przez :target). Mobile-first, lekka i szybka. Inline SVG do ikon.
