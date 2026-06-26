@@ -1029,7 +1029,7 @@ async function retryCreateLead(sid) {
 function leadQuickBar(s) {
   const paid = !!s.paid_at;
   const cancelled = !!s.sequence_cancelled_at;
-  const inSeq = (s.verdict === 'zielony' || paid) && !s.knowhow_closed_at;
+  const inSeq = (s.raport_meta || paid) && !s.knowhow_closed_at;
   const isLost = LOST_STAGE_IDS.includes(stageOf(s));
   const b = [];
   if (!paid) b.push(`<button class="qbtn" onclick="copyReservation('${s.id}')" title="Skopiuj indywidualny link rezerwacji 500 zł (do maila/WhatsApp)"><i class="ph ph-link"></i>Kopiuj link rezerwacji</button>`);
@@ -1067,7 +1067,7 @@ function renderLeadTab() {
   if (leadTab === 'przeglad') b.innerHTML = leadOverviewHTML();
   else if (leadTab === 'rozmowa') { b.innerHTML = leadChatHTML(); leadChatSig = chatSig(leadData.msgs); }
   else if (leadTab === 'artefakty') b.innerHTML = leadArtefaktyHTML();
-  else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.verdict === 'zielony' || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
+  else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.raport_meta || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
   else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
   else if (leadTab === 'sms') { b.innerHTML = leadSmsHTML(); renderLeadSms(leadData.s.id); }
   else if (leadTab === 'platnosci') b.innerHTML = leadPlatnosciHTML();
@@ -1444,7 +1444,7 @@ async function genArtifact(kind) {
   setTimeout(tick, 8000);
 }
 function leadSekwencjaHTML() {
-  const { s } = leadData; const can = s.verdict === 'zielony' || s.paid_at;
+  const { s } = leadData; const can = s.raport_meta || s.paid_at;
   const cancelled = !!s.sequence_cancelled_at;
   const toggleBtn = cancelled
     ? `<button onclick="resumeLeadDrip('${s.id}')" class="text-xs text-emerald-300 hover:bg-emerald-500/10 border border-emerald-500/30 rounded-lg px-3 py-1.5 transition inline-flex items-center gap-1"><i class="ph ph-play"></i>Wznów sekwencję</button>`
@@ -1803,7 +1803,7 @@ async function setStage(id, stageId) {
   toast(override ? ('Przeniesiono do: ' + stName) : ('Etap automatyczny: ' + stName));
   // „przegrany": wstrzymaj automat, żeby nie wysyłał dalej do straconego leada.
   // Dotyczy tylko aktywnych w sekwencji (zielony, nieopłacony) — dla reszty no-op.
-  if (!BUD_MISSING_FNS.has('bud-drip') && LOST_STAGE_IDS.includes(stageId) && s.verdict === 'zielony' && !s.paid_at) {
+  if (LOST_STAGE_IDS.includes(stageId) && s.raport_meta && !s.paid_at) {
     callDrip({ action: 'cancel', sessionId: id })
       .then(() => toast('Sekwencja wstrzymana (lead przegrany)'))
       .catch((e) => { console.error('cancel drip', e); toast('Etap zapisany, ale nie udało się wstrzymać sekwencji'); });
@@ -1924,14 +1924,20 @@ function sessLabel(sess) { return (sess && ((sess.preview_brief && sess.preview_
 const yesNo = (ts) => ts ? `<span class="text-emerald-400" title="${esc(fmtDate(ts))}"><i class="ph ph-check-circle"></i></span>` : '<span class="text-zinc-700"><i class="ph ph-minus"></i></span>';
 
 let sekwBusy = false;
-// STUB (lejek Sklep): edge `bud-drip` jeszcze nie istnieje (fork z aplikacji nie ma
-// silnika sekwencji odkrywania). NIE wołamy nieistniejącego endpointu — rzucamy jasny
-// błąd, który łapią istniejące try/catch (renderProjectDetail / fire / seed / cancel /
-// resume), pokazując komunikat zamiast martwej referencji. Tabele bud_reveals / bud_emails
-// / bud_sms są czytane bezpośrednio (Komunikacja → Sekwencja działa jako podgląd read-only).
+// Silnik sekwencji odkrywania lejka Sklep: edge `bud-drip` (autoryzacja JWT zalogowanego
+// admina — bud-drip ma ścieżkę admin-JWT). Akcje: status / fire / seed / cancel / resume / templates.
 async function callDrip(payload) {
   if (DEMO) return (window.__MOCK_DRIP || {});
-  throw new Error('Sekwencja odkrywania nie jest jeszcze dostępna dla lejka Sklep (brak edge bud-drip).');
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (!session) { toast('Brak sesji — zaloguj się ponownie'); throw new Error('no session'); }
+  const res = await fetch(SUPABASE_URL + '/functions/v1/bud-drip', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + session.access_token },
+    body: JSON.stringify(payload),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) { throw new Error(j.error || ('HTTP ' + res.status)); }
+  return j;
 }
 
 async function renderSekwencja() {
@@ -2108,11 +2114,10 @@ let mmCtx = null;
 // modal bez przycisku wysyłki (follow-upy idą automatem z crona, nie ręcznie stąd).
 let fuBusy = false;
 async function previewFollowup(sid, kind) {
-  if (BUD_MISSING_FNS.has('spar-followups')) { toast('Maile dla lejka Sklep będą dostępne po zbudowaniu silnika followupów.'); return; }
   if (fuBusy) return; fuBusy = true;
   toast('Wczytuję treść maila…');
   try {
-    const j = await callFn('spar-followups', { action: 'preview_session', sessionId: sid, kind });
+    const j = await callFn('bud-followups', { action: 'preview_session', sessionId: sid, kind });
     if (!j.preview) { toast('Brak podglądu (' + (j.error || '—') + ')'); return; }
     // abandoned → treść zapisana 1:1; reszta → odtworzona na żywo
     const kicker = j.stored ? 'Treść sekwencji powrotu — zapisana 1:1' : 'Treść follow-upa — odtworzona na żywo';
@@ -2121,11 +2126,10 @@ async function previewFollowup(sid, kind) {
 }
 // Wymuś pre-generację sekwencji powrotu TERAZ (3 maile jednym promptem) i odśwież kartę.
 async function generateAbandoned(sid) {
-  if (BUD_MISSING_FNS.has('spar-followups')) { toast('Sekwencja maili dla lejka Sklep będzie dostępna po zbudowaniu silnika followupów.'); return; }
   if (fuBusy) return; fuBusy = true;
   toast('Generuję 3 maile sekwencji powrotu…');
   try {
-    const j = await callFn('spar-followups', { action: 'generate_abandoned', sessionId: sid });
+    const j = await callFn('bud-followups', { action: 'generate_abandoned', sessionId: sid });
     if (j.rows) { leadData.abandoned = j.rows; toast('Wygenerowano ✓'); if (leadData && leadData.s.id === sid && leadTab === 'maile') renderLeadTab(); }
     else toast('Nie udało się (' + (j.error || '—') + ')');
   } catch (e) { toast('Błąd: ' + e.message); } finally { fuBusy = false; }
@@ -2274,8 +2278,10 @@ function renderKomunikacja() {
 // Dane z spar-followups action:'stats' (lifetime). Dostarczalność z Resend (otwarcia/kliknięcia wyłączone).
 async function renderReengStats() {
   const box = $('reeng-stats'); if (!box) return;
-  // SKLEP: brak edge bud-followups (silnik reaktywacji rozmów). Pokazujemy info zamiast błędu.
-  box.innerHTML = '<div class="text-xs text-zinc-500 py-2 px-3 rounded-lg bg-white/[0.03] border border-white/5"><i class="ph ph-info mr-1.5 text-zinc-600"></i>Statystyki reaktywacji rozmów będą dostępne po zbudowaniu silnika follow-upów dla lejka Sklep (edge bud-followups).</div>';
+  // Liczone lokalnie z załadowanych maili (bud-followups nie ma akcji 'stats').
+  const _ab = (mails || []).filter((m) => /^abandoned_chat/.test(m.kind || ''));
+  const _rv = (mails || []).filter((m) => /^reveal_/.test(m.kind || ''));
+  box.innerHTML = `<div class="text-xs text-zinc-400 py-2 px-3 rounded-lg bg-white/[0.03] border border-white/5 flex flex-wrap gap-x-5 gap-y-1"><span><i class="ph ph-arrow-u-up-left mr-1 text-amber-400"></i>Maile powrotu: <b class="text-white">${_ab.length}</b> wysłane · <b class="text-white">${_ab.filter((m) => m.delivered_at).length}</b> dostarczone</span><span><i class="ph ph-flow-arrow mr-1 text-blue-400"></i>Odsłony: <b class="text-white">${_rv.length}</b> wysłane · <b class="text-white">${_rv.filter((m) => m.delivered_at).length}</b> dostarczone</span></div>`;
   if (true) return;
   let j; try { j = await callFn('spar-followups', { action: 'stats' }); }
   catch (e) { box.innerHTML = `<div class="text-xs text-rose-400 py-2">Błąd statystyk: ${esc(e.message)}</div>`; return; }
@@ -2330,8 +2336,9 @@ let templatesCache = null;
 async function loadSzablony(force) {
   const grid = $('szablony-grid');
   if (!grid) return;
-  // SKLEP: szablony pochodzą z edge bud-drip / bud-followups (jeszcze nie istnieją).
-  grid.innerHTML = '<div class="col-span-full text-sm text-zinc-500 py-4 px-3 rounded-lg bg-white/[0.03] border border-white/5"><i class="ph ph-info mr-1.5 text-zinc-600"></i>Podgląd szablonów wiadomości będzie dostępny po zbudowaniu silnika maili dla lejka Sklep (edge bud-drip / bud-followups).</div>';
+  // SKLEP: maile NIE są szablonowe — generowane indywidualnie per lead (GPT-5.5, pod jego
+  // raport/makiety/ustalenia/rozmowę). Realną, spersonalizowaną treść podejrzysz per lead.
+  grid.innerHTML = '<div class="col-span-full text-sm text-zinc-400 py-4 px-3 rounded-lg bg-white/[0.03] border border-white/5"><i class="ph ph-sparkle mr-1.5 text-blue-400"></i>Maile lejka Sklep nie są szablonowe — każdy powstaje indywidualnie (GPT-5.5) pod raport, makiety i ustalenia danego leada. Podgląd realnej treści: otwórz leada → zakładka <b class="text-white">Maile</b> lub <b class="text-white">Sekwencja</b> → „Podgląd".</div>';
 }
 function tplMeta(t) {
   if (t.group === 'drip') { const m = revMeta(t.kind); return { label: m.label, icon: m.icon, tone: m.tone, tag: 'sekwencja' }; }
