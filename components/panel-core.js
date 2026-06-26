@@ -170,6 +170,45 @@
     return esc(out).replace(/\n/g, '<br>') + badge;
   }
 
+  // ── Dane sesji (wstrzykiwane z panelu) ──────────────────────────────────────
+  // Panel woła setData() przekazując REFERENCJE swoich map (te same obiekty), więc
+  // mutacje in-place są widoczne obustronnie, a reassign przy reloadzie leci razem
+  // przez loadSessions→setData. Współdzielone state-readery czytają _data.
+  let _data = { sessions: [], costsBySession: {}, mailsBySession: {}, avatarByUser: {} };
+  function setData(d) { _data = Object.assign(_data, d || {}); }
+  const getSessions = () => _data.sessions;
+  const costOf = (s) => (_data.costsBySession[s.id] ? Number(_data.costsBySession[s.id].cost_usd) : 0);
+
+  // ── Avatar konta: zdjęcie Google (gdy logowano przez Google), inaczej inicjały ──
+  function avatarPhoto(s) { return (s.auth_provider === 'google' && s.auth_user_id && _data.avatarByUser[s.auth_user_id]) || null; }
+  function avatarImg(url, px) { return `<img src="${esc(url)}" alt="" referrerpolicy="no-referrer" loading="lazy" class="rounded-full object-cover shrink-0 border border-white/10" style="width:${px}px;height:${px}px" title="Konto Google">`; }
+  function avatarThumb(s, px) { const u = avatarPhoto(s); return u ? avatarImg(u, px) : ''; }
+  function avatarBlock(s, px) {
+    const u = avatarPhoto(s);
+    if (u) return avatarImg(u, px);
+    const initials = (s.name || s.email || '?').trim().slice(0, 2).toUpperCase();
+    return `<div class="rounded-md bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center text-white font-bold shrink-0" style="width:${px}px;height:${px}px;font-size:${Math.round(px * 0.34)}px">${esc(initials)}</div>`;
+  }
+
+  // ── Zaangażowanie (lustro serwerowego isEngaged z drip) ──
+  const ENGAGE_DAYS = 10;
+  function lastTouchOf(s) {
+    const t = [s.last_panel_at, s.last_user_at].map((x) => x ? new Date(x).getTime() : 0);
+    return Math.max(t[0], t[1]) || 0;
+  }
+  function isEngaged(s) { return lastTouchOf(s) >= (Date.now() - ENGAGE_DAYS * 864e5); }
+  function revealDelivered(s) { return (_data.mailsBySession[s.id] || []).filter((m) => /^reveal_/.test(m.kind) && m.delivered_at).length; }
+  function leadSignal(s) {
+    if (s.paid_at) return { key: 'paid', label: 'opłacony', tone: 'amber', icon: 'ph-currency-circle-dollar' };
+    if (s.verdict === 'zielony') {
+      if (isEngaged(s)) return { key: 'hot', label: 'gorący', tone: 'emerald', icon: 'ph-fire' };
+      return { key: 'cold', label: 'wystygł', tone: 'sky', icon: 'ph-snowflake' };
+    }
+    if (s.verdict === 'zolty' || s.verdict === 'czerwony') return { key: 'verdict', label: 'werdykt', tone: 'zinc', icon: 'ph-flag' };
+    if (s.email) return { key: 'lead', label: 'lead', tone: 'zinc', icon: 'ph-user' };
+    return { key: 'talk', label: 'rozmowa', tone: 'zinc', icon: 'ph-chat-circle' };
+  }
+
   // ── Ładowanie sesji (wspólny loader; różnice lejków wchodzą configiem) ──
   // Wzorzec „zwróć dane": PanelCore ładuje, panel przypisuje do swoich zmiennych
   // (bez przenoszenia własności stanu — najniższe ryzyko). cfg: {table, select,
@@ -209,11 +248,15 @@
       (mailKindsBySession[m.session_id] = mailKindsBySession[m.session_id] || new Set()).add(m.kind);
       (mailsBySession[m.session_id] = mailsBySession[m.session_id] || []).push(m);
     });
-    return { sessions: all, costsBySession, avatarByUser, rate, mails, mailKindsBySession, mailsBySession };
+    const out = { sessions: all, costsBySession, avatarByUser, rate, mails, mailKindsBySession, mailsBySession };
+    setData(out); // PanelCore trzyma referencje dla wspólnych state-readerów (costOf/avatar/engagement)
+    return out;
   }
 
   window.PanelCore = {
-    setRate, getRate, loadSessions,
+    setRate, getRate, loadSessions, setData, getSessions,
+    costOf, avatarPhoto, avatarImg, avatarThumb, avatarBlock,
+    lastTouchOf, isEngaged, revealDelivered, leadSignal,
     $, esc, fmtPln, fmtZl, fmtUsd, timeAgo, fmtDate, untilStr, plural, toast,
     STAGES, STAGE_IDS, LOST_STAGE_IDS, derivedStageOf, stageOf, projName,
     designOf, hexOf, accentDot, designSwatch,
