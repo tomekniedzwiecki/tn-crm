@@ -67,7 +67,11 @@
 
   /* VIDEO */
   .vid{position:relative;width:150px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;cursor:pointer}
-  .vid img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s}
+  .vid img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;position:relative;z-index:1}
+  .vid .vidph{position:absolute;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim2);background:linear-gradient(135deg,#1b1b20,#0c0c0e)}
+  .vid .vidph svg{width:24px;height:24px;opacity:.45}
+  .vid .vidph span{font-size:9.5px;letter-spacing:.05em;text-transform:uppercase}
+  .vid.healing .vidph span{color:var(--gold)}
   .vid:hover img{transform:scale(1.04)}
   .vid .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.35))}
   .vid .play span{width:52px;height:52px;border-radius:50%;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);border:1.5px solid rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center}
@@ -267,6 +271,40 @@ function render(){
   $('empty').style.display=total?'none':'block';
   $('cards').innerHTML=slice.map(card).join('');
   renderPager(total,pages);
+  healVisible(slice);
+}
+// Miniatury z TikTok CDN to podpisane URL-e z krótkim TTL → wygasają w ~dobę i nie wczytują
+// się w panelu. bud-tt-rehost pobiera ŚWIEŻY thumbnail przez oEmbed i wgrywa go na trwałe do
+// storage. Robimy to „na widoku" — tylko dla aktualnie wyświetlanych kart (≤20), w paczkach,
+// z podmianą obrazka na żywo. Invoke leci z JWT admina → przechodzi adminGate (team_members).
+const HEALED=new Set(); let HEALING=false;
+async function healVisible(slice){
+  if(HEALING)return;
+  const need=(slice||[]).filter(x=>x.tiktok_url&&!(x.cover||'').includes('/storage/v1/')&&!HEALED.has(x.key));
+  if(!need.length)return;
+  HEALING=true;
+  need.forEach(x=>{const el=$('r-'+x.id);if(el){const v=el.querySelector('.vid');if(v)v.classList.add('healing');}});
+  try{
+    for(let i=0;i<need.length;i+=6){
+      const chunk=need.slice(i,i+6), keys=chunk.map(x=>x.key);
+      keys.forEach(k=>HEALED.add(k));
+      const {error}=await sb.functions.invoke('bud-tt-rehost',{body:{keys,limit:keys.length}});
+      if(error)continue;
+      const {data:fresh}=await sb.from('bud_tt_products').select('key,cover').in('key',keys);
+      (fresh||[]).forEach(f=>{
+        if(!f.cover||!f.cover.includes('/storage/v1/'))return;
+        const x=ROWS.find(r=>r.key===f.key);if(!x)return;x.cover=f.cover;
+        const el=$('r-'+x.id);if(!el)return;
+        const v=el.querySelector('.vid');if(v)v.classList.remove('healing');
+        let img=el.querySelector('.vid img');
+        if(img){img.style.display='';img.src=f.cover;}
+        else if(v){img=document.createElement('img');img.loading='lazy';img.src=f.cover;v.insertBefore(img,v.querySelector('.age')||v.querySelector('.play')||null);}
+      });
+    }
+  }catch(e){}finally{
+    document.querySelectorAll('.vid.healing').forEach(v=>v.classList.remove('healing'));
+    HEALING=false;
+  }
 }
 function renderPager(total,pages){
   const pg=$('pager');if(!pg)return;
@@ -292,7 +330,8 @@ function card(x){
   return `<div class="card ${x.status}" id="r-${x.id}">
     <div class="head">
       <div class="vid" ${vid?`onclick="openM('${x.id}')"`:''}>
-        ${x.cover?`<img loading=lazy src="${esc(x.cover)}">`:''}
+        <div class="vidph">${I.tiktok}<span>miniatura</span></div>
+        ${x.cover?`<img loading=lazy src="${esc(x.cover)}" onerror="this.style.display='none'">`:''}
         ${days!=null?`<div class="age${hot?' hot':''}">${hot?'🔥 ':''}${days} dni</div>`:''}
         ${vid?`<div class="play"><span>${I.play}</span></div>`:''}
       </div>
