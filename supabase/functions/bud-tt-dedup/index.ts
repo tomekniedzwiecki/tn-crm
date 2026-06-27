@@ -25,13 +25,16 @@ function containment(a: Set<string>, b: Set<string>): { c: number; shared: numbe
   for (const t of a) if (b.has(t)) inter++;
   return { c: inter / Math.min(a.size, b.size), shared: inter };
 }
+// SILNE sygnały item-id: TYLKO najlepsze dopasowanie (top-1 kandydat, ułożony verify'em
+// „od najlepszego") + chosen_link (approved). Dzielenie POBOCZNEGO kandydata to za słabo
+// (różne produkty bywają mają wspólny luźny kandydat → fałszywy duplikat, np. kinkiet↔pielnik).
 // deno-lint-ignore no-explicit-any
 function itemIds(row: any): string[] {
   const ids = new Set<string>();
-  for (const c of (Array.isArray(row.ali_candidates) ? row.ali_candidates : [])) {
-    const id = c && (c.id || (typeof c.link === "string" && (c.link.match(/\/item\/(\d+)/) || [])[1]));
-    if (id) ids.add(String(id));
-  }
+  const cands = Array.isArray(row.ali_candidates) ? row.ali_candidates : [];
+  const top = cands[0];
+  const topId = top && (top.id || (typeof top.link === "string" && (top.link.match(/\/item\/(\d+)/) || [])[1]));
+  if (topId) ids.add(String(topId));
   const cm = typeof row.chosen_link === "string" && row.chosen_link.match(/\/item\/(\d+)/);
   if (cm) ids.add(cm[1]);
   return [...ids];
@@ -65,7 +68,7 @@ Deno.serve(async (req) => {
     return String(a.created_at).localeCompare(String(b.created_at));
   });
 
-  const idMap = new Map<string, string>();                 // itemId → anchor key
+  const idMap = new Map<string, { key: string; cat: string }>();   // itemId → anchor {key,cat}
   const anchors: { key: string; toks: Set<string>; cat: string }[] = [];
   const marks: { key: string; dup_of: string; reason: string; name: string }[] = [];
 
@@ -75,7 +78,9 @@ Deno.serve(async (req) => {
     const cat = row.category || "Inne";
     let dupOf = "", reason = "";
 
-    for (const id of ids) { if (idMap.has(id)) { dupOf = idMap.get(id)!; reason = "item"; break; } }
+    // item-id: ta sama aukcja (top-1) ORAZ ta sama kategoria — kategoria chroni przed
+    // kontaminacją (zablokowana strona oddaje wynik poprzedniego produktu z innej kategorii).
+    for (const id of ids) { const a = idMap.get(id); if (a && a.cat === cat) { dupOf = a.key; reason = "item"; break; } }
     if (!dupOf) {
       for (const a of anchors) {
         if (a.cat !== cat) continue;
@@ -91,7 +96,7 @@ Deno.serve(async (req) => {
       marks.push({ key: row.key, dup_of: dupOf, reason, name: row.pl_name });
       // duplikat NIE staje się kotwicą
     } else {
-      for (const id of ids) if (!idMap.has(id)) idMap.set(id, row.key);
+      for (const id of ids) if (!idMap.has(id)) idMap.set(id, { key: row.key, cat });
       anchors.push({ key: row.key, toks, cat });
     }
   }
