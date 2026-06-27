@@ -73,6 +73,10 @@ Deno.serve(async (req) => {
   const marks: { key: string; dup_of: string; reason: string; name: string }[] = [];
 
   for (const row of sorted) {
+    // Wiersze już 'duplicate' POMIJAMY całkiem — inaczej w kolejnym przebiegu stają się kotwicą
+    // i oznaczają swój KANONICZNY odpowiednik (kaskada → oba duplikatem, znika z kolejki).
+    // Kanoniczny jest już reprezentowany przez approved/pending, więc duplikat jako kotwica zbędny.
+    if (row.status === "duplicate") continue;
     const ids = itemIds(row);
     const toks = tokens(row.pl_name);
     const cat = row.category || "Inne";
