@@ -1389,7 +1389,7 @@ Deno.serve(async (req) => {
     if (profession && profession.length > 200) {
       return jsonResponse({ error: 'brak_profesji' }, 400, corsHeaders)
     }
-    if (!message && body.knowhowResume !== true && body.reportEngage !== true) {
+    if (!message && body.knowhowResume !== true && body.reportEngage !== true && body.qualifyEngage !== true) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -1559,6 +1559,9 @@ Deno.serve(async (req) => {
     // proaktywna tura AI (bez wiadomości usera), która angażuje rozmówcę pytaniem do
     // ustaleń, żeby rozmowa nie stała w miejscu w trakcie generacji raportu.
     const reportEngage = body.reportEngage === true
+    // Proaktywna tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (req Tomka): bot zadaje
+    // jedno naturalne pytanie z „ankiety", żeby wykorzystać czas generowania.
+    const qualifyEngage = body.qualifyEngage === true
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1721,7 +1724,7 @@ Deno.serve(async (req) => {
     // ── Append wiadomości usera ──────────────────────────────────────────────
     // Zaczepka know-how (knowhowResume): brak realnej wiadomości usera → NIE zapisujemy
     // jej do historii. Model dostaje syntetyczny wyzwalacz jako ostatnią turę.
-    if (!knowhowResume && !reportEngage) {
+    if (!knowhowResume && !reportEngage && !qualifyEngage) {
       const { error: userMsgError } = await supabase
         .from('bud_messages')
         .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
@@ -1733,9 +1736,12 @@ Deno.serve(async (req) => {
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
     const REPORT_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca właśnie zostawił komplet kontaktu i raport rynku RUSZYŁ w tle (wyników JESZCZE nie ma). Nie zostawiaj ciszy: zagadnij go JEDNYM lekkim, naturalnym pytaniem przydatnym do późniejszych ustaleń (kogo widzi jako klienta / co go w produkcie przekonało / jaki klimat marki / pomysł na nazwę). OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że raport jest gotowy ani nie podawaj liczb/wyników.]'
+    // Tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (qualifyEngage). Jedno pytanie z „ankiety"
+    // — extractSurveyAsync wyłapie odpowiedź do CRM. Klikalne <opcje> > otwarte pole.
+    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca wybrał styl i właśnie składają się w tle jego reklamy oraz sklep (potrwa to chwilę). Wykorzystaj tę chwilę: zadaj mu JEDNO naturalne pytanie KWALIFIKUJĄCE pod współpracę — wybierz jeden wątek, którego jeszcze nie znasz: co już próbował w e-commerce/online, ile czasu w tygodniu realnie może dać, jaki ma budżet na start, albo na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem. Jedno pytanie, ciepło, nie ankieta. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że sklep/reklamy są już gotowe.]'
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : message) },
+      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : (qualifyEngage ? QUALIFY_ENGAGE_TRIGGER : message)) },
     ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne
