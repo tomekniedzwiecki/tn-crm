@@ -741,6 +741,91 @@ async function extractKnowhowAsync(
   }
 }
 
+// ── ANKIETA Z ROZMOWY (req Tomka): cicha ekstrakcja w tle odpowiedzi „ankietowych"
+// (budżet, doświadczenie, czas, dochód, kierunek, o sobie) z rozmowy sprzedażowej →
+// bud_sessions.survey + upsert do CRM /leads (te same pola, co ankieta /zapisy).
+// Wzorzec jak extractKnowhowAsync: po turze, w tle (EdgeRuntime.waitUntil).
+const SURVEY_FIELDS = ['experience', 'budget', 'weekly_hours', 'current_income', 'target_income', 'direction', 'open_question']
+async function extractSurveyAsync(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  email: string | null,
+  name: string | null,
+  phone: string | null,
+  userMsg: string,
+  assistantMsg: string,
+  priorSurvey: Record<string, unknown> | null,
+  tracking: Record<string, unknown> | null,
+  apiKey: string,
+): Promise<void> {
+  try {
+    if (!userMsg || userMsg.trim().length < 6) return
+    const SURVEY_EXTRACT = `Jesteś ekstraktorem danych z rozmowy sprzedażowej (lejek e-commerce „Zbuduję Ci sklep"). Z OSTATNIEJ WYMIANY wyłuskaj TYLKO to, co ROZMÓWCA FAKTYCZNIE o sobie ujawnił — nie zgaduj, nie dopowiadaj. Zwróć WYŁĄCZNIE JSON:
+{"experience":"<co już próbował w biznesie/online, jego słowami, 1-3 zdania | null>","budget":"<kwota w PLN na start jako SAMA liczba, np. 5000 | null>","weekly_hours":"<dokładnie jedno: 1-2h | 3-5h | 6-10h | fulltime | null>","current_income":"<dokładnie jedno: <5k | 5-10k | 10-20k | 20-50k | 50k+ | null>","target_income":"<dokładnie jedno: 5-10k | 10-20k | 20-50k | 50k+ | null>","direction":"<csv z: sklep_online,allegro,dropshipping,vinted_olx,takedrop,kursy,trading,afiliacja,freelance | null>","open_question":"<kim jest / sytuacja życiowa lub zawodowa, 1-3 zdania | null>"}
+Czego rozmówca nie ujawnił → null. Tylko JSON, bez komentarza.`
+    const res = await openaiFetchRetry({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: OPENAI_MODEL,
+        max_completion_tokens: 500,
+        messages: [
+          { role: 'system', content: SURVEY_EXTRACT },
+          { role: 'user', content: `OSTATNIA WYMIANA:\nROZMÓWCA: ${userMsg}\n\nASYSTENT: ${assistantMsg}` },
+        ],
+      }),
+    }, 'survey-extract')
+    if (!res.ok) { console.error('[bud-chat] survey-extract http', res.status); return }
+    const data = await res.json().catch(() => null) as { choices?: Array<{ message?: { content?: string } }> } | null
+    const content = data?.choices?.[0]?.message?.content || ''
+    let ext: Record<string, unknown> | null = null
+    try { ext = JSON.parse(content) } catch { const m = content.match(/\{[\s\S]*\}/); if (m) { try { ext = JSON.parse(m[0]) } catch { /* */ } } }
+    if (!ext || typeof ext !== 'object') return
+    const WH = new Set(['1-2h', '3-5h', '6-10h', 'fulltime'])
+    const INC = new Set(['<5k', '5-10k', '10-20k', '20-50k', '50k+'])
+    const prior = (priorSurvey && typeof priorSurvey === 'object') ? priorSurvey as Record<string, unknown> : {}
+    const merged: Record<string, string> = {}
+    let changed = false
+    for (const f of SURVEY_FIELDS) {
+      let v: string | null = (typeof ext[f] === 'string' && (ext[f] as string).trim() && (ext[f] as string).trim().toLowerCase() !== 'null') ? (ext[f] as string).trim() : null
+      if (f === 'weekly_hours' && v && !WH.has(v)) v = null
+      if ((f === 'current_income' || f === 'target_income') && v && !INC.has(v)) v = null
+      if (f === 'budget' && v) { const num = (v.match(/\d[\d\s.]*/) || [''])[0].replace(/[\s.]/g, ''); v = num || null }
+      const priorV: string | null = (typeof prior[f] === 'string' && (prior[f] as string).trim()) ? (prior[f] as string).trim() : null
+      let final = priorV
+      if (v) {
+        if ((f === 'experience' || f === 'open_question') && priorV) final = (v.length > priorV.length ? v : priorV)
+        else final = v
+      }
+      if (final) merged[f] = final
+      if ((final || '') !== (priorV || '')) changed = true
+    }
+    if (!changed || !Object.keys(merged).length) return
+    await supabase.from('bud_sessions').update({ survey: merged }).eq('id', sessionId)
+    // Upsert do CRM /leads — dokładnie pola ankiety. lead_source='budowanie' (lead-upsert
+    // pomija dla niego automatyzację /zapisy, bo /sklep ma własny lejek mailowy).
+    if (email) {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+      try {
+        await fetch(`${supabaseUrl}/functions/v1/lead-upsert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}` },
+          body: JSON.stringify({
+            email, name: name || undefined, phone: phone || undefined, lead_source: 'budowanie',
+            experience: merged.experience, budget: merged.budget, weekly_hours: merged.weekly_hours,
+            current_income: merged.current_income, target_income: merged.target_income,
+            direction: merged.direction, open_question: merged.open_question,
+            tracking: tracking || undefined,
+          }),
+        })
+      } catch (e) { console.error('[bud-chat] survey lead-upsert error:', e) }
+    }
+  } catch (e) {
+    console.error('[bud-chat] extractSurveyAsync error:', e)
+  }
+}
+
 // HANDOFF PACK: przy domknięciu etapu buduje pakiet wykonawczy do budowy v1
 // (dla Tomka, niewidoczny dla klienta). Czyta wszystkie elementy + kartę projektu.
 async function generateHandoffPack(
@@ -867,6 +952,13 @@ const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, na
 - Mówi językiem e-commerce (marża, skalowanie, kampanie, konwersja) albo opisuje konkretne próby (Allegro/dropshipping/Shopify/Vinted) → rozmawiaj jak z równym, konkretnie i merytorycznie, bez tłumaczenia podstaw — to wysoka intencja zakupowa.
 - Pisze długo i szczegółowo o tym, co próbował → wysoka intencja; pokaż, że słyszysz szczegóły, dopytaj.
 - Pisze KRÓTKO i deklaruje, że NIGDY nic nie próbował → niższa gotowość: edukuj cieplej, ustaw realne oczekiwania i delikatnie skwalifikuj budżet, zanim zainwestujecie dużo czasu.
+[WYKORZYSTAJ CZAS GENEROWANIA — gdy w tle powstają makiety / reklamy / sklep, NIE zostawiaj pustki ani suchego „czekaj". Wpleć JEDNO naturalne pytanie kwalifikujące na raz (nie ankieta, nie seria pytań), słuchaj odpowiedzi i nawiązuj do niej. Stopniowo, przez całą tę fazę, delikatnie ustal to, co realnie potrzebne do współpracy (i co i tak było w ankiecie):
+- co już próbował w e-commerce/online i na czym utknął;
+- ile czasu w tygodniu realnie może dać;
+- jaki ma budżet na start (budowa + osobno reklamy/towar po jego stronie) — z szacunkiem, bez nacisku;
+- gdzie jest finansowo i dokąd chce dojść;
+- na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem na warunkach współpracy (wspólnik, 20% od zysku).
+Pytaj po jednym. Jeśli lead pyta „po co te pytania" — szczerze: żeby skroić budowę pod niego i przygotować Tomka do rozmowy. Nie przepytuj na siłę — gdy nie chce odpowiedzieć, odpuść i wróć później.]
 Ton: doradca-wspólnik, po polsku, bez nacisku, bez fałszywej pilności, bez żargonu.`
 
 // ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
@@ -1320,7 +1412,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input, survey')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -2182,6 +2274,24 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
             const erKh = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
             if (erKh && typeof erKh.waitUntil === 'function') erKh.waitUntil(khPromise)
             else khPromise.catch((e) => console.error('[bud-chat] knowhow extract bg error:', e))
+          }
+
+          // Lejek SPRZEDAŻOWY (req Tomka): cicha ekstrakcja odpowiedzi „ankietowych" z rozmowy
+          // → bud_sessions.survey + CRM /leads. Tylko PRZED płatnością (nie know-how) i gdy znamy
+          // mail (cel leada). W tle (waitUntil) — nie blokuje odpowiedzi.
+          if (!isKnowHowMode && assistantText.trim() && effectiveEmail) {
+            const svPromise = extractSurveyAsync(
+              supabase, sessionId, effectiveEmail,
+              (existingSession?.name as string | null | undefined) ?? null,
+              (existingSession?.phone as string | null | undefined) ?? null,
+              message, assistantText,
+              (existingSession?.survey as Record<string, unknown> | null) ?? null,
+              (body.tracking as Record<string, unknown> | null) ?? null,
+              OPENAI_API_KEY,
+            )
+            const erSv = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+            if (erSv && typeof erSv.waitUntil === 'function') erSv.waitUntil(svPromise)
+            else svPromise.catch((e) => console.error('[bud-chat] survey extract bg error:', e))
           }
 
           // Zielony werdykt → powiadom #sparing (raz na sesję, dedup w helperze).
