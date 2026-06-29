@@ -54,7 +54,30 @@ let MODEL_BLOCK = ''
 // Stały prompt systemowy (cache'owalny — bez danych sesji)
 let SYSTEM_PROMPT = ''
 
-function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, assessment: Record<string, unknown> | null = null): string {
+// Kompaktowy odczyt rynku z raportu — obsługuje OBA kształty: płaski (Aplikacja:
+// konkurenci/luka_rynkowa) ORAZ /sklep (sekcje[] z markdownem). Bez tego /sklep
+// (kształt sekcje) nie przekazywał TU żadnego researchu mimo gotowego raportu.
+function raportDigest(raport: Record<string, unknown> | null): string {
+  if (!raport || typeof raport !== 'object') return ''
+  const s = (v: unknown, m = 240) => (typeof v === 'string' ? v.slice(0, m) : '')
+  const out: string[] = []
+  // deno-lint-ignore no-explicit-any
+  const r = raport as any
+  if (Array.isArray(r.konkurenci) && r.konkurenci.length) {
+    const k = r.konkurenci.slice(0, 4).map((c: Record<string, unknown>) => s(c?.nazwa, 40)).filter(Boolean).join(', ')
+    if (k) out.push('Konkurenci z researchu: ' + k)
+  }
+  if (r.luka_rynkowa) out.push('Okno rynkowe: ' + s(r.luka_rynkowa, 240))
+  if (Array.isArray(r.sekcje)) {
+    const sek = r.sekcje as Array<Record<string, unknown>>
+    const flat = (t: unknown) => (typeof t === 'string' ? t.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim() : '')
+    const pick = (re: RegExp) => { const x = sek.find((y) => typeof y?.tytul === 'string' && re.test(y.tytul as string)); return x ? flat(x.tresc) : '' }
+    const pot = pick(/potencja|popyt|rynk/i)
+    if (pot) out.push('Z raportu rynkowego — popyt, skala kategorii i realne ceny konkurencji (UŻYJ jako realne wejście do planu, NIE wymyślaj sprzecznych liczb): ' + pot.slice(0, 650))
+  }
+  return out.join('\n')
+}
+function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, assessment: Record<string, unknown> | null = null, raport: Record<string, unknown> | null = null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const list = (v: unknown) => Array.isArray(v)
     ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ')
@@ -73,6 +96,7 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
   // Spójność liczb: badanie rynku z bramki (to samo, co rozmówca usłyszał w czacie) —
   // pole „rynek" w planie MA być z tym zgodne, nie wymyślone od nowa.
   if (assessment && typeof assessment.odczyt_rynku === 'string') fakty.push(`Badanie rynku z rozmowy (UŻYJ tych liczb/przedziałów w polu „rynek", nie podawaj innych): ${s(assessment.odczyt_rynku, 400)}`)
+  const dig = raportDigest(raport); if (dig) fakty.push(dig)
   return `KARTA SKLEPU:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
 }
 
@@ -94,11 +118,14 @@ async function callOnce(apiKey: string, user: string, maxTokens: number): Promis
 
 // deno-lint-ignore no-explicit-any
 function sanePlan(p: any): boolean {
+  // Nowy kształt: horyzonty 3/6/12/24 (mies + zamowienia_mies). Zachowujemy też
+  // zgodność wstecz ze starym 'kamienie' (sesje sprzed przebudowy planu).
+  const horyzonty = Array.isArray(p?.horyzonty) ? p.horyzonty : (Array.isArray(p?.kamienie) ? p.kamienie : null)
   return !!p && typeof p === 'object'
     && typeof p.model_przychodu === 'string'
     && typeof p.cena === 'number' && p.cena > 0
-    && Array.isArray(p.kamienie) && p.kamienie.length >= 2
-    && p.kamienie.every((k: unknown) => !!k && typeof k === 'object'
+    && Array.isArray(horyzonty) && horyzonty.length >= 3
+    && horyzonty.every((k: unknown) => !!k && typeof k === 'object'
       && typeof (k as Record<string, unknown>).zamowienia_mies === 'number'
       && typeof (k as Record<string, unknown>).mies === 'number')
 }
@@ -132,7 +159,7 @@ Deno.serve(async (req) => {
     if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['budowanie_prompt_plan_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('budowanie_prompt_plan_system') } catch (_e) { /* fallback: puste prompty */ } }
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, business_plan, assessment, auth_user_id')
+      .select('id, preview_brief, problem_summary, business_plan, assessment, market_report, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -151,6 +178,7 @@ Deno.serve(async (req) => {
     const karta = session.problem_summary as Record<string, unknown> | null
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const assessment = session.assessment as Record<string, unknown> | null
+    const raport = session.market_report as Record<string, unknown> | null
     if (!karta) {
       // plan liczymy dopiero, gdy jest karta (werdykt) — gate jak w bud-image
       return jsonResponse({ error: 'brak_karty' }, 400, cors)
@@ -188,7 +216,7 @@ Deno.serve(async (req) => {
     }
     // Auto-retry ×1 na pustą/niepoprawną odpowiedź. Zapas max_completion_tokens
     // (lekcja: gpt-5.x zjada tokeny na reasoning → pusty JSON).
-    const user = buildUser(brief, karta, assessment)
+    const user = buildUser(brief, karta, assessment, raport)
     let plan: Record<string, unknown> | null = null
     for (let attempt = 0; attempt < 2 && !plan; attempt++) {
       const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
