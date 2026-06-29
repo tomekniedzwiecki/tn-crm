@@ -821,6 +821,12 @@ let PREVIEW_AFTER_GATE_INSTRUCTION = ''
 // — łatwa do tuningu/rewersji. Treść retoryki (bank obiekcji) jest w prompcie.
 let COLLAB_PHASE_INSTRUCTION = ''
 
+// FAKTY OFERTY I UMOWY (settings.budowanie_model_biznesowy) — SSOT liczb i zasad
+// współpracy. Wstrzykiwane w FAZIE WSPÓŁPRACY, żeby czat odpowiadał na pytania o
+// cenę/%/etapy/warunki WPROST z umowy (transparentność — decyzja Tomka), zamiast
+// zbywać „to na rozmowie". Cache module-level (jak inne) → po edycji klucza REDEPLOY.
+let MODEL_FACTS = ''
+
 // REZYGNACJA — bezpieczne, DWUSTOPNIOWE oznaczenie „zrezygnował". Model NIE
 // oznacza od razu: najpierw upewnia się co do intencji, marker <rezygnacja/>
 // wystawia DOPIERO po wyraźnym potwierdzeniu w kolejnej turze. Backend mapuje
@@ -836,7 +842,27 @@ const FALLBACK_GATE_INSTRUCTION = `[ETAP USTALENIA] Gdy raport jest gotowy, prze
 <ustalenia>{"dla_kogo":"...","kat":"...","ton_marki":"...","nazwa":"...","korzysci":["...","..."]}</ustalenia>
 JSON musi być POPRAWNY (tylko podwójne cudzysłowy, bez znaków sterujących). Po markerze front przechodzi do makiet.`
 const FALLBACK_RESIGNATION_INSTRUCTION = `[REZYGNACJA] Jeśli rozmówca wyraźnie sygnalizuje, że rezygnuje/nie jest zainteresowany, NIE oznaczaj od razu — dopytaj raz, czy na pewno chce zakończyć. Dopiero po wyraźnym potwierdzeniu w KOLEJNEJ turze wystaw w osobnej linii marker <rezygnacja/>. Nie wymuszaj, reaguj z szacunkiem.`
-const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany. Odpowiadaj na pytania o ofertę/zakres/cenę konkretnie pod ten biznes, spokojnie przełamuj obiekcje i — gdy rozmówca jest gotów — zaproponuj rezerwację wspólnej rozmowy z Tomkiem (500 zł, w pełni zwrotna), wystawiając w osobnej linii marker <makieta/>. Bez nacisku i bez fałszywej pilności.`
+const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany — to WERSJA WSTĘPNA (finalną dopracujecie razem po starcie współpracy). NIE pytaj „jak Ci się podoba" ani nie proś o akceptację. Gdy rozmówca reaguje pozytywnie — najpierw wystaw <zielone> (pozytywna decyzja + 2-3 mocne strony + 2-3 rzeczy do dopracowania razem), BEZ kwoty. Od kolejnej tury KAŻDA odpowiedź spokojnie prowadzi do REZERWACJI (500 zł, w pełni ZWROTNA — NIGDY „zadatek") jako następnego kroku: odpowiedz na pytanie/obiekcję i wskaż rezerwację rozmowy z Tomkiem przez stronę współpracy. Ton doradcy, bez nacisku i fałszywej pilności, bez zmyślonych kwot. Kartę <makieta> wystawiaj, gdy rozmówca jest gotów lub sam pyta o rezerwację.`
+// Minimum faktów na wypadek awarii loadu settings — żeby czat NIGDY nie zmyślał liczb.
+const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
+- Rezerwacja: 500 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w cenę budowy.
+- Budowa sklepu: 9400 zł brutto, jednorazowo, pod klucz (po wliczeniu rezerwacji zostaje 8900 zł do zapłaty).
+- Udział Tomka: 20% od DOCHODU NETTO (po odjęciu towaru, reklam, wysyłki), bezterminowo, rozliczane miesięcznie — zarabia, gdy zarabia klient.
+- Etapy: przygotowania → formalności → materiały reklamowe → uruchomienie kampanii (cel 1000 zamówień) → ~180 dni skalowania i przekazania sterów.
+- Budżet reklamowy i koszty operacyjne (towar, wysyłka) pokrywa klient.
+- Czego nie ma w tych faktach → „to domknie Tomek po rezerwacji". Nie zmyślaj liczb.`
+
+// PRZEPLATANA NARRACJA „po co to robisz" (decyzja Tomka 2026-06-29). Lead w KAŻDEJ
+// fazie ma rozumieć cel i model — wstrzykiwane do systemu każdej tury SPRZEDAŻOWEJ
+// (nie w trybie know-how po płatności). Mechanika w kodzie → łatwy tuning/rewersja.
+const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, naturalnie, 1 zdaniem (nie wykład), zwłaszcza przy przejściach między etapami i ZAWSZE gdy lead się gubi, nie ufa lub pyta „o co właściwie chodzi":]
+- TO TWÓJ SKLEP ONLINE — realny biznes e-commerce pod Twoją marką, nie kurs, nie subskrypcja, nie „ściema".
+- TOMEK BUDUJE GO DLA CIEBIE jak Twój człowiek od e-commerce: składa cały sklep z zespołem, odpala reklamy i rozkręca sprzedaż (pierwsze ~1000 zamówień), potem ~pół roku skaluje i uczy Cię, aż przejmiesz stery.
+- TO WSPÓLNY BIZNES — Tomek wchodzi jako WSPÓLNIK: bierze 20% od ZYSKU (nie fakturę), czyli zarabia DOPIERO, gdy Ty zarabiasz. To jego skóra w grze i dowód, że nie wciska byle czego (rozbraja „a co Ty z tego masz / czy to nie oszustwo").
+- TWOJA ROLA: uczysz się przy GOTOWYM, działającym sklepie; obsługa to proste czynności (nie kod), realne przy kilku godzinach tygodniowo. Jeśli lead boi się „nie ogarnę / nie znam się / mam mało czasu" — rozbrój to WPROST i ciepło tym faktem.
+- PIENIĄDZE bez iluzji: projekt, raport i podgląd sklepu są DARMOWE i zostają jego; pełną budowę pod klucz robi Tomek — to płatna współpraca (kotwica ceny). Gdy lead pyta o cenę albo sygnalizuje „mam mało / ostatnie pieniądze / jestem spłukany" — odpowiedz UCZCIWIE i z szacunkiem: jest realny próg wejścia, a reklamy i towar są osobno po jego stronie; nie bagatelizuj i nie ciągnij go pod ścianę, której nie udźwignie. Konkretne liczby podajesz, gdy dojdziecie do kroku współpracy (tam masz FAKTY OFERTY) — nigdy nie zmyślaj.
+- JAKOŚĆ: makiety i reklamy, które teraz widzi, to SZYBKIE SZKICE kierunku — finalne kreacje robicie po starcie z prawdziwą sesją/realnym twórcą (rozbraja „to mocno AI-owe"). Produkt = sprawdzony popyt pod Twoją marką i marżę; NIGDY nie ujawniaj źródła ani ceny zakupu produktu.
+Ton: doradca-wspólnik, po polsku, bez nacisku, bez fałszywej pilności, bez żargonu.`
 
 // ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
 // Włączany WYŁĄCZNIE serwerowo, gdy bud_sessions.full_paid_at IS NOT NULL i
@@ -1197,7 +1223,21 @@ Deno.serve(async (req) => {
         .select('id, email, name, phone, auth_user_id')
         .eq('id', sessionId)
         .maybeSingle()
-      if (!sess) return jsonResponse({ ok: false }, 200, corsHeaders)
+      if (!sess) {
+        // Sesja jeszcze nie istnieje — nowy lejek /sklep prosi o kontakt (imię+nazwisko+e-mail)
+        // PRZED pierwszą wiadomością/raportem. Zakładamy wiersz, żeby kontakt NIGDY nie przepadł
+        // (cel Tomka: zero anonimowych sesji odpalających generację).
+        const ins: Record<string, unknown> = { id: sessionId, last_user_at: new Date().toISOString() }
+        const e0 = (au?.email || email) || null
+        const n0 = (au?.name || name) || null
+        if (e0) ins.email = e0
+        if (n0) ins.name = n0
+        if (phone) { ins.phone = phone; ins.sms_consent_at = new Date().toISOString() }
+        if (au) { ins.auth_user_id = au.id; ins.auth_provider = au.provider }
+        await sb.from('bud_sessions').upsert([ins], { onConflict: 'id', ignoreDuplicates: true })
+        await maybeNotifyContactSlack(sb, sessionId)
+        return jsonResponse({ ok: true }, 200, corsHeaders)
+      }
       const ownerId = (sess.auth_user_id as string | null) || null
       if (ownerId && (!au || au.id !== ownerId)) {
         return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
@@ -1252,7 +1292,7 @@ Deno.serve(async (req) => {
     if (profession && profession.length > 200) {
       return jsonResponse({ error: 'brak_profesji' }, 400, corsHeaders)
     }
-    if (!message && body.knowhowResume !== true) {
+    if (!message && body.knowhowResume !== true && body.reportEngage !== true) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
     if (message.length > MAX_MESSAGE_LENGTH) {
@@ -1275,7 +1315,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1290,6 +1330,11 @@ Deno.serve(async (req) => {
     if (sessionOwnerId && (!authUser || authUser.id !== sessionOwnerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
     }
+
+    // Narracja przeplatana — tylko w fazie SPRZEDAŻY (przed pełną płatnością);
+    // w trybie know-how/budowa (full_paid_at) NIE wstrzykujemy.
+    const _isPostPay = !!(existingSession && (existingSession.full_paid_at || existingSession.knowhow_closed_at))
+    const narrativeWeaveTurn = _isPostPay ? '' : `\n\n${NARRATIVE_WEAVE}`
 
     // ── PRZEŁĄCZENIE KIERUNKU (switch_track) — pełny pivot K1↔K2↔K3 ──────────
     // Front przy „Mam jednak własny produkt" / „Mam własny pomysł" wysyła
@@ -1355,8 +1400,21 @@ Deno.serve(async (req) => {
           const want = sm[1].trim().toLowerCase()
           const { data: ms } = await supabase.from('bud_sessions').select('mockups').eq('id', sessionId).maybeSingle()
           const mocks = Array.isArray(ms?.mockups) ? ms!.mockups as Array<Record<string, unknown>> : []
-          const hit = mocks.find((m) => String(m.label || '').toLowerCase() === want || String(m.style || '').toLowerCase() === want)
-          const styl = (hit && typeof hit.style === 'string' && hit.style) ? hit.style : sm[1].trim().slice(0, 80)
+          const styleOf = (i: number): string | null => (mocks[i] && typeof mocks[i].style === 'string') ? mocks[i].style as string : null
+          let styl: string | null = null
+          // 1) po labelu/stylu (exact LUB zawieranie — „biorę styl premium, dawaj")
+          const hit = mocks.find((m) => {
+            const lb = String(m.label || '').toLowerCase(), st = String(m.style || '').toLowerCase()
+            return lb === want || st === want || (!!lb && want.includes(lb)) || (!!st && want.includes(st))
+          })
+          if (hit && typeof hit.style === 'string') styl = hit.style
+          // 2) liczebnik porządkowy („ten pierwszy", „drugi", „styl 3", „nr 2")
+          if (!styl) {
+            const ord = /\b(pierwsz|jeden|1)\b/.test(want) ? 0 : /\b(drug|dwa|2)\b/.test(want) ? 1 : /\b(trzec|trzy|3)\b/.test(want) ? 2 : /\b(czwart|cztery|4)\b/.test(want) ? 3 : -1
+            if (ord >= 0) styl = styleOf(ord)
+          }
+          // 3) fallback: pierwszy styl makiety (NIE surowy tekst usera, QA P2)
+          if (!styl) styl = styleOf(0) || sm[1].trim().slice(0, 60)
           await supabase.from('bud_sessions').update({ chosen_style: styl, updated_at: new Date().toISOString() }).eq('id', sessionId)
         } catch (e) { console.error('[bud-chat] błąd zapisu chosen_style:', e) }
       }
@@ -1400,6 +1458,10 @@ Deno.serve(async (req) => {
     if (body.knowhowResume === true && !isKnowHowMode) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
     }
+    // Zaczepka po bramce kontaktu: kontakt właśnie podany, raport ruszył w tle →
+    // proaktywna tura AI (bez wiadomości usera), która angażuje rozmówcę pytaniem do
+    // ustaleń, żeby rozmowa nie stała w miejscu w trakcie generacji raportu.
+    const reportEngage = body.reportEngage === true
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1562,7 +1624,7 @@ Deno.serve(async (req) => {
     // ── Append wiadomości usera ──────────────────────────────────────────────
     // Zaczepka know-how (knowhowResume): brak realnej wiadomości usera → NIE zapisujemy
     // jej do historii. Model dostaje syntetyczny wyzwalacz jako ostatnią turę.
-    if (!knowhowResume) {
+    if (!knowhowResume && !reportEngage) {
       const { error: userMsgError } = await supabase
         .from('bud_messages')
         .insert({ session_id: sessionId, role: 'user', content: message, channel: mode })
@@ -1573,9 +1635,10 @@ Deno.serve(async (req) => {
     }
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
+    const REPORT_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca właśnie zostawił komplet kontaktu i raport rynku RUSZYŁ w tle (wyników JESZCZE nie ma). Nie zostawiaj ciszy: zagadnij go JEDNYM lekkim, naturalnym pytaniem przydatnym do późniejszych ustaleń (kogo widzi jako klienta / co go w produkcie przekonało / jaki klimat marki / pomysł na nazwę). OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że raport jest gotowy ani nie podawaj liczb/wyników.]'
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : message },
+      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : message) },
     ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne
@@ -1596,13 +1659,14 @@ Deno.serve(async (req) => {
     // (jednorazowo; flaga awaiting_preview w assessment, czyszczona poniżej).
     {
       await ensureKnowhowPrompts(supabase)
-if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('settings').select('key, value').in('key', ['budowanie_etap_gate', 'budowanie_etap_kierunki', 'budowanie_etap_preview_po_kierunku', 'budowanie_etap_wspolpraca', 'budowanie_etap_rezygnacja']); const __ev = (k: string) => ((__ep || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; GATE_INSTRUCTION = __ev('budowanie_etap_gate'); KIERUNKI_INSTRUCTION = __ev('budowanie_etap_kierunki'); PREVIEW_AFTER_GATE_INSTRUCTION = __ev('budowanie_etap_preview_po_kierunku'); COLLAB_PHASE_INSTRUCTION = __ev('budowanie_etap_wspolpraca'); RESIGNATION_INSTRUCTION = __ev('budowanie_etap_rezygnacja') } catch (_e) { /* fallback poniżej */ } }
+if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('settings').select('key, value').in('key', ['budowanie_etap_gate', 'budowanie_etap_kierunki', 'budowanie_etap_preview_po_kierunku', 'budowanie_etap_wspolpraca', 'budowanie_etap_rezygnacja', 'budowanie_model_biznesowy']); const __ev = (k: string) => ((__ep || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; GATE_INSTRUCTION = __ev('budowanie_etap_gate'); KIERUNKI_INSTRUCTION = __ev('budowanie_etap_kierunki'); PREVIEW_AFTER_GATE_INSTRUCTION = __ev('budowanie_etap_preview_po_kierunku'); COLLAB_PHASE_INSTRUCTION = __ev('budowanie_etap_wspolpraca'); RESIGNATION_INSTRUCTION = __ev('budowanie_etap_rezygnacja'); MODEL_FACTS = __ev('budowanie_model_biznesowy') } catch (_e) { /* fallback poniżej */ } }
       // GUARD: gdy load z settings padł (awaria DB), instrukcje zostają puste →
       // detektor rezygnacji omijany, etap ustaleń bez prowadzenia. Wstrzykujemy
       // minimalny hardkod, żeby mechanika gate'ów NIGDY nie zniknęła całkowicie.
       if (!GATE_INSTRUCTION) { console.error('[bud-chat] GATE_INSTRUCTION puste — hardkod fallback'); GATE_INSTRUCTION = FALLBACK_GATE_INSTRUCTION }
       if (!RESIGNATION_INSTRUCTION) { console.error('[bud-chat] RESIGNATION_INSTRUCTION puste — hardkod fallback'); RESIGNATION_INSTRUCTION = FALLBACK_RESIGNATION_INSTRUCTION }
       if (!COLLAB_PHASE_INSTRUCTION) { console.error('[bud-chat] COLLAB_PHASE_INSTRUCTION puste — hardkod fallback'); COLLAB_PHASE_INSTRUCTION = FALLBACK_COLLAB_INSTRUCTION }
+      if (!MODEL_FACTS) { console.error('[bud-chat] MODEL_FACTS puste — hardkod fallback'); MODEL_FACTS = FALLBACK_MODEL_FACTS }
       const asmt = existingSession?.assessment as Record<string, unknown> | null
       if (isKnowHowMode) {
         // TRYB DOPRACOWANIA WIZJI (po pełnej płatności): zbieranie know-how,
@@ -1622,6 +1686,14 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // PO POKAZANIU SKLEPU (nowy pipeline /sklep): faza współpracy + rezerwacja
         // (przełamywanie obiekcji, <makieta>). Nie bramkuj już niczym wcześniejszym.
         sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
+        // FAKTY OFERTY I UMOWY — żeby czat odpowiadał na pytania o cenę/%/etapy/warunki
+        // WPROST z umowy (transparentność), zamiast zbywać. Tylko w fazie współpracy.
+        sessionContext += `\n\n[FAKTY OFERTY I UMOWY — to z tego bloku czerpiesz WSZYSTKIE konkrety o współpracy; gdy rozmówca pyta o cenę, procent Tomka, etapy, czas, co wchodzi w cenę, warunki — odpowiadaj WPROST stąd, nie zbywaj „to na rozmowie"; nie zmyślaj niczego spoza tego bloku]\n${MODEL_FACTS}`
+        // ZIELONE ŚWIATŁO przed rezerwacją: dopóki verdict != 'zielony', wymuś <zielone> jako PIERWSZE,
+        // zero kwoty 500 zł przed nim (QA: 500 zł pitchowane przed zielonym = odruchowy upsell).
+        if ((existingSession?.verdict as string | null) !== 'zielony') {
+          sessionContext += `\n\n[KOLEJNOŚĆ — TWARDE: rozmówca ma już gotową stronę, ale ZIELONE ŚWIATŁO jeszcze NIE padło w tej rozmowie. W NAJBLIŻSZEJ odpowiedzi (gdy reaguje na stronę albo pyta „co dalej") NAJPIERW wydaj <zielone> (pozytywna decyzja + 2-3 mocne strony z raportu + 2-3 rzeczy „co dopracujemy razem"). NIE wymieniaj kwoty 500 zł ani słowa „rezerwacja", DOPÓKI nie padło zielone światło. Rezerwację (<makieta>) proponujesz DOPIERO po zielonym świetle.]`
+        }
         // Wstrzyknij USTALENIA, żeby odpowiedzi o ofercie/zakresie/cenie były pod TEN biznes.
         const collabCard = (existingSession?.ustalenia as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
         if (collabCard) sessionContext += `\n\n[USTALENIA PROJEKTU — przy pytaniach o ofertę/zakres/„co wchodzi"/cenę personalizuj DOKŁADNIE pod to, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}`
@@ -1632,11 +1704,43 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         const rep = existingSession?.market_report as Record<string, unknown> | null
         if (rep && typeof rep === 'object') {
           const { _meta: _d, ...r } = rep
-          sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. Oprzyj ustalenia „dla kogo to jest" na jego realnych wnioskach (konkurenci, ceny, luka); odwołuj się do nich.]\n${JSON.stringify(r).slice(0, 2400)}`
+          sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. PRZEJŚCIE MA BYĆ PŁYNNE, NIE URWANE: jeśli przed chwilą rozmawialiście (czas generowania raportu), NAJPIERW zareaguj na ostatnią wypowiedź rozmówcy i domknij ten wątek jednym naturalnym zdaniem + zasygnalizuj, że raport właśnie wskoczył — NIE ucinaj rozmowy w pół. Dopiero potem przejdź do ustaleń „dla kogo to jest", ŁĄCZĄC DWA ŹRÓDŁA: (1) to, co rozmówca SAM Ci powiedział podczas czekania (idealny klient, klimat/charakter marki, pomysły na nazwę, co go przekonało) — WYKORZYSTAJ to i NIE pytaj o to samo drugi raz; (2) realne wnioski raportu (konkurenci, ceny, luka). Odwołuj się do obu naturalnie.]\n${JSON.stringify(r).slice(0, 2400)}`
+        } else if (body.reportGated || !effectiveEmail) {
+          // Raport WSTRZYMANY: front trzyma bramkę kontaktu (konto→imię+nazwisko→telefon)
+          // i NIE odpalił bud-raport (reportGated), albo kontaktu po prostu brak. Mózg NIE
+          // może udawać, że raport się liczy ani pytać o ustalenia — inaczej bramka wygląda
+          // na opcjonalną (rozjazd: „zaczynam analizę" przy zagatowanym raporcie).
+          sessionContext += `\n\n[RAPORT WSTRZYMANY — KONTAKT NIEPODANY. Raport NIE wystartował i NIE wystartuje, dopóki rozmówca nie zostawi kontaktu (front pokazuje bramkę OBOK: konto → imię i nazwisko → telefon). TWARDE ZAKAZY: NIE mów „zaczynam analizę"/„robię raport"/„raport się liczy"/„raport pojawi się gotowy"/„za ~2 min" — NIC się jeszcze nie liczy; ZERO zmyślonych liczb, konkurencji ani wyników; NIE zadawaj pytań ustaleń („dla kogo", klimat marki, nazwa…) i NIE wystawiaj markera <ustalenia> ani <opcje> do ustaleń — to przyjdzie DOPIERO po kontakcie i po raporcie. ZRÓB: w 1-2 zdaniach ciepło potwierdź wybór produktu i powiedz WPROST, że gdy tylko zostawi kontakt z bramki obok, OD RAZU ruszasz z raportem rynku. Gdy dopytuje o status — spokojnie: „ruszam z raportem, jak tylko zostawisz kontakt". Krótko, bez ponaglania.]`
         } else {
-          sessionContext += `\n\n[RAPORT JESZCZE SIĘ GENERUJE — TWARDA ZASADA. Odpowiedz MAKSYMALNIE jednym–dwoma zdaniami, że raport się liczy i poprosisz o moment (możesz lekko podtrzymać rozmowę). CAŁKOWITY ZAKAZ: pisania o rynku/konkurencji/cenach/odbiorcach/„dla kogo", cytowania JAKICHKOLWIEK wniosków „z raportu", używania nawiasów kwadratowych [ ] ani placeholderów typu [X z raportu]. NIE zaczynaj ustaleń — poczekaj, aż raport będzie gotowy.]`
+          sessionContext += `\n\n[RAPORT GENERUJE SIĘ W TLE (~2 MIN) — NIE ZOSTAWIAJ CISZY, WYKORZYSTAJ TEN CZAS. ZAANGAŻUJ rozmówcę w lekką, naturalną rozmowę, której odpowiedzi PRZYDADZĄ SIĘ później (do ustaleń „dla kogo", marki, strony sprzedażowej). Zadawaj PO JEDNYM pytaniu na turę i realnie reaguj na odpowiedź — np.: kogo widzi jako idealnego klienta tego produktu; co JEGO samego w nim przekonało / jaki problem rozwiązuje; jaki klimat/charakter marki mu pasuje (premium / energetyczny / ciepły / minimalistyczny…); czy ma już pomysł na nazwę albo skojarzenia. To zwykła, ciepła rozmowa — nie przesłuchanie i nie formularz.
+PODPOWIEDZI — OBOWIĄZKOWE PRZY KAŻDYM PYTANIU: pod treścią pytania, w NOWEJ linii, ZAWSZE wstaw marker <opcje>["odp 1","odp 2","odp 3"]</opcje> z 2-4 krótkimi, klikalnymi odpowiedziami DOPASOWANYMI do tego pytania — rozmówca ma móc kliknąć zamiast pisać. Mają realnie pomóc dopracować ustalenia, ale LEKKO: naturalne, ludzkie warianty oddające główne sensowne rozróżnienia, NIE drobiazgowe ani przesadnie precyzyjne. Rekomendację oznacz prefiksem ~. PRZYKŁAD: „kogo najbardziej widzisz z tym produktem?" → <opcje>["~Zwykły Kowalski do domu","Ktoś techniczny, gadżeciarz","Coś pomiędzy"]</opcje>. Pytanie ustaleń BEZ markera <opcje> jest błędem.
+TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurencji, cen ani „dla kogo wg danych"; NIE cytuj wniosków „z raportu"; NIE TWIERDŹ, że raport jest „gotowy"/„już powinien być gotowy"/skończony, dopóki nie zobaczysz go w kontekście (dostaniesz wtedy sekcję [RAPORT STRATEGICZNY — GOTOWY]) — po prostu prowadź lekką rozmowę, a gdy raport wskoczy, sam to zauważysz i wtedy go omówisz; nawiasów kwadratowych [ ] NIE używaj JAKO PLACEHOLDERÓW w widocznym tekście (np. [X z raportu]) — to NIE dotyczy markera <opcje>, który JEST wymagany. NIE wystawiaj markera <ustalenia> — FORMALNE ustalenia podsumujesz DOPIERO po gotowym raporcie, opierając je TAKŻE na tym, co teraz zebrałeś od rozmówcy.]`
         }
-        sessionContext += `\n\n${GATE_INSTRUCTION}`
+        // [Audyt kontekstu] MARKA + USTALENIA jako FAKT w ETAP2 — dotąd model ich tu NIE dostawał:
+        // mówił „Twój sklep" zamiast nazwy marki i pytał drugi raz „dla kogo to jest".
+        {
+          const _brand = (existingSession?.brand && typeof existingSession.brand === 'object' && !Array.isArray(existingSession.brand)) ? existingSession.brand as Record<string, unknown> : null
+          const _bn = _brand && typeof _brand.chosen_name === 'string' ? _brand.chosen_name : ''
+          if (_bn) sessionContext += `\n\n[MARKA — sklep nazywa się „${_bn}". Używaj TEJ nazwy zamiast „Twój sklep".]`
+          const _ustE = (existingSession?.ustalenia && typeof existingSession.ustalenia === 'object' && !Array.isArray(existingSession.ustalenia)) ? existingSession.ustalenia as Record<string, unknown> : null
+          if (_ustE && Object.keys(_ustE).length) sessionContext += `\n\n[USTALENIA (JUŻ ustalone — NIE pytaj o to ponownie, opieraj odpowiedzi na tym): ${JSON.stringify(_ustE).slice(0, 1000)}]`
+        }
+        // L5 — strażnik ścieżki: jawny etap środkowy + następna akcja usera (żeby AI nie gubił kierunku ani się nie cofał)
+        {
+          const _mk = Array.isArray(existingSession?.mockups) && (existingSession?.mockups as unknown[]).length > 0
+          const _style = !!existingSession?.chosen_style
+          const _ads = Array.isArray(existingSession?.session_ads) && (existingSession?.session_ads as unknown[]).length > 0
+          const _ust = !!existingSession?.ustalenia
+          let _stage = ''
+          if (_style && !_ads) _stage = '[ETAP ŚCIEŻKI: reklamy/sklep w toku — składają się automatycznie po wyborze stylu. Krótko potwierdź; NIE cofaj się do ustaleń/makiet.]'
+          else if (_mk && !_style) _stage = '[ETAP ŚCIEŻKI: makiety GOTOWE, czekasz aż rozmówca WYBIERZE styl w zakładce Makiety. Jeśli pyta „co dalej" lub się waha — skieruj go DO WYBORU stylu (kliknij makietę, którą czuje); dalsze etapy ruszają po wyborze. Nic nie generuj sam, nie wracaj do raportu.]'
+          else if (_ust && !_mk) _stage = '[ETAP ŚCIEŻKI: ustalenia domknięte; makiety są w drodze (przygotowują się w tle). Krótko i ciepło zapowiedz, że za chwilę pojawią się style sklepu do wyboru w zakładce „Makiety". Nic nie generuj sam — nie deklaruj twardo, że „już gotowe".]'
+          if (_stage) sessionContext += `\n\n${_stage}`
+        }
+        // #10: instrukcja ETAPU USTALENIA tylko gdy raport realnie wystartował/gotowy.
+        // Przy reportGated (raport wstrzymany) lub braku maila NIE doklejaj jej — inaczej
+        // kłóci się z [RAPORT WSTRZYMANY] (jedno każe „zrób ustalenia", drugie zakazuje).
+        if (!body.reportGated && effectiveEmail) sessionContext += `\n\n${GATE_INSTRUCTION}`
       }
       // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
@@ -1662,7 +1766,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           stream_options: { include_usage: true },
           max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
           messages: [
-            { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
+            { role: 'system', content: `${systemPrompt}\n\n${sessionContext}${narrativeWeaveTurn}` },
             ...messages,
           ],
         }),
@@ -1779,11 +1883,23 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                 if (dk || kt || tm) ust = { dla_kogo: dk, kat: kt, ton_marki: tm, nazwa: nz, ...(kz ? { korzysci: kz } : {}), _repaired: true }
               }
               if (ust) {
+                // Ustalenia pochodzą z ROZMOWY (dla_kogo/kąt/ton/nazwa/korzyści), nie z raportu —
+                // zapisuj ZAWSZE. Wcześniej guard wymagał gotowego market_report w `existingSession`
+                // (ładowanym na starcie requestu); gdy raport dopiął się równolegle albo brain wystawił
+                // <ustalenia> chwilę za wcześnie, ustalenia GINĘŁY na zawsze (NULL) → zakładka „Ustalenia"
+                // pokazywała placeholder, a makiety/landing szły z pustymi ustaleniami. Jeśli brain je
+                // później dopracuje, po prostu nadpisze. (Prompt i tak każe czekać na raport.)
                 await supabase.from('bud_sessions').update({ ustalenia: ust, updated_at: new Date().toISOString() }).eq('id', sessionId)
               } else {
                 console.error('[bud-chat] <ustalenia> nieparsowalne, surowe:', raw.slice(0, 300))
               }
             }
+          }
+          // ── ZIELONE ŚWIATŁO (/sklep) — model wydał pozytywny werdykt <zielone> ──
+          // Persist verdict='zielony' → kolejne tury wiedzą, że zielone już padło (gate kolejności
+          // <zielone>→rezerwacja w sessionContext) + panel widzi status.
+          if (/<zielone[\s/>]/.test(assistantText) && (existingSession?.verdict as string | null) !== 'zielony') {
+            try { await supabase.from('bud_sessions').update({ verdict: 'zielony', updated_at: new Date().toISOString() }).eq('id', sessionId) } catch (e) { console.error('[bud-chat] zapis verdict zielony:', e) }
           }
 
           // ── BRAMKA POTENCJAŁU (GA) ─────────────────────────────────────────
@@ -1805,7 +1921,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                     .eq('id', sessionId)
                   controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'gotowe', ocena: gateOcena })}\n\n`))
                   const second = await streamSecondCall(controller, encoder, OPENAI_API_KEY, OPENAI_MODEL, [
-                    { role: 'system', content: `${systemPrompt}\n\n${sessionContext}\n\n${buildSteerInstruction(gateOcena)}` },
+                    { role: 'system', content: `${systemPrompt}\n\n${sessionContext}\n\n${buildSteerInstruction(gateOcena)}${narrativeWeaveTurn}` },
                     ...messages,
                     { role: 'assistant', content: assistantText },
                     { role: 'user', content: '[SYSTEM] Wynik badania rynku gotowy — zareaguj zgodnie z instrukcją STEROWANIA.' },
