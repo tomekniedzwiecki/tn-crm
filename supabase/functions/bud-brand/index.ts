@@ -185,6 +185,66 @@ async function generateLogo(
   }
 }
 
+// ── H2: nazwy + sprawdzanie domen .pl + 3 logo ──────────────────────────────
+function slugifyPl(s: string): string {
+  const map: Record<string, string> = { 'ą': 'a', 'ć': 'c', 'ę': 'e', 'ł': 'l', 'ń': 'n', 'ó': 'o', 'ś': 's', 'ź': 'z', 'ż': 'z' }
+  return (s || '').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => map[c] || c).replace(/[^a-z0-9]/g, '').slice(0, 40)
+}
+// Wolna domena .pl: RDAP oficjalnego rejestru NASK (rdap.dns.pl) — 404 = WOLNA, 200 = ZAJĘTA.
+// RDAP łapie też domeny ZAPARKOWANE bez rekordów DNS (DoH przepuszczał je jako „wolne" — fałszywie).
+// Fallback na DoH (Cloudflare NS) tylko gdy RDAP odmówi (429/błąd), żeby nie stracić wszystkich checków.
+// Konserwatywnie: niepewne → zajęta (nie sugerujemy wątpliwych).
+async function plDomainFree(domain: string): Promise<boolean> {
+  try {
+    const r = await fetch('https://rdap.dns.pl/domain/' + encodeURIComponent(domain), { headers: { accept: 'application/rdap+json' } })
+    if (r.status === 404) return true
+    if (r.status === 200) return false
+    // 429 / inny status → fallback DoH niżej
+  } catch { /* sieć — fallback DoH */ }
+  try {
+    const r2 = await fetch('https://cloudflare-dns.com/dns-query?name=' + encodeURIComponent(domain) + '&type=NS', { headers: { accept: 'application/dns-json' } })
+    if (!r2.ok) return false
+    // deno-lint-ignore no-explicit-any
+    const d: any = await r2.json()
+    if (d.Status === 3) return true
+    return false
+  } catch { return false }
+}
+function brandCtx(ust: Record<string, unknown> | null, niche: string, brief: Record<string, unknown> | null): string {
+  const s = (v: unknown, m = 200) => (typeof v === 'string' ? v.slice(0, m) : '')
+  const parts: string[] = []
+  if (ust) {
+    if (s(ust.dla_kogo)) parts.push('Dla kogo: ' + s(ust.dla_kogo))
+    // deno-lint-ignore no-explicit-any
+    if (s(ust.kat) || s((ust as any)['kąt'])) parts.push('Kąt: ' + (s(ust.kat) || s((ust as any)['kąt'])))
+    if (s(ust.ton_marki) || s(ust.ton)) parts.push('Ton: ' + (s(ust.ton_marki) || s(ust.ton)))
+    if (Array.isArray(ust.korzysci)) parts.push('Korzyści: ' + (ust.korzysci as unknown[]).slice(0, 4).join('; '))
+  }
+  if (niche) parts.push('Nisza/produkt: ' + niche.slice(0, 160))
+  if (brief && s(brief.produkt)) parts.push('Produkt: ' + s(brief.produkt))
+  return parts.join('\n')
+}
+async function genNameCandidates(apiKey: string, ctx: string, n: number): Promise<string[]> {
+  const prompt = 'Jesteś namingowcem marek e-commerce (rynek PL). Zaproponuj ' + n + ' KRÓTKICH nazw marki jednoproduktowego sklepu. ZASADY: 1-2 słowa, MAX 12 znaków, łatwe do wymówienia i zapamiętania, brandowalne i dobrze wyglądające w domenie .pl, sugerują kategorię/emocję produktu. Mix: część polskich (bezpośrednie, fachowe), część krótkich nowoczesnych w stylu DTC (premium, neutralne). ZAKAZ: generycznych shop/store/sklep, nazw znanych marek, anglicyzmów-wypełniaczy. KONTEKST:\n' + ctx + '\nZwróć WYŁĄCZNIE JSON: {"nazwy":["...", ...]}'
+  // deno-lint-ignore no-explicit-any
+  const payload: any = { model: OPENAI_MODEL, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 1600 }
+  if (/^gpt-5/.test(OPENAI_MODEL)) payload.reasoning_effort = 'low'
+  const res = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(payload) })
+  if (!res.ok) return []
+  const data = await res.json().catch(() => null)
+  try { const o = JSON.parse(data?.choices?.[0]?.message?.content || '{}'); return Array.isArray(o.nazwy) ? o.nazwy.filter((x: unknown) => typeof x === 'string').map((x: string) => x.trim()).filter(Boolean) : [] } catch { return [] }
+}
+function logoPromptVariant(name: string, ctx: string, variant: number): string {
+  const styles = [
+    'minimalistyczny wektorowy sygnet, czyste linie, nowoczesny',
+    'elegancki geometryczny sygnet, premium, wyrazisty',
+    'przyjazny, zaokrąglony sygnet z prostym symbolem, ciepły charakter',
+  ]
+  // UKŁAD OBOWIĄZKOWY: sygnet po LEWEJ, nazwa po PRAWEJ, jedna linia (poziomy lockup) — bo trafia do
+  // nagłówka sklepu. Nigdy sygnet nad nazwą ani w innym miejscu.
+  return `Profesjonalne, POZIOME LOGO marki e-commerce „${name}" do nagłówka sklepu. UKŁAD OBOWIĄZKOWY: SYGNET (ikona/symbol) po LEWEJ stronie, a NAZWA „${name}" po PRAWEJ, w JEDNEJ linii (poziomy lockup, jak logo w headerze) — NIGDY sygnet nad nazwą, pod nazwą ani w innym miejscu. Sygnet: ${styles[variant % 3]}, ale PRZEDE WSZYSTKIM oddaj STYL i KIERUNEK marki z kontekstu niżej — symbol i krój pisma mają pasować do TEJ konkretnej marki (premium = elegancko i oszczędnie; energetyczny/viralowy = odważnie i dynamicznie; ciepły/organiczny = miękko i przyjaźnie; techniczny = geometrycznie i ostro). Jednolite, bardzo jasne/białe tło, równy margines wokół. Nazwa „${name}" zapisana DOKŁADNIE tak, bezbłędnie (z polskimi znakami jeśli są), krojem dopasowanym do charakteru marki, wyrównana w pionie do środka sygnetu. KIERUNEK MARKI (dopasuj sygnet i typografię do tego): ${ctx.slice(0, 400)}. Pixel-perfect, ostre krawędzie, wektorowy charakter, bez efektu zdjęcia, bez znaków wodnych, bez obcych logotypów, bez dodatkowego tekstu poza nazwą.`
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get('origin'))
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -205,7 +265,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, niche, preview_brief, problem_summary, brand, track, auth_user_id')
+      .select('id, niche, preview_brief, problem_summary, brand, track, auth_user_id, ustalenia, ip')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) { console.error('[bud-brand] session fetch error:', sErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
@@ -226,6 +286,110 @@ Deno.serve(async (req) => {
       ? session.problem_summary as Record<string, unknown> : null
     const niche = typeof session.niche === 'string' ? session.niche : ''
     const track = typeof session.track === 'string' ? session.track : ''
+
+    // ── H2: akcje nazwy/logo (osobny tor od pełnej marki) ──────────────────────
+    // deno-lint-ignore no-explicit-any
+    const action = typeof (body as any).action === 'string' ? (body as any).action : ''
+    if (action === 'names' || action === 'logos' || action === 'pick') {
+      const ust = (session.ustalenia && typeof session.ustalenia === 'object' && !Array.isArray(session.ustalenia)) ? session.ustalenia as Record<string, unknown> : null
+      // deno-lint-ignore no-explicit-any
+      const _prod: any = ((body as any).product && typeof (body as any).product === 'object') ? (body as any).product : null
+      const ctx = [brandCtx(ust, niche, brief), (_prod && _prod.name) ? ('Produkt: ' + String(_prod.name).slice(0, 120) + (_prod.category ? ' (kategoria: ' + String(_prod.category).slice(0, 60) + ')' : '')) : ''].filter(Boolean).join('\n')
+      const existingBrand = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand as Record<string, unknown> : null
+      // deno-lint-ignore no-explicit-any
+      const b = body as any
+
+      // ── CAPY anty-nadużycie (tylko płatne akcje; pick jest bezkosztowe → bez capa).
+      //    names = 24× RDAP + 1× OpenAI; logos = 3× gpt-image-2. Te ścieżki returnują
+      //    PRZED lockiem marki (l.~360), więc bez capa „reload/regeneruj" pali realny
+      //    koszt. Sprawdzane PRZED generacją. Admin (x-admin-secret) omija. Fail-open.
+      if (action === 'names' || action === 'logos') {
+        const isAdmin = !!CRON_SECRET && req.headers.get('x-admin-secret') === CRON_SECRET
+        if (!isAdmin) {
+          // deno-lint-ignore no-explicit-any
+          const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+            || (typeof (session as any).ip === 'string' ? (session as any).ip : null)
+          const kind = action === 'logos' ? 'image' : 'brand-names'
+          const fromMeta = action === 'logos' ? 'bud-brand/logos' : 'bud-brand/names'
+          const sessionMax = action === 'logos'
+            ? parseInt(Deno.env.get('BUD_BRAND_LOGOS_PER_SESSION') || '6', 10)
+            : parseInt(Deno.env.get('BUD_BRAND_NAMES_PER_SESSION') || '8', 10)
+          const ipMax = action === 'logos'
+            ? parseInt(Deno.env.get('BUD_BRAND_LOGOS_IP_DAILY') || '12', 10)
+            : parseInt(Deno.env.get('BUD_BRAND_NAMES_IP_DAILY') || '20', 10)
+          // (a) cap per sesja — marker: logos=image/bud-brand/logos, names=brand-names/bud-brand/names
+          const { count: sessCount, error: sessErr } = await supabase
+            .from('bud_usage').select('id', { count: 'exact', head: true })
+            .eq('session_id', sessionId).eq('kind', kind).eq('meta->>from', fromMeta)
+          if (sessErr) { console.error('[bud-brand] session cap error (fail-open):', sessErr) }
+          else if ((sessCount ?? 0) >= sessionMax) {
+            return jsonResponse({ error: action === 'logos' ? 'limit_logo' : 'limit_nazw' }, 429, cors)
+          }
+          // (b) dzienny cap per IP (wzorzec bud-landing/bud-mockup) — fail-open na braku IP/błędzie
+          if (ip) {
+            const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+            const { data: ipSessions, error: ipSessErr } = await supabase
+              .from('bud_sessions').select('id').eq('ip', ip)
+            if (ipSessErr) { console.error('[bud-brand] ip sessions error (fail-open):', ipSessErr) }
+            else if (ipSessions && ipSessions.length) {
+              const { count: ipCount, error: ipErr } = await supabase
+                .from('bud_usage').select('id', { count: 'exact', head: true })
+                .eq('kind', kind).eq('meta->>from', fromMeta)
+                .in('session_id', ipSessions.map((r) => r.id)).gte('created_at', dayAgo)
+              if (ipErr) { console.error('[bud-brand] ip usage error (fail-open):', ipErr) }
+              else if ((ipCount ?? 0) >= ipMax) {
+                return jsonResponse({ error: action === 'logos' ? 'limit_logo_dzienny' : 'limit_nazw_dzienny' }, 429, cors)
+              }
+            }
+          } else { console.warn('[bud-brand] brak IP do capa dziennego — fail-open') }
+        }
+      }
+
+      if (action === 'names') {
+        // Większa pula kandydatów (jak w procedurze brandingu) → więcej szans na 5 z WOLNĄ domeną wg RDAP.
+        const cands = await genNameCandidates(OPENAI_API_KEY, ctx || niche || 'sklep z produktem fizycznym', 24)
+        const seen = new Set<string>()
+        const out: Array<{ name: string; domain: string; available: boolean }> = []
+        for (const nm of cands) {
+          const slug = slugifyPl(nm); if (!slug || slug.length < 3 || seen.has(slug)) continue; seen.add(slug)
+          const free = await plDomainFree(slug + '.pl')
+          await new Promise((r) => setTimeout(r, 110))   // łagodnie dla RDAP/NASK (anty-429)
+          if (free) out.push({ name: nm, domain: slug + '.pl', available: true })
+          if (out.length >= 5) break
+        }
+        if (out.length < 5) {
+          // awaryjnie dopełnij do 5 (gdyby RDAP masowo odmawiał) — oznaczone available:false
+          for (const nm of cands) {
+            const slug = slugifyPl(nm); if (!slug || slug.length < 3) continue
+            if (out.some((o) => o.domain === slug + '.pl')) continue
+            out.push({ name: nm, domain: slug + '.pl', available: false })
+            if (out.length >= 5) break
+          }
+        }
+        await supabase.from('bud_sessions').update({ brand: { ...(existingBrand || {}), names: out }, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'brand-names', model: 'rdap+gpt', cost_usd: 0, meta: { from: 'bud-brand/names' } }) } catch { /* marker capa nazw */ }
+        return jsonResponse({ names: out }, 200, cors)
+      }
+
+      if (action === 'logos') {
+        const name = String(b.name || '').trim().slice(0, 80)
+        if (!name) return jsonResponse({ error: 'brak_nazwy' }, 400, cors)
+        const domain = String(b.domain || (slugifyPl(name) + '.pl')).slice(0, 120)
+        const logos = (await Promise.all([0, 1, 2].map((v) => generateLogo(SUPABASE_URL, SERVICE_KEY, CRON_SECRET, logoPromptVariant(name, ctx, v))))).filter((u): u is string => !!u)
+        try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', model: 'gpt-image-2', images: logos.length, cost_usd: 0.041 * logos.length, meta: { view: 'logo', from: 'bud-brand/logos' } }) } catch { /* */ }
+        await supabase.from('bud_sessions').update({ brand: { ...(existingBrand || {}), chosen_name: name, nazwa: name, chosen_domain: domain, logos }, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        return jsonResponse({ logos, name, domain }, 200, cors)
+      }
+
+      // action === 'pick'
+      const logoUrl = String(b.logo_url || '').slice(0, 600)
+      const merged: Record<string, unknown> = { ...(existingBrand || {}) }
+      if (logoUrl) { merged.chosen_logo = logoUrl; merged.logo_url = logoUrl }
+      if (b.name) { merged.chosen_name = String(b.name).slice(0, 80); merged.nazwa = String(b.name).slice(0, 80) }
+      if (b.domain) merged.chosen_domain = String(b.domain).slice(0, 120)
+      await supabase.from('bud_sessions').update({ brand: merged, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      return jsonResponse({ ok: true, brand: merged }, 200, cors)
+    }
 
     if (!niche && !brief && !karta) {
       // Bez żadnego kontekstu produktu nie ma z czego budować marki

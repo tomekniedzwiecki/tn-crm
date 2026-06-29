@@ -10,6 +10,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { verifyAuthUser, ownerDenied } from "../_shared/bud-owner.ts";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
+import { productRefs } from "../_shared/bud-refs.ts";
 
 const ALLOWED_ORIGINS = ['https://tomekniedzwiecki.pl', 'https://www.tomekniedzwiecki.pl', 'http://localhost:3000', 'http://localhost:5500', 'http://127.0.0.1:5500'];
 function cors(origin: string | null): Record<string, string> {
@@ -18,6 +19,12 @@ function cors(origin: string | null): Record<string, string> {
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MODEL = Deno.env.get('BUD_OPENAI_MODEL') || 'gpt-5.1';
+// Anty-nadużycie kosztowe (wzorzec bud-landing): każda generacja = 4× gpt-image-2
+// (~0.16 USD) + dobór stylów gpt-5.1. force=true regeneruje → MUSI podlegać capom,
+// inaczej pętla „regeneruj" pali realny koszt. Liczymy z bud_usage (kind='mockup',
+// meta.from='mockup-styles' — dokładnie 1 wpis na próbę generacji).
+const MAX_MOCKUPS_PER_SESSION = parseInt(Deno.env.get('BUD_MOCKUP_MAX_PER_SESSION') || '6', 10);
+const MAX_MOCKUPS_PER_IP_PER_DAY = parseInt(Deno.env.get('BUD_MOCKUP_IP_DAILY') || '12', 10);
 function json(b: Record<string, unknown>, s: number, c: Record<string, string>): Response {
   return new Response(JSON.stringify(b), { status: s, headers: { ...c, 'Content-Type': 'application/json' } });
 }
@@ -55,20 +62,55 @@ Dla każdego stylu zwróć:
 Zwróć WYŁĄCZNIE JSON: {"styles":[{"key":"...","label":"...","brief":"..."}, ...4 sztuki]}`;
 }
 
+// Zwięzły blok kontekstu z raportu rynku — OPCJONALNY (stare sesje bez raportu działają jak dotąd).
+// Etap MAKIETY: ukierunkowuje dobór stylu/komunikatów wg avatara + pozycjonowania marki (+ lead).
 // deno-lint-ignore no-explicit-any
-function imagePrompt(product: any, snap: any, ust: any, brief: string): string {
+function reportContext(report: any): string {
+  if (!report || typeof report !== 'object') return '';
+  const lead = String(report?.lead || '').slice(0, 300);
+  const sekcje = Array.isArray(report?.sekcje) ? report.sekcje : [];
+  // NAJBARDZIEJ istotne dla makiety: avatar (styl/estetyka) + marka/pozycjonowanie (ton, charakter)
+  const wanted = ['Grupa docelowa', 'Marka i pozycjonowanie'];
+  // deno-lint-ignore no-explicit-any
+  const pick = (s: any) => {
+    const t = String(s?.tytul || '');
+    return wanted.some((w) => t.startsWith(w));
+  };
+  const parts: string[] = [];
+  if (lead) parts.push(`Hook: ${lead}`);
+  for (const s of sekcje) {
+    if (!pick(s)) continue;
+    // tytuł + treść tekstowa sekcji (bez wymuszania konkretnego pola — bierzemy stringowe wartości)
+    const tytul = String(s?.tytul || '').slice(0, 80);
+    // deno-lint-ignore no-explicit-any
+    const tresc = Object.entries(s as Record<string, any>)
+      .filter(([k, v]) => k !== 'tytul' && typeof v === 'string' && v.trim())
+      .map(([, v]) => String(v))
+      .join(' ')
+      .slice(0, 500);
+    if (tytul) parts.push(`${tytul}: ${tresc}`.trim());
+  }
+  if (!parts.length) return '';
+  const block = parts.join('\n').slice(0, 2000);
+  return `\n\n[KONTEKST Z RAPORTU RYNKU — wykorzystaj, gdzie pomaga: dopasuj ton, estetykę i obietnicę makiety do tego avatara i pozycjonowania (NIE wypisuj raportu w makiecie):\n${block}]`;
+}
+
+// deno-lint-ignore no-explicit-any
+function imagePrompt(product: any, snap: any, ust: any, brief: string, brandName = '', report: any = null): string {
   const name = String(product?.name || product?.nazwa || snap?.title || 'produkt').slice(0, 120);
   const dla = String(ust?.dla_kogo || '').slice(0, 160);
-  return `Realistic VERTICAL (portrait) mockup of a HIGH-CONVERTING one-product e-commerce landing page (US DTC style) for the product in the reference image. Website design preview to show a client "this is how your store could look".
+  const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 160);
+  const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120);
+  return `Realistic VERTICAL (portrait) mockup of a HIGH-CONVERTING, BRAND-BUILDING one-product e-commerce landing page (US DTC style, 2025) for the product in the reference images. Website design preview to show a client "this is how your store could look".
 
-Product: ${name}.${dla ? ` Target customer: ${dla}.` : ''}
+Product: ${name}.${dla ? ` Target customer: ${dla}.` : ''}${kat ? ` Angle/wyróżnik: ${kat}.` : ''}${ton ? ` Brand tone: ${ton}.` : ''}${brandName ? ` Brand name: ${brandName} — show it as the store name/logo in the header.` : ''}
 Visual style for THIS mockup: ${brief}
 
-CRITICAL: the product shown MUST faithfully match the reference image (same object, shape, color, set). Render the ACTUAL product, not a generic stand-in.
+CRITICAL: the product shown MUST faithfully match the reference images (same object, shape, color, set). Render the ACTUAL product, not a generic stand-in.
 
-Layout top-to-bottom (conversion-optimized): 1) HERO — large product shot IN USE + benefit-led Polish headline (not the product name) + 1-line subtitle + ONE high-contrast CTA button "Kup teraz" + price + ★★★★★ rating with review count; 2) social-proof strip (stars, liczba opinii, „viralowy hit z TikToka"); 3) trust bar (płatność przy odbiorze · 14 dni na zwrot · bezpieczna płatność); 4) 3 BENEFITS with icons (benefit-led); 5) product in use / lifestyle; 6) customer REVIEWS with stars + avatars; 7) guarantee / risk-reversal block with a badge/seal; 8) final CTA with price. Suggest a sticky bottom bar with price + "Kup teraz".
+Sections top→bottom (conversion-optimized, mobile): 1) announcement bar (płatność przy odbiorze · 14 dni na zwrot); 2) header with brand name/logo + one CTA; 3) HERO — large product-in-use shot + benefit-led Polish headline (what it DOES, not the product name) + 1-line subtitle + ONE high-contrast CTA "Kup teraz" + price + ★★★★★; 4) trust strip (płatność przy odbiorze · 14 dni na zwrot · bezpieczna płatność · „hit z TikToka"); 5) „as seen on TikTok" social proof; 6) problem→solution; 7) how-it-works 3 steps; 8) 3-4 icon BENEFITS (ordered by the angle); 9) lifestyle/demo photo; 10) comparison table (nasza marka ✓ vs „zwykłe rozwiązanie" ✗); 11) short BRAND STORY (why it was created); 12) customer REVIEWS with stars + avatars; 13) guarantee/risk-reversal with a seal badge; 14) FAQ; 15) final CTA with price; plus a sticky bottom bar (price + „Kup teraz").
 
-Polish texts. Realistic, premium interface (NOT a placeholder template). One consistent palette and typography per the style above; the CTA button must visually pop (high contrast). No foreign brand logos, no fake countdown timers. High quality, sharp, crisp UI.`;
+Polish texts. Realistic, premium interface (NOT a placeholder template). ONE consistent palette and max 2 fonts per the style/tone above; brand name/logo consistent in the header; the CTA button must visually pop (high contrast). No foreign brand logos, no fake countdown timers, no invented review counts. High quality, sharp, crisp UI.${reportContext(report)}`;
 }
 
 Deno.serve(async (req) => {
@@ -86,11 +128,17 @@ Deno.serve(async (req) => {
     const sessionId = (body.sessionId || '').trim();
     if (!sessionId || !UUID_RE.test(sessionId)) return json({ error: 'nieprawidlowa_sesja' }, 400, c);
 
+    // Admin/cron (nagłówek x-admin-secret == SPAR_CRON_SECRET) omija owner-gate i capy
+    // — rerolle z panelu / wewnętrzne wywołania. Pusty CRON nigdy nie autoryzuje.
+    const isAdmin = !!CRON && req.headers.get('x-admin-secret') === CRON;
+
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
-    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, mockups').eq('id', sessionId).maybeSingle();
+    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, mockups, brand, market_report, ip').eq('id', sessionId).maybeSingle();
     if (!session) return json({ error: 'nieprawidlowa_sesja' }, 404, c);
-    const authUser = await verifyAuthUser(req, supabase);
-    if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c);
+    if (!isAdmin) {
+      const authUser = await verifyAuthUser(req, supabase);
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c);
+    }
 
     // deno-lint-ignore no-explicit-any
     const product: any = (body.product && typeof body.product === 'object') ? body.product : null;
@@ -98,8 +146,62 @@ Deno.serve(async (req) => {
 
     // CACHE per-sesja — komplet 4 makiet gotowy.
     const existing = Array.isArray(session.mockups) ? session.mockups : null;
-    if (!body.force && existing && existing.length >= 4 && existing.every((m: any) => m && m.url)) {
+    // FIX: oddaj cząstkowe (>=3) zamiast wymagać kompletu 4 — gdy 1 obraz padł, nie blokuj
+    // frontu na 6 min (lock TTL). Picker działa z 3 stylami; brakujący 4. nie wstrzymuje lejka.
+    if (!body.force && existing && existing.length >= 3 && existing.every((m: any) => m && m.url)) {
       return json({ mockups: existing, cached: true }, 200, c);
+    }
+
+    // ── CAPY anty-nadużycie (admin omija). Sprawdzane PRZED lockiem i generacją;
+    //    force=true też tu trafia (cache zwrócił już wyżej), więc „regeneruj" w pętli
+    //    podlega capowi. Fail-open na błędzie zapytania — nie blokuj legalnego usera.
+    if (!isAdmin) {
+      // (a) cap generacji per sesja. Marker = wpis kosztu OBRAZÓW
+      //     bud_usage(kind='image', meta.from='bud-mockup') — DOKŁADNIE 1 na batch,
+      //     niezależnie od tego czy style poszły z API czy z fallbacku (to ten sam
+      //     genTask). Wybrany zamiast 'mockup-styles', bo ścieżka fallback stylów
+      //     NIE loguje 'mockup-styles', a i tak pali 4× gpt-image-2.
+      const { count: sessCount, error: sessErr } = await supabase
+        .from('bud_usage')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .eq('kind', 'image')
+        .eq('meta->>from', 'bud-mockup');
+      if (sessErr) {
+        console.error('[bud-mockup] session cap count error (fail-open):', sessErr);
+      } else if ((sessCount ?? 0) >= MAX_MOCKUPS_PER_SESSION) {
+        return json({ error: 'limit_makiet' }, 429, c);
+      }
+
+      // (b) dzienny cap per IP — makiety z 24 h po wszystkich sesjach tego IP
+      //     (wzorzec bud-landing; liczone z bud_usage.created_at). Brak IP/tabeli → fail-open.
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || (typeof session.ip === 'string' ? session.ip : null);
+      if (ip) {
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+        const { data: ipSessions, error: ipSessErr } = await supabase
+          .from('bud_sessions')
+          .select('id')
+          .eq('ip', ip);
+        if (ipSessErr) {
+          console.error('[bud-mockup] ip sessions query error (fail-open):', ipSessErr);
+        } else if (ipSessions && ipSessions.length) {
+          const { count: ipCount, error: ipUsageErr } = await supabase
+            .from('bud_usage')
+            .select('id', { count: 'exact', head: true })
+            .eq('kind', 'image')
+            .eq('meta->>from', 'bud-mockup')
+            .in('session_id', ipSessions.map((r) => r.id))
+            .gte('created_at', dayAgo);
+          if (ipUsageErr) {
+            console.error('[bud-mockup] ip usage count error (fail-open):', ipUsageErr);
+          } else if ((ipCount ?? 0) >= MAX_MOCKUPS_PER_IP_PER_DAY) {
+            return json({ error: 'limit_makiet_dzienny' }, 429, c);
+          }
+        }
+      } else {
+        console.warn('[bud-mockup] brak IP do capa dziennego — fail-open');
+      }
     }
 
     const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'mockups', p_ttl_sec: 360 });
@@ -114,8 +216,14 @@ Deno.serve(async (req) => {
         snap = (row && row.ali_snapshot) || null;
       }
     } catch { /* */ }
-    const refUrl = String((snap && (snap as any).main_image) || product.image || product.cover || '').trim();
+    // FIX: galeria AliExpress jako reference_images type:'product' (kilka kadrów) — zamiast pojedynczego
+    // main_image traktowanego przez legacy `reference_image_url` jako LOGO (→ generował zły produkt).
+    const refs = productRefs(snap, product, 4);
     const ust = session.ustalenia || {};
+    const brandObj = (session.brand && typeof session.brand === 'object') ? session.brand as Record<string, unknown> : null;
+    const brandName = String((brandObj?.chosen_name as string) || (brandObj?.nazwa as string) || '').slice(0, 60);
+    // Raport rynku (OPCJONALNY) — ukierunkowuje styl/komunikaty makiety (avatar + pozycjonowanie).
+    const marketReport = (session.market_report && typeof session.market_report === 'object') ? session.market_report : null;
 
     const genTask = (async () => {
       try {
@@ -127,6 +235,8 @@ Deno.serve(async (req) => {
             body: JSON.stringify({ model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: stylesPrompt(product, snap, ust) }] }),
           }, 'bud-mockup/styles');
           const d = await r.json();
+          // KOSZT: dobór stylów (gpt-5.1) — dotąd nie logowany
+          try { const u = d?.usage || {}; const inT = u.prompt_tokens || 0, cT = (u.prompt_tokens_details?.cached_tokens) || 0, oT = u.completion_tokens || 0; await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'mockup', model: MODEL, input_tokens: inT, cached_tokens: cT, output_tokens: oT, cost_usd: (Math.max(0, inT - cT) * 1.25 + cT * 0.125 + oT * 10) / 1_000_000, meta: { from: 'mockup-styles' } }); } catch (_) { /* log nie blokuje */ }
           const txt = d?.choices?.[0]?.message?.content || '{}';
           const parsed = JSON.parse(txt);
           styles = Array.isArray(parsed.styles) ? parsed.styles.slice(0, 4) : [];
@@ -148,7 +258,7 @@ Deno.serve(async (req) => {
         const settled = await Promise.allSettled(styles.map(async (st) => {
           const r = await fetchTimeout(`${SUPABASE_URL}/functions/v1/generate-image`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
-            body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refUrl ? { reference_image_url: refUrl } : {}) }),
+            body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief, brandName, marketReport), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refs.length ? { reference_images: refs } : {}) }),
           }, 110_000);
           if (!r.ok) throw new Error(`gen HTTP ${r.status}`);
           const d = await r.json().catch(() => null);
@@ -159,10 +269,16 @@ Deno.serve(async (req) => {
         const mockups = settled
           .map((s, i) => { if (s.status === 'fulfilled') return s.value; console.error('[bud-mockup] obraz padł', styles[i]?.key, String(s.reason).slice(0, 120)); return null; })
           .filter(Boolean);
+        // KOSZT: obrazy makiet (gpt-image-2 medium = 0.041 USD/obraz) — dotąd nie logowane
+        try { if (mockups.length) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: mockups.length, cost_usd: 0.041 * mockups.length, meta: { view: 'mockup', quality: 'medium', from: 'bud-mockup' } }); } catch (_) { /* log nie blokuje */ }
         if (mockups.length) {
           // Zapis nawet gdy <4 — front pokaże to, co się udało (lepsze niż czekanie 6 min na komplet).
           await supabase.from('bud_sessions').update({ mockups }).eq('id', sessionId);
-          if (mockups.length < 4) console.warn('[bud-mockup] zapisano cząstkowo:', mockups.length, '/ 4');
+          if (mockups.length < 4) {
+            console.warn('[bud-mockup] zapisano cząstkowo:', mockups.length, '/ 4');
+            // FIX: zwolnij lock przy partialu, by force-retry mógł dopełnić do 4 (nie czekać na TTL 360s)
+            try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'mockups' }); } catch { /* */ }
+          }
         } else {
           console.error('[bud-mockup] 0 makiet — żaden obraz się nie wygenerował (front pokaże retry po timeoucie)');
         }

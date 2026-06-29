@@ -136,7 +136,7 @@ Deno.serve(async (req) => {
     // budowa → bez workflow CRM). Webhook tpay oznaczy paid → conversations +1.
     if (action === 'buy_conversation') {
       if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
-      const CONVO_OFFER_ID = '2a1fbbfe-32fe-4aa3-9f96-3a812da103d4'
+      const CONVO_OFFER_ID = '45869096-210c-468a-8333-23f998514afa'   // „Twój sklep online — kolejna rozmowa" (49 zł) — dedykowana /sklep
       const { data: offer, error: offErr } = await supabase
         .from('offers').select('id, name, price').eq('id', CONVO_OFFER_ID).maybeSingle()
       if (offErr || !offer) {
@@ -152,6 +152,7 @@ Deno.serve(async (req) => {
           // STAŁY opis — MUSI być identyczny z CONVO_DESCRIPTION w action 'conversations' (liczenie limitu).
           // NIE offer.name: zmiana nazwy oferty w DB rozspójniłaby liczenie (user płaci, a limit nie rośnie).
           description: CONVO_DESCRIPTION,
+          offer_id: CONVO_OFFER_ID,   // walidacja kwoty w tpay-create (amount == cena oferty)
           amount: offer.price,
           status: 'pending',
           payment_source: 'tpay',
@@ -174,6 +175,7 @@ Deno.serve(async (req) => {
         .from('bud_sessions')
         .select('id, profession, verdict, status, turns, created_at, updated_at, preview_brief, preview_images')
         .eq('auth_user_id', authUser.id)
+        .is('archived_at', null)   // pomiń rozmowy usunięte przez usera (soft-delete)
         .order('updated_at', { ascending: false, nullsFirst: false })
         .limit(MAX_LIST_SESSIONS)
       if (listErr) {
@@ -201,9 +203,24 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
     }
 
+    // ── action 'delete': soft-delete rozmowy KONTA (znika z listy „Twoje projekty",
+    //    dane zostają w bazie). Owner-gate: tylko właściciel (auth_user_id). MUSI być
+    //    PRZED fetchem projektu — puste „Rozmowa bez nazwy" (brak projektu) inaczej
+    //    dostają 404 z guardu niżej i nie dałoby się ich usunąć. ──────────────────
+    if (action === 'delete') {
+      if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
+      const { error: delErr } = await supabase
+        .from('bud_sessions')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', sessionId)
+        .eq('auth_user_id', authUser.id)
+      if (delErr) { console.error('[bud-project] delete error:', delErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -211,9 +228,37 @@ Deno.serve(async (req) => {
       console.error('[bud-project] session fetch error:', sErr)
       return jsonResponse({ error: 'blad_serwera' }, 500, cors)
     }
-    // Panel istnieje tylko dla sesji, w których jest już projekt (karta lub brief)
-    if (!session || (!session.problem_summary && !session.preview_brief)) {
+    // Panel istnieje, gdy jest już projekt (stary flow: karta/brief) LUB nowy pipeline
+    // /sklep ruszył (raport / ustalenia / makiety) — inaczej 404.
+    if (!session) {
+      return jsonResponse({ error: 'brak_sesji' }, 404, cors)
+    }
+    // Sesja istnieje, ale jeszcze bez artefaktów (świeży wybór / raport się dopiero liczy):
+    // dla 'get' (sync panelu pollowany co ~25s w trakcie generacji) zwróć PUSTY projekt 200
+    // zamiast 404 — front i tak pollinguje, a 404 zaśmiecał konsolę i wyglądał jak błąd.
+    // Dla pozostałych akcji (panel z treścią) zachowaj 404 brak_projektu.
+    if (!session.problem_summary && !session.preview_brief && !session.market_report && !session.ustalenia && !session.mockups) {
+      if (action === 'get') {
+        return jsonResponse({ projekt: null, feedback: [], wspolpraca: [], historia: null, wlasciciel: !!(authUser && session.auth_user_id && authUser.id === session.auth_user_id) }, 200, cors)
+      }
       return jsonResponse({ error: 'brak_projektu' }, 404, cors)
+    }
+
+    // ── action 'reset_pipeline': PIVOT produktu — czyść artefakty sesji, żeby NOWY
+    //    produkt regenerował od zera (bez tego cache sesji zwraca raport/makiety/landing
+    //    STAREGO produktu → user dostaje raport nie tego produktu). Owner-gate: sesja
+    //    przypięta do konta wymaga właściciela; anonimowa — po sessionId.
+    if (action === 'reset_pipeline') {
+      if (session.auth_user_id && (!authUser || authUser.id !== session.auth_user_id)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+      await supabase.from('bud_sessions').update({
+        market_report: null, ustalenia: null, mockups: null, session_ads: null,
+        landing_html: null, landing_url: null, chosen_style: null, verdict: null,
+        seen_landing_at: null, updated_at: new Date().toISOString(),
+      }).eq('id', sessionId)
+      await supabase.from('bud_reveals').delete().eq('session_id', sessionId)
+      return jsonResponse({ ok: true }, 200, cors)
     }
 
     // ── action 'public': READ-ONLY podgląd dla galerii inspiracji — ZERO PII ──
@@ -474,6 +519,13 @@ Deno.serve(async (req) => {
         reveals: revealsMap,
         imie: firstName,
         created_at: session.created_at,
+        // Pipeline /sklep (nowy flow): ustalenia + makiety + reklamy + landing per-sesja
+        ustalenia: session.ustalenia || null,
+        chosen_style: session.chosen_style || null,
+        mockups: session.mockups || null,
+        session_ads: session.session_ads || null,
+        landing_html: session.landing_html || null,
+        brand: session.brand || null,
       },
       feedback: feedback || [],
       wspolpraca: collabMessages || [],

@@ -42,6 +42,11 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 3
+// Dzienny cap per IP — raport to NAJDROŻSZA generacja (gpt-5.5 + web_search),
+// więc bez tego limitu ktoś w pętli (force=true / wiele sesji z jednego IP)
+// pali realny budżet OpenAI. Liczone z bud_usage po sesjach tego IP w 24 h
+// (wzorzec bud-landing/bud-image). Default 5/dobę/IP.
+const MAX_RAPORTS_PER_IP_PER_DAY = parseInt(Deno.env.get('BUD_RAPORT_IP_DAILY') || '5', 10)
 const OPENAI_MODEL = Deno.env.get('BUD_RAPORT_MODEL') || Deno.env.get('BUD_OPENAI_MODEL') || 'gpt-5.5'
 const MAX_OUTPUT_TOKENS = 14000
 // $10 / 1000 wywołań web_search (doliczane do kosztu tokenów)
@@ -55,7 +60,7 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
 }
 
 // deno-lint-ignore no-explicit-any
-function buildRaportPrompt(product: any, recipient: string): string {
+function buildRaportPrompt(product: any, recipient: string, aliData = ''): string {
   const s = (v: unknown, max = 200) => (typeof v === 'string' ? v.slice(0, max) : '')
   const n = (v: unknown) => Number(v) || 0
   const name = s(product?.nazwa ?? product?.name, 160) || 'produkt'
@@ -74,7 +79,7 @@ PRODUKT:
 - Kategoria: ${cat || 'do ustalenia z analizy'}
 - Dowód popytu: to aktualny HIT na TikToku${sig ? ` (${sig})` : ''} — ludzie już masowo reagują, więc popyt jest realny (research ma potwierdzić skalę, nie zaczynać od zera).
 ${link ? `- Referencja produktu (analiza cech, ceny, wariantów): ${link}` : ''}
-
+${aliData ? `\nDANE PRODUKTU — REALNE, z aukcji źródłowej (OPIERAJ na nich sekcje 2 „czułe punkty", 3 „avatar/język klienta" i 6 „zestawy/upsell"; web_search użyj TYLKO do cen rynkowych i konkurencji w PL, NIE do zgadywania cech/popytu, które JUŻ masz poniżej):\n${aliData}\n` : ''}
 KONTEKST BIZNESOWY (wpleć w strategię — to realny plan działania):
 - Start: dropshipping z AliExpress (pierwsze zamówienia, walidacja oferty bez ryzyka magazynu).
 - Docelowo: import przez agenta w Chinach z PEŁNYM brandingiem (własne opakowanie, logo na produkcie, wkładki do paczki, branded unboxing experience), a potem magazyn w Polsce (szybka wysyłka, wyższa marża).
@@ -99,7 +104,7 @@ Zwróć WYŁĄCZNIE poprawny JSON (bez markdown wokół, bez tekstu przed/po):
 {
   "dla": "${dla}",
   "naglowek": "Raport strategiczny — <krótka, ludzka nazwa produktu>",
-  "lead": "2-3 zdania mocnego, osobistego wprowadzenia bezpośrednio do odbiorcy (po imieniu): dlaczego to dobra decyzja i co znajdzie w tym raporcie",
+  "lead": "2-3 zdania osobistego wprowadzenia po imieniu, KONKRETNIE o TYM produkcie — nazwij go i jego realny atut/kąt (co rozwiązuje, dla kogo, czym się wyróżnia). NIE ogólniki typu „tani/prosty/emocjonalny", które pasują do każdego produktu; ma czuć, że to dedykowane pod JEGO konkretny wybór.",
   "sekcje": [
     {"tytul":"Produkt i potencjał rynkowy","tresc":"markdown…","zrodla":[1]},
     {"tytul":"Problem, potrzeby i emocje","tresc":"markdown…"},
@@ -154,7 +159,7 @@ Deno.serve(async (req) => {
     }
 
     // deno-lint-ignore no-explicit-any
-    let body: { sessionId?: string; force?: boolean; product?: any; recipient?: string }
+    let body: { sessionId?: string; force?: boolean; product?: any; recipient?: string; email?: string }
     try {
       body = await req.json()
     } catch {
@@ -168,7 +173,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id, name')
+      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id, name, email, raport_available_at')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -197,22 +202,45 @@ Deno.serve(async (req) => {
       ? body.recipient.trim()
       : (typeof (session as Record<string, unknown>).name === 'string' ? (session as Record<string, unknown>).name as string : '')
 
+    // Bramka kontaktu (cel Tomka: ZERO anonimowych generacji). Raport rusza dopiero, gdy
+    // sesja ma e-mail — front zbiera imię+nazwisko+e-mail PRZED raportem. body.email to
+    // fallback na wyścig zapisu kontaktu (front zapisuje kontakt i zaraz odpala raport).
+    const sessEmail = typeof (session as Record<string, unknown>).email === 'string' ? (session as Record<string, unknown>).email as string : ''
+    const hasContact = !!(sessEmail || (typeof body.email === 'string' && body.email.trim()))
+    if (!hasContact) return jsonResponse({ needs_contact: true }, 200, cors)
+
+    // MIN. ODSŁONA RAPORTU (decyzja Tomka): raport — nawet z cache — staje się dostępny
+    // dopiero ~25 s od startu, żeby nie „błyskał" natychmiast (ma wyglądać na realny
+    // research). raport_available_at ustawiamy raz (pierwsze wejście z kontaktem); do tego
+    // czasu zwracamy pending i NIE kopiujemy cache do market_report → front, bud-chat i
+    // panel spójnie widzą „jeszcze nie gotowy". Świeża generacja trwa >25 s, więc jej nie hamuje.
+    const MIN_REVEAL_MS = 25_000
+    let availAtIso = (session as Record<string, unknown>).raport_available_at as string | null
+    if (!availAtIso) {
+      availAtIso = new Date(Date.now() + MIN_REVEAL_MS).toISOString()
+      await supabase.from('bud_sessions').update({ raport_available_at: availAtIso }).eq('id', sessionId)
+    }
+    const notReadyYet = Date.now() < new Date(availAtIso).getTime()
+
     // Klucz cache per-PRODUKT: ten sam produkt = ten sam raport (reużycie między userami, bez TTL).
     const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
     const productKey = String(product.id || product.product_id || norm(product.nazwa || product.name || '')) || sessionId
 
-    // 1) CACHE PRODUKTU (współdzielony) — hit = oddaj od razu (skopiuj też do sesji dla resume).
+    // 1) CACHE PRODUKTU (współdzielony) — hit = oddaj (skopiuj też do sesji dla resume),
+    //    ale dopiero po MIN. ODSŁONIE (wcześniej pending, bez kopiowania).
     if (!body.force) {
       const { data: pkg } = await supabase.from('bud_product_packages').select('report').eq('product_key', productKey).maybeSingle()
       if (pkg && pkg.report) {
+        if (notReadyYet) return jsonResponse({ pending: true }, 200, cors)
         await supabase.from('bud_sessions').update({ market_report: pkg.report, updated_at: new Date().toISOString() }).eq('id', sessionId)
         const { _meta: _d, ...raport } = pkg.report as Record<string, unknown>
         return jsonResponse({ raport, cached: true }, 200, cors)
       }
     }
-    // 2) CACHE SESJI (np. refresh tej samej rozmowy).
+    // 2) CACHE SESJI (np. refresh tej samej rozmowy) — też po MIN. ODSŁONIE.
     const existing = session.market_report as Record<string, unknown> | null
     if (existing && !body.force) {
+      if (notReadyYet) return jsonResponse({ pending: true }, 200, cors)
       const { _meta: _drop, ...raport } = existing
       return jsonResponse({ raport, cached: true }, 200, cors)
     }
@@ -230,11 +258,73 @@ Deno.serve(async (req) => {
     const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'raport', p_ttl_sec: 400 })
     if (!lock) return jsonResponse({ pending: true }, 202, cors)
 
+    // Dzienny cap per IP — raporty z 24 h po wszystkich sesjach tego IP (wzorzec
+    // bud-landing; liczone z bud_usage.created_at, nie z wieku sesji). Obejmuje
+    // też force=true (regeneracja pali dokładnie tę samą generację gpt-5.5+web_search).
+    // FAIL-OPEN: brak IP / błąd zapytania / brak tabeli → NIE blokuj (loguj),
+    // żeby nie wywalić legalnych userów. Po przekroczeniu zwalniamy lock, by reload
+    // nie wisiał na pending i nie trzymał locka 400 s.
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null
+    if (ip) {
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: ipSessions, error: ipErr } = await supabase
+        .from('bud_sessions')
+        .select('id')
+        .eq('ip', ip)
+      if (ipErr) {
+        console.error('[bud-raport] ip sessions query error (fail-open):', ipErr)
+      } else if (ipSessions && ipSessions.length) {
+        const { count: ipCount, error: ipUsageErr } = await supabase
+          .from('bud_usage')
+          .select('id', { count: 'exact', head: true })
+          .eq('kind', 'raport')
+          .in('session_id', ipSessions.map((r) => r.id))
+          .gte('created_at', dayAgo)
+        if (ipUsageErr) {
+          console.error('[bud-raport] ip usage count error (fail-open):', ipUsageErr)
+        } else if ((ipCount ?? 0) >= MAX_RAPORTS_PER_IP_PER_DAY) {
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ }
+          return jsonResponse({ error: 'limit_raportow_dzienny' }, 429, cors)
+        }
+      }
+    } else {
+      console.warn('[bud-raport] brak x-forwarded-for — pomijam dzienny cap IP (fail-open)')
+    }
+
+    // [Audyt kontekstu] REALNE dane produktu z aukcji (ali_snapshot) — raport ma je CYTOWAĆ
+    // (czułe punkty z opinii, avatar, realne warianty/zestawy, twardy dowód popytu z liczby ocen),
+    // a web_search ograniczyć do cen/konkurencji. Wzór jak bud-mockup. Tani input, cache per-produkt.
+    let aliData = ''
+    try {
+      const pkId = String(product.id || '')
+      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pkId)) {
+        const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle()
+        // deno-lint-ignore no-explicit-any
+        const snap = (row?.ali_snapshot || null) as any
+        if (snap) {
+          // deno-lint-ignore no-explicit-any
+          const specs = Array.isArray(snap.specs) ? snap.specs.slice(0, 12).map((x: any) => (x && x.name) ? `${x.name}: ${x.value}` : '').filter(Boolean) : []
+          const variants = Array.isArray(snap.variants) ? snap.variants.slice(0, 12).map((x: any) => String(x)).filter(Boolean) : []
+          // deno-lint-ignore no-explicit-any
+          const revLines = (Array.isArray(snap.reviews) ? snap.reviews.slice(0, 8) : []).map((r: any) => `${r.stars || 5}★ ${String(r.text_pl || r.text || '').replace(/\s+/g, ' ').slice(0, 150)}`).filter((x: string) => x.length > 5)
+          const rs = snap.review_stats || {}
+          const parts: string[] = []
+          if (snap.title) parts.push(`Pełny tytuł (aukcja): ${String(snap.title).slice(0, 200)}`)
+          if (rs.avg) parts.push(`Dowód popytu (aukcja): ocena ${String(rs.avg).replace('.', ',')}/5 z ${rs.numRatings || 0} ocen${rs.positivePct ? `, ${rs.positivePct}% pozytywnych` : ''}`)
+          if (specs.length) parts.push(`Specyfikacja: ${specs.join('; ')}`)
+          if (variants.length) parts.push(`Warianty/zestawy: ${variants.join(', ')}`)
+          if (revLines.length) parts.push(`OPINIE KUPUJĄCYCH (realne):\n${revLines.join('\n')}`)
+          aliData = parts.join('\n').slice(0, 2400)
+        }
+      }
+    } catch { /* brak snapshotu — raport jak dotąd */ }
+
     // GENEROWANIE W TLE: pełny raport (web_search + gpt-5.5) trwa dłużej niż 150s
     // bramki request/response (→ 504). Zwracamy 202 OD RAZU, a robotę kończymy
     // przez EdgeRuntime.waitUntil. Gdy market_report się zapisze, kolejny POST
     // (front pollinguje) zwróci wersję cached.
     const genTask = (async () => {
+      let saved = false
       try {
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
           method: 'POST',
@@ -242,7 +332,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             model: OPENAI_MODEL,
             tools: [{ type: 'web_search' }],
-            input: buildRaportPrompt(product, recipient),
+            input: buildRaportPrompt(product, recipient, aliData),
             max_output_tokens: MAX_OUTPUT_TOKENS,
           }),
         })
@@ -294,6 +384,7 @@ Deno.serve(async (req) => {
           .update({ market_report: toSave, updated_at: new Date().toISOString() })
           .eq('id', sessionId)
         if (updErr) console.error('[bud-raport] save error:', updErr)
+        else saved = true
         // CACHE PRODUKTU: zapisz raport pod kluczem produktu → kolejni userzy reużyją bez generowania.
         try {
           await supabase.from('bud_product_packages').upsert({
@@ -306,10 +397,14 @@ Deno.serve(async (req) => {
         } catch (pkgErr) { console.error('[bud-raport] product cache upsert error:', pkgErr) }
       } catch (e) {
         console.error('[bud-raport] gen task error:', e)
+      } finally {
+        // Po BŁĘDZIE (raport NIE zapisany) ZWOLNIJ lock — żeby kolejny poll/strzał wygenerował
+        // OD RAZU, zamiast czekać 400s na wygaśnięcie TTL (to był objaw „raport nie generuje się
+        // w ogóle": genTask padł na 429/timeout/sanity, lock trzymał 400s, klient pollował pending
+        // do wyczerpania prób). Po sukcesie locka NIE ruszamy — wygaśnie sam, a kolejny poll i tak
+        // zwróci cached. Spójne z bud-ads/brand/economics/gtm (one też releasują po zakończeniu).
+        if (!saved) { try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ } }
       }
-      // Locka NIE zwalniamy ręcznie — wygasa przez TTL (400s). Sukces i tak zwraca
-      // cached (sprawdzane PRZED claim locka), a brak release throttluje re-generacje
-      // po błędzie (anty-runaway: maks ~1 próba / 400s zamiast pętli drogich callów).
     })()
 
     // Kontynuuj robotę po zwróceniu odpowiedzi (Supabase Edge background task).

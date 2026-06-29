@@ -349,6 +349,41 @@ Deno.serve(async (req) => {
       throw new Error('Zamówienie jest już opłacone')
     }
 
+    // ── SECURITY: anti-tampering kwoty ───────────────────────────────────────────
+    // Zamówienia z checkoutu wstawia klient kluczem anon → order.amount pochodzi z JS i
+    // NIE jest godny zaufania (RLS pilnuje tylko status='pending'). Gdy zamówienie ma
+    // offer_id (ustawia je checkout dla zakupów ofertowych — m.in. rezerwacja 500 zł i
+    // budowy) walidujemy amount względem KANONICZNEJ ceny oferty (serwerowo), z rabatem
+    // WYŁĄCZNIE z realnego, ważnego kodu — nie z pola amount/discount klienta. Zamówienia
+    // serwerowe (bud-project/spar-project, service_role, bez offer_id — amount ustawiany
+    // serwerowo, zaufany), raty, upgrade'y i płatności custom — pomijamy.
+    if (order.offer_id && !order.installment_id && !order.upgrade_to_offer_id) {
+      const { data: validOffer } = await supabase.from('offers').select('price, is_active').eq('id', order.offer_id).single()
+      if (!validOffer || validOffer.is_active === false) {
+        throw new Error('Oferta niedostępna')
+      }
+      let expected = parseFloat(validOffer.price)
+      // Rabat: stosujemy, gdy kod ISTNIEJE i jest AKTYWNY (checkout zwalidował daty/limit
+      // przy applowaniu — nie re-sprawdzamy sztywno, by wyścig na uses/valid_until nie
+      // odrzucił legalnego zamówienia). To wciąż zamyka lukę: atakujący bez realnego kodu
+      // nie zejdzie poniżej ceny, a z realnym kodem co najwyżej dostanie jego rabat.
+      if (order.discount_code_id) {
+        const { data: dc } = await supabase.from('discount_codes')
+          .select('target_price, discount_amount, discount_percent')
+          .eq('id', order.discount_code_id).eq('is_active', true).maybeSingle()
+        if (dc) {
+          if (dc.target_price != null) expected = parseFloat(dc.target_price)
+          else if (dc.discount_amount != null) expected = Math.max(0, expected - parseFloat(dc.discount_amount))
+          else if (dc.discount_percent != null) expected = Math.max(0, expected * (1 - parseFloat(dc.discount_percent) / 100))
+        }
+      }
+      const got = parseFloat(order.amount)
+      if (got < expected - 0.5) {   // tolerancja 50 gr; niedopłata = próba podmiany kwoty
+        console.error('[tpay][SECURITY] kwota niezgodna z ofertą — odrzucam', { orderId: order.id, got, expected, offerId: order.offer_id })
+        throw new Error('Kwota zamówienia niezgodna z ofertą')
+      }
+    }
+
     console.log('[tpay] Order found:', order.order_number, 'Amount:', order.amount)
 
     // Check if using sandbox mode (from settings)
