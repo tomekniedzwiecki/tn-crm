@@ -218,7 +218,9 @@ Deno.serve(async (req) => {
     let availAtIso = (session as Record<string, unknown>).raport_available_at as string | null
     if (!availAtIso) {
       availAtIso = new Date(Date.now() + MIN_REVEAL_MS).toISOString()
-      await supabase.from('bud_sessions').update({ raport_available_at: availAtIso }).eq('id', sessionId)
+      // #10 (R4): utrwal wybrany produkt na sesji — bud-project zwróci go w 'get',
+      // front zhydratuje state.chosenProduct i pipeline wznawia się na świeżym urządzeniu.
+      await supabase.from('bud_sessions').update({ raport_available_at: availAtIso, chosen_product: product }).eq('id', sessionId)
     }
     const notReadyYet = Date.now() < new Date(availAtIso).getTime()
 

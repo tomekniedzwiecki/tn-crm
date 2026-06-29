@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -526,6 +526,7 @@ Deno.serve(async (req) => {
         session_ads: session.session_ads || null,
         landing_html: session.landing_html || null,
         brand: session.brand || null,
+        chosen_product: session.chosen_product || null,   // #10 (R4): resume produktu na świeżym urządzeniu
       },
       feedback: feedback || [],
       wspolpraca: collabMessages || [],
