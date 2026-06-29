@@ -168,6 +168,54 @@ Deno.serve(async (req) => {
       return jsonResponse({ orderId: order.id, amount: offer.price }, 200, cors)
     }
 
+    // ── action 'buy_reservation': pending order na ZWROTNĄ REZERWACJĘ 500 zł (/sklep) ──
+    // BLIK inline w rozmowie (lustro buy_conversation). KLUCZOWE dla tpay-webhook (blok
+    // „LEJEK BUDOWANIA"): (a) description zawiera 'rezerwacj' + 'sklep' → isBudReservation=true;
+    // (b) amount 500 (< 1000) → rezerwacja, nie pełna budowa; (c) spar_session_id = bud sessionId
+    // → TWARDY link order→sesja, webhook ustawia bud_sessions.paid_at; (d) offer_id → walidacja
+    // kwoty w tpay-create. lead_id z sesji = fallback linku + status leada 'won'.
+    if (action === 'buy_reservation') {
+      const rsid = (sessionId || '').trim()
+      if (!rsid || !UUID_RE.test(rsid)) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)
+      const RES_OFFER_ID = 'f32102f9-cc1e-42a3-9742-82593dadaaf1'   // „Rezerwacja — Twój sklep online" (500 zł), dedykowana /sklep
+      const { data: rOffer, error: rOffErr } = await supabase
+        .from('offers').select('id, name, price, is_active').eq('id', RES_OFFER_ID).maybeSingle()
+      if (rOffErr || !rOffer || rOffer.is_active === false) {
+        console.error('[bud-project] buy_reservation offer error:', rOffErr)
+        return jsonResponse({ error: 'brak_oferty' }, 500, cors)
+      }
+      const { data: rSess } = await supabase
+        .from('bud_sessions').select('id, email, lead_id, auth_user_id').eq('id', rsid).maybeSingle()
+      if (!rSess) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
+      // Owner-gate: sesja przypięta do konta wymaga JWT tego konta.
+      if (rSess.auth_user_id && (!authUser || authUser.id !== rSess.auth_user_id)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+      const rEmail = ((authUser && authUser.email) || (rSess.email as string | null) || body.email || '').toString().trim()
+      if (!rEmail) return jsonResponse({ error: 'brak_emaila' }, 400, cors)
+      const { data: rOrder, error: rOrdErr } = await supabase
+        .from('orders')
+        .insert({
+          customer_email: rEmail,
+          description: 'Rezerwacja — Twój sklep online',   // zawiera 'rezerwacj' + 'sklep' → webhook: isBudReservation
+          offer_id: RES_OFFER_ID,                          // walidacja kwoty w tpay-create (amount == cena oferty)
+          amount: rOffer.price,                            // 500 (< 1000 → rezerwacja, nie pełna budowa)
+          status: 'pending',
+          payment_source: 'tpay',
+          spar_session_id: rsid,                           // TWARDY link order→bud_session (webhook ustawi paid_at)
+          lead_id: (rSess.lead_id as string | null) || null,
+          bud_user_id: (authUser && authUser.id) || null,
+          skip_workflow: true,
+        })
+        .select('id')
+        .single()
+      if (rOrdErr || !rOrder) {
+        console.error('[bud-project] buy_reservation insert error:', rOrdErr)
+        return jsonResponse({ error: 'blad_zamowienia' }, 500, cors)
+      }
+      return jsonResponse({ orderId: rOrder.id, amount: rOffer.price }, 200, cors)
+    }
+
     // ── action 'list': rozmowy zalogowanego konta (cross-device) ─────────────
     if (action === 'list') {
       if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
