@@ -90,25 +90,36 @@ export function reviveTargetFromSignals(s: ReviveSignals): string {
   return 'new';
 }
 
+export interface ReviveResult {
+  revived: boolean;
+  from?: string;  // status terminalny sprzed wskrzeszenia (lost/abandoned)
+  to?: string;    // etap docelowy (z sygnałów)
+}
+
 // Wskrzesza leada TYLKO z terminala lost/abandoned (aktywne etapy zostawia monotoniczny
 // bumpLeadStage — tu jawny guard = zero zbędnego wpisu activity i zero ruszania leadów
 // w won/negotiation/itd.). Target z sygnałów (allowRevive, bo cur rank = -1). Wołać
 // WYŁĄCZNIE z gałęzi genuine-user-turn (realna wiadomość usera).
+// Zwraca { revived, from, to } — caller na tej podstawie odpala Slack alert i stopuje
+// sekwencję maili „porzucony" (sequence_cancelled_at). { revived:false } = no-op.
 export async function reviveLeadOnReengage(
   // deno-lint-ignore no-explicit-any
   supabase: any,
   leadId: string | null | undefined,
   signals: ReviveSignals,
   channel: string,
-): Promise<void> {
+): Promise<ReviveResult> {
   try {
-    if (!leadId) return;
+    if (!leadId) return { revived: false };
     const { data: lead } = await supabase
       .from('leads').select('status').eq('id', leadId).maybeSingle();
     const cur = (lead?.status as string | null) || null;
-    if (cur !== 'lost' && cur !== 'abandoned') return; // tylko terminal się wskrzesza
-    await bumpLeadStage(supabase, leadId, reviveTargetFromSignals(signals), { allowRevive: true, channel });
+    if (cur !== 'lost' && cur !== 'abandoned') return { revived: false }; // tylko terminal się wskrzesza
+    const target = reviveTargetFromSignals(signals);
+    await bumpLeadStage(supabase, leadId, target, { allowRevive: true, channel });
+    return { revived: true, from: cur, to: target };
   } catch (e) {
     console.error('[lead-stage] reviveLeadOnReengage error:', e);
+    return { revived: false };
   }
 }

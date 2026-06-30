@@ -90,6 +90,11 @@ Deno.serve(async (req) => {
         message = formatSparGreenMessage(data)
         break
 
+      case 'spar_revive':
+        webhookUrl = webhookSparing
+        message = formatSparReviveMessage(data)
+        break
+
       case 'spar_preview':
         webhookUrl = webhookSparing
         message = formatSparPreviewMessage(data)
@@ -1355,6 +1360,44 @@ function formatBudKnowhowErrorMessage(data: {
   const link = budLeadLink(data.session_id)
   if (link) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_bud_lead' }] })
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}${data.lead_id ? ` · lead: \`${data.lead_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// Odrzucony (lost/abandoned) lead WRÓCIŁ do rozmowy (genuine user turn) — najgorętszy
+// sygnał sprzedażowy. funnel decyduje o panelu deep-linku (aplikacja/sklep).
+function formatSparReviveMessage(data: {
+  session_id?: string
+  funnel?: string
+  name?: string
+  email?: string
+  phone?: string
+  from?: string
+  to?: string
+}) {
+  const STAGE_PL: Record<string, string> = {
+    new: 'Nowy', contacted: 'Skontaktowany', qualified: 'Oferta', proposal: 'Zakwalifikowany',
+    negotiation: 'Rezerwacja', won: 'Wygrany', lost: 'Przegrany', abandoned: 'Porzucony',
+  }
+  const isSklep = data.funnel === 'sklep'
+  const funnelLabel = isSklep ? 'Sklep' : 'Aplikacja'
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const fromL = STAGE_PL[data.from || ''] || data.from || '—'
+  const toL = STAGE_PL[data.to || ''] || data.to || '—'
+
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: `🔥 ${funnelLabel} — odrzucony lead WRÓCIŁ`, emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}` } },
+    { type: 'section', text: { type: 'mrkdwn', text: `Sam wrócił do rozmowy i pisze. Lejek: *${fromL}* → *${toL}*. Odezwij się, póki gorący.` } },
+  ]
+
+  const link = isSklep ? budLeadLink(data.session_id) : sparLeadLink(data.session_id)
+  const actions: any[] = []
+  if (link) actions.push({ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_revive_lead' })
+  if (data.phone) { const wa = waLink(data.phone); if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' }) }
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }] })
   return { blocks }
 }
 

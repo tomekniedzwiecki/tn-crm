@@ -367,7 +367,7 @@ async function createLeadForGreenVerdict(
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green',
+  type: 'spar_contact' | 'spar_green' | 'spar_revive',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -1363,18 +1363,31 @@ Deno.serve(async (req) => {
       // ── REVIVE-ON-REENGAGE: realna wiadomość usera wskrzesza leada z lost/abandoned ──
       // Tu mamy GENUINE user turn (eventy leave_screen/contact/knowhow_close zwróciły
       // wcześniej; knowhowResume wykluczony tym blokiem; pusta wiadomość odrzucona @1144).
-      // Ogląd panelu / zaczepki NIE wskrzeszają. Target z sygnałów sesji (FLOOR 'new')
-      // — patrz reviveTargetFromSignals. Fire-and-forget (waitUntil) — nie blokuje streamu.
+      // Ogląd panelu / zaczepki NIE wskrzeszają. Target z sygnałów sesji (FLOOR 'new').
+      // Gdy faktycznie wskrzesimy (martwy lead wrócił): (1) STOP sekwencji „porzucony"/
+      // nurture — żeby wracającemu nie słać dalej „dokończ rozmowę"; (2) Slack alert
+      // (najgorętszy sygnał). Całość w tle (waitUntil) — nie blokuje streamu odpowiedzi.
       if (existingSession?.lead_id) {
-        const revivePromise = reviveLeadOnReengage(supabase, existingSession.lead_id as string, {
-          full_paid_at: existingSession.full_paid_at,
-          paid_at: existingSession.paid_at,
-          verdict: existingSession.verdict,
-          panel_visits: (existingSession as Record<string, unknown>).panel_visits,
-          seen_landing_at: (existingSession as Record<string, unknown>).seen_landing_at,
-        }, '/aplikacja').catch((e) => console.error('[spar-chat] revive-on-reengage error:', e))
+        const reviveBg = (async () => {
+          const r = await reviveLeadOnReengage(supabase, existingSession.lead_id as string, {
+            full_paid_at: existingSession.full_paid_at,
+            paid_at: existingSession.paid_at,
+            verdict: existingSession.verdict,
+            panel_visits: (existingSession as Record<string, unknown>).panel_visits,
+            seen_landing_at: (existingSession as Record<string, unknown>).seen_landing_at,
+          }, '/aplikacja')
+          if (!r.revived) return
+          await supabase.from('spar_sessions')
+            .update({ sequence_cancelled_at: new Date().toISOString() })
+            .eq('id', sessionId).is('sequence_cancelled_at', null)
+          await postSlackSparing('spar_revive', {
+            session_id: sessionId, funnel: 'aplikacja',
+            name: existingSession.name ?? null, email: existingSession.email ?? null,
+            phone: existingSession.phone ?? null, from: r.from, to: r.to,
+          })
+        })().catch((e) => console.error('[spar-chat] revive-on-reengage bg error:', e))
         const erRv = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
-        if (erRv && typeof erRv.waitUntil === 'function') erRv.waitUntil(revivePromise)
+        if (erRv && typeof erRv.waitUntil === 'function') erRv.waitUntil(reviveBg)
       }
     }
 
