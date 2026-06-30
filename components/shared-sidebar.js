@@ -344,7 +344,11 @@ const SIDEBAR_CSS = `
 const APP_RESTRICTIONS = {
     // Apps that are only visible to specific users
     // Use full email format - the function will handle username-only input
-    biznes: ['tomekniedzwiecki@gmail.com']
+    biznes: ['tomekniedzwiecki@gmail.com'],
+    // Panele lejków (lead pipeline, kasa, prompty) — tylko Tomek + Maciej.
+    // Maciej loguje się przez Google (kanczewski.maciej@gmail.com) lub maila firmowego.
+    aplikacje: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl'],
+    sklep: ['tomekniedzwiecki@gmail.com', 'kanczewski.maciej@gmail.com', 'maciej@tomekniedzwiecki.pl']
 };
 
 function canAccessApp(appId, userEmail) {
