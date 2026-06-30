@@ -24,28 +24,35 @@ async function fetchAliReviews(productId: string): Promise<{ stats: any; reviews
         if (!r.ok) break;
         const j = await r.json().catch(() => null); if (!j) break;
         if (!stats) { const st = j.data?.productEvaluationStatistic || {}; stats = { avg: st.evarageStar ?? null, positivePct: st.evarageStarRage ?? null, numRatings: parseInt(j.displayMessage?.numRatings) || 0 }; }
-        // deno-lint-ignore no-explicit-any
-        for (const e of (j.data?.evaViewList || []) as any[]) {
+        const list = (j.data?.evaViewList || []) as any[];
+        if (!list.length) break; // brak kolejnych recenzji — nie marnuj requestów
+        for (const e of list) {
           const text = String(e.buyerTranslationFeedback || e.buyerFeedback || '').trim();
           const stars = Math.round((e.buyerEval ?? 0) / 20);
-          if (!text || text.length < 12 || stars < 4 || e.aigc) continue;
-          out.push({ stars, name: String(e.buyerName || '').slice(0, 24), text: text.slice(0, 320), date: String(e.evaDate || ''), images: Array.isArray(e.images) ? e.images.slice(0, 3) : [] });
+          const imgs = Array.isArray(e.images) ? e.images.slice(0, 4) : [];
+          if (e.aigc || stars < 4) continue;
+          // Recenzję ZE ZDJĘCIEM trzymamy nawet z krótkim/pustym tekstem — ZDJĘCIE jest dowodem.
+          // Tekst wymagany tylko dla recenzji BEZ zdjęcia.
+          if (!imgs.length && (!text || text.length < 12)) continue;
+          out.push({ stars, name: String(e.buyerName || '').slice(0, 24), text: text.slice(0, 320), date: String(e.evaDate || ''), images: imgs });
         }
         await new Promise((s) => setTimeout(s, 200));
       } catch { break; }
     }
   };
-  await pull('withPic', 2);
-  if (out.filter((r) => r.images.length).length < 4) await pull('all', 2);
+  // KLUCZ: filter=image zwraca TYLKO recenzje ZE ZDJĘCIAMI (withPic NIE filtruje — zwracał wszystko,
+  // stąd 1 zdjęcie na 20). 4 strony = do ~80 zdjęciowych dla popularnych produktów.
+  await pull('image', 4);
+  await pull('all', 2); // uzupełnienie: recenzje tekstowe + statystyki
   const seen = new Set<string>();
-  const uniq = out.filter((r) => { const k = r.name + '|' + r.text.slice(0, 40); if (seen.has(k)) return false; seen.add(k); return true; });
+  const uniq = out.filter((r) => { const k = r.name + '|' + r.text.slice(0, 40) + '|' + (r.images[0] || ''); if (seen.has(k)) return false; seen.add(k); return true; });
   uniq.sort((a, b) => ((b.images.length ? 1 : 0) - (a.images.length ? 1 : 0)) || (b.stars - a.stars));
-  return { stats, reviews: uniq.slice(0, 12) };
+  return { stats, reviews: uniq.slice(0, 20) };
 }
 
 // Tłumaczenie opinii na naturalny PL (gpt-5.1, 1 call). Fallback: oryginał.
 // deno-lint-ignore no-explicit-any
-async function translateReviewsPL(reviews: any[], key: string): Promise<any[]> {
+async function translateReviewsPL(reviews: any[], key: string, acc?: { i: number; c: number; o: number }): Promise<any[]> {
   if (!reviews.length || !key) return reviews.map((r) => ({ ...r, text_pl: r.text }));
   try {
     const payload = reviews.map((r, i) => ({ i, t: r.text }));
@@ -54,6 +61,7 @@ async function translateReviewsPL(reviews: any[], key: string): Promise<any[]> {
       body: JSON.stringify({ model: 'gpt-5.1', reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: `Przetłumacz te opinie klientów na naturalny, potoczny polski (zachowaj sens i ton, zwięźle, bez upiększania i bez dodawania treści). Zwróć WYŁĄCZNIE JSON {"t":[{"i":0,"pl":"..."}]} w tej samej kolejności.\n${JSON.stringify(payload)}` }] }),
     }, 'reviews-translate');
     const d = await res.json();
+    if (acc && d?.usage) { acc.i += d.usage.prompt_tokens || 0; acc.c += d.usage.prompt_tokens_details?.cached_tokens || 0; acc.o += d.usage.completion_tokens || 0; }
     // deno-lint-ignore no-explicit-any
     const arr = (JSON.parse(d.choices?.[0]?.message?.content || '{}').t || []) as any[];
     const map = new Map(arr.map((x) => [x.i, x.pl]));
@@ -135,6 +143,7 @@ function parseSnapshot(raw: any): Record<string, unknown> | null {
   const imgRaw = media.image_urls ?? media.imageUrls ?? d.product_small_image_urls ?? d.image_urls ?? null;
   if (typeof imgRaw === 'string') images = imgRaw.split(/[;,]/).map((s: string) => s.trim()).filter(Boolean);
   else if (Array.isArray(imgRaw)) images = imgRaw.map((x: any) => String(x)).filter(Boolean);
+  else if (imgRaw && Array.isArray(imgRaw.product_small_image_url)) images = imgRaw.product_small_image_url.map((x: any) => String(x)).filter(Boolean);
   else if (imgRaw && Array.isArray(imgRaw.string)) images = imgRaw.string.map((x: any) => String(x)).filter(Boolean);
   const mainImage = String(base.product_main_image_url ?? d.product_main_image_url ?? images[0] ?? '').trim();
   if (mainImage && !images.includes(mainImage)) images.unshift(mainImage);
@@ -192,18 +201,23 @@ async function tryDetail(id: string, key: string): Promise<Record<string, unknow
 async function searchEnrich(id: string, queryStr: string, key: string): Promise<{ title: string; images: string[] } | null> {
   if (!queryStr) return null;
   const j = await rapidGet(`/api/v3/products?keywords=${encodeURIComponent(queryStr)}&page_size=30&target_currency=USD&country=PL&ship_to_country=PL&sort=LAST_VOLUME_DESC`, key);
-  const arr = j?.data?.products?.product || j?.data?.products || j?.products?.product || j?.products || [];
+  const arr = j?.data?.products?.product || j?.products?.product || j?.data?.products || j?.products || [];
   const list = Array.isArray(arr) ? arr : [];
-  const m = list.find((p: any) => String(p.product_id ?? p.productId ?? '') === id);
-  if (!m) return null;
+  if (!list.length) return null;
+  // Preferuj DOKŁADNY product_id; gdy go nie ma w wynikach (search po słowach kluczowych bywa nietrafny),
+  // użyj TOP wyniku (best-seller tej samej kategorii) jako reprezentatywnej galerii — lepsze niż brak zdjęć.
+  // deno-lint-ignore no-explicit-any
+  const m = list.find((p: any) => String(p.product_id ?? p.productId ?? '') === id) || list[0];
   const title = String(m.product_title || '').slice(0, 240);
   let images: string[] = [];
   const small = m.product_small_image_urls;
-  if (small && Array.isArray(small.string)) images = small.string.map((x: any) => String(x));
+  // FIX: realny kształt to product_small_image_urls.product_small_image_url[] (NIE .string)
+  if (small && Array.isArray(small.product_small_image_url)) images = small.product_small_image_url.map((x: any) => String(x));
+  else if (small && Array.isArray(small.string)) images = small.string.map((x: any) => String(x));
   else if (Array.isArray(small)) images = small.map((x: any) => String(x));
   if (m.product_main_image_url) images.unshift(String(m.product_main_image_url));
   images = [...new Set(images.map((u) => u.startsWith('//') ? 'https:' + u : u).filter(Boolean))].slice(0, 8);
-  return { title, images };
+  return images.length ? { title, images } : null;
 }
 
 Deno.serve(async (req) => {
@@ -290,11 +304,29 @@ Deno.serve(async (req) => {
       try {
         const rv = await fetchAliReviews(id);
         snapshot.review_stats = rv.stats;
-        snapshot.reviews = await translateReviewsPL(rv.reviews, OPENAI_KEY);
+        const transUsage = { i: 0, c: 0, o: 0 };
+        snapshot.reviews = await translateReviewsPL(rv.reviews, OPENAI_KEY, transUsage);
+        // KOSZT tłumaczenia opinii (gpt-5.1) → bud_usage. session_id z body (lub null = koszt sourcingu).
+        if (transUsage.i || transUsage.o) {
+          try {
+            const P51 = { i: 1.25, c: 0.125, o: 10 };  // gpt-5.1 per 1M (spójne z bud-gtm/bud-raport)
+            const cost = (Math.max(0, transUsage.i - transUsage.c) * P51.i + transUsage.c * P51.c + transUsage.o * P51.o) / 1_000_000;
+            const logSid = (body.sessionId && UUID_RE.test(String(body.sessionId).trim())) ? String(body.sessionId).trim() : null;
+            await supabase.from('bud_usage').insert({ session_id: logSid, kind: 'ali-snapshot', model: 'gpt-5.1', input_tokens: transUsage.i, cached_tokens: transUsage.c, output_tokens: transUsage.o, cost_usd: cost, meta: { view: 'reviews_translate', product_id: id } });
+          } catch (uErr) { console.error('[bud-ali-snapshot] usage insert', uErr); }
+        }
         // Re-host zdjęć opinii → Storage (anti-wygasanie CDN Ali). Nigdy nie failuje snapshotu.
         try { snapshot.reviews = await rehostReviewImages(supabase, snapshot.reviews, id); }
         catch (e) { console.warn('[bud-ali-snapshot] rehost err', String(e).slice(0, 80)); }
       } catch (e) { console.warn('[bud-ali-snapshot] reviews err', String(e).slice(0, 80)); }
+    }
+
+    // Fallback galerii: gdy RapidAPI nie dało galerii (source 'have' → tylko cover), dołącz zdjęcia
+    // z opinii (realny produkt w użyciu, już re-hostowane do Storage) — modal danych produktu ma wtedy co pokazać.
+    if (snapshot.images.length < 4 && Array.isArray(snapshot.reviews)) {
+      // deno-lint-ignore no-explicit-any
+      const revImgs = (snapshot.reviews as any[]).flatMap((r) => (Array.isArray(r.images) ? r.images : [])).filter(Boolean);
+      snapshot.images = [...new Set([...snapshot.images, ...revImgs])].slice(0, 8);
     }
 
     await supabase.from('bud_tt_products').update({ ali_snapshot: snapshot }).eq('id', row.id);

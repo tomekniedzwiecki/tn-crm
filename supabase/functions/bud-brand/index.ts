@@ -18,6 +18,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { verifyAuthUser, ownerDenied } from "../_shared/bud-owner.ts";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
   'https://tomekniedzwiecki.pl',
@@ -224,15 +225,46 @@ function brandCtx(ust: Record<string, unknown> | null, niche: string, brief: Rec
   if (brief && s(brief.produkt)) parts.push('Produkt: ' + s(brief.produkt))
   return parts.join('\n')
 }
-async function genNameCandidates(apiKey: string, ctx: string, n: number): Promise<string[]> {
+type Usage = { i: number; c: number; o: number }
+async function genNameCandidatesOnce(apiKey: string, ctx: string, n: number, acc?: Usage): Promise<string[]> {
   const prompt = 'Jesteś namingowcem marek e-commerce (rynek PL). Zaproponuj ' + n + ' KRÓTKICH nazw marki jednoproduktowego sklepu. ZASADY: 1-2 słowa, MAX 12 znaków, łatwe do wymówienia i zapamiętania, brandowalne i dobrze wyglądające w domenie .pl, sugerują kategorię/emocję produktu. Mix: część polskich (bezpośrednie, fachowe), część krótkich nowoczesnych w stylu DTC (premium, neutralne). ZAKAZ: generycznych shop/store/sklep, nazw znanych marek, anglicyzmów-wypełniaczy. KONTEKST:\n' + ctx + '\nZwróć WYŁĄCZNIE JSON: {"nazwy":["...", ...]}'
   // deno-lint-ignore no-explicit-any
   const payload: any = { model: OPENAI_MODEL, messages: [{ role: 'user', content: prompt }], response_format: { type: 'json_object' }, max_completion_tokens: 1600 }
   if (/^gpt-5/.test(OPENAI_MODEL)) payload.reasoning_effort = 'low'
-  const res = await fetch('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(payload) })
-  if (!res.ok) return []
-  const data = await res.json().catch(() => null)
-  try { const o = JSON.parse(data?.choices?.[0]?.message?.content || '{}'); return Array.isArray(o.nazwy) ? o.nazwy.filter((x: unknown) => typeof x === 'string').map((x: string) => x.trim()).filter(Boolean) : [] } catch { return [] }
+  try {
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(payload) }, 'brand-names')
+    if (!res.ok) { console.warn('[bud-brand] names openai !ok:', res.status); return [] }
+    const data = await res.json().catch(() => null)
+    // Akumuluj koszt KAŻDEJ próby (także retry) — wołający zaloguje sumę do bud_usage.
+    if (acc && data?.usage) { acc.i += data.usage.prompt_tokens || 0; acc.c += data.usage.prompt_tokens_details?.cached_tokens || 0; acc.o += data.usage.completion_tokens || 0 }
+    const o = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    return Array.isArray(o.nazwy) ? o.nazwy.filter((x: unknown) => typeof x === 'string').map((x: string) => x.trim()).filter(Boolean) : []
+  } catch (e) { console.warn('[bud-brand] names exception:', String(e).slice(0, 200)); return [] }
+}
+// ZAWSZE coś zwróć (req Tomka: nazwy mają się generować bez błędów ani klikania). openaiFetchRetry
+// łapie 429/5xx; tu dokładamy retry na PUSTĄ odpowiedź, a gdy OpenAI całkiem padnie — deterministyczny
+// fallback z kontekstu, żeby front NIGDY nie dostał pustej listy.
+async function genNameCandidates(apiKey: string, ctx: string, n: number, acc?: Usage): Promise<string[]> {
+  for (let i = 0; i < 3; i++) {
+    const r = await genNameCandidatesOnce(apiKey, ctx, n, acc)
+    if (r.length >= 5) return r
+    if (i < 2) await new Promise((res) => setTimeout(res, 700 * (i + 1)))
+  }
+  const last = await genNameCandidatesOnce(apiKey, ctx, n, acc)
+  if (last.length) return last
+  return fallbackNames(ctx)
+}
+// Deterministyczny generator nazw z kontekstu — used ONLY gdy OpenAI niedostępny. Brandowalne warianty PL.
+function fallbackNames(ctx: string): string[] {
+  const stop = new Set(['sklep', 'produkt', 'kogo', 'marka', 'online', 'biznes', 'fizyczny', 'rynek', 'polski', 'oraz', 'który', 'która', 'dla'])
+  const words = (ctx || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9\s]/gi, ' ').split(/\s+/).filter((w) => w.length >= 4 && !stop.has(w))
+  const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s)
+  const r = cap((words[0] || 'marka').replace(/[^a-ząćęłńóśźż]/gi, '')).slice(0, 8)
+  const fromCtx = [r, r + 'go', r + 'la', 'Moje' + r, r + 'Pro']
+  const neutral = ['Lumo', 'Nivo', 'Brava', 'Kori', 'Vena', 'Salto', 'Nuvo']
+  const seen = new Set<string>(); const out: string[] = []
+  for (const nm of [...fromCtx, ...neutral]) { const k = nm.toLowerCase(); if (nm.length >= 3 && nm.length <= 14 && !seen.has(k)) { seen.add(k); out.push(nm) } }
+  return out.slice(0, 10)
 }
 function logoPromptVariant(name: string, ctx: string, variant: number): string {
   const styles = [
@@ -347,12 +379,14 @@ Deno.serve(async (req) => {
 
       if (action === 'names') {
         // Większa pula kandydatów (jak w procedurze brandingu) → więcej szans na 5 z WOLNĄ domeną wg RDAP.
-        const cands = await genNameCandidates(OPENAI_API_KEY, ctx || niche || 'sklep z produktem fizycznym', 24)
+        const namesUsage: Usage = { i: 0, c: 0, o: 0 }
+        let cands = await genNameCandidates(OPENAI_API_KEY, ctx || niche || 'sklep z produktem fizycznym', 24, namesUsage)
+        if (!cands.length) cands = fallbackNames(ctx || niche || 'sklep z produktem fizycznym')   // double-safety: NIGDY pusto
         const seen = new Set<string>()
         const out: Array<{ name: string; domain: string; available: boolean }> = []
         for (const nm of cands) {
           const slug = slugifyPl(nm); if (!slug || slug.length < 3 || seen.has(slug)) continue; seen.add(slug)
-          const free = await plDomainFree(slug + '.pl')
+          let free = false; try { free = await plDomainFree(slug + '.pl') } catch { free = false }   // RDAP padło → nie wywracaj całości
           await new Promise((r) => setTimeout(r, 110))   // łagodnie dla RDAP/NASK (anty-429)
           if (free) out.push({ name: nm, domain: slug + '.pl', available: true })
           if (out.length >= 5) break
@@ -366,8 +400,20 @@ Deno.serve(async (req) => {
             if (out.length >= 5) break
           }
         }
+        // OSTATECZNY bezpiecznik — front NIGDY nie dostaje pustej listy (req Tomka).
+        if (!out.length) {
+          for (const nm of (cands.length ? cands : fallbackNames('sklep')).slice(0, 5)) {
+            const slug = slugifyPl(nm) || ('marka' + (out.length + 1))
+            out.push({ name: nm, domain: slug + '.pl', available: false })
+          }
+        }
         await supabase.from('bud_sessions').update({ brand: { ...(existingBrand || {}), names: out }, updated_at: new Date().toISOString() }).eq('id', sessionId)
-        try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'brand-names', model: 'rdap+gpt', cost_usd: 0, meta: { from: 'bud-brand/names' } }) } catch { /* marker capa nazw */ }
+        // Realny koszt nazw (suma wszystkich prób OpenAI) — nie 0. Marker capa nazw zostaje.
+        try {
+          const pn = PRICES[OPENAI_MODEL] || PRICES['gpt-5.5']
+          const namesCost = (Math.max(0, namesUsage.i - namesUsage.c) * pn.i + namesUsage.c * pn.c + namesUsage.o * pn.o) / 1_000_000
+          await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'brand-names', model: OPENAI_MODEL, input_tokens: namesUsage.i, cached_tokens: namesUsage.c, output_tokens: namesUsage.o, cost_usd: namesCost, meta: { from: 'bud-brand/names' } })
+        } catch (uErr) { console.error('[bud-brand] names usage:', uErr) }
         return jsonResponse({ names: out }, 200, cors)
       }
 

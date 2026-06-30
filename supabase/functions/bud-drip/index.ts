@@ -54,6 +54,19 @@ const CORS: Record<string, string> = {
 function jsonResponse(body: Record<string, unknown>, status: number): Response {
   return new Response(JSON.stringify(body), { status, headers: { ...CORS, 'Content-Type': 'application/json' } })
 }
+// Koszt SMS = segmenty (points z SMSAPI) × 0,10 zł, przeliczone na USD bieżącym kursem
+// settings.usd_pln_rate (bud_usage trzyma USD; panel wyświetla tym samym kursem).
+const SMS_PLN_PER_POINT = 0.10
+let _usdPln: number | null = null
+async function usdPlnRate(supabase: ReturnType<typeof createClient>): Promise<number> {
+  if (_usdPln != null) return _usdPln
+  try {
+    const { data } = await supabase.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle()
+    const v = data && (data as { value?: unknown }).value
+    _usdPln = v ? Number(v) : 4.0
+  } catch { _usdPln = 4.0 }
+  return _usdPln && _usdPln > 0 ? _usdPln : 4.0
+}
 function warsawHour(): number {
   return parseInt(new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false }).format(new Date()), 10)
 }
@@ -787,7 +800,19 @@ Deno.serve(async (req) => {
           status: res && res.ok ? (res.status || 'SENT') : 'ERROR',
           meta: res && res.ok ? null : { error: res ? res.error : 'no_response' },
         })
-        if (res && res.ok) smsSent++
+        if (res && res.ok) {
+          // KOSZT SMS → bud_usage (widoczny przy leadzie i w zakładce Koszty)
+          try {
+            const pts = typeof res.points === 'number' && res.points > 0 ? res.points : 1
+            const rate = await usdPlnRate(supabase)
+            const pln = pts * SMS_PLN_PER_POINT
+            await supabase.from('bud_usage').insert({
+              session_id: s.id, kind: 'sms', model: 'smsapi', input_tokens: 0, cached_tokens: 0, output_tokens: 0, images: 0,
+              cost_usd: pln / rate, meta: { view: 'sms', kind: em.kind, points: pts, pln, rate },
+            })
+          } catch (uErr) { console.error('[bud-drip] sms usage insert:', uErr) }
+          smsSent++
+        }
       }
     }
 

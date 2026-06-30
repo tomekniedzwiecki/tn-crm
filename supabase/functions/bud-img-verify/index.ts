@@ -25,7 +25,7 @@ function normImg(u: string): string {
 }
 
 // deno-lint-ignore no-explicit-any
-async function gptMatches(frame: string, name: string, q: string, cands: any[]): Promise<number[]> {
+async function gptMatches(frame: string, name: string, q: string, cands: any[], acc?: { i: number; c: number; o: number }): Promise<number[]> {
   // deno-lint-ignore no-explicit-any
   const content: any[] = [
     { type: "text", text: `Szukamy na AliExpress źródła produktu z TikToka.\nNAZWA produktu (najważniejsze): "${name}"${q ? ` (EN: ${q})` : ""}.\nKadr z filmu (POMOCNICZO — bywa kadrem-haczykiem z osobą/clickbaitem, nie zawsze pokazuje produkt):` },
@@ -45,6 +45,7 @@ async function gptMatches(frame: string, name: string, q: string, cands: any[]):
     }, "img-verify");
     if (!res.ok) return [];
     const j = await res.json();
+    if (acc && j?.usage) { acc.i += j.usage.prompt_tokens || 0; acc.c += j.usage.prompt_tokens_details?.cached_tokens || 0; acc.o += j.usage.completion_tokens || 0; }
     const o = JSON.parse(j.choices[0].message.content);
     const m = Array.isArray(o?.matches) ? o.matches : [];
     return m.filter((x: unknown) => typeof x === "number" && x >= 0 && x < cands.length);
@@ -69,7 +70,16 @@ Deno.serve(async (req) => {
   if (!frame || !name || !cands.length)
     return new Response(JSON.stringify({ matches: [], kept: [] }), { headers: { ...cors, "content-type": "application/json" } });
 
-  const idx = await gptMatches(frame, name, q, cands);
+  const vu = { i: 0, c: 0, o: 0 };
+  const idx = await gptMatches(frame, name, q, cands, vu);
+  // KOSZT vision (gpt-5.1) → bud_usage. session_id=null (koszt sourcingu/infrastruktury radaru).
+  if (vu.i || vu.o) {
+    try {
+      const P51 = { i: 1.25, c: 0.125, o: 10 };
+      const cost = (Math.max(0, vu.i - vu.c) * P51.i + vu.c * P51.c + vu.o * P51.o) / 1_000_000;
+      await supabase.from("bud_usage").insert({ session_id: null, kind: "img-verify", model: MODEL, input_tokens: vu.i, cached_tokens: vu.c, output_tokens: vu.o, cost_usd: cost, meta: { from: "bud-img-verify", cands: cands.length } });
+    } catch (e) { console.error("[bud-img-verify] usage", e); }
+  }
   const kept = idx.map((i) => cands[i]);
   return new Response(JSON.stringify({ matches: idx, kept }), { headers: { ...cors, "content-type": "application/json" } });
 });
