@@ -52,6 +52,20 @@ function jsonResponse(body: Record<string, unknown>, status: number): Response {
   })
 }
 
+// Koszt SMS = segmenty (points z SMSAPI) × 0,10 zł, przeliczone na USD bieżącym kursem
+// settings.usd_pln_rate (spar_usage trzyma USD; panel wyświetla tym samym kursem).
+const SMS_PLN_PER_POINT = 0.10
+let _usdPln: number | null = null
+async function usdPlnRate(supabase: ReturnType<typeof createClient>): Promise<number> {
+  if (_usdPln != null) return _usdPln
+  try {
+    const { data } = await supabase.from('settings').select('value').eq('key', 'usd_pln_rate').maybeSingle()
+    const v = data && (data as { value?: unknown }).value
+    _usdPln = v ? Number(v) : 4.0
+  } catch { _usdPln = 4.0 }
+  return _usdPln && _usdPln > 0 ? _usdPln : 4.0
+}
+
 function warsawHour(): number {
   return parseInt(new Intl.DateTimeFormat('pl-PL', {
     timeZone: 'Europe/Warsaw', hour: 'numeric', hour12: false,
@@ -692,12 +706,22 @@ Deno.serve(async (req) => {
         })
         const res = await r.json().catch(() => ({})) as Record<string, unknown>
         if (!r.ok || !res.ok) throw new Error(`send-sms ${r.status}: ${JSON.stringify(res)}`)
+        const pts = typeof res.points === 'number' && res.points > 0 ? res.points : 1
         await supabase.from('spar_sms').insert({
           session_id: s.id, kind, phone: s.phone, message,
           smsapi_id: res.id ? String(res.id) : null,
           points: typeof res.points === 'number' ? res.points : null,
           status: (res.status as string) || 'SENT',
         })
+        // KOSZT SMS → spar_usage (panel widzi koszt SMS przy leadzie i w zakładce Koszty)
+        try {
+          const rate = await usdPlnRate(supabase)
+          const pln = pts * SMS_PLN_PER_POINT
+          await supabase.from('spar_usage').insert({
+            session_id: s.id, kind: 'sms', model: 'smsapi', input_tokens: 0, cached_tokens: 0, output_tokens: 0, images: 0,
+            cost_usd: pln / rate, meta: { view: 'sms', kind, points: pts, pln, rate },
+          })
+        } catch (uErr) { console.error('[spar-followups] sms usage:', uErr) }
         sent[kind] = (sent[kind] || 0) + 1
         return true
       } catch (smsErr) {

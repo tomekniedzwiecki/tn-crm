@@ -435,6 +435,10 @@
         <div class="text-[11px] text-zinc-500" id="cost-range-usd"></div>
       </div>
     </div>
+    <!-- Rozbicie wg rodzaju (cały zakres) — KAŻDA kategoria kosztu widoczna osobno -->
+    <div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Koszty wg rodzaju</div>
+    <div id="cost-by-kind" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-5"></div>
+    <div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Dzień po dniu</div>
     <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
       <table class="w-full text-sm">
         <thead>
@@ -742,11 +746,25 @@ async function renderKoszty() {
   if (error) { console.error(error); toast('Błąd ładowania kosztów'); return; }
   // Sumujemy WSZYSTKIE rodzaje (chat/image/plan/raport/landing/prototype…),
   // nie tylko trzy — inaczej „Razem" zaniżało koszt o strony, raporty i panele.
-  const byDay = {};
+  const byDay = {}, byKind = {};
   (data || []).forEach((r) => {
     byDay[r.day] = byDay[r.day] || {};
     byDay[r.day][r.kind] = (byDay[r.day][r.kind] || 0) + Number(r.cost_usd);
+    byKind[r.kind] = (byKind[r.kind] || 0) + Number(r.cost_usd);
   });
+  // Rozbicie wg rodzaju — KAŻDA kategoria osobno.
+  const KIND_LABELS = {
+    chat: 'Rozmowy AI', raport: 'Raporty', landing: 'Strony', image: 'Grafiki', plan: 'Plany',
+    prototype: 'Prototypy', economics: 'Ekonomia', gtm: 'Go-to-market', email: 'Maile', assess: 'Ocena', sms: 'SMS',
+  };
+  const kindEntries = Object.keys(byKind).sort((a, b) => byKind[b] - byKind[a]);
+  $('cost-by-kind').innerHTML = kindEntries.map((k) => {
+    const lbl = KIND_LABELS[k] || k;
+    return `<div class="bg-zinc-900/40 border border-white/5 rounded-lg px-3 py-2.5">
+      <div class="text-[11px] text-zinc-400 truncate">${esc(lbl)}</div>
+      <div class="text-sm font-mono text-white mt-0.5">${fmtPln(byKind[k])}</div>
+    </div>`;
+  }).join('') || '<div class="text-zinc-600 text-sm col-span-full py-3">Brak kosztów w zakresie.</div>';
   const days = Object.keys(byDay).sort().reverse();
   let totalUsd = 0;
   const fmtDay = (d) => {
