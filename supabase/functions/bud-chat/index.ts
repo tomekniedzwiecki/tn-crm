@@ -26,6 +26,7 @@
 //   bud_sessions.track ('k1'|'k2'|'k3') i wstrzykuje go do kontekstu modelu.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { reviveLeadOnReengage } from "../_shared/lead-stage.ts";
 
 // ── CORS — whitelist originów (wzorzec: tpay-create-transaction) ──────────────
 const ALLOWED_ORIGINS = [
@@ -420,12 +421,35 @@ async function createLeadForGreenVerdict(
   }
 }
 
+// Heurystyka śmieciowego kontaktu z bramki (troll/bot wpisuje bzdury w imię/telefon).
+// Konserwatywna — łapie TYLKO jednoznaczne śmieci, by nie odrzucać prawdziwych leadów:
+//  • telefon: ciąg sekwencyjny (123456789), powtórzona jedna cyfra (000000000), <7 unikalnych
+//  • imię: jeden powtórzony znak (aaaa), <2 litery, albo z czarnej listy wulgaryzmów.
+// Garbage → sesja is_test=true (wypada z automatów/raportów), lead NIE trafia do CRM.
+function looksLikeGarbageContact(name: string | null, phone: string | null): boolean {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (digits) {
+    if (/^(\d)\1+$/.test(digits)) return true                       // 0000000000
+    if ('01234567890123456789'.includes(digits) && digits.length >= 7) return true  // 123456789
+    if ('98765432109876543210'.includes(digits) && digits.length >= 7) return true  // 987654321
+    if (new Set(digits.split('')).size <= 2 && digits.length >= 7) return true       // 1212121212
+  }
+  const n = (name || '').trim().toLowerCase()
+  if (n) {
+    const letters = n.replace(/[^a-ząćęłńóśźż]/gi, '')
+    if (letters.length >= 2 && /^(.)\1+$/.test(letters)) return true   // aaaa / xxxx
+    const BAD = ['chuj', 'kurwa', 'jeb', 'huj', 'pierdol', 'cwel', 'dupa', 'cipa', 'penis', 'sracz', 'qwerty', 'asdf', 'test test', 'aaa bbb']
+    if (BAD.some((b) => n.includes(b))) return true
+  }
+  return false
+}
+
 // ── Powiadomienia Slack #sparing ─────────────────────────────────────────────
 // Wysyłka przez edge function slack-notify (centralne formatowanie + sekret
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error',
+  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error' | 'spar_revive',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -446,10 +470,11 @@ async function postSlackSparing(
   }
 }
 
-// Lead zostawił JEDNOCZEŚNIE e-mail i telefon → #sparing (raz na sesję).
-// Stempel + warunki w jednym atomowym UPDATE: tylko gdy oba pola wypełnione
-// i jeszcze nie powiadomiono — wygrany wiersz = nasze powiadomienie (domyka też
-// równoległe requesty). Wołane po każdym dopisaniu kontaktu.
+// Lead domknął kontakt → #sparing + lead „Nowy" w CRM (raz na sesję).
+// R1 (proof-first): kontakt = KONTO (e-mail) + IMIĘ. Telefon jest teraz ODROCZONY
+// (pytamy o niego po dostarczeniu raportu/sklepu), więc NIE czekamy już na niego —
+// inaczej lead „Nowy" nigdy by nie powstał, dopóki nie zostawi numeru.
+// Stempel + warunki w jednym atomowym UPDATE → jedno powiadomienie nawet przy równoległych requestach.
 async function maybeNotifyContactSlack(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -461,7 +486,7 @@ async function maybeNotifyContactSlack(
       .eq('id', sessionId)
       .is('slack_contact_notified_at', null)
       .not('email', 'is', null)
-      .not('phone', 'is', null)
+      .not('name', 'is', null)
       .eq('is_test', false)
       .select('id, email, name, phone, profession, problem_summary, preview_brief')
     if (error) { console.error('[bud-chat] contact slack claim error:', error); return }
@@ -478,6 +503,34 @@ async function maybeNotifyContactSlack(
       project_desc: brief?.opis ?? null,
       karta: (s.problem_summary && typeof s.problem_summary === 'object') ? s.problem_summary : null,
     })
+    // ── Pipeline „Nowy": komplet kontaktu (email+telefon) = lead w CRM OD RAZU ──
+    // Wcześniej lead powstawał dopiero na zielono / gdy ankieta coś wyłapie, więc wczesne
+    // dropoffy (podali kontakt i utknęli) były NIEWIDOCZNE — brak followupu i dyskwalifikacji.
+    // Atomowy claim wyżej gwarantuje, że to leci RAZ na sesję (i tylko nie-test).
+    try {
+      // Anty-śmieć: garbage imię/telefon (troll/bot) → oznacz sesję is_test, NIE twórz leada
+      // (chroni pipeline CRM i automaty mailowe/SMS przed fejkowymi kontaktami).
+      if (looksLikeGarbageContact(s.name as string | null, s.phone as string | null)) {
+        await supabase.from('bud_sessions').update({ is_test: true }).eq('id', sessionId)
+        console.log('[bud-chat] gate garbage contact → is_test, lead pominięty:', sessionId)
+        return
+      }
+      if (s.email) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+        const lid = await createLeadForGreenVerdict(supabaseUrl, serviceKey, {
+          email: s.email as string,
+          name: (s.name as string | null) ?? null,
+          phone: (s.phone as string | null) ?? null,
+          profession: (s.profession as string | null) || 'nieznana',
+          karta: null,
+          tracking: null,
+        })
+        if (lid) {
+          await supabase.from('bud_sessions').update({ lead_id: lid }).eq('id', sessionId).is('lead_id', null)
+        }
+      }
+    } catch (e) { console.error('[bud-chat] gate lead create error:', e) }
   } catch (err) {
     console.error('[bud-chat] maybeNotifyContactSlack exception:', err)
   }
@@ -945,7 +998,7 @@ const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, na
 - TOMEK BUDUJE GO DLA CIEBIE jak Twój człowiek od e-commerce: składa cały sklep z zespołem, odpala reklamy i rozkręca sprzedaż (pierwsze ~1000 zamówień), potem ~pół roku skaluje i uczy Cię, aż przejmiesz stery.
 - TO WSPÓLNY BIZNES — Tomek wchodzi jako WSPÓLNIK: bierze 20% od ZYSKU (nie fakturę), czyli zarabia DOPIERO, gdy Ty zarabiasz. To jego skóra w grze i dowód, że nie wciska byle czego (rozbraja „a co Ty z tego masz / czy to nie oszustwo").
 - TWOJA ROLA: uczysz się przy GOTOWYM, działającym sklepie; obsługa to proste czynności (nie kod), realne przy kilku godzinach tygodniowo. Jeśli lead boi się „nie ogarnę / nie znam się / mam mało czasu" — rozbrój to WPROST i ciepło tym faktem.
-- PIENIĄDZE bez iluzji: projekt, raport i podgląd sklepu są DARMOWE i zostają jego; pełną budowę pod klucz robi Tomek — to płatna współpraca (kotwica ceny). Gdy lead pyta o cenę albo sygnalizuje „mam mało / ostatnie pieniądze / jestem spłukany" — odpowiedz UCZCIWIE i z szacunkiem: jest realny próg wejścia, a reklamy i towar są osobno po jego stronie; nie bagatelizuj i nie ciągnij go pod ścianę, której nie udźwignie. Konkretne liczby podajesz, gdy dojdziecie do kroku współpracy (tam masz FAKTY OFERTY) — nigdy nie zmyślaj.
+- PIENIĄDZE bez iluzji i BEZ CHOWANIA CENY: projekt, raport i podgląd sklepu są DARMOWE i zostają jego; pełną budowę pod klucz robi Tomek za 9400 zł jednorazowo + wchodzi jako wspólnik z 20% od ZYSKU, a reklamy i towar są osobno po stronie klienta. Te liczby podajesz WPROST, gdy lead pyta (a zdecydowanemu nawet z wyprzedzeniem) — NIGDY nie zbywaj „to na rozmowie / to domknie Tomek", bo to budowało nieufność. 500 zł rezerwacji jest zwrotne i wliczane w 9400 zł. Gdy lead sygnalizuje „mam mało / ostatnie pieniądze / jestem spłukany" — odpowiedz uczciwie i z szacunkiem (jest realny próg wejścia), nie ciągnij go pod ścianę, której nie udźwignie; nie zmyślaj innych liczb niż te.
 - JAKOŚĆ: makiety i reklamy, które teraz widzi, to SZYBKIE SZKICE kierunku — finalne kreacje robicie po starcie z prawdziwą sesją/realnym twórcą (rozbraja „to mocno AI-owe"). Produkt = sprawdzony popyt pod Twoją marką i marżę; NIGDY nie ujawniaj źródła ani ceny zakupu produktu.
 [ROZPOZNAWAJ SYGNAŁY KUPUJĄCEGO i naturalnie dostrajaj ton (z danych: kupują głównie ci, którzy piszą konkretnie i znają temat — NIGDY nie mów leadowi, że go „oceniasz"):]
 - Wspomina, że KORZYSTAŁ JUŻ od Tomka/TakeDrop/z kursu/coachingu („kupiłem u was", „mam sklep na TakeDrop", „byłem na coachingu") → NAJCIEPLEJSZY sygnał (kupują ~4× częściej). Odwołaj się ciepło do wspólnej historii, potraktuj jak kogoś, kto już zaufał, i płynnie prowadź do DOKOŃCZENIA tego, co utknęło.
@@ -1412,7 +1465,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input, survey')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input, survey, panel_visits, seen_landing_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1590,9 +1643,9 @@ Deno.serve(async (req) => {
           .update(contactUpdate)
           .eq('id', sessionId)
         if (contactError) console.error('[bud-chat] contact update error:', contactError)
-        // Jeśli ta tura dopięła e-mail lub telefon — sprawdź czy lead ma już
-        // komplet kontaktu i ewentualnie powiadom #sparing (dedup w helperze).
-        if ('email' in contactUpdate || 'phone' in contactUpdate) {
+        // Jeśli ta tura dopięła e-mail, imię lub telefon — sprawdź, czy lead ma już
+        // komplet kontaktu (R1: konto+imię) i ewentualnie powiadom #sparing + utwórz lead.
+        if ('email' in contactUpdate || 'name' in contactUpdate || 'phone' in contactUpdate) {
           await maybeNotifyContactSlack(supabase, sessionId)
         }
       }
@@ -1732,13 +1785,40 @@ Deno.serve(async (req) => {
         console.error('[bud-chat] insert user message error:', userMsgError)
         return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
       }
+      // ── REVIVE-ON-REENGAGE (parytet z /aplikacja): realna wiadomość usera wskrzesza
+      // leada z lost/abandoned. reportEngage/qualifyEngage to syntetyczne wyzwalacze
+      // (raport ruszył / tura kwalifikująca) — PASYWNE, wykluczone tym blokiem, więc
+      // nie wskrzeszają. Target z sygnałów sesji (FLOOR 'new'). Po wskrzeszeniu: STOP
+      // sekwencji „porzucony"/nurture + Slack alert. Całość w tle (waitUntil).
+      if (existingSession?.lead_id) {
+        const reviveBg = (async () => {
+          const r = await reviveLeadOnReengage(supabase, existingSession.lead_id as string, {
+            full_paid_at: existingSession.full_paid_at,
+            paid_at: existingSession.paid_at,
+            verdict: existingSession.verdict,
+            panel_visits: (existingSession as Record<string, unknown>).panel_visits,
+            seen_landing_at: (existingSession as Record<string, unknown>).seen_landing_at,
+          }, '/sklep')
+          if (!r.revived) return
+          await supabase.from('bud_sessions')
+            .update({ sequence_cancelled_at: new Date().toISOString() })
+            .eq('id', sessionId).is('sequence_cancelled_at', null)
+          await postSlackSparing('spar_revive', {
+            session_id: sessionId, funnel: 'sklep',
+            name: existingSession.name ?? null, email: existingSession.email ?? null,
+            phone: existingSession.phone ?? null, from: r.from, to: r.to,
+          })
+        })().catch((e) => console.error('[bud-chat] revive-on-reengage bg error:', e))
+        const erRv = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+        if (erRv && typeof erRv.waitUntil === 'function') erRv.waitUntil(reviveBg)
+      }
     }
 
     const RESUME_TRIGGER = '[SYSTEM: Rozmówca wrócił do rozmowy i czeka — zagadnij go zgodnie z instrukcją POWRÓT DO ROZMOWY.]'
     const REPORT_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca właśnie zostawił komplet kontaktu i raport rynku RUSZYŁ w tle (wyników JESZCZE nie ma). Nie zostawiaj ciszy: zagadnij go JEDNYM lekkim, naturalnym pytaniem przydatnym do późniejszych ustaleń (kogo widzi jako klienta / co go w produkcie przekonało / jaki klimat marki / pomysł na nazwę). OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że raport jest gotowy ani nie podawaj liczb/wyników.]'
     // Tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (qualifyEngage). Jedno pytanie z „ankiety"
     // — extractSurveyAsync wyłapie odpowiedź do CRM. Klikalne <opcje> > otwarte pole.
-    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca wybrał styl i właśnie składają się w tle jego reklamy oraz sklep (potrwa to chwilę). Wykorzystaj tę chwilę: zadaj mu JEDNO naturalne pytanie KWALIFIKUJĄCE pod współpracę — wybierz jeden wątek, którego jeszcze nie znasz: co już próbował w e-commerce/online, ile czasu w tygodniu realnie może dać, jaki ma budżet na start, albo na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem. Jedno pytanie, ciepło, nie ankieta. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że sklep/reklamy są już gotowe.]'
+    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: W tle właśnie składają się materiały rozmówcy (makiety / reklamy / sklep — potrwa to chwilę). NIE zostawiaj go samego w tej ciszy. Wykorzystaj czas: zadaj mu JEDNO naturalne pytanie z naszej ankiety, którego odpowiedzi JESZCZE NIE ZNASZ z tej rozmowy (NIE powtarzaj już zadanych). Kolejność wątków od najlżejszego: (1) czym się teraz zajmuje / co robi zawodowo (\\"powiedz coś o sobie\\"), (2) co już próbował w biznesie/e-commerce online i na czym utknął, (3) ile czasu w tygodniu realnie może dać, (4) jaki budżet na start rozważa, (5) na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem. Jedno krótkie pytanie, ciepło, jak Tomek do znajomego — NIE ankieta, NIE seria. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. Nawiąż do tego, co już powiedział. NIE twierdź, że sklep/reklamy są już gotowe.]'
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
       { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : (qualifyEngage ? QUALIFY_ENGAGE_TRIGGER : message)) },
@@ -1748,12 +1828,35 @@ Deno.serve(async (req) => {
     // słowa rozmówcy). Źródłem prawdy jest wiersz sesji w DB; dla nowej sesji
     // — wartości z requestu. Osobny blok system PO bloku cache'owanym
     // (cache_control wyznacza granicę prefiksu — duży prompt dalej się cache'uje).
+    // ── ENGAGEMENT-DETECTOR (req Tomka 2026-07-01) ───────────────────────────
+    // Model nie „czuje" ciszy ani jednowyrazowych odpowiedzi — to deterministyczny sygnał.
+    // Liczymy długość ostatnich tur usera; jeśli pasywne (krótkie / „ok/tak/nie"), wstrzykujemy
+    // jawny marker, żeby bot SAM przeszedł do proaktywnych <opcje> zamiast czekać na inicjatywę
+    // (skalowalność bez człowieka — cichy wahający się lead nie wymaga interwencji Tomka).
+    let engagementNote = ''
+    if (!knowhowResume && !reportEngage && !qualifyEngage) {
+      const userMsgs = [
+        ...(history || []).filter((m) => m.role === 'user').map((m) => String(m.content || '')),
+        String(message || ''),
+      ]
+      const PASSIVE_RE = /^(ok|oki|okej|okk?|tak|nie|spoko|jasne|no|nono|aha|hmm+|taa+|no tak|nie wiem|nwm|moze|może|pewnie|git|elo|hej|siema|.|👍|👌)$/i
+      const isShort = (s: string) => { const t = s.trim(); return t.length > 0 && (t.length < 12 || PASSIVE_RE.test(t)) }
+      const recent = userMsgs.slice(-3)
+      const passiveCount = recent.filter(isShort).length
+      // ≥2 z ostatnich 3 tur pasywne ORAZ rozmowa już się toczy (≥2 tury usera) → nie odpalaj na starcie
+      if (passiveCount >= 2 && userMsgs.length >= 2) {
+        engagementNote =
+          '\n\n[USER_ENGAGEMENT: passive] Rozmówca odpowiada krótko/zdawkowo (jednowyrazowo albo „ok/tak/nie") — nie prowadzi rozmowy sam. NIE czekaj na jego inicjatywę i NIE poprzestawaj na potwierdzeniu: zadaj JEDNO konkretne, lekkie pytanie, które popchnie sprawę do przodu (np. co go powstrzymuje, jaka obawa, czego potrzebuje, by ruszyć) i OBOWIĄZKOWO dołącz marker <opcje> z 2-3 klikalnymi odpowiedziami. Jedno pytanie, ciepło, do celu (rezerwacja) — nie ankieta.'
+      }
+    }
+
     const sessionProfession = (existingSession?.profession as string | null | undefined) || profession || null
     // JEDNO FLOW (picker-first): produkt wybiera rozmówca z karuzeli viralowych hitów,
     // nie odkrywamy go z rozmowy. Router kierunków K1/K2/K3 wygaszony — NIE wstrzykujemy
     // „WYBRANY KIERUNEK" ani nie każemy modelowi „ustalać, czym rozmówca się zajmuje".
     let sessionContext =
-      `KONTEKST SESJI${sessionProfession ? ` — rozmówca wspomniał, że zajmuje się: ${sessionProfession}` : ''}.`
+      `KONTEKST SESJI${sessionProfession ? ` — rozmówca wspomniał, że zajmuje się: ${sessionProfession}` : ''}.` +
+      engagementNote
 
     // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend
     // odpala bud-assess i steruje drugą turą wg wyniku (tylko kanał sparing).
@@ -1801,6 +1904,10 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         const collabCard = (existingSession?.ustalenia as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
         if (collabCard) sessionContext += `\n\n[USTALENIA PROJEKTU — przy pytaniach o ofertę/zakres/„co wchodzi"/cenę personalizuj DOKŁADNIE pod to, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}`
       } else {
+        // R9 (decyzja Tomka 2026-06-30): cena budowy NIE jest już chowana. Wstrzykujemy
+        // FAKTY OFERTY także PRZED sklepem, żeby bot odpowiadał o cenie WPROST (9400 zł + 20%
+        // od zysku), a nie zbywał „to domknie Tomek". Te liczby dotyczą OFERTY, nie raportu rynku.
+        sessionContext += `\n\n[FAKTY OFERTY — gdy rozmówca pyta o koszt budowy, udział Tomka albo warunki współpracy, podaj te liczby WPROST i konkretnie (NIE chowaj, NIE odsyłaj „to na rozmowie"). Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
         // NOWY PIPELINE /sklep — ETAP 2: raport → USTALENIA. Wstrzyknij raport (gdy gotowy),
         // żeby ustalenia „dla kogo" były na nim oparte. GATE_INSTRUCTION (settings,
         // budowanie_etap_gate) niesie teraz instrukcję etapu ustaleń. Stary <ocena>/kierunki OFF.
@@ -1827,6 +1934,14 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           if (_bn) sessionContext += `\n\n[MARKA — sklep nazywa się „${_bn}". Używaj TEJ nazwy zamiast „Twój sklep".]`
           const _ustE = (existingSession?.ustalenia && typeof existingSession.ustalenia === 'object' && !Array.isArray(existingSession.ustalenia)) ? existingSession.ustalenia as Record<string, unknown> : null
           if (_ustE && Object.keys(_ustE).length) sessionContext += `\n\n[USTALENIA (JUŻ ustalone — NIE pytaj o to ponownie, opieraj odpowiedzi na tym): ${JSON.stringify(_ustE).slice(0, 1000)}]`
+          // R5: WŁASNY PRODUKT klienta (podał link/opis zamiast wyboru z karuzeli). Dotąd
+          // zapisywany w product_input.wlasny, ale NIE wstrzykiwany — bot zawracał „wybierz
+          // z karuzeli" (martwy dead-end, lead ginął). Teraz bot go widzi i prowadzi wprost.
+          const _pi = (existingSession?.product_input && typeof existingSession.product_input === 'object' && !Array.isArray(existingSession.product_input)) ? existingSession.product_input as Record<string, unknown> : null
+          const _wl = _pi && _pi.wlasny && typeof _pi.wlasny === 'object' && !Array.isArray(_pi.wlasny) ? _pi.wlasny as Record<string, unknown> : null
+          if (_wl && (_wl.url || _wl.opis)) {
+            sessionContext += `\n\n[WŁASNY PRODUKT KLIENTA — klient NIE wybierał z karuzeli, podał SWÓJ produkt: ${String(_wl.url || _wl.opis || '').slice(0, 300)}. Buduj rozmowę WOKÓŁ tego produktu i NIGDY nie zawracaj „wybierz z karuzeli" — on już wybrał. WAŻNE: dla własnego produktu automatyczny raport/makiety/sklep z radaru NIE ruszą same; zbierz od niego krótko konkrety (co to dokładnie, dla kogo, orientacyjna cena, czym się wyróżnia), potwierdź, czy to się spina jako biznes, i poprowadź do kontaktu oraz rezerwacji — Tomek przygotuje raport, markę i sklep pod TEN produkt osobiście. Bądź konkretny i pomocny; nie zmyślaj danych o produkcie, których nie podał.]`
+          }
         }
         // L5 — strażnik ścieżki: jawny etap środkowy + następna akcja usera (żeby AI nie gubił kierunku ani się nie cofał)
         {
@@ -2285,7 +2400,7 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           // Lejek SPRZEDAŻOWY (req Tomka): cicha ekstrakcja odpowiedzi „ankietowych" z rozmowy
           // → bud_sessions.survey + CRM /leads. Tylko PRZED płatnością (nie know-how) i gdy znamy
           // mail (cel leada). W tle (waitUntil) — nie blokuje odpowiedzi.
-          if (!isKnowHowMode && assistantText.trim() && effectiveEmail) {
+          if (!isKnowHowMode && assistantText.trim() && effectiveEmail && existingSession?.is_test !== true) {
             const svPromise = extractSurveyAsync(
               supabase, sessionId, effectiveEmail,
               (existingSession?.name as string | null | undefined) ?? null,

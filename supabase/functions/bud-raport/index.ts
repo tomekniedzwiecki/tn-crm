@@ -81,20 +81,21 @@ PRODUKT:
 ${link ? `- Referencja produktu (analiza cech, ceny, wariantów): ${link}` : ''}
 ${aliData ? `\nDANE PRODUKTU — REALNE, z aukcji źródłowej (OPIERAJ na nich sekcje 2 „czułe punkty", 3 „avatar/język klienta" i 6 „zestawy/upsell"; web_search użyj TYLKO do cen rynkowych i konkurencji w PL, NIE do zgadywania cech/popytu, które JUŻ masz poniżej):\n${aliData}\n` : ''}
 KONTEKST BIZNESOWY (wpleć w strategię — to realny plan działania):
-- Start: dropshipping z AliExpress (pierwsze zamówienia, walidacja oferty bez ryzyka magazynu).
-- Docelowo: import przez agenta w Chinach z PEŁNYM brandingiem (własne opakowanie, logo na produkcie, wkładki do paczki, branded unboxing experience), a potem magazyn w Polsce (szybka wysyłka, wyższa marża).
+- Start: szybka walidacja oferty z zewnętrznym dostawcą — pierwsze zamówienia bez ryzyka własnego magazynu. NIE nazywaj klientowi platformy ani źródła zakupu, NIE podawaj ceny zakupu.
+- Docelowo: import z PEŁNYM brandingiem (własne opakowanie, logo na produkcie, wkładki do paczki, branded unboxing experience), a potem własny stock i szybsza logistyka (wyższa marża, lepsza kontrola).
 - Kanał sprzedaży: dedykowany landing page (one-product store).
 - Rynek docelowy: Polska.
 
 ZADANIE: zrób realny research (web_search, po polsku I angielsku — popyt, konkurencja w PL z cenami, trendy, słowa-klucze) i zbuduj kompletny przewodnik. Trzymaj się DOKŁADNIE tych 6 sekcji (w tej kolejności):
-1. PRODUKT I POTENCJAŁ RYNKOWY — co to za produkt i jak działa, dlaczego TERAZ, skala popytu w PL (liczby ze źródeł), kto już to sprzedaje i po ile (konkurenci po nazwie + ceny), największa LUKA = otwarte okno.
+1. PRODUKT I POTENCJAŁ RYNKOWY — co to za produkt i jak działa, dlaczego TERAZ, skala popytu w PL (liczby ze źródeł), kto już to sprzedaje i w jakich PRZEDZIAŁACH cenowych (pokaż ROZRZUT cen i zwłaszcza segment markowy/premium — tam jest przestrzeń na wyższą marżę; akcentuj LUKĘ na porządną markę, NIE pozycjonuj produktu jako taniego towaru z dolnej półki ani nie eksponuj najtańszej anonimowej oferty jako punktu odniesienia — to podkopuje wartość brandowanego sklepu), największa LUKA = otwarte okno.
 2. PROBLEM, POTRZEBY I EMOCJE — jaki problem realnie rozwiązuje, jakie potrzeby zaspokaja; wypisz konkretne CZUŁE PUNKTY, w które warto uderzać, by klient poczuł SILNĄ potrzebę zakupu; jak grać na emocjach (strach/aspiracja/wygoda/duma/miłość do bliskich/zwierzęcia). Konkretne kąty, nie ogólniki.
 3. GRUPA DOCELOWA — zbuduj konkretny AVATAR (kto to, wiek, sytuacja życiowa, dzień z życia, język jakim mówi, gdzie bywa online, co go boli, co go kręci, co go powstrzymuje przed zakupem). Może 1 główny + 1 poboczny.
 4. MARKA I POZYCJONOWANIE — jak zbudować markę pod TEN produkt: zaproponuj 5 NAZW (PL i/lub EN, łatwe, z wolną szansą na domenę), do każdej 1 zdanie uzasadnienia; ton i styl komunikacji, wartości do eksponowania, pozycjonowanie (premium vs przystępne) i dlaczego.
 5. PLAN KOMUNIKACJI MARKETINGOWEJ — kanały (Meta/TikTok ads jako główny, organic TikTok, ewentualnie Google), 3-4 KĄTY reklamowe z przykładowymi hookami (gotowe do użycia), struktura lejka, oferta zdejmująca ryzyko (płatność przy odbiorze / gwarancja zwrotu), pomysły na kreacje (UGC, demo, before/after).
-6. STRATEGIA ROZWOJU I SKALOWANIA — droga: pierwsze zamówienia (dropship) → walidacja → import z brandingiem przez agenta → magazyn PL → skalowanie (rozszerzenie linii/zestawy/upsell, kolejne kanały, retencja i powracający klienci, ewentualnie eksport). Konkretne kamienie milowe.
+6. STRATEGIA ROZWOJU I SKALOWANIA — droga: pierwsze zamówienia i walidacja → import z WŁASNYM brandingiem → własny stock i szybsza logistyka → skalowanie (rozszerzenie linii/zestawy/upsell, kolejne kanały, retencja i powracający klienci, ewentualnie eksport). Konkretne kamienie milowe. NIE nazywaj platformy/źródła zakupu ani kraju pochodzenia produktu; mów ogólnie „dostawca"/„import".
 
 ZASADY:
+- ZASADA MARKI (TWARDA): NIGDY nie ujawniaj klientowi źródła zakupu produktu — żadnego „AliExpress", „z Chin", „Aliexpress", nazwy platformy/marketplace ani konkretnego dostawcy, ani CENY ZAKUPU/kosztu jednostkowego. To know-how, za które klient płaci. Mów ogólnie: „dostawca", „import", „zakup hurtowy". Nie obiecuj „magazynu w Polsce" ani „dostawy 24h" jako pewnika — najwyżej jako CEL skalowania („docelowo własny stock i szybsza wysyłka").
 - Konkret i liczby ZE ŹRÓDEŁ (web_search). NIE zmyślaj liczb ani konkurentów — brak twardej danej = napisz jakościowo, bez fałszywej cyfry.
 - TON pod osobę, która WCHODZI w ten produkt: pewny, motywujący, pokazujący szansę i drogę — nie strasz, nie rób listy ryzyk. Ma dodawać energii i dawać plan.
 - Każda sekcja: kilka akapitów lub konkretne listy — w polu "tresc" MARKDOWN (### podnagłówki, **pogrubienia**, listy „- ", numerację). Nowe linie zapisuj jako \n. Poprawny JSON (jedna wartość = jeden string), tylko podwójne cudzysłowy.

@@ -167,6 +167,16 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
   if (raport) {
     if (Array.isArray(raport.konkurenci) && raport.konkurenci.length) { const k = (raport.konkurenci as Record<string, unknown>[]).slice(0, 4).map((c) => s(c.nazwa, 40)).filter(Boolean).join(', '); if (k) fakty.push(`Konkurenci z researchu: ${k}`) }
     if (raport.luka_rynkowa) fakty.push(`Okno rynkowe: ${s(raport.luka_rynkowa, 240)}`)
+    // /sklep: raport ma kształt sekcje[] (markdown), nie płaski — wyciągnij sekcję rynkową,
+    // inaczej GTM nie widzi researchu (konkurenci/luka_rynkowa są wtedy undefined).
+    if (Array.isArray(raport.sekcje)) {
+      const sek = raport.sekcje as Array<Record<string, unknown>>
+      const flat = (t: unknown) => (typeof t === 'string' ? t.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim() : '')
+      const komun = sek.find((y) => typeof y?.tytul === 'string' && /komunikac|marketing|plan/i.test(y.tytul as string))
+      const pot = sek.find((y) => typeof y?.tytul === 'string' && /potencja|popyt|rynk/i.test(y.tytul as string))
+      const src = flat(komun?.tresc) || flat(pot?.tresc)
+      if (src) fakty.push(`Z raportu rynkowego — research kanałów/konkurencji/kątów (UŻYJ jako realne wejście do playbooka, NIE wymyślaj sprzecznych liczb): ${src.slice(0, 650)}`)
+    }
   }
   return `PROJEKT:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
 }

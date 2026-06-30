@@ -32,7 +32,30 @@ let MODEL_BLOCK = ''
 // ── Stały prompt systemowy (cache'owalny — bez danych sesji) ──
 let SYSTEM_PROMPT = ''
 
-function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null): string {
+// Kompaktowy odczyt rynku z raportu — obsługuje OBA kształty: płaski (Aplikacja:
+// konkurenci/luka_rynkowa) ORAZ /sklep (sekcje[] z markdownem). Bez tego /sklep
+// (kształt sekcje) nie przekazywał TU żadnego researchu mimo gotowego raportu.
+function raportDigest(raport: Record<string, unknown> | null): string {
+  if (!raport || typeof raport !== 'object') return ''
+  const s = (v: unknown, m = 240) => (typeof v === 'string' ? v.slice(0, m) : '')
+  const out: string[] = []
+  // deno-lint-ignore no-explicit-any
+  const r = raport as any
+  if (Array.isArray(r.konkurenci) && r.konkurenci.length) {
+    const k = r.konkurenci.slice(0, 4).map((c: Record<string, unknown>) => s(c?.nazwa, 40)).filter(Boolean).join(', ')
+    if (k) out.push('Konkurenci z researchu: ' + k)
+  }
+  if (r.luka_rynkowa) out.push('Okno rynkowe: ' + s(r.luka_rynkowa, 240))
+  if (Array.isArray(r.sekcje)) {
+    const sek = r.sekcje as Array<Record<string, unknown>>
+    const flat = (t: unknown) => (typeof t === 'string' ? t.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim() : '')
+    const pick = (re: RegExp) => { const x = sek.find((y) => typeof y?.tytul === 'string' && re.test(y.tytul as string)); return x ? flat(x.tresc) : '' }
+    const pot = pick(/potencja|popyt|rynk/i)
+    if (pot) out.push('Z raportu rynkowego — popyt, skala kategorii i realne ceny konkurencji (UŻYJ jako wejście do ceny/COGS/marży, NIE wymyślaj sprzecznych liczb): ' + pot.slice(0, 650))
+  }
+  return out.join('\n')
+}
+function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown>, plan: Record<string, unknown> | null, raport: Record<string, unknown> | null = null): string {
   const s = (v: unknown, max = 300) => (typeof v === 'string' ? v.slice(0, max) : '')
   const list = (v: unknown) => Array.isArray(v) ? v.filter((x) => typeof x === 'string').slice(0, 6).join(', ') : ''
   const fakty: string[] = []
@@ -43,6 +66,7 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
   if (karta.sygnal_budzetu) fakty.push(`Sygnał ceny/budżetu z rozmowy: ${s(karta.sygnal_budzetu)}`)
   if (list(karta.ekrany)) fakty.push(`Asortyment / zakres pierwszej oferty: ${list(karta.ekrany)}`)
   if (plan && typeof plan.cena === 'number') fakty.push(`GŁÓWNA CENA produktu już pokazana klientowi w zakładce „Plan przychodu": ${plan.cena} ${s(plan.cena_jednostka, 20) || 'zł'} (${s(plan.model_przychodu, 80)}). Wariant „polecany" / cena bazowa MUSI mieć DOKŁADNIE tę cenę; pozostałe warianty (np. zestaw, multipack) zbuduj wokół niej. NIE zmieniaj tej głównej ceny — inaczej zakładki przeczą sobie.`)
+  const dig = raportDigest(raport); if (dig) fakty.push(dig)
   return `PROJEKT:\n${fakty.join('\n')}\n\nZwróć JSON dokładnie wg schematu z instrukcji systemowej.`
 }
 
@@ -88,7 +112,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     if (!MODEL_BLOCK) { try { const { data: mb } = await supabase.from('settings').select('value').eq('key', 'budowanie_model_biznesowy').single(); MODEL_BLOCK = (mb as { value?: string } | null)?.value || '' } catch (_e) { /* fallback: pusty blok */ } }
     if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['budowanie_prompt_economics_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('budowanie_prompt_economics_system') } catch (_e) { /* fallback: puste prompty */ } }
-    const { data: session, error: sErr } = await supabase.from('bud_sessions').select('id, preview_brief, problem_summary, business_plan, economics, auth_user_id').eq('id', sessionId).maybeSingle()
+    const { data: session, error: sErr } = await supabase.from('bud_sessions').select('id, preview_brief, problem_summary, business_plan, economics, market_report, auth_user_id').eq('id', sessionId).maybeSingle()
     if (sErr) { console.error('[bud-economics] session fetch error:', sErr); return jsonResponse({ error: 'blad_serwera' }, 500, cors) }
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
     // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
@@ -102,6 +126,7 @@ Deno.serve(async (req) => {
     const karta = session.problem_summary as Record<string, unknown> | null
     const brief = (session.preview_brief || {}) as Record<string, unknown>
     const plan = session.business_plan as Record<string, unknown> | null
+    const raport = session.market_report as Record<string, unknown> | null
     if (!karta) return jsonResponse({ error: 'brak_karty' }, 400, cors)
     const existing = session.economics as Record<string, unknown> | null
     const meta = (existing && existing._meta) as Record<string, unknown> | null
@@ -111,7 +136,7 @@ Deno.serve(async (req) => {
     const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'economics', p_ttl_sec: 180 })
     if (!lock) return jsonResponse({ pending: true }, 202, cors)
 
-    const user = buildUser(brief, karta, plan)
+    const user = buildUser(brief, karta, plan, raport)
     const logUsage = async (usage: { i: number; c: number; o: number } | null) => {
       if (!usage) return
       try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'economics', model: OPENAI_MODEL, input_tokens: usage.i, cached_tokens: usage.c, output_tokens: usage.o, cost_usd: (Math.max(0, usage.i - usage.c) * p.i + usage.c * p.c + usage.o * p.o) / 1_000_000 }) } catch (uErr) { console.error('[bud-economics] usage insert error:', uErr) }

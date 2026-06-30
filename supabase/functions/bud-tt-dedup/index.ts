@@ -52,13 +52,23 @@ Deno.serve(async (req) => {
   const dryRun = !!body.dryRun;
   const nameThreshold = typeof body.nameThreshold === "number" ? body.nameThreshold : 0.8;
 
-  // Pełen radar (cap 5000 — pula jest mała).
-  const { data: rows, error } = await supabase
-    .from("bud_tt_products")
-    .select("key,pl_name,category,status,ali_candidates,chosen_link,created_at,heat")
-    .order("created_at", { ascending: true })
-    .limit(5000);
-  if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
+  // Pełen radar. PostgREST tnie pojedyncze zapytanie do 1000 wierszy (db-max-rows), a pula
+  // przekroczyła 1000 → MUSIMY paginować .range, inaczej created_at ASC + obcięcie gubi
+  // NAJNOWSZE wiersze (świeżo zassane) i dedup ich nie sprawdza.
+  // deno-lint-ignore no-explicit-any
+  const rows: any[] = [];
+  const PAGE = 1000;
+  for (let off = 0; ; off += PAGE) {
+    const { data, error } = await supabase
+      .from("bud_tt_products")
+      .select("key,pl_name,category,status,ali_candidates,chosen_link,created_at,heat")
+      .order("created_at", { ascending: true })
+      .range(off, off + PAGE - 1);
+    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
+    if (!data?.length) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
 
   // Kolejność przetwarzania: najpierw zdecydowane (approved<rejected/dup), potem pending od najstarszych.
   // deno-lint-ignore no-explicit-any

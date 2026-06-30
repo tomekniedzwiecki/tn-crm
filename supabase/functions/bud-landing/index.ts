@@ -231,9 +231,42 @@ async function openaiChat(
   }
 }
 
+// Zwięzły blok kontekstu z raportu rynku (market_report jsonb) — DOPRACOWUJE
+// landing, nie zmienia logiki. Dla SKLEPU bierzemy lead + sekcje o bólach,
+// avatarze, pozycjonowaniu i komunikacji. Raport jest OPCJONALNY: brak → '' .
+// Landing bywa duży, więc tniemy agresywnie (~1500 zn.), żeby nie rozdmuchać promptu.
+function reportContextBlock(report: Record<string, unknown> | null): string {
+  if (!report || typeof report !== 'object') return ''
+  const lead = typeof report.lead === 'string' ? report.lead.trim() : ''
+  const sekcje = Array.isArray(report.sekcje) ? report.sekcje as Array<Record<string, unknown>> : []
+  // Dla landingu sprzedażowego: realne bóle, avatar, pozycjonowanie, komunikacja.
+  const wanted = [
+    'Problem, potrzeby i emocje',
+    'Grupa docelowa — avatar',
+    'Marka i pozycjonowanie',
+    'Plan komunikacji marketingowej',
+  ]
+  const picked: string[] = []
+  for (const tytul of wanted) {
+    const sek = sekcje.find((s) => typeof s?.tytul === 'string' && (s.tytul as string).trim() === tytul)
+    if (sek) {
+      const { tytul: _t, ...rest } = sek
+      picked.push(`### ${tytul}\n${JSON.stringify(rest, null, 1)}`)
+    }
+  }
+  if (!lead && !picked.length) return ''
+  let body = ''
+  if (lead) body += `HOOK/LEAD: ${lead}\n\n`
+  body += picked.join('\n\n')
+  // Agresywne przycięcie pod landing (~1500 zn.)
+  if (body.length > 1500) body = body.slice(0, 1500) + '…'
+  return `[KONTEKST Z RAPORTU RYNKU — wykorzystaj, gdzie pomaga: buduj nagłówki, sekcje korzyści, obiekcje i CTA wokół tych realnych bólów/avatara/pozycjonowania. To kontekst pomocniczy — BRIEF i PLAN PRZYCHODU pozostają nadrzędne.]\n${body}`
+}
+
 function buildUserPrompt(
   brief: Record<string, unknown>,
   plan: Record<string, unknown> | null,
+  report: Record<string, unknown> | null,
 ): string {
   // Brief przekazujemy w całości (bez pól technicznych) — model ma widzieć
   // wszystko, co ustalono w rozmowie; plan dostarcza realne liczby do oferty.
@@ -255,6 +288,8 @@ function buildUserPrompt(
       }, null, 1),
     )
   }
+  const reportBlock = reportContextBlock(report)
+  if (reportBlock) parts.push(reportBlock)
   parts.push(variantsBlock())
   parts.push(`Wygeneruj kompletny landing page sprzedażowy tego sklepu zgodnie ze wszystkimi zasadami.`)
   return parts.join('\n\n')
@@ -307,6 +342,7 @@ async function generateAndStore(
   sessionId: string,
   brief: Record<string, unknown>,
   plan: Record<string, unknown> | null,
+  report: Record<string, unknown> | null,
   storagePath: string,
   viewUrl: string,
 ): Promise<void> {
@@ -318,7 +354,7 @@ async function generateAndStore(
   try {
     // ── PASS 1: generator ──
     if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['budowanie_prompt_landing_system', 'budowanie_prompt_landing_critic']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('budowanie_prompt_landing_system'); CRITIC_SYSTEM = __pv('budowanie_prompt_landing_critic') } catch (_e) { /* fallback: puste prompty */ } }
-    const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, plan), null)
+    const gen = await openaiChat(apiKey, SYSTEM_PROMPT, buildUserPrompt(brief, plan, report), null)
     if (!gen.content) { await releaseLock(); return }
     const html1 = extractHtml(gen.content)
     if (!html1) {
@@ -576,7 +612,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, business_plan, verdict, landing_url, auth_user_id')
+      .select('id, preview_brief, business_plan, market_report, verdict, landing_url, auth_user_id')
       .eq('id', sessionId)
       .maybeSingle()
     if (sessionError) {
@@ -662,6 +698,7 @@ Deno.serve(async (req) => {
     const task = generateAndStore(
       supabase, OPENAI_API_KEY, sessionId,
       brief, session.business_plan as Record<string, unknown> | null,
+      session.market_report as Record<string, unknown> | null,
       storagePath, viewUrl,
     )
     // deno-lint-ignore no-explicit-any

@@ -567,11 +567,14 @@ async function fetchAliexpressCandidates(
 // RETRY na 429 (rate-limit!) i 5xx z backoffem — przy wielu frazach API łatwo rzuca 429,
 // co wcześniej GUBIŁO całe frazy (np. „tennis ball" → 0 mimo 47 realnych produktów).
 // deno-lint-ignore no-explicit-any
-async function rapidFetch(keyword: string, endpoint: 'hot-products' | 'products', pageSize: number): Promise<any[]> {
+async function rapidFetch(keyword: string, endpoint: 'hot-products' | 'products', pageSize: number, shipPL = false): Promise<any[]> {
   const key = Deno.env.get('BUD_ALIEXPRESS_RAPIDAPI_KEY') || ''
   const host = rapidHost()
   const enc = encodeURIComponent(keyword)
-  const url = `https://${host}/api/v3/${endpoint}?keywords=${enc}&page_no=1&page_size=${pageSize}&target_currency=USD&target_language=EN&country=PL&sort=LAST_VOLUME_DESC`
+  // shipPL=true → ship_to_country=PL: ZWRACA tylko produkty wysyłane do Polski (samo country=PL
+  // NIE filtruje dostępności — część była „niedostępna w Twoim kraju"). Używa SOURCING ad-first.
+  const ship = shipPL ? '&ship_to_country=PL' : ''
+  const url = `https://${host}/api/v3/${endpoint}?keywords=${enc}&page_no=1&page_size=${pageSize}&target_currency=USD&target_language=EN&country=PL${ship}&sort=LAST_VOLUME_DESC`
   for (let attempt = 0; attempt < 4; attempt++) {
     const ctrl = new AbortController()
     const t = setTimeout(() => ctrl.abort(), RAPID_TIMEOUT_MS)
@@ -921,6 +924,312 @@ function fallbackFromCandidates(kandydaci: Record<string, unknown>[], max: numbe
   return out.slice(0, max)
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// AD-FIRST DISCOVERY (ScrapeCreators Facebook Ad Library → AliExpress sourcing)
+// Oś danych = AKTYWNE REKLAMY w PL (co ktoś realnie reklamuje = zwalidowany winner),
+// NIE wolumen AliExpress. AliExpress = tylko SOURCING (cena/zdjęcie/marża/link).
+// Dwa tryby (handler body.mode): 'kierunki' (pre-walidacja) i 'produkty' (dobór).
+// ═══════════════════════════════════════════════════════════════════════════
+const SC_BASE = 'https://api.scrapecreators.com'
+const SC_PATH = '/v1/facebook/adLibrary/search/ads'
+const SC_TIMEOUT_MS = 25000
+const SC_MIN_ADS = (() => { const n = parseInt(Deno.env.get('BUD_SC_MIN_ADS') || '', 10); return (isFinite(n) && n > 0) ? n : 6 })()
+const SC_CREDITS_CAP = (() => { const n = parseInt(Deno.env.get('BUD_SC_CREDITS_CAP') || '', 10); return (isFinite(n) && n > 0) ? n : 8 })() // twardy limit wyszukań SC / wywołanie
+const SC_SOURCE_TARGET = 10   // ile gotowych ProductCandidate chcemy zwrócić
+const SC_SOURCE_TRY = 16      // ilu AdWinnerów próbujemy sourcować (zapas na dropy w PL/verify)
+function hasScrapeCreators(): boolean { return !!Deno.env.get('BUD_SCRAPECREATORS_API_KEY') }
+
+interface AdWinner {
+  domena: string; slug: string; nazwa: string; copy: string
+  image: string; video: boolean; page_name: string; dni_emisji: number; cta: string
+}
+
+// Jedno wyszukanie ScrapeCreators (FB Ad Library) — PL, aktywne. 1 kredyt ≈ 25-30 reklam.
+// deno-lint-ignore no-explicit-any
+async function scSearch(query: string): Promise<{ ads: any[]; credits: number | null; status: number }> {
+  const key = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
+  const url = `${SC_BASE}${SC_PATH}?query=${encodeURIComponent(query)}&country=PL&status=active`
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), SC_TIMEOUT_MS)
+    try {
+      const res = await fetch(url, { headers: { 'x-api-key': key }, signal: ctrl.signal })
+      if (res.status === 429 || res.status >= 500) { await new Promise((r) => setTimeout(r, [600, 1500, 3000][attempt] ?? 3000)); continue }
+      if (!res.ok) { console.error('[bud-products] SC http', res.status, 'q:', query); return { ads: [], credits: null, status: res.status } }
+      const data = await res.json()
+      const ads = Array.isArray(data?.searchResults) ? data.searchResults : []
+      const credits = (typeof data?.credits_remaining === 'number') ? data.credits_remaining : null
+      return { ads, credits, status: 200 }
+    } catch (e) { console.error('[bud-products] scSearch', query, e instanceof Error ? e.message : e); await new Promise((r) => setTimeout(r, 600 + attempt * 600)) }
+    finally { clearTimeout(t) }
+  }
+  return { ads: [], credits: null, status: 0 }
+}
+
+function parseLinkUrl(u: string): { domena: string; slug: string } {
+  try {
+    const url = new URL(/^https?:\/\//i.test(u) ? u : 'https://' + u)
+    const domena = url.hostname.replace(/^www\./, '')
+    const parts = url.pathname.split('/').filter(Boolean)
+    const slug = parts.length ? parts[parts.length - 1] : ''
+    return { domena, slug }
+  } catch { return { domena: '', slug: '' } }
+}
+
+// Wieloryby/nie-ecom do odsiania (apki opowiadań, media, książki) — zalewają wyniki.
+const AD_WHALE_CATS = ['book', 'app page', 'media/news', 'news', 'publisher', 'magazine', 'website']
+// Surowa reklama SC → AdWinner. Wymaga (slug LUB title) ORAZ (zdjęcie LUB wideo).
+// deno-lint-ignore no-explicit-any
+function mapAdSnapshot(ad: any): AdWinner | null {
+  const snap = ad?.snapshot || {}
+  const str = (v: unknown) => (typeof v === 'string' ? v.trim() : '')
+  const cats = Array.isArray(snap.page_categories) ? snap.page_categories.map((c: any) => String(c).toLowerCase()) : []
+  if (cats.some((c: string) => AD_WHALE_CATS.some((w) => c.includes(w)))) return null
+  const { domena, slug } = parseLinkUrl(str(snap.link_url))
+  const title = str(snap.title)
+  const bodyText = (snap.body && typeof snap.body === 'object') ? str((snap.body as any).text) : str(snap.body)
+  const images = Array.isArray(snap.images) ? snap.images : []
+  const videos = Array.isArray(snap.videos) ? snap.videos : []
+  const img = images.length ? (str(images[0]?.original_image_url) || str(images[0]?.resized_image_url) || str(images[0]?.url)) : ''
+  const hasVideo = videos.length > 0
+  if (!title && !slug) return null
+  if (!img && !hasVideo) return null
+  const start = Number(ad?.start_date) || 0
+  const dni = start > 0 ? Math.max(0, Math.round((Math.floor(Date.now() / 1000) - start) / 86400)) : 0
+  return {
+    domena, slug,
+    nazwa: title || slug.replace(/[-_]/g, ' '),
+    copy: bodyText.slice(0, 400),
+    image: img,
+    video: hasVideo,
+    page_name: str(ad?.page_name) || str(snap.page_name),
+    dni_emisji: dni,
+    cta: str(snap.cta_type),
+  }
+}
+
+function adWinnerKey(w: AdWinner): string {
+  if (w.domena && w.slug) return w.domena + '|' + w.slug
+  return (w.nazwa || '').toLowerCase().slice(0, 40)
+}
+// Dedup po (domena+slug) + ranking WOW: preferuj wideo i dłuższą emisję (=zwalidowany winner).
+function dedupRankAds(raw: AdWinner[]): AdWinner[] {
+  const seen = new Map<string, AdWinner>()
+  const score = (x: AdWinner) => (x.video ? 1000 : 0) + x.dni_emisji
+  for (const w of raw) {
+    const k = adWinnerKey(w); if (!k) continue
+    const prev = seen.get(k)
+    if (!prev || score(w) > score(prev)) seen.set(k, w)
+  }
+  return Array.from(seen.values()).sort((a, b) => score(b) - score(a))
+}
+
+// Zbiera AdWinnerów dla listy fraz (każda = 1 kredyt SC), dedup+rank. Zwraca też zużyte kredyty.
+async function collectAdWinners(frazy: string[]): Promise<{ winners: AdWinner[]; credits: number; lastRemaining: number | null }> {
+  const raw: AdWinner[] = []
+  let credits = 0; let lastRemaining: number | null = null
+  for (const f of frazy) {
+    const r = await scSearch(f)
+    credits++
+    if (r.credits != null) lastRemaining = r.credits
+    for (const ad of r.ads) { const w = mapAdSnapshot(ad); if (w) raw.push(w) }
+  }
+  return { winners: dedupRankAds(raw), credits, lastRemaining }
+}
+
+// GPT #1: dla każdego AdWinnera → angielska fraza zakupowa do AliExpress + krótka polska nazwa.
+// Slug/tytuł reklamy bywa PL/marketingowy — Ali szuka po EN. JSON, gpt-5 low.
+async function adQueriesAndNames(winners: AdWinner[]): Promise<Array<{ en: string; nazwa_pl: string }>> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  const fallback = winners.map((w) => ({ en: (w.slug || w.nazwa).replace(/[-_]/g, ' '), nazwa_pl: w.nazwa.slice(0, 70) }))
+  if (!apiKey || winners.length === 0) return fallback
+  const lista = winners.map((w, i) => `${i}. tytuł:"${w.nazwa}" slug:"${w.slug}" opis:"${w.copy.slice(0, 120)}"`).join('\n')
+  const sys = 'Jesteś asystentem sourcingu produktów. Dla każdej reklamy podaj: en = KRÓTKA angielska fraza wyszukiwania na AliExpress identyfikująca TEN produkt (2-4 słowa, typ produktu, nie marka sklepu), nazwa_pl = zwięzła polska nazwa produktu (do 60 znaków). Zwróć WYŁĄCZNIE JSON.'
+  const user = `Reklamy:\n${lista}\n\nZwróć JSON: {"q":[{"i":<indeks>,"en":"...","nazwa_pl":"..."}]} dla każdej reklamy.`
+  try {
+    const body: Record<string, unknown> = { model: KW_MODEL, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 4000 }
+    if (/^gpt-5/.test(KW_MODEL)) body.reasoning_effort = 'low'
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(body) }, 'adq')
+    if (!res.ok) return fallback
+    const data = await res.json()
+    const parsed = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const arr = Array.isArray(parsed?.q) ? parsed.q : []
+    const out = winners.map((w, i) => ({ en: fallback[i].en, nazwa_pl: fallback[i].nazwa_pl }))
+    for (const r of arr) {
+      const i = Number(r?.i)
+      if (Number.isInteger(i) && i >= 0 && i < out.length) {
+        if (typeof r.en === 'string' && r.en.trim()) out[i].en = r.en.trim()
+        if (typeof r.nazwa_pl === 'string' && r.nazwa_pl.trim()) out[i].nazwa_pl = r.nazwa_pl.trim().slice(0, 70)
+      }
+    }
+    return out
+  } catch (e) { console.error('[bud-products] adQueriesAndNames błąd:', e instanceof Error ? e.message : e); return fallback }
+}
+
+// GPT #2: weryfikacja zgodności — dla każdej reklamy wskaż, który kandydat AliExpress to TEN SAM
+// produkt (typ/funkcja), albo -1 gdy żaden nie pasuje (tekstowe dopasowanie myli się ~50%).
+// deno-lint-ignore no-explicit-any
+async function verifyAliMatches(pairs: Array<{ nazwa_pl: string; copy: string; cands: any[] }>): Promise<number[]> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  const fb = pairs.map((p) => (p.cands.length ? 0 : -1)) // fallback: pierwszy kandydat (lub brak)
+  if (!apiKey || pairs.length === 0) return fb
+  const blocks = pairs.map((p, i) => {
+    const cl = p.cands.map((c: any, j: number) => `   [${j}] ${String(c.nazwa).slice(0, 70)} (${c.est_koszt_zakupu} zł zakup)`).join('\n')
+    return `${i}. PRODUKT Z REKLAMY: "${p.nazwa_pl}" — ${p.copy.slice(0, 100)}\n  kandydaci AliExpress:\n${cl || '   (brak)'}`
+  }).join('\n\n')
+  const sys = 'Jesteś weryfikatorem sourcingu. Dla każdej reklamy wskaż indeks kandydata AliExpress, który jest TYM SAMYM produktem co w reklamie (ten sam typ/funkcja). Jeśli żaden nie pasuje (inny produkt, akcesorium, część zamienna, drastycznie inna cena/typ) → -1. Bądź surowy: lepiej -1 niż złe dopasowanie. Zwróć WYŁĄCZNIE JSON.'
+  const user = `${blocks}\n\nZwróć JSON: {"m":[{"i":<indeks reklamy>,"c":<indeks kandydata lub -1>}]}`
+  try {
+    const body: Record<string, unknown> = { model: OPENAI_MODEL, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 3000 }
+    if (/^gpt-5/.test(OPENAI_MODEL)) body.reasoning_effort = 'low'
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(body) }, 'verify')
+    if (!res.ok) return fb
+    const data = await res.json()
+    const parsed = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const arr = Array.isArray(parsed?.m) ? parsed.m : []
+    const out = fb.slice()
+    for (const r of arr) { const i = Number(r?.i); const c = Number(r?.c); if (Number.isInteger(i) && i >= 0 && i < out.length) out[i] = Number.isInteger(c) ? c : -1 }
+    return out
+  } catch (e) { console.error('[bud-products] verifyAliMatches błąd:', e instanceof Error ? e.message : e); return fb }
+}
+
+// Pre-walidacja kierunków: dla każdego {nazwa,fraza} 1 search SC; ok gdy ≥ SC_MIN_ADS winnerów.
+// Zwraca też bufor reklam per kierunek (bud-chat zapisze go → discovery serwuje bez nowych kredytów).
+// deno-lint-ignore no-explicit-any
+async function prevalidateKierunki(kierunki: any[], _sessionId: string): Promise<{ kierunki: Array<{ nazwa: string; fraza: string; ok: boolean; count: number; ads: AdWinner[] }>; credits: number; remaining: number | null }> {
+  const out: Array<{ nazwa: string; fraza: string; ok: boolean; count: number; ads: AdWinner[] }> = []
+  let credits = 0; let remaining: number | null = null
+  for (const k of (kierunki || []).slice(0, 4)) {
+    const nazwa = typeof k?.nazwa === 'string' ? k.nazwa.trim() : ''
+    const fraza = typeof k?.fraza === 'string' ? k.fraza.trim() : nazwa
+    if (!fraza) { out.push({ nazwa, fraza: '', ok: false, count: 0, ads: [] }); continue }
+    const r = await scSearch(fraza); credits++
+    if (r.credits != null) remaining = r.credits
+    const winners = dedupRankAds(r.ads.map(mapAdSnapshot).filter((w): w is AdWinner => !!w))
+    out.push({ nazwa, fraza, ok: winners.length >= SC_MIN_ADS, count: winners.length, ads: winners.slice(0, 30) })
+  }
+  console.log('[bud-products] prevalidateKierunki:', out.map((o) => `${o.nazwa}=${o.count}${o.ok ? '✓' : '✗'}`).join(', '), '| kredyty:', credits)
+  return { kierunki: out, credits, remaining }
+}
+
+// GPT #0: z kierunku/klimatu klienta → 6-8 KONKRETNYCH polskich fraz produktowych do Ad Library.
+// Konkretne (typ produktu), NIE ogólniki („do domu"/„gadżety") — ogólniki łapią szum/wieloryby.
+// Każda fraza = inny typ produktu (różnorodność karuzeli). JSON, gpt-5 low.
+async function generateAdQueries(kierunek: string, wyklucz: string[]): Promise<string[]> {
+  const apiKey = Deno.env.get('OPENAI_API_KEY')
+  if (!apiKey || !kierunek) return kierunek ? [kierunek] : []
+  const wy = (wyklucz || []).filter((x) => typeof x === 'string').slice(0, 30)
+  const sys = 'Jesteś łowcą winning-productów pod reklamy Facebook/TikTok na rynek PL. Z KLIMATU/świata klienta generujesz konkretne POLSKIE frazy produktowe do wyszukania AKTYWNYCH reklam (Ad Library). Zasady: (1) każda fraza = KONKRETNY typ produktu fizycznego, jaki ludzie realnie reklamują (np. „projektor gwiazd", „masażer karku", „lampka księżyc"), NIE ogólniki („do domu", „gadżety", „akcesoria") — ogólniki łapią szum i wieloryby (apki, książki). (2) Produkty z efektem WOW / scroll-stopper, luźno powiązane z klimatem (nie tylko dosłowny rdzeń). (3) Każda fraza INNY typ produktu. (4) 6-8 fraz. Zwróć WYŁĄCZNIE JSON.'
+  const user = `KLIMAT/świat klienta: ${kierunek}${wy.length ? `\nPOMIŃ (już pokazane): ${wy.join('; ')}` : ''}\n\nZwróć JSON: {"frazy":["...","..."]} — 6-8 konkretnych polskich fraz produktowych.`
+  try {
+    const body: Record<string, unknown> = { model: KW_MODEL, messages: [{ role: 'system', content: sys }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: 2000 }
+    if (/^gpt-5/.test(KW_MODEL)) body.reasoning_effort = 'low'
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify(body) }, 'adqueries')
+    if (!res.ok) return [kierunek]
+    const data = await res.json()
+    const parsed = JSON.parse(data?.choices?.[0]?.message?.content || '{}')
+    const frazy = Array.isArray(parsed?.frazy) ? parsed.frazy.filter((x: unknown) => typeof x === 'string' && (x as string).trim().length > 1).map((x: string) => x.trim()) : []
+    return frazy.length ? frazy.slice(0, 8) : [kierunek]
+  } catch (e) { console.error('[bud-products] generateAdQueries błąd:', e instanceof Error ? e.message : e); return [kierunek] }
+}
+
+// Dobór produktów ad-first: bufor reklam (z pre-walidacji) LUB świeży search po frazach →
+// dedup → sourcing AliExpress (ship_to_country=PL) → GPT weryfikacja → ≤10 ProductCandidate.
+async function runAdFirstProdukty(
+  inp: { kierunek: string; frazy: string[]; adBuffer: AdWinner[]; wyklucz: string[]; page: number },
+  sessionId: string,
+): Promise<{ items: Record<string, unknown>[]; source: string; ad_buffer: AdWinner[]; credits: number; remaining: number | null }> {
+  const rate = await fetchUsdPlnRate()
+  let credits = 0; let remaining: number | null = null
+  // 1) Pula reklam: preferuj bufor (0 kredytów); dobierz świeżo gdy płytki.
+  let winners: AdWinner[] = Array.isArray(inp.adBuffer) ? inp.adBuffer.filter((w) => w && (w.slug || w.nazwa)) : []
+  if (winners.length < SC_SOURCE_TRY) {
+    // Frazy: z markera (jeśli model podał) ALBO wygenerowane z kierunku (konkretne PL, anty-wieloryb).
+    let frazy = inp.frazy.filter((f) => f && f.trim().length > 1)
+    if (!frazy.length) frazy = await generateAdQueries(inp.kierunek, inp.wyklucz)
+    const got = await collectAdWinners(frazy.slice(0, SC_CREDITS_CAP))
+    credits += got.credits; remaining = got.lastRemaining
+    const seen = new Set(winners.map(adWinnerKey))
+    for (const w of got.winners) { const k = adWinnerKey(w); if (!seen.has(k)) { seen.add(k); winners.push(w) } }
+    winners = dedupRankAds(winners)
+  }
+  // wyklucz już pokazane (po nazwie/slug)
+  const wyklSet = new Set((inp.wyklucz || []).map((x) => x.toLowerCase().trim()).filter(Boolean))
+  winners = winners.filter((w) => { const n = (w.nazwa + ' ' + w.slug).toLowerCase(); for (const x of wyklSet) { if (x.length >= 4 && n.includes(x)) return false } return true })
+  if (winners.length === 0) return { items: [], source: 'brak_reklam', ad_buffer: [], credits, remaining }
+
+  // 2) Bierzemy pierwszych SC_SOURCE_TRY do sourcingu (reszta zostaje w buforze na „pokaż inne").
+  const toSource = winners.slice(0, SC_SOURCE_TRY)
+  const rest = winners.slice(SC_SOURCE_TRY)
+  // 3) GPT #1: EN-fraza + nazwa_pl per winner.
+  const qn = await adQueriesAndNames(toSource)
+  // 4) Sourcing AliExpress RÓWNOLEGLE (ship_to_country=PL), batchami.
+  const sourced: Array<{ w: AdWinner; nazwa_pl: string; cands: Record<string, unknown>[] }> = []
+  const CONC = 5
+  for (let i = 0; i < toSource.length; i += CONC) {
+    const batch = toSource.slice(i, i + CONC)
+    const settled = await Promise.allSettled(batch.map((_w, j) => rapidFetch(qn[i + j].en, 'products', 5, true)))
+    settled.forEach((s, j) => {
+      const w = batch[j]; const meta = qn[i + j]
+      const prods = (s.status === 'fulfilled' && Array.isArray(s.value)) ? s.value : []
+      const cands: Record<string, unknown>[] = []
+      for (let k = 0; k < prods.length && cands.length < 5; k++) {
+        const c = mapRapidProduct(prods[k], k, rate, meta.en)
+        if (!c) continue
+        const koszt = (c.est_koszt_zakupu as number) || 0
+        if (koszt < MIN_KOSZT_ZAKUP || koszt > MAX_KOSZT_ZAKUP) continue // sanity strefy impulsu
+        cands.push(c)
+      }
+      if (cands.length) sourced.push({ w, nazwa_pl: meta.nazwa_pl, cands })
+    })
+  }
+  if (sourced.length === 0) return { items: [], source: 'brak_pl', ad_buffer: rest, credits, remaining }
+
+  // 5) GPT #2: weryfikacja — który kandydat Ali = produkt z reklamy (lub -1).
+  const picks = await verifyAliMatches(sourced.map((s) => ({ nazwa_pl: s.nazwa_pl, copy: s.w.copy, cands: s.cands })))
+
+  // 6) Składanie ProductCandidate: nazwa z reklamy (PL), zdjęcie+ceny z Ali, sygnal = dowód reklamowy.
+  // DEDUP finalny: różne reklamy tego samego produktu trafiają w ten sam produkt Ali → 1 karta.
+  const seenAliId = new Set<string>()
+  const seenName = new Set<string>()
+  const normName = (n: string) => n.toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+  const rawItems: Record<string, unknown>[] = []
+  sourced.forEach((s, i) => {
+    const ci = picks[i]
+    if (!Number.isInteger(ci) || ci < 0 || ci >= s.cands.length) return // brak dopasowania → drop
+    const c = s.cands[ci]
+    const aliId = String(c.id || '')
+    const nk = normName(String(s.nazwa_pl || c.nazwa || ''))
+    if ((aliId && seenAliId.has(aliId)) || (nk && seenName.has(nk))) return // duplikat → pomiń
+    if (aliId) seenAliId.add(aliId)
+    if (nk) seenName.add(nk)
+    const dni = s.w.dni_emisji
+    const sygnal = s.w.page_name
+      ? `Reklama aktywna${dni > 0 ? ` od ~${dni} dni` : ''} — ${s.w.page_name}`
+      : `Produkt aktywnie reklamowany w Polsce${dni > 0 ? ` (~${dni} dni)` : ''}`
+    rawItems.push({
+      id: c.id,
+      nazwa: s.nazwa_pl || (c.nazwa as string),
+      opis_1zd: s.w.copy.slice(0, 140),
+      czemu_sie_sprzedaje: `Realnie reklamowany w PL${s.w.video ? ' (wideo)' : ''} — sprawdzony scroll-stopper, nie commodity z półki.`,
+      est_cena_detaliczna_pl: c.est_cena_detaliczna_pl,
+      est_koszt_zakupu: c.est_koszt_zakupu,
+      est_marza_zl: c.est_marza_zl,
+      sygnal_popytu: sygnal,
+      kategoria: inp.kierunek,
+      ref_url: c.ref_url,
+      image: c.image,
+      najmocniejszy: false,
+    })
+    if (rawItems.length >= SC_SOURCE_TARGET) return
+  })
+
+  const items = rawItems.slice(0, SC_SOURCE_TARGET).filter(saneCandidate).map((c, i) => normalizeCandidate(c, i))
+  if (items.length) { const si = 0; items.forEach((x, i) => { x.najmocniejszy = i === si }) }
+  console.log('[bud-products] ad-first:', { winners: winners.length, toSource: toSource.length, sourced: sourced.length, dopasowane: items.length, credits })
+  if (sessionId) { try { await logRapidUsage(sessionId, { source: 'adfirst', counts: { winners: winners.length, sourced: sourced.length, items: items.length, sc_credits: credits } }, items.length, 'adfirst') } catch (_e) { /* */ } }
+  return { items, source: items.length ? 'adfirst' : 'brak_dopasowan', ad_buffer: rest, credits, remaining }
+}
+
 Deno.serve(async (req) => {
   const cors = getCorsHeaders(req.headers.get('origin'))
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
@@ -940,8 +1249,31 @@ Deno.serve(async (req) => {
     // dopiero gdy faktycznie wchodzimy w ścieżkę web_search.
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')
 
-    let body: { sessionId?: string; kategoria?: string; budzet?: string; styl?: string; wyklucz?: unknown; page?: number }
+    let body: { sessionId?: string; kategoria?: string; budzet?: string; styl?: string; wyklucz?: unknown; page?: number; mode?: string; kierunki?: unknown; frazy?: unknown; ad_buffer?: unknown }
     try { body = await req.json() } catch { return jsonResponse({ error: 'nieprawidlowy_json' }, 400, cors) }
+
+    // ── AD-FIRST (ScrapeCreators) — NOWA oś, tryby przez body.mode. Gdy klucz SC jest
+    //    i mode pasuje, obsługujemy tu i WYCHODZIMY; inaczej spadamy do starych ścieżek niżej.
+    const mode = typeof body.mode === 'string' ? body.mode : ''
+    if (hasScrapeCreators() && (mode === 'kierunki' || mode === 'produkty')) {
+      const sid = (typeof body.sessionId === 'string' ? body.sessionId : '').trim()
+      if (mode === 'kierunki') {
+        const kierunki = Array.isArray(body.kierunki) ? body.kierunki : []
+        if (!kierunki.length) return jsonResponse({ error: 'brak_kierunkow' }, 400, cors)
+        const pv = await prevalidateKierunki(kierunki, sid)
+        return jsonResponse({ mode: 'kierunki', kierunki: pv.kierunki, sc_credits: pv.credits, sc_remaining: pv.remaining }, 200, cors)
+      }
+      // mode === 'produkty'
+      const kierunek = typeof body.kategoria === 'string' ? body.kategoria : ''
+      const frazy = Array.isArray(body.frazy) ? (body.frazy as unknown[]).filter((x): x is string => typeof x === 'string') : []
+      const adBuffer = Array.isArray(body.ad_buffer) ? (body.ad_buffer as AdWinner[]) : []
+      const wyklP = Array.isArray(body.wyklucz) ? (body.wyklucz as unknown[]).filter((x): x is string => typeof x === 'string') : []
+      const pageP = (typeof body.page === 'number' && body.page > 0) ? Math.floor(body.page) : 1
+      if (!frazy.length && !adBuffer.length && !kierunek) return jsonResponse({ error: 'brak_kryteriow' }, 400, cors)
+      // frazy puste → runAdFirstProdukty wygeneruje konkretne PL frazy z kierunku (generateAdQueries)
+      const r = await runAdFirstProdukty({ kierunek, frazy, adBuffer, wyklucz: wyklP, page: pageP }, sid)
+      return jsonResponse({ items: r.items, page: pageP, source: r.source, ad_buffer: r.ad_buffer, sc_credits: r.credits, sc_remaining: r.remaining }, 200, cors)
+    }
 
     const kategoria = typeof body.kategoria === 'string' ? body.kategoria : ''
     const budzet = typeof body.budzet === 'string' ? body.budzet : ''

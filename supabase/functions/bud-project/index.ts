@@ -23,6 +23,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { REVEAL_PLAN, VISIT_DEBOUNCE_MS } from "../_shared/bud-reveal-plan.ts";
+import { bumpLeadStage } from "../_shared/lead-stage.ts";
 
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
@@ -213,6 +214,9 @@ Deno.serve(async (req) => {
         console.error('[bud-project] buy_reservation insert error:', rOrdErr)
         return jsonResponse({ error: 'blad_zamowienia' }, 500, cors)
       }
+      // Pipeline: kliknął „zapłać rezerwację" = blisko rezerwacji → „Zakwalifikowany" (proposal).
+      // Mocny sygnał intencji → allowRevive (nawet jeśli był wcześniej odrzucony).
+      await bumpLeadStage(supabase, (rSess.lead_id as string | null) || null, 'proposal', { allowRevive: true })
       return jsonResponse({ orderId: rOrder.id, amount: rOffer.price }, 200, cors)
     }
 
@@ -268,7 +272,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product')
+      .select('id, name, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product, budget_declared, shortlist')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -280,6 +284,30 @@ Deno.serve(async (req) => {
     // /sklep ruszył (raport / ustalenia / makiety) — inaczej 404.
     if (!session) {
       return jsonResponse({ error: 'brak_sesji' }, 404, cors)
+    }
+
+    // Lekkie sygnały (budżet, shortlist) — działają NIEZALEŻNIE od artefaktów (shortlist pada przy
+    // openerze, jeszcze przed raportem) → PRZED bramką brak_projektu. Owner-gate jak w reset_pipeline.
+    if (action === 'set_budget' || action === 'set_shortlist') {
+      if (session.auth_user_id && (!authUser || authUser.id !== session.auth_user_id)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+      if (action === 'set_budget') {
+        // EARLY BUDGET GATE (req Tomka): zadeklarowany budżet startowy (lead-scoring + dyskwalifikacja).
+        // Wartości: high | mid | unknown | none. „none" = soft-exit po stronie frontu (NIE palimy compute).
+        const budget = (typeof body.budget === 'string' ? body.budget : '').trim()
+        if (!['high', 'mid', 'unknown', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
+        const { error: bErr } = await supabase.from('bud_sessions')
+          .update({ budget_declared: budget, updated_at: new Date().toISOString() }).eq('id', sessionId)
+        if (bErr) console.error('[bud-project] set_budget error:', bErr)
+        return jsonResponse({ ok: true, budget }, 200, cors)
+      }
+      // set_shortlist — „Rozważam" → CRM: lekka lista (nazwa + metryki) jako sygnał intencji/wahania.
+      const sl = Array.isArray(body.shortlist) ? (body.shortlist as unknown[]).slice(0, 6) : []
+      const { error: sErr } = await supabase.from('bud_sessions')
+        .update({ shortlist: sl, updated_at: new Date().toISOString() }).eq('id', sessionId)
+      if (sErr) console.error('[bud-project] set_shortlist error:', sErr)
+      return jsonResponse({ ok: true, n: sl.length }, 200, cors)
     }
     // Sesja istnieje, ale jeszcze bez artefaktów (świeży wybór / raport się dopiero liczy):
     // dla 'get' (sync panelu pollowany co ~25s w trakcie generacji) zwróć PUSTY projekt 200
@@ -418,6 +446,9 @@ Deno.serve(async (req) => {
         const { error: slErr } = await supabase.from('bud_sessions')
           .update({ seen_landing_at: new Date().toISOString() }).eq('id', sessionId)
         if (slErr) console.error('[bud-project] seen_landing stamp error:', slErr)
+        // Pipeline: sklep wygenerowany I obejrzany → „Skontaktowany" (contacted).
+        // Sygnał pasywny → bez wskrzeszania ręcznie odrzuconych leadów.
+        await bumpLeadStage(supabase, (session.lead_id as string | null) || null, 'contacted')
       }
       return jsonResponse({ ok: true, seen: !!session.landing_url }, 200, cors)
     }
@@ -461,6 +492,36 @@ Deno.serve(async (req) => {
       .order('id', { ascending: true })
       .limit(80)
     if (cmErr) console.error('[bud-project] collab messages fetch error:', cmErr)
+
+    // ── Pipeline CRM: awans leada do NAJWYŻSZEGO osiągniętego etapu (monotonicznie) ──
+    // Liczone z trwałego stanu sesji przy każdym sync 'get' (front polluje), więc status
+    // dogania rzeczywistość nawet bez dotykania tpay-webhook. Kolejność: opłacone > rozmowa
+    // o współpracy > obejrzany sklep. Sygnały opłaty wskrzeszają, pasywne nie.
+    if (session.lead_id) {
+      // FIX (audyt 2026-06-30): „Oferta"/qualified czytało kanał 'wspolpraca' z bud_messages,
+      // który został usunięty 2026-06-16 (rozmowa idzie na 'sparing') → bump NIGDY nie odpalał.
+      // Sygnał „rozmowa o warunkach współpracy" = ZIELONE ŚWIATŁO (verdict): pada w fazie
+      // współpracy, gdy oferta + model 9400/20% są na stole. Czyste, dostępne w sesji.
+      const offerOnTable = (session.verdict as string | null) === 'zielony'
+      // „Zakwalifikowany" (proposal) — KONKRETNE KRYTERIA (req Tomka 2026-06-30):
+      // lead z ZIELONYM światłem (Oferta na stole), który wykazał TWARDY sygnał gotowości,
+      // ale jeszcze nie wpłacił. Sygnał = WRÓCIŁ do projektu po zielonym (panel_visits >= 2 —
+      // odrębne wizyty, debounced 30 min, czyli realny powrót = aktywne rozważanie rezerwacji).
+      // Klik „Rezerwuję" (buy_reservation) już bumpuje proposal osobno (allowRevive). Dzięki temu
+      // „Zakwalifikowany" to gorący lead PRZED kliknięciem pay, nie tylko tuż-przed-Rezerwacją.
+      const nearReservation = offerOnTable && ((session.panel_visits as number | null) || 0) >= 2
+      if (session.full_paid_at) {
+        await bumpLeadStage(supabase, session.lead_id as string, 'won', { allowRevive: true })
+      } else if (session.paid_at) {
+        await bumpLeadStage(supabase, session.lead_id as string, 'negotiation', { allowRevive: true })
+      } else if (nearReservation) {
+        await bumpLeadStage(supabase, session.lead_id as string, 'proposal')   // ZAKWALIFIKOWANY
+      } else if (offerOnTable) {
+        await bumpLeadStage(supabase, session.lead_id as string, 'qualified')   // OFERTA
+      } else if (session.seen_landing_at) {
+        await bumpLeadStage(supabase, session.lead_id as string, 'contacted')   // SKONTAKTOWANY
+      }
+    }
 
     // Historia GŁÓWNEJ rozmowy (sparing) — tylko dla zweryfikowanego WŁAŚCICIELA
     // sesji (JWT). Pozwala odtworzyć rozmowę po zalogowaniu na innym urządzeniu;
@@ -543,7 +604,7 @@ Deno.serve(async (req) => {
 
     return jsonResponse({
       projekt: {
-        nazwa: (brief.nazwa as string) || 'Twoje narzędzie',
+        nazwa: (brief.nazwa as string) || 'Twój sklep',
         opis: (brief.opis as string) || null,
         dla_kogo: (brief.dla_kogo as string) || null,
         ekrany: Array.isArray(brief.ekrany) ? brief.ekrany : [],
@@ -564,8 +625,15 @@ Deno.serve(async (req) => {
         full_paid_at: session.full_paid_at || null,
         knowhow_closed_at: session.knowhow_closed_at || null,
         idea_source: session.idea_source || null,
+        budget_declared: session.budget_declared || null,
+        shortlist: session.shortlist || null,
         reveals: revealsMap,
         imie: firstName,
+        // R1/resume (feedback Tomka): front MUSI odtworzyć komplet kontaktu po ?id= na świeżym
+        // urządzeniu, inaczej bramka pyta o imię/nazwisko DRUGI raz mimo że już je podano.
+        // Pełne imię i nazwisko + obecność telefonu (nie sam numer — to wystarcza bramce).
+        name: (session.name as string | null) || null,
+        ma_telefon: !!session.phone,
         created_at: session.created_at,
         // Pipeline /sklep (nowy flow): ustalenia + makiety + reklamy + landing per-sesja
         ustalenia: session.ustalenia || null,
