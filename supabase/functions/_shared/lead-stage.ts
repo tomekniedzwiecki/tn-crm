@@ -61,3 +61,54 @@ export async function bumpLeadStage(
     console.error('[lead-stage] bump error:', e);
   }
 }
+
+// ── REVIVE przy POWROCIE leada do rozmowy ─────────────────────────────────────
+// Sygnały MOCNE (realna wiadomość usera w czacie) wskrzeszają leada z terminala
+// lost/abandoned. Sygnały PASYWNE (ogląd panelu, zaczepki systemowe) NIE — to robi
+// wywołujący, decydując KIEDY wołać reviveLeadOnReengage (tylko z genuine user turn).
+
+interface ReviveSignals {
+  full_paid_at?: unknown;
+  paid_at?: unknown;
+  verdict?: unknown;
+  panel_visits?: unknown;
+  seen_landing_at?: unknown;
+}
+
+// Etap docelowy przy wskrzeszeniu — liczony z sygnałów sesji, z FLOOREM 'new'.
+// Lead w lost/abandoned MA lead_id (przeszedł bramkę kontaktu), więc jeśli wcześniej
+// dostał zielony werdykt / opłacił rezerwację, revive sztywno do 'new' cofnąłby realnie
+// zaawansowaną sprzedaż. Ta sama kaskada co spar-project/bud-project (get-sync).
+export function reviveTargetFromSignals(s: ReviveSignals): string {
+  const visits = (s.panel_visits as number | null) || 0;
+  const green = (s.verdict as string | null) === 'zielony';
+  if (s.full_paid_at) return 'won';
+  if (s.paid_at) return 'negotiation';
+  if (green && visits >= 2) return 'proposal';
+  if (green) return 'qualified';
+  if (s.seen_landing_at) return 'contacted';
+  return 'new';
+}
+
+// Wskrzesza leada TYLKO z terminala lost/abandoned (aktywne etapy zostawia monotoniczny
+// bumpLeadStage — tu jawny guard = zero zbędnego wpisu activity i zero ruszania leadów
+// w won/negotiation/itd.). Target z sygnałów (allowRevive, bo cur rank = -1). Wołać
+// WYŁĄCZNIE z gałęzi genuine-user-turn (realna wiadomość usera).
+export async function reviveLeadOnReengage(
+  // deno-lint-ignore no-explicit-any
+  supabase: any,
+  leadId: string | null | undefined,
+  signals: ReviveSignals,
+  channel: string,
+): Promise<void> {
+  try {
+    if (!leadId) return;
+    const { data: lead } = await supabase
+      .from('leads').select('status').eq('id', leadId).maybeSingle();
+    const cur = (lead?.status as string | null) || null;
+    if (cur !== 'lost' && cur !== 'abandoned') return; // tylko terminal się wskrzesza
+    await bumpLeadStage(supabase, leadId, reviveTargetFromSignals(signals), { allowRevive: true, channel });
+  } catch (e) {
+    console.error('[lead-stage] reviveLeadOnReengage error:', e);
+  }
+}

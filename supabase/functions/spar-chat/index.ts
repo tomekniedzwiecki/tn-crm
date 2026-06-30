@@ -21,6 +21,7 @@
 //   tryb 'wspolpraca' (stary model 20%/30k, niepodłączony) USUNIĘTY 2026-06-16.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { reviveLeadOnReengage } from "../_shared/lead-stage.ts";
 
 // ── CORS — whitelist originów (wzorzec: tpay-create-transaction) ──────────────
 const ALLOWED_ORIGINS = [
@@ -1164,7 +1165,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, panel_visits, seen_landing_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1358,6 +1359,22 @@ Deno.serve(async (req) => {
       if (userMsgError) {
         console.error('[spar-chat] insert user message error:', userMsgError)
         return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
+      }
+      // ── REVIVE-ON-REENGAGE: realna wiadomość usera wskrzesza leada z lost/abandoned ──
+      // Tu mamy GENUINE user turn (eventy leave_screen/contact/knowhow_close zwróciły
+      // wcześniej; knowhowResume wykluczony tym blokiem; pusta wiadomość odrzucona @1144).
+      // Ogląd panelu / zaczepki NIE wskrzeszają. Target z sygnałów sesji (FLOOR 'new')
+      // — patrz reviveTargetFromSignals. Fire-and-forget (waitUntil) — nie blokuje streamu.
+      if (existingSession?.lead_id) {
+        const revivePromise = reviveLeadOnReengage(supabase, existingSession.lead_id as string, {
+          full_paid_at: existingSession.full_paid_at,
+          paid_at: existingSession.paid_at,
+          verdict: existingSession.verdict,
+          panel_visits: (existingSession as Record<string, unknown>).panel_visits,
+          seen_landing_at: (existingSession as Record<string, unknown>).seen_landing_at,
+        }, '/aplikacja').catch((e) => console.error('[spar-chat] revive-on-reengage error:', e))
+        const erRv = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
+        if (erRv && typeof erRv.waitUntil === 'function') erRv.waitUntil(revivePromise)
       }
     }
 
