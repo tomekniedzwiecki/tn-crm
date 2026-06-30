@@ -387,7 +387,30 @@ async function postSlackSparing(
   }
 }
 
-// Lead zostawił JEDNOCZEŚNIE e-mail i telefon → #sparing (raz na sesję).
+// Heurystyka śmieciowego kontaktu z bramki (troll/bot wpisuje bzdury w imię/telefon).
+// Konserwatywna — łapie TYLKO jednoznaczne śmieci, by nie odrzucać prawdziwych leadów:
+//  • telefon: ciąg sekwencyjny (123456789), powtórzona jedna cyfra (000000000), ≤2 unikalne
+//  • imię: jeden powtórzony znak (aaaa), albo z czarnej listy wulgaryzmów.
+// Garbage → sesja is_test=true (wypada z automatów/raportów), lead NIE trafia do CRM.
+function looksLikeGarbageContact(name: string | null, phone: string | null): boolean {
+  const digits = (phone || '').replace(/\D/g, '')
+  if (digits) {
+    if (/^(\d)\1+$/.test(digits)) return true                       // 0000000000
+    if ('01234567890123456789'.includes(digits) && digits.length >= 7) return true  // 123456789
+    if ('98765432109876543210'.includes(digits) && digits.length >= 7) return true  // 987654321
+    if (new Set(digits.split('')).size <= 2 && digits.length >= 7) return true       // 1212121212
+  }
+  const n = (name || '').trim().toLowerCase()
+  if (n) {
+    const letters = n.replace(/[^a-ząćęłńóśźż]/gi, '')
+    if (letters.length >= 2 && /^(.)\1+$/.test(letters)) return true   // aaaa / xxxx
+    const BAD = ['chuj', 'kurwa', 'jeb', 'huj', 'pierdol', 'cwel', 'dupa', 'cipa', 'penis', 'sracz', 'qwerty', 'asdf', 'test test', 'aaa bbb']
+    if (BAD.some((b) => n.includes(b))) return true
+  }
+  return false
+}
+
+// Lead zostawił JEDNOCZEŚNIE e-mail i telefon → #sparing + lead „Nowy" w CRM (raz na sesję).
 // Stempel + warunki w jednym atomowym UPDATE: tylko gdy oba pola wypełnione
 // i jeszcze nie powiadomiono — wygrany wiersz = nasze powiadomienie (domyka też
 // równoległe requesty). Wołane po każdym dopisaniu kontaktu.
@@ -419,6 +442,33 @@ async function maybeNotifyContactSlack(
       project_desc: brief?.opis ?? null,
       karta: (s.problem_summary && typeof s.problem_summary === 'object') ? s.problem_summary : null,
     })
+    // ── Pipeline „Nowy": komplet kontaktu (email+telefon) = lead w CRM OD RAZU ──
+    // Parytet ze /sklep (bud-chat). Wcześniej lead Aplikacji powstawał dopiero na zielono,
+    // więc wczesne dropoffy (podali kontakt i utknęli) były NIEWIDOCZNE w pipeline.
+    // Atomowy claim wyżej gwarantuje, że to leci RAZ na sesję (i tylko nie-test).
+    try {
+      // Anty-śmieć: garbage imię/telefon (troll/bot) → oznacz sesję is_test, NIE twórz leada.
+      if (looksLikeGarbageContact(s.name as string | null, s.phone as string | null)) {
+        await supabase.from('spar_sessions').update({ is_test: true }).eq('id', sessionId)
+        console.log('[spar-chat] gate garbage contact → is_test, lead pominięty:', sessionId)
+        return
+      }
+      if (s.email) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+        const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
+        const lid = await createLeadForGreenVerdict(supabaseUrl, serviceKey, {
+          email: s.email as string,
+          name: (s.name as string | null) ?? null,
+          phone: (s.phone as string | null) ?? null,
+          profession: (s.profession as string | null) || 'nieznana',
+          karta: null,
+          tracking: null,
+        })
+        if (lid) {
+          await supabase.from('spar_sessions').update({ lead_id: lid }).eq('id', sessionId).is('lead_id', null)
+        }
+      }
+    } catch (e) { console.error('[spar-chat] gate lead create error:', e) }
   } catch (err) {
     console.error('[spar-chat] maybeNotifyContactSlack exception:', err)
   }

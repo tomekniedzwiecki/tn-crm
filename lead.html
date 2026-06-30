@@ -520,6 +520,12 @@
                     <div class="flex-1 min-w-0">
                         <h1 id="lead-email-display" class="text-3xl font-semibold text-white tracking-tight mb-1 truncate">Ładowanie...</h1>
                         <div class="flex items-center gap-3 text-zinc-500 text-sm flex-wrap">
+                            <span id="lead-origin-badge" class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-medium">-</span>
+                            <a id="lead-panel-link" href="#" target="_blank" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors">
+                                <i class="ph ph-identification-card text-base"></i>
+                                <span id="lead-panel-link-label">Zobacz konto</span>
+                            </a>
+                            <span class="text-zinc-700">•</span>
                             <span id="lead-source-badge" class="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium">-</span>
                             <span class="text-zinc-700">•</span>
                             <span class="font-mono text-xs">Dodany: <span id="lead-created">-</span></span>
@@ -2146,6 +2152,7 @@
             return {
                 search: params.get('f_search') || '',
                 team: params.get('f_team') || '',
+                origin: params.get('f_origin') || '',
                 source: params.get('f_source') || '',
                 minValue: params.get('f_min') || '',
                 maxValue: params.get('f_max') || ''
@@ -2154,7 +2161,20 @@
 
         function hasActiveFilters() {
             const f = getFiltersFromUrl();
-            return !!(f.search || f.team || f.source || f.minValue || f.maxValue);
+            return !!(f.search || f.team || f.origin || f.source || f.minValue || f.maxValue);
+        }
+
+        // ── POCHODZENIE leada (lejek) — spojne z pipeline.html ───────────────────
+        const ORIGIN_META = {
+            ankieta:   { key: 'ankieta',   label: 'Ankieta',   icon: 'ph-clipboard-text', color: 'text-zinc-300',    bg: 'bg-zinc-500/10',    border: 'border-zinc-500/30',    panel: null },
+            aplikacja: { key: 'aplikacja', label: 'Aplikacja', icon: 'ph-sparkle',        color: 'text-violet-300',  bg: 'bg-violet-500/10',  border: 'border-violet-500/30',  panel: '/tn-aplikacje/index' },
+            sklep:     { key: 'sklep',     label: 'Sklep',     icon: 'ph-storefront',     color: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', panel: '/tn-sklep/index' }
+        };
+        function leadOrigin(l) {
+            const s = l && l.lead_source;
+            if (s === 'stworze') return ORIGIN_META.aplikacja;
+            if (s === 'budowanie') return ORIGIN_META.sklep;
+            return ORIGIN_META.ankieta;
         }
 
         function buildLeadUrlWithFilters(leadId) {
@@ -2406,10 +2426,26 @@
                 }
             }
 
-            // Source badge
+            // Source badge (kanal marketingowy)
             const badge = document.getElementById('lead-source-badge');
             badge.textContent = src.name;
             badge.className = `inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-medium ${src.color} ${src.bg} ${src.border}`;
+
+            // Origin badge (pochodzenie / lejek) + link do panelu konta
+            const origin = leadOrigin(lead);
+            const originBadge = document.getElementById('lead-origin-badge');
+            originBadge.innerHTML = `<i class="ph ${origin.icon} text-[11px]"></i>${origin.label}`;
+            originBadge.className = `inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[10px] font-medium ${origin.color} ${origin.bg} ${origin.border}`;
+            originBadge.title = `Pochodzenie: ${origin.label}`;
+            const panelLinkEl = document.getElementById('lead-panel-link');
+            if (origin.panel) {
+                panelLinkEl.href = `${origin.panel}#lead-${lead.id}`;
+                panelLinkEl.className = `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors ${origin.color} ${origin.bg} ${origin.border} hover:brightness-125`;
+                document.getElementById('lead-panel-link-label').textContent = `Zobacz w panelu ${origin.label}`;
+                panelLinkEl.classList.remove('hidden');
+            } else {
+                panelLinkEl.classList.add('hidden');
+            }
 
             // Update pipeline stepper
             const status = lead.status || 'new';

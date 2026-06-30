@@ -196,11 +196,12 @@ Deno.serve(async (req) => {
       isNewLead = true
       console.log(`Created new lead: ${email} (id: ${leadId})`)
 
-      // Trigger lead_created automation — POMIJAMY dla 'budowanie' (/sklep): te leady mają
-      // własny lejek mailowy (bud-drip/bud-followups) i NIE powinny dostawać maila
-      // potwierdzenia zapisu z /zapisy. Pozostałe źródła (website/stworze/...) bez zmian.
-      if (data.lead_source === 'budowanie') {
-        console.log(`Skipping lead_created automation for budowanie lead ${leadId} (własny lejek)`)
+      // Trigger lead_created automation — POMIJAMY dla 'budowanie' (/sklep) i 'stworze'
+      // (/aplikacja): te leady mają własny lejek mailowy (bud-/spar-drip + followups) i NIE
+      // powinny dostawać generycznego maila „Potwierdzenie zapisu" z /zapisy. Pozostałe
+      // źródła (website/outreach/manual) bez zmian.
+      if (data.lead_source === 'budowanie' || data.lead_source === 'stworze') {
+        console.log(`Skipping lead_created automation for ${data.lead_source} lead ${leadId} (własny lejek)`)
       } else try {
         const supabaseUrl = Deno.env.get("SUPABASE_URL")
         const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")

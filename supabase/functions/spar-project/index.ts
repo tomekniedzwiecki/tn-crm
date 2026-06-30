@@ -23,6 +23,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { REVEAL_PLAN, VISIT_DEBOUNCE_MS } from "../_shared/spar-reveal-plan.ts";
+import { bumpLeadStage } from "../_shared/lead-stage.ts";
 
 const ALLOWED_ORIGINS = [
   'https://crm.tomekniedzwiecki.pl',
@@ -325,6 +326,9 @@ Deno.serve(async (req) => {
         const { error: slErr } = await supabase.from('spar_sessions')
           .update({ seen_landing_at: new Date().toISOString() }).eq('id', sessionId)
         if (slErr) console.error('[spar-project] seen_landing stamp error:', slErr)
+        // Pipeline: projekt obejrzany → „Skontaktowany" (contacted). Sygnał pasywny
+        // → bez wskrzeszania ręcznie odrzuconych leadów (parytet ze /sklep).
+        await bumpLeadStage(supabase, (session.lead_id as string | null) || null, 'contacted', { channel: '/aplikacja' })
       }
       return jsonResponse({ ok: true, seen: !!session.landing_url }, 200, cors)
     }
@@ -446,6 +450,28 @@ Deno.serve(async (req) => {
       }
       const { data: rvs } = await supabase.from('spar_reveals').select('key, status').eq('session_id', sessionId)
       for (const r of rvs || []) revealsMap[(r as { key: string }).key] = (r as { status: string }).status
+
+      // ── Pipeline CRM: awans leada do NAJWYŻSZEGO osiągniętego etapu (monotonicznie) ──
+      // Parytet ze /sklep (bud-project): liczone z trwałego stanu sesji przy każdym sync 'get'
+      // (front polluje), więc status dogania rzeczywistość bez dotykania tpay-webhook.
+      // Kolejność: pełna płatność > rezerwacja > blisko rezerwacji > oferta(zielony) > obejrzany.
+      // Sygnały płatności wskrzeszają (allowRevive), pasywne nie.
+      if (session.lead_id) {
+        const offerOnTable = isGreen                       // zielony werdykt = oferta + rezerwacja na stole
+        const nearReservation = offerOnTable && ((session.panel_visits as number | null) || 0) >= 2 // wrócił po zielonym
+        const lead_id = session.lead_id as string
+        if (session.full_paid_at) {
+          await bumpLeadStage(supabase, lead_id, 'won', { allowRevive: true, channel: '/aplikacja' })
+        } else if (session.paid_at) {
+          await bumpLeadStage(supabase, lead_id, 'negotiation', { allowRevive: true, channel: '/aplikacja' }) // REZERWACJA
+        } else if (nearReservation) {
+          await bumpLeadStage(supabase, lead_id, 'proposal', { channel: '/aplikacja' })   // ZAKWALIFIKOWANY
+        } else if (offerOnTable) {
+          await bumpLeadStage(supabase, lead_id, 'qualified', { channel: '/aplikacja' })   // OFERTA
+        } else if (session.seen_landing_at) {
+          await bumpLeadStage(supabase, lead_id, 'contacted', { channel: '/aplikacja' })   // SKONTAKTOWANY
+        }
+      }
     }
 
     return jsonResponse({

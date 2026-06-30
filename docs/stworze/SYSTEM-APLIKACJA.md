@@ -27,14 +27,14 @@ User przechodzi etapy; etap jest **wyliczany z flag serwerowych**, nie trzymany 
 ## 2. Komponenty per etap
 
 ### Etap 1 — Rozmowa
-- **`spar-chat`** (mózg, 1714 l.) — streaming czat; model `SPAR_OPENAI_MODEL`→`gpt-5.1`; prompt `settings.stworze_sparing_prompt`. Obsługuje WSZYSTKIE etapy (mechaniki w kodzie: GATE, KIERUNKI, PREVIEW_AFTER_GATE, COLLAB_PHASE, RESIGNATION, KNOWHOW_*). Zapisuje `spar_messages`, `spar_usage`, większość kolumn `spar_sessions`.
+- **`spar-chat`** (mózg, 1714 l.) — streaming czat; model `SPAR_OPENAI_MODEL`→`gpt-5.1`; prompt `settings.stworze_sparing_prompt`. Obsługuje WSZYSTKIE etapy (mechaniki w kodzie: GATE, KIERUNKI, PREVIEW_AFTER_GATE, COLLAB_PHASE, RESIGNATION, KNOWHOW_*). Zapisuje `spar_messages`, `spar_usage`, większość kolumn `spar_sessions`. **Lead „Nowy" w CRM powstaje przy BRAMCE kontaktu** (email+telefon, `maybeNotifyContactSlack`, atomowy claim raz/sesję + anty-garbage) — parytet ze /sklep; wcześniej dopiero na zielono (wczesne dropoffy były niewidoczne w pipeline). Zielony werdykt to fallback (lead-upsert idempotentny po e-mailu).
 - **`spar-assess`** — bramka potencjału (Responses API + web_search), structured verdict; model `SPAR_ASSESS_MODEL`→`gpt-5.5`. WEWNĘTRZNY (tylko spar-chat go woła Bearer service-role).
 - **`spar-image`** — 4 widoki „wow" + ekstra; `gpt-image-2`. Jedyna funkcja obrazowa z timeoutem (120 s + retry).
 - Front: zakładka **Rozmowa** w `sparing/index.html`.
 
 ### Etap 2 — Współpraca + rezerwacja
 - W `spar-chat`: po zielonym wstrzykiwany `COLLAB_PHASE_INSTRUCTION`; prompt sekcje `# OFERTA I WSPÓŁPRACA`, `# PRZEŁAMYWANIE OBIEKCJI`, `# FAQ OFERTY`. Marker `<makieta>` → karta rezerwacji 500 zł.
-- **`spar-project`** — read-panel (karta/brief/plan/raport/economics/gtm/strona/uwagi); zapisuje `seen_landing_at`, `last_panel_at`, `panel_visits` (zasilają bramki dripu).
+- **`spar-project`** — read-panel (karta/brief/plan/raport/economics/gtm/strona/uwagi); zapisuje `seen_landing_at`, `last_panel_at`, `panel_visits` (zasilają bramki dripu). **Awansuje leada po lejku CRM** (monotonicznie, `_shared/lead-stage.ts`, `channel:'/aplikacja'`) na każdym sync `get`: full_paid→won, paid→negotiation(Rezerwacja), zielony+visits≥2→proposal(Zakwalifikowany), zielony→qualified(Oferta), seen_landing→contacted(Skontaktowany). Parytet ze /sklep (bud-project) — patrz [[sklep-pipeline-mapowanie-statusow]].
 - **Deliverables** (gen na żądanie/drip): `spar-plan`, `spar-raport`, `spar-economics`, `spar-gtm`, `spar-landing`, `spar-prototype`.
 - **`spar-drip`** (cron) + **`spar-followups`** (cron) — sekwencje maili/SMS prowadzące do rezerwacji.
 - Front: zakładki **Współpraca / Plan / Rynek / Economics / GTM / Strona / Prototyp**; strona `aplikacja/wspolpraca/`; checkout + `aplikacja/regulamin/`.

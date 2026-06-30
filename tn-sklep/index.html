@@ -731,7 +731,7 @@ function renderSesje() {
 // ── GENEROWANIA (globalna galeria obrazów ze wszystkich sesji) ──
 // Widoki makiet SKLEPU (bud_sessions.preview_images): sklep / karta_produktu / logo / lifestyle / telefon / podsumowanie.
 const VIEW_LABELS = { sklep: 'Sklep', karta_produktu: 'Karta produktu', logo: 'Logo', lifestyle: 'Lifestyle', telefon: 'Mobile', podsumowanie: 'Pigułka', marka: 'Marka' };
-const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan', raport: 'raport rynku', landing: 'strona', prototype: 'panel (prototyp)', economics: 'unit economics', gtm: 'go-to-market', assess: 'badanie rynku', brand: 'marka', demand: 'walidacja popytu' };
+const KIND_LABELS = { chat: 'rozmowa', image: 'grafika', plan: 'plan', raport: 'raport rynku', landing: 'strona', prototype: 'panel (prototyp)', economics: 'unit economics', gtm: 'go-to-market', assess: 'badanie rynku', brand: 'marka', demand: 'walidacja popytu', mockup: 'makiety', ads: 'reklamy' };
 // plural → PanelCore
 function renderGenerowania() {
   const imgs = [];
@@ -891,6 +891,17 @@ const LEAD_TABS = [
   { id: 'koszty', icon: 'ph-wallet', label: 'Koszty', group: 'Biznes' },
   { id: 'akcje', icon: 'ph-sliders-horizontal', label: 'Akcje', group: 'Biznes' },
 ];
+
+// Deep-link #lead-<uuid>: UUID bywa session_id (Slack) albo CRM lead_id (pipeline/lead).
+// Najpierw probujemy po id sesji; jak nie ma — po lead_id (najswiezsza sesja tego leada).
+function resolveDeepLinkSession(uuid) {
+  const u = (uuid || '').toLowerCase();
+  if (sessions.some((s) => (s.id || '').toLowerCase() === u)) return uuid;
+  const byLead = sessions
+    .filter((s) => (s.lead_id || '').toLowerCase() === u)
+    .sort((a, b) => new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at))[0];
+  return byLead ? byLead.id : uuid;
+}
 
 async function openSession(id) {
   const s = sessions.find((x) => x.id === id);
@@ -2535,11 +2546,12 @@ async function init() {
   if (!DEMO) await loadAll();
   $('loading').classList.add('hidden');
 
-  // Deep-link do karty leada: #lead-<sessionId> (np. z powiadomienia Slack #sparing)
+  // Deep-link do karty leada: #lead-<uuid>. UUID = session_id (linki Slack #sparing)
+  // ALBO CRM lead_id (linki z /pipeline i /lead). Rozwiazujemy po obu.
   const leadMatch = (location.hash || '').match(/^#lead-([0-9a-f-]{36})$/i);
   if (leadMatch) {
     switchTab('leady');
-    openSession(leadMatch[1]);
+    openSession(resolveDeepLinkSession(leadMatch[1]));
   } else {
     const hash = (location.hash || '').replace(/[^a-z]/g, '');
     switchTab(VIEWS.includes(hash) ? hash : 'przeglad');

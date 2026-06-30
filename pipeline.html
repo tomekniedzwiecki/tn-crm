@@ -138,6 +138,12 @@
                 <i class="ph ph-funnel"></i>
                 <span>Filtry:</span>
             </div>
+            <select id="filter-origin" class="bg-zinc-900 border border-violet-500/30 rounded-lg px-3 py-1.5 text-xs text-white cursor-pointer outline-none hover:border-violet-500/50 focus:border-violet-500" title="Pochodzenie leada (z jakiego lejka wpadl)">
+                <option value="">Wszystkie lejki</option>
+                <option value="ankieta">📋 Ankieta</option>
+                <option value="aplikacja">✦ Aplikacja</option>
+                <option value="sklep">🏪 Sklep</option>
+            </select>
             <div id="team-filter-container" class="hidden">
                 <select id="filter-team" class="bg-zinc-900 border border-zinc-800 rounded-lg px-3 py-1.5 text-xs text-zinc-300 cursor-pointer outline-none hover:border-zinc-700 focus:border-zinc-600">
                     <option value="">Wszyscy handlowcy</option>
@@ -426,6 +432,7 @@
             return {
                 search: document.getElementById('filter-search')?.value?.trim() || '',
                 team: document.getElementById('filter-team')?.value || '',
+                origin: document.getElementById('filter-origin')?.value || '',
                 source: document.getElementById('filter-source')?.value || '',
                 minValue: document.getElementById('filter-value-min')?.value || '',
                 maxValue: document.getElementById('filter-value-max')?.value || ''
@@ -442,6 +449,7 @@
 
             if (filters.search) params.set('f_search', filters.search);
             if (filters.team) params.set('f_team', filters.team);
+            if (filters.origin) params.set('f_origin', filters.origin);
             if (filters.source) params.set('f_source', filters.source);
             if (filters.minValue) params.set('f_min', filters.minValue);
             if (filters.maxValue) params.set('f_max', filters.maxValue);
@@ -578,6 +586,28 @@
             return ch === 'youtube' ? 'google' : ch; // pipeline nie ma osobnego kubelka YouTube (= Google Ads)
         }
 
+        // ── POCHODZENIE leada (lejek, NIE kanal marketingowy) ────────────────────
+        // lead_source -> z ktorego lejka lead wpadl do pipeline:
+        //   stworze   -> Aplikacja (panel /tn-aplikacje)
+        //   budowanie -> Sklep     (panel /tn-sklep)
+        //   reszta (website/outreach/manual/null) -> Ankieta (/zapisy + reczne)
+        const ORIGIN_META = {
+            ankieta:   { key: 'ankieta',   label: 'Ankieta',   icon: 'ph-clipboard-text', color: 'text-zinc-300',    bg: 'bg-zinc-500/10',    border: 'border-zinc-500/30',    panel: null },
+            aplikacja: { key: 'aplikacja', label: 'Aplikacja', icon: 'ph-sparkle',        color: 'text-violet-300',  bg: 'bg-violet-500/10',  border: 'border-violet-500/30',  panel: '/tn-aplikacje/index' },
+            sklep:     { key: 'sklep',     label: 'Sklep',     icon: 'ph-storefront',     color: 'text-emerald-300', bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', panel: '/tn-sklep/index' }
+        };
+        function leadOrigin(lead) {
+            const s = lead && lead.lead_source;
+            if (s === 'stworze') return ORIGIN_META.aplikacja;
+            if (s === 'budowanie') return ORIGIN_META.sklep;
+            return ORIGIN_META.ankieta;
+        }
+        // Deep-link do panelu konta (#lead-<id> rozwiazywany po lead_id w panelu)
+        function leadPanelLink(lead) {
+            const o = leadOrigin(lead);
+            return o.panel ? `${o.panel}#lead-${lead.id}` : null;
+        }
+
         let filteredLeads = [];
         let sortDirection = 'asc'; // 'asc' = najstarsze na górze, 'desc' = najnowsze na górze
 
@@ -610,6 +640,7 @@
 
         function applyFilters() {
             const searchTerm = document.getElementById('filter-search').value.trim().toLowerCase();
+            const originFilter = document.getElementById('filter-origin')?.value || '';
             const sourceFilter = document.getElementById('filter-source').value;
             const minValue = document.getElementById('filter-value-min').value;
             const maxValue = document.getElementById('filter-value-max').value;
@@ -637,6 +668,9 @@
                 // Team member filter (admin only)
                 if (teamFilter && lead.assigned_to !== teamFilter) return false;
 
+                // Origin filter (pochodzenie / lejek)
+                if (originFilter && leadOrigin(lead).key !== originFilter) return false;
+
                 // Source filter
                 if (sourceFilter && getSource(lead) !== sourceFilter) return false;
 
@@ -649,7 +683,7 @@
             });
 
             // Show/hide clear button
-            const hasFilters = searchTerm || sourceFilter || minValue || maxValue || teamFilter;
+            const hasFilters = searchTerm || originFilter || sourceFilter || minValue || maxValue || teamFilter;
             document.getElementById('clear-pipeline-filters').classList.toggle('hidden', !hasFilters);
 
             // Update counts
@@ -661,12 +695,15 @@
 
         // Filter event listeners
         document.getElementById('filter-search').addEventListener('input', applyFilters);
+        document.getElementById('filter-origin')?.addEventListener('change', applyFilters);
         document.getElementById('filter-source').addEventListener('change', applyFilters);
         document.getElementById('filter-value-min').addEventListener('input', applyFilters);
         document.getElementById('filter-value-max').addEventListener('input', applyFilters);
         document.getElementById('filter-team')?.addEventListener('change', applyFilters);
         document.getElementById('clear-pipeline-filters').addEventListener('click', () => {
             document.getElementById('filter-search').value = '';
+            const originFilterEl = document.getElementById('filter-origin');
+            if (originFilterEl) originFilterEl.value = '';
             document.getElementById('filter-source').value = '';
             document.getElementById('filter-value-min').value = '';
             document.getElementById('filter-value-max').value = '';
@@ -1264,6 +1301,8 @@
             const memberColor = assignedMember ? getMemberColor(lead.assigned_to) : '';
             const daysInStatus = getDaysInStatus(lead);
             const leadValue = getLeadValue(lead);
+            const origin = leadOrigin(lead);
+            const panelLink = leadPanelLink(lead);
 
             // Urgency indicator
             const isUrgent = daysInStatus >= 7;
@@ -1287,9 +1326,14 @@
                             ${initials}
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="font-medium text-white text-sm truncate leading-tight">${displayName}</div>
-                            ${offer ? `<div class="text-[11px] text-amber-400/70 truncate leading-tight">${offer.name}</div>` :
-                              (lead.company ? `<div class="text-[11px] text-zinc-500 truncate leading-tight">${lead.company}</div>` : '')}
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${origin.bg} ${origin.border} ${origin.color} text-[9px] font-medium flex-shrink-0" title="Pochodzenie: ${origin.label}">
+                                    <i class="ph ${origin.icon} text-[10px]"></i>${origin.label}
+                                </span>
+                                <div class="font-medium text-white text-sm truncate leading-tight">${displayName}</div>
+                            </div>
+                            ${offer ? `<div class="text-[11px] text-amber-400/70 truncate leading-tight mt-0.5">${offer.name}</div>` :
+                              (lead.company ? `<div class="text-[11px] text-zinc-500 truncate leading-tight mt-0.5">${lead.company}</div>` : '')}
                         </div>
                         <div class="flex items-center gap-1 flex-shrink-0">
                             ${assignedMember ? `
@@ -1297,6 +1341,9 @@
                                     ${memberInitials}
                                 </div>
                             ` : ''}
+                            ${panelLink ? `<button onclick="event.stopPropagation(); window.open('${panelLink}', '_blank')" class="p-1 ${origin.color} hover:bg-white/10 rounded transition-colors" title="Zobacz konto w panelu ${origin.label}">
+                                <i class="ph ph-identification-card text-xs"></i>
+                            </button>` : ''}
                             <button onclick="event.stopPropagation(); window.open(getLeadPath('${lead.id}'), '_blank')" class="p-1 text-zinc-500 hover:text-blue-400 hover:bg-blue-500/10 rounded transition-colors" title="Otwórz w nowej karcie">
                                 <i class="ph ph-arrow-square-out text-xs"></i>
                             </button>
