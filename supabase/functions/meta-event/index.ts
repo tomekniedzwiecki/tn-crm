@@ -13,7 +13,7 @@ const META_PIXEL_ID = '1668188210820080'
 const META_API_VERSION = 'v25.0'
 
 // Supported events
-type MetaEventType = 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Lead' | 'CompleteRegistration' | 'Purchase'
+type MetaEventType = 'ViewContent' | 'AddToCart' | 'InitiateCheckout' | 'Lead' | 'Contact' | 'CompleteRegistration' | 'Purchase'
 
 interface MetaEventRequest {
   event: MetaEventType
@@ -252,7 +252,7 @@ Deno.serve(async (req) => {
     }
 
     // Validate event type
-    const validEvents: MetaEventType[] = ['ViewContent', 'AddToCart', 'InitiateCheckout', 'Lead', 'CompleteRegistration', 'Purchase']
+    const validEvents: MetaEventType[] = ['ViewContent', 'AddToCart', 'InitiateCheckout', 'Lead', 'Contact', 'CompleteRegistration', 'Purchase']
     if (!validEvents.includes(data.event)) {
       throw new Error(`Invalid event type. Must be one of: ${validEvents.join(', ')}`)
     }
