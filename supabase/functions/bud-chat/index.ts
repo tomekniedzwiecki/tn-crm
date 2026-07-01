@@ -985,7 +985,7 @@ const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany —
 const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
 - Rezerwacja: 500 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w cenę budowy.
 - Budowa sklepu: 9400 zł brutto, jednorazowo, pod klucz (po wliczeniu rezerwacji zostaje 8900 zł do zapłaty).
-- Udział Tomka: 20% od DOCHODU NETTO (po odjęciu towaru, reklam, wysyłki), bezterminowo, rozliczane miesięcznie — zarabia, gdy zarabia klient.
+- Udział Tomka: 10% od PRZYCHODU (obrotu ze sprzedaży), bezterminowo, rozliczane miesięcznie — ma udział w każdej Twojej sprzedaży.
 - Etapy: przygotowania → formalności → materiały reklamowe → uruchomienie kampanii (cel 1000 zamówień) → ~180 dni skalowania i przekazania sterów.
 - Budżet reklamowy i koszty operacyjne (towar, wysyłka) pokrywa klient.
 - Czego nie ma w tych faktach → „to domknie Tomek po rezerwacji". Nie zmyślaj liczb.`
@@ -996,9 +996,9 @@ const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
 const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, naturalnie, 1 zdaniem (nie wykład), zwłaszcza przy przejściach między etapami i ZAWSZE gdy lead się gubi, nie ufa lub pyta „o co właściwie chodzi":]
 - TO TWÓJ SKLEP ONLINE — realny biznes e-commerce pod Twoją marką, nie kurs, nie subskrypcja, nie „ściema".
 - TOMEK BUDUJE GO DLA CIEBIE jak Twój człowiek od e-commerce: składa cały sklep z zespołem, odpala reklamy i rozkręca sprzedaż (pierwsze ~1000 zamówień), potem ~pół roku skaluje i uczy Cię, aż przejmiesz stery.
-- TO WSPÓLNY BIZNES — Tomek wchodzi jako WSPÓLNIK: bierze 20% od ZYSKU (nie fakturę), czyli zarabia DOPIERO, gdy Ty zarabiasz. To jego skóra w grze i dowód, że nie wciska byle czego (rozbraja „a co Ty z tego masz / czy to nie oszustwo").
+- TO WSPÓLNY BIZNES — Tomek wchodzi jako WSPÓLNIK: bierze 10% od PRZYCHODU (nie fakturę), czyli ma udział w każdej Twojej sprzedaży. To jego skóra w grze i dowód, że nie wciska byle czego (rozbraja „a co Ty z tego masz / czy to nie oszustwo").
 - TWOJA ROLA: uczysz się przy GOTOWYM, działającym sklepie; obsługa to proste czynności (nie kod), realne przy kilku godzinach tygodniowo. Jeśli lead boi się „nie ogarnę / nie znam się / mam mało czasu" — rozbrój to WPROST i ciepło tym faktem.
-- PIENIĄDZE bez iluzji i BEZ CHOWANIA CENY: projekt, raport i podgląd sklepu są DARMOWE i zostają jego; pełną budowę pod klucz robi Tomek za 9400 zł jednorazowo + wchodzi jako wspólnik z 20% od ZYSKU, a reklamy i towar są osobno po stronie klienta. Te liczby podajesz WPROST, gdy lead pyta (a zdecydowanemu nawet z wyprzedzeniem) — NIGDY nie zbywaj „to na rozmowie / to domknie Tomek", bo to budowało nieufność. 500 zł rezerwacji jest zwrotne i wliczane w 9400 zł. Gdy lead sygnalizuje „mam mało / ostatnie pieniądze / jestem spłukany" — odpowiedz uczciwie i z szacunkiem (jest realny próg wejścia), nie ciągnij go pod ścianę, której nie udźwignie; nie zmyślaj innych liczb niż te.
+- PIENIĄDZE bez iluzji i BEZ CHOWANIA CENY: projekt, raport i podgląd sklepu są DARMOWE i zostają jego; pełną budowę pod klucz robi Tomek za 9400 zł jednorazowo + wchodzi jako wspólnik z 10% od PRZYCHODU, a reklamy i towar są osobno po stronie klienta. Te liczby podajesz WPROST, gdy lead pyta (a zdecydowanemu nawet z wyprzedzeniem) — NIGDY nie zbywaj „to na rozmowie / to domknie Tomek", bo to budowało nieufność. 500 zł rezerwacji jest zwrotne i wliczane w 9400 zł. Gdy lead sygnalizuje „mam mało / ostatnie pieniądze / jestem spłukany" — odpowiedz uczciwie i z szacunkiem (jest realny próg wejścia), nie ciągnij go pod ścianę, której nie udźwignie; nie zmyślaj innych liczb niż te.
 - JAKOŚĆ: makiety i reklamy, które teraz widzi, to SZYBKIE SZKICE kierunku — finalne kreacje robicie po starcie z prawdziwą sesją/realnym twórcą (rozbraja „to mocno AI-owe"). Produkt = sprawdzony popyt pod Twoją marką i marżę; NIGDY nie ujawniaj źródła ani ceny zakupu produktu.
 [ROZPOZNAWAJ SYGNAŁY KUPUJĄCEGO i naturalnie dostrajaj ton (z danych: kupują głównie ci, którzy piszą konkretnie i znają temat — NIGDY nie mów leadowi, że go „oceniasz"):]
 - Wspomina, że KORZYSTAŁ JUŻ od Tomka/TakeDrop/z kursu/coachingu („kupiłem u was", „mam sklep na TakeDrop", „byłem na coachingu") → NAJCIEPLEJSZY sygnał (kupują ~4× częściej). Odwołaj się ciepło do wspólnej historii, potraktuj jak kogoś, kto już zaufał, i płynnie prowadź do DOKOŃCZENIA tego, co utknęło.
@@ -1010,7 +1010,7 @@ const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, na
 - ile czasu w tygodniu realnie może dać;
 - jaki ma budżet na start (budowa + osobno reklamy/towar po jego stronie) — z szacunkiem, bez nacisku;
 - gdzie jest finansowo i dokąd chce dojść;
-- na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem na warunkach współpracy (wspólnik, 20% od zysku).
+- na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem na warunkach współpracy (wspólnik, 10% od przychodu).
 Pytaj po jednym. Jeśli lead pyta „po co te pytania" — szczerze: żeby skroić budowę pod niego i przygotować Tomka do rozmowy. Nie przepytuj na siłę — gdy nie chce odpowiedzieć, odpuść i wróć później.]
 Ton: doradca-wspólnik, po polsku, bez nacisku, bez fałszywej pilności, bez żargonu.`
 
@@ -1905,8 +1905,8 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         if (collabCard) sessionContext += `\n\n[USTALENIA PROJEKTU — przy pytaniach o ofertę/zakres/„co wchodzi"/cenę personalizuj DOKŁADNIE pod to, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}`
       } else {
         // R9 (decyzja Tomka 2026-06-30): cena budowy NIE jest już chowana. Wstrzykujemy
-        // FAKTY OFERTY także PRZED sklepem, żeby bot odpowiadał o cenie WPROST (9400 zł + 20%
-        // od zysku), a nie zbywał „to domknie Tomek". Te liczby dotyczą OFERTY, nie raportu rynku.
+        // FAKTY OFERTY także PRZED sklepem, żeby bot odpowiadał o cenie WPROST (9400 zł + 10%
+        // od przychodu), a nie zbywał „to domknie Tomek". Te liczby dotyczą OFERTY, nie raportu rynku.
         sessionContext += `\n\n[FAKTY OFERTY — gdy rozmówca pyta o koszt budowy, udział Tomka albo warunki współpracy, podaj te liczby WPROST i konkretnie (NIE chowaj, NIE odsyłaj „to na rozmowie"). Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
         // NOWY PIPELINE /sklep — ETAP 2: raport → USTALENIA. Wstrzyknij raport (gdy gotowy),
         // żeby ustalenia „dla kogo" były na nim oparte. GATE_INSTRUCTION (settings,
