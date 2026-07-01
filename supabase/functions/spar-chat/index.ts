@@ -435,6 +435,7 @@ async function maybeNotifyContactSlack(
     const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
     await postSlackSparing('spar_contact', {
       session_id: s.id,
+      funnel: 'aplikacja',
       name: s.name ?? null,
       email: s.email ?? null,
       phone: s.phone ?? null,
@@ -501,6 +502,7 @@ async function maybeNotifyGreenSlack(
     const brief = payload.brief
     await postSlackSparing('spar_green', {
       session_id: sessionId,
+      funnel: 'aplikacja',
       name: payload.name,
       email: payload.email,
       phone: payload.phone,

@@ -336,6 +336,57 @@ function landingCostUsd(model: string, input: number, cached: number, output: nu
 // Koszt obu passów w JEDNYM wpisie bud_usage, znajdowanym po meta.path
 // (limit 3/sesja liczy wpisy = landingi, nie calle).
 
+// ── Powiadomienie #sparing: strona sklepu (HTML) opublikowana ────────────────
+// Wzorzec 1:1 z bud-image. Błąd Slacka NIGDY nie wywraca generacji — tylko log.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-landing] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-landing] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-landing] slack-notify ${type} exception:`, err)
+  }
+}
+
+// Strona sklepu opublikowana → JEDNO powiadomienie #sparing (dedup atomowym claimem
+// na slack_html_notified_at). is_test pomijane. shopUrl = klikalny podgląd sklepu.
+async function maybeNotifyHtmlSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+  shopUrl: string,
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('bud_sessions')
+      .update({ slack_html_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_html_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, brand, preview_brief')
+    if (error) { console.error('[bud-landing] html slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brand = (s.brand && typeof s.brand === 'object') ? s.brand as Record<string, unknown> : null
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    await postSlackSparing('bud_html', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: (brand && typeof brand.nazwa === 'string' && brand.nazwa) ? brand.nazwa : (brief?.nazwa ?? null),
+      shop_url: shopUrl,
+    })
+  } catch (err) {
+    console.error('[bud-landing] maybeNotifyHtmlSlack exception:', err)
+  }
+}
+
 async function generateAndStore(
   supabase: ReturnType<typeof createClient>,
   apiKey: string,
@@ -390,6 +441,16 @@ async function generateAndStore(
       .eq('id', sessionId)
     if (sessErr) console.error('[bud-landing] landing_url save error:', sessErr)
     await releaseLock()
+
+    // Strona sklepu opublikowana → powiadom #sparing (dedup w helperze; waitUntil
+    // nie opóźnia odpowiedzi ani nie ginie po zwróceniu response).
+    {
+      const notifyTask = maybeNotifyHtmlSlack(supabase, sessionId, viewUrl)
+      // deno-lint-ignore no-explicit-any
+      const rt = (globalThis as any).EdgeRuntime
+      if (rt?.waitUntil) rt.waitUntil(notifyTask)
+      else await notifyTask.catch(() => {})
+    }
 
     // Log kosztów pass 1 (panel TN Aplikacje); pass 2 dopisuje się UPDATE'em
     const meta: Record<string, unknown> = {

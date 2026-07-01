@@ -97,7 +97,17 @@ Deno.serve(async (req) => {
 
       case 'spar_preview':
         webhookUrl = webhookSparing
-        message = formatSparPreviewMessage(data)
+        message = formatSparPreviewMessage({ ...data, funnel: data.funnel || 'aplikacja' })
+        break
+
+      case 'bud_preview':
+        webhookUrl = webhookSparing
+        message = formatSparPreviewMessage({ ...data, funnel: 'sklep' })
+        break
+
+      case 'bud_html':
+        webhookUrl = webhookSparing
+        message = formatBudHtmlMessage(data)
         break
 
       case 'bud_lead_error':
@@ -1084,14 +1094,24 @@ function sparLeadLink(sessionId?: string): string | null {
   return `https://crm.tomekniedzwiecki.pl/tn-aplikacje/index#lead-${sessionId}`
 }
 
-// Przyciski akcji wspólne dla obu typów: karta w CRM + WhatsApp
-function sparActionButtons(sessionId?: string, phone?: string): any[] {
+// ŹRÓDŁO akcji: który lejek (sklep vs aplikacja). Obie funkcje piszą na #sparing,
+// więc każde powiadomienie MUSI jawnie oznaczać pochodzenie + linkować do WŁAŚCIWEGO
+// panelu (Sklep → tn-sklep, Aplikacja → tn-aplikacje).
+function funnelLabel(funnel?: string): string {
+  return funnel === 'sklep' ? 'Sklep' : 'Aplikacja'
+}
+function funnelLeadLink(funnel?: string, sessionId?: string): string | null {
+  return (funnel === 'sklep' ? budLeadLink : sparLeadLink)(sessionId)
+}
+
+// Przyciski akcji wspólne dla obu typów: karta w panelu (wg lejka) + WhatsApp
+function sparActionButtons(sessionId?: string, phone?: string, funnel?: string): any[] {
   const elements: any[] = []
-  const crm = sparLeadLink(sessionId)
+  const crm = funnelLeadLink(funnel, sessionId)
   if (crm) {
     elements.push({
       type: 'button',
-      text: { type: 'plain_text', text: '📋 Otwórz w CRM', emoji: true },
+      text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true },
       url: crm,
       action_id: 'view_spar_lead'
     })
@@ -1143,6 +1163,7 @@ function sparProjectSummary(data: {
 
 function formatSparContactMessage(data: {
   session_id?: string
+  funnel?: string
   name?: string
   email?: string
   phone?: string
@@ -1158,7 +1179,7 @@ function formatSparContactMessage(data: {
   const blocks: any[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '🆕 Sparing — lead zostawił kontakt', emoji: true }
+      text: { type: 'plain_text', text: `🆕 ${funnelLabel(data.funnel)} — lead zostawił kontakt`, emoji: true }
     },
     {
       type: 'section',
@@ -1186,7 +1207,7 @@ function formatSparContactMessage(data: {
     })
   }
 
-  const actions = sparActionButtons(data.session_id, data.phone)
+  const actions = sparActionButtons(data.session_id, data.phone, data.funnel)
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
 
   blocks.push({
@@ -1211,6 +1232,15 @@ const SPAR_VIEW_LABELS: Record<string, string> = {
   telefon: 'W dłoni',
 }
 
+// Widoki makiet lejka /sklep (klucze z bud-image: kolejność sklep→…→podsumowanie)
+const BUD_VIEW_LABELS: Record<string, string> = {
+  sklep: 'Sklep — strona główna',
+  karta_produktu: 'Karta produktu',
+  logo: 'Logo / marka',
+  lifestyle: 'Zdjęcie lifestyle',
+  podsumowanie: 'Podsumowanie',
+}
+
 // Publiczny URL pliku PNG (…/storage/v1/object/public/…) → render endpoint
 // (…/storage/v1/render/image/public/…?width=600&resize=contain). resize=contain
 // OBOWIĄZKOWO — samo width tnie boki i Slack dostałby pionowy wycinek
@@ -1227,6 +1257,7 @@ function toRenderUrl(publicUrl: string, width = 600): string {
 // przyciski: karta w CRM, WhatsApp oraz — jeśli istnieją — live landing i prototyp.
 function formatSparPreviewMessage(data: {
   session_id?: string
+  funnel?: string
   name?: string
   email?: string
   phone?: string
@@ -1235,6 +1266,7 @@ function formatSparPreviewMessage(data: {
   landing_url?: string | null
   prototype_url?: string | null
 }) {
+  const isSklep = data.funnel === 'sklep'
   const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
   const emailLine = data.email ? ` · ${data.email}` : ''
   const phoneLine = data.phone ? ` · ${data.phone}` : ''
@@ -1243,7 +1275,7 @@ function formatSparPreviewMessage(data: {
   const blocks: any[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '🎨 Sparing — podgląd aplikacji gotowy', emoji: true }
+      text: { type: 'plain_text', text: `🎨 ${funnelLabel(data.funnel)} — ${isSklep ? 'makiety sklepu gotowe' : 'podgląd aplikacji gotowy'}`, emoji: true }
     },
     {
       type: 'section',
@@ -1255,7 +1287,7 @@ function formatSparPreviewMessage(data: {
   const images = Array.isArray(data.images) ? data.images : []
   for (const img of images) {
     if (!img || typeof img.url !== 'string' || !img.url) continue
-    const label = SPAR_VIEW_LABELS[img.view || ''] || (img.view || 'Ekran')
+    const label = (isSklep ? BUD_VIEW_LABELS : SPAR_VIEW_LABELS)[img.view || ''] || (img.view || (isSklep ? 'Makieta' : 'Ekran'))
     blocks.push({
       type: 'image',
       title: { type: 'plain_text', text: label, emoji: false },
@@ -1272,11 +1304,11 @@ function formatSparPreviewMessage(data: {
   }
 
   // Przyciski: karta w CRM + WhatsApp (wspólny helper) + live landing/prototyp
-  const actions = sparActionButtons(data.session_id, data.phone)
+  const actions = sparActionButtons(data.session_id, data.phone, data.funnel)
   if (data.landing_url) {
     actions.push({
       type: 'button',
-      text: { type: 'plain_text', text: '🌐 Zobacz stronę', emoji: true },
+      text: { type: 'plain_text', text: isSklep ? '🛒 Zobacz sklep' : '🌐 Zobacz stronę', emoji: true },
       url: data.landing_url,
       action_id: 'view_spar_landing',
     })
@@ -1363,6 +1395,39 @@ function formatBudKnowhowErrorMessage(data: {
   return { blocks }
 }
 
+// #sparing: strona sklepu (HTML) wygenerowana i opublikowana (bud-landing, pass 1).
+// Lejek /sklep — zawsze funnel='sklep'.
+function formatBudHtmlMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  shop_url?: string | null
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🛍️ Sklep — strona sklepu gotowa', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+  ]
+  const actions = sparActionButtons(data.session_id, data.phone, 'sklep')
+  if (data.shop_url) {
+    actions.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '🛒 Zobacz sklep', emoji: true },
+      url: data.shop_url,
+      style: 'primary',
+      action_id: 'view_bud_shop',
+    })
+  }
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
 // Odrzucony (lost/abandoned) lead WRÓCIŁ do rozmowy (genuine user turn) — najgorętszy
 // sygnał sprzedażowy. funnel decyduje o panelu deep-linku (aplikacja/sklep).
 function formatSparReviveMessage(data: {
@@ -1403,6 +1468,7 @@ function formatSparReviveMessage(data: {
 
 function formatSparGreenMessage(data: {
   session_id?: string
+  funnel?: string
   name?: string
   email?: string
   phone?: string
@@ -1418,7 +1484,7 @@ function formatSparGreenMessage(data: {
   const blocks: any[] = [
     {
       type: 'header',
-      text: { type: 'plain_text', text: '🟢 Sparing — ZIELONY werdykt (warto pisać)', emoji: true }
+      text: { type: 'plain_text', text: `🟢 ${funnelLabel(data.funnel)} — ZIELONY werdykt (warto pisać)`, emoji: true }
     },
     {
       type: 'section',
@@ -1441,7 +1507,7 @@ function formatSparGreenMessage(data: {
     })
   }
 
-  const actions = sparActionButtons(data.session_id, data.phone)
+  const actions = sparActionButtons(data.session_id, data.phone, data.funnel)
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
 
   blocks.push({
