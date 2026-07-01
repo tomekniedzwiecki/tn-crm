@@ -106,6 +106,36 @@ async function rehostReviewImages(supabase: ReturnType<typeof createClient>, rev
   return reviews;
 }
 
+// Re-host GALERII PRODUKTU do naszego Storage. AliExpress kasuje oferty/CDN (ae-pic wygasa),
+// a galeria to GŁÓWNA referencja produktu do makiet/reklam/landingu — MUSI przetrwać u nas
+// (req Tomka). Zwraca nową tablicę URL-i (nasze Storage tam, gdzie się udało; oryginał gdy nie).
+async function rehostGalleryImages(supabase: ReturnType<typeof createClient>, images: string[], productId: string): Promise<string[]> {
+  const out = images.slice(0, 8);
+  const tasks = out.map((url, i) => async () => {
+    try {
+      const s = String(url || '');
+      if (!s || /supabase\.co\/storage/.test(s)) return;                  // już u nas → pomiń
+      const u = s.startsWith('//') ? 'https:' + s : s;
+      if (!/^https?:\/\//.test(u)) return;
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 9000);
+      const resp = await fetch(u, { headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SupabaseEdge/1.0)', 'Accept': 'image/*' }, signal: ctrl.signal }); clearTimeout(t);
+      if (!resp.ok) return;                                               // 404/wygasł → zostaw oryginał (i tak martwy, ale nie psujemy)
+      const ct = (resp.headers.get('content-type') || 'image/jpeg').split(';')[0].trim();
+      if (!ct.startsWith('image/')) return;
+      const buf = new Uint8Array(await resp.arrayBuffer());
+      if (buf.byteLength < 500 || buf.byteLength > 5_000_000) return;
+      const ext = ct.includes('png') ? 'png' : ct.includes('webp') ? 'webp' : ct.includes('avif') ? 'avif' : 'jpg';
+      const path = `bud-products/${productId}/g${i}.${ext}`;
+      const { error } = await supabase.storage.from('attachments').upload(path, buf, { contentType: ct, upsert: true });
+      if (error) { console.warn('[bud-ali-snapshot] gallery rehost upload', error.message); return; }
+      const { data: pub } = supabase.storage.from('attachments').getPublicUrl(path);
+      if (pub?.publicUrl) out[i] = pub.publicUrl;
+    } catch { /* zostaw oryginał */ }
+  });
+  await Promise.allSettled(tasks.map((fn) => fn()));
+  return out;
+}
+
 const ALLOWED = ['https://tomekniedzwiecki.pl', 'https://www.tomekniedzwiecki.pl', 'http://localhost:5500', 'http://127.0.0.1:5500', 'http://localhost:3000'];
 function cors(o: string | null): Record<string, string> {
   const origin = o && ALLOWED.includes(o) ? o : ALLOWED[0];
@@ -266,7 +296,23 @@ Deno.serve(async (req) => {
       const fetchedAt = Date.parse(String(snap.fetched_at || '')) || 0;
       const fresh = fetchedAt > 0 && (Date.now() - fetchedAt) < 14 * 24 * 60 * 60 * 1000;
       const sameProduct = !id || !snap.product_id || String(snap.product_id) === id;
-      if (fresh && sameProduct) return json({ snapshot: snap, cached: true }, 200, c);
+      if (fresh && sameProduct) {
+        // LAZY-MIGRACJA (req Tomka): stare snapshoty mają galerię na surowym AliExpress (ae-pic wygasa).
+        // Gdy ktoś sięgnie po taki produkt — rehostuj galerię do naszego Storage w locie i zapisz.
+        // Bez refetchu z RapidAPI (za darmo). Dzięki temu biblioteka migruje się przy użyciu.
+        try {
+          const imgs = Array.isArray(snap.images) ? (snap.images as string[]) : [];
+          const hasRaw = imgs.some((u) => /aliexpress|ae-pic|alicdn/i.test(String(u)) && !/supabase\.co\/storage/.test(String(u)));
+          if (hasRaw) {
+            const rehosted = await rehostGalleryImages(supabase, imgs, id || String(row.id));
+            snap.images = rehosted;
+            const mi = String(snap.main_image || '');
+            if (mi && !/supabase\.co\/storage/.test(mi)) snap.main_image = rehosted[0] || mi;
+            await supabase.from('bud_tt_products').update({ ali_snapshot: snap }).eq('id', row.id);
+          }
+        } catch (e) { console.warn('[bud-ali-snapshot] lazy rehost', String(e).slice(0, 80)); }
+        return json({ snapshot: snap, cached: true }, 200, c);
+      }
     }
 
     // Złóż snapshot best-effort: detail (bonus: specy/warianty) + search-enrich (galeria/tytuł)
@@ -328,6 +374,15 @@ Deno.serve(async (req) => {
       const revImgs = (snapshot.reviews as any[]).flatMap((r) => (Array.isArray(r.images) ? r.images : [])).filter(Boolean);
       snapshot.images = [...new Set([...snapshot.images, ...revImgs])].slice(0, 8);
     }
+
+    // RE-HOST GALERII PRODUKTU → nasze Storage (req Tomka: zdjęcia zawsze u nas, bo oferty
+    // AliExpress/ae-pic znikają). Robimy na SAM KONIEC, po ewentualnym dołączeniu zdjęć z opinii,
+    // żeby cała referencja (makiety/reklamy/landing) była trwała. Zdjęcia już z opinii/Storage są pomijane.
+    try {
+      snapshot.images = await rehostGalleryImages(supabase, snapshot.images as string[], id || String(row.id));
+      const mi = String(snapshot.main_image || '');
+      if (mi && !/supabase\.co\/storage/.test(mi)) snapshot.main_image = (snapshot.images as string[])[0] || mi;
+    } catch (e) { console.warn('[bud-ali-snapshot] gallery rehost', String(e).slice(0, 80)); }
 
     await supabase.from('bud_tt_products').update({ ali_snapshot: snapshot }).eq('id', row.id);
     return json({ snapshot, product_id: id, n_reviews: snapshot.reviews.length }, 200, c);
