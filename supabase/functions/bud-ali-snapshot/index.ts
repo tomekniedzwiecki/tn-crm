@@ -264,7 +264,20 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({})) as { sessionId?: string; productKey?: string; product_id?: string; link?: string; force?: boolean };
     const isBackend = TOOLS && req.headers.get('x-tools-secret') === TOOLS;
-    if (!isBackend) {
+    // Admin z panelu /trendy (team_members JWT) — omija wymóg sessionId, żeby przy zatwierdzeniu
+    // produktu od razu zbudować snapshot + rehostować galerię do naszego Storage (req Tomka).
+    let isAdmin = false;
+    try {
+      const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '').trim();
+      if (token) {
+        const { data: u } = await supabase.auth.getUser(token);
+        if (u?.user) {
+          const { data: tm } = await supabase.from('team_members').select('user_id').eq('user_id', u.user.id).maybeSingle();
+          isAdmin = !!tm;
+        }
+      }
+    } catch { /* */ }
+    if (!isBackend && !isAdmin) {
       const sid = (body.sessionId || '').trim();
       if (!sid || !UUID_RE.test(sid)) return json({ error: 'nieprawidlowa_sesja' }, 400, c);
       const { data: s } = await supabase.from('bud_sessions').select('id').eq('id', sid).maybeSingle();

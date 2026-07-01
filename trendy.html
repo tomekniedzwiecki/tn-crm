@@ -415,6 +415,12 @@ async function upd(id,patch,msg){
   // URL z krótkim TTL → w /sklep gnije w ~dobę). Fire-and-forget, świeży thumb przez oEmbed.
   if(patch.status==='approved'&&x&&x.key){
     try{sb.functions.invoke('bud-tt-rehost',{body:{keys:[x.key]}}).catch(()=>{});}catch(e){}
+    // ORAZ: zbuduj snapshot AliExpress i REHOSTUJ GALERIĘ produktu do naszego Storage od razu
+    // (req Tomka: zdjęcia zawsze u nas — ae-pic wygasa). force=true = świeży snapshot wybranego
+    // produktu. Admin (team_members JWT) → gate bud-ali-snapshot przepuszcza bez sessionId.
+    if(patch.chosen_link||x.chosen_link){
+      try{sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}}).catch(()=>{});}catch(e){}
+    }
   }
 }
 function pick(id,link){upd(id,{chosen_link:link,status:'approved'},'Zatwierdzone');}
