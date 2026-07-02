@@ -1622,6 +1622,9 @@ Deno.serve(async (req) => {
     // budżet/markę, ale ZAPOMNIEĆ markera <ustalenia> → pipeline stoi (bug z E2E: „Teraz strona
     // zapyta o budżet…" bez bloku). Front wykrywa martwe ogłoszenie i wymusza sam blok.
     const ustaleniaEnforce = body.ustaleniaEnforce === true
+    // Wisząca karta-decyzja na froncie (budżet/marka/telefon/styl) — user pisze zamiast
+    // klikać → model odpowiada i kieruje z powrotem (fix audytu „prowadzenie za rękę").
+    const pendingUi = typeof body.pendingUi === 'string' ? body.pendingUi.slice(0, 12) : ''
     // Proaktywna tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (req Tomka): bot zadaje
     // jedno naturalne pytanie z „ankiety", żeby wykorzystać czas generowania.
     const qualifyEngage = body.qualifyEngage === true
@@ -1869,6 +1872,20 @@ Deno.serve(async (req) => {
     let sessionContext =
       `KONTEKST SESJI${sessionProfession ? ` — rozmówca wspomniał, że zajmuje się: ${sessionProfession}` : ''}.` +
       engagementNote
+
+    // Wisząca karta-decyzja (front): user pisze zamiast kliknąć → odpowiedz i skieruj
+    // z powrotem do karty. Pipeline stoi, dopóki jej nie domknie — model NIE może
+    // obiecywać postępu (makiet/reklam) z pominięciem tej decyzji.
+    if (pendingUi) {
+      const UI_LABELS: Record<string, string> = {
+        budzet: 'budżet startowy (karta z opcjami)',
+        marka: 'wybór nazwy i logo marki (karty z propozycjami)',
+        telefon: 'numer telefonu (SMS, gdy sklep będzie gotowy)',
+        styl: 'wybór stylu makiety (karuzela 4 stylów w rozmowie)',
+      }
+      const lbl = UI_LABELS[pendingUi]
+      if (lbl) sessionContext += `\n\n[UI CZEKA NA DECYZJĘ: na ekranie rozmówcy wisi karta — ${lbl} — i dalsza budowa STOI, dopóki jej nie domknie. Odpowiedz krótko na jego wiadomość i JEDNYM zdaniem skieruj go z powrotem do tej karty (np. „…a żeby lecieć dalej, kliknij na karcie wyżej"). NIE zadawaj nowych pytań, NIE duplikuj treści karty, NIE mów, że coś się generuje.]`
+    }
 
     // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend
     // odpala bud-assess i steruje drugą turą wg wyniku (tylko kanał sparing).
