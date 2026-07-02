@@ -518,6 +518,35 @@ async function runGenSweeps(supabase: any, SUPABASE_URL: string, CRON_SECRET: st
       }
     }
   } catch (e) { console.error('[bud-drip] stalled sweep err:', e) }
+  // (7) AUTO-PREWARM raportów (decyzja Tomka 2026-07-02): każdy zaakceptowany produkt
+  // radaru dostaje raport do cache Z AUTOMATU (2/przebieg co 30 min — koszt kapie powoli,
+  // ~0,63 USD/szt.). Bez tego pierwszy user nowego produktu czekał ~2,5 min i uciekał;
+  // z cache raport jest w ~25 s. Claim per produkt (bud_claim_product_gen) deduplikuje
+  // z ręcznymi prewarmami i generacjami userów.
+  if (CRON_SECRET) {
+    try {
+      const { data: fresh } = await supabase
+        .from('bud_tt_products')
+        .select('id, pl_name, category')
+        .eq('status', 'approved')
+        .order('updated_at', { ascending: false })
+        .limit(60)
+      let warmed = 0
+      for (const p of fresh || []) {
+        if (warmed >= 2) break
+        const { data: pkg } = await supabase.from('bud_product_packages').select('report, generating_at').eq('product_key', String(p.id)).maybeSingle()
+        if (pkg && (pkg.report || pkg.generating_at)) continue
+        try {
+          const r = await fetch(`${SUPABASE_URL}/functions/v1/bud-raport`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON_SECRET },
+            body: JSON.stringify({ prewarm: true, product: { id: p.id, name: p.pl_name, category: p.category } }),
+          })
+          if (r.ok || r.status === 202) warmed++
+        } catch (e) { console.error('[bud-drip] auto-prewarm err:', p.id, e) }
+      }
+      if (warmed) console.log('[bud-drip] auto-prewarm:', warmed)
+    } catch (e) { console.error('[bud-drip] auto-prewarm sweep err:', e) }
+  }
   return adsSweep
 }
 
