@@ -986,7 +986,7 @@ const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany —
 // Minimum faktów na wypadek awarii loadu settings — żeby czat NIGDY nie zmyślał liczb.
 const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
 - Rezerwacja: 500 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w cenę budowy.
-- Budowa sklepu: 9400 zł brutto, jednorazowo, pod klucz (po wliczeniu rezerwacji zostaje 8900 zł do zapłaty).
+- Budowa sklepu: 9400 zł brutto, pod klucz (po wliczeniu rezerwacji zostaje 8900 zł do zapłaty). Możliwe rozłożenie na raty — warunki ZAWSZE indywidualnie, bezpośrednio z Tomkiem (nie podawaj sam liczby rat ani kwot).
 - Udział Tomka: 10% od PRZYCHODU (obrotu ze sprzedaży), bezterminowo, rozliczane miesięcznie — ma udział w każdej Twojej sprzedaży. 10% to punkt wyjścia — wysokość udziału do negocjacji bezpośrednio z Tomkiem; opcja wykupu po 24 mies. (18–24× średni miesięczny udział, bez sztywnego minimum).
 - Etapy: przygotowania → formalności → materiały reklamowe → uruchomienie kampanii (cel 1000 zamówień) → ~180 dni skalowania i przekazania sterów.
 - Budżet reklamowy i koszty operacyjne (towar, wysyłka) pokrywa klient.
