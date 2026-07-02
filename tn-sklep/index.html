@@ -825,42 +825,6 @@ async function renderKoszty() {
 // ── SZCZEGÓŁ SESJI ──
 // MARKER_RE + cleanMsg → PanelCore
 
-// Karta „Artefakty projektu" w modalu — daje adminowi BEZPOŚREDNI podgląd
-// wszystkiego, co zbudowaliśmy (landing, prototyp, reklamy + skróty raportu/
-// economics/gtm/planu), z pominięciem bramkowania, które ukrywa to przed klientem.
-function artefaktyHTML(s, art, protoUrl) {
-  art = art || {};
-  const land = art.landing_url || s.landing_url || null;
-  const rap = (art.market_report && typeof art.market_report === 'object') ? art.market_report : null;
-  const eco = (art.economics && typeof art.economics === 'object') ? art.economics : null;
-  const gtm = (art.gtm && typeof art.gtm === 'object') ? art.gtm : null;
-  const plan = (art.business_plan && typeof art.business_plan === 'object') ? art.business_plan : null;
-  const banners = (gtm && gtm.pakiet && Array.isArray(gtm.pakiet.reklamy)) ? gtm.pakiet.reklamy.filter((r) => r && r.banner_url).map((r) => r.banner_url) : [];
-  if (!(land || protoUrl || rap || eco || gtm || plan)) return '';
-  const zl = (n) => Math.round(n).toLocaleString('pl-PL');
-  const openRow = (icon, tone, label, url, sub) => `<a href="${esc(url)}" target="_blank" rel="noopener" class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5 hover:border-blue-500/40 transition group">
-      <i class="ph ${icon} ${tone}"></i><span class="flex-1 min-w-0"><span class="block text-xs text-white">${label}</span><span class="block text-[10px] text-zinc-500 truncate">${esc(sub)}</span></span>
-      <i class="ph ph-arrow-square-out text-zinc-500 group-hover:text-white"></i></a>`;
-  const infoRow = (icon, tone, label, sub) => `<div class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/5">
-      <i class="ph ${icon} ${tone}"></i><span class="flex-1 min-w-0"><span class="block text-xs text-white">${label}</span><span class="block text-[10px] text-zinc-500 truncate">${esc(sub)}</span></span>
-      <i class="ph ph-check-circle text-emerald-500/70"></i></div>`;
-  let rows = '';
-  if (protoUrl) rows += openRow('ph-cursor-click', 'text-violet-400', 'Klikalny prototyp', protoUrl, 'działająca apka — otwórz ↗');
-  if (land) rows += openRow('ph-globe', 'text-blue-400', 'Strona sprzedażowa', land, String(land).replace(/^https?:\/\//, ''));
-  if (rap) { const oc = typeof rap.ocena_potencjalu === 'string' ? rap.ocena_potencjalu : ''; const nk = Array.isArray(rap.konkurenci) ? rap.konkurenci.length : 0; rows += infoRow('ph-chart-line-up', 'text-sky-400', 'Raport rynku', [oc && ('ocena: ' + oc), nk && (nk + ' konkurentów')].filter(Boolean).join(' · ') || 'gotowy'); }
-  if (eco) { const w = eco.wejscia || {}; const cb = typeof w.cena_bazowa === 'number' ? ('cena ' + zl(w.cena_bazowa) + ' zł/mies.') : ''; const cac = typeof w.cac === 'number' ? ('CAC ' + zl(w.cac) + ' zł') : ''; rows += infoRow('ph-calculator', 'text-emerald-400', 'Unit economics — czy się spina', [cb, cac].filter(Boolean).join(' · ') || 'policzone'); }
-  if (gtm) { const nk = gtm.playbook && Array.isArray(gtm.playbook.kanaly) ? gtm.playbook.kanaly.length : 0; const nr = gtm.pakiet && Array.isArray(gtm.pakiet.reklamy) ? gtm.pakiet.reklamy.length : 0; rows += infoRow('ph-megaphone', 'text-amber-400', 'Sprzedaż + reklamy', [nk && (nk + ' kanałów'), nr && (nr + ' reklam')].filter(Boolean).join(' · ') || 'gotowe'); }
-  if (plan) { const km = Array.isArray(plan.kamienie) && plan.kamienie.length ? plan.kamienie[plan.kamienie.length - 1] : null; const sub = km && typeof km.mies === 'number' ? ('cel: ' + zl(km.mies) + ' zł/mies. przy ' + (km.klienci || '?') + ' klientach') : 'policzony'; rows += infoRow('ph-chart-bar', 'text-blue-400', 'Plan przychodu', sub); }
-  const bannerHtml = banners.length ? `<div class="mt-2.5"><div class="text-[10px] text-zinc-600 mb-1.5">Kreacje reklam (${banners.length}) — kliknij, by powiększyć</div>
-      <div class="grid grid-cols-3 gap-2">${banners.slice(0, 6).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener" class="block rounded-lg overflow-hidden border border-white/10 hover:border-amber-400/50 transition"><img src="${esc(u)}" loading="lazy" class="aspect-square object-cover w-full bg-zinc-800"></a>`).join('')}</div></div>` : '';
-  return `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-    <div class="flex items-center justify-between mb-2.5">
-      <div class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-package mr-1 text-blue-400"></i>Artefakty projektu</div>
-    </div>
-    <div class="space-y-1.5">${rows}</div>${bannerHtml}
-  </div>`;
-}
-
 // ── KARTA LEADA (pełnoekranowy widok z zakładkami) ──
 let leadData = null;        // {s, msgs, usage, emails, art, protoUrl, totalUsd}
 let leadTab = 'przeglad';
@@ -905,7 +869,6 @@ function setLeadChatStage(k) { leadChatStage = k; renderLeadTab(); }
 const LEAD_TABS = [
   { id: 'przeglad', icon: 'ph-identification-card', label: 'Przegląd', group: 'Projekt' },
   { id: 'rozmowa', icon: 'ph-chats-circle', label: 'Rozmowa', group: 'Projekt' },
-  { id: 'artefakty', icon: 'ph-package', label: 'Artefakty', group: 'Projekt' },
   { id: 'wiedza', icon: 'ph-books', label: 'Baza wiedzy', group: 'Projekt' },
   { id: 'sekwencja', icon: 'ph-flow-arrow', label: 'Sekwencja', group: 'Komunikacja' },
   { id: 'maile', icon: 'ph-envelope', label: 'Maile', group: 'Komunikacja' },
@@ -1109,7 +1072,6 @@ function renderLeadTab() {
   const b = $('lead-body'); const s = leadData.s;
   if (leadTab === 'przeglad') b.innerHTML = leadOverviewHTML();
   else if (leadTab === 'rozmowa') { b.innerHTML = leadChatHTML(); leadChatSig = chatSig(leadData.msgs); if (!DEMO && leadChatView === 'user') mountLeadUserView(s.id); }
-  else if (leadTab === 'artefakty') { b.innerHTML = leadArtefaktyHTML(); if (!DEMO) mountLeadArtView(s.id); }
   else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.raport_meta || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
   else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
   else if (leadTab === 'sms') { b.innerHTML = leadSmsHTML(); renderLeadSms(leadData.s.id); }
@@ -1444,116 +1406,6 @@ function leadChatTranscriptHTML() {
       </div>
       <div class="text-zinc-200">${cleanMsg(m.content)}</div>
     </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości w tym etapie.</div>'}</div></div>`;
-}
-// ── Zakładka ARTEFAKTY ──
-// Od razu PULPIT projektu oczami leada (deep-link #projekt w podglądzie admina):
-// pulpit appki to gotowy, sensownie ułożony przegląd artefaktów (kafle raportu/
-// makiet/reklam/sklepu z detalami po kliknięciu) — bez dublowania nawigacji
-// w panelu. Pod spodem skróty (surowe linki, kreacje, ekrany) do nowej karty.
-async function mountLeadArtView(sid) {
-  const frame = $('lead-art-view'); if (!frame) return;
-  const loading = $('lead-art-view-loading');
-  try {
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    const tok = session && session.access_token;
-    if (!tok) { if (loading) loading.innerHTML = 'Brak sesji panelu — zaloguj się ponownie.'; return; }
-    if (!$('lead-art-view')) return;   // user zdążył przejść gdzie indziej
-    frame.onload = () => { const l = $('lead-art-view-loading'); if (l) l.style.display = 'none'; frame.style.display = 'block'; };
-    frame.src = sklepPreviewUrl(sid, tok, 'projekt');
-  } catch (e) { console.error(e); if (loading) loading.textContent = 'Nie udało się załadować podglądu.'; }
-}
-function leadArtefaktyHTML() {
-  const { s, art, protoUrl } = leadData;
-  const land = art.landing_url || s.landing_url || null;
-  const imgs = s.preview_images || {}; const imgKeys = Object.keys(imgs);
-  const rows = artefaktyHTML(s, art, protoUrl);
-  const ekrany = imgKeys.length ? `<div class="bg-zinc-900/60 border border-white/5 rounded-xl p-4">
-    <div class="text-[11px] uppercase tracking-wider text-zinc-500 mb-2">Wygenerowane ekrany (${imgKeys.length})</div>
-    <div class="grid grid-cols-2 md:grid-cols-3 gap-2">${imgKeys.map((k) => `<a href="${esc(imgs[k])}" target="_blank" class="block rounded-lg overflow-hidden border border-white/10 hover:border-blue-500/40 transition"><img src="${esc(imgs[k]).replace('/object/public/', '/render/image/public/') + '?format=webp&width=400&quality=70&resize=contain'}" alt="${VIEW_LABELS[k] || esc(k)}" loading="lazy" class="aspect-[3/2] object-contain bg-white w-full"><div class="text-[10px] text-zinc-500 px-1.5 py-1">${VIEW_LABELS[k] || esc(k)}</div></a>`).join('')}</div></div>` : '';
-  // Pasek admina — generowanie na żądanie (omija werdykt/limity przez JWT zespołu).
-  // Zawsze widoczny, także zanim powstaną pierwsze artefakty.
-  const actions = `<div class="bg-zinc-900/40 border border-white/5 rounded-xl p-3.5 mb-4 flex flex-wrap items-center gap-2">
-    <span class="text-[11px] uppercase tracking-wider text-zinc-500 mr-1 inline-flex items-center gap-1.5"><i class="ph ph-lightning text-amber-400"></i>Generuj na żądanie · tylko admin</span>
-    <button id="gen-landing" onclick="genArtifact('landing')" class="px-3.5 py-2 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-xs transition"><i class="ph ph-globe mr-1.5"></i>${land ? 'Przegeneruj landing' : 'Wygeneruj landing'}</button>
-    <span class="text-[11px] text-zinc-600 basis-full sm:basis-auto sm:ml-auto">landing przez bud-landing · 1–4 min · prototyp panelu (bud-prototype) jeszcze niedostępny</span>
-  </div>`;
-  // DEMO: brak realnej sesji do osadzenia — tylko skróty jak dotąd
-  if (DEMO) {
-    if (!rows && !imgKeys.length) return `${actions}<div class="text-zinc-600 text-sm">Brak artefaktów.</div>`;
-    return `${actions}<div class="space-y-4 max-w-3xl">${rows}${ekrany}</div>`;
-  }
-  const viewer = `<div class="flex flex-wrap items-center gap-1.5 mb-3">
-      <span class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-squares-four mr-1 text-blue-400"></i>Pulpit projektu — oczami leada</span>
-      <span class="flex-1"></span>
-      <button onclick="openClientPreview('${s.id}')" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz w nowej karcie</button>
-    </div>
-    <div class="rounded-xl overflow-hidden border border-white/10 bg-zinc-950 mb-4">
-      <div id="lead-art-view-loading" class="flex items-center justify-center text-zinc-500 text-sm" style="height:64px"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Ładuję pulpit…</div>
-      <iframe id="lead-art-view" title="Pulpit projektu oczami leada" style="width:100%;height:calc(100dvh - 280px);min-height:560px;border:0;display:none" allow="clipboard-write"></iframe>
-    </div>`;
-  const skroty = (rows || imgKeys.length) ? `<div class="grid lg:grid-cols-2 gap-4 items-start max-w-6xl">${rows ? `<div class="space-y-4">${rows}</div>` : ''}${ekrany ? `<div class="space-y-4">${ekrany}</div>` : ''}</div>` : '';
-  return `${actions}${viewer}${skroty}`;
-}
-// ── Generowanie artefaktu na żądanie (admin) ──
-// callFn wysyła JWT zalogowanego admina; edge function weryfikuje team_members
-// i omija werdykt/limity. spar-* zwraca 202 natychmiast, generacja leci w tle
-// (1-4 min) — odpytujemy gotowość: landing przez kolumnę landing_url, prototyp
-// przez action:'status'. Pętla ograniczona licznikiem (brak sierot).
-let genBusy = false;
-function setGenBtns(busy, nazwa) {
-  ['gen-landing', 'gen-prototype'].forEach((id) => { const b = $(id); if (b) { b.disabled = busy; b.classList.toggle('opacity-40', busy); b.classList.toggle('pointer-events-none', busy); } });
-  // Widoczny progres generowania (1–4 min) — pływający pasek, widoczny też po zmianie zakładki.
-  let p = document.getElementById('gen-progress');
-  if (busy) {
-    if (!p) { p = document.createElement('div'); p.id = 'gen-progress'; p.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-zinc-900 border border-blue-500/40 shadow-xl flex items-center gap-2.5 text-sm text-white'; document.body.appendChild(p); }
-    p.innerHTML = '<i class="ph ph-circle-notch animate-spin text-blue-400 text-lg"></i><span>Generuję ' + esc(nazwa || 'artefakt') + ' — to potrwa 1–4 min…</span>';
-  } else if (p) { p.remove(); }
-}
-async function genArtifact(kind) {
-  if (!leadData) return;
-  if (kind !== 'landing') { toast('Prototyp panelu nie jest jeszcze dostępny dla lejka Sklep (brak edge bud-prototype).'); return; }
-  if (genBusy) { toast('Poczekaj — generowanie w toku'); return; }
-  const s = leadData.s;
-  // bud-landing istnieje i przyjmuje {sessionId}, zapisuje bud_sessions.landing_url (jak spar-landing).
-  const fn = 'bud-landing';
-  const nazwa = 'strony sprzedażowej';
-  const prev = kind === 'landing'
-    ? ((leadData.art && leadData.art.landing_url) || s.landing_url || '')
-    : (leadData.protoUrl || '');
-  genBusy = true; setGenBtns(true, nazwa);
-  toast('Start generowania ' + nazwa + ' — to potrwa 1–4 min');
-  try {
-    await callFn(fn, { sessionId: s.id });
-  } catch (e) {
-    genBusy = false; setGenBtns(false);
-    toast('Błąd startu: ' + e.message);
-    return;
-  }
-  const sid = s.id;
-  let tries = 0;
-  const tick = async () => {
-    if (!leadData || leadData.s.id !== sid) { genBusy = false; setGenBtns(false); return; } // user przeszedł gdzie indziej
-    tries++;
-    let url = '';
-    try {
-      const { data } = await supabaseClient.from('bud_sessions').select('landing_url').eq('id', sid).maybeSingle();
-      url = (data && data.landing_url) || '';
-    } catch (e) { /* przejściowy blip — próbujemy dalej */ }
-    if (url && url !== prev) {
-      leadData.art = Object.assign({}, leadData.art, { landing_url: url }); leadData.s.landing_url = url;
-      genBusy = false; setGenBtns(false);
-      toast('Gotowe ✓ — ' + nazwa);
-      if (leadTab === 'artefakty') renderLeadTab();
-      return;
-    }
-    if (tries >= 40) { // ~5 min @ 7,5 s
-      genBusy = false; setGenBtns(false);
-      toast('Generowanie trwa dłużej niż zwykle — odśwież kartę za chwilę');
-      return;
-    }
-    setTimeout(tick, 7500);
-  };
-  setTimeout(tick, 8000);
 }
 function leadSekwencjaHTML() {
   const { s } = leadData; const can = s.raport_meta || s.paid_at;
@@ -2424,9 +2276,8 @@ async function renderReengStats() {
 }
 
 // Edge functions sparingu, których NIE ma jeszcze forka dla lejka Sklep (bud-*).
-// Wywołania do nich są stubowane (jasny błąd zamiast martwej referencji 404). Generację
-// landinga obsługuje istniejący `bud-landing` (mapowanie w genArtifact). Reszta (followupy,
-// drip-templates, prototyp) czeka na zbudowanie odpowiedników bud-*.
+// Wywołania do nich są stubowane (jasny błąd zamiast martwej referencji 404).
+// Followupy, drip-templates i prototyp czekają na zbudowanie odpowiedników bud-*.
 const BUD_MISSING_FNS = new Set(['spar-followups', 'spar-drip', 'spar-prototype']);
 // Wywołanie dowolnej funkcji edge z autoryzacją zalogowanego admina (JWT)
 async function callFn(fnName, payload) {
