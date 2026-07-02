@@ -153,6 +153,24 @@ Deno.serve(async (req) => {
       console.error('[resend-webhook] spar_emails stamp error:', sparErr)
     }
 
+    // Stempluj też bud_emails (lejek /sklep — followupy bud-drip/bud-followups).
+    // Do 2026-07-02 stemplowaliśmy TYLKO spar_emails → cały tracking maili sklepu
+    // był ślepy (delivered_at/clicked_at wiecznie NULL). Te same zasady co wyżej.
+    try {
+      if (payload.type === 'email.delivered') {
+        await supabase.from('bud_emails').update({ delivered_at: new Date().toISOString() })
+          .eq('resend_id', resendId).is('delivered_at', null)
+      } else if (payload.type === 'email.opened') {
+        await supabase.from('bud_emails').update({ opened_at: new Date().toISOString() })
+          .eq('resend_id', resendId).is('opened_at', null)
+      } else if (payload.type === 'email.clicked') {
+        await supabase.from('bud_emails').update({ clicked_at: new Date().toISOString() })
+          .eq('resend_id', resendId).is('clicked_at', null)
+      }
+    } catch (budErr) {
+      console.error('[resend-webhook] bud_emails stamp error:', budErr)
+    }
+
     // Always return 200 to acknowledge receipt
     return new Response(
       JSON.stringify({ success: true, processed: payload.type }),

@@ -104,10 +104,12 @@ const GSM_MAP: Record<string, string> = {
 function gsmSafe(str: unknown): string {
   return String(str || '').split('').map((c) => (c in GSM_MAP ? GSM_MAP[c] : c)).join('')
 }
-// Brandowany krótki link do SMS: tomekniedzwiecki.pl/p/{code} (rewrite → bud-go).
+// Brandowany krótki link do SMS: tomekniedzwiecki.pl/b/{code} (rewrite → bud-go).
+// UWAGA: MUSI być /b/ (bud-go → bud_short_links). /p/ trafia do spar-go (spar_short_links)
+// i gubi kod → 302 na panel sparingu. Fix 2026-07-01 (wcześniej wszystkie linki /sklep martwe).
 // Jeden kod na sesję (bud_short_links), odporny na równoległy insert.
 const SHORT_BASE = 'https://tomekniedzwiecki.pl'
-function shortLink(code: string): string { return `${SHORT_BASE}/p/${code}` }
+function shortLink(code: string): string { return `${SHORT_BASE}/b/${code}` }
 function randCode(len = 7): string {
   const a = '23456789abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ'
   const buf = new Uint8Array(len); crypto.getRandomValues(buf)
@@ -274,6 +276,21 @@ function followupView(kind: string, s: SessionRow): string {
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
 function reserveFor(_kind: string, _s: SessionRow): string | null { return null }
+
+// Maile RATUNKOWE „utknął PO raporcie" (statyczne — treść standardowa, bez GPT):
+// lead ma gotowy raport, ale nigdy nie domknął ustaleń (typowo turns=1). Deep-link
+// wraca do rozmowy; front (resume-propose) każe botowi od razu zaproponować komplet.
+function stalledEmail(kind: string, s: SessionRow): { subject: string; html: string } {
+  const im = firstName(s) ? ` ${firstName(s)}` : ''
+  const n = productName(s)
+  const co = n && n !== 'Twój sklep' ? n : 'Twój produkt'
+  const T: Record<string, { subject: string; body: string }> = {
+    stalled_report: { subject: 'Twój raport rynku czeka — 2 kliknięcia do makiet sklepu', body: `Cześć${im}!\n\nRaport rynku dla ${co} jest gotowy i czeka w Twoim projekcie. Zajrzyj — a zaraz po nim pokażę Ci 4 gotowe wyglądy Twojego sklepu do wyboru.\n\nWracasz dokładnie tam, gdzie skończyliśmy — [dokończmy to](LINK_VIEW). To dosłownie 2 kliknięcia.` },
+    stalled_report_2: { subject: 'Makiety Twojego sklepu są o krok', body: `Cześć${im}!\n\nTwój projekt (${co}) stoi w miejscu, a szkoda — raport rynku już jest, a od makiet sklepu i reklam dzieli Cię jedna krótka odpowiedź w rozmowie.\n\n[Wejdź tutaj](LINK_VIEW), zaproponuję Ci gotowy kierunek — Ty tylko klikniesz „pasuje".` },
+  }
+  const t = T[kind] || T.stalled_report
+  return { subject: t.subject, html: mdToHtml(t.body, panelLink(s.id, kind), null, 'Wróć do rozmowy tutaj') }
+}
 
 // Statyczny mail (plain, „z palca") — fallback gdy GPT off / nieparsowalny.
 function staticEmail(kind: string, s: SessionRow): { subject: string; html: string } {
@@ -713,6 +730,50 @@ Deno.serve(async (req) => {
           if (ok) await supabase.from('bud_abandoned_emails').update({ status: 'sent', sent_at: new Date().toISOString() }).eq('session_id', s.id).eq('kind', 'abandoned_sms')
         }
       }
+    }
+
+    // ── 2d) RATUNEK „UTKNĄŁ PO RAPORCIE" (największy przeciek lejka — dane 07/2026:
+    //    połowa leadów z raportem umiera z turns=1). Kwalifikacja: MA raport,
+    //    NIE MA ustaleń, nie zapłacił, nie wstrzymany, mail jest. Sekwencji 2b
+    //    NIE dubluje (tam market_report IS NULL), dripu odsłon też nie (bud-drip
+    //    tylko OGŁASZA artefakty — nikt nie ciągnie leada z powrotem do rozmowy).
+    //    2 maile: +6h i +30h od ostatniej aktywności (user LUB panel), okno ≤7 dni.
+    //    Dedup: sendOnce (bud_emails, unikat session_id+kind). Bramka reputacji:
+    //    #2 tylko gdy #1 DOSTARCZONY. Bramka międzykanałowa CHANNEL_GAP jak wszędzie. ──
+    const STALLED_KINDS = ['stalled_report', 'stalled_report_2']
+    const STALLED_THRESH_H = [6, 30]
+    const { data: stalledRows, error: stErr } = await supabase
+      .from('bud_sessions')
+      .select(SESSION_COLS)
+      .eq('is_test', false)
+      .is('archived_at', null)
+      .not('market_report', 'is', null)
+      .is('ustalenia', null)
+      .is('paid_at', null)
+      .is('full_paid_at', null)
+      .is('sequence_cancelled_at', null)
+      .not('email', 'is', null)
+      .gte('last_user_at', hoursAgo(168))
+      .lte('last_user_at', hoursAgo(STALLED_THRESH_H[0]))
+      .limit(80)
+    if (stErr) console.error('[bud-followups] stalled fetch error:', stErr)
+    const stalled = (stalledRows || []) as SessionRow[]
+    const stTouches = await loadTouches(supabase, stalled.map((s) => s.id))
+    for (const s of stalled) {
+      // ostatnia aktywność = user LUB panel (siedzi w panelu → nie zaczepiaj mailem)
+      const lastAct = Math.max(
+        s.last_user_at ? Date.parse(s.last_user_at) : 0,
+        s.last_panel_at ? Date.parse(s.last_panel_at) : 0,
+      )
+      if (!lastAct) continue
+      const hoursSince = (now - lastAct) / 3_600_000
+      const t = stTouches.get(s.id)
+      const sentCnt = STALLED_KINDS.filter((k) => t?.kinds.has(k)).length
+      if (sentCnt >= STALLED_KINDS.length) continue
+      if (hoursSince < STALLED_THRESH_H[sentCnt]) continue
+      if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue
+      if (sentCnt === 1 && !t?.delivered.has('stalled_report')) continue
+      await sendOnce(STALLED_KINDS[sentCnt], s, stalledEmail(STALLED_KINDS[sentCnt], s))
     }
 
     return jsonResponse({ ok: true, flag: FOLLOWUPS_ENABLED, sms_flag: SMS_ENABLED, sent }, 200)

@@ -73,6 +73,10 @@ Deno.serve(async (req: Request) => {
 
     const { error } = await supabase.from('spar_sms').update(patch).eq('smsapi_id', String(msgId))
     if (error) console.error('[sms-dlr] update error:', error)
+    // Lustro dla lejka /sklep (bud_sms ma identyczne kolumny). Do 2026-07-02 DLR
+    // aktualizował TYLKO spar_sms → statusy SMS-ów sklepu wiecznie puste.
+    const { error: budErr } = await supabase.from('bud_sms').update(patch).eq('smsapi_id', String(msgId))
+    if (budErr) console.error('[sms-dlr] bud_sms update error:', budErr)
     return ok()
   } catch (e) {
     console.error('[sms-dlr] ERROR:', e instanceof Error ? e.message : String(e))
