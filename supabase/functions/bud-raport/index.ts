@@ -183,6 +183,94 @@ Deno.serve(async (req) => {
     } catch {
       return jsonResponse({ error: 'nieprawidlowy_json' }, 400, cors)
     }
+    // PREWARM (x-admin-secret, bez sesji): pregeneracja UNIWERSALNEGO raportu produktu
+    // wprost do cache bud_product_packages. Cache-warming karuzeli — dane 2026-07-02:
+    // userzy z reklam uciekają w oknie świeżej generacji (~2,5 min); raport z cache jest
+    // dostępny w ~25 s (MIN_REVEAL) i user widzi artefakt zanim się zniechęci.
+    // Body: { prewarm:true, product:{ id, name, ... } }. Zero dotykania bud_sessions;
+    // koszt logowany do bud_usage z session_id=null (kolumna nullable).
+    if ((body as Record<string, unknown>).prewarm) {
+      const CRON = Deno.env.get('SPAR_CRON_SECRET') || ''
+      if (!CRON || req.headers.get('x-admin-secret') !== CRON) return jsonResponse({ error: 'brak_uprawnien' }, 403, cors)
+      // deno-lint-ignore no-explicit-any
+      const product: any = (body.product && typeof body.product === 'object') ? body.product : null
+      if (!product || !(product.nazwa || product.name)) return jsonResponse({ error: 'brak_produktu' }, 400, cors)
+      const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
+      const normP = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+      const productKey = String(product.id || product.product_id || normP(product.nazwa || product.name || ''))
+      if (!productKey) return jsonResponse({ error: 'brak_produktu' }, 400, cors)
+      const { data: pkg } = await supabase.from('bud_product_packages').select('report').eq('product_key', productKey).maybeSingle()
+      if (pkg && pkg.report) return jsonResponse({ cached: true }, 200, cors)
+      const { data: claimed } = await supabase.rpc('bud_claim_product_gen', {
+        p_key: productKey,
+        p_name: String(product.nazwa || product.name || ''),
+        p_category: String(product.kategoria || product.category || ''),
+        p_ttl_sec: 420,
+      })
+      if (!claimed) return jsonResponse({ pending: true }, 202, cors)
+      // Snapshot aukcji (jak w głównym torze) — realne dane do cytowania w raporcie
+      let aliData = ''
+      try {
+        const pkId = String(product.id || '')
+        if (UUID_RE.test(pkId)) {
+          const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle()
+          // deno-lint-ignore no-explicit-any
+          const snap = (row?.ali_snapshot || null) as any
+          if (snap) {
+            // deno-lint-ignore no-explicit-any
+            const specs = Array.isArray(snap.specs) ? snap.specs.slice(0, 12).map((x: any) => (x && x.name) ? `${x.name}: ${x.value}` : '').filter(Boolean) : []
+            // deno-lint-ignore no-explicit-any
+            const revLines = (Array.isArray(snap.reviews) ? snap.reviews.slice(0, 8) : []).map((r: any) => `${r.stars || 5}★ ${String(r.text_pl || r.text || '').replace(/\s+/g, ' ').slice(0, 150)}`).filter((x: string) => x.length > 5)
+            const rs = snap.review_stats || {}
+            const parts: string[] = []
+            if (snap.title) parts.push(`Pełny tytuł (aukcja): ${String(snap.title).slice(0, 200)}`)
+            if (rs.avg) parts.push(`Dowód popytu (aukcja): ocena ${String(rs.avg).replace('.', ',')}/5 z ${rs.numRatings || 0} ocen${rs.positivePct ? `, ${rs.positivePct}% pozytywnych` : ''}`)
+            if (specs.length) parts.push(`Specyfikacja: ${specs.join('; ')}`)
+            if (revLines.length) parts.push(`OPINIE KUPUJĄCYCH (realne):\n${revLines.join('\n')}`)
+            aliData = parts.join('\n').slice(0, 2400)
+          }
+        }
+      } catch { /* bez snapshotu */ }
+      const prewarmTask = (async () => {
+        let saved = false
+        try {
+          const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({ model: OPENAI_MODEL, tools: [{ type: 'web_search' }], input: buildRaportPrompt(product, '', aliData), max_output_tokens: MAX_OUTPUT_TOKENS }),
+          })
+          if (!res.ok) { console.error('[bud-raport] prewarm openai:', res.status); return }
+          const data = await res.json()
+          const output = Array.isArray(data?.output) ? data.output : []
+          const searchCalls = output.filter((o: Record<string, unknown>) => o?.type === 'web_search_call').length
+          let text = typeof data?.output_text === 'string' ? data.output_text : ''
+          if (!text) { for (const item of output) { if (item?.type === 'message' && Array.isArray(item.content)) for (const c of item.content) { if (c?.type === 'output_text' && typeof c.text === 'string') text += c.text } } }
+          try {
+            const u = data?.usage || {}
+            const prices: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 } }
+            const p = prices[OPENAI_MODEL] || prices['gpt-5.5']
+            const inT = u.input_tokens || 0, cT = u.input_tokens_details?.cached_tokens || 0, oT = u.output_tokens || 0
+            await supabase.from('bud_usage').insert({ session_id: null, kind: 'raport', model: OPENAI_MODEL, input_tokens: inT, cached_tokens: cT, output_tokens: oT, cost_usd: (Math.max(0, inT - cT) * p.i + cT * p.c + oT * p.o) / 1_000_000 + searchCalls * WEB_SEARCH_CALL_USD, meta: { web_search_calls: searchCalls, prewarm: true, product_key: productKey } })
+          } catch (uErr) { console.error('[bud-raport] prewarm usage:', uErr) }
+          const raport = extractJson(text)
+          if (!raport || !saneRaport(raport)) { console.error('[bud-raport] prewarm sanity fail'); return }
+          const toSave = { ...raport, _meta: { gen: 1, at: new Date().toISOString(), model: OPENAI_MODEL, searches: searchCalls, prewarm: true } }
+          await supabase.from('bud_product_packages').upsert({
+            product_key: productKey,
+            product_name: String(product.nazwa || product.name || ''),
+            category: String(product.kategoria || product.category || ''),
+            report: toSave, generating_at: null, updated_at: new Date().toISOString(),
+          }, { onConflict: 'product_key' })
+          saved = true
+        } catch (e) { console.error('[bud-raport] prewarm error:', e) }
+        finally {
+          if (!saved) { try { await supabase.from('bud_product_packages').update({ generating_at: null }).eq('product_key', productKey).is('report', null) } catch (_) { /* */ } }
+        }
+      })()
+      try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(prewarmTask) } catch (_) { /* */ }
+      return jsonResponse({ pending: true, prewarm: true }, 202, cors)
+    }
+
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) {
       return jsonResponse({ error: 'nieprawidlowa_sesja' }, 400, cors)

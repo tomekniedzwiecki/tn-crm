@@ -470,6 +470,57 @@ async function getRevealSms(supabase: ReturnType<typeof createClient>, reveal: a
   return composeSms(staticSms(s, key), code)
 }
 
+// T5+T10: sweepy generatorów — wywoływane w KAŻDYM przebiegu crona, także w quiet hours
+// (audyt regresji #5: nie wysyłają maili, więc okno 8–23 ich nie dotyczy; wyniki tasków
+// Manus i martwe locki nie mogą czekać do rana).
+// (5) watchdog Manus: dociąga wyniki reklam dla sesji z zamkniętą kartą (bud-ads sweep;
+//     tam też timeout >40 min + alert). (6) martwe locki: lock claimowany, grace minął,
+//     artefaktu brak = genTask umarł na cicho → release + JEDEN alert (dedup bud_usage kind='alert').
+// deno-lint-ignore no-explicit-any
+async function runGenSweeps(supabase: any, SUPABASE_URL: string, CRON_SECRET: string): Promise<Record<string, unknown> | null> {
+  let adsSweep: Record<string, unknown> | null = null
+  if (CRON_SECRET) {
+    try {
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/bud-ads`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON_SECRET },
+        body: JSON.stringify({ sweep: true }),
+      })
+      adsSweep = r.ok ? await r.json().catch(() => null) : { error: r.status }
+    } catch (e) { console.error('[bud-drip] ads sweep err:', e) }
+  }
+  try {
+    const twoDaysAgo = new Date(Date.now() - 48 * 3600000).toISOString()
+    const { data: lockedSessions } = await supabase.from('bud_sessions')
+      .select('id, gen_locks, mockups, landing_html, market_report, session_ads, ads_manus_status')
+      .not('gen_locks', 'is', null).eq('is_test', false).is('archived_at', null)
+      .is('paid_at', null).gte('updated_at', twoDaysAgo).limit(100)
+    // deno-lint-ignore no-explicit-any
+    const CHECKS: Array<{ key: string; stage: string; missing: (s: any) => boolean; graceMs: number }> = [
+      { key: 'raport', stage: 'raport rynku (martwy lock — sweep)', missing: (s) => !s.market_report, graceMs: 30 * 60000 },
+      { key: 'mockups', stage: 'makiety (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.mockups) && s.mockups.length), graceMs: 30 * 60000 },
+      { key: 'landing', stage: 'strona sklepu (martwy lock — sweep)', missing: (s) => !s.landing_html, graceMs: 30 * 60000 },
+      { key: 'ads', stage: 'reklamy (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.session_ads) && s.session_ads.length) && s.ads_manus_status !== 'running', graceMs: 60 * 60000 },
+    ]
+    for (const s of lockedSessions || []) {
+      const locks = (s.gen_locks && typeof s.gen_locks === 'object' && !Array.isArray(s.gen_locks)) ? s.gen_locks as Record<string, string> : {}
+      for (const chk of CHECKS) {
+        const at = locks[chk.key] ? Date.parse(locks[chk.key]) : 0
+        if (!at || Date.now() - at < chk.graceMs || !chk.missing(s)) continue
+        // zwolnij martwy lock niezależnie od alertu — user po powrocie generuje od razu
+        try { await supabase.rpc('bud_release_lock', { p_session: s.id, p_key: chk.key }) } catch { /* */ }
+        const { count: alerted, error: alertCntErr } = await supabase.from('bud_usage')
+          .select('id', { count: 'exact', head: true })
+          .eq('session_id', s.id).eq('kind', 'alert').eq('meta->>gen_key', chk.key)
+        if (alertCntErr) { console.error('[bud-drip] alert dedup err (pomijam alert):', alertCntErr); continue }
+        if (alerted) continue
+        try { await supabase.from('bud_usage').insert({ session_id: s.id, kind: 'alert', cost_usd: 0, meta: { gen_key: chk.key, type: 'stalled_gen' } }) } catch (mErr) { console.error('[bud-drip] alert marker err:', mErr) }
+        await postSlackSparing('bud_gen_error', { session_id: s.id as string, stage: chk.stage, error: `lock '${chk.key}' z ${new Date(at).toISOString()} bez artefaktu — generacja umarła na cicho; lock zwolniony` })
+      }
+    }
+  } catch (e) { console.error('[bud-drip] stalled sweep err:', e) }
+  return adsSweep
+}
+
 // T10: alert #sparing (wzorzec 1:1 z bud-image) — sweep martwych generacji.
 async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
   try {
@@ -728,8 +779,12 @@ Deno.serve(async (req) => {
       if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
     }
 
-    // Poza oknem 8–23: plan zaseedowany, ale nic nie wysyłamy do rana.
-    if (!inWindow) return jsonResponse({ ok: true, quiet_hours: true, seeded: (green || []).length }, 200)
+    // Poza oknem 8–23: plan zaseedowany, nic nie WYSYŁAMY do rana — ale sweepy generatorów
+    // biegną 24/7 (nie wysyłają maili do leadów; audyt regresji #5).
+    if (!inWindow) {
+      const adsSweepQ = await runGenSweeps(supabase, SUPABASE_URL, CRON_SECRET || '')
+      return jsonResponse({ ok: true, quiet_hours: true, seeded: (green || []).length, adsSweep: adsSweepQ }, 200)
+    }
 
     // 2) przetwórz due reveale (pending/generating, due_at<=now) z bramką + `requires`
     const nowIso = new Date().toISOString()
@@ -833,56 +888,8 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 5) T5: watchdog Manus — dociągnij wyniki tasków reklam dla sesji z ZAMKNIĘTĄ kartą
-    //    (dotąd wynik lądował tylko przy pollingu frontu → reklamy przepadały, comeback-mail
-    //    „reklamy gotowe" nigdy nie kwalifikował się przez `requires`). bud-ads sam oznacza
-    //    failed >40 min i alertuje #sparing.
-    let adsSweep: Record<string, unknown> | null = null
-    if (CRON_SECRET) {
-      try {
-        const r = await fetch(`${SUPABASE_URL}/functions/v1/bud-ads`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON_SECRET },
-          body: JSON.stringify({ sweep: true }),
-        })
-        adsSweep = r.ok ? await r.json().catch(() => null) : { error: r.status }
-      } catch (e) { console.error('[bud-drip] ads sweep err:', e) }
-    }
-
-    // 6) T10: cron-sweep MARTWYCH generacji — lock claimowany, grace dawno minął, artefaktu
-    //    brak = genTask umarł na cicho (waitUntil ubity / crash bez release). Zwalniamy lock
-    //    (powrót usera odpala generację od nowa) + JEDEN alert per sesja+etap (marker
-    //    bud_usage kind='alert'). Tylko sesje z ostatnich 48 h.
-    try {
-      const twoDaysAgo = new Date(Date.now() - 48 * 3600000).toISOString()
-      const { data: lockedSessions } = await supabase.from('bud_sessions')
-        .select('id, gen_locks, mockups, landing_html, market_report, session_ads, ads_manus_status')
-        .not('gen_locks', 'is', null).eq('is_test', false).is('archived_at', null)
-        .is('paid_at', null).gte('updated_at', twoDaysAgo).limit(100)
-      // deno-lint-ignore no-explicit-any
-      const CHECKS: Array<{ key: string; stage: string; missing: (s: any) => boolean; graceMs: number }> = [
-        { key: 'raport', stage: 'raport rynku (martwy lock — sweep)', missing: (s) => !s.market_report, graceMs: 30 * 60000 },
-        { key: 'mockups', stage: 'makiety (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.mockups) && s.mockups.length), graceMs: 30 * 60000 },
-        { key: 'landing', stage: 'strona sklepu (martwy lock — sweep)', missing: (s) => !s.landing_html, graceMs: 30 * 60000 },
-        { key: 'ads', stage: 'reklamy (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.session_ads) && s.session_ads.length) && s.ads_manus_status !== 'running', graceMs: 60 * 60000 },
-      ]
-      for (const s of lockedSessions || []) {
-        const locks = (s.gen_locks && typeof s.gen_locks === 'object' && !Array.isArray(s.gen_locks)) ? s.gen_locks as Record<string, string> : {}
-        for (const chk of CHECKS) {
-          const at = locks[chk.key] ? Date.parse(locks[chk.key]) : 0
-          if (!at || Date.now() - at < chk.graceMs || !chk.missing(s)) continue
-          // zwolnij martwy lock niezależnie od alertu — user po powrocie generuje od razu
-          try { await supabase.rpc('bud_release_lock', { p_session: s.id, p_key: chk.key }) } catch { /* */ }
-          // dedup alertu: marker w bud_usage (kind='alert' wymaga rozszerzonego CHECK)
-          const { count: alerted, error: alertCntErr } = await supabase.from('bud_usage')
-            .select('id', { count: 'exact', head: true })
-            .eq('session_id', s.id).eq('kind', 'alert').eq('meta->>gen_key', chk.key)
-          if (alertCntErr) { console.error('[bud-drip] alert dedup err (pomijam alert):', alertCntErr); continue }
-          if (alerted) continue
-          try { await supabase.from('bud_usage').insert({ session_id: s.id, kind: 'alert', cost_usd: 0, meta: { gen_key: chk.key, type: 'stalled_gen' } }) } catch (mErr) { console.error('[bud-drip] alert marker err:', mErr) }
-          await postSlackSparing('bud_gen_error', { session_id: s.id as string, stage: chk.stage, error: `lock '${chk.key}' z ${new Date(at).toISOString()} bez artefaktu — generacja umarła na cicho; lock zwolniony` })
-        }
-      }
-    } catch (e) { console.error('[bud-drip] stalled sweep err:', e) }
+    // 5+6) sweepy generatorów (patrz runGenSweeps) — tu dla przebiegów w oknie wysyłki.
+    const adsSweep = await runGenSweeps(supabase, SUPABASE_URL, CRON_SECRET || '')
 
     return jsonResponse({ ok: true, processed, fired, smsSent, adsSweep, followups_enabled: followupsEnabled() }, 200)
   } catch (e) {

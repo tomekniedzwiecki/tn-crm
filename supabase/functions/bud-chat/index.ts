@@ -1467,7 +1467,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, session_ads, product_input, survey, panel_visits, seen_landing_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1944,14 +1944,25 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         if (rep && typeof rep === 'object') {
           const { _meta: _d, ...r } = rep
           sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. PRZEJŚCIE MA BYĆ PŁYNNE, NIE URWANE: jeśli przed chwilą rozmawialiście (czas generowania raportu), NAJPIERW zareaguj na ostatnią wypowiedź rozmówcy i domknij ten wątek jednym naturalnym zdaniem + zasygnalizuj, że raport właśnie wskoczył — NIE ucinaj rozmowy w pół. Dopiero potem przejdź do ustaleń „dla kogo to jest", ŁĄCZĄC DWA ŹRÓDŁA: (1) to, co rozmówca SAM Ci powiedział podczas czekania (idealny klient, klimat/charakter marki, pomysły na nazwę, co go przekonało) — WYKORZYSTAJ to i NIE pytaj o to samo drugi raz; (2) realne wnioski raportu (konkurenci, ceny, luka). Odwołuj się do obu naturalnie.]\n${JSON.stringify(r).slice(0, 2400)}`
-        } else if (body.reportGated || !effectiveEmail) {
-          // Raport WSTRZYMANY: front trzyma bramkę kontaktu (konto→imię+nazwisko→telefon)
-          // i NIE odpalił bud-raport (reportGated), albo kontaktu po prostu brak. Mózg NIE
-          // może udawać, że raport się liczy ani pytać o ustalenia — inaczej bramka wygląda
-          // na opcjonalną (rozjazd: „zaczynam analizę" przy zagatowanym raporcie).
-          sessionContext += `\n\n[RAPORT WSTRZYMANY — KONTAKT NIEPODANY. Raport NIE wystartował i NIE wystartuje, dopóki rozmówca nie zostawi kontaktu (front pokazuje bramkę OBOK: konto → imię i nazwisko → telefon). TWARDE ZAKAZY: NIE mów „zaczynam analizę"/„robię raport"/„raport się liczy"/„raport pojawi się gotowy"/„za ~2 min" — NIC się jeszcze nie liczy; ZERO zmyślonych liczb, konkurencji ani wyników; NIE zadawaj pytań ustaleń („dla kogo", klimat marki, nazwa…) i NIE wystawiaj markera <ustalenia> ani <opcje> do ustaleń — to przyjdzie DOPIERO po kontakcie i po raporcie. ZRÓB: w 1-2 zdaniach ciepło potwierdź wybór produktu i powiedz WPROST, że gdy tylko zostawi kontakt z bramki obok, OD RAZU ruszasz z raportem rynku. Gdy dopytuje o status — spokojnie: „ruszam z raportem, jak tylko zostawisz kontakt". Krótko, bez ponaglania.]`
+        } else if (body.reportGated) {
+          // Raport WSTRZYMANY bramką — od 2026-07-02 WYŁĄCZNIE produkt WŁASNY (bez id;
+          // flaga z frontu). FIX 2026-07-02 wieczór: usunięty warunek `|| !effectiveEmail` —
+          // relikt starej bramki. Po zmianie architektury raport KARUZELOWY generuje się
+          // ANONIMOWO, a stary warunek kazał botowi KŁAMAĆ każdemu anonimowi („ruszam
+          // z raportem, jak zostawisz kontakt" + wskazanie bramki, której NIE MA na
+          // ekranie). QA 2026-07-02: userzy deklarowali „OK, podam dane" i znikali.
+          sessionContext += `\n\n[RAPORT WSTRZYMANY — KONTAKT NIEPODANY. Raport NIE wystartował i NIE wystartuje, dopóki rozmówca nie zostawi kontaktu (front pokazuje bramkę OBOK). TWARDE ZAKAZY: NIE mów „zaczynam analizę"/„robię raport"/„raport się liczy"/„raport pojawi się gotowy"/„za ~2 min" — NIC się jeszcze nie liczy; ZERO zmyślonych liczb, konkurencji ani wyników; NIE zadawaj pytań ustaleń („dla kogo", klimat marki, nazwa…) i NIE wystawiaj markera <ustalenia> ani <opcje> do ustaleń — to przyjdzie DOPIERO po kontakcie i po raporcie. ZRÓB: w 1-2 zdaniach ciepło potwierdź wybór produktu i powiedz WPROST, że gdy tylko zostawi kontakt z bramki obok, OD RAZU ruszasz z raportem rynku. Krótko, bez ponaglania.]`
+        } else if (!(existingSession?.chosen_product) && !/^wybieram produkt:/i.test(message)) {
+          // ETAP KARUZELI — produkt jeszcze NIE wybrany. Bez tej sekcji model dostawał
+          // instrukcję „raport w tle" (nic się nie liczy!) albo — przez stary warunek —
+          // kazał zostawiać dane. QA rozmów 2026-07-02: bot kazał userowi PRZEPISYWAĆ
+          // nazwy produktów („napisz dokładną nazwę", „wklej listę") zamiast prowadzić
+          // do kliknięcia karty; leada z własnym asortymentem odbijał do karuzeli.
+          sessionContext += `\n\n[ETAP WYBORU PRODUKTU — karuzela viralowych produktów z TikToka jest NA EKRANIE (karty z wideo i przyciskiem „Wybieram"). Rozmówca wybiera KLIKIEM w kartę — NIGDY nie każ mu przepisywać ani wklejać nazw produktów. Możesz doradzić kierunek (kategoria pod jego sytuację, na co patrzeć: liczba zapisów, prostota wysyłki, marża) i zachęcić do kliknięcia karty, która go kręci; jest też przycisk „Pokaż inne" (nowy zestaw). Raport rynku wystartuje AUTOMATYCZNIE po kliknięciu — NIE twierdź, że już się liczy. WŁASNY POMYSŁ: pojedynczy własny produkt to normalna ścieżka — potwierdź, że działamy też na własnych pomysłach, i poprowadź rozmowę o tym produkcie (bez odsyłania do karuzeli). WYJĄTEK — DUŻY GRACZ: gdy rozmówca deklaruje WIELE własnych produktów (własny asortyment/istniejąca firma) albo budżet ≥10 tys. zł — NIE wpychaj go w karuzelę ani w demo jednego produktu; powiedz, że to temat na bezpośrednią rozmowę z Tomkiem, i poproś o telefon lub e-mail, żeby Tomek się odezwał osobiście.]`
         } else {
-          sessionContext += `\n\n[RAPORT GENERUJE SIĘ W TLE (~2 MIN) — NIE ZOSTAWIAJ CISZY, WYKORZYSTAJ TEN CZAS. ZAANGAŻUJ rozmówcę w lekką, naturalną rozmowę, której odpowiedzi PRZYDADZĄ SIĘ później (do ustaleń „dla kogo", marki, strony sprzedażowej). Zadawaj PO JEDNYM pytaniu na turę i realnie reaguj na odpowiedź — np.: kogo widzi jako idealnego klienta tego produktu; co JEGO samego w nim przekonało / jaki problem rozwiązuje; jaki klimat/charakter marki mu pasuje (premium / energetyczny / ciepły / minimalistyczny…); czy ma już pomysł na nazwę albo skojarzenia. To zwykła, ciepła rozmowa — nie przesłuchanie i nie formularz.
+          sessionContext += `\n\n[RAPORT GENERUJE SIĘ W TLE (~2 MIN) — NIE ZOSTAWIAJ CISZY, WYKORZYSTAJ TEN CZAS.
+PIERWSZA ODPOWIEDŹ PO WYBORZE PRODUKTU (gdy user właśnie kliknął „Wybieram produkt") — dokładnie ta struktura, krótko: (1) potwierdź wybór JEDNYM zdaniem z konkretem, czemu jest dobry — wolno użyć liczb Z KARTY PRODUKTU, którą user widzi (zapisy/wyświetlenia z TikToka), NIE wyników raportu; (2) roadmapa jednym zdaniem: „w ~10 minut zobaczysz tu kolejno: raport rynku → markę z logo → makiety sklepu → reklamy → gotowy podgląd sklepu"; (3) JEDNO ŁATWE pytanie OSOBISTE związane z produktem (np. przy produkcie dla psa: „masz psa?"; przy aucie: „jeździsz dużo?") — NIE pytanie strategiczne o grupę docelową ani klimat marki (persona to laik, pytania eksperckie w 1. turze zabijają rozmowę — QA 2026-07-02: 60% sesji umierało na 1. turze).
+DALSZE TURY: ZAANGAŻUJ rozmówcę w lekką, naturalną rozmowę, której odpowiedzi PRZYDADZĄ SIĘ później (do ustaleń „dla kogo", marki, strony sprzedażowej). Zadawaj PO JEDNYM pytaniu na turę i realnie reaguj na odpowiedź — np.: kogo widzi jako idealnego klienta tego produktu; co JEGO samego w nim przekonało / jaki problem rozwiązuje; jaki klimat/charakter marki mu pasuje (premium / energetyczny / ciepły / minimalistyczny…); czy ma już pomysł na nazwę albo skojarzenia. To zwykła, ciepła rozmowa — nie przesłuchanie i nie formularz.
 PODPOWIEDZI — OBOWIĄZKOWE PRZY KAŻDYM PYTANIU: pod treścią pytania, w NOWEJ linii, ZAWSZE wstaw marker <opcje>["odp 1","odp 2","odp 3"]</opcje> z 2-4 krótkimi, klikalnymi odpowiedziami DOPASOWANYMI do tego pytania — rozmówca ma móc kliknąć zamiast pisać. Mają realnie pomóc dopracować ustalenia, ale LEKKO: naturalne, ludzkie warianty oddające główne sensowne rozróżnienia, NIE drobiazgowe ani przesadnie precyzyjne. Rekomendację oznacz prefiksem ~. PRZYKŁAD: „kogo najbardziej widzisz z tym produktem?" → <opcje>["~Zwykły Kowalski do domu","Ktoś techniczny, gadżeciarz","Coś pomiędzy"]</opcje>. Pytanie ustaleń BEZ markera <opcje> jest błędem.
 TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurencji, cen ani „dla kogo wg danych"; NIE cytuj wniosków „z raportu"; NIE TWIERDŹ, że raport jest „gotowy"/„już powinien być gotowy"/skończony, dopóki nie zobaczysz go w kontekście (dostaniesz wtedy sekcję [RAPORT STRATEGICZNY — GOTOWY]) — po prostu prowadź lekką rozmowę, a gdy raport wskoczy, sam to zauważysz i wtedy go omówisz; nawiasów kwadratowych [ ] NIE używaj JAKO PLACEHOLDERÓW w widocznym tekście (np. [X z raportu]) — to NIE dotyczy markera <opcje>, który JEST wymagany. NIE wystawiaj markera <ustalenia> — FORMALNE ustalenia podsumujesz DOPIERO po gotowym raporcie, opierając je TAKŻE na tym, co teraz zebrałeś od rozmówcy.]`
         }
@@ -1987,7 +1998,10 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
         // #10: instrukcja ETAPU USTALENIA tylko gdy raport realnie wystartował/gotowy.
         // Przy reportGated (raport wstrzymany) lub braku maila NIE doklejaj jej — inaczej
         // kłóci się z [RAPORT WSTRZYMANY] (jedno każe „zrób ustalenia", drugie zakazuje).
-        if (!body.reportGated && effectiveEmail) sessionContext += `\n\n${GATE_INSTRUCTION}`
+        // FIX 2026-07-02 wieczór: GATE_INSTRUCTION (instrukcja etapu ustaleń) też dla sesji
+        // ANONIMOWYCH — warunek `&& effectiveEmail` był reliktem starej bramki; po niej ustalenia
+        // i propozycja działają bez maila (kontakt zbierany dopiero przy makietach).
+        if (!body.reportGated) sessionContext += `\n\n${GATE_INSTRUCTION}`
       }
       // Bezpieczna detekcja rezygnacji — niezależnie od fazy (badanie i współpraca).
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`

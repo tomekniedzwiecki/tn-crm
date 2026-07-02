@@ -162,11 +162,13 @@ Deno.serve(async (req) => {
     const product: any = (body.product && typeof body.product === 'object') ? body.product : null;
     if (!product || !(product.name || product.nazwa)) return json({ error: 'brak_produktu' }, 400, c);
 
-    // CACHE per-sesja — komplet 4 makiet gotowy.
+    // CACHE per-sesja — oddaj to, co jest.
     const existing = Array.isArray(session.mockups) ? session.mockups : null;
-    // FIX: oddaj cząstkowe (>=3) zamiast wymagać kompletu 4 — gdy 1 obraz padł, nie blokuj
-    // frontu na 6 min (lock TTL). Picker działa z 3 stylami; brakujący 4. nie wstrzymuje lejka.
-    if (!body.force && existing && existing.length >= 3 && existing.every((m: any) => m && m.url)) {
+    // FIX (audyt regresji #2): próg >=1 zamiast >=3 — partial 1-2/4 z releasem locka wpadał
+    // w AUTOMATYCZNĄ pętlę: poll frontu nie dostawał cache, claimował wolny lock i odpalał
+    // pełny NOWY batch 4 obrazów, aż do capa sesji. Teraz partial wraca od razu (front pokazuje
+    // co jest); dopełnienie do 4 tylko świadomym force=true (podlega capom).
+    if (!body.force && existing && existing.length >= 1 && existing.every((m: any) => m && m.url)) {
       return json({ mockups: existing, cached: true }, 200, c);
     }
 
@@ -179,12 +181,15 @@ Deno.serve(async (req) => {
       //     niezależnie od tego czy style poszły z API czy z fallbacku (to ten sam
       //     genTask). Wybrany zamiast 'mockup-styles', bo ścieżka fallback stylów
       //     NIE loguje 'mockup-styles', a i tak pali 4× gpt-image-2.
+      // OKNO 24 h (audyt regresji #2): cap bez okna robił z sesji trwały dead-end po awarii.
+      const capDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
       const { count: sessCount, error: sessErr } = await supabase
         .from('bud_usage')
         .select('id', { count: 'exact', head: true })
         .eq('session_id', sessionId)
         .eq('kind', 'image')
-        .eq('meta->>from', 'bud-mockup');
+        .eq('meta->>from', 'bud-mockup')
+        .gte('created_at', capDayAgo);
       if (sessErr) {
         console.error('[bud-mockup] session cap count error (fail-open):', sessErr);
       } else if ((sessCount ?? 0) >= MAX_MOCKUPS_PER_SESSION) {
@@ -287,8 +292,9 @@ Deno.serve(async (req) => {
         const mockups = settled
           .map((s, i) => { if (s.status === 'fulfilled') return s.value; console.error('[bud-mockup] obraz padł', styles[i]?.key, String(s.reason).slice(0, 120)); return null; })
           .filter(Boolean);
-        // KOSZT: obrazy makiet (gpt-image-2 medium = 0.041 USD/obraz) — dotąd nie logowane
-        try { if (mockups.length) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: mockups.length, cost_usd: 0.041 * mockups.length, meta: { view: 'mockup', quality: 'medium', from: 'bud-mockup' } }); } catch (_) { /* log nie blokuje */ }
+        // KOSZT: obrazy makiet (gpt-image-2 medium = 0.041 USD/obraz). Rerolle admina
+        // z osobnym markerem — nie zjadają capa usera (audyt #7), koszt dalej policzony.
+        try { if (mockups.length) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: mockups.length, cost_usd: 0.041 * mockups.length, meta: { view: 'mockup', quality: 'medium', from: isAdmin ? 'bud-mockup-admin' : 'bud-mockup' } }); } catch (_) { /* log nie blokuje */ }
         if (mockups.length) {
           // Zapis nawet gdy <4 — front pokaże to, co się udało (lepsze niż czekanie 6 min na komplet).
           await supabase.from('bud_sessions').update({ mockups }).eq('id', sessionId);

@@ -307,8 +307,14 @@ async function manusPollAndPull(supabase: any, sessionId: string, taskId: string
 
   if (!ads.some((x) => x.image_url)) return { done: false }   // skończony, ale brak grafik → poczekaj kolejny cykl (nie oznaczaj completed)
 
-  await supabase.from('bud_sessions').update({ session_ads: ads, ads_manus_status: 'completed', ads_manus_completed_at: new Date().toISOString() }).eq('id', sessionId)
-  // KOSZT: task Manus (kredyty agenta) — dotąd NIE liczony nigdzie; stawka szacunkowa MANUS_TASK_USD
+  // ATOMOWO (audyt regresji #3): poll frontu i sweep crona potrafią wywołać pull RÓWNOLEGLE —
+  // update warunkowy na status='running' wygrywa raz; przegrany NIE liczy kosztu drugi raz
+  // (dubel wpisu zjadał cap MAX_MANUS_RETRIGGERS_PER_SESSION) i nie zwalnia locka ponownie.
+  const { data: won } = await supabase.from('bud_sessions')
+    .update({ session_ads: ads, ads_manus_status: 'completed', ads_manus_completed_at: new Date().toISOString() })
+    .eq('id', sessionId).eq('ads_manus_status', 'running').select('id')
+  if (!won || !won.length) return { done: true, ads }
+  // KOSZT: task Manus (kredyty agenta) — stawka szacunkowa MANUS_TASK_USD
   try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'ads', model: 'manus', cost_usd: MANUS_TASK_USD, meta: { source: 'manus', task_id: taskId } }) } catch { /* log nie blokuje */ }
   try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
   return { done: true, ads }
@@ -367,8 +373,12 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, chosen_style, session_ads, brand, market_report, ads_manus_task_id, ads_manus_status, ads_manus_started_at').eq('id', sessionId).maybeSingle()
     if (!session) return json({ error: 'nieprawidlowa_sesja' }, 404, c)
-    const authUser = await verifyAuthUser(req, supabase)
-    if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c)
+    // Admin (x-admin-secret) omija owner-gate — rerolle z panelu na sesjach przypiętych
+    // do kont dostawały 403 (audyt regresji #4; spójnie z bud-mockup/bud-landing-gen).
+    if (!isAdmin) {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c)
+    }
 
     // deno-lint-ignore no-explicit-any
     const product: any = (body.product && typeof body.product === 'object') ? body.product : null

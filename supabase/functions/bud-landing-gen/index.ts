@@ -27,6 +27,17 @@ function json(b: Record<string, unknown>, s: number, c: Record<string, string>):
 }
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
+// fetch z twardym timeoutem — generate-image (gpt-image-2) potrafi wisieć (wzorzec bud-mockup).
+// Bez tego JEDEN zawieszony obraz lifestyle trzyma prewarm dłużej niż TTL locka 'lifestyle'
+// (300 s) → główna generacja przejmuje lock i DUBLUJE koszt, a spóźniony prewarm zwalnia
+// cudzy lock (audyt regresji 2026-07-02 #1).
+async function fetchTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), ms)
+  try { return await fetch(url, { ...init, signal: ctrl.signal }) }
+  finally { clearTimeout(t) }
+}
+
 // deno-lint-ignore no-explicit-any
 function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: string[] = [], styleBrief = '', styleLabel = '', logoUrl = '', brandName = '', mockupSpec = ''): string {
   const name = String(snap?.title || product?.nazwa || product?.name || 'produkt').slice(0, 160)
@@ -139,10 +150,10 @@ async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[
   ]
   const one = async (scenePrompt: string): Promise<string | null> => {
     try {
-      const r = await fetch(`${SUPABASE_URL}/functions/v1/generate-image`, {
+      const r = await fetchTimeout(`${SUPABASE_URL}/functions/v1/generate-image`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
         body: JSON.stringify({ prompt: scenePrompt, provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '1:1', type: 'lifestyle', count: 1, reference_images: refs }),
-      })
+      }, 110_000)
       if (!r.ok) { console.error('[bud-landing-gen] lifestyle HTTP', r.status); return null }
       const d = await r.json().catch(() => null)
       const u = d?.images?.[0]?.url
@@ -282,13 +293,17 @@ Deno.serve(async (req) => {
     // ── T1: CAPY anty-nadużycie (admin omija; wzorzec bud-mockup). Sprawdzane PRZED lockiem;
     //    force=true też tu trafia (cache zwrócił wyżej). Fail-open na błędzie zapytania.
     if (!isAdmin) {
-      // (a) cap startów generacji per sesja (marker 'landing-attempt' niżej)
+      // (a) cap startów generacji per sesja (marker 'landing-attempt' niżej).
+      // OKNO 24 h (audyt regresji #2): bez okna po przejściowej awarii OpenAI polling frontu
+      // sam wypalał wszystkie próby i sesja zostawała bez sklepu NA ZAWSZE (429 + martwy retry).
+      const capDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
       const { count: sessCount, error: sessErr } = await supabase
         .from('bud_usage')
         .select('id', { count: 'exact', head: true })
         .eq('session_id', sessionId)
         .eq('kind', 'landing')
         .eq('meta->>from', 'landing-attempt')
+        .gte('created_at', capDayAgo)
       if (sessErr) {
         console.error('[bud-landing-gen] session cap count error (fail-open):', sessErr)
       } else if ((sessCount ?? 0) >= MAX_LANDINGS_PER_SESSION) {
@@ -325,7 +340,8 @@ Deno.serve(async (req) => {
     if (!lock) return json({ pending: true }, 202, c)
     // T1: marker startu generacji (licznik capów) — wstawiany PO claimie locka, więc
     // polling pending / cache-hit nie nabija licznika; realny start palący $ TAK.
-    try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-attempt' } }) } catch (_) { /* */ }
+    // Rerolle admina dostają osobny marker (nie zjadają limitu usera — audyt #7).
+    try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: isAdmin ? 'landing-attempt-admin' : 'landing-attempt' } }) } catch (_) { /* */ }
 
     // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
     const mocks = Array.isArray(session.mockups) ? session.mockups : []
