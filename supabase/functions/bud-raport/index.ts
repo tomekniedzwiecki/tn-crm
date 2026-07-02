@@ -67,12 +67,12 @@ function buildRaportPrompt(product: any, recipient: string, aliData = ''): strin
   const cat = s(product?.kategoria ?? product?.category, 80)
   const link = s(product?.link ?? product?.product_link, 320)
   const saves = n(product?.saves), plays = n(product?.plays), comments = n(product?.comments)
-  const dla = s(recipient, 80)
+  void s(recipient, 80) // recipient NIE trafia już do promptu (raport uniwersalny per produkt — cache czysty); personalizacja „dla" wstrzykiwana przy zwrocie
   const sig = [plays ? `~${plays} wyświetleń` : '', saves ? `~${saves} zapisów` : '', comments ? `~${comments} komentarzy` : ''].filter(Boolean).join(', ')
 
-  return `Jesteś czołowym STRATEGIEM e-commerce i brand-builderem. Przygotowujesz DEDYKOWANY raport strategiczny dla konkretnej osoby, która JUŻ ZDECYDOWAŁA, że chce sprzedawać poniższy produkt na rynku polskim. Raport to jej przewodnik: jak wprowadzić produkt, zbudować wokół niego markę i maksymalizować zyski. Po polsku, konkretnie, z energią praktyka — ma się go DOBRZE CZYTAĆ i realnie pomagać. Treściwy, ale NIE 50-stronicowy elaborat: każda sekcja zwarta, mięsista, bez lania wody i bez suchych jednolinijkowców.
+  return `Jesteś czołowym STRATEGIEM e-commerce i brand-builderem. Przygotowujesz raport strategiczny dla osoby, która JUŻ ZDECYDOWAŁA, że chce sprzedawać poniższy produkt na rynku polskim. Raport to jej przewodnik: jak wprowadzić produkt, zbudować wokół niego markę i maksymalizować zyski. Po polsku, konkretnie, z energią praktyka — ma się go DOBRZE CZYTAĆ i realnie pomagać. Treściwy, ale NIE 50-stronicowy elaborat: każda sekcja zwarta, mięsista, bez lania wody i bez suchych jednolinijkowców.
 
-ODBIORCA RAPORTU: ${dla || '(klient)'}. Pisz tak, by czuł, że to przygotowane SPECJALNIE dla niego — zwracaj się bezpośrednio („Ty"), użyj jego imienia w "lead" i raz–dwa w treści (z umiarem, naturalnie). To ma być dedykowany dokument, nie szablon.
+ODBIORCA: raport jest UNIWERSALNY per produkt (współdzielony przez cache między osobami, które wybrały ten sam produkt). Pisz bezpośrednio i ciepło do czytelnika („Ty"), ale BEZ imienia i BEZ jakichkolwiek danych osobowych. Dedykowany charakter ma wynikać z KONKRETU o tym produkcie i rynku, nie z imienia.
 
 PRODUKT:
 - Nazwa robocza: ${name}
@@ -103,9 +103,9 @@ ZASADY:
 
 Zwróć WYŁĄCZNIE poprawny JSON (bez markdown wokół, bez tekstu przed/po):
 {
-  "dla": "${dla}",
+  "dla": "",
   "naglowek": "Raport strategiczny — <krótka, ludzka nazwa produktu>",
-  "lead": "2-3 zdania osobistego wprowadzenia po imieniu, KONKRETNIE o TYM produkcie — nazwij go i jego realny atut/kąt (co rozwiązuje, dla kogo, czym się wyróżnia). NIE ogólniki typu „tani/prosty/emocjonalny", które pasują do każdego produktu; ma czuć, że to dedykowane pod JEGO konkretny wybór.",
+  "lead": "2-3 zdania wprowadzenia (bezpośrednio, na «Ty», BEZ imienia), KONKRETNIE o TYM produkcie — nazwij go i jego realny atut/kąt (co rozwiązuje, dla kogo, czym się wyróżnia). NIE ogólniki typu „tani/prosty/emocjonalny", które pasują do każdego produktu; ma czuć, że to dedykowane pod ten konkretny wybór.",
   "sekcje": [
     {"tytul":"Produkt i potencjał rynkowy","tresc":"markdown…","zrodla":[1]},
     {"tytul":"Problem, potrzeby i emocje","tresc":"markdown…"},
@@ -237,6 +237,7 @@ Deno.serve(async (req) => {
         if (notReadyYet) return jsonResponse({ pending: true }, 200, cors)
         await supabase.from('bud_sessions').update({ market_report: pkg.report, updated_at: new Date().toISOString() }).eq('id', sessionId)
         const { _meta: _d, ...raport } = pkg.report as Record<string, unknown>
+        if (recipient) (raport as Record<string, unknown>).dla = recipient   // personalizacja na brzegu — cache zostaje neutralny
         return jsonResponse({ raport, cached: true }, 200, cors)
       }
     }
@@ -245,6 +246,7 @@ Deno.serve(async (req) => {
     if (existing && !body.force) {
       if (notReadyYet) return jsonResponse({ pending: true }, 200, cors)
       const { _meta: _drop, ...raport } = existing
+      if (recipient) (raport as Record<string, unknown>).dla = recipient   // personalizacja na brzegu
       return jsonResponse({ raport, cached: true }, 200, cors)
     }
     const meta = (existing && existing._meta) as Record<string, unknown> | null
