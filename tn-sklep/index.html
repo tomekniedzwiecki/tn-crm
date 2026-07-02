@@ -1375,7 +1375,9 @@ function leadOverviewHTML() {
 // na żywo (strona sama dociąga stan co ~20 s). bud-project 'admin_get' = zero
 // efektów ubocznych (bez stempla wizyt / seedowania reveals / bumpów pipeline).
 // „Transkrypcja" = dotychczasowy surowy podgląd wiadomości (filtr etapów).
-let leadChatView = 'user';   // 'user' | 'transkrypcja'
+// Mobile: domyślnie transkrypcja (iframe pełnej appki w wąskim viewporcie jest
+// ciasny i ciężki) — przełącznik pozwala wejść w widok leada na życzenie.
+let leadChatView = window.matchMedia('(max-width: 767px)').matches ? 'transkrypcja' : 'user';   // 'user' | 'transkrypcja'
 const SKLEP_PREVIEW_BASE = 'https://tomekniedzwiecki.pl/sklep/';
 function sklepPreviewUrl(sid, tok) { return SKLEP_PREVIEW_BASE + '?id=' + encodeURIComponent(sid) + '&podglad=admin#admintok=' + encodeURIComponent(tok); }
 function setLeadChatView(v) { leadChatView = v; renderLeadTab(); }
