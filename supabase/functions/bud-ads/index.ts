@@ -475,6 +475,7 @@ Deno.serve(async (req) => {
       // utwórz nowy task Manus (force lub pierwszy raz)
       const { data: mlock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'ads', p_ttl_sec: 2000 })
       if (!mlock) return json({ pending: true }, 202, c)
+      let manusCreateErr = ''
       try {
         const rawRef = refs[0]?.url || ''
         const productImageUrl = rawRef ? await cacheRefToStorage(supabase, sessionId, rawRef) : ''
@@ -488,17 +489,32 @@ Deno.serve(async (req) => {
         const createRes = await fetch(`${MANUS_BASE}/task.create`, { method: 'POST', headers: { 'x-manus-api-key': MANUS_API_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ message: messagePayload }) })
         const createData = await createRes.json().catch(() => null)
         if (!createRes.ok || !createData?.ok || !createData?.task_id) {
-          console.error('[bud-ads] Manus task.create failed', createRes.status, JSON.stringify(createData).slice(0, 200))
-          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
-          return json({ error: 'manus_create_failed' }, 502, c)
+          manusCreateErr = `HTTP ${createRes.status}: ${JSON.stringify(createData).slice(0, 180)}`
+          console.error('[bud-ads] Manus task.create failed', manusCreateErr)
+        } else {
+          await supabase.from('bud_sessions').update({ ads_manus_task_id: createData.task_id, ads_manus_status: 'running', ads_manus_started_at: new Date().toISOString(), ads_manus_step: null, session_ads: null }).eq('id', sessionId)
+          return json({ pending: true, manus: 'created', task_id: createData.task_id }, 202, c)
         }
-        await supabase.from('bud_sessions').update({ ads_manus_task_id: createData.task_id, ads_manus_status: 'running', ads_manus_started_at: new Date().toISOString(), ads_manus_step: null, session_ads: null }).eq('id', sessionId)
-        return json({ pending: true, manus: 'created', task_id: createData.task_id }, 202, c)
       } catch (e) {
+        manusCreateErr = String(e).slice(0, 180)
         console.error('[bud-ads] Manus create error', e)
-        try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
-        return json({ error: 'manus_create_error' }, 502, c)
       }
+      // FALLBACK (fix 2026-07-02, incydent „reklamy nie działają"): padnięty task.create
+      // (najczęściej BRAK KREDYTÓW Manusa) kończył się dead-endem 502 — user klikał
+      // „Spróbuj ponownie" w kółko i nic. Tor zapasowy Gemini istniał, ale odpalał się
+      // TYLKO przy wyłączonej fladze. Teraz: create padł → alert dla Tomka → zwalniamy
+      // lock Manusowy i SPADAMY do toru Gemini niżej (świeży claim).
+      // Req Tomka: brak kredytów ma być powiedziany WPROST, po ludzku — nie surowym JSON-em.
+      const isCredits = /HTTP 429|resource_exhausted|credit limit/i.test(manusCreateErr)
+      await postSlackSparing('bud_gen_error', {
+        session_id: sessionId,
+        stage: isCredits ? 'reklamy — SKOŃCZYŁY SIĘ KREDYTY MANUSA → przełączam na Gemini' : 'reklamy — Manus create padł → przełączam na Gemini',
+        error: isCredits
+          ? 'Manus odrzucił zadanie: limit kredytów wyczerpany. DOŁADUJ KREDYTY w Manusie — do tego czasu kreacje robi fallback Gemini (słabsza jakość, ale lejek nie stoi).'
+          : manusCreateErr,
+        product: String(product?.nazwa || product?.name || ''),
+      })
+      try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
     }
 
     // ===== Fallback: Gemini (gdy flaga Manus wyłączona / brak klucza) =====
