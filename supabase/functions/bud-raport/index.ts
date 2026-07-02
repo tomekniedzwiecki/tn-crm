@@ -203,12 +203,15 @@ Deno.serve(async (req) => {
       ? body.recipient.trim()
       : (typeof (session as Record<string, unknown>).name === 'string' ? (session as Record<string, unknown>).name as string : '')
 
-    // Bramka kontaktu (cel Tomka: ZERO anonimowych generacji). Raport rusza dopiero, gdy
-    // sesja ma e-mail — front zbiera imię+nazwisko+e-mail PRZED raportem. body.email to
-    // fallback na wyścig zapisu kontaktu (front zapisuje kontakt i zaraz odpala raport).
+    // Bramka kontaktu (ZMIANA — decyzja Tomka 2026-07-02): raport z KARUZELI jest
+    // UNIWERSALNY per produkt (cache w bud_product_packages) → generuje się ANONIMOWO
+    // (koszt ~0 przy cache-hit; świeże generacje chronią capy 3/sesję + 5/dobę/IP).
+    // Kontakt front zbiera DOPIERO przy starcie makiet. WYJĄTEK: produkt WŁASNY
+    // (bez id — bez cache, pełny koszt per generacja) dalej wymaga e-maila.
     const sessEmail = typeof (session as Record<string, unknown>).email === 'string' ? (session as Record<string, unknown>).email as string : ''
     const hasContact = !!(sessEmail || (typeof body.email === 'string' && body.email.trim()))
-    if (!hasContact) return jsonResponse({ needs_contact: true }, 200, cors)
+    const isCarouselProduct = !!(product.id || product.product_id)
+    if (!hasContact && !isCarouselProduct) return jsonResponse({ needs_contact: true }, 200, cors)
 
     // MIN. ODSŁONA RAPORTU (decyzja Tomka): raport — nawet z cache — staje się dostępny
     // dopiero ~25 s od startu, żeby nie „błyskał" natychmiast (ma wyglądać na realny
