@@ -384,12 +384,22 @@ Deno.serve(async (req) => {
         if (!cands.length) cands = fallbackNames(ctx || niche || 'sklep z produktem fizycznym')   // double-safety: NIGDY pusto
         const seen = new Set<string>()
         const out: Array<{ name: string; domain: string; available: boolean }> = []
+        // T9: RDAP BATCHAMI po 4 równolegle (było: sekwencyjnie z pauzą 110 ms → 10-20 s
+        // gapienia się w spinner). 4 naraz + 150 ms przerwy między batchami = łagodnie dla
+        // NASK (anty-429; plDomainFree ma fallback DoH), a picker nazw spada do ~2-4 s.
+        const uniq: Array<{ nm: string; slug: string }> = []
         for (const nm of cands) {
           const slug = slugifyPl(nm); if (!slug || slug.length < 3 || seen.has(slug)) continue; seen.add(slug)
-          let free = false; try { free = await plDomainFree(slug + '.pl') } catch { free = false }   // RDAP padło → nie wywracaj całości
-          await new Promise((r) => setTimeout(r, 110))   // łagodnie dla RDAP/NASK (anty-429)
-          if (free) out.push({ name: nm, domain: slug + '.pl', available: true })
-          if (out.length >= 5) break
+          uniq.push({ nm, slug })
+        }
+        for (let i = 0; i < uniq.length && out.length < 5; i += 4) {
+          const batch = uniq.slice(i, i + 4)
+          const checked = await Promise.all(batch.map(async (x) => {
+            let free = false; try { free = await plDomainFree(x.slug + '.pl') } catch { free = false }   // RDAP padło → nie wywracaj całości
+            return { ...x, free }
+          }))
+          for (const r of checked) { if (r.free && out.length < 5) out.push({ name: r.nm, domain: r.slug + '.pl', available: true }) }
+          if (out.length < 5 && i + 4 < uniq.length) await new Promise((r) => setTimeout(r, 150))
         }
         if (out.length < 5) {
           // awaryjnie dopełnij do 5 (gdyby RDAP masowo odmawiał) — oznaczone available:false

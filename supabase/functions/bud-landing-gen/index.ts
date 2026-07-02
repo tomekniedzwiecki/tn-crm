@@ -16,6 +16,12 @@ function cors(o: string | null): Record<string, string> {
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MODEL = Deno.env.get('BUD_LANDING_MODEL') || 'gpt-5.5'
 const MAX_OUT = 32000
+// T1: capy anty-nadużycie (wzorzec bud-mockup/bud-raport). To NAJDROŻSZA generacja lejka
+// (~1 USD: 4× lifestyle + spec + HTML gpt-5.5) i dotąd JEDYNA bez limitów — pętla force=true
+// z curla paliła realne $ bez ograniczeń. Marker = wpis 'landing-attempt' (start generacji
+// po claimie locka), więc cache-hit NIE liczy się do limitu, a pętla z padającym OpenAI TAK.
+const MAX_LANDINGS_PER_SESSION = parseInt(Deno.env.get('BUD_LANDING_MAX_PER_SESSION') || '3', 10)
+const MAX_LANDINGS_PER_IP_PER_DAY = parseInt(Deno.env.get('BUD_LANDING_IP_DAILY') || '6', 10)
 function json(b: Record<string, unknown>, s: number, c: Record<string, string>): Response {
   return new Response(JSON.stringify(b), { status: s, headers: { ...c, 'Content-Type': 'application/json' } })
 }
@@ -158,6 +164,23 @@ function optimizeImg(url: string, w = 1000, q = 72): string {
   return url
 }
 
+// T10: alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-image).
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-landing-gen] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-landing-gen] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-landing-gen] slack-notify ${type} exception:`, err)
+  }
+}
+
 function extractHtml(raw: string): string {
   let t = (raw || '').trim().replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/, '')
   const s = t.search(/<!doctype html|<html/i)
@@ -201,26 +224,108 @@ Deno.serve(async (req) => {
     const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY')!
     const CRON = Deno.env.get('SPAR_CRON_SECRET') || ''
     // deno-lint-ignore no-explicit-any
-    let body: { sessionId?: string; product?: any; mockup_url?: string; force?: boolean }
+    let body: { sessionId?: string; product?: any; mockup_url?: string; force?: boolean; prewarm?: boolean }
     try { body = await req.json() } catch { return json({ error: 'nieprawidlowy_json' }, 400, c) }
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return json({ error: 'nieprawidlowa_sesja' }, 400, c)
 
+    // Admin/wewnętrzne (x-admin-secret == SPAR_CRON_SECRET) omija owner-gate i capy —
+    // prewarm z bud-mockup, rerolle z panelu. Pusty CRON nigdy nie autoryzuje.
+    const isAdmin = !!CRON && req.headers.get('x-admin-secret') === CRON
+
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, chosen_style, mockups, landing_html, brand').eq('id', sessionId).maybeSingle()
+    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, chosen_style, mockups, landing_html, brand, ip, landing_lifestyle').eq('id', sessionId).maybeSingle()
     if (!session) return json({ error: 'nieprawidlowa_sesja' }, 404, c)
-    const authUser = await verifyAuthUser(req, supabase)
-    if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c)
+    if (!isAdmin) {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) return json({ error: 'wymagane_logowanie' }, 403, c)
+    }
 
     // deno-lint-ignore no-explicit-any
     const product: any = (body.product && typeof body.product === 'object') ? body.product : null
     if (!product || !(product.nazwa || product.name)) return json({ error: 'brak_produktu' }, 400, c)
 
+    // T7: PREWARM lifestyle (wewnętrzny strzał z bud-mockup po zapisaniu makiet) — generuje
+    // TYLKO ujęcia lifestyle do bud_sessions.landing_lifestyle, ŻADNEGO HTML. Główna generacja
+    // (po wyborze stylu, ~1-2 min później) reużywa gotowe → landing szybszy o 60-90 s.
+    if (body.prewarm) {
+      if (!isAdmin) return json({ error: 'brak_uprawnien' }, 403, c)
+      const preExisting = Array.isArray((session as Record<string, unknown>).landing_lifestyle) ? ((session as Record<string, unknown>).landing_lifestyle as unknown[]) : []
+      if (session.landing_html || preExisting.length) return json({ done: true }, 200, c)
+      const { data: plock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'lifestyle', p_ttl_sec: 300 })
+      if (!plock) return json({ pending: true }, 202, c)
+      let preSnap: Record<string, unknown> | null = null
+      try {
+        const pkId = String(product.id || '')
+        if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle(); preSnap = (row && row.ali_snapshot) || null }
+      } catch { /* */ }
+      // deno-lint-ignore no-explicit-any
+      const preImages = (preSnap && Array.isArray((preSnap as any).images)) ? (preSnap as any).images : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
+      const preUst = session.ustalenia || {}
+      const preTask = (async () => {
+        try {
+          const lifestyle = await genLifestyle(SUPABASE_URL, CRON, preImages, product, preUst)
+          if (lifestyle.length) {
+            await supabase.from('bud_sessions').update({ landing_lifestyle: lifestyle }).eq('id', sessionId)
+            try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: lifestyle.length, cost_usd: 0.041 * lifestyle.length, meta: { view: 'lifestyle', from: 'bud-landing-gen', prewarm: true } }) } catch (_) { /* */ }
+          }
+        } catch (e) { console.error('[bud-landing-gen] prewarm err', e) }
+        finally { try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'lifestyle' }) } catch { /* */ } }
+      })()
+      try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(preTask) } catch (_) { /* */ }
+      return json({ pending: true }, 202, c)
+    }
+
     // PER-SESJA (landing zależy od ustaleń + wybranej makiety konkretnego usera)
     if (!body.force && session.landing_html) return json({ landing_html: session.landing_html, cached: true }, 200, c)
 
+    // ── T1: CAPY anty-nadużycie (admin omija; wzorzec bud-mockup). Sprawdzane PRZED lockiem;
+    //    force=true też tu trafia (cache zwrócił wyżej). Fail-open na błędzie zapytania.
+    if (!isAdmin) {
+      // (a) cap startów generacji per sesja (marker 'landing-attempt' niżej)
+      const { count: sessCount, error: sessErr } = await supabase
+        .from('bud_usage')
+        .select('id', { count: 'exact', head: true })
+        .eq('session_id', sessionId)
+        .eq('kind', 'landing')
+        .eq('meta->>from', 'landing-attempt')
+      if (sessErr) {
+        console.error('[bud-landing-gen] session cap count error (fail-open):', sessErr)
+      } else if ((sessCount ?? 0) >= MAX_LANDINGS_PER_SESSION) {
+        return json({ error: 'limit_stron' }, 429, c)
+      }
+      // (b) dzienny cap per IP — starty z 24 h po wszystkich sesjach tego IP
+      const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+        || (typeof session.ip === 'string' ? session.ip : null)
+      if (ip) {
+        const dayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { data: ipSessions, error: ipSessErr } = await supabase.from('bud_sessions').select('id').eq('ip', ip)
+        if (ipSessErr) {
+          console.error('[bud-landing-gen] ip sessions query error (fail-open):', ipSessErr)
+        } else if (ipSessions && ipSessions.length) {
+          const { count: ipCount, error: ipUsageErr } = await supabase
+            .from('bud_usage')
+            .select('id', { count: 'exact', head: true })
+            .eq('kind', 'landing')
+            .eq('meta->>from', 'landing-attempt')
+            .in('session_id', ipSessions.map((r) => r.id))
+            .gte('created_at', dayAgo)
+          if (ipUsageErr) {
+            console.error('[bud-landing-gen] ip usage count error (fail-open):', ipUsageErr)
+          } else if ((ipCount ?? 0) >= MAX_LANDINGS_PER_IP_PER_DAY) {
+            return json({ error: 'limit_stron_dzienny' }, 429, c)
+          }
+        }
+      } else {
+        console.warn('[bud-landing-gen] brak IP do capa dziennego — fail-open')
+      }
+    }
+
     const { data: lock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'landing', p_ttl_sec: 400 })
     if (!lock) return json({ pending: true }, 202, c)
+    // T1: marker startu generacji (licznik capów) — wstawiany PO claimie locka, więc
+    // polling pending / cache-hit nie nabija licznika; realny start palący $ TAK.
+    try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-attempt' } }) } catch (_) { /* */ }
 
     // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
     const mocks = Array.isArray(session.mockups) ? session.mockups : []
@@ -244,16 +349,50 @@ Deno.serve(async (req) => {
     const images = (snap && Array.isArray((snap as any).images)) ? (snap as any).images : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
 
     const genTask = (async () => {
+      let saved = false
+      let failReason = ''
       try {
-        // deno-lint-ignore no-explicit-any
-        // 1-2 fotorealistyczne ujęcia lifestyle z wielu zdjęć Ali (wierność) — do hero+użycia.
-        const lifestyle = await genLifestyle(SUPABASE_URL, CRON, images, product, ust)
-        // KOSZT: obrazy lifestyle (gpt-image-2 medium = 0.041 USD/obraz) — dotąd nie logowane
-        try { if (lifestyle.length) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: lifestyle.length, cost_usd: 0.041 * lifestyle.length, meta: { view: 'lifestyle', from: 'bud-landing-gen' } }) } catch (_) { /* log nie blokuje */ }
+        // T7: lifestyle z PREWARMU (bud-mockup odpalił je przy makietach) — reużyj zamiast
+        // generować od nowa. Gdy prewarm właśnie biegnie (lock 'lifestyle' zajęty) — poczekaj
+        // na jego wynik zamiast dublować koszt; gdy nic nie ma — wygeneruj sam (i odłóż do
+        // landing_lifestyle, żeby force-regen też reużył).
+        const getLifestyle = async (): Promise<string[]> => {
+          const readPre = async (): Promise<string[]> => {
+            const { data: fresh } = await supabase.from('bud_sessions').select('landing_lifestyle').eq('id', sessionId).maybeSingle()
+            const arr = Array.isArray(fresh?.landing_lifestyle) ? (fresh.landing_lifestyle as unknown[]) : []
+            return arr.filter((u): u is string => typeof u === 'string' && !!u)
+          }
+          let pre = await readPre()
+          if (pre.length) return pre
+          const { data: llock } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'lifestyle', p_ttl_sec: 240 })
+          if (!llock) {
+            // prewarm w toku — polluj wynik do ~90 s, potem jedź bez lifestyle (HTML ma realne foto)
+            for (let i = 0; i < 18; i++) {
+              await new Promise((r) => setTimeout(r, 5000))
+              pre = await readPre()
+              if (pre.length) return pre
+            }
+            return []
+          }
+          try {
+            const gen = await genLifestyle(SUPABASE_URL, CRON, images, product, ust)
+            if (gen.length) {
+              await supabase.from('bud_sessions').update({ landing_lifestyle: gen }).eq('id', sessionId)
+              // KOSZT: obrazy lifestyle (gpt-image-2 medium = 0.041 USD/obraz)
+              try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: gen.length, cost_usd: 0.041 * gen.length, meta: { view: 'lifestyle', from: 'bud-landing-gen' } }) } catch (_) { /* log nie blokuje */ }
+            }
+            return gen
+          } finally { try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'lifestyle' }) } catch { /* */ } }
+        }
+        // T7: lifestyle i spec makiety nie zależą od siebie — RÓWNOLEGLE (oszczędza 20-60 s).
         const specUsage = { i: 0, c: 0, o: 0 }
-        const mockupSpec = await extractMockupSpec(OPENAI_API_KEY, mockupUrl, specUsage)   // FAZA 3: twarda spec z makiety przed HTML
-        // KOSZT: vision pre-pass makiety (gpt-5.1) — dotąd nie logowany
+        const [lifestyle, mockupSpec] = await Promise.all([
+          getLifestyle(),
+          extractMockupSpec(OPENAI_API_KEY, mockupUrl, specUsage),   // FAZA 3: twarda spec z makiety przed HTML
+        ])
+        // KOSZT: vision pre-pass makiety (gpt-5.1)
         try { if (specUsage.i || specUsage.o) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: 'gpt-5.1', input_tokens: specUsage.i, cached_tokens: specUsage.c, output_tokens: specUsage.o, cost_usd: (Math.max(0, specUsage.i - specUsage.c) * 1.25 + specUsage.c * 0.125 + specUsage.o * 10) / 1_000_000, meta: { from: 'landing-mockup-spec' } }) } catch (_) { /* log nie blokuje */ }
+        // deno-lint-ignore no-explicit-any
         const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle, styleBrief, styleLabel, logoUrl, brandName, mockupSpec) }]
         if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
@@ -261,9 +400,9 @@ Deno.serve(async (req) => {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
           body: JSON.stringify({ model: MODEL, input: [{ role: 'user', content }], max_output_tokens: MAX_OUT }),
         }, 'bud-landing-gen')
-        if (!res.ok) { console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
+        if (!res.ok) { failReason = `openai HTTP ${res.status}`; console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
         const data = await res.json()
-        // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka, dotąd NIE logowany
+        // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka
         try {
           const u = data?.usage || {}; const inTok = u.input_tokens || 0, cTok = (u.input_tokens_details?.cached_tokens) || 0, oTok = u.output_tokens || 0
           await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html' } })
@@ -271,9 +410,20 @@ Deno.serve(async (req) => {
         let text = typeof data?.output_text === 'string' ? data.output_text : ''
         if (!text) { for (const it of (data?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') text += cc.text } }
         const html = extractHtml(text)
-        if (!html || html.length < 400 || !/<\/html>/i.test(html)) { console.error('[bud-landing-gen] zły HTML (len ' + html.length + ')'); return }
+        if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
         await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
-      } catch (e) { console.error('[bud-landing-gen] gen task error:', e) }
+        saved = true
+      } catch (e) {
+        failReason = String(e).slice(0, 280)
+        console.error('[bud-landing-gen] gen task error:', e)
+      } finally {
+        if (!saved) {
+          // T2: porażka = lock w dół (retry usera generuje OD RAZU, nie po TTL 400 s)…
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
+          // …T10: i Tomek wie o padzie przed userem.
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'strona sklepu (bud-landing-gen)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
+        }
+      }
     })()
     try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(genTask) } catch (_) { /* */ }
 

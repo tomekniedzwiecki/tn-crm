@@ -470,6 +470,23 @@ async function getRevealSms(supabase: ReturnType<typeof createClient>, reveal: a
   return composeSms(staticSms(s, key), code)
 }
 
+// T10: alert #sparing (wzorzec 1:1 z bud-image) — sweep martwych generacji.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-drip] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-drip] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-drip] slack-notify ${type} exception:`, err)
+  }
+}
+
 // Wyślij SMS przez funkcję send-sms (autoryzacja x-cron-secret). Zwraca wynik JSON.
 async function sendSms(CRON_SECRET: string, to: string, message: string): Promise<{ ok?: boolean; id?: string; points?: number; status?: string; error?: unknown } | null> {
   try {
@@ -816,7 +833,58 @@ Deno.serve(async (req) => {
       }
     }
 
-    return jsonResponse({ ok: true, processed, fired, smsSent, followups_enabled: followupsEnabled() }, 200)
+    // 5) T5: watchdog Manus — dociągnij wyniki tasków reklam dla sesji z ZAMKNIĘTĄ kartą
+    //    (dotąd wynik lądował tylko przy pollingu frontu → reklamy przepadały, comeback-mail
+    //    „reklamy gotowe" nigdy nie kwalifikował się przez `requires`). bud-ads sam oznacza
+    //    failed >40 min i alertuje #sparing.
+    let adsSweep: Record<string, unknown> | null = null
+    if (CRON_SECRET) {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/bud-ads`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON_SECRET },
+          body: JSON.stringify({ sweep: true }),
+        })
+        adsSweep = r.ok ? await r.json().catch(() => null) : { error: r.status }
+      } catch (e) { console.error('[bud-drip] ads sweep err:', e) }
+    }
+
+    // 6) T10: cron-sweep MARTWYCH generacji — lock claimowany, grace dawno minął, artefaktu
+    //    brak = genTask umarł na cicho (waitUntil ubity / crash bez release). Zwalniamy lock
+    //    (powrót usera odpala generację od nowa) + JEDEN alert per sesja+etap (marker
+    //    bud_usage kind='alert'). Tylko sesje z ostatnich 48 h.
+    try {
+      const twoDaysAgo = new Date(Date.now() - 48 * 3600000).toISOString()
+      const { data: lockedSessions } = await supabase.from('bud_sessions')
+        .select('id, gen_locks, mockups, landing_html, market_report, session_ads, ads_manus_status')
+        .not('gen_locks', 'is', null).eq('is_test', false).is('archived_at', null)
+        .is('paid_at', null).gte('updated_at', twoDaysAgo).limit(100)
+      // deno-lint-ignore no-explicit-any
+      const CHECKS: Array<{ key: string; stage: string; missing: (s: any) => boolean; graceMs: number }> = [
+        { key: 'raport', stage: 'raport rynku (martwy lock — sweep)', missing: (s) => !s.market_report, graceMs: 30 * 60000 },
+        { key: 'mockups', stage: 'makiety (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.mockups) && s.mockups.length), graceMs: 30 * 60000 },
+        { key: 'landing', stage: 'strona sklepu (martwy lock — sweep)', missing: (s) => !s.landing_html, graceMs: 30 * 60000 },
+        { key: 'ads', stage: 'reklamy (martwy lock — sweep)', missing: (s) => !(Array.isArray(s.session_ads) && s.session_ads.length) && s.ads_manus_status !== 'running', graceMs: 60 * 60000 },
+      ]
+      for (const s of lockedSessions || []) {
+        const locks = (s.gen_locks && typeof s.gen_locks === 'object' && !Array.isArray(s.gen_locks)) ? s.gen_locks as Record<string, string> : {}
+        for (const chk of CHECKS) {
+          const at = locks[chk.key] ? Date.parse(locks[chk.key]) : 0
+          if (!at || Date.now() - at < chk.graceMs || !chk.missing(s)) continue
+          // zwolnij martwy lock niezależnie od alertu — user po powrocie generuje od razu
+          try { await supabase.rpc('bud_release_lock', { p_session: s.id, p_key: chk.key }) } catch { /* */ }
+          // dedup alertu: marker w bud_usage (kind='alert' wymaga rozszerzonego CHECK)
+          const { count: alerted, error: alertCntErr } = await supabase.from('bud_usage')
+            .select('id', { count: 'exact', head: true })
+            .eq('session_id', s.id).eq('kind', 'alert').eq('meta->>gen_key', chk.key)
+          if (alertCntErr) { console.error('[bud-drip] alert dedup err (pomijam alert):', alertCntErr); continue }
+          if (alerted) continue
+          try { await supabase.from('bud_usage').insert({ session_id: s.id, kind: 'alert', cost_usd: 0, meta: { gen_key: chk.key, type: 'stalled_gen' } }) } catch (mErr) { console.error('[bud-drip] alert marker err:', mErr) }
+          await postSlackSparing('bud_gen_error', { session_id: s.id as string, stage: chk.stage, error: `lock '${chk.key}' z ${new Date(at).toISOString()} bez artefaktu — generacja umarła na cicho; lock zwolniony` })
+        }
+      }
+    } catch (e) { console.error('[bud-drip] stalled sweep err:', e) }
+
+    return jsonResponse({ ok: true, processed, fired, smsSent, adsSweep, followups_enabled: followupsEnabled() }, 200)
   } catch (e) {
     console.error('[bud-drip] ERROR:', e)
     return jsonResponse({ error: 'blad_serwera' }, 500)

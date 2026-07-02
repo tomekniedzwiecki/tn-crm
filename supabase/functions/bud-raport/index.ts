@@ -59,6 +59,23 @@ function jsonResponse(body: Record<string, unknown>, status: number, cors: Recor
   })
 }
 
+// T10: alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-image).
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-raport] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-raport] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-raport] slack-notify ${type} exception:`, err)
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 function buildRaportPrompt(product: any, recipient: string, aliData = ''): string {
   const s = (v: unknown, max = 200) => (typeof v === 'string' ? v.slice(0, max) : '')
@@ -299,6 +316,28 @@ Deno.serve(async (req) => {
       console.warn('[bud-raport] brak x-forwarded-for — pomijam dzienny cap IP (fail-open)')
     }
 
+    // T6: claim generacji per-PRODUKT — lock sesji nie chroni przed DWOMA userami na tym
+    // samym NOWYM produkcie (2× pełny koszt gpt-5.5+web_search). Pierwszy claimuje wiersz
+    // w bud_product_packages (generating_at, RPC atomowy), drugi dostaje pending — jego
+    // poll trafi w cache produktu, gdy pierwszy skończy. Tylko produkty z karuzeli
+    // (mają wspólny cache); force = świadoma regeneracja, idzie starym torem.
+    const isSharedGen = isCarouselProduct && !body.force
+    if (isSharedGen) {
+      const { data: claimed, error: claimErr } = await supabase.rpc('bud_claim_product_gen', {
+        p_key: productKey,
+        p_name: String(product.nazwa || product.name || ''),
+        p_category: String(product.kategoria || product.category || ''),
+        p_ttl_sec: 420,
+      })
+      if (claimErr) {
+        console.error('[bud-raport] product claim error (fail-open):', claimErr)
+      } else if (!claimed) {
+        // ktoś inny właśnie generuje ten produkt — zwolnij własny lock sesji, żeby poll nie wisiał na nim
+        try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ }
+        return jsonResponse({ pending: true }, 202, cors)
+      }
+    }
+
     // [Audyt kontekstu] REALNE dane produktu z aukcji (ali_snapshot) — raport ma je CYTOWAĆ
     // (czułe punkty z opinii, avatar, realne warianty/zestawy, twardy dowód popytu z liczby ocen),
     // a web_search ograniczyć do cen/konkurencji. Wzór jak bud-mockup. Tani input, cache per-produkt.
@@ -333,6 +372,7 @@ Deno.serve(async (req) => {
     // (front pollinguje) zwróci wersję cached.
     const genTask = (async () => {
       let saved = false
+      let failReason = ''
       try {
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
           method: 'POST',
@@ -346,6 +386,7 @@ Deno.serve(async (req) => {
         })
         if (!res.ok) {
           const errText = await res.text().catch(() => '')
+          failReason = `openai HTTP ${res.status}`
           console.error('[bud-raport] openai error:', res.status, errText.slice(0, 500))
           return
         }
@@ -383,6 +424,7 @@ Deno.serve(async (req) => {
 
         const raport = extractJson(text)
         if (!raport || !saneRaport(raport)) {
+          failReason = 'sanity-check fail (zły JSON raportu)'
           console.error('[bud-raport] sanity-check fail:', String(text).slice(0, 300))
           return
         }
@@ -400,10 +442,12 @@ Deno.serve(async (req) => {
             product_name: String(product.nazwa || product.name || ''),
             category: String(product.kategoria || product.category || ''),
             report: toSave,
+            generating_at: null,   // T6: domknij claim generacji
             updated_at: new Date().toISOString(),
           }, { onConflict: 'product_key' })
         } catch (pkgErr) { console.error('[bud-raport] product cache upsert error:', pkgErr) }
       } catch (e) {
+        failReason = String(e).slice(0, 280)
         console.error('[bud-raport] gen task error:', e)
       } finally {
         // Po BŁĘDZIE (raport NIE zapisany) ZWOLNIJ lock — żeby kolejny poll/strzał wygenerował
@@ -411,7 +455,13 @@ Deno.serve(async (req) => {
         // w ogóle": genTask padł na 429/timeout/sanity, lock trzymał 400s, klient pollował pending
         // do wyczerpania prób). Po sukcesie locka NIE ruszamy — wygaśnie sam, a kolejny poll i tak
         // zwróci cached. Spójne z bud-ads/brand/economics/gtm (one też releasują po zakończeniu).
-        if (!saved) { try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ } }
+        if (!saved) {
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ }
+          // T6: zwolnij też claim per-produkt — inaczej DRUGI user na tym produkcie czeka 420 s TTL.
+          if (isSharedGen) { try { await supabase.from('bud_product_packages').update({ generating_at: null }).eq('product_key', productKey).is('report', null) } catch (_) { /* */ } }
+          // T10: Tomek wie o padzie przed userem (raport to brama całego lejka).
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'raport rynku (bud-raport)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
+        }
       }
     })()
 

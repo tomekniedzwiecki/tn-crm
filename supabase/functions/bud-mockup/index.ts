@@ -40,6 +40,24 @@ async function fetchTimeout(url: string, init: RequestInit, ms: number): Promise
   finally { clearTimeout(t); }
 }
 
+// T10: alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-image).
+// Błąd Slacka NIGDY nie wywraca generacji — tylko logujemy.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL');
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!url || !key) { console.error('[bud-mockup] slack-notify: brak SUPABASE_URL/KEY'); return; }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    });
+    if (!res.ok) console.error(`[bud-mockup] slack-notify ${type} HTTP`, res.status, await res.text());
+  } catch (err) {
+    console.error(`[bud-mockup] slack-notify ${type} exception:`, err);
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 function stylesPrompt(product: any, snap: any, ust: any): string {
   const name = String(product?.name || product?.nazwa || snap?.title || 'produkt').slice(0, 120);
@@ -279,13 +297,28 @@ Deno.serve(async (req) => {
             // FIX: zwolnij lock przy partialu, by force-retry mógł dopełnić do 4 (nie czekać na TTL 360s)
             try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'mockups' }); } catch { /* */ }
           }
+          // T7: PREWARM lifestyle — landing potrzebuje ich dopiero po wyborze stylu (~1-2 min stąd),
+          // a generacja trwa 60-90 s. Odpalamy w tle już teraz → landing startuje bez tego czekania.
+          // Fire-and-forget: porażka prewarma NICZEGO nie psuje (landing-gen wygeneruje sam).
+          try {
+            await fetchTimeout(`${SUPABASE_URL}/functions/v1/bud-landing-gen`, {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON },
+              body: JSON.stringify({ sessionId, product, prewarm: true }),
+            }, 8_000);
+          } catch { /* prewarm best-effort */ }
         } else {
-          console.error('[bud-mockup] 0 makiet — żaden obraz się nie wygenerował (front pokaże retry po timeoucie)');
+          console.error('[bud-mockup] 0 makiet — żaden obraz się nie wygenerował');
+          // T2: zwolnij lock, żeby retry usera generował OD RAZU (nie po TTL 360 s).
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'mockups' }); } catch { /* */ }
+          // T10: Tomek ma wiedzieć o padzie przed userem.
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'makiety (bud-mockup)', error: '0/4 obrazów — żaden nie wygenerował się', product: String(product?.nazwa || product?.name || '') });
         }
       } catch (e) {
         console.error('[bud-mockup] gen task error:', e);
+        // T2: pad całego taska = lock w dół, inaczej user wisi do TTL.
+        try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'mockups' }); } catch { /* */ }
+        await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'makiety (bud-mockup)', error: String(e).slice(0, 280), product: String(product?.nazwa || product?.name || '') });
       }
-      // Locka nie zwalniamy — TTL (anty-runaway).
     })();
     try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(genTask); } catch (_) { /* */ }
 

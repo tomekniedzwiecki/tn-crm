@@ -224,6 +224,23 @@ async function cacheRefToStorage(supabase: any, sessionId: string, url: string):
   } catch { return url }
 }
 
+// T10: alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-image).
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-ads] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-ads] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-ads] slack-notify ${type} exception:`, err)
+  }
+}
+
 // deno-lint-ignore no-explicit-any
 function tolerantParse(t: string): any {
   try { return JSON.parse(t) } catch { /* */ }
@@ -309,8 +326,41 @@ Deno.serve(async (req) => {
     // Admin/cron (panel TN Aplikacje, testy, rerolle) omija capy anty-nadużycia — jak w bud-landing.
     const isAdmin = !!CRON && req.headers.get('x-admin-secret') === CRON
     // deno-lint-ignore no-explicit-any
-    let body: { sessionId?: string; product?: any; force?: boolean }
+    let body: { sessionId?: string; product?: any; force?: boolean; sweep?: boolean }
     try { body = await req.json() } catch { return json({ error: 'nieprawidlowy_json' }, 400, c) }
+
+    // T5: SWEEP (cron przez bud-drip, x-admin-secret) — dociąga wyniki tasków Manus dla sesji,
+    // w których user ZAMKNĄŁ KARTĘ (dotąd wynik lądował tylko, gdy front pollował → reklamy
+    // nigdy nie trafiały do sesji, a comeback-mail „reklamy gotowe" przepadał) + oznacza
+    // failed taski wiszące >40 min (z alertem).
+    if (body.sweep) {
+      if (!isAdmin) return json({ error: 'brak_uprawnien' }, 403, c)
+      const sweepDb = createClient(SUPABASE_URL, SERVICE_KEY)
+      const { data: running } = await sweepDb
+        .from('bud_sessions')
+        .select('id, ads_manus_task_id, ads_manus_started_at')
+        .eq('ads_manus_status', 'running')
+        .not('ads_manus_task_id', 'is', null)
+        .limit(20)
+      let pulled = 0, timedOut = 0
+      for (const s of (running || [])) {
+        try {
+          if (MANUS_API_KEY) {
+            const r = await manusPollAndPull(sweepDb, s.id as string, String(s.ads_manus_task_id))
+            if (r.done) { pulled++; continue }
+          }
+          const started = s.ads_manus_started_at ? Date.parse(String(s.ads_manus_started_at)) : 0
+          if (started && (Date.now() - started) > 40 * 60 * 1000) {
+            await sweepDb.from('bud_sessions').update({ ads_manus_status: 'failed', ads_manus_step: 'timeout_sweep' }).eq('id', s.id)
+            try { await sweepDb.rpc('bud_release_lock', { p_session: s.id, p_key: 'ads' }) } catch { /* */ }
+            timedOut++
+            await postSlackSparing('bud_gen_error', { session_id: s.id as string, stage: 'reklamy (Manus, timeout >40 min — sweep)', error: `task ${s.ads_manus_task_id} nie dowiózł wyniku` })
+          }
+        } catch (e) { console.error('[bud-ads] sweep err', s.id, e) }
+      }
+      return json({ swept: (running || []).length, pulled, timed_out: timedOut }, 200, c)
+    }
+
     const sessionId = (body.sessionId || '').trim()
     if (!sessionId || !UUID_RE.test(sessionId)) return json({ error: 'nieprawidlowa_sesja' }, 400, c)
 
@@ -482,10 +532,25 @@ Deno.serve(async (req) => {
           ? s.value
           : { headline: String(concepts[i]?.headline || ''), primary_text: String(concepts[i]?.primary_text || ''), image_url: '' })
 
+        // T3: 0 grafik = PORAŻKA, nie „sukces". Dotąd zapisywało się session_ads z samym
+        // copy → cache-hit na zawsze i user oglądał „reklamy" bez obrazków. Teraz: nie
+        // zapisuj, zwolnij lock (retry generuje od razu) i alertuj Tomka.
+        const nImg = ads.filter((a) => a.image_url).length
+        if (!nImg) {
+          console.error('[bud-ads] 0/4 grafik — NIE zapisuję session_ads (retry po releasie locka)')
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'reklamy (bud-ads / Gemini)', error: '0/4 grafik — żaden obraz się nie wygenerował', product: String(product?.nazwa || product?.name || '') })
+          return
+        }
         await supabase.from('bud_sessions').update({ session_ads: ads }).eq('id', sessionId)
-        // KOSZT: obrazy reklam Gemini (fallback) — dotąd nie logowane
-        try { const nImg = ads.filter((a) => a.image_url).length; if (nImg) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: nImg, cost_usd: GEMINI_IMAGE_USD * nImg, meta: { view: 'ad', provider: 'gemini', from: 'bud-ads' } }) } catch (_) { /* */ }
-      } catch (e) { console.error('[bud-ads] gen task error:', e) }
+        // KOSZT: obrazy reklam Gemini (fallback)
+        try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'image', images: nImg, cost_usd: GEMINI_IMAGE_USD * nImg, meta: { view: 'ad', provider: 'gemini', from: 'bud-ads' } }) } catch (_) { /* */ }
+      } catch (e) {
+        console.error('[bud-ads] gen task error:', e)
+        // T2/T10: pad taska = lock w dół + alert (user nie wisi do TTL 300 s).
+        try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
+        await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'reklamy (bud-ads / Gemini)', error: String(e).slice(0, 280), product: String(product?.nazwa || product?.name || '') })
+      }
     })()
     try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(genTask) } catch (_) { /* */ }
 

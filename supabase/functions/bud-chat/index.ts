@@ -987,7 +987,7 @@ const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany —
 const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
 - Rezerwacja: 500 zł, w pełni ZWROTNA (nie „zadatek"), wliczana potem w cenę budowy.
 - Budowa sklepu: 9400 zł brutto, jednorazowo, pod klucz (po wliczeniu rezerwacji zostaje 8900 zł do zapłaty).
-- Udział Tomka: 10% od PRZYCHODU (obrotu ze sprzedaży), bezterminowo, rozliczane miesięcznie — ma udział w każdej Twojej sprzedaży.
+- Udział Tomka: 10% od PRZYCHODU (obrotu ze sprzedaży), bezterminowo, rozliczane miesięcznie — ma udział w każdej Twojej sprzedaży. 10% to punkt wyjścia — wysokość udziału do negocjacji bezpośrednio z Tomkiem; opcja wykupu po 24 mies. (18–24× średni miesięczny udział, bez sztywnego minimum).
 - Etapy: przygotowania → formalności → materiały reklamowe → uruchomienie kampanii (cel 1000 zamówień) → ~180 dni skalowania i przekazania sterów.
 - Budżet reklamowy i koszty operacyjne (towar, wysyłka) pokrywa klient.
 - Czego nie ma w tych faktach → „to domknie Tomek po rezerwacji". Nie zmyślaj liczb.`

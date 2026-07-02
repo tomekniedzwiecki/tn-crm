@@ -120,6 +120,11 @@ Deno.serve(async (req) => {
         message = formatBudKnowhowErrorMessage(data)
         break
 
+      case 'bud_gen_error':
+        webhookUrl = webhookSparing
+        message = formatBudGenErrorMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -1367,6 +1372,31 @@ function formatBudLeadErrorMessage(data: {
   if (link) actions.push({ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_bud_lead' })
   if (data.phone) { const wa = waLink(data.phone); if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' }) }
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// Awaria generatora lejka /sklep (raport / makiety / reklamy / strona) — user widzi
+// zablokowany pipeline, Tomek ma wiedzieć PRZED userem. Wysyłane z bud-raport /
+// bud-mockup / bud-ads / bud-landing-gen przy DEFINITYWNEJ porażce generacji
+// oraz z bud-drip (sweep wiszących sesji / Manus timeout).
+function formatBudGenErrorMessage(data: {
+  session_id?: string
+  stage?: string
+  error?: string
+  product?: string
+}) {
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🛑 Sklep — GENERACJA PADŁA', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `*Etap:* ${data.stage || '?'}${data.product ? `\n*Produkt:* ${String(data.product).slice(0, 120)}` : ''}` } },
+  ]
+  if (data.error) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Błąd:*\n\`${String(data.error).slice(0, 280)}\`` } })
+  }
+  const genLink = budLeadLink(data.session_id)
+  if (genLink) {
+    blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: genLink, style: 'primary', action_id: 'view_bud_lead' }] })
+  }
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }
 }
