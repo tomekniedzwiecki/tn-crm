@@ -937,7 +937,6 @@ async function openSession(id) {
   closeNav();
   try { window.scrollTo({ top: 0 }); } catch (e) { /* ignore */ }
   leadTab = 'przeglad';
-  leadArtTab = 'projekt'; leadArtTok = null;   // podgląd artefaktów nie przenosi się między leadami
   leadLoadingId = id;
   renderLeadHead(s);
   renderLeadTabs();
@@ -981,7 +980,7 @@ async function openSession(id) {
   renderLeadHead(leadData.s); // odśwież nagłówek + pasek akcji świeżym stanem (paid/cancelled/etap)
   renderLeadTab();
 }
-function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; leadChatStageLead = null; leadArtTab = 'projekt'; leadArtTok = null; switchTab(prevTab || 'leady'); }
+function closeLead() { $('view-lead').classList.add('hidden'); leadData = null; leadLoadingId = null; leadChatSig = ''; leadChatStageLead = null; switchTab(prevTab || 'leady'); }
 
 // Podgląd rozmowy na żywo — dociąga nowe wiadomości bez przeładowania strony
 function chatSig(msgs) { const n = msgs.length; const last = n ? msgs[n - 1] : null; return n + '|' + (last ? (last.created_at || '') + '|' + (last.content || '').length : ''); }
@@ -1447,52 +1446,10 @@ function leadChatTranscriptHTML() {
     </div>`).join('') : '<div class="text-zinc-600 text-sm">Brak wiadomości w tym etapie.</div>'}</div></div>`;
 }
 // ── Zakładka ARTEFAKTY ──
-// Pełnoprawny podgląd wygenerowanych artefaktów: pigułki przełączają iframe
-// „oczami leada" na konkretną zakładkę appki (#rynek/#ustalenia/#makiety/
-// #reklamy/#sklep) — ten sam renderer, który widzi lead, więc raport/makiety/
-// reklamy/sklep wyglądają DOKŁADNIE tak, jak u niego. Przełączenie po pierwszym
-// załadowaniu podmienia sam fragment URL-a (nawigacja bez reloadu — popstate
-// w appce robi switchTab). Pod spodem zostają skróty (linki, kreacje, ekrany).
-let leadArtTab = 'projekt';   // aktywna zakładka podglądu artefaktów
-let leadArtTok = null;        // JWT z mountLeadArtView — do fragment-swapów bez ponownego getSession
-const LEAD_ART_TABS = [
-  ['projekt', 'Pulpit', 'ph-squares-four'],
-  ['rynek', 'Raport rynku', 'ph-chart-line-up'],
-  ['ustalenia', 'Ustalenia', 'ph-list-checks'],
-  ['makiety', 'Makiety', 'ph-layout'],
-  ['reklamy', 'Reklamy', 'ph-megaphone'],
-  ['sklep', 'Sklep', 'ph-storefront'],
-  ['wspolpraca', 'Współpraca', 'ph-handshake'],
-];
-function leadArtPresence() {
-  const { s, art } = leadData; const a = art || {};
-  return {
-    projekt: true,
-    rynek: !!a.market_report,
-    ustalenia: !!a.ustalenia,
-    makiety: Array.isArray(a.mockups) && a.mockups.length > 0,
-    reklamy: !!a.session_ads,
-    sklep: !!(a.landing_html || a.landing_url || s.landing_url),
-    wspolpraca: true,
-  };
-}
-function leadArtPillsHTML() {
-  const has = leadArtPresence();
-  return LEAD_ART_TABS.map(([k, label, icon]) => has[k]
-    ? `<button onclick="setLeadArtTab('${k}')" class="px-2.5 py-1 rounded-full text-[11px] border transition ${leadArtTab === k ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'text-zinc-400 border-white/10 hover:text-white hover:border-white/25'}"><i class="ph ${icon} mr-1"></i>${label}</button>`
-    : `<span class="px-2.5 py-1 rounded-full text-[11px] border border-white/5 text-zinc-700 cursor-not-allowed" title="jeszcze nie wygenerowane"><i class="ph ${icon} mr-1"></i>${label}</span>`).join('');
-}
-function setLeadArtTab(k) {
-  leadArtTab = k;
-  const f = $('lead-art-view');
-  if (f && f.src && leadArtTok) {
-    // podmiana samego fragmentu = przełączenie zakładki w appce bez przeładowania iframe
-    f.src = f.src.split('#')[0] + '#' + k + '&admintok=' + encodeURIComponent(leadArtTok);
-    const bar = $('lead-art-pills'); if (bar) bar.innerHTML = leadArtPillsHTML();
-    return;
-  }
-  renderLeadTab();
-}
+// Od razu PULPIT projektu oczami leada (deep-link #projekt w podglądzie admina):
+// pulpit appki to gotowy, sensownie ułożony przegląd artefaktów (kafle raportu/
+// makiet/reklam/sklepu z detalami po kliknięciu) — bez dublowania nawigacji
+// w panelu. Pod spodem skróty (surowe linki, kreacje, ekrany) do nowej karty.
 async function mountLeadArtView(sid) {
   const frame = $('lead-art-view'); if (!frame) return;
   const loading = $('lead-art-view-loading');
@@ -1501,9 +1458,8 @@ async function mountLeadArtView(sid) {
     const tok = session && session.access_token;
     if (!tok) { if (loading) loading.innerHTML = 'Brak sesji panelu — zaloguj się ponownie.'; return; }
     if (!$('lead-art-view')) return;   // user zdążył przejść gdzie indziej
-    leadArtTok = tok;
     frame.onload = () => { const l = $('lead-art-view-loading'); if (l) l.style.display = 'none'; frame.style.display = 'block'; };
-    frame.src = sklepPreviewUrl(sid, tok, leadArtTab);
+    frame.src = sklepPreviewUrl(sid, tok, 'projekt');
   } catch (e) { console.error(e); if (loading) loading.textContent = 'Nie udało się załadować podglądu.'; }
 }
 function leadArtefaktyHTML() {
@@ -1526,16 +1482,14 @@ function leadArtefaktyHTML() {
     if (!rows && !imgKeys.length) return `${actions}<div class="text-zinc-600 text-sm">Brak artefaktów.</div>`;
     return `${actions}<div class="space-y-4 max-w-3xl">${rows}${ekrany}</div>`;
   }
-  const has = leadArtPresence();
-  if (!has[leadArtTab]) leadArtTab = 'projekt';
   const viewer = `<div class="flex flex-wrap items-center gap-1.5 mb-3">
-      <span id="lead-art-pills" class="contents">${leadArtPillsHTML()}</span>
+      <span class="text-[11px] uppercase tracking-wider text-zinc-500"><i class="ph ph-squares-four mr-1 text-blue-400"></i>Pulpit projektu — oczami leada</span>
       <span class="flex-1"></span>
       <button onclick="openClientPreview('${s.id}')" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz w nowej karcie</button>
     </div>
     <div class="rounded-xl overflow-hidden border border-white/10 bg-zinc-950 mb-4">
-      <div id="lead-art-view-loading" class="flex items-center justify-center text-zinc-500 text-sm" style="height:64px"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Ładuję artefakty…</div>
-      <iframe id="lead-art-view" title="Artefakty oczami leada" style="width:100%;height:calc(100dvh - 280px);min-height:560px;border:0;display:none" allow="clipboard-write"></iframe>
+      <div id="lead-art-view-loading" class="flex items-center justify-center text-zinc-500 text-sm" style="height:64px"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Ładuję pulpit…</div>
+      <iframe id="lead-art-view" title="Pulpit projektu oczami leada" style="width:100%;height:calc(100dvh - 280px);min-height:560px;border:0;display:none" allow="clipboard-write"></iframe>
     </div>`;
   const skroty = (rows || imgKeys.length) ? `<div class="grid lg:grid-cols-2 gap-4 items-start max-w-6xl">${rows ? `<div class="space-y-4">${rows}</div>` : ''}${ekrany ? `<div class="space-y-4">${ekrany}</div>` : ''}</div>` : '';
   return `${actions}${viewer}${skroty}`;
