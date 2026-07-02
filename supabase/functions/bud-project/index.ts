@@ -294,9 +294,11 @@ Deno.serve(async (req) => {
       }
       if (action === 'set_budget') {
         // EARLY BUDGET GATE (req Tomka): zadeklarowany budżet startowy (lead-scoring + dyskwalifikacja).
-        // Wartości: high | mid | unknown | none. „none" = soft-exit po stronie frontu (NIE palimy compute).
+        // Wartości: high | mid | unknown | raty | none. „raty" (2026-07-02): user nie ma całości
+        // naraz i chce rat — KONTYNUACJA lejka (warunki indywidualnie z Tomkiem), mocny sygnał
+        // intencji do CRM. „none" = soft-exit po stronie frontu (NIE palimy compute).
         const budget = (typeof body.budget === 'string' ? body.budget : '').trim()
-        if (!['high', 'mid', 'unknown', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
+        if (!['high', 'mid', 'unknown', 'raty', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
         const { error: bErr } = await supabase.from('bud_sessions')
           .update({ budget_declared: budget, updated_at: new Date().toISOString() }).eq('id', sessionId)
         if (bErr) console.error('[bud-project] set_budget error:', bErr)
