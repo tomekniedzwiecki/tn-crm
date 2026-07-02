@@ -987,6 +987,7 @@ function chatSig(msgs) { const n = msgs.length; const last = n ? msgs[n - 1] : n
 async function refreshLeadChat() {
   if (DEMO || document.hidden) return;
   if (!leadData || leadTab !== 'rozmowa') return;
+  if (leadChatView !== 'transkrypcja') return;   // widok „Oczami leada" (iframe) odświeża się sam — re-render zresetowałby iframe
   if ($('view-lead').classList.contains('hidden')) return;
   const id = leadData.s.id;
   const { data: msgs, error } = await supabaseClient.from('bud_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true });
@@ -1000,11 +1001,19 @@ async function refreshLeadChat() {
   if (grew) { try { window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }); } catch (e) { /* ignore */ } }
 }
 
-// STUB (lejek Sklep): klient-app budowania (podgląd projektu jak widzi go klient) jeszcze
-// nie istnieje na froncie. NIE otwieramy URL-a sparingu (PROJEKT_URL = inny lejek). Gdy
-// powstanie strona klienta budowania, przywróć logikę z window.open + #admin=JWT i bud-project.
+// Podgląd strony /sklep dokładnie tak, jak widzi ją lead — JWT zalogowanego admina
+// w hashu (#admintok=), bo strona żyje na tomekniedzwiecki.pl (inny origin, brak
+// wspólnej sesji Supabase). bud-project 'admin_get' weryfikuje team_members i zwraca
+// dane bez efektów ubocznych. Tab otwieramy SYNCHRONICZNIE (gest usera) i dopiero
+// potem dostawiamy URL — inaczej popup-blocker ubiłby okno po await getSession().
 function openClientPreview(sid) {
-  toast('Podgląd jako klient nie jest jeszcze dostępny dla lejka Sklep (brak strony klienta budowania).');
+  const w = window.open('about:blank', '_blank');
+  supabaseClient.auth.getSession().then(({ data: { session } }) => {
+    const tok = session && session.access_token;
+    if (!tok) { if (w) w.close(); toast('Brak sesji — zaloguj się ponownie'); return; }
+    const url = sklepPreviewUrl(sid, tok);
+    if (w) w.location = url; else window.open(url, '_blank');
+  }).catch(() => { if (w) w.close(); toast('Nie udało się otworzyć podglądu'); });
 }
 function renderLeadHead(s) {
   $('lead-head').innerHTML = `
@@ -1020,7 +1029,7 @@ function renderLeadHead(s) {
       </div>
       <div class="flex items-center gap-2 shrink-0">
         ${s.lead_id ? `<a href="/leads?id=${s.lead_id}" target="_blank" class="px-3 py-1.5 rounded-lg border border-white/10 text-blue-400 text-xs hover:border-blue-500/40 transition">Lead w CRM →</a>` : ''}
-        <button onclick="openClientPreview('${s.id}')" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Podgląd jako klient (strona klienta budowania w przygotowaniu)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</button>
+        <button onclick="openClientPreview('${s.id}')" class="px-3 py-1.5 rounded-lg border border-white/10 text-zinc-300 text-xs hover:text-white hover:border-white/25 transition" title="Otwórz /sklep dokładnie tak, jak widzi go lead (podgląd admina, tylko odczyt)"><i class="ph ph-eye mr-1"></i>Podgląd jako klient</button>
       </div>
     </div>
     ${s.lead_error && !s.lead_id ? `<div class="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-3">
@@ -1099,7 +1108,7 @@ function renderLeadTab() {
   if (!leadData) return;
   const b = $('lead-body'); const s = leadData.s;
   if (leadTab === 'przeglad') b.innerHTML = leadOverviewHTML();
-  else if (leadTab === 'rozmowa') { b.innerHTML = leadChatHTML(); leadChatSig = chatSig(leadData.msgs); }
+  else if (leadTab === 'rozmowa') { b.innerHTML = leadChatHTML(); leadChatSig = chatSig(leadData.msgs); if (!DEMO && leadChatView === 'user') mountLeadUserView(s.id); }
   else if (leadTab === 'artefakty') b.innerHTML = leadArtefaktyHTML();
   else if (leadTab === 'sekwencja') { b.innerHTML = leadSekwencjaHTML(); if (s.raport_meta || s.paid_at) renderProjectDetail(s.id, 'lead-drip'); }
   else if (leadTab === 'maile') b.innerHTML = leadMaileHTML();
@@ -1359,7 +1368,48 @@ function leadOverviewHTML() {
       </div></div>` : ''}
   </div>`;
 }
+// ── Zakładka ROZMOWA ──
+// Domyślnie „Oczami leada": iframe strony /sklep w trybie podglądu admina
+// (?podglad=admin + #admintok=JWT panelu) — DOKŁADNIE to, co widzi lead:
+// dymki, karty etapów, raport, makiety, reklamy, sklep i wszystkie zakładki,
+// na żywo (strona sama dociąga stan co ~20 s). bud-project 'admin_get' = zero
+// efektów ubocznych (bez stempla wizyt / seedowania reveals / bumpów pipeline).
+// „Transkrypcja" = dotychczasowy surowy podgląd wiadomości (filtr etapów).
+let leadChatView = 'user';   // 'user' | 'transkrypcja'
+const SKLEP_PREVIEW_BASE = 'https://tomekniedzwiecki.pl/sklep/';
+function sklepPreviewUrl(sid, tok) { return SKLEP_PREVIEW_BASE + '?id=' + encodeURIComponent(sid) + '&podglad=admin#admintok=' + encodeURIComponent(tok); }
+function setLeadChatView(v) { leadChatView = v; renderLeadTab(); }
 function leadChatHTML() {
+  if (DEMO) return leadChatTranscriptHTML();   // demo: brak realnej sesji do osadzenia
+  const viewBtn = (key, label, icon) => `<button onclick="setLeadChatView('${key}')" class="px-2.5 py-1 rounded-full text-[11px] border transition ${leadChatView === key ? 'bg-blue-500/15 text-blue-300 border-blue-500/40' : 'text-zinc-400 border-white/10 hover:text-white hover:border-white/25'}"><i class="ph ${icon} mr-1"></i>${label}</button>`;
+  const bar = `<div class="flex flex-wrap items-center gap-1.5 mb-3">
+      ${viewBtn('user', 'Oczami leada', 'ph-eye')}
+      ${viewBtn('transkrypcja', 'Transkrypcja', 'ph-list-dashes')}
+      <span class="flex-1"></span>
+      ${leadChatView === 'user' ? `<button onclick="openClientPreview('${leadData.s.id}')" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz w nowej karcie</button>` : ''}
+    </div>`;
+  if (leadChatView !== 'user') return bar + leadChatTranscriptHTML();
+  return `${bar}
+    <div class="rounded-xl overflow-hidden border border-white/10 bg-zinc-950">
+      <div id="lead-user-view-loading" class="flex items-center justify-center text-zinc-500 text-sm" style="height:64px"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Ładuję widok leada…</div>
+      <iframe id="lead-user-view" title="Rozmowa oczami leada" style="width:100%;height:calc(100dvh - 230px);min-height:560px;border:0;display:none" allow="clipboard-write"></iframe>
+    </div>
+    <div class="text-[11px] text-zinc-600 mt-2"><i class="ph ph-info mr-1"></i>1:1 widok leada (czat, karty etapów, zakładki artefaktów) na żywo. Tylko odczyt — nic nie wysyłasz i nie generujesz jako lead.</div>`;
+}
+// Wstrzykuje JWT panelu do iframe'a (osobny origin — brak wspólnej sesji Supabase).
+async function mountLeadUserView(sid) {
+  const frame = $('lead-user-view'); if (!frame) return;
+  const loading = $('lead-user-view-loading');
+  try {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    const tok = session && session.access_token;
+    if (!tok) { if (loading) loading.innerHTML = 'Brak sesji panelu — zaloguj się ponownie.'; return; }
+    if (!$('lead-user-view')) return;   // user zdążył przejść gdzie indziej
+    frame.onload = () => { const l = $('lead-user-view-loading'); if (l) l.style.display = 'none'; frame.style.display = 'block'; };
+    frame.src = sklepPreviewUrl(sid, tok);
+  } catch (e) { console.error(e); if (loading) loading.textContent = 'Nie udało się załadować podglądu.'; }
+}
+function leadChatTranscriptHTML() {
   const { msgs, s } = leadData;
   const { phases, counts } = leadChatPhases();
   const present = CHAT_STAGES.filter((st) => counts[st.key] > 0);

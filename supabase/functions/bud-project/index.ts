@@ -108,6 +108,9 @@ Deno.serve(async (req) => {
 
     const sessionId = (body.sessionId || '').trim()
     const action = (body.action || 'get').trim()
+    // Podgląd admina (panel Sklep (AWE)) — pseudo-właściciel bez efektów ubocznych.
+    // Weryfikacja team_members niżej (po early-akcjach), przed wydaniem treści.
+    const adminView = action === 'admin_get'
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const authUser = await verifyAuthUser(req, supabase)
@@ -319,7 +322,9 @@ Deno.serve(async (req) => {
       if (action === 'get') {
         return jsonResponse({ projekt: null, feedback: [], wspolpraca: [], historia: null, wlasciciel: !!(authUser && session.auth_user_id && authUser.id === session.auth_user_id) }, 200, cors)
       }
-      return jsonResponse({ error: 'brak_projektu' }, 404, cors)
+      // admin_get: sesja bez artefaktów (świeża rozmowa) NADAL ma historię czatu —
+      // przepuszczamy do ogona, który zwróci pusty projekt + historia (podgląd admina).
+      if (!adminView) return jsonResponse({ error: 'brak_projektu' }, 404, cors)
     }
 
     // ── action 'reset_pipeline': PIVOT produktu — czyść artefakty sesji, żeby NOWY
@@ -381,49 +386,20 @@ Deno.serve(async (req) => {
       } }, 200, cors)
     }
 
-    // ── action 'admin_get': READ-ONLY podgląd panelu dla ADMINA (panel Sklep (AWE)) ──
-    //    Jak 'public', ale BEZ bramki kompletności i restrykcji galerii — admin widzi
-    //    panel KAŻDEGO leada (też niedomknięty: bez landinga/prototypu/werdyktu).
-    //    KRYTYCZNE: ZERO efektów ubocznych — NIE stempluje last_panel_at / panel_visits /
-    //    nie seeduje reveals (inaczej podgląd admina psułby bramkowanie dripa leada).
+    // ── action 'admin_get': READ-ONLY podgląd dla ADMINA (panel Sklep (AWE), zakładka
+    //    Rozmowa „oczami leada"). Działa jak 'get' WŁAŚCICIELA (pełny projekt + historia
+    //    sparingu + wspolpraca + feedback + reveals) — front /sklep w trybie podglądu
+    //    (?podglad=admin) hydratuje się tą odpowiedzią bez przeróbek.
+    //    KRYTYCZNE: ZERO efektów ubocznych — NIE stempluje last_panel_at / panel_visits,
+    //    NIE seeduje reveals, NIE bumpuje pipeline leada (inaczej podgląd admina psułby
+    //    bramkowanie dripa i statusy CRM).
     //    Autoryzacja: JWT członka zespołu (team_members) — sam 'authenticated' nie wystarcza
     //    (publiczna rejestracja w sparingu daje tę rolę każdemu; wzorzec invoice-pdf/bud-landing).
-    //    Kształt 'projekt' 1:1 z 'public' → renderer /sklep/projekt/ działa bez przeróbek.
-    if (action === 'admin_get') {
+    if (adminView) {
       if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
       const { data: tm } = await supabase
         .from('team_members').select('user_id').eq('user_id', authUser.id).maybeSingle()
       if (!tm) return jsonResponse({ error: 'brak_uprawnien' }, 403, cors)
-      const { data: protoRow } = await supabase.from('bud_usage')
-        .select('meta').eq('session_id', sessionId).eq('kind', 'prototype')
-        .order('created_at', { ascending: false }).limit(1).maybeSingle()
-      const protoMeta = (protoRow?.meta || null) as Record<string, unknown> | null
-      const protoUrl = protoMeta && typeof protoMeta.url === 'string' ? protoMeta.url as string : null
-      const pBrief = (session.preview_brief || {}) as Record<string, unknown>
-      const stripMeta = (o: unknown): Record<string, unknown> | null => {
-        if (!o || typeof o !== 'object') return null
-        const { _meta: _drop, ...rest } = o as Record<string, unknown>
-        return rest
-      }
-      return jsonResponse({ projekt: {
-        nazwa: (pBrief.nazwa as string) || 'Narzędzie',
-        opis: (pBrief.opis as string) || null,
-        dla_kogo: (pBrief.dla_kogo as string) || null,
-        ekrany: Array.isArray(pBrief.ekrany) ? pBrief.ekrany : [],
-        karta: (session.problem_summary as Record<string, unknown> | null) || null,
-        preview_image_url: session.preview_image_url || null,
-        preview_images: session.preview_images || null,
-        preview_history: session.preview_history || null,
-        image_count: session.image_count || 0,
-        business_plan: stripMeta(session.business_plan),
-        market_report: stripMeta(session.market_report),
-        economics: stripMeta(session.economics),
-        gtm: stripMeta(session.gtm),
-        landing_url: session.landing_url || null,
-        prototyp_url: protoUrl,
-        verdict: session.verdict || null,
-        created_at: session.created_at,
-      } }, 200, cors)
     }
 
     // ── Własność sesji: rozmowa przypięta do konta wymaga JWT tego konta ──────
@@ -435,7 +411,7 @@ Deno.serve(async (req) => {
     //    Sesja anonimowa (auth_user_id == null, np. darmowa pierwsza rozmowa bez
     //    konta) nadal działa po sessionId — jak w bud-chat.
     const ownerId = (session.auth_user_id as string | null) || null
-    if (ownerId && (!authUser || authUser.id !== ownerId)) {
+    if (!adminView && ownerId && (!authUser || authUser.id !== ownerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
@@ -499,7 +475,7 @@ Deno.serve(async (req) => {
     // Liczone z trwałego stanu sesji przy każdym sync 'get' (front polluje), więc status
     // dogania rzeczywistość nawet bez dotykania tpay-webhook. Kolejność: opłacone > rozmowa
     // o współpracy > obejrzany sklep. Sygnały opłaty wskrzeszają, pasywne nie.
-    if (session.lead_id) {
+    if (session.lead_id && !adminView) {
       // FIX (audyt 2026-06-30): „Oferta"/qualified czytało kanał 'wspolpraca' z bud_messages,
       // który został usunięty 2026-06-16 (rozmowa idzie na 'sparing') → bump NIGDY nie odpalał.
       // Sygnał „rozmowa o warunkach współpracy" = ZIELONE ŚWIATŁO (verdict): pada w fazie
@@ -529,7 +505,7 @@ Deno.serve(async (req) => {
     // sesji (JWT). Pozwala odtworzyć rozmowę po zalogowaniu na innym urządzeniu;
     // sam sessionId (link ?id=) historii nie dostaje.
     let sparingMessages: { role: string; content: string }[] | null = null
-    if (authUser && ownerId && authUser.id === ownerId) {
+    if (adminView || (authUser && ownerId && authUser.id === ownerId)) {
       const { data: sm, error: smErr } = await supabase
         .from('bud_messages')
         .select('role, content')
@@ -573,7 +549,13 @@ Deno.serve(async (req) => {
     // dripa odblokowuje dalsze odsłony / wznawia zapauzowane). Tylko dla 'get'.
     const isGreen = session.verdict === 'zielony'
     const isPaid = !!session.paid_at
-    let revealsMap: Record<string, string> = {}
+    const revealsMap: Record<string, string> = {}
+    // admin_get: sam ODCZYT mapy reveals (bez stempli wizyt i bez seeda) — podgląd
+    // ma pokazywać stan odsłon 1:1, ale nie wolno mu go zmieniać.
+    if (adminView) {
+      const { data: rvs } = await supabase.from('bud_reveals').select('key, status').eq('session_id', sessionId)
+      for (const r of rvs || []) revealsMap[(r as { key: string }).key] = (r as { status: string }).status
+    }
     if (action === 'get') {
       // Wejście do panelu = sygnał zaangażowania. last_panel_at stempluj ZAWSZE
       // (najświeższy dotyk), ale panel_visits inkrementuj tylko gdy to ODRĘBNA wizyta
