@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Projekt sklepu</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        /* pigułki etapów */
+        .stage-pill { display:flex; align-items:center; gap:8px; border:1px solid rgba(255,255,255,.09);
+            background:rgba(24,24,27,.55); border-radius:14px; padding:9px 14px; cursor:pointer; transition:all .15s ease; white-space:nowrap; }
+        .stage-pill:hover { border-color:rgba(255,255,255,.22); }
+        .stage-pill.active { border-color:rgba(139,92,246,.6); background:rgba(139,92,246,.12); }
+        .stage-pill.completed .stage-num { background:#10b981; color:#fff; }
+        .stage-num { width:20px; height:20px; border-radius:7px; background:#27272a; color:#a1a1aa;
+            display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; }
+        /* status kroku */
+        .st-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid; border-radius:9px;
+            padding:5px 11px; font-size:11.5px; font-weight:500; cursor:pointer; transition:all .15s ease; }
+        .st-pending     { border-color:rgba(255,255,255,.12); background:rgba(39,39,42,.5); color:#a1a1aa; }
+        .st-in_progress { border-color:rgba(245,158,11,.4);  background:rgba(245,158,11,.12); color:#fbbf24; }
+        .st-done        { border-color:rgba(16,185,129,.4);  background:rgba(16,185,129,.12); color:#34d399; }
+        .st-skipped     { border-color:rgba(255,255,255,.08); background:transparent; color:#52525b; text-decoration:line-through; }
+        .st-blocked     { border-color:rgba(244,63,94,.4);   background:rgba(244,63,94,.12); color:#fb7185; }
+        /* komórka macierzy */
+        .mx-cell { width:30px; height:30px; border-radius:9px; border:1px solid rgba(255,255,255,.1);
+            display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all .12s ease; margin:0 auto; }
+        .mx-cell:hover { transform:scale(1.12); }
+        .mx-pending     { background:rgba(39,39,42,.6); color:#71717a; }
+        .mx-in_progress { background:rgba(245,158,11,.18); color:#fbbf24; border-color:rgba(245,158,11,.4); }
+        .mx-done        { background:rgba(16,185,129,.18); color:#34d399; border-color:rgba(16,185,129,.45); }
+        .mx-skipped     { background:transparent; color:#3f3f46; }
+        .owner-tag { font-size:10px; padding:2px 7px; border-radius:6px; font-weight:600; letter-spacing:.02em; }
+        .owner-admin  { background:rgba(139,92,246,.15); color:#c4b5fd; }
+        .owner-client { background:rgba(245,158,11,.15); color:#fbbf24; }
+        .owner-auto   { background:rgba(16,185,129,.15); color:#34d399; }
+        input[type="date"] { color-scheme: dark; }
+        .fld { width:100%; background:#18181b; border:1px solid rgba(255,255,255,.1); border-radius:8px;
+            padding:8px 10px; font-size:13px; color:#fff; }
+        .fld:focus { outline:none; border-color:rgba(139,92,246,.5); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <a href="sklepy.html" class="text-zinc-500 hover:text-white transition-colors flex items-center gap-1 text-xs"><i class="ph ph-arrow-left"></i> Sklepy</a>
+                <span class="text-zinc-700">/</span>
+                <span id="hdr-name" class="text-zinc-300 text-xs font-mono truncate">…</span>
+            </div>
+            <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+
+                <!-- Nagłówek projektu -->
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-7">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <h1 id="p-name" class="text-3xl font-semibold text-white tracking-tight">…</h1>
+                            <select id="p-status" onchange="saveStatus()" class="bg-zinc-900 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
+                        </div>
+                        <div id="p-meta" class="text-zinc-500 text-xs mt-2 flex items-center gap-3 flex-wrap"></div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-white" id="stat-progress">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">postęp</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-white" id="stat-products">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">produkty</div>
+                        </div>
+                        <div class="bg-zinc-900/50 border border-white/5 rounded-xl px-4 py-2.5 text-center" title="Cel: przekazanie sterów">
+                            <div class="text-xl font-semibold text-emerald-400" id="stat-orders">0</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">/ <span id="stat-target">1000</span> zam.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pigułki etapów -->
+                <div id="stage-pills" class="flex gap-2.5 overflow-x-auto pb-2 mb-7"></div>
+
+                <!-- Kroki projektu (scope=project) -->
+                <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
+
+                <!-- Płatności (tylko Etap 1) -->
+                <div id="payments-box" class="hidden bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-credit-card text-violet-400"></i> Harmonogram płatności</h3>
+                        <button onclick="addPayment()" class="text-xs text-violet-300 hover:text-violet-200 flex items-center gap-1"><i class="ph ph-plus"></i> Dodaj pozycję</button>
+                    </div>
+                    <div id="payments-rows" class="space-y-2"></div>
+                    <div id="payments-sum" class="text-zinc-400 text-xs mt-3 font-mono"></div>
+                </div>
+
+                <!-- Portfel produktów: macierz (etapy z krokami scope=product) -->
+                <div id="matrix-box" class="hidden bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-stack text-violet-400"></i> Portfel produktów <span id="matrix-count" class="text-zinc-500 font-normal text-xs"></span></h3>
+                        <button onclick="openProductModal()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"><i class="ph ph-plus"></i> Produkt</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead><tr id="matrix-head" class="border-b border-white/5 text-[10.5px] font-mono uppercase tracking-wider text-zinc-500"></tr></thead>
+                            <tbody id="matrix-body"></tbody>
+                        </table>
+                    </div>
+                    <div id="matrix-empty" class="hidden py-10 text-center text-zinc-500 text-xs">Portfel pusty — dodaj 5–10 produktów do testów.</div>
+                </div>
+
+                <!-- Notatki + aktywność -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
+                    <div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-5">
+                        <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-note-pencil text-violet-400"></i> Notatki projektu</h3>
+                        <textarea id="p-notes" rows="6" class="fld resize-y" placeholder="Ustalenia z rozmowy, plan przedsięwzięcia, decyzje…"></textarea>
+                        <button onclick="saveNotes()" class="mt-2 text-xs text-violet-300 hover:text-violet-200">Zapisz notatki</button>
+                    </div>
+                    <div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-5">
+                        <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-clock-counter-clockwise text-violet-400"></i> Aktywność</h3>
+                        <div id="activity-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: produkt -->
+    <div id="prod-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onclick="if(event.target===this)closeProductModal()">
+        <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-2xl p-6 my-8">
+            <h3 id="pm-title" class="text-white text-lg font-semibold mb-4">Produkt</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Nazwa produktu</label><input id="pm-name" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Status</label><select id="pm-status" class="fld"></select></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Tryb marży</label>
+                    <select id="pm-margin-mode" class="fld" onchange="recalcMargin()">
+                        <option value="test">TEST — 5–10 zł zysku/szt.</option>
+                        <option value="scale">SKALA — marża docelowa</option>
+                    </select></div>
+                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Link dostawcy</label><input id="pm-supplier" class="fld" placeholder="https://…"></div>
+                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Zdjęcie (cover URL)</label><input id="pm-cover" class="fld" placeholder="https://…"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Zakup / szt. (zł)</label><input id="pm-cost" type="number" step="0.01" class="fld" oninput="recalcMargin()"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Wysyłka / szt. (zł)</label><input id="pm-ship" type="number" step="0.01" class="fld" oninput="recalcMargin()"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Prowizje (% ceny)</label><input id="pm-fees" type="number" step="0.1" value="2" class="fld" oninput="recalcMargin()"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Cena sprzedaży (zł)</label><input id="pm-price" type="number" step="0.01" class="fld" oninput="recalcMargin()"></div>
+                <!-- kalkulator marży -->
+                <div class="md:col-span-2 bg-zinc-900/70 border border-white/5 rounded-xl px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+                    <div class="text-xs text-zinc-400">Zysk na sztuce: <span id="pm-profit" class="font-mono font-semibold text-white">—</span></div>
+                    <div id="pm-hint" class="text-[11px] text-zinc-500"></div>
+                </div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Strona w TakeDrop (URL)</label><input id="pm-tdurl" class="fld" placeholder="https://…"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Meta campaign ID</label><input id="pm-campaign" class="fld" placeholder="(po utworzeniu kampanii)"></div>
+                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Notatki</label><textarea id="pm-notes" rows="2" class="fld resize-y"></textarea></div>
+            </div>
+            <div class="flex justify-between items-center mt-5">
+                <button id="pm-delete" onclick="deleteProduct()" class="hidden px-3 py-2 text-xs text-rose-400 hover:text-rose-300">Usuń produkt</button>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="closeProductModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                    <button id="pm-save" onclick="saveProduct()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: krok (notatka/szczegóły) -->
+    <div id="step-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeStepModal()">
+        <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-md p-6">
+            <h3 id="sm-title" class="text-white text-lg font-semibold mb-1">Krok</h3>
+            <div id="sm-sub" class="text-zinc-500 text-xs mb-4"></div>
+            <label class="text-xs text-zinc-500 block mb-1">Notatka / link</label>
+            <textarea id="sm-note" rows="4" class="fld resize-y"></textarea>
+            <div class="flex items-center justify-between mt-4">
+                <button id="sm-skip" onclick="toggleSkipStep()" class="px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300">Pomiń krok</button>
+                <div class="flex gap-2">
+                    <button onclick="closeStepModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Zamknij</button>
+                    <button onclick="saveStepNote()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ustawienia projektu -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeSettings()">
+        <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-lg p-6">
+            <h3 class="text-white text-lg font-semibold mb-4">Ustawienia projektu</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Nazwa / marka</label><input id="set-name" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Klient</label><input id="set-customer" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label><input id="set-email" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label><input id="set-phone" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Cel zamówień</label><input id="set-target" type="number" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Konto reklamowe (act_…)</label><input id="set-act" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Pixel ID</label><input id="set-pixel" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Sklep TD (URL)</label><input id="set-tdurl" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Domena</label><input id="set-domain" class="fld"></div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button onclick="closeSettings()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        const projectId = new URLSearchParams(location.search).get('id');
+        let project = null;
+        let stepDefs = [];
+        let steps = [];
+        let products = [];
+        let payments = [];
+        let activeStage = 1;
+        let editingProductId = null;
+        let stepModalCtx = null; // {stepId}
+
+        const PROJECT_STATUSES = ['start','budowa','sklep','kampanie','testy','stery','monthly','zamkniety'];
+        const STATUS_LABELS = { start:'Start', budowa:'Budowa', sklep:'Sklep', kampanie:'Kampanie', testy:'Testy', stery:'Stery', monthly:'Monthly', zamkniety:'Zamknięty' };
+        const PRODUCT_STATUSES = ['kandydat','zaakceptowany','w_budowie','gotowy','live','test','winner','kill','skala'];
+        const PRODUCT_STATUS_META = {
+            kandydat:     { label:'Kandydat',     cls:'bg-zinc-500/15 text-zinc-300' },
+            zaakceptowany:{ label:'Zaakceptowany',cls:'bg-sky-500/15 text-sky-300' },
+            w_budowie:    { label:'W budowie',    cls:'bg-violet-500/15 text-violet-300' },
+            gotowy:       { label:'Gotowy',       cls:'bg-indigo-500/15 text-indigo-300' },
+            live:         { label:'LIVE',         cls:'bg-emerald-500/15 text-emerald-300' },
+            test:         { label:'W teście',     cls:'bg-amber-500/15 text-amber-300' },
+            winner:       { label:'WINNER',       cls:'bg-emerald-500/25 text-emerald-300 font-semibold' },
+            kill:         { label:'KILL',         cls:'bg-rose-500/15 text-rose-400' },
+            skala:        { label:'Skala',        cls:'bg-fuchsia-500/15 text-fuchsia-300' },
+        };
+        const STEP_CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', skipped:'pending', blocked:'in_progress' };
+        const STEP_LABELS = { pending:'Do zrobienia', in_progress:'W trakcie', done:'Ukończone', skipped:'Pominięte', blocked:'Zablokowane' };
+        const OWNER_LABEL = { admin:'Tomek', client:'Klient', auto:'Auto' };
+        const TEST_PROFIT_MIN = 5, TEST_PROFIT_MAX = 10; // zł zysku/szt. w trybie TEST
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function moneyPL(n) { return (Number(n)||0).toLocaleString('pl-PL',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' zł'; }
+        function relTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso); const mins = Math.round((Date.now()-d.getTime())/60000);
+            if (mins < 60) return mins + ' min temu';
+            if (mins < 1440) return Math.round(mins/60) + ' godz. temu';
+            return d.toLocaleDateString('pl-PL');
+        }
+        function showToast(message, type='info') {
+            const toast = document.createElement('div');
+            const bg = type==='success' ? '#10b981' : type==='error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:8px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 2200);
+        }
+        async function logActivity(action, description) {
+            try { await supabaseClient.from('wf2_activities').insert({ project_id: projectId, actor:'admin', action, description }); } catch(_) {}
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data||[]).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // ============ ŁADOWANIE ============
+        async function loadAll() {
+            // dosiej brakujące instancje kroków (nowe defs / nowe produkty)
+            await supabaseClient.rpc('wf2_ensure_steps', { p_project: projectId });
+            const [projQ, defsQ, stepsQ, prodQ, payQ, actQ] = await Promise.all([
+                supabaseClient.from('wf2_projects').select('*').eq('id', projectId).single(),
+                supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
+                supabaseClient.from('wf2_steps').select('*').eq('project_id', projectId).range(0, 1999),
+                supabaseClient.from('wf2_products').select('*').eq('project_id', projectId).order('sort').order('created_at'),
+                supabaseClient.from('wf2_payments').select('*').eq('project_id', projectId).order('sort').order('created_at'),
+                supabaseClient.from('wf2_activities').select('*').eq('project_id', projectId).order('created_at',{ascending:false}).limit(20),
+            ]);
+            if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='sklepy.html'; return; }
+            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; payments = payQ.data||[];
+            renderHeader(); renderPills(); renderStage(); renderActivity(actQ.data||[]);
+        }
+
+        function stageNums() { return [...new Set(stepDefs.map(d=>d.stage))].sort((a,b)=>a-b); }
+        function defsForStage(n) { return stepDefs.filter(d=>d.stage===n); }
+        function stepFor(key, productId) {
+            return steps.find(s => s.step_key===key && (productId ? s.product_id===productId : !s.product_id));
+        }
+        function stageProgress(n) {
+            const keys = defsForStage(n).map(d=>d.key);
+            const inst = steps.filter(s => keys.includes(s.step_key) && s.status!=='skipped');
+            const done = inst.filter(s=>s.status==='done').length;
+            return { done, total: inst.length, pct: inst.length ? Math.round(done/inst.length*100) : 0 };
+        }
+
+        // ============ RENDER ============
+        function renderHeader() {
+            document.getElementById('hdr-name').textContent = project.name || '(bez nazwy)';
+            document.getElementById('p-name').textContent = project.name || '(bez nazwy)';
+            const sel = document.getElementById('p-status');
+            sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
+            const meta = [];
+            if (project.customer_name) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-user"></i>${escapeHtml(project.customer_name)}</span>`);
+            if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
+            if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
+            if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-violet-400 hover:text-violet-300 flex items-center gap-1"><i class="ph ph-kanban"></i>lead w pipeline</a>`);
+            if (project.bud_session_id) meta.push(`<a href="/tn-sklep/" target="_blank" class="text-violet-400 hover:text-violet-300 flex items-center gap-1"><i class="ph ph-chats-circle"></i>sesja /sklep</a>`);
+            if (project.td_shop_url) meta.push(`<a href="${escapeHtml(project.td_shop_url)}" target="_blank" class="text-violet-400 hover:text-violet-300 flex items-center gap-1"><i class="ph ph-storefront"></i>sklep TD</a>`);
+            document.getElementById('p-meta').innerHTML = meta.join('<span class="text-zinc-700">·</span>');
+            const all = steps.filter(s=>s.status!=='skipped');
+            const done = all.filter(s=>s.status==='done').length;
+            document.getElementById('stat-progress').textContent = (all.length?Math.round(done/all.length*100):0) + '%';
+            document.getElementById('stat-products').textContent = products.length;
+            document.getElementById('stat-target').textContent = project.target_orders || 1000;
+            document.getElementById('p-notes').value = project.notes || '';
+        }
+
+        function renderPills() {
+            const wrap = document.getElementById('stage-pills');
+            wrap.innerHTML = stageNums().map(n => {
+                const pr = stageProgress(n);
+                const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
+                const cls = (n===activeStage?'active ':'') + (pr.total>0 && pr.done===pr.total ? 'completed' : '');
+                const num = pr.total>0 && pr.done===pr.total ? '<i class="ph ph-check"></i>' : n;
+                return `<div class="stage-pill ${cls}" onclick="switchStage(${n})">
+                    <span class="stage-num">${num}</span>
+                    <span class="text-xs ${n===activeStage?'text-white':'text-zinc-400'}">${escapeHtml(label)}</span>
+                    <span class="text-[10px] font-mono text-zinc-500">${pr.done}/${pr.total}</span>
+                </div>`;
+            }).join('');
+        }
+        function switchStage(n) { activeStage = n; renderPills(); renderStage(); }
+
+        function renderStage() {
+            const defs = defsForStage(activeStage);
+            const projDefs = defs.filter(d=>d.scope==='project');
+            const prodDefs = defs.filter(d=>d.scope==='product');
+
+            // karty kroków projektu
+            document.getElementById('steps-grid').innerHTML = projDefs.map(d => {
+                const st = stepFor(d.key) || { status:'pending', data:{} };
+                const note = st.data && st.data.note ? st.data.note : '';
+                return `<div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-xl bg-zinc-800/80 flex items-center justify-center flex-shrink-0"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i></div>
+                            <div class="min-w-0">
+                                <div class="text-white font-medium text-[13px] truncate">${escapeHtml(d.label)}</div>
+                                <span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>
+                            </div>
+                        </div>
+                        <button class="text-zinc-600 hover:text-zinc-300 p-1" title="Notatka" onclick="openStepModal('${d.key}', null)"><i class="ph ph-note-pencil"></i></button>
+                    </div>
+                    ${note ? `<div class="text-zinc-400 text-[11.5px] bg-zinc-900/70 rounded-lg px-2.5 py-1.5 line-clamp-2">${escapeHtml(note)}</div>` : ''}
+                    <div class="flex items-center justify-between mt-auto">
+                        <button class="st-btn st-${st.status}" onclick="cycleStep('${d.key}', null)">
+                            <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
+                            ${STEP_LABELS[st.status]}
+                        </button>
+                        <span class="text-zinc-600 text-[10px]">${st.completed_at ? relTime(st.completed_at) : ''}</span>
+                    </div>
+                </div>`;
+            }).join('');
+
+            // płatności tylko na etapie 1
+            const payBox = document.getElementById('payments-box');
+            payBox.classList.toggle('hidden', activeStage !== 1);
+            if (activeStage === 1) renderPayments();
+
+            // macierz produktów, jeśli etap ma kroki scope=product (etap 2 zawsze pokazuje portfel)
+            const mxBox = document.getElementById('matrix-box');
+            const showMatrix = prodDefs.length > 0 || activeStage === 2;
+            mxBox.classList.toggle('hidden', !showMatrix);
+            if (showMatrix) renderMatrix(prodDefs);
+        }
+
+        function renderMatrix(prodDefs) {
+            document.getElementById('matrix-count').textContent = products.length ? `(${products.length})` : '';
+            const head = ['<th class="px-3 py-2.5">Produkt</th>', '<th class="px-3 py-2.5">Status</th>', '<th class="px-3 py-2.5 text-right">Zysk/szt.</th>']
+                .concat(prodDefs.map(d=>`<th class="px-2 py-2.5 text-center" title="${escapeHtml(d.label)}"><i class="ph ${escapeHtml(d.icon)} text-sm"></i><div class="text-[9px] normal-case mt-0.5">${escapeHtml(d.label)}</div></th>`))
+                .concat(['<th class="px-3 py-2.5"></th>']);
+            document.getElementById('matrix-head').innerHTML = head.join('');
+            document.getElementById('matrix-empty').classList.toggle('hidden', products.length > 0);
+
+            document.getElementById('matrix-body').innerHTML = products.map(p => {
+                const sm = PRODUCT_STATUS_META[p.status] || PRODUCT_STATUS_META.kandydat;
+                const profit = p.unit_profit;
+                const profitOk = p.margin_mode==='test' ? (profit >= TEST_PROFIT_MIN && profit <= TEST_PROFIT_MAX) : profit > 0;
+                const profitCls = profit === null || p.price === null ? 'text-zinc-600' : profitOk ? 'text-emerald-400' : 'text-amber-400';
+                const cells = prodDefs.map(d => {
+                    const st = stepFor(d.key, p.id) || { status:'pending' };
+                    const icon = st.status==='done' ? 'ph-check' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='skipped' ? 'ph-minus' : 'ph-circle';
+                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}" title="${escapeHtml(d.label)}: ${STEP_LABELS[st.status]}" onclick="cycleStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
+                }).join('');
+                const cover = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0"><i class="ph ph-package text-zinc-600"></i></div>';
+                return `<tr class="border-b border-white/5 hover:bg-white/[.02]">
+                    <td class="px-3 py-2.5"><div class="flex items-center gap-2.5 min-w-[160px]">${cover}
+                        <div class="min-w-0"><div class="text-white text-[12.5px] font-medium truncate max-w-[220px]">${escapeHtml(p.name||'(bez nazwy)')}</div>
+                        ${p.td_page_url?`<a href="${escapeHtml(p.td_page_url)}" target="_blank" class="text-[10px] text-violet-400 hover:text-violet-300">strona TD ↗</a>`:''}</div></div></td>
+                    <td class="px-3 py-2.5"><span class="inline-block px-2 py-0.5 rounded-md text-[10.5px] ${sm.cls}">${sm.label}</span></td>
+                    <td class="px-3 py-2.5 text-right font-mono text-xs ${profitCls}">${p.price !== null && profit !== null ? moneyPL(profit) : '—'}</td>
+                    ${cells}
+                    <td class="px-3 py-2.5 text-right"><button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')"><i class="ph ph-pencil-simple"></i></button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function renderPayments() {
+            const rows = document.getElementById('payments-rows');
+            rows.innerHTML = payments.map(pay => `
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input class="fld" style="max-width:180px" value="${escapeHtml(pay.label)}" placeholder="np. Rata 2/4" onchange="updPayment('${pay.id}','label',this.value)">
+                    <input class="fld" style="max-width:110px" type="number" step="0.01" value="${pay.amount}" onchange="updPayment('${pay.id}','amount',parseFloat(this.value)||0)">
+                    <input class="fld" style="max-width:140px" type="date" value="${pay.due_date||''}" onchange="updPayment('${pay.id}','due_date',this.value||null)">
+                    <label class="flex items-center gap-1.5 text-xs ${pay.paid_at?'text-emerald-400':'text-zinc-500'} cursor-pointer">
+                        <input type="checkbox" ${pay.paid_at?'checked':''} onchange="updPayment('${pay.id}','paid_at',this.checked?new Date().toISOString():null)" class="accent-emerald-500">
+                        opłacone${pay.paid_at?' '+new Date(pay.paid_at).toLocaleDateString('pl-PL'):''}
+                    </label>
+                    <button class="text-zinc-600 hover:text-rose-400 p-1 ml-auto" onclick="delPayment('${pay.id}')"><i class="ph ph-trash"></i></button>
+                </div>`).join('');
+            const total = payments.reduce((a,p)=>a+Number(p.amount||0),0);
+            const paid = payments.filter(p=>p.paid_at).reduce((a,p)=>a+Number(p.amount||0),0);
+            document.getElementById('payments-sum').textContent = payments.length ? `Opłacone ${moneyPL(paid)} z ${moneyPL(total)}` : 'Brak pozycji — dodaj rezerwację, płatność główną albo raty.';
+        }
+
+        function renderActivity(items) {
+            document.getElementById('activity-list').innerHTML = (items||[]).map(a => `
+                <div class="flex items-start gap-2 text-xs">
+                    <span class="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${a.actor==='auto'?'bg-emerald-500':a.actor==='client'?'bg-amber-500':'bg-violet-500'}"></span>
+                    <div><span class="text-zinc-300">${escapeHtml(a.description||a.action)}</span>
+                    <span class="text-zinc-600 ml-1">${relTime(a.created_at)}</span></div>
+                </div>`).join('') || '<div class="text-zinc-600 text-xs">Brak aktywności.</div>';
+        }
+
+        // ============ AKCJE: kroki ============
+        async function cycleStep(key, productId) {
+            const st = stepFor(key, productId);
+            if (!st) { showToast('Brak instancji kroku — odśwież', 'error'); return; }
+            const next = STEP_CYCLE[st.status] || 'pending';
+            const upd = { status: next, completed_at: next==='done' ? new Date().toISOString() : null, completed_by: next==='done' ? 'admin' : null };
+            const { error } = await supabaseClient.from('wf2_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Błąd zapisu: '+error.message,'error'); return; }
+            Object.assign(st, upd);
+            const d = stepDefs.find(x=>x.key===key);
+            const prodName = productId ? (products.find(p=>p.id===productId)?.name || '') : '';
+            if (next==='done') logActivity('step_done', `Ukończono: ${d?.label||key}${prodName?' — '+prodName:''}`);
+            renderPills(); renderStage(); renderHeader();
+        }
+
+        function openStepModal(key, productId) {
+            const st = stepFor(key, productId);
+            const d = stepDefs.find(x=>x.key===key);
+            if (!st || !d) return;
+            stepModalCtx = { stepId: st.id, key, productId };
+            document.getElementById('sm-title').textContent = d.label;
+            document.getElementById('sm-sub').textContent = (productId ? (products.find(p=>p.id===productId)?.name||'')+' · ' : '') + OWNER_LABEL[d.owner] + ' · ' + STEP_LABELS[st.status];
+            document.getElementById('sm-note').value = (st.data && st.data.note) || '';
+            document.getElementById('sm-skip').textContent = st.status==='skipped' ? 'Przywróć krok' : 'Pomiń krok';
+            document.getElementById('step-modal').classList.remove('hidden');
+        }
+        function closeStepModal() { document.getElementById('step-modal').classList.add('hidden'); stepModalCtx = null; }
+        async function saveStepNote() {
+            if (!stepModalCtx) return;
+            const st = steps.find(s=>s.id===stepModalCtx.stepId);
+            const data = Object.assign({}, st.data || {}, { note: document.getElementById('sm-note').value });
+            const { error } = await supabaseClient.from('wf2_steps').update({ data }).eq('id', st.id);
+            if (error) { showToast('Błąd zapisu: '+error.message,'error'); return; }
+            st.data = data; closeStepModal(); renderStage(); showToast('Zapisano','success');
+        }
+        async function toggleSkipStep() {
+            if (!stepModalCtx) return;
+            const st = steps.find(s=>s.id===stepModalCtx.stepId);
+            const next = st.status==='skipped' ? 'pending' : 'skipped';
+            const { error } = await supabaseClient.from('wf2_steps').update({ status: next, completed_at: null, completed_by: null }).eq('id', st.id);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            st.status = next; closeStepModal(); renderPills(); renderStage(); renderHeader();
+        }
+
+        // ============ AKCJE: produkty ============
+        function openProductModal(id) {
+            editingProductId = id || null;
+            const p = id ? products.find(x=>x.id===id) : null;
+            document.getElementById('pm-title').textContent = p ? 'Edycja produktu' : 'Nowy produkt';
+            document.getElementById('pm-delete').classList.toggle('hidden', !p);
+            document.getElementById('pm-status').innerHTML = PRODUCT_STATUSES.map(s=>`<option value="${s}" ${p&&p.status===s?'selected':''}>${PRODUCT_STATUS_META[s].label}</option>`).join('');
+            document.getElementById('pm-name').value = p?.name || '';
+            document.getElementById('pm-margin-mode').value = p?.margin_mode || 'test';
+            document.getElementById('pm-supplier').value = p?.supplier_url || '';
+            document.getElementById('pm-cover').value = p?.cover_url || '';
+            document.getElementById('pm-cost').value = p?.cost_purchase ?? '';
+            document.getElementById('pm-ship').value = p?.cost_shipping ?? '';
+            document.getElementById('pm-fees').value = p?.fees_pct ?? 2;
+            document.getElementById('pm-price').value = p?.price ?? '';
+            document.getElementById('pm-tdurl').value = p?.td_page_url || '';
+            document.getElementById('pm-campaign').value = p?.campaign_id || '';
+            document.getElementById('pm-notes').value = p?.notes || '';
+            recalcMargin();
+            document.getElementById('prod-modal').classList.remove('hidden');
+        }
+        function closeProductModal() { document.getElementById('prod-modal').classList.add('hidden'); editingProductId = null; }
+
+        // Kalkulator marży: zysk = cena − zakup − wysyłka − cena×prowizje%.
+        // W trybie TEST podpowiada cenę dającą 5–10 zł zysku/szt. (decyzja Tomka 2026-07-03).
+        function recalcMargin() {
+            const cost = parseFloat(document.getElementById('pm-cost').value) || 0;
+            const ship = parseFloat(document.getElementById('pm-ship').value) || 0;
+            const fees = (parseFloat(document.getElementById('pm-fees').value) || 0) / 100;
+            const price = parseFloat(document.getElementById('pm-price').value);
+            const mode = document.getElementById('pm-margin-mode').value;
+            const profitEl = document.getElementById('pm-profit');
+            const hintEl = document.getElementById('pm-hint');
+            if (!isNaN(price)) {
+                const profit = price - cost - ship - price * fees;
+                profitEl.textContent = moneyPL(profit);
+                const ok = mode==='test' ? (profit >= TEST_PROFIT_MIN && profit <= TEST_PROFIT_MAX) : profit > 0;
+                profitEl.className = 'font-mono font-semibold ' + (ok ? 'text-emerald-400' : 'text-amber-400');
+            } else { profitEl.textContent = '—'; profitEl.className = 'font-mono font-semibold text-zinc-500'; }
+            if (mode === 'test' && fees < 1 && (cost > 0 || ship > 0)) {
+                const lo = (cost + ship + TEST_PROFIT_MIN) / (1 - fees);
+                const hi = (cost + ship + TEST_PROFIT_MAX) / (1 - fees);
+                hintEl.textContent = `Cena dla ${TEST_PROFIT_MIN}–${TEST_PROFIT_MAX} zł zysku: ${moneyPL(lo)} – ${moneyPL(hi)}`;
+            } else hintEl.textContent = mode==='scale' ? 'Tryb SKALA — marża docelowa wg decyzji przy winnerze.' : '';
+        }
+
+        async function saveProduct() {
+            const payload = {
+                name: document.getElementById('pm-name').value.trim(),
+                status: document.getElementById('pm-status').value,
+                margin_mode: document.getElementById('pm-margin-mode').value,
+                supplier_url: document.getElementById('pm-supplier').value.trim() || null,
+                cover_url: document.getElementById('pm-cover').value.trim() || null,
+                cost_purchase: parseFloat(document.getElementById('pm-cost').value) || null,
+                cost_shipping: parseFloat(document.getElementById('pm-ship').value) || null,
+                fees_pct: parseFloat(document.getElementById('pm-fees').value) || 0,
+                price: parseFloat(document.getElementById('pm-price').value) || null,
+                td_page_url: document.getElementById('pm-tdurl').value.trim() || null,
+                campaign_id: document.getElementById('pm-campaign').value.trim() || null,
+                notes: document.getElementById('pm-notes').value.trim() || null,
+            };
+            if (!payload.name) { showToast('Podaj nazwę produktu','error'); return; }
+            try {
+                if (editingProductId) {
+                    const { error } = await supabaseClient.from('wf2_products').update(payload).eq('id', editingProductId);
+                    if (error) throw error;
+                    logActivity('product_updated', 'Zaktualizowano produkt: ' + payload.name);
+                } else {
+                    payload.project_id = projectId;
+                    payload.sort = products.length;
+                    const { error } = await supabaseClient.from('wf2_products').insert(payload);
+                    if (error) throw error;
+                    logActivity('product_added', 'Dodano produkt do portfela: ' + payload.name);
+                }
+                closeProductModal();
+                await loadAll();
+                showToast('Zapisano','success');
+            } catch(e) { showToast('Błąd: '+(e.message||e),'error'); }
+        }
+        async function deleteProduct() {
+            if (!editingProductId) return;
+            const p = products.find(x=>x.id===editingProductId);
+            if (!confirm(`Usunąć produkt „${p?.name||''}" z portfela? Usunie też jego kroki.`)) return;
+            const { error } = await supabaseClient.from('wf2_products').delete().eq('id', editingProductId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            logActivity('product_deleted', 'Usunięto produkt: ' + (p?.name||''));
+            closeProductModal(); await loadAll();
+        }
+
+        // ============ AKCJE: płatności ============
+        async function addPayment() {
+            const { data, error } = await supabaseClient.from('wf2_payments')
+                .insert({ project_id: projectId, sort: payments.length, label: '', amount: 0 }).select('*').single();
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            payments.push(data); renderPayments();
+        }
+        async function updPayment(id, field, value) {
+            const { error } = await supabaseClient.from('wf2_payments').update({ [field]: value }).eq('id', id);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            const pay = payments.find(p=>p.id===id); if (pay) pay[field] = value;
+            if (field==='paid_at' && value) logActivity('payment_paid', `Opłacona pozycja: ${pay?.label||''} (${moneyPL(pay?.amount)})`);
+            renderPayments();
+        }
+        async function delPayment(id) {
+            const { error } = await supabaseClient.from('wf2_payments').delete().eq('id', id);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            payments = payments.filter(p=>p.id!==id); renderPayments();
+        }
+
+        // ============ AKCJE: projekt ============
+        async function saveStatus() {
+            const status = document.getElementById('p-status').value;
+            const { error } = await supabaseClient.from('wf2_projects').update({ status }).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            project.status = status; logActivity('status_changed', 'Status projektu: ' + (STATUS_LABELS[status]||status));
+            showToast('Status zapisany','success');
+        }
+        async function saveNotes() {
+            const notes = document.getElementById('p-notes').value;
+            const { error } = await supabaseClient.from('wf2_projects').update({ notes }).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            project.notes = notes; showToast('Notatki zapisane','success');
+        }
+        function openSettings() {
+            document.getElementById('set-name').value = project.name || '';
+            document.getElementById('set-customer').value = project.customer_name || '';
+            document.getElementById('set-email').value = project.customer_email || '';
+            document.getElementById('set-phone').value = project.customer_phone || '';
+            document.getElementById('set-target').value = project.target_orders || 1000;
+            document.getElementById('set-act').value = project.meta_ad_account_id || '';
+            document.getElementById('set-pixel').value = project.pixel_id || '';
+            document.getElementById('set-tdurl').value = project.td_shop_url || '';
+            document.getElementById('set-domain').value = project.domain || '';
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+        function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+        async function saveSettings() {
+            const payload = {
+                name: document.getElementById('set-name').value.trim(),
+                customer_name: document.getElementById('set-customer').value.trim() || null,
+                customer_email: document.getElementById('set-email').value.trim() || null,
+                customer_phone: document.getElementById('set-phone').value.trim() || null,
+                target_orders: parseInt(document.getElementById('set-target').value) || 1000,
+                meta_ad_account_id: document.getElementById('set-act').value.trim() || null,
+                pixel_id: document.getElementById('set-pixel').value.trim() || null,
+                td_shop_url: document.getElementById('set-tdurl').value.trim() || null,
+                domain: document.getElementById('set-domain').value.trim() || null,
+            };
+            const { error } = await supabaseClient.from('wf2_projects').update(payload).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            Object.assign(project, payload); closeSettings(); renderHeader(); showToast('Zapisano','success');
+        }
+
+        (async () => {
+            if (!projectId) { location.href = 'sklepy.html'; return; }
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+        })();
+    </script>
+</body>
+</html>

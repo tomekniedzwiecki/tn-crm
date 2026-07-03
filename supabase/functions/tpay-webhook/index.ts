@@ -930,8 +930,70 @@ Deno.serve(async (req) => {
             await supabase.from('bud_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
             console.log('[tpay-webhook] Budowanie: rezerwacja → bud_session paid_at:', bs.id)
           }
+          // WORKFLOW V2 („Sklepy"): opłacona rezerwacja → auto-projekt prowadzenia
+          // wspólnego biznesu (docs/zbuduje/WORKFLOW-V2-PLAN.md §9). Idempotentne po
+          // bud_session_id; własny try/catch — NIGDY nie przerywa obsługi płatności.
+          if (!isFull) {
+            try {
+              const { data: exProj } = await supabase.from('wf2_projects').select('id').eq('bud_session_id', bs.id).maybeSingle()
+              if (!exProj) {
+                const { data: sess } = await supabase.from('bud_sessions')
+                  .select('id, name, email, phone, lead_id, brand, chosen_product').eq('id', bs.id).maybeSingle()
+                // deno-lint-ignore no-explicit-any
+                const brandObj: any = sess?.brand || {}
+                // deno-lint-ignore no-explicit-any
+                const prodObj: any = sess?.chosen_product || {}
+                const brandName = String(brandObj.chosen_name || brandObj.nazwa || '').trim()
+                const prodName = String(prodObj.nazwa || prodObj.pl_name || prodObj.name || '').trim()
+                const { data: proj, error: projErr } = await supabase.from('wf2_projects').insert({
+                  name: brandName || prodName || sess?.name || order.customer_name || 'Nowy projekt',
+                  customer_name: sess?.name || order.customer_name || null,
+                  customer_email: sess?.email || order.customer_email || null,
+                  customer_phone: sess?.phone || null,
+                  lead_id: bs.lead_id || order.lead_id || null,
+                  bud_session_id: bs.id,
+                  reservation_order_id: order.id,
+                  status: 'start',
+                }).select('id').single()
+                if (projErr) {
+                  console.error('[tpay-webhook] WF2: insert projektu padł (nieblokujące):', projErr.message)
+                } else if (proj) {
+                  // produkt z rozmowy = pierwszy kandydat portfela; oryginalna sesja = sesja generatorów
+                  if (prodName) {
+                    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                    await supabase.from('wf2_products').insert({
+                      project_id: proj.id, name: prodName, status: 'kandydat', sort: 0,
+                      gen_session_id: bs.id,
+                      tt_product_id: uuidRe.test(String(prodObj.id || '')) ? prodObj.id : null,
+                      supplier_url: prodObj.ali_url || prodObj.chosen_link || prodObj.supplier_url || null,
+                      cover_url: prodObj.curated_image || prodObj.cover || prodObj.image || null,
+                    })
+                  }
+                  await supabase.rpc('wf2_ensure_steps', { p_project: proj.id })
+                  // rezerwacja jako pierwsza pozycja harmonogramu płatności — od razu opłacona
+                  await supabase.from('wf2_payments').insert({
+                    project_id: proj.id, sort: 0, label: 'Rezerwacja (zwrotna, wliczana w budowę)',
+                    amount: amt, order_id: order.id, paid_at: paidAt,
+                  })
+                  await supabase.from('wf2_activities').insert({
+                    project_id: proj.id, actor: 'auto', action: 'created',
+                    description: 'Projekt utworzony automatycznie po opłaceniu rezerwacji 500 zł',
+                  })
+                  console.log('[tpay-webhook] WF2: utworzony projekt', proj.id, 'dla bud_session', bs.id)
+                }
+              }
+            } catch (wf2Err) {
+              console.error('[tpay-webhook] WF2 project create error (nieblokujące):', wf2Err)
+            }
+          }
           const leadId = bs.lead_id || order.lead_id
-          if (leadId) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+          // Rezerwacja 500 zł (zwrotna) = etap NEGOCJACJE — rozmowa z Tomkiem dopiero przed
+          // nami; „won" WYŁĄCZNIE przy pełnej płatności budowy (decyzja Tomka 2026-07-03;
+          // wcześniej każda rezerwacja lądowała w CRM jako wygrany deal i psuła metrykę WON).
+          if (leadId) {
+            if (isFull) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+            else await supabase.from('leads').update({ status: 'negotiation' }).eq('id', leadId).not('status', 'in', '("won","negotiation")')
+          }
         } else if (isBudReservation) {
           console.error('[tpay-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
         }
