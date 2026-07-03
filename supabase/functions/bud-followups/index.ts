@@ -34,7 +34,10 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const PANEL_URL = 'https://tomekniedzwiecki.pl/sklep/'
-const RESERVE_URL = 'https://crm.tomekniedzwiecki.pl/checkout'
+// checkout/v2 + offer OBOWIĄZKOWE (audyt 2026-07-03 #1: stary /checkout bez oferty =
+// „oferta nie istnieje"). Parametry lead_id/sid/spar_email jak w linku frontu.
+const RESERVE_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
+const RESERVE_OFFER = 'f32102f9-cc1e-42a3-9742-82593dadaaf1'
 const MAX_PER_RUN = 30
 
 // Sekwencja powrotu (rozmowa W TOKU, przed raportem): 3 maile, progi w GODZINACH
@@ -89,8 +92,9 @@ const SMS_ENABLED = (Deno.env.get('SMS_ENABLED') || '') === '1'
 function panelLink(sessionId: string, campaign: string, hash = ''): string {
   return `${PANEL_URL}?id=${sessionId}&utm_source=email&utm_medium=followup&utm_campaign=${campaign}${hash}`
 }
-function reserveLink(leadId: string | null): string {
-  return `${RESERVE_URL}?utm_source=email&utm_medium=followup${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}`
+function reserveLink(leadId: string | null, sid?: string | null, email?: string | null): string {
+  return `${RESERVE_URL}?offer=${RESERVE_OFFER}&utm_source=email&utm_medium=followup` +
+    `${leadId ? `&lead_id=${encodeURIComponent(leadId)}` : ''}${sid ? `&sid=${encodeURIComponent(sid)}` : ''}${email ? `&spar_email=${encodeURIComponent(email)}` : ''}`
 }
 
 // GSM-7 safe: transliteracja znaków spoza podstawowego GSM (polskie diakrytyki,

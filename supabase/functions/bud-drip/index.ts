@@ -29,7 +29,9 @@ import { REVEAL_PLAN, PANEL_VISITS_GATE } from "../_shared/bud-reveal-plan.ts";
 
 const PANEL_URL = 'https://tomekniedzwiecki.pl/sklep/'
 const CHECKOUT_URL = 'https://crm.tomekniedzwiecki.pl/checkout/v2/'
-const OFFER_ID = Deno.env.get('BUD_OFFER_ID') || ''
+// Fallback = realna oferta rezerwacji 500 zł (audyt 2026-07-03 #1: bez `offer=` checkout
+// pokazywał „oferta nie istnieje" — kliki „Rezerwuję" z maili umierały).
+const OFFER_ID = Deno.env.get('BUD_OFFER_ID') || 'f32102f9-cc1e-42a3-9742-82593dadaaf1'
 const FN = (name: string) => `${Deno.env.get('SUPABASE_URL')}/functions/v1/${name}`
 
 // Kadencja sekwencji + bramki = JEDNO źródło w ../_shared/bud-reveal-plan.ts (import wyżej).
@@ -73,9 +75,11 @@ function warsawHour(): number {
 function panelLink(sid: string, campaign: string, hash = ''): string {
   return `${PANEL_URL}?id=${sid}&utm_source=email&utm_medium=drip&utm_campaign=${campaign}${hash}`
 }
-function checkoutLink(leadId: string | null): string {
+// lead_id (NIE „lead" — checkout ignorował parametr i wpłata nie wiązała się z leadem)
+// + sid/spar_email jak w linku frontu (audyt 2026-07-03 #1).
+function checkoutLink(leadId: string | null, sid: string | null = null, email: string | null = null): string {
   const offer = OFFER_ID ? `offer=${OFFER_ID}&` : ''
-  return `${CHECKOUT_URL}?${offer}${leadId ? `lead=${encodeURIComponent(leadId)}&` : ''}utm_source=email&utm_medium=drip`
+  return `${CHECKOUT_URL}?${offer}${leadId ? `lead_id=${encodeURIComponent(leadId)}&` : ''}${sid ? `sid=${encodeURIComponent(sid)}&` : ''}${email ? `spar_email=${encodeURIComponent(email)}&` : ''}utm_source=email&utm_medium=drip`
 }
 // Model do personalizacji treści maili. /sklep = gpt-5.5 (NIE 5.1 — 5.1 psuł treści sklepowe).
 const OPENAI_MODEL = Deno.env.get('BUD_EMAIL_MODEL') || 'gpt-5.5'
@@ -217,9 +221,11 @@ function hasArtifact(s: any, field: string | null): boolean {
 // Adres podglądu artefaktu (link „zobacz" w mailu) — zawsze do panelu /sklep z kotwicą.
 // deno-lint-ignore no-explicit-any
 function revealView(s: any, key: string): string {
+  // Hashe MUSZĄ istnieć w applyHashTab frontu (audyt 2026-07-03 #2: #raport/#strona/
+  // #rezerwacja nie pasowały do regexu → lead z maila lądował na gołym czacie).
   const hash: Record<string, string> = {
-    raport: '#raport', makiety: '#makiety', reklamy: '#reklamy',
-    strona: '#strona', rezerwacja: '#rezerwacja',
+    raport: '#rynek', makiety: '#makiety', reklamy: '#reklamy',
+    strona: '#sklep', rezerwacja: '#wspolpraca',
   }
   return panelLink(s.id, `reveal_${key}`, hash[key] || '')
 }
@@ -440,7 +446,7 @@ async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal:
   if (cached && typeof cached.subject === 'string' && typeof cached.html === 'string') return { subject: cached.subject, html: cached.html }
   const key = reveal.key
   const viewUrl = revealView(s, key)
-  const reserveUrl = s.email ? checkoutLink(s.lead_id || null) : null
+  const reserveUrl = s.email ? checkoutLink(s.lead_id || null, s.id || null, s.email || null) : null
   let email: { subject: string; html: string }
   let model: string | null = null
   let smsText: string
