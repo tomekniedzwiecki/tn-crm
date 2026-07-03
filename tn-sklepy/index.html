@@ -59,11 +59,16 @@
                 <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku) -->
                 <div id="stages-wrap" class="space-y-5 mb-10"></div>
 
-                <!-- Filtr aktywny -->
-                <div id="filter-bar" class="hidden items-center gap-2 mb-4">
-                    <span class="text-zinc-500 text-xs">Filtr:</span>
-                    <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
-                    <button onclick="clearFilter()" class="text-zinc-500 hover:text-white text-xs underline">wyczyść</button>
+                <!-- Pasek nad listą: rozwiń wszystkie + filtr -->
+                <div class="flex items-center gap-3 mb-4">
+                    <button id="expand-all-btn" onclick="toggleAll()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors">
+                        <i class="ph ph-caret-double-down"></i> <span id="expand-all-label">Rozwiń wszystkie</span>
+                    </button>
+                    <div id="filter-bar" class="hidden items-center gap-2">
+                        <span class="text-zinc-500 text-xs">Filtr:</span>
+                        <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
+                        <button onclick="clearFilter()" class="text-zinc-500 hover:text-white text-xs underline">wyczyść</button>
+                    </div>
                 </div>
 
                 <!-- Lista projektów -->
@@ -324,7 +329,22 @@
         }
         function toggleRow(id) {
             if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
-            renderTable();
+            renderTable(); updateExpandAllLabel();
+        }
+        function toggleAll() {
+            let rows = projects;
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
+            if (allOpen) rows.forEach(p => openRows.delete(p.id));
+            else rows.forEach(p => openRows.add(p.id));
+            renderTable(); updateExpandAllLabel();
+        }
+        function updateExpandAllLabel() {
+            let rows = projects;
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
+            const lbl = document.getElementById('expand-all-label');
+            if (lbl) lbl.textContent = allOpen ? 'Zwiń wszystkie' : 'Rozwiń wszystkie';
         }
 
         // ============ NOWY PROJEKT ============
