@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
     const { data: emailDomainSettings } = await supabase
       .from('settings')
       .select('key, value')
-      .in('key', ['email_from_name_transactional', 'email_from_transactional'])
+      .in('key', ['email_from_name_transactional', 'email_from_transactional', 'email_reply_to'])
 
     const domainSettingsMap: Record<string, string> = {}
     emailDomainSettings?.forEach(s => { domainSettingsMap[s.key] = s.value })
@@ -266,6 +266,8 @@ Deno.serve(async (req) => {
     const fromNameTransactional = domainSettingsMap.email_from_name_transactional || 'Tomek Niedzwiecki'
     const fromEmailTransactional = domainSettingsMap.email_from_transactional || 'biuro@tomekniedzwiecki.pl'
     const fromAddressTransactional = `${fromNameTransactional} <${fromEmailTransactional}>`
+    // Realna skrzynka na odpowiedzi (fallback dla maili do leadów). Patrz komentarz przy reply_to niżej.
+    const replyToAddress = domainSettingsMap.email_reply_to || 'ceo@tomekniedzwiecki.pl'
 
     console.log('[send-email] Using transactional from address:', fromAddressTransactional)
 
@@ -529,10 +531,12 @@ Deno.serve(async (req) => {
       emailPayload.reply_to = senderDirectEmail
       console.log('[send-email] Reply-to set to:', senderDirectEmail)
     } else if (leadId) {
-      // Fall back to inbound domain for tracking in CRM
-      const replyName = getFirstNameForReplyTo(senderName)
-      emailPayload.reply_to = `${replyName}@inbound.tomekniedzwiecki.pl`
-      console.log('[send-email] Reply-to set to inbound:', emailPayload.reply_to)
+      // Odpowiedzi na maile do leadów (followupy, drip) lecą na realną skrzynkę = email_reply_to (ceo@tomekniedzwiecki.pl).
+      // Wcześniej reply-to szło na {imie}@inbound.tomekniedzwiecki.pl (Resend Inbound → webhook email-inbound),
+      // ale webhook przestał odbierać 2026-01-22 i odpowiedzi klientów ginęły. Decyzja Tomka 2026-07-01:
+      // niech klienci odpisują wprost na ceo@ — z pominięciem inbound. reply_to == from, więc wątki się kleją.
+      emailPayload.reply_to = replyToAddress
+      console.log('[send-email] Reply-to set to real mailbox:', emailPayload.reply_to)
     }
 
     console.log('[send-email] Sending to Resend API, to:', recipientEmail)
