@@ -788,8 +788,9 @@
         async function openPicker() {
             document.getElementById('picker-modal').classList.remove('hidden');
             if (!ttProducts) {
+                // zdjęcie i cena z AliExpress (snapshot aukcji), nie okładka TikToka (req Tomka)
                 const { data } = await supabaseClient.from('bud_tt_products')
-                    .select('id, pl_name, category, cover, curated_image, chosen_link, heat, max_plays')
+                    .select('id, pl_name, category, cover, curated_image, chosen_link, heat, max_plays, ali_main:ali_snapshot->>main_image, ali_price:ali_snapshot->price->>sale, ali_src:ali_snapshot->>source')
                     .eq('status', 'approved').order('heat', { ascending: false }).range(0, 199);
                 ttProducts = data || [];
             }
@@ -801,13 +802,17 @@
             const q = (document.getElementById('pk-search').value || '').toLowerCase();
             const items = (ttProducts || []).filter(t => !q || (t.pl_name || '').toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q)).slice(0, 60);
             document.getElementById('pk-grid').innerHTML = items.map(t => {
-                const img = t.curated_image || t.cover;
+                // priorytet zdjęcia: kurowane (admin) → snapshot AliExpress → okładka TikToka
+                const img = t.curated_image || t.ali_main || t.cover;
+                const isAli = !!(t.curated_image || t.ali_main);
                 const inPortfolio = products.some(p => p.tt_product_id === t.id);
-                const ref = t.curated_image ? '<i class="ph ph-image text-[#62c073]" title="referencja zdjęcia OK"></i> ' : '';
+                const ref = t.curated_image ? '<i class="ph ph-image text-[#62c073]" title="referencja kurowana"></i> ' : (t.ali_src === 'detail' ? '<i class="ph ph-check-circle text-[#62c073]" title="snapshot z aukcji (pewny)"></i> ' : '');
+                const price = t.ali_price ? `<span class="text-[#52a8ff] font-mono">$${escapeHtml(t.ali_price)}</span>` : '';
                 return `<div class="border border-[#2a2a2a] ${inPortfolio ? 'opacity-40' : 'hover:border-[#0070f3]/60 cursor-pointer'} rounded-md p-2.5 transition-colors" ${inPortfolio ? '' : `onclick="pickTT('${t.id}')"`}>
-                    ${img ? `<img src="${escapeHtml(img)}" class="w-full h-24 object-cover rounded mb-2" loading="lazy" onerror="this.style.display='none'">` : '<div class="w-full h-24 bg-[#111] rounded mb-2 flex items-center justify-center"><i class="ph ph-package text-zinc-700 text-xl"></i></div>'}
+                    <div class="relative">${img ? `<img src="${escapeHtml(img)}" class="w-full h-24 object-cover rounded mb-2" loading="lazy" onerror="this.style.display='none'">` : '<div class="w-full h-24 bg-[#111] rounded mb-2 flex items-center justify-center"><i class="ph ph-package text-zinc-700 text-xl"></i></div>'}
+                    ${!isAli && img ? '<span class="absolute top-1 left-1 bg-black/70 text-zinc-400 text-[8.5px] px-1.5 py-0.5 rounded" title="brak zdjęcia z aukcji — to okładka wideo">TikTok</span>' : ''}</div>
                     <div class="text-white text-[12px] font-medium leading-tight mb-1">${escapeHtml(t.pl_name)}</div>
-                    <div class="flex items-center justify-between text-[10px] text-zinc-500"><span>${escapeHtml(t.category || '')}</span><span class="font-mono">${ref}heat ${t.heat ?? '—'}</span></div>
+                    <div class="flex items-center justify-between text-[10px] text-zinc-500"><span>${escapeHtml(t.category || '')}${price ? ' · ' + price : ''}</span><span class="font-mono">${ref}heat ${t.heat ?? '—'}</span></div>
                     ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : ''}
                 </div>`;
             }).join('') || '<div class="col-span-full text-center text-zinc-600 text-xs py-8">Brak wyników</div>';
@@ -819,7 +824,7 @@
             pendingTT = t.id;
             document.getElementById('pm-name').value = t.pl_name || '';
             document.getElementById('pm-supplier').value = t.chosen_link || '';
-            document.getElementById('pm-cover').value = t.curated_image || t.cover || '';
+            document.getElementById('pm-cover').value = t.curated_image || t.ali_main || t.cover || '';
         }
         async function previewGenLanding(sessId) {
             const { data, error } = await supabaseClient.from('bud_sessions').select('landing_html').eq('id', sessId).single();

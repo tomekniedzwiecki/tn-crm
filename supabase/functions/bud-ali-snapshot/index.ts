@@ -3,7 +3,8 @@
 // makiety/landing korzystają z tego bez ponownego pobierania.
 // Źródło: aliexpress-true-api (RapidAPI), detail po product_id. Defensywnie na kształt
 // odpowiedzi (różne wersje API zwracają inne struktury).
-// Snapshot: { title, images[], main_image, specs[{name,value}], variants[], bundle_hint, fetched_at }.
+// Snapshot: { title, images[], main_image, specs[{name,value}], variants[], price{sale,original,currency},
+//             sku_prices[{v,price}], description, reviews[], review_stats, fetched_at }.
 // Gate: x-tools-secret (backend/backfill) LUB istniejąca sesja (front lejka).
 // Deploy: --no-verify-jwt.
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -160,7 +161,10 @@ function pid(body: { product_id?: string; link?: string }, chosenLink?: string):
 // deno-lint-ignore no-explicit-any
 function parseSnapshot(raw: any): Record<string, unknown> | null {
   if (!raw || typeof raw !== 'object') return null;
-  const d = raw.data ?? raw.result ?? raw.product ?? raw;
+  // aliexpress-true-api /product-info zwraca TABLICĘ [{...}]; błąd = {"No information": "..."}
+  const root = Array.isArray(raw) ? raw[0] : raw;
+  if (!root || typeof root !== 'object' || root['No information']) return null;
+  const d = root.data ?? root.result ?? root.product ?? root;
   const base = d.ae_item_base_info_dto ?? d.item_base_info ?? d.base_info ?? d;
   const media = d.ae_multimedia_info_dto ?? d.multimedia ?? d.item_multimedia ?? {};
   const props = d.ae_item_properties ?? d.item_properties ?? d.properties ?? {};
@@ -187,21 +191,43 @@ function parseSnapshot(raw: any): Record<string, unknown> | null {
       .filter((s) => s.name && s.value).slice(0, 20);
   }
 
-  // warianty/zestaw — z SKU
+  // warianty/zestaw — z SKU (+ ceny per wariant, req Tomka: CAŁY snapshot aukcji)
   let variants: string[] = [];
+  const skuPrices: Array<{ v: string; price: number | null }> = [];
   const skuArr = skuInfo.ae_item_sku_info_d_t_o ?? skuInfo.ae_item_sku_info ?? skuInfo.sku ?? (Array.isArray(skuInfo) ? skuInfo : null);
   if (Array.isArray(skuArr)) {
     const set = new Set<string>();
     for (const s of skuArr) {
       const props2 = s.ae_sku_property_dtos?.ae_sku_property ?? s.sku_property ?? [];
       const list = Array.isArray(props2) ? props2 : [];
-      for (const sp of list) { const v = String(sp.sku_property_value ?? sp.property_value ?? '').trim(); if (v) set.add(v.slice(0, 60)); }
+      const names: string[] = [];
+      for (const sp of list) { const v = String(sp.sku_property_value ?? sp.property_value ?? '').trim(); if (v) { set.add(v.slice(0, 60)); names.push(v.slice(0, 60)); } }
+      const sp = parseFloat(String(s.offer_sale_price ?? s.sku_sale_price ?? s.sku_price ?? s.sale_price ?? '')) || null;
+      if (names.length && skuPrices.length < 24) skuPrices.push({ v: names.join(' / '), price: sp });
     }
     variants = [...set].slice(0, 24);
   }
 
+  // CENA (poziom oferty): target_* = w walucie żądania (PLN), fallback surowe pola
+  const num = (x: unknown) => { const n = parseFloat(String(x ?? '')); return Number.isFinite(n) ? n : null; };
+  const sale = num(base.target_sale_price ?? d.target_sale_price ?? base.sale_price ?? d.sale_price ?? base.app_sale_price)
+    ?? (skuPrices.length ? Math.min(...skuPrices.filter((s) => s.price != null).map((s) => s.price as number)) : null);
+  const original = num(base.target_original_price ?? d.target_original_price ?? base.original_price ?? d.original_price);
+  const currency = String(base.target_sale_price_currency ?? d.target_sale_price_currency ?? base.currency_code ?? d.currency ?? '').trim() || null;
+  const price = sale != null ? { sale, original, currency } : null;
+
+  // OPIS aukcji (HTML → tekst) — bywa w detail/mobile_detail/description
+  const rawDesc = String(base.detail ?? base.mobile_detail ?? d.detail ?? d.description ?? d.product_description ?? '');
+  const description = rawDesc
+    .replace(/<script[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim().slice(0, 2500);
+
   if (!title && !images.length) return null;
-  return { title, images, main_image: mainImage || images[0] || '', specs, variants, fetched_at: new Date().toISOString() };
+  return { title, images, main_image: mainImage || images[0] || '', specs, variants, sku_prices: skuPrices, price, description, fetched_at: new Date().toISOString() };
 }
 
 async function rapidGet(path: string, key: string): Promise<any | null> {
@@ -214,21 +240,18 @@ async function rapidGet(path: string, key: string): Promise<any | null> {
   } catch (e) { console.warn('[bud-ali-snapshot] err', String(e).slice(0, 80)); return null; }
 }
 
-// BONUS: prawdziwy detail (specy/warianty/pełna galeria) — jeśli API go ma.
+// Prawdziwy detail aukcji: /api/v3/product-info (WŁAŚCIWY endpoint aliexpress-true-api;
+// wcześniejsze /product i /product/details NIE istnieją — stąd 0 snapshotów 'detail').
+// Ceny w PLN (target_currency), opis po polsku gdy API tłumaczy (target_language).
 async function tryDetail(id: string, key: string): Promise<Record<string, unknown> | null> {
-  for (const p of [
-    `/api/v3/product?product_id=${id}&country=PL&target_currency=USD&target_language=PL&ship_to_country=PL`,
-    `/api/v3/product/details?product_id=${id}&country=PL&target_currency=USD&ship_to_country=PL`,
-  ]) {
-    const j = await rapidGet(p, key);
-    if (j) { const snap = parseSnapshot(j); if (snap) return snap; }
-  }
-  return null;
+  // UWAGA: target_currency=PLN / target_language=PL zwraca "No information" — API wspiera USD/EN
+  const j = await rapidGet(`/api/v3/product-info?product_id=${id}&target_currency=USD&target_language=EN&country=PL&ship_to_country=PL`, key);
+  return j ? parseSnapshot(j) : null;
 }
 
 // NIEZAWODNY enrichment: endpoint SEARCH (działa w produkcji) → dopasuj po product_id
 // → tytuł + galeria miniatur (product_small_image_urls). Gdy brak dopasowania, null.
-async function searchEnrich(id: string, queryStr: string, key: string): Promise<{ title: string; images: string[] } | null> {
+async function searchEnrich(id: string, queryStr: string, key: string): Promise<{ title: string; images: string[]; price: { sale: number; original: number | null; currency: string | null } | null } | null> {
   if (!queryStr) return null;
   const j = await rapidGet(`/api/v3/products?keywords=${encodeURIComponent(queryStr)}&page_size=30&target_currency=USD&country=PL&ship_to_country=PL&sort=LAST_VOLUME_DESC`, key);
   const arr = j?.data?.products?.product || j?.products?.product || j?.data?.products || j?.products || [];
@@ -247,7 +270,11 @@ async function searchEnrich(id: string, queryStr: string, key: string): Promise<
   else if (Array.isArray(small)) images = small.map((x: any) => String(x));
   if (m.product_main_image_url) images.unshift(String(m.product_main_image_url));
   images = [...new Set(images.map((u) => u.startsWith('//') ? 'https:' + u : u).filter(Boolean))].slice(0, 8);
-  return images.length ? { title, images } : null;
+  // cena z wyniku wyszukiwania (fallback, gdy detail padnie) — target_* w PLN
+  const sale = parseFloat(String(m.target_sale_price ?? m.sale_price ?? m.app_sale_price ?? '')) || null;
+  const original = parseFloat(String(m.target_original_price ?? m.original_price ?? '')) || null;
+  const price = sale != null ? { sale, original, currency: String(m.target_sale_price_currency ?? 'USD') } : null;
+  return images.length ? { title, images, price } : null;
 }
 
 Deno.serve(async (req) => {
@@ -352,7 +379,7 @@ Deno.serve(async (req) => {
     // Złóż snapshot best-effort: detail (bonus: specy/warianty) + search-enrich (galeria/tytuł)
     // + obraz/cover, które już mamy. Nigdy nie failujemy twardo — zawsze zapiszemy minimum.
     let detail: Record<string, unknown> | null = null;
-    let enr: { title: string; images: string[] } | null = null;
+    let enr: { title: string; images: string[]; price: { sale: number; original: number | null; currency: string | null } | null } | null = null;
     if (id && RAPID_KEY) {
       detail = await tryDetail(id, RAPID_KEY);
       if (!detail) enr = await searchEnrich(id, row.query || row.pl_name || '', RAPID_KEY);
@@ -374,6 +401,10 @@ Deno.serve(async (req) => {
       main_image: (detail?.main_image as string) || haveImg || images[0] || '',
       specs: (detail?.specs as unknown[]) || [],
       variants: (detail?.variants as unknown[]) || [],
+      // CAŁY snapshot aukcji (req Tomka 2026-07-03): ceny + warianty z cenami + opis
+      price: (detail?.price as Record<string, unknown>) || enr?.price || null,
+      sku_prices: (detail?.sku_prices as unknown[]) || [],
+      description: String(detail?.description || ''),
       product_id: id || null,
       source: detail ? 'detail' : (enr ? 'search' : 'have'),
       fetched_at: new Date().toISOString(),
