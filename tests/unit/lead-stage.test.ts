@@ -36,6 +36,33 @@ describe('reviveTargetFromSignals — etap z sygnałów (FLOOR new)', () => {
   })
 })
 
+describe('reviveTargetFromSignals — lejek /aplikacja (granularny, wybór Tomka 2026-07-01)', () => {
+  it('zielony werdykt → proposal (Zakwalifikowany) OD RAZU, bez wymogu wizyt', () => {
+    expect(reviveTargetFromSignals({ verdict: 'zielony' }, '/aplikacja')).toBe('proposal')
+  })
+  it('zielony + 1 wizyta → proposal (bez progu wizyt jak w /sklep)', () => {
+    expect(reviveTargetFromSignals({ verdict: 'zielony', panel_visits: 1 }, '/aplikacja')).toBe('proposal')
+  })
+  it('podgląd projektu bez zielonego → qualified (Oferta)', () => {
+    expect(reviveTargetFromSignals({ preview_brief: { nazwa: 'X' } }, '/aplikacja')).toBe('qualified')
+  })
+  it('werdykt żółty → contacted (Skontaktowany)', () => {
+    expect(reviveTargetFromSignals({ verdict: 'zolty' }, '/aplikacja')).toBe('contacted')
+  })
+  it('werdykt czerwony → contacted (Skontaktowany)', () => {
+    expect(reviveTargetFromSignals({ verdict: 'czerwony' }, '/aplikacja')).toBe('contacted')
+  })
+  it('płatność ma pierwszeństwo nad werdyktem (paid → negotiation)', () => {
+    expect(reviveTargetFromSignals({ paid_at: 'x', verdict: 'zielony' }, '/aplikacja')).toBe('negotiation')
+  })
+  it('full_paid → won (najwyższy priorytet)', () => {
+    expect(reviveTargetFromSignals({ full_paid_at: 'x', paid_at: 'x', verdict: 'zielony' }, '/aplikacja')).toBe('won')
+  })
+  it('brak sygnałów → new (FLOOR)', () => {
+    expect(reviveTargetFromSignals({}, '/aplikacja')).toBe('new')
+  })
+})
+
 // Minimalny mock chainable klienta supabase (leads.select/.eq/.maybeSingle + update().eq()).
 function makeMock(leadStatus: string | null, activities: unknown[] = []) {
   const updates: Record<string, unknown>[] = []

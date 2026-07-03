@@ -452,24 +452,29 @@ Deno.serve(async (req) => {
       for (const r of rvs || []) revealsMap[(r as { key: string }).key] = (r as { status: string }).status
 
       // ── Pipeline CRM: awans leada do NAJWYŻSZEGO osiągniętego etapu (monotonicznie) ──
-      // Parytet ze /sklep (bud-project): liczone z trwałego stanu sesji przy każdym sync 'get'
-      // (front polluje), więc status dogania rzeczywistość bez dotykania tpay-webhook.
-      // Kolejność: pełna płatność > rezerwacja > blisko rezerwacji > oferta(zielony) > obejrzany.
-      // Sygnały płatności wskrzeszają (allowRevive), pasywne nie.
+      // Lejek /aplikacja — wariant GRANULARNY (wybór Tomka 2026-07-01). Każdy realny
+      // sygnał rozmowy ma swoją kolumnę, żeby tablica pokazywała progres DO REZERWACJI:
+      //   Nowy(kontakt, w spar-chat) → Skontaktowany(werdykt żółty/czerwony — AI oceniło,
+      //   dopracowuje kierunek) → Oferta(podgląd projektu pokazany) → Zakwalifikowany
+      //   (ZIELONY werdykt = pomysł zwalidowany) → Rezerwacja(paid_at) → Wygrany(full_paid_at).
+      // Liczone z trwałego stanu sesji przy każdym sync 'get' (front polluje), więc status
+      // dogania rzeczywistość bez dotykania tpay-webhook. Sygnały płatności wskrzeszają
+      // (allowRevive), pasywne nie. UWAGA: to NIE parytet ze /sklep (tam zielony = Oferta,
+      // powrót po zielonym = Zakwalifikowany) — /aplikacja świadomie awansuje zielony wyżej.
       if (session.lead_id) {
-        const offerOnTable = isGreen                       // zielony werdykt = oferta + rezerwacja na stole
-        const nearReservation = offerOnTable && ((session.panel_visits as number | null) || 0) >= 2 // wrócił po zielonym
         const lead_id = session.lead_id as string
+        const hasPreview = !!session.preview_brief         // AI pokazało podgląd narzędzia (podgląd projektu)
+        const otherVerdict = session.verdict === 'zolty' || session.verdict === 'czerwony' // AI oceniło, nie-zielony
         if (session.full_paid_at) {
-          await bumpLeadStage(supabase, lead_id, 'won', { allowRevive: true, channel: '/aplikacja' })
+          await bumpLeadStage(supabase, lead_id, 'won', { allowRevive: true, channel: '/aplikacja' })          // WYGRANY
         } else if (session.paid_at) {
-          await bumpLeadStage(supabase, lead_id, 'negotiation', { allowRevive: true, channel: '/aplikacja' }) // REZERWACJA
-        } else if (nearReservation) {
-          await bumpLeadStage(supabase, lead_id, 'proposal', { channel: '/aplikacja' })   // ZAKWALIFIKOWANY
-        } else if (offerOnTable) {
-          await bumpLeadStage(supabase, lead_id, 'qualified', { channel: '/aplikacja' })   // OFERTA
-        } else if (session.seen_landing_at) {
-          await bumpLeadStage(supabase, lead_id, 'contacted', { channel: '/aplikacja' })   // SKONTAKTOWANY
+          await bumpLeadStage(supabase, lead_id, 'negotiation', { allowRevive: true, channel: '/aplikacja' })  // REZERWACJA
+        } else if (isGreen) {
+          await bumpLeadStage(supabase, lead_id, 'proposal', { channel: '/aplikacja' })    // ZAKWALIFIKOWANY (zielony werdykt)
+        } else if (hasPreview) {
+          await bumpLeadStage(supabase, lead_id, 'qualified', { channel: '/aplikacja' })   // OFERTA (podgląd projektu)
+        } else if (otherVerdict) {
+          await bumpLeadStage(supabase, lead_id, 'contacted', { channel: '/aplikacja' })   // SKONTAKTOWANY (werdykt żółty/czerwony)
         }
       }
     }

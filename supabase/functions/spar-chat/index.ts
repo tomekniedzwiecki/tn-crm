@@ -1377,6 +1377,7 @@ Deno.serve(async (req) => {
             verdict: existingSession.verdict,
             panel_visits: (existingSession as Record<string, unknown>).panel_visits,
             seen_landing_at: (existingSession as Record<string, unknown>).seen_landing_at,
+            preview_brief: (existingSession as Record<string, unknown>).preview_brief, // podgląd projektu = etap „Oferta"
           }, '/aplikacja')
           if (!r.revived) return
           await supabase.from('spar_sessions')

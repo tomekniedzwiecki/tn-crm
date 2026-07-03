@@ -73,17 +73,30 @@ interface ReviveSignals {
   verdict?: unknown;
   panel_visits?: unknown;
   seen_landing_at?: unknown;
+  preview_brief?: unknown;   // /aplikacja: podgląd projektu pokazany = etap „Oferta"
 }
 
 // Etap docelowy przy wskrzeszeniu — liczony z sygnałów sesji, z FLOOREM 'new'.
 // Lead w lost/abandoned MA lead_id (przeszedł bramkę kontaktu), więc jeśli wcześniej
 // dostał zielony werdykt / opłacił rezerwację, revive sztywno do 'new' cofnąłby realnie
-// zaawansowaną sprzedaż. Ta sama kaskada co spar-project/bud-project (get-sync).
-export function reviveTargetFromSignals(s: ReviveSignals): string {
+// zaawansowaną sprzedaż. Kaskada MUSI odpowiadać get-sync danego lejka:
+//  • /aplikacja (spar-project): zielony → proposal(Zakwalifikowany), podgląd → qualified(Oferta),
+//    inny werdykt → contacted(Skontaktowany). Wariant granularny (wybór Tomka 2026-07-01).
+//  • /sklep (bud-project, domyślnie): zielony+powrót(≥2 wizyty) → proposal, zielony → qualified,
+//    obejrzana strona → contacted.
+export function reviveTargetFromSignals(s: ReviveSignals, channel?: string): string {
   const visits = (s.panel_visits as number | null) || 0;
   const green = (s.verdict as string | null) === 'zielony';
   if (s.full_paid_at) return 'won';
   if (s.paid_at) return 'negotiation';
+  if ((channel || '').includes('aplikacja')) {
+    // /aplikacja: zielony werdykt awansuje od razu do „Zakwalifikowany".
+    if (green) return 'proposal';                                     // ZAKWALIFIKOWANY
+    if (s.preview_brief) return 'qualified';                          // OFERTA (podgląd projektu)
+    if (s.verdict === 'zolty' || s.verdict === 'czerwony' || s.seen_landing_at) return 'contacted'; // SKONTAKTOWANY
+    return 'new';
+  }
+  // /sklep (domyślnie)
   if (green && visits >= 2) return 'proposal';
   if (green) return 'qualified';
   if (s.seen_landing_at) return 'contacted';
@@ -115,7 +128,7 @@ export async function reviveLeadOnReengage(
       .from('leads').select('status').eq('id', leadId).maybeSingle();
     const cur = (lead?.status as string | null) || null;
     if (cur !== 'lost' && cur !== 'abandoned') return { revived: false }; // tylko terminal się wskrzesza
-    const target = reviveTargetFromSignals(signals);
+    const target = reviveTargetFromSignals(signals, channel);
     await bumpLeadStage(supabase, leadId, target, { allowRevive: true, channel });
     return { revived: true, from: cur, to: target };
   } catch (e) {
