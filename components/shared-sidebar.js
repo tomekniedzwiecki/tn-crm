@@ -15,7 +15,7 @@ const APPS = [
     { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
     { id: 'aplikacje', name: 'TN Aplikacje', icon: 'ph-rocket-launch', color: 'bg-blue-500 text-white', defaultPage: 'index' },
     { id: 'sklep', name: 'TN Sklep', icon: 'ph-storefront', color: 'bg-blue-500 text-white', defaultPage: 'index' },
-    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-rose-500 text-white', defaultPage: 'index' }
+    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-[#0070f3] text-white', defaultPage: 'index' }
 ];
 
 const APP_BASES = {
@@ -35,7 +35,7 @@ const APP_AVATAR_COLORS = {
     biznes: 'from-amber-500 to-amber-600',
     aplikacje: 'from-blue-600 to-blue-700',
     sklep: 'from-blue-600 to-blue-700',
-    sklepy: 'from-rose-600 to-rose-700'
+    sklepy: 'from-[#0070f3] to-[#0761d1]'
 };
 
 // ============================================
