@@ -120,17 +120,9 @@
                     <div id="matrix-empty" class="hidden py-10 text-center text-zinc-500 text-xs">Portfel pusty — dodaj 5–10 produktów do testów.</div>
                 </div>
 
-                <!-- Płatności (stała sekcja — etap „Start" usunięty decyzją Tomka 2026-07-03) -->
-                <div id="payments-box" class="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-credit-card text-violet-400"></i> Harmonogram płatności</h3>
-                        <button onclick="addPayment()" class="text-xs text-violet-300 hover:text-violet-200 flex items-center gap-1"><i class="ph ph-plus"></i> Dodaj pozycję</button>
-                    </div>
-                    <div id="payments-rows" class="space-y-2"></div>
-                    <div id="payments-sum" class="text-zinc-400 text-xs mt-3 font-mono"></div>
-                </div>
-
                 <!-- Notatki + aktywność -->
+                <!-- (Harmonogram płatności usunięty z UI 2026-07-03 na życzenie Tomka;
+                     tabela wf2_payments i wpis rezerwacji z webhooka zostają na później) -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
                     <div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-5">
                         <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-note-pencil text-violet-400"></i> Notatki projektu</h3>
@@ -148,7 +140,7 @@
     </main>
 
     <!-- Modal: produkt -->
-    <div id="prod-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onclick="if(event.target===this)closeProductModal()">
+    <div id="prod-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onclick="if(event.target===this)closeProductModal()">
         <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-2xl p-6 my-8">
             <h3 id="pm-title" class="text-white text-lg font-semibold mb-4">Produkt</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -184,19 +176,22 @@
         </div>
     </div>
 
-    <!-- Modal: krok (notatka/szczegóły) -->
-    <div id="step-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeStepModal()">
-        <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-md p-6">
-            <h3 id="sm-title" class="text-white text-lg font-semibold mb-1">Krok</h3>
-            <div id="sm-sub" class="text-zinc-500 text-xs mb-4"></div>
-            <label class="text-xs text-zinc-500 block mb-1">Notatka / link</label>
-            <textarea id="sm-note" rows="4" class="fld resize-y"></textarea>
-            <div class="flex items-center justify-between mt-4">
-                <button id="sm-skip" onclick="toggleSkipStep()" class="px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300">Pomiń krok</button>
-                <div class="flex gap-2">
-                    <button onclick="closeStepModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Zamknij</button>
-                    <button onclick="saveStepNote()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+    <!-- Warsztat kroku (drawer) — konkretna robota danego kroku -->
+    <div id="step-drawer-wrap" class="hidden fixed inset-0 z-50" onclick="if(event.target===this.querySelector('.sd-overlay')||event.target===this)closeStep()">
+        <div class="sd-overlay absolute inset-0 bg-black/60"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-full max-w-[540px] bg-zinc-950 border-l border-white/10 flex flex-col">
+            <div class="flex items-start justify-between px-6 pt-5 pb-4 border-b border-white/5">
+                <div class="min-w-0">
+                    <div id="sd-product" class="text-[11px] text-violet-300 mb-1 hidden"></div>
+                    <h3 id="sd-title" class="text-white text-lg font-semibold flex items-center gap-2"></h3>
+                    <div id="sd-sub" class="text-zinc-500 text-xs mt-1.5"></div>
                 </div>
+                <button onclick="closeStep()" class="p-2 text-zinc-500 hover:text-white flex-shrink-0"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5" id="sd-body"></div>
+            <div class="border-t border-white/5 px-6 py-4 flex items-center justify-between gap-2">
+                <button id="sd-skip" onclick="sdToggleSkip()" class="px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0">Pomiń krok</button>
+                <div class="flex gap-2" id="sd-statusbtns"></div>
             </div>
         </div>
     </div>
@@ -237,11 +232,11 @@
         let stepDefs = [];
         let steps = [];
         let products = [];
-        let payments = [];
         let sales = [];
+        let adStats = [];
         let activeStage = 1;
         let editingProductId = null;
-        let stepModalCtx = null; // {stepId}
+        let drawerCtx = null; // {key, productId} — otwarty warsztat kroku
 
         const PROJECT_STATUSES = ['start','budowa','sklep','kampanie','testy','stery','monthly','zamkniety'];
         const STATUS_LABELS = { start:'Start', budowa:'Budowa', sklep:'Sklep', kampanie:'Kampanie', testy:'Testy', stery:'Stery', monthly:'Monthly', zamkniety:'Zamknięty' };
@@ -301,17 +296,17 @@
         async function loadAll() {
             // dosiej brakujące instancje kroków (nowe defs / nowe produkty)
             await supabaseClient.rpc('wf2_ensure_steps', { p_project: projectId });
-            const [projQ, defsQ, stepsQ, prodQ, payQ, actQ, salesQ] = await Promise.all([
+            const [projQ, defsQ, stepsQ, prodQ, actQ, salesQ, adsQ] = await Promise.all([
                 supabaseClient.from('wf2_projects').select('*').eq('id', projectId).single(),
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wf2_steps').select('*').eq('project_id', projectId).range(0, 1999),
                 supabaseClient.from('wf2_products').select('*').eq('project_id', projectId).order('sort').order('created_at'),
-                supabaseClient.from('wf2_payments').select('*').eq('project_id', projectId).order('sort').order('created_at'),
                 supabaseClient.from('wf2_activities').select('*').eq('project_id', projectId).order('created_at',{ascending:false}).limit(20),
-                supabaseClient.from('wf2_sales').select('source, orders').eq('project_id', projectId).range(0, 4999),
+                supabaseClient.from('wf2_sales').select('product_id, source, orders, revenue').eq('project_id', projectId).range(0, 4999),
+                supabaseClient.from('wf2_ad_stats').select('product_id, spend, purchases, purchase_value').eq('project_id', projectId).range(0, 9999),
             ]);
             if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='index.html'; return; }
-            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; payments = payQ.data||[]; sales = salesQ.data||[];
+            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; sales = salesQ.data||[]; adStats = adsQ.data||[];
             renderHeader(); renderPills(); renderStage(); renderActivity(actQ.data||[]);
         }
 
@@ -377,7 +372,7 @@
             document.getElementById('steps-grid').innerHTML = projDefs.map(d => {
                 const st = stepFor(d.key) || { status:'pending', data:{} };
                 const note = st.data && st.data.note ? st.data.note : '';
-                return `<div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3">
+                return `<div class="bg-zinc-900/40 border border-white/5 rounded-2xl p-4 flex flex-col gap-3 cursor-pointer hover:border-violet-500/30 transition-colors" onclick="openStep('${d.key}', null)">
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-2.5 min-w-0">
                             <div class="w-9 h-9 rounded-xl bg-zinc-800/80 flex items-center justify-center flex-shrink-0"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i></div>
@@ -386,11 +381,11 @@
                                 <span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>
                             </div>
                         </div>
-                        <button class="text-zinc-600 hover:text-zinc-300 p-1" title="Notatka" onclick="openStepModal('${d.key}', null)"><i class="ph ph-note-pencil"></i></button>
+                        <i class="ph ph-caret-right text-zinc-700 mt-1"></i>
                     </div>
                     ${note ? `<div class="text-zinc-400 text-[11.5px] bg-zinc-900/70 rounded-lg px-2.5 py-1.5 line-clamp-2">${escapeHtml(note)}</div>` : ''}
                     <div class="flex items-center justify-between mt-auto">
-                        <button class="st-btn st-${st.status}" onclick="cycleStep('${d.key}', null)">
+                        <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" title="Klik = przełącz status">
                             <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
                             ${STEP_LABELS[st.status]}
                         </button>
@@ -398,8 +393,6 @@
                     </div>
                 </div>`;
             }).join('');
-
-            renderPayments();
 
             // macierz produktów, jeśli etap ma kroki scope=product (etap 1 Portfel — zawsze)
             const mxBox = document.getElementById('matrix-box');
@@ -424,7 +417,7 @@
                 const cells = prodDefs.map(d => {
                     const st = stepFor(d.key, p.id) || { status:'pending' };
                     const icon = st.status==='done' ? 'ph-check' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='skipped' ? 'ph-minus' : 'ph-circle';
-                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}" title="${escapeHtml(d.label)}: ${STEP_LABELS[st.status]}" onclick="cycleStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
+                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}" title="${escapeHtml(d.label)}: ${STEP_LABELS[st.status]} — klik otwiera warsztat" onclick="openStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
                 }).join('');
                 const cover = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0"><i class="ph ph-package text-zinc-600"></i></div>';
                 return `<tr class="border-b border-white/5 hover:bg-white/[.02]">
@@ -437,24 +430,6 @@
                     <td class="px-3 py-2.5 text-right"><button class="text-zinc-600 hover:text-white p-1" onclick="openProductModal('${p.id}')"><i class="ph ph-pencil-simple"></i></button></td>
                 </tr>`;
             }).join('');
-        }
-
-        function renderPayments() {
-            const rows = document.getElementById('payments-rows');
-            rows.innerHTML = payments.map(pay => `
-                <div class="flex items-center gap-2 flex-wrap">
-                    <input class="fld" style="max-width:180px" value="${escapeHtml(pay.label)}" placeholder="np. Rata 2/4" onchange="updPayment('${pay.id}','label',this.value)">
-                    <input class="fld" style="max-width:110px" type="number" step="0.01" value="${pay.amount}" onchange="updPayment('${pay.id}','amount',parseFloat(this.value)||0)">
-                    <input class="fld" style="max-width:140px" type="date" value="${pay.due_date||''}" onchange="updPayment('${pay.id}','due_date',this.value||null)">
-                    <label class="flex items-center gap-1.5 text-xs ${pay.paid_at?'text-emerald-400':'text-zinc-500'} cursor-pointer">
-                        <input type="checkbox" ${pay.paid_at?'checked':''} onchange="updPayment('${pay.id}','paid_at',this.checked?new Date().toISOString():null)" class="accent-emerald-500">
-                        opłacone${pay.paid_at?' '+new Date(pay.paid_at).toLocaleDateString('pl-PL'):''}
-                    </label>
-                    <button class="text-zinc-600 hover:text-rose-400 p-1 ml-auto" onclick="delPayment('${pay.id}')"><i class="ph ph-trash"></i></button>
-                </div>`).join('');
-            const total = payments.reduce((a,p)=>a+Number(p.amount||0),0);
-            const paid = payments.filter(p=>p.paid_at).reduce((a,p)=>a+Number(p.amount||0),0);
-            document.getElementById('payments-sum').textContent = payments.length ? `Opłacone ${moneyPL(paid)} z ${moneyPL(total)}` : 'Brak pozycji — dodaj rezerwację, płatność główną albo raty.';
         }
 
         function renderActivity(items) {
@@ -481,33 +456,283 @@
             renderPills(); renderStage(); renderHeader();
         }
 
-        function openStepModal(key, productId) {
-            const st = stepFor(key, productId);
-            const d = stepDefs.find(x=>x.key===key);
-            if (!st || !d) return;
-            stepModalCtx = { stepId: st.id, key, productId };
-            document.getElementById('sm-title').textContent = d.label;
-            document.getElementById('sm-sub').textContent = (productId ? (products.find(p=>p.id===productId)?.name||'')+' · ' : '') + OWNER_LABEL[d.owner] + ' · ' + STEP_LABELS[st.status];
-            document.getElementById('sm-note').value = (st.data && st.data.note) || '';
-            document.getElementById('sm-skip').textContent = st.status==='skipped' ? 'Przywróć krok' : 'Pomiń krok';
-            document.getElementById('step-modal').classList.remove('hidden');
+        // ============ WARSZTAT KROKU ============
+        // Konfiguracja „co konkretnie robimy w tym kroku": opis, pola (col = zapis do kolumny
+        // projektu/produktu, inaczej do wf2_steps.data.fields), checklista roboty, prompt dla
+        // Claude jako punkt wyjścia. Krok bez wpisu dostaje warsztat generyczny.
+        const WS = {
+            wybor:        { desc:'Wybór produktu do portfela i ustawienie marży testowej — celujemy w 5–10 zł zysku na sztuce, żeby zobaczyć realny potencjał sprzedaży.', productBtn:true,
+                            check:['Produkt zweryfikowany na radarze (/trendy)','Dostawca i cena zakupu potwierdzone','Kalkulacja marży ustawiona (tryb TEST)'],
+                            links:[{label:'Radar produktów (/trendy)', href:'/trendy'}] },
+            branding:     { desc:'Marka dla produktu: nazwa z wolną domeną, paleta, typografia, logo.',
+                            fields:[{k:'nazwa',l:'Nazwa marki'},{k:'domena',l:'Domena (.pl)'},{k:'logo_url',l:'Logo (URL)'},{k:'kolory',l:'Paleta (hex, po przecinku)'}],
+                            check:['Propozycje nazw z wolnymi domenami','Decyzja: nazwa wybrana','Logo wygenerowane','Paleta + typografia spisane'], prompt:'branding' },
+            design:       { desc:'Makiety strony produktowej w finalnej jakości (realne referencje produktu — curated_image z /trendy).',
+                            fields:[{k:'makiety_url',l:'Link do makiet / podglądu'}],
+                            check:['Makiety wygenerowane','Kierunek designu wybrany','Referencje = realny wygląd produktu'], prompt:'design' },
+            html_draft:   { desc:'Draft HTML strony produktowej z generatora — surowiec do dopracowania.',
+                            fields:[{k:'preview_url',l:'URL podglądu draftu'}],
+                            check:['Draft wygenerowany','Podgląd sprawdzony (desktop + mobile)'] },
+            html_final:   { desc:'Dopracowanie HTML w Claude Code wg procedury landingowej i przygotowanie do wgrania w TakeDrop.',
+                            fields:[{k:'repo_path',l:'Ścieżka w repo', col:'product.repo_path'},{k:'preview_url',l:'URL podglądu finalnego'}],
+                            check:['Review treści (grep-checki)','Design polish + offer box','Verify 3 viewporty','Mobile 375px','COD + zwrot 14 dni na stronie'], prompt:'html' },
+            td_konto:     { fields:[{k:'account_email',l:'E-mail konta TD'}], check:['Konto założone przez klienta','Dostęp przekazany Tomkowi'] },
+            td_konfiguracja:{ check:['Metody płatności skonfigurowane','Cennik wysyłek','Maile transakcyjne','Dane firmy w panelu TD'] },
+            td_dane_prawne:{ check:['Regulamin','Polityka prywatności','Klauzule RODO'] },
+            td_bramka:    { check:['Bramka płatności aktywna','Wypłaty skonfigurowane (konto klienta)'] },
+            td_galeria:   { desc:'Strona główna sklepu — galeria spinająca wszystkie strony produktowe klienta.',
+                            fields:[{k:'galeria_url',l:'URL strony głównej (galerii)', col:'project.td_shop_url'}],
+                            check:['Struktura galerii zaprojektowana','Linki do wszystkich stron produktowych','Wgrane do TakeDrop'] },
+            td_strona_prod:{ desc:'Wgranie finalnego HTML produktu do TakeDrop (przegranie z repo do CMS).',
+                            fields:[{k:'td_page_url',l:'URL strony w TD', col:'product.td_page_url'}],
+                            check:['HTML przegrany do TD','Zdjęcia produktu wgrane','Cena i stany ustawione','Podpięta pod galerię'] },
+            td_domena:    { fields:[{k:'domain',l:'Domena', col:'project.domain'}], check:['Domena kupiona','DNS ustawione','SSL aktywny'] },
+            td_test:      { check:['Zamówienie testowe złożone','Płatność przeszła','Mail potwierdzenia dotarł','Test COD / zwrotu'] },
+            ads_konto:    { fields:[{k:'act',l:'ID konta reklamowego (act_…)', col:'project.meta_ad_account_id'}],
+                            check:['Konto reklamowe klienta założone','Partner access do BM Tomka','Metoda płatności dodana'] },
+            ads_budzet:   { desc:'Najpierw kasa: klient zasila konto reklamowe, dopiero potem pixel i kampanie.',
+                            fields:[{k:'kwota',l:'Zadeklarowany budżet (zł/mies.)'}],
+                            check:['Budżet zadeklarowany','Wpłata / karta aktywna na koncie'] },
+            ads_pixel:    { fields:[{k:'pixel',l:'Pixel ID', col:'project.pixel_id'}],
+                            check:['Pixel utworzony','Kod na stronach TD','Eventy testowe widoczne w Events Managerze'] },
+            ads_grafiki:  { desc:'Content reklamowy do testów produktu — po stronie Tomka.',
+                            fields:[{k:'grafiki_url',l:'Link do grafik (folder)'}],
+                            check:['Koncepty copy + wizual gotowe','Formaty 1:1 i 9:16'], prompt:'ads' },
+            ads_kampanie: { desc:'Kampania Meta 1:1 dla produktu. Konwencja nazwy: [WF2] klient — produkt. Start zawsze PAUSED.',
+                            fields:[{k:'campaign_id',l:'Meta campaign ID', col:'product.campaign_id'},{k:'daily',l:'Budżet dzienny (zł)'}],
+                            check:['Kampania utworzona (PAUSED)','Kreacje podpięte','Start zatwierdzony przez Tomka'], prompt:'kampania' },
+            test_wynik:   { desc:'Wynik testu produktu: marża × sztuki − wydatki na reklamy. Decyzja na liczbach, nie przeczuciu.', stats:true, decision:true },
+            skalowanie:   { desc:'Skalowanie winnera: wyższa marża (tryb SKALA), większy budżet, budowa marki.',
+                            fields:[{k:'plan',l:'Plan skalowania',ta:true}], productBtn:true,
+                            check:['Cena podniesiona (tryb SKALA)','Budżet kampanii zwiększony','Plan marki spisany'] },
+            rotacja:      { desc:'Równolegle do skalowania — kolejne produkty wchodzą do testów.',
+                            check:['Kandydaci wybrani z /trendy','Dodani do portfela (przycisk Produkt w macierzy)'] },
+            sprzedaz_sync:{ desc:'Synchronizacja sprzedaży: Meta pixel na bieżąco + import pliku z TakeDrop (automat w F3).',
+                            check:['Ostatni import z TakeDrop < 7 dni'] },
+            wdrazanie:    { desc:'Wdrażanie klienta w system: CO robimy, JAK i DLACZEGO — przygotowanie do przejęcia sterów.',
+                            fields:[{k:'log',l:'Log sesji wdrożeniowych',ta:true}] },
+            przejecie_kampanii:{ check:['Klient zna panel Ads i metryki','Pierwsza samodzielna optymalizacja za nim','Dostępy przekazane'] },
+            przejecie_operacji:{ check:['Obsługa zamówień przejęta','Obsługa zapytań klientów przejęta'] },
+            stery:        { desc:'~1000 zamówień — klient przejmuje system, Tomek przechodzi na doradztwo strategiczne.',
+                            check:['Cel zamówień osiągnięty','Checklisty przejęcia domknięte','Rytm przeglądów miesięcznych umówiony'] },
+            monthly:      { fields:[{k:'log',l:'Notatki przeglądów miesięcznych',ta:true}] },
+        };
+
+        function mdLite(md) {
+            let h = escapeHtml(md).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+            const lines = h.split(/\r?\n/); let out = '', inUl = false;
+            for (const ln of lines) {
+                if (/^\s*-\s+/.test(ln)) { if (!inUl) { out += '<ul class="list-disc pl-4 space-y-1">'; inUl = true; } out += '<li>' + ln.replace(/^\s*-\s+/, '') + '</li>'; }
+                else { if (inUl) { out += '</ul>'; inUl = false; } if (ln.trim()) out += '<p>' + ln + '</p>'; }
+            }
+            if (inUl) out += '</ul>';
+            return out;
         }
-        function closeStepModal() { document.getElementById('step-modal').classList.add('hidden'); stepModalCtx = null; }
-        async function saveStepNote() {
-            if (!stepModalCtx) return;
-            const st = steps.find(s=>s.id===stepModalCtx.stepId);
-            const data = Object.assign({}, st.data || {}, { note: document.getElementById('sm-note').value });
+        function drawerStep() { return drawerCtx ? stepFor(drawerCtx.key, drawerCtx.productId) : null; }
+        function drawerProduct() { return drawerCtx && drawerCtx.productId ? products.find(p => p.id === drawerCtx.productId) : null; }
+
+        function openStep(key, productId) {
+            drawerCtx = { key, productId: productId || null };
+            renderDrawer();
+            document.getElementById('step-drawer-wrap').classList.remove('hidden');
+        }
+        function closeStep() { document.getElementById('step-drawer-wrap').classList.add('hidden'); drawerCtx = null; }
+
+        function mergedChecklist(ws, st) {
+            const stored = (st.data && Array.isArray(st.data.checklist)) ? st.data.checklist.slice() : [];
+            const tpl = (ws && ws.check) || [];
+            tpl.forEach(t => { if (!stored.some(x => x.t === t)) stored.push({ t, done: false }); });
+            stored.sort((a, b) => { const ia = tpl.indexOf(a.t), ib = tpl.indexOf(b.t); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+            return stored;
+        }
+        function productStats(pid) {
+            const spend = adStats.filter(a => a.product_id === pid).reduce((a, s) => a + Number(s.spend || 0), 0);
+            const sl = sales.filter(s => s.product_id === pid);
+            const td = sl.filter(s => s.source === 'takedrop');
+            const src = td.length ? td : sl.filter(s => s.source === 'meta');
+            const orders = src.reduce((a, s) => a + (s.orders || 0), 0);
+            const revenue = src.reduce((a, s) => a + Number(s.revenue || 0), 0);
+            const p = products.find(x => x.id === pid);
+            const profit = (p && p.unit_profit != null ? Number(p.unit_profit) : 0) * orders - spend;
+            return { spend, orders, revenue, profit };
+        }
+
+        function renderDrawer() {
+            const st = drawerStep(); const d = stepDefs.find(x => x.key === drawerCtx.key);
+            if (!st || !d) { closeStep(); return; }
+            const p = drawerProduct();
+            const ws = WS[d.key] || {};
+            document.getElementById('sd-title').innerHTML = `<i class="ph ${escapeHtml(d.icon)} text-violet-400"></i> ${escapeHtml(d.label)}`;
+            document.getElementById('sd-sub').innerHTML = `<span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span> <span class="ml-1 text-zinc-600">Etap ${d.stage} · ${escapeHtml(d.stage_label)}</span>`;
+            const prodEl = document.getElementById('sd-product');
+            prodEl.classList.toggle('hidden', !p);
+            if (p) prodEl.innerHTML = '<i class="ph ph-package"></i> ' + escapeHtml(p.name);
+
+            let h = '';
+            if (ws.desc) h += `<p class="text-zinc-400 text-[12.5px] leading-relaxed">${escapeHtml(ws.desc)}</p>`;
+            if (d.owner === 'client' && d.instructions_md) {
+                h += `<div class="bg-amber-500/[.07] border border-amber-500/20 rounded-xl p-4 text-[12.5px] text-amber-100/90 space-y-1.5">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-amber-400/80">Instrukcja dla klienta (trafi do portalu — F2)</div>
+                    ${mdLite(d.instructions_md)}</div>`;
+            }
+            const fields = ws.fields || [];
+            if (fields.length) {
+                h += '<div class="space-y-3">' + fields.map((f, i) => f.ta
+                    ? `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><textarea rows="4" class="fld resize-y" onchange="sdSaveField(${i}, this.value)">${escapeHtml(fieldGet(f))}</textarea></div>`
+                    : `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><input class="fld" value="${escapeHtml(fieldGet(f))}" onchange="sdSaveField(${i}, this.value)"></div>`
+                ).join('') + '</div>';
+            }
+            if (ws.productBtn && p) {
+                h += `<button onclick="openProductModal('${p.id}')" class="w-full flex items-center justify-between bg-zinc-900/70 border border-white/10 rounded-xl px-4 py-3 hover:border-violet-500/40 transition-colors">
+                    <span class="text-[12.5px] text-zinc-300 flex items-center gap-2"><i class="ph ph-calculator text-violet-400"></i> Edytuj produkt / kalkulator marży</span>
+                    <span class="text-zinc-500 text-xs font-mono">${p.price !== null && p.unit_profit !== null ? moneyPL(p.unit_profit) + ' /szt.' : 'brak ceny'}</span></button>`;
+            }
+            if (ws.stats && p) {
+                const s = productStats(p.id);
+                const profCls = s.profit > 0 ? 'text-emerald-400' : s.profit < 0 ? 'text-rose-400' : 'text-zinc-300';
+                const cards = [['Wydatki na reklamy', moneyPL(s.spend), 'text-white'], ['Zamówienia', s.orders.toLocaleString('pl-PL'), 'text-white'], ['Przychód', moneyPL(s.revenue), 'text-white'], ['Wynik testu', moneyPL(s.profit), profCls]];
+                h += '<div class="grid grid-cols-2 gap-2">' + cards.map(c =>
+                    `<div class="bg-zinc-900/70 border border-white/5 rounded-xl px-3.5 py-3"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${c[0]}</div><div class="text-sm font-semibold font-mono ${c[2]}">${c[1]}</div></div>`).join('') + '</div>'
+                  + '<div class="text-[10.5px] text-zinc-600">Wynik = zysk/szt. × zamówienia − wydatki. Zamówienia: import TakeDrop, a gdy brak — Meta pixel.</div>';
+            }
+            if (ws.decision && p) {
+                h += `<div><div class="text-xs text-zinc-500 mb-2">Decyzja (ustawia status produktu):</div><div class="flex gap-2">
+                    <button onclick="sdDecision('winner')" class="flex-1 st-btn st-done justify-center">WINNER — skaluj</button>
+                    <button onclick="sdDecision('test')" class="flex-1 st-btn st-in_progress justify-center">Testuj dalej</button>
+                    <button onclick="sdDecision('kill')" class="flex-1 st-btn st-blocked justify-center">KILL</button>
+                </div></div>`;
+            }
+            const check = mergedChecklist(ws, st);
+            h += `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Do zrobienia w tym kroku</div><div class="space-y-1.5">`
+                + check.map((c, i) => `<label class="flex items-start gap-2.5 text-[12.5px] ${c.done ? 'text-zinc-500 line-through' : 'text-zinc-300'} cursor-pointer"><input type="checkbox" ${c.done ? 'checked' : ''} onchange="sdToggleCheck(${i})" class="mt-0.5 accent-violet-500 flex-shrink-0">${escapeHtml(c.t)}</label>`).join('')
+                + `</div><div class="flex gap-2 mt-2.5"><input id="sd-newcheck" class="fld" style="padding:6px 10px;font-size:12px" placeholder="Dodaj punkt…" onkeydown="if(event.key==='Enter')sdAddCheck()"><button onclick="sdAddCheck()" class="text-xs text-violet-300 hover:text-violet-200 flex-shrink-0">Dodaj</button></div></div>`;
+            if (ws.prompt) {
+                h += `<button onclick="sdCopyPrompt('${ws.prompt}')" class="w-full inline-flex items-center justify-center gap-2 bg-violet-500/15 hover:bg-violet-500/25 text-violet-300 border border-violet-500/30 rounded-lg px-4 py-2.5 text-xs font-medium transition-colors"><i class="ph ph-sparkle"></i> Kopiuj prompt dla Claude — punkt wyjścia do roboty</button>`;
+            }
+            (ws.links || []).forEach(l => {
+                h += `<a href="${escapeHtml(l.href)}" target="_blank" class="block text-xs text-violet-400 hover:text-violet-300"><i class="ph ph-arrow-square-out"></i> ${escapeHtml(l.label)}</a>`;
+            });
+            h += `<div><label class="text-xs text-zinc-500 block mb-1">Notatka / linki robocze</label><textarea id="sd-note" rows="3" class="fld resize-y">${escapeHtml((st.data && st.data.note) || '')}</textarea><button onclick="sdSaveNote()" class="mt-1.5 text-xs text-violet-300 hover:text-violet-200">Zapisz notatkę</button></div>`;
+            document.getElementById('sd-body').innerHTML = h;
+
+            document.getElementById('sd-skip').textContent = st.status === 'skipped' ? 'Przywróć krok' : 'Pomiń krok';
+            document.getElementById('sd-statusbtns').innerHTML = ['pending', 'in_progress', 'done'].map(s =>
+                `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
+        }
+
+        function fieldGet(f) {
+            if (f.col) {
+                const dot = f.col.indexOf('.'); const t = f.col.slice(0, dot), c = f.col.slice(dot + 1);
+                if (t === 'project') return project[c] || '';
+                const p = drawerProduct(); return (p && p[c]) || '';
+            }
+            const st = drawerStep();
+            return (st.data && st.data.fields && st.data.fields[f.k]) || '';
+        }
+        async function sdSaveField(i, v) {
+            const ws = WS[drawerCtx.key] || {}; const f = (ws.fields || [])[i]; if (!f) return;
+            v = String(v).trim();
+            if (f.col) {
+                const dot = f.col.indexOf('.'); const t = f.col.slice(0, dot), c = f.col.slice(dot + 1);
+                if (t === 'project') {
+                    const { error } = await supabaseClient.from('wf2_projects').update({ [c]: v || null }).eq('id', projectId);
+                    if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                    project[c] = v || null; renderHeader();
+                } else {
+                    const p = drawerProduct(); if (!p) return;
+                    const { error } = await supabaseClient.from('wf2_products').update({ [c]: v || null }).eq('id', p.id);
+                    if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                    p[c] = v || null; renderStage();
+                }
+            } else {
+                const st = drawerStep();
+                const data = Object.assign({}, st.data || {});
+                data.fields = Object.assign({}, data.fields || {}); data.fields[f.k] = v;
+                const { error } = await supabaseClient.from('wf2_steps').update({ data }).eq('id', st.id);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                st.data = data;
+            }
+            showToast('Zapisano', 'success');
+        }
+        async function sdSaveChecklist(list) {
+            const st = drawerStep();
+            const data = Object.assign({}, st.data || {}, { checklist: list });
             const { error } = await supabaseClient.from('wf2_steps').update({ data }).eq('id', st.id);
-            if (error) { showToast('Błąd zapisu: '+error.message,'error'); return; }
-            st.data = data; closeStepModal(); renderStage(); showToast('Zapisano','success');
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return false; }
+            st.data = data; return true;
         }
-        async function toggleSkipStep() {
-            if (!stepModalCtx) return;
-            const st = steps.find(s=>s.id===stepModalCtx.stepId);
-            const next = st.status==='skipped' ? 'pending' : 'skipped';
+        async function sdToggleCheck(i) {
+            const list = mergedChecklist(WS[drawerCtx.key] || {}, drawerStep());
+            list[i].done = !list[i].done;
+            if (await sdSaveChecklist(list)) renderDrawer();
+        }
+        async function sdAddCheck() {
+            const inp = document.getElementById('sd-newcheck'); const t = inp.value.trim(); if (!t) return;
+            const list = mergedChecklist(WS[drawerCtx.key] || {}, drawerStep());
+            list.push({ t, done: false });
+            if (await sdSaveChecklist(list)) renderDrawer();
+        }
+        async function sdSaveNote() {
+            const st = drawerStep();
+            const data = Object.assign({}, st.data || {}, { note: document.getElementById('sd-note').value });
+            const { error } = await supabaseClient.from('wf2_steps').update({ data }).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            st.data = data; renderStage(); showToast('Notatka zapisana', 'success');
+        }
+        async function sdSetStatus(next, silent) {
+            const st = drawerStep();
+            const upd = { status: next, completed_at: next === 'done' ? new Date().toISOString() : null, completed_by: next === 'done' ? 'admin' : null };
+            const { error } = await supabaseClient.from('wf2_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            Object.assign(st, upd);
+            if (next === 'done' && !silent) {
+                const d = stepDefs.find(x => x.key === drawerCtx.key); const p = drawerProduct();
+                logActivity('step_done', `Ukończono: ${d?.label || ''}${p ? ' — ' + p.name : ''}`);
+            }
+            renderPills(); renderStage(); renderHeader(); renderDrawer();
+        }
+        async function sdToggleSkip() {
+            const st = drawerStep();
+            const next = st.status === 'skipped' ? 'pending' : 'skipped';
             const { error } = await supabaseClient.from('wf2_steps').update({ status: next, completed_at: null, completed_by: null }).eq('id', st.id);
-            if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            st.status = next; closeStepModal(); renderPills(); renderStage(); renderHeader();
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            st.status = next; renderPills(); renderStage(); renderHeader(); renderDrawer();
+        }
+        async function sdDecision(dec) {
+            const p = drawerProduct(); if (!p) return;
+            const upd = { status: dec === 'winner' ? 'winner' : dec === 'kill' ? 'kill' : 'test' };
+            if (dec === 'winner') upd.margin_mode = 'scale';
+            const { error } = await supabaseClient.from('wf2_products').update(upd).eq('id', p.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            Object.assign(p, upd);
+            if (dec !== 'test') await sdSetStatus('done', true);
+            if (dec === 'kill') {
+                const sk = stepFor('skalowanie', p.id);
+                if (sk) {
+                    await supabaseClient.from('wf2_steps').update({ status: 'skipped' }).eq('id', sk.id);
+                    sk.status = 'skipped';
+                }
+            }
+            logActivity('test_decision', `Wynik testu: ${p.name} = ${dec === 'winner' ? 'WINNER (skalujemy)' : dec === 'kill' ? 'KILL' : 'testujemy dalej'}`);
+            renderPills(); renderStage(); renderHeader(); renderDrawer();
+            showToast('Decyzja zapisana', 'success');
+        }
+        function sdCopyPrompt(kind) {
+            const p = drawerProduct();
+            const base = `Kontekst: workflow v2 „TN Sklepy" (crm.tomekniedzwiecki.pl/tn-sklepy/projekt?id=${projectId}).\nKlient: ${project.customer_name || '—'}`
+                + (p ? `\nProdukt: ${p.name} (wf2_products.id: ${p.id}${p.supplier_url ? ', dostawca: ' + p.supplier_url : ''})` : '') + '\n\n';
+            const map = {
+                branding: 'Zrób branding dla tego produktu z portfela: propozycje nazw z wolnymi domenami .pl, paleta 6 kolorów, 3 fonty, 5 promptów logo i wygeneruj loga. Wyniki wpisz w pola kroku „Branding" tego produktu w /tn-sklepy.',
+                design: 'Przygotuj makiety strony produktowej w finalnej jakości (realne referencje produktu — curated_image z /trendy jako pierwsza referencja). Link do makiet wpisz w kroku „Design".',
+                html: 'Dopracuj HTML strony produktowej wg procedury landingowej (03-review → 04-design → 05-verify → 06-mobile). UWAGA: dla sklepów klienta COD i zwrot 14 dni są DOZWOLONE (odwrotnie niż landingi ofert Tomka). Źródło: ',
+                ads: 'Przygotuj content reklamowy do testów tego produktu wg CLAUDE_ADS_COPY_PROCEDURE (v2 COD): 5 konceptów copy + wizual, hook ≤125 znaków, risk-reversal COD. Link do grafik wpisz w kroku „Grafiki reklamowe".',
+                kampania: 'Utwórz kampanię Meta przez MCP wg CLAUDE_MCP_CAMPAIGN_PROCEDURE: 1 kampania = 1 produkt, nazwa „[WF2] klient — produkt", wszystko PAUSED (publikacja ręcznie przez Tomka). Po utworzeniu wpisz campaign_id w kroku „Kampania Meta".',
+            };
+            let txt = base + (map[kind] || 'Pomóż mi z tym krokiem.');
+            if (kind === 'html') txt += (p && p.repo_path ? p.repo_path : 'tn-crm/sklepy/<klient>/<produkt>/ (utwórz z draftu)');
+            navigator.clipboard.writeText(txt)
+                .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
+                .catch(() => showToast('Nie udało się skopiować', 'error'));
         }
 
         // ============ AKCJE: produkty ============
@@ -597,26 +822,6 @@
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             logActivity('product_deleted', 'Usunięto produkt: ' + (p?.name||''));
             closeProductModal(); await loadAll();
-        }
-
-        // ============ AKCJE: płatności ============
-        async function addPayment() {
-            const { data, error } = await supabaseClient.from('wf2_payments')
-                .insert({ project_id: projectId, sort: payments.length, label: '', amount: 0 }).select('*').single();
-            if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            payments.push(data); renderPayments();
-        }
-        async function updPayment(id, field, value) {
-            const { error } = await supabaseClient.from('wf2_payments').update({ [field]: value }).eq('id', id);
-            if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            const pay = payments.find(p=>p.id===id); if (pay) pay[field] = value;
-            if (field==='paid_at' && value) logActivity('payment_paid', `Opłacona pozycja: ${pay?.label||''} (${moneyPL(pay?.amount)})`);
-            renderPayments();
-        }
-        async function delPayment(id) {
-            const { error } = await supabaseClient.from('wf2_payments').delete().eq('id', id);
-            if (error) { showToast('Błąd: '+error.message,'error'); return; }
-            payments = payments.filter(p=>p.id!==id); renderPayments();
         }
 
         // ============ AKCJE: projekt ============
