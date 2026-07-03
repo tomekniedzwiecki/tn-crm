@@ -1655,6 +1655,9 @@ Deno.serve(async (req) => {
     // Proaktywna tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (req Tomka): bot zadaje
     // jedno naturalne pytanie z „ankiety", żeby wykorzystać czas generowania.
     const qualifyEngage = body.qualifyEngage === true
+    // Temat tury kwalifikującej PRZED kartą budżetu (front, kolejność req Tomka 2026-07-03:
+    // doświadczenie → sytuacja → budżet). Pusty = generyczna tura z okien generowania.
+    const qualifyTopic = typeof body.qualifyTopic === 'string' ? body.qualifyTopic.slice(0, 24) : ''
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1860,10 +1863,15 @@ Deno.serve(async (req) => {
     const USTALENIA_ENFORCE_TRIGGER = '[SYSTEM: Rozmówca ZAAKCEPTOWAŁ zaproponowany kierunek, ale blok <ustalenia> NIE został wystawiony w poprzedniej turze i pipeline stoi. Wystaw TERAZ dokładnie jeden PEŁNY blok <ustalenia>{...} zbudowany z kompletu zaproponowanego w rozmowie (dla_kogo, kat, ton_marki, korzysci, opcjonalnie nazwa). Przed blokiem najwyżej JEDNO krótkie zdanie (np. "Zapisuję ustalenia — lecimy dalej."). BEZ <opcje>, BEZ pytań, BEZ ponownego opisywania kierunku.]'
     // Tura KWALIFIKUJĄCA podczas budowy sklepu/reklam (qualifyEngage). Jedno pytanie z „ankiety"
     // — extractSurveyAsync wyłapie odpowiedź do CRM. Klikalne <opcje> > otwarte pole.
-    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: W tle właśnie składają się materiały rozmówcy (makiety / reklamy / sklep — potrwa to chwilę). NIE zostawiaj go samego w tej ciszy. Wykorzystaj czas: zadaj mu JEDNO naturalne pytanie z naszej ankiety, którego odpowiedzi JESZCZE NIE ZNASZ z tej rozmowy (NIE powtarzaj już zadanych). Kolejność wątków od najlżejszego: (1) czym się teraz zajmuje / co robi zawodowo (\\"powiedz coś o sobie\\"), (2) co już próbował w biznesie/e-commerce online i na czym utknął, (3) ile czasu w tygodniu realnie może dać, (4) jaki budżet na start rozważa, (5) na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem. Jedno krótkie pytanie, ciepło, jak Tomek do znajomego — NIE ankieta, NIE seria. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. Nawiąż do tego, co już powiedział. NIE twierdź, że sklep/reklamy są już gotowe.]'
+    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: W tle właśnie składają się materiały rozmówcy (makiety / reklamy / sklep — potrwa to chwilę). NIE zostawiaj go samego w tej ciszy. Wykorzystaj czas: zadaj mu JEDNO naturalne pytanie z naszej ankiety, którego odpowiedzi JESZCZE NIE ZNASZ z tej rozmowy (NIE powtarzaj już zadanych). Kolejność wątków od najlżejszego: (1) co już próbował w biznesie/e-commerce online i na czym utknął (\\"zaczynam od zera\\" to też dobra odpowiedź), (2) czym się teraz zajmuje / co robi zawodowo (\\"powiedz coś o sobie\\"), (3) ile czasu w tygodniu realnie może dać, (4) jaki budżet na start rozważa, (5) na ile jest gotów wejść we WSPÓLNY biznes z Tomkiem. Jedno krótkie pytanie, ciepło, jak Tomek do znajomego — NIE ankieta, NIE seria. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. Nawiąż do tego, co już powiedział. NIE twierdź, że sklep/reklamy są już gotowe.]'
+    // Sekwencja poznania PRZED kartą budżetu (front prowadzi kolejność: doświadczenie →
+    // sytuacja → karta budżetu; req Tomka 2026-07-03 „bardziej naturalna kolejność").
+    const QPRE_DOSW_TRIGGER = '[SYSTEM: Ustalenia domknięte; zanim strona zapyta o budżet, poznajemy rozmówcę. Zadaj TERAZ JEDNO ciepłe pytanie o jego DOŚWIADCZENIE: co już próbował w biznesie / sprzedaży online i jak mu poszło — z jasnym sygnałem, że „zaczynam od zera" to też świetna odpowiedź (większość naszych klientów tak startuje). Jedno krótkie pytanie, jak Tomek do znajomego — zero ankiety; możesz JEDNYM zdaniem nawiązać do produktu. OBOWIĄZKOWO marker <opcje> z 3-4 klikalnymi odpowiedziami (np. „Zaczynam od zera", „Próbowałem, ale nie wypaliło", „Sprzedaję już online"). NIE pytaj o budżet ani o nic innego w tej turze.]'
+    const QPRE_SYT_TRIGGER = '[SYSTEM: Rozmówca opowiedział o doświadczeniu (masz to w historii). BEZ ponownego komentowania tamtej odpowiedzi zadaj TERAZ JEDNO pytanie o jego AKTUALNĄ SYTUACJĘ: czym się zajmuje na co dzień — etat, własna firma, studia, coś innego. Jedno krótkie, ciepłe pytanie. OBOWIĄZKOWO marker <opcje> z 3-4 klikalnymi odpowiedziami. NIE pytaj o budżet — kartę budżetu pokaże strona zaraz po tej odpowiedzi; po tym pytaniu nie zadawaj kolejnych.]'
+    const qualifyTrigger = qualifyTopic === 'doswiadczenie' ? QPRE_DOSW_TRIGGER : (qualifyTopic === 'sytuacja' ? QPRE_SYT_TRIGGER : QUALIFY_ENGAGE_TRIGGER)
     const messages = [
       ...(history || []).map((m) => ({ role: m.role, content: m.content })),
-      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : (reportPropose ? REPORT_PROPOSE_TRIGGER : (ustaleniaEnforce ? USTALENIA_ENFORCE_TRIGGER : (qualifyEngage ? QUALIFY_ENGAGE_TRIGGER : message)))) },
+      { role: 'user', content: knowhowResume ? RESUME_TRIGGER : (reportEngage ? REPORT_ENGAGE_TRIGGER : (reportPropose ? REPORT_PROPOSE_TRIGGER : (ustaleniaEnforce ? USTALENIA_ENFORCE_TRIGGER : (qualifyEngage ? qualifyTrigger : message)))) },
     ]
 
     // Kontekst sesji dla modelu: profesja + punkt wyjścia (kafelek lub własne

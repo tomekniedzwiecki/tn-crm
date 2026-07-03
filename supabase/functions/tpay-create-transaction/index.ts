@@ -226,17 +226,19 @@ async function createTpayTransaction(
   // Tpay odrzuca payer.name krotsze niz 3 znaki (kod not_valid)
   const trimmedName = (params.name || '').trim()
   const payerName = trimmedName.length >= 3 ? trimmedName : 'Klient'
+  // Tpay odrzuca też payer.phone KRÓTSZY niż 3 znaki — pusty string '' = twardy 400
+  // (nie_valid). Zamówienia bez telefonu (BLIK inline rezerwacji /sklep) NIE mogą wysyłać
+  // pustego pola — pomijamy je całkiem. FIX 2026-07-03: to blokowało CAŁY inline BLIK.
+  const trimmedPhone = (params.phone || '').trim()
+  const payer: Record<string, string> = { email: params.email, name: payerName }
+  if (trimmedPhone.length >= 3) payer.phone = trimmedPhone
 
   const payload: Record<string, any> = {
     amount: params.amount,
     description: params.description,
     hiddenDescription: params.orderId,
     lang: 'pl',
-    payer: {
-      email: params.email,
-      name: payerName,
-      phone: params.phone || '',
-    },
+    payer,
     callbacks: {
       payerUrls: {
         success: params.successUrl,
@@ -435,6 +437,11 @@ Deno.serve(async (req) => {
 
     console.log('[tpay] Payment type:', paymentType, 'Group ID:', finalGroupId, 'BLIK code:', blikCode ? 'provided' : 'none')
 
+    // Slack o PRÓBIE płatności PRZED utworzeniem transakcji (req Tomka 2026-07-03):
+    // nieudane próby (np. BLIK inline z rezerwacji) też mają być widoczne, nie tylko sukcesy.
+    // Funkcja ma własny try/catch — nie blokuje płatności.
+    await sendSlackCheckoutNotification(order, blikCode ? 'blik' : (paymentType || 'unknown'), supabase)
+
     // Get OAuth token
     const token = await getTpayToken(tpayClientId, tpayClientSecret, useSandbox)
 
@@ -478,9 +485,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('[tpay-create-transaction] SUCCESS - Payment URL generated')
-
-    // Send Slack notification for checkout attempt
-    await sendSlackCheckoutNotification(order, paymentType || 'unknown', supabase)
 
     // For BLIK inline, we don't redirect - the payment is processed immediately
     // Frontend should poll for status

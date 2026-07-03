@@ -2766,6 +2766,12 @@ async function loadOffer() {
     // Sparing: prefill e-maila kontem aplikacji (atrybucja i tak idzie po spar_user_id)
     const sparEmail = params.get('spar_email');
     if (sparEmail && $('v-email') && !$('v-email').value) $('v-email').value = sparEmail;
+    // Prefill danych, które lejek /sklep|/aplikacja JUŻ zna (req Tomka 2026-07-03) — jawne
+    // parametry zamiast zależności od odczytu leads (lead_id bywa puste, RLS bywa zawężone).
+    const sparName = params.get('spar_name');
+    if (sparName && $('v-name') && !$('v-name').value) $('v-name').value = sparName.slice(0, 120);
+    const sparPhone = params.get('spar_phone');
+    if (sparPhone && $('v-phone') && !$('v-phone').value) $('v-phone').value = sparPhone.slice(0, 20);
 
     upgradeWorkflowId = params.get('upgrade_workflow_id');
     upgradeToOfferId = params.get('upgrade_to_offer_id');
