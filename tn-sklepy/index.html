@@ -41,7 +41,7 @@
         <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
             <div class="flex items-center gap-3">
                 <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
-                <span class="text-zinc-500 text-xs font-mono">tn-crm / <span class="text-zinc-300">sklepy</span></span>
+                <span class="text-zinc-500 text-xs font-mono">tn-sklepy / <span class="text-zinc-300">projekty</span></span>
             </div>
             <button onclick="openNewModal()" class="inline-flex items-center gap-2 bg-white text-black hover:bg-zinc-200 rounded-lg px-4 py-2 text-xs font-semibold transition-colors">
                 <i class="ph ph-plus"></i> Nowy projekt
@@ -267,7 +267,7 @@
                 const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentLabel: '—' };
                 const sm = STATUS_META[p.status] || STATUS_META.start;
                 const prods = (productsByProj[p.id] || []).length;
-                return `<tr class="border-b border-white/5 hover:bg-white/[.03] cursor-pointer transition-colors" onclick="location.href='sklep-projekt.html?id=${p.id}'">
+                return `<tr class="border-b border-white/5 hover:bg-white/[.03] cursor-pointer transition-colors" onclick="location.href='projekt.html?id=${p.id}'">
                     <td class="px-5 py-3.5">
                         <div class="text-white font-medium">${escapeHtml(p.name || '(bez nazwy)')}</div>
                         <div class="text-zinc-600 text-[11px] font-mono">${p.id.slice(0, 8)}</div>
@@ -309,7 +309,7 @@
                 if (error) throw error;
                 await supabaseClient.rpc('wf2_ensure_steps', { p_project: data.id });
                 await supabaseClient.from('wf2_activities').insert({ project_id: data.id, actor: 'admin', action: 'created', description: 'Projekt utworzony ręcznie' });
-                location.href = 'sklep-projekt.html?id=' + data.id;
+                location.href = 'projekt.html?id=' + data.id;
             } catch (e) {
                 console.error(e); showToast('Błąd tworzenia projektu: ' + (e.message || e), 'error'); btn.disabled = false;
             }

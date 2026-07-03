@@ -14,7 +14,8 @@ const APPS = [
     { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
     { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
     { id: 'aplikacje', name: 'TN Aplikacje', icon: 'ph-rocket-launch', color: 'bg-blue-500 text-white', defaultPage: 'index' },
-    { id: 'sklep', name: 'TN Sklep', icon: 'ph-storefront', color: 'bg-blue-500 text-white', defaultPage: 'index' }
+    { id: 'sklep', name: 'TN Sklep', icon: 'ph-storefront', color: 'bg-blue-500 text-white', defaultPage: 'index' },
+    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-rose-500 text-white', defaultPage: 'index' }
 ];
 
 const APP_BASES = {
@@ -23,7 +24,8 @@ const APP_BASES = {
     todo: '/tn-todo',
     biznes: '/tn-biznes',
     aplikacje: '/tn-aplikacje',
-    sklep: '/tn-sklep'
+    sklep: '/tn-sklep',
+    sklepy: '/tn-sklepy'
 };
 
 const APP_AVATAR_COLORS = {
@@ -32,7 +34,8 @@ const APP_AVATAR_COLORS = {
     todo: 'from-violet-600 to-violet-700',
     biznes: 'from-amber-500 to-amber-600',
     aplikacje: 'from-blue-600 to-blue-700',
-    sklep: 'from-blue-600 to-blue-700'
+    sklep: 'from-blue-600 to-blue-700',
+    sklepy: 'from-rose-600 to-rose-700'
 };
 
 // ============================================
@@ -55,7 +58,6 @@ const NAV_ITEMS_CRM = [
 
 const NAV_ITEMS_WORKFLOW = [
     { id: 'workflows', icon: 'ph-list-checks', label: 'Projekty' },
-    { id: 'sklepy', icon: 'ph-storefront', label: 'Sklepy' },
     { id: 'products', icon: 'ph-package', label: 'Produkty' },
     { id: 'kampanie', icon: 'ph-chart-line-up', label: 'Kampanie', showCount: true, countHiddenAtZero: true },
     { id: 'automations', icon: 'ph-lightning', label: 'Automatyzacje' },
@@ -81,6 +83,11 @@ const NAV_ITEMS_SKLEP = [
     { id: 'index', icon: 'ph-storefront', label: 'Sklep' },
 ];
 
+// TN Sklepy (workflow v2 — prowadzenie wspólnych biznesów po rezerwacji /sklep)
+const NAV_ITEMS_SKLEPY = [
+    { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
+];
+
 const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
     { id: 'analytics', icon: 'ph-chart-bar', label: 'Analytics' },
@@ -98,6 +105,7 @@ function getNavItemsForApp(appId) {
         case 'todo': return NAV_ITEMS_TODO;
         case 'biznes': return NAV_ITEMS_BIZNES;
         case 'aplikacje': return NAV_ITEMS_APLIKACJE;
+        case 'sklepy': return NAV_ITEMS_SKLEPY;
         case 'sklep': return NAV_ITEMS_SKLEP;
         default: return NAV_ITEMS_CRM;
     }
@@ -470,6 +478,8 @@ function detectCurrentApp() {
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
     if (path.includes('/tn-aplikacje')) return 'aplikacje';
+    // UWAGA: '/tn-sklepy' PRZED '/tn-sklep' — includes() złapałby prefiks
+    if (path.includes('/tn-sklepy')) return 'sklepy';
     if (path.includes('/tn-sklep')) return 'sklep';
     return 'crm';
 }
