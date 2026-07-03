@@ -18,12 +18,25 @@ serve(async (req) => {
     const payload = await req.json()
     console.log('Manus webhook received:', JSON.stringify(payload, null, 2))
 
-    const { task_id, status, result, metadata } = payload
+    // REFACTOR (2026-07-03, case „reklamy /sklep po 95 min"): Manus v2 wysyła eventy w RÓŻNYCH
+    // kształtach ({task_id,...} / {event, data:{...}} / {task:{...}}) — stary kod czytał tylko
+    // top-level task_id i odpowiadał 400 (8 retry Manusa poszło w ścianę), więc ukończenie
+    // taska NIGDY nie docierało i dostawa wisiała na pollu frontu / cronie. Parsujemy
+    // tolerancyjnie + routing również do bud-ads (taski kreacji lejka /sklep).
+    // deno-lint-ignore no-explicit-any
+    const p: any = payload || {}
+    const taskObj = p.task || (p.data && p.data.task) || p.data || {}
+    const task_id = p.task_id || taskObj.task_id || taskObj.id || null
+    const status = p.status || taskObj.status || p.event_type || p.event || null
+    const result = p.result || taskObj.result || null
 
     if (!task_id) {
+      // 200, nie 400 — payload bez task_id i tak nie jest do zrutowania, a 4xx tylko
+      // nakręcało burzę retry po stronie Manusa. Pełny payload jest w logu wyżej.
+      console.error('Manus webhook: no task_id in payload — ignoring')
       return new Response(
-        JSON.stringify({ success: false, error: 'task_id required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, ignored: true, reason: 'no task_id' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
@@ -37,10 +50,40 @@ serve(async (req) => {
       .maybeSingle()
 
     if (findError || !adsRecord) {
+      // ── Tor /sklep (bud-ads): task kreacji reklamowych sesji lejka ──
+      // Ukończony task → sweep bud-ads (ten sam, przetestowany tor co cron): dociąga
+      // załączniki, rehostuje do Storage, zapisuje session_ads i zwalnia lock — reklamy
+      // trafiają do usera SEKUNDY po ukończeniu, bez czekania na poll frontu.
+      const { data: budRow } = await supabase
+        .from('bud_sessions')
+        .select('id, ads_manus_status')
+        .eq('ads_manus_task_id', task_id)
+        .maybeSingle()
+      if (budRow) {
+        const CRON = Deno.env.get('SPAR_CRON_SECRET') || ''
+        if (CRON && budRow.ads_manus_status === 'running') {
+          const sweep = fetch(`${SUPABASE_URL}/functions/v1/bud-ads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON },
+            body: JSON.stringify({ sweep: true }),
+          }).then(async (r) => console.log('bud-ads sweep via webhook:', r.status, (await r.text()).slice(0, 200)))
+            .catch((e) => console.error('bud-ads sweep via webhook error:', e))
+          // deno-lint-ignore no-explicit-any
+          const er = (globalThis as any).EdgeRuntime
+          if (er && typeof er.waitUntil === 'function') er.waitUntil(sweep)
+          else await sweep
+        }
+        return new Response(
+          JSON.stringify({ success: true, routed: 'bud-ads', session_id: budRow.id, task_status: status }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       console.error('Could not find workflow for task:', task_id)
+      // 200 zamiast 404 — taski spoza obu torów (np. odpalone ręcznie w UI Manusa)
+      // nie mają gdzie trafić; 4xx tylko prowokował retraje.
       return new Response(
-        JSON.stringify({ success: false, error: 'Workflow not found for task' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: true, ignored: true, reason: 'task not matched' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
