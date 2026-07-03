@@ -109,7 +109,7 @@
                 <div id="matrix-box" class="hidden bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
                     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                         <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-stack text-[#3291ff]"></i> Portfel produktów <span id="matrix-count" class="text-zinc-500 font-normal text-xs"></span></h3>
-                        <button onclick="openProductModal()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors"><i class="ph ph-plus"></i> Produkt</button>
+                        <button onclick="openPicker()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors"><i class="ph ph-plus"></i> Produkt</button>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
@@ -138,6 +138,22 @@
             </div>
         </div>
     </main>
+
+    <!-- Modal: picker produktów z radaru /trendy -->
+    <div id="picker-modal" class="hidden fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closePicker()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-3xl p-6 max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-white text-lg font-semibold">Produkt z radaru (/trendy)</h3>
+                <button onclick="closePicker()" class="p-1.5 text-zinc-500 hover:text-white"><i class="ph ph-x"></i></button>
+            </div>
+            <input id="pk-search" class="fld mb-4" placeholder="Szukaj po nazwie lub kategorii…" oninput="renderPicker()">
+            <div id="pk-grid" class="grid grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto pr-1" style="min-height:200px"></div>
+            <div class="flex items-center justify-between mt-4 pt-4 border-t border-[#1f1f1f]">
+                <span class="text-zinc-600 text-[11px]">Tylko zatwierdzone na /trendy · sort: potencjał (heat)</span>
+                <button onclick="closePicker(); openProductModal()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff]">Dodaj ręcznie (spoza radaru)</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Modal: produkt -->
     <div id="prod-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4 overflow-y-auto" onclick="if(event.target===this)closeProductModal()">
@@ -236,7 +252,10 @@
         let adStats = [];
         let activeStage = 1;
         let editingProductId = null;
-        let drawerCtx = null; // {key, productId} — otwarty warsztat kroku
+        let drawerCtx = null;    // {key, productId} — otwarty warsztat kroku
+        let ttProducts = null;   // cache radaru /trendy (approved)
+        let pendingTT = null;    // tt_product_id wybrany w pickerze (dla nowego produktu)
+        let genMap = {};         // bud_session_id -> {brand, mockups, chosen_style} (generacje z /sklep)
 
         const PROJECT_STATUSES = ['start','budowa','sklep','kampanie','testy','stery','monthly','zamkniety'];
         const STATUS_LABELS = { start:'Start', budowa:'Budowa', sklep:'Sklep', kampanie:'Kampanie', testy:'Testy', stery:'Stery', monthly:'Monthly', zamkniety:'Zamknięty' };
@@ -307,6 +326,14 @@
             ]);
             if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='index.html'; return; }
             project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; sales = salesQ.data||[]; adStats = adsQ.data||[];
+            // generacje z lejka /sklep (typ A): marka, makiety, strona — pokazywane w warsztatach kroków
+            const genIds = [...new Set(products.map(p => p.gen_session_id).filter(Boolean))];
+            genMap = {};
+            if (genIds.length) {
+                const { data: gs } = await supabaseClient.from('bud_sessions')
+                    .select('id, brand, mockups, chosen_style, landing_url').in('id', genIds);
+                (gs || []).forEach(g => genMap[g.id] = g);
+            }
             renderHeader(); renderPills(); renderStage(); renderActivity(actQ.data||[]);
         }
 
@@ -422,7 +449,7 @@
                 const cover = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-8 h-8 rounded-lg object-cover flex-shrink-0" onerror="this.style.display='none'">` : '<div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0"><i class="ph ph-package text-zinc-600"></i></div>';
                 return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.02]">
                     <td class="px-3 py-2.5"><div class="flex items-center gap-2.5 min-w-[160px]">${cover}
-                        <div class="min-w-0"><div class="text-white text-[12.5px] font-medium truncate max-w-[220px]">${escapeHtml(p.name||'(bez nazwy)')}</div>
+                        <div class="min-w-0"><div class="text-white text-[12.5px] font-medium truncate max-w-[220px]">${p.gen_session_id ? '<i class="ph ph-sparkle text-[#52a8ff] text-[10px]" title="ma generacje z rozmowy /sklep"></i> ' : ''}${escapeHtml(p.name||'(bez nazwy)')}</div>
                         ${p.td_page_url?`<a href="${escapeHtml(p.td_page_url)}" target="_blank" class="text-[10px] text-[#3291ff] hover:text-[#52a8ff]">strona TD ↗</a>`:''}</div></div></td>
                     <td class="px-3 py-2.5"><span class="inline-block px-2 py-0.5 rounded-md text-[10.5px] ${sm.cls}">${sm.label}</span></td>
                     <td class="px-3 py-2.5 text-right font-mono text-xs ${profitCls}">${p.price !== null && profit !== null ? moneyPL(profit) : '—'}</td>
@@ -570,6 +597,28 @@
 
             let h = '';
             if (ws.desc) h += `<p class="text-zinc-400 text-[12.5px] leading-relaxed">${escapeHtml(ws.desc)}</p>`;
+            // Generacje z rozmowy /sklep (typ A) — marka / makiety / strona z lejka
+            const gen = p && p.gen_session_id ? genMap[p.gen_session_id] : null;
+            if (gen && ['branding','design','html_draft','html_final'].includes(d.key)) {
+                let g = '<div class="border border-[#0070f3]/30 bg-[#0070f3]/[.05] rounded-md p-4 space-y-3">'
+                    + '<div class="text-[10px] font-mono uppercase tracking-wider text-[#52a8ff]">Wygenerowane w rozmowie /sklep</div>';
+                if (d.key === 'branding' && gen.brand) {
+                    const logo = gen.brand.chosen_logo || gen.brand.logo_url;
+                    g += `<div class="flex items-center gap-3">${logo ? `<img src="${escapeHtml(logo)}" class="w-12 h-12 rounded-md object-cover border border-[#2a2a2a]">` : ''}
+                        <div><div class="text-white text-sm font-medium">${escapeHtml(gen.brand.chosen_name || gen.brand.nazwa || '—')}</div>
+                        <div class="text-zinc-500 text-[11px]">marka z lejka — decyzja: zostaje czy dopracowujemy</div></div></div>`;
+                }
+                if (d.key === 'design' && Array.isArray(gen.mockups) && gen.mockups.length) {
+                    g += '<div class="grid grid-cols-4 gap-1.5">' + gen.mockups.map(m =>
+                        `<a href="${escapeHtml(m.url)}" target="_blank" class="block relative"><img src="${escapeHtml(m.url)}" class="w-full h-16 object-cover rounded border ${m.style === gen.chosen_style ? 'border-[#0070f3]' : 'border-[#2a2a2a]'}" loading="lazy"><span class="absolute bottom-0 inset-x-0 bg-black/70 text-[8.5px] text-zinc-300 px-1 py-0.5 truncate rounded-b">${escapeHtml(m.label || m.style || '')}</span></a>`).join('') + '</div>';
+                    if (gen.chosen_style) g += `<div class="text-[10.5px] text-zinc-500">wybrany kierunek: <span class="text-[#52a8ff]">${escapeHtml(gen.chosen_style)}</span></div>`;
+                }
+                if (d.key === 'html_draft' || d.key === 'html_final') {
+                    g += `<button onclick="previewGenLanding('${gen.id}')" class="inline-flex items-center gap-2 border border-[#0070f3]/40 text-[#52a8ff] hover:bg-[#0070f3]/10 rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-browser"></i> Podgląd wygenerowanej strony</button>`;
+                }
+                g += '</div>';
+                h += g;
+            }
             if (d.owner === 'client' && d.instructions_md) {
                 h += `<div class="bg-[#f5a623]/[.06] border border-[#f5a623]/30 rounded-md p-4 text-[12.5px] text-[#f5deb0]/90 space-y-1.5">
                     <div class="text-[10px] font-mono uppercase tracking-wider text-[#f5a623]/90">Instrukcja dla klienta (trafi do portalu — F2)</div>
@@ -735,9 +784,55 @@
                 .catch(() => showToast('Nie udało się skopiować', 'error'));
         }
 
+        // ============ PICKER: produkty z radaru /trendy ============
+        async function openPicker() {
+            document.getElementById('picker-modal').classList.remove('hidden');
+            if (!ttProducts) {
+                const { data } = await supabaseClient.from('bud_tt_products')
+                    .select('id, pl_name, category, cover, curated_image, chosen_link, heat, max_plays')
+                    .eq('status', 'approved').order('heat', { ascending: false }).range(0, 199);
+                ttProducts = data || [];
+            }
+            renderPicker();
+            document.getElementById('pk-search').focus();
+        }
+        function closePicker() { document.getElementById('picker-modal').classList.add('hidden'); }
+        function renderPicker() {
+            const q = (document.getElementById('pk-search').value || '').toLowerCase();
+            const items = (ttProducts || []).filter(t => !q || (t.pl_name || '').toLowerCase().includes(q) || (t.category || '').toLowerCase().includes(q)).slice(0, 60);
+            document.getElementById('pk-grid').innerHTML = items.map(t => {
+                const img = t.curated_image || t.cover;
+                const inPortfolio = products.some(p => p.tt_product_id === t.id);
+                const ref = t.curated_image ? '<i class="ph ph-image text-[#62c073]" title="referencja zdjęcia OK"></i> ' : '';
+                return `<div class="border border-[#2a2a2a] ${inPortfolio ? 'opacity-40' : 'hover:border-[#0070f3]/60 cursor-pointer'} rounded-md p-2.5 transition-colors" ${inPortfolio ? '' : `onclick="pickTT('${t.id}')"`}>
+                    ${img ? `<img src="${escapeHtml(img)}" class="w-full h-24 object-cover rounded mb-2" loading="lazy" onerror="this.style.display='none'">` : '<div class="w-full h-24 bg-[#111] rounded mb-2 flex items-center justify-center"><i class="ph ph-package text-zinc-700 text-xl"></i></div>'}
+                    <div class="text-white text-[12px] font-medium leading-tight mb-1">${escapeHtml(t.pl_name)}</div>
+                    <div class="flex items-center justify-between text-[10px] text-zinc-500"><span>${escapeHtml(t.category || '')}</span><span class="font-mono">${ref}heat ${t.heat ?? '—'}</span></div>
+                    ${inPortfolio ? '<div class="text-[10px] text-[#52a8ff] mt-1">już w portfelu</div>' : ''}
+                </div>`;
+            }).join('') || '<div class="col-span-full text-center text-zinc-600 text-xs py-8">Brak wyników</div>';
+        }
+        function pickTT(id) {
+            const t = (ttProducts || []).find(x => x.id === id); if (!t) return;
+            closePicker();
+            openProductModal();
+            pendingTT = t.id;
+            document.getElementById('pm-name').value = t.pl_name || '';
+            document.getElementById('pm-supplier').value = t.chosen_link || '';
+            document.getElementById('pm-cover').value = t.curated_image || t.cover || '';
+        }
+        async function previewGenLanding(sessId) {
+            const { data, error } = await supabaseClient.from('bud_sessions').select('landing_html').eq('id', sessId).single();
+            if (error || !data || !data.landing_html) { showToast('Brak wygenerowanego HTML', 'error'); return; }
+            const w = window.open('about:blank');
+            if (!w) { showToast('Odblokuj popupy dla tej strony', 'error'); return; }
+            w.document.open(); w.document.write(data.landing_html); w.document.close();
+        }
+
         // ============ AKCJE: produkty ============
         function openProductModal(id) {
             editingProductId = id || null;
+            pendingTT = null;
             const p = id ? products.find(x=>x.id===id) : null;
             document.getElementById('pm-title').textContent = p ? 'Edycja produktu' : 'Nowy produkt';
             document.getElementById('pm-delete').classList.toggle('hidden', !p);
@@ -805,6 +900,7 @@
                 } else {
                     payload.project_id = projectId;
                     payload.sort = products.length;
+                    if (pendingTT) payload.tt_product_id = pendingTT;
                     const { error } = await supabaseClient.from('wf2_products').insert(payload);
                     if (error) throw error;
                     logActivity('product_added', 'Dodano produkt do portfela: ' + payload.name);

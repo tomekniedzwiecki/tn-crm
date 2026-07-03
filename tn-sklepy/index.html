@@ -99,6 +99,10 @@
         <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-md p-6">
             <h3 class="text-white text-lg font-semibold mb-4">Nowy projekt</h3>
             <div class="space-y-3">
+                <div><label class="text-xs text-zinc-500 block mb-1">Przenieś klienta z TN Workflow (opcjonalnie)</label>
+                    <select id="np-v1" onchange="prefillFromV1()" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60">
+                        <option value="">— buduję od zera —</option>
+                    </select></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Imię i nazwisko klienta</label>
                     <input id="np-customer" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label>
@@ -126,6 +130,7 @@
         let stepsByProj = {};     // project_id -> [wf2_steps skrót]
         let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
         let filterStepKey = null;
+        const openRows = new Set(); // rozwinięte podglądy projektów
 
         const STATUS_META = {
             start:     { label: 'Start',      cls: 'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40' },
@@ -264,10 +269,16 @@
                 const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentLabel: '—' };
                 const sm = STATUS_META[p.status] || STATUS_META.start;
                 const prods = (productsByProj[p.id] || []).length;
-                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="location.href='projekt.html?id=${p.id}'">
+                const open = openRows.has(p.id);
+                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="toggleRow('${p.id}')">
                     <td class="px-5 py-3.5">
-                        <div class="text-white font-medium">${escapeHtml(p.customer_name || '(bez klienta)')}</div>
-                        <div class="text-zinc-600 text-[11px]">${escapeHtml(p.customer_email || '')}</div>
+                        <div class="flex items-center gap-2.5">
+                            <i class="ph ${open ? 'ph-caret-down text-[#3291ff]' : 'ph-caret-right text-zinc-600'} text-xs flex-shrink-0"></i>
+                            <div>
+                                <div class="text-white font-medium">${escapeHtml(p.customer_name || '(bez klienta)')}</div>
+                                <div class="text-zinc-600 text-[11px]">${escapeHtml(p.customer_email || '')}</div>
+                            </div>
+                        </div>
                     </td>
                     <td class="px-5 py-3.5"><span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span></td>
                     <td class="px-5 py-3.5 min-w-[130px]">
@@ -280,13 +291,65 @@
                     <td class="px-5 py-3.5 text-zinc-300 text-xs">${escapeHtml(agg.currentLabel)}</td>
                     <td class="px-5 py-3.5 text-center text-zinc-300 font-mono">${prods}</td>
                     <td class="px-5 py-3.5 text-zinc-500 text-xs">${relDate(p.created_at)}</td>
-                    <td class="px-5 py-3.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
-                </tr>`;
+                    <td class="px-5 py-3.5 text-right"><button onclick="event.stopPropagation();location.href='projekt.html?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button></td>
+                </tr>` + (open ? renderRowPreview(p) : '');
             }).join('');
         }
 
+        // Rozwijany podgląd projektu: postęp etapów + portfel produktów bez wchodzenia w projekt
+        function renderRowPreview(p) {
+            const stages = {};
+            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, keys: [] }).keys.push(d.key); });
+            const steps = stepsByProj[p.id] || [];
+            const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
+                const inst = steps.filter(s => stages[n].keys.includes(s.step_key) && s.status !== 'skipped');
+                const done = inst.filter(s => s.status === 'done').length;
+                const full = inst.length > 0 && done === inst.length;
+                const started = done > 0 || inst.some(s => s.status === 'in_progress');
+                const cls = full ? 'border-[#45a557]/50 text-[#62c073]' : started ? 'border-[#0070f3]/50 text-[#52a8ff]' : 'border-[#2a2a2a] text-zinc-500';
+                return `<span class="inline-flex items-center gap-1.5 border ${cls} rounded-md px-2.5 py-1 text-[11px]">
+                    ${full ? '<i class="ph ph-check"></i>' : `<span class="font-mono">${done}/${inst.length}</span>`} ${escapeHtml(stages[n].label)}</span>`;
+            }).join('');
+            const PS = { kandydat:['Kandydat','text-zinc-500'], zaakceptowany:['Zaakcept.','text-[#52a8ff]'], w_budowie:['W budowie','text-[#52a8ff]'], gotowy:['Gotowy','text-[#52a8ff]'], live:['LIVE','text-[#62c073]'], test:['Test','text-[#f5b955]'], winner:['WINNER','text-[#62c073]'], kill:['KILL','text-[#f26d78]'], skala:['Skala','text-[#62c073]'] };
+            const prods = (productsByProj[p.id] || []);
+            const prodHtml = prods.length ? prods.map(pr => {
+                const m = PS[pr.status] || PS.kandydat;
+                return `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px] text-zinc-300">${escapeHtml(pr.name)}<span class="border-l border-[#2a2a2a] pl-1.5 ${m[1]}">${m[0]}</span></span>`;
+            }).join('') : '<span class="text-zinc-600 text-[11px]">brak produktów w portfelu</span>';
+            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="7" class="px-5 py-4 cursor-default">
+                <div class="flex flex-wrap gap-1.5 mb-3">${stageHtml}</div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-600 mb-1.5">Portfel</div>
+                <div class="flex flex-wrap gap-1.5">${prodHtml}</div>
+            </td></tr>`;
+        }
+        function toggleRow(id) {
+            if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
+            renderTable();
+        }
+
         // ============ NOWY PROJEKT ============
-        function openNewModal() { document.getElementById('new-modal').classList.remove('hidden'); document.getElementById('np-customer').focus(); }
+        let v1Workflows = [];
+        async function openNewModal() {
+            document.getElementById('new-modal').classList.remove('hidden');
+            document.getElementById('np-customer').focus();
+            // Typ B: klient przenoszony ze starego workflow — prefill danych, budowa od zera
+            if (!v1Workflows.length) {
+                const { data } = await supabaseClient.from('workflows')
+                    .select('id, customer_name, customer_email, customer_phone, offer_name')
+                    .order('created_at', { ascending: false }).range(0, 199);
+                v1Workflows = data || [];
+                const sel = document.getElementById('np-v1');
+                sel.innerHTML = '<option value="">— buduję od zera —</option>' + v1Workflows.map(w =>
+                    `<option value="${w.id}">${escapeHtml(w.customer_name || w.customer_email || '?')}${w.offer_name ? ' · ' + escapeHtml(w.offer_name) : ''}</option>`).join('');
+            }
+        }
+        function prefillFromV1() {
+            const w = v1Workflows.find(x => x.id === document.getElementById('np-v1').value);
+            if (!w) return;
+            document.getElementById('np-customer').value = w.customer_name || '';
+            document.getElementById('np-email').value = w.customer_email || '';
+            document.getElementById('np-phone').value = w.customer_phone || '';
+        }
         function closeNewModal() { document.getElementById('new-modal').classList.add('hidden'); }
         async function createProject() {
             const btn = document.getElementById('np-save'); btn.disabled = true;
@@ -297,6 +360,8 @@
                     customer_phone: document.getElementById('np-phone').value.trim() || null,
                 };
                 if (!payload.customer_name) { showToast('Podaj imię i nazwisko klienta', 'error'); btn.disabled = false; return; }
+                const v1 = document.getElementById('np-v1').value;
+                if (v1) payload.notes = 'Klient przeniesiony z TN Workflow (v1): ' + v1;
                 const { data, error } = await supabaseClient.from('wf2_projects').insert(payload).select('id').single();
                 if (error) throw error;
                 await supabaseClient.rpc('wf2_ensure_steps', { p_project: data.id });
