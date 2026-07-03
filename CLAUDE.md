@@ -33,6 +33,31 @@ CRM / system workflow do obslugi klientow. Stack:
 
 RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
 
+## TN Sklepy — workflow v2 (wspólne biznesy po rezerwacji /sklep)
+
+**Osobna aplikacja** (`tn-sklepy/index.html` lista + `tn-sklepy/projekt.html`), LIVE:
+`crm.tomekniedzwiecki.pl/tn-sklepy/index`. **Przeczytaj PRZED pracą:**
+`docs/zbuduje/WORKFLOW-V2-PLAN.md` (sekcja „STAN WDROŻENIA" = prawda).
+
+- Tabele `wf2_*`: projects, products (portfel, generated `unit_profit`), step_defs
+  (**kroki = konfiguracja: nowy krok = 1 INSERT, zero zmian frontu**), steps (jedyne
+  źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
+  `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
+- Etapy 1–5: Portfel → Sklep TakeDrop → Kampanie (konto→budżet→pixel→grafiki→kampania)
+  → Testy i skalowanie → Przekazanie sterów. Marża testowa = 5–10 zł zysku/szt.
+- Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
+  własny try/catch — NIGDY nie może przerwać obsługi płatności).
+- **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
+  akcent #0070f3, success #45a557, warning #f5a623, error #e5484d, promienie 6–8px,
+  zero fioletu/rose. Sidebar: `/tn-sklepy` sprawdzane PRZED `/tn-sklep` w detectCurrentApp.
+
+### bud-ali-snapshot — GOTCHA endpointu
+Detail aukcji = `/api/v3/product-info` (aliexpress-true-api); odpowiedź to TABLICA
+`[{...}]`, błąd = `{"No information":...}`; `target_currency=PLN`/`target_language=PL`
+NIE działa — tylko USD/EN (ceny w snapshocie SĄ W USD, front przelicza kursem NBP).
+`source==='detail'` = potwierdzona żywa aukcja; 'search' = możliwy INNY produkt/martwa
+aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen SKU.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów

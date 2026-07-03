@@ -1,6 +1,43 @@
 # WORKFLOW V2 — plan modułu prowadzenia wspólnych biznesów (po rezerwacji /sklep)
 
-**Status: PLAN zaakceptowany kierunkowo 2026-07-03 (decyzje Tomka niżej). Implementacja fazami F1→F4.**
+**Status: F1 WDROŻONE + iteracje z odbioru (2026-07-03). Ten dokument = plan bazowy;
+poniższa sekcja „STAN WDROŻENIA" nadpisuje szczegóły, które zmieniły się przy odbiorze.**
+
+## 0a. STAN WDROŻENIA (po odbiorze Tomka, 2026-07-03 wieczór)
+
+- **Osobna aplikacja `TN Sklepy`** (nie podstrony tn-workflow): `tn-sklepy/index.html` (lista)
+  + `tn-sklepy/projekt.html` (projekt). LIVE: `crm.tomekniedzwiecki.pl/tn-sklepy/index`.
+  Rejestracja w `components/shared-sidebar.js` (APPS/APP_BASES/NAV_ITEMS_SKLEPY;
+  GOTCHA: `detectCurrentApp` sprawdza `/tn-sklepy` PRZED `/tn-sklep`).
+- **Etapy 1–5** (bez etapu „Start" i bez kroku „Raport" — decyzja przy odbiorze):
+  1 Portfel produktów · 2 Sklep TakeDrop · 3 Kampanie (konto → **budżet** → pixel →
+  grafiki → kampania — „najpierw kasa") · 4 Testy i skalowanie · 5 Przekazanie sterów.
+- **Projekt BEZ własnej nazwy** — identyfikacja po kliencie; docelowa wizytówka = link
+  do galerii landingów klienta (kolumna `name` została w schemacie, UI jej nie używa).
+- **Harmonogram płatności UKRYTY z UI** (przeszkadzał) — tabela `wf2_payments` i wpis
+  rezerwacji z webhooka zostają; wróci później.
+- **Warsztat kroku (drawer)**: klik w kartę/komórkę macierzy otwiera panel z konkretną
+  robotą — config `WS` per step_key w projekt.html (opis, pola z bindingiem
+  `col: 'project.X'|'product.X'`, checklisty, prompt dla Claude, statystyki + decyzja
+  WINNER/KILL w `test_wynik`).
+- **Lista**: rozwijany podgląd projektu (etapy + portfel) + „Rozwiń wszystkie".
+- **Portfel z pickera /trendy** (approved, sort heat, zdjęcie: curated → snapshot Ali →
+  cover TikToka z badge, cena $, znacznik pewnego snapshotu) + ręczne dodanie.
+- **Dwa typy klientów**: A = z lejka /sklep (auto-create w tpay-webhook; produkty
+  z `gen_session_id` pokazują w warsztatach generacje z `bud_sessions`: marka+logo,
+  makiety, lazy podgląd landing_html) · B = przenoszony z TN Workflow v1 (select
+  w modalu nowego projektu → prefill, budowa od zera).
+- **Marża z aukcji AliExpress**: sekcja „Aukcja" w modalu produktu — cena $ z snapshotu
+  × kurs NBP (cache 24h) → „Wstaw jako cenę zakupu"; „Ustaw cenę docelową" (środek
+  widełek 5–10 zł zysku/szt.); aukcja NIEPOTWIERDZONA (source≠'detail') = bursztynowy
+  alert + szukanie po zdjęciu (AliPrice/Lens) + podmiana linku z auto-rebuildem snapshotu.
+- **bud-ali-snapshot NAPRAWIONY**: endpoint `/api/v3/product-info` (USD/EN; odpowiedź-
+  tablica), snapshot z ceną; LIMIT: bez opisu i cen SKU (wymagałoby drugiego API).
+  Pokrycie po backfillu: 136/136, w tym 78 'detail', 133 z ceną, 119 z opiniami.
+- **Styl modułu = Geist/Vercel** (twardo): tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
+  akcent #0070f3, success #45a557, warning #f5a623, error #e5484d, promienie 6–8px.
+- **Dane demo**: 5 projektów „DEMO …" na różnych etapach (kasowanie: zębatka → Usuń projekt);
+  DEMO Karolina spięta z testową sesją NocWTrasie (typ A z generacjami).
 
 Źródło prawdy procesu biznesowego: `settings.budowanie_model_biznesowy` → sekcja „PROCES PO REZERWACJI"
 (rozmowa → płatność → portfel 5–10 produktów → TakeDrop → grafiki → kampanie Meta → 2–3 winnery →

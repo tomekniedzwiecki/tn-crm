@@ -49,7 +49,27 @@ auto-create, rewrites, deploy + test:webhooks 4/4, commit ×2.
 | Poprawka struktury (osobna apka tn-sklepy, domena, diagnoza logowania) | ~1,2M input + ~8k output (szac.) | ~$2,5 |
 | **Razem F1 (z poprawką)** | **~5,4M (szacunek)** | **~$12,5 (zakres $9–17) ≈ 46 zł** |
 
-### Suma narastająco
+### 2026-07-03 (wieczór) — Iteracje z odbioru + snapshoty AliExpress
+
+Zakres: osobna apka TN Sklepy, usunięcie etapu Start/kroku Raport, warsztat kroku (drawer),
+redesign Geist, podgląd projektów, picker /trendy, generacje typ A, przenoszenie z v1,
+marża z aukcji (NBP), diagnoza i naprawa bud-ali-snapshot + backfill 136 produktów,
+2 agenty code-review (porządki).
+
+| Składnik | Tokeny | Koszt API (szac.) |
+|---|---|---|
+| Główna pętla — output (ekrany/warsztat/fixy/SQL ~45k) | ~45 000 | ~$2,3 |
+| Główna pętla — input kumulacyjny (szac., ~90 wywołań, głównie cache read) | ~9M | ~$14 |
+| Agenty code-review ×2 (zmierzone po zakończeniu — patrz niżej) | ~200 000 | ~$2,0 |
+| **Razem wieczór** | **~9,3M (szacunek)** | **~$18 (zakres $13–25) ≈ 67 zł** |
+
+### Suma narastająco (po całym 2026-07-03)
+
+| | Tokeny (szac.) | Koszt API (szac.) |
+|---|---|---|
+| **Przygotowanie + F1 + iteracje odbioru + snapshoty** | ~17M | **~$40 (zakres $28–55) ≈ 148 zł** |
+
+### [ARCHIWUM] Suma po F1
 
 | | Tokeny (szac.) | Koszt API (szac.) |
 |---|---|---|

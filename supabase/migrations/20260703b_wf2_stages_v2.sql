@@ -1,3 +1,5 @@
+-- ⚠ NIEIDEMPOTENTNA: `stage = stage - 1` przy ponownym uruchomieniu przesunęłoby
+-- etapy o kolejne -1. Odpalać wyłącznie raz (standardowy flow migracji); NIE re-runować ręcznie.
 -- Workflow v2: decyzja Tomka 2026-07-03 — bez etapu „Start" (rozmowa/umowa/kickoff
 -- prowadzone poza systemem; płatności mają własną, zawsze widoczną sekcję w widoku
 -- projektu) i bez kroku „Raport" w Portfelu. Etapy przenumerowane 1..5:

@@ -202,7 +202,8 @@ function parseSnapshot(raw: any): Record<string, unknown> | null {
       const list = Array.isArray(props2) ? props2 : [];
       const names: string[] = [];
       for (const sp of list) { const v = String(sp.sku_property_value ?? sp.property_value ?? '').trim(); if (v) { set.add(v.slice(0, 60)); names.push(v.slice(0, 60)); } }
-      const sp = parseFloat(String(s.offer_sale_price ?? s.sku_sale_price ?? s.sku_price ?? s.sale_price ?? '')) || null;
+      const spRaw = parseFloat(String(s.offer_sale_price ?? s.sku_sale_price ?? s.sku_price ?? s.sale_price ?? ''));
+      const sp = Number.isFinite(spRaw) ? spRaw : null; // NIE `|| null` — cena 0 to nie brak ceny
       if (names.length && skuPrices.length < 24) skuPrices.push({ v: names.join(' / '), price: sp });
     }
     variants = [...set].slice(0, 24);
@@ -210,8 +211,11 @@ function parseSnapshot(raw: any): Record<string, unknown> | null {
 
   // CENA (poziom oferty): target_* = w walucie żądania (PLN), fallback surowe pola
   const num = (x: unknown) => { const n = parseFloat(String(x ?? '')); return Number.isFinite(n) ? n : null; };
+  // GUARD (review 2026-07-03): Math.min(...[]) = Infinity — gdy wszystkie SKU bez ceny,
+  // sale musi być null, nie Infinity (JSON i tak zserializowałby to do null, ale nie ryzykujemy)
+  const validSkuPrices = skuPrices.filter((s) => s.price != null).map((s) => s.price as number);
   const sale = num(base.target_sale_price ?? d.target_sale_price ?? base.sale_price ?? d.sale_price ?? base.app_sale_price)
-    ?? (skuPrices.length ? Math.min(...skuPrices.filter((s) => s.price != null).map((s) => s.price as number)) : null);
+    ?? (validSkuPrices.length ? Math.min(...validSkuPrices) : null);
   const original = num(base.target_original_price ?? d.target_original_price ?? base.original_price ?? d.original_price);
   const currency = String(base.target_sale_price_currency ?? d.target_sale_price_currency ?? base.currency_code ?? d.currency ?? '').trim() || null;
   const price = sale != null ? { sale, original, currency } : null;
@@ -270,9 +274,11 @@ async function searchEnrich(id: string, queryStr: string, key: string): Promise<
   else if (Array.isArray(small)) images = small.map((x: any) => String(x));
   if (m.product_main_image_url) images.unshift(String(m.product_main_image_url));
   images = [...new Set(images.map((u) => u.startsWith('//') ? 'https:' + u : u).filter(Boolean))].slice(0, 8);
-  // cena z wyniku wyszukiwania (fallback, gdy detail padnie) — target_* w PLN
-  const sale = parseFloat(String(m.target_sale_price ?? m.sale_price ?? m.app_sale_price ?? '')) || null;
-  const original = parseFloat(String(m.target_original_price ?? m.original_price ?? '')) || null;
+  // cena z wyniku wyszukiwania (fallback, gdy detail padnie) — target_* w USD
+  const saleRaw = parseFloat(String(m.target_sale_price ?? m.sale_price ?? m.app_sale_price ?? ''));
+  const sale = Number.isFinite(saleRaw) ? saleRaw : null;
+  const origRaw = parseFloat(String(m.target_original_price ?? m.original_price ?? ''));
+  const original = Number.isFinite(origRaw) ? origRaw : null;
   const price = sale != null ? { sale, original, currency: String(m.target_sale_price_currency ?? 'USD') } : null;
   return images.length ? { title, images, price } : null;
 }

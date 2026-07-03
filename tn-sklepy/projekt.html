@@ -53,7 +53,7 @@
         input[type="date"] { color-scheme: dark; }
         .fld { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:6px;
             padding:8px 10px; font-size:13px; color:#fff; }
-        .fld:focus { outline:none; border-color:rgba(139,92,246,.5); }
+        .fld:focus { outline:none; border-color:rgba(0,112,243,.5); }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -372,10 +372,15 @@
             document.getElementById('stat-progress').textContent = (all.length?Math.round(done/all.length*100):0) + '%';
             document.getElementById('stat-products').textContent = products.length;
             document.getElementById('stat-target').textContent = project.target_orders || 1000;
-            // zamówienia: prawda = import z TakeDrop; fallback = purchases z Meta pixela
-            const tdOrders = sales.filter(s=>s.source==='takedrop').reduce((a,s)=>a+(s.orders||0),0);
-            const metaOrders = sales.filter(s=>s.source==='meta').reduce((a,s)=>a+(s.orders||0),0);
-            document.getElementById('stat-orders').textContent = (tdOrders || metaOrders).toLocaleString('pl-PL');
+            // zamówienia: prawda = import z TakeDrop, fallback Meta — PER PRODUKT (portfel może
+            // mieć produkty tylko z Meta obok produktów z importem TD; globalny fallback gubiłby te pierwsze)
+            const bySrc = {};
+            sales.forEach(s => {
+                const k = s.product_id || '_proj';
+                (bySrc[k] = bySrc[k] || { td: 0, meta: 0 })[s.source === 'takedrop' ? 'td' : 'meta'] += (s.orders || 0);
+            });
+            const totalOrders = Object.values(bySrc).reduce((a, x) => a + (x.td || x.meta), 0);
+            document.getElementById('stat-orders').textContent = totalOrders.toLocaleString('pl-PL');
             document.getElementById('p-notes').value = project.notes || '';
         }
 
@@ -492,6 +497,9 @@
         // Konfiguracja „co konkretnie robimy w tym kroku": opis, pola (col = zapis do kolumny
         // projektu/produktu, inaczej do wf2_steps.data.fields), checklista roboty, prompt dla
         // Claude jako punkt wyjścia. Krok bez wpisu dostaje warsztat generyczny.
+        // UWAGA: teksty checklist są KLUCZEM deduplikacji z zapisanym stanem (wf2_steps.data.checklist)
+        // — zmiana brzmienia pozycji tworzy duplikat u projektów, które już odhaczały. Nie przeredagowywać;
+        // poprawki brzmienia = nowa pozycja + świadomość, że stara zostanie jako „własna" u starych projektów.
         const WS = {
             wybor:        { desc:'Wybór produktu do portfela i ustawienie marży testowej — celujemy w 5–10 zł zysku na sztuce, żeby zobaczyć realny potencjał sprzedaży.', productBtn:true,
                             check:['Produkt zweryfikowany na radarze (/trendy)','Dostawca i cena zakupu potwierdzone','Kalkulacja marży ustawiona (tryb TEST)'],
@@ -854,7 +862,9 @@
             } catch (_) {}
             usdRate = 4.00; usdRateReal = false; return usdRate;
         }
+        let auctionSeq = 0; // guard na race: szybkie przełączanie produktów w modalu
         async function loadModalAuction(ttId) {
+            const my = ++auctionSeq;
             modalTT = null;
             const box = document.getElementById('pm-auction');
             if (!ttId) { box.innerHTML = ''; return; }
@@ -865,6 +875,7 @@
                     .eq('id', ttId).maybeSingle(),
                 getUsdRate(),
             ]);
+            if (my !== auctionSeq) return; // w międzyczasie otwarto inny produkt — nie nadpisuj
             modalTT = data || null;
             renderAuctionBox();
         }
