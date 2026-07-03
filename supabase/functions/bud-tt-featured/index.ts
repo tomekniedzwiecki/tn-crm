@@ -89,7 +89,12 @@ Deno.serve(async (req) => {
       return ((h >>> 0) % 100000) / 100000 // [0,1)
     }
     const maxHeat = Math.max(1, ...all.map((p: any) => p.heat || 0))
-    const W = 1.5 // waga jakości (heat) vs losowość; większe = mocniej trzyma się topu
+    // FIX 2026-07-02 (feedback Tomka: „ciągle te same produkty"): przy W=1.5 baza heat (0–1,5)
+    // DOMINOWAŁA nad losowością (0–1) — top-heat wygrywał każdy seed, pierwsza strona wyglądała
+    // identycznie w każdej rozmowie, a ogon puli (~129 approved) nie istniał. W=0.35 = lekka
+    // premia za jakość + realna rotacja: każdy seed daje inny zestaw, pracuje CAŁA pula.
+    // (Stały seed w sesji nadal gwarantuje spójną paginację „Pokaż więcej".)
+    const W = 0.35
     const score = (p: any) => ((p.heat || 0) / maxHeat) * W + rngFor(p.id)
     all.sort((a: any, b: any) => score(b) - score(a))
   }

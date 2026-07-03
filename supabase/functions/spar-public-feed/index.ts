@@ -18,6 +18,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5500',
   'http://127.0.0.1:5500',
   'http://localhost:5173',
+  'http://localhost:8317',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -61,7 +62,7 @@ Deno.serve(async (req) => {
     // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji
     const { data, error } = await supabase
       .from('spar_sessions')
-      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at')
+      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at, full_paid_at')
       .or('is_test.eq.false,showcase.eq.true')
       .eq('hidden_from_feed', false)
       .not('preview_images', 'is', null)
@@ -96,6 +97,7 @@ Deno.serve(async (req) => {
       id: string
       nazwa: string
       complete: boolean
+      paid: boolean
       img: string
       generated_at: string
       imgs: { view: string; label: string; url: string }[]
@@ -125,6 +127,7 @@ Deno.serve(async (req) => {
         id: row.id as string,
         nazwa,
         complete, // zielony + strona + prototyp → karta prowadzi do pełnego /projekt
+        paid: !row.is_test && !!row.full_paid_at, // pełna wpłata = realnie kupiony projekt
         img: imgs[0].url, // wsteczna zgodność (strona główna)
         generated_at: maxTs ? new Date(maxTs).toISOString() : (row.created_at as string),
         imgs,

@@ -18,6 +18,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5500',
   'http://127.0.0.1:5500',
   'http://localhost:5173',
+  'http://localhost:8317',
 ]
 
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -58,13 +59,15 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
 
     // Wszystkie realne sesje z grafikami; testowe wykluczone CHYBA że showcase;
-    // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji
+    // hidden_from_feed pozwala ręcznie zdjąć projekt z publicznych inspiracji.
+    // Grafiki: preview_images (pełny zestaw widoków) LUB mockups (makiety sklepu
+    // z rozmowy — to je realnie wypełnia lejek /sklep).
     const { data, error } = await supabase
       .from('bud_sessions')
-      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, created_at')
+      .select('id, verdict, landing_url, is_test, preview_brief, preview_images, brand, mockups, chosen_style, created_at')
       .or('is_test.eq.false,showcase.eq.true')
       .eq('hidden_from_feed', false)
-      .not('preview_images', 'is', null)
+      .or('preview_images.not.is.null,mockups.not.is.null')
       .order('created_at', { ascending: false })
       .limit(FEED_LIMIT * 2)
 
@@ -105,7 +108,9 @@ Deno.serve(async (req) => {
     for (const row of data || []) {
       const imgsObj = (row.preview_images || {}) as Record<string, unknown>
       const brief = (row.preview_brief || {}) as Record<string, unknown>
-      const nazwa = typeof brief.nazwa === 'string' ? brief.nazwa.slice(0, 60) : null
+      const brand = (row.brand || {}) as Record<string, unknown>
+      const nazwa = typeof brief.nazwa === 'string' ? brief.nazwa.slice(0, 60)
+        : typeof brand.nazwa === 'string' ? brand.nazwa.slice(0, 60) : null
       if (!nazwa || seen.has(nazwa)) continue
       const imgs: FeedItem['imgs'] = []
       let maxTs = 0
@@ -115,6 +120,18 @@ Deno.serve(async (req) => {
         imgs.push({ view, label: VIEW_LABELS[view] || view, url })
         const m = url.match(/-(\d{13})\.png/)
         if (m) maxTs = Math.max(maxTs, parseInt(m[1], 10))
+      }
+      // fallback: makiety sklepu z rozmowy — wybrany styl (chosen_style) idzie pierwszy
+      if (!imgs.length && Array.isArray(row.mockups)) {
+        const mocks = (row.mockups as Record<string, unknown>[])
+          .filter((m) => typeof m?.url === 'string' && m.url)
+          .sort((a, b) => (a.style === row.chosen_style ? -1 : 0) - (b.style === row.chosen_style ? -1 : 0))
+        for (const m of mocks) {
+          const url = m.url as string
+          imgs.push({ view: 'makieta', label: typeof m.label === 'string' ? m.label.slice(0, 60) : 'Makieta sklepu', url })
+          const t = url.match(/\/(\d{13})_\d+\.(?:png|webp|jpg)/)
+          if (t) maxTs = Math.max(maxTs, parseInt(t[1], 10))
+        }
       }
       if (!imgs.length) continue
       seen.add(nazwa)

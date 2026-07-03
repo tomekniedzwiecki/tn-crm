@@ -235,8 +235,15 @@ Deno.serve(async (req) => {
 
     // wyklucz produkty już w bazie (żeby zwracać tylko NOWE)
     if (body.excludeExisting) {
-      const { data: ex } = await supabase.from('bud_tt_products').select('key').range(0, 9999)
-      const have = new Set((ex || []).map((r: any) => r.key))
+      // PostgREST tnie pojedyncze zapytanie do 1000 wierszy → przy puli >1000 MUSIMY paginować,
+      // inaczej istniejące produkty poza pierwszym 1000 nie są wykluczane i wracają jako „nowe".
+      const have = new Set<string>()
+      for (let off = 0; ; off += 1000) {
+        const { data: ex } = await supabase.from('bud_tt_products').select('key').range(off, off + 999)
+        if (!ex?.length) break
+        for (const r of ex as any[]) have.add(r.key)
+        if (ex.length < 1000) break
+      }
       for (const k of [...cl.keys()]) if (have.has(k)) cl.delete(k)
     }
 
