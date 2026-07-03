@@ -398,7 +398,9 @@ Deno.serve(async (req) => {
         curated = (row && (row.curated_image as string)) || null
       }
     } catch { /* */ }
-    const snapTitle = String((snap && (snap as any).title) || '')
+    // Tytuł tylko z pewnego snapshotu ('detail') — fallback 'search' bywa INNYM produktem
+    // i wstrzykiwał obcy tytuł do copy reklam.
+    const snapTitle = (snap && String((snap as any).source || '') !== 'search') ? String((snap as any).title || '') : ''
     // FIX: galeria AliExpress jako reference_images type:'product' (kilka kadrów) — zamiast pojedynczego
     // main_image, który przez legacy `reference_image_url` był traktowany jako LOGO (→ zły produkt).
     // curated_image (panel /trendy) idzie PIERWSZE — snapshot z wyszukiwarki bywa innym produktem.

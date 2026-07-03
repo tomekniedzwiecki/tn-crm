@@ -37,7 +37,12 @@ export function productRefs(
   }
   push(curatedImage);                        // KUROWANE przez admina w /trendy — pewna prawda o produkcie,
                                              // ratuje makiety gdy snapshot ma galerię INNEGO towaru (source='search')
-  clean.forEach(push);                       // czyste kadry produktu z galerii — najsilniejszy sygnał
+  // source='search' = galeria z wyszukiwarki po nazwie (detail padł) — bywa INNYM produktem.
+  // Wtedy PEWNIEJSZE są: kandydat dopasowany PO OBRAZIE (product.image) i okładka wideo
+  // (product.cover — realny produkt z TikToka); podejrzana galeria idzie na SAM KONIEC.
+  const searchSnap = !!snap && String((snap as any).source || '') === 'search';
+  if (searchSnap) { push(product?.image); push(product?.cover); }
+  clean.forEach(push);                       // czyste kadry produktu z galerii — najsilniejszy sygnał (gdy detail)
   if (snap) push((snap as any).main_image);  // zwykle == images[0] (dedup), ale czasem uzupełnia
   covers.forEach(push);                      // okładki TikToka dopiero gdy brakuje czystych kadrów
   push(product?.image);                      // ostateczny fallback z karty produktu

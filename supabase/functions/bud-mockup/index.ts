@@ -65,9 +65,12 @@ function stylesPrompt(product: any, snap: any, ust: any): string {
   const dla = String(ust?.dla_kogo || '').slice(0, 200);
   const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 200);
   const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120);
+  // Tytuł aukcji groundinguje palety w REALNYM produkcie — pomijany przy snapshotach
+  // 'search' (fallback wyszukiwarki bywa innym towarem, mylnie ukierunkowałby style).
+  const snapTitle = (snap && String(snap.source || '') !== 'search') ? String(snap?.title || '').slice(0, 160) : '';
   return `Jesteś dyrektorem artystycznym marek e-commerce na rynek polski. Dla jednoproduktowego sklepu zaprojektuj DOKŁADNIE 4 RÓŻNE kierunki wizualne (style), z których klient wybierze jeden.
 
-Produkt: „${name}"${cat ? ` (kategoria: ${cat})` : ''}.
+Produkt: „${name}"${cat ? ` (kategoria: ${cat})` : ''}.${snapTitle ? `\nRealny produkt (tytuł aukcji): ${snapTitle} — palety mają WSPÓŁGRAĆ z jego rzeczywistym wyglądem (kolor/materiał), nie kłócić się z nim.` : ''}
 ${dla ? `Dla kogo: ${dla}.` : ''}${kat ? ` Kąt/wyróżnik: ${kat}.` : ''}${ton ? ` Ton marki: ${ton}.` : ''}
 
 Każdy z 4 stylów ma być WYRAŹNIE inny (inna paleta, typografia, nastrój) i sensownie dopasowany do produktu i odbiorcy — unikaj 4 wariantów tego samego „czysty minimalizm". Sięgaj świadomie po różne kierunki (np. premium/elegancki, energetyczny/viralowy, ciepły/organiczny, odważny/nowoczesny, retro, techniczny — dobierz pod TEN produkt).
@@ -126,9 +129,9 @@ Visual style for THIS mockup: ${brief}
 
 CRITICAL: the product shown MUST faithfully match the reference images (same object, shape, color, set). Render the ACTUAL product, not a generic stand-in.
 
-Sections top→bottom (conversion-optimized, mobile): 1) announcement bar (płatność przy odbiorze · 14 dni na zwrot); 2) header with brand name/logo + one CTA; 3) HERO — large product-in-use shot + benefit-led Polish headline (what it DOES, not the product name) + 1-line subtitle + ONE high-contrast CTA "Kup teraz" + price + ★★★★★; 4) trust strip (płatność przy odbiorze · 14 dni na zwrot · bezpieczna płatność · „hit z TikToka"); 5) „as seen on TikTok" social proof; 6) problem→solution; 7) how-it-works 3 steps; 8) 3-4 icon BENEFITS (ordered by the angle); 9) lifestyle/demo photo; 10) comparison table (nasza marka ✓ vs „zwykłe rozwiązanie" ✗); 11) short BRAND STORY (why it was created); 12) customer REVIEWS with stars + avatars; 13) guarantee/risk-reversal with a seal badge; 14) FAQ; 15) final CTA with price; plus a sticky bottom bar (price + „Kup teraz").
+COMPOSITION (CRITICAL — this is a DESIGN PREVIEW of the TOP of the page, not the whole page; fewer sections, BIGGER and LEGIBLE): render top→bottom, as if screenshotted on a phone: 1) thin announcement bar („Płatność przy odbiorze · 14 dni na zwrot"); 2) header with brand name/logo; 3) BIG HERO filling roughly HALF the frame — the product from the reference images rendered LARGE (at least one third of the frame width), shown in use, plus a benefit-led Polish headline (what it DOES, ≤8 words, large type), 1-line subtitle, ONE high-contrast „Kup teraz" button, visible price and a ★★★★★ row; 4) trust icon strip (płatność przy odbiorze · 14 dni na zwrot · bezpieczna płatność · „Znany z TikToka"); 5) at the very bottom, PARTIALLY CUT OFF by the frame edge (suggesting the page scrolls on): the start of a social-proof section — „Znany z TikToka" badge and the first customer review cards with photos. Do NOT cram more sections in — legibility and a big, faithful product beat completeness.
 
-Polish texts. Realistic, premium interface (NOT a placeholder template). ONE consistent palette and max 2 fonts per the style/tone above; brand name/logo consistent in the header; the CTA button must visually pop (high contrast). No foreign brand logos, no fake countdown timers, no invented review counts. High quality, sharp, crisp UI.${reportContext(report)}`;
+Polish texts, all headlines fully legible (no lorem ipsum, no gibberish glyphs). Realistic, premium interface (NOT a placeholder template). ONE consistent palette and max 2 fonts per the style/tone above; brand name/logo consistent in the header; the CTA button must visually pop (high contrast). No foreign brand logos, no fake countdown timers, no invented review counts. High quality, sharp, crisp UI.${reportContext(report)}`;
 }
 
 Deno.serve(async (req) => {

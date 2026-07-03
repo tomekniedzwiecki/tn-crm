@@ -40,12 +40,15 @@ async function fetchTimeout(url: string, init: RequestInit, ms: number): Promise
 
 // deno-lint-ignore no-explicit-any
 function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: string[] = [], styleBrief = '', styleLabel = '', logoUrl = '', brandName = '', mockupSpec = ''): string {
-  const name = String(snap?.title || product?.nazwa || product?.name || 'produkt').slice(0, 160)
+  // Polska nazwa produktu (radar) ma PIERWSZEŃSTWO — snap.title to angielski tytuł aukcji,
+  // który wchodził do copy strony (a przy snapshotach 'search' bywał INNYM produktem).
+  const name = String(product?.nazwa || product?.name || snap?.title || 'produkt').slice(0, 160)
   const cat = String(product?.kategoria || product?.category || '').slice(0, 60)
   const dla = String(ust?.dla_kogo || '').slice(0, 240)
   const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 240)
   const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120)
   const brand = String(ust?.nazwa || ust?.brand || '').slice(0, 80)
+  const haslo = String(ust?.haslo || '').slice(0, 120)   // hasło wybrane/wpisane przez klienta w rozmowie (sprawczość)
   const korz = Array.isArray(ust?.korzysci) ? ust.korzysci.slice(0, 6).join('; ') : (Array.isArray(ust?.korzyści) ? ust.korzyści.slice(0, 6).join('; ') : '')
   const imgList = (images || []).slice(0, 6)
   // Autor opinii NIGDY „AliExpress Shopper"/marketplace/„Buyer" — pusty => model dorobi polski inicjał.
@@ -70,7 +73,7 @@ function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: 
     : `OPINIE: brak realnych — wygeneruj wiarygodny szablon (kilka kafli ze zdjęciem-placeholderem + tekst).`
   return `Jesteś elitarnym front-end developerem i copywriterem direct-response, specjalizującym się w WYSOKOKONWERTUJĄCYCH stronach jednoproduktowych w stylu topowych marek DTC z USA. Zbuduj KOMPLETNĄ, produkcyjnie bliską stronę sprzedażową dla „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. CEL NADRZĘDNY: maksymalna skuteczność sprzedaży tego JEDNEGO produktu — każdy element ma popychać do zakupu.
 
-USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}
+USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}${haslo ? `\n- HASŁO OD KLIENTA (jego własne słowa — świętość): „${haslo}"` : ''}
 
 ${logoUrl ? `LOGO MARKI (GOTOWE): użyj DOKŁADNIE tego URL jako logo na górze strony (header/hero) — <img src="${logoUrl}" alt="${brandName || 'logo marki'}" style="height:38px;width:auto"> . NIE generuj innego logo i NIE pisz samej nazwy zamiast logo; to oficjalne logo marki${brandName ? ` „${brandName}"` : ''}.\n\n` : (brandName || brand) ? `NAZWA MARKI (BEZ GOTOWEGO LOGO): w headerze na górze strony pokaż nazwę „${brandName || brand}" jako WORDMARK — wyrazisty tekstowy logotyp (mocny font/akcent spójny ze stylem makiety), traktowany jak logo marki; NIE zostawiaj headera bez marki. Powtórz nazwę dyskretnie przy domknięciu strony.\n\n` : ''}ZDJĘCIA DO UŻYCIA (jako <img src="..." loading="lazy">; NIE wymyślaj innych URL-i). Masz DWA rodzaje — używaj ich ZGODNIE Z PRZEZNACZENIEM, oszczędnie, żeby strona wyglądała jak prawdziwa marka, nie „wygenerowana AI":
 ${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie; masz ich ${lifestyle.length}) — ROZŁÓŻ po jednym na RÓŻNE sekcje: HERO, „jak działa / w użyciu", demonstracja/efekt oraz lifestyle „w codzienności". Użyj WSZYSTKICH dostępnych, NIE wrzucaj dwóch w to samo miejsce (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
@@ -87,7 +90,7 @@ STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
 0. GÓRNY PASEK OGŁOSZENIOWY (cienki pasek na samej górze, nad headerem, pełna szerokość, kontrastowy akcent): 1 krótki UCZCIWY komunikat zaufania („Płatność przy odbiorze · 14 dni na zwrot" albo „Znany z TikToka"). BEZ pilności i obietnic dostawy. Statyczny OK; delikatne przewijanie 2-3 haseł czystym CSS dozwolone.
 0a. HEADER (pasek marki, pod paskiem ogłoszeniowym, sticky lub statyczny): ZAWSZE pokaż markę — logo (jeśli podane) albo wyrazisty WORDMARK z nazwą. OBOWIĄZKOWY nawet przy skąpych ustaleniach; gdy brak nazwy — krótka, spójna z tonem (NIE „Sklep"). Bez menu i linków wyprowadzających; opcjonalnie dyskretne ★ ocena albo ikona COD po prawej.
 1. STICKY DOLNY PASEK CTA (position:fixed na dole, zawsze widoczny zwł. na mobile): cena + przycisk „Kup teraz". KRYTYCZNE — klient nigdy nie szuka przycisku.
-2. HERO (test 3 sekund): nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); w h1 CO NAJMNIEJ JEDEN człon opisuje konkretne DZIAŁANIE produktu (np. ściskasz / wraca powoli / mierzy / świeci), nie wyłącznie stan emocjonalny — unikaj triady samych uczuć („odstresuj / poczuj ulgę / zrelaksuj"). 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ z REALNYMI statystykami opinii (patrz STATYSTYKI OPINII wyżej).
+2. HERO (test 3 sekund): ${haslo ? `NAGŁÓWEK h1 = HASŁO KLIENTA „${haslo}" — użyj 1:1 albo z MINIMALNĄ korektą (interpunkcja/szyk), zachowując jego słowa i sens; wolno dopisać krótki podtytuł-wyróżnik. NIE zastępuj hasła własnym pomysłem. ` : ''}nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); w h1 CO NAJMNIEJ JEDEN człon opisuje konkretne DZIAŁANIE produktu (np. ściskasz / wraca powoli / mierzy / świeci), nie wyłącznie stan emocjonalny — unikaj triady samych uczuć („odstresuj / poczuj ulgę / zrelaksuj"). 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ z REALNYMI statystykami opinii (patrz STATYSTYKI OPINII wyżej).
 3. PASEK SOCIAL PROOF (zaraz pod hero): ★ ocena + liczba ocen (z realnych statystyk wyżej) + % pozytywnych. Zamiast twardego „viralowy hit" bez dowodu — dyskretna ODZNAKA „Znany z TikToka" (inline SVG TikToka + 1 linijka, BEZ zmyślonych liczb wyświetleń), wyglądająca jak odznaka mediów, nie zwykły tekst. Używaj REALNYCH liczb, nie wymyślaj.
 3a. PASEK ZAUFANIA — IKONY (osobny wąski strip pod paskiem ocen, równy rząd 3-4 kafelków inline SVG + krótki podpis): (1) paczka/kurier — „Płatność przy odbiorze"; (2) strzałka zwrotu — „14 dni na zwrot"; (3) kłódka/tarcza — „Bezpieczna płatność"; (4) ogień/TikTok — „Hit z TikToka". To OSOBNA sekcja-pasek, NIE tekst w hero. BEZ obietnic dostawy czasowej.
 4. PROBLEM → ROZWIĄZANIE: nazwij ból odbiorcy (z ustaleń), pokaż produkt jako rozwiązanie.
@@ -358,11 +361,20 @@ Deno.serve(async (req) => {
     const logoUrl = String((brandObj && (brandObj.chosen_logo || brandObj.logo_url)) || '')
     const brandName = String((brandObj && (brandObj.chosen_name || brandObj.nazwa)) || (ust && (ust as any).nazwa) || '').slice(0, 80)
     let snap: Record<string, unknown> | null = null
+    let curated: string | null = null
     try {
       const pkId = String(product.id || '')
-      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null }
+      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null; curated = (row && (row.curated_image as string)) || null }
     } catch { /* */ }
-    const images = (snap && Array.isArray((snap as any).images)) ? (snap as any).images : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
+    // ANTY-ZATRUCIE (2026-07-03, przypadek „materac do Tesli"): snapshot source='search'
+    // (fallback wyszukiwarki po nazwie) bywa INNYM produktem — jego tytuł psuł nazwę na
+    // stronie, jego OPINIE lądowały jako social proof, a galeria karmiła stronę i lifestyle
+    // zdjęciami obcego towaru. Wtedy: zeruj tytuł/opinie/staty (prompt przejdzie na uczciwe
+    // szablony), a zdjęcia bierz z pewnych źródeł (kandydat dopasowany po obrazie + okładka).
+    const searchSnap = !!snap && String((snap as any).source || '') === 'search'
+    if (searchSnap) snap = { ...(snap as Record<string, unknown>), title: '', reviews: [], review_stats: null }
+    let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
+    if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
 
     const genTask = (async () => {
       let saved = false

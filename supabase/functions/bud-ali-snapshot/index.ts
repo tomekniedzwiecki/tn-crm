@@ -358,8 +358,12 @@ Deno.serve(async (req) => {
       if (!detail) enr = await searchEnrich(id, row.query || row.pl_name || '', RAPID_KEY);
     }
 
+    // Kolejność ma znaczenie (productRefs bierze images[0..] jako referencje generatora):
+    // przy fallbacku 'search' galeria bywa INNYM produktem — wtedy PIERWSZE idą pewne kadry
+    // (kandydat dopasowany po obrazie + okładka wideo), a wyszukiwarkowa galeria na koniec.
     const images = [...new Set([
       ...((detail?.images as string[]) || []),
+      ...(detail ? [] : [haveImg, String(row.cover || '')]),
       ...((enr?.images) || []),
       haveImg, row.cover,
     ].map((u) => String(u || '').trim()).filter(Boolean))].slice(0, 8);
