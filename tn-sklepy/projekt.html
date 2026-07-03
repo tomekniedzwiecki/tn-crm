@@ -206,7 +206,6 @@
         <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-lg p-6">
             <h3 class="text-white text-lg font-semibold mb-4">Ustawienia projektu</h3>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Nazwa / marka</label><input id="set-name" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Klient</label><input id="set-customer" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label><input id="set-email" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label><input id="set-phone" class="fld"></div>
@@ -330,12 +329,11 @@
 
         // ============ RENDER ============
         function renderHeader() {
-            document.getElementById('hdr-name').textContent = project.name || '(bez nazwy)';
-            document.getElementById('p-name').textContent = project.name || '(bez nazwy)';
+            document.getElementById('hdr-name').textContent = project.customer_name || '(bez klienta)';
+            document.getElementById('p-name').textContent = project.customer_name || '(bez klienta)';
             const sel = document.getElementById('p-status');
             sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
             const meta = [];
-            if (project.customer_name) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-user"></i>${escapeHtml(project.customer_name)}</span>`);
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
             if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-violet-400 hover:text-violet-300 flex items-center gap-1"><i class="ph ph-kanban"></i>lead w pipeline</a>`);
@@ -636,7 +634,6 @@
             project.notes = notes; showToast('Notatki zapisane','success');
         }
         function openSettings() {
-            document.getElementById('set-name').value = project.name || '';
             document.getElementById('set-customer').value = project.customer_name || '';
             document.getElementById('set-email').value = project.customer_email || '';
             document.getElementById('set-phone').value = project.customer_phone || '';
@@ -650,7 +647,6 @@
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
         async function saveSettings() {
             const payload = {
-                name: document.getElementById('set-name').value.trim(),
                 customer_name: document.getElementById('set-customer').value.trim() || null,
                 customer_email: document.getElementById('set-email').value.trim() || null,
                 customer_phone: document.getElementById('set-phone').value.trim() || null,
@@ -665,7 +661,7 @@
             Object.assign(project, payload); closeSettings(); renderHeader(); showToast('Zapisano','success');
         }
         async function deleteProject() {
-            if (!confirm(`Usunąć projekt „${project.name||''}"? Skasuje produkty, kroki, płatności i historię.`)) return;
+            if (!confirm(`Usunąć projekt klienta „${project.customer_name||''}"? Skasuje produkty, kroki, płatności i historię.`)) return;
             if (!confirm('Na pewno? Tej operacji nie da się cofnąć.')) return;
             const { error } = await supabaseClient.from('wf2_projects').delete().eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }

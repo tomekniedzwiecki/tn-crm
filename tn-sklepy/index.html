@@ -72,7 +72,6 @@
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="border-b border-white/5 text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-                                    <th class="px-5 py-3">Projekt</th>
                                     <th class="px-5 py-3">Klient</th>
                                     <th class="px-5 py-3">Status</th>
                                     <th class="px-5 py-3">Postęp</th>
@@ -100,8 +99,6 @@
         <div class="bg-zinc-950 border border-white/10 rounded-2xl w-full max-w-md p-6">
             <h3 class="text-white text-lg font-semibold mb-4">Nowy projekt</h3>
             <div class="space-y-3">
-                <div><label class="text-xs text-zinc-500 block mb-1">Nazwa projektu / marka</label>
-                    <input id="np-name" class="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/50"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Imię i nazwisko klienta</label>
                     <input id="np-customer" class="w-full bg-zinc-900 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-violet-500/50"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label>
@@ -269,11 +266,7 @@
                 const prods = (productsByProj[p.id] || []).length;
                 return `<tr class="border-b border-white/5 hover:bg-white/[.03] cursor-pointer transition-colors" onclick="location.href='projekt.html?id=${p.id}'">
                     <td class="px-5 py-3.5">
-                        <div class="text-white font-medium">${escapeHtml(p.name || '(bez nazwy)')}</div>
-                        <div class="text-zinc-600 text-[11px] font-mono">${p.id.slice(0, 8)}</div>
-                    </td>
-                    <td class="px-5 py-3.5">
-                        <div class="text-zinc-300">${escapeHtml(p.customer_name || '—')}</div>
+                        <div class="text-white font-medium">${escapeHtml(p.customer_name || '(bez klienta)')}</div>
                         <div class="text-zinc-600 text-[11px]">${escapeHtml(p.customer_email || '')}</div>
                     </td>
                     <td class="px-5 py-3.5"><span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span></td>
@@ -293,18 +286,17 @@
         }
 
         // ============ NOWY PROJEKT ============
-        function openNewModal() { document.getElementById('new-modal').classList.remove('hidden'); document.getElementById('np-name').focus(); }
+        function openNewModal() { document.getElementById('new-modal').classList.remove('hidden'); document.getElementById('np-customer').focus(); }
         function closeNewModal() { document.getElementById('new-modal').classList.add('hidden'); }
         async function createProject() {
             const btn = document.getElementById('np-save'); btn.disabled = true;
             try {
                 const payload = {
-                    name: document.getElementById('np-name').value.trim(),
                     customer_name: document.getElementById('np-customer').value.trim() || null,
                     customer_email: document.getElementById('np-email').value.trim() || null,
                     customer_phone: document.getElementById('np-phone').value.trim() || null,
                 };
-                if (!payload.name && !payload.customer_name) { showToast('Podaj nazwę projektu albo klienta', 'error'); btn.disabled = false; return; }
+                if (!payload.customer_name) { showToast('Podaj imię i nazwisko klienta', 'error'); btn.disabled = false; return; }
                 const { data, error } = await supabaseClient.from('wf2_projects').insert(payload).select('id').single();
                 if (error) throw error;
                 await supabaseClient.rpc('wf2_ensure_steps', { p_project: data.id });

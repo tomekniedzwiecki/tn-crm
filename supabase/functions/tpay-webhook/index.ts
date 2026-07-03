@@ -938,15 +938,13 @@ Deno.serve(async (req) => {
               const { data: exProj } = await supabase.from('wf2_projects').select('id').eq('bud_session_id', bs.id).maybeSingle()
               if (!exProj) {
                 const { data: sess } = await supabase.from('bud_sessions')
-                  .select('id, name, email, phone, lead_id, brand, chosen_product').eq('id', bs.id).maybeSingle()
-                // deno-lint-ignore no-explicit-any
-                const brandObj: any = sess?.brand || {}
+                  .select('id, name, email, phone, lead_id, chosen_product').eq('id', bs.id).maybeSingle()
                 // deno-lint-ignore no-explicit-any
                 const prodObj: any = sess?.chosen_product || {}
-                const brandName = String(brandObj.chosen_name || brandObj.nazwa || '').trim()
                 const prodName = String(prodObj.nazwa || prodObj.pl_name || prodObj.name || '').trim()
+                // projekt NIE ma własnej nazwy (decyzja Tomka 2026-07-03) — identyfikacja
+                // po kliencie; docelowo wizytówką będzie link do galerii landingów klienta
                 const { data: proj, error: projErr } = await supabase.from('wf2_projects').insert({
-                  name: brandName || prodName || sess?.name || order.customer_name || 'Nowy projekt',
                   customer_name: sess?.name || order.customer_name || null,
                   customer_email: sess?.email || order.customer_email || null,
                   customer_phone: sess?.phone || null,
