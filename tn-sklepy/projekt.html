@@ -168,6 +168,8 @@
                         <option value="scale">SKALA — marża docelowa</option>
                     </select></div>
                 <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Link dostawcy</label><input id="pm-supplier" class="fld" placeholder="https://…"></div>
+                <!-- Aukcja AliExpress: status/cena/podmiana (tylko produkty z radaru) -->
+                <div id="pm-auction" class="md:col-span-2"></div>
                 <div class="md:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Zdjęcie (cover URL)</label><input id="pm-cover" class="fld" placeholder="https://…"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Zakup / szt. (zł)</label><input id="pm-cost" type="number" step="0.01" class="fld" oninput="recalcMargin()"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Wysyłka / szt. (zł)</label><input id="pm-ship" type="number" step="0.01" class="fld" oninput="recalcMargin()"></div>
@@ -176,7 +178,10 @@
                 <!-- kalkulator marży -->
                 <div class="md:col-span-2 bg-[#111] border border-[#262626] rounded-md px-4 py-3 flex items-center justify-between flex-wrap gap-2">
                     <div class="text-xs text-zinc-400">Zysk na sztuce: <span id="pm-profit" class="font-mono font-semibold text-white">—</span></div>
-                    <div id="pm-hint" class="text-[11px] text-zinc-500"></div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div id="pm-hint" class="text-[11px] text-zinc-500"></div>
+                        <button onclick="setTargetPrice()" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1 transition-colors" title="Ustawia cenę sprzedaży celującą w środek widełek 5–10 zł zysku/szt.">Ustaw cenę docelową</button>
+                    </div>
                 </div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Strona w TakeDrop (URL)</label><input id="pm-tdurl" class="fld" placeholder="https://…"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Meta campaign ID</label><input id="pm-campaign" class="fld" placeholder="(po utworzeniu kampanii)"></div>
@@ -825,6 +830,7 @@
             document.getElementById('pm-name').value = t.pl_name || '';
             document.getElementById('pm-supplier').value = t.chosen_link || '';
             document.getElementById('pm-cover').value = t.curated_image || t.ali_main || t.cover || '';
+            loadModalAuction(t.id);
         }
         async function previewGenLanding(sessId) {
             const { data, error } = await supabaseClient.from('bud_sessions').select('landing_html').eq('id', sessId).single();
@@ -832,6 +838,120 @@
             const w = window.open('about:blank');
             if (!w) { showToast('Odblokuj popupy dla tej strony', 'error'); return; }
             w.document.open(); w.document.write(data.landing_html); w.document.close();
+        }
+
+        // ============ AUKCJA ALIEXPRESS w modalu produktu ============
+        let modalTT = null;      // wiersz bud_tt_products produktu otwartego w modalu
+        let usdRate = null;      // kurs NBP (cache 24h w localStorage), fallback 4.00
+        let usdRateReal = false; // czy kurs z NBP (false = fallback)
+        async function getUsdRate() {
+            if (usdRate) return usdRate;
+            try { const c = JSON.parse(localStorage.getItem('nbp_usd') || 'null'); if (c && Date.now() - c.t < 86400000) { usdRate = c.r; usdRateReal = true; return usdRate; } } catch (_) {}
+            try {
+                const r = await fetch('https://api.nbp.pl/api/exchangerates/rates/a/usd?format=json');
+                const j = await r.json(); const mid = j?.rates?.[0]?.mid;
+                if (mid) { usdRate = mid; usdRateReal = true; localStorage.setItem('nbp_usd', JSON.stringify({ r: mid, t: Date.now() })); return usdRate; }
+            } catch (_) {}
+            usdRate = 4.00; usdRateReal = false; return usdRate;
+        }
+        async function loadModalAuction(ttId) {
+            modalTT = null;
+            const box = document.getElementById('pm-auction');
+            if (!ttId) { box.innerHTML = ''; return; }
+            box.innerHTML = '<div class="text-zinc-600 text-[11px]">Sprawdzam aukcję…</div>';
+            const [{ data }] = await Promise.all([
+                supabaseClient.from('bud_tt_products')
+                    .select('id, chosen_link, curated_image, cover, ali_src:ali_snapshot->>source, ali_sale:ali_snapshot->price->>sale, ali_img:ali_snapshot->>main_image, ali_at:ali_snapshot->>fetched_at, ali_title:ali_snapshot->>title')
+                    .eq('id', ttId).maybeSingle(),
+                getUsdRate(),
+            ]);
+            modalTT = data || null;
+            renderAuctionBox();
+        }
+        function renderAuctionBox() {
+            const box = document.getElementById('pm-auction');
+            if (!modalTT) { box.innerHTML = ''; return; }
+            const t = modalTT;
+            const confirmed = t.ali_src === 'detail';
+            const sale = parseFloat(t.ali_sale) || null;
+            const pln = sale != null ? Math.round(sale * usdRate * 100) / 100 : null;
+            const when = t.ali_at ? new Date(t.ali_at).toLocaleDateString('pl-PL') : '—';
+            let h = '';
+            if (confirmed) {
+                h += `<div class="border border-[#45a557]/30 bg-[#45a557]/[.05] rounded-md p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <span class="text-[11px] text-[#62c073] flex items-center gap-1.5"><i class="ph ph-check-circle"></i> Aukcja potwierdzona (snapshot z ${when})</span>
+                        <button onclick="pmRecheck()" class="text-[10.5px] text-zinc-500 hover:text-zinc-300">Sprawdź ponownie</button>
+                    </div>
+                    ${sale != null ? `<div class="flex items-center justify-between flex-wrap gap-2">
+                        <span class="text-[12px] text-zinc-300 font-mono">$${sale} × ${usdRate.toFixed(2)}${usdRateReal ? '' : ' (kurs zapasowy!)'} ≈ <b class="text-white">${pln.toFixed(2)} zł</b></span>
+                        <button onclick="pmInsertCost(${pln})" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1">Wstaw jako cenę zakupu</button>
+                    </div>` : '<div class="text-[11px] text-zinc-500">Aukcja żyje, ale bez ceny w snapshocie — Sprawdź ponownie.</div>'}
+                </div>`;
+            } else {
+                h += `<div class="border border-[#f5a623]/40 bg-[#f5a623]/[.06] rounded-md p-3.5 space-y-2.5">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <span class="text-[11px] text-[#f5b955] flex items-center gap-1.5"><i class="ph ph-warning"></i> AUKCJA NIEPOTWIERDZONA — możliwe, że wygasła. Podmień link.</span>
+                        <button onclick="pmRecheck()" class="text-[10.5px] text-zinc-500 hover:text-zinc-300">Sprawdź ponownie</button>
+                    </div>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <button onclick="pmSearchImage('aliprice')" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1"><i class="ph ph-image"></i> AliPrice (kopiuje zdjęcie)</button>
+                        <button onclick="pmSearchImage('lens')" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff] border border-[#0070f3]/40 rounded-md px-2.5 py-1"><i class="ph ph-magnifying-glass"></i> Google Lens po zdjęciu</button>
+                    </div>
+                    <div class="flex gap-2">
+                        <input id="pm-newlink" class="fld" style="font-size:12px" placeholder="Nowy link do aukcji AliExpress…">
+                        <button onclick="pmSwapLink()" class="text-[11px] font-semibold bg-white text-black rounded-md px-3 flex-shrink-0 hover:bg-zinc-200">Podmień</button>
+                    </div>
+                </div>`;
+            }
+            box.innerHTML = h;
+        }
+        function pmInsertCost(pln) {
+            document.getElementById('pm-cost').value = pln.toFixed(2);
+            recalcMargin();
+            showToast('Cena zakupu z aukcji wstawiona (bez wysyłki — uzupełnij osobno)', 'success');
+        }
+        async function pmRecheck() {
+            if (!modalTT) return;
+            showToast('Przebudowuję snapshot aukcji… (~20 s)');
+            try { await supabaseClient.functions.invoke('bud-ali-snapshot', { body: { productKey: modalTT.id, force: true } }); } catch (_) {}
+            await loadModalAuction(modalTT.id);
+            ttProducts = null; // odśwież cache pickera przy następnym otwarciu
+        }
+        function pmSearchImage(kind) {
+            const img = modalTT && (modalTT.curated_image || modalTT.ali_img || modalTT.cover) || document.getElementById('pm-cover').value;
+            if (!img) { showToast('Brak zdjęcia produktu', 'error'); return; }
+            if (kind === 'lens') { window.open('https://lens.google.com/uploadbyurl?url=' + encodeURIComponent(img), '_blank'); return; }
+            // AliPrice nie ma deep-linka po URL — kopiujemy zdjęcie, otwieramy wyszukiwarkę, wklejasz 1×
+            navigator.clipboard.writeText(img).catch(() => {});
+            window.open('https://www.aliprice.com/', '_blank');
+            showToast('URL zdjęcia skopiowany — wklej w wyszukiwarkę obrazem AliPrice', 'success');
+        }
+        async function pmSwapLink() {
+            const v = (document.getElementById('pm-newlink').value || '').trim();
+            if (!modalTT || !/^https?:\/\//.test(v)) { showToast('Wklej pełny link do aukcji', 'error'); return; }
+            const { error } = await supabaseClient.from('bud_tt_products').update({ chosen_link: v }).eq('id', modalTT.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            document.getElementById('pm-supplier').value = v;
+            logActivity('auction_swapped', 'Podmieniony link aukcji AliExpress dla produktu z radaru');
+            showToast('Link podmieniony — buduję świeży snapshot… (~20 s)');
+            try { await supabaseClient.functions.invoke('bud-ali-snapshot', { body: { productKey: modalTT.id, force: true } }); } catch (_) {}
+            await loadModalAuction(modalTT.id);
+            ttProducts = null;
+        }
+        // Cena docelowa: celuje w środek widełek 5–10 zł zysku/szt. (końcówka .99)
+        function setTargetPrice() {
+            const cost = parseFloat(document.getElementById('pm-cost').value) || 0;
+            const ship = parseFloat(document.getElementById('pm-ship').value) || 0;
+            const fees = (parseFloat(document.getElementById('pm-fees').value) || 0) / 100;
+            if (!cost && !ship) { showToast('Najpierw cena zakupu (np. z aukcji) i wysyłka', 'error'); return; }
+            if (fees >= 1) { showToast('Prowizje ≥ 100%?', 'error'); return; }
+            const lo = (cost + ship + TEST_PROFIT_MIN) / (1 - fees);
+            const hi = (cost + ship + TEST_PROFIT_MAX) / (1 - fees);
+            let price = Math.round((lo + hi) / 2) - 0.01;           // końcówka .99 przy środku widełek
+            price = Math.min(hi, Math.max(lo, price));
+            document.getElementById('pm-price').value = price.toFixed(2);
+            recalcMargin();
         }
 
         // ============ AKCJE: produkty ============
@@ -855,6 +975,7 @@
             document.getElementById('pm-notes').value = p?.notes || '';
             recalcMargin();
             document.getElementById('prod-modal').classList.remove('hidden');
+            loadModalAuction(p?.tt_product_id || null);
         }
         function closeProductModal() { document.getElementById('prod-modal').classList.add('hidden'); editingProductId = null; }
 
