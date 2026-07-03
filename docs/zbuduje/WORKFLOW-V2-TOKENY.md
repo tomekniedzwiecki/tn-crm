@@ -46,13 +46,14 @@ auto-create, rewrites, deploy + test:webhooks 4/4, commit ×2.
 | Główna pętla — output (migracja ~2×5k, ekrany ~14k, webhook/misc ~6k) | ~30 000 | ~$1,5 |
 | Główna pętla — input kumulacyjny (szac., ~35 wywołań × ~120k kontekstu, głównie cache read) | ~4,2M | ~$8,5 |
 | Subagenty | 0 | $0 |
-| **Razem F1** | **~4,2M (szacunek)** | **~$10 (zakres $7–14) ≈ 37 zł** |
+| Poprawka struktury (osobna apka tn-sklepy, domena, diagnoza logowania) | ~1,2M input + ~8k output (szac.) | ~$2,5 |
+| **Razem F1 (z poprawką)** | **~5,4M (szacunek)** | **~$12,5 (zakres $9–17) ≈ 46 zł** |
 
 ### Suma narastająco
 
 | | Tokeny (szac.) | Koszt API (szac.) |
 |---|---|---|
-| **Przygotowanie + F1** | ~6,8M | **~$19 (zakres $13–27) ≈ 70 zł** |
+| **Przygotowanie + F1** | ~8,0M | **~$21,5 (zakres $15–30) ≈ 80 zł** |
 
 Uwaga: bez prompt cache te same prace kosztowałyby po API ~3–4× więcej (~$60–75), bo każdy
 z ~60 wywołań narzędzi czyta pełny kontekst rozmowy po pełnej stawce $10/M.
