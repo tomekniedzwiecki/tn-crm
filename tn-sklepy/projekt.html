@@ -105,16 +105,6 @@
                 <!-- Kroki projektu (scope=project) -->
                 <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
 
-                <!-- Płatności (tylko Etap 1) -->
-                <div id="payments-box" class="hidden bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-credit-card text-violet-400"></i> Harmonogram płatności</h3>
-                        <button onclick="addPayment()" class="text-xs text-violet-300 hover:text-violet-200 flex items-center gap-1"><i class="ph ph-plus"></i> Dodaj pozycję</button>
-                    </div>
-                    <div id="payments-rows" class="space-y-2"></div>
-                    <div id="payments-sum" class="text-zinc-400 text-xs mt-3 font-mono"></div>
-                </div>
-
                 <!-- Portfel produktów: macierz (etapy z krokami scope=product) -->
                 <div id="matrix-box" class="hidden bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
                     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -128,6 +118,16 @@
                         </table>
                     </div>
                     <div id="matrix-empty" class="hidden py-10 text-center text-zinc-500 text-xs">Portfel pusty — dodaj 5–10 produktów do testów.</div>
+                </div>
+
+                <!-- Płatności (stała sekcja — etap „Start" usunięty decyzją Tomka 2026-07-03) -->
+                <div id="payments-box" class="bg-zinc-900/40 border border-white/5 rounded-2xl p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-credit-card text-violet-400"></i> Harmonogram płatności</h3>
+                        <button onclick="addPayment()" class="text-xs text-violet-300 hover:text-violet-200 flex items-center gap-1"><i class="ph ph-plus"></i> Dodaj pozycję</button>
+                    </div>
+                    <div id="payments-rows" class="space-y-2"></div>
+                    <div id="payments-sum" class="text-zinc-400 text-xs mt-3 font-mono"></div>
                 </div>
 
                 <!-- Notatki + aktywność -->
@@ -216,9 +216,12 @@
                 <div><label class="text-xs text-zinc-500 block mb-1">Sklep TD (URL)</label><input id="set-tdurl" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">Domena</label><input id="set-domain" class="fld"></div>
             </div>
-            <div class="flex justify-end gap-2 mt-5">
-                <button onclick="closeSettings()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
-                <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+            <div class="flex justify-between items-center mt-5">
+                <button onclick="deleteProject()" class="px-3 py-2 text-xs text-rose-400 hover:text-rose-300">Usuń projekt</button>
+                <div class="flex gap-2">
+                    <button onclick="closeSettings()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                    <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+                </div>
             </div>
         </div>
     </div>
@@ -236,6 +239,7 @@
         let steps = [];
         let products = [];
         let payments = [];
+        let sales = [];
         let activeStage = 1;
         let editingProductId = null;
         let stepModalCtx = null; // {stepId}
@@ -298,16 +302,17 @@
         async function loadAll() {
             // dosiej brakujące instancje kroków (nowe defs / nowe produkty)
             await supabaseClient.rpc('wf2_ensure_steps', { p_project: projectId });
-            const [projQ, defsQ, stepsQ, prodQ, payQ, actQ] = await Promise.all([
+            const [projQ, defsQ, stepsQ, prodQ, payQ, actQ, salesQ] = await Promise.all([
                 supabaseClient.from('wf2_projects').select('*').eq('id', projectId).single(),
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wf2_steps').select('*').eq('project_id', projectId).range(0, 1999),
                 supabaseClient.from('wf2_products').select('*').eq('project_id', projectId).order('sort').order('created_at'),
                 supabaseClient.from('wf2_payments').select('*').eq('project_id', projectId).order('sort').order('created_at'),
                 supabaseClient.from('wf2_activities').select('*').eq('project_id', projectId).order('created_at',{ascending:false}).limit(20),
+                supabaseClient.from('wf2_sales').select('source, orders').eq('project_id', projectId).range(0, 4999),
             ]);
             if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='index.html'; return; }
-            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; payments = payQ.data||[];
+            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[]; payments = payQ.data||[]; sales = salesQ.data||[];
             renderHeader(); renderPills(); renderStage(); renderActivity(actQ.data||[]);
         }
 
@@ -342,6 +347,10 @@
             document.getElementById('stat-progress').textContent = (all.length?Math.round(done/all.length*100):0) + '%';
             document.getElementById('stat-products').textContent = products.length;
             document.getElementById('stat-target').textContent = project.target_orders || 1000;
+            // zamówienia: prawda = import z TakeDrop; fallback = purchases z Meta pixela
+            const tdOrders = sales.filter(s=>s.source==='takedrop').reduce((a,s)=>a+(s.orders||0),0);
+            const metaOrders = sales.filter(s=>s.source==='meta').reduce((a,s)=>a+(s.orders||0),0);
+            document.getElementById('stat-orders').textContent = (tdOrders || metaOrders).toLocaleString('pl-PL');
             document.getElementById('p-notes').value = project.notes || '';
         }
 
@@ -392,14 +401,11 @@
                 </div>`;
             }).join('');
 
-            // płatności tylko na etapie 1
-            const payBox = document.getElementById('payments-box');
-            payBox.classList.toggle('hidden', activeStage !== 1);
-            if (activeStage === 1) renderPayments();
+            renderPayments();
 
-            // macierz produktów, jeśli etap ma kroki scope=product (etap 2 zawsze pokazuje portfel)
+            // macierz produktów, jeśli etap ma kroki scope=product (etap 1 Portfel — zawsze)
             const mxBox = document.getElementById('matrix-box');
-            const showMatrix = prodDefs.length > 0 || activeStage === 2;
+            const showMatrix = prodDefs.length > 0 || activeStage === 1;
             mxBox.classList.toggle('hidden', !showMatrix);
             if (showMatrix) renderMatrix(prodDefs);
         }
@@ -657,6 +663,13 @@
             const { error } = await supabaseClient.from('wf2_projects').update(payload).eq('id', projectId);
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             Object.assign(project, payload); closeSettings(); renderHeader(); showToast('Zapisano','success');
+        }
+        async function deleteProject() {
+            if (!confirm(`Usunąć projekt „${project.name||''}"? Skasuje produkty, kroki, płatności i historię.`)) return;
+            if (!confirm('Na pewno? Tej operacji nie da się cofnąć.')) return;
+            const { error } = await supabaseClient.from('wf2_projects').delete().eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            location.href = 'index.html';
         }
 
         (async () => {
