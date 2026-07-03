@@ -128,6 +128,19 @@
   .cand .ext{border:1px solid var(--line2);background:var(--surface2);border-radius:7px;width:32px;display:flex;align-items:center;justify-content:center;color:var(--dim)}
   .cand .ext:hover{color:var(--gold);border-color:#7a4a12}
   .nocand{color:var(--dim2);font-size:13px;padding:6px 0}
+  /* Referencja generatora (makiety/reklamy) — co model faktycznie dostaje jako zdjęcie produktu */
+  .refbox{display:flex;gap:12px;margin-top:4px;align-items:flex-start}
+  .refbox .refimg{flex:0 0 74px;width:74px;height:74px;border-radius:10px;overflow:hidden;background:#fff;border:1px solid var(--line2)}
+  .refbox .refimg img{width:100%;height:100%;object-fit:cover;display:block}
+  .refbox .refimg.none{display:flex;align-items:center;justify-content:center;color:var(--dim2);background:var(--surface2);font-size:10px;text-align:center;padding:4px}
+  .refmeta{flex:1;min-width:0;display:flex;flex-direction:column;gap:7px}
+  .refbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 10px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);width:fit-content}
+  .refbadge.ok{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.08)}
+  .refbadge.warn{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.08)}
+  .reftitle{font-size:11.5px;color:var(--dim2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .refrow{display:flex;gap:8px;flex-wrap:wrap}
+  .refrow .ipt{flex:1;min-width:180px}
+  @media(max-width:680px){.refrow .ipt{min-width:100%}.refrow .btn{flex:1}}
   .actions{display:flex;gap:10px;align-items:center;margin-top:15px;flex-wrap:wrap}
   .actions .ipt{flex:1;min-width:200px}
   .stbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--dim);margin-left:auto}
@@ -249,10 +262,19 @@ async function init(){
 }
 async function load(){
   $('loading').style.display='flex';$('cards').innerHTML='';
-  const {data,error}=await sb.from('bud_tt_products').select('*').order('heat',{ascending:false});
+  // PostgREST oddaje max 1000 wierszy na zapytanie — pula > 1000, więc paginujemy .range,
+  // inaczej najniższy-heat ogon (np. część approved) wypada z widoku i „znika" z liczników.
+  let all=[],err=null;
+  for(let off=0;;off+=1000){
+    const {data,error}=await sb.from('bud_tt_products').select('*').order('heat',{ascending:false}).order('key',{ascending:true}).range(off,off+999);
+    if(error){err=error;break;}
+    if(!data||!data.length)break;
+    all=all.concat(data);
+    if(data.length<1000)break;
+  }
   $('loading').style.display='none';
-  if(error){toast('Błąd: '+error.message);return;}
-  ROWS=data||[];render();
+  if(err){toast('Błąd: '+err.message);return;}
+  ROWS=all;render();
 }
 function render(){
   const term=$('q').value.toLowerCase().trim(),fc=$('fcat').value;
@@ -364,6 +386,7 @@ function card(x){
     <div class="body">
       <div class="secLab">${I.store} AliExpress — dopasowane po obrazie (${cands.length})</div>
       <div class="cands">${cands.length?cands.map(c=>candHtml(x,c)).join(''):'<div class="nocand">Brak kandydatów (kadr-haczyk lub w toku). Wklej własny link niżej.</div>'}</div>
+      ${refHtml(x)}
       <div class="actions">
         <input class="ipt" id="cl-${x.id}" placeholder="…lub wklej własny link do produktu" value="${esc(x.status==='approved'&&!cands.some(c=>c.link===x.chosen_link)?(x.chosen_link||''):'')}">
         <button class="btn btn-g" onclick="customApprove('${x.id}')">${I.check} Zatwierdź własny</button>
@@ -373,6 +396,62 @@ function card(x){
       </div>
     </div>
   </div>`;
+}
+
+// ── REFERENCJA GENERATORA (makiety/reklamy) ──
+// Pokazuje, co model faktycznie dostaje jako zdjęcie produktu. Snapshot source='search'
+// = galeria z wyszukiwarki po nazwie (detail padł) — bywa INNYM produktem (przypadek
+// „materac do Tesli" → dmuchany materac między siedzenia). Ręczne zdjęcie (curated_image)
+// wchodzi jako PIERWSZA referencja i naprawia makiety/reklamy bez ruszania snapshotu.
+function refHtml(x){
+  const snap=x.ali_snapshot||null;
+  const imgsN=snap&&Array.isArray(snap.images)?snap.images.length:0;
+  const src=snap?String(snap.source||''):'';
+  let badge,cls;
+  if(x.curated_image){badge=`${I.check} ręczne zdjęcie admina — używane jako pierwsza referencja`;cls='ok';}
+  else if(!snap){badge='brak snapshotu — zbuduje się przy zatwierdzeniu';cls='';}
+  else if(src==='detail'){badge=`${I.check} galeria z wybranego linku (${imgsN} kadrów)`;cls='ok';}
+  else if(src==='search'){badge=`⚠ dopasowanie z wyszukiwarki (${imgsN} kadrów) — sprawdź, czy to TEN produkt`;cls='warn';}
+  else{badge='tylko okładka wideo — warto dodać zdjęcie';cls='warn';}
+  const thumb=x.curated_image||(snap&&(snap.main_image||((snap.images||[])[0])))||'';
+  const title=snap&&snap.title?String(snap.title):'';
+  return `<div class="secLab" style="margin-top:16px">${I.eye} Referencja generatora — tak model „widzi" produkt (makiety/reklamy)</div>
+  <div class="refbox">
+    <div class="refimg${thumb?'':' none'}">${thumb?`<img loading=lazy src="${esc(thumb)}" onerror="this.parentNode.classList.add('none');this.remove()">`:'brak zdjęcia'}</div>
+    <div class="refmeta">
+      <span class="refbadge ${cls}">${badge}</span>
+      ${title?`<div class="reftitle" title="${esc(title)}">Snapshot: ${esc(title.slice(0,110))}</div>`:''}
+      <div class="refrow">
+        <input class="ipt" id="ci-${x.id}" placeholder="URL realnego zdjęcia produktu (np. PPM na zdjęciu w AliExpress → kopiuj adres)">
+        <button class="btn btn-g" onclick="setCurated('${x.id}')">${I.check} Ustaw zdjęcie główne</button>
+        ${x.curated_image?`<button class="btn btn-r" onclick="clearCurated('${x.id}')">${I.x} Usuń ręczne</button>`:''}
+        <button class="btn" onclick="rebuildSnap('${x.id}')" title="Świeży snapshot z wybranego linku (galeria, specyfikacja, opinie)">↻ Przebuduj snapshot</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function setCurated(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const v=($('ci-'+id)?.value||'').trim();if(!v){toast('Wklej URL zdjęcia');return;}
+  toast('Pobieram i zapisuję zdjęcie…');
+  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedUrl:v}});
+  if(error||!data||!data.curated_image){toast('Nie udało się pobrać zdjęcia — sprawdź URL');return;}
+  x.curated_image=data.curated_image;toast('Zdjęcie główne ustawione ✓');render();
+}
+async function clearCurated(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const {error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedClear:true}});
+  if(error){toast('Błąd: '+error.message);return;}
+  x.curated_image=null;toast('Usunięto ręczne zdjęcie');render();
+}
+async function rebuildSnap(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  toast('Przebudowuję snapshot… (do ~30 s)');
+  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
+  if(error){toast('Błąd przebudowy: '+error.message);return;}
+  if(data&&data.snapshot)x.ali_snapshot=data.snapshot;
+  else{const {data:fresh}=await sb.from('bud_tt_products').select('ali_snapshot').eq('id',id).maybeSingle();if(fresh)x.ali_snapshot=fresh.ali_snapshot;}
+  toast('Snapshot przebudowany');render();
 }
 
 // ── PLAYER MODAL (video + dane obok) ──

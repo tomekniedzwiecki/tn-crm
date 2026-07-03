@@ -232,16 +232,19 @@ Deno.serve(async (req) => {
 
     // snapshot produktu (zdjęcie-referencja + tytuł) — z bud_tt_products
     let snap: Record<string, unknown> | null = null;
+    let curated: string | null = null;
     try {
       const pkId = String(product.id || '');
       if (pkId && UUID_RE.test(pkId)) {
-        const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle();
+        const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle();
         snap = (row && row.ali_snapshot) || null;
+        curated = (row && (row.curated_image as string)) || null;
       }
     } catch { /* */ }
     // FIX: galeria AliExpress jako reference_images type:'product' (kilka kadrów) — zamiast pojedynczego
     // main_image traktowanego przez legacy `reference_image_url` jako LOGO (→ generował zły produkt).
-    const refs = productRefs(snap, product, 4);
+    // curated_image (panel /trendy) idzie PIERWSZE — snapshot z wyszukiwarki bywa innym produktem.
+    const refs = productRefs(snap, product, 4, curated);
     const ust = session.ustalenia || {};
     const brandObj = (session.brand && typeof session.brand === 'object') ? session.brand as Record<string, unknown> : null;
     const brandName = String((brandObj?.chosen_name as string) || (brandObj?.nazwa as string) || '').slice(0, 60);

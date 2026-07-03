@@ -138,8 +138,9 @@ function copyPrompt(product: any, ust: any, style: string, brandName = '', snapT
   const dla = String(ust?.dla_kogo || '').slice(0, 200)
   const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 200)
   const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120)
-  const ctx = (dla || kat || ton || style || brandName)
-    ? `\n\nUSTALENIA (dopasuj reklamy DOKŁADNIE do nich):${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton marki: ${ton}` : ''}${brandName ? `\n- Marka: ${brandName}` : ''}${style ? `\n- Styl wizualny sklepu: ${style}` : ''}`
+  const haslo = String(ust?.haslo || '').slice(0, 120)
+  const ctx = (dla || kat || ton || style || brandName || haslo)
+    ? `\n\nUSTALENIA (dopasuj reklamy DOKŁADNIE do nich):${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton marki: ${ton}` : ''}${brandName ? `\n- Marka: ${brandName}` : ''}${style ? `\n- Styl wizualny sklepu: ${style}` : ''}${haslo ? `\n- HASŁO KLIENTA (użyj 1:1 jako headline JEDNEGO konceptu — najlepiej „problem" albo „demo" — jeśli ≤6 słów; dłuższe minimalnie skróć zachowując jego słowa): „${haslo}"` : ''}`
     : ''
   const repCtx = reportCtx
     ? `\n\n[KONTEKST Z RAPORTU RYNKU — wykorzystaj, gdzie pomaga: oprzyj nagłówki i copy reklam na tych realnych bólach, avatarze i kątach komunikacji, nie na ogólnikach]\n${reportCtx}`
@@ -162,6 +163,7 @@ function buildAdsInstruction(product: any, ust: any, brandName: string, snapTitl
   const dla = String(ust?.dla_kogo || '').slice(0, 240)
   const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 240)
   const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120)
+  const hasloM = String(ust?.haslo || '').slice(0, 120)
   const extraRefs = refs.slice(1, 4).map((r) => r.url).filter(Boolean)
   const repCtx = reportCtx
     ? `\n[KONTEKST Z RAPORTU RYNKU — wykorzystaj, gdzie pomaga: oprzyj nagłówki i copy reklam na tych realnych bólach, avatarze i kątach komunikacji, nie na ogólnikach]\n${reportCtx}\n`
@@ -181,7 +183,7 @@ KONTEKST (z ustaleń klienta — dopasuj reklamy DOKŁADNIE):
 - Marka: ${brandName || '(brak nazwy — użyj neutralnego, spójnego brandingu; NIE wymyślaj nazwy)'}
 - Dla kogo: ${dla || '—'}  (persona na kreacji lifestyle/problem)
 - Kąt / wyróżnik: ${kat || '—'}  (główny hook copy i dobór konceptów)
-- Ton marki: ${ton || '—'}
+- Ton marki: ${ton || '—'}${hasloM ? `\n- HASŁO KLIENTA (jego własne słowa — użyj 1:1 jako headline JEDNEGO konceptu, najlepiej „problem" albo „demo"; renderuj je też na tej grafice): „${hasloM}"` : ''}
 ${repCtx}
 === ZADANIE 1: 4 KONCEPTY COPY (różne kąty) ===
 Po jednym z kątów: "problem" (problem→rozwiązanie), "demo" (demonstracja/„wow"), "emotion" (emocja/prezent/bliscy), "proof" (dowód społeczny: viral z TikToka — BEZ zmyślonych liczb/recenzji).
@@ -387,17 +389,20 @@ Deno.serve(async (req) => {
     // Snapshot z AliExpress (tytuł + lepsze zdjęcie-referencja) — spójnie z bud-mockup.
     // Bez tego copy jest uboższe, a grafiki dostają słabszą referencję.
     let snap: Record<string, unknown> | null = null
+    let curated: string | null = null
     try {
       const pkId = String(product.id || '')
       if (pkId && UUID_RE.test(pkId)) {
-        const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', pkId).maybeSingle()
+        const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle()
         snap = (row && row.ali_snapshot) || null
+        curated = (row && (row.curated_image as string)) || null
       }
     } catch { /* */ }
     const snapTitle = String((snap && (snap as any).title) || '')
     // FIX: galeria AliExpress jako reference_images type:'product' (kilka kadrów) — zamiast pojedynczego
     // main_image, który przez legacy `reference_image_url` był traktowany jako LOGO (→ zły produkt).
-    const refs = productRefs(snap, product, 4)
+    // curated_image (panel /trendy) idzie PIERWSZE — snapshot z wyszukiwarki bywa innym produktem.
+    const refs = productRefs(snap, product, 4, curated)
     const ust = session.ustalenia || {}
     const reportCtx = reportContextBlock(session.market_report)
     const style = String(session.chosen_style || '')

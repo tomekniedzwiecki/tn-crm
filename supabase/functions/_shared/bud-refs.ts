@@ -16,6 +16,7 @@ export function productRefs(
   // deno-lint-ignore no-explicit-any
   product: any,
   max = 4,
+  curatedImage?: string | null,
 ): { url: string; type: 'product' }[] {
   const out: string[] = [];
   const seen = new Set<string>();
@@ -34,6 +35,8 @@ export function productRefs(
     if (!s) continue;
     if (/bud-covers\//i.test(s)) covers.push(s); else clean.push(s);
   }
+  push(curatedImage);                        // KUROWANE przez admina w /trendy — pewna prawda o produkcie,
+                                             // ratuje makiety gdy snapshot ma galerię INNEGO towaru (source='search')
   clean.forEach(push);                       // czyste kadry produktu z galerii — najsilniejszy sygnał
   if (snap) push((snap as any).main_image);  // zwykle == images[0] (dedup), ale czasem uzupełnia
   covers.forEach(push);                      // okładki TikToka dopiero gdy brakuje czystych kadrów

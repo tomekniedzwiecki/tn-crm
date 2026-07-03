@@ -493,17 +493,39 @@ async function maybeNotifyContactSlack(
     if (!claimed || !claimed.length) return
     const s = claimed[0] as Record<string, unknown>
     const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
-    await postSlackSparing('spar_contact', {
-      session_id: s.id,
-      funnel: 'sklep',
-      name: s.name ?? null,
-      email: s.email ?? null,
-      phone: s.phone ?? null,
-      profession: s.profession ?? null,
-      project_name: brief?.nazwa ?? null,
-      project_desc: brief?.opis ?? null,
-      karta: (s.problem_summary && typeof s.problem_summary === 'object') ? s.problem_summary : null,
-    })
+    // POWRACAJĄCY LEAD (req Tomka 2026-07-03): dedup per-sesja nie wystarcza — zalogowany
+    // user wchodzący ponownie dostaje NOWĄ sesję, konto od razu wnosi email+imię i Slack
+    // dostawał drugie „pozostawił kontakt", choć człowiek tylko wszedł na stronę.
+    // Jeśli JAKAKOLWIEK inna sesja z tym e-mailem była już notyfikowana → cicho pomiń Slack
+    // (claim wyżej i tak stemluje tę sesję, a blok leada niżej dopina lead_id jak dotąd).
+    let isReturning = false
+    if (s.email) {
+      try {
+        const { data: dupe } = await supabase
+          .from('bud_sessions')
+          .select('id')
+          .ilike('email', String(s.email))
+          .neq('id', sessionId)
+          .not('slack_contact_notified_at', 'is', null)
+          .limit(1)
+        isReturning = !!(dupe && dupe.length)
+      } catch (e) { console.error('[bud-chat] returning-lead check error:', e) }
+    }
+    if (isReturning) {
+      console.log('[bud-chat] contact slack pominięty — powracający lead:', s.email)
+    } else {
+      await postSlackSparing('spar_contact', {
+        session_id: s.id,
+        funnel: 'sklep',
+        name: s.name ?? null,
+        email: s.email ?? null,
+        phone: s.phone ?? null,
+        profession: s.profession ?? null,
+        project_name: brief?.nazwa ?? null,
+        project_desc: brief?.opis ?? null,
+        karta: (s.problem_summary && typeof s.problem_summary === 'object') ? s.problem_summary : null,
+      })
+    }
     // ── Pipeline „Nowy": komplet kontaktu (email+telefon) = lead w CRM OD RAZU ──
     // Wcześniej lead powstawał dopiero na zielono / gdy ankieta coś wyłapie, więc wczesne
     // dropoffy (podali kontakt i utknęli) były NIEWIDOCZNE — brak followupu i dyskwalifikacji.
@@ -1399,7 +1421,12 @@ Deno.serve(async (req) => {
       const inEmail = (au?.email || email) || null
       const inName = (au?.name || name) || null
       if (inEmail && !sess.email) upd.email = inEmail
-      if (inName && !sess.name) upd.name = inName
+      // Imię: uzupełnij brak, ale też PODMIEŃ jednosłowne (np. testowe „asdfa" ze starej
+      // zakładki) na pełne imię i nazwisko z konta — sesja nie może być gorsza niż auth
+      // metadata (front gateContactMissing/hasFullName wymaga 2 słów).
+      const sessWords = String(sess.name || '').trim().split(/\s+/).filter(Boolean).length
+      const inWords = String(inName || '').trim().split(/\s+/).filter(Boolean).length
+      if (inName && (!sess.name || (sessWords < 2 && inWords >= 2))) upd.name = inName
       if (phone && !sess.phone) { upd.phone = phone; upd.sms_consent_at = new Date().toISOString() }
       if (Object.keys(upd).length) {
         upd.updated_at = new Date().toISOString()
@@ -1937,6 +1964,34 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // FAKTY OFERTY także PRZED sklepem, żeby bot odpowiadał o cenie WPROST (9400 zł + 10%
         // od przychodu), a nie zbywał „to domknie Tomek". Te liczby dotyczą OFERTY, nie raportu rynku.
         sessionContext += `\n\n[FAKTY OFERTY — gdy rozmówca pyta o koszt budowy, udział Tomka albo warunki współpracy, podaj te liczby WPROST i konkretnie (NIE chowaj, NIE odsyłaj „to na rozmowie"). Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
+        // [GROUNDING 2026-07-03, feedback Tomka: „doradziłeś bez sensu — czy ty wiesz, jaki to
+        // produkt?"] REALNY produkt z AliExpress (snapshot): tytuł + specyfikacja + realne
+        // opinie kupujących. Bez tego model proponował grupy odbiorców „z powietrza".
+        try {
+          const _cp = (existingSession?.chosen_product && typeof existingSession.chosen_product === 'object') ? existingSession.chosen_product as Record<string, unknown> : null
+          const _cpId = _cp && typeof _cp.id === 'string' ? _cp.id : ''
+          if (_cpId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(_cpId)) {
+            const { data: _row } = await supabase.from('bud_tt_products').select('ali_snapshot').eq('id', _cpId).maybeSingle()
+            const _sn = (_row && _row.ali_snapshot && typeof _row.ali_snapshot === 'object') ? _row.ali_snapshot as Record<string, unknown> : null
+            if (_sn) {
+              const _t = String(_sn.title || '').slice(0, 220)
+              // deno-lint-ignore no-explicit-any
+              const _specs = Array.isArray(_sn.specs) ? (_sn.specs as any[]).slice(0, 12).map((s) => `${String(s?.name || '').slice(0, 40)}: ${String(s?.value || '').slice(0, 80)}`).filter((x) => x.length > 3).join('; ').slice(0, 600) : ''
+              // deno-lint-ignore no-explicit-any
+              const _rs: any = (_sn.review_stats && typeof _sn.review_stats === 'object') ? _sn.review_stats : null
+              // deno-lint-ignore no-explicit-any
+              const _revs = Array.isArray(_sn.reviews) ? (_sn.reviews as any[]).slice(0, 6).map((r) => `„${String(r?.text_pl || r?.text || '').replace(/\s+/g, ' ').trim().slice(0, 130)}"`).filter((x) => x.length > 6) : []
+              if (_t || _specs || _revs.length) {
+                // source='search' = galeria/tytuł z WYSZUKIWARKI po nazwie (detail padł) — bywa
+                // PODOBNYM, nie tym samym towarem. Model ma wtedy traktować dane jako orientacyjne.
+                const _approx = String(_sn.source || '') === 'search'
+                  ? `\nUWAGA: dane pochodzą z dopasowania wyszukiwarki i mogą dotyczyć PODOBNEGO produktu, nie dokładnie tego z wideo. Traktuj specyfikację i opinie jako ORIENTACYJNE tło kategorii — nie cytuj ich jako pewnych cech TEGO produktu; pewne są tylko nazwa i wideo.`
+                  : ''
+                sessionContext += `\n\n[PRODUKT — REALNE DANE Z ALIEXPRESS (jedyne źródło prawdy o cechach). Wszystko, co mówisz o produkcie — i KAŻDA proponowana grupa odbiorców czy kąt — MUSI wynikać z tych danych + raportu. ZERO cech „z powietrza"; nie obiecuj funkcji, której tu nie ma.]${_approx}${_t ? `\nTytuł aukcji: ${_t}` : ''}${_specs ? `\nSpecyfikacja: ${_specs}` : ''}${_rs && _rs.avg ? `\nOceny kupujących: ${_rs.avg}/5 (${_rs.numRatings || 0} ocen)` : ''}${_revs.length ? `\nREALNE OPINIE (tak ludzie NAPRAWDĘ go używają — kotwicz w nich grupy i argumenty):\n- ${_revs.join('\n- ')}` : ''}`
+              }
+            }
+          }
+        } catch (e) { console.error('[bud-chat] snapshot ctx:', e) }
         // NOWY PIPELINE /sklep — ETAP 2: raport → USTALENIA. Wstrzyknij raport (gdy gotowy),
         // żeby ustalenia „dla kogo" były na nim oparte. GATE_INSTRUCTION (settings,
         // budowanie_etap_gate) niesie teraz instrukcję etapu ustaleń. Stary <ocena>/kierunki OFF.
@@ -2156,11 +2211,40 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
               }
             }
           }
+          // ── HASŁO ROZMÓWCY (marker <haslo>) — sprawczość (req Tomka 2026-07-03):
+          // wybrane/wpisane w rozmowie hasło ląduje w ustaleniach (pole haslo) i dalej
+          // w hero sklepu (bud-landing-gen) oraz copy reklam (bud-ads). Merge na świeżym
+          // stanie ustaleń (mogły się właśnie zapisać w bloku wyżej).
+          {
+            const hm = assistantText.match(/<haslo>([\s\S]*?)<\/haslo>/)
+            const hv = hm ? hm[1].trim().replace(/^["„»]+|["”»«]+$/g, '').slice(0, 120) : ''
+            if (hv) {
+              try {
+                const { data: curU } = await supabase.from('bud_sessions').select('ustalenia').eq('id', sessionId).maybeSingle()
+                const prevU = (curU?.ustalenia && typeof curU.ustalenia === 'object') ? curU.ustalenia as Record<string, unknown> : {}
+                await supabase.from('bud_sessions').update({ ustalenia: { ...prevU, haslo: hv }, updated_at: new Date().toISOString() }).eq('id', sessionId)
+              } catch (e) { console.error('[bud-chat] zapis <haslo>:', e) }
+            }
+          }
           // ── ZIELONE ŚWIATŁO (/sklep) — model wydał pozytywny werdykt <zielone> ──
           // Persist verdict='zielony' → kolejne tury wiedzą, że zielone już padło (gate kolejności
           // <zielone>→rezerwacja w sessionContext) + panel widzi status.
           if (/<zielone[\s/>]/.test(assistantText) && (existingSession?.verdict as string | null) !== 'zielony') {
             try { await supabase.from('bud_sessions').update({ verdict: 'zielony', updated_at: new Date().toISOString() }).eq('id', sessionId) } catch (e) { console.error('[bud-chat] zapis verdict zielony:', e) }
+            // Audyt 2026-07-03 #3: <zielone> = najgorętszy lead lejka — ping na #sparing.
+            // Dotąd powiadomienie wisiało WYŁĄCZNIE na legacy-markerze <werdykt>, którego
+            // prompt /sklep zakazuje → zielone światła przechodziły bez śladu na Slacku.
+            // Dedup atomowy w maybeNotifyGreenSlack (slack_green_notified_at) — zero spamu.
+            try {
+              await maybeNotifyGreenSlack(supabase, sessionId, {
+                email: ((existingSession?.email as string | null | undefined) ?? null),
+                name: ((existingSession?.name as string | null | undefined) ?? null),
+                phone: ((existingSession?.phone as string | null | undefined) ?? null),
+                profession: ((existingSession?.profession as string | null | undefined) ?? 'nieznana'),
+                karta: ((existingSession?.ustalenia as Record<string, unknown> | null | undefined) ?? null),
+                brief: ((existingSession?.preview_brief as Record<string, unknown> | null | undefined) ?? null),
+              })
+            } catch (e) { console.error('[bud-chat] green slack (<zielone>):', e) }
           }
 
           // ── BRAMKA POTENCJAŁU (GA) ─────────────────────────────────────────

@@ -294,6 +294,27 @@ Deno.serve(async (req) => {
       .eq(byId ? 'id' : 'key', productKey).maybeSingle();
     if (!row) return json({ error: 'produkt_nieznany' }, 404, c);
 
+    // ── KUROWANE ZDJĘCIE GŁÓWNE (panel /trendy, tylko admin/backend) ──
+    // Admin podaje URL realnego zdjęcia produktu → rehost do Storage → curated_image.
+    // To NAJSILNIEJSZA referencja generatora (productRefs daje ją pierwszą) — ratunek,
+    // gdy snapshot ma galerię INNEGO produktu (source='search' po padniętym detail).
+    const curatedUrl = String((body as Record<string, unknown>).curatedUrl || '').trim();
+    const curatedClear = (body as Record<string, unknown>).curatedClear === true;
+    if (curatedUrl || curatedClear) {
+      if (!isBackend && !isAdmin) return json({ error: 'wymagane_logowanie' }, 403, c);
+      if (curatedClear) {
+        await supabase.from('bud_tt_products').update({ curated_image: null }).eq('id', row.id);
+        return json({ curated_image: null }, 200, c);
+      }
+      // unikalna ścieżka per zapis (timestamp) — nadpis pod tą samą nazwą serwowałby stare bajty z cache
+      const slot = `${pid(body, row.chosen_link) || row.id}/curated-${Date.now()}`;
+      const hosted = await rehostGalleryImages(supabase, [curatedUrl], slot);
+      const cur = hosted[0] || '';
+      if (!cur || !/supabase\.co\/storage/.test(cur)) return json({ error: 'nie_udalo_sie_pobrac' }, 422, c);
+      await supabase.from('bud_tt_products').update({ curated_image: cur }).eq('id', row.id);
+      return json({ curated_image: cur }, 200, c);
+    }
+
     // ustal product_id + obraz produktu, który JUŻ mamy (chosen candidate)
     const cands = Array.isArray(row.ali_candidates) ? row.ali_candidates : [];
     const chosenLink = row.chosen_link || (cands[0] && cands[0].link) || '';
