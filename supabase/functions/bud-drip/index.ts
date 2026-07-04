@@ -324,6 +324,20 @@ async function recentMessages(supabase: ReturnType<typeof createClient>, sid: st
   } catch { return '' }
 }
 
+// Recap TYLKO istniejących artefaktów — przy lazy ads (2026-07-04) reklamy/strona mogą nie
+// istnieć, a statyczny mail rezerwacyjny nie może kłamać „przeszliśmy przez reklamy i stronę".
+// (GPT-owy wariant dostaje flagi istnienia osobno — buildStepFacts, sekcja rezerwacja.)
+// deno-lint-ignore no-explicit-any
+function recapArtifacts(s: any): string {
+  const parts: string[] = []
+  if (hasArtifact(s, 'market_report')) parts.push('raport rynku')
+  if (hasArtifact(s, 'mockups')) parts.push('makiety')
+  if (hasArtifact(s, 'session_ads')) parts.push('reklamy')
+  if (hasArtifact(s, 'landing_html')) parts.push('działającą stronę')
+  if (!parts.length) return 'pierwsze kroki Twojego sklepu'
+  return parts.length > 1 ? parts.slice(0, -1).join(', ') + ' i ' + parts[parts.length - 1] : parts[0]
+}
+
 // Statyczny fallback (plain, „z palca") — gdy GPT niedostępny + do galerii szablonów.
 // deno-lint-ignore no-explicit-any
 function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string | null): { subject: string; html: string } {
@@ -334,7 +348,7 @@ function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string |
     makiety: { subject: `${n}: zobacz makiety swojego sklepu`, body: `Cześć${im}!\n\nPrzygotowałem makiety sklepu ${n} w kilku wariantach stylu — żebyś zobaczył, jak realnie może wyglądać i wybrał kierunek, który najbardziej Ci pasuje.\n\n[Otwórz makiety tutaj](LINK_VIEW) i daj znać, który styl czujesz.` },
     reklamy: { subject: `${n}: gotowe reklamy do startu`, body: `Cześć${im}!\n\nDo ${n} przygotowałem warianty reklam z gotowymi hookami — tak, żebyś od pierwszego dnia wiedział, czym przyciągniesz pierwszych klientów.\n\nMożesz [zobaczyć je tutaj](LINK_VIEW).` },
     strona: { subject: `${n} ma już działającą stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona sprzedażowa ${n} — to prawdziwa strona w przeglądarce, nie grafika.\n\n[Otwórz ją tutaj](LINK_VIEW), przewiń, możesz nawet pokazać komuś i zapytać, co myśli.` },
-    rezerwacja: { subject: `${n}: zarezerwujesz budowę?`, body: `Cześć${im}!\n\nPrzeszliśmy przez raport rynku, makiety, reklamy i stronę ${n} — masz komplet, na którym widać, jak to realnie wygląda.\n\nJeśli chcesz, żebym zbudował to na serio, [zarezerwuj miejsce](LINK_RESERVE). Rezerwacja jest zwrotna — to tylko zaklepanie terminu, nie zobowiązanie.` },
+    rezerwacja: { subject: `${n}: zarezerwujesz budowę?`, body: `Cześć${im}!\n\nPrzeszliśmy przez ${recapArtifacts(s)} ${n} — widać na tym, jak to realnie wygląda.\n\nJeśli chcesz, żebym zbudował to na serio, [zarezerwuj miejsce](LINK_RESERVE). Rezerwacja jest zwrotna — to tylko zaklepanie terminu, nie zobowiązanie.` },
   }
   const m = M[key] || M.raport
   return { subject: m.subject, html: mdToHtml(m.body, viewUrl, reserveUrl, artifactImagesHtml(s, key, viewUrl)) }
