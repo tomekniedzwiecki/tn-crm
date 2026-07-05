@@ -220,23 +220,42 @@ Deno.serve(async (req) => {
         .filter(s => s.contact && isValidEmail(s.contact.email))
         .slice(0, campaign.daily_limit)
 
-      console.log(`[outreach-send] Fetched ${pendingSends.length}, valid: ${validSends.length}, sending up to ${campaign.daily_limit} for ${campaign.name}`)
+      // Globalna lista wypisow (email_suppressions) — pomin i oznacz jako excluded
+      const batchEmails = validSends.map(s => s.contact.email.toLowerCase())
+      const { data: suppressedRows } = await supabase
+        .from('email_suppressions')
+        .select('email')
+        .in('email', batchEmails)
+      const suppressedSet = new Set((suppressedRows || []).map((r: { email: string }) => r.email.toLowerCase()))
+      const toSuppress = validSends.filter(s => suppressedSet.has(s.contact.email.toLowerCase()))
+      for (const s of toSuppress) {
+        await supabase
+          .from('outreach_sends')
+          .update({ status: 'excluded', excluded_reason: 'unsubscribed' })
+          .eq('id', s.id)
+      }
+      const sendable = validSends.filter(s => !suppressedSet.has(s.contact.email.toLowerCase()))
 
-      if (validSends.length === 0) {
-        console.log(`[outreach-send] No valid sends for ${campaign.name}`)
+      console.log(`[outreach-send] Fetched ${pendingSends.length}, valid: ${validSends.length}, suppressed: ${toSuppress.length}, sending: ${sendable.length} for ${campaign.name}`)
+
+      if (sendable.length === 0) {
+        console.log(`[outreach-send] No sendable (non-suppressed) sends for ${campaign.name}`)
         continue
       }
 
       let campaignSent = 0
       let campaignErrors = 0
 
-      for (const send of validSends) {
+      for (const send of sendable) {
         const contact = send.contact
 
         try {
           // Prepare email (no signature for cold outreach)
           const subject = replaceVariables(campaign.email_1_subject, contact)
+          // Link wypisu (per-send, nieodgadywalny) wstrzykiwany do {{unsubscribe_url}}
+          const unsubscribeUrl = `https://crm.tomekniedzwiecki.pl/unsub?s=${send.id}`
           const body = replaceVariables(campaign.email_1_body, contact)
+            .replace(/\{\{unsubscribe_url\}\}/g, unsubscribeUrl)
 
           // Send via Resend with inbound reply-to for tracking
           const replyTo = `reply+${send.id}@inbound.tomekniedzwiecki.pl`
@@ -252,7 +271,11 @@ Deno.serve(async (req) => {
               reply_to: replyTo,
               to: contact.email,
               subject: subject,
-              html: body
+              html: body,
+              headers: {
+                'List-Unsubscribe': `<${unsubscribeUrl}>`,
+                'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click'
+              }
             })
           })
 

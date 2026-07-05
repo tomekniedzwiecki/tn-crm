@@ -1402,6 +1402,10 @@ Deno.serve(async (req) => {
         // PRZED pierwszą wiadomością/raportem. Zakładamy wiersz, żeby kontakt NIGDY nie przepadł
         // (cel Tomka: zero anonimowych sesji odpalających generację).
         const ins: Record<string, unknown> = { id: sessionId, last_user_at: new Date().toISOString() }
+        // ATRYBUCJA: event 'contact' zakłada wiersz PRZED pierwszą wiadomością (APP-GATE 2026-07-03),
+        // więc MUSI nieść click-ID/UTM — inaczej sesja powstaje z tracking=null, a późniejsza
+        // pierwsza wiadomość (isFirst) trafia w istniejący wiersz i tracking przepada → wszystko „organic".
+        if (tracking) ins.tracking = tracking
         const e0 = (au?.email || email) || null
         const n0 = (au?.name || name) || null
         if (e0) ins.email = e0
@@ -1494,7 +1498,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at, tracking')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1658,6 +1662,11 @@ Deno.serve(async (req) => {
     // Temat tury kwalifikującej PRZED kartą budżetu (front, kolejność req Tomka 2026-07-03:
     // doświadczenie → sytuacja → budżet). Pusty = generyczna tura z okien generowania.
     const qualifyTopic = typeof body.qualifyTopic === 'string' ? body.qualifyTopic.slice(0, 24) : ''
+    // Sekwencja poznania (advanceQpre na froncie) jeszcze trwa: normalna tura ma TYLKO
+    // skwitować odpowiedź — kolejne pytanie dosyła strona (qualifyEngage), a budżet pyta
+    // karta. Bez tej flagi model sam kwalifikował budżet suwakiem i lead dostawał dwa
+    // pytania naraz + budżet poza kolejnością (wyścig 2026-07-04, sesja c4f2bcfe).
+    const qpreOpen = body.qpreOpen === true
 
     let turnsBefore = 0
     if (existingSession) {
@@ -1679,6 +1688,9 @@ Deno.serve(async (req) => {
       // Numer oddany przez bramkę, która jawnie informuje o SMS-ach o projekcie
       // („…czasem wyślemy SMS… STOP wypisuje") = zgoda przez wyraźną informację.
       if (phone && !existingSession.phone) { contactUpdate.phone = phone; contactUpdate.sms_consent_at = new Date().toISOString() }
+      // BACKFILL ATRYBUCJI: sesja mogła powstać z eventu 'contact' bez trackingu (APP-GATE);
+      // pierwsza wiadomość (isFirst) niesie click-ID/UTM → uzupełnij, jeśli wiersz go nie ma.
+      if (tracking && !(existingSession as Record<string, unknown>).tracking) contactUpdate.tracking = tracking
       if (Object.keys(contactUpdate).length) {
         contactUpdate.updated_at = new Date().toISOString()
         const { error: contactError } = await supabase
@@ -1920,6 +1932,14 @@ Deno.serve(async (req) => {
       }
       const lbl = UI_LABELS[pendingUi]
       if (lbl) sessionContext += `\n\n[UI CZEKA NA DECYZJĘ: na ekranie rozmówcy wisi karta — ${lbl} — i dalsza budowa STOI, dopóki jej nie domknie. Odpowiedz krótko na jego wiadomość i JEDNYM zdaniem skieruj go z powrotem do tej karty (np. „…a żeby lecieć dalej, kliknij na karcie wyżej"). NIE zadawaj nowych pytań, NIE duplikuj treści karty, NIE mów, że coś się generuje.]`
+    }
+
+    // Sekwencja poznania w toku (front pyta po kolei: doświadczenie → sytuacja → karta
+    // budżetu). Normalna tura ma być TYLKO kwitująca — inaczej model dokładał własne
+    // pytanie kwalifikujące (np. budżet z <suwak>) i sekundę później strona dosyłała
+    // swoje → dwa pytania naraz, budżet poza kolejnością i DRUGA karta budżetu na końcu.
+    if (qpreOpen) {
+      sessionContext += `\n\n[SEKWENCJA POZNANIA W TOKU: strona zadaje teraz rozmówcy serię pytań po kolei (doświadczenie → sytuacja → budżet) i sama dosyła następne. Skwituj jego odpowiedź ciepło w 1-2 zdaniach i STOP: NIE zadawaj ŻADNYCH pytań, NIE wystawiaj <opcje>, <suwak> ani innych widgetów, NIE pytaj o budżet (o budżet zapyta strona osobną kartą). Samo krótkie potwierdzenie.]`
     }
 
     // Bramka potencjału: model wystawia <ocena> po domknięciu rdzenia, backend

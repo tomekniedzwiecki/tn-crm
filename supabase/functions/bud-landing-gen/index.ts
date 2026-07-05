@@ -38,8 +38,29 @@ async function fetchTimeout(url: string, init: RequestInit, ms: number): Promise
   finally { clearTimeout(t) }
 }
 
+// Zwięzły blok z raportu rynku → COPY strony (2026-07-04). Sekcje najbardziej „sprzedażowe":
+// bóle/emocje (PROBLEM→ROZWIĄZANIE, FAQ), avatar (język klienta), pozycjonowanie (ton, obietnica).
+// Raport jest OPCJONALNY — stare sesje bez niego działają jak dotąd.
 // deno-lint-ignore no-explicit-any
-function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: string[] = [], styleBrief = '', styleLabel = '', logoUrl = '', brandName = '', mockupSpec = ''): string {
+function landingReportContext(report: any): string {
+  if (!report || typeof report !== 'object') return ''
+  const lead = String(report?.lead || '').slice(0, 300)
+  const sekcje = Array.isArray(report?.sekcje) ? report.sekcje : []
+  const wanted = ['Problem, potrzeby i emocje', 'Grupa docelowa', 'Marka i pozycjonowanie']
+  const parts: string[] = []
+  if (lead) parts.push(`Hook rynkowy: ${lead}`)
+  for (const s of sekcje) {
+    const t = String(s?.tytul || '')
+    if (!wanted.some((w) => t.startsWith(w))) continue
+    const tresc = String(s?.tresc || '').replace(/\s+/g, ' ').trim().slice(0, 1100)
+    if (tresc) parts.push(`${t}: ${tresc}`)
+  }
+  if (!parts.length) return ''
+  return `\n\nKONTEKST Z RAPORTU RYNKU (paliwo do COPY, nie do layoutu): sekcje PROBLEM→ROZWIĄZANIE, korzyści, FAQ i podtytuł hero pisz JĘZYKIEM tego avatara, pod te realne bóle i to pozycjonowanie. NIE cytuj raportu wprost, NIE przenoś z niego liczb na stronę (liczby na stronie WYŁĄCZNIE ze STATYSTYK OPINII albo neutralne):\n${parts.join('\n').slice(0, 3800)}`
+}
+
+// deno-lint-ignore no-explicit-any
+function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: string[] = [], styleBrief = '', styleLabel = '', logoUrl = '', brandName = '', mockupSpec = '', styleTokens: any = null, report: any = null): string {
   // Polska nazwa produktu (radar) ma PIERWSZEŃSTWO — snap.title to angielski tytuł aukcji,
   // który wchodził do copy strony (a przy snapshotach 'search' bywał INNYM produktem).
   const name = String(product?.nazwa || product?.name || snap?.title || 'produkt').slice(0, 160)
@@ -73,10 +94,10 @@ function prompt(product: any, ust: any, snap: any, images: string[], lifestyle: 
     : `OPINIE: brak realnych — wygeneruj wiarygodny szablon (kilka kafli ze zdjęciem-placeholderem + tekst).`
   return `Jesteś elitarnym front-end developerem i copywriterem direct-response, specjalizującym się w WYSOKOKONWERTUJĄCYCH stronach jednoproduktowych w stylu topowych marek DTC z USA. Zbuduj KOMPLETNĄ, produkcyjnie bliską stronę sprzedażową dla „${name}"${cat ? ` (kategoria: ${cat})` : ''} na rynek polski. CEL NADRZĘDNY: maksymalna skuteczność sprzedaży tego JEDNEGO produktu — każdy element ma popychać do zakupu.
 
-USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}${haslo ? `\n- HASŁO OD KLIENTA (jego własne słowa — świętość): „${haslo}"` : ''}
+USTALENIA (fundament copy — trzymaj się ściśle):${brand ? `\n- Marka: ${brand}` : ''}${dla ? `\n- Dla kogo: ${dla}` : ''}${kat ? `\n- Kąt/wyróżnik: ${kat}` : ''}${ton ? `\n- Ton: ${ton}` : ''}${korz ? `\n- Korzyści: ${korz}` : ''}${haslo ? `\n- HASŁO OD KLIENTA (jego własne słowa — świętość): „${haslo}"` : ''}${landingReportContext(report)}
 
 ${logoUrl ? `LOGO MARKI (GOTOWE): użyj DOKŁADNIE tego URL jako logo na górze strony (header/hero) — <img src="${logoUrl}" alt="${brandName || 'logo marki'}" style="height:38px;width:auto"> . NIE generuj innego logo i NIE pisz samej nazwy zamiast logo; to oficjalne logo marki${brandName ? ` „${brandName}"` : ''}.\n\n` : (brandName || brand) ? `NAZWA MARKI (BEZ GOTOWEGO LOGO): w headerze na górze strony pokaż nazwę „${brandName || brand}" jako WORDMARK — wyrazisty tekstowy logotyp (mocny font/akcent spójny ze stylem makiety), traktowany jak logo marki; NIE zostawiaj headera bez marki. Powtórz nazwę dyskretnie przy domknięciu strony.\n\n` : ''}ZDJĘCIA DO UŻYCIA (jako <img src="..." loading="lazy">; NIE wymyślaj innych URL-i). Masz DWA rodzaje — używaj ich ZGODNIE Z PRZEZNACZENIEM, oszczędnie, żeby strona wyglądała jak prawdziwa marka, nie „wygenerowana AI":
-${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie; masz ich ${lifestyle.length}) — ROZŁÓŻ po jednym na RÓŻNE sekcje: HERO, „jak działa / w użyciu", demonstracja/efekt oraz lifestyle „w codzienności". Użyj WSZYSTKICH dostępnych, NIE wrzucaj dwóch w to samo miejsce (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
+${lifestyle.length ? `• LIFESTYLE (fotorealistyczne, produkt w realnej scenie; masz ich ${lifestyle.length}) — ROZŁÓŻ po jednym na RÓŻNE sekcje: L1 = TŁO CAŁEGO HERO (szerokie 3:2, full-bleed — patrz instrukcja HERO), kolejne na „jak działa / w użyciu", demonstrację/efekt i lifestyle „w codzienności". Użyj WSZYSTKICH dostępnych, NIE wrzucaj dwóch w to samo miejsce (to one budują pożądanie):\n${lifestyle.map((u, i) => `   L${i + 1}. ${u}`).join('\n')}` : ''}
 ${imgList.length ? `• PRODUKT (realne zdjęcia z AliExpress — DOKŁADNY wygląd produktu) — wstaw tam, gdzie pokazujesz SAM produkt: sekcja produktu, „przed/po", tabela porównania, dowód:\n${imgList.map((u, i) => `   P${i + 1}. ${u}`).join('\n')}` : '(brak realnych zdjęć — użyj placeholderów [ Zdjęcie: … ])'}
 ZASADA OBRAZÓW: nie wrzucaj zdjęcia do każdej sekcji — sekcje korzyści/porównania/FAQ działają lepiej na ikonach/tekście. WYKORZYSTAJ wszystkie ujęcia LIFESTYLE (L*, do 4) — po jednym na hero, „jak działa", demonstrację/efekt i sekcję lifestyle „w codzienności". Realne foto (P*) do prezentacji SAMEGO produktu + mini-galeria. Dozwolona MINI-GALERIA produktu (PDP): w sekcji produktu możesz pokazać 3-4 realne zdjęcia P* jako siatkę miniatur (klikalne na powiększenie przez :target, bez JS) — to NIE wlicza się do limitu obrazów scenicznych; pokazuje DOKŁADNY wygląd tego, co klient dostanie. Realne zdjęcia P* z AliExpress wyświetlaj w kontenerach z ustaloną proporcją i max-width:100% — NIE ładuj pełnej rozdzielczości do małych miniatur.
 WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): obraz HERO (1.) ładuj NATYCHMIAST — loading="eager" fetchpriority="high"; KAŻDY pozostały <img> ma loading="lazy", decoding="async" oraz ustaloną proporcję/wymiary (width+height albo aspect-ratio w CSS), żeby nie było przeskoku layoutu (CLS). Skaluj obrazy CSS-em do realnego rozmiaru kontenera (max-width:100%; height:auto) — NIE wyświetlaj wielkich zdjęć w małych ramkach. Nie dodawaj ciężkich teł-obrazów. (Podane URL-e LIFESTYLE są już zoptymalizowane do webp — używaj ich bez zmian.)
@@ -84,13 +105,39 @@ WYDAJNOŚĆ OBRAZÓW (ważne dla szybkości/LCP): obraz HERO (1.) ładuj NATYCHM
 ${statsLine}
 ${reviewsBlock}
 
-WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? `Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.${styleBrief ? `\nSTYLE BRIEF (po angielsku — AUTORYTET PALETY, TYPOGRAFII i NASTROJU dla stylu „${styleLabel}"; użyj DOKŁADNIE wymienionych kolorów i charakteru fontów, a gdy podane są hexy — użyj ich 1:1; to instrukcja dla Ciebie, NIE wstawiaj angielskiego do widocznego copy): ${styleBrief}` : ''}${mockupSpec ? `\nSPEC ODCZYTANY Z MAKIETY (TWARDY — użyj DOKŁADNIE tych hexów palety, tej kolejności sekcji i tych motywów; bezpośredni odczyt z obrazu, ma PRIORYTET przy palecie/typografii/układzie): ${mockupSpec}` : ''}\nMOTYWY DEKORACYJNE — odwzoruj CZYSTYM CSS te, które SĄ WIDOCZNE na makiecie (nie dodawaj na siłę, gdy ich nie ma): (a) zdjęcia w ramkach polaroid (biała ramka, lekki obrót, podpis kursywą) jako galeria, gdy makieta ma ich kilka; (b) naklejki/odznaki jak przyklejone stickery przez ::before/::after; (c) subtelny „film grain" przez malutki noise PNG data-URI z background-repeat (NIGDY animowany feTurbulence — kosztowny na mobile); (d) faliste przejścia między sekcjami przez inline SVG path lub clip-path.` : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
+WIERNOŚĆ WIZUALNA DO MAKIETY (KRYTYCZNE): ${product?.__hasMockup ? `Do wiadomości dołączony jest OBRAZ ZATWIERDZONEJ MAKIETY. ODWZORUJ go 1:1 w HTML/CSS: odczytaj i użyj DOKŁADNIE tej palety (kolory jako hex), tej typografii (charakter nagłówków i treści), tego stylu i kształtu przycisków, zaokrągleń, odstępów, nastroju i układu sekcji. Strona ma wyglądać jak ta makieta ożywiona w kodzie — NIE jak inny szablon.${styleTokens ? `\nDESIGN TOKENS STYLU (NAJTWARDSZY autorytet palety/typografii/kształtów — te same tokens zbudowały makietę; hexy stosuj 1:1 jako zmienne CSS :root): ${JSON.stringify(styleTokens).slice(0, 900)}` : ''}${styleBrief ? `\nSTYLE BRIEF (po angielsku — autorytet ${styleTokens ? 'NASTROJU (paleta/typografia: patrz DESIGN TOKENS)' : 'PALETY, TYPOGRAFII i NASTROJU — użyj DOKŁADNIE wymienionych kolorów i charakteru fontów, a gdy podane są hexy, użyj ich 1:1'} dla stylu „${styleLabel}"; to instrukcja dla Ciebie, NIE wstawiaj angielskiego do widocznego copy): ${styleBrief}` : ''}${mockupSpec ? `\nSPEC ODCZYTANY Z MAKIETY (${styleTokens ? 'kolejność sekcji i motywy WIDOCZNE na obrazie; przy konflikcie hexów z DESIGN TOKENS wygrywają TOKENS' : 'TWARDY — użyj DOKŁADNIE tych hexów palety, tej kolejności sekcji i tych motywów; bezpośredni odczyt z obrazu ma PRIORYTET przy palecie/typografii/układzie'}): ${mockupSpec}` : ''}` : 'Dobierz spójną, premium paletę i typografię dopasowaną do tonu marki; jeden wyrazisty kolor akcentu na CTA.'}
+
+WARSTWA WIZUALNA „PRO" (to ona odróżnia stronę MARKI od szablonu — wszystko CZYSTYM CSS, zero JS):
+MENU WZORCÓW — wybierz 4-6 pasujących do stylu makiety (w PIERWSZEJ kolejności odwzoruj motywy WIDOCZNE na makiecie, potem dobierz resztę z menu; nie używaj wzorców kłócących się ze stylem):
+- OVERSIZED NUMERAL/WORD: gigantyczna liczba lub słowo-klucz w tle hero (font-size clamp(180px,24vw,400px), bardzo jasny odcień tła, z-index:-1, user-select:none) — waga okładki magazynu (style premium/editorial).
+- MAGAZINE NUMBERING: eyebrow „Nº 01 — NAZWA SEKCJI" nad nagłówkami (uppercase, letter-spacing .1em, drobny) — rytm czasopisma.
+- ASYMMETRIC BENTO: korzyści jako bento o RÓŻNYCH rozmiarach kafli (grid-template-areas, 1 duży + 2-3 małe), nie nudny grid 2×2.
+- SPEC SHEET: „arkusz danych" produktu na kontrastowym tle (rzędy label–wartość, cienkie linie, font mono do wartości) — techniczna wiarygodność (style tech/modern).
+- FIGURE+CAPTION: zdjęcia z podpisem jak w magazynie (drobna kursywa/mono pod kadrem).
+- RITUAL 3 AKTY: „jak działa" jako 3 akty połączone linią (pseudo-elementy), numery dużym krojem.
+- EDITORIAL SPLIT: porównanie jako dwie połowy o różnych tłach („zwykły odpowiednik" vs marka), nie tylko tabela ✓/✗.
+- POLAROID GALLERY: zdjęcia w białych ramkach z lekkim obrotem (rotate ±2-3deg) i podpisem kursywą (style ciepłe/playful).
+- STICKER BADGES: odznaki jak naklejki (gruby border, lekki obrót, cień hard-offset) przy hero/cenie (style viral/playful).
+- TRUST MARQUEE: pasek zaufania jako płynny marquee (keyframes translateX, treść zduplikowana dla pętli).
+- COLOR SHADOW HOVER: na hover CTA/kafli cień w kolorze akcentu z palety (box-shadow + transition).
+- FINAL-CTA BANNER: końcowe CTA jako pełnowymiarowy banner na zdjęciu lifestyle z dwuwarstwowym gradient-scrimem (czytelność tekstu!), nie zwykła sekcja.
+- WAVY/DIAGONAL DIVIDERS: przejścia między sekcjami przez inline SVG path lub clip-path (style organiczne/energetyczne).
+- GRAIN: subtelny szum przez malutki noise PNG data-URI z background-repeat (NIGDY animowany feTurbulence).
+WOW MOMENTS (OBOWIĄZKOWE): DOKŁADNIE 2-3 sygnaturowe, dopracowane momenty wizualne — jeden w HERO, jeden w środku strony, opcjonalnie jeden przy końcowym CTA. To świadome kompozycje (z menu albo własne w duchu stylu), NIE mikro-efekty rozsiane wszędzie; reszta strony to spokojna, czysta baza, która im nie konkuruje.
+RUCH (jakość > ilość, tylko transform/opacity):
+- KAŻDY element klikalny ma wyraźny stan :hover (transform/box-shadow/kolor; transition 150-250ms).
+- Maks 1-2 subtelne animacje ambientowe (np. trust marquee, delikatny float odznaki w hero).
+- SCROLL-REVEAL: sekcje wjeżdżają przy scrollu przez animation-timeline: view() — WYŁĄCZNIE wewnątrz @supports (animation-timeline: view()); bez wsparcia przeglądarki wszystko MUSI być normalnie widoczne (zero JS, zero „pustych" sekcji). Delikatnie: 16-24px translateY + opacity, ~0.6s.
+- Całość szanuje @media (prefers-reduced-motion: reduce) — animacje wyłączone.
+- ZAKAZ: animowania width/height/top/left, background-attachment:fixed (łamie się na iOS), efektów odciągających wzrok od CTA.
 
 STRUKTURA KONWERSYJNA (kolejność sekcji; każda ma zadanie sprzedażowe):
 0. GÓRNY PASEK OGŁOSZENIOWY (cienki pasek na samej górze, nad headerem, pełna szerokość, kontrastowy akcent): 1 krótki UCZCIWY komunikat zaufania („Płatność przy odbiorze · 14 dni na zwrot" albo „Znany z TikToka"). BEZ pilności i obietnic dostawy. Statyczny OK; delikatne przewijanie 2-3 haseł czystym CSS dozwolone.
 0a. HEADER (pasek marki, pod paskiem ogłoszeniowym, sticky lub statyczny): ZAWSZE pokaż markę — logo (jeśli podane) albo wyrazisty WORDMARK z nazwą. OBOWIĄZKOWY nawet przy skąpych ustaleniach; gdy brak nazwy — krótka, spójna z tonem (NIE „Sklep"). Bez menu i linków wyprowadzających; opcjonalnie dyskretne ★ ocena albo ikona COD po prawej.
 1. STICKY DOLNY PASEK CTA (position:fixed na dole, zawsze widoczny zwł. na mobile): cena + przycisk „Kup teraz". KRYTYCZNE — klient nigdy nie szuka przycisku.
-2. HERO (test 3 sekund): ${haslo ? `NAGŁÓWEK h1 = HASŁO KLIENTA „${haslo}" — użyj 1:1 albo z MINIMALNĄ korektą (interpunkcja/szyk), zachowując jego słowa i sens; wolno dopisać krótki podtytuł-wyróżnik. NIE zastępuj hasła własnym pomysłem. ` : ''}nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (wzór „[efekt] — [wyróżnik]", ≤12 słów); w h1 CO NAJMNIEJ JEDEN człon opisuje konkretne DZIAŁANIE produktu (np. ściskasz / wraca powoli / mierzy / świeci), nie wyłącznie stan emocjonalny — unikaj triady samych uczuć („odstresuj / poczuj ulgę / zrelaksuj"). 1 zdanie podtytułu; DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ z REALNYMI statystykami opinii (patrz STATYSTYKI OPINII wyżej).
+2. HERO (test 3 sekund): ${haslo ? `NAGŁÓWEK h1 = HASŁO KLIENTA „${haslo}" — DOKŁADNIE ono i NIC WIĘCEJ (ZAKAZ doklejania do h1 drugiego członu typu „— [wyróżnik]"; wyróżnik idzie do podtytułu POD h1). NIE zastępuj hasła własnym pomysłem. ` : ''}nagłówek = KORZYŚĆ/transformacja, nie nazwa produktu (≤8 słów); w h1 CO NAJMNIEJ JEDEN człon opisuje konkretne DZIAŁANIE produktu (np. ściskasz / wraca powoli / mierzy / świeci), nie wyłącznie stan emocjonalny — unikaj triady samych uczuć („odstresuj / poczuj ulgę / zrelaksuj"). 1 KRÓTKIE zdanie podtytułu (≤120 znaków); DUŻE realne zdjęcie produktu (najlepiej w użyciu); JEDEN kontrastowy przycisk „Kup teraz"; pod nim mikrocopy „płatność przy odbiorze · 14 dni na zwrot"; widoczna cena; pasek ocen ★★★★★ z REALNYMI statystykami opinii (patrz STATYSTYKI OPINII wyżej).
+   SKALA TYPOGRAFII HERO (TWARDA — częsty błąd: przeskalowany nagłówek-ściana): h1 font-size MAKS clamp(2.2rem, 3.8vw, 3.6rem), na mobile ≤2.6rem; podtytuł ~1–1.2rem; cena ≤3.6rem. Całe hero (h1 + podtytuł + CTA + cena + oceny) MUSI mieścić się na jednym ekranie laptopa i telefonu — mniej tekstu, więcej produktu. Gigantyczna typografia (150px+) dozwolona WYŁĄCZNIE jako dekoracyjne tło (oversized word z menu wzorców, z-index:-1), NIGDY jako treściowy nagłówek.
+   HERO = PEŁNOEKRANOWA SCENA (jak na makiecie — to jej główny efekt „wow"): pierwsze zdjęcie LIFESTYLE (L1 — szerokie 3:2, komponowane z przestrzenią negatywną po lewej) jest TŁEM CAŁEGO hero, nie obrazkiem w ramce: <img class="hero-bg"> pozycjonowany absolutnie (inset:0; width/height:100%; object-fit:cover; object-position ~65-70% center; z-index:0; loading="eager" fetchpriority="high"), NAD nim scrim (osobny div, z-index:1) z DWÓCH linear-gradientów: poziomego (ciemno ~.9 nad strefą copy po lewej → ~.2 nad produktem → lekkie ~.35 na prawej krawędzi) i pionowego (przyciemniona góra pod header, na dole płynne zejście w kolor tła strony — hero MUSI zlewać się z następną sekcją, bez twardej krawędzi zdjęcia). Copy w JEDNEJ kolumnie po lewej na scrimie (z-index:2), hero min-height ~85vh. UWAGA KONTENER: treść hero siedzi w STANDARDOWYM kontenerze strony (ten sam max-width + margin-inline:auto co reszta sekcji) — full-bleed jest TYLKO zdjęcie i scrim; copy wyrównane do lewej krawędzi KONTENERA, NIGDY do krawędzi viewportu (nie nadawaj kontenerowi width:100% bez auto-marginesów). Tekstom na zdjęciu daj delikatny text-shadow (czytelność na jaśniejszych partiach sceny). ZAKAZ wciskania L1 w małą kartę/ramkę obok tekstu. RESPONSYWNOŚĆ KADRU (3 progi, nie 2 — częsty błąd to pominięcie tabletu): (a) desktop — object-position ~65-70%; (b) TABLET/wąski desktop (~641-980px, copy zajmuje pełną szerokość) — przesuń kadr mocniej w prawo (object-position ~75-80%) i wzmocnij lewy gradient scrimu, żeby cena/rating/koniec nagłówka NIE lądowały na jasnych partiach produktu; (c) mobile (≤640px) — scrim najmocniejszy (czytelność przede wszystkim), object-position dopasowany tak, by produkt był widoczny, min-height ~75vh. Gdy L1 nie istnieje — dopiero wtedy klasyczny układ dwukolumnowy z dużym realnym zdjęciem produktu.
 3. PASEK SOCIAL PROOF (zaraz pod hero): ★ ocena + liczba ocen (z realnych statystyk wyżej) + % pozytywnych. Zamiast twardego „viralowy hit" bez dowodu — dyskretna ODZNAKA „Znany z TikToka" (inline SVG TikToka + 1 linijka, BEZ zmyślonych liczb wyświetleń), wyglądająca jak odznaka mediów, nie zwykły tekst. Używaj REALNYCH liczb, nie wymyślaj.
 3a. PASEK ZAUFANIA — IKONY (osobny wąski strip pod paskiem ocen, równy rząd 3-4 kafelków inline SVG + krótki podpis): (1) paczka/kurier — „Płatność przy odbiorze"; (2) strzałka zwrotu — „14 dni na zwrot"; (3) kłódka/tarcza — „Bezpieczna płatność"; (4) ogień/TikTok — „Hit z TikToka". To OSOBNA sekcja-pasek, NIE tekst w hero. BEZ obietnic dostawy czasowej.
 4. PROBLEM → ROZWIĄZANIE: nazwij ból odbiorcy (z ustaleń), pokaż produkt jako rozwiązanie.
@@ -145,17 +192,19 @@ async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[
   const dla = String(ust?.dla_kogo || 'codzienny użytkownik').slice(0, 140)
   const kat = String(ust?.kat || ust?.kąt || '').slice(0, 160)
   const base = `Fotorealistyczne zdjęcie produktowe LIFESTYLE. Pokaż DOKŁADNIE ten produkt z obrazów referencyjnych (ten sam kształt, kolor, zestaw) — nie zmieniaj go, nie wymyślaj wariantu. Produkt: ${name}. Naturalne światło, realna codzienna scena, estetyka jak prawdziwa sesja zdjęciowa marki e-commerce (NIE render 3D, NIE grafika AI, bez tekstu/logo/znaków wodnych/ramek).`
-  const scenes = [
-    `${base} Ujęcie HERO: produkt w użyciu przez odbiorcę (${dla}) w atrakcyjnym, aspiracyjnym kontekście — tak, by od razu było widać korzyść. Kadr czysty, miejsce na nałożenie nagłówka.`,
-    `${base} Ujęcie „w użyciu / jak działa": produkt w działaniu, z bliska w realnym kontekście pokazującym jego rolę${kat ? ` (${kat})` : ''}. Detal sceny, autentycznie.`,
-    `${base} Ujęcie LIFESTYLE „w codzienności": produkt naturalnie wpleciony w zwykłą scenę z życia odbiorcy (${dla}) — np. na biurku, w torbie, na stoliku, wśród codziennych przedmiotów. Ma wyglądać, jakby już należał do tego świata.`,
-    `${base} Ujęcie EMOCJA/EFEKT: ludzki, bliski kadr (dłonie / uśmiech / reakcja) pokazujący przyjemność lub rezultat z użycia produktu${kat ? ` (${kat})` : ''}, ciepły nastrój — bez przesady, autentycznie.`,
+  // Ujęcie 1 (HERO) = SZEROKIE tło całego hero strony (jak na makietach): kompozycja
+  // z przestrzenią negatywną po lewej pod nagłówek — landing kładzie na nim copy + scrim.
+  const scenes: Array<{ p: string; ar: string }> = [
+    { p: `${base} Ujęcie HERO-TŁO (kadr SZEROKI, poziomy): produkt w atrakcyjnym, aspiracyjnym kontekście użycia (odbiorca: ${dla}) — klimatyczna scena z nastrojem dopasowanym do marki${kat ? ` (${kat})` : ''}. KOMPOZYCJA KRYTYCZNA: produkt w PRAWYCH 2/3 kadru, LEWA 1/3 = czysta, spokojna, ciemniejsza przestrzeń negatywna (rozmyte tło sceny) pod nałożenie nagłówka strony. Bez ludzi na pierwszym planie.`, ar: '3:2' },
+    { p: `${base} Ujęcie „w użyciu / jak działa": produkt w działaniu, z bliska w realnym kontekście pokazującym jego rolę${kat ? ` (${kat})` : ''}. Detal sceny, autentycznie.`, ar: '1:1' },
+    { p: `${base} Ujęcie LIFESTYLE „w codzienności": produkt naturalnie wpleciony w zwykłą scenę z życia odbiorcy (${dla}) — np. na biurku, w torbie, na stoliku, wśród codziennych przedmiotów. Ma wyglądać, jakby już należał do tego świata.`, ar: '1:1' },
+    { p: `${base} Ujęcie EMOCJA/EFEKT: ludzki, bliski kadr (dłonie / uśmiech / reakcja) pokazujący przyjemność lub rezultat z użycia produktu${kat ? ` (${kat})` : ''}, ciepły nastrój — bez przesady, autentycznie.`, ar: '1:1' },
   ]
-  const one = async (scenePrompt: string): Promise<string | null> => {
+  const one = async (scene: { p: string; ar: string }): Promise<string | null> => {
     try {
       const r = await fetchTimeout(`${SUPABASE_URL}/functions/v1/generate-image`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
-        body: JSON.stringify({ prompt: scenePrompt, provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '1:1', type: 'lifestyle', count: 1, reference_images: refs }),
+        body: JSON.stringify({ prompt: scene.p, provider: 'gpt-image-2', quality: 'medium', aspect_ratio: scene.ar, type: 'lifestyle', count: 1, reference_images: refs }),
       }, 110_000)
       if (!r.ok) { console.error('[bud-landing-gen] lifestyle HTTP', r.status); return null }
       const d = await r.json().catch(() => null)
@@ -166,7 +215,8 @@ async function genLifestyle(SUPABASE_URL: string, CRON: string, refUrls: string[
   const res = await Promise.all(scenes.map(one))
   // OPTYMALIZACJA WAGI: surowe PNG z gpt-image-2 to ~1,4 MB — zabójcze dla LCP.
   // Serwujemy przez Supabase render API (resize + kompresja + webp) → ~40-60 KB.
-  return res.filter((u): u is string => !!u).map((u) => optimizeImg(u, 1100, 72))
+  // Pierwsze ujęcie (hero-tło, 3:2) szerzej — rozciąga się na pełną szerokość ekranu.
+  return res.filter((u): u is string => !!u).map((u, i) => optimizeImg(u, i === 0 ? 1600 : 1100, i === 0 ? 74 : 72))
 }
 
 // Storage public URL → render (resize+quality+webp). resize=contain (sam width tnie boki).
@@ -200,6 +250,10 @@ function extractHtml(raw: string): string {
   const s = t.search(/<!doctype html|<html/i)
   const e = t.toLowerCase().lastIndexOf('</html>')
   if (s !== -1 && e !== -1) t = t.slice(s, e + 7)
+  // SANITYZACJA (2026-07-04, sesja c4f2bcfe): model potrafi wypluć SAMOTNE surogaty UTF-16
+  // (połamane emoji) — w przeglądarce leada renderują się jako �. Prawidłowe pary
+  // (emoji) zostają — wycinamy wyłącznie surogaty bez pary.
+  t = t.replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')
   return t
 }
 
@@ -248,7 +302,7 @@ Deno.serve(async (req) => {
     const isAdmin = !!CRON && req.headers.get('x-admin-secret') === CRON
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
-    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, chosen_style, mockups, landing_html, brand, ip, landing_lifestyle').eq('id', sessionId).maybeSingle()
+    const { data: session } = await supabase.from('bud_sessions').select('id, auth_user_id, ustalenia, chosen_style, mockups, landing_html, brand, ip, landing_lifestyle, market_report').eq('id', sessionId).maybeSingle()
     if (!session) return json({ error: 'nieprawidlowa_sesja' }, 404, c)
     if (!isAdmin) {
       const authUser = await verifyAuthUser(req, supabase)
@@ -354,6 +408,12 @@ Deno.serve(async (req) => {
     // Brief wybranego stylu = AUTORYTET palety/typografii (tekstem, nie tylko z JPEG-a makiety → mniej dryfu)
     const styleBrief = String((chosen && (chosen as any).brief) || '').slice(0, 600)
     const styleLabel = String((chosen && (chosen as any).label) || '').slice(0, 80)
+    // Design tokens stylu (bud-mockup zapisuje je w mockups[].tokens od 2026-07-04) —
+    // NAJTWARDSZY autorytet palety/typografii; stare sesje bez tokens działają jak dotąd.
+    // deno-lint-ignore no-explicit-any
+    const styleTokens = (chosen && (chosen as any).tokens && typeof (chosen as any).tokens === 'object') ? (chosen as any).tokens : null
+    // Raport rynku (OPCJONALNY) → paliwo do copy (bóle avatara, pozycjonowanie) — patrz landingReportContext.
+    const marketReport = (session.market_report && typeof session.market_report === 'object') ? session.market_report : null
     const ust = session.ustalenia || {}
     // Logo marki (z bud-brand) — jeśli wybrane, wplatamy je w stronę zamiast samej nazwy
     // deno-lint-ignore no-explicit-any
@@ -420,8 +480,17 @@ Deno.serve(async (req) => {
         ])
         // KOSZT: vision pre-pass makiety (gpt-5.1)
         try { if (specUsage.i || specUsage.o) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: 'gpt-5.1', input_tokens: specUsage.i, cached_tokens: specUsage.c, output_tokens: specUsage.o, cost_usd: (Math.max(0, specUsage.i - specUsage.c) * 1.25 + specUsage.c * 0.125 + specUsage.o * 10) / 1_000_000, meta: { from: 'landing-mockup-spec' } }) } catch (_) { /* log nie blokuje */ }
+        // Utrwal spec w wybranej makiecie (mockups[].spec) — razem z tokens/brief/ustaleniami
+        // tworzy „manifest stylu" sesji do późniejszego dopracowania strony poza lejkiem
+        // (plan Tomka 2026-07-04: baza z GPT, polish w Claude). Best-effort, nie blokuje.
+        if (mockupSpec && chosen) {
+          try {
+            ;(chosen as any).spec = mockupSpec
+            await supabase.from('bud_sessions').update({ mockups: mocks }).eq('id', sessionId)
+          } catch (e) { console.error('[bud-landing-gen] zapis spec do mockups nieudany:', e) }
+        }
         // deno-lint-ignore no-explicit-any
-        const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle, styleBrief, styleLabel, logoUrl, brandName, mockupSpec) }]
+        const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle, styleBrief, styleLabel, logoUrl, brandName, mockupSpec, styleTokens, marketReport) }]
         if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
           method: 'POST',

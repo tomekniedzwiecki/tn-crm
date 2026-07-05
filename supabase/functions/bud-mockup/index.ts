@@ -78,9 +78,10 @@ Każdy z 4 stylów ma być WYRAŹNIE inny (inna paleta, typografia, nastrój) i 
 Dla każdego stylu zwróć:
 - "key": krótki identyfikator (a-z, bez spacji),
 - "label": nazwa stylu po polsku (2-4 słowa, atrakcyjna dla klienta),
-- "brief": konkretny opis wizualny PO ANGIELSKU dla generatora obrazu (paleta z kolorami, typografia, nastrój, charakter UI) — 1-2 zdania.
+- "brief": konkretny opis wizualny PO ANGIELSKU dla generatora obrazu (paleta z kolorami, typografia, nastrój, charakter UI) — 1-2 zdania,
+- "tokens": TWARDE design-tokens tego stylu (wspólne źródło prawdy dla makiety i późniejszej strony HTML — hexy muszą się zgadzać z briefem): {"palette":[{"role":"tlo","hex":"#RRGGBB"},{"role":"tekst","hex":"#..."},{"role":"akcent","hex":"#..."},{"role":"cta","hex":"#..."},{"role":"sekcja","hex":"#..."}],"headingFont":"charakter nagłówków po angielsku (np. bold geometric sans / elegant editorial serif / rounded friendly sans)","bodyFont":"charakter tekstu","radius":"none|small|medium|pill","shadow":"none|soft|hard-offset","ctaShape":"pill|rounded|sharp","motifs":["1-3 motywy dekoracyjne pasujące do stylu, po polsku"]}.
 
-Zwróć WYŁĄCZNIE JSON: {"styles":[{"key":"...","label":"...","brief":"..."}, ...4 sztuki]}`;
+Zwróć WYŁĄCZNIE JSON: {"styles":[{"key":"...","label":"...","brief":"...","tokens":{...}}, ...4 sztuki]}`;
 }
 
 // Zwięzły blok kontekstu z raportu rynku — OPCJONALNY (stare sesje bez raportu działają jak dotąd).
@@ -117,15 +118,21 @@ function reportContext(report: any): string {
 }
 
 // deno-lint-ignore no-explicit-any
-function imagePrompt(product: any, snap: any, ust: any, brief: string, brandName = '', report: any = null): string {
+function imagePrompt(product: any, snap: any, ust: any, brief: string, brandName = '', report: any = null, tokens: any = null): string {
   const name = String(product?.name || product?.nazwa || snap?.title || 'produkt').slice(0, 120);
   const dla = String(ust?.dla_kogo || '').slice(0, 160);
   const kat = String(ust?.kat || ust?.kąt || ust?.kat_odroznienia || '').slice(0, 160);
   const ton = String(ust?.ton_marki || ust?.ton || '').slice(0, 120);
+  // Paleta z design-tokens (hexy) — deterministycznie spina makietę z późniejszą stroną HTML,
+  // która dostanie te same tokens jako twardy autorytet.
+  const pal = (tokens && Array.isArray(tokens.palette))
+    // deno-lint-ignore no-explicit-any
+    ? tokens.palette.filter((p: any) => p && p.hex).map((p: any) => `${p.role}: ${p.hex}`).join(', ').slice(0, 220)
+    : '';
   return `Realistic VERTICAL (portrait) mockup of a HIGH-CONVERTING, BRAND-BUILDING one-product e-commerce landing page (US DTC style, 2025) for the product in the reference images. Website design preview to show a client "this is how your store could look".
 
 Product: ${name}.${dla ? ` Target customer: ${dla}.` : ''}${kat ? ` Angle/wyróżnik: ${kat}.` : ''}${ton ? ` Brand tone: ${ton}.` : ''}${brandName ? ` Brand name: ${brandName} — show it as the store name/logo in the header.` : ''}
-Visual style for THIS mockup: ${brief}
+Visual style for THIS mockup: ${brief}${pal ? `\nUse EXACTLY this color palette (hex): ${pal}.` : ''}
 
 CRITICAL: the product shown MUST faithfully match the reference images (same object, shape, color, set). Render the ACTUAL product, not a generic stand-in.
 
@@ -257,7 +264,8 @@ Deno.serve(async (req) => {
     const genTask = (async () => {
       try {
         // 1) AI: 4 zróżnicowane style pod produkt + ustalenia
-        let styles: Array<{ key: string; label: string; brief: string }> = [];
+        // deno-lint-ignore no-explicit-any
+        let styles: Array<{ key: string; label: string; brief: string; tokens?: any }> = [];
         try {
           const r = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
             method: 'POST', headers: { authorization: `Bearer ${OPENAI_API_KEY}`, 'content-type': 'application/json' },
@@ -271,12 +279,12 @@ Deno.serve(async (req) => {
           styles = Array.isArray(parsed.styles) ? parsed.styles.slice(0, 4) : [];
         } catch (e) { console.error('[bud-mockup] styles err', e); }
         if (styles.length < 4) {
-          // fallback: 4 uniwersalne kierunki
+          // fallback: 4 uniwersalne kierunki (tokens spójne z briefami — landing dostaje je jako twardy autorytet)
           const fb = [
-            { key: 'premium', label: 'Premium / elegancki', brief: 'Premium minimal: off-white & deep charcoal, refined serif headings, generous whitespace, subtle gold accent, calm and trustworthy.' },
-            { key: 'viral', label: 'Energetyczny / viralowy', brief: 'Bold viral DTC: vivid accent color, heavy grotesque type, punchy badges, high-energy, social-proof heavy.' },
-            { key: 'organic', label: 'Ciepły / naturalny', brief: 'Warm organic: sand & terracotta palette, rounded soft UI, friendly humanist sans, cozy lifestyle mood.' },
-            { key: 'modern', label: 'Nowoczesny / techniczny', brief: 'Modern tech: dark UI, electric blue accent, crisp geometric sans, sharp cards, sleek and precise.' },
+            { key: 'premium', label: 'Premium / elegancki', brief: 'Premium minimal: off-white & deep charcoal, refined serif headings, generous whitespace, subtle gold accent, calm and trustworthy.', tokens: { palette: [{ role: 'tlo', hex: '#faf8f4' }, { role: 'tekst', hex: '#26241f' }, { role: 'akcent', hex: '#b28f4c' }, { role: 'cta', hex: '#26241f' }, { role: 'sekcja', hex: '#f1ede4' }], headingFont: 'refined editorial serif', bodyFont: 'clean humanist sans', radius: 'small', shadow: 'soft', ctaShape: 'sharp', motifs: ['numeracja sekcji jak w magazynie', 'podpisy pod zdjęciami kursywą'] } },
+            { key: 'viral', label: 'Energetyczny / viralowy', brief: 'Bold viral DTC: vivid accent color, heavy grotesque type, punchy badges, high-energy, social-proof heavy.', tokens: { palette: [{ role: 'tlo', hex: '#ffffff' }, { role: 'tekst', hex: '#111111' }, { role: 'akcent', hex: '#ff4d2e' }, { role: 'cta', hex: '#ff4d2e' }, { role: 'sekcja', hex: '#f5f5f5' }], headingFont: 'heavy grotesque sans', bodyFont: 'sturdy grotesque sans', radius: 'medium', shadow: 'hard-offset', ctaShape: 'pill', motifs: ['odznaki-naklejki z lekkim obrotem', 'marquee paska zaufania'] } },
+            { key: 'organic', label: 'Ciepły / naturalny', brief: 'Warm organic: sand & terracotta palette, rounded soft UI, friendly humanist sans, cozy lifestyle mood.', tokens: { palette: [{ role: 'tlo', hex: '#faf4ec' }, { role: 'tekst', hex: '#3d3129' }, { role: 'akcent', hex: '#c96f4a' }, { role: 'cta', hex: '#c96f4a' }, { role: 'sekcja', hex: '#f3e8da' }], headingFont: 'soft rounded sans', bodyFont: 'friendly humanist sans', radius: 'pill', shadow: 'soft', ctaShape: 'pill', motifs: ['faliste przejścia między sekcjami', 'zdjęcia polaroid z podpisem'] } },
+            { key: 'modern', label: 'Nowoczesny / techniczny', brief: 'Modern tech: dark UI, electric blue accent, crisp geometric sans, sharp cards, sleek and precise.', tokens: { palette: [{ role: 'tlo', hex: '#0b0d12' }, { role: 'tekst', hex: '#f2f4f8' }, { role: 'akcent', hex: '#2f7dff' }, { role: 'cta', hex: '#2f7dff' }, { role: 'sekcja', hex: '#141821' }], headingFont: 'crisp geometric sans', bodyFont: 'clean neutral sans', radius: 'small', shadow: 'none', ctaShape: 'rounded', motifs: ['arkusz specyfikacji na ciemnym tle', 'cienkie linie techniczne'] } },
           ];
           styles = fb;
         }
@@ -287,13 +295,15 @@ Deno.serve(async (req) => {
         const settled = await Promise.allSettled(styles.map(async (st) => {
           const r = await fetchTimeout(`${SUPABASE_URL}/functions/v1/generate-image`, {
             method: 'POST', headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON },
-            body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief, brandName, marketReport), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refs.length ? { reference_images: refs } : {}) }),
+            body: JSON.stringify({ prompt: imagePrompt(product, snap, ust, st.brief, brandName, marketReport, st.tokens || null), provider: 'gpt-image-2', quality: 'medium', aspect_ratio: '3:4', type: 'mockup', count: 1, ...(refs.length ? { reference_images: refs } : {}) }),
           }, 110_000);
           if (!r.ok) throw new Error(`gen HTTP ${r.status}`);
           const d = await r.json().catch(() => null);
           const url = d?.images?.[0]?.url;
           if (!url || typeof url !== 'string' || url.startsWith('data:')) throw new Error('brak URL');
-          return { style: st.key, label: st.label, brief: st.brief, url };
+          // tokens wędrują z makietą (bud_sessions.mockups) → bud-landing-gen czyta je jako
+          // twardy design-system wybranego stylu (wspólne źródło prawdy makieta↔strona).
+          return { style: st.key, label: st.label, brief: st.brief, tokens: st.tokens || null, url };
         }));
         const mockups = settled
           .map((s, i) => { if (s.status === 'fulfilled') return s.value; console.error('[bud-mockup] obraz padł', styles[i]?.key, String(s.reason).slice(0, 120)); return null; })

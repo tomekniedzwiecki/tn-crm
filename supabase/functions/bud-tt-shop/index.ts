@@ -60,6 +60,35 @@ function parseShop(j: any, pdpUrl: string): any | null {
   const pid = String(j.product_id || (pdpUrl.match(/\/pdp\/(?:[^/]*\/)?(\d+)/) || pdpUrl.match(/(\d{6,})/) || [])[1] || '') || null
   const priceReal = num(price.min_sku_price) ?? num(price.real_price)   // numeryczny FLOOR (do narzutu)
   const skus = Array.isArray(j.skus) ? j.skus : (j.product_info?.skus || [])
+  // POWIĄZANE WIDEO promujące produkt (req Tomka: podgląd „podobnych filmów") — link + miniatura
+  const rv = Array.isArray(j.related_videos) ? j.related_videos : []
+  const videos = rv.map((v: any) => ({
+    url: String(v.url || v.author_url || v.content_url || '').trim(),
+    title: String(v.title || '').slice(0, 120),
+    author: String(v.author_name || '').slice(0, 40),
+    plays: count(v.play_count),
+    likes: count(v.like_count),
+    cover: String(v.cover_image_url || '').trim(),
+  })).filter((v: any) => v.url).sort((a: any, b: any) => (b.plays || 0) - (a.plays || 0)).slice(0, 12)
+  // SPRZEDAWCA (sklep TikTok Shop) — req Tomka: „pokaż sklepy które sprzedają te produkty"
+  const sel = j.seller || j.product_info?.seller || {}
+  // odznaka sklepu (OFFICIAL SHOP / Gold Star Seller / …) — silny sygnał wiarygodności sprzedawcy
+  const badge = String(sel.store_label?.store_identity_label?.identity_label_data?.identity_label_text
+    || sel.store_label?.official_label?.label_type_str
+    || sel.visit_shop_text?.template || '').slice(0, 40)
+  const sid = String(sel.seller_id || sel.id || '')
+  const shop = sel && sel.name ? {
+    name: String(sel.name).slice(0, 60),
+    seller_id: sid,
+    rating: num(sel.rating),
+    product_count: num(sel.product_count),
+    avatar: String(sel.avatar?.url_list?.[0] || sel.avatar?.url || '').trim(),
+    badge,
+    location: String(sel.seller_location || '').slice(0, 40),
+    // TikTok NIE oddaje webowego URL-a sklepu (tylko deep-link aweko://ec/store) — trzymamy
+    // deeplink + seller_id; w panelu „sklep" prowadzi przez shop_url (PDP) do TikTok Shop.
+    deeplink: String(sel.shop_link || '').trim(),
+  } : null
   return {
     product_id: pid,
     title,
@@ -74,7 +103,9 @@ function parseShop(j: any, pdpUrl: string): any | null {
     rating: num(rev.product_rating) ?? num(j.seller?.rating),
     review_count: count(rev.review_count),
     images,
-    video_count: Array.isArray(j.related_videos) ? j.related_videos.length : 0,
+    videos,
+    video_count: rv.length,
+    shop,
     fetched_at: new Date().toISOString(),
   }
 }
@@ -151,7 +182,12 @@ Deno.serve(async (req) => {
       const txt = await r.text()
       let parsed: any = null; try { parsed = JSON.parse(txt) } catch { /* */ }
       const pb = parsed?.product_base || parsed?.product_info?.product_base || null
-      return j({ sc_key_present: !!SC, http_status: r.status, pb_keys: pb ? Object.keys(pb) : null, pb_price: pb?.price ?? null, pb_sold: pb?.sold_count ?? pb?.sold ?? null, pb_title: pb?.title ?? null, sku0_keys: parsed?.skus?.[0] ? Object.keys(parsed.skus[0]) : null, review: parsed?.product_detail_review ?? null, seller_rating: parsed?.seller?.rating ?? null, imgs: Array.isArray(pb?.images) ? pb.images.slice(0, 1) : pb?.images ?? null, related_n: Array.isArray(parsed?.related_videos) ? parsed.related_videos.length : null })
+      const parsedShop = parseShop(parsed, url)
+      // deno-lint-ignore no-explicit-any
+      const skus = (Array.isArray(parsed?.skus) ? parsed.skus : []).map((s: any) => ({ price: s?.price?.real_price ?? s?.price ?? null, props: (Array.isArray(s?.sku_sale_props) ? s.sku_sale_props : []).map((p: any) => `${p?.sku_prop_name || p?.prop_name || ''}: ${p?.prop_value || p?.sku_prop_value || ''}`.trim()) }))
+      // deno-lint-ignore no-explicit-any
+      const sale_props = (Array.isArray(parsed?.sale_props) ? parsed.sale_props : []).map((sp: any) => ({ name: sp?.prop_name || sp?.name, values: (Array.isArray(sp?.sale_prop_values) ? sp.sale_prop_values : []).map((v: any) => v?.prop_value || v?.value).slice(0, 12) }))
+      return j({ sc_key_present: !!SC, http_status: r.status, parsed: parsedShop, sale_props, skus_n: skus.length, skus: skus.slice(0, 20) })
     } catch (e) { return j({ error: String(e).slice(0, 200), sc_key_present: !!SC }) }
   }
 

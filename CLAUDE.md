@@ -44,7 +44,9 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
   `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
 - Etapy 1–5: Portfel → Sklep TakeDrop → Kampanie (konto→budżet→pixel→grafiki→kampania)
-  → Testy i skalowanie → Przekazanie sterów. Marża testowa = 5–10 zł zysku/szt.
+  → Testy i skalowanie → Przekazanie sterów. Marża testowa = ~15% narzutu na cenę zakupu
+  (`TEST_MARGIN_PCT` w projekt.html; do 2026-07-04 widełki 5–10 zł/szt.). Portfel: cel 5
+  produktów (klient z /zbuduje ma 1 → auto-dobór +4), pusty portfel → auto-dobór 10.
 - Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
