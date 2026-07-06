@@ -2158,10 +2158,21 @@ function signalBadge(s) {
   const g = leadSignal(s);
   return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${TONE_CHIP[g.tone]}"><i class="ph ${g.icon}"></i>${g.label}</span>`;
 }
+// Rozmowa „pusta" = użytkownik nigdy nic nie napisał (0 tur i brak last_user_at —
+// oba ustawiane naraz przy pierwszej turze usera, patrz bud-chat persistAfterStream).
+// Takich nie pokazujemy na liście leadów. Cokolwiek świadczącego o realnym leadzie
+// (opłata, e-mail, lead w CRM, wygenerowana grafika) trzyma sesję na liście.
+function hasConversation(s) {
+  return (s.turns || 0) > 0 || !!s.last_user_at || !!s.paid_at || !!s.email || !!s.lead_id || (s.image_count || 0) > 0;
+}
+// Baza leadów: widoczne sesje bez pustych rozmów (spójna dla listy i liczników filtrów).
+function leadBase() {
+  return visibleSessions().filter(hasConversation);
+}
 // Lista leadów po filtrze szybkim + wyszukiwarce
 function leadList() {
   const q = search.toLowerCase();
-  return visibleSessions().filter((s) => {
+  return leadBase().filter((s) => {
     if (q && ![projName(s), s.email, s.phone, s.profession, s.name, productOf(s), s.niche].some((v) => v && String(v).toLowerCase().includes(q))) return false;
     if (leadySource !== 'all' && srcInfo(s).channel !== leadySource) return false;
     if (leadyTrack !== 'all' && (s.track || '') !== leadyTrack) return false;
@@ -2190,7 +2201,7 @@ const LEAD_FILTERS = [
   { key: 'lead_err', label: 'Błąd leada', icon: 'ph-warning' },
 ];
 function renderLeadyFilters() {
-  const base = visibleSessions();
+  const base = leadBase();
   const count = (k) => base.filter((s) => {
     if (k === 'all') return true;
     if (k === 'paid') return !!s.paid_at;
