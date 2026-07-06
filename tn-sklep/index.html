@@ -2158,16 +2158,21 @@ function signalBadge(s) {
   const g = leadSignal(s);
   return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${TONE_CHIP[g.tone]}"><i class="ph ${g.icon}"></i>${g.label}</span>`;
 }
-// Rozmowa „pusta" = użytkownik nigdy nic nie napisał (0 tur i brak last_user_at —
-// oba ustawiane naraz przy pierwszej turze usera, patrz bud-chat persistAfterStream).
-// Takich nie pokazujemy na liście leadów. Cokolwiek świadczącego o realnym leadzie
-// (opłata, e-mail, lead w CRM, wygenerowana grafika) trzyma sesję na liście.
-function hasConversation(s) {
-  return (s.turns || 0) > 0 || !!s.last_user_at || !!s.paid_at || !!s.email || !!s.lead_id || (s.image_count || 0) > 0;
+// Realny lead = ktoś, kogo da się obsłużyć. Kryją się dwa rodzaje szumu:
+//  • pusta rozmowa — user nigdy nic nie napisał (turns=0 i brak last_user_at, oba
+//    ustawiane naraz przy 1. turze usera, patrz bud-chat persistAfterStream),
+//  • anonim bez namiaru — brak e-maila i telefonu, więc nie ma jak follow-upować.
+// Pokazujemy więc tylko sesje, które mają ≥1 wiadomość ORAZ kontakt. Wyjątkiem są
+// stany, których nie wolno ukryć: opłacony, lead w CRM, błąd lead-upsertu.
+function isRealLead(s) {
+  if (s.paid_at || s.lead_id || s.lead_error) return true;
+  const hasMsg = (s.turns || 0) > 0 || !!s.last_user_at;
+  const hasContact = !!s.email || !!s.phone;
+  return hasMsg && hasContact;
 }
-// Baza leadów: widoczne sesje bez pustych rozmów (spójna dla listy i liczników filtrów).
+// Baza leadów: widoczne sesje bez szumu (spójna dla listy i liczników filtrów).
 function leadBase() {
-  return visibleSessions().filter(hasConversation);
+  return visibleSessions().filter(isRealLead);
 }
 // Lista leadów po filtrze szybkim + wyszukiwarce
 function leadList() {
