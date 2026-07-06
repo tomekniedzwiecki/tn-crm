@@ -293,6 +293,110 @@ Deno.serve(async (req) => {
     // PER-SESJA (landing zależy od ustaleń + wybranej makiety konkretnego usera)
     if (!body.force && session.landing_html) return json({ landing_html: session.landing_html, cached: true }, 200, c)
 
+    // ── KONTEKST GENERACJI (wspólny dla stage1 i stage2) ─────────────────────
+    // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
+    // deno-lint-ignore no-explicit-any
+    const mocks = Array.isArray(session.mockups) ? session.mockups : []
+    // deno-lint-ignore no-explicit-any
+    const chosen = mocks.find((m: any) => m && m.style === session.chosen_style) || mocks[0] || null
+    const mockupUrl = String(body.mockup_url || (chosen && (chosen as any).url) || '')
+    product.__hasMockup = !!mockupUrl
+    // Brief wybranego stylu = AUTORYTET palety/typografii (tekstem, nie tylko z JPEG-a makiety → mniej dryfu)
+    // deno-lint-ignore no-explicit-any
+    const styleBrief = String((chosen && (chosen as any).brief) || '').slice(0, 600)
+    // deno-lint-ignore no-explicit-any
+    const styleLabel = String((chosen && (chosen as any).label) || '').slice(0, 80)
+    const ust = session.ustalenia || {}
+    // Logo marki (z bud-brand) — jeśli wybrane, wplatamy je w stronę zamiast samej nazwy
+    // deno-lint-ignore no-explicit-any
+    const brandObj: any = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand : null
+    const logoUrl = String((brandObj && (brandObj.chosen_logo || brandObj.logo_url)) || '')
+    // deno-lint-ignore no-explicit-any
+    const brandName = String((brandObj && (brandObj.chosen_name || brandObj.nazwa)) || (ust && (ust as any).nazwa) || '').slice(0, 80)
+    let snap: Record<string, unknown> | null = null
+    let curated: string | null = null
+    try {
+      const pkId = String(product.id || '')
+      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null; curated = (row && (row.curated_image as string)) || null }
+    } catch { /* */ }
+    // ANTY-ZATRUCIE (2026-07-03, przypadek „materac do Tesli"): snapshot source='search'
+    // (fallback wyszukiwarki po nazwie) bywa INNYM produktem — zeruj tytuł/opinie/staty,
+    // a zdjęcia bierz z pewnych źródeł (kandydat dopasowany po obrazie + okładka).
+    // deno-lint-ignore no-explicit-any
+    const searchSnap = !!snap && String((snap as any).source || '') === 'search'
+    if (searchSnap) snap = { ...(snap as Record<string, unknown>), title: '', reviews: [], review_stats: null }
+    // deno-lint-ignore no-explicit-any
+    let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
+    if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
+
+    // ── STAGE 2 (wewnętrzne, x-admin-secret): SAM call HTML we WŁASNEJ inwokacji ──
+    // NIEZAWODNOŚĆ (2026-07-06, sesja 70cb915c: 2 niewidzialne pady jednego wieczora):
+    // lifestyle+spec zjadały 1-2 min wall-clocka, a HTML (kilkanaście-30k tokenów przy
+    // wolnym OpenAI) nie mieścił się w reszcie limitu 400 s → isolate ubijany BEZ finally
+    // (zero usage-faila, zero Slacka, lock wisiał do TTL, front mielił „pending").
+    // Stage2 = świeży wall-clock wyłącznie na HTML + deadline guard 330 s, żeby KAŻDA
+    // porażka była uczciwa (fail-usage + Slack + release → front sam ponawia w pollingu).
+    if ((body as Record<string, unknown>).stage2) {
+      if (!isAdmin) return json({ error: 'brak_uprawnien' }, 403, c)
+      const { data: lock2 } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'landing', p_ttl_sec: 400 })
+      if (!lock2) return json({ pending: true }, 202, c)
+      const lifestyle2 = Array.isArray((body as Record<string, unknown>).lifestyle)
+        ? ((body as Record<string, unknown>).lifestyle as unknown[]).filter((u): u is string => typeof u === 'string' && !!u).slice(0, 4)
+        : []
+      const mockupSpec2 = String((body as Record<string, unknown>).mockupSpec || '').slice(0, 1500)
+      const htmlTask = (async () => {
+        const t0 = Date.now()
+        let saved = false
+        let failReason = ''
+        try {
+          // deno-lint-ignore no-explicit-any
+          const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle2, styleBrief, styleLabel, logoUrl, brandName, mockupSpec2) }]
+          if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
+          const callOnce = (ms: number) => fetchTimeout('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({ model: MODEL, input: [{ role: 'user', content }], max_output_tokens: MAX_OUT }),
+          }, ms)
+          // Deadline guard: 330 s < wall-clock 400 s → przy timeout/abort finally DZIAŁA.
+          // Szybki blip (429/5xx w <90 s) dostaje jedną ponowną próbę w reszcie budżetu.
+          let res = await callOnce(330_000)
+          if (!res.ok && (res.status === 429 || res.status >= 500) && Date.now() - t0 < 90_000) {
+            try { await res.body?.cancel() } catch { /* zwolnij połączenie */ }
+            await new Promise((r) => setTimeout(r, 1200))
+            res = await callOnce(330_000 - (Date.now() - t0))
+          }
+          if (!res.ok) { failReason = `openai HTTP ${res.status}`; console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
+          const data = await res.json()
+          // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka
+          try {
+            const u = data?.usage || {}; const inTok = u.input_tokens || 0, cTok = (u.input_tokens_details?.cached_tokens) || 0, oTok = u.output_tokens || 0
+            await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html', duration_ms: Date.now() - t0 } })
+          } catch (_) { /* log nie blokuje */ }
+          let text = typeof data?.output_text === 'string' ? data.output_text : ''
+          if (!text) { for (const it of (data?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') text += cc.text } }
+          const html = extractHtml(text)
+          if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
+          await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
+          saved = true
+        } catch (e) {
+          failReason = String(e).includes('AbortError') || String(e).toLowerCase().includes('abort')
+            ? `timeout ${Math.round((Date.now() - t0) / 1000)}s (deadline guard)` : String(e).slice(0, 280)
+          console.error('[bud-landing-gen] stage2 error:', e)
+        } finally {
+          if (!saved) {
+            // Uczciwy fail: ślad w usage (duration!), lock w dół (retry usera od razu), alert Tomka.
+            try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-html-fail', reason: failReason || 'nieznany', duration_ms: Date.now() - t0 } }) } catch { /* */ }
+            try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
+            await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'strona sklepu (bud-landing-gen/stage2)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
+          } else {
+            try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
+          }
+        }
+      })()
+      try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(htmlTask) } catch (_) { /* */ }
+      return json({ pending: true }, 202, c)
+    }
+
     // ── T1: CAPY anty-nadużycie (admin omija; wzorzec bud-mockup). Sprawdzane PRZED lockiem;
     //    force=true też tu trafia (cache zwrócił wyżej). Fail-open na błędzie zapytania.
     if (!isAdmin) {
@@ -346,36 +450,6 @@ Deno.serve(async (req) => {
     // Rerolle admina dostają osobny marker (nie zjadają limitu usera — audyt #7).
     try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: isAdmin ? 'landing-attempt-admin' : 'landing-attempt' } }) } catch (_) { /* */ }
 
-    // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
-    const mocks = Array.isArray(session.mockups) ? session.mockups : []
-    const chosen = mocks.find((m: any) => m && m.style === session.chosen_style) || mocks[0] || null
-    const mockupUrl = String(body.mockup_url || (chosen && chosen.url) || '')
-    product.__hasMockup = !!mockupUrl
-    // Brief wybranego stylu = AUTORYTET palety/typografii (tekstem, nie tylko z JPEG-a makiety → mniej dryfu)
-    const styleBrief = String((chosen && (chosen as any).brief) || '').slice(0, 600)
-    const styleLabel = String((chosen && (chosen as any).label) || '').slice(0, 80)
-    const ust = session.ustalenia || {}
-    // Logo marki (z bud-brand) — jeśli wybrane, wplatamy je w stronę zamiast samej nazwy
-    // deno-lint-ignore no-explicit-any
-    const brandObj: any = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand : null
-    const logoUrl = String((brandObj && (brandObj.chosen_logo || brandObj.logo_url)) || '')
-    const brandName = String((brandObj && (brandObj.chosen_name || brandObj.nazwa)) || (ust && (ust as any).nazwa) || '').slice(0, 80)
-    let snap: Record<string, unknown> | null = null
-    let curated: string | null = null
-    try {
-      const pkId = String(product.id || '')
-      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null; curated = (row && (row.curated_image as string)) || null }
-    } catch { /* */ }
-    // ANTY-ZATRUCIE (2026-07-03, przypadek „materac do Tesli"): snapshot source='search'
-    // (fallback wyszukiwarki po nazwie) bywa INNYM produktem — jego tytuł psuł nazwę na
-    // stronie, jego OPINIE lądowały jako social proof, a galeria karmiła stronę i lifestyle
-    // zdjęciami obcego towaru. Wtedy: zeruj tytuł/opinie/staty (prompt przejdzie na uczciwe
-    // szablony), a zdjęcia bierz z pewnych źródeł (kandydat dopasowany po obrazie + okładka).
-    const searchSnap = !!snap && String((snap as any).source || '') === 'search'
-    if (searchSnap) snap = { ...(snap as Record<string, unknown>), title: '', reviews: [], review_stats: null }
-    let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
-    if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
-
     const genTask = (async () => {
       let saved = false
       let failReason = ''
@@ -420,20 +494,38 @@ Deno.serve(async (req) => {
         ])
         // KOSZT: vision pre-pass makiety (gpt-5.1)
         try { if (specUsage.i || specUsage.o) await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: 'gpt-5.1', input_tokens: specUsage.i, cached_tokens: specUsage.c, output_tokens: specUsage.o, cost_usd: (Math.max(0, specUsage.i - specUsage.c) * 1.25 + specUsage.c * 0.125 + specUsage.o * 10) / 1_000_000, meta: { from: 'landing-mockup-spec' } }) } catch (_) { /* log nie blokuje */ }
+        // HAND-OFF DO STAGE2 (2026-07-06): najcięższy call (HTML) dostaje WŁASNĄ inwokację
+        // ze świeżym wall-clockiem — patrz komentarz przy gałęzi stage2. Lock zwalniamy tuż
+        // przed self-invoke (stage2 claimuje własny); okno wyścigu z pollingiem ~0,5 s jest
+        // akceptowalne (poll co 12 s; przegrany claim po prostu nic nie robi).
+        if (CRON) {
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* stage2 zaraz claimnie */ }
+          const selfRes = await fetchTimeout(`${SUPABASE_URL}/functions/v1/bud-landing-gen`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON },
+            body: JSON.stringify({ stage2: true, sessionId, product, mockup_url: mockupUrl, lifestyle, mockupSpec, force: !!body.force }),
+          }, 15_000)
+          if (!selfRes.ok) { failReason = `stage2 HTTP ${selfRes.status}`; return }
+          saved = true   // odpowiedzialność (lock, save, Slack) przejął stage2
+          return
+        }
+        // FALLBACK bez CRON (brak sekretu = brak self-invoke): stary tryb inline —
+        // pojedyncza próba z deadline guardem, żeby pad nigdy nie był niewidzialny.
+        const t0 = Date.now()
         // deno-lint-ignore no-explicit-any
         const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle, styleBrief, styleLabel, logoUrl, brandName, mockupSpec) }]
         if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
-        const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
+        const res = await fetchTimeout('https://api.openai.com/v1/responses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
           body: JSON.stringify({ model: MODEL, input: [{ role: 'user', content }], max_output_tokens: MAX_OUT }),
-        }, 'bud-landing-gen')
+        }, 240_000)
         if (!res.ok) { failReason = `openai HTTP ${res.status}`; console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
         const data = await res.json()
         // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka
         try {
           const u = data?.usage || {}; const inTok = u.input_tokens || 0, cTok = (u.input_tokens_details?.cached_tokens) || 0, oTok = u.output_tokens || 0
-          await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html' } })
+          await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html', duration_ms: Date.now() - t0 } })
         } catch (_) { /* log nie blokuje */ }
         let text = typeof data?.output_text === 'string' ? data.output_text : ''
         if (!text) { for (const it of (data?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') text += cc.text } }
@@ -447,6 +539,7 @@ Deno.serve(async (req) => {
       } finally {
         if (!saved) {
           // T2: porażka = lock w dół (retry usera generuje OD RAZU, nie po TTL 400 s)…
+          try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-html-fail', reason: failReason || 'nieznany', stage: 1 } }) } catch { /* */ }
           try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
           // …T10: i Tomek wie o padzie przed userem.
           await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'strona sklepu (bud-landing-gen)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
