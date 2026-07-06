@@ -296,12 +296,12 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
       }
       if (action === 'set_budget') {
-        // EARLY BUDGET GATE (req Tomka): zadeklarowany budżet startowy (lead-scoring + dyskwalifikacja).
-        // Wartości: high | mid | unknown | raty | none. „raty" (2026-07-02): user nie ma całości
-        // naraz i chce rat — KONTYNUACJA lejka (warunki indywidualnie z Tomkiem), mocny sygnał
-        // intencji do CRM. „none" = soft-exit po stronie frontu (NIE palimy compute).
+        // LEJEK V2 (2026-07-06): budżet = MECHANIZM OFERTY, pytany PO pokazaniu sklepu
+        // („Tomek ułoży plan pod Twoją kwotę"). Kody kwotowe: lt2 (do 2 tys. — bramka:
+        // uczciwe „to się nie uda") | 2-5 | 5-10 | 10plus. Stare kody (high/mid/unknown/
+        // raty/none) zostają dla kompatybilności z otwartymi kartami starego frontu.
         const budget = (typeof body.budget === 'string' ? body.budget : '').trim()
-        if (!['high', 'mid', 'unknown', 'raty', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
+        if (!['lt2', '2-5', '5-10', '10plus', 'high', 'mid', 'unknown', 'raty', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
         const { error: bErr } = await supabase.from('bud_sessions')
           .update({ budget_declared: budget, updated_at: new Date().toISOString() }).eq('id', sessionId)
         if (bErr) console.error('[bud-project] set_budget error:', bErr)
@@ -415,12 +415,17 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
-    // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do
-    //    zakładki 'strona' albo otworzył landing). Bramka prototypu (plan w _shared).
+    // ── action 'seen_landing': lead obejrzał sklep (zakładka „Sklep" w panelu albo
+    //    otwarty landing). Bramka prototypu (plan w _shared) + gate drip 'seen_landing'.
     //    Stempluj RAZ i tylko gdy strona realnie istnieje (jest co oglądać) — pusta
     //    zakładka nie może przedwcześnie odblokować prototypu. Idempotentne, lekkie.
+    //    FIX 2026-07-06 (LEJEK V2): /sklep dostarcza sklep INLINE (landing_html z
+    //    bud-landing-gen, iframe srcdoc) — landing_url to legacy hostowanego podglądu,
+    //    którego ten fork nie tworzy; warunek tylko na landing_url trzymał
+    //    seen_landing_at=NULL u 100% sesji i wieczne 'seen_landing' gate w bud-drip.
     if (action === 'seen_landing') {
-      if (session.landing_url && !session.seen_landing_at) {
+      const hasShop = !!(session.landing_url || session.landing_html)
+      if (hasShop && !session.seen_landing_at) {
         const { error: slErr } = await supabase.from('bud_sessions')
           .update({ seen_landing_at: new Date().toISOString() }).eq('id', sessionId)
         if (slErr) console.error('[bud-project] seen_landing stamp error:', slErr)
@@ -428,7 +433,7 @@ Deno.serve(async (req) => {
         // Sygnał pasywny → bez wskrzeszania ręcznie odrzuconych leadów.
         await bumpLeadStage(supabase, (session.lead_id as string | null) || null, 'contacted')
       }
-      return jsonResponse({ ok: true, seen: !!session.landing_url }, 200, cors)
+      return jsonResponse({ ok: true, seen: hasShop }, 200, cors)
     }
 
     if (action === 'feedback') {
