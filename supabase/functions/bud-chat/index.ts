@@ -449,7 +449,7 @@ function looksLikeGarbageContact(name: string | null, phone: string | null): boo
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error' | 'spar_revive',
+  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error' | 'spar_revive' | 'bud_reservation',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -596,6 +596,49 @@ async function maybeNotifyGreenSlack(
     })
   } catch (err) {
     console.error('[bud-chat] maybeNotifyGreenSlack exception:', err)
+  }
+}
+
+// Bot zaproponował leadowi wpłatę rezerwacji 500 zł (marker <makieta>, po zielonym świetle)
+// → #sparing (raz na sesję, dedup atomowym claimem na slack_reservation_notified_at).
+// To najgorętszy moment lejka — jawna prośba o pieniądze. Zielone światło pinguje osobno
+// (spar_green); tu chodzi o SAMĄ propozycję rezerwacji.
+async function maybeNotifyReservationSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('bud_sessions')
+      .update({ slack_reservation_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_reservation_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, brand, preview_brief, market_report, mockups, session_ads, landing_html')
+    if (error) { console.error('[bud-chat] reservation slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brand = (s.brand && typeof s.brand === 'object') ? s.brand as Record<string, unknown> : null
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    // Recap „co już ma" — te same artefakty, które lead widzi na karcie rezerwacji.
+    const have: string[] = []
+    if (s.market_report) have.push('Raport rynku')
+    if (brand && (brand.chosen_name || brand.nazwa)) have.push(`Marka „${String(brand.chosen_name || brand.nazwa)}"`)
+    if (Array.isArray(s.mockups) && (s.mockups as unknown[]).length) have.push('Makiety')
+    if (Array.isArray(s.session_ads) && (s.session_ads as unknown[]).length) have.push('Reklamy')
+    if (s.landing_html) have.push('Podgląd sklepu')
+    await postSlackSparing('bud_reservation', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: (brand && typeof brand.chosen_name === 'string' && brand.chosen_name)
+        ? brand.chosen_name
+        : ((brand && typeof brand.nazwa === 'string' && brand.nazwa) ? brand.nazwa : (brief?.nazwa ?? null)),
+      have,
+    })
+  } catch (err) {
+    console.error('[bud-chat] maybeNotifyReservationSlack exception:', err)
   }
 }
 
@@ -1862,11 +1905,19 @@ Deno.serve(async (req) => {
     const REPORT_ENGAGE_TRIGGER = '[SYSTEM: Rozmówca właśnie zostawił komplet kontaktu i raport rynku RUSZYŁ w tle (wyników JESZCZE nie ma). Nie zostawiaj ciszy: zagadnij go JEDNYM lekkim, naturalnym pytaniem przydatnym do późniejszych ustaleń (kogo widzi jako klienta / co go w produkcie przekonało / jaki klimat marki / pomysł na nazwę). OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. NIE twierdź, że raport jest gotowy ani nie podawaj liczb/wyników.]'
     const REPORT_PROPOSE_TRIGGER = '[SYSTEM: Raport rynku właśnie się ZAKOŃCZYŁ — masz jego pełną treść w kontekście (sekcja RAPORT STRATEGICZNY). Rozmówca milczy. Zrób DOMYŚLNY RUCH USTALEŃ: w maks. 3 krótkich linijkach zaproponuj komplet wyprowadzony z raportu (dla kogo · czym wygrywamy · ton marki) i zapytaj tylko, czy pasuje. OBOWIĄZKOWO <opcje>: pierwsza opcja = akceptacja (np. "Pasuje — rób makiety"), potem 1-2 korekty. NIE domykaj <ustalenia> w tej turze — czekaj na potwierdzenie. Całość ma się czytać w 5 sekund.]'
     const USTALENIA_ENFORCE_TRIGGER = '[SYSTEM: Rozmówca ZAAKCEPTOWAŁ zaproponowany kierunek, ale blok <ustalenia> NIE został wystawiony w poprzedniej turze i pipeline stoi. Wystaw TERAZ dokładnie jeden PEŁNY blok <ustalenia>{...} zbudowany z kompletu zaproponowanego w rozmowie (dla_kogo, kat, ton_marki, korzysci, opcjonalnie nazwa). Przed blokiem najwyżej JEDNO krótkie zdanie (np. "Zapisuję ustalenia — lecimy dalej."). BEZ <opcje>, BEZ pytań, BEZ ponownego opisywania kierunku.]'
-    // Tura ZACZEPKI podczas budowy sklepu/reklam (qualifyEngage). LEJEK V2 (2026-07-06):
-    // ZERO kwalifikacji przed rezerwacją (rozmowy umierały na przesłuchaniu) — zamiast
-    // ankiety: personalizacja i budowanie apetytu na sklep. qualifyTopic (stare fronty
-    // z otwartą kartą: 'doswiadczenie'/'sytuacja') mapuje się na TEN SAM trigger.
-    const QUALIFY_ENGAGE_TRIGGER = '[SYSTEM: W tle właśnie składają się materiały rozmówcy (makiety / reklamy / sklep — potrwa to chwilę). NIE zostawiaj go samego w tej ciszy, ale ZAKAZ ankiety: NIE pytaj o budżet, doświadczenie, czas, zawód ani gotowość. Zamiast tego JEDNO lekkie pytanie personalizujące PRODUKT/MARKĘ/SKLEP, którego odpowiedź realnie przyda się w budowie (np. kogo najbardziej widzi jako klienta, co jego samego przekonało w produkcie, jaki klimat marki czuje, pomysł na hasło/nazwę) — ALBO krótka zapowiedź budująca apetyt („za chwilę zobaczysz swój sklep na żywo"). Jedno krótkie pytanie, ciepło, jak Tomek do znajomego. OBOWIĄZKOWO dołącz marker <opcje> z 2-4 klikalnymi odpowiedziami. Nawiąż do tego, co już powiedział; NIE powtarzaj zadanych pytań. NIE twierdź, że sklep/reklamy są już gotowe.]'
+    // Tura ZACZEPKI podczas generowania (qualifyEngage). LEJEK V2 + korekta Tomka
+    // 2026-07-07 (QA LicoSilk: po wyborze stylu bot męczył pytaniami o produkt, którego
+    // lead prawie nie zna): okno generowania reklam/sklepu = rozmowa o MODELU WSPÓŁPRACY
+    // (fundament „buduję → wdrażam → przekazuję stery"), wg sprawdzonego skryptu Tomka
+    // sprzed automatyzacji. Sprzedażowo, bez nachalności. qualifyTopic (stare fronty)
+    // mapuje się na ten sam trigger.
+    const QUALIFY_ENGAGE_TRIGGER = `[SYSTEM: W tle właśnie składają się materiały rozmówcy (makiety / reklamy / sklep — potrwa to chwilę). NIE zostawiaj go samego w tej ciszy. NIE twierdź, że sklep/reklamy są już gotowe. ZAKAZ ankiety: żadnych pytań o budżet, doświadczenie, czas, zawód, gotowość.
+FAZA A — jeśli w rozmowie NIE padło jeszcze „Wybieram styl": JEDNO lekkie pytanie personalizujące PRODUKT/MARKĘ (kogo widzi jako klienta, jaki klimat marki, pomysł na hasło) — ciepło, z <opcje>.
+FAZA B — jeśli „Wybieram styl" JUŻ padło (reklamy i sklep składają się w tle): ustalenia są DOMKNIĘTE — ZAKAZ dalszego dopytywania o produkt i preferencje (lead zna ten produkt słabo i to go męczy; jedyny wyjątek: hasło do hero, gdy strona o nie poprosi). Zamiast tego prowadź WĄTEK MODELU WSPÓŁPRACY — JEDEN krok na turę, kontynuując od miejsca, w którym wątek stanął (NIGDY nie powtarzaj już opowiedzianego):
+  B1. Otwarcie (gdy wątek modelu jeszcze nie ruszył): „Zanim wskoczą reklamy i podgląd sklepu — wiesz już, na czym polega model współpracy z Tomkiem, czy opowiedzieć w skrócie?" <opcje>["Opowiedz w skrócie","Coś tam wiem — dopytam","Znam — co dalej?"]
+  B2. Skrót modelu (gdy poprosił albo zna słabo; 3-5 zdań, prosto, słowami Tomka): model opiera się na tym, że Tomek praktycznie WSZYSTKO buduje — markę wokół produktu masowego, który rozwiązuje konkretny problem (marka sprawia, że klienci chętniej kupują i są gotowi zapłacić więcej); przez pierwsze ~4-6 miesięcy prowadzi sprzedaż, aż macie minimum ~1000 zamówień, i wtedy przekazuje Ci prowadzenie biznesu; sam zostaje wspólnikiem i doradza strategicznie (warunki udziału ustalacie indywidualnie po rezerwacji — zarabia dopiero, gdy Ty zarabiasz). Najważniejsza robota to właśnie te pierwsze pół roku. Zakończ: „Jeśli ten model Ci odpowiada — przejdziemy do szczegółów." <opcje> z pierwszą opcją akceptującą.
+  B3. Dalsze tury: odpowiadaj na pytania/obiekcje o model z FAKTÓW OFERTY (zero kwot budowy, zero procentu — mechanizm „podajesz kwotę, Tomek ocenia, czy i co w niej zrobicie") i pilnuj sygnałów gotowości (karta <makieta> wg zasad). Gdy reklamy/sklep dojadą — pokaż je jako ELEMENT WSPÓLNEGO BIZNESU (przewodnik po 2-3 konkretach z ICH ustaleń), po czym naturalnie wróć do wątku modelu/rezerwacji.
+Jedna rzecz na turę, ciepło, jak Tomek do znajomego — sprzedażowo, ale bez nachalności. OBOWIĄZKOWO <opcje> z 2-4 klikalnymi odpowiedziami.]`
     const qualifyTrigger = QUALIFY_ENGAGE_TRIGGER   // qualifyTopic ignorowane od V2 (kompatybilność ze starymi frontami)
     void qualifyTopic
     const messages = [
@@ -2255,6 +2306,16 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
                 brief: ((existingSession?.preview_brief as Record<string, unknown> | null | undefined) ?? null),
               })
             } catch (e) { console.error('[bud-chat] green slack (<zielone>):', e) }
+          }
+
+          // ── PROPOZYCJA REZERWACJI (/sklep) — model wystawił kartę <makieta> ──
+          // Jawna prośba o wpłatę zwrotnej rezerwacji 500 zł (po zielonym świetle) =
+          // najgorętszy moment lejka. Ping na #sparing (dedup atomowy w helperze — raz
+          // na sesję). Zielone światło pinguje osobno (spar_green wyżej).
+          if (/<makieta[\s/>]/.test(assistantText)) {
+            try {
+              await maybeNotifyReservationSlack(supabase, sessionId)
+            } catch (e) { console.error('[bud-chat] reservation slack (<makieta>):', e) }
           }
 
           // ── BRAMKA POTENCJAŁU (GA) ─────────────────────────────────────────
