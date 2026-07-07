@@ -117,6 +117,7 @@
   <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" id="tabs">
     <button data-tab="przeglad" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-squares-four text-lg shrink-0"></i><span>Przegląd</span></button>
     <button data-tab="leady" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-users-three text-lg shrink-0"></i><span>Leady</span></button>
+    <button data-tab="lejek" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-funnel text-lg shrink-0"></i><span>Lejek</span></button>
     <button data-tab="komunikacja" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-flow-arrow text-lg shrink-0"></i><span>Komunikacja</span></button>
     <button data-tab="koszty" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-wallet text-lg shrink-0"></i><span>Koszty</span></button>
     <button data-tab="galeria" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-images text-lg shrink-0"></i><span>Galeria</span></button>
@@ -178,6 +179,16 @@
       <h3 class="text-white font-medium text-sm mb-4"><i class="ph ph-clock-counter-clockwise mr-1.5 text-blue-400"></i>Ostatnia aktywność</h3>
       <div id="recent-sessions" class="space-y-1.5"></div>
     </div>
+  </section>
+
+  <!-- ════════ LEJEK (analityka końcówki — kohorty tygodniowe; LEJEK V2 2026-07-07) ════════ -->
+  <section id="view-lejek" class="hidden p-4 md:p-6">
+    <div class="flex items-center gap-3 mb-1">
+      <h2 class="text-lg font-semibold text-white">Lejek rezerwacji</h2>
+      <span class="text-[11px] text-zinc-500">kohorty tygodniowe wg daty startu sesji · pełne dane eventowe od 7.07.2026</span>
+    </div>
+    <p class="text-xs text-zinc-500 mb-4">Ile sesji z każdej kohorty dotarło do etapu. Procent = konwersja z poprzedniego wiersza. Wpłata liczona po <code>paid_at</code>, reszta z <code>bud_events</code> + stanu sesji.</p>
+    <div id="lejek-body" class="space-y-6"><div class="text-sm text-zinc-500"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę lejek…</div></div>
   </section>
 
   <!-- ════════ LEADY (lista + tablica, filtry, zaangażowanie) ════════ -->
@@ -652,7 +663,7 @@ function visibleSessions() {
 // Config źródła danych lejka SKLEP (bud_* + kolumny e-com → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'bud_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, track, niche, product_input, problem_summary, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, track, niche, product_input, problem_summary, budget_declared, seen_landing_at, raport_meta:market_report->_meta',
   rpcCosts: 'bud_session_costs', rpcAvatars: 'bud_session_avatars', emailsTable: 'bud_emails',
 };
 async function loadAll() {
@@ -2191,6 +2202,108 @@ function leadList() {
   });
 }
 
+// ── LEJEK REZERWACJI (analityka końcówki, LEJEK V2 2026-07-07) ────────────────
+// Kohorty tygodniowe (wg created_at sesji): ile sesji z kohorty osiągnęło każdy
+// etap końcówki. Źródła: sessions (stan) + bud_events (momenty; pełne od 7.07).
+// Cel: decyzja o cenie 500 zł i wąskim gardle na DANYCH, nie wrażeniu.
+const BUDGET_OK = new Set(['2-5', '5-10', '10plus', 'high', 'mid', 'raty']);
+let _lejekEvents = null;   // cache eventów na czas otwartej karty (odświeżane przy wejściu w tab)
+async function renderLejek() {
+  const box = $('lejek-body');
+  if (!box) return;
+  box.innerHTML = '<div class="text-sm text-zinc-500"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę lejek…</div>';
+  let events = [];
+  if (DEMO) { _lejekEvents = []; }
+  else {
+    try {
+      const since = new Date(Date.now() - 35 * 86400000).toISOString();
+      const { data, error } = await supabaseClient.from('bud_events')
+        .select('session_id, event, meta, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+        .range(0, 9999);   // GOTCHA: default 1000 rows — bez range ucina
+      if (error) throw error;
+      events = data || [];
+      _lejekEvents = events;
+    } catch (e) { box.innerHTML = `<div class="text-sm text-rose-400">Błąd eventów: ${esc(e.message || e)}</div>`; return; }
+  }
+  const evBySession = {};
+  events.forEach((e) => { (evBySession[e.session_id] = evBySession[e.session_id] || []).push(e); });
+  const hasEv = (s, name) => (evBySession[s.id] || []).some((e) => e.event === name);
+
+  // Kohorty: 4 pełne tygodnie wstecz od poniedziałku bieżącego tygodnia + RAZEM
+  const now = new Date();
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const weeks = [];
+  for (let i = 3; i >= 0; i--) {
+    const from = new Date(monday); from.setDate(from.getDate() - i * 7);
+    const to = new Date(from); to.setDate(to.getDate() + 7);
+    weeks.push({ from, to, label: `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}–${String(to.getDate() - 1 >= 0 ? new Date(to - 1).getDate() : '').padStart(2, '0')}.${String(new Date(to - 1).getMonth() + 1).padStart(2, '0')}` });
+  }
+  // Sesje realne (jak leadBase, ale bez filtra szumu isRealLead — tu chcemy pełną bazę rozmów z kontaktem)
+  const base = visibleSessions().filter((s) => (s.turns || 0) > 0 && (s.email || s.phone));
+  const inWeek = (s, w) => { const t = Date.parse(s.created_at); return t >= w.from.getTime() && t < w.to.getTime(); };
+
+  const budgetOkOf = (s) => {
+    if (s.budget_declared && BUDGET_OK.has(s.budget_declared)) return true;
+    return (evBySession[s.id] || []).some((e) => e.event === 'budget_pick' && e.meta && BUDGET_OK.has(String(e.meta.budget)));
+  };
+  const STAGES_F = [
+    { key: 'realne',   label: 'Sesje realne (rozmowa + kontakt)', test: () => true },
+    { key: 'sklep',    label: 'Obejrzał sklep',                    test: (s) => !!s.seen_landing_at },
+    { key: 'zielone',  label: 'Zielone światło',                   test: (s) => s.verdict === 'zielony' || hasEv(s, 'zielone') },
+    { key: 'bud_gate', label: 'Karta budżetu pokazana',            test: (s) => hasEv(s, 'budget_gate_shown') },
+    { key: 'bud_ok',   label: 'Budżet ≥ 2 tys. zadeklarowany',     test: budgetOkOf },
+    { key: 'rsv_card', label: 'Karta rezerwacji pokazana',         test: (s) => hasEv(s, 'rsv_card_shown') },
+    { key: 'paywall',  label: 'Otworzył płatność (paywall)',       test: (s) => hasEv(s, 'paywall_open') },
+    { key: 'blik',     label: 'Próba BLIK',                        test: (s) => hasEv(s, 'blik_attempt') },
+    { key: 'paid',     label: 'WPŁATA 500 zł',                     test: (s) => !!s.paid_at },
+  ];
+
+  const cohorts = weeks.map((w) => base.filter((s) => inWeek(s, w)));
+  cohorts.push(base.filter((s) => Date.parse(s.created_at) >= weeks[0].from.getTime()));   // RAZEM (4 tyg.)
+  const headers = [...weeks.map((w) => w.label), 'RAZEM 4 tyg.'];
+
+  const counts = STAGES_F.map((st) => cohorts.map((c) => c.filter((s) => st.test(s)).length));
+  const rows = STAGES_F.map((st, ri) => {
+    const cells = counts[ri].map((n, ci) => {
+      const prev = ri > 0 ? counts[ri - 1][ci] : null;
+      const pct = prev ? Math.round((n / prev) * 100) : null;
+      const pctHtml = (prev !== null) ? `<span class="text-[10px] ${pct >= 50 ? 'text-emerald-400' : pct >= 20 ? 'text-amber-400' : 'text-rose-400'} ml-1">${prev ? pct + '%' : '—'}</span>` : '';
+      return `<td class="px-3 py-2 text-right font-mono ${n ? 'text-white' : 'text-zinc-700'}">${n}${n || prev ? pctHtml : ''}</td>`;
+    }).join('');
+    return `<tr class="border-b border-white/5 ${st.key === 'paid' ? 'bg-emerald-500/5' : ''}"><td class="px-3 py-2 text-zinc-300 whitespace-nowrap">${ri + 1}. ${st.label}</td>${cells}</tr>`;
+  }).join('');
+
+  // Powody padów BLIK + rozkład deklaracji budżetu (ostatnie 35 dni)
+  const failAgg = {}, budAgg = {};
+  events.forEach((e) => {
+    if (e.event === 'blik_fail') { const r = (e.meta && e.meta.reason) || 'unknown'; failAgg[r] = (failAgg[r] || 0) + 1; }
+    if (e.event === 'budget_pick') { const b = (e.meta && e.meta.budget) || '?'; budAgg[b] = (budAgg[b] || 0) + 1; }
+  });
+  const aggList = (agg, empty) => {
+    const ks = Object.keys(agg).sort((a, b) => agg[b] - agg[a]);
+    return ks.length ? ks.map((k) => `<div class="flex justify-between gap-4 py-1 border-b border-white/5 text-sm"><span class="text-zinc-400">${esc(k)}</span><span class="font-mono text-white">${agg[k]}</span></div>`).join('') : `<div class="text-xs text-zinc-600">${empty}</div>`;
+  };
+
+  box.innerHTML =
+    `<div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm">
+      <thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+        <th class="px-3 py-3">Etap</th>${headers.map((h, i) => `<th class="px-3 py-3 text-right ${i === headers.length - 1 ? 'text-zinc-300' : ''}">${h}</th>`).join('')}
+      </tr></thead><tbody>${rows}</tbody></table></div></div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-warning-circle mr-1"></i>Pady BLIK — powody (35 dni)</div>
+        ${aggList(failAgg, 'Brak padów BLIK — albo brak prób.')}
+      </div>
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-coins mr-1"></i>Deklaracje budżetu (35 dni)</div>
+        ${aggList(budAgg, 'Jeszcze żadnych deklaracji (karta budżetu żyje od 6.07 wieczorem).')}
+      </div>
+    </div>
+    <p class="text-[11px] text-zinc-600">Czytanie: spadek % między wierszami = wąskie gardło. Decyzja o cenie 500 zł dopiero, gdy wiersze 6→9 mają ruch: dużo „karta→mało paywall" = framing/zaufanie (wideo Tomka), „BLIK→brak wpłat" = tarcie płatności/kwota (wtedy test 299 zł).</p>`;
+}
+
 // ── PRZEGLĄD ──
 // renderPrzeglad / attentionRow / attentionCol / renderAttention → PanelCore
 
@@ -2347,8 +2460,8 @@ function openTemplate(i) {
 }
 
 // ── Zakładki ──
-const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia', 'zrodlo'];
-const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia', zrodlo: 'Źródło prawdy' };
+const VIEWS = ['przeglad', 'leady', 'lejek', 'komunikacja', 'koszty', 'galeria', 'ustawienia', 'zrodlo'];
+const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', lejek: 'Lejek rezerwacji', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia', zrodlo: 'Źródło prawdy' };
 let leadyView = 'table';   // 'table' | 'board'
 let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
 let leadySource = 'all';   // kanał pozyskania: all|meta|tiktok|google|youtube|email|organic
@@ -2385,6 +2498,7 @@ function switchTab(tab) {
 function renderActive() {
   if (activeTab === 'przeglad') renderPrzeglad();
   if (activeTab === 'leady') renderLeady();
+  if (activeTab === 'lejek') renderLejek();
   if (activeTab === 'komunikacja') renderKomunikacja();
   if (activeTab === 'galeria') renderGenerowania();
   if (activeTab === 'koszty') renderKoszty();

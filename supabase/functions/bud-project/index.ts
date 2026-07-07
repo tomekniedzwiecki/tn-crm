@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500, cors)
 
-    let body: { sessionId?: string; action?: string; text?: string; email?: string }
+    let body: { sessionId?: string; action?: string; text?: string; email?: string; event?: string; meta?: unknown }
     try {
       body = await req.json()
     } catch {
@@ -413,6 +413,37 @@ Deno.serve(async (req) => {
     const ownerId = (session.auth_user_id as string | null) || null
     if (!adminView && ownerId && (!authUser || authUser.id !== ownerId)) {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    }
+
+    // ── action 'track': analityka końcówki lejka (LEJEK V2, 2026-07-07) ─────────
+    //    Lekki log zdarzeń do bud_events — WYŁĄCZNIE whitelistowane eventy, dedup
+    //    one-shotów, twardy cap per sesja (anty-spam; endpoint publiczny po ownerze).
+    //    Wnioski: panel /tn-sklep zakładka „Lejek" (kohorty tygodniowe, drop-off).
+    if (action === 'track') {
+      const TRACK_EVENTS = new Set(['zielone', 'budget_gate_shown', 'budget_pick', 'soft_exit_shown', 'rsv_card_shown', 'rsv_chip_click', 'paywall_open', 'blik_attempt', 'blik_fail', 'rsv_other_click', 'facts_open', 'collab_tab_view'])
+      const TRACK_ONCE = new Set(['zielone', 'budget_gate_shown', 'soft_exit_shown', 'rsv_card_shown', 'collab_tab_view'])
+      const MAX_EVENTS_PER_SESSION = 120
+      const ev = String(body.event || '').slice(0, 40)
+      if (!TRACK_EVENTS.has(ev)) return jsonResponse({ ok: false, error: 'zly_event' }, 400, cors)
+      // meta: tylko płytkie, krótkie wartości (reason/budget/source) — nic więcej nie wpuszczamy
+      let meta: Record<string, string> | null = null
+      if (body.meta && typeof body.meta === 'object') {
+        meta = {}
+        for (const k of ['reason', 'budget', 'source', 'amount']) {
+          const v = (body.meta as Record<string, unknown>)[k]
+          if (typeof v === 'string' || typeof v === 'number') meta[k] = String(v).slice(0, 80)
+        }
+        if (!Object.keys(meta).length) meta = null
+      }
+      const { count: evCount } = await supabase.from('bud_events').select('id', { count: 'exact', head: true }).eq('session_id', sessionId)
+      if ((evCount ?? 0) >= MAX_EVENTS_PER_SESSION) return jsonResponse({ ok: false, error: 'limit_eventow' }, 429, cors)
+      if (TRACK_ONCE.has(ev)) {
+        const { count: dupCount } = await supabase.from('bud_events').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('event', ev)
+        if ((dupCount ?? 0) > 0) return jsonResponse({ ok: true, dedup: true }, 200, cors)
+      }
+      const { error: evErr } = await supabase.from('bud_events').insert({ session_id: sessionId, event: ev, meta })
+      if (evErr) { console.error('[bud-project] track insert error:', evErr); return jsonResponse({ ok: false }, 500, cors) }
+      return jsonResponse({ ok: true }, 200, cors)
     }
 
     // ── action 'seen_landing': lead obejrzał sklep (zakładka „Sklep" w panelu albo
