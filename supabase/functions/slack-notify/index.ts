@@ -110,6 +110,16 @@ Deno.serve(async (req) => {
         message = formatBudHtmlMessage(data)
         break
 
+      case 'bud_mockups':
+        webhookUrl = webhookSparing
+        message = formatBudMockupsMessage(data)
+        break
+
+      case 'bud_reservation':
+        webhookUrl = webhookSparing
+        message = formatBudReservationMessage(data)
+        break
+
       case 'bud_lead_error':
         webhookUrl = webhookSparing
         message = formatBudLeadErrorMessage(data)
@@ -1453,6 +1463,76 @@ function formatBudHtmlMessage(data: {
       action_id: 'view_bud_shop',
     })
   }
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// #sparing: user WYBRAŁ makietę sklepu (bud-chat po chosen_style). Lejek /sklep, żywa
+// ścieżka picker-first (bud_sessions.mockups). Pokazujemy TĘ JEDNĄ wybraną makietę
+// (decyzja Tomka 2026-07-07), nie całą galerię 4 stylów. Struktura `mockups[]` zostawiona
+// tablicą (elastyczność), ale bud-chat przekazuje tu 1 element = wybrany styl.
+function formatBudMockupsMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  mockups?: { style?: string; label?: string; url?: string }[]
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const mockups = Array.isArray(data.mockups) ? data.mockups.filter((m) => m && typeof m.url === 'string' && m.url) : []
+  const styleLabel = (mockups[0] && typeof mockups[0].label === 'string' && mockups[0].label) ? mockups[0].label : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*${styleLabel ? ` · styl: ${styleLabel}` : ''}` : (styleLabel ? `\nstyl: *${styleLabel}*` : '')
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🎨 Sklep — lead wybrał makietę sklepu', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+  ]
+  for (const m of mockups) {
+    const label = (typeof m.label === 'string' && m.label) ? m.label : (m.style || 'Makieta')
+    blocks.push({
+      type: 'image',
+      title: { type: 'plain_text', text: label.slice(0, 200), emoji: false },
+      image_url: toRenderUrl(m.url as string),
+      alt_text: label.slice(0, 200),
+    })
+  }
+  if (!mockups.length) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: '⚠️ Brak gotowej miniatury wybranej makiety do pokazania.' }] })
+  }
+  const actions = sparActionButtons(data.session_id, data.phone, 'sklep')
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// #sparing: bot zaproponował leadowi wpłatę ZWROTNEJ rezerwacji 500 zł (marker <makieta>
+// w bud-chat, po zielonym świetle). Gorący moment lejka /sklep — Tomek ma odezwać się,
+// póki decyzja świeża. Deep-link do panelu tn-sklep + WhatsApp.
+function formatBudReservationMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  have?: string[]
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '💰 Sklep — lead dostał propozycję rezerwacji 500 zł', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+    { type: 'section', text: { type: 'mrkdwn', text: 'Bot zaproponował wpłatę zwrotnej rezerwacji (miejsce w kolejce). Najgorętszy moment — odezwij się, póki decyzja świeża.' } },
+  ]
+  const have = Array.isArray(data.have) ? data.have.filter((h) => typeof h === 'string' && h) : []
+  if (have.length) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Ma już: ${have.map((h) => `✓ ${h}`).join(' · ')}` }] })
+  }
+  const actions = sparActionButtons(data.session_id, data.phone, 'sklep')
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }

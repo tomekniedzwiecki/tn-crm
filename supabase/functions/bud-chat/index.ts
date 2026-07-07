@@ -449,7 +449,7 @@ function looksLikeGarbageContact(name: string | null, phone: string | null): boo
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error' | 'spar_revive' | 'bud_reservation',
+  type: 'spar_contact' | 'spar_green' | 'bud_lead_error' | 'bud_knowhow_error' | 'spar_revive' | 'bud_reservation' | 'bud_mockups',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -639,6 +639,46 @@ async function maybeNotifyReservationSlack(
     })
   } catch (err) {
     console.error('[bud-chat] maybeNotifyReservationSlack exception:', err)
+  }
+}
+
+// User WYBRAŁ styl makiety (chosen_style) → #sparing z TĄ JEDNĄ makietą (decyzja Tomka
+// 2026-07-07: nie cała galeria 4, tylko wybrana). Dedup atomowy na slack_mockups_notified_at
+// — raz na sesję (zmiana stylu potem nie re-pinguje). Błąd Slacka nie wywraca rozmowy.
+async function maybeNotifyChosenMockupSlack(
+  supabase: ReturnType<typeof createClient>,
+  sessionId: string,
+): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('bud_sessions')
+      .update({ slack_mockups_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_mockups_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, brand, preview_brief, mockups, chosen_style')
+    if (error) { console.error('[bud-chat] chosen mockup slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const mocks = Array.isArray(s.mockups) ? s.mockups as Array<Record<string, unknown>> : []
+    const chosenStyle = typeof s.chosen_style === 'string' ? s.chosen_style : ''
+    const pick = mocks.find((m) => m && m.style === chosenStyle && typeof m.url === 'string' && m.url)
+      || mocks.find((m) => m && typeof m.url === 'string' && m.url) // fallback: pierwsza z URL-em
+    if (!pick) return // brak makiety z URL-em → nic do pokazania (claim i tak zdjęty)
+    const brand = (s.brand && typeof s.brand === 'object') ? s.brand as Record<string, unknown> : null
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    await postSlackSparing('bud_mockups', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: (brand && typeof brand.chosen_name === 'string' && brand.chosen_name)
+        ? brand.chosen_name
+        : ((brand && typeof brand.nazwa === 'string' && brand.nazwa) ? brand.nazwa : (brief?.nazwa ?? null)),
+      mockups: [{ style: String(pick.style || ''), label: String(pick.label || ''), url: String(pick.url) }],
+    })
+  } catch (err) {
+    console.error('[bud-chat] maybeNotifyChosenMockupSlack exception:', err)
   }
 }
 
@@ -1639,6 +1679,8 @@ Deno.serve(async (req) => {
           // 3) fallback: pierwszy styl makiety (NIE surowy tekst usera, QA P2)
           if (!styl) styl = styleOf(0) || sm[1].trim().slice(0, 60)
           await supabase.from('bud_sessions').update({ chosen_style: styl, updated_at: new Date().toISOString() }).eq('id', sessionId)
+          // Wybór stylu → #sparing z WYBRANĄ makietą (dedup w helperze, raz na sesję).
+          await maybeNotifyChosenMockupSlack(supabase, sessionId)
         } catch (e) { console.error('[bud-chat] błąd zapisu chosen_style:', e) }
       }
     }

@@ -934,7 +934,7 @@ async function openSession(id) {
     supabaseClient.from('bud_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('bud_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('bud_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
-    supabaseClient.from('bud_sessions').select('landing_url, business_plan, market_report, economics, gtm, assessment, problem_summary, demand_validation, brand, niche, product_input, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source, ustalenia, chosen_style, mockups, session_ads, landing_html').eq('id', id).maybeSingle(),
+    supabaseClient.from('bud_sessions').select('landing_url, landing_preview_url, business_plan, market_report, economics, gtm, assessment, problem_summary, demand_validation, brand, niche, product_input, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source, ustalenia, chosen_style, mockups, session_ads, landing_html').eq('id', id).maybeSingle(),
     supabaseClient.from('bud_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('bud_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
@@ -1370,6 +1370,7 @@ function leadChatHTML() {
       ${viewBtn('user', 'Oczami leada', 'ph-eye')}
       ${viewBtn('transkrypcja', 'Transkrypcja', 'ph-list-dashes')}
       <span class="flex-1"></span>
+      ${leadData.s.landing_preview_url ? `<a href="${esc(leadData.s.landing_preview_url)}" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition" title="Sam sklep (publiczny podgląd, bez reszty lejka)"><i class="ph ph-storefront mr-1"></i>Otwórz sklep</a>` : ''}
       ${leadChatView === 'user' ? `<button onclick="openClientPreview('${leadData.s.id}')" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz w nowej karcie</button>` : ''}
     </div>`;
   if (leadChatView !== 'user') return bar + leadChatTranscriptHTML();

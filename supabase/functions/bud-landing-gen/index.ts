@@ -195,6 +195,59 @@ async function postSlackSparing(type: string, data: Record<string, unknown>): Pr
   }
 }
 
+// Publiczny podgląd sklepu = wrapper /sklep/podglad/ na NASZEJ domenie (tomekniedzwiecki.pl),
+// który fetchem pobiera landing_html z edge function bud-shop-preview i renderuje w sandboxowanym
+// iframe. Nie da się serwować HTML wprost z *.supabase.co (Storage ORAZ functions wymuszają
+// content-type text/plain — anty-XSS → przeglądarka pokazałaby ŹRÓDŁO, nie sklep). URL
+// deterministyczny z sid; persystujemy w landing_preview_url (sygnał „gotowe" dla panelu;
+// NIE landing_url — ten bramkuje publiczny feed w bud-public-feed!).
+// deno-lint-ignore no-explicit-any
+async function publishShopPreview(supabase: any, sessionId: string): Promise<string | null> {
+  try {
+    const url = `https://tomekniedzwiecki.pl/sklep/podglad/?sid=${sessionId}`
+    const { error: sErr } = await supabase.from('bud_sessions').update({ landing_preview_url: url }).eq('id', sessionId)
+    if (sErr) console.error('[bud-landing-gen] landing_preview_url save error:', sErr)
+    return url
+  } catch (err) {
+    console.error('[bud-landing-gen] publishShopPreview exception:', err)
+    return null
+  }
+}
+
+// Strona sklepu (landing_html) opublikowana → JEDNO powiadomienie #sparing (dedup atomowym
+// claimem na slack_html_notified_at — wspólna kolumna z legacy bud-landing, w żywym lejku
+// tylko ta funkcja ją stempluje). is_test pomijane. shopUrl = publiczny podgląd sklepu
+// (Storage) — klikalny „Zobacz sklep". Panel tn-sklep dostaje ten sam URL (landing_preview_url).
+// deno-lint-ignore no-explicit-any
+async function maybeNotifyHtmlSlack(supabase: any, sessionId: string, shopUrl: string | null): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('bud_sessions')
+      .update({ slack_html_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_html_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, brand, preview_brief')
+    if (error) { console.error('[bud-landing-gen] html slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brand = (s.brand && typeof s.brand === 'object') ? s.brand as Record<string, unknown> : null
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    await postSlackSparing('bud_html', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: (brand && typeof brand.chosen_name === 'string' && brand.chosen_name)
+        ? brand.chosen_name
+        : ((brand && typeof brand.nazwa === 'string' && brand.nazwa) ? brand.nazwa : (brief?.nazwa ?? null)),
+      shop_url: shopUrl, // publiczny podgląd sklepu (Storage); null → sam przycisk „Otwórz w panelu"
+    })
+  } catch (err) {
+    console.error('[bud-landing-gen] maybeNotifyHtmlSlack exception:', err)
+  }
+}
+
 function extractHtml(raw: string): string {
   let t = (raw || '').trim().replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/, '')
   const s = t.search(/<!doctype html|<html/i)
@@ -378,6 +431,8 @@ Deno.serve(async (req) => {
           if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
           await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
           saved = true
+          const shopUrl = await publishShopPreview(supabase, sessionId) // publiczny podgląd sklepu (bud-shop-preview)
+          await maybeNotifyHtmlSlack(supabase, sessionId, shopUrl) // strona gotowa → #sparing (dedup, raz na sesję)
         } catch (e) {
           failReason = String(e).includes('AbortError') || String(e).toLowerCase().includes('abort')
             ? `timeout ${Math.round((Date.now() - t0) / 1000)}s (deadline guard)` : String(e).slice(0, 280)
@@ -533,6 +588,8 @@ Deno.serve(async (req) => {
         if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
         await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
         saved = true
+        const shopUrl = await publishShopPreview(supabase, sessionId) // publiczny podgląd sklepu (bud-shop-preview)
+        await maybeNotifyHtmlSlack(supabase, sessionId, shopUrl) // strona gotowa → #sparing (dedup, raz na sesję)
       } catch (e) {
         failReason = String(e).slice(0, 280)
         console.error('[bud-landing-gen] gen task error:', e)
