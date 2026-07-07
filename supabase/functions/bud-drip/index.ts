@@ -134,7 +134,7 @@ function bizplanEmailHtml(plan: any): string {
     ? `<p style="margin:10px 0 0;font-size:12.5px;color:#666;line-height:1.5;">${escHtml(plan.dlaczego_realne)}</p>` : ''
   return `<div style="margin:22px 0 6px;">` +
     `<div style="font-size:14px;color:#1a1a1a;margin:0 0 4px;font-weight:700;">Twój wstępny biznesplan</div>` +
-    `<div style="font-size:12.5px;color:#666;margin:0 0 10px;line-height:1.5;">Prognoza specjalisty osadzona w Twoim produkcie i rynku — ile realnie zostaje Tobie na czysto (po koszcie towaru, wysyłki, reklamy i po 10% Tomka od przychodu):</div>` +
+    `<div style="font-size:12.5px;color:#666;margin:0 0 10px;line-height:1.5;">Prognoza specjalisty osadzona w Twoim produkcie i rynku — ile realnie zostaje Tobie na czysto (po koszcie towaru, wysyłki, reklamy i po udziale wspólnika — Tomka):</div>` +
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:540px;border-collapse:collapse;background:#fafafa;border:1px solid #ececec;border-radius:12px;overflow:hidden;">${rows}</table>` +
     why +
     `</div>`
