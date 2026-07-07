@@ -448,6 +448,12 @@ Deno.serve(async (req) => {
     }
 
     // ===== MANUS: finalne kreacje robi agent Manus (flaga BUD_ADS_MANUS_ENABLED) =====
+    // skipManusToGemini (2026-07-07, incydent „7 timeoutów / 0 sukcesów"): Manus potrafi
+    // PRZYJĄĆ task i nigdy go nie skończyć (kolejka stoi — inny tryb awarii niż padnięty
+    // create). Timeout był dead-endem 504, a retry usera tworzył KOLEJNY skazany task
+    // (cap liczy tylko UKOŃCZONE). Teraz: timeout → spadamy do Gemini w TYM żądaniu,
+    // a sesja z JAKIMKOLWIEK failem Manusa nie wraca do Manusa (breaker per sesja).
+    let skipManusToGemini = false
     if (MANUS_ENABLED) {
       const sAny = session as Record<string, unknown>
       // task już biegnie → sprawdź status i (gdy skończony) dociągnij wynik. Front poluje co ~12s.
@@ -458,10 +464,19 @@ Deno.serve(async (req) => {
         if (started && (Date.now() - started) > 32 * 60 * 1000) {
           await supabase.from('bud_sessions').update({ ads_manus_status: 'failed', ads_manus_step: 'timeout' }).eq('id', sessionId)
           try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
-          return json({ error: 'manus_timeout' }, 504, c)
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'reklamy — task Manus >32 min bez wyniku → przełączam TĘ sesję na Gemini', error: `task ${sAny.ads_manus_task_id} nie dowiózł wyniku (sprawdź kolejkę/kredyty w konsoli Manusa)`, product: String(product?.nazwa || product?.name || '') })
+          skipManusToGemini = true   // user czeka — dowieź reklamy tanim torem TERAZ
+        } else {
+          return json({ pending: true, manus: 'running' }, 202, c)
         }
-        return json({ pending: true, manus: 'running' }, 202, c)
       }
+      // Breaker per sesja: poprzedni task Manusa w tej sesji już padł (timeout/sweep) —
+      // nie pchaj jej tam drugi raz; retry i powrót usera idą prosto w Gemini.
+      if (!skipManusToGemini && sAny.ads_manus_status === 'failed') skipManusToGemini = true
+    }
+    if (MANUS_ENABLED && !skipManusToGemini) {
+      const sAny = session as Record<string, unknown>
+      void sAny
       // (b) Cap re-triggerów Manus per sesja — task Manus to NAJDROŻSZY fallback (kredyty agenta).
       // Liczymy zalogowane taski Manus tej sesji (bud_usage kind='ads' model='manus', wpis robi
       // manusPollAndPull po ukończeniu). force=true też tu wpada (poll path wyżej już obsłużony,
