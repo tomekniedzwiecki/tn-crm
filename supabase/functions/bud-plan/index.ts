@@ -159,7 +159,7 @@ Deno.serve(async (req) => {
     if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['budowanie_prompt_plan_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('budowanie_prompt_plan_system') } catch (_e) { /* fallback: puste prompty */ } }
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, business_plan, assessment, market_report, auth_user_id')
+      .select('id, preview_brief, problem_summary, business_plan, assessment, market_report, auth_user_id, ustalenia, chosen_product, brand')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -175,13 +175,35 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
-    const karta = session.problem_summary as Record<string, unknown> | null
-    const brief = (session.preview_brief || {}) as Record<string, unknown>
     const assessment = session.assessment as Record<string, unknown> | null
     const raport = session.market_report as Record<string, unknown> | null
+    // V2 (2026-07-09): pipeline /sklep NIE tworzy już problem_summary/preview_brief (relikty forku
+    // /aplikacja) → plan nigdy się nie liczył. Budujemy „kartę" i „brief" z danych, które V2 MA:
+    // ustalenia (dla_kogo/kąt/ton/korzyści) + chosen_product + brand. Legacy sesje (z problem_summary)
+    // działają jak dawniej. Wejście liczbowe do planu i tak daje market_report (raportDigest).
+    const ust = (session.ustalenia && typeof session.ustalenia === 'object' && !Array.isArray(session.ustalenia)) ? session.ustalenia as Record<string, unknown> : null
+    const prod = (session.chosen_product && typeof session.chosen_product === 'object' && !Array.isArray(session.chosen_product)) ? session.chosen_product as Record<string, unknown> : null
+    const brandObj = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand as Record<string, unknown> : null
+    let karta = session.problem_summary as Record<string, unknown> | null
+    if (!karta && ust) {
+      karta = {
+        produkt: prod?.nazwa || prod?.name || '',
+        dla_kogo: ust.dla_kogo || '',
+        kto_placi: ust.dla_kogo || '',
+        konkurencja: ust.kat || (ust as Record<string, unknown>)['kąt'] || ust.kat_odroznienia || '',
+        ekrany: Array.isArray(ust.korzysci) ? ust.korzysci : [],
+      }
+    }
+    let brief = (session.preview_brief && typeof session.preview_brief === 'object') ? session.preview_brief as Record<string, unknown> : null
+    if (!brief || !brief.nazwa) {
+      brief = {
+        nazwa: (brandObj?.chosen_name as string) || (ust?.nazwa as string) || (prod?.nazwa as string) || (prod?.name as string) || 'Sklep',
+        opis: (ust?.kat as string) || (prod?.kategoria as string) || (prod?.category as string) || '',
+      }
+    }
     if (!karta) {
-      // plan liczymy dopiero, gdy jest karta (werdykt) — gate jak w bud-image
-      return jsonResponse({ error: 'brak_karty' }, 400, cors)
+      // brak i problem_summary (legacy), i ustaleń (V2) — nie ma z czego liczyć planu
+      return jsonResponse({ error: 'brak_danych' }, 400, cors)
     }
 
     const existing = session.business_plan as Record<string, unknown> | null
