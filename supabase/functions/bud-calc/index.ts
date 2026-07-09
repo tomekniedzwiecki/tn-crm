@@ -36,7 +36,7 @@ Zasady (trzymaj się realiów researchu, nie z sufitu):
 - zam (zamówień/miesiąc): realistyczny poziom PO rozkręceniu sprzedaży przez Tomka — optymistyczny, ale osiągalny dla pojedynczego viralowego produktu (zwykle 250–800). TO jest miejsce na optymizm, nie marża.
 - Lepiej wiarygodnie niż efektownie. Liczby mają wytrzymać kontakt z rozsądnym, sceptycznym klientem.
 
-Zwróć WYŁĄCZNIE JSON: {"aov": <liczba całkowita zł>, "marza": <liczba całkowita %>, "cac": <liczba całkowita zł>, "zam": <liczba całkowita/mies>, "nota": "<1 krótkie zdanie po polsku: dlaczego te liczby — odwołaj się do produktu/kategorii/ceny rynkowej>"}.`
+Zwróć WYŁĄCZNIE JSON: {"aov": <liczba całkowita zł>, "marza": <liczba całkowita %>, "cac": <liczba całkowita zł>, "zam": <liczba całkowita/mies>, "nota": "<1 krótkie zdanie po polsku: dlaczego te liczby — odwołaj się do produktu/kategorii/ceny rynkowej. PROSTYM językiem, dla osoby BEZ doświadczenia w biznesie: ZERO skrótów i żargonu (nie ROAS/CAC/AOV/COGS/marża jednostkowa); pisz zwykłymi słowami>"}.`
 
 // Kompaktowy odczyt rynku z raportu /sklep (sekcje[] z markdownem) — daje modelowi realne ceny.
 function raportDigest(raport: Record<string, unknown> | null): string {
