@@ -656,6 +656,16 @@ function budgetBadge(s) {
   if (!m) return '';
   return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium ${m.cls}" title="Deklarowany budżet startu"><i class="ph ${m.icon}"></i>${m.label}</span>`;
 }
+// KWOTA budżetu podana słownie w rozmowie (budget_note, LEJEK V2) — pokazujemy WPROST,
+// bo to konkret, którego kategoryczny badge nie oddaje. Gdy jest kwota: chip z kwotą
+// (+ badge kategorii, jeśli inny sygnał). Gdy brak kwoty: sam badge kategorii.
+function budgetCell(s) {
+  const note = (s.budget_note || '').trim();
+  const badge = budgetBadge(s);
+  if (!note) return badge;
+  const amt = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-semibold text-emerald-200 bg-emerald-500/10 border-emerald-500/30" title="Kwota zadeklarowana w rozmowie"><i class="ph ph-coins"></i>${esc(note)}</span>`;
+  return amt;
+}
 // Wybrany produkt (K1: product_input.k1_wybrany.nazwa) lub nisza (niche / K2 nazwa)
 function productOf(s) {
   const pi = (s.product_input && typeof s.product_input === 'object') ? s.product_input : {};
@@ -671,7 +681,7 @@ function visibleSessions() {
 // Config źródła danych lejka SKLEP (bud_* + kolumny e-com → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'bud_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, niche, product_input, problem_summary, budget_declared, seen_landing_at, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, niche, product_input, problem_summary, budget_declared, budget_note, seen_landing_at, raport_meta:market_report->_meta',
   rpcCosts: 'bud_session_costs', rpcAvatars: 'bud_session_avatars', emailsTable: 'bud_emails',
 };
 async function loadAll() {
@@ -741,7 +751,7 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
       <td class="px-4 py-2.5">${sourceBadge(s)}</td>
-      <td class="px-4 py-2.5">${budgetBadge(s) || '<span class="text-zinc-700 text-xs">—</span>'}${productOf(s) ? `<div class="text-[10px] text-zinc-500 truncate max-w-[140px] mt-0.5" title="${esc(productOf(s))}">${esc(productOf(s))}</div>` : ''}</td>
+      <td class="px-4 py-2.5">${budgetCell(s) || '<span class="text-zinc-700 text-xs">—</span>'}${productOf(s) ? `<div class="text-[10px] text-zinc-500 truncate max-w-[140px] mt-0.5" title="${esc(productOf(s))}">${esc(productOf(s))}</div>` : ''}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
       <td class="px-4 py-2.5">${signalBadge(s)}</td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
@@ -1004,7 +1014,7 @@ function renderLeadHead(s) {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
-          ${signalBadge(s)}${budgetBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
+          ${signalBadge(s)}${budgetCell(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
         </div>
         <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''}${productOf(s) ? ' · produkt: ' + esc(productOf(s)) : ''} · ${fmtDate(s.created_at)}</div>
       </div>

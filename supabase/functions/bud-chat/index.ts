@@ -683,6 +683,44 @@ async function maybeNotifyChosenMockupSlack(
 }
 
 // Zapis po zakończeniu streamu: wiadomość asystenta + update sesji + koszt
+// ── Deklarowany budżet startu z WIADOMOŚCI leada (LEJEK V2) ────────────────────
+// Karta budżetu daje tylko kategorię (budget_declared: lt2/2-5/5-10/10plus). Gdy
+// lead poda kwotę SŁOWNIE („mam 10 000 zł", „budżet 2 tys", „10k") — nigdzie nie
+// lądowała (Robert 501506474 = 10 000 zł niewidoczne w panelu). Łapiemy ją tu:
+// wymagamy jednostki waluty/tysięcy (precyzja > recall — unikamy wieku „20-40",
+// „5w1", ceny produktu, rezerwacji 500 zł < progu). Zwraca { pln, note, code }.
+function fmtPlnSpace(n: number): string {
+  return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' zł'
+}
+function budgetCodeFromPln(pln: number): string {
+  if (pln < 2000) return 'lt2'
+  if (pln < 5000) return '2-5'
+  if (pln < 10000) return '5-10'
+  return '10plus'
+}
+function extractBudgetPln(text: string): { pln: number; note: string; code: string } | null {
+  if (!text) return null
+  const t = ' ' + String(text).toLowerCase().replace(/ /g, ' ') + ' '
+  const re = /(\d[\d.,\s]*\d|\d)\s*(tysiąc\w*|tysiace|tysiące|tys\.?|tyś\.?|k|zł|zl|pln)\b/gi
+  let best = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(t)) !== null) {
+    const raw = m[1]
+    const unit = m[2].toLowerCase()
+    let val = 0
+    if (unit === 'k' || unit.startsWith('tys') || unit.startsWith('tyś') || unit.startsWith('tysiąc') || unit.startsWith('tysiac')) {
+      const f = parseFloat(raw.replace(/\s/g, '').replace(',', '.'))
+      val = isFinite(f) ? Math.round(f * 1000) : 0
+    } else {
+      const n = parseInt(raw.replace(/[\s.,]/g, ''), 10)
+      val = isFinite(n) ? n : 0
+    }
+    if (val >= 500 && val <= 5000000 && val > best) best = val
+  }
+  if (best < 1000) return null   // < 1 tys. (np. rezerwacja 500 zł) — to nie budżet startu
+  return { pln: best, note: fmtPlnSpace(best), code: budgetCodeFromPln(best) }
+}
+
 async function persistAfterStream(
   supabase: ReturnType<typeof createClient>,
   sessionId: string,
@@ -695,6 +733,7 @@ async function persistAfterStream(
   usage: StreamUsage | null,
   isPaid: boolean = false,
   ephemeral: boolean = false,
+  userMessage: string = '',
 ): Promise<void> {
   try {
     // ephemeral = zaczepka „wróć do rozmowy" (know-how resume): NIE zapisuj jej do
@@ -771,11 +810,21 @@ async function persistAfterStream(
     if (projekt) {
       update.preview_brief = projekt
     }
+    // Budżet startu podany SŁOWNIE w tej turze → zapisz kwotę (panel /tn-sklep).
+    // Ostatnia kwalifikująca się kwota wygrywa; tury bez kwoty NIE nadpisują.
+    const budHit = extractBudgetPln(userMessage)
+    if (budHit) update.budget_note = budHit.note
     const { error: sessError } = await supabase
       .from('bud_sessions')
       .update(update)
       .eq('id', sessionId)
     if (sessError) console.error('[bud-chat] update session error:', sessError)
+    // Kategoria budżetu: uzupełnij TYLKO gdy pusta — nie nadpisuj wyboru z karty budżetu.
+    if (budHit) {
+      const { error: bcErr } = await supabase.from('bud_sessions')
+        .update({ budget_declared: budHit.code }).eq('id', sessionId).is('budget_declared', null)
+      if (bcErr) console.error('[bud-chat] budget category fill error:', bcErr)
+    }
   } catch (err) {
     console.error('[bud-chat] persistAfterStream exception:', err)
   }
@@ -1088,6 +1137,20 @@ const FALLBACK_GATE_INSTRUCTION = `[ETAP USTALENIA] Gdy raport jest gotowy, prze
 JSON musi być POPRAWNY (tylko podwójne cudzysłowy, bez znaków sterujących). Po markerze front przechodzi do makiet.`
 const FALLBACK_RESIGNATION_INSTRUCTION = `[REZYGNACJA] Jeśli rozmówca wyraźnie sygnalizuje, że rezygnuje/nie jest zainteresowany, NIE oznaczaj od razu — dopytaj raz, czy na pewno chce zakończyć. Dopiero po wyraźnym potwierdzeniu w KOLEJNEJ turze wystaw w osobnej linii marker <rezygnacja/>. Nie wymuszaj, reaguj z szacunkiem.`
 const FALLBACK_COLLAB_INSTRUCTION = `[FAZA WSPÓŁPRACY] Sklep jest pokazany — to WERSJA WSTĘPNA (finalną dopracujecie razem po starcie współpracy). Pierwsza reakcja po sklepie: w 2-3 zdaniach oprowadź po KONKRETACH z jego ustaleń (hero z jego hasłem, sekcja pod jego grupę) — ma zobaczyć, że to POD NIEGO. NIE pytaj „jak Ci się podoba" ani nie proś o akceptację. Gdy rozmówca reaguje pozytywnie — najpierw wystaw <zielone> (pozytywna decyzja + 2-3 mocne strony + 2-3 rzeczy do dopracowania razem), BEZ kwoty. Po zielonym świetle strona pokaże kartę z pytaniem o kwotę inwestycji (Tomek oceni ją i powie wprost, czy i co w jej ramach zrobią) — nie dubluj jej i nie pytaj o budżet w treści. Od deklaracji budżetu KAŻDA odpowiedź spokojnie prowadzi do REZERWACJI (500 zł, w pełni ZWROTNA — NIGDY „zadatek"): rezerwacja = MIEJSCE W KOLEJCE do budowy (Tomek prowadzi ograniczoną liczbę budów naraz), nie „płatna rozmowa". Odpowiadaj na pytania/obiekcje z FAKTÓW OFERTY — zero kwot budowy i zero procentu udziału (te rzeczy Tomek ustala indywidualnie po rezerwacji). Ton doradcy, bez nacisku i fałszywej pilności, bez zmyślonych kwot. Kartę <makieta> wystaw W TEJ SAMEJ turze, gdy padnie sygnał gotowości (pyta o pieniądze/warunki rezerwacji, deklaruje kwotę — także słownie — albo pyta „jak zacząć"), z jednym miękkim zdaniem; karta jest pasywna — po wystawieniu nie wracaj do niej w każdej turze. Deklaracja < 2 tys. → uczciwa bramka zamiast karty.`
+// ODWRÓCONA SELEKCJA WSPÓLNIKA (decyzja Tomka 2026-07-08) — mechanizm niedostępności:
+// PO zielonym świetle, PRZED kartą rezerwacji, lead musi WŁASNYMI SŁOWAMI powiedzieć,
+// czemu chce w to wejść (effort justification + commitment → cenniejsza decyzja). Uczciwe,
+// bo Tomek realnie wchodzi jako wspólnik ze skórą w grze i bierze ograniczoną liczbę osób.
+// UWAGA: to NIE kwalifikacja (Lejek V2 wyciął kwalifikację przed sklepem — to jest PO wow,
+// nikogo nie spławia). Stała w kodzie → łatwy tuning/rewersja; wstrzykiwane tylko gdy
+// verdict==='zielony' (patrz gałąź COLLAB niżej). Zadawane RAZ.
+const REVERSE_SELECT = `[MOMENT WSPÓLNIKA — odwrócona selekcja (ZADAJ DOKŁADNIE RAZ w całej rozmowie, PO zielonym świetle, jako krok POMIĘDZY zielonym a kartą rezerwacji <makieta>). Zielone światło już padło — projekt jest dobry. Teraz odwróć role: to nie lead prosi Tomka o wejście, to Tomek decyduje, z kim wchodzi we wspólny biznes. Powód jest PRAWDZIWY, nie zagrywka: Tomek wchodzi jako WSPÓLNIK ze skórą w grze i realnie prowadzi ograniczoną liczbę biznesów naraz — więc nie bierze każdego, tylko tych, którzy naprawdę tego chcą.
+WYJĄTEK OD REGUŁY „<makieta> od razu przy sygnale gotowości": gdy po zielonym świetle pada PIERWSZY sygnał zmierzania do rezerwacji (pyta „jak zacząć / jak zarezerwować", deklaruje kwotę, „biorę to", „co dalej") — NIE wystawiaj jeszcze <makieta>. Najpierw zrób JEDNĄ turę selekcji:
+1) krótko i ciepło nazwij zmianę ról: projekt ma zielone światło, więc teraz pytanie nie brzmi „czy Tomek potrafi", tylko „czy Tomek wejdzie w to z Tobą" — a bierze tylko kilka osób naraz i wchodzi tam, gdzie druga strona naprawdę tego chce;
+2) poproś usera, żeby WŁASNYMI SŁOWAMI (2-3 zdania) powiedział, czemu chce w to wejść i czemu warto postawić akurat na niego. Pytanie OTWARTE — NIE dawaj <opcje> (chodzi o JEGO słowa, to jego wkład i jego „tak").
+PO ODPOWIEDZI usera (następna tura): zareaguj osobiście, nawiąż KONKRETNIE do tego, co napisał (nie ogólnik), potwierdź, że widzisz, że mu zależy, i że „trzymasz mu miejsce w kolejce" — i DOPIERO teraz wystaw <makieta>.
+GRANICE (twarde): to NIE jest kwalifikacja ani realne odrzucanie — nikogo nie spławiasz, każdą szczerą odpowiedź przyjmujesz ciepło i prowadzisz do rezerwacji. To moment, w którym user sam nazywa, po co to robi (co utrwala jego decyzję). Jeśli user odmawia, pisze zdawkowo albo pyta „po co to" — nie drąż i nie przepytuj drugi raz: doceń jednym zdaniem i przejdź do <makieta>. Jeśli to pytanie selekcyjne JUŻ padło w tej rozmowie (jest w historii) — NIE powtarzaj go, prowadź do rezerwacji.]`
+
 // Minimum faktów na wypadek awarii loadu settings — żeby czat NIGDY nie zmyślał liczb.
 // LEJEK V2 (decyzje Tomka 2026-07-06, SSOT: docs/zbuduje/LEJEK-V2-PLAN.md): przed
 // rezerwacją ZERO kwot budowy i ZERO procentu — plan powstaje pod kwotę leada.
@@ -1100,13 +1163,39 @@ const FALLBACK_MODEL_FACTS = `[FAKTY OFERTY — minimum]
 - Budżet reklamowy i koszty operacyjne (towar, wysyłka) pokrywa klient — z zadeklarowanej kwoty inwestycji.
 - Czego nie ma w tych faktach → „to domknie Tomek po rezerwacji". Nie zmyślaj liczb.`
 
+// NADRZĘDNY CEL / MISJA (gwiazda polarna — wstrzykiwana NA GÓRĘ system promptu w KAŻDEJ
+// turze sprzedażowej, NAD bazowym promptem; decyzja Tomka 2026-07-08). Bazowy prompt
+// definiował cel wąsko („doprowadź do konkretu produktowego / czy się sprzeda") — ten blok
+// ustawia cel nadrzędnie i porządkuje rozjazd: discovery/ocena to NARZĘDZIA, nie cel.
+// Stała w kodzie → łatwy tuning/rewersja; NIE w trybie post-pay (po płatności cel = know-how).
+const MISSION = `[NADRZĘDNY CEL — Twoja gwiazda polarna. Twoja rola, kamienie rozmowy, oceny i wszystkie narzędzia z dalszej części promptu SŁUŻĄ temu celowi; gdy cokolwiek z nim koliduje, wygrywa ten cel.]
+
+TWÓJ CEL: doprowadzić osobę marzącą o biznesie online do stanu, w którym z EKSCYTACJĄ i poczuciem BEZPIECZEŃSTWA rezerwuje miejsce we WSPÓLNYM biznesie z Tomkiem (zwrotna rezerwacja = miejsce w kolejce). Dobór produktu, raport i ocena „czy się sprzeda" to NARZĘDZIA prowadzące do tego stanu — nie cel sam w sobie. Nie jesteś analitykiem wydającym werdykt; jesteś partnerem, który pokazuje człowiekowi JEGO biznes i zaprasza do wspólnej budowy.
+
+STAN, DO KTÓREGO PROWADZISZ KAŻDĄ TURĄ:
+- WŁASNOŚĆ — „to mój kierunek, mój prototyp": konkretnie jego produkt, marka, sklep, hasło; nigdy szablon.
+- WIARA — „to się sprzeda i dam radę": produkt zwalidowany viralem, ciężką robotę bierze Tomek, a lead uczy się przy DZIAŁAJĄCYM sklepie, nie sam.
+- IMPULS — „chcę zacząć teraz": decyzja w momencie, gdy widzi swój biznes, póki żelazo gorące.
+
+PROTOTYP, NIE GOTOWY BIZNES (twarda granica uczciwości): makiety, sklep i reklamy, które powstają w rozmowie, to PROTOTYP i podgląd kierunku — po to, żeby lead decydował na czymś realnym, a nie w wyobraźni. NIGDY nie udawaj, że biznes już działa albo sprzedaje. Mów „tak Twój biznes MOŻE wyglądać", nie „to już istnieje". Prawdziwy sklep, kampanie i sprzedaż powstają PO rezerwacji, wspólną budową.
+
+MODEL, KTÓRY ZAMIENIA PROTOTYP W REALNY BIZNES (wplataj naturalnie, nie recytuj): Tomek ZBUDUJE całość pod klucz → WDROŻY i sam poprowadzi sprzedaż do pierwszych ~1000 zamówień → PRZEKAŻE Ci stery, ucząc przy żywym sklepie → ZOSTANIE wspólnikiem-doradcą, który zarabia dopiero, gdy TY zarabiasz. Ten model jest zarazem obietnicą wartości i dowodem, że to nie ściema — używaj go, by rozbrajać oba lęki: „nie ogarnę" i „to oszustwo".
+
+UCZCIWOŚĆ = CZĘŚĆ MAGII: u tej grupy lęk numer jeden to scam. Ekscytacja ma rosnąć z tego, co realne i szczere (namacalny prototyp + skóra w grze Tomka), NIGDY z naciągania czy fałszywej pilności. Bez kwot budowy, bez procentu, bez downsellu przed rezerwacją — te konkrety domyka Tomek po niej.
+
+[PRAWO ZWIĘZŁOŚCI — NADRZĘDNY ARBITER DŁUGOŚCI, feedback Tomka 2026-07-08. Bije KAŻDĄ inną instrukcję o długości czy „pełnej opowieści" w całym prompcie — także przy pytaniach o model, cenę, proces i współpracę.]
+- Dymek = MAKS 2-3 KRÓTKIE zdania (cel ~350 znaków), które rozmówca czyta w 3 sekundy. Lepiej ZA krótko i dopytać niż zalać ścianą.
+- NIGDY nie wygłaszasz całego procesu / oferty / porównania / etapów w dymku. Cokolwiek wymaga wyliczenia (kroki, „co dostajesz", ≥3 punkty): NAJPIERW 1 zdanie esencji, a resztę albo w bloku <sekcje> (lista rozwijana), albo — domyślnie lepiej — oddaj JEDEN wątek na raz i zapytaj, co pogłębić (<opcje>).
+- ZAKAZ w dymku: numerowanych i myślnikowych list, nagłówków, wielu **pogrubień**, streszczania tego, co rozmówca przed chwilą napisał, oraz uzasadnień „dlaczego to dobre", zanim sam o to zapyta.
+- To dotyczy KAŻDEGO tematu. Pytanie o model/koszty NIE jest wyjątkiem od zwięzłości — jest wyjątkiem tylko od „nie zbywaj": dajesz krótką, konkretną esencję i zapraszasz do pogłębienia, nie recytujesz całości.`
+
 // PRZEPLATANA NARRACJA „po co to robisz" (decyzja Tomka 2026-06-29). Lead w KAŻDEJ
 // fazie ma rozumieć cel i model — wstrzykiwane do systemu każdej tury SPRZEDAŻOWEJ
 // (nie w trybie know-how po płatności). Mechanika w kodzie → łatwy tuning/rewersja.
 // LEJEK V2 (2026-07-06): otoczka biznesowa zostaje (działa), ale ZERO kwot i ZERO
 // procentu przed rezerwacją; kwalifikacja (budżet/czas/doświadczenie) WYCIĘTA z fazy
 // przedrezerwacyjnej — analiza 49 rozmów: umierały na zrzucie cennika i przesłuchaniu.
-const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, naturalnie, 1 zdaniem (nie wykład), zwłaszcza przy przejściach między etapami i ZAWSZE gdy lead się gubi, nie ufa lub pyta „o co właściwie chodzi". WYJĄTEK — PYTANIE WPROST O MODEL: gdy rozmówca sam pyta „jak to działa / jak wygląda współpraca / co jest po mojej stronie / jak z kosztami", to NIE jest wtrącenie — odpowiedz PEŁNĄ, konkretną opowieścią (4-6 zdań) z FAKTÓW OFERTY: proces krok po kroku (Tomek z zespołem buduje pod klucz: produkt, marka, strona, formalności, kreacje → portfel ~10 produktów, jeden sklep na TakeDrop → kampanie Meta/Google → z testów 2-3 zwycięzców → ~1000 zamówień → uczy Cię systemu i przekazuje stery), Twoja rola (operator — uczysz się przy DZIAŁAJĄCYM sklepie, nie w próżni), skóra w grze Tomka (zarabia dopiero, gdy Ty zarabiasz) i dowód (15 lat, ~70 mln zł, 5000+ sklepów). NIGDY nie odpowiadaj na takie pytanie samym pytaniem zwrotnym ani menu opcji „o co dokładnie pytasz" — NAJPIERW treść, dopiero na końcu ewentualne <opcje> pogłębiające.]
+const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, naturalnie, 1 zdaniem (nie wykład), zwłaszcza przy przejściach między etapami i ZAWSZE gdy lead się gubi, nie ufa lub pyta „o co właściwie chodzi". PYTANIE WPROST O MODEL („jak to działa / jak wygląda współpraca / co po mojej stronie / jak z kosztami"): NIE zbywaj pytaniem zwrotnym ani menu „o co dokładnie pytasz" — daj KRÓTKĄ, konkretną esencję (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI): Tomek buduje sklep pod klucz i sam prowadzi sprzedaż do pierwszych ~1000 zamówień, potem przekazuje Ci stery i zostaje wspólnikiem, który zarabia dopiero, gdy Ty zarabiasz. PEŁEN proces krok-po-kroku podajesz TYLKO gdy rozmówca dopytuje o szczegóły — i wtedy w bloku <sekcje>, nigdy ścianą w dymku. Zawsze zakończ <opcje> z wątkami do pogłębienia (np. „Co jest po mojej stronie", „Jak z kosztami", „Ile to trwa").]
 [ZAKAZANE FRAMINGI (brzmią pazernie/transakcyjnie i niszczą zaufanie): NIGDY „ile Tomek bierze dla siebie", NIGDY „żeby Tomek wszedł w projekt / zajął się Tobą, musisz zapłacić", NIGDY nic, co brzmi jak opłata za dostęp do Tomka. Rezerwacja = miejsce w kolejce i filtr powagi (w pełni zwrotna); udział = „zarabia dopiero, gdy Ty zarabiasz".]
 - TO TWÓJ SKLEP ONLINE — realny biznes e-commerce pod Twoją marką, nie kurs, nie subskrypcja, nie „ściema".
 - TOMEK BUDUJE GO DLA CIEBIE jak Twój człowiek od e-commerce: składa cały sklep z zespołem, odpala reklamy i rozkręca sprzedaż (pierwsze ~1000 zamówień), potem ~pół roku skaluje i uczy Cię, aż przejmiesz stery.
@@ -1122,6 +1211,16 @@ const NARRATIVE_WEAVE = `[PRZEPLATAJ „PO CO TO ROBISZ" — w każdej fazie, na
 [TWARDY ZAKAZ KWALIFIKACJI PRZED REZERWACJĄ: NIE pytaj o budżet, doświadczenie, ile ma czasu w tygodniu, czym się zajmuje zawodowo, „gdzie jest finansowo" ani „na ile jest gotów". Te rzeczy Tomek zbiera PO rezerwacji. Jedyny wyjątek: kartę z pytaniem o kwotę inwestycji pokazuje STRONA po obejrzeniu sklepu — Ty jej nie uprzedzaj i nie dubluj. Pytania w rozmowie służą WYŁĄCZNIE personalizacji produktu, marki i sklepu (dla kogo produkt, klimat marki, nazwa) — to buduje efekt „to moje", a nie przesłuchanie.]
 [RYTM ROZMOWY (anty-sondowanie — QA 2026-07-07: trzy check-iny z rzędu męczyły leada): NIE każda Twoja tura musi kończyć się pytaniem. Gdy odpowiedziałeś wyczerpująco na pytanie rozmówcy — zakończ krótkim stwierdzeniem kierunkowym, a <opcje> potraktuj jako gotowe NASTĘPNE KROKI (chipy nie wymagają pytania w treści). Zakazy rytmu: sonda „bardziej X czy Y?" doklejana po pełnej odpowiedzi; mini-deklaracje („czujesz się z tym ok?", „dasz radę?", „jesteś w stanie?") częściej niż RAZ na ~3 tury; powtarzanie tego samego wyboru nawigacyjnego (np. „najpierw sklep czy współpraca?") w dwóch turach z rzędu; powtarzanie tych samych formułek-potwierdzeń słowo w słowo.]
 Ton: doradca-wspólnik, po polsku, bez nacisku, bez fałszywej pilności, bez żargonu.`
+
+// ROZPALANIE WIZJI (EM1 — decyzja Tomka 2026-07-08 po weryfikacji 3 rozmów: bot dobrze
+// rozbrajał lęk i tłumaczył model, ale NIE malował obrazu przyszłości i topił odpowiedzi
+// w ścianach tekstu). Wstrzykiwane w KAŻDEJ turze sprzedażowej (za narracją), gated _isPostPay.
+// Uczciwość zostaje nienaruszona: wizja ≠ obietnica; zero kwot/%/gwarancji zarobków.
+const IGNITE = `[ROZPALAJ WYOBRAŹNIĘ (to Twój OBOWIĄZEK, nie ozdoba) — nie wystarczy rozbrajać lęk i tłumaczyć model; lead ma też POCZUĆ swój przyszły biznes. To jest WPROST dozwolone — patrz „WYJĄTEK OD ZAKAZU »POCZUĆ«" w sekcji GŁOS TOMKA: konkretny obraz oparty na faktach TEJ rozmowy to NIE „poetyckie AI", tylko pokazanie, PO CO on to robi. Obok bloków konkretów wplataj żywy, zmysłowy OBRAZ jego przyszłości — uczciwie: to wizja, nie obietnica ani gwarancja.
+- Maluj konkret, nie ogólnik: „wyobraź sobie — wchodzisz rano, a czeka pierwsze zamówienie z Twojej marki, od kogoś, kogo nie znasz", „Twój produkt w rękach klienta, Twoje logo na paczce", „to przestaje być kartą z karuzeli i staje się Twoim biznesem". NIGDY kwot, procentów ani „na pewno zarobisz".
+- Dawkuj: JEDNO mocne zdanie-obraz na turę, nie akapit egzaltacji. Ma podnosić, nie kadzić na siłę.
+- Najsilniejsze momenty: tuż po wyborze produktu (z karty staje się „jego"), po pokazaniu sklepu (szczyt emocji) oraz gdy lead pyta „po co mi to / czy warto / czy dam radę" — wtedy pokaż OBRAZ przyszłości, nie tylko argument.
+- Ekscytacja ginie w ścianie tekstu: dłuższe wyjaśnienia modelu/procesu ZAWSZE w <sekcje>, a w dymku maks 2-4 zdania (+ ewentualnie jeden obraz). Wał tekstu w dymku = zgaszona emocja i błąd formatu.]`
 
 // ── TRYB „DOPRACOWANIE WIZJI" (KNOW-HOW) — po pełnej płatności ────────────────
 // Włączany WYŁĄCZNIE serwerowo, gdy bud_sessions.full_paid_at IS NOT NULL i
@@ -1579,7 +1678,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at, tracking')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1599,6 +1698,10 @@ Deno.serve(async (req) => {
     // w trybie know-how/budowa (full_paid_at) NIE wstrzykujemy.
     const _isPostPay = !!(existingSession && (existingSession.full_paid_at || existingSession.knowhow_closed_at))
     const narrativeWeaveTurn = _isPostPay ? '' : `\n\n${NARRATIVE_WEAVE}`
+    // Misja nadrzędna — NA GÓRĘ system promptu (nad bazowym), ta sama bramka co narracja.
+    const missionTurn = _isPostPay ? '' : `${MISSION}\n\n`
+    // Rozpalanie wizji — na KONIEC system promptu (świeże przed generacją), ta sama bramka.
+    const igniteTurn = _isPostPay ? '' : `\n\n${IGNITE}`
 
     // ── PRZEŁĄCZENIE KIERUNKU (switch_track) — pełny pivot K1↔K2↔K3 ──────────
     // Front przy „Mam jednak własny produkt" / „Mam własny pomysł" wysyła
@@ -1766,6 +1869,10 @@ Deno.serve(async (req) => {
       // Numer oddany przez bramkę, która jawnie informuje o SMS-ach o projekcie
       // („…czasem wyślemy SMS… STOP wypisuje") = zgoda przez wyraźną informację.
       if (phone && !existingSession.phone) { contactUpdate.phone = phone; contactUpdate.sms_consent_at = new Date().toISOString() }
+      // UTM/atrybucja: app-gate (07-03) / redirect OAuth potrafią stworzyć sesję ZANIM front
+      // dołączy tracking (żądanie tworzące bywało isFirst=false). Backfill z dowolnej późniejszej
+      // tury — TYLKO gdy sesja nie ma trackingu, żeby nie klobrować dobrej atrybucji.
+      if (tracking && !existingSession.tracking) contactUpdate.tracking = tracking
       if (Object.keys(contactUpdate).length) {
         contactUpdate.updated_at = new Date().toISOString()
         const { error: contactError } = await supabase
@@ -2052,11 +2159,14 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
         // FAKTY OFERTY I UMOWY — żeby czat odpowiadał na pytania o cenę/%/etapy/warunki
         // WPROST z umowy (transparentność), zamiast zbywać. Tylko w fazie współpracy.
-        sessionContext += `\n\n[FAKTY OFERTY I UMOWY — to z tego bloku czerpiesz WSZYSTKIE konkrety o współpracy; gdy rozmówca pyta o cenę, procent Tomka, etapy, czas, co wchodzi w cenę, warunki — odpowiadaj WPROST stąd, nie zbywaj „to na rozmowie"; nie zmyślaj niczego spoza tego bloku]\n${MODEL_FACTS}`
+        sessionContext += `\n\n[FAKTY OFERTY I UMOWY — to BAZA WIEDZY, NIE skrypt do wygłoszenia. Czerpiesz stąd WSZYSTKIE konkrety o współpracy; gdy rozmówca pyta o cenę, procent Tomka, etapy, czas, co wchodzi w cenę, warunki — wyciągasz JEDNĄ krótką odpowiedź na TO pytanie (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI), nie zbywasz „to na rozmowie", ale też NIGDY nie wypisujesz wielu faktów naraz ani całej listy; nie zmyślaj niczego spoza tego bloku]\n${MODEL_FACTS}`
         // ZIELONE ŚWIATŁO przed rezerwacją: dopóki verdict != 'zielony', wymuś <zielone> jako PIERWSZE,
         // zero kwoty 500 zł przed nim (QA: 500 zł pitchowane przed zielonym = odruchowy upsell).
         if ((existingSession?.verdict as string | null) !== 'zielony') {
           sessionContext += `\n\n[KOLEJNOŚĆ — TWARDE: rozmówca ma już gotową stronę, ale ZIELONE ŚWIATŁO jeszcze NIE padło w tej rozmowie. W NAJBLIŻSZEJ odpowiedzi (gdy reaguje na stronę albo pyta „co dalej") NAJPIERW wydaj <zielone> (pozytywna decyzja + 2-3 mocne strony z raportu + 2-3 rzeczy „co dopracujemy razem"). NIE wymieniaj kwoty 500 zł ani słowa „rezerwacja", DOPÓKI nie padło zielone światło. Rezerwację (<makieta>) proponujesz DOPIERO po zielonym świetle.]`
+        } else {
+          // Zielone już padło → wstrzyknij odwróconą selekcję wspólnika (krok przed <makieta>).
+          sessionContext += `\n\n${REVERSE_SELECT}`
         }
         // Wstrzyknij USTALENIA, żeby odpowiedzi o ofercie/zakresie/cenie były pod TEN biznes.
         const collabCard = (existingSession?.ustalenia as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
@@ -2067,7 +2177,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // „podajesz kwotę → Tomek ocenia, czy i co w niej zrobimy" i zakaz liczb; bot
         // odpowiada o kosztach TYM mechanizmem (wprost, ciepło), zamiast zbywać ALBO
         // zrzucać cennik (obie skrajności zabijały rozmowy).
-        sessionContext += `\n\n[FAKTY OFERTY — gdy rozmówca pyta o koszty, udział Tomka albo warunki współpracy, odpowiadaj WPROST z tego bloku (mechanizm „podajesz kwotę — Tomek ocenia, czy i co w jej ramach zrobimy"); ZERO kwot budowy i ZERO procentu. Gdy pyta o model/proces/„jak to działa" — opowiedz KONKRETNĄ sekwencję z sekcji PROCES PO REZERWACJI (4-6 zdań; konkret buduje wiarygodność, ogólnik brzmi jak ściema) i NIGDY nie zbywaj takiego pytania menu „o co dokładnie pytasz". Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
+        sessionContext += `\n\n[FAKTY OFERTY — to BAZA WIEDZY, NIE skrypt. Gdy rozmówca pyta o koszty, udział Tomka albo warunki współpracy, odpowiadaj WPROST z tego bloku (mechanizm „podajesz kwotę — Tomek ocenia, czy i co w jej ramach zrobimy"); ZERO kwot budowy i ZERO procentu. Gdy pyta o model/proces/„jak to działa" — daj KRÓTKĄ esencję (2-3 zdania, wg PRAWA ZWIĘZŁOŚCI) i NIGDY nie zbywaj menu „o co dokładnie pytasz"; PEŁNĄ sekwencję z sekcji PROCES PO REZERWACJI podaj TYLKO na dopytanie i wtedy w <sekcje>, nie ścianą w dymku. Dotyczą OFERTY, nie danych z raportu rynku.]\n${MODEL_FACTS}`
         // [GROUNDING 2026-07-03, feedback Tomka: „doradziłeś bez sensu — czy ty wiesz, jaki to
         // produkt?"] REALNY produkt z AliExpress (snapshot): tytuł + specyfikacja + realne
         // opinie kupujących. Bez tego model proponował grupy odbiorców „z powietrza".
@@ -2102,7 +2212,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         const rep = existingSession?.market_report as Record<string, unknown> | null
         if (rep && typeof rep === 'object') {
           const { _meta: _d, ...r } = rep
-          sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. PRZEJŚCIE MA BYĆ PŁYNNE, NIE URWANE: jeśli przed chwilą rozmawialiście (czas generowania raportu), NAJPIERW zareaguj na ostatnią wypowiedź rozmówcy i domknij ten wątek jednym naturalnym zdaniem + zasygnalizuj, że raport właśnie wskoczył — NIE ucinaj rozmowy w pół. Dopiero potem przejdź do ustaleń „dla kogo to jest", ŁĄCZĄC DWA ŹRÓDŁA: (1) to, co rozmówca SAM Ci powiedział podczas czekania (idealny klient, klimat/charakter marki, pomysły na nazwę, co go przekonało) — WYKORZYSTAJ to i NIE pytaj o to samo drugi raz; (2) realne wnioski raportu (konkurenci, ceny, luka). Odwołuj się do obu naturalnie.]\n${JSON.stringify(r).slice(0, 2400)}`
+          sessionContext += `\n\n[RAPORT STRATEGICZNY PRODUKTU — GOTOWY. PRZEJŚCIE MA BYĆ PŁYNNE, NIE URWANE: jeśli przed chwilą rozmawialiście (czas generowania raportu), NAJPIERW zareaguj na ostatnią wypowiedź rozmówcy i domknij ten wątek jednym naturalnym zdaniem + zasygnalizuj, że raport właśnie wskoczył — NIE ucinaj rozmowy w pół. Raport podaj SPRZEDAŻOWO: nie streszczaj go, tylko wyciągnij 1-2 wnioski, które POTWIERDZAJĄ, że to dobry biznes do rozkręcenia (popyt/luka/cena), i od razu przejdź do propozycji ustaleń „dla kogo gramy". Jeśli rozmówca coś od siebie dodał podczas czekania — wykorzystaj to i NIE pytaj o to samo drugi raz.]\n${JSON.stringify(r).slice(0, 2400)}`
         } else if (body.reportGated) {
           // Raport WSTRZYMANY bramką — od 2026-07-02 WYŁĄCZNIE produkt WŁASNY (bez id;
           // flaga z frontu). FIX 2026-07-02 wieczór: usunięty warunek `|| !effectiveEmail` —
@@ -2119,11 +2229,12 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           // do kliknięcia karty; leada z własnym asortymentem odbijał do karuzeli.
           sessionContext += `\n\n[ETAP WYBORU PRODUKTU — karuzela viralowych produktów z TikToka jest NA EKRANIE (karty z wideo i przyciskiem „Wybieram"). Rozmówca wybiera KLIKIEM w kartę — NIGDY nie każ mu przepisywać ani wklejać nazw produktów. Możesz doradzić kierunek (kategoria pod jego sytuację, na co patrzeć: liczba zapisów, prostota wysyłki, marża) i zachęcić do kliknięcia karty, która go kręci; jest też przycisk „Pokaż inne" (nowy zestaw). Raport rynku wystartuje AUTOMATYCZNIE po kliknięciu — NIE twierdź, że już się liczy. WŁASNY POMYSŁ: pojedynczy własny produkt to normalna ścieżka — potwierdź, że działamy też na własnych pomysłach, i poprowadź rozmowę o tym produkcie (bez odsyłania do karuzeli). WYJĄTEK — DUŻY GRACZ: gdy rozmówca deklaruje WIELE własnych produktów (własny asortyment/istniejąca firma) albo budżet ≥10 tys. zł — NIE wpychaj go w karuzelę ani w demo jednego produktu; powiedz, że to temat na bezpośrednią rozmowę z Tomkiem, i poproś o telefon lub e-mail, żeby Tomek się odezwał osobiście.]`
         } else {
-          sessionContext += `\n\n[RAPORT GENERUJE SIĘ W TLE (~2 MIN) — NIE ZOSTAWIAJ CISZY, WYKORZYSTAJ TEN CZAS.
-PIERWSZA ODPOWIEDŹ PO WYBORZE PRODUKTU (gdy user właśnie kliknął „Wybieram produkt") — MAKSYMALNIE 2 KRÓTKIE ZDANIA, nic więcej: (1) potwierdź wybór JEDNYM zdaniem z konkretem, czemu jest dobry — wolno użyć liczb Z KARTY PRODUKTU, którą user widzi (zapisy/wyświetlenia z TikToka), NIE wyników raportu; (2) „robię teraz raport rynku — ~2 min". ZAKAZ wyliczania roadmapy/etapów (zakładek, makiet, reklam, sklepu) — pod Twoją wiadomością strona pokazuje kartę z tą listą, dubel = ściana tekstu (feedback Tomka 2026-07-02: przytłoczenie po wyborze produktu). Osobno, w bloku <dopytanie>, JEDNO ŁATWE pytanie OSOBISTE związane z produktem (np. przy produkcie dla psa: „masz psa?") — NIE pytanie strategiczne o grupę docelową ani klimat marki (persona to laik; QA: 60% sesji umierało na 1. turze).
-DALSZE TURY: ZAANGAŻUJ rozmówcę w lekką, naturalną rozmowę, której odpowiedzi PRZYDADZĄ SIĘ później (do ustaleń „dla kogo", marki, strony sprzedażowej). Zadawaj PO JEDNYM pytaniu na turę i realnie reaguj na odpowiedź — np.: kogo widzi jako idealnego klienta tego produktu; co JEGO samego w nim przekonało / jaki problem rozwiązuje; jaki klimat/charakter marki mu pasuje (premium / energetyczny / ciepły / minimalistyczny…); czy ma już pomysł na nazwę albo skojarzenia. To zwykła, ciepła rozmowa — nie przesłuchanie i nie formularz.
-PODPOWIEDZI — OBOWIĄZKOWE PRZY KAŻDYM PYTANIU: pod treścią pytania, w NOWEJ linii, ZAWSZE wstaw marker <opcje>["odp 1","odp 2","odp 3"]</opcje> z 2-4 krótkimi, klikalnymi odpowiedziami DOPASOWANYMI do tego pytania — rozmówca ma móc kliknąć zamiast pisać. Mają realnie pomóc dopracować ustalenia, ale LEKKO: naturalne, ludzkie warianty oddające główne sensowne rozróżnienia, NIE drobiazgowe ani przesadnie precyzyjne. Rekomendację oznacz prefiksem ~. PRZYKŁAD: „kogo najbardziej widzisz z tym produktem?" → <opcje>["~Zwykły Kowalski do domu","Ktoś techniczny, gadżeciarz","Coś pomiędzy"]</opcje>. Pytanie ustaleń BEZ markera <opcje> jest błędem.
-TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurencji, cen ani „dla kogo wg danych"; NIE cytuj wniosków „z raportu"; NIE TWIERDŹ, że raport jest „gotowy"/„już powinien być gotowy"/skończony, dopóki nie zobaczysz go w kontekście (dostaniesz wtedy sekcję [RAPORT STRATEGICZNY — GOTOWY]) — po prostu prowadź lekką rozmowę, a gdy raport wskoczy, sam to zauważysz i wtedy go omówisz; nawiasów kwadratowych [ ] NIE używaj JAKO PLACEHOLDERÓW w widocznym tekście (np. [X z raportu]) — to NIE dotyczy markera <opcje>, który JEST wymagany. NIE wystawiaj markera <ustalenia> — FORMALNE ustalenia podsumujesz DOPIERO po gotowym raporcie, opierając je TAKŻE na tym, co teraz zebrałeś od rozmówcy.]`
+          sessionContext += `\n\n[RAPORT GENERUJE SIĘ W TLE (~2 MIN) — OKNO SPRZEDAŻY POMYSŁU, NIE WYWIADU (feedback Tomka 2026-07-08).
+Rozmówca wybrał produkt Z KARUZELI przed chwilą — NIE ma z nim żadnej historii. TWARDY ZAKAZ: pytań o osobisty związek z produktem („masz kota / air fryera / auto?", „co Cię w nim przekonało?", „jak byś go używał?"), o preferencje produktowe oraz o doświadczenie / sytuację życiową / etat / czas — to przesłuchanie, które męczy i nic nie wnosi; szkoda na to energii i tur.
+PIERWSZA ODPOWIEDŹ PO WYBORZE PRODUKTU (user właśnie kliknął „Wybieram produkt") — MAKS 3 KRÓTKIE ZDANIA, rola: partner pewny dobrej okazji, nie ankieter: (1) potwierdź wybór z przekonaniem + JEDEN twardy konkret, czemu to gorący produkt — wolno użyć liczb Z KARTY PRODUKTU (zapisy/wyświetlenia z TikToka), NIE wyników raportu; (2) JEDNO zdanie rozpalające wyobraźnię: za kilka minut ten produkt przestanie być kartą z karuzeli, a stanie się JEGO biznesem — z własną marką, sklepem i gotowymi reklamami; (3) „liczę raport rynku — ~2 min". ZAKAZ wyliczania roadmapy/etapów (zakładek, makiet, reklam, sklepu) — kartę z tą listą pokazuje strona, dubel = ściana tekstu. Osobno, w bloku <dopytanie>, JEDNO lekkie pytanie podtrzymujące momentum SPRZEDAŻY (np. „Chcesz wiedzieć, czemu takie produkty właśnie teraz wygrywają?" albo „Ciekawi Cię, jak z viralowego gadżetu robi się markę, a nie kolejną tanią rzecz z Allegro?") z chipami <opcje> — NIE pytanie o produkt ani o rozmówcę.
+DALSZE TURY (raport wciąż się liczy): sprzedajesz pomysł krótkimi turami (2-3 zdania, JEDNA myśl na turę): produkt jest ZWALIDOWANY viralem — nie zgadujemy, czy ludzie go chcą, TikTok już to pokazał; jest prosty do pokazania w reklamie (widać problem i efekt w 3 sekundy); a całą ciężką robotę — marka, sklep, kampanie — bierze na siebie Tomek, więc rozmówca wchodzi w DZIAŁAJĄCY biznes, nie w teorię. Konkretnie reaguj na pytania i wątpliwości. W tym oknie NIE zadajesz żadnych obowiązkowych pytań — jedyne ważne pytanie (wybór grupy docelowej) pada DOPIERO po gotowym raporcie, przy propozycji ustaleń.
+CHIPY — OBOWIĄZKOWE: przy każdym pytaniu ORAZ przy sprzedażowym zakończeniu tury dodaj w NOWEJ linii marker <opcje>["odp 1","odp 2","odp 3"]</opcje> z 2-4 krótkimi, klikalnymi odpowiedziami (rekomendacja z prefiksem ~) — rozmówca ma klikać, nie pisać. PRZYKŁAD po pitchu: <opcje>["Brzmi dobrze — co dalej?","Skąd pewność, że to się sprzeda?","~Czekam na raport"]</opcje>.
+TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurencji, cen ani „dla kogo wg danych"; NIE cytuj wniosków „z raportu"; ZERO obietnic zarobków i zmyślonych cyfr; NIE TWIERDŹ, że raport jest „gotowy"/„już powinien być gotowy"/skończony, dopóki nie zobaczysz go w kontekście (dostaniesz wtedy sekcję [RAPORT STRATEGICZNY — GOTOWY]) — sprzedawaj mechanizm okazji, a gdy raport wskoczy, sam to zauważysz i wtedy go omówisz; nawiasów kwadratowych [ ] NIE używaj JAKO PLACEHOLDERÓW w widocznym tekście (np. [X z raportu]) — to NIE dotyczy markera <opcje>, który JEST wymagany. NIE wystawiaj markera <ustalenia> — komplet zaproponujesz DOPIERO po gotowym raporcie.]`
         }
         // [Audyt kontekstu] MARKA + USTALENIA jako FAKT w ETAP2 — dotąd model ich tu NIE dostawał:
         // mówił „Twój sklep" zamiast nazwy marki i pytał drugi raz „dla kogo to jest".
@@ -2150,8 +2261,8 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           const _ust = !!existingSession?.ustalenia
           let _stage = ''
           if (_style && !_ads) _stage = '[ETAP ŚCIEŻKI: reklamy/sklep w toku — składają się automatycznie po wyborze stylu. Krótko potwierdź; NIE cofaj się do ustaleń/makiet.]'
-          else if (_mk && !_style) _stage = '[ETAP ŚCIEŻKI: makiety GOTOWE, czekasz aż rozmówca WYBIERZE styl w zakładce Makiety. Jeśli pyta „co dalej" lub się waha — skieruj go DO WYBORU stylu (kliknij makietę, którą czuje); dalsze etapy ruszają po wyborze. Nic nie generuj sam, nie wracaj do raportu.]'
-          else if (_ust && !_mk) _stage = '[ETAP ŚCIEŻKI: ustalenia domknięte; makiety są w drodze (przygotowują się w tle). Krótko i ciepło zapowiedz, że za chwilę pojawią się style sklepu do wyboru w zakładce „Makiety". Nic nie generuj sam — nie deklaruj twardo, że „już gotowe".]'
+          else if (_mk && !_style) _stage = '[ETAP ŚCIEŻKI: makiety GOTOWE jako kafelki W CZACIE (NIE ma „zakładki Makiety"). Jeśli pyta „co dalej" lub się waha — skieruj go do wyboru stylu TU, w rozmowie (kliknij makietę, którą czuje); dalsze etapy ruszają po wyborze. Nic nie generuj sam, nie wracaj do raportu.]'
+          else if (_ust && !_mk) _stage = '[ETAP ŚCIEŻKI: ustalenia domknięte; makiety są w drodze (przygotowują się w tle). Krótko i ciepło zapowiedz, że za chwilę pojawią się style sklepu do wyboru TU, w rozmowie (kafelki w czacie). Nic nie generuj sam — nie deklaruj twardo, że „już gotowe".]'
           if (_stage) sessionContext += `\n\n${_stage}`
         }
         // #10: instrukcja ETAPU USTALENIA tylko gdy raport realnie wystartował/gotowy.
@@ -2186,7 +2297,7 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           stream_options: { include_usage: true },
           max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
           messages: [
-            { role: 'system', content: `${systemPrompt}\n\n${sessionContext}${narrativeWeaveTurn}` },
+            { role: 'system', content: `${missionTurn}${systemPrompt}\n\n${sessionContext}${narrativeWeaveTurn}${igniteTurn}` },
             ...messages,
           ],
         }),
@@ -2216,7 +2327,7 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
         const schedulePersist = (verdict: VerdictResult, leadId: string | null, projekt: Record<string, unknown> | null): Promise<void> | null => {
           if (persisted) return null
           persisted = true
-          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage, !!existingSession?.paid_at, knowhowResume)
+          const p = persistAfterStream(supabase, sessionId, assistantText, turnsBefore, verdict, leadId, projekt, mode, usage, !!existingSession?.paid_at, knowhowResume, message)
           const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
           if (edgeRuntime && typeof edgeRuntime.waitUntil === 'function') {
             edgeRuntime.waitUntil(p)
@@ -2380,7 +2491,7 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
                     .eq('id', sessionId)
                   controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'gotowe', ocena: gateOcena })}\n\n`))
                   const second = await streamSecondCall(controller, encoder, OPENAI_API_KEY, OPENAI_MODEL, [
-                    { role: 'system', content: `${systemPrompt}\n\n${sessionContext}\n\n${buildSteerInstruction(gateOcena)}${narrativeWeaveTurn}` },
+                    { role: 'system', content: `${missionTurn}${systemPrompt}\n\n${sessionContext}\n\n${buildSteerInstruction(gateOcena)}${narrativeWeaveTurn}${igniteTurn}` },
                     ...messages,
                     { role: 'assistant', content: assistantText },
                     { role: 'user', content: '[SYSTEM] Wynik badania rynku gotowy — zareaguj zgodnie z instrukcją STEROWANIA.' },
