@@ -683,12 +683,12 @@ async function maybeNotifyChosenMockupSlack(
 }
 
 // Zapis po zakończeniu streamu: wiadomość asystenta + update sesji + koszt
-// ── Deklarowany budżet startu z WIADOMOŚCI leada (LEJEK V2) ────────────────────
-// Karta budżetu daje tylko kategorię (budget_declared: lt2/2-5/5-10/10plus). Gdy
-// lead poda kwotę SŁOWNIE („mam 10 000 zł", „budżet 2 tys", „10k") — nigdzie nie
-// lądowała (Robert 501506474 = 10 000 zł niewidoczne w panelu). Łapiemy ją tu:
-// wymagamy jednostki waluty/tysięcy (precyzja > recall — unikamy wieku „20-40",
-// „5w1", ceny produktu, rezerwacji 500 zł < progu). Zwraca { pln, note, code }.
+// ── Normalizacja kwoty budżetu startu (LEJEK V2) ──────────────────────────────
+// Karta budżetu daje tylko kategorię (budget_declared: lt2/2-5/5-10/10plus). Kwotę
+// podaną SŁOWNIE mózg oznacza markerem <budzet_kwota>…</budzet_kwota> (tylko on
+// odróżnia budżet leada od ceny 9400 / rezerwacji 500 / statystyk TikToka — regex
+// mylił je). Ta funkcja NORMALIZUJE treść markera („10 000 zł", „2 tys", „10k") na
+// { pln, note, code }; próg ≥1 tys. odsiewa drobne. Zwraca null, gdy brak kwoty.
 function fmtPlnSpace(n: number): string {
   return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' zł'
 }
@@ -810,9 +810,11 @@ async function persistAfterStream(
     if (projekt) {
       update.preview_brief = projekt
     }
-    // Budżet startu podany SŁOWNIE w tej turze → zapisz kwotę (panel /tn-sklep).
-    // Ostatnia kwalifikująca się kwota wygrywa; tury bez kwoty NIE nadpisują.
-    const budHit = extractBudgetPln(userMessage)
+    // Budżet startu z MARKERA mózgu <budzet_kwota> (tylko on odróżnia budżet leada od
+    // ceny 9400/rezerwacji 500/statystyk TikToka). Normalizujemy treść markera na kwotę.
+    // Ostatnia zadeklarowana kwota wygrywa; tury bez markera NIE nadpisują.
+    const budMark = assistantText.match(/<budzet_kwota>([\s\S]{1,40}?)<\/budzet_kwota>/i)
+    const budHit = budMark ? extractBudgetPln(budMark[1]) : null
     if (budHit) update.budget_note = budHit.note
     const { error: sessError } = await supabase
       .from('bud_sessions')
