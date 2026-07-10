@@ -52,6 +52,11 @@
     { id: 'project',  name: 'Projekt',         icon: 'ph-images',        color: 'text-violet-400',  dot: 'bg-violet-500' },
     { id: 'green',    name: 'Zielony werdykt', icon: 'ph-check-circle',  color: 'text-emerald-400', dot: 'bg-emerald-500' },
     { id: 'paid',     name: 'Rezerwacja',      icon: 'ph-currency-circle-dollar', color: 'text-amber-400', dot: 'bg-amber-400' },
+    // Etapy PO rezerwacji — wyliczane z pól sesji (full_paid_at / knowhow_closed_at).
+    // Addytywne: dla paneli/sesji, które tych pól nie mają, derivedStageOf ich nie
+    // zwróci (pola undefined = falsy) → kolumny zostają puste, bez wpływu na /tn-sklep.
+    { id: 'full_paid',      name: 'Opłacony projekt', icon: 'ph-seal-check', color: 'text-emerald-400', dot: 'bg-emerald-400' },
+    { id: 'knowhow_closed', name: 'Budowa',           icon: 'ph-hammer',    color: 'text-teal-400',    dot: 'bg-teal-400' },
     // Kategoria „przegrane" — etapy ustawiane WYŁĄCZNIE ręcznie, zapisywane w *_sessions.pipeline_override.
     { id: 'resigned', name: 'Zrezygnował',     icon: 'ph-hand-waving',   color: 'text-orange-400',  dot: 'bg-orange-500', lost: true },
     { id: 'lost',     name: 'Przegrany',       icon: 'ph-x-circle',      color: 'text-rose-400',    dot: 'bg-rose-500',   lost: true },
@@ -59,6 +64,10 @@
   const STAGE_IDS = STAGES.map((x) => x.id);
   const LOST_STAGE_IDS = STAGES.filter((x) => x.lost).map((x) => x.id);
   function derivedStageOf(s) {
+    // Po pełnej płatności kanban nie może dalej pokazywać „Rezerwacja". Pola
+    // opcjonalne (gated): panele/sesje bez nich lecą dalej starą ścieżką.
+    if (s.knowhow_closed_at) return 'knowhow_closed';
+    if (s.full_paid_at) return 'full_paid';
     if (s.paid_at) return 'paid';
     if (s.verdict === 'zielony') return 'green';
     if (s.preview_images && Object.keys(s.preview_images).length) return 'project';

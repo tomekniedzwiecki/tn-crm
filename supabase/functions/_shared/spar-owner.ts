@@ -41,3 +41,20 @@ export function ownerDenied(
   const ownerId = sessionAuthUserId || null;
   return !!(ownerId && (!authUser || authUser.id !== ownerId));
 }
+
+// Zaufany wywołujący WEWNĘTRZNY (server-to-server): Bearer == SUPABASE_SERVICE_ROLE_KEY.
+// Używane przez generatory sparingu, gdy woła je spar-drip (cron) kluczem serwisowym —
+// wtedy bramka właściciela NIE ma zastosowania (to nie przeglądarka z linkiem ?id=,
+// tylko backend z sekretem serwera, który i tak ma pełny dostęp do bazy).
+//
+// To NIE osłabia ochrony ?id=: klucz serwisowy nigdy nie trafia do przeglądarki
+// (front używa anon/publishable). Bez tego zaufania drip NIE mógł generować
+// artefaktów sesji przypiętych do konta (auth_user_id != null) → 403 → reveale
+// wisiały wiecznie w 'generating' (root-cause zawieszonych generacji, 2026-07-10).
+export function isTrustedInternalCall(req: Request): boolean {
+  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
+  if (!m) return false;
+  const token = m[1].trim();
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  return !!serviceKey && token === serviceKey;
+}

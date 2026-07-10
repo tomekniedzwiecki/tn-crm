@@ -628,7 +628,7 @@ function visibleSessions() {
 // Config źródła danych lejka APLIKACJA (różnice spar_*/bud_* → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'spar_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, gen_error_count, raport_meta:market_report->_meta',
   rpcCosts: 'spar_session_costs', rpcAvatars: 'spar_session_avatars', emailsTable: 'spar_emails',
 };
 async function loadAll() {
@@ -941,6 +941,14 @@ async function openSession(id) {
     if (art.idea_source) leadData.s.idea_source = art.idea_source;
   }
   leadData.wiedza = { items: khItems || [], summary: khSummary || null };
+  // Status paywallu (defensywnie — kolumny paywall_opened_at/abandoned dokłada
+  // równolegle inna sesja; mogą jeszcze nie istnieć). Osobny, opakowany fetch:
+  // brak kolumny → cicho pomijamy, karta leada działa dalej.
+  leadData.paywall = null;
+  try {
+    const { data: pw, error: pwErr } = await supabaseClient.from('spar_sessions').select('paywall_opened_at, paywall_abandoned_at').eq('id', id).maybeSingle();
+    if (!pwErr && pw) leadData.paywall = pw;
+  } catch (e) { /* kolumny paywall jeszcze nie istnieją — pomijamy */ }
   renderLeadHead(leadData.s); // odśwież nagłówek + pasek akcji świeżym stanem (paid/cancelled/etap)
   renderLeadTab();
 }
@@ -978,6 +986,20 @@ function openClientPreview(sid) {
     if (w) w.location = url; else window.open(url, '_blank');
   }).catch(() => { if (w) w.close(); toast('Nie udało się otworzyć podglądu'); });
 }
+// Chipy zdrowia w nagłówku leada: padłe generacje (gen_error_count) + status
+// paywallu („dotarł do karty płatności i porzucił"). Paywall czytany z leadData
+// (defensywny fetch); gdy kolumny jeszcze nie istnieją — chip po prostu nie wchodzi.
+function leadHealthChips(s) {
+  const chips = [];
+  const ge = (s && s.gen_error_count) ? Number(s.gen_error_count) : 0;
+  if (ge > 0) chips.push(`<span class="text-[10px] px-1.5 py-0.5 rounded border text-rose-400 bg-rose-400/10 border-rose-400/30" title="Tyle artefaktów tej sesji padło definitywnie (spar_reveals: failed). Zakładka Sekwencja ma szczegóły."><i class="ph ph-warning-octagon mr-0.5"></i>${ge} pad${ge === 1 ? '' : 'y'} generacji</span>`);
+  const pw = (leadData && leadData.s && s && leadData.s.id === s.id) ? leadData.paywall : null;
+  if (pw) {
+    if (pw.paywall_abandoned_at) chips.push(`<span class="text-[10px] px-1.5 py-0.5 rounded border text-amber-400 bg-amber-400/10 border-amber-400/30" title="Dotarł do karty płatności i porzucił: ${fmtDate(pw.paywall_abandoned_at)}"><i class="ph ph-door-open mr-0.5"></i>porzucił paywall</span>`);
+    else if (pw.paywall_opened_at) chips.push(`<span class="text-[10px] px-1.5 py-0.5 rounded border text-sky-400 bg-sky-400/10 border-sky-400/30" title="Otworzył kartę płatności: ${fmtDate(pw.paywall_opened_at)}"><i class="ph ph-credit-card mr-0.5"></i>otworzył paywall</span>`);
+  }
+  return chips.join('');
+}
 function renderLeadHead(s) {
   $('lead-head').innerHTML = `
     <div class="flex items-start gap-3 flex-wrap">
@@ -986,7 +1008,7 @@ function renderLeadHead(s) {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
-          ${signalBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
+          ${signalBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}${leadHealthChips(s)}
         </div>
         <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''} · ${fmtDate(s.created_at)}</div>
       </div>
@@ -1681,18 +1703,33 @@ function copyReservation(id) {
 }
 // Ręczne oznaczenie rezerwacji (fallback/override). Automatyczne oznaczanie robi
 // tpay-webhook (real-time) + spar-followups (cron, safety-net) — patrz reservationUrl().
+// RĘCZNE zaksięgowanie rezerwacji 500 zł (bez realnej płatności TPay). Odróżnialne
+// od prawdziwej wpłaty: wymaga potwierdzenia i jest logowane w adnotacji sesji
+// (pipeline_override='paid' = ślad ręcznej ingerencji, nie sygnał z webhooka).
+// SEMANTYKA LEJKA (lead-stage): rezerwacja = 'negotiation', NIE 'won'. „Wygrany"
+// zarezerwowany wyłącznie dla PEŁNEJ płatności (full_paid_at). Ręczna akcja NIGDY
+// nie ustawia 'won' — inaczej rozjeżdża pipeline (płacący rezerwację ≠ klient).
 async function setReservationPaid(id, val) {
+  if (val && !confirm('Zaksięgować rezerwację RĘCZNIE (bez płatności TPay)?\n\nLead trafi na etap „Rezerwacja" (negotiation), NIE „Wygrany". Użyj tylko gdy masz potwierdzenie wpłaty poza systemem.')) {
+    // przywróć stan checkboxa, jeśli user anulował
+    if (leadData && leadData.s.id === id) renderLeadTab();
+    return;
+  }
   const paidAt = val ? new Date().toISOString() : null;
-  const { error } = await supabaseClient.from('spar_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', id);
+  const patch = { paid_at: paidAt, updated_at: new Date().toISOString() };
+  // Ślad ręcznej ingerencji (odróżnia od paid_at ustawionego przez tpay-webhook).
+  if (val) patch.pipeline_override = 'paid';
+  const { error } = await supabaseClient.from('spar_sessions').update(patch).eq('id', id);
   if (error) { toast('Błąd zapisu: ' + (error.message || '')); console.error(error); return; }
   const s = sessions.find((x) => x.id === id);
   if (s) {
     s.paid_at = paidAt;
-    // pipeline CRM: lead wygrany (best-effort — przy braku uprawnień po prostu pomijamy)
-    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'won' }).eq('id', s.lead_id).neq('status', 'won'); } catch (e) { /* ignore */ } }
+    if (val) s.pipeline_override = 'paid';
+    // pipeline CRM: rezerwacja = 'negotiation' (NIE 'won'). Nie cofamy realnego 'won'.
+    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'negotiation' }).eq('id', s.lead_id).neq('status', 'won'); } catch (e) { /* ignore */ } }
   }
-  toast(val ? 'Oznaczono rezerwację jako opłaconą' : 'Cofnięto oznaczenie rezerwacji');
-  if (leadData && leadData.s.id === id) { leadData.s.paid_at = paidAt; renderLeadHead(leadData.s); renderLeadTab(); }
+  toast(val ? 'Rezerwację zaksięgowano ręcznie (etap: Rezerwacja)' : 'Cofnięto oznaczenie rezerwacji');
+  if (leadData && leadData.s.id === id) { leadData.s.paid_at = paidAt; if (val) leadData.s.pipeline_override = 'paid'; renderLeadHead(leadData.s); renderLeadTab(); }
 }
 async function toggleTest(id, val) {
   const { error } = await supabaseClient.from('spar_sessions').update({ is_test: val }).eq('id', id);
@@ -1849,6 +1886,7 @@ const REVEAL_STATUS = {
   sent:       { label: 'wysłany',               cls: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30' },
   paused:     { label: 'pauza — zimny lead',    cls: 'text-amber-400 bg-amber-400/10 border-amber-400/30' },
   skipped:    { label: 'pominięty',             cls: 'text-zinc-500 bg-white/5 border-white/10' },
+  failed:     { label: 'generacja padła',       cls: 'text-rose-400 bg-rose-400/10 border-rose-400/30' },
 };
 const revKey = (k) => (k || '').replace('reveal_', '');
 function revMeta(k) { return REVEAL_META[revKey(k)] || { label: revKey(k), icon: 'ph-circle', tone: 'text-zinc-400' }; }
@@ -1899,6 +1937,7 @@ async function renderSekwencja() {
   const inSeq = new Set(rv.filter((r) => !(r.sess && (r.sess.is_test || r.sess.paid_at))).map((r) => r.session_id)).size;
   const paused = rv.filter((r) => r.status === 'paused').length;
   const inProgress = rv.filter((r) => r.status === 'generating').length;
+  const failedCount = rv.filter((r) => r.status === 'failed').length;
   const deliveryRate = sentEmails.length ? Math.round((delivered / sentEmails.length) * 100) : 0;
   const smsOk = sms.filter((x) => x.status && x.status !== 'ERROR');
   const kpi = [
@@ -1908,6 +1947,7 @@ async function renderSekwencja() {
     { label: 'SMS reaktywacyjne', val: smsOk.length, icon: 'ph-chat-circle-text', tone: 'text-teal-400' },
     { label: 'W generowaniu', val: inProgress, icon: 'ph-circle-notch', tone: 'text-violet-400' },
     { label: 'Pauza (zimni)', val: paused, icon: 'ph-pause-circle', tone: 'text-amber-400' },
+    { label: 'Padłe (do naprawy)', val: failedCount, icon: 'ph-warning-octagon', tone: failedCount ? 'text-rose-400' : 'text-zinc-500' },
   ];
   $('sekw-kpi').innerHTML = kpi.map((k) => `
     <div class="bg-zinc-950/60 border border-white/5 rounded-xl p-3.5">
@@ -1945,7 +1985,7 @@ async function renderSekwencja() {
 
   // ZAPLANOWANE / W TOKU
   const now = Date.now();
-  const queue = rv.filter((r) => ['pending', 'generating', 'ready', 'paused'].includes(r.status) && !(r.sess && (r.sess.is_test || r.sess.paid_at)))
+  const queue = rv.filter((r) => ['pending', 'generating', 'ready', 'paused', 'failed'].includes(r.status) && !(r.sess && (r.sess.is_test || r.sess.paid_at)))
     .sort((a, b) => new Date(a.due_at) - new Date(b.due_at));
   $('sekw-queue-count').textContent = queue.length + ' pozycji';
   $('sekw-queue-rows').innerHTML = queue.length ? queue.map((r) => {
@@ -2018,6 +2058,14 @@ async function renderProjectDetail(sid, targetId) {
       : `<button onclick="firePreview('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-white/20 text-[11px] transition" title="Podejrzyj maila bez wysyłki"><i class="ph ph-eye"></i></button>
         <button onclick="fireSend('${sid}','${p.key}')" class="px-2.5 py-1.5 rounded-lg border border-white/10 text-zinc-300 hover:text-white hover:border-blue-500/40 text-[11px] transition" title="Wyślij testowo teraz (z pominięciem bramki)"><i class="ph ph-paper-plane-tilt"></i></button>`;
     const m = revMeta(p.key);
+    // Zdrowie generacji: badge błędów + treść ostatniego błędu (z spar_reveals).
+    const errCount = r ? (r.error_count || 0) : 0;
+    const errBadge = (r && (r.status === 'failed' || errCount > 0))
+      ? `<span class="inline-flex items-center px-2 py-0.5 rounded-md border text-[11px] font-medium text-rose-400 bg-rose-400/10 border-rose-400/30" title="${esc((r && r.last_error) || '')}"><i class="ph ph-warning-octagon mr-1"></i>${r.status === 'failed' ? 'padło' : 'błąd'}${errCount ? ' ×' + errCount : ''}</span>`
+      : '';
+    const errLine = (r && r.last_error && (r.status === 'failed' || errCount > 0))
+      ? `<div class="text-[11px] text-rose-400/90 mt-0.5"><i class="ph ph-bug mr-1"></i>${esc(String(r.last_error).slice(0, 160))}${r.last_error_at ? ' · ' + fmtDate(r.last_error_at) : ''}</div>`
+      : '';
     const sx = smsByKind[p.emailKind];
     const smsDeliv = sx ? (sx.delivered_at ? ' · <span class="text-emerald-400">dostarczony</span>' : (sx.dlr_status && /UNDELIV|EXPIR|REJEC|FAIL|UNKNOWN/.test(sx.dlr_status) ? ' · <span class="text-rose-400">' + esc(String(sx.dlr_status).toLowerCase()) + '</span>' : (sx.status === 'ERROR' ? '' : ' · <span class="text-zinc-500">w drodze</span>'))) : '';
     const smsLine = sx ? `<div class="text-[11px] mt-0.5 ${sx.status === 'ERROR' ? 'text-rose-400' : 'text-teal-400'}" title="${esc(sx.message || '')}"><i class="ph ph-chat-circle-text mr-1"></i>SMS ${sx.status === 'ERROR' ? 'błąd' : 'wysłany'} ${fmtDate(sx.created_at)}${sx.phone ? ' → ' + esc(sx.phone) : ''}${smsDeliv}${sx.clicked_at ? ' · <span class="text-emerald-400">klik</span>' : ''} · <button onclick="switchLeadTab('sms')" class="underline underline-offset-2 hover:text-white">treść</button></div>` : '';
@@ -2028,8 +2076,10 @@ async function renderProjectDetail(sid, targetId) {
         <div class="flex items-center gap-2 flex-wrap">
           <span class="text-sm text-white font-medium">${p.seq}. ${esc(m.label)}</span>
           ${statusBadge(status)}
+          ${errBadge}
         </div>
         <div class="text-[11px] text-zinc-500 mt-0.5">${sentLine}</div>
+        ${errLine}
         ${smsLine}
       </div>
       <div class="flex items-center gap-1.5 shrink-0">${actionsHtml}</div>
@@ -2501,7 +2551,7 @@ function seedDemo() {
   const iso = (ms) => new Date(ms).toISOString();
   const mk = (o) => Object.assign({ status: 'active', turns: 0, image_count: 0, preview_images: {}, is_test: false }, o);
   sessions = [
-    mk({ id: 's1', name: 'Tomasz Wnuk', email: 'tomasz@coachpro.pl', phone: '600100200', created_at: iso(now - 5 * day), last_user_at: iso(now - 5 * day), last_panel_at: iso(now - 6 * 36e5), verdict: 'zielony', turns: 14, image_count: 4, preview_brief: { nazwa: 'CoachKeep', opis: 'Przypomina trenerom, z kim odezwać się przez WhatsApp.', design: { kierunek: 'ciepły, zaufany', akcent: '#4d9fff' } } }),
+    mk({ id: 's1', name: 'Tomasz Wnuk', email: 'tomasz@coachpro.pl', phone: '600100200', created_at: iso(now - 5 * day), last_user_at: iso(now - 5 * day), last_panel_at: iso(now - 6 * 36e5), verdict: 'zielony', turns: 14, image_count: 4, gen_error_count: 1, preview_brief: { nazwa: 'CoachKeep', opis: 'Przypomina trenerom, z kim odezwać się przez WhatsApp.', design: { kierunek: 'ciepły, zaufany', akcent: '#4d9fff' } } }),
     mk({ id: 's2', name: 'Anna Lis', email: 'anna@studiolis.pl', created_at: iso(now - 9 * day), last_user_at: iso(now - 9 * day), last_panel_at: iso(now - 8 * day), verdict: 'zielony', turns: 11, image_count: 3, preview_brief: { nazwa: 'RezerwAI', opis: 'Rezerwacje dla małych gabinetów.' } }),
     mk({ id: 's3', name: 'Marek Dąb', email: 'marek@dabconsulting.pl', created_at: iso(now - 2 * day), last_user_at: iso(now - 2 * day), last_panel_at: iso(now - 30 * 6e4), verdict: 'zielony', turns: 18, image_count: 5, paid_at: iso(now - 1 * day), preview_brief: { nazwa: 'OfertaFlow' } }),
     mk({ id: 's4', name: 'Kasia Nowak', email: 'kasia@nowak.pl', created_at: iso(now - 1 * day), last_user_at: iso(now - 20 * 36e5), verdict: 'zolty', turns: 6, image_count: 1, preview_brief: { nazwa: 'PlanDnia' } }),
@@ -2529,7 +2579,8 @@ function seedDemo() {
     { id: 'r3', session_id: 's1', key: 'landing', seq: 3, status: 'pending', due_at: iso(now + 1 * day), email_kind: 'reveal_landing', sess: sessEmbed('s1') },
     { id: 'r4', session_id: 's1', key: 'prototyp', seq: 5, status: 'pending', due_at: iso(now + 6 * day), email_kind: 'reveal_prototyp', sess: sessEmbed('s1') },
     { id: 'r5', session_id: 's2', key: 'economics', seq: 2, status: 'paused', due_at: iso(now - 2 * day), email_kind: 'reveal_economics', sess: sessEmbed('s2') },
-    { id: 'r6', session_id: 's6', key: 'gtm', seq: 4, status: 'generating', due_at: iso(now - 6 * 36e5), email_kind: 'reveal_gtm', sess: sessEmbed('s6') },
+    { id: 'r6', session_id: 's6', key: 'gtm', seq: 4, status: 'generating', due_at: iso(now - 6 * 36e5), email_kind: 'reveal_gtm', error_count: 1, last_error: 'spar-gtm HTTP 502 blad_generowania', last_error_at: iso(now - 40 * 6e4), sess: sessEmbed('s6') },
+    { id: 'r7', session_id: 's1', key: 'gtm', seq: 4, status: 'failed', due_at: iso(now - 1 * day), email_kind: 'reveal_gtm', error_count: 3, last_error: 'spar-gtm HTTP 403 wymagane_logowanie', last_error_at: iso(now - 2 * 36e5), sess: sessEmbed('s1') },
   ];
   const revealMails = mails.filter((m) => /^reveal_/.test(m.kind)).map((m) => Object.assign({}, m, { sess: sessEmbed(m.session_id) }));
   window.__MOCK = {

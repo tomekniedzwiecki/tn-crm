@@ -146,6 +146,16 @@ Tani research zawsze 0h/5h/10h: **rynek** (`spar-raport`) → **economics** → 
 
 ---
 
+### ✅ Zrobione 2026-07-10 (audyt lejka + wdrożenie domykania)
+- **Prompt (`stworze_sparing_prompt`, 51k; backup `_backup_20260710`):** DRZEWO DOMYKANIA (sygnał intencji → `<makieta>` w tej samej turze; karta projektu domknięta → następna tura = cena+karta; limit pętli poprawek; zakaz pytań o pozwolenie i furtek odroczenia w `<opcje>`; wyjątek zwięzłości na turę domknięcia), bank obiekcji +4 (scam/zaufanie, kontakt z Tomkiem = sygnał kupna, żona/wspólnik, „zastanowię się"), sekcja `# POWRÓT PO PRZERWIE`, spięty timing K5↔`<ocena>`.
+- **spar-chat:** blok `[STAN SESJI]` per tura (werdykt, paid, makieta wystawiona, panel_visits, paywall open/abandon — twarde fakty zamiast skanowania historii); gałąź post-paid (opłacona rezerwacja ≠ dalszy pitch); eventy `paywall_open`/`paywall_abandon`; stempel `makieta_last_at`; uczciwy komunikat + event error przy padzie bramki `spar-assess`.
+- **Kolumny:** `spar_sessions.paywall_opened_at/paywall_abandoned_at/makieta_last_at/gen_error_count`, `spar_reveals.error_count/last_error/last_error_at` (migracje `20260710*`).
+- **KRYTYCZNY FIX pipeline'u dripa:** owner-gate odrzucał 403 wywołania WEWNĘTRZNE spar-drip (service-role) → generacje dla zarejestrowanych leadów nigdy nie ruszały (36 reveali wisiało w `generating`). Nowy `isTrustedInternalCall` w `_shared/spar-owner.ts` (Bearer==SERVICE_ROLE_KEY omija bramkę; `?id=` dalej nie jest hasłem). Recovery stale-generating (>30 min → pending, po 3 padach `failed` + Slack `spar_gen_error`), SMS w dripie z timeoutem 20s+retry, retry OpenAI dołożony w economics/gtm.
+- **spar-followups:** `reclose_1` (+48h) / `reclose_2` (+5 dni) po sygnale paywalla/nudge; `payment_rescue` (orders pending 2–48h); linki CTA maili przez PANEL (nie goły checkout); List-Unsubscribe (flaga `unsubscribe:true`, tylko kindy marketingowe). send-sms: timeout 12s + retry + normalizacja numerów.
+- **Front:** beacony paywalla, InitiateCheckout z dedupem `resv_<sid>`, idle-nudge 90s (raz/sesję, wspólny guard zaczepek), mail-capture w oknie badania rynku, ceremonia po płatności + guard `!state.paid` na karcie, hero mobile z CTA + pasek zaufania, fail-state banerów GTM. Checkout v2: linia zwrotności przy rezerwacji, piksele ujednolicone do netto.
+- **Panel:** `derivedStageOf` + kanban o stany `full_paid`/`knowhow_closed`; `setReservationPaid` → negotiation (won TYLKO full_paid) + marker ręcznego księgowania; badge zdrowia generacji i chip paywalla w karcie leada.
+- **spar-project:** `panel_visits`/`last_panel_at` awaited (bramka `visits2` przestaje gubić stemple).
+
 ### ✅ Zrobione 2026-06-20
 Bug #1 (kolejna rozmowa — stała `CONVO_DESCRIPTION`) · Bug #2 (retry OpenAI w raport/landing/prototype/assess) · bezpieczeństwo bucketa `attachments` (SELECT→`team_members`) · **safety-net `full_paid_at`** (pełna płatność za budowę nadrabiana w `spar-followups`, gdy webhook nie trafi — wcześniej płacący ~12k mógł utknąć bez odmrożenia spowiednika) · sprzątnięty `c:\tmp` · panel „Źródło prawdy" (edycja SSOT).
 

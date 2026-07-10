@@ -145,19 +145,60 @@ async function artifactReady(supabase: ReturnType<typeof createClient>, key: str
 }
 
 // Odpal generację artefaktu (woła istniejącą funkcję spar-*). Idempotentne —
-// funkcje zwracają cached jeśli już jest.
-async function triggerGeneration(key: string, sid: string, serviceKey: string): Promise<void> {
+// funkcje zwracają cached jeśli już jest. Zwraca wynik, by processReveal wiedział,
+// czy generacja padła CICHO (403 owner-gate / 502 openai / wyjątek) — inaczej reveal
+// wisiał wiecznie w 'generating' i nic tego nie wykrywało.
+// Autoryzacja: klucz serwisowy → generatory rozpoznają go jako zaufany internal
+// (isTrustedInternalCall) i OMIJAJĄ bramkę właściciela (sesje przypięte do konta).
+async function triggerGeneration(key: string, sid: string, serviceKey: string): Promise<{ ok: boolean; error?: string }> {
   const map: Record<string, string> = { prototyp: 'spar-prototype', rynek: 'spar-raport', economics: 'spar-economics', landing: 'spar-landing', gtm: 'spar-gtm' }
   const fn = map[key]
-  if (!fn) return
+  if (!fn) return { ok: false, error: 'nieznany_artefakt' }
   const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${serviceKey}`, 'apikey': serviceKey }
   try {
-    await fetch(FN(fn), { method: 'POST', headers, body: JSON.stringify({ sessionId: sid }) })
+    const res = await fetch(FN(fn), { method: 'POST', headers, body: JSON.stringify({ sessionId: sid }) })
     // gtm: po copy dociągamy banery (osobna akcja w tle)
     if (key === 'gtm') {
       await fetch(FN('spar-gtm'), { method: 'POST', headers, body: JSON.stringify({ sessionId: sid, action: 'banners' }) }).catch(() => {})
     }
-  } catch (e) { console.error('[spar-drip] trigger', key, 'error:', e instanceof Error ? e.message : String(e)) }
+    // 200 = wygenerowane/cache; 202 = w toku (lock zajęty) — OBA OK (artefakt dojdzie).
+    // 4xx/5xx (403 owner-gate, 400 brak_karty, 502 openai) = realny błąd generacji.
+    if (res.ok || res.status === 202) return { ok: true }
+    const body = (await res.text().catch(() => '')).slice(0, 180)
+    console.error('[spar-drip] trigger', key, 'HTTP', res.status, body)
+    return { ok: false, error: `${fn} HTTP ${res.status}${body ? ' ' + body : ''}` }
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e)
+    console.error('[spar-drip] trigger', key, 'error:', msg)
+    return { ok: false, error: `${fn} wyjątek: ${msg}` }
+  }
+}
+
+// ── Alert #sparing: definitywny pad generacji artefaktu (/aplikacja) ──
+// Wysyłka przez slack-notify (typ 'spar_gen_error', kanał #sparing). Fire-and-forget
+// z perspektywy logiki — błąd Slacka nie może wywrócić crona. Dedup NATURALNY: alert
+// leci tylko przy przejściu reveala w 'failed' (a ten wypada z kolejki due) → RAZ na
+// artefakt/sesję.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL'); const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) return
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error('[spar-drip] slack-notify', type, 'HTTP', res.status)
+  } catch (e) { console.error('[spar-drip] slack-notify', type, 'exception:', e instanceof Error ? e.message : String(e)) }
+}
+// deno-lint-ignore no-explicit-any
+async function notifyGenErrorSlack(s: any, key: string, error: string, count: number): Promise<void> {
+  const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+  await postSlackSparing('spar_gen_error', {
+    session_id: s.id, funnel: 'aplikacja',
+    name: s.name ?? null, email: s.email ?? null,
+    project_name: (brief && brief.nazwa) ?? null,
+    artifact: key, error: String(error || '').slice(0, 280), count,
+  })
 }
 
 // Adres podglądu artefaktu (link „zobacz" w mailu)
@@ -351,15 +392,41 @@ async function getRevealSms(supabase: ReturnType<typeof createClient>, reveal: a
 }
 
 // Wyślij SMS przez funkcję send-sms (autoryzacja x-cron-secret). Zwraca wynik JSON.
+// HARDENING: własny AbortController (timeout 20s) + 1 retry przy braku odpowiedzi.
+// Diagnoza (2026-07-10): przy zamuleniu SMSAPI send-sms nie odpowiadał, a edge
+// wall-clock potrafił ubić CAŁY cron dripa (19/32 reveal_rynek padło „no_response").
+// send-sms ma już własny timeout 12s + retry; tu bronimy tylko crona przed zawisem
+// jednego SMS-a (max ~2×20s). Retry TYLKO gdy brak/niepełna odpowiedź (timeout/wyjątek/
+// nie-ok) — send-sms jest idempotentne po swojej stronie, więc nie mnożymy wysyłek.
 async function sendSms(CRON_SECRET: string, to: string, message: string): Promise<{ ok?: boolean; id?: string; points?: number; status?: string; error?: unknown } | null> {
-  try {
-    const r = await fetch(FN('send-sms'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET },
-      body: JSON.stringify({ action: 'send', to, message }),
-    })
-    return await r.json().catch(() => null)
-  } catch (e) { console.error('[spar-drip] sms send error:', e instanceof Error ? e.message : String(e)); return null }
+  const attempt = async (): Promise<{ ok: boolean; json: { ok?: boolean; id?: string; points?: number; status?: string; error?: unknown } | null }> => {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), 20000)
+    try {
+      const r = await fetch(FN('send-sms'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-cron-secret': CRON_SECRET },
+        body: JSON.stringify({ action: 'send', to, message }),
+        signal: ctrl.signal,
+      })
+      const json = await r.json().catch(() => null)
+      return { ok: r.ok && !!json, json }
+    } finally { clearTimeout(timer) }
+  }
+  for (let i = 0; i < 2; i++) {
+    try {
+      const { ok, json } = await attempt()
+      if (ok) return json
+      if (i === 0) { console.warn('[spar-drip] sms send: brak/niepełna odpowiedź — ponawiam raz'); continue }
+      return json   // druga próba — oddaj co jest (send-sms zaloguje pad w spar_sms)
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error(`[spar-drip] sms send error (próba ${i + 1}/2):`, msg)
+      if (i === 0) continue
+      return null
+    }
+  }
+  return null
 }
 
 // Przykładowa sesja do PODGLĄDU szablonów (bez realnego leada) — id-zero, więc
@@ -377,7 +444,12 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, business_plan, market_report, economics, gtm, landing_url, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test, gen_error_count'
+
+// Po tylu NIEUDANYCH ponowieniach generacji (reveal wisi w 'generating', artefakt
+// nie powstaje) uznajemy odsłonę za PADŁĄ: status 'failed' + alert #sparing.
+// 'failed' wypada z kolejki due, więc przestaje wisieć i zżerać wywołania generatorów.
+const MAX_GEN_ATTEMPTS = 3
 
 // Czy lead jest ZAANGAŻOWANY (bramka): aktywność w panelu/rozmowie w oknie LUB
 // otworzył którykolwiek reveal-mail.
@@ -482,8 +554,23 @@ async function sendReveal(supabase: ReturnType<typeof createClient>, SUPABASE_UR
 async function processReveal(supabase: ReturnType<typeof createClient>, SUPABASE_URL: string, SERVICE_KEY: string, s: any, reveal: any): Promise<string> {
   const ready = await artifactReady(supabase, reveal.key, s)
   if (!ready) {
-    await triggerGeneration(reveal.key, s.id, SERVICE_KEY)
-    await supabase.from('spar_reveals').update({ status: 'generating', updated_at: new Date().toISOString() }).eq('id', reveal.id)
+    const gen = await triggerGeneration(reveal.key, s.id, SERVICE_KEY)
+    const nowIso = new Date().toISOString()
+    // Licznik prób: rośnie, gdy reveal BYŁ już 'generating' (poprzedni przebieg
+    // odpalił generację), a artefaktu wciąż nie ma — czyli realny nieudany retry.
+    // Świeże 'pending' → 'generating' liczymy jako próbę 0 (dajemy generacji czas
+    // do kolejnego crona; nie karzemy za normalną asynchroniczność).
+    const wasGenerating = reveal.status === 'generating'
+    const nextCount = (reveal.error_count || 0) + (wasGenerating ? 1 : 0)
+    const errMsg = gen.error || (wasGenerating ? 'artefakt nie powstał mimo ponowienia (stale)' : null)
+    if (wasGenerating && nextCount >= MAX_GEN_ATTEMPTS) {
+      // Definitywny pad: zdejmij z kolejki (status 'failed'), policz na sesji, zaalarmuj.
+      await supabase.from('spar_reveals').update({ status: 'failed', error_count: nextCount, last_error: (errMsg || 'generacja padła').slice(0, 500), last_error_at: nowIso, updated_at: nowIso }).eq('id', reveal.id)
+      try { await supabase.from('spar_sessions').update({ gen_error_count: ((s.gen_error_count as number) || 0) + 1 }).eq('id', s.id) } catch (bErr) { console.error('[spar-drip] gen_error_count bump:', bErr) }
+      await notifyGenErrorSlack(s, reveal.key, errMsg || 'generacja padła', nextCount)
+      return 'failed'
+    }
+    await supabase.from('spar_reveals').update({ status: 'generating', error_count: nextCount, last_error: errMsg ? errMsg.slice(0, 500) : (reveal.last_error ?? null), last_error_at: errMsg ? nowIso : (reveal.last_error_at ?? null), updated_at: nowIso }).eq('id', reveal.id)
     return 'generating'
   }
   if (!reveal.generated_at) await supabase.from('spar_reveals').update({ generated_at: new Date().toISOString() }).eq('id', reveal.id)
@@ -579,7 +666,9 @@ Deno.serve(async (req) => {
         return jsonResponse({ ok: true, cancelled: true }, 200)
       }
       await supabase.from('spar_sessions').update({ sequence_cancelled_at: null, updated_at: nowIso }).eq('id', sid)
-      await supabase.from('spar_reveals').update({ status: 'pending', updated_at: nowIso }).eq('session_id', sid).eq('status', 'skipped')
+      // Wznów niewysłane (skipped) ORAZ padłe (failed — reset licznika, świeża szansa
+      // po naprawie root-cause). Nie ruszamy sent/paused.
+      await supabase.from('spar_reveals').update({ status: 'pending', error_count: 0, last_error: null, updated_at: nowIso }).eq('session_id', sid).in('status', ['skipped', 'failed'])
       return jsonResponse({ ok: true, cancelled: false }, 200)
     }
 

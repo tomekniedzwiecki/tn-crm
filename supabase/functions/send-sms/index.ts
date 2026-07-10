@@ -46,10 +46,33 @@ function normalizePhone(raw: unknown): string | null {
   let d = String(raw || '').replace(/\D/g, '')
   if (!d) return null
   if (d.startsWith('00')) d = d.slice(2)            // 0048... → 48...
+  if (d.length === 10 && d.startsWith('0')) d = d.slice(1)  // krajowy z zerem wiodącym 0XXXXXXXXX → 9 cyfr
   if (d.length === 9) d = '48' + d                  // krajowy 9-cyfrowy → +48
   if (d.startsWith('48') && d.length === 11) return d
   if (d.length >= 11 && d.length <= 15) return d     // już z prefiksem innego kraju
   return null
+}
+
+// Fetch z twardym timeoutem + jednym retry. Powód: masowe wysyłki (reveal_rynek w
+// spar-drip) łapały „no_response" — SMSAPI potrafi zamulić, a bez limitu czasu
+// edge-wall-clock ubija funkcję ZANIM zdąży odpowiedzieć wołającemu (który loguje
+// wtedy błąd „no_response"). Bounded call + retry zwraca zawsze definitywny wynik.
+async function fetchSmsApi(url: string, init: RequestInit, timeoutMs = 12000): Promise<Response> {
+  let lastErr: unknown = null
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const ctrl = new AbortController()
+    const timer = setTimeout(() => ctrl.abort(), timeoutMs)
+    try {
+      return await fetch(url, { ...init, signal: ctrl.signal })
+    } catch (e) {
+      lastErr = e
+      // retry tylko przy przerwaniu/sieci; drobny backoff
+      if (attempt === 0) await new Promise((r) => setTimeout(r, 600))
+    } finally {
+      clearTimeout(timer)
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error('sms_fetch_failed')
 }
 
 Deno.serve(async (req: Request) => {
@@ -98,11 +121,17 @@ Deno.serve(async (req: Request) => {
       if (!test && SB_URL && SECRET) params.set('notify_url', `${SB_URL}/functions/v1/sms-dlr?token=${encodeURIComponent(SECRET)}`)
       if (test) params.set('test', '1')
 
-      const r = await fetch(`${SMSAPI_BASE}/sms.do`, {
-        method: 'POST',
-        headers: { ...apiHeaders, 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: params.toString(),
-      })
+      let r: Response
+      try {
+        r = await fetchSmsApi(`${SMSAPI_BASE}/sms.do`, {
+          method: 'POST',
+          headers: { ...apiHeaders, 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: params.toString(),
+        })
+      } catch (fe) {
+        console.error('[send-sms] SMSAPI fetch failed:', fe instanceof Error ? fe.message : String(fe))
+        return json({ ok: false, error: 'smsapi_timeout' }, 504)
+      }
       const d = await r.json().catch(() => ({})) as Record<string, unknown>
       const item = Array.isArray(d.list) ? (d.list[0] as Record<string, unknown>) : null
       if (!r.ok || d.error || !item) {

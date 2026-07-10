@@ -22,7 +22,7 @@
 //   SPAR_RAPORT_MODEL  — opcjonalny override (default: SPAR_OPENAI_MODEL -> gpt-5.5)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { verifyAuthUser, ownerDenied, isTrustedInternalCall } from "../_shared/spar-owner.ts";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
@@ -194,9 +194,12 @@ Deno.serve(async (req) => {
 
     // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
     // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
-    const authUser = await verifyAuthUser(req, supabase)
-    if (ownerDenied(session.auth_user_id as string | null, authUser)) {
-      return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    // Wyjątek: zaufany wywołujący wewnętrzny (spar-drip kluczem serwisowym).
+    if (!isTrustedInternalCall(req)) {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
     }
 
     const karta = session.problem_summary as Record<string, unknown> | null

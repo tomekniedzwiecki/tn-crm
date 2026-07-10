@@ -37,7 +37,7 @@
 //          SPAR_CRON_SECRET (admin, współdzielony ze spar-landing/followups).
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { verifyAuthUser, ownerDenied, isTrustedInternalCall } from "../_shared/spar-owner.ts";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
@@ -528,7 +528,7 @@ Deno.serve(async (req) => {
     // Bramka właściciela (PRZED 'status'/budową; admin omija — panel TN Aplikacje
     // generuje na żądanie): sesja przypięta do konta wymaga JWT tego konta,
     // link ?id= przestaje działać jak hasło (lustrzane odbicie spar-chat).
-    if (!isAdmin) {
+    if (!isAdmin && !isTrustedInternalCall(req)) {
       const authUser = await verifyAuthUser(req, supabase)
       const { data: own } = await supabase.from('spar_sessions').select('auth_user_id').eq('id', sessionId).maybeSingle()
       if (own && ownerDenied(own.auth_user_id as string | null, authUser)) {

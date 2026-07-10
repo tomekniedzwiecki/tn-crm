@@ -1929,6 +1929,7 @@ let installmentWorkflowId = null;
 let installmentData = null;
 let upgradeWorkflowId = null;
 let upgradeToOfferId = null;
+let sparSid = null; // sid sesji sparingu (?sid=) — dedup InitiateCheckout z lejkiem /aplikacja
 
 // Tpay group IDs (for Tpay-routed methods)
 const TPAY_GROUPS = {
@@ -2019,11 +2020,11 @@ function showRevolutInstructions(order) {
     $('v-revolut-amount').textContent = formatPrice(amount);
     $('v-revolut-overlay').classList.add('show');
 
-    // Track InitiateCheckout
+    // Track InitiateCheckout (NETTO + wspólny eventID dla oferty rezerwacji)
     if (typeof fbq !== 'undefined') {
         fbq('track', 'InitiateCheckout', {
-            content_name: 'Revolut Payment', currency: 'PLN', value: amount
-        });
+            content_name: 'Revolut Payment', currency: 'PLN', value: amount / 1.23
+        }, resvEventOpts());
     }
 
     // Notify Slack (best effort)
@@ -2524,9 +2525,10 @@ async function handleSubmit() {
 
     const effectivePrice = getEffectivePrice();
     if (typeof fbq !== 'undefined') {
+        // NETTO + wspólny eventID dla oferty rezerwacji (dedup z pikselem /aplikacja)
         fbq('track', 'InitiateCheckout', {
-            content_name: currentOffer.name, currency: 'PLN', value: effectivePrice
-        });
+            content_name: currentOffer.name, currency: 'PLN', value: effectivePrice / 1.23
+        }, resvEventOpts());
     }
 
     if (!validateForm()) {
@@ -2722,6 +2724,14 @@ const STWORZE_OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076';
 const STWORZE_REGULAMIN = 'https://tomekniedzwiecki.pl/aplikacja/regulamin/';
 let stworzeConsentRequired = false;
 
+// Oferta rezerwacji + znany sid sparingu → wspólny eventID z pikselem /aplikacja
+// (sparing odpala InitiateCheckout resv_<sid> przy kliknięciu w CTA). Meta/TikTok
+// dedupują po tym samym id, więc nie ma podwójnego strzału mimo dwóch źródeł.
+function resvEventOpts() {
+    return (currentOffer && currentOffer.id === STWORZE_OFFER_ID && sparSid)
+        ? { eventID: 'resv_' + sparSid } : undefined;
+}
+
 function setupStworzeConsent(offer) {
     if (offer.id !== STWORZE_OFFER_ID) return;
     stworzeConsentRequired = true;
@@ -2743,6 +2753,18 @@ function setupStworzeConsent(offer) {
     err.style.cssText = 'display:none;color:#f87171;font-size:12px;margin:-2px 0 8px;';
     err.textContent = 'Zaznacz zgodę, żeby przejść do płatności.';
     ctaWrap.parentNode.insertBefore(err, ctaWrap);
+    // Warunki widoczne w momencie płatności (subtelnie, przy CTA; widoczne też na
+    // mobile, bo — jak checkbox — stoi POZA .v-form-cta ukrywanym na telefonie).
+    if (!$('stworze-reassure')) {
+        const reassure = document.createElement('div');
+        reassure.id = 'stworze-reassure';
+        reassure.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 14px;margin:2px 0 12px;font-size:12px;line-height:1.5;color:#a1a1aa;';
+        reassure.innerHTML =
+            '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0"></span>W pełni zwrotne</span>' +
+            '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0"></span>Wliczane w cenę budowy</span>' +
+            '<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:5px;height:5px;border-radius:50%;background:#10b981;flex-shrink:0"></span>Po wpłacie Tomek przygotuje plan i odezwie się osobiście</span>';
+        ctaWrap.parentNode.insertBefore(reassure, ctaWrap);
+    }
 }
 
 function validateStworzeConsent() {
@@ -2763,6 +2785,7 @@ async function loadOffer() {
     const customDescription = params.get('description');
     const leadId = params.get('lead_id');
 
+    sparSid = params.get('sid'); // sesja sparingu — dla dedup InitiateCheckout (resv_<sid>)
     // Sparing: prefill e-maila kontem aplikacji (atrybucja i tak idzie po spar_user_id)
     const sparEmail = params.get('spar_email');
     if (sparEmail && $('v-email') && !$('v-email').value) $('v-email').value = sparEmail;
@@ -2938,7 +2961,8 @@ async function loadOffer() {
         showCheckout();
 
         if (typeof fbq !== 'undefined') {
-            fbq('track', 'ViewContent', { content_name: currentOffer.name, content_type: 'product', currency: 'PLN', value: currentOffer.price });
+            // NETTO (spójne z begin_checkout GA + Purchase na success.html; wszystkie piksele liczą netto)
+            fbq('track', 'ViewContent', { content_name: currentOffer.name, content_type: 'product', currency: 'PLN', value: currentOffer.price / 1.23 });
         }
         if (typeof gtag !== 'undefined') {
             gtag('event', 'begin_checkout', {

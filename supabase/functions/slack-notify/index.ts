@@ -100,6 +100,11 @@ Deno.serve(async (req) => {
         message = formatSparPreviewMessage({ ...data, funnel: data.funnel || 'aplikacja' })
         break
 
+      case 'spar_gen_error':
+        webhookUrl = webhookSparing
+        message = formatSparGenErrorMessage(data)
+        break
+
       case 'bud_preview':
         webhookUrl = webhookSparing
         message = formatSparPreviewMessage({ ...data, funnel: 'sklep' })
@@ -1573,6 +1578,48 @@ function formatSparReviveMessage(data: {
   if (data.phone) { const wa = waLink(data.phone); if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' }) }
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }] })
+  return { blocks }
+}
+
+// #sparing: cichy pad generacji artefaktu lejka /aplikacja (rynek/economics/gtm/
+// strona/prototyp). Reveal utknął w 'generating' i po N ponowieniach spar-drip
+// oznaczył go 'failed'. Tomek ma wiedzieć, że zielony lead NIE dostał artefaktu
+// (mail odsłony nie poszedł) — zanim odkryje ubytek przypadkiem. Deep-link do
+// karty leada w panelu TN Aplikacje.
+const SPAR_ARTIFACT_LABELS: Record<string, string> = {
+  rynek: 'Raport rynku',
+  economics: 'Unit economics',
+  gtm: 'Plan + reklamy (GTM)',
+  landing: 'Strona sprzedażowa',
+  prototyp: 'Klikalny prototyp',
+}
+function formatSparGenErrorMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  project_name?: string
+  artifact?: string
+  error?: string
+  count?: number
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+  const artLabel = SPAR_ARTIFACT_LABELS[data.artifact || ''] || (data.artifact || 'artefakt')
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🛑 Aplikacja — GENERACJA PADŁA', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `Zielony lead NIE dostał artefaktu — mail odsłony nie poszedł. Sprawdź i wygeneruj ręcznie z panelu.\n${headerName}${emailLine}${projectLine}` } },
+    { type: 'section', fields: [
+      { type: 'mrkdwn', text: `*Artefakt:*\n${artLabel}` },
+      { type: 'mrkdwn', text: `*Nieudane próby:*\n${typeof data.count === 'number' ? data.count : '?'}` },
+    ] },
+  ]
+  if (data.error) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Błąd:*\n\`${String(data.error).slice(0, 280)}\`` } })
+  }
+  const link = sparLeadLink(data.session_id)
+  if (link) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_spar_gen_error' }] })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }
 }
 

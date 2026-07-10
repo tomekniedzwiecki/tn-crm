@@ -433,8 +433,10 @@ Deno.serve(async (req) => {
       const isNewVisit = !lastPanelMs || (nowMs - lastPanelMs) > VISIT_DEBOUNCE_MS
       const visitPatch: Record<string, unknown> = { last_panel_at: new Date(nowMs).toISOString() }
       if (isNewVisit) visitPatch.panel_visits = ((session.panel_visits as number) || 0) + 1
-      supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
-        .then(() => {}, (e: unknown) => console.error('[spar-project] panel visit stamp error:', e))
+      // AWAIT (nie fire-and-forget): last_panel_at/panel_visits napędzają bramkę
+      // 'visits2' landingu w spar-drip — niezastempowany dotyk gubił odblokowanie.
+      { const { error: vErr } = await supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
+        if (vErr) console.error('[spar-project] panel visit stamp error:', vErr) }
       if (isGreen && !isPaid && !session.full_paid_at) {
         // Eager-seed planu (idempotentne) — żeby bramkowanie działało od razu po
         // werdykcie, nie dopiero po przebiegu crona dripa. Kadencja w GODZINACH (h)
