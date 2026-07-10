@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, name, phone, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product, budget_declared, shortlist')
+      .select('id, name, phone, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, market_report_error, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product, budget_declared, shortlist')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -635,6 +635,9 @@ Deno.serve(async (req) => {
         image_count: session.image_count || 0,
         business_plan: bizplan,
         market_report: raport,
+        // Trwały stan błędu generacji raportu (bud-raport stempluje po wyczerpaniu prób).
+        // Front: gdy != null i brak market_report → pokaż błąd i PRZESTAŃ pollować (koniec pętli).
+        market_report_error: (session.market_report_error as string | null) || null,
         economics: economics,
         gtm: gtm,
         landing_url: session.landing_url || null,

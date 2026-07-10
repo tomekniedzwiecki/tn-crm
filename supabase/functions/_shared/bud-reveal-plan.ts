@@ -11,6 +11,9 @@
 //  • raport / makiety / reklamy = wysyłane gdy artefakt jest, w odstępach 0h / 5h / 10h od seedu.
 //  • strona = gate 'visits2' (lead wszedł do panelu >=2x SAM) + wymaga landing_html.
 //  • rezerwacja = ZAMKNIĘCIE: zawsze (gate 'none', requires null) — recap + CTA zwrotnej rezerwacji.
+//  • reclose1/reclose2 = RE-CLOSE po rezerwacji (+48h / +5 dni): spokojne dopięcie, TYLKO gdy
+//    paid_at IS NULL i lead nie zrezygnował (guard w cronie: paid_at/full_paid_at/
+//    sequence_cancelled_at/pipeline_override='resigned'). CTA → PANEL (#wspolpraca), nie checkout.
 // due_at (h) to „nie wcześniej niż"; realną bramką jest istnienie artefaktu (requires) + zaangażowanie.
 
 export type RevealGate = 'none' | 'visits2' | 'seen_landing'
@@ -22,6 +25,10 @@ export const REVEAL_PLAN: RevealStep[] = [
   { key: 'reklamy',    seq: 3, h: 10, emailKind: 'reveal_reklamy',    gate: 'none',    requires: 'session_ads' },
   { key: 'strona',     seq: 4, h: 24, emailKind: 'reveal_strona',     gate: 'visits2', requires: 'landing_html' },
   { key: 'rezerwacja', seq: 5, h: 30, emailKind: 'reveal_rezerwacja', gate: 'none',    requires: null },
+  // RE-CLOSE po rezerwacji (paid_at IS NULL, nie-rezygnacja — guard w cronie). Link do PANELU
+  // (#wspolpraca), nie direct checkout — proof-grid + narracja zwrotności domykają.
+  { key: 'reclose1',   seq: 6, h: 78,  emailKind: 'reveal_reclose_1', gate: 'none',    requires: null }, // +48h po rezerwacji (30h)
+  { key: 'reclose2',   seq: 7, h: 150, emailKind: 'reveal_reclose_2', gate: 'none',    requires: null }, // +5 dni po rezerwacji (30h)
 ]
 
 // Bramka „2 wizyty" (strona) + debounce liczenia odrębnych wejść do panelu.

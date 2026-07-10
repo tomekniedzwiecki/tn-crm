@@ -880,7 +880,10 @@ function leadChatPhases() {
   let verdictIdx = -1;
   for (let i = 0; i < msgs.length; i++) {
     const c = msgs[i].content || '';
-    if (msgs[i].role === 'assistant' && c.indexOf('<werdykt>') >= 0 && /"kolor"\s*:\s*"zielony"/.test(c)) { verdictIdx = i; break; }
+    if (msgs[i].role !== 'assistant') continue;
+    // /sklep emituje marker <zielone> (zielone światło). Legacy /aplikacja: <werdykt> kolor=zielony.
+    // Obsługujemy OBA — inaczej sesje /sklep nie mają fazy „warunki/współpraca".
+    if (/<zielone[\s/>]/.test(c) || (c.indexOf('<werdykt>') >= 0 && /"kolor"\s*:\s*"zielony"/.test(c))) { verdictIdx = i; break; }
   }
   const phases = msgs.map((m, i) => {
     const t = m.created_at ? Date.parse(m.created_at) : 0;
@@ -1045,7 +1048,7 @@ async function retryCreateLead(sid) {
     } else {
       const { data: ins, error: insErr } = await supabaseClient.from('leads').insert({
         email: s.email.trim(), name: s.name || null, phone: s.phone || null,
-        lead_source: 'budowanie', status: (s.paid_at ? 'won' : 'new'),
+        lead_source: 'budowanie', status: (s.paid_at ? 'negotiation' : 'new'),
       }).select('id').maybeSingle();
       if (insErr) { console.error(insErr); toast('Błąd tworzenia leada: ' + (insErr.message || '')); return; }
       leadId = ins && ins.id;
@@ -1728,8 +1731,10 @@ async function setReservationPaid(id, val) {
   const s = sessions.find((x) => x.id === id);
   if (s) {
     s.paid_at = paidAt;
-    // pipeline CRM: lead wygrany (best-effort — przy braku uprawnień po prostu pomijamy)
-    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'won' }).eq('id', s.lead_id).neq('status', 'won'); } catch (e) { /* ignore */ } }
+    // pipeline CRM: rezerwacja opłacona = 'negotiation' (NIE 'won' — 'won' zarezerwowane
+    // dla PEŁNEJ płatności budowy, spójnie z tpay-webhook isFull). Guard: nie downgrade'uj
+    // leada już 'won'/'negotiation' (best-effort — przy braku uprawnień po prostu pomijamy).
+    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'negotiation' }).eq('id', s.lead_id).not('status', 'in', '("won","negotiation")'); } catch (e) { /* ignore */ } }
   }
   toast(val ? 'Oznaczono rezerwację jako opłaconą' : 'Cofnięto oznaczenie rezerwacji');
   if (leadData && leadData.s.id === id) { leadData.s.paid_at = paidAt; renderLeadHead(leadData.s); renderLeadTab(); }

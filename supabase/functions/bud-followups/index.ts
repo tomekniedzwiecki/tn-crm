@@ -192,6 +192,7 @@ interface SessionRow {
   sms_consent_at: string | null
   sms_opt_out: boolean | null
   sequence_cancelled_at: string | null
+  pipeline_override: string | null
   created_at: string | null
 }
 
@@ -276,7 +277,9 @@ function forKogo(s: SessionRow): string {
 }
 
 function followupView(kind: string, s: SessionRow): string {
-  return panelLink(s.id, kind) // abandoned_chat / _2 / _3 → utm_campaign per mail
+  // reservation_rescue → panel z kotwicą #wspolpraca (karta rezerwacji + proof-grid).
+  const hash = kind === 'reservation_rescue' ? '#wspolpraca' : ''
+  return panelLink(s.id, kind, hash) // abandoned_chat / _2 / _3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
 function reserveFor(_kind: string, _s: SessionRow): string | null { return null }
@@ -306,6 +309,8 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     abandoned_chat_2: { subject: 'Co czeka na Ciebie za darmo', body: `Cześć${im}!\n\nWczoraj zaczęliśmy projektować ${co} i utknęliśmy w pół drogi. Chcę tylko, żebyś wiedział, co dokładnie się dla Ciebie zbuduje, jeśli dokończymy rozmowę: sprawdzenie Twojego rynku i konkurencji na żywo, makiety sklepu w kilku stylach i gotowe pomysły na reklamy. To realna robota — nic za nią nie płacisz.\n\nTo Ty masz na tym skorzystać. Jak będziesz miał chwilę, [wróć i dokończ](LINK_VIEW).` },
     abandoned_chat_3: { subject: 'Zostawiam Twój projekt zapisany', body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — to ostatnia wiadomość w tej sprawie. Twój projekt jest zapisany i wraca dokładnie tam, gdzie skończyliśmy. Drzwi są otwarte, decyzja należy do Ciebie.\n\nJeśli kiedyś zechcesz to ruszyć, [link masz tutaj](LINK_VIEW).` },
     paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${co} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji sklepu, produkty, droga do pierwszej sprzedaży) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
+    // RATUNEK porzuconego BLIK — LINK_VIEW = panel #wspolpraca (karta rezerwacji + proof-grid).
+    reservation_rescue: { subject: 'Twoja rezerwacja czeka — dokończ w panelu', body: `Cześć${im}!\n\nTwoja płatność nie doszła do końca — nic straconego. Karta rezerwacji ${co !== 'Twój pomysł na sklep' ? co + ' ' : ''}czeka w Twoim panelu. Przypominam: 500 zł jest w pełni zwrotne.\n\n[Dokończ rezerwację tutaj](LINK_VIEW).` },
   }
   const t = T[kind] || T.abandoned_chat
   const fallback = kind.startsWith('abandoned_chat') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
@@ -392,6 +397,8 @@ async function generateFollowupEmail(supabase: ReturnType<typeof createClient>, 
 // GPT dla paid_welcome (pojedynczy mail) + log kosztu; sekwencja abandoned ma
 // własny generator (generateAbandonedSequence). logUsage=false → PODGLĄD w adminie.
 async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow, logUsage = true): Promise<{ subject: string; html: string }> {
+  // reservation_rescue = statyczny, on-message (bez GPT — CTA na panel #wspolpraca, nie czat).
+  if (kind === 'reservation_rescue') return staticEmail(kind, s)
   const gen = await generateFollowupEmail(supabase, kind, s, viewFor(kind, s), reserveFor(kind, s), logUsage)
   if (gen) return gen
   return staticEmail(kind, s)
@@ -500,7 +507,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, ustalenia, market_report, problem_summary, preview_brief, landing_html, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, phone, sms_consent_at, sms_opt_out, sequence_cancelled_at, created_at'
+    const SESSION_COLS = 'id, email, name, verdict, ustalenia, market_report, problem_summary, preview_brief, landing_html, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, phone, sms_consent_at, sms_opt_out, sequence_cancelled_at, pipeline_override, created_at'
 
     // ── action: preview_session (ADMIN — podgląd treści follow-upa dla
     //    konkretnego leada). Dla sekwencji powrotu (abandoned_chat*) zwraca
@@ -544,7 +551,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_welcome: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, abandoned_sms: 0, skipped_flag_off: 0 }
+    const sent: Record<string, number> = { paid_welcome: 0, reservation_rescue: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, abandoned_sms: 0, skipped_flag_off: 0 }
     let mailBudget = MAX_PER_RUN
     const hour = warsawHour()
     const inWindow = hour >= 8 && hour < 23
@@ -570,7 +577,8 @@ Deno.serve(async (req) => {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
-          body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined }),
+          // unsubscribe:true → send-email dokłada nagłówek List-Unsubscribe (mail lejka, nie CRM).
+          body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined, unsubscribe: true }),
         })
         if (!res.ok) throw new Error(`send-email ${res.status}: ${await res.text()}`)
         // backfill resend_id → resend-webhook stempluje opened_at/clicked_at (bramka #3).
@@ -647,6 +655,42 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, quiet_hours: true, flag: FOLLOWUPS_ENABLED, sent }, 200)
     }
 
+    // ── 1b) RATUNEK PORZUCONEJ REZERWACJI (porzucony BLIK). Order 'pending' z twardym
+    //    linkiem do bud_session (spar_session_id), utworzony 2–48h temu, sesja WCIĄŻ
+    //    nieopłacona (paid_at NULL) → jeden mail z linkiem do panelu #wspolpraca (karta
+    //    rezerwacji + proof-grid + narracja zwrotności 500 zł). Dedup: bud_emails
+    //    (kind=reservation_rescue) = raz na sesję (wiele pending-orderów = ta sama
+    //    porzucona rezerwacja, więc jeden mail — nie spamujemy retry-ów BLIK). ──
+    {
+      const { data: pendingOrders, error: poErr } = await supabase
+        .from('orders')
+        .select('spar_session_id, created_at')
+        .eq('status', 'pending')
+        .not('spar_session_id', 'is', null)
+        .gte('created_at', hoursAgo(48))
+        .lte('created_at', hoursAgo(2))
+        .limit(80)
+      if (poErr) console.error('[bud-followups] pending orders fetch error:', poErr)
+      const rescueSids = [...new Set(((pendingOrders || []) as { spar_session_id: string }[]).map((o) => o.spar_session_id))]
+      if (rescueSids.length) {
+        const { data: rescueSess, error: rsErr } = await supabase
+          .from('bud_sessions')
+          .select(SESSION_COLS)
+          .eq('is_test', false)
+          .is('archived_at', null)
+          .is('paid_at', null)
+          .is('full_paid_at', null)
+          .is('sequence_cancelled_at', null)
+          .not('email', 'is', null)
+          .in('id', rescueSids)
+        if (rsErr) console.error('[bud-followups] rescue sessions fetch error:', rsErr)
+        for (const s of (rescueSess || []) as SessionRow[]) {
+          if (s.pipeline_override === 'resigned') continue
+          await sendOnce('reservation_rescue', s)
+        }
+      }
+    }
+
     // ── 2) ABANDONED: sekwencja 3 maili + SMS dla rozmów PORZUCONYCH PRZED
     //    RAPORTEM. KWALIFIKACJA (krytyczne — żeby NIE dublować bud-drip):
     //      email NOT NULL, market_report IS NULL (porzucił PRZED raportem —
@@ -667,6 +711,32 @@ Deno.serve(async (req) => {
       const stopIds = ((ss || []) as { id: string; market_report: Record<string, unknown> | null; paid_at: string | null; full_paid_at: string | null; sequence_cancelled_at: string | null }[])
         .filter((x) => x.market_report || x.paid_at || x.full_paid_at || x.sequence_cancelled_at).map((x) => x.id)
       if (stopIds.length) await supabase.from('bud_abandoned_emails').update({ status: 'cancelled' }).in('session_id', stopIds).eq('status', 'pending')
+    }
+
+    // 2a') HIGIENA abandoned_sms (fix 2026-07-10 — 15 martwych rekordów w 'pending').
+    //   ROOT CAUSE: ensureAbandonedRows seeduje wiersz abandoned_sms dla KAŻDEJ porzuconej
+    //   sesji (także bez telefonu/zgody), a pętla wysyłki (2c) tylko WYSYŁA do uprawnionych —
+    //   nieuprawnionych nigdy nie kasuje (`continue` bez update). Do tego CAŁY blok 2c jest za
+    //   flagą SMS_ENABLED, więc przy SMS off nic tych wierszy nie rusza → wiszą wiecznie.
+    //   Tu domykamy (status='cancelled') wiersze bez SZANS na wysyłkę: brak telefonu / brak
+    //   zgody / opt-out / lead wypadł z okna reaktywacji (ostatnia aktywność > 7 dni). Idempotentne.
+    {
+      const { data: smsPend } = await supabase.from('bud_abandoned_emails')
+        .select('session_id').eq('kind', 'abandoned_sms').eq('status', 'pending')
+      const smsPendIds = [...new Set(((smsPend || []) as { session_id: string }[]).map((r) => r.session_id))]
+      if (smsPendIds.length) {
+        const { data: ss } = await supabase.from('bud_sessions')
+          .select('id, phone, sms_consent_at, sms_opt_out, last_user_at').in('id', smsPendIds)
+        const deadIds = ((ss || []) as { id: string; phone: string | null; sms_consent_at: string | null; sms_opt_out: boolean | null; last_user_at: string | null }[])
+          .filter((x) => !x.phone || !x.sms_consent_at || x.sms_opt_out ||
+            (x.last_user_at ? (now - Date.parse(x.last_user_at)) >= 7 * 86400000 : true))
+          .map((x) => x.id)
+        if (deadIds.length) {
+          await supabase.from('bud_abandoned_emails').update({ status: 'cancelled' })
+            .in('session_id', deadIds).eq('kind', 'abandoned_sms').eq('status', 'pending')
+          sent.abandoned_sms_cancelled = (sent.abandoned_sms_cancelled || 0) + deadIds.length
+        }
+      }
     }
 
     // 2b) Pre-generuj trójkę + SMS (raz na sesję) i wyślij DOKŁADNIE zapisaną treść.

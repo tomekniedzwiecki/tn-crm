@@ -382,6 +382,43 @@ Deno.serve(async (req) => {
     let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
     if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
 
+    // ── TRYB COMPARE (jednorazowy, req Tomka 2026-07-10): ten sam prompt+spec co produkcja,
+    //    dowolny model (body.model), ZWRACA html+usage — ZERO zapisu do sesji / locków / Slacka.
+    //    Służy do porównania jakości modeli (gpt-5.5 vs gpt-5.6) na tym samym sklepie.
+    if ((body as Record<string, unknown>).compare) {
+      const cmpModel = String((body as Record<string, unknown>).model || MODEL)
+      const doSave = !!(body as Record<string, unknown>).save
+      const lifestyleC = Array.isArray((session as Record<string, unknown>).landing_lifestyle)
+        ? ((session as Record<string, unknown>).landing_lifestyle as unknown[]).filter((u): u is string => typeof u === 'string' && !!u).slice(0, 4) : []
+      // SYNCHRONICZNIE — waitUntil bywa ubijany przy 190 s. Sync handler dobija serwerowo
+      // (inserty przed returnem WYKONAJĄ się), nawet gdy bramka utnie odpowiedź 504.
+      // Koszt czytamy potem z bud_usage (meta.from='compare-html'/'compare-spec').
+      const specAcc = { i: 0, c: 0, o: 0 }
+      const t0 = Date.now()
+      const mSpec = mockupUrl ? await extractMockupSpec(OPENAI_API_KEY, mockupUrl, specAcc).catch(() => '') : ''
+      // deno-lint-ignore no-explicit-any
+      const contentC: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyleC, styleBrief, styleLabel, logoUrl, brandName, mSpec) }]
+      if (mockupUrl) contentC.push({ type: 'input_image', image_url: mockupUrl })
+      const resC = await fetchTimeout('https://api.openai.com/v1/responses', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: JSON.stringify({ model: cmpModel, input: [{ role: 'user', content: contentC }], max_output_tokens: MAX_OUT }),
+      }, 330_000)
+      if (!resC.ok) { try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: cmpModel, cost_usd: 0, meta: { from: 'compare-fail', reason: 'openai ' + resC.status, duration_ms: Date.now() - t0 } }) } catch (_) { /* */ } return json({ error: 'openai', status: resC.status }, 200, c) }
+      const dataC = await resC.json()
+      let textC = typeof dataC?.output_text === 'string' ? dataC.output_text : ''
+      if (!textC) { for (const it of (dataC?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') textC += cc.text } }
+      const htmlC = extractHtml(textC)
+      const uC = dataC?.usage || {}
+      const inC = uC.input_tokens || 0, ccC = (uC.input_tokens_details?.cached_tokens) || 0, oC = uC.output_tokens || 0
+      const htmlCost = (Math.max(0, inC - ccC) * 5 + ccC * 0.5 + oC * 30) / 1_000_000
+      if (doSave && htmlC && htmlC.length > 400) {
+        try { await supabase.from('bud_sessions').update({ landing_html: htmlC, landing_preview_url: `https://tomekniedzwiecki.pl/sklep/podglad/?sid=${sessionId}` }).eq('id', sessionId) } catch (_) { /* */ }
+      }
+      try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: cmpModel, input_tokens: inC, cached_tokens: ccC, output_tokens: oC, cost_usd: htmlCost, meta: { from: 'compare-html', html_len: htmlC.length, duration_ms: Date.now() - t0 } }) } catch (_) { /* */ }
+      if (specAcc.i || specAcc.o) { try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: 'gpt-5.1', input_tokens: specAcc.i, cached_tokens: specAcc.c, output_tokens: specAcc.o, cost_usd: (Math.max(0, specAcc.i - specAcc.c) * 1.25 + specAcc.c * 0.125 + specAcc.o * 10) / 1_000_000, meta: { from: 'compare-spec' } }) } catch (_) { /* */ } }
+      return json({ model: cmpModel, ms: Date.now() - t0, html_len: htmlC.length, cost_html_usd: htmlCost, cost_spec_usd: (Math.max(0, specAcc.i - specAcc.c) * 1.25 + specAcc.c * 0.125 + specAcc.o * 10) / 1_000_000 }, 200, c)
+    }
+
     // ── STAGE 2 (wewnętrzne, x-admin-secret): SAM call HTML we WŁASNEJ inwokacji ──
     // NIEZAWODNOŚĆ (2026-07-06, sesja 70cb915c: 2 niewidzialne pady jednego wieczora):
     // lifestyle+spec zjadały 1-2 min wall-clocka, a HTML (kilkanaście-30k tokenów przy

@@ -41,6 +41,24 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_GENERATIONS = 4
 const OPENAI_MODEL = Deno.env.get('BUD_OPENAI_MODEL') || 'gpt-5.1'
 
+// Alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-raport).
+// Wołany RAZ per pad (po wyczerpaniu wewn. retry), nie per próba.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-plan] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-plan] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-plan] slack-notify ${type} exception:`, err)
+  }
+}
+
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -101,19 +119,19 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
 }
 
 // Jedno wywołanie; zwraca {obj, usage}. Loguje koszt każdej próby osobno.
-async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
+async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null; err?: string }> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
-  if (!res.ok) { console.error('[bud-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
+  if (!res.ok) { console.error('[bud-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null, err: `openai HTTP ${res.status}` } }
   const data = await res.json()
   const u = data?.usage || {}
   const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
   const content = data?.choices?.[0]?.message?.content
   try { return { obj: JSON.parse(content), usage } }
-  catch { console.error('[bud-plan] niepoprawny JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage } }
+  catch { console.error('[bud-plan] niepoprawny JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage, err: `niepoprawny JSON (finish: ${data?.choices?.[0]?.finish_reason || '?'})` } }
 }
 
 // deno-lint-ignore no-explicit-any
@@ -240,15 +258,18 @@ Deno.serve(async (req) => {
     // (lekcja: gpt-5.x zjada tokeny na reasoning → pusty JSON).
     const user = buildUser(brief, karta, assessment, raport)
     let plan: Record<string, unknown> | null = null
+    let failReason = ''
     for (let attempt = 0; attempt < 2 && !plan; attempt++) {
-      const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
+      const { obj, usage, err } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
       await logUsage(usage)
       if (obj && sanePlan(obj)) plan = obj
-      else if (attempt === 0) console.warn('[bud-plan] próba 1 nieudana — ponawiam')
+      else { failReason = err || 'pusty/niepoprawny plan (sanity fail)'; if (attempt === 0) console.warn('[bud-plan] próba 1 nieudana — ponawiam') }
     }
     if (!plan) {
       console.error('[bud-plan] obie próby nieudane')
       await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'plan' })
+      // Alert #sparing — raz per pad (po obu próbach), Tomek wie o cichym 502.
+      await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'plan przychodu (bud-plan)', error: failReason || 'nieznany błąd' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
 

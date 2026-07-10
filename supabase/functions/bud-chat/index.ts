@@ -1151,7 +1151,8 @@ WYJĄTEK OD REGUŁY „<makieta> od razu przy sygnale gotowości": gdy po zielon
 1) krótko i ciepło nazwij zmianę ról: projekt ma zielone światło, więc teraz pytanie nie brzmi „czy Tomek potrafi", tylko „czy Tomek wejdzie w to z Tobą" — a bierze tylko kilka osób naraz i wchodzi tam, gdzie druga strona naprawdę tego chce;
 2) poproś usera, żeby WŁASNYMI SŁOWAMI (2-3 zdania) powiedział, czemu chce w to wejść i czemu warto postawić akurat na niego. Pytanie OTWARTE — NIE dawaj <opcje> (chodzi o JEGO słowa, to jego wkład i jego „tak").
 PO ODPOWIEDZI usera (następna tura): zareaguj osobiście, nawiąż KONKRETNIE do tego, co napisał (nie ogólnik), potwierdź, że widzisz, że mu zależy, i że „trzymasz mu miejsce w kolejce" — i DOPIERO teraz wystaw <makieta>.
-GRANICE (twarde): to NIE jest kwalifikacja ani realne odrzucanie — nikogo nie spławiasz, każdą szczerą odpowiedź przyjmujesz ciepło i prowadzisz do rezerwacji. To moment, w którym user sam nazywa, po co to robi (co utrwala jego decyzję). Jeśli user odmawia, pisze zdawkowo albo pyta „po co to" — nie drąż i nie przepytuj drugi raz: doceń jednym zdaniem i przejdź do <makieta>. Jeśli to pytanie selekcyjne JUŻ padło w tej rozmowie (jest w historii) — NIE powtarzaj go, prowadź do rezerwacji.]`
+GRANICE (twarde): to NIE jest kwalifikacja ani realne odrzucanie — nikogo nie spławiasz, każdą szczerą odpowiedź przyjmujesz ciepło i prowadzisz do rezerwacji. To moment, w którym user sam nazywa, po co to robi (co utrwala jego decyzję). Jeśli user odmawia, pisze zdawkowo albo pyta „po co to" — nie drąż i nie przepytuj drugi raz: doceń jednym zdaniem i przejdź do <makieta>. Jeśli to pytanie selekcyjne JUŻ padło w tej rozmowie (jest w historii) — NIE powtarzaj go, prowadź do rezerwacji.
+CARVE-OUT (audyt 2026-07-10 — selekcja nie może hamować gotowych): gdy user WPROST prosi o kartę/płatność („podeślij kartę", „chcę zapłacić", „gdzie płacę", „rezerwuję teraz") albo już wcześniej własnymi słowami powiedział, czemu chce w to wejść — POMIŃ selekcję całkowicie i wystaw <makieta> w tej samej turze.]`
 
 // Minimum faktów na wypadek awarii loadu settings — żeby czat NIGDY nie zmyślał liczb.
 // LEJEK V2 (decyzje Tomka 2026-07-06, SSOT: docs/zbuduje/LEJEK-V2-PLAN.md): przed
@@ -1189,7 +1190,8 @@ UCZCIWOŚĆ = CZĘŚĆ MAGII: u tej grupy lęk numer jeden to scam. Ekscytacja m
 - Dymek = MAKS 2-3 KRÓTKIE zdania (cel ~350 znaków), które rozmówca czyta w 3 sekundy. Lepiej ZA krótko i dopytać niż zalać ścianą.
 - NIGDY nie wygłaszasz całego procesu / oferty / porównania / etapów w dymku. Cokolwiek wymaga wyliczenia (kroki, „co dostajesz", ≥3 punkty): NAJPIERW 1 zdanie esencji, a resztę albo w bloku <sekcje> (lista rozwijana), albo — domyślnie lepiej — oddaj JEDEN wątek na raz i zapytaj, co pogłębić (<opcje>).
 - ZAKAZ w dymku: numerowanych i myślnikowych list, nagłówków, wielu **pogrubień**, streszczania tego, co rozmówca przed chwilą napisał, oraz uzasadnień „dlaczego to dobre", zanim sam o to zapyta.
-- To dotyczy KAŻDEGO tematu. Pytanie o model/koszty NIE jest wyjątkiem od zwięzłości — jest wyjątkiem tylko od „nie zbywaj": dajesz krótką, konkretną esencję i zapraszasz do pogłębienia, nie recytujesz całości.`
+- To dotyczy KAŻDEGO tematu. Pytanie o model/koszty NIE jest wyjątkiem od zwięzłości — jest wyjątkiem tylko od „nie zbywaj": dajesz krótką, konkretną esencję i zapraszasz do pogłębienia, nie recytujesz całości.
+- JEDYNY WYJĄTEK DŁUGOŚCI (audyt 2026-07-10): TURA DOMKNIĘCIA REZERWACJI — gdy wystawiasz kartę <makieta>, wolno 3-5 zdań (KOTWICA WARTOŚCI: co już dostał za darmo + jedno ciepłe zdanie + karta). Zwięzłość nie może stłumić recapu wartości, który realnie domyka.`
 
 // PRZEPLATANA NARRACJA „po co to robisz" (decyzja Tomka 2026-06-29). Lead w KAŻDEJ
 // fazie ma rozumieć cel i model — wstrzykiwane do systemu każdej tury SPRZEDAŻOWEJ
@@ -1680,7 +1682,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('bud_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at, tracking')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, track, market_report, ustalenia, landing_html, niche, brand, mockups, chosen_style, chosen_product, session_ads, product_input, survey, panel_visits, seen_landing_at, tracking, budget_declared, budget_note')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -2173,6 +2175,16 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // Wstrzyknij USTALENIA, żeby odpowiedzi o ofercie/zakresie/cenie były pod TEN biznes.
         const collabCard = (existingSession?.ustalenia as Record<string, unknown> | null) || (existingSession?.preview_brief as Record<string, unknown> | null) || (existingSession?.problem_summary as Record<string, unknown> | null)
         if (collabCard) sessionContext += `\n\n[USTALENIA PROJEKTU — przy pytaniach o ofertę/zakres/„co wchodzi"/cenę personalizuj DOKŁADNIE pod to, nie ogólnikuj]\n${JSON.stringify(collabCard).slice(0, 1800)}`
+        // [AUDYT 2026-07-10] Blok STANU — maszynowe fakty zamiast skanowania 30 tur historii
+        // przez model (pod obciążeniem gubił, co już wystawił → powtórki, brak karty u gorących).
+        // Deklaracja budżetu pada KLIKIEM na froncie (pickBudget) i NIE trafia do bud_messages —
+        // bez tej linii model w ogóle nie wie, że lead już podał kwotę.
+        {
+          const _hAll = (history ?? []).filter((m) => m.role === 'assistant').map((m) => String(m.content ?? '')).join('\n')
+          const _bd = (existingSession?.budget_declared as string | null) || null
+          const _bn = (existingSession?.budget_note as string | null) || null
+          sessionContext += `\n\n[STAN ROZMOWY — twarde fakty, nie zgaduj ich z historii] zielone światło: ${(existingSession?.verdict as string | null) === 'zielony' ? 'PADŁO' : 'jeszcze nie'} · karta rezerwacji <makieta>: ${/<makieta[\s/>]/.test(_hAll) ? 'JUŻ WYSTAWIONA (nie dubluj bez nowej treści, ale prowadź do niej)' : 'jeszcze nie wystawiona'} · budżet leada: ${_bd ? `ZADEKLAROWANY (${_bd}${_bn ? `, słownie: ${_bn}` : ''}) — od deklaracji budżetu każda odpowiedź spokojnie prowadzi do rezerwacji` : 'nie zadeklarowany'}`
+        }
       } else {
         // LEJEK V2 (2026-07-06, nadpisuje R9 z 2026-06-30): przed rezerwacją ZERO kwot
         // i procentów. FAKTY OFERTY wstrzykujemy nadal — ale to one niosą mechanizm
