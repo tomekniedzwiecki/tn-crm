@@ -10,10 +10,10 @@
 
 ## 0. Guardraile Lejka V2 — NIE łamać
 
-- **Zero kwot/procentów/symulacji przed rezerwacją.** Jedyne kwoty w całym lejku: **0 zł** i **500 zł**. Na pytanie o koszt → „plan układamy pod Twoją kwotę".
+- **[V2.1, 2026-07-10] CENA BUDOWY JAWNA: 9400 zł, jedna i stała** (500 zł zwrotne wliczone), podawana proaktywnie w turze domknięcia z kotwicą wartości (u agencji 25–40 tys./rok). Zero symulacji zysków.
 - **Zero „10% / udziału %" w rozmowie** → „udział ustalany indywidualnie po rezerwacji".
 - **Zero kwalifikacji przed sklepem** (budżet, czas, doświadczenie, etat, „czego się boisz"). Pytania przedrezerwacyjne = tylko personalizacja (produkt/marka/styl).
-- **Budżet = mechanizm oferty PO pokazaniu sklepu**, nie bramka wstępu. Nie rozbijać kwoty usera na towar/reklamy. Raty tylko reaktywnie.
+- **[V2.1] Budżet reklamowy WYŁĄCZNIE reaktywnie:** „~1000 zł łącznie na start, skalujemy z dochodów". Karta „kwoty inwestycji" i bramka 2000 zł WYCOFANE. Nie rozbijać kwoty usera na towar/reklamy. Raty reaktywnie (formy ustala Tomek po rezerwacji).
 - **Bez downsellu / zamrażania projektu.**
 - **Dowód społeczny wyłącznie agregatowy** — NIGDY nazwane cudze sklepy.
 - **Pilność zawsze uczciwa** — żadnych fałszywych liczników ani wymyślonych pozycji w kolejce.

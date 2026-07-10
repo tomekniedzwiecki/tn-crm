@@ -82,3 +82,33 @@ D. Karta rezerwacji: miniatura ICH sklepu + „Rezerwuję miejsce w kolejce — 
 - „Udział 10% od przychodu" (SSOT narracji) → w rozmowie przedrezerwacyjnej zastąpione
   „ustalane indywidualnie po rezerwacji"; 10% pozostaje domyślną strukturą samej umowy.
 - LEKKI START / reportPropose — bez zmian, zgodne z v2 (ustalenia = propozycja).
+
+## AKTUALIZACJA V2.1 — JAWNA CENA (decyzja Tomka 2026-07-10)
+
+> Nadrzędne nad pkt 2 i 5 decyzji z 2026-07-06. Powód: dowody z lejka /aplikacja
+> (jawna stała cena + proaktywne domknięcie = 8 płatności, 0 porzuconych checkoutów;
+> ukrywanie kwot w /sklep = 0 rezerwacji, 10 porzuconych kas) + rynkowa kotwica
+> (software house / agencja liczy 25–40 tys. zł za analogiczny zakres w 1. roku).
+
+1. **CENA BUDOWY JEST JAWNA: 9400 zł, jedna i stała** (500 zł zwrotnej rezerwacji
+   wliczone → przy umowie zostaje 8900 zł). Bot podaje ją PROAKTYWNIE w turze
+   domknięcia (po <zielone>) i na każde pytanie o koszt — ZAWSZE z kotwicą wartości
+   (portfel 10 produktów, budowa, kampanie Tomka do ~1000 zamówień, wdrożenie;
+   u agencji rynkowo 25–40 tys. zł w pierwszym roku).
+2. **BUDŻET REKLAMOWY — WYŁĄCZNIE REAKTYWNIE:** bot NIE wywołuje tematu; gdy lead
+   zapyta → „działamy na ok. 1000 zł budżetu łącznie na start i skalujemy z dochodów
+   sklepu". Kwota na suwakach Opłacalności = docelowa skala finansowana z obrotu.
+3. **Karta „kwoty inwestycji" i bramka 2000 zł — WYCOFANE** (front: maybeBudgetAfterShop
+   = no-op; renderBudgetGate/soft-exit zostają w kodzie na wypadek rewersji). Jawna
+   cena sama filtruje; przy deklaracji kwoty wyraźnie poniżej ceny bot uczciwie mówi,
+   że się nie spina (projekt zostaje zapisany). Marker <budzet_kwota> działa pasywnie.
+4. **Raty wracają reaktywnie:** „da się rozłożyć — formy ustala Tomek po rezerwacji".
+5. **Bez zmian:** zero procentu udziału przed rezerwacją; zero kwalifikacji przed
+   sklepem; „miejsce w kolejce"; maile/drip nadal z jedyną liczbą 500 zł (cena
+   z kotwicą pada w rozmowie, nie w zimnym mailu).
+
+Wdrożone 2026-07-10 w: settings (budowanie_model_biznesowy, budowanie_etap_wspolpraca,
+budowanie_etap_gate, budowanie_sparing_prompt; backupy *_bak_0710_jawnakwota),
+bud-chat (FALLBACK_MODEL_FACTS/COLLAB, MISSION, NARRATIVE_WEAVE, QUALIFY B3, blok
+FAKTY OFERTY), front sklep/index.html (karta rezerwacji + facts modal + timeline
+z ceną; karta budżetu no-op).
