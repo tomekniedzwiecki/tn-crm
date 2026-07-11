@@ -59,11 +59,11 @@ const MAX_TURNS_HARD_GATE = 7        // #10: twardy backstop — kontakt wymusza
 // SPAR_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
 // false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
 const REQUIRE_ACCOUNT = (Deno.env.get('SPAR_REQUIRE_ACCOUNT') || 'false') === 'true'
-const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.1'
+const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 // 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
 // przekroczyć 1500 — ucięty </projekt> = parseProjekt zwraca null i brief
 // NIE trafia do bazy (podgląd się nie generuje mimo zapowiedzi w tekście)
-const OPENAI_MAX_COMPLETION_TOKENS = 3000
+const OPENAI_MAX_COMPLETION_TOKENS = 6000 // 3000->6000 przy gpt-5.6-sol: reasoning (medium) liczy sie do puli
 
 // ── Cache system promptów (mapa per klucz settings, 5 min) ───────────────────
 const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000
@@ -156,6 +156,7 @@ async function verifyTurnstile(token: string | null | undefined, ip: string | nu
 
 // ── Cennik USD per 1M tokenów (logowanie kosztów do spar_usage) ──────────────
 const CHAT_PRICES: Record<string, { input: number; cached: number; output: number }> = {
+  'gpt-5.6-sol': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.1': { input: 1.25, cached: 0.125, output: 10 },
   'gpt-4o': { input: 2.5, cached: 1.25, output: 10 },
@@ -683,7 +684,8 @@ async function extractKnowhowAsync(
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        max_completion_tokens: 700,
+        max_completion_tokens: 1500, // 700->1500: reasoning (low) Sola liczy sie do puli
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: KH.extract },
           { role: 'user', content: `${ctx}OSTATNIA WYMIANA:\n${transcript}` },
@@ -757,7 +759,8 @@ async function generateHandoffPack(
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        max_completion_tokens: 6000,
+        max_completion_tokens: 12000, // podbite 6000->12000 (gpt-5.6-sol: reasoning liczy się do puli)
+        reasoning_effort: 'medium',
         messages: [ { role: 'system', content: KH.handoff }, { role: 'user', content: userMsg } ],
       }),
     }, 'knowhow-handoff')
@@ -975,7 +978,7 @@ async function streamSecondCall(
         // większy limit niż zwykła tura, by marker <projekt> się nie uciął (ucięty
         // </projekt> = brak podglądu = „generowanie nie działa").
         model, stream: true, stream_options: { include_usage: true },
-        max_completion_tokens: 5000, messages: msgs,
+        max_completion_tokens: 8000, reasoning_effort: 'medium', messages: msgs, // steer niesie <projekt> — budżet podbity pod reasoning Sola
       }),
     }, 'chat-steer')
     if (!resp.ok || !resp.body) {
@@ -1529,6 +1532,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           // usage w ostatnim chunku streamu — bez tego nie policzymy kosztu tury
           stream_options: { include_usage: true },
           max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
+          reasoning_effort: 'medium', // mózg rozmowy — jak dotychczasowy default 5.5; NIE degradować do low
           messages: [
             { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
             ...messages,

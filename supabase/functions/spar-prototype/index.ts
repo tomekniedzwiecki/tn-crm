@@ -56,7 +56,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-const PROTOTYPE_MODEL = Deno.env.get('SPAR_PROTOTYPE_MODEL') || 'gpt-5.5'
+const PROTOTYPE_MODEL = Deno.env.get('SPAR_PROTOTYPE_MODEL') || 'gpt-5.6-sol'
 // gpt-5.5 to model rozumujący — tokeny reasoningu liczą się DO max_completion_tokens.
 // Przy 40000 większe apki nie miały budżetu na dokończenie HTML (reasoning zjadał pulę
 // → output bez </html> → walidacja odrzucała → cichy brak prototypu). Udane buildy
@@ -67,6 +67,7 @@ const MAX_PROTOTYPES_PER_IP_PER_DAY = parseInt(Deno.env.get('SPAR_PROTOTYPE_IP_D
 const STORAGE_BUCKET = 'attachments'
 
 const PRICING: Record<string, { input: number; cached: number; output: number }> = {
+  'gpt-5.6-sol': { input: 5.0, cached: 0.5, output: 30.0 },
   'gpt-5.5': { input: 5.0, cached: 0.5, output: 30.0 },
   'gpt-5.1': { input: 1.25, cached: 0.125, output: 10.0 },
 }

@@ -58,7 +58,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   }
 }
 
-const LANDING_MODEL = Deno.env.get('SPAR_LANDING_MODEL') || 'gpt-5.5'
+const LANDING_MODEL = Deno.env.get('SPAR_LANDING_MODEL') || 'gpt-5.6-sol'
 // HTML landinga to 15-25k tokenów + reasoning; 3000 ze spar-chat by ucięło plik
 const MAX_COMPLETION_TOKENS = 40000
 const MAX_LANDINGS_PER_SESSION = 3
@@ -67,6 +67,7 @@ const STORAGE_BUCKET = 'attachments'
 
 // Cennik USD per 1M tokenów (jak w spar-chat) — do logu kosztów w spar_usage
 const PRICING: Record<string, { input: number; cached: number; output: number }> = {
+  'gpt-5.6-sol': { input: 5.0, cached: 0.5, output: 30.0 },
   'gpt-5.5': { input: 5.0, cached: 0.5, output: 30.0 },
   'gpt-5.1': { input: 1.25, cached: 0.125, output: 10.0 },
 }

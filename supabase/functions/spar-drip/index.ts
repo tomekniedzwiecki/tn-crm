@@ -80,8 +80,8 @@ function checkoutLink(leadId: string | null): string {
   return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=drip`
 }
 // Model do personalizacji treści maili (tani gpt-5.1; ~kilka groszy/mail).
-const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.1'
-const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+const OPENAI_MODEL = Deno.env.get('SPAR_EMAIL_MODEL') || 'gpt-5.6-sol'
+const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 
 // Prompty dripu: JEDNO źródło = settings (rejestr _shared/spar-prompts.ts).
 // SITUATION + SYSTEM ładowane raz na cold-start (ensureDripPrompts). W szablonie

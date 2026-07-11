@@ -21,8 +21,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 4
-const OPENAI_MODEL = Deno.env.get('SPAR_ECONOMICS_MODEL') || 'gpt-5.1'
-const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+const OPENAI_MODEL = Deno.env.get('SPAR_ECONOMICS_MODEL') || 'gpt-5.6-sol'
+const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response { return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } }) }
 
 // Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.

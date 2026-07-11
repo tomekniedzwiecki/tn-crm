@@ -29,7 +29,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0]
   return { 'Access-Control-Allow-Origin': allowedOrigin, 'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type', 'Access-Control-Allow-Methods': 'POST, OPTIONS' }
 }
-const OPENAI_MODEL = Deno.env.get('SPAR_ASSESS_MODEL') || Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.5'
+const OPENAI_MODEL = Deno.env.get('SPAR_ASSESS_MODEL') || Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 const MAX_OUTPUT_TOKENS = 6000
 const WEB_SEARCH_CALL_USD = 0.01
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response {
@@ -132,7 +132,7 @@ async function logAssessCost(sessionId: string, model: string, u: Record<string,
     const input = (u?.input_tokens as number) || 0
     const cached = ((u?.input_tokens_details as Record<string, unknown>)?.cached_tokens as number) || 0
     const out = (u?.output_tokens as number) || 0
-    const prices: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 } }
+    const prices: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 } }
     const p = prices[model] || prices['gpt-5.5']
     await supabase.from('spar_usage').insert({
       session_id: sessionId, kind: 'assess', model,
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
         // max_tool_calls: dokumentowany lever na liczbę wyszukań (bywa ignorowany
         // przez model — patrz audyt 2026-06-14, realnie 6-8 zamiast 2-3 — ale to
         // jedyny twardy sufit, więc ustawiamy; prompt już nie obiecuje konkretnej liczby).
-        body: JSON.stringify({ model: OPENAI_MODEL, tools: [{ type: 'web_search' }], max_tool_calls: 4, input: buildPrompt(projekt), max_output_tokens: MAX_OUTPUT_TOKENS, stream: true }),
+        body: JSON.stringify({ model: OPENAI_MODEL, tools: [{ type: 'web_search' }], max_tool_calls: 4, reasoning: { effort: 'low' }, input: buildPrompt(projekt), max_output_tokens: MAX_OUTPUT_TOKENS, stream: true }),
       })
       if (!upstream.ok || !upstream.body) {
         const errText = await upstream.text().catch(() => '')
@@ -276,7 +276,7 @@ Deno.serve(async (req) => {
       body: JSON.stringify({
         model: OPENAI_MODEL,
         tools: [{ type: 'web_search' }],
-        max_tool_calls: 4,
+        max_tool_calls: 4, reasoning: { effort: 'low' },
         input: buildPrompt(projekt),
         max_output_tokens: MAX_OUTPUT_TOKENS,
       }),
@@ -307,7 +307,7 @@ Deno.serve(async (req) => {
           const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
           const u = data?.usage || {}
           const input = u.input_tokens || 0, cached = u.input_tokens_details?.cached_tokens || 0, out = u.output_tokens || 0
-          const prices: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 } }
+          const prices: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 } }
           const p = prices[OPENAI_MODEL] || prices['gpt-5.5']
           await supabase.from('spar_usage').insert({
             session_id: sessionId, kind: 'assess', model: OPENAI_MODEL,
