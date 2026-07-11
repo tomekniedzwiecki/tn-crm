@@ -79,6 +79,12 @@ Wszystko inne: Tomek przegląda DOWODY, nie kod.
 - Lifecycle e-maile behawioralne (lifecycle_status), nie kalendarzowe: welcome z JEDNYM krokiem, nudge 24-48h
   (okno 72h!), dunning. Max 4-6 maili / 14 dni.
 - Webhook Stripe: inbox pattern (podpis → zapis surowego eventu → 200; osobny processor idempotentnie).
+- **Rabaty subskrypcyjne operatora = STANDARD każdej apki** (moduł startera): Stripe Coupons + Promotion Codes
+  na koncie operatora (%, czas trwania raz/X mies./na zawsze, limit użyć — 1 = kod imienny, ważność);
+  sekcja „Rabaty" w panelu operatora; checkout z `allow_promotion_codes`. Zero własnej księgowości —
+  Stripe liczy, a udział platformy nalicza się od kwoty PO rabacie automatycznie.
+- Trial: domyślnie **bez karty na wejściu** (nieznana marka = karta ścina rejestracje ~65%); prośba o kartę
+  w momencie aha (contextual capture). Model per apka potwierdza krok `pricing`.
 - AI w produkcie tylko jako silnik jednego workflow niszy (mierzalna oszczędność w 1. sesji użytkownika), nigdy bajer.
 - Mobile-first zawsze (nisze B2B pracują z telefonu — patrz Grzegorz: „fachowiec w trasie").
 

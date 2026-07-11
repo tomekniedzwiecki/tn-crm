@@ -145,6 +145,9 @@ prowizję Stripe ponosi klient (zapis do umowy).
   Osobne repo + osobny projekt Supabase (EU) + osobny projekt Vercel per aplikacja. Deploy = git push main.
 - **Repo `saas-starter`** — szkielet generowany skryptem forge (ZAKAZ `cp -r`): landing+cennik, auth (email+hasło,
   Confirm OFF), panel usera, panel operatora, edge fns Stripe, helper Resend, migracja bazowa z RLS, `CLAUDE.md`, `.env.example`.
+- **Moduł RABATÓW operatora (standard od 11.07, decyzja Tomka):** Stripe Coupons+Promotion Codes na koncie
+  operatora, sekcja „Rabaty" w panelu (tworzenie/lista/dezaktywacja; kody imienne przez limit=1),
+  `allow_promotion_codes` w checkout. Zastępuje „stawki założycielskie" — operator sam nagradza kogo chce.
 - **Design per aplikacja:** makiety ze sparingu (`preview_images`) = inspiracja + tokeny; ZAKAZ katalogu skórek
   (`projekt-stworze-design-per-projekt`).
 - **E-maile:** auth-maile (reset hasła) → Supabase Auth SMTP = Resend SMTP (`smtp.resend.com`, user `resend`,

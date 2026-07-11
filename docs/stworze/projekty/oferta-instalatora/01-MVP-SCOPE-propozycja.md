@@ -50,12 +50,16 @@ poprawki wyłącznie przez „Utwórz wersję v2" (poprzednia nigdy nie znika). 
 Konto (e-mail+hasło). **Profil firmy instalatora** (nazwa, telefon, adres, opcjonalnie NIP + logo) — wypełniany
 RAZ, auto-wchodzi w nagłówek/stopkę każdego PDF; minimalny profil (nazwa+telefon) wystarcza, logo opcjonalne
 (żeby nie psuć TTFV). Pulpit „kolejka wycen" wg makiety (Do wysłania dzisiaj / liczby tygodnia / ostatnie
-oferty), subskrypcja Stripe (trial 7 dni z kartą — patrz PRICING). Mobile-first CAŁOŚĆ (fachowiec w trasie).
+oferty). **Subskrypcja Stripe — FINAŁ pricingu (11.07): 99 zł netto/mc · 949 zł/rok (≈79 zł/mc); trial 14 dni
+BEZ karty, prośba o kartę przy pierwszym wygenerowanym PDF.** **Rabaty subskrypcyjne OPERATORA (w v1, moduł
+standardowy fabryki):** Grzegorz przydziela kody zniżkowe konkretnym osobom (Stripe promotion codes: %, czas
+trwania, limit użyć, ważność, kody imienne) — sekcja „Rabaty" w panelu operatora. Mobile-first CAŁOŚĆ.
 
 ## Poza zakresem v1 (świadome cięcia)
 - automatyczne liczenie materiałów; rozbijanie materiałów na sztuki/podzespoły; kosztorysy KNR/przetargowe
 - **kalkulatory pomocnicze (metry rury, przeliczniki przyborów)** — patrz Otwarta decyzja D12
-- **rabaty (% i kwotowe) — ODŁOŻONE do v1.1** (decyzja Tomka 2026-07-11; łatwe do dołożenia, nie blokują wysyłki oferty)
+- **rabaty NA OFERCIE PDF (% i kwotowe dla klienta końcowego instalatora) — ODŁOŻONE do v1.1** (decyzja Tomka
+  2026-07-11). UWAGA: to co innego niż rabaty SUBSKRYPCYJNE operatora — te SĄ w v1 (F5).
 - wiele cenników robocizny; zespoły/multi-user
 - załączanie projektów/dokumentacji do oferty (D2 — proponuję później)
 - publiczny link do oferty online + tracking „obejrzana" (dobry kandydat na v1.1)
