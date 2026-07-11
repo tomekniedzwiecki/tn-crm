@@ -1736,6 +1736,44 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
             }
           }
 
+          // ── AUTO-DOMKNIĘCIE PO ZIELONYM WERDYKCIE (2026-07-11) ────────────
+          // Tura werdyktu jest generowana ZANIM sesja ma verdict='zielony', więc
+          // DRZEWO DOMYKANIA (kotwica + warunki + <makieta> „w następnej turze")
+          // wymagało KOLEJNEJ wiadomości usera — która często nie przychodziła
+          // (case Konrad/Raport Trasy: werdykt → pasywne zaproszenie → cisza,
+          // makieta nigdy nie wystawiona). Fix: drugi call w TYM SAMYM streamie
+          // (wzorzec bramki <ocena>): serwer sam dogenerowuje turę domknięcia.
+          if (verdict.verdict === 'zielony' && !isKnowHowMode && !existingSession?.paid_at && !assistantText.includes('<makieta')) {
+            try {
+              const closeSystem = `${systemPrompt}\n\n${sessionContext}\n\n${COLLAB_PHASE_INSTRUCTION}`
+              const second = await streamSecondCall(controller, encoder, OPENAI_API_KEY, OPENAI_MODEL, [
+                { role: 'system', content: closeSystem },
+                ...messages,
+                { role: 'assistant', content: assistantText },
+                { role: 'user', content: '[SYSTEM] Zielony werdykt zapisany, karta projektu domknięta. Wykonaj TERAZ turę domknięcia wg DRZEWA DOMYKANIA: 1-2 zdania kotwicy wartości (co dokładnie dostał i dlaczego ten projekt się spina) + warunki wprost (rezerwacja 500 zł, w pełni zwrotna, uruchamia osobisty kontakt Tomka z planem) + wystaw <makieta></makieta> w osobnej linii. Bez pytań o pozwolenie, bez „co chcesz doprecyzować". Zacznij naturalnie, jakbyś kontynuował wypowiedź.' },
+              ])
+              assistantText += '\n' + second.text
+              if (second.text.includes('<makieta')) {
+                supabase.from('spar_sessions')
+                  .update({ makieta_last_at: new Date().toISOString() })
+                  .eq('id', sessionId)
+                  .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] makieta stamp (auto-close) error:', error) })
+              }
+              if (second.usage) {
+                const u3 = second.usage
+                const inp = u3.prompt_tokens || 0, cch = u3.prompt_tokens_details?.cached_tokens || 0, out = u3.completion_tokens || 0
+                supabase.from('spar_usage').insert({
+                  session_id: sessionId, kind: 'chat', model: OPENAI_MODEL,
+                  input_tokens: inp, cached_tokens: cch, output_tokens: out,
+                  cost_usd: chatCostUsd(OPENAI_MODEL, inp, cch, out), meta: { channel: mode, phase: 'collab-close' },
+                }).then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] collab-close usage insert error:', error) })
+              }
+            } catch (closeErr) {
+              // Auto-domknięcie jest bonusem — jego pad nie może wywrócić tury z werdyktem.
+              console.error('[spar-chat] auto-domknięcie po werdykcie padło:', closeErr)
+            }
+          }
+
           // Własny event SSE doklejony po streamie Anthropic.
           // emailKnown: sesja ma już maila po stronie serwera — frontend przy
           // powrocie z linku ?id= nie zna go lokalnie i bez tej flagi pokazywałby
