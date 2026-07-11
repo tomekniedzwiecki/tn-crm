@@ -3,6 +3,9 @@
 > Wygenerowane z handoff packu + 156 elementów bazy wiedzy spowiednika. Tomek TNIE i zatwierdza;
 > po akceptcie klienta plik przechodzi do paczki `apka-<slug>-brief/01-MVP-SCOPE.md` w repo aplikacji.
 > Projekt w panelu: /tn-app/projekt?id=102e4c74-ae3d-4cbf-885d-0826b283f7e6 · termin: 13.08.2026
+>
+> ✅ **ZATWIERDZONE przez Tomka 2026-07-11.** Rdzeń = F1–F5; urządzenia i PEŁNY VAT w rdzeniu (decyzja Tomka);
+> **profil firmy** dopisany do F5 (był luką); **rabaty odłożone do v1.1** (były w F2). Akcept klienta = krok `akcept_klienta` (pending).
 
 ## Definicja v1 (1 zdanie)
 Jednoosobowy instalator (sanitarny/grzewczy/gazowy) składa z własnego cennika profesjonalną ofertę PDF
@@ -24,7 +27,6 @@ Start = **szablon z oczyszczonego cennika Grzegorza** (klucz do TTFV — user ni
   czysta pomoc pamięciowa, zero logiki).
 - Proponowane urządzenia: osobna biblioteka (marka, model, opis, cena) → jednym klikiem do sekcji
   „Proponowane urządzenia" POZA sumą główną (kilka kotłów jako opcje, bez sumowania).
-- Rabaty: tylko %, osobno materiały / robocizna, auto-przeliczenie.
 - Warunki: ważność oferty (dni, per oferta), dopisek gwarancji (checkbox + treść), warunki płatności
   (dopisek tekstowy — bez auto-liczenia zaliczek), uwagi końcowe (jedna wolna sekcja, ZERO szablonów).
 - Dane klienta: minimum imię + telefon (szkic i PDF działają); ulica/miejscowość/NIP-firma opcjonalne
@@ -44,14 +46,17 @@ ew. VAT robocizny / SUMA; poniżej „Proponowane urządzenia". Numeracja auto *
 Lista ofert ze statusami (nowa/wysłana/do poprawki). Szkic edytowalny; po oznaczeniu „wysłana" ZAMROŻONA;
 poprawki wyłącznie przez „Utwórz wersję v2" (poprzednia nigdy nie znika). Zero automatycznych dopisków w PDF.
 
-**F5. Konto + pulpit + subskrypcja**
-Konto (e-mail+hasło), pulpit „kolejka wycen" wg makiety (Do wysłania dzisiaj / liczby tygodnia / ostatnie
+**F5. Konto + profil firmy + pulpit + subskrypcja**
+Konto (e-mail+hasło). **Profil firmy instalatora** (nazwa, telefon, adres, opcjonalnie NIP + logo) — wypełniany
+RAZ, auto-wchodzi w nagłówek/stopkę każdego PDF; minimalny profil (nazwa+telefon) wystarcza, logo opcjonalne
+(żeby nie psuć TTFV). Pulpit „kolejka wycen" wg makiety (Do wysłania dzisiaj / liczby tygodnia / ostatnie
 oferty), subskrypcja Stripe (trial 7 dni z kartą — patrz PRICING). Mobile-first CAŁOŚĆ (fachowiec w trasie).
 
 ## Poza zakresem v1 (świadome cięcia)
 - automatyczne liczenie materiałów; rozbijanie materiałów na sztuki/podzespoły; kosztorysy KNR/przetargowe
 - **kalkulatory pomocnicze (metry rury, przeliczniki przyborów)** — patrz Otwarta decyzja D12
-- rabat kwotowy; wiele cenników robocizny; zespoły/multi-user
+- **rabaty (% i kwotowe) — ODŁOŻONE do v1.1** (decyzja Tomka 2026-07-11; łatwe do dołożenia, nie blokują wysyłki oferty)
+- wiele cenników robocizny; zespoły/multi-user
 - załączanie projektów/dokumentacji do oferty (D2 — proponuję później)
 - publiczny link do oferty online + tracking „obejrzana" (dobry kandydat na v1.1)
 - wysyłka e-mail z aplikacji (v1: pobierz PDF i wyślij po swojemu)
