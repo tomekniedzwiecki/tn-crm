@@ -748,7 +748,10 @@ async function generateHandoffPack(
     }
     const srcLabel = srcMap[(sess?.idea_source as string | null) || 'wlasny'] || srcMap.wlasny
     const itemsTxt = items.map((i) => `- [${i.kind}${i.scope ? '/' + i.scope : ''}] ${i.content}${i.url ? ' (' + i.url + ')' : ''}`).join('\n')
-    const userMsg = `ŹRÓDŁO POMYSŁU: ${srcLabel}\n\nKARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 1500)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 8000)}`
+    // Limit podniesiony 8000→60000 (2026-07-11): przy bogatych bazach (Grzegorz: 156 pozycji)
+    // ucięcie do 8k gubiło większość wiedzy i wymuszało ręczne składanie pakietu.
+    // 60k znaków ≈ 15-20k tokenów — mieści się w kontekście z dużym zapasem.
+    const userMsg = `ŹRÓDŁO POMYSŁU: ${srcLabel}\n\nKARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 4000)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 60000)}`
     const res = await openaiFetchRetry({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
@@ -1208,6 +1211,13 @@ Deno.serve(async (req) => {
     const knowhowResume = body.knowhowResume === true && isKnowHowMode
     if (body.knowhowResume === true && !isKnowHowMode) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
+    }
+
+    // Decyzja Tomka 2026-07-11: etap spowiednika KOŃCZY SIĘ twardo. Po knowhow_closed_at
+    // nie przyjmujemy nowych tur (dopiski w trakcie budowy = pełzanie zakresu; nowe pomysły
+    // wracają przy demo wersji roboczej). Front pokazuje planszę zamknięcia; to obrona w głębi.
+    if (isKnowHowMode && knowhowClosed) {
+      return jsonResponse({ error: 'knowhow_zamkniety' }, 403, corsHeaders)
     }
 
     let turnsBefore = 0
