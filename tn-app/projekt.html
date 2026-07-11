@@ -431,8 +431,8 @@
                         </div>
                         <i class="ph ph-caret-right text-zinc-700 mt-1"></i>
                     </div>
-                    ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : (d.milestone_label ? `<div class="text-[10px] text-zinc-600 flex items-center gap-1"><i class="ph ph-flag"></i> kamień: ${escapeHtml(d.milestone_label)}</div>` : '')}
-                    ${note ? `<div class="text-zinc-400 text-[11.5px] bg-zinc-900/70 rounded-md px-2.5 py-1.5 line-clamp-2">${escapeHtml(note)}</div>` : ''}
+                    ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : ''}
+                    ${note ? `<div class="text-zinc-600 text-[10px] flex items-center gap-1"><i class="ph ph-note"></i> notatka w warsztacie</div>` : ''}
                     <div class="flex items-center justify-between mt-auto">
                         <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}')" title="Klik = przełącz status">
                             <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
@@ -768,7 +768,7 @@
             if (summary && summary.handoff_pack) {
                 h += `<div class="bg-zinc-900/60 border border-[#0070f3]/25 rounded-lg p-5">
                     <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
-                        <div class="text-[11px] uppercase tracking-wider text-[#52a8ff]"><i class="ph ph-package mr-1"></i>Handoff pack — gotowe do budowy</div>
+                        <div class="text-[11px] uppercase tracking-wider text-[#52a8ff]"><i class="ph ph-package mr-1"></i>Pakiet wiedzy — wszystko, co wiemy od klienta, złożone pod budowę</div>
                         ${summary.handoff_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(summary.handoff_generated_at)}</span>` : ''}
                     </div>
                     <div class="md-body text-[12.5px] text-zinc-300 leading-relaxed">${mdRender(summary.handoff_pack)}</div>
@@ -776,7 +776,7 @@
             } else {
                 h += `<div class="bg-[#f5a623]/[.06] border border-[#f5a623]/40 rounded-lg p-4 flex items-start gap-2.5">
                     <i class="ph ph-warning text-[#f5b955] mt-0.5"></i>
-                    <div class="text-[12.5px] text-[#f5deb0]/90">Handoff pack nie wygenerowany. Generuje się przy evencie <code class="text-[#f5b955]">knowhow_close</code> w spar-chat — w kroku „Handoff pack" wymuś generację lub złóż pakiet z surowych <code class="text-[#f5b955]">spar_knowhow_items</code>.</div>
+                    <div class="text-[12.5px] text-[#f5deb0]/90">Pakiet wiedzy nie jest jeszcze złożony — powstaje automatycznie, gdy klient domknie spowiednika, albo składamy go ręcznie z surowych notatek (krok „Pakiet wiedzy" w Etapie 1).</div>
                 </div>`;
             }
 
@@ -876,7 +876,7 @@
         // — nie przeredagowywać po wdrożeniu; poprawka brzmienia tworzy duplikat u projektów, które odhaczały.
         const WS = {
             // ETAP 1 — Fundament
-            handoff:       { desc:'Złożenie pakietu „gotowe do budowy" ze sparingu. Jeśli handoff pack nie istnieje — wymuś generację lub złóż z surowych spar_knowhow_items. Ścieżka B (klient bez spowiednika): rozmowa 1:1 → notatki → handoff ręcznie. Podgląd w „Dane ze sparingu".',
+            handoff:       { desc:'Pakiet wiedzy = wszystko, co wiemy od klienta (rozmowa, spowiednik, wymagania), złożone w JEDEN dokument „gotowe do budowy" — 12 sekcji: definicja v1, ekrany, dane, must-have, ryzyka. Jeśli nie istnieje — składamy go z surowych notatek. Ścieżka B (klient bez spowiednika): rozmowa 1:1 → notatki → pakiet ręcznie. Podgląd w „Dane ze sparingu".',
                              check:['Handoff pack wygenerowany (spar_knowhow_summary.handoff_pack)','Braki uzupełnione z surowych spar_knowhow_items','Otwarte decyzje i ryzyka z handoffu przeniesione do „Uwag" (kind: decyzja)','Nisza / operator / problem główny potwierdzone','Pakiet kompletny — gotowy do MVP scope'] },
             zalaczniki:    { desc:'Materiały od klienta (pliki, linki, dokumenty). Owner: klient — kroki klienckie to najdłuższe ogony: poproś JAK NAJWCZEŚNIEJ, przypominaj gdy wisi >5 dni. Do czasu portalu: klient śle mailem, my wgrywamy do Storage attachments/wfa/<project_id>/.',
                              fields:[{k:'materialy',l:'Linki / lista materiałów',ta:true}],
@@ -1012,15 +1012,18 @@
                 ).join('') + '</div>';
             }
 
-            // Checklista
+            // Checklista — odhaczana AUTOMATYCZNIE przez sesję Claude Code (instrukcja w prompcie);
+            // ręcznie klika się tylko kroki robione bez sesji (np. zakup domeny, akcepty klienta).
             const check = mergedChecklist(ws, st);
             h += `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Do zrobienia w tym kroku</div><div class="space-y-1.5">`
                 + check.map((c, i) => `<label class="flex items-start gap-2.5 text-[12.5px] ${c.done ? 'text-zinc-500 line-through' : 'text-zinc-300'} cursor-pointer"><input type="checkbox" ${c.done ? 'checked' : ''} onchange="sdToggleCheck(${i})" class="mt-0.5 accent-[#0070f3] flex-shrink-0">${escapeHtml(c.t)}</label>`).join('')
-                + `</div><div class="flex gap-2 mt-2.5"><input id="sd-newcheck" class="fld" style="padding:6px 10px;font-size:12px" placeholder="Dodaj punkt…" onkeydown="if(event.key==='Enter')sdAddCheck()"><button onclick="sdAddCheck()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] flex-shrink-0">Dodaj</button></div></div>`;
+                + `</div><div class="text-[10px] text-zinc-600 mt-2">Sesja Claude Code odhacza checklistę i status sama na koniec pracy (instrukcja jest w prompcie). Ręcznie klikasz tylko to, co robisz bez sesji.</div>`
+                + `<div class="flex gap-2 mt-2.5"><input id="sd-newcheck" class="fld" style="padding:6px 10px;font-size:12px" placeholder="Dodaj punkt…" onkeydown="if(event.key==='Enter')sdAddCheck()"><button onclick="sdAddCheck()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] flex-shrink-0">Dodaj</button></div></div>`;
 
-            // Generator promptu dla Claude Code
-            if (ws.prompt) {
-                h += `<button onclick="sdCopyPrompt('${ws.prompt}')" class="w-full inline-flex items-center justify-center gap-2 bg-[#0070f3]/10 hover:bg-[#0070f3]/20 text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-4 py-2.5 text-xs font-medium transition-colors"><i class="ph ph-sparkle"></i> Kopiuj prompt dla Claude Code</button>`;
+            // Generator promptu dla Claude Code — na KAŻDYM kroku Tomka/auto
+            // (kroki bez dedykowanego promptu dostają generyczny, zbudowany z opisu + checklisty).
+            if (d.owner !== 'client') {
+                h += `<button onclick="sdCopyPrompt('${ws.prompt || d.key}')" class="w-full inline-flex items-center justify-center gap-2 bg-[#0070f3]/10 hover:bg-[#0070f3]/20 text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-4 py-2.5 text-xs font-medium transition-colors"><i class="ph ph-sparkle"></i> Kopiuj prompt sesji (Claude Code)</button>`;
             }
 
             // Notatka robocza
@@ -1146,7 +1149,31 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
                 const open = notes.filter(n => n.status === 'open');
                 if (open.length) extra = '\n\nOtwarte uwagi Tomka (do 00-KONTEKST):\n' + open.map(n => `- [${n.kind}] ${n.content}`).join('\n');
             }
-            const txt = base + (map[kind] || 'Pomóż mi z tym krokiem.') + (BUILD_KINDS.includes(kind) ? RITUAL : '') + extra;
+
+            // Zadanie: dedykowane z mapy albo GENERYCZNE z warsztatu kroku (opis + kryteria)
+            const dCur = drawerCtx ? defFor(drawerCtx.key) : null;
+            const wsCur = dCur ? (WS[dCur.key] || {}) : {};
+            const generic = dCur
+                ? `Poprowadź krok „${dCur.label}" (etap ${dCur.stage}: ${dCur.stage_label}) tego projektu.\n${wsCur.desc || ''}\nWykonaj to, co opisuje checklista kroku (sekcja AKTUALIZACJA PANELU niżej zawiera jej pozycje).`
+                : 'Pomóż mi z tym krokiem.';
+
+            // AUTO-ODHACZANIE: sesja sama aktualizuje checklistę, status i notatkę kroku na koniec pracy.
+            let panelUpd = '';
+            const stCur = drawerCtx ? stepFor(drawerCtx.key) : null;
+            if (stCur) {
+                const items = mergedChecklist(wsCur, stCur).map(c => c.t);
+                panelUpd = `\n\nAKTUALIZACJA PANELU — wykonaj na SAMYM KOŃCU sesji (Supabase MCP, projekt yxmavwkwnfuphjqbelws, tabela wfa_steps, wiersz id='${stCur.id}'):\n`
+                    + `1) Zapisz checklistę z faktycznym stanem (done=true TYLKO dla realnie wykonanych; zachowaj DOKŁADNIE poniższe teksty pozycji — są kluczem deduplikacji):\n`
+                    + `   UPDATE wfa_steps SET data = jsonb_set(data, '{checklist}', '<JSON>'::jsonb) WHERE id='${stCur.id}';\n`
+                    + `   gdzie <JSON> to tablica [{"t":"…","done":true|false}] dla pozycji: ${JSON.stringify(items)}\n`
+                    + `2) Status kroku: wszystkie kryteria spełnione → UPDATE wfa_steps SET status='done', completed_at=now(), completed_by='auto' WHERE id='${stCur.id}'; w przeciwnym razie ustaw status='in_progress'.\n`
+                    + `3) Dopisz 2-4 zdania podsumowania Z DOWODAMI do notatki kroku: UPDATE wfa_steps SET data = jsonb_set(data, '{note}', to_jsonb('<podsumowanie>'::text)) WHERE id='${stCur.id}';\n`
+                    + `4) Dodaj wpis do logu: INSERT INTO wfa_activities (project_id, actor, action, description) VALUES ('${projectId}', 'auto', 'session', '<co zrobiła sesja, 1 zdanie>');`;
+            }
+
+            // Pełny rytuał (BUILDLOG/plan sesji) tylko dla sesji w REPO aplikacji;
+            // kroki sprzed repo (Etap 1) i review dostają samą aktualizację panelu.
+            const txt = base + (map[kind] || generic) + (BUILD_KINDS.includes(kind) ? RITUAL : '') + panelUpd + extra;
             navigator.clipboard.writeText(txt)
                 .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
                 .catch(() => showToast('Nie udało się skopiować', 'error'));
