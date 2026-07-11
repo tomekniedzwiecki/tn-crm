@@ -231,7 +231,11 @@ DEPLOY
       review_adwersarski, demo_klienta, poprawki_demo, monthly) → 36 kroków; terminy wstępne pilotów ustawione — 2026-07-11
 - [x] Panel v2: warsztaty wg metodyki (wzmocnione checklisty/desc), prompty z rytuałem sesji + 6 nowych promptów,
       badge terminu (żółty <14 dni, czerwony <7) — 2026-07-11
-- [ ] `saas-starter` (szkielet apki: auth, webhook inbox, lifecycle, Playwright, legal, forge.mjs) — W BUDOWIE
+- [x] **`c:\repos_tn\saas-starter`** (osobne repo, git init): `forge.mjs <slug> "<Nazwa>" <dir>` + `template/`
+      (CLAUDE.md z Boundaries, BUILDLOG, brief 00-08, public: landing/auth/app/admin, migracja foundation
+      z RLS + is_operator() + inbox stripe_events + email_log, edge fns: stripe-onboard/checkout/webhook/
+      processor + lifecycle-emails + admin-stats, Playwright, legal szablony PL). Znane TODO: linki legal
+      w stopce, amount jednorazowych z Price/DB, 0002_cron do włączenia per apka — 2026-07-11
 - [ ] F2 fabryka (saas-starter + paczki) — NIE ZACZĘTE
 - [ ] F3 portal klienta — NIE ZACZĘTE
 - [ ] F4 automaty — NIE ZACZĘTE
