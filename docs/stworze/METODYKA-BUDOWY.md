@@ -70,6 +70,20 @@ Wszystko inne: Tomek przegląda DOWODY, nie kod.
 - AI w produkcie tylko jako silnik jednego workflow niszy (mierzalna oszczędność w 1. sesji użytkownika), nigdy bajer.
 - Mobile-first zawsze (nisze B2B pracują z telefonu — patrz Grzegorz: „fachowiec w trasie").
 
+## 6a. Pipeline designu (krok `design`, Etap 3) — pętla repo ↔ Claude Design
+
+Dwukierunkowa synchronizacja przez narzędzie **DesignSync** (skill `/design-sync` jeśli dostępny):
+1. Sesja EKSTRAHUJE tokeny z makiet sparingu (dokładne hexy — sampling PNG, nie zgadywanie) + inwentarz
+   ekranów ze specu + ton/kontekst niszy (np. teren → większe cele dotykowe, kontrast).
+2. Buduje bibliotekę w repo `design-system/`: `tokens.css` (custom properties) + preview HTML per komponent
+   z markerem `<!-- @dsCard group="…" -->` (Brand/Type/Colors/Components/Forms/Screens); komponenty we
+   wszystkich stanach + wzorce specyficzne apki (PDF itd.) + **2-3 pełne ekrany wzorcowe = dowód spójności**.
+3. PUSH do projektu claude.ai/design (DesignSync: create_project → finalize_plan → write_files) —
+   Tomek iteruje WIZUALNIE.
+4. PULL zmian: list_files → diff → get_file tylko zmienionych → repo, komponent po komponencie (nigdy hurtowo).
+5. **Kanon = repo.** Ekrany apki i landing stylują się WYŁĄCZNIE tokenami/komponentami; zakaz stylowania
+   ad hoc wpisany w CLAUDE.md apki (sekcja 🚫). Zero AI-sztampy (generyczne gradienty/fiolet).
+
 ## 7. Start rynkowy (Etap 5 — kolejność kanałów)
 
 Soft launch: 5-10 userów z sieci operatora (beta, testimoniale) → publiczny start po tygodniu.
