@@ -286,4 +286,10 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
 - [x] Panel: wskaźnik „u klienta od X dni" na krokach klienckich (>5 dni = followup), transkrypcja rozmowy
       sparingu w projekcie (na żądanie) — 2026-07-11
 - [x] Starter: `scripts/audit-static.mjs` — automatyczny gate (sekrety/XSS/USING(true)/service_role we froncie) — 2026-07-11
+- [x] **Mechanizm umowy** (odwzorowanie tn-crm v1; migracja `20260711d`): kolumny `contract_*` na wfa_projects,
+      krok `umowa` (E1, kamień „Umowa podpisana"); wfa-portal: contract_meta/contract_data/contract_html (render
+      W LOCIE, wykonawca z `settings.aplikacja_wykonawca_dane` — zasiane); portal: formularz danych → pobranie +
+      instrukcja podpisu (FORMA PISEMNA — wydruk/kwalifikowany, wniosek z researchu) → finalna do pobrania;
+      panel: karta Umowa (dane, podgląd, edycja HTML Z WALIDACJĄ placeholderów — guard na bug „baked placeholders",
+      oznacz wysłaną, uploady klient/finalna → `attachments/wfa/<id>/`, auto-done kroku). E2E przetestowane — 2026-07-11
 - [ ] F4 automaty — NIE ZACZĘTE
