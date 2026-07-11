@@ -49,6 +49,18 @@
         .err { color:#f26d78; font-size:12.5px; margin-bottom:10px; min-height:18px; }
         .hidden { display:none; }
         .skel { color:#52525b; text-align:center; padding:40px 0; }
+        /* Umowa */
+        input.ci { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:8px; padding:11px 13px; font-size:14px; color:#fff; margin-bottom:12px; }
+        input.ci:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        .lbl { display:block; font-size:12px; color:#71717a; margin-bottom:5px; }
+        .cbtn { background:#0070f3; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .cbtn:hover { background:#2b86ff; }
+        .cbtn-sec { background:#18181b; color:#e5e5e5; border:1px solid #2e2e2e; }
+        .cbtn-sec:hover { background:#222226; }
+        .note-box { background:rgba(0,112,243,.06); border:1px solid rgba(0,112,243,.25); border-radius:8px; padding:14px 16px; font-size:12.5px; color:#a9c9f0; line-height:1.6; }
+        .note-box b { color:#cfe2fb; }
+        .ok-box { background:rgba(69,165,87,.1); border:1px solid rgba(69,165,87,.4); border-radius:8px; padding:18px; }
+        .ok-box a { color:#8fe3a3; font-weight:600; text-decoration:none; }
     </style>
 </head>
 <body>
@@ -94,6 +106,8 @@
             <div id="c-miles"></div>
         </div>
 
+        <div class="card hidden" id="c-contract"></div>
+
         <div class="card hidden" id="c-linkbox">
             <div class="h-mini">Linki</div>
             <div class="links" id="c-links"></div>
@@ -112,6 +126,10 @@
     const $ = id => document.getElementById(id);
     const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
     const PW_KEY = 'wfa_portal_pw_' + token;
+    let currentPw = '';
+    let contractMeta = null;
+    let contractHtmlCache = null;
+    const cval = id => { const el = $(id); return el ? el.value.trim() : ''; };
 
     function show(id) {
         ['login','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
@@ -130,7 +148,9 @@
             }
             const d = await res.json();
             sessionStorage.setItem(PW_KEY, pw);
+            currentPw = pw;
             render(d); show('content');
+            loadContract(); // nie blokuje głównego renderu
         } catch (e) {
             show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
         } finally { if ($('go')) $('go').disabled = false; }
@@ -166,6 +186,99 @@
         $('c-links').innerHTML = links.join('');
 
         $('c-deadline').textContent = d.deadline_at ? ('Planowany termin oddania: ' + new Date(d.deadline_at).toLocaleDateString('pl-PL') + '.') : '';
+    }
+
+    // ============ UMOWA ============
+    async function callFn(extra) {
+        return fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ token, password: currentPw }, extra)) });
+    }
+
+    async function loadContract() {
+        try {
+            const res = await callFn({ action: 'contract_meta' });
+            if (!res.ok) { $('c-contract').classList.add('hidden'); return; }
+            contractMeta = await res.json();
+            renderContract();
+        } catch (e) { $('c-contract').classList.add('hidden'); }
+    }
+
+    function renderContract() {
+        const box = $('c-contract');
+        const m = contractMeta || {};
+        const st = m.contract_status || 'brak';
+        if (st === 'brak') { box.classList.add('hidden'); box.innerHTML = ''; return; }
+        box.classList.remove('hidden');
+        let inner = '<div class="h-mini">Umowa</div>';
+
+        if (st === 'dane_klienta') {
+            const f = m.fields || {};
+            inner += '<p style="color:#a1a1aa;font-size:13px;margin-bottom:16px">Te dane trafią do umowy — sprawdź je uważnie.</p>' +
+                '<div id="cc-err" class="err"></div>' +
+                '<label class="lbl">Imię i nazwisko</label><input class="ci" id="cc-name" value="' + esc(f.full_name || m.customer_name || '') + '">' +
+                '<label class="lbl">Firma (opcjonalnie)</label><input class="ci" id="cc-company" value="' + esc(f.company || '') + '">' +
+                '<label class="lbl">NIP (podaj, jeśli zawierasz umowę jako firma)</label><input class="ci" id="cc-nip" value="' + esc(f.nip || '') + '">' +
+                '<label class="lbl">Ulica i numer</label><input class="ci" id="cc-street" value="' + esc(f.street || '') + '">' +
+                '<label class="lbl">Kod pocztowy</label><input class="ci" id="cc-postal" placeholder="00-000" value="' + esc(f.postal || '') + '">' +
+                '<label class="lbl">Miejscowość</label><input class="ci" id="cc-city" value="' + esc(f.city || '') + '">' +
+                '<button class="cbtn" id="cc-save" onclick="submitContractData()"><i class="ph ph-floppy-disk"></i> Zapisz dane do umowy</button>';
+        } else if (st === 'do_podpisu') {
+            inner += '<button class="cbtn" onclick="openContractPrint()"><i class="ph ph-file-text"></i> Pobierz umowę do podpisu</button>' +
+                '<button class="cbtn-sec" style="margin-top:10px" onclick="downloadContractFile()"><i class="ph ph-download-simple"></i> Pobierz jako plik .html</button>' +
+                '<div class="note-box" style="margin-top:16px"><b>Jak podpisać:</b><br>' +
+                '(1) wydrukuj umowę w 2 egzemplarzach, podpisz odręcznie na ostatniej stronie i odeślij oba egzemplarze pocztą na adres z umowy — odeślemy Ci Twój egzemplarz podpisany przez nas;<br>' +
+                'ALBO (2) podpisz kwalifikowanym podpisem elektronicznym (np. mSzafir, SimplySign) i odeślij plik e-mailem.<br><br>' +
+                'Uwaga: zwykły skan/zdjęcie podpisu przyspiesza start, ale oryginał papierowy i tak jest potrzebny (przeniesienie praw autorskich wymaga formy pisemnej).</div>';
+        } else if (st === 'podpisana_klient') {
+            inner += '<div class="note-box">Otrzymaliśmy Twoją podpisaną umowę — po podpisie z naszej strony znajdziesz tu finalny dokument.</div>';
+        } else if (st === 'podpisana') {
+            inner += '<div class="ok-box"><div style="color:#8fe3a3;font-weight:600;margin-bottom:6px"><i class="ph ph-seal-check"></i> Umowa podpisana obustronnie</div>' +
+                (m.final_url ? '<a href="' + esc(m.final_url) + '" target="_blank" rel="noopener"><i class="ph ph-download-simple"></i> Pobierz podpisaną umowę</a>' : '<span style="color:#9db8a4;font-size:12.5px">Finalny dokument pojawi się tutaj wkrótce.</span>') +
+                '</div>';
+        }
+        box.innerHTML = inner;
+    }
+
+    async function submitContractData() {
+        const btn = $('cc-save'); if (btn) btn.disabled = true;
+        const errBox = $('cc-err'); if (errBox) errBox.textContent = '';
+        const fields = { full_name: cval('cc-name'), company: cval('cc-company'), nip: cval('cc-nip'), street: cval('cc-street'), postal: cval('cc-postal'), city: cval('cc-city') };
+        try {
+            const res = await callFn({ action: 'contract_data', fields });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { if (errBox) errBox.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; return; }
+            contractHtmlCache = null;
+            await loadContract();
+        } catch (e) {
+            if (errBox) errBox.textContent = 'Błąd połączenia — spróbuj ponownie.';
+        } finally { if (btn) btn.disabled = false; }
+    }
+
+    async function fetchContractHtml() {
+        if (contractHtmlCache) return contractHtmlCache;
+        const res = await callFn({ action: 'contract_html' });
+        if (!res.ok) throw new Error('fail');
+        const d = await res.json();
+        contractHtmlCache = d.html;
+        return contractHtmlCache;
+    }
+    async function openContractPrint() {
+        try {
+            const html = await fetchContractHtml();
+            const w = window.open('', '_blank');
+            if (!w) { alert('Odblokuj wyskakujące okna, aby wyświetlić umowę do wydruku.'); return; }
+            w.document.open(); w.document.write(html); w.document.close(); w.focus();
+        } catch (e) { alert('Nie udało się pobrać umowy — spróbuj ponownie za chwilę.'); }
+    }
+    async function downloadContractFile() {
+        try {
+            const html = await fetchContractHtml();
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'Umowa-' + String((contractMeta && contractMeta.name) || 'aplikacja').replace(/[^a-z0-9]+/gi, '-') + '.html';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+        } catch (e) { alert('Nie udało się pobrać pliku.'); }
     }
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }

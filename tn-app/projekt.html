@@ -149,6 +149,12 @@
                     <div id="notes-list" class="space-y-2"></div>
                 </div>
 
+                <!-- Umowa (wfa_projects.contract_*) -->
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-file-text text-[#3291ff]"></i> Umowa <span id="contract-badge" class="ml-1"></span></h3>
+                    <div id="contract-body" class="space-y-4"></div>
+                </div>
+
                 <!-- Dane ze sparingu (read-only) -->
                 <div id="spar-box" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7 hidden">
                     <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-chats-circle text-[#3291ff]"></i> Dane ze sparingu <span id="spar-sub" class="text-zinc-500 font-normal text-xs"></span></h3>
@@ -316,7 +322,7 @@
             // ustaw aktywny etap na etap aktualnego kroku
             const cur = currentStep();
             if (cur) { const d = stepDefs.find(x => x.key === cur.step_key); if (d) activeStage = d.stage; }
-            renderHeader(); renderFields(); renderPills(); renderStage(); renderNotes(); renderActivity(actQ.data||[]);
+            renderHeader(); renderFields(); renderPills(); renderStage(); renderNotes(); renderContract(); renderActivity(actQ.data||[]);
             loadSparing();
         }
 
@@ -507,6 +513,233 @@
             const { error } = await supabaseClient.from('wfa_notes').delete().eq('id', id);
             if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
             notes = notes.filter(x => x.id !== id); renderNotes();
+        }
+
+        // ============ UMOWA (wfa_projects.contract_*) ============
+        const CONTRACT_TEMPLATE_PATH = '/umowy/umowa-budowa-aplikacji.html';
+        const CONTRACT_STATUS_META = {
+            brak:             { l:'Brak umowy',              cls:'text-zinc-400 border-[#333]' },
+            dane_klienta:     { l:'Czeka na dane klienta',  cls:'text-[#f5b955] border-[#f5a623]/40' },
+            do_podpisu:       { l:'Do podpisu',             cls:'text-[#52a8ff] border-[#0070f3]/40' },
+            podpisana_klient: { l:'Podpisana przez klienta',cls:'text-[#f5b955] border-[#f5a623]/40' },
+            podpisana:        { l:'Podpisana',              cls:'text-[#62c073] border-[#45a557]/40' },
+        };
+        // Placeholdery DANYCH, które MUSZĄ zostać w custom_html (render w locie — lekcja „baked placeholders").
+        const DATA_PLACEHOLDERS = ['{{ZAMAWIAJACY_IMIE_NAZWISKO}}','{{ZAMAWIAJACY_NIP}}','{{ZAMAWIAJACY_ADRES}}','{{ZAMAWIAJACY_EMAIL}}','{{DATA}}'];
+
+        function contractPublicUrl(path) {
+            if (!path) return null;
+            const { data } = supabaseClient.storage.from('attachments').getPublicUrl(path);
+            return data ? data.publicUrl : null;
+        }
+        async function getWykonawca() {
+            try {
+                const { data } = await supabaseClient.from('settings').select('value').eq('key', 'aplikacja_wykonawca_dane').maybeSingle();
+                if (data && data.value) return typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            } catch (_) {}
+            return null;
+        }
+        // Render w locie: usuń baner .warn + podstaw placeholdery (identycznie jak edge fn wfa-portal).
+        function contractSubstitute(rawHtml, wyk) {
+            let html = String(rawHtml).replace(/<div class="warn[^"]*"[^>]*>[\s\S]*?<\/div>/, '');
+            const f = project.contract_fields || {};
+            const company = (f.company || '').trim();
+            const adres = [(f.street || '').trim(), [(f.postal || '').trim(), (f.city || '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+            const dataDate = project.contract_sent_at ? new Date(project.contract_sent_at) : new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const dataStr = pad(dataDate.getDate()) + '.' + pad(dataDate.getMonth() + 1) + '.' + dataDate.getFullYear();
+            const map = {
+                '{{ZAMAWIAJACY_IMIE_NAZWISKO}}': f.full_name || project.customer_name || '',
+                '{{ZAMAWIAJACY_FIRMA}}': company ? ', ' + company : '',
+                '{{ZAMAWIAJACY_NIP}}': f.nip || '',
+                '{{ZAMAWIAJACY_ADRES}}': adres,
+                '{{ZAMAWIAJACY_EMAIL}}': project.customer_email || '',
+                '{{DATA}}': dataStr,
+                '{{TERMIN_TYGODNI}}': f.termin_tygodni || '8',
+                '{{NAZWA_APLIKACJI_ROBOCZA}}': project.name || '',
+                '{{FEE_PERCENT}}': (project.fee_percent != null ? project.fee_percent : 10) + '',
+            };
+            if (wyk) {
+                if (wyk.nazwa != null) map['{{WYKONAWCA_NAZWA}}'] = wyk.nazwa;
+                if (wyk.nip != null) map['{{WYKONAWCA_NIP}}'] = wyk.nip;
+                if (wyk.adres != null) map['{{WYKONAWCA_ADRES}}'] = wyk.adres;
+            }
+            for (const [k, v] of Object.entries(map)) html = html.split(k).join(String(v));
+            return html;
+        }
+
+        function renderContract() {
+            const st = project.contract_status || 'brak';
+            const meta = CONTRACT_STATUS_META[st] || CONTRACT_STATUS_META.brak;
+            document.getElementById('contract-badge').innerHTML = `<span class="text-[11px] px-2 py-0.5 rounded-md border ${meta.cls}">${meta.l}</span>`;
+            const f = project.contract_fields || {};
+            const hasCustom = !!project.contract_custom_html;
+            let h = '';
+
+            if (st === 'brak') {
+                h += `<div class="bg-[#111] border border-[#262626] rounded-md p-4 flex items-start gap-3">
+                    <i class="ph ph-info text-[#f5b955] mt-0.5"></i>
+                    <div class="text-[12.5px] text-zinc-300">Umowa nie została jeszcze uruchomiona. Poproś klienta o dane — formularz pojawi mu się w portalu.
+                        <div class="mt-3"><button onclick="requestClientData()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25"><i class="ph ph-paper-plane-tilt"></i> Poproś klienta o dane</button>
+                        <span class="text-[11px] text-zinc-600 ml-2">Następnie wyślij klientowi link portalu (Ustawienia → Kopiuj link).</span></div>
+                    </div></div>`;
+            }
+
+            h += `<div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Dane do umowy <span class="text-zinc-700">· imię/nazwisko i e-mail bierzemy z Ustawień projektu</span></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Firma (opcjonalnie)</label><input class="fld" value="${escapeHtml(f.company||'')}" onchange="saveContractField('company', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">NIP</label><input class="fld" value="${escapeHtml(f.nip||'')}" onchange="saveContractField('nip', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Termin (tygodni)</label><input class="fld" type="number" value="${escapeHtml(f.termin_tygodni||'8')}" onchange="saveContractField('termin_tygodni', this.value)"></div>
+                    <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Ulica i numer</label><input class="fld" value="${escapeHtml(f.street||'')}" onchange="saveContractField('street', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Kod pocztowy</label><input class="fld" placeholder="00-000" value="${escapeHtml(f.postal||'')}" onchange="saveContractField('postal', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Miejscowość</label><input class="fld" value="${escapeHtml(f.city||'')}" onchange="saveContractField('city', this.value)"></div>
+                </div>
+            </div>`;
+
+            h += `<div class="flex flex-wrap gap-2 pt-1">
+                <button onclick="previewContract()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-eye"></i> Podgląd umowy</button>
+                <button onclick="toggleContractEditor()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-code"></i> Edytuj HTML</button>
+                ${hasCustom ? `<button onclick="restoreContractTemplate()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-[#f5b955] hover:border-[#f5a623]/60"><i class="ph ph-arrow-counter-clockwise"></i> Przywróć szablon</button>` : ''}
+                ${['do_podpisu','podpisana_klient','podpisana'].includes(st) ? '' : `<button onclick="markContractSent()" class="px-3 py-2 text-xs font-medium bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25"><i class="ph ph-paper-plane-tilt"></i> Oznacz jako wysłaną do podpisu</button>`}
+            </div>`;
+            if (hasCustom) h += `<div class="text-[11px] text-[#f5b955]"><i class="ph ph-warning-circle"></i> Umowa używa własnego HTML (nie szablonu).</div>`;
+
+            h += `<div id="contract-editor-wrap" class="hidden space-y-2">
+                <div class="text-[10px] text-zinc-500">Edytuj SUROWY szablon. NIE usuwaj placeholderów danych (${escapeHtml(DATA_PLACEHOLDERS.join(', '))}) — zapis bez nich zostanie odrzucony (render umowy jest w locie).</div>
+                <textarea id="contract-html-editor" rows="14" class="fld resize-y font-mono text-[11px]" spellcheck="false"></textarea>
+                <div class="flex gap-2">
+                    <button onclick="saveContractHtmlCustom()" class="px-3 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200">Zapisz HTML</button>
+                    <button onclick="toggleContractEditor()" class="px-3 py-2 text-xs text-zinc-400 hover:text-white">Zwiń</button>
+                </div>
+            </div>`;
+
+            const clientUrl = contractPublicUrl(project.contract_client_signed_path);
+            const finalUrl = contractPublicUrl(project.contract_final_path);
+            h += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#1f1f1f]">
+                <div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Podpisana przez klienta</div>
+                    <input id="contract-file-client" type="file" accept=".pdf,.jpg,.jpeg,.png" class="fld text-[11px]">
+                    <button onclick="uploadContractFile('client')" class="mt-2 px-3 py-1.5 text-xs bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-upload-simple"></i> Wgraj</button>
+                    ${clientUrl ? `<div class="mt-2"><a href="${escapeHtml(clientUrl)}" target="_blank" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff]"><i class="ph ph-file"></i> Podgląd pliku klienta</a></div>` : ''}
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Finalna (obustronnie podpisana)</div>
+                    <input id="contract-file-final" type="file" accept=".pdf,.jpg,.jpeg,.png" class="fld text-[11px]">
+                    <button onclick="uploadContractFile('final')" class="mt-2 px-3 py-1.5 text-xs bg-[#45a557]/15 border border-[#45a557]/40 rounded-md text-[#62c073] hover:bg-[#45a557]/25"><i class="ph ph-upload-simple"></i> Wgraj i zamknij krok</button>
+                    ${finalUrl ? `<div class="mt-2"><a href="${escapeHtml(finalUrl)}" target="_blank" class="text-[11px] text-[#62c073] hover:text-[#7ad08a]"><i class="ph ph-file"></i> Podgląd finalnej umowy</a></div>` : ''}
+                </div>
+            </div>`;
+
+            document.getElementById('contract-body').innerHTML = h;
+        }
+
+        async function saveContractField(key, value) {
+            const fields = Object.assign({}, project.contract_fields || {});
+            const v = String(value).trim();
+            if (v) fields[key] = v; else delete fields[key];
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_fields: fields }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_fields = fields; showToast('Zapisano', 'success');
+        }
+        async function requestClientData() {
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_status: 'dane_klienta' }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_status = 'dane_klienta';
+            logActivity('contract', 'Poproszono klienta o dane do umowy');
+            showToast('Czeka na dane klienta — wyślij mu link portalu', 'info');
+            renderContract();
+        }
+        async function markContractSent() {
+            const now = new Date().toISOString();
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_status: 'do_podpisu', contract_sent_at: now }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_status = 'do_podpisu'; project.contract_sent_at = now;
+            logActivity('contract', 'Umowa oznaczona jako wysłana do podpisu');
+            showToast('Oznaczono jako wysłaną do podpisu', 'success');
+            renderContract();
+        }
+        async function previewContract() {
+            try {
+                let raw = project.contract_custom_html;
+                if (!raw) {
+                    const r = await fetch(CONTRACT_TEMPLATE_PATH);
+                    if (!r.ok) throw new Error('template');
+                    raw = await r.text();
+                }
+                const wyk = await getWykonawca();
+                let html = contractSubstitute(raw, wyk);
+                html = html.replace('<body>', '<body><div class="no-print" style="position:fixed;top:10px;right:10px;z-index:99"><button onclick="window.print()" style="background:#1a365d;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 13px sans-serif;cursor:pointer">Drukuj / PDF</button></div>');
+                const w = window.open('', '_blank');
+                if (!w) { showToast('Odblokuj wyskakujące okna', 'error'); return; }
+                w.document.open(); w.document.write(html); w.document.close();
+            } catch (e) { showToast('Błąd podglądu umowy', 'error'); }
+        }
+        async function toggleContractEditor() {
+            const wrap = document.getElementById('contract-editor-wrap');
+            if (!wrap.classList.contains('hidden')) { wrap.classList.add('hidden'); return; }
+            const ta = document.getElementById('contract-html-editor');
+            if (!ta.value) {
+                if (project.contract_custom_html) ta.value = project.contract_custom_html;
+                else { try { const r = await fetch(CONTRACT_TEMPLATE_PATH); ta.value = r.ok ? await r.text() : ''; } catch (_) { ta.value = ''; } }
+            }
+            wrap.classList.remove('hidden');
+        }
+        async function saveContractHtmlCustom() {
+            const html = document.getElementById('contract-html-editor').value;
+            const missing = DATA_PLACEHOLDERS.filter(pl => !html.includes(pl));
+            if (missing.length) {
+                alert('Odmowa zapisu — w treści brakuje wymaganych placeholderów danych:\n' + missing.join(', ') + '\n\nUmowa jest renderowana w locie: placeholdery MUSZĄ zostać, inaczej dane klienta nie zostaną podstawione (bug „baked placeholders").');
+                return;
+            }
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_custom_html: html }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_custom_html = html;
+            logActivity('contract', 'Zapisano własny HTML umowy');
+            showToast('Umowa zapisana', 'success'); renderContract();
+        }
+        async function restoreContractTemplate() {
+            if (!confirm('Przywrócić oryginalny szablon (usunąć własny HTML umowy)?')) return;
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_custom_html: null }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_custom_html = null;
+            showToast('Przywrócono szablon', 'success'); renderContract();
+        }
+        async function markUmowaStepDone() {
+            const st = steps.find(s => s.step_key === 'umowa');
+            if (!st || st.status === 'done') return;
+            const upd = { status: 'done', completed_at: new Date().toISOString(), completed_by: 'admin' };
+            const { error } = await supabaseClient.from('wfa_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Krok „umowa": ' + error.message, 'error'); return; }
+            Object.assign(st, upd);
+        }
+        async function uploadContractFile(kind) {
+            const input = document.getElementById(kind === 'client' ? 'contract-file-client' : 'contract-file-final');
+            const file = input && input.files && input.files[0];
+            if (!file) { showToast('Wybierz plik', 'error'); return; }
+            const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+            const prefix = kind === 'client' ? 'umowa-klient-' : 'umowa-final-';
+            const path = 'wfa/' + projectId + '/' + prefix + Date.now() + '.' + ext;
+            const { error: upErr } = await supabaseClient.storage.from('attachments').upload(path, file);
+            if (upErr) { showToast('Błąd uploadu: ' + upErr.message, 'error'); return; }
+            if (kind === 'client') {
+                const { error } = await supabaseClient.from('wfa_projects').update({ contract_client_signed_path: path, contract_status: 'podpisana_klient' }).eq('id', projectId);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                project.contract_client_signed_path = path; project.contract_status = 'podpisana_klient';
+                logActivity('contract', 'Wgrano umowę podpisaną przez klienta');
+                showToast('Wgrano podpisaną przez klienta', 'success');
+                renderContract();
+            } else {
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient.from('wfa_projects').update({ contract_final_path: path, contract_status: 'podpisana', contract_signed_at: now }).eq('id', projectId);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                project.contract_final_path = path; project.contract_status = 'podpisana'; project.contract_signed_at = now;
+                await markUmowaStepDone();
+                logActivity('contract', 'Wgrano finalną, obustronnie podpisaną umowę');
+                logActivity('milestone', '🏁 Umowa podpisana');
+                showToast('🏁 Umowa podpisana', 'success');
+                renderContract(); renderPills(); renderStage(); renderHeader();
+            }
         }
 
         // ============ DANE ZE SPARINGU (read-only) ============
