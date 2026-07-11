@@ -14,6 +14,9 @@
 3. **`BUILDLOG.md`** — dziennik budowy (pamięć między sesjami). Każda sesja: (a) ZACZYNA od przeczytania,
    (b) KOŃCZY dopisaniem wpisu: co zrobione, decyzje + uzasadnienia, otwarte sprawy, dowody (linki/outputy).
 
+> Artefakty Etapu 1 (propozycje MVP-scope / pricing / nazwy — repo aplikacji jeszcze nie istnieje) żyją w
+> `tn-crm/docs/stworze/projekty/<slug>/` i przechodzą do repo aplikacji w kroku `paczka_cc` (lekcja z pilota 11.07).
+
 ## 2. Plan sesji (`08-PLAN-SESJI.md`)
 
 Sekwencja krótkich sesji z celem i kryterium „zrobione" ZANIM sesja ruszy. Wzorzec:
