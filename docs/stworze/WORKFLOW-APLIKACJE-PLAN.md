@@ -185,6 +185,10 @@ DEPLOY
 [ ] migracja PRZED pushem kodu; Confirm email OFF potwierdzone; Resend DNS zielony
 ```
 
+> ⚠️ 2026-07-11: propozycja autonomizacji flow + rewizja krytyczna (2 tory, nowe kroki, bramki jakości):
+> **`docs/stworze/FLOW-AUTONOMIA-PLAN.md`** — czytać razem z tym dokumentem; po decyzjach Tomka §8 poniżej
+> zostanie zaktualizowane.
+
 ## 8. Fazy wdrożenia modułu
 
 - **F1 — Fundament (panel):** migracja `wfa_*` + seed → panel `/tn-app` (index + projekt) → sidebar/rewrites →
