@@ -991,7 +991,7 @@
                              fields:[{k:'gtm_plan',l:'Plan GTM / kanały',ta:true}],
                              check:['0→10: sieć operatora + grupy branżowe (insider dzieli się narzędziem)','10→30: outreach z AI-personalizacją (RODO: uzasadniony interes, opt-out)','30→50: partnerstwa dystrybucyjne (hurtownie/izby/stowarzyszenia)','Tło: kilka MOCNYCH stron porównawczych (AI+człowiek, NIE masowy content)','Płatne tylko retargeting, po PMF','Pętla feedbacku od pierwszych klientów działa'], prompt:'gtm_50' },
             stery:         { desc:'Przekazanie sterów operatorowi. Tomek przechodzi na rev-share (Connect → Application fees). Pamiętaj: po 12 mies. hosting przechodzi 90% klient / 10% Tomek. Kamień milowy.',
-                             check:['Operator prowadzi samodzielnie','Dostępy przekazane','Rytm przeglądów ustalony','Rev-share rozliczany (Connect Application fees)','Data „hosting 90/10 po 12 mies." zanotowana'] },
+                             check:['Operator prowadzi samodzielnie','Dostępy przekazane','Rytm przeglądów ustalony','Rev-share rozliczany (Connect Application fees)','Data „hosting 90/10 po 12 mies." zanotowana','Otwarte uwagi [v1.1] zebrane w backlog i omówione z operatorem'] },
             monthly:       { desc:'3 comiesięczne przeglądy z operatorem po przekazaniu sterów (rytm, zanim nawyki operatora okrzepną): liczby, blokery, plan na miesiąc.',
                              check:['Przegląd #1 (liczby / blokery / plan)','Przegląd #2','Przegląd #3','Decyzja: dalszy rytm (kwartalny / autopilot)'] },
         };
@@ -1167,15 +1167,17 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
                 landing: 'Zbuduj landing + cennik aplikacji wg makiet sparingu (04-STYLEGUIDE). Sekcje: hero, problem, jak działa, cennik / plany, CTA → checkout Stripe. Dopracuj mobile 375px oraz OG / SEO.',
                 testy_e2e: 'Napisz i URUCHOM testy E2E (Playwright, scaffold w tests/) na deploy preview: rejestracja→logowanie→funkcja główna; checkout→płatność→webhook→dostęp; reset hasła; panel operatora. Konto testowe Stripe. Wklej pełne wyniki do BUILDLOG.',
                 review_adwersarski: 'REVIEW ADWERSARSKI — świeża sesja, celowo ograniczony kontekst: przeczytaj WYŁĄCZNIE `git diff main...HEAD` oraz kryteria z apka-<slug>-brief/01-MVP-SCOPE.md. NIE czytaj BUILDLOG.md ani historii pracy (niezależność od rozumowania budowniczego). Twoim zadaniem jest ZNALEŹĆ błędy, nie potwierdzić poprawność: poprawność logiki, edge case\'y, bezpieczeństwo (RLS, sekrety, walidacja wejścia, XSS, kwoty liczone serwerowo), zgodność z kryteriami MVP. Każde znalezisko: file:line + jednozdaniowy opis + konkretny scenariusz błędu (wejście → złe wyjście). Na końcu lista findings posortowana wg wagi — bez naprawiania.',
-                poprawki_demo: 'Wykonaj poprawki z demo klienta oznaczone jako „w cenie v1" (lista w kroku „Demo dla klienta" / Uwagach). Rzeczy spoza granicy v1 NIE ruszaj — tylko odnotuj. Po poprawkach uruchom E2E i wklej wyniki.',
+                poprawki_demo: 'Wykonaj poprawki z demo klienta oznaczone jako „w cenie v1" (lista w kroku „Demo dla klienta") ORAZ wszystkie otwarte uwagi z prefiksem [DEMO] (sekcja OTWARTE UWAGI niżej) — po wykonaniu zamykaj je wg zasad. Rzeczy spoza granicy v1 przetaguj na [v1.1]. Po poprawkach uruchom E2E i wklej wyniki.',
                 gtm_50: 'Przygotuj plan GTM 0→50 dla tej aplikacji wg playbooku (METODYKA-BUDOWY.md §7): (1) lista grup branżowych/społeczności niszy + 3 posty dla operatora (jego głosem, „patrzcie czego używam", nie reklama), (2) szablon cold-maila/LinkedIn z AI-personalizacją z sygnałów (RODO: uzasadniony interes, opt-out), (3) lista 10 potencjalnych partnerów dystrybucyjnych (hurtownie/izby/stowarzyszenia niszy) + szablon propozycji, (4) 3 tematy stron porównawczych. Wszystko po polsku, pod tę konkretną niszę.',
                 audyt: 'Wykonaj audyt bezpieczeństwa wg checklisty (WORKFLOW-APLIKACJE-PLAN §7): RLS / izolacja, sekrety, webhooki, XSS / input, nadużycia, deploy. Dla każdej pozycji: PASS/FAIL + dowód (wynik komendy/query). Sekcje RLS i płatności przygotuj do osobistego przeglądu Tomka (wypisz polityki i przepływy kwot wprost). FAIL = gate — nie startujemy, dopóki nie naprawione.',
             };
-            // Wstrzyknij otwarte uwagi Tomka do paczki startowej
-            let extra = '';
-            if (kind === 'paczka_cc') {
-                const open = notes.filter(n => n.status === 'open');
-                if (open.length) extra = '\n\nOtwarte uwagi Tomka (do 00-KONTEKST):\n' + open.map(n => `- [${n.kind}] ${n.content}`).join('\n');
+            // CYKL ŻYCIA UWAG: otwarte uwagi wstrzykiwane do KAŻDEJ sesji — sesja je stosuje,
+            // klasyfikuje ([DEMO]/[v1.1]) albo eskaluje. Uwagi nie "leżą": każda sesja je przetwarza.
+            let notesBlock = '';
+            const openNotes = notes.filter(n => n.status === 'open');
+            if (openNotes.length) {
+                const listed = openNotes.slice(0, 20).map(n => `- [${n.kind} | id:${n.id}] ${n.content}`).join('\n');
+                notesBlock = `\n\nOTWARTE UWAGI TOMKA (${openNotes.length}${openNotes.length > 20 ? ' — pokazuję pierwsze 20' : ''}) — przetwórz wg zasad (tabela wfa_notes, Supabase MCP):\n${listed}\nZASADY OBSŁUGI:\n(a) uwaga dotyczy TEGO kroku → zastosuj ją w pracy i ZAMKNIJ: UPDATE wfa_notes SET status='done', resolved_at=now(), content = content || ' ✅ [sesja: <jak zastosowano, pół zdania>]' WHERE id='<id>';\n(b) dotyczy przyszłego kroku → zostaw otwartą (nie ruszaj);\n(c) dotyczy zakresu JUŻ zbudowanego/zamkniętego → NIE wdrażaj po cichu: przetaguj — UPDATE wfa_notes SET content = '[DEMO] ' || content WHERE id='<id>' (drobiazg do poprawek po demo) ALBO prefiks '[v1.1] ' (rozwój po starcie) — i zostaw otwartą;\n(d) sprzeczna z 01-MVP-SCOPE lub wymaga decyzji → zostaw otwartą i dopisz pytanie „DO DECYZJI TOMKA" w notatce kroku.`;
             }
 
             // Zadanie: dedykowane z mapy albo GENERYCZNE z warsztatu kroku (opis + kryteria)
@@ -1201,7 +1203,7 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
 
             // Pełny rytuał (BUILDLOG/plan sesji) tylko dla sesji w REPO aplikacji;
             // kroki sprzed repo (Etap 1) i review dostają samą aktualizację panelu.
-            const txt = base + (map[kind] || generic) + (BUILD_KINDS.includes(kind) ? RITUAL : '') + panelUpd + extra;
+            const txt = base + (map[kind] || generic) + (BUILD_KINDS.includes(kind) ? RITUAL : '') + notesBlock + panelUpd;
             navigator.clipboard.writeText(txt)
                 .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
                 .catch(() => showToast('Nie udało się skopiować', 'error'));

@@ -44,6 +44,18 @@ Scope creep: wszystko spoza `01-MVP-SCOPE.md` → `wfa_notes` „na później", 
 4. Dopisz wpis do `BUILDLOG.md`.
 5. Jeśli utknąłeś na decyzji biznesowej — NIE zgaduj: zapisz pytanie w BUILDLOG „DO DECYZJI TOMKA" i zakończ sesję.
 
+## 3a. Cykl życia Uwag (wfa_notes) — uwagi nigdy nie „leżą"
+
+Tomek dorzuca uwagę JEDNĄ linijką w dowolnym momencie (zakładka Uwagi). Dalej proces jest automatyczny:
+1. **Triage hurtowy (raz, krok `uwagi_tomka` w E1):** decyzje fundamentowe rozstrzygnięte przed MVP scope.
+2. **Każda sesja dostaje wszystkie OTWARTE uwagi** (wstrzykiwane do każdego promptu z panelu) i przetwarza je:
+   (a) dotyczy jej kroku → stosuje i ZAMYKA z adnotacją „✅ jak zastosowano";
+   (b) dotyczy przyszłości → zostawia;
+   (c) dotyczy już zbudowanego → przetagowuje `[DEMO]` (drobiazg) lub `[v1.1]` (rozwój) — NIGDY nie wdraża po cichu;
+   (d) sprzeczna ze scope / wymaga decyzji → eskalacja „DO DECYZJI TOMKA" w notatce kroku.
+3. **Momenty zbiorcze:** `[DEMO]` konsumuje krok `poprawki_demo`; `[v1.1]` zbiera krok `stery` jako backlog
+   dla operatora. Licznik otwartych uwag widoczny na tabie — rosnący = sygnał do zajrzenia.
+
 ## 4. Review adwersarski (osobny prompt, świeża sesja)
 
 Po ukończeniu fazy budowy (i przy każdej dużej zmianie): nowa sesja dostaje WYŁĄCZNIE
