@@ -78,9 +78,12 @@ Dwukierunkowa synchronizacja przez narzędzie **DesignSync** (skill `/design-syn
 2. Buduje bibliotekę w repo `design-system/`: `tokens.css` (custom properties) + preview HTML per komponent
    z markerem `<!-- @dsCard group="…" -->` (Brand/Type/Colors/Components/Forms/Screens); komponenty we
    wszystkich stanach + wzorce specyficzne apki (PDF itd.) + **2-3 pełne ekrany wzorcowe = dowód spójności**.
-3. PUSH do projektu claude.ai/design (DesignSync: create_project → finalize_plan → write_files) —
-   Tomek iteruje WIZUALNIE.
-4. PULL zmian: list_files → diff → get_file tylko zmienionych → repo, komponent po komponencie (nigdy hurtowo).
+3. PĘTLA SAMODOSKONALENIA (autonomiczna, bez czekania na Tomka): render-check każdej karty + krytyk
+   w świeżym kontekście (spójność tokenów, kontrast, stany, mobile) → napraw → powtórz, aż zero zastrzeżeń
+   (max 4 rundy; reszta do BUILDLOG).
+4. PUSH do projektu claude.ai/design (DesignSync: create_project → finalize_plan → write_files) —
+   NIEBLOKUJĄCY podgląd dla Tomka; jego iteracje są opcjonalne. PULL na hasło „zsynchronizuj design":
+   list_files → diff → get_file tylko zmienionych → repo, komponent po komponencie (nigdy hurtowo).
 5. **Kanon = repo.** Ekrany apki i landing stylują się WYŁĄCZNIE tokenami/komponentami; zakaz stylowania
    ad hoc wpisany w CLAUDE.md apki (sekcja 🚫). Zero AI-sztampy (generyczne gradienty/fiolet).
 
