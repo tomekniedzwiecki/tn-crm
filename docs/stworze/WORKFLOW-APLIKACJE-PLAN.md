@@ -122,7 +122,7 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > z WOLNYMI .pl (RDAP, fallback WHOIS), wybór w rozmowie, sesja zapisuje name/slug/domain; Tomkowi
 > zostaje zakup + DNS. NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
 > 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
-> w rozmowie, zapis finalnych planów w kroku. Razem: 34 kroki.
+> w rozmowie, zapis finalnych planów w kroku. Razem: **35 kroków** (z krokiem `umowa`).
 
 ## 5. Stripe Connect — architektura płatności każdej aplikacji
 
