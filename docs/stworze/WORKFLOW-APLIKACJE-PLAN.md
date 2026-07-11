@@ -115,6 +115,15 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 | 5 | Start | `gtm_50` Droga do 50 klientów | admin | |
 | 5 | Start | `stery` Przekazanie sterów | admin | ✅ „Stery przekazane operatorowi" |
 
+> **ZMIANY KROKÓW v3 (11.07 wieczór, feedback Tomka z panelu; tabela wyżej = stan historyczny):**
+> OUT: `zalaczniki` (materiały zbiera SPOWIEDNIK; dane domenowe → `dane_operatora`), `akcept_klienta`
+> (klient ocenia GOTOWE MVP przy `demo_klienta`; zakres wiąże Załącznik 1 umowy), osobna `domena`.
+> SCALONE: `nazwa` = „Nazwa i domena" (kamień „Nazwa i domena wybrane") — sesja proponuje 10 nazw
+> z WOLNYMI .pl (RDAP, fallback WHOIS), wybór w rozmowie, sesja zapisuje name/slug/domain; Tomkowi
+> zostaje zakup + DNS. NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
+> 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
+> w rozmowie, zapis finalnych planów w kroku. Razem: 34 kroki.
+
 ## 5. Stripe Connect — architektura płatności każdej aplikacji
 
 Decyzje Tomka (2026-07-11): model zaakceptowany; aktywację Connect robi sam wg `docs/stworze/STRIPE-CONNECT-SETUP.md`;
