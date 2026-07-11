@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Aplikacje (Workflow wfa)</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        .step-chip { display:inline-flex; align-items:center; gap:7px; position:relative;
+            border:1px solid #2a2a2a; background:#0a0a0a; color:#a1a1aa;
+            border-radius:6px; padding:8px 14px; font-size:12.5px; cursor:pointer; transition:all .15s ease; }
+        .step-chip:hover { color:#fff; border-color:#444; }
+        .step-chip.active { color:#fff; border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
+        .step-badge { position:absolute; top:-7px; right:-7px; min-width:18px; height:18px; padding:0 5px;
+            border-radius:6px; font-size:10.5px; font-weight:600; display:flex; align-items:center; justify-content:center; color:#fff; }
+        .owner-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <span class="text-zinc-500 text-xs font-mono">tn-app / <span class="text-zinc-300">aplikacje</span></span>
+            </div>
+            <button onclick="openNewModal()" class="inline-flex items-center gap-2 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2 text-xs font-semibold transition-colors">
+                <i class="ph ph-plus"></i> Nowy projekt
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+
+                <div class="mb-8">
+                    <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Aplikacje — wspólne SaaS</h1>
+                    <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: fundament → infrastruktura → budowa MVP → jakość → start → stery.</p>
+                </div>
+
+                <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku) -->
+                <div id="stages-wrap" class="space-y-5 mb-10"></div>
+
+                <!-- Pasek nad listą: rozwiń wszystkie + filtr -->
+                <div class="flex items-center gap-3 mb-4">
+                    <button id="expand-all-btn" onclick="toggleAll()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors">
+                        <i class="ph ph-caret-double-down"></i> <span id="expand-all-label">Rozwiń wszystkie</span>
+                    </button>
+                    <div id="filter-bar" class="hidden items-center gap-2">
+                        <span class="text-zinc-500 text-xs">Filtr:</span>
+                        <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
+                        <button onclick="clearFilter()" class="text-zinc-500 hover:text-white text-xs underline">wyczyść</button>
+                    </div>
+                    <span id="sync-note" class="text-zinc-700 text-[11px] ml-auto"></span>
+                </div>
+
+                <!-- Lista projektów -->
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+                                    <th class="px-5 py-3">Aplikacja / klient</th>
+                                    <th class="px-5 py-3">Status</th>
+                                    <th class="px-5 py-3">Postęp</th>
+                                    <th class="px-5 py-3">Aktualny krok</th>
+                                    <th class="px-5 py-3">Domena</th>
+                                    <th class="px-5 py-3">Utworzony</th>
+                                    <th class="px-5 py-3"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="projects-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
+                        <i class="ph ph-app-window text-4xl mb-3 block text-zinc-700"></i>
+                        Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: nowy projekt (ręczne dodanie — projekt spoza lejka) -->
+    <div id="new-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeNewModal()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-md p-6">
+            <h3 class="text-white text-lg font-semibold mb-1">Nowy projekt</h3>
+            <p class="text-zinc-500 text-xs mb-4">Dla projektu spoza lejka /aplikacja. Projekty z opłaconych sesji sparingu tworzą się automatycznie.</p>
+            <div class="space-y-3">
+                <div><label class="text-xs text-zinc-500 block mb-1">Nazwa aplikacji (opcjonalnie)</label>
+                    <input id="np-name" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Imię i nazwisko klienta</label>
+                    <input id="np-customer" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label>
+                    <input id="np-email" type="email" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label>
+                    <input id="np-phone" class="w-full bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-2 text-sm text-white focus:outline-none focus:border-[#0070f3]/60"></div>
+            </div>
+            <div class="flex justify-end gap-2 mt-5">
+                <button onclick="closeNewModal()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                <button id="np-save" onclick="createProject()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Utwórz</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let stepDefs = [];        // wfa_step_defs (active, sorted)
+        let projects = [];        // wfa_projects
+        let stepsByProj = {};     // project_id -> [wfa_steps skrót]
+        let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
+        let filterStepKey = null;
+        const openRows = new Set();
+
+        // Statusy projektu aplikacji (CHECK z migracji wfa_projects)
+        const STATUS_META = {
+            fundament:     { label: 'Fundament',      cls: 'bg-zinc-500/15 text-zinc-300 border-zinc-500/30' },
+            infrastruktura:{ label: 'Infrastruktura', cls: 'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40' },
+            budowa:        { label: 'Budowa MVP',     cls: 'bg-[#0070f3]/10 text-[#52a8ff] border-[#0070f3]/40' },
+            jakosc:        { label: 'Jakość',         cls: 'bg-[#f5a623]/10 text-[#f5b955] border-[#f5a623]/40' },
+            start:         { label: 'Start',          cls: 'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40' },
+            stery:         { label: 'Stery',          cls: 'bg-[#45a557]/10 text-[#62c073] border-[#45a557]/40' },
+            zamkniety:     { label: 'Zamknięty',      cls: 'bg-zinc-500/15 text-zinc-400 border-zinc-500/30' },
+        };
+        const BADGE_COLORS = { admin: '#0070f3', client: '#f5a623', auto: '#45a557' };
+        const OWNER_LABEL = { admin: 'Tomek', client: 'Klient', auto: 'Auto' };
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function relDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso); if (isNaN(d.getTime())) return '—';
+            const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
+            if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj'; return diff + ' dni temu';
+        }
+        function projName(p) {
+            const n = (p.name || '').trim();
+            if (n) return n;
+            return (p.customer_name || 'Projekt') + ' (bez nazwy)';
+        }
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? '#45a557' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:6px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data || []).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // ============ DANE ============
+        async function loadAll() {
+            // 1) auto-sync: opłacone sesje sparingu -> wfa_projects (SECURITY DEFINER; zero zmian w tpay/spar-chat)
+            let created = 0;
+            try { const { data } = await supabaseClient.rpc('wfa_sync_projects'); created = data || 0; } catch (e) { console.warn('wfa_sync_projects', e); }
+
+            // 2) definicje + projekty
+            const [defsQ, projQ] = await Promise.all([
+                supabaseClient.from('wfa_step_defs').select('*').eq('active', true).order('stage').order('sort'),
+                supabaseClient.from('wfa_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
+            ]);
+            stepDefs = defsQ.data || [];
+            projects = (projQ.data || []).filter(p => !p.is_test);
+
+            // 3) dosiej brakujące instancje kroków per projekt (nowe defs)
+            await Promise.all(projects.map(p => supabaseClient.rpc('wfa_ensure_steps', { p_project: p.id }).catch(() => {})));
+
+            // 4) instancje kroków — GOTCHA PostgREST: default 1000 wierszy, przy 30 krokach/projekt szybko przekroczone
+            const stepsQ = await supabaseClient.from('wfa_steps').select('project_id, step_key, status').range(0, 9999);
+            stepsByProj = {}; (stepsQ.data || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
+
+            const note = document.getElementById('sync-note');
+            if (note) note.textContent = created > 0 ? `zsynchronizowano ${created} nowy(ch) projekt(ów) z sparingu` : '';
+
+            computeAgg();
+            renderStages();
+            renderTable();
+        }
+
+        // Postęp + „aktualny krok": pierwszy nie-done/nie-skipped krok wg kolejności definicji (etap → sort)
+        function computeAgg() {
+            const defOrder = stepDefs.map(d => d.key);
+            const defMap = {}; stepDefs.forEach(d => defMap[d.key] = d);
+            aggByProj = {};
+            projects.forEach(p => {
+                const steps = stepsByProj[p.id] || [];
+                const countable = steps.filter(s => s.status !== 'skipped');
+                const done = countable.filter(s => s.status === 'done').length;
+                let currentKey = null;
+                for (const key of defOrder) {
+                    const open = steps.some(s => s.step_key === key && s.status !== 'done' && s.status !== 'skipped');
+                    if (open) { currentKey = key; break; }
+                }
+                aggByProj[p.id] = {
+                    total: countable.length, done,
+                    pct: countable.length ? Math.round(done / countable.length * 100) : 0,
+                    currentKey,
+                    currentLabel: currentKey ? (defMap[currentKey]?.label || currentKey) : 'Wszystko ukończone',
+                };
+            });
+        }
+
+        // ============ RENDER: etapy + chipy ============
+        function renderStages() {
+            const wrap = document.getElementById('stages-wrap');
+            const stages = {};
+            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
+            const activeProjects = projects.filter(p => p.status !== 'zamkniety');
+            const countByKey = {};
+            activeProjects.forEach(p => { const k = aggByProj[p.id]?.currentKey; if (k) countByKey[k] = (countByKey[k] || 0) + 1; });
+
+            wrap.innerHTML = Object.keys(stages).sort((a, b) => a - b).map(num => {
+                const st = stages[num];
+                const chips = st.defs.map(d => {
+                    const cnt = countByKey[d.key] || 0;
+                    const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
+                    const mileMark = d.milestone_label ? '<i class="ph ph-flag-checkered text-[10px] opacity-70" title="kamień milowy"></i>' : '';
+                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.milestone_label ? ' · kamień milowy' : ''}">
+                        <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
+                        <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mileMark}${badge}</button>`;
+                }).join('');
+                return `<div>
+                    <div class="flex items-baseline gap-2 mb-2.5">
+                        <span class="text-[11px] font-mono font-semibold tracking-wider text-zinc-300">ETAP ${num}</span>
+                        <span class="text-[11px] text-zinc-500">${escapeHtml(st.label)}</span>
+                    </div>
+                    <div class="flex flex-wrap gap-2.5">${chips}</div>
+                </div>`;
+            }).join('');
+        }
+
+        function toggleFilter(key) {
+            filterStepKey = filterStepKey === key ? null : key;
+            const bar = document.getElementById('filter-bar');
+            if (filterStepKey) {
+                const d = stepDefs.find(x => x.key === filterStepKey);
+                document.getElementById('filter-label').textContent = 'projekty na kroku „' + (d?.label || key) + '"';
+                bar.classList.remove('hidden'); bar.classList.add('flex');
+            } else { bar.classList.add('hidden'); bar.classList.remove('flex'); }
+            renderStages(); renderTable();
+        }
+        function clearFilter() { toggleFilter(filterStepKey); }
+
+        // ============ RENDER: tabela ============
+        function renderTable() {
+            const tbody = document.getElementById('projects-tbody');
+            let rows = projects;
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            tbody.innerHTML = rows.map(p => {
+                const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentLabel: '—' };
+                const sm = STATUS_META[p.status] || STATUS_META.fundament;
+                const open = openRows.has(p.id);
+                const domain = p.domain
+                    ? `<a href="https://${escapeHtml(p.domain)}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded-md px-2 py-0.5 text-[11px] hover:bg-[#0070f3]/10"><i class="ph ph-globe"></i>${escapeHtml(p.domain)}</a>`
+                    : '<span class="text-zinc-700 text-[11px]">—</span>';
+                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="toggleRow('${p.id}')">
+                    <td class="px-5 py-3.5">
+                        <div class="flex items-center gap-2.5">
+                            <i class="ph ${open ? 'ph-caret-down text-[#3291ff]' : 'ph-caret-right text-zinc-600'} text-xs flex-shrink-0"></i>
+                            <div class="min-w-0">
+                                <div class="text-white font-medium truncate">${escapeHtml(projName(p))}</div>
+                                <div class="text-zinc-600 text-[11px] truncate">${escapeHtml(p.customer_name || '')}${p.customer_email ? ' · ' + escapeHtml(p.customer_email) : ''}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-5 py-3.5"><span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span></td>
+                    <td class="px-5 py-3.5 min-w-[130px]">
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full bg-[#0070f3] rounded-full" style="width:${agg.pct}%"></div></div>
+                            <span class="text-zinc-400 text-[11px] font-mono">${agg.pct}%</span>
+                        </div>
+                        <div class="text-zinc-600 text-[10px] mt-0.5">${agg.done}/${agg.total} kroków</div>
+                    </td>
+                    <td class="px-5 py-3.5 text-zinc-300 text-xs">${escapeHtml(agg.currentLabel)}</td>
+                    <td class="px-5 py-3.5">${domain}</td>
+                    <td class="px-5 py-3.5 text-zinc-500 text-xs">${relDate(p.created_at)}</td>
+                    <td class="px-5 py-3.5 text-right"><button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button></td>
+                </tr>` + (open ? renderRowPreview(p) : '');
+            }).join('');
+        }
+
+        // Rozwijany podgląd: postęp etapów bez wchodzenia w projekt
+        function renderRowPreview(p) {
+            const stages = {};
+            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, keys: [] }).keys.push(d.key); });
+            const steps = stepsByProj[p.id] || [];
+            const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
+                const inst = steps.filter(s => stages[n].keys.includes(s.step_key) && s.status !== 'skipped');
+                const done = inst.filter(s => s.status === 'done').length;
+                const full = inst.length > 0 && done === inst.length;
+                const started = done > 0 || inst.some(s => s.status === 'in_progress');
+                const cls = full ? 'border-[#45a557]/50 text-[#62c073]' : started ? 'border-[#0070f3]/50 text-[#52a8ff]' : 'border-[#2a2a2a] text-zinc-500';
+                return `<span class="inline-flex items-center gap-1.5 border ${cls} rounded-md px-2.5 py-1 text-[11px]">
+                    ${full ? '<i class="ph ph-check"></i>' : `<span class="font-mono">${done}/${inst.length}</span>`} ${escapeHtml(stages[n].label)}</span>`;
+            }).join('');
+            const links = [];
+            if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i> aplikacja</a>`);
+            if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-browser"></i> landing</a>`);
+            if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i> repo</a>`);
+            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="7" class="px-5 py-4 cursor-default">
+                <div class="flex flex-wrap gap-1.5 mb-3">${stageHtml}</div>
+                ${links.length ? `<div class="flex flex-wrap gap-3 text-[11px]">${links.join('')}</div>` : '<span class="text-zinc-600 text-[11px]">brak linków (repo / aplikacja / landing)</span>'}
+            </td></tr>`;
+        }
+        function toggleRow(id) {
+            if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
+            renderTable(); updateExpandAllLabel();
+        }
+        function toggleAll() {
+            let rows = projects;
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
+            if (allOpen) rows.forEach(p => openRows.delete(p.id));
+            else rows.forEach(p => openRows.add(p.id));
+            renderTable(); updateExpandAllLabel();
+        }
+        function updateExpandAllLabel() {
+            let rows = projects;
+            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
+            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
+            const lbl = document.getElementById('expand-all-label');
+            if (lbl) lbl.textContent = allOpen ? 'Zwiń wszystkie' : 'Rozwiń wszystkie';
+        }
+
+        // ============ NOWY PROJEKT (ręczny) ============
+        function openNewModal() {
+            document.getElementById('new-modal').classList.remove('hidden');
+            document.getElementById('np-name').focus();
+        }
+        function closeNewModal() { document.getElementById('new-modal').classList.add('hidden'); }
+        async function createProject() {
+            const btn = document.getElementById('np-save'); btn.disabled = true;
+            try {
+                const payload = {
+                    name: document.getElementById('np-name').value.trim() || '',
+                    customer_name: document.getElementById('np-customer').value.trim() || null,
+                    customer_email: document.getElementById('np-email').value.trim() || null,
+                    customer_phone: document.getElementById('np-phone').value.trim() || null,
+                };
+                if (!payload.customer_name && !payload.name) { showToast('Podaj nazwę aplikacji lub imię klienta', 'error'); btn.disabled = false; return; }
+                const { data, error } = await supabaseClient.from('wfa_projects').insert(payload).select('id').single();
+                if (error) throw error;
+                await supabaseClient.rpc('wfa_ensure_steps', { p_project: data.id });
+                await supabaseClient.from('wfa_activities').insert({ project_id: data.id, actor: 'admin', action: 'created', description: 'Projekt utworzony ręcznie' });
+                location.href = '/tn-app/projekt?id=' + data.id;
+            } catch (e) {
+                console.error(e); showToast('Błąd tworzenia projektu: ' + (e.message || e), 'error'); btn.disabled = false;
+            }
+        }
+
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+        })();
+    </script>
+</body>
+</html>

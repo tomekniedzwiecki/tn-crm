@@ -58,6 +58,26 @@ NIE działa — tylko USD/EN (ceny w snapshocie SĄ W USD, front przelicza kurse
 `source==='detail'` = potwierdzona żywa aukcja; 'search' = możliwy INNY produkt/martwa
 aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen SKU.
 
+## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
+
+**Osobna aplikacja** (`tn-app/index.html` lista + `tn-app/projekt.html`), LIVE:
+`crm.tomekniedzwiecki.pl/tn-app/index`. **Przeczytaj PRZED pracą:**
+`docs/stworze/WORKFLOW-APLIKACJE-PLAN.md` (sekcja „STAN WDROŻENIA" = prawda).
+
+- Tabele `wfa_*`: projects (slug/domain/repo/vercel/supabase_ref/stripe_account_id/`fee_percent`),
+  step_defs (**kroki = konfiguracja + `milestone_label`** = kamień milowy portalu klienta), steps
+  (jedyne źródło postępu), notes (uwagi Tomka — wejście do paczek promptów), activities.
+  RLS wyłącznie `team_members`. BEZ macierzy produktów (1 projekt = 1 aplikacja).
+- Etapy 1–5: Fundament (handoff→MVP→nazwa+domena→akcept) → Infrastruktura (repo/Supabase/Resend/Stripe KYC)
+  → Budowa MVP (paczka Claude Code→DB→auth→funkcja→panele→płatności→maile) → Landing i jakość (audyt = gate)
+  → Start (prawne→onboarding→start→50 klientów→stery).
+- Auto-create projektu: RPC `wfa_sync_projects()` przy load panelu (spar_sessions z `full_paid_at`,
+  `is_test=false`) — celowo ZERO zmian w tpay-webhook/spar-chat.
+- Stripe Connect: Standard + direct charges + application_fee (% z `wfa_projects.fee_percent`);
+  aktywacja platformy: `docs/stworze/STRIPE-CONNECT-SETUP.md`.
+- Styl = Geist/Vercel (jak tn-sklepy). Slug `/tn-app` NIE koliduje z `/tn-aplikacje` (panel lejka!).
+- GOTCHA: teksty checklist w obiekcie `WS` (projekt.html) = klucz deduplikacji ze stanem — nie przeredagowywać.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów

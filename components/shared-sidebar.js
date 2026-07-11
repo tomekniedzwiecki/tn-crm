@@ -15,7 +15,8 @@ const APPS = [
     { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
     { id: 'aplikacje', name: 'TN Aplikacje', icon: 'ph-rocket-launch', color: 'bg-blue-500 text-white', defaultPage: 'index' },
     { id: 'sklep', name: 'TN Sklep', icon: 'ph-storefront', color: 'bg-blue-500 text-white', defaultPage: 'index' },
-    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-[#0070f3] text-white', defaultPage: 'index' }
+    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-[#0070f3] text-white', defaultPage: 'index' },
+    { id: 'app', name: 'TN App', icon: 'ph-app-window', color: 'bg-[#0070f3] text-white', defaultPage: 'index' }
 ];
 
 const APP_BASES = {
@@ -25,7 +26,8 @@ const APP_BASES = {
     biznes: '/tn-biznes',
     aplikacje: '/tn-aplikacje',
     sklep: '/tn-sklep',
-    sklepy: '/tn-sklepy'
+    sklepy: '/tn-sklepy',
+    app: '/tn-app'
 };
 
 const APP_AVATAR_COLORS = {
@@ -35,7 +37,8 @@ const APP_AVATAR_COLORS = {
     biznes: 'from-amber-500 to-amber-600',
     aplikacje: 'from-blue-600 to-blue-700',
     sklep: 'from-blue-600 to-blue-700',
-    sklepy: 'from-[#0070f3] to-[#0761d1]'
+    sklepy: 'from-[#0070f3] to-[#0761d1]',
+    app: 'from-[#0070f3] to-[#0761d1]'
 };
 
 // ============================================
@@ -88,6 +91,11 @@ const NAV_ITEMS_SKLEPY = [
     { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
 ];
 
+// TN App (workflow budowy aplikacji SaaS po pełnej płatności /aplikacja)
+const NAV_ITEMS_APP = [
+    { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
+];
+
 const NAV_ITEMS_BIZNES = [
     { id: 'dashboard', icon: 'ph-chart-pie', label: 'Przegląd' },
     { id: 'analytics', icon: 'ph-chart-bar', label: 'Analytics' },
@@ -107,6 +115,7 @@ function getNavItemsForApp(appId) {
         case 'aplikacje': return NAV_ITEMS_APLIKACJE;
         case 'sklepy': return NAV_ITEMS_SKLEPY;
         case 'sklep': return NAV_ITEMS_SKLEP;
+        case 'app': return NAV_ITEMS_APP;
         default: return NAV_ITEMS_CRM;
     }
 }
@@ -478,6 +487,8 @@ function detectCurrentApp() {
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
     if (path.includes('/tn-aplikacje')) return 'aplikacje';
+    // '/tn-app' NIE koliduje z '/tn-aplikacje' (apl ≠ app), ale trzymamy po nim dla jasności
+    if (path.includes('/tn-app')) return 'app';
     // UWAGA: '/tn-sklepy' PRZED '/tn-sklep' — includes() złapałby prefiks
     if (path.includes('/tn-sklepy')) return 'sklepy';
     if (path.includes('/tn-sklep')) return 'sklep';
