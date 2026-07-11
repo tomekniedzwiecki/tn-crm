@@ -46,6 +46,11 @@
         .fld { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:6px;
             padding:8px 10px; font-size:13px; color:#fff; }
         .fld:focus { outline:none; border-color:rgba(0,112,243,.5); }
+        .ptab { background:none; border:none; border-bottom:2px solid transparent; color:#a1a1aa;
+            padding:9px 14px; font-size:13px; cursor:pointer; white-space:nowrap; transition:color .15s ease; }
+        .ptab:hover { color:#fff; }
+        .ptab.active { color:#fff; border-bottom-color:#0070f3; }
+        .ptab span { color:#52a8ff; font-size:11px; }
         .md-body h2 { color:#fff; font-size:14px; font-weight:600; margin:14px 0 6px; }
         .md-body h3 { color:#e5e5e5; font-size:13px; font-weight:600; margin:10px 0 4px; }
         .md-body p { margin:4px 0; }
@@ -103,7 +108,16 @@
                 <!-- Karty kroków (scope projektu) -->
                 <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
 
-                <!-- Aplikacja + Infrastruktura -->
+                <!-- Zakładki sekcji (porządek: kroki zawsze na górze, reszta pod tabami) -->
+                <div id="psec-tabs" class="flex gap-1 border-b border-[#1f1f1f] mb-6 overflow-x-auto">
+                    <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
+                    <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
+                    <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
+                    <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
+                    <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
+                </div>
+
+                <div data-psec="projekt">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-7">
                     <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
                         <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-app-window text-[#3291ff]"></i> Aplikacja</h3>
@@ -128,7 +142,9 @@
                     </div>
                 </div>
 
-                <!-- Uwagi Tomka (wfa_notes) -->
+                </div>
+
+                <div data-psec="uwagi" class="hidden">
                 <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
                     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
                         <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-note-pencil text-[#3291ff]"></i> Uwagi Tomka <span class="text-zinc-500 font-normal text-xs">wejście do paczki dla Claude Code</span></h3>
@@ -149,19 +165,25 @@
                     <div id="notes-list" class="space-y-2"></div>
                 </div>
 
-                <!-- Umowa (wfa_projects.contract_*) -->
+                </div>
+
+                <div data-psec="umowa" class="hidden">
                 <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
                     <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-file-text text-[#3291ff]"></i> Umowa <span id="contract-badge" class="ml-1"></span></h3>
                     <div id="contract-body" class="space-y-4"></div>
                 </div>
 
-                <!-- Dane ze sparingu (read-only) -->
+                </div>
+
+                <div data-psec="sparing" class="hidden">
                 <div id="spar-box" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7 hidden">
                     <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-chats-circle text-[#3291ff]"></i> Dane ze sparingu <span id="spar-sub" class="text-zinc-500 font-normal text-xs"></span></h3>
                     <div id="spar-content" class="space-y-5"></div>
                 </div>
 
-                <!-- Notatki projektu + Aktywność -->
+                </div>
+
+                <div data-psec="notatki" class="hidden">
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
                     <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
                         <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-article text-[#3291ff]"></i> Notatki projektu</h3>
@@ -172,6 +194,7 @@
                         <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-clock-counter-clockwise text-[#3291ff]"></i> Aktywność</h3>
                         <div id="activity-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
                     </div>
+                </div>
                 </div>
 
             </div>
@@ -463,6 +486,13 @@
                 </div>`).join('') || '<div class="text-zinc-600 text-xs">Brak aktywności.</div>';
         }
 
+        // ── Zakładki sekcji (kroki zawsze na górze; reszta pod tabami; wybór pamiętany per projekt) ──
+        function switchPsec(name) {
+            document.querySelectorAll('[data-psec]').forEach(el => el.classList.toggle('hidden', el.dataset.psec !== name));
+            document.querySelectorAll('#psec-tabs .ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === name));
+            try { localStorage.setItem('wfa_psec_' + projectId, name); } catch (_) {}
+        }
+
         // ============ UWAGI TOMKA (wfa_notes) ============
         function setNoteFilter(f) {
             noteFilter = f;
@@ -471,6 +501,9 @@
             renderNotes();
         }
         function renderNotes() {
+            const openCnt = notes.filter(n => n.status === 'open').length;
+            const tb = document.getElementById('ptab-uwagi-cnt');
+            if (tb) tb.textContent = openCnt ? '(' + openCnt + ')' : '';
             const list = noteFilter === 'open' ? notes.filter(n => n.status === 'open') : notes;
             const box = document.getElementById('notes-list');
             if (!list.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">${noteFilter==='open'?'Brak otwartych uwag.':'Brak uwag.'}</div>`; return; }
@@ -1241,6 +1274,8 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             if (!projectId) { location.href = '/tn-app/index'; return; }
             const session = await checkAuth();
             if (!session) return;
+            let saved = null; try { saved = localStorage.getItem('wfa_psec_' + projectId); } catch (_) {}
+            switchPsec(saved || 'projekt');
             await loadAll();
         })();
     </script>
