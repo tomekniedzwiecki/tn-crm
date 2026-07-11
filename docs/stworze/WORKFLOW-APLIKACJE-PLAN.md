@@ -206,28 +206,45 @@ DEPLOY
 - Sesje testowe: zawsze filtr `is_test=false` przy syncu.
 - Fakty oferty (cena/%) — NIE hardkodować w panelu; % per projekt z `wfa_projects.fee_percent`.
 
-## 9a. Konstrukcja prawna Udziału 10% (decyzja Tomka 2026-07-11 — JEDEN model dla wszystkich umów)
+## 9a. Konstrukcja prawna Udziału 10% (decyzja Tomka 2026-07-11; SKORYGOWANA po researchu prawnym tego samego dnia)
 
 Cel: „syntetyczne 10% equity" — trwałe, nienegocjowalne, zbywalne przez Tomka, komfortowe dla klienta.
-Szablon: `umowy/umowa-budowa-aplikacji.html` (v2, krótka/partnerska; wymaga przeglądu prawnika — komentarze PRAWNIK).
+Szablon: `umowy/umowa-budowa-aplikacji.html` (**v3**; wymaga przeglądu prawnika — komentarze PRAWNIK).
+⚠️ Pierwotna konstrukcja licencyjna (v2) ODRZUCONA po researchu: art. 68 ust. 2 pr. aut. — licencja udzielona
+na >5 lat po tym okresie traktowana jest jak bezterminowa i WYPOWIADALNA; „wieczysta nieodwołalna licencja
+wyłączna" jest iluzoryczna (SA W-wa VI ACa 1735/14 dopuszcza niewypowiadalność tylko: niewyłączna + jednorazowe
+wynagrodzenie + brak świadczeń ciągłych — nasze przeciwieństwo).
 
-1. **Licencja zamiast przeniesienia praw**: klient dostaje wyłączną, bezterminową, nieodwołalną licencję z pełnym
-   prawem rozwijania; 10% = wynagrodzenie licencyjne + świadczenia ciągłe Tomka (utrzymanie płatności, aktualizacje
-   bezpieczeństwa, doradztwo) — mitygacja wypowiadalności (art. 365¹ k.c.). Marka/domena/klienci/przychody =
-   własność klienta od dnia 1.
-2. **Wykup**: po 12 mies. od startu, cena = 36× średnia miesięczna Udziału z ostatnich 12 mies.; z chwilą wykupu
-   pełne prawa autorskie przechodzą na klienta. Komfort („jasna cena wyjścia") + kapitalizacja strumienia.
-3. **Sprzedaż biznesu**: nabywca przystępuje do umowy ALBO wykup wymagalny; obejście = wykup natychmiast wymagalny.
-4. **Anty-klon**: apka-następca w tej samej niszy = kontynuacja (Udział nalicza się); 5 lat po ustaniu z naruszenia.
-5. **Cesja**: Tomek może zbyć wierzytelności z Udziału bez zgody klienta → portfel 10% = sprzedawalne aktywo.
-6. Symetria komfortu: Tomek nie zbuduje konkurencji w niszy klienta w okresie Udziału; ramka „w skrócie" na
-   początku umowy; jednakowe warunki dla wszystkich partnerów (nienegocjowalność jako cecha modelu).
+**Model v3 (obowiązujący):**
+1. **Przeniesienie autorskich praw majątkowych z chwilą zapłaty** (pola wg art. 74 ust. 4 + prawa zależne + SaaS/sieć)
+   — klient ma pełną własność kodu od dnia 1 (zgodnie z pierwotną obietnicą oferty!). Forma pisemna / podpis
+   KWALIFIKOWANY (ad solemnitatem).
+2. **Udział 10% = odrębna wierzytelność**: część CENY za przeniesienie praw i rozruch, rozłożona w czasie, zależna
+   od Przychodu (brutto minus zwroty/chargebacki) — celowo NIE tantiema licencyjna i NIE zapłata za serwis
+   (mitygacja art. 365¹: wynagrodzenie za świadczenie już wykonane). Serwis (§6: płatności, aktualizacje
+   bezpieczeństwa, doradztwo) = świadczenie ODRĘBNE; jego ustanie nie gasi Udziału. Rozliczenie miesięczne,
+   faktura zbiorcza netto+VAT (moment VAT przy application fee → interpretacja KIS do rozważenia).
+3. **Pobór**: Stripe application fee jako TECHNIKA zapłaty (nie jedyne źródło roszczenia) + obowiązek utrzymania
+   konfiguracji + zapłata przelewem na fakturę, gdy pobór niemożliwy + wgląd read-only w dane sprzedażowe.
+4. **Wykup**: po 12 mies., 36× średnia miesięczna z 12 mies.; wygasza Udział i serwis.
+5. **Sprzedaż biznesu**: przejęcie długu przez nabywcę (519 k.c., forma pisemna, zgoda Tomka nie odmówiona bez
+   ważnego powodu) ALBO wykup; obejście = KARA UMOWNA = cena wykupu (oznaczona, miarkowalna — nie „cały przyszły udział").
+6. **Anty-klon jako KONTYNUACJA, nie zakaz** (zakaz konkurencji bez ekwiwalentu grozi nieważnością — III CKN 579/01):
+   apka rozwiązująca ten sam główny problem tej samej grupy odbiorców (definicja z Załącznika 1) = kontynuacja,
+   Udział nalicza się; okres: Udział + 3 lata po ustaniu z naruszenia.
+7. **Cesja** wierzytelności (w tym przyszłych) bez zgody klienta, ze zgodą wpisaną w umowę → portfel = aktywo.
+8. **Konsument-lite** (klient-JDG może być „na prawach konsumenta"): pouczenie o odstąpieniu 14 dni + żądanie
+   rozpoczęcia prac przed upływem (art. 38 u.p.k.), klauzule §5/§8/§9 indywidualnie uzgodnione, sąd wg przepisów
+   ogólnych, symetryczna odpowiedzialność.
 
-⚠️ **DO ZROBIENIA (decyzja komunikacyjna Tomka, protokół SSOT oferty — 6 kroków!):** oferta w lejku mówi
-„Kod i własność klienta od pierwszego dnia" — nowa formuła: „Biznes jest Twój od pierwszego dnia: marka, domena,
-klienci i pełne, wyłączne, bezterminowe prawo do aplikacji i jej rozwijania; pełne prawa autorskie przechodzą
-na Ciebie z chwilą wykupu udziału". Zmiana w `settings.aplikacja_model_biznesowy` + FAQ + hardkody frontu +
-prompt — TYLKO po akceptacji Tomka, wg `feedback-aplikacja-oferta-ssot-protokol`.
+**Pytania otwarte dla prawnika (research nie rozstrzyga):** czy art. 68 ust. 2 stosuje się do licencji na programy
+(art. 74-77 lex specialis) — nieistotne w modelu przeniesienia, ale ważne dla oceny; skuteczność oderwania Udziału
+od 365¹; status „na prawach konsumenta" klienta kupującego narzędzie do zarabiania; kara umowna vs miarkowanie;
+moment VAT przy application fee (KIS); Standard vs Express w kontekście ryzyka odłączenia platformy przez klienta.
+
+✅ Komunikat oferty w lejku ZAKTUALIZOWANY 11.07 wg protokołu 6 kroków (FAQ-kanon, `aplikacja_model_biznesowy`,
+prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna własność z chwilą opłacenia budowy
+(przeniesienie praw autorskich w umowie) + udział 10% jako osobne wynagrodzenie z opcją wykupu po 12 mies.".
 
 ## 10. Decyzje Tomka (log)
 
