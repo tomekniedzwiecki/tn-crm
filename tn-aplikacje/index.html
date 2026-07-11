@@ -81,6 +81,19 @@
     #appnav.open { transform: translateX(0); }
     #appnav-overlay { display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 45; opacity: 0; visibility: hidden; transition: opacity 0.28s ease, visibility 0.28s ease; }
     #appnav-overlay.open { opacity: 1; visibility: visible; }
+    /* Karta leada: tytuł + pasek akcji przewijają się razem z treścią (zamiast
+       przyklejać ~43% ekranu nad rozmową). Sticky zostaje tylko pasek zakładek,
+       z własnym tłem/hairline'em, żeby wiadomości nie prześwitywały pod spodem. */
+    #lead-headbar { position: static; border-bottom: 0; }
+    #lead-tabs {
+      position: sticky; top: 56px; z-index: 20;
+      background: rgba(10,10,10,0.92);
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      border-bottom: 1px solid #242424;
+      margin-top: 12px; padding-bottom: 2px;
+    }
+    /* Węższe przyciski szybkich akcji — mieszczą się w mniejszej liczbie rzędów. */
+    .qbtn { padding: 6px 9px; gap: 5px; }
   }
   .no-scrollbar { scrollbar-width: none; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -138,7 +151,7 @@
 <main class="flex-1 min-w-0">
   <header class="geist-bar sticky top-0 z-30 px-4 md:px-6 h-14 flex items-center gap-3 border-b border-white/5">
     <button id="btn-mobile-menu" aria-label="Menu" class="md:hidden w-9 h-9 -ml-1.5 rounded-lg text-zinc-300 hover:text-white hover:bg-white/5 flex items-center justify-center transition"><i class="ph ph-list text-xl"></i></button>
-    <h1 id="section-title" class="text-white font-semibold text-base">Przegląd</h1>
+    <h1 id="section-title" class="text-white font-semibold text-base min-w-0 truncate">Przegląd</h1>
     <button id="global-refresh" title="Odśwież dane" class="ml-auto shrink-0 w-9 h-9 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition flex items-center justify-center"><i class="ph ph-arrows-clockwise"></i></button>
   </header>
 
@@ -207,11 +220,11 @@
               <th class="px-4 py-3">Data</th>
               <th class="px-4 py-3">Projekt</th>
               <th class="px-4 py-3">Osoba</th>
-              <th class="px-4 py-3">Źródło</th>
-              <th class="px-4 py-3">Etap</th>
-              <th class="px-4 py-3">Sygnał</th>
-              <th class="px-4 py-3 text-right">Tury</th>
-              <th class="px-4 py-3 text-right">Koszt</th>
+              <th class="px-4 py-3 hidden md:table-cell">Źródło</th>
+              <th class="px-4 py-3 hidden sm:table-cell">Etap</th>
+              <th class="px-4 py-3 hidden lg:table-cell">Sygnał</th>
+              <th class="px-4 py-3 text-right hidden md:table-cell">Tury</th>
+              <th class="px-4 py-3 text-right hidden sm:table-cell">Koszt</th>
               <th class="px-4 py-3"></th>
             </tr>
           </thead>
@@ -440,7 +453,8 @@
     <div id="cost-by-kind" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 mb-5"></div>
     <div class="mb-1 text-[11px] uppercase tracking-wider text-zinc-500">Dzień po dniu</div>
     <div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
-      <table class="w-full text-sm">
+      <div class="overflow-x-auto">
+      <table class="w-full text-sm min-w-[560px] md:min-w-0">
         <thead>
           <tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
             <th class="px-4 py-3">Dzień</th>
@@ -454,6 +468,7 @@
         </thead>
         <tbody id="koszty-rows"></tbody>
       </table>
+      </div>
     </div>
   </section>
 
@@ -512,9 +527,12 @@
 
   <!-- ════════ KARTA LEADA (pełnoekranowy widok z zakładkami) ════════ -->
   <section id="view-lead" class="hidden">
-    <div class="geist-bar sticky top-14 z-20 px-4 md:px-6 pt-4 pb-0 border-b border-white/5">
-      <div id="lead-head"></div>
-      <div id="lead-tabs" class="flex items-center gap-1 mt-3 -mb-px overflow-x-auto no-scrollbar"></div>
+    <!-- Na desktopie cały pasek (tytuł + akcje + zakładki) jest sticky. Na mobile
+         tytuł i przyciski PRZEWIJAJĄ się (zajmowały ~43% ekranu nad rozmową) —
+         sticky zostaje wyłącznie pasek zakładek (reguła w @media niżej). -->
+    <div id="lead-headbar" class="geist-bar sticky top-14 z-20 border-b border-white/5">
+      <div id="lead-head" class="px-4 md:px-6 pt-4"></div>
+      <div id="lead-tabs" class="flex items-center gap-1 mt-3 -mb-px px-4 md:px-6 overflow-x-auto no-scrollbar"></div>
     </div>
     <div id="lead-body" class="p-4 md:p-6"></div>
   </section>
@@ -697,11 +715,11 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-zinc-400 whitespace-nowrap text-xs">${fmtDate(s.created_at)}</td>
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
-      <td class="px-4 py-2.5">${sourceBadge(s)}</td>
-      <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
-      <td class="px-4 py-2.5">${signalBadge(s)}</td>
-      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
-      <td class="px-4 py-2.5 text-right text-white font-mono text-xs">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
+      <td class="px-4 py-2.5 hidden md:table-cell">${sourceBadge(s)}</td>
+      <td class="px-4 py-2.5 hidden sm:table-cell"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
+      <td class="px-4 py-2.5 hidden lg:table-cell">${signalBadge(s)}</td>
+      <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs hidden md:table-cell">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
+      <td class="px-4 py-2.5 text-right text-white font-mono text-xs hidden sm:table-cell">${costOf(s) ? fmtPln(costOf(s)) : '—'}</td>
       <td class="px-4 py-2.5 text-right"><i class="ph ph-caret-right text-zinc-600"></i></td>
     </tr>`;
   }).join('') || '<tr><td colspan="9" class="px-4 py-8 text-center text-zinc-600 text-sm">Brak leadów dla tego filtra.</td></tr>';
@@ -1459,11 +1477,11 @@ function leadMaileHTML() {
     : '';
   const followLog = !emails.length
     ? `<div class="text-zinc-600 text-sm">Brak innych follow-upów (poza sekwencją powrotu powyżej).</div>`
-    : `<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden">
+    : `<div class="max-w-3xl bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden"><div class="overflow-x-auto">
     <table class="w-full text-sm"><thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
       <th class="px-4 py-3">Data</th><th class="px-4 py-3">Rodzaj</th><th class="px-4 py-3 text-center">Dostarczony</th><th class="px-4 py-3 text-center">Treść</th></tr></thead><tbody>
     ${emails.map((e) => `<tr class="border-b border-white/[0.03]"><td class="px-4 py-2.5 text-zinc-400 text-xs whitespace-nowrap">${fmtDate(e.sent_at)}</td><td class="px-4 py-2.5">${mailBadge(e.kind)}</td><td class="px-4 py-2.5 text-center">${yesNo(e.delivered_at)}</td><td class="px-4 py-2.5 text-center"><button onclick="previewFollowup('${sid}','${esc(e.kind)}')" title="Podgląd treści (odtworzona na żywo)" class="w-7 h-7 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-eye"></i></button></td></tr>`).join('')}
-    </tbody></table></div>
+    </tbody></table></div></div>
     <div class="max-w-3xl mt-2 text-[11px] text-zinc-600"><i class="ph ph-info mr-1"></i>Te follow-upy nie są cache'owane — podgląd odtwarza treść na żywo (wysłany egzemplarz mógł brzmieć minimalnie inaczej).</div>`;
   return `<div class="max-w-3xl">${leadAbandonHTML(sid)}<div class="text-sm text-white font-medium mb-2"><i class="ph ph-envelope mr-1.5 text-sky-400"></i>Pozostałe follow-upy</div>${note}${followLog}</div>`;
 }
