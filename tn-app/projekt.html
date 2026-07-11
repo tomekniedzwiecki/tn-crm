@@ -113,6 +113,7 @@
                             <div><label class="text-xs text-zinc-500 block mb-1">Domena</label><input id="f-domain" class="fld" placeholder="np. rezerwuj.pl" onchange="saveField('domain', this.value)"></div>
                             <div><label class="text-xs text-zinc-500 block mb-1">URL aplikacji</label><input id="f-app_url" class="fld" placeholder="https://…" onchange="saveField('app_url', this.value)"></div>
                             <div><label class="text-xs text-zinc-500 block mb-1">URL landingu</label><input id="f-landing_url" class="fld" placeholder="https://…" onchange="saveField('landing_url', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Termin umowny</label><input id="f-deadline_at" type="date" class="fld" onchange="saveField('deadline_at', this.value)"></div>
                         </div>
                     </div>
                     <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
@@ -342,6 +343,11 @@
             if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
             if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
             if (project.fee_percent != null) meta.push(`<span class="flex items-center gap-1 text-[#62c073]"><i class="ph ph-percent"></i>${project.fee_percent}% od przychodu</span>`);
+            if (project.deadline_at) {
+                const days = Math.ceil((new Date(project.deadline_at) - new Date()) / 86400000);
+                const cls = days < 7 ? 'text-[#f26d78]' : days < 14 ? 'text-[#f5b955]' : 'text-zinc-400';
+                meta.push(`<span class="flex items-center gap-1 ${cls}"><i class="ph ph-calendar-blank"></i>termin ${fmtDate(project.deadline_at)} (${days >= 0 ? days + ' dni' : Math.abs(days) + ' dni PO terminie'})</span>`);
+            }
             if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-kanban"></i>lead w pipeline</a>`);
             document.getElementById('p-meta').innerHTML = meta.join('<span class="text-zinc-700">·</span>');
             const all = steps.filter(s=>s.status!=='skipped');
@@ -361,7 +367,7 @@
             set('f-app_url', project.app_url); set('f-landing_url', project.landing_url);
             set('f-repo_url', project.repo_url); set('f-vercel_project', project.vercel_project);
             set('f-supabase_ref', project.supabase_ref); set('f-stripe_account_id', project.stripe_account_id);
-            set('f-fee_percent', project.fee_percent);
+            set('f-fee_percent', project.fee_percent); set('f-deadline_at', project.deadline_at);
         }
         async function saveField(col, value) {
             let v = String(value).trim();
@@ -371,7 +377,7 @@
             const { error } = await supabaseClient.from('wfa_projects').update(payload).eq('id', projectId);
             if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
             Object.assign(project, payload);
-            if (['name','slug','domain'].includes(col)) renderHeader();
+            if (['name','slug','domain','deadline_at'].includes(col)) renderHeader();
             showToast('Zapisano', 'success');
         }
 
@@ -592,31 +598,34 @@
         // — nie przeredagowywać po wdrożeniu; poprawka brzmienia tworzy duplikat u projektów, które odhaczały.
         const WS = {
             // ETAP 1 — Fundament
-            handoff:       { desc:'Złożenie pakietu „gotowe do budowy" ze sparingu. Jeśli handoff pack nie istnieje — wymuś generację (event knowhow_close w spar-chat) lub złóż z surowych spar_knowhow_items. Podgląd w sekcji „Dane ze sparingu".',
-                             check:['Handoff pack wygenerowany (spar_knowhow_summary.handoff_pack)','Braki uzupełnione z surowych spar_knowhow_items','Nisza / operator / problem główny potwierdzone','Pakiet kompletny — gotowy do MVP scope'] },
-            zalaczniki:    { desc:'Materiały od klienta (pliki, linki, dokumenty) pomocne przy budowie. Owner: klient.',
+            handoff:       { desc:'Złożenie pakietu „gotowe do budowy" ze sparingu. Jeśli handoff pack nie istnieje — wymuś generację lub złóż z surowych spar_knowhow_items. Ścieżka B (klient bez spowiednika): rozmowa 1:1 → notatki → handoff ręcznie. Podgląd w „Dane ze sparingu".',
+                             check:['Handoff pack wygenerowany (spar_knowhow_summary.handoff_pack)','Braki uzupełnione z surowych spar_knowhow_items','Otwarte decyzje i ryzyka z handoffu przeniesione do „Uwag" (kind: decyzja)','Nisza / operator / problem główny potwierdzone','Pakiet kompletny — gotowy do MVP scope'] },
+            zalaczniki:    { desc:'Materiały od klienta (pliki, linki, dokumenty). Owner: klient — kroki klienckie to najdłuższe ogony: poproś JAK NAJWCZEŚNIEJ, przypominaj gdy wisi >5 dni. Do czasu portalu: klient śle mailem, my wgrywamy do Storage attachments/wfa/<project_id>/.',
                              fields:[{k:'materialy',l:'Linki / lista materiałów',ta:true}],
                              check:['Poproszono klienta o materiały','Materiały zebrane','Przejrzane pod kątem MVP'] },
-            uwagi_tomka:   { desc:'Przejrzyj i uzupełnij uwagi / decyzje / blokady w sekcji „Uwagi Tomka" na ekranie projektu — to pierwszoklasowe wejście do paczki dla Claude Code (00-KONTEKST).',
-                             check:['Uwagi z rozmowy spisane','Decyzje architektoniczne zapisane','Blokady oznaczone (kind: blokada)'] },
-            mvp_scope:     { desc:'Definicja MVP: 3–5 funkcji rdzenia (co JEST), świadome cięcia (czego NIE MA) i kryteria „gotowe". Najszybszy go-to-market, zero przekombinowania.',
-                             fields:[{k:'scope',l:'MVP: co jest / czego nie ma',ta:true},{k:'kryteria',l:'Kryteria „gotowe" per funkcja',ta:true}],
-                             check:['3–5 funkcji rdzenia wypisanych','Lista „poza MVP" (świadome cięcia)','Kryteria akceptacji per funkcja','Najszybszy go-to-market — brak przekombinowania'], prompt:'mvp_scope' },
+            uwagi_tomka:   { desc:'Przegląd i DOMKNIĘCIE uwag przed definicją MVP (uwagi żyją przez cały projekt — ten krok to bramka: otwarte decyzje z handoffu rozstrzygnięte albo świadomie odłożone). Sekcja „Uwagi Tomka" = wejście do paczki (00-KONTEKST).',
+                             check:['Uwagi z rozmowy spisane','Otwarte decyzje z handoffu rozstrzygnięte lub odłożone świadomie','Decyzje architektoniczne zapisane','Blokady oznaczone (kind: blokada)'] },
+            mvp_scope:     { desc:'Najważniejszy krok workflow. AI generuje propozycję scope z handoffu (80% roboty), Tomek TNIE i decyduje. Obowiązkowo: funkcje rdzenia, NIE-funkcje, metryka aktywacji (aha-moment) + time-to-first-value < 10 min, granica „zmiany w cenie v1 vs rozwój" (lekcja Grzegorza). Wynik = plik 01-MVP-SCOPE.md.',
+                             fields:[{k:'scope',l:'MVP: co jest / czego nie ma',ta:true},{k:'kryteria',l:'Kryteria „gotowe" per funkcja',ta:true},{k:'aktywacja',l:'Metryka aktywacji (aha-moment) + TTFV'}],
+                             check:['3–5 funkcji rdzenia wypisanych','Lista „poza MVP" (świadome cięcia)','Metryka aktywacji + time-to-first-value < 10 min zdefiniowane','Granica „zmiany w cenie v1 vs osobny rozwój" spisana','Kryteria akceptacji per funkcja','Zapisane jako 01-MVP-SCOPE.md w paczce'], prompt:'mvp_scope' },
+            pricing:       { desc:'Decyzja fundamentowa Z KLIENTEM (nie technikalia): plany i ceny (poniżej kotwicy konkurencji z researchu niszy), trial Z KARTĄ (konwersja ~31% vs ~9% bez), plan roczny obok miesięcznego (churn −30%). Etap 2 „Stripe: plany" tylko IMPLEMENTUJE tę decyzję.',
+                             fields:[{k:'plany',l:'Plany i ceny (mies./rok, trial)',ta:true}],
+                             check:['Kotwica cenowa konkurencji ustalona (research niszy)','Plany i ceny zdefiniowane (mies. + rok)','Trial z kartą — model przyjęty','Cena omówiona i zaakceptowana z klientem-operatorem'], prompt:'pricing' },
             nazwa:         { desc:'Nazwa aplikacji determinuje repo = projekt Vercel = ref bazy = domenę. Ustala pola projektu: nazwa + slug (kebab-case).',
                              fields:[{k:'name',l:'Nazwa aplikacji',col:'project.name'},{k:'slug',l:'Slug (kebab-case)',col:'project.slug'}],
                              check:['Propozycje nazw','Nazwa wybrana','Slug (kebab) ustalony — repo=Vercel=ref bazy=domena','Zgodność ze spar preview_brief.nazwa (lub świadoma zmiana)'] },
             domena:        { desc:'Zakup domeny (kupuje Tomek — krok blocked until Tomek). Ustala pole projektu: domena.',
                              fields:[{k:'domain',l:'Domena',col:'project.domain'}],
                              check:['Dostępność sprawdzona','Domena kupiona (Tomek)','DNS wskazuje na Vercel','SSL aktywny'] },
-            akcept_klienta:{ desc:'Klient zatwierdza zakres MVP i nazwę — od tego momentu ruszamy z budową. Owner: klient. Kamień milowy.',
-                             check:['MVP scope wysłany klientowi','Nazwa zaakceptowana','Zakres zaakceptowany','Zgoda (mail) zarchiwizowana'] },
+            akcept_klienta:{ desc:'Klient zatwierdza KWARTET: zakres MVP + nazwę + pricing + granicę „zmiany w cenie vs rozwój". Jeden mail akceptacyjny (draft generuje prompt) — w nim od razu link do założenia konta Stripe (KYC startuje async, to najdłuższy ogon). Kamień milowy.',
+                             check:['Mail akceptacyjny (MVP + nazwa + pricing + granica zmian) wysłany','Link Stripe (Account Link) dołączony do maila','Zakres zaakceptowany przez klienta','Zgoda (mail) zarchiwizowana'], prompt:'akcept_klienta' },
             // ETAP 2 — Infrastruktura
-            repo_vercel:   { desc:'Osobne repo (z saas-starter przez forge, ZAKAZ cp -r) + osobny projekt Vercel. Deploy = git push main.',
+            repo_vercel:   { desc:'Sesja S1 — „pipeline first": zanim powstanie jakakolwiek funkcja, hello-world ze startera MUSI żyć na preview. Repo z saas-starter przez `node forge.mjs <slug>` (ZAKAZ cp -r). Deploy = git push main. UWAGA: do startu Etapu 3 wystarczą repo+Vercel+Supabase — Resend i Stripe KYC idą RÓWNOLEGLE w tle.',
                              fields:[{k:'repo_url',l:'Repo URL',col:'project.repo_url'},{k:'vercel_project',l:'Projekt Vercel',col:'project.vercel_project'},{k:'app_url',l:'URL z Vercel',col:'project.app_url'}],
-                             check:['Repo z saas-starter (forge, nie cp -r)','Projekt Vercel podpięty','git push main = deploy działa','URL aplikacji zapisany'] },
+                             check:['Repo z saas-starter (forge.mjs, nie cp -r)','Projekt Vercel podpięty (plan komercyjny zweryfikowany — Hobby zakazuje użytku komercyjnego)','git push main = deploy działa (hello-world na preview)','URL aplikacji zapisany'] },
             supabase_proj: { desc:'Osobny projekt Supabase (region EU). Ustala pole projektu: supabase_ref.',
                              fields:[{k:'supabase_ref',l:'Supabase project ref',col:'project.supabase_ref'}],
-                             check:['Projekt Supabase (EU) utworzony','Ref zapisany','Legacy keys OFF; front tylko sb_publishable_*','service_role tylko w env edge fns'] },
+                             check:['Projekt Supabase (EU) utworzony','Ref zapisany','Legacy keys OFF; front tylko sb_publishable_*','service_role tylko w env edge fns','Plan płatny od startu produkcyjnego zweryfikowany (free pauzuje projekty)'] },
             resend_dns:    { desc:'Resend + DNS e-mail (SPF/DKIM/DMARC). Supabase Auth SMTP = Resend SMTP (custom SMTP obowiązkowy — default 2 maile/h).',
                              check:['Domena dodana w Resend','SPF/DKIM/DMARC zielone','Supabase Auth SMTP = smtp.resend.com','Confirm email = OFF','Tracking otwarć OFF (logika na delivered_at)'] },
             stripe_kyc:    { desc:'Klient zakłada konto Stripe (Standard connected account) i przechodzi KYC. To jego konto — merchant of record. Owner: klient. Ustala pole projektu: stripe_account_id.',
@@ -628,47 +637,58 @@
             env_secrets:   { desc:'Env + sekrety na Vercel i Supabase. Kamień milowy „Infrastruktura gotowa".',
                              check:['Sekrety Stripe/Resend w env edge fns','service_role nigdy we froncie/repo','.env.example uzupełniony','Zmienne na Vercel + Supabase ustawione'] },
             // ETAP 3 — Budowa MVP
-            paczka_cc:     { desc:'Wygeneruj paczkę startową apka-<slug>-brief/ dla Claude Code (00-KONTEKST … 07-RUNBOOK). Wstrzyknij handoff pack + otwarte uwagi Tomka + nisza/operator/fee.',
+            paczka_cc:     { desc:'Wygeneruj paczkę apka-<slug>-brief/ (00-KONTEKST … 07-RUNBOOK + 08-PLAN-SESJI) w repo aplikacji. Wstrzyknij: handoff pack, ROZSTRZYGNIĘCIA otwartych decyzji (z Uwag), pricing, nisza/operator/fee. Metodyka: docs/stworze/METODYKA-BUDOWY.md.',
                              fields:[{k:'paczka_path',l:'Ścieżka paczki (apka-<slug>-brief/)'}],
-                             check:['00-KONTEKST (handoff + wfa_notes open + nisza/operator/fee)','01-MVP-SCOPE','02-SPEC-FUNKCJONALNY (ekrany, user stories, flow)','03-SCHEMAT-DB.sql (tabele + RLS)','04-STYLEGUIDE (tokeny z makiet)','05-STRIPE-CONFIG','06-CLAUDE.md','07-DEPLOY-RUNBOOK'], prompt:'paczka_cc' },
-            schemat_db:    { desc:'Schemat DB + RLS od 1 dnia. Migracja PRZED pushem kodu.',
-                             check:['Tabele wg 03-SCHEMAT-DB.sql','RLS ENABLED na każdej tabeli','Polityki per auth.uid() (SELECT/INSERT/UPDATE/DELETE osobno)','Triggery COUNT/MAX = SECURITY DEFINER','Migracja PRZED pushem kodu'], prompt:'schemat_db' },
+                             check:['00-KONTEKST (handoff + rozstrzygnięcia decyzji + nisza/operator/fee)','01-MVP-SCOPE (z metryką aktywacji i granicą zmian)','02-SPEC-FUNKCJONALNY (ekrany, user stories, flow)','03-SCHEMAT-DB.sql (tabele + RLS)','04-STYLEGUIDE (tokeny z makiet)','05-STRIPE-CONFIG (plany z kroku pricing)','06-CLAUDE.md (Boundaries ✅/⚠️/🚫)','07-DEPLOY-RUNBOOK','08-PLAN-SESJI (sesje S1-S9 z kryteriami done)','BUILDLOG.md założony'], prompt:'paczka_cc' },
+            dane_operatora:{ desc:'Import danych domenowych operatora do produktu (np. cennik → szablon startowy, biblioteka pozycji, treści branżowe). Klient dostarcza, my digitalizujemy (agent czyta PDF/zdjęcia → strukturyzuje → seed SQL). Odpalać RÓWNOLEGLE z paczką — nie blokuje S1-S3.',
+                             fields:[{k:'zrodla',l:'Źródła danych (pliki/linki od klienta)',ta:true}],
+                             check:['Lista potrzebnych danych wysłana klientowi','Dane otrzymane','Zdigitalizowane i oczyszczone (agent)','Seed SQL / import gotowy do wgrania'], prompt:'dane_operatora' },
+            schemat_db:    { desc:'Sesja S2. Schemat jest ZAPROJEKTOWANY w paczce (03) — sesja go implementuje, nie wymyśla. Test kluczem anon NATYCHMIAST po migracji (błąd RLS w S2 = minuty; w audycie = przebudowa). Migracja PRZED pushem kodu.',
+                             check:['Tabele wg 03-SCHEMAT-DB.sql','RLS ENABLED na każdej tabeli','Polityki per auth.uid() (SELECT/INSERT/UPDATE/DELETE osobno)','Test kluczem anon wykonany OD RAZU — dowód w BUILDLOG','Triggery COUNT/MAX = SECURITY DEFINER','Migracja PRZED pushem kodu'], prompt:'schemat_db' },
             auth_konta:    { desc:'Auth: e-mail + hasło (Confirm OFF), reset przez Resend SMTP, izolacja kont (user widzi tylko swoje).',
                              check:['Rejestracja / logowanie e-mail+hasło','Confirm email OFF','Reset hasła przez Resend SMTP','Izolacja: user widzi tylko własne dane','Test kluczem anon — brak przecieku'], prompt:'auth_konta' },
-            funkcja_glowna:{ desc:'Rdzeń aplikacji — jedna główna funkcja rozwiązująca problem niszy. Trzymaj twardą granicę MVP.',
-                             check:['Funkcja główna działa E2E','Zgodna z MVP scope','Poza-MVP odcięte','Walidacja wejścia w edge fn'], prompt:'funkcja_glowna' },
+            funkcja_glowna:{ desc:'Rdzeń aplikacji — realizowany w N KRÓTKICH sesjach wg 08-PLAN-SESJI (1 moduł = 1 sesja; 2× dłuższa sesja = 4× więcej porażek). Scope creep → wfa_notes „na później", NIGDY do bieżącej sesji.',
+                             check:['Moduły rozpisane w 08-PLAN-SESJI (1 moduł = 1 sesja)','Każdy moduł działa E2E na preview (dowód w BUILDLOG)','Zgodna z MVP scope; poza-MVP odcięte','Walidacja wejścia w edge fn'], prompt:'funkcja_glowna' },
             panel_usera:   { desc:'Panel użytkownika wg specu i stylu z makiet sparingu.',
                              check:['Ekrany usera wg 02-SPEC','Dane tylko własne (RLS)','Stan pusty / onboarding','Mobile OK'], prompt:'panel_usera' },
             panel_operatora:{ desc:'Panel operatora (klient = operator): użytkownicy, płatności, statystyki. Agregaty przez edge fn (service-role).',
                              check:['Panel operatora: użytkownicy/płatności/statystyki','Agregaty przez edge fn (service-role), nie z frontu','Operator widzi tylko swoją instancję','Role / dostęp ograniczone'], prompt:'panel_operatora' },
             platnosci_e2e: { desc:'Płatności Stripe Connect: direct charges na koncie klienta + application_fee, webhook z sygnaturą i idempotencją.',
                              check:['stripe-onboard (Account Link, Standard)','stripe-checkout (direct charge, Stripe-Account)','application_fee liczone serwerowo (fee_percent)','stripe-webhook: constructEvent + idempotencja event.id','deploy --no-verify-jwt (sygnatura obowiązkowa)','BLIK działa E2E'], prompt:'platnosci_e2e' },
-            maile_trans:   { desc:'E-maile transakcyjne przez Resend API z edge fns. Kamień milowy „Aplikacja działa (wersja robocza)".',
-                             check:['Szablony transakcyjne','Resend API z edge fns','Logika na delivered_at (tracking OFF)','email_log + hook point pod dripy'], prompt:'maile_trans' },
+            maile_trans:   { desc:'Sesja S8 — lifecycle BEHAWIORALNE (pole lifecycle_status, nie kalendarz; 3-4× CTR): welcome z JEDNYM pierwszym krokiem, nudge aktywacyjny 24-48h (okno 72h decyduje o retencji), dunning przy past_due (ratuje przychód = nasze 10%). Kamień „Aplikacja działa (wersja robocza)".',
+                             check:['Welcome z JEDNYM pierwszym krokiem (nie tour po funkcjach)','Nudge aktywacyjny 24-48h gdy brak aha-moment','Dunning przy past_due','Triggery behawioralne (lifecycle_status), nie kalendarzowe','Logika na delivered_at (tracking OFF); email_log bez dublowania'], prompt:'maile_trans' },
+            review_adwersarski:{ desc:'Bramka po budowie: ŚWIEŻA sesja Claude Code dostaje WYŁĄCZNIE git diff + kryteria z 01-MVP-SCOPE (celowo BEZ BUILDLOG-a — niezależność od rozumowania budowniczego). Zadanie: ZNALEŹĆ błędy, nie potwierdzić poprawność.',
+                             check:['Świeża sesja: tylko diff + kryteria (bez BUILDLOG)','Findings z file:line i scenariuszem błędu','Findings przeniesione do checklisty/Uwag','Poprawki wykonane i zweryfikowane'], prompt:'review_adwersarski' },
             // ETAP 4 — Landing i jakość
-            landing:       { desc:'Landing + cennik aplikacji wg makiet sparingu. Ustala pole projektu: landing_url.',
+            landing:       { desc:'Landing + cennik wg makiet sparingu. NIE od zera: adaptuj 7-etapową procedurę landingową tn-crm (docs/landing/) do SaaS — sekcje hero/problem/jak działa/pricing/FAQ zamiast produktowych. Bramki verify z procedury obowiązują.',
                              fields:[{k:'landing_url',l:'Landing URL',col:'project.landing_url'}],
-                             check:['Landing wg makiet / 04-STYLEGUIDE','Cennik / plany','CTA → checkout Stripe','Mobile 375px','SEO / OG'], prompt:'landing' },
-            testy_e2e:     { desc:'Testy kluczowych przepływów na koncie testowym Stripe.',
-                             check:['Rejestracja→logowanie→funkcja główna','Checkout→płatność→webhook→dostęp','Reset hasła','Panel operatora','Testy na koncie testowym'], prompt:'testy_e2e' },
+                             check:['Landing wg makiet / 04-STYLEGUIDE','Sekcje SaaS: hero / problem / jak działa / pricing / FAQ','CTA → checkout Stripe','Mobile 375px','SEO / OG'], prompt:'landing' },
+            testy_e2e:     { desc:'Playwright na preview (scaffold ze startera): sesja PISZE i URUCHAMIA testy, wkleja wyniki. To siatka regresyjna dla wszystkich późniejszych poprawek (demo, audyt).',
+                             check:['Rejestracja→logowanie→funkcja główna','Checkout→płatność→webhook→dostęp','Reset hasła','Panel operatora','Testy na koncie testowym Stripe — wyniki wklejone do BUILDLOG'], prompt:'testy_e2e' },
+            demo_klienta:  { desc:'Pętla klienta PRZED audytem: operator klika wersję roboczą na preview i zgłasza uwagi (lekcja Grzegorza: „muszę to zobaczyć, jak wygląda i funkcjonuje"). Uwagi → sekcja Uwagi (kind: uwaga). Granica „w cenie v1 vs rozwój" z Etapu 1 chroni przed spiralą życzeń. Kamień milowy.',
+                             check:['Link preview + instrukcja wysłane klientowi','Klient przetestował (potwierdzenie)','Uwagi zebrane w sekcji Uwagi','Podział uwag: w cenie v1 / rozwój (wg granicy z akceptu)'] },
+            poprawki_demo: { desc:'Poprawki z demo w ramach granicy v1 — jedna sesja wg metodyki (BUILDLOG, dowody). Rzeczy spoza granicy → Uwagi „na później" + komunikat do klienta.',
+                             check:['Uwagi „w cenie v1" wykonane','Uwagi „rozwój" zapisane na później + zakomunikowane klientowi','E2E przechodzi po poprawkach','Klient potwierdził poprawki'], prompt:'poprawki_demo' },
             audyt:         { desc:'Audyt bezpieczeństwa — obowiązkowy gate przed startem (WORKFLOW-APLIKACJE-PLAN §7). Dla każdej pozycji: PASS/FAIL + dowód. FAIL blokuje start.',
                              check:['RLS ENABLED na każdej tabeli; zero authenticated/anon USING(true)','Polityki per auth.uid() (S/I/U/D osobno)','Operator widzi tylko swoją instancję; agregaty przez edge fn','Triggery COUNT/MAX = SECURITY DEFINER','Test kluczem ANON: nie przecieka cudze konto','service_role nigdy we froncie/repo; front tylko sb_publishable_*; legacy OFF','Sekrety Stripe/Resend tylko w env edge fns','stripe-webhook: constructEvent + idempotencja po event.id','deploy --no-verify-jwt ALE sygnatura obowiązkowa','Zero innerHTML z danymi usera; walidacja wejścia w edge fn','Literal </scr'+'ipt> splitowany; polskie znaki w regex escapowane','Rate limiting na publicznych edge fns (checkout/onboard/rejestracja/reset)','Kwoty/ceny liczone serwerowo, nigdy z frontu','Migracja PRZED pushem; Confirm email OFF; Resend DNS zielony','Plan rollback / kopia zapasowa'], prompt:'audyt' },
             poprawki:      { desc:'Poprawki po audycie. Kamień milowy „Aplikacja przeszła audyt bezpieczeństwa".',
                              check:['Wszystkie FAIL z audytu naprawione','Re-test po poprawkach','Brak regresji'] },
             // ETAP 5 — Start
-            prawne:        { desc:'Regulamin + RODO + DPA. Operator jako administrator danych.',
+            prawne:        { desc:'Regulamin + RODO + DPA z SZABLONÓW startera (saas-starter/template/legal/ — robione raz per fabryka, konsultacja prawna raz). Per apka tylko wypełnienie danych operatora. Administrator danych = operator.',
                              fields:[{k:'prawne_links',l:'Linki do dokumentów prawnych',ta:true}],
-                             check:['Regulamin','Polityka prywatności / RODO','DPA (przetwarzanie danych)','Cookies / consent','Dane operatora jako administrator'] },
-            onboarding_op: { desc:'Wdrożenie operatora: obsługa użytkowników, płatności, statystyki. Owner: klient.',
-                             check:['Sesja z panelu operatora','Obsługa użytkowników / płatności / statystyk','Materiały / nagranie przekazane'] },
-            start_live:    { desc:'START aplikacji na produkcji. Kamień milowy „Aplikacja wystartowała". Ustala pole projektu: app_url.',
+                             check:['Regulamin (z szablonu startera)','Polityka prywatności / RODO (z szablonu)','DPA (z szablonu)','Cookies / consent','Dane operatora jako administrator wpisane'] },
+            onboarding_op: { desc:'Wdrożenie operatora: obsługa użytkowników, płatności, statystyki. Format: nagranie (Loom) + checklist „pierwsze 7 dni operatora" w jego panelu — operator-nowicjusz ma KLIKAĆ, nie wymyślać. Owner: klient.',
+                             check:['Sesja z panelu operatora','Nagranie (Loom) przekazane','Checklist „pierwsze 7 dni operatora" w panelu','Obsługa użytkowników / płatności / statystyk przećwiczona'] },
+            start_live:    { desc:'SOFT LAUNCH: najpierw 5-10 userów z sieci operatora (beta = walidacja + testimoniale), publiczny start po ~tygodniu. Kamień milowy „Aplikacja wystartowała".',
                              fields:[{k:'app_url',l:'URL aplikacji (produkcja)',col:'project.app_url'}],
-                             check:['Smoke test na produkcji','DNS / SSL zielone','Płatność produkcyjna testowa','Ogłoszenie startu'] },
-            gtm_50:        { desc:'Droga do 50 klientów — Tomek rozkręca, potem stery. Kanały pozyskania i pętla feedbacku.',
+                             check:['Smoke test na produkcji','DNS / SSL zielone','Płatność produkcyjna testowa','Beta: 5-10 userów z sieci operatora','Testimoniale/opinie z bety zebrane','Publiczny start ogłoszony'] },
+            gtm_50:        { desc:'Playbook 4 kanałów W KOLEJNOŚCI (cold ads przy niskim ACV się nie domykają — CAC $3-4k; partnerstwa −50% CAC): sieć operatora → outreach z AI → partnerstwa → content. Płatne = TYLKO retargeting, po PMF.',
                              fields:[{k:'gtm_plan',l:'Plan GTM / kanały',ta:true}],
-                             check:['Kanały pozyskania','Pierwsi klienci','Pętla feedbacku','Metryki wzrostu'] },
-            stery:         { desc:'Przekazanie sterów operatorowi. Tomek przechodzi na rev-share (Connect → Application fees). Kamień milowy.',
-                             check:['Operator prowadzi samodzielnie','Dostępy przekazane','Rytm przeglądów ustalony','Rev-share rozliczany (Connect Application fees)'] },
+                             check:['0→10: sieć operatora + grupy branżowe (insider dzieli się narzędziem)','10→30: outreach z AI-personalizacją (RODO: uzasadniony interes, opt-out)','30→50: partnerstwa dystrybucyjne (hurtownie/izby/stowarzyszenia)','Tło: kilka MOCNYCH stron porównawczych (AI+człowiek, NIE masowy content)','Płatne tylko retargeting, po PMF','Pętla feedbacku od pierwszych klientów działa'], prompt:'gtm_50' },
+            stery:         { desc:'Przekazanie sterów operatorowi. Tomek przechodzi na rev-share (Connect → Application fees). Pamiętaj: po 12 mies. hosting przechodzi 90% klient / 10% Tomek. Kamień milowy.',
+                             check:['Operator prowadzi samodzielnie','Dostępy przekazane','Rytm przeglądów ustalony','Rev-share rozliczany (Connect Application fees)','Data „hosting 90/10 po 12 mies." zanotowana'] },
+            monthly:       { desc:'3 comiesięczne przeglądy z operatorem po przekazaniu sterów (rytm, zanim nawyki operatora okrzepną): liczby, blokery, plan na miesiąc.',
+                             check:['Przegląd #1 (liczby / blokery / plan)','Przegląd #2','Przegląd #3','Decyzja: dalszy rytm (kwartalny / autopilot)'] },
         };
 
         function drawerStep() { return drawerCtx ? stepFor(drawerCtx.key) : null; }
@@ -816,8 +836,17 @@ Dane źródłowe (baza tn-crm, projekt yxmavwkwnfuphjqbelws, sesja sparingu: ${p
 Zasady: stack statyczny HTML + vanilla JS + Supabase Edge Functions + Vercel (BEZ frameworków SSR). RLS od 1 dnia (polityki per auth.uid()). Stripe direct charges z application_fee. Deploy = git push main. Migracja PRZED pushem kodu. Paczka wejściowa: apka-${project.slug || '<slug>'}-brief/ (00-KONTEKST … 07-RUNBOOK).
 
 Zadanie: `;
+            // Rytuał metodyki (METODYKA-BUDOWY.md §3) — doklejany do sesji BUDOWLANYCH.
+            // Review adwersarski celowo BEZ rytuału (nie może czytać BUILDLOG-a).
+            const RITUAL = `
+
+Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.md i swoją sekcję w 08-PLAN-SESJI.md, (2) wykonaj TYLKO cel tej sesji — scope creep zapisuj jako „na później", (3) commit → deploy preview → DOWODY (wynik testu / curl / screenshot wklejone, nie „zrobione"), (4) dopisz wpis do BUILDLOG.md (co zrobione / decyzje / otwarte / dowody), (5) decyzja biznesowa poza spec → zapisz „DO DECYZJI TOMKA" w BUILDLOG i zakończ sesję.`;
+            const BUILD_KINDS = ['schemat_db','auth_konta','funkcja_glowna','panel_usera','panel_operatora','platnosci_e2e','maile_trans','landing','testy_e2e','poprawki_demo','dane_operatora'];
             const map = {
-                mvp_scope: 'Na bazie 00-KONTEKST i handoff packu zdefiniuj MVP: 3–5 funkcji rdzenia (co JEST), świadome cięcia (czego NIE MA) oraz kryteria „gotowe" per funkcja. Zapisz jako 01-MVP-SCOPE.md w paczce. Najszybszy go-to-market, zero przekombinowania.',
+                mvp_scope: 'Na bazie 00-KONTEKST i handoff packu wygeneruj PROPOZYCJĘ MVP do decyzji Tomka: 3–5 funkcji rdzenia (co JEST), świadome cięcia (czego NIE MA), metryka aktywacji (aha-moment) + time-to-first-value < 10 min, granica „jakie zmiany po zobaczeniu v1 są w cenie, a jakie są rozwojem" oraz kryteria „gotowe" per funkcja. Zapisz jako 01-MVP-SCOPE.md w paczce. Najszybszy go-to-market, zero przekombinowania. Tomek tnie i zatwierdza — oznacz miejsca wymagające jego decyzji.',
+                pricing: 'Na bazie handoff packu (intel cenowy, konkurencja) i researchu niszy zaproponuj pricing do decyzji z klientem: 1-2 plany (miesięczny + roczny), cena poniżej kotwicy konkurencji, trial Z KARTĄ (konwersja ~31% vs ~9% bez karty). Uzasadnij liczbami z handoffu. Wynik: tabela planów + rekomendacja + pytania do klienta.',
+                akcept_klienta: 'Przygotuj draft maila akceptacyjnego do klienta (styl Tomka: krótko, konkretnie, 1:1): podsumowanie zakresu MVP (z 01-MVP-SCOPE), nazwa aplikacji, pricing, granica „zmiany w cenie v1 vs dalszy rozwój" + prośba o potwierdzenie. Dołącz akapit o założeniu konta Stripe (Account Link — KYC startuje równolegle). NIE wysyłaj — tylko draft do przeglądu.',
+                dane_operatora: 'Zdigitalizuj dane domenowe operatora (pliki/linki w kroku „Dane operatora"): odczytaj źródła (PDF/zdjęcia/arkusze), ustrukturyzuj wg 03-SCHEMAT-DB.sql, oczyść (nazwy, duplikaty, jednostki), wygeneruj seed SQL gotowy do wgrania. Wypisz pozycje niepewne do potwierdzenia z klientem.',
                 paczka_cc: 'Złóż kompletną paczkę startową apka-<slug>-brief/ dla Claude Code (WORKFLOW-APLIKACJE-PLAN §6.1): 00-KONTEKST-BIZNESOWY (wyciąg z handoff packu + otwarte uwagi Tomka + nisza/operator/fee), 01-MVP-SCOPE, 02-SPEC-FUNKCJONALNY (ekrany, user stories, flow user + operator), 03-SCHEMAT-DB.sql (tabele + RLS), 04-STYLEGUIDE (tokeny z makiet sparingu), 05-STRIPE-CONFIG (plany, fee_percent, subskrypcja vs jednorazowe), 06-CLAUDE.md, 07-DEPLOY-RUNBOOK. Zasada: Claude IMPLEMENTUJE, nie wymyśla.',
                 schemat_db: 'Zaprojektuj i wdróż schemat DB wg 03-SCHEMAT-DB.sql: wszystkie tabele z RLS ENABLED, polityki per auth.uid() (SELECT/INSERT/UPDATE/DELETE osobno), triggery liczące (COUNT/MAX) jako SECURITY DEFINER. Zastosuj migracją PRZED pushem kodu. Zero polityk authenticated/anon USING(true).',
                 auth_konta: 'Zbuduj auth: rejestracja i logowanie e-mail+hasło (Confirm email OFF), reset hasła przez Resend SMTP. Zapewnij izolację kont — każdy user widzi wyłącznie swoje dane (RLS per auth.uid()). Przetestuj kluczem anon, czy nie przecieka cudze konto.',
@@ -827,8 +856,11 @@ Zadanie: `;
                 platnosci_e2e: 'Wdróż płatności Stripe Connect: stripe-onboard (Account Link, Standard), stripe-checkout (direct charge z nagłówkiem Stripe-Account), application_fee liczone SERWEROWO wg fee_percent, stripe-webhook (constructEvent z STRIPE_WEBHOOK_SECRET + idempotencja po event.id w tabeli stripe_events). Deploy edge fns z --no-verify-jwt, ale sygnatura obowiązkowa. Włącz i przetestuj BLIK.',
                 maile_trans: 'Dodaj e-maile transakcyjne przez Resend API z edge functions (potwierdzenia, powiadomienia). Tracking otwarć OFF — logika oparta na delivered_at. Loguj wysyłki do email_log; zostaw hook point pod przyszłe dripy.',
                 landing: 'Zbuduj landing + cennik aplikacji wg makiet sparingu (04-STYLEGUIDE). Sekcje: hero, problem, jak działa, cennik / plany, CTA → checkout Stripe. Dopracuj mobile 375px oraz OG / SEO.',
-                testy_e2e: 'Przejdź testy E2E kluczowych przepływów: rejestracja→logowanie→funkcja główna; checkout→płatność→webhook→dostęp; reset hasła; panel operatora. Testuj na koncie testowym Stripe. Wypisz wyniki i błędy.',
-                audyt: 'Wykonaj audyt bezpieczeństwa wg checklisty (WORKFLOW-APLIKACJE-PLAN §7): RLS / izolacja, sekrety, webhooki, XSS / input, nadużycia, deploy. Dla każdej pozycji: PASS/FAIL + dowód. FAIL = gate — nie startujemy, dopóki nie naprawione.',
+                testy_e2e: 'Napisz i URUCHOM testy E2E (Playwright, scaffold w tests/) na deploy preview: rejestracja→logowanie→funkcja główna; checkout→płatność→webhook→dostęp; reset hasła; panel operatora. Konto testowe Stripe. Wklej pełne wyniki do BUILDLOG.',
+                review_adwersarski: 'REVIEW ADWERSARSKI — świeża sesja, celowo ograniczony kontekst: przeczytaj WYŁĄCZNIE `git diff main...HEAD` oraz kryteria z apka-<slug>-brief/01-MVP-SCOPE.md. NIE czytaj BUILDLOG.md ani historii pracy (niezależność od rozumowania budowniczego). Twoim zadaniem jest ZNALEŹĆ błędy, nie potwierdzić poprawność: poprawność logiki, edge case\'y, bezpieczeństwo (RLS, sekrety, walidacja wejścia, XSS, kwoty liczone serwerowo), zgodność z kryteriami MVP. Każde znalezisko: file:line + jednozdaniowy opis + konkretny scenariusz błędu (wejście → złe wyjście). Na końcu lista findings posortowana wg wagi — bez naprawiania.',
+                poprawki_demo: 'Wykonaj poprawki z demo klienta oznaczone jako „w cenie v1" (lista w kroku „Demo dla klienta" / Uwagach). Rzeczy spoza granicy v1 NIE ruszaj — tylko odnotuj. Po poprawkach uruchom E2E i wklej wyniki.',
+                gtm_50: 'Przygotuj plan GTM 0→50 dla tej aplikacji wg playbooku (METODYKA-BUDOWY.md §7): (1) lista grup branżowych/społeczności niszy + 3 posty dla operatora (jego głosem, „patrzcie czego używam", nie reklama), (2) szablon cold-maila/LinkedIn z AI-personalizacją z sygnałów (RODO: uzasadniony interes, opt-out), (3) lista 10 potencjalnych partnerów dystrybucyjnych (hurtownie/izby/stowarzyszenia niszy) + szablon propozycji, (4) 3 tematy stron porównawczych. Wszystko po polsku, pod tę konkretną niszę.',
+                audyt: 'Wykonaj audyt bezpieczeństwa wg checklisty (WORKFLOW-APLIKACJE-PLAN §7): RLS / izolacja, sekrety, webhooki, XSS / input, nadużycia, deploy. Dla każdej pozycji: PASS/FAIL + dowód (wynik komendy/query). Sekcje RLS i płatności przygotuj do osobistego przeglądu Tomka (wypisz polityki i przepływy kwot wprost). FAIL = gate — nie startujemy, dopóki nie naprawione.',
             };
             // Wstrzyknij otwarte uwagi Tomka do paczki startowej
             let extra = '';
@@ -836,7 +868,7 @@ Zadanie: `;
                 const open = notes.filter(n => n.status === 'open');
                 if (open.length) extra = '\n\nOtwarte uwagi Tomka (do 00-KONTEKST):\n' + open.map(n => `- [${n.kind}] ${n.content}`).join('\n');
             }
-            const txt = base + (map[kind] || 'Pomóż mi z tym krokiem.') + extra;
+            const txt = base + (map[kind] || 'Pomóż mi z tym krokiem.') + (BUILD_KINDS.includes(kind) ? RITUAL : '') + extra;
             navigator.clipboard.writeText(txt)
                 .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
                 .catch(() => showToast('Nie udało się skopiować', 'error'));

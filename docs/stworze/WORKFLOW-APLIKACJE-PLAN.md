@@ -225,6 +225,13 @@ DEPLOY
 - [x] Handoff pack Grzegorza wygenerowany ręcznie z pełnej bazy 156 itemów (auto-generator ucina do 8000 zn.);
       `knowhow_closed_at` ustawiony po stronie zespołu — 2026-07-11
 - [x] `docs/stworze/STRIPE-CONNECT-SETUP.md` (instrukcja dla Tomka) — 2026-07-11; aktywacja Connect: CZEKA na Tomka
+- [x] `docs/stworze/METODYKA-BUDOWY.md` (spec-driven: BUILDLOG, 08-PLAN-SESJI, rytuał sesji, review adwersarski,
+      bramki człowieka) — 2026-07-11
+- [x] Migracja `20260711b_wfa_flow_v2.sql`: `deadline_at` + 6 nowych kroków (pricing, dane_operatora,
+      review_adwersarski, demo_klienta, poprawki_demo, monthly) → 36 kroków; terminy wstępne pilotów ustawione — 2026-07-11
+- [x] Panel v2: warsztaty wg metodyki (wzmocnione checklisty/desc), prompty z rytuałem sesji + 6 nowych promptów,
+      badge terminu (żółty <14 dni, czerwony <7) — 2026-07-11
+- [ ] `saas-starter` (szkielet apki: auth, webhook inbox, lifecycle, Playwright, legal, forge.mjs) — W BUDOWIE
 - [ ] F2 fabryka (saas-starter + paczki) — NIE ZACZĘTE
 - [ ] F3 portal klienta — NIE ZACZĘTE
 - [ ] F4 automaty — NIE ZACZĘTE

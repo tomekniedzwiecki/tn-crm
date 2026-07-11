@@ -124,15 +124,15 @@ płatności: Grzegorz od 18.06 → okno ~16.07-13.08; Tomek J. od 26.06 → ~24.
 - B4. Bramki: review_adwersarski + wzmocniony audyt + E2E scaffold.
 - B5. Autopilot ops: Healthchecks/Sentry + routine tygodniowa portfela + #ops-portfel.
 
-## 9. Decyzje Tomka (otwarte)
+## 9. Decyzje Tomka (rozstrzygnięte 2026-07-11)
 
-1. Wariant automatyzacji: B (Routines, subskrypcja) jako główny — akcept? (C/GitHub Actions wymaga API key = osobne koszty.)
-2. Czy kroki `runner=agent` mogą same MERGOWAĆ drobne PR po zielonych testach, czy KAŻDY PR czeka na Tomka? (rekomendacja:
-   na start każdy PR czeka; auto-merge po 2-3 aplikacjach zaufania)
-3. Slack #ops-portfel + #aplikacje-build — utworzyć?
-4. Sentry + Healthchecks.io — założyć konta (free tier) przy B5.
-5. Status umów Grzegorza i Tomka J. (nie ma ich w repo; brak szablonu umowy aplikacji) — istnieją poza repo czy do zrobienia?
-6. Płatności w apkach: na start TYLKO Stripe (karta/BLIK); faktury pro-forma/przelewy B2B = świadome cięcie v1 — akcept?
+1. Automatyzacja: **PROMPTY do Claude Code** (kontrola) — NIE Routines/Actions. Kolumna `runner` NIE powstaje;
+   §1 (warianty B/C) = odłożone na przyszłość. Cała dźwignia autonomii = jakość promptów + metodyka (METODYKA-BUDOWY.md).
+2. Każdy PR/efekt czeka na Tomka — akcept.
+3. Slack #ops-portfel — JESZCZE NIE.
+4. Sentry/Healthchecks — JESZCZE NIE.
+5. Umowy — PÓŹNIEJ (Tomek). Terminy wstępne (8 tyg. wg oferty) ustawione w `deadline_at`: Grzegorz 13.08, Tomek J. 21.08.
+6. Tor kliencki Grzegorza — JESZCZE NIE startuje (decyzja Tomka).
 
 ## 10. Rewizja krytyczna flow (11.07) — luki znalezione w głębokim przeglądzie
 

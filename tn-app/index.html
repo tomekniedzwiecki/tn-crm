@@ -82,6 +82,7 @@
                                     <th class="px-5 py-3">Postęp</th>
                                     <th class="px-5 py-3">Aktualny krok</th>
                                     <th class="px-5 py-3">Domena</th>
+                                    <th class="px-5 py-3">Termin</th>
                                     <th class="px-5 py-3">Utworzony</th>
                                     <th class="px-5 py-3"></th>
                                 </tr>
@@ -157,6 +158,14 @@
             const d = new Date(iso); if (isNaN(d.getTime())) return '—';
             const diff = Math.round((new Date().setHours(0,0,0,0) - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000);
             if (diff <= 0) return 'dziś'; if (diff === 1) return 'wczoraj'; return diff + ' dni temu';
+        }
+        // Badge terminu umownego (oferta: 4-8 tyg. od pełnej płatności): żółty <14 dni, czerwony <7 / po terminie
+        function deadlineBadge(p) {
+            if (!p.deadline_at) return '<span class="text-zinc-700 text-[11px]">—</span>';
+            const days = Math.ceil((new Date(p.deadline_at) - new Date()) / 86400000);
+            const cls = days < 0 ? 'border-[#e5484d]/50 text-[#f26d78]' : days < 7 ? 'border-[#e5484d]/50 text-[#f26d78]' : days < 14 ? 'border-[#f5a623]/50 text-[#f5b955]' : 'border-[#2a2a2a] text-zinc-400';
+            const txt = days < 0 ? Math.abs(days) + ' dni PO' : days + ' dni';
+            return `<span class="inline-flex items-center gap-1 border ${cls} rounded-md px-2 py-0.5 text-[11px]"><i class="ph ph-calendar-blank"></i>${txt}</span>`;
         }
         function projName(p) {
             const n = (p.name || '').trim();
@@ -309,6 +318,7 @@
                     </td>
                     <td class="px-5 py-3.5 text-zinc-300 text-xs">${escapeHtml(agg.currentLabel)}</td>
                     <td class="px-5 py-3.5">${domain}</td>
+                    <td class="px-5 py-3.5">${deadlineBadge(p)}</td>
                     <td class="px-5 py-3.5 text-zinc-500 text-xs">${relDate(p.created_at)}</td>
                     <td class="px-5 py-3.5 text-right"><button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button></td>
                 </tr>` + (open ? renderRowPreview(p) : '');
@@ -333,7 +343,7 @@
             if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i> aplikacja</a>`);
             if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-browser"></i> landing</a>`);
             if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i> repo</a>`);
-            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="7" class="px-5 py-4 cursor-default">
+            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="8" class="px-5 py-4 cursor-default">
                 <div class="flex flex-wrap gap-1.5 mb-3">${stageHtml}</div>
                 ${links.length ? `<div class="flex flex-wrap gap-3 text-[11px]">${links.join('')}</div>` : '<span class="text-zinc-600 text-[11px]">brak linków (repo / aplikacja / landing)</span>'}
             </td></tr>`;
