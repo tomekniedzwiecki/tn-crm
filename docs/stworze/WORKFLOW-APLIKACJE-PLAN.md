@@ -237,5 +237,13 @@ DEPLOY
       processor + lifecycle-emails + admin-stats, Playwright, legal szablony PL). Znane TODO: linki legal
       w stopce, amount jednorazowych z Price/DB, 0002_cron do włączenia per apka — 2026-07-11
 - [ ] F2 fabryka (saas-starter + paczki) — NIE ZACZĘTE
-- [ ] F3 portal klienta — NIE ZACZĘTE
+- [x] **F3 portal klienta — LIVE** 2026-07-11: edge fn `wfa-portal` (token 32-hex + hasło SHA-256 w
+      `client_password_hash`; hasło nieustawione = portal wyłączony; zwraca TYLKO postęp/etapy/kamienie/termin)
+      + strona `/twoja-aplikacja?t=<token>` (`tn-app/portal.html`) + panel: Ustawienia → hasło portalu + kopiuj link.
+      Przetestowane E2E; hasła klientom ustawia Tomek, gdy zdecyduje się udostępnić.
+- [x] Hardening po advisors (migracja `20260711c`): REVOKE anon/PUBLIC z funkcji SECURITY DEFINER + wewnętrzny
+      gate team_members (service-role przechodzi); search_path w wfa_touch_updated_at — 2026-07-11
+- [x] Panel: wskaźnik „u klienta od X dni" na krokach klienckich (>5 dni = followup), transkrypcja rozmowy
+      sparingu w projekcie (na żądanie) — 2026-07-11
+- [x] Starter: `scripts/audit-static.mjs` — automatyczny gate (sekrety/XSS/USING(true)/service_role we froncie) — 2026-07-11
 - [ ] F4 automaty — NIE ZACZĘTE

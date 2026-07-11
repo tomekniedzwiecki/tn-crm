@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postęp budowy Twojej aplikacji</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#050505">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#000; color:#e5e5e5; font:14px/1.55 Inter, sans-serif; -webkit-font-smoothing:antialiased; min-height:100dvh; }
+        ::selection { background:#fff; color:#000; }
+        .wrap { max-width:680px; margin:0 auto; padding:48px 20px 80px; }
+        .brand { display:flex; align-items:center; gap:10px; color:#71717a; font-size:12px; margin-bottom:40px; }
+        .brand b { color:#a1a1aa; font-weight:600; }
+        h1 { color:#fff; font-size:26px; font-weight:600; letter-spacing:-.02em; margin-bottom:6px; }
+        .sub { color:#71717a; font-size:13px; margin-bottom:32px; }
+        .card { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:24px; margin-bottom:16px; }
+        .bar-wrap { height:8px; background:#1c1c1f; border-radius:99px; overflow:hidden; margin:14px 0 8px; }
+        .bar { height:100%; background:#0070f3; border-radius:99px; transition:width .8s ease; }
+        .pct { color:#fff; font-size:30px; font-weight:600; }
+        .stage { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #161616; }
+        .stage:last-child { border-bottom:none; }
+        .st-ico { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+        .st-done { background:rgba(69,165,87,.15); color:#4cb782; }
+        .st-cur  { background:rgba(0,112,243,.15); color:#52a8ff; }
+        .st-wait { background:#18181b; color:#52525b; }
+        .st-label { flex:1; }
+        .st-cnt { color:#52525b; font-size:11px; font-variant-numeric:tabular-nums; }
+        .mile { display:flex; align-items:flex-start; gap:12px; padding:10px 0; }
+        .mile i { margin-top:2px; }
+        .mile.done i { color:#4cb782; } .mile.todo i { color:#3f3f46; }
+        .mile.done .m-label { color:#e5e5e5; } .mile.todo .m-label { color:#52525b; }
+        .m-date { color:#52525b; font-size:11px; }
+        .now { display:inline-flex; align-items:center; gap:8px; background:rgba(0,112,243,.08); border:1px solid rgba(0,112,243,.35); color:#52a8ff; border-radius:99px; padding:6px 14px; font-size:12.5px; }
+        .now .dot { width:7px; height:7px; border-radius:50%; background:#0070f3; animation:pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+        .h-mini { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#52525b; font-weight:600; margin-bottom:10px; }
+        .links a { color:#52a8ff; text-decoration:none; font-size:13px; margin-right:18px; }
+        .foot { color:#3f3f46; font-size:11.5px; margin-top:36px; }
+        /* logowanie */
+        input[type=password] { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:8px; padding:12px 14px; font-size:15px; color:#fff; margin-bottom:12px; }
+        input[type=password]:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        button { width:100%; background:#fff; color:#000; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:600; cursor:pointer; }
+        button:hover { background:#e4e4e7; } button:disabled { opacity:.5; cursor:default; }
+        .err { color:#f26d78; font-size:12.5px; margin-bottom:10px; min-height:18px; }
+        .hidden { display:none; }
+        .skel { color:#52525b; text-align:center; padding:40px 0; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="brand"><i class="ph ph-app-window"></i> Budowa aplikacji · <b>Tomek Niedźwiecki</b></div>
+
+    <!-- Logowanie -->
+    <div id="login" class="hidden">
+        <h1>Postęp budowy</h1>
+        <p class="sub">Podaj hasło, które otrzymałeś ode mnie, aby zobaczyć status swojego projektu.</p>
+        <div class="card" style="max-width:420px">
+            <div id="err" class="err"></div>
+            <input id="pw" type="password" placeholder="Hasło" autocomplete="current-password">
+            <button id="go" onclick="load()">Pokaż postęp</button>
+        </div>
+    </div>
+
+    <!-- Brak tokenu -->
+    <div id="notoken" class="hidden">
+        <h1>Nieprawidłowy link</h1>
+        <p class="sub">Ten link jest niekompletny. Użyj dokładnie tego, który otrzymałeś w wiadomości.</p>
+    </div>
+
+    <!-- Treść -->
+    <div id="content" class="hidden">
+        <h1 id="c-name">…</h1>
+        <p class="sub" id="c-hello"></p>
+
+        <div class="card">
+            <div class="h-mini">Postęp budowy</div>
+            <span class="pct" id="c-pct">0%</span>
+            <div class="bar-wrap"><div class="bar" id="c-bar" style="width:0%"></div></div>
+            <div style="margin-top:14px"><span class="now"><span class="dot"></span> Teraz pracujemy nad: <b id="c-now" style="margin-left:2px"></b></span></div>
+        </div>
+
+        <div class="card">
+            <div class="h-mini">Etapy</div>
+            <div id="c-stages"></div>
+        </div>
+
+        <div class="card">
+            <div class="h-mini">Kamienie milowe</div>
+            <div id="c-miles"></div>
+        </div>
+
+        <div class="card hidden" id="c-linkbox">
+            <div class="h-mini">Linki</div>
+            <div class="links" id="c-links"></div>
+        </div>
+
+        <p class="foot" id="c-deadline"></p>
+        <p class="foot">Masz pytanie? Odpisz po prostu na naszą korespondencję mailową.</p>
+    </div>
+
+    <div id="loading" class="skel">Ładowanie…</div>
+</div>
+
+<script>
+    const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
+    const token = (new URLSearchParams(location.search).get('t') || '').trim();
+    const $ = id => document.getElementById(id);
+    const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+    const PW_KEY = 'wfa_portal_pw_' + token;
+
+    function show(id) {
+        ['login','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    }
+
+    async function load() {
+        const pw = $('pw') && !$('login').classList.contains('hidden') ? $('pw').value.trim() : (sessionStorage.getItem(PW_KEY) || '');
+        if (!pw) { show('login'); return; }
+        $('err').textContent = ''; if ($('go')) $('go').disabled = true;
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, password: pw }) });
+            if (!res.ok) {
+                sessionStorage.removeItem(PW_KEY);
+                show('login'); $('err').textContent = 'Nieprawidłowe hasło. Spróbuj ponownie.';
+                return;
+            }
+            const d = await res.json();
+            sessionStorage.setItem(PW_KEY, pw);
+            render(d); show('content');
+        } catch (e) {
+            show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
+        } finally { if ($('go')) $('go').disabled = false; }
+    }
+
+    function render(d) {
+        $('c-name').textContent = d.name;
+        $('c-hello').textContent = d.customer_name ? ('Cześć ' + d.customer_name.split(' ')[0] + '! Tak wygląda aktualny stan prac nad Twoją aplikacją.') : 'Aktualny stan prac nad Twoją aplikacją.';
+        $('c-pct').textContent = d.progress + '%';
+        $('c-bar').style.width = d.progress + '%';
+        $('c-now').textContent = d.current_stage;
+
+        $('c-stages').innerHTML = (d.stages || []).map(s => {
+            const cur = !s.complete && d.stages.find(x => !x.complete) === s;
+            const cls = s.complete ? 'st-done' : cur ? 'st-cur' : 'st-wait';
+            const ico = s.complete ? '<i class="ph ph-check"></i>' : s.num;
+            return '<div class="stage"><span class="st-ico ' + cls + '">' + ico + '</span>' +
+                '<span class="st-label">' + esc(s.label) + '</span>' +
+                '<span class="st-cnt">' + s.done + '/' + s.total + '</span></div>';
+        }).join('');
+
+        $('c-miles').innerHTML = (d.milestones || []).map(m => {
+            const date = m.at ? new Date(m.at).toLocaleDateString('pl-PL') : '';
+            return '<div class="mile ' + (m.done ? 'done' : 'todo') + '">' +
+                '<i class="ph ' + (m.done ? 'ph-flag-checkered' : 'ph-flag') + '"></i>' +
+                '<div><div class="m-label">' + esc(m.label) + '</div>' + (date ? '<div class="m-date">' + date + '</div>' : '') + '</div></div>';
+        }).join('');
+
+        const links = [];
+        if (d.landing_url) links.push('<a href="' + esc(d.landing_url) + '" target="_blank" rel="noopener"><i class="ph ph-browser"></i> Strona aplikacji</a>');
+        if (d.app_url) links.push('<a href="' + esc(d.app_url) + '" target="_blank" rel="noopener"><i class="ph ph-rocket-launch"></i> Aplikacja</a>');
+        $('c-linkbox').classList.toggle('hidden', !links.length);
+        $('c-links').innerHTML = links.join('');
+
+        $('c-deadline').textContent = d.deadline_at ? ('Planowany termin oddania: ' + new Date(d.deadline_at).toLocaleDateString('pl-PL') + '.') : '';
+    }
+
+    if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
+    else if (sessionStorage.getItem(PW_KEY)) { show('loading'); load(); }
+    else { show('login'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Enter' && !$('login').classList.contains('hidden')) load(); });
+</script>
+</body>
+</html>

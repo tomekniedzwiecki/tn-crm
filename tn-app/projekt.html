@@ -201,6 +201,15 @@
                 <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label><input id="set-phone" class="fld"></div>
                 <div><label class="text-xs text-zinc-500 block mb-1">spar_session_id (podgląd danych)</label><input id="set-spar" class="fld" placeholder="uuid sesji sparingu"></div>
             </div>
+            <div class="mt-4 pt-4 border-t border-[#1f1f1f]">
+                <div class="text-xs text-zinc-500 mb-2">Portal klienta (kamienie milowe): <span id="set-portal-status" class="text-zinc-300"></span></div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="set-portal-pw" class="fld" placeholder="Nowe hasło portalu (min 6 znaków)">
+                    <button onclick="setPortalPassword()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25 flex-shrink-0">Ustaw hasło</button>
+                    <button onclick="copyPortalLink()" class="px-3 py-2 text-xs text-zinc-300 border border-[#333] rounded-md hover:border-[#0070f3]/60 flex-shrink-0"><i class="ph ph-link"></i> Kopiuj link</button>
+                </div>
+                <div class="text-[10px] text-zinc-600 mt-1.5">Link: /twoja-aplikacja?t=&lt;token&gt; — klient widzi TYLKO postęp, etapy i kamienie (przez edge fn wfa-portal, nie anon RLS).</div>
+            </div>
             <div class="flex justify-between items-center mt-5">
                 <button onclick="deleteProject()" class="px-3 py-2 text-xs text-[#f26d78] hover:text-[#ff8589]">Usuń projekt</button>
                 <div class="flex gap-2">
@@ -423,10 +432,20 @@
                             <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
                             ${STEP_LABELS[st.status]}
                         </button>
-                        <span class="text-zinc-600 text-[10px]">${st.completed_at ? relTime(st.completed_at) : ''}</span>
+                        <span class="text-zinc-600 text-[10px]">${st.completed_at ? relTime(st.completed_at) : clientLagBadge(d, st)}</span>
                     </div>
                 </div>`;
             }).join('');
+        }
+
+        // Kroki klienckie = najdłuższe ogony procesu: gdy krok klienta jest „W trakcie"
+        // (= poprosiliśmy klienta), pokazuj ile dni wisi. >5 dni = czerwono (czas na followup).
+        function clientLagBadge(d, st) {
+            if (d.owner !== 'client' || st.status !== 'in_progress' || !st.updated_at) return '';
+            const days = Math.floor((Date.now() - new Date(st.updated_at).getTime()) / 86400000);
+            if (days < 1) return '';
+            const cls = days > 5 ? 'text-[#f26d78]' : days > 2 ? 'text-[#f5b955]' : 'text-zinc-500';
+            return `<span class="${cls}">u klienta od ${days} dni${days > 5 ? ' — followup!' : ''}</span>`;
         }
 
         function renderActivity(items) {
@@ -561,7 +580,33 @@
                 </div>`;
             }
 
+            // Transkrypcja rozmowy (sparing + spowiednik) — doładowywana na żądanie
+            h += `<div id="spar-transcript-box">
+                <button onclick="loadTranscript()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] inline-flex items-center gap-1.5"><i class="ph ph-chat-dots"></i> Pokaż transkrypcję rozmowy</button>
+                <div id="spar-transcript" class="hidden mt-3 max-h-96 overflow-y-auto space-y-2 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4"></div>
+            </div>`;
+
             document.getElementById('spar-content').innerHTML = h;
+        }
+        async function loadTranscript() {
+            const box = document.getElementById('spar-transcript');
+            box.classList.remove('hidden');
+            box.innerHTML = '<div class="text-zinc-600 text-xs">Ładuję…</div>';
+            const { data, error } = await supabaseClient.from('spar_messages')
+                .select('role, content, created_at')
+                .eq('session_id', project.spar_session_id)
+                .order('created_at', { ascending: true })
+                .range(0, 4999);
+            if (error) { box.innerHTML = '<div class="text-[#f26d78] text-xs">Błąd: ' + escapeHtml(error.message) + '</div>'; return; }
+            if (!data || !data.length) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak wiadomości.</div>'; return; }
+            box.innerHTML = data.map(m => {
+                const isUser = m.role === 'user';
+                return `<div class="text-[12px] leading-relaxed">
+                    <span class="font-semibold ${isUser ? 'text-[#f5b955]' : 'text-[#52a8ff]'}">${isUser ? 'Klient' : 'AI'}</span>
+                    <span class="text-zinc-600 text-[10px] ml-1">${relTime(m.created_at)}</span>
+                    <div class="text-zinc-300 whitespace-pre-wrap break-words">${escapeHtml(m.content)}</div>
+                </div>`;
+            }).join('');
         }
         function collectMockups(session) {
             if (!session) return [];
@@ -669,7 +714,7 @@
                              check:['Link preview + instrukcja wysłane klientowi','Klient przetestował (potwierdzenie)','Uwagi zebrane w sekcji Uwagi','Podział uwag: w cenie v1 / rozwój (wg granicy z akceptu)'] },
             poprawki_demo: { desc:'Poprawki z demo w ramach granicy v1 — jedna sesja wg metodyki (BUILDLOG, dowody). Rzeczy spoza granicy → Uwagi „na później" + komunikat do klienta.',
                              check:['Uwagi „w cenie v1" wykonane','Uwagi „rozwój" zapisane na później + zakomunikowane klientowi','E2E przechodzi po poprawkach','Klient potwierdził poprawki'], prompt:'poprawki_demo' },
-            audyt:         { desc:'Audyt bezpieczeństwa — obowiązkowy gate przed startem (WORKFLOW-APLIKACJE-PLAN §7). Dla każdej pozycji: PASS/FAIL + dowód. FAIL blokuje start.',
+            audyt:         { desc:'Audyt bezpieczeństwa — obowiązkowy gate przed startem (WORKFLOW-APLIKACJE-PLAN §7). Zacznij od `node scripts/audit-static.mjs` (automatyczna część: sekrety/XSS/USING(true)). Dla każdej pozycji: PASS/FAIL + dowód. RLS + płatności = osobisty przegląd Tomka. FAIL blokuje start.',
                              check:['RLS ENABLED na każdej tabeli; zero authenticated/anon USING(true)','Polityki per auth.uid() (S/I/U/D osobno)','Operator widzi tylko swoją instancję; agregaty przez edge fn','Triggery COUNT/MAX = SECURITY DEFINER','Test kluczem ANON: nie przecieka cudze konto','service_role nigdy we froncie/repo; front tylko sb_publishable_*; legacy OFF','Sekrety Stripe/Resend tylko w env edge fns','stripe-webhook: constructEvent + idempotencja po event.id','deploy --no-verify-jwt ALE sygnatura obowiązkowa','Zero innerHTML z danymi usera; walidacja wejścia w edge fn','Literal </scr'+'ipt> splitowany; polskie znaki w regex escapowane','Rate limiting na publicznych edge fns (checkout/onboard/rejestracja/reset)','Kwoty/ceny liczone serwerowo, nigdy z frontu','Migracja PRZED pushem; Confirm email OFF; Resend DNS zielony','Plan rollback / kopia zapasowa'], prompt:'audyt' },
             poprawki:      { desc:'Poprawki po audycie. Kamień milowy „Aplikacja przeszła audyt bezpieczeństwa".',
                              check:['Wszystkie FAIL z audytu naprawione','Re-test po poprawkach','Brak regresji'] },
@@ -893,7 +938,29 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             document.getElementById('set-email').value = project.customer_email || '';
             document.getElementById('set-phone').value = project.customer_phone || '';
             document.getElementById('set-spar').value = project.spar_session_id || '';
+            document.getElementById('set-portal-status').textContent = project.client_password_hash ? 'WŁĄCZONY (hasło ustawione)' : 'wyłączony (brak hasła)';
             document.getElementById('settings-modal').classList.remove('hidden');
+        }
+        async function sha256Hex(s) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        async function setPortalPassword() {
+            const pw = document.getElementById('set-portal-pw').value.trim();
+            if (pw.length < 6) { showToast('Hasło min. 6 znaków', 'error'); return; }
+            const hash = await sha256Hex(pw);
+            const { error } = await supabaseClient.from('wfa_projects').update({ client_password_hash: hash }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.client_password_hash = hash;
+            document.getElementById('set-portal-pw').value = '';
+            document.getElementById('set-portal-status').textContent = 'WŁĄCZONY (hasło ustawione)';
+            logActivity('portal', 'Hasło portalu klienta ustawione');
+            showToast('Hasło portalu ustawione', 'success');
+        }
+        function copyPortalLink() {
+            if (!project.client_password_hash) { showToast('Najpierw ustaw hasło portalu', 'error'); return; }
+            const url = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token;
+            navigator.clipboard.writeText(url).then(() => showToast('Link portalu skopiowany', 'success'));
         }
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
         async function saveSettings() {
