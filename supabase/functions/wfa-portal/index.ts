@@ -35,6 +35,24 @@ async function sha256Hex(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// Podgląd admina „oczami klienta": autoryzacja JWT CZŁONKA ZESPOŁU (team_members),
+// nie samego 'authenticated' — publiczna rejestracja sparingu daje tę rolę każdemu
+// (wzorzec bud-project 'admin_get'). Zwraca usera albo null.
+async function verifyTeamMember(
+  req: Request,
+  sb: ReturnType<typeof createClient>,
+): Promise<{ id: string } | null> {
+  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
+  if (!m) return null;
+  const { data: u } = await sb.auth.getUser(m[1].trim());
+  if (!u?.user) return null;
+  const { data: tm } = await sb
+    .from("team_members").select("user_id").eq("user_id", u.user.id).maybeSingle();
+  return tm ? { id: u.user.id } : null;
+}
+
 function fmtDatePl(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
   return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()}`;
@@ -94,6 +112,7 @@ Deno.serve(async (req: Request) => {
     password?: string;
     action?: string;
     fields?: Record<string, unknown>;
+    preview?: boolean;
   };
   try {
     body = JSON.parse(raw);
@@ -102,8 +121,9 @@ Deno.serve(async (req: Request) => {
   }
   const token = (body.token || "").trim();
   const password = (body.password || "").trim();
-  if (!/^[0-9a-f]{32}$/i.test(token) || !password || password.length > 200) {
-    await new Promise((r) => setTimeout(r, 300)); // tania mitygacja brute-force
+  const preview = body.preview === true; // podgląd admina „oczami klienta"
+  if (!/^[0-9a-f]{32}$/i.test(token)) {
+    await sleep(300); // tania mitygacja brute-force
     return json({ error: "unauthorized" }, 401);
   }
 
@@ -111,6 +131,19 @@ Deno.serve(async (req: Request) => {
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
+
+  // Tryb PODGLĄDU: JWT członka zespołu zamiast hasła klienta. READ-ONLY (zero zapisów),
+  // działa NAWET gdy hasło portalu nie jest jeszcze ustawione — sens: Tomek weryfikuje
+  // widok klienta PRZED przekazaniem dostępu. JWT idzie w #hashu linku (nie w query/logach).
+  let readonly = false;
+  if (preview) {
+    const member = await verifyTeamMember(req, sb);
+    if (!member) {
+      await sleep(300);
+      return json({ error: "unauthorized" }, 401);
+    }
+    readonly = true;
+  }
 
   const { data: p } = await sb
     .from("wfa_projects")
@@ -120,15 +153,23 @@ Deno.serve(async (req: Request) => {
     .eq("unique_token", token)
     .maybeSingle();
 
-  // Hasło nieustawione = portal wyłączony dla tego projektu (Tomek włącza w panelu).
-  if (!p || !p.client_password_hash) {
-    await new Promise((r) => setTimeout(r, 300));
+  if (!p) {
+    await sleep(300);
     return json({ error: "unauthorized" }, 401);
   }
-  const hash = await sha256Hex(password);
-  if (hash !== String(p.client_password_hash).toLowerCase()) {
-    await new Promise((r) => setTimeout(r, 300));
-    return json({ error: "unauthorized" }, 401);
+
+  // Ścieżka KLIENTA (nie podgląd): hasło (SHA-256) obowiązkowe. Hasło nieustawione =
+  // portal wyłączony dla tego projektu (Tomek włącza w panelu).
+  if (!preview) {
+    if (!password || password.length > 200 || !p.client_password_hash) {
+      await sleep(300);
+      return json({ error: "unauthorized" }, 401);
+    }
+    const hash = await sha256Hex(password);
+    if (hash !== String(p.client_password_hash).toLowerCase()) {
+      await sleep(300);
+      return json({ error: "unauthorized" }, 401);
+    }
   }
 
   const action = (body.action || "").trim();
@@ -153,6 +194,7 @@ Deno.serve(async (req: Request) => {
 
   // ============ UMOWA: zapis danych klienta ============
   if (action === "contract_data") {
+    if (readonly) return json({ error: "preview_readonly" }, 403); // podgląd admina nie zapisuje
     if (p.contract_status !== "dane_klienta") {
       return json({ error: "not_allowed_now" }, 409);
     }
@@ -222,8 +264,11 @@ Deno.serve(async (req: Request) => {
     } catch { /* zostaw placeholdery */ }
 
     const html = renderContractHtml(rawHtml, p as Record<string, unknown>, wyk);
-    // Informacyjnie znaczymy moment generacji (nie zapisujemy wyniku).
-    await sb.from("wfa_projects").update({ contract_generated_at: new Date().toISOString() }).eq("id", p.id);
+    // Informacyjnie znaczymy moment generacji (nie zapisujemy wyniku). W podglądzie admina
+    // NIE stemplujemy — read-only nie może zostawiać śladów w danych klienta.
+    if (!readonly) {
+      await sb.from("wfa_projects").update({ contract_generated_at: new Date().toISOString() }).eq("id", p.id);
+    }
     return json({ html });
   }
 

@@ -237,6 +237,10 @@
                     <button onclick="setPortalPassword()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25 flex-shrink-0">Ustaw hasło</button>
                     <button onclick="copyPortalLink()" class="px-3 py-2 text-xs text-zinc-300 border border-[#333] rounded-md hover:border-[#0070f3]/60 flex-shrink-0"><i class="ph ph-link"></i> Kopiuj link</button>
                 </div>
+                <div class="mt-2">
+                    <button onclick="previewAsClient()" class="px-3 py-2 text-xs font-semibold bg-[#111] border border-[#0070f3]/40 rounded-md text-[#52a8ff] hover:bg-[#0070f3]/10"><i class="ph ph-eye"></i> Podejrzyj oczami klienta</button>
+                    <span class="text-[10px] text-zinc-600 ml-2">Portal w trybie podglądu (read-only). Działa bez ustawiania hasła — do weryfikacji PRZED przekazaniem dostępu.</span>
+                </div>
                 <div class="text-[10px] text-zinc-600 mt-1.5">Link: /twoja-aplikacja?t=&lt;token&gt; — klient widzi TYLKO postęp, etapy i kamienie (przez edge fn wfa-portal, nie anon RLS).</div>
             </div>
             <div class="flex justify-between items-center mt-5">
@@ -1254,6 +1258,21 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             if (!project.client_password_hash) { showToast('Najpierw ustaw hasło portalu', 'error'); return; }
             const url = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token;
             navigator.clipboard.writeText(url).then(() => showToast('Link portalu skopiowany', 'success'));
+        }
+        // Podgląd „oczami klienta" — otwiera portal w trybie read-only autoryzowanym JWT panelu
+        // (team_members). Tab otwieramy SYNCHRONICZNIE (gest usera), JWT doklejamy po async getSession.
+        // JWT idzie w #hashu (nie w query → nie trafia do logów). Działa BEZ ustawionego hasła portalu.
+        async function previewAsClient() {
+            if (!project || !project.unique_token) { showToast('Brak tokenu projektu', 'error'); return; }
+            const w = window.open('', '_blank');
+            if (!w) { showToast('Odblokuj wyskakujące okna, aby otworzyć podgląd', 'error'); return; }
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const jwt = session && session.access_token;
+                if (!jwt) { w.close(); showToast('Zaloguj się ponownie', 'error'); return; }
+                w.location = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token +
+                    '&podglad=admin#admintok=' + encodeURIComponent(jwt);
+            } catch (e) { try { w.close(); } catch (_) {} showToast('Nie udało się otworzyć podglądu', 'error'); }
         }
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
         async function saveSettings() {

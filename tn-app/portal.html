@@ -61,6 +61,10 @@
         .note-box b { color:#cfe2fb; }
         .ok-box { background:rgba(69,165,87,.1); border:1px solid rgba(69,165,87,.4); border-radius:8px; padding:18px; }
         .ok-box a { color:#8fe3a3; font-weight:600; text-decoration:none; }
+        /* Baner podglądu admina */
+        #preview-banner { position:fixed; top:0; left:0; right:0; z-index:100; background:#0070f3; color:#fff;
+            font-size:12.5px; font-weight:500; padding:11px 16px; text-align:center; display:flex; align-items:center;
+            justify-content:center; gap:8px; box-shadow:0 1px 0 rgba(255,255,255,.1); }
     </style>
 </head>
 <body>
@@ -122,7 +126,16 @@
 
 <script>
     const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
-    const token = (new URLSearchParams(location.search).get('t') || '').trim();
+    const qs = new URLSearchParams(location.search);
+    const token = (qs.get('t') || '').trim();
+    // Podgląd admina „oczami klienta": ?podglad=admin + JWT panelu w #hashu (nie w query →
+    // nie trafia do logów/Referer). Autoryzacja przez team_members w wfa-portal, READ-ONLY.
+    const previewMode = qs.get('podglad') === 'admin';
+    const adminJwt = previewMode
+        ? (new URLSearchParams((location.hash || '').replace(/^#/, '')).get('admintok') || '').trim()
+        : '';
+    // Po odczycie JWT z hasha — wyczyść go z paska adresu (nie zostawiamy tokenu w URL).
+    if (previewMode && adminJwt) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
     const $ = id => document.getElementById(id);
     const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
     const PW_KEY = 'wfa_portal_pw_' + token;
@@ -131,11 +144,19 @@
     let contractHtmlCache = null;
     const cval = id => { const el = $(id); return el ? el.value.trim() : ''; };
 
+    // Nagłówki/ciało żądania — w podglądzie dokładamy Bearer JWT + preview:true (zamiast hasła).
+    function authHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        if (previewMode && adminJwt) h['Authorization'] = 'Bearer ' + adminJwt;
+        return h;
+    }
+
     function show(id) {
         ['login','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
     }
 
     async function load() {
+        if (previewMode) return loadPreview();
         const pw = $('pw') && !$('login').classList.contains('hidden') ? $('pw').value.trim() : (sessionStorage.getItem(PW_KEY) || '');
         if (!pw) { show('login'); return; }
         $('err').textContent = ''; if ($('go')) $('go').disabled = true;
@@ -154,6 +175,35 @@
         } catch (e) {
             show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
         } finally { if ($('go')) $('go').disabled = false; }
+    }
+
+    // Podgląd admina: ładuje widok klienta przez wfa-portal (preview:true + Bearer JWT).
+    async function loadPreview() {
+        show('loading');
+        try {
+            const res = await fetch(FN_URL, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ token, preview: true }) });
+            if (!res.ok) {
+                show('notoken');
+                $('notoken').innerHTML = '<h1>Podgląd niedostępny</h1><p class="sub">Zaloguj się w panelu (crm.tomekniedzwiecki.pl) i otwórz podgląd ponownie — link jest ważny tylko dla zalogowanego zespołu.</p>';
+                return;
+            }
+            const d = await res.json();
+            render(d); show('content');
+            showPreviewBanner();
+            loadContract();
+        } catch (e) {
+            show('notoken');
+            $('notoken').innerHTML = '<h1>Błąd podglądu</h1><p class="sub">Spróbuj ponownie za chwilę.</p>';
+        }
+    }
+
+    function showPreviewBanner() {
+        if ($('preview-banner')) return;
+        const b = document.createElement('div');
+        b.id = 'preview-banner';
+        b.innerHTML = '<i class="ph ph-eye"></i> Podgląd administratora — widzisz dokładnie to, co zobaczy klient. Zmiany są zablokowane (formularz umowy wypełni klient).';
+        document.body.prepend(b);
+        document.body.style.paddingTop = '44px';
     }
 
     function render(d) {
@@ -190,7 +240,10 @@
 
     // ============ UMOWA ============
     async function callFn(extra) {
-        return fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Object.assign({ token, password: currentPw }, extra)) });
+        const payload = previewMode
+            ? Object.assign({ token, preview: true }, extra)
+            : Object.assign({ token, password: currentPw }, extra);
+        return fetch(FN_URL, { method:'POST', headers: authHeaders(), body: JSON.stringify(payload) });
     }
 
     async function loadContract() {
@@ -212,15 +265,18 @@
 
         if (st === 'dane_klienta') {
             const f = m.fields || {};
+            const dis = previewMode ? ' disabled' : '';
             inner += '<p style="color:#a1a1aa;font-size:13px;margin-bottom:16px">Te dane trafią do umowy — sprawdź je uważnie.</p>' +
                 '<div id="cc-err" class="err"></div>' +
-                '<label class="lbl">Imię i nazwisko</label><input class="ci" id="cc-name" value="' + esc(f.full_name || m.customer_name || '') + '">' +
-                '<label class="lbl">Firma (opcjonalnie)</label><input class="ci" id="cc-company" value="' + esc(f.company || '') + '">' +
-                '<label class="lbl">NIP (podaj, jeśli zawierasz umowę jako firma)</label><input class="ci" id="cc-nip" value="' + esc(f.nip || '') + '">' +
-                '<label class="lbl">Ulica i numer</label><input class="ci" id="cc-street" value="' + esc(f.street || '') + '">' +
-                '<label class="lbl">Kod pocztowy</label><input class="ci" id="cc-postal" placeholder="00-000" value="' + esc(f.postal || '') + '">' +
-                '<label class="lbl">Miejscowość</label><input class="ci" id="cc-city" value="' + esc(f.city || '') + '">' +
-                '<button class="cbtn" id="cc-save" onclick="submitContractData()"><i class="ph ph-floppy-disk"></i> Zapisz dane do umowy</button>';
+                '<label class="lbl">Imię i nazwisko</label><input class="ci" id="cc-name"' + dis + ' value="' + esc(f.full_name || m.customer_name || '') + '">' +
+                '<label class="lbl">Firma (opcjonalnie)</label><input class="ci" id="cc-company"' + dis + ' value="' + esc(f.company || '') + '">' +
+                '<label class="lbl">NIP (podaj, jeśli zawierasz umowę jako firma)</label><input class="ci" id="cc-nip"' + dis + ' value="' + esc(f.nip || '') + '">' +
+                '<label class="lbl">Ulica i numer</label><input class="ci" id="cc-street"' + dis + ' value="' + esc(f.street || '') + '">' +
+                '<label class="lbl">Kod pocztowy</label><input class="ci" id="cc-postal"' + dis + ' placeholder="00-000" value="' + esc(f.postal || '') + '">' +
+                '<label class="lbl">Miejscowość</label><input class="ci" id="cc-city"' + dis + ' value="' + esc(f.city || '') + '">' +
+                (previewMode
+                    ? '<div class="note-box"><i class="ph ph-info"></i> Podgląd — tu klient sam uzupełni i zapisze dane do umowy.</div>'
+                    : '<button class="cbtn" id="cc-save" onclick="submitContractData()"><i class="ph ph-floppy-disk"></i> Zapisz dane do umowy</button>');
         } else if (st === 'do_podpisu') {
             inner += '<button class="cbtn" onclick="openContractPrint()"><i class="ph ph-file-text"></i> Pobierz umowę do podpisu</button>' +
                 '<button class="cbtn-sec" style="margin-top:10px" onclick="downloadContractFile()"><i class="ph ph-download-simple"></i> Pobierz jako plik .html</button>' +
@@ -282,6 +338,10 @@
     }
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
+    else if (previewMode) {
+        if (!adminJwt) { show('notoken'); $('notoken').innerHTML = '<h1>Podgląd niedostępny</h1><p class="sub">Otwórz podgląd z panelu, będąc zalogowanym.</p>'; }
+        else { show('loading'); load(); }
+    }
     else if (sessionStorage.getItem(PW_KEY)) { show('loading'); load(); }
     else { show('login'); }
     document.addEventListener('keydown', e => { if (e.key === 'Enter' && !$('login').classList.contains('hidden')) load(); });
