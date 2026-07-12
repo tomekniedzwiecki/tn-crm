@@ -1,8 +1,15 @@
-// wfa-progress-drip — AUTOMATYCZNY mail o postępie budowy (jak follow-upy sparingu).
-// Moment wysyłki: osiągnięcie KAMIENIA MILOWEGO, gdy klient ma już dostęp do portalu
-// (client_password_hash ustawione) i mamy jego e-mail. Wyklucza kickoff (to osobny mail
-// „przekazanie dostępu") i wczesne kroki. GPT 5.6 pisze treść → Resend wysyła → stempel
-// wfa_steps.progress_mail_sent_at (dedup: jeden mail na kamień) + wpis do wfa_activities.
+// wfa-progress-drip — AUTOMATYCZNE maile lifecycle budowy aplikacji (jak follow-upy sparingu).
+//
+// FAZA 0 „przekazanie dostępu": nowy projekt (access_mail_sent_at IS NULL, nazwa + e-mail,
+// nie testowy) → generujemy hasło portalu (SHA-256 → client_password_hash, schemat wfa-portal),
+// wysyłamy przez Resend link + hasło, stempel wfa_projects.access_mail_sent_at + wfa_activities.
+// Treść STATYCZNA (mail z poświadczeniami musi być przewidywalny). Projekt bez nazwy czeka
+// BEZ stempla — mail pójdzie, gdy Tomek nazwie projekt w panelu.
+//
+// FAZA 1 „kamienie": osiągnięcie KAMIENIA MILOWEGO, gdy klient ma już dostęp do portalu
+// (client_password_hash ustawione) i mamy jego e-mail. Wyklucza kickoff (= faza 0 wyżej).
+// GPT 5.6 pisze treść → Resend wysyła → stempel wfa_steps.progress_mail_sent_at
+// (dedup: jeden mail na kamień) + wpis do wfa_activities.
 //
 // Gate: cron (x-cron-secret == WFA_CRON_SECRET). Wołane przez pg_cron + pg_net.
 // Deploy: npx supabase functions deploy wfa-progress-drip --no-verify-jwt --project-ref yxmavwkwnfuphjqbelws
@@ -28,6 +35,39 @@ function wrapHtml(bodyText: string, portalUrl: string): string {
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:520px">
 ${paras}
 <p style="margin:22px 0 0"><a href="${esc(portalUrl)}" style="display:inline-block;background:#0070f3;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600">Zobacz postęp w swoim portalu</a></p>
+</div>`;
+}
+
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Hasło portalu: 2 słowa + liczba — łatwe do przepisania z telefonu, bez znaków mylnych.
+const PASS_WORDS = [
+  "sokol", "zubr", "wilk", "orzel", "bocian", "jodla", "klon", "modrzew",
+  "granit", "bursztyn", "krzemien", "bazalt", "wrzos", "jawor", "jesion", "grab",
+];
+function genPassword(): string {
+  const buf = new Uint32Array(3);
+  crypto.getRandomValues(buf);
+  const w1 = PASS_WORDS[buf[0] % PASS_WORDS.length];
+  let w2 = PASS_WORDS[buf[1] % PASS_WORDS.length];
+  if (w2 === w1) w2 = PASS_WORDS[(buf[1] + 1) % PASS_WORDS.length];
+  return `${w1}-${10 + (buf[2] % 90)}-${w2}`;
+}
+
+// HTML maila dostępowego: akapity + ramka z poświadczeniami + przycisk + podpis.
+function accessHtml(bodyText: string, portalUrl: string, password: string): string {
+  const paras = bodyText.split(/\n{2,}/).map((p) => `<p style="margin:0 0 14px">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
+  return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;max-width:520px">
+${paras}
+<div style="background:#f6f6f6;border:1px solid #e5e5e5;border-radius:8px;padding:14px 16px;margin:18px 0">
+<p style="margin:0 0 8px"><strong>Twój portal:</strong><br><a href="${esc(portalUrl)}" style="color:#0070f3">${esc(portalUrl)}</a></p>
+<p style="margin:0"><strong>Hasło:</strong> <span style="font-family:Consolas,Menlo,monospace">${esc(password)}</span></p>
+</div>
+<p style="margin:22px 0 0"><a href="${esc(portalUrl)}" style="display:inline-block;background:#0070f3;color:#fff;text-decoration:none;padding:11px 20px;border-radius:8px;font-weight:600">Wejdź do swojego portalu</a></p>
+<p style="margin:18px 0 0">Pozdrawiam<br>Tomek</p>
 </div>`;
 }
 
@@ -90,23 +130,77 @@ Deno.serve(async (req: Request) => {
   const resendKey = Deno.env.get("resend_api_key");
   if (!openaiKey || !resendKey) return json({ error: "not_configured" }, 500);
 
+  // ===== FAZA 0: mail „przekazanie dostępu" dla nowych projektów =====
+  // Hasło generujemy TUTAJ w momencie wysyłki (ten mail = jedyny kanał doręczenia hasła,
+  // więc zawsze świeże — nadpisuje ewentualne ręczne, którego klient i tak nie dostał).
+  const access: Array<{ project: string; ok: boolean }> = [];
+  {
+    const { data: fresh } = await sb.from("wfa_projects")
+      .select("id, name, customer_name, customer_email, unique_token, is_test")
+      .is("access_mail_sent_at", null).order("created_at", { ascending: true }).limit(MAX_PER_RUN);
+    for (const p of fresh || []) {
+      if (Date.now() - started > DEADLINE_MS - 20_000) break;
+      // Testowy albo bez e-maila → stempel (nie wyślemy nigdy, nie skanuj w kółko).
+      if (p.is_test || !p.customer_email) {
+        await sb.from("wfa_projects").update({ access_mail_sent_at: new Date().toISOString() }).eq("id", p.id);
+        continue;
+      }
+      // Bez nazwy aplikacji czekamy BEZ stempla — mail pójdzie, gdy projekt dostanie nazwę.
+      const name = String(p.name || "").trim();
+      if (!name) continue;
+
+      const password = genPassword();
+      const { error: pwErr } = await sb.from("wfa_projects")
+        .update({ client_password_hash: await sha256Hex(password) }).eq("id", p.id);
+      if (pwErr) { access.push({ project: name, ok: false }); continue; }
+
+      const firstName = String(p.customer_name || "").trim().split(/\s+/)[0] || "";
+      const portalUrl = `${PORTAL_BASE}?t=${p.unique_token}`;
+      const bodyText = [
+        firstName ? `Cześć ${firstName},` : "Cześć,",
+        `ruszamy z budową aplikacji ${name}! Przez najbliższe tygodnie będę składał ją kawałek po kawałku: najpierw fundamenty i wygląd, potem najważniejsze funkcje i płatności, na koniec testy i szlif. Jak będę czegoś potrzebował z Twojej strony, dam znać.`,
+        `Żebyś na bieżąco widział, co się dzieje, przygotowałem dla Ciebie portal postępu — znajdziesz tam aktualny etap prac, dziennik budowy i makiety.`,
+      ].join("\n\n");
+
+      const delivered = await sendResend(
+        resendKey, String(p.customer_email), `${name} — ruszamy z budową`,
+        accessHtml(bodyText, portalUrl, password),
+      );
+      if (delivered) {
+        // Stempel dopiero PO doręczeniu — porażka Resend = retry w następnym przebiegu crona
+        // (mail z hasłem jest krytyczny; przy retry generujemy nowe hasło, stare nigdy nie wyszło).
+        await sb.from("wfa_projects").update({ access_mail_sent_at: new Date().toISOString() }).eq("id", p.id);
+        await sb.from("wfa_activities").insert({
+          project_id: p.id, actor: "auto", action: "access_mail",
+          description: "Wysłano klientowi dostęp do portalu postępu (link + hasło, Resend).",
+        });
+      } else {
+        await sb.from("wfa_activities").insert({
+          project_id: p.id, actor: "auto", action: "access_mail",
+          description: "Nie udało się wysłać maila z dostępem do portalu — ponowię w następnym przebiegu (sprawdź Resend).",
+        });
+      }
+      access.push({ project: name, ok: delivered });
+    }
+  }
+
   // Kamienie milowe (klucze kroków z milestone_label, bez kickoff = osobny mail dostępu).
   const { data: defs } = await sb.from("wfa_step_defs")
     .select("key, stage, stage_label, sort, milestone_label").eq("active", true).order("stage").order("sort");
   const milestoneKeys = (defs || []).filter((d) => d.milestone_label && d.key !== "kickoff").map((d) => d.key);
-  if (!milestoneKeys.length) return json({ ok: true, sent: 0, note: "brak kamieni" });
+  if (!milestoneKeys.length) return json({ ok: true, sent: 0, access, note: "brak kamieni" });
 
   // Kandydaci: kroki-kamienie ukończone, jeszcze nie powiadomione.
   const { data: cand } = await sb.from("wfa_steps")
     .select("id, project_id, step_key, completed_at")
     .eq("status", "done").is("progress_mail_sent_at", null).in("step_key", milestoneKeys)
     .order("completed_at", { ascending: true }).limit(MAX_PER_RUN);
-  if (!cand || !cand.length) return json({ ok: true, sent: 0 });
+  if (!cand || !cand.length) return json({ ok: true, sent: 0, access });
 
   // Projekty tych kandydatów — tylko z aktywnym portalem (dostęp przekazany) i e-mailem.
   const projIds = [...new Set(cand.map((c) => c.project_id))];
   const { data: projs } = await sb.from("wfa_projects")
-    .select("id, name, customer_name, customer_email, unique_token, client_password_hash, is_test")
+    .select("id, name, customer_name, customer_email, unique_token, client_password_hash, is_test, access_mail_sent_at")
     .in("id", projIds);
   const projById = new Map((projs || []).map((p) => [p.id, p]));
 
@@ -133,6 +227,14 @@ Deno.serve(async (req: Request) => {
     // Warunki wysyłki: portal aktywny + e-mail + nie testowy. Jeśli nie — oznacz jako
     // „obsłużone" (stempel), żeby nie skanować w kółko (i tak nie wyślemy).
     if (!p || !label || !p.customer_email || !p.client_password_hash || p.is_test) {
+      await sb.from("wfa_steps").update({ progress_mail_sent_at: new Date().toISOString() }).eq("id", c.id);
+      continue;
+    }
+    // Kamień ukończony PRZED przekazaniem dostępu (typowo kroki Etapu 1 zrobione przy
+    // kickoffie) — bez osobnego maila: klient zobaczy go w portalu przy pierwszym wejściu.
+    // Bez tego faza 0 + zaległe kamienie = kilka maili w jednym przebiegu.
+    if (p.access_mail_sent_at && c.completed_at &&
+        new Date(String(c.completed_at)) <= new Date(String(p.access_mail_sent_at))) {
       await sb.from("wfa_steps").update({ progress_mail_sent_at: new Date().toISOString() }).eq("id", c.id);
       continue;
     }
@@ -164,5 +266,5 @@ Deno.serve(async (req: Request) => {
     results.push({ project: String(p.name), milestone: String(label), ok: delivered });
   }
 
-  return json({ ok: true, sent, candidates: cand.length, results });
+  return json({ ok: true, sent, access, candidates: cand.length, results });
 });
