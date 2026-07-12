@@ -79,6 +79,9 @@ aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen 
   aktywacja platformy: `docs/stworze/STRIPE-CONNECT-SETUP.md`.
 - Styl = Geist/Vercel (jak tn-sklepy). Slug `/tn-app` NIE koliduje z `/tn-aplikacje` (panel lejka!).
 - GOTCHA: teksty checklist w obiekcie `WS` (projekt.html) = klucz deduplikacji ze stanem — nie przeredagowywać.
+  Jeśli MUSISZ zmienić teksty pozycji: w TEJ SAMEJ sesji zmigruj `wfa_steps.data->checklist` każdego kroku,
+  który ma już zapisany stan (nadpisz nowymi tekstami z faktycznym done) — inaczej panel pokaże sieroty:
+  stare pozycje odhaczone + nowe puste (2× incydent 12.07 przy krokach `nazwa` i `repo_vercel`).
 
 ## Procedury Claude
 
