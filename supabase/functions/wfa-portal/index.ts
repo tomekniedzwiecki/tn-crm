@@ -148,7 +148,7 @@ Deno.serve(async (req: Request) => {
   const { data: p } = await sb
     .from("wfa_projects")
     .select(
-      "id, name, customer_name, customer_email, status, deadline_at, client_password_hash, app_url, landing_url, fee_percent, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path",
+      "id, name, customer_name, customer_email, status, deadline_at, client_password_hash, app_url, landing_url, fee_percent, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id",
     )
     .eq("unique_token", token)
     .maybeSingle();
@@ -273,15 +273,19 @@ Deno.serve(async (req: Request) => {
   }
 
   // ============ DOMYŚLNIE: status projektu (kamienie milowe) ============
-  const [defsQ, stepsQ] = await Promise.all([
-    sb.from("wfa_step_defs").select("key, stage, stage_label, sort, milestone_label")
+  const [defsQ, stepsQ, actQ] = await Promise.all([
+    sb.from("wfa_step_defs").select("key, stage, stage_label, sort, milestone_label, owner")
       .eq("active", true).order("stage").order("sort"),
     sb.from("wfa_steps").select("step_key, status, completed_at")
       .eq("project_id", p.id).range(0, 999),
+    // Dowód życia: kiedy ostatnio coś się działo (bez treści technicznej — sama data).
+    sb.from("wfa_activities").select("created_at")
+      .eq("project_id", p.id).order("created_at", { ascending: false }).limit(1),
   ]);
   const defs = defsQ.data || [];
   const steps = stepsQ.data || [];
   const stepFor = (key: string) => steps.find((s) => s.step_key === key);
+  const lastActivityAt = actQ.data?.[0]?.created_at || null;
 
   // Postęp + etapy (bez nazw pojedynczych kroków — klient widzi poziom etapu)
   const countable = steps.filter((s) => s.status !== "skipped");
@@ -317,13 +321,65 @@ Deno.serve(async (req: Request) => {
       };
     });
 
+  // Bieżący krok = pierwszy niedokończony (nie done/skipped) wg kolejności. Z niego bierzemy
+  // WŁAŚCICIELA ruchu (my vs klient) i ludzki opis etapu (klient nie widzi nazw kroków).
+  let currentDef: Record<string, unknown> | null = null;
+  for (const d of defs) {
+    const st = stepFor(d.key);
+    if (!st || (st.status !== "done" && st.status !== "skipped")) { currentDef = d; break; }
+  }
+  const currentOwner = currentDef ? String(currentDef.owner || "admin") : null;
+  const currentStage = currentDef ? Number(currentDef.stage) : null;
+
+  // Opis etapu po ludzku (bez żargonu) — „co teraz robimy".
+  const STAGE_HINT: Record<number, string> = {
+    1: "Ustalamy zakres, nazwę i przygotowujemy fundamenty Twojej aplikacji.",
+    2: "Stawiamy techniczne fundamenty — konta, serwery i płatności.",
+    3: "Budujemy serce aplikacji — funkcje główne i panele.",
+    4: "Dopracowujemy wygląd, stronę i jakość przed startem.",
+    5: "Uruchamiamy aplikację i przekazujemy Ci stery.",
+  };
+  // „Twój ruch" — tylko gdy piłka jest po stronie klienta (owner=client bieżącego kroku).
+  const YOUR_MOVE: Record<string, string> = {
+    umowa: "Uzupełnij dane do umowy i podpisz ją — w sekcji Umowa niżej.",
+    dane_operatora: "Prześlij materiały i dane, o które prosimy mailowo — to odblokuje kolejny etap.",
+    demo_klienta: "Przetestuj wersję roboczą aplikacji i podziel się uwagami.",
+    akcept_klienta: "Sprawdź i zatwierdź zakres oraz nazwę aplikacji.",
+  };
+  const yourMove = currentDef && currentOwner === "client"
+    ? (YOUR_MOVE[String(currentDef.key)] || "Czekamy na Twoją odpowiedź, żeby ruszyć dalej.")
+    : null;
+
+  // Wizja: makiety ze sparingu (spar_sessions.preview_images). Obiekt {widok: url} albo tablica.
+  const mockups: Array<{ url: string; view: string }> = [];
+  if (p.spar_session_id) {
+    try {
+      const { data: sess } = await sb
+        .from("spar_sessions").select("preview_images").eq("id", p.spar_session_id).maybeSingle();
+      const pi = sess?.preview_images;
+      if (Array.isArray(pi)) {
+        pi.forEach((u: unknown, i: number) => {
+          if (typeof u === "string") mockups.push({ url: u, view: "widok " + (i + 1) });
+          else if (u && typeof u === "object" && (u as any).url) mockups.push({ url: (u as any).url, view: (u as any).view || (u as any).label || ("widok " + (i + 1)) });
+        });
+      } else if (pi && typeof pi === "object") {
+        for (const [k, v] of Object.entries(pi)) if (typeof v === "string") mockups.push({ url: v, view: k });
+      }
+    } catch { /* brak makiet = pomijamy sekcję */ }
+  }
+
   return json({
     name: (p.name || "").trim() || "Twoja aplikacja",
     customer_name: p.customer_name || null,
     progress: pct,
     stages,
     current_stage: current ? current.label : "Wszystko ukończone",
+    current_stage_hint: currentStage ? (STAGE_HINT[currentStage] || null) : null,
+    current_owner: currentOwner,
+    your_move: yourMove,
+    last_activity_at: lastActivityAt,
     milestones,
+    mockups,
     deadline_at: p.deadline_at || null,
     app_url: p.app_url || null,
     landing_url: p.landing_url || null,
