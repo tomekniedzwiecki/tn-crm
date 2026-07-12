@@ -863,21 +863,38 @@ Deno.serve(async (req) => {
       if (lostNow.has(rv.session_id)) continue
       const { data: s } = await supabase.from('bud_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
       // pipeline_override='resigned' = lead zrezygnował → twardy stop (dotyczy zwł. re-close).
-      if (!s || s.is_test || !s.email || s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned') continue
+      // FIX 2026-07-12 (ZATOR KOLEJKI): SELECT bierze 120 NAJSTARSZYCH due, a wiersze bez szans
+      // wisiały w pending bez zmiany statusu i wypychały żywe leady poza okno (12.07: 260
+      // zaległych due → świeże sesje NIGDY nie dostawały odsłon). Zasada od teraz: każdy
+      // pominięty wiersz albo zmienia status, albo dostaje due_at w przyszłości — nic nie
+      // zostaje w miejscu z przeterminowanym due_at.
+      if (!s || s.is_test || s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned') {
+        await supabase.from('bud_reveals').update({ status: 'skipped', updated_at: nowIso }).eq('id', rv.id)
+        continue
+      }
+      if (!s.email) { // email może się jeszcze pojawić (bramka rejestracji) → snooze +24h, nie skip
+        await supabase.from('bud_reveals').update({ due_at: new Date(Date.now() + 24 * 3600000).toISOString(), updated_at: nowIso }).eq('id', rv.id)
+        continue
+      }
+      // Twardo zimny po LOST_WINDOW → zamknij sesję NIEZALEŻNIE od bramki kroku (dotąd closeLost
+      // odpalał się tylko dla kroków z gate — kroki gate:'none' martwych sesji wisiały wiecznie).
+      const inactive = Date.now() - await lastActivityMs(supabase, s)
+      if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
       const step = REVEAL_PLAN.find((p) => p.key === rv.key)
-      // ── `requires`: artefakt jeszcze nie istnieje → odsłona NIE idzie w tym przebiegu.
-      //    Zostaw status pending (NIE oznaczaj sent), przejdź dalej. requires:null
+      // ── `requires`: artefakt jeszcze nie istnieje → snooze +6h (wróci, gdy artefakt powstanie;
+      //    czysty continue zostawiał due_at w przeszłości i klinował okno). requires:null
       //    (rezerwacja) jest zawsze kwalifikowana, gdy due.
-      if (step && step.requires && !hasArtifact(s, step.requires)) continue
+      if (step && step.requires && !hasArtifact(s, step.requires)) {
+        await supabase.from('bud_reveals').update({ due_at: new Date(Date.now() + 6 * 3600000).toISOString(), updated_at: nowIso }).eq('id', rv.id)
+        continue
+      }
       // ── Bramka między-kanałowa: świeży dotyk mailem/SMS z innego kanału → odpuść przebieg.
       const xTouch = await recentNonRevealTouchMs(supabase, s.id)
       if (xTouch && Date.now() - xTouch < CROSS_CHANNEL_GAP_MS) continue
-      // ── Bramka zaangażowania per reveal (strona = visits2). Brak → zostaw pending;
-      //    twardo zimny po LOST_WINDOW → zamknij sesję.
+      // ── Bramka zaangażowania per reveal (strona = visits2). Brak → zostaw pending
+      //    (żywy lead w oknie ENGAGE — wiersz może czekać, sesja i tak ma limit 1 odsłony/przebieg).
       const gate = step ? step.gate : 'none'
       if (gate !== 'none') {
-        const inactive = Date.now() - await lastActivityMs(supabase, s)
-        if (inactive >= LOST_WINDOW_DAYS * 86400000) { await closeLost(supabase, s.id, nowIso); lostNow.add(s.id); continue }
         if (gate === 'visits2' && (s.panel_visits || 0) < PANEL_VISITS_GATE) continue
         if (gate === 'seen_landing' && !s.seen_landing_at) continue
       }

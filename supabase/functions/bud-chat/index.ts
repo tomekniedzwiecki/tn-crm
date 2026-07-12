@@ -2293,7 +2293,16 @@ TWARDE ZAKAZY (raport JESZCZE się liczy): NIE podawaj ŻADNYCH liczb, konkurenc
           const _ust = !!existingSession?.ustalenia
           let _stage = ''
           if (_style && !_ads) _stage = '[ETAP ŚCIEŻKI: reklamy/sklep w toku — składają się automatycznie po wyborze stylu. Krótko potwierdź; NIE cofaj się do ustaleń/makiet.]'
-          else if (_mk && !_style) _stage = '[ETAP ŚCIEŻKI: makiety GOTOWE jako kafelki W CZACIE (NIE ma „zakładki Makiety"). Jeśli pyta „co dalej" lub się waha — skieruj go do wyboru stylu TU, w rozmowie (kliknij makietę, którą czuje); dalsze etapy ruszają po wyborze. Nic nie generuj sam, nie wracaj do raportu.]'
+          else if (_mk && !_style) {
+            // Labelki styli do fallbacku chipów — klik w opcję „Wybieram styl: X" przechodzi
+            // przez ten sam parser co kafelek (regex ^Wybieram styl:), więc odblokowuje pipeline
+            // nawet gdy kafelki się nie wyrenderowały (case Remi 11.07: lead nie widział kart,
+            // bot zahalucynował wybór stylu i obiecał sklep, który nigdy nie ruszył).
+            const _mlabels = (existingSession!.mockups as Array<Record<string, unknown>>)
+              .map((m) => String(m?.label || m?.style || '').trim()).filter(Boolean).slice(0, 4)
+            const _chips = _mlabels.map((l) => `"Wybieram styl: ${l}"`).join(',')
+            _stage = `[ETAP ŚCIEŻKI: makiety GOTOWE jako kafelki W CZACIE (NIE ma „zakładki Makiety"); style: ${_mlabels.join(' / ') || 'brak etykiet'}. STYL NIE ZOSTAŁ WYBRANY — nie twierdź, że wybrany, i NIE zapowiadaj reklam/sklepu, dopóki nie padnie wiadomość „Wybieram styl: …". Jeśli pyta „co dalej", waha się albo pisze „dalej/lecimy" bez wskazania stylu — poproś o kliknięcie makiety, a w NOWEJ linii dodaj fallback: <opcje>[${_chips || '"Wybieram styl: pierwszy"'},"~Doradź mi, który styl"]</opcje> (klik w taką opcję ustawia styl). Przy „~Doradź" wskaż JEDEN styl pasujący do ton_marki i poproś o potwierdzenie klikiem. Nic nie generuj sam, nie wracaj do raportu.]`
+          }
           else if (_ust && !_mk) _stage = '[ETAP ŚCIEŻKI: ustalenia domknięte; makiety są w drodze (przygotowują się w tle). Krótko i ciepło zapowiedz, że za chwilę pojawią się style sklepu do wyboru TU, w rozmowie (kafelki w czacie). Nic nie generuj sam — nie deklaruj twardo, że „już gotowe".]'
           if (_stage) sessionContext += `\n\n${_stage}`
         }
