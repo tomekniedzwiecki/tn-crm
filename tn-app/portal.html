@@ -131,11 +131,21 @@
     // Podgląd admina „oczami klienta": ?podglad=admin + JWT panelu w #hashu (nie w query →
     // nie trafia do logów/Referer). Autoryzacja przez team_members w wfa-portal, READ-ONLY.
     const previewMode = qs.get('podglad') === 'admin';
-    const adminJwt = previewMode
+    const AJ_KEY = 'wfa_preview_jwt_' + qs.get('t');
+    let adminJwt = previewMode
         ? (new URLSearchParams((location.hash || '').replace(/^#/, '')).get('admintok') || '').trim()
         : '';
-    // Po odczycie JWT z hasha — wyczyść go z paska adresu (nie zostawiamy tokenu w URL).
-    if (previewMode && adminJwt) { try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {} }
+    if (previewMode) {
+        if (adminJwt) {
+            // Zapamiętaj JWT na czas TEJ karty (przeżyje odświeżenie strony), potem wyczyść
+            // go z paska adresu — nie zostawiamy tokenu w URL (logi/Referer/historia).
+            try { sessionStorage.setItem(AJ_KEY, adminJwt); } catch (e) {}
+            try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+        } else {
+            // Odświeżenie po wyczyszczeniu hasha — odtwórz JWT z sessionStorage tej karty.
+            try { adminJwt = sessionStorage.getItem(AJ_KEY) || ''; } catch (e) { adminJwt = ''; }
+        }
+    }
     const $ = id => document.getElementById(id);
     const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
     const PW_KEY = 'wfa_portal_pw_' + token;
