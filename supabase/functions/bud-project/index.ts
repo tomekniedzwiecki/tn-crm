@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!SUPABASE_URL || !SERVICE_KEY) return jsonResponse({ error: 'brak_konfiguracji' }, 500, cors)
 
-    let body: { sessionId?: string; action?: string; text?: string; email?: string }
+    let body: { sessionId?: string; action?: string; text?: string; email?: string; event?: string; meta?: unknown }
     try {
       body = await req.json()
     } catch {
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
 
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, name, phone, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product, budget_declared, shortlist')
+      .select('id, name, phone, status, verdict, problem_summary, preview_brief, preview_image_url, preview_images, preview_history, image_count, business_plan, market_report, market_report_error, economics, gtm, landing_url, lead_id, paid_at, full_paid_at, knowhow_closed_at, idea_source, created_at, last_panel_at, panel_visits, seen_landing_at, is_test, hidden_from_feed, auth_user_id, ustalenia, chosen_style, mockups, session_ads, landing_html, brand, chosen_product, budget_declared, shortlist')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -296,12 +296,12 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
       }
       if (action === 'set_budget') {
-        // EARLY BUDGET GATE (req Tomka): zadeklarowany budżet startowy (lead-scoring + dyskwalifikacja).
-        // Wartości: high | mid | unknown | raty | none. „raty" (2026-07-02): user nie ma całości
-        // naraz i chce rat — KONTYNUACJA lejka (warunki indywidualnie z Tomkiem), mocny sygnał
-        // intencji do CRM. „none" = soft-exit po stronie frontu (NIE palimy compute).
+        // LEJEK V2 (2026-07-06): budżet = MECHANIZM OFERTY, pytany PO pokazaniu sklepu
+        // („Tomek ułoży plan pod Twoją kwotę"). Kody kwotowe: lt2 (do 2 tys. — bramka:
+        // uczciwe „to się nie uda") | 2-5 | 5-10 | 10plus. Stare kody (high/mid/unknown/
+        // raty/none) zostają dla kompatybilności z otwartymi kartami starego frontu.
         const budget = (typeof body.budget === 'string' ? body.budget : '').trim()
-        if (!['high', 'mid', 'unknown', 'raty', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
+        if (!['lt2', '2-5', '5-10', '10plus', 'high', 'mid', 'unknown', 'raty', 'none'].includes(budget)) return jsonResponse({ error: 'zly_budget' }, 400, cors)
         const { error: bErr } = await supabase.from('bud_sessions')
           .update({ budget_declared: budget, updated_at: new Date().toISOString() }).eq('id', sessionId)
         if (bErr) console.error('[bud-project] set_budget error:', bErr)
@@ -415,12 +415,48 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
-    // ── action 'seen_landing': lead obejrzał stronę sprzedażową (wszedł w panelu do
-    //    zakładki 'strona' albo otworzył landing). Bramka prototypu (plan w _shared).
+    // ── action 'track': analityka końcówki lejka (LEJEK V2, 2026-07-07) ─────────
+    //    Lekki log zdarzeń do bud_events — WYŁĄCZNIE whitelistowane eventy, dedup
+    //    one-shotów, twardy cap per sesja (anty-spam; endpoint publiczny po ownerze).
+    //    Wnioski: panel /tn-sklep zakładka „Lejek" (kohorty tygodniowe, drop-off).
+    if (action === 'track') {
+      const TRACK_EVENTS = new Set(['zielone', 'budget_gate_shown', 'budget_pick', 'soft_exit_shown', 'rsv_card_shown', 'rsv_chip_click', 'paywall_open', 'blik_attempt', 'blik_fail', 'rsv_other_click', 'facts_open', 'collab_tab_view'])
+      const TRACK_ONCE = new Set(['zielone', 'budget_gate_shown', 'soft_exit_shown', 'rsv_card_shown', 'collab_tab_view'])
+      const MAX_EVENTS_PER_SESSION = 120
+      const ev = String(body.event || '').slice(0, 40)
+      if (!TRACK_EVENTS.has(ev)) return jsonResponse({ ok: false, error: 'zly_event' }, 400, cors)
+      // meta: tylko płytkie, krótkie wartości (reason/budget/source) — nic więcej nie wpuszczamy
+      let meta: Record<string, string> | null = null
+      if (body.meta && typeof body.meta === 'object') {
+        meta = {}
+        for (const k of ['reason', 'budget', 'source', 'amount']) {
+          const v = (body.meta as Record<string, unknown>)[k]
+          if (typeof v === 'string' || typeof v === 'number') meta[k] = String(v).slice(0, 80)
+        }
+        if (!Object.keys(meta).length) meta = null
+      }
+      const { count: evCount } = await supabase.from('bud_events').select('id', { count: 'exact', head: true }).eq('session_id', sessionId)
+      if ((evCount ?? 0) >= MAX_EVENTS_PER_SESSION) return jsonResponse({ ok: false, error: 'limit_eventow' }, 429, cors)
+      if (TRACK_ONCE.has(ev)) {
+        const { count: dupCount } = await supabase.from('bud_events').select('id', { count: 'exact', head: true }).eq('session_id', sessionId).eq('event', ev)
+        if ((dupCount ?? 0) > 0) return jsonResponse({ ok: true, dedup: true }, 200, cors)
+      }
+      const { error: evErr } = await supabase.from('bud_events').insert({ session_id: sessionId, event: ev, meta })
+      if (evErr) { console.error('[bud-project] track insert error:', evErr); return jsonResponse({ ok: false }, 500, cors) }
+      return jsonResponse({ ok: true }, 200, cors)
+    }
+
+    // ── action 'seen_landing': lead obejrzał sklep (zakładka „Sklep" w panelu albo
+    //    otwarty landing). Bramka prototypu (plan w _shared) + gate drip 'seen_landing'.
     //    Stempluj RAZ i tylko gdy strona realnie istnieje (jest co oglądać) — pusta
     //    zakładka nie może przedwcześnie odblokować prototypu. Idempotentne, lekkie.
+    //    FIX 2026-07-06 (LEJEK V2): /sklep dostarcza sklep INLINE (landing_html z
+    //    bud-landing-gen, iframe srcdoc) — landing_url to legacy hostowanego podglądu,
+    //    którego ten fork nie tworzy; warunek tylko na landing_url trzymał
+    //    seen_landing_at=NULL u 100% sesji i wieczne 'seen_landing' gate w bud-drip.
     if (action === 'seen_landing') {
-      if (session.landing_url && !session.seen_landing_at) {
+      const hasShop = !!(session.landing_url || session.landing_html)
+      if (hasShop && !session.seen_landing_at) {
         const { error: slErr } = await supabase.from('bud_sessions')
           .update({ seen_landing_at: new Date().toISOString() }).eq('id', sessionId)
         if (slErr) console.error('[bud-project] seen_landing stamp error:', slErr)
@@ -428,7 +464,7 @@ Deno.serve(async (req) => {
         // Sygnał pasywny → bez wskrzeszania ręcznie odrzuconych leadów.
         await bumpLeadStage(supabase, (session.lead_id as string | null) || null, 'contacted')
       }
-      return jsonResponse({ ok: true, seen: !!session.landing_url }, 200, cors)
+      return jsonResponse({ ok: true, seen: hasShop }, 200, cors)
     }
 
     if (action === 'feedback') {
@@ -599,6 +635,9 @@ Deno.serve(async (req) => {
         image_count: session.image_count || 0,
         business_plan: bizplan,
         market_report: raport,
+        // Trwały stan błędu generacji raportu (bud-raport stempluje po wyczerpaniu prób).
+        // Front: gdy != null i brak market_report → pokaż błąd i PRZESTAŃ pollować (koniec pętli).
+        market_report_error: (session.market_report_error as string | null) || null,
         economics: economics,
         gtm: gtm,
         landing_url: session.landing_url || null,

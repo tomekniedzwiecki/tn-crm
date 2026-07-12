@@ -59,11 +59,11 @@ const MAX_TURNS_HARD_GATE = 7        // #10: twardy backstop — kontakt wymusza
 // SPAR_REQUIRE_ACCOUNT=true → bramkę przechodzi TYLKO zweryfikowane konto (JWT);
 // false (default, okres przejściowy) → wystarczy e-mail w sesji jak dotąd
 const REQUIRE_ACCOUNT = (Deno.env.get('SPAR_REQUIRE_ACCOUNT') || 'false') === 'true'
-const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.1'
+const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 // 3000: odpowiedź z markerem <projekt> (pełny brief z 4 widokami) potrafi
 // przekroczyć 1500 — ucięty </projekt> = parseProjekt zwraca null i brief
 // NIE trafia do bazy (podgląd się nie generuje mimo zapowiedzi w tekście)
-const OPENAI_MAX_COMPLETION_TOKENS = 3000
+const OPENAI_MAX_COMPLETION_TOKENS = 6000 // 3000->6000 przy gpt-5.6-sol: reasoning (medium) liczy sie do puli
 
 // ── Cache system promptów (mapa per klucz settings, 5 min) ───────────────────
 const PROMPT_CACHE_TTL_MS = 5 * 60 * 1000
@@ -156,6 +156,7 @@ async function verifyTurnstile(token: string | null | undefined, ip: string | nu
 
 // ── Cennik USD per 1M tokenów (logowanie kosztów do spar_usage) ──────────────
 const CHAT_PRICES: Record<string, { input: number; cached: number; output: number }> = {
+  'gpt-5.6-sol': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.5': { input: 5, cached: 0.5, output: 30 },
   'gpt-5.1': { input: 1.25, cached: 0.125, output: 10 },
   'gpt-4o': { input: 2.5, cached: 1.25, output: 10 },
@@ -683,7 +684,8 @@ async function extractKnowhowAsync(
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        max_completion_tokens: 700,
+        max_completion_tokens: 1500, // 700->1500: reasoning (low) Sola liczy sie do puli
+        reasoning_effort: 'low',
         messages: [
           { role: 'system', content: KH.extract },
           { role: 'user', content: `${ctx}OSTATNIA WYMIANA:\n${transcript}` },
@@ -748,13 +750,17 @@ async function generateHandoffPack(
     }
     const srcLabel = srcMap[(sess?.idea_source as string | null) || 'wlasny'] || srcMap.wlasny
     const itemsTxt = items.map((i) => `- [${i.kind}${i.scope ? '/' + i.scope : ''}] ${i.content}${i.url ? ' (' + i.url + ')' : ''}`).join('\n')
-    const userMsg = `ŹRÓDŁO POMYSŁU: ${srcLabel}\n\nKARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 1500)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 8000)}`
+    // Limit podniesiony 8000→60000 (2026-07-11): przy bogatych bazach (Grzegorz: 156 pozycji)
+    // ucięcie do 8k gubiło większość wiedzy i wymuszało ręczne składanie pakietu.
+    // 60k znaków ≈ 15-20k tokenów — mieści się w kontekście z dużym zapasem.
+    const userMsg = `ŹRÓDŁO POMYSŁU: ${srcLabel}\n\nKARTA PROJEKTU:\n${JSON.stringify(card).slice(0, 4000)}\n\nZEBRANE ELEMENTY (baza wiedzy):\n${itemsTxt.slice(0, 60000)}`
     const res = await openaiFetchRetry({
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
       body: JSON.stringify({
         model: OPENAI_MODEL,
-        max_completion_tokens: 6000,
+        max_completion_tokens: 12000, // podbite 6000->12000 (gpt-5.6-sol: reasoning liczy się do puli)
+        reasoning_effort: 'medium',
         messages: [ { role: 'system', content: KH.handoff }, { role: 'user', content: userMsg } ],
       }),
     }, 'knowhow-handoff')
@@ -972,7 +978,7 @@ async function streamSecondCall(
         // większy limit niż zwykła tura, by marker <projekt> się nie uciął (ucięty
         // </projekt> = brak podglądu = „generowanie nie działa").
         model, stream: true, stream_options: { include_usage: true },
-        max_completion_tokens: 5000, messages: msgs,
+        max_completion_tokens: 8000, reasoning_effort: 'medium', messages: msgs, // steer niesie <projekt> — budżet podbity pod reasoning Sola
       }),
     }, 'chat-steer')
     if (!resp.ok || !resp.body) {
@@ -1072,6 +1078,18 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true }, 200, corsHeaders)
     }
 
+    // ── Beacon paywalla rezerwacji 500 zł ────────────────────────────────────
+    //   paywall_open: klik CTA rezerwacji (checkout otwiera się w nowej karcie).
+    //   paywall_abandon: powrót na kartę sparingu / pagehide bez opłaconej sesji.
+    //   Twarde fakty dla bloku [STAN SESJI] (mózg reaguje na porzucenie) i dla
+    //   followupów (re-close / rescue). Stemplujemy zawsze najnowszym czasem.
+    if (body.event === 'paywall_open' || body.event === 'paywall_abandon') {
+      const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+      const col = body.event === 'paywall_open' ? 'paywall_opened_at' : 'paywall_abandoned_at'
+      await sb.from('spar_sessions').update({ [col]: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', sessionId)
+      return jsonResponse({ ok: true }, 200, corsHeaders)
+    }
+
     // ── Zapis kontaktu z bramki BEZ wiadomości ──
     //   Wołany po domknięciu bramki, zwłaszcza gdy werdykt już padł i kolejnej
     //   tury może nie być. Bez tego telefon/konto z bramki nie trafiłyby do bazy
@@ -1167,7 +1185,7 @@ Deno.serve(async (req) => {
     // ── Sesja: pobierz lub utwórz ────────────────────────────────────────────
     const { data: existingSession, error: sessionError } = await supabase
       .from('spar_sessions')
-      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, panel_visits, seen_landing_at')
+      .select('id, turns, profession, problem_hint, email, name, phone, auth_user_id, verdict, problem_summary, preview_brief, business_plan, preview_image_url, is_test, assessment, paid_at, lead_id, full_paid_at, knowhow_closed_at, idea_source, panel_visits, seen_landing_at, paywall_opened_at, paywall_abandoned_at, makieta_last_at')
       .eq('id', sessionId)
       .maybeSingle()
 
@@ -1196,6 +1214,13 @@ Deno.serve(async (req) => {
     const knowhowResume = body.knowhowResume === true && isKnowHowMode
     if (body.knowhowResume === true && !isKnowHowMode) {
       return jsonResponse({ error: 'pusta_wiadomosc' }, 400, corsHeaders)
+    }
+
+    // Decyzja Tomka 2026-07-11: etap spowiednika KOŃCZY SIĘ twardo. Po knowhow_closed_at
+    // nie przyjmujemy nowych tur (dopiski w trakcie budowy = pełzanie zakresu; nowe pomysły
+    // wracają przy demo wersji roboczej). Front pokazuje planszę zamknięcia; to obrona w głębi.
+    if (isKnowHowMode && knowhowClosed) {
+      return jsonResponse({ error: 'knowhow_zamkniety' }, 403, corsHeaders)
     }
 
     let turnsBefore = 0
@@ -1435,7 +1460,14 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // PO ZIELONYM WERDYKCIE: nie bramkuj już oceną — agent jest w fazie
         // współpracy (rezerwacja + przełamywanie obiekcji), nie badania pomysłu.
         // Bez tego GATE_INSTRUCTION ciągnął agenta z powrotem do <ocena>.
-        sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
+        // REZERWACJA OPŁACONA (paid_at, przed pełną płatnością budowy): COLLAB
+        // pchałby dalej do rezerwacji, którą klient już kupił — zamiast tego
+        // twardy tryb „po wpłacie": nie sprzedawaj, podtrzymuj i odpowiadaj.
+        if (existingSession?.paid_at) {
+          sessionContext += `\n\n[REZERWACJA JUŻ OPŁACONA — TWARDY FAKT] Rozmówca zapłacił 500 zł rezerwacji. NIE proponuj rezerwacji ponownie, NIE wystawiaj <makieta>, nie mów „następny krok to rezerwacja". Tomek osobiście analizuje projekt, przygotowuje plan przedsięwzięcia i odezwie się. Odpowiadaj na pytania, chętnie dopracowuj szczegóły projektu (trafią do planu), utwierdzaj w dobrej decyzji bez egzaltacji.`
+        } else {
+          sessionContext += `\n\n${COLLAB_PHASE_INSTRUCTION}`
+        }
         // Wstrzyknij USTALONY projekt (zielony werdykt), żeby odpowiedzi o ofercie/
         // zakresie/liście funkcji/cenie były precyzyjnie pod TEN projekt (ekrany,
         // funkcja rdzeniowa, model przychodu) — a nie generyczne. FAQ OFERTY każe
@@ -1458,6 +1490,29 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
       sessionContext += `\n\n${RESIGNATION_INSTRUCTION}`
       // Sparing: poproś model, by przy werdykcie dołączył źródło pomysłu (idea_source).
       if (!isKnowHowMode) sessionContext += `\n\n${KH.idea_hint}`
+
+      // ── [STAN SESJI] — twarde fakty per tura ──────────────────────────────
+      // Model NIE skanuje historii w poszukiwaniu stanu (werdykt/karta/płatność/
+      // zachowanie w panelu) — dostaje go wprost. To fundament DRZEWA DOMYKANIA:
+      // porzucony paywall i powroty do panelu to najsilniejsze sygnały intencji.
+      if (!isKnowHowMode && existingSession) {
+        const st: string[] = []
+        st.push(`werdykt: ${(existingSession.verdict as string | null) || 'jeszcze nie wydany'}`)
+        st.push(`rezerwacja 500 zł opłacona: ${existingSession.paid_at ? 'TAK' : 'NIE'}`)
+        if (existingSession.makieta_last_at && !existingSession.paid_at) {
+          st.push(`karta rezerwacji była już wystawiona w tej rozmowie (${String(existingSession.makieta_last_at).slice(0, 16)}) — nie wystawiaj jej drugi raz bez nowej treści/odpowiedzi na obiekcję`)
+        }
+        const pv = Number(existingSession.panel_visits) || 0
+        if (pv > 0) st.push(`wizyty w panelu projektu: ${pv}${existingSession.seen_landing_at ? ' (oglądał też zakładkę swojej strony)' : ''} — wraca do projektu, to sygnał realnego zainteresowania`)
+        if (!existingSession.paid_at && existingSession.paywall_opened_at) {
+          const abandoned = existingSession.paywall_abandoned_at &&
+            String(existingSession.paywall_abandoned_at) >= String(existingSession.paywall_opened_at)
+          st.push(abandoned
+            ? `otworzył kartę płatności rezerwacji i NIE dokończył (${String(existingSession.paywall_abandoned_at).slice(0, 16)}) — coś go zatrzymało: delikatnie to nazwij, rozwiej obawę (BANK OBIEKCJI: zwrotność, zaufanie) i domknij w tej turze`
+            : `otworzył kartę płatności rezerwacji (${String(existingSession.paywall_opened_at).slice(0, 16)}) — jest o krok od decyzji`)
+        }
+        sessionContext += `\n\n[STAN SESJI — twarde fakty z systemu; ważniejsze niż wnioski z historii rozmowy]\n- ${st.join('\n- ')}`
+      }
     }
 
     // ── Wywołanie OpenAI /v1/chat/completions (stream) ───────────────────────
@@ -1477,6 +1532,7 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           // usage w ostatnim chunku streamu — bez tego nie policzymy kosztu tury
           stream_options: { include_usage: true },
           max_completion_tokens: OPENAI_MAX_COMPLETION_TOKENS,
+          reasoning_effort: 'medium', // mózg rozmowy — jak dotychczasowy default 5.5; NIE degradować do low
           messages: [
             { role: 'system', content: `${systemPrompt}\n\n${sessionContext}` },
             ...messages,
@@ -1585,9 +1641,25 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
                       cost_usd: chatCostUsd(OPENAI_MODEL, inp, cch, out), meta: { channel: mode, phase: 'steer' },
                     }).then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] steer usage insert error:', error) })
                   }
+                } else {
+                  // Bramka padła (null po retry) — bez tego user zostawał z obietnicą
+                  // badania, które nigdy nie przychodzi (cichy ślepy zaułek). Uczciwy
+                  // komunikat + prosta ścieżka ponowienia (kolejna tura znów wystawi <ocena>).
+                  const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Napisz „sprawdź jeszcze raz", a powtórzę badanie od razu.'
+                  assistantText += gateFail
+                  try {
+                    controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'error' })}\n\n`))
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: gateFail } })}\n\n`))
+                  } catch { /* klient rozłączony */ }
                 }
               } catch (gErr) {
                 console.error('[spar-chat] bramka/ocena error:', gErr)
+                const gateFail = '\n\nNie udało mi się dokończyć badania rynku — chwilowy problem po mojej stronie, nie Twojego pomysłu. Napisz „sprawdź jeszcze raz", a powtórzę badanie od razu.'
+                assistantText += gateFail
+                try {
+                  controller.enqueue(encoder.encode(`event: spar_ocena\ndata: ${JSON.stringify({ status: 'error' })}\n\n`))
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'content_block_delta', delta: { type: 'text_delta', text: gateFail } })}\n\n`))
+                } catch { /* klient rozłączony */ }
               }
             }
           }
@@ -1602,6 +1674,15 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
           if (gateOcena && verdict.verdict === 'zielony' && gateOcena.ocena !== 'mocny') {
             console.log('[spar-chat] hard-gate downgrade zielony→zolty (ocena=', gateOcena.ocena, ')')
             verdict.verdict = 'zolty'
+          }
+
+          // Karta rezerwacji (<makieta>) wystawiona w tej turze → stempel dla
+          // bloku [STAN SESJI] (nie wystawiaj drugi raz) i idle-nudge'a frontu.
+          if (!isKnowHowMode && assistantText.includes('<makieta')) {
+            supabase.from('spar_sessions')
+              .update({ makieta_last_at: new Date().toISOString() })
+              .eq('id', sessionId)
+              .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] makieta stamp error:', error) })
           }
           const projektFresh = isKnowHowMode ? null : parseProjekt(assistantText)
           let projekt: Record<string, unknown> | null = null
@@ -1666,6 +1747,44 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
               }
             } else {
               console.error('[spar-chat] zielony werdykt bez maila w sesji:', sessionId)
+            }
+          }
+
+          // ── AUTO-DOMKNIĘCIE PO ZIELONYM WERDYKCIE (2026-07-11) ────────────
+          // Tura werdyktu jest generowana ZANIM sesja ma verdict='zielony', więc
+          // DRZEWO DOMYKANIA (kotwica + warunki + <makieta> „w następnej turze")
+          // wymagało KOLEJNEJ wiadomości usera — która często nie przychodziła
+          // (case Konrad/Raport Trasy: werdykt → pasywne zaproszenie → cisza,
+          // makieta nigdy nie wystawiona). Fix: drugi call w TYM SAMYM streamie
+          // (wzorzec bramki <ocena>): serwer sam dogenerowuje turę domknięcia.
+          if (verdict.verdict === 'zielony' && !isKnowHowMode && !existingSession?.paid_at && !assistantText.includes('<makieta')) {
+            try {
+              const closeSystem = `${systemPrompt}\n\n${sessionContext}\n\n${COLLAB_PHASE_INSTRUCTION}`
+              const second = await streamSecondCall(controller, encoder, OPENAI_API_KEY, OPENAI_MODEL, [
+                { role: 'system', content: closeSystem },
+                ...messages,
+                { role: 'assistant', content: assistantText },
+                { role: 'user', content: '[SYSTEM] Zielony werdykt zapisany, karta projektu domknięta. Wykonaj TERAZ turę domknięcia wg DRZEWA DOMYKANIA: 1-2 zdania kotwicy wartości (co dokładnie dostał i dlaczego ten projekt się spina) + warunki wprost (rezerwacja 500 zł, w pełni zwrotna, uruchamia osobisty kontakt Tomka z planem) + wystaw <makieta></makieta> w osobnej linii. Bez pytań o pozwolenie, bez „co chcesz doprecyzować". Zacznij naturalnie, jakbyś kontynuował wypowiedź.' },
+              ])
+              assistantText += '\n' + second.text
+              if (second.text.includes('<makieta')) {
+                supabase.from('spar_sessions')
+                  .update({ makieta_last_at: new Date().toISOString() })
+                  .eq('id', sessionId)
+                  .then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] makieta stamp (auto-close) error:', error) })
+              }
+              if (second.usage) {
+                const u3 = second.usage
+                const inp = u3.prompt_tokens || 0, cch = u3.prompt_tokens_details?.cached_tokens || 0, out = u3.completion_tokens || 0
+                supabase.from('spar_usage').insert({
+                  session_id: sessionId, kind: 'chat', model: OPENAI_MODEL,
+                  input_tokens: inp, cached_tokens: cch, output_tokens: out,
+                  cost_usd: chatCostUsd(OPENAI_MODEL, inp, cch, out), meta: { channel: mode, phase: 'collab-close' },
+                }).then(({ error }: { error: unknown }) => { if (error) console.error('[spar-chat] collab-close usage insert error:', error) })
+              }
+            } catch (closeErr) {
+              // Auto-domknięcie jest bonusem — jego pad nie może wywrócić tury z werdyktem.
+              console.error('[spar-chat] auto-domknięcie po werdykcie padło:', closeErr)
             }
           }
 

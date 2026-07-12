@@ -41,6 +41,24 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MAX_GENERATIONS = 4
 const OPENAI_MODEL = Deno.env.get('BUD_OPENAI_MODEL') || 'gpt-5.1'
 
+// Alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-raport).
+// Wołany RAZ per pad (po wyczerpaniu wewn. retry), nie per próba.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-plan] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-plan] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-plan] slack-notify ${type} exception:`, err)
+  }
+}
+
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -101,19 +119,19 @@ function buildUser(brief: Record<string, unknown>, karta: Record<string, unknown
 }
 
 // Jedno wywołanie; zwraca {obj, usage}. Loguje koszt każdej próby osobno.
-async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
+async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null; err?: string }> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
-  if (!res.ok) { console.error('[bud-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
+  if (!res.ok) { console.error('[bud-plan] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null, err: `openai HTTP ${res.status}` } }
   const data = await res.json()
   const u = data?.usage || {}
   const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
   const content = data?.choices?.[0]?.message?.content
   try { return { obj: JSON.parse(content), usage } }
-  catch { console.error('[bud-plan] niepoprawny JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage } }
+  catch { console.error('[bud-plan] niepoprawny JSON, finish:', data?.choices?.[0]?.finish_reason, String(content).slice(0, 200)); return { obj: null, usage, err: `niepoprawny JSON (finish: ${data?.choices?.[0]?.finish_reason || '?'})` } }
 }
 
 // deno-lint-ignore no-explicit-any
@@ -159,7 +177,7 @@ Deno.serve(async (req) => {
     if (!SYSTEM_PROMPT) { try { const { data: __pd } = await supabase.from('settings').select('key, value').in('key', ['budowanie_prompt_plan_system']); const __pv = (k: string) => ((__pd || []) as Array<{ key: string; value: string }>).find((r) => r.key === k)?.value || ''; SYSTEM_PROMPT = __pv('budowanie_prompt_plan_system') } catch (_e) { /* fallback: puste prompty */ } }
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, business_plan, assessment, market_report, auth_user_id')
+      .select('id, preview_brief, problem_summary, business_plan, assessment, market_report, auth_user_id, ustalenia, chosen_product, brand')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -175,13 +193,35 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
     }
 
-    const karta = session.problem_summary as Record<string, unknown> | null
-    const brief = (session.preview_brief || {}) as Record<string, unknown>
     const assessment = session.assessment as Record<string, unknown> | null
     const raport = session.market_report as Record<string, unknown> | null
+    // V2 (2026-07-09): pipeline /sklep NIE tworzy już problem_summary/preview_brief (relikty forku
+    // /aplikacja) → plan nigdy się nie liczył. Budujemy „kartę" i „brief" z danych, które V2 MA:
+    // ustalenia (dla_kogo/kąt/ton/korzyści) + chosen_product + brand. Legacy sesje (z problem_summary)
+    // działają jak dawniej. Wejście liczbowe do planu i tak daje market_report (raportDigest).
+    const ust = (session.ustalenia && typeof session.ustalenia === 'object' && !Array.isArray(session.ustalenia)) ? session.ustalenia as Record<string, unknown> : null
+    const prod = (session.chosen_product && typeof session.chosen_product === 'object' && !Array.isArray(session.chosen_product)) ? session.chosen_product as Record<string, unknown> : null
+    const brandObj = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand as Record<string, unknown> : null
+    let karta = session.problem_summary as Record<string, unknown> | null
+    if (!karta && ust) {
+      karta = {
+        produkt: prod?.nazwa || prod?.name || '',
+        dla_kogo: ust.dla_kogo || '',
+        kto_placi: ust.dla_kogo || '',
+        konkurencja: ust.kat || (ust as Record<string, unknown>)['kąt'] || ust.kat_odroznienia || '',
+        ekrany: Array.isArray(ust.korzysci) ? ust.korzysci : [],
+      }
+    }
+    let brief = (session.preview_brief && typeof session.preview_brief === 'object') ? session.preview_brief as Record<string, unknown> : null
+    if (!brief || !brief.nazwa) {
+      brief = {
+        nazwa: (brandObj?.chosen_name as string) || (ust?.nazwa as string) || (prod?.nazwa as string) || (prod?.name as string) || 'Sklep',
+        opis: (ust?.kat as string) || (prod?.kategoria as string) || (prod?.category as string) || '',
+      }
+    }
     if (!karta) {
-      // plan liczymy dopiero, gdy jest karta (werdykt) — gate jak w bud-image
-      return jsonResponse({ error: 'brak_karty' }, 400, cors)
+      // brak i problem_summary (legacy), i ustaleń (V2) — nie ma z czego liczyć planu
+      return jsonResponse({ error: 'brak_danych' }, 400, cors)
     }
 
     const existing = session.business_plan as Record<string, unknown> | null
@@ -218,15 +258,18 @@ Deno.serve(async (req) => {
     // (lekcja: gpt-5.x zjada tokeny na reasoning → pusty JSON).
     const user = buildUser(brief, karta, assessment, raport)
     let plan: Record<string, unknown> | null = null
+    let failReason = ''
     for (let attempt = 0; attempt < 2 && !plan; attempt++) {
-      const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
+      const { obj, usage, err } = await callOnce(OPENAI_API_KEY, user, 5000 + attempt * 2000)
       await logUsage(usage)
       if (obj && sanePlan(obj)) plan = obj
-      else if (attempt === 0) console.warn('[bud-plan] próba 1 nieudana — ponawiam')
+      else { failReason = err || 'pusty/niepoprawny plan (sanity fail)'; if (attempt === 0) console.warn('[bud-plan] próba 1 nieudana — ponawiam') }
     }
     if (!plan) {
       console.error('[bud-plan] obie próby nieudane')
       await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'plan' })
+      // Alert #sparing — raz per pad (po obu próbach), Tomek wie o cichym 502.
+      await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'plan przychodu (bud-plan)', error: failReason || 'nieznany błąd' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
 

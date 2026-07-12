@@ -11,7 +11,8 @@
 // idzie w `user`. Auto-retry ×1 na pustą/niepoprawną odpowiedź. Limit 4 gen/sesja.
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { verifyAuthUser, ownerDenied, isTrustedInternalCall } from "../_shared/spar-owner.ts";
+import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = ['https://tomekniedzwiecki.pl','https://www.tomekniedzwiecki.pl','https://crm.tomekniedzwiecki.pl','https://tn-crm.vercel.app','http://localhost:5500','http://127.0.0.1:5500']
 function getCorsHeaders(origin: string | null): Record<string, string> {
@@ -20,8 +21,8 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 4
-const OPENAI_MODEL = Deno.env.get('SPAR_ECONOMICS_MODEL') || 'gpt-5.1'
-const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
+const OPENAI_MODEL = Deno.env.get('SPAR_ECONOMICS_MODEL') || 'gpt-5.6-sol'
+const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response { return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } }) }
 
 // Model biznesowy — JEDNO źródło (settings.aplikacja_model_biznesowy), ładowane raz w handlerze.
@@ -57,11 +58,11 @@ function saneEconomics(e: any): boolean {
 
 // Jedno wywołanie OpenAI; zwraca {obj, usage} albo {obj:null}. Loguje koszt każdej próby.
 async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
-  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+  const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
-  })
+  }, 'spar-economics')
   if (!res.ok) { console.error('[spar-economics] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
   const data = await res.json()
   const u = data?.usage || {}
@@ -90,7 +91,9 @@ Deno.serve(async (req) => {
     if (!session) return jsonResponse({ error: 'nieprawidlowa_sesja' }, 404, cors)
     // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
     // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
-    {
+    // Wyjątek: zaufany wywołujący wewnętrzny (spar-drip kluczem serwisowym) omija
+    // bramkę — inaczej cron nie wygeneruje artefaktu sesji przypiętej do konta.
+    if (!isTrustedInternalCall(req)) {
       const authUser = await verifyAuthUser(req, supabase)
       if (ownerDenied(session.auth_user_id as string | null, authUser)) {
         return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)

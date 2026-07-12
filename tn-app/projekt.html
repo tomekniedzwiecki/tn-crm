@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Projekt aplikacji</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        .stage-pill { display:flex; align-items:center; gap:8px; border:1px solid #2a2a2a;
+            background:#0a0a0a; border-radius:6px; padding:9px 14px; cursor:pointer; transition:all .15s ease; white-space:nowrap; }
+        .stage-pill:hover { border-color:#444; }
+        .stage-pill.active { border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.1); }
+        .stage-pill.completed .stage-num { background:#45a557; color:#fff; }
+        .stage-num { width:20px; height:20px; border-radius:5px; background:#27272a; color:#a1a1aa;
+            display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0; }
+        .st-btn { display:inline-flex; align-items:center; gap:6px; border:1px solid; border-radius:6px;
+            padding:5px 11px; font-size:11.5px; font-weight:500; cursor:pointer; transition:all .15s ease; }
+        .st-pending     { border-color:#333; background:#161616; color:#a1a1aa; }
+        .st-in_progress { border-color:rgba(245,166,35,.45);  background:rgba(245,166,35,.1); color:#f5b955; }
+        .st-done        { border-color:rgba(69,165,87,.45);  background:rgba(69,165,87,.1); color:#4cb782; }
+        .st-skipped     { border-color:#262626; background:transparent; color:#52525b; text-decoration:line-through; }
+        .st-blocked     { border-color:rgba(229,72,77,.45);   background:rgba(229,72,77,.1); color:#f26d78; }
+        .owner-tag { font-size:10px; padding:2px 7px; border-radius:6px; font-weight:600; letter-spacing:.02em; }
+        .owner-admin  { background:rgba(0,112,243,.12); color:#52a8ff; }
+        .owner-client { background:rgba(245,166,35,.12); color:#f5b955; }
+        .owner-auto   { background:rgba(69,165,87,.12); color:#4cb782; }
+        .mile-badge { display:inline-flex; align-items:center; gap:4px; font-size:10px; padding:2px 7px; border-radius:6px;
+            background:rgba(69,165,87,.14); color:#4cb782; border:1px solid rgba(69,165,87,.35); font-weight:600; }
+        input[type="date"] { color-scheme: dark; }
+        .fld { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:6px;
+            padding:8px 10px; font-size:13px; color:#fff; }
+        .fld:focus { outline:none; border-color:rgba(0,112,243,.5); }
+        .ptab { background:none; border:none; border-bottom:2px solid transparent; color:#a1a1aa;
+            padding:9px 14px; font-size:13px; cursor:pointer; white-space:nowrap; transition:color .15s ease; }
+        .ptab:hover { color:#fff; }
+        .ptab.active { color:#fff; border-bottom-color:#0070f3; }
+        .ptab span { color:#52a8ff; font-size:11px; }
+        .md-body h2 { color:#fff; font-size:14px; font-weight:600; margin:14px 0 6px; }
+        .md-body h3 { color:#e5e5e5; font-size:13px; font-weight:600; margin:10px 0 4px; }
+        .md-body p { margin:4px 0; }
+        .md-body ul { list-style:disc; padding-left:18px; margin:4px 0; }
+        .md-body li { margin:2px 0; }
+        .md-body b { color:#fff; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <a href="/tn-app/index" class="text-zinc-500 hover:text-white transition-colors flex items-center gap-1 text-xs"><i class="ph ph-arrow-left"></i> Aplikacje</a>
+                <span class="text-zinc-700">/</span>
+                <span id="hdr-name" class="text-zinc-300 text-xs font-mono truncate">…</span>
+            </div>
+            <div class="flex items-center gap-1">
+                <button onclick="progressMail()" class="px-3 py-1.5 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60 flex items-center gap-1.5" title="GPT 5.6 napisze mail o postępie — Ty wysyłasz"><i class="ph ph-envelope-simple"></i> Mail o postępie</button>
+                <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+            </div>
+        </header>
+
+        <!-- Modal: mail o postępie (AI) -->
+        <div id="pmail-modal" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
+            <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-xl p-6">
+                <h3 class="text-white text-lg font-semibold mb-1 flex items-center gap-2"><i class="ph ph-envelope-simple text-[#3291ff]"></i> Mail o postępie</h3>
+                <p class="text-zinc-500 text-xs mb-4">GPT 5.6 pisze na podstawie stanu projektu. Sprawdź, popraw i wyślij — nic nie wychodzi automatycznie.</p>
+                <div id="pmail-loading" class="text-zinc-500 text-sm py-8 text-center">Piszę maila…</div>
+                <div id="pmail-body" class="hidden">
+                    <label class="text-xs text-zinc-500 block mb-1">Temat</label>
+                    <input id="pmail-subject" class="fld mb-3">
+                    <label class="text-xs text-zinc-500 block mb-1">Treść</label>
+                    <textarea id="pmail-text" rows="10" class="fld w-full font-normal" style="resize:vertical"></textarea>
+                    <div class="flex justify-between items-center mt-4">
+                        <button onclick="copyPmail()" class="px-3 py-2 text-xs text-zinc-300 border border-[#333] rounded-md hover:border-[#0070f3]/60"><i class="ph ph-copy"></i> Kopiuj treść</button>
+                        <div class="flex gap-2">
+                            <button onclick="closePmail()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Zamknij</button>
+                            <button onclick="openPmailGmail()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200 flex items-center gap-1.5"><i class="ph ph-paper-plane-tilt"></i> Otwórz w Gmailu</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="pmail-err" class="hidden text-[#f26d78] text-sm py-6 text-center"></div>
+            </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+
+                <!-- Nagłówek projektu -->
+                <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-7">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <h1 id="p-name" class="text-3xl font-semibold text-white tracking-tight">…</h1>
+                            <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
+                        </div>
+                        <div id="p-meta" class="text-zinc-500 text-xs mt-2 flex items-center gap-3 flex-wrap"></div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-white" id="stat-progress">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">postęp</div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center">
+                            <div class="text-xl font-semibold text-white" id="stat-stage">–</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">etap</div>
+                        </div>
+                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" title="Kamienie milowe">
+                            <div class="text-xl font-semibold text-[#4cb782]" id="stat-miles">0</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">kamienie</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pigułki etapów -->
+                <div id="stage-pills" class="flex gap-2.5 overflow-x-auto pb-2 mb-7"></div>
+
+                <!-- Karty kroków (scope projektu) -->
+                <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
+
+                <!-- Zakładki sekcji (porządek: kroki zawsze na górze, reszta pod tabami) -->
+                <div id="psec-tabs" class="flex gap-1 border-b border-[#1f1f1f] mb-6 overflow-x-auto">
+                    <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
+                    <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
+                    <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
+                    <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
+                    <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
+                </div>
+
+                <div data-psec="projekt">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-7">
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-app-window text-[#3291ff]"></i> Aplikacja</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Nazwa aplikacji</label><input id="f-name" class="fld" onchange="saveField('name', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Slug (kebab-case)</label><input id="f-slug" class="fld" placeholder="np. rezerwuj-teraz" onchange="saveField('slug', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Domena</label><input id="f-domain" class="fld" placeholder="np. rezerwuj.pl" onchange="saveField('domain', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">URL aplikacji</label><input id="f-app_url" class="fld" placeholder="https://…" onchange="saveField('app_url', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">URL landingu</label><input id="f-landing_url" class="fld" placeholder="https://…" onchange="saveField('landing_url', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Termin umowny</label><input id="f-deadline_at" type="date" class="fld" onchange="saveField('deadline_at', this.value)"></div>
+                        </div>
+                    </div>
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-stack text-[#3291ff]"></i> Infrastruktura</h3>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Repo (URL)</label><input id="f-repo_url" class="fld" placeholder="https://github.com/…" onchange="saveField('repo_url', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Projekt Vercel</label><input id="f-vercel_project" class="fld" onchange="saveField('vercel_project', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Supabase ref</label><input id="f-supabase_ref" class="fld" placeholder="np. abcde...ws" onchange="saveField('supabase_ref', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">Stripe account (acct_…)</label><input id="f-stripe_account_id" class="fld" placeholder="acct_…" onchange="saveField('stripe_account_id', this.value)"></div>
+                            <div><label class="text-xs text-zinc-500 block mb-1">% od przychodu (Tomek)</label><input id="f-fee_percent" type="number" step="0.5" class="fld" onchange="saveField('fee_percent', this.value)"></div>
+                        </div>
+                    </div>
+                </div>
+
+                </div>
+
+                <div data-psec="uwagi" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-note-pencil text-[#3291ff]"></i> Uwagi Tomka <span class="text-zinc-500 font-normal text-xs">wejście do paczki dla Claude Code</span></h3>
+                        <div class="flex items-center gap-2">
+                            <button id="nf-open" onclick="setNoteFilter('open')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#0070f3]/40 text-[#52a8ff]">Otwarte</button>
+                            <button id="nf-all" onclick="setNoteFilter('all')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white">Wszystkie</button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                        <select id="note-kind" class="fld sm:w-40 flex-shrink-0">
+                            <option value="uwaga">Uwaga</option>
+                            <option value="decyzja">Decyzja</option>
+                            <option value="blokada">Blokada</option>
+                        </select>
+                        <input id="note-content" class="fld" placeholder="Treść uwagi / decyzji / blokady…" onkeydown="if(event.key==='Enter')addNote()">
+                        <button onclick="addNote()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200 flex-shrink-0">Dodaj</button>
+                    </div>
+                    <div id="notes-list" class="space-y-2"></div>
+                </div>
+
+                </div>
+
+                <div data-psec="umowa" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-file-text text-[#3291ff]"></i> Umowa <span id="contract-badge" class="ml-1"></span></h3>
+                    <div id="contract-body" class="space-y-4"></div>
+                </div>
+
+                </div>
+
+                <div data-psec="sparing" class="hidden">
+                <div id="spar-box" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7 hidden">
+                    <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-chats-circle text-[#3291ff]"></i> Dane ze sparingu <span id="spar-sub" class="text-zinc-500 font-normal text-xs"></span></h3>
+                    <div id="spar-content" class="space-y-5"></div>
+                </div>
+
+                </div>
+
+                <div data-psec="notatki" class="hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-10">
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-article text-[#3291ff]"></i> Notatki projektu</h3>
+                        <textarea id="p-notes" rows="6" class="fld resize-y" placeholder="Ogólne notatki projektu, plan, decyzje…"></textarea>
+                        <button onclick="saveNotes()" class="mt-2 text-xs text-[#52a8ff] hover:text-[#78b6ff]">Zapisz notatki</button>
+                    </div>
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <h3 class="text-white font-semibold mb-3 flex items-center gap-2"><i class="ph ph-clock-counter-clockwise text-[#3291ff]"></i> Aktywność</h3>
+                        <div id="activity-list" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+                </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Warsztat kroku (drawer) -->
+    <div id="step-drawer-wrap" class="hidden fixed inset-0 z-50" onclick="if(event.target===this.querySelector('.sd-overlay')||event.target===this)closeStep()">
+        <div class="sd-overlay absolute inset-0 bg-black/60"></div>
+        <div class="absolute right-0 top-0 bottom-0 w-full max-w-[560px] bg-zinc-950 border-l border-[#333] flex flex-col">
+            <div class="flex items-start justify-between px-6 pt-5 pb-4 border-b border-[#1f1f1f]">
+                <div class="min-w-0">
+                    <h3 id="sd-title" class="text-white text-lg font-semibold flex items-center gap-2"></h3>
+                    <div id="sd-sub" class="text-zinc-500 text-xs mt-1.5"></div>
+                </div>
+                <button onclick="closeStep()" class="p-2 text-zinc-500 hover:text-white flex-shrink-0"><i class="ph ph-x text-lg"></i></button>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5" id="sd-body"></div>
+            <div class="border-t border-[#1f1f1f] px-6 py-4 flex items-center justify-between gap-2">
+                <button id="sd-skip" onclick="sdToggleSkip()" class="px-3 py-2 text-xs text-zinc-500 hover:text-zinc-300 flex-shrink-0">Pomiń krok</button>
+                <div class="flex gap-2" id="sd-statusbtns"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: ustawienia projektu (klient + usuń) -->
+    <div id="settings-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeSettings()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-lg p-6">
+            <h3 class="text-white text-lg font-semibold mb-4">Ustawienia projektu</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div><label class="text-xs text-zinc-500 block mb-1">Klient</label><input id="set-customer" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">E-mail</label><input id="set-email" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">Telefon</label><input id="set-phone" class="fld"></div>
+                <div><label class="text-xs text-zinc-500 block mb-1">spar_session_id (podgląd danych)</label><input id="set-spar" class="fld" placeholder="uuid sesji sparingu"></div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-[#1f1f1f]">
+                <div class="text-xs text-zinc-500 mb-2">Portal klienta (kamienie milowe): <span id="set-portal-status" class="text-zinc-300"></span></div>
+                <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="set-portal-pw" class="fld" placeholder="Nowe hasło portalu (min 6 znaków)">
+                    <button onclick="setPortalPassword()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25 flex-shrink-0">Ustaw hasło</button>
+                    <button onclick="copyPortalLink()" class="px-3 py-2 text-xs text-zinc-300 border border-[#333] rounded-md hover:border-[#0070f3]/60 flex-shrink-0"><i class="ph ph-link"></i> Kopiuj link</button>
+                </div>
+                <div class="mt-2">
+                    <button onclick="previewAsClient()" class="px-3 py-2 text-xs font-semibold bg-[#111] border border-[#0070f3]/40 rounded-md text-[#52a8ff] hover:bg-[#0070f3]/10"><i class="ph ph-eye"></i> Podejrzyj oczami klienta</button>
+                    <span class="text-[10px] text-zinc-600 ml-2">Portal w trybie podglądu (read-only). Działa bez ustawiania hasła — do weryfikacji PRZED przekazaniem dostępu.</span>
+                </div>
+                <div class="text-[10px] text-zinc-600 mt-1.5">Link: /twoja-aplikacja?t=&lt;token&gt; — klient widzi TYLKO postęp, etapy i kamienie (przez edge fn wfa-portal, nie anon RLS).</div>
+            </div>
+            <div class="flex justify-between items-center mt-5">
+                <button onclick="deleteProject()" class="px-3 py-2 text-xs text-[#f26d78] hover:text-[#ff8589]">Usuń projekt</button>
+                <div class="flex gap-2">
+                    <button onclick="closeSettings()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                    <button onclick="saveSettings()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200">Zapisz</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lightbox makiet -->
+    <div id="lightbox" class="hidden fixed inset-0 z-[70] bg-black/90 flex items-center justify-center p-6" onclick="closeLightbox()">
+        <img id="lightbox-img" src="" class="max-w-full max-h-full rounded-lg object-contain">
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        const projectId = new URLSearchParams(location.search).get('id');
+        let project = null;
+        let stepDefs = [];
+        let steps = [];
+        let notes = [];
+        let noteFilter = 'open';
+        let activeStage = 1;
+        let drawerCtx = null;   // {key}
+        let sparData = null;    // {summary, itemsByKind, session}
+
+        const PROJECT_STATUSES = ['fundament','infrastruktura','budowa','jakosc','start','stery','zamkniety'];
+        const STATUS_LABELS = { fundament:'Fundament', infrastruktura:'Infrastruktura', budowa:'Budowa MVP', jakosc:'Jakość', start:'Start', stery:'Stery', zamkniety:'Zamknięty' };
+        const STEP_CYCLE = { pending:'in_progress', in_progress:'done', done:'pending', skipped:'pending', blocked:'in_progress' };
+        const STEP_LABELS = { pending:'Do zrobienia', in_progress:'W trakcie', done:'Ukończone', skipped:'Pominięte', blocked:'Zablokowane' };
+        const OWNER_LABEL = { admin:'Tomek', client:'Klient', auto:'Auto' };
+        const KIND_META = { uwaga:{l:'Uwaga',cls:'text-[#52a8ff] border-[#0070f3]/40'}, decyzja:{l:'Decyzja',cls:'text-[#62c073] border-[#45a557]/40'}, blokada:{l:'Blokada',cls:'text-[#f26d78] border-[#e5484d]/40'} };
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function relTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso); const mins = Math.round((Date.now()-d.getTime())/60000);
+            if (mins < 60) return mins + ' min temu';
+            if (mins < 1440) return Math.round(mins/60) + ' godz. temu';
+            return d.toLocaleDateString('pl-PL');
+        }
+        function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL'); }
+        function projName() { const n = (project.name || '').trim(); return n || ((project.customer_name || 'Projekt') + ' (bez nazwy)'); }
+        function showToast(message, type='info') {
+            const toast = document.createElement('div');
+            const bg = type==='success' ? '#45a557' : type==='error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:6px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 2200);
+        }
+        async function logActivity(action, description) {
+            try { await supabaseClient.from('wfa_activities').insert({ project_id: projectId, actor:'admin', action, description }); } catch(_) {}
+        }
+
+        // Prosty renderer markdown (nagłówki #/##/###, **bold**, listy -) — dane read-only ze sparingu
+        function mdRender(md) {
+            const lines = String(md == null ? '' : md).split(/\r?\n/);
+            let out = '', inUl = false;
+            const inline = s => escapeHtml(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`([^`]+?)`/g, '<code class="text-[#52a8ff]">$1</code>');
+            for (const ln of lines) {
+                const h = ln.match(/^(#{1,3})\s+(.*)$/);
+                if (/^\s*[-*]\s+/.test(ln)) { if (!inUl) { out += '<ul>'; inUl = true; } out += '<li>' + inline(ln.replace(/^\s*[-*]\s+/, '')) + '</li>'; continue; }
+                if (inUl) { out += '</ul>'; inUl = false; }
+                if (h) { const lvl = h[1].length; out += `<h${lvl === 1 ? 2 : lvl}>${inline(h[2])}</h${lvl === 1 ? 2 : lvl}>`; }
+                else if (ln.trim()) out += '<p>' + inline(ln) + '</p>';
+            }
+            if (inUl) out += '</ul>';
+            return out;
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data||[]).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // ============ ŁADOWANIE ============
+        async function loadAll() {
+            await supabaseClient.rpc('wfa_ensure_steps', { p_project: projectId });
+            const [projQ, defsQ, stepsQ, notesQ, actQ] = await Promise.all([
+                supabaseClient.from('wfa_projects').select('*').eq('id', projectId).single(),
+                supabaseClient.from('wfa_step_defs').select('*').eq('active', true).order('stage').order('sort'),
+                supabaseClient.from('wfa_steps').select('*').eq('project_id', projectId).range(0, 999),
+                supabaseClient.from('wfa_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false }),
+                supabaseClient.from('wfa_activities').select('*').eq('project_id', projectId).order('created_at',{ascending:false}).limit(20),
+            ]);
+            if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='/tn-app/index'; return; }
+            project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; notes = notesQ.data||[];
+            // ustaw aktywny etap na etap aktualnego kroku
+            const cur = currentStep();
+            if (cur) { const d = stepDefs.find(x => x.key === cur.step_key); if (d) activeStage = d.stage; }
+            renderHeader(); renderFields(); renderPills(); renderStage(); renderNotes(); renderContract(); renderActivity(actQ.data||[]);
+            loadSparing();
+        }
+
+        function currentStep() {
+            for (const d of stepDefs) {
+                const s = steps.find(x => x.step_key === d.key);
+                if (s && s.status !== 'done' && s.status !== 'skipped') return s;
+            }
+            return null;
+        }
+        function stageNums() { return [...new Set(stepDefs.map(d=>d.stage))].sort((a,b)=>a-b); }
+        function defsForStage(n) { return stepDefs.filter(d=>d.stage===n); }
+        function stepFor(key) { return steps.find(s => s.step_key===key); }
+        function defFor(key) { return stepDefs.find(d => d.key===key); }
+        function stageProgress(n) {
+            const keys = defsForStage(n).map(d=>d.key);
+            const inst = steps.filter(s => keys.includes(s.step_key) && s.status!=='skipped');
+            const done = inst.filter(s=>s.status==='done').length;
+            return { done, total: inst.length, pct: inst.length ? Math.round(done/inst.length*100) : 0 };
+        }
+        function stageHasMilestone(n) {
+            return defsForStage(n).some(d => d.milestone_label && stepFor(d.key)?.status === 'done');
+        }
+
+        // ============ RENDER ============
+        function renderHeader() {
+            document.getElementById('hdr-name').textContent = projName();
+            document.getElementById('p-name').textContent = projName();
+            const sel = document.getElementById('p-status');
+            sel.innerHTML = PROJECT_STATUSES.map(s=>`<option value="${s}" ${project.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('');
+            const meta = [];
+            if (project.customer_name) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-user"></i>${escapeHtml(project.customer_name)}</span>`);
+            if (project.customer_email) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-envelope"></i>${escapeHtml(project.customer_email)}</span>`);
+            if (project.customer_phone) meta.push(`<span class="flex items-center gap-1"><i class="ph ph-phone"></i>${escapeHtml(project.customer_phone)}</span>`);
+            if (project.fee_percent != null) meta.push(`<span class="flex items-center gap-1 text-[#62c073]"><i class="ph ph-percent"></i>${project.fee_percent}% od przychodu</span>`);
+            if (project.deadline_at) {
+                const days = Math.ceil((new Date(project.deadline_at) - new Date()) / 86400000);
+                const cls = days < 7 ? 'text-[#f26d78]' : days < 14 ? 'text-[#f5b955]' : 'text-zinc-400';
+                meta.push(`<span class="flex items-center gap-1 ${cls}"><i class="ph ph-calendar-blank"></i>termin ${fmtDate(project.deadline_at)} (${days >= 0 ? days + ' dni' : Math.abs(days) + ' dni PO terminie'})</span>`);
+            }
+            if (project.lead_id) meta.push(`<a href="/pipeline#lead-${project.lead_id}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff] flex items-center gap-1"><i class="ph ph-kanban"></i>lead w pipeline</a>`);
+            document.getElementById('p-meta').innerHTML = meta.join('<span class="text-zinc-700">·</span>');
+            const all = steps.filter(s=>s.status!=='skipped');
+            const done = all.filter(s=>s.status==='done').length;
+            document.getElementById('stat-progress').textContent = (all.length?Math.round(done/all.length*100):0) + '%';
+            const cur = currentStep(); const curDef = cur ? defFor(cur.step_key) : null;
+            document.getElementById('stat-stage').textContent = curDef ? curDef.stage : '✓';
+            const milesTotal = stepDefs.filter(d=>d.milestone_label).length;
+            const milesDone = stepDefs.filter(d=>d.milestone_label && stepFor(d.key)?.status==='done').length;
+            document.getElementById('stat-miles').textContent = milesDone + '/' + milesTotal;
+            document.getElementById('p-notes').value = project.notes || '';
+        }
+
+        function renderFields() {
+            const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v == null ? '' : v; };
+            set('f-name', project.name); set('f-slug', project.slug); set('f-domain', project.domain);
+            set('f-app_url', project.app_url); set('f-landing_url', project.landing_url);
+            set('f-repo_url', project.repo_url); set('f-vercel_project', project.vercel_project);
+            set('f-supabase_ref', project.supabase_ref); set('f-stripe_account_id', project.stripe_account_id);
+            set('f-fee_percent', project.fee_percent); set('f-deadline_at', project.deadline_at);
+        }
+        async function saveField(col, value) {
+            let v = String(value).trim();
+            let payload;
+            if (col === 'fee_percent') { const num = parseFloat(v); payload = { fee_percent: isNaN(num) ? 10 : num }; }
+            else payload = { [col]: v || null };
+            const { error } = await supabaseClient.from('wfa_projects').update(payload).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            Object.assign(project, payload);
+            if (['name','slug','domain','deadline_at'].includes(col)) renderHeader();
+            showToast('Zapisano', 'success');
+        }
+
+        function renderPills() {
+            const wrap = document.getElementById('stage-pills');
+            wrap.innerHTML = stageNums().map(n => {
+                const pr = stageProgress(n);
+                const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
+                const cls = (n===activeStage?'active ':'') + (pr.total>0 && pr.done===pr.total ? 'completed' : '');
+                const num = pr.total>0 && pr.done===pr.total ? '<i class="ph ph-check"></i>' : n;
+                const flag = stageHasMilestone(n) ? '<i class="ph ph-flag-checkered text-[#4cb782] text-[11px]" title="kamień milowy osiągnięty"></i>' : '';
+                return `<div class="stage-pill ${cls}" onclick="switchStage(${n})">
+                    <span class="stage-num">${num}</span>
+                    <span class="text-xs ${n===activeStage?'text-white':'text-zinc-400'}">${escapeHtml(label)}</span>
+                    ${flag}
+                    <span class="text-[10px] font-mono text-zinc-500">${pr.done}/${pr.total}</span>
+                </div>`;
+            }).join('');
+        }
+        function switchStage(n) { activeStage = n; renderPills(); renderStage(); }
+
+        function renderStage() {
+            const defs = defsForStage(activeStage);
+            document.getElementById('steps-grid').innerHTML = defs.map(d => {
+                const st = stepFor(d.key) || { status:'pending', data:{} };
+                const note = st.data && st.data.note ? st.data.note : '';
+                const isMile = d.milestone_label && st.status === 'done';
+                return `<div class="bg-[#0a0a0a] border ${isMile?'border-[#45a557]/40':'border-[#1f1f1f]'} rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-[#0070f3]/40 transition-colors" onclick="openStep('${d.key}')">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="w-9 h-9 rounded-md bg-zinc-800/80 flex items-center justify-center flex-shrink-0"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i></div>
+                            <div class="min-w-0">
+                                <div class="text-white font-medium text-[13px] truncate">${escapeHtml(d.label)}</div>
+                                <span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>
+                            </div>
+                        </div>
+                        <i class="ph ph-caret-right text-zinc-700 mt-1"></i>
+                    </div>
+                    ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : ''}
+                    ${note ? `<div class="text-zinc-600 text-[10px] flex items-center gap-1"><i class="ph ph-note"></i> notatka w warsztacie</div>` : ''}
+                    <div class="flex items-center justify-between mt-auto">
+                        <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}')" title="Klik = przełącz status">
+                            <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
+                            ${STEP_LABELS[st.status]}
+                        </button>
+                        <span class="text-zinc-600 text-[10px]">${st.completed_at ? relTime(st.completed_at) : clientLagBadge(d, st)}</span>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // Kroki klienckie = najdłuższe ogony procesu: gdy krok klienta jest „W trakcie"
+        // (= poprosiliśmy klienta), pokazuj ile dni wisi. >5 dni = czerwono (czas na followup).
+        function clientLagBadge(d, st) {
+            if (d.owner !== 'client' || st.status !== 'in_progress' || !st.updated_at) return '';
+            const days = Math.floor((Date.now() - new Date(st.updated_at).getTime()) / 86400000);
+            if (days < 1) return '';
+            const cls = days > 5 ? 'text-[#f26d78]' : days > 2 ? 'text-[#f5b955]' : 'text-zinc-500';
+            return `<span class="${cls}">u klienta od ${days} dni${days > 5 ? ' — followup!' : ''}</span>`;
+        }
+
+        function renderActivity(items) {
+            document.getElementById('activity-list').innerHTML = (items||[]).map(a => `
+                <div class="flex items-start gap-2 text-xs">
+                    <span class="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${a.actor==='auto'?'bg-[#45a557]':a.actor==='client'?'bg-[#f5a623]':'bg-[#0070f3]'}"></span>
+                    <div><span class="text-zinc-300">${escapeHtml(a.description||a.action)}</span>
+                    <span class="text-zinc-600 ml-1">${relTime(a.created_at)}</span></div>
+                </div>`).join('') || '<div class="text-zinc-600 text-xs">Brak aktywności.</div>';
+        }
+
+        // ── Zakładki sekcji (kroki zawsze na górze; reszta pod tabami; wybór pamiętany per projekt) ──
+        function switchPsec(name) {
+            document.querySelectorAll('[data-psec]').forEach(el => el.classList.toggle('hidden', el.dataset.psec !== name));
+            document.querySelectorAll('#psec-tabs .ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === name));
+            try { localStorage.setItem('wfa_psec_' + projectId, name); } catch (_) {}
+        }
+
+        // ============ UWAGI TOMKA (wfa_notes) ============
+        function setNoteFilter(f) {
+            noteFilter = f;
+            document.getElementById('nf-open').className = 'text-[11px] px-2.5 py-1 rounded-md border ' + (f==='open'?'border-[#0070f3]/40 text-[#52a8ff]':'border-[#333] text-zinc-400 hover:text-white');
+            document.getElementById('nf-all').className = 'text-[11px] px-2.5 py-1 rounded-md border ' + (f==='all'?'border-[#0070f3]/40 text-[#52a8ff]':'border-[#333] text-zinc-400 hover:text-white');
+            renderNotes();
+        }
+        function renderNotes() {
+            const openCnt = notes.filter(n => n.status === 'open').length;
+            const tb = document.getElementById('ptab-uwagi-cnt');
+            if (tb) tb.textContent = openCnt ? '(' + openCnt + ')' : '';
+            const list = noteFilter === 'open' ? notes.filter(n => n.status === 'open') : notes;
+            const box = document.getElementById('notes-list');
+            if (!list.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">${noteFilter==='open'?'Brak otwartych uwag.':'Brak uwag.'}</div>`; return; }
+            box.innerHTML = list.map(n => {
+                const km = KIND_META[n.kind] || KIND_META.uwaga;
+                const done = n.status === 'done';
+                return `<div class="flex items-start gap-3 bg-[#111] border border-[#262626] rounded-md px-3.5 py-2.5 ${done?'opacity-55':''}">
+                    <span class="mt-0.5 text-[10px] px-2 py-0.5 rounded-md border ${km.cls} flex-shrink-0">${km.l}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[12.5px] ${done?'line-through text-zinc-500':'text-zinc-200'} break-words">${escapeHtml(n.content)}</div>
+                        <div class="text-[10px] text-zinc-600 mt-0.5">${escapeHtml(n.author||'tomek')} · ${relTime(n.created_at)}</div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="toggleNoteDone('${n.id}')" class="text-[11px] ${done?'text-zinc-500 hover:text-zinc-300':'text-[#62c073] hover:text-[#7ad08a]'}" title="${done?'Otwórz ponownie':'Oznacz jako załatwione'}"><i class="ph ${done?'ph-arrow-counter-clockwise':'ph-check-circle'}"></i></button>
+                        <button onclick="deleteNote('${n.id}')" class="text-[11px] text-zinc-600 hover:text-[#f26d78]" title="Usuń"><i class="ph ph-trash"></i></button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        async function addNote() {
+            const content = document.getElementById('note-content').value.trim();
+            if (!content) { showToast('Wpisz treść uwagi', 'error'); return; }
+            const kind = document.getElementById('note-kind').value;
+            const { data, error } = await supabaseClient.from('wfa_notes').insert({ project_id: projectId, kind, content, author: 'tomek' }).select('*').single();
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            notes.unshift(data);
+            document.getElementById('note-content').value = '';
+            logActivity('note_added', `Uwaga (${kind}): ${content.slice(0,80)}`);
+            renderNotes();
+        }
+        async function toggleNoteDone(id) {
+            const n = notes.find(x => x.id === id); if (!n) return;
+            const next = n.status === 'done' ? 'open' : 'done';
+            const { error } = await supabaseClient.from('wfa_notes').update({ status: next, resolved_at: next==='done'? new Date().toISOString() : null }).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            n.status = next; renderNotes();
+        }
+        async function deleteNote(id) {
+            if (!confirm('Usunąć tę uwagę?')) return;
+            const { error } = await supabaseClient.from('wfa_notes').delete().eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            notes = notes.filter(x => x.id !== id); renderNotes();
+        }
+
+        // ============ UMOWA (wfa_projects.contract_*) ============
+        const CONTRACT_TEMPLATE_PATH = '/umowy/umowa-budowa-aplikacji.html';
+        const CONTRACT_STATUS_META = {
+            brak:             { l:'Brak umowy',              cls:'text-zinc-400 border-[#333]' },
+            dane_klienta:     { l:'Czeka na dane klienta',  cls:'text-[#f5b955] border-[#f5a623]/40' },
+            do_podpisu:       { l:'Do podpisu',             cls:'text-[#52a8ff] border-[#0070f3]/40' },
+            podpisana_klient: { l:'Podpisana przez klienta',cls:'text-[#f5b955] border-[#f5a623]/40' },
+            podpisana:        { l:'Podpisana',              cls:'text-[#62c073] border-[#45a557]/40' },
+        };
+        // Placeholdery DANYCH, które MUSZĄ zostać w custom_html (render w locie — lekcja „baked placeholders").
+        const DATA_PLACEHOLDERS = ['{{ZAMAWIAJACY_IMIE_NAZWISKO}}','{{ZAMAWIAJACY_NIP}}','{{ZAMAWIAJACY_ADRES}}','{{ZAMAWIAJACY_EMAIL}}','{{DATA}}'];
+
+        function contractPublicUrl(path) {
+            if (!path) return null;
+            const { data } = supabaseClient.storage.from('attachments').getPublicUrl(path);
+            return data ? data.publicUrl : null;
+        }
+        async function getWykonawca() {
+            try {
+                const { data } = await supabaseClient.from('settings').select('value').eq('key', 'aplikacja_wykonawca_dane').maybeSingle();
+                if (data && data.value) return typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+            } catch (_) {}
+            return null;
+        }
+        // Render w locie: usuń baner .warn + podstaw placeholdery (identycznie jak edge fn wfa-portal).
+        function contractSubstitute(rawHtml, wyk) {
+            let html = String(rawHtml).replace(/<div class="warn[^"]*"[^>]*>[\s\S]*?<\/div>/, '');
+            const f = project.contract_fields || {};
+            const company = (f.company || '').trim();
+            const adres = [(f.street || '').trim(), [(f.postal || '').trim(), (f.city || '').trim()].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+            const dataDate = project.contract_sent_at ? new Date(project.contract_sent_at) : new Date();
+            const pad = n => String(n).padStart(2, '0');
+            const dataStr = pad(dataDate.getDate()) + '.' + pad(dataDate.getMonth() + 1) + '.' + dataDate.getFullYear();
+            const map = {
+                '{{ZAMAWIAJACY_IMIE_NAZWISKO}}': f.full_name || project.customer_name || '',
+                '{{ZAMAWIAJACY_FIRMA}}': company ? ', ' + company : '',
+                '{{ZAMAWIAJACY_NIP}}': f.nip || '',
+                '{{ZAMAWIAJACY_ADRES}}': adres,
+                '{{ZAMAWIAJACY_EMAIL}}': project.customer_email || '',
+                '{{DATA}}': dataStr,
+                '{{TERMIN_TYGODNI}}': f.termin_tygodni || '8',
+                '{{NAZWA_APLIKACJI_ROBOCZA}}': project.name || '',
+                '{{FEE_PERCENT}}': (project.fee_percent != null ? project.fee_percent : 10) + '',
+            };
+            if (wyk) {
+                if (wyk.nazwa != null) map['{{WYKONAWCA_NAZWA}}'] = wyk.nazwa;
+                if (wyk.nip != null) map['{{WYKONAWCA_NIP}}'] = wyk.nip;
+                if (wyk.adres != null) map['{{WYKONAWCA_ADRES}}'] = wyk.adres;
+            }
+            for (const [k, v] of Object.entries(map)) html = html.split(k).join(String(v));
+            return html;
+        }
+
+        function renderContract() {
+            const st = project.contract_status || 'brak';
+            const meta = CONTRACT_STATUS_META[st] || CONTRACT_STATUS_META.brak;
+            document.getElementById('contract-badge').innerHTML = `<span class="text-[11px] px-2 py-0.5 rounded-md border ${meta.cls}">${meta.l}</span>`;
+            const f = project.contract_fields || {};
+            const hasCustom = !!project.contract_custom_html;
+            let h = '';
+
+            if (st === 'brak') {
+                h += `<div class="bg-[#111] border border-[#262626] rounded-md p-4 flex items-start gap-3">
+                    <i class="ph ph-info text-[#f5b955] mt-0.5"></i>
+                    <div class="text-[12.5px] text-zinc-300">Umowa nie została jeszcze uruchomiona. Poproś klienta o dane — formularz pojawi mu się w portalu.
+                        <div class="mt-3"><button onclick="requestClientData()" class="px-3 py-2 text-xs font-semibold bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25"><i class="ph ph-paper-plane-tilt"></i> Poproś klienta o dane</button>
+                        <span class="text-[11px] text-zinc-600 ml-2">Następnie wyślij klientowi link portalu (Ustawienia → Kopiuj link).</span></div>
+                    </div></div>`;
+            }
+
+            h += `<div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Dane do umowy <span class="text-zinc-700">· imię/nazwisko i e-mail bierzemy z Ustawień projektu</span></div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Firma (opcjonalnie)</label><input class="fld" value="${escapeHtml(f.company||'')}" onchange="saveContractField('company', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">NIP</label><input class="fld" value="${escapeHtml(f.nip||'')}" onchange="saveContractField('nip', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Termin (tygodni)</label><input class="fld" type="number" value="${escapeHtml(f.termin_tygodni||'8')}" onchange="saveContractField('termin_tygodni', this.value)"></div>
+                    <div class="sm:col-span-2"><label class="text-xs text-zinc-500 block mb-1">Ulica i numer</label><input class="fld" value="${escapeHtml(f.street||'')}" onchange="saveContractField('street', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Kod pocztowy</label><input class="fld" placeholder="00-000" value="${escapeHtml(f.postal||'')}" onchange="saveContractField('postal', this.value)"></div>
+                    <div><label class="text-xs text-zinc-500 block mb-1">Miejscowość</label><input class="fld" value="${escapeHtml(f.city||'')}" onchange="saveContractField('city', this.value)"></div>
+                </div>
+            </div>`;
+
+            h += `<div class="flex flex-wrap gap-2 pt-1">
+                <button onclick="previewContract()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-eye"></i> Podgląd umowy</button>
+                <button onclick="toggleContractEditor()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-code"></i> Edytuj HTML</button>
+                ${hasCustom ? `<button onclick="restoreContractTemplate()" class="px-3 py-2 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-[#f5b955] hover:border-[#f5a623]/60"><i class="ph ph-arrow-counter-clockwise"></i> Przywróć szablon</button>` : ''}
+                ${['do_podpisu','podpisana_klient','podpisana'].includes(st) ? '' : `<button onclick="markContractSent()" class="px-3 py-2 text-xs font-medium bg-[#0070f3]/15 text-[#52a8ff] border border-[#0070f3]/40 rounded-md hover:bg-[#0070f3]/25"><i class="ph ph-paper-plane-tilt"></i> Oznacz jako wysłaną do podpisu</button>`}
+            </div>`;
+            if (hasCustom) h += `<div class="text-[11px] text-[#f5b955]"><i class="ph ph-warning-circle"></i> Umowa używa własnego HTML (nie szablonu).</div>`;
+
+            h += `<div id="contract-editor-wrap" class="hidden space-y-2">
+                <div class="text-[10px] text-zinc-500">Edytuj SUROWY szablon. NIE usuwaj placeholderów danych (${escapeHtml(DATA_PLACEHOLDERS.join(', '))}) — zapis bez nich zostanie odrzucony (render umowy jest w locie).</div>
+                <textarea id="contract-html-editor" rows="14" class="fld resize-y font-mono text-[11px]" spellcheck="false"></textarea>
+                <div class="flex gap-2">
+                    <button onclick="saveContractHtmlCustom()" class="px-3 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200">Zapisz HTML</button>
+                    <button onclick="toggleContractEditor()" class="px-3 py-2 text-xs text-zinc-400 hover:text-white">Zwiń</button>
+                </div>
+            </div>`;
+
+            const clientUrl = contractPublicUrl(project.contract_client_signed_path);
+            const finalUrl = contractPublicUrl(project.contract_final_path);
+            h += `<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-3 border-t border-[#1f1f1f]">
+                <div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Podpisana przez klienta</div>
+                    <input id="contract-file-client" type="file" accept=".pdf,.jpg,.jpeg,.png" class="fld text-[11px]">
+                    <button onclick="uploadContractFile('client')" class="mt-2 px-3 py-1.5 text-xs bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60"><i class="ph ph-upload-simple"></i> Wgraj</button>
+                    ${clientUrl ? `<div class="mt-2"><a href="${escapeHtml(clientUrl)}" target="_blank" class="text-[11px] text-[#52a8ff] hover:text-[#78b6ff]"><i class="ph ph-file"></i> Podgląd pliku klienta</a></div>` : ''}
+                </div>
+                <div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Finalna (obustronnie podpisana)</div>
+                    <input id="contract-file-final" type="file" accept=".pdf,.jpg,.jpeg,.png" class="fld text-[11px]">
+                    <button onclick="uploadContractFile('final')" class="mt-2 px-3 py-1.5 text-xs bg-[#45a557]/15 border border-[#45a557]/40 rounded-md text-[#62c073] hover:bg-[#45a557]/25"><i class="ph ph-upload-simple"></i> Wgraj i zamknij krok</button>
+                    ${finalUrl ? `<div class="mt-2"><a href="${escapeHtml(finalUrl)}" target="_blank" class="text-[11px] text-[#62c073] hover:text-[#7ad08a]"><i class="ph ph-file"></i> Podgląd finalnej umowy</a></div>` : ''}
+                </div>
+            </div>`;
+
+            document.getElementById('contract-body').innerHTML = h;
+        }
+
+        async function saveContractField(key, value) {
+            const fields = Object.assign({}, project.contract_fields || {});
+            const v = String(value).trim();
+            if (v) fields[key] = v; else delete fields[key];
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_fields: fields }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_fields = fields; showToast('Zapisano', 'success');
+        }
+        async function requestClientData() {
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_status: 'dane_klienta' }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_status = 'dane_klienta';
+            logActivity('contract', 'Poproszono klienta o dane do umowy');
+            showToast('Czeka na dane klienta — wyślij mu link portalu', 'info');
+            renderContract();
+        }
+        async function markContractSent() {
+            const now = new Date().toISOString();
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_status: 'do_podpisu', contract_sent_at: now }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_status = 'do_podpisu'; project.contract_sent_at = now;
+            logActivity('contract', 'Umowa oznaczona jako wysłana do podpisu');
+            showToast('Oznaczono jako wysłaną do podpisu', 'success');
+            renderContract();
+        }
+        async function previewContract() {
+            try {
+                let raw = project.contract_custom_html;
+                if (!raw) {
+                    const r = await fetch(CONTRACT_TEMPLATE_PATH);
+                    if (!r.ok) throw new Error('template');
+                    raw = await r.text();
+                }
+                const wyk = await getWykonawca();
+                let html = contractSubstitute(raw, wyk);
+                html = html.replace('<body>', '<body><div class="no-print" style="position:fixed;top:10px;right:10px;z-index:99"><button onclick="window.print()" style="background:#1a365d;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 13px sans-serif;cursor:pointer">Drukuj / PDF</button></div>');
+                const w = window.open('', '_blank');
+                if (!w) { showToast('Odblokuj wyskakujące okna', 'error'); return; }
+                w.document.open(); w.document.write(html); w.document.close();
+            } catch (e) { showToast('Błąd podglądu umowy', 'error'); }
+        }
+        async function toggleContractEditor() {
+            const wrap = document.getElementById('contract-editor-wrap');
+            if (!wrap.classList.contains('hidden')) { wrap.classList.add('hidden'); return; }
+            const ta = document.getElementById('contract-html-editor');
+            if (!ta.value) {
+                if (project.contract_custom_html) ta.value = project.contract_custom_html;
+                else { try { const r = await fetch(CONTRACT_TEMPLATE_PATH); ta.value = r.ok ? await r.text() : ''; } catch (_) { ta.value = ''; } }
+            }
+            wrap.classList.remove('hidden');
+        }
+        async function saveContractHtmlCustom() {
+            const html = document.getElementById('contract-html-editor').value;
+            const missing = DATA_PLACEHOLDERS.filter(pl => !html.includes(pl));
+            if (missing.length) {
+                alert('Odmowa zapisu — w treści brakuje wymaganych placeholderów danych:\n' + missing.join(', ') + '\n\nUmowa jest renderowana w locie: placeholdery MUSZĄ zostać, inaczej dane klienta nie zostaną podstawione (bug „baked placeholders").');
+                return;
+            }
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_custom_html: html }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_custom_html = html;
+            logActivity('contract', 'Zapisano własny HTML umowy');
+            showToast('Umowa zapisana', 'success'); renderContract();
+        }
+        async function restoreContractTemplate() {
+            if (!confirm('Przywrócić oryginalny szablon (usunąć własny HTML umowy)?')) return;
+            const { error } = await supabaseClient.from('wfa_projects').update({ contract_custom_html: null }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.contract_custom_html = null;
+            showToast('Przywrócono szablon', 'success'); renderContract();
+        }
+        async function markUmowaStepDone() {
+            const st = steps.find(s => s.step_key === 'umowa');
+            if (!st || st.status === 'done') return;
+            const upd = { status: 'done', completed_at: new Date().toISOString(), completed_by: 'admin' };
+            const { error } = await supabaseClient.from('wfa_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Krok „umowa": ' + error.message, 'error'); return; }
+            Object.assign(st, upd);
+        }
+        async function uploadContractFile(kind) {
+            const input = document.getElementById(kind === 'client' ? 'contract-file-client' : 'contract-file-final');
+            const file = input && input.files && input.files[0];
+            if (!file) { showToast('Wybierz plik', 'error'); return; }
+            const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+            const prefix = kind === 'client' ? 'umowa-klient-' : 'umowa-final-';
+            const path = 'wfa/' + projectId + '/' + prefix + Date.now() + '.' + ext;
+            const { error: upErr } = await supabaseClient.storage.from('attachments').upload(path, file);
+            if (upErr) { showToast('Błąd uploadu: ' + upErr.message, 'error'); return; }
+            if (kind === 'client') {
+                const { error } = await supabaseClient.from('wfa_projects').update({ contract_client_signed_path: path, contract_status: 'podpisana_klient' }).eq('id', projectId);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                project.contract_client_signed_path = path; project.contract_status = 'podpisana_klient';
+                logActivity('contract', 'Wgrano umowę podpisaną przez klienta');
+                showToast('Wgrano podpisaną przez klienta', 'success');
+                renderContract();
+            } else {
+                const now = new Date().toISOString();
+                const { error } = await supabaseClient.from('wfa_projects').update({ contract_final_path: path, contract_status: 'podpisana', contract_signed_at: now }).eq('id', projectId);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                project.contract_final_path = path; project.contract_status = 'podpisana'; project.contract_signed_at = now;
+                await markUmowaStepDone();
+                logActivity('contract', 'Wgrano finalną, obustronnie podpisaną umowę');
+                logActivity('milestone', '🏁 Umowa podpisana');
+                showToast('🏁 Umowa podpisana', 'success');
+                renderContract(); renderPills(); renderStage(); renderHeader();
+            }
+        }
+
+        // ============ DANE ZE SPARINGU (read-only) ============
+        async function loadSparing() {
+            const box = document.getElementById('spar-box');
+            if (!project.spar_session_id) { box.classList.add('hidden'); return; }
+            box.classList.remove('hidden');
+            document.getElementById('spar-content').innerHTML = '<div class="text-zinc-600 text-xs">Ładuję dane ze sparingu…</div>';
+            const sid = project.spar_session_id;
+            const [sumQ, itemsQ, sessQ] = await Promise.all([
+                supabaseClient.from('spar_knowhow_summary').select('handoff_pack, handoff_generated_at, summary_text, items_count').eq('session_id', sid).maybeSingle(),
+                supabaseClient.from('spar_knowhow_items').select('kind').eq('session_id', sid).range(0, 4999),
+                supabaseClient.from('spar_sessions').select('name, problem_summary, preview_brief, preview_images').eq('id', sid).maybeSingle(),
+            ]);
+            const itemsByKind = {};
+            (itemsQ.data || []).forEach(it => { itemsByKind[it.kind||'inne'] = (itemsByKind[it.kind||'inne']||0) + 1; });
+            sparData = { summary: sumQ.data || null, itemsByKind, session: sessQ.data || null, totalItems: (itemsQ.data||[]).length };
+            document.getElementById('spar-sub').textContent = 'sesja ' + sid.slice(0,8);
+            renderSparing();
+        }
+        function renderSparing() {
+            const { summary, itemsByKind, session, totalItems } = sparData;
+            let h = '';
+
+            // Handoff pack
+            if (summary && summary.handoff_pack) {
+                h += `<div class="bg-zinc-900/60 border border-[#0070f3]/25 rounded-lg p-5">
+                    <div class="flex items-center justify-between mb-2 flex-wrap gap-2">
+                        <div class="text-[11px] uppercase tracking-wider text-[#52a8ff]"><i class="ph ph-package mr-1"></i>Pakiet wiedzy — wszystko, co wiemy od klienta, złożone pod budowę</div>
+                        ${summary.handoff_generated_at ? `<span class="text-[10px] text-zinc-600">AI · ${fmtDate(summary.handoff_generated_at)}</span>` : ''}
+                    </div>
+                    <div class="md-body text-[12.5px] text-zinc-300 leading-relaxed">${mdRender(summary.handoff_pack)}</div>
+                </div>`;
+            } else {
+                h += `<div class="bg-[#f5a623]/[.06] border border-[#f5a623]/40 rounded-lg p-4 flex items-start gap-2.5">
+                    <i class="ph ph-warning text-[#f5b955] mt-0.5"></i>
+                    <div class="text-[12.5px] text-[#f5deb0]/90">Pakiet wiedzy nie jest jeszcze złożony — powstaje automatycznie, gdy klient domknie spowiednika, albo składamy go ręcznie z surowych notatek (krok „Pakiet wiedzy" w Etapie 1).</div>
+                </div>`;
+            }
+
+            // Baza wiedzy — licznik itemów po kind
+            const kinds = Object.keys(itemsByKind);
+            h += `<div>
+                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Baza wiedzy spowiednika — ${totalItems} itemów</div>
+                <div class="flex flex-wrap gap-2">${kinds.length ? kinds.map(k =>
+                    `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px] text-zinc-300">${escapeHtml(k)}<span class="border-l border-[#2a2a2a] pl-1.5 text-[#52a8ff] font-mono">${itemsByKind[k]}</span></span>`
+                ).join('') : '<span class="text-zinc-600 text-[11px]">brak itemów bazy wiedzy</span>'}</div>
+            </div>`;
+
+            // Problem summary (karta projektu)
+            const ps = session && session.problem_summary;
+            if (ps && typeof ps === 'object' && Object.keys(ps).length) {
+                const rows = Object.entries(ps).filter(([,v]) => v != null && String(v).trim() && typeof v !== 'object').map(([k,v]) =>
+                    `<div class="flex gap-2 text-[12px]"><span class="text-zinc-500 min-w-[110px] flex-shrink-0">${escapeHtml(k)}</span><span class="text-zinc-300 break-words">${escapeHtml(String(v))}</span></div>`).join('');
+                if (rows) h += `<div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Karta projektu (problem_summary)</div>
+                    <div class="bg-[#111] border border-[#262626] rounded-md p-4 space-y-1.5">${rows}</div>
+                </div>`;
+            }
+
+            // Makiety (preview_images)
+            const imgs = collectMockups(session);
+            if (imgs.length) {
+                h += `<div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Makiety ze sparingu — ${imgs.length}</div>
+                    <div class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">${imgs.map(im =>
+                        `<div class="relative group cursor-pointer" onclick="openLightbox('${escapeHtml(im.url)}')">
+                            <img src="${escapeHtml(im.url)}" loading="lazy" class="w-full h-24 object-cover rounded-md border border-[#2a2a2a] group-hover:border-[#0070f3]/60 transition-colors" onerror="this.parentElement.style.display='none'">
+                            <span class="absolute bottom-0 inset-x-0 bg-black/70 text-[8.5px] text-zinc-300 px-1 py-0.5 truncate rounded-b">${escapeHtml(im.view)}</span>
+                        </div>`).join('')}</div>
+                </div>`;
+            }
+
+            // Transkrypcja rozmowy (sparing + spowiednik) — doładowywana na żądanie
+            h += `<div id="spar-transcript-box">
+                <button onclick="loadTranscript()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] inline-flex items-center gap-1.5"><i class="ph ph-chat-dots"></i> Pokaż transkrypcję rozmowy</button>
+                <div id="spar-transcript" class="hidden mt-3 max-h-96 overflow-y-auto space-y-2 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4"></div>
+            </div>`;
+
+            document.getElementById('spar-content').innerHTML = h;
+        }
+        async function loadTranscript() {
+            const box = document.getElementById('spar-transcript');
+            box.classList.remove('hidden');
+            box.innerHTML = '<div class="text-zinc-600 text-xs">Ładuję…</div>';
+            const { data, error } = await supabaseClient.from('spar_messages')
+                .select('role, content, created_at')
+                .eq('session_id', project.spar_session_id)
+                .order('created_at', { ascending: true })
+                .range(0, 4999);
+            if (error) { box.innerHTML = '<div class="text-[#f26d78] text-xs">Błąd: ' + escapeHtml(error.message) + '</div>'; return; }
+            if (!data || !data.length) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak wiadomości.</div>'; return; }
+            box.innerHTML = data.map(m => {
+                const isUser = m.role === 'user';
+                return `<div class="text-[12px] leading-relaxed">
+                    <span class="font-semibold ${isUser ? 'text-[#f5b955]' : 'text-[#52a8ff]'}">${isUser ? 'Klient' : 'AI'}</span>
+                    <span class="text-zinc-600 text-[10px] ml-1">${relTime(m.created_at)}</span>
+                    <div class="text-zinc-300 whitespace-pre-wrap break-words">${escapeHtml(m.content)}</div>
+                </div>`;
+            }).join('');
+        }
+        function collectMockups(session) {
+            if (!session) return [];
+            const pi = session.preview_images;
+            const out = [];
+            if (Array.isArray(pi)) pi.forEach((u,i) => { if (typeof u === 'string') out.push({ url:u, view:'makieta '+(i+1) }); else if (u && u.url) out.push({ url:u.url, view:u.view||u.label||('makieta') }); });
+            else if (pi && typeof pi === 'object') Object.entries(pi).forEach(([v,u]) => { if (typeof u === 'string') out.push({ url:u, view:v }); });
+            return out;
+        }
+        function openLightbox(url) { document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.remove('hidden'); }
+        function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); }
+
+        // ============ AKCJE: kroki ============
+        async function cycleStep(key) {
+            const st = stepFor(key);
+            if (!st) { showToast('Brak instancji kroku — odśwież', 'error'); return; }
+            const next = STEP_CYCLE[st.status] || 'pending';
+            const upd = { status: next, completed_at: next==='done' ? new Date().toISOString() : null, completed_by: next==='done' ? 'admin' : null };
+            const { error } = await supabaseClient.from('wfa_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Błąd zapisu: '+error.message,'error'); return; }
+            Object.assign(st, upd);
+            const d = defFor(key);
+            if (next==='done') {
+                logActivity('step_done', `Ukończono: ${d?.label||key}`);
+                if (d?.milestone_label) { logActivity('milestone', `🏁 ${d.milestone_label}`); showToast('🏁 ' + d.milestone_label, 'success'); }
+            }
+            renderPills(); renderStage(); renderHeader();
+        }
+
+        // ============ WARSZTAT KROKU ============
+        // Konfiguracja „co konkretnie robimy w tym kroku": desc, fields (col=zapis do kolumny projektu,
+        // inaczej do wfa_steps.data.fields), check (checklista), prompt (klucz promptu dla Claude Code).
+        // UWAGA: teksty pozycji checklist = KLUCZ deduplikacji z zapisanym stanem (wfa_steps.data.checklist)
+        // — nie przeredagowywać po wdrożeniu; poprawka brzmienia tworzy duplikat u projektów, które odhaczały.
+        const WS = {
+            // ETAP 1 — Fundament
+            handoff:       { desc:'Pakiet wiedzy = wszystko, co wiemy od klienta (rozmowa, spowiednik, wymagania), złożone w JEDEN dokument „gotowe do budowy" — 12 sekcji: definicja v1, ekrany, dane, must-have, ryzyka. Jeśli nie istnieje — składamy go z surowych notatek. Ścieżka B (klient bez spowiednika): rozmowa 1:1 → notatki → pakiet ręcznie. Podgląd w „Dane ze sparingu".',
+                             check:['Handoff pack wygenerowany (spar_knowhow_summary.handoff_pack)','Braki uzupełnione z surowych spar_knowhow_items','Otwarte decyzje i ryzyka z handoffu przeniesione do „Uwag" (kind: decyzja)','Nisza / operator / problem główny potwierdzone','Pakiet kompletny — gotowy do MVP scope'] },
+            kickoff:       { desc:'Przekazanie klientowi DOSTĘPU do portalu postępu: jeden krótki mail „ruszamy" + link i hasło do portalu. BEZ umowy (ma własny krok „Umowa") i BEZ materiałów branżowych (zbieramy w Etapie 3 „Dane operatora"). Docelowo AUTOMATYCZNY w chwili powstania projektu (po spowiedniku) — teraz ręczny, do czasu weryfikacji. Anty-lęk „zapłaciłem i cisza": klient od razu widzi start w portalu.',
+                             check:['Hasło portalu ustawione (Ustawienia projektu)','Podgląd „oczami klienta" sprawdzony','Draft maila z dostępem przygotowany i przejrzany','Mail wysłany przez Tomka','Klient wszedł do portalu / potwierdził'], prompt:'kickoff' },
+            uwagi_tomka:   { desc:'Przegląd i DOMKNIĘCIE uwag przed definicją MVP (uwagi żyją przez cały projekt — ten krok to bramka: otwarte decyzje z handoffu rozstrzygnięte albo świadomie odłożone). Sekcja „Uwagi Tomka" = wejście do paczki (00-KONTEKST).',
+                             check:['Uwagi z rozmowy spisane','Otwarte decyzje z handoffu rozstrzygnięte lub odłożone świadomie','Decyzje architektoniczne zapisane','Blokady oznaczone (kind: blokada)'] },
+            mvp_scope:     { desc:'Najważniejszy krok workflow. AI generuje propozycję scope z handoffu (80% roboty), Tomek TNIE i decyduje. Obowiązkowo: funkcje rdzenia, NIE-funkcje, metryka aktywacji (aha-moment) + time-to-first-value < 10 min, granica „zmiany w cenie v1 vs rozwój" (lekcja Grzegorza). Wynik = plik 01-MVP-SCOPE.md.',
+                             fields:[{k:'scope',l:'MVP: co jest / czego nie ma',ta:true},{k:'kryteria',l:'Kryteria „gotowe" per funkcja',ta:true},{k:'aktywacja',l:'Metryka aktywacji (aha-moment) + TTFV'}],
+                             check:['3–5 funkcji rdzenia wypisanych','Lista „poza MVP" (świadome cięcia)','Metryka aktywacji + time-to-first-value < 10 min zdefiniowane','Granica „zmiany w cenie v1 vs osobny rozwój" spisana','Kryteria akceptacji per funkcja','Zapisane jako 01-MVP-SCOPE.md w paczce'], prompt:'mvp_scope' },
+            pricing:       { desc:'Sesja z researchem: prompt wypuszcza agentów (Opus 4.8) badających ceny w niszy i proponuje pricing na bazie WSZYSTKIEGO, co wiemy (pakiet wiedzy, raport rynkowy, economics). Cennik dopracowujesz W ROZMOWIE — po Twoim potwierdzeniu sesja zapisuje finalne plany w tym kroku. Etap 2 „Stripe: plany" tylko to implementuje.',
+                             fields:[{k:'plany',l:'FINALNE plany i ceny (mies./rok, trial)',ta:true},{k:'kotwica',l:'Kotwica konkurencji (z researchu)'}],
+                             check:['Research cen niszy wykonany (agenci Opus)','Propozycja przedstawiona i dopracowana w rozmowie','Finalne plany zapisane w polu kroku','Model trialu potwierdzony (długość + moment prośby o kartę)'], prompt:'pricing' },
+            nazwa:         { desc:'JEDNA sesja: 10 propozycji nazw z WOLNYMI domenami .pl → wybór w rozmowie → sesja sama zapisuje nazwę, slug i domenę do projektu. Nazwa = repo = Vercel = ref bazy = domena. Tobie zostaje tylko: kup domenę (OVH) i ustaw DNS na Vercel.',
+                             fields:[{k:'name',l:'Nazwa aplikacji',col:'project.name'},{k:'slug',l:'Slug (kebab-case)',col:'project.slug'},{k:'domain',l:'Domena',col:'project.domain'}],
+                             check:['10 propozycji z wolnymi .pl przedstawione (sesja)','Nazwa + slug + domena wybrane i zapisane w projekcie','Domena KUPIONA (Tomek; OVH — odnowienie ~73 zł/rok)','DNS wskazuje na Vercel, SSL aktywny'], prompt:'nazwa' },
+            // ETAP 2 — Infrastruktura
+            repo_vercel:   { desc:'Sesja S1 — „pipeline first": zanim powstanie jakakolwiek funkcja, hello-world ze startera MUSI żyć na preview. Repo z saas-starter przez `node forge.mjs <slug>` (ZAKAZ cp -r). Deploy = git push main. UWAGA: do startu Etapu 3 wystarczą repo+Vercel+Supabase — Resend i Stripe KYC idą RÓWNOLEGLE w tle.',
+                             fields:[{k:'repo_url',l:'Repo URL',col:'project.repo_url'},{k:'vercel_project',l:'Projekt Vercel',col:'project.vercel_project'},{k:'app_url',l:'URL z Vercel',col:'project.app_url'}],
+                             check:['Repo z saas-starter (forge.mjs, nie cp -r)','Projekt Vercel podpięty (plan komercyjny zweryfikowany — Hobby zakazuje użytku komercyjnego)','git push main = deploy działa (hello-world na preview)','URL aplikacji zapisany'] },
+            supabase_proj: { desc:'Osobny projekt Supabase (region EU). Ustala pole projektu: supabase_ref.',
+                             fields:[{k:'supabase_ref',l:'Supabase project ref',col:'project.supabase_ref'}],
+                             check:['Projekt Supabase (EU) utworzony','Ref zapisany','Legacy keys OFF; front tylko sb_publishable_*','service_role tylko w env edge fns','Plan płatny od startu produkcyjnego zweryfikowany (free pauzuje projekty)'] },
+            resend_dns:    { desc:'Resend + DNS e-mail (SPF/DKIM/DMARC). Supabase Auth SMTP = Resend SMTP (custom SMTP obowiązkowy — default 2 maile/h).',
+                             check:['Domena dodana w Resend','SPF/DKIM/DMARC zielone','Supabase Auth SMTP = smtp.resend.com','Confirm email = OFF','Tracking otwarć OFF (logika na delivered_at)'] },
+            stripe_kyc:    { desc:'Klient zakłada konto Stripe (Standard connected account) i przechodzi KYC. To jego konto — merchant of record. Owner: klient. Ustala pole projektu: stripe_account_id.',
+                             fields:[{k:'stripe_account_id',l:'Stripe account (acct_…)',col:'project.stripe_account_id'}],
+                             check:['Account Link wysłany klientowi','KYC ukończone (dane firmy, konto bankowe)','acct_… zapisany','BLIK capability włączona'] },
+            stripe_plany:  { desc:'Plany / ceny w Stripe klienta + % platformy (application fee). Ustala pole projektu: fee_percent → env aplikacji.',
+                             fields:[{k:'fee_percent',l:'% Tomka od przychodu (application fee)',col:'project.fee_percent'}],
+                             check:['Plany/ceny w Stripe klienta','application_fee_percent (subskrypcje) / _amount (jednorazowe)','fee_percent = wartość z projektu → env aplikacji','Prowizja Stripe po stronie klienta (zapis w umowie)'] },
+            env_secrets:   { desc:'Env + sekrety na Vercel i Supabase. Kamień milowy „Infrastruktura gotowa".',
+                             check:['Sekrety Stripe/Resend w env edge fns','service_role nigdy we froncie/repo','.env.example uzupełniony','Zmienne na Vercel + Supabase ustawione'] },
+            // ETAP 3 — Budowa MVP
+            paczka_cc:     { desc:'Wygeneruj paczkę apka-<slug>-brief/ (00-KONTEKST … 07-RUNBOOK + 08-PLAN-SESJI) w repo aplikacji. Wstrzyknij: handoff pack, ROZSTRZYGNIĘCIA otwartych decyzji (z Uwag), pricing, nisza/operator/fee. Metodyka: docs/stworze/METODYKA-BUDOWY.md.',
+                             fields:[{k:'paczka_path',l:'Ścieżka paczki (apka-<slug>-brief/)'}],
+                             check:['00-KONTEKST (handoff + rozstrzygnięcia decyzji + nisza/operator/fee)','01-MVP-SCOPE (z metryką aktywacji i granicą zmian)','02-SPEC-FUNKCJONALNY (ekrany, user stories, flow)','03-SCHEMAT-DB.sql (tabele + RLS)','04-STYLEGUIDE (tokeny z makiet)','05-STRIPE-CONFIG (plany z kroku pricing)','06-CLAUDE.md (Boundaries ✅/⚠️/🚫)','07-DEPLOY-RUNBOOK','08-PLAN-SESJI (sesje S1-S9 z kryteriami done)','BUILDLOG.md założony'], prompt:'paczka_cc' },
+            dane_operatora:{ desc:'Import danych domenowych operatora do produktu (np. cennik → szablon startowy, biblioteka pozycji, treści branżowe). Klient dostarcza, my digitalizujemy (agent czyta PDF/zdjęcia → strukturyzuje → seed SQL). Odpalać RÓWNOLEGLE z paczką — nie blokuje S1-S3.',
+                             fields:[{k:'zrodla',l:'Źródła danych (pliki/linki od klienta)',ta:true}],
+                             check:['Lista potrzebnych danych wysłana klientowi','Dane otrzymane','Zdigitalizowane i oczyszczone (agent)','Seed SQL / import gotowy do wgrania'], prompt:'dane_operatora' },
+            design:        { desc:'System designu w PĘTLI z Claude Design (dwukierunkowy DesignSync): sesja buduje bibliotekę komponentów w repo, wypycha ją do projektu claude.ai/design (oglądasz i iterujesz WIZUALNIE), a Twoje poprawki wracają do repo komponent po komponencie. Kanon = repo; panele i landing stylują się WYŁĄCZNIE tokenami/komponentami z systemu.',
+                             check:['Ekstrakt z makiet: dokładne tokeny (hexy, typografia, geometria) + ton niszy','Biblioteka w repo: tokens.css + preview komponentów z markerami @dsCard','2-3 PEŁNE ekrany wzorcowe złożone wyłącznie z komponentów (dowód spójności)','Pętla samodoskonalenia: render-check + krytyk (świeży kontekst) do zera zastrzeżeń','Push do Claude Design (DesignSync) — nieblokujący podgląd dla Tomka','04-STYLEGUIDE.md = spis tokenów/komponentów; zakaz stylowania ad hoc wpisany do CLAUDE.md apki'], prompt:'design' },
+            schemat_db:    { desc:'Sesja S2. Schemat jest ZAPROJEKTOWANY w paczce (03) — sesja go implementuje, nie wymyśla. Test kluczem anon NATYCHMIAST po migracji (błąd RLS w S2 = minuty; w audycie = przebudowa). Migracja PRZED pushem kodu.',
+                             check:['Tabele wg 03-SCHEMAT-DB.sql','RLS ENABLED na każdej tabeli','Polityki per auth.uid() (SELECT/INSERT/UPDATE/DELETE osobno)','Test kluczem anon wykonany OD RAZU — dowód w BUILDLOG','Triggery COUNT/MAX = SECURITY DEFINER','Migracja PRZED pushem kodu'], prompt:'schemat_db' },
+            auth_konta:    { desc:'Auth: e-mail + hasło (Confirm OFF), reset przez Resend SMTP, izolacja kont (user widzi tylko swoje).',
+                             check:['Rejestracja / logowanie e-mail+hasło','Confirm email OFF','Reset hasła przez Resend SMTP','Izolacja: user widzi tylko własne dane','Test kluczem anon — brak przecieku'], prompt:'auth_konta' },
+            funkcja_glowna:{ desc:'Rdzeń aplikacji — realizowany w N KRÓTKICH sesjach wg 08-PLAN-SESJI (1 moduł = 1 sesja; 2× dłuższa sesja = 4× więcej porażek). Scope creep → wfa_notes „na później", NIGDY do bieżącej sesji.',
+                             check:['Moduły rozpisane w 08-PLAN-SESJI (1 moduł = 1 sesja)','Każdy moduł działa E2E na preview (dowód w BUILDLOG)','Zgodna z MVP scope; poza-MVP odcięte','Walidacja wejścia w edge fn'], prompt:'funkcja_glowna' },
+            panel_usera:   { desc:'Panel użytkownika wg specu i stylu z makiet sparingu.',
+                             check:['Ekrany usera wg 02-SPEC','Dane tylko własne (RLS)','Stan pusty / onboarding','Mobile OK'], prompt:'panel_usera' },
+            panel_operatora:{ desc:'Panel operatora (klient = operator): użytkownicy, płatności, statystyki. Agregaty przez edge fn (service-role).',
+                             check:['Panel operatora: użytkownicy/płatności/statystyki','Agregaty przez edge fn (service-role), nie z frontu','Operator widzi tylko swoją instancję','Role / dostęp ograniczone'], prompt:'panel_operatora' },
+            platnosci_e2e: { desc:'Płatności Stripe Connect: direct charges na koncie klienta + application_fee, webhook z sygnaturą i idempotencją.',
+                             check:['stripe-onboard (Account Link, Standard)','stripe-checkout (direct charge, Stripe-Account)','application_fee liczone serwerowo (fee_percent)','stripe-webhook: constructEvent + idempotencja event.id','deploy --no-verify-jwt (sygnatura obowiązkowa)','BLIK działa E2E'], prompt:'platnosci_e2e' },
+            maile_trans:   { desc:'Sesja S8 — lifecycle BEHAWIORALNE (pole lifecycle_status, nie kalendarz; 3-4× CTR): welcome z JEDNYM pierwszym krokiem, nudge aktywacyjny 24-48h (okno 72h decyduje o retencji), dunning przy past_due (ratuje przychód = nasze 10%). Kamień „Aplikacja działa (wersja robocza)".',
+                             check:['Welcome z JEDNYM pierwszym krokiem (nie tour po funkcjach)','Nudge aktywacyjny 24-48h gdy brak aha-moment','Dunning przy past_due','Triggery behawioralne (lifecycle_status), nie kalendarzowe','Logika na delivered_at (tracking OFF); email_log bez dublowania'], prompt:'maile_trans' },
+            review_adwersarski:{ desc:'Bramka po budowie: ŚWIEŻA sesja Claude Code dostaje WYŁĄCZNIE git diff + kryteria z 01-MVP-SCOPE (celowo BEZ BUILDLOG-a — niezależność od rozumowania budowniczego). Zadanie: ZNALEŹĆ błędy, nie potwierdzić poprawność.',
+                             check:['Świeża sesja: tylko diff + kryteria (bez BUILDLOG)','Findings z file:line i scenariuszem błędu','Findings przeniesione do checklisty/Uwag','Poprawki wykonane i zweryfikowane'], prompt:'review_adwersarski' },
+            // ETAP 4 — Landing i jakość
+            landing:       { desc:'Landing + cennik wg makiet sparingu. NIE od zera: adaptuj 7-etapową procedurę landingową tn-crm (docs/landing/) do SaaS — sekcje hero/problem/jak działa/pricing/FAQ zamiast produktowych. Bramki verify z procedury obowiązują.',
+                             fields:[{k:'landing_url',l:'Landing URL',col:'project.landing_url'}],
+                             check:['Landing wg makiet / 04-STYLEGUIDE','Sekcje SaaS: hero / problem / jak działa / pricing / FAQ','CTA → checkout Stripe','Mobile 375px','SEO / OG'], prompt:'landing' },
+            testy_e2e:     { desc:'Playwright na preview (scaffold ze startera): sesja PISZE i URUCHAMIA testy, wkleja wyniki. To siatka regresyjna dla wszystkich późniejszych poprawek (demo, audyt).',
+                             check:['Rejestracja→logowanie→funkcja główna','Checkout→płatność→webhook→dostęp','Reset hasła','Panel operatora','Testy na koncie testowym Stripe — wyniki wklejone do BUILDLOG'], prompt:'testy_e2e' },
+            demo_klienta:  { desc:'Pętla klienta PRZED audytem: operator klika wersję roboczą na preview i zgłasza uwagi (lekcja Grzegorza: „muszę to zobaczyć, jak wygląda i funkcjonuje"). Uwagi → sekcja Uwagi (kind: uwaga). Granica „w cenie v1 vs rozwój" z Etapu 1 chroni przed spiralą życzeń. Kamień milowy.',
+                             check:['Link preview + instrukcja wysłane klientowi','Klient przetestował (potwierdzenie)','Uwagi zebrane w sekcji Uwagi','Podział uwag: w cenie v1 / rozwój (wg granicy z akceptu)'] },
+            poprawki_demo: { desc:'Poprawki z demo w ramach granicy v1 — jedna sesja wg metodyki (BUILDLOG, dowody). Rzeczy spoza granicy → Uwagi „na później" + komunikat do klienta.',
+                             check:['Uwagi „w cenie v1" wykonane','Uwagi „rozwój" zapisane na później + zakomunikowane klientowi','E2E przechodzi po poprawkach','Klient potwierdził poprawki'], prompt:'poprawki_demo' },
+            audyt:         { desc:'Audyt bezpieczeństwa — obowiązkowy gate przed startem (WORKFLOW-APLIKACJE-PLAN §7). Zacznij od `node scripts/audit-static.mjs` (automatyczna część: sekrety/XSS/USING(true)). Dla każdej pozycji: PASS/FAIL + dowód. RLS + płatności = osobisty przegląd Tomka. FAIL blokuje start.',
+                             check:['RLS ENABLED na każdej tabeli; zero authenticated/anon USING(true)','Polityki per auth.uid() (S/I/U/D osobno)','Operator widzi tylko swoją instancję; agregaty przez edge fn','Triggery COUNT/MAX = SECURITY DEFINER','Test kluczem ANON: nie przecieka cudze konto','service_role nigdy we froncie/repo; front tylko sb_publishable_*; legacy OFF','Sekrety Stripe/Resend tylko w env edge fns','stripe-webhook: constructEvent + idempotencja po event.id','deploy --no-verify-jwt ALE sygnatura obowiązkowa','Zero innerHTML z danymi usera; walidacja wejścia w edge fn','Literal </scr'+'ipt> splitowany; polskie znaki w regex escapowane','Rate limiting na publicznych edge fns (checkout/onboard/rejestracja/reset)','Kwoty/ceny liczone serwerowo, nigdy z frontu','Migracja PRZED pushem; Confirm email OFF; Resend DNS zielony','Plan rollback / kopia zapasowa'], prompt:'audyt' },
+            poprawki:      { desc:'Poprawki po audycie. Kamień milowy „Aplikacja przeszła audyt bezpieczeństwa".',
+                             check:['Wszystkie FAIL z audytu naprawione','Re-test po poprawkach','Brak regresji'] },
+            // ETAP 5 — Start
+            prawne:        { desc:'Regulamin + RODO + DPA z SZABLONÓW startera (saas-starter/template/legal/ — robione raz per fabryka, konsultacja prawna raz). Per apka tylko wypełnienie danych operatora. Administrator danych = operator.',
+                             fields:[{k:'prawne_links',l:'Linki do dokumentów prawnych',ta:true}],
+                             check:['Regulamin (z szablonu startera)','Polityka prywatności / RODO (z szablonu)','DPA (z szablonu)','Cookies / consent','Dane operatora jako administrator wpisane'] },
+            onboarding_op: { desc:'Wdrożenie operatora: obsługa użytkowników, płatności, statystyki. Format: nagranie (Loom) + checklist „pierwsze 7 dni operatora" w jego panelu — operator-nowicjusz ma KLIKAĆ, nie wymyślać. Owner: klient.',
+                             check:['Sesja z panelu operatora','Nagranie (Loom) przekazane','Checklist „pierwsze 7 dni operatora" w panelu','Obsługa użytkowników / płatności / statystyk przećwiczona'] },
+            start_live:    { desc:'SOFT LAUNCH: najpierw 5-10 userów z sieci operatora (beta = walidacja + testimoniale), publiczny start po ~tygodniu. Kamień milowy „Aplikacja wystartowała".',
+                             fields:[{k:'app_url',l:'URL aplikacji (produkcja)',col:'project.app_url'}],
+                             check:['Smoke test na produkcji','DNS / SSL zielone','Płatność produkcyjna testowa','Beta: 5-10 userów z sieci operatora','Testimoniale/opinie z bety zebrane','Publiczny start ogłoszony'] },
+            gtm_50:        { desc:'Playbook 4 kanałów W KOLEJNOŚCI (cold ads przy niskim ACV się nie domykają — CAC $3-4k; partnerstwa −50% CAC): sieć operatora → outreach z AI → partnerstwa → content. Płatne = TYLKO retargeting, po PMF.',
+                             fields:[{k:'gtm_plan',l:'Plan GTM / kanały',ta:true}],
+                             check:['0→10: sieć operatora + grupy branżowe (insider dzieli się narzędziem)','10→30: outreach z AI-personalizacją (RODO: uzasadniony interes, opt-out)','30→50: partnerstwa dystrybucyjne (hurtownie/izby/stowarzyszenia)','Tło: kilka MOCNYCH stron porównawczych (AI+człowiek, NIE masowy content)','Płatne tylko retargeting, po PMF','Pętla feedbacku od pierwszych klientów działa'], prompt:'gtm_50' },
+            stery:         { desc:'Przekazanie sterów operatorowi. Tomek przechodzi na rev-share (Connect → Application fees). Pamiętaj: po 12 mies. hosting przechodzi 90% klient / 10% Tomek. Kamień milowy.',
+                             check:['Operator prowadzi samodzielnie','Dostępy przekazane','Rytm przeglądów ustalony','Rev-share rozliczany (Connect Application fees)','Data „hosting 90/10 po 12 mies." zanotowana','Otwarte uwagi [v1.1] zebrane w backlog i omówione z operatorem'] },
+            monthly:       { desc:'3 comiesięczne przeglądy z operatorem po przekazaniu sterów (rytm, zanim nawyki operatora okrzepną): liczby, blokery, plan na miesiąc.',
+                             check:['Przegląd #1 (liczby / blokery / plan)','Przegląd #2','Przegląd #3','Decyzja: dalszy rytm (kwartalny / autopilot)'] },
+        };
+
+        function drawerStep() { return drawerCtx ? stepFor(drawerCtx.key) : null; }
+        function openStep(key) {
+            drawerCtx = { key };
+            renderDrawer();
+            document.getElementById('step-drawer-wrap').classList.remove('hidden');
+        }
+        function closeStep() { document.getElementById('step-drawer-wrap').classList.add('hidden'); drawerCtx = null; }
+
+        function mergedChecklist(ws, st) {
+            const stored = (st.data && Array.isArray(st.data.checklist)) ? st.data.checklist.slice() : [];
+            const tpl = (ws && ws.check) || [];
+            tpl.forEach(t => { if (!stored.some(x => x.t === t)) stored.push({ t, done: false }); });
+            stored.sort((a, b) => { const ia = tpl.indexOf(a.t), ib = tpl.indexOf(b.t); return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib); });
+            return stored;
+        }
+
+        function renderDrawer() {
+            const st = drawerStep(); const d = defFor(drawerCtx.key);
+            if (!st || !d) { closeStep(); return; }
+            const ws = WS[d.key] || {};
+            document.getElementById('sd-title').innerHTML = `<i class="ph ${escapeHtml(d.icon)} text-[#3291ff]"></i> ${escapeHtml(d.label)}`;
+            const mile = d.milestone_label ? ` <span class="mile-badge ml-1"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</span>` : '';
+            document.getElementById('sd-sub').innerHTML = `<span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span> <span class="ml-1 text-zinc-600">Etap ${d.stage} · ${escapeHtml(d.stage_label)}</span>${mile}`;
+
+            let h = '';
+            if (ws.desc) h += `<p class="text-zinc-400 text-[12.5px] leading-relaxed">${escapeHtml(ws.desc)}</p>`;
+
+            // Instrukcja dla klienta (owner=client) — trafi do portalu (F3)
+            if (d.owner === 'client' && d.instructions_md) {
+                h += `<div class="bg-[#f5a623]/[.06] border border-[#f5a623]/30 rounded-md p-4 text-[12.5px] text-[#f5deb0]/90 space-y-1.5">
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-[#f5a623]/90">Instrukcja dla klienta (trafi do portalu — F3)</div>
+                    <div class="md-body">${mdRender(d.instructions_md)}</div></div>`;
+            }
+
+            // Pola kroku (col = kolumna projektu, inaczej wfa_steps.data.fields)
+            const fields = ws.fields || [];
+            if (fields.length) {
+                h += '<div class="space-y-3">' + fields.map((f, i) => f.ta
+                    ? `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}${f.col?' <span class="text-zinc-700">· pole projektu</span>':''}</label><textarea rows="4" class="fld resize-y" onchange="sdSaveField(${i}, this.value)">${escapeHtml(fieldGet(f))}</textarea></div>`
+                    : `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}${f.col?' <span class="text-zinc-700">· pole projektu</span>':''}</label><input class="fld" value="${escapeHtml(fieldGet(f))}" onchange="sdSaveField(${i}, this.value)"></div>`
+                ).join('') + '</div>';
+            }
+
+            // Checklista — odhaczana AUTOMATYCZNIE przez sesję Claude Code (instrukcja w prompcie);
+            // ręcznie klika się tylko kroki robione bez sesji (np. zakup domeny, akcepty klienta).
+            const check = mergedChecklist(ws, st);
+            h += `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Do zrobienia w tym kroku</div><div class="space-y-1.5">`
+                + check.map((c, i) => `<label class="flex items-start gap-2.5 text-[12.5px] ${c.done ? 'text-zinc-500 line-through' : 'text-zinc-300'} cursor-pointer"><input type="checkbox" ${c.done ? 'checked' : ''} onchange="sdToggleCheck(${i})" class="mt-0.5 accent-[#0070f3] flex-shrink-0">${escapeHtml(c.t)}</label>`).join('')
+                + `</div><div class="text-[10px] text-zinc-600 mt-2">Sesja Claude Code odhacza checklistę i status sama na koniec pracy (instrukcja jest w prompcie). Ręcznie klikasz tylko to, co robisz bez sesji.</div>`
+                + `<div class="flex gap-2 mt-2.5"><input id="sd-newcheck" class="fld" style="padding:6px 10px;font-size:12px" placeholder="Dodaj punkt…" onkeydown="if(event.key==='Enter')sdAddCheck()"><button onclick="sdAddCheck()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] flex-shrink-0">Dodaj</button></div></div>`;
+
+            // Generator promptu dla Claude Code — na KAŻDYM kroku Tomka/auto
+            // (kroki bez dedykowanego promptu dostają generyczny, zbudowany z opisu + checklisty).
+            if (d.owner !== 'client') {
+                h += `<button onclick="sdCopyPrompt('${ws.prompt || d.key}')" class="w-full inline-flex items-center justify-center gap-2 bg-[#0070f3]/10 hover:bg-[#0070f3]/20 text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-4 py-2.5 text-xs font-medium transition-colors"><i class="ph ph-sparkle"></i> Kopiuj prompt sesji (Claude Code)</button>`;
+            }
+
+            // Notatka robocza
+            h += `<div><label class="text-xs text-zinc-500 block mb-1">Notatka / linki robocze</label><textarea id="sd-note" rows="3" class="fld resize-y">${escapeHtml((st.data && st.data.note) || '')}</textarea><button onclick="sdSaveNote()" class="mt-1.5 text-xs text-[#52a8ff] hover:text-[#78b6ff]">Zapisz notatkę</button></div>`;
+            document.getElementById('sd-body').innerHTML = h;
+
+            document.getElementById('sd-skip').textContent = st.status === 'skipped' ? 'Przywróć krok' : 'Pomiń krok';
+            document.getElementById('sd-statusbtns').innerHTML = ['pending', 'in_progress', 'blocked', 'done'].map(s =>
+                `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
+        }
+
+        function fieldGet(f) {
+            if (f.col) { const c = f.col.slice(f.col.indexOf('.') + 1); return project[c] == null ? '' : project[c]; }
+            const st = drawerStep();
+            return (st.data && st.data.fields && st.data.fields[f.k]) || '';
+        }
+        async function sdSaveField(i, v) {
+            const ws = WS[drawerCtx.key] || {}; const f = (ws.fields || [])[i]; if (!f) return;
+            v = String(v).trim();
+            if (f.col) {
+                const c = f.col.slice(f.col.indexOf('.') + 1);
+                let payload;
+                if (c === 'fee_percent') { const num = parseFloat(v); payload = { fee_percent: isNaN(num) ? 10 : num }; }
+                else payload = { [c]: v || null };
+                const { error } = await supabaseClient.from('wfa_projects').update(payload).eq('id', projectId);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                Object.assign(project, payload); renderHeader(); renderFields();
+            } else {
+                const st = drawerStep();
+                const data = Object.assign({}, st.data || {});
+                data.fields = Object.assign({}, data.fields || {}); data.fields[f.k] = v;
+                const { error } = await supabaseClient.from('wfa_steps').update({ data }).eq('id', st.id);
+                if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+                st.data = data;
+            }
+            showToast('Zapisano', 'success');
+        }
+        async function sdSaveChecklist(list) {
+            const st = drawerStep();
+            const data = Object.assign({}, st.data || {}, { checklist: list });
+            const { error } = await supabaseClient.from('wfa_steps').update({ data }).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return false; }
+            st.data = data; return true;
+        }
+        async function sdToggleCheck(i) {
+            const list = mergedChecklist(WS[drawerCtx.key] || {}, drawerStep());
+            list[i].done = !list[i].done;
+            if (await sdSaveChecklist(list)) renderDrawer();
+        }
+        async function sdAddCheck() {
+            const inp = document.getElementById('sd-newcheck'); const t = inp.value.trim(); if (!t) return;
+            const list = mergedChecklist(WS[drawerCtx.key] || {}, drawerStep());
+            list.push({ t, done: false });
+            if (await sdSaveChecklist(list)) renderDrawer();
+        }
+        async function sdSaveNote() {
+            const st = drawerStep();
+            const data = Object.assign({}, st.data || {}, { note: document.getElementById('sd-note').value });
+            const { error } = await supabaseClient.from('wfa_steps').update({ data }).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            st.data = data; renderStage(); showToast('Notatka zapisana', 'success');
+        }
+        async function sdSetStatus(next) {
+            const st = drawerStep();
+            const upd = { status: next, completed_at: next === 'done' ? new Date().toISOString() : null, completed_by: next === 'done' ? 'admin' : null };
+            const { error } = await supabaseClient.from('wfa_steps').update(upd).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            Object.assign(st, upd);
+            if (next === 'done') {
+                const d = defFor(drawerCtx.key);
+                logActivity('step_done', `Ukończono: ${d?.label || ''}`);
+                if (d?.milestone_label) { logActivity('milestone', `🏁 ${d.milestone_label}`); showToast('🏁 ' + d.milestone_label, 'success'); }
+            }
+            renderPills(); renderStage(); renderHeader(); renderDrawer();
+        }
+        async function sdToggleSkip() {
+            const st = drawerStep();
+            const next = st.status === 'skipped' ? 'pending' : 'skipped';
+            const { error } = await supabaseClient.from('wfa_steps').update({ status: next, completed_at: null, completed_by: null }).eq('id', st.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            st.status = next; renderPills(); renderStage(); renderHeader(); renderDrawer();
+        }
+
+        // Generator promptów dla Claude Code — kontekst projektu + prompt per krok
+        function sdCopyPrompt(kind) {
+            const base = `Kontekst: budowa aplikacji SaaS w module „TN App" (panel: crm.tomekniedzwiecki.pl/tn-app/projekt?id=${projectId}).
+Aplikacja: ${project.name || '—'} (slug: ${project.slug || '—'})
+Klient / operator: ${project.customer_name || '—'}
+Domena: ${project.domain || '—'} · Repo: ${project.repo_url || '—'} · Supabase ref: ${project.supabase_ref || '—'} · % od przychodu (Tomek): ${project.fee_percent != null ? project.fee_percent : 10}%
+Dane źródłowe (baza tn-crm, projekt yxmavwkwnfuphjqbelws, sesja sparingu: ${project.spar_session_id || '—'}): handoff pack = spar_knowhow_summary.handoff_pack, baza wiedzy = spar_knowhow_items, makiety = spar_sessions.preview_images (PNG w Storage attachments/spar/<sid>/), uwagi Tomka = wfa_notes (status=open) po project_id ${projectId}.
+Zasady: stack statyczny HTML + vanilla JS + Supabase Edge Functions + Vercel (BEZ frameworków SSR). RLS od 1 dnia (polityki per auth.uid()). Stripe direct charges z application_fee. Deploy = git push main. Migracja PRZED pushem kodu. Paczka wejściowa: apka-${project.slug || '<slug>'}-brief/ (00-KONTEKST … 07-RUNBOOK).
+
+Zadanie: `;
+            // Rytuał metodyki (METODYKA-BUDOWY.md §3) — doklejany do sesji BUDOWLANYCH.
+            // Review adwersarski celowo BEZ rytuału (nie może czytać BUILDLOG-a).
+            const RITUAL = `
+
+Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.md i swoją sekcję w 08-PLAN-SESJI.md, (2) wykonaj TYLKO cel tej sesji — scope creep zapisuj jako „na później", (3) commit → deploy preview → DOWODY (wynik testu / curl / screenshot wklejone, nie „zrobione"), (4) dopisz wpis do BUILDLOG.md (co zrobione / decyzje / otwarte / dowody), (5) decyzja biznesowa poza spec → zapisz „DO DECYZJI TOMKA" w BUILDLOG i zakończ sesję.`;
+            const BUILD_KINDS = ['design','schemat_db','auth_konta','funkcja_glowna','panel_usera','panel_operatora','platnosci_e2e','maile_trans','landing','testy_e2e','poprawki_demo','dane_operatora'];
+            const map = {
+                mvp_scope: 'Na bazie 00-KONTEKST i handoff packu wygeneruj PROPOZYCJĘ MVP do decyzji Tomka: 3–5 funkcji rdzenia (co JEST), świadome cięcia (czego NIE MA), metryka aktywacji (aha-moment) + time-to-first-value < 10 min, granica „jakie zmiany po zobaczeniu v1 są w cenie, a jakie są rozwojem" oraz kryteria „gotowe" per funkcja. Zapisz jako 01-MVP-SCOPE.md w paczce. Najszybszy go-to-market, zero przekombinowania. Tomek tnie i zatwierdza — oznacz miejsca wymagające jego decyzji.',
+                pricing: 'Przygotuj pricing tej aplikacji do MOJEJ decyzji, w trzech ruchach: (1) ZBIERZ kontekst z bazy (Supabase MCP): pakiet wiedzy (spar_knowhow_summary.handoff_pack), raport rynkowy i economics (spar_sessions.market_report / economics po sesji z kontekstu), 01-MVP-SCOPE; (2) WYPUŚĆ 2 agentów researchowych (Agent tool, model opus, równolegle): a) realne ceny konkurencji i substytutów tej niszy w Polsce — nazwy i ceny ZE ŹRÓDEŁ, b) wrażliwość cenowa tej grupy zawodowej + benchmarki SaaS o podobnym ACV; (3) zaproponuj 2 warianty pricingu (plan miesięczny + roczny, trial z kartą, ewentualna stawka beta dla sieci operatora) z uzasadnieniem liczbami. Potem DOPRACUJ cennik ze mną w rozmowie — pytaj, iteruj. PO MOIM POTWIERDZENIU zapisz finalny cennik w kroku: pole plany + kotwica (data.fields) oraz podsumowanie w notatce.',
+                kickoff: 'Przygotuj DRAFT maila przekazującego klientowi DOSTĘP do portalu postępu (Gmail create_draft; styl Tomka: krótko, ciepło, konkretnie — NIE wysyłaj). Treść: (1) ruszamy z budową — co się będzie działo w najbliższych tygodniach (2-3 zdania po ludzku, bez żargonu); (2) link do portalu postępu: https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=<unique_token projektu — pobierz z wfa_projects> + hasło, które przekaże Tomek (zostaw placeholder [HASŁO]). NIC o umowie ani materiałach — umowa ma własny krok „Umowa", a materiały branżowe zbieramy w Etapie 3 „Dane operatora". PRZED draftem sprawdź, czy client_password_hash jest ustawiony (jeśli nie — przypomnij mi w odpowiedzi, żebym ustawił hasło w Ustawieniach). Docelowo ten mail wysyła się automatycznie w chwili powstania projektu (po spowiedniku) — na razie ręcznie.',
+                nazwa: 'Zaproponuj 10 nazw dla tej aplikacji, KAŻDA z wolną domeną .pl. Kontekst weź z pakietu wiedzy i 01-MVP-SCOPE. Dostępność sprawdzaj przez RDAP: curl https://rdap.dns.pl/domain/<domena> (404 = wolna, 200 = zajęta; przy HTTP 429 fallback: WHOIS whois.dns.pl) — dobieraj kolejne kandydatury, aż będzie 10 WOLNYCH. Kryteria: krótko, brzmi jak marka po polsku, łatwe do zapisania ze słuchu, nie zawęża branży w ramach niszy. Pokaż tabelę z oceną i rekomendacją, potem pomóż mi wybrać w rozmowie. PO MOIM WYBORZE zapisz do projektu (Supabase MCP): UPDATE wfa_projects SET name=..., slug=..., domain=... WHERE id (id projektu masz w kontekście) — i zostaw krok „in_progress" z notatką „czeka: zakup domeny + DNS na Vercel (Tomek)".',
+                design: 'Zbuduj SYSTEM DESIGNU tej aplikacji w pętli z Claude Design przez narzędzie DesignSync (jeśli dostępny jest skill /design-sync — użyj go; inaczej wołaj DesignSync bezpośrednio). Plan:\n(1) EKSTRAKCJA ŹRÓDEŁ: pobierz makiety ze sparingu (spar_sessions.preview_images → PNG w Storage) i kierunek/tokeny z preview_brief.design; z PNG odczytaj DOKŁADNE wartości (hexy tła/powierzchni/akcentów, radiusy, charakter typografii — nie zgaduj, samploj piksele); z 02-SPEC-FUNKCJONALNY weź pełen inwentarz ekranów i komponentów; z 00-KONTEKST — ton niszy i kontekst użycia (np. praca w terenie/rękawice = większe cele dotykowe, wysoki kontrast w słońcu).\n(2) BIBLIOTEKA W REPO (katalog design-system/): tokens.css (custom properties: kolory z rolami, skala typografii, spacing, radiusy, cienie, motion) + osobne pliki preview HTML per komponent, KAŻDY z pierwszą linią <!-- @dsCard group="..." --> (grupy: Brand, Type, Colors, Components, Forms, Screens). Zakres: fundamenty; komponenty we WSZYSTKICH stanach (przyciski, inputy+walidacja, karty, tabele, modale, toasty, empty states, nawigacja); wzorce specyficzne TEJ apki (np. dokument/PDF oferty, listy pozycji); na dowód spójności 2-3 PEŁNE ekrany wzorcowe złożone w 100% z komponentów. Mobile-first. Zero AI-sztampy (żadnych generycznych gradientów i fioletu).\n(3) PĘTLA SAMODOSKONALENIA (autonomiczna — NIE czekaj na moją akceptację): renderuj każdą kartę (screenshot/render-check) i przepuść przez krytyka w świeżym kontekście (subagent: spójność tokenów między komponentami, kontrast/czytelność, kompletność stanów, mobile, „czy ekrany wzorcowe wyglądają jak jeden produkt"); każdą uwagę napraw i powtórz — iteruj, aż krytyk nie ma zastrzeżeń (max 4 rundy, potem zapisz otwarte uwagi w BUILDLOG).\n(4) PUSH DO CLAUDE DESIGN (DesignSync): list_projects → w razie braku create_project „<Nazwa apki> Design System" → finalize_plan → write_files. To NIEBLOKUJĄCY podgląd dla mnie — podaj link i JEDŹ DALEJ. Jeśli kiedyś coś tam zmienię, na hasło „zsynchronizuj design": list_files → diff → get_file TYLKO zmienionych → repo, komponent po komponencie.\n(5) INTEGRACJA: tokens.css podpięte w public/css/base.css; 04-STYLEGUIDE.md = spis tokenów, komponentów i zasad użycia; do CLAUDE.md apki dopisz w 🚫: „stylowanie ad hoc poza design-systemem zabronione — tylko tokeny i komponenty".',
+                dane_operatora: 'Zdigitalizuj dane domenowe operatora (pliki/linki w kroku „Dane operatora"): odczytaj źródła (PDF/zdjęcia/arkusze), ustrukturyzuj wg 03-SCHEMAT-DB.sql, oczyść (nazwy, duplikaty, jednostki), wygeneruj seed SQL gotowy do wgrania. Wypisz pozycje niepewne do potwierdzenia z klientem.',
+                paczka_cc: 'Złóż kompletną paczkę startową apka-<slug>-brief/ dla Claude Code (WORKFLOW-APLIKACJE-PLAN §6.1): 00-KONTEKST-BIZNESOWY (wyciąg z handoff packu + otwarte uwagi Tomka + nisza/operator/fee), 01-MVP-SCOPE, 02-SPEC-FUNKCJONALNY (ekrany, user stories, flow user + operator), 03-SCHEMAT-DB.sql (tabele + RLS), 04-STYLEGUIDE (tokeny z makiet sparingu), 05-STRIPE-CONFIG (plany, fee_percent, subskrypcja vs jednorazowe), 06-CLAUDE.md, 07-DEPLOY-RUNBOOK. Zasada: Claude IMPLEMENTUJE, nie wymyśla.',
+                schemat_db: 'Zaprojektuj i wdróż schemat DB wg 03-SCHEMAT-DB.sql: wszystkie tabele z RLS ENABLED, polityki per auth.uid() (SELECT/INSERT/UPDATE/DELETE osobno), triggery liczące (COUNT/MAX) jako SECURITY DEFINER. Zastosuj migracją PRZED pushem kodu. Zero polityk authenticated/anon USING(true).',
+                auth_konta: 'Zbuduj auth: rejestracja i logowanie e-mail+hasło (Confirm email OFF), reset hasła przez Resend SMTP. Zapewnij izolację kont — każdy user widzi wyłącznie swoje dane (RLS per auth.uid()). Przetestuj kluczem anon, czy nie przecieka cudze konto.',
+                funkcja_glowna: 'Zaimplementuj funkcję główną aplikacji wg 01-MVP-SCOPE i 02-SPEC. Trzymaj twardą granicę MVP (poza-MVP odcięte). Walidacja wejścia w edge function, logika/kwoty po stronie serwera.',
+                panel_usera: 'Zbuduj panel użytkownika wg 02-SPEC: ekrany, stany puste / onboarding, dostęp tylko do własnych danych (RLS). Styl wg 04-STYLEGUIDE (tokeny z makiet sparingu). Mobile-first.',
+                panel_operatora: 'Zbuduj panel operatora (klient = operator): zarządzanie użytkownikami, podgląd płatności, statystyki. Agregaty licz przez edge function (service-role), nigdy z frontu. Operator widzi tylko swoją instancję.',
+                platnosci_e2e: 'Wdróż płatności Stripe Connect: stripe-onboard (Account Link, Standard), stripe-checkout (direct charge z nagłówkiem Stripe-Account), application_fee liczone SERWEROWO wg fee_percent, stripe-webhook (constructEvent z STRIPE_WEBHOOK_SECRET + idempotencja po event.id w tabeli stripe_events). Deploy edge fns z --no-verify-jwt, ale sygnatura obowiązkowa. Włącz i przetestuj BLIK.',
+                maile_trans: 'Dodaj e-maile transakcyjne przez Resend API z edge functions (potwierdzenia, powiadomienia). Tracking otwarć OFF — logika oparta na delivered_at. Loguj wysyłki do email_log; zostaw hook point pod przyszłe dripy.',
+                landing: 'Zbuduj landing + cennik aplikacji wg makiet sparingu (04-STYLEGUIDE). Sekcje: hero, problem, jak działa, cennik / plany, CTA → checkout Stripe. Dopracuj mobile 375px oraz OG / SEO.',
+                testy_e2e: 'Napisz i URUCHOM testy E2E (Playwright, scaffold w tests/) na deploy preview: rejestracja→logowanie→funkcja główna; checkout→płatność→webhook→dostęp; reset hasła; panel operatora. Konto testowe Stripe. Wklej pełne wyniki do BUILDLOG.',
+                review_adwersarski: 'REVIEW ADWERSARSKI — świeża sesja, celowo ograniczony kontekst: przeczytaj WYŁĄCZNIE `git diff main...HEAD` oraz kryteria z apka-<slug>-brief/01-MVP-SCOPE.md. NIE czytaj BUILDLOG.md ani historii pracy (niezależność od rozumowania budowniczego). Twoim zadaniem jest ZNALEŹĆ błędy, nie potwierdzić poprawność: poprawność logiki, edge case\'y, bezpieczeństwo (RLS, sekrety, walidacja wejścia, XSS, kwoty liczone serwerowo), zgodność z kryteriami MVP. Każde znalezisko: file:line + jednozdaniowy opis + konkretny scenariusz błędu (wejście → złe wyjście). Na końcu lista findings posortowana wg wagi — bez naprawiania.',
+                poprawki_demo: 'Wykonaj poprawki z demo klienta oznaczone jako „w cenie v1" (lista w kroku „Demo dla klienta") ORAZ wszystkie otwarte uwagi z prefiksem [DEMO] (sekcja OTWARTE UWAGI niżej) — po wykonaniu zamykaj je wg zasad. Rzeczy spoza granicy v1 przetaguj na [v1.1]. Po poprawkach uruchom E2E i wklej wyniki.',
+                gtm_50: 'Przygotuj plan GTM 0→50 dla tej aplikacji wg playbooku (METODYKA-BUDOWY.md §7): (1) lista grup branżowych/społeczności niszy + 3 posty dla operatora (jego głosem, „patrzcie czego używam", nie reklama), (2) szablon cold-maila/LinkedIn z AI-personalizacją z sygnałów (RODO: uzasadniony interes, opt-out), (3) lista 10 potencjalnych partnerów dystrybucyjnych (hurtownie/izby/stowarzyszenia niszy) + szablon propozycji, (4) 3 tematy stron porównawczych. Wszystko po polsku, pod tę konkretną niszę.',
+                audyt: 'Wykonaj audyt bezpieczeństwa wg checklisty (WORKFLOW-APLIKACJE-PLAN §7): RLS / izolacja, sekrety, webhooki, XSS / input, nadużycia, deploy. Dla każdej pozycji: PASS/FAIL + dowód (wynik komendy/query). Sekcje RLS i płatności przygotuj do osobistego przeglądu Tomka (wypisz polityki i przepływy kwot wprost). FAIL = gate — nie startujemy, dopóki nie naprawione.',
+            };
+            // CYKL ŻYCIA UWAG: otwarte uwagi wstrzykiwane do KAŻDEJ sesji — sesja je stosuje,
+            // klasyfikuje ([DEMO]/[v1.1]) albo eskaluje. Uwagi nie "leżą": każda sesja je przetwarza.
+            let notesBlock = '';
+            const openNotes = notes.filter(n => n.status === 'open');
+            if (openNotes.length) {
+                const listed = openNotes.slice(0, 20).map(n => `- [${n.kind} | id:${n.id}] ${n.content}`).join('\n');
+                notesBlock = `\n\nOTWARTE UWAGI TOMKA (${openNotes.length}${openNotes.length > 20 ? ' — pokazuję pierwsze 20' : ''}) — przetwórz wg zasad (tabela wfa_notes, Supabase MCP):\n${listed}\nZASADY OBSŁUGI:\n(a) uwaga dotyczy TEGO kroku → zastosuj ją w pracy i ZAMKNIJ: UPDATE wfa_notes SET status='done', resolved_at=now(), content = content || ' ✅ [sesja: <jak zastosowano, pół zdania>]' WHERE id='<id>';\n(b) dotyczy przyszłego kroku → zostaw otwartą (nie ruszaj);\n(c) dotyczy zakresu JUŻ zbudowanego/zamkniętego → NIE wdrażaj po cichu: przetaguj — UPDATE wfa_notes SET content = '[DEMO] ' || content WHERE id='<id>' (drobiazg do poprawek po demo) ALBO prefiks '[v1.1] ' (rozwój po starcie) — i zostaw otwartą;\n(d) sprzeczna z 01-MVP-SCOPE lub wymaga decyzji → zostaw otwartą i dopisz pytanie „DO DECYZJI TOMKA" w notatce kroku.`;
+            }
+
+            // Zadanie: dedykowane z mapy albo GENERYCZNE z warsztatu kroku (opis + kryteria)
+            const dCur = drawerCtx ? defFor(drawerCtx.key) : null;
+            const wsCur = dCur ? (WS[dCur.key] || {}) : {};
+            const generic = dCur
+                ? `Poprowadź krok „${dCur.label}" (etap ${dCur.stage}: ${dCur.stage_label}) tego projektu.\n${wsCur.desc || ''}\nWykonaj to, co opisuje checklista kroku (sekcja AKTUALIZACJA PANELU niżej zawiera jej pozycje).`
+                : 'Pomóż mi z tym krokiem.';
+
+            // AUTO-ODHACZANIE: sesja sama aktualizuje checklistę, status i notatkę kroku na koniec pracy.
+            let panelUpd = '';
+            const stCur = drawerCtx ? stepFor(drawerCtx.key) : null;
+            if (stCur) {
+                const items = mergedChecklist(wsCur, stCur).map(c => c.t);
+                panelUpd = `\n\nAKTUALIZACJA PANELU — wykonaj na SAMYM KOŃCU sesji (Supabase MCP, projekt yxmavwkwnfuphjqbelws, tabela wfa_steps, wiersz id='${stCur.id}'):\n`
+                    + `1) Zapisz checklistę z faktycznym stanem (done=true TYLKO dla realnie wykonanych; zachowaj DOKŁADNIE poniższe teksty pozycji — są kluczem deduplikacji):\n`
+                    + `   UPDATE wfa_steps SET data = jsonb_set(data, '{checklist}', '<JSON>'::jsonb) WHERE id='${stCur.id}';\n`
+                    + `   gdzie <JSON> to tablica [{"t":"…","done":true|false}] dla pozycji: ${JSON.stringify(items)}\n`
+                    + `2) Status kroku: wszystkie kryteria spełnione → UPDATE wfa_steps SET status='done', completed_at=now(), completed_by='auto' WHERE id='${stCur.id}'; w przeciwnym razie ustaw status='in_progress'.\n`
+                    + `3) Dopisz 2-4 zdania podsumowania Z DOWODAMI do notatki kroku: UPDATE wfa_steps SET data = jsonb_set(data, '{note}', to_jsonb('<podsumowanie>'::text)) WHERE id='${stCur.id}';\n`
+                    + `4) Dodaj wpis do logu: INSERT INTO wfa_activities (project_id, actor, action, description) VALUES ('${projectId}', 'auto', 'session', '<co zrobiła sesja, 1 zdanie>');`;
+            }
+
+            // Pełny rytuał (BUILDLOG/plan sesji) tylko dla sesji w REPO aplikacji;
+            // kroki sprzed repo (Etap 1) i review dostają samą aktualizację panelu.
+            const txt = base + (map[kind] || generic) + (BUILD_KINDS.includes(kind) ? RITUAL : '') + notesBlock + panelUpd;
+            navigator.clipboard.writeText(txt)
+                .then(() => showToast('Prompt skopiowany — wklej w Claude Code', 'success'))
+                .catch(() => showToast('Nie udało się skopiować', 'error'));
+        }
+
+        // ============ AKCJE: projekt ============
+        async function saveStatus() {
+            const status = document.getElementById('p-status').value;
+            const { error } = await supabaseClient.from('wfa_projects').update({ status }).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            project.status = status; logActivity('status_changed', 'Status projektu: ' + (STATUS_LABELS[status]||status));
+            showToast('Status zapisany','success');
+        }
+        async function saveNotes() {
+            const notesVal = document.getElementById('p-notes').value;
+            const { error } = await supabaseClient.from('wfa_projects').update({ notes: notesVal }).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            project.notes = notesVal; showToast('Notatki zapisane','success');
+        }
+        function openSettings() {
+            document.getElementById('set-customer').value = project.customer_name || '';
+            document.getElementById('set-email').value = project.customer_email || '';
+            document.getElementById('set-phone').value = project.customer_phone || '';
+            document.getElementById('set-spar').value = project.spar_session_id || '';
+            document.getElementById('set-portal-status').textContent = project.client_password_hash ? 'WŁĄCZONY (hasło ustawione)' : 'wyłączony (brak hasła)';
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+        async function sha256Hex(s) {
+            const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+        async function setPortalPassword() {
+            const pw = document.getElementById('set-portal-pw').value.trim();
+            if (pw.length < 6) { showToast('Hasło min. 6 znaków', 'error'); return; }
+            const hash = await sha256Hex(pw);
+            const { error } = await supabaseClient.from('wfa_projects').update({ client_password_hash: hash }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            project.client_password_hash = hash;
+            document.getElementById('set-portal-pw').value = '';
+            document.getElementById('set-portal-status').textContent = 'WŁĄCZONY (hasło ustawione)';
+            logActivity('portal', 'Hasło portalu klienta ustawione');
+            showToast('Hasło portalu ustawione', 'success');
+        }
+        function copyPortalLink() {
+            if (!project.client_password_hash) { showToast('Najpierw ustaw hasło portalu', 'error'); return; }
+            const url = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token;
+            navigator.clipboard.writeText(url).then(() => showToast('Link portalu skopiowany', 'success'));
+        }
+        // Podgląd „oczami klienta" — otwiera portal w trybie read-only autoryzowanym JWT panelu
+        // (team_members). Tab otwieramy SYNCHRONICZNIE (gest usera), JWT doklejamy po async getSession.
+        // JWT idzie w #hashu (nie w query → nie trafia do logów). Działa BEZ ustawionego hasła portalu.
+        async function previewAsClient() {
+            if (!project || !project.unique_token) { showToast('Brak tokenu projektu', 'error'); return; }
+            const w = window.open('', '_blank');
+            if (!w) { showToast('Odblokuj wyskakujące okna, aby otworzyć podgląd', 'error'); return; }
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const jwt = session && session.access_token;
+                if (!jwt) { w.close(); showToast('Zaloguj się ponownie', 'error'); return; }
+                w.location = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token +
+                    '&podglad=admin#admintok=' + encodeURIComponent(jwt);
+            } catch (e) { try { w.close(); } catch (_) {} showToast('Nie udało się otworzyć podglądu', 'error'); }
+        }
+
+        // Mail o postępie: GPT 5.6 pisze treść (edge wfa-progress-mail), Tomek sprawdza i wysyła
+        // (otwarcie gotowego maila w Gmailu). NIC nie wychodzi automatycznie.
+        let pmailTo = '';
+        function _pm(id) { return document.getElementById(id); }
+        async function progressMail() {
+            _pm('pmail-modal').classList.remove('hidden');
+            _pm('pmail-loading').classList.remove('hidden');
+            _pm('pmail-body').classList.add('hidden');
+            _pm('pmail-err').classList.add('hidden');
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const jwt = session && session.access_token;
+                if (!jwt) throw new Error('Zaloguj się ponownie');
+                const res = await fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-progress-mail', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(d.error === 'openai_not_configured' ? 'Brak klucza OpenAI' : 'Nie udało się napisać maila');
+                pmailTo = d.to || project.customer_email || '';
+                _pm('pmail-subject').value = d.subject || '';
+                _pm('pmail-text').value = d.body || '';
+                _pm('pmail-loading').classList.add('hidden');
+                _pm('pmail-body').classList.remove('hidden');
+            } catch (e) {
+                _pm('pmail-loading').classList.add('hidden');
+                _pm('pmail-err').textContent = e.message || 'Błąd — spróbuj ponownie.';
+                _pm('pmail-err').classList.remove('hidden');
+            }
+        }
+        function closePmail() { _pm('pmail-modal').classList.add('hidden'); }
+        function copyPmail() {
+            navigator.clipboard.writeText(_pm('pmail-text').value).then(() => showToast('Treść skopiowana', 'success'));
+        }
+        function openPmailGmail() {
+            const su = encodeURIComponent(_pm('pmail-subject').value);
+            const body = encodeURIComponent(_pm('pmail-text').value);
+            const to = encodeURIComponent(pmailTo);
+            window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + su + '&body=' + body, '_blank');
+        }
+        function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
+        async function saveSettings() {
+            const payload = {
+                customer_name: document.getElementById('set-customer').value.trim() || null,
+                customer_email: document.getElementById('set-email').value.trim() || null,
+                customer_phone: document.getElementById('set-phone').value.trim() || null,
+                spar_session_id: document.getElementById('set-spar').value.trim() || null,
+            };
+            const { error } = await supabaseClient.from('wfa_projects').update(payload).eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            Object.assign(project, payload); closeSettings(); renderHeader(); loadSparing(); showToast('Zapisano','success');
+        }
+        async function deleteProject() {
+            if (!confirm(`Usunąć projekt „${projName()}"? Skasuje kroki, uwagi i historię.`)) return;
+            if (!confirm('Na pewno? Tej operacji nie da się cofnąć.')) return;
+            const { error } = await supabaseClient.from('wfa_projects').delete().eq('id', projectId);
+            if (error) { showToast('Błąd: '+error.message,'error'); return; }
+            location.href = '/tn-app/index';
+        }
+
+        (async () => {
+            if (!projectId) { location.href = '/tn-app/index'; return; }
+            const session = await checkAuth();
+            if (!session) return;
+            let saved = null; try { saved = localStorage.getItem('wfa_psec_' + projectId); } catch (_) {}
+            switchPsec(saved || 'projekt');
+            await loadAll();
+        })();
+    </script>
+</body>
+</html>

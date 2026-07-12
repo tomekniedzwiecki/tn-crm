@@ -279,7 +279,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY)
     const { data: session, error: sErr } = await supabase
       .from('bud_sessions')
-      .select('id, preview_brief, problem_summary, market_report, assessment, auth_user_id, name, email, raport_available_at')
+      .select('id, preview_brief, problem_summary, market_report, market_report_error, market_report_fail_count, assessment, auth_user_id, name, email, raport_available_at')
       .eq('id', sessionId)
       .maybeSingle()
     if (sErr) {
@@ -359,12 +359,20 @@ Deno.serve(async (req) => {
     }
     const meta = (existing && existing._meta) as Record<string, unknown> | null
     const genCount = (meta && typeof meta.gen === 'number') ? meta.gen : (existing ? 1 : 0)
-    if (genCount >= MAX_GENERATIONS) {
+    // Nieudane generacje TEŻ liczą się do limitu — inaczej po każdym padzie lock się zwalniał,
+    // raportu brak, a front retriggerował w nieskończoność („za ~2 min"). Po wyczerpaniu prób
+    // (genCount + failCount >= MAX) i braku raportu zwracamy TRWAŁY błąd (market_report_error
+    // został utrwalony przy ostatnim padzie); front czyta go z bud-project.get i przestaje pollować.
+    const failCount = typeof (session as Record<string, unknown>).market_report_fail_count === 'number'
+      ? (session as Record<string, unknown>).market_report_fail_count as number : 0
+    if (genCount + failCount >= MAX_GENERATIONS) {
       if (existing) {
         const { _meta: _drop2, ...raport } = existing
         return jsonResponse({ raport, cached: true }, 200, cors)
       }
-      return jsonResponse({ error: 'limit_generacji' }, 429, cors)
+      const prevErr = typeof (session as Record<string, unknown>).market_report_error === 'string'
+        ? (session as Record<string, unknown>).market_report_error as string : null
+      return jsonResponse({ error: 'blad_generowania', report_error: prevErr || 'generacja raportu nie powiodła się' }, 502, cors)
     }
 
     // Lock: research trwa >150s — reload/drugi tab nie może odpalić duplikatu.
@@ -462,6 +470,9 @@ Deno.serve(async (req) => {
       let saved = false
       let failReason = ''
       try {
+        // Start nowej generacji — skasuj ewentualny wcześniejszy ślad błędu (front przestaje
+        // pokazywać trwały błąd i czeka na wynik). Utrwalimy go z powrotem TYLKO gdy padnie ostatnia próba.
+        try { await supabase.from('bud_sessions').update({ market_report_error: null }).eq('id', sessionId) } catch (_) { /* */ }
         const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
@@ -519,7 +530,8 @@ Deno.serve(async (req) => {
         const toSave = { ...raport, _meta: { gen: genCount + 1, at: new Date().toISOString(), model: OPENAI_MODEL, searches: searchCalls } }
         const { error: updErr } = await supabase
           .from('bud_sessions')
-          .update({ market_report: toSave, updated_at: new Date().toISOString() })
+          // Sukces = wyczyść ślad awarii i wyzeruj licznik prób.
+          .update({ market_report: toSave, market_report_error: null, market_report_fail_count: 0, updated_at: new Date().toISOString() })
           .eq('id', sessionId)
         if (updErr) console.error('[bud-raport] save error:', updErr)
         else saved = true
@@ -547,6 +559,18 @@ Deno.serve(async (req) => {
           try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'raport' }) } catch (_) { /* */ }
           // T6: zwolnij też claim per-produkt — inaczej DRUGI user na tym produkcie czeka 420 s TTL.
           if (isSharedGen) { try { await supabase.from('bud_product_packages').update({ generating_at: null }).eq('product_key', productKey).is('report', null) } catch (_) { /* */ } }
+          // Policz nieudaną próbę do limitu. Dopiero na WYCZERPANIU prób utrwal błąd w
+          // market_report_error → front dostaje trwały stan błędu zamiast pętli retriggerów.
+          // Wcześniejsze pady zostawiają NULL (skasowany na starcie), więc front dalej czeka i retriggeruje.
+          const newFail = failCount + 1
+          const exhausted = (genCount + newFail) >= MAX_GENERATIONS
+          try {
+            await supabase.from('bud_sessions').update({
+              market_report_fail_count: newFail,
+              ...(exhausted ? { market_report_error: (failReason || 'nieznany błąd generacji').slice(0, 500) } : {}),
+              updated_at: new Date().toISOString(),
+            }).eq('id', sessionId)
+          } catch (_) { /* */ }
           // T10: Tomek wie o padzie przed userem (raport to brama całego lejka).
           await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'raport rynku (bud-raport)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
         }

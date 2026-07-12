@@ -539,6 +539,25 @@ Deno.serve(async (req) => {
       console.log('[send-email] Reply-to set to real mailbox:', emailPayload.reply_to)
     }
 
+    // List-Unsubscribe (opt-in flagą `unsubscribe:true`) — TYLKO dla maili lejka /sklep
+    // (bud-followups/bud-drip). CRM (transakcyjne, ofertowe) NIE przekazuje flagi → bez zmian.
+    // Zawsze mailto na realną skrzynkę (ceo@ = reply-to followupów). Wariant one-click (RFC 8058)
+    // wymaga działającego endpointu https POST — obecnie brak (jedyny „cancel" w bud-drip jest za
+    // x-admin-secret, nie publiczny). Gdy caller poda `unsubscribe_url`, dokładamy go + One-Click.
+    if (reqBody.unsubscribe === true) {
+      const unsubTargets: string[] = []
+      if (reqBody.unsubscribe_url) unsubTargets.push(`<${reqBody.unsubscribe_url}>`)
+      unsubTargets.push('<mailto:ceo@tomekniedzwiecki.pl?subject=unsubscribe>')
+      emailPayload.headers = {
+        ...(emailPayload.headers || {}),
+        'List-Unsubscribe': unsubTargets.join(', '),
+      }
+      if (reqBody.unsubscribe_url) {
+        emailPayload.headers['List-Unsubscribe-Post'] = 'List-Unsubscribe=One-Click'
+      }
+      console.log('[send-email] List-Unsubscribe header set:', emailPayload.headers['List-Unsubscribe'])
+    }
+
     console.log('[send-email] Sending to Resend API, to:', recipientEmail)
 
     const response = await fetch('https://api.resend.com/emails', {

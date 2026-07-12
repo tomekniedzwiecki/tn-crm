@@ -134,7 +134,7 @@ function bizplanEmailHtml(plan: any): string {
     ? `<p style="margin:10px 0 0;font-size:12.5px;color:#666;line-height:1.5;">${escHtml(plan.dlaczego_realne)}</p>` : ''
   return `<div style="margin:22px 0 6px;">` +
     `<div style="font-size:14px;color:#1a1a1a;margin:0 0 4px;font-weight:700;">Twój wstępny biznesplan</div>` +
-    `<div style="font-size:12.5px;color:#666;margin:0 0 10px;line-height:1.5;">Prognoza specjalisty osadzona w Twoim produkcie i rynku — ile realnie zostaje Tobie na czysto (po koszcie towaru, wysyłki, reklamy i po 10% Tomka od przychodu):</div>` +
+    `<div style="font-size:12.5px;color:#666;margin:0 0 10px;line-height:1.5;">Prognoza specjalisty osadzona w Twoim produkcie i rynku — ile realnie zostaje Tobie na czysto (po koszcie towaru, wysyłki, reklamy i po udziale wspólnika — Tomka):</div>` +
     `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;max-width:540px;border-collapse:collapse;background:#fafafa;border:1px solid #ececec;border-radius:12px;overflow:hidden;">${rows}</table>` +
     why +
     `</div>`
@@ -226,6 +226,7 @@ function revealView(s: any, key: string): string {
   const hash: Record<string, string> = {
     raport: '#rynek', makiety: '#makiety', reklamy: '#reklamy',
     strona: '#sklep', rezerwacja: '#wspolpraca',
+    reclose1: '#wspolpraca', reclose2: '#wspolpraca',
   }
   return panelLink(s.id, `reveal_${key}`, hash[key] || '')
 }
@@ -349,6 +350,9 @@ function staticReveal(s: any, key: string, viewUrl: string, reserveUrl: string |
     reklamy: { subject: `${n}: gotowe reklamy do startu`, body: `Cześć${im}!\n\nDo ${n} przygotowałem warianty reklam z gotowymi hookami — tak, żebyś od pierwszego dnia wiedział, czym przyciągniesz pierwszych klientów.\n\nMożesz [zobaczyć je tutaj](LINK_VIEW).` },
     strona: { subject: `${n} ma już działającą stronę`, body: `Cześć${im}!\n\nZbudowała się działająca strona sprzedażowa ${n} — to prawdziwa strona w przeglądarce, nie grafika.\n\n[Otwórz ją tutaj](LINK_VIEW), przewiń, możesz nawet pokazać komuś i zapytać, co myśli.` },
     rezerwacja: { subject: `${n}: zarezerwujesz budowę?`, body: `Cześć${im}!\n\nPrzeszliśmy przez ${recapArtifacts(s)} ${n} — widać na tym, jak to realnie wygląda.\n\nJeśli chcesz, żebym zbudował to na serio, [zarezerwuj miejsce](LINK_RESERVE). Rezerwacja jest zwrotna — to tylko zaklepanie terminu, nie zobowiązanie.` },
+    // RE-CLOSE po rezerwacji — CTA (LINK_VIEW/LINK_RESERVE) prowadzi do PANELU (#wspolpraca).
+    reclose1: { subject: `${n}: trzymam Ci miejsce w kolejce`, body: `Cześć${im}!\n\nTrzymam Ci miejsce w kolejce — ${n} czeka. 500 zł jest w pełni zwrotne; jeśli nie wejdziecie we współpracę, wraca w całości.\n\n[Wróć do swojego projektu](LINK_VIEW) i zaklep termin.` },
+    reclose2: { subject: `${n}: domykam kolejkę na ten tydzień`, body: `Cześć${im}!\n\nDomykam kolejkę na ten tydzień. Twój projekt zostaje zapisany — ale jeśli chcesz, żeby Tomek wziął go na warsztat teraz, to jest ten moment.\n\n[Otwórz projekt](LINK_VIEW).` },
   }
   const m = M[key] || M.raport
   return { subject: m.subject, html: mdToHtml(m.body, viewUrl, reserveUrl, artifactImagesHtml(s, key, viewUrl)) }
@@ -428,6 +432,7 @@ function staticSms(s: any, key: string): string {
   const co: Record<string, string> = {
     raport: 'raport Twojego rynku', makiety: 'makiety Twojego sklepu',
     reklamy: 'gotowe reklamy', strona: 'Twoja strona sprzedazowa', rezerwacja: 'rezerwacja budowy',
+    reclose1: 'Twoja karta rezerwacji', reclose2: 'Twoja karta rezerwacji',
   }
   const what = co[key] || 'nowy material'
   return `${imie ? 'Czesc ' + imie + '! ' : 'Czesc! '}W panelu czeka ${what} przygotowane pod Twoj sklep - zerknij, jest na co popatrzec. ~Tomek`
@@ -460,11 +465,18 @@ async function getRevealEmail(supabase: ReturnType<typeof createClient>, reveal:
   if (cached && typeof cached.subject === 'string' && typeof cached.html === 'string') return { subject: cached.subject, html: cached.html }
   const key = reveal.key
   const viewUrl = revealView(s, key)
-  const reserveUrl = s.email ? checkoutLink(s.lead_id || null, s.id || null, s.email || null) : null
+  // Rezerwacja + re-close: CTA rezerwacji przez PANEL (#wspolpraca), nie direct checkout/v2 —
+  // proof-grid + narracja zwrotności mają domykać (audyt 2026-07-10). Parametry sesji zachowane
+  // (panelLink → ?id=<sid>). Pozostałe odsłony: bez zmian (reserveUrl = checkout/v2).
+  const reserveViaPanel = key === 'rezerwacja' || key === 'reclose1' || key === 'reclose2'
+  const reserveUrl = reserveViaPanel
+    ? panelLink(s.id, `reveal_${key}`, '#wspolpraca')
+    : (s.email ? checkoutLink(s.lead_id || null, s.id || null, s.email || null) : null)
   let email: { subject: string; html: string }
   let model: string | null = null
   let smsText: string
-  const gen = await generateRevealEmail(supabase, s, key, viewUrl, reserveUrl)
+  // re-close = statyczne, on-message zamknięcie (bez GPT — gwarancja treści i CTA na panel).
+  const gen = (key === 'reclose1' || key === 'reclose2') ? null : await generateRevealEmail(supabase, s, key, viewUrl, reserveUrl)
   if (gen) {
     email = { subject: gen.subject, html: gen.html }; model = OPENAI_MODEL
     smsText = gen.sms || staticSms(s, key)
@@ -613,7 +625,7 @@ function sampleSession(): any {
   }
 }
 
-const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, ustalenia, chosen_style, market_report, mockups, session_ads, landing_html, business_plan, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, created_at, is_test'
+const SESSION_COLS = 'id, email, name, verdict, paid_at, full_paid_at, preview_brief, problem_summary, ustalenia, chosen_style, market_report, mockups, session_ads, landing_html, business_plan, lead_id, last_user_at, last_panel_at, panel_visits, seen_landing_at, sequence_cancelled_at, pipeline_override, created_at, is_test'
 
 // Najświeższy sygnał aktywności leada (ms): wejście do panelu albo aktywność w rozmowie.
 // Otwarcia maili celowo pominięte (wyłączone w Resend / niewiarygodne).
@@ -691,7 +703,8 @@ async function sendReveal(supabase: ReturnType<typeof createClient>, SUPABASE_UR
   try {
     const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
-      body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined }),
+      // unsubscribe:true → send-email dokłada nagłówek List-Unsubscribe (mail lejka, nie CRM).
+      body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined, unsubscribe: true }),
     })
     if (!res.ok) throw new Error(`send-email ${res.status}`)
     try { const j = await res.json(); const rid = j?.id || j?.resend_id || j?.data?.id; if (rid) await supabase.from('bud_emails').update({ resend_id: rid }).eq('session_id', s.id).eq('kind', emailKind) } catch { /* ignoruj */ }
@@ -825,7 +838,9 @@ Deno.serve(async (req) => {
       .select('id, created_at').eq('is_test', false).not('email', 'is', null).not('market_report', 'is', null).is('archived_at', null).is('paid_at', null).is('full_paid_at', null).is('sequence_cancelled_at', null).limit(200)
     for (const g of green || []) {
       const { count } = await supabase.from('bud_reveals').select('id', { count: 'exact', head: true }).eq('session_id', g.id)
-      if (!count) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
+      // Seeduj gdy brak wierszy LUB gdy plan się rozrósł (np. dodano re-close) — seedReveals jest
+      // idempotentny (upsert onConflict session_id,key, ignoreDuplicates), więc dosiewa tylko braki.
+      if (!count || count < REVEAL_PLAN.length) await seedReveals(supabase, g.id, Date.parse(g.created_at as string) || Date.now())
     }
 
     // Poza oknem 8–23: plan zaseedowany, nic nie WYSYŁAMY do rana — ale sweepy generatorów
@@ -847,7 +862,8 @@ Deno.serve(async (req) => {
       if (fired >= MAX_FIRES_PER_RUN) break
       if (lostNow.has(rv.session_id)) continue
       const { data: s } = await supabase.from('bud_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.is_test || !s.email || s.paid_at || s.full_paid_at || s.sequence_cancelled_at) continue
+      // pipeline_override='resigned' = lead zrezygnował → twardy stop (dotyczy zwł. re-close).
+      if (!s || s.is_test || !s.email || s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned') continue
       const step = REVEAL_PLAN.find((p) => p.key === rv.key)
       // ── `requires`: artefakt jeszcze nie istnieje → odsłona NIE idzie w tym przebiegu.
       //    Zostaw status pending (NIE oznaczaj sent), przejdź dalej. requires:null
@@ -880,7 +896,7 @@ Deno.serve(async (req) => {
     for (const rv of paused || []) {
       if (closedLost.has(rv.session_id)) continue
       const { data: s } = await supabase.from('bud_sessions').select(SESSION_COLS).eq('id', rv.session_id).maybeSingle()
-      if (!s || s.paid_at || s.full_paid_at || s.sequence_cancelled_at) continue
+      if (!s || s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned') continue
       const inactive = Date.now() - await lastActivityMs(supabase, s)
       if (inactive >= LOST_WINDOW_DAYS * 86400000) {
         await closeLost(supabase, s.id, nowIso); closedLost.add(s.id)
@@ -905,8 +921,8 @@ Deno.serve(async (req) => {
         if (smsDone) continue
         const { count: recentSms } = await supabase.from('bud_sms').select('id', { count: 'exact', head: true }).eq('session_id', em.session_id).gte('created_at', new Date(Date.now() - 2 * 86400000).toISOString())
         if (recentSms) continue
-        const { data: s } = await supabase.from('bud_sessions').select('id, name, email, phone, verdict, paid_at, full_paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out, sequence_cancelled_at').eq('id', em.session_id).maybeSingle()
-        if (!s || s.is_test || s.paid_at || s.full_paid_at || s.sequence_cancelled_at) continue
+        const { data: s } = await supabase.from('bud_sessions').select('id, name, email, phone, verdict, paid_at, full_paid_at, is_test, last_user_at, last_panel_at, sms_consent_at, sms_opt_out, sequence_cancelled_at, pipeline_override').eq('id', em.session_id).maybeSingle()
+        if (!s || s.is_test || s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned') continue
         if (!s.phone || !s.sms_consent_at || s.sms_opt_out) continue
         const inactive = Date.now() - await lastActivityMs(supabase, s)
         if (inactive < 86400000) continue

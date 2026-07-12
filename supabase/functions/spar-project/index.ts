@@ -168,6 +168,62 @@ Deno.serve(async (req) => {
       return jsonResponse({ orderId: order.id, amount: offer.price }, 200, cors)
     }
 
+    // ── action 'buy_reservation': pending order na rezerwację 500 zł ─────────
+    // (BLIK inline w sparingu — front bierze orderId i woła tpay-create-transaction;
+    //  fallback „inne metody" dalej idzie przez checkout/v2). Order MUSI wyglądać
+    //  jak z checkout/v2: description = offer.name (tpay-webhook stempluje paid_at
+    //  po 'rezerwacj'+'aplikac'), spar_session_id + lead_id + customer_email =
+    //  ścieżki dopasowania sesji w webhooku. Zgoda art. 15 u.p.k. OBOWIĄZKOWA
+    //  (checkout ma checkbox — tu front przysyła consent:true po zaznaczeniu).
+    if (action === 'buy_reservation') {
+      const RESV_OFFER_ID = 'a1656695-db0d-4ae7-b107-230832042076'
+      if (!sessionId) return jsonResponse({ error: 'brak_sesji' }, 400, cors)
+      const consent = (body as Record<string, unknown>).consent === true
+      if (!consent) return jsonResponse({ error: 'brak_zgody' }, 400, cors)
+      const { data: sess, error: sessErr } = await supabase
+        .from('spar_sessions')
+        .select('id, email, lead_id, auth_user_id, paid_at')
+        .eq('id', sessionId)
+        .maybeSingle()
+      if (sessErr || !sess) return jsonResponse({ error: 'brak_sesji' }, 404, cors)
+      // Owner-gate: sesja przypięta do konta wydaje order tylko właścicielowi.
+      const ownerId = (sess.auth_user_id as string | null) || null
+      if (ownerId && (!authUser || authUser.id !== ownerId)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
+      if (sess.paid_at) return jsonResponse({ alreadyPaid: true }, 200, cors)
+      const email = ((sess.email as string | null) || authUser?.email || (body.email || '')).toString().trim()
+      if (!email) return jsonResponse({ error: 'brak_emaila' }, 400, cors)
+      const { data: offer, error: offErr } = await supabase
+        .from('offers').select('id, name, price').eq('id', RESV_OFFER_ID).maybeSingle()
+      if (offErr || !offer) {
+        console.error('[spar-project] buy_reservation offer error:', offErr)
+        return jsonResponse({ error: 'brak_oferty' }, 500, cors)
+      }
+      const { data: order, error: ordErr } = await supabase
+        .from('orders')
+        .insert({
+          customer_email: email,
+          description: offer.name, // parytet z checkout/v2 — webhook matchuje po opisie
+          offer_id: offer.id,
+          amount: offer.price,
+          status: 'pending',
+          payment_source: 'tpay',
+          notes: `Sparing inline BLIK: ${offer.name} | Metoda: blik | Zgoda na wykonanie uslugi przed uplywem 14 dni: TAK`,
+          consent_digital_service: true,
+          consented_at: new Date().toISOString(),
+          spar_session_id: sessionId,
+          ...(sess.lead_id ? { lead_id: sess.lead_id } : {}),
+        })
+        .select('id')
+        .single()
+      if (ordErr || !order) {
+        console.error('[spar-project] buy_reservation insert error:', ordErr)
+        return jsonResponse({ error: 'blad_zamowienia' }, 500, cors)
+      }
+      return jsonResponse({ orderId: order.id, amount: offer.price }, 200, cors)
+    }
+
     // ── action 'list': rozmowy zalogowanego konta (cross-device) ─────────────
     if (action === 'list') {
       if (!authUser) return jsonResponse({ error: 'wymagane_logowanie' }, 401, cors)
@@ -433,8 +489,10 @@ Deno.serve(async (req) => {
       const isNewVisit = !lastPanelMs || (nowMs - lastPanelMs) > VISIT_DEBOUNCE_MS
       const visitPatch: Record<string, unknown> = { last_panel_at: new Date(nowMs).toISOString() }
       if (isNewVisit) visitPatch.panel_visits = ((session.panel_visits as number) || 0) + 1
-      supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
-        .then(() => {}, (e: unknown) => console.error('[spar-project] panel visit stamp error:', e))
+      // AWAIT (nie fire-and-forget): last_panel_at/panel_visits napędzają bramkę
+      // 'visits2' landingu w spar-drip — niezastempowany dotyk gubił odblokowanie.
+      { const { error: vErr } = await supabase.from('spar_sessions').update(visitPatch).eq('id', sessionId)
+        if (vErr) console.error('[spar-project] panel visit stamp error:', vErr) }
       if (isGreen && !isPaid && !session.full_paid_at) {
         // Eager-seed planu (idempotentne) — żeby bramkowanie działało od razu po
         // werdykcie, nie dopiero po przebiegu crona dripa. Kadencja w GODZINACH (h)

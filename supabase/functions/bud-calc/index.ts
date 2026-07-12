@@ -26,6 +26,24 @@ const OPENAI_MODEL = Deno.env.get('BUD_CALC_MODEL') || 'gpt-5.1'
 const PRICES: Record<string, { i: number; c: number; o: number }> = { 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 } }
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response { return new Response(JSON.stringify(body), { status, headers: { ...cors, 'Content-Type': 'application/json' } }) }
 
+// Alert #sparing przy definitywnej porażce generacji (wzorzec 1:1 z bud-raport).
+// Wołany RAZ per pad (po wyczerpaniu wewn. retry), nie per próba.
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) { console.error('[bud-calc] slack-notify: brak SUPABASE_URL/KEY'); return }
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[bud-calc] slack-notify ${type} HTTP`, res.status, await res.text())
+  } catch (err) {
+    console.error(`[bud-calc] slack-notify ${type} exception:`, err)
+  }
+}
+
 let MODEL_BLOCK = ''
 const SYSTEM_PROMPT = `Jesteś analitykiem unit-economics polskiego e-commerce z FIZYCZNYM produktem (model: dropshipping / własny sklep + płatne reklamy Meta/TikTok/Google, często płatność przy odbiorze). Dostajesz produkt, grupę odbiorców i wyciąg z researchu rynku. Oszacuj REALISTYCZNE, lekko optymistyczne wejścia do kalkulatora potencjału dla sklepu, który zespół Tomka buduje i ROZKRĘCA do pierwszych 1000+ zamówień, a potem przekazuje klientowi.
 
@@ -36,7 +54,7 @@ Zasady (trzymaj się realiów researchu, nie z sufitu):
 - zam (zamówień/miesiąc): realistyczny poziom PO rozkręceniu sprzedaży przez Tomka — optymistyczny, ale osiągalny dla pojedynczego viralowego produktu (zwykle 250–800). TO jest miejsce na optymizm, nie marża.
 - Lepiej wiarygodnie niż efektownie. Liczby mają wytrzymać kontakt z rozsądnym, sceptycznym klientem.
 
-Zwróć WYŁĄCZNIE JSON: {"aov": <liczba całkowita zł>, "marza": <liczba całkowita %>, "cac": <liczba całkowita zł>, "zam": <liczba całkowita/mies>, "nota": "<1 krótkie zdanie po polsku: dlaczego te liczby — odwołaj się do produktu/kategorii/ceny rynkowej>"}.`
+Zwróć WYŁĄCZNIE JSON: {"aov": <liczba całkowita zł>, "marza": <liczba całkowita %>, "cac": <liczba całkowita zł>, "zam": <liczba całkowita/mies>, "nota": "<1 krótkie zdanie po polsku: dlaczego te liczby — odwołaj się do produktu/kategorii/ceny rynkowej. PROSTYM językiem, dla osoby BEZ doświadczenia w biznesie: ZERO skrótów i żargonu (nie ROAS/CAC/AOV/COGS/marża jednostkowa); pisz zwykłymi słowami>"}.`
 
 // Kompaktowy odczyt rynku z raportu /sklep (sekcje[] z markdownem) — daje modelowi realne ceny.
 function raportDigest(raport: Record<string, unknown> | null): string {
@@ -87,19 +105,19 @@ function sanitizeSeed(o: any): { aov: number; marza: number; cac: number; zam: n
   return { aov, marza, cac: cac2, zam, nota }
 }
 
-async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null }> {
+async function callOnce(apiKey: string, user: string, maxTokens: number): Promise<{ obj: Record<string, unknown> | null; usage: { i: number; c: number; o: number } | null; err?: string }> {
   const res = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
     body: JSON.stringify({ model: OPENAI_MODEL, messages: [{ role: 'system', content: (MODEL_BLOCK ? MODEL_BLOCK + '\n\n' : '') + SYSTEM_PROMPT }, { role: 'user', content: user }], response_format: { type: 'json_object' }, max_completion_tokens: maxTokens, reasoning_effort: 'low' }),
   })
-  if (!res.ok) { console.error('[bud-calc] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null } }
+  if (!res.ok) { console.error('[bud-calc] openai error:', res.status, (await res.text().catch(() => '')).slice(0, 400)); return { obj: null, usage: null, err: `openai HTTP ${res.status}` } }
   const data = await res.json()
   const u = data?.usage || {}
   const usage = { i: u.prompt_tokens || 0, c: u.prompt_tokens_details?.cached_tokens || 0, o: u.completion_tokens || 0 }
   const content = data?.choices?.[0]?.message?.content
   try { return { obj: JSON.parse(content), usage } }
-  catch { console.error('[bud-calc] zły JSON:', String(content).slice(0, 200)); return { obj: null, usage } }
+  catch { console.error('[bud-calc] zły JSON:', String(content).slice(0, 200)); return { obj: null, usage, err: `niepoprawny JSON (finish: ${data?.choices?.[0]?.finish_reason || '?'})` } }
 }
 
 Deno.serve(async (req) => {
@@ -142,14 +160,17 @@ Deno.serve(async (req) => {
       try { const p = PRICES[OPENAI_MODEL] || PRICES['gpt-5.1']; await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'calc', model: OPENAI_MODEL, input_tokens: usage.i, cached_tokens: usage.c, output_tokens: usage.o, cost_usd: (Math.max(0, usage.i - usage.c) * p.i + usage.c * p.c + usage.o * p.o) / 1_000_000 }) } catch (uErr) { console.error('[bud-calc] usage insert error:', uErr) }
     }
     let seed: { aov: number; marza: number; cac: number; zam: number; nota: string } | null = null
+    let failReason = ''
     for (let attempt = 0; attempt < 2 && !seed; attempt++) {
-      const { obj, usage } = await callOnce(OPENAI_API_KEY, user, 1200 + attempt * 800)
+      const { obj, usage, err } = await callOnce(OPENAI_API_KEY, user, 1200 + attempt * 800)
       await logUsage(usage)
       seed = sanitizeSeed(obj)
-      if (!seed && attempt === 0) console.warn('[bud-calc] próba 1 nieudana — ponawiam')
+      if (!seed) { failReason = err || 'pusty/niepoprawny seed (sanity fail)'; if (attempt === 0) console.warn('[bud-calc] próba 1 nieudana — ponawiam') }
     }
     if (!seed) {
       await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'calc' })
+      // Alert #sparing — raz per pad (po obu próbach), Tomek wie o cichym 502.
+      await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'kalkulator opłacalności (bud-calc)', error: failReason || 'nieznany błąd' })
       return jsonResponse({ error: 'blad_generowania' }, 502, cors)
     }
     const toSave = { ...seed, _meta: { gen: genCount + 1, at: new Date().toISOString(), model: OPENAI_MODEL } }

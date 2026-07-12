@@ -22,7 +22,7 @@
 //   SPAR_RAPORT_MODEL  — opcjonalny override (default: SPAR_OPENAI_MODEL -> gpt-5.5)
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { verifyAuthUser, ownerDenied } from "../_shared/spar-owner.ts";
+import { verifyAuthUser, ownerDenied, isTrustedInternalCall } from "../_shared/spar-owner.ts";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 
 const ALLOWED_ORIGINS = [
@@ -46,7 +46,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 3
-const OPENAI_MODEL = Deno.env.get('SPAR_RAPORT_MODEL') || Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.5'
+const OPENAI_MODEL = Deno.env.get('SPAR_RAPORT_MODEL') || Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 const MAX_OUTPUT_TOKENS = 10000
 // $10 / 1000 wywołań web_search (doliczane do kosztu tokenów)
 const WEB_SEARCH_CALL_USD = 0.01
@@ -194,9 +194,12 @@ Deno.serve(async (req) => {
 
     // Bramka właściciela: sesja przypięta do konta wymaga JWT tego konta
     // (link ?id= przestaje działać jak hasło — lustrzane odbicie spar-chat).
-    const authUser = await verifyAuthUser(req, supabase)
-    if (ownerDenied(session.auth_user_id as string | null, authUser)) {
-      return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+    // Wyjątek: zaufany wywołujący wewnętrzny (spar-drip kluczem serwisowym).
+    if (!isTrustedInternalCall(req)) {
+      const authUser = await verifyAuthUser(req, supabase)
+      if (ownerDenied(session.auth_user_id as string | null, authUser)) {
+        return jsonResponse({ error: 'wymagane_logowanie' }, 403, cors)
+      }
     }
 
     const karta = session.problem_summary as Record<string, unknown> | null
@@ -239,6 +242,7 @@ Deno.serve(async (req) => {
         tools: [{ type: 'web_search' }],
         input: buildRaportPrompt(brief, karta, (session.assessment as Record<string, unknown> | null) ?? null),
         max_output_tokens: MAX_OUTPUT_TOKENS,
+        reasoning: { effort: 'low' },
       }),
     })
     if (!res.ok) {
@@ -270,7 +274,7 @@ Deno.serve(async (req) => {
       const cached = u.input_tokens_details?.cached_tokens || 0
       const out = u.output_tokens || 0
       const prices: Record<string, { i: number; c: number; o: number }> = {
-        'gpt-5.5': { i: 5, c: 0.5, o: 30 },
+        'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 },
         'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
       }
       let p = prices[OPENAI_MODEL]

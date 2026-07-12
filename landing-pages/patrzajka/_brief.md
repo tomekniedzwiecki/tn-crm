@@ -166,3 +166,17 @@ motion_level: subtle
 | Border-radius globalny | 12px |
 | Shadow styl | Soft sage shadow: `0 6px 20px rgba(46,90,61,0.10)` |
 | Divider między sekcjami | Cienka linia Mech Polny + numeracja Caveat Nº 0X |
+
+---
+
+## Photo System (generacja obrazów AI — 2026-07-12, Gemini 3 Pro Image)
+
+**Produkt (z referencji AliExpress):** kieszonkowy cyfrowy mikroskop dla dzieci, jaskrawo-żółty korpus; kwadratowy kolorowy ekran IPS na górze w ząbkowanej „koronkowej" ramce; rząd małych okrągłych przycisków na szyjce; pionowo ryflowany walcowy uchwyt; przezroczysta okrągła podstawa z obiektywem (8 LED) u dołu; w zestawie biały kabel USB-C i żółto-biała smycz.
+
+**Lighting:** miękkie naturalne światło poranka / złotej godziny, plenery leśne i łąkowe.
+**Paleta w scenach:** leśna zieleń #2E5A3D, terrakota #C66B47, musztard #E8B14F, piasek #F5EFE3 — mech, kora, paprocie, trawa. Żółć produktu współgra z musztardem.
+**Kadrowanie:** perspektywa dziecka, low-angle, produkt w małej dłoni, płytka głębia ostrości.
+**Post:** 35mm Kodak Portra 400, subtelny grain, ciepłe lekko wypłowiałe tony, candid documentary.
+**Negatywy:** żaden tekst/watermark; brak neonu; brak stock-pozowania; produkt ZAWSZE wg referencji (żółty, ryflowany uchwyt, przezroczysta podstawa).
+
+**Wyjątek:** obraz „Problem" (dziecko przy smartfonie) generowany BEZ referencji produktu — to scena „starego sposobu", mikroskop nie może się tam pojawić.

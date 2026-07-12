@@ -634,6 +634,18 @@
                             </div>
                         </details>
 
+                        <!-- Transkrypcja rozmowy /sklep (bud_messages) -->
+                        <details id="transcript-section" class="group hidden">
+                            <summary class="bg-gradient-to-br from-violet-950/30 to-zinc-900/40 rounded-lg border border-violet-500/20 p-4 cursor-pointer list-none flex items-center justify-between hover:bg-violet-950/40 transition-colors">
+                                <span class="text-sm text-white flex items-center gap-2">
+                                    <i class="ph ph-chat-circle-text text-violet-400"></i>
+                                    Transkrypcja rozmowy <span class="text-zinc-500">(<span id="transcript-count">0</span>)</span>
+                                </span>
+                                <i class="ph ph-caret-down text-violet-500 group-open:rotate-180 transition-transform"></i>
+                            </summary>
+                            <div id="transcript-body" class="bg-violet-950/10 rounded-b-lg border border-t-0 border-violet-500/20 p-4 -mt-1 max-h-[480px] overflow-y-auto"></div>
+                        </details>
+
                         <!-- Contact Info -->
                         <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 sm:p-5">
                             <h3 class="text-sm font-medium text-white mb-4 flex items-center gap-2">
@@ -2530,6 +2542,52 @@
 
             // Survey responses
             renderSurvey();
+            // Transkrypcja rozmowy /sklep (async — bud_messages po lead_id)
+            renderTranscript();
+        }
+
+        // Podgląd rozmowy /sklep w karcie leada (decyzja Tomka 2026-07-09: budżet i przebieg
+        // rozmowy były tylko w panelu admina). Czyta bud_sessions→bud_messages po lead_id
+        // (RLS: team_members ma SELECT). Markery techniczne (<opcje>/<ustalenia>/…) usuwane.
+        function stripTrMarkers(s) {
+            return String(s || '')
+                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja)\b[^>]*>[\s\S]*?<\/\1>/gi, '')
+                .replace(/<(opcje|opcje_multi|sekcje|karuzela|ustalenia|zielone|makieta|suwak|ranking|styl_wybor|kierunki|propozycje|propozycje_zadaj|propbrak|kamien|blysk|wskaz|wybor|marka_nazwa|haslo|dopytanie|werdykt|ocena|projekt|bierny|rezygnacja)\b[^>]*\/?>/gi, '')
+                .replace(/\n{3,}/g, '\n\n').trim();
+        }
+        function escTr(s) { const d = document.createElement('div'); d.textContent = String(s || ''); return d.innerHTML; }
+        async function renderTranscript() {
+            const section = document.getElementById('transcript-section');
+            if (!section || !lead || !lead.id) return;
+            try {
+                const { data: sess } = await supabaseClient
+                    .from('bud_sessions').select('id, created_at')
+                    .eq('lead_id', lead.id).order('created_at', { ascending: false }).limit(1);
+                const sid = sess && sess[0] && sess[0].id;
+                if (!sid) { section.classList.add('hidden'); return; }
+                const { data: msgs } = await supabaseClient
+                    .from('bud_messages').select('role, content, created_at')
+                    .eq('session_id', sid).order('created_at', { ascending: true });
+                if (!msgs || !msgs.length) { section.classList.add('hidden'); return; }
+                const body = document.getElementById('transcript-body');
+                let shown = 0;
+                body.innerHTML = msgs.map(function (m) {
+                    const isUser = m.role === 'user';
+                    let txt = stripTrMarkers(m.content);
+                    // wiadomości systemowe użytkownika („Wybieram produkt: …") zostawiamy — pokazują przebieg
+                    if (!txt.trim()) return '';
+                    shown++;
+                    let t = ''; try { t = new Date(m.created_at).toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' }); } catch (e) {}
+                    return '<div class="flex ' + (isUser ? 'justify-end' : 'justify-start') + ' mb-2">' +
+                        '<div class="max-w-[82%] rounded-lg px-3 py-2 ' + (isUser ? 'bg-blue-500/15 border border-blue-500/25' : 'bg-zinc-800/60 border border-white/5') + '">' +
+                        '<div class="text-sm whitespace-pre-wrap leading-relaxed ' + (isUser ? 'text-blue-100' : 'text-zinc-200') + '">' + escTr(txt) + '</div>' +
+                        '<div class="text-[9px] text-zinc-500 mt-1 font-mono">' + (isUser ? 'Lead' : 'AI') + (t ? ' · ' + t : '') + '</div>' +
+                        '</div></div>';
+                }).join('');
+                if (!shown) { section.classList.add('hidden'); return; }
+                const cnt = document.getElementById('transcript-count'); if (cnt) cnt.textContent = shown;
+                section.classList.remove('hidden');
+            } catch (e) { console.error('[lead] transcript:', e); section.classList.add('hidden'); }
         }
 
         function formatSurveyHours(value) {

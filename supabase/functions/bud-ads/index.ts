@@ -55,14 +55,16 @@ function fallbackConcepts(product: any, _ust: any): Array<{ angle: string; headl
   ]
 }
 
-// Hint kompozycji hero pod konkretny angle baneru (każdy angle = inny układ — Agent A).
-function angleHero(angle: string): string {
+// Art-direction pod konkretny angle baneru — każdy angle = INNY układ + paleta + typografia
+// (fix 2026-07-07: wcześniej różniła się tylko scena hero, a layout/paleta/światło były wspólne
+// → 4 re-skiny jednej reklamy, bezużyteczne do testów A/B; teraz 4 realnie różne warianty).
+function angleArt(angle: string): string {
   switch ((angle || '').toLowerCase()) {
-    case 'demo': return 'Hero: the product shown in ACTION / mid-use, slightly angled for energy; add a small clean inset of the product solo for shape fidelity.'
-    case 'emotion': return 'Hero: a warm lifestyle scene with the product naturally in-hand / in context; add a small clean inset of the product solo so the buyer sees exactly what they get.'
-    case 'proof': return 'Hero: the product as a centered hero with a prominent "Viralowy hit" seal/stamp; NO stars, NO numbers, NO fake testimonials.'
+    case 'demo': return 'LAYOUT "demo" (full-bleed action): the product mid-use fills the ENTIRE frame, dynamic diagonal energy, sense of motion; headline on a high-contrast overlay band; small clean inset of the product solo for shape fidelity. Photographic natural palette from the scene itself — NO flat brand-color block background.'
+    case 'emotion': return 'LAYOUT "emotion" (warm lifestyle editorial): soft warm-light scene with the product naturally in-hand / in context; LIGHT muted palette (cream/beige/soft pastel), lighter elegant typography, generous breathing room; small clean inset of the product solo so the buyer sees exactly what they get. The most "human" of the set.'
+    case 'proof': return 'LAYOUT "proof" (viral/social): the product as a centered hero on a DARK or boldly contrasting background with a prominent "Viralowy hit" seal/stamp; raw social-media energy, punchy condensed type — NO stars, NO numbers, NO fake testimonials, NO TikTok UI or logo.'
     case 'problem':
-    default: return 'Hero: a clean product-in-use shot as the "fix" to the problem in the headline; optional small inset showing the key detail/mechanism.'
+    default: return 'LAYOUT "problem" (classic DR poster): split composition — big bold headline on a FULL solid brand-color block, below/beside it a clean product-in-use shot as the "fix" to the problem; flat accent-color background, heavy poster typography; optional small inset of the key detail/mechanism.'
   }
 }
 
@@ -82,17 +84,16 @@ function adImagePrompt(cpt: { headline?: string; badge?: string; angle?: string 
 PRODUCT (render with HIGH FIDELITY to the reference images — exact shape, color, material, proportions; do NOT invent or restyle it): ${name}.
 ${dla ? `Target audience: ${dla}. ` : ''}${kat ? `Angle/hook: ${kat}. ` : ''}${ton ? `Brand tone: ${ton}. ` : ''}${brandName ? `Brand name: ${brandName}.` : ''}
 
-LAYOUT (build it like a designed ad with clear visual hierarchy):
-- ${angleHero(cpt?.angle || '')}
-- A brand-color ACCENT BLOCK / band (derived from the brand tone) framing the composition and giving contrast behind the text.
-- A rendered HEADLINE in the top third: "${headline}" — bold, high-contrast, max ~6 words, legible even as a 320px thumbnail.
-- A pill-shaped CTA BUTTON near the bottom labelled "Kup teraz" — rounded, in the accent color, treated as a UI element (not floating text).
+ART DIRECTION (this is 1 of 4 A/B TEST variants — it MUST look clearly DIFFERENT from the other angles: different layout, different background/palette treatment, different type character; NOT a re-skin of one template):
+- ${angleArt(cpt?.angle || '')}
+- A rendered HEADLINE: "${headline}" — bold, high-contrast, max ~6 words, legible even as a 320px thumbnail (placement per the layout above).
+- A pill-shaped CTA BUTTON near the bottom labelled "Kup teraz" — rounded, high-contrast against THIS creative's palette, treated as a UI element (not floating text).
 ${badge ? `- A small benefit BADGE/seal: "${badge}" — as a graphic stamp, not a sentence.` : ''}
 - Keep all text and the button at least 8% inside the edges (safe margin, nothing cropped).
 
 TEXT RENDERING RULES (model renders only SHORT text reliably): render ONLY the headline, the button label "Kup teraz"${badge ? `, and the badge "${badge}"` : ''}. Polish, correct diacritics, NO paragraphs, NO long sentences, NO fine print. Crisp sans-serif, strong contrast. FALLBACK: if rendered text would be unreliable/garbled, keep ONLY the short headline and the "Kup teraz" button; drop the badge rather than render broken letters. Never output misspelled/scrambled words.
 
-STYLE: premium DTC advertising look, strong scroll-stopping contrast, clean commercial lighting, cohesive with the brand tone${ton ? ` "${ton}"` : ''}. Figure/background clearly separated; the product never blends into the background.
+STYLE: premium DTC advertising look, strong scroll-stopping contrast, lighting and mood per THIS creative's layout above (do NOT default every variant to the same clean studio look), cohesive with the brand tone${ton ? ` "${ton}"` : ''}. Figure/background clearly separated; the product never blends into the background.
 HARD CONSTRAINTS: no fake numbers, ratings, stars, reviews or testimonials; no countdowns or fake urgency; no "24h delivery"/"warehouse in Poland" claims; no other brands' logos. "Viral hit from TikTok" is allowed (true).`
 }
 
@@ -190,15 +191,16 @@ Po jednym z kątów: "problem" (problem→rozwiązanie), "demo" (demonstracja/�
 Dla każdego: angle, headline (≤6 słów, PL, renderowany na grafice), badge (≤3 słowa, TYLKO prawdziwy: „Płatność przy odbiorze" / „14 dni na zwrot" / „Hit z TikToka" / „Viralowy hit"), primary_text (2-3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów").
 
 === ZADANIE 2: 4 KREACJE GRAFICZNE (najważniejsze) ===
-Format PIONOWY 4:5 (1080×1350 px), pod feed IG/FB. Każda kreacja = INNY angle z Zadania 1:
-- ad_1_problem: czysty produkt-in-use jako „naprawa" problemu z polskim headline; opcjonalnie mały inset detalu.
-- ad_2_demo: produkt W AKCJI / mid-use, energia, mały inset produktu solo dla wierności kształtu.
-- ad_3_emotion: ciepła scena lifestyle z personą dopasowaną do „dla kogo", produkt naturalnie w dłoni/kontekście.
-- ad_4_proof: produkt-bohater + pieczęć „Viralowy hit" / „Hit z TikToka" (BEZ gwiazdek, liczb, fałszywych recenzji).
+Format PIONOWY 4:5 (1080×1350 px), pod feed IG/FB. Każda kreacja = INNY angle z Zadania 1.
+⚠️ RÓŻNORODNOŚĆ — to zestaw do TESTÓW A/B: 4 grafiki mają wyglądać jak 4 RÓŻNE reklamy (inny układ, inne tło/paleta, inny charakter typografii), NIE jak 4 warianty jednego szablonu. Dwie podobne = test nic nie mierzy. Art-direction per kreacja:
+- ad_1_problem — KLASYCZNY PLAKAT DR: kompozycja dzielona — duży, gruby headline na PEŁNYM bloku koloru marki, obok/pod nim czysty produkt-in-use jako „naprawa" problemu; płaskie tło w kolorze akcentu, ciężka plakatowa typografia; opcjonalnie mały inset detalu.
+- ad_2_demo — FULL-BLEED AKCJA: produkt W AKCJI / mid-use wypełnia CAŁY kadr, dynamiczna diagonala, energia ruchu; headline na kontrastowym pasku/overlayu; mały inset produktu solo dla wierności kształtu; paleta fotograficzna z samej sceny — BEZ płaskiego bloku koloru.
+- ad_3_emotion — CIEPŁY LIFESTYLE/EDITORIAL: miękka, ciepła scena z personą dopasowaną do „dla kogo", produkt naturalnie w dłoni/kontekście; JASNA stonowana paleta (krem/beż/pastel), lżejsza elegancka typografia, dużo oddechu — najbardziej „ludzka" z czterech.
+- ad_4_proof — VIRAL/SOCIAL: produkt-bohater na CIEMNYM lub mocno kontrastowym tle + wyrazista pieczęć „Viralowy hit" / „Hit z TikToka"; surowszy, socialowy vibe, wyrazista skondensowana typografia (BEZ gwiazdek, liczb, fałszywych recenzji; BEZ interfejsu/logo TikToka).
 ZASADY GRAFIK:
 - Polski tekst poprawny (z diakrytykami), TYLKO krótki: headline + przycisk-pigułka „Kup teraz" (+ ewentualnie badge). Bez akapitów na grafice.
 - Branding ${brandName || 'marki'} widoczny (logo/nazwa w rogu); gdy brak — neutralny i spójny.
-- Ciepłe/jasne światło; NIE białe studio (wygląda jak Allegro); produkt 1:1 z referencji.
+- Światło/nastrój wg art-direction danej kreacji (NIE powtarzaj jednego oświetlenia na wszystkich); NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
 - Element COD jako ATUT: badge „Płatność przy odbiorze" pasuje do problem/proof.
 ZAKAZY (COD/safety): zero zmyślonej pilności/countdownów; zero „dostawa 24h"/„magazyn w Polsce"; zero zmyślonych liczb/gwiazdek/recenzji; zero obcych logo; zero obietnic medycznych; bez cen na grafice.
 
@@ -448,6 +450,12 @@ Deno.serve(async (req) => {
     }
 
     // ===== MANUS: finalne kreacje robi agent Manus (flaga BUD_ADS_MANUS_ENABLED) =====
+    // skipManusToGemini (2026-07-07, incydent „7 timeoutów / 0 sukcesów"): Manus potrafi
+    // PRZYJĄĆ task i nigdy go nie skończyć (kolejka stoi — inny tryb awarii niż padnięty
+    // create). Timeout był dead-endem 504, a retry usera tworzył KOLEJNY skazany task
+    // (cap liczy tylko UKOŃCZONE). Teraz: timeout → spadamy do Gemini w TYM żądaniu,
+    // a sesja z JAKIMKOLWIEK failem Manusa nie wraca do Manusa (breaker per sesja).
+    let skipManusToGemini = false
     if (MANUS_ENABLED) {
       const sAny = session as Record<string, unknown>
       // task już biegnie → sprawdź status i (gdy skończony) dociągnij wynik. Front poluje co ~12s.
@@ -458,10 +466,19 @@ Deno.serve(async (req) => {
         if (started && (Date.now() - started) > 32 * 60 * 1000) {
           await supabase.from('bud_sessions').update({ ads_manus_status: 'failed', ads_manus_step: 'timeout' }).eq('id', sessionId)
           try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'ads' }) } catch { /* */ }
-          return json({ error: 'manus_timeout' }, 504, c)
+          await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'reklamy — task Manus >32 min bez wyniku → przełączam TĘ sesję na Gemini', error: `task ${sAny.ads_manus_task_id} nie dowiózł wyniku (sprawdź kolejkę/kredyty w konsoli Manusa)`, product: String(product?.nazwa || product?.name || '') })
+          skipManusToGemini = true   // user czeka — dowieź reklamy tanim torem TERAZ
+        } else {
+          return json({ pending: true, manus: 'running' }, 202, c)
         }
-        return json({ pending: true, manus: 'running' }, 202, c)
       }
+      // Breaker per sesja: poprzedni task Manusa w tej sesji już padł (timeout/sweep) —
+      // nie pchaj jej tam drugi raz; retry i powrót usera idą prosto w Gemini.
+      if (!skipManusToGemini && sAny.ads_manus_status === 'failed') skipManusToGemini = true
+    }
+    if (MANUS_ENABLED && !skipManusToGemini) {
+      const sAny = session as Record<string, unknown>
+      void sAny
       // (b) Cap re-triggerów Manus per sesja — task Manus to NAJDROŻSZY fallback (kredyty agenta).
       // Liczymy zalogowane taski Manus tej sesji (bud_usage kind='ads' model='manus', wpis robi
       // manusPollAndPull po ukończeniu). force=true też tu wpada (poll path wyżej już obsłużony,

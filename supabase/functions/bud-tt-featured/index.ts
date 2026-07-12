@@ -76,10 +76,15 @@ Deno.serve(async (req) => {
 
   const all = (data || []).filter((p: any) => p.cover && p.tiktok_url)
 
-  // ── RÓŻNICOWANIE: ważone losowanie zamiast twardego heat-desc ──────────────
-  // Bez tego user wciąż widzi te same topowe produkty. Sortujemy po (jakość po heat)
-  // + (wariancja zależna od seed). Seed stały w sesji (front podaje jeden) → paginacja
-  // „Pokaż inne" spójna, ale różne sesje dostają różny zestaw. Brak seed = stare heat-desc.
+  // ── RÓŻNICOWANIE: czysty seeded shuffle (równe szanse dla całej puli) ───────
+  // FIX 2026-07-10 (feedback Tomka: „skoro produkt jest approved, to jest dobry —
+  // pokazuj tak samo jak inne"): nawet lekka premia W=0.35 za heat dawała top-heat
+  // produktom ~21% sesji na stronie 0 vs ~3% przy równym losowaniu (symulacja na
+  // realnych heat), a 62/194 produktów miało mniej niż połowę uczciwej ekspozycji.
+  // Wybory leadów odzwierciedlały to 1:1 (dashcam heat#1 = najczęściej wybierany).
+  // Selekcja jakości dzieje się w /trendy (approve) — feed jej nie dubluje.
+  // Seed stały w sesji (front podaje jeden) → paginacja „Pokaż więcej" spójna,
+  // różne sesje dostają różny zestaw. Brak seed = stare heat-desc (fallback).
   const seedStr = (url.searchParams.get('seed') || '').slice(0, 40)
   if (seedStr) {
     const rngFor = (id: string): number => {
@@ -88,15 +93,7 @@ Deno.serve(async (req) => {
       for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) }
       return ((h >>> 0) % 100000) / 100000 // [0,1)
     }
-    const maxHeat = Math.max(1, ...all.map((p: any) => p.heat || 0))
-    // FIX 2026-07-02 (feedback Tomka: „ciągle te same produkty"): przy W=1.5 baza heat (0–1,5)
-    // DOMINOWAŁA nad losowością (0–1) — top-heat wygrywał każdy seed, pierwsza strona wyglądała
-    // identycznie w każdej rozmowie, a ogon puli (~129 approved) nie istniał. W=0.35 = lekka
-    // premia za jakość + realna rotacja: każdy seed daje inny zestaw, pracuje CAŁA pula.
-    // (Stały seed w sesji nadal gwarantuje spójną paginację „Pokaż więcej".)
-    const W = 0.35
-    const score = (p: any) => ((p.heat || 0) / maxHeat) * W + rngFor(p.id)
-    all.sort((a: any, b: any) => score(b) - score(a))
+    all.sort((a: any, b: any) => rngFor(b.id) - rngFor(a.id))
   }
 
   // Lista kategorii (tylko te, które mają zatwierdzone produkty) + liczba, malejąco.

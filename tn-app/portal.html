@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Postęp budowy Twojej aplikacji</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="theme-color" content="#050505">
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background:#000; color:#e5e5e5; font:14px/1.55 Inter, sans-serif; -webkit-font-smoothing:antialiased; min-height:100dvh; }
+        ::selection { background:#fff; color:#000; }
+        .wrap { max-width:680px; margin:0 auto; padding:48px 20px 80px; }
+        .brand { display:flex; align-items:center; gap:10px; color:#71717a; font-size:12px; margin-bottom:40px; }
+        .brand b { color:#a1a1aa; font-weight:600; }
+        h1 { color:#fff; font-size:26px; font-weight:600; letter-spacing:-.02em; margin-bottom:6px; }
+        .sub { color:#71717a; font-size:13px; margin-bottom:32px; }
+        .card { background:#0a0a0a; border:1px solid #1f1f1f; border-radius:8px; padding:24px; margin-bottom:16px; }
+        .bar-wrap { height:8px; background:#1c1c1f; border-radius:99px; overflow:hidden; margin:14px 0 8px; }
+        .bar { height:100%; background:#0070f3; border-radius:99px; transition:width .8s ease; }
+        .pct { color:#fff; font-size:30px; font-weight:600; }
+        .stage { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid #161616; }
+        .stage:last-child { border-bottom:none; }
+        .st-ico { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex-shrink:0; }
+        .st-done { background:rgba(69,165,87,.15); color:#4cb782; }
+        .st-cur  { background:rgba(0,112,243,.15); color:#52a8ff; }
+        .st-wait { background:#18181b; color:#52525b; }
+        .st-label { flex:1; }
+        .st-cnt { color:#52525b; font-size:11px; font-variant-numeric:tabular-nums; }
+        .mile { display:flex; align-items:flex-start; gap:12px; padding:10px 0; }
+        .mile i { margin-top:2px; }
+        .mile.done i { color:#4cb782; } .mile.todo i { color:#3f3f46; }
+        .mile.done .m-label { color:#e5e5e5; } .mile.todo .m-label { color:#52525b; }
+        .m-date { color:#52525b; font-size:11px; }
+        .now { display:inline-flex; align-items:center; gap:8px; background:rgba(0,112,243,.08); border:1px solid rgba(0,112,243,.35); color:#52a8ff; border-radius:99px; padding:6px 14px; font-size:12.5px; }
+        .now .dot { width:7px; height:7px; border-radius:50%; background:#0070f3; animation:pulse 1.6s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+        .h-mini { font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:#52525b; font-weight:600; margin-bottom:10px; }
+        .links a { color:#52a8ff; text-decoration:none; font-size:13px; margin-right:18px; }
+        .foot { color:#3f3f46; font-size:11.5px; margin-top:36px; }
+        /* logowanie */
+        input[type=password] { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:8px; padding:12px 14px; font-size:15px; color:#fff; margin-bottom:12px; }
+        input[type=password]:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        button { width:100%; background:#fff; color:#000; border:none; border-radius:8px; padding:12px; font-size:14px; font-weight:600; cursor:pointer; }
+        button:hover { background:#e4e4e7; } button:disabled { opacity:.5; cursor:default; }
+        .err { color:#f26d78; font-size:12.5px; margin-bottom:10px; min-height:18px; }
+        .hidden { display:none; }
+        .skel { color:#52525b; text-align:center; padding:40px 0; }
+        /* Umowa */
+        input.ci { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:8px; padding:11px 13px; font-size:14px; color:#fff; margin-bottom:12px; }
+        input.ci:focus { outline:none; border-color:rgba(0,112,243,.6); }
+        .lbl { display:block; font-size:12px; color:#71717a; margin-bottom:5px; }
+        .cbtn { background:#0070f3; color:#fff; display:flex; align-items:center; justify-content:center; gap:8px; }
+        .cbtn:hover { background:#2b86ff; }
+        .cbtn-sec { background:#18181b; color:#e5e5e5; border:1px solid #2e2e2e; }
+        .cbtn-sec:hover { background:#222226; }
+        .note-box { background:rgba(0,112,243,.06); border:1px solid rgba(0,112,243,.25); border-radius:8px; padding:14px 16px; font-size:12.5px; color:#a9c9f0; line-height:1.6; }
+        .note-box b { color:#cfe2fb; }
+        .ok-box { background:rgba(69,165,87,.1); border:1px solid rgba(69,165,87,.4); border-radius:8px; padding:18px; }
+        .ok-box a { color:#8fe3a3; font-weight:600; text-decoration:none; }
+        /* Baner podglądu admina */
+        #preview-banner { position:fixed; top:0; left:0; right:0; z-index:100; background:#0070f3; color:#fff;
+            font-size:12.5px; font-weight:500; padding:11px 16px; text-align:center; display:flex; align-items:center;
+            justify-content:center; gap:8px; box-shadow:0 1px 0 rgba(255,255,255,.1); }
+        /* Box „Twój ruch" */
+        .move-box { background:rgba(245,166,35,.07); border-color:rgba(245,166,35,.4); }
+        .move-head { display:flex; align-items:center; gap:8px; color:#f5b955; font-size:12.5px; font-weight:600;
+            text-transform:uppercase; letter-spacing:.05em; margin-bottom:8px; }
+        #c-move-text { color:#e9d9bd; font-size:13.5px; line-height:1.55; }
+        /* Dowód życia */
+        .life { color:#4cb782; font-size:12px; margin-top:8px; display:flex; align-items:center; gap:6px; }
+        .life::before { content:''; width:6px; height:6px; border-radius:50%; background:#4cb782; display:inline-block; }
+        /* Galeria wizji */
+        .vision-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:10px; }
+        .vision-item { border:1px solid #1f1f1f; border-radius:8px; overflow:hidden; cursor:pointer; background:#050505;
+            transition:border-color .15s; }
+        .vision-item:hover { border-color:rgba(0,112,243,.5); }
+        .vision-item img { width:100%; height:110px; object-fit:cover; object-position:top; display:block; }
+        .vision-item .vcap { font-size:10.5px; color:#71717a; padding:6px 8px; text-transform:capitalize; }
+        /* Lightbox makiet */
+        #vlb { position:fixed; inset:0; z-index:120; background:rgba(0,0,0,.92); display:none; align-items:center;
+            justify-content:center; padding:24px; }
+        #vlb.show { display:flex; }
+        #vlb img { max-width:100%; max-height:100%; border-radius:8px; object-fit:contain; }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <div class="brand"><i class="ph ph-app-window"></i> Budowa aplikacji · <b>Tomek Niedźwiecki</b></div>
+
+    <!-- Logowanie -->
+    <div id="login" class="hidden">
+        <h1>Postęp budowy</h1>
+        <p class="sub">Podaj hasło, które otrzymałeś ode mnie, aby zobaczyć status swojego projektu.</p>
+        <div class="card" style="max-width:420px">
+            <div id="err" class="err"></div>
+            <input id="pw" type="password" placeholder="Hasło" autocomplete="current-password">
+            <button id="go" onclick="load()">Pokaż postęp</button>
+        </div>
+    </div>
+
+    <!-- Brak tokenu -->
+    <div id="notoken" class="hidden">
+        <h1>Nieprawidłowy link</h1>
+        <p class="sub">Ten link jest niekompletny. Użyj dokładnie tego, który otrzymałeś w wiadomości.</p>
+    </div>
+
+    <!-- Treść -->
+    <div id="content" class="hidden">
+        <h1 id="c-name">…</h1>
+        <p class="sub" id="c-hello"></p>
+
+        <!-- Twój ruch (piłka po stronie klienta) -->
+        <div class="card move-box hidden" id="c-move">
+            <div class="move-head"><i class="ph ph-hand-pointing"></i> Twój ruch</div>
+            <div id="c-move-text"></div>
+        </div>
+
+        <div class="card">
+            <div class="h-mini">Postęp budowy</div>
+            <span class="pct" id="c-pct">0%</span>
+            <div class="bar-wrap"><div class="bar" id="c-bar" style="width:0%"></div></div>
+            <div style="margin-top:14px"><span class="now"><span class="dot"></span> Teraz pracujemy nad: <b id="c-now" style="margin-left:2px"></b></span></div>
+            <p id="c-hint" style="color:#a1a1aa;font-size:13px;margin-top:12px"></p>
+            <p id="c-life" class="life"></p>
+        </div>
+
+        <!-- Jak będzie wyglądać (makiety ze sparingu) -->
+        <div class="card hidden" id="c-vision">
+            <div class="h-mini">Jak będzie wyglądać Twoja aplikacja</div>
+            <p style="color:#71717a;font-size:12.5px;margin-bottom:14px">Wstępna wizja z naszej rozmowy — kierunek, nie finalny wygląd. Detale dopracujemy w trakcie budowy.</p>
+            <div class="vision-grid" id="c-vision-grid"></div>
+        </div>
+
+        <div class="card">
+            <div class="h-mini">Etapy</div>
+            <div id="c-stages"></div>
+        </div>
+
+        <div class="card">
+            <div class="h-mini">Dziennik postępu</div>
+            <div id="c-miles"></div>
+        </div>
+
+        <div class="card hidden" id="c-contract"></div>
+
+        <div class="card hidden" id="c-linkbox">
+            <div class="h-mini">Linki</div>
+            <div class="links" id="c-links"></div>
+        </div>
+
+        <p class="foot" id="c-deadline"></p>
+        <p class="foot">Masz pytanie? Odpisz po prostu na naszą korespondencję mailową.</p>
+    </div>
+
+    <div id="loading" class="skel">Ładowanie…</div>
+</div>
+<div id="vlb" onclick="this.classList.remove('show')"><img id="vlb-img" src="" alt=""></div>
+
+<script>
+    const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
+    const qs = new URLSearchParams(location.search);
+    const token = (qs.get('t') || '').trim();
+    // Podgląd admina „oczami klienta": ?podglad=admin + JWT panelu w #hashu (nie w query →
+    // nie trafia do logów/Referer). Autoryzacja przez team_members w wfa-portal, READ-ONLY.
+    const previewMode = qs.get('podglad') === 'admin';
+    const AJ_KEY = 'wfa_preview_jwt_' + qs.get('t');
+    let adminJwt = previewMode
+        ? (new URLSearchParams((location.hash || '').replace(/^#/, '')).get('admintok') || '').trim()
+        : '';
+    if (previewMode) {
+        if (adminJwt) {
+            // Zapamiętaj JWT na czas TEJ karty (przeżyje odświeżenie strony), potem wyczyść
+            // go z paska adresu — nie zostawiamy tokenu w URL (logi/Referer/historia).
+            try { sessionStorage.setItem(AJ_KEY, adminJwt); } catch (e) {}
+            try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+        } else {
+            // Odświeżenie po wyczyszczeniu hasha — odtwórz JWT z sessionStorage tej karty.
+            try { adminJwt = sessionStorage.getItem(AJ_KEY) || ''; } catch (e) { adminJwt = ''; }
+        }
+    }
+    const $ = id => document.getElementById(id);
+    const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+    const PW_KEY = 'wfa_portal_pw_' + token;
+    let currentPw = '';
+    let contractMeta = null;
+    let contractHtmlCache = null;
+    const cval = id => { const el = $(id); return el ? el.value.trim() : ''; };
+
+    // Nagłówki/ciało żądania — w podglądzie dokładamy Bearer JWT + preview:true (zamiast hasła).
+    function authHeaders() {
+        const h = { 'Content-Type': 'application/json' };
+        if (previewMode && adminJwt) h['Authorization'] = 'Bearer ' + adminJwt;
+        return h;
+    }
+
+    function show(id) {
+        ['login','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    }
+
+    async function load() {
+        if (previewMode) return loadPreview();
+        const pw = $('pw') && !$('login').classList.contains('hidden') ? $('pw').value.trim() : (sessionStorage.getItem(PW_KEY) || '');
+        if (!pw) { show('login'); return; }
+        $('err').textContent = ''; if ($('go')) $('go').disabled = true;
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, password: pw }) });
+            if (!res.ok) {
+                sessionStorage.removeItem(PW_KEY);
+                show('login'); $('err').textContent = 'Nieprawidłowe hasło. Spróbuj ponownie.';
+                return;
+            }
+            const d = await res.json();
+            sessionStorage.setItem(PW_KEY, pw);
+            currentPw = pw;
+            render(d); show('content');
+            loadContract(); // nie blokuje głównego renderu
+        } catch (e) {
+            show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
+        } finally { if ($('go')) $('go').disabled = false; }
+    }
+
+    // Podgląd admina: ładuje widok klienta przez wfa-portal (preview:true + Bearer JWT).
+    async function loadPreview() {
+        show('loading');
+        try {
+            const res = await fetch(FN_URL, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ token, preview: true }) });
+            if (!res.ok) {
+                show('notoken');
+                $('notoken').innerHTML = '<h1>Podgląd niedostępny</h1><p class="sub">Zaloguj się w panelu (crm.tomekniedzwiecki.pl) i otwórz podgląd ponownie — link jest ważny tylko dla zalogowanego zespołu.</p>';
+                return;
+            }
+            const d = await res.json();
+            render(d); show('content');
+            showPreviewBanner();
+            loadContract();
+        } catch (e) {
+            show('notoken');
+            $('notoken').innerHTML = '<h1>Błąd podglądu</h1><p class="sub">Spróbuj ponownie za chwilę.</p>';
+        }
+    }
+
+    function showPreviewBanner() {
+        if ($('preview-banner')) return;
+        const b = document.createElement('div');
+        b.id = 'preview-banner';
+        b.innerHTML = '<i class="ph ph-eye"></i> Podgląd administratora — widzisz dokładnie to, co zobaczy klient. Zmiany są zablokowane (formularz umowy wypełni klient).';
+        document.body.prepend(b);
+        document.body.style.paddingTop = '44px';
+    }
+
+    function render(d) {
+        $('c-name').textContent = d.name;
+        $('c-hello').textContent = d.customer_name ? ('Cześć ' + d.customer_name.split(' ')[0] + '! Tak wygląda aktualny stan prac nad Twoją aplikacją.') : 'Aktualny stan prac nad Twoją aplikacją.';
+        $('c-pct').textContent = d.progress + '%';
+        $('c-bar').style.width = d.progress + '%';
+        $('c-now').textContent = d.current_stage;
+
+        // Opis bieżącego etapu po ludzku + dowód życia („ostatnia praca X temu")
+        $('c-hint').textContent = d.current_stage_hint || '';
+        $('c-hint').style.display = d.current_stage_hint ? 'block' : 'none';
+        const life = relLife(d.last_activity_at);
+        $('c-life').textContent = life ? ('Ostatnia praca nad projektem: ' + life) : '';
+        $('c-life').style.display = life ? 'flex' : 'none';
+
+        // Twój ruch (piłka po stronie klienta)
+        const moveBox = $('c-move');
+        if (d.your_move) { $('c-move-text').textContent = d.your_move; moveBox.classList.remove('hidden'); }
+        else { moveBox.classList.add('hidden'); }
+
+        // Wizja: makiety ze sparingu
+        const vg = $('c-vision-grid');
+        const mk = (d.mockups || []).filter(m => m && m.url);
+        if (mk.length) {
+            vg.innerHTML = mk.map(m =>
+                '<div class="vision-item" onclick="openVlb(\'' + encodeURIComponent(m.url) + '\')">' +
+                '<img src="' + esc(m.url) + '" alt="" loading="lazy">' +
+                '<div class="vcap">' + esc(m.view || '') + '</div></div>'
+            ).join('');
+            $('c-vision').classList.remove('hidden');
+        } else { $('c-vision').classList.add('hidden'); }
+
+        $('c-stages').innerHTML = (d.stages || []).map(s => {
+            const cur = !s.complete && d.stages.find(x => !x.complete) === s;
+            const cls = s.complete ? 'st-done' : cur ? 'st-cur' : 'st-wait';
+            const ico = s.complete ? '<i class="ph ph-check"></i>' : s.num;
+            return '<div class="stage"><span class="st-ico ' + cls + '">' + ico + '</span>' +
+                '<span class="st-label">' + esc(s.label) + '</span>' +
+                '<span class="st-cnt">' + s.done + '/' + s.total + '</span></div>';
+        }).join('');
+
+        $('c-miles').innerHTML = (d.milestones || []).map(m => {
+            const date = m.at ? new Date(m.at).toLocaleDateString('pl-PL') : '';
+            return '<div class="mile ' + (m.done ? 'done' : 'todo') + '">' +
+                '<i class="ph ' + (m.done ? 'ph-flag-checkered' : 'ph-flag') + '"></i>' +
+                '<div><div class="m-label">' + esc(m.label) + '</div>' + (date ? '<div class="m-date">' + date + '</div>' : '') + '</div></div>';
+        }).join('');
+
+        const links = [];
+        if (d.landing_url) links.push('<a href="' + esc(d.landing_url) + '" target="_blank" rel="noopener"><i class="ph ph-browser"></i> Strona aplikacji</a>');
+        if (d.app_url) links.push('<a href="' + esc(d.app_url) + '" target="_blank" rel="noopener"><i class="ph ph-rocket-launch"></i> Aplikacja</a>');
+        $('c-linkbox').classList.toggle('hidden', !links.length);
+        $('c-links').innerHTML = links.join('');
+
+        $('c-deadline').textContent = d.deadline_at ? ('Planowany termin oddania: ' + new Date(d.deadline_at).toLocaleDateString('pl-PL') + '.') : '';
+    }
+
+    // „Ostatnia praca" po ludzku (dowód życia). Zwraca '' gdy brak daty.
+    function relLife(iso) {
+        if (!iso) return '';
+        const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+        if (days <= 0) return 'dzisiaj';
+        if (days === 1) return 'wczoraj';
+        if (days < 7) return days + ' dni temu';
+        if (days < 14) return 'w zeszłym tygodniu';
+        return new Date(iso).toLocaleDateString('pl-PL');
+    }
+    function openVlb(encUrl) {
+        $('vlb-img').src = decodeURIComponent(encUrl);
+        $('vlb').classList.add('show');
+    }
+
+    // ============ UMOWA ============
+    async function callFn(extra) {
+        const payload = previewMode
+            ? Object.assign({ token, preview: true }, extra)
+            : Object.assign({ token, password: currentPw }, extra);
+        return fetch(FN_URL, { method:'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    }
+
+    async function loadContract() {
+        try {
+            const res = await callFn({ action: 'contract_meta' });
+            if (!res.ok) { $('c-contract').classList.add('hidden'); return; }
+            contractMeta = await res.json();
+            renderContract();
+        } catch (e) { $('c-contract').classList.add('hidden'); }
+    }
+
+    function renderContract() {
+        const box = $('c-contract');
+        const m = contractMeta || {};
+        const st = m.contract_status || 'brak';
+        if (st === 'brak') { box.classList.add('hidden'); box.innerHTML = ''; return; }
+        box.classList.remove('hidden');
+        let inner = '<div class="h-mini">Umowa</div>';
+
+        if (st === 'dane_klienta') {
+            const f = m.fields || {};
+            const dis = previewMode ? ' disabled' : '';
+            inner += '<p style="color:#a1a1aa;font-size:13px;margin-bottom:16px">Te dane trafią do umowy — sprawdź je uważnie.</p>' +
+                '<div id="cc-err" class="err"></div>' +
+                '<label class="lbl">Imię i nazwisko</label><input class="ci" id="cc-name"' + dis + ' value="' + esc(f.full_name || m.customer_name || '') + '">' +
+                '<label class="lbl">Firma (opcjonalnie)</label><input class="ci" id="cc-company"' + dis + ' value="' + esc(f.company || '') + '">' +
+                '<label class="lbl">NIP (podaj, jeśli zawierasz umowę jako firma)</label><input class="ci" id="cc-nip"' + dis + ' value="' + esc(f.nip || '') + '">' +
+                '<label class="lbl">Ulica i numer</label><input class="ci" id="cc-street"' + dis + ' value="' + esc(f.street || '') + '">' +
+                '<label class="lbl">Kod pocztowy</label><input class="ci" id="cc-postal"' + dis + ' placeholder="00-000" value="' + esc(f.postal || '') + '">' +
+                '<label class="lbl">Miejscowość</label><input class="ci" id="cc-city"' + dis + ' value="' + esc(f.city || '') + '">' +
+                (previewMode
+                    ? '<div class="note-box"><i class="ph ph-info"></i> Podgląd — tu klient sam uzupełni i zapisze dane do umowy.</div>'
+                    : '<button class="cbtn" id="cc-save" onclick="submitContractData()"><i class="ph ph-floppy-disk"></i> Zapisz dane do umowy</button>');
+        } else if (st === 'do_podpisu') {
+            inner += '<button class="cbtn" onclick="openContractPrint()"><i class="ph ph-file-text"></i> Pobierz umowę do podpisu</button>' +
+                '<button class="cbtn-sec" style="margin-top:10px" onclick="downloadContractFile()"><i class="ph ph-download-simple"></i> Pobierz jako plik .html</button>' +
+                '<div class="note-box" style="margin-top:16px"><b>Jak podpisać:</b><br>' +
+                '(1) wydrukuj umowę w 2 egzemplarzach, podpisz odręcznie na ostatniej stronie i odeślij oba egzemplarze pocztą na adres z umowy — odeślemy Ci Twój egzemplarz podpisany przez nas;<br>' +
+                'ALBO (2) podpisz kwalifikowanym podpisem elektronicznym (np. mSzafir, SimplySign) i odeślij plik e-mailem.<br><br>' +
+                'Uwaga: zwykły skan/zdjęcie podpisu przyspiesza start, ale oryginał papierowy i tak jest potrzebny (przeniesienie praw autorskich wymaga formy pisemnej).</div>';
+        } else if (st === 'podpisana_klient') {
+            inner += '<div class="note-box">Otrzymaliśmy Twoją podpisaną umowę — po podpisie z naszej strony znajdziesz tu finalny dokument.</div>';
+        } else if (st === 'podpisana') {
+            inner += '<div class="ok-box"><div style="color:#8fe3a3;font-weight:600;margin-bottom:6px"><i class="ph ph-seal-check"></i> Umowa podpisana obustronnie</div>' +
+                (m.final_url ? '<a href="' + esc(m.final_url) + '" target="_blank" rel="noopener"><i class="ph ph-download-simple"></i> Pobierz podpisaną umowę</a>' : '<span style="color:#9db8a4;font-size:12.5px">Finalny dokument pojawi się tutaj wkrótce.</span>') +
+                '</div>';
+        }
+        box.innerHTML = inner;
+    }
+
+    async function submitContractData() {
+        const btn = $('cc-save'); if (btn) btn.disabled = true;
+        const errBox = $('cc-err'); if (errBox) errBox.textContent = '';
+        const fields = { full_name: cval('cc-name'), company: cval('cc-company'), nip: cval('cc-nip'), street: cval('cc-street'), postal: cval('cc-postal'), city: cval('cc-city') };
+        try {
+            const res = await callFn({ action: 'contract_data', fields });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { if (errBox) errBox.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; return; }
+            contractHtmlCache = null;
+            await loadContract();
+        } catch (e) {
+            if (errBox) errBox.textContent = 'Błąd połączenia — spróbuj ponownie.';
+        } finally { if (btn) btn.disabled = false; }
+    }
+
+    async function fetchContractHtml() {
+        if (contractHtmlCache) return contractHtmlCache;
+        const res = await callFn({ action: 'contract_html' });
+        if (!res.ok) throw new Error('fail');
+        const d = await res.json();
+        contractHtmlCache = d.html;
+        return contractHtmlCache;
+    }
+    async function openContractPrint() {
+        try {
+            const html = await fetchContractHtml();
+            const w = window.open('', '_blank');
+            if (!w) { alert('Odblokuj wyskakujące okna, aby wyświetlić umowę do wydruku.'); return; }
+            w.document.open(); w.document.write(html); w.document.close(); w.focus();
+        } catch (e) { alert('Nie udało się pobrać umowy — spróbuj ponownie za chwilę.'); }
+    }
+    async function downloadContractFile() {
+        try {
+            const html = await fetchContractHtml();
+            const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'Umowa-' + String((contractMeta && contractMeta.name) || 'aplikacja').replace(/[^a-z0-9]+/gi, '-') + '.html';
+            document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+        } catch (e) { alert('Nie udało się pobrać pliku.'); }
+    }
+
+    if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
+    else if (previewMode) {
+        if (!adminJwt) { show('notoken'); $('notoken').innerHTML = '<h1>Podgląd niedostępny</h1><p class="sub">Otwórz podgląd z panelu, będąc zalogowanym.</p>'; }
+        else { show('loading'); load(); }
+    }
+    else if (sessionStorage.getItem(PW_KEY)) { show('loading'); load(); }
+    else { show('login'); }
+    document.addEventListener('keydown', e => { if (e.key === 'Enter' && !$('login').classList.contains('hidden')) load(); });
+</script>
+</body>
+</html>

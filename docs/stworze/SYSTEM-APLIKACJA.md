@@ -43,6 +43,8 @@ User przechodzi etapy; etap jest **wyliczany z flag serwerowych**, nie trzymany 
 - **Brak osobnych funkcji** — żyje w `spar-chat`, gałąź `isKnowHowMode` (gdy `full_paid_at`): KNOWHOW_BASE+warianty, KNOWHOW_RESUME, KNOWHOW_EXTRACT_PROMPT, HANDOFF_PROMPT. Zapisuje `spar_knowhow_items`, `spar_knowhow_summary`.
 - **Odmrażane przez `tpay-webhook`** (desc „budowa aplikacji" → `full_paid_at` + summary `status='active'`).
 - Front: tryb nałożony na zakładkę Rozmowa (`.view--knowhow`); JS `buildKnowhowOpener`/`enterKnowhowChat`/`requestKnowhowNudge`/`playKnowhowIntro`/`playKnowhowOutro`/`cardBoxHTML` (sparing l. 10811–11060). Domknięcie = `event:'knowhow_close'` → `knowhow_closed_at`.
+- **TWARDE ZAMKNIĘCIE (decyzja Tomka 2026-07-11):** po `knowhow_closed_at` czat spowiednika NIE przyjmuje nowych tur — front blokuje kompozer (`KH_CLOSED_MSG` w `enterKnowhowChat`/`closeKnowhow`), backend zwraca 403 `knowhow_zamkniety` (guard w spar-chat po `knowhowClosed`). Nowe pomysły klienta wracają przy demo wersji roboczej (krok `demo_klienta` w /tn-app). [Wcześniej czat celowo działał po zamknięciu — ZMIENIONE.]
+- **Handoff (pakiet wiedzy) bez ucinania:** limit bazy wiedzy w `generateHandoffPack` podniesiony 8000→60000 znaków (karta 1500→4000) — automat składa pakiet z PEŁNEJ bazy; ręczne składanie tylko dla ekstremów/ścieżki B (klient bez spowiednika).
 
 ### Cross-cutting / infra
 `tpay-webhook` (płatności: 500 zł→`paid_at`, budowa→`full_paid_at`; **NIE RUSZAĆ**), `lead-upsert` (lead_source='stworze'), `send-email` (Resend), `send-sms` (SMSAPI), `slack-notify` (`slack_webhook_sparing`), `spar-go` (krótki link `/p/{code}`), `spar-public-feed` (feed dla `/aplikacja`, cache 60 s), `spar-admin-settings` (edycja faktów oferty + promptu z panelu, gate team_members, auto-backup). Panel admina: `tn-crm/tn-aplikacje/` (zakładka „Źródło prawdy" = mapa etapów + edytory SSOT).
@@ -145,6 +147,16 @@ Tani research zawsze 0h/5h/10h: **rynek** (`spar-raport`) → **economics** → 
 9. Stare docs: `PLAN-PRODUKCYJNY.md` (model 50/50), `RUNBOOK.md` (cron jobid 22 → realnie 23/24; lista follow-upów częściowo nieaktualna).
 
 ---
+
+### ✅ Zrobione 2026-07-10 (audyt lejka + wdrożenie domykania)
+- **Prompt (`stworze_sparing_prompt`, 51k; backup `_backup_20260710`):** DRZEWO DOMYKANIA (sygnał intencji → `<makieta>` w tej samej turze; karta projektu domknięta → następna tura = cena+karta; limit pętli poprawek; zakaz pytań o pozwolenie i furtek odroczenia w `<opcje>`; wyjątek zwięzłości na turę domknięcia), bank obiekcji +4 (scam/zaufanie, kontakt z Tomkiem = sygnał kupna, żona/wspólnik, „zastanowię się"), sekcja `# POWRÓT PO PRZERWIE`, spięty timing K5↔`<ocena>`.
+- **spar-chat:** blok `[STAN SESJI]` per tura (werdykt, paid, makieta wystawiona, panel_visits, paywall open/abandon — twarde fakty zamiast skanowania historii); gałąź post-paid (opłacona rezerwacja ≠ dalszy pitch); eventy `paywall_open`/`paywall_abandon`; stempel `makieta_last_at`; uczciwy komunikat + event error przy padzie bramki `spar-assess`.
+- **Kolumny:** `spar_sessions.paywall_opened_at/paywall_abandoned_at/makieta_last_at/gen_error_count`, `spar_reveals.error_count/last_error/last_error_at` (migracje `20260710*`).
+- **KRYTYCZNY FIX pipeline'u dripa:** owner-gate odrzucał 403 wywołania WEWNĘTRZNE spar-drip (service-role) → generacje dla zarejestrowanych leadów nigdy nie ruszały (36 reveali wisiało w `generating`). Nowy `isTrustedInternalCall` w `_shared/spar-owner.ts` (Bearer==SERVICE_ROLE_KEY omija bramkę; `?id=` dalej nie jest hasłem). Recovery stale-generating (>30 min → pending, po 3 padach `failed` + Slack `spar_gen_error`), SMS w dripie z timeoutem 20s+retry, retry OpenAI dołożony w economics/gtm.
+- **spar-followups:** `reclose_1` (+48h) / `reclose_2` (+5 dni) po sygnale paywalla/nudge; `payment_rescue` (orders pending 2–48h); linki CTA maili przez PANEL (nie goły checkout); List-Unsubscribe (flaga `unsubscribe:true`, tylko kindy marketingowe). send-sms: timeout 12s + retry + normalizacja numerów.
+- **Front:** beacony paywalla, InitiateCheckout z dedupem `resv_<sid>`, idle-nudge 90s (raz/sesję, wspólny guard zaczepek), mail-capture w oknie badania rynku, ceremonia po płatności + guard `!state.paid` na karcie, hero mobile z CTA + pasek zaufania, fail-state banerów GTM. Checkout v2: linia zwrotności przy rezerwacji, piksele ujednolicone do netto.
+- **Panel:** `derivedStageOf` + kanban o stany `full_paid`/`knowhow_closed`; `setReservationPaid` → negotiation (won TYLKO full_paid) + marker ręcznego księgowania; badge zdrowia generacji i chip paywalla w karcie leada.
+- **spar-project:** `panel_visits`/`last_panel_at` awaited (bramka `visits2` przestaje gubić stemple).
 
 ### ✅ Zrobione 2026-06-20
 Bug #1 (kolejna rozmowa — stała `CONVO_DESCRIPTION`) · Bug #2 (retry OpenAI w raport/landing/prototype/assess) · bezpieczeństwo bucketa `attachments` (SELECT→`team_members`) · **safety-net `full_paid_at`** (pełna płatność za budowę nadrabiana w `spar-followups`, gdy webhook nie trafi — wcześniej płacący ~12k mógł utknąć bez odmrożenia spowiednika) · sprzątnięty `c:\tmp` · panel „Źródło prawdy" (edycja SSOT).

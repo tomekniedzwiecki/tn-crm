@@ -314,6 +314,8 @@ Deno.serve(async (req) => {
         if (mockups.length) {
           // Zapis nawet gdy <4 — front pokaże to, co się udało (lepsze niż czekanie 6 min na komplet).
           await supabase.from('bud_sessions').update({ mockups }).eq('id', sessionId);
+          // NB: powiadomienie #sparing NIE leci tu — decyzja Tomka 2026-07-07: pokazujemy tylko
+          // makietę WYBRANĄ przez usera, więc ping jest w bud-chat po zapisie chosen_style.
           if (mockups.length < 4) {
             console.warn('[bud-mockup] zapisano cząstkowo:', mockups.length, '/ 4');
             // FIX: zwolnij lock przy partialu, by force-retry mógł dopełnić do 4 (nie czekać na TTL 360s)

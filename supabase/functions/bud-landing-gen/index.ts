@@ -245,6 +245,59 @@ async function postSlackSparing(type: string, data: Record<string, unknown>): Pr
   }
 }
 
+// Publiczny podgląd sklepu = wrapper /sklep/podglad/ na NASZEJ domenie (tomekniedzwiecki.pl),
+// który fetchem pobiera landing_html z edge function bud-shop-preview i renderuje w sandboxowanym
+// iframe. Nie da się serwować HTML wprost z *.supabase.co (Storage ORAZ functions wymuszają
+// content-type text/plain — anty-XSS → przeglądarka pokazałaby ŹRÓDŁO, nie sklep). URL
+// deterministyczny z sid; persystujemy w landing_preview_url (sygnał „gotowe" dla panelu;
+// NIE landing_url — ten bramkuje publiczny feed w bud-public-feed!).
+// deno-lint-ignore no-explicit-any
+async function publishShopPreview(supabase: any, sessionId: string): Promise<string | null> {
+  try {
+    const url = `https://tomekniedzwiecki.pl/sklep/podglad/?sid=${sessionId}`
+    const { error: sErr } = await supabase.from('bud_sessions').update({ landing_preview_url: url }).eq('id', sessionId)
+    if (sErr) console.error('[bud-landing-gen] landing_preview_url save error:', sErr)
+    return url
+  } catch (err) {
+    console.error('[bud-landing-gen] publishShopPreview exception:', err)
+    return null
+  }
+}
+
+// Strona sklepu (landing_html) opublikowana → JEDNO powiadomienie #sparing (dedup atomowym
+// claimem na slack_html_notified_at — wspólna kolumna z legacy bud-landing, w żywym lejku
+// tylko ta funkcja ją stempluje). is_test pomijane. shopUrl = publiczny podgląd sklepu
+// (Storage) — klikalny „Zobacz sklep". Panel tn-sklep dostaje ten sam URL (landing_preview_url).
+// deno-lint-ignore no-explicit-any
+async function maybeNotifyHtmlSlack(supabase: any, sessionId: string, shopUrl: string | null): Promise<void> {
+  try {
+    const { data: claimed, error } = await supabase
+      .from('bud_sessions')
+      .update({ slack_html_notified_at: new Date().toISOString() })
+      .eq('id', sessionId)
+      .is('slack_html_notified_at', null)
+      .eq('is_test', false)
+      .select('id, name, email, phone, brand, preview_brief')
+    if (error) { console.error('[bud-landing-gen] html slack claim error:', error); return }
+    if (!claimed || !claimed.length) return
+    const s = claimed[0] as Record<string, unknown>
+    const brand = (s.brand && typeof s.brand === 'object') ? s.brand as Record<string, unknown> : null
+    const brief = (s.preview_brief && typeof s.preview_brief === 'object') ? s.preview_brief as Record<string, unknown> : null
+    await postSlackSparing('bud_html', {
+      session_id: sessionId,
+      name: s.name ?? null,
+      email: s.email ?? null,
+      phone: s.phone ?? null,
+      project_name: (brand && typeof brand.chosen_name === 'string' && brand.chosen_name)
+        ? brand.chosen_name
+        : ((brand && typeof brand.nazwa === 'string' && brand.nazwa) ? brand.nazwa : (brief?.nazwa ?? null)),
+      shop_url: shopUrl, // publiczny podgląd sklepu (Storage); null → sam przycisk „Otwórz w panelu"
+    })
+  } catch (err) {
+    console.error('[bud-landing-gen] maybeNotifyHtmlSlack exception:', err)
+  }
+}
+
 function extractHtml(raw: string): string {
   let t = (raw || '').trim().replace(/^```(?:html)?\s*/i, '').replace(/\s*```$/, '')
   const s = t.search(/<!doctype html|<html/i)
@@ -347,6 +400,155 @@ Deno.serve(async (req) => {
     // PER-SESJA (landing zależy od ustaleń + wybranej makiety konkretnego usera)
     if (!body.force && session.landing_html) return json({ landing_html: session.landing_html, cached: true }, 200, c)
 
+    // ── KONTEKST GENERACJI (wspólny dla stage1 i stage2) ─────────────────────
+    // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
+    // deno-lint-ignore no-explicit-any
+    const mocks = Array.isArray(session.mockups) ? session.mockups : []
+    // deno-lint-ignore no-explicit-any
+    const chosen = mocks.find((m: any) => m && m.style === session.chosen_style) || mocks[0] || null
+    const mockupUrl = String(body.mockup_url || (chosen && (chosen as any).url) || '')
+    product.__hasMockup = !!mockupUrl
+    // Brief wybranego stylu = AUTORYTET palety/typografii (tekstem, nie tylko z JPEG-a makiety → mniej dryfu)
+    // deno-lint-ignore no-explicit-any
+    const styleBrief = String((chosen && (chosen as any).brief) || '').slice(0, 600)
+    // deno-lint-ignore no-explicit-any
+    const styleLabel = String((chosen && (chosen as any).label) || '').slice(0, 80)
+    // Design tokens stylu (bud-mockup zapisuje je w mockups[].tokens od 2026-07-04) —
+    // NAJTWARDSZY autorytet palety/typografii; stare sesje bez tokens działają jak dotąd.
+    // deno-lint-ignore no-explicit-any
+    const styleTokens = (chosen && (chosen as any).tokens && typeof (chosen as any).tokens === 'object') ? (chosen as any).tokens : null
+    // Raport rynku (OPCJONALNY) → paliwo do copy (bóle avatara, pozycjonowanie) — patrz landingReportContext.
+    const marketReport = (session.market_report && typeof session.market_report === 'object') ? session.market_report : null
+    const ust = session.ustalenia || {}
+    // Logo marki (z bud-brand) — jeśli wybrane, wplatamy je w stronę zamiast samej nazwy
+    // deno-lint-ignore no-explicit-any
+    const brandObj: any = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand : null
+    const logoUrl = String((brandObj && (brandObj.chosen_logo || brandObj.logo_url)) || '')
+    // deno-lint-ignore no-explicit-any
+    const brandName = String((brandObj && (brandObj.chosen_name || brandObj.nazwa)) || (ust && (ust as any).nazwa) || '').slice(0, 80)
+    let snap: Record<string, unknown> | null = null
+    let curated: string | null = null
+    try {
+      const pkId = String(product.id || '')
+      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null; curated = (row && (row.curated_image as string)) || null }
+    } catch { /* */ }
+    // ANTY-ZATRUCIE (2026-07-03, przypadek „materac do Tesli"): snapshot source='search'
+    // (fallback wyszukiwarki po nazwie) bywa INNYM produktem — zeruj tytuł/opinie/staty,
+    // a zdjęcia bierz z pewnych źródeł (kandydat dopasowany po obrazie + okładka).
+    // deno-lint-ignore no-explicit-any
+    const searchSnap = !!snap && String((snap as any).source || '') === 'search'
+    if (searchSnap) snap = { ...(snap as Record<string, unknown>), title: '', reviews: [], review_stats: null }
+    // deno-lint-ignore no-explicit-any
+    let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
+    if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
+
+    // ── TRYB COMPARE (jednorazowy, req Tomka 2026-07-10): ten sam prompt+spec co produkcja,
+    //    dowolny model (body.model), ZWRACA html+usage — ZERO zapisu do sesji / locków / Slacka.
+    //    Służy do porównania jakości modeli (gpt-5.5 vs gpt-5.6) na tym samym sklepie.
+    if ((body as Record<string, unknown>).compare) {
+      const cmpModel = String((body as Record<string, unknown>).model || MODEL)
+      const doSave = !!(body as Record<string, unknown>).save
+      const lifestyleC = Array.isArray((session as Record<string, unknown>).landing_lifestyle)
+        ? ((session as Record<string, unknown>).landing_lifestyle as unknown[]).filter((u): u is string => typeof u === 'string' && !!u).slice(0, 4) : []
+      // SYNCHRONICZNIE — waitUntil bywa ubijany przy 190 s. Sync handler dobija serwerowo
+      // (inserty przed returnem WYKONAJĄ się), nawet gdy bramka utnie odpowiedź 504.
+      // Koszt czytamy potem z bud_usage (meta.from='compare-html'/'compare-spec').
+      const specAcc = { i: 0, c: 0, o: 0 }
+      const t0 = Date.now()
+      const mSpec = mockupUrl ? await extractMockupSpec(OPENAI_API_KEY, mockupUrl, specAcc).catch(() => '') : ''
+      // deno-lint-ignore no-explicit-any
+      const contentC: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyleC, styleBrief, styleLabel, logoUrl, brandName, mSpec, styleTokens, marketReport) }]
+      if (mockupUrl) contentC.push({ type: 'input_image', image_url: mockupUrl })
+      const resC = await fetchTimeout('https://api.openai.com/v1/responses', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+        body: JSON.stringify({ model: cmpModel, input: [{ role: 'user', content: contentC }], max_output_tokens: MAX_OUT }),
+      }, 330_000)
+      if (!resC.ok) { try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: cmpModel, cost_usd: 0, meta: { from: 'compare-fail', reason: 'openai ' + resC.status, duration_ms: Date.now() - t0 } }) } catch (_) { /* */ } return json({ error: 'openai', status: resC.status }, 200, c) }
+      const dataC = await resC.json()
+      let textC = typeof dataC?.output_text === 'string' ? dataC.output_text : ''
+      if (!textC) { for (const it of (dataC?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') textC += cc.text } }
+      const htmlC = extractHtml(textC)
+      const uC = dataC?.usage || {}
+      const inC = uC.input_tokens || 0, ccC = (uC.input_tokens_details?.cached_tokens) || 0, oC = uC.output_tokens || 0
+      const htmlCost = (Math.max(0, inC - ccC) * 5 + ccC * 0.5 + oC * 30) / 1_000_000
+      if (doSave && htmlC && htmlC.length > 400) {
+        try { await supabase.from('bud_sessions').update({ landing_html: htmlC, landing_preview_url: `https://tomekniedzwiecki.pl/sklep/podglad/?sid=${sessionId}` }).eq('id', sessionId) } catch (_) { /* */ }
+      }
+      try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: cmpModel, input_tokens: inC, cached_tokens: ccC, output_tokens: oC, cost_usd: htmlCost, meta: { from: 'compare-html', html_len: htmlC.length, duration_ms: Date.now() - t0 } }) } catch (_) { /* */ }
+      if (specAcc.i || specAcc.o) { try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: 'gpt-5.1', input_tokens: specAcc.i, cached_tokens: specAcc.c, output_tokens: specAcc.o, cost_usd: (Math.max(0, specAcc.i - specAcc.c) * 1.25 + specAcc.c * 0.125 + specAcc.o * 10) / 1_000_000, meta: { from: 'compare-spec' } }) } catch (_) { /* */ } }
+      return json({ model: cmpModel, ms: Date.now() - t0, html_len: htmlC.length, cost_html_usd: htmlCost, cost_spec_usd: (Math.max(0, specAcc.i - specAcc.c) * 1.25 + specAcc.c * 0.125 + specAcc.o * 10) / 1_000_000 }, 200, c)
+    }
+
+    // ── STAGE 2 (wewnętrzne, x-admin-secret): SAM call HTML we WŁASNEJ inwokacji ──
+    // NIEZAWODNOŚĆ (2026-07-06, sesja 70cb915c: 2 niewidzialne pady jednego wieczora):
+    // lifestyle+spec zjadały 1-2 min wall-clocka, a HTML (kilkanaście-30k tokenów przy
+    // wolnym OpenAI) nie mieścił się w reszcie limitu 400 s → isolate ubijany BEZ finally
+    // (zero usage-faila, zero Slacka, lock wisiał do TTL, front mielił „pending").
+    // Stage2 = świeży wall-clock wyłącznie na HTML + deadline guard 330 s, żeby KAŻDA
+    // porażka była uczciwa (fail-usage + Slack + release → front sam ponawia w pollingu).
+    if ((body as Record<string, unknown>).stage2) {
+      if (!isAdmin) return json({ error: 'brak_uprawnien' }, 403, c)
+      const { data: lock2 } = await supabase.rpc('bud_claim_lock', { p_session: sessionId, p_key: 'landing', p_ttl_sec: 400 })
+      if (!lock2) return json({ pending: true }, 202, c)
+      const lifestyle2 = Array.isArray((body as Record<string, unknown>).lifestyle)
+        ? ((body as Record<string, unknown>).lifestyle as unknown[]).filter((u): u is string => typeof u === 'string' && !!u).slice(0, 4)
+        : []
+      const mockupSpec2 = String((body as Record<string, unknown>).mockupSpec || '').slice(0, 1500)
+      const htmlTask = (async () => {
+        const t0 = Date.now()
+        let saved = false
+        let failReason = ''
+        try {
+          // deno-lint-ignore no-explicit-any
+          const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle2, styleBrief, styleLabel, logoUrl, brandName, mockupSpec2, styleTokens, marketReport) }]
+          if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
+          const callOnce = (ms: number) => fetchTimeout('https://api.openai.com/v1/responses', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
+            body: JSON.stringify({ model: MODEL, input: [{ role: 'user', content }], max_output_tokens: MAX_OUT }),
+          }, ms)
+          // Deadline guard: 330 s < wall-clock 400 s → przy timeout/abort finally DZIAŁA.
+          // Szybki blip (429/5xx w <90 s) dostaje jedną ponowną próbę w reszcie budżetu.
+          let res = await callOnce(330_000)
+          if (!res.ok && (res.status === 429 || res.status >= 500) && Date.now() - t0 < 90_000) {
+            try { await res.body?.cancel() } catch { /* zwolnij połączenie */ }
+            await new Promise((r) => setTimeout(r, 1200))
+            res = await callOnce(330_000 - (Date.now() - t0))
+          }
+          if (!res.ok) { failReason = `openai HTTP ${res.status}`; console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
+          const data = await res.json()
+          // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka
+          try {
+            const u = data?.usage || {}; const inTok = u.input_tokens || 0, cTok = (u.input_tokens_details?.cached_tokens) || 0, oTok = u.output_tokens || 0
+            await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html', duration_ms: Date.now() - t0 } })
+          } catch (_) { /* log nie blokuje */ }
+          let text = typeof data?.output_text === 'string' ? data.output_text : ''
+          if (!text) { for (const it of (data?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') text += cc.text } }
+          const html = extractHtml(text)
+          if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
+          await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
+          saved = true
+          const shopUrl = await publishShopPreview(supabase, sessionId) // publiczny podgląd sklepu (bud-shop-preview)
+          await maybeNotifyHtmlSlack(supabase, sessionId, shopUrl) // strona gotowa → #sparing (dedup, raz na sesję)
+        } catch (e) {
+          failReason = String(e).includes('AbortError') || String(e).toLowerCase().includes('abort')
+            ? `timeout ${Math.round((Date.now() - t0) / 1000)}s (deadline guard)` : String(e).slice(0, 280)
+          console.error('[bud-landing-gen] stage2 error:', e)
+        } finally {
+          if (!saved) {
+            // Uczciwy fail: ślad w usage (duration!), lock w dół (retry usera od razu), alert Tomka.
+            try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-html-fail', reason: failReason || 'nieznany', duration_ms: Date.now() - t0 } }) } catch { /* */ }
+            try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
+            await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'strona sklepu (bud-landing-gen/stage2)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })
+          } else {
+            try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
+          }
+        }
+      })()
+      try { (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(htmlTask) } catch (_) { /* */ }
+      return json({ pending: true }, 202, c)
+    }
+
     // ── T1: CAPY anty-nadużycie (admin omija; wzorzec bud-mockup). Sprawdzane PRZED lockiem;
     //    force=true też tu trafia (cache zwrócił wyżej). Fail-open na błędzie zapytania.
     if (!isAdmin) {
@@ -399,42 +601,6 @@ Deno.serve(async (req) => {
     // polling pending / cache-hit nie nabija licznika; realny start palący $ TAK.
     // Rerolle admina dostają osobny marker (nie zjadają limitu usera — audyt #7).
     try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: isAdmin ? 'landing-attempt-admin' : 'landing-attempt' } }) } catch (_) { /* */ }
-
-    // Wybrana makieta = referencja wizualna; snapshot = realne zdjęcia + tytuł.
-    const mocks = Array.isArray(session.mockups) ? session.mockups : []
-    const chosen = mocks.find((m: any) => m && m.style === session.chosen_style) || mocks[0] || null
-    const mockupUrl = String(body.mockup_url || (chosen && chosen.url) || '')
-    product.__hasMockup = !!mockupUrl
-    // Brief wybranego stylu = AUTORYTET palety/typografii (tekstem, nie tylko z JPEG-a makiety → mniej dryfu)
-    const styleBrief = String((chosen && (chosen as any).brief) || '').slice(0, 600)
-    const styleLabel = String((chosen && (chosen as any).label) || '').slice(0, 80)
-    // Design tokens stylu (bud-mockup zapisuje je w mockups[].tokens od 2026-07-04) —
-    // NAJTWARDSZY autorytet palety/typografii; stare sesje bez tokens działają jak dotąd.
-    // deno-lint-ignore no-explicit-any
-    const styleTokens = (chosen && (chosen as any).tokens && typeof (chosen as any).tokens === 'object') ? (chosen as any).tokens : null
-    // Raport rynku (OPCJONALNY) → paliwo do copy (bóle avatara, pozycjonowanie) — patrz landingReportContext.
-    const marketReport = (session.market_report && typeof session.market_report === 'object') ? session.market_report : null
-    const ust = session.ustalenia || {}
-    // Logo marki (z bud-brand) — jeśli wybrane, wplatamy je w stronę zamiast samej nazwy
-    // deno-lint-ignore no-explicit-any
-    const brandObj: any = (session.brand && typeof session.brand === 'object' && !Array.isArray(session.brand)) ? session.brand : null
-    const logoUrl = String((brandObj && (brandObj.chosen_logo || brandObj.logo_url)) || '')
-    const brandName = String((brandObj && (brandObj.chosen_name || brandObj.nazwa)) || (ust && (ust as any).nazwa) || '').slice(0, 80)
-    let snap: Record<string, unknown> | null = null
-    let curated: string | null = null
-    try {
-      const pkId = String(product.id || '')
-      if (pkId && UUID_RE.test(pkId)) { const { data: row } = await supabase.from('bud_tt_products').select('ali_snapshot, curated_image').eq('id', pkId).maybeSingle(); snap = (row && row.ali_snapshot) || null; curated = (row && (row.curated_image as string)) || null }
-    } catch { /* */ }
-    // ANTY-ZATRUCIE (2026-07-03, przypadek „materac do Tesli"): snapshot source='search'
-    // (fallback wyszukiwarki po nazwie) bywa INNYM produktem — jego tytuł psuł nazwę na
-    // stronie, jego OPINIE lądowały jako social proof, a galeria karmiła stronę i lifestyle
-    // zdjęciami obcego towaru. Wtedy: zeruj tytuł/opinie/staty (prompt przejdzie na uczciwe
-    // szablony), a zdjęcia bierz z pewnych źródeł (kandydat dopasowany po obrazie + okładka).
-    const searchSnap = !!snap && String((snap as any).source || '') === 'search'
-    if (searchSnap) snap = { ...(snap as Record<string, unknown>), title: '', reviews: [], review_stats: null }
-    let images = (!searchSnap && snap && Array.isArray((snap as any).images)) ? ((snap as any).images as string[]).slice() : [String(product.image || ''), String(product.cover || '')].filter(Boolean)
-    if (curated) images = [curated, ...images.filter((u: string) => u !== curated)]   // ręczne zdjęcie z /trendy = pierwsza referencja
 
     const genTask = (async () => {
       let saved = false
@@ -489,20 +655,38 @@ Deno.serve(async (req) => {
             await supabase.from('bud_sessions').update({ mockups: mocks }).eq('id', sessionId)
           } catch (e) { console.error('[bud-landing-gen] zapis spec do mockups nieudany:', e) }
         }
+        // HAND-OFF DO STAGE2 (2026-07-06): najcięższy call (HTML) dostaje WŁASNĄ inwokację
+        // ze świeżym wall-clockiem — patrz komentarz przy gałęzi stage2. Lock zwalniamy tuż
+        // przed self-invoke (stage2 claimuje własny); okno wyścigu z pollingiem ~0,5 s jest
+        // akceptowalne (poll co 12 s; przegrany claim po prostu nic nie robi).
+        if (CRON) {
+          try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* stage2 zaraz claimnie */ }
+          const selfRes = await fetchTimeout(`${SUPABASE_URL}/functions/v1/bud-landing-gen`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON },
+            body: JSON.stringify({ stage2: true, sessionId, product, mockup_url: mockupUrl, lifestyle, mockupSpec, force: !!body.force }),
+          }, 15_000)
+          if (!selfRes.ok) { failReason = `stage2 HTTP ${selfRes.status}`; return }
+          saved = true   // odpowiedzialność (lock, save, Slack) przejął stage2
+          return
+        }
+        // FALLBACK bez CRON (brak sekretu = brak self-invoke): stary tryb inline —
+        // pojedyncza próba z deadline guardem, żeby pad nigdy nie był niewidzialny.
+        const t0 = Date.now()
         // deno-lint-ignore no-explicit-any
         const content: any[] = [{ type: 'input_text', text: prompt(product, ust, snap, images, lifestyle, styleBrief, styleLabel, logoUrl, brandName, mockupSpec, styleTokens, marketReport) }]
         if (mockupUrl) content.push({ type: 'input_image', image_url: mockupUrl })
-        const res = await openaiFetchRetry('https://api.openai.com/v1/responses', {
+        const res = await fetchTimeout('https://api.openai.com/v1/responses', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${OPENAI_API_KEY}` },
           body: JSON.stringify({ model: MODEL, input: [{ role: 'user', content }], max_output_tokens: MAX_OUT }),
-        }, 'bud-landing-gen')
+        }, 240_000)
         if (!res.ok) { failReason = `openai HTTP ${res.status}`; console.error('[bud-landing-gen] openai', res.status, (await res.text().catch(() => '')).slice(0, 300)); return }
         const data = await res.json()
         // KOSZT: HTML strony (gpt-5.5, responses API) — najdroższy etap lejka
         try {
           const u = data?.usage || {}; const inTok = u.input_tokens || 0, cTok = (u.input_tokens_details?.cached_tokens) || 0, oTok = u.output_tokens || 0
-          await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html' } })
+          await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', model: MODEL, input_tokens: inTok, cached_tokens: cTok, output_tokens: oTok, cost_usd: (Math.max(0, inTok - cTok) * 5 + cTok * 0.5 + oTok * 30) / 1_000_000, meta: { from: 'landing-html', duration_ms: Date.now() - t0 } })
         } catch (_) { /* log nie blokuje */ }
         let text = typeof data?.output_text === 'string' ? data.output_text : ''
         if (!text) { for (const it of (data?.output || [])) { if (it?.type === 'message' && Array.isArray(it.content)) for (const cc of it.content) if (cc?.type === 'output_text' && typeof cc.text === 'string') text += cc.text } }
@@ -510,12 +694,15 @@ Deno.serve(async (req) => {
         if (!html || html.length < 400 || !/<\/html>/i.test(html)) { failReason = 'zły HTML (len ' + html.length + ')'; console.error('[bud-landing-gen] ' + failReason); return }
         await supabase.from('bud_sessions').update({ landing_html: html }).eq('id', sessionId)
         saved = true
+        const shopUrl = await publishShopPreview(supabase, sessionId) // publiczny podgląd sklepu (bud-shop-preview)
+        await maybeNotifyHtmlSlack(supabase, sessionId, shopUrl) // strona gotowa → #sparing (dedup, raz na sesję)
       } catch (e) {
         failReason = String(e).slice(0, 280)
         console.error('[bud-landing-gen] gen task error:', e)
       } finally {
         if (!saved) {
           // T2: porażka = lock w dół (retry usera generuje OD RAZU, nie po TTL 400 s)…
+          try { await supabase.from('bud_usage').insert({ session_id: sessionId, kind: 'landing', cost_usd: 0, meta: { from: 'landing-html-fail', reason: failReason || 'nieznany', stage: 1 } }) } catch { /* */ }
           try { await supabase.rpc('bud_release_lock', { p_session: sessionId, p_key: 'landing' }) } catch { /* */ }
           // …T10: i Tomek wie o padzie przed userem.
           await postSlackSparing('bud_gen_error', { session_id: sessionId, stage: 'strona sklepu (bud-landing-gen)', error: failReason || 'nieznany błąd', product: String(product?.nazwa || product?.name || '') })

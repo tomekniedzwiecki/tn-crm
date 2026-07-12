@@ -117,6 +117,7 @@
   <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" id="tabs">
     <button data-tab="przeglad" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-squares-four text-lg shrink-0"></i><span>Przegląd</span></button>
     <button data-tab="leady" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-users-three text-lg shrink-0"></i><span>Leady</span></button>
+    <button data-tab="lejek" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-funnel text-lg shrink-0"></i><span>Lejek</span></button>
     <button data-tab="komunikacja" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-flow-arrow text-lg shrink-0"></i><span>Komunikacja</span></button>
     <button data-tab="koszty" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-wallet text-lg shrink-0"></i><span>Koszty</span></button>
     <button data-tab="galeria" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-images text-lg shrink-0"></i><span>Galeria</span></button>
@@ -180,6 +181,16 @@
     </div>
   </section>
 
+  <!-- ════════ LEJEK (analityka końcówki — kohorty tygodniowe; LEJEK V2 2026-07-07) ════════ -->
+  <section id="view-lejek" class="hidden p-4 md:p-6">
+    <div class="flex items-center gap-3 mb-1">
+      <h2 class="text-lg font-semibold text-white">Lejek rezerwacji</h2>
+      <span class="text-[11px] text-zinc-500">kohorty tygodniowe wg daty startu sesji · pełne dane eventowe od 7.07.2026</span>
+    </div>
+    <p class="text-xs text-zinc-500 mb-4">Ile sesji z każdej kohorty dotarło do etapu. Procent = konwersja z poprzedniego wiersza. Wpłata liczona po <code>paid_at</code>, reszta z <code>bud_events</code> + stanu sesji.</p>
+    <div id="lejek-body" class="space-y-6"><div class="text-sm text-zinc-500"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę lejek…</div></div>
+  </section>
+
   <!-- ════════ LEADY (lista + tablica, filtry, zaangażowanie) ════════ -->
   <section id="view-leady" class="hidden p-4 md:p-6">
     <div class="flex items-center gap-2.5 mb-3 flex-wrap">
@@ -208,7 +219,7 @@
               <th class="px-4 py-3">Projekt</th>
               <th class="px-4 py-3">Osoba</th>
               <th class="px-4 py-3">Źródło</th>
-              <th class="px-4 py-3">Kierunek</th>
+              <th class="px-4 py-3">Budżet</th>
               <th class="px-4 py-3">Etap</th>
               <th class="px-4 py-3">Sygnał</th>
               <th class="px-4 py-3 text-right">Tury</th>
@@ -626,16 +637,34 @@ PC.setRate(usdPln);
 PC.initCtx({ supabase: supabaseClient, rpcCostsDaily: 'bud_costs_daily' });
 
 // pipeline (STAGES/STAGE_IDS/derivedStageOf/stageOf/projName) → PanelCore (components/panel-core.js)
-// ── Specyfika SKLEPU: 3 kierunki (track k1/k2/k3) + wybrany produkt/nisza ──
-const TRACK_META = {
-  k1: { label: 'K1 · od zera',  full: 'Nie mam pomysłu — dobór produktu od zera', cls: 'text-sky-400 bg-sky-500/10 border-sky-500/20', icon: 'ph-compass' },
-  k2: { label: 'K2 · mam markę', full: 'Mam produkt/markę i już sprzedaję — optymalizacja', cls: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', icon: 'ph-storefront' },
-  k3: { label: 'K3 · launch',   full: 'Mam pomysł — chcę wprowadzić na rynek', cls: 'text-violet-400 bg-violet-500/10 border-violet-500/20', icon: 'ph-rocket-launch' },
+// ── Specyfika SKLEPU: deklarowany budżet startu (LEJEK V2) + wybrany produkt/nisza ──
+// Kierunki (track k1/k2/k3) USUNIĘTE z UI (req Tomka 2026-07-07 — nie ustalamy tego);
+// kolumna DB zostaje jako historia, panel jej nie pokazuje i nie edytuje.
+const BUDGET_META = {
+  '10plus': { label: '10 tys.+',   cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/25', icon: 'ph-coins' },
+  '5-10':   { label: '5–10 tys.',  cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20', icon: 'ph-coins' },
+  '2-5':    { label: '2–5 tys.',   cls: 'text-sky-300 bg-sky-500/10 border-sky-500/25', icon: 'ph-coin' },
+  lt2:      { label: '< 2 tys.',   cls: 'text-rose-300 bg-rose-500/10 border-rose-500/25', icon: 'ph-warning' },
+  none:     { label: 'bez budżetu', cls: 'text-rose-300 bg-rose-500/10 border-rose-500/25', icon: 'ph-warning' },
+  high:     { label: 'jest budżet', cls: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20', icon: 'ph-coins' },
+  mid:      { label: 'część budżetu', cls: 'text-sky-300 bg-sky-500/10 border-sky-500/20', icon: 'ph-coin' },
+  raty:     { label: 'raty',       cls: 'text-sky-300 bg-sky-500/10 border-sky-500/20', icon: 'ph-coin' },
+  unknown:  { label: 'nie wie',    cls: 'text-zinc-400 bg-white/5 border-white/10', icon: 'ph-question' },
 };
-function trackBadge(s) {
-  const m = TRACK_META[s.track];
+function budgetBadge(s) {
+  const m = BUDGET_META[s.budget_declared];
   if (!m) return '';
-  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium ${m.cls}" title="${esc(m.full)}"><i class="ph ${m.icon}"></i>${m.label}</span>`;
+  return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-medium ${m.cls}" title="Deklarowany budżet startu"><i class="ph ${m.icon}"></i>${m.label}</span>`;
+}
+// KWOTA budżetu podana słownie w rozmowie (budget_note, LEJEK V2) — pokazujemy WPROST,
+// bo to konkret, którego kategoryczny badge nie oddaje. Gdy jest kwota: chip z kwotą
+// (+ badge kategorii, jeśli inny sygnał). Gdy brak kwoty: sam badge kategorii.
+function budgetCell(s) {
+  const note = (s.budget_note || '').trim();
+  const badge = budgetBadge(s);
+  if (!note) return badge;
+  const amt = `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[11px] font-semibold text-emerald-200 bg-emerald-500/10 border-emerald-500/30" title="Kwota zadeklarowana w rozmowie"><i class="ph ph-coins"></i>${esc(note)}</span>`;
+  return amt;
 }
 // Wybrany produkt (K1: product_input.k1_wybrany.nazwa) lub nisza (niche / K2 nazwa)
 function productOf(s) {
@@ -652,7 +681,7 @@ function visibleSessions() {
 // Config źródła danych lejka SKLEP (bud_* + kolumny e-com → PanelCore.loadSessions).
 const LOAD_CFG = {
   table: 'bud_sessions',
-  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, track, niche, product_input, problem_summary, raport_meta:market_report->_meta',
+  select: 'id, created_at, updated_at, last_user_at, last_panel_at, email, name, phone, profession, verdict, status, turns, image_count, preview_brief, preview_images, lead_id, paid_at, lead_error, is_test, showcase, hidden_from_feed, pipeline_override, tracking, auth_provider, auth_user_id, landing_url, idea_source, full_paid_at, knowhow_closed_at, niche, product_input, problem_summary, budget_declared, budget_note, seen_landing_at, raport_meta:market_report->_meta',
   rpcCosts: 'bud_session_costs', rpcAvatars: 'bud_session_avatars', emailsTable: 'bud_emails',
 };
 async function loadAll() {
@@ -722,7 +751,7 @@ function renderSesje() {
       <td class="px-4 py-2.5 text-white">${accentDot(s)}${esc(projName(s))}${s.is_test ? ' <span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}</td>
       <td class="px-4 py-2.5"><div class="flex items-center gap-2.5">${avatarThumb(s, 28)}<div class="min-w-0"><div class="text-zinc-400 text-xs truncate">${esc(s.email || '—')}</div>${s.phone ? `<div class="text-zinc-600 text-xs">${esc(s.phone)}</div>` : ''}</div></div></td>
       <td class="px-4 py-2.5">${sourceBadge(s)}</td>
-      <td class="px-4 py-2.5">${trackBadge(s) || '<span class="text-zinc-700 text-xs">—</span>'}${productOf(s) ? `<div class="text-[10px] text-zinc-500 truncate max-w-[140px] mt-0.5" title="${esc(productOf(s))}">${esc(productOf(s))}</div>` : ''}</td>
+      <td class="px-4 py-2.5">${budgetCell(s) || '<span class="text-zinc-700 text-xs">—</span>'}${productOf(s) ? `<div class="text-[10px] text-zinc-500 truncate max-w-[140px] mt-0.5" title="${esc(productOf(s))}">${esc(productOf(s))}</div>` : ''}</td>
       <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1.5 text-xs ${st.color}"><span class="w-1.5 h-1.5 rounded-full ${st.dot}"></span>${st.name}</span></td>
       <td class="px-4 py-2.5">${signalBadge(s)}</td>
       <td class="px-4 py-2.5 text-right text-zinc-400 font-mono text-xs">${s.turns || '<span class="text-zinc-700">0</span>'}</td>
@@ -851,7 +880,10 @@ function leadChatPhases() {
   let verdictIdx = -1;
   for (let i = 0; i < msgs.length; i++) {
     const c = msgs[i].content || '';
-    if (msgs[i].role === 'assistant' && c.indexOf('<werdykt>') >= 0 && /"kolor"\s*:\s*"zielony"/.test(c)) { verdictIdx = i; break; }
+    if (msgs[i].role !== 'assistant') continue;
+    // /sklep emituje marker <zielone> (zielone światło). Legacy /aplikacja: <werdykt> kolor=zielony.
+    // Obsługujemy OBA — inaczej sesje /sklep nie mają fazy „warunki/współpraca".
+    if (/<zielone[\s/>]/.test(c) || (c.indexOf('<werdykt>') >= 0 && /"kolor"\s*:\s*"zielony"/.test(c))) { verdictIdx = i; break; }
   }
   const phases = msgs.map((m, i) => {
     const t = m.created_at ? Date.parse(m.created_at) : 0;
@@ -915,7 +947,7 @@ async function openSession(id) {
     supabaseClient.from('bud_messages').select('role, content, channel, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('bud_usage').select('kind, model, input_tokens, cached_tokens, output_tokens, images, cost_usd, created_at').eq('session_id', id).order('id', { ascending: true }),
     supabaseClient.from('bud_emails').select('kind, sent_at, opened_at, clicked_at, delivered_at').eq('session_id', id).order('sent_at', { ascending: false }),
-    supabaseClient.from('bud_sessions').select('landing_url, business_plan, market_report, economics, gtm, assessment, problem_summary, demand_validation, brand, niche, track, product_input, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source, ustalenia, chosen_style, mockups, session_ads, landing_html').eq('id', id).maybeSingle(),
+    supabaseClient.from('bud_sessions').select('landing_url, landing_preview_url, business_plan, market_report, economics, gtm, assessment, problem_summary, demand_validation, brand, niche, product_input, sequence_cancelled_at, full_paid_at, knowhow_closed_at, idea_source, ustalenia, chosen_style, mockups, session_ads, landing_html').eq('id', id).maybeSingle(),
     supabaseClient.from('bud_usage').select('meta').eq('session_id', id).eq('kind', 'prototype').order('id', { ascending: false }).limit(1).maybeSingle(),
     supabaseClient.from('bud_abandoned_emails').select('kind, seq, subject, sms, status, scheduled_at, sent_at').eq('session_id', id).order('seq'),
     ordersQ,
@@ -935,7 +967,6 @@ async function openSession(id) {
     // SKLEP: świeże pola sparingu budowania do widoków karty (Karta / Bramka / kierunek)
     if (art.assessment) leadData.s.assessment = art.assessment;
     if (art.problem_summary) leadData.s.problem_summary = art.problem_summary;
-    if (art.track !== undefined) leadData.s.track = art.track;
     if (art.niche !== undefined) leadData.s.niche = art.niche;
     if (art.product_input !== undefined) leadData.s.product_input = art.product_input;
   }
@@ -986,7 +1017,7 @@ function renderLeadHead(s) {
       <div class="min-w-0 flex-1">
         <div class="flex items-center gap-2 flex-wrap">
           <h2 class="text-white font-semibold text-lg truncate">${accentDot(s)}${esc(projName(s))}</h2>
-          ${signalBadge(s)}${trackBadge(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
+          ${signalBadge(s)}${budgetCell(s)}${sourceBadge(s)}${s.is_test ? '<span class="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-zinc-500">TEST</span>' : ''}
         </div>
         <div class="text-xs text-zinc-500 mt-0.5 truncate">${esc(s.email || 'bez e-maila')}${s.phone ? ' · ' + esc(s.phone) : ''}${s.auth_provider ? ' · ' + esc(s.auth_provider) : ''}${productOf(s) ? ' · produkt: ' + esc(productOf(s)) : ''} · ${fmtDate(s.created_at)}</div>
       </div>
@@ -1017,7 +1048,7 @@ async function retryCreateLead(sid) {
     } else {
       const { data: ins, error: insErr } = await supabaseClient.from('leads').insert({
         email: s.email.trim(), name: s.name || null, phone: s.phone || null,
-        lead_source: 'budowanie', status: (s.paid_at ? 'won' : 'new'),
+        lead_source: 'budowanie', status: (s.paid_at ? 'negotiation' : 'new'),
       }).select('id').maybeSingle();
       if (insErr) { console.error(insErr); toast('Błąd tworzenia leada: ' + (insErr.message || '')); return; }
       leadId = ins && ins.id;
@@ -1352,6 +1383,7 @@ function leadChatHTML() {
       ${viewBtn('user', 'Oczami leada', 'ph-eye')}
       ${viewBtn('transkrypcja', 'Transkrypcja', 'ph-list-dashes')}
       <span class="flex-1"></span>
+      ${leadData.s.landing_preview_url ? `<a href="${esc(leadData.s.landing_preview_url)}" target="_blank" rel="noopener" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition" title="Sam sklep (publiczny podgląd, bez reszty lejka)"><i class="ph ph-storefront mr-1"></i>Otwórz sklep</a>` : ''}
       ${leadChatView === 'user' ? `<button onclick="openClientPreview('${leadData.s.id}')" class="px-2.5 py-1 rounded-full text-[11px] border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 transition"><i class="ph ph-arrow-square-out mr-1"></i>Otwórz w nowej karcie</button>` : ''}
     </div>`;
   if (leadChatView !== 'user') return bar + leadChatTranscriptHTML();
@@ -1602,19 +1634,9 @@ function leadAkcjeHTML() {
       ${manual ? `<button onclick="setStage('${s.id}','${derivedStageOf(s)}')" class="px-3.5 py-2 rounded-lg border border-white/10 text-zinc-400 hover:text-white hover:border-white/25 text-xs transition inline-flex items-center gap-1.5"><i class="ph ph-arrow-counter-clockwise"></i>Przywróć automatyczny</button>` : ''}
     </div>
   </div>`;
-  // SKLEP: ręczne ustawienie kierunku (track k1/k2/k3) — kolumna objęta GRANT UPDATE
-  // dla authenticated (migracja 20260621_zbuduje_f0_foundation). Brak odpowiednika
-  // „darmowych rozmów" (to mechanika sparingu 49 zł — nie dotyczy budowania).
-  const trackBox = `<div class="p-3.5 rounded-xl bg-zinc-900/60 border border-white/5">
-        <div class="text-sm text-zinc-300 mb-1"><i class="ph ph-signpost mr-1 text-sky-400"></i>Kierunek (track)</div>
-        <div class="text-[11px] text-zinc-500 mb-2.5">k1 = od zera (dobór produktu), k2 = mam markę (optymalizacja), k3 = mam pomysł (launch). Zwykle ustawia go rozmowa — tu możesz nadpisać ręcznie.</div>
-        <select onchange="updateTrack('${s.id}', this.value)" class="bg-black/40 border border-white/10 text-zinc-200 text-xs rounded-lg px-2.5 py-2 focus:border-blue-500/40 outline-none w-full">
-          <option value="" ${!s.track ? 'selected' : ''}>— brak / automatycznie</option>
-          <option value="k1" ${s.track === 'k1' ? 'selected' : ''}>k1 · od zera</option>
-          <option value="k2" ${s.track === 'k2' ? 'selected' : ''}>k2 · mam markę</option>
-          <option value="k3" ${s.track === 'k3' ? 'selected' : ''}>k3 · launch</option>
-        </select>
-      </div>`;
+  // Kierunek (track k1/k2/k3) USUNIĘTY z UI (req Tomka 2026-07-07 — nie ustalamy tego);
+  // kolumna DB zostaje jako historia. Brak odpowiednika „darmowych rozmów" (mechanika
+  // sparingu 49 zł — nie dotyczy budowania).
   const platnosciPtr = `<button onclick="switchLeadTab('platnosci')" class="w-full text-left p-3.5 rounded-xl bg-zinc-900/60 border border-white/5 hover:border-blue-500/40 transition">
     <div class="flex items-center justify-between gap-2">
       <div>
@@ -1626,20 +1648,11 @@ function leadAkcjeHTML() {
   </button>`;
   return `<div class="max-w-xl space-y-2.5">
     ${stageBox}
-    ${trackBox}
     ${platnosciPtr}
     ${row(s.is_test, `toggleTest('${s.id}', this.checked)`, 'Sesja testowa (poza metrykami i follow-upami)', 'accent-blue-500')}
     ${row(s.showcase, `toggleShowcase('${s.id}', this.checked)`, 'Pokazuj w przykładach mimo statusu testowego (showcase)', 'accent-blue-500')}
     ${row(s.hidden_from_feed, `toggleHidden('${s.id}', this.checked)`, 'Ukryj z inspiracji i strony głównej', 'accent-red-500')}
   </div>`;
-}
-async function updateTrack(id, val) {
-  const v = val || null;
-  const { error } = await supabaseClient.from('bud_sessions').update({ track: v }).eq('id', id);
-  if (error) { toast('Błąd zapisu kierunku: ' + (error.message || '')); console.error(error); return; }
-  const s = sessions.find((x) => x.id === id); if (s) s.track = v;
-  if (leadData && leadData.s.id === id) { leadData.s.track = v; renderLeadHead(leadData.s); renderLeadTab(); }
-  toast('Zmieniono kierunek: ' + (v || 'automatyczny'));
 }
 function afterToggle(id) {
   const s = sessions.find((x) => x.id === id);
@@ -1718,8 +1731,10 @@ async function setReservationPaid(id, val) {
   const s = sessions.find((x) => x.id === id);
   if (s) {
     s.paid_at = paidAt;
-    // pipeline CRM: lead wygrany (best-effort — przy braku uprawnień po prostu pomijamy)
-    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'won' }).eq('id', s.lead_id).neq('status', 'won'); } catch (e) { /* ignore */ } }
+    // pipeline CRM: rezerwacja opłacona = 'negotiation' (NIE 'won' — 'won' zarezerwowane
+    // dla PEŁNEJ płatności budowy, spójnie z tpay-webhook isFull). Guard: nie downgrade'uj
+    // leada już 'won'/'negotiation' (best-effort — przy braku uprawnień po prostu pomijamy).
+    if (val && s.lead_id) { try { await supabaseClient.from('leads').update({ status: 'negotiation' }).eq('id', s.lead_id).not('status', 'in', '("won","negotiation")'); } catch (e) { /* ignore */ } }
   }
   toast(val ? 'Oznaczono rezerwację jako opłaconą' : 'Cofnięto oznaczenie rezerwacji');
   if (leadData && leadData.s.id === id) { leadData.s.paid_at = paidAt; renderLeadHead(leadData.s); renderLeadTab(); }
@@ -2158,13 +2173,29 @@ function signalBadge(s) {
   const g = leadSignal(s);
   return `<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium ${TONE_CHIP[g.tone]}"><i class="ph ${g.icon}"></i>${g.label}</span>`;
 }
+// Realny lead = ktoś, kogo da się obsłużyć. Kryją się dwa rodzaje szumu:
+//  • pusta rozmowa — user nigdy nic nie napisał (turns=0 i brak last_user_at, oba
+//    ustawiane naraz przy 1. turze usera, patrz bud-chat persistAfterStream),
+//  • anonim bez namiaru — brak e-maila i telefonu, więc nie ma jak follow-upować.
+// Pokazujemy więc tylko sesje, które mają ≥1 wiadomość ORAZ kontakt. Wyjątkiem są
+// stany, których nie wolno ukryć: opłacony, lead w CRM, błąd lead-upsertu.
+function isRealLead(s) {
+  if (s.paid_at || s.lead_id || s.lead_error) return true;
+  const hasMsg = (s.turns || 0) > 0 || !!s.last_user_at;
+  const hasContact = !!s.email || !!s.phone;
+  return hasMsg && hasContact;
+}
+// Baza leadów: widoczne sesje bez szumu (spójna dla listy i liczników filtrów).
+function leadBase() {
+  return visibleSessions().filter(isRealLead);
+}
 // Lista leadów po filtrze szybkim + wyszukiwarce
 function leadList() {
   const q = search.toLowerCase();
-  return visibleSessions().filter((s) => {
+  return leadBase().filter((s) => {
     if (q && ![projName(s), s.email, s.phone, s.profession, s.name, productOf(s), s.niche].some((v) => v && String(v).toLowerCase().includes(q))) return false;
     if (leadySource !== 'all' && srcInfo(s).channel !== leadySource) return false;
-    if (leadyTrack !== 'all' && (s.track || '') !== leadyTrack) return false;
+    if (leadyBudget !== 'all' && (s.budget_declared || '') !== leadyBudget) return false;
     if (leadyFilter === 'all') return true;
     if (leadyFilter === 'paid') return !!s.paid_at;
     if (leadyFilter === 'green') return s.verdict === 'zielony';
@@ -2173,6 +2204,108 @@ function leadList() {
     if (leadyFilter === 'lead_err') return !!s.lead_error && !s.lead_id;
     return leadSignal(s).key === leadyFilter;
   });
+}
+
+// ── LEJEK REZERWACJI (analityka końcówki, LEJEK V2 2026-07-07) ────────────────
+// Kohorty tygodniowe (wg created_at sesji): ile sesji z kohorty osiągnęło każdy
+// etap końcówki. Źródła: sessions (stan) + bud_events (momenty; pełne od 7.07).
+// Cel: decyzja o cenie 500 zł i wąskim gardle na DANYCH, nie wrażeniu.
+const BUDGET_OK = new Set(['2-5', '5-10', '10plus', 'high', 'mid', 'raty']);
+let _lejekEvents = null;   // cache eventów na czas otwartej karty (odświeżane przy wejściu w tab)
+async function renderLejek() {
+  const box = $('lejek-body');
+  if (!box) return;
+  box.innerHTML = '<div class="text-sm text-zinc-500"><i class="ph ph-circle-notch animate-spin mr-1.5"></i>Liczę lejek…</div>';
+  let events = [];
+  if (DEMO) { _lejekEvents = []; }
+  else {
+    try {
+      const since = new Date(Date.now() - 35 * 86400000).toISOString();
+      const { data, error } = await supabaseClient.from('bud_events')
+        .select('session_id, event, meta, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
+        .range(0, 9999);   // GOTCHA: default 1000 rows — bez range ucina
+      if (error) throw error;
+      events = data || [];
+      _lejekEvents = events;
+    } catch (e) { box.innerHTML = `<div class="text-sm text-rose-400">Błąd eventów: ${esc(e.message || e)}</div>`; return; }
+  }
+  const evBySession = {};
+  events.forEach((e) => { (evBySession[e.session_id] = evBySession[e.session_id] || []).push(e); });
+  const hasEv = (s, name) => (evBySession[s.id] || []).some((e) => e.event === name);
+
+  // Kohorty: 4 pełne tygodnie wstecz od poniedziałku bieżącego tygodnia + RAZEM
+  const now = new Date();
+  const monday = new Date(now); monday.setHours(0, 0, 0, 0); monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  const weeks = [];
+  for (let i = 3; i >= 0; i--) {
+    const from = new Date(monday); from.setDate(from.getDate() - i * 7);
+    const to = new Date(from); to.setDate(to.getDate() + 7);
+    weeks.push({ from, to, label: `${String(from.getDate()).padStart(2, '0')}.${String(from.getMonth() + 1).padStart(2, '0')}–${String(to.getDate() - 1 >= 0 ? new Date(to - 1).getDate() : '').padStart(2, '0')}.${String(new Date(to - 1).getMonth() + 1).padStart(2, '0')}` });
+  }
+  // Sesje realne (jak leadBase, ale bez filtra szumu isRealLead — tu chcemy pełną bazę rozmów z kontaktem)
+  const base = visibleSessions().filter((s) => (s.turns || 0) > 0 && (s.email || s.phone));
+  const inWeek = (s, w) => { const t = Date.parse(s.created_at); return t >= w.from.getTime() && t < w.to.getTime(); };
+
+  const budgetOkOf = (s) => {
+    if (s.budget_declared && BUDGET_OK.has(s.budget_declared)) return true;
+    return (evBySession[s.id] || []).some((e) => e.event === 'budget_pick' && e.meta && BUDGET_OK.has(String(e.meta.budget)));
+  };
+  const STAGES_F = [
+    { key: 'realne',   label: 'Sesje realne (rozmowa + kontakt)', test: () => true },
+    { key: 'sklep',    label: 'Obejrzał sklep',                    test: (s) => !!s.seen_landing_at },
+    { key: 'zielone',  label: 'Zielone światło',                   test: (s) => s.verdict === 'zielony' || hasEv(s, 'zielone') },
+    { key: 'bud_gate', label: 'Karta budżetu pokazana',            test: (s) => hasEv(s, 'budget_gate_shown') },
+    { key: 'bud_ok',   label: 'Budżet ≥ 2 tys. zadeklarowany',     test: budgetOkOf },
+    { key: 'rsv_card', label: 'Karta rezerwacji pokazana',         test: (s) => hasEv(s, 'rsv_card_shown') },
+    { key: 'paywall',  label: 'Otworzył płatność (paywall)',       test: (s) => hasEv(s, 'paywall_open') },
+    { key: 'blik',     label: 'Próba BLIK',                        test: (s) => hasEv(s, 'blik_attempt') },
+    { key: 'paid',     label: 'WPŁATA 500 zł',                     test: (s) => !!s.paid_at },
+  ];
+
+  const cohorts = weeks.map((w) => base.filter((s) => inWeek(s, w)));
+  cohorts.push(base.filter((s) => Date.parse(s.created_at) >= weeks[0].from.getTime()));   // RAZEM (4 tyg.)
+  const headers = [...weeks.map((w) => w.label), 'RAZEM 4 tyg.'];
+
+  const counts = STAGES_F.map((st) => cohorts.map((c) => c.filter((s) => st.test(s)).length));
+  const rows = STAGES_F.map((st, ri) => {
+    const cells = counts[ri].map((n, ci) => {
+      const prev = ri > 0 ? counts[ri - 1][ci] : null;
+      const pct = prev ? Math.round((n / prev) * 100) : null;
+      const pctHtml = (prev !== null) ? `<span class="text-[10px] ${pct >= 50 ? 'text-emerald-400' : pct >= 20 ? 'text-amber-400' : 'text-rose-400'} ml-1">${prev ? pct + '%' : '—'}</span>` : '';
+      return `<td class="px-3 py-2 text-right font-mono ${n ? 'text-white' : 'text-zinc-700'}">${n}${n || prev ? pctHtml : ''}</td>`;
+    }).join('');
+    return `<tr class="border-b border-white/5 ${st.key === 'paid' ? 'bg-emerald-500/5' : ''}"><td class="px-3 py-2 text-zinc-300 whitespace-nowrap">${ri + 1}. ${st.label}</td>${cells}</tr>`;
+  }).join('');
+
+  // Powody padów BLIK + rozkład deklaracji budżetu (ostatnie 35 dni)
+  const failAgg = {}, budAgg = {};
+  events.forEach((e) => {
+    if (e.event === 'blik_fail') { const r = (e.meta && e.meta.reason) || 'unknown'; failAgg[r] = (failAgg[r] || 0) + 1; }
+    if (e.event === 'budget_pick') { const b = (e.meta && e.meta.budget) || '?'; budAgg[b] = (budAgg[b] || 0) + 1; }
+  });
+  const aggList = (agg, empty) => {
+    const ks = Object.keys(agg).sort((a, b) => agg[b] - agg[a]);
+    return ks.length ? ks.map((k) => `<div class="flex justify-between gap-4 py-1 border-b border-white/5 text-sm"><span class="text-zinc-400">${esc(k)}</span><span class="font-mono text-white">${agg[k]}</span></div>`).join('') : `<div class="text-xs text-zinc-600">${empty}</div>`;
+  };
+
+  box.innerHTML =
+    `<div class="bg-zinc-900/40 border border-white/5 rounded-xl overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-sm">
+      <thead><tr class="text-left text-[11px] uppercase tracking-wider text-zinc-500 border-b border-white/5">
+        <th class="px-3 py-3">Etap</th>${headers.map((h, i) => `<th class="px-3 py-3 text-right ${i === headers.length - 1 ? 'text-zinc-300' : ''}">${h}</th>`).join('')}
+      </tr></thead><tbody>${rows}</tbody></table></div></div>
+    <div class="grid md:grid-cols-2 gap-4">
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-warning-circle mr-1"></i>Pady BLIK — powody (35 dni)</div>
+        ${aggList(failAgg, 'Brak padów BLIK — albo brak prób.')}
+      </div>
+      <div class="bg-zinc-900/40 border border-white/5 rounded-xl p-4">
+        <div class="text-xs uppercase tracking-wider text-zinc-500 mb-2"><i class="ph ph-coins mr-1"></i>Deklaracje budżetu (35 dni)</div>
+        ${aggList(budAgg, 'Jeszcze żadnych deklaracji (karta budżetu żyje od 6.07 wieczorem).')}
+      </div>
+    </div>
+    <p class="text-[11px] text-zinc-600">Czytanie: spadek % między wierszami = wąskie gardło. Decyzja o cenie 500 zł dopiero, gdy wiersze 6→9 mają ruch: dużo „karta→mało paywall" = framing/zaufanie (wideo Tomka), „BLIK→brak wpłat" = tarcie płatności/kwota (wtedy test 299 zł).</p>`;
 }
 
 // ── PRZEGLĄD ──
@@ -2190,7 +2323,7 @@ const LEAD_FILTERS = [
   { key: 'lead_err', label: 'Błąd leada', icon: 'ph-warning' },
 ];
 function renderLeadyFilters() {
-  const base = visibleSessions();
+  const base = leadBase();
   const count = (k) => base.filter((s) => {
     if (k === 'all') return true;
     if (k === 'paid') return !!s.paid_at;
@@ -2209,16 +2342,16 @@ function renderLeadyFilters() {
   const srcCount = (k) => base.filter((s) => k === 'all' || srcInfo(s).channel === k).length;
   const srcSel = `<select id="leady-src" title="Źródło pozyskania" style="color-scheme:dark" class="ml-auto bg-zinc-900 border border-white/10 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:border-blue-500/40 outline-none">
     ${SRC_CHANNELS.map((c) => `<option value="${c.key}" ${leadySource === c.key ? 'selected' : ''} style="background:#15151a;color:#e4e4e7">${c.label} (${srcCount(c.key)})</option>`).join('')}</select>`;
-  // SKLEP: filtr KIERUNKU (track k1/k2/k3) — niezależny od pozostałych (AND).
-  const trkCount = (k) => base.filter((s) => k === 'all' || (s.track || '') === k).length;
-  const trkSel = `<select id="leady-track" title="Kierunek (track)" style="color-scheme:dark" class="bg-zinc-900 border border-white/10 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:border-blue-500/40 outline-none">
-    ${TRACK_CHANNELS.map((c) => `<option value="${c.key}" ${leadyTrack === c.key ? 'selected' : ''} style="background:#15151a;color:#e4e4e7">${c.label} (${trkCount(c.key)})</option>`).join('')}</select>`;
+  // SKLEP: filtr BUDŻETU (deklaracja z karty budżetu, LEJEK V2) — niezależny od pozostałych (AND).
+  const budCount = (k) => base.filter((s) => k === 'all' || (s.budget_declared || '') === k).length;
+  const trkSel = `<select id="leady-budget" title="Deklarowany budżet startu" style="color-scheme:dark" class="bg-zinc-900 border border-white/10 text-zinc-300 text-xs rounded-lg px-2.5 py-1.5 cursor-pointer focus:border-blue-500/40 outline-none">
+    ${BUDGET_CHANNELS.map((c) => `<option value="${c.key}" ${leadyBudget === c.key ? 'selected' : ''} style="background:#15151a;color:#e4e4e7">${c.label} (${budCount(c.key)})</option>`).join('')}</select>`;
   $('leady-filters').innerHTML = chips + srcSel + trkSel;
   $('leady-filters').querySelectorAll('.lead-chip').forEach((b) => b.addEventListener('click', () => { leadyFilter = b.dataset.filter; renderLeady(); }));
   const srcEl = $('leady-src');
   if (srcEl) srcEl.addEventListener('change', (e) => { leadySource = e.target.value; renderLeady(); });
-  const trkEl = $('leady-track');
-  if (trkEl) trkEl.addEventListener('change', (e) => { leadyTrack = e.target.value; renderLeady(); });
+  const trkEl = $('leady-budget');
+  if (trkEl) trkEl.addEventListener('change', (e) => { leadyBudget = e.target.value; renderLeady(); });
 }
 function renderLeady() {
   document.querySelectorAll('.lv-toggle').forEach((b) => b.classList.toggle('tab-active', b.dataset.view === leadyView));
@@ -2331,18 +2464,19 @@ function openTemplate(i) {
 }
 
 // ── Zakładki ──
-const VIEWS = ['przeglad', 'leady', 'komunikacja', 'koszty', 'galeria', 'ustawienia', 'zrodlo'];
-const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia', zrodlo: 'Źródło prawdy' };
+const VIEWS = ['przeglad', 'leady', 'lejek', 'komunikacja', 'koszty', 'galeria', 'ustawienia', 'zrodlo'];
+const SECTION_LABELS = { przeglad: 'Przegląd', leady: 'Leady', lejek: 'Lejek rezerwacji', komunikacja: 'Komunikacja', koszty: 'Koszty', galeria: 'Galeria', ustawienia: 'Ustawienia', zrodlo: 'Źródło prawdy' };
 let leadyView = 'table';   // 'table' | 'board'
 let leadyFilter = 'all';   // all|hot|cold|green|paid|lead|verdict
 let leadySource = 'all';   // kanał pozyskania: all|meta|tiktok|google|youtube|email|organic
-let leadyTrack = 'all';    // SKLEP: kierunek track: all|k1|k2|k3|'' (brak)
-const TRACK_CHANNELS = [
-  { key: 'all', label: 'Wszystkie kierunki' },
-  { key: 'k1', label: 'k1 · od zera' },
-  { key: 'k2', label: 'k2 · mam markę' },
-  { key: 'k3', label: 'k3 · launch' },
-  { key: '', label: 'bez kierunku' },
+let leadyBudget = 'all';   // SKLEP: deklarowany budżet startu (karta budżetu, LEJEK V2)
+const BUDGET_CHANNELS = [
+  { key: 'all', label: 'Każdy budżet' },
+  { key: '10plus', label: '10 tys.+' },
+  { key: '5-10', label: '5–10 tys.' },
+  { key: '2-5', label: '2–5 tys.' },
+  { key: 'lt2', label: '< 2 tys.' },
+  { key: '', label: 'niezadeklarowany' },
 ];
 // Kanały z classifySource (components/source-classifier.js) — wspólny słownik.
 const SRC_CHANNELS = [
@@ -2369,6 +2503,7 @@ function switchTab(tab) {
 function renderActive() {
   if (activeTab === 'przeglad') renderPrzeglad();
   if (activeTab === 'leady') renderLeady();
+  if (activeTab === 'lejek') renderLejek();
   if (activeTab === 'komunikacja') renderKomunikacja();
   if (activeTab === 'galeria') renderGenerowania();
   if (activeTab === 'koszty') renderKoszty();

@@ -100,6 +100,11 @@ Deno.serve(async (req) => {
         message = formatSparPreviewMessage({ ...data, funnel: data.funnel || 'aplikacja' })
         break
 
+      case 'spar_gen_error':
+        webhookUrl = webhookSparing
+        message = formatSparGenErrorMessage(data)
+        break
+
       case 'bud_preview':
         webhookUrl = webhookSparing
         message = formatSparPreviewMessage({ ...data, funnel: 'sklep' })
@@ -108,6 +113,16 @@ Deno.serve(async (req) => {
       case 'bud_html':
         webhookUrl = webhookSparing
         message = formatBudHtmlMessage(data)
+        break
+
+      case 'bud_mockups':
+        webhookUrl = webhookSparing
+        message = formatBudMockupsMessage(data)
+        break
+
+      case 'bud_reservation':
+        webhookUrl = webhookSparing
+        message = formatBudReservationMessage(data)
         break
 
       case 'bud_lead_error':
@@ -1458,6 +1473,76 @@ function formatBudHtmlMessage(data: {
   return { blocks }
 }
 
+// #sparing: user WYBRAŁ makietę sklepu (bud-chat po chosen_style). Lejek /sklep, żywa
+// ścieżka picker-first (bud_sessions.mockups). Pokazujemy TĘ JEDNĄ wybraną makietę
+// (decyzja Tomka 2026-07-07), nie całą galerię 4 stylów. Struktura `mockups[]` zostawiona
+// tablicą (elastyczność), ale bud-chat przekazuje tu 1 element = wybrany styl.
+function formatBudMockupsMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  mockups?: { style?: string; label?: string; url?: string }[]
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const mockups = Array.isArray(data.mockups) ? data.mockups.filter((m) => m && typeof m.url === 'string' && m.url) : []
+  const styleLabel = (mockups[0] && typeof mockups[0].label === 'string' && mockups[0].label) ? mockups[0].label : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*${styleLabel ? ` · styl: ${styleLabel}` : ''}` : (styleLabel ? `\nstyl: *${styleLabel}*` : '')
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🎨 Sklep — lead wybrał makietę sklepu', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+  ]
+  for (const m of mockups) {
+    const label = (typeof m.label === 'string' && m.label) ? m.label : (m.style || 'Makieta')
+    blocks.push({
+      type: 'image',
+      title: { type: 'plain_text', text: label.slice(0, 200), emoji: false },
+      image_url: toRenderUrl(m.url as string),
+      alt_text: label.slice(0, 200),
+    })
+  }
+  if (!mockups.length) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: '⚠️ Brak gotowej miniatury wybranej makiety do pokazania.' }] })
+  }
+  const actions = sparActionButtons(data.session_id, data.phone, 'sklep')
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
+// #sparing: bot zaproponował leadowi wpłatę ZWROTNEJ rezerwacji 500 zł (marker <makieta>
+// w bud-chat, po zielonym świetle). Gorący moment lejka /sklep — Tomek ma odezwać się,
+// póki decyzja świeża. Deep-link do panelu tn-sklep + WhatsApp.
+function formatBudReservationMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  have?: string[]
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '💰 Sklep — lead dostał propozycję rezerwacji 500 zł', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+    { type: 'section', text: { type: 'mrkdwn', text: 'Bot zaproponował wpłatę zwrotnej rezerwacji (miejsce w kolejce). Najgorętszy moment — odezwij się, póki decyzja świeża.' } },
+  ]
+  const have = Array.isArray(data.have) ? data.have.filter((h) => typeof h === 'string' && h) : []
+  if (have.length) {
+    blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `Ma już: ${have.map((h) => `✓ ${h}`).join(' · ')}` }] })
+  }
+  const actions = sparActionButtons(data.session_id, data.phone, 'sklep')
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
+  return { blocks }
+}
+
 // Odrzucony (lost/abandoned) lead WRÓCIŁ do rozmowy (genuine user turn) — najgorętszy
 // sygnał sprzedażowy. funnel decyduje o panelu deep-linku (aplikacja/sklep).
 function formatSparReviveMessage(data: {
@@ -1493,6 +1578,48 @@ function formatSparReviveMessage(data: {
   if (data.phone) { const wa = waLink(data.phone); if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' }) }
   if (actions.length) blocks.push({ type: 'actions', elements: actions })
   blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }] })
+  return { blocks }
+}
+
+// #sparing: cichy pad generacji artefaktu lejka /aplikacja (rynek/economics/gtm/
+// strona/prototyp). Reveal utknął w 'generating' i po N ponowieniach spar-drip
+// oznaczył go 'failed'. Tomek ma wiedzieć, że zielony lead NIE dostał artefaktu
+// (mail odsłony nie poszedł) — zanim odkryje ubytek przypadkiem. Deep-link do
+// karty leada w panelu TN Aplikacje.
+const SPAR_ARTIFACT_LABELS: Record<string, string> = {
+  rynek: 'Raport rynku',
+  economics: 'Unit economics',
+  gtm: 'Plan + reklamy (GTM)',
+  landing: 'Strona sprzedażowa',
+  prototyp: 'Klikalny prototyp',
+}
+function formatSparGenErrorMessage(data: {
+  session_id?: string
+  name?: string
+  email?: string
+  project_name?: string
+  artifact?: string
+  error?: string
+  count?: number
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+  const artLabel = SPAR_ARTIFACT_LABELS[data.artifact || ''] || (data.artifact || 'artefakt')
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🛑 Aplikacja — GENERACJA PADŁA', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `Zielony lead NIE dostał artefaktu — mail odsłony nie poszedł. Sprawdź i wygeneruj ręcznie z panelu.\n${headerName}${emailLine}${projectLine}` } },
+    { type: 'section', fields: [
+      { type: 'mrkdwn', text: `*Artefakt:*\n${artLabel}` },
+      { type: 'mrkdwn', text: `*Nieudane próby:*\n${typeof data.count === 'number' ? data.count : '?'}` },
+    ] },
+  ]
+  if (data.error) {
+    blocks.push({ type: 'section', text: { type: 'mrkdwn', text: `*Błąd:*\n\`${String(data.error).slice(0, 280)}\`` } })
+  }
+  const link = sparLeadLink(data.session_id)
+  if (link) blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: '📋 Otwórz w panelu', emoji: true }, url: link, style: 'primary', action_id: 'view_spar_gen_error' }] })
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }
 }
 

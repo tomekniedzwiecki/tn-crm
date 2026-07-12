@@ -139,8 +139,22 @@ function staticAbandonedSms(s: SessionRow): string {
   const co = n && n !== 'Twoje narzędzie' ? gsmSafe(n) : 'Twoj pomysl'
   return `${imie ? 'Czesc ' + gsmSafe(imie) + '! ' : 'Czesc! '}Zaczelismy projektowac ${co} i zatrzymalismy sie w pol drogi. Wrocisz dokladnie w to samo miejsce - dokonczenie to kilka minut. ~Tomek`
 }
-function checkoutLink(leadId: string | null): string {
-  return `${CHECKOUT_URL}?offer=${OFFER_ID}${leadId ? `&lead=${encodeURIComponent(leadId)}` : ''}&utm_source=email&utm_medium=followup`
+// Checkout WZNOWIENIA (payment_rescue) — mirror linku z panelu: lead_id + spar_email
+// + sid, dzięki czemu CRM automatycznie wiąże wpłatę z tą sesją. TYLKO payment_rescue
+// prowadzi wprost do dokończenia płatności; wszystkie inne CTA rezerwacji → panel.
+function checkoutResumeLink(s: SessionRow, medium = 'rescue'): string {
+  const p = new URLSearchParams({ offer: OFFER_ID })
+  if (s.lead_id) p.set('lead_id', s.lead_id)
+  if (s.email) p.set('spar_email', s.email)
+  p.set('sid', s.id)
+  p.set('utm_source', 'email'); p.set('utm_medium', medium)
+  return `${CHECKOUT_URL}?${p.toString()}`
+}
+// CTA rezerwacji w mailach lejka → PANEL projektu (sekcja „Współpraca" #wspolpraca),
+// gdzie lead widzi swój projekt + dowody i klika WŁASNE CTA rezerwacji. Nie goły
+// checkout — panel domyka wyciek „przed kartą" (84% zielonych nie klika rezerwacji).
+function panelReserveLink(s: SessionRow, campaign: string): string {
+  return chatLink(s.id, campaign, '#wspolpraca')
 }
 function escHtml(s: string): string { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
@@ -191,6 +205,8 @@ interface SessionRow {
   left_screen: string | null
   problem_summary: Record<string, unknown> | null
   economics: Record<string, unknown> | null
+  sequence_cancelled_at: string | null
+  pipeline_override: string | null
   created_at: string | null
 }
 
@@ -266,12 +282,15 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'verdict_no_payment') return chatLink(s.id, 'verdict_no_payment', '#projekt-plan')
   if (kind === 'verdict_last_call') return chatLink(s.id, 'verdict_last_call', '#projekt')
   if (kind === 'paid_welcome') return chatLink(s.id, 'paid_welcome')
+  if (kind === 'payment_rescue') return checkoutResumeLink(s) // LINK_VIEW = dokończenie płatności
   if (kind === 'komplet_gotowy') return chatLink(s.id, 'komplet_gotowy', '#projekt')
+  if (kind === 'reclose_1' || kind === 'reclose_2') return chatLink(s.id, kind, '#projekt')
   if (kind.startsWith('nurture_')) return chatLink(s.id, kind, '#projekt')
   return chatLink(s.id, kind) // abandoned_chat / abandoned_chat_2 / abandoned_chat_3 → utm_campaign per mail
 }
 function viewFor(kind: string, s: SessionRow): string | null { return kind === 'paid_welcome' ? null : followupView(kind, s) }
-function reserveFor(kind: string, s: SessionRow): string | null { return (kind === 'verdict_last_call' || kind === 'verdict_no_payment' || kind === 'nurture_4' || kind === 'nurture_5' || kind === 'nurture_6') ? checkoutLink(s.lead_id) : null }
+const RESERVE_PANEL_KINDS = ['verdict_last_call', 'verdict_no_payment', 'nurture_4', 'nurture_5', 'nurture_6', 'reclose_1', 'reclose_2']
+function reserveFor(kind: string, s: SessionRow): string | null { return RESERVE_PANEL_KINDS.includes(kind) ? panelReserveLink(s, kind) : null }
 
 // Statyczny mail (plain, „z palca") — gallery podglądu + fallback gdy GPT off.
 function staticEmail(kind: string, s: SessionRow): { subject: string; html: string } {
@@ -293,6 +312,9 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     nurture_5: { subject: `Co Cię powstrzymuje przed ${n}?`, body: `Cześć${im}!\n\nZgaduję, że gdzieś z tyłu głowy siedzi „nie mam czasu tego ogarniać" albo „a co, jeśli nie wyjdzie". Uczciwie: budowę i całą techniczną stronę biorę na siebie, zaczynamy mało, a 500 zł jest w pełni zwrotne — więc realne ryzyko po Twojej stronie jest naprawdę małe.\n\nJeśli to jedyne, co Cię trzyma, [po prostu pogadajmy](LINK_RESERVE).` },
     nurture_6: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie będę się naprzykrzał — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Jeśli kiedyś zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${n} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów, droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
+    reclose_1: { subject: `${n}: rozmowa wciąż czeka`, body: `Cześć${im}!\n\nProjekt ${n} jest gotowy i czeka w panelu — a pierwszy krok to po prostu niezobowiązująca wspólna rozmowa. 500 zł jest w pełni zwrotne, więc realnie nic nie ryzykujesz.\n\nGdy będziesz gotowy, [zarezerwuj rozmowę](LINK_RESERVE) — [projekt zobaczysz tutaj](LINK_VIEW).` },
+    reclose_2: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Rozmowa jest niezobowiązująca, a 500 zł w pełni zwrotne.\n\nJeśli zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
+    payment_rescue: { subject: 'Widzę, że rezerwacja nie doszła do końca', body: `Cześć${im}!\n\nZauważyłem, że zaczęła się Twoja rezerwacja wspólnej rozmowy, ale płatność nie doszła do końca — czasem przerwie ją bank albo połączenie. Nic straconego.\n\nGdyby coś przerwało, [dokończ rezerwację tutaj](LINK_VIEW). Przypominam: 500 zł jest w pełni zwrotne, więc nic nie ryzykujesz.` },
   }
   const t = T[kind] || T.abandoned_chat
   const fallback = kind.startsWith('abandoned_chat') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
@@ -350,6 +372,16 @@ function followupBrief(kind: string, s: SessionRow): { goal: string; facts: stri
     if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
     return { goal: MAIL_CELE['verdict_last_call'] || '', facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
   }
+  if (kind === 'reclose_1' || kind === 'reclose_2') {
+    // Post-nudge domknięcie: „gęsto nie długo" + konkret; ekonomika projektu jako miękki argument.
+    const dens = MAIL_CELE._dens || ''
+    const plan = s.business_plan; let liczba = ''
+    if (plan && Array.isArray(plan.kamienie) && plan.kamienie.length) { const g = plan.kamienie[plan.kamienie.length - 1] as Record<string, unknown>; if (typeof g.mies === 'number' && typeof g.klienci === 'number') liczba = `przy ${g.klienci} klientach ~${Math.round(g.mies).toLocaleString('pl-PL')} zł/mies.` }
+    return { goal: dens + (MAIL_CELE[kind] || ''), facts: [`narzędzie: ${n}`, liczba && `liczba z planu: ${liczba}`].filter(Boolean).join('; ') }
+  }
+  if (kind === 'payment_rescue') {
+    return { goal: MAIL_CELE['payment_rescue'] || '', facts: `narzędzie: ${n}` }
+  }
   return { goal: MAIL_CELE['paid_welcome'] || '', facts: `narzędzie: ${n}` }
 }
 
@@ -390,7 +422,9 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
     // Segment „w toku": pomysł NIE jest jeszcze zbudowany — link wraca do ROZMOWY,
     // nie do gotowego projektu. Bez tego model dopisuje „masz podgląd ekranów".
     ? 'LINK_VIEW = powrót do ROZMOWY (czatu) w tym samym miejscu. To NIE jest gotowy projekt/panel/podgląd — karta projektu, badanie rynku i ekrany POWSTANĄ DOPIERO, gdy dokończy rozmowę. NIE pisz, że coś „czeka w panelu" / „masz podgląd ekranów/planu". Opisz link jako „wróć do rozmowy" / „dokończ".'
-    : ([viewUrl && 'jest link do podglądu projektu (LINK_VIEW)', reserveUrl && 'jest link do rezerwacji (LINK_RESERVE)'].filter(Boolean).join('; ') || 'brak linków')
+    : kind === 'payment_rescue'
+    ? 'LINK_VIEW = link do DOKOŃCZENIA przerwanej płatności rezerwacji (nie podgląd projektu). Opisz go jako „dokończ rezerwację".'
+    : ([viewUrl && 'LINK_VIEW = link do PANELU projektu (podgląd karty/rynku/planu)', reserveUrl && 'LINK_RESERVE = link do panelu, sekcja Współpraca, gdzie rezerwuje rozmowę'].filter(Boolean).join('; ') || 'brak linków')
   const tn = toolName(s)
   const hasName = !!tn && tn !== 'Twoje narzędzie'
   const ctx = [
@@ -424,7 +458,7 @@ async function generateFollowupEmail(kind: string, s: SessionRow, viewUrl: strin
 // logUsage=false → PODGLĄD w adminie: generuj treść, ale NIE zaliczaj kosztu do
 // statystyk (inaczej każde otwarcie podglądu zawyżałoby koszt rozmowy).
 async function getEmailFor(supabase: ReturnType<typeof createClient>, kind: string, s: SessionRow, logUsage = true): Promise<{ subject: string; html: string }> {
-  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome']
+  const GPT_KINDS = ['abandoned_chat', 'abandoned_chat_2', 'abandoned_chat_3', 'komplet_gotowy', 'verdict_last_call', 'paid_welcome', 'reclose_1', 'reclose_2', 'payment_rescue']
   if (GPT_KINDS.includes(kind) || kind.startsWith('nurture_')) {
     const convo = kind.startsWith('abandoned_chat') ? await fetchConvo(supabase, s.id) : ''
     const gen = await generateFollowupEmail(kind, s, viewFor(kind, s), reserveFor(kind, s), convo)
@@ -650,7 +684,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, payment_rescue: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, reclose_1: 0, reclose_2: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–23 PL dotyczy WSZYSTKICH maili (też paid_welcome); cutoff 23
     // (decyzja Tomka 2026-06-16) łapie wieczornych porzucaczy, póki pamiętają
@@ -671,11 +705,15 @@ Deno.serve(async (req) => {
       // prebuilt = treść wcześniej WYGENEROWANA i ZAPISANA (sekwencja powrotu):
       // wysyłamy dokładnie ją, bez regeneracji. Inaczej (nurture itd.) — getEmailFor.
       const { subject, html } = prebuilt || await getEmailFor(supabase, kind, s)
+      // Marketingowe kindy (abandoned/nurture/reclose/komplet/verdict) → List-Unsubscribe
+      // (send-email dokłada nagłówki gdy unsubscribe:true). Transakcyjne (paid_welcome,
+      // payment_rescue) BEZ flagi — nie wypisujemy z maili obsługujących płatność.
+      const marketing = /^(abandoned_chat|nurture_|reclose_|komplet_gotowy|verdict_)/.test(kind)
       try {
         const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
-          body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined }),
+          body: JSON.stringify({ to: s.email, subject, html, lead_id: s.lead_id || undefined, unsubscribe: marketing || undefined }),
         })
         if (!res.ok) throw new Error(`send-email ${res.status}: ${await res.text()}`)
         // backfill resend_id → resend-webhook stempluje opened_at/clicked_at
@@ -730,7 +768,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, created_at'
+    const SESSION_COLS = 'id, email, name, verdict, preview_brief, business_plan, market_report, landing_url, lead_id, paid_at, full_paid_at, last_user_at, last_panel_at, assessment, phone, sms_consent_at, sms_opt_out, left_screen_at, left_screen, problem_summary, economics, sequence_cancelled_at, pipeline_override, created_at'
 
     // ── 1) SYNC PŁATNOŚCI: orders(paid, Rezerwacja Aplikacja) → paid_at + lead won + welcome ──
     // Safety-net dla webhooka (tpay-webhook oznacza paid_at w czasie rzeczywistym; ten cron
@@ -828,6 +866,57 @@ Deno.serve(async (req) => {
 
     const now = Date.now()
     const hoursAgo = (h: number) => new Date(now - h * 3600 * 1000).toISOString()
+
+    // ── 1a-rescue) RATUNEK PORZUCONEJ PŁATNOŚCI (payment_rescue) ─────────────
+    //   orders(status=pending, opis „rezerwacj") w wieku 2–48 h, związane z sesją
+    //   sparingu (spar_session_id → lead_id → email), która wciąż nie zapłaciła →
+    //   JEDEN mail z linkiem do dokończenia płatności (500 zł w pełni zwrotne).
+    //   Transakcyjny (bez unsubscribe). Wysyłka tylko w oknie 8–20 PL. Idempotencja
+    //   spar_emails(session_id,'payment_rescue'). Pomijamy zamówienia /sklep
+    //   (bud_session_id ustawione) — te ratuje bud-followups. ──────────────────
+    if (hour >= 8 && hour < 20) {
+      const { data: pendOrders, error: poErr } = await supabase
+        .from('orders')
+        .select('spar_session_id, lead_id, customer_email, bud_session_id, description, amount, created_at')
+        .eq('status', 'pending')
+        .ilike('description', '%rezerwacj%')
+        .gte('created_at', hoursAgo(48))
+        .lte('created_at', hoursAgo(2))
+      if (poErr) console.error('[spar-followups] pending orders fetch error:', poErr)
+      // /aplikacja: bud_session_id NULL i kwota rezerwacji (~500), nie 49 zł „kolejna rozmowa"
+      const resc = ((pendOrders || []) as Array<{ spar_session_id: string | null; lead_id: string | null; customer_email: string | null; bud_session_id: string | null; amount: number | null }>)
+        .filter((o) => !o.bud_session_id && Number(o.amount) >= 400)
+      if (resc.length) {
+        const sidSet = [...new Set(resc.map((o) => o.spar_session_id).filter(Boolean) as string[])]
+        const leadSet = [...new Set(resc.filter((o) => !o.spar_session_id && o.lead_id).map((o) => o.lead_id) as string[])]
+        const emailSet = [...new Set(resc.filter((o) => !o.spar_session_id && !o.lead_id && o.customer_email).map((o) => (o.customer_email as string).toLowerCase().trim()))]
+        const rescById = new Map<string, SessionRow>()
+        const collect = (rows: SessionRow[] | null) => { for (const r of (rows || [])) rescById.set(r.id, r) }
+        if (sidSet.length) { const { data } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('is_test', false).in('id', sidSet); collect(data as SessionRow[] | null) }
+        if (leadSet.length) { const { data } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('is_test', false).in('lead_id', leadSet); collect(data as SessionRow[] | null) }
+        const byLead = new Map<string, SessionRow>(); const byEmail = new Map<string, SessionRow>()
+        for (const r of rescById.values()) { if (r.lead_id) byLead.set(r.lead_id, r); if (r.email) byEmail.set(r.email.toLowerCase().trim(), r) }
+        // fallback e-mailowy (rzadki — realne rezerwacje mają spar_session_id)
+        for (const em of emailSet.slice(0, 10)) {
+          if (byEmail.has(em)) continue
+          const { data } = await supabase.from('spar_sessions').select(SESSION_COLS).eq('is_test', false).ilike('email', em).order('created_at', { ascending: false }).limit(1).maybeSingle()
+          if (data) { const r = data as SessionRow; rescById.set(r.id, r); if (r.email) byEmail.set(r.email.toLowerCase().trim(), r) }
+        }
+        const doneRescue = new Set<string>()
+        for (const o of resc) {
+          const s = (o.spar_session_id && rescById.get(o.spar_session_id))
+            || (o.lead_id && byLead.get(o.lead_id))
+            || (o.customer_email && byEmail.get(o.customer_email.toLowerCase().trim()))
+            || null
+          if (!s || doneRescue.has(s.id)) continue
+          doneRescue.add(s.id)
+          // STOP: zapłacone/wstrzymane/zrezygnowane — nie ratujemy
+          if (s.paid_at || s.full_paid_at || s.sequence_cancelled_at || s.pipeline_override === 'resigned' || s.pipeline_override === 'lost') continue
+          if (!s.email) continue
+          await sendOnce('payment_rescue', s)
+        }
+      }
+    }
 
     // ── 1b) WELCOME po wpłacie — osobny krok oparty o paid_at (nie o pętlę
     //        sync), żeby nocny sync nie "zjadał" maila: poranny run znajdzie
@@ -1046,6 +1135,64 @@ Deno.serve(async (req) => {
       if (daysSince < NURTURE_THRESH_D[sentCount]) continue // za wcześnie na następny
       if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
       await sendOnce(NURTURE_KINDS[sentCount], s)
+    }
+
+    // ── 5) RE-CLOSE po nudge'u rezerwacji (reclose_1 +48h, reclose_2 +5 dni) ──
+    //   Zielony-niepłatny, po WYCZERPANIU pielęgnacji (lub — gdy istnieje kolumna
+    //   paywall_opened_at i jest ustawiona — 48h po otwarciu-porzuceniu paywalla).
+    //   Anchor = paywall_opened_at (silny sygnał intencji) LUB czas ostatniego maila
+    //   z CTA (nurture/reveal/verdict). Spokojne domknięcie, link do PANELU (nie
+    //   gołego checkoutu). Marketingowy (unsubscribe). Bramka międzykanałowa ≥10h.
+    //   Idempotencja spar_emails. STOP przy paid/full_paid/resigned/lost/cancelled. ──
+    const RECLOSE_KINDS = ['reclose_1', 'reclose_2']
+    const RECLOSE_THRESH_H = [48, 120]
+    const NUDGE_KINDS = ['nurture_4', 'nurture_5', 'nurture_6', 'verdict_last_call', 'verdict_no_payment', 'reveal_rynek', 'reveal_economics', 'reveal_landing', 'reveal_gtm', 'reveal_prototyp']
+    const { data: recloseRows, error: rcErr } = await supabase
+      .from('spar_sessions')
+      .select(SESSION_COLS)
+      .eq('is_test', false)
+      .eq('verdict', 'zielony')
+      .is('paid_at', null)
+      .is('full_paid_at', null)
+      .is('sequence_cancelled_at', null)
+      .not('email', 'is', null)
+      .gte('created_at', hoursAgo(60 * 24))
+      .limit(120)
+    if (rcErr) console.error('[spar-followups] reclose fetch error:', rcErr)
+    const recloseSess = ((recloseRows || []) as SessionRow[]).filter((s) => s.pipeline_override !== 'resigned' && s.pipeline_override !== 'lost')
+    if (recloseSess.length) {
+      const rcIds = recloseSess.map((s) => s.id)
+      const rcTouch = await loadTouches(supabase, rcIds)
+      // anchor A: ostatni mail-nudge (max sent_at)
+      const nudgeAnchor = new Map<string, number>()
+      const { data: nudgeMails } = await supabase.from('spar_emails').select('session_id, sent_at').in('session_id', rcIds).in('kind', NUDGE_KINDS)
+      for (const r of (nudgeMails || []) as { session_id: string; sent_at: string | null }[]) {
+        const ts = r.sent_at ? Date.parse(r.sent_at) : 0
+        if (ts && ts > (nudgeAnchor.get(r.session_id) || 0)) nudgeAnchor.set(r.session_id, ts)
+      }
+      // anchor B: paywall_opened_at — DEFENSYWNIE (kolumna może jeszcze nie istnieć;
+      // dodaje ją równolegle inna sesja). Gdy zapytanie się wywali → pomijamy.
+      const paywallAnchor = new Map<string, number>()
+      try {
+        const { data: pw, error: pwErr } = await supabase.from('spar_sessions').select('id, paywall_opened_at').in('id', rcIds)
+        if (!pwErr) for (const r of (pw || []) as { id: string; paywall_opened_at: string | null }[]) { if (r.paywall_opened_at) paywallAnchor.set(r.id, Date.parse(r.paywall_opened_at)) }
+      } catch { /* kolumna nie istnieje — anchor tylko z nudge */ }
+      for (const s of recloseSess) {
+        const t = rcTouch.get(s.id)
+        const done = RECLOSE_KINDS.filter((k) => t?.kinds.has(k)).length
+        if (done >= RECLOSE_KINDS.length) continue // obie odsłony poszły
+        const pw = paywallAnchor.get(s.id) || 0
+        const nudge = nudgeAnchor.get(s.id) || 0
+        // anchor: paywall (intencja) LUB — gdy pielęgnacja WYCZERPANA — ostatni nudge.
+        // Wymóg „nurtureDone" dla ścieżki nudge chroni przed kolizją reclose↔nurture.
+        let anchor = 0
+        if (pw) anchor = pw
+        else { const nurtureDone = NURTURE_KINDS.every((k) => t?.kinds.has(k)); if (nurtureDone && nudge) anchor = nudge }
+        if (!anchor) continue
+        if ((now - anchor) / 3_600_000 < RECLOSE_THRESH_H[done]) continue // za wcześnie na następną odsłonę
+        if (t && t.last && now - t.last < CHANNEL_GAP_MS) continue // świeży dotyk — nie przeciążaj
+        await sendOnce(RECLOSE_KINDS[done], s)
+      }
     }
 
     return jsonResponse({ ok: true, sent }, 200)
