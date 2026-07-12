@@ -283,12 +283,23 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
       review_adwersarski, demo_klienta, poprawki_demo, monthly) → 36 kroków; terminy wstępne pilotów ustawione — 2026-07-11
 - [x] Panel v2: warsztaty wg metodyki (wzmocnione checklisty/desc), prompty z rytuałem sesji + 6 nowych promptów,
       badge terminu (żółty <14 dni, czerwony <7) — 2026-07-11
-- [x] **`c:\repos_tn\saas-starter`** (osobne repo, git init): `forge.mjs <slug> "<Nazwa>" <dir>` + `template/`
-      (CLAUDE.md z Boundaries, BUILDLOG, brief 00-08, public: landing/auth/app/admin, migracja foundation
-      z RLS + is_operator() + inbox stripe_events + email_log, edge fns: stripe-onboard/checkout/webhook/
-      processor + lifecycle-emails + admin-stats, Playwright, legal szablony PL). Znane TODO: linki legal
-      w stopce, amount jednorazowych z Price/DB, 0002_cron do włączenia per apka — 2026-07-11
-- [ ] F2 fabryka (saas-starter + paczki) — NIE ZACZĘTE
+- [x] **`c:\repos_tn\saas-starter`** — od 12.07 na GitHubie: **prywatne repo `tomekniedzwiecki/saas-starter`**
+      (backup + sync desktop↔laptop; wpis w `_CHECKLIST-WYJAZD.md`). `forge.mjs <slug> "<Nazwa>" <dir>` + `template/`.
+      **Katalog modułów = `MODULES.md` (SSOT startera; czytać zamiast tej listy)**: fundament (auth, DB foundation
+      z RLS/is_operator, Stripe Connect onboard/checkout/webhook-INBOX/processor, rabaty operatora, lifecycle
+      e-maile, 3 powierzchnie, legal PL, Playwright + audit-static.mjs, CLAUDE.md Boundaries, brief **00-09**)
+      + Tier 1 (billing-portal, konto/RODO export+delete, subscription gating, app_events+track, rate-limit,
+      PWA, feedback widget, zgody z wersją, SEO/OG) + Tier 1b (dunning z odzyskiem, dispute-alert, impersonation,
+      dashboard przychodowy, edytowalne plany/grandfathering, Google OAuth, deliverability) + Tier 2 (10 szkieletów:
+      client_errors, onboarding checklist, AI-assist, broadcast, kill-switch, trust page, changelog, pauza,
+      win-back, referral). Migracje `0001–0006`; **runda testowa 1 na apce `wzorzec-test` = `TESTY.md`**
+      (3 fixy, w tym KRYTYCZNY: eskalacja roli przez profiles_update_own → `0006_profiles_column_privs`,
+      lekcja: RLS chroni wiersz, nie kolumny). Znane TODO: amount jednorazowych z Price/DB
+      (`stripe-checkout` — nie ufać frontowi!), `0002_cron` do włączenia per apka; płatności E2E ⏸ do aktywacji
+      Stripe Connect — 2026-07-11/12
+- [~] F2 fabryka: starter = DONE (wyżej), generator paczek = prompt `paczka_cc` w panelu; POZOSTAŁO:
+      pierwszy przebieg forge→paczka na pilocie Grzegorza + dostrojenie promptów kroków budowy do startera
+      (prompty mówią „zbuduj", starter już to ma — patrz audyt flow 12.07)
 - [x] **F3 portal klienta — LIVE** 2026-07-11: edge fn `wfa-portal` (token 32-hex + hasło SHA-256 w
       `client_password_hash`; hasło nieustawione = portal wyłączony; zwraca TYLKO postęp/etapy/kamienie/termin)
       + strona `/twoja-aplikacja?t=<token>` (`tn-app/portal.html`) + panel: Ustawienia → hasło portalu + kopiuj link.
