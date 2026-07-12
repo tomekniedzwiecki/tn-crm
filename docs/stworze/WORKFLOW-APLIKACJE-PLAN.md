@@ -118,9 +118,11 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > **ZMIANY KROKÓW v3 (11.07 wieczór, feedback Tomka z panelu; tabela wyżej = stan historyczny):**
 > OUT: `zalaczniki` (materiały zbiera SPOWIEDNIK; dane domenowe → `dane_operatora`), `akcept_klienta`
 > (klient ocenia GOTOWE MVP przy `demo_klienta`; zakres wiąże Załącznik 1 umowy), osobna `domena`.
-> SCALONE: `nazwa` = „Nazwa i domena" (kamień „Nazwa i domena wybrane") — sesja proponuje 10 nazw
-> z WOLNYMI .pl (RDAP, fallback WHOIS), wybór w rozmowie, sesja zapisuje name/slug/domain; Tomkowi
-> zostaje zakup + DNS. NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
+> SCALONE: `nazwa` = „Nazwa i domena" (kamień „Nazwa i domena wybrane") — sesja NAJPIERW wyprowadza
+> USP z pełnej bazy wiedzy (handoff_pack + spar_knowhow_items) i przedstawia je do akceptacji, POTEM
+> proponuje 10 nazw z WOLNYMI .pl (RDAP, fallback WHOIS), każda z dopiskiem, który element USP niesie
+> (zakaz nazw = generyczna kategoria produktu); wybór w rozmowie, sesja zapisuje name/slug/domain;
+> Tomkowi zostaje zakup + DNS. (Poprawka promptu 12.07: nazwy szły w kategorię/szybkość zamiast w USP.) NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
 > 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
 > w rozmowie, zapis finalnych planów w kroku. Razem: **35 kroków** (z krokiem `umowa`).
 
