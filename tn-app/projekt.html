@@ -71,8 +71,34 @@
                 <span class="text-zinc-700">/</span>
                 <span id="hdr-name" class="text-zinc-300 text-xs font-mono truncate">…</span>
             </div>
-            <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+            <div class="flex items-center gap-1">
+                <button onclick="progressMail()" class="px-3 py-1.5 text-xs font-medium bg-[#111] border border-[#333] rounded-md text-zinc-200 hover:border-[#0070f3]/60 flex items-center gap-1.5" title="GPT 5.6 napisze mail o postępie — Ty wysyłasz"><i class="ph ph-envelope-simple"></i> Mail o postępie</button>
+                <button onclick="openSettings()" class="p-2 text-zinc-400 hover:text-white" title="Ustawienia projektu"><i class="ph ph-gear text-lg"></i></button>
+            </div>
         </header>
+
+        <!-- Modal: mail o postępie (AI) -->
+        <div id="pmail-modal" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
+            <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-xl p-6">
+                <h3 class="text-white text-lg font-semibold mb-1 flex items-center gap-2"><i class="ph ph-envelope-simple text-[#3291ff]"></i> Mail o postępie</h3>
+                <p class="text-zinc-500 text-xs mb-4">GPT 5.6 pisze na podstawie stanu projektu. Sprawdź, popraw i wyślij — nic nie wychodzi automatycznie.</p>
+                <div id="pmail-loading" class="text-zinc-500 text-sm py-8 text-center">Piszę maila…</div>
+                <div id="pmail-body" class="hidden">
+                    <label class="text-xs text-zinc-500 block mb-1">Temat</label>
+                    <input id="pmail-subject" class="fld mb-3">
+                    <label class="text-xs text-zinc-500 block mb-1">Treść</label>
+                    <textarea id="pmail-text" rows="10" class="fld w-full font-normal" style="resize:vertical"></textarea>
+                    <div class="flex justify-between items-center mt-4">
+                        <button onclick="copyPmail()" class="px-3 py-2 text-xs text-zinc-300 border border-[#333] rounded-md hover:border-[#0070f3]/60"><i class="ph ph-copy"></i> Kopiuj treść</button>
+                        <div class="flex gap-2">
+                            <button onclick="closePmail()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Zamknij</button>
+                            <button onclick="openPmailGmail()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-lg hover:bg-zinc-200 flex items-center gap-1.5"><i class="ph ph-paper-plane-tilt"></i> Otwórz w Gmailu</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="pmail-err" class="hidden text-[#f26d78] text-sm py-6 text-center"></div>
+            </div>
+        </div>
 
         <div class="flex-1 overflow-y-auto p-6 lg:p-10">
             <div class="max-w-7xl mx-auto animate-enter">
@@ -1273,6 +1299,48 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
                 w.location = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token +
                     '&podglad=admin#admintok=' + encodeURIComponent(jwt);
             } catch (e) { try { w.close(); } catch (_) {} showToast('Nie udało się otworzyć podglądu', 'error'); }
+        }
+
+        // Mail o postępie: GPT 5.6 pisze treść (edge wfa-progress-mail), Tomek sprawdza i wysyła
+        // (otwarcie gotowego maila w Gmailu). NIC nie wychodzi automatycznie.
+        let pmailTo = '';
+        function _pm(id) { return document.getElementById(id); }
+        async function progressMail() {
+            _pm('pmail-modal').classList.remove('hidden');
+            _pm('pmail-loading').classList.remove('hidden');
+            _pm('pmail-body').classList.add('hidden');
+            _pm('pmail-err').classList.add('hidden');
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                const jwt = session && session.access_token;
+                if (!jwt) throw new Error('Zaloguj się ponownie');
+                const res = await fetch('https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-progress-mail', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + jwt },
+                    body: JSON.stringify({ project_id: projectId })
+                });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(d.error === 'openai_not_configured' ? 'Brak klucza OpenAI' : 'Nie udało się napisać maila');
+                pmailTo = d.to || project.customer_email || '';
+                _pm('pmail-subject').value = d.subject || '';
+                _pm('pmail-text').value = d.body || '';
+                _pm('pmail-loading').classList.add('hidden');
+                _pm('pmail-body').classList.remove('hidden');
+            } catch (e) {
+                _pm('pmail-loading').classList.add('hidden');
+                _pm('pmail-err').textContent = e.message || 'Błąd — spróbuj ponownie.';
+                _pm('pmail-err').classList.remove('hidden');
+            }
+        }
+        function closePmail() { _pm('pmail-modal').classList.add('hidden'); }
+        function copyPmail() {
+            navigator.clipboard.writeText(_pm('pmail-text').value).then(() => showToast('Treść skopiowana', 'success'));
+        }
+        function openPmailGmail() {
+            const su = encodeURIComponent(_pm('pmail-subject').value);
+            const body = encodeURIComponent(_pm('pmail-text').value);
+            const to = encodeURIComponent(pmailTo);
+            window.open('https://mail.google.com/mail/?view=cm&fs=1&to=' + to + '&su=' + su + '&body=' + body, '_blank');
         }
         function closeSettings() { document.getElementById('settings-modal').classList.add('hidden'); }
         async function saveSettings() {
