@@ -118,11 +118,17 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > **ZMIANY KROKÓW v3 (11.07 wieczór, feedback Tomka z panelu; tabela wyżej = stan historyczny):**
 > OUT: `zalaczniki` (materiały zbiera SPOWIEDNIK; dane domenowe → `dane_operatora`), `akcept_klienta`
 > (klient ocenia GOTOWE MVP przy `demo_klienta`; zakres wiąże Załącznik 1 umowy), osobna `domena`.
-> SCALONE: `nazwa` = „Nazwa i domena" (kamień „Nazwa i domena wybrane") — sesja NAJPIERW wyprowadza
-> USP z pełnej bazy wiedzy (handoff_pack + spar_knowhow_items) i przedstawia je do akceptacji, POTEM
-> proponuje 10 nazw z WOLNYMI .pl (RDAP, fallback WHOIS), każda z dopiskiem, który element USP niesie
-> (zakaz nazw = generyczna kategoria produktu); wybór w rozmowie, sesja zapisuje name/slug/domain;
-> Tomkowi zostaje zakup + DNS. (Poprawka promptu 12.07: nazwy szły w kategorię/szybkość zamiast w USP.) NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
+> SCALONE: `nazwa` = „Nazwa i domena" (kamień „Nazwa i domena wybrane") — krok END-TO-END w FAZACH
+> (idempotentny — sesję odpala się wielokrotnie, wykrywa stan z wfa_projects i robi tylko brakujące):
+> F1 USP z pełnej bazy wiedzy (handoff_pack + spar_knowhow_items) do akceptacji → 20 nazw z WOLNYMI .pl
+> (RDAP, fallback WHOIS NASK), szerokie spektrum stylów, filtr = duma użytkownika końcowego (zakaz gołej
+> kategorii); wybór w rozmowie → zapis name/slug/domain. F2 od razu Vercel: projekt <slug> z placeholderem
+> (deploy z katalogu tymczasowego, NIGDY z roota repos_tn) + domains add apex/www + zapis vercel_project/
+> app_url (Etap 2 `repo_vercel` podpina repo do ISTNIEJĄCEGO projektu). F3 pytanie do Tomka o zakup domeny
+> + instrukcja delegacji NS (ns1/ns2.vercel-dns.com). F4 weryfikacja propagacji (domains inspect + curl)
+> i domknięcie kroku. Udział Tomka: wybór nazwy, zakup domeny, przepięcie NS.
+> (Historia: poprawka 12.07 — USP-first po sesji Oferta Instalatora, gdzie nazwy szły w kategorię;
+> tego samego dnia rozszerzenie na end-to-end z fazami po ręcznym przejściu procedury dla fachmat.pl.) NOWY E3: `design` (sort 17) — brief z makiet+specu → **Claude Design** →
 > 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
 > w rozmowie, zapis finalnych planów w kroku. Razem: **35 kroków** (z krokiem `umowa`).
 
