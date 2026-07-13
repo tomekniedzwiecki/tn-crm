@@ -94,6 +94,36 @@ function renderContractHtml(
   return html;
 }
 
+// Pierwsze PRAWDZIWE wejście klienta do portalu: odhacz pozycję „Klient wszedł do portalu /
+// potwierdził" w kroku kickoff (idempotentnie — kolejne wejścia to tani no-op) + activity.
+// UWAGA: tekst pozycji = klucz deduplikacji checklisty w panelu — musi być IDENTYCZNY z WS.kickoff.
+const KICKOFF_VISIT_ITEM = "Klient wszedł do portalu / potwierdził";
+async function markClientEntered(sb: ReturnType<typeof createClient>, projectId: string): Promise<void> {
+  const { data: step } = await sb
+    .from("wfa_steps")
+    .select("id, data")
+    .eq("project_id", projectId)
+    .eq("step_key", "kickoff")
+    .maybeSingle();
+  if (!step) return;
+
+  const data = (step.data && typeof step.data === "object") ? step.data as Record<string, unknown> : {};
+  const checklist: { t: string; done: boolean }[] = Array.isArray(data.checklist) ? [...data.checklist as []] : [];
+  const idx = checklist.findIndex((i) => i && i.t === KICKOFF_VISIT_ITEM);
+  if (idx >= 0 && checklist[idx].done === true) return; // już odhaczone — nic nie rób
+
+  if (idx >= 0) checklist[idx] = { ...checklist[idx], done: true };
+  else checklist.push({ t: KICKOFF_VISIT_ITEM, done: true });
+
+  await sb.from("wfa_steps").update({ data: { ...data, checklist } }).eq("id", step.id);
+  await sb.from("wfa_activities").insert({
+    project_id: projectId,
+    actor: "client",
+    action: "portal_visit",
+    description: "Klient wszedł do portalu — pozycja kroku Przekazanie dostępu odhaczona automatycznie.",
+  });
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -170,6 +200,10 @@ Deno.serve(async (req: Request) => {
       await sleep(300);
       return json({ error: "unauthorized" }, 401);
     }
+    // PIERWSZE WEJŚCIE KLIENTA (nie podgląd admina): auto-odhacz pozycję
+    // „Klient wszedł do portalu / potwierdził" w kroku kickoff + wpis do activity.
+    // Fire-and-forget — nie może blokować ani wywalać odpowiedzi portalu.
+    markClientEntered(sb, p.id).catch((e) => console.warn("[wfa-portal] markClientEntered:", e));
   }
 
   const action = (body.action || "").trim();
