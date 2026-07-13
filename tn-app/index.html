@@ -212,6 +212,9 @@
                 supabaseClient.from('wfa_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 supabaseClient.from('wfa_projects').select('*').order('created_at', { ascending: false }).range(0, 999),
             ]);
+            // Błędy NIE mogą być ciche — pusta lista wygląda jak „brak projektów" (incydent 13.07)
+            if (defsQ.error) { console.error('wfa_step_defs:', defsQ.error); showToast('Błąd definicji kroków: ' + defsQ.error.message, 'error'); }
+            if (projQ.error) { console.error('wfa_projects:', projQ.error); showToast('Błąd listy projektów: ' + projQ.error.message, 'error'); }
             stepDefs = defsQ.data || [];
             projects = (projQ.data || []).filter(p => !p.is_test);
 
@@ -220,6 +223,7 @@
 
             // 4) instancje kroków — GOTCHA PostgREST: default 1000 wierszy, przy 30 krokach/projekt szybko przekroczone
             const stepsQ = await supabaseClient.from('wfa_steps').select('project_id, step_key, status').range(0, 9999);
+            if (stepsQ.error) { console.error('wfa_steps:', stepsQ.error); showToast('Błąd kroków: ' + stepsQ.error.message, 'error'); }
             stepsByProj = {}; (stepsQ.data || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
 
             const note = document.getElementById('sync-note');
@@ -341,6 +345,9 @@
             const steps = stepsByProj[p.id] || [];
             const stepByKey = {}; steps.forEach(s => { stepByKey[s.step_key] = s; });
 
+            // Zbiorczo per etap (bez wypisywania kroków — kroki globalnie w sekcji u góry strony);
+            // wyróżniamy tylko AKTUALNY krok projektu.
+            const currentKey = aggByProj[p.id]?.currentKey;
             const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
                 const st = stages[n];
                 const inst = st.defs.filter(d => (stepByKey[d.key]?.status || 'pending') !== 'skipped');
@@ -348,26 +355,16 @@
                 const total = inst.length;
                 const pct = total ? Math.round(done / total * 100) : 0;
                 const full = total > 0 && done === total;
-                const chips = st.defs.map(d => {
-                    const status = stepByKey[d.key]?.status || 'pending';
-                    const sm = STEP_STATUS_META[status] || STEP_STATUS_META.pending;
-                    const mile = d.milestone_label ? `<i class="ph ph-flag-checkered text-[10px] opacity-70" title="Kamień milowy: ${escapeHtml(d.milestone_label)}"></i>` : '';
-                    return `<button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'"
-                        class="inline-flex items-center gap-1.5 border rounded-md px-2.5 py-1 text-[11px] transition-colors hover:border-[#0070f3]/60 hover:text-white ${sm.cls}"
-                        title="${OWNER_LABEL[d.owner]} · ${STEP_LABELS[status]}">
-                        <span class="owner-dot" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}"></span>
-                        <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mile}</button>`;
-                }).join('');
-                return `<div>
-                    <div class="flex items-center gap-2 mb-2">
-                        <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-400'}">ETAP ${n}</span>
-                        <span class="text-[11px] text-zinc-500">${escapeHtml(st.label)}</span>
-                        <span class="ml-auto flex items-center gap-2">
-                            <div class="w-20 h-1 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
-                            <span class="text-[10px] font-mono text-zinc-500">${done}/${total}</span>
-                        </span>
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">${chips}</div>
+                const cur = st.defs.find(d => d.key === currentKey);
+                const curHtml = cur
+                    ? `<span class="inline-flex items-center gap-1.5 border border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955] rounded-md px-2 py-0.5 text-[11px]"><i class="ph ${escapeHtml(cur.icon)}"></i>${escapeHtml(cur.label)}</span>`
+                    : '';
+                return `<div class="flex items-center gap-2">
+                    <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-400'} w-14 flex-shrink-0">ETAP ${n}</span>
+                    <span class="text-[11px] text-zinc-500 w-32 flex-shrink-0 truncate">${escapeHtml(st.label)}</span>
+                    <div class="w-28 h-1 bg-zinc-800 rounded-full overflow-hidden flex-shrink-0"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
+                    <span class="text-[10px] font-mono text-zinc-500 w-8 flex-shrink-0">${done}/${total}</span>
+                    ${curHtml}
                 </div>`;
             }).join('');
 
