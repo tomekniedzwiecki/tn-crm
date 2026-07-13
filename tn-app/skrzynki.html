@@ -190,7 +190,7 @@
         async function loadProjects() {
             // inbox_forward_to / inbox_enabled dołączone — potrzebne w modalu ustawień
             const { data } = await supabaseClient.from('wfa_projects')
-                .select('id, name, customer_name, domain, slug, is_test, inbox_forward_to, inbox_enabled')
+                .select('id, name, customer_name, customer_email, domain, slug, is_test, inbox_forward_to, inbox_enabled')
                 .order('created_at', { ascending: false }).range(0, 999);
             state.projects = (data || []).filter(p => !p.is_test);
             state.projById = {}; state.projects.forEach(p => state.projById[p.id] = p);
@@ -484,7 +484,7 @@
                         <div class="text-white text-[13px] font-medium">${escapeHtml(projLabel(p))}</div>
                         <div class="text-zinc-600 text-[11px] font-mono">${hasDomain ? escapeHtml(p.domain) : 'brak domeny'}</div>
                     </td>
-                    <td class="px-3 py-2.5"><input type="email" class="fld fwd-email" value="${escapeHtml(p.inbox_forward_to || '')}" placeholder="adres@do-przekazu" ${dis}></td>
+                    <td class="px-3 py-2.5"><input type="email" class="fld fwd-email" value="${escapeHtml(p.inbox_forward_to || '')}" placeholder="${escapeHtml(p.customer_email ? 'domyślnie: ' + p.customer_email + ' (klient)' : 'adres@do-przekazu')}" ${dis}></td>
                     <td class="px-3 py-2.5 text-center"><input type="checkbox" class="fwd-enabled w-4 h-4 accent-[#0070f3] align-middle" ${p.inbox_enabled ? 'checked' : ''} ${dis}></td>
                     <td class="px-3 py-2.5 text-right"><button class="fwd-save px-3 py-1.5 text-[11px] font-semibold bg-white text-black rounded-md hover:bg-zinc-200 ${hasDomain ? '' : 'pointer-events-none opacity-50'}">Zapisz</button></td>
                 </tr>`;

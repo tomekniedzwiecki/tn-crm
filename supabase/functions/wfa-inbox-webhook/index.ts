@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
     if (domain) {
       const { data: rows } = await supabase
         .from("wfa_projects")
-        .select("id, name, domain, inbox_enabled, inbox_forward_to")
+        .select("id, name, domain, inbox_enabled, inbox_forward_to, customer_email")
         .ilike("domain", domain)
         .eq("is_test", false)
         .limit(1);
@@ -270,7 +270,8 @@ Deno.serve(async (req) => {
     console.log(`[wfa-inbox-webhook] zapisano ${inboxId} (project=${project?.id ?? "—"}, to=${toEmail})`);
 
     // ── FORWARD (tylko świeży wiersz + projekt + enabled + adres) ──────────────
-    const forwardTo = (project?.inbox_forward_to || "").trim();
+    // DEFAULT: adres klienta/operatora (customer_email); inbox_forward_to = świadome nadpisanie.
+    const forwardTo = (project?.inbox_forward_to || project?.customer_email || "").trim().toLowerCase();
     const shouldForward = !!project && project.inbox_enabled !== false && !!forwardTo;
 
     if (shouldForward) {
