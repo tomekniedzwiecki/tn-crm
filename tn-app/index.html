@@ -55,14 +55,20 @@
                     <p class="text-zinc-500">Projekty po pełnej płatności /aplikacja: fundament → infrastruktura → budowa MVP → jakość → start → stery.</p>
                 </div>
 
-                <!-- Etapy z chipami kroków (badge = ilu projektów czeka na tym kroku) -->
-                <div id="stages-wrap" class="space-y-5 mb-10"></div>
+                <!-- Przegląd kroków — nagłówek-pasek (klik = rozwiń/zwiń). Zwinięte: chipy kroków z badge>0 (gdzie stoją projekty) -->
+                <div class="mb-8">
+                    <div id="stages-bar" onclick="toggleStages()" class="flex items-center gap-3 flex-wrap cursor-pointer select-none">
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <i id="stages-chevron" class="ph ph-caret-right text-zinc-500"></i>
+                            <span class="text-sm font-medium text-zinc-300">Przegląd kroków</span>
+                        </div>
+                        <div id="stages-compact" class="flex flex-wrap items-center gap-2.5"></div>
+                    </div>
+                    <div id="stages-wrap" class="space-y-5 mt-5 hidden"></div>
+                </div>
 
-                <!-- Pasek nad listą: rozwiń wszystkie + filtr -->
-                <div class="flex items-center gap-3 mb-4">
-                    <button id="expand-all-btn" onclick="toggleAll()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors">
-                        <i class="ph ph-caret-double-down"></i> <span id="expand-all-label">Rozwiń wszystkie</span>
-                    </button>
+                <!-- Pasek nad listą: filtr po kroku -->
+                <div class="flex items-center gap-3 mb-4 min-h-[26px]">
                     <div id="filter-bar" class="hidden items-center gap-2">
                         <span class="text-zinc-500 text-xs">Filtr:</span>
                         <span id="filter-label" class="text-[#52a8ff] text-xs font-medium"></span>
@@ -71,29 +77,11 @@
                     <span id="sync-note" class="text-zinc-700 text-[11px] ml-auto"></span>
                 </div>
 
-                <!-- Lista projektów -->
-                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left">
-                            <thead>
-                                <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
-                                    <th class="px-5 py-3">Aplikacja / klient</th>
-                                    <th class="px-5 py-3">Status</th>
-                                    <th class="px-5 py-3">Postęp</th>
-                                    <th class="px-5 py-3">Aktualny krok</th>
-                                    <th class="px-5 py-3">Domena</th>
-                                    <th class="px-5 py-3">Termin</th>
-                                    <th class="px-5 py-3">Utworzony</th>
-                                    <th class="px-5 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="projects-tbody"></tbody>
-                        </table>
-                    </div>
-                    <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
-                        <i class="ph ph-app-window text-4xl mb-3 block text-zinc-700"></i>
-                        Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.
-                    </div>
+                <!-- Lista projektów — kafelki -->
+                <div id="projects-grid" class="grid grid-cols-1 xl:grid-cols-2 gap-4"></div>
+                <div id="empty-state" class="hidden py-16 text-center text-zinc-500 bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg">
+                    <i class="ph ph-app-window text-4xl mb-3 block text-zinc-700"></i>
+                    Brak projektów. Nowy projekt powstaje automatycznie po pełnej płatności /aplikacja — albo dodaj ręcznie.
                 </div>
 
             </div>
@@ -134,7 +122,6 @@
         let stepsByProj = {};     // project_id -> [wfa_steps skrót]
         let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
         let filterStepKey = null;
-        const openRows = new Set();
 
         // Statusy projektu aplikacji (CHECK z migracji wfa_projects)
         const STATUS_META = {
@@ -237,7 +224,7 @@
 
             computeAgg();
             renderStages();
-            renderTable();
+            renderCards();
         }
 
         // Postęp + „aktualny krok": pierwszy nie-done/nie-skipped krok wg kolejności definicji (etap → sort)
@@ -264,6 +251,16 @@
         }
 
         // ============ RENDER: etapy + chipy ============
+        // Chip kroku — używany i w rozwiniętej sekcji, i w kompaktowym pasku.
+        // event.stopPropagation: klik w chip filtruje kafelki, a nie toggluje sekcję.
+        function stepChipHtml(d, cnt) {
+            const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
+            const mileMark = d.milestone_label ? '<i class="ph ph-flag-checkered text-[10px] opacity-70" title="kamień milowy"></i>' : '';
+            return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="event.stopPropagation();toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.milestone_label ? ' · kamień milowy' : ''}">
+                <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
+                <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mileMark}${badge}</button>`;
+        }
+
         function renderStages() {
             const wrap = document.getElementById('stages-wrap');
             const stages = {};
@@ -272,16 +269,10 @@
             const countByKey = {};
             activeProjects.forEach(p => { const k = aggByProj[p.id]?.currentKey; if (k) countByKey[k] = (countByKey[k] || 0) + 1; });
 
+            // Pełne 5 etapów (widoczne po rozwinięciu)
             wrap.innerHTML = Object.keys(stages).sort((a, b) => a - b).map(num => {
                 const st = stages[num];
-                const chips = st.defs.map(d => {
-                    const cnt = countByKey[d.key] || 0;
-                    const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
-                    const mileMark = d.milestone_label ? '<i class="ph ph-flag-checkered text-[10px] opacity-70" title="kamień milowy"></i>' : '';
-                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.milestone_label ? ' · kamień milowy' : ''}">
-                        <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
-                        <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mileMark}${badge}</button>`;
-                }).join('');
+                const chips = st.defs.map(d => stepChipHtml(d, countByKey[d.key] || 0)).join('');
                 return `<div>
                     <div class="flex items-baseline gap-2 mb-2.5">
                         <span class="text-[11px] font-mono font-semibold tracking-wider text-zinc-300">ETAP ${num}</span>
@@ -290,6 +281,28 @@
                     <div class="flex flex-wrap gap-2.5">${chips}</div>
                 </div>`;
             }).join('');
+
+            // Kompaktowy pasek (widoczny gdy zwinięte): TYLKO kroki, na których stoją projekty (badge>0)
+            const bar = document.getElementById('stages-compact');
+            const hotDefs = stepDefs.filter(d => (countByKey[d.key] || 0) > 0);
+            bar.innerHTML = hotDefs.length
+                ? hotDefs.map(d => stepChipHtml(d, countByKey[d.key])).join('')
+                : '<span class="text-zinc-600 text-xs">brak aktywnych kroków</span>';
+
+            applyStagesOpen();
+        }
+
+        // Sekcja etapów: domyślnie ZWINIĘTA; stan w localStorage 'tnapp_stages_open' ('1'/'0')
+        function applyStagesOpen() {
+            const open = localStorage.getItem('tnapp_stages_open') === '1';
+            document.getElementById('stages-wrap').classList.toggle('hidden', !open);
+            document.getElementById('stages-compact').classList.toggle('hidden', open);
+            document.getElementById('stages-chevron').className = 'ph ' + (open ? 'ph-caret-down' : 'ph-caret-right') + ' text-zinc-500';
+        }
+        function toggleStages() {
+            const open = localStorage.getItem('tnapp_stages_open') === '1';
+            localStorage.setItem('tnapp_stages_open', open ? '0' : '1');
+            applyStagesOpen();
         }
 
         function toggleFilter(key) {
@@ -300,111 +313,97 @@
                 document.getElementById('filter-label').textContent = 'projekty na kroku „' + (d?.label || key) + '"';
                 bar.classList.remove('hidden'); bar.classList.add('flex');
             } else { bar.classList.add('hidden'); bar.classList.remove('flex'); }
-            renderStages(); renderTable();
+            renderStages(); renderCards();
         }
         function clearFilter() { toggleFilter(filterStepKey); }
 
-        // ============ RENDER: tabela ============
-        function renderTable() {
-            const tbody = document.getElementById('projects-tbody');
+        // ============ RENDER: kafelki ============
+        function renderCards() {
+            const grid = document.getElementById('projects-grid');
             let rows = projects;
             if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
             document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
-            tbody.innerHTML = rows.map(p => {
-                const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentLabel: '—' };
+            const defMap = {}; stepDefs.forEach(d => defMap[d.key] = d);
+
+            grid.innerHTML = rows.map(p => {
+                const agg = aggByProj[p.id] || { pct: 0, done: 0, total: 0, currentKey: null };
                 const sm = STATUS_META[p.status] || STATUS_META.fundament;
-                const open = openRows.has(p.id);
+
+                // AKTUALNY KROK — wyeksponowany chip (bursztyn) + owner; zielony gdy wszystko ukończone
+                const curDef = agg.currentKey ? defMap[agg.currentKey] : null;
+                const currentBlock = curDef
+                    ? `<div class="flex items-center gap-2.5 flex-wrap">
+                        <span class="inline-flex items-center gap-1.5 border border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955] rounded-md px-2.5 py-1 text-xs"><i class="ph ${escapeHtml(curDef.icon)}"></i>${escapeHtml(curDef.label)}</span>
+                        <span class="inline-flex items-center gap-1.5 text-[11px] text-zinc-500"><span class="owner-dot" style="background:${BADGE_COLORS[curDef.owner]}"></span>${OWNER_LABEL[curDef.owner] || ''}</span>
+                    </div>`
+                    : `<span class="inline-flex items-center gap-1.5 border border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782] rounded-md px-2.5 py-1 text-xs"><i class="ph ph-check-circle"></i>Wszystko ukończone</span>`;
+
+                // Stopka: domena, deadline, utworzony + ikonki-linki
                 const domain = p.domain
                     ? `<a href="https://${escapeHtml(p.domain)}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded-md px-2 py-0.5 text-[11px] hover:bg-[#0070f3]/10"><i class="ph ph-globe"></i>${escapeHtml(p.domain)}</a>`
-                    : '<span class="text-zinc-700 text-[11px]">—</span>';
-                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="toggleRow('${p.id}')">
-                    <td class="px-5 py-3.5">
-                        <div class="flex items-center gap-2.5">
-                            <i class="ph ${open ? 'ph-caret-down text-[#3291ff]' : 'ph-caret-right text-zinc-600'} text-xs flex-shrink-0"></i>
-                            <div class="min-w-0">
-                                <div class="text-white font-medium truncate">${escapeHtml(projName(p))}</div>
-                                <div class="text-zinc-600 text-[11px] truncate">${escapeHtml(p.customer_name || '')}${p.customer_email ? ' · ' + escapeHtml(p.customer_email) : ''}</div>
-                            </div>
+                    : '';
+                const links = [];
+                if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" onclick="event.stopPropagation()" title="repo" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i></a>`);
+                if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" onclick="event.stopPropagation()" title="aplikacja" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i></a>`);
+                if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" onclick="event.stopPropagation()" title="landing" class="text-zinc-500 hover:text-[#52a8ff]"><i class="ph ph-browser"></i></a>`);
+
+                return `<div onclick="location.href='/tn-app/projekt?id=${p.id}'" class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 hover:border-[#333] cursor-pointer transition-colors">
+                    <div class="flex items-start justify-between gap-3 mb-4">
+                        <div class="min-w-0">
+                            <div class="text-white text-lg font-semibold truncate">${escapeHtml(projName(p))}</div>
+                            <div class="text-zinc-500 text-xs truncate mt-0.5">${escapeHtml(p.customer_name || '')}${p.customer_email ? ' · ' + escapeHtml(p.customer_email) : ''}</div>
                         </div>
-                    </td>
-                    <td class="px-5 py-3.5"><span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span></td>
-                    <td class="px-5 py-3.5 min-w-[130px]">
+                        <div class="flex items-center gap-2 flex-shrink-0">
+                            <span class="inline-block px-2 py-0.5 rounded-md border text-[11px] font-medium ${sm.cls}">${sm.label}</span>
+                            <button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="text-[10px] font-mono uppercase text-zinc-600 mb-1.5">Aktualny krok</div>
+                        ${currentBlock}
+                    </div>
+
+                    <div class="mb-4">
                         <div class="flex items-center gap-2">
                             <div class="flex-1 h-1.5 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full bg-[#0070f3] rounded-full" style="width:${agg.pct}%"></div></div>
                             <span class="text-zinc-400 text-[11px] font-mono">${agg.pct}%</span>
                         </div>
                         <div class="text-zinc-600 text-[10px] mt-0.5">${agg.done}/${agg.total} kroków</div>
-                    </td>
-                    <td class="px-5 py-3.5 text-zinc-300 text-xs">${escapeHtml(agg.currentLabel)}</td>
-                    <td class="px-5 py-3.5">${domain}</td>
-                    <td class="px-5 py-3.5">${deadlineBadge(p)}</td>
-                    <td class="px-5 py-3.5 text-zinc-500 text-xs">${relDate(p.created_at)}</td>
-                    <td class="px-5 py-3.5 text-right"><button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'" class="inline-flex items-center gap-1 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-2.5 py-1 text-[11px] transition-colors">Otwórz <i class="ph ph-arrow-right"></i></button></td>
-                </tr>` + (open ? renderRowPreview(p) : '');
+                    </div>
+
+                    <div class="space-y-1.5">${renderStageMini(p)}</div>
+
+                    <div class="border-t border-[#1a1a1a] pt-3 mt-3 flex items-center gap-3 flex-wrap text-[11px]">
+                        ${domain}
+                        ${deadlineBadge(p)}
+                        <span class="text-zinc-600">utworzony ${relDate(p.created_at)}</span>
+                        ${links.length ? `<span class="ml-auto flex items-center gap-2.5 text-sm">${links.join('')}</span>` : ''}
+                    </div>
+                </div>`;
             }).join('');
         }
 
-        // Rozwijany podgląd: etapy z progressem + rozbite na pojedyncze kroki ze statusami
-        function renderRowPreview(p) {
+        // Etapy kompaktowo w kafelce: 5 wierszy E1..E5 + krótka nazwa + mini progress + done/total (zielone gdy etap ukończony)
+        function renderStageMini(p) {
             const stages = {};
             stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
             const steps = stepsByProj[p.id] || [];
             const stepByKey = {}; steps.forEach(s => { stepByKey[s.step_key] = s; });
-
-            // Zbiorczo per etap (bez wypisywania kroków — kroki globalnie w sekcji u góry strony);
-            // wyróżniamy tylko AKTUALNY krok projektu.
-            const currentKey = aggByProj[p.id]?.currentKey;
-            const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
+            return Object.keys(stages).sort((a, b) => a - b).map(n => {
                 const st = stages[n];
                 const inst = st.defs.filter(d => (stepByKey[d.key]?.status || 'pending') !== 'skipped');
                 const done = inst.filter(d => stepByKey[d.key]?.status === 'done').length;
                 const total = inst.length;
                 const pct = total ? Math.round(done / total * 100) : 0;
                 const full = total > 0 && done === total;
-                const cur = st.defs.find(d => d.key === currentKey);
-                const curHtml = cur
-                    ? `<span class="inline-flex items-center gap-1.5 border border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955] rounded-md px-2 py-0.5 text-[11px]"><i class="ph ${escapeHtml(cur.icon)}"></i>${escapeHtml(cur.label)}</span>`
-                    : '';
                 return `<div class="flex items-center gap-2">
-                    <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-400'} w-14 flex-shrink-0">ETAP ${n}</span>
-                    <span class="text-[11px] text-zinc-500 w-32 flex-shrink-0 truncate">${escapeHtml(st.label)}</span>
-                    <div class="w-28 h-1 bg-zinc-800 rounded-full overflow-hidden flex-shrink-0"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
-                    <span class="text-[10px] font-mono text-zinc-500 w-8 flex-shrink-0">${done}/${total}</span>
-                    ${curHtml}
+                    <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-500'} w-6 flex-shrink-0">E${n}</span>
+                    <span class="text-[11px] ${full ? 'text-[#62c073]' : 'text-zinc-500'} flex-1 min-w-0 truncate">${escapeHtml(st.label)}</span>
+                    <div class="w-24 h-1 bg-zinc-800 rounded-full overflow-hidden flex-shrink-0"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
+                    <span class="text-[10px] font-mono text-zinc-500 w-8 flex-shrink-0 text-right">${done}/${total}</span>
                 </div>`;
             }).join('');
-
-            const links = [];
-            if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i> aplikacja</a>`);
-            if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-browser"></i> landing</a>`);
-            if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i> repo</a>`);
-
-            return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="8" class="px-5 py-4 cursor-default">
-                <div class="space-y-3.5">${stageHtml}</div>
-                <div class="mt-4 pt-3 border-t border-[#1a1a1a] flex flex-wrap items-center gap-3 text-[11px]">
-                    ${links.length ? links.join('') : '<span class="text-zinc-600">brak linków (repo / aplikacja / landing)</span>'}
-                    <a href="/tn-app/projekt?id=${p.id}" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-zinc-400 hover:text-white">Otwórz projekt <i class="ph ph-arrow-right"></i></a>
-                </div>
-            </td></tr>`;
-        }
-        function toggleRow(id) {
-            if (openRows.has(id)) openRows.delete(id); else openRows.add(id);
-            renderTable(); updateExpandAllLabel();
-        }
-        function toggleAll() {
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
-            if (allOpen) rows.forEach(p => openRows.delete(p.id));
-            else rows.forEach(p => openRows.add(p.id));
-            renderTable(); updateExpandAllLabel();
-        }
-        function updateExpandAllLabel() {
-            let rows = projects;
-            if (filterStepKey) rows = rows.filter(p => aggByProj[p.id]?.currentKey === filterStepKey);
-            const allOpen = rows.length > 0 && rows.every(p => openRows.has(p.id));
-            const lbl = document.getElementById('expand-all-label');
-            if (lbl) lbl.textContent = allOpen ? 'Zwiń wszystkie' : 'Rozwiń wszystkie';
         }
 
         // ============ NOWY PROJEKT (ręczny) ============
