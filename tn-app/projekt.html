@@ -139,6 +139,7 @@
                     <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
                     <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
                     <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
+                    <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
                     <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
                 </div>
@@ -199,6 +200,16 @@
                     <div id="contract-body" class="space-y-4"></div>
                 </div>
 
+                </div>
+
+                <div data-psec="intake" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-tray-arrow-down text-[#3291ff]"></i> Dane od klienta <span class="text-zinc-500 font-normal text-xs">sekcja „Do uzupełnienia" w portalu</span></h3>
+                        <button onclick="loadIntakeAdmin()" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white flex items-center gap-1"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
+                    </div>
+                    <div id="intake-admin-body"></div>
+                </div>
                 </div>
 
                 <div data-psec="sparing" class="hidden">
@@ -287,6 +298,7 @@
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const FN_PORTAL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
@@ -525,6 +537,77 @@
             document.querySelectorAll('[data-psec]').forEach(el => el.classList.toggle('hidden', el.dataset.psec !== name));
             document.querySelectorAll('#psec-tabs .ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === name));
             try { localStorage.setItem('wfa_psec_' + projectId, name); } catch (_) {}
+            if (name === 'intake') loadIntakeAdmin();
+        }
+
+        // ============ DANE OD KLIENTA (intake — read-only podgląd admina) ============
+        // Dane + signed URLs przez wfa-portal (action intake_admin, gate = team JWT). Zero edycji w v1.
+        function iaChip(status, kind) {
+            const map = { done:['Gotowe','#62c073','#45a557'], partial:['Częściowo','#f5b955','#f5a623'], empty:['Brak','#a1a1aa','#333'], progress:['W toku','#52a8ff','#0070f3'] };
+            let key = status; if (kind === 'stripe') key = status === 'done' ? 'done' : 'progress';
+            const m = map[key] || map.empty;
+            return `<span class="text-[11px] px-2 py-0.5 rounded-md border" style="color:${m[1]};border-color:${m[2]}66">${m[0]}</span>`;
+        }
+        async function loadIntakeAdmin() {
+            const box = document.getElementById('intake-admin-body');
+            if (!box || !project) return;
+            box.innerHTML = '<div class="text-zinc-600 text-xs">Ładuję dane od klienta…</div>';
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak sesji — zaloguj się ponownie.</div>'; return; }
+                const res = await fetch(FN_PORTAL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+                    body: JSON.stringify({ token: project.unique_token, action: 'intake_admin' }),
+                });
+                if (!res.ok) { box.innerHTML = `<div class="text-[#f26d78] text-xs">Nie udało się pobrać danych (HTTP ${res.status}).</div>`; return; }
+                const d = await res.json();
+                renderIntakeAdmin(d.sections);
+            } catch (e) { box.innerHTML = `<div class="text-[#f26d78] text-xs">Błąd: ${escapeHtml(e.message)}</div>`; }
+        }
+        function renderIntakeAdmin(s) {
+            const box = document.getElementById('intake-admin-body');
+            if (!s) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak danych.</div>'; return; }
+            const f = s.firma.data || {}, m = s.materialy || {}, st = s.stripe || {}, beta = (s.beta.data && s.beta.data.people) || [];
+            const row = (label, chip, detail) => `<div class="flex items-start gap-3 py-3 border-b border-[#161616] last:border-0">
+                <div class="w-28 flex-shrink-0 text-zinc-300 text-[13px] font-medium">${label}</div>
+                <div class="flex-shrink-0 pt-0.5">${chip}</div>
+                <div class="flex-1 min-w-0 text-zinc-400 text-[12.5px] break-words">${detail}</div></div>`;
+            const dash = '<span class="text-zinc-600">—</span>';
+            // firma
+            const fb = [];
+            if (f.full_name) fb.push(escapeHtml(f.full_name));
+            if (f.company) fb.push(escapeHtml(f.company));
+            if (f.nip) fb.push('NIP ' + escapeHtml(f.nip));
+            const addr = [f.street, [f.postal, f.city].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+            if (addr) fb.push(escapeHtml(addr));
+            if (f.phone) fb.push(escapeHtml(f.phone));
+            const firmaDetail = fb.length ? fb.join(' · ') : dash;
+            // materialy
+            const files = m.files || [];
+            const plik = files.length === 1 ? 'plik' : (files.length >= 2 && files.length <= 4 ? 'pliki' : 'plików');
+            const links = (m.data && m.data.links) ? escapeHtml(m.data.links) : '';
+            const note = (m.data && m.data.note) ? escapeHtml(m.data.note) : '';
+            const fileLinks = files.map(fl => fl.url
+                ? `<a href="${escapeHtml(fl.url)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-[#52a8ff] hover:text-[#78b6ff] mr-3 mb-1"><i class="ph ph-download-simple"></i>${escapeHtml(fl.filename)}</a>`
+                : `<span class="mr-3 text-zinc-500">${escapeHtml(fl.filename)}</span>`).join('');
+            let matDetail = `${files.length} ${plik}` + (links ? ` · linki podane` : '');
+            if (files.length) matDetail += `<div class="mt-1.5">${fileLinks}</div>`;
+            if (links) matDetail += `<div class="mt-1 text-zinc-500">Linki: ${links}</div>`;
+            if (note) matDetail += `<div class="mt-1 text-zinc-500">Notatka: ${note}</div>`;
+            if (!files.length && !links && !note) matDetail = dash;
+            // stripe
+            const yn = b => b ? '<span class="text-[#62c073]">✓</span>' : '<span class="text-zinc-600">—</span>';
+            const stripeDetail = `konto ${yn(st.acct_created)} · KYC ${yn(st.kyc_done)} · BLIK ${yn(st.blik_active)}`;
+            // beta
+            const betaDetail = beta.length
+                ? `${beta.length} os.: ${beta.map(p => escapeHtml(p.name || p.contact || '')).filter(Boolean).slice(0, 12).join(', ')}`
+                : dash;
+            box.innerHTML =
+                row('Dane firmy', iaChip(s.firma.status), firmaDetail) +
+                row('Materiały', iaChip(s.materialy.status), matDetail) +
+                row('Stripe', iaChip((st.kyc_done && st.blik_active) ? 'done' : 'progress', 'stripe'), stripeDetail) +
+                row('Osoby (beta)', iaChip(s.beta.status), betaDetail);
         }
 
         // ============ UWAGI TOMKA (wfa_notes) ============
@@ -1381,6 +1464,7 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             let saved = null; try { saved = localStorage.getItem('wfa_psec_' + projectId); } catch (_) {}
             switchPsec(saved || 'projekt');
             await loadAll();
+            if ((saved || 'projekt') === 'intake') loadIntakeAdmin(); // project gotowy dopiero po loadAll
         })();
     </script>
 </body>

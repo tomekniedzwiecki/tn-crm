@@ -85,6 +85,56 @@
             justify-content:center; padding:24px; }
         #vlb.show { display:flex; }
         #vlb img { max-width:100%; max-height:100%; border-radius:8px; object-fit:contain; }
+        /* Do uzupełnienia (intake) */
+        .intake-head { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .intake-count { color:#a1a1aa; font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        .intake-intro { color:#71717a; font-size:12.5px; margin:8px 0 4px; line-height:1.5; }
+        .ic { border:1px solid #1f1f1f; border-radius:8px; padding:16px; margin-top:14px; background:#080808; }
+        .ic.done { border-color:rgba(69,165,87,.35); background:rgba(69,165,87,.05); }
+        .ic-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+        .ic-title { color:#fff; font-size:14px; font-weight:600; }
+        .ic-title .ic-sub { color:#71717a; font-weight:400; font-size:12px; }
+        .ic-why { color:#8a8a93; font-size:12.5px; margin:6px 0 14px; line-height:1.5; }
+        .chip { font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; white-space:nowrap; border:1px solid transparent; }
+        .chip-empty { background:#18181b; color:#a1a1aa; border-color:#2a2a2a; }
+        .chip-partial { background:rgba(245,166,35,.12); color:#f5b955; border-color:rgba(245,166,35,.3); }
+        .chip-progress { background:rgba(0,112,243,.1); color:#52a8ff; border-color:rgba(0,112,243,.3); }
+        .chip-done { background:rgba(69,165,87,.14); color:#5fce8c; border-color:rgba(69,165,87,.35); }
+        .ic-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+        @media (max-width:520px){ .ic-grid2 { grid-template-columns:1fr; } }
+        .ic-full { grid-column:1/-1; }
+        .ic textarea.ci { resize:vertical; min-height:56px; font-family:inherit; }
+        .ic-err { color:#f26d78; font-size:12px; margin-bottom:8px; min-height:0; }
+        .ic-ok { color:#5fce8c; font-size:12.5px; margin-top:8px; display:flex; align-items:center; gap:6px; }
+        .ic-save { width:auto; padding:9px 18px; font-size:13px; margin-top:4px; }
+        /* upload */
+        .upzone { border:1.5px dashed #2e2e2e; border-radius:8px; padding:20px 16px; text-align:center; cursor:pointer;
+            color:#8a8a93; font-size:12.5px; transition:border-color .15s, background .15s; }
+        .upzone:hover, .upzone.drag { border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.05); color:#a9c9f0; }
+        .upzone i { font-size:22px; display:block; margin-bottom:6px; color:#52a8ff; }
+        .ifile { display:flex; align-items:center; gap:10px; padding:9px 11px; border:1px solid #1f1f1f; border-radius:7px; margin-top:8px; background:#0a0a0a; }
+        .ifile i.fi { color:#52a8ff; flex-shrink:0; }
+        .ifile .fn { flex:1; min-width:0; color:#e5e5e5; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .ifile .fs { color:#52525b; font-size:11px; flex-shrink:0; font-variant-numeric:tabular-nums; }
+        .ifile .fx { color:#71717a; cursor:pointer; flex-shrink:0; padding:2px; }
+        .ifile .fx:hover { color:#f26d78; }
+        .ifile .fbar { flex:1; height:5px; background:#1c1c1f; border-radius:99px; overflow:hidden; }
+        .ifile .fbar span { display:block; height:100%; background:#0070f3; width:0%; transition:width .2s; }
+        .ic-hint { color:#71717a; font-size:11.5px; margin-top:8px; line-height:1.5; }
+        /* stripe status list */
+        .st-line { display:flex; align-items:center; gap:9px; padding:6px 0; font-size:13px; color:#a1a1aa; }
+        .st-line i { font-size:16px; }
+        .st-line.ok { color:#e5e5e5; } .st-line.ok i { color:#5fce8c; }
+        .st-line.pending i { color:#52525b; }
+        /* beta rows */
+        .brow { display:grid; grid-template-columns:1fr 1fr auto; gap:8px; align-items:start; margin-bottom:8px; }
+        @media (max-width:520px){ .brow { grid-template-columns:1fr 1fr; } .brow .brm { grid-column:2; justify-self:end; } }
+        .brow .ci { margin-bottom:0; }
+        .brm { background:#18181b; border:1px solid #2e2e2e; color:#a1a1aa; width:38px; height:38px; border-radius:8px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+        .brm:hover { color:#f26d78; border-color:#3a2a2a; }
+        .badd { background:#18181b; color:#e5e5e5; border:1px solid #2e2e2e; width:auto; padding:8px 14px; font-size:12.5px; margin-top:2px; }
+        .badd:hover { background:#222226; }
+        .pv-badge { font-size:10.5px; color:#f5b955; border:1px solid rgba(245,166,35,.3); background:rgba(245,166,35,.08); padding:2px 7px; border-radius:99px; margin-left:6px; }
     </style>
 </head>
 <body>
@@ -144,6 +194,20 @@
             <div class="h-mini">Dziennik postępu</div>
             <div id="c-miles"></div>
         </div>
+
+        <!-- Do uzupełnienia (intake) -->
+        <div class="card hidden" id="c-intake">
+            <div class="intake-head">
+                <div class="h-mini" style="margin-bottom:0">Do uzupełnienia</div>
+                <span class="intake-count" id="ci-count">0 z 4 gotowe</span>
+            </div>
+            <div class="bar-wrap"><div class="bar" id="ci-bar" style="width:0%"></div></div>
+            <p class="intake-intro">Wszystko możesz uzupełnić od razu, kiedy masz czas — nie musisz czekać na nasze kroki. Każda karta zapisuje się osobno.</p>
+            <div id="ci-cards"></div>
+        </div>
+
+        <input type="file" id="ci-file-input" multiple class="hidden"
+            accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.html,.htm,.csv,.xls,.xlsx,.doc,.docx,.txt,.zip">
 
         <div class="card hidden" id="c-contract"></div>
 
@@ -218,6 +282,7 @@
             currentPw = pw;
             render(d); show('content');
             loadContract(); // nie blokuje głównego renderu
+            loadIntake();
         } catch (e) {
             show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
         } finally { if ($('go')) $('go').disabled = false; }
@@ -237,6 +302,7 @@
             render(d); show('content');
             showPreviewBanner();
             loadContract();
+            loadIntake();
         } catch (e) {
             show('notoken');
             $('notoken').innerHTML = '<h1>Błąd podglądu</h1><p class="sub">Spróbuj ponownie za chwilę.</p>';
@@ -421,6 +487,246 @@
             setTimeout(() => URL.revokeObjectURL(url), 4000);
         } catch (e) { alert('Nie udało się pobrać pliku.'); }
     }
+
+    // ============ DO UZUPEŁNIENIA (intake) ============
+    let intakeData = null;
+    const DIS = () => (previewMode ? ' disabled' : '');
+    const PVB = () => (previewMode ? '<span class="pv-badge"><i class="ph ph-eye"></i> podgląd</span>' : '');
+    function fmtBytes(n) { n = Number(n) || 0; if (n < 1024) return n + ' B'; if (n < 1048576) return Math.round(n / 1024) + ' KB'; return (n / 1048576).toFixed(1) + ' MB'; }
+
+    async function loadIntake() {
+        try {
+            const res = await callFn({ action: 'intake_get' });
+            if (!res.ok) { $('c-intake').classList.add('hidden'); return; }
+            const d = await res.json();
+            intakeData = d.sections;
+            renderIntake();
+            $('c-intake').classList.remove('hidden');
+        } catch (e) { $('c-intake').classList.add('hidden'); }
+    }
+
+    function chipHtml(status, kind) {
+        if (kind === 'stripe') return status === 'done' ? '<span class="chip chip-done">Gotowe ✓</span>' : '<span class="chip chip-progress">W toku</span>';
+        if (status === 'done') return '<span class="chip chip-done">Gotowe ✓</span>';
+        if (status === 'partial') return '<span class="chip chip-partial">Częściowo</span>';
+        return '<span class="chip chip-empty">Do uzupełnienia</span>';
+    }
+    function intakeDoneCount() {
+        const s = intakeData; let n = 0;
+        if (s.firma.status === 'done') n++;
+        if (s.materialy.status === 'done') n++;
+        if (s.stripe.kyc_done && s.stripe.blik_active) n++;
+        if (s.beta.status === 'done') n++;
+        return n;
+    }
+    function updateChips() {
+        const setChip = (id, html) => { const el = $(id); if (el) el.innerHTML = html; };
+        const setDone = (id, on) => { const el = $(id); if (el) el.classList.toggle('done', on); };
+        const s = intakeData;
+        setChip('ci-chip-firma', chipHtml(s.firma.status)); setDone('ci-card-firma', s.firma.status === 'done');
+        setChip('ci-chip-materialy', chipHtml(s.materialy.status)); setDone('ci-card-materialy', s.materialy.status === 'done');
+        const stripeDone = s.stripe.kyc_done && s.stripe.blik_active;
+        setChip('ci-chip-stripe', chipHtml(stripeDone ? 'done' : 'progress', 'stripe')); setDone('ci-card-stripe', stripeDone);
+        setChip('ci-chip-beta', chipHtml(s.beta.status)); setDone('ci-card-beta', s.beta.status === 'done');
+        const sbtn = $('ci-stripe-btn'); if (sbtn) sbtn.style.display = stripeDone ? 'none' : '';
+        const n = intakeDoneCount();
+        $('ci-count').textContent = n + ' z 4 gotowe';
+        $('ci-bar').style.width = (n / 4 * 100) + '%';
+    }
+
+    function renderIntake() {
+        const s = intakeData, dis = DIS();
+        const f = s.firma.data || {}, m = s.materialy.data || {}, st = s.stripe || {};
+        const iv = v => esc(v == null ? '' : v);
+
+        // Karta 1 — Dane firmy
+        const firma =
+            '<div class="ic" id="ci-card-firma"><div class="ic-top"><div class="ic-title">Dane firmy <span class="ic-sub">do umowy i rozliczeń</span>' + PVB() + '</div><span id="ci-chip-firma"></span></div>' +
+            '<p class="ic-why">Potrzebujemy ich do umowy i do wystawiania rozliczeń — wpisujesz raz.</p>' +
+            '<div class="ic-err" id="if-firma-err"></div>' +
+            '<div class="ic-grid2">' +
+              '<div class="ic-full"><label class="lbl">Imię i nazwisko</label><input class="ci" id="if-full_name"' + dis + ' value="' + iv(f.full_name) + '"></div>' +
+              '<div class="ic-full"><label class="lbl">Firma (jeśli zawierasz umowę jako firma)</label><input class="ci" id="if-company"' + dis + ' value="' + iv(f.company) + '"></div>' +
+              '<div><label class="lbl">NIP</label><input class="ci" id="if-nip"' + dis + ' value="' + iv(f.nip) + '"></div>' +
+              '<div><label class="lbl">Telefon</label><input class="ci" id="if-phone"' + dis + ' value="' + iv(f.phone) + '"></div>' +
+              '<div class="ic-full"><label class="lbl">Ulica i numer</label><input class="ci" id="if-street"' + dis + ' value="' + iv(f.street) + '"></div>' +
+              '<div><label class="lbl">Kod pocztowy</label><input class="ci" id="if-postal"' + dis + ' placeholder="00-000" value="' + iv(f.postal) + '"></div>' +
+              '<div><label class="lbl">Miejscowość</label><input class="ci" id="if-city"' + dis + ' value="' + iv(f.city) + '"></div>' +
+            '</div>' +
+            (previewMode ? '' : '<button class="cbtn ic-save" id="if-firma-save" onclick="saveIntakeFirma()"><i class="ph ph-floppy-disk"></i> Zapisz</button><span class="ic-ok hidden" id="if-firma-ok"><i class="ph ph-check-circle"></i> Zapisano</span>') +
+            '</div>';
+
+        // Karta 2 — Materiały
+        const materialy =
+            '<div class="ic" id="ci-card-materialy"><div class="ic-top"><div class="ic-title">Materiały do aplikacji' + PVB() + '</div><span id="ci-chip-materialy"></span></div>' +
+            '<p class="ic-why">Wszystko, co pomoże nam odwzorować Twój biznes — dzięki temu aplikacja od razu mówi Twoim językiem.</p>' +
+            (previewMode ? '' : '<div class="upzone" id="ci-upzone"><i class="ph ph-upload-simple"></i>Przeciągnij pliki tutaj lub kliknij, aby wybrać<div class="ic-hint" style="margin-top:6px">np. cennik, dotychczasowe wyceny/oferty (PDF), materiały ze starej aplikacji lub strony, zdjęcia realizacji. Do 25&nbsp;MB na plik.</div></div>') +
+            '<div id="if-progress"></div>' +
+            '<div id="if-files"></div>' +
+            '<label class="lbl" style="margin-top:14px">Linki (np. do dysku, strony, cennika online)</label><textarea class="ci" id="if-links"' + dis + '>' + iv(m.links) + '</textarea>' +
+            '<label class="lbl">Notatka dla nas</label><textarea class="ci" id="if-note"' + dis + '>' + iv(m.note) + '</textarea>' +
+            (previewMode ? '' : '<button class="cbtn ic-save" id="if-mat-save" onclick="saveIntakeMaterialy()"><i class="ph ph-floppy-disk"></i> Zapisz linki i notatkę</button><span class="ic-ok hidden" id="if-mat-ok"><i class="ph ph-check-circle"></i> Zapisano</span>') +
+            '</div>';
+
+        // Karta 3 — Stripe
+        const line = (ok, label) => '<div class="st-line ' + (ok ? 'ok' : 'pending') + '"><i class="ph ' + (ok ? 'ph-check-circle' : 'ph-circle') + '"></i>' + label + '</div>';
+        const stripe =
+            '<div class="ic" id="ci-card-stripe"><div class="ic-top"><div class="ic-title">Weryfikacja płatności (Stripe)' + PVB() + '</div><span id="ci-chip-stripe"></span></div>' +
+            '<p class="ic-why">Aby aplikacja mogła przyjmować płatności, zakładasz swoje konto Stripe i przechodzisz krótką weryfikację.</p>' +
+            line(!!st.acct_created, 'Konto płatności utworzone') +
+            line(!!st.kyc_done, 'Weryfikacja tożsamości i firmy ukończona') +
+            line(!!st.blik_active, 'BLIK aktywny') +
+            (previewMode
+                ? '<div class="note-box" style="margin-top:12px"><i class="ph ph-info"></i> Podgląd — tu klient przechodzi weryfikację w Stripe.</div>'
+                : '<a class="cbtn ic-save" id="ci-stripe-btn" style="display:inline-flex;text-decoration:none;margin-top:12px" href="' + esc(st.onboard_url || '#') + '" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i> Przejdź weryfikację w Stripe</a>') +
+            '<p class="ic-hint">Konto zakładasz raz. Dane trafiają bezpośrednio do Stripe — my ich nie widzimy.</p>' +
+            '</div>';
+
+        // Karta 4 — Beta
+        const people = (s.beta.data && s.beta.data.people) || [];
+        const rows = (people.length ? people : [null, null, null]).map(p => betaRowHtml(p, dis)).join('');
+        const beta =
+            '<div class="ic" id="ci-card-beta"><div class="ic-top"><div class="ic-title">Osoby na start (beta)' + PVB() + '</div><span id="ci-chip-beta"></span></div>' +
+            '<p class="ic-why">5–10 osób z Twojej sieci, które pierwsze przetestują aplikację — to najlepszy rozpęd na start.</p>' +
+            '<div id="b-rows">' + rows + '</div>' +
+            (previewMode ? '' : '<button class="badd" onclick="addBetaRow()"><i class="ph ph-plus"></i> Dodaj osobę</button><br>' +
+                '<button class="cbtn ic-save" id="if-beta-save" onclick="saveIntakeBeta()" style="margin-top:10px"><i class="ph ph-floppy-disk"></i> Zapisz listę</button><span class="ic-ok hidden" id="if-beta-ok"><i class="ph ph-check-circle"></i> Zapisano</span>') +
+            '<p class="ic-hint">Podawaj tylko osoby, które zgodziły się na kontakt.</p>' +
+            '</div>';
+
+        $('ci-cards').innerHTML = firma + materialy + stripe + beta;
+        renderIntakeFiles();
+        updateChips();
+
+        // drag&drop upload
+        const uz = $('ci-upzone');
+        if (uz && !previewMode) {
+            uz.onclick = () => $('ci-file-input').click();
+            uz.ondragover = e => { e.preventDefault(); uz.classList.add('drag'); };
+            uz.ondragleave = () => uz.classList.remove('drag');
+            uz.ondrop = e => { e.preventDefault(); uz.classList.remove('drag'); intakeUpload(e.dataTransfer.files); };
+        }
+    }
+
+    function betaRowHtml(p, dis) {
+        return '<div class="brow">' +
+            '<input class="ci b-name" placeholder="Imię"' + dis + ' value="' + esc(p && p.name || '') + '">' +
+            '<input class="ci b-contact" placeholder="Telefon lub e-mail"' + dis + ' value="' + esc(p && p.contact || '') + '">' +
+            (dis ? '' : '<button class="brm" title="Usuń" onclick="this.closest(\'.brow\').remove()"><i class="ph ph-x"></i></button>') +
+            '</div>';
+    }
+    function addBetaRow() { if (previewMode) return; $('b-rows').insertAdjacentHTML('beforeend', betaRowHtml(null, '')); }
+
+    function renderIntakeFiles() {
+        const box = $('if-files'); if (!box) return;
+        const files = (intakeData.materialy && intakeData.materialy.files) || [];
+        box.innerHTML = files.map(f =>
+            '<div class="ifile"><i class="ph ph-file fi"></i><span class="fn">' + esc(f.filename) + '</span>' +
+            '<span class="fs">' + fmtBytes(f.size_bytes) + '</span>' +
+            (previewMode ? '' : '<i class="ph ph-trash fx" title="Usuń" onclick="deleteIntakeFile(\'' + esc(f.id) + '\')"></i>') +
+            '</div>'
+        ).join('');
+    }
+
+    function flashOk(id) { const el = $(id); if (!el) return; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 2500); }
+
+    async function saveIntakeFirma() {
+        if (previewMode) return;
+        const btn = $('if-firma-save'); if (btn) btn.disabled = true;
+        const err = $('if-firma-err'); if (err) err.textContent = '';
+        const data = { full_name: cval('if-full_name'), company: cval('if-company'), nip: cval('if-nip'), street: cval('if-street'), postal: cval('if-postal'), city: cval('if-city'), phone: cval('if-phone') };
+        try {
+            const res = await callFn({ action: 'intake_save', section: 'firma', data });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) { if (err) err.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; return; }
+            intakeData.firma.data = data; intakeData.firma.status = d.status || intakeData.firma.status;
+            updateChips(); flashOk('if-firma-ok');
+        } catch (e) { if (err) err.textContent = 'Błąd połączenia — spróbuj ponownie.'; }
+        finally { if (btn) btn.disabled = false; }
+    }
+
+    async function saveIntakeMaterialy() {
+        if (previewMode) return;
+        const btn = $('if-mat-save'); if (btn) btn.disabled = true;
+        const data = { links: cval('if-links'), note: cval('if-note') };
+        try {
+            const res = await callFn({ action: 'intake_save', section: 'materialy', data });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) return;
+            intakeData.materialy.data = data; intakeData.materialy.status = d.status;
+            updateChips(); flashOk('if-mat-ok');
+        } catch (e) {} finally { if (btn) btn.disabled = false; }
+    }
+
+    async function saveIntakeBeta() {
+        if (previewMode) return;
+        const btn = $('if-beta-save'); if (btn) btn.disabled = true;
+        const rows = Array.from(document.querySelectorAll('#b-rows .brow'));
+        const people = rows.map(r => ({ name: r.querySelector('.b-name').value.trim(), contact: r.querySelector('.b-contact').value.trim() })).filter(p => p.name || p.contact);
+        try {
+            const res = await callFn({ action: 'intake_save', section: 'beta', data: { people } });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) return;
+            intakeData.beta.data.people = people; intakeData.beta.status = d.status;
+            updateChips(); flashOk('if-beta-ok');
+        } catch (e) {} finally { if (btn) btn.disabled = false; }
+    }
+
+    // Upload sekwencyjny: init → PUT (signed url, progres) → done
+    function putFile(url, file, onProgress) {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', url);
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
+            xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('PUT ' + xhr.status));
+            xhr.onerror = () => reject(new Error('network'));
+            xhr.send(file);
+        });
+    }
+    async function intakeUpload(fileList) {
+        if (previewMode) return;
+        const files = Array.from(fileList || []);
+        for (const file of files) await uploadOne(file);
+    }
+    const UP_ALLOWED = ['pdf','png','jpg','jpeg','webp','heic','html','htm','csv','xls','xlsx','doc','docx','txt','zip'];
+    async function uploadOne(file) {
+        const prog = $('if-progress');
+        const row = document.createElement('div'); row.className = 'ifile';
+        row.innerHTML = '<i class="ph ph-file fi"></i><span class="fn">' + esc(file.name) + '</span><div class="fbar"><span></span></div>';
+        prog.appendChild(row);
+        const setBar = pct => { const b = row.querySelector('.fbar span'); if (b) b.style.width = pct + '%'; };
+        const fail = msg => { row.innerHTML = '<i class="ph ph-warning fi" style="color:#f26d78"></i><span class="fn">' + esc(file.name) + '</span><span class="fs" style="color:#f26d78">' + esc(msg) + '</span>'; setTimeout(() => row.remove(), 4500); };
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!UP_ALLOWED.includes(ext)) return fail('niedozwolony typ');
+        if (file.size > 25 * 1024 * 1024) return fail('za duży (>25 MB)');
+        try {
+            const initRes = await callFn({ action: 'intake_upload_init', filename: file.name, size_bytes: file.size, mime: file.type || '' });
+            const init = await initRes.json().catch(() => ({}));
+            if (!initRes.ok) return fail(init.message || 'nie udało się');
+            await putFile(init.upload_url, file, setBar);
+            const doneRes = await callFn({ action: 'intake_upload_done', path: init.path, filename: file.name, size_bytes: file.size, mime: file.type || '' });
+            const done = await doneRes.json().catch(() => ({}));
+            if (!doneRes.ok) return fail(done.message || 'błąd zapisu');
+            row.remove();
+            if (done.file) intakeData.materialy.files.push(done.file);
+            intakeData.materialy.status = done.status || 'done';
+            renderIntakeFiles(); updateChips();
+        } catch (e) { fail('błąd sieci'); }
+    }
+    async function deleteIntakeFile(id) {
+        if (previewMode) return;
+        try {
+            const res = await callFn({ action: 'intake_file_delete', id });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) return;
+            intakeData.materialy.files = d.files || intakeData.materialy.files.filter(f => f.id !== id);
+            intakeData.materialy.status = d.status;
+            renderIntakeFiles(); updateChips();
+        } catch (e) {}
+    }
+    const _ciInput = $('ci-file-input');
+    if (_ciInput) _ciInput.onchange = e => { intakeUpload(e.target.files); e.target.value = ''; };
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
     else if (previewMode) {
