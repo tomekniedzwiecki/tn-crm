@@ -193,6 +193,10 @@
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            // Weryfikacja SERWEROWA — zwietrzała sesja (martwy refresh token) ma wylogowac,
+            // a nie udawac pusty panel (incydent 13.07: "Brak projektow" mimo dzialajacego backendu)
+            const { error: userErr } = await supabaseClient.auth.getUser();
+            if (userErr) { await supabaseClient.auth.signOut(); window.location.href = Sidebar.getLoginPath(); return null; }
             Sidebar.setUserEmail(session.user.email.split('@')[0]);
             const { data } = await supabaseClient.from('team_members').select('*');
             const me = (data || []).find(m => m.user_id === session.user.id);
