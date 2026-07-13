@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Skrzynki (wfa-inbox)</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        .fld { width:100%; background:#0a0a0a; border:1px solid #2e2e2e; border-radius:6px;
+            padding:8px 10px; font-size:13px; color:#fff; }
+        .fld:focus { outline:none; border-color:rgba(0,112,243,.5); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10 gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <h1 class="text-white font-semibold text-base flex items-center gap-2"><i class="ph ph-tray text-[#3291ff]"></i> Skrzynki</h1>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap justify-end">
+                <div class="relative">
+                    <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 text-sm"></i>
+                    <input id="search" placeholder="Szukaj: nadawca / temat" class="bg-[#0a0a0a] border border-[#333] rounded-md pl-8 pr-3 py-1.5 text-xs text-white w-48 focus:outline-none focus:border-[#0070f3]/60">
+                </div>
+                <select id="proj-filter" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60"></select>
+                <button id="arch-toggle" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-archive"></i> Pokaż archiwum</button>
+                <button onclick="openSettings()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-arrow-bend-double-up-right"></i> Ustawienia przekazywania</button>
+            </div>
+        </header>
+
+        <!-- Layout główny: lewa lista + prawy podgląd (pełna wysokość, bez scrolla strony) -->
+        <div class="flex-1 flex min-h-0 animate-enter">
+
+            <!-- Lewa kolumna: lista maili -->
+            <div class="w-[380px] flex-shrink-0 border-r border-white/5 flex flex-col min-h-0">
+                <div id="list" class="flex-1 overflow-y-auto"></div>
+                <div id="list-empty" class="flex-1 flex-col items-center justify-center text-zinc-600 gap-2 p-6 text-center" style="display:none">
+                    <i class="ph ph-tray text-4xl"></i>
+                    <span class="text-sm">Brak wiadomości</span>
+                </div>
+            </div>
+
+            <!-- Prawa kolumna: podgląd -->
+            <section id="preview" class="flex-1 flex flex-col min-w-0 min-h-0">
+                <div id="preview-empty" class="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-2">
+                    <i class="ph ph-envelope-open text-5xl"></i>
+                    <span class="text-sm">Wybierz wiadomość z listy</span>
+                </div>
+                <div id="preview-content" class="flex-1 flex-col min-h-0" style="display:none">
+                    <div id="preview-head" class="flex-shrink-0 px-6 py-4 border-b border-[#1f1f1f]"></div>
+                    <div id="preview-body" class="flex-1 overflow-y-auto px-6 py-5 min-h-0">
+                        <div id="preview-attachments" class="mb-4"></div>
+                        <div id="preview-mail"></div>
+                    </div>
+                    <div class="flex-shrink-0 border-t border-[#1f1f1f] px-6 py-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[11px] font-mono uppercase tracking-wider text-zinc-500">Odpowiedz</span>
+                            <span id="reply-from-note" class="text-[10px] text-zinc-600"></span>
+                        </div>
+                        <textarea id="reply-text" rows="3" class="fld resize-y" placeholder="Napisz odpowiedź…"></textarea>
+                        <div class="flex justify-end mt-2">
+                            <button id="reply-send" onclick="sendReply()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2 text-xs font-semibold transition-colors"><i class="ph ph-paper-plane-tilt"></i> Wyślij odpowiedź</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Modal: ustawienia przekazywania -->
+    <div id="fwd-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closeSettings()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-2xl max-h-[85vh] flex flex-col">
+            <div class="px-6 pt-5 pb-3 border-b border-[#1f1f1f] flex-shrink-0">
+                <h3 class="text-white text-lg font-semibold flex items-center gap-2"><i class="ph ph-arrow-bend-double-up-right text-[#3291ff]"></i> Ustawienia przekazywania</h3>
+                <p class="text-zinc-500 text-xs mt-1">Maile na alias domeny projektu są przekazywane na wskazany adres, gdy przekazywanie jest aktywne. Odpowiadając z Gmaila trafisz wprost do klienta.</p>
+            </div>
+            <div class="flex-1 overflow-y-auto px-6 py-4">
+                <table class="w-full text-left">
+                    <thead>
+                        <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+                            <th class="px-3 py-2">Projekt / domena</th>
+                            <th class="px-3 py-2">Przekazuj na</th>
+                            <th class="px-3 py-2 text-center">Aktywne</th>
+                            <th class="px-3 py-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="fwd-tbody"></tbody>
+                </table>
+                <div id="fwd-empty" class="hidden py-10 text-center text-zinc-600 text-sm">Brak projektów.</div>
+            </div>
+            <div class="px-6 py-4 border-t border-[#1f1f1f] flex justify-end flex-shrink-0">
+                <button onclick="closeSettings()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Zamknij</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const WFA_INBOX_API = SUPABASE_URL + '/functions/v1/wfa-inbox-api';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        // ============ STAN ============
+        const state = {
+            inbox: [],            // załadowane wiersze wfa_inbox (dla aktualnego widoku)
+            projects: [],         // wfa_projects (bez testowych)
+            projById: {},         // id -> projekt
+            showArchive: false,   // false = skrzynka (archived_at IS NULL), true = archiwum
+            projectFilter: 'all', // 'all' | 'unassigned' | project_id
+            search: '',
+            selectedId: null,
+        };
+
+        // ============ HELPERY ============
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function relTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso); if (isNaN(d)) return '';
+            const mins = Math.round((Date.now() - d.getTime()) / 60000);
+            if (mins < 1) return 'przed chwilą';
+            if (mins < 60) return mins + ' min temu';
+            if (mins < 1440) return Math.round(mins / 60) + ' godz. temu';
+            const days = Math.round(mins / 1440);
+            if (days < 30) return days + ' dni temu';
+            return d.toLocaleDateString('pl-PL');
+        }
+        function fmtFull(iso) {
+            if (!iso) return '';
+            const d = new Date(iso); if (isNaN(d)) return '';
+            return d.toLocaleString('pl-PL', { dateStyle: 'medium', timeStyle: 'short' });
+        }
+        function fmtSize(bytes) {
+            const n = Number(bytes) || 0;
+            const kb = n / 1024;
+            if (kb < 1024) return Math.max(1, Math.round(kb)) + ' KB';
+            return (kb / 1024).toFixed(1) + ' MB';
+        }
+        function projLabel(p) {
+            const n = (p.name || '').trim();
+            return n || (p.customer_name || 'Projekt');
+        }
+        function currentMsg() { return state.inbox.find(m => m.id === state.selectedId) || null; }
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? '#45a557' : type === 'error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:6px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity = '0'; setTimeout(() => toast.remove(), 300); }, 2500);
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data || []).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // ============ DANE ============
+        async function loadProjects() {
+            // inbox_forward_to / inbox_enabled dołączone — potrzebne w modalu ustawień
+            const { data } = await supabaseClient.from('wfa_projects')
+                .select('id, name, customer_name, domain, slug, is_test, inbox_forward_to, inbox_enabled')
+                .order('created_at', { ascending: false }).range(0, 999);
+            state.projects = (data || []).filter(p => !p.is_test);
+            state.projById = {}; state.projects.forEach(p => state.projById[p.id] = p);
+            buildProjectFilterOptions();
+        }
+
+        async function loadInbox() {
+            let q = supabaseClient.from('wfa_inbox').select('*').order('received_at', { ascending: false }).range(0, 199);
+            q = state.showArchive ? q.not('archived_at', 'is', null) : q.is('archived_at', null);
+            const { data, error } = await q;
+            if (error) { showToast('Błąd ładowania skrzynki: ' + error.message, 'error'); state.inbox = []; }
+            else state.inbox = data || [];
+            // wybrany mail mógł zniknąć z widoku po zmianie filtra
+            if (state.selectedId && !state.inbox.find(m => m.id === state.selectedId)) { state.selectedId = null; showPreviewEmpty(); }
+            renderList();
+            refreshBadge();
+        }
+
+        // Licznik nieprzeczytanych = zawsze nieprzeczytane w NIE-archiwum (niezależnie od bieżącego widoku)
+        async function refreshBadge() {
+            try {
+                const { count } = await supabaseClient.from('wfa_inbox')
+                    .select('id', { count: 'exact', head: true })
+                    .is('archived_at', null).is('read_at', null);
+                Sidebar.setNavBadge('skrzynki', count || 0);
+            } catch (_) { /* badge opcjonalny */ }
+        }
+
+        // ============ FILTRY ============
+        function buildProjectFilterOptions() {
+            const sel = document.getElementById('proj-filter');
+            const opts = ['<option value="all">Wszystkie projekty</option>', '<option value="unassigned">Nieprzypisane</option>']
+                .concat(state.projects.map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(projLabel(p))}</option>`));
+            sel.innerHTML = opts.join('');
+            sel.value = state.projectFilter;
+        }
+        function applyFilters() {
+            let rows = state.inbox.slice();
+            if (state.projectFilter === 'unassigned') rows = rows.filter(m => !m.project_id);
+            else if (state.projectFilter !== 'all') rows = rows.filter(m => m.project_id === state.projectFilter);
+            const s = state.search.trim().toLowerCase();
+            if (s) rows = rows.filter(m =>
+                (m.from_email || '').toLowerCase().includes(s) ||
+                (m.from_name || '').toLowerCase().includes(s) ||
+                (m.subject || '').toLowerCase().includes(s));
+            return rows;
+        }
+
+        // ============ RENDER: lista ============
+        function projChipHtml(pid) {
+            const p = pid ? state.projById[pid] : null;
+            if (p) return `<span class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded-md px-2 py-0.5 text-[11px] max-w-[150px] truncate"><i class="ph ph-app-window"></i>${escapeHtml(projLabel(p))}</span>`;
+            return `<span class="inline-flex items-center gap-1 border border-[#2a2a2a] text-zinc-500 rounded-md px-2 py-0.5 text-[11px]">nieprzypisane</span>`;
+        }
+        function listItemHtml(m) {
+            const unread = !m.read_at;
+            const who = m.from_name || m.from_email || '(brak nadawcy)';
+            const p = m.project_id ? state.projById[m.project_id] : null;
+            const chip = p
+                ? `<span class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded px-1.5 py-0.5 text-[10px] max-w-[130px] truncate">${escapeHtml(projLabel(p))}</span>`
+                : `<span class="inline-flex items-center gap-1 border border-[#2a2a2a] text-zinc-600 rounded px-1.5 py-0.5 text-[10px]">nieprzypisane</span>`;
+            const icons = [
+                (Array.isArray(m.attachments) && m.attachments.length) ? '<i class="ph ph-paperclip" title="załączniki"></i>' : '',
+                m.replied_at ? '<i class="ph ph-arrow-bend-up-left text-[#4cb782]" title="odpowiedziano"></i>' : '',
+                m.forwarded_at ? '<i class="ph ph-share-fat text-[#52a8ff]" title="przekazano"></i>' : '',
+            ].join('');
+            const active = m.id === state.selectedId ? 'bg-white/[.04]' : '';
+            return `<button data-id="${escapeHtml(m.id)}" class="msg-row block w-full text-left px-4 py-3 border-b border-[#141414] hover:bg-white/[.03] transition-colors ${active}">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full flex-shrink-0 ${unread ? 'bg-[#0070f3]' : ''}"></span>
+                    <span class="truncate ${unread ? 'text-white font-semibold' : 'text-zinc-300'} text-[13px] flex-1 min-w-0">${escapeHtml(who)}</span>
+                    <span class="text-zinc-600 text-[10px] flex-shrink-0 whitespace-nowrap">${escapeHtml(relTime(m.received_at))}</span>
+                </div>
+                <div class="text-[12px] ${unread ? 'text-zinc-200' : 'text-zinc-400'} truncate mt-0.5 pl-4">${escapeHtml(m.subject || '(bez tematu)')}</div>
+                <div class="flex items-center gap-2 mt-1 pl-4">
+                    ${chip}
+                    <span class="text-zinc-600 text-[10px] font-mono truncate min-w-0">${escapeHtml(m.to_email || '')}</span>
+                    <span class="ml-auto flex items-center gap-1.5 text-zinc-500 text-[11px] flex-shrink-0">${icons}</span>
+                </div>
+            </button>`;
+        }
+        function renderList() {
+            const rows = applyFilters();
+            const list = document.getElementById('list');
+            const empty = document.getElementById('list-empty');
+            if (!rows.length) {
+                list.innerHTML = '';
+                list.style.display = 'none';
+                empty.style.display = 'flex';
+                return;
+            }
+            list.style.display = 'block';
+            empty.style.display = 'none';
+            list.innerHTML = rows.map(listItemHtml).join('');
+        }
+
+        // ============ PODGLĄD ============
+        function showPreviewEmpty() {
+            document.getElementById('preview-content').style.display = 'none';
+            document.getElementById('preview-empty').style.display = 'flex';
+        }
+        function showPreviewContent() {
+            document.getElementById('preview-empty').style.display = 'none';
+            document.getElementById('preview-content').style.display = 'flex';
+        }
+        function selectMessage(id) {
+            const m = state.inbox.find(x => x.id === id);
+            if (!m) return;
+            state.selectedId = id;
+            renderPreview(m);
+            renderList();          // podświetlenie zaznaczonego
+            if (!m.read_at) markRead(m);
+        }
+        function renderPreview(m) {
+            showPreviewContent();
+            const head = document.getElementById('preview-head');
+            const fromStr = m.from_name
+                ? `${escapeHtml(m.from_name)} &lt;${escapeHtml(m.from_email || '')}&gt;`
+                : escapeHtml(m.from_email || '');
+            const fwd = m.forward_error
+                ? `<span class="inline-flex items-center gap-1 text-[#f26d78]"><i class="ph ph-warning-circle"></i>błąd przekazania: ${escapeHtml(m.forward_error)}</span>`
+                : m.forwarded_at
+                    ? `<span class="inline-flex items-center gap-1 text-[#52a8ff]"><i class="ph ph-share-fat"></i>przekazano na ${escapeHtml(m.forwarded_to || '')}</span>`
+                    : '';
+            const repl = m.replied_at ? `<span class="inline-flex items-center gap-1 text-[#4cb782]"><i class="ph ph-arrow-bend-up-left"></i>odpowiedziano</span>` : '';
+            head.innerHTML = `
+                <div class="flex items-start justify-between gap-3">
+                    <h2 class="text-white text-lg font-semibold min-w-0 break-words">${escapeHtml(m.subject || '(bez tematu)')}</h2>
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <button onclick="markUnread()" class="p-2 text-zinc-500 hover:text-white" title="Oznacz jako nieprzeczytane"><i class="ph ph-envelope"></i></button>
+                        <button id="arch-btn" onclick="toggleArchive()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"></button>
+                    </div>
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
+                    <span><span class="text-zinc-600">Od:</span> ${fromStr}</span>
+                    <span><span class="text-zinc-600">Do:</span> <span class="font-mono text-zinc-300">${escapeHtml(m.to_email || '')}</span></span>
+                    <span class="text-zinc-500">${escapeHtml(fmtFull(m.received_at))}</span>
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                    ${projChipHtml(m.project_id)}${fwd}${repl}
+                </div>`;
+            const ab = document.getElementById('arch-btn');
+            ab.innerHTML = m.archived_at ? '<i class="ph ph-arrow-counter-clockwise"></i> Przywróć' : '<i class="ph ph-archive"></i> Archiwizuj';
+
+            renderMailBody(m);
+            renderAttachments(m);
+
+            document.getElementById('reply-from-note').textContent = m.to_email ? ('Odpowiedź pójdzie z adresu ' + m.to_email) : '';
+            document.getElementById('reply-text').value = '';
+        }
+        // Treść maila: html_body → iframe sandbox (BEZ allow-scripts = XSS-safe), inaczej <pre> przez textContent
+        function renderMailBody(m) {
+            const box = document.getElementById('preview-mail');
+            box.innerHTML = '';
+            if (m.html_body) {
+                const iframe = document.createElement('iframe');
+                iframe.setAttribute('sandbox', '');   // pełna izolacja: brak skryptów, brak same-origin
+                iframe.style.cssText = 'width:100%;border:0;background:#fff;border-radius:8px;min-height:420px;height:62vh';
+                iframe.srcdoc = m.html_body;           // ustawienie przez property — brak ryzyka wykonania w rodzicu
+                box.appendChild(iframe);
+            } else {
+                const pre = document.createElement('pre');
+                pre.className = 'whitespace-pre-wrap break-words text-zinc-200 text-[13px] leading-relaxed font-sans';
+                pre.textContent = m.text_body || '(brak treści)';   // textContent — nie innerHTML
+                box.appendChild(pre);
+            }
+        }
+        function renderAttachments(m) {
+            const wrap = document.getElementById('preview-attachments');
+            wrap.innerHTML = '';
+            const atts = Array.isArray(m.attachments) ? m.attachments : [];
+            if (!atts.length) return;
+            const title = document.createElement('div');
+            title.className = 'text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2';
+            title.textContent = 'Załączniki (' + atts.length + ')';
+            wrap.appendChild(title);
+            atts.forEach(a => {
+                const btn = document.createElement('button');
+                btn.className = 'inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs mr-2 mb-2 transition-colors';
+                const icon = document.createElement('i'); icon.className = 'ph ph-paperclip';
+                const label = document.createElement('span');
+                label.textContent = (a.filename || 'załącznik') + (a.size ? ' · ' + fmtSize(a.size) : '');
+                btn.appendChild(icon); btn.appendChild(label);
+                btn.addEventListener('click', () => openAttachment(a.id));
+                wrap.appendChild(btn);
+            });
+        }
+
+        // ============ AKCJE ============
+        async function markRead(m) {
+            if (m.read_at) return;
+            m.read_at = new Date().toISOString();
+            renderList();
+            const { error } = await supabaseClient.from('wfa_inbox').update({ read_at: m.read_at }).eq('id', m.id);
+            if (!error) refreshBadge();
+        }
+        async function markUnread() {
+            const m = currentMsg(); if (!m) return;
+            m.read_at = null;
+            renderList(); renderPreview(m);
+            const { error } = await supabaseClient.from('wfa_inbox').update({ read_at: null }).eq('id', m.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            refreshBadge();
+            showToast('Oznaczono jako nieprzeczytane', 'success');
+        }
+        async function toggleArchive() {
+            const m = currentMsg(); if (!m) return;
+            const nowArch = !m.archived_at;
+            const val = nowArch ? new Date().toISOString() : null;
+            const { error } = await supabaseClient.from('wfa_inbox').update({ archived_at: val }).eq('id', m.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            m.archived_at = val;
+            // wiersz opuszcza bieżący widok (skrzynka vs archiwum)
+            state.inbox = state.inbox.filter(x => x.id !== m.id);
+            state.selectedId = null;
+            showPreviewEmpty();
+            renderList(); refreshBadge();
+            showToast(nowArch ? 'Zarchiwizowano' : 'Przywrócono', 'success');
+        }
+        async function sendReply() {
+            const m = currentMsg(); if (!m) return;
+            const ta = document.getElementById('reply-text');
+            const body = ta.value.trim();
+            if (!body) { showToast('Wpisz treść odpowiedzi', 'error'); return; }
+            const btn = document.getElementById('reply-send');
+            const orig = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Wysyłanie…';
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error('Brak sesji');
+                const res = await fetch(WFA_INBOX_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token,
+                        'apikey': SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify({ action: 'reply', inbox_id: m.id, body_text: body }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok || json.error) throw new Error(json.error || ('HTTP ' + res.status));
+                m.replied_at = new Date().toISOString();
+                ta.value = '';
+                showToast('Odpowiedź wysłana', 'success');
+                renderList(); renderPreview(m);
+            } catch (e) {
+                showToast('Błąd wysyłki: ' + (e.message || e), 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = orig;
+            }
+        }
+        async function openAttachment(attId) {
+            const m = currentMsg(); if (!m) return;
+            // Okno otwieramy synchronicznie (klik) — omija blokadę popupów; URL ustawiamy po fetchu
+            const w = window.open('', '_blank');
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error('Brak sesji');
+                const res = await fetch(WFA_INBOX_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token,
+                        'apikey': SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify({ action: 'attachment', inbox_id: m.id, attachment_id: attId }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok || json.error || !json.download_url) throw new Error(json.error || 'Brak URL załącznika');
+                if (w) w.location.href = json.download_url; else window.open(json.download_url, '_blank');
+            } catch (e) {
+                if (w) w.close();
+                showToast('Nie udało się pobrać załącznika: ' + (e.message || e), 'error');
+            }
+        }
+
+        // ============ MODAL: USTAWIENIA PRZEKAZYWANIA ============
+        function openSettings() { renderSettings(); document.getElementById('fwd-modal').classList.remove('hidden'); }
+        function closeSettings() { document.getElementById('fwd-modal').classList.add('hidden'); }
+        function renderSettings() {
+            const tbody = document.getElementById('fwd-tbody');
+            const empty = document.getElementById('fwd-empty');
+            if (!state.projects.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+            empty.classList.add('hidden');
+            tbody.innerHTML = state.projects.map(p => {
+                const hasDomain = !!(p.domain && p.domain.trim());
+                const dis = hasDomain ? '' : 'disabled';
+                const rowCls = hasDomain ? '' : 'opacity-40';
+                return `<tr data-pid="${escapeHtml(p.id)}" class="border-b border-[#1f1f1f] ${rowCls}">
+                    <td class="px-3 py-2.5 align-top">
+                        <div class="text-white text-[13px] font-medium">${escapeHtml(projLabel(p))}</div>
+                        <div class="text-zinc-600 text-[11px] font-mono">${hasDomain ? escapeHtml(p.domain) : 'brak domeny'}</div>
+                    </td>
+                    <td class="px-3 py-2.5"><input type="email" class="fld fwd-email" value="${escapeHtml(p.inbox_forward_to || '')}" placeholder="adres@do-przekazu" ${dis}></td>
+                    <td class="px-3 py-2.5 text-center"><input type="checkbox" class="fwd-enabled w-4 h-4 accent-[#0070f3] align-middle" ${p.inbox_enabled ? 'checked' : ''} ${dis}></td>
+                    <td class="px-3 py-2.5 text-right"><button class="fwd-save px-3 py-1.5 text-[11px] font-semibold bg-white text-black rounded-md hover:bg-zinc-200 ${hasDomain ? '' : 'pointer-events-none opacity-50'}">Zapisz</button></td>
+                </tr>`;
+            }).join('');
+        }
+        async function saveForwarding(tr, btn) {
+            const pid = tr.getAttribute('data-pid');
+            const email = tr.querySelector('.fwd-email').value.trim();
+            const enabled = tr.querySelector('.fwd-enabled').checked;
+            btn.disabled = true;
+            const { error } = await supabaseClient.from('wfa_projects')
+                .update({ inbox_forward_to: email || null, inbox_enabled: enabled }).eq('id', pid);
+            btn.disabled = false;
+            if (error) { showToast('Błąd zapisu: ' + error.message, 'error'); return; }
+            const p = state.projById[pid];
+            if (p) { p.inbox_forward_to = email || null; p.inbox_enabled = enabled; }
+            showToast('Zapisano przekazywanie', 'success');
+        }
+
+        // ============ NASŁUCHY ============
+        document.getElementById('list').addEventListener('click', (e) => {
+            const row = e.target.closest('.msg-row'); if (!row) return;
+            selectMessage(row.getAttribute('data-id'));
+        });
+        document.getElementById('search').addEventListener('input', (e) => { state.search = e.target.value; renderList(); });
+        document.getElementById('proj-filter').addEventListener('change', (e) => { state.projectFilter = e.target.value; renderList(); });
+        document.getElementById('arch-toggle').addEventListener('click', () => {
+            state.showArchive = !state.showArchive;
+            const b = document.getElementById('arch-toggle');
+            if (state.showArchive) {
+                b.classList.add('border-[#0070f3]/60', 'text-white', 'bg-[#0070f3]/10');
+                b.innerHTML = '<i class="ph ph-tray"></i> Skrzynka odbiorcza';
+            } else {
+                b.classList.remove('border-[#0070f3]/60', 'text-white', 'bg-[#0070f3]/10');
+                b.innerHTML = '<i class="ph ph-archive"></i> Pokaż archiwum';
+            }
+            loadInbox();
+        });
+        document.getElementById('fwd-tbody').addEventListener('click', (e) => {
+            const btn = e.target.closest('.fwd-save'); if (!btn) return;
+            const tr = btn.closest('tr'); if (tr) saveForwarding(tr, btn);
+        });
+
+        // ============ START ============
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadProjects();
+            await loadInbox();
+        })();
+    </script>
+</body>
+</html>

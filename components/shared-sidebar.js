@@ -94,6 +94,7 @@ const NAV_ITEMS_SKLEPY = [
 // TN App (workflow budowy aplikacji SaaS po pełnej płatności /aplikacja)
 const NAV_ITEMS_APP = [
     { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
+    { id: 'skrzynki', icon: 'ph-tray', label: 'Skrzynki' },
 ];
 
 const NAV_ITEMS_BIZNES = [
@@ -779,6 +780,24 @@ function setLeadsCount(count) {
     if (el) el.textContent = count;
 }
 
+// Uniwersalny badge liczbowy przy dowolnej pozycji nav (id = item.id).
+// Wywoływać PO Sidebar.render(). Tworzy span raz, potem tylko aktualizuje.
+// Ukryty gdy count <= 0. Strona sama fetchuje liczbę — sidebar nie robi zapytań.
+function setNavBadge(id, count) {
+    const link = document.getElementById(`nav-${id}`);
+    if (!link) return;
+    let badge = document.getElementById(`nav-${id}-badge`);
+    if (!badge) {
+        badge = document.createElement('span');
+        badge.id = `nav-${id}-badge`;
+        badge.className = 'ml-auto bg-[#0070f3] text-white rounded-full text-[10px] px-1.5 py-0.5 font-mono leading-none min-w-[18px] text-center';
+        link.appendChild(badge);
+    }
+    const n = Number(count) || 0;
+    badge.textContent = n;
+    badge.classList.toggle('hidden', n <= 0);
+}
+
 function setupLogout(supabaseClient) {
     const btn = document.getElementById('logout-btn');
     if (btn) {
@@ -861,6 +880,7 @@ window.Sidebar = {
     setUserName,
     setUserColor,
     setLeadsCount,
+    setNavBadge,
     refreshKampanieBadge: loadWorkflowCampaignBadge,
     setupLogout,
     setupProfileClick,
