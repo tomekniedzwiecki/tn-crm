@@ -148,6 +148,15 @@
         };
         const BADGE_COLORS = { admin: '#0070f3', client: '#f5a623', auto: '#45a557' };
         const OWNER_LABEL = { admin: 'Tomek', client: 'Klient', auto: 'Auto' };
+        // Statusy pojedynczego kroku (wfa_steps.status) — kolory spójne z projekt.html (.st-*)
+        const STEP_LABELS = { pending: 'Do zrobienia', in_progress: 'W trakcie', done: 'Ukończone', skipped: 'Pominięte', blocked: 'Zablokowane' };
+        const STEP_STATUS_META = {
+            done:        { cls: 'border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782]' },
+            in_progress: { cls: 'border-[#f5a623]/45 bg-[#f5a623]/10 text-[#f5b955]' },
+            blocked:     { cls: 'border-[#e5484d]/45 bg-[#e5484d]/10 text-[#f26d78]' },
+            skipped:     { cls: 'border-[#262626] text-zinc-600 line-through' },
+            pending:     { cls: 'border-[#2a2a2a] text-zinc-400' },
+        };
 
         function escapeHtml(str) {
             if (str === null || str === undefined) return '';
@@ -325,27 +334,54 @@
             }).join('');
         }
 
-        // Rozwijany podgląd: postęp etapów bez wchodzenia w projekt
+        // Rozwijany podgląd: etapy z progressem + rozbite na pojedyncze kroki ze statusami
         function renderRowPreview(p) {
             const stages = {};
-            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, keys: [] }).keys.push(d.key); });
+            stepDefs.forEach(d => { (stages[d.stage] = stages[d.stage] || { label: d.stage_label, defs: [] }).defs.push(d); });
             const steps = stepsByProj[p.id] || [];
+            const stepByKey = {}; steps.forEach(s => { stepByKey[s.step_key] = s; });
+
             const stageHtml = Object.keys(stages).sort((a, b) => a - b).map(n => {
-                const inst = steps.filter(s => stages[n].keys.includes(s.step_key) && s.status !== 'skipped');
-                const done = inst.filter(s => s.status === 'done').length;
-                const full = inst.length > 0 && done === inst.length;
-                const started = done > 0 || inst.some(s => s.status === 'in_progress');
-                const cls = full ? 'border-[#45a557]/50 text-[#62c073]' : started ? 'border-[#0070f3]/50 text-[#52a8ff]' : 'border-[#2a2a2a] text-zinc-500';
-                return `<span class="inline-flex items-center gap-1.5 border ${cls} rounded-md px-2.5 py-1 text-[11px]">
-                    ${full ? '<i class="ph ph-check"></i>' : `<span class="font-mono">${done}/${inst.length}</span>`} ${escapeHtml(stages[n].label)}</span>`;
+                const st = stages[n];
+                const inst = st.defs.filter(d => (stepByKey[d.key]?.status || 'pending') !== 'skipped');
+                const done = inst.filter(d => stepByKey[d.key]?.status === 'done').length;
+                const total = inst.length;
+                const pct = total ? Math.round(done / total * 100) : 0;
+                const full = total > 0 && done === total;
+                const chips = st.defs.map(d => {
+                    const status = stepByKey[d.key]?.status || 'pending';
+                    const sm = STEP_STATUS_META[status] || STEP_STATUS_META.pending;
+                    const mile = d.milestone_label ? `<i class="ph ph-flag-checkered text-[10px] opacity-70" title="Kamień milowy: ${escapeHtml(d.milestone_label)}"></i>` : '';
+                    return `<button onclick="event.stopPropagation();location.href='/tn-app/projekt?id=${p.id}'"
+                        class="inline-flex items-center gap-1.5 border rounded-md px-2.5 py-1 text-[11px] transition-colors hover:border-[#0070f3]/60 hover:text-white ${sm.cls}"
+                        title="${OWNER_LABEL[d.owner]} · ${STEP_LABELS[status]}">
+                        <span class="owner-dot" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}"></span>
+                        <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${mile}</button>`;
+                }).join('');
+                return `<div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-[10px] font-mono font-semibold tracking-wider ${full ? 'text-[#62c073]' : 'text-zinc-400'}">ETAP ${n}</span>
+                        <span class="text-[11px] text-zinc-500">${escapeHtml(st.label)}</span>
+                        <span class="ml-auto flex items-center gap-2">
+                            <div class="w-20 h-1 bg-zinc-800 rounded-full overflow-hidden"><div class="h-full ${full ? 'bg-[#45a557]' : 'bg-[#0070f3]'} rounded-full" style="width:${pct}%"></div></div>
+                            <span class="text-[10px] font-mono text-zinc-500">${done}/${total}</span>
+                        </span>
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">${chips}</div>
+                </div>`;
             }).join('');
+
             const links = [];
-            if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i> aplikacja</a>`);
-            if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-browser"></i> landing</a>`);
-            if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i> repo</a>`);
+            if (p.app_url) links.push(`<a href="${escapeHtml(p.app_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-rocket-launch"></i> aplikacja</a>`);
+            if (p.landing_url) links.push(`<a href="${escapeHtml(p.landing_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-browser"></i> landing</a>`);
+            if (p.repo_url) links.push(`<a href="${escapeHtml(p.repo_url)}" target="_blank" onclick="event.stopPropagation()" class="text-[#3291ff] hover:text-[#52a8ff]"><i class="ph ph-git-branch"></i> repo</a>`);
+
             return `<tr class="border-b border-[#1f1f1f] bg-[#050505]" onclick="event.stopPropagation()"><td colspan="8" class="px-5 py-4 cursor-default">
-                <div class="flex flex-wrap gap-1.5 mb-3">${stageHtml}</div>
-                ${links.length ? `<div class="flex flex-wrap gap-3 text-[11px]">${links.join('')}</div>` : '<span class="text-zinc-600 text-[11px]">brak linków (repo / aplikacja / landing)</span>'}
+                <div class="space-y-3.5">${stageHtml}</div>
+                <div class="mt-4 pt-3 border-t border-[#1a1a1a] flex flex-wrap items-center gap-3 text-[11px]">
+                    ${links.length ? links.join('') : '<span class="text-zinc-600">brak linków (repo / aplikacja / landing)</span>'}
+                    <a href="/tn-app/projekt?id=${p.id}" onclick="event.stopPropagation()" class="ml-auto inline-flex items-center gap-1 text-zinc-400 hover:text-white">Otwórz projekt <i class="ph ph-arrow-right"></i></a>
+                </div>
             </td></tr>`;
         }
         function toggleRow(id) {
