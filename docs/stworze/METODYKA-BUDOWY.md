@@ -94,13 +94,19 @@ Wszystko inne: Tomek przegląda DOWODY, nie kod.
 ## 6a. Pipeline designu (krok `design`, Etap 3) — pętla repo ↔ Claude Design
 
 Dwukierunkowa synchronizacja przez narzędzie **DesignSync** (skill `/design-sync` jeśli dostępny):
-1. Sesja EKSTRAHUJE tokeny z makiet sparingu (dokładne hexy — sampling PNG, nie zgadywanie) + inwentarz
-   ekranów ze specu + ton/kontekst niszy (np. teren → większe cele dotykowe, kontrast).
-2. Buduje bibliotekę w repo `design-system/`: `tokens.css` (custom properties) + preview HTML per komponent
-   z markerem `<!-- @dsCard group="…" -->` (Brand/Type/Colors/Components/Forms/Screens); komponenty we
-   wszystkich stanach + wzorce specyficzne apki (PDF itd.) + **2-3 pełne ekrany wzorcowe = dowód spójności**.
-3. PĘTLA SAMODOSKONALENIA (autonomiczna, bez czekania na Tomka): render-check każdej karty + krytyk
-   w świeżym kontekście (spójność tokenów, kontrast, stany, mobile) → napraw → powtórz, aż zero zastrzeżeń
+1. Sesja KONSUMUJE kontrakt tokenów z `brief/04-STYLEGUIDE` (wyprodukowany w kroku `paczka_cc`: zbadane
+   hexy z samplingu makiet, tabela kontrastów WCAG, warianty tekstowe, geometria, zasady PDF/mobile) —
+   NIE sampluje makiet od nowa (lekcja z pilota 13.07: dublowanie = ryzyko rozjazdu). Makiety tylko jako
+   referencja układów. + inwentarz ekranów ze specu + ton/kontekst niszy (teren → większe cele dotykowe).
+2. TOKENY: jedno źródło prawdy w runtime = `:root` w `public/css/base.css` (wartości z 04 wpisane 1:1;
+   klasy komponentów niszy też do base.css). `design-system/tokens.css` = AUTOGENEROWANA kopia :root
+   (tylko po to, by podglądy renderowały się samodzielnie w Claude Design). Biblioteka w repo
+   `design-system/`: preview HTML per komponent z markerem `<!-- @dsCard group="…" -->`
+   (Brand/Type/Colors/Components/Forms/Screens); komponenty we wszystkich stanach + wzorce specyficzne
+   apki (PDF itd.) + **2-3 pełne ekrany wzorcowe = dowód spójności**.
+3. PĘTLA SAMODOSKONALENIA (autonomiczna, bez czekania na Tomka): render-check każdej karty przez
+   **Playwright z repo apki** (chrome-devtools nie widzi lokalnych plików) + krytyk w świeżym kontekście
+   (spójność tokenów, kontrast wg tabeli z 04, stany, mobile) → napraw → powtórz, aż zero zastrzeżeń
    (max 4 rundy; reszta do BUILDLOG).
 4. PUSH do projektu claude.ai/design (DesignSync: create_project → finalize_plan → write_files) —
    NIEBLOKUJĄCY podgląd dla Tomka; jego iteracje są opcjonalne. PULL na hasło „zsynchronizuj design":
