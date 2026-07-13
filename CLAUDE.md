@@ -103,6 +103,18 @@ w wątku przez In-Reply-To; załączniki przez krótkotrwały download_url — 1
   występuje jako legacy JWT LUB sb_secret_* (kilka aktywnych) — funkcja akceptuje env
   SERVICE_ROLE_KEY + wartości z SUPABASE_SECRET_KEYS + claim role=service_role.
 
+### Sekcja „Do uzupełnienia" (intake) w portalu klienta
+Portal (`tn-app/portal.html`) pokazuje od pierwszego dnia 4 karty, każda zapisywana OSOBNO od razu
+(bez „wyślij wszystko"): **Dane firmy** (SSOT = `wfa_projects.contract_fields`, współdzielone z flow umowy —
+NIE dubluj), **Materiały** (upload plików + linki + notatka), **Stripe** (status KYC/BLIK + stały link
+`wfa-stripe-onboard`), **Beta** (5–10 osób). Tabele `wfa_intake` (materialy/beta) + `wfa_intake_files`,
+bucket **`wfa-intake`** (PRIVATE — dostęp tylko service-role z edge + signed URLs). Wszystko przez
+`wfa-portal` (token+hasło klienta): akcje `intake_get/intake_save/intake_upload_init/_done/intake_file_delete`;
+`intake_admin` = panel (`tn-app/projekt.html` zakładka „Dane od klienta", gate = team JWT, read-only, signed URLs 1 h).
+Pierwsza zawartość materiałów odhacza „Dane otrzymane" w kroku `dane_operatora` (VERBATIM z WS). **Podgląd admina
+„oczami klienta" = READ-ONLY**: zapisy intake zwracają 403 `{error:'podgląd — tylko odczyt'}`. RLS `wfa_intake*`
+= wyłącznie `team_members` (ZERO anon). Migracja: `20260713c_wfa_intake.sql`.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów
