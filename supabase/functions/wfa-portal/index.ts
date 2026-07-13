@@ -662,9 +662,9 @@ Deno.serve(async (req: Request) => {
   };
   // „Twój ruch" — tylko gdy piłka jest po stronie klienta (owner=client bieżącego kroku).
   const YOUR_MOVE: Record<string, string> = {
-    // Sekcja umowy w portalu jest tymczasowo ukryta (wzór w dopracowaniu) — kierujemy do karty „Dane firmy".
-    umowa: "Uzupełnij dane firmy w sekcji „Do uzupełnienia" — umowę przygotujemy na ich podstawie i damy Ci znać, gdy będzie gotowa do podpisu.",
-    dane_operatora: "Wgraj materiały (cennik, dotychczasowe wyceny) w sekcji „Do uzupełnienia" — to odblokuje kolejny etap.",
+    // Sekcja umowy w portalu jest tymczasowo ukryta (wzór w dopracowaniu) — kierujemy do karty Dane firmy.
+    umowa: "Uzupełnij dane firmy w sekcji Do uzupełnienia — umowę przygotujemy na ich podstawie i damy Ci znać, gdy będzie gotowa do podpisu.",
+    dane_operatora: "Wgraj materiały (cennik, dotychczasowe wyceny) w sekcji Do uzupełnienia — to odblokuje kolejny etap.",
     demo_klienta: "Przetestuj wersję roboczą aplikacji i podziel się uwagami.",
     akcept_klienta: "Sprawdź i zatwierdź zakres oraz nazwę aplikacji.",
   };
