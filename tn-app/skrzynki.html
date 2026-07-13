@@ -38,18 +38,25 @@
                 <h1 class="text-white font-semibold text-base flex items-center gap-2"><i class="ph ph-tray text-[#3291ff]"></i> Skrzynki</h1>
             </div>
             <div class="flex items-center gap-2 flex-wrap justify-end">
+                <!-- Przełącznik strumienia: Skrzynki (wfa_inbox) vs Partnerzy (wfa_outbox) -->
+                <div class="inline-flex items-center gap-1 mr-1">
+                    <button id="tab-inbox" onclick="setStream('inbox')" class="stream-tab inline-flex items-center gap-1.5 border rounded-md px-3 py-1.5 text-xs transition-colors hover:text-white hover:border-[#0070f3]/60"><i class="ph ph-tray"></i> Skrzynki</button>
+                    <button id="tab-partners" onclick="setStream('partners')" class="stream-tab inline-flex items-center gap-1.5 border rounded-md px-3 py-1.5 text-xs transition-colors hover:text-white hover:border-[#0070f3]/60"><i class="ph ph-paper-plane-tilt"></i> Partnerzy</button>
+                </div>
                 <div class="relative">
                     <i class="ph ph-magnifying-glass absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-600 text-sm"></i>
                     <input id="search" placeholder="Szukaj: nadawca / temat" class="bg-[#0a0a0a] border border-[#333] rounded-md pl-8 pr-3 py-1.5 text-xs text-white w-48 focus:outline-none focus:border-[#0070f3]/60">
                 </div>
                 <select id="proj-filter" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60"></select>
                 <button id="arch-toggle" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-archive"></i> Pokaż archiwum</button>
-                <button onclick="openSettings()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-arrow-bend-double-up-right"></i> Ustawienia przekazywania</button>
+                <button id="settings-btn" onclick="openSettings()" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-arrow-bend-double-up-right"></i> Ustawienia przekazywania</button>
+                <!-- Primary — widoczny wyłącznie w widoku Partnerzy -->
+                <button id="partner-compose-btn" onclick="openPartnerCompose()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors" style="display:none"><i class="ph ph-paper-plane-tilt"></i> Napisz do partnera</button>
             </div>
         </header>
 
         <!-- Layout główny: lewa lista + prawy podgląd (pełna wysokość, bez scrolla strony) -->
-        <div class="flex-1 flex min-h-0 animate-enter">
+        <div id="view-inbox" class="flex-1 flex min-h-0 animate-enter">
 
             <!-- Lewa kolumna: lista maili -->
             <div class="w-[380px] flex-shrink-0 border-r border-white/5 flex flex-col min-h-0">
@@ -86,6 +93,32 @@
             </section>
 
         </div>
+
+        <!-- Widok Partnerzy: rejestr maili wychodzących do partnerów-operatorów (wfa_outbox) -->
+        <div id="view-partners" class="flex-1 flex min-h-0 animate-enter" style="display:none">
+
+            <!-- Lewa kolumna: lista wysłanych -->
+            <div class="w-[380px] flex-shrink-0 border-r border-white/5 flex flex-col min-h-0">
+                <div id="out-list" class="flex-1 overflow-y-auto"></div>
+                <div id="out-list-empty" class="flex-1 flex-col items-center justify-center text-zinc-600 gap-2 p-6 text-center" style="display:none">
+                    <i class="ph ph-paper-plane-tilt text-4xl"></i>
+                    <span class="text-sm">Brak wysłanych wiadomości</span>
+                </div>
+            </div>
+
+            <!-- Prawa kolumna: podgląd wysłanej wiadomości -->
+            <section class="flex-1 flex flex-col min-w-0 min-h-0">
+                <div id="out-preview-empty" class="flex-1 flex flex-col items-center justify-center text-zinc-600 gap-2">
+                    <i class="ph ph-paper-plane-tilt text-5xl"></i>
+                    <span class="text-sm">Wybierz wiadomość z listy</span>
+                </div>
+                <div id="out-preview-content" class="flex-1 flex-col min-h-0" style="display:none">
+                    <div id="out-preview-head" class="flex-shrink-0 px-6 py-4 border-b border-[#1f1f1f]"></div>
+                    <div id="out-preview-body" class="flex-1 overflow-y-auto px-6 py-5 min-h-0"></div>
+                </div>
+            </section>
+
+        </div>
     </main>
 
     <!-- Modal: ustawienia przekazywania -->
@@ -115,10 +148,40 @@
         </div>
     </div>
 
+    <!-- Modal: napisz do partnera (wysyłka przez wfa-partner-mail) -->
+    <div id="partner-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closePartnerCompose()">
+        <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-xl flex flex-col">
+            <div class="px-6 pt-5 pb-3 border-b border-[#1f1f1f] flex-shrink-0">
+                <h3 class="text-white text-lg font-semibold flex items-center gap-2"><i class="ph ph-paper-plane-tilt text-[#3291ff]"></i> Napisz do partnera</h3>
+                <p class="text-zinc-500 text-xs mt-1">Wiadomość trafi na adres operatora (klienta) wskazanego projektu. Zapisuje się w rejestrze wysłanych.</p>
+            </div>
+            <div class="px-6 py-4 space-y-3">
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Projekt</label>
+                    <select id="pm-project" class="fld"></select>
+                    <div id="pm-to" class="text-zinc-500 text-xs mt-1"></div>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Temat</label>
+                    <input id="pm-subject" type="text" class="fld" placeholder="Temat wiadomości">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-1">Treść</label>
+                    <textarea id="pm-body" rows="8" class="fld resize-y" placeholder="Treść wiadomości…"></textarea>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-t border-[#1f1f1f] flex justify-end gap-2 flex-shrink-0">
+                <button onclick="closePartnerCompose()" class="px-4 py-2 text-xs text-zinc-400 hover:text-white">Anuluj</button>
+                <button id="pm-send" onclick="sendPartnerMail()" class="inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2 text-xs font-semibold transition-colors"><i class="ph ph-paper-plane-tilt"></i> Wyślij</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
         const WFA_INBOX_API = SUPABASE_URL + '/functions/v1/wfa-inbox-api';
+        const WFA_PARTNER_MAIL_API = SUPABASE_URL + '/functions/v1/wfa-partner-mail';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         Sidebar.render();
         Sidebar.setupLogout(supabaseClient);
@@ -132,6 +195,11 @@
             projectFilter: 'all', // 'all' | 'unassigned' | project_id
             search: '',
             selectedId: null,
+            // --- Widok Partnerzy (wfa_outbox) ---
+            view: 'inbox',        // 'inbox' | 'partners'
+            outbox: [],           // załadowane wiersze wfa_outbox
+            outSelectedId: null,
+            outLoaded: false,     // leniwe ładowanie — pierwsze wejście w widok pobiera dane
         };
 
         // ============ HELPERY ============
@@ -508,13 +576,229 @@
             showToast('Zapisano przekazywanie', 'success');
         }
 
+        // ============ WIDOK PARTNERZY (wfa_outbox) ============
+        // Etykiety kind — friendly PL; nieznany kind pokazujemy dosłownie (mono badge)
+        const OUT_KIND_LABELS = {
+            stripe_onboarding: 'Stripe onboarding',
+            portal_dostep: 'Dostęp do portalu',
+            przypomnienie: 'Przypomnienie',
+            custom: 'Wiadomość',
+        };
+        function kindLabel(k) { return OUT_KIND_LABELS[k] || (k || '—'); }
+
+        // Przełącznik strumienia: pokaż/ukryj kontenery + dopasuj kontrolki headera
+        function setStream(view) {
+            state.view = view;
+            const isPartners = view === 'partners';
+            document.getElementById('view-inbox').style.display = isPartners ? 'none' : 'flex';
+            document.getElementById('view-partners').style.display = isPartners ? 'flex' : 'none';
+            // kontrolki nieadekwatne dla wysłanych chowamy
+            document.getElementById('arch-toggle').style.display = isPartners ? 'none' : '';
+            document.getElementById('settings-btn').style.display = isPartners ? 'none' : '';
+            document.getElementById('partner-compose-btn').style.display = isPartners ? '' : 'none';
+            document.getElementById('search').placeholder = isPartners ? 'Szukaj: adresat / temat' : 'Szukaj: nadawca / temat';
+            updateStreamTabs();
+            if (isPartners) {
+                if (!state.outLoaded) loadOutbox(); else renderOutList();
+            } else {
+                renderList();
+            }
+        }
+        function updateStreamTabs() {
+            [['inbox', 'tab-inbox'], ['partners', 'tab-partners']].forEach(([k, id]) => {
+                const el = document.getElementById(id);
+                const active = state.view === k;
+                el.classList.toggle('border-[#0070f3]/60', active);
+                el.classList.toggle('text-white', active);
+                el.classList.toggle('bg-[#0070f3]/10', active);
+                el.classList.toggle('border-[#333]', !active);
+                el.classList.toggle('text-zinc-400', !active);
+            });
+        }
+
+        // --- Dane ---
+        async function loadOutbox() {
+            const { data, error } = await supabaseClient.from('wfa_outbox').select('*')
+                .order('created_at', { ascending: false }).range(0, 199);
+            if (error) { showToast('Błąd ładowania wysłanych: ' + error.message, 'error'); state.outbox = []; }
+            else state.outbox = data || [];
+            state.outLoaded = true;
+            // wybrany wiersz mógł zniknąć po odświeżeniu
+            if (state.outSelectedId && !state.outbox.find(m => m.id === state.outSelectedId)) { state.outSelectedId = null; showOutPreviewEmpty(); }
+            renderOutList();
+        }
+
+        // --- Filtry (te same kontrolki co inbox: projekt + search) ---
+        function applyOutFilters() {
+            let rows = state.outbox.slice();
+            if (state.projectFilter === 'unassigned') rows = rows.filter(m => !m.project_id);
+            else if (state.projectFilter !== 'all') rows = rows.filter(m => m.project_id === state.projectFilter);
+            const s = state.search.trim().toLowerCase();
+            if (s) rows = rows.filter(m =>
+                (m.to_email || '').toLowerCase().includes(s) ||
+                (m.subject || '').toLowerCase().includes(s));
+            return rows;
+        }
+
+        // --- Render: lista wysłanych ---
+        function outStatusBadge(m) {
+            return m.status === 'failed'
+                ? `<span class="inline-flex items-center gap-1 border border-[#e5484d]/40 text-[#f26d78] rounded px-1.5 py-0.5 text-[10px]" title="${escapeHtml(m.error || 'błąd wysyłki')}"><i class="ph ph-warning-circle"></i>nieudane</span>`
+                : `<span class="inline-flex items-center gap-1 border border-[#45a557]/40 text-[#4cb782] rounded px-1.5 py-0.5 text-[10px]"><i class="ph ph-check-circle"></i>wysłane</span>`;
+        }
+        function outListItemHtml(m) {
+            const p = m.project_id ? state.projById[m.project_id] : null;
+            const chip = p
+                ? `<span class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded px-1.5 py-0.5 text-[10px] max-w-[130px] truncate">${escapeHtml(projLabel(p))}</span>`
+                : `<span class="inline-flex items-center gap-1 border border-[#2a2a2a] text-zinc-600 rounded px-1.5 py-0.5 text-[10px]">nieprzypisane</span>`;
+            const kindBadge = `<span class="inline-flex items-center border border-[#2a2a2a] text-zinc-400 rounded px-1.5 py-0.5 text-[10px] font-mono">${escapeHtml(kindLabel(m.kind))}</span>`;
+            const actor = m.actor === 'admin'
+                ? '<i class="ph ph-user" title="wysłane ręcznie"></i>'
+                : '<i class="ph ph-robot" title="wysłane automatycznie"></i>';
+            const active = m.id === state.outSelectedId ? 'bg-white/[.04]' : '';
+            return `<button data-id="${escapeHtml(m.id)}" class="out-row block w-full text-left px-4 py-3 border-b border-[#141414] hover:bg-white/[.03] transition-colors ${active}">
+                <div class="flex items-center gap-2">
+                    <span class="truncate text-zinc-200 text-[13px] flex-1 min-w-0 font-mono">${escapeHtml(m.to_email || '(brak adresata)')}</span>
+                    <span class="text-zinc-500 text-[11px] flex-shrink-0">${actor}</span>
+                    <span class="text-zinc-600 text-[10px] flex-shrink-0 whitespace-nowrap">${escapeHtml(relTime(m.created_at))}</span>
+                </div>
+                <div class="text-[12px] text-zinc-300 truncate mt-0.5">${escapeHtml(m.subject || '(bez tematu)')}</div>
+                <div class="flex items-center gap-2 mt-1 flex-wrap">
+                    ${chip}${kindBadge}${outStatusBadge(m)}
+                </div>
+            </button>`;
+        }
+        function renderOutList() {
+            const rows = applyOutFilters();
+            const list = document.getElementById('out-list');
+            const empty = document.getElementById('out-list-empty');
+            if (!rows.length) {
+                list.innerHTML = '';
+                list.style.display = 'none';
+                empty.style.display = 'flex';
+                return;
+            }
+            list.style.display = 'block';
+            empty.style.display = 'none';
+            list.innerHTML = rows.map(outListItemHtml).join('');
+        }
+
+        // --- Podgląd wysłanej wiadomości ---
+        function showOutPreviewEmpty() {
+            document.getElementById('out-preview-content').style.display = 'none';
+            document.getElementById('out-preview-empty').style.display = 'flex';
+        }
+        function showOutPreviewContent() {
+            document.getElementById('out-preview-empty').style.display = 'none';
+            document.getElementById('out-preview-content').style.display = 'flex';
+        }
+        function selectOutMessage(id) {
+            const m = state.outbox.find(x => x.id === id);
+            if (!m) return;
+            state.outSelectedId = id;
+            renderOutPreview(m);
+            renderOutList();   // podświetlenie zaznaczonego
+        }
+        function renderOutPreview(m) {
+            showOutPreviewContent();
+            const failed = m.status === 'failed';
+            const statusHtml = failed
+                ? `<span class="inline-flex items-center gap-1 text-[#f26d78]"><i class="ph ph-warning-circle"></i>nieudane${m.error ? ': ' + escapeHtml(m.error) : ''}</span>`
+                : `<span class="inline-flex items-center gap-1 text-[#4cb782]"><i class="ph ph-check-circle"></i>wysłane</span>`;
+            const actorHtml = m.actor === 'admin'
+                ? '<span class="inline-flex items-center gap-1 text-zinc-500"><i class="ph ph-user"></i>ręcznie</span>'
+                : '<span class="inline-flex items-center gap-1 text-zinc-500"><i class="ph ph-robot"></i>automat</span>';
+            document.getElementById('out-preview-head').innerHTML = `
+                <h2 class="text-white text-lg font-semibold min-w-0 break-words">${escapeHtml(m.subject || '(bez tematu)')}</h2>
+                <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-zinc-400">
+                    <span><span class="text-zinc-600">Do:</span> <span class="font-mono text-zinc-300">${escapeHtml(m.to_email || '')}</span></span>
+                    <span class="text-zinc-500">${escapeHtml(fmtFull(m.created_at))}</span>
+                </div>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
+                    ${projChipHtml(m.project_id)}
+                    <span class="inline-flex items-center border border-[#2a2a2a] text-zinc-400 rounded-md px-2 py-0.5 font-mono">${escapeHtml(kindLabel(m.kind))}</span>
+                    ${statusHtml}${actorHtml}
+                </div>`;
+            // Treść zawsze przez textContent (brak HTML w wychodzących)
+            const body = document.getElementById('out-preview-body');
+            body.innerHTML = '';
+            const pre = document.createElement('pre');
+            pre.className = 'whitespace-pre-wrap break-words text-zinc-200 text-[13px] leading-relaxed font-sans';
+            pre.textContent = m.body_text || '(brak treści)';
+            body.appendChild(pre);
+        }
+
+        // ============ MODAL: NAPISZ DO PARTNERA ============
+        function openPartnerCompose() {
+            buildPartnerProjectOptions();
+            document.getElementById('pm-subject').value = '';
+            document.getElementById('pm-body').value = '';
+            updatePartnerTo();
+            document.getElementById('partner-modal').classList.remove('hidden');
+        }
+        function closePartnerCompose() { document.getElementById('partner-modal').classList.add('hidden'); }
+        function buildPartnerProjectOptions() {
+            const sel = document.getElementById('pm-project');
+            // projekty bez customer_email wyszarzone (backend bierze adresata z projektu)
+            const opts = ['<option value="">— wybierz projekt —</option>'].concat(
+                state.projects.map(p => {
+                    const has = !!(p.customer_email && p.customer_email.trim());
+                    return `<option value="${escapeHtml(p.id)}" ${has ? '' : 'disabled'}>${escapeHtml(projLabel(p))}${has ? '' : ' (brak adresu)'}</option>`;
+                }));
+            sel.innerHTML = opts.join('');
+            sel.value = '';
+        }
+        function updatePartnerTo() {
+            const pid = document.getElementById('pm-project').value;
+            const p = pid ? state.projById[pid] : null;
+            document.getElementById('pm-to').textContent = (p && p.customer_email) ? ('Do: ' + p.customer_email) : '';
+        }
+        async function sendPartnerMail() {
+            const pid = document.getElementById('pm-project').value;
+            const subject = document.getElementById('pm-subject').value.trim();
+            const body = document.getElementById('pm-body').value.trim();
+            if (!pid) { showToast('Wybierz projekt', 'error'); return; }
+            if (!subject) { showToast('Wpisz temat', 'error'); return; }
+            if (!body) { showToast('Wpisz treść', 'error'); return; }
+            const btn = document.getElementById('pm-send');
+            const orig = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Wysyłanie…';
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) throw new Error('Brak sesji');
+                const res = await fetch(WFA_PARTNER_MAIL_API, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + session.access_token,
+                        'apikey': SUPABASE_ANON_KEY,
+                    },
+                    body: JSON.stringify({ project_id: pid, subject, body_text: body, kind: 'custom' }),
+                });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok || json.error) throw new Error(json.error || ('HTTP ' + res.status));
+                showToast('Wiadomość wysłana', 'success');
+                closePartnerCompose();
+                await loadOutbox();   // odśwież rejestr wysłanych
+            } catch (e) {
+                showToast('Błąd wysyłki: ' + (e.message || e), 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = orig;
+            }
+        }
+
         // ============ NASŁUCHY ============
         document.getElementById('list').addEventListener('click', (e) => {
             const row = e.target.closest('.msg-row'); if (!row) return;
             selectMessage(row.getAttribute('data-id'));
         });
-        document.getElementById('search').addEventListener('input', (e) => { state.search = e.target.value; renderList(); });
-        document.getElementById('proj-filter').addEventListener('change', (e) => { state.projectFilter = e.target.value; renderList(); });
+        document.getElementById('out-list').addEventListener('click', (e) => {
+            const row = e.target.closest('.out-row'); if (!row) return;
+            selectOutMessage(row.getAttribute('data-id'));
+        });
+        document.getElementById('pm-project').addEventListener('change', updatePartnerTo);
+        document.getElementById('search').addEventListener('input', (e) => { state.search = e.target.value; if (state.view === 'partners') renderOutList(); else renderList(); });
+        document.getElementById('proj-filter').addEventListener('change', (e) => { state.projectFilter = e.target.value; if (state.view === 'partners') renderOutList(); else renderList(); });
         document.getElementById('arch-toggle').addEventListener('click', () => {
             state.showArchive = !state.showArchive;
             const b = document.getElementById('arch-toggle');
@@ -534,6 +818,7 @@
 
         // ============ START ============
         (async () => {
+            updateStreamTabs();   // podświetl domyślny tab (Skrzynki) — widok inbox jest domyślny
             const session = await checkAuth();
             if (!session) return;
             await loadProjects();

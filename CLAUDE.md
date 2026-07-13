@@ -95,6 +95,13 @@ w wątku przez In-Reply-To; załączniki przez krótkotrwały download_url — 1
   „Receiving MX" → `vercel dns add <domena> '' MX <wartość> <prio>` → verify → ustaw `inbox_forward_to`.
 - Treść maila NIE przychodzi w webhooku — jest dociągana z `GET /emails/receiving/{id}`
   (html bywa `data_uri` — webhook dekoduje przy zapisie). Inbound zużywa limit maili Resend 1:1.
+- **Maile DO partnerów (operatorów)**: wysyłka BEZPOŚREDNIA przez `wfa-partner-mail`
+  ({project_id, subject, body_text, kind}; service key = actor 'auto', team JWT = 'admin';
+  from/reply-to z `settings` jak send-email) → rejestr `wfa_outbox`, widok Skrzynki → strumień
+  „Partnerzy" (+ przycisk „Napisz do partnera"). NIE robić draftów Gmail dla partnerów TN App
+  (decyzja Tomka 13.07); drafty zostają dla klientów sklepów/CRM. GOTCHA gate: service key
+  występuje jako legacy JWT LUB sb_secret_* (kilka aktywnych) — funkcja akceptuje env
+  SERVICE_ROLE_KEY + wartości z SUPABASE_SECRET_KEYS + claim role=service_role.
 
 ## Procedury Claude
 
