@@ -21,10 +21,16 @@
 4. **Payment methods:** upewnij się, że na koncie platformy aktywne są karty + **BLIK** (Settings → Payment methods).
    BLIK trzeba będzie włączać także na każdym koncie klienta (to zrobi nasz onboarding / klient w swoim dashboardzie).
 5. **Klucze i webhook Connect:**
-   - Developers → API keys: zanotuj, że będziemy używać kluczy platformy w edge functions aplikacji
-     (per aplikacja trafią do sekretów Supabase — NIE wysyłaj mi ich na czacie, wkleisz przy kroku `env_secrets`).
-   - Developers → Webhooks → „Add endpoint" typu **Connect** (events: `account.updated`) — zrobimy przy pierwszej
-     aplikacji (krok `stripe_plany` w workflow), na razie nic nie klikaj.
+   - Developers → API keys: `STRIPE_PLATFORM_SECRET` = **PEŁNY Secret key `sk_live_…`** (Reveal live key).
+     ⚠️ Klucz **restricted (`rk_live_…`) NIE zadziała** — nie może wykonywać operacji na kontach połączonych
+     przez nagłówek `Stripe-Account` (błąd „Please use a different key", empirycznie fachmat 13.07),
+     a cały model direct charges na tym stoi (plany, webhooki, checkout). Klucz trafia do sekretów
+     Supabase (tn-crm + per aplikacja jako `STRIPE_SECRET_KEY`) — NIGDY do repo/frontu; wyciek = roll
+     w Dashboard + podmiana sekretu we wszystkich apkach.
+   - Developers → Webhooks: endpoint typu **Connect** (events: `account.updated`) już istnieje →
+     `wfa-stripe-webhook` (auto-odhaczanie KYC/BLIK). Webhooki APLIKACJI też są typu Connect na platformie —
+     kont **Standard nie da się** obsłużyć webhookiem per-account przez API (`403 oauth_not_supported`);
+     dlatego `stripe-webhook` każdej apki MUSI filtrować `event.account != STRIPE_ACCOUNT_ID` (jest w starterze).
 6. **Test mode:** przełącz Dashboard na test mode i sprawdź, że Connect działa też w trybie testowym
    (pierwszą integrację przetestujemy w całości na test keys: onboarding → checkout → application fee widoczny).
 
