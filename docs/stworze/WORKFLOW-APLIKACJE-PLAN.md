@@ -132,6 +132,15 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
 > w rozmowie, zapis finalnych planów w kroku. Razem: **35 kroków** (z krokiem `umowa`).
 
+### 4b. Moduł „Skrzynki" (`/tn-app/skrzynki`) — poczta domen aplikacji (12-13.07)
+Globalna funkcja panelu: odbiór maili wszystkich domen aplikacji (Resend Inbound, catch-all) →
+`wfa_inbox` (match po domenie; nieprzypisane gdy brak projektu) → widok w panelu (podgląd w iframe
+sandbox, odpowiedź w wątku z adresu aliasu, załączniki, archiwum, badge nieprzeczytanych) +
+auto-forward per projekt (`wfa_projects.inbox_forward_to` / `inbox_enabled`, reply_to=nadawca,
+loop-guard). Edge: `wfa-inbox-webhook` (svix `RESEND_WEBHOOK_SECRET_INBOX`) + `wfa-inbox-api`
+(gate team). Webhook email.received GLOBALNY — onboarding nowej domeny = PATCH receiving enabled
++ MX z GET domain + verify + forward_to (kroki w promptcie `resend_dns`). Szczegóły: tn-crm/CLAUDE.md.
+
 ## 5. Stripe Connect — architektura płatności każdej aplikacji
 
 Decyzje Tomka (2026-07-11): model zaakceptowany; aktywację Connect robi sam wg `docs/stworze/STRIPE-CONNECT-SETUP.md`;

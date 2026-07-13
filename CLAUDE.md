@@ -83,6 +83,19 @@ aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen 
   który ma już zapisany stan (nadpisz nowymi tekstami z faktycznym done) — inaczej panel pokaże sieroty:
   stare pozycje odhaczone + nowe puste (2× incydent 12.07 przy krokach `nazwa` i `repo_vercel`).
 
+### Moduł „Skrzynki" (`/tn-app/skrzynki`) — poczta przychodząca domen aplikacji
+Centralny odbiór maili WSZYSTKICH domen aplikacji: MX apeksu → **Resend Inbound** → webhook
+`wfa-inbox-webhook` (--no-verify-jwt; svix sekret `RESEND_WEBHOOK_SECRET_INBOX`) → tabela `wfa_inbox`
+(match projektu po domenie z `to`; RLS team_members) → panel `tn-app/skrzynki.html` + auto-forward
+na `wfa_projects.inbox_forward_to` (toggle `inbox_enabled`; reply_to=nadawca, loop-guard nagłówkiem
+`X-TN-Inbox-Forward`). Odpowiedzi z panelu: `wfa-inbox-api` (verify_jwt, gate team_members; reply
+w wątku przez In-Reply-To; załączniki przez krótkotrwały download_url — 1 h).
+- **Webhook email.received jest GLOBALNY** (1 na konto Resend, id 55eaeccf…) — nowa aplikacja NIE tworzy
+  webhooka; wystarczy: `PATCH /domains/{id}` `capabilities.receiving=enabled` → GET domain → rekord
+  „Receiving MX" → `vercel dns add <domena> '' MX <wartość> <prio>` → verify → ustaw `inbox_forward_to`.
+- Treść maila NIE przychodzi w webhooku — jest dociągana z `GET /emails/receiving/{id}`
+  (html bywa `data_uri` — webhook dekoduje przy zapisie). Inbound zużywa limit maili Resend 1:1.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów
