@@ -7,7 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
     <meta name="theme-color" content="#050505">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="../components/shared-sidebar.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -223,7 +223,9 @@
             projects = (projQ.data || []).filter(p => !p.is_test);
 
             // 3) dosiej brakujące instancje kroków per projekt (nowe defs)
-            await Promise.all(projects.map(p => supabaseClient.rpc('wfa_ensure_steps', { p_project: p.id }).catch(() => {})));
+            // UWAGA: builder .rpc() w nowszych supabase-js NIE ma .catch() (incydent 13.07 — cichy
+            // TypeError wykładał całe loadAll); opakowujemy w Promise.resolve + drugi argument then.
+            await Promise.all(projects.map(p => Promise.resolve(supabaseClient.rpc('wfa_ensure_steps', { p_project: p.id })).then(() => {}, () => {})));
 
             // 4) instancje kroków — GOTCHA PostgREST: default 1000 wierszy, przy 30 krokach/projekt szybko przekroczone
             const stepsQ = await supabaseClient.from('wfa_steps').select('project_id, step_key, status').range(0, 9999);
