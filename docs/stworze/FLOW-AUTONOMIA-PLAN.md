@@ -25,7 +25,7 @@ Trzy mechanizmy (raport agenta Claude Code):
 | C. GitHub Actions + claude-code-action | issue/dispatch → workflow → PR | API key (~$0,02-0,10/krok) + GH minutes | opcja przy skali / gdy routine nie wystarcza |
 
 Architektura wariantu B: `wfa_steps.status='pending'` + klik „Buduj (agent)" → edge fn `wfa-build-trigger`
-(zapisuje `data.agent_session`, status `in_progress`) → routine klonuje repo apki, czyta paczkę `apka-<slug>-brief/`,
+(zapisuje `data.agent_session`, status `in_progress`) → routine klonuje repo apki, czyta paczkę `brief/`,
 wykonuje krok, otwiera PR (branch `step-<key>`), aktualizuje `wfa_steps` przez Supabase + post na Slack #aplikacje.
 Cron nocny = fallback (podnosi zawieszone kroki). Ograniczenia: routine to świeży klon (kontekst MUSI być w repo —
 stąd waga paczki i AGENTS.md), min. interwał cronu 1h, sesje nie współdzielą pamięci (checkpoint = plik postępu w repo).

@@ -5,7 +5,9 @@
 
 ## 1. Trzy filary kontekstu (żyją w REPO aplikacji, nie w czacie)
 
-1. **Paczka `apka-<slug>-brief/`** — spec (00-KONTEKST … 07-RUNBOOK + **08-PLAN-SESJI.md**).
+1. **Paczka `brief/` w repo aplikacji** — spec (00-KONTEKST … 07-RUNBOOK + **08-PLAN-SESJI.md** + 09-SEO).
+   Szkielet 00-09 tworzy forge ze startera; wypełnia go krok `paczka_cc`. Źródła (handoff pack,
+   artefakty Etapu 1) lądują w `brief/zrodla/` — sesje budowy czytają je z repo, nie z bazy.
 2. **`CLAUDE.md`** aplikacji — krótki (bloat mierzalnie obniża skuteczność), z sekcjami: Commands (pełne komendy
    z flagami), Testing, Structure, Code Style (1 realny przykład), Git, **Boundaries 3-poziomowe**:
    - ✅ ZAWSZE WOLNO: edycja kodu, testy, commit, deploy preview, migracje na projekcie DEV
@@ -15,7 +17,8 @@
    (b) KOŃCZY dopisaniem wpisu: co zrobione, decyzje + uzasadnienia, otwarte sprawy, dowody (linki/outputy).
 
 > Artefakty Etapu 1 (propozycje MVP-scope / pricing / nazwy — repo aplikacji jeszcze nie istnieje) żyją w
-> `tn-crm/docs/stworze/projekty/<slug>/` i przechodzą do repo aplikacji w kroku `paczka_cc` (lekcja z pilota 11.07).
+> `tn-crm/docs/stworze/projekty/<slug>/` (katalog może nosić STARY slug sprzed kroku Nazwa) i przechodzą
+> do repo aplikacji (do `brief/zrodla/`) w kroku `paczka_cc` (lekcja z pilota 11.07).
 
 ## 2. Plan sesji (`08-PLAN-SESJI.md`)
 

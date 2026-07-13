@@ -171,19 +171,24 @@ prowizję Stripe ponosi klient (zapis do umowy).
   pass = API key; default Supabase 2 maile/h — custom SMTP OBOWIĄZKOWY). Transakcyjne/produktowe → Resend API z edge fns.
   Tracking otwarć OFF; logika na `delivered_at`. Followupy: na starcie tylko tabele `email_log` + hook point, dripy później.
 
-### 6.1. Paczka startowa dla Claude Code (generowana w kroku `paczka_cc`)
+### 6.1. Paczka startowa dla Claude Code (wypełniana w kroku `paczka_cc`)
 
-Katalog `apka-<slug>-brief/`:
+Katalog `brief/` w repo aplikacji — szkielet 00-09 tworzy forge ze startera ({{TODO}} do wypełnienia),
+krok `paczka_cc` wypełnia go z danych workflow (zaktualizowano 13.07 po pilocie fachmat — wcześniejsza
+koncepcja osobnego katalogu `apka-<slug>-brief/` porzucona: paczka żyje z kodem):
 
 ```
-00-KONTEKST-BIZNESOWY.md   ← wyciąg: handoff pack + uwagi Tomka (wfa_notes open) + nisza/operator/fee
-01-MVP-SCOPE.md            ← co JEST (3–5 funkcji), co NIE JEST; kryteria „gotowe"; twarda granica scope
-02-SPEC-FUNKCJONALNY.md    ← ekrany, user stories, flow user + flow operator
-03-SCHEMAT-DB.sql          ← tabele + RLS gotowe do apply_migration
-04-STYLEGUIDE.md           ← tokeny z makiet sparingu; 1 kierunek
-05-STRIPE-CONFIG.md        ← plany/ceny, fee_percent, subskrypcja vs jednorazowe
-06-CLAUDE.md               ← wklejany jako CLAUDE.md apki (szablon w starterze)
-07-DEPLOY-RUNBOOK.md       ← kolejność: Supabase → migracja → Vercel → Resend → Stripe → smoke test
+00-KONTEKST-BIZNESOWY.md   ← wyciąg: handoff pack + rozstrzygnięcia decyzji + uwagi Tomka (wfa_notes open) + nisza/operator/fee
+01-MVP-SCOPE.md            ← ZATWIERDZONY scope 1:1 (z artefaktów Etapu 1); późniejsze decyzje jako „AKTUALIZACJA <data>"
+02-SPEC-FUNKCJONALNY.md    ← ekrany, user stories, flow user + flow operator, decyzje techniczne rdzenia WPROST
+03-SCHEMAT-DB.sql          ← TYLKO tabele niszy + RLS (fundament w migracjach 0001-0007 startera); aplikuje krok Schemat DB
+04-STYLEGUIDE.md           ← tokeny z makiet sparingu (sampling PNG); 1 kierunek; mapowanie na base.css
+05-STRIPE-CONFIG.md        ← plany z REALNYMI price_id (krok stripe_plany), fee_percent, trial, webhook Connect+filtr, rabaty operatora
+06-CLAUDE.md-NOTES.md      ← dopiski niszy do CLAUDE.md repo (CLAUDE.md istnieje ze startera — nie rozdymać)
+07-DEPLOY-RUNBOOK.md       ← kolejność: Supabase → migracja → Vercel → Resend → Stripe → smoke; [x] za Etap 2 z dowodami
+08-PLAN-SESJI.md           ← sesje S0-S9 z kryteriami done; funkcja główna rozbita S4a..S4n (1 moduł = 1 sesja)
+09-SEO.md                  ← tagline/description/OG (checklista domykana w kroku Landing)
+zrodla/                    ← handoff pack + artefakty Etapu 1 (sesje budowy czytają źródła z repo, nie z bazy)
 ```
 
 Zasada: Claude Code IMPLEMENTUJE, nie wymyśla — schemat DB i scope są w paczce. Prompty per krok generuje
