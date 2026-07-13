@@ -61,6 +61,7 @@
         .ic-heads { flex:1; min-width:0; }
         .ic-title { color:#fff; font-size:14.5px; font-weight:600; letter-spacing:-.01em; display:block; }
         .ic-meta { color:#71717a; font-size:12.5px; margin-top:1px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; display:block; }
+        @media (max-width:560px){ .ic-meta { white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; } }
         .ic.done .ic-meta { color:#79a687; }
         .ic-chev { color:#4c4c53; font-size:15px; flex-shrink:0; transition:transform .25s ease; }
         .ic.open .ic-chev { transform:rotate(180deg); }
@@ -234,9 +235,9 @@
             <div class="vision-row" id="c-vision-grid"></div>
         </section>
 
-        <!-- 5. Jedna oś czasu: etapy + daty ukończenia -->
+        <!-- 5. Jedna oś czasu: kamienie milowe z datami ukończenia -->
         <section>
-            <div class="shead"><h2>Etapy budowy</h2></div>
+            <div class="shead"><h2>Kamienie milowe</h2></div>
             <div style="margin-top:14px" id="c-timeline"></div>
         </section>
 
@@ -396,15 +397,17 @@
             $('c-vision').classList.remove('hidden');
         } else { $('c-vision').classList.add('hidden'); }
 
-        // Oś czasu: etapy (kolejność/stan) + daty ukończenia z kamieni milowych.
+        // Oś czasu: kamienie milowe (mają daty ukończenia = dowód pracy); fallback: etapy.
         const miles = d.milestones || [];
-        const rows = stages.length ? stages : miles.map((m, i) => ({ label: m.label, complete: !!m.done, num: i + 1 }));
+        const rows = miles.length
+            ? miles.map(m => ({ label: m.label, complete: !!m.done, at: m.at }))
+            : stages.map(s => ({ label: s.label, complete: !!s.complete }));
         const rCurIdx = rows.findIndex(r => !r.complete);
         $('c-timeline').innerHTML = rows.map((r, i) => {
             const done = !!r.complete;
             const cur = i === rCurIdx;
             let date = '';
-            if (done && miles[i] && miles[i].done && miles[i].at) date = new Date(miles[i].at).toLocaleDateString('pl-PL');
+            if (done && r.at) date = new Date(r.at).toLocaleDateString('pl-PL');
             else if (cur) date = 'w toku';
             const glyph = done ? '<i class="ph ph-check-circle"></i>' : '';
             return '<div class="trow ' + (done ? 'done' : cur ? 'cur' : 'fut') + '">' +
