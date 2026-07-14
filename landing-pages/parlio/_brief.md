@@ -80,6 +80,16 @@
 
 > Kontrakt. Fonty/paleta nadpisane brandingiem Parlio (Krok 4.4 — branding ma priorytet; memory `feedback-verify-style-lock-vs-branding`).
 
+<!-- v5.0 maszynowy Style Lock — legalizuje fonty/paletę BRANDU klienta (Parlio) ponad domyślny Atlas Panoramic Calm; przełącza verify-style-lock w tryb BRIEF-LOCK -->
+lock-font-display: Fraunces
+lock-font-body: Inter
+lock-font-accent: Space Grotesk
+lock-hex: #0E7C7B
+lock-hex: #161E2B
+lock-hex: #F4EFE8
+lock-hex: #E8A33D
+lock-hex: #C66B3D
+
 ### 10.1 Wybrany styl
 - **Style ID:** `panoramic-calm`
 - **Plik:** [`docs/landing/style-atlas/panoramic-calm.md`](../../docs/landing/style-atlas/)
