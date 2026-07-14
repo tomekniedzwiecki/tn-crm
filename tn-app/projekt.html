@@ -111,6 +111,8 @@
                             <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
                         </div>
                         <div id="p-meta" class="text-zinc-500 text-xs mt-2 flex items-center gap-3 flex-wrap"></div>
+                        <!-- Podglądy: wszystko, co da się już obejrzeć/poklikać (wypełniają sesje kroków) -->
+                        <div id="p-links" class="flex items-center gap-2 flex-wrap mt-3"></div>
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center">
@@ -443,6 +445,34 @@
             const milesDone = stepDefs.filter(d=>d.milestone_label && stepFor(d.key)?.status==='done').length;
             document.getElementById('stat-miles').textContent = milesDone + '/' + milesTotal;
             document.getElementById('p-notes').value = project.notes || '';
+            renderLinks();
+        }
+
+        // ============ Podglądy (wfa_projects.links) — pasek „co już można obejrzeć" ============
+        function renderLinks() {
+            const box = document.getElementById('p-links'); if (!box) return;
+            const links = Array.isArray(project.links) ? project.links : [];
+            box.innerHTML = links.map((l, i) =>
+                `<span class="inline-flex items-center gap-1 bg-[#0a0a0a] border border-[#1f1f1f] rounded-full pl-3 pr-1.5 py-1 text-xs group">
+                    <a href="${escapeHtml(l.url)}" target="_blank" rel="noopener" class="text-[#3291ff] hover:text-[#52a8ff] flex items-center gap-1.5"><i class="ph ${escapeHtml(l.icon || 'ph-arrow-square-out')}"></i>${escapeHtml(l.label)}</a>
+                    <button onclick="removeLink(${i})" class="text-zinc-700 hover:text-[#f26d78] px-1 opacity-0 group-hover:opacity-100 transition-opacity" title="Usuń link">×</button>
+                </span>`).join('') +
+                `<button onclick="addLink()" class="text-zinc-500 hover:text-white text-xs border border-dashed border-[#333] hover:border-zinc-500 rounded-full px-3 py-1 transition-colors">+ podgląd</button>`;
+        }
+        async function saveLinks(arr) {
+            const { error } = await supabaseClient.from('wfa_projects').update({ links: arr }).eq('id', projectId);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return false; }
+            project.links = arr; renderLinks(); return true;
+        }
+        function addLink() {
+            const label = prompt('Nazwa podglądu (np. Design system):'); if (!label) return;
+            const url = prompt('URL:'); if (!url || !/^https?:\/\//.test(url.trim())) { if (url) showToast('URL musi zaczynać się od http(s)://', 'error'); return; }
+            saveLinks([...(Array.isArray(project.links) ? project.links : []), { label: label.trim(), url: url.trim() }]).then(ok => ok && showToast('Dodano', 'success'));
+        }
+        function removeLink(i) {
+            const links = [...(Array.isArray(project.links) ? project.links : [])];
+            links.splice(i, 1);
+            saveLinks(links).then(ok => ok && showToast('Usunięto', 'success'));
         }
 
         function renderFields() {
@@ -1326,7 +1356,8 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
                     + `   gdzie <JSON> to tablica [{"t":"…","done":true|false}] dla pozycji: ${JSON.stringify(items)}\n`
                     + `2) Status kroku: wszystkie kryteria spełnione → UPDATE wfa_steps SET status='done', completed_at=now(), completed_by='auto' WHERE id='${stCur.id}'; w przeciwnym razie ustaw status='in_progress'.\n`
                     + `3) Dopisz 2-4 zdania podsumowania Z DOWODAMI do notatki kroku: UPDATE wfa_steps SET data = jsonb_set(data, '{note}', to_jsonb('<podsumowanie>'::text)) WHERE id='${stCur.id}';\n`
-                    + `4) Dodaj wpis do logu: INSERT INTO wfa_activities (project_id, actor, action, description) VALUES ('${projectId}', 'auto', 'session', '<co zrobiła sesja, 1 zdanie>');`;
+                    + `4) Dodaj wpis do logu: INSERT INTO wfa_activities (project_id, actor, action, description) VALUES ('${projectId}', 'auto', 'session', '<co zrobiła sesja, 1 zdanie>');\n`
+                    + `5) Jeśli sesja wytworzyła coś OGLĄDALNEGO dla Tomka (URL: deploy/preview, design system, galeria, panel), dopisz link do paska „Podglądy" projektu (deduplikuj po label): UPDATE wfa_projects SET links = COALESCE(links,'[]'::jsonb) || '[{"label":"<krótka nazwa>","url":"<url>","icon":"ph-<ikona>"}]'::jsonb WHERE id='${projectId}';`;
             }
 
             // Pełny rytuał (BUILDLOG/plan sesji) tylko dla sesji w REPO aplikacji;
