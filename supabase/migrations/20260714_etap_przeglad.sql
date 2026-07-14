@@ -14,3 +14,9 @@ INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, ac
 ON CONFLICT (key) DO NOTHING;
 UPDATE wfa_step_defs SET stage=5, stage_label='Przegląd', sort=50, label='Poprawki z przeglądu', milestone_label='Aplikacja przeszła pełny przegląd' WHERE key='poprawki';
 UPDATE wfa_step_defs SET stage_label='Landing i testy' WHERE stage=4;
+
+-- Uzupełnienie (decyzja Tomka 14.07, później tego dnia): soczewka zgodności z ustaleniami klienta
+-- (rozmowa sparingowa + spowiednik + handoff) jako osobny krok Przeglądu. Zaaplikowane przez MCP.
+INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, active) VALUES
+ ('review_zgodnosc', 5, 'Przegląd', 45, 'Przegląd: zgodność z ustaleniami', 'ph-handshake', 'admin', true)
+ON CONFLICT (key) DO NOTHING;
