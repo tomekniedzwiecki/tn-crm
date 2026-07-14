@@ -17959,7 +17959,18 @@ PODSUMOWANIE wyświetl na końcu:
                 const sigTypes = { 'zaufany': 'Podpis zaufany (gov.pl)', 'kwalifikowany': 'Podpis kwalifikowany', 'fizyczny': 'Podpis fizyczny' };
                 document.getElementById('signed-type').textContent = sigTypes[workflow.contract_signature_type] || workflow.contract_signature_type || '-';
                 if (workflow.contract_seller_signed_url) {
-                    document.getElementById('signed-file-link').href = workflow.contract_seller_signed_url;
+                    const link = document.getElementById('signed-file-link');
+                    link.href = '#';
+                    link.onclick = async (e) => {
+                        e.preventDefault();
+                        try {
+                            const { data, error } = await supabaseClient.functions.invoke('contract-file', { body: { workflow_id: workflow.id } });
+                            if (error || !data?.signedUrl) throw new Error('fail');
+                            window.open(data.signedUrl, '_blank', 'noopener');
+                        } catch (_) {
+                            (typeof showToast === 'function' ? showToast : alert)('Nie udało się otworzyć umowy');
+                        }
+                    };
                 }
             }
         }
@@ -18260,10 +18271,11 @@ PODSUMOWANIE wyświetl na końcu:
             // Upload seller-signed contract PDF if provided
             if (file) {
                 const fileExt = file.name.split('.').pop();
-                const fileName = `contracts/${workflow.id}/seller_signed_${Date.now()}.${fileExt}`;
+                // PRYWATNY bucket `contracts` (nie publiczny `attachments`). Klucz = <wfid>/plik.
+                const fileName = `${workflow.id}/seller_signed_${Date.now()}.${fileExt}`;
 
                 const { data: uploadData, error: uploadError } = await supabaseClient.storage
-                    .from('attachments')
+                    .from('contracts')
                     .upload(fileName, file);
 
                 if (uploadError) {
@@ -18271,11 +18283,8 @@ PODSUMOWANIE wyświetl na końcu:
                     return;
                 }
 
-                const { data: urlData } = supabaseClient.storage
-                    .from('attachments')
-                    .getPublicUrl(fileName);
-
-                sellerSignedUrl = urlData.publicUrl;
+                // Przechowujemy sam KLUCZ (nie publiczny URL) — pobieranie idzie przez edge `contract-file` (signed URL).
+                sellerSignedUrl = fileName;
             }
 
             const updateData = {
@@ -18315,7 +18324,7 @@ PODSUMOWANIE wyświetl na końcu:
                                 clientName: clientName,
                                 offerName: offerName,
                                 projectUrl: projectUrl,
-                                contractUrl: sellerSignedUrl || projectUrl
+                                contractUrl: projectUrl
                             }
                         }
                     });

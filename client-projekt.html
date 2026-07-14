@@ -14452,10 +14452,21 @@
             document.getElementById('current-milestone').textContent = currentMilestone ? currentMilestone.title : 'Brak';
             document.getElementById('current-deadline').textContent = currentMilestone ? formatDate(currentMilestone.deadline) : '-';
 
-            // Signed contract
+            // Signed contract — pobieranie przez krótkotrwały signed URL (prywatny bucket), nie publiczny link
             if (workflow.contract_seller_signed_url) {
                 document.getElementById('signed-contract-section').classList.remove('hidden');
-                document.getElementById('signed-contract-download').href = workflow.contract_seller_signed_url;
+                const dl = document.getElementById('signed-contract-download');
+                dl.href = '#';
+                dl.onclick = async (e) => {
+                    e.preventDefault();
+                    try {
+                        const { data, error } = await supabaseClient.functions.invoke('contract-file', { body: { workflow_id: workflow.id } });
+                        if (error || !data?.signedUrl) throw new Error('fail');
+                        window.open(data.signedUrl, '_blank', 'noopener');
+                    } catch (_) {
+                        showToast('Nie udało się otworzyć umowy. Odśwież stronę i spróbuj ponownie.', 'error');
+                    }
+                };
             }
 
             // Milestones
