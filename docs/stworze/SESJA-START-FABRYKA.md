@@ -97,9 +97,24 @@ metryczka / numer własny+akcje; mobile kolumna]). SPRAWDŹ stan: git log fachma
    otwarta wfa_note „DO DECYZJI TOMKA"), (e) welcome-mail poszedł do palkabu@wp.pl (Grzegorz
    zarejestrował się sam — poprawne działanie), (f) konta test@testp.pl/sfsfsf@gp.pl — śmieciowe,
    Tomek może skasować.
-5. Dalej wg workflow: demo_klienta (decyzja Tomka kiedy), dane_operatora (czeka na materiały
+5. NOWE MODUŁY FABRYKI (zaprojektowane 14.07, DO ZBUDOWANIA po S25 — dotykają admin.js/processor,
+   więc NIE równolegle z sesją admin): kroki w Etapie 3:
+   - `wiadomosci_panel` — centrum wiadomości w panelu operatora (historia email_log + szablony z podglądem/
+     edycją + wiadomość ręczna) + wspólny brandowany layout maila (_shared/mail-layout, logo z
+     wfa_projects.brand_logo_url / placeholder). Koncept: docs/stworze/MODUL-WIADOMOSCI.md.
+   - `wiadomosci_trial` — seria onboardingowa trialu (drip behawioralny prezentujący funkcje).
+   - `polecenia` — program poleceń dwustronny (kredyt Stripe customer_balance po invoice.paid; polecający
+     miesiąc gratis, polecony −50%; konfigurowalne; anti-abuse; WhatsApp/SMS-first). Research:
+     docs/stworze/research-polecenia.md · Koncept: docs/stworze/MODUL-POLECENIA.md.
+   Kolejność budowy: najpierw wiadomosci_panel (layout maila = fundament dla reszty), potem
+   wiadomosci_trial i polecenia (mail „nagroda" używa layoutu). Buduj w STARTERZE (uniwersalne) +
+   Fachmacie. Prompty gotowe w projekt.html.
+6. Dalej wg workflow: demo_klienta (decyzja Tomka kiedy), dane_operatora (czeka na materiały
    Grzegorza — cennik/ściągawki podmienią TYMCZASOWY szablon), umowa/prawne (czeka na prawnika),
    START (realna płatność minimalna + BLIK + 2 pozycje checklisty platnosci_e2e).
+7. PRZEGLĄD KOŃCOWY FABRYKI (na życzenie Tomka): po domknięciu wszystkiego przygotować LISTĘ usprawnień/
+   rozwinięć fabryki (co dodać/poprawić/rozwinąć) — TYLKO do przedstawienia i ustalenia z Tomkiem,
+   NIE wykonywać bez jego zgody.
 
 **Czeka na ludzi (NIE ruszać automatem):** materiały od Grzegorza, wzór umowy od prawnika,
 decyzja Tomka o demo i starcie.
