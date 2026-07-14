@@ -29,3 +29,11 @@ INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, ac
  ('landing_krytyk',   4, 'Landing', 15, 'Landing: pętla krytyka',  'ph-magnifying-glass',  'admin', true)
 ON CONFLICT (key) DO NOTHING;
 UPDATE wfa_step_defs SET label='Landing: budowa', sort=10 WHERE key='landing';
+
+-- Uzupełnienie 3 (Tomek 14.07): przegląd UX paneli jako OSOBNE kroki (jak proces landinga):
+-- panel usera / panel operatora / poprawki i pętla do PRZYJĄĆ.
+UPDATE wfa_step_defs SET label='Przegląd UX: panel usera' WHERE key='review_ux';
+INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, active) VALUES
+ ('review_ux_admin', 5, 'Przegląd', 32, 'Przegląd UX: panel operatora', 'ph-gauge',             'admin', true),
+ ('ux_petla',        5, 'Przegląd', 34, 'Przegląd UX: poprawki i pętla', 'ph-arrows-clockwise', 'admin', true)
+ON CONFLICT (key) DO NOTHING;
