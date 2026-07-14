@@ -194,6 +194,17 @@ zrodla/                    ← handoff pack + artefakty Etapu 1 (sesje budowy cz
 Zasada: Claude Code IMPLEMENTUJE, nie wymyśla — schemat DB i scope są w paczce. Prompty per krok generuje
 warsztat kroku w panelu (wzorzec `sdCopyPrompt` z wf2).
 
+## 6.2. Etap „Przegląd" (decyzja Tomka 14.07.2026 — po pilocie fachmat)
+
+Duży przegląd jakości = OSOBNY etap (5) między „Landing i testy" (4) a „Start" (6; Start zaczyna się
+od Demo — klient ogląda apkę PO przeglądzie). Soczewki jako osobne kroki (świeże sesje, każde z własnym
+werdyktem; naprawy skonsolidowane w kroku Poprawki):
+`review_adwersarski` (logika/edge-case'y na diffie) → `audyt` (bezpieczeństwo §7) → `review_ux`
+(wszystkie ekrany oczami usera niszy, TTFV mierzony realnie) → `review_tresc` (całe copy: landing,
+maile, PDF, prawne — obietnice vs produkt) → `poprawki` (kamień „Aplikacja przeszła pełny przegląd").
+Dodatkowo w Etapie 3: MINI-REVIEW rdzenia zaraz po ostatniej sesji funkcji głównej (wada fundamentu
+wykryta zanim obrośnie zależnościami). Migracja: 20260714_etap_przeglad.sql.
+
 ## 7. Checklist audytu bezpieczeństwa (krok `audyt` — obowiązkowy gate przed startem)
 
 ```
