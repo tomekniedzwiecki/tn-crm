@@ -105,6 +105,9 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 | 3 | Budowa MVP | `panel_operatora` Panel operatora | admin | |
 | 3 | Budowa MVP | `platnosci_e2e` Płatności Stripe E2E | admin | |
 | 3 | Budowa MVP | `maile_trans` E-maile transakcyjne | admin | ✅ „Aplikacja działa (wersja robocza)" |
+| 3 | Budowa MVP | `wiadomosci_panel` Wiadomości: centrum w panelu operatora | admin | |
+| 3 | Budowa MVP | `wiadomosci_trial` Wiadomości: seria onboardingowa trialu | admin | |
+| 3 | Budowa MVP | `polecenia` Program poleceń (referral dwustronny) | admin | |
 | 4 | Landing i jakość | `landing` Landing + cennik | admin | |
 | 4 | Landing i jakość | `testy_e2e` Testy przepływów | admin | |
 | 4 | Landing i jakość | `audyt` Audyt bezpieczeństwa | admin | |
