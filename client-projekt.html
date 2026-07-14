@@ -11424,7 +11424,7 @@
             try {
                 const { data, error } = await supabaseClient
                     .from('workflow_takedrop')
-                    .select('id, is_active, account_created, account_created_at, account_active, account_active_at, account_active_confirmed_by, account_email, account_password, landing_page_connected, landing_page_connected_at, landing_url, legal_documents_ready, legal_documents_in_shop, legal_documents_in_shop_at, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_credentials, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
+                    .select('id, is_active, account_created, account_created_at, account_active, account_active_at, account_active_confirmed_by, account_email, landing_page_connected, landing_page_connected_at, landing_url, legal_documents_ready, legal_documents_in_shop, legal_documents_in_shop_at, legal_data, domain, payment_gateway_type, payment_gateway_ready, payment_gateway_configured_at, test_accepted, test_accepted_at, test_feedback_sent, test_feedback_sent_at')
                     .eq('workflow_id', workflow.id)
                     .maybeSingle();
 
@@ -11509,9 +11509,9 @@
                 if (confirmedDate && takeDropData.account_created_at) {
                     confirmedDate.textContent = new Date(takeDropData.account_created_at).toLocaleDateString('pl-PL');
                 }
-                // Pre-fill fields with existing data
+                // Pre-fill email; hasła NIE echujemy z powrotem (anon nie ma już do niego dostępu,
+                // placeholder ••••••••  = stan „zapisane"). Aktualizacja wymaga ponownego wpisania hasła.
                 if (emailInput) emailInput.value = takeDropData.account_email || '';
-                if (passwordInput) passwordInput.value = takeDropData.account_password || '';
                 // Change button text
                 if (confirmBtn) confirmBtn.textContent = 'Zaktualizuj dane';
             } else {
