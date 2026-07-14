@@ -4827,28 +4827,37 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             tomorrow.setDate(tomorrow.getDate() + 1);
             document.getElementById('modal-first-date').value = tomorrow.toISOString().split('T')[0];
 
-            // Populate offer dropdown
+            // Populate offer dropdown — WSZYSTKIE aktywne oferty (katalog), żeby dało się wybrać
+            // ofertę wprost z harmonogramu bez generowania client_offer (sklepowy flow z proformą).
+            // Np. „Budowa aplikacji — STANDARD" → opis raty niesie nazwę → tpay-webhook wpina do TN App.
             const offerSelect = document.getElementById('modal-schedule-offer');
             if (offerSelect) {
-                offerSelect.innerHTML = '<option value="">-- Bez powiązania z ofertą --</option>';
-                if (clientOffer) {
-                    const selectedOffer = offers.find(o => o.id === clientOffer.offer_id);
-                    const offerName = selectedOffer?.name || 'Oferta';
-                    const offerPrice = clientOffer.custom_price || selectedOffer?.price || 0;
-                    offerSelect.innerHTML += `<option value="${clientOffer.id}" selected>${offerName} (${offerPrice.toLocaleString('pl-PL')} zł)</option>`;
-                }
+                const preselectId = lead?.offer_id || clientOffer?.offer_id || '';
+                let opts = '<option value="">-- Bez powiązania z ofertą --</option>';
+                offers.forEach(o => {
+                    const price = Number(o.price) || 0;
+                    const sel = o.id === preselectId ? ' selected' : '';
+                    opts += `<option value="${o.id}" data-price="${price}"${sel}>${o.name} (${price.toLocaleString('pl-PL')} zł)</option>`;
+                });
+                offerSelect.innerHTML = opts;
+                // zmiana oferty → podstaw jej cenę jako kwotę całkowitą harmonogramu
+                offerSelect.onchange = () => {
+                    const opt = offerSelect.options[offerSelect.selectedIndex];
+                    const price = Number(opt?.dataset?.price) || 0;
+                    if (price > 0) {
+                        document.getElementById('modal-schedule-total').value = price;
+                        updateModalPreview(true);
+                    }
+                };
             }
 
-            // Try to get amount from offer or deal value
-            let defaultAmount = lead?.deal_value || 0;
-            if (clientOffer) {
-                const selectedOffer = offers.find(o => o.id === clientOffer.offer_id);
-                if (clientOffer.custom_price) {
-                    defaultAmount = clientOffer.custom_price;
-                } else if (selectedOffer?.price) {
-                    defaultAmount = selectedOffer.price;
-                }
-            }
+            // Kwota domyślna: cena zaznaczonej oferty > custom_price z client_offer > deal_value
+            const preOpt = offerSelect?.options[offerSelect.selectedIndex];
+            const preOfferPrice = Number(preOpt?.dataset?.price) || 0;
+            let defaultAmount = 0;
+            if (preOfferPrice > 0) defaultAmount = preOfferPrice;
+            else if (clientOffer?.custom_price) defaultAmount = Number(clientOffer.custom_price) || 0;
+            else defaultAmount = Number(lead?.deal_value) || 0;
             document.getElementById('modal-schedule-total').value = defaultAmount || '';
             document.getElementById('modal-first-amount').value = '';
 
@@ -5043,9 +5052,11 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     created_by: currentMember?.id
                 };
 
-                // Add offer link if selected
+                // Powiązanie z ofertą KATALOGOWĄ (offers.id) — bez generowania client_offer.
+                // Dzięki temu opis raty w checkoucie niesie nazwę oferty (RPC installment_offer_name)
+                // → dla „Budowa aplikacji — …" tpay-webhook wpina projekt do TN App.
                 if (selectedOfferId) {
-                    scheduleData.client_offer_id = selectedOfferId;
+                    scheduleData.offer_id = selectedOfferId;
                 }
 
                 const { data: schedule, error: scheduleError } = await supabaseClient

@@ -2826,7 +2826,15 @@ async function loadOffer() {
             installmentData = instData;
             isCustomPayment = true;
 
-            const offerName = 'Budowa sklepu pełen pakiet';
+            // Nazwa oferty z powiązania harmonogramu (payment_schedules.client_offer_id → offers.name),
+            // NIE hardkod. Dzięki temu opis raty za aplikację niesie „Budowa aplikacji — …", co pozwala
+            // tpay-webhook rozpoznać płatność aplikacji i wpiąć projekt do TN App. client_offers jest
+            // token-gated dla anon, więc most robi RPC SECURITY DEFINER installment_offer_name.
+            let offerName = 'Płatność ratalna';
+            try {
+                const { data: resolvedName } = await supabaseClient.rpc('installment_offer_name', { p_installment_id: installmentId });
+                if (resolvedName) offerName = resolvedName;
+            } catch (e) { console.warn('[checkout-v2] installment_offer_name', e); }
             const rataLabel = `Rata ${instData.installment_number}/${instData.schedule.installments_count}`;
             currentOffer = {
                 id: null,
