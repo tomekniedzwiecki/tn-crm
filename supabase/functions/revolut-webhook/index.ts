@@ -643,6 +643,215 @@ Deno.serve(async (req) => {
             }
           }
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Synchronizacje sesji lejków (LUSTRO tpay-webhook — incydent 2026-07-14:
+        // rata „Budowa aplikacji" opłacona Revolutem NIE ustawiła full_paid_at,
+        // bo te bloki istniały tylko w tpay-webhook → brak projektu w TN App
+        // i brak etapu spowiednika). Poza guardem order.status !== 'paid' —
+        // wszystkie są idempotentne przez .is(paid_at/full_paid_at, null).
+        // Przy zmianie logiki: edytuj RÓWNOLEGLE w tpay-webhook.
+        // ═══════════════════════════════════════════════════════════════
+
+        // ── REZERWACJA APLIKACJA: oznacz sesję sparingu jako opłaconą ──
+        // Match: sid (twardy link order→sesja) > lead_id > e-mail (najnowsza aktywna).
+        try {
+          const desc = (order.description || '').toLowerCase()
+          const isAplikacjaReservation = desc.includes('rezerwacj') && (desc.includes('aplikac') || desc.includes('stworz'))
+          if (isAplikacjaReservation) {
+            let sess: { id: string; lead_id: string | null } | null = null
+            if (order.spar_session_id) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .eq('id', order.spar_session_id)
+                .is('paid_at', null)
+                .maybeSingle()
+              sess = data || null
+            }
+            if (!sess && order.lead_id) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .eq('lead_id', order.lead_id)
+                .is('paid_at', null)
+                .eq('is_test', false)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              sess = data || null
+            }
+            if (!sess && order.customer_email) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .ilike('email', order.customer_email.trim())
+                .is('paid_at', null)
+                .eq('is_test', false)
+                .order('last_user_at', { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle()
+              sess = data || null
+            }
+            if (sess) {
+              await supabase.from('spar_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', sess.id)
+              console.log('[revolut-webhook] Reservation → spar_session marked paid:', sess.id)
+              const leadId = sess.lead_id || order.lead_id
+              if (leadId) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+            } else {
+              console.log('[revolut-webhook] Reservation paid but no matching unpaid spar_session (lead_id/email):', order.lead_id, order.customer_email)
+            }
+          }
+        } catch (sparErr) {
+          console.error('[revolut-webhook] spar_session reservation sync error:', sparErr)
+        }
+
+        // ── PEŁNA PŁATNOŚĆ APLIKACJA: full_paid_at → odmraża etap KNOW-HOW ──
+        // (spowiednik) i pozwala wfa_sync_projects() utworzyć projekt w TN App.
+        // Rata z harmonogramu też tu wpada (opis "<oferta> - Rata N/M" niesie
+        // frazę „budowa aplikacji"); full_paid_at ustawia się na PIERWSZEJ racie.
+        try {
+          const descF = (order.description || '').toLowerCase()
+          const isAplikacjaFull = descF.includes('budowa aplikacji')
+          if (isAplikacjaFull) {
+            let sessF: { id: string; lead_id: string | null } | null = null
+            if (order.spar_session_id) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .eq('id', order.spar_session_id)
+                .is('full_paid_at', null)
+                .maybeSingle()
+              sessF = data || null
+            }
+            if (!sessF && order.lead_id) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .eq('lead_id', order.lead_id)
+                .is('full_paid_at', null)
+                .eq('is_test', false)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
+              sessF = data || null
+            }
+            if (!sessF && order.customer_email) {
+              const { data } = await supabase
+                .from('spar_sessions')
+                .select('id, lead_id')
+                .ilike('email', order.customer_email.trim())
+                .is('full_paid_at', null)
+                .eq('is_test', false)
+                .order('last_user_at', { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle()
+              sessF = data || null
+            }
+            if (sessF) {
+              await supabase.from('spar_sessions').update({ full_paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', sessF.id)
+              await supabase.from('spar_knowhow_summary').upsert({ session_id: sessF.id, lead_id: sessF.lead_id || order.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
+              console.log('[revolut-webhook] Full payment → spar_session full_paid_at set (know-how):', sessF.id)
+            } else {
+              console.error('[revolut-webhook] [ALERT] Full payment „budowa aplikacji" bez dopasowanej spar_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
+            }
+          }
+        } catch (fullErr) {
+          console.error('[revolut-webhook] spar_session full payment sync error:', fullErr)
+        }
+
+        // ── LEJEK BUDOWANIA (/sklep): synchronizacja bud_sessions + projekt WF2 ──
+        // Rezerwacja vs pełna płatność rozstrzygana KWOTĄ (rezerwacja = 500; budowa ≫ 1000).
+        try {
+          const descB = (order.description || '').toLowerCase()
+          const isBudReservation = descB.includes('rezerwacj') && (descB.includes('zbuduj') || descB.includes('sklep') || descB.includes('biznes online'))
+          const amt = parseFloat(String(order.amount)) || 0
+          const isFull = amt >= 1000 // rezerwacja = 500 zł; pełna budowa ≫ 1000
+          const sid = order.spar_session_id || null
+          // deno-lint-ignore no-explicit-any
+          let bs: any = null
+          if (sid) {
+            const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').eq('id', sid).maybeSingle()
+            bs = data || null // gdy sid wskazuje spar (nie bud) → null → blok nic nie robi
+          }
+          if (!bs && isBudReservation && order.lead_id) {
+            const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').eq('lead_id', order.lead_id).is('paid_at', null).eq('is_test', false).order('last_user_at', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+            bs = data || null
+          }
+          if (!bs && isBudReservation && order.customer_email) {
+            const { data } = await supabase.from('bud_sessions').select('id, lead_id, paid_at, full_paid_at').ilike('email', order.customer_email.trim()).is('paid_at', null).eq('is_test', false).order('last_user_at', { ascending: false, nullsFirst: false }).limit(1).maybeSingle()
+            bs = data || null
+          }
+          if (bs) {
+            if (isFull && !bs.full_paid_at) {
+              await supabase.from('bud_sessions').update({ full_paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
+              await supabase.from('bud_knowhow_summary').upsert({ session_id: bs.id, lead_id: bs.lead_id || order.lead_id || null, status: 'active' }, { onConflict: 'session_id' })
+              console.log('[revolut-webhook] Budowanie: pełna płatność → bud_session full_paid_at (know-how):', bs.id)
+            } else if (!bs.paid_at) {
+              await supabase.from('bud_sessions').update({ paid_at: paidAt, updated_at: new Date().toISOString() }).eq('id', bs.id)
+              console.log('[revolut-webhook] Budowanie: rezerwacja → bud_session paid_at:', bs.id)
+            }
+            // WORKFLOW V2 („Sklepy"): opłacona rezerwacja → auto-projekt. Idempotentne
+            // po bud_session_id; własny try/catch — NIGDY nie przerywa obsługi płatności.
+            if (!isFull) {
+              try {
+                const { data: exProj } = await supabase.from('wf2_projects').select('id').eq('bud_session_id', bs.id).maybeSingle()
+                if (!exProj) {
+                  const { data: sess } = await supabase.from('bud_sessions')
+                    .select('id, name, email, phone, lead_id, chosen_product').eq('id', bs.id).maybeSingle()
+                  // deno-lint-ignore no-explicit-any
+                  const prodObj: any = sess?.chosen_product || {}
+                  const prodName = String(prodObj.nazwa || prodObj.pl_name || prodObj.name || '').trim()
+                  const { data: proj, error: projErr } = await supabase.from('wf2_projects').insert({
+                    customer_name: sess?.name || order.customer_name || null,
+                    customer_email: sess?.email || order.customer_email || null,
+                    customer_phone: sess?.phone || null,
+                    lead_id: bs.lead_id || order.lead_id || null,
+                    bud_session_id: bs.id,
+                    reservation_order_id: order.id,
+                    status: 'start',
+                  }).select('id').single()
+                  if (projErr) {
+                    console.error('[revolut-webhook] WF2: insert projektu padł (nieblokujące):', projErr.message)
+                  } else if (proj) {
+                    if (prodName) {
+                      const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+                      await supabase.from('wf2_products').insert({
+                        project_id: proj.id, name: prodName, status: 'kandydat', sort: 0,
+                        gen_session_id: bs.id,
+                        tt_product_id: uuidRe.test(String(prodObj.id || '')) ? prodObj.id : null,
+                        supplier_url: prodObj.ali_url || prodObj.chosen_link || prodObj.supplier_url || null,
+                        cover_url: prodObj.curated_image || prodObj.cover || prodObj.image || null,
+                      })
+                    }
+                    await supabase.rpc('wf2_ensure_steps', { p_project: proj.id })
+                    await supabase.from('wf2_payments').insert({
+                      project_id: proj.id, sort: 0, label: 'Rezerwacja (zwrotna, wliczana w budowę)',
+                      amount: amt, order_id: order.id, paid_at: paidAt,
+                    })
+                    await supabase.from('wf2_activities').insert({
+                      project_id: proj.id, actor: 'auto', action: 'created',
+                      description: 'Projekt utworzony automatycznie po opłaceniu rezerwacji 500 zł',
+                    })
+                    console.log('[revolut-webhook] WF2: utworzony projekt', proj.id, 'dla bud_session', bs.id)
+                  }
+                }
+              } catch (wf2Err) {
+                console.error('[revolut-webhook] WF2 project create error (nieblokujące):', wf2Err)
+              }
+            }
+            const leadId = bs.lead_id || order.lead_id
+            // Rezerwacja 500 zł = etap NEGOCJACJE; „won" wyłącznie przy pełnej płatności.
+            if (leadId) {
+              if (isFull) await supabase.from('leads').update({ status: 'won' }).eq('id', leadId).neq('status', 'won')
+              else await supabase.from('leads').update({ status: 'negotiation' }).eq('id', leadId).not('status', 'in', '("won","negotiation")')
+            }
+          } else if (isBudReservation) {
+            console.error('[revolut-webhook] [ALERT] Rezerwacja budowania bez dopasowanej bud_session — przypnij ręcznie. order:', order.id, 'lead:', order.lead_id, 'email:', order.customer_email)
+          }
+        } catch (budErr) {
+          console.error('[revolut-webhook] bud_session sync error:', budErr)
+        }
       }
     } else if (event === 'ORDER_CANCELLED') {
       newStatus = 'cancelled'
