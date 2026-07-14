@@ -948,6 +948,14 @@
         // Bramka startu budowy: dopóki klient nie kliknie „To już wszystko" w spowiedniku
         // (spar_knowhow_summary.status='closed'), budowa NIE rusza — wiedza jest niekompletna,
         // a przedwczesny Pakiet wiedzy = niepełny scope. Baner znika po domknięciu.
+        // Link dla klienta = wejście do rozmowy (spowiednik to jej tryb po pełnej płatności);
+        // ten sam link wysyła automat knowhow_unlock (spar-followups) po full_paid_at.
+        function sparChatUrl() { return `https://tomekniedzwiecki.pl/aplikacja/sparing/?id=${project.spar_session_id}`; }
+        function copySparChatLink() {
+            navigator.clipboard.writeText(sparChatUrl())
+                .then(() => showToast('Link do spowiednika skopiowany', 'success'))
+                .catch(() => showToast('Nie udało się skopiować — zaznacz link ręcznie', 'error'));
+        }
         function renderKnowhowGate() {
             const box = document.getElementById('knowhow-gate'); if (!box) return;
             const st = sparData.summary?.status || null;
@@ -955,9 +963,13 @@
             box.classList.remove('hidden');
             box.innerHTML = `<div class="bg-[#f5a623]/[.07] border border-[#f5a623]/45 rounded-lg p-4 flex items-start gap-3">
                 <i class="ph ph-hourglass-high text-[#f5b955] text-lg mt-0.5"></i>
-                <div class="text-[13px] leading-relaxed">
+                <div class="text-[13px] leading-relaxed min-w-0">
                     <div class="text-[#f5deb0] font-semibold mb-0.5">Spowiednik w toku — nie zaczynaj budowy</div>
-                    <div class="text-[#f5deb0]/75">Klient nie domknął jeszcze etapu spowiednika (przycisk „To już wszystko" w rozmowie). Do tego momentu wiedza jest niekompletna. Gdy domknie: Pakiet wiedzy złoży się automatycznie, a na #sparing wpadnie powiadomienie „możesz zaczynać budowę".</div>
+                    <div class="text-[#f5deb0]/75">Klient nie domknął jeszcze etapu spowiednika (przycisk „To już wszystko" w rozmowie). Do tego momentu wiedza jest niekompletna. Gdy domknie: Pakiet wiedzy złoży się automatycznie, a na #sparing wpadnie powiadomienie „możesz zaczynać budowę". Mail z linkiem do spowiednika idzie do klienta automatycznie po zaksięgowaniu płatności.</div>
+                    <div class="flex items-center gap-2 flex-wrap mt-2.5">
+                        <button onclick="copySparChatLink()" class="inline-flex items-center gap-1.5 border border-[#f5a623]/50 hover:border-[#f5a623] text-[#f5b955] rounded-md px-3 py-1.5 text-xs transition-colors"><i class="ph ph-copy"></i>Kopiuj link dla klienta</button>
+                        <a href="${sparChatUrl()}" target="_blank" rel="noopener" class="text-[11px] text-[#f5deb0]/60 hover:text-[#f5deb0] underline decoration-dotted truncate max-w-full">${sparChatUrl()}</a>
+                    </div>
                 </div>
             </div>`;
         }

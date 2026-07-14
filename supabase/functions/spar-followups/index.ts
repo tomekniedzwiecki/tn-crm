@@ -19,6 +19,7 @@
 //        temu; tylko telefon + zgoda + brak opt-out; ta sama bramka ≥10h
 //   verdict_no_payment — zielony werdykt, brak wpłaty, cisza 20–96 h
 //   paid_welcome       — wpłata 500 zł wykryta (wysyłka przy nadaniu paid_at)
+//   knowhow_unlock     — pełna płatność budowy → link do spowiednika (wysyłka przy nadaniu full_paid_at)
 //   landing_ready      — działająca strona narzędzia zbudowana ≥15 min temu
 //   raport_ready       — raport potencjału rynku policzony ≥15 min temu
 //     (artefakty CELOWO z opóźnieniem — decyzja Tomka 2026-06-12: followup
@@ -282,6 +283,7 @@ function followupView(kind: string, s: SessionRow): string {
   if (kind === 'verdict_no_payment') return chatLink(s.id, 'verdict_no_payment', '#projekt-plan')
   if (kind === 'verdict_last_call') return chatLink(s.id, 'verdict_last_call', '#projekt')
   if (kind === 'paid_welcome') return chatLink(s.id, 'paid_welcome')
+  if (kind === 'knowhow_unlock') return chatLink(s.id, 'knowhow_unlock')
   if (kind === 'payment_rescue') return checkoutResumeLink(s) // LINK_VIEW = dokończenie płatności
   if (kind === 'komplet_gotowy') return chatLink(s.id, 'komplet_gotowy', '#projekt')
   if (kind === 'reclose_1' || kind === 'reclose_2') return chatLink(s.id, kind, '#projekt')
@@ -312,12 +314,13 @@ function staticEmail(kind: string, s: SessionRow): { subject: string; html: stri
     nurture_5: { subject: `Co Cię powstrzymuje przed ${n}?`, body: `Cześć${im}!\n\nZgaduję, że gdzieś z tyłu głowy siedzi „nie mam czasu tego ogarniać" albo „a co, jeśli nie wyjdzie". Uczciwie: budowę i całą techniczną stronę biorę na siebie, zaczynamy mało, a 500 zł jest w pełni zwrotne — więc realne ryzyko po Twojej stronie jest naprawdę małe.\n\nJeśli to jedyne, co Cię trzyma, [po prostu pogadajmy](LINK_RESERVE).` },
     nurture_6: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie będę się naprzykrzał — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Jeśli kiedyś zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     paid_welcome: { subject: 'Rezerwacja przyjęta — co dalej', body: `Cześć${im}!\n\nDzięki za rezerwację. Biorę ${n} na warsztat — przygotowuję plan przedsięwzięcia (zakres pierwszej wersji, model przychodów, droga do 50 klientów, harmonogram) i odezwę się do Ciebie osobiście w ciągu 2–3 dni roboczych.\n\nPrzypominam: 500 zł jest w pełni zwrotne.` },
+    knowhow_unlock: { subject: 'Zaczynamy budowę — najpierw dopracujmy wizję', body: `Cześć${im}!\n\nPłatność dotarła — oficjalnie zaczynamy pracę nad ${n}. Zanim napiszę pierwszą linijkę kodu, potrzebuję od Ciebie jednej rzeczy.\n\n[Wróć do naszej rozmowy](LINK_VIEW) i dopracuj ze mną wizję. Wypytam Cię tam o wszystko, co powinno znaleźć się w aplikacji — każdy szczegół, który teraz opowiesz, trafi prosto do planu budowy. Im więcej opowiesz, tym celniej trafi pierwsza wersja.\n\nGdy uznasz, że powiedziałeś wszystko, kliknij w rozmowie „To już wszystko" — od tego momentu przejmuję pałeczkę i ruszam z budową.` },
     reclose_1: { subject: `${n}: rozmowa wciąż czeka`, body: `Cześć${im}!\n\nProjekt ${n} jest gotowy i czeka w panelu — a pierwszy krok to po prostu niezobowiązująca wspólna rozmowa. 500 zł jest w pełni zwrotne, więc realnie nic nie ryzykujesz.\n\nGdy będziesz gotowy, [zarezerwuj rozmowę](LINK_RESERVE) — [projekt zobaczysz tutaj](LINK_VIEW).` },
     reclose_2: { subject: `Zostawiam ${n} otwarte`, body: `Cześć${im}!\n\nNie chcę zawracać Ci głowy — projekt ${n} zostaje zapisany i czeka, kiedy będziesz gotowy. Rozmowa jest niezobowiązująca, a 500 zł w pełni zwrotne.\n\nJeśli zechcesz to ruszyć, [rezerwacja jest tutaj](LINK_RESERVE), a [projekt w panelu](LINK_VIEW).` },
     payment_rescue: { subject: 'Widzę, że rezerwacja nie doszła do końca', body: `Cześć${im}!\n\nZauważyłem, że zaczęła się Twoja rezerwacja wspólnej rozmowy, ale płatność nie doszła do końca — czasem przerwie ją bank albo połączenie. Nic straconego.\n\nGdyby coś przerwało, [dokończ rezerwację tutaj](LINK_VIEW). Przypominam: 500 zł jest w pełni zwrotne, więc nic nie ryzykujesz.` },
   }
   const t = T[kind] || T.abandoned_chat
-  const fallback = kind.startsWith('abandoned_chat') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
+  const fallback = (kind.startsWith('abandoned_chat') || kind === 'knowhow_unlock') ? 'Wróć do rozmowy tutaj' : 'Wszystko jest w Twoim panelu'
   return { subject: t.subject, html: mdToHtml(t.body, viewFor(kind, s), reserveFor(kind, s), fallback) }
 }
 
@@ -684,7 +687,7 @@ Deno.serve(async (req) => {
     // Run crona: tylko cron-secret lub admin
     if (!isCron && !isAdmin) return jsonResponse({ error: 'unauthorized' }, 401)
 
-    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, payment_rescue: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, reclose_1: 0, reclose_2: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
+    const sent: Record<string, number> = { paid_sync: 0, full_paid_sync: 0, paid_welcome: 0, knowhow_unlock: 0, payment_rescue: 0, komplet_gotowy: 0, abandoned_chat: 0, abandoned_chat_2: 0, abandoned_chat_3: 0, verdict_last_call: 0, reclose_1: 0, reclose_2: 0, sms_badanie_back: 0, sms_ekrany_back: 0 }
     let mailBudget = MAX_PER_RUN
     // Okno wysyłek 8–23 PL dotyczy WSZYSTKICH maili (też paid_welcome); cutoff 23
     // (decyzja Tomka 2026-06-16) łapie wieczornych porzucaczy, póki pamiętają
@@ -934,6 +937,28 @@ Deno.serve(async (req) => {
       if (prErr) console.error('[spar-followups] paid recent fetch error:', prErr)
       for (const s of (paidRecent || []) as SessionRow[]) {
         await sendOnce('paid_welcome', s)
+      }
+    }
+
+    // ── 1b-kh) SPOWIEDNIK ODBLOKOWANY — mail z linkiem do rozmowy po pełnej
+    //        płatności budowy (full_paid_at). Bez tego klient płaci ~12k i musi
+    //        sam trafić do spowiednika (do 14.07 NIKT nie dostawał linku — Tomek
+    //        pisał ręcznie). Wzorzec = 1b: okno 72h od full_paid_at (nie nadrabiamy
+    //        starych klientów obsłużonych ręcznie), idempotencja spar_emails,
+    //        pomijamy sesje z już domkniętym spowiednikiem. ──────────────────
+    if (inWindow) {
+      const { data: fullRecent, error: frErr } = await supabase
+        .from('spar_sessions')
+        .select(SESSION_COLS)
+        .eq('is_test', false)
+        .not('full_paid_at', 'is', null)
+        .is('knowhow_closed_at', null) // po „To już wszystko" link do spowiednika nie ma sensu
+        .not('email', 'is', null)
+        .gte('full_paid_at', hoursAgo(72))
+        .limit(40)
+      if (frErr) console.error('[spar-followups] full paid recent fetch error:', frErr)
+      for (const s of (fullRecent || []) as SessionRow[]) {
+        await sendOnce('knowhow_unlock', s)
       }
     }
 
