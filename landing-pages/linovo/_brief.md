@@ -144,3 +144,37 @@ js_effects_count: { counter_min: 0, tilt_min: 0, parallax_min: 0 }
 3. **Conversion — cichy offer-box w ramce brass:** offer otoczony 1px mosiężną ramką (border-beam zastąpiony statycznym szwem, zgodnie z motion=still), cena-kotwica przekreślona + „Oszczędzasz", trust strip bez ikon-krzykaczy, gwarancja 90 dni jako mikrokopia.
 - pattern-id: quiet-brass-offer-frame
 - selector: .offer-incl
+
+---
+
+## 12. Photo System (KROK 2 procedury AI Images — 2026-07-14)
+
+**Referencja produktu (SSOT kształtu):** biała ręczna parownica ciśnieniowa (typ Xiaomi Mijia),
+pistoletowy/L-kształt: pozioma cylindryczna głowica parowa u góry z metalową stopą (biała ramka wokół
+jasnosrebrnej płytki z rzędem otworów pary), pionowa **biała** rączka z pojedynczym owalnym przyciskiem,
+cienki biały kabel. **CAŁY MATOWY BIAŁY. Zakaz: drewniana rączka, dodatkowe przyciski, ekran, LED-y**
+(incydent Linovo 2026-05-29 — model dorobił drewnianą rączkę).
+
+### Lighting
+Miękkie, chłodno-neutralne światło poranne z dużego bocznego okna. Cień zamiast obrysu (Kinfolk).
+Pochmurna miękkość, ZERO golden hour, zero ciepłych pomarańczy.
+
+### Paleta w scenach
+- Tła: Cream Linen paper #F4EEE3, Warm Linen #D4B896, Stone Gray #9B9389; sekcje ciemne = Deep Linen #1F3A3D
+- Akcent: Soft Brass #C99A4E — rzadko (mosiężny drążek/haczyk, nić, detal). Materiały: len, kaszmir, jedwab, mosiądz, jasne drewno, ceramika
+- Unikamy: neon, zielenie wellness, czyste #FFFFFF, ciepłe gradienty
+
+### Kadrowanie
+Asymetryczne, produkt ~45% kadru, dużo oddechu (negative space papieru), off-center. Editorial column.
+
+### Post-processing
+35mm film (Kodak Portra 400 / Fujifilm Eterna), lekki grain, mild halation, chłodno-neutralne, film-like.
+
+### Negatywy — NIGDY
+Tekst/labele/watermarki, stock-photo body language, neon glow, cluttered tła, golden hour,
+drewniana rączka produktu, wymyślone przyciski/LED-y/ekrany poza jednym owalnym przyciskiem.
+
+### Sloty (13 obrazów)
+hero(4:5), problem(4:5, bez produktu), 3×detal(1:1), 3×krok(4:3), persona1(4:5, bez twarzy/bez produktu),
+persona2(4:5, walizka), persona3(4:5, pościel), offer(3:2, flat-lay), cta-bg(16:9, garderoba, bez produktu).
+Twarze w testimonialach = inicjały (etyka). Referencja produktu w 10/13 (bez: problem, persona1, cta-bg).
