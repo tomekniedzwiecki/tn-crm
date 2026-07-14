@@ -667,6 +667,8 @@ Deno.serve(async (req: Request) => {
     dane_operatora: "Wgraj materiały (cennik, dotychczasowe wyceny) w sekcji Do uzupełnienia — to odblokuje kolejny etap.",
     demo_klienta: "Przetestuj wersję roboczą aplikacji i podziel się uwagami.",
     akcept_klienta: "Sprawdź i zatwierdź zakres oraz nazwę aplikacji.",
+    onboarding_op: "Załóż konto w swojej aplikacji na adres " + String(p.customer_email || "(Twój e-mail z tego projektu)") + " — na tym adresie automatycznie dostaniesz uprawnienia operatora (panel zarządzania). Potem przejdziemy razem przez panel.",
+    stery: "Zaloguj się do panelu operatora kontem " + String(p.customer_email || "(Twój e-mail z tego projektu)") + " — przekazujemy Ci stery: użytkownicy, płatności, rabaty i statystyki są w Twoich rękach.",
   };
   const yourMove = currentDef && currentOwner === "client"
     ? (YOUR_MOVE[String(currentDef.key)] || "Czekamy na Twoją odpowiedź, żeby ruszyć dalej.")
