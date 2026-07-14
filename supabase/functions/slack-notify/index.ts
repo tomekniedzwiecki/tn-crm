@@ -95,6 +95,11 @@ Deno.serve(async (req) => {
         message = formatSparReviveMessage(data)
         break
 
+      case 'spar_knowhow_closed':
+        webhookUrl = webhookSparing
+        message = formatSparKnowhowClosedMessage(data)
+        break
+
       case 'spar_preview':
         webhookUrl = webhookSparing
         message = formatSparPreviewMessage({ ...data, funnel: data.funnel || 'aplikacja' })
@@ -1675,5 +1680,52 @@ function formatSparGreenMessage(data: {
     }]
   })
 
+  return { blocks }
+}
+
+// #sparing: klient DOMKNĄŁ etap spowiednika (przycisk „To już wszystko" w spar-chat).
+// To jest sygnał startu budowy dla Tomka — do tego momentu projekt w TN App czeka
+// (badge „Spowiednik w toku"). Handoff pack generuje się w tle tuż po tym evencie.
+function formatSparKnowhowClosedMessage(data: {
+  session_id?: string
+  project_id?: string
+  name?: string
+  email?: string
+  phone?: string
+  project_name?: string
+  items_count?: number
+}) {
+  const headerName = data.name ? `*${data.name}*` : '*(bez imienia)*'
+  const emailLine = data.email ? ` · ${data.email}` : ''
+  const phoneLine = data.phone ? ` · ${data.phone}` : ''
+  const projectLine = data.project_name ? `\n🧩 *${data.project_name}*` : ''
+
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🏁 Aplikacja — klient UKOŃCZYŁ spowiednika', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `${headerName}${emailLine}${phoneLine}${projectLine}` } },
+    { type: 'section', text: { type: 'mrkdwn', text: `Klient kliknął *„To już wszystko"* — wiedza zebrana${typeof data.items_count === 'number' ? ` (${data.items_count} itemów w bazie)` : ''}, Pakiet wiedzy składa się w tle. *Możesz zaczynać budowę.*` } },
+  ]
+
+  const actions: any[] = []
+  if (data.project_id) {
+    actions.push({
+      type: 'button',
+      text: { type: 'plain_text', text: '🚀 Otwórz projekt TN App', emoji: true },
+      url: `https://crm.tomekniedzwiecki.pl/tn-app/projekt?id=${data.project_id}`,
+      style: 'primary',
+      action_id: 'view_wfa_project',
+    })
+  }
+  const panelLink = sparLeadLink(data.session_id)
+  if (panelLink) {
+    actions.push({ type: 'button', text: { type: 'plain_text', text: '📋 Karta w panelu', emoji: true }, url: panelLink, action_id: 'view_spar_lead' })
+  }
+  if (data.phone) {
+    const wa = waLink(data.phone)
+    if (wa) actions.push({ type: 'button', text: { type: 'plain_text', text: '💬 WhatsApp', emoji: true }, url: wa, action_id: 'whatsapp' })
+  }
+  if (actions.length) blocks.push({ type: 'actions', elements: actions })
+
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}${data.session_id ? ` · sid: \`${data.session_id.substring(0, 8)}\`` : ''}` }] })
   return { blocks }
 }

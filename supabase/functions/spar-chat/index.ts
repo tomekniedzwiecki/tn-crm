@@ -368,7 +368,7 @@ async function createLeadForGreenVerdict(
 // webhooka). Fire-and-forget z perspektywy logiki — błąd Slacka NIGDY nie może
 // wywrócić rozmowy, więc tylko logujemy.
 async function postSlackSparing(
-  type: 'spar_contact' | 'spar_green' | 'spar_revive',
+  type: 'spar_contact' | 'spar_green' | 'spar_revive' | 'spar_knowhow_closed',
   data: Record<string, unknown>,
 ): Promise<void> {
   try {
@@ -1147,6 +1147,28 @@ Deno.serve(async (req) => {
         .eq('id', sessionId).is('knowhow_closed_at', null).select('id')
       if (!claimed || !claimed.length) return jsonResponse({ ok: true, already: true }, 200, corsHeaders)
       await sb.from('spar_knowhow_summary').upsert({ session_id: sessionId, lead_id: (sess.lead_id as string | null) || null, status: 'closed', closed_at: now }, { onConflict: 'session_id' })
+      // Slack #sparing: „możesz zaczynać budowę" — sygnał startu pracy dla Tomka
+      // (TN App pokazuje do tego momentu „Spowiednik w toku"). Po atomowym claimie
+      // wyżej = wysyłka dokładnie raz; fire-and-forget, błąd nie psuje odpowiedzi.
+      try {
+        const [{ data: sessInfo }, { data: wfaProj }, { count: itemsCount }] = await Promise.all([
+          sb.from('spar_sessions').select('name, email, phone, problem_summary').eq('id', sessionId).maybeSingle(),
+          sb.from('wfa_projects').select('id, name').eq('spar_session_id', sessionId).maybeSingle(),
+          sb.from('spar_knowhow_items').select('id', { count: 'exact', head: true }).eq('session_id', sessionId),
+        ])
+        const psName = (sessInfo?.problem_summary as Record<string, unknown> | null)?.nazwa
+        await postSlackSparing('spar_knowhow_closed', {
+          session_id: sessionId,
+          project_id: wfaProj?.id || null,
+          name: sessInfo?.name || null,
+          email: sessInfo?.email || null,
+          phone: sessInfo?.phone || null,
+          project_name: (wfaProj?.name as string | null) || (typeof psName === 'string' ? psName : null),
+          items_count: typeof itemsCount === 'number' ? itemsCount : undefined,
+        })
+      } catch (slackErr) {
+        console.error('[spar-chat] knowhow_closed slack error:', slackErr)
+      }
       // Handoff pack w tle (nie blokuje odpowiedzi na przycisk)
       const erHp = (globalThis as { EdgeRuntime?: { waitUntil?: (pr: Promise<unknown>) => void } }).EdgeRuntime
       const hpPromise = generateHandoffPack(sb, sessionId)

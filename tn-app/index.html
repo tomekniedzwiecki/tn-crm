@@ -121,6 +121,7 @@
         let projects = [];        // wfa_projects
         let stepsByProj = {};     // project_id -> [wfa_steps skrót]
         let aggByProj = {};       // project_id -> {total, done, currentKey, currentLabel}
+        let knowhowByProj = {};   // project_id -> {status, closed_at} ze spar_knowhow_summary (null = brak wiersza)
         let filterStepKey = null;
 
         // Statusy projektu aplikacji (CHECK z migracji wfa_projects)
@@ -218,6 +219,17 @@
             const stepsQ = await supabaseClient.from('wfa_steps').select('project_id, step_key, status').range(0, 9999);
             if (stepsQ.error) { console.error('wfa_steps:', stepsQ.error); showToast('Błąd kroków: ' + stepsQ.error.message, 'error'); }
             stepsByProj = {}; (stepsQ.data || []).forEach(s => { (stepsByProj[s.project_id] = stepsByProj[s.project_id] || []).push(s); });
+
+            // 5) status spowiednika per projekt — budowa rusza dopiero po status='closed'
+            // (klient klika „To już wszystko"). Brak wiersza / błąd = traktuj jak „w toku".
+            knowhowByProj = {};
+            const sids = projects.map(p => p.spar_session_id).filter(Boolean);
+            if (sids.length) {
+                const khQ = await supabaseClient.from('spar_knowhow_summary').select('session_id, status, closed_at').in('session_id', sids);
+                if (khQ.error) console.warn('spar_knowhow_summary:', khQ.error);
+                const bySid = {}; (khQ.data || []).forEach(k => { bySid[k.session_id] = k; });
+                projects.forEach(p => { if (p.spar_session_id) knowhowByProj[p.id] = bySid[p.spar_session_id] || null; });
+            }
 
             const note = document.getElementById('sync-note');
             if (note) note.textContent = created > 0 ? `zsynchronizowano ${created} nowy(ch) projekt(ów) z sparingu` : '';
@@ -338,6 +350,16 @@
                     </div>`
                     : `<span class="inline-flex items-center gap-1.5 border border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782] rounded-md px-2.5 py-1 text-xs"><i class="ph ph-check-circle"></i>Wszystko ukończone</span>`;
 
+                // SPOWIEDNIK — bramka startu budowy: czerwony „w toku" (nie zaczynaj), zielony po domknięciu.
+                // Tylko projekty z sesją sparingu; brak wiersza summary = w toku (bezpieczny default).
+                const kh = knowhowByProj[p.id];
+                const khClosed = !!(kh && kh.status === 'closed');
+                const khBadge = p.spar_session_id
+                    ? (khClosed
+                        ? `<span class="inline-flex items-center gap-1.5 border border-[#45a557]/45 bg-[#45a557]/10 text-[#4cb782] rounded-md px-2.5 py-1 text-[11px]" title="klient domknął spowiednika${kh.closed_at ? ' · ' + relDate(kh.closed_at) : ''} — można budować"><i class="ph ph-check-circle"></i>Spowiednik ukończony</span>`
+                        : `<span class="inline-flex items-center gap-1.5 border border-[#e5484d]/45 bg-[#e5484d]/10 text-[#f26d78] rounded-md px-2.5 py-1 text-[11px]" title="czekamy, aż klient kliknie „To już wszystko" — nie zaczynaj budowy"><i class="ph ph-hourglass-high"></i>Spowiednik w toku</span>`)
+                    : '';
+
                 // Stopka: domena, deadline, utworzony + ikonki-linki
                 const domain = p.domain
                     ? `<a href="https://${escapeHtml(p.domain)}" target="_blank" onclick="event.stopPropagation()" class="inline-flex items-center gap-1 border border-[#0070f3]/40 text-[#52a8ff] rounded-md px-2 py-0.5 text-[11px] hover:bg-[#0070f3]/10"><i class="ph ph-globe"></i>${escapeHtml(p.domain)}</a>`
@@ -361,6 +383,7 @@
 
                     <div class="mb-4">
                         <div class="text-[10px] font-mono uppercase text-zinc-600 mb-1.5">Aktualny krok</div>
+                        ${khBadge ? `<div class="mb-2">${khBadge}</div>` : ''}
                         ${currentBlock}
                     </div>
 

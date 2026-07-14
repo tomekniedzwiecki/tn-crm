@@ -348,4 +348,13 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
       instrukcja podpisu (FORMA PISEMNA — wydruk/kwalifikowany, wniosek z researchu) → finalna do pobrania;
       panel: karta Umowa (dane, podgląd, edycja HTML Z WALIDACJĄ placeholderów — guard na bug „baked placeholders",
       oznacz wysłaną, uploady klient/finalna → `attachments/wfa/<id>/`, auto-done kroku). E2E przetestowane — 2026-07-11
-- [ ] F4 automaty — NIE ZACZĘTE
+- [x] **Bramka spowiednika + sygnał startu budowy** — 2026-07-14. Zasada: Tomek zaczyna budowę DOPIERO gdy
+      klient domknie spowiednika („To już wszystko" → `spar_knowhow_summary.status='closed'`). Wdrożone:
+      (a) `spar-chat` event `knowhow_close` → Slack #sparing typ `spar_knowhow_closed` („możesz zaczynać
+      budowę", przycisk do projektu TN App; po atomowym claimie = dokładnie raz), (b) lista `tn-app/index`:
+      badge „Spowiednik w toku" (czerwony) / „Spowiednik ukończony" (zielony) na kafelkach z sesją sparingu,
+      (c) `tn-app/projekt`: baner ostrzegawczy nad pigułkami etapów, znika po domknięciu. Miękka bramka
+      (świadomie NIE twardy lock kroków — zegar umowny 4-8 tyg. biegnie od płatności, Tomek może przygotowywać
+      infrastrukturę). Kontekst incydentu: rata Revolut nie ustawiała `full_paid_at` (naprawione w
+      revolut-webhook — lustro tpay; commit `7c96fe3`).
+- [ ] F4 automaty — NIE ZACZĘTE (poza powiadomieniem spowiednika wyżej)
