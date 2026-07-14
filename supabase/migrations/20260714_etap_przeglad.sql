@@ -20,3 +20,12 @@ UPDATE wfa_step_defs SET stage_label='Landing i testy' WHERE stage=4;
 INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, active) VALUES
  ('review_zgodnosc', 5, 'Przegląd', 45, 'Przegląd: zgodność z ustaleniami', 'ph-handshake', 'admin', true)
 ON CONFLICT (key) DO NOTHING;
+
+-- Uzupełnienie 2 (Tomek 14.07): proces landinga jako OSOBNE kroki w etapie 4 „Landing"
+-- (research → koncept → budowa → pętla krytyka; budowa done dopiero po werdykcie PRZYJĄĆ).
+INSERT INTO wfa_step_defs (key, stage, stage_label, sort, label, icon, owner, active) VALUES
+ ('landing_research', 4, 'Landing', 4,  'Landing: research',       'ph-binoculars',        'admin', true),
+ ('landing_koncept',  4, 'Landing', 6,  'Landing: koncept',        'ph-lightbulb',         'admin', true),
+ ('landing_krytyk',   4, 'Landing', 15, 'Landing: pętla krytyka',  'ph-magnifying-glass',  'admin', true)
+ON CONFLICT (key) DO NOTHING;
+UPDATE wfa_step_defs SET label='Landing: budowa', sort=10 WHERE key='landing';
