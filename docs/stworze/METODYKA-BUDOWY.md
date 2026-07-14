@@ -107,7 +107,7 @@ Dwukierunkowa synchronizacja przez narzędzie **DesignSync** (skill `/design-syn
 3. PĘTLA SAMODOSKONALENIA (autonomiczna, bez czekania na Tomka): render-check każdej karty przez
    **Playwright z repo apki** (chrome-devtools nie widzi lokalnych plików) + krytyk w świeżym kontekście
    (spójność tokenów, kontrast wg tabeli z 04, stany, mobile) → napraw → powtórz, aż zero zastrzeżeń
-   (max 4 rundy; reszta do BUILDLOG).
+   (pętla DO WYCZERPANIA — bez limitu rund; decyzja Tomka 14.07, dotyczy każdej serii poprawek).
 4. PUSH do projektu claude.ai/design (DesignSync: create_project → finalize_plan → write_files) —
    NIEBLOKUJĄCY podgląd dla Tomka; jego iteracje są opcjonalne. PULL na hasło „zsynchronizuj design":
    list_files → diff → get_file tylko zmienionych → repo, komponent po komponencie (nigdy hurtowo).

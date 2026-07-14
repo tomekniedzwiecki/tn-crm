@@ -22,8 +22,12 @@
      oglądalne → pasek „Podglądy" (wfa_projects.links).
   6. UWAGI (wfa_notes) wg zasad: (a) dotyczy kroku → zastosuj i zamknij z adnotacją ✅;
      (b) przyszłość → zostaw; (c) już zbudowane → [DEMO]/[v1.1]; (d) sprzeczne → DO DECYZJI TOMKA.
-- **Pętle jakości:** świeży krytyk (osobny subagent bez kontekstu budowy) → naprawy → re-test →
-  aż werdykt PRZYJĄĆ (max 3-4 rundy). Kroki jakości NIE przechodzą na done deklaracją.
+- **Pętle jakości — DO WYCZERPANIA (decyzja Tomka 14.07):** świeży krytyk (osobny subagent bez
+  kontekstu budowy) → naprawy → KOLEJNA świeża runda (pełne polowanie, nie tylko re-test napraw) —
+  tak długo, aż runda nie przyniesie ŻADNYCH nowych uwag. Bez limitu rund; kosmetykę też naprawiamy,
+  nie odkładamy. Dedup znalezisk vs poprzednie rundy (seen-lista w BUILDLOG), inaczej pętla nie
+  konwerguje. Dotyczy KAŻDEJ serii poprawek: landing, panele, design system, treści. Kroki jakości
+  NIE przechodzą na done deklaracją — domyka je czysta runda.
 - **Tomek prowadzi ślepe testy:** ma własną listę usterek i sprawdza, czy pętle je znajdą.
   KAŻDE jego zgłoszenie = naprawa + LEKCJA DO WZORCA (dotąd 5: marginesy boczne mobile per sekcja;
   kadry sekwencji hero na obu szerokościach + test przesłonięć elementFromPoint; sweep szerokości
