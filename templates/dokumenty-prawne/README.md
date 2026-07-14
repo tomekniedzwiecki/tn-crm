@@ -31,7 +31,7 @@ Wszystkie szablony używają tych samych zmiennych w formacie `{{NAZWA}}`:
 |---------|------|----------|
 | `{{DOMAIN}}` | Domena sklepu | oravibe.pl |
 | `{{MAIN_URL}}` | Link do strony głównej | https://oravibe.pl |
-| `{{PAYMENT_PROVIDER}}` | Operator płatności | Tpay |
+| `{{PAYMENT_PROVIDER}}` | Operator płatności | PayU |
 
 ### Dostawa
 
@@ -86,6 +86,8 @@ Szablony są zgodne z:
 - RODO (Rozporządzenie UE 2016/679)
 - Dyrektywa Omnibus (od 01.01.2023)
 - Dyrektywa towarowa (UE 2019/771)
+- Zmiany w e-commerce od 01.07.2026 (zniesienie zwolnienia z cła do 150 EUR, cło ryczałtowe 3 EUR/pozycja)
+- Rozporządzenie UE 2024/3228 — wygaszenie platformy ODR (20.07.2025)
 
 **Nie zawierają klauzul abuzywnych** - sprawdzono z rejestrem UOKiK.
 
@@ -96,4 +98,4 @@ Szablony są zgodne z:
 - [Wzór formularza odstąpienia](https://uokik.gov.pl/downloadId/1216)
 
 ---
-*Ostatnia aktualizacja: 2026-03-09*
+*Ostatnia aktualizacja: 2026-07-14*
