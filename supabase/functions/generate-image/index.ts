@@ -482,6 +482,15 @@ Deno.serve(async (req) => {
       const token = authzRaw.replace(/^Bearer\s+/i, '')
       let okAuth = token === SERVICE_KEY ||
         (!!SECRET && (req.headers.get('x-admin-secret') === SECRET || req.headers.get('x-cron-secret') === SECRET))
+      // Klucze service-role rotują i występują w DWÓCH formatach (legacy JWT oraz nowe
+      // sb_secret_*); projekt może mieć kilka aktywnych sb_secret naraz — sprawdź listę
+      // SUPABASE_SECRET_KEYS (JSON, np. {"default":"sb_secret_..."}). Wzorzec z wfa-partner-mail.
+      if (!okAuth && token.startsWith('sb_secret_')) {
+        try {
+          const keys = JSON.parse(Deno.env.get('SUPABASE_SECRET_KEYS') || '{}')
+          if (Object.values(keys).some((k) => k === token)) okAuth = true
+        } catch (_e) { /* brak/zły format env — zostaje false */ }
+      }
       if (!okAuth && token && token !== ANON_KEY) {
         try {
           const uResp = await fetch(`${SUPA_URL}/auth/v1/user`, { headers: { 'Authorization': authzRaw, 'apikey': ANON_KEY } })

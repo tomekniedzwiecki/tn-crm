@@ -151,3 +151,53 @@ js_effects_count: { scroll_reveal_min: 5, magnetic_cta_optional: true }
 **Mockupy z Supabase (10 dostępnych):** kierowca w kabinie, vanlife w górach, kawa na masce auta MOP, kubek wraca z trasy, ojciec pakuje się przed trasą, klucze i ekspres na siedzeniu, dziennik trasy, vanlife setup w kamperze, czyszczenie ekspresu na MOP-ie, unboxing prezentu dla taty.
 
 **Domena:** brak w bazie. Używam `kawomir.pl` jako placeholder (typowy pattern dla TakeDrop projektów). Do potwierdzenia z klientem.
+
+---
+
+## 11. Photo System (generowanie obrazów AI — 2026-07-14)
+
+> Referencja produktu: `https://ae-pic-a1.aliexpress-media.com/kf/S3c6835cc323b4eb3be7baef39b1ba2408.jpg`
+> **Prawda o produkcie (Shape Constraint):** matowy CZARNY walec pionowy ~17 cm, rozszerzana czarna górna pokrywa, JEDEN okrągły podświetlany na ZIELONO przycisk power z przodu, mała ikona baterii pod przyciskiem, perforowany kropkowany pasek przy dole, wkręcany czarny brew head na dole wydający espresso. Cały korpus czarny, BEZ napisów/logo na urządzeniu. (Copy mówi „bursztynowe akcenty" — to NIEPRAWDA o produkcie; bursztyn pochodzi WYŁĄCZNIE ze sceny/światła, nie z korpusu.)
+
+### Lighting
+Zimne, niebieskawe światło przedświtu (04:30–06:15) + ciepły bursztynowy rim-light wschodu odbity na czarnym korpusie. Praktyczne, przygaszone źródła (lampka kabiny, deska rozdzielcza). Low-key, cinematic.
+
+### Paleta w scenach
+- Tła: antracyt/smoła (#1A1814), ciemne wnętrza kabin/kamperów, asfalt MOP, świt nad jeziorem
+- Akcenty: bursztyn/miedź (wschód słońca, crema espresso, poświata deski rozdzielczej) — TYLKO w otoczeniu
+- Czego unikamy: jasne studio na białym tle, neony, ciepłe „golden hour" pocztówkowe przesycenie, kuchnia domowa
+
+### Kadrowanie
+Editorial, męskie, produkt w realnym kontekście persony (kabina TIR, kamper, maska auta na MOP). Lekki tilt, dokumentalne.
+
+### Post-processing
+35mm film (Kodak Portra 400), delikatny grain, mild halation, lekko zdesaturowane cienie z ciepłymi światłami.
+
+### Negatywy — NIGDY
+Text/labels/watermarks · biały packshot studio · zmyślone przyciski/LED/porty poza referencją · bursztynowy korpus (korpus jest CZARNY) · uśmiechnięty stock „point at product" · kuchnia/biuro.
+
+### Stały SHAPE prefix (każdy prompt)
+`MATCH THE PRODUCT IN THE REFERENCE IMAGE EXACTLY — do not redesign or modify its shape. Product: a compact matte-black cylindrical portable espresso machine ~17cm tall, flared black top cap, one round glowing green power button on the front, a small battery indicator icon below it, a perforated dotted band near the base, and a black screw-on brew head at the bottom dispensing espresso. Entirely matte-black body, no logos or text on the device.`
+
+### Stały REALISM suffix (każdy prompt)
+`Shot on 35mm film (Kodak Portra 400), slightly grainy, mild halation, imperfect hand-held framing with a slight tilt, lived-in feel. Candid documentary photography, not a studio product shot, not a render, not CGI. Slightly off-center. No text, no captions, no labels, no watermarks, no writing, no signage.`
+
+### Matryca slotów (14 obrazów → `ai-generated/kawomir/`)
+| # | Slot | CSS box | aspect_ratio | Scena |
+|---|---|---|---|---|
+| 1 | hero | 4/5 | 4:5 | Kabina TIR, deska rozdzielcza, świt, kubek espresso z cremą |
+| 2 | gallery-1 (duży) | ~0.65 | 2:3 | Szeroka kabina TIR 04:30, kierowca w tle |
+| 3 | gallery-2 | ~1/1 | 1:1 | Kamper/vanlife Bieszczady, produkt na blacie |
+| 4 | gallery-3 | ~1/1 | 1:1 | Maska auta na MOP, kubek + produkt, świt |
+| 5 | gallery-4 | ~1/1 | 1:1 | Powrót z trasy — kubek/produkt w dłoni |
+| 6 | gallery-5 | ~1/1 | 1:1 | Pakowanie o 04:15, torba + produkt |
+| 7 | step-1 | 4/3 | 4:3 | Ręce wkładają kapsułkę + wodę (close-up) |
+| 8 | step-2 | 4/3 | 4:3 | Zielony przycisk wciśnięty, świeci (close-up) |
+| 9 | step-3 | 4/3 | 4:3 | Espresso leci do kubka na masce auta |
+| 10 | persona-1 | 4/3 | 4:3 | Kierowca TIR w kabinie, half-body, świt |
+| 11 | persona-2 | 4/3 | 4:3 | Vanlife/wędkarz nad jeziorem o 5:00 |
+| 12 | persona-3 | 4/3 | 4:3 | Przedsiębiorca/ojciec pakuje się przed autem |
+| 13 | package | 1/1 | 1:1 | Flat-lay zestawu (ekspres, kabel USB-C, adaptery, etui) |
+| 14 | offer | 16/10 | 3:2 | Poziomy packshot zestawu na ciemnym rugged tle |
+
+Provider: **Gemini 3 Pro Image Preview** (override). final-cta = gradient CSS, brak slotu obrazu.
