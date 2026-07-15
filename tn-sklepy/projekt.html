@@ -755,7 +755,7 @@
                     <label class="text-xs text-zinc-500 block mb-1">Cena sprzedaży (zł)</label>
                     <div class="flex gap-2">
                         <input id="wy-price" type="number" step="0.01" class="fld" value="${p.price ?? ''}" oninput="wyRecalc()" onchange="wySave()">
-                        <button onclick="wySuggest()" class="text-[11px] text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-3 flex-shrink-0 hover:bg-[#0070f3]/10 transition-colors" title="Cena zakupu + ${TEST_MARGIN_PCT}% (końcówka .99)">+${TEST_MARGIN_PCT}%</button>
+                        <button onclick="wySuggest()" class="text-[11px] text-[#52a8ff] border border-[#0070f3]/40 rounded-md px-3 flex-shrink-0 hover:bg-[#0070f3]/10 transition-colors" title="Cena zakupu + ${TEST_MARGIN_PCT}% (cena psychologiczna …4,90/…9,00)">+${TEST_MARGIN_PCT}%</button>
                     </div>
                 </div>
                 <div class="bg-[#111] border border-[#262626] rounded-md px-4 py-3 flex items-center justify-between flex-wrap gap-2">
@@ -788,7 +788,18 @@
             renderStage();
             showToast('Zapisano', 'success');
         }
-        function suggestTestPrice(cost) { return Math.max(Math.round(cost * (1 + TEST_MARGIN_PCT / 100)) - 0.01, cost + 1); }
+        // Cena psychologiczna: najniższa końcówka …4,90 / …9,00 NIE NIŻSZA niż minimum z marży.
+        // (Runda krytyka 15.07: surowe przeliczenia typu 83,68 / 240,01 krzyczą „auto-przelicznik"
+        //  i zabijają wiarygodność marki „bez bazaru" dokładnie w momencie decyzji.)
+        function psychPriceUp(min) {
+            const dec = Math.floor(min / 10) * 10;
+            // ≥150 zł tylko pełne „…9,00" (249, nie 244,90) — końcówka ,90 przy dużych kwotach razi
+            const cands = min >= 150 ? [dec + 9.00, dec + 19.00]
+                                     : [dec + 4.90, dec + 9.00, dec + 14.90, dec + 19.00];
+            for (const c of cands) if (c >= min - 0.001) return Math.round(c * 100) / 100;
+            return Math.round((dec + 19.00) * 100) / 100;
+        }
+        function suggestTestPrice(cost) { return psychPriceUp(Math.max(cost * (1 + TEST_MARGIN_PCT / 100), cost + 1)); }
         function wySuggest() {
             const cost = parseFloat(document.getElementById('wy-cost').value);
             if (isNaN(cost) || cost <= 0) { showToast('Najpierw cena zakupu', 'error'); return; }
@@ -1234,7 +1245,7 @@
         // Cena z marżą testową: zysk = ~15% kosztu (zakup + wysyłka), z pokryciem prowizji; końcówka .99
         function testPriceFor(cost, ship, fees) {
             const base = (cost + ship) * (1 + TEST_MARGIN_PCT / 100) / (1 - fees);
-            return Math.max(Math.round(base) - 0.01, cost + ship + 1);
+            return psychPriceUp(Math.max(base, cost + ship + 1));
         }
         function setTargetPrice() {
             const cost = parseFloat(document.getElementById('pm-cost').value) || 0;
