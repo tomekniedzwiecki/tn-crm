@@ -109,6 +109,11 @@ Konsekwencje architektoniczne:
    `wf2_step_defs.milestone_label`; tabela `wf2_notes` (uwagi Tomka → wstrzykiwane do promptów).
 5. OCZEKUJEMY od developera: base URL, autoryzacja (klucz per partner?), format odpowiedzi.
    Warstwę kliencką piszemy jako edge `wf2-platform` (adapter — jedyne miejsce znające API).
+   **PYTANIA PŁATNOŚCIOWE (15.07, po decyzji o pasku metod na landingach):** (a) czy checkout
+   wspiera POBRANIE (COD)? — cała narracja risk-reversal na landingach na tym stoi;
+   (b) dokładna lista metod Autopay w checkoucie (BLIK? karty Visa/MC? pay-by-link?) —
+   na landingach pokazujemy TYLKO realnie dostępne ikony; (c) czy checkout może dostać
+   logo+kolory marki sklepu (spójność wizualna landing→kasa tnie drop-off).
 6. **WYMAGANIA TRACKINGOWE wobec platformy (z WORKFLOW-V2-TESTY.md §7 — checkout jest na
    innej domenie niż landing!):** (a) możliwość wpięcia Meta pixela per sklep na checkoucie,
    (b) przechowanie `pixel_id` + tokenu CAPI per sklep, (c) emisja `Purchase` przez CAPI

@@ -101,7 +101,14 @@ platformy href → checkout_url wariantu.
 
 ## ZAUFANIE PL (rynek po 19% oszukanych — uczciwość = konwersja)
 
-- COD wyeksponowany wszędzie (hero, każde CTA, sticky) — zdejmuje 100% ryzyka „scamu".
+- **PŁATNOŚCI = pełen wachlarz, nie tylko COD (korekta Tomka 15.07):** COD komunikowany jako
+  JEDYNA forma osłabia wiarygodność („sklep bez płatności online?"). Standard: CTA neutralne
+  („Zamawiam teraz"), mikrocopy „Płatność: BLIK, karta lub przy odbiorze · 14 dni na zwrot",
+  **pasek ikon płatności** (inline SVG: BLIK / Visa / Mastercard / POBRANIE) w hero i w ofercie
+  — ikony znanych metod to czołowy sygnał zaufania (tpay: 48% PL patrzy najpierw na bezpieczne
+  płatności). COD zostaje GŁÓWNYM risk-reversalem w narracji 1-2-3 („płacisz, jak wolisz —
+  online albo przy odbiorze") — opcją zdejmującą lęk, nie jedyną drogą. Pokazujemy WYŁĄCZNIE
+  metody realnie dostępne w checkoucie platformy.
 - Pilność WYŁĄCZNIE realna (sezon: „najgorętsze tygodnie lata"), **zero**: liczników,
   „ostatnich sztuk", fikcyjnych przekreśleń, stockowych twarzy, kalek językowych.
 - Polszczyzna natywna (pełne znaki, naturalne frazy — żadnego translatora).
