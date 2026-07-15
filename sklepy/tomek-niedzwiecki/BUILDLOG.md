@@ -78,3 +78,27 @@ standardu→pętla CRO) i S7 strona główna.
 
 **Dowody:** commity `236f5db`, `ab360f0`, `3d54df6`, `81600d7`; wideo `bud-videos/7642664659505483021.mp4`;
 grafiki `ai-generated/wf2-znajdzik-koc/`.
+
+## 2026-07-15 — Sesja 1b: architektura v3 (mini-marki), decyzja DS, runda 2 CRO = INPUT
+
+**Decyzje Tomka (wieczór):**
+- **Mini-marki produktów (arch. v3):** parasol tylko w domenie/stronie głównej; landing = wyłącznie
+  marka produktu (nazwa+logo, title/SEO/GEO pod nią). Koc = **CHŁODZIK** (live). WS branding
+  zaktualizowany (nazwa mini-marki + logo, slug = ścieżka URL).
+- **Poprawki koca WSTRZYMANE** — przebudowa nastąpi przez BIBLIOTEKĘ DESIGN SYSTEMÓW
+  (Claude Design): 8 systemów zdefiniowanych w `_design-systems/systems.json` (Fable),
+  fabryka styleguide'ów w budowie (agent), potem sync DesignSync → przegląd Tomka → przebudowa.
+- **GEO:** research w toku → sekcja w standardzie + JSON-LD + wymagania platformowe.
+
+**RUNDA 2 CRO (żywa strona) = INPUT DO PRZEBUDOWY (nie naniesione — decyzja):**
+- Technicznie PASS: sticky-po-hero, wideo self-host (0 requestów TikTok, autoplay/pauza/dźwięk OK,
+  preload=none potwierdzony), płatności czytelne, tabela bez h-scrolla, ?h=N, konsola czysta,
+  branding spójny „Chłodzik".
+- **[P1] Galeria: wywalić kompozyty AliExpress g0/g2/g5** (śnieżynki-cliparty, termometr, strzałki)
+  — zostają czyste g1/g3/g4 + ew. packshoty/UGC z opinii.
+- [P2] Grafiki AI: odcień koca granat → dociągnąć do realnego stalowego błękitu przy regeneracji.
+- [P2] Opinia „Pasuje i jest wygodne" (Ewa T.) — podmienić na adekwatną do koca.
+- [P2] Kafle statystyk opinii za duże na mobile (2-up w rzędzie).
+- [P2] Tabela: „✗wtedy sięgnij…" — brak odstępu po markerze.
+- [GATE] Pixel = placeholder — podmiana OBOWIĄZKOWA przed pierwszą kampanią (inaczej CP1/CP2 ślepe).
+- Kontekst: wideo EN (świadomy trade-off; przy skali rozważyć PL-dubbing/napisy własnym contentem).
