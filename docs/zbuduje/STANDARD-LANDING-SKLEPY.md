@@ -60,16 +60,21 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
    MINUSEM po naszej stronie („na mroźną zimę ✗ — wtedy sięgnij po cieplejszy"): jawna
    dyskwalifikacja buduje zaufanie na rynku wyczulonym na scam. Tabela w kontenerze
    `overflow-x:auto` (body bez h-scrolla).
-6c. **NARRACJA WIZUALNA AI (opcja, budżet ~3 generacji na produkt — decyzja Tomka 15.07):**
-   trzy kadry opowiadające problem→produkt→efekt: (1) HERO-efekt: osoba używająca produktu
-   w palecie marki (świt/jasno), (2) PROBLEM: scena bólu BEZ produktu (empatycznie, gustownie
-   — osoba od tyłu; „sweaty/uncomfortable" wywala safety filter, pisać „restless"),
-   (3) FINAL: efekt nocą/duży plan przed ostatnim CTA. TWARDE ZASADY: referencje produktu
-   (2 zdjęcia z aukcji) + „the EXACT product from reference, do NOT change colors/pattern",
-   generacja przez wf2-gen→generate-image (provider gpt-image-2, quality medium, aspect 3:2
-   hero/final, 1:1 problem), OBEJRZEĆ przed wstawieniem (drift = odrzucić), REALNE zdjęcia
-   aukcji zostają w galerii i ofercie (AI nie zastępuje dowodu produktu), hero eager przez
-   render API, pozostałe lazy.
+6c. **NARRACJA WIZUALNA AI — HERO OBOWIĄZKOWO (potwierdzone przez Tomka 15.07 na kocu:
+   „to na pewno chcę dodać do naszej fabryki"), problem/final wg budżetu:**
+   - **HERO (STANDARD, każdy landing):** fotorealistyczna scena „osoba używa produktu
+     i ma EFEKT" (koc: kobieta śpi spokojnie o świcie) — JASNA, w palecie DS produktu,
+     naturalne światło, zero tekstu/naklejek. Przepis: 2 referencje zdjęć z aukcji +
+     „the EXACT product from the reference images (kolory/wzór wyliczone!), do NOT change
+     the product's colors, pattern or proportions" + paleta sceny z MOOD DS. aspect 3:2,
+     eager przez render API (width=900), jawne width/height. OBEJRZEĆ przed wstawieniem:
+     drift produktu (inny kolor/wzór) = odrzucić i regenerować z mocniejszą kotwicą
+     (lekcja koca: odcień dociągać do REALNEGO produktu, nie „ładniejszego").
+   - (2) PROBLEM: scena bólu BEZ produktu (empatycznie; osoba od tyłu — „sweaty/uncomfortable"
+     wywala safety filter, pisać „restless"), 1:1, lazy. (3) FINAL: efekt przed ostatnim CTA,
+     3:2, lazy. Oba opcjonalne wg budżetu generacji.
+   - REALNE zdjęcia aukcji ZOSTAJĄ w galerii i ofercie (AI nie zastępuje dowodu produktu).
+   - Wszystkie generacje JASNE (reguła jasnych teł obowiązuje też obrazy).
 7. **GALERIA** (lazy, lightbox :target) — wpleć zdjęcia Z OPINII (UGC, rehost `bud-reviews/`).
 8. **SOCIAL PROOF**: statystyki + 3-6 opinii (priorytet: ZE ZDJĘCIAMI). Zasada małego N:
    pokazuj uczciwie („14 opinii"), nie klonuj, nie dmuchaj; 0 opinii ⇒ sekcję POMIŃ
