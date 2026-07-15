@@ -21,6 +21,17 @@
      sesji 1 świeży subagent-krytyk przechodzi ZAKRES TEJ SESJI (nie cały produkt) na prodzie/
      preview — znaleziska naprawia się od ręki przed domknięciem kroku; pełna pętla do wyczerpania
      zostaje w etapie Przegląd.
+  3.6. DWA GATE'Y (decyzja Tomka 15.07 — SSOT: `docs/stworze/SECURITY-I-TESTY-GATE.md`; system
+     żyje, więc bezpieczeństwo i testy to proces CIĄGŁY, nie krok jednorazowy — „wolę żeby dłużej
+     trwało, ale było w pełni bezpieczne"): **GATE A (bezpieczeństwo przy zmianie wrażliwej
+     powierzchni):** jeśli sesja dotknęła migracji/RLS/edge/auth/ról/płatności/storage/uploadu/
+     renderu-danych-usera/sekretów/CDN/publicznego-endpointu — OBOWIĄZKOWY zakresowy adwersarski
+     audyt TEJ zmiany (świeży subagent próbuje ZŁAMAĆ diff) PRZED pushem; FAIL→naprawa→ponów aż
+     czysto; marker `SEC-CHECK:` w BUILDLOG. Większa zmiana wrażliwa (nowy moduł) po kroku `audyt`
+     = re-trigger PEŁNEGO audytu (pętla do wyczerpania). **GATE B (nie live bez zielonych testów):**
+     większa zmiana (`public/js`/`functions`/`migrations`) NIE idzie na main/prod bez zielonej
+     suity E2E + audit-static. Oba gate'y EGZEKWOWANE technicznie: `scripts/preflight.mjs` +
+     pre-push git hook (nie tylko deklaracja w prompcie — bo deklaracje bywają pomijane).
   4. LEKCJE PO WYKONANIU wracają do wzorca (prompt kroku) i/lub do saas-startera — commit.
      **TWARDA ZASADA UCZENIA FABRYKI (decyzja Tomka 15.07): krok/sesja naprawcza NIE jest
      domknięta, dopóki jej lekcje nie są WPISANE do fabryki.** Każdy brief subagenta budowlanego/
