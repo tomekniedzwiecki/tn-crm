@@ -113,6 +113,20 @@ Jedyny <script> na stronie robi:
 CTA zakupu = `<a data-checkout="<produkt-slug>" href="#zamow">`; przy publikacji przez API
 platformy href → checkout_url wariantu.
 
+## DESIGN SYSTEMY — TYLKO JASNE TŁA (decyzja Tomka 15.07, potwierdzona badaniami)
+
+- **Tła stron/sekcji wyłącznie jasne** (kremy/biele/pastelowe mgły). Ciemne dozwolone tylko
+  jako drobne akcenty (tekst, ikony), NIGDY jako tło strony/sekcji. Powody z badań:
+  (a) jasne tło = wierniejsze zdjęcia produktu, lepsza czytelność, standard zaufania w masowym
+  B2C (imsolutionz/ekomfy); (b) „ciemne + neon/gradient" czyta się w 2024-26 jako
+  AI-slop/szablon — „Your brand looks like a template. And your users notice" (dev.to/raxxo);
+  (c) dark wygrywa tylko w niszach premium/tech/B2B (case Search Engine Land: dark −16% CTR
+  ale +42% konwersji przy PRZEMYSŁOWYM SaaS) — nasza grupa (impuls, kobiety 25-45) to
+  przeciwny biegun. Pula DS: `sklepy/_design-systems/systems.json` (regula_jasnych_tel).
+- **CTA: decyduje kontrast, nie „magiczny kolor"** (CXL; HubSpot red vs green +21% = efekt
+  izolacji): jeden ciepły, mocno kontrastujący kolor, użyty WYŁĄCZNIE na przycisku zakupu
+  (nasze `--cta` w tokens robi dokładnie to).
+
 ## ZAUFANIE PL (rynek po 19% oszukanych — uczciwość = konwersja)
 
 - **PŁATNOŚCI = pełen wachlarz, nie tylko COD (korekta Tomka 15.07):** COD komunikowany jako
