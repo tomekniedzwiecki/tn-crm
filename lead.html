@@ -6050,6 +6050,12 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     params.set('upgrade_to_offer_id', upgradeOfferId);
                 }
 
+                // Aplikacja po indywidualnej cenie — doklej sid jak w trybie ofertowym
+                if (/budowa aplikacji/i.test(description)) {
+                    const sid = await getLeadSparSessionId();
+                    if (sid) params.set('sid', sid);
+                }
+
                 paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
             }
 
@@ -6146,6 +6152,12 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                     description: description,
                     lead_id: lead?.id || ''
                 });
+
+                // Aplikacja po indywidualnej cenie — doklej sid jak w trybie ofertowym
+                if (/budowa aplikacji/i.test(description)) {
+                    const sid = await getLeadSparSessionId();
+                    if (sid) params.set('sid', sid);
+                }
 
                 paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
             }
