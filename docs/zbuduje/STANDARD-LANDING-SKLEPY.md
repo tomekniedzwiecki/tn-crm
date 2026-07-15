@@ -75,6 +75,25 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
      3:2, lazy. Oba opcjonalne wg budżetu generacji.
    - REALNE zdjęcia aukcji ZOSTAJĄ w galerii i ofercie (AI nie zastępuje dowodu produktu).
    - Wszystkie generacje JASNE (reguła jasnych teł obowiązuje też obrazy).
+
+6d. **ART PACK — pełny pakiet generacyjny per landing (pipeline v3, decyzja Tomka 15.07:
+   „grafiki z image są genialne — budujemy landing tak, jak wygląda na grafikach"):**
+   Styl określa MAKIETA-MASTER (gpt-image, full page, ref = zdjęcia produktu; Tomek zatwierdza
+   obraz jak klient w lejku), a potem KOMPLET skoordynowanych generacji (każda: ref = makieta
+   [+ zdjęcie produktu gdy produkt w kadrze], twarde „NO text/typography/UI/watermark" dla teł):
+   1) **hero-plate** — czysta scena hero z produktem, przestrzeń pod treść (3:2, eager, render API);
+   2) **final-plate** — pas dekoracyjny pod final CTA (duża pusta przestrzeń centralna);
+   3) **band-plate** — subtelny pas pod sekcję środkową (bardzo jasny — tekst musi być czytelny);
+   4) **icon-sheet** — arkusz 6 ikon w stylu makiety na CZYSTEJ BIELI (siatka 3×2) → cięcie +
+      biel→alpha (PIL); jeśli SVG kodem ostrzejszy — wybór per ikona (decyzja przy wpięciu);
+   5) **og-banner** — dedykowany social-share w stylu makiety (przycinany do 1200×630;
+      kompozycja z pustą 1/3 — tekst dodajemy overlayem, nie w obrazie).
+   BUDOWA: UI (karty, przyciski, typografia, fale-SVG) = kod z pipetą kolorów z makiety;
+   **pętla diffowa** (PIL ImageChops: % pikseli ≠ + heatmapa, screenshot 1024w vs makieta)
+   per sekcja aż różnice zostają tylko w strefach świadomych nadpisań treści (prawdziwe
+   liczby/płatności). Każdy plate OBEJRZANY przed użyciem (wtopiony tekst/UI = odrzut).
+   Mechanika: prompty-szablony w `scratchpad`-history + skrypty koc-*.ps1 (do przeniesienia
+   w narzędzia fabryki przy S3).
 7. **GALERIA** (lazy, lightbox :target) — wpleć zdjęcia Z OPINII (UGC, rehost `bud-reviews/`).
 8. **SOCIAL PROOF**: statystyki + 3-6 opinii (priorytet: ZE ZDJĘCIAMI). Zasada małego N:
    pokazuj uczciwie („14 opinii"), nie klonuj, nie dmuchaj; 0 opinii ⇒ sekcję POMIŃ
