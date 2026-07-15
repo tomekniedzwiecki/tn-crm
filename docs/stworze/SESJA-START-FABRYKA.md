@@ -110,7 +110,10 @@ topbar, last-write-wins). Pętla kręci się aż runda = ZERO nowych uwag.
    polecenia): kolejność — wiadomosci_panel (layout maila = fundament) → wiadomosci_trial →
    polecenia. Budować w STARTERZE + Fachmacie.
 3. Krok `poprawki` — domknąć pozostałe ([Z1] zmiana działu pozycji robocizny; [TREŚĆ] K1-pełne
-   czeka na Prawne; N-2/3/4 = [v1.1]) → kamień „Aplikacja przeszła pełny przegląd".
+   czeka na Prawne; N-2/3/4 = [v1.1]). UWAGA reorganizacja 15.07 (migracja
+   20260715_przeglad_reorg_kolejnosc.sql): cała jakość w etapie 5 „Przegląd i jakość" z wymuszoną
+   kolejnością (suita → soczewki → poprawki → pętla → AUDYT NA KOŃCU); kamień „pełny przegląd"
+   przeniesiony na `audyt` — po domknięciu poprawek RE-AUDYT stanu finalnego domyka etap.
 4. RAPORT KOŃCOWY dla Tomka z retro-akceptacjami: (a) RLS SELECT own-folder na logos (prod),
    (b) fix Stripe API 2026 w starterze, (c) kupony-sieroty w Stripe operatora (~5 + FACHMATTEST20
    + UXR4TEST10 zdezaktywowane — skasować w Dashboardzie), (d) DO DECYZJI: numeracja wersji v2

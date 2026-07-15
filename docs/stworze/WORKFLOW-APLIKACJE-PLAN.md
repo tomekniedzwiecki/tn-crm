@@ -208,6 +208,20 @@ maile, PDF, prawne — obietnice vs produkt) → `poprawki` (kamień „Aplikacj
 Dodatkowo w Etapie 3: MINI-REVIEW rdzenia zaraz po ostatniej sesji funkcji głównej (wada fundamentu
 wykryta zanim obrośnie zależnościami). Migracja: 20260714_etap_przeglad.sql.
 
+**AKTUALIZACJA 15.07 (decyzja Tomka — porządek i kolejność; migracja
+`20260715_przeglad_reorg_kolejnosc.sql`):** CAŁA jakość w JEDNYM etapie 5 „Przegląd i jakość",
+z WYMUSZONĄ KOLEJNOŚCIĄ (panel pokazuje numer kolejności na każdej karcie kroku — kroki w etapie
+wykonuje się po kolei wg `sort`). Etap 4 „Landing" = tylko budowa (research → koncept → budowa;
+krok budowy domyka się dowodami budowy). Kolejność Przeglądu:
+1. `testy_e2e` — trwała suita E2E (fundament dowodów dla soczewek),
+2. `review_adwersarski` (logika na diffie), 3. `review_zgodnosc` (ustalenia klienta),
+4. `landing_krytyk` (krytyk landinga z benchmarkami — przeniesiony z Etapu 4),
+5. `review_ux` (panel usera), 6. `review_ux_admin` (panel operatora), 7. `review_tresc` (copy),
+8. `poprawki` (wykonanie znalezisk wszystkich soczewek),
+9. `ux_petla` = „Pętla poprawek — do wyczerpania" (świeże rundy całego produktu aż czysta runda),
+10. `audyt` (bezpieczeństwo) — NA KOŃCU, bo audytuje stan finalny PO poprawkach; kamień
+„Aplikacja przeszła pełny przegląd" przeniesiony z `poprawki` na `audyt`.
+
 ## 7. Checklist audytu bezpieczeństwa (krok `audyt` — obowiązkowy gate przed startem)
 
 ```
