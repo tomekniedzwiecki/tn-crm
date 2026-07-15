@@ -274,7 +274,7 @@ Deno.serve(async (req) => {
       const cached = u.input_tokens_details?.cached_tokens || 0
       const out = u.output_tokens || 0
       const prices: Record<string, { i: number; c: number; o: number }> = {
-        'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 },
+        'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.6-terra': { i: 2.5, c: 0.25, o: 15 }, 'gpt-5.6-luna': { i: 1, c: 0.1, o: 6 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 },
         'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
       }
       let p = prices[OPENAI_MODEL]

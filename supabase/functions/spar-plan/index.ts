@@ -38,7 +38,7 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_GENERATIONS = 4
-const OPENAI_MODEL = Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
+const OPENAI_MODEL = Deno.env.get('SPAR_PLAN_MODEL') || Deno.env.get('SPAR_OPENAI_MODEL') || 'gpt-5.6-sol'
 
 function jsonResponse(body: Record<string, unknown>, status: number, cors: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
 
     // Koszt każdej próby → spar_usage. reasoning 'low' wystarcza do wyliczeń.
     const prices: Record<string, { i: number; c: number; o: number }> = {
-      'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
+      'gpt-5.6-sol': { i: 5, c: 0.5, o: 30 }, 'gpt-5.6-terra': { i: 2.5, c: 0.25, o: 15 }, 'gpt-5.6-luna': { i: 1, c: 0.1, o: 6 }, 'gpt-5.5': { i: 5, c: 0.5, o: 30 }, 'gpt-5.1': { i: 1.25, c: 0.125, o: 10 },
       'gpt-4o': { i: 2.5, c: 1.25, o: 10 }, 'gpt-4o-mini': { i: 0.15, c: 0.075, o: 0.6 },
     }
     const logUsage = async (usage: { i: number; c: number; o: number } | null) => {
