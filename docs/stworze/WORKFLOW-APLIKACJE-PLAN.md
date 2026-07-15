@@ -135,6 +135,18 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > 04-STYLEGUIDE + tokeny CSS w repo. `pricing` = sesja z 2 agentami researchu (Opus), iteracja
 > w rozmowie, zapis finalnych planów w kroku. Razem: **35 kroków** (z krokiem `umowa`).
 
+> **AKTUALIZACJA 15.07 wieczór (uwagi Tomka, sesja Dobry Wstęp; migracja `20260715g`):**
+> (a) **Krok `nazwa` przesunięty na POCZĄTEK Etapu 1** (sort 50→12, zaraz po `handoff`) — sesja flow
+> zadaje pytanie o nazwę+domenę JAK NAJSZYBCIEJ po starcie, żeby zakup domeny i propagacja NS szły
+> równolegle z resztą budowy i niczego nie blokowały. (b) **Nowy standardowy krok `logo` (sort 13,
+> zaraz po nazwie):** logo generowane z wybranej nazwy (generate-image, GPT-image-2, jasne tło,
+> warianty do wyboru Tomka) + favicon (kwadratowy znak 32/180/512) → pliki w Storage aplikacji,
+> URL-e w `app_settings.brand_logo_url` / `app_settings.favicon_url` = JEDNO ŹRÓDŁO, z którego
+> czytają landing, panele, auth i layout maili; panel operatora ma sekcję Ustawienia → „Marka"
+> (podgląd + podmiana działająca wszędzie). Wykonane wstecznie dla fachmata. (c) Spektrum stylów
+> w kroku `nazwa` rozszerzone: obok polskich znaczących OBOWIĄZKOWO neologizmy SaaS-owe bez
+> znaczenia + równoległe sprawdzanie .pl/.com/.io/.app (commit d1229a3).
+
 ### 4b. Moduł „Skrzynki" (`/tn-app/skrzynki`) — poczta domen aplikacji (12-13.07)
 Globalna funkcja panelu: odbiór maili wszystkich domen aplikacji (Resend Inbound, catch-all) →
 `wfa_inbox` (match po domenie; nieprzypisane gdy brak projektu) → widok w panelu (podgląd w iframe
