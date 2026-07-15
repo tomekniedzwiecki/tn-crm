@@ -166,5 +166,23 @@ płatności: Grzegorz od 18.06 → okno ~16.07-13.08; Tomek J. od 26.06 → ~24.
 - **(W6) Kroki klienta odpalać najwcześniej jak się da** (KYC Stripe, materiały, dane operatora) — czekanie na klienta
   to najdłuższe ogony; zasada jawnie w warsztatach kroków klienckich + followup automatyczny gdy krok klienta wisi >5 dni (F4).
 
+## 11. AKTUALIZACJA 15.07 — konfrontacja z pilotem Fachmat (przegląd B11)
+
+**ZREALIZOWANE przez pilota (temat zamknięty):** K3 (demo_klienta/poprawki_demo + NOWY moduł
+Testy klienta = spowiednik testów ze zrzutami i bramką akceptacji), K4/B2 (portal z kamieniami,
+intake, testami), B4 (bramki: review-soczewki + pętla do wyczerpania + AUDYT na końcu + suita
+E2E 30 testów), W1 (krok pricing), W2 (dane_operatora — zdigitalizowany cennik Grzegorza),
+W4 (monthly), W5 (Vercel Pro + Supabase płatny w standardzie kroków). §1 automatyzacja:
+zrealizowana LEPSZYM mechanizmem niż warianty B/C — sesja zarządzająca (Fable) + subagenci
+(Opus) wg promptów kroków; routines/kolumna runner NIEPOTRZEBNE (potwierdza decyzję Tomka 1/2026-07-11).
+
+**OTWARTE — do decyzji Tomka:**
+1. B5 autopilot ops (Healthchecks/Sentry, tygodniowa routine portfela, #ops-portfel) —
+   propozycja: włączyć przy starcie DRUGIEJ aplikacji (przy jednej zbędny narzut).
+2. K1 badge „dni do terminu" (deadline_at) w panelu projektu — małe, do zrobienia przy okazji.
+3. W6 followup automatyczny kroku klienta wiszącego >5 dni (mail systemowy wfa-partner-mail;
+   dziś jest tylko czerwony badge w panelu) — propozycja: tak, z szablonem po ludzku.
+4. K2 umowy — u prawnika (PILNE: organiczne rejestracje na fachmat.pl).
+
 **Zmiany w seedzie wynikające z rewizji:** +`pricing` (E1), +`dane_operatora` (E3), +`demo_klienta` i `poprawki_demo`
 (E4, przed audytem), +`monthly` (E5, po stery), +`review_adwersarski` (E3) i `autopilot_ops` (E5) z §7. Razem: 30 → 36 kroków.
