@@ -7,7 +7,8 @@
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#0a0a0b">
     <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Ikony Phosphor 2.1.2 REHOSTED lokalnie (SEC-R3-CDN): powierzchnia klienta (portal z hasłem) BEZ CDN. -->
+    <link rel="stylesheet" href="/tn-app/vendor/phosphor/regular.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         /* Jedna wąska kolumna czytana z góry na dół — portal ma dwa zadania:
@@ -798,9 +799,15 @@
         box.innerHTML = files.map(f =>
             '<div class="ifile"><i class="ph ph-file fi"></i><span class="fn">' + esc(f.filename) + '</span>' +
             '<span class="fs">' + fmtBytes(f.size_bytes) + '</span>' +
-            (previewMode ? '' : '<i class="ph ph-trash fx" title="Usuń" onclick="deleteIntakeFile(\'' + esc(f.id) + '\')"></i>') +
+            (previewMode ? '' : '<i class="ph ph-trash fx" title="Usuń" data-del-file="' + esc(f.id) + '"></i>') +
             '</div>'
         ).join('');
+        // Delegacja zdarzeń zamiast onclick z interpolacją danych do atrybutu (SEC-R3-CDN):
+        // id pliku trafia do data-* (kontekst atrybutu, esc() poprawny), nie do treści JS w onclick.
+        box.onclick = (e) => {
+            const t = e.target.closest('[data-del-file]');
+            if (t) deleteIntakeFile(t.getAttribute('data-del-file'));
+        };
     }
 
     function flashOk(id) { const el = $(id); if (!el) return; el.classList.remove('hidden'); setTimeout(() => el.classList.add('hidden'), 2500); }
