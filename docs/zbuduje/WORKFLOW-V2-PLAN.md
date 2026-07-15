@@ -119,8 +119,22 @@ Konsekwencje architektoniczne:
    strona główna = otoczka marki + galeria produktów testowych) + produkty na podstronach
    (landing 1-produktowy per produkt, styl per produkt pod parasolem marki). NIE robimy
    5 marek/domen per produkt (koszt + niezgodne z modelem strony głównej). Konsekwencja:
-   nowy krok `marka` (stage 1, scope=project) — marka sklepu przed brandingiem produktów;
-   krok `branding` (scope=product) = kąt komunikacji/prezentacja produktu pod marką.
+   nowy krok `marka` (stage 1, scope=project, WDROŻONY 15.07 + warsztat WS + prompt) —
+   marka sklepu przed brandingiem produktów; krok `branding` (scope=product) = kąt
+   komunikacji/persona/hooki produktu pod marką (WS przepisany — BEZ osobnej domeny).
+   Typ A: marka z lejka /sklep (bud_sessions.brand) = baza marki parasolowej.
+8. **Etap Kampanie dopracowany wg etapu Reklamy v1 (15.07):** ads_konto = 4 pod-kroki klienta
+   (konto w BM klienta PLN / fanpage / Instagram / telefon SMS) + partner access „Pełna
+   kontrola" do BM Tomka (737839566050751, 3 assety naraz) + metoda płatności; ads_budzet =
+   płatności RĘCZNE (prepaid 1000 zł: BLIK/przelew/PayU, nie karta) + weryfikacja realnych
+   środków (lekcja v1: klient odhacza „doładowałem" bez środków → mail budget_not_funded);
+   ads_pixel = pixel w TYM SAMYM BM co konto (incydent v1: pixel w BM Tomka + konto klienta
+   = WCA nie działają!) + strona przypisana do konta (wymóg create_ad) + weryfikacja OBU
+   domen + CAPI na checkoucie platformy + Purchase w Test Events jako gate; ads_kampanie =
+   konwencje z WORKFLOW-V2-TESTY.md §1. `instructions_md` ads_konto/ads_budzet = pełne
+   instrukcje klienckie (z boxem „częste pomyłki" z v1) — gotowe pod portal. Automaty
+   mailowe etapu (wzorzec v1: ads_activated → partner_step_completed → ads_completed +
+   budget_not_funded) = do F4.
 
 ### Cennik dwufazowy (decyzja Tomka 15.07)
 
