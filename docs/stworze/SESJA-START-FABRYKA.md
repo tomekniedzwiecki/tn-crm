@@ -68,60 +68,57 @@
   bezpieczeństwo/audyt → UX panel usera → UX panel operatora → UX poprawki i pętla → zgodność
   z ustaleniami → treść → poprawki) · 6 Start (od demo_klienta).
 
-## 4. Stan pilota Fachmat (na moment przekazania, 14.07 wieczorem)
+## 4. Stan pilota Fachmat (aktualizacja 15.07 — po rundach pętli UX 1-5)
 
-**DONE (panel):** Etapy 1-2 w całości; Etap 3 (paczka, design, schemat+RLS, auth, funkcja główna
-S4a-e, pulpit+profil, admin w tabach, płatności 9/11 [reszta przy START], maile+cron); Etap 4
-(landing: research/koncept/budowa/pętla — PRZYJĄĆ po 3 rundach; suita E2E 11/11); Etap 5 częściowo
-(review logika: 0 kryt/0 wys, naprawy S22 done; zgodność z ustaleniami: 62 ustalenia, 1 rozjazd;
-UX panel usera + operatora: werdykty done; treść: werdykt + poprawki S24 done, legal jako HTML).
+**DONE (panel):** Etapy 1-2 w całości; Etap 3 (w tym `dane_operatora` DONE: Grzegorz wgrał
+przez portal 5 PDF + dane firmy [Rentix Grzegorz Pałaszewski, NIP 7831566239 → contract_fields]
++ 5 beta-testerów; cennik zdigitalizowany → brief/10 + brief/10a; REALNY szablon 76 pozycji
+wpięty w S27); Etap 4 w całości; Etap 5: wszystkie review done, `audyt` in_progress (FAIL tylko
+legal-placeholdery = czeka na prawnika), `poprawki` in_progress, `ux_petla` in_progress.
 
-**W TOKU w momencie przekazania:** krok „Przegląd UX: poprawki i pętla" (`ux_petla`,
-id c535c372-e324-41f0-a370-179a0326df14) — agent S25 wykonywał ~21 poprawek [UX]/[UX-ADMIN]
-+ zgłoszenia Tomka A-D (A: overlap onboarding/hero pulpitu na szerokościach pośrednich;
-B: TRWAŁY overlap-detector w tests/e2e.spec.ts [320/390/414/768/1024/1280, przecięcia bbox
-rodzeństwa, wyjątki: sticky/FAB/modale — ma OBLAĆ przed fixem]; C: wspólne kolumny listy ofert
-[RAZEM/akcje w pionie, także pulpit]; D: przeprojektowanie top-baru kreatora [siatka: powrót+chip+
-metryczka / numer własny+akcje; mobile kolumna]). SPRAWDŹ stan: git log fachmata (commit „S25:...")
-+ BUILDLOG + checklista kroku ux_petla — jeśli S25 niedokończone, wznow z tego opisu.
+**PĘTLA UX „DO WYCZERPANIA" (zasada z §1) — przebieg:** R1→S25 · R2→S27 (9 fixów + realny
+cennik) · R3→S28 (PDF deterministyczny, chip ≤14, nawigacja cennika, automaty) · S29 (race
+podwójnego seedu: mutex obu ścieżek) · R4→S30 (RODO eksport+delete ze Storage, confirmModal ×7,
+/co-nowego, automaty failOnDialog/eksport/anty-sierota) · R5→S31 (guard double-submit „Nowa
+oferta", error≠empty, focus-trap, @media print). Suita E2E = 20 testów, ZERO flaky. Konwergencja:
+R2=4 poważne → R5=1 istotna+3 drobne. Backporty startera na bieżąco: 565f66f, baad1d8, ff7588a,
+157bd01. Commity fachmat: …→759b2d3/774b872 (S31).
+
+**PRZERWANE limitem tokenów 15.07: RUNDA 6 krytyka** (agent padł w trakcie — wystartuj ŚWIEŻĄ
+rundę 6 wg wzorca rund: spot-check S31 [3 kliki=1 szkic; błąd ładowania→stan błędu; Tab cykluje
+w modalu; print bez chrome] + świeże polowanie w kątach: pełny cykl onboardingu, event aha,
+zmiana e-maila/reset hasła przy kill_emails, wersje v3+, integralność sum przy usuwaniu w edycji,
+urządzenie z biblioteki vs przypisane do oferty, cykl feedback user→admin, OG landingu, admin
+mobile 375 wszystkie taby; seen-lista = wszystkie naprawy S25-S31 + znane-otwarte: legal, rabat
+per-oferta [DO DECYZJI], kontakt gpalka0@gmail.com na stronie zaufania [DO DECYZJI], statyczny
+topbar, last-write-wins). Pętla kręci się aż runda = ZERO nowych uwag.
 
 **NASTĘPNE KROKI (kolejność):**
-1. Dokończyć/odebrać S25 → RE-TEST świeżym okiem (runda 2 pętli UX — subagent-krytyk przechodzi
-   naprawione miejsca desktop+mobile+szerokości pośrednie, sprawdza regresje) → werdykt PRZYJĄĆ →
-   ux_petla done.
-2. AUDYT bezpieczeństwa (krok `audyt`, ostatnia soczewka Przeglądu): checklista §7 WORKFLOW-PLAN,
-   sekcje RLS i płatności przygotować do OSOBISTEGO przeglądu Tomka; suita E2E jako część dowodów.
-3. Krok `poprawki` — domknąć pozostałe pozycje ([Z1] zmiana działu istniejącej pozycji robocizny;
-   [TREŚĆ] K1-pełne czeka na krok Prawne; N-2/N-3/N-4 = propozycja [v1.1]); status done →
-   kamień „Aplikacja przeszła pełny przegląd" w portalu klienta.
-4. RAPORT KOŃCOWY dla Tomka z retro-akceptacjami: (a) polityka RLS SELECT own-folder na storage
-   logos dodana na prod (zawężająca, wymusił upsert), (b) fix API Stripe 2026 promotion_codes
-   w starterze, (c) ~5 osieroconych kuponów w Stripe operatora do skasowania w Dashboardzie,
-   (d) decyzja: numeracja wersji v2 (świeży numer per wysyłka [tak działa RPC] vs dziedziczenie —
-   otwarta wfa_note „DO DECYZJI TOMKA"), (e) welcome-mail poszedł do palkabu@wp.pl (Grzegorz
-   zarejestrował się sam — poprawne działanie), (f) konta test@testp.pl/sfsfsf@gp.pl — śmieciowe,
-   Tomek może skasować.
-5. NOWE MODUŁY FABRYKI (zaprojektowane 14.07, DO ZBUDOWANIA po S25 — dotykają admin.js/processor,
-   więc NIE równolegle z sesją admin): kroki w Etapie 3:
-   - `wiadomosci_panel` — centrum wiadomości w panelu operatora (historia email_log + szablony z podglądem/
-     edycją + wiadomość ręczna) + wspólny brandowany layout maila (_shared/mail-layout, logo z
-     wfa_projects.brand_logo_url / placeholder). Koncept: docs/stworze/MODUL-WIADOMOSCI.md.
-   - `wiadomosci_trial` — seria onboardingowa trialu (drip behawioralny prezentujący funkcje).
-   - `polecenia` — program poleceń dwustronny (kredyt Stripe customer_balance po invoice.paid; polecający
-     miesiąc gratis, polecony −50%; konfigurowalne; anti-abuse; WhatsApp/SMS-first). Research:
-     docs/stworze/research-polecenia.md · Koncept: docs/stworze/MODUL-POLECENIA.md.
-   Kolejność budowy: najpierw wiadomosci_panel (layout maila = fundament dla reszty), potem
-   wiadomosci_trial i polecenia (mail „nagroda" używa layoutu). Buduj w STARTERZE (uniwersalne) +
-   Fachmacie. Prompty gotowe w projekt.html.
-6. Dalej wg workflow: demo_klienta (decyzja Tomka kiedy), dane_operatora (czeka na materiały
-   Grzegorza — cennik/ściągawki podmienią TYMCZASOWY szablon), umowa/prawne (czeka na prawnika),
-   START (realna płatność minimalna + BLIK + 2 pozycje checklisty platnosci_e2e).
-7. PRZEGLĄD KOŃCOWY FABRYKI (na życzenie Tomka): po domknięciu wszystkiego przygotować LISTĘ usprawnień/
-   rozwinięć fabryki (co dodać/poprawić/rozwinąć) — TYLKO do przedstawienia i ustalenia z Tomkiem,
-   NIE wykonywać bez jego zgody.
+1. RUNDA 6 (i kolejne) pętli UX → aż czysta runda → `ux_petla` done. Po zamknięciu pętli:
+   lekcje zbiorcze R4-R6 do wzorca review_ux/testy_e2e w projekt.html (double-submit guard,
+   error≠empty, focus-trap modali, @media print, pełny cykl RODO jako cleanup testów).
+2. NOWE MODUŁY FABRYKI (koncepty gotowe: docs/stworze/MODUL-WIADOMOSCI.md, MODUL-POLECENIA.md,
+   research-polecenia.md; prompty w projekt.html; kroki w bazie: wiadomosci_panel/wiadomosci_trial/
+   polecenia): kolejność — wiadomosci_panel (layout maila = fundament) → wiadomosci_trial →
+   polecenia. Budować w STARTERZE + Fachmacie.
+3. Krok `poprawki` — domknąć pozostałe ([Z1] zmiana działu pozycji robocizny; [TREŚĆ] K1-pełne
+   czeka na Prawne; N-2/3/4 = [v1.1]) → kamień „Aplikacja przeszła pełny przegląd".
+4. RAPORT KOŃCOWY dla Tomka z retro-akceptacjami: (a) RLS SELECT own-folder na logos (prod),
+   (b) fix Stripe API 2026 w starterze, (c) kupony-sieroty w Stripe operatora (~5 + FACHMATTEST20
+   + UXR4TEST10 zdezaktywowane — skasować w Dashboardzie), (d) DO DECYZJI: numeracja wersji v2
+   (wfa_note), (e) DO DECYZJI: luki modelu z realnych ofert Grzegorza (wfa_note [v1.1]: rabat,
+   urządzenia w sumie, itemizacja materiałów, pozycje opcjonalne, VAT mieszany), (f) DO DECYZJI:
+   kontakt na stronie zaufania → kontakt@fachmat.pl przez Skrzynki?, (g) welcome do palkabu@wp.pl
+   poprawny, (h) konta test@testp.pl/sfsfsf@gp.pl śmieciowe — może skasować, (i) NAZWISKO:
+   klient wpisał „Pałaszewski", panel ma „Pałka" — potwierdzić i ujednolicić.
+5. PRZEGLĄD KOŃCOWY FABRYKI: LISTA usprawnień/rozwinięć — TYLKO do ustalenia z Tomkiem,
+   NIE wykonywać bez zgody.
+6. Dalej wg workflow: demo_klienta (decyzja Tomka), umowa/prawne (dane firmy klienta JUŻ SĄ,
+   czeka wzór od prawnika; placeholdery OPERATOR_* w legal można wypełnić danymi Rentix),
+   START (realna płatność + BLIK + 2 pozycje platnosci_e2e).
 
-**Czeka na ludzi (NIE ruszać automatem):** materiały od Grzegorza, wzór umowy od prawnika,
-decyzja Tomka o demo i starcie.
+**Czeka na ludzi (NIE ruszać automatem):** wzór umowy od prawnika, decyzja Tomka o demo
+i starcie, retro-akceptacje z pkt 4.
 
 ## 5. Jak startować pracę w nowej sesji (checklist)
 
@@ -141,11 +138,15 @@ decyzja Tomka o demo i starcie.
 Kontynuujemy pracę nad fabryką aplikacji TN App i pilotem Fachmat. Przeczytaj W CAŁOŚCI
 c:\repos_tn\tn-crm\docs\stworze\SESJA-START-FABRYKA.md i pracuj DOKŁADNIE wg opisanego tam modelu
 (Fable zarządza i audytuje wzorce, subagenci Opus 4.8 wykonują; rytuał kroku: audyt wzorca →
-wykonanie z dowodami na produkcji → lekcje do wzorca → panel; pętle jakości do werdyktu PRZYJĄĆ;
-każda moja uwaga = naprawa + lekcja do wzorca fabryki, najlepiej automat w testach).
-Najpierw zweryfikuj stan faktyczny (git log fachmata, BUILDLOG, statusy kroków wfa_steps) i sprawdź,
-czy sesja S25 (pętla poprawek UX) się domknęła — jeśli nie, dokończ ją wg opisu w pliku. Potem
-prowadź dalej: re-test pętli UX → audyt bezpieczeństwa → domknięcie kroku poprawek → raport końcowy
-z retro-akceptacjami. Pracuj autonomicznie, pytaj tylko o decyzje biznesowe. Ja będę dorzucał
-uwagi/poprawki na bieżąco — traktuj je wg zasady „naprawa + lekcja do wzorca".
+wykonanie z dowodami na produkcji → lekcje do wzorca → panel; PĘTLE JAKOŚCI DO WYCZERPANIA —
+kolejne rundy świeżego krytyka + naprawy aż runda zwróci ZERO nowych uwag, bez limitu rund;
+każda moja uwaga = naprawa + lekcja do wzorca fabryki, najlepiej trwały automat w testach).
+Najpierw zweryfikuj stan faktyczny (git log fachmata, ogon BUILDLOG [S25-S31], statusy wfa_steps).
+Stan: rundy 1-5 pętli UX naprawione (S25/S27/S28/S29/S30/S31, suita E2E 20/20 zero flaky);
+RUNDA 6 została przerwana w trakcie — wystartuj ją OD NOWA wg opisu w sekcji 4 pliku. Potem
+wg NASTĘPNYCH KROKÓW: pętla aż do czystej rundy → lekcje zbiorcze do wzorca → budowa modułów
+Wiadomości/Polecenia (koncepty w docs/stworze/) → domknięcie kroku poprawki → raport końcowy
+z retro-akceptacjami → lista usprawnień fabryki (NIE wykonywać bez mojej zgody).
+Pracuj autonomicznie, pytaj tylko o decyzje biznesowe. Ja będę dorzucał uwagi na bieżąco —
+traktuj je wg zasady „naprawa + lekcja do wzorca".
 ```
