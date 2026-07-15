@@ -347,7 +347,11 @@
         }
     }
     const $ = id => document.getElementById(id);
-    const esc = s => { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; };
+    // Escape ATRYBUTOWY (koduje też " i ') — bezpieczny w value="…", src/href="…" ORAZ w treści.
+    // NIGDY nie wracać do textContent→innerHTML: to NIE escapuje " ' → Stored XSS przez łamanie atrybutu (SEC-D2).
+    const esc = s => (s === null || s === undefined) ? '' : String(s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     const PW_KEY = 'wfa_portal_pw_' + token;
     let currentPw = '';
     let contractMeta = null;
