@@ -835,7 +835,9 @@
                 if (wyk.nip != null) map['{{WYKONAWCA_NIP}}'] = wyk.nip;
                 if (wyk.adres != null) map['{{WYKONAWCA_ADRES}}'] = wyk.adres;
             }
-            for (const [k, v] of Object.entries(map)) html = html.split(k).join(String(v));
+            // SEC-D FAIL #1: escapuj KAZDA wartosc klienta — dane firmy to XSS sink w podgladzie
+            // umowy admina (previewContract renderuje w przegladarce Tomka na crm.tomekniedzwiecki.pl).
+            for (const [k, v] of Object.entries(map)) html = html.split(k).join(escapeHtml(String(v)));
             return html;
         }
 
@@ -930,6 +932,26 @@
             showToast('Oznaczono jako wysłaną do podpisu', 'success');
             renderContract();
         }
+        // SEC-D FAIL #1 (warstwa 2): podglad umowy „oczami klienta" renderowany w SANDBOXED iframe
+        // (srcdoc, bez allow-scripts) zamiast document.write(html). Dane klienta sa juz escapowane w
+        // contractSubstitute; sandbox = druga warstwa (skrypt w tresci umowy sie nie wykona nawet gdyby
+        // escape zawiodl). Do document.write idzie tylko STATYCZNA powloka; dane -> atrybut srcdoc.
+        function openContractSandbox(html) {
+            const w = window.open('', '_blank');
+            if (!w) { showToast('Odblokuj wyskakujące okna', 'error'); return; }
+            const escSrcdoc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+            const shell = '<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Umowa</title>'
+                + '<style>html,body{margin:0;padding:0;height:100%;background:#e2e8f0}'
+                + 'iframe{border:0;width:100%;min-height:100vh;display:block;background:#fff}'
+                + '.tb{position:fixed;top:10px;right:10px;z-index:99}'
+                + '.tb button{background:#1a365d;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 13px sans-serif;cursor:pointer}'
+                + '@media print{.tb{display:none}}</style></head><body>'
+                + '<div class="tb"><button onclick="print()">Drukuj / PDF</button></div>'
+                + '<iframe sandbox="allow-same-origin" srcdoc="' + escSrcdoc(html) + '"></iframe>'
+                + '<scr' + 'ipt>var f=document.querySelector("iframe");f.addEventListener("load",function(){try{f.style.height=f.contentDocument.documentElement.scrollHeight+"px"}catch(e){}});</scr' + 'ipt>'
+                + '</body></html>';
+            w.document.open(); w.document.write(shell); w.document.close();
+        }
         async function previewContract() {
             try {
                 let raw = project.contract_custom_html;
@@ -939,11 +961,8 @@
                     raw = await r.text();
                 }
                 const wyk = await getWykonawca();
-                let html = contractSubstitute(raw, wyk);
-                html = html.replace('<body>', '<body><div class="no-print" style="position:fixed;top:10px;right:10px;z-index:99"><button onclick="window.print()" style="background:#1a365d;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 13px sans-serif;cursor:pointer">Drukuj / PDF</button></div>');
-                const w = window.open('', '_blank');
-                if (!w) { showToast('Odblokuj wyskakujące okna', 'error'); return; }
-                w.document.open(); w.document.write(html); w.document.close();
+                const html = contractSubstitute(raw, wyk);
+                openContractSandbox(html);
             } catch (e) { showToast('Błąd podglądu umowy', 'error'); }
         }
         async function toggleContractEditor() {
