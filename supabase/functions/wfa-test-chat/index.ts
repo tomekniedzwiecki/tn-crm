@@ -14,6 +14,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
+import { signPaths, verifyTeamMember } from "../_shared/admin-files.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -48,17 +49,8 @@ async function sha256Hex(s: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-// Podgląd admina „oczami klienta": JWT CZŁONKA ZESPOŁU (team_members), nie samego 'authenticated'.
-async function verifyTeamMember(req: Request, sb: ReturnType<typeof createClient>): Promise<{ id: string } | null> {
-  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const tok = m[1].trim();
-  if (!tok || tok.startsWith("sb_publishable_") || tok.startsWith("sb_secret_")) return null;
-  const { data: u } = await sb.auth.getUser(tok);
-  if (!u?.user) return null;
-  const { data: tm } = await sb.from("team_members").select("user_id").eq("user_id", u.user.id).maybeSingle();
-  return tm ? { id: u.user.id } : null;
-}
+// Podgląd admina „oczami klienta" (gate JWT team_members) → wspólny helper
+// _shared/admin-files.ts (verifyTeamMember), używany też przez wfa-portal.
 
 // Kill-switch FAIL-OPEN: gramy DALEJ przy każdym błędzie/braku klucza; ubijamy TYLKO gdy jawnie false.
 async function isKilled(sb: ReturnType<typeof createClient>): Promise<boolean> {
@@ -104,26 +96,63 @@ async function loadIssues(sb: ReturnType<typeof createClient>, projectId: string
   return (data || []) as Array<Record<string, unknown>>;
 }
 
-// Podpisz ścieżki zrzutów (1h) do renderu miniatur / vision.
-async function sign(sb: ReturnType<typeof createClient>, paths: string[]): Promise<Record<string, string>> {
-  const map: Record<string, string> = {};
-  const uniq = [...new Set(paths.filter(Boolean))];
-  if (!uniq.length) return map;
-  const { data } = await sb.storage.from(BUCKET).createSignedUrls(uniq, 3600);
-  (data || []).forEach((s: any) => { if (s && s.path && s.signedUrl) map[s.path] = s.signedUrl; });
-  return map;
+// Podpisz ścieżki zrzutów (1h) do renderu miniatur / vision — wspólny helper signPaths
+// (_shared/admin-files.ts), związany na stałe z prywatnym bucketem BUCKET.
+function sign(sb: ReturnType<typeof createClient>, paths: string[]): Promise<Record<string, string>> {
+  return signPaths(sb, BUCKET, paths);
 }
 
 const pathsOf = (att: unknown): string[] =>
   Array.isArray(att) ? att.map((a) => (typeof a === "string" ? a : (a && (a as any).path))).filter(Boolean) : [];
 
-// ── System prompt „przyjmujący zgłoszenia" ────────────────────────────────────
-function buildSystemPrompt(appName: string, testContext: string, issues: Array<Record<string, unknown>>): string {
+// ── System prompt ─────────────────────────────────────────────────────────────
+// Tryb per projekt (wfa_projects.test_mode): 'testy' = spowiednik testów PRZED startem
+// (bug reporting); 'feedback' = zbieranie propozycji rozwoju i problemów od operatora
+// DZIAŁAJĄCEJ aplikacji. Tryb zmienia WYŁĄCZNIE ten prompt — marker <zgloszenie>, parser,
+// INSERT, walidacja severity, panel, statusy i zrzuty są WSPÓLNE (zero zmian struktur).
+type TestMode = "testy" | "feedback";
+
+function buildSystemPrompt(appName: string, testContext: string, issues: Array<Record<string, unknown>>, mode: TestMode = "testy"): string {
   const titles = issues.length
     ? issues.map((i) => `  - [TK-${i.seq}] ${i.title}`).join("\n")
     : "  (brak — to pierwsze zgłoszenia)";
+  const app = appName || "Twoja aplikacja";
   const ctx = (testContext || "").trim() || "(brak szczegółowego opisu — dopytuj klienta o ekran/moduł, którego dotyczy uwaga)";
-  return `Jesteś życzliwym, konkretnym asystentem, który PRZYJMUJE UWAGI klienta do jego aplikacji „${appName || "Twoja aplikacja"}" po testach. Rozmawiasz jak dobry, cierpliwy tester-recepcjonista: klient MÓWI swobodnie co mu nie gra, a Ty układasz z tego porządek. Klient NIGDY nie wypełnia formularza — strukturę tworzysz Ty.
+
+  if (mode === "feedback") {
+    return `Jesteś życzliwym, konkretnym asystentem, który ZBIERA PROPOZYCJE ROZWOJU I PROBLEMY od operatora DZIAŁAJĄCEJ aplikacji „${app}". Aplikacja już żyje i jest używana na co dzień — nie testujemy wersji roboczej, tylko rozwijamy produkt. Rozmawiasz jak dobry opiekun produktu: operator swobodnie MÓWI, co chciałby usprawnić i co go uwiera w codziennej pracy, a Ty układasz z tego porządek. Operator NIGDY nie wypełnia formularza — strukturę tworzysz Ty.
+
+O APLIKACJI (kontekst — znasz ją, więc nie pytaj o rzeczy oczywiste):
+${ctx}
+
+JAK ROZMAWIASZ:
+- Ciepło, po ludzku, krótko (1–4 zdania). Zero żargonu technicznego.
+- Zachęcaj: „Powiedz mi o wszystkim, co chciałbyś usprawnić albo co Ci przeszkadza w codziennej pracy — nawet drobiazgi. Zrzut ekranu bardzo pomaga."
+- Rozróżniaj dwie rzeczy: POMYSŁ (propozycja rozwoju — coś nowego / usprawnienie) oraz PROBLEM (coś nie działa jak trzeba albo przeszkadza w pracy). Dla każdej uwagi ustal, o którą kategorię chodzi.
+- Dla KAŻDEJ uwagi dopytaj naturalnie (o ile operator sam nie podał): 1) GDZIE (ekran/moduł), 2) JAK to teraz wygląda i CO konkretnie chciałby zmienić / co zawodzi, 3) PO CO — jaką korzyść albo jaki kłopot to rozwiązuje w jego pracy, 4) URZĄDZENIE (telefon czy komputer). Po jednym–dwa pytania naraz, nie jak z formularza.
+- Gdy operator dokleił ZRZUT EKRANU — obejrzyj go i ODNIEŚ SIĘ do tego, co na nim widać.
+- NIGDY nie obiecuj wdrożenia ani terminu. Mów: „Przekażę to do przeglądu" / „Zapiszę i zespół to rozważy". Decyzja, co i kiedy trafi do rozwoju, należy do zespołu — nie do Ciebie.
+- Nie zdradzasz wewnętrznych szczegółów technicznych ani sekretów. Znasz tylko to, co wyżej + rozmowę.
+
+SKŁADANIE ZGŁOSZENIA (najważniejsze):
+Gdy masz dość informacji o danej uwadze (temat wyczerpany), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (operator go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
+<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null}</zgloszenie>
+- title: krótki, po polsku, konkretny; zacznij od kategorii w nawiasie — „[Pomysł] …" albo „[Problem] …" (np. „[Pomysł] Eksport listy klientów do CSV").
+- description: złóż w całość STAN OBECNY / PROPONOWANĄ ZMIANĘ lub OBJAW / KORZYŚĆ lub KŁOPOT — 2–5 zdań, tak by zespół wiedział, co i po co zrobić.
+- area: ekran/moduł którego dotyczy (np. „Panel operatora → Rabaty"); null jeśli naprawdę nieznany.
+- device: mobile / desktop / null.
+- severity: użyj JAKO KATEGORII (mapowanie na wspólne pole): POMYSŁ / propozycja rozwoju → "kosmetyka"; PROBLEM który przeszkadza → "istotne"; PROBLEM który blokuje pracę operatora → "krytyczne".
+- quote: DOSŁOWNY, najbardziej treściwy cytat operatora (zachowaj jego język!).
+- dodaj_do: jeśli to TA SAMA rzecz co istniejące zgłoszenie z listy poniżej — wstaw jego numer seq (samą liczbę), a w description dopisz nowy szczegół; system dołączy notatkę zamiast dublować. W innym razie null.
+- Możesz w jednej odpowiedzi zapisać KILKA zgłoszeń (kilka markerów), jeśli operator wymienił kilka niezależnych rzeczy.
+- Po markerze pisz DALEJ naturalnie: potwierdź krótko po ludzku (bez podawania numeru — system go dopisze) i zapytaj „Co jeszcze chciałbyś usprawnić?".
+- NIE zapisuj zgłoszenia przedwcześnie — najpierw dopytaj, chyba że operator od razu podał komplet.
+
+ISTNIEJĄCE ZGŁOSZENIA TEGO PROJEKTU (do deduplikacji — nie twórz duplikatów, użyj dodaj_do):
+${titles}`;
+  }
+
+  return `Jesteś życzliwym, konkretnym asystentem, który PRZYJMUJE UWAGI klienta do jego aplikacji „${app}" po testach. Rozmawiasz jak dobry, cierpliwy tester-recepcjonista: klient MÓWI swobodnie co mu nie gra, a Ty układasz z tego porządek. Klient NIGDY nie wypełnia formularza — strukturę tworzysz Ty.
 
 O APLIKACJI (kontekst — znasz ją, więc nie pytaj o rzeczy oczywiste):
 ${ctx}
@@ -297,7 +326,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const { data: p } = await sb.from("wfa_projects")
-    .select("id, name, unique_token, client_password_hash, test_context")
+    .select("id, name, unique_token, client_password_hash, test_context, test_mode")
     .eq("unique_token", token).maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
 
@@ -331,6 +360,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const projectId = String(p.id);
+  const mode: TestMode = String(p.test_mode || "").trim() === "feedback" ? "feedback" : "testy";
   const roErr = () => json({ error: "podgląd — tylko odczyt" }, 403);
 
   // Krok testów musi być aktywny (in_progress/done) — inaczej karta w portalu ukryta.
@@ -436,8 +466,8 @@ Deno.serve(async (req: Request) => {
     });
 
     const issues = await loadIssues(sb, projectId);
-    const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues);
-    const ai = await callOpenAI(system, transcript, `proj=${projectId.slice(0, 8)}`);
+    const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues, mode);
+    const ai = await callOpenAI(system, transcript, `proj=${projectId.slice(0, 8)} mode=${mode}`);
     if (!ai) {
       return json({ soft: true, reply: "Coś mi się przycięło — spróbuj wysłać jeszcze raz za chwilę. Twoja wiadomość jest zapisana." });
     }
@@ -492,7 +522,7 @@ Deno.serve(async (req: Request) => {
         content: (m.content || "") + (m.role === "user" && pathsOf(m.attachments).length ? " [klient dołączył zrzut ekranu]" : ""),
       }));
       const issues = await loadIssues(sb, projectId);
-      const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues)
+      const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues, mode)
         + "\n\nKONIEC ROZMOWY: klient powiedział, że to wszystko. ZRÓB SWEEP — jeśli w rozmowie została JAKAKOLWIEK uwaga jeszcze niezapisana jako zgłoszenie, zapisz ją TERAZ markerem <zgloszenie>. Następnie krótko, ciepło PODSUMUJ ile uwag zebraliśmy i podziękuj. Nie obiecuj wdrożenia.";
       const ai = await callOpenAI(system, hist, `end proj=${projectId.slice(0, 8)}`);
       if (ai) {

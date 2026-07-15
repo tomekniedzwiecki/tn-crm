@@ -106,3 +106,38 @@ Widoczna gdy krok `testy_klienta` ≥ in_progress. Zawartość:
 - Klient wkleja zrzut z danymi wrażliwymi — bucket private, dostęp tylko Tomek/edge.
 - Rozjazd rozmowa↔zgłoszenia (AI nie wyemitował create_issue) — przycisk „end" ZAWSZE robi
   sweep: model dostaje transkrypt od ostatniego issue i decyduje, czy coś zostało niezapisane.
+
+## Tryb „feedback" po starcie (B13)
+
+Ten sam silnik obsługuje DWA scenariusze — sterowane kolumną `wfa_projects.test_mode`
+(text, `NOT NULL DEFAULT 'testy'`; migracja `20260715d_wfa_test_mode.sql`, CHECK
+`in ('testy','feedback')`; flaga retro — istniejące projekty dostają `'testy'`):
+
+- **`testy`** (domyślny) — spowiednik testów PRZED startem: klient testuje wersję roboczą,
+  AI zbiera BUGI (gdzie / kroki / czego oczekiwał / co zobaczył / urządzenie).
+- **`feedback`** — po starcie aplikacja już DZIAŁA i jest używana; operator zgłasza
+  **propozycje rozwoju i problemy** z codziennej pracy. Ton AI: „zbieram propozycje
+  rozwoju i problemy". AI dopytuje o STAN OBECNY, PROPONOWANĄ ZMIANĘ / OBJAW oraz KORZYŚĆ
+  lub KŁOPOT (zamiast kroków reprodukcji buga).
+
+**Zasada twarda: tryb zmienia WYŁĄCZNIE system prompt** edge `wfa-test-chat`
+(`buildSystemPrompt(..., mode)`). Marker `<zgloszenie>`, parser, INSERT do `wfa_test_issues`,
+walidacja `severity`, panel Tomka, statusy (`new→approved/rejected→in_progress→done`),
+zrzuty ekranu i karta portalu są **WSPÓLNE** — ZERO zmian struktur ani UI (panel i portal
+czytają te same wiersze).
+
+**Kategoria przez `severity` (bez zmiany schematu).** W trybie `feedback` prompt każe AI
+używać pola `severity` jako kategorii, mapując na dozwolone wartości (`SEV_OK`):
+
+| Kategoria (feedback) | `severity` w bazie | Znaczenie |
+|---|---|---|
+| Pomysł / propozycja rozwoju | `kosmetyka` | coś nowego lub usprawnienie |
+| Problem (przeszkadza) | `istotne` | utrudnia codzienną pracę |
+| Problem (blokuje) | `krytyczne` | blokuje pracę operatora |
+
+Dodatkowo AI prefiksuje `title` znacznikiem `[Pomysł]` / `[Problem]`, więc kategoria jest
+czytelna w panelu bez żadnej zmiany UI. Interpretacja `severity` po stronie Tomka: dla
+projektów `feedback` `kosmetyka` = pomysł, `istotne`/`krytyczne` = problem.
+
+**Aktywacja per projekt:** `UPDATE wfa_projects SET test_mode='feedback' WHERE id=…`
+(np. gdy aplikacja przeszła na etap `stery` / działa u operatora). Reszta modułu bez zmian.

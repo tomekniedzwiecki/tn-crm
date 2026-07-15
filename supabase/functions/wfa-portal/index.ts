@@ -14,6 +14,7 @@
 // Deploy: npx supabase functions deploy wfa-portal --no-verify-jwt --project-ref yxmavwkwnfuphjqbelws
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { signPaths, verifyTeamMember } from "../_shared/admin-files.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -42,21 +43,8 @@ async function sha256Hex(s: string): Promise<string> {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-// Podgląd admina „oczami klienta": autoryzacja JWT CZŁONKA ZESPOŁU (team_members),
-// nie samego 'authenticated' — publiczna rejestracja sparingu daje tę rolę każdemu
-// (wzorzec bud-project 'admin_get'). Zwraca usera albo null.
-async function verifyTeamMember(
-  req: Request,
-  sb: ReturnType<typeof createClient>,
-): Promise<{ id: string } | null> {
-  const m = (req.headers.get("authorization") || "").match(/^Bearer\s+(.+)$/i);
-  if (!m) return null;
-  const { data: u } = await sb.auth.getUser(m[1].trim());
-  if (!u?.user) return null;
-  const { data: tm } = await sb
-    .from("team_members").select("user_id").eq("user_id", u.user.id).maybeSingle();
-  return tm ? { id: u.user.id } : null;
-}
+// Podgląd admina „oczami klienta" (gate JWT team_members) + signed URLs prywatnych
+// bucketów → wspólny helper _shared/admin-files.ts (używany też przez wfa-test-chat).
 
 function fmtDatePl(d: Date): string {
   const p = (n: number) => String(n).padStart(2, "0");
@@ -223,12 +211,7 @@ async function intakeAdmin(sb: ReturnType<typeof createClient>, p: Record<string
     intakeFiles(sb, projectId, "materialy"),
     stripeStatus(sb, projectId),
   ]);
-  const signedMap: Record<string, string> = {};
-  const paths = matFiles.map((x) => x.storage_path);
-  if (paths.length) {
-    const { data: signedList } = await sb.storage.from(INTAKE_BUCKET).createSignedUrls(paths, 3600);
-    (signedList || []).forEach((s: any) => { if (s && s.path && s.signedUrl) signedMap[s.path] = s.signedUrl; });
-  }
+  const signedMap = await signPaths(sb, INTAKE_BUCKET, matFiles.map((x) => x.storage_path));
   const files = matFiles.map((x) => ({ id: x.id, filename: x.filename, size_bytes: x.size_bytes, mime: x.mime, created_at: x.created_at, url: signedMap[x.storage_path] || null }));
   const matData = matRow?.data || {};
   const betaPeople = Array.isArray(betaRow?.data?.people) ? betaRow!.data.people : [];
