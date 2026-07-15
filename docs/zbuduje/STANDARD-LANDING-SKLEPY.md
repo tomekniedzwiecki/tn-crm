@@ -23,7 +23,12 @@ z samego dopasowania; to największa pojedyncza dźwignia.)
 podmienia h1+subheadline przy load (fallback: wariant 1 = główna obietnica). Kreacja nr N
 linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym budżecie.
 
-## ARCHITEKTURA STRONY (kolejność sekcji — mobile-first 390px)
+## ARCHITEKTURA STRONY — BIBLIOTEKA SEKCJI (mobile-first 390px)
+**(korekta Tomka 15.07 wieczór — FLOW V5): lista 1-12 poniżej to BIBLIOTEKA + checklist
+pokrycia, NIE sztywny szablon.** Dobór, kolejność i charakter sekcji dla KAŻDEGO produktu
+ustala PLAN od gpt-5.6-sol (sekcja 6d, faza PLAN) — „każdy produkt może mieć trochę inny
+sposób na budowę landinga i trzymanie się sztywnego kierunku może być błędem". Twarde są
+wyłącznie WYMAGANIA-ZAWSZE (sekcja 6d) + zakazy + pomiar + mapa anty-duplikacji.
 
 1. **Topbar mini**: logo marki + „Płatność przy odbiorze · 14 dni na zwrot".
 2. **HERO = kompletna mikro-oferta w 1. ekranie**: h1-echo hooka → subheadline (dla kogo+efekt)
@@ -88,19 +93,74 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
    NIGDY neutralny „clean e-commerce" (produkuje przeciętność); (2) dekoracje spójne z motywem
    (jak fale/latarnia/muszle); (3) kartę produktu wtopioną w scenę hero; (4) sekcje „z życiem"
    (nie gołe gridy); (5) jasne tło (reguła), polskie teksty przykładowe.
-   **FLOW v4 (korekta Tomka 15.07 — „jedna dopracowana wersja, nie 4 do wyboru"):**
-   (1) **WIZJA-MASTER ×1** wg recepty-WOW (pełna strona, pionowa) → GATE WIZUALNY (vision-check
-   rubryką: motyw obecny i związany z korzyścią · karta produktu w hero · czytelna hierarchia ·
-   jasne tło · produkt WIERNY referencji · minimalny fake-tekst); FAIL ⇒ regeneracja
-   z poprawionym promptem (nie równoległe warianty!).
-   (2) **MAKIETY SEKCYJNE ×4** (ref = wizja + zdjęcie produktu gdy w kadrze; format 3:2, DUŻE
-   i dopracowane — cała strona w jednej grafice = sekcje za małe): S-A topbar+hero z kartą ·
-   S-B benefity+galeria/demo · S-C opinie+tabela+FAQ · S-D final+stopka.
-   (3) **ASSETY spójne** (z produktem i bez: platy, band, ikony, OG) — komplet z tej samej wizji.
-   (4) **PAKIET KODERA → gpt-5.6-sol** (via wf2-gpt): obrazy sekcji (vision) + URL-e assetów +
-   spec (hexy z pipety, fonty, TWARDE dane z bazy, zakazy, kontrakt techniczny: 1 script,
-   eventy ATC/IC, data-checkout, HOOKS ?h=N, JSON-LD) → kod sekcja po sekcji → składanie →
-   pętla diffowa vs makiety sekcyjne → cross-review → gate → akcept (1 klik człowieka).
+   **FLOW V5 (korekta Tomka 15.07 wieczór — „GPT planuje per produkt, duża autonomia,
+   sekcje przyrostowo"; zastępuje FLOW v4):**
+   (0) **PLAN OD GPT (gpt-5.6-sol via wf2-gpt) — ZAWSZE PIERWSZY KROK.** Briefing wejściowy:
+   co robimy i po co (landing PL pod maksymalną konwersję, klient końcowy decyduje o zakupie),
+   ZDJĘCIA produktu jako input_image (2-4 ujęcia z aukcji), dane z RAPORTU produktu, dane ze
+   SNAPSHOTU aliexpress (tytuł, spec z infografik, PEŁNE opinie z tekstami i gwiazdkami),
+   cena detal, mini-marka, hit z TikToka (wyświetlenia), lista WYMAGAŃ-ZAWSZE (niżej) + zakazy.
+   GPT zwraca: **koncepcję landingu pod TEN produkt** (motyw przewodni = metafora korzyści,
+   dobór i KOLEJNOŚĆ sekcji z uzasadnieniem — może odbiegać od biblioteki!), rekomendacje
+   designu (paleta, typografia, charakter), **listę grafik do wygenerowania** (rola + opis
+   sceny per grafika, z produktem / bez) oraz funkcje konwersji, które uważa za warte dodania.
+   Dajemy GPT dużą autonomię — cel jest dobrze określony, plan GPT rządzi doborem sekcji;
+   my egzekwujemy tylko WYMAGANIA-ZAWSZE i zakazy.
+   (1) **STYL-MASTER ×1** — pierwsza generacja wg planu GPT: główna grafika stylu (pełna scena
+   z motywem przewodnim), której trzymamy się do końca → GATE WIZUALNY (rubryka: motyw
+   związany z korzyścią · czytelna hierarchia · jasne tło · produkt WIERNY referencji ·
+   minimalny fake-tekst); FAIL ⇒ regeneracja z poprawionym promptem.
+   **🔒 ESENCJA PRODUKTU NA GRAFIKACH (feedback Tomka 15.07 — „grafiki zgubiły sens produktu"):**
+   plan GPT rządzi STYLEM, ale nie może wyprać grafik z produktu. KLUCZOWE SCENY (hero,
+   demo/PRZED-PO, zastosowania) MUSZĄ pokazywać wizualny mechanizm/efekt działania produktu
+   (pompka: przezroczysty worek ze ściśniętymi ubraniami + pompka w akcji; koc: chłód snu itd.)
+   — z referencją produktu wg 3 warunków. Jeśli plan GPT proponuje „no product" na scenach
+   kluczowych ⇒ NADPISAĆ plan (dozwolone „no product" tylko dla teł czysto dekoracyjnych:
+   pasy, tekstury, ornamenty). Gate całości: patrząc na same grafiki landing musi odpowiadać
+   „CO ten produkt robi i po co go kupić" — inaczej regeneracja scen kluczowych.
+   (2) **SEKCJE PRZYROSTOWO wg planu** (ref = styl-master + zdjęcie produktu gdy w kadrze;
+   3:2, DUŻE): najpierw **hero + pierwsza sekcja pod hero**, potem kolejne **po 2**, aż plan
+   pokryty. Liczba grafik = ile potrzeba dla CAŁOŚCIOWEGO pokrycia (nie sztywne 4) — w tym
+   elementy „zawodowego grafika": ozdobniki, pasy, ilustracje pojęciowe, tła sekcji. Budżet
+   ~15 zł/landing jest PO TO, żeby go używać.
+   (2b) **MAPA ASSETÓW — OBOWIĄZKOWA przed kodem (feedback Tomka 15.07: „brakuje precyzji
+   i planu; grafiki przygotowane a nieużyte"):** każda grafika ma z góry ZDECYDOWANĄ rolę
+   z taksonomii: **[P] PRODUKT** — pokazuje produkt/jego użycie/efekt (wierność wg 3 warunków)
+   albo **[D] DESIGN** — element brandingu/wrażenia, nadal ZWIĄZANY z produktem (motyw
+   korzyści), nigdy generic. Mapa = tabela: asset → sekcja docelowa → sposób użycia (tło
+   pełne / maska / pas-separator / WYCINEK z arkusza / punktor / akcent CTA). Arkusze
+   (ornamenty, ikony) MUSZĄ mieć plan cięcia (PIL, biel→alpha) i każdy wycięty element
+   przypisane miejsce — grafika wygenerowana a nieużyta = błąd planu (albo użyć, albo nie
+   generować). Gate przed kodem: 100% assetów z mapy ma sekcję; 0 sekcji bez assetu z mapy.
+   (3) **ASSETY spójne** (platy bez UI, bandy, ikony, OG — komplet z tego samego stylu-master).
+   (3b) **WARSTWA ŻYCIA — animacje jakościowe (feedback Tomka 15.07: „efekty, animacje, JS,
+   które nada ruchu i życia"):** landing dostaje spójny zestaw mikro-ruchu (vanilla JS+CSS,
+   zero bibliotek, tylko transform/opacity, IO-based, pełny respekt prefers-reduced-motion):
+   scroll-reveal sekcji (fade+translate, stagger dzieci), JEDNA animacja-motyw związana
+   z korzyścią produktu (np. linia kompresji rysowana scrollem — stroke-dashoffset), count-up
+   liczb twardych przy wejściu w viewport, interaktywne demo (suwak PRZED/PO z auto-zajawką
+   przy pierwszym pokazaniu), sticky slide-in, hover CTA (scale+cień). Zakaz gadżetów bez
+   funkcji (particles, tilt, confetti) — ruch ma prowadzić wzrok do dowodu i CTA.
+   (4) **KOD → gpt-5.6-sol** (via wf2-gpt): obrazy sekcji (vision) + URL-e assetów + spec
+   (hexy z pipety, fonty, TWARDE dane z bazy, zakazy, WYMAGANIA-ZAWSZE, kontrakt techniczny:
+   1 script, eventy ATC/IC, data-checkout, HOOKS ?h=N, JSON-LD) + autonomia: „możesz dodać
+   funkcje podnoszące konwersję wg uznania" → kod sekcja po sekcji → składanie → pętla
+   side-by-side vs sekcje → cross-review → gate → akcept (1 klik człowieka).
+   GOTCHA transportu: odpowiedź wf2-gpt czytać jako SUROWE BAJTY UTF-8 (Python/urllib);
+   PowerShell Invoke-RestMethod dekoduje Latin-1 = nieodwracalny mojibake.
+
+   **WYMAGANIA-ZAWSZE (twarda lista must-have — niezależnie od planu GPT):**
+   - **PRAWDZIWE ikony płatności** — oficjalne loga BLIK / VISA / Mastercard jako wektorowe
+     inline SVG (brand marks, nie tekstowe atrapy, nie generowane obrazkiem) + „za pobraniem";
+   - **sticky przycisk zamówienia** (mobile, po hero) + CTA → checkout_url (data-checkout);
+   - **prawdziwe opinie z AliExpress ZE ZDJĘCIAMI** (wzorzec drukarki 3D: kafle-zdjęcia
+     `bud-reviews/` + lightbox z pełną treścią; ae-pic ZAWSZE rehost przed użyciem);
+   - realne zdjęcia produktu w karcie/galerii/ofercie (AI nie zastępuje dowodu);
+   - hit z TikToka: self-host MP4, autoplay-on-visible, bez odtwarzacza;
+   - pomiar (pixel ViewContent/ATC/IC, link decoration, HOOKS ?h=N), JSON-LD @graph,
+     placeholdery {{PIXEL_ID}}/{{CANONICAL_URL}} + noindex do publikacji;
+   - dane twarde 1:1 z aukcji, zakazy treściowe, mapa anty-duplikacji trust, jasne tła,
+     tech budżet (1 font custom, zero h-scrolla, lazy poza hero).
    1) **hero-plate** — czysta scena hero z produktem, przestrzeń pod treść (3:2, eager, render API);
    2) **final-plate** — pas dekoracyjny pod final CTA (duża pusta przestrzeń centralna);
    3) **band-plate** — subtelny pas pod sekcję środkową (bardzo jasny — tekst musi być czytelny);
