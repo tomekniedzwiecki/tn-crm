@@ -83,6 +83,20 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
 12. **STICKY BAR mobile** (<768px): cena + „Zamów — płacisz przy odbiorze"; pojawia się po
     zescrollowaniu hero; nie zasłania treści (padding-bottom body).
 
+**MAPA TRUST-ELEMENTÓW (anty-duplikacja — feedback Tomka 15.07 ×2: „znowu powielasz").**
+Każda informacja zaufania (metody płatności / zwrot 14 dni / COD / ocena ★) występuje
+w danej sekcji MAKSYMALNIE RAZ, wg stałych miejsc:
+| Miejsce | Co dokładnie |
+|---|---|
+| topbar | 1 linia: „Płatność online lub przy odbiorze · 14 dni na zwrot" |
+| header | chip „★ 4,9/5 · N ocen" (jedyne ★ nad foldem) |
+| HERO | pod CTA+ceną JEDEN rząd: pay-row (ikony) + badge „14 DNI NA ZWROT" — nic więcej |
+| COD-strip | narracja 1-2-3 (proces, nie badge) |
+| OFERTA | lista „co dostajesz" (płatności+zwrot+wysyłka jako punkty) + pay-row SAME ikony; zero chipów i mikrocopy powtarzających listę |
+| FINAL | pełne mikrocopy (jedyne pełne zdanie płatności poza listą) + mini-opinia |
+| sticky | skrót: „BLIK · karta · za pobraniem — 14 dni na zwrot" |
+Gate: przed publikacją policz wystąpienia „14 dni", „pobranie/przy odbiorze", „BLIK" per sekcja.
+
 **CTA — jedno działanie, powtórzone 3-4×** (hero / po dowodzie / finał / sticky).
 Copy przycisku mówi dokąd i bezpiecznie: **„Zamawiam — zapłacę przy odbiorze"**;
 finał: „Przejdź do zamówienia — płatność przy odbiorze".
