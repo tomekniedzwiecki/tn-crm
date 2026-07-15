@@ -76,8 +76,10 @@ END $$;
 
 -- ── Storage bucket: PRIVATE (dostęp wyłącznie service-role z edge + signed URLs) ─
 -- Zrzuty mogą zawierać dane klientów operatora → private; brak polityk anon/authenticated.
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('wfa-test-shots', 'wfa-test-shots', false, 26214400)   -- 25 MB (defense-in-depth)
+-- SEC-R3-UPLOAD: zrzuty = obraz png/jpg/webp; allowed_mime_types od 1 dnia (BEZ image/svg+xml).
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('wfa-test-shots', 'wfa-test-shots', false, 15728640,   -- 15 MB (defense-in-depth)
+        ARRAY['image/png','image/jpeg','image/webp'])
 ON CONFLICT (id) DO NOTHING;
 
 COMMENT ON TABLE public.wfa_test_sessions IS

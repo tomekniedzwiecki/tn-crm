@@ -56,8 +56,21 @@ END $$;
 
 -- ── Storage bucket: PRIVATE (dostęp wyłącznie service-role z edge + signed URLs) ─
 -- Brak polityk storage dla anon/authenticated → tylko service_role. 25 MB limit (defense-in-depth).
-INSERT INTO storage.buckets (id, name, public, file_size_limit)
-VALUES ('wfa-intake', 'wfa-intake', false, 26214400)
+-- SEC-R3-UPLOAD: allowed_mime_types od 1 dnia (nieomijalna warstwa). WYKLUCZONE text/html,
+-- image/svg+xml, application/xhtml+xml (Stored XSS); application/octet-stream dopuszczony
+-- (doc/xls/zip/heic bywają bez rozpoznanego typu → serwują się jako download, nie inline).
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('wfa-intake', 'wfa-intake', false, 26214400, ARRAY[
+  'application/pdf',
+  'image/png','image/jpeg','image/webp','image/heic','image/heif',
+  'text/csv','text/plain',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/zip','application/x-zip-compressed',
+  'application/octet-stream'
+])
 ON CONFLICT (id) DO NOTHING;
 
 COMMENT ON TABLE public.wfa_intake IS
