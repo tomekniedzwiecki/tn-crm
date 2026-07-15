@@ -31,3 +31,24 @@ Zasady: każda sesja ZACZYNA od przeczytania tego pliku, KOŃCZY dopisem (co zro
 - Konto reklamowe + budżet (kroki klienckie — tu: Tomek jako klient testowy).
 
 **Dowody:** commity `2580954`, `26e4193` (tn-crm main); wpisy wf2_activities projektu; kroki `marka`/`branding` wypełnione w panelu.
+
+## 2026-07-15 — Sesja 0b: pętla jakości brandingu + loga + korekta cen
+
+**Zrobione:**
+- Aukcje POTWIERDZONE 3/3 (bud-ali-snapshot force): endoskop OK; lokówka $8,07→**$19,21**, koc $7,81→**$13,52** — snapshoty „search" zaniżały koszt ~2×. Koszty/ceny przeliczone.
+- LOGA Znajdzik 5/5 (generate-image przez proxy wf2-gen; wordmarki bezbłędne). Komplet: dzik z metką (GŁÓWNE) + lupa (header) + „z" (favicon) + editorial + monoline. URL-e w kroku `marka`.
+- **Pętla poprawek DO WYCZERPANIA na brandingu: 4 rundy świeżego krytyka (15 → 8 → 3 → CZYSTA).**
+  Najważniejsze: ceny psychologiczne zamiast artefaktów (,68/,01) → **reguła fabryczna `psychPriceUp()`**
+  w projekt.html (<150 zł → …4,90/…9,90; ≥150 → …9,00) z testami; klejmy urealnione do aukcji
+  (lokówka PRZEWODOWA — zero „cordless"; koc bez „obu stron"); COD zdjęty z dźwigni przy 249 zł;
+  risk-reversal „A gdyby nie…" spójny 5/5; endoskop z domowymi scenariuszami.
+- Ceny finalne: 84,90 / 59,90 / 39,90 / 249,00 / 64,90 (profit/szt.: 10,43 / 7,49 / 8,30 / 35,31 / 8,49).
+- Branding 5/5 = DONE (kroki w panelu, dowody w data.fields + activities).
+
+**Decyzje:** psychologiczne końcówki cen = standard fabryki (TESTY.md §3); nazwy display na
+wf2_products.name (galeria/landing używa nazw sprzedażowych, nie roboczych z /trendy).
+
+**Otwarte:** bez zmian (bramka nazwy+domeny u Tomka; API platformy; landingi wg planu S1-S7).
+
+**Dowody:** commity `45763da`, `db172c6`; 4 wpisy activities (branding_runda1-3, branding_done);
+loga w Storage `attachments/ai-generated/wf2-znajdzik/`.
