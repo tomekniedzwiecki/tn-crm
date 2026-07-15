@@ -1753,7 +1753,9 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
         }
         function copyPortalLink() {
             if (!project.client_password_hash) { showToast('Najpierw ustaw hasło portalu', 'error'); return; }
-            const url = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja?t=' + project.unique_token;
+            // SEC-D FAIL #3: token portalu w #hashu (nie ?query) — nie trafia do logow serwera/CDN
+            // ani Referera. Stare linki ?t= dalej dzialaja (portal.html migruje je do #t= przy wejsciu).
+            const url = 'https://crm.tomekniedzwiecki.pl/twoja-aplikacja#t=' + project.unique_token;
             navigator.clipboard.writeText(url).then(() => showToast('Link portalu skopiowany', 'success'));
         }
         // Podgląd „oczami klienta" — otwiera portal w trybie read-only autoryzowanym JWT panelu
