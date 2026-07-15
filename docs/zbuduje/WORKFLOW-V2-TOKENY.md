@@ -63,6 +63,20 @@ marża z aukcji (NBP), diagnoza i naprawa bud-ali-snapshot + backfill 136 produk
 | Agenty code-review ×2 (zmierzone po zakończeniu — patrz niżej) | ~200 000 | ~$2,0 |
 | **Razem wieczór** | **~9,3M (szacunek)** | **~$18 (zakres $13–25) ≈ 67 zł** |
 
+### 2026-07-15 — Koncepcja produkcyjna + system decyzji testów (sekcja 0b)
+
+Zakres: 3 agenty badawcze (mapa stanu wf2, wnioski z sesji fachmat, wzorce TN App) + agent
+projektujący system testów (Opus + web research), projekt rozwojowy `baacc66f` (5 produktów
+z /trendy), migracje `20260715_wf2_produkcja_fundament` + `20260715b_wf2_testy_dane`,
+SSOT 0b + WORKFLOW-V2-TESTY.md, settings `wf2_test_config`/`wf2_scale_config`, pamięć.
+
+| Składnik | Tokeny | Koszt API (szac.) |
+|---|---|---|
+| Subagenty ×4 Opus (ZMIERZONE: 157k+132k+133k+101k) | 523 000 | ~$5,0 (cennik Opus) |
+| Główna pętla Fable — output (SSOT/TESTY/migracje/synteza, szac.) | ~35 000 | ~$1,8 |
+| Główna pętla Fable — input kumulacyjny (szac., ~45 wywołań, głównie cache read) | ~4M | ~$8 |
+| **Razem 15.07 (do domknięcia systemu testów)** | **~4,6M (w tym 523k zmierzone)** | **~$15 (zakres $11–20) ≈ 55 zł** |
+
 ### Suma narastająco (po całym 2026-07-03)
 
 | | Tokeny (szac.) | Koszt API (szac.) |
