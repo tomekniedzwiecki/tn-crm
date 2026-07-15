@@ -1,18 +1,23 @@
 # DS-01 „Ciepły Krem"
 
-**Charakter:** ciepło, spokój, „po ludzku". Kremowe tła, ciepły grafit zamiast czerni,
-terakota jako serce marki i cegła tylko na przycisku zakupu. Zero neonów, zero twardych
-czarnych cieni, zero glassmorphizmu. Strona ma wyglądać jak dobrze wydany katalog domowy,
-nie jak „promka z dropu".
+**Charakter:** Ciepło, spokój, katalog domowy premium. Jak dobrze wydany magazyn wnętrzarski.
 
-**Gra dobrze z:** dom & sen (koce, pościel, lampki), dziecko (miękkie zabawki, akcesoria),
-uroda-soft (pielęgnacja), kuchnia-przytulna. Persona: kobiety 25-45, zakup „dla domu/rodziny".
+**Gra dobrze z:** dom & sen, dziecko-soft, uroda-pielęgnacja, kuchnia przytulna.
+**Persona:** kobiety 25-45, zakupy dla domu/rodziny.
 
-**NIE używać do:** tech/gadżety „męskie" (endoskop, narzędzia — za miękko), produkty
-adrenalinowe/outdoor hard, elektronika premium (wtedy chłodniejsze DS).
+**NIE robi / ANTY:** neony · twarde czarne cienie · CAPS-krzyk · glassmorphism.
 
-**Hero/foto:** jasne kadry lifestyle przy naturalnym świetle (świt/dzień), len i drewno
-w tle, paleta zdjęcia zgodna z kremem/piaskiem; produkt w użyciu przez człowieka.
-AI-generacje: „cream and warm sand palette, natural linen, soft morning light".
+**Hero / foto:** jasny lifestyle, świt/dzień, len, drewno, kremowa paleta.
 
-**Wzorzec żywy:** `sklepy/tomek-niedzwiecki/chlodzacy-koc/index.html` (pierwszy landing DS-01).
+**Klasy charakteru (na `<body>` styleguide'u):**
+`shape-rounded head-serif-warm card-soft-shadow rhythm-alternating frame-rounded-xl-shadow energy-2`
+- przyciski zaokrąglone 12–14px
+- nagłówki: ciepły szeryf 700
+- karty na miękkim cieniu
+- sekcje naprzemienne (tło ↔ pas)
+- ramki zaokrąglone z dużym cieniem
+- energia 2/5
+
+**Paleta-serce:** tło `#FCF8F2` · akcent `#E8795A` · CTA `#DC5322` · zaufanie `#3E8E6E`.
+
+**Wzorzec żywy:** `components.html` w tym katalogu — jednocześnie demo do oceny i źródło kopiuj-wklej dla buildera. Tokeny: `tokens.css` (wklejka 1:1).

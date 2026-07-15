@@ -1,0 +1,744 @@
+<!-- @dsCard group="DS-07 Czysty Klinik" -->
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DS-07 · Czysty Klinik — styleguide landingu</title>
+  <meta name="description" content="Żywy styleguide design systemu DS-07 Czysty Klinik — wszystkie klocki standardu landingu sklepu.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23e9e4dc'/%3E%3Ccircle cx='32' cy='32' r='13' fill='none' stroke='%23999' stroke-width='4'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+/* ===== TOKENY DESIGN SYSTEMU (wklejka 1:1 z DS-XX/tokens.css) ===== */
+/* DS-07 „Czysty Klinik" — Higiena, precyzja, zaufanie gabinetu.
+   Font nagłówków: Fraunces (600;700, latin-ext, display=swap). Body = system stack.
+   Charakter: shape-rounded head-serif-editorial card-flat-border rhythm-alternating frame-thin-border energy-2. Struktura/eventy/zakazy: STANDARD-LANDING-SKLEPY.md. */
+:root{
+  /* powierzchnie */
+  --bg:#FAFBFC;
+  --section:#EFF4F6;
+  --card:#FFFFFF;
+  --line:#DCE5E9;
+  --line-soft:#E7EEF1;
+  /* tekst */
+  --ink:#1F2A30;
+  --muted:#5B6B73;
+  --faint:#8798A1;
+  /* akcenty (accent = eyebrow/gwiazdki/marka; cta = WYŁĄCZNIE zakup; success = zaufanie/checki) */
+  --accent:#2FA3B8;
+  --accent-soft:rgba(47,163,184,0.12);
+  --on-accent:#171512;
+  --cta:#0F8DA6;
+  --cta-hover:#0B7690;
+  --on-cta:#ffffff;
+  --success:#2F8F5B;
+  --success-soft:#E6F3EC;
+  --on-success:#ffffff;
+  /* geometria */
+  --radius-lg:22px;
+  --radius-md:16px;
+  --radius-sm:10px;
+  --radius-pill:999px;
+  /* cienie */
+  --shadow-lg:0 18px 46px rgba(31,42,48,0.14);
+  --shadow-md:0 12px 30px rgba(31,42,48,0.1);
+  --shadow-sm:0 4px 16px rgba(31,42,48,0.07);
+  --shadow-cta:0 12px 28px rgba(15,141,166,0.3);
+  /* typografia */
+  --font-head:'Fraunces',Georgia,serif;
+  --font-body:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --fs-h1:clamp(1.9rem,5.6vw,3.1rem);
+  --fs-h2:clamp(1.45rem,3.6vw,2.1rem);
+  --fs-body:1rem;
+  --lh-body:1.62;
+  /* layout */
+  --max:1140px;
+  --sec-pad:76px;
+  /* motion */
+  --ease:cubic-bezier(.22,.7,.3,1);
+  --dur:.28s;
+}
+/* Reguły użycia:
+   - --cta tylko na akcji zakupu (tekst --on-cta); linki/hover/eyebrow/gwiazdki — --accent.
+   - Karty na tle --card z --line; sekcje-pasy w kolorze --section (rytm: sekcje naprzemienne (tło ↔ pas)).
+   - Checkmarki i sygnały zaufania — --success (--on-success na jednolitym tle).
+   - Zdjęcia w ramce: ramki z cienkim borderem.
+   - prefers-reduced-motion: transition/animation → none.
+   - ZAKAZY (anty): medyczne obietnice; niebieski-korpo #0066CC; sterylna martwota (dodaj ciepły akcent). */
+
+/* ===== RESET / BAZA ===== */
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--font-body);
+  font-weight:400;
+  font-size:var(--fs-body);
+  line-height:var(--lh-body);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+  padding-bottom:82px; /* miejsce na sticky bar w demo */
+
+  /* ---- zmienne charakteru (domyślne; nadpisywane klasami na <body>) ---- */
+  --btn-r:12px;               /* shape-*  */
+  --chip-r:999px;
+  --h-weight:700;             /* head-*  */
+  --h-ls:-.012em;
+  --h-lh:1.08;
+  --h-scale:1;                /* energy-* (skala h1) */
+  --card-bg:var(--card);      /* card-*  */
+  --card-border:1px solid var(--line);
+  --card-shadow:none;
+  --card-shadow-hover:var(--shadow-md);
+  --card-lift:-4px;
+  --frame-bg:var(--card);     /* frame-*  */
+  --frame-r:var(--radius-lg);
+  --frame-pad:0px;
+  --frame-border:0 solid transparent;
+  --frame-shadow:var(--shadow-lg);
+  --frame-rotate:0deg;
+}
+img{max-width:100%;height:auto;display:block}
+a{color:inherit;text-decoration:none}
+ul{margin:0;padding:0;list-style:none}
+button{font:inherit}
+
+h1,h2,h3{
+  margin:0;
+  font-family:var(--font-head);
+  font-weight:var(--h-weight);
+  line-height:var(--h-lh);
+  letter-spacing:var(--h-ls);
+  color:var(--ink);
+}
+h1{font-size:calc(var(--fs-h1) * var(--h-scale))}
+h2{font-size:calc(var(--fs-h2) * (1 + (var(--h-scale) - 1) * .55))}
+h3{font-size:clamp(1.12rem,1.9vw,1.32rem);font-weight:var(--h-weight);line-height:1.22;letter-spacing:-.006em}
+p{margin:0;color:var(--muted)}
+
+.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+
+/* ===== KLASY CHARAKTERU ===== */
+/* shape — promień przycisków i chipów */
+body.shape-pill{--btn-r:999px;--chip-r:999px}
+body.shape-rounded{--btn-r:13px;--chip-r:10px}
+body.shape-sharp{--btn-r:6px;--chip-r:6px}
+
+/* head — waga / trekking / interlinia nagłówków (rodzina z --font-head) */
+body.head-serif-warm{--h-weight:700;--h-ls:-.012em;--h-lh:1.08}
+body.head-serif-editorial{--h-weight:600;--h-ls:-.021em;--h-lh:1.05}
+body.head-grotesk-bold{--h-weight:800;--h-ls:-.022em;--h-lh:1.02}
+body.head-grotesk-clean{--h-weight:700;--h-ls:-.013em;--h-lh:1.08}
+body.head-rounded-soft{--h-weight:800;--h-ls:-.005em;--h-lh:1.1}
+body.head-slab-tech{--h-weight:800;--h-ls:-.008em;--h-lh:1.03}
+body.head-slab-tech .eyebrow,body.head-grotesk-bold .eyebrow{letter-spacing:.19em}
+
+/* card — obramowania vs cień vs offset-outline vs papier */
+body.card-flat-border{--card-bg:var(--card);--card-border:1px solid var(--line);--card-shadow:none;--card-shadow-hover:var(--shadow-md);--card-lift:-3px}
+body.card-soft-shadow{--card-bg:var(--card);--card-border:1px solid var(--line-soft);--card-shadow:var(--shadow-sm);--card-shadow-hover:var(--shadow-md);--card-lift:-4px}
+body.card-outlined-offset{--card-bg:var(--card);--card-border:2px solid var(--ink);--card-shadow:5px 5px 0 var(--ink);--card-shadow-hover:8px 8px 0 var(--accent);--card-lift:-2px}
+body.card-paper{--card-bg:linear-gradient(158deg,var(--card),var(--section));--card-border:1px solid var(--line);--card-shadow:inset 0 1px 0 rgba(255,255,255,.055),var(--shadow-md);--card-shadow-hover:inset 0 1px 0 rgba(255,255,255,.09),var(--shadow-lg);--card-lift:-3px}
+
+/* rhythm — naprzemienność / ciągłość z separatorami / mocne pasy */
+body.rhythm-alternating .section.tint{background:var(--section)}
+body.rhythm-continuous .section{background:var(--bg)}
+body.rhythm-continuous .section.tint{background:var(--bg)}
+body.rhythm-continuous .section + .section{border-top:1px solid var(--line-soft)}
+body.rhythm-banded .section.tint{background:var(--section);box-shadow:inset 0 4px 0 var(--accent)}
+
+/* frame — ramki zdjęć */
+body.frame-rounded-xl-shadow{--frame-bg:var(--card);--frame-r:var(--radius-lg);--frame-pad:6px;--frame-border:0 solid transparent;--frame-shadow:var(--shadow-lg);--frame-rotate:0deg}
+body.frame-thin-border{--frame-bg:var(--card);--frame-r:var(--radius-md);--frame-pad:0px;--frame-border:1px solid var(--line);--frame-shadow:var(--shadow-md);--frame-rotate:0deg}
+body.frame-polaroid-offset{--frame-bg:var(--card);--frame-r:8px;--frame-pad:12px;--frame-border:1px solid var(--line-soft);--frame-shadow:var(--shadow-lg);--frame-rotate:-1.5deg}
+body.frame-bleed{--frame-bg:transparent;--frame-r:0px;--frame-pad:0px;--frame-border:0 solid transparent;--frame-shadow:none;--frame-rotate:0deg}
+
+/* energy — skala nagłówków + gęstość spacingu */
+body.energy-1{--h-scale:.94;--sec-pad:94px}
+body.energy-2{--h-scale:1;--sec-pad:84px}
+body.energy-3{--h-scale:1.07;--sec-pad:76px}
+body.energy-4{--h-scale:1.16;--sec-pad:68px}
+body.energy-5{--h-scale:1.24;--sec-pad:60px}
+
+/* ===== LAYOUT ===== */
+.wrap{width:min(var(--max),calc(100% - 44px));margin-inline:auto}
+.section{padding:var(--sec-pad) 0;position:relative}
+section[id]{scroll-margin-top:80px}
+.section-head{max-width:660px}
+.section-head.center{margin-inline:auto;text-align:center}
+.section-head p{margin-top:14px;font-size:1.04rem}
+.lead{font-size:clamp(1.02rem,1.35vw,1.18rem);color:var(--ink);opacity:.85}
+
+.eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--font-body);font-weight:800;text-transform:uppercase;
+  letter-spacing:.15em;font-size:.72rem;color:var(--accent);margin-bottom:15px;
+}
+.eyebrow .i{width:15px;height:15px;stroke-width:2.1}
+.section-head.center .eyebrow{justify-content:center;width:100%}
+
+/* ===== IKONY (chipy) ===== */
+.ic{
+  width:48px;height:48px;border-radius:calc(var(--radius-md) * .8);
+  display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);
+  margin-bottom:18px;flex-shrink:0;
+}
+.ic.ok{background:var(--success-soft);color:var(--success)}
+.ic .i{width:24px;height:24px}
+
+/* ===== PRZYCISKI ===== */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:10px;
+  font-family:var(--font-body);font-weight:800;font-size:1.03rem;letter-spacing:.004em;
+  color:var(--on-cta);background:var(--cta);
+  padding:15px 27px;border-radius:var(--btn-r);border:0;cursor:pointer;
+  box-shadow:var(--shadow-cta);
+  transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),background var(--dur) var(--ease);
+}
+.btn:hover{transform:translateY(-2px);background:var(--cta-hover)}
+.btn:active{transform:translateY(0)}
+.btn .i{width:20px;height:20px;stroke-width:2.3}
+.btn.big{padding:19px 32px;font-size:1.12rem;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.btn.ghost:hover{background:var(--section);border-color:var(--muted)}
+
+.price{font-family:var(--font-body);font-weight:800;line-height:1;color:var(--ink);white-space:nowrap}
+.price .amount{font-size:2.35rem}
+.price .cur{font-size:1.02rem;margin-left:3px;color:var(--muted)}
+.micro{margin-top:12px;font-size:.86rem;color:var(--muted)}
+.micro b{color:var(--success);font-weight:700}
+
+/* ===== STYLEGUIDE RIBBON ===== */
+.sg-ribbon{
+  display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  padding:9px 20px;background:var(--section);border-bottom:1px solid var(--line);
+  font-family:ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;font-size:.74rem;color:var(--muted);
+}
+.sg-ribbon .tag{
+  font-weight:700;letter-spacing:.12em;text-transform:uppercase;font-size:.64rem;
+  color:var(--on-accent);background:var(--accent);padding:3px 8px;border-radius:5px;
+}
+.sg-ribbon .id{font-weight:700;color:var(--ink);letter-spacing:.02em}
+.sg-ribbon .mood{color:var(--faint);flex:1;min-width:180px}
+
+/* ===== TOPBAR + HEADER ===== */
+.topbar{
+  background:var(--section);color:var(--ink);text-align:center;
+  font-family:var(--font-body);font-weight:700;font-size:.82rem;letter-spacing:.01em;
+  padding:9px 16px;border-bottom:1px solid var(--line-soft);
+}
+.topbar .dot{color:var(--accent);margin:0 8px;font-weight:900}
+.site-header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--line-soft)}
+.header-row{display:flex;align-items:center;justify-content:space-between;height:66px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo .mark{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent);flex-shrink:0}
+.logo .mark .i{width:20px;height:20px;stroke-width:2.2}
+.logo .word{font-family:var(--font-head);font-weight:var(--h-weight);font-size:1.42rem;letter-spacing:-.02em;color:var(--ink)}
+.header-trust{display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-weight:700;font-size:.85rem;color:var(--muted)}
+.header-trust .stars{color:var(--accent);letter-spacing:.04em}
+
+/* ===== PAY ROW ===== */
+.pay-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pay-label{font-size:11.5px;color:var(--faint);margin-right:2px;font-weight:600}
+.pay-badge{display:inline-flex;align-items:center;justify-content:center;height:30px;min-width:46px;padding:0 9px;background:#fff;border:1px solid rgba(0,0,0,.12);border-radius:7px;gap:5px}
+.pay-badge.blik{background:#000;border-color:#000}
+.pay-badge .t{font-size:10.5px;font-weight:700;color:var(--muted)}
+
+/* ===== HERO ===== */
+.hero{position:relative;overflow:hidden;padding:52px 0 74px}
+.hero::before{content:"";position:absolute;top:-160px;right:-120px;width:520px;height:520px;background:radial-gradient(circle,var(--accent-soft),transparent 66%);pointer-events:none;z-index:0}
+.hero .wrap{position:relative;z-index:1}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:50px;align-items:center}
+.hero-copy h1{margin-bottom:16px}
+.hero-sub{font-size:clamp(1.04rem,1.4vw,1.2rem);color:var(--ink);opacity:.84;max-width:520px}
+.hero-buy{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:28px}
+
+/* ===== RAMKA MEDIÓW + PLACEHOLDER ===== */
+.frame{position:relative;background:var(--frame-bg);border:var(--frame-border);border-radius:var(--frame-r);padding:var(--frame-pad);box-shadow:var(--frame-shadow);transform:rotate(var(--frame-rotate));overflow:hidden}
+.ph{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;width:100%;
+  background:radial-gradient(120% 90% at 28% 18%,var(--accent-soft),transparent 58%),linear-gradient(158deg,var(--section),var(--card));
+  color:var(--faint);overflow:hidden}
+.ph.r{border-radius:calc(var(--frame-r) * .7)}
+.ph .i{width:34px;height:34px;stroke:var(--accent);opacity:.85;stroke-width:1.8}
+.ph .cap{font-size:.76rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
+.ph-hero{aspect-ratio:3/2}
+.ph-offer{aspect-ratio:4/3;min-height:320px}
+.media-tag{position:absolute;left:16px;bottom:16px;z-index:2;display:inline-flex;align-items:center;gap:7px;font-family:var(--font-body);font-weight:800;font-size:.82rem;color:var(--ink);background:var(--card);border:1px solid var(--line-soft);border-radius:var(--chip-r);padding:8px 14px;box-shadow:var(--shadow-sm)}
+.media-tag .i{width:16px;height:16px;stroke:var(--accent);stroke-width:2.1}
+
+/* ===== COD 1-2-3 ===== */
+.cod-strip{background:var(--card);border-top:1px solid var(--line-soft);border-bottom:1px solid var(--line)}
+.cod-steps{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:12px 20px;padding:22px 0}
+.cod-step{display:flex;align-items:center;gap:12px}
+.cod-num{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--on-accent);font-weight:800;font-size:.82rem;flex-shrink:0}
+.cod-num.ok{background:var(--success);color:var(--on-success)}
+.cod-txt{font-size:.98rem;font-weight:600;color:var(--ink)}
+.cod-sep{display:inline-flex;color:var(--faint);opacity:.5}
+.cod-sep .i{width:20px;height:20px}
+
+/* ===== SIATKI KART ===== */
+.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:38px}
+.card{background:var(--card-bg);border:var(--card-border);border-radius:var(--radius-md);padding:27px;box-shadow:var(--card-shadow);transition:transform var(--dur) var(--ease),box-shadow var(--dur) var(--ease),border-color var(--dur) var(--ease)}
+.card:hover{transform:translateY(var(--card-lift));box-shadow:var(--card-shadow-hover)}
+.card h3{margin-bottom:9px}
+.card p{font-size:.97rem}
+
+/* ===== WIDEO 9:16 ===== */
+.video-wrap{display:flex;justify-content:center;margin-top:38px}
+.tt-shell{max-width:326px;width:100%;text-align:center}
+.tt-frame{position:relative;aspect-ratio:9/16;background:var(--frame-bg);border:var(--frame-border);border-radius:var(--frame-r);padding:var(--frame-pad);box-shadow:var(--frame-shadow);transform:rotate(var(--frame-rotate));overflow:hidden}
+.tt-inner{position:absolute;inset:var(--frame-pad);border-radius:calc(var(--frame-r) * .7);overflow:hidden;background:radial-gradient(120% 60% at 50% 22%,var(--accent-soft),transparent 60%),linear-gradient(180deg,var(--section),var(--card));display:grid;place-items:center}
+.tt-play{width:66px;height:66px;border-radius:50%;background:var(--card);color:var(--accent);display:grid;place-items:center;box-shadow:var(--shadow-md);border:1px solid var(--line-soft)}
+.tt-play .i{width:26px;height:26px;fill:var(--accent);stroke:none;margin-left:3px}
+.tt-credit{font-size:12px;color:var(--faint);margin:12px 0 0}
+
+/* ===== TABELA PORÓWNAWCZA ===== */
+.cmp-wrap{margin-top:36px;overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius-md);box-shadow:var(--card-shadow)}
+table.cmp{width:100%;border-collapse:collapse;background:var(--card);min-width:560px}
+table.cmp th,table.cmp td{padding:16px 20px;text-align:left;border-bottom:1px solid var(--line-soft);font-size:.97rem}
+table.cmp thead th{font-family:var(--font-body);font-weight:800;font-size:.82rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:var(--section)}
+table.cmp td:first-child{color:var(--ink);font-weight:600}
+table.cmp .col-our{position:relative;background:var(--accent-soft);color:var(--ink);font-weight:800;text-align:center}
+table.cmp thead .col-our{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+table.cmp td.col-other{text-align:center;color:var(--muted)}
+table.cmp tbody tr:last-child td{border-bottom:0}
+.yes{color:var(--success);font-weight:800}
+.no{color:var(--faint);font-weight:700}
+
+/* ===== GALERIA BENTO ===== */
+.gallery{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:168px;gap:14px;margin-top:36px}
+.g-tile{position:relative;overflow:hidden;border-radius:var(--frame-r);border:1px solid var(--line);box-shadow:var(--shadow-sm);background:var(--section)}
+.g-tile.lead{grid-column:span 2;grid-row:span 2}
+.g-tile .ph{height:100%;aspect-ratio:auto}
+.g-tile .ph .i{transition:transform .45s var(--ease)}
+.g-tile:hover .ph .i{transform:scale(1.12)}
+
+/* ===== OPINIE ===== */
+.rev-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:34px;max-width:640px}
+.rev-stat{background:var(--card-bg);border:var(--card-border);border-radius:var(--radius-md);padding:22px 18px;text-align:center;box-shadow:var(--card-shadow)}
+.rev-stat strong{display:block;font-family:var(--font-body);font-weight:800;font-size:1.9rem;line-height:1;color:var(--ink)}
+.rev-stat .stars{display:block;color:var(--accent);font-size:.92rem;margin:6px 0 4px;letter-spacing:.04em}
+.rev-stat span{font-size:.83rem;color:var(--muted)}
+.rev-list{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:24px}
+.rev{background:var(--card-bg);border:var(--card-border);border-radius:var(--radius-md);padding:27px;box-shadow:var(--card-shadow)}
+.rev .stars{color:var(--accent);font-size:1.05rem;letter-spacing:.05em}
+.rev blockquote{margin:13px 0 15px;font-size:1.1rem;line-height:1.5;color:var(--ink);font-weight:500}
+.rev .who{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rev .who strong{font-family:var(--font-body);font-weight:800;color:var(--ink);font-size:.94rem}
+.rev .ver{display:inline-flex;align-items:center;gap:5px;color:var(--success);font-size:.78rem;font-weight:700}
+.rev .ver .i{width:14px;height:14px;stroke-width:2.4}
+
+/* ===== OFFER BOX ===== */
+.offer-card{background:var(--card-bg);border:var(--card-border);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);overflow:hidden;display:grid;grid-template-columns:.92fr 1.08fr;margin-top:36px}
+.offer-media{position:relative;background:var(--section);min-height:100%}
+.offer-media .ph{height:100%}
+.offer-body{padding:38px}
+.offer-body h3{font-size:1.44rem;margin-bottom:6px}
+.offer-price{display:flex;align-items:baseline;gap:12px;margin:4px 0 4px}
+.offer-price .amount{font-size:2.7rem}
+.offer-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;font-weight:800;color:var(--success);background:var(--success-soft);border-radius:var(--chip-r);padding:5px 11px;letter-spacing:.02em}
+.get-list{display:grid;gap:12px;margin:22px 0 26px}
+.get-list li{display:flex;gap:11px;align-items:flex-start;color:var(--ink);font-size:1rem}
+.get-list .i{width:22px;height:22px;stroke:var(--success);stroke-width:2.2;margin-top:1px}
+
+/* ===== FAQ ===== */
+.faq-list{max-width:820px;margin:34px auto 0;display:grid;gap:12px}
+details{background:var(--card-bg);border:var(--card-border);border-radius:var(--radius-md);overflow:hidden;box-shadow:var(--card-shadow)}
+summary{padding:19px 23px;font-family:var(--font-body);font-weight:800;font-size:1.02rem;color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;list-style:none}
+summary::-webkit-details-marker{display:none}
+summary::after{content:"+";color:var(--accent);font-size:1.5rem;line-height:1;font-weight:700;transition:transform var(--dur) var(--ease)}
+details[open] summary::after{content:"–"}
+details p{padding:0 23px 21px;color:var(--muted);font-size:.98rem}
+
+/* ===== FINAL CTA ===== */
+.final-card{display:grid;grid-template-columns:1.3fr .9fr;gap:32px;align-items:center;background:linear-gradient(135deg,var(--card),var(--section));border:1px solid var(--line);border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:44px}
+.final-copy h2{margin:12px 0 13px}
+.final-copy .lead{margin-bottom:4px;max-width:520px}
+.final-buy{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:24px}
+.final-rev{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-md);padding:25px;box-shadow:var(--card-shadow)}
+.final-rev .stars{color:var(--accent);font-size:1.08rem;letter-spacing:.05em}
+.final-rev blockquote{margin:11px 0 13px;font-size:1.12rem;line-height:1.5;color:var(--ink);font-weight:500}
+.final-rev strong{color:var(--ink);font-weight:700;font-size:.92rem}
+
+/* ===== FOOTER ===== */
+.footer{background:var(--section);border-top:1px solid var(--line);padding:40px 0}
+.footer-row{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.footer p{color:var(--muted);font-size:.9rem}
+
+/* ===== STICKY BAR (w demo zawsze widoczny) ===== */
+.sticky-buy{position:fixed;left:0;right:0;bottom:0;z-index:60;background:var(--bg);border-top:1px solid var(--line);box-shadow:0 -12px 34px rgba(0,0,0,.10);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.sticky-buy .wrap{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.sticky-buy .sp{display:flex;flex-direction:column;line-height:1.15}
+.sticky-buy .sp strong{font-family:var(--font-body);font-weight:800;font-size:1.28rem;color:var(--ink)}
+.sticky-buy .sp span{font-size:.74rem;color:var(--muted)}
+.sticky-buy .btn{padding:13px 22px;font-size:.98rem}
+
+/* ===== RESPONSYWNOŚĆ ===== */
+@media (max-width:1000px){
+  .hero-grid{grid-template-columns:1fr;gap:32px}
+  .hero-media{order:-1;max-width:460px;margin-inline:auto;width:100%}
+  .hero-sub{max-width:none}
+  .grid-3{grid-template-columns:1fr 1fr}
+  .offer-card{grid-template-columns:1fr}
+  .offer-media .ph{aspect-ratio:16/10;min-height:260px}
+  .rev-list{grid-template-columns:1fr}
+  .final-card{grid-template-columns:1fr;gap:22px}
+}
+@media (max-width:640px){
+  .wrap{width:min(var(--max),calc(100% - 32px))}
+  h2{font-size:calc(var(--fs-h2) * (1 + (var(--h-scale) - 1) * .45) * .96)}
+  .grid-3{grid-template-columns:1fr;gap:14px}
+  .gallery{grid-template-columns:repeat(2,1fr);grid-auto-rows:42vw}
+  .g-tile.lead{grid-column:span 2;grid-row:span 1}
+  .rev-stats{grid-template-columns:1fr 1fr}
+  .rev-stats .rev-stat:first-child{grid-column:span 2}
+  .cod-steps{flex-direction:column;align-items:flex-start;gap:14px;padding:20px 0}
+  .cod-sep{display:none}
+  .cod-step{width:100%}
+  .offer-body{padding:26px}
+  .final-card{padding:26px}
+  .hero-buy .price,.final-buy .price{order:-1}
+  .btn:not(.sticky-buy .btn){width:100%}
+  .header-trust{font-size:.74rem;gap:5px}
+}
+
+/* ===== MOTION / A11Y ===== */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  .g-tile:hover .ph .i{transform:none}
+}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:4px}
+  </style>
+</head>
+<body class="shape-rounded head-serif-editorial card-flat-border rhythm-alternating frame-thin-border energy-2">
+
+  <!-- STYLEGUIDE RIBBON (meta-etykieta karty; nie część landingu) -->
+  <div class="sg-ribbon">
+    <span class="tag">Styleguide</span>
+    <span class="id">DS-07 · Czysty Klinik</span>
+    <span class="mood">Higiena, precyzja, zaufanie gabinetu. Beauty-tech i zdrowie bez obietnic medycznych.</span>
+  </div>
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    Płatność online lub przy odbiorze <span class="dot">·</span> 14 dni na zwrot
+  </div>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="wrap header-row">
+      <div class="logo" aria-label="Marka">
+        <span class="mark"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg></span>
+        <span class="word">[MARKA]</span>
+      </div>
+      <div class="header-trust">
+        <span class="stars">★★★★★</span>
+        <span>4,9/5 · 120 opinii</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="hero">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.5 4.6 2.4 6.5 7 7-4.6.5-6.5 2.4-7 7-.5-4.6-2.4-6.5-7-7 4.6-.5 6.5-2.4 7-7Z"/></svg> Wyróżnik / obietnica</div>
+          <h1>Nazwa produktu, która rozwiązuje realny problem</h1>
+          <p class="hero-sub">Hook problemowy w jednym zdaniu — dokładnie to, co klient poczuje i zyska od pierwszej chwili.</p>
+          <div class="hero-buy">
+            <a href="#zamow" class="btn">Zamawiam teraz <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+            <div class="price"><span class="amount">99</span><span class="cur">zł</span></div>
+          </div>
+          <div class="pay-row" aria-label="Metody płatności">
+            <span class="pay-label">Bezpieczne płatności:</span>
+            <span class="pay-badge blik" title="BLIK"><svg width="32" height="13" viewBox="0 0 34 14" aria-label="BLIK"><text x="17" y="11" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="800" fill="#fff" letter-spacing="1">BLIK</text></svg></span>
+            <span class="pay-badge" title="Visa"><svg width="32" height="13" viewBox="0 0 34 14" aria-label="Visa"><text x="17" y="11.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="800" font-style="italic" fill="#1A1F71">VISA</text></svg></span>
+            <span class="pay-badge" title="Mastercard"><svg width="28" height="17" viewBox="0 0 30 18" aria-label="Mastercard"><circle cx="12" cy="9" r="7" fill="#EB001B"/><circle cx="18" cy="9" r="7" fill="#F79E1B" fill-opacity=".85"/></svg></span>
+            <span class="pay-badge" title="Płatność przy odbiorze"><svg width="16" height="14" viewBox="0 0 24 24" fill="none" stroke="#3E8E6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></svg><span class="t">POBRANIE</span></span>
+            <span class="pay-badge" title="14 dni na zwrot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3E8E6E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span class="t">14 DNI NA ZWROT</span></span>
+          </div>
+        </div>
+        <div class="hero-media">
+          <div class="frame">
+            <div class="ph ph-hero r"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg><span class="cap">Zdjęcie produktu · 3:2</span></div>
+            <div class="media-tag"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c.5 4.6 2.4 6.5 7 7-4.6.5-6.5 2.4-7 7-.5-4.6-2.4-6.5-7-7 4.6-.5 6.5-2.4 7-7Z"/></svg> Kluczowa korzyść</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- COD 1-2-3 -->
+    <section class="cod-strip" aria-label="Jak składasz zamówienie">
+      <div class="wrap">
+        <div class="cod-steps">
+          <div class="cod-step"><span class="cod-num">1</span><span class="cod-txt">Zamawiasz — 2 minuty</span></div>
+          <span class="cod-sep" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+          <div class="cod-step"><span class="cod-num">2</span><span class="cod-txt">Kurier przynosi pod drzwi</span></div>
+          <span class="cod-sep" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></span>
+          <div class="cod-step"><span class="cod-num ok">3</span><span class="cod-txt">Płacisz, jak wolisz — online albo przy odbiorze</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PAS / PROBLEM -->
+    <section class="section tint">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg> Problem</div>
+          <h2>Znasz to uczucie aż za dobrze</h2>
+          <p>Krótki, konkretny opis sytuacji, w której klient utknął — bez wyolbrzymiania, po ludzku.</p>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg></div>
+            <h3>Pierwszy ból klienta</h3>
+            <p>Jedno zdanie opisujące frustrację numer jeden — takie, w którym klient rozpoznaje siebie.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></div>
+            <h3>Drugi ból klienta</h3>
+            <p>Kolejna codzienna niedogodność, którą produkt zdejmuje z głowy raz na zawsze.</p>
+          </div>
+          <div class="card">
+            <div class="ic"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg></div>
+            <h3>Trzeci ból klienta</h3>
+            <p>Skutek, który boli najbardziej — i którego klient chce uniknąć już dziś.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- JAK DZIAŁA -->
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.1h6c0-.8.4-1.6 1-2.1A7 7 0 0 0 12 2Z"/></svg> Jak to działa</div>
+          <h2>Trzy proste kroki do efektu</h2>
+          <p>Mechanizm działania wyjaśniony tak, żeby każdy zrozumiał w pięć sekund.</p>
+        </div>
+        <div class="grid-3">
+          <div class="card">
+            <div class="ic ok"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.2 7.5 19.8 16.5M19.8 7.5 4.2 16.5"/></svg></div>
+            <h3>Zaleta pierwsza</h3>
+            <p>Co dokładnie robi produkt i dlaczego to działa — konkret zamiast obietnic bez pokrycia.</p>
+          </div>
+          <div class="card">
+            <div class="ic ok"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 12.2a6 6 0 0 0-8.5-8.5L5 10.5V19h8.5zM16 8 2 22"/></svg></div>
+            <h3>Zaleta druga</h3>
+            <p>Druga realna korzyść, którą klient poczuje od razu po pierwszym użyciu.</p>
+          </div>
+          <div class="card">
+            <div class="ic ok"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg></div>
+            <h3>Zaleta trzecia</h3>
+            <p>Trzeci powód, dla którego to lepszy wybór niż to, czego klient używa teraz.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WIDEO 9:16 -->
+    <section class="section tint" id="wideo">
+      <div class="wrap">
+        <div class="section-head center">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m23 7-7 5 7 5V7zM1 5h13a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H1z"/></svg> Zobacz w akcji</div>
+          <h2>Nagranie, które mówi wszystko</h2>
+          <p>Krótkie wideo pionowe pokazujące produkt w prawdziwym użyciu.</p>
+        </div>
+        <div class="video-wrap">
+          <div class="tt-shell">
+            <div class="tt-frame">
+              <div class="tt-inner">
+                <span class="tt-play"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span>
+              </div>
+            </div>
+            <p class="tt-credit">wideo produktowe · format 9:16</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TABELA PORÓWNAWCZA -->
+    <section class="section" id="porownanie">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H4v18h16v-5M14 3h6v6M20 3l-9 9"/></svg> Uczciwe porównanie</div>
+          <h2>Czym różni się od reszty?</h2>
+          <p>Bez ściemy — co potrafi produkt, a czego od niego nie oczekuj.</p>
+        </div>
+        <div class="cmp-wrap">
+          <table class="cmp">
+            <thead>
+              <tr><th>Cecha</th><th class="col-our">[MARKA]</th><th>Inne rozwiązania</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Rozwiązuje główny problem</td><td class="col-our"><span class="yes">✓</span></td><td class="col-other"><span class="no">✗</span></td></tr>
+              <tr><td>Efekt od pierwszego użycia</td><td class="col-our"><span class="yes">✓</span></td><td class="col-other"><span class="no">rzadko</span></td></tr>
+              <tr><td>Prosta obsługa, zero instrukcji</td><td class="col-our"><span class="yes">✓</span></td><td class="col-other"><span class="no">✗</span></td></tr>
+              <tr><td>Płatność przy odbiorze</td><td class="col-our"><span class="yes">✓</span></td><td class="col-other"><span class="no">✗</span></td></tr>
+              <tr><td>14 dni na spokojny zwrot</td><td class="col-our"><span class="yes">✓</span></td><td class="col-other"><span class="no">✗</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- GALERIA BENTO -->
+    <section class="section tint" id="galeria">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg> Z bliska</div>
+          <h2>Zobacz każdy szczegół</h2>
+          <p>Zestaw kadrów produktowych w układzie bento.</p>
+        </div>
+        <div class="gallery">
+          <div class="g-tile lead"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg><span class="cap">Kadr główny</span></div></div>
+          <div class="g-tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg></div></div>
+          <div class="g-tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg></div></div>
+          <div class="g-tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg></div></div>
+          <div class="g-tile"><div class="ph"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OPINIE -->
+    <section class="section" id="opinie">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 15 8.5 22 9.3 17 14l1.3 7L12 17.8 5.7 21 7 14 2 9.3l7-.8L12 2Z"/></svg> Opinie</div>
+          <h2>Oceniony na 4,9 na 5</h2>
+          <p>Zaufanie zbudowane na realnych, zweryfikowanych zakupach.</p>
+        </div>
+        <div class="rev-stats">
+          <div class="rev-stat"><strong>4,9/5</strong><span class="stars">★★★★★</span><span>średnia ocen</span></div>
+          <div class="rev-stat"><strong>120</strong><span class="stars">&nbsp;</span><span>opinii kupujących</span></div>
+          <div class="rev-stat"><strong>98%</strong><span class="stars">&nbsp;</span><span>poleca znajomym</span></div>
+        </div>
+        <div class="rev-list">
+          <div class="rev">
+            <span class="stars">★★★★★</span>
+            <blockquote>„Cytat opinii klienta — krótko, konkretnie, o efekcie, którego się nie spodziewał.”</blockquote>
+            <div class="who"><strong>Imię K.</strong><span class="ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> zweryfikowany zakup</span></div>
+          </div>
+          <div class="rev">
+            <span class="stars">★★★★★</span>
+            <blockquote>„Druga opinia — inny profil klienta, inny powód zadowolenia z produktu.”</blockquote>
+            <div class="who"><strong>Imię N.</strong><span class="ver"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> zweryfikowany zakup</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- OFFER BOX -->
+    <section class="section tint" id="zamow">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4zM3 6h18M16 10a4 4 0 0 1-8 0"/></svg> Zamów</div>
+          <h2>Zamów dziś, zapłać przy odbiorze</h2>
+          <p>Zero ryzyka: płacisz dopiero, gdy kurier przyniesie paczkę pod Twój adres.</p>
+        </div>
+        <div class="offer-card">
+          <div class="offer-media">
+            <div class="ph ph-offer"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-4.5-4.5L5 21"/></svg><span class="cap">Zdjęcie oferty</span></div>
+          </div>
+          <div class="offer-body">
+            <h3>[MARKA] — pełny zestaw</h3>
+            <div class="offer-price">
+              <span class="price"><span class="amount">99</span><span class="cur">zł</span></span>
+              <span class="offer-badge"><svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="width:14px;height:14px;stroke-width:2.4"><path d="M20 6 9 17l-5-5"/></svg> Najczęściej wybierane</span>
+            </div>
+            <ul class="get-list">
+              <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Produkt główny wraz z akcesoriami</li>
+              <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Płatność jak wolisz: BLIK, karta lub przy odbiorze</li>
+              <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> 14 dni na zwrot, bez tłumaczenia się</li>
+              <li><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg> Wysyłka pod Twój adres, status mailem</li>
+            </ul>
+            <a class="btn big" href="#zamow">Zamawiam teraz <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+            <div class="pay-row" aria-label="Metody płatności">
+              <span class="pay-badge blik" title="BLIK"><svg width="32" height="13" viewBox="0 0 34 14" aria-label="BLIK"><text x="17" y="11" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="800" fill="#fff" letter-spacing="1">BLIK</text></svg></span>
+              <span class="pay-badge" title="Visa"><svg width="32" height="13" viewBox="0 0 34 14" aria-label="Visa"><text x="17" y="11.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="12" font-weight="800" font-style="italic" fill="#1A1F71">VISA</text></svg></span>
+              <span class="pay-badge" title="Mastercard"><svg width="28" height="17" viewBox="0 0 30 18" aria-label="Mastercard"><circle cx="12" cy="9" r="7" fill="#EB001B"/><circle cx="18" cy="9" r="7" fill="#F79E1B" fill-opacity=".85"/></svg></span>
+              <span class="pay-badge" title="Płatność przy odbiorze"><svg width="16" height="14" viewBox="0 0 24 24" fill="none" stroke="#3E8E6E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/></svg><span class="t">POBRANIE</span></span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section">
+      <div class="wrap">
+        <div class="section-head center">
+          <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/></svg> Pytania</div>
+          <h2>Zanim zamówisz</h2>
+        </div>
+        <div class="faq-list">
+          <details open>
+            <summary>Kiedy i jak płacę?</summary>
+            <p>Jak wolisz: online (BLIK lub karta) przy składaniu zamówienia, albo dopiero przy odbiorze — kurierowi lub w punkcie, gdy paczka jest już u Ciebie.</p>
+          </details>
+          <details>
+            <summary>Jak wygląda zwrot?</summary>
+            <p>Masz 14 dni. Jeśli uznasz, że to nie dla Ciebie, po prostu odsyłasz produkt w ciągu 14 dni od odbioru — bez tłumaczenia się.</p>
+          </details>
+          <details>
+            <summary>Jak długo idzie wysyłka?</summary>
+            <p>Wysyłamy pod Twój adres, a status zamówienia dostajesz mailem — jesteś na bieżąco na każdym etapie.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="section">
+      <div class="wrap">
+        <div class="final-card">
+          <div class="final-copy">
+            <div class="eyebrow"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8Z"/></svg> Ostatni krok</div>
+            <h2>Gotowy, żeby mieć to u siebie?</h2>
+            <p class="lead">Zamawiasz dziś, a płacisz dopiero wtedy, gdy kurier przyniesie paczkę pod Twój adres. Nic nie ryzykujesz.</p>
+            <div class="final-buy">
+              <a class="btn" href="#zamow">Przejdź do zamówienia <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg></a>
+              <div class="price"><span class="amount">99</span><span class="cur">zł</span></div>
+            </div>
+            <p class="micro">Płatność: BLIK, karta lub przy odbiorze · <b>14 dni na zwrot</b> · Wysyłka pod Twój adres</p>
+          </div>
+          <div class="final-rev">
+            <span class="stars">★★★★★</span>
+            <blockquote>„Zamknięcie opinią — mocny, krótki cytat, który rozwiewa ostatnią wątpliwość.”</blockquote>
+            <strong>— Imię K., zweryfikowany zakup</strong>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="wrap footer-row">
+      <div class="logo" aria-label="Marka">
+        <span class="mark"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/></svg></span>
+        <span class="word">[MARKA]</span>
+      </div>
+      <p>Krótki, ludzki tagline marki w jednym zdaniu.</p>
+      <p>© 2026 [MARKA]</p>
+    </div>
+  </footer>
+
+  <!-- STICKY BAR (w demo zawsze na dole) -->
+  <div class="sticky-buy">
+    <div class="wrap">
+      <div class="sp">
+        <strong>99 zł</strong>
+        <span>BLIK · karta · za pobraniem — 14 dni na zwrot</span>
+      </div>
+      <a href="#zamow" class="btn">Zamawiam</a>
+    </div>
+  </div>
+
+</body>
+</html>
