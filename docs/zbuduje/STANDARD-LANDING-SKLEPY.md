@@ -115,6 +115,17 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
    bez pytania**, w ramach budżetu ~15 zł/landing (kod+zdjęcia). Cross-model:
    review kodu i polish copy przez **gpt-5.6-sol via edge `wf2-gpt`** (x-wf2-secret;
    klucz OpenAI tylko w sekretach edge) — uwagi wchodzą po naszym filtrze zakazów.
+   **🔒 PRODUKT NA GRAFIKACH = WYŁĄCZNIE REALNY (uwaga Tomka 15.07 — drift pompki w assetach):**
+   generacje NIE odtwarzają produktu wiernie mimo referencji (walec zamiast smukłej latarki).
+   Zasady: (1) sceny/platy generujemy BEZ produktu — produkt wchodzi jako REALNE zdjęcie
+   aukcji: <img> w HTML na scenie (karta produktu) albo kompozyt PIL (cutout realnego
+   packshota + paste z cieniem); (2) makiety sekcyjne: produkt na nich = placeholder
+   rozmieszczenia — koder renderuje WYŁĄCZNIE realne zdjęcia; (3) gate każdej generacji
+   z produktem w kadrze = side-by-side z realnym zdjęciem (kształt/kolor/proporcje) —
+   drift = odrzut; (4) **PRZED/PO: preferuj REALNE zdjęcia z opinii klientów**
+   (`bud-reviews/<product_id>/`, podpis „zdjęcie od kupującego") — autentyk bije generację;
+   (5) twarde spec-liczby producenta z infografik aukcji (np. 85%/8s/1500mAh/125g/15 szt.)
+   wolno cytować — pochodzą z aukcji, nie z fantazji modelu.
    BUDOWA: UI (karty, przyciski, typografia, fale-SVG) = kod z pipetą kolorów z makiety;
    **pętla diffowa** (PIL ImageChops: % pikseli ≠ + heatmapa, screenshot 1024w vs makieta)
    per sekcja aż różnice zostają tylko w strefach świadomych nadpisań treści (prawdziwe
