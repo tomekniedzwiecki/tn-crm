@@ -1216,8 +1216,6 @@
             // „Mózg" spowiednika: zastrzeżenie AI (klient podtrzymał mimo kontry) — decyzja należy do Tomka.
             const pushback = flags.ai_pushback ? `<div class="text-[11.5px] mt-2.5 rounded-md px-2.5 py-2 leading-relaxed" style="color:#f5b955;background:rgba(245,185,85,.08);border:1px solid rgba(245,185,85,.28)"><i class="ph ph-warning-circle"></i> <span class="font-semibold">Zastrzeżenie AI:</span> ${escapeHtml(flags.ai_pushback)}<div class="text-[10.5px] text-zinc-500 mt-1">Klient podtrzymał mimo uwagi AI — decyzję podejmujesz Ty (Zatwierdź / Odrzuć).</div></div>` : '';
             const devTag = flags.poza_v1 ? `<span class="text-[10px] px-1.5 py-0.5 rounded whitespace-nowrap" style="color:#c99a5b;background:rgba(201,154,91,.12)" title="AI oznaczyło jako poza zakresem wersji 1">rozwój (poza v1)</span>` : '';
-            // Diagnoza AI (U8): AI zajrzało w kod i wskazało miejsce/przyczynę/naprawę — trop dla sesji naprawczej.
-            const diag = (flags.code_ref || flags.hipoteza || flags.proponowana_naprawa) ? `<div class="text-[11.5px] mt-2.5 rounded-md px-2.5 py-2 leading-relaxed" style="color:#8fb3ff;background:rgba(112,160,255,.06);border:1px solid rgba(112,160,255,.22)"><i class="ph ph-magnifying-glass"></i> <span class="font-semibold">Diagnoza AI</span>${flags.code_ref?`<div class="mt-1"><span class="text-zinc-500">Miejsce:</span> <span class="font-mono text-[11px] text-zinc-300">${escapeHtml(flags.code_ref)}</span></div>`:''}${flags.hipoteza?`<div class="mt-0.5"><span class="text-zinc-500">Hipoteza:</span> ${escapeHtml(flags.hipoteza)}</div>`:''}${flags.proponowana_naprawa?`<div class="mt-0.5"><span class="text-zinc-500">Proponowana naprawa:</span> ${escapeHtml(flags.proponowana_naprawa)}</div>`:''}</div>` : '';
             return `<div class="bg-[#0a0a0a] border border-[#1a1a1a] rounded-lg p-3.5 mb-2.5">
                 <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0"><span class="text-[11px] font-mono text-zinc-500">TK-${i.seq}</span><span class="text-[13px] text-white font-medium ml-1.5">${escapeHtml(i.title)}</span></div>
@@ -1227,7 +1225,6 @@
                     <span>${escapeHtml(i.area||'—')}</span>${i.device?`<span>· ${escapeHtml(i.device)}</span>`:''}<span class="flex items-center gap-1">waga: ${sevSel}</span>${devTag}
                 </div>
                 ${pushback}
-                ${diag}
                 ${i.description?`<div class="text-[12px] text-zinc-400 mt-2 whitespace-pre-wrap">${escapeHtml(i.description)}</div>`:''}
                 ${i.quote?`<div class="text-[12px] text-zinc-500 mt-1.5 italic border-l-2 border-[#26262b] pl-2.5">„${escapeHtml(i.quote)}"</div>`:''}
                 ${shots?`<div class="flex flex-wrap gap-2 mt-2.5">${shots}</div>`:''}
@@ -1301,9 +1298,7 @@ Zasada fabryki: PĘTLA DO WYCZERPANIA — naprawiaj aż runda nie przynosi nowyc
 ZGŁOSZENIA DO NAPRAWY (${list.length}):
 ` + list.map(i => {
                 const shots = (i.shots||[]).length ? `\n  Zrzuty (${i.shots.length}): ${i.shots.map(s=>s.path).join(', ')}` : '';
-                const fl = (i.flags && typeof i.flags === 'object') ? i.flags : {};
-                const diag = (fl.code_ref || fl.hipoteza || fl.proponowana_naprawa) ? `\n  Diagnoza AI:${fl.code_ref?` podejrzane miejsce ${fl.code_ref};`:''}${fl.hipoteza?` hipoteza — ${fl.hipoteza}`:''}${fl.proponowana_naprawa?` proponowana naprawa — ${fl.proponowana_naprawa}`:''} (trop AI — zweryfikuj w kodzie).` : '';
-                return `[TK-${i.seq}] ${i.title}\n  Obszar: ${i.area||'—'} · Urządzenie: ${i.device||'—'} · Waga: ${i.severity}\n  Opis: ${i.description||'—'}\n  Cytat klienta: „${i.quote||'—'}"${diag}${shots}`;
+                return `[TK-${i.seq}] ${i.title}\n  Obszar: ${i.area||'—'} · Urządzenie: ${i.device||'—'} · Waga: ${i.severity}\n  Opis: ${i.description||'—'}\n  Cytat klienta: „${i.quote||'—'}"${shots}`;
             }).join('\n\n');
             const tail = `\n\nPO NAPRAWIE KAŻDEGO ZGŁOSZENIA (Supabase MCP / SQL, projekt yxmavwkwnfuphjqbelws):\n1) UPDATE wfa_test_issues SET status='done', done_at=now() WHERE project_id='${projectId}' AND seq=<n>;  (klient zobaczy „Poprawione ✅" w portalu)\n2) Odhacz odpowiadającą pozycję „[TK-<n>] …" w checkliście kroku poprawki_demo (wfa_steps.data.checklist; zachowaj DOKŁADNIE teksty pozycji — klucz deduplikacji).\n3) Dowód w BUILDLOG (co naprawione, commit, deploy/preview). Gdy wszystkie [TK-*] done i E2E zielone → status kroku poprawki_demo = done.`;
             return head + tail;
