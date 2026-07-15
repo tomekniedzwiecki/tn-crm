@@ -154,6 +154,13 @@ function betaStatus(people: unknown): "empty" | "partial" | "done" {
   return "empty";
 }
 
+// SEC-D2 defense-in-depth: usuń znaki, które NIGDY nie są legalne w polach nazwa/firma/adres/beta
+// i które łamią atrybut HTML przy renderze (< > "). Apostrof ' ZOSTAJE (np. „O'Brien").
+// Główny fix XSS jest we froncie (escape atrybutowy w portal.html); to druga warstwa na wejściu.
+function stripHtmlBreakers(v: string): string {
+  return v.replace(/[<>"]/g, "");
+}
+
 async function intakeRow(sb: ReturnType<typeof createClient>, projectId: string, section: string) {
   const { data } = await sb.from("wfa_intake").select("data, status").eq("project_id", projectId).eq("section", section).maybeSingle();
   return data as { data: Record<string, any>; status: string } | null;
@@ -481,12 +488,13 @@ Deno.serve(async (req: Request) => {
 
     if (section === "firma") {
       const clip = (v: unknown) => String(v == null ? "" : v).trim();
-      const full_name = clip(inp.full_name);
-      const company = clip(inp.company);
+      const clipT = (v: unknown) => stripHtmlBreakers(clip(v)); // pola tekstowe → dodatkowo bez < > "
+      const full_name = clipT(inp.full_name);
+      const company = clipT(inp.company);
       const nip = clip(inp.nip).replace(/\D/g, "");
-      const street = clip(inp.street);
+      const street = clipT(inp.street);
       const postal = clip(inp.postal);
-      const city = clip(inp.city);
+      const city = clipT(inp.city);
       const phone = clip(inp.phone);
       const errs: string[] = [];
       if (nip && nip.length !== 10) errs.push("NIP musi mieć 10 cyfr.");
@@ -524,10 +532,10 @@ Deno.serve(async (req: Request) => {
       const raw = Array.isArray(inp.people) ? inp.people : [];
       const people = raw.slice(0, 15).map((pp: any) => {
         const o: Record<string, string> = {
-          name: String(pp?.name == null ? "" : pp.name).trim().slice(0, 120),
-          contact: String(pp?.contact == null ? "" : pp.contact).trim().slice(0, 160),
+          name: stripHtmlBreakers(String(pp?.name == null ? "" : pp.name).trim()).slice(0, 120),
+          contact: stripHtmlBreakers(String(pp?.contact == null ? "" : pp.contact).trim()).slice(0, 160),
         };
-        const n = String(pp?.note == null ? "" : pp.note).trim().slice(0, 200);
+        const n = stripHtmlBreakers(String(pp?.note == null ? "" : pp.note).trim()).slice(0, 200);
         if (n) o.note = n;
         return o;
       }).filter((pp) => pp.name || pp.contact);
