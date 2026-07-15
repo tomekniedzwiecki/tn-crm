@@ -123,6 +123,11 @@ Konsekwencje architektoniczne:
    marka sklepu przed brandingiem produktów; krok `branding` (scope=product) = kąt
    komunikacji/persona/hooki produktu pod marką (WS przepisany — BEZ osobnej domeny).
    Typ A: marka z lejka /sklep (bud_sessions.brand) = baza marki parasolowej.
+7b. **STANDARD-LANDING-SKLEPY.md (15.07)** — landingi produktowe projektujemy POD KONWERSJĘ
+   (research CRO: Baymard/CWV/Gemius/tpay/FTC), nie wg estetyki starej procedury. Filary:
+   message match z kreacją (wymienny moduł hero `?h=N`), mikro-oferta w 1. ekranie, COD jako
+   narracja 1-2-3, sticky CTA, 1 font custom (LCP<2,5 s), eventy ATC/IC spięte z checkpointami
+   CP2, benchmark CR 3%+. Gate: checklist + pętla krytyka-CRO do czystej rundy.
 8. **Etap Kampanie dopracowany wg etapu Reklamy v1 (15.07):** ads_konto = 4 pod-kroki klienta
    (konto w BM klienta PLN / fanpage / Instagram / telefon SMS) + partner access „Pełna
    kontrola" do BM Tomka (737839566050751, 3 assety naraz) + metoda płatności; ads_budzet =

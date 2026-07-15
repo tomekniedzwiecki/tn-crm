@@ -14,8 +14,16 @@
 ## Design tokens (manifest stylu — obowiązuje na stronie głównej i landingach)
 - Tło `#FCF8F2` (krem) · Tekst `#29241F` (ciepły grafit) · Akcent `#E8795A` (terakota)
 - CTA `#DC5322` (cegła, biały tekst) · Sukces `#3E8E6E` (szałwia) · Subtelne tła/bordery `#EFE4D2` (piasek)
-- Fonty (Google, latin-ext ✓): **Fraunces** (nagłówki/wordmark) · **Plus Jakarta Sans** (tekst/UI) · **Nunito** (akcenty, ceny, badge)
+- Fonty NA LANDINGACH (budżet LCP — STANDARD-LANDING-SKLEPY.md): **1 rodzina custom = Fraunces**
+  (nagłówki, 600+700, preload+swap+latin-ext); **body/UI = system-font stack**. (Plus Jakarta
+  Sans/Nunito zostają w identyfikacji marki poza landingami: panel, materiały, dokumenty.)
 - Charakter: ciepły, czysty, zaufany e-commerce; ZERO neonowego dropshipping-vibe.
+
+## ⚡ KONWERSJA — obowiązuje `docs/zbuduje/STANDARD-LANDING-SKLEPY.md` (15.07)
+Cel CR 3%+ (zimny Meta, mobile). Filary: message match (moduł hero `?h=N` z hookami z kroku
+Branding — kreacja N linkuje `?h=N`), kompletna mikro-oferta w 1. ekranie, COD jako narracja
+1-2-3 przy każdym CTA, sticky bar mobile, FAQ nad finalnym CTA, LCP<2,5 s, eventy
+VC/ATC(klik CTA)/IC(wyjście do kasy) + link decoration — spięte z CP2 systemu testów.
 
 ## Architektura sklepu (API platformy sklepy.niedzwiecki.ai)
 - Strona główna = otoczka marki + galeria produktów testowych (linkuje do podstron).
