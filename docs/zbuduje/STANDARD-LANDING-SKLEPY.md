@@ -56,6 +56,20 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
      na pierwsze żądanie twórcy, wideo NIGDY w kreacjach Meta (tam wyłącznie content
      własny/Manus). Brak wideo ⇒ sekcję pomijamy.
 6. **Korzyści** (3-4, ikony, konkrety z FAKTÓW aukcji — zero zmyśleń).
+6b. **UCZCIWE PORÓWNANIE** (tabela „zwykły X vs nasz X", 4-6 wierszy) — Z JEDNYM PRAWDZIWYM
+   MINUSEM po naszej stronie („na mroźną zimę ✗ — wtedy sięgnij po cieplejszy"): jawna
+   dyskwalifikacja buduje zaufanie na rynku wyczulonym na scam. Tabela w kontenerze
+   `overflow-x:auto` (body bez h-scrolla).
+6c. **NARRACJA WIZUALNA AI (opcja, budżet ~3 generacji na produkt — decyzja Tomka 15.07):**
+   trzy kadry opowiadające problem→produkt→efekt: (1) HERO-efekt: osoba używająca produktu
+   w palecie marki (świt/jasno), (2) PROBLEM: scena bólu BEZ produktu (empatycznie, gustownie
+   — osoba od tyłu; „sweaty/uncomfortable" wywala safety filter, pisać „restless"),
+   (3) FINAL: efekt nocą/duży plan przed ostatnim CTA. TWARDE ZASADY: referencje produktu
+   (2 zdjęcia z aukcji) + „the EXACT product from reference, do NOT change colors/pattern",
+   generacja przez wf2-gen→generate-image (provider gpt-image-2, quality medium, aspect 3:2
+   hero/final, 1:1 problem), OBEJRZEĆ przed wstawieniem (drift = odrzucić), REALNE zdjęcia
+   aukcji zostają w galerii i ofercie (AI nie zastępuje dowodu produktu), hero eager przez
+   render API, pozostałe lazy.
 7. **GALERIA** (lazy, lightbox :target) — wpleć zdjęcia Z OPINII (UGC, rehost `bud-reviews/`).
 8. **SOCIAL PROOF**: statystyki + 3-6 opinii (priorytet: ZE ZDJĘCIAMI). Zasada małego N:
    pokazuj uczciwie („14 opinii"), nie klonuj, nie dmuchaj; 0 opinii ⇒ sekcję POMIŃ

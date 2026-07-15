@@ -52,3 +52,29 @@ wf2_products.name (galeria/landing używa nazw sprzedażowych, nie roboczych z /
 
 **Dowody:** commity `45763da`, `db172c6`; 4 wpisy activities (branding_runda1-3, branding_done);
 loga w Storage `attachments/ai-generated/wf2-znajdzik/`.
+
+## 2026-07-15 — Sesja 1: LANDING KOCA wg nowego standardu konwersji
+
+**Zrobione:**
+- **STANDARD-LANDING-SKLEPY.md** (na żądanie Tomka: przemyślane OD ZERA pod konwersję, research
+  CRO z danymi) — message match `?h=N`, mikro-oferta 1. ekran, COD 1-2-3, sticky-po-hero,
+  1 font custom, eventy ATC/IC pod CP2, benchmark CR 3%+.
+- Landing `chlodzacy-koc/` LIVE: crm.tomekniedzwiecki.pl/sklepy/tomek-niedzwiecki/chlodzacy-koc/
+  (~1050 linii, self-contained, 1 script). Runda 1 CRO: 2×P1+7×P2 → wszystkie naniesione.
+- **Decyzje Tomka w trakcie (wszystkie w standardzie):** (a) wideo z /trendy BEZ odtwarzacza
+  TikToka → self-host MP4 (yt-dlp→H.264 30fps→wf2-asset-rehost) z autoplay-on-visible + głośnik;
+  (b) płatności MULTI (BLIK/Visa/MC/pobranie z ikonami), COD = risk-reversal nie jedyna forma;
+  (c) 3 grafiki AI z referencjami (hero-świt / problem-noc / final-sen) — narracja
+  problem→produkt→efekt; (d) tabela uczciwego porównania z prawdziwym minusem.
+- Nowe narzędzie fabryki: edge `wf2-asset-rehost` (upload assetów; sb_secret nie działa jako
+  Bearer w storage-api, CLI cp = LegacyStorage err).
+- GOTCHA sesji: bash heredoc z `p='index.html'` + persistent cwd po `cd` w innym wywołaniu →
+  patch poszedł w ZŁY plik (tn-crm/index.html odczytany+zapisany bez zmian). Zawsze jawny cd
+  w TYM SAMYM wywołaniu co patch.
+
+**Otwarte:** runda 2 CRO w toku; po CZYSTEJ: kroki html_draft/html_final → done; potem S3-S6
+(lokówka/pompka/endoskop/jeździk — każdy: branding→wideo MP4→3 generacje AI→landing wg
+standardu→pętla CRO) i S7 strona główna.
+
+**Dowody:** commity `236f5db`, `ab360f0`, `3d54df6`, `81600d7`; wideo `bud-videos/7642664659505483021.mp4`;
+grafiki `ai-generated/wf2-znajdzik-koc/`.
