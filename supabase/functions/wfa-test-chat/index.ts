@@ -15,6 +15,7 @@
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { openaiFetchRetry } from "../_shared/openai-fetch.ts";
 import { signPaths, verifyTeamMember } from "../_shared/admin-files.ts";
+import { throttleClear, throttleFail, throttleGate } from "../_shared/portal-throttle.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -40,8 +41,8 @@ const PRICES: Record<string, { input: number; output: number }> = {
   "gpt-5.1": { input: 1.25, output: 10 },
 };
 
-function json(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json" } });
+function json(body: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
+  return new Response(JSON.stringify(body), { status, headers: { ...CORS, "Content-Type": "application/json", ...(extraHeaders || {}) } });
 }
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 async function sha256Hex(s: string): Promise<string> {
@@ -396,9 +397,13 @@ Deno.serve(async (req: Request) => {
 
   // Ścieżka klienta: hasło portalu (SHA-256) obowiązkowe.
   if (!preview) {
-    if (!password || password.length > 200 || !p.client_password_hash) { await sleep(300); return json({ error: "unauthorized" }, 401); }
+    // SEC-D FAIL #2: throttling per-token (wspólny z wfa-portal). Zablokowany token -> 429.
+    const gate = await throttleGate(sb, token);
+    if (gate.locked) return json({ error: "too_many_attempts", retry_after: gate.retryAfter }, 429, { "Retry-After": String(gate.retryAfter) });
+    if (!password || password.length > 200 || !p.client_password_hash) { await throttleFail(sb, token); await sleep(300); return json({ error: "unauthorized" }, 401); }
     const hash = await sha256Hex(password);
-    if (hash !== String(p.client_password_hash).toLowerCase()) { await sleep(300); return json({ error: "unauthorized" }, 401); }
+    if (hash !== String(p.client_password_hash).toLowerCase()) { await throttleFail(sb, token); await sleep(300); return json({ error: "unauthorized" }, 401); }
+    throttleClear(sb, token).catch(() => {});
   }
 
   const projectId = String(p.id);
