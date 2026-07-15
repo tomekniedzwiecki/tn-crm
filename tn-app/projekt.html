@@ -78,7 +78,7 @@
         </header>
 
         <!-- Modal: mail o postępie (AI) -->
-        <div id="pmail-modal" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
+        <div id="pmail-modal" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this)closePmail()">
             <div class="bg-[#0a0a0a] border border-[#333] rounded-lg w-full max-w-xl p-6">
                 <h3 class="text-white text-lg font-semibold mb-1 flex items-center gap-2"><i class="ph ph-envelope-simple text-[#3291ff]"></i> Mail o postępie</h3>
                 <p class="text-zinc-500 text-xs mb-4">GPT 5.6 pisze na podstawie stanu projektu. Sprawdź, popraw i wyślij — nic nie wychodzi automatycznie.</p>
@@ -108,6 +108,7 @@
                     <div class="min-w-0">
                         <div class="flex items-center gap-3 flex-wrap">
                             <h1 id="p-name" class="text-3xl font-semibold text-white tracking-tight">…</h1>
+                            <span id="retro-badge"></span>
                             <select id="p-status" onchange="saveStatus()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-2.5 py-1.5 text-xs text-white focus:outline-none"></select>
                         </div>
                         <div id="p-meta" class="text-zinc-500 text-xs mt-2 flex items-center gap-3 flex-wrap"></div>
@@ -144,6 +145,7 @@
                 <div id="psec-tabs" class="flex gap-1 border-b border-[#1f1f1f] mb-6 overflow-x-auto">
                     <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
                     <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
+                    <button data-ptab="retro" onclick="switchPsec('retro')" class="ptab">Do akceptacji <span id="ptab-retro-cnt" class="text-[#f5b955]"></span></button>
                     <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
                     <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
@@ -197,6 +199,17 @@
                         <button onclick="addNote()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200 flex-shrink-0">Dodaj</button>
                     </div>
                     <div id="notes-list" class="space-y-2"></div>
+                </div>
+
+                </div>
+
+                <div data-psec="retro" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-seal-check text-[#f5a623]"></i> Do akceptacji Tomka <span class="text-zinc-500 font-normal text-xs">zmiany fabryki (migracje, bezpieczeństwo) czekające na świadomą akceptację</span></h3>
+                    </div>
+                    <div id="retro-list" class="space-y-2"></div>
+                    <div class="text-[10px] text-zinc-600 mt-3">ODRZUĆ = sesje fabryki mają cofnąć zmianę. AKCEPTUJĘ = zmiana zostaje (adnotacja z datą zapisywana przy wpisie).</div>
                 </div>
 
                 </div>
@@ -398,7 +411,7 @@
             // ustaw aktywny etap na etap aktualnego kroku
             const cur = currentStep();
             if (cur) { const d = stepDefs.find(x => x.key === cur.step_key); if (d) activeStage = d.stage; }
-            renderHeader(); renderFields(); renderPills(); renderStage(); renderNotes(); renderContract(); renderActivity(actQ.data||[]);
+            renderHeader(); renderFields(); renderPills(); renderStage(); renderNotes(); renderRetro(); renderContract(); renderActivity(actQ.data||[]);
             loadSparing();
             loadTkIssues(true); // zgłoszenia z testów klienta (badge „nowe" + sekcja w kroku)
         }
@@ -656,10 +669,12 @@
             renderNotes();
         }
         function renderNotes() {
-            const openCnt = notes.filter(n => n.status === 'open').length;
+            // Uwagi Tomka = wszystko poza kind=retro (retro ma własną sekcję „Do akceptacji").
+            const base = notes.filter(n => n.kind !== 'retro');
+            const openCnt = base.filter(n => n.status === 'open').length;
             const tb = document.getElementById('ptab-uwagi-cnt');
             if (tb) tb.textContent = openCnt ? '(' + openCnt + ')' : '';
-            const list = noteFilter === 'open' ? notes.filter(n => n.status === 'open') : notes;
+            const list = noteFilter === 'open' ? base.filter(n => n.status === 'open') : base;
             const box = document.getElementById('notes-list');
             if (!list.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">${noteFilter==='open'?'Brak otwartych uwag.':'Brak uwag.'}</div>`; return; }
             box.innerHTML = list.map(n => {
@@ -687,20 +702,88 @@
             notes.unshift(data);
             document.getElementById('note-content').value = '';
             logActivity('note_added', `Uwaga (${kind}): ${content.slice(0,80)}`);
-            renderNotes();
+            renderNotes(); reloadNotes();
         }
         async function toggleNoteDone(id) {
             const n = notes.find(x => x.id === id); if (!n) return;
             const next = n.status === 'done' ? 'open' : 'done';
+            n.status = next; renderNotes(); // optimistic
             const { error } = await supabaseClient.from('wfa_notes').update({ status: next, resolved_at: next==='done'? new Date().toISOString() : null }).eq('id', id);
-            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
-            n.status = next; renderNotes();
+            if (error) { n.status = next==='done'?'open':'done'; renderNotes(); showToast('Błąd: ' + error.message, 'error'); return; }
+            reloadNotes(); // reconcile
         }
         async function deleteNote(id) {
             if (!confirm('Usunąć tę uwagę?')) return;
+            const snapshot = notes.slice();
+            notes = notes.filter(x => x.id !== id); renderNotes(); // optimistic
             const { error } = await supabaseClient.from('wfa_notes').delete().eq('id', id);
-            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
-            notes = notes.filter(x => x.id !== id); renderNotes();
+            if (error) { notes = snapshot; renderNotes(); showToast('Błąd: ' + error.message, 'error'); return; }
+            reloadNotes(); // reconcile
+        }
+        // Cichy re-fetch uwag (reconcile po optimistic update — wzorzec tkUpdate) — odświeża Uwagi i sekcję retro.
+        async function reloadNotes() {
+            const { data, error } = await supabaseClient.from('wfa_notes').select('*').eq('project_id', projectId).order('created_at', { ascending: false });
+            if (!error && data) { notes = data; renderNotes(); renderRetro(); }
+        }
+
+        // ============ DO AKCEPTACJI TOMKA (wfa_notes kind=retro) ============
+        // Zmiany fabryki (migracje/bezpieczeństwo) czekające na świadomą akceptację.
+        // AKCEPTUJĘ → status=done + adnotacja z datą. ODRZUĆ → status=done + ODRZUCONE (sesja fabryki cofa zmianę).
+        function renderRetro() {
+            const open = notes.filter(n => n.kind === 'retro' && n.status === 'open');
+            const tc = document.getElementById('ptab-retro-cnt'); if (tc) tc.textContent = open.length ? '(' + open.length + ')' : '';
+            const badge = document.getElementById('retro-badge');
+            if (badge) badge.innerHTML = open.length
+                ? `<button onclick="switchPsec('retro')" class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-[#f5a623]/50 text-[#f5b955] hover:bg-[#f5a623]/10" title="Zmiany fabryki czekające na akceptację"><i class="ph ph-seal-warning"></i>${open.length} do akceptacji</button>`
+                : '';
+            const box = document.getElementById('retro-list'); if (!box) return;
+            if (!open.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">Brak zmian czekających na akceptację. Sesje fabryki dopisują tu retro-akceptacje zmian bezpieczeństwa i migracji.</div>`; return; }
+            box.innerHTML = open.map(n => `<div class="bg-[#111] border border-[#f5a623]/25 rounded-md px-3.5 py-3">
+                <div class="flex items-start gap-3">
+                    <span class="mt-0.5 text-[10px] px-2 py-0.5 rounded-md border text-[#f5b955] border-[#f5a623]/40 flex-shrink-0">RETRO</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-[12.5px] text-zinc-200 break-words">${escapeHtml(n.content)}</div>
+                        <div class="text-[10px] text-zinc-600 mt-0.5">${escapeHtml(n.author||'fabryka')} · ${relTime(n.created_at)}</div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 mt-2.5">
+                    <button onclick="retroAccept('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#45a557]/50 text-[#62c073] hover:bg-[#45a557]/10 flex items-center gap-1"><i class="ph ph-check-circle"></i> AKCEPTUJĘ</button>
+                    <button onclick="retroToggleReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#e5484d]/40 text-[#f08a92] hover:bg-[#e5484d]/10">Odrzuć</button>
+                </div>
+                <div id="retro-rej-${n.id}" class="hidden mt-2">
+                    <textarea id="retro-rejc-${n.id}" rows="2" placeholder="Powód odrzucenia — sesje fabryki mają cofnąć tę zmianę…" class="w-full bg-[#0a0a0a] border border-[#26262b] rounded-md text-[12px] text-zinc-200 p-2 resize-y"></textarea>
+                    <div class="flex gap-2 mt-1.5">
+                        <button onclick="retroReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#e5484d]/50 text-[#f08a92] hover:bg-[#e5484d]/10">Potwierdź odrzucenie</button>
+                        <button onclick="retroToggleReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md text-zinc-500">Anuluj</button>
+                    </div>
+                </div>
+            </div>`).join('');
+        }
+        function retroToggleReject(id) { const el = document.getElementById('retro-rej-' + id); if (el) el.classList.toggle('hidden'); }
+        async function retroUpdate(id, patch, msg) {
+            const n = notes.find(x => x.id === id); const prev = n ? Object.assign({}, n) : null;
+            if (n) { Object.assign(n, patch); renderRetro(); } // optimistic — sekcja odświeża się natychmiast (bez reloadu)
+            const { error } = await supabaseClient.from('wfa_notes').update(patch).eq('id', id);
+            if (error) { if (n && prev) { Object.assign(n, prev); renderRetro(); } showToast('Błąd: ' + error.message, 'error'); return false; }
+            if (msg) showToast(msg, 'success');
+            await reloadNotes(); // reconcile z serwerem
+            return true;
+        }
+        async function retroAccept(id) {
+            const n = notes.find(x => x.id === id); if (!n) return;
+            const date = new Date().toISOString().slice(0, 10);
+            const content = (n.content || '') + ` — AKCEPTOWANE ${date}`;
+            if (await retroUpdate(id, { status:'done', resolved_at:new Date().toISOString(), content }, 'Zaakceptowano'))
+                logActivity('retro_decision', `Zaakceptowano (retro): ${(n.content||'').slice(0,70)}`);
+        }
+        async function retroReject(id) {
+            const n = notes.find(x => x.id === id); if (!n) return;
+            const ta = document.getElementById('retro-rejc-' + id); const c = (ta ? ta.value : '').trim();
+            if (!c) { showToast('Podaj powód — sesja fabryki cofnie zmianę', 'error'); return; }
+            const date = new Date().toISOString().slice(0, 10);
+            const content = (n.content || '') + ` — ODRZUCONE ${date}: ${c}`;
+            if (await retroUpdate(id, { status:'done', resolved_at:new Date().toISOString(), content }, 'Odrzucone — do cofnięcia przez fabrykę'))
+                logActivity('retro_decision', `Odrzucono (retro): ${(n.content||'').slice(0,50)} → ${c.slice(0,60)}`);
         }
 
         // ============ UMOWA (wfa_projects.contract_*) ============
@@ -1725,6 +1808,18 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             if (error) { showToast('Błąd: '+error.message,'error'); return; }
             location.href = '/tn-app/index';
         }
+
+        // A8: jeden globalny listener Escape — zamyka wierzchni otwarty modal (null-safe, bez TypeError null.remove).
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const tkLb = document.getElementById('tk-lightbox'); if (tkLb) { tkLb.remove(); return; }
+            // tk-prompt-ov ma własny handler Escape (zamyka się sam)
+            const vis = id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden') ? el : null; };
+            if (vis('lightbox')) { closeLightbox(); return; }
+            if (vis('pmail-modal')) { closePmail(); return; }
+            if (vis('settings-modal')) { closeSettings(); return; }
+            if (vis('step-drawer-wrap')) { closeStep(); return; }
+        });
 
         (async () => {
             if (!projectId) { location.href = '/tn-app/index'; return; }

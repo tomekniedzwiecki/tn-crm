@@ -737,6 +737,13 @@
             document.getElementById('partner-modal').classList.remove('hidden');
         }
         function closePartnerCompose() { document.getElementById('partner-modal').classList.add('hidden'); }
+        // A8: jeden globalny listener Escape — zamyka wierzchni otwarty modal (null-safe).
+        document.addEventListener('keydown', (e) => {
+            if (e.key !== 'Escape') return;
+            const vis = id => { const el = document.getElementById(id); return el && !el.classList.contains('hidden') ? el : null; };
+            if (vis('partner-modal')) { closePartnerCompose(); return; }
+            if (vis('fwd-modal')) { closeSettings(); return; }
+        });
         function buildPartnerProjectOptions() {
             const sel = document.getElementById('pm-project');
             // projekty bez customer_email wyszarzone (backend bierze adresata z projektu)

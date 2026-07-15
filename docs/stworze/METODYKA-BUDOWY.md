@@ -45,6 +45,7 @@ Scope creep: wszystko spoza `01-MVP-SCOPE.md` → `wfa_notes` „na później", 
 2. Wykonaj TYLKO cel sesji.
 3. **Commit → deploy preview → DOWODY** (wynik testu / curl / screenshot — wklejone, nie „zrobione ✓").
 4. Dopisz wpis do `BUILDLOG.md`.
+4.5. MINI-RUNDA KRYTYKA (decyzja Tomka 15.07): zaraz po commicie sesji świeży subagent-krytyk (bez kontekstu budowy) przechodzi WYŁĄCZNIE ZAKRES TEJ SESJI na prodzie/preview i szuka usterek. Znaleziska naprawia się od ręki przed domknięciem kroku; pełna pętla adwersarska do wyczerpania (sekcja 4) zostaje w etapie Przegląd.
 5. Jeśli utknąłeś na decyzji biznesowej — NIE zgaduj: zapisz pytanie w BUILDLOG „DO DECYZJI TOMKA" i zakończ sesję.
 
 ## 3a. Cykl życia Uwag (wfa_notes) — uwagi nigdy nie „leżą"

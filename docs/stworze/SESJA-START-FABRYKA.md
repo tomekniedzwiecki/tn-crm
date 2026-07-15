@@ -16,6 +16,10 @@
   2. WYKONANIE przez subagenta Opus z pełnym briefem (źródła, fazy, zakazy, format zwrotu).
   3. DOWODY, nie deklaracje: weryfikacja na ŻYWEJ produkcji (Playwright/SQL/curl), screenshoty,
      liczby przed/po; wpis do BUILDLOG repo aplikacji.
+  3.5. MINI-RUNDA KRYTYKA po każdej sesji budowlanej (decyzja Tomka 15.07): zaraz po commicie
+     sesji 1 świeży subagent-krytyk przechodzi ZAKRES TEJ SESJI (nie cały produkt) na prodzie/
+     preview — znaleziska naprawia się od ręki przed domknięciem kroku; pełna pętla do wyczerpania
+     zostaje w etapie Przegląd.
   4. LEKCJE PO WYKONANIU wracają do wzorca (prompt kroku) i/lub do saas-startera — commit.
      **TWARDA ZASADA UCZENIA FABRYKI (decyzja Tomka 15.07): krok/sesja naprawcza NIE jest
      domknięta, dopóki jej lekcje nie są WPISANE do fabryki.** Każdy brief subagenta budowlanego/
@@ -55,7 +59,10 @@
   (tymczasowa edge fn + x-guard, DELETE natychmiast); service-role po legacy-OFF = `sb_secret_*`
   (żyje w Vault dla cronów).
 - Zmiany RLS/migracje produkcyjne = formalnie bramka Tomka; w trybie autonomicznym wolno, gdy
-  blokują shippowaną funkcję i są zawężające — ZAWSZE flagować do retro-akceptacji.
+  blokują shippowaną funkcję i są zawężające — ZAWSZE flagować do retro-akceptacji. Flagowanie =
+  INSERT `wfa_notes` (kind=`retro`, status=`open`, project_id projektu) — NIE tylko wpis w BUILDLOG;
+  wpisy trafiają do sekcji „Do akceptacji Tomka" w panelu (`tn-app/projekt.html`), gdzie Tomek
+  AKCEPTUJE (zostaje) lub ODRZUCA (sesja fabryki cofa zmianę).
 - tn-crm: deploy = git push main (NIE Vercel CLI); commity PATHSPEC (równoległe sesje!); migracja
   PRZED pushem kodu. Fachmat: deploy = git push main; edge deploy `npx supabase functions deploy <fn>
   --no-verify-jwt --project-ref cpzstoyvpfqydmoutcmk`.
