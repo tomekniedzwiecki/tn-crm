@@ -34,6 +34,20 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
    — COD jako NARRACJA procesu, nie tylko badge.
 4. **PAS krótko**: problem → agitacja (empatycznie, po ludzku) → przejście do rozwiązania.
 5. **DEMO „Jak to działa" 1-2-3** (karty/sekwencja zdjęć; GIF/wideo własne — lazy — gdy będzie).
+5b. **„HIT Z TIKTOKA" — osadzone wideo z /trendy (decyzja Tomka 15.07).** Wideo, które
+   wykryło produkt w radarze, osadzamy OFICJALNYM embedem TikToka (iframe
+   `www.tiktok.com/embed/v2/<video_id>`) — odtwarzacz sam pokazuje autora (pełna atrybucja;
+   NIE przypisujemy sobie contentu, dodatkowo podpis „wideo: @autor na TikToku").
+   Nagłówek sekcji: „Ten produkt obiegł TikToka" + UCZCIWA liczba z radaru
+   („ponad X mln wyświetleń" — `bud_tt_products.max_plays`, zaokrąglana W DÓŁ).
+   **Wydajność = FACADE:** statyczny poster (trwała okładka `bud-covers/<video_id>.jpg`
+   ze Storage, lazy) + przycisk Play z etykietą „Kliknij, by odtworzyć (załaduje się
+   odtwarzacz TikTok)" → iframe montuje się DOPIERO po kliku (zero kosztu LCP,
+   consent-friendly). Umiejscowienie: po „Jak to działa", przed korzyściami — wideo jest
+   jednocześnie demo i dowodem popularności.
+   ZAKAZY: nie pobieramy/nie rehostujemy cudzego wideo (tylko oficjalny embed); cudze wideo
+   NIGDY w kreacjach Meta (tam wyłącznie content własny/Manus); brak wideo lub wideo
+   usunięte przez autora ⇒ sekcję pomijamy (przy przeglądach sprawdzać dostępność oEmbed).
 6. **Korzyści** (3-4, ikony, konkrety z FAKTÓW aukcji — zero zmyśleń).
 7. **GALERIA** (lazy, lightbox :target) — wpleć zdjęcia Z OPINII (UGC, rehost `bud-reviews/`).
 8. **SOCIAL PROOF**: statystyki + 3-6 opinii (priorytet: ZE ZDJĘCIAMI). Zasada małego N:
