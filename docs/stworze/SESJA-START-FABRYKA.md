@@ -17,6 +17,14 @@
   3. DOWODY, nie deklaracje: weryfikacja na ŻYWEJ produkcji (Playwright/SQL/curl), screenshoty,
      liczby przed/po; wpis do BUILDLOG repo aplikacji.
   4. LEKCJE PO WYKONANIU wracają do wzorca (prompt kroku) i/lub do saas-startera — commit.
+     **TWARDA ZASADA UCZENIA FABRYKI (decyzja Tomka 15.07): krok/sesja naprawcza NIE jest
+     domknięta, dopóki jej lekcje nie są WPISANE do fabryki.** Każdy brief subagenta budowlanego/
+     naprawczego MUSI wymagać w raporcie sekcji BACKPORT-LISTA (co przenieść do startera) +
+     LEKCJE (jakie klasy błędów/wzorce odkryto); sesja zarządzająca przetwarza je NATYCHMIAST
+     (backport-commit do startera, lekcja do promptu kroku, automat do suity, gotcha do CLAUDE.md
+     startera lub pamięci) — dopiero wtedy odhacza krok. Dzięki temu każda kolejna aplikacja
+     rodzi się mądrzejsza AUTOMATYCZNIE: starter = zmaterializowane naprawy, prompty = wiedza
+     procesowa, suita-scaffold = automaty klas błędów, pamięć = gotchas cross-projektowe.
   5. PANEL: checklista kroku wg FAKTÓW (teksty pozycji = klucz deduplikacji — przy zmianie tekstu
      migruj stan w tej samej sesji!), status, notatka z dowodami, INSERT wfa_activities; linki
      oglądalne → pasek „Podglądy" (wfa_projects.links).
