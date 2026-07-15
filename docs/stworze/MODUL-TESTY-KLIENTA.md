@@ -184,3 +184,59 @@ projektów `feedback` `kosmetyka` = pomysł, `istotne`/`krytyczne` = problem.
 
 **Aktywacja per projekt:** `UPDATE wfa_projects SET test_mode='feedback' WHERE id=…`
 (np. gdy aplikacja przeszła na etap `stery` / działa u operatora). Reszta modułu bez zmian.
+
+## Dostęp do kodu (diagnoza) — U8
+
+Rozszerzenie „mózgu" spowiednika (decyzja Tomka 15.07): przy zgłoszeniu **BŁĘDU** AI może
+zajrzeć w **kod aplikacji** (READ-ONLY), żeby ocenić PRECYZYJNIE, czy to faktyczny błąd, czy
+zachowanie CELOWE — i przy realnym błędzie od razu wskazać wykonawcy podejrzane miejsce.
+
+### Narzędzie `czytaj_kod` (edge `wfa-test-chat`)
+Marker-protokół spójny z `<zgloszenie>`: model emituje ukryty marker `<czytaj_kod>{…}</czytaj_kod>`
+(klient go NIE widzi), edge wykonuje akcję przez **GitHub REST API** na repo z
+`wfa_projects.repo_url` (parsowanie owner/repo, branch domyślny), oddaje wynik modelowi i pętla
+trwa, aż model odpowie klientowi. Akcje:
+- `lista_plikow(sciezka?)` — spis plików katalogu (`GET /contents/{path}`; pusta ścieżka = root),
+- `czytaj(plik, od?, do?)` — treść pliku w zakresie linii (`GET /contents/{file}`, base64→UTF-8),
+- `szukaj(fraza)` — wyszukiwanie w kodzie repo (`GET /search/code`; przy świeżym repo bez indeksu
+  degraduje się miękko: podpowiada `lista_plikow` + `czytaj`).
+
+**Autoryzacja:** sekret edge `GITHUB_READ_TOKEN` (fine-grained PAT read-only — rekomendacja, patrz
+niżej). Brak tokenu lub brak/parsowalnego `repo_url` → narzędzie WYŁĄCZONE, moduł działa jak dotąd.
+
+**Limity (twarde, w kodzie):** maks. **6** wywołań narzędzia na turę (po przekroczeniu — miękkie
+ucięcie: model dostaje komunikat „limit" i musi odpowiedzieć bez dalszych odczytów), maks. **400**
+linii na odczyt, wyłącznie repo TEGO projektu, cache w ramach jednej tury (te same odczyty nie idą
+2× do GitHuba). Ochrona kosztów i wall-clocka edge.
+
+### Zasada nie-wklejania kodu
+Kod służy **wyłącznie diagnozie AI**. Model NIGDY nie wkleja klientowi fragmentów kodu, nazw
+funkcji/tabel ani żargonu — klientowi tłumaczy wszystko zwykłym, ludzkim językiem (np. „wysłana
+oferta jest celowo zamrożona — poprawki robisz przez nową wersję"). Gdy zachowanie okaże się
+CELOWE → to NIE jest błąd: AI wyjaśnia DLACZEGO i pyta, czy to zmienia spojrzenie klienta (jeśli
+klient podtrzymuje mimo wyjaśnienia → zapis jako propozycja z `flags.ai_pushback`).
+
+### `code_ref` w zgłoszeniach (`wfa_test_issues.flags`)
+Przy potwierdzonym błędzie marker `<zgloszenie>` dostaje 3 dodatkowe pola, trafiające do `flags`
+(ta sama kolumna jsonb co `ai_pushback`/`poza_v1`):
+- `code_ref` — plik i przybliżona linia podejrzanego miejsca (np. `public/js/oferty.js:138`),
+- `hipoteza` — 1–2 zdania: prawdopodobna przyczyna,
+- `proponowana_naprawa` — 1–2 zdania: co zmienić.
+
+Panel Tomka (krok `testy_klienta`) pokazuje je w dyskretnym bloku **„Diagnoza AI"** przy zgłoszeniu,
+a wygenerowany **„Prompt sesji naprawczej"** („Zleć pracę nad zatwierdzonymi") wstrzykuje diagnozy
+do każdego `[TK-n]` — wykonawca dostaje gotowy trop.
+
+### Bramka: naprawa PO zatwierdzeniu Tomka
+Dostęp do kodu to **tylko diagnoza** — NIC nie jest naprawiane automatycznie. Zmiana w kodzie
+następuje wyłącznie po decyzji Tomka: „Zleć pracę nad zatwierdzonymi" tworzy pozycje `[TK-n]` w
+checkliście `poprawki_demo` + prompt, a właściwą naprawę robi osobna, **automatyczna sesja
+naprawcza pełnym rytuałem fabryki** (pętla do wyczerpania, `status='done'` na issue → klient widzi
+✅). Spowiednik czyta, Tomek zatwierdza, sesja naprawcza wykonuje.
+
+### Token GitHub (retro)
+Sekret `GITHUB_READ_TOKEN` ustawiono początkowo wartością z zalogowanego `gh` CLI (`gh auth token`)
+— ten token ma **szeroki zakres** (`repo`, `workflow`, …), więc de facto pełny zapis do wszystkich
+repo konta. Narzędzie potrzebuje jedynie **odczytu Contents jednego repo**. Rekomendacja (wpis
+retro w `wfa_notes`): podmienić na **fine-grained PAT read-only** (Contents: Read-only, ograniczony
+do repozytoriów aplikacji) i podać go przez `npx supabase secrets set GITHUB_READ_TOKEN=…`.

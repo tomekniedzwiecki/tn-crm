@@ -33,6 +33,13 @@ const MAX_USER_MSGS_PER_HOUR = 40; // rate-limit per projekt (anty-abuse/koszty)
 const MAX_ATTACH_PER_MSG = 4;
 const HISTORY_TURNS = 24; // ile ostatnich wiadomości bierzemy do kontekstu modelu
 
+// „Czytaj kod" (diagnoza bugów, sesja U8) — READ-ONLY dostęp do repo projektu przez GitHub REST.
+// Model przy zgłoszeniu BŁĘDU może zajrzeć w kod (potwierdzić bug vs zachowanie celowe). Sekret edge.
+const GH_TOKEN = Deno.env.get("GITHUB_READ_TOKEN") || "";
+const MAX_CODE_CALLS = 6;    // max wywołań narzędzia czytaj_kod na turę (twarda bramka anty-koszt)
+const MAX_CODE_ROUNDS = 6;   // max rund modelu z narzędziem (bezpiecznik pętli)
+const MAX_CODE_LINES = 400;  // max linii na jeden odczyt
+
 // Cennik USD/1M tokenów (log kosztu do edge logs; brak dedykowanej tabeli ai_usage w wfa — patrz raport)
 const PRICES: Record<string, { input: number; output: number }> = {
   "gpt-4o": { input: 2.5, output: 10 },
@@ -139,12 +146,122 @@ BEZ ŻARGONU: mów „zakres wersji 1", „plan rozwoju", „na później". Nie 
 const MARKER_BRAIN_FIELDS = `- ai_pushback: wypełnij TYLKO gdy PODWAŻYŁEŚ ten pomysł, a klient mimo to go PODTRZYMAŁ — zwięźle po polsku: Twój argument + odpowiedź klienta (np. „Sugerowałem prostszy filtr zamiast osobnego ekranu; klient chce osobny ekran, bo obsługuje 300 klientów dziennie"). Dla BŁĘDÓW i pomysłów przyjętych bez kontry: null.
 - poza_v1: true, jeśli propozycja wykracza poza zakres wersji 1 (rozwój aplikacji); w innym wypadku false.`;
 
-function buildSystemPrompt(appName: string, testContext: string, issues: Array<Record<string, unknown>>, mode: TestMode = "testy"): string {
+// ── Narzędzie „czytaj_kod" (U8): READ-ONLY GitHub REST na repo z wfa_projects.repo_url ──────────
+type RepoInfo = { owner: string; repo: string };
+
+function parseRepoUrl(url: string): RepoInfo | null {
+  const m = String(url || "").match(/github\.com[/:]([^/\s]+)\/([^/#?\s]+?)(?:\.git)?\/?$/i);
+  return m ? { owner: m[1], repo: m[2] } : null;
+}
+
+function ghFetch(path: string, accept = "application/vnd.github+json"): Promise<Response> {
+  return fetch(`https://api.github.com${path}`, {
+    headers: {
+      Authorization: `Bearer ${GH_TOKEN}`,
+      Accept: accept,
+      "X-GitHub-Api-Version": "2022-11-28",
+      "User-Agent": "tn-crm-wfa-test-chat",
+    },
+  });
+}
+
+type CodeCall = { akcja?: string; sciezka?: string; fraza?: string; plik?: string; od?: number; do?: number };
+
+// Wykonanie jednej akcji narzędzia → zwięzły tekst dla modelu (NIE dla klienta).
+async function execCodeTool(owner: string, repo: string, c: CodeCall): Promise<string> {
+  const akcja = String(c.akcja || "").trim();
+  try {
+    if (akcja === "lista_plikow") {
+      const dir = String(c.sciezka || "").replace(/^\/+|\/+$/g, "");
+      const res = await ghFetch(`/repos/${owner}/${repo}/contents/${dir.split("/").map(encodeURIComponent).join("/")}`);
+      if (!res.ok) return `[lista_plikow ${dir || "/"}] błąd ${res.status}`;
+      const arr = await res.json().catch(() => null);
+      if (!Array.isArray(arr)) return `[lista_plikow ${dir || "/"}] to plik, nie katalog — użyj „czytaj"`;
+      const items = arr.slice(0, 100).map((x: any) => `${x.type === "dir" ? "[DIR] " : "      "}${x.path}${x.type === "file" ? ` (${x.size} B)` : ""}`);
+      return `[lista_plikow ${dir || "/"}] (${arr.length} pozycji)\n` + items.join("\n");
+    }
+    if (akcja === "czytaj") {
+      const plik = String(c.plik || "").replace(/^\/+/, "");
+      if (!plik) return "[czytaj] brak nazwy pliku";
+      const res = await ghFetch(`/repos/${owner}/${repo}/contents/${plik.split("/").map(encodeURIComponent).join("/")}`);
+      if (!res.ok) return `[czytaj ${plik}] błąd ${res.status}`;
+      const j = await res.json().catch(() => null) as any;
+      if (!j || Array.isArray(j) || !j.content) return `[czytaj ${plik}] to katalog albo plik binarny`;
+      let text: string;
+      try {
+        const bin = atob(String(j.content).replace(/\s/g, ""));
+        text = new TextDecoder().decode(Uint8Array.from(bin, (ch) => ch.charCodeAt(0)));
+      } catch { return `[czytaj ${plik}] nie mogę zdekodować treści`; }
+      const lines = text.split("\n");
+      let od = Math.max(1, Math.floor(Number(c.od) || 1));
+      let doo = Math.floor(Number(c.do) || (od + MAX_CODE_LINES - 1));
+      if (doo < od) doo = od;
+      if (doo - od + 1 > MAX_CODE_LINES) doo = od + MAX_CODE_LINES - 1;
+      doo = Math.min(doo, lines.length);
+      const body = lines.slice(od - 1, doo).map((l, i) => `${od + i}: ${l}`).join("\n");
+      const tail = doo < lines.length ? `\n… (plik ma ${lines.length} linii; pokazano ${od}-${doo}; poproś o dalszy zakres jeśli trzeba)` : "";
+      return `[czytaj ${plik} ${od}-${doo}]\n${body}${tail}`;
+    }
+    if (akcja === "szukaj") {
+      const fraza = String(c.fraza || "").trim();
+      if (!fraza) return "[szukaj] brak frazy";
+      const res = await ghFetch(`/search/code?q=${encodeURIComponent(`${fraza} repo:${owner}/${repo}`)}&per_page=6`, "application/vnd.github.text-match+json");
+      if (res.status === 422) return `[szukaj „${fraza}"] wyszukiwarka treści niedostępna dla tego repo (może nie być jeszcze zaindeksowane) — użyj „lista_plikow" + „czytaj"`;
+      if (!res.ok) return `[szukaj „${fraza}"] błąd ${res.status}`;
+      const j = await res.json().catch(() => null) as any;
+      const items = (j?.items || []).slice(0, 6);
+      if (!items.length) return `[szukaj „${fraza}"] brak trafień — spróbuj „lista_plikow" + „czytaj"`;
+      return `[szukaj „${fraza}"] trafienia:\n` + items.map((it: any) => {
+        const frag = (it.text_matches || []).map((t: any) => t.fragment).filter(Boolean).slice(0, 2).join(" … ").replace(/\s+/g, " ").slice(0, 200);
+        return `- ${it.path}${frag ? `  → …${frag}…` : ""}`;
+      }).join("\n");
+    }
+    return `[czytaj_kod] nieznana akcja: „${akcja}" (dozwolone: lista_plikow, czytaj, szukaj)`;
+  } catch (e) {
+    return `[czytaj_kod ${akcja}] wyjątek: ${String(e).slice(0, 140)}`;
+  }
+}
+
+// Wytnij markery <czytaj_kod>{...}</czytaj_kod> z tekstu modelu → lista wywołań + oczyszczony tekst.
+function parseCodeCalls(text: string): { clean: string; calls: CodeCall[] } {
+  const calls: CodeCall[] = [];
+  const clean = text.replace(/<czytaj_kod>([\s\S]*?)<\/czytaj_kod>/g, (_m, inner) => {
+    try { const o = JSON.parse(String(inner).trim()); if (o && o.akcja) calls.push(o); }
+    catch (e) { console.error("[wfa-test-chat] czytaj_kod marker parse:", e, String(inner).slice(0, 160)); }
+    return "";
+  }).replace(/\n{3,}/g, "\n\n").trim();
+  return { clean, calls };
+}
+
+// Instrukcja narzędzia do system-promptu (wstrzykiwana tylko gdy projekt MA dostęp do repo).
+const CODE_TOOL_INSTR = (owner: string, repo: string) => `MASZ WGLĄD W KOD APLIKACJI (repo ${owner}/${repo}, tylko ODCZYT) — służy WYŁĄCZNIE Twojej diagnozie zgłoszeń, nie rozmowie.
+KIEDY zaglądać: przy KAŻDYM zgłoszeniu BŁĘDU dotyczącym tego, jak aplikacja DZIAŁA lub WYGLĄDA (coś nie działa, psuje się, nachodzi na siebie, źle się wyświetla, nie zapisuje itp.) ZAJRZYJ w kod ZANIM zapiszesz zgłoszenie — po to, by (1) ocenić, czy to faktyczny błąd, czy zachowanie CELOWE, ORAZ (2) zlokalizować prawdopodobne miejsce w kodzie. Wyjątek: czyste pomysły/propozycje rozwoju (to nie błędy) — tam kodu nie ruszaj.
+JAK: wysyłasz ukryty marker (klient go NIE widzi), dostajesz wynik i DOPIERO wtedy piszesz odpowiedź. Akcje:
+<czytaj_kod>{"akcja":"lista_plikow","sciezka":"public/js"}</czytaj_kod>   (spis plików katalogu; pusta ścieżka = katalog główny)
+<czytaj_kod>{"akcja":"czytaj","plik":"public/js/offer-actions.js","od":1,"do":80}</czytaj_kod>   (treść pliku, zakres linii)
+<czytaj_kod>{"akcja":"szukaj","fraza":"frozen"}</czytaj_kod>   (wyszukiwanie w kodzie repo)
+NAJPIERW „lista_plikow", by znaleźć właściwy plik, potem „czytaj". Gdy chcesz zajrzeć — wyślij SAM marker/markery i NIC więcej (nie pisz jeszcze do klienta); odpowiedź napiszesz po wyniku.
+LIMITY: maks. ${MAX_CODE_CALLS} odczytów na jedną wiadomość, maks. ${MAX_CODE_LINES} linii na odczyt, tylko repo TEGO projektu.
+CO ROBISZ Z USTALENIAMI:
+- Jeśli zachowanie okaże się CELOWE (świadoma blokada/zamrożenie, walidacja, limit, konstrukcja z założenia) → to NIE jest błąd. Wyjaśnij klientowi PO LUDZKU, dlaczego tak działa i jaka jest właściwa droga (np. „wysłana oferta jest celowo zamrożona — poprawki robisz przez nową wersję"), i ZAPYTAJ, czy to zmienia jego spojrzenie. Jeśli mimo wyjaśnienia podtrzymuje, że chce zmianę → zapisz jako propozycję i wypełnij ai_pushback.
+- Jeśli to FAKTYCZNY błąd → zapisz <zgloszenie> i ZAWSZE (skoro masz wgląd w kod) dołóż do jego JSON trzy pola diagnozy: code_ref = plik i przybliżona linia najbardziej podejrzanego miejsca, hipoteza = prawdopodobna przyczyna, proponowana_naprawa = co zmienić. To przyspiesza sesję naprawczą. Przykład:
+<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"…","quote":"…","dodaj_do":null,"ai_pushback":null,"poza_v1":false,"code_ref":"public/js/plik.js:123","hipoteza":"…","proponowana_naprawa":"…"}</zgloszenie>
+ŻELAZNA ZASADA: NIGDY nie wklejaj klientowi fragmentów kodu, nazw funkcji/tabel ani żargonu — klientowi tłumaczysz wszystko zwykłym, ludzkim językiem.`;
+
+// Pola diagnozy w markerze <zgloszenie> (dokładane do opisu pól, gdy jest dostęp do kodu).
+const MARKER_DIAG_FIELDS = `- code_ref: (TYLKO gdy potwierdziłeś w kodzie FAKTYCZNY błąd) plik i przybliżona linia podejrzanego miejsca, np. „public/js/kreator.js:142". Inaczej null.
+- hipoteza: (TYLKO przy potwierdzonym błędzie) 1–2 zdania po polsku — prawdopodobna przyczyna. Inaczej null.
+- proponowana_naprawa: (TYLKO przy potwierdzonym błędzie) 1–2 zdania po polsku — co zmienić, by naprawić. Inaczej null.`;
+
+function buildSystemPrompt(appName: string, testContext: string, issues: Array<Record<string, unknown>>, mode: TestMode = "testy", codeInfo: RepoInfo | null = null): string {
   const titles = issues.length
     ? issues.map((i) => `  - [TK-${i.seq}] ${i.title}`).join("\n")
     : "  (brak — to pierwsze zgłoszenia)";
   const app = appName || "Twoja aplikacja";
   const ctx = (testContext || "").trim() || "(brak szczegółowego opisu — dopytuj klienta o ekran/moduł, którego dotyczy uwaga)";
+  // U8: gdy projekt ma dostęp do repo → wstrzyknij instrukcję narzędzia + pola diagnozy do markera.
+  const codeBlock = codeInfo ? "\n" + CODE_TOOL_INSTR(codeInfo.owner, codeInfo.repo) + "\n" : "";
+  const diagFieldsBlock = codeInfo ? "\n" + MARKER_DIAG_FIELDS : "";
 
   if (mode === "feedback") {
     return `Jesteś życzliwym, konkretnym asystentem, który ZBIERA PROPOZYCJE ROZWOJU I PROBLEMY od operatora DZIAŁAJĄCEJ aplikacji „${app}". Aplikacja już żyje i jest używana na co dzień — nie testujemy wersji roboczej, tylko rozwijamy produkt. Rozmawiasz jak dobry opiekun produktu: operator swobodnie MÓWI, co chciałby usprawnić i co go uwiera w codziennej pracy, a Ty układasz z tego porządek. Operator NIGDY nie wypełnia formularza — strukturę tworzysz Ty.
@@ -162,7 +279,7 @@ JAK ROZMAWIASZ:
 - Nie zdradzasz wewnętrznych szczegółów technicznych ani sekretów. Znasz tylko to, co wyżej + rozmowę.
 
 ${SCEPTYK}
-
+${codeBlock}
 SKŁADANIE ZGŁOSZENIA (najważniejsze):
 Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundzie kontry), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (operator go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
 <zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null,"ai_pushback":null,"poza_v1":false}</zgloszenie>
@@ -173,7 +290,7 @@ Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundz
 - severity: użyj JAKO KATEGORII (mapowanie na wspólne pole): POMYSŁ / propozycja rozwoju → "kosmetyka"; PROBLEM który przeszkadza → "istotne"; PROBLEM który blokuje pracę operatora → "krytyczne".
 - quote: DOSŁOWNY, najbardziej treściwy cytat operatora (zachowaj jego język!).
 - dodaj_do: jeśli to TA SAMA rzecz co istniejące zgłoszenie z listy poniżej — wstaw jego numer seq (samą liczbę), a w description dopisz nowy szczegół; system dołączy notatkę zamiast dublować. W innym razie null.
-${MARKER_BRAIN_FIELDS}
+${MARKER_BRAIN_FIELDS}${diagFieldsBlock}
 - Możesz w jednej odpowiedzi zapisać KILKA zgłoszeń (kilka markerów), jeśli operator wymienił kilka niezależnych rzeczy.
 - Po markerze pisz DALEJ naturalnie: potwierdź krótko po ludzku (bez podawania numeru — system go dopisze) i zapytaj „Co jeszcze chciałbyś usprawnić?".
 - NIE zapisuj zgłoszenia przedwcześnie — najpierw dopytaj, chyba że operator od razu podał komplet.
@@ -196,7 +313,7 @@ JAK ROZMAWIASZ:
 - Nie zdradzasz wewnętrznych szczegółów technicznych ani sekretów. Znasz tylko to, co wyżej + rozmowę.
 
 ${SCEPTYK}
-
+${codeBlock}
 SKŁADANIE ZGŁOSZENIA (najważniejsze):
 Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundzie kontry), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (klient go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
 <zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null,"ai_pushback":null,"poza_v1":false}</zgloszenie>
@@ -207,7 +324,7 @@ Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundz
 - severity: TWOJA sugestia (krytyczne = blokuje pracę; istotne = przeszkadza; kosmetyka = drobiazg wizualny).
 - quote: DOSŁOWNY, najbardziej treściwy cytat klienta (zachowaj jego język!).
 - dodaj_do: jeśli to TA SAMA rzecz co istniejące zgłoszenie z listy poniżej — wstaw jego numer seq (samą liczbę), a w description dopisz nowy szczegół; system dołączy notatkę zamiast dublować. W innym razie null.
-${MARKER_BRAIN_FIELDS}
+${MARKER_BRAIN_FIELDS}${diagFieldsBlock}
 - Możesz w jednej odpowiedzi zapisać KILKA zgłoszeń (kilka markerów), jeśli klient wymienił kilka niezależnych rzeczy.
 - Po markerze pisz DALEJ naturalnie: potwierdź krótko po ludzku (bez podawania numeru — system go dopisze) i zapytaj „Co jeszcze zauważyłeś?".
 - NIE zapisuj zgłoszenia przedwcześnie — najpierw dopytaj, chyba że klient od razu podał komplet.
@@ -254,6 +371,14 @@ async function insertIssue(
   const pushback = raw.ai_pushback ? String(raw.ai_pushback).slice(0, 1500).trim() : "";
   if (pushback) flags.ai_pushback = pushback;
   if (raw.poza_v1 === true || String(raw.poza_v1).toLowerCase() === "true") flags.poza_v1 = true;
+
+  // U8: diagnoza z kodu (tylko dla potwierdzonych błędów) → flags.code_ref / hipoteza / proponowana_naprawa.
+  const codeRef = raw.code_ref ? String(raw.code_ref).slice(0, 300).trim() : "";
+  const hipoteza = raw.hipoteza ? String(raw.hipoteza).slice(0, 800).trim() : "";
+  const naprawa = raw.proponowana_naprawa ? String(raw.proponowana_naprawa).slice(0, 800).trim() : "";
+  if (codeRef) flags.code_ref = codeRef;
+  if (hipoteza) flags.hipoteza = hipoteza;
+  if (naprawa) flags.proponowana_naprawa = naprawa;
 
   // Dedup: dodaj_do = seq istniejącego → dopisz notatkę zamiast dublować.
   const addTo = Number(raw.dodaj_do);
@@ -336,6 +461,58 @@ async function callOpenAI(
   return { text, inTok, outTok };
 }
 
+// U8: runda(y) modelu z narzędziem „czytaj_kod". Model może zażądać odczytów kodu (markery),
+// my je wykonujemy (max MAX_CODE_CALLS/turę) i oddajemy wynik, aż model odpowie klientowi.
+// Brak codeInfo/tokenu → zwykłe pojedyncze wywołanie (zachowanie sprzed U8). Zwraca oczyszczony tekst.
+async function runWithCodeTool(
+  system: string,
+  transcript: Array<{ role: string; content: string; images?: string[] }>,
+  codeInfo: RepoInfo | null,
+  label: string,
+): Promise<{ text: string } | null> {
+  const conv: Array<{ role: string; content: string; images?: string[] }> =
+    transcript.map((m) => ({ role: m.role, content: m.content, images: m.images }));
+
+  if (!codeInfo || !GH_TOKEN) {
+    const ai = await callOpenAI(system, conv, label);
+    return ai ? { text: parseCodeCalls(ai.text).clean || ai.text } : null;
+  }
+
+  let used = 0;
+  const cache = new Map<string, string>();
+  for (let round = 0; round < MAX_CODE_ROUNDS; round++) {
+    const ai = await callOpenAI(system, conv, `${label} r${round}`);
+    if (!ai) return round === 0 ? null : { text: "" };
+    const { clean, calls } = parseCodeCalls(ai.text);
+    if (!calls.length) return { text: clean || ai.text };
+
+    const results: string[] = [];
+    let hitLimit = false;
+    for (const c of calls) {
+      if (used >= MAX_CODE_CALLS) {
+        results.push(`[limit] Wyczerpano limit ${MAX_CODE_CALLS} odczytów kodu w tej wiadomości. Odpowiedz TERAZ na podstawie tego, co już wiesz — NIE proś o kolejne odczyty.`);
+        hitLimit = true;
+        break;
+      }
+      used++;
+      const key = JSON.stringify(c);
+      let r = cache.get(key);
+      if (r === undefined) { r = await execCodeTool(codeInfo.owner, codeInfo.repo, c); cache.set(key, r); }
+      results.push(r);
+    }
+    console.log(`[wfa-test-chat] ${label} czytaj_kod round=${round} calls=${calls.length} used=${used}${hitLimit ? " LIMIT" : ""}`);
+    conv.push({ role: "assistant", content: ai.text });
+    conv.push({ role: "user", content: `WYNIK narzędzia „czytaj_kod" (widzisz to tylko Ty; klient tego NIE widzi):\n\n${results.join("\n\n")}` });
+    if (hitLimit || used >= MAX_CODE_CALLS) break; // wymuś finalną odpowiedź poza pętlą
+  }
+
+  // Finalna odpowiedź — bez dalszych odczytów (limit rund/wywołań osiągnięty).
+  const finalSys = system + "\n\n[SYSTEM] Zakończ diagnozę: NIE emituj już markerów <czytaj_kod>. Napisz teraz odpowiedź do klienta i — jeśli zasadne — zapisz zgłoszenie markerem <zgloszenie>.";
+  const fin = await callOpenAI(finalSys, conv, `${label} final`);
+  if (!fin) return { text: "" };
+  return { text: parseCodeCalls(fin.text).clean || fin.text };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -367,7 +544,7 @@ Deno.serve(async (req: Request) => {
   }
 
   const { data: p } = await sb.from("wfa_projects")
-    .select("id, name, unique_token, client_password_hash, test_context, test_mode")
+    .select("id, name, unique_token, client_password_hash, test_context, test_mode, repo_url")
     .eq("unique_token", token).maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
 
@@ -403,6 +580,8 @@ Deno.serve(async (req: Request) => {
 
   const projectId = String(p.id);
   const mode: TestMode = String(p.test_mode || "").trim() === "feedback" ? "feedback" : "testy";
+  // U8: dostęp do kodu tylko gdy jest sekret GITHUB_READ_TOKEN i repo_url projektu daje się sparsować.
+  const codeInfo: RepoInfo | null = GH_TOKEN && (p as any).repo_url ? parseRepoUrl(String((p as any).repo_url)) : null;
   const roErr = () => json({ error: "podgląd — tylko odczyt" }, 403);
 
   // Krok testów musi być aktywny (in_progress/done) — inaczej karta w portalu ukryta.
@@ -508,8 +687,8 @@ Deno.serve(async (req: Request) => {
     });
 
     const issues = await loadIssues(sb, projectId);
-    const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues, mode);
-    const ai = await callOpenAI(system, transcript, `proj=${projectId.slice(0, 8)} mode=${mode}`);
+    const system = buildSystemPrompt(String(p.name || ""), String(p.test_context || ""), issues, mode, codeInfo);
+    const ai = await runWithCodeTool(system, transcript, codeInfo, `proj=${projectId.slice(0, 8)} mode=${mode}`);
     if (!ai) {
       return json({ soft: true, reply: "Coś mi się przycięło — spróbuj wysłać jeszcze raz za chwilę. Twoja wiadomość jest zapisana." });
     }
