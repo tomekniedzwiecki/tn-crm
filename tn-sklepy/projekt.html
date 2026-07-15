@@ -793,11 +793,12 @@
         //  i zabijają wiarygodność marki „bez bazaru" dokładnie w momencie decyzji.)
         function psychPriceUp(min) {
             const dec = Math.floor(min / 10) * 10;
-            // ≥150 zł tylko pełne „…9,00" (249, nie 244,90) — końcówka ,90 przy dużych kwotach razi
+            // Spójny katalog (runda 2 krytyka): <150 zł końcówki „…4,90/…9,90"; ≥150 zł pełne „…9,00"
+            // (249, nie 244,90 — grosze przy dużych kwotach rażą).
             const cands = min >= 150 ? [dec + 9.00, dec + 19.00]
-                                     : [dec + 4.90, dec + 9.00, dec + 14.90, dec + 19.00];
+                                     : [dec + 4.90, dec + 9.90, dec + 14.90, dec + 19.90];
             for (const c of cands) if (c >= min - 0.001) return Math.round(c * 100) / 100;
-            return Math.round((dec + 19.00) * 100) / 100;
+            return Math.round((dec + 19.90) * 100) / 100;
         }
         function suggestTestPrice(cost) { return psychPriceUp(Math.max(cost * (1 + TEST_MARGIN_PCT / 100), cost + 1)); }
         function wySuggest() {

@@ -93,14 +93,14 @@ START (publikacja pon./wt. rano, z PAUSED — bramka Tomka)
 - Cena scale ~2,5–2,7× kosztu → marża ~40% → **BE-ROAS ≈ 1,6** → przy celu ROAS 2,0–2,5
   realny zysk + 10% od przychodu dla Tomka. **Cały sens dwufazy.**
 
-**Ceny testowe = psychologiczne (reguła fabryki od 15.07):** zaokrąglamy W GÓRĘ do najbliższej
-końcówki …4,90 / …9,00 nie niższej niż koszt×1,15 — surowe artefakty przeliczeń (83,68 / 240,01)
-sygnalizują „auto-przelicznik/dropshipping" i zabijają zaufanie w momencie decyzji.
-(`psychPriceUp()` w projekt.html — suggestTestPrice/testPriceFor.)
+**Ceny testowe = psychologiczne (reguła fabryki od 15.07, doprecyzowana rundą 2 krytyka):**
+zaokrąglamy W GÓRĘ, spójne końcówki katalogu: **<150 zł → …4,90/…9,90; ≥150 zł → pełne …9,00**;
+nigdy surowe artefakty przeliczeń (83,68 / 240,01) — sygnalizują „auto-przelicznik/dropshipping"
+i zabijają zaufanie w momencie decyzji. (`psychPriceUp()` w projekt.html — suggestTestPrice/testPriceFor.)
 
 Portfel rozwojowy (fees 2%, koszty z POTWIERDZONYCH aukcji detail 15.07): lokówka 72,77→**84,90**
-(profit 10,43; BE-ROAS 8,1) · koc 51,21→**59,00** (6,61; BE 8,9) · endoskop 30,80→**39,00**
-(7,42; BE 5,3 — podbite z 35,41, bo COD z opłatą pobraniową się nie domykał) · jeździk
+(profit 10,43; BE-ROAS 8,1) · koc 51,21→**59,90** (7,49; BE 8,0) · endoskop 30,80→**39,90**
+(8,30; BE 4,8 — podbite z 35,41, bo COD z opłatą pobraniową się nie domykał) · jeździk
 208,71→**249,00** (35,31; BE 7,1) · pompka 55,11→**64,90** (8,49; BE 7,6).
 ⚠️ Lekcja 15.07: snapshoty „search" zaniżały koszt lokówki i koca ~2× — cena z aukcji
 NIEPOTWIERDZONEJ nie jest podstawą kalkulacji (wymóg `detail` PRZED kampanią, §8).
