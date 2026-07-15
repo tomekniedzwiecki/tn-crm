@@ -842,6 +842,13 @@
                                         <!-- Custom Payment Config (Indywidualnie) -->
                                         <div id="custom-payment-config" class="hidden mb-4 p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
                                             <p class="text-zinc-500 text-[10px] mb-3">Jednorazowy link do płatności. Projekt TN Workflow <strong>nie zostanie</strong> utworzony.</p>
+                                            <div class="mb-3">
+                                                <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Oferta z katalogu (opcja)</label>
+                                                <select id="custom-payment-offer-inline" class="input-field w-full rounded px-2 py-1.5 text-xs text-white" onchange="onCustomPaymentOfferChange('inline')">
+                                                    <option value="">-- Własna kwota i opis --</option>
+                                                </select>
+                                                <p id="custom-payment-offer-hint-inline" class="hidden text-[9px] text-emerald-400/80 mt-1"></p>
+                                            </div>
                                             <div class="grid grid-cols-2 gap-3">
                                                 <div>
                                                     <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Kwota (PLN) <span class="text-red-400">*</span></label>
@@ -946,6 +953,13 @@
                                                     <!-- Form -->
                                                     <div id="custom-payment-exists-form">
                                                         <p class="text-zinc-600 text-[10px] mb-3">Jednorazowy link do płatności. Projekt TN Workflow <strong>nie zostanie</strong> utworzony.</p>
+                                                        <div class="mb-3">
+                                                            <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Oferta z katalogu (opcja)</label>
+                                                            <select id="custom-payment-offer-exists" class="input-field w-full rounded-lg px-3 py-2 text-sm text-white" onchange="onCustomPaymentOfferChange('exists')">
+                                                                <option value="">-- Własna kwota i opis --</option>
+                                                            </select>
+                                                            <p id="custom-payment-offer-hint-exists" class="hidden text-[9px] text-emerald-400/80 mt-1"></p>
+                                                        </div>
                                                         <div class="grid grid-cols-2 gap-3 mb-3">
                                                             <div>
                                                                 <label class="block text-zinc-500 text-[9px] font-mono uppercase mb-1">Kwota (PLN) <span class="text-red-400">*</span></label>
@@ -2345,6 +2359,17 @@
             offers.forEach(offer => {
                 const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(offer.price || 0);
                 select.innerHTML += `<option value="${offer.id}" data-price="${offer.price || 0}" data-offer-type="${offer.offer_type || 'full'}">${offer.name} (${price})</option>`;
+            });
+
+            // Płatność jednorazowa: selecty oferty katalogowej (link /checkout?offer=&lead_id=&sid=)
+            ['custom-payment-offer-inline', 'custom-payment-offer-exists'].forEach(id => {
+                const sel = document.getElementById(id);
+                if (!sel) return;
+                sel.innerHTML = '<option value="">-- Własna kwota i opis --</option>';
+                offers.forEach(offer => {
+                    const price = new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: 0 }).format(offer.price || 0);
+                    sel.innerHTML += `<option value="${offer.id}">${offer.name} (${price})</option>`;
+                });
             });
         }
 
@@ -5908,7 +5933,72 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
         }
 
-        function generateCustomPaymentLinkInline() {
+        // ============ PŁATNOŚĆ ZA OFERTĘ KATALOGOWĄ (bez client_offer) ============
+        // Link /checkout?offer=&lead_id=(&sid=) — kwota walidowana serwerowo z oferty.
+        // Dla ofert aplikacji dokleja sid (spar_session), żeby tpay-webhook twardo
+        // powiązał zakup z sesją sparingu → full_paid_at → projekt w TN App.
+
+        function getSelectedCatalogOffer(suffix) {
+            const sel = document.getElementById(`custom-payment-offer-${suffix}`);
+            if (!sel?.value) return null;
+            return offers.find(o => o.id === sel.value) || null;
+        }
+
+        async function getLeadSparSessionId() {
+            if (!lead?.id) return null;
+            try {
+                const { data } = await supabaseClient
+                    .from('spar_sessions')
+                    .select('id')
+                    .eq('lead_id', lead.id)
+                    .is('full_paid_at', null)
+                    .eq('is_test', false)
+                    .order('last_user_at', { ascending: false, nullsFirst: false })
+                    .limit(1)
+                    .maybeSingle();
+                return data?.id || null;
+            } catch (e) {
+                console.warn('[custom-payment] spar_sessions lookup:', e);
+                return null; // webhook i tak dopasuje po lead_id — sid to tylko twardszy link
+            }
+        }
+
+        async function buildCatalogOfferPaymentUrl(offer) {
+            const isLocal = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+            const baseUrl = isLocal ? location.origin : 'https://crm.tomekniedzwiecki.pl';
+            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+            const params = new URLSearchParams({ offer: offer.id, lead_id: lead?.id || '' });
+            if (/budowa aplikacji/i.test(offer.name || '')) {
+                const sid = await getLeadSparSessionId();
+                if (sid) params.set('sid', sid);
+            }
+            return `${baseUrl}${checkoutPath}?${params.toString()}`;
+        }
+
+        function onCustomPaymentOfferChange(suffix) {
+            const offer = getSelectedCatalogOffer(suffix);
+            const amountInput = document.getElementById(`custom-payment-amount-${suffix}`);
+            const descriptionInput = document.getElementById(`custom-payment-description-${suffix}`);
+            const hint = document.getElementById(`custom-payment-offer-hint-${suffix}`);
+            if (offer) {
+                amountInput.value = offer.price || '';
+                descriptionInput.value = offer.name || '';
+                amountInput.readOnly = true;
+                descriptionInput.readOnly = true;
+                if (hint) {
+                    hint.textContent = /budowa aplikacji/i.test(offer.name || '')
+                        ? 'Kwota i opis z oferty. Po opłaceniu lead wejdzie do TN App (sesja sparingu → full_paid_at).'
+                        : 'Kwota i opis z oferty (walidacja serwerowa ceny).';
+                    hint.classList.remove('hidden');
+                }
+            } else {
+                amountInput.readOnly = false;
+                descriptionInput.readOnly = false;
+                hint?.classList.add('hidden');
+            }
+        }
+
+        async function generateCustomPaymentLinkInline() {
             const amountInput = document.getElementById('custom-payment-amount-inline');
             const descriptionInput = document.getElementById('custom-payment-description-inline');
 
@@ -5936,26 +6026,32 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 return;
             }
 
-            // Generate URL
-            const baseUrl = location.origin;
-            const isLocal = location.hostname === 'localhost';
-            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+            // Generate URL — oferta katalogowa ma priorytet (offer mode, cena z oferty)
+            const catalogOffer = getSelectedCatalogOffer('inline');
+            let paymentUrl;
+            if (catalogOffer) {
+                paymentUrl = await buildCatalogOfferPaymentUrl(catalogOffer);
+            } else {
+                const baseUrl = location.origin;
+                const isLocal = location.hostname === 'localhost';
+                const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
 
-            const params = new URLSearchParams({
-                amount: amount.toFixed(2),
-                description: description,
-                lead_id: lead?.id || ''
-            });
+                const params = new URLSearchParams({
+                    amount: amount.toFixed(2),
+                    description: description,
+                    lead_id: lead?.id || ''
+                });
 
-            // Check if upgrade option selected
-            const upgradeOfferSelect = document.getElementById('custom-payment-upgrade-offer-inline');
-            const upgradeOfferId = upgradeOfferSelect?.value;
-            if (upgradeOfferId && leadWorkflowId) {
-                params.set('upgrade_workflow_id', leadWorkflowId);
-                params.set('upgrade_to_offer_id', upgradeOfferId);
+                // Check if upgrade option selected
+                const upgradeOfferSelect = document.getElementById('custom-payment-upgrade-offer-inline');
+                const upgradeOfferId = upgradeOfferSelect?.value;
+                if (upgradeOfferId && leadWorkflowId) {
+                    params.set('upgrade_workflow_id', leadWorkflowId);
+                    params.set('upgrade_to_offer_id', upgradeOfferId);
+                }
+
+                paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
             }
-
-            const paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
 
             // Update UI - show result, hide config
             document.getElementById('custom-payment-url-inline').value = paymentUrl;
@@ -6005,6 +6101,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         function resetCustomPaymentInline() {
             document.getElementById('custom-payment-amount-inline').value = '';
             document.getElementById('custom-payment-description-inline').value = '';
+            const offerSel = document.getElementById('custom-payment-offer-inline');
+            if (offerSel) { offerSel.value = ''; onCustomPaymentOfferChange('inline'); }
             document.getElementById('custom-payment-config').classList.remove('hidden');
             document.getElementById('custom-payment-result-inline').classList.add('hidden');
         }
@@ -6014,7 +6112,7 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
 
         // ============ CUSTOM PAYMENT IN EXISTS STATE FUNCTIONS ============
 
-        function generateCustomPaymentLinkExists() {
+        async function generateCustomPaymentLinkExists() {
             const amountInput = document.getElementById('custom-payment-amount-exists');
             const descriptionInput = document.getElementById('custom-payment-description-exists');
 
@@ -6033,18 +6131,24 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 return;
             }
 
-            // Generate TPay payment URL
-            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const baseUrl = isLocal ? window.location.origin : 'https://crm.tomekniedzwiecki.pl';
-            const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
+            // Generate TPay payment URL — oferta katalogowa ma priorytet (offer mode)
+            const catalogOffer = getSelectedCatalogOffer('exists');
+            let paymentUrl;
+            if (catalogOffer) {
+                paymentUrl = await buildCatalogOfferPaymentUrl(catalogOffer);
+            } else {
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const baseUrl = isLocal ? window.location.origin : 'https://crm.tomekniedzwiecki.pl';
+                const checkoutPath = isLocal ? '/checkout/index.html' : '/checkout';
 
-            const params = new URLSearchParams({
-                amount: amount.toFixed(2),
-                description: description,
-                lead_id: lead?.id || ''
-            });
+                const params = new URLSearchParams({
+                    amount: amount.toFixed(2),
+                    description: description,
+                    lead_id: lead?.id || ''
+                });
 
-            const paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
+                paymentUrl = `${baseUrl}${checkoutPath}?${params.toString()}`;
+            }
 
             // Update UI - show result, hide form
             document.getElementById('custom-payment-url-exists').value = paymentUrl;
@@ -6088,6 +6192,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
         function resetCustomPaymentExists() {
             document.getElementById('custom-payment-amount-exists').value = '';
             document.getElementById('custom-payment-description-exists').value = '';
+            const offerSel = document.getElementById('custom-payment-offer-exists');
+            if (offerSel) { offerSel.value = ''; onCustomPaymentOfferChange('exists'); }
             document.getElementById('custom-payment-exists-form').classList.remove('hidden');
             document.getElementById('custom-payment-exists-result').classList.add('hidden');
         }
