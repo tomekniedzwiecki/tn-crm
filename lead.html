@@ -5983,17 +5983,13 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             if (offer) {
                 amountInput.value = offer.price || '';
                 descriptionInput.value = offer.name || '';
-                amountInput.readOnly = true;
-                descriptionInput.readOnly = true;
                 if (hint) {
                     hint.textContent = /budowa aplikacji/i.test(offer.name || '')
-                        ? 'Kwota i opis z oferty. Po opłaceniu lead wejdzie do TN App (sesja sparingu → full_paid_at).'
-                        : 'Kwota i opis z oferty (walidacja serwerowa ceny).';
+                        ? 'Kwota i opis z oferty — możesz je zmienić (inna kwota = link indywidualny). Po opłaceniu lead wejdzie do TN App.'
+                        : 'Kwota i opis z oferty — możesz je zmienić (inna kwota = link indywidualny).';
                     hint.classList.remove('hidden');
                 }
             } else {
-                amountInput.readOnly = false;
-                descriptionInput.readOnly = false;
                 hint?.classList.add('hidden');
             }
         }
@@ -6026,10 +6022,14 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 return;
             }
 
-            // Generate URL — oferta katalogowa ma priorytet (offer mode, cena z oferty)
+            // Generate URL — tryb ofertowy tylko gdy kwota/opis zgodne z ofertą
+            // (checkout w offer mode bierze cenę z oferty; zmieniona kwota = link indywidualny)
             const catalogOffer = getSelectedCatalogOffer('inline');
+            const matchesOffer = catalogOffer
+                && parseFloat(catalogOffer.price) === amount
+                && (catalogOffer.name || '').trim() === description;
             let paymentUrl;
-            if (catalogOffer) {
+            if (matchesOffer) {
                 paymentUrl = await buildCatalogOfferPaymentUrl(catalogOffer);
             } else {
                 const baseUrl = location.origin;
@@ -6137,10 +6137,14 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 return;
             }
 
-            // Generate TPay payment URL — oferta katalogowa ma priorytet (offer mode)
+            // Generate TPay payment URL — tryb ofertowy tylko gdy kwota/opis zgodne z ofertą
+            // (checkout w offer mode bierze cenę z oferty; zmieniona kwota = link indywidualny)
             const catalogOffer = getSelectedCatalogOffer('exists');
+            const matchesOffer = catalogOffer
+                && parseFloat(catalogOffer.price) === amount
+                && (catalogOffer.name || '').trim() === description;
             let paymentUrl;
-            if (catalogOffer) {
+            if (matchesOffer) {
                 paymentUrl = await buildCatalogOfferPaymentUrl(catalogOffer);
             } else {
                 const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
