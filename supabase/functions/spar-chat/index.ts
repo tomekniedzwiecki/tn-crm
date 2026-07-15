@@ -22,6 +22,7 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { reviveLeadOnReengage } from "../_shared/lead-stage.ts";
+import { isTrustedInternalCall } from "../_shared/spar-owner.ts";
 
 // ── CORS — whitelist originów (wzorzec: tpay-create-transaction) ──────────────
 const ALLOWED_ORIGINS = [
@@ -1136,7 +1137,10 @@ Deno.serve(async (req) => {
       const { data: sess } = await sb.from('spar_sessions').select('id, lead_id, auth_user_id').eq('id', sessionId).maybeSingle()
       if (!sess) return jsonResponse({ ok: false }, 200, corsHeaders)
       const ownerId = (sess.auth_user_id as string | null) || null
-      if (ownerId && (!au || au.id !== ownerId)) return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
+      // Bypass service-role (isTrustedInternalCall): zespół może domknąć etap ZA klienta
+      // (incydent 2026-07-15: model „zamknął" etap słownie w czacie, klient uznał sprawę
+      // za załatwioną, a knowhow_closed_at zostało NULL — panel TN App pokazywał etap w toku).
+      if (ownerId && !isTrustedInternalCall(req) && (!au || au.id !== ownerId)) return jsonResponse({ error: 'wymagane_logowanie' }, 403, corsHeaders)
       const now = new Date().toISOString()
       // Idempotencja: domknij i odpal drogi handoff TYLKO przy pierwszym zamknięciu.
       // Atomowy claim (WHERE knowhow_closed_at IS NULL) chroni przed podwójnym
@@ -1476,6 +1480,11 @@ if (!GATE_INSTRUCTION) { try { const { data: __ep } = await supabase.from('setti
         // i rusza z budową. Jeśli klient mimo to coś dopisze: podziękuj, dopytaj krótko o
         // jeden szczegół i potwierdź, że dopisujesz to do projektu. Bez ponaglania.
         if (knowhowClosed) sessionContext += `\n\n[ETAP DOPRACOWANIA JUŻ DOMKNIĘTY] Klient zamknął ten etap, a Tomek zaczął budowę. Każda nowa wiadomość to bonusowy szczegół „po fakcie". Reaguj krótko i ciepło: podziękuj, w razie potrzeby dopytaj o jedną rzecz i zapewnij, że trafia to do projektu. Nie zachęcaj do przedłużania rozmowy.`
+        // Zamknięcie etapu = WYŁĄCZNIE przycisk „To już wszystko" (event knowhow_close).
+        // Twardy guard w kodzie (mechanika etapu, nie głos): 2026-07-15 model podsunął
+        // chip <opcje>„Domykamy etap" i ogłosił „Etap domknięty. Ruszam z budową" —
+        // klient uznał etap za zamknięty, a knowhow_closed_at zostało NULL.
+        else sessionContext += `\n\n[ZAMKNIĘCIE ETAPU = PRZYCISK, NIE CZAT] Etap dopracowania zamyka WYŁĄCZNIE klient przyciskiem „To już wszystko — przejdź do budowy" w interfejsie (poza oknem czatu). Ty NIE możesz zamknąć etapu: NIGDY nie ogłaszaj „etap domknięty", NIE pisz „ruszam z budową", NIE podsuwaj w <opcje> pozycji typu „Domykamy etap". Gdy klient sygnalizuje koniec — podsumuj krótko zebrane i skieruj go wprost do tego przycisku.`
         // Powrót do rozmowy („wróć do rozmowy") — proaktywna zaczepka zamiast reakcji na turę.
         if (knowhowResume) sessionContext += `\n\n${KH.resume}`
       } else if (existingSession?.verdict === 'zielony') {
