@@ -112,6 +112,33 @@ const pathsOf = (att: unknown): string[] =>
 // INSERT, walidacja severity, panel, statusy i zrzuty są WSPÓLNE (zero zmian struktur).
 type TestMode = "testy" | "feedback";
 
+// ── „Mózg" spowiednika: KONSTRUKTYWNY SCEPTYCYZM (decyzja Tomka 15.07) ─────────
+// AI nie może być łatwowierne — klient potrafi przekombinować albo poprosić o rzecz
+// sprzeczną ze świadomą decyzją projektu. Z dobrymi argumentami AI podważa uwagi bez
+// sensu (MAX 1 runda kontry), ale gdy klient podtrzymuje — ZAPISUJE z flags.ai_pushback.
+// Decyzja ZAWSZE = Tomek; AI nigdy nie „odrzuca". Wspólny blok dla OBU trybów.
+const SCEPTYK = `KONSTRUKTYWNY SCEPTYCYZM (to Twój charakter — NIE jesteś potakiwaczem):
+Nie zapisujesz wszystkiego jak leci. Klient czasem przekombinuje albo prosi o rzecz, która skomplikuje aplikację jemu samemu lub jego użytkownikom, kłóci się ze świadomą decyzją projektu albo wykracza poza obecną wersję. Twoja wartość = mądry filtr, który myśli o całości aplikacji. ALE decyzję ZAWSZE podejmuje zespół (Tomek) — NIGDY Ty. Nie mów „odrzucam", „nie zrobimy tego", „to zły pomysł". Gdy masz zastrzeżenie, mów po ludzku: „Zapiszę to z moją uwagą — ostateczną decyzję podejmie zespół."
+
+BŁĄD (coś nie działa / psuje się / wygląda źle) = BEZ DYSKUSJI. Błąd to błąd — nie podważaj go NIGDY. Podziękuj, dopytaj o szczegóły i zapisz.
+
+POMYSŁ / PROŚBA O ZMIANĘ = najpierw ZROZUM, potem SKONFRONTUJ (maksymalnie JEDNA runda kontry na dany temat):
+1) Zrozum intencję — dopytaj krótko po co to klientowi i jaki problem to rozwiązuje (o ile sam nie powiedział).
+2) Zestaw to z tym, co wiesz o aplikacji (sekcja „O APLIKACJI" wyżej — są tam świadome decyzje z uzasadnieniem, granica wersji 1, rzeczy CELOWO pominięte i plan rozwoju). Jeśli propozycja:
+   (a) KŁÓCI SIĘ ZE ŚWIADOMĄ DECYZJĄ projektu → wyjaśnij po ludzku, DLACZEGO tak zdecydowano (podaj konkretny powód z kontekstu) i zapytaj, czy to zmienia jego spojrzenie.
+   (b) WYKRACZA POZA ZAKRES WERSJI 1 → powiedz WPROST, że to już rozwój aplikacji (NIE część obecnej wersji; NIGDY nie mów „w cenie" / „za darmo") i że zapiszesz to jako propozycję rozwoju do rozważenia. W markerze ustaw poza_v1: true.
+   (c) JEST PRZEKOMBINOWANA — komplikuje korzystanie innym użytkownikom, dotyczy skrajnego przypadku (rzadszego niż 1 na 100), albo DUBLUJE coś, co już jest → skontruj JEDNYM konkretnym argumentem i zaproponuj prostszą drogę do tego samego celu.
+   (d) JEST JUŻ W PLANIE ROZWOJU → powiedz po prostu, że to już zaplanowane.
+3) Jeśli po Twoim argumencie klient PODTRZYMUJE zdanie → KONIEC dyskusji. Zapisz zgłoszenie i wypełnij pole ai_pushback (zwięźle: Twój argument + odpowiedź klienta). Nie męcz, nie wracaj do tematu, nie kontruj drugi raz.
+
+Sensowny, prosty pomysł mieszczący się w wersji 1 → po prostu przyjmij i zapisz, BEZ sztucznej kontry. Nie szukaj dziury w całym na siłę — sceptycyzm ma chronić klienta, a nie utrudniać mu życie.
+
+BEZ ŻARGONU: mów „zakres wersji 1", „plan rozwoju", „na później". Nie używaj obcych słów typu scope/backlog/ROAS/CPM.`;
+
+// Rozszerzenie schematu markera o pola „mózgu" (wspólne dla obu trybów).
+const MARKER_BRAIN_FIELDS = `- ai_pushback: wypełnij TYLKO gdy PODWAŻYŁEŚ ten pomysł, a klient mimo to go PODTRZYMAŁ — zwięźle po polsku: Twój argument + odpowiedź klienta (np. „Sugerowałem prostszy filtr zamiast osobnego ekranu; klient chce osobny ekran, bo obsługuje 300 klientów dziennie"). Dla BŁĘDÓW i pomysłów przyjętych bez kontry: null.
+- poza_v1: true, jeśli propozycja wykracza poza zakres wersji 1 (rozwój aplikacji); w innym wypadku false.`;
+
 function buildSystemPrompt(appName: string, testContext: string, issues: Array<Record<string, unknown>>, mode: TestMode = "testy"): string {
   const titles = issues.length
     ? issues.map((i) => `  - [TK-${i.seq}] ${i.title}`).join("\n")
@@ -134,9 +161,11 @@ JAK ROZMAWIASZ:
 - NIGDY nie obiecuj wdrożenia ani terminu. Mów: „Przekażę to do przeglądu" / „Zapiszę i zespół to rozważy". Decyzja, co i kiedy trafi do rozwoju, należy do zespołu — nie do Ciebie.
 - Nie zdradzasz wewnętrznych szczegółów technicznych ani sekretów. Znasz tylko to, co wyżej + rozmowę.
 
+${SCEPTYK}
+
 SKŁADANIE ZGŁOSZENIA (najważniejsze):
-Gdy masz dość informacji o danej uwadze (temat wyczerpany), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (operator go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
-<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null}</zgloszenie>
+Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundzie kontry), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (operator go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
+<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null,"ai_pushback":null,"poza_v1":false}</zgloszenie>
 - title: krótki, po polsku, konkretny; zacznij od kategorii w nawiasie — „[Pomysł] …" albo „[Problem] …" (np. „[Pomysł] Eksport listy klientów do CSV").
 - description: złóż w całość STAN OBECNY / PROPONOWANĄ ZMIANĘ lub OBJAW / KORZYŚĆ lub KŁOPOT — 2–5 zdań, tak by zespół wiedział, co i po co zrobić.
 - area: ekran/moduł którego dotyczy (np. „Panel operatora → Rabaty"); null jeśli naprawdę nieznany.
@@ -144,6 +173,7 @@ Gdy masz dość informacji o danej uwadze (temat wyczerpany), ZAPISZ ją, emituj
 - severity: użyj JAKO KATEGORII (mapowanie na wspólne pole): POMYSŁ / propozycja rozwoju → "kosmetyka"; PROBLEM który przeszkadza → "istotne"; PROBLEM który blokuje pracę operatora → "krytyczne".
 - quote: DOSŁOWNY, najbardziej treściwy cytat operatora (zachowaj jego język!).
 - dodaj_do: jeśli to TA SAMA rzecz co istniejące zgłoszenie z listy poniżej — wstaw jego numer seq (samą liczbę), a w description dopisz nowy szczegół; system dołączy notatkę zamiast dublować. W innym razie null.
+${MARKER_BRAIN_FIELDS}
 - Możesz w jednej odpowiedzi zapisać KILKA zgłoszeń (kilka markerów), jeśli operator wymienił kilka niezależnych rzeczy.
 - Po markerze pisz DALEJ naturalnie: potwierdź krótko po ludzku (bez podawania numeru — system go dopisze) i zapytaj „Co jeszcze chciałbyś usprawnić?".
 - NIE zapisuj zgłoszenia przedwcześnie — najpierw dopytaj, chyba że operator od razu podał komplet.
@@ -165,9 +195,11 @@ JAK ROZMAWIASZ:
 - NIGDY nie obiecuj wdrożenia ani terminu. Mów: „Przekażę to do przeglądu" / „Zapiszę i zespół to rozważy". Decyzja, co trafi do poprawek, należy do zespołu — nie do Ciebie.
 - Nie zdradzasz wewnętrznych szczegółów technicznych ani sekretów. Znasz tylko to, co wyżej + rozmowę.
 
+${SCEPTYK}
+
 SKŁADANIE ZGŁOSZENIA (najważniejsze):
-Gdy masz dość informacji o danej uwadze (temat wyczerpany), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (klient go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
-<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null}</zgloszenie>
+Gdy masz dość informacji o danej uwadze (temat wyczerpany, ew. po jednej rundzie kontry), ZAPISZ ją, emitując w SWOJEJ odpowiedzi ukryty marker (klient go nie widzi — system go wycina i sam dopisze potwierdzenie z numerem):
+<zgloszenie>{"title":"…","description":"…","area":"…","device":"mobile|desktop|null","severity":"krytyczne|istotne|kosmetyka","quote":"…","dodaj_do":null,"ai_pushback":null,"poza_v1":false}</zgloszenie>
 - title: krótki, po polsku, konkretny (np. „Nie działa zapis notatki na telefonie").
 - description: złóż w całość KROKI / CZEGO OCZEKIWAŁ / CO ZOBACZYŁ — 2–5 zdań, tak by wykonawca wiedział co naprawić.
 - area: ekran/moduł którego dotyczy (np. „Panel operatora → Rabaty"); null jeśli naprawdę nieznany.
@@ -175,6 +207,7 @@ Gdy masz dość informacji o danej uwadze (temat wyczerpany), ZAPISZ ją, emituj
 - severity: TWOJA sugestia (krytyczne = blokuje pracę; istotne = przeszkadza; kosmetyka = drobiazg wizualny).
 - quote: DOSŁOWNY, najbardziej treściwy cytat klienta (zachowaj jego język!).
 - dodaj_do: jeśli to TA SAMA rzecz co istniejące zgłoszenie z listy poniżej — wstaw jego numer seq (samą liczbę), a w description dopisz nowy szczegół; system dołączy notatkę zamiast dublować. W innym razie null.
+${MARKER_BRAIN_FIELDS}
 - Możesz w jednej odpowiedzi zapisać KILKA zgłoszeń (kilka markerów), jeśli klient wymienił kilka niezależnych rzeczy.
 - Po markerze pisz DALEJ naturalnie: potwierdź krótko po ludzku (bez podawania numeru — system go dopisze) i zapytaj „Co jeszcze zauważyłeś?".
 - NIE zapisuj zgłoszenia przedwcześnie — najpierw dopytaj, chyba że klient od razu podał komplet.
@@ -215,16 +248,24 @@ async function insertIssue(
   const severity = SEV_OK.has(String(raw.severity)) ? String(raw.severity) : "istotne";
   const quote = raw.quote ? String(raw.quote).slice(0, 1000) : null;
 
+  // „Mózg" spowiednika: flags = adnotacje sceptyka. ai_pushback = argument AI + odpowiedź
+  // klienta (gdy AI podważyło, a klient podtrzymał); poza_v1 = propozycja poza zakresem wersji 1.
+  const flags: Record<string, unknown> = {};
+  const pushback = raw.ai_pushback ? String(raw.ai_pushback).slice(0, 1500).trim() : "";
+  if (pushback) flags.ai_pushback = pushback;
+  if (raw.poza_v1 === true || String(raw.poza_v1).toLowerCase() === "true") flags.poza_v1 = true;
+
   // Dedup: dodaj_do = seq istniejącego → dopisz notatkę zamiast dublować.
   const addTo = Number(raw.dodaj_do);
   if (Number.isInteger(addTo) && addTo > 0) {
-    const { data: ex } = await sb.from("wfa_test_issues").select("id, seq, title, description, screenshots")
+    const { data: ex } = await sb.from("wfa_test_issues").select("id, seq, title, description, screenshots, flags")
       .eq("project_id", projectId).eq("seq", addTo).maybeSingle();
     if (ex) {
       const prevShots = pathsOf((ex as any).screenshots);
       const merged = [...new Set([...prevShots, ...shots])].map((p) => ({ path: p }));
       const newDesc = String((ex as any).description || "") + (desc ? `\n\n[dopisane z rozmowy] ${desc}` : "");
-      await sb.from("wfa_test_issues").update({ description: newDesc.slice(0, 4000), screenshots: merged }).eq("id", (ex as any).id);
+      const mergedFlags = { ...((ex as any).flags && typeof (ex as any).flags === "object" ? (ex as any).flags : {}), ...flags };
+      await sb.from("wfa_test_issues").update({ description: newDesc.slice(0, 4000), screenshots: merged, flags: mergedFlags }).eq("id", (ex as any).id);
       return { seq: (ex as any).seq, title: (ex as any).title };
     }
   }
@@ -235,7 +276,7 @@ async function insertIssue(
     const seq = ((mx as any)?.seq || 0) + 1;
     const { data, error } = await sb.from("wfa_test_issues").insert({
       project_id: projectId, session_id: sessionId, seq, title, description: desc,
-      area, device, severity, quote, screenshots: shotsJson, status: "new",
+      area, device, severity, quote, screenshots: shotsJson, status: "new", flags,
     }).select("seq, title").single();
     if (!error && data) return { seq: (data as any).seq, title: (data as any).title };
     if (error && String(error.code) === "23505") { await sleep(40); continue; } // wyścig seq → retry
@@ -337,7 +378,7 @@ Deno.serve(async (req: Request) => {
     const member = await verifyTeamMember(req, sb);
     if (!member) { await sleep(300); return json({ error: "unauthorized" }, 401); }
     const { data: iss } = await sb.from("wfa_test_issues")
-      .select("id, seq, title, description, area, device, severity, quote, status, tomek_comment, screenshots, created_at, decided_at, done_at")
+      .select("id, seq, title, description, area, device, severity, quote, status, tomek_comment, screenshots, flags, created_at, decided_at, done_at")
       .eq("project_id", String(p.id)).order("seq", { ascending: true });
     const rows = (iss || []) as Array<Record<string, unknown>>;
     const allPaths: string[] = [];
@@ -347,6 +388,7 @@ Deno.serve(async (req: Request) => {
       issues: rows.map((i) => ({
         id: i.id, seq: i.seq, title: i.title, description: i.description, area: i.area, device: i.device,
         severity: i.severity, quote: i.quote, status: i.status, tomek_comment: i.tomek_comment, created_at: i.created_at,
+        flags: (i.flags && typeof i.flags === "object") ? i.flags : {},
         shots: pathsOf(i.screenshots).map((pp) => ({ path: pp, url: signed[pp] || null })),
       })),
     });

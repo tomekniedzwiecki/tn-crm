@@ -93,6 +93,49 @@ Widoczna gdy krok `testy_klienta` ≥ in_progress. Zawartość:
   do istniejącego zamiast dublować (append notatki), gdy to samo.
 - Koszt/nadużycia: rate-limit per token; kill-switch `wfa_test_chat_enabled` w settings.
 
+## Mózg spowiednika — konstruktywny sceptycyzm (decyzja Tomka 15.07)
+
+AI **nie jest potakiwaczem**. Klienci potrafią przekombinować albo poprosić o rzecz sprzeczną
+ze świadomą decyzją projektu — a bezkrytyczne zapisanie wszystkiego generuje szum i złe poprawki.
+Spowiednik ma być **mądrym filtrem, który myśli o całości aplikacji**, ale NIGDY nie decyduje sam —
+decyzja zawsze należy do Tomka. Zasada obowiązuje w OBU trybach (`testy` i `feedback`); żyje wyłącznie
+w system prompcie edge (`SCEPTYK` + `MARKER_BRAIN_FIELDS` w `wfa-test-chat`), zero zmian w innych warstwach.
+
+**Źródło wiedzy o granicach = `wfa_projects.test_context`.** Aby sceptycyzm działał, kontekst musi mieć
+sekcje: **EKRANY**, **ZAKRES MVP v1 + NIE-FUNKCJE** (co świadomie pominięte), **GRANICA v1 vs rozwój**,
+**KLUCZOWE DECYZJE z uzasadnieniem**, **ZNANY BACKLOG v1.1** (plan rozwoju). Bez uzasadnień AI nie ma
+czym kontrować — wypełnienie test_context to warunek działania „mózgu".
+
+### Reguły reakcji
+- **BŁĄD = bez dyskusji.** Coś nie działa / psuje się / źle wygląda → AI dziękuje, dopytuje o repro
+  (gdzie, kroki, urządzenie) i zapisuje. Nigdy nie podważa zgłoszenia błędu.
+- **POMYSŁ / ZMIANA → najpierw ZROZUM (po co? jaki problem rozwiązuje?), potem SKONFRONTUJ** z kontekstem:
+  - **(a) sprzeczny ze świadomą decyzją** → AI wyjaśnia decyzję i jej powód, pyta, czy to zmienia perspektywę.
+  - **(b) poza granicą v1** → AI mówi wprost, że to **rozwój** (nie „w cenie"), zapisze jako propozycję rozwoju;
+    w markerze `poza_v1: true` (panel pokazuje tag „rozwój (poza v1)").
+  - **(c) przekombinowany / antywzorzec** (komplikuje flow userów, skrajny przypadek <1%, dubluje istniejącą
+    funkcję) → AI kontruje **jednym konkretnym argumentem** i proponuje prostszą alternatywę.
+  - **(d) już w backlogu v1.1** → AI mówi, że to już zaplanowane.
+- **Sensowny, prosty pomysł w granicach v1 → przyjmij BEZ sztucznej kontry.** Sceptycyzm chroni klienta,
+  nie utrudnia mu życia — nie szukamy dziury w całym na siłę.
+
+### Zasada sprawczości (max 1 runda kontry)
+Jeśli po kontrze klient **podtrzymuje** zdanie — koniec dyskusji. AI zapisuje zgłoszenie **bez dalszego
+męczenia** (max 1 runda kontry na temat) i w zgłoszeniu zapisuje `flags.ai_pushback` = zwięzły argument AI
++ odpowiedź klienta. AI **nigdy nie mówi „odrzucam"**; mówi „zapiszę z moją uwagą — zdecyduje zespół".
+Decyzja ZAWSZE = Tomek.
+
+### `flags` na `wfa_test_issues` (migracja `20260715e_wfa_test_issues_flags.sql`)
+Kolumna `flags jsonb NOT NULL DEFAULT '{}'`:
+- `ai_pushback` (text) — zastrzeżenie AI + odpowiedź klienta; ustawiane TYLKO gdy AI podważyło,
+  a klient podtrzymał. Panel Tomka (sekcja „Testy klienta", `tkRow`) renderuje wyróżnioną adnotację
+  **„⚠ Zastrzeżenie AI: …"** przy ZATWIERDŹ/ODRZUĆ, żeby kontekst był widoczny od razu.
+- `poza_v1` (bool) — propozycja poza zakresem wersji 1 (rozwój); panel pokazuje tag „rozwój (poza v1)".
+
+Marker `<zgloszenie>` niesie oba pola (`"ai_pushback":null,"poza_v1":false` domyślnie); parser i `insertIssue`
+składają z nich `flags` (przy `dodaj_do` — merge z istniejącymi). Zero żargonu w rozmowie z klientem
+(zakaz: scope/backlog/ROAS/CPM — mów „zakres wersji 1", „plan rozwoju", „na później").
+
 ## Zakres per warstwa
 - **FABRYKA (tn-crm, raz):** migracja, edge wfa-test-chat, karta portalu, sekcja panelu,
   krok workflow, prompt kroku w projekt.html. Każdy projekt dostaje moduł automatycznie.
