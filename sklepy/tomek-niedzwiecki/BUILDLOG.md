@@ -102,3 +102,26 @@ grafiki `ai-generated/wf2-znajdzik-koc/`.
 - [P2] Tabela: „✗wtedy sięgnij…" — brak odstępu po markerze.
 - [GATE] Pixel = placeholder — podmiana OBOWIĄZKOWA przed pierwszą kampanią (inaczej CP1/CP2 ślepe).
 - Kontekst: wideo EN (świadomy trade-off; przy skali rozważyć PL-dubbing/napisy własnym contentem).
+
+## 2026-07-15 — Sesja 1c: pipeline makietowy + biblioteka DS gotowa
+
+**Decyzje Tomka (późny wieczór):** (a) design nie z ręcznych palet — **STYL OKREŚLA MAKIETA
+OBRAZOWA (gpt-image), jak przy drukarce 3D Wojciecha** (chosen_style neonpro z 3 obrazów);
+(b) ZAKAZ ciemnych teł potwierdzony ×3 → pamięć trwała + wszystkie prompty; (c) **hero-grafika
+AI „osoba używa produktu" = OBOWIĄZKOWY standard fabryki**; (d) mapa anty-duplikacji trust
+(feedback „znowu powielasz" — 2. raz).
+
+**Zrobione:**
+- **4 makiety Chłodzika wygenerowane i WYSŁANE Tomkowi do wyboru** (referencje produktu twarde;
+  wszystkie jasne): 1 Ciepły katalog · 2 Świt błękitu · 3 Nadmorska bryza · 4 Magazyn snu.
+  Storage: `ai-generated/wf2-chlodzik-mockups/`. UWAGA przy ekstrakcji: liczby/obietnice
+  z makiet IGNORUJEMY (na obrazach są ozdobne „1200+ opinii/24h/30 dni" — do landingu tylko
+  nasze prawdziwe dane).
+- **Biblioteka styleguide'ów COMMIT `8231509`**: `_generator/` (build.mjs + template 690 linii,
+  zero JS) + 8×DS (tokens/components/MOOD), wszystkie JASNE (weryfikacja luminancją), mapa
+  anty-duplikacji w szablonie, WCAG per-kolor (--on-accent/--on-cta/--on-success).
+  Rola po zmianie kierunku: MASZYNA DO KODU — źródłem stylu będą zatwierdzone makiety
+  (makieta → vision-tokens → systems.json → build), nie ręczne palety.
+
+**CZEKA (bramka Tomka):** wybór makiety 1-4 → ekstrakcja tokens/spec → przebudowa Chłodzika
+(+ input rundy 2 CRO) → ten sam pipeline dla lokówki/pompki/endoskopu/jeździka.
