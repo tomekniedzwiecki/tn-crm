@@ -77,6 +77,22 @@ SSOT 0b + WORKFLOW-V2-TESTY.md, settings `wf2_test_config`/`wf2_scale_config`, p
 | Główna pętla Fable — input kumulacyjny (szac., ~45 wywołań, głównie cache read) | ~4M | ~$8 |
 | **Razem 15.07 (do domknięcia systemu testów)** | **~4,6M (w tym 523k zmierzone)** | **~$15 (zakres $11–20) ≈ 55 zł** |
 
+### 2026-07-15 (po południu/wieczór) — Etap 1 pilota + landing Chłodzik + standardy
+
+Zakres: marka Znajdzik (research 45 domen + 5 log) → pętla brandingu 4 rundy → landing koca
+(budowa+rewizja+2 rundy CRO na żywo+3 grafiki AI+wideo self-host) → STANDARD-LANDING-SKLEPY +
+architektura v3 mini-marki (Chłodzik) → GEO (research+wdrożenie) → biblioteka DS (definicje 8 +
+fabryka w toku). Edge: wf2-asset-rehost. Decyzje Tomka wplatane na żywo (6 dużych zwrotów).
+
+| Składnik | Tokeny | Koszt API (szac.) |
+|---|---|---|
+| Subagenty Opus ×10 zmierzone (marka 75k, branding 47k, krytycy 33+55+59k, budowa 148k, rewizja 121k, CRO-live 145+166k, GEO 88k, reklamy-v1 106k) | ~1 043 000 | ~$10 |
+| Fabryka styleguide'ów (w toku — dopisać po zakończeniu) | ~? | ~? |
+| Główna pętla Fable — output (standard/TESTY/GEO/edycje landingu/SQL/pamięć) | ~55 000 | ~$2,8 |
+| Główna pętla Fable — input kumulacyjny (~120 wywołań, głównie cache read) | ~11M | ~$20 |
+| Generacje obrazów (5 log + 3 landing + 1 retry, gpt-image-2 medium) | — | ~$1,5 |
+| **Razem blok popołudniowy** | **~12M (w tym 1,04M zmierzone)** | **~$34 (zakres $26–45) ≈ 126 zł** |
+
 ### Suma narastająco (po całym 2026-07-03)
 
 | | Tokeny (szac.) | Koszt API (szac.) |
