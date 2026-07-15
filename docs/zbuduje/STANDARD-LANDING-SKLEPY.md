@@ -141,7 +141,16 @@ wyłącznie WYMAGANIA-ZAWSZE (sekcja 6d) + zakazy + pomiar + mapa anty-duplikacj
    liczb twardych przy wejściu w viewport, interaktywne demo (suwak PRZED/PO z auto-zajawką
    przy pierwszym pokazaniu), sticky slide-in, hover CTA (scale+cień). Zakaz gadżetów bez
    funkcji (particles, tilt, confetti) — ruch ma prowadzić wzrok do dowodu i CTA.
-   (4) **KOD → gpt-5.6-sol** (via wf2-gpt): obrazy sekcji (vision) + URL-e assetów + spec
+   (4) **KOD → gpt-5.6-sol ZAWSZE (twarda decyzja Tomka 15.07: „kod ma pisać GPT 5.6 sol
+   zawsze!")** — sekcje, POPRAWKI i iteracje = wywołania wf2-gpt; agent Claude tylko planuje,
+   montuje (szkielet-kontrakt, składanie markerowe), weryfikuje i robi fixy integracyjne
+   (<5% kodu, raportowane). (4a) **PĘTLA KRYTYKA (Tomek 15.07):** po każdej wersji screenshoty
+   (1280+390, full-page i per sekcja) → krytyk gpt-5.6-sol vision (bezlitosny art director +
+   CRO: „czy czuć produkt, który chce się kupić? co tandetne? co niespójne?") naprzemiennie
+   ze świeżym agentem-krytykiem → filtr uwag (zakazy/dane twarde) → poprawki KODEM przez GPT →
+   re-render → znowu krytyk; STOP dopiero gdy 2 rundy z rzędu bez istotnych uwag (albo
+   wyczerpany budżet iteracji). Każda wersja archiwizowana (pulpit: NOC-*/<slug>/vN/).
+   (4b) KOD → gpt-5.6-sol (via wf2-gpt): obrazy sekcji (vision) + URL-e assetów + spec
    (hexy z pipety, fonty, TWARDE dane z bazy, zakazy, WYMAGANIA-ZAWSZE, kontrakt techniczny:
    1 script, eventy ATC/IC, data-checkout, HOOKS ?h=N, JSON-LD) + autonomia: „możesz dodać
    funkcje podnoszące konwersję wg uznania" → kod sekcja po sekcji → składanie → pętla
@@ -230,6 +239,21 @@ Gate: przed publikacją policz wystąpienia „14 dni", „pobranie/przy odbiorz
 Copy przycisku mówi dokąd i bezpiecznie: **„Zamawiam — zapłacę przy odbiorze"**;
 finał: „Przejdź do zamówienia — płatność przy odbiorze".
 Mikrocopy pod KAŻDYM CTA: „Płatność przy odbiorze · 14 dni na zwrot · Wysyłka pod Twój adres".
+
+## LEKCJE KRYTYKA (nocna pętla 15/16.07 — R0 Zmieścik; wpisywać do promptów generacji OD RAZU)
+1. **Minimum scen AI**: tło-obraz TYLKO hero (+ ewent. finał); pozostałe sekcje na jednolitych
+   jasnych płaszczyznach DS — wiele tekstur/plam = „AI-generic chaos". Koral/akcent WYŁĄCZNIE CTA.
+2. **Zakaz ornamentów-PNG** (wstążki/chmurki/ściegi/zawieszki = cukierkowe); akcenty czystym CSS.
+3. Count-up: statyczna liczba w źródle HTML (boty nie wykonują JS), animacja = enhancement.
+4. Media kart: jeden `aspect-ratio` + `object-fit:cover` w całej sekcji.
+5. Tabela porównania od razu wzorcem responsywnym tabela→karty z `data-label` (390 px!).
+6. Footer JASNY w szablonie.
+7. PRZED/PO: bez realnego SPAROWANEGO kadru → statyczny panel z jedną spójną sceną (lewa/prawa
+   w jednym obrazie); NIE nakładać realnego zdjęcia na scenę AI w suwaku (mismatch).
+8. Zdjęcia UGC: normalizacja CSS (brightness/contrast/saturate) od razu.
+9. Zdjęcia aukcji z wtopionym OBCYM tekstem infografik = ZAKAZ w galerii (efekt dropship);
+   tylko czyste packshoty. + VISION-GATE zdjęć opinii (zrzuty apki AliExpress/obce marki = odrzut).
+10. Filtr zakazów obietnic dostawy działa też na CYTATACH opinii (przycinać do zgodnej części).
 
 ## TECH BUDŻET (twardy)
 
