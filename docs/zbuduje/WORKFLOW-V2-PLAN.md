@@ -114,6 +114,15 @@ Konsekwencje architektoniczne:
    (b) dokładna lista metod Autopay w checkoucie (BLIK? karty Visa/MC? pay-by-link?) —
    na landingach pokazujemy TYLKO realnie dostępne ikony; (c) czy checkout może dostać
    logo+kolory marki sklepu (spójność wizualna landing→kasa tnie drop-off).
+5b. **WYMAGANIA GEO wobec platformy (z docs/zbuduje/GEO-LLM.md — znajdowalność w LLM):**
+   (a) robots.txt z jawnym Allow dla botów-RETRIEVAL: OAI-SearchBot, ChatGPT-User,
+   Claude-SearchBot, Claude-User, PerplexityBot, Perplexity-User, Googlebot, Bingbot, Applebot
+   + linia Sitemap; (b) jeśli Cloudflare/WAF — te boty na Allow (od VII.2025 domyślna blokada AI!);
+   (c) sitemap.xml wszystkich podstron z UCZCIWYM lastmod (tylko realne zmiany); (d) canonical
+   self per podstrona; przy publikacji podmiana {{CANONICAL_URL}} i zdjęcie noindex z naszego
+   HTML-a; (e) **FEEDY produktowe: Google Merchant Center (free listings — warunek AI Mode),
+   Bing MC, Perplexity Merchant Program (darmowy)** + pole GTIN w danych produktu; cena/stan
+   feed↔strona 1:1; (f) podstrony = statyczny serwerowy HTML (nasz plik 1:1, nie SPA-wrapper).
 6. **WYMAGANIA TRACKINGOWE wobec platformy (z WORKFLOW-V2-TESTY.md §7 — checkout jest na
    innej domenie niż landing!):** (a) możliwość wpięcia Meta pixela per sklep na checkoucie,
    (b) przechowanie `pixel_id` + tokenu CAPI per sklep, (c) emisja `Purchase` przez CAPI

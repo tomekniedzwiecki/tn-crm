@@ -137,6 +137,25 @@ obietnice zdrowotne (tylko komfort/stylizacja) · zmyślone liczby/opinie/przekr
 klejmy niepotwierdzone w aukcji (przykład 15.07: „bez kabla" przy przewodowej lokówce,
 „nie nagrzewa się" przy kocu) · multi-pack bez realnej oszczędności.
 
+## GEO — znajdowalność w LLM (pełna wiedza: docs/zbuduje/GEO-LLM.md)
+
+1. **Treść w serwerowym HTML** — boty LLM nie wykonują JS; każdy fakt (cena, ocena, spec, FAQ,
+   recenzje) w widocznym tekście źródła. Self-contained ✓ z natury — nie łamać fetchami.
+2. **Answer-first**: hero-sub = 2-3 zdania „co to + korzyść + dla kogo"; liczby i konkrety;
+   akapity 40-75 słów; ZERO tonu „najlepszy/rewelacyjny" (promocyjność obniża cytowalność −26%).
+3. **JSON-LD @graph** (higiena — pomaga Google/feedom, nie zastępuje widocznego tekstu):
+   Organization/OnlineStore (parasol, sameAs) + Product (brand = **Brand mini-marki**,
+   aggregateRating/review 1:1 z widocznymi, price kropką, PLN, availability, zwroty 14 dni)
+   + BreadcrumbList (galeria→produkt) + FAQPage (= widoczne FAQ). Pól bez danych NIE zmyślać
+   (GTIN/wymiary tylko gdy realne — inaczej pomiń).
+4. **Placeholdery publikacji**: `{{CANONICAL_URL}}` (canonical + og:url + JSON-LD url)
+   i `<meta name="robots" content="noindex">` na PREVIEW (crm.*) — publikacja przez API
+   podmienia canonical i zdejmuje noindex (jak {{PIXEL_ID}}).
+5. **ANTY-DOORWAY (krytyczne przy skali!):** każdy landing genuinnie unikalny (opis, FAQ,
+   recenzje SWOJEGO produktu) — klony/spiny karane na CAŁĄ domenę, także w AI Overviews.
+6. Poziom domeny (robots/sitemap/feedy GMC+Bing+Perplexity/GTIN) = wymagania do platformy
+   (SSOT 0b) — nie na landingu.
+
 ## CHECKLIST PRZED PUBLIKACJĄ (gate — wszystkie PASS)
 
 1. grep-checki zakazów (24h, magazyn, ostatnie, tylko dziś, liczniki, <s>/<del>/line-through
