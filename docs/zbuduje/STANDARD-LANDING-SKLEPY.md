@@ -78,9 +78,22 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
 
 6d. **ART PACK — pełny pakiet generacyjny per landing (pipeline v3, decyzja Tomka 15.07:
    „grafiki z image są genialne — budujemy landing tak, jak wygląda na grafikach"):**
-   Styl określa MAKIETA-MASTER (gpt-image, full page, ref = zdjęcia produktu; Tomek zatwierdza
-   obraz jak klient w lejku), a potem KOMPLET skoordynowanych generacji (każda: ref = makieta
-   [+ zdjęcie produktu gdy produkt w kadrze], twarde „NO text/typography/UI/watermark" dla teł):
+   Styl określa MAKIETA-MASTER (gpt-image, full page, ref = zdjęcia produktu), a potem KOMPLET
+   skoordynowanych generacji (każda: ref = makieta [+ zdjęcie produktu gdy produkt w kadrze],
+   twarde „NO text/typography/UI/watermark" dla teł).
+   **MASTER — RECEPTA-WOW (analiza zwycięskiej bryzy, Tomek 15.07: „bez mojego wyboru musi być
+   od razu na bardzo wysokim poziomie"):** prompt mastera MUSI wymagać: (1) **MOTYW PRZEWODNI =
+   wizualna metafora KORZYŚCI produktu** (koc-chłód→morze/lato; lokówka→poranek przed lustrem;
+   pompka→walizka/lotnisko; endoskop→porządny warsztat; jeździk→dziecięcy plac budowy) —
+   NIGDY neutralny „clean e-commerce" (produkuje przeciętność); (2) dekoracje spójne z motywem
+   (jak fale/latarnia/muszle); (3) kartę produktu wtopioną w scenę hero; (4) sekcje „z życiem"
+   (nie gołe gridy); (5) jasne tło (reguła), polskie teksty przykładowe.
+   **SELEKCJA = SĘDZIA-AI (zamiast wyboru Tomka):** ZAWSZE 4 kandydatów (różne motywy/warianty)
+   → vision-judge (wf2-gpt/Claude z obrazami) ocenia rubryką: motyw obecny i związany
+   z korzyścią · kompozycja hero z kartą · czytelna hierarchia · jasność tła · produkt WIERNY
+   referencji · minimalny fake-tekst — wybiera top-1 z uzasadnieniem; remis/wszystkie słabe
+   (<próg) ⇒ regeneracja z poprawionym promptem. W fazie testów pipeline'u Tomek może nadpisać
+   wybór; w automacie wf2-landing-gen sędzia decyduje sam.
    1) **hero-plate** — czysta scena hero z produktem, przestrzeń pod treść (3:2, eager, render API);
    2) **final-plate** — pas dekoracyjny pod final CTA (duża pusta przestrzeń centralna);
    3) **band-plate** — subtelny pas pod sekcję środkową (bardzo jasny — tekst musi być czytelny);
