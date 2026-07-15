@@ -88,12 +88,19 @@ linkuje na `?h=N`. NIE budujemy osobnych landingów per kreacja przy małym bud�
    NIGDY neutralny „clean e-commerce" (produkuje przeciętność); (2) dekoracje spójne z motywem
    (jak fale/latarnia/muszle); (3) kartę produktu wtopioną w scenę hero; (4) sekcje „z życiem"
    (nie gołe gridy); (5) jasne tło (reguła), polskie teksty przykładowe.
-   **SELEKCJA = SĘDZIA-AI (zamiast wyboru Tomka):** ZAWSZE 4 kandydatów (różne motywy/warianty)
-   → vision-judge (wf2-gpt/Claude z obrazami) ocenia rubryką: motyw obecny i związany
-   z korzyścią · kompozycja hero z kartą · czytelna hierarchia · jasność tła · produkt WIERNY
-   referencji · minimalny fake-tekst — wybiera top-1 z uzasadnieniem; remis/wszystkie słabe
-   (<próg) ⇒ regeneracja z poprawionym promptem. W fazie testów pipeline'u Tomek może nadpisać
-   wybór; w automacie wf2-landing-gen sędzia decyduje sam.
+   **FLOW v4 (korekta Tomka 15.07 — „jedna dopracowana wersja, nie 4 do wyboru"):**
+   (1) **WIZJA-MASTER ×1** wg recepty-WOW (pełna strona, pionowa) → GATE WIZUALNY (vision-check
+   rubryką: motyw obecny i związany z korzyścią · karta produktu w hero · czytelna hierarchia ·
+   jasne tło · produkt WIERNY referencji · minimalny fake-tekst); FAIL ⇒ regeneracja
+   z poprawionym promptem (nie równoległe warianty!).
+   (2) **MAKIETY SEKCYJNE ×4** (ref = wizja + zdjęcie produktu gdy w kadrze; format 3:2, DUŻE
+   i dopracowane — cała strona w jednej grafice = sekcje za małe): S-A topbar+hero z kartą ·
+   S-B benefity+galeria/demo · S-C opinie+tabela+FAQ · S-D final+stopka.
+   (3) **ASSETY spójne** (z produktem i bez: platy, band, ikony, OG) — komplet z tej samej wizji.
+   (4) **PAKIET KODERA → gpt-5.6-sol** (via wf2-gpt): obrazy sekcji (vision) + URL-e assetów +
+   spec (hexy z pipety, fonty, TWARDE dane z bazy, zakazy, kontrakt techniczny: 1 script,
+   eventy ATC/IC, data-checkout, HOOKS ?h=N, JSON-LD) → kod sekcja po sekcji → składanie →
+   pętla diffowa vs makiety sekcyjne → cross-review → gate → akcept (1 klik człowieka).
    1) **hero-plate** — czysta scena hero z produktem, przestrzeń pod treść (3:2, eager, render API);
    2) **final-plate** — pas dekoracyjny pod final CTA (duża pusta przestrzeń centralna);
    3) **band-plate** — subtelny pas pod sekcję środkową (bardzo jasny — tekst musi być czytelny);
