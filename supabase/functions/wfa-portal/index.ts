@@ -15,6 +15,18 @@
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { signPaths, verifyTeamMember } from "../_shared/admin-files.ts";
+import { throttleClear, throttleFail, throttleGate } from "../_shared/portal-throttle.ts";
+
+// SEC-D FAIL #1: escape WSZYSTKICH wartości klienta wstawianych do HTML umowy.
+// Klient-operator jest półzaufany — dane firmy (imię/firma/ulica/miasto) trafiają do umowy
+// renderowanej w przeglądarce Tomka (podgląd admina) na crm.tomekniedzwiecki.pl. Bez escapowania
+// = stored XSS -> przejęcie sesji super-admina. Placeholdery szablonu (klucze mapy) zostają;
+// escapowane są tylko WARTOŚCI podstawiane w ich miejsce.
+function escHtml(s: unknown): string {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -29,10 +41,10 @@ const INTAKE_MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 const INTAKE_MAX_FILES = 30;
 const INTAKE_ALLOWED_EXT = ["pdf", "png", "jpg", "jpeg", "webp", "heic", "html", "htm", "csv", "xls", "xlsx", "doc", "docx", "txt", "zip"];
 
-function json(body: unknown, status = 200): Response {
+function json(body: unknown, status = 200, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...CORS, "Content-Type": "application/json", ...(extraHeaders || {}) },
   });
 }
 
@@ -83,7 +95,9 @@ function renderContractHtml(
     if (wyk.nip != null) map["{{WYKONAWCA_NIP}}"] = String(wyk.nip);
     if (wyk.adres != null) map["{{WYKONAWCA_ADRES}}"] = String(wyk.adres);
   }
-  for (const [k, v] of Object.entries(map)) html = html.split(k).join(v);
+  // SEC-D: escapujemy KAŻDĄ podstawianą wartość (dane klienta = XSS sink). Placeholdery to
+  // plain-text pola (nazwiska, adres, data, %) — żaden nie jest zamierzonym HTML-em.
+  for (const [k, v] of Object.entries(map)) html = html.split(k).join(escHtml(v));
   return html;
 }
 
@@ -313,15 +327,24 @@ Deno.serve(async (req: Request) => {
   // Ścieżka KLIENTA (nie podgląd): hasło (SHA-256) obowiązkowe. Hasło nieustawione =
   // portal wyłączony dla tego projektu (Tomek włącza w panelu).
   if (!preview) {
+    // SEC-D FAIL #2: throttling per-token. Zablokowany token -> 429 (bez porównania hasła).
+    const gate = await throttleGate(sb, token);
+    if (gate.locked) {
+      return json({ error: "too_many_attempts", retry_after: gate.retryAfter }, 429, { "Retry-After": String(gate.retryAfter) });
+    }
     if (!password || password.length > 200 || !p.client_password_hash) {
+      await throttleFail(sb, token);
       await sleep(300);
       return json({ error: "unauthorized" }, 401);
     }
     const hash = await sha256Hex(password);
     if (hash !== String(p.client_password_hash).toLowerCase()) {
+      await throttleFail(sb, token);
       await sleep(300);
       return json({ error: "unauthorized" }, 401);
     }
+    // Poprawne hasło -> reset licznika throttlingu (fire-and-forget).
+    throttleClear(sb, token).catch(() => {});
     // PIERWSZE WEJŚCIE KLIENTA (nie podgląd admina): auto-odhacz pozycję
     // „Klient wszedł do portalu / potwierdził" w kroku kickoff + wpis do activity.
     // Fire-and-forget — nie może blokować ani wywalać odpowiedzi portalu.

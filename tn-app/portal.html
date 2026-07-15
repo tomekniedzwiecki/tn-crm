@@ -321,11 +321,17 @@
 <script>
     const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
     const qs = new URLSearchParams(location.search);
-    const token = (qs.get('t') || '').trim();
+    const hp = new URLSearchParams((location.hash || '').replace(/^#/, ''));
     // Podgląd admina „oczami klienta": ?podglad=admin + JWT panelu w #hashu (nie w query →
     // nie trafia do logów/Referer). Autoryzacja przez team_members w wfa-portal, READ-ONLY.
     const previewMode = qs.get('podglad') === 'admin';
-    const AJ_KEY = 'wfa_preview_jwt_' + qs.get('t');
+    // SEC-D FAIL #3: token portalu NIE w query stringu (wyciek w logach/Referer/historii).
+    // Preferuj #t (nowe linki), wspieraj ?t (stare linki mailowe) → migruj do #hasha i wyczyść query.
+    const token = (hp.get('t') || qs.get('t') || '').trim();
+    if (!previewMode && qs.get('t') && token) {
+        try { history.replaceState(null, '', location.pathname + '#t=' + encodeURIComponent(token)); } catch (e) {}
+    }
+    const AJ_KEY = 'wfa_preview_jwt_' + token;
     let adminJwt = previewMode
         ? (new URLSearchParams((location.hash || '').replace(/^#/, '')).get('admintok') || '').trim()
         : '';
@@ -582,12 +588,30 @@
         contractHtmlCache = d.html;
         return contractHtmlCache;
     }
+    // SEC-D FAIL #1 (warstwa 2): renderuj umowę w SANDBOXED iframe (srcdoc, bez allow-scripts)
+    // zamiast document.write(html). Sandbox blokuje wykonanie skryptów w treści umowy nawet gdyby
+    // escape server-side gdzieś zawiódł (defense-in-depth). Do document.write idzie tylko STATYCZNA
+    // powłoka (bez danych klienta); dane klienta trafiają do atrybutu srcdoc (escape &amp;/&quot;).
+    function escSrcdoc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;'); }
+    function openContractSandbox(html) {
+        const w = window.open('', '_blank');
+        if (!w) { alert('Odblokuj wyskakujące okna, aby wyświetlić umowę do wydruku.'); return; }
+        const shell = '<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Umowa</title>'
+            + '<style>html,body{margin:0;padding:0;height:100%;background:#e2e8f0}'
+            + 'iframe{border:0;width:100%;min-height:100vh;display:block;background:#fff}'
+            + '.tb{position:fixed;top:10px;right:10px;z-index:99}'
+            + '.tb button{background:#1a365d;color:#fff;border:none;border-radius:6px;padding:8px 14px;font:600 13px sans-serif;cursor:pointer}'
+            + '@media print{.tb{display:none}}</style></head><body>'
+            + '<div class="tb"><button onclick="print()">Drukuj / PDF</button></div>'
+            + '<iframe sandbox="allow-same-origin" srcdoc="' + escSrcdoc(html) + '"></iframe>'
+            + '<scr' + 'ipt>var f=document.querySelector("iframe");f.addEventListener("load",function(){try{f.style.height=f.contentDocument.documentElement.scrollHeight+"px"}catch(e){}});</scr' + 'ipt>'
+            + '</body></html>';
+        w.document.open(); w.document.write(shell); w.document.close(); w.focus();
+    }
     async function openContractPrint() {
         try {
             const html = await fetchContractHtml();
-            const w = window.open('', '_blank');
-            if (!w) { alert('Odblokuj wyskakujące okna, aby wyświetlić umowę do wydruku.'); return; }
-            w.document.open(); w.document.write(html); w.document.close(); w.focus();
+            openContractSandbox(html);
         } catch (e) { alert('Nie udało się pobrać umowy — spróbuj ponownie za chwilę.'); }
     }
     async function downloadContractFile() {
