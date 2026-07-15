@@ -115,6 +115,19 @@ Pierwsza zawartość materiałów odhacza „Dane otrzymane" w kroku `dane_opera
 „oczami klienta" = READ-ONLY**: zapisy intake zwracają 403 `{error:'podgląd — tylko odczyt'}`. RLS `wfa_intake*`
 = wyłącznie `team_members` (ZERO anon). Migracja: `20260713c_wfa_intake.sql`.
 
+### Moduł „Testy klienta" (spowiednik testów) — krok `testy_klienta`
+Standard fabryki (decyzja Tomka 15.07). Klient-operator w SWOIM portalu rozmawia z AI o uwagach do
+aplikacji, dokleja ZRZUTY EKRANU (vision — AI je ogląda), a AI składa z rozmowy ustrukturyzowane
+zgłoszenia (`wfa_test_issues`, seq/projekt). Tomek w panelu (`tn-app/projekt.html`, krok `testy_klienta`)
+edytuje wagę, ZATWIERDZA/ODRZUCA (komentarz wraca do klienta) i „Zleca pracę nad zatwierdzonymi" →
+`[TK-n]` do checklisty kroku `poprawki_demo` + prompt sesji naprawczej (`done` → klient widzi ✅).
+Edge **`wfa-test-chat`** (`--no-verify-jwt`; akcje history/message/upload_init/_done/end + `test_admin`
+gate=team JWT; model `WFA_TEST_OPENAI_MODEL` default `gpt-4o`; marker `<zgloszenie>`; kill-switch
+`settings.wfa_test_chat_enabled` FAIL-OPEN). Tabele `wfa_test_*` + kolumna `wfa_projects.test_context`
++ bucket **`wfa-test-shots` (PRIVATE)**, RLS wyłącznie `team_members`. Migracja `20260715c_wfa_testy_klienta.sql`.
+Karta „Testy aplikacji" w portalu widoczna gdy krok `testy_klienta` ma status `in_progress`/`done`.
+Koncept (SSOT): `docs/stworze/MODUL-TESTY-KLIENTA.md`.
+
 ## Procedury Claude
 
 ### Tworzenie umów dla klientów

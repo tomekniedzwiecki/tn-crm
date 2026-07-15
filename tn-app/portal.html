@@ -179,6 +179,46 @@
             .bar { transition:none; }
             .life::before, .trow.cur .tglyph::before { animation:none; }
         }
+
+        /* Testy aplikacji — czat „spowiednika testów" */
+        .tk-chat { padding:16px; max-height:54vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+        .tk-b { max-width:84%; padding:10px 13px; border-radius:13px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
+        .tk-b.ai { align-self:flex-start; background:#151517; border:1px solid #232327; color:#dcdce0; border-bottom-left-radius:4px; }
+        .tk-b.me { align-self:flex-end; background:#0d3a6b; border:1px solid #14538f; color:#eaf3ff; border-bottom-right-radius:4px; }
+        .tk-b img { display:block; margin-top:8px; max-width:200px; max-height:150px; border-radius:8px; border:1px solid rgba(255,255,255,.14); cursor:pointer; }
+        .tk-typing { align-self:flex-start; display:flex; gap:4px; padding:13px 15px; }
+        .tk-typing span { width:6px; height:6px; border-radius:50%; background:#52525b; animation:tkdot 1.1s infinite ease-in-out; }
+        .tk-typing span:nth-child(2){ animation-delay:.18s; } .tk-typing span:nth-child(3){ animation-delay:.36s; }
+        @keyframes tkdot { 0%,60%,100%{ transform:translateY(0); opacity:.4; } 30%{ transform:translateY(-4px); opacity:1; } }
+        .tk-shots { display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+        .tk-shots:empty { display:none; }
+        .tk-shots .ts { position:relative; width:56px; height:56px; border-radius:8px; overflow:hidden; border:1px solid #26262b; background:#0a0a0b; }
+        .tk-shots .ts img { width:100%; height:100%; object-fit:cover; }
+        .tk-shots .ts .rm { position:absolute; top:1px; right:1px; background:rgba(0,0,0,.7); color:#fff; border-radius:5px; width:18px; height:18px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:11px; }
+        .tk-shots .ts .up { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.5); color:#fff; font-size:11px; }
+        .tk-compose { display:flex; align-items:flex-end; gap:8px; margin-top:12px; background:#0a0a0b; border:1px solid #26262b; border-radius:11px; padding:7px 8px; transition:border-color .15s; }
+        .tk-compose.drag { border-color:#0070f3; background:#0a1626; }
+        .tk-compose:focus-within { border-color:rgba(0,112,243,.5); }
+        .tk-compose textarea { flex:1; background:transparent; border:none; outline:none; color:#fff; font-size:14px; resize:none; line-height:1.45; max-height:120px; padding:7px 4px; font-family:inherit; }
+        .tk-ic { flex-shrink:0; width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; border:none; }
+        .tk-ic.att { background:#1a1a1d; color:#a1a1aa; } .tk-ic.att:hover { color:#52a8ff; }
+        .tk-ic.snd { background:#0070f3; color:#fff; } .tk-ic.snd:hover { background:#0a84ff; } .tk-ic.snd:disabled { opacity:.4; cursor:default; }
+        .tk-endrow { margin-top:10px; text-align:center; }
+        .tk-end { background:none; border:none; color:#6b6b74; font-size:12.5px; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
+        .tk-end:hover { color:#93939c; }
+        .tk-hint { color:#5b5b63; font-size:11.5px; margin-top:8px; text-align:center; }
+        .tk-issues { margin-top:22px; }
+        .tk-issues .tih { color:#8b8b93; font-size:12.5px; margin-bottom:6px; font-weight:600; }
+        .tk-iss { display:flex; align-items:flex-start; gap:10px; padding:11px 13px; background:#0e0e10; border:1px solid #1e1e21; border-radius:9px; margin-top:7px; }
+        .tk-iss .tn { color:#5b5b63; font-size:12px; font-variant-numeric:tabular-nums; flex-shrink:0; min-width:46px; padding-top:2px; }
+        .tk-iss .tib { flex:1; min-width:0; }
+        .tk-iss .tt { color:#e5e5e5; font-size:13px; line-height:1.45; }
+        .tk-iss .tc { color:#9a8b6b; font-size:12px; margin-top:5px; line-height:1.5; }
+        .tk-pill { font-size:11px; padding:2px 9px; border-radius:99px; white-space:nowrap; flex-shrink:0; font-weight:500; }
+        .tk-pill.new { background:#26324a; color:#8fb3ff; }
+        .tk-pill.approved, .tk-pill.in_progress { background:#3a2f12; color:#f5c451; }
+        .tk-pill.rejected { background:#3a1f22; color:#f08a92; }
+        .tk-pill.done { background:#16351f; color:#5cd07f; }
     </style>
 </head>
 <body>
@@ -219,6 +259,23 @@
 
         <!-- 2. Twój ruch: jedna linia, gdy piłka jest po stronie klienta -->
         <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span></div>
+
+        <!-- 2b. Testy aplikacji: czat „spowiednika testów" (widoczny gdy krok testów aktywny) -->
+        <section class="hidden" id="c-testy">
+            <div class="shead"><h2>Testy aplikacji</h2><span class="scount" id="ct-count"></span></div>
+            <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
+            <div class="tk-chat card" id="ct-chat"></div>
+            <div class="tk-shots" id="ct-shots"></div>
+            <div class="tk-compose" id="ct-compose">
+                <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu"><i class="ph ph-image"></i></button>
+                <textarea id="ct-input" rows="1" placeholder="Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)"></textarea>
+                <button class="tk-ic snd" id="ct-send" type="button" title="Wyślij"><i class="ph ph-paper-plane-tilt"></i></button>
+            </div>
+            <p class="tk-hint">Zrzut ekranu: kliknij ikonę obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij plik tutaj.</p>
+            <div class="tk-endrow"><button class="tk-end" id="ct-end" type="button">To wszystko — zakończ testy</button></div>
+            <div class="tk-issues hidden" id="ct-issues"></div>
+            <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" class="hidden">
+        </section>
 
         <!-- 3. Do uzupełnienia: jedyne miejsce z akcjami klienta -->
         <section class="hidden" id="c-intake">
@@ -320,6 +377,7 @@
             render(d); show('content');
             loadContract(); // nie blokuje głównego renderu
             loadIntake();
+            loadTesty();
         } catch (e) {
             show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
         } finally { if ($('go')) $('go').disabled = false; }
@@ -340,6 +398,7 @@
             showPreviewBanner();
             loadContract();
             loadIntake();
+            loadTesty();
         } catch (e) {
             show('notoken');
             $('notoken').innerHTML = '<h1>Błąd podglądu</h1><p class="sub">Spróbuj ponownie za chwilę.</p>';
@@ -815,6 +874,150 @@
     }
     const _ciInput = $('ci-file-input');
     if (_ciInput) _ciInput.onchange = e => { intakeUpload(e.target.files); e.target.value = ''; };
+
+    // ============ Testy aplikacji — czat „spowiednika testów" ============
+    const TEST_FN = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-test-chat';
+    function callTest(extra) {
+        const payload = previewMode
+            ? Object.assign({ token, preview: true }, extra)
+            : Object.assign({ token, password: currentPw }, extra);
+        return fetch(TEST_FN, { method: 'POST', headers: authHeaders(), body: JSON.stringify(payload) });
+    }
+    let testPending = [];   // [{path,url,uploading}] zrzuty dołączane do NASTĘPNEJ wiadomości
+    let testBusy = false;
+    const INTRO_MSG = 'Cześć! Tu asystent testów. Poklikaj swoją aplikację i opowiedz mi o wszystkim, co Ci nie gra — nawet o drobiazgach. Napisz, na którym ekranie to zauważyłeś i co się stało. Zrzut ekranu bardzo pomaga — możesz go wkleić (Ctrl+V).';
+
+    async function loadTesty() {
+        try {
+            const res = await callTest({ action: 'history' });
+            if (!res.ok) { $('c-testy').classList.add('hidden'); return; }
+            const d = await res.json();
+            if (!d.active) { $('c-testy').classList.add('hidden'); return; }
+            $('c-testy').classList.remove('hidden');
+            renderTestChat(d.messages || []);
+            renderTestIssues(d.issues || []);
+            if (previewMode) lockTestCompose();
+        } catch (e) { $('c-testy').classList.add('hidden'); }
+    }
+    function tkBubble(role, text, imgs) {
+        const b = document.createElement('div');
+        b.className = 'tk-b ' + (role === 'user' ? 'me' : 'ai');
+        b.textContent = text || '';
+        (imgs || []).forEach(u => { if (!u) return; const im = document.createElement('img'); im.src = u; im.onclick = () => openVlb(encodeURIComponent(u)); b.appendChild(im); });
+        return b;
+    }
+    function renderTestChat(messages) {
+        const box = $('ct-chat'); box.innerHTML = '';
+        if (!messages.length) box.appendChild(tkBubble('assistant', INTRO_MSG, []));
+        messages.forEach(m => box.appendChild(tkBubble(m.role, m.content, (m.attachments || []).map(a => a.url))));
+        box.scrollTop = box.scrollHeight;
+    }
+    function tkAppend(role, text, imgs) { const box = $('ct-chat'); box.appendChild(tkBubble(role, text, imgs)); box.scrollTop = box.scrollHeight; }
+    function tkTyping() { const box = $('ct-chat'); const t = document.createElement('div'); t.className = 'tk-typing'; t.id = 'ct-typing'; t.innerHTML = '<span></span><span></span><span></span>'; box.appendChild(t); box.scrollTop = box.scrollHeight; }
+    function tkHideTyping() { const t = $('ct-typing'); if (t) t.remove(); }
+
+    function renderTestIssues(issues) {
+        const box = $('ct-issues'), count = $('ct-count');
+        if (!issues || !issues.length) { box.classList.add('hidden'); box.innerHTML = ''; count.textContent = ''; return; }
+        count.textContent = 'Zgłoszeń: ' + issues.length;
+        box.classList.remove('hidden');
+        const done = issues.filter(i => i.status === 'done').length;
+        let h = '<div class="tih">Twoje zgłoszenia' + (done ? ' · ' + done + ' poprawione ✅' : '') + '</div>';
+        h += issues.map(i => {
+            const label = i.status === 'done' ? 'Poprawione ✅' : (i.status_pl || i.status);
+            const comment = (i.comment && (i.status === 'rejected' || i.status === 'done')) ? '<div class="tc">' + esc(i.comment) + '</div>' : '';
+            return '<div class="tk-iss"><span class="tn">TK-' + i.seq + '</span>'
+                + '<div class="tib"><div class="tt">' + esc(i.title) + '</div>' + comment + '</div>'
+                + '<span class="tk-pill ' + esc(i.status) + '">' + esc(label) + '</span></div>';
+        }).join('');
+        box.innerHTML = h;
+    }
+    function renderPending() {
+        const box = $('ct-shots'); box.innerHTML = '';
+        testPending.forEach((s, i) => {
+            const d = document.createElement('div'); d.className = 'ts';
+            d.innerHTML = '<img src="' + esc(s.url) + '">' + (s.uploading ? '<div class="up">…</div>' : '<div class="rm" data-i="' + i + '">✕</div>');
+            box.appendChild(d);
+        });
+        box.querySelectorAll('.rm').forEach(el => el.onclick = () => { testPending.splice(+el.dataset.i, 1); renderPending(); });
+    }
+    async function uploadShot(file) {
+        if (previewMode || !file) return;
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!(['png','jpg','jpeg','webp'].includes(ext) || /^image\//.test(file.type || ''))) return;
+        if (file.size > 15 * 1024 * 1024) { tkAppend('assistant', 'Ten zrzut jest za duży (max 15 MB).', []); return; }
+        let fname = file.name || '';
+        if (!/\.(png|jpe?g|webp)$/i.test(fname)) fname = 'zrzut.' + ((file.type || 'image/png').split('/')[1] || 'png').replace('jpeg', 'jpg');
+        const ph = { url: URL.createObjectURL(file), uploading: true, path: null };
+        testPending.push(ph); renderPending();
+        try {
+            const initRes = await callTest({ action: 'upload_init', filename: fname, size_bytes: file.size, mime: file.type || '' });
+            const init = await initRes.json().catch(() => ({}));
+            if (!initRes.ok) throw new Error(init.message || 'init');
+            await putFile(init.upload_url, file, () => {});
+            const doneRes = await callTest({ action: 'upload_done', path: init.path, filename: fname, size_bytes: file.size, mime: file.type || '' });
+            const done = await doneRes.json().catch(() => ({}));
+            if (!doneRes.ok) throw new Error('done');
+            ph.uploading = false; ph.path = done.path; if (done.url) ph.url = done.url; renderPending();
+        } catch (e) {
+            const idx = testPending.indexOf(ph); if (idx >= 0) testPending.splice(idx, 1); renderPending();
+            tkAppend('assistant', 'Nie udało się wgrać zrzutu — spróbuj jeszcze raz.', []);
+        }
+    }
+    async function sendTest() {
+        if (previewMode || testBusy) return;
+        const inp = $('ct-input'), text = inp.value.trim();
+        if (testPending.some(s => s.uploading)) return;   // poczekaj aż zrzut się wgra
+        const ready = testPending.filter(s => s.path);
+        if (!text && !ready.length) return;
+        testBusy = true; $('ct-send').disabled = true;
+        tkAppend('user', text, ready.map(s => s.url));
+        inp.value = ''; inp.style.height = 'auto';
+        const attachments = ready.map(s => s.path);
+        testPending = []; renderPending();
+        tkTyping();
+        try {
+            const res = await callTest({ action: 'message', message: text, attachments });
+            const d = await res.json().catch(() => ({}));
+            tkHideTyping();
+            if (!res.ok && !d.reply) { tkAppend('assistant', 'Coś się przycięło — spróbuj jeszcze raz za chwilę.', []); return; }
+            tkAppend('assistant', d.reply || '…', []);
+            if (d.issues) renderTestIssues(d.issues);
+        } catch (e) { tkHideTyping(); tkAppend('assistant', 'Błąd połączenia — spróbuj ponownie.', []); }
+        finally { testBusy = false; $('ct-send').disabled = false; inp.focus(); }
+    }
+    async function endTest() {
+        if (previewMode || testBusy) return;
+        testBusy = true; tkTyping();
+        try {
+            const res = await callTest({ action: 'end' });
+            const d = await res.json().catch(() => ({}));
+            tkHideTyping();
+            tkAppend('assistant', d.reply || 'Dziękuję za testy!', []);
+            if (d.issues) renderTestIssues(d.issues);
+        } catch (e) { tkHideTyping(); } finally { testBusy = false; }
+    }
+    function lockTestCompose() {
+        ['ct-attach','ct-send','ct-end','ct-input'].forEach(id => { const el = $(id); if (el) { el.disabled = true; el.style.opacity = '.5'; } });
+        const inp = $('ct-input'); if (inp) inp.placeholder = 'Podgląd — tu pisze klient';
+    }
+    (function bindTesty() {
+        const inp = $('ct-input'); if (!inp) return;
+        $('ct-attach').onclick = () => { if (!previewMode) $('ct-file').click(); };
+        $('ct-file').onchange = e => { Array.from(e.target.files || []).forEach(uploadShot); e.target.value = ''; };
+        $('ct-send').onclick = sendTest;
+        $('ct-end').onclick = endTest;
+        inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; });
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendTest(); } });
+        inp.addEventListener('paste', e => {
+            const items = (e.clipboardData && e.clipboardData.items) || [];
+            for (const it of items) { if (it.type && it.type.startsWith('image/')) { const f = it.getAsFile(); if (f) { e.preventDefault(); uploadShot(f); } } }
+        });
+        const comp = $('ct-compose'), testy = $('c-testy');
+        testy.addEventListener('dragover', e => { e.preventDefault(); comp.classList.add('drag'); });
+        testy.addEventListener('dragleave', e => { if (e.target === testy) comp.classList.remove('drag'); });
+        testy.addEventListener('drop', e => { e.preventDefault(); comp.classList.remove('drag'); Array.from((e.dataTransfer && e.dataTransfer.files) || []).forEach(f => { if ((f.type || '').startsWith('image/')) uploadShot(f); }); });
+    })();
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
     else if (previewMode) {

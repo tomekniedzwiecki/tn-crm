@@ -222,6 +222,35 @@ krok budowy domyka się dowodami budowy). Kolejność Przeglądu:
 10. `audyt` (bezpieczeństwo) — NA KOŃCU, bo audytuje stan finalny PO poprawkach; kamień
 „Aplikacja przeszła pełny przegląd" przeniesiony z `poprawki` na `audyt`.
 
+## 6.3. Moduł „Testy klienta" (spowiednik testów, decyzja Tomka 15.07)
+
+Standard fabryki — uniwersalny, żyje w tn-crm (migracja + edge + portal + panel), działa dla KAŻDEGO
+projektu bez zmian w samej aplikacji. Pełna architektura, zasady twarde i ryzyka:
+**`docs/stworze/MODUL-TESTY-KLIENTA.md`** (koncept = źródło prawdy).
+
+Po demo klient-operator w SWOIM portalu rozmawia z AI jak ze spowiednikiem — opowiada co nie działa /
+przeszkadza / co by zmienił, DOKLEJA ZRZUTY EKRANU (vision — AI je ogląda i dopytuje), a AI składa z
+rozmowy USTRUKTURYZOWANE ZGŁOSZENIA. Tomek widzi je w panelu (krok `testy_klienta` → sekcja „Zgłoszenia
+z testów klienta"), edytuje wagę, ZATWIERDZA / ODRZUCA (komentarz wraca do klienta w portalu) i jednym
+ruchem ZLECA pracę: zatwierdzone → pozycje `[TK-n] tytuł` w checkliście kroku `poprawki_demo` +
+wygenerowany PROMPT sesji naprawczej (pętla do wyczerpania; po naprawie `status=done` → klient widzi ✅).
+Nic nie jest wdrażane bez zatwierdzenia Tomka.
+
+- **Dane (migracja `20260715c_wfa_testy_klienta.sql`):** `wfa_test_sessions` (żywa sesja/projekt),
+  `wfa_test_messages` (transkrypt + `attachments`), `wfa_test_issues` (seq/projekt, status
+  new→approved/rejected→in_progress→done, severity, quote, screenshots, tomek_comment) + kolumna
+  `wfa_projects.test_context` (opis ekranów z brief/02) + bucket **`wfa-test-shots` (PRIVATE)**. RLS
+  wszystkich tabel = wyłącznie `team_members` (ZERO anon).
+- **Edge `wfa-test-chat`** (`--no-verify-jwt`): akcje `history/message/upload_init/upload_done/end`
+  (gate = token+hasło portalu; `?preview` + team JWT = READ-ONLY) + `test_admin` (gate = team JWT →
+  signed URL zrzutów dla panelu). Model OpenAI vision (`WFA_TEST_OPENAI_MODEL`, default `gpt-4o`);
+  zgłoszenia emitowane markerem `<zgloszenie>{…}</zgloszenie>` (dedup po `dodaj_do:<seq>`); `end` =
+  sweep niezapisanych tematów. Kill-switch `settings.wfa_test_chat_enabled` (FAIL-OPEN), rate-limit
+  per projekt, koszty → logi edge (brak dedykowanej tabeli ai_usage w wfa).
+- **Aktywacja per projekt:** wypełnij `wfa_projects.test_context` + ustaw krok `testy_klienta` na
+  `in_progress` (karta „Testy aplikacji" w portalu widoczna od `in_progress`) + przekaż klientowi link
+  (portal + mail systemowy — osobny krok, NIE część budowy modułu).
+
 ## 7. Checklist audytu bezpieczeństwa (krok `audyt` — obowiązkowy gate przed startem)
 
 ```
