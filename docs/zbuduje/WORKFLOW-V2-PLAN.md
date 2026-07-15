@@ -120,14 +120,18 @@ Konsekwencje architektoniczne:
    server-side z `event_id` (dedup z pixelem przeglądarkowym), (d) odbiór parametrów
    `fbclid/_fbp/_fbc` doklejanych przez landing do linku kasy i dołączanie ich do zdarzenia.
    Bez (c) zakupy przy iOS/blokerach będą niedoszacowane i system decyzji testów kuleje.
-7. **Architektura marki (15.07):** 1 sklep = 1 MARKA PARASOLOWA merchanta (jedna domena,
-   strona główna = otoczka marki + galeria produktów testowych) + produkty na podstronach
-   (landing 1-produktowy per produkt, styl per produkt pod parasolem marki). NIE robimy
-   5 marek/domen per produkt (koszt + niezgodne z modelem strony głównej). Konsekwencja:
-   nowy krok `marka` (stage 1, scope=project, WDROŻONY 15.07 + warsztat WS + prompt) —
-   marka sklepu przed brandingiem produktów; krok `branding` (scope=product) = kąt
-   komunikacji/persona/hooki produktu pod marką (WS przepisany — BEZ osobnej domeny).
-   Typ A: marka z lejka /sklep (bud_sessions.brand) = baza marki parasolowej.
+7. **Architektura marki v3 (15.07 wieczór — NADPISUJE v2 z tego samego dnia):** 1 sklep =
+   1 DOMENA PARASOLOWA (np. znajdzik.pl) + strona główna-galeria, ale **każdy produkt to
+   MINI-MARKA z własną nazwą i logo** (np. znajdzik.pl/chlodzik): na landingu widać
+   WYŁĄCZNIE markę produktu (logo w topbar/stopka, title/meta/OG/SEO/**GEO** pod nią);
+   parasol widoczny tylko w pasku adresu i na stronie głównej. „Wygląda jak marka, nie jak
+   podstrona sklepu." Slug URL = nazwa mini-marki. Nadal ZERO osobnych domen per produkt.
+   Krok `marka` (project) = domena parasolowa + strona główna; krok `branding` (product) =
+   MINI-MARKA: nazwa+logo+persona+obietnica+hooki (WS zaktualizowany). Typ A: marka z lejka
+   /sklep = baza mini-marki GŁÓWNEGO produktu klienta, parasol dobierany osobno.
+   Pilot: koc = „Chłodzik". GEO (znajdowalność w LLM): research + sekcja w
+   STANDARD-LANDING-SKLEPY (wdrożenie: JSON-LD Product/Offer/FAQ/AggregateRating z realnych
+   danych + wymagania do platformy: robots.txt boty AI, llms.txt, sitemap).
 7b. **STANDARD-LANDING-SKLEPY.md (15.07)** — landingi produktowe projektujemy POD KONWERSJĘ
    (research CRO: Baymard/CWV/Gemius/tpay/FTC), nie wg estetyki starej procedury. Filary:
    message match z kreacją (wymienny moduł hero `?h=N`), mikro-oferta w 1. ekranie, COD jako
