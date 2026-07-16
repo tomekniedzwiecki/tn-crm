@@ -110,6 +110,60 @@ Starter (`saas-starter/template`) dostarcza SZKIELET, krok `onboarding` wypełni
 
 ---
 
+## 4b. Aha za ASYNCHRONICZNĄ generacją AI (apki AI-first — OBOWIĄZKOWE)
+
+Gdy pierwsza wartość (aha) jest ARTEFAKTEM z modelu (plan, oferta, PDF, analiza), między „user kliknął
+Generuj" a „user widzi wartość" jest realny WAIT (10-60 s) + ryzyko błędu. To DOKŁADNIE punkt, w którym
+sceptyk-JDG (lęk #1=scam) porzuca. Klasyczny onboarding tego nie pokrywa — fabryka MUSI. Research:
+`docs/stworze/onboarding/RESEARCH-AI-ASYNC.md`. Dane: pasek postępu → cierpliwość 9 s→22,6 s; widoczny
+progres → porzucenie ~30%; streaming tokenów → drop-off 22%→7%; tempo optymistyczne (szybko na starcie)
+11,3% vs „szczere" 21,8% porzuceń.
+
+1. **Generacja = NAZWANE ETAPY w 1. osobie, nie nagi spinner.** Nigdy spinner >3 s. Narracja czynności
+   („Analizuję Twoją firmę…" → „Dobieram argumenty…" → „Układam plan…"), rosnąca checklista z ✓. To
+   *labor illusion* — pokazanie pracy podnosi zaufanie i postrzeganą wartość. Streaming tokenów OBOWIĄZKOWY
+   gdy artefakt tekstowy i model to wspiera. Skeleton = kształt REALNego artefaktu (te karty/sekcje), nie
+   szare paski. Tempo optymistyczne: pierwszy etap „gotowy" w 1-2 s (choćby tania walidacja inputu).
+   Anti-flicker: etap min. ~700 ms na ekranie. Zero fałszywych procentów — nazwane etapy zamiast liczby.
+2. **PODCZAS czekania mów sceptykowi wprost, że to działa NA JEGO danych.** „Analizuję dane Twojej firmy
+   z KRS i strony…" (konkret o JEGO wejściu = dowód że to nie atrapa). Widełki czasu, nie obietnica
+   („zwykle 20-40 s"). Transparentność WARTOŚCI (co robię i po co), NIE techniczna (zero logów/promptów/
+   nazw modeli/„429"/„inference"). Zawsze widoczny ruch + rotacja etykiet co kilka s (klient rotuje wg
+   szacunkowego harmonogramu p50/p95 z logów, nawet gdy backend milczy).
+3. **PORAŻKA pierwszej generacji = pełnoprawny stan produktu, nie wyjątek.** Wzorzec OBOWIĄZKOWY:
+   (a) zapis inputu PRZED wysyłką (localStorage + wiersz `pending`) — retry NIGDY nie każe wpisywać od nowa;
+   (b) automatyczny CICHY retry 1× z backoffem PRZED pokazaniem błędu (blipy OpenAI przejściowe —
+   [[feedback-spar-pipeline-transient-resilience]]); (c) komunikat bez żargonu, wina po stronie SYSTEMU
+   („Coś u nas przycięło — Twoje dane są zapisane, spróbujmy jeszcze raz"); (d) fallback wartości nie pusty
+   ekran: degradacja modelu / częściowy wynik / kolejka operatora „przyślemy mailem"; (e) backend rozróżnia
+   `rate_limit|timeout|empty|quota|other`, UI pokazuje JEDEN ludzki komunikat; `insufficient_quota` =
+   alert fabryki nie retry usera ([[feedback-openai-insufficient-quota-lejki-down]]). Timeout klienta >
+   p95 modelu (np. p95=35 s → 75 s); edge split + deadline 330s ([[feedback-edge-wallclock-niewidzialne-pady]]).
+4. **Aha = pierwszy PERSONALIZOWANY output, NIE `generation_succeeded`.** Przy wieloetapowości
+   (research→plan): aha = pierwsza widoczna, użyteczna dla usera SEKCJA artefaktu, nie „research done"
+   (to jego dane odbite z powrotem). Pokaż CZĘŚCIOWY wynik ASAP (wynik researchu zanim powstanie plan) —
+   pierwszy widoczny fragment = koniec percepcji czekania.
+5. **Instrumentacja generacji (STAŁY zestaw across fabryka):** `generation_started`(T0) ·
+   `generation_first_value`(=AHA, patrz p.4) · `generation_succeeded` · `generation_failed`
+   (`fail_reason`,`retry_count`) · `generation_retried` · `generation_abandoned`. Tabela `generations`
+   (status `pending→running→(partial)→succeeded|failed|abandoned`, `first_value_at`, `model_latency`,
+   `fail_reason`). **TTFV = first_value_at − T0 = KPI aktywacji (NIE succeeded).** Czasu modelu NIE
+   odejmuj od TTFV produktowego; loguj `model_latency` OSOBNO (metryka inżynierska). Porzucenie w trakcie:
+   `sendBeacon` na `visibilitychange`/`beforeunload` + serwerowy sweep wierszy `running` przeterminowanych
+   (beacon bywa gubiony); loguj ETAP porzucenia. Segmentuj `failed` (system) ≠ `abandoned` (user).
+6. **Nudge po porzuceniu/porażce = DOSTARCZ WARTOŚĆ, nie „wróć".** Dokończ/regeneruj artefakt SERWEROWO
+   z zapisanego inputu i wyślij GOTOWY wynik (lub zajawkę) mailem, spersonalizowany firmą usera w temacie.
+   Trigger A (porzucił w trakcie): „Twój plan jest gotowy — dokończyliśmy za Ciebie", 15-60 min po.
+   Trigger B (2× failed): przeprosiny + naprawiony artefakt. Max 1-2 wiadomości; KILL-SWITCH gdy w
+   międzyczasie był sukces; reply-to=ceo@ ([[feedback-followup-reply-to-ceo-not-inbound]]); wysyłka wg
+   reguł fabryki (nie autonomicznie); logika na `delivered_at` ([[feedback-resend-tracking-svix-and-opens-disabled]]).
+
+**Build:** uniwersalny komponent statusu generacji (`generation.js`: etapy+narracja+streaming+retry+beacon),
+tabela `generations`, eventy i wzorzec porażki powstają przy PIERWSZYM wdrożeniu AI-first (Dobry Wstęp) i
+są BACKPORTOWANE do startera jako standard każdej kolejnej apki AI (walidacja na realnym flow > budowa w próżni).
+
+---
+
 ## 5. Umiejscowienie w etapach (nowy krok)
 
 **Nowy krok `onboarding`** w **Etapie 3 (Budowa MVP)**, PO zbudowaniu rdzenia + paneli + maili (bo aha
@@ -128,6 +182,7 @@ dashboard aktywacji).
 ## STAN WDROŻENIA (aktualizować)
 - [x] Research ×3 (Sonnet 5) — `docs/stworze/onboarding/RESEARCH-1..3.md` — 2026-07-16
 - [x] SSOT (ten dokument) — 2026-07-16
+- [x] Research AI-async (Sonnet 5) — `docs/stworze/onboarding/RESEARCH-AI-ASYNC.md` + §4b „Aha za async-AI" — 2026-07-17
 - [x] Krok `onboarding` dodany: `wfa_step_defs` (stage 3, sort 88, owner admin, milestone „Onboarding gotowy — user wie, co robić") + WS (checklista §3) + prompt sesji (streszcza §3) w `tn-app/projekt.html`; ensure_steps dla Dobry Wstęp + fachmat — 2026-07-16 (migr. `20260716f_wfa_krok_onboarding.sql`)
 - [ ] Standard fabryki (starter scaffolding + prompt + template/CLAUDE.md) — reszta robi strumień startera
 - [ ] Wdrożenie Dobry Wstęp (aha = pierwszy wygenerowany PLAN)
