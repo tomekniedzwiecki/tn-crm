@@ -56,3 +56,30 @@ grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
   dlatego liczby idą TEKSTEM, nie „z oka").
 - Werdykt końcowy nadal wizualny (kompozyt, „czy to ten sam projekt?") — SSIM steruje
   pętlą, człowiek/krytyk ocenia charakter.
+
+## WNIOSKI Z PILOTA (sekcja demo Świtka, 2026-07-16) — TWARDE
+- **Hosting makiet obowiązkowy.** `wf2-gpt` odrzuca input >400000 znaków (`input_za_dlugi`),
+  więc data-URI makiety (base64 ~2-5 MB) NIE przejdzie. Anotowane makiety wgraj do
+  publicznego bucketa `attachments` (service-role, `x-upsert:true`) i podaj URL —
+  model dostaje pełny detal, body zostaje krótkie.
+- **Effort/tokeny.** `high` na złożonej sekcji często daje 504 → domyślnie `medium`.
+  `max_output_tokens=5000` za mało na pełną sekcję z RWD (obcina `@media`) → dawaj **8000**.
+- **Detekcja bloków na miękkich pastelowych makietach** (blask świtu, full-bleed gradient):
+  same `findContours` zlewają wszystko w 1 blob. Skuteczne: karty obrazu = **wysoki próg
+  delty od koloru tła** (odrzuca subtelne dekory) + **grupy tekstu z OCR** (klastrowanie słów
+  → linie → bloki). Tak powstaje sensowna siatka SoM.
+- **SSIM mobile jest systemowo zaniżony przez aspect mismatch.** Kanwa mockupu
+  (np. 1024×1536) jest bardziej ściśnięta w pionie niż realna sekcja RWD, więc kontrolki
+  wypadają poza porównywany (nakładający się od góry) kadr → SSIM ~0.72 mimo wiernego layoutu.
+  Rekomendacja narzędziowa: dla mobile **letterbox obu obrazów do wspólnego aspektu** albo
+  ocena strukturalna; próg DONE mobile realnie ~0.72–0.80. **Werdykt wizualny rządzi.**
+- **SSIM desktop capowany różnicą ASSETU.** Gdy makieta ma zdjęcie lifestyle a mamy tylko
+  packshot, sufit to ~0.80–0.82 — NIE goń 0.90 rewrite'ami (to droga „regeneracja grafiki
+  sceny", nie kod). 0.76→0.81 przez 1 edit punktowy = sukces.
+- **Kontrakt zmiennych CSS w briefingu (jednostki!).** Koder generuje własne nazwy/typy
+  (np. `--sun-p` jako `%`), a istniejący JS podaje `0..1` → animacja martwa. W briefingu
+  podaj DOKŁADNY kontrakt hooków (nazwa, zakres, jednostka), albo reconciluj przy montażu
+  (`circle at calc(var(--sun-p)*100%)`). Zweryfikuj suwak skryptem CDP (nie „na oko").
+- **Montaż markerowy:** usuń stary scoped CSS sekcji z `<head>` (konflikt selektorów) i wklej
+  `<section>`+`<style>` kodera w `<body>`; zachowaj id/klasy hooków JS. Weryfikacja twarda:
+  `scrollWidth-clientWidth==0`, `img.naturalWidth>0`, suwak aktualizuje `.demo-time b`.
