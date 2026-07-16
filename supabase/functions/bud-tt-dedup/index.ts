@@ -41,6 +41,30 @@ function itemIds(row: any): string[] {
 }
 const STATUS_RANK: Record<string, number> = { approved: 0, rejected: 1, duplicate: 1, pending: 2 };
 
+// OBRAZKOWY dedup: identyczne zdjecie producenta = ten sam produkt (sprzedawcy TT Shop wystawiaja
+// pod roznymi nazwami). Hash 64-bit (hex, hash_size=8) -> BigInt -> XOR -> popcount = dystans Hamminga.
+function popcount(x: bigint): number { let c = 0; while (x) { x &= x - 1n; c++; } return c; }
+// Odsiewa hashe "plaskie": popcount <8 lub >56 = jednolite tlo/banner (bialy packshot / czarna plansza)
+// -> takie matchuja wszystko krzyzowo, wiec NIE porownujemy ich w ogole.
+function validHashes(arr: unknown): bigint[] {
+  if (!Array.isArray(arr)) return [];
+  const out: bigint[] = [];
+  for (const h of arr) {
+    if (typeof h !== "string" || !/^[0-9a-fA-F]+$/.test(h)) continue;
+    let v: bigint;
+    try { v = BigInt("0x" + h); } catch { continue; }
+    const pc = popcount(v);
+    if (pc < 8 || pc > 56) continue;
+    out.push(v);
+  }
+  return out;
+}
+function minHamming(a: bigint[], b: bigint[]): number {
+  let m = 99;
+  for (const x of a) for (const y of b) { const d = popcount(x ^ y); if (d < m) m = d; }
+  return m;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   if (req.method !== "POST") return new Response("method", { status: 405, headers: cors });
@@ -61,7 +85,7 @@ Deno.serve(async (req) => {
   for (let off = 0; ; off += PAGE) {
     const { data, error } = await supabase
       .from("bud_tt_products")
-      .select("key,pl_name,category,status,ali_candidates,chosen_link,created_at,heat")
+      .select("key,pl_name,category,status,ali_candidates,chosen_link,created_at,heat,img_hash")
       .order("created_at", { ascending: true })
       .range(off, off + PAGE - 1);
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, "content-type": "application/json" } });
@@ -79,8 +103,10 @@ Deno.serve(async (req) => {
   });
 
   const idMap = new Map<string, { key: string; cat: string }>();   // itemId → anchor {key,cat}
-  const anchors: { key: string; toks: Set<string>; cat: string }[] = [];
+  const anchors: { key: string; toks: Set<string>; cat: string; name: string; hashes: bigint[] }[] = [];
   const marks: { key: string; dup_of: string; reason: string; name: string }[] = [];
+  // Pary 7-10: podejrzane (podobne zdjecie, ale nie na pewno ten sam produkt) — do recznego przegladu.
+  const imageSuspects: { key_a: string; key_b: string; dist: number; name_a: string; name_b: string }[] = [];
 
   for (const row of sorted) {
     // Wiersze już 'duplicate' POMIJAMY całkiem — inaczej w kolejnym przebiegu stają się kotwicą
@@ -90,11 +116,26 @@ Deno.serve(async (req) => {
     const ids = itemIds(row);
     const toks = tokens(row.pl_name);
     const cat = row.category || "Inne";
+    const myHashes = validHashes(row.img_hash);
     let dupOf = "", reason = "";
 
     // item-id: ta sama aukcja (top-1) ORAZ ta sama kategoria — kategoria chroni przed
     // kontaminacją (zablokowana strona oddaje wynik poprzedniego produktu z innej kategorii).
     for (const id of ids) { const a = idMap.get(id); if (a && a.cat === cat) { dupOf = a.key; reason = "item"; break; } }
+    // OBRAZ: identyczny packshot producenta = ten sam produkt — BEZ warunku kategorii.
+    // dist ≤6 → duplikat; 7-10 → tylko podejrzenie (do image_suspects). Pomijamy hashe płaskie (validHashes).
+    if (!dupOf && myHashes.length) {
+      let best = 99, bestKey = "", bestName = "";
+      for (const a of anchors) {
+        if (!a.hashes.length) continue;
+        const m = minHamming(myHashes, a.hashes);
+        if (m < best) { best = m; bestKey = a.key; bestName = a.name; }
+      }
+      if (bestKey && best <= 6) { dupOf = bestKey; reason = "image"; }
+      else if (bestKey && best >= 7 && best <= 10 && imageSuspects.length < 40) {
+        imageSuspects.push({ key_a: row.key, key_b: bestKey, dist: best, name_a: row.pl_name, name_b: bestName });
+      }
+    }
     if (!dupOf) {
       for (const a of anchors) {
         if (a.cat !== cat) continue;
@@ -111,7 +152,7 @@ Deno.serve(async (req) => {
       // duplikat NIE staje się kotwicą
     } else {
       for (const id of ids) if (!idMap.has(id)) idMap.set(id, { key: row.key, cat });
-      anchors.push({ key: row.key, toks, cat });
+      anchors.push({ key: row.key, toks, cat, name: row.pl_name, hashes: myHashes });
     }
   }
 
@@ -127,6 +168,10 @@ Deno.serve(async (req) => {
     }
   }
 
-  const byReason = { item: marks.filter((m) => m.reason === "item").length, name: marks.filter((m) => m.reason === "name").length };
-  return new Response(JSON.stringify({ scanned: sorted.length, duplicates: marks.length, byReason, updated, dryRun, sample: marks.slice(0, 40) }), { headers: { ...cors, "content-type": "application/json" } });
+  const byReason = {
+    item: marks.filter((m) => m.reason === "item").length,
+    image: marks.filter((m) => m.reason === "image").length,
+    name: marks.filter((m) => m.reason === "name").length,
+  };
+  return new Response(JSON.stringify({ scanned: sorted.length, duplicates: marks.length, byReason, updated, dryRun, image_suspects: imageSuspects, sample: marks.slice(0, 40) }), { headers: { ...cors, "content-type": "application/json" } });
 });
