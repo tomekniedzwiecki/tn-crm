@@ -150,6 +150,7 @@
                     <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
                     <button data-ptab="spowiednik" onclick="switchPsec('spowiednik')" class="ptab">Spowiednik <span id="ptab-spow-status"></span></button>
+                    <button data-ptab="testy" onclick="switchPsec('testy')" class="ptab">Testy klienta <span id="ptab-testy-cnt"></span></button>
                     <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
                 </div>
 
@@ -249,6 +250,17 @@
                         <button onclick="loadSpowiednik(true)" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
                     </div>
                     <div id="spow-body" class="max-h-[70vh] overflow-y-auto space-y-3 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4"></div>
+                </div>
+                </div>
+
+                <!-- Testy klienta: zgłoszenia „spowiednika testów" + serie/rundy + transkrypt rozmowy (rozstrzyganie: zatwierdź/odrzuć/zleć) -->
+                <div data-psec="testy" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-chat-teardrop-dots text-[#3291ff]"></i> Testy klienta — zgłoszenia i rozmowa</h3>
+                        <button onclick="loadTkIssues(true)" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
+                    </div>
+                    <div id="tk-admin"><div class="text-zinc-600 text-xs">Ładuję zgłoszenia…</div></div>
                 </div>
                 </div>
 
@@ -622,6 +634,7 @@
             try { localStorage.setItem('wfa_psec_' + projectId, name); } catch (_) {}
             if (name === 'intake') loadIntakeAdmin();
             if (name === 'spowiednik') loadSpowiednik();
+            if (name === 'testy') { renderTkAdmin(); loadTkIssues(true); }
         }
 
         // ============ DANE OD KLIENTA (intake — read-only podgląd admina) ============
@@ -1274,6 +1287,12 @@
         let TK_ROUNDS = [];        // [{round_no, opened_at, closed_at, summary}]
         let TK_MESSAGES = [];      // pełny transkrypt rozmowy (user+assistant, timestampy, zrzuty signed)
         function tkNewCount() { return TK_ISSUES.filter(i => i.status === 'new').length; }
+        function updateTkTopBadge() {
+            const b = document.getElementById('ptab-testy-cnt'); if (!b) return;
+            const n = tkNewCount();
+            b.textContent = n > 0 ? '(' + n + ')' : '';
+            b.className = n > 0 ? 'text-[#f26d78] font-semibold' : '';
+        }
         async function loadTkIssues(refreshUi) {
             try {
                 const { data: { session } } = await supabaseClient.auth.getSession();
@@ -1286,6 +1305,7 @@
                 TK_ROUNDS = d.rounds || [];
                 TK_MESSAGES = d.messages || [];
             } catch (e) { /* cicho — sekcja pokaże pustkę */ }
+            updateTkTopBadge();
             if (refreshUi) { renderStage(); if (drawerCtx && drawerCtx.key === 'testy_klienta') renderTkAdmin(); }
         }
         const TK_SEV = { krytyczne:['Krytyczne','#f26d78'], istotne:['Istotne','#f5b955'], kosmetyka:['Kosmetyka','#8b8b93'] };
@@ -1684,8 +1704,9 @@ ZGŁOSZENIA DO NAPRAWY (${list.length}):
             // Testy klienta — zgłoszenia „spowiednika testów" (rozstrzyganie + zlecanie poprawek)
             if (d.key === 'testy_klienta') {
                 h += `<div class="border border-[#1f1f1f] rounded-lg p-3.5 bg-[#0d0d0d]">
-                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2.5">Zgłoszenia z testów klienta</div>
-                    <div id="tk-admin"><div class="text-zinc-600 text-xs">Ładuję zgłoszenia…</div></div>
+                    <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Zgłoszenia z testów klienta</div>
+                    <div class="text-zinc-400 text-[12px] mb-2.5">Rozstrzyganie (zatwierdź / odrzuć / zleć), serie poprawek i transkrypt rozmowy są w zakładce <b class="text-zinc-200">Testy klienta</b> (na górze, obok Spowiednika).</div>
+                    <button type="button" onclick="closeStep(); switchPsec('testy');" class="text-[11px] px-3 py-1.5 rounded-md border border-[#0070f3]/50 text-[#52a8ff] hover:bg-[#0070f3]/10 inline-flex items-center gap-1.5"><i class="ph ph-arrow-square-out"></i> Otwórz zakładkę Testy klienta</button>
                 </div>`;
             }
 
@@ -1715,7 +1736,7 @@ ZGŁOSZENIA DO NAPRAWY (${list.length}):
             // Notatka robocza
             h += `<div><label class="text-xs text-zinc-500 block mb-1">Notatka / linki robocze</label><textarea id="sd-note" rows="3" class="fld resize-y">${escapeHtml((st.data && st.data.note) || '')}</textarea><button onclick="sdSaveNote()" class="mt-1.5 text-xs text-[#52a8ff] hover:text-[#78b6ff]">Zapisz notatkę</button></div>`;
             document.getElementById('sd-body').innerHTML = h;
-            if (d.key === 'testy_klienta') { renderTkAdmin(); loadTkIssues(true); }
+            if (d.key === 'testy_klienta') { loadTkIssues(true); }
 
             document.getElementById('sd-skip').textContent = st.status === 'skipped' ? 'Przywróć krok' : 'Pomiń krok';
             document.getElementById('sd-statusbtns').innerHTML = ['pending', 'in_progress', 'blocked', 'done'].map(s =>
