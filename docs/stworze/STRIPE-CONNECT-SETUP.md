@@ -1,5 +1,11 @@
 # Stripe Connect — jednorazowa aktywacja platformy (instrukcja dla Tomka)
 
+> ✅ **WYKONANE 2026-07-13** (przy kroku stripe_plany fachmata). Platforma: `acct_1TshmjPfs96MHB0x`;
+> `STRIPE_PLATFORM_SECRET` (pełny sk_live) + `STRIPE_PLATFORM_SECRET_TEST` + `STRIPE_CONNECT_WEBHOOK_SECRET`
+> w sekretach edge tn-crm. **Kolejne aplikacje: ZERO akcji Tomka w Stripe** — sesja fabryki tworzy konto
+> klienta, plany, webhook i sekrety sama (wzorce: fachmat 13.07, Dobry Wstęp 16.07). Poniższa instrukcja
+> zostaje jako referencja historyczna.
+
 > Model (zaakceptowany 2026-07-11): konto Tomka = platforma Connect; klient-operator = **Standard connected account**
 > (własne KYC, własny dashboard, merchant of record); płatności userów aplikacji = **direct charges** na koncie klienta;
 > % Tomka pobierany automatycznie jako **application fee** przy każdej transakcji (w tym każdej fakturze subskrypcji).

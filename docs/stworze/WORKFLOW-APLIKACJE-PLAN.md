@@ -170,7 +170,11 @@ loop-guard). Edge: `wfa-inbox-webhook` (svix `RESEND_WEBHOOK_SECRET_INBOX`) + `w
 
 ## 5. Stripe Connect — architektura płatności każdej aplikacji
 
-Decyzje Tomka (2026-07-11): model zaakceptowany; aktywację Connect robi sam wg `docs/stworze/STRIPE-CONNECT-SETUP.md`;
+Decyzje Tomka (2026-07-11): model zaakceptowany. **PLATFORMA CONNECT AKTYWNA od 2026-07-13** (fachmat,
+krok stripe_plany): konto platformy `acct_1TshmjPfs96MHB0x`, `STRIPE_PLATFORM_SECRET` (pełny sk_live)
++ `STRIPE_CONNECT_WEBHOOK_SECRET` w sekretach tn-crm — kolejne aplikacje NIE wymagają żadnej akcji
+Tomka w Stripe (dowód 16.07: Dobry Wstęp poszedł w pełni automatycznie). Instrukcja aktywacji
+(`docs/stworze/STRIPE-CONNECT-SETUP.md`) = referencja historyczna;
 prowizję Stripe ponosi klient (zapis do umowy).
 
 - Konto Tomka = **platforma Stripe Connect**. Klient = **Standard connected account** (self-onboarding, własne KYC,
@@ -379,7 +383,7 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
 - [x] Projekty pilotażowe: Grzegorz Pełka („Oferta Instalatora"), Tomek Jankowiak (auto-sync) — 2026-07-11
 - [x] Handoff pack Grzegorza wygenerowany ręcznie z pełnej bazy 156 itemów (auto-generator ucina do 8000 zn.);
       `knowhow_closed_at` ustawiony po stronie zespołu — 2026-07-11
-- [x] `docs/stworze/STRIPE-CONNECT-SETUP.md` (instrukcja dla Tomka) — 2026-07-11; aktywacja Connect: CZEKA na Tomka
+- [x] `docs/stworze/STRIPE-CONNECT-SETUP.md` (instrukcja dla Tomka) — 2026-07-11; **aktywacja Connect: WYKONANA 2026-07-13** (platforma acct_1TshmjPfs96MHB0x, sekrety w tn-crm)
 - [x] `docs/stworze/METODYKA-BUDOWY.md` (spec-driven: BUILDLOG, 08-PLAN-SESJI, rytuał sesji, review adwersarski,
       bramki człowieka) — 2026-07-11
 - [x] Migracja `20260711b_wfa_flow_v2.sql`: `deadline_at` + 6 nowych kroków (pricing, dane_operatora,
