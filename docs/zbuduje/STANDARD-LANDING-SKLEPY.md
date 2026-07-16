@@ -17,7 +17,10 @@ lęk #1 = scam), checkout na osobnej domenie platformy (CTA → checkout_url), C
 obietnica + motyw wizualny; case'y +34…66% CR). Mapa `HOOKS={1..3}` w skrypcie, `?h=N`
 podmienia h1+sub; kreacja N linkuje `?h=N`. Nie budujemy osobnych landingów per kreacja.
 
-**Z2 — 🎨 GRAFIKA-FIRST.** „Grafiki robią bardzo dużą część roboty wizualnej — posługujmy
+**Z2 — 🎨 GRAFIKA-FIRST. PRIORYTET #1 CAŁEGO PROCESU (Tomek 16.07): finalna strona ma
+wyglądać JAK GRAFIKI KAŻDEJ SEKCJI z gpt-image — proces budowy dopracowujemy tak długo,
+aż ten efekt jest osiągany POWTARZALNIE; każda rozbieżność render↔makieta to dług
+do spłacenia w pętli dopasowania, nie „wystarczająco dobrze".** „Grafiki robią bardzo dużą część roboty wizualnej — posługujmy
 się nimi tak bardzo, jak tylko się da; kod nie zawsze umie zrobić tak dobrze" (Tomek 16.07).
 Sceny generowane niosą wygląd; kod robi WYŁĄCZNIE to, co musi być kodem: typografia, CTA,
 listy/tabele/FAQ, opinie (realne zdjęcia), dane, interakcje. **Scena = TŁO CAŁEJ SEKCJI,
@@ -101,24 +104,50 @@ pay-badges). Potem sekcja po sekcji: call = PARA makiet (mobile+desktop) jako in
 zdjęcia, prawdziwe pay-badges, prawdziwe liczby). Sekcje czysto-danowe mogą iść z kontraktu.
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 
-**F5 — WARSTWA ŻYCIA + CREATIVE TECHNOLOGIST.** Standardowy zestaw: scroll-reveal ze
-staggerem, JEDNA animacja-motyw korzyści (np. linia/łuk rysowany scrollem), count-up
-(statyczna liczba w źródle!), interaktywne demo produktu (suwak/taby/wybór wariantów
-z auto-zajawką), sticky slide-in, mikrointerakcje CTA. PLUS osobny call gpt-5.6-sol
-w roli creative technologist (propozycje per sekcja: scroll-driven animations, warstwowy
-parallax, morphing, magnetic CTA, SVG mikro-scenki) → filtr (celowe, zero tandety/particles/
-tilt/confetti, transform/opacity, fallbacki, reduced-motion→off, 60fps) → implementacja
-kodem GPT. Ruch prowadzi wzrok do dowodu i CTA.
+**F5 — ETAP ŻYCIA I ZAANGAŻOWANIA — OSOBNY, SEKWENCYJNY PRZEBIEG (wzmocnione przez Tomka
+16.07: „brakuje animacji w JS, czegoś co doda życia, pokaże profesjonalizm i ZAANGAŻUJE;
+nie robić wszystkiego naraz — etapami").** Wykonywany DOPIERO po zamknięciu dopasowania
+wizualnego (F7.1) i audytu grafika-first — na stabilnej stronie, jako dedykowana runda:
+1. **CREATIVE TECHNOLOGIST** (gpt-5.6-sol, effort high, bez obrazów lub 1-2 screeny):
+   propozycje per sekcja — scroll-driven animations (`animation-timeline: view()` z fallback
+   IO), warstwowy parallax scen, morphing, magnetic CTA, SVG mikro-scenki związane z korzyścią.
+2. **ZESTAW OBOWIĄZKOWY:** scroll-reveal ze staggerem · JEDNA animacja-motyw korzyści
+   (np. łuk świtu rysowany scrollem) · count-up (statyczna liczba w źródle!) · sticky
+   slide-in · mikrointerakcje CTA/kart (hover/press states) · **ELEMENT ANGAŻUJĄCY (wymóg!):**
+   co najmniej jedna interakcja, która WCIĄGA użytkownika w produkt (interaktywne demo:
+   suwak symulacji efektu, wybór kolorów/wariantów na packshocie, porównanie przed/po —
+   z auto-zajawką przy pierwszym pokazaniu, żeby było widać że to interaktywne).
+3. Filtr (celowe, zero tandety/particles/tilt/confetti, transform/opacity, fallbacki,
+   reduced-motion→off, 60fps bez layout thrashing) → implementacja kodem GPT → test na żywo
+   (scroll przez całą stronę, klik każdej interakcji, pomiar jank).
+Ruch prowadzi wzrok do dowodu i CTA. Strona bez etapu życia = niekompletna (gate F6).
+
+**🔁 SEKWENCYJNOŚĆ ETAPÓW (Tomek 16.07: „nie próbować robić wszystkiego naraz"):**
+F4 kod-struktura → F7.1 dopasowanie wizualne → audyt grafika-first → **F5 życie** →
+F7.2 krytyk końcowy. Każdy etap kończy się weryfikacją i zapisem wersji PRZED startem
+następnego; jeden etap = jedna intencja (nie mieszać dopasowania z animacjami w jednym callu).
 
 **F6 — WERYFIKACJA TWARDA.** 0 błędów konsoli · 0 h-scrolla (390/768/1280) · wszystkie
 `<img>` naturalWidth>0 (eager-wait) · assety 200 · reduced-motion pokazuje pełną treść ·
 grep zakazów i liczb · JSON-LD parse · `node --check` exec-scriptu · placeholdery+noindex ·
-sticky nie zasłania (padding-bottom stopki) · lightbox/taby/wideo działają.
+sticky nie zasłania (padding-bottom stopki) · lightbox/taby/wideo działają ·
+**AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
+z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
+ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**
 
 **F7 — PĘTLE JAKOŚCI (sekcja po sekcji).**
-1. **Pętla DOPASOWANIA**: screenshot sekcji (390 i 1280) obok pary makiet → lista KONKRETNYCH
-   rozjazdów (hexy, typografia, proporcje, cienie, sceny, hierarchia) → poprawka kodem GPT →
-   aż „to ta sama strona" (max 3 iteracje/sekcję, start od hero).
+1. **ETAP DOPASOWANIA — OSOBNA FAZA, DO WYCZERPANIA (wzmocnione przez Tomka 16.07: „strona
+   ma wyglądać tak jak makiety"):** dla KAŻDEJ sekcji buduj KOMPOZYT side-by-side (PIL:
+   makieta | screenshot, 390 i 1280, wyrównane szerokości) → lista KONKRETNYCH rozjazdów
+   (hexy, font-size/wagi, spacing, cienie, zaokrąglenia, brakujące elementy SCENY, kompozycja,
+   hierarchia) → poprawka kodem GPT (effort low/medium) → re-render → werdykt vision na
+   kompozycie: „czy to ten sam projekt? TAK/NIE + czego brakuje" → iteruj AŻ TAK.
+   **BEZ limitu iteracji** (pętla do wyczerpania — limit tylko: brak postępu 2 rundy z rzędu
+   ⇒ eskalacja: regeneracja grafiki sceny albo nota do nadzorcy). Start od hero. Kompozyty
+   archiwizować per sekcja/iteracja (`FABRYKA-*/<slug>/dopasowanie/<sekcja>-vN.png`) —
+   postęp ma być widoczny dla Tomka. Podział pracy (RETRO 16.07): analizę rozjazdów na
+   kompozytach może robić agent (vision) — GPT wołać do PRZEBUDÓW sekcji; mechaniczne fixy
+   CSS/typografii <5% pliku = fixy integracyjne (dozwolone agentowi, raportowane).
 2. **Pętla KRYTYKA**: krytyk gpt-5.6-sol vision (bezlitosny art director + CRO: „czy czuć
    produkt, który chce się kupić? co tandetne? czy wygląda na DROGI projekt?") NAPRZEMIENNIE
    ze świeżym subagentem visual-verify (SEKWENCYJNIE — jedna przeglądarka) → filtr uwag WZGLĘDEM
@@ -160,6 +189,14 @@ widać, CO produkt robi i po co go kupić.
 **PAY-BADGES — kanoniczny blok `docs/zbuduje/assets/pay-badges.html`** (prawdziwe logotypy:
 Visa wordmark-path, Mastercard geometria kół, BLIK znak słowny; białe pigułki z borderem
 i cieniem + „ZA POBRANIEM"). Wklejać 1:1; ZAKAZ odtwarzania logotypów z pamięci.
+
+**DNA TYPOGRAFICZNE MAKIET (RETRO dopasowania 16.07 — najtańszy fix o największym wpływie):**
+makiety mają zwykle KURSYWNY SERIF-AKCENT na słowie-kluczu nagłówka — koder MUSI wczytać
+font szeryfowy (np. Fraunces italic) + klasę `.ac` i owinąć akcenty; każda sekcja treściowa
+MUSI mieć eyebrow+`<h2>` zgodny z makietą (gate: sekcja bez nagłówka = błąd); wyrównanie
+nagłówków wg makiety (edytorialne=lewa, nie domyślne centrowanie). Grafika-first: scena
+w interaktywnym stage'u NIE może być wyprana ani mała (tło stage=transparent, spoczynkowy
+glow ≤0.42, kadr ≥520px desktop) — biały wash marnuje bogatą generację.
 
 **Detale rzemiosła:** media kart = jeden `aspect-ratio`+`object-fit:cover` na sekcję
 (UWAGA: atrybut HTML `height` na `<img>` BIJE CSS aspect-ratio — dla kafli dawać w CSS
