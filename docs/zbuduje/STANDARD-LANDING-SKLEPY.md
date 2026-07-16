@@ -144,6 +144,12 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
   (bogactwo mierzy się OUTPUTEM: sceny/interakcje/jakość na stronie, nie wydanymi $).
 
 **F3 — GRAFIKI PRODUKCYJNE = DERYWATY MAKIET (Z2).**
+0. **WARSTWA GRAFICZNA per sekcja (Tomek 16.07 późny wieczór) — procedura
+   `docs/zbuduje/GRAFIKA-Z-MAKIETY.md` (CZYTAĆ):** dla KAŻDEJ makiety rozpoznaj, co jest
+   grafiką (sceny, foto-pasy, zdjęcia sekcji, ornamenty) a co elementem kodowym; każdy
+   element graficzny = OSOBNY plik wyciągnięty 1:1 z makiety (DOMYŚLNIE CROP z PNG —
+   pixel-perfect i darmowy; regeneracja tylko: inny aspekt / tekst na fakturze / produkt
+   wymagający 3 wariantów). Grafiki niosą styl strony — używać ich jak najwięcej.
 1. **TŁO KAŻDEJ SEKCJI SCENICZNEJ = TA SAMA SCENA CO NA MAKIECIE (pomysł Tomka 16.07 —
    standard; koniec losowania nowych scen):** gpt-image-2, REFERENCJA = ZAAKCEPTOWANA makieta
    tej sekcji (+ realny packshot dla wierności produktu — 3 WARUNKI, sekcja 2), prompt:
