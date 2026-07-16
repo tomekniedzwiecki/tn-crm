@@ -33,6 +33,26 @@ Agent dla KAŻDEGO zgłoszenia:
    „Przyjęte, poprawiamy X." / „Świetny pomysł, dodamy w kolejnej wersji." `decided_at=now()`.
 4. Rozstrzyga PĘTLĄ do wyczerpania: gdy 0 zgłoszeń w statusie `new` → runda gotowa do naprawy.
 
+## 3a. Zasada akceptacji FICZERÓW (nie tylko bugów) — filtr „rdzeń, nie nowe zastosowania"
+
+Decyzja Tomka 16.07.2026: gdy user zgłasza coś, co NIE jest bugiem, tylko **ficzerem** — też możemy
+to zrobić, ALE **wyłącznie gdy dopracowuje RDZEŃ produktu**, a nie wymyśla mu nowe zastosowania.
+
+**Test rozstrzygający (jedno pytanie):** czy to sprawia, że produkt robi LEPIEJ / PEŁNIEJ to, po co
+powstał — czy dokłada mu NOWY cel/domenę?
+- **Dopracowanie rdzenia → ROBIMY** (approved). Usprawnia istniejący, główny przepływ/obietnicę produktu.
+  Fachmat (rdzeń = szybka, kompletna oferta PDF instalatora): pole „kod pocztowy"/„nr działki" w adresie,
+  więcej pozycji w gotowym cenniku, wybór VAT przy materiałach, czytelniejszy tryb netto — to LEPSZA oferta.
+- **Nowe zastosowanie / scope creep → NIE ROBIMY** (rejected albo „na później" z komunikatem). Nowy przypadek
+  użycia, nowa domena, „a może by jeszcze…". Fachmat: moduł CRM klientów, kalendarz montaży, magazyn,
+  księgowość — to JUŻ INNY PRODUKT, nie dopracowanie oferty. Uprzejmie odmawiamy / odkładamy poza roadmapę.
+
+**Jak stosować:** przy triażu (§3 pkt 1) ficzer klasyfikuj dodatkowo jako `core-refinement` (→ approved,
+ewentualnie `flags.poza_v1=true` jeśli większy, do kolejnej wersji) albo `scope-creep` (→ rejected/odłożony
+z ciepłym komunikatem: „Świetny pomysł, ale to wykracza poza to, do czego Fachmat służy — zostawiamy poza
+zakresem, żeby produkt był najlepszy w swoim rdzeniu"). Granica v1 vs v1.1 dotyczy TYLKO ficzerów rdzeniowych;
+scope-creep nie wchodzi ani do v1, ani do v1.1. W razie wątpliwości: mniej = lepiej (ostrość produktu > szerokość).
+
 ## 4. Naprawa (pętla do wyczerpania)
 
 Kolejność: **bugi/regresje → UX → feature-v1 → v1.1 osobno.** Dla każdego zatwierdzonego zgłoszenia:
