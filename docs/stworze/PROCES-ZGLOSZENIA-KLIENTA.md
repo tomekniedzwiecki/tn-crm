@@ -68,6 +68,15 @@ Kolejność: **bugi/regresje → UX → feature-v1 → v1.1 osobno.** Dla każde
 
 - Po naprawie: `wfa_test_issues.status='done'`, `done_at=now()` → **klient widzi ✅** w portalu przy swoim
   zgłoszeniu (potwierdzenie, że jego głos coś zmienił — buduje zaufanie).
+- **„Historia poprawek" (portal klienta)** = trwały widok „Twoja uwaga → status → data", grupowany po
+  rundach z podsumowaniem (portal.html `renderTestIssues`; edge `wfa-test-chat` history zwraca done_at +
+  rounds). Widoczna też po zakończeniu testów. Etykiety spójne: Poprawione ✅·data / W realizacji /
+  Poza zakresem / Zaplanowane·kolejna wersja. To NASZE rozliczenie się z operatorem — osobne od „Co nowego".
+- **Model całościowy (spójność, dwie narracje zmian — różne odbiorcy, wspólny język wizualny):**
+  (1) **„Historia poprawek"** — dla OPERATORA, w jego portalu fabryki, źródło `wfa_test_issues`; nasze
+  poprawki jego zgłoszeń. (2) **„Co nowego"** — dla END-USERÓW operatora, w jego apce, źródło changelog
+  ([[aplikacje-changelog-system]]); jego produkt. Most: naprawiona rzecz user-facing MOŻE zasilić draft
+  „Co nowego" (decyzja operatora) — łączy, nie miesza. Te same chipy/format daty/styl kart w obu.
 - Runda: gdy wszystkie zatwierdzone z rundy = `done` → zamknij serię (`wfa_test_rounds`, podsumowanie
   zgłoszonych/naprawionych/odrzuconych/v1.1). Kolejne uwagi = nowa runda.
 - **Komunikat „co nowego"**: istotne poprawki widoczne dla użytkownika → operator publikuje wpis w
