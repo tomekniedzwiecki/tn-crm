@@ -70,15 +70,20 @@ esencja produktu na scenach kluczowych, jasne tła.
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
    makiety), przyrostowo: hero+1 → po 2. Każda: ref = styl-master + realne zdjęcie produktu
    gdy w kadrze; 3:2 DUŻE; polskie teksty przykładowe; pełny układ UI.
-4. **PARY desktop+mobile**: z każdej makiety desktop wariant MOBILE 2:3 („adapt this exact
-   section design to a narrow 390px viewport — stack, keep style identical"). Mobile-makieta
-   WIĄŻE dla 390px, desktopowa dla ≥768px.
+4. **PARY desktop+mobile**: z każdej makiety desktop wariant MOBILE 2:3. ⚠️ NIE „adaptuj
+   referencję" generycznie — gpt-image nie odwzorowuje tekstu z obrazu, regeneruje z priora
+   i WSTRZYKUJE dropship-claims (przekreślenia, „NR 1 W POLSCE", darmowa dostawa)! Mobile
+   generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
+   desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
 
 **F3 — GRAFIKI PRODUKCYJNE (grafika-first).**
 1. **HERO = pełna scena Z PRODUKTEM w środku** (ref = hero-makieta jako wzór kompozycji
    + realny packshot; wierność wg 3 WARUNKÓW — sekcja 2). Puste strefy negatywne dokładnie
    tam, gdzie makieta ma nagłówek/CTA/kartę. **TRZY warianty: mobile 2:3 · tablet ~1:1 ·
    desktop 3:2** (`<picture>`). NIE „plate + wycięty packshot" (szwy/skala/światło = źle).
+   Mobile: `object-position` uniesiony (produkt nie może zniknąć za blokiem oferty) +
+   oferta/CTA w wydzielonej JASNEJ karcie na dole (nie „na produkcie" i nie ghost-poświata);
+   układ stref: tekst-góra / produkt-środek / karta-dół.
 2. **Sceny pozostałych sekcji wizualnych**: gdzie makieta ma bogatą scenę — JEDNA grafika
    sceny (z produktem gdy makieta go tam ma) jako tło full-bleed; kod dodaje warstwę treści.
 3. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
@@ -156,7 +161,11 @@ widać, CO produkt robi i po co go kupić.
 Visa wordmark-path, Mastercard geometria kół, BLIK znak słowny; białe pigułki z borderem
 i cieniem + „ZA POBRANIEM"). Wklejać 1:1; ZAKAZ odtwarzania logotypów z pamięci.
 
-**Detale rzemiosła:** media kart = jeden `aspect-ratio`+`object-fit:cover` na sekcję ·
+**Detale rzemiosła:** media kart = jeden `aspect-ratio`+`object-fit:cover` na sekcję
+(UWAGA: atrybut HTML `height` na `<img>` BIJE CSS aspect-ratio — dla kafli dawać w CSS
+i width, i height) · hero mobile: jasny panel/scrim pod copy (tekst nie może nachodzić
+na scenę/twarz) · UGC podpisywać „zdjęcia od kupujących" — NIGDY „z AliExpress" (zdradzanie
+źródła = sygnał dropshippingu; uczciwość ≠ zdradzanie źródła) ·
 zakaz ornamentów-PNG (wstążki/chmurki/ściegi — cukierkowe; akcenty czystym CSS; wycinki
 z arkuszy tylko wg mapy assetów) · UGC z normalizacją CSS (brightness/contrast/saturate) ·
 PRZED/PO bez sparowanego realnego kadru = statyczny panel z JEDNĄ spójną sceną (nie mieszać
@@ -265,11 +274,16 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ## 7. LEKSYKON WYKONAWCZY (lekcje skonsolidowane TEMATYCZNIE — F8 dopisuje tu nowe)
 
 ### 7a. wf2-gpt / koder
-- **`reasoning.effort` — STERUJ per zadanie (Tomek 16.07; wf2-gpt przekazuje pole,
-  wf2gpt-call.py: env `WF2_EFFORT`):** PLAN / KRYTYK vision / CREATIVE TECHNOLOGIST = `high`
-  (najtrudniejsze myślenie) · KOD sekcji z makiet = `medium` · drobne poprawki z pętli /
-  przycinanie copy = `low` (szybciej = mniej 504). UWAGA: wyższy effort wydłuża wall-clock —
-  przy `high` trzymać niski cap outputu (~4-5k) i max 2 obrazy.
+- **`reasoning.effort` — STERUJ per zadanie (wf2-gpt przekazuje pole; wf2gpt-call.py: env
+  `WF2_EFFORT`). Kalibracja EMPIRYCZNA (Blasik 16.07):** PLAN i KRYTYK vision = **`medium`**
+  (`high` na edge jest niewykonalny: 504 przy dużym capie, a przy małym cały budżet idzie
+  w reasoning i tekst wraca pusty) · `high` TYLKO krótkie calle tekstowe bez obrazów
+  (creative technologist, koncepcje) z capem ~4k · KOD sekcji = `medium` · drobne poprawki /
+  przycinanie copy = `low`.
+- **Chunki: ≤~4 sekcje na chunk; lightboxy + JS interakcji ZAWSZE OSOBNYM wywołaniem**
+  (5 sekcji + 12 lightboxów + JS = pewny 504).
+- Marker `<!--PAYBADGES-->`: instruować kodera „NIE dodawaj własnego wrappera .pay-badges"
+  (GPT owija — po wklejce kanonicznej robi się zagnieżdżenie); montaż deduplikuje.
 - 504 = wall-clock edge, nie tylko rozmiar: kod w chunkach ≤~5k out (literalny HTML — FAQ/
   stopka — zapas 7k); plan-call MAX 2 obrazy i cap ~4-5k; `max_output_tokens` ≠ bezpiecznik.
 - Limit inputu 400k znaków (`input_za_dlugi`): screenshoty jako data-URI JPEG q~47 szer.400
@@ -277,6 +291,8 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 - Odpowiedź czytać jako SUROWE BAJTY UTF-8 (python/urllib); PS Invoke-RestMethod = mojibake.
 - SŁOWNIK KLAS wspólny dla chunków (inaczej CSS↔body rozjazd, gołe `<svg>` = ikony 300px);
   lightboxy w JEDNYM chunku (inaczej zduplikowane ID). Montaż: cross-check + grep.
+- Sekcje z dużym literalnym HTML/SVG (hero, opinie): cap 7-8k; po KAŻDYM chunku grep
+  niedomkniętego patha (`d="[^"]*$`) — ucięcie w środku atrybutu rozwala parsing dalszych sekcji.
 
 ### 7b. Screenshoty / krytycy
 - Przed zrzutem: eager-load wszystkich img aż `naturalWidth>0` (inaczej fałszywe P0),
@@ -284,6 +300,8 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 - Full-page ze `svh`: chrome-devtools MCP (captureBeyondViewport), nie goły CLI
   (fallback z override `.hero{min-height:0}`).
 - Uwagi o foldzie/sticky/nachodzeniu weryfikować NA ŻYWO (getBoundingClientRect), nie z obrazu.
+- Bardzo długie strony do krytyka: zrzuty przez upload do storage + URL (resize ~760/360)
+  pewniejsze niż data-URI.
 - Uwagi krytyków filtrować względem TEGO standardu (np. COD jest WYMAGANY — „zakaz COD"
   z landing-pages nie obowiązuje). visual-verify i chrome-devtools dzielą przeglądarkę —
   sekwencjonować; zombie-lock profilu → fallback headless z tmp user-data-dir.
@@ -291,8 +309,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ### 7c. Materiał źródłowy (aukcja/snapshot)
 - Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty jakościowe.
 - Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
-- Rehost zewnętrznych obrazów TYLKO do `bud-assets/<slug>/` (whitelist edge; nie bud-reviews).
+- Rehost zewnętrznych obrazów TYLKO do `bud-assets/<slug>/` — to PREFIX w buckecie
+  `attachments` (upload: `/object/attachments/bud-assets/<slug>/...`), nie osobny bucket.
 - Treść odrzuconych infografik producenta wolno cytować (dane z aukcji, nie fantazja).
+- **Limit realnego dowodu**: ubogie UGC (same packshoty) = social-proof zawsze „słaby" u krytyka —
+  to sufit danych, nie kodu; NIE nadrabiać fabrykacją (uwagę krytyka odrzucić z tą notą).
 
 ### 7d. Rzemiosło UI (szczegóły w sekcji 2)
 - Tabela porównania od razu wzorcem tabela→karty z `data-label` (390!).
@@ -320,3 +341,12 @@ Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/rep
   GRAFIKA-FIRST + hero 3 warianty + full-bleed (Z2/F3) · pay-badges kanoniczne · pętla
   dopasowania sekcja-po-sekcji (F7.1) · creative technologist (F5) · RETRO jako obowiązkowa
   faza (F8). Nocne landingi R1-R4 skasowane — rebuild pełnym flow.
+- **2026-07-16 wieczór (RETRO Świtek+Blasik)**: effort skalibrowany empirycznie (plan/krytyk
+  = medium; high tylko krótkie calle bez obrazów) · mobile-makiety z DOKŁADNĄ treścią
+  w prompcie (generyczna adaptacja wstrzykuje dropship-claims) · chunki ≤4 sekcje, lightboxy
+  +JS osobno, grep niedomkniętych `d="` · PAYBADGES bez wrappera · height-attr vs
+  aspect-ratio · „zdjęcia od kupujących" nie „z AliExpress" · hero mobile: panel pod copy,
+  object-position, karta oferty · limit realnego dowodu (ubogie UGC ≠ wina kodu) ·
+  bud-assets = prefix attachments. OTWARTE do decyzji Tomka: czy przy grafika-first sceny
+  produkcyjne full-bleed mogą pełnić rolę makiet dla sekcji SCENICZNYCH (2-w-1, jak Blasik
+  $1.15), czy zawsze pełne pary makiet UI całego planu (jak Świtek $4.03).
