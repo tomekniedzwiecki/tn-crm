@@ -23,6 +23,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({})) as {
       model?: string; input?: string; messages?: { role: string; content: string }[];
       max_output_tokens?: number; temperature?: number;
+      reasoning?: { effort?: 'minimal' | 'low' | 'medium' | 'high' };
     };
     const input = body.messages ?? body.input;
     if (!input) return new Response(JSON.stringify({ error: 'brak_input' }), { status: 400 });
@@ -38,6 +39,7 @@ Deno.serve(async (req) => {
         input,
         max_output_tokens: Math.min(body.max_output_tokens ?? 8000, 32000),
         ...(body.temperature !== undefined ? { temperature: body.temperature } : {}),
+        ...(body.reasoning?.effort ? { reasoning: { effort: body.reasoning.effort } } : {}),
       }),
     });
     const j = await r.json();
