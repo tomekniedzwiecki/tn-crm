@@ -70,11 +70,15 @@
 - Sekrety NIGDY w plikach/repo/BUILDLOG/notatkach — tylko maski; odzysk kluczy metodą echo-fn
   (tymczasowa edge fn + x-guard, DELETE natychmiast); service-role po legacy-OFF = `sb_secret_*`
   (żyje w Vault dla cronów).
-- Zmiany RLS/migracje produkcyjne = formalnie bramka Tomka; w trybie autonomicznym wolno, gdy
-  blokują shippowaną funkcję i są zawężające — ZAWSZE flagować do retro-akceptacji. Flagowanie =
-  INSERT `wfa_notes` (kind=`retro`, status=`open`, project_id projektu) — NIE tylko wpis w BUILDLOG;
-  wpisy trafiają do sekcji „Do akceptacji Tomka" w panelu (`tn-app/projekt.html`), gdzie Tomek
-  AKCEPTUJE (zostaje) lub ODRZUCA (sesja fabryki cofa zmianę).
+- Zmiany RLS/migracje produkcyjne: w trybie autonomicznym wolno, gdy przechodzą GATE A (audyt
+  adwersarski PRZED wejściem live) — to jest PRAWDZIWA bramka. **Decyzja Tomka 2026-07-16: Tomek
+  NIE jest bramką retro-akceptacji** — deleguje świadomą akceptację agentowi (nie chce klikać
+  AKCEPTUJĘ/ODRZUĆ). Każda wrażliwa zmiana nadal jest LOGOWANA do dziennika = INSERT `wfa_notes`
+  (kind=`retro`, **status=`done`** — przyjęte po audycie, project_id projektu). Wpisy trafiają do
+  read-only sekcji „Dziennik zmian fabryki" w panelu (`tn-app/projekt.html`) — audit trail dla
+  wiedzy Tomka, ZERO akcji wymaganych. NIE tworzyć wpisów `status=open` (to była stara bramka
+  klikania — martwa). Jeśli zmiana budzi realną wątpliwość biznesową → normalna rozmowa z Tomkiem,
+  nie ta zakładka.
 - tn-crm: deploy = git push main (NIE Vercel CLI); commity PATHSPEC (równoległe sesje!); migracja
   PRZED pushem kodu. Fachmat: deploy = git push main; edge deploy `npx supabase functions deploy <fn>
   --no-verify-jwt --project-ref cpzstoyvpfqydmoutcmk`.
@@ -125,9 +129,11 @@ ORGANICZNE rejestracje**, więc dokumenty prawne muszą być realne przed szersz
 2. (U2) cache-buster `?v=N` dla css/js (marker deployu + twardy bust entry-pointów).
 3. (U…) pg_net u źródła w starterze (poza `public`); helper `admin-files`; przewodnik kreatorów niszy
    w starterze (`docs/PRZEWODNIK-KREATOROW-NISZY.md`); wzorce modali/optimistic-UI w panelu.
-4. **REJESTR RETRO w panelu** = sekcja „Do akceptacji Tomka" (`tn-app/projekt.html`) zasilana INSERT-em
-   `wfa_notes kind=retro` — **OBOWIĄZEK każdej sesji fabryki** (zmiana RLS/migracja zawężająca w trybie
-   autonomicznym = flaga do retro-akceptacji Tomka: zostaje / cofamy).
+4. **DZIENNIK FABRYKI w panelu** = read-only sekcja „Dziennik zmian fabryki" (`tn-app/projekt.html`)
+   zasilana INSERT-em `wfa_notes kind=retro` **status=`done`** — **OBOWIĄZEK każdej sesji fabryki**
+   logować wrażliwą zmianę (RLS/migracja/bezpieczeństwo). NIE jest to bramka Tomka (decyzja 2026-07-16
+   — agent bierze świadomą akceptację na siebie przez GATE A); to audit trail. Stare wpisy `status=open`
+   domknięte hurtem 16.07.
 5. Mini-runda krytyka po KAŻDEJ sesji budowlanej (zakres tej sesji, zaraz po commicie).
 6. (U5) maintenance mode per apka. (U9) widoczność zniżki poleconego. (U7/U8) sceptycyzm + dostęp do
    kodu w testach klienta. **(U10) syntax-check w `audit-static.mjs`** — automat klasy błędu „polski
@@ -137,7 +143,8 @@ ORGANICZNE rejestracje**, więc dokumenty prawne muszą być realne przed szersz
 
 **NASTĘPNE KROKI (kolejność):**
 1. **CZEKAJĄ DECYZJE/AKCEPTACJE TOMKA (nie ruszać automatem):**
-   - Rejestr retro (~9 pozycji) w panelu „Do akceptacji Tomka" — Tomek AKCEPTUJE/ODRZUCA.
+   - ~~Rejestr retro~~ — ZNIESIONE 16.07: Tomek nie jest bramką retro (patrz pkt 4 wyżej); dziennik
+     read-only, agent akceptuje przez GATE A.
    - Decyzje produktowe z `docs/stworze/RAPORT-PILOT-FACHMAT-2026-07-15.md §3`.
    - 4 decyzje autonomii z `docs/stworze/FLOW-AUTONOMIA-PLAN.md §11`.
    - Wybór runnera auto-naprawy zgłoszeń z testów klienta (kto/jak wykonuje `[TK-n]` po zatwierdzeniu).

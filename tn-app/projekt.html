@@ -145,7 +145,7 @@
                 <div id="psec-tabs" class="flex gap-1 border-b border-[#1f1f1f] mb-6 overflow-x-auto">
                     <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
                     <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
-                    <button data-ptab="retro" onclick="switchPsec('retro')" class="ptab">Do akceptacji <span id="ptab-retro-cnt" class="text-[#f5b955]"></span></button>
+                    <button data-ptab="retro" onclick="switchPsec('retro')" class="ptab">Dziennik fabryki <span id="ptab-retro-cnt" class="text-zinc-600"></span></button>
                     <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
                     <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
@@ -208,10 +208,10 @@
                 <div data-psec="retro" class="hidden">
                 <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
                     <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-seal-check text-[#f5a623]"></i> Do akceptacji Tomka <span class="text-zinc-500 font-normal text-xs">zmiany fabryki (migracje, bezpieczeństwo) czekające na świadomą akceptację</span></h3>
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-notebook text-[#3291ff]"></i> Dziennik zmian fabryki <span class="text-zinc-500 font-normal text-xs">wrażliwe zmiany (migracje, bezpieczeństwo) — wykonane i zweryfikowane przez agenta</span></h3>
                     </div>
                     <div id="retro-list" class="space-y-2"></div>
-                    <div class="text-[10px] text-zinc-600 mt-3">ODRZUĆ = sesje fabryki mają cofnąć zmianę. AKCEPTUJĘ = zmiana zostaje (adnotacja z datą zapisywana przy wpisie).</div>
+                    <div class="text-[10px] text-zinc-600 mt-3">Zapis dla Twojej wiedzy — nic nie wymaga Twojej akcji. Każdy wpis przeszedł audyt bezpieczeństwa przed wejściem na produkcję. Jeśli coś budzi wątpliwość, po prostu mi napisz.</div>
                 </div>
 
                 </div>
@@ -772,38 +772,32 @@
             if (!error && data) { notes = data; renderNotes(); renderRetro(); }
         }
 
-        // ============ DO AKCEPTACJI TOMKA (wfa_notes kind=retro) ============
-        // Zmiany fabryki (migracje/bezpieczeństwo) czekające na świadomą akceptację.
-        // AKCEPTUJĘ → status=done + adnotacja z datą. ODRZUĆ → status=done + ODRZUCONE (sesja fabryki cofa zmianę).
+        // ============ DZIENNIK ZMIAN FABRYKI (wfa_notes kind=retro) — READ-ONLY ============
+        // Decyzja Tomka 2026-07-16: NIE jest bramką klikania. Agent bierze świadomą akceptację
+        // na siebie (każda wrażliwa zmiana przechodzi GATE A — audyt adwersarski — PRZED wejściem
+        // live). Ta sekcja = audit trail dla wiedzy Tomka: co fabryka ruszyła i kiedy. Zero akcji
+        // wymaganych. Sesje dopisują wpisy od razu ze statusem `done` (przyjęte po audycie).
         function renderRetro() {
-            const open = notes.filter(n => n.kind === 'retro' && n.status === 'open');
-            const tc = document.getElementById('ptab-retro-cnt'); if (tc) tc.textContent = open.length ? '(' + open.length + ')' : '';
-            const badge = document.getElementById('retro-badge');
-            if (badge) badge.innerHTML = open.length
-                ? `<button onclick="switchPsec('retro')" class="inline-flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-[#f5a623]/50 text-[#f5b955] hover:bg-[#f5a623]/10" title="Zmiany fabryki czekające na akceptację"><i class="ph ph-seal-warning"></i>${open.length} do akceptacji</button>`
-                : '';
+            const log = notes.filter(n => n.kind === 'retro').slice()
+                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const tc = document.getElementById('ptab-retro-cnt'); if (tc) tc.textContent = log.length ? '(' + log.length + ')' : '';
+            const badge = document.getElementById('retro-badge'); if (badge) badge.innerHTML = ''; // koniec z amber „X do akceptacji"
             const box = document.getElementById('retro-list'); if (!box) return;
-            if (!open.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">Brak zmian czekających na akceptację. Sesje fabryki dopisują tu retro-akceptacje zmian bezpieczeństwa i migracji.</div>`; return; }
-            box.innerHTML = open.map(n => `<div class="bg-[#111] border border-[#f5a623]/25 rounded-md px-3.5 py-3">
+            if (!log.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">Brak wpisów. Fabryka dopisuje tu wrażliwe zmiany (migracje, bezpieczeństwo) po audycie — dla Twojej wiedzy.</div>`; return; }
+            box.innerHTML = log.map(n => {
+                const rejected = n.status === 'rejected' || /ODRZUCONE/.test(n.content || '');
+                const chip = rejected
+                    ? `<span class="mt-0.5 text-[10px] px-2 py-0.5 rounded-md border text-[#f08a92] border-[#e5484d]/40 flex-shrink-0">COFNIĘTE</span>`
+                    : `<span class="mt-0.5 text-[10px] px-2 py-0.5 rounded-md border text-[#62c073] border-[#45a557]/40 flex-shrink-0"><i class="ph ph-check"></i> przyjęte</span>`;
+                return `<div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-md px-3.5 py-3">
                 <div class="flex items-start gap-3">
-                    <span class="mt-0.5 text-[10px] px-2 py-0.5 rounded-md border text-[#f5b955] border-[#f5a623]/40 flex-shrink-0">RETRO</span>
+                    ${chip}
                     <div class="min-w-0 flex-1">
-                        <div class="text-[12.5px] text-zinc-200 break-words">${escapeHtml(n.content)}</div>
+                        <div class="text-[12.5px] text-zinc-300 break-words">${escapeHtml(n.content)}</div>
                         <div class="text-[10px] text-zinc-600 mt-0.5">${escapeHtml(n.author||'fabryka')} · ${relTime(n.created_at)}</div>
                     </div>
                 </div>
-                <div class="flex items-center gap-2 mt-2.5">
-                    <button onclick="retroAccept('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#45a557]/50 text-[#62c073] hover:bg-[#45a557]/10 flex items-center gap-1"><i class="ph ph-check-circle"></i> AKCEPTUJĘ</button>
-                    <button onclick="retroToggleReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#e5484d]/40 text-[#f08a92] hover:bg-[#e5484d]/10">Odrzuć</button>
-                </div>
-                <div id="retro-rej-${n.id}" class="hidden mt-2">
-                    <textarea id="retro-rejc-${n.id}" rows="2" placeholder="Powód odrzucenia — sesje fabryki mają cofnąć tę zmianę…" class="w-full bg-[#0a0a0a] border border-[#26262b] rounded-md text-[12px] text-zinc-200 p-2 resize-y"></textarea>
-                    <div class="flex gap-2 mt-1.5">
-                        <button onclick="retroReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#e5484d]/50 text-[#f08a92] hover:bg-[#e5484d]/10">Potwierdź odrzucenie</button>
-                        <button onclick="retroToggleReject('${n.id}')" class="text-[11px] px-3 py-1.5 rounded-md text-zinc-500">Anuluj</button>
-                    </div>
-                </div>
-            </div>`).join('');
+            </div>`; }).join('');
         }
         function retroToggleReject(id) { const el = document.getElementById('retro-rej-' + id); if (el) el.classList.toggle('hidden'); }
         async function retroUpdate(id, patch, msg) {
