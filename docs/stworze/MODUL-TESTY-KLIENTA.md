@@ -213,3 +213,36 @@ wszystkie projekty fabryki). Bezpieczeństwo: front dopuszcza w `href` wyłączn
 
 Zaproszenie do testów / onboarding to **human touch Tomka (WhatsApp)**, NIE automat — automatyczne
 są tylko wiadomości transakcyjne (patrz `feedback-operator-human-touch-momenty-relacyjne.md`).
+
+## Ergonomia czatu testów: większe okno + pełny ekran + zrzut ekranu (16.07, TK-UX)
+
+Standard portalu testów (`tn-app/portal.html`, sekcja „Testy aplikacji"). Klient-operator
+dużo pisze i dokleja zrzuty, więc czat musi być duży i wygodny — trzy rzeczy stałe:
+- **Wysokość okna czatu = viewport-relative** (`.tk-chat { height:64vh; max-height:660px;
+  min-height:360px }`, mobile 66vh). Nie stały `max-height` w px — więcej wiadomości widać
+  bez scrolla. (Wcześniej `max-height:54vh` — za nisko, zgłoszenie Tomka.)
+- **Tryb pełnoekranowy** — przycisk **„Powiększ"** (ikona `ph-arrows-out` + LABEL tekstowy,
+  akcentowany pill) w NAGŁÓWKU czatu (nie w polu wiadomości). Toggle klasy `#c-testy.fs`
+  (overlay `position:fixed; inset:0`), chat rośnie `flex:1`, `.sdesc`/`.tk-issues` ukryte,
+  `body.tk-fs-open{overflow:hidden}`; Esc zwija; label→„Zwiń", ikona→`ph-arrows-in`. Stan
+  rozmowy zachowany (tylko toggle klasy, ZERO re-renderu). **Label na przycisku sam
+  komunikuje opcję — ŻADNEGO osobnego bloku-hintu w obszarze rozmowy** (Tomek: blok-podpowiedź
+  „Możesz powiększyć…" w oknie czatu przeszkadza i zabiera miejsce — usunięty; subtelność =
+  tooltip `title` na hover).
+- **Zrzut ekranu „od razu"** — przycisk `ph-monitor` w kompozytorze obok „dodaj z pliku":
+  `navigator.mediaDevices.getDisplayMedia` (user gesture) → klatka na `<canvas>` → `toBlob('image/png')`
+  → `File` → ta sama `uploadShot()` co załącznik. Graceful fallback gdy brak wsparcia lub brak zgody
+  („użyj ikony obrazka / Ctrl+V"). CSP bez zmian: MediaStream idzie przez `video.srcObject`
+  (nie URL), a upload leci do `*.supabase.co` już obecnego w `connect-src`. Permissions-Policy
+  `camera=()/microphone=()` NIE blokuje `display-capture` (domyślnie `self`).
+
+**GOTCHA uploadu (regresja z rundy bezpieczeństwa — root cause TK-UX):** bucket `wfa-test-shots`
+po SEC-R3-UPLOAD dopuszcza `allowed_mime_types` = `image/png|jpeg|webp` TYLKO. Front `putFile`
+wysyłał `Content-Type: file.type || 'application/octet-stream'`. Gdy przeglądarka nie ustawi
+`file.type` (drag z aplikacji, część źródeł schowka, surowy blob) → `octet-stream` → **bucket
+odrzuca PUT (400) → „dodawanie zrzutów nie działa"**. Fix: `uploadShot` NORMALIZUJE MIME do
+realnego `image/*` (z rozszerzenia, potem `file.type`, fallback `image/png`) i przekazuje JAWNY
+`Content-Type` do `putFile`. Bucket NIE poluzowany (nadal png/jpeg/webp; svg/gif/bmp odrzucane po
+stronie klienta z komunikatem). **Zasada: gdy bucket ma `allowed_mime_types`, klient MUSI wysyłać
+jawny, dozwolony `Content-Type` przy signed-URL PUT — nigdy `octet-stream`.** Ta sama pułapka
+dotyczy każdego uploadu z hartowanym bucketem (patrz też `wfa-intake`).
