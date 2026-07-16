@@ -149,6 +149,7 @@
                     <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
                     <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
+                    <button data-ptab="spowiednik" onclick="switchPsec('spowiednik')" class="ptab">Spowiednik <span id="ptab-spow-status"></span></button>
                     <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
                 </div>
 
@@ -238,6 +239,17 @@
                     <div id="spar-content" class="space-y-5"></div>
                 </div>
 
+                </div>
+
+                <!-- Spowiednik: podgląd rozmowy NA ŻYWO (także zanim klient domknie etap) — transkrypcja z datą i godziną każdej wiadomości -->
+                <div data-psec="spowiednik" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-chat-circle-text text-[#3291ff]"></i> Spowiednik — transkrypcja rozmowy <span id="spow-status" class="font-normal"></span></h3>
+                        <button onclick="loadSpowiednik(true)" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
+                    </div>
+                    <div id="spow-body" class="max-h-[70vh] overflow-y-auto space-y-3 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4"></div>
+                </div>
                 </div>
 
                 <div data-psec="notatki" class="hidden">
@@ -359,6 +371,7 @@
             return d.toLocaleDateString('pl-PL');
         }
         function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL'); }
+        function fmtDateTime(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL') + ', ' + d.toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' }); }
         function projName() { const n = (project.name || '').trim(); return n || ((project.customer_name || 'Projekt') + ' (bez nazwy)'); }
         function showToast(message, type='info') {
             const toast = document.createElement('div');
@@ -596,6 +609,7 @@
             document.querySelectorAll('#psec-tabs .ptab').forEach(b => b.classList.toggle('active', b.dataset.ptab === name));
             try { localStorage.setItem('wfa_psec_' + projectId, name); } catch (_) {}
             if (name === 'intake') loadIntakeAdmin();
+            if (name === 'spowiednik') loadSpowiednik();
         }
 
         // ============ DANE OD KLIENTA (intake — read-only podgląd admina) ============
@@ -1055,6 +1069,8 @@
             (itemsQ.data || []).forEach(it => { itemsByKind[it.kind||'inne'] = (itemsByKind[it.kind||'inne']||0) + 1; });
             sparData = { summary: sumQ.data || null, itemsByKind, session: sessQ.data || null, totalItems: (itemsQ.data||[]).length };
             document.getElementById('spar-sub').textContent = 'sesja ' + sid.slice(0,8);
+            const spTab = document.getElementById('ptab-spow-status');
+            if (spTab) { spTab.textContent = (sparData.summary?.status === 'closed') ? '' : '●'; spTab.style.color = '#f5b955'; }
             renderKnowhowGate();
             renderSparing();
         }
@@ -1162,11 +1178,53 @@
                 const isUser = m.role === 'user';
                 return `<div class="text-[12px] leading-relaxed">
                     <span class="font-semibold ${isUser ? 'text-[#f5b955]' : 'text-[#52a8ff]'}">${isUser ? 'Klient' : 'AI'}</span>
-                    <span class="text-zinc-600 text-[10px] ml-1">${relTime(m.created_at)}</span>
+                    <span class="text-zinc-600 text-[10px] ml-1">${fmtDateTime(m.created_at)}</span>
                     <div class="text-zinc-300 whitespace-pre-wrap break-words">${escapeHtml(m.content)}</div>
                 </div>`;
             }).join('');
         }
+        // ============ SPOWIEDNIK (podgląd rozmowy na żywo) ============
+        // Transkrypcja CAŁEJ rozmowy klienta (sparing + spowiednik) z dokładną datą i godziną
+        // każdej wiadomości. Dostępna od razu — także zanim klient domknie etap („To już wszystko").
+        // Separator „początek spowiednika" = full_paid_at (spowiednik to tryb rozmowy po pełnej płatności).
+        async function loadSpowiednik(manual) {
+            const box = document.getElementById('spow-body');
+            const stEl = document.getElementById('spow-status');
+            if (!box || !project) return;
+            if (!project.spar_session_id) { box.innerHTML = '<div class="text-zinc-600 text-xs">Projekt nie ma powiązanej sesji sparingu — brak rozmowy do podglądu.</div>'; if (stEl) stEl.textContent = ''; return; }
+            box.innerHTML = '<div class="text-zinc-600 text-xs">Ładuję transkrypcję…</div>';
+            const sid = project.spar_session_id;
+            const [sessQ, msgQ] = await Promise.all([
+                supabaseClient.from('spar_sessions').select('full_paid_at, knowhow_closed_at').eq('id', sid).maybeSingle(),
+                supabaseClient.from('spar_messages').select('role, content, created_at').eq('session_id', sid).order('created_at', { ascending: true }).range(0, 4999),
+            ]);
+            if (msgQ.error) { box.innerHTML = '<div class="text-[#f26d78] text-xs">Błąd: ' + escapeHtml(msgQ.error.message) + '</div>'; return; }
+            const sess = sessQ.data || {};
+            if (stEl) stEl.innerHTML = sess.knowhow_closed_at
+                ? `<span class="text-[11px] px-2 py-0.5 rounded-md" style="color:#62c073;background:rgba(69,165,87,.12)">domknięty ${escapeHtml(fmtDateTime(sess.knowhow_closed_at))}</span>`
+                : `<span class="text-[11px] px-2 py-0.5 rounded-md" style="color:#f5b955;background:rgba(245,166,35,.12)">w toku — klient nie kliknął „To już wszystko"</span>`;
+            const msgs = msgQ.data || [];
+            if (!msgs.length) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak wiadomości w rozmowie.</div>'; return; }
+            const paidTs = sess.full_paid_at ? new Date(sess.full_paid_at).getTime() : null;
+            let divider = false;
+            box.innerHTML = msgs.map(m => {
+                const isUser = m.role === 'user';
+                let sep = '';
+                if (paidTs && !divider && new Date(m.created_at).getTime() >= paidTs) {
+                    divider = true;
+                    sep = `<div class="flex items-center gap-2 my-3"><div class="flex-1 border-t border-[#f5a623]/40"></div><span class="text-[10px] uppercase tracking-wider text-[#f5b955] whitespace-nowrap">początek spowiednika · ${escapeHtml(fmtDateTime(sess.full_paid_at))}</span><div class="flex-1 border-t border-[#f5a623]/40"></div></div>`;
+                }
+                return sep + `<div class="text-[12.5px] leading-relaxed">
+                    <span class="font-semibold ${isUser ? 'text-[#f5b955]' : 'text-[#52a8ff]'}">${isUser ? 'Klient' : 'AI'}</span>
+                    <span class="text-zinc-600 text-[10.5px] ml-1.5">${fmtDateTime(m.created_at)}</span>
+                    <div class="text-zinc-300 whitespace-pre-wrap break-words mt-0.5">${escapeHtml(m.content)}</div>
+                </div>`;
+            }).join('');
+            if (paidTs && !divider) box.insertAdjacentHTML('beforeend', `<div class="text-[10.5px] text-zinc-600 mt-3 pt-2 border-t border-[#1f1f1f]">Pełna płatność ${escapeHtml(fmtDateTime(sess.full_paid_at))} — klient nie napisał jeszcze nic w spowiedniku.</div>`);
+            box.scrollTop = box.scrollHeight;
+            if (manual) showToast('Transkrypcja odświeżona', 'success');
+        }
+
         function collectMockups(session) {
             if (!session) return [];
             const pi = session.preview_images;
@@ -1880,6 +1938,7 @@ Rytuał sesji (tn-crm/docs/stworze/METODYKA-BUDOWY.md): (1) przeczytaj BUILDLOG.
             switchPsec(saved || 'projekt');
             await loadAll();
             if ((saved || 'projekt') === 'intake') loadIntakeAdmin(); // project gotowy dopiero po loadAll
+            if ((saved || 'projekt') === 'spowiednik') loadSpowiednik();
         })();
     </script>
 </body>
