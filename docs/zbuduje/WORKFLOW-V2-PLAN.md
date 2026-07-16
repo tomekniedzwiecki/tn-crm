@@ -3,6 +3,31 @@
 **Status: F1 WDROŻONE + iteracje z odbioru (2026-07-03). Ten dokument = plan bazowy;
 poniższa sekcja „STAN WDROŻENIA" nadpisuje szczegóły, które zmieniły się przy odbiorze.**
 
+## 0a-bis. FABRYKA LANDINGÓW — STAN (2026-07-16 wieczór, po 2 dniach dopracowywania flow)
+
+- **SSOT flow:** `docs/zbuduje/STANDARD-LANDING-SKLEPY.md` **v2.0** (zasady Z1-Z5, fazy
+  F0→F8 z RETRO, leksykon lekcji) + `docs/zbuduje/SEKCJA-Z-MAKIETY.md` (procedura wiernego
+  kodowania sekcji z makiety: IR z ekstrakcją algorytmiczną, anotacje SoM, mierzalna pętla
+  SSIM z heatmapą, rewrite-not-patch; z researchu 3× Sonnet + pilot z wnioskami).
+- **Toolchain:** `scripts/mockup-tools/` — mockup-ir.py (paleta k-means, typografia OCR,
+  bloki, anotacje), render-diff.py (CDP headless, SSIM, heatmapa, keep-best, letterbox
+  mobile), wf2gpt-call.py (UTF-8 klient wf2-gpt; env WF2_EFFORT/WF2_MAXOUT).
+  Edge: wf2-gpt (reasoning.effort; plan/krytyk=medium — high pada 504), wf2-gen,
+  wf2-asset-rehost. Pay-badges kanoniczne: `docs/zbuduje/assets/pay-badges.html`.
+- **Landingi (preview, noindex, placeholdery pixel/canonical):**
+  Zmieścik `sklepy/tomek-niedzwiecki/zmiescik/` (v5 po pętli krytyka) ·
+  Świtek `.../switek/` (pełny przebieg fabryki + procedura v2: demo przepisane 0.78→0.81
+  + scena lifestyle; rollout reszty sekcji PRZERWANY na etapie weryfikacji — sweep SSIM
+  zrobiony, sekcje wpięte, plik spójny 13/13 sekcji) ·
+  Blasik `.../blasik/` (czysty test standardu v2.0, $1.15, etap życia z auto-zajawką demo).
+  Skasowane (rebuild pełnym flow gdy wróci kolejka): Mordulek, Blatek, squishy.
+- **Koszty:** cała 2-dniowa nauka fabryki ~$13 z budżetu $54 (200 zł); docelowy landing
+  czystym procesem ~$3-4.5 (11-17 zł) przy budżecie 25 zł/landing.
+- **Otwarte decyzje Tomka:** kanon makiet (pełne pary UI jak Świtek vs sceny-jako-makiety
+  jak Blasik); akcept landingów do publikacji; kolejka #3-5.
+- Archiwa wersji/makiet/kompozytów: `Desktop\TN-Sklepy-grafiki\FABRYKA-16.07\` (+ NOC-15-16.07
+  historycznie); ledger kosztów w scratchpadzie sesji (podsumowany wyżej).
+
 ## 0a. STAN WDROŻENIA (po odbiorze Tomka, 2026-07-03 wieczór)
 
 - **Osobna aplikacja `TN Sklepy`** (nie podstrony tn-workflow): `tn-sklepy/index.html` (lista)

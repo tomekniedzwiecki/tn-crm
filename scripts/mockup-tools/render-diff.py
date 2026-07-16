@@ -174,6 +174,10 @@ def main():
     ap.add_argument("width", type=int)
     ap.add_argument("--out", default=None)
     ap.add_argument("--label", default="v")
+    ap.add_argument("--letterbox", action="store_true",
+                    help="Tryb mobile: sprowadz OBA obrazy do wspolnego aspektu (canonical = makieta) "
+                         "zamiast kadrowac do min-wysokosci. Usuwa falszywy cap SSIM z niedopasowania proporcji "
+                         "kanwy mockupu vs realnej sekcji RWD (kontrolki wypadajace poza nakladajacy sie kadr).")
     a = ap.parse_args()
 
     outdir = a.out or os.path.dirname(os.path.abspath(a.makieta))
@@ -186,10 +190,19 @@ def main():
     W = mk.width
     rd_w = to_width(rd, W)
     mk_w = mk
-    # wspolna wysokosc = min (porownujemy nakladajacy sie obszar od gory)
-    Hc = min(mk_w.height, rd_w.height)
-    mk_c = mk_w.crop((0, 0, W, Hc))
-    rd_c = rd_w.crop((0, 0, W, Hc))
+    if a.letterbox:
+        # TRYB LETTERBOX (mobile): sprowadz OBA obrazy do wspolnego aspektu = kanwa makiety.
+        # Render (zwykle wyzszy/bardziej rozciagniety w RWD) skalujemy NIE-jednorodnie do pelnego
+        # boxa makiety, wiec cala jego tresc trafia do porownania i elementy re-rejestruja sie
+        # z makieta (koniec falszywego capu z kadrowania do min-wysokosci). Ocena strukturalna.
+        Hc = mk_w.height
+        mk_c = mk_w if mk_w.height == Hc else mk_w.resize((W, Hc), Image.LANCZOS)
+        rd_c = rd_w.resize((W, Hc), Image.LANCZOS)
+    else:
+        # wspolna wysokosc = min (porownujemy nakladajacy sie obszar od gory)
+        Hc = min(mk_w.height, rd_w.height)
+        mk_c = mk_w.crop((0, 0, W, Hc))
+        rd_c = rd_w.crop((0, 0, W, Hc))
 
     a_gray = np.array(mk_c.convert("L"))
     b_gray = np.array(rd_c.convert("L"))
