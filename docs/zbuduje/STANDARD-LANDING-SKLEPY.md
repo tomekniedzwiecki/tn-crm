@@ -79,6 +79,34 @@ esencja produktu na scenach kluczowych, jasne tła.
    generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
 
+**🎛️ RZEMIOSŁO PROMPTÓW MAKIET (research D, 16.07 — OpenAI cookbook + praktycy; UNIWERSALNE):**
+- **Szablon promptu = struktura stała** {rola, sekcja, layout, TREŚĆ w "cudzysłowach",
+  style-DNA, wykluczenia, wymiar}: język UI („high-fidelity product UI screenshot,
+  Figma-style, pixel-perfect, clean design system"), ZERO języka concept-art
+  („beautiful/render/artwork" → daje ilustrację zamiast makiety). Opisuj interfejs
+  „jakby już istniał".
+- **STYLE-DNA tekstowe w KAŻDYM prompcie** (niezmienny akapit serii): dokładne hexy,
+  font+wagi+skala, spacing/gęstość, radius, cienie, ton fotografii — obraz-master
+  + tekst-DNA razem są stabilniejsze niż sam obraz.
+- **Obrazy wejściowe: indeksuj i przypisuj ROLĘ**: „Image 1: style reference (match
+  palette/typography/spacing). Image 2: previous section (match visual system, do NOT
+  copy its text)." Bez tego model kopiuje treść sąsiedniej makiety. Kolejność:
+  styl-master pierwszy; ZAAKCEPTOWANE hero jako druga kotwica dla kolejnych sekcji
+  (baseline-first loop).
+- **Stały blok wykluczeń w każdym prompcie**: no browser chrome/URL bar/tabs/window
+  controls, no device frame, no mockup shadow („flat edge-to-edge section screenshot"),
+  no watermark/signature, no lorem ipsum, no crossed-out prices, no bestseller/„NR 1"
+  badges, no free-shipping unless specified, no extra text beyond quoted, no abstract
+  blobs/random 3D/decorative gradients unless in style DNA.
+- **Tekst PL**: krótkie stringi w "cudzysłowach" (nagłówek/cena/CTA); długie bloki (FAQ,
+  opisy) = paski/linie o właściwej długości zamiast fałszywego copy (treść i tak nadpisuje
+  kod); quality high dla drobnego tekstu.
+- Wymiary natywne (1536×1024 / 1024×1536), NIGDY tagów `--ar` w treści promptu.
+- **CZEGO NIE ZMIENIAĆ (anty-regresja):** pary jako OSOBNE generacje (nie cięcie desktopu,
+  nie multi-frame) · styl-master jako ref obrazkowa · gpt-image-2 jako model całej serii
+  (spójność serii > lokalna jakość tekstu; Ideogram/v0 tylko jako testowany wyjątek) ·
+  nadpisywanie treści w kodzie.
+
 **F3 — GRAFIKI PRODUKCYJNE (grafika-first).**
 1. **HERO = pełna scena Z PRODUKTEM w środku** (ref = hero-makieta jako wzór kompozycji
    + realny packshot; wierność wg 3 WARUNKÓW — sekcja 2). Puste strefy negatywne dokładnie
@@ -89,6 +117,13 @@ esencja produktu na scenach kluczowych, jasne tła.
    układ stref: tekst-góra / produkt-środek / karta-dół.
 2. **Sceny pozostałych sekcji wizualnych**: gdzie makieta ma bogatą scenę — JEDNA grafika
    sceny (z produktem gdy makieta go tam ma) jako tło full-bleed; kod dodaje warstwę treści.
+   **2b. OCENA ZDJĘCIA PER SEKCJA (Tomek 16.07):** dla KAŻDEJ sekcji z obrazem produktu
+   zdecyduj świadomie, jakie zdjęcie tam być powinno — WZORUJĄC SIĘ NA SCENIE Z MAKIETY
+   (sceny z gpt-image są na bardzo wysokim poziomie — to wzór nastroju/kadru/kontekstu).
+   Packshot z aukcji tylko tam, gdzie makieta ma packshot (karta oferty); gdzie makieta ma
+   scenę lifestyle/kontekst użycia → WYGENERUJ scenę produktu (wierność wg 3 warunków,
+   ref = realne zdjęcie + makieta jako wzór kadru). Surowy packshot wklejony w sekcję
+   sceniczna = rozjazd z makietą (lekcja demo Świtka: to była główna różnica SSIM).
 3. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
    **[P] produkt/użycie/efekt** (wierność 3 warunków) / **[D] design związany z motywem**
    (nigdy generic). Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
@@ -110,9 +145,14 @@ Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 16.07: „brakuje animacji w JS, czegoś co doda życia, pokaże profesjonalizm i ZAANGAŻUJE;
 nie robić wszystkiego naraz — etapami").** Wykonywany DOPIERO po zamknięciu dopasowania
 wizualnego (F7.1) i audytu grafika-first — na stabilnej stronie, jako dedykowana runda:
-1. **CREATIVE TECHNOLOGIST** (gpt-5.6-sol, effort high, bez obrazów lub 1-2 screeny):
-   propozycje per sekcja — scroll-driven animations (`animation-timeline: view()` z fallback
-   IO), warstwowy parallax scen, morphing, magnetic CTA, SVG mikro-scenki związane z korzyścią.
+1. **CREATIVE TECHNOLOGIST** (gpt-5.6-sol; wybór wzorców z **`docs/zbuduje/
+   INTERAKCJE-KATALOG.md`** — katalog 15 wzorców per typ produktu + szablon SPEC-a +
+   anty-wzorce; research 16.07). **FILTR SENSU (twardy):** interakcja musi demonstrować
+   KORZYŚĆ produktu w momencie wątpliwości klienta — kontrolka zmieniająca tylko liczbę/
+   jedną wartość = gadżet = FAIL (przeprojektować wg wzorca-matki #3: kontrolka steruje
+   CAŁĄ SCENĄ przez jedną zmienną `--t`). Interakcję FLAGOWĄ landingu spec-ować szablonem
+   z katalogu (storyboard+stany+kryteria liczbowe, BEZ gotowego kodu) i kodować na
+   NAJWYŻSZYM wykonalnym efforcie.
 2. **ZESTAW OBOWIĄZKOWY:** scroll-reveal ze staggerem · JEDNA animacja-motyw korzyści
    (np. łuk świtu rysowany scrollem) · count-up (statyczna liczba w źródle!) · sticky
    slide-in · mikrointerakcje CTA/kart (hover/press states) · **ELEMENT ANGAŻUJĄCY (wymóg!):**
