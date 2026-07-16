@@ -64,12 +64,57 @@ def capture_viewport(target, width, height):
         try: proc.wait(timeout=5)
         except Exception: pass
 
+MEASURE_JS = """(function(sels){
+  const out=[];
+  for(const sel of sels){
+    const el=document.querySelector(sel); if(!el){out.push({sel,error:'brak'});continue;}
+    const cs=getComputedStyle(el);
+    const txt=(el.textContent||'').trim().split('\\n')[0].slice(0,40);
+    const c=document.createElement('canvas').getContext('2d');
+    c.font=`${cs.fontStyle} ${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+    const m=c.measureText(txt||'Hg');
+    const glyphH=Math.round((m.actualBoundingBoxAscent||0)+(m.actualBoundingBoxDescent||0));
+    const r=el.getBoundingClientRect();
+    out.push({sel,fontSize:cs.fontSize,lineHeight:cs.lineHeight,sample:txt,
+      glyphH,bbox:{x:Math.round(r.x),y:Math.round(r.y),w:Math.round(r.width),h:Math.round(r.height)}});
+  }
+  return JSON.stringify(out);
+})(%s)"""
+
+def measure(target,width,height,selectors):
+    chrome=rd.chrome_path(); port=rd.free_port(); profile=tempfile.mkdtemp(prefix="vpm-")
+    url=target if target.startswith(("http://","https://")) else \
+        "file:///"+os.path.abspath(target).replace("\\","/")
+    proc=subprocess.Popen([chrome,"--headless=new","--disable-gpu","--hide-scrollbars",
+        "--remote-debugging-port=%d"%port,"--user-data-dir="+profile,
+        "--window-size=%d,%d"%(width,height),url],
+        stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    try:
+        assert rd.wait_debugger(port)
+        tabs=[t for t in rd.cdp_get(port,"/json") if t.get("type")=="page"]
+        ws=rd.WS(tabs[0]["webSocketDebuggerUrl"])
+        ws.call("Page.enable"); ws.call("Runtime.enable")
+        ws.call("Emulation.setDeviceMetricsOverride",
+                {"width":width,"height":height,"deviceScaleFactor":1,"mobile":width<700})
+        time.sleep(2.5)
+        r=ws.call("Runtime.evaluate",{"expression":MEASURE_JS%json.dumps(selectors),
+                                      "returnByValue":True})
+        return r["result"]["value"]
+    finally:
+        proc.terminate()
+
 def main():
     ap=argparse.ArgumentParser()
     ap.add_argument("target"); ap.add_argument("makieta")
     ap.add_argument("width",type=int); ap.add_argument("height",type=int)
     ap.add_argument("--out",default="."); ap.add_argument("--label",default="viewport")
+    ap.add_argument("--measure",default=None,
+        help="lista selektorów CSV — zamiast diffu wypisz font-size + wysokość glifów "
+             "(canvas TextMetrics) do kalibracji typografii względem bboxów OCR z IR")
     a=ap.parse_args()
+    if a.measure:
+        print(measure(a.target,a.width,a.height,[s.strip() for s in a.measure.split(",")]))
+        return
     mock=Image.open(a.makieta).convert("RGB").resize((a.width,a.height),Image.LANCZOS)
     render,broken=capture_viewport(a.target,a.width,a.height)
     if render.size!=(a.width,a.height): render=render.crop((0,0,a.width,a.height))

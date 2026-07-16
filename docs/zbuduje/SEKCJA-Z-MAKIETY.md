@@ -105,6 +105,15 @@ grafika do poprawy, nie „sufit danych".
   viewport 2400px wysokości, co rozciąga sekcje `min-height:100svh` i psuje crop `cover`
   (fałszywy SSIM). Pierwszy ekran porównuj: `viewport-diff.py <plik> <makieta> 1536 1024`
   (viewport = wymiary makiety, force-reveal, zrzut bez captureBeyondViewport).
+- **KALIBRACJA TYPOGRAFII POMIAREM, NIE OKIEM (Tomek 16.07 — obowiązkowe):**
+  `viewport-diff.py <plik> x <W> <H> --measure "#hero .hero-title, ..."` zwraca font-size,
+  wysokość glifów (canvas TextMetrics) i bbox elementu w viewporcie makiety — porównuj
+  z bboxami OCR z `IR.json` (mockup-ir). ⚠️ Wysokość glifów NIE wystarcza przy INNYM foncie
+  niż na makiecie (Cormorant jest wąski — przy tej samej wysokości linia wygląda mniejsza):
+  kalibruj po SZEROKOŚCI LINII nagłówka (canvas `measureText` dla kilku font-size → wybierz
+  rozmiar, przy którym najdłuższa linia ≈ szerokość linii z makiety). Hero Uśmieszka:
+  OCR-bloki H1 y153-336, linie ~630-660px → Cormorant 600 potrzebował 104px (nie 74px
+  „z clampa"), cena 82px. Iteruj: zmiana CSS → --measure → zgodność → dopiero werdykt vision.
 - **Kontrakt zmiennych CSS w briefingu (jednostki!).** Koder generuje własne nazwy/typy
   (np. `--sun-p` jako `%`), a istniejący JS podaje `0..1` → animacja martwa. W briefingu
   podaj DOKŁADNY kontrakt hooków (nazwa, zakres, jednostka), albo reconciluj przy montażu
