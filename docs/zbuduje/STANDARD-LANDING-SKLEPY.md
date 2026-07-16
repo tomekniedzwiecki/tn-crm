@@ -133,7 +133,10 @@ esencja produktu na scenach kluczowych, jasne tła.
    sceniczna = rozjazd z makietą (lekcja demo Świtka: to była główna różnica SSIM).
 3. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
    **[P] produkt/użycie/efekt** (wierność 3 warunków) / **[D] design związany z motywem**
-   (nigdy generic). Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
+   (nigdy generic). **Każdy asset dostaje też TAG KLASY OBRAZU (P=packshot / U=UGC /
+   S=scena AI), a każdy slot sekcji ma ALLOWLISTĘ klas wg `docs/zbuduje/OBRAZY-ROLE.md`**
+   (karta oferty = TYLKO packshot, NIGDY UGC; opinie = TYLKO UGC; zakaz obrazu-na-obrazie
+   — na scenie tylko cutout z alfą). Klasa spoza allowlisty = BLOK. Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
    wycinka. 100% assetów użytych; 0 sekcji bez assetu. OG = 1200×630 w stylu master.
 4. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
 
@@ -211,6 +214,13 @@ ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-blee
    potwierdzony (P2-kosmetyki nie iterować w nieskończoność).
    Każda wersja archiwizowana: `Desktop\TN-Sklepy-grafiki\FABRYKA-*\<slug>\vN\`
    (index.html + full-1280 + full-390 + KRYTYKA.md); grafiki w `assets\`.
+3. **F7.3 FINALNY PASS DETALI — OBOWIĄZKOWY, ostatni gate przed oddaniem (Tomek 16.07:
+   „musi być sprawdzenie na koniec wszystkiego, pixel-perfect"):** pełna procedura
+   `docs/zbuduje/FINALNY-PASS.md` — 4 passy kaskadowo (design-linter skryptowy → vision
+   warstwowy na crop'ach → squint/blur → proweniencja assetów z tagami P/U/S wg
+   `docs/zbuduje/OBRAZY-ROLE.md`), format findingów P0-P2, pętla do czystej rundy.
+   Uruchamiany PO zielonym dopasowaniu (F7.1) i krytyku (F7.2). Landing bez czystego
+   F7.3 = NIEGOTOWY.
 
 **F8 — RETRO (mechanizm uczenia — obowiązkowy).** Raport wykonawcy MUSI zawierać sekcję
 „NOWE WNIOSKI" (co zawiodło / co zaskoczyło / co dodać do promptów). Nadzorca po każdym
