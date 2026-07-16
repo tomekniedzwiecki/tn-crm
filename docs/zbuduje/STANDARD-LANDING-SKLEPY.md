@@ -270,6 +270,18 @@ Mikrocopy pod KAŻDYM CTA: „Płatność przy odbiorze · 14 dni na zwrot · Wy
     z landing-pages v5 tu nie obowiązuje). visual-verify i chrome-devtools = jedna przeglądarka,
     sekwencjonować.
 
+**LEKCJE R2 (Blasik):**
+16. **Vision-gate WIDEO przed pipeline** — `tiktok_url`/`videos` w bud_tt_products bywa OFF-PRODUCT
+    (maska LED miała wideo budzika); sprawdzić poster/klatkę vision zanim sekcja powstanie.
+17. **Chunkowanie kodu → rozjazd nazw klas** (CSS-chunk i body-chunk wymyślają różne nazwy; gołe
+    `<svg>` bez klasy = ikony 240-395px). SPEC kodera MUSI zawierać „słownik klas" wspólny dla
+    chunków; montaż = cross-check klas body↔CSS + grep gołych `<svg>`.
+18. „Świecenie" na białym/jasnym packshocie: NIE `mix-blend-mode:screen` (niewidoczne) —
+    kolorowy spotlight normal-blend z opacity ~0.55.
+19. Grid z breakpointem tylko „w górę" (2-kol @≤1000) zawsze z mobilnym resetem (1-kol @≤560).
+20. Kategoria beauty/health: język WYŁĄCZNIE kosmetyczny (zero obietnic medycznych/liczb-efektów);
+    obce marki na infografikach (foreverLily itp.) = odrzut z galerii, treść wolno cytować.
+
 ## TECH BUDŻET (twardy)
 
 - **LCP < 2,5 s · CLS < 0,1 · INP < 200 ms (mobile 4G).**
