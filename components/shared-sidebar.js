@@ -95,6 +95,7 @@ const NAV_ITEMS_SKLEPY = [
 const NAV_ITEMS_APP = [
     { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
     { id: 'skrzynki', icon: 'ph-tray', label: 'Skrzynki' },
+    { id: 'rozliczenia', icon: 'ph-receipt', label: 'Rozliczenia AI' },
 ];
 
 const NAV_ITEMS_BIZNES = [

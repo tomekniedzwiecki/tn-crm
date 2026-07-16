@@ -113,6 +113,29 @@ Apki są w osobnych projektach Supabase → potrzebny CENTRALNY zrzut w tn-crm:
 - tn-crm: `wfa_ai_billing` + panel rozliczeń + reconciliacja.
 - Wpis w MODULES.md startera: „każda apka z AI = rozliczenie pass-through per operator".
 
+## STAN WDROŻENIA (tn-crm — panel fabryki, §6)
+
+Zrealizowane 2026-07-16 (panel rozliczeń Tomka):
+
+- **Tabela `wfa_ai_billing`** — istnieje (project_id, period, total_pln, total_usd, breakdown jsonb,
+  nonbillable_usd, users/preparations/sims/reports); RLS team_members; zasilana cronem apki. Migracja
+  `20260716d_wfa_ai_billing.sql`. **Uwaga:** nonbillable jest TYLKO w USD (kolumny `nonbillable_pln` brak);
+  panel konwertuje na zł informacyjnie kursem fallback `settings.usd_pln_rate`.
+- **Tabela `ai_openai_bills(period PK, amount_usd, note, updated_at)`** — realny rachunek OpenAI wpisywany
+  RĘCZNIE do reconciliacji; RLS team_members. Migracja `20260716e_ai_openai_bills.sql`.
+- **Panel per projekt** — `tn-app/projekt.html`, zakładka „Rozliczenie AI": tabela miesięczna z
+  `wfa_ai_billing` dla project_id (okres, do refaktury zł = total_pln, rozbicie po funkcji z breakdown,
+  liczby userów/przyg./sym./ocen, koszt fabryki ~zł informacyjnie). Podpis: „Kwota do refaktury operatorowi
+  za dany miesiąc (koszt AI jego userów, +10%, kurs NBP sprzedaży). Osobno od 10% od przychodu."
+- **Widok zbiorczy + reconciliacja** — NOWA strona `tn-app/rozliczenia.html` (sidebar „Rozliczenia AI",
+  rewrite `/tn-app/rozliczenia`): bieżący + poprzedni miesiąc; tabela wszystkie apki × operator × userzy ×
+  do refaktury zł + SUMA („ile zafakturować operatorom"). Reconciliacja: Σ(total_usd billable) +
+  Σ(nonbillable_usd) = szacowany rachunek OpenAI; pole na realny rachunek (upsert do `ai_openai_bills`)
+  → różnica = koszt czystego dev/fabryki poza apkami + % pokrycia.
+- **Reconciliacja liczona w USD** (OpenAI fakturuje w USD); refaktura operatora prezentowana w zł
+  (total_pln już z kursem NBP z dnia + narzut, liczone w apce). NIE dubluje kursu.
+- TODO poza tym zadaniem: cron zrzutu w apkach (ai-billing-cron) — po stronie każdej apki (§9 backport).
+
 ## 10. Prywatność
 
 Rozliczenie operuje na METADANYCH (tokeny/koszt/liczby/area/user_id), NIGDY na treści przygotowań/

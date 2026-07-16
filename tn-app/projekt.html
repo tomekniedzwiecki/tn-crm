@@ -152,6 +152,7 @@
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
                     <button data-ptab="spowiednik" onclick="switchPsec('spowiednik')" class="ptab">Spowiednik <span id="ptab-spow-status"></span></button>
                     <button data-ptab="testy" onclick="switchPsec('testy')" class="ptab">Testy klienta <span id="ptab-testy-cnt"></span></button>
+                    <button data-ptab="ai" onclick="switchPsec('ai')" class="ptab">Rozliczenie AI <span id="ptab-ai-cnt" class="text-zinc-600"></span></button>
                     <button data-ptab="notatki" onclick="switchPsec('notatki')" class="ptab">Notatki i aktywność</button>
                 </div>
 
@@ -319,6 +320,28 @@
                         <button onclick="loadTkIssues(true)" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
                     </div>
                     <div id="tk-admin"><div class="text-zinc-600 text-xs">Ładuję zgłoszenia…</div></div>
+                </div>
+                </div>
+
+                <!-- ===================== ROZLICZENIE AI (per projekt) ===================== -->
+                <!-- Dane z wfa_ai_billing (zrzut cronem apki). total_pln = koszt AI userów operatora
+                     po kursie NBP sprzedaży z dnia + narzut 10% = KWOTA DO REFAKTURY (obok 10% rev-share).
+                     nonbillable_usd = koszt własny fabryki (testy/podglądy) — tylko informacyjnie. -->
+                <div data-psec="ai" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-4">
+                    <div class="flex items-start justify-between gap-3 flex-wrap mb-1">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-robot text-[#3291ff]"></i> Rozliczenie AI — pass-through operatora</h3>
+                        <button onclick="loadAiBilling()" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
+                    </div>
+                    <p class="text-zinc-500 text-xs leading-relaxed max-w-3xl">
+                        <b class="text-zinc-300">Kwota do refaktury operatorowi za dany miesiąc</b> = koszt AI jego userów,
+                        +10% narzut, przeliczony po kursie NBP sprzedaży z dnia wywołania.
+                        <b class="text-[#f5b955]">Osobno od 10% od przychodu.</b> Liczy się WYŁĄCZNIE zużycie prawdziwych końcowych
+                        userów — bez testów fabryki, podglądów i impersonacji operatora.
+                    </p>
+                </div>
+                <div id="ai-billing-body">
+                    <div class="text-zinc-600 text-xs">Ładuję rozliczenie…</div>
                 </div>
                 </div>
 
@@ -694,6 +717,115 @@
             if (name === 'spowiednik') loadSpowiednik();
             if (name === 'testy') { renderTkAdmin(); loadTkIssues(true); }
             if (name === 'changelog') loadChangelog();
+            if (name === 'ai') loadAiBilling();
+        }
+
+        // ============ ROZLICZENIE AI (wfa_ai_billing — RLS team; per projekt) ============
+        // total_pln = billable (koszt userów operatora) po kursie NBP z dnia × narzut 10% = do refaktury.
+        // nonbillable_usd = koszt własny fabryki (testy/podglądy) — informacyjnie, konwersja kursem fallback.
+        const AREA_LABELS = { research:'Analiza rozmówcy', plan:'Plan', sim:'Symulacja', report:'Ocena', other:'Inne' };
+        let aiUsdPln = 4.0; // fallback do konwersji nonbillable USD→PLN (informacyjnie); billable ma już PLN z apki
+        function fmtPln(v) { return (Number(v)||0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'; }
+        function fmtUsd(v) { return '$' + (Number(v)||0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function periodLabel(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso + (iso.length === 10 ? 'T00:00:00' : ''));
+            if (isNaN(d)) return escapeHtml(iso);
+            return d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+        }
+        async function loadAiBilling() {
+            const box = document.getElementById('ai-billing-body'); if (!box) return;
+            box.innerHTML = '<div class="text-zinc-600 text-xs">Ładuję rozliczenie…</div>';
+            // kurs fallback (settings.usd_pln_rate) do informacyjnej konwersji nonbillable
+            try {
+                const { data: sr } = await supabaseClient.from('settings').select('value').eq('key','usd_pln_rate').maybeSingle();
+                if (sr && sr.value) { const n = parseFloat(sr.value); if (!isNaN(n) && n > 0) aiUsdPln = n; }
+            } catch (_) {}
+            const { data, error } = await supabaseClient.from('wfa_ai_billing')
+                .select('*').eq('project_id', projectId).order('period', { ascending: false });
+            if (error) { box.innerHTML = `<div class="text-[#f26d78] text-xs">Błąd: ${escapeHtml(error.message)}</div>`; return; }
+            renderAiBilling(data || []);
+        }
+        function renderAiBilling(rows) {
+            const cnt = document.getElementById('ptab-ai-cnt'); if (cnt) cnt.textContent = rows.length ? '(' + rows.length + ')' : '';
+            const box = document.getElementById('ai-billing-body');
+            if (!rows.length) {
+                box.innerHTML = `<div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-6 text-center">
+                    <i class="ph ph-robot text-3xl text-zinc-700 mb-2 block"></i>
+                    <div class="text-zinc-400 text-sm mb-1">Brak zrzutów rozliczenia AI dla tej aplikacji.</div>
+                    <div class="text-zinc-600 text-xs">Zrzut miesięczny pcha cron apki (ai-billing-cron) po zamknięciu okresu. Jeśli apka nie ma jeszcze AI userów, tabela jest pusta.</div>
+                </div>`;
+                return;
+            }
+            // Podsumowanie ostatniego okresu (kafle)
+            const last = rows[0];
+            const lastNonbillablePln = Number(last.nonbillable_usd || 0) * aiUsdPln;
+            const tiles = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-5">
+                <div class="bg-[#0a0a0a] border border-[#0070f3]/30 rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Do refaktury (${escapeHtml(periodLabel(last.period))})</div>
+                    <div class="text-[#52a8ff] text-2xl font-semibold">${fmtPln(last.total_pln)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">koszt AI userów +10% · NBP sprzedaży</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Baza (USD)</div>
+                    <div class="text-white text-2xl font-semibold">${fmtUsd(last.total_usd)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">koszt OpenAI przed narzutem</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Aktywni userzy</div>
+                    <div class="text-white text-2xl font-semibold">${last.users || 0}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">${last.preparations||0} przyg. · ${last.sims||0} sym. · ${last.reports||0} ocen</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4" title="Koszt własny fabryki: testy, podglądy, impersonacja operatora. NIE refakturowane — informacyjnie.">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Koszt fabryki</div>
+                    <div class="text-zinc-300 text-2xl font-semibold">${fmtUsd(last.nonbillable_usd)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">~${fmtPln(lastNonbillablePln)} · nie refakturowane</div>
+                </div>
+            </div>`;
+
+            // Tabela miesięczna
+            const head = `<thead><tr class="text-[10px] font-mono uppercase text-zinc-500 border-b border-[#1f1f1f]">
+                <th class="text-left py-2 pr-3 font-medium">Okres</th>
+                <th class="text-right py-2 px-3 font-medium text-[#52a8ff]">Do refaktury (zł)</th>
+                <th class="text-left py-2 px-3 font-medium">Rozbicie po funkcji</th>
+                <th class="text-right py-2 px-3 font-medium">Userzy</th>
+                <th class="text-right py-2 px-3 font-medium">Przyg. / Sym. / Ocen</th>
+                <th class="text-right py-2 pl-3 font-medium" title="Koszt własny fabryki — informacyjnie">Fabryka (~zł)</th>
+            </tr></thead>`;
+            const bodyRows = rows.map(r => {
+                const bd = (r.breakdown && typeof r.breakdown === 'object') ? r.breakdown : {};
+                const chips = Object.keys(bd).map(area => {
+                    const a = bd[area] || {};
+                    const pln = a.pln != null ? a.pln : null;
+                    const label = AREA_LABELS[area] || area;
+                    const val = pln != null ? fmtPln(pln) : (a.usd != null ? fmtUsd(a.usd) : '—');
+                    return `<span class="inline-flex items-center gap-1 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md px-2 py-0.5 text-[11px] text-zinc-300 mr-1 mb-1">
+                        ${escapeHtml(label)}<span class="text-zinc-500">${val}${a.count != null ? ' · ' + a.count + '×' : ''}</span></span>`;
+                }).join('') || '<span class="text-zinc-600 text-[11px]">—</span>';
+                const nbPln = Number(r.nonbillable_usd || 0) * aiUsdPln;
+                return `<tr class="border-b border-[#141414] align-top">
+                    <td class="py-2.5 pr-3 text-zinc-200 whitespace-nowrap">${escapeHtml(periodLabel(r.period))}</td>
+                    <td class="py-2.5 px-3 text-right text-[#52a8ff] font-semibold whitespace-nowrap">${fmtPln(r.total_pln)}<div class="text-zinc-600 text-[10px] font-normal">${fmtUsd(r.total_usd)}</div></td>
+                    <td class="py-2.5 px-3 max-w-md"><div class="flex flex-wrap">${chips}</div></td>
+                    <td class="py-2.5 px-3 text-right text-zinc-300">${r.users||0}</td>
+                    <td class="py-2.5 px-3 text-right text-zinc-400 whitespace-nowrap">${r.preparations||0} / ${r.sims||0} / ${r.reports||0}</td>
+                    <td class="py-2.5 pl-3 text-right text-zinc-500 whitespace-nowrap" title="${fmtUsd(r.nonbillable_usd)} koszt fabryki">~${fmtPln(nbPln)}</td>
+                </tr>`;
+            }).join('');
+            // Suma (wszystkie okresy — orientacyjnie)
+            const sumPln = rows.reduce((s,r)=>s+Number(r.total_pln||0),0);
+            const sumNbPln = rows.reduce((s,r)=>s+Number(r.nonbillable_usd||0),0)*aiUsdPln;
+            const foot = `<tfoot><tr class="text-xs font-semibold border-t border-[#333]">
+                <td class="py-2.5 pr-3 text-zinc-400">Razem (${rows.length} mies.)</td>
+                <td class="py-2.5 px-3 text-right text-[#52a8ff]">${fmtPln(sumPln)}</td>
+                <td colspan="3"></td>
+                <td class="py-2.5 pl-3 text-right text-zinc-500">~${fmtPln(sumNbPln)}</td>
+            </tr></tfoot>`;
+
+            box.innerHTML = tiles + `<div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7 overflow-x-auto">
+                <table class="w-full text-sm min-w-[720px]">${head}<tbody>${bodyRows}</tbody>${foot}</table>
+                <div class="text-[10px] text-zinc-600 mt-3">Konwersja „Fabryka (~zł)" po kursie fallback ${aiUsdPln.toFixed(2)} (settings.usd_pln_rate) — orientacyjnie; refaktura (kolumna „Do refaktury") liczona jest w apce po kursie NBP z dnia. Zbiorczy widok wszystkich aplikacji + reconciliacja: <a href="/tn-app/rozliczenia" class="text-[#52a8ff] hover:underline">Rozliczenia AI</a>.</div>
+            </div>`;
         }
 
         // ============ CHANGELOG (changelog_entries — RLS team, CRUD bezpośrednio jak wfa_notes) ============

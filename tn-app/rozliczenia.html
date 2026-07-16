@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Rozliczenia AI (fabryka ↔ operatorzy)</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.2/src/index.js" integrity="sha384-J7cw2fbG1T4C5MirTVUxsZGaMfw2m0XsCgOQEqUvB1OF9VIsHWuZF1GmyVRzs7eu" crossorigin="anonymous"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        .fld { width:100%; background:#0a0a0a; border:1px solid #333; border-radius:6px; padding:8px 12px; font-size:13px; color:#fff; }
+        .fld:focus { outline:none; border-color:rgba(0,112,243,.6); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <span class="text-zinc-500 text-xs font-mono">tn-app / <span class="text-zinc-300">rozliczenia AI</span></span>
+            </div>
+            <button onclick="loadAll()" class="inline-flex items-center gap-2 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors">
+                <i class="ph ph-arrows-clockwise"></i> Odśwież
+            </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-6xl mx-auto animate-enter">
+
+                <div class="mb-6">
+                    <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Rozliczenia AI</h1>
+                    <p class="text-zinc-500 max-w-3xl leading-relaxed">Ile w danym miesiącu zafakturować operatorom za AI ich userów (pass-through, +10%, kurs NBP sprzedaży) — <b class="text-[#f5b955]">osobno od 10% od przychodu</b>. Poniżej reconciliacja: suma zużycia wszystkich apek vs realny rachunek OpenAI.</p>
+                </div>
+
+                <!-- Przełącznik miesiąca -->
+                <div class="flex items-center gap-2 mb-6">
+                    <span class="text-zinc-500 text-xs">Miesiąc:</span>
+                    <div id="month-tabs" class="flex gap-1.5"></div>
+                </div>
+
+                <!-- Kafle podsumowania -->
+                <div id="summary-tiles" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
+
+                <!-- Tabela: wszystkie apki dla wybranego miesiąca -->
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-6 overflow-x-auto">
+                    <h3 class="text-white font-semibold mb-4 flex items-center gap-2"><i class="ph ph-buildings text-[#3291ff]"></i> Do refaktury per operator <span id="month-label" class="text-zinc-500 font-normal text-xs"></span></h3>
+                    <table class="w-full text-sm min-w-[680px]">
+                        <thead><tr class="text-[10px] font-mono uppercase text-zinc-500 border-b border-[#1f1f1f]">
+                            <th class="text-left py-2 pr-3 font-medium">Aplikacja</th>
+                            <th class="text-left py-2 px-3 font-medium">Operator</th>
+                            <th class="text-right py-2 px-3 font-medium">Userzy</th>
+                            <th class="text-right py-2 px-3 font-medium text-[#52a8ff]">Do refaktury (zł)</th>
+                            <th class="text-right py-2 pl-3 font-medium">Baza (USD)</th>
+                        </tr></thead>
+                        <tbody id="apps-tbody"></tbody>
+                        <tfoot id="apps-tfoot"></tfoot>
+                    </table>
+                    <div id="apps-empty" class="hidden text-zinc-600 text-xs py-6 text-center">Brak zrzutów rozliczenia AI dla tego miesiąca.</div>
+                </div>
+
+                <!-- RECONCILIACJA -->
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-10">
+                    <h3 class="text-white font-semibold mb-1 flex items-center gap-2"><i class="ph ph-scales text-[#3291ff]"></i> Reconciliacja z rachunkiem OpenAI <span id="recon-month" class="text-zinc-500 font-normal text-xs"></span></h3>
+                    <p class="text-zinc-500 text-xs mb-4 max-w-3xl leading-relaxed">Szacowany rachunek OpenAI = Σ(billable wszystkich apek) + Σ(nonbillable = koszt fabryki). Wpisz realny rachunek z faktury OpenAI (USD) — różnica to koszt czystego dev poza apkami. Pozwala zweryfikować, że refaktura operatorów pokrywa koszt tokena.</p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+                        <div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-lg p-4">
+                            <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Billable (refakturowane)</div>
+                            <div id="rc-billable" class="text-[#52a8ff] text-xl font-semibold">$0.00</div>
+                            <div id="rc-billable-pln" class="text-zinc-600 text-[10px] mt-1">—</div>
+                        </div>
+                        <div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-lg p-4">
+                            <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Nonbillable (fabryka)</div>
+                            <div id="rc-nonbillable" class="text-zinc-300 text-xl font-semibold">$0.00</div>
+                            <div class="text-zinc-600 text-[10px] mt-1">testy / podglądy / impersonacja</div>
+                        </div>
+                        <div class="bg-[#0d0d0d] border border-[#0070f3]/30 rounded-lg p-4">
+                            <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Szacowany rachunek OpenAI</div>
+                            <div id="rc-estimated" class="text-white text-xl font-semibold">$0.00</div>
+                            <div class="text-zinc-600 text-[10px] mt-1">billable + nonbillable</div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row sm:items-end gap-3 border-t border-[#1f1f1f] pt-4">
+                        <div class="flex-1 max-w-[240px]">
+                            <label class="text-xs text-zinc-500 block mb-1">Realny rachunek OpenAI (USD)</label>
+                            <input id="rc-real" type="number" step="0.01" min="0" class="fld" placeholder="np. 42.50">
+                        </div>
+                        <div class="flex-1">
+                            <label class="text-xs text-zinc-500 block mb-1">Notatka (opcjonalnie)</label>
+                            <input id="rc-note" class="fld" placeholder="np. w tym $5 na obrazy / dev poza apkami">
+                        </div>
+                        <button id="rc-save" onclick="saveRealBill()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200 flex-shrink-0">Zapisz</button>
+                    </div>
+
+                    <div id="rc-diff" class="mt-4"></div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let projectsById = {};      // id -> wfa_projects (name/customer)
+        let billingRows = [];       // wfa_ai_billing dla bieżącego + poprzedniego miesiąca
+        let realBills = {};         // periodKey -> ai_openai_bills row
+        let periods = [];           // [{key, label}] bieżący + poprzedni
+        let selectedPeriod = null;  // key 'YYYY-MM-01'
+        let usdPln = 4.0;           // fallback do konwersji USD→PLN (informacyjnie)
+
+        const AREA_LABELS = { research:'Analiza rozmówcy', plan:'Plan', sim:'Symulacja', report:'Ocena', other:'Inne' };
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        function fmtPln(v) { return (Number(v)||0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'; }
+        function fmtUsd(v) { return '$' + (Number(v)||0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+        function periodKeyFor(offset) {
+            const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - offset);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+        }
+        function periodLabel(key) {
+            if (!key) return '—';
+            const d = new Date(key + 'T00:00:00'); if (isNaN(d)) return escapeHtml(key);
+            return d.toLocaleDateString('pl-PL', { month: 'long', year: 'numeric' });
+        }
+        function projName(p) {
+            if (!p) return 'Projekt';
+            const n = (p.name || '').trim(); if (n) return n;
+            return (p.customer_name || 'Projekt') + ' (bez nazwy)';
+        }
+        function showToast(message, type='info') {
+            const toast = document.createElement('div');
+            const bg = type==='success' ? '#45a557' : type==='error' ? '#ef4444' : '#3b82f6';
+            toast.style.cssText = `position:fixed;top:20px;right:20px;z-index:9999;background:${bg};color:#fff;padding:12px 20px;border-radius:6px;font:14px/1 sans-serif;box-shadow:0 4px 12px rgba(0,0,0,.3);transition:opacity .3s`;
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => { toast.style.opacity='0'; setTimeout(()=>toast.remove(),300); }, 2500);
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            const { error: userErr } = await supabaseClient.auth.getUser();
+            if (userErr) { await supabaseClient.auth.signOut(); window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data || []).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        async function loadAll() {
+            periods = [ { key: periodKeyFor(0), label: periodLabel(periodKeyFor(0)) },
+                        { key: periodKeyFor(1), label: periodLabel(periodKeyFor(1)) } ];
+            if (!selectedPeriod) selectedPeriod = periods[0].key;
+            const keys = periods.map(p => p.key);
+
+            // kurs fallback (settings.usd_pln_rate) — informacyjnie do konwersji USD→PLN
+            try {
+                const { data: sr } = await supabaseClient.from('settings').select('value').eq('key','usd_pln_rate').maybeSingle();
+                if (sr && sr.value) { const n = parseFloat(sr.value); if (!isNaN(n) && n > 0) usdPln = n; }
+            } catch (_) {}
+
+            const [billQ, projQ, realQ] = await Promise.all([
+                supabaseClient.from('wfa_ai_billing').select('*').in('period', keys),
+                supabaseClient.from('wfa_projects').select('id, name, customer_name, customer_email').range(0, 999),
+                supabaseClient.from('ai_openai_bills').select('*').in('period', keys),
+            ]);
+            if (billQ.error) { showToast('Błąd rozliczeń: ' + billQ.error.message, 'error'); console.error(billQ.error); }
+            if (projQ.error) { showToast('Błąd projektów: ' + projQ.error.message, 'error'); console.error(projQ.error); }
+            billingRows = billQ.data || [];
+            projectsById = {}; (projQ.data || []).forEach(p => projectsById[p.id] = p);
+            realBills = {}; (realQ.data || []).forEach(r => realBills[r.period] = r);
+
+            renderMonthTabs();
+            renderMonth();
+        }
+
+        function renderMonthTabs() {
+            document.getElementById('month-tabs').innerHTML = periods.map(p => {
+                const active = p.key === selectedPeriod;
+                const cls = active
+                    ? 'border-[#0070f3]/60 bg-[#0070f3]/10 text-white'
+                    : 'border-[#333] text-zinc-400 hover:text-white';
+                return `<button onclick="selectPeriod('${p.key}')" class="text-xs px-3 py-1.5 rounded-md border ${cls} capitalize">${escapeHtml(p.label)}</button>`;
+            }).join('');
+        }
+        function selectPeriod(key) { selectedPeriod = key; renderMonthTabs(); renderMonth(); }
+
+        function rowsForSelected() { return billingRows.filter(r => r.period === selectedPeriod); }
+
+        function renderMonth() {
+            document.getElementById('month-label').textContent = '· ' + periodLabel(selectedPeriod);
+            document.getElementById('recon-month').textContent = '· ' + periodLabel(selectedPeriod);
+            const rows = rowsForSelected();
+
+            // Tabela apek
+            const tbody = document.getElementById('apps-tbody');
+            const tfoot = document.getElementById('apps-tfoot');
+            const empty = document.getElementById('apps-empty');
+            if (!rows.length) {
+                tbody.innerHTML = ''; tfoot.innerHTML = ''; empty.classList.remove('hidden');
+            } else {
+                empty.classList.add('hidden');
+                const sorted = rows.slice().sort((a,b) => Number(b.total_pln||0) - Number(a.total_pln||0));
+                tbody.innerHTML = sorted.map(r => {
+                    const p = projectsById[r.project_id];
+                    const op = p ? (p.customer_name || p.customer_email || '—') : '—';
+                    return `<tr class="border-b border-[#141414]">
+                        <td class="py-2.5 pr-3 text-zinc-200">${escapeHtml(projName(p))}</td>
+                        <td class="py-2.5 px-3 text-zinc-400">${escapeHtml(op)}</td>
+                        <td class="py-2.5 px-3 text-right text-zinc-300">${r.users||0}</td>
+                        <td class="py-2.5 px-3 text-right text-[#52a8ff] font-semibold whitespace-nowrap">${fmtPln(r.total_pln)}</td>
+                        <td class="py-2.5 pl-3 text-right text-zinc-500 whitespace-nowrap">${fmtUsd(r.total_usd)}</td>
+                    </tr>`;
+                }).join('');
+                const sumPln = rows.reduce((s,r)=>s+Number(r.total_pln||0),0);
+                const sumUsd = rows.reduce((s,r)=>s+Number(r.total_usd||0),0);
+                const sumUsers = rows.reduce((s,r)=>s+Number(r.users||0),0);
+                tfoot.innerHTML = `<tr class="text-sm font-semibold border-t border-[#333]">
+                    <td class="py-2.5 pr-3 text-zinc-300" colspan="2">Razem — do zafakturowania (${rows.length} apek)</td>
+                    <td class="py-2.5 px-3 text-right text-zinc-300">${sumUsers}</td>
+                    <td class="py-2.5 px-3 text-right text-[#52a8ff]">${fmtPln(sumPln)}</td>
+                    <td class="py-2.5 pl-3 text-right text-zinc-400">${fmtUsd(sumUsd)}</td>
+                </tr>`;
+            }
+
+            renderSummaryTiles(rows);
+            renderReconciliation(rows);
+        }
+
+        function renderSummaryTiles(rows) {
+            const sumPln = rows.reduce((s,r)=>s+Number(r.total_pln||0),0);
+            const sumUsd = rows.reduce((s,r)=>s+Number(r.total_usd||0),0);
+            const sumNb  = rows.reduce((s,r)=>s+Number(r.nonbillable_usd||0),0);
+            const apps = rows.length;
+            document.getElementById('summary-tiles').innerHTML = `
+                <div class="bg-[#0a0a0a] border border-[#0070f3]/30 rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Do zafakturowania</div>
+                    <div class="text-[#52a8ff] text-2xl font-semibold">${fmtPln(sumPln)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">suma refaktur AI (obok rev-share)</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Aplikacje</div>
+                    <div class="text-white text-2xl font-semibold">${apps}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">z zużyciem AI w tym miesiącu</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Baza billable (USD)</div>
+                    <div class="text-white text-2xl font-semibold">${fmtUsd(sumUsd)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">koszt OpenAI userów przed narzutem</div>
+                </div>
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-4" title="Koszt własny fabryki: testy, podglądy, impersonacja operatora.">
+                    <div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Koszt fabryki (USD)</div>
+                    <div class="text-zinc-300 text-2xl font-semibold">${fmtUsd(sumNb)}</div>
+                    <div class="text-zinc-600 text-[10px] mt-1">nonbillable — nie refakturowane</div>
+                </div>`;
+        }
+
+        function renderReconciliation(rows) {
+            const sumUsd = rows.reduce((s,r)=>s+Number(r.total_usd||0),0);   // billable base USD
+            const sumPln = rows.reduce((s,r)=>s+Number(r.total_pln||0),0);   // billable PLN (do refaktury)
+            const sumNb  = rows.reduce((s,r)=>s+Number(r.nonbillable_usd||0),0);
+            const estimated = sumUsd + sumNb;
+            document.getElementById('rc-billable').textContent = fmtUsd(sumUsd);
+            document.getElementById('rc-billable-pln').textContent = 'refaktura: ' + fmtPln(sumPln);
+            document.getElementById('rc-nonbillable').textContent = fmtUsd(sumNb);
+            document.getElementById('rc-estimated').textContent = fmtUsd(estimated);
+
+            // pole realnego rachunku
+            const rb = realBills[selectedPeriod];
+            document.getElementById('rc-real').value = rb ? Number(rb.amount_usd) : '';
+            document.getElementById('rc-note').value = rb ? (rb.note || '') : '';
+
+            renderDiff(estimated, rb);
+        }
+
+        function renderDiff(estimated, rb) {
+            const box = document.getElementById('rc-diff');
+            if (!rb || rb.amount_usd == null) {
+                box.innerHTML = `<div class="text-zinc-600 text-xs">Wpisz realny rachunek OpenAI, aby zobaczyć różnicę (koszt czystego dev poza apkami).</div>`;
+                return;
+            }
+            const real = Number(rb.amount_usd);
+            const diff = real - estimated;   // dodatnia = koszt dev/fabryki poza apkami (nieprzypisany)
+            const covered = estimated;
+            const pct = real > 0 ? Math.round(covered / real * 100) : 0;
+            const diffCls = Math.abs(diff) < 0.01 ? 'text-zinc-300' : diff > 0 ? 'text-[#f5b955]' : 'text-[#62c073]';
+            const diffLabel = diff > 0
+                ? 'koszt dev / fabryki poza apkami (nieprzypisany do operatorów)'
+                : (diff < 0 ? 'apki naliczyły WIĘCEJ niż rachunek — sprawdź kursy / zwroty' : 'idealne pokrycie');
+            box.innerHTML = `<div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-lg p-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div><div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Realny rachunek</div><div class="text-white text-lg font-semibold">${fmtUsd(real)}</div></div>
+                    <div><div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Różnica (real − szacunek)</div><div class="${diffCls} text-lg font-semibold">${fmtUsd(diff)}</div></div>
+                    <div><div class="text-[10px] font-mono uppercase text-zinc-500 mb-1">Pokrycie przez apki</div><div class="text-white text-lg font-semibold">${pct}%</div></div>
+                </div>
+                <div class="text-zinc-500 text-xs mt-2">${escapeHtml(diffLabel)}${rb.note ? ' · ' + escapeHtml(rb.note) : ''}</div>
+                <div class="text-zinc-600 text-[10px] mt-1">Zapisano ${rb.updated_at ? new Date(rb.updated_at).toLocaleString('pl-PL') : ''}</div>
+            </div>`;
+        }
+
+        async function saveRealBill() {
+            const btn = document.getElementById('rc-save'); btn.disabled = true;
+            try {
+                const raw = document.getElementById('rc-real').value.trim();
+                const note = document.getElementById('rc-note').value.trim() || null;
+                if (raw === '') { showToast('Podaj kwotę rachunku', 'error'); btn.disabled = false; return; }
+                const amount = parseFloat(raw);
+                if (isNaN(amount) || amount < 0) { showToast('Nieprawidłowa kwota', 'error'); btn.disabled = false; return; }
+                const payload = { period: selectedPeriod, amount_usd: amount, note, updated_at: new Date().toISOString() };
+                const { data, error } = await supabaseClient.from('ai_openai_bills')
+                    .upsert(payload, { onConflict: 'period' }).select('*').single();
+                if (error) throw error;
+                realBills[selectedPeriod] = data;
+                showToast('Zapisano rachunek OpenAI', 'success');
+                renderReconciliation(rowsForSelected());
+            } catch (e) {
+                console.error(e); showToast('Błąd zapisu: ' + (e.message || e), 'error');
+            } finally { btn.disabled = false; }
+        }
+
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+        })();
+    </script>
+</body>
+</html>
