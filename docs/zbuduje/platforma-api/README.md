@@ -31,7 +31,7 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-platform
 | `PUT /stores/{id}/pages/{locationId}/html` | ⛔ 500 notImplemented | „Custom HTML page override is not available yet" — **blokuje publikację landingów** |
 | `GET /stores/{id}/products` | ✅ 200 | paginacja + `Search`; warianty z price/currency/checkoutSlug/checkoutUrl |
 | `POST /stores/{id}/products` | ✅ 200 | body TYLKO `{name, price}` → `{id}`; bez opisu/zdjęć/wariantów; **brak DELETE** |
-| `PUT /stores/{id}/products/{pid}/variants/{vid}/checkout-link` | ✅ 200 | body `{checkoutSlug}`; zapis potwierdzony; `checkoutUrl` pozostaje null (pytanie do dev.) |
+| `PUT /stores/{id}/products/{pid}/variants/{vid}/checkout-link` | ✅ 200 | body `{checkoutSlug}`; `checkoutUrl` materializuje się z OPÓŹNIENIEM (tuż po zapisie null; po chwili `https://{activeDomain}/checkout?p={checkoutSlug}` — zweryfikowane, kasa odpowiada 200) |
 | `GET /stores/{id}/orders` | ✅ 200 | `From/To` (date-time) + `Page/PageSize`; sort po dacie desc; bez danych klienta |
 | `GET /stores/{id}/domains` | ✅ 200 | starterDomain/activeDomain/isOnCustomDomain + lista custom domen z rekordami DNS |
 | `POST /stores/{id}/domains` | 🔸 nietestowane (side-effect) | body `{domain}` → rekordy DNS (z www) |
@@ -50,6 +50,8 @@ Artefakty testów na sklepie „test" (`019f650b-8d9b-7225-b0aa-c5455f6298a1`): 
 1. **PUT html not implemented** → nie opublikujemy landingów (kluczowa funkcja fazy B). Czekamy na wdrożenie.
 2. **POST /pages = 502** (powtarzalne) → bug originu.
 3. **Produkt = tylko name+price** → brak opisu, zdjęć, wariantów, GTIN/EAN (wymóg feedów GEO), brak endpointu zmiany CENY (potrzebny do test→scale) i brak DELETE.
-4. `checkoutUrl` null po ustawieniu `checkoutSlug` — jak/kiedy się materializuje?
+4. ~~`checkoutUrl` null po ustawieniu sluga~~ ROZWIĄZANE: materializuje się asynchronicznie
+   (kilka minut); format `https://{activeDomain}/checkout?p={checkoutSlug}`. Przy publikacji
+   landingu: polling do skutku albo składanie URL z domeny+sluga.
 5. Brak endpointów pixel/CAPI per sklep (wymagania trackingowe §6 SSOT) i metod płatności checkoutu (pytania płatnościowe §5: COD w checkoucie? lista metod Autopay? branding kasy?). Flaga `isCashOnDelivery` w delivery-methods sugeruje COD w modelu — potwierdzić w checkoucie.
 6. Brak robots.txt/sitemap/llms.txt endpointów (wymagania GEO §5b — po stronie platformy).
