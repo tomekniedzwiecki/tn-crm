@@ -62,3 +62,43 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
 4. OBRAZY (11: role P/U/S, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
 5. STANY/INTERAKCJE (6: hover/focus/disabled, empty/error, touch, sticky, reduced-motion)
 6. TREŚĆ (6: placeholdery, zakazane frazy, ceny/format, ton, duplikaty)
+
+## NARZĘDZIA (zbudowane — reużywalne)
+- **`scripts/mockup-tools/detail-lint.py <html> [--out f.json]`** — PASS 0 skryptowy (CDP
+  `getComputedStyle`/`getBoundingClientRect` + PIL na obrazach): spacing 4/8, near-same fonty,
+  Delta-E akcentów, WCAG (tekst na tle + worst-pixel pod tekstem na scenie), focus-ring,
+  touch≥44, aspect/upscaling, **hash-dedup obrazów cross-sekcja**, bbox-overlap fotografii,
+  zakazane frazy/placeholdery/podwójne spacje/proste cudzysłowy, sticky geometry.
+- **`scripts/mockup-tools/capture-lint.py <html> <outdir>`** — full 1280/390, crop'y sekcji
+  hi-res, `blur.jpg`+`placeholdified.jpg` do PASS 2 squint.
+
+## WNIOSKI WYKONAWCZE (F8 — konsolidować tematycznie)
+- **Kalibracja lintera (z przebiegu Uśmieszek 16.07, 0 P0):**
+  - **Gwiazdki dekoracyjne `aria-hidden` NIE podlegają progowi kontrastu TEKSTU WCAG** — info
+    niesie sąsiedni tekst („4,9/5 · 76 ocen"). Złoty (#F5A623) fizycznie nie osiągnie 4.5:1
+    na bieli bez zejścia w bursztyn kolidujący z CTA → to konwencja, nie zgrzyt. Linter musi
+    wykluczać `aria-hidden`/ikony z checku tekstowego (inaczej fałszywe P1).
+  - **near-same font-size:** `clamp()` daje kontinuum ułamków → filtrować do INTEGER-tokenów
+    (n≥3) i raportować JEDEN wniosek „skala ma N rozmiarów 12–22px", nie 8 par-szumu.
+  - **worst-pixel pod tekstem na scenie** liczony jako globalne min-luminance CAŁEJ sceny =
+    fałszywy (tekst siedzi w strefie scrim/negative-space, nie nad ciemnym produktem po
+    drugiej stronie kadru). Poprawnie: mapować bbox tekstu → region sceny (object-fit:cover),
+    do tego czasu traktować jako KANDYDAT vision, nie P1.
+  - **Delta-E akcentów:** próg dE<3 (nie <10) — celowe warianty papieru (#F7F3EC/#FBF8F2/
+    #F6F1E9, dE≈4.5) to zaplanowana warstwa, nie błąd.
+- **Skuteczność passów (dojrzała strona po F7.1/F7.2):** PASS 0 skrypt złapał WSZYSTKIE realne
+  findingi (3× kontrast tekstu pomocniczego <4.5, touch 42/31px, sticky bez prześwitu) —
+  naprawione tanim CSS. PASS 1/2 vision = potwierdzenie NEGATYWNE (0 nowych P0/P1) + odsiew
+  false-positive lintera (hero-text nad sceną czytelny dzięki scrimowi). PASS 3 proweniencja
+  (hash-dedup + inspekcja ról) = czysty. **Wniosek: po zielonym F7.1/F7.2 skrypt jest głównym
+  źródłem findingów; vision waliduje i odsiewa FP, rzadko generuje nowe** → uzasadnia niski
+  budżet vision (ten przebieg: $0 na wf2-gpt — vision przez Read PNG agenta; wf2-gpt rezerwować
+  wyłącznie na PRZEBUDOWY sekcji).
+- **UGC data-ceiling:** realne zdjęcie kupującego bywa z obcym pudełkiem („WHITENING") — surowa
+  autentyczność vs sygnał white-label; NIE fabrykować podmianki. Przy vision-gate F0 preferować
+  UGC bez widocznego obcego brandingu GDY jest wybór; inaczej zostawić (limit danych ≠ wina kodu).
+- **Typowy zestaw tanich P1/P2 fabryki (do prewencji w F4/F5):** microcopy/caption na `--muted`
+  (#8996A0) daje ~3:1 na jasnym tle → default `--body` (#54636E, ~5:1); przyciski CTA 18–18.5px
+  bold są TUŻ pod progiem large-text WCAG (18.66px) — dawać ≥19px by obowiązywał próg 3:1;
+  sticky-buy fixed wymaga `body{padding-bottom}` na mobile (prześwit stopki); brand/logo link
+  potrzebuje `min-height:44px` (tap-target).

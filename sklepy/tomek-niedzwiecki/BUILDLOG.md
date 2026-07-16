@@ -125,3 +125,14 @@ AI „osoba używa produktu" = OBOWIĄZKOWY standard fabryki**; (d) mapa anty-du
 
 **CZEKA (bramka Tomka):** wybór makiety 1-4 → ekstrakcja tokens/spec → przebudowa Chłodzika
 (+ input rundy 2 CRO) → ten sam pipeline dla lokówki/pompki/endoskopu/jeździka.
+
+
+## Sesja 2 — 15.07 wieczór: ZMIEŚCIK V5 (FLOW V5, commit c8790b0)
+Feedback Tomka → 3 korekty systemowe (wszystkie w STANDARD-LANDING-SKLEPY.md):
+1. **FLOW V5**: PLAN od gpt-5.6-sol PRZED grafikami (briefing: zdjęcia+snapshot+opinie+wymagania) — plan rządzi doborem sekcji per produkt; architektura 1-12 = biblioteka. WYMAGANIA-ZAWSZE (loga płatności SVG, sticky ATC, opinie ZE ZDJĘCIAMI, wideo, tracking).
+2. **Esencja produktu**: plan GPT nadużył „no product" → sceny bez sensu próżni; sceny kluczowe [P] MUSZĄ pokazywać mechanizm/efekt (regeneracja B/D/E/F v2 z ref g0/ae + „reproduce EXACTLY").
+3. **Mapa assetów + warstwa życia**: taksonomia [P]/[D], tabela asset→sekcja→użycie, cięcie arkuszy (6 ornamentów + 2 pasy użyte!), 6 animacji (linia kompresji scrollem, reveal, count-up, suwak z auto-zajawką, parallax, sticky).
+4. **HERO = makieta-first**: pełna makieta 1. ekranu → kod 1:1 → WOW za 1. próbą.
+Wynik: 15 generacji (0 odrzutów po v2), kod 100% agent (0 calli wf2-gpt — odstępstwo; werdykt v4: GPT pisze sekcje dobrze), Playwright 8/8 PASS.
+**Wnioski fabryczne:** (a) VISION-GATE zdjęć opinii OBOWIĄZKOWY — ae-* bywają zrzutami apki AliExpress/obcą marką (VOLLYC)/off-topic; (b) rehost tylko bud-assets/<slug>/ (whitelist edge); (c) reduced-motion: treść ukrywana dopiero klasą .anim z JS; (d) koszt V5: ~15 obrazów ≈ 3,3 zł + plan 15,4k tok ≈ 0,4 zł.
+Otwarte: pixel/canonical placeholdery (gate przed kampanią); cross-model review wf2-gpt.
