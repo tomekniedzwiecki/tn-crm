@@ -27,8 +27,8 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-platform
 | `GET /docs` | ✅ 200 | katalog maszynowy wszystkich endpointów |
 | `GET /stores` | ✅ 200 | id + name + activeDomain; 5 sklepów testowych |
 | `GET /stores/{id}/pages` | ✅ 200 | id strony = **locationId** do PUT html; path + url; świeży sklep „test" ma pages:[] |
-| `POST /stores/{id}/pages` | ❌ **502** (2×, origin) | body `{path, name}` — BUG po stronie platformy, zgłosić developerowi |
-| `PUT /stores/{id}/pages/{locationId}/html` | ⛔ 500 notImplemented | „Custom HTML page override is not available yet" — **blokuje publikację landingów** |
+| `POST /stores/{id}/pages` | ✅ 200 (naprawione 16.07 wieczór; wcześniej 502) | body `{path, name}` → od razu `{id, path, name, url}` |
+| `PUT /stores/{id}/pages/{locationId}/html` | ✅ 200 (WDROŻONE 16.07 wieczór) | body **`{isHtml: bool, html: string}`** — storefront serwuje HTML zamiast sekcji; `isHtml:false` = powrót do sekcji. Działa też na stronie głównej (locationId strony z `path:""`) — tak ustawia się główna vs podstrona. **Serwowanie = statyczny HTML 1:1 z serwera** (bez wrappera Next.js — wymóg GEO §5b(f) SPEŁNIONY). Zweryfikowane publikacją Uśmieszka (93 KB, UTF-8/polskie znaki OK): https://test.shop.tomekniedzwiecki.pl/usmieszek |
 | `GET /stores/{id}/products` | ✅ 200 | paginacja + `Search`; warianty z price/currency/checkoutSlug/checkoutUrl |
 | `POST /stores/{id}/products` | ✅ 200 | body TYLKO `{name, price}` → `{id}`; bez opisu/zdjęć/wariantów; **brak DELETE** |
 | `PUT /stores/{id}/products/{pid}/variants/{vid}/checkout-link` | ✅ 200 | body `{checkoutSlug}`; `checkoutUrl` materializuje się z OPÓŹNIENIEM (tuż po zapisie null; po chwili `https://{activeDomain}/checkout?p={checkoutSlug}` — zweryfikowane, kasa odpowiada 200) |
@@ -47,8 +47,8 @@ Artefakty testów na sklepie „test" (`019f650b-8d9b-7225-b0aa-c5455f6298a1`): 
 
 ## Luki vs wymagania SSOT (do zgłoszenia developerowi)
 
-1. **PUT html not implemented** → nie opublikujemy landingów (kluczowa funkcja fazy B). Czekamy na wdrożenie.
-2. **POST /pages = 502** (powtarzalne) → bug originu.
+1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").
+2. ~~POST /pages = 502~~ **NAPRAWIONE 16.07 wieczór.**
 3. **Produkt = tylko name+price** → brak opisu, zdjęć, wariantów, GTIN/EAN (wymóg feedów GEO), brak endpointu zmiany CENY (potrzebny do test→scale) i brak DELETE.
 4. ~~`checkoutUrl` null po ustawieniu sluga~~ ROZWIĄZANE: materializuje się asynchronicznie
    (kilka minut); format `https://{activeDomain}/checkout?p={checkoutSlug}`. Przy publikacji
