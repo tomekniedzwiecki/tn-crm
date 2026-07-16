@@ -130,7 +130,13 @@ Realia: **fachmat = OSOBNY projekt Supabase** (`cpzstoyvpfqydmoutcmk`) niż tn-c
 - **Faza 1 (MVP, tn-crm):** tabela `changelog_entries` + `changelog_reads` + VIEW `changelog_public`
   + RLS + edge (`changelog-feed`, `changelog-seen`, admin insert/update) + panel admina + feed
   operatora w portalu + badge. GATE A + E2E przed live.
-- **Faza 2:** wyrównanie `co-nowego.html` (starter) do wspólnej taksonomii; opcjonalny push fabryka→apka.
+- **Faza 1 (MVP, tn-crm):** ✅ LIVE 16.07 (commit d3f0132). Changelog fabryki→operator; Tomek podgląd.
+- **Faza 2 (WARSTWA 2 — operator→end-user):** ✅ LIVE 16.07. Decyzja Tomka: changelog końcowych
+  użytkowników = robota OPERATORA. Zbudowane W APCE Fachmat (osobna baza): tabela `changelog`
+  (RLS deny-all), edge `changelog` (list_public + operator CRUD), sekcja operatora w `admin.html`,
+  `co-nowego.html` z bazy (zamiast statycznego `changelog.md`). Backport do startera (migr. 0014).
+  GATE A adwersarski PASS, GATE B @smoke 5 passed. Grzegorz pisze pierwszy wpis sam (human-touch).
+  Follow-up: rate-limit `_shared/ratelimit.ts clientIp` (IP infry XFF — systemowy, cross-fn).
 - **Faza 3:** `changelog-ingest` z Conventional Commits (auto-draft admin).
 
 ## 10. Otwarte decyzje (do potwierdzenia z Tomkiem)
