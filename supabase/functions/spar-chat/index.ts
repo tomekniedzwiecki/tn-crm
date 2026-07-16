@@ -52,6 +52,11 @@ function getCorsHeaders(origin: string | null): Record<string, string> {
 const MAX_TURNS = 30                  // tur asystenta per sesja
 const MAX_MESSAGE_LENGTH = 2000       // znaków per wiadomość
 const MAX_MESSAGES_PER_HOUR = 60      // wiadomości/h per sesja (COUNT spar_messages)
+// Spowiednik (po pełnej płatności): klient MA pisać dużo — to podnosi jakość projektu
+// (decyzja Tomka 16.07 po incydencie magm5: 60/h zatrzymało płacącą klientkę o 7:55;
+// koszt całej jej 87-turowej rozmowy = $3,5, więc limit jest tylko anty-botowy).
+// 240 = 120 wymian/h — człowiek tego nie przekroczy, pętla bota tak.
+const MAX_MESSAGES_PER_HOUR_KNOWHOW = 240
 const MAX_SESSIONS_PER_HOUR_PER_IP = 10 // nowych sesji/h per IP (anty-abuse: mnożenie sessionId)
 const MAX_SESSIONS_PER_DAY_PER_USER = parseInt(Deno.env.get('SPAR_SESSIONS_USER_DAILY') || '10', 10) // nowych sesji/dobę per konto
 const MAX_TURNS_BEZ_KONTAKTU = 5      // tur asystenta zanim wymagamy konta/maila (bramka inline w czacie)
@@ -1385,7 +1390,8 @@ Deno.serve(async (req) => {
       console.error('[spar-chat] rate-limit count error:', countError)
       return jsonResponse({ error: 'blad_serwera' }, 500, corsHeaders)
     }
-    if ((recentCount ?? 0) >= MAX_MESSAGES_PER_HOUR) {
+    const hourlyLimit = isKnowHowMode ? MAX_MESSAGES_PER_HOUR_KNOWHOW : MAX_MESSAGES_PER_HOUR
+    if ((recentCount ?? 0) >= hourlyLimit) {
       return jsonResponse({ error: 'limit_wiadomosci' }, 429, corsHeaders)
     }
 
