@@ -98,10 +98,12 @@ esencja produktu na scenach kluczowych, jasne tła.
 **F4 — KOD (gpt-5.6-sol).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
 noindex `{{CANONICAL_URL}}`, JSON-LD @graph, JEDEN exec-script: pixel `{{PIXEL_ID}}`
 VC/ATC/IC + link decoration + HOOKS + sticky IO + wideo autoplay-on-visible; lightboxy;
-pay-badges). Potem sekcja po sekcji: call = PARA makiet (mobile+desktop) jako input_image
-+ spec (SŁOWNIK KLAS wspólny, dane twarde, URL-e assetów, animacje sekcji, zakazy)
-+ „ODWZORUJ 1:1; 390 wg mobile-makiety, ≥768 wg desktopowej" (odstępstwa tylko: realne
-zdjęcia, prawdziwe pay-badges, prawdziwe liczby). Sekcje czysto-danowe mogą iść z kontraktu.
+pay-badges). Potem sekcja po sekcji **WYŁĄCZNIE procedurą `docs/zbuduje/SEKCJA-Z-MAKIETY.md` (v2,
+z researchu 16.07)**: ekstrakcja IR z makiety (paleta hex, skala typo px, bboxy — narzędzia
+scripts/mockup-tools/) → anotowana makieta + IR i DOKŁADNE copy jako TEKST → koder
+z layout-as-thought → mierzalna pętla render-diff (SSIM-bramka ~0.90, heatmapa, keep-best,
+rewrite<0.80 / edit-punktowy 0.80-0.90). Odstępstwa od makiety tylko: realne zdjęcia,
+prawdziwe pay-badges, prawdziwe liczby. Sekcje czysto-danowe mogą iść z kontraktu.
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 
 **F5 — ETAP ŻYCIA I ZAANGAŻOWANIA — OSOBNY, SEKWENCYJNY PRZEBIEG (wzmocnione przez Tomka
@@ -142,6 +144,13 @@ ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-blee
    (hexy, font-size/wagi, spacing, cienie, zaokrąglenia, brakujące elementy SCENY, kompozycja,
    hierarchia) → poprawka kodem GPT (effort low/medium) → re-render → werdykt vision na
    kompozycie: „czy to ten sam projekt? TAK/NIE + czego brakuje" → iteruj AŻ TAK.
+   **🔁 REWRITE-NOT-PATCH (Tomek 16.07: „jak się poprawia, zmiany są niewielkie — lepiej
+   zrobić jeszcze raz"):** jeśli werdykt kompozytu = NIE (sekcja odbiega istotnie), NIE
+   łatać istniejącego kodu — **przepisać sekcję OD ZERA świeżym callem** z pełnym pakietem
+   wytycznych (makieta + wyekstrahowane tokens/wymiary + wnioski z poprzedniej wersji jako
+   „czego unikać", NIE jako kod do poprawy) i NAJWYŻSZYM wykonalnym effortem (high przy
+   capie ~5k; 504 → medium). Łatki (patch) tylko dla drobnych rozjazdów przy werdykcie
+   „prawie TAK". Iteracje: rewrite → kompozyt → werdykt;
    **BEZ limitu iteracji** (pętla do wyczerpania — limit tylko: brak postępu 2 rundy z rzędu
    ⇒ eskalacja: regeneracja grafiki sceny albo nota do nadzorcy). Start od hero. Kompozyty
    archiwizować per sekcja/iteracja (`FABRYKA-*/<slug>/dopasowanie/<sekcja>-vN.png`) —
