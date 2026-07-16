@@ -316,7 +316,7 @@ Deno.serve(async (req: Request) => {
   const { data: p } = await sb
     .from("wfa_projects")
     .select(
-      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, app_url, domain, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id",
+      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, app_url, domain, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id, changelog_seen_at",
     )
     .eq("unique_token", token)
     .maybeSingle();
@@ -411,6 +411,32 @@ Deno.serve(async (req: Request) => {
     // „Klient wszedł do portalu / potwierdził" w kroku kickoff + wpis do activity.
     // Fire-and-forget — nie może blokować ani wywalać odpowiedzi portalu.
     markClientEntered(sb, p.id).catch((e) => console.warn("[wfa-portal] markClientEntered:", e));
+  }
+
+  // ============ CHANGELOG: „Co nowego" dla klienta (whitelist kolumn = VIEW changelog_public) ============
+  // Zwraca TYLKO opublikowane wpisy public dla projektu + globalne platformy. VIEW nie oddaje
+  // admin_note/commit_sha/source_* (RLS chroni wiersz nie kolumny → osobny VIEW). Read = OK w preview.
+  if (action === "changelog_feed") {
+    const { data: rows } = await sb
+      .from("changelog_public")
+      .select("id, public_category, area, title, public_summary, media_url, cta_url, version, published_at")
+      .or(`project_id.eq.${p.id},project_id.is.null`)
+      .order("published_at", { ascending: false })
+      .limit(100);
+    const seen = p.changelog_seen_at ? new Date(String(p.changelog_seen_at)).getTime() : 0;
+    const entries = (rows || []).map((r: Record<string, any>) => ({
+      ...r,
+      is_new: seen === 0 ? true : new Date(String(r.published_at)).getTime() > seen,
+    }));
+    const unread = entries.filter((e: Record<string, any>) => e.is_new).length;
+    return json({ entries, unread, seen_at: p.changelog_seen_at || null });
+  }
+
+  // ============ CHANGELOG: oznacz „przeczytane" (zeruje badge). Blokada w podglądzie admina. ============
+  if (action === "changelog_seen") {
+    if (readonly) return json({ error: "preview_readonly" }, 403);
+    await sb.from("wfa_projects").update({ changelog_seen_at: new Date().toISOString() }).eq("id", p.id);
+    return json({ ok: true });
   }
 
   // ============ UMOWA: metadane ============

@@ -255,6 +255,20 @@
         .tk-notice i { color:#5cd07f; font-size:17px; flex-shrink:0; margin-top:1px; }
         .tk-rhead { color:#8b8b93; font-size:11.5px; font-weight:600; margin:13px 0 3px; text-transform:uppercase; letter-spacing:.4px; }
         .tk-rhead:first-of-type { margin-top:8px; }
+        /* Co nowego (changelog) */
+        .cl-badge { display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 6px; border-radius:99px; background:#0070f3; color:#fff; font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; margin-left:6px; vertical-align:middle; }
+        #c-cl-list { margin-top:16px; display:flex; flex-direction:column; gap:12px; }
+        .cl-item { background:#0e0e10; border:1px solid #1e1e21; border-radius:12px; padding:16px 18px; }
+        .cl-item.new { border-left:2px solid #0070f3; }
+        .cl-top { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+        .cl-chip { font-size:11px; padding:2px 9px; border-radius:99px; border:1px solid; font-weight:500; white-space:nowrap; }
+        .cl-date { color:#6b6b74; font-size:12px; font-variant-numeric:tabular-nums; margin-left:auto; }
+        .cl-title { color:#fff; font-size:14.5px; font-weight:600; letter-spacing:-.01em; }
+        .cl-sum { color:#a7a7af; font-size:13.5px; margin-top:5px; line-height:1.6; white-space:pre-wrap; }
+        .cl-img { display:block; max-width:100%; border-radius:8px; margin-top:12px; border:1px solid #1e1e21; }
+        .cl-cta { display:inline-flex; align-items:center; gap:6px; margin-top:12px; color:#5aa2ff; font-size:13px; font-weight:500; text-decoration:none; }
+        .cl-cta:hover { color:#7fb8ff; }
+        .cl-empty { color:#6b6b74; font-size:13px; margin-top:14px; }
     </style>
 </head>
 <body>
@@ -317,6 +331,13 @@
 
         <!-- 2. Twój ruch: jedna linia, gdy piłka jest po stronie klienta -->
         <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span></div>
+
+        <!-- 2a. Co nowego: opublikowane wpisy changelog (nowości / ulepszenia / poprawki) -->
+        <section class="hidden" id="c-changelog">
+            <div class="shead"><h2><i class="ph ph-megaphone" style="color:#5aa2ff"></i> Co nowego <span class="cl-badge hidden" id="c-cl-badge"></span></h2></div>
+            <p class="sdesc">Najnowsze ulepszenia Twojej aplikacji.</p>
+            <div id="c-cl-list"></div>
+        </section>
 
         <!-- 2b. Testy aplikacji: czat „spowiednika testów" (widoczny gdy krok testów aktywny) -->
         <section class="hidden" id="c-testy">
@@ -502,6 +523,7 @@
             loadContract(); // nie blokuje głównego renderu
             loadIntake();
             loadTesty();
+            loadChangelogFeed();
         } catch (e) {
             show('login'); $('err').textContent = 'Błąd połączenia — spróbuj za chwilę.';
         } finally { if ($('go')) $('go').disabled = false; }
@@ -523,6 +545,7 @@
             loadContract();
             loadIntake();
             loadTesty();
+            loadChangelogFeed();
         } catch (e) {
             show('notoken');
             $('notoken').innerHTML = '<h1>Błąd podglądu</h1><p class="sub">Spróbuj ponownie za chwilę.</p>';
@@ -636,6 +659,60 @@
     function openVlb(encUrl) {
         $('vlb-img').src = decodeURIComponent(encUrl);
         $('vlb').classList.add('show');
+    }
+
+    // ============ CO NOWEGO (changelog_feed / changelog_seen) ============
+    function clFeedChip(pc) {
+        const map = {
+            new:      ['Nowość',        '#4cb782', 'rgba(76,183,130,.35)', 'rgba(76,183,130,.12)'],
+            improved: ['Ulepszenie',    '#5aa2ff', 'rgba(0,112,243,.35)',  'rgba(0,112,243,.12)'],
+            fixed:    ['Poprawka',      '#a7a7af', 'rgba(255,255,255,.18)','rgba(255,255,255,.05)'],
+            security: ['Bezpieczeństwo','#e6c34a', 'rgba(201,162,39,.4)',  'rgba(201,162,39,.12)'],
+        };
+        const m = map[pc]; if (!m) return '';
+        return '<span class="cl-chip" style="color:' + m[1] + ';border-color:' + m[2] + ';background:' + m[3] + '">' + esc(m[0]) + '</span>';
+    }
+    async function loadChangelogFeed() {
+        try {
+            const res = await callFn({ action: 'changelog_feed' });
+            if (!res.ok) { $('c-changelog').classList.add('hidden'); return; }
+            renderChangelogFeed(await res.json());
+        } catch (e) { $('c-changelog').classList.add('hidden'); }
+    }
+    function renderChangelogFeed(d) {
+        const sec = $('c-changelog'); if (!sec) return;
+        const entries = (d && d.entries) || [];
+        sec.classList.remove('hidden');
+        const unread = (d && d.unread) || 0;
+        const badge = $('c-cl-badge');
+        if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
+        else { badge.textContent = ''; badge.classList.add('hidden'); }
+        const list = $('c-cl-list');
+        if (!entries.length) {
+            list.innerHTML = '<p class="cl-empty">Nic nowego — tu pokażemy ulepszenia Twojej aplikacji.</p>';
+            return;
+        }
+        list.innerHTML = entries.map(e => {
+            const media = safeHttpsUrl(e.media_url);
+            const cta = safeHttpsUrl(e.cta_url);
+            const dateStr = e.published_at ? new Date(e.published_at).toLocaleDateString('pl-PL') : '';
+            return '<div class="cl-item' + (e.is_new ? ' new' : '') + '">' +
+                '<div class="cl-top">' + clFeedChip(e.public_category) +
+                    (dateStr ? '<span class="cl-date">' + esc(dateStr) + '</span>' : '') + '</div>' +
+                '<div class="cl-title">' + esc(e.title) + '</div>' +
+                (e.public_summary ? '<div class="cl-sum">' + esc(e.public_summary) + '</div>' : '') +
+                (media ? '<img class="cl-img" src="' + esc(media) + '" alt="" loading="lazy">' : '') +
+                (cta ? '<a class="cl-cta" href="' + esc(cta) + '" target="_blank" rel="noopener">Zobacz <i class="ph ph-arrow-right"></i></a>' : '') +
+                '</div>';
+        }).join('');
+        // Sekcja właśnie się pokazała klientowi → oznacz jako przeczytane (nie w podglądzie: edge zwróci 403).
+        if (!previewMode && unread > 0) markChangelogSeen();
+    }
+    async function markChangelogSeen() {
+        try {
+            const res = await callFn({ action: 'changelog_seen' });
+            if (res.ok) { const b = $('c-cl-badge'); if (b) { b.textContent = ''; b.classList.add('hidden'); } }
+        } catch (e) {}
     }
 
     // ============ UMOWA ============

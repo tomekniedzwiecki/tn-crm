@@ -146,6 +146,7 @@
                     <button data-ptab="projekt" onclick="switchPsec('projekt')" class="ptab">Projekt</button>
                     <button data-ptab="uwagi" onclick="switchPsec('uwagi')" class="ptab">Uwagi <span id="ptab-uwagi-cnt"></span></button>
                     <button data-ptab="retro" onclick="switchPsec('retro')" class="ptab">Dziennik fabryki <span id="ptab-retro-cnt" class="text-zinc-600"></span></button>
+                    <button data-ptab="changelog" onclick="switchPsec('changelog')" class="ptab">Changelog <span id="ptab-changelog-cnt" class="text-zinc-600"></span></button>
                     <button data-ptab="umowa" onclick="switchPsec('umowa')" class="ptab">Umowa</button>
                     <button data-ptab="intake" onclick="switchPsec('intake')" class="ptab">Dane od klienta</button>
                     <button data-ptab="sparing" onclick="switchPsec('sparing')" class="ptab">Dane ze sparingu</button>
@@ -214,6 +215,63 @@
                     <div class="text-[10px] text-zinc-600 mt-3">Zapis dla Twojej wiedzy — nic nie wymaga Twojej akcji. Każdy wpis przeszedł audyt bezpieczeństwa przed wejściem na produkcję. Jeśli coś budzi wątpliwość, po prostu mi napisz.</div>
                 </div>
 
+                </div>
+
+                <!-- Changelog: wpisy o zmianach. Szkic (admin) widoczny tylko dla Tomka; opublikowany trafia do portalu klienta. project_id=null => zmiana globalna platformy (widzą wszyscy klienci). -->
+                <div data-psec="changelog" class="hidden">
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5 mb-7">
+                    <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+                        <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-megaphone text-[#3291ff]"></i> Changelog <span class="text-zinc-500 font-normal text-xs">szkice widzisz tylko Ty; opublikowane trafiają do sekcji „Co nowego" u klienta</span></h3>
+                        <button onclick="loadChangelog()" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white inline-flex items-center gap-1.5"><i class="ph ph-arrows-clockwise"></i> Odśwież</button>
+                    </div>
+
+                    <!-- FORMULARZ nowego wpisu -->
+                    <div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4 mb-5 space-y-3">
+                        <div class="text-[11px] text-zinc-500 font-medium uppercase tracking-wide">Nowy wpis</div>
+                        <input id="cl-title" class="fld" placeholder="Tytuł zmiany (np. Szybsze ładowanie panelu zamówień)">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="cl-category" class="fld">
+                                <option value="added">added — dodano</option>
+                                <option value="changed">changed — zmieniono</option>
+                                <option value="deprecated">deprecated — wycofywane</option>
+                                <option value="removed">removed — usunięto</option>
+                                <option value="fixed">fixed — poprawka</option>
+                                <option value="security">security — bezpieczeństwo</option>
+                            </select>
+                            <input id="cl-area" class="fld" placeholder="Obszar (np. platnosci / panel / powiadomienia)">
+                        </div>
+                        <textarea id="cl-admin-note" rows="2" class="fld resize-y" placeholder="Notatka techniczna (obowiązkowa) — dla Ciebie, klient tego nie widzi"></textarea>
+                        <div>
+                            <textarea id="cl-public" rows="2" class="fld resize-y" placeholder="Treść dla klienta (opcjonalna) — prosty opis korzyści"></textarea>
+                            <div class="text-[10px] text-zinc-600 mt-1">Puste = wpis tylko dla Ciebie, klient go nie zobaczy.</div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <select id="cl-pubcat" class="fld">
+                                <option value="">Kategoria dla klienta: —</option>
+                                <option value="new">Nowość</option>
+                                <option value="improved">Ulepszenie</option>
+                                <option value="fixed">Poprawka</option>
+                                <option value="security">Bezpieczeństwo</option>
+                            </select>
+                            <div class="flex gap-2">
+                                <input id="cl-version" class="fld" placeholder="Wersja (RRRRMMDDNN)">
+                                <button type="button" onclick="clVersionToday()" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white whitespace-nowrap flex-shrink-0">dziś</button>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <input id="cl-media" class="fld" placeholder="Link do obrazka (https://, opcjonalny)">
+                            <input id="cl-cta" class="fld" placeholder="Link CTA (https://, opcjonalny)">
+                        </div>
+                        <label class="flex items-center gap-2 text-[12px] text-zinc-400 cursor-pointer select-none">
+                            <input type="checkbox" id="cl-global" class="accent-[#f5a623]"> zmiana GLOBALNA platformy (widzą wszyscy klienci)
+                        </label>
+                        <div class="pt-1">
+                            <button type="button" onclick="clAdd()" class="text-[12px] px-4 py-2 rounded-md border border-[#0070f3]/50 text-[#52a8ff] hover:bg-[#0070f3]/10 inline-flex items-center gap-1.5"><i class="ph ph-plus"></i> Dodaj wpis</button>
+                        </div>
+                    </div>
+
+                    <div id="cl-list" class="space-y-2"><div class="text-zinc-600 text-xs">Ładuję wpisy…</div></div>
+                </div>
                 </div>
 
                 <div data-psec="umowa" class="hidden">
@@ -635,6 +693,158 @@
             if (name === 'intake') loadIntakeAdmin();
             if (name === 'spowiednik') loadSpowiednik();
             if (name === 'testy') { renderTkAdmin(); loadTkIssues(true); }
+            if (name === 'changelog') loadChangelog();
+        }
+
+        // ============ CHANGELOG (changelog_entries — RLS team, CRUD bezpośrednio jak wfa_notes) ============
+        let changelog = [];
+        const clv = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
+        function clVersionToday() {
+            const n = new Date();
+            const v = n.getFullYear().toString() + String(n.getMonth()+1).padStart(2,'0') + String(n.getDate()).padStart(2,'0') + '01';
+            const el = document.getElementById('cl-version'); if (el) el.value = v;
+        }
+        async function loadChangelog() {
+            const box = document.getElementById('cl-list');
+            // GATE A (F, def-in-depth): projectId z URL — waliduj uuid przed .or() (bez tego przecinek/nawias
+            // mógłby rozszerzyć filtr PostgREST; RLS team i tak gate'uje, ale nie polegamy na tym).
+            const isUuid = /^[0-9a-f-]{36}$/i.test(projectId || '');
+            const filter = isUuid ? ('project_id.eq.' + projectId + ',project_id.is.null') : 'project_id.is.null';
+            const { data, error } = await supabaseClient.from('changelog_entries')
+                .select('*')
+                .or(filter)
+                .order('created_at', { ascending: false });
+            if (error) { if (box) box.innerHTML = `<div class="text-[#f26d78] text-xs">Błąd: ${escapeHtml(error.message)}</div>`; return; }
+            changelog = data || [];
+            renderChangelog();
+        }
+        function clCatChip(cat) {
+            const map = {
+                added:['dodano','#62c073','#45a557'], changed:['zmieniono','#52a8ff','#0070f3'],
+                deprecated:['wycofywane','#f5b955','#f5a623'], removed:['usunięto','#f08a92','#e5484d'],
+                fixed:['poprawka','#8ab4f8','#3a5cc0'], security:['bezpieczeństwo','#f5d76e','#c9a227'],
+            };
+            const m = map[cat] || [cat || '—','#a1a1aa','#333'];
+            return `<span class="text-[10px] px-2 py-0.5 rounded-md border" style="color:${m[1]};border-color:${m[2]}66">${escapeHtml(m[0])}</span>`;
+        }
+        function clPubChip(pc) {
+            const map = { new:['Nowość','#62c073','#45a557'], improved:['Ulepszenie','#52a8ff','#0070f3'], fixed:['Poprawka','#a1a1aa','#555'], security:['Bezpieczeństwo','#f5d76e','#c9a227'] };
+            const m = map[pc]; if (!m) return '';
+            return `<span class="text-[10px] px-2 py-0.5 rounded-md border" style="color:${m[1]};border-color:${m[2]}66">${escapeHtml(m[0])}</span>`;
+        }
+        function renderChangelog() {
+            const tc = document.getElementById('ptab-changelog-cnt'); if (tc) tc.textContent = changelog.length ? '(' + changelog.length + ')' : '';
+            const box = document.getElementById('cl-list'); if (!box) return;
+            if (!changelog.length) { box.innerHTML = `<div class="text-zinc-600 text-xs">Brak wpisów. Dodaj pierwszą zmianę w formularzu wyżej.</div>`; return; }
+            box.innerHTML = changelog.map(c => {
+                const isPublic = c.visibility === 'public';
+                const visChip = isPublic
+                    ? `<span class="text-[10px] px-2 py-0.5 rounded-md border text-[#62c073] border-[#45a557]/40">opublikowany</span>`
+                    : `<span class="text-[10px] px-2 py-0.5 rounded-md border text-zinc-400 border-[#333]">szkic / wewnętrzny</span>`;
+                const globalBadge = !c.project_id ? `<span class="text-[10px] px-2 py-0.5 rounded-md border text-[#f5b955] border-[#f5a623]/40"><i class="ph ph-globe"></i> GLOBALNA</span>` : '';
+                const meta = [c.area ? escapeHtml(c.area) : '', c.version ? 'v' + escapeHtml(c.version) : '', fmtDateTime(c.created_at)].filter(Boolean).join(' · ');
+                const pubBox = (c.public_summary && c.public_summary.trim())
+                    ? `<div class="mt-2 bg-[#0b1620] border border-[#0070f3]/25 rounded-md px-3 py-2">
+                        <div class="text-[10px] text-[#52a8ff] mb-1 flex items-center gap-1.5">${clPubChip(c.public_category)} Treść dla klienta</div>
+                        <div class="text-[12px] text-zinc-300 break-words">${escapeHtml(c.public_summary)}</div></div>`
+                    : '';
+                const actions = `<div class="flex flex-wrap gap-1.5 mt-2.5">
+                    ${isPublic
+                        ? `<button onclick="clUnpublish('${c.id}')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white">Cofnij publikację</button>`
+                        : `<button onclick="clPublish('${c.id}')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#45a557]/50 text-[#62c073] hover:bg-[#45a557]/10">Publikuj dla klienta</button>`}
+                    <button onclick="clToggleEdit('${c.id}')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#333] text-zinc-400 hover:text-white">Edytuj</button>
+                    <button onclick="clDelete('${c.id}')" class="text-[11px] px-2.5 py-1 rounded-md border border-[#e5484d]/40 text-[#f08a92] hover:bg-[#e5484d]/10">Usuń</button>
+                </div>`;
+                const pcOpts = [['','—'],['new','Nowość'],['improved','Ulepszenie'],['fixed','Poprawka'],['security','Bezpieczeństwo']]
+                    .map(o => `<option value="${o[0]}"${(c.public_category||'') === o[0] ? ' selected' : ''}>${o[1]}</option>`).join('');
+                const editBox = `<div id="cl-edit-${c.id}" class="hidden mt-3 pt-3 border-t border-[#1f1f1f] space-y-2">
+                    <input id="cl-e-title-${c.id}" class="fld" value="${escapeHtml(c.title)}" placeholder="Tytuł">
+                    <textarea id="cl-e-note-${c.id}" rows="2" class="fld resize-y" placeholder="Notatka techniczna">${escapeHtml(c.admin_note)}</textarea>
+                    <textarea id="cl-e-public-${c.id}" rows="2" class="fld resize-y" placeholder="Treść dla klienta (puste = tylko dla Ciebie)">${escapeHtml(c.public_summary || '')}</textarea>
+                    <div class="flex gap-2 items-center flex-wrap">
+                        <select id="cl-e-pubcat-${c.id}" class="fld" style="width:auto">${pcOpts}</select>
+                        <button onclick="clSaveEdit('${c.id}')" class="text-[11px] px-3 py-1.5 rounded-md border border-[#0070f3]/50 text-[#52a8ff] hover:bg-[#0070f3]/10">Zapisz zmiany</button>
+                    </div>
+                </div>`;
+                return `<div class="bg-[#0d0d0d] border border-[#1f1f1f] rounded-md px-3.5 py-3">
+                    <div class="flex items-center gap-1.5 flex-wrap mb-1.5">${clCatChip(c.category)}${visChip}${globalBadge}</div>
+                    <div class="text-[13px] text-white font-medium break-words">${escapeHtml(c.title)}</div>
+                    <div class="text-[12px] text-zinc-400 mt-1 break-words whitespace-pre-wrap">${escapeHtml(c.admin_note || '')}</div>
+                    ${pubBox}
+                    <div class="text-[10px] text-zinc-600 mt-2">${meta}</div>
+                    ${actions}
+                    ${editBox}
+                </div>`;
+            }).join('');
+        }
+        async function clAdd() {
+            const title = clv('cl-title'); const admin_note = clv('cl-admin-note');
+            if (!title) { showToast('Podaj tytuł', 'error'); return; }
+            if (!admin_note) { showToast('Uzupełnij notatkę techniczną', 'error'); return; }
+            const isGlobal = document.getElementById('cl-global').checked;
+            const rec = {
+                project_id: isGlobal ? null : projectId,
+                platform: (project && project.platform) || 'tn-app',
+                version: clv('cl-version') || null,
+                category: document.getElementById('cl-category').value,
+                public_category: document.getElementById('cl-pubcat').value || null,
+                area: clv('cl-area') || null,
+                title, admin_note,
+                public_summary: clv('cl-public') || null,
+                media_url: clv('cl-media') || null,
+                cta_url: clv('cl-cta') || null,
+                visibility: 'admin',
+                created_by: 'tomek',
+            };
+            const { error } = await supabaseClient.from('changelog_entries').insert(rec);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            ['cl-title','cl-area','cl-admin-note','cl-public','cl-version','cl-media','cl-cta'].forEach(id => { const e = document.getElementById(id); if (e) e.value = ''; });
+            document.getElementById('cl-global').checked = false;
+            document.getElementById('cl-pubcat').value = '';
+            document.getElementById('cl-category').value = 'added';
+            showToast('Wpis dodany', 'success');
+            logActivity('changelog_add', 'Changelog: ' + title.slice(0,60));
+            loadChangelog();
+        }
+        async function clPublish(id) {
+            const c = changelog.find(x => x.id === id); if (!c) return;
+            if (!(c.public_summary && c.public_summary.trim()) || !c.public_category) { showToast('Uzupełnij treść dla klienta i kategorię', 'error'); return; }
+            const { error } = await supabaseClient.from('changelog_entries').update({ visibility:'public', published_at: new Date().toISOString() }).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            showToast('Opublikowano dla klienta', 'success');
+            logActivity('changelog_publish', 'Opublikowano: ' + (c.title||'').slice(0,60));
+            loadChangelog();
+        }
+        async function clUnpublish(id) {
+            const { error } = await supabaseClient.from('changelog_entries').update({ visibility:'admin', published_at: null }).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            showToast('Cofnięto publikację', 'success');
+            loadChangelog();
+        }
+        async function clDelete(id) {
+            if (!confirm('Usunąć ten wpis changelog? Tej operacji nie można cofnąć.')) return;
+            const { error } = await supabaseClient.from('changelog_entries').delete().eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            showToast('Usunięto', 'success');
+            loadChangelog();
+        }
+        function clToggleEdit(id) { const el = document.getElementById('cl-edit-' + id); if (el) el.classList.toggle('hidden'); }
+        async function clSaveEdit(id) {
+            const t = document.getElementById('cl-e-title-' + id), n = document.getElementById('cl-e-note-' + id),
+                  p = document.getElementById('cl-e-public-' + id), pc = document.getElementById('cl-e-pubcat-' + id);
+            if (!t || !n || !p || !pc) return;
+            const title = t.value.trim();
+            if (!title) { showToast('Tytuł nie może być pusty', 'error'); return; }
+            const patch = {
+                title,
+                admin_note: n.value.trim(),
+                public_summary: p.value.trim() || null,
+                public_category: pc.value || null,
+            };
+            const { error } = await supabaseClient.from('changelog_entries').update(patch).eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            showToast('Zapisano', 'success');
+            loadChangelog();
         }
 
         // ============ DANE OD KLIENTA (intake — read-only podgląd admina) ============
