@@ -196,7 +196,8 @@
         }
 
         /* Testy aplikacji — czat „spowiednika testów" */
-        .tk-chat { padding:16px; max-height:54vh; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+        .tk-chat { padding:16px; height:64vh; max-height:660px; min-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+        @media (max-width:600px){ .tk-chat { height:66vh; min-height:300px; } }
         .tk-b { max-width:84%; padding:10px 13px; border-radius:13px; font-size:13.5px; line-height:1.55; white-space:pre-wrap; word-wrap:break-word; overflow-wrap:anywhere; }
         .tk-b.ai { align-self:flex-start; background:#151517; border:1px solid #232327; color:#dcdce0; border-bottom-left-radius:4px; }
         .tk-b.me { align-self:flex-end; background:#0d3a6b; border:1px solid #14538f; color:#eaf3ff; border-bottom-right-radius:4px; }
@@ -218,6 +219,17 @@
         .tk-ic { flex-shrink:0; width:38px; height:38px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:18px; cursor:pointer; border:none; }
         .tk-ic.att { background:#1a1a1d; color:#a1a1aa; } .tk-ic.att:hover { color:#52a8ff; }
         .tk-ic.snd { background:#0070f3; color:#fff; } .tk-ic.snd:hover { background:#0a84ff; } .tk-ic.snd:disabled { opacity:.4; cursor:default; }
+        .tk-ic.cap { background:#1a1a1d; color:#a1a1aa; } .tk-ic.cap:hover { color:#52a8ff; } .tk-ic.cap:disabled { opacity:.4; cursor:default; }
+        /* Rozwiń na cały ekran (#3) */
+        .tk-head-r { display:flex; align-items:center; gap:9px; flex-shrink:0; }
+        .tk-expand { background:#1a1a1d; color:#a1a1aa; border:1px solid #26262b; border-radius:8px; width:33px; height:33px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; transition:color .15s; }
+        .tk-expand:hover { color:#52a8ff; }
+        body.tk-fs-open { overflow:hidden; }
+        #c-testy.fs { position:fixed; inset:0; z-index:2000; margin:0; background:#050506; padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 12px); display:flex; flex-direction:column; overflow:hidden; }
+        #c-testy.fs .sdesc, #c-testy.fs .tk-issues { display:none; }
+        #c-testy.fs .shead { flex-shrink:0; margin-bottom:12px; }
+        #c-testy.fs .tk-chat { flex:1 1 auto; height:auto; max-height:none; min-height:0; }
+        #c-testy.fs .tk-shots, #c-testy.fs .tk-compose, #c-testy.fs .tk-hint, #c-testy.fs .tk-endrow { flex-shrink:0; }
         .tk-endrow { margin-top:10px; text-align:center; }
         .tk-end { background:none; border:none; color:#6b6b74; font-size:12.5px; cursor:pointer; text-decoration:underline; text-underline-offset:2px; }
         .tk-end:hover { color:#93939c; }
@@ -299,16 +311,17 @@
 
         <!-- 2b. Testy aplikacji: czat „spowiednika testów" (widoczny gdy krok testów aktywny) -->
         <section class="hidden" id="c-testy">
-            <div class="shead"><h2>Testy aplikacji</h2><span class="scount" id="ct-count"></span></div>
+            <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Rozwiń czat na cały ekran" aria-label="Rozwiń czat na cały ekran"><i class="ph ph-arrows-out"></i></button></span></div>
             <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
             <div class="tk-chat card" id="ct-chat"></div>
             <div class="tk-shots" id="ct-shots"></div>
             <div class="tk-compose" id="ct-compose">
-                <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu" aria-label="Dodaj zrzut ekranu"><i class="ph ph-image"></i></button>
+                <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu z pliku" aria-label="Dodaj zrzut ekranu z pliku"><i class="ph ph-image"></i></button>
+                <button class="tk-ic cap" id="ct-capture" type="button" title="Zrób zrzut ekranu teraz" aria-label="Zrób zrzut ekranu teraz"><i class="ph ph-monitor"></i></button>
                 <textarea id="ct-input" rows="1" aria-label="Napisz, co zauważyłeś w aplikacji" placeholder="Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)"></textarea>
                 <button class="tk-ic snd" id="ct-send" type="button" title="Wyślij" aria-label="Wyślij wiadomość"><i class="ph ph-paper-plane-tilt"></i></button>
             </div>
-            <p class="tk-hint">Zrzut ekranu: kliknij ikonę obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij plik tutaj.</p>
+            <p class="tk-hint">Zrzut ekranu: zrób go teraz ikoną monitora, dodaj z pliku ikoną obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij tutaj.</p>
             <div class="tk-endrow"><button class="tk-end" id="ct-end" type="button">To wszystko — zakończ testy</button></div>
             <div class="tk-issues hidden" id="ct-issues"></div>
             <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" class="hidden">
@@ -947,11 +960,15 @@
     }
 
     // Upload sekwencyjny: init → PUT (signed url, progres) → done
-    function putFile(url, file, onProgress) {
+    function putFile(url, file, onProgress, contentType) {
         return new Promise((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.open('PUT', url);
-            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            // SEC-CHECK: bucket wfa-test-shots dopuszcza WYŁĄCZNIE image/png|jpeg|webp (SEC-R3-UPLOAD).
+            // Gdy przeglądarka nie ustawi file.type (drag z aplikacji, część źródeł schowka), fallback
+            // 'application/octet-stream' był ODRZUCANY przez bucket → upload padał. Dlatego przyjmujemy
+            // jawny contentType od wywołującego (uploadShot normalizuje do realnego image/*).
+            xhr.setRequestHeader('Content-Type', contentType || file.type || 'application/octet-stream');
             xhr.upload.onprogress = e => { if (e.lengthComputable) onProgress(Math.round(e.loaded / e.total * 100)); };
             xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve() : reject(new Error('PUT ' + xhr.status));
             xhr.onerror = () => reject(new Error('network'));
@@ -1068,21 +1085,30 @@
         });
         box.querySelectorAll('.rm').forEach(el => el.onclick = () => { testPending.splice(+el.dataset.i, 1); renderPending(); });
     }
+    // Dozwolone typy zrzutu = allowed_mime_types bucketu wfa-test-shots (png/jpeg/webp).
+    const SHOT_MIME = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
     async function uploadShot(file) {
         if (previewMode || !file) return;
         const ext = (file.name.split('.').pop() || '').toLowerCase();
-        if (!(['png','jpg','jpeg','webp'].includes(ext) || /^image\//.test(file.type || ''))) return;
+        const ftype = (file.type || '').toLowerCase();
+        // Ustal DOCELOWY Content-Type = realny image/* (NIGDY octet-stream). Priorytet: rozszerzenie,
+        // potem file.type (jeśli już dozwolony), a jako ostateczność image/png (np. paste/getDisplayMedia
+        // bez nazwy). Inny obraz niż png/jpg/webp (np. gif/bmp) → odrzucamy z jasnym komunikatem.
+        let ctype = SHOT_MIME[ext] || (['image/png','image/jpeg','image/webp'].includes(ftype) ? ftype : '');
+        if (!ctype && /^image\//.test(ftype)) ctype = ''; // gif/bmp/svg — świadomie odrzucane (bezpieczeństwo)
+        if (!ctype && !ext && !ftype) ctype = 'image/png'; // surowy blob bez metadanych (np. zrzut ekranu)
+        if (!ctype) { tkAppend('assistant', 'Mogę przyjąć tylko obraz w formacie PNG, JPG lub WEBP.', []); return; }
         if (file.size > 15 * 1024 * 1024) { tkAppend('assistant', 'Ten zrzut jest za duży (max 15 MB).', []); return; }
-        let fname = file.name || '';
-        if (!/\.(png|jpe?g|webp)$/i.test(fname)) fname = 'zrzut.' + ((file.type || 'image/png').split('/')[1] || 'png').replace('jpeg', 'jpg');
+        const extForType = ctype === 'image/jpeg' ? 'jpg' : ctype === 'image/webp' ? 'webp' : 'png';
+        let fname = /\.(png|jpe?g|webp)$/i.test(file.name || '') ? file.name : ('zrzut.' + extForType);
         const ph = { url: URL.createObjectURL(file), uploading: true, path: null };
         testPending.push(ph); renderPending();
         try {
-            const initRes = await callTest({ action: 'upload_init', filename: fname, size_bytes: file.size, mime: file.type || '' });
+            const initRes = await callTest({ action: 'upload_init', filename: fname, size_bytes: file.size, mime: ctype });
             const init = await initRes.json().catch(() => ({}));
             if (!initRes.ok) throw new Error(init.message || 'init');
-            await putFile(init.upload_url, file, () => {});
-            const doneRes = await callTest({ action: 'upload_done', path: init.path, filename: fname, size_bytes: file.size, mime: file.type || '' });
+            await putFile(init.upload_url, file, () => {}, ctype);
+            const doneRes = await callTest({ action: 'upload_done', path: init.path, filename: fname, size_bytes: file.size, mime: ctype });
             const done = await doneRes.json().catch(() => ({}));
             if (!doneRes.ok) throw new Error('done');
             ph.uploading = false; ph.path = done.path; if (done.url) ph.url = done.url; renderPending();
@@ -1124,14 +1150,60 @@
             if (d.issues) renderTestIssues(d.issues);
         } catch (e) { tkHideTyping(); } finally { testBusy = false; }
     }
+    // ── Zrzut ekranu „od razu" (#4): getDisplayMedia → klatka na canvas → PNG → ta sama ścieżka co plik.
+    async function captureScreen() {
+        if (previewMode) return;
+        const md = navigator.mediaDevices;
+        if (!md || !md.getDisplayMedia) {
+            tkAppend('assistant', 'Twoja przeglądarka nie wspiera robienia zrzutu — dodaj plik ikoną obrazka albo wklej zrzut przez Ctrl+V.', []);
+            return;
+        }
+        let stream;
+        try {
+            stream = await md.getDisplayMedia({ video: true, audio: false });
+        } catch (e) {
+            // Brak zgody / anulowanie / brak wsparcia — graceful fallback.
+            tkAppend('assistant', 'Nie zrobiłem zrzutu (brak zgody albo anulowano). Możesz dodać plik ikoną obrazka lub wkleić zrzut przez Ctrl+V.', []);
+            return;
+        }
+        try {
+            const video = document.createElement('video');
+            video.srcObject = stream; video.muted = true; video.playsInline = true;
+            await video.play().catch(() => {});
+            await new Promise(r => setTimeout(r, 250)); // ustabilizuj klatkę
+            const w = video.videoWidth || 1280, h = video.videoHeight || 720;
+            const canvas = document.createElement('canvas'); canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(video, 0, 0, w, h);
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+            stream.getTracks().forEach(t => t.stop());
+            if (!blob) { tkAppend('assistant', 'Nie udało się zapisać zrzutu — spróbuj ponownie.', []); return; }
+            uploadShot(new File([blob], 'zrzut-ekranu.png', { type: 'image/png' }));
+        } catch (e) {
+            try { stream.getTracks().forEach(t => t.stop()); } catch (_) {}
+            tkAppend('assistant', 'Nie udało się zrobić zrzutu — spróbuj ponownie albo dodaj plik ikoną obrazka.', []);
+        }
+    }
+    // ── Tryb pełnoekranowy czatu (#3): overlay bez utraty stanu rozmowy (tylko toggle klasy).
+    function toggleTestFullscreen(on) {
+        const sec = $('c-testy'); if (!sec) return;
+        const fs = (on === undefined) ? !sec.classList.contains('fs') : on;
+        sec.classList.toggle('fs', fs);
+        document.body.classList.toggle('tk-fs-open', fs);
+        const btn = $('ct-expand'), ic = btn && btn.querySelector('i');
+        if (ic) ic.className = fs ? 'ph ph-arrows-in' : 'ph ph-arrows-out';
+        if (btn) { btn.title = btn.ariaLabel = fs ? 'Zwiń czat' : 'Rozwiń czat na cały ekran'; }
+        const box = $('ct-chat'); if (box) box.scrollTop = box.scrollHeight;
+    }
     function lockTestCompose() {
-        ['ct-attach','ct-send','ct-end','ct-input'].forEach(id => { const el = $(id); if (el) { el.disabled = true; el.style.opacity = '.5'; } });
+        ['ct-attach','ct-capture','ct-send','ct-end','ct-input'].forEach(id => { const el = $(id); if (el) { el.disabled = true; el.style.opacity = '.5'; } });
         const inp = $('ct-input'); if (inp) inp.placeholder = 'Podgląd — tu pisze klient';
     }
     (function bindTesty() {
         const inp = $('ct-input'); if (!inp) return;
         $('ct-attach').onclick = () => { if (!previewMode) $('ct-file').click(); };
         $('ct-file').onchange = e => { Array.from(e.target.files || []).forEach(uploadShot); e.target.value = ''; };
+        const capBtn = $('ct-capture'); if (capBtn) capBtn.onclick = () => { if (!previewMode) captureScreen(); };
+        const expBtn = $('ct-expand'); if (expBtn) expBtn.onclick = () => toggleTestFullscreen();
         $('ct-send').onclick = sendTest;
         $('ct-end').onclick = endTest;
         inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; });
@@ -1144,6 +1216,7 @@
         testy.addEventListener('dragover', e => { e.preventDefault(); comp.classList.add('drag'); });
         testy.addEventListener('dragleave', e => { if (e.target === testy) comp.classList.remove('drag'); });
         testy.addEventListener('drop', e => { e.preventDefault(); comp.classList.remove('drag'); Array.from((e.dataTransfer && e.dataTransfer.files) || []).forEach(f => { if ((f.type || '').startsWith('image/')) uploadShot(f); }); });
+        document.addEventListener('keydown', e => { if (e.key === 'Escape' && testy.classList.contains('fs')) toggleTestFullscreen(false); });
     })();
 
     if (!token || !/^[0-9a-f]{32}$/i.test(token)) { show('notoken'); }
