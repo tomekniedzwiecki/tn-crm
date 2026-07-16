@@ -107,8 +107,12 @@ Konsekwencje architektoniczne:
 4. Nowe kolumny (migracja `20260715_wf2_produkcja_fundament`): `wf2_projects.platform_shop_id`
    + `deadline_at`; `wf2_products.platform_product_id/checkout_url/platform_page_url`;
    `wf2_step_defs.milestone_label`; tabela `wf2_notes` (uwagi Tomka → wstrzykiwane do promptów).
-5. OCZEKUJEMY od developera: base URL, autoryzacja (klucz per partner?), format odpowiedzi.
-   Warstwę kliencką piszemy jako edge `wf2-platform` (adapter — jedyne miejsce znające API).
+5. ✅ OTRZYMANE 16.07: base URL `https://gateway.trevio.pl/partner/v1`, auth `X-Api-Key`
+   (klucz per partner = edge secret `ecom_platform_API`), docs maszynowe `GET /docs`,
+   limit 120 req/min. Adapter edge **`wf2-platform` WDROŻONY** (gate jak wf2-gen: team JWT
+   lub x-wf2-secret; na razie tryb `raw`). **Pełna referencja + wyniki testów + LUKI
+   (PUT html not implemented = blokada landingów; POST pages 502; produkt tylko name+price):
+   `docs/zbuduje/platforma-api/README.md`**.
    **PYTANIA PŁATNOŚCIOWE (15.07, po decyzji o pasku metod na landingach):** (a) czy checkout
    wspiera POBRANIE (COD)? — cała narracja risk-reversal na landingach na tym stoi;
    (b) dokładna lista metod Autopay w checkoucie (BLIK? karty Visa/MC? pay-by-link?) —
