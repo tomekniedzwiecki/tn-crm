@@ -222,8 +222,12 @@
         .tk-ic.cap { background:#1a1a1d; color:#a1a1aa; } .tk-ic.cap:hover { color:#52a8ff; } .tk-ic.cap:disabled { opacity:.4; cursor:default; }
         /* Rozwiń na cały ekran (#3) */
         .tk-head-r { display:flex; align-items:center; gap:9px; flex-shrink:0; }
-        .tk-expand { background:#1a1a1d; color:#a1a1aa; border:1px solid #26262b; border-radius:8px; width:33px; height:33px; display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:16px; transition:color .15s; }
-        .tk-expand:hover { color:#52a8ff; }
+        .tk-expand { display:flex; align-items:center; gap:6px; background:#12233d; color:#8fc0ff; border:1px solid #1c4176; border-radius:8px; height:33px; padding:0 12px; cursor:pointer; font-size:12.5px; font-weight:600; line-height:1; transition:background .15s, color .15s; }
+        .tk-expand:hover { background:#173254; color:#bcdcff; }
+        .tk-expand i { font-size:15px; }
+        .tk-tip { display:block; margin:9px 0 2px auto; background:none; border:none; color:#5f7fa8; font-size:12px; cursor:pointer; padding:2px 2px; text-align:right; }
+        .tk-tip:hover { color:#8fc0ff; text-decoration:underline; }
+        .tk-tip:empty, #c-testy.fs .tk-tip { display:none; }
         body.tk-fs-open { overflow:hidden; }
         #c-testy.fs { position:fixed; inset:0; z-index:2000; margin:0; background:#050506; padding:calc(env(safe-area-inset-top,0px) + 14px) 16px calc(env(safe-area-inset-bottom,0px) + 12px); display:flex; flex-direction:column; overflow:hidden; }
         #c-testy.fs .sdesc, #c-testy.fs .tk-issues { display:none; }
@@ -311,9 +315,10 @@
 
         <!-- 2b. Testy aplikacji: czat „spowiednika testów" (widoczny gdy krok testów aktywny) -->
         <section class="hidden" id="c-testy">
-            <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Rozwiń czat na cały ekran" aria-label="Rozwiń czat na cały ekran"><i class="ph ph-arrows-out"></i></button></span></div>
+            <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
             <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
             <div class="tk-chat card" id="ct-chat"></div>
+            <button class="tk-tip" id="ct-tip" type="button">💬 Za mało miejsca? Możesz powiększyć to okno na cały ekran</button>
             <div class="tk-shots" id="ct-shots"></div>
             <div class="tk-compose" id="ct-compose">
                 <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu z pliku" aria-label="Dodaj zrzut ekranu z pliku"><i class="ph ph-image"></i></button>
@@ -1189,9 +1194,10 @@
         const fs = (on === undefined) ? !sec.classList.contains('fs') : on;
         sec.classList.toggle('fs', fs);
         document.body.classList.toggle('tk-fs-open', fs);
-        const btn = $('ct-expand'), ic = btn && btn.querySelector('i');
+        const btn = $('ct-expand'), ic = btn && btn.querySelector('i'), lbl = $('ct-expand-lbl');
         if (ic) ic.className = fs ? 'ph ph-arrows-in' : 'ph ph-arrows-out';
-        if (btn) { btn.title = btn.ariaLabel = fs ? 'Zwiń czat' : 'Rozwiń czat na cały ekran'; }
+        if (lbl) lbl.textContent = fs ? 'Zwiń' : 'Powiększ';
+        if (btn) { btn.title = btn.ariaLabel = fs ? 'Zwiń czat do sekcji' : 'Powiększ czat na cały ekran'; }
         const box = $('ct-chat'); if (box) box.scrollTop = box.scrollHeight;
     }
     function lockTestCompose() {
@@ -1204,6 +1210,7 @@
         $('ct-file').onchange = e => { Array.from(e.target.files || []).forEach(uploadShot); e.target.value = ''; };
         const capBtn = $('ct-capture'); if (capBtn) capBtn.onclick = () => { if (!previewMode) captureScreen(); };
         const expBtn = $('ct-expand'); if (expBtn) expBtn.onclick = () => toggleTestFullscreen();
+        const tipBtn = $('ct-tip'); if (tipBtn) tipBtn.onclick = () => toggleTestFullscreen(true);
         $('ct-send').onclick = sendTest;
         $('ct-end').onclick = endTest;
         inp.addEventListener('input', () => { inp.style.height = 'auto'; inp.style.height = Math.min(inp.scrollHeight, 120) + 'px'; });
