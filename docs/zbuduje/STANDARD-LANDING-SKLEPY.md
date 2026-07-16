@@ -47,6 +47,14 @@ Agent Claude: dane, spec, montaż markerowy, weryfikacja, fixy integracyjne <5% 
 **Z5 — UCZCIWOŚĆ = KONWERSJA (rynek PL).** Dane twarde 1:1 ze snapshotu aukcji, uczciwe N
 opinii, jeden prawdziwy minus w porównaniu, zero fałszywej pilności. Szczegóły: sekcja 4.
 
+**Z6 — GŁÓWNE ZASADY, NIE SZABLON (Tomek 16.07: „będę tworzyć setki landingów i chcę, aby
+były unikatowe").** Standard podaje ZASADY (jasne tła, jeden ciepły akcent na CTA, wierność
+produktu, prawdziwe dane, mikro-oferta w hero, mobile = mniej niż desktop) i CEL — nie
+narzuca layoutu, kompozycji ani konkretnego wyglądu. Briefy makiet = brief celu (F2 🥇);
+layouty poprzednich produktów są inspiracją POZIOMU jakości, NIGDY wzorem do kopiowania.
+Świętość makiety (Z2) działa W OBRĘBIE jednego landingu (wierność przeniesienia po akcepcie);
+między landingami rządzi unikatowość (spójne z anty-doorway, sekcja 5 GEO).
+
 ---
 
 ## 1. FLOW FABRYKI (fazy F0→F8; wykonawca = agent, koder = gpt-5.6-sol)
