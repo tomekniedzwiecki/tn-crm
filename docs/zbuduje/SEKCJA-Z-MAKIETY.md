@@ -94,10 +94,17 @@ grafika do poprawy, nie „sufit danych".
   wypadają poza porównywany (nakładający się od góry) kadr → SSIM ~0.72 mimo wiernego layoutu.
   Rekomendacja narzędziowa: dla mobile **letterbox obu obrazów do wspólnego aspektu** albo
   ocena strukturalna; próg DONE mobile realnie ~0.72–0.80. **Werdykt wizualny rządzi.**
-- **SSIM desktop capowany różnicą ASSETU — NIEAKTUALNE po scene-from-mockup (STANDARD F3.1):**
-  tło strony = ta sama scena co na makiecie, więc cap znika. Jeśli SSIM niski, przyczyną jest
-  kod (→ rewrite) albo grafika (→ regeneracja) — nie „sufit danych". (Historycznie: przy
-  packshocie zamiast lifestyle sufit bywał ~0.80–0.82.)
+- **SSIM przy scene-from-mockup — DOPRECYZOWANE (hero Uśmieszka 16.07):** scena z OSOBNEJ
+  generacji jest „ta sama" semantycznie, ale NIE pikselowo (inne ułożenie rekwizytów/faktur)
+  → SSIM całej sekcji ma naturalny sufit ~0.68–0.75 mimo wiernego kodu. Progi twarde (0.85/0.78)
+  stosować do sekcji, których assety są 1:1 (packshoty, UGC); dla sekcji z generowaną sceną:
+  oceniaj SSIM KIERUNKOWO (rosnący = lepiej) + werdykt vision na kompozycie decyduje o DONE,
+  a diffy sprawdzaj na WARSTWIE TREŚCI (kolumna copy/karty — tam kod odpowiada za piksele).
+  Sufit zniknie dopiero, gdy tło = dokładnie te same piksele (inpainting makiety — do zbadania).
+- **Pomiar hero ze `svh`: viewport-diff.py (NOWE narzędzie)** — render-diff.py ma domyślny
+  viewport 2400px wysokości, co rozciąga sekcje `min-height:100svh` i psuje crop `cover`
+  (fałszywy SSIM). Pierwszy ekran porównuj: `viewport-diff.py <plik> <makieta> 1536 1024`
+  (viewport = wymiary makiety, force-reveal, zrzut bez captureBeyondViewport).
 - **Kontrakt zmiennych CSS w briefingu (jednostki!).** Koder generuje własne nazwy/typy
   (np. `--sun-p` jako `%`), a istniejący JS podaje `0..1` → animacja martwa. W briefingu
   podaj DOKŁADNY kontrakt hooków (nazwa, zakres, jednostka), albo reconciluj przy montażu
