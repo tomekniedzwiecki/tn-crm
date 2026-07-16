@@ -72,9 +72,23 @@ push zablokowany):
    a w wiadomości commita / świeżym wpisie BUILDLOG brak markera `SEC-CHECK: <opis co sprawdzono>`
    → BLOKADA z komunikatem „zmiana dotyka wrażliwej powierzchni (X) — wymagany GATE A (zakresowy
    audyt) przed pushem; dodaj SEC-CHECK: po wykonaniu".
-4. **Klasyfikator większej zmiany** (GATE B): jeśli diff dotyka `public/js`/`functions`/`migrations`
-   → wymaga świeżego wpisu E2E w BUILDLOG dla HEAD (marker `E2E: <n> passed`) LUB uruchamia smoke
-   (gdy `E2E_PASSWORD` w env). Brak dowodu zielonych testów → BLOKADA.
+4. **Klasyfikator większej zmiany** (GATE B — TWARDY): jeśli diff dotyka `public/js`/`functions`/`migrations`/
+   kluczowego HTML-CSS → marker `E2E: <n> passed` (commit/BUILDLOG HEAD, dowód pełnej suity) = przejście.
+   Bez markera preflight **REALNIE odpala smoke** `playwright test --grep @smoke` (BASE_URL=prod, deadline 90 s):
+   zielone = przejście, czerwone/timeout = BLOKADA. Hasło kont testowych bierze z env `E2E_PASSWORD` **lub
+   Windows Credential Manager** (P/Invoke `advapi32!CredReadW`, target „<AppName> E2E:password"; zapis:
+   `npm run set-e2e-secret` — losowe hasło, NIGDY do repo/logów). Brak hasła (inne środowisko) → smoke pominięty
+   + WARN, wymagany marker. Wcześniej (do 15.07) GATE B był PÓŁTWARDY — polegał na markerze deklarowanym przez
+   sesję (sesje nie miały hasła w env → nie mogły odpalić suity). Od 16.07 (decyzja Tomka „GATE B twardy") sesje
+   czytają hasło z CredMan → smoke odpala się realnie w hooku.
+
+   **Zestaw `@smoke`** (szybki, twardy podzbiór — kryteria): (a) BEZ tworzenia świeżych kont per-test,
+   (b) BEZ zależności od stanu przygotowanego SQL-em wokół suity (wygasły trial / operator / canceled),
+   (c) < ~60 s razem. Rekomendowane pokrycie: landing 200 + tytuł · ceny z `public_prices` (edge żyje) ·
+   `?ref` localStorage · płatna bramka fail-closed bez sesji → 401 · detektor nachodzeń/​h-scrolla na KLUCZOWYM
+   widoku (kilka szerokości). Pełna ścieżka `402` (paywall przy wygasłym trialu) zostaje w PEŁNEJ suicie (wymaga
+   fixture-stanu). Preflight ustawia `E2E_SMOKE=1` → `global-setup` ogranicza fixture do minimum (np. tylko user A,
+   reużywalny, zero maili). Konta smoke = reużywalny fixture (idempotentny signup), nie akumulują się.
 5. Migracja w diffie bez odpowiadającego wpisu/aplikacji → ostrzeżenie (migracja PRZED pushem kodu).
 
 ### Instalacja: `scripts/install-hooks.sh`
