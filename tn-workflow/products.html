@@ -162,6 +162,10 @@
                         <img id="product-image-preview-img" class="w-24 h-24 object-cover rounded-lg border border-zinc-800" src="">
                     </div>
                 </div>
+                <div>
+                    <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Link TikTok</label>
+                    <input type="url" id="product-tiktok-url" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="https://www.tiktok.com/@user/video/...">
+                </div>
 
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Screenshot do raportów (PDF)</label>
@@ -204,6 +208,14 @@
                 </button>
             </div>
         </div>
+    </div>
+
+    <!-- TikTok Video Modal -->
+    <div id="tiktok-modal" class="hidden fixed inset-0 bg-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" onclick="if(event.target===this)closeTiktokModal()">
+        <button onclick="closeTiktokModal()" class="absolute top-4 right-4 text-zinc-400 hover:text-white transition-colors z-10" title="Zamknij">
+            <i class="ph ph-x text-2xl"></i>
+        </button>
+        <div id="tiktok-modal-frame" class="relative bg-black rounded-xl overflow-hidden" style="aspect-ratio:9/16;max-height:80vh;width:min(90vw,45vh);"></div>
     </div>
 
     <script>
@@ -339,6 +351,30 @@
             'delivered': { text: 'Dostarczony', class: 'bg-emerald-500/20 text-emerald-400' }
         };
 
+        // ── TikTok video: wyciągnij VIDEO_ID (same cyfry) i zbuduj URL playera samodzielnie ──
+        function tiktokVideoId(url) {
+            const m = String(url || '').match(/\/video\/(\d+)/);
+            return m ? m[1] : '';
+        }
+        function tiktokPlayerSrc(id) {
+            return `https://www.tiktok.com/player/v1/${id}?rel=0&autoplay=1&music_info=0&description=0`;
+        }
+        function openTiktokModal(id) {
+            if (!id || !/^\d+$/.test(id)) return;
+            const frame = document.getElementById('tiktok-modal-frame');
+            frame.innerHTML = `<iframe src="${tiktokPlayerSrc(id)}" class="w-full h-full" style="border:0" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe>`;
+            document.getElementById('tiktok-modal').classList.remove('hidden');
+        }
+        function closeTiktokModal() {
+            document.getElementById('tiktok-modal').classList.add('hidden');
+            document.getElementById('tiktok-modal-frame').innerHTML = ''; // usuń iframe = zatrzymaj dźwięk
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('tiktok-modal').classList.contains('hidden')) {
+                closeTiktokModal();
+            }
+        });
+
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
@@ -354,6 +390,7 @@
             grid.innerHTML = filteredProducts.map(p => {
                 const status = statusLabels[p.status] || statusLabels.proposal;
                 const isActive = p.is_active !== false;
+                const ttId = tiktokVideoId(p.tiktok_url);
 
                 return `
                     <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all ${!isActive ? 'opacity-60' : ''}">
@@ -364,6 +401,7 @@
                             }
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
                             ${!isActive ? `<span class="absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-medium bg-zinc-800/90 text-zinc-400 backdrop-blur-sm"><i class="ph ph-eye-slash mr-1"></i>Wyłączony</span>` : ''}
+                            ${ttId ? `<button onclick="openTiktokModal('${ttId}')" class="absolute inset-0 m-auto w-14 h-14 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/25 text-white hover:scale-110 hover:bg-black/70 transition-all duration-200" title="Zobacz wideo TikTok"><i class="ph-fill ph-play text-2xl ml-0.5"></i></button>` : ''}
                         </div>
                         <div class="p-4">
                             <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
@@ -393,6 +431,7 @@
             document.getElementById('product-name').value = '';
             document.getElementById('product-source-url').value = '';
             document.getElementById('product-image-url').value = '';
+            document.getElementById('product-tiktok-url').value = '';
             document.getElementById('product-report-screenshot-url').value = '';
             updateImagePreview();
             resetReportScreenshotPreview();
@@ -405,6 +444,7 @@
                     document.getElementById('product-name').value = p.name || '';
                     document.getElementById('product-source-url').value = p.source_url || '';
                     document.getElementById('product-image-url').value = p.image_url || '';
+                    document.getElementById('product-tiktok-url').value = p.tiktok_url || '';
                     updateImagePreview();
 
                     // PDF screenshot
@@ -526,6 +566,7 @@
                 name,
                 image_url: document.getElementById('product-image-url').value.trim() || null,
                 source_url: document.getElementById('product-source-url').value.trim() || null,
+                tiktok_url: document.getElementById('product-tiktok-url').value.trim() || null,
                 report_screenshot_url: document.getElementById('product-report-screenshot-url').value.trim() || null,
                 visible_to_client: true,
             };

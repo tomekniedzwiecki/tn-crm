@@ -58,7 +58,7 @@ async function translateReviewsPL(reviews: any[], key: string, acc?: { i: number
   try {
     const payload = reviews.map((r, i) => ({ i, t: r.text }));
     const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
-      method: 'POST', headers: { authorization: `Bearer ${key}`, 'content-type': 'application/json' },
+      method: 'POST', headers: { authorization: `Bearer ${openaiKey}`, 'content-type': 'application/json' },
       body: JSON.stringify({ model: 'gpt-5.1', reasoning_effort: 'low', response_format: { type: 'json_object' }, messages: [{ role: 'user', content: `Przetłumacz te opinie klientów na naturalny, potoczny polski (zachowaj sens i ton, zwięźle, bez upiększania i bez dodawania treści). Zwróć WYŁĄCZNIE JSON {"t":[{"i":0,"pl":"..."}]} w tej samej kolejności.\n${JSON.stringify(payload)}` }] }),
     }, 'reviews-translate');
     const d = await res.json();
@@ -147,6 +147,43 @@ function json(b: Record<string, unknown>, s: number, c: Record<string, string>):
 }
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const RAPID_HOST = 'aliexpress-true-api.p.rapidapi.com';
+// Model do dopracowania nazwy produktu — ta sama konwencja co bud-img-verify.
+const PRODUCTS_MODEL = Deno.env.get('BUD_PRODUCTS_MODEL') || 'gpt-5.1';
+
+// Dopracowanie polskiej nazwy produktu na podstawie tytułu aukcji AliExpress (EN, keyword-stuffing).
+// 1 call OpenAI (BUD_PRODUCTS_MODEL, ten sam klucz/wzorzec co reszta bud-*). Zwraca dopracowaną
+// nazwę PL albo null (odrzucona odpowiedź / błąd). NIGDY nie rzuca — dodatkowo owinięte try/catch.
+async function refinePlName(title: string, currentName: string, openaiKey: string): Promise<string | null> {
+  if (!title || !openaiKey) return null;
+  try {
+    const sys = `Jesteś specjalistą e-commerce nazywającym produkty po polsku. Dostajesz tytuł aukcji AliExpress (po angielsku, przeładowany słowami kluczowymi i śmieciami) oraz obecną polską nazwę produktu. Zwróć TYLKO dopracowaną polską nazwę produktu — nic więcej, żadnych wyjaśnień.
+ZASADY:
+- 2–6 słów, naturalna handlowa polszczyzna
+- pierwsza litera wielka
+- WYTNIJ śmieci: "2026", "New", "Hot Sale", "Free Shipping", "Dropshipping", kody, zbędne wymiary/ilości, listy wariantów
+- zachowaj wyróżnik/istotę produktu (to, co go definiuje)
+- nazwę marki podaj TYLKO gdy jest tożsamością produktu (np. ZipString, CarPlay); w innym wypadku pomiń markę
+- poprawne polskie diakrytyki (ą, ć, ę, ł, ń, ó, ś, ż, ź)
+Zwróć samą nazwę: bez cudzysłowów, bez kropki na końcu.`;
+    const usr = `Tytuł aukcji AliExpress (EN):\n${String(title).slice(0, 240)}\n\nObecna nazwa PL: ${String(currentName || '(brak)').slice(0, 120)}`;
+    const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { authorization: `Bearer ${openaiKey}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ model: PRODUCTS_MODEL, reasoning_effort: 'low', messages: [{ role: 'system', content: sys }, { role: 'user', content: usr }] }),
+    }, 'name-refine');
+    if (!res.ok) { try { await res.body?.cancel(); } catch { /* */ } return null; }
+    const d = await res.json();
+    let name = String(d.choices?.[0]?.message?.content || '');
+    // walidacja/przycięcie: pierwsza linia, bez cudzysłowów/kropki brzegowej, pojedyncze spacje
+    name = name.split('\n')[0]
+      .replace(/^["'„”«»\s]+/, '')
+      .replace(/["'„”«».\s]+$/, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (name.length < 3 || name.length > 80) return null; // odrzuć śmieciową/za długą odpowiedź
+    return name;
+  } catch { return null; }
+}
 
 function pid(body: { product_id?: string; link?: string }, chosenLink?: string): string {
   if (body.product_id && /^\d+$/.test(String(body.product_id))) return String(body.product_id);
@@ -323,7 +360,7 @@ Deno.serve(async (req) => {
 
     // wczytaj wiersz produktu (chosen_link + cache + dane do enrichmentu)
     const { data: row } = await supabase.from('bud_tt_products')
-      .select('id, key, pl_name, query, chosen_link, ali_candidates, cover, ali_snapshot')
+      .select('id, key, pl_name, query, chosen_link, ali_candidates, cover, ali_snapshot, name_refined_at')
       .eq(byId ? 'id' : 'key', productKey).maybeSingle();
     if (!row) return json({ error: 'produkt_nieznany' }, 404, c);
 
@@ -460,7 +497,30 @@ Deno.serve(async (req) => {
     } catch (e) { console.warn('[bud-ali-snapshot] gallery rehost', String(e).slice(0, 80)); }
 
     await supabase.from('bud_tt_products').update({ ali_snapshot: snapshot }).eq('id', row.id);
-    return json({ snapshot, product_id: id, n_reviews: snapshot.reviews.length }, 200, c);
+
+    // ── DOPRACUJ POLSKĄ NAZWĘ (raz na produkt) ──
+    // Po udanym zapisie snapshotu z niepustym title: jeżeli name_refined_at IS NULL → poproś model
+    // o naturalną handlową nazwę PL na podstawie tytułu aukcji (EN). KRYTYCZNE: całość w try/catch —
+    // błąd dopracowania NIGDY nie wywala głównego flow snapshotu. Odrzucona odpowiedź → zostaw NULL
+    // (spróbuje przy kolejnym snapshot-callu), bez błędu.
+    let nameRefined = false;
+    try {
+      const title = String(snapshot.title || '').trim();
+      if (!row.name_refined_at && OPENAI_KEY && title) {
+        const refined = await refinePlName(title, String(row.pl_name || ''), OPENAI_KEY);
+        if (refined) {
+          // pl_name aktualizujemy tylko gdy zmiana; name_refined_at ustawiamy zawsze (nie mielić w kółko).
+          // key NIE jest ruszany — zmieniamy wyłącznie pl_name.
+          const patch: Record<string, unknown> = { name_refined_at: new Date().toISOString() };
+          if (refined !== row.pl_name) patch.pl_name = refined;
+          await supabase.from('bud_tt_products').update(patch).eq('id', row.id);
+          nameRefined = true;
+        }
+        // refined === null → odrzucone: name_refined_at zostaje NULL, ponowna próba przy kolejnym callu
+      }
+    } catch (e) { console.warn('[bud-ali-snapshot] name refine', String(e).slice(0, 80)); }
+
+    return json({ snapshot, product_id: id, n_reviews: snapshot.reviews.length, name_refined: nameRefined }, 200, c);
   } catch (e) {
     console.error('[bud-ali-snapshot] ERROR', e);
     return json({ error: 'blad_serwera' }, 500, c);
