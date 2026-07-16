@@ -255,6 +255,21 @@ Mikrocopy pod KAŻDYM CTA: „Płatność przy odbiorze · 14 dni na zwrot · Wy
    tylko czyste packshoty. + VISION-GATE zdjęć opinii (zrzuty apki AliExpress/obce marki = odrzut).
 10. Filtr zakazów obietnic dostawy działa też na CYTATACH opinii (przycinać do zgodnej części).
 
+**LEKCJE R1 (Świtek):**
+11. **wf2-gpt pada 504 przy output >~8k tok** — kod dzielić na chunki ≤~5k out (head / CSS×2-3 /
+    body×4); `max_output_tokens` NIE jest bezpiecznikiem czasu. Lightboxy przypisać JEDNEMU
+    chunkowi (dwa chunki z instrukcją `.lb` = zduplikowane ID).
+12. **Screenshot full-page okłamuje krytyka vision**: przed zrzutem wymusić klasy reveal (`.in`),
+    renderować DPR1 (DPR3 mobile kafelkuje stronę = fałszywe „powtórzenia"), a uwagi o sticky/
+    nachodzeniu weryfikować NA ŻYWO (evaluate), nie z obrazu.
+13. Dane twarde ZAWSZE ze snapshotu (review_stats, tytuł, infografiki producenta — treść wolno
+    cytować nawet gdy obraz odrzucony), NIGDY z odziedziczonego briefu/zadania.
+14. **Wycena = rynkowa półka kategorii PL + zdrowa marża** (sztywny mnożnik detal×2,2-2,6
+    zawodzi poza tanimi gadżetami); końcówka psychologiczna wg reguły cen.
+15. Uwagi krytyków filtrować względem WŁAŚCIWEGO standardu (sklepy WYMAGAJĄ COD — „zakaz COD"
+    z landing-pages v5 tu nie obowiązuje). visual-verify i chrome-devtools = jedna przeglądarka,
+    sekwencjonować.
+
 ## TECH BUDŻET (twardy)
 
 - **LCP < 2,5 s · CLS < 0,1 · INP < 200 ms (mobile 4G).**
