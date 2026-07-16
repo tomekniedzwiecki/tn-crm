@@ -13,12 +13,17 @@ Deno.serve(async (req) => {
   const page = Math.max(parseInt(url.searchParams.get('page') || '0'), 0)
   const cat = (url.searchParams.get('cat') || '').trim()
 
-  // ── TRYB DETAL: ?id=<uuid> → pełne dane jednego produktu (TikTok + AliExpress snapshot) ──
+  // ── TRYB DETAL: ?id=<uuid> lub ?id=<bud_key> → pełne dane jednego produktu ──
+  // UUID → szukaj po id (jak dotąd, /sklep). Inaczej traktuj jako bud_tt_products.key
+  // (most z biblioteki CRM: workflow_products.bud_key = bud_tt_products.key).
   const detailId = (url.searchParams.get('id') || '').trim()
-  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(detailId)) {
-    const { data: row } = await supabase.from('bud_tt_products')
+  if (detailId) {
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(detailId)
+    const base = supabase.from('bud_tt_products')
       .select('id,pl_name,category,cover,tiktok_url,saves,shares,eng_rate,max_plays,total_plays,comments,videos,is_ad,author,author_followers,heat,newest_days,tags,ali_candidates,chosen_link,ali_snapshot')
-      .eq('id', detailId).maybeSingle()
+    // TYLKO approved — endpoint jest publiczny, a key (nazwa) jest odgadywalny; bez tego
+    // filtru dałoby się enumerować produkty pending/rejected przed recenzją.
+    const { data: row } = await (isUuid ? base.eq('id', detailId) : base.eq('key', detailId)).eq('status', 'approved').maybeSingle()
     if (!row) return new Response(JSON.stringify({ error: 'not_found' }), { status: 404, headers: { ...cors, 'content-type': 'application/json' } })
     // deno-lint-ignore no-explicit-any
     const r: any = row

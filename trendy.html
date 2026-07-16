@@ -154,6 +154,23 @@
   .stbadge.duplicate{color:var(--blue);border-color:#234a6e;background:rgba(50,145,255,.08)}
   .stbadge.pending{color:var(--gold);border-color:#5a4412;background:rgba(245,181,63,.06)}
 
+  /* RADAR v2 „dowód sprzedaży" — badge sprzedaży / mismatch / origin + filtr-chipy + eksport do biblioteki */
+  .sellBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid var(--green-d);background:rgba(70,180,106,.13);color:var(--green)}
+  .sellBadge.gray{border-color:var(--line2);background:var(--surface2);color:var(--dim);font-weight:600}
+  .mmBadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid #5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .originBadge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:7px;border:1px solid #234a6e;background:rgba(50,145,255,.08);color:var(--blue)}
+  .originBadge svg{width:11px;height:11px}
+  .filterChips{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+  .filterChips:empty{display:none}
+  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--line2);background:var(--surface);color:var(--dim);cursor:pointer;transition:.15s}
+  .fchip:hover{border-color:#3a3a42;color:var(--text)}
+  .fchip.on{border-color:var(--green-d);background:rgba(70,180,106,.1);color:var(--green)}
+  .fchip.mm.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .fchip svg{width:13px;height:13px}
+  .libBtn{margin-left:auto}
+  .libBtn.done{background:var(--green-d);border-color:#3d9450;color:#eafff0}
+  .controls.tableMode #sortseg{display:none}
+
   /* SNAPSHOT — co realnie pobraliśmy z aukcji (galeria, cena, warianty, OPINIE ze zdjęciami) */
   .snap>summary{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.07em;padding:2px 0}
   .snap>summary .chev{margin-left:auto;transition:transform .2s;color:var(--dim2)}
@@ -335,6 +352,11 @@
         <button data-s="duplicate">Duplikaty<span class="cnt" data-c="duplicate"></span></button>
         <button data-s="">Wszystkie<span class="cnt" data-c="all"></span></button>
       </div>
+      <div class="seg" id="sortseg" title="Kolejność kart">
+        <button data-sort="sales" class="on">Sprzedaż</button>
+        <button data-sort="heat">Heat</button>
+        <button data-sort="new">Najnowsze</button>
+      </div>
       <button id="refresh" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Odśwież</button>
     </div>
   </div>
@@ -342,6 +364,7 @@
 
 <main>
   <div class="loader" id="loading"><div class="spin"></div></div>
+  <div class="filterChips" id="filterChips"></div>
   <div class="cards" id="cards"></div>
   <div class="empty" id="empty" style="display:none">Brak pozycji dla tego filtra.</div>
   <div class="pager" id="pager"></div>
@@ -363,6 +386,10 @@ const fmtDate=s=>{if(!s)return'';const d=new Date(s);return isNaN(d)?'':d.toLoca
 const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Ogród & Majsterkowanie','Moda & Akcesoria','Podróże','Hobby & Kreatywne','Biuro & Organizacja','Inne'];
 let ROWS=[], ME='', FSTAT='pending', toastT, PAGE=0; const PER=20;
 let VIEW='trendy', TSORT={col:'score',dir:-1};   // widok Trendy(karty) | Tabela(zatwierdzone)
+// RADAR v2 „dowód sprzedaży > viral": kolejność kart + filtry + cache biblioteki/tempa sprzedaży
+let SORT='sales', FPROOF=false, FMISMATCH=false;   // sortowanie: sales|heat|new · filtr dowodu/mismatchu
+const INLIB=new Set();                             // workflow_products.bud_key już w bibliotece CRM
+const HIST=new Map(), HISTFETCHED=new Set();       // key → sprzedaż/tydzień (delta z bud_tt_shop_history)
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
 function lightbox(src){if(!src)return;$('lightboxImg').src=src;$('lightbox').classList.add('show');}
 
@@ -403,6 +430,7 @@ async function init(){
   $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
   $('q').oninput=()=>{PAGE=0;render()}; $('fcat').onchange=()=>{PAGE=0;render()}; $('refresh').onclick=load;
   $('stseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('stseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FSTAT=b.dataset.s;PAGE=0;render();});
+  $('sortseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('sortseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');SORT=b.dataset.sort;PAGE=0;render();});
   $('viewSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
   document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeM(null,true);$('lightbox').classList.remove('show');}});
   await load();
@@ -421,7 +449,21 @@ async function load(){
   }
   $('loading').style.display='none';
   if(err){toast('Błąd: '+err.message);return;}
+  await fetchLibrary();
   ROWS=all;render();
+}
+// Które produkty są już w bibliotece CRM (workflow_products.bud_key) — do oznaczenia kart approved.
+// RLS: authenticated SELECT dozwolony. Paginacja jak wyżej (pula może przekroczyć 1000).
+async function fetchLibrary(){
+  try{
+    INLIB.clear();
+    for(let off=0;;off+=1000){
+      const {data,error}=await sb.from('workflow_products').select('bud_key').not('bud_key','is',null).range(off,off+999);
+      if(error||!data||!data.length)break;
+      data.forEach(r=>{if(r.bud_key)INLIB.add(r.bud_key);});
+      if(data.length<1000)break;
+    }
+  }catch(e){}
 }
 function render(){
   const term=$('q').value.toLowerCase().trim(),fc=$('fcat').value;
@@ -429,6 +471,8 @@ function render(){
     if(FSTAT&&x.status!==FSTAT)return false;
     if(fc&&x.category!==fc)return false;
     if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
+    if(FPROOF&&!(x.tt_shop&&+x.tt_shop.sold_count>0))return false;   // filtr „Dowód sprzedaży"
+    if(FMISMATCH&&x.ali_mismatch!==true)return false;                // filtr „Mismatche"
     return true;
   });
   const cnt={pending:0,approved:0,rejected:0,duplicate:0};
@@ -436,7 +480,9 @@ function render(){
   document.querySelectorAll('#stseg .cnt').forEach(el=>{const k=el.dataset.c;el.textContent=k==='all'?ROWS.length:(cnt[k]||0);});
   const matched=ROWS.filter(x=>x.status==='pending'&&(x.ali_candidates||[]).length).length;
   $('kpis').innerHTML=`<div class="kpi"><b>${ROWS.length}</b> produktów</div><div class="kpi"><b>${cnt.pending}</b> do dopasowania</div><div class="kpi g"><b>${cnt.approved}</b> zatwierdzonych</div>`;
+  renderChips();
   if(VIEW==='table'){ renderTable(); return; }
+  sortCards(r);
   const total=r.length, pages=Math.max(1,Math.ceil(total/PER));
   if(PAGE>=pages)PAGE=pages-1; if(PAGE<0)PAGE=0;
   const slice=r.slice(PAGE*PER,PAGE*PER+PER);
@@ -444,7 +490,68 @@ function render(){
   $('cards').innerHTML=slice.map(card).join('');
   renderPager(total,pages);
   healVisible(slice);
+  loadHistory(slice);
   setupVids();
+}
+// ── KOLEJNOŚĆ KART ── „Sprzedaż" (domyślna, dowód > viral): najpierw produkty z TikTok Shop
+// po sold_count malejąco, potem reszta po heat malejąco. „Heat" i „Najnowsze" = alternatywy.
+function _sold0(x){return (x.tt_shop&&x.tt_shop.sold_count!=null)?+x.tt_shop.sold_count:null;}
+function _newness(x){
+  const t=Date.parse(x.created_at||x.inserted_at||x.first_seen||'');
+  if(!isNaN(t))return t;
+  return x.newest_days!=null? -x.newest_days*86400000 : -Infinity;   // fallback: mniej dni = nowszy
+}
+function sortCards(r){
+  if(SORT==='heat'){ r.sort((a,b)=>(b.heat||0)-(a.heat||0)); return; }
+  if(SORT==='new'){ r.sort((a,b)=>_newness(b)-_newness(a)); return; }
+  r.sort((a,b)=>{                                          // 'sales'
+    const ax=!!a.tt_shop, bx=!!b.tt_shop;
+    if(ax&&bx)return ((_sold0(b)||0)-(_sold0(a)||0))||((b.heat||0)-(a.heat||0));
+    if(ax)return -1; if(bx)return 1;
+    return (b.heat||0)-(a.heat||0);
+  });
+}
+// ── FILTR-CHIPY + EKSPORT ZBIORCZY ── nad listą; stan odzwierciedla FPROOF/FMISMATCH
+function renderChips(){
+  const el=$('filterChips'); if(!el)return;
+  if(VIEW==='table'){el.innerHTML='';return;}
+  const inFstat=x=>FSTAT?x.status===FSTAT:true;
+  const proofN=ROWS.filter(x=>inFstat(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
+  const mmN=ROWS.filter(x=>inFstat(x)&&x.ali_mismatch===true).length;
+  let h=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`
+    +`<button class="fchip mm ${FMISMATCH?'on':''}" onclick="toggleMismatch()">⚠ Mismatche${mmN?` · ${mmN}`:''}</button>`;
+  if(FSTAT==='approved'){
+    const exportable=ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key));
+    h+=`<button class="btn btn-sm libBtn" onclick="exportAllProof()" ${exportable.length?'':'disabled'}>${I.box} Eksportuj wszystkie z dowodem sprzedaży${exportable.length?` (${exportable.length})`:''}</button>`;
+  }
+  el.innerHTML=h;
+}
+function toggleProof(){FPROOF=!FPROOF;PAGE=0;render();}
+function toggleMismatch(){FMISMATCH=!FMISMATCH;PAGE=0;render();}
+// ── TEMPO SPRZEDAŻY ── delta/tydzień z bud_tt_shop_history (>=2 snapshoty). Dociągane dla
+// widocznej strony (jak healVisible); po policzeniu re-render (HISTFETCHED chroni przed pętlą).
+async function loadHistory(slice){
+  const keys=(slice||[]).filter(x=>x.tt_shop&&x.key&&!HISTFETCHED.has(x.key)).map(x=>x.key);
+  if(!keys.length)return;
+  keys.forEach(k=>HISTFETCHED.add(k));
+  try{
+    const {data,error}=await sb.from('bud_tt_shop_history').select('key,sold_count,captured_at').in('key',keys);
+    if(error||!data)return;
+    const byKey={};
+    data.forEach(h=>{(byKey[h.key]=byKey[h.key]||[]).push(h);});
+    let changed=false;
+    Object.keys(byKey).forEach(k=>{
+      const rows=byKey[k]; if(rows.length<2)return;
+      rows.sort((a,b)=>(Date.parse(a.captured_at)||0)-(Date.parse(b.captured_at)||0));
+      const first=rows[0], last=rows[rows.length-1];
+      if(first.sold_count==null||last.sold_count==null)return;
+      const days=(Date.parse(last.captured_at)-Date.parse(first.captured_at))/86400000;
+      if(!(days>0))return;
+      const perWeek=Math.round((+last.sold_count - +first.sold_count)/days*7);
+      HIST.set(k,perWeek); changed=true;
+    });
+    if(changed)render();
+  }catch(e){}
 }
 // ── WIDEO GRA W KARCIE ── odtwarzacz TikTok montuje się dla produktu w polu widzenia
 // i sam startuje (autoplay). Gra TYLKO jeden — najlepiej widoczny — żeby 20 filmów nie
@@ -599,6 +706,14 @@ function card(x){
   const days=x.newest_days, hot=days!=null&&days<=14;
   const eng=((x.eng_rate||0)*100).toFixed(1)+'%';
   const heatHi=(x.heat||0)>=48;
+  const soldN=(x.tt_shop&&x.tt_shop.sold_count!=null)?+x.tt_shop.sold_count:null;
+  // Dowód sprzedaży na karcie pending: realna sprzedaż (zielony) lub „do pobrania" (szary)
+  const sellBadge=x.status==='pending'
+    ? (soldN!=null?`<span class="sellBadge">🛒 ${fmt(soldN)} sprzedanych</span>`
+      : (x.shop_url&&!x.tt_shop?`<span class="sellBadge gray">${I.store} Shop: do pobrania</span>`:''))
+    : '';
+  const mmBadge=x.ali_mismatch===true?`<span class="mmBadge">⚠ Inny produkt?</span>`:'';
+  const originBadge=x.origin==='shop_radar'?`<span class="originBadge">${I.store} Shop-radar</span>`:'';
   return `<div class="card ${x.status}" id="r-${x.id}">
     <div class="head">
       <div class="vid" ${vid?`data-vidid="${vid}"`:''}>
@@ -614,6 +729,7 @@ function card(x){
           <span class="stbadge ${x.status}">${x.status==='approved'?'Zatwierdzone':x.status==='rejected'?'Odrzucone':x.status==='duplicate'?'Duplikat':'Do dopasowania'}</span>
         </div>
         <div class="metaRow">
+          ${sellBadge}${mmBadge}${originBadge}
           <select class="catsel" onchange="setCat('${x.id}',this.value)">${CATS.map(c=>`<option ${c===x.category?'selected':''}>${c}</option>`).join('')}</select>
           ${days!=null?`<span class="chip">${I.cal} ${hot?'🔥 ':''}${days} dni temu</span>`:''}
           ${x.is_ad?`<span class="chip ad">${I.mega} reklamowany</span>`:''}
@@ -667,6 +783,7 @@ function matchHtml(x,vid){
           <button class="btn btn-g" onclick="customApprove('${x.id}')">${I.check} Zatwierdź własny</button>
           <button class="btn btn-r" onclick="reject('${x.id}')">${I.x} Odrzuć</button>
           <button class="btn btn-dup" onclick="markDup('${x.id}')" title="Ten produkt już był w radarze">${I.copy} Duplikat</button>
+          ${x.ali_mismatch===true?`<button class="btn btn-sm" onclick="clearMismatch('${x.id}')" title="Auto-flaga niesłuszna — ten link to właściwy produkt">${I.check} To dobry link</button>`:''}
           ${x.reviewed_by?`<span class="chip">${esc(x.reviewed_by)}${x.reviewed_at?' · '+fmtDate(x.reviewed_at):''}</span>`:''}
         </div>
       </div>
@@ -676,13 +793,16 @@ function matchHtml(x,vid){
 
 // ── SCORECARD: wynik produktu (approved) — score + sprzedaż/marża na jeden rzut oka ──
 function scorecardHtml(x){
-  if(x.product_score==null && !x.tt_shop) return '';
+  // approved zawsze renderuje (miejsce na przycisk biblioteki); pending/reszta tylko gdy są dane
+  if(x.product_score==null && !x.tt_shop && x.status!=='approved') return '';
   const s=x.product_score; const sc=(s==null?'—':s);
   const cls=s>=70?'hi':s>=40?'mid':'lo';
   const shop=x.tt_shop||null; const m=x.score_meta||{};
   const facts=[];
   if(shop && shop.sold_count!=null) facts.push(`<span class="scoreFact sold">${I.cart}<b>${fmt(shop.sold_count)}</b> sprzedane</span>`);
   else facts.push(`<span class="scoreWarn">${I.info} brak danych TikTok Shop — wynik wstępny</span>`);
+  const dw=x.key?HIST.get(x.key):null;   // tempo sprzedaży (delta/tydzień z historii snapshotów)
+  if(dw!=null&&dw>0) facts.push(`<span class="scoreFact" style="color:var(--green)">▲ +${fmt(dw)}/tydz.</span>`);
   if(shop && shop.price_display) facts.push(`<span class="scoreFact">${I.tag}<b>${esc(shop.price_display)}</b> rynek</span>`);
   if(m.ali_usd) facts.push(`<span class="scoreFact">${I.store}Ali ~${Math.round(m.ali_usd*4)} zł</span>`);
   if(m.markup_x) facts.push(`<span class="scoreFact mk">${I.trend}<b>×${m.markup_x}</b> narzut</span>`);
@@ -692,7 +812,13 @@ function scorecardHtml(x){
   return `<div class="scorecard">
     <div class="scoreBig ${cls}" title="Wynik produktu (0–100): sprzedaż 40 / narzut 25 / heat 20 / ocena 10 / świeżość 5"><div class="n mono">${sc}</div><div class="l">wynik</div></div>
     <div class="scoreFacts">${facts.join('')}</div>
+    ${x.status==='approved'?libBtnHtml(x):''}
   </div>`;
+}
+// Przycisk eksportu pojedynczego produktu do biblioteki CRM (kartę approved oznacza „✓ W bibliotece")
+function libBtnHtml(x){
+  const inlib=!!(x.key&&INLIB.has(x.key));
+  return `<button class="btn btn-sm libBtn ${inlib?'done':''}" onclick="exportToLib('${x.id}')" ${inlib?'disabled':''}>${inlib?I.check+' W bibliotece':I.box+' → Biblioteka CRM'}</button>`;
 }
 
 // ── TABY ŹRÓDEŁ: AliExpress | TikTok Shop | (przyszłe) ──
@@ -927,6 +1053,57 @@ function reject(id){upd(id,{status:'rejected'},'Odrzucone');}
 function markDup(id){upd(id,{status:'duplicate'},'Oznaczone jako duplikat — już był');}
 function reopen(id){upd(id,{status:'pending'},'Przywrócone do dopasowania');}
 async function setCat(id,cat){const{error}=await sb.from('bud_tt_products').update({category:cat}).eq('id',id);if(error){toast('Błąd: '+error.message);return;}const x=ROWS.find(r=>r.id===id);if(x)x.category=cat;toast('Kategoria: '+cat);}
+
+// ── MISMATCH: recenzent rozstrzyga auto-flagę (RLS pozwala recenzentom UPDATE bud_tt_products) ──
+async function clearMismatch(id){
+  const{error}=await sb.from('bud_tt_products').update({ali_mismatch:false}).eq('id',id);
+  if(error){toast('Błąd: '+error.message);return;}
+  const x=ROWS.find(r=>r.id===id);if(x)x.ali_mismatch=false;
+  toast('Oznaczono jako właściwy link ✓');render();
+}
+
+// ── EKSPORT DO BIBLIOTEKI CRM (edge bud-crm-export; JWT recenzenta przechodzi przez adminGate) ──
+// Kontrakt: POST {keys:string[]} → {exported:number, skipped:number, errors?:[]}. Błąd = graceful toast.
+async function exportToLib(id){
+  const x=ROWS.find(r=>r.id===id); if(!x||!x.key){toast('Brak klucza produktu');return;}
+  const btn=(typeof event!=='undefined')&&event.currentTarget; if(btn)btn.disabled=true;
+  toast('Eksportuję do biblioteki CRM…');
+  try{
+    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys:[x.key]}});
+    if(error)throw error;
+    // kontrakt: {exported, updated, skipped:[{key,reason}]} — skip = eksport NIE doszedł do skutku
+    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
+    if(skipped.length&&!(data.exported>0||data.updated>0)){
+      toast('Eksport pominięty: '+(skipped[0].reason||'błąd'));
+      if(btn)btn.disabled=false; return;
+    }
+    INLIB.add(x.key);
+    toast((data&&data.exported>0)?'Dodano do biblioteki CRM ✓':'Zaktualizowano w bibliotece ✓');
+    render();
+  }catch(e){
+    toast('Nie udało się wyeksportować (funkcja w budowie?)');
+    if(btn)btn.disabled=false;
+  }
+}
+async function exportAllProof(){
+  const keys=[...new Set(ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key)).map(x=>x.key))];
+  if(!keys.length){toast('Brak nowych produktów z dowodem sprzedaży do eksportu');return;}
+  if(!confirm(`Wyeksportować ${keys.length} zatwierdzonych produktów z dowodem sprzedaży do biblioteki CRM?`))return;
+  toast('Eksportuję '+keys.length+' produktów…');
+  try{
+    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys}});
+    if(error)throw error;
+    // kontrakt: skipped = TABLICA {key,reason}; do INLIB tylko te, które realnie weszły
+    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
+    const skippedKeys=new Set(skipped.map(s=>s.key));
+    keys.forEach(k=>{if(!skippedKeys.has(k))INLIB.add(k);});
+    const ex=(data&&data.exported!=null)?(data.exported+(data.updated||0)):keys.length-skipped.length;
+    toast(`Wyeksportowano ${ex}${skipped.length?` · pominięto ${skipped.length}`:''} ✓`);
+    render();
+  }catch(e){
+    toast('Eksport zbiorczy nieudany (funkcja w budowie?)');
+  }
+}
 init();
 </script>
 </body>

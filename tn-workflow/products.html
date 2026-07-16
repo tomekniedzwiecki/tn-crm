@@ -218,6 +218,22 @@
         <div id="tiktok-modal-frame" class="relative bg-black rounded-xl overflow-hidden" style="aspect-ratio:9/16;max-height:80vh;width:min(90vw,45vh);"></div>
     </div>
 
+    <!-- Ali Auction Preview Modal (podgląd na żywo z bud-tt-featured?id=<bud_key>) -->
+    <div id="ali-modal" class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-[60]" onclick="if(event.target===this)closeAliModal()">
+        <div class="bg-zinc-950 border border-white/10 rounded-lg w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col">
+            <div class="flex items-center justify-between px-5 py-4 border-b border-white/5 flex-shrink-0">
+                <h2 class="text-sm font-medium text-white flex items-center gap-2">
+                    <i class="ph ph-storefront text-orange-400"></i>
+                    Podgląd aukcji AliExpress
+                </h2>
+                <button onclick="closeAliModal()" class="text-zinc-500 hover:text-white transition-colors">
+                    <i class="ph ph-x text-lg"></i>
+                </button>
+            </div>
+            <div id="ali-modal-body" class="p-5 overflow-y-auto flex-1"></div>
+        </div>
+    </div>
+
     <script>
         const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
         const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
@@ -375,6 +391,105 @@
             }
         });
 
+        // ── Escape uniwersalny (tekst + atrybuty): koduje & < > " ' ──
+        function esc(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        // URL do atrybutu src/href: przepuszcza tylko http(s) (i względne ścieżki) — blokuje javascript:/data:
+        function safeUrl(u) {
+            const s = String(u == null ? '' : u).trim();
+            return /^(https?:\/\/|\/)/i.test(s) ? s : '';
+        }
+
+        // 14900 → "14,9k", 194359 → "194,4k", 1000 → "1k", 850 → "850"
+        function fmtSold(n) {
+            n = Number(n) || 0;
+            if (n >= 1000) {
+                const s = (Math.round((n / 1000) * 10) / 10).toString().replace('.', ',');
+                return s + 'k';
+            }
+            return String(n);
+        }
+
+        function starRow(n) {
+            n = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
+            let out = '';
+            for (let i = 0; i < 5; i++) out += `<i class="ph-fill ph-star ${i < n ? 'text-amber-400' : 'text-zinc-700'}"></i>`;
+            return out;
+        }
+
+        // ── Podgląd aukcji na żywo: publiczny edge bud-tt-featured w trybie ?id=<bud_key> ──
+        async function openAliModal(key) {
+            if (!key) return;
+            const modal = document.getElementById('ali-modal');
+            const body = document.getElementById('ali-modal-body');
+            body.innerHTML = '<div class="py-12 text-center text-zinc-500"><i class="ph ph-spinner text-3xl animate-spin"></i><p class="mt-3 text-xs">Ładowanie aukcji…</p></div>';
+            modal.classList.remove('hidden');
+            try {
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/bud-tt-featured?id=${encodeURIComponent(key)}`, { headers: { apikey: SUPABASE_ANON_KEY } });
+                const data = await res.json();
+                const p = data && data.product;
+                if (!p) { body.innerHTML = '<div class="py-12 text-center text-zinc-500 text-sm">Nie znaleziono danych aukcji.</div>'; return; }
+                renderAli(p);
+            } catch (e) {
+                body.innerHTML = '<div class="py-12 text-center text-red-400 text-sm">Błąd ładowania: ' + esc(e.message) + '</div>';
+            }
+        }
+
+        function renderAli(p) {
+            const ali = p.ali || {};
+            const imgs = (Array.isArray(ali.images) && ali.images.length) ? ali.images : [ali.main_image || p.image].filter(Boolean);
+            const rs = ali.review_stats || null;
+            const reviews = Array.isArray(ali.reviews) ? ali.reviews.slice(0, 5) : [];
+            const title = ali.title || p.name || '';
+            document.getElementById('ali-modal-body').innerHTML = `
+                <div class="space-y-4">
+                    <div>
+                        <h3 class="text-white font-medium text-base leading-snug">${esc(title)}</h3>
+                        <div class="flex items-center gap-3 mt-2 flex-wrap">
+                            ${p.price ? `<span class="text-emerald-400 font-semibold text-sm">${esc(p.price)}</span>` : ''}
+                            ${rs && rs.avg ? `<span class="inline-flex items-center gap-1 text-xs">${starRow(rs.avg)}<span class="text-zinc-400 ml-1">${esc(rs.avg)}${rs.numRatings ? ` · ${esc(rs.numRatings)} ocen` : ''}</span></span>` : ''}
+                        </div>
+                        ${p.product_link ? `<a href="${esc(p.product_link)}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 text-orange-400 hover:text-orange-300 text-xs mt-2"><i class="ph ph-arrow-square-out"></i> Otwórz na AliExpress</a>` : ''}
+                    </div>
+                    ${imgs.length ? `<div class="flex gap-2 overflow-x-auto pb-2 -mx-1 px-1">${imgs.map(u => `<img src="${esc(u)}" class="h-40 w-40 flex-shrink-0 object-cover rounded-lg border border-zinc-800 bg-zinc-900" loading="lazy">`).join('')}</div>` : ''}
+                    ${reviews.length ? `<div class="space-y-3">
+                        <h4 class="text-zinc-400 text-[10px] font-mono uppercase tracking-wider">Opinie klientów</h4>
+                        ${reviews.map(r => `
+                            <div class="border border-white/5 rounded-lg p-3 bg-zinc-900/50">
+                                <div class="flex items-center justify-between mb-1.5 gap-2">
+                                    <span class="text-white text-xs font-medium truncate">${esc(r.name || 'Klient')}</span>
+                                    <span class="text-xs flex-shrink-0">${starRow(r.stars)}</span>
+                                </div>
+                                ${r.text ? `<p class="text-zinc-300 text-xs leading-relaxed">${esc(r.text)}</p>` : ''}
+                                ${Array.isArray(r.images) && r.images.length ? `<div class="flex gap-1.5 mt-2 overflow-x-auto">${r.images.slice(0, 6).map(u => `<img src="${esc(u)}" class="h-16 w-16 flex-shrink-0 object-cover rounded border border-zinc-800 bg-zinc-900" loading="lazy">`).join('')}</div>` : ''}
+                            </div>
+                        `).join('')}
+                    </div>` : `<p class="text-zinc-600 text-xs">Brak opinii w migawce aukcji.</p>`}
+                </div>
+            `;
+        }
+
+        function closeAliModal() {
+            document.getElementById('ali-modal').classList.add('hidden');
+            document.getElementById('ali-modal-body').innerHTML = '';
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !document.getElementById('ali-modal').classList.contains('hidden')) {
+                closeAliModal();
+            }
+        });
+
+        // Delegacja kliknięć „Aukcja Ali" (bud_key przez data-atrybut, bez inline onclick = bez XSS).
+        document.getElementById('products-grid').addEventListener('click', (e) => {
+            const btn = e.target.closest('[data-ali-key]');
+            if (btn) openAliModal(btn.getAttribute('data-ali-key'));
+        });
+
         function renderProducts() {
             const grid = document.getElementById('products-grid');
             const emptyState = document.getElementById('empty-state');
@@ -396,7 +511,7 @@
                     <div class="product-card bg-zinc-900/60 border border-white/5 rounded-xl overflow-hidden group transition-all ${!isActive ? 'opacity-60' : ''}">
                         <div class="relative aspect-square bg-zinc-800 overflow-hidden">
                             ${p.image_url
-                                ? `<img src="${p.image_url}" alt="${p.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!isActive ? 'grayscale' : ''}" loading="lazy">`
+                                ? `<img src="${esc(safeUrl(p.image_url))}" alt="${esc(p.name)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300 ${!isActive ? 'grayscale' : ''}" loading="lazy">`
                                 : `<div class="w-full h-full flex items-center justify-center"><i class="ph ph-package text-4xl text-zinc-700"></i></div>`
                             }
                             <span class="absolute top-3 right-3 px-2 py-1 rounded-md text-[10px] font-medium ${status.class} backdrop-blur-sm">${status.text}</span>
@@ -404,14 +519,16 @@
                             ${ttId ? `<button onclick="openTiktokModal('${ttId}')" class="absolute inset-0 m-auto w-14 h-14 flex items-center justify-center rounded-full bg-black/50 backdrop-blur-sm border border-white/25 text-white hover:scale-110 hover:bg-black/70 transition-all duration-200" title="Zobacz wideo TikTok"><i class="ph-fill ph-play text-2xl ml-0.5"></i></button>` : ''}
                         </div>
                         <div class="p-4">
-                            <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${p.name}</h4>
+                            <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(p.name)}</h4>
+                            ${p.orders_sold ? `<div class="mb-2"><span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🛒 ${fmtSold(p.orders_sold)} sprzedanych${p.orders_sold_source === 'tiktok_shop' ? ' (TikTok Shop)' : ''}</span></div>` : ''}
+                            ${p.bud_key ? `<button type="button" data-ali-key="${esc(p.bud_key)}" class="w-full mb-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500/10 text-orange-300 border border-orange-500/20 hover:bg-orange-500/20 transition-colors"><i class="ph ph-storefront"></i> Aukcja Ali</button>` : ''}
                             <div class="flex items-center justify-between pt-2 border-t border-white/5">
                                 <button onclick="toggleProductActive('${p.id}')" class="${isActive ? 'text-emerald-500 hover:text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'} text-xs transition-colors" title="${isActive ? 'Wyłącz produkt' : 'Włącz produkt'}">
                                     <i class="ph ${isActive ? 'ph-toggle-right' : 'ph-toggle-left'} text-lg"></i>
                                 </button>
                                 <div class="flex items-center gap-2">
-                                    ${p.report_screenshot_url ? `<a href="${p.report_screenshot_url}" target="_blank" download class="text-red-400 hover:text-red-300 text-xs" title="Pobierz PDF"><i class="ph ph-file-pdf"></i></a>` : ''}
-                                    ${p.source_url ? `<a href="${p.source_url}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
+                                    ${p.report_screenshot_url ? `<a href="${esc(safeUrl(p.report_screenshot_url))}" target="_blank" download class="text-red-400 hover:text-red-300 text-xs" title="Pobierz PDF"><i class="ph ph-file-pdf"></i></a>` : ''}
+                                    ${p.source_url ? `<a href="${esc(safeUrl(p.source_url))}" target="_blank" class="text-orange-400 hover:text-orange-300 text-xs"><i class="ph ph-arrow-square-out"></i></a>` : ''}
                                     <button onclick="openAddProductModal('${p.id}')" class="text-zinc-500 hover:text-white text-xs transition-colors"><i class="ph ph-pencil-simple"></i></button>
                                     <button onclick="deleteProduct('${p.id}')" class="text-zinc-500 hover:text-red-400 text-xs transition-colors"><i class="ph ph-trash"></i></button>
                                 </div>

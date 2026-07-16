@@ -10,7 +10,8 @@
 // Operacje (admin-gated: team_member JWT | x-tools-secret):
 //   {key}                      → jeden produkt (wołane z panelu po zatwierdzeniu)
 //   {keys:[...]}               → lista produktów
-//   {op:'backfill', limit?}    → wszystkie approved (pull Shop dla tych z shop_url, score dla wszystkich)
+//   {op:'backfill', limit?, scope?} → scope 'approved'(default, kompat) | 'pending' (sprzedaż widoczna
+//                                PRZED recenzją) | 'all'. Pull Shop dla tych z shop_url, score dla wszystkich.
 // Deploy: --no-verify-jwt.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { adminGate } from '../_shared/bud-owner.ts'
@@ -21,6 +22,21 @@ const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers
 const W = { sales: 0.40, markup: 0.25, heat: 0.20, rating: 0.10, fresh: 0.05 }
 
 const clamp = (x: number) => Math.max(0, Math.min(1, x))
+// SANITYZACJA stringów do jsonb: slice(0,N) na tytułach/wideo z TikToka TNIE pary surogatów emoji
+// → osierocony surogat = PostgREST PGRST102 „Empty or invalid json" → CAŁY UPDATE (też product_score)
+// się wywala i tt_shop nigdy się nie zapisuje. Usuwamy null-bajty i osierocone surogaty (pary zostają).
+function cleanStr(s: string): string {
+  return s.replace(/\x00/g, '')
+    .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, '')   // wysoki surogat bez pary
+    .replace(/(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g, '')  // niski surogat bez pary
+}
+// deno-lint-ignore no-explicit-any
+function deepClean(v: any): any {
+  if (typeof v === 'string') return cleanStr(v)
+  if (Array.isArray(v)) return v.map(deepClean)
+  if (v && typeof v === 'object') { const o: Record<string, unknown> = {}; for (const k in v) o[k] = deepClean(v[k]); return o }
+  return v
+}
 const num = (x: unknown): number | null => { const n = parseFloat(String(x ?? '')); return Number.isFinite(n) ? n : null }
 // sold_count / review_count bywa liczbą albo stringiem "12.4K" / "1.2M"
 function count(x: unknown): number | null {
@@ -126,10 +142,21 @@ function score(row: any, shop: any): { score: number | null; meta: any } {
   const p: Record<string, number> = {}
   if (shop && shop.sold_count != null) p.sales = clamp(Math.log10(shop.sold_count + 1) / Math.log10(50000))   // 50k szt = pełne
   const aliUsd = aliUsdOf(row)
+  // GUARD narzutu: cena z ali_snapshot bywa z WYSZUKIWARKI (source!=='detail') → może być INNY
+  // produkt niż nasz (fałszywy narzut). Gdy USD do narzutu pochodzi z takiego snapshotu, NIE licz
+  // składnika markup (zostaje 0, jak przy braku danych — BEZ przeskalowania wag; ΣW=1.0).
+  const snapSale = row.ali_snapshot?.price?.sale
+  const snapProvidedUsd = snapSale != null && Number.isFinite(+snapSale) && +snapSale > 0
+  const snapNotDetail = !!row.ali_snapshot?.source && row.ali_snapshot.source !== 'detail'
   let markupX: number | null = null
+  let markupSkippedReason: string | null = null
   if (shop && shop.price_real && shop.price_real > 0 && aliUsd && aliUsd > 0 && (!shop.currency || shop.currency === 'USD')) {
-    markupX = shop.price_real / aliUsd
-    p.markup = clamp((markupX - 1) / 5)                                                                       // ×6 narzut = pełne
+    if (snapProvidedUsd && snapNotDetail) {
+      markupSkippedReason = 'snapshot_search'                                                                 // narzut liczony z ceny wyszukiwarkowej = niewiarygodny
+    } else {
+      markupX = shop.price_real / aliUsd
+      p.markup = clamp((markupX - 1) / 5)                                                                     // ×6 narzut = pełne
+    }
   }
   if (row.heat != null) p.heat = clamp((row.heat || 0) / 70)                                                  // heat 70 = pełne
   const rating = (shop && shop.rating && shop.rating > 0) ? shop.rating : (row.ali_snapshot?.review_stats?.avg ? +row.ali_snapshot.review_stats.avg : null)
@@ -141,21 +168,50 @@ function score(row: any, shop: any): { score: number | null; meta: any } {
   let n = 0
   for (const k of Object.keys(W) as (keyof typeof W)[]) n += W[k] * (p[k] ?? 0)
   const sc = Math.round(100 * n)
-  return { score: sc, meta: { ...p, markup_x: markupX ? +markupX.toFixed(2) : null, ali_usd: aliUsd ? +aliUsd.toFixed(2) : null, partial: !(shop && shop.sold_count != null), weights: W } }
+  return { score: sc, meta: { ...p, markup_x: markupX ? +markupX.toFixed(2) : null, ali_usd: aliUsd ? +aliUsd.toFixed(2) : null, ...(markupSkippedReason ? { markup_skipped_reason: markupSkippedReason } : {}), partial: !(shop && shop.sold_count != null), weights: W } }
 }
 
-const COLS = 'id,key,status,shop_url,chosen_link,ali_candidates,ali_snapshot,heat,newest_days'
+const COLS = 'id,key,status,shop_url,chosen_link,ali_candidates,ali_snapshot,heat,newest_days,tt_shop,score_meta'
 
 // deno-lint-ignore no-explicit-any
-async function processRow(supabase: any, row: any): Promise<{ key: string; score: number | null; sold: number | null; shop: boolean }> {
+async function processRow(supabase: any, row: any): Promise<{ key: string; score: number | null; sold: number | null; shop: boolean; history: boolean }> {
   let shop = null
   const url = String(row.shop_url || '')
   if (url && /\/pdp\//.test(url) && SC) shop = parseShop(await fetchShop(url), url)
   const { score: sc, meta } = score(row, shop)
-  const patch: Record<string, unknown> = { product_score: sc, score_meta: meta }
-  if (shop) patch.tt_shop = shop
-  await supabase.from('bud_tt_products').update(patch).eq('id', row.id)
-  return { key: row.key, score: sc, sold: shop?.sold_count ?? null, shop: !!shop }
+  // scored_at = znacznik OSTATNIEGO przetworzenia (zapisywany zawsze, także gdy brak danych Shop) —
+  // secondary klucz priorytetu w backfillu: rotuje wiersze, które nigdy nie dostają tt_shop (brak/zły shop_url).
+  const patch: Record<string, unknown> = { product_score: sc, score_meta: { ...meta, scored_at: new Date().toISOString() } }
+  if (shop) patch.tt_shop = deepClean(shop)   // usuń osierocone surogaty (slice tnie emoji) → inaczej PGRST102 wywala cały UPDATE
+  const { error: uErr } = await supabase.from('bud_tt_products').update(patch).eq('id', row.id)
+  if (uErr) console.warn('[bud-tt-shop] update err', row.key, JSON.stringify(uErr).slice(0, 300))
+  // HISTORIA SPRZEDAŻY: przy KAŻDYM udanym pobraniu danych Shop dokładamy snapshot (sold/cena/stan)
+  // → cotygodniowy refresh buduje krzywą sprzedaży (delta = tempo). Zapis service_role (edge).
+  let history = false
+  if (shop) {
+    // GUARD anty-duplikacyjny: pomiń insert, jeśli ostatni wpis dla key jest młodszy niż 20 h
+    // I ma ten sam sold_count (chroni przed pętlami/retry, które mieliłyby ten sam snapshot).
+    let dupSkip = false
+    const { data: last } = await supabase.from('bud_tt_shop_history')
+      .select('sold_count,captured_at').eq('key', row.key)
+      .order('captured_at', { ascending: false }).limit(1).maybeSingle()
+    if (last?.captured_at) {
+      const ageH = (Date.now() - new Date(last.captured_at).getTime()) / 3_600_000
+      const sameSold = (last.sold_count ?? null) === (shop.sold_count ?? null)
+      if (ageH < 20 && sameSold) dupSkip = true
+    }
+    if (!dupSkip) {
+      const { error: hErr } = await supabase.from('bud_tt_shop_history').insert({
+        key: row.key,
+        sold_count: shop.sold_count ?? null,
+        price_usd: shop.price_real ?? null,   // numeryczny FLOOR (min_sku_price)
+        stock: shop.stock ?? null,            // skus[0].stock jeśli był
+      })
+      if (hErr) console.warn('[bud-tt-shop] history insert err', String(hErr.message || hErr).slice(0, 120))
+      else history = true
+    }
+  }
+  return { key: row.key, score: sc, sold: shop?.sold_count ?? null, shop: !!shop, history }
 }
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
@@ -193,17 +249,36 @@ Deno.serve(async (req) => {
 
   // BACKFILL: wszystkie approved (pull Shop dla tych z shop_url; score liczony dla wszystkich)
   if (body.op === 'backfill') {
+    // scope: 'approved' (default — kompatybilność) | 'pending' (sprzedaż widoczna PRZED recenzją) | 'all'
+    const scope = ['approved', 'pending', 'all'].includes(body.scope) ? body.scope : 'approved'
     const rows: any[] = []
     for (let off = 0; ; off += 1000) {
-      const { data, error } = await supabase.from('bud_tt_products').select(COLS).eq('status', 'approved').order('heat', { ascending: false }).range(off, off + 999)
+      let q = supabase.from('bud_tt_products').select(COLS).order('heat', { ascending: false }).range(off, off + 999)
+      if (scope !== 'all') q = q.eq('status', scope)
+      const { data, error } = await q
       if (error) return j({ error: error.message }, 500)
       if (!data?.length) break
       rows.push(...data); if (data.length < 1000) break
     }
+    // PRIORYTET zamiast offsetu (odporny na równoległość, bezstanowy): odświeżaj NAJSTARSZE.
+    // Dwa kubełki: A) wiersze BEZ tt_shop (nigdy niepobrane danymi Shop) — NAJPIERW; B) reszta.
+    // Wewnątrz kubełka rotujemy po znaczniku czasu rosnąco (najdawniej dotykane pierwsze):
+    //   A → score_meta.scored_at (rotuje też wiersze bez/ze złym shop_url, które nigdy nie dostaną tt_shop),
+    //   B → tt_shop.fetched_at. Brak znacznika = '' = traktowany jak najdawniejszy. Dzięki temu kolejne
+    // wywołania z tym samym limitem NATURALNIE przesuwają się po zbiorze, zamiast mleć wciąż top-N.
+    const hasTt = (r: any) => !!(r?.tt_shop && typeof r.tt_shop === 'object')
+    const stamp = (r: any) => hasTt(r)
+      ? String(r.tt_shop.fetched_at || '')
+      : String((r?.score_meta && typeof r.score_meta === 'object' ? r.score_meta.scored_at : '') || '')
+    rows.sort((a, b) => {
+      const ha = hasTt(a), hb = hasTt(b)
+      if (ha !== hb) return ha ? 1 : -1           // kubełek A (bez tt_shop) przed B
+      return stamp(a).localeCompare(stamp(b))     // wewnątrz kubełka: najstarszy znacznik pierwszy
+    })
     const lim = Math.min(rows.length, body.limit || 500)
     const res = await pool(rows.slice(0, lim), 4, (r) => processRow(supabase, r))
     const withShop = res.filter((r) => r.shop).length
-    return j({ ok: true, processed: res.length, with_shop: withShop, scored: res.filter((r) => r.score != null).length, sample: res.slice(0, 20) })
+    return j({ ok: true, scope, refreshed_oldest_first: true, processed: res.length, with_shop: withShop, scored: res.filter((r) => r.score != null).length, history_inserted: res.filter((r) => r.history).length, sample: res.slice(0, 20) })
   }
 
   // Lista kluczy
