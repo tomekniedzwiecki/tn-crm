@@ -1,6 +1,9 @@
 // TikTok TREND RADAR (ScrapeCreators) — feed trendów: Top Ads (po CTR/lajkach) + wiralowe filmy
 // z hashtagów (po odtworzeniach). Zwraca produkty-trendy z metryką zaangażowania.
 // Admin-gated. (Sourcing na AliExpress = osobny krok.)
+// DECYZJA Tomka 2026-07-16: tryb 'products' domyślnie (requireShop=true) pobiera WYŁĄCZNIE produkty
+// obecne w TikTok Shop (mają shop_product_url) — dowód sprzedaży + packshoty do dopasowań Ali.
+// Filmy bez linku TikTok Shop są odrzucane PRZED analizą GPT (oszczędza tokeny). Zwrotka: dropped_no_shop.
 import { adminGate } from '../_shared/bud-owner.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
@@ -77,6 +80,33 @@ async function topAds(period: number, pages: number, order: string): Promise<any
   return out
 }
 
+// WZMOCNIONE łapanie linku TikTok Shop: sprawdź KAŻDE dostępne pole surowej odpowiedzi aweme,
+// nie tylko a.shop_product_url (SC bywa niekonsekwentne: products_info / anchors / added_sound_music_info).
+// deno-lint-ignore no-explicit-any
+function extractShop(a: any): string {
+  if (typeof a?.shop_product_url === 'string' && a.shop_product_url) return a.shop_product_url
+  // products_info: tablica lub obiekt z linkiem produktu w TikTok Shop
+  const pi = a?.products_info
+  const piArr = Array.isArray(pi) ? pi : (pi && typeof pi === 'object' ? [pi] : [])
+  for (const p of piArr) {
+    const u = p?.product_url || p?.shop_product_url || p?.detail_url || p?.url || p?.web_url || p?.schema_url
+    if (typeof u === 'string' && u) return u
+  }
+  // anchors: karty produktowe pod filmem (typ TikTok Shop) — link bywa w url/schema/keyword lub w polu extra (JSON string)
+  const anchors = a?.anchors || a?.anchor_info || a?.commerce_info?.anchors
+  const anArr = Array.isArray(anchors) ? anchors : (anchors && typeof anchors === 'object' ? [anchors] : [])
+  for (const an of anArr) {
+    const direct = an?.url || an?.web_url || an?.schema || an?.schema_url
+    if (typeof direct === 'string' && /(product|item|shop|tiktok)/i.test(direct)) return direct
+    const extra = an?.extra
+    if (typeof extra === 'string') {
+      const m = extra.match(/https?:\/\/[^"\\ ]*(?:product|item|shop)[^"\\ ]*/i)
+      if (m) return m[0]
+    }
+  }
+  return ''
+}
+
 // Wiralowe filmy organiczne po hashtagu — po odtworzeniach
 async function viral(hashtag: string, pages: number): Promise<any[]> {
   const out: any[] = []; let cursor = 0
@@ -96,7 +126,7 @@ async function viral(hashtag: string, pages: number): Promise<any[]> {
         isAd: !!(a.is_ad || a.has_ever_advertised),
         id: a.aweme_id || '',
         url: a.author?.unique_id && a.aweme_id ? `https://www.tiktok.com/@${a.author.unique_id}/video/${a.aweme_id}` : '',
-        shop: a.shop_product_url || '',
+        shop: extractShop(a),
       })
     }
     if (!j?.has_more) break
@@ -186,6 +216,8 @@ Deno.serve(async (req) => {
         create_time: a.create_time, region: a.region,
         products_info: a.products_info || null,
         shop_product_url: a.shop_product_url || null,
+        anchors: a.anchors || a.anchor_info || null,
+        extracted_shop: extractShop(a) || null,   // co realnie wyciąga wzmocniony extractShop()
       }
     })
     return new Response(JSON.stringify({ statKeys: Object.keys(a0.statistics || {}), authorKeys: Object.keys(a0.author || {}), probe }, null, 2), { headers: { ...cors, 'content-type': 'application/json' } })
@@ -210,6 +242,17 @@ Deno.serve(async (req) => {
       v.plays >= minPlays && (v.seed || '').trim().length >= 8 &&
       v.created && (NOW - v.created) <= maxAge          // ≤60 dni
     ).sort((a, b) => b.plays - a.plays)
+
+    // DECYZJA Tomka 2026-07-16: domyślnie zbieramy TYLKO produkty z TikTok Shop (mają shop link).
+    // requireShop=true (default) → odrzuć filmy bez linku TikTok Shop PRZED analizą GPT (oszczędza tokeny
+    // i gwarantuje dowód sprzedaży + packshot do dopasowań Ali). Jawne false = stare zachowanie.
+    const requireShop = body.requireShop !== false
+    let dropped_no_shop = 0
+    if (requireShop) {
+      const before = items.length
+      items = items.filter(v => v.shop)
+      dropped_no_shop = before - items.length
+    }
     items = items.slice(0, body.scan ?? 280)
 
     const chunks: any[][] = []
@@ -280,7 +323,7 @@ Deno.serve(async (req) => {
 
     await flushRadar(supabase)   // koszt OpenAI tego przebiegu → bud_usage (kind='radar')
     return new Response(JSON.stringify({
-      scanned_videos: items.length, found_products: cl.size,
+      scanned_videos: items.length, found_products: cl.size, dropped_no_shop, require_shop: requireShop,
       products: final.map(g => ({ pl: g.pl, q: g.q, category: g.category || 'Inne', heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, saves: g.saves, shares: g.shares, eng_rate: g.eng_rate, is_ad: g.isAd, author: g.authorNick, author_followers: g.followers, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
     }), { headers: { ...cors, 'content-type': 'application/json' } })
   }

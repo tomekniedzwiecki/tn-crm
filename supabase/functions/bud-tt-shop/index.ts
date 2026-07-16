@@ -15,6 +15,7 @@
 // Deploy: --no-verify-jwt.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { adminGate } from '../_shared/bud-owner.ts'
+import { rehostShopImages } from '../_shared/shop-images.ts'
 
 const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
 const RATE = 4   // koszt Ali (PLN-ish) = USD × RATE — spójne z bud-tt-trends
@@ -182,7 +183,19 @@ async function processRow(supabase: any, row: any): Promise<{ key: string; score
   // scored_at = znacznik OSTATNIEGO przetworzenia (zapisywany zawsze, także gdy brak danych Shop) —
   // secondary klucz priorytetu w backfillu: rotuje wiersze, które nigdy nie dostają tt_shop (brak/zły shop_url).
   const patch: Record<string, unknown> = { product_score: sc, score_meta: { ...meta, scored_at: new Date().toISOString() } }
-  if (shop) patch.tt_shop = deepClean(shop)   // usuń osierocone surogaty (slice tnie emoji) → inaczej PGRST102 wywala cały UPDATE
+  if (shop) {
+    // TRWAŁE packshoty: images z Shop CDN to podpisane URL-e (wygasają w ~dobę). Rehostuj do storage
+    // TYLKO gdy tt_shop.images_hosted jeszcze NIE istnieje (nie wydłużamy backfillu w kółko);
+    // gdy już istnieje — przenieś je na świeży tt_shop, żeby refresh nie skasował hosted URL-i.
+    const prevHosted = Array.isArray(row.tt_shop?.images_hosted) ? row.tt_shop.images_hosted : null
+    if (prevHosted?.length) {
+      shop.images_hosted = prevHosted
+    } else if (Array.isArray(shop.images) && shop.images.length) {
+      const hosted = await rehostShopImages(supabase, row.key, shop.images, 3)
+      if (hosted.length) shop.images_hosted = hosted
+    }
+    patch.tt_shop = deepClean(shop)   // usuń osierocone surogaty (slice tnie emoji) → inaczej PGRST102 wywala cały UPDATE
+  }
   const { error: uErr } = await supabase.from('bud_tt_products').update(patch).eq('id', row.id)
   if (uErr) console.warn('[bud-tt-shop] update err', row.key, JSON.stringify(uErr).slice(0, 300))
   // HISTORIA SPRZEDAŻY: przy KAŻDYM udanym pobraniu danych Shop dokładamy snapshot (sold/cena/stan)

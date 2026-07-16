@@ -8,8 +8,11 @@
 // (chyba że force). Re-runnable: backfill (status=approved) + hook po zatwierdzeniu (keys[]).
 // Gate: adminGate (team_member JWT z panelu /trendy LUB x-tools-secret z backendu).
 // Deploy: --no-verify-jwt (własny gate).
+// OP {op:'shop_images', limit?:50}: osobny backfill TRWAŁYCH PACKSHOTÓW TikTok Shop
+// (tt_shop.images = podpisane URL-e CDN, wygasają) → storage → tt_shop.images_hosted (patrz _shared/shop-images.ts).
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { adminGate } from "../_shared/bud-owner.ts";
+import { rehostShopImages } from "../_shared/shop-images.ts";
 
 const BUCKET = "attachments";
 const cors = {
@@ -51,6 +54,51 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "wymagane_logowanie_admin" }), { status: 403, headers: { ...cors, "content-type": "application/json" } });
 
   const body = await req.json().catch(() => ({}));
+  const jsonRes = (o: unknown, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { ...cors, "content-type": "application/json" } });
+
+  // ── OP shop_images: backfill trwałych PACKSHOTÓW produktów TikTok Shop.
+  // Wiersze status in (pending,approved) z tt_shop->images ale BEZ tt_shop->images_hosted → helper
+  // (rehost bajtów do storage) → update tt_shop.images_hosted (+ cover = pierwszy hosted, gdy cover
+  // jeszcze nie jest storage'owy). Zwraca {processed, rehosted_images, failed}. Wołane w pętli aż processed=0.
+  if (body.op === "shop_images") {
+    const lim: number = Math.min(body.limit || 50, 100);
+    // Kandydaci: images obecne, images_hosted brak. Filtr jsonb-path w PostgREST + dodatkowy guard w JS.
+    const { data: cand, error: cErr } = await supabase
+      .from("bud_tt_products")
+      .select("key,cover,tt_shop")
+      .in("status", ["pending", "approved"])
+      .not("tt_shop->images", "is", null)
+      .is("tt_shop->images_hosted", null)
+      .limit(lim);
+    if (cErr) return jsonRes({ error: cErr.message }, 500);
+    let processed = 0, rehosted_images = 0, failed = 0;
+    const results: Array<Record<string, unknown>> = [];
+    for (const row of (cand || [])) {
+      // deno-lint-ignore no-explicit-any
+      const ts: any = row.tt_shop;
+      const imgs: string[] = Array.isArray(ts?.images) ? ts.images : [];
+      if (!imgs.length || (Array.isArray(ts?.images_hosted) && ts.images_hosted.length)) continue; // guard
+      processed++;
+      const key = row.key as string;
+      try {
+        const hosted = await rehostShopImages(supabase, key, imgs, 3);
+        if (!hosted.length) { failed++; results.push({ key, err: "no-hosted" }); continue; }
+        // deno-lint-ignore no-explicit-any
+        const patch: Record<string, any> = { tt_shop: { ...ts, images_hosted: hosted } };
+        const cov = String((row.cover as string) || "");
+        if (!cov.includes("/storage/v1/")) patch.cover = hosted[0]; // podmień wygasający cover z shop CDN
+        const { error: uErr } = await supabase.from("bud_tt_products").update(patch).eq("key", key);
+        if (uErr) { failed++; results.push({ key, err: "db-" + uErr.message.slice(0, 40) }); continue; }
+        rehosted_images += hosted.length;
+        results.push({ key, hosted: hosted.length });
+      } catch (e) {
+        failed++;
+        results.push({ key, err: String(e).slice(0, 80) });
+      }
+    }
+    return jsonRes({ processed, rehosted_images, failed, results });
+  }
+
   const status: string = body.status || "approved";
   const keys: string[] | null = Array.isArray(body.keys) && body.keys.length ? body.keys : null;
   const limit: number = Math.min(body.limit || 200, 500);

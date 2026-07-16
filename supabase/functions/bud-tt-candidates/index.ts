@@ -27,14 +27,30 @@ Deno.serve(async (req) => {
     const limit = Math.min(body.limit || 400, 1000);
     const { data, error } = await supabase
       .from("bud_tt_products")
-      .select("key,pl_name,query,tiktok_url,heat")
+      .select("key,pl_name,query,tiktok_url,heat,tt_shop")
       .eq("status", "pending")
       .not("tiktok_url", "is", null)
       .is("ali_search_url", null)
       .order("heat", { ascending: false })
       .limit(limit);
     if (error) return j({ error: error.message }, 500);
-    return j({ products: data || [] });
+    // Packshoty produktu z TikTok Shop (czyste zdjęcia) — priorytet nad okładką wideo w reverse-image.
+    // shop_img = najlepszy pojedynczy (images_hosted[0] || images[0] || null),
+    // shop_imgs = pełna lista (max 3, images_hosted preferowane, potem images CDN — mogą wygasać).
+    const products = (data || []).map((p: Record<string, unknown>) => {
+      const shop = (p.tt_shop || {}) as Record<string, unknown>;
+      const hosted = (Array.isArray(shop.images_hosted) ? shop.images_hosted : []).filter(
+        (u: unknown): u is string => typeof u === "string" && !!u,
+      );
+      const cdn = (Array.isArray(shop.images) ? shop.images : []).filter(
+        (u: unknown): u is string => typeof u === "string" && !!u,
+      );
+      const shop_imgs = [...hosted, ...cdn].slice(0, 3);
+      const shop_img = hosted[0] || cdn[0] || null;
+      const { tt_shop: _drop, ...rest } = p;
+      return { ...rest, shop_img, shop_imgs };
+    });
+    return j({ products });
   }
 
   if (body.op === "set") {

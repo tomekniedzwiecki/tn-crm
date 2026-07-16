@@ -15,6 +15,7 @@
 import { adminGate } from '../_shared/bud-owner.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
+import { rehostShopImages } from '../_shared/shop-images.ts'
 
 const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
@@ -429,13 +430,34 @@ Deno.serve(async (req) => {
     }
   }
 
+  // ── REHOST PACKSHOTÓW: images z tt_shop to podpisane URL-e TikTok CDN (wygasają w ~dobę) →
+  // wgraj BAJTY do storage `attachments/bud-shop-imgs/<slug(key)>/<n>.jpg`, zapisz tt_shop.images_hosted
+  // + podmień cover na pierwszy hosted URL (cover z shop CDN TEŻ wygasa). Deadline 300s: rehostujemy
+  // sekwencyjnie i PRZERYWAMY gdy blisko limitu — wiersze bez images_hosted dorobi backfill (bud-tt-rehost).
+  let imagesRehosted = 0
+  if (ingest && upserted) {
+    for (const r of rows as any[]) {
+      if (Date.now() - t0 > DEADLINE_MS - 20_000) { partial = true; break } // zostaw zapas na zapis
+      const imgs = Array.isArray(r.tt_shop?.images) ? r.tt_shop.images : []
+      if (!imgs.length) continue
+      const hosted = await rehostShopImages(supabase, r.key, imgs, 3)
+      if (!hosted.length) continue
+      const tt_shop = { ...r.tt_shop, images_hosted: hosted }
+      const patch: any = { tt_shop: deepSanitize(tt_shop) }
+      patch.cover = hosted[0] // trwały cover (shop CDN wygasa)
+      const { error: ue } = await supabase.from('bud_tt_products').update(patch).eq('key', r.key)
+      if (ue) { console.warn('[bud-shop-radar] rehost update', r.key, String(ue.message || ue).slice(0, 120)); continue }
+      imagesRehosted++
+    }
+  }
+
   await flushUsage(supabase)
   const sample = (ingest ? rows : named.map((it: any) => ({ pl_name: it._pl, _sold: it._detail?.sold_count ?? it.sold, _price: it._detail?.price_real ?? it.priceSale, tiktok_url: it._detail?.videos?.[0]?.url || it.searchVideo || null }))).slice(0, 5)
     .map((r: any) => ({ pl: r.pl_name, sold: r._sold ?? null, priceUsd: r._price ?? null, hasVideo: !!r.tiktok_url }))
 
   return J({
     scanned, found: uniq.length, filtered: filteredCount,
-    upserted, failed, skipped_existing: skippedExisting,
+    upserted, failed, skipped_existing: skippedExisting, images_rehosted: imagesRehosted,
     ...(failed ? { upsert_errors: upsertErrors } : {}),
     ...(diag.length ? { diag } : {}),
     ...(partial ? { partial: true, nextQueries } : {}),
