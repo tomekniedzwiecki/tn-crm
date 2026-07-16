@@ -91,6 +91,14 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
 
 **🎛️ RZEMIOSŁO PROMPTÓW MAKIET (research D, 16.07 — OpenAI cookbook + praktycy; UNIWERSALNE):**
+- **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
+  najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
+  a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
+  zostawiając modelowi. Wyliczanie „co dokładnie ma być na hero" zagęszcza layout i zabija
+  stylowanie (v2/v6 nakazowe PRZEGRAŁY z v7 brief-celu). Nakazowo tylko: zakazy, wierność
+  produktu, style-DNA/referencja. Do EDYCJI zaakceptowanej makiety (podmiana 1 elementu):
+  referencja = ta makieta + krótka lista zmian + kotwice stylu tekstem (bez nich model dryfuje
+  — v3 zsiniało od packshotu-infografiki; ref produktu ZAWSZE czysty packshot, NIGDY infografika).
 - **Szablon promptu = struktura stała** {rola, sekcja, layout, TREŚĆ w "cudzysłowach",
   style-DNA, wykluczenia, wymiar}: język UI („high-fidelity product UI screenshot,
   Figma-style, pixel-perfect, clean design system"), ZERO języka concept-art
@@ -135,8 +143,13 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
    product placement; REMOVE all text, UI elements, buttons, cards and icons; output a clean
    photographic background with empty negative space exactly where the content was".
    Produkt ZOSTAJE w scenie (NIE „plate + wycięty packshot" — szwy/skala/światło = źle).
-   **Gate: side-by-side wygenerowanego tła z makietą — inne pomieszczenie/kadr/światło =
-   odrzut i ponowna generacja.**
+   **Prompt sceny MUSI wymagać: (a) produkt w TEJ SAMEJ skali i pozycji co na makiecie
+   („SAME size and position as in the reference" — bez tego wychodzi mniejszy; Uśmieszek 16.07),
+   (b) strefa treści WTAPIA SIĘ w jednolity kolor tła („fades seamlessly into flat solid #HEX")
+   — a kod dokłada dopasowany scrim-gradient nad sceną w strefie treści (Tomek 16.07: bez tego
+   makieta wygląda dobrze, finał gorzej).**
+   **Gate: side-by-side wygenerowanego tła z makietą — inne pomieszczenie/kadr/światło/skala
+   produktu = odrzut i ponowna generacja.**
 2. **HERO: TRZY warianty (mobile 2:3 · tablet ~1:1 · desktop 3:2, `<picture>`) = REFRAME
    TEJ SAMEJ SCENY** (za każdym razem hero-makieta jako referencja + „extend/reframe the
    same scene to N:M"). Mobile: `object-position` uniesiony (produkt nie może zniknąć za
