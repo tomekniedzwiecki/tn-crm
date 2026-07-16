@@ -70,13 +70,16 @@ function clientIssue(i: Record<string, unknown>) {
   return {
     seq: i.seq, title: i.title, status: i.status, status_pl: statusPl(String(i.status)),
     comment: i.tomek_comment || null, round_no: (i.round_no as number) || 1,
+    done_at: i.done_at || null, decided_at: i.decided_at || null,
+    // TYLKO potrzebna flaga (nie cały obiekt — nie wyciekamy wewnętrznych znaczników jak ai_pushback).
+    poza_v1: !!(i.flags && typeof i.flags === "object" && (i.flags as Record<string, unknown>).poza_v1),
   };
 }
 
 function statusPl(s: string): string {
   return s === "new" ? "Nowe"
     : s === "approved" ? "Przyjęte do poprawki"
-    : s === "rejected" ? "Odrzucone"
+    : s === "rejected" ? "Poza zakresem"
     : s === "in_progress" ? "W realizacji"
     : s === "done" ? "Poprawione"
     : s;
@@ -100,7 +103,7 @@ async function getOrCreateSession(sb: ReturnType<typeof createClient>, projectId
 
 async function loadIssues(sb: ReturnType<typeof createClient>, projectId: string) {
   const { data } = await sb.from("wfa_test_issues")
-    .select("seq, title, status, severity, tomek_comment, screenshots, round_no")
+    .select("seq, title, status, severity, tomek_comment, screenshots, round_no, decided_at, done_at, flags")
     .eq("project_id", projectId).order("seq", { ascending: true });
   return (data || []) as Array<Record<string, unknown>>;
 }
@@ -501,6 +504,10 @@ Deno.serve(async (req: Request) => {
       }));
     }
     const issues = await loadIssues(sb, projectId);
+    // Rundy (serie poprawek) z podsumowaniami — dla „Historii poprawek" po stronie klienta.
+    const { data: roundRows } = await sb.from("wfa_test_rounds")
+      .select("round_no, closed_at, summary")
+      .eq("project_id", projectId).order("round_no", { ascending: true });
     // miniatury zgłoszeń dla klienta pomijamy (lista statusów wystarcza); pełny podgląd = panel Tomka.
     // Komunikat serii poprawek: po zamknięciu rundy N (test_round wzrósł) i zanim klient dorzuci
     // cokolwiek w nowej rundzie — zachęta do ponownego testu (human touch w portalu, NIE mail).
@@ -517,6 +524,10 @@ Deno.serve(async (req: Request) => {
       round: curRound, round_notice: roundNotice,
       messages,
       issues: issues.map(clientIssue),
+      rounds: (roundRows || []).map((r: Record<string, unknown>) => ({
+        round_no: r.round_no, closed_at: r.closed_at || null,
+        summary: (r.summary && typeof r.summary === "object") ? r.summary : {},
+      })),
     });
   }
 

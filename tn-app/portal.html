@@ -247,6 +247,8 @@
         .tk-pill.approved, .tk-pill.in_progress { background:#3a2f12; color:#f5c451; }
         .tk-pill.rejected { background:#3a1f22; color:#f08a92; }
         .tk-pill.done { background:#16351f; color:#5cd07f; }
+        .tk-pill.later { background:#22304a; color:#8fb3ff; }
+        .tk-rsum { color:#6a6a72; font-weight:400; text-transform:none; letter-spacing:0; font-size:10.5px; }
         /* Timestamp wiadomości (dyskretny, w dymku) */
         .tk-ts { font-size:10.5px; opacity:.5; margin-top:5px; letter-spacing:.2px; }
         .tk-b.me .tk-ts { text-align:right; }
@@ -1139,7 +1141,7 @@
             if (!d.active) { $('c-testy').classList.add('hidden'); return; }
             $('c-testy').classList.remove('hidden');
             renderTestChat(d.messages || []);
-            renderTestIssues(d.issues || []);
+            renderTestIssues(d.issues || [], d.rounds || []);
             renderRoundNotice(d.round_notice || null);
             if (previewMode) lockTestCompose();
         } catch (e) { $('c-testy').classList.add('hidden'); }
@@ -1169,26 +1171,50 @@
     function tkTyping() { const box = $('ct-chat'); const t = document.createElement('div'); t.className = 'tk-typing'; t.id = 'ct-typing'; t.innerHTML = '<span></span><span></span><span></span>'; box.appendChild(t); box.scrollTop = box.scrollHeight; }
     function tkHideTyping() { const t = $('ct-typing'); if (t) t.remove(); }
 
-    function renderTestIssues(issues) {
+    // Data w formacie PL (DD.MM.RRRR) — spójnie z „Co nowego".
+    function fmtDatePl(iso) { if (!iso) return ''; try { return new Date(iso).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }); } catch (_) { return ''; } }
+    // Etykieta + klasa pilla wg statusu/flagi (spójne z panelem): naprawione z datą, „poza zakresem",
+    // „zaplanowane" (flaga poza_v1 = kolejna wersja), „w realizacji".
+    function issLabel(i) {
+        if (i.status === 'done') return 'Poprawione ✅' + (i.done_at ? ' · ' + fmtDatePl(i.done_at) : '');
+        if (i.status === 'rejected') return 'Poza zakresem';
+        if (i.poza_v1 === true) return 'Zaplanowane · kolejna wersja';
+        if (i.status === 'approved' || i.status === 'in_progress') return 'W realizacji';
+        return i.status_pl || i.status;
+    }
+    function issClass(i) {
+        if (i.status === 'done') return 'done';
+        if (i.status === 'rejected') return 'rejected';
+        if (i.poza_v1 === true) return 'later';
+        if (i.status === 'approved' || i.status === 'in_progress') return 'approved';
+        return esc(i.status);
+    }
+    // HISTORIA POPRAWEK dla klienta: „Twoja uwaga → status → data", grupowana po rundach (serie
+    // poprawek) z podsumowaniem rundy zamkniętej. Trwała (widoczna też po zakończeniu testów).
+    function renderTestIssues(issues, rounds) {
         const box = $('ct-issues'), count = $('ct-count');
         if (!issues || !issues.length) { box.classList.add('hidden'); box.innerHTML = ''; count.textContent = ''; return; }
         count.textContent = 'Zgłoszeń: ' + issues.length;
         box.classList.remove('hidden');
         const done = issues.filter(i => i.status === 'done').length;
+        const roundMeta = {}; (rounds || []).forEach(r => { roundMeta[r.round_no] = r; });
         const issRow = i => {
-            const label = i.status === 'done' ? 'Poprawione ✅' : (i.status_pl || i.status);
-            const comment = (i.comment && (i.status === 'rejected' || i.status === 'done')) ? '<div class="tc">' + esc(i.comment) + '</div>' : '';
+            const comment = (i.comment && (i.status === 'rejected' || i.status === 'done' || i.poza_v1)) ? '<div class="tc">' + esc(i.comment) + '</div>' : '';
             return '<div class="tk-iss"><span class="tn">TK-' + i.seq + '</span>'
                 + '<div class="tib"><div class="tt">' + esc(i.title) + '</div>' + comment + '</div>'
-                + '<span class="tk-pill ' + esc(i.status) + '">' + esc(label) + '</span></div>';
+                + '<span class="tk-pill ' + issClass(i) + '">' + esc(issLabel(i)) + '</span></div>';
         };
         // Grupowanie po rundzie serii poprawek — nagłówek „Runda N" tylko gdy rund jest więcej niż jedna.
         const byRound = {};
         issues.forEach(i => { const r = i.round_no || 1; (byRound[r] = byRound[r] || []).push(i); });
-        const rounds = Object.keys(byRound).map(Number).sort((a, b) => a - b);
-        let h = '<div class="tih">Twoje zgłoszenia' + (done ? ' · ' + done + ' poprawione ✅' : '') + '</div>';
-        rounds.forEach(r => {
-            if (rounds.length > 1) h += '<div class="tk-rhead">Runda ' + r + '</div>';
+        const rnums = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+        let h = '<div class="tih">Historia poprawek' + (done ? ' · ' + done + ' naprawionych ✅' : '') + '</div>';
+        rnums.forEach(r => {
+            if (rnums.length > 1) {
+                const m = roundMeta[r]; let sub = '';
+                if (m && m.closed_at) { const s = m.summary || {}; sub = ' <span class="tk-rsum">zamknięta ' + esc(fmtDatePl(m.closed_at)) + (s.fixed != null ? ' · ' + esc(String(s.fixed)) + ' naprawionych' : '') + '</span>'; }
+                h += '<div class="tk-rhead">Runda ' + esc(String(r)) + sub + '</div>';
+            }
             h += byRound[r].map(issRow).join('');
         });
         box.innerHTML = h;
@@ -1253,7 +1279,7 @@
             tkHideTyping();
             if (!res.ok && !d.reply) { tkAppend('assistant', 'Coś się przycięło — spróbuj jeszcze raz za chwilę.', []); return; }
             tkAppend('assistant', d.reply || '…', []);
-            if (d.issues) renderTestIssues(d.issues);
+            if (d.issues) renderTestIssues(d.issues, d.rounds || []);
         } catch (e) { tkHideTyping(); tkAppend('assistant', 'Błąd połączenia — spróbuj ponownie.', []); }
         finally { testBusy = false; $('ct-send').disabled = false; inp.focus(); }
     }
@@ -1265,7 +1291,7 @@
             const d = await res.json().catch(() => ({}));
             tkHideTyping();
             tkAppend('assistant', d.reply || 'Dziękuję za testy!', []);
-            if (d.issues) renderTestIssues(d.issues);
+            if (d.issues) renderTestIssues(d.issues, d.rounds || []);
         } catch (e) { tkHideTyping(); } finally { testBusy = false; }
     }
     // ── Zrzut ekranu „od razu" (#4): getDisplayMedia → klatka na canvas → PNG → ta sama ścieżka co plik.
