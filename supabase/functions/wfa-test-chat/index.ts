@@ -65,6 +65,14 @@ async function isKilled(sb: ReturnType<typeof createClient>): Promise<boolean> {
   }
 }
 
+// Mapowanie zgłoszenia na widok klienta (portal) — z oznaczeniem rundy.
+function clientIssue(i: Record<string, unknown>) {
+  return {
+    seq: i.seq, title: i.title, status: i.status, status_pl: statusPl(String(i.status)),
+    comment: i.tomek_comment || null, round_no: (i.round_no as number) || 1,
+  };
+}
+
 function statusPl(s: string): string {
   return s === "new" ? "Nowe"
     : s === "approved" ? "Przyjęte do poprawki"
@@ -92,9 +100,18 @@ async function getOrCreateSession(sb: ReturnType<typeof createClient>, projectId
 
 async function loadIssues(sb: ReturnType<typeof createClient>, projectId: string) {
   const { data } = await sb.from("wfa_test_issues")
-    .select("seq, title, status, severity, tomek_comment, screenshots")
+    .select("seq, title, status, severity, tomek_comment, screenshots, round_no")
     .eq("project_id", projectId).order("seq", { ascending: true });
   return (data || []) as Array<Record<string, unknown>>;
+}
+
+// Serie poprawek (rundy): upewnij się, że wiersz rundy istnieje (idempotentnie).
+// round_no NIGDY nie pochodzi z body klienta — tylko z wfa_projects.test_round.
+async function ensureRound(sb: ReturnType<typeof createClient>, projectId: string, roundNo: number): Promise<void> {
+  await sb.from("wfa_test_rounds").upsert(
+    { project_id: projectId, round_no: roundNo },
+    { onConflict: "project_id,round_no", ignoreDuplicates: true },
+  );
 }
 
 // Podpisz ścieżki zrzutów (1h) do renderu miniatur / vision — wspólny helper signPaths
@@ -240,6 +257,7 @@ async function insertIssue(
   sessionId: string,
   raw: Record<string, unknown>,
   shots: string[],
+  roundNo: number,
 ): Promise<{ seq: number; title: string } | null> {
   const title = String(raw.title || "").slice(0, 200).trim();
   if (!title) return null;
@@ -278,6 +296,7 @@ async function insertIssue(
     const { data, error } = await sb.from("wfa_test_issues").insert({
       project_id: projectId, session_id: sessionId, seq, title, description: desc,
       area, device, severity, quote, screenshots: shotsJson, status: "new", flags,
+      round_no: roundNo, // SERIA POPRAWEK: runda z wfa_projects.test_round (serwer, nie body klienta)
     }).select("seq, title").single();
     if (!error && data) return { seq: (data as any).seq, title: (data as any).title };
     if (error && String(error.code) === "23505") { await sleep(40); continue; } // wyścig seq → retry
@@ -368,9 +387,11 @@ Deno.serve(async (req: Request) => {
   }
 
   const { data: p } = await sb.from("wfa_projects")
-    .select("id, name, unique_token, client_password_hash, test_context, test_mode")
+    .select("id, name, unique_token, client_password_hash, test_context, test_mode, test_round")
     .eq("unique_token", token).maybeSingle();
   if (!p) { await sleep(300); return json({ error: "unauthorized" }, 401); }
+
+  const curRound = Number((p as any).test_round) || 1; // bieżąca (otwarta) runda serii poprawek
 
   // ============ TEST_ADMIN (panel Tomka): pełne zgłoszenia + signed URLs zrzutów ============
   // Gate = CZŁONEK ZESPOŁU (team JWT), NIE hasło klienta. Wiersze i tak czyta panel przez
@@ -378,21 +399,70 @@ Deno.serve(async (req: Request) => {
   if ((body.action || "").trim() === "test_admin") {
     const member = await verifyTeamMember(req, sb);
     if (!member) { await sleep(300); return json({ error: "unauthorized" }, 401); }
+    await ensureRound(sb, String(p.id), curRound); // gwarancja wiersza bieżącej rundy
     const { data: iss } = await sb.from("wfa_test_issues")
-      .select("id, seq, title, description, area, device, severity, quote, status, tomek_comment, screenshots, flags, created_at, decided_at, done_at")
+      .select("id, seq, title, description, area, device, severity, quote, status, tomek_comment, screenshots, flags, round_no, created_at, decided_at, done_at")
       .eq("project_id", String(p.id)).order("seq", { ascending: true });
     const rows = (iss || []) as Array<Record<string, unknown>>;
+    // Pełny transkrypt rozmowy (wszystkie sesje projektu) — panel pokazuje KONTEKST, nie tylko
+    // wyekstrahowane zgłoszenia (jak spowiednik ze spar_messages). Zrzuty = signed URL (bucket private).
+    const { data: msgRows } = await sb.from("wfa_test_messages")
+      .select("role, content, attachments, created_at")
+      .eq("project_id", String(p.id)).order("created_at", { ascending: true }).range(0, 1999);
+    const { data: rounds } = await sb.from("wfa_test_rounds")
+      .select("round_no, opened_at, closed_at, summary")
+      .eq("project_id", String(p.id)).order("round_no", { ascending: true });
     const allPaths: string[] = [];
     rows.forEach((i) => pathsOf(i.screenshots).forEach((pp) => allPaths.push(pp)));
+    (msgRows || []).forEach((m: any) => pathsOf(m.attachments).forEach((pp) => allPaths.push(pp)));
     const signed = await sign(sb, allPaths);
     return json({
+      test_round: curRound,
+      rounds: (rounds || []).map((r: any) => ({ round_no: r.round_no, opened_at: r.opened_at, closed_at: r.closed_at, summary: (r.summary && typeof r.summary === "object") ? r.summary : {} })),
       issues: rows.map((i) => ({
         id: i.id, seq: i.seq, title: i.title, description: i.description, area: i.area, device: i.device,
         severity: i.severity, quote: i.quote, status: i.status, tomek_comment: i.tomek_comment, created_at: i.created_at,
+        round_no: i.round_no || 1,
         flags: (i.flags && typeof i.flags === "object") ? i.flags : {},
         shots: pathsOf(i.screenshots).map((pp) => ({ path: pp, url: signed[pp] || null })),
       })),
+      messages: (msgRows || []).map((m: any) => ({
+        role: m.role, content: m.content, created_at: m.created_at,
+        attachments: pathsOf(m.attachments).map((pp) => ({ path: pp, url: signed[pp] || null })),
+      })),
     });
+  }
+
+  // ============ CLOSE_ROUND (panel Tomka: „Zamknij serię poprawek") ============
+  // Gate = CZŁONEK ZESPOŁU (team JWT). Zamyka bieżącą rundę (podsumowanie), inkrementuje
+  // test_round i otwiera następną. Warunek: 0 zgłoszeń w statusie „new" (wszystko rozstrzygnięte).
+  if ((body.action || "").trim() === "close_round") {
+    const member = await verifyTeamMember(req, sb);
+    if (!member) { await sleep(300); return json({ error: "unauthorized" }, 401); }
+    const { data: rows } = await sb.from("wfa_test_issues")
+      .select("status, flags").eq("project_id", String(p.id)).eq("round_no", curRound);
+    const list = (rows || []) as Array<Record<string, unknown>>;
+    if (!list.length) return json({ error: "empty_round", message: `Runda ${curRound} nie ma jeszcze żadnych zgłoszeń — nie ma czego zamykać.` }, 409);
+    const newCount = list.filter((r) => String(r.status) === "new").length;
+    if (newCount > 0) return json({ error: "unresolved", message: `W rundzie ${curRound} zostało ${newCount} nierozstrzygniętych zgłoszeń. Zatwierdź lub odrzuć wszystkie przed zamknięciem serii.` }, 409);
+    const summary = {
+      reported: list.length,
+      fixed: list.filter((r) => String(r.status) === "done").length,
+      rejected: list.filter((r) => String(r.status) === "rejected").length,
+      in_progress: list.filter((r) => ["approved", "in_progress"].includes(String(r.status))).length,
+      dev_v11: list.filter((r) => r.flags && typeof r.flags === "object" && (r.flags as any).poza_v1 === true).length,
+    };
+    await ensureRound(sb, String(p.id), curRound);
+    await sb.from("wfa_test_rounds").update({ closed_at: new Date().toISOString(), summary })
+      .eq("project_id", String(p.id)).eq("round_no", curRound);
+    const next = curRound + 1;
+    await sb.from("wfa_projects").update({ test_round: next }).eq("id", String(p.id));
+    await ensureRound(sb, String(p.id), next);
+    await sb.from("wfa_activities").insert({
+      project_id: String(p.id), actor: "admin", action: "test_round_closed",
+      description: `Zamknięto serię poprawek — Runda ${curRound} (zgłoszonych ${summary.reported}, naprawionych ${summary.fixed}, odrzuconych ${summary.rejected}, rozwój v1.1 ${summary.dev_v11}). Otwarta Runda ${next}.`.slice(0, 500),
+    });
+    return json({ ok: true, closed_round: curRound, test_round: next, summary });
   }
 
   // Ścieżka klienta: hasło portalu (SHA-256) obowiązkowe.
@@ -426,17 +496,27 @@ Deno.serve(async (req: Request) => {
       (msgs || []).forEach((m: any) => pathsOf(m.attachments).forEach((p) => allPaths.push(p)));
       const signed = await sign(sb, allPaths);
       messages = (msgs || []).map((m: any) => ({
-        role: m.role, content: m.content,
+        role: m.role, content: m.content, created_at: m.created_at,
         attachments: pathsOf(m.attachments).map((p) => ({ path: p, url: signed[p] || null })),
       }));
     }
     const issues = await loadIssues(sb, projectId);
     // miniatury zgłoszeń dla klienta pomijamy (lista statusów wystarcza); pełny podgląd = panel Tomka.
+    // Komunikat serii poprawek: po zamknięciu rundy N (test_round wzrósł) i zanim klient dorzuci
+    // cokolwiek w nowej rundzie — zachęta do ponownego testu (human touch w portalu, NIE mail).
+    let roundNotice: string | null = null;
+    if (curRound > 1 && !issues.some((i) => (Number(i.round_no) || 1) === curRound)) {
+      const { data: lastClosed } = await sb.from("wfa_test_rounds").select("round_no")
+        .eq("project_id", projectId).not("closed_at", "is", null).order("round_no", { ascending: false }).limit(1).maybeSingle();
+      const rn = (lastClosed as any)?.round_no || (curRound - 1);
+      roundNotice = `Poprawki z rundy ${rn} są już gotowe — przetestuj aplikację jeszcze raz i daj mi znać, co jeszcze wymaga uwagi.`;
+    }
     return json({
       active: true, readonly, session_id: session?.id || null,
       app_name: (p.name || "").trim() || "Twoja aplikacja",
+      round: curRound, round_notice: roundNotice,
       messages,
-      issues: issues.map((i) => ({ seq: i.seq, title: i.title, status: i.status, status_pl: statusPl(String(i.status)), comment: i.tomek_comment || null })),
+      issues: issues.map(clientIssue),
     });
   }
 
@@ -525,7 +605,7 @@ Deno.serve(async (req: Request) => {
     if (parsed.length) {
       let shots = await pendingShots(sb, projectId, session.id);
       for (const iss of parsed) {
-        const r = await insertIssue(sb, projectId, session.id, iss, shots);
+        const r = await insertIssue(sb, projectId, session.id, iss, shots, curRound);
         if (r) { created.push(r); shots = []; } // kolejne w tej turze bez ponownego doklejania
       }
     }
@@ -548,8 +628,9 @@ Deno.serve(async (req: Request) => {
     const allIssues = await loadIssues(sb, projectId);
     return json({
       reply,
+      round: curRound,
       created: created.map((c) => ({ seq: c.seq, title: c.title })),
-      issues: allIssues.map((i) => ({ seq: i.seq, title: i.title, status: i.status, status_pl: statusPl(String(i.status)), comment: i.tomek_comment || null })),
+      issues: allIssues.map(clientIssue),
     });
   }
 
@@ -576,7 +657,7 @@ Deno.serve(async (req: Request) => {
         const { clean, issues: parsed } = parseIssues(ai.text);
         if (parsed.length) {
           let shots = await pendingShots(sb, projectId, session.id);
-          for (const iss of parsed) { const r = await insertIssue(sb, projectId, session.id, iss, shots); if (r) shots = []; }
+          for (const iss of parsed) { const r = await insertIssue(sb, projectId, session.id, iss, shots, curRound); if (r) shots = []; }
         }
         if (clean) reply = clean;
       }
@@ -584,7 +665,7 @@ Deno.serve(async (req: Request) => {
     await sb.from("wfa_test_sessions").update({ status: "closed", last_activity_at: new Date().toISOString() }).eq("id", session.id);
     await sb.from("wfa_test_messages").insert({ session_id: session.id, project_id: projectId, role: "assistant", content: reply });
     const allIssues = await loadIssues(sb, projectId);
-    return json({ ok: true, reply, issues: allIssues.map((i) => ({ seq: i.seq, title: i.title, status: i.status, status_pl: statusPl(String(i.status)), comment: i.tomek_comment || null })) });
+    return json({ ok: true, reply, round: curRound, issues: allIssues.map(clientIssue) });
   }
 
   return json({ error: "bad_action" }, 400);

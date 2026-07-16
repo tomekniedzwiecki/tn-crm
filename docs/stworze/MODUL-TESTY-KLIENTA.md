@@ -214,6 +214,62 @@ wszystkie projekty fabryki). Bezpieczeństwo: front dopuszcza w `href` wyłączn
 Zaproszenie do testów / onboarding to **human touch Tomka (WhatsApp)**, NIE automat — automatyczne
 są tylko wiadomości transakcyjne (patrz `feedback-operator-human-touch-momenty-relacyjne.md`).
 
+## Serie poprawek (rundy) + timestampy + transkrypt w panelu (16.07, TK-SERIE)
+
+Trzy rozszerzenia modułu (wymagania Tomka 16.07). Migracja `20260716b_wfa_test_rundy.sql`.
+
+### 1) Timestampy wiadomości (strefa Europe/Warsaw)
+Każda wiadomość (klient + AI) ma widoczny, dyskretny timestamp: `dziś 14:32` / `wczoraj 14:32`
+/ `16.07, 14:32`. Dane były od zawsze (`wfa_test_messages.created_at`) — teraz edge JE ZWRACA
+(`history.messages[].created_at`, `test_admin.messages[].created_at`), a front renderuje helperem
+`fmtChatTime(iso)` (Europe/Warsaw, `toLocaleDateString('en-CA')` do porównania dnia). Portal:
+w dymku (`.tk-ts`); świeżo wysłane bąbelki dostają `new Date()`. Panel: w transkrypcie.
+
+### 2) Transkrypt rozmowy w panelu (jak spowiednik ze `spar_messages`)
+Panel `projekt.html`, krok „Testy klienta": pod zgłoszeniami zwijany blok **„Pokaż pełną rozmowę
+(transkrypt · N)"** — PEŁNA rozmowa klienta z AI (user+assistant, timestampy, miniatury zrzutów
+signed). Tomek widzi KONTEKST, nie tylko wyekstrahowane zgłoszenia. Dane: `test_admin.messages`
+(edge dokłada `created_at` + signed URL zrzutów, gate = team JWT). Render **wyłącznie przez
+`escapeHtml` (atrybutowy, SEC-D2) / `encodeURIComponent` dla URL** — treść = dane klienta, zero
+surowego innerHTML (analogicznie do `loadSpowiednik`/`tkRow`).
+
+### 3) Serie poprawek (rundy) — model
+Cykl: klient testuje → zgłasza uwagi (runda N) → Tomek rozstrzyga+zleca → poprawki →
+**„Zamknij serię poprawek"** (podsumowanie rundy N, powiadomienie klienta) → klient testuje
+ponownie → uwagi = runda N+1 → aż czysto. Wiele rund, historia zostaje.
+
+**Dane:**
+- `wfa_projects.test_round int NOT NULL DEFAULT 1` — bieżąca (otwarta) runda.
+- `wfa_test_issues.round_no int NOT NULL DEFAULT 1` — runda powstania zgłoszenia. **Ustawiany
+  WYŁĄCZNIE przez edge z `test_round` (klient NIGDY nie podaje w body — niemanipulowalny).**
+- `wfa_test_rounds (project_id, round_no, opened_at, closed_at, summary jsonb)` — jedna runda;
+  `summary` liczone przy zamknięciu (`reported/fixed/rejected/in_progress/dev_v11`). Dedykowana
+  tabela (nie nota/activity), bo panel grupuje po rundach i renderuje nagłówki z podsumowaniem,
+  a portal pokazuje komunikat po zamknięciu. RLS = team_members, ZERO anon.
+
+**Edge `wfa-test-chat`:**
+- `create_issue` (marker) → `round_no = curRound` (bieżący `test_round`).
+- `history` → `round` + `round_notice` (po zamknięciu rundy i zanim klient dorzuci coś w nowej
+  rundzie: „Poprawki z rundy N są gotowe — przetestuj ponownie…"); issues z `round_no`.
+- `test_admin` → `test_round` + `rounds[]` (z summary) + `messages[]` (transkrypt) + issues z `round_no`.
+- **`close_round`** (nowa akcja, gate = team JWT): warunek = 0 zgłoszeń w statusie `new` w bieżącej
+  rundzie (i ≥1 zgłoszenie); (a) liczy+zapisuje `summary`, (b) `closed_at=now()`, (c) `test_round++`,
+  (d) otwiera wiersz następnej rundy. `409 unresolved` gdy są nierozstrzygnięte; `409 empty_round`
+  gdy runda pusta. Powiadomienie klienta = komunikat w portalu (human touch, NIE automatyczny mail).
+
+**Panel `projekt.html`:** zgłoszenia GRUPOWANE po `round_no`. Nagłówek każdej rundy: „Runda N —
+otwarta/zamknięta + podsumowanie (zgłoszonych X · naprawionych Y ✅ · odrzuconych Z · rozwój v1.1 W)".
+Bieżąca otwarta runda u góry z przyciskiem **„Zamknij serię poprawek (Runda N)"** (aktywny gdy 0
+„nowych" i ≥1 zgłoszenie). Zamknięte rundy = historia zwinięta (`<details>`). „Zleć pracę nad
+zatwierdzonymi" dopisuje pozycje `[TK-<seq>] (runda N) <tytuł>` do checklisty `poprawki_demo`.
+
+**Portal `portal.html`:** zgłoszenia z tagiem „Runda N" (grupowanie gdy >1 runda); po zamknięciu
+serii banner „Poprawki z rundy N gotowe — przetestuj ponownie" (znika, gdy klient dorzuci nowe
+zgłoszenie). Nowa runda = klient kontynuuje czat, nowe zgłoszenia → `round_no = N+1`.
+
+**Współgranie z workflow:** krok `testy_klienta` powtarzalny (rundy); `poprawki_demo` zasilany per
+runda (`[TK-<seq>] (runda N)`).
+
 ## Ergonomia czatu testów: większe okno + pełny ekran + zrzut ekranu (16.07, TK-UX)
 
 Standard portalu testów (`tn-app/portal.html`, sekcja „Testy aplikacji"). Klient-operator

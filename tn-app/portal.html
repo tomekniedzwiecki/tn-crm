@@ -247,6 +247,14 @@
         .tk-pill.approved, .tk-pill.in_progress { background:#3a2f12; color:#f5c451; }
         .tk-pill.rejected { background:#3a1f22; color:#f08a92; }
         .tk-pill.done { background:#16351f; color:#5cd07f; }
+        /* Timestamp wiadomości (dyskretny, w dymku) */
+        .tk-ts { font-size:10.5px; opacity:.5; margin-top:5px; letter-spacing:.2px; }
+        .tk-b.me .tk-ts { text-align:right; }
+        /* Serie poprawek (rundy) */
+        .tk-notice { display:flex; align-items:flex-start; gap:9px; background:#12281a; border:1px solid #24532f; color:#a8e0ba; border-radius:10px; padding:11px 14px; margin:12px 0 4px; font-size:13px; line-height:1.5; }
+        .tk-notice i { color:#5cd07f; font-size:17px; flex-shrink:0; margin-top:1px; }
+        .tk-rhead { color:#8b8b93; font-size:11.5px; font-weight:600; margin:13px 0 3px; text-transform:uppercase; letter-spacing:.4px; }
+        .tk-rhead:first-of-type { margin-top:8px; }
     </style>
 </head>
 <body>
@@ -314,6 +322,7 @@
         <section class="hidden" id="c-testy">
             <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
             <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
+            <div class="tk-notice hidden" id="ct-notice"></div>
             <div class="tk-chat card" id="ct-chat"></div>
             <div class="tk-shots" id="ct-shots"></div>
             <div class="tk-compose" id="ct-compose">
@@ -407,6 +416,19 @@
     // relatywne, gdyby app_url był kiedyś zmanipulowany w bazie). Zwraca '' = ukryj przycisk.
     const safeHttpsUrl = u => { const s = (u === null || u === undefined) ? '' : String(u).trim(); return /^https:\/\//i.test(s) ? s : ''; };
     const urlHost = u => { try { return new URL(u).host; } catch (e) { return String(u).replace(/^https?:\/\//i, '').replace(/\/.*$/, ''); } };
+    // Timestamp wiadomości czatu — strefa Europe/Warsaw, „dziś HH:MM" / „wczoraj HH:MM" / „DD.MM, HH:MM".
+    function fmtChatTime(iso) {
+        if (!iso) return '';
+        const d = new Date(iso); if (isNaN(d)) return '';
+        const TZ = 'Europe/Warsaw';
+        const time = d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', timeZone: TZ });
+        const dayKey = x => x.toLocaleDateString('en-CA', { timeZone: TZ }); // YYYY-MM-DD do porównania dnia
+        const now = new Date(), yest = new Date(now.getTime() - 86400000);
+        const k = dayKey(d);
+        if (k === dayKey(now)) return 'dziś ' + time;
+        if (k === dayKey(yest)) return 'wczoraj ' + time;
+        return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', timeZone: TZ }) + ', ' + time;
+    }
     const PW_KEY = 'wfa_portal_pw_' + token;
     let currentPw = '';
     let contractMeta = null;
@@ -1041,23 +1063,32 @@
             $('c-testy').classList.remove('hidden');
             renderTestChat(d.messages || []);
             renderTestIssues(d.issues || []);
+            renderRoundNotice(d.round_notice || null);
             if (previewMode) lockTestCompose();
         } catch (e) { $('c-testy').classList.add('hidden'); }
     }
-    function tkBubble(role, text, imgs) {
+    // Komunikat serii poprawek („Runda N gotowa — przetestuj ponownie"). Znika, gdy klient
+    // dorzuci nowe zgłoszenie w bieżącej rundzie (edge przestaje go zwracać / hide przy wysyłce).
+    function renderRoundNotice(txt) {
+        const el = $('ct-notice'); if (!el) return;
+        if (txt) { el.innerHTML = '<i class="ph ph-check-circle"></i><span>' + esc(txt) + '</span>'; el.classList.remove('hidden'); }
+        else { el.innerHTML = ''; el.classList.add('hidden'); }
+    }
+    function tkBubble(role, text, imgs, ts) {
         const b = document.createElement('div');
         b.className = 'tk-b ' + (role === 'user' ? 'me' : 'ai');
         b.textContent = text || '';
         (imgs || []).forEach(u => { if (!u) return; const im = document.createElement('img'); im.src = u; im.onclick = () => openVlb(encodeURIComponent(u)); b.appendChild(im); });
+        if (ts) { const t = document.createElement('div'); t.className = 'tk-ts'; t.textContent = fmtChatTime(ts); b.appendChild(t); }
         return b;
     }
     function renderTestChat(messages) {
         const box = $('ct-chat'); box.innerHTML = '';
-        if (!messages.length) box.appendChild(tkBubble('assistant', INTRO_MSG, []));
-        messages.forEach(m => box.appendChild(tkBubble(m.role, m.content, (m.attachments || []).map(a => a.url))));
+        if (!messages.length) box.appendChild(tkBubble('assistant', INTRO_MSG, [], null));
+        messages.forEach(m => box.appendChild(tkBubble(m.role, m.content, (m.attachments || []).map(a => a.url), m.created_at)));
         box.scrollTop = box.scrollHeight;
     }
-    function tkAppend(role, text, imgs) { const box = $('ct-chat'); box.appendChild(tkBubble(role, text, imgs)); box.scrollTop = box.scrollHeight; }
+    function tkAppend(role, text, imgs) { const box = $('ct-chat'); box.appendChild(tkBubble(role, text, imgs, new Date().toISOString())); box.scrollTop = box.scrollHeight; }
     function tkTyping() { const box = $('ct-chat'); const t = document.createElement('div'); t.className = 'tk-typing'; t.id = 'ct-typing'; t.innerHTML = '<span></span><span></span><span></span>'; box.appendChild(t); box.scrollTop = box.scrollHeight; }
     function tkHideTyping() { const t = $('ct-typing'); if (t) t.remove(); }
 
@@ -1067,14 +1098,22 @@
         count.textContent = 'Zgłoszeń: ' + issues.length;
         box.classList.remove('hidden');
         const done = issues.filter(i => i.status === 'done').length;
-        let h = '<div class="tih">Twoje zgłoszenia' + (done ? ' · ' + done + ' poprawione ✅' : '') + '</div>';
-        h += issues.map(i => {
+        const issRow = i => {
             const label = i.status === 'done' ? 'Poprawione ✅' : (i.status_pl || i.status);
             const comment = (i.comment && (i.status === 'rejected' || i.status === 'done')) ? '<div class="tc">' + esc(i.comment) + '</div>' : '';
             return '<div class="tk-iss"><span class="tn">TK-' + i.seq + '</span>'
                 + '<div class="tib"><div class="tt">' + esc(i.title) + '</div>' + comment + '</div>'
                 + '<span class="tk-pill ' + esc(i.status) + '">' + esc(label) + '</span></div>';
-        }).join('');
+        };
+        // Grupowanie po rundzie serii poprawek — nagłówek „Runda N" tylko gdy rund jest więcej niż jedna.
+        const byRound = {};
+        issues.forEach(i => { const r = i.round_no || 1; (byRound[r] = byRound[r] || []).push(i); });
+        const rounds = Object.keys(byRound).map(Number).sort((a, b) => a - b);
+        let h = '<div class="tih">Twoje zgłoszenia' + (done ? ' · ' + done + ' poprawione ✅' : '') + '</div>';
+        rounds.forEach(r => {
+            if (rounds.length > 1) h += '<div class="tk-rhead">Runda ' + r + '</div>';
+            h += byRound[r].map(issRow).join('');
+        });
         box.innerHTML = h;
     }
     function renderPending() {
@@ -1125,6 +1164,7 @@
         const ready = testPending.filter(s => s.path);
         if (!text && !ready.length) return;
         testBusy = true; $('ct-send').disabled = true;
+        renderRoundNotice(null); // klient wraca do testów w nowej rundzie — komunikat już zbędny
         tkAppend('user', text, ready.map(s => s.url));
         inp.value = ''; inp.style.height = 'auto';
         const attachments = ready.map(s => s.path);

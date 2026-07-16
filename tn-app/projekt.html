@@ -372,6 +372,18 @@
         }
         function fmtDate(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL'); }
         function fmtDateTime(iso) { if (!iso) return ''; const d = new Date(iso); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL') + ', ' + d.toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit' }); }
+        // Timestamp wiadomości czatu — strefa Europe/Warsaw, „dziś HH:MM" / „wczoraj HH:MM" / „DD.MM, HH:MM".
+        function fmtChatTime(iso) {
+            if (!iso) return '';
+            const d = new Date(iso); if (isNaN(d)) return '';
+            const TZ = 'Europe/Warsaw';
+            const time = d.toLocaleTimeString('pl-PL', { hour:'2-digit', minute:'2-digit', timeZone: TZ });
+            const dayKey = x => x.toLocaleDateString('en-CA', { timeZone: TZ });
+            const now = new Date(), yest = new Date(now.getTime() - 86400000), k = dayKey(d);
+            if (k === dayKey(now)) return 'dziś ' + time;
+            if (k === dayKey(yest)) return 'wczoraj ' + time;
+            return d.toLocaleDateString('pl-PL', { day:'2-digit', month:'2-digit', timeZone: TZ }) + ', ' + time;
+        }
         function projName() { const n = (project.name || '').trim(); return n || ((project.customer_name || 'Projekt') + ' (bez nazwy)'); }
         function showToast(message, type='info') {
             const toast = document.createElement('div');
@@ -1258,6 +1270,9 @@
         // bucketa wfa-test-shots dokłada edge wfa-test-chat (action test_admin, gate = team JWT).
         const FN_TEST = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-test-chat';
         let TK_ISSUES = [];
+        let TK_ROUND = 1;          // bieżąca (otwarta) runda serii poprawek
+        let TK_ROUNDS = [];        // [{round_no, opened_at, closed_at, summary}]
+        let TK_MESSAGES = [];      // pełny transkrypt rozmowy (user+assistant, timestampy, zrzuty signed)
         function tkNewCount() { return TK_ISSUES.filter(i => i.status === 'new').length; }
         async function loadTkIssues(refreshUi) {
             try {
@@ -1267,22 +1282,116 @@
                 if (!res.ok) return;
                 const d = await res.json();
                 TK_ISSUES = d.issues || [];
+                TK_ROUND = d.test_round || 1;
+                TK_ROUNDS = d.rounds || [];
+                TK_MESSAGES = d.messages || [];
             } catch (e) { /* cicho — sekcja pokaże pustkę */ }
             if (refreshUi) { renderStage(); if (drawerCtx && drawerCtx.key === 'testy_klienta') renderTkAdmin(); }
         }
         const TK_SEV = { krytyczne:['Krytyczne','#f26d78'], istotne:['Istotne','#f5b955'], kosmetyka:['Kosmetyka','#8b8b93'] };
         const TK_STATUS = { new:['Nowe','#8fb3ff'], approved:['Zatwierdzone','#f5c451'], rejected:['Odrzucone','#f08a92'], in_progress:['W realizacji','#f5c451'], done:['Poprawione ✅','#5cd07f'] };
 
+        // Serie poprawek: podsumowanie rundy (zgłoszonych/naprawionych/odrzuconych/rozwój v1.1).
+        function tkRoundMeta(n) { return TK_ROUNDS.find(r => r.round_no === n) || null; }
+        function tkSummaryLine(summary, liveIssues) {
+            let reported, fixed, rejected, dev;
+            if (liveIssues) { // bieżąca (otwarta) runda — liczymy na żywo
+                reported = liveIssues.length;
+                fixed = liveIssues.filter(i => i.status === 'done').length;
+                rejected = liveIssues.filter(i => i.status === 'rejected').length;
+                dev = liveIssues.filter(i => i.flags && i.flags.poza_v1 === true).length;
+            } else { const s = summary || {}; reported = s.reported||0; fixed = s.fixed||0; rejected = s.rejected||0; dev = s.dev_v11||0; }
+            return `zgłoszonych ${reported} · naprawionych ${fixed} ✅ · odrzuconych ${rejected}` + (dev ? ` · rozwój v1.1 ${dev}` : '');
+        }
         function renderTkAdmin() {
             const box = document.getElementById('tk-admin'); if (!box) return;
             const issues = TK_ISSUES;
             const approved = issues.filter(i => i.status === 'approved');
-            let h = `<div class="flex items-center justify-between gap-2 mb-3">
-                <div class="text-[11px] text-zinc-500">${issues.length} zgłoszeń · ${tkNewCount()} nowych · ${approved.length} zatwierdzonych</div>
+            let h = `<div class="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <div class="text-[11px] text-zinc-500">${issues.length} zgłoszeń łącznie · bieżąca <b class="text-zinc-300">Runda ${TK_ROUND}</b> · ${tkNewCount()} nowych · ${approved.length} zatwierdzonych</div>
                 <button onclick="tkAssignApproved()" ${approved.length?'':'disabled'} class="text-[11px] px-3 py-1.5 rounded-md border ${approved.length?'border-[#0070f3]/50 text-[#52a8ff] hover:bg-[#0070f3]/10':'border-[#1f1f1f] text-zinc-700 cursor-not-allowed'}"><i class="ph ph-arrow-bend-down-right"></i> Zleć pracę nad zatwierdzonymi (${approved.length})</button>
             </div>`;
-            if (!issues.length) { box.innerHTML = h + '<div class="text-zinc-600 text-xs py-4">Brak zgłoszeń. Gdy klient przejdzie testy w portalu, pojawią się tutaj.</div>'; return; }
-            box.innerHTML = h + issues.map(tkRow).join('');
+            if (!issues.length && !TK_ROUNDS.some(r => r.closed_at)) h += '<div class="text-zinc-600 text-xs mb-2">Brak zgłoszeń. Gdy klient przejdzie testy w portalu, pojawią się tutaj.</div>';
+
+            // Grupowanie po rundzie. Zbiór rund = rundy zgłoszeń ∪ historia rund ∪ bieżąca.
+            const byRound = {};
+            issues.forEach(i => { const r = i.round_no || 1; (byRound[r] = byRound[r] || []).push(i); });
+            const roundSet = new Set([TK_ROUND, ...Object.keys(byRound).map(Number), ...TK_ROUNDS.map(r => r.round_no)]);
+            const allRounds = [...roundSet].sort((a, b) => b - a); // malejąco — najnowsza u góry
+
+            h += allRounds.map(n => {
+                const meta = tkRoundMeta(n);
+                const rIssues = byRound[n] || [];
+                const closed = !!(meta && meta.closed_at);
+                const isOpen = (n === TK_ROUND) && !closed;
+                const newInRound = rIssues.filter(i => i.status === 'new').length;
+                const summary = closed ? tkSummaryLine(meta.summary, null) : tkSummaryLine(null, rIssues);
+                const rows = rIssues.length ? rIssues.map(tkRow).join('') : '<div class="text-zinc-600 text-xs py-2">Brak zgłoszeń w tej rundzie.</div>';
+
+                if (closed && !isOpen) { // zamknięte rundy — historia zwinięta
+                    return `<details class="mb-2 border-t border-[#1a1a1a] pt-2.5">
+                        <summary class="cursor-pointer list-none flex items-center justify-between gap-2 text-[12px] text-zinc-400 hover:text-zinc-200">
+                            <span class="font-semibold"><i class="ph ph-check-circle text-[#5cd07f]"></i> Runda ${n} — zamknięta ${escapeHtml(fmtDateTime(meta.closed_at))}</span>
+                            <span class="text-[10.5px] text-zinc-500">${escapeHtml(summary)}</span>
+                        </summary>
+                        <div class="mt-2.5">${rows}</div>
+                    </details>`;
+                }
+                const stateLabel = `<span style="color:#f5b955">otwarta</span>`;
+                let closeBtn = '';
+                const canClose = rIssues.length > 0 && newInRound === 0;
+                closeBtn = `<div class="mb-2.5"><button onclick="tkCloseRound()" ${canClose?'':'disabled'} class="text-[11px] px-3 py-1.5 rounded-md border ${canClose?'border-[#45a557]/50 text-[#62c073] hover:bg-[#45a557]/10':'border-[#1f1f1f] text-zinc-700 cursor-not-allowed'}" title="${canClose?'Zamknij serię poprawek tej rundy i otwórz następną':'Najpierw rozstrzygnij wszystkie nowe zgłoszenia (0 „nowych")'}"><i class="ph ph-flag-checkered"></i> Zamknij serię poprawek (Runda ${n})</button>${newInRound?`<span class="text-[10.5px] text-zinc-500 ml-2">zostaw 0 „nowych" — jest ${newInRound}</span>`:''}</div>`;
+                return `<div class="mb-1 border-t border-[#1a1a1a] pt-2.5">
+                    <div class="flex items-center justify-between gap-2 mb-2">
+                        <div class="text-[12px] font-semibold text-zinc-300">Runda ${n} — ${stateLabel}</div>
+                        <div class="text-[10.5px] text-zinc-500">${escapeHtml(summary)}</div>
+                    </div>
+                    ${closeBtn}${rows}
+                </div>`;
+            }).join('');
+
+            box.innerHTML = h + tkTranscriptBlock();
+        }
+        // Transkrypt CAŁEJ rozmowy klienta z AI (kontekst — jak spowiednik). Zwijany.
+        function tkTranscriptBlock() {
+            return `<div class="mt-4 border-t border-[#1f1f1f] pt-3">
+                <button onclick="tkToggleTranscript()" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] inline-flex items-center gap-1.5"><i class="ph ph-chat-dots"></i> Pokaż pełną rozmowę (transkrypt · ${TK_MESSAGES.length})</button>
+                <div id="tk-transcript" class="hidden mt-3 max-h-96 overflow-y-auto space-y-2 bg-[#0d0d0d] border border-[#1f1f1f] rounded-md p-4"></div>
+            </div>`;
+        }
+        function tkToggleTranscript() {
+            const box = document.getElementById('tk-transcript'); if (!box) return;
+            const nowHidden = box.classList.toggle('hidden');
+            if (!nowHidden) tkRenderTranscript();
+        }
+        function tkRenderTranscript() {
+            const box = document.getElementById('tk-transcript'); if (!box) return;
+            if (!TK_MESSAGES.length) { box.innerHTML = '<div class="text-zinc-600 text-xs">Brak wiadomości — klient nie zaczął jeszcze rozmowy.</div>'; return; }
+            // ESCAPE: treść wiadomości + URL zrzutu = dane klienta → wyłącznie escapeHtml (atrybutowy, SEC-D2). Zero surowego innerHTML.
+            box.innerHTML = TK_MESSAGES.map(m => {
+                const isUser = m.role === 'user';
+                const imgs = (m.attachments || []).filter(a => a.url).map(a =>
+                    `<img src="${escapeHtml(a.url)}" onclick="tkLightbox('${encodeURIComponent(a.url)}')" class="w-16 h-16 object-cover rounded-md border border-[#26262b] cursor-pointer inline-block mr-1.5 mt-1.5">`).join('');
+                return `<div class="text-[12px] leading-relaxed">
+                    <span class="font-semibold ${isUser?'text-[#f5b955]':'text-[#52a8ff]'}">${isUser?'Klient':'AI'}</span>
+                    <span class="text-zinc-600 text-[10.5px] ml-1.5">${escapeHtml(fmtChatTime(m.created_at))}</span>
+                    <div class="text-zinc-300 whitespace-pre-wrap break-words mt-0.5">${escapeHtml(m.content)}</div>
+                    ${imgs?`<div class="flex flex-wrap">${imgs}</div>`:''}
+                </div>`;
+            }).join('');
+        }
+        async function tkCloseRound() {
+            if (!confirm(`Zamknąć serię poprawek Rundy ${TK_ROUND}?\n\nZapiszę podsumowanie tej rundy, otworzę Rundę ${TK_ROUND+1}, a klient dostanie w portalu komunikat „poprawki gotowe — przetestuj ponownie".`)) return;
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) { showToast('Brak sesji — zaloguj się ponownie', 'error'); return; }
+                const res = await fetch(FN_TEST, { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+session.access_token }, body: JSON.stringify({ token: project.unique_token, action:'close_round' }) });
+                const d = await res.json().catch(() => ({}));
+                if (!res.ok) { showToast(d.message || 'Nie udało się zamknąć serii poprawek', 'error'); return; }
+                logActivity('test_round_closed', `Zamknięto serię poprawek — Runda ${d.closed_round} (naprawionych ${d.summary?.fixed||0}/${d.summary?.reported||0}, odrzuconych ${d.summary?.rejected||0}). Otwarta Runda ${d.test_round}.`);
+                showToast(`Runda ${d.closed_round} zamknięta — otwarta Runda ${d.test_round}. Klient dostanie komunikat w portalu.`, 'success');
+                await loadTkIssues(true);
+            } catch (e) { showToast('Błąd: ' + e.message, 'error'); }
         }
         function tkRow(i) {
             const stt = TK_STATUS[i.status] || TK_STATUS.new;
@@ -1357,7 +1466,7 @@
             // 1) dopisz [TK-n] tytuł do checklisty kroku poprawki_demo (dedup po prefiksie [TK-n])
             const data = Object.assign({}, st.data || {});
             const checklist = Array.isArray(data.checklist) ? data.checklist.slice() : [];
-            approved.forEach(i => { if (!checklist.some(c => c.t && c.t.indexOf(`[TK-${i.seq}]`) === 0)) checklist.push({ t:`[TK-${i.seq}] ${i.title}`, done:false }); });
+            approved.forEach(i => { if (!checklist.some(c => c.t && c.t.indexOf(`[TK-${i.seq}]`) === 0)) checklist.push({ t:`[TK-${i.seq}] (runda ${i.round_no||1}) ${i.title}`, done:false }); });
             data.checklist = checklist;
             const { error: e1 } = await supabaseClient.from('wfa_steps').update({ data }).eq('id', st.id);
             if (e1) { showToast('Błąd zapisu checklisty: '+e1.message, 'error'); return; }
@@ -1382,7 +1491,7 @@ Zasada fabryki: PĘTLA DO WYCZERPANIA — naprawiaj aż runda nie przynosi nowyc
 ZGŁOSZENIA DO NAPRAWY (${list.length}):
 ` + list.map(i => {
                 const shots = (i.shots||[]).length ? `\n  Zrzuty (${i.shots.length}): ${i.shots.map(s=>s.path).join(', ')}` : '';
-                return `[TK-${i.seq}] ${i.title}\n  Obszar: ${i.area||'—'} · Urządzenie: ${i.device||'—'} · Waga: ${i.severity}\n  Opis: ${i.description||'—'}\n  Cytat klienta: „${i.quote||'—'}"${shots}`;
+                return `[TK-${i.seq}] (runda ${i.round_no||1}) ${i.title}\n  Obszar: ${i.area||'—'} · Urządzenie: ${i.device||'—'} · Waga: ${i.severity}\n  Opis: ${i.description||'—'}\n  Cytat klienta: „${i.quote||'—'}"${shots}`;
             }).join('\n\n');
             const tail = `\n\nPO NAPRAWIE KAŻDEGO ZGŁOSZENIA (Supabase MCP / SQL, projekt yxmavwkwnfuphjqbelws):\n1) UPDATE wfa_test_issues SET status='done', done_at=now() WHERE project_id='${projectId}' AND seq=<n>;  (klient zobaczy „Poprawione ✅" w portalu)\n2) Odhacz odpowiadającą pozycję „[TK-<n>] …" w checkliście kroku poprawki_demo (wfa_steps.data.checklist; zachowaj DOKŁADNIE teksty pozycji — klucz deduplikacji).\n3) Dowód w BUILDLOG (co naprawione, commit, deploy/preview). Gdy wszystkie [TK-*] done i E2E zielone → status kroku poprawki_demo = done.`;
             return head + tail;
