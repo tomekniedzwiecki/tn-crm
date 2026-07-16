@@ -28,8 +28,10 @@ render→diff→popraw (nie „na oko").
 **Krok 0 — IR:** mockup-ir.py na parze makiet (desktop+mobile).
 **Krok 1 — CALL KODERA** (gpt-5.6-sol, effort=high cap ~5k; 504 → medium):
 - obrazy: makieta ANOTOWANA (detail high) [+ mobile-makieta];
-- tekst: **DOKŁADNE copy sekcji** (nie każ czytać z PNG — tekst w makietach gpt-image
-  bywa zmyślony; copy bierzemy z planu/danych, „użyj DOKŁADNIE tych treści");
+- tekst: **DOKŁADNE copy sekcji = treść z PROMPTU makiety** (nie każ czytać z PNG — render
+  tekstu gpt-image bywa niedokładny; treść w prompcie i na makiecie jest IDENTYCZNA, bo
+  prompt podaje ją w cudzysłowach — Z2/F2 ⚓). Rozjazd treści prompt↔makieta zauważony przy
+  kodowaniu = poprawka GRAFIKI, nie decyzja kodera;
 - IR jako tekst: „PALETA (użyj DOKŁADNIE): #… (tło 62%), …; SKALA TYPO: H1≈52px…;
   BLOKI: #1 karta zdjęcia x=0-460 y=… (0-1000)"; słownik klas; realne URL-e assetów;
 - CoT wymuszony: „NAJPIERW wypisz siatkę sekcji (wiersze/kolumny/wyrównania z bboxów),
@@ -46,6 +48,11 @@ render→diff→popraw (nie „na oko").
   edytuj wskazane bloki, nie regeneruj całości.
 **Krok 4 — pętla** aż DONE lub brak poprawy SSIM 2 rundy (→ eskalacja: regeneracja
 grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
+**📏 PRÓG MINIMALNY ZAMKNIĘCIA (twardy, po hero Uśmieszka 0.7829): desktop <0.85 albo
+mobile <0.78 ⇒ sekcja NIE jest DONE — niezależnie od werdyktu wizualnego.** Werdykt
+„ten sam projekt?" jest WSPÓŁ-warunkiem (może zaostrzyć, nie obniżyć). Przy tle
+scene-from-mockup (STANDARD F3.1) cap assetowy nie istnieje — niski SSIM to kod albo
+grafika do poprawy, nie „sufit danych".
 
 ## ZASADY DODATKOWE
 - Sekcja bardzo złożona (gęsta siatka) → potnij makietę na pod-bloki (DCGen/LaTCoder),
@@ -67,8 +74,9 @@ grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
   własnego wrappera · zakazy + dane twarde · „NAJPIERW siatka, POTEM kod"}.
 - Ceny psychologiczne — przykłady: 84,90 / 99,90 / 129,90 / 149 (płaska OK przy „ładnej"
   kwocie pod barierą) / 249 (≥150 → pełne lub 9,00).
-- **Przy grafika-first pętla często zamyka się na v1** — SSIM 0.69-0.90 z werdyktem
-  wizualnym TAK = gotowe (cap od realnego UGC/treści), nie sygnał do przepisywania.
+- ~~„Przy grafika-first pętla często zamyka się na v1 (SSIM 0.69-0.90 z werdyktem TAK =
+  gotowe)"~~ — **USUNIĘTE (pivot MAKIETA JEST ŚWIĘTA, 16.07):** ta furtka przepuściła hero
+  Uśmieszka z 0.78. Obowiązują progi twarde z Kroku 4.
 
 ## WNIOSKI Z PILOTA (sekcja demo Świtka, 2026-07-16) — TWARDE
 - **Hosting makiet obowiązkowy.** `wf2-gpt` odrzuca input >400000 znaków (`input_za_dlugi`),
@@ -86,9 +94,10 @@ grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
   wypadają poza porównywany (nakładający się od góry) kadr → SSIM ~0.72 mimo wiernego layoutu.
   Rekomendacja narzędziowa: dla mobile **letterbox obu obrazów do wspólnego aspektu** albo
   ocena strukturalna; próg DONE mobile realnie ~0.72–0.80. **Werdykt wizualny rządzi.**
-- **SSIM desktop capowany różnicą ASSETU.** Gdy makieta ma zdjęcie lifestyle a mamy tylko
-  packshot, sufit to ~0.80–0.82 — NIE goń 0.90 rewrite'ami (to droga „regeneracja grafiki
-  sceny", nie kod). 0.76→0.81 przez 1 edit punktowy = sukces.
+- **SSIM desktop capowany różnicą ASSETU — NIEAKTUALNE po scene-from-mockup (STANDARD F3.1):**
+  tło strony = ta sama scena co na makiecie, więc cap znika. Jeśli SSIM niski, przyczyną jest
+  kod (→ rewrite) albo grafika (→ regeneracja) — nie „sufit danych". (Historycznie: przy
+  packshocie zamiast lifestyle sufit bywał ~0.80–0.82.)
 - **Kontrakt zmiennych CSS w briefingu (jednostki!).** Koder generuje własne nazwy/typy
   (np. `--sun-p` jako `%`), a istniejący JS podaje `0..1` → animacja martwa. W briefingu
   podaj DOKŁADNY kontrakt hooków (nazwa, zakres, jednostka), albo reconciluj przy montażu

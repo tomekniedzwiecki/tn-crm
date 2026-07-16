@@ -17,16 +17,19 @@ lęk #1 = scam), checkout na osobnej domenie platformy (CTA → checkout_url), C
 obietnica + motyw wizualny; case'y +34…66% CR). Mapa `HOOKS={1..3}` w skrypcie, `?h=N`
 podmienia h1+sub; kreacja N linkuje `?h=N`. Nie budujemy osobnych landingów per kreacja.
 
-**Z2 — 🎨 GRAFIKA-FIRST. PRIORYTET #1 CAŁEGO PROCESU (Tomek 16.07): finalna strona ma
-wyglądać JAK GRAFIKI KAŻDEJ SEKCJI z gpt-image — proces budowy dopracowujemy tak długo,
-aż ten efekt jest osiągany POWTARZALNIE; każda rozbieżność render↔makieta to dług
-do spłacenia w pętli dopasowania, nie „wystarczająco dobrze".** „Grafiki robią bardzo dużą część roboty wizualnej — posługujmy
-się nimi tak bardzo, jak tylko się da; kod nie zawsze umie zrobić tak dobrze" (Tomek 16.07).
-Sceny generowane niosą wygląd; kod robi WYŁĄCZNIE to, co musi być kodem: typografia, CTA,
-listy/tabele/FAQ, opinie (realne zdjęcia), dane, interakcje. **Scena = TŁO CAŁEJ SEKCJI,
-FULL-BLEED** (absolutny `<img>` `object-fit:cover` pod treścią; hero = pełny pierwszy ekran);
-NIGDY scena jako obrazek w kolumnie. Zero tekstu wypalonego w grafice (nagłówki/ceny/przyciski
-zawsze HTML — SEO/GEO/dostępność/edycja).
+**Z2 — 🖼️ MAKIETA JEST ŚWIĘTA. PRIORYTET #1 CAŁEGO PROCESU (Tomek 16.07 wieczór, po ocenie
+Uśmieszka — zaostrzenie GRAFIKA-FIRST): zaakceptowana makieta = JEDYNE źródło prawdy o wyglądzie
+strony. Strona to CZYSTE PRZENIESIENIE makiet — kod niczego nie dodaje, nie usuwa i nie
+„ulepsza".** Wszystko, czego strona potrzebuje (karta oferty, cena, pasek trust, pay-row,
+prawdziwe dane), MUSI znaleźć się NA MAKIECIE — wchodzi do PROMPTU makiety (wymagania sekcji 3
++ dane F0). Jeżeli czegoś brakuje albo makieta zawiera błąd → **POPRAWIAMY GRAFIKĘ**
+(regeneracja makiety), NIGDY nie łatamy kodem. Cała ocena, krytyka i decyzje smakowe dzieją
+się NA MAKIETACH, przed akceptem; po akceptcie jedyną miarą strony jest WIERNOŚĆ makiecie.
+Kod robi wyłącznie to, czego statyczna grafika nie umie: żywy tekst (IDENTYCZNA treść
+i wygląd jak na makiecie — SEO/GEO/pixel/edycja), linki/CTA, interakcje, pomiar.
+**Scena = TŁO CAŁEJ SEKCJI, FULL-BLEED** (absolutny `<img>` `object-fit:cover` pod treścią;
+hero = pełny pierwszy ekran); NIGDY scena jako obrazek w kolumnie. Zero tekstu wypalonego
+w grafice na FINALNEJ stronie (na makiecie tekst jest — kod odtwarza go 1:1 jako HTML).
 
 **Z3 — BOGATO ALE SPÓJNIE.** Landing jak od agencyjnego seniora „za wielkie pieniądze".
 Nie oszczędzamy na grafikach/JS/animacjach/funkcjach — oszczędzamy na marnotrawstwie.
@@ -66,6 +69,14 @@ listę grafik, funkcje konwersji. FILTR PLANU (my): zakazy, formularz→CTA chec
 esencja produktu na scenach kluczowych, jasne tła.
 
 **F2 — MAKIETY (projekt całej strony).**
+**⚓ MAKIETA MUSI BYĆ KOMPLETNA (Z2):** do promptu KAŻDEJ makiety wchodzą wymagania sekcji 3
+(hero: karta mikro-oferty z PRAWDZIWĄ ceną + pay-row + pasek trust) oraz PRAWDZIWE dane z F0
+wypisane WPROST w cudzysłowach (cena, „★ x,x/5 · N ocen", specs/komunikaty ze snapshotu) —
+żeby gpt-image nie miał czego zmyślać. **Gate fake-danych działa NA MAKIECIE:** zmyślona
+wartość = REGENERACJA makiety z poprawionym promptem (podmiana w tym samym slocie), NIGDY
+wycinanie/edycja na etapie kodu. **KRYTYK (bezlitosny art director + CRO: „czy czuć produkt?
+czy wygląda na DROGI projekt?") ocenia MAKIETY — przed akceptem.** AKCEPT MAKIET = kontrakt;
+po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do tego punktu.
 1. **STYL-MASTER ×1** (pełna scena z motywem; gate: motyw↔korzyść, jasno, hierarchia,
    produkt wierny, minimalny fake-tekst; FAIL→regeneracja promptu).
 2. **HERO-MAKIETA** (pełny 1. ekran: topbar, nagłówek PL, scena z produktem, karta wtopiona
@@ -106,39 +117,41 @@ esencja produktu na scenach kluczowych, jasne tła.
   nie multi-frame) · styl-master jako ref obrazkowa · gpt-image-2 jako model całej serii
   (spójność serii > lokalna jakość tekstu; Ideogram/v0 tylko jako testowany wyjątek) ·
   nadpisywanie treści w kodzie.
-- **⚠️ MAKIETA = LAYOUT, NIGDY ŹRÓDŁO DANYCH (test Uśmieszek 16.07):** gpt-image regularnie
-  wstrzykuje FAKE-SPECS (IPX7, „X dni baterii", „silikon medyczny", „dla dzieci") — twardy
-  gate przy montażu: specs WYŁĄCZNIE ze snapshotu.
+- **⚠️ FAKE-SPECS gpt-image (test Uśmieszek 16.07):** gpt-image regularnie wstrzykuje
+  zmyślone specs (IPX7, „X dni baterii", „silikon medyczny", „dla dzieci"), gdy prompt nie
+  podaje treści — dlatego prompt makiety podaje WSZYSTKIE dane wprost (⚓ wyżej), a wykryta
+  zmyłka NA MAKIECIE = regeneracja TEJ makiety przed akceptem. (Stara reguła „gate przy
+  montażu wycina" USUNIĘTA — wycinała treść razem z układem = rozjazd z makietą.)
 - **✅ KANON MAKIET (rozstrzygnięty testem Uśmieszek, 0 odrzutów, $1.67):** makiety UI
   całego planu (layout) + OSOBNE sceny text-free jako tła full-bleed (nie mieszać treści
   z tłem w jednej generacji). Przy 0-reject prompt-crafcie NISKI koszt ≠ uboga strona
   (bogactwo mierzy się OUTPUTEM: sceny/interakcje/jakość na stronie, nie wydanymi $).
 
-**F3 — GRAFIKI PRODUKCYJNE (grafika-first).**
-1. **HERO = pełna scena Z PRODUKTEM w środku** (ref = hero-makieta jako wzór kompozycji
-   + realny packshot; wierność wg 3 WARUNKÓW — sekcja 2). Puste strefy negatywne dokładnie
-   tam, gdzie makieta ma nagłówek/CTA/kartę. **TRZY warianty: mobile 2:3 · tablet ~1:1 ·
-   desktop 3:2** (`<picture>`). NIE „plate + wycięty packshot" (szwy/skala/światło = źle).
-   Mobile: `object-position` uniesiony (produkt nie może zniknąć za blokiem oferty) +
-   oferta/CTA w wydzielonej JASNEJ karcie na dole (nie „na produkcie" i nie ghost-poświata);
-   układ stref: tekst-góra / produkt-środek / karta-dół.
-2. **Sceny pozostałych sekcji wizualnych**: gdzie makieta ma bogatą scenę — JEDNA grafika
-   sceny (z produktem gdy makieta go tam ma) jako tło full-bleed; kod dodaje warstwę treści.
-   **2b. OCENA ZDJĘCIA PER SEKCJA (Tomek 16.07):** dla KAŻDEJ sekcji z obrazem produktu
-   zdecyduj świadomie, jakie zdjęcie tam być powinno — WZORUJĄC SIĘ NA SCENIE Z MAKIETY
-   (sceny z gpt-image są na bardzo wysokim poziomie — to wzór nastroju/kadru/kontekstu).
-   Packshot z aukcji tylko tam, gdzie makieta ma packshot (karta oferty); gdzie makieta ma
-   scenę lifestyle/kontekst użycia → WYGENERUJ scenę produktu (wierność wg 3 warunków,
-   ref = realne zdjęcie + makieta jako wzór kadru). Surowy packshot wklejony w sekcję
-   sceniczna = rozjazd z makietą (lekcja demo Świtka: to była główna różnica SSIM).
-3. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
+**F3 — GRAFIKI PRODUKCYJNE = DERYWATY MAKIET (Z2).**
+1. **TŁO KAŻDEJ SEKCJI SCENICZNEJ = TA SAMA SCENA CO NA MAKIECIE (pomysł Tomka 16.07 —
+   standard; koniec losowania nowych scen):** gpt-image-2, REFERENCJA = ZAAKCEPTOWANA makieta
+   tej sekcji (+ realny packshot dla wierności produktu — 3 WARUNKI, sekcja 2), prompt:
+   „the SAME scene as in the reference image — same room, same framing, same light, same
+   product placement; REMOVE all text, UI elements, buttons, cards and icons; output a clean
+   photographic background with empty negative space exactly where the content was".
+   Produkt ZOSTAJE w scenie (NIE „plate + wycięty packshot" — szwy/skala/światło = źle).
+   **Gate: side-by-side wygenerowanego tła z makietą — inne pomieszczenie/kadr/światło =
+   odrzut i ponowna generacja.**
+2. **HERO: TRZY warianty (mobile 2:3 · tablet ~1:1 · desktop 3:2, `<picture>`) = REFRAME
+   TEJ SAMEJ SCENY** (za każdym razem hero-makieta jako referencja + „extend/reframe the
+   same scene to N:M"). Mobile: `object-position` uniesiony (produkt nie może zniknąć za
+   kartą oferty); układ stref dokładnie wg mobile-makiety.
+3. **Packshot z aukcji tylko tam, gdzie makieta ma packshot** (karta oferty); gdzie makieta
+   ma scenę lifestyle → scena-z-makiety (pkt 1). Surowy packshot wklejony w sekcję sceniczną
+   = rozjazd z makietą (lekcja demo Świtka).
+4. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
    **[P] produkt/użycie/efekt** (wierność 3 warunków) / **[D] design związany z motywem**
    (nigdy generic). **Każdy asset dostaje też TAG KLASY OBRAZU (P=packshot / U=UGC /
    S=scena AI), a każdy slot sekcji ma ALLOWLISTĘ klas wg `docs/zbuduje/OBRAZY-ROLE.md`**
    (karta oferty = TYLKO packshot, NIGDY UGC; opinie = TYLKO UGC; zakaz obrazu-na-obrazie
    — na scenie tylko cutout z alfą). Klasa spoza allowlisty = BLOK. Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
    wycinka. 100% assetów użytych; 0 sekcji bez assetu. OG = 1200×630 w stylu master.
-4. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
+5. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
 
 **F4 — KOD (gpt-5.6-sol).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
 noindex `{{CANONICAL_URL}}`, JSON-LD @graph, JEDEN exec-script: pixel `{{PIXEL_ID}}`
@@ -146,9 +159,11 @@ VC/ATC/IC + link decoration + HOOKS + sticky IO + wideo autoplay-on-visible; lig
 pay-badges). Potem sekcja po sekcji **WYŁĄCZNIE procedurą `docs/zbuduje/SEKCJA-Z-MAKIETY.md` (v2,
 z researchu 16.07)**: ekstrakcja IR z makiety (paleta hex, skala typo px, bboxy — narzędzia
 scripts/mockup-tools/) → anotowana makieta + IR i DOKŁADNE copy jako TEKST → koder
-z layout-as-thought → mierzalna pętla render-diff (SSIM-bramka ~0.90, heatmapa, keep-best,
-rewrite<0.80 / edit-punktowy 0.80-0.90). Odstępstwa od makiety tylko: realne zdjęcia,
-prawdziwe pay-badges, prawdziwe liczby. Sekcje czysto-danowe mogą iść z kontraktu.
+z layout-as-thought → mierzalna pętla render-diff (SSIM-bramka, heatmapa, keep-best; progi
+twarde w F7.1). **Jedyne dozwolone różnice względem makiety = podmiany 1:1 W TYM SAMYM
+SLOCIE:** żywy tekst (treść z promptu makiety), kanoniczny blok pay-badges, realne zdjęcia
+opinii/produktu. NICZEGO nie dodajemy ani nie usuwamy — brak/błąd na makiecie ⇒ powrót
+do F2 (poprawka grafiki), nie inwencja kodera. Sekcje czysto-danowe mogą iść z kontraktu.
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 
 **F5 — ETAP ŻYCIA I ZAANGAŻOWANIA — OSOBNY, SEKWENCYJNY PRZEBIEG (wzmocnione przez Tomka
@@ -176,7 +191,7 @@ Ruch prowadzi wzrok do dowodu i CTA. Strona bez etapu życia = niekompletna (gat
 
 **🔁 SEKWENCYJNOŚĆ ETAPÓW (Tomek 16.07: „nie próbować robić wszystkiego naraz"):**
 F4 kod-struktura → F7.1 dopasowanie wizualne → audyt grafika-first → **F5 życie** →
-F7.2 krytyk końcowy. Każdy etap kończy się weryfikacją i zapisem wersji PRZED startem
+F7.2 sanity rendera → F7.3 finalny pass. Każdy etap kończy się weryfikacją i zapisem wersji PRZED startem
 następnego; jeden etap = jedna intencja (nie mieszać dopasowania z animacjami w jednym callu).
 
 **F6 — WERYFIKACJA TWARDA.** 0 błędów konsoli · 0 h-scrolla (390/768/1280) · wszystkie
@@ -202,16 +217,22 @@ ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-blee
    capie ~5k; 504 → medium). Łatki (patch) tylko dla drobnych rozjazdów przy werdykcie
    „prawie TAK". Iteracje: rewrite → kompozyt → werdykt;
    **BEZ limitu iteracji** (pętla do wyczerpania — limit tylko: brak postępu 2 rundy z rzędu
-   ⇒ eskalacja: regeneracja grafiki sceny albo nota do nadzorcy). Start od hero. Kompozyty
+   ⇒ eskalacja: regeneracja grafiki sceny albo nota do nadzorcy).
+   **📏 TWARDY PRÓG ZAMKNIĘCIA SEKCJI (po Uśmieszku 16.07 — hero z SSIM 0.7829 przeszło jako
+   najgorsza sekcja, bo progu nie było): desktop SSIM <0.85 ⇒ sekcja NIEZAMKNIĘTA (rewrite
+   albo poprawka grafiki); mobile (letterbox-cap aspectu) <0.78 ⇒ jw. Werdykt vision może
+   próg ZAOSTRZYĆ, nigdy obniżyć. Po scene-from-mockup (F3.1) wymówka „SSIM capowany innym
+   assetem" znika — tło strony = tło makiety, więc niski SSIM = wina kodu lub grafiki do
+   poprawy.** Start od hero. Kompozyty
    archiwizować per sekcja/iteracja (`FABRYKA-*/<slug>/dopasowanie/<sekcja>-vN.png`) —
    postęp ma być widoczny dla Tomka. Podział pracy (RETRO 16.07): analizę rozjazdów na
    kompozytach może robić agent (vision) — GPT wołać do PRZEBUDÓW sekcji; mechaniczne fixy
    CSS/typografii <5% pliku = fixy integracyjne (dozwolone agentowi, raportowane).
-2. **Pętla KRYTYKA**: krytyk gpt-5.6-sol vision (bezlitosny art director + CRO: „czy czuć
-   produkt, który chce się kupić? co tandetne? czy wygląda na DROGI projekt?") NAPRZEMIENNIE
-   ze świeżym subagentem visual-verify (SEKWENCYJNIE — jedna przeglądarka) → filtr uwag WZGLĘDEM
-   TEGO STANDARDU → poprawki kodem GPT → STOP gdy zero realnych P0/P1 i poziom agencyjny
-   potwierdzony (P2-kosmetyki nie iterować w nieskończoność).
+2. **Sanity rendera (krytyk wyglądu PRZENIESIONY do F2 — ocenia MAKIETY przed akceptem,
+   Z2):** po akceptcie makiet strona NIE podlega już krytyce smaku/wyglądu — zostaje szybki
+   przegląd visual-verify wyłącznie pod błędy TECHNICZNE renderu (złamany layout, niezaładowane
+   obrazy, h-scroll, jank). Uwaga estetyczna do gotowej strony = uwaga do MAKIETY: wraca
+   do F2 jako poprawka grafiki + ponowne przeniesienie, nie „poprawka kodem wg gustu".
    Każda wersja archiwizowana: `Desktop\TN-Sklepy-grafiki\FABRYKA-*\<slug>\vN\`
    (index.html + full-1280 + full-390 + KRYTYKA.md); grafiki w `assets\`.
 3. **F7.3 FINALNY PASS DETALI — OBOWIĄZKOWY, ostatni gate przed oddaniem (Tomek 16.07:
@@ -278,6 +299,11 @@ normal-blend ~0.55 (nie mix-blend screen) · grid 2-kol zawsze z mobilnym resete
 ---
 
 ## 3. WYMAGANIA-ZAWSZE (niezależnie od planu GPT)
+
+**⚓ Pozycje WIZUALNE z tej listy wchodzą do PROMPTÓW MAKIET (F2) — NIE są dokładane na
+etapie kodu (Z2: kod nie dodaje niczego, czego nie ma na makiecie). Pozycje mechaniczne
+(pomiar, JSON-LD, placeholdery, zachowanie sticky/IO) implementuje kod, bo nie zmieniają
+wyglądu żadnego kadru.**
 
 - pay-badges z kanonicznego bloku (hero/oferta/sticky wg mapy anty-duplikacji);
 - sticky przycisk zamówienia (mobile, po hero, IO) + KAŻDE CTA `data-checkout` → checkout_url;
@@ -368,8 +394,9 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 5. LCP<2,5s (4G) · CLS<0,1 · waga 1. ekranu sensowna.
 6. 390/768/1440: zero h-scrolla, sticky nie zasłania, lightbox działa.
 7. Wszystkie CTA → #zamow z data-checkout; mikrocopy pod każdym.
-8. Pętla dopasowania (F7.1) zamknięta: sekcje == makiety.
-9. Pętla krytyka (F7.2) czysta: zero P0/P1 + potwierdzony poziom agencyjny.
+8. Pętla dopasowania (F7.1) zamknięta: sekcje == makiety, progi twarde (desktop ≥0.85 /
+   mobile ≥0.78) + werdykt „ten sam projekt" dla KAŻDEJ sekcji.
+9. Sanity rendera (F7.2) czyste: zero błędów technicznych renderu.
 10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze.
 
 ---
@@ -461,3 +488,14 @@ Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/rep
   bud-assets = prefix attachments. OTWARTE do decyzji Tomka: czy przy grafika-first sceny
   produkcyjne full-bleed mogą pełnić rolę makiet dla sekcji SCENICZNYCH (2-w-1, jak Blasik
   $1.15), czy zawsze pełne pary makiet UI całego planu (jak Świtek $4.03).
+- **2026-07-16 późny wieczór (ocena hero Uśmieszka przez Tomka — PIVOT: MAKIETA JEST ŚWIĘTA)**:
+  root cause rozjazdu hero = 4 konkurencyjne źródła prawdy (wymagania CRO wstrzykiwane na
+  etapie KODU · gate fake-specs WYCINAŁ treść zamiast naprawiać grafikę · tła LOSOWANE na nowo
+  zamiast przenoszone z makiety · pętla wierności bez twardego progu — 0.78 przeszło).
+  Naprawa = jedna zasada zamiast czterech łat: Z2 przepisane (strona = czyste przeniesienie
+  zaakceptowanych makiet; braki ⇒ poprawka GRAFIKI, nigdy kodu) · wymagania sekcji 3 +
+  prawdziwe dane idą do PROMPTÓW makiet (F2 ⚓) · gate fake-specs = regeneracja MAKIETY ·
+  tła = TA SAMA scena z makiety (gpt-image-2, makieta jako ref, „remove text/UI"; F3.1) ·
+  krytyk ocenia MAKIETY przed akceptem (F7.2 zredukowane do sanity technicznego) · twarde
+  progi F7.1 (desktop ≥0.85 / mobile ≥0.78) · usunięte reguły „makieta = layout, nie źródło
+  danych" i „pętla zamyka się na v1 przy 0.69+".
