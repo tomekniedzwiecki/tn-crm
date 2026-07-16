@@ -56,6 +56,19 @@ grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
   dlatego liczby idą TEKSTEM, nie „z oka").
 - Werdykt końcowy nadal wizualny (kompozyt, „czy to ten sam projekt?") — SSIM steruje
   pętlą, człowiek/krytyk ocenia charakter.
+- **Zrzuty do diff/kompozytów ZAWSZE z force-reveal + eager-img** (narzędzie `capture.py`
+  w mockup-tools — wymusza `.reveal.in`, czeka naturalWidth>0, wykrywa h-scroll/broken-img);
+  bez tego kolumna RENDER jest „wyprana" (opacity:0) = fałszywy alarm.
+- **SZABLON BRIEFU KODERA sekcji** (luka wykryta w teście Uśmieszka — używać zawsze):
+  {sekcja+cel · anotowana makieta URL (desktop+mobile) · IR tekstem (PALETA DOKŁADNIE /
+  SKALA TYPO / BLOKI 0-1000) · DOKŁADNE copy w cudzysłowach · realne URL-e assetów/scen ·
+  słownik klas z prefiksem sekcji · kontrakt hooków JS (nazwa+zakres+jednostka!) ·
+  format odpowiedzi: `<section>` + scoped `<style>`, marker `<!--PAYBADGES-->` BEZ
+  własnego wrappera · zakazy + dane twarde · „NAJPIERW siatka, POTEM kod"}.
+- Ceny psychologiczne — przykłady: 84,90 / 99,90 / 129,90 / 149 (płaska OK przy „ładnej"
+  kwocie pod barierą) / 249 (≥150 → pełne lub 9,00).
+- **Przy grafika-first pętla często zamyka się na v1** — SSIM 0.69-0.90 z werdyktem
+  wizualnym TAK = gotowe (cap od realnego UGC/treści), nie sygnał do przepisywania.
 
 ## WNIOSKI Z PILOTA (sekcja demo Świtka, 2026-07-16) — TWARDE
 - **Hosting makiet obowiązkowy.** `wf2-gpt` odrzuca input >400000 znaków (`input_za_dlugi`),

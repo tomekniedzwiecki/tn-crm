@@ -106,6 +106,13 @@ esencja produktu na scenach kluczowych, jasne tła.
   nie multi-frame) · styl-master jako ref obrazkowa · gpt-image-2 jako model całej serii
   (spójność serii > lokalna jakość tekstu; Ideogram/v0 tylko jako testowany wyjątek) ·
   nadpisywanie treści w kodzie.
+- **⚠️ MAKIETA = LAYOUT, NIGDY ŹRÓDŁO DANYCH (test Uśmieszek 16.07):** gpt-image regularnie
+  wstrzykuje FAKE-SPECS (IPX7, „X dni baterii", „silikon medyczny", „dla dzieci") — twardy
+  gate przy montażu: specs WYŁĄCZNIE ze snapshotu.
+- **✅ KANON MAKIET (rozstrzygnięty testem Uśmieszek, 0 odrzutów, $1.67):** makiety UI
+  całego planu (layout) + OSOBNE sceny text-free jako tła full-bleed (nie mieszać treści
+  z tłem w jednej generacji). Przy 0-reject prompt-crafcie NISKI koszt ≠ uboga strona
+  (bogactwo mierzy się OUTPUTEM: sceny/interakcje/jakość na stronie, nie wydanymi $).
 
 **F3 — GRAFIKI PRODUKCYJNE (grafika-first).**
 1. **HERO = pełna scena Z PRODUKTEM w środku** (ref = hero-makieta jako wzór kompozycji
