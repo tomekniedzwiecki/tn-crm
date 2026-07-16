@@ -41,6 +41,20 @@
         .move { margin-top:38px; border-left:2px solid #f5b955; padding:3px 0 3px 15px; font-size:13.5px; color:#cbbd9e; line-height:1.6; }
         .move b { color:#f5b955; font-weight:600; }
 
+        /* Jeden punkt wejścia partnera — „Otwórz swoją aplikację" (kartka, nie kokpit) */
+        .appcard { display:flex; align-items:center; gap:16px; margin-top:34px; padding:18px 20px; text-decoration:none;
+            border:1px solid rgba(0,112,243,.42); border-radius:14px;
+            background:linear-gradient(135deg, rgba(0,112,243,.13), rgba(0,112,243,.04));
+            transition:border-color .18s ease, background .18s ease, transform .18s ease; }
+        .appcard:hover { border-color:rgba(0,112,243,.75); background:linear-gradient(135deg, rgba(0,112,243,.19), rgba(0,112,243,.06)); transform:translateY(-1px); }
+        .appcard-ic { width:44px; height:44px; flex-shrink:0; border-radius:11px; background:rgba(0,112,243,.18);
+            display:flex; align-items:center; justify-content:center; color:#52a8ff; font-size:22px; }
+        .appcard-txt { flex:1; min-width:0; }
+        .appcard-t { display:block; color:#fff; font-size:15.5px; font-weight:600; letter-spacing:-.01em; }
+        .appcard-d { display:block; color:#7fb2f0; font-size:12.5px; margin-top:2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .appcard-arrow { color:#52a8ff; font-size:18px; flex-shrink:0; transition:transform .18s ease; }
+        .appcard:hover .appcard-arrow { transform:translateX(3px); }
+
         /* Sekcje */
         section { margin-top:58px; }
         .shead { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
@@ -270,6 +284,16 @@
             <p class="life" id="c-life"></p>
         </section>
 
+        <!-- 1b. Jeden punkt wejścia partnera: „Otwórz swoją aplikację" (widoczne tylko gdy app_url = https://) -->
+        <a class="appcard hidden" id="c-appcard" target="_blank" rel="noopener" href="#">
+            <span class="appcard-ic"><i class="ph ph-rocket-launch"></i></span>
+            <span class="appcard-txt">
+                <span class="appcard-t">Otwórz swoją aplikację</span>
+                <span class="appcard-d" id="c-appcard-domain"></span>
+            </span>
+            <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
+        </a>
+
         <!-- 2. Twój ruch: jedna linia, gdy piłka jest po stronie klienta -->
         <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span></div>
 
@@ -365,6 +389,10 @@
     const esc = s => (s === null || s === undefined) ? '' : String(s)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    // GATE A: link do apki idzie do href — dopuszczamy WYŁĄCZNIE https:// (odrzucamy javascript:/data:/
+    // relatywne, gdyby app_url był kiedyś zmanipulowany w bazie). Zwraca '' = ukryj przycisk.
+    const safeHttpsUrl = u => { const s = (u === null || u === undefined) ? '' : String(u).trim(); return /^https:\/\//i.test(s) ? s : ''; };
+    const urlHost = u => { try { return new URL(u).host; } catch (e) { return String(u).replace(/^https?:\/\//i, '').replace(/\/.*$/, ''); } };
     const PW_KEY = 'wfa_portal_pw_' + token;
     let currentPw = '';
     let contractMeta = null;
@@ -535,9 +563,24 @@
                 (date ? '<span class="tdate">' + esc(date) + '</span>' : '') + '</div>';
         }).join('');
 
+        // Jeden punkt wejścia partnera: wyraźny przycisk „Otwórz swoją aplikację".
+        // app_url pochodzi z wfa_projects wiązanego z tokenem (nie z parametru) → własna apka klienta.
+        // href ustawiamy przez setAttribute na ZWALIDOWANYM https:// (mocniej niż esc-do-innerHTML:
+        // zero konkatenacji do HTML, DOM sam escapuje atrybut). Brak/niepoprawny app_url = ukryj.
+        const appUrl = safeHttpsUrl(d.app_url);
+        const appCard = $('c-appcard');
+        if (appUrl) {
+            appCard.setAttribute('href', appUrl);
+            $('c-appcard-domain').textContent = urlHost(appUrl);
+            appCard.classList.remove('hidden');
+        } else {
+            appCard.setAttribute('href', '#');
+            appCard.classList.add('hidden');
+        }
+
         const links = [];
-        if (d.landing_url) links.push('<a href="' + esc(d.landing_url) + '" target="_blank" rel="noopener"><i class="ph ph-browser"></i> Strona aplikacji</a>');
-        if (d.app_url) links.push('<a href="' + esc(d.app_url) + '" target="_blank" rel="noopener"><i class="ph ph-rocket-launch"></i> Aplikacja</a>');
+        const landingUrl = safeHttpsUrl(d.landing_url);
+        if (landingUrl) links.push('<a href="' + esc(landingUrl) + '" target="_blank" rel="noopener"><i class="ph ph-browser"></i> Strona aplikacji</a>');
         $('c-linkbox').classList.toggle('hidden', !links.length);
         $('c-links').innerHTML = links.join('');
 
