@@ -697,6 +697,24 @@ tr:last-child td{border-bottom:0}
   }
   .sec--bleed:has(#hero-h1) #hero-sub{color:var(--ink)}
 }
+/* F7.1 dopasowanie 16.07: sekcja KOLORY — scena pryzmatu ma być WYRAZISTA i DUŻA jak makieta
+   (była wyprana białym washem + zbyt mały kadr) */
+#kolory{background:linear-gradient(180deg,#FBF4FA 0%,#F6EFF8 46%,var(--paper) 100%)}
+#kolory .picker__stage{background:transparent;min-height:440px}
+#kolory .picker__glow{opacity:.40}
+@media (min-width:760px){
+  #kolory .picker{grid-template-columns:minmax(0,1.55fr) minmax(280px,.72fr);gap:30px}
+  #kolory .picker__stage{min-height:540px}
+}
+/* F5 warstwa życia: auto-zajawka + płynność demo kolorów */
+#kolory .picker__glow{transition:background .34s ease,opacity .34s ease}
+#kolory .picker.auto .picker__glow{transition-duration:.62s}
+#kolory .swatch{transition:transform .2s cubic-bezier(.2,.7,.2,1),box-shadow .2s ease}
+#kolory .swatch:hover{transform:translateY(-1px) scale(1.1)}
+#kolory .picker.hint .grid{border-radius:18px;animation:swHint 2.6s ease-in-out 2}
+@keyframes swHint{0%,100%{box-shadow:0 0 0 0 rgba(255,90,77,0)}50%{box-shadow:0 0 0 7px rgba(255,90,77,.12)}}
+#kolory .pk-hint{margin:12px 0 0;min-height:17px;font-size:12.5px;font-weight:600;letter-spacing:.01em;color:var(--body);opacity:0;transform:translateY(3px);transition:opacity .45s ease,transform .45s ease}
+#kolory .picker.hint .pk-hint{opacity:.9;transform:none}
 </style>
 <style>
 .pay-badges{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -807,6 +825,7 @@ tr:last-child td{border-bottom:0}
           <button class="swatch" type="button" data-color="cyjan" style="--sw:#3FE0C8" aria-label="Wybierz kolor cyjan" aria-pressed="false"></button>
           <button class="swatch" type="button" data-color="biały" style="--sw:#FFF6E9" aria-label="Wybierz kolor biały" aria-pressed="false"></button>
         </div>
+        <p class="pk-hint" aria-hidden="true">Dotknij, aby zmienić kolor</p>
       </div>
     </div>
   </div>
@@ -1275,6 +1294,18 @@ tr:last-child td{border-bottom:0}
     var pickerName = document.getElementById('picker-name');
     var pickerDesc = document.getElementById('picker-desc');
 
+    // Dwuwarstwowy glow (crossfade opacity-only — bez „taniego skoku" gradientu, F5/CT)
+    var glowLayers = [];
+    var glowIdx = 0;
+    if (pickerGlow && pickerGlow.parentNode) {
+      glowLayers.push(pickerGlow);
+      var glowB = pickerGlow.cloneNode(false);
+      glowB.removeAttribute('id');
+      glowB.style.opacity = '0';
+      pickerGlow.parentNode.insertBefore(glowB, pickerGlow.nextSibling);
+      glowLayers.push(glowB);
+    }
+
     function normalize(value) {
       return String(value || '').trim().toLowerCase();
     }
@@ -1322,16 +1353,24 @@ tr:last-child td{border-bottom:0}
         pickerStage.style.setProperty('--glow', color.hex);
       }
 
-      if (pickerGlow) {
+      var grad = 'radial-gradient(circle at 50% 48%, ' +
+        rgba(color.hex, 0.78) + ' 0%, ' +
+        rgba(color.hex, 0.48) + ' 34%, ' +
+        rgba(color.hex, 0.18) + ' 55%, transparent 74%)';
+
+      if (glowLayers.length === 2) {
+        // crossfade: maluj kolor na warstwie ukrytej, potem przełącz krycie (tylko opacity)
+        var incoming = glowLayers[(glowIdx + 1) % 2];
+        var outgoing = glowLayers[glowIdx];
+        incoming.style.setProperty('--glow', color.hex);
+        incoming.style.background = grad;
+        void incoming.offsetWidth;
+        incoming.style.opacity = '';   // wróć do krycia z CSS (.40)
+        outgoing.style.opacity = '0';
+        glowIdx = (glowIdx + 1) % 2;
+      } else if (pickerGlow) {
         pickerGlow.style.setProperty('--glow', color.hex);
-        pickerGlow.style.background =
-          'radial-gradient(circle at 50% 48%, ' +
-          rgba(color.hex, 0.78) +
-          ' 0%, ' +
-          rgba(color.hex, 0.48) +
-          ' 34%, ' +
-          rgba(color.hex, 0.18) +
-          ' 55%, transparent 74%)';
+        pickerGlow.style.background = grad;
       }
 
       if (pickerName) {
@@ -1352,6 +1391,44 @@ tr:last-child td{border-bottom:0}
 
       activateColor(swatches[0], colors[0]);
     }
+
+    // Auto-zajawka demo kolorów (F5): gdy sekcja wejdzie w kadr, samo przejdź płynnie przez kilka
+    // kolorów (teaser interaktywności), potem oddaj kontrolę + subtelny hint. Anuluj przy 1. interakcji
+    // użytkownika i przy reduced-motion.
+    try {
+      var pickerWrap = document.querySelector('.picker');
+      if (pickerWrap && swatches.length > 1) {
+        var autoOn = false, autoTimer = null, autoDone = false, userTouched = false;
+        // czerwony(start) → niebieski → zielony → fioletowy → powrót do czerwonego (CT)
+        var seq = [1, 2, 4, 0];
+        var stopAuto = function(){ autoOn = false; if (autoTimer){ clearTimeout(autoTimer); autoTimer = null; } };
+        var cancelByUser = function(){ userTouched = true; stopAuto(); pickerWrap.classList.remove('auto', 'hint'); };
+        pickerWrap.addEventListener('pointerdown', cancelByUser);
+        pickerWrap.addEventListener('keydown', cancelByUser);
+        pickerWrap.addEventListener('focusin', cancelByUser);
+        document.addEventListener('visibilitychange', function(){ if (document.hidden) stopAuto(); });
+        swatches.forEach(function(b){ b.addEventListener('click', cancelByUser); });
+        var runAuto = function(){
+          if (userTouched) return;
+          autoOn = true; pickerWrap.classList.add('auto');
+          var k = 0;
+          (function tick(){
+            if (!autoOn || userTouched) return;
+            var idx = seq[k];
+            activateColor(swatches[idx], colors[idx]);
+            k += 1;
+            if (k >= seq.length){ pickerWrap.classList.remove('auto'); pickerWrap.classList.add('hint'); autoDone = true; return; }
+            autoTimer = setTimeout(tick, 800);
+          })();
+        };
+        if (!reducedMotion && 'IntersectionObserver' in window){
+          var pio = new IntersectionObserver(function(es){
+            es.forEach(function(en){ if (en.isIntersecting && !autoDone && !userTouched){ pio.unobserve(en.target); autoTimer = setTimeout(runAuto, 400); } });
+          }, { threshold: .5 });
+          pio.observe(pickerWrap);
+        }
+      }
+    } catch(e) {}
 
     var prism = document.querySelector('.prism');
 

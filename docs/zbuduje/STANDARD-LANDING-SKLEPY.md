@@ -365,6 +365,14 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 - Tabela porównania od razu wzorcem tabela→karty z `data-label` (390!).
 - Sticky-buy: `padding-bottom` na body/stopce.
 - Count-up: statyczna wartość w źródle; `data-to` bez treści = błąd GEO.
+- **Kadr produktu (RETRO 16.07):** kontener `aspect-ratio` + obraz `position:absolute;
+  inset:0;width/height:100%;object-fit:contain` (dziecko z height:100% w aspect-ratio
+  przelewa się i przycina!); media w kartach split `align-self:center` z własną proporcją
+  (stretch = pionowy słup od wysokiej kolumny treści).
+- **CSS nie animuje gradientów (background-image snapuje):** zmiana koloru glow/sceny =
+  2 warstwy + crossfade `opacity` — standard dla wszystkich „zmieniających kolor" scen.
+- **Auto-zajawka każdego interaktywnego demo** (teaser 1 cykl → natychmiastowe oddanie
+  kontroli przy 1. interakcji → hint; reduced-motion → bez teasera) — wzorzec F5.
 
 ### 7e. Narzędzia
 - yt-dlp przez `python -m yt_dlp` (winget-shim myli); payloady PL przez plik UTF-8 (cp1250!);
