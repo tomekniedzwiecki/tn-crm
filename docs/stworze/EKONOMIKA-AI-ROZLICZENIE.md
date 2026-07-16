@@ -70,6 +70,9 @@ Osobna zakładka/sekcja w panelu operatora (odrębna od ops-owego kafla „Koszt
 - **Jasny komunikat:** „To koszt AI Twoich użytkowników — rozliczamy go osobno co miesiąc.
   Nie obejmuje Twoich testów ani podglądów." (transparentność = zero zaskoczenia na fakturze).
 - Waluta ZAWSZE zł (kurs pokazany). Zero USD w panelu operatora.
+- **NIGDY nie pokazuj NARZUTU operatorowi** (decyzja Tomka 16.07) — to marża platformy. Nota kursu = SAM
+  kurs NBP sprzedaży z dnia (`Kurs NBP (sprzedaż) X z DATA`), bez „· narzut Y%". Operator widzi finalną
+  kwotę `total_pln` (narzut wliczony serwerowo), nie sposób jej wyliczenia. Ujawnienie narzutu = wyciek marży.
 
 ## 6. Widok fabryki (tn-crm) — rozliczenie Tomek↔operatorzy
 
