@@ -81,14 +81,18 @@ Apki są w osobnych projektach Supabase → potrzebny CENTRALNY zrzut w tn-crm:
 - **Reconciliacja:** SUMA (billable wszystkich apek + nonbillable wszystkich apek) ≈ rachunek OpenAI
   Tomka za miesiąc. Różnica = koszt czystego dev poza apkami. Pozwala zweryfikować, że refaktura jest pełna.
 
-## 7. Decyzje biznesowe (defaulty przyjęte — do potwierdzenia/retro Tomka)
+## 7. Decyzje biznesowe (DECYZJE Tomka 2026-07-16)
 
-1. **Kurs USD→PLN:** default `settings.ai_billing_usd_pln` = 4,00 (konfigurowalny per apka/globalnie).
-   REKOMENDACJA docelowo: średni NBP (tab. A) z ostatniego dnia okresu + bufor 3% (zmienność FX +
-   koszt przewalutowania). Na start stały 4,00 — łatwy do zmiany w settings. **Do decyzji: NBP-auto czy stały.**
-2. **Narzut na koszt AI:** default = **pass-through po koszcie** (koszt OpenAI × kurs, ZERO marży) —
-   zgodnie z „kasować za to użycie". **Do decyzji Tomka:** czy chce mały narzut (np. +10-15% na
-   pokrycie FX/overhead/wahań cennika OpenAI) — ustawialny `settings.ai_billing_markup_pct` (default 0).
+1. **Kurs USD→PLN: CODZIENNIE z NBP, kurs SPRZEDAŻY (tabela C — `ask`), żeby Tomek nie był stratny.**
+   NBP tabela C = kursy kupna/sprzedaży; bierzemy **sprzedaży** (wyższy — po nim realnie kupuje się USD),
+   więc refaktura pokrywa faktyczny koszt przewalutowania. Mechanizm: cron dobowy pobiera kurs z
+   `https://api.nbp.pl/api/exchangerates/rates/c/usd/?format=json` (pole `rates[0].ask`) → tabela
+   `nbp_usd_rates(effective_date, ask, mid, fetched_at)`. **Każdy wiersz `ai_usage` przeliczany po
+   kursie z JEGO dnia** (data wywołania), nie jednym kursem miesiąca — dokładność i brak straty na FX.
+   Weekend/święto (NBP nie publikuje) → ostatni znany kurs (`ORDER BY effective_date DESC LIMIT 1`).
+   `settings.ai_billing_usd_pln` zostaje jako AWARYJNY fallback (gdy brak w tabeli NBP), nie główny.
+2. **Narzut na koszt AI: +10%** — `settings.ai_billing_markup_pct` = 10. Pokrywa wahania cennika
+   OpenAI i overhead. **Rozliczenie operatora = koszt_USD × kurs_NBP_sprzedaży_z_dnia × 1,10.**
 3. **Trial userzy = rozliczalni** (są userami panelu / prospektami operatora) — koszt akwizycji
    ponosi operator. Do potwierdzenia; jeśli Tomek chce, dodamy tryb „trial na koszt fabryki".
 4. **Kadencja:** rozliczenie miesięczne, zamknięcie okresu 1. dnia następnego miesiąca (zrzut cronem).
