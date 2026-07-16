@@ -30,12 +30,22 @@ const toNum = (v: unknown): number | null => {
   return Number.isFinite(n) ? n : null
 }
 
+// SEZONOWOŚĆ: produkt w oknie sprzedażowym? from/to='MM-DD', today='MM-DD'.
+// Brak from/to (all_year) → true. Obsługa wrap-around (from>to, np. zima 09-15→01-31).
+function inWindow(from: string | null, to: string | null, today: string): boolean {
+  if (!from || !to) return true
+  if (from <= to) return today >= from && today <= to
+  return today >= from || today <= to
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
   if (!(await adminGate(req, supabase))) return json({ error: 'wymagane_logowanie_admin' }, 403)
 
   const body = await req.json().catch(() => ({}))
+  const force = body.force === true // pomiń filtr sezonowy (eksportuj mimo bycia poza oknem)
+  const todayMMDD = new Date().toISOString().slice(5, 10)
   let keys = Array.isArray(body.keys) ? body.keys : []
   keys = [...new Set(keys.filter((k: unknown) => typeof k === 'string' && k.trim()).map((k: string) => k.trim()))]
   if (!keys.length) return json({ error: 'brak_keys' }, 400)
@@ -47,11 +57,16 @@ Deno.serve(async (req) => {
 
   for (const key of keys) {
     const { data: src, error: srcErr } = await supabase.from('bud_tt_products')
-      .select('key,pl_name,status,chosen_link,ali_candidates,ali_snapshot,tt_shop,tiktok_url,cover')
+      .select('key,pl_name,status,chosen_link,ali_candidates,ali_snapshot,tt_shop,tiktok_url,cover,season_type,season_label,sell_from,sell_to')
       .eq('key', key).maybeSingle()
     if (srcErr) { skipped.push({ key, reason: 'db_error: ' + srcErr.message }); continue }
     if (!src) { skipped.push({ key, reason: 'nie_znaleziono' }); continue }
     if (src.status !== 'approved') { skipped.push({ key, reason: 'status_' + (src.status || 'brak') }); continue }
+    // Produkt sezonowy poza oknem sprzedażowym → nie eksportuj (cel: nie sprzedawać po sezonie),
+    // chyba że body {force:true}. all_year / brak season_type → zawsze przechodzi.
+    if (!force && src.season_type === 'seasonal' && !inWindow(src.sell_from, src.sell_to, todayMMDD)) {
+      skipped.push({ key, reason: 'poza_sezonem' }); continue
+    }
 
     // deno-lint-ignore no-explicit-any
     const snap: any = src.ali_snapshot || {}
@@ -85,6 +100,9 @@ Deno.serve(async (req) => {
       orders_sold_source,
       rating,
       review_count,
+      season_label: src.season_label || null,
+      sell_from: src.sell_from || null,
+      sell_to: src.sell_to || null,
     }
 
     // Dedup po bud_key (nie maybeSingle — teoretycznie mogłoby być >1 wiersza).

@@ -147,6 +147,9 @@
             <div class="p-5 space-y-4 overflow-y-auto flex-1">
                 <input type="hidden" id="product-edit-id">
 
+                <!-- Sezonowość — TYLKO do wglądu (dane z radaru /trendy, nieedytowalne tutaj) -->
+                <div id="product-season-display" class="hidden"></div>
+
                 <div>
                     <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Nazwa produktu</label>
                     <input type="text" id="product-name" class="w-full text-sm text-white px-3 py-3 rounded-lg bg-zinc-900 border border-zinc-800 outline-none focus:border-zinc-600" placeholder="Nazwa produktu...">
@@ -421,6 +424,40 @@
             return out;
         }
 
+        // ── SEZONOWOŚĆ (kompakt) ── dane płyną z radaru: season_label/sell_from/sell_to ('MM-DD').
+        // Brak season_type w workflow_products → całoroczny rozpoznajemy po etykiecie ('całoroczny').
+        function _mmddPL(s) { const m = /^(\d{2})-(\d{2})$/.exec(s || ''); return m ? `${m[2]}.${m[1]}` : ''; } // "07-16" → "16.07"
+        function inWindow(from, to) {                                  // czy dziś mieści się w oknie [from,to] (wrap-around)
+            if (!from || !to) return true;
+            const pf = /^(\d{2})-(\d{2})$/.exec(from), pt = /^(\d{2})-(\d{2})$/.exec(to);
+            if (!pf || !pt) return true;
+            const now = new Date(), nowN = (now.getMonth() + 1) * 100 + now.getDate();
+            const fromN = +pf[1] * 100 + +pf[2], toN = +pt[1] * 100 + +pt[2];
+            return fromN <= toN ? (nowN >= fromN && nowN <= toN) : (nowN >= fromN || nowN <= toN);
+        }
+        function _daysUntil(mmdd) {                                    // dni do najbliższego wystąpienia MM-DD
+            const m = /^(\d{2})-(\d{2})$/.exec(mmdd || ''); if (!m) return null;
+            const now = new Date(); now.setHours(0, 0, 0, 0);
+            let d = new Date(now.getFullYear(), +m[1] - 1, +m[2]);
+            if (d < now) d = new Date(now.getFullYear() + 1, +m[1] - 1, +m[2]);
+            return Math.round((d - now) / 86400000);
+        }
+        // Zwraca <span> badge sezonu (te same stany co /trendy) albo '' gdy brak danych sezonu.
+        function seasonBadge(p) {
+            const label = (p.season_label || '').trim(), from = p.sell_from, to = p.sell_to;
+            if (!label && !from && !to) return '';
+            const base = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border';
+            if (/całoroczn/i.test(label)) return `<span class="${base} bg-zinc-700/20 text-zinc-400 border-zinc-600/30">∞ ${esc(label || 'całoroczny')}</span>`;
+            const lab = esc(label || 'sezonowy');
+            if (from && to) {
+                if (!inWindow(from, to)) return `<span class="${base} bg-red-500/15 text-red-400 border-red-500/25">⛔ po sezonie (${lab})</span>`;
+                const end = _mmddPL(to), d = _daysUntil(to);
+                if (end && d != null && d <= 21) return `<span class="${base} bg-amber-500/15 text-amber-400 border-amber-500/25">⏳ ${lab} · koniec ${end}</span>`;
+                return `<span class="${base} bg-blue-500/15 text-blue-400 border-blue-500/25">🗓 ${lab}${end ? ` · do ${end}` : ''}</span>`;
+            }
+            return `<span class="${base} bg-blue-500/15 text-blue-400 border-blue-500/25">🗓 ${lab}</span>`;
+        }
+
         // ── Podgląd aukcji na żywo: publiczny edge bud-tt-featured w trybie ?id=<bud_key> ──
         async function openAliModal(key) {
             if (!key) return;
@@ -521,6 +558,7 @@
                         <div class="p-4">
                             <h4 class="text-white font-medium text-sm leading-tight mb-2" style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;">${esc(p.name)}</h4>
                             ${p.orders_sold ? `<div class="mb-2"><span class="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🛒 ${fmtSold(p.orders_sold)} sprzedanych${p.orders_sold_source === 'tiktok_shop' ? ' (TikTok Shop)' : ''}</span></div>` : ''}
+                            ${(() => { const sb = seasonBadge(p); return sb ? `<div class="mb-2">${sb}</div>` : ''; })()}
                             ${p.bud_key ? `<button type="button" data-ali-key="${esc(p.bud_key)}" class="w-full mb-2 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-orange-500/10 text-orange-300 border border-orange-500/20 hover:bg-orange-500/20 transition-colors"><i class="ph ph-storefront"></i> Aukcja Ali</button>` : ''}
                             <div class="flex items-center justify-between pt-2 border-t border-white/5">
                                 <button onclick="toggleProductActive('${p.id}')" class="${isActive ? 'text-emerald-500 hover:text-emerald-400' : 'text-zinc-500 hover:text-emerald-400'} text-xs transition-colors" title="${isActive ? 'Wyłącz produkt' : 'Włącz produkt'}">
@@ -553,6 +591,10 @@
             updateImagePreview();
             resetReportScreenshotPreview();
 
+            const seasonBox = document.getElementById('product-season-display');
+            seasonBox.classList.add('hidden');
+            seasonBox.innerHTML = '';
+
             if (editId) {
                 const p = products.find(x => x.id === editId);
                 if (p) {
@@ -563,6 +605,18 @@
                     document.getElementById('product-image-url').value = p.image_url || '';
                     document.getElementById('product-tiktok-url').value = p.tiktok_url || '';
                     updateImagePreview();
+
+                    // Sezonowość — read-only wgląd (edycja tylko w radarze /trendy)
+                    const sb = seasonBadge(p);
+                    if (sb) {
+                        seasonBox.innerHTML = `
+                            <label class="block text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1.5">Sezonowość</label>
+                            <div class="flex items-center gap-2 flex-wrap px-3 py-2.5 rounded-lg bg-zinc-900 border border-zinc-800">
+                                ${sb}
+                                <span class="text-zinc-500 text-[11px]">dane z radaru — edytuj w /trendy</span>
+                            </div>`;
+                        seasonBox.classList.remove('hidden');
+                    }
 
                     // PDF screenshot
                     if (p.report_screenshot_url) {

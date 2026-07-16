@@ -50,6 +50,20 @@ function count(x: unknown): number | null {
 // znormalizowana nazwa = key (identyczne z bud-tt-ingest / bud-tt-trends)
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
+// ── SEZONOWOŚĆ ──
+// Walidacja klasyfikacji sezonowej z GPT. sell_from/sell_to = 'MM-DD' (okno SPRZEDAŻOWE).
+// Zła data / niepewne → all_year (NULL-e). Cel: nie sprzedawać po sezonie.
+const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
+// deno-lint-ignore no-explicit-any
+function normSeason(it: any): { season_type: string; season_label: string | null; sell_from: string | null; sell_to: string | null } {
+  const rawLabel = (typeof it?.season_label === 'string' && it.season_label.trim()) ? it.season_label.trim().slice(0, 40) : ''
+  if (it?.season_type !== 'seasonal') return { season_type: 'all_year', season_label: rawLabel || 'całoroczny', sell_from: null, sell_to: null }
+  const from = String(it?.sell_from || '').trim()
+  const to = String(it?.sell_to || '').trim()
+  if (!MMDD.test(from) || !MMDD.test(to)) return { season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null }
+  return { season_type: 'seasonal', season_label: rawLabel || 'sezonowy', sell_from: from, sell_to: to }
+}
+
 // -- SANITYZACJA POD JSONB --
 // Postgres jsonb ODRZUCA znak NUL oraz OSIEROCONE surogaty UTF-16 (blad
 // "invalid input syntax for type json"). Osierocony surogat powstaje gdy .slice() utnie
@@ -234,22 +248,28 @@ async function flushUsage(supabase: any) {
   const snap = { ...RU }; RU = { i: 0, c: 0, o: 0, calls: 0 }
   try { await supabase.from('bud_usage').insert({ session_id: null, kind: 'radar', model: MODEL, input_tokens: snap.i, cached_tokens: snap.c, output_tokens: snap.o, cost_usd: cost, meta: { from: 'bud-shop-radar', calls: snap.calls } }) } catch (e) { console.error('[bud-shop-radar] usage', e) }
 }
-async function namesAndCats(titles: string[]): Promise<{ pl: string; category: string }[]> {
-  if (!titles.length || !OPENAI_KEY) return titles.map(() => ({ pl: '', category: 'Inne' }))
+type NameCat = { pl: string; category: string; season_type: string; season_label: string | null; sell_from: string | null; sell_to: string | null }
+async function namesAndCats(titles: string[]): Promise<NameCat[]> {
+  const fallback = (): NameCat => ({ pl: '', category: 'Inne', season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null })
+  if (!titles.length || !OPENAI_KEY) return titles.map(fallback)
   const list = titles.map((t, i) => `${i}. ${(t || '').replace(/\s+/g, ' ').slice(0, 200)}`).join('\n')
   try {
     const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: `Dostajesz listę tytułów produktów z TikTok Shop (EN, przeładowane słowami kluczowymi i śmieciami). Dla KAŻDEGO zwróć krótką polską nazwę handlową i kategorię.\nZASADY NAZWY:\n- 2–6 słów, naturalna handlowa polszczyzna, pierwsza litera wielka\n- WYTNIJ śmieci: "2026","New","Hot Sale","Free Shipping","Dropshipping", kody, zbędne wymiary/ilości, listy wariantów\n- zachowaj wyróżnik/istotę produktu\n- markę podaj TYLKO gdy jest tożsamością produktu (np. CarPlay); inaczej pomiń\n- poprawne polskie diakrytyki\nZwróć JSON {"items":[{"pl":"<nazwa>","category":"<jedna z: ${TT_CATS.join(' / ')}>"}]} w TEJ SAMEJ kolejności i liczbie co tytuły.\nTytuły:\n${list}` }],
+        messages: [{ role: 'user', content: `Dostajesz listę tytułów produktów z TikTok Shop (EN, przeładowane słowami kluczowymi i śmieciami). Dla KAŻDEGO zwróć krótką polską nazwę handlową, kategorię i klasyfikację sezonową.\nZASADY NAZWY:\n- 2–6 słów, naturalna handlowa polszczyzna, pierwsza litera wielka\n- WYTNIJ śmieci: "2026","New","Hot Sale","Free Shipping","Dropshipping", kody, zbędne wymiary/ilości, listy wariantów\n- zachowaj wyróżnik/istotę produktu\n- markę podaj TYLKO gdy jest tożsamością produktu (np. CarPlay); inaczej pomiń\n- poprawne polskie diakrytyki\nZASADY SEZONOWOŚCI:\n- season_type: "seasonal" tylko gdy sprzedaż WYRAŹNIE zależy od pory roku/okazji; inaczej "all_year"\n- season_label: krótka polska etykieta (np. "lato","zima","grill","święta","Halloween","całoroczny")\n- sell_from/sell_to: okno SPRZEDAŻOWE w formacie "MM-DD" (start ~4-6 tyg. PRZED sezonem, koniec ~2-3 tyg. PRZED końcem sezonu; wrap-around dozwolony). Dla all_year → null.\n- Przykładowe okna: lato 04-15→08-05, grill 03-15→08-15, zima 09-15→01-31, święta 10-15→12-18, Halloween 09-01→10-25.\n- Wątpliwe → "all_year" (null-e).\nZwróć JSON {"items":[{"pl":"<nazwa>","category":"<jedna z: ${TT_CATS.join(' / ')}>","season_type":"all_year|seasonal","season_label":"<PL>","sell_from":"MM-DD|null","sell_to":"MM-DD|null"}]} w TEJ SAMEJ kolejności i liczbie co tytuły.\nTytuły:\n${list}` }],
       }),
     }, 'shop-radar-names')
-    if (!res.ok) { try { await res.body?.cancel() } catch { /* */ } return titles.map(() => ({ pl: '', category: 'Inne' })) }
+    if (!res.ok) { try { await res.body?.cancel() } catch { /* */ } return titles.map(fallback) }
     const j = await res.json(); feedUsage(j)
     const items = JSON.parse(j.choices[0].message.content).items || []
-    return titles.map((_, i) => ({ pl: String(items[i]?.pl || '').trim().slice(0, 80), category: TT_CATS.includes(items[i]?.category) ? items[i].category : 'Inne' }))
-  } catch { return titles.map(() => ({ pl: '', category: 'Inne' })) }
+    return titles.map((_, i) => {
+      const it = items[i] || {}
+      const s = normSeason(it)
+      return { pl: String(it?.pl || '').trim().slice(0, 80), category: TT_CATS.includes(it?.category) ? it.category : 'Inne', ...s }
+    })
+  } catch { return titles.map(fallback) }
 }
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promise<R>): Promise<R[]> {
@@ -338,7 +358,10 @@ Deno.serve(async (req) => {
 
   // ── NAZWY PL + KATEGORIE (1 GPT call, batch) ──
   const nc = await namesAndCats(uniq.map((it: any) => it._detail?.title || it.title))
-  uniq.forEach((it: any, i: number) => { it._pl = nc[i]?.pl || ''; it._cat = nc[i]?.category || 'Inne' })
+  uniq.forEach((it: any, i: number) => {
+    it._pl = nc[i]?.pl || ''; it._cat = nc[i]?.category || 'Inne'
+    it._season = { season_type: nc[i]?.season_type || 'all_year', season_label: nc[i]?.season_label ?? 'całoroczny', sell_from: nc[i]?.sell_from ?? null, sell_to: nc[i]?.sell_to ?? null }
+  })
 
   // odrzuć te bez sensownej nazwy / key
   const named = uniq.filter((it: any) => { it._key = norm(it._pl); return it._key && it._pl })
@@ -394,6 +417,10 @@ Deno.serve(async (req) => {
       key: it._key,
       pl_name: it._pl,
       category: it._cat,
+      season_type: it._season?.season_type || 'all_year',
+      season_label: it._season?.season_label ?? 'całoroczny',
+      sell_from: it._season?.sell_from ?? null,
+      sell_to: it._season?.sell_to ?? null,
       query: it._query || null,
       tiktok_url: bestVideo,
       cover: it.images?.[0] || d?.images?.[0] || null, // pierwszy obraz produktu z shop CDN

@@ -17,10 +17,20 @@ Deno.serve(async (req) => {
   if (!prods.length) return new Response(JSON.stringify({ ok: true, purged: !!body.purge }), { headers: { ...cors, 'content-type': 'application/json' } })
 
   const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
+  // SEZONOWOŚĆ: walidacja pól przekazanych z bud-tt-trends (okno 'MM-DD'; złe/niepewne → all_year).
+  const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
+  const season = (p: any) => {
+    const rawLabel = (typeof p?.season_label === 'string' && p.season_label.trim()) ? p.season_label.trim().slice(0, 40) : ''
+    if (p?.season_type !== 'seasonal') return { season_type: 'all_year', season_label: rawLabel || 'całoroczny', sell_from: null, sell_to: null }
+    const from = String(p?.sell_from || '').trim(); const to = String(p?.sell_to || '').trim()
+    if (!MMDD.test(from) || !MMDD.test(to)) return { season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null }
+    return { season_type: 'seasonal', season_label: rawLabel || 'sezonowy', sell_from: from, sell_to: to }
+  }
   const rows = prods.map((p: any) => ({
     key: norm(p.pl || p.pl_name || '') || (p.tiktok_url || '').slice(-24),
     pl_name: p.pl || p.pl_name || '',
     category: p.category || 'Inne',
+    ...season(p),
     query: p.q || p.query || null,
     tiktok_url: p.tiktok_url || (p.tiktok_urls?.[0]) || null,
     cover: p.cover || null,

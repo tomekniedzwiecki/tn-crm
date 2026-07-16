@@ -5,6 +5,14 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS' }
 
+// SEZONOWOŚĆ: produkt jest w oknie sprzedażowym? from/to='MM-DD', today='MM-DD'.
+// Brak from/to (all_year) → zawsze true. Obsługa wrap-around (from>to, np. zima 09-15→01-31).
+function inWindow(from: string | null, to: string | null, today: string): boolean {
+  if (!from || !to) return true
+  if (from <= to) return today >= from && today <= to
+  return today >= from || today <= to // wrap-around przez koniec roku
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -20,7 +28,7 @@ Deno.serve(async (req) => {
   if (detailId) {
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(detailId)
     const base = supabase.from('bud_tt_products')
-      .select('id,pl_name,category,cover,tiktok_url,saves,shares,eng_rate,max_plays,total_plays,comments,videos,is_ad,author,author_followers,heat,newest_days,tags,ali_candidates,chosen_link,ali_snapshot')
+      .select('id,pl_name,category,cover,tiktok_url,saves,shares,eng_rate,max_plays,total_plays,comments,videos,is_ad,author,author_followers,heat,newest_days,tags,ali_candidates,chosen_link,ali_snapshot,season_type,season_label,sell_from,sell_to')
     // TYLKO approved — endpoint jest publiczny, a key (nazwa) jest odgadywalny; bez tego
     // filtru dałoby się enumerować produkty pending/rejected przed recenzją.
     const { data: row } = await (isUuid ? base.eq('id', detailId) : base.eq('key', detailId)).eq('status', 'approved').maybeSingle()
@@ -49,6 +57,7 @@ Deno.serve(async (req) => {
       plays: r.max_plays || 0, total_plays: r.total_plays || 0, comments: r.comments || 0,
       videos: r.videos || 0, is_ad: !!r.is_ad, author: r.author || '', followers: r.author_followers || 0,
       heat: r.heat || 0, newest_days: r.newest_days, tags: Array.isArray(r.tags) ? r.tags : [],
+      season_label: r.season_label || null, sell_to: r.sell_to || null,
       price: chosen?.price || (cands[0]?.price) || '', product_link: chosen?.link || '',
       image: chosen?.img || (cands[0]?.img) || '', ali,
     }
@@ -58,7 +67,7 @@ Deno.serve(async (req) => {
   // Curowana pula jest mała — pobieramy CAŁOŚĆ zatwierdzonych (cap 500), liczymy
   // kategorie z pełnego zbioru, dopiero potem filtrujemy/paginujemy w pamięci.
   const { data, error } = await supabase.from('bud_tt_products')
-    .select('id,pl_name,category,cover,tiktok_url,saves,eng_rate,max_plays,comments,videos,is_ad,author,author_followers,heat,newest_days,ali_candidates,chosen_link,status')
+    .select('id,pl_name,category,cover,tiktok_url,saves,eng_rate,max_plays,comments,videos,is_ad,author,author_followers,heat,newest_days,ali_candidates,chosen_link,status,season_type,sell_from,sell_to')
     .eq('status', 'approved')
     .order('heat', { ascending: false })
     .limit(500)
@@ -79,7 +88,11 @@ Deno.serve(async (req) => {
     }
   }
 
-  const all = (data || []).filter((p: any) => p.cover && p.tiktok_url)
+  // Wyklucz produkty SEZONOWE poza oknem sprzedażowym (cel Tomka: nie sprzedawać po sezonie).
+  // Brak season_type / all_year → traktuj jak całoroczny (nie filtruj). today = 'MM-DD' (UTC).
+  const todayMMDD = new Date().toISOString().slice(5, 10)
+  const all = (data || []).filter((p: any) => p.cover && p.tiktok_url &&
+    !(p.season_type === 'seasonal' && !inWindow(p.sell_from, p.sell_to, todayMMDD)))
 
   // ── RÓŻNICOWANIE: czysty seeded shuffle (równe szanse dla całej puli) ───────
   // FIX 2026-07-10 (feedback Tomka: „skoro produkt jest approved, to jest dobry —

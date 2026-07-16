@@ -160,12 +160,20 @@
   .mmBadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid #5a2326;background:rgba(229,72,77,.1);color:var(--red)}
   .originBadge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:7px;border:1px solid #234a6e;background:rgba(50,145,255,.08);color:var(--blue)}
   .originBadge svg{width:11px;height:11px}
+  /* SEZONOWOŚĆ — badge okna sprzedażowego produktu (całoroczny / w oknie / kończy się / po sezonie) */
+  .seasonBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid var(--line2);background:var(--surface2);color:var(--dim)}
+  .seasonBadge.ay{font-weight:600;border-color:var(--line2);background:var(--surface2);color:var(--dim)}
+  .seasonBadge.in{border-color:#234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
+  .seasonBadge.soon{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
+  .seasonBadge.off{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
   .filterChips{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
   .filterChips:empty{display:none}
   .fchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--line2);background:var(--surface);color:var(--dim);cursor:pointer;transition:.15s}
   .fchip:hover{border-color:#3a3a42;color:var(--text)}
   .fchip.on{border-color:var(--green-d);background:rgba(70,180,106,.1);color:var(--green)}
   .fchip.mm.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .fchip.soff.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .fchip.ssoon.on{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
   .fchip svg{width:13px;height:13px}
   .libBtn{margin-left:auto}
   .libBtn.done{background:var(--green-d);border-color:#3d9450;color:#eafff0}
@@ -383,11 +391,42 @@ const $=id=>document.getElementById(id);
 const esc=s=>(''+(s||'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>{n=+n||0;return n>=1e6?(n/1e6).toFixed(1).replace('.',',')+'M':n>=1000?(n/1000).toFixed(n>=1e4?0:1).replace('.',',')+'k':String(n);};
 const fmtDate=s=>{if(!s)return'';const d=new Date(s);return isNaN(d)?'':d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric'});};
+// ── SEZONOWOŚĆ ── okno sprzedażowe MM-DD (wrap-around); null-e traktujemy jak „zawsze w oknie".
+const _mmddPL=s=>{const m=/^(\d{2})-(\d{2})$/.exec(s||'');return m?`${m[2]}.${m[1]}`:'';};   // "07-16" → "16.07"
+function inWindow(from,to){                                   // czy dziś mieści się w oknie [from,to]
+  if(!from||!to)return true;
+  const pf=/^(\d{2})-(\d{2})$/.exec(from),pt=/^(\d{2})-(\d{2})$/.exec(to);
+  if(!pf||!pt)return true;
+  const now=new Date(),nowN=(now.getMonth()+1)*100+now.getDate();
+  const fromN=+pf[1]*100+ +pf[2],toN=+pt[1]*100+ +pt[2];
+  return fromN<=toN ? (nowN>=fromN&&nowN<=toN) : (nowN>=fromN||nowN<=toN);   // wrap-around gdy from>to
+}
+function _daysUntil(mmdd){                                    // ile dni do najbliższego wystąpienia MM-DD
+  const m=/^(\d{2})-(\d{2})$/.exec(mmdd||'');if(!m)return null;
+  const now=new Date();now.setHours(0,0,0,0);
+  let d=new Date(now.getFullYear(),+m[1]-1,+m[2]);
+  if(d<now)d=new Date(now.getFullYear()+1,+m[1]-1,+m[2]);
+  return Math.round((d-now)/86400000);
+}
+// Stany sezonu produktu (bud_tt_products.season_type/season_label/sell_from/sell_to)
+function _seasonOff(x){return x.season_type==='seasonal'&&!inWindow(x.sell_from,x.sell_to);}
+function _seasonSoon(x){if(x.season_type!=='seasonal'||!inWindow(x.sell_from,x.sell_to))return false;const d=_daysUntil(x.sell_to);return d!=null&&d<=21;}
+function seasonBadgeHtml(x){
+  if(!x||!x.season_type)return '';
+  if(x.season_type==='all_year')return `<span class="seasonBadge ay">∞ ${esc(x.season_label||'całoroczny')}</span>`;
+  if(x.season_type!=='seasonal')return '';
+  const lab=esc(x.season_label||'sezonowy');
+  if(!inWindow(x.sell_from,x.sell_to))return `<span class="seasonBadge off">⛔ po sezonie (${lab})</span>`;
+  const end=_mmddPL(x.sell_to),d=_daysUntil(x.sell_to);
+  if(end&&d!=null&&d<=21)return `<span class="seasonBadge soon">⏳ ${lab} · koniec ${end}</span>`;
+  return `<span class="seasonBadge in">🗓 ${lab}${end?` · do ${end}`:''}</span>`;
+}
 const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Ogród & Majsterkowanie','Moda & Akcesoria','Podróże','Hobby & Kreatywne','Biuro & Organizacja','Inne'];
 let ROWS=[], ME='', FSTAT='pending', toastT, PAGE=0; const PER=20;
 let VIEW='trendy', TSORT={col:'score',dir:-1};   // widok Trendy(karty) | Tabela(zatwierdzone)
 // RADAR v2 „dowód sprzedaży > viral": kolejność kart + filtry + cache biblioteki/tempa sprzedaży
 let SORT='sales', FPROOF=false, FMISMATCH=false;   // sortowanie: sales|heat|new · filtr dowodu/mismatchu
+let FSEASONOFF=false, FSEASONSOON=false;           // filtry sezonowości: po sezonie / kończy się okno
 const INLIB=new Set();                             // workflow_products.bud_key już w bibliotece CRM
 const HIST=new Map(), HISTFETCHED=new Set();       // key → sprzedaż/tydzień (delta z bud_tt_shop_history)
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
@@ -473,6 +512,8 @@ function render(){
     if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
     if(FPROOF&&!(x.tt_shop&&+x.tt_shop.sold_count>0))return false;   // filtr „Dowód sprzedaży"
     if(FMISMATCH&&x.ali_mismatch!==true)return false;                // filtr „Mismatche"
+    if(FSEASONOFF&&!_seasonOff(x))return false;                      // filtr „Po sezonie"
+    if(FSEASONSOON&&!_seasonSoon(x))return false;                    // filtr „Kończy się okno"
     return true;
   });
   const cnt={pending:0,approved:0,rejected:0,duplicate:0};
@@ -518,16 +559,39 @@ function renderChips(){
   const inFstat=x=>FSTAT?x.status===FSTAT:true;
   const proofN=ROWS.filter(x=>inFstat(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
   const mmN=ROWS.filter(x=>inFstat(x)&&x.ali_mismatch===true).length;
+  const soffN=ROWS.filter(x=>inFstat(x)&&_seasonOff(x)).length;
+  const ssoonN=ROWS.filter(x=>inFstat(x)&&_seasonSoon(x)).length;
   let h=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`
-    +`<button class="fchip mm ${FMISMATCH?'on':''}" onclick="toggleMismatch()">⚠ Mismatche${mmN?` · ${mmN}`:''}</button>`;
+    +`<button class="fchip mm ${FMISMATCH?'on':''}" onclick="toggleMismatch()">⚠ Mismatche${mmN?` · ${mmN}`:''}</button>`
+    +`<button class="fchip soff ${FSEASONOFF?'on':''}" onclick="toggleSeasonOff()">⛔ Po sezonie${soffN?` · ${soffN}`:''}</button>`
+    +`<button class="fchip ssoon ${FSEASONSOON?'on':''}" onclick="toggleSeasonSoon()">⏳ Kończy się okno${ssoonN?` · ${ssoonN}`:''}</button>`;
   if(FSTAT==='approved'){
     const exportable=ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key));
     h+=`<button class="btn btn-sm libBtn" onclick="exportAllProof()" ${exportable.length?'':'disabled'}>${I.box} Eksportuj wszystkie z dowodem sprzedaży${exportable.length?` (${exportable.length})`:''}</button>`;
+  }
+  if(FSTAT==='pending'){
+    const offPending=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)).length;
+    h+=`<button class="btn btn-sm btn-r libBtn" onclick="rejectSeasonOff()" ${offPending?'':'disabled'}>⛔ Odrzuć po sezonie${offPending?` (${offPending})`:''}</button>`;
   }
   el.innerHTML=h;
 }
 function toggleProof(){FPROOF=!FPROOF;PAGE=0;render();}
 function toggleMismatch(){FMISMATCH=!FMISMATCH;PAGE=0;render();}
+function toggleSeasonOff(){FSEASONOFF=!FSEASONOFF;PAGE=0;render();}
+function toggleSeasonSoon(){FSEASONSOON=!FSEASONSOON;PAGE=0;render();}
+// ── ZBIOROWE ODRZUCENIE „PO SEZONIE" ── pending seasonal poza oknem → rejected (recenzent = auto-season).
+// RLS pozwala recenzentom UPDATE bud_tt_products (jak reject/clearMismatch).
+async function rejectSeasonOff(){
+  const targets=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)&&x.id);
+  if(!targets.length){toast('Brak produktów po sezonie do odrzucenia');return;}
+  if(!confirm(`Odrzucić ${targets.length} produktów po sezonie? Znikną z listy „do dopasowania".`))return;
+  toast('Odrzucam '+targets.length+' po sezonie…');
+  const ids=targets.map(x=>x.id), now=new Date().toISOString();
+  const{error}=await sb.from('bud_tt_products').update({status:'rejected',reviewed_by:'auto-season',reviewed_at:now}).in('id',ids);
+  if(error){toast('Błąd: '+error.message);return;}
+  targets.forEach(x=>{x.status='rejected';x.reviewed_by='auto-season';x.reviewed_at=now;});
+  toast(`Odrzucono ${targets.length} po sezonie ✓`);render();
+}
 // ── TEMPO SPRZEDAŻY ── delta/tydzień z bud_tt_shop_history (>=2 snapshoty). Dociągane dla
 // widocznej strony (jak healVisible); po policzeniu re-render (HISTFETCHED chroni przed pętlą).
 async function loadHistory(slice){
@@ -674,8 +738,9 @@ function renderTable(){
     const aliUnc=x.ali_snapshot&&x.ali_snapshot.source==='search';   // cena z wyszukiwarki = niepewne dopasowanie
     const aliLink=x.chosen_link?` <a class="tlink" href="${esc(x.chosen_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Sprawdź cenę na AliExpress">↗</a>`:'';
     const ttLink=x.shop_url?` <a class="tlink" href="${esc(x.shop_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Otwórz w TikTok Shop">↗</a>`:'';
+    const seasonB=seasonBadgeHtml(x);
     return `<tr onclick="openCard('${x.id}')">
-      <td class="name">${esc(x.pl_name)}</td>
+      <td class="name">${esc(x.pl_name)}${seasonB?`<div style="margin-top:5px">${seasonB}</div>`:''}</td>
       <td>${esc(x.category||'')}</td>
       <td class="r mono">${_aliPln(x)!=null?_aliPln(x)+' zł':'—'}${aliUnc?` <span class="warn" title="Cena z wyszukiwarki — dopasowanie może być innym produktem/wariantem. Sprawdź ↗">⚠</span>`:''}${aliLink}</td>
       <td class="r mono">${tt!=null?tt+' zł':'—'}${x.tt_shop&&x.tt_shop.price_display?`<span class="usd">${esc(_shortR(x.tt_shop.price_display))}</span>`:''}${ttLink}</td>
@@ -729,7 +794,7 @@ function card(x){
           <span class="stbadge ${x.status}">${x.status==='approved'?'Zatwierdzone':x.status==='rejected'?'Odrzucone':x.status==='duplicate'?'Duplikat':'Do dopasowania'}</span>
         </div>
         <div class="metaRow">
-          ${sellBadge}${mmBadge}${originBadge}
+          ${sellBadge}${seasonBadgeHtml(x)}${mmBadge}${originBadge}
           <select class="catsel" onchange="setCat('${x.id}',this.value)">${CATS.map(c=>`<option ${c===x.category?'selected':''}>${c}</option>`).join('')}</select>
           ${days!=null?`<span class="chip">${I.cal} ${hot?'🔥 ':''}${days} dni temu</span>`:''}
           ${x.is_ad?`<span class="chip ad">${I.mega} reklamowany</span>`:''}
