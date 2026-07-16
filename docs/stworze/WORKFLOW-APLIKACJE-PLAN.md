@@ -120,6 +120,7 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 | 3 | Budowa MVP | `wiadomosci_panel` Wiadomości: centrum w panelu operatora | admin | |
 | 3 | Budowa MVP | `wiadomosci_trial` Wiadomości: seria onboardingowa trialu | admin | |
 | 3 | Budowa MVP | `polecenia` Program poleceń (referral dwustronny) | admin | |
+| 3 | Budowa MVP | `onboarding` Onboarding użytkownika | admin | ✅ „Onboarding gotowy — user wie, co robić" |
 | 4 | Landing i jakość | `landing` Landing + cennik | admin | |
 | 4 | Landing i jakość | `testy_e2e` Testy przepływów | admin | |
 | 4 | Landing i jakość | `audyt` Audyt bezpieczeństwa | admin | |
@@ -158,6 +159,15 @@ infrastruktura rusza dopiero po zatwierdzeniu nazwy.
 > (podgląd + podmiana działająca wszędzie). Wykonane wstecznie dla fachmata. (c) Spektrum stylów
 > w kroku `nazwa` rozszerzone: obok polskich znaczących OBOWIĄZKOWO neologizmy SaaS-owe bez
 > znaczenia + równoległe sprawdzanie .pl/.com/.io/.app (commit d1229a3).
+
+> **NOWY KROK 16.07: `onboarding` (Etap 3, sort 88, po `polecenia`; migracja `20260716f`).**
+> Onboarding = luka fabryki (user wchodzi i nie wie, co robić). Krok idzie PO rdzeniu + panelach + mailach
+> (aha musi być znany, silnik maili istnieć) i CAŁOŚCIOWO projektuje onboarding tej apki wg frameworku
+> „Setup → Aha → Habit": definicja aha (`activated`), JTBD survey z routingiem, checklist „Pierwsze kroki"
+> (1. pre-checked), audyt empty-states, dane przykładowe PL, progressive disclosure, kontekstowe tooltipy,
+> pełna instrumentacja eventów, seria 7 maili z niszy + `milestone`, dashboard aktywacji operatora, progi TTFV
+> i pętla przeglądu do wyczerpania. Kamień: „Onboarding gotowy — user wie, co robić". Framework + protokół
+> per projekt = SSOT **`docs/stworze/ONBOARDING-FABRYKA.md`** (uniwersalne elementy backportowane do startera).
 
 ### 4b. Moduł „Skrzynki" (`/tn-app/skrzynki`) — poczta domen aplikacji (12-13.07)
 Globalna funkcja panelu: odbiór maili wszystkich domen aplikacji (Resend Inbound, catch-all) →

@@ -34,6 +34,7 @@ Sekwencja krótkich sesji z celem i kryterium „zrobione" ZANIM sesja ruszy. Wz
 | S6 | Panel operatora | agregaty przez edge fn (service-role) |
 | S7 | Płatności Stripe | płatność testowa → webhook → dostęp (log) |
 | S8 | Lifecycle e-maile | wysyłka testowa + email_log |
+| S8b | **Onboarding** (krok `onboarding`, po rdzeniu+panelach+mailach) — aha/JTBD survey/checklist „Pierwsze kroki"/empty-states/instrumentacja/seria maili+`milestone`/dashboard aktywacji, pętla do wyczerpania | onboarding przejść oczami usera niszy; framework+protokół = **`docs/stworze/ONBOARDING-FABRYKA.md`** |
 | S9 | Landing + cennik | preview + mobile 375px |
 
 Twarda zasada (badania: 2× dłuższe zadanie = 4× więcej porażek): sesje KRÓTKIE, domykane, nie sklejane.

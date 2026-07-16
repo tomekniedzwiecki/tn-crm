@@ -128,6 +128,7 @@ dashboard aktywacji).
 ## STAN WDROŻENIA (aktualizować)
 - [x] Research ×3 (Sonnet 5) — `docs/stworze/onboarding/RESEARCH-1..3.md` — 2026-07-16
 - [x] SSOT (ten dokument) — 2026-07-16
-- [ ] Standard fabryki (starter scaffolding + krok wfa_step_defs + prompt + template/CLAUDE.md)
+- [x] Krok `onboarding` dodany: `wfa_step_defs` (stage 3, sort 88, owner admin, milestone „Onboarding gotowy — user wie, co robić") + WS (checklista §3) + prompt sesji (streszcza §3) w `tn-app/projekt.html`; ensure_steps dla Dobry Wstęp + fachmat — 2026-07-16 (migr. `20260716f_wfa_krok_onboarding.sql`)
+- [ ] Standard fabryki (starter scaffolding + prompt + template/CLAUDE.md) — reszta robi strumień startera
 - [ ] Wdrożenie Dobry Wstęp (aha = pierwszy wygenerowany PLAN)
 - [ ] Wdrożenie Fachmat (aha = pierwszy wygenerowany PDF oferty)
