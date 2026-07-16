@@ -1755,6 +1755,66 @@
         </div>
     </div>
 
+    <!-- RODO / Delete Lead Modal -->
+    <div id="rodo-modal" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeRodoModal()"></div>
+        <div class="absolute inset-0 flex items-center justify-center p-4">
+            <div class="bg-zinc-900 border border-white/10 rounded-xl shadow-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto transform transition-all duration-200">
+                <div class="p-6">
+                    <div class="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-4">
+                        <i class="ph ph-trash text-red-400 text-xl"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white text-center mb-2">Usuń leada</h3>
+
+                    <!-- Krok 1: wybór trybu -->
+                    <div id="rodo-step-choice">
+                        <p class="text-zinc-400 text-sm text-center mb-6">Wybierz zakres usunięcia. Obie akcje są nieodwracalne.</p>
+                        <div class="space-y-3">
+                            <button onclick="rodoSimpleDelete()" class="w-full px-4 py-3 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-left transition-colors">
+                                <div class="text-sm font-medium text-white flex items-center gap-2"><i class="ph ph-trash text-red-400"></i> Usuń leada z CRM</div>
+                                <div class="text-xs text-zinc-500 mt-1">Usuwa rekord leada. Historia maili, rozmów i audytu zostaje w systemie.</div>
+                            </button>
+                            <button onclick="rodoStartErase()" class="w-full px-4 py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-lg text-left transition-colors">
+                                <div class="text-sm font-medium text-red-400 flex items-center gap-2"><i class="ph ph-shield-warning"></i> Usuń trwale wszystkie dane (RODO)</div>
+                                <div class="text-xs text-zinc-500 mt-1">Prawo do bycia zapomnianym — usuwa dane ze wszystkich tabel: rozmowy z lejków, maile, SMS-y, WhatsApp, oferty, tracking i audyt (po ID, e-mailu i telefonie).</div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Krok 2: raport dry-run + potwierdzenie -->
+                    <div id="rodo-step-confirm" class="hidden">
+                        <div id="rodo-loading" class="text-center py-6 text-zinc-400 text-sm">
+                            <i class="ph ph-circle-notch animate-spin text-xl block mb-2"></i>Analizuję dane leada we wszystkich tabelach...
+                        </div>
+                        <div id="rodo-report" class="hidden">
+                            <p class="text-zinc-400 text-sm text-center mb-4">Zostaną trwale usunięte następujące dane:</p>
+                            <div id="rodo-report-list" class="bg-black/40 border border-white/5 rounded-lg p-3 mb-4 text-xs text-zinc-300 space-y-1 max-h-48 overflow-y-auto"></div>
+                            <div id="rodo-storage-warning" class="hidden text-amber-400 text-xs mb-4"></div>
+                            <label class="flex items-start gap-2 text-xs text-zinc-400 mb-4 cursor-pointer">
+                                <input type="checkbox" id="rodo-suppress" checked class="mt-0.5 accent-red-500">
+                                <span>Dodaj e-mail do listy wykluczeń (<span class="text-zinc-300">email_suppressions</span>) — blokuje przyszłe wysyłki, gdyby adres wrócił do bazy. Zapisany zostaje wyłącznie sam adres.</span>
+                            </label>
+                            <p class="text-zinc-400 text-xs mb-2">Wpisz <span class="text-red-400 font-semibold">USUŃ</span>, aby potwierdzić:</p>
+                            <input type="text" id="rodo-confirm-input" autocomplete="off" class="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-2 text-sm text-white mb-4 focus:outline-none focus:border-red-500/50" placeholder="USUŃ">
+                            <button id="rodo-execute-btn" onclick="rodoExecuteErase()" disabled class="w-full px-4 py-2.5 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-400 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                                <i class="ph ph-shield-warning"></i> Usuń trwale wszystkie dane
+                            </button>
+                        </div>
+                        <div id="rodo-blocked" class="hidden">
+                            <p class="text-amber-400 text-sm mb-2 flex items-center gap-2"><i class="ph ph-warning"></i> Usunięcie zablokowane</p>
+                            <p class="text-zinc-400 text-xs mb-3">Lead ma dane objęte obowiązkiem księgowym lub aktywną współpracą — wymaga ręcznej decyzji:</p>
+                            <ul id="rodo-blockers-list" class="text-xs text-zinc-300 list-disc list-inside space-y-1 mb-4"></ul>
+                        </div>
+                    </div>
+
+                    <button onclick="closeRodoModal()" class="w-full mt-4 px-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 border border-white/10 rounded-lg text-zinc-300 text-sm font-medium transition-colors">
+                        Anuluj
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- View History Modal -->
     <div id="view-history-modal" class="fixed inset-0 z-50 hidden">
         <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" onclick="closeViewHistoryModal()"></div>
@@ -3858,8 +3918,20 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             });
         }
 
-        // Delete
-        document.getElementById('delete-btn').addEventListener('click', async () => {
+        // Delete — modal z wyborem: zwykłe usunięcie vs trwałe usunięcie danych (RODO)
+        document.getElementById('delete-btn').addEventListener('click', () => {
+            document.getElementById('rodo-step-choice').classList.remove('hidden');
+            document.getElementById('rodo-step-confirm').classList.add('hidden');
+            document.getElementById('rodo-confirm-input').value = '';
+            document.getElementById('rodo-execute-btn').disabled = true;
+            document.getElementById('rodo-modal').classList.remove('hidden');
+        });
+
+        window.closeRodoModal = function() {
+            document.getElementById('rodo-modal').classList.add('hidden');
+        };
+
+        window.rodoSimpleDelete = async function() {
             if (!confirm('Czy na pewno chcesz usunąć tego leada? Ta akcja jest nieodwracalna.')) return;
 
             // Log deletion before actually deleting
@@ -3878,7 +3950,119 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
             }
 
             window.location.href = getLeadsPath();
+        };
+
+        // Nazwy tabel w raporcie RODO -> czytelne etykiety
+        const RODO_LABELS = {
+            leads: 'Rekord leada',
+            bud_sessions: 'Sesje rozmów /zbuduje', bud_messages: 'Wiadomości /zbuduje', bud_usage: 'Statystyki użycia /zbuduje',
+            bud_reveals: 'Odsłonięcia /zbuduje', bud_events: 'Eventy /zbuduje', bud_emails: 'Maile lejka /zbuduje',
+            bud_sms: 'SMS-y /zbuduje', bud_short_links: 'Krótkie linki /zbuduje', bud_abandoned_emails: 'Maile porzuconych /zbuduje',
+            bud_feedback: 'Uwagi /zbuduje', bud_knowhow_items: 'Know-how /zbuduje', bud_knowhow_summary: 'Podsumowania know-how /zbuduje',
+            spar_sessions: 'Sesje rozmów /stworze', spar_messages: 'Wiadomości /stworze', spar_usage: 'Statystyki użycia /stworze',
+            spar_reveals: 'Odsłonięcia /stworze', spar_emails: 'Maile lejka /stworze', spar_sms: 'SMS-y /stworze',
+            spar_short_links: 'Krótkie linki /stworze', spar_abandoned_emails: 'Maile porzuconych /stworze',
+            spar_feedback: 'Uwagi /stworze', spar_knowhow_items: 'Know-how /stworze', spar_knowhow_summary: 'Podsumowania know-how /stworze',
+            email_messages: 'Wysłane maile CRM', scheduled_emails: 'Zaplanowane maile', whatsapp_messages: 'Wiadomości WhatsApp',
+            whatsapp_followups: 'Followupy WhatsApp', followup_queue: 'Kolejka followupów', whatsapp_sync_status: 'Status synchronizacji WhatsApp',
+            calendar_events: 'Spotkania w kalendarzu', booking_links: 'Linki do rezerwacji spotkań', client_offers: 'Oferty klienta',
+            lead_activities: 'Aktywności leada', lead_tracking: 'Dane trackingowe (UTM, kliknięcia)', orders_nieoplacone: 'Nieopłacone zamówienia',
+            outreach_sends: 'Wysyłki outreach', outreach_contacts: 'Kontakty outreach', zwolnie_leads: 'Leady /zwolnie',
+            zwolnie_lead_attachments: 'Załączniki /zwolnie', client_knowledge: 'Cache wątków Gmail', automation_executions: 'Wykonania automatyzacji',
+            audit_log: 'Wpisy dziennika audytu', email_suppressions_istniejace: 'Istniejące wykluczenia e-mail'
+        };
+
+        window.rodoStartErase = async function() {
+            document.getElementById('rodo-step-choice').classList.add('hidden');
+            document.getElementById('rodo-step-confirm').classList.remove('hidden');
+            document.getElementById('rodo-loading').classList.remove('hidden');
+            document.getElementById('rodo-report').classList.add('hidden');
+            document.getElementById('rodo-blocked').classList.add('hidden');
+
+            const { data, error } = await supabaseClient.rpc('rodo_erase_lead', {
+                p_lead_id: lead.id, p_dry_run: true, p_suppress: true, p_force: false
+            });
+
+            document.getElementById('rodo-loading').classList.add('hidden');
+
+            if (error) {
+                alert('Błąd analizy danych: ' + error.message);
+                closeRodoModal();
+                return;
+            }
+
+            if (data.blocked) {
+                const list = document.getElementById('rodo-blockers-list');
+                list.innerHTML = '';
+                (data.blockers || []).forEach(b => {
+                    const li = document.createElement('li');
+                    li.textContent = b;
+                    list.appendChild(li);
+                });
+                document.getElementById('rodo-blocked').classList.remove('hidden');
+                return;
+            }
+
+            const listEl = document.getElementById('rodo-report-list');
+            listEl.innerHTML = '';
+            const counts = data.counts || {};
+            Object.keys(counts).filter(k => counts[k] > 0).sort((a, b) => counts[b] - counts[a]).forEach(k => {
+                const row = document.createElement('div');
+                row.className = 'flex justify-between gap-3';
+                const label = document.createElement('span');
+                label.textContent = RODO_LABELS[k] || k;
+                const val = document.createElement('span');
+                val.className = 'text-red-400 font-medium shrink-0';
+                val.textContent = counts[k];
+                row.appendChild(label); row.appendChild(val);
+                listEl.appendChild(row);
+            });
+
+            const files = data.storage_files || [];
+            const storageEl = document.getElementById('rodo-storage-warning');
+            if (files.length > 0) {
+                storageEl.textContent = `Uwaga: ${files.length} plik(ów) w Storage wymaga ręcznego usunięcia — lista trafi do konsoli.`;
+                storageEl.classList.remove('hidden');
+                console.warn('RODO: pliki Storage do ręcznego usunięcia:', files);
+            } else {
+                storageEl.classList.add('hidden');
+            }
+
+            document.getElementById('rodo-report').classList.remove('hidden');
+        };
+
+        document.getElementById('rodo-confirm-input').addEventListener('input', (e) => {
+            document.getElementById('rodo-execute-btn').disabled = e.target.value.trim().toUpperCase() !== 'USUŃ';
         });
+
+        window.rodoExecuteErase = async function() {
+            const btn = document.getElementById('rodo-execute-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="ph ph-circle-notch animate-spin"></i> Usuwanie...';
+
+            const { data, error } = await supabaseClient.rpc('rodo_erase_lead', {
+                p_lead_id: lead.id,
+                p_dry_run: false,
+                p_suppress: document.getElementById('rodo-suppress').checked,
+                p_force: false
+            });
+
+            if (error || (data && data.error)) {
+                alert('Błąd usuwania: ' + (error ? error.message : data.error));
+                btn.disabled = false;
+                btn.innerHTML = '<i class="ph ph-shield-warning"></i> Usuń trwale wszystkie dane';
+                return;
+            }
+
+            if (data && data.blocked) {
+                alert('Usunięcie zablokowane: ' + (data.blockers || []).join(', '));
+                closeRodoModal();
+                return;
+            }
+
+            showToast('Dane leada trwale usunięte (RODO)', 'success');
+            setTimeout(() => { window.location.href = getLeadsPath(); }, 800);
+        };
 
         // Save note
         document.getElementById('save-note-btn').addEventListener('click', async () => {
