@@ -237,6 +237,18 @@
         </div>
     </div>
 
+    <!-- Ustaw hasło (pierwsze wejście — hash NULL) -->
+    <div id="setpw" class="hidden">
+        <h1>Ustaw hasło do swojego portalu</h1>
+        <p class="sub" style="margin-bottom:26px">To Twoje pierwsze wejście. Ustaw hasło, którym będziesz się logować do podglądu postępu budowy. Zapamiętaj je — przyda się przy kolejnych wizytach.</p>
+        <div class="card" style="max-width:420px">
+            <div id="spw-err" class="err"></div>
+            <input id="spw1" type="password" placeholder="Nowe hasło (min. 8 znaków)" autocomplete="new-password">
+            <input id="spw2" type="password" placeholder="Powtórz hasło" autocomplete="new-password">
+            <button id="spw-go" onclick="setPassword()">Ustaw hasło i wejdź</button>
+        </div>
+    </div>
+
     <!-- Brak tokenu -->
     <div id="notoken" class="hidden">
         <h1>Nieprawidłowy link</h1>
@@ -367,7 +379,44 @@
     }
 
     function show(id) {
-        ['login','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+        ['login','setpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    }
+
+    // First-visit: bez hasła pytamy portal, czy klient musi je dopiero ustawić (hash NULL),
+    // czy loguje się istniejącym hasłem. Token 32-hex = sekret dostępowy.
+    async function bootstrapAuth() {
+        show('loading');
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, action:'portal_state' }) });
+            if (!res.ok) { show(res.status === 401 ? 'notoken' : 'login'); return; }
+            const d = await res.json();
+            show(d.needs_setup ? 'setpw' : 'login');
+        } catch (e) { show('login'); }
+    }
+
+    // Klient ustawia własne hasło (tylko gdy portal jeszcze bez hasła) → auto-wejście.
+    async function setPassword() {
+        const p1 = $('spw1').value.trim(), p2 = $('spw2').value.trim();
+        $('spw-err').textContent = '';
+        if (p1.length < 8) { $('spw-err').textContent = 'Hasło musi mieć min. 8 znaków.'; return; }
+        if (p1 !== p2) { $('spw-err').textContent = 'Hasła nie są takie same.'; return; }
+        $('spw-go').disabled = true;
+        try {
+            const res = await fetch(FN_URL, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ token, action:'set_password', password: p1 }) });
+            const d = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                if (res.status === 409) { $('spw-err').textContent = 'Hasło zostało już ustawione — zaloguj się poniżej.'; setTimeout(() => show('login'), 1200); }
+                else if (res.status === 429) { $('spw-err').textContent = 'Zbyt wiele prób — spróbuj za chwilę.'; }
+                else { $('spw-err').textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się ustawić hasła.'; }
+                return;
+            }
+            // Auto-wejście: zapamiętaj hasło tej karty i wejdź normalną ścieżką logowania.
+            sessionStorage.setItem(PW_KEY, p1);
+            currentPw = p1;
+            show('loading');
+            load();
+        } catch (e) { $('spw-err').textContent = 'Błąd połączenia — spróbuj ponownie.'; }
+        finally { $('spw-go').disabled = false; }
     }
 
     async function load() {
@@ -1060,8 +1109,12 @@
         else { show('loading'); load(); }
     }
     else if (sessionStorage.getItem(PW_KEY)) { show('loading'); load(); }
-    else { show('login'); }
-    document.addEventListener('keydown', e => { if (e.key === 'Enter' && !$('login').classList.contains('hidden')) load(); });
+    else { bootstrapAuth(); }
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Enter') return;
+        if (!$('login').classList.contains('hidden')) load();
+        else if (!$('setpw').classList.contains('hidden')) setPassword();
+    });
 </script>
 </body>
 </html>

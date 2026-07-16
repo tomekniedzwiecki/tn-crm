@@ -77,6 +77,18 @@ Klient widzi TYLKO: nazwę aplikacji, pasek postępu (procent z kroków), listę
 Serwowane przez edge function `wfa-portal` (weryfikacja `unique_token` + hasło), strona `partner-app.html`.
 Kamienie = konfiguracja (kolumna w `step_defs`), nie osobna tabela.
 
+**AKTUALIZACJA 16.07 — hasło portalu ustawia KLIENT (nie Tomek).** Dawniej: Tomek ustawiał hasło
+w panelu i przekazywał je osobno. Teraz: mail kickoff zawiera TYLKO link; `client_password_hash IS NULL`
+= first-visit → portal pokazuje ekran „Ustaw hasło do swojego portalu" (min. 8 znaków, powtórz) → akcja
+`set_password` w `wfa-portal` (gate: token 32-hex OK **ORAZ** hash jeszcze NULL; atomowy warunkowy
+UPDATE `...is('client_password_hash', null)` — NIGDY nie nadpisuje istniejącego hasła; rate-limit przez
+wspólny `portal-throttle` per-token) → zapis hash → auto-wejście. Front decyduje ekran (login vs setpw)
+przez bezhasłową akcję `portal_state` (`{ needs_setup }`). Reset = Tomek w Ustawieniach projektu
+„Wyczyść hasło portalu" (hash→NULL → klient ustawia nowe); ręczne ustawienie hasła zostaje (schowane pod
+„Ręcznie ustaw hasło", przydatne do podglądu). Podgląd admina „oczami klienta" (`?podglad=admin` + team JWT)
+działa dalej bez hasła (read-only). Prompt kroku `kickoff` i `WS.kickoff.desc` zaktualizowane: żadnego
+`[HASŁO]` w mailu.
+
 ## 4. Etapy i kroki (seed `wfa_step_defs`)
 
 Decyzja Tomka (2026-07-11): **nazwa + domena = Etap 1**, bo nazwa projektu determinuje repo/Vercel/Supabase/domenę —

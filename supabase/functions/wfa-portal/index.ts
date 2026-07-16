@@ -1,10 +1,17 @@
 // wfa-portal — publiczny odczyt postępu budowy aplikacji dla KLIENTA (kamienie milowe)
 // + mechanizm UMOWY (zbieranie danych, render w locie, pobranie do podpisu).
 // Wzorzec: RLS wfa_* = tylko team; klient dostaje dane WYŁĄCZNIE przez tę funkcję
-// (token z URL + hasło ustawione przez Tomka w panelu; hasło = SHA-256 w client_password_hash).
+// (token z URL + hasło; hasło = SHA-256 w client_password_hash).
+//
+// HASŁO first-visit (16.07): hash NULL = portal jeszcze bez hasła. KLIENT sam ustawia hasło
+// przy pierwszym wejściu — akcja `set_password` (gate: token OK ORAZ hash NULL; NIGDY nie
+// nadpisuje istniejącego). `portal_state` (bez hasła) mówi frontowi czy pokazać ekran „ustaw hasło"
+// czy logowanie. Reset = Tomek czyści hash do NULL w panelu → klient ustawia nowe.
 //
 // Body BEZ `action` = status projektu (postęp %, etapy, kamienie).
 // Body z `action`:
+//   'portal_state'   → { needs_setup, name } — czy portal wymaga ustawienia hasła (bez hasła)
+//   'set_password'   → ustaw hasło TYLKO gdy hash NULL (first-visit); { ok:true }
 //   'contract_meta'  → { contract_status, fields, has_final, final_url, name, customer_name, customer_email }
 //   'contract_data'  → zapis danych klienta (tylko gdy status='dane_klienta') → status='do_podpisu'
 //   'contract_html'  → render umowy W LOCIE (szablon/custom + podstawienie {{...}}); { html }
@@ -331,8 +338,56 @@ Deno.serve(async (req: Request) => {
     return await intakeAdmin(sb, p as Record<string, any>);
   }
 
+  // ============ FIRST-VISIT: stan bramki (czy klient musi ustawić hasło) ============
+  // Bez hasła i bez preview — jedyna informacja to boolean „czy portal wymaga ustawienia hasła".
+  // Token 32-hex jest sekretem dostępowym; nieznany token dostał już 401 wyżej.
+  if (action === "portal_state") {
+    return json({
+      needs_setup: !p.client_password_hash,
+      name: (p.name || "").trim() || "Twoja aplikacja",
+    });
+  }
+
+  // ============ FIRST-VISIT: klient sam ustawia hasło do portalu ============
+  // Gate: token poprawny (sprawdzony wyżej) ORAZ hash JESZCZE NULL. Ta ścieżka NIGDY nie
+  // nadpisuje istniejącego hasła (reset robi Tomek w panelu → hash=NULL). Atomowość przez
+  // warunkowy UPDATE ...is('client_password_hash', null) — obrona przed wyścigiem/podwójnym setem.
+  // Hasło NIGDY nie trafia do logów.
+  if (action === "set_password") {
+    if (preview) return json({ error: "preview_readonly" }, 403);
+    const gate = await throttleGate(sb, token);
+    if (gate.locked) {
+      return json({ error: "too_many_attempts", retry_after: gate.retryAfter }, 429, { "Retry-After": String(gate.retryAfter) });
+    }
+    if (p.client_password_hash) return json({ error: "already_set" }, 409);
+    const np = (body.password || "").trim();
+    if (np.length < 8) {
+      await throttleFail(sb, token);
+      await sleep(200);
+      return json({ error: "validation", messages: ["Hasło musi mieć min. 8 znaków."] }, 400);
+    }
+    if (np.length > 200) return json({ error: "validation", messages: ["Hasło jest za długie."] }, 400);
+    const hash = await sha256Hex(np);
+    const { data: updated, error: upErr } = await sb
+      .from("wfa_projects")
+      .update({ client_password_hash: hash })
+      .eq("id", p.id)
+      .is("client_password_hash", null)
+      .select("id");
+    if (upErr) return json({ error: "save_failed" }, 500);
+    if (!updated || (updated as unknown[]).length === 0) return json({ error: "already_set" }, 409);
+    throttleClear(sb, token).catch(() => {});
+    await sb.from("wfa_activities").insert({
+      project_id: p.id,
+      actor: "client",
+      action: "portal_set_password",
+      description: "Klient ustawił własne hasło do portalu przy pierwszym wejściu.",
+    });
+    return json({ ok: true });
+  }
+
   // Ścieżka KLIENTA (nie podgląd): hasło (SHA-256) obowiązkowe. Hasło nieustawione =
-  // portal wyłączony dla tego projektu (Tomek włącza w panelu).
+  // portal czeka aż klient ustawi hasło przy pierwszym wejściu (akcja set_password wyżej).
   if (!preview) {
     // SEC-D FAIL #2: throttling per-token. Zablokowany token -> 429 (bez porównania hasła).
     const gate = await throttleGate(sb, token);
