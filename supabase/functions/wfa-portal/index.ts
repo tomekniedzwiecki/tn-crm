@@ -316,7 +316,7 @@ Deno.serve(async (req: Request) => {
   const { data: p } = await sb
     .from("wfa_projects")
     .select(
-      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, app_url, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id",
+      "id, name, customer_name, customer_email, customer_phone, status, deadline_at, client_password_hash, app_url, domain, landing_url, fee_percent, unique_token, stripe_account_id, contract_status, contract_fields, contract_custom_html, contract_sent_at, contract_final_path, spar_session_id",
     )
     .eq("unique_token", token)
     .maybeSingle();
@@ -774,7 +774,9 @@ Deno.serve(async (req: Request) => {
     milestones,
     mockups,
     deadline_at: p.deadline_at || null,
-    app_url: p.app_url || null,
+    // Jeden punkt wejścia partnera: URL apki dla przycisku „Otwórz swoją aplikację" w portalu.
+    // Publiczny URL (NIE sekret), zawsze z projektu wiązanego z tokenem. Fallback: https:// + domena.
+    app_url: p.app_url || (p.domain ? "https://" + String(p.domain).replace(/^https?:\/\//i, "").replace(/\/+$/, "") : null),
     landing_url: p.landing_url || null,
     contract_status: p.contract_status || "brak",
   });
