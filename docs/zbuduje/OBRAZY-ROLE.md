@@ -5,13 +5,14 @@
 DO ROLI. Im bliżej decyzji zakupowej (oferta/warianty) → czystszy packshot; im bardziej
 o dowodzie społecznym (opinie) → surowsze UGC. Mylenie tych ról = błąd klasy P0.
 
-## TABELA RÓL (klasy: **P**=packshot realny · **U**=UGC z opinii · **S**=scena AI wierna)
+## TABELA RÓL (klasy: **P**=packshot realny · **U**=UGC z opinii · **S**=scena AI wierna ·
+## **R**=real-gallery — kurowany kadr z galerii detail, `bud_tt_products.gallery_curated`)
 | Sekcja | Dozwolone | ZAKAZANE | Wymagania |
 |---|---|---|---|
 | Hero | S (główna), P-cutout na czystym polu | U jako tło | negative space na copy zaplanowany w promptcie; kontrast pod tekstem ≥4.5:1 |
-| **Karta oferty „Zamów…"** | **TYLKO P** | **U bezwzględnie**; S pod packshotem | jasne jednolite tło; PEŁNY produkt (bbox nie dotyka krawędzi); 80-85% kadru, margines ≥5%; jasność/kontrast w normie |
+| **Karta oferty „Zamów…"** | **TYLKO P lub R-packshot** | **U bezwzględnie**; S pod packshotem | jasne jednolite tło; PEŁNY produkt (bbox nie dotyka krawędzi); 80-85% kadru, margines ≥5%; jasność/kontrast w normie |
 | Warianty/swatche | P (seria-klon setupu) | U, S | identyczny kąt/światło/tło/skala między wariantami |
-| Galeria | mix P+S+detal | U jako główny slajd | 4 typy: plain/in-scale/detal/lifestyle; wspólny grading |
+| **Galeria „zobacz produkt"** | **R (główne slajdy; z `gallery_curated.keep`)** + detal-cropy R; U wpleciony | **S i P bez źródła w detail; U jako główny slajd** | 4-6 kafli; kolejność packshot→detal→lifestyle→skala; wspólny grading; alt PL z `alt_pl`; AI-scena NIGDY jako dowód produktu |
 | Demo „jak działa" | S lub P w akcji | U losowe | produkt wierny, sekwencja spójna |
 | Social proof/opinie | **TYLKO U** | P/S udające UGC | surowe = sygnał prawdziwości; NIE retuszować; zawsze RAMKOWANE (nigdy full-bleed tło) |
 | USP/zaufanie | ikony/grafika | zdjęcia | flat, spójny zestaw |
@@ -36,9 +37,9 @@ o dowodzie społecznym (opinie) → surowsze UGC. Mylenie tych ról = błąd kla
 → wymuś overlay · bbox produktu 80-85% kadru, margines ≥5%, nie dotyka krawędzi ·
 detekcja białego prostokąta wklejonego w scenę · rozdzielczość vs rozmiar renderu.
 **Skrypt (per layout):** bbox-overlap dwóch fotografii → BLOK image-on-image (alfa-cutout
-dozwolony) · WCAG contrast pod tekstem na obrazie · **TAG KLASY (P/U/S) każdego assetu
+dozwolony) · WCAG contrast pod tekstem na obrazie · **TAG KLASY (P/U/S/R) każdego assetu
 w mapie assetów + allowlista klas per slot sekcji → klasa spoza allowlisty = BLOK**
-(to łapie „UGC w ofercie" mechanicznie).
+(to łapie „UGC w ofercie" mechanicznie; obejmuje też R poza galerią/kartą i S w galerii).
 **Vision (na wątpliwe):** spójność światła/kąta/tonu w sekcji · konflikt światła
 packshot↔scena · realizm cutoutu (cień, skala) · fałszywa autentyczność (P/S udające U) ·
 AI-slop tells · dopasowanie semantyczne obrazu do roli.

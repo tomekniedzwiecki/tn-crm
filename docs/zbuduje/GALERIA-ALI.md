@@ -1,0 +1,59 @@
+# GALERIA-ALI — kuracja realnych zdjęć z galerii AliExpress (F0 GATE + F0.5)
+
+**Status: OBOWIĄZUJE (2026-07-17; zasada Tomka „galeria AliExpress = punkt wyjścia tego,
+jak wygląda produkt" + incydent Latarka: search-galeria z INNEJ aukcji → landing zbudowany
+na nieistniejącym produkcie).** Synteza 2× research Sonnet (kurator + integrator).
+
+## 0. GATE F0: `source='detail'` OBOWIĄZKOWY (twardy)
+Przed czymkolwiek sprawdź `bud_tt_products.ali_snapshot->>'source'`:
+- `!= 'detail'` lub brak snapshotu → wywołaj `bud-ali-snapshot` `{productKey, force:true}`
+  (auth: `x-tools-secret`=BUD_TOOLS_SECRET albo `sessionId` z `bud_sessions`; martwy/zły
+  chosen_link → dołóż `link` z właściwą aukcją).
+- Po force nadal ≠ `detail` = **STOP PRODUKTU** + nota `FABRYKA-*/<slug>/BLOK-source.md`;
+  ZAKAZ budowy na search-galerii (bywa INNYM produktem). `curatedUrl` ratuje pojedyncze
+  zdjęcie karty, ale NIE podnosi source i nie odblokowuje budowy.
+- **PASZPORT PRODUKTU i KAŻDA referencja generacji — wyłącznie z galerii detail.**
+
+## 1. F0.5 KURACJA GALERII (po zielonym gate, PRZED F1)
+Agent-kurator orzeka per kadr galerii detail; werdykty zapisuje w
+**`bud_tt_products.gallery_curated jsonb`** (migracja 20260717) + czytelna kopia
+`FABRYKA-*/<slug>/GALERIA.md` dla Tomka. Kształt: `{source_ok, product_id, curated_at,
+items:[{url, klasa, werdykt, role, class:'R', keep, crop_bbox?, kolejnosc?, alt_pl, powod}]}`.
+Konsumpcja: **F1** planuje z inwentarza `keep` (role/alt_pl) — nie z surowych images;
+**F3** każdy `keep` = pełnoprawny asset klasy **R**; **F4** sekcja galerii/karta budują się
+z `gallery_curated`, NIGDY z generacji.
+
+## 2. KLASYFIKACJA per zdjęcie (werdykty: POKAŻ / CROP(bbox) / DANE / ODRZUĆ)
+| Klasa | Sygnatura | Werdykt domyślny |
+|---|---|---|
+| packshot-czysty | jednolite jasne tło, zero tekstu | POKAŻ (główny slajd) |
+| lifestyle-czysty | produkt w użyciu/dłoni, zero wypalonego tekstu | POKAŻ |
+| detal/makro | zbliżenie mechanizmu, czyste | POKAŻ (po packshocie) |
+| infografika-z-tekstem | wypalony napis (KAŻDY język) | DANE (USP→copy) + CROP czystej strefy |
+| diagram-schemat | rysunek instruktażowy | DANE (przerysować natywnie PL) |
+| rozmiarówka | wymiary na kadrze | DANE (→specs!) + CROP packshotów |
+| kolaż / insety | kilka kadrów w pliku | CROP — rozbij na czyste kadry |
+| duplikat-wariant | prawie identyczny | ODRZUĆ (1 reprezentant) |
+| niska-jakość | kompresja/sklejka/ghost | ODRZUĆ |
+Przy infografice notuj: język, ilość tekstu, czy treść WARTOŚCIOWA (USP/wymiary → copy/specs).
+
+## 3. TANDETA (twarde — dowolny trigger = NIE na stronę as-is)
+Wypalone napisy w każdym języku · watermarki/loga · sklejki 2×2 · przesycone
+AliExpress-kolory, strzałki, obwódki, ceny, badge, przekreślenia · **scenografia
+z innego świata** (korale/lód/plaża pod przyborem — fantazja zabija wiarygodność;
+„czysty produkt" ≠ „dobry do galerii", decyduje TŁO) · ghost-sylwetki · duplikaty ·
+mediana luminancji <70/255 · pikseloza.
+
+## 4. KOMPOZYCJA GALERII NA STRONIE
+Min 4, max 6 kafli; kolejność: packshot → detal/makro → lifestyle → skala/wymiar.
+Lightbox z pełnym kadrem; alt-y PL z `alt_pl`; wspólny grading CSS (inaczej patchwork).
+UGC tylko WPLECIONE (nigdy główny slajd). **Fallback przy ubogiej galerii po odsiewie**
+(częste!): (a) CROP-y z kolaży/infografik jako detale; (b) 1-2 sceny S text-free z makiety
+jako lifestyle (ale NIGDY jako „dowód produktu"); (c) 2-4 UGC z opinii (rehost, podpis
+„zdjęcia od kupujących"). NIGDY nie łatać infografiką z obcym tekstem ani sceną-fantazją.
+
+## 5. ANTY-MISMATCH landing↔aukcja (FILTR PLANU w F1)
+Tabela CLAIM→ŹRÓDŁO dla KAŻDEGO claimu planu (funkcje, zasilanie, elementy, wymiary,
+materiał): źródło ∈ {tytuł detail, specs, galeria detail, opinie}. Claim bez źródła = CUT.
+Claim o KLASIE produktu / elemencie tożsamości (typ narzędzia, wyświetlacz, mechanizm)
+bez źródła = **STOP planu** (incydent Latarka: elektryczny pistolet vs realne cążki).

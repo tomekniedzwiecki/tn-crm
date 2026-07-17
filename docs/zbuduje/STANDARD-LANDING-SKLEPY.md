@@ -61,7 +61,12 @@ między landingami rządzi unikatowość (spójne z anty-doorway, sekcja 5 GEO).
 
 **F0 — DANE + VISION-GATE.** Snapshot z `bud_tt_products.ali_snapshot` (tytuł, opinie
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
-zmyślonych cm/kg). Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
+zmyślonych cm/kg). **🚫 GATE `source='detail'` — TWARDY, PIERWSZY KROK (incydent Latarka
+17.07: search-galeria = INNY produkt → landing sprzedawał nieistniejące cechy): procedura
+`docs/zbuduje/GALERIA-ALI.md` §0; source≠detail po force:true = STOP PRODUKTU.
+Następnie F0.5 KURACJA GALERII (GALERIA-ALI §1-4): werdykty per kadr →
+`bud_tt_products.gallery_curated` + kopia GALERIA.md; galeria na stronie budowana TYLKO
+z kuracji (klasa R).** Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
 tekstem/marką = odrzut z galerii, treść wolno cytować), zdjęcia opinii (zrzuty apki
 AliExpress/obce marki/off-topic = odrzut), WIDEO (poster/klatka — off-product w obie strony
 = sekcję pominąć, nawet przy milionach wyświetleń). Cena = półka rynkowa kategorii PL +
@@ -74,7 +79,9 @@ briefing.md, aktualizowany o ten standard): cel+kontekst, zdjęcia produktu jako
 GPT zwraca: koncepcję pod TEN produkt (motyw przewodni = wizualna metafora korzyści,
 NIGDY „clean e-commerce"), dobór i kolejność sekcji z uzasadnieniem, paletę+font+charakter,
 listę grafik, funkcje konwersji. FILTR PLANU (my): zakazy, formularz→CTA checkout_url,
-esencja produktu na scenach kluczowych, jasne tła.
+esencja produktu na scenach kluczowych, jasne tła, **ANTY-MISMATCH (GALERIA-ALI §5):
+tabela CLAIM→ŹRÓDŁO (tytuł detail/specs/galeria detail/opinie); claim bez źródła = CUT;
+claim o klasie produktu/elemencie tożsamości bez źródła = STOP planu.**
 
 **F2 — MAKIETY (projekt całej strony).**
 **⚓ MAKIETA MUSI BYĆ KOMPLETNA (Z2):** do promptu KAŻDEJ makiety wchodzą wymagania sekcji 3
@@ -364,6 +371,9 @@ wyglądu żadnego kadru.**
 - sticky przycisk zamówienia (mobile, po hero, IO) + KAŻDE CTA `data-checkout` → checkout_url;
 - prawdziwe opinie z aukcji ZE ZDJĘCIAMI (kafle + lightbox z pełną treścią; wzorzec:
   drukarka-3d ~l.1324; ae-pic rehost do `bud-assets/<slug>/` przed użyciem);
+- **galeria „zobacz produkt" = WYŁĄCZNIE realne kadry z kuracji (`gallery_curated`, klasa R)**
+  — AI-sceny (S) ZAKAZANE jako slajd galerii/karty (mogą być tłem sekcji, nie dowodem);
+  lightbox + alt PL z `alt_pl`; szczegóły `docs/zbuduje/GALERIA-ALI.md`;
 - realne zdjęcia produktu w karcie/galerii/ofercie (AI nie zastępuje dowodu);
 - hit z TikToka: self-host MP4 bez ramki odtwarzacza (pipeline i ryzyko: sekcja 5),
   TYLKO po vision-gate on-product;
@@ -492,7 +502,10 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   sekwencjonować; zombie-lock profilu → fallback headless z tmp user-data-dir.
 
 ### 7c. Materiał źródłowy (aukcja/snapshot)
-- Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty jakościowe.
+- **`source='detail'` = warunek konieczny budowy**; `search`/`have` = STOP (galeria bywa
+  INNYM produktem — Latarek 17.07). Kuracja galerii → `bud_tt_products.gallery_curated`.
+- Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty
+  jakościowe **+ wymiary z rozmiarówek galerii (kuracja DANE) uzupełniają specs**.
 - Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
 - Rehost zewnętrznych obrazów TYLKO do `bud-assets/<slug>/` — to PREFIX w buckecie
   `attachments` (upload: `/object/attachments/bud-assets/<slug>/...`), nie osobny bucket.

@@ -59,6 +59,10 @@ Detail aukcji = `/api/v3/product-info` (aliexpress-true-api); odpowiedź to TABL
 NIE działa — tylko USD/EN (ceny w snapshocie SĄ W USD, front przelicza kursem NBP).
 `source==='detail'` = potwierdzona żywa aukcja; 'search' = możliwy INNY produkt/martwa
 aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen SKU.
+**Fabryka landingów: `source!=='detail'` = GATE STOP** (force:true raz, potem nota do
+Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego produktu);
+`curatedUrl` ratuje zdjęcie karty, ale NIE podnosi source. Kuracja galerii →
+`bud_tt_products.gallery_curated jsonb` (procedura `docs/zbuduje/GALERIA-ALI.md`).
 
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 
