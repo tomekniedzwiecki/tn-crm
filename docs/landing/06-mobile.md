@@ -9,6 +9,15 @@
 
 **Dlaczego obowiązkowy:** 60-70% ruchu to mobile. Landing który wygląda świetnie na 1440px ale "się rozjeżdża" na 375px = wyrzucone pieniądze na reklamę.
 
+> ⚠️ **PASS ≠ brak poziomego scrolla** (`scrollWidth == viewport` to MINIMUM, NIE dowód jakości —
+> incydent hero mobile 17.07: „mobile PASS bez overflow", a animowana karta hero była zlepkiem
+> nakładających się warstw + ucięta treść). Werdykt „gotowe" DOPIERO po ocenie, czy REALNIE wygląda dobrze:
+> (1) oceń JAKOŚĆ (ucięcia/nachodzenia/spacing/hierarchia/ciasnota), nie tylko overflow; (2) łap KLATKI
+> W TRAKCIE animacji/przejść (seria zrzutów co ~0,8 s przez cały cykl), bo wada bywa widoczna tylko
+> w połowie crossfade — statyczny end-frame kłamie; (3) SAM ZOBACZ zrzuty; (4) kadr o stałej wysokości
+> ≥ najwyższa faza Z ZAWIJANIEM tekstu; (5) iteruj lokalnie (serwuj `public/` → zrzuty → popraw → ponów)
+> aż wygląda dobrze, dopiero potem deploy. Patrz pamięć `feedback-weryfikacja-wizualna-jakosc-nie-overflow`.
+
 ---
 
 ## Workflow
