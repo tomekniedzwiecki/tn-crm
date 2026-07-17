@@ -103,6 +103,12 @@ snapshotu (cena z `sku_prices`+NBP, specs 1:1, DESTYLACJA opisu FAKT/BEŁKOT, wa
 PL, `sold_volume`/review/video/shop) + wskaźniki do `PASZPORT.md`, `gallery_curated`,
 `videos_curated`. Zapis `FABRYKA-*/<slug>/KARTA-PRAWDY.md`. **Każdy brief (F1/F4/copy) dostaje
 TĘ kartę zamiast luźnych wyimków (Z7).** Puste pole = „brak danych", nie zmyślać.
+**SANITY LICZB (Odpalak 17.07: „20000-30000 mAh" i „diesle do 10 L" przeszły, bo miały
+„kotwicę" w aukcji):** (a) ZAKRES z wariantów ≠ kotwica — na stronę idzie KONKRET
+kupowanego wariantu; (b) liczba z aukcji sprzeczna ze spec (tytułowe „7000A" vs spec
+„>1200A") = BEŁKOT; (c) wartości fizycznie nierealne dla kategorii (pojemność silnika,
+moce, czasy) = weryfikuj zdrowym rozsądkiem, wątpliwa = nie cytuj. Karta oznacza
+każdą liczbę: [KONKRET-SKU] / [SPEC] / [BEŁKOT-CUT].
 Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
 tekstem/marką = odrzut z galerii, treść wolno cytować), zdjęcia opinii (zrzuty apki
 AliExpress/obce marki/off-topic = odrzut), WIDEO (poster/klatka — off-product w obie strony

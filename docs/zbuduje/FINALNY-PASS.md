@@ -53,6 +53,28 @@ Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
   P0 klaster (≥2 chipy w kontenerze) / P2 brak kanonu przy CTA; `--fix` = auto-swap klastra
   na blok SSOT (innerHTML kontenera → kanon; wrapper layoutu zachowany; re-run detektora).
 
+**PASS 5 — SEMANTYKA (vision krzyżowy; OBOWIĄZKOWY po incydencie Odpalaka 17.07: audyt
+live znalazł błędy WYŁĄCZNIE znaczeniowe, których SSIM/linty fizycznie nie widzą — podpisy
+galerii przesunięte względem zdjęć, rendery udające zdjęcia klientów w opiniach, SREBRNE
+urządzenie z UGC obok naszego CZARNEGO, „20000-30000 mAh" z zakresu wariantów, „diesle
+do 10 L").** Agent OGLĄDA stronę i odpowiada na PYTANIA KRZYŻOWE — każde z werdyktem
+per wystąpienie, zapisane do `dopasowanie/SEMANTYKA.md` (gate-check wymaga pliku):
+1. **PODPIS↔OBRAZ:** czy KAŻDY podpis/etykieta/alt przy obrazie opisuje to, co REALNIE
+   widać na tym obrazie? (galeria, opinie, demo, kafle) — czytaj parami, nie osobno.
+2. **TOŻSAMOŚĆ PRODUKTU cross-section:** czy na WSZYSTKICH ujęciach (sceny, galeria,
+   opinie, wideo-postery, packshot) jest TEN SAM produkt (kolor/model/kształt wg
+   PASZPORTU)? Inny egzemplarz/kolor z UGC = wymiana kadru albo usunięcie.
+3. **AUTENTYCZNOŚĆ:** czy żaden render/scena S nie udaje zdjęcia klienta (klasa U)?
+   Sekcja opinii = TYLKO realne kadry, dopasowane do TREŚCI opinii; brak pasującego =
+   opinia bez zdjęcia.
+4. **REALNOŚĆ DANYCH NA OBRAZACH:** LCD/wyświetlacze pokazują sensowne odczyty (nie
+   all-segments „1888" w scenach generowanych); liczby w copy = KONKRET kupowanego
+   wariantu (zakres z aukcji ≠ kotwica!), wartości fizycznie realne (sanity: pojemność
+   silnika, temperatury, czasy).
+5. **OBIETNICE SEKCJI:** nagłówki nie obiecują więcej niż treść (np. „nagrania naszych
+   klientów" przy obcym UGC = kłamstwo; „realne zdjęcia" przy renderach = kłamstwo).
+Werdykt FAIL któregokolwiek pytania = naprawa + powtórka PASS 5 (pętla do czystej rundy).
+
 ## ZASADY
 - Porównujemy z REGUŁAMI (ta checklista + OBRAZY-ROLE + zakazy standardu), nie z makietą
   (makieta przeszła na etapie SSIM). Few-shot 2-3 przykłady dobrze/źle w promptach vision.

@@ -41,6 +41,8 @@ z `gallery_curated`, NIGDY z generacji.
 | kolaż / insety | kilka kadrów w pliku | CROP — rozbij na czyste kadry |
 | duplikat-wariant | prawie identyczny | ODRZUĆ (1 reprezentant) |
 | niska-jakość | kompresja/sklejka/ghost | ODRZUĆ |
+| **inny-egzemplarz** | **INNY kolor/model/kształt niż paszport (galerie Ali i UGC miksują warianty i cudze produkty!)** | **ODRZUĆ — tożsamość produktu (incydent Odpalak: srebrny kompresor obok czarnego)** |
+| **czytelny-brand** | nadruk producenta/obcej marki czytelny W PIKSELACH (grep tekstu tego nie łapie) | RETUSZ (flat-fill, nie blur-plama) albo ODRZUĆ |
 Przy infografice notuj: język, ilość tekstu, czy treść WARTOŚCIOWA (USP/wymiary → copy/specs).
 
 ## 3. TANDETA (twarde — dowolny trigger = NIE na stronę as-is)
