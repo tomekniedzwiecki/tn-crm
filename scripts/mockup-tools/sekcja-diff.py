@@ -104,19 +104,24 @@ RECTS_JS = r"""
 })()
 """
 
-def render_full(target, width):
+def render_full(target, width, mobile=False):
     chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="sdiff-")
     url=target if target.startswith(("http://","https://")) else "file:///"+os.path.abspath(target).replace("\\","/")
+    # mobile: DPR=1 (nie 2) — strony mobilne bywaja bardzo wysokie, a captureBeyondViewport
+    # nie maluje trescie powyzej ~16384 device-px; przy DPR2 gleboko lezace sekcje (final/faq)
+    # wychodza biale. DPR1 utrzymuje caly dokument pod limitem.
+    dpr = 1
+    vh = 844 if mobile else 900
     args=[chrome,"--headless=new","--disable-gpu","--hide-scrollbars","--no-first-run",
-          "--no-default-browser-check","--disable-extensions","--force-device-scale-factor=1",
-          "--remote-debugging-port=%d"%port,"--user-data-dir="+profile,"--window-size=%d,900"%width,url]
+          "--no-default-browser-check","--disable-extensions","--force-device-scale-factor=%d"%dpr,
+          "--remote-debugging-port=%d"%port,"--user-data-dir="+profile,"--window-size=%d,%d"%(width,vh),url]
     proc=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
     try:
         if not wait_debugger(port): raise SystemExit("debugger nie wstal")
         tabs=[t for t in cdp_get(port,"/json") if t.get("type")=="page"]
         ws=WS(tabs[0]["webSocketDebuggerUrl"])
         ws.call("Page.enable"); ws.call("Runtime.enable")
-        ws.call("Emulation.setDeviceMetricsOverride",{"width":width,"height":900,"deviceScaleFactor":1,"mobile":False})
+        ws.call("Emulation.setDeviceMetricsOverride",{"width":width,"height":vh,"deviceScaleFactor":dpr,"mobile":mobile})
         time.sleep(2.2)
         ws.call("Runtime.evaluate",{"expression":FORCE_FINAL})
         # scroll to bottom (lazy img) then top
@@ -128,10 +133,12 @@ def render_full(target, width):
         meta=json.loads(res.get("result",{}).get("value"))
         docH=min(int(meta["docH"]), 30000)
         shot=ws.call("Page.captureScreenshot",{"format":"png","captureBeyondViewport":True,
-              "clip":{"x":0,"y":0,"width":width,"height":docH,"scale":1}},timeout=90)
+              "clip":{"x":0,"y":0,"width":width,"height":docH,"scale":1}},timeout=120)
         png=base64.b64decode(shot["data"])
         img=Image.open(io.BytesIO(png)).convert("RGB")
-        return img, meta["rects"]
+        # DPR>1: screenshot pixels = CSS px * dpr; rects are CSS px -> zwroc realny dpr do skalowania cropow
+        real_dpr = img.size[0] / float(width)
+        return img, meta["rects"], real_dpr
     finally:
         proc.terminate()
         try: proc.wait(timeout=5)
@@ -146,6 +153,42 @@ def load_makieta_map(makiety_dir):
         mm=re.match(r"^(\d+)([a-z]?)-",b)
         if mm: m[mm.group(1)+mm.group(2)]=f
     return m, files
+
+# mobile: makieta tylko dla wybranych sekcji (hero, wideo). Mapa id->plik po slowach kluczowych.
+MOBILE_MK_TOKENS = {
+    "hero": ["hero"],
+    "wideo": ["wideo", "video"],
+    "video": ["wideo", "video"],
+    "demo": ["demo"],
+    "interakcja": ["interakcja"],
+}
+def load_makieta_mobile_map(makiety_dir):
+    files=[f for f in sorted(glob.glob(os.path.join(makiety_dir,"*.png")))
+           if "mobile" in os.path.basename(f).lower()]
+    # preferuj warianty bez '-alt'
+    files.sort(key=lambda f: ("-alt" in os.path.basename(f).lower(), f))
+    m={}
+    for sid, toks in MOBILE_MK_TOKENS.items():
+        for f in files:
+            b=os.path.basename(f).lower()
+            if any(t in b for t in toks):
+                m[sid]=f; break
+    return m
+
+def composite_render_only(render, sec_id, nn, verdict="do oceny"):
+    """Skladanka render-only (brak makiety mobile) — render + pasek na werdykt jakosci."""
+    W=460
+    w,h=render.size; r=render.resize((W,max(1,int(h*W/w))))
+    pad=16; label=40; foot=64
+    canvas=Image.new("RGB",(W+pad*2, r.size[1]+label+foot),(24,18,20))
+    canvas.paste(r,(pad,label))
+    d=ImageDraw.Draw(canvas)
+    try: font=ImageFont.truetype("arial.ttf",17); fs=ImageFont.truetype("arial.ttf",14)
+    except Exception: font=ImageFont.load_default(); fs=font
+    d.text((pad,10),"RENDER-ONLY #%s  (390, brak makiety mobile)"%sec_id,fill=(230,220,215),font=font)
+    d.text((pad,label+r.size[1]+8),"werdykt jakosci mobile: %s"%verdict,fill=(240,210,150),font=fs)
+    d.text((pad,label+r.size[1]+30),"produkt duzy? tresc czytelna? touch-target? h-scroll?",fill=(170,160,158),font=fs)
+    return canvas
 
 def ssim_score(a_img, b_img):
     W=560
@@ -177,21 +220,91 @@ def composite(makieta, render, ssim_v, sec_id, nn):
     d.text((W+pad*2,10),"RENDER #%s  |  SSIM=%.3f"%(sec_id,ssim_v),fill=(230,220,215),font=font)
     return canvas
 
+MOBILE_MARK = "<!-- MOBILE-390 -->"
+
+def merge_mobile_md(md_path, target, rows, dpr):
+    """Dopisuje/aktualizuje sekcje MOBILE (390) w DOPASOWANIE.md bez kasowania desktopu."""
+    existing = ""
+    if os.path.isfile(md_path):
+        existing = io.open(md_path, encoding="utf-8").read()
+    # utnij wczesniejsza sekcje MOBILE (idempotentnie)
+    if MOBILE_MARK in existing:
+        existing = existing.split(MOBILE_MARK)[0].rstrip()
+    block = [existing, "", MOBILE_MARK,
+        "## MOBILE (390 · DPR%d) — sekcja-diff.py --viewport 390" % round(dpr),
+        "",
+        "Render `%s` @ 390px. Mobile bez makiety = skladanka render-only z werdyktem jakosci." % os.path.basename(target),
+        "",
+        "| sekcja | dowod mobile | SSIM/typ | werdykt (TAK/NIE — vision) |",
+        "|---|---|---|---|"]
+    for sec, mkpath, kind, sv, outp in rows:
+        if mkpath:
+            dowod = "[makieta|render] %s" % os.path.basename(outp)
+            typ = "%.3f" % sv if isinstance(sv, float) else str(sv)
+        else:
+            dowod = "render-only %s" % os.path.basename(outp)
+            typ = "render-only"
+        block.append("| %s | %s | %s |  |" % (sec, dowod, typ))
+    block += ["",
+        "> Mobile: makieta istnieje TYLKO dla hero i wideo (SSIM). Reszta = render-only —",
+        "> werdykt jakosci (produkt duzy? tresc czytelna? touch-target? kolaz/panel/FAQ OK? h-scroll 0?).",
+        "> Incydent Loczek 17.07: mobile nie bylo sprawdzane wcale — dowod jest DWUKROTNY (1280 I 390)."]
+    io.open(md_path, "w", encoding="utf-8").write("\n".join(block))
+
+def run_mobile(target, makiety_dir, out_dir, width):
+    img, rects, dpr = render_full(target, width, mobile=True)
+    print("Render MOBILE: %dx%d px (dpr~%.2f), sekcji: %d" % (img.size[0], img.size[1], dpr, len(rects)))
+    mk_mob = load_makieta_mobile_map(makiety_dir)
+    rects=[r for r in rects if r["h"]>=40]
+    rects_sorted=sorted(rects,key=lambda r:r["y"])
+    rows=[]
+    for idx, rc in enumerate(rects_sorted, start=1):
+        sec=rc["id"]
+        x0=int(rc["x"]*dpr); y0=int(rc["y"]*dpr)
+        x1=int(min(img.size[0], (rc["x"]+rc["w"])*dpr)); y1=int(min(img.size[1], (rc["y"]+rc["h"])*dpr))
+        if x1-x0<8 or y1-y0<8:
+            continue
+        crop=img.crop((x0,y0,x1,y1))
+        nn="%02d"%idx
+        mkpath=mk_mob.get(sec)
+        outp=os.path.join(out_dir,"%s-%s-m.png"%(nn,sec))
+        if mkpath:
+            makieta=Image.open(mkpath).convert("RGB")
+            sv=ssim_score(makieta,crop)
+            comp=composite(makieta,crop,sv,sec+" (mobile)",nn+"-m")
+            comp.save(outp)
+            rows.append((sec,mkpath,"ssim",sv,outp))
+            print("  #%-12s <- %-30s SSIM=%.3f -> %s"%(sec,os.path.basename(mkpath),sv,os.path.basename(outp)))
+        else:
+            comp=composite_render_only(crop,sec,nn)
+            comp.save(outp)
+            rows.append((sec,None,"render-only",None,outp))
+            print("  #%-12s  render-only -> %s"%(sec,os.path.basename(outp)))
+    merge_mobile_md(os.path.join(out_dir,"DOPASOWANIE.md"), target, rows, dpr)
+    print("Zapisano MOBILE do:",os.path.join(out_dir,"DOPASOWANIE.md"))
+
 def main():
     if len(sys.argv)<4:
-        raise SystemExit("uzycie: sekcja-diff.py <url|plik> <makiety-dir> <out-dir> [--manifest id=NN-file.png,...] [--width 1280]")
+        raise SystemExit("uzycie: sekcja-diff.py <url|plik> <makiety-dir> <out-dir> [--manifest id=NN-file.png,...] [--width 1280] [--viewport 390]")
     target, makiety_dir, out_dir = sys.argv[1], sys.argv[2], sys.argv[3]
     width=1280
     if "--width" in sys.argv: width=int(sys.argv[sys.argv.index("--width")+1])
+    os.makedirs(out_dir,exist_ok=True)
+
+    # MOBILE tryb: --viewport 390 (crop per sekcja z renderu 390; makieta tylko hero/wideo)
+    if "--viewport" in sys.argv:
+        vw=int(sys.argv[sys.argv.index("--viewport")+1])
+        run_mobile(target, makiety_dir, out_dir, vw)
+        return
+
     manifest={}
     if "--manifest" in sys.argv:
         raw=sys.argv[sys.argv.index("--manifest")+1]
         for pair in raw.split(","):
             if "=" in pair:
                 k,v=pair.split("=",1); manifest[k.strip()]=v.strip()
-    os.makedirs(out_dir,exist_ok=True)
 
-    img, rects = render_full(target, width)
+    img, rects, _dpr = render_full(target, width)
     print("Render: %dx%d px, sekcji: %d"%(img.size[0],img.size[1],len(rects)))
     mk_map, mk_files = load_makieta_map(makiety_dir)
 
@@ -222,7 +335,13 @@ def main():
         rows.append((sec,mkpath,rc,sv))
         print("  #%-12s <- %-28s SSIM=%.3f  -> %s"%(sec,os.path.basename(mkpath),sv if isinstance(sv,float) else 0,os.path.basename(outp)))
 
-    # DOPASOWANIE.md
+    # DOPASOWANIE.md (desktop) — zachowaj ewentualna sekcje MOBILE dopisana wczesniej
+    md_path=os.path.join(out_dir,"DOPASOWANIE.md")
+    mobile_tail=""
+    if os.path.isfile(md_path):
+        prev=io.open(md_path,encoding="utf-8").read()
+        if MOBILE_MARK in prev:
+            mobile_tail="\n\n"+MOBILE_MARK+prev.split(MOBILE_MARK,1)[1]
     md=["# DOPASOWANIE — dowody per sekcja (sekcja-diff.py)","",
         "Render: `%s` @ %dpx. Kompozyty [makieta | render] w tym katalogu."%(os.path.basename(target),width),"",
         "| sekcja | makieta | SSIM | werdykt (vision — uzupelnij) |","|---|---|---:|---|"]
@@ -232,8 +351,8 @@ def main():
         md.append("| %s | %s | %s |  |"%(sec,mkn,svs))
     md.append("")
     md.append("> Progi: naprawiane sekcje >=0.85 desktop LUB werdykt vision TAK. Sceny generowane cap ~0.7 (vision wspoldecyduje).")
-    io.open(os.path.join(out_dir,"DOPASOWANIE.md"),"w",encoding="utf-8").write("\n".join(md))
-    print("Zapisano:",os.path.join(out_dir,"DOPASOWANIE.md"))
+    io.open(md_path,"w",encoding="utf-8").write("\n".join(md)+mobile_tail)
+    print("Zapisano:",md_path)
 
 if __name__=="__main__":
     main()

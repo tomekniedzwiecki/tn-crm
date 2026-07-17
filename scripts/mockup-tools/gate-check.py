@@ -190,6 +190,35 @@ def check_dopasowanie(res, M, ctx):
         ok = rows_ssim >= len(sections)
         res.add("dopasowanie", "DOPASOWANIE.md + wiersze SSIM", status_for(ok, sev),
                 "%d wierszy SSIM / %d sekcji" % (rows_ssim, len(sections)))
+    # --- MOBILE (390): komplet NN-*-m.png == liczba sekcji + werdykty mobile w DOPASOWANIE.md
+    mob = m.get("mobile")
+    if mob:
+        msev = mob["severity"]
+        mcomps = [os.path.basename(x) for x in find_glob(arch, mob["kompozyt_glob"])]
+        mcomps_n = [norm(c) for c in mcomps]
+        mmatched, mmissing = [], []
+        for i, sid in enumerate(sections, start=1):
+            toks = aliasy.get(sid, [sid])
+            toks = [norm(t) for t in toks] + ["%02d" % i, str(i)]
+            hit = any(any(t and t in cn for t in toks) for cn in mcomps_n)
+            (mmatched if hit else mmissing).append(sid)
+        if mmissing:
+            res.add("dopasowanie", "kompozyty mobile per sekcja (-m)", status_for(False, msev),
+                    "%d/%d; brak: %s" % (len(mmatched), len(sections), ", ".join(mmissing)))
+        else:
+            res.add("dopasowanie", "kompozyty mobile per sekcja (-m)", "PASS",
+                    "%d/%d (razem %d plikow -m)" % (len(mmatched), len(sections), len(mcomps)))
+        # werdykty mobile w sekcji MOBILE DOPASOWANIE.md
+        if not md or mob["md_marker"] not in md:
+            res.add("dopasowanie", "werdykty mobile (MOBILE-390)", status_for(False, msev),
+                    "brak sekcji MOBILE w DOPASOWANIE.md")
+        else:
+            mob_block = md.split(mob["md_marker"], 1)[1]
+            vx = re.compile(mob["verdict_regex"])
+            n_verd = sum(1 for ln in mob_block.splitlines() if vx.search(ln))
+            ok = n_verd >= len(sections)
+            res.add("dopasowanie", "werdykty mobile (MOBILE-390)", status_for(ok, msev),
+                    "%d werdyktow / %d sekcji" % (n_verd, len(sections)))
 
 def check_interakcje(res, M, ctx):
     m = M["interakcje"]; sev = m["severity"]; arch = ctx["archiwum"]

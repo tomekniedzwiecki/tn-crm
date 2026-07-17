@@ -55,6 +55,10 @@ DONE — zdanie „przeniesione 1:1" w LEDGER bez kompozytu = niedozwolone (incy
 06-korzyści 17.07: biały panel+overlap makiety → open+kafel-podium; przepuszczone, bo
 kompozytu nie było — jedyna sekcja z dowodem [hero] była jedyną bez dryfu). Batch:
 `sekcja-diff.py <url> <slug>` generuje wszystkie NN naraz z granic DOM.
+**Dowód jest DWUKROTNY: desktop (1280) I mobile (390) — `sekcja-diff.py --viewport 390`;
+mobile bez makiety = składanka render-only z werdyktem jakości (incydent Loczek 17.07: mobile
+nie było sprawdzane wcale).** Mobilne kompozyty = `dopasowanie/NN-<sekcja>-m.png`, werdykty w
+sekcji `<!-- MOBILE-390 -->` DOPASOWANIE.md; gate-check egzekwuje komplet `-m` + werdykty.
 **📏 PRÓG MINIMALNY ZAMKNIĘCIA (twardy, po hero Uśmieszka 0.7829): desktop <0.85 albo
 mobile <0.78 ⇒ sekcja NIE jest DONE — niezależnie od werdyktu wizualnego.** Werdykt
 „ten sam projekt?" jest WSPÓŁ-warunkiem (może zaostrzyć, nie obniżyć). Przy tle
