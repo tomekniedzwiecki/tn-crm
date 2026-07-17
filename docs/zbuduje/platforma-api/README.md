@@ -69,6 +69,29 @@ Dostawy (nowe endpointy, nietestowane): `PUT/DELETE /delivery-methods/{id}`, `PU
 `GET /delivery-brokers/{id}/services`, **`PUT /delivery-brokers/{id}/cod-bank-account`** (konto do pobrań
 — COD potwierdzone na poziomie brokera).
 
+## Analityka storefrontu: `window.trevio` (guide z GET /docs, 17.07 wieczór)
+
+Strony custom-HTML dostają SDK analityki platformy jako **`window.trevio`**. `PageView` +
+heartbeat lecą AUTOMATYCZNIE — nigdy ich nie wołać. Metody (każda bierze 1 obiekt; ceny =
+liczby; currency='PLN'; item = {productId, name, price, quantity}):
+`viewItem · viewItemList · selectItem · addToCart · removeFromCart · viewCart · beginCheckout ·
+addShippingInfo · addPaymentInfo · paymentInitiated · purchase{isCashOnDelivery} ·
+purchaseOnDelivery · search · identify{EmailHash|PhoneHash|CustomerId} · newsletterSubscribe ·
+emailCampaignClick` + generyczny `trevio.track(eventType, fields)`.
+**Mapowanie na landing 1-produktowy** (snippet: `docs/zbuduje/assets/landing-runtime-snippet.html`):
+viewItem @load · addToCart+beginCheckout @klik CTA. Purchase emituje platforma na checkoucie.
+
+## Typed actions `wf2-platform` (od 2026-07-18; raw zostaje do diagnostyki)
+
+`stores · pages · publish_landing{shop_id,path,html} (path:''=home) · unpublish_landing ·
+products{search} · ensure_product{name,price} (idempotentny po nazwie — brak DELETE!) ·
+set_checkout_slug{product_id,variant_id,slug} (+odczyt checkoutUrl) · integrations ·
+set_integration{type,config} (PUT AUTO-WŁĄCZA) · toggle_integration · upload_logo/upload_favicon
+{base64,file_name} · domains · add_domain · activate_domain · orders{from,to,page} · delivery ·
+delivery_options · add_delivery{body} · set_cod_account{broker_id,nrb} · set_delivery_order{items}`.
+Retry na 429 (Retry-After) wbudowany. Cena na landingu: publiczny edge **`wf2-landing-api`**
+(GET ?product=<wf2_products.id> → {price, checkout_url}; cache 5 min; DB = źródło prawdy).
+
 ## Luki vs wymagania SSOT (do zgłoszenia developerowi)
 
 1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").

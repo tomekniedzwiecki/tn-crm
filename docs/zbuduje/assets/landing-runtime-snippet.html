@@ -1,0 +1,141 @@
+<!--
+  LANDING RUNTIME (workflow v2 / fabryka landingów) — WKLEJANY PRZED </body> każdego landinga.
+  Kontrakt DOM:
+    - CTA:   <a data-checkout href="#zamow">…</a>  → runtime podmienia href na checkout_url z API
+    - CENA:  <span data-price>149,90 zł</span>     → runtime nadpisuje AKTUALNĄ ceną (zapieczona = fallback)
+             <span data-price-raw>149.90</span>    → wariant bez formatowania (opcjonalny)
+  Placeholdery podmieniane PRZY PUBLIKACJI (krok pl_publikacja):
+    {{WF2_PRODUCT_ID}} — wf2_products.id
+    {{PIXEL_ID}}       — Meta pixel (zwykle NIEPOTRZEBNY: platforma wstrzykuje pixel przez
+                         integracje; placeholder zostaje na wypadek preview poza platformą)
+  REGUŁY (SSOT: docs/zbuduje/platforma-api/README.md + STANDARD-LANDING-SKLEPY §5):
+    1. INIT-GUARD META: platforma wstrzykuje pixel na strony isHtml — landing NIGDY nie robi
+       drugiego init/PageView; dowiesza TYLKO ViewContent/AddToCart/InitiateCheckout.
+       Własny loader fbq odpala się WYŁĄCZNIE, gdy po 3 s nie ma window.fbq (preview poza platformą).
+    2. ANALITYKA PLATFORMY: window.trevio (SDK wstrzykiwany na stronach custom-HTML) —
+       viewItem przy load, addToCart + beginCheckout przy kliknięciu CTA. PageView automatyczny.
+    3. CENA: pobierana z wf2-landing-api (cache 5 min); brak sieci = zostaje zapieczona.
+    4. ATRYBUCJA: do checkout_url doklejamy fbclid/_fbp/_fbc (wymóg CAPI §6 TESTY.md).
+-->
+<script>
+(function () {
+  'use strict';
+  var CFG = {
+    productId: '{{WF2_PRODUCT_ID}}',
+    api: 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-landing-api',
+    pixelId: '{{PIXEL_ID}}'
+  };
+  var configured = function (v) { return v && v.indexOf('{{') === -1; };
+  var state = { name: document.title, price: null, currency: 'PLN', checkoutUrl: '' };
+
+  function fmtPln(n) {
+    try { return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł'; }
+    catch (e) { return n + ' zł'; }
+  }
+  function getCookie(name) {
+    var m = document.cookie.match(new RegExp('(?:^|; )' + name + '=([^;]*)'));
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  // fallback: zapieczona cena z pierwszego [data-price-raw]/[data-price]
+  (function bakedPrice() {
+    var raw = document.querySelector('[data-price-raw]');
+    if (raw) { var v = parseFloat(String(raw.textContent).replace(',', '.')); if (v > 0) { state.price = v; return; } }
+    var el = document.querySelector('[data-price]');
+    if (el) { var t = String(el.textContent).replace(/[^\d,\.]/g, '').replace(',', '.'); var p = parseFloat(t); if (p > 0) state.price = p; }
+  })();
+
+  function decorateCheckoutUrl(url) {
+    try {
+      var u = new URL(url);
+      var qs = new URLSearchParams(location.search);
+      var fbclid = qs.get('fbclid'); var fbp = getCookie('_fbp'); var fbc = getCookie('_fbc');
+      if (fbclid && !u.searchParams.get('fbclid')) u.searchParams.set('fbclid', fbclid);
+      if (fbp) u.searchParams.set('_fbp', fbp);
+      if (fbc || fbclid) u.searchParams.set('_fbc', fbc || ('fb.1.' + Date.now() + '.' + fbclid));
+      return u.toString();
+    } catch (e) { return url; }
+  }
+  function applyState() {
+    if (state.price != null) {
+      document.querySelectorAll('[data-price]').forEach(function (el) { el.textContent = fmtPln(state.price); });
+      document.querySelectorAll('[data-price-raw]').forEach(function (el) { el.textContent = String(state.price); });
+    }
+    if (state.checkoutUrl) {
+      document.querySelectorAll('[data-checkout]').forEach(function (a) {
+        if (a.tagName === 'A') a.setAttribute('href', decorateCheckoutUrl(state.checkoutUrl));
+      });
+    }
+  }
+
+  // ── aktualna cena + link kasy z API (fallback: zapieczone wartości) ──
+  if (configured(CFG.productId)) {
+    fetch(CFG.api + '?product=' + encodeURIComponent(CFG.productId))
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        if (d.price != null && d.price > 0) state.price = d.price;
+        if (d.checkout_url) state.checkoutUrl = d.checkout_url;
+        if (d.name) state.name = d.name;
+        applyState();
+        trevioViewItem();
+      })
+      .catch(function () { /* zapieczona cena zostaje */ });
+  }
+
+  // ── Meta pixel: init-guard (platforma wstrzykuje pixel — NIE dublować init/PageView) ──
+  var vcSent = false;
+  function fbqSafe(evt) {
+    if (window.fbq) { try { window.fbq('track', evt); } catch (e) {} }
+  }
+  function viewContentOnce() { if (!vcSent && window.fbq) { vcSent = true; fbqSafe('ViewContent'); } }
+  if (window.fbq) viewContentOnce();
+  else {
+    var waited = 0;
+    var iv = setInterval(function () {
+      waited += 250;
+      if (window.fbq) { clearInterval(iv); viewContentOnce(); return; }
+      if (waited >= 3000) {
+        clearInterval(iv);
+        // preview poza platformą: własny loader TYLKO gdy pixel skonfigurowany
+        if (configured(CFG.pixelId)) {
+          !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+          window.fbq('init', CFG.pixelId); window.fbq('track', 'PageView');
+          viewContentOnce();
+        }
+      }
+    }, 250);
+  }
+
+  // ── analityka platformy (window.trevio — SDK stron custom-HTML) ──
+  function trevioItem() {
+    return { productId: CFG.productId, name: state.name, price: state.price != null ? state.price : 0 };
+  }
+  var viSent = false;
+  function trevioViewItem() {
+    if (viSent || !window.trevio || state.price == null) return;
+    viSent = true;
+    try { window.trevio.viewItem({ currency: state.currency, productId: CFG.productId, name: state.name, price: state.price }); } catch (e) {}
+  }
+  var tWait = 0;
+  var tIv = setInterval(function () {
+    tWait += 300;
+    if (window.trevio) { clearInterval(tIv); trevioViewItem(); return; }
+    if (tWait >= 4500) clearInterval(tIv);
+  }, 300);
+
+  // ── zdarzenia CTA: Meta ATC+IC oraz trevio addToCart+beginCheckout ──
+  document.addEventListener('click', function (ev) {
+    var el = ev.target && ev.target.closest ? ev.target.closest('[data-checkout]') : null;
+    if (!el) return;
+    fbqSafe('AddToCart');
+    fbqSafe('InitiateCheckout');
+    if (window.trevio) {
+      var item = trevioItem(); item.quantity = 1;
+      try { window.trevio.addToCart({ currency: state.currency, productId: item.productId, name: item.name, price: item.price, quantity: 1 }); } catch (e) {}
+      try { window.trevio.beginCheckout({ currency: state.currency, total: item.price, items: [item] }); } catch (e) {}
+    }
+  }, true);
+
+  applyState();
+})();
+</script>

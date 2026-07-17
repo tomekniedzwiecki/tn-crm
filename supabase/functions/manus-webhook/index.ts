@@ -78,6 +78,34 @@ serve(async (req) => {
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
+
+      // ── Tor wf2 (wf2-ads): 3 grafiki reklamowe per produkt workflow v2 (R4 §4.4) ──
+      // Ukończony task → sweep wf2-ads (ten sam, przetestowany tor co cron): dociąga załączniki,
+      // rehostuje do Storage, zapisuje ads_creatives. Match po ads_manus_task_id, status 'running'.
+      const { data: wf2p } = await supabase
+        .from('wf2_products')
+        .select('id, ads_manus_status')
+        .eq('ads_manus_task_id', task_id)
+        .maybeSingle()
+      if (wf2p) {
+        const CRON = Deno.env.get('SPAR_CRON_SECRET') || ''
+        if (CRON && wf2p.ads_manus_status === 'running') {
+          const sweep = fetch(`${SUPABASE_URL}/functions/v1/wf2-ads`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-secret': CRON },
+            body: JSON.stringify({ sweep: true }),
+          }).then(async (r) => console.log('wf2-ads sweep via webhook:', r.status, (await r.text()).slice(0, 200)))
+            .catch((e) => console.error('wf2-ads sweep via webhook error:', e))
+          // deno-lint-ignore no-explicit-any
+          const er = (globalThis as any).EdgeRuntime
+          if (er && typeof er.waitUntil === 'function') er.waitUntil(sweep)
+          else await sweep
+        }
+        return new Response(
+          JSON.stringify({ success: true, routed: 'wf2-ads', product_id: wf2p.id, task_status: status }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
       console.error('Could not find workflow for task:', task_id)
       // 200 zamiast 404 — taski spoza obu torów (np. odpalone ręcznie w UI Manusa)
       // nie mają gdzie trafić; 4xx tylko prowokował retraje.

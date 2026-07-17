@@ -43,10 +43,17 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   (**kroki = konfiguracja: nowy krok = 1 INSERT, zero zmian frontu**), steps (jedyne
   źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
   `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
-- Etapy 1–5: Portfel → Sklep TakeDrop → Kampanie (konto→budżet→pixel→grafiki→kampania)
-  → Testy i skalowanie → Przekazanie sterów. Marża testowa = ~15% narzutu na cenę zakupu
-  (`TEST_MARGIN_PCT` w projekt.html; do 2026-07-04 widełki 5–10 zł/szt.). Portfel: cel 5
-  produktów (klient z /zbuduje ma 1 → auto-dobór +4), pusty portfel → auto-dobór 10.
+- **Etapy 1–6 (od 2026-07-18, migracja `20260718_wf2_fabryka_panel`):** 1 Portfel (marka+wybor)
+  → **2 Landing** (lp_dane→lp_plan→lp_styl_marka→lp_makiety🏁→lp_grafiki→lp_kod→lp_dopasowanie→
+  lp_zycie→lp_finisz🏁 = fabryka F0→F8) → **3 Sklep na platformie** (pl_* przez API Trevio,
+  edge wf2-platform TYPED ACTIONS) → 4 Kampanie (konto→budżet→pixel🏁→**3 grafiki wf2-ads**→
+  **ads_wideo**→kampania🏁 PAUSED) → 5 Testy i skalowanie → 6 Stery. Artefakty fabryki
+  (makiety/dowody/kreacje) = tabela `wf2_artifacts` → galerie w warsztatach kroków.
+  Zamówienia platformy = `wf2_orders` (cron wf2-orders-sync; licznik do 1000 = COUNT).
+  Cena na landingu = publiczny edge `wf2-landing-api` + snippet
+  `docs/zbuduje/assets/landing-runtime-snippet.html` (window.trevio + INIT-GUARD pixela).
+  Marża testowa = ~15% narzutu (`TEST_MARGIN_PCT`). Portfel: cel 5 produktów,
+  dobór = **PRAWDZIWE losowanie** z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,

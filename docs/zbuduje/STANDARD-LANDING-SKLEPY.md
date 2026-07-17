@@ -592,6 +592,15 @@ spójne końcówki w portfelu.
 woff2, swap, latin-ext; body = system stack) · hero przez Storage render API (eager+preload,
 width wg viewportu), reszta lazy, wszystkie width/height · self-contained: 1 plik, CSS
 inline, JEDEN exec-`<script>`, zero bibliotek · overflow-x zablokowany.
+**RUNTIME LANDINGA (od 18.07, OBOWIĄZKOWY):** snippet `docs/zbuduje/assets/
+landing-runtime-snippet.html` przed `</body>`. Kontrakt DOM: CTA = `<a data-checkout>`,
+cena = `<span data-price>` (zapieczona wartość = fallback). Placeholder `{{WF2_PRODUCT_ID}}`
+(podmiana przy publikacji). Snippet robi: hydratację ceny+checkout_url z publicznego edge
+`wf2-landing-api` (zmiana ceny test→scale BEZ re-publikacji), zdarzenia `window.trevio`
+(viewItem/addToCart/beginCheckout), Meta VC/ATC/IC z **INIT-GUARD** (platforma wstrzykuje
+pixel na stronach isHtml — landing NIGDY nie robi 2. init/PageView; własny loader tylko
+w preview poza platformą) i doklejanie fbclid/_fbp/_fbc do linku kasy. ZAKAZ własnego
+`fbq('init')` w exec-script.
 **WAGI ASSETÓW (Tomek 17.07 — twarde cele, sprawdzać przy KAŻDYM eksporcie):** format WebP
 (foto q≈78-82; PNG tylko D-art z alfą, preferuj WebP-alfa) · wymiar pod realne użycie
 (full-bleed ≤1536 szer., kafle ~800px, postery wideo ~720px) · scena hero ≤230 KB · scena
@@ -769,6 +778,13 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-18 (przebudowa panelu tn-sklepy)**: fazy F0→F8 odwzorowane 1:1 jako kroki panelu
+  `lp_dane…lp_finisz` (Etap 2 „Landing" w /tn-sklepy; kamienie: akcept makiet + gate-check
+  0 FAIL) · artefakty fabryki rejestrowane w `wf2_artifacts` (INSERT po uploadzie do
+  `bud-assets/<slug>/…` — panel pokazuje galerie w warsztatach) · RUNTIME LANDINGA
+  obowiązkowy (sekcja 5): hydratacja ceny z `wf2-landing-api`, `window.trevio`, INIT-GUARD
+  pixela (platforma wstrzykuje pixel na isHtml — zakaz własnego init/PageView).
 
 - **2026-07-15**: v1 standardu (research CRO) → FLOW v3/v4 → FLOW V5 (plan GPT); nocna pętla
   R0-R4 (Zmieścik/Świtek/Blasik/Mordulek/Blatek) — lekcje 1-30 (skonsolidowane w sekcji 7).

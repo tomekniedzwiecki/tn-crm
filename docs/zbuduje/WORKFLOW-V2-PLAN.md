@@ -3,6 +3,44 @@
 **Status: F1 WDROŻONE + iteracje z odbioru (2026-07-03). Ten dokument = plan bazowy;
 poniższa sekcja „STAN WDROŻENIA" nadpisuje szczegóły, które zmieniły się przy odbiorze.**
 
+## 0a-ter. PRZEBUDOWA PANELU POD FABRYKĘ (2026-07-18 noc — NADPISUJE strukturę etapów!)
+
+Panel `tn-sklepy/projekt.html` przebudowany OD ZERA na wzór `tn-app/projekt.html`
+(decyzja Tomka 17.07: „chcę pracować nad sklepem tak samo jak nad aplikacją").
+Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje przesiane).
+
+- **NOWA STRUKTURA ETAPÓW (6):** 1 Portfel produktów (marka [project] + wybor [product])
+  · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
+  lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
+  · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
+  pl_domena 🏁 [client] → pl_integracje → pl_produkt [product] → pl_landing [product] →
+  pl_glowna → pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
+  [client], ads_pixel 🏁, ads_grafiki [product], **ads_wideo** [product, NOWY], ads_kampanie 🏁
+  [product]) · 5 Testy i skalowanie · 6 Przekazanie sterów.
+- **`wf2_artifacts`** (project_id, product_id, step_key, kind, label, url, storage, meta) —
+  artefakty fabryki (makiety/branding/dowody/kreacje) widoczne w warsztatach kroków panelu;
+  fabryka INSERT-uje wiersz po każdym uploadzie do Storage (`bud-assets/<slug>/…`).
+  Sesje dostają instrukcję w warstwie „Rytuał" paczki promptu.
+- **`wf2_orders`** — surowe zamówienia z platformy (dedup po id = dokładny licznik do 1000);
+  cron `wf2-orders-sync` → agregacja `wf2_sales` (source='takedrop') po `platform_name`.
+- **Panel:** paczki promptów 5-warstwowe jak TN App (base fabryki + zadanie per krok + RYTUAŁ +
+  GATE produkcyjny + uwagi `wf2_notes` + panelUpd z INSERT-em artefaktów), pasek „Podglądy"
+  (`wf2_projects.links`), karta produktu (zdjęcie/cena/dostawca/TikToki ≤5/galeria kurowana),
+  kamienie milowe (product-scope liczone per produkt), taby Projekt/Uwagi/Sprzedaż/Aktywność,
+  **losowanie portfela = PRAWDZIWY random** (Fisher-Yates z całej puli approved; cel 5;
+  stary scoring/dywersyfikacja SKASOWANE — decyzja Tomka 17.07).
+- **Edge:** `wf2-platform` = TYPED ACTIONS (stores/publish_landing/ensure_product/
+  set_checkout_slug/integracje/domeny/logo/orders/dostawy+COD; retry 429; raw zostaje) ·
+  **`wf2-landing-api`** (PUBLICZNY GET ?product= → cena/checkout_url z DB, cache 5 min —
+  hydratacja ceny na landingu bez re-publikacji przy test→scale) · **`wf2-ads`** (3 grafiki
+  Manus per produkt: kąty demo/problem/proof 4:5, fallback Gemini; wynik →
+  `wf2_products.ads_creatives`; manus-webhook ma 3. gałąź routingu) · `wf2-orders-sync` (cron).
+- **Landing runtime:** `docs/zbuduje/assets/landing-runtime-snippet.html` — kontrakt
+  data-checkout/data-price + {{WF2_PRODUCT_ID}}; window.trevio (viewItem/addToCart/
+  beginCheckout) + Meta VC/ATC/IC z **INIT-GUARD** (platforma wstrzykuje pixel na stronach
+  isHtml — landing NIGDY nie robi 2. init/PageView) + doklejanie fbclid/_fbp/_fbc do kasy.
+- Świeży katalog API (26 endpointów + guide `window.trevio`): `platforma-api/docs-raw.json`.
+
 ## 0a-bis. FABRYKA LANDINGÓW — STAN (2026-07-16 wieczór, po 2 dniach dopracowywania flow)
 
 - **SSOT flow:** `docs/zbuduje/STANDARD-LANDING-SKLEPY.md` **v2.0** (zasady Z1-Z5, fazy
