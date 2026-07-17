@@ -573,6 +573,16 @@ Deno.serve(async (req) => {
       review_stats: null as any,
     };
 
+    // GUARD ANTY-DEGRADACJA (incydent 17.07: force-backfill nadpisał 40 dobrych snapshotów
+    // detail search-sklejką, bo aukcje umarły od czasu pierwotnego pobrania). Zamrożony
+    // snapshot detail = źródło prawdy na zawsze (galeria zrehostowana u nas) — świeży fetch,
+    // który NIE jest detail, nigdy go nie zastępuje.
+    if (snapshot.source !== 'detail' && (row.ali_snapshot as Record<string, unknown> | null)?.source === 'detail') {
+      console.warn(`[bud-ali-snapshot] guard: odmowa degradacji detail->${snapshot.source} dla ${row.key}`);
+      return json({ snapshot: row.ali_snapshot, product_id: id, kept_existing: true,
+        note: 'świeży fetch nie dał detail — zachowano zamrożony snapshot detail (aukcja mogła umrzeć; do sprzedaży wymagana żywa aukcja)' }, 200, c);
+    }
+
     // REALNE OPINIE z AliExpress (priorytet ze zdjęciami) + tłumaczenie PL — wiarygodność.
     if (id) {
       try {
