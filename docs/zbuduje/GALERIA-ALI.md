@@ -60,6 +60,11 @@ jako lifestyle (ale NIGDY jako „dowód produktu"); (c) 2-4 UGC z opinii (rehos
 
 ## 5. ANTY-MISMATCH landing↔aukcja (FILTR PLANU w F1)
 Tabela CLAIM→ŹRÓDŁO dla KAŻDEGO claimu planu (funkcje, zasilanie, elementy, wymiary,
-materiał): źródło ∈ {tytuł detail, specs, galeria detail, opinie}. Claim bez źródła = CUT.
+materiał): źródło ∈ {tytuł detail, **specs**, galeria detail, opinie, **opis-FAKTY po
+destylacji** (Karta Prawdy §1a — NIGDY BEŁKOT)}. KAŻDA korzyść NIESIE KOTWICĘ w nawiasie
+(„służy latami (spec: Materiał=stal nierdzewna)"). Claim bez źródła = CUT.
 Claim o KLASIE produktu / elemencie tożsamości (typ narzędzia, wyświetlacz, mechanizm)
 bez źródła = **STOP planu** (incydent Latarka: elektryczny pistolet vs realne cążki).
+**Warianty/swatche:** `sku.props` = źródło swatchy, mapowanie 1:1 PL (Blue→Niebieski,
+Pink→Różowy, Kaki→Khaki); swatch TYLKO gdy w galerii jest wizualny dowód koloru. JEDNA cena PL
+(baza marży = MAX kosztu wariantów z `sku_prices`); różnice cen wariantów WEWNĘTRZNE — nie na stronę.

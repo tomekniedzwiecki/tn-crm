@@ -90,7 +90,19 @@ ANALYZER = r"""
   function contrast(a,b){var l1=lum(a),l2=lum(b);var hi=Math.max(l1,l2),lo=Math.min(l1,l2);return (hi+.05)/(lo+.05);}
   // effective background: walk up until non-transparent bg-color
   function effBg(el){var n=el;while(n&&n!==document.documentElement){var bg=rgb(getComputedStyle(n).backgroundColor);if(bg&&bg.a>0.5)return bg;n=n.parentElement;}return {r:255,g:255,b:255,a:1};}
-  var out={spacings:[],fonts:[],accents:{},texts:[],focus:[],touch:[],imgs:[],forbidden:[],quotes:[],dblspace:[],sticky:null,vw:window.innerWidth,vh:window.innerHeight};
+  // PASS 4: parent-id map (rodzenstwo = ten sam pid) + klasyfikacja blokow + tokeny pay-imitacji
+  var pmap=new Map(),pc=0;
+  function pid(p){if(!p)return 0;if(!pmap.has(p)){pmap.set(p,++pc);}return pmap.get(p);}
+  function kindOf(el){
+    if(el.matches('.pay-badges'))return 'pay';
+    if(el.matches('.btn,button,[role=button],a.btn'))return 'cta';
+    if(el.matches('.pill'))return 'pill';
+    if(el.matches('form,input,select,textarea'))return 'form';
+    if(el.matches('figure'))return 'figure';
+    return null;
+  }
+  var PAYTOK=['blik','visa','mastercard','mc','karta','za pobraniem','przelew'];
+  var out={spacings:[],fonts:[],accents:{},texts:[],focus:[],touch:[],imgs:[],forbidden:[],quotes:[],dblspace:[],sticky:null,blocks:[],paychips:[],hasPayBadges:false,vw:window.innerWidth,vh:window.innerHeight};
   // walk elements
   var all=document.querySelectorAll('body *');
   var fontSet={},sizeSet={},accentList=[];
@@ -126,7 +138,25 @@ ANALYZER = r"""
     if(el.tagName==='IMG'){
       out.imgs.push({sec:sectionOf(el),src:el.currentSrc||el.src,nw:el.naturalWidth,nh:el.naturalHeight,rw:Math.round(r.width),rh:Math.round(r.height),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),cls:(el.className||''),alt:el.getAttribute('alt'),objfit:cs.objectFit});
     }
+    // PASS 4 — bloki interaktywne/wizualne (odstepy) + paychip collector
+    if(r.width>0&&r.height>0&&el.matches('.btn,button,[role=button],.pay-badges,.pill,form,input,select,textarea,figure')){
+      var k=kindOf(el);
+      if(k){out.blocks.push({sec:sectionOf(el),pid:pid(el.parentElement),kind:k,x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height),tag:el.tagName.toLowerCase(),cls:(el.className&&typeof el.className==='string'?el.className.split(' ')[0]:'')});}
+    }
+    // paychip: imitacja marki platnosci POZA kanonicznym .pay-badges
+    if(r.width>0&&r.height>0&&!el.closest('.pay-badges')){
+      var tx=(el.textContent||'').trim(); var lc=tx.toLowerCase();
+      if(tx.length<=14&&PAYTOK.indexOf(lc)>-1){
+        var kids=el.children,onlySvg=true;
+        for(var ci=0;ci<kids.length;ci++){if(kids[ci].tagName.toLowerCase()!=='svg'){onlySvg=false;break;}}
+        var leaf=(kids.length===0)||onlySvg;
+        var bgp=rgb(cs.backgroundColor);
+        var styled=(cs.borderStyle&&cs.borderStyle!=='none'&&parseFloat(cs.borderTopWidth)>0)||(bgp&&bgp.a>0.05)||(parseFloat(cs.borderTopLeftRadius)>=6);
+        if(leaf&&styled){out.paychips.push({sec:sectionOf(el),pid:pid(el.parentElement),txt:tx,tag:el.tagName.toLowerCase(),cls:(el.className&&typeof el.className==='string'?el.className.split(' ')[0]:''),x:Math.round(r.x),y:Math.round(r.y+window.scrollY),w:Math.round(r.width),h:Math.round(r.height)});}
+      }
+    }
   });
+  out.hasPayBadges=!!document.querySelector('.pay-badges');
   out.fonts=Object.keys(fontSet).map(function(k){return {fam:k,n:fontSet[k]};});
   out.sizes=Object.keys(sizeSet).map(function(k){return {px:parseFloat(k),n:sizeSet[k]};}).sort(function(a,b){return a.px-b.px;});
   out.accents=accentList;
@@ -141,6 +171,49 @@ ANALYZER = r"""
   // straight quotes used as typographic quotes in visible copy
   var q=body.match(/"[^"]{3,60}"/g);if(q)out.quotes=q.slice(0,8);
   var ds=body.match(/\S  +\S/g);if(ds)out.dblspace=ds.slice(0,8);
+  return JSON.stringify(out);
+})()
+"""
+
+# PASS 4 — hit-test + martwa-interakcja per viewport (generyczny PROBE).
+# Dla kazdego input[type=range]/[data-slider]: (a) elementFromPoint(center)==kontrolka,
+# (b) pointer-events != none, (c) driven-property (styl obliczony LUB custom-prop --t itd.)
+# ROZNI sie miedzy min i max. Identyczna przy min i max = martwa interakcja.
+PROBE_JS = r"""
+(function(){
+  var PROPS=['opacity','transform','filter','backgroundColor','backgroundImage','color','clipPath','width','height','left','top','backdropFilter','maskImage','borderTopColor'];
+  var CUSTOM=['--t','--sim','--p','--v','--progress','--pos','--x','--val','--pct'];
+  function secOf(el){var s=el.closest('section,header,footer');return s?(s.id||(el.className,s.className.split(' ')[0])):'?';}
+  var out={sliders:[]};
+  var els=document.querySelectorAll('input[type=range],[data-slider]');
+  Array.prototype.forEach.call(els,function(rng){
+    try{ rng.scrollIntoView({block:'center'}); }catch(e){}
+    var scope=rng.closest('section,figure,[data-sim],.stage,#sim')||rng.parentElement||document.body;
+    var mon=Array.prototype.slice.call(scope.querySelectorAll('*')).slice(0,500); mon.push(scope);
+    function snap(){
+      return mon.map(function(e){
+        var cs=getComputedStyle(e);
+        var a=PROPS.map(function(p){return cs[p];}).join('|');
+        var b=CUSTOM.map(function(cp){return cs.getPropertyValue(cp).trim();}).join('|');
+        return a+'#'+b;
+      });
+    }
+    function setv(v){ rng.value=v; rng.dispatchEvent(new Event('input',{bubbles:true})); rng.dispatchEvent(new Event('change',{bubbles:true})); }
+    var mn=parseFloat(rng.min||'0'), mx=parseFloat(rng.max||'100'); if(!(mx>mn)){mx=mn+1;}
+    var s0=snap(); setv(mn); s0=snap(); setv(mx); var s1=snap(); setv(mn);
+    var changed=0; for(var i=0;i<Math.min(s0.length,s1.length);i++){ if(s0[i]!==s1[i]) changed++; }
+    var r=rng.getBoundingClientRect();
+    var cx=r.x+r.width/2, cy=r.y+r.height/2;
+    var top=document.elementFromPoint(cx,cy);
+    var topIsControl=(top===rng)||(!!top&&(rng.contains(top)||top.contains(rng)));
+    out.sliders.push({
+      id:rng.id||rng.getAttribute('data-slider')||rng.tagName.toLowerCase(),
+      sec:secOf(rng), w:Math.round(r.width), h:Math.round(r.height),
+      pe:getComputedStyle(rng).pointerEvents, topIsControl:topIsControl,
+      topEl: top?(top.id||top.tagName.toLowerCase()+'.'+((top.className||'').toString().split(' ')[0])):null,
+      changed:changed, monitored:s0.length
+    });
+  });
   return JSON.stringify(out);
 })()
 """
@@ -164,8 +237,15 @@ def load_and_analyze(target, width, height, mobile):
         ws.call("Runtime.evaluate",{"expression":"window.scrollTo(0,0);"})
         time.sleep(0.5)
         res=ws.call("Runtime.evaluate",{"expression":ANALYZER,"returnByValue":True},timeout=40)
-        val=res.get("result",{}).get("value")
-        return json.loads(val)
+        val=json.loads(res.get("result",{}).get("value"))
+        # PASS 4 PROBE (mutuje stan suwakow — dlatego PO analizie DOM)
+        try:
+            ws.call("Runtime.evaluate",{"expression":"window.scrollTo(0,0);"}); time.sleep(0.2)
+            pr=ws.call("Runtime.evaluate",{"expression":PROBE_JS,"returnByValue":True},timeout=40)
+            val["probe"]=json.loads(pr.get("result",{}).get("value") or '{"sliders":[]}')
+        except Exception:
+            val["probe"]={"sliders":[]}
+        return val
     finally:
         proc.terminate()
         try: proc.wait(timeout=5)
@@ -200,13 +280,187 @@ def near_scale(v):
     # allowed 4/8 scale multiples; also common odd values tolerance
     return abs(v-round(v/4)*4)<0.6
 
+# ---------- PASS 4: pay-badges kanon ----------
+_PAY_SSOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "docs", "zbuduje", "assets", "pay-badges.html")
+def canonical_paybadges_inner():
+    """Zwraca kanoniczny <div class="pay-badges">...</div> z SSOT (do auto-swap)."""
+    try:
+        txt=io.open(os.path.abspath(_PAY_SSOT),encoding="utf-8").read()
+    except Exception:
+        return None
+    m=re.search(r'(<div class="pay-badges"[\s\S]*?</div>)\s*$', txt.strip())
+    return m.group(1) if m else None
+
+def check_gap(D, add, seen=None):
+    """Sasiadujace bloki interakt./wizualne (rozny kind, ten sam parent) — pionowy gap <12px."""
+    blocks=D.get("blocks",[])
+    byp={}
+    for b in blocks: byp.setdefault(b["pid"],[]).append(b)
+    if seen is None: seen=set()
+    for pidv,arr in byp.items():
+        arr=sorted(arr,key=lambda b:b["y"])
+        for i in range(len(arr)-1):
+            up,lo=arr[i],arr[i+1]
+            if up["kind"]==lo["kind"]: continue
+            # tylko pionowe stykanie: bboxy nachodza poziomo
+            ox=min(up["x"]+up["w"],lo["x"]+lo["w"])-max(up["x"],lo["x"])
+            if ox<=8: continue
+            gap=lo["y"]-(up["y"]+up["h"])
+            if gap<0 or gap>=12: continue
+            key=(up["sec"],up["kind"]+">"+lo["kind"])
+            if key in seen: continue
+            seen.add(key)
+            sev="P1" if gap<8 else "P2"
+            desc="przyklejone" if gap<8 else "ciasno"
+            add("spacing",up["sec"]+" / ."+ (up["cls"] or up["kind"])+" -> ."+(lo["cls"] or lo["kind"]),
+                "Bloki %s i %s: pionowy odstep %dpx (%s) bez intencji grupujacej"%(up["kind"],lo["kind"],gap,desc),
+                sev,"Dodaj >=12px odstepu lub jawny wspolny wrapper grupujacy","skrypt")
+
+def check_crop(D, add, fetch):
+    """object-fit:cover crop (>25%) + upscaling DPR2 ((rw*2)/nw)."""
+    for im in D.get("imgs",[]):
+        src=im["src"]
+        if not src or src.startswith("data:"): continue
+        pil,h,size=fetch(src)
+        base=src.split("/")[-1].split("?")[0]
+        if pil is None: continue
+        nw,nh=pil.size; rw,rh=im["rw"],im["rh"]
+        if nw<=0 or rw<=0 or rh<=0: continue
+        if im["objfit"]=="cover":
+            ia=nw/nh; ba=rw/rh
+            cf=1-(min(ia,ba)/max(ia,ba))
+            if cf>0.25:
+                add("obrazy",im["sec"]+" / "+base,
+                    "Crop w kaflu cover: %d%% obrazu przyciete (AR obrazu %.2f vs box %.2f)"%(round(cf*100),ia,ba),
+                    "P1","Podmien AR kafla albo obraz o proporcji ~box","skrypt")
+        ups2=(rw*2)/nw
+        if ups2>1.3:
+            add("obrazy",im["sec"]+" / "+base,
+                "Upscaling przy DPR2: render*2 (%dpx) / natural (%dpx) = %.2fx"%(rw*2,nw,ups2),
+                "P1" if ups2>1.6 else "P2","Podmien na wieksza rozdzielczosc (>=2x szerokosci renderu)","skrypt")
+
+def check_interactive(D, add, vw):
+    """Hit-test + martwa interakcja per viewport."""
+    for s in D.get("probe",{}).get("sliders",[]):
+        loc="%s / #%s (vw%d)"%(s["sec"],s["id"],vw)
+        if not s["topIsControl"]:
+            add("interakcje",loc,"Kontrolka zaslonieta: elementFromPoint(srodka) = %s, nie sama kontrolka"%(s["topEl"]),
+                "P0","Podnies z-index/pointer-events kontrolki albo usun nakladke nad suwakiem","skrypt")
+        elif str(s["pe"])=="none":
+            add("interakcje",loc,"Kontrolka ma pointer-events:none — nieklikralna","P0","Ustaw pointer-events:auto na kontrolce","skrypt")
+        if s["changed"]==0:
+            add("interakcje",loc,"Martwa interakcja: driven-property identyczna przy min i max (przesuniecie nic nie zmienia w %d monitorowanych elementach)"%(s["monitored"]),
+                "P1","Suwak musi sterowac widoczna zmiana (--t/opacity/transform); patrz F5 wzorzec-matka #3","skrypt")
+
+def paybadges_guard(D, add):
+    """Imitacje marek platnosci poza SSOT: klaster=P0, pojedynczy=P1, brak kanonu przy CTA=P2.
+    Zwraca liste pid-ow klastrow do auto-swap (--fix)."""
+    chips=D.get("paychips",[])
+    byp={}
+    for c in chips: byp.setdefault(c["pid"],[]).append(c)
+    clusters=[]
+    for pidv,arr in byp.items():
+        toks=", ".join(sorted(set(c["txt"] for c in arr)))
+        sec=arr[0]["sec"]; cls=arr[0]["cls"]
+        if len(arr)>=2:
+            clusters.append(pidv)
+            add("obrazy",sec+" / ."+(cls or "?"),
+                "Klaster imitacji pay-badges (%d chipow: %s) POZA kanonicznym blokiem SSOT"%(len(arr),toks),
+                "P0","Podmien caly klaster na blok z docs/zbuduje/assets/pay-badges.html (--fix auto-swap)","skrypt")
+        else:
+            add("tresc",sec+" / \""+arr[0]["txt"]+"\"",
+                "Pojedyncza imitacja marki platnosci ('%s') poza SSOT — moze byc w prozie"%(arr[0]["txt"]),
+                "P1","Zweryfikuj recznie: chip->kanon SSOT; wystapienie w prozie zostaw","skrypt")
+    ctas=[b for b in D.get("blocks",[]) if b["kind"]=="cta"]
+    if ctas and not D.get("hasPayBadges"):
+        add("tresc","global","Brak kanonicznego bloku .pay-badges przy CTA (SSOT pay-badges.html)","P2",
+            "Wklej kanoniczny blok pay-badges pod glownym CTA","skrypt")
+    return clusters
+
+PAYSWAP_JS = r"""
+(function(){
+  var PAYTOK=['blik','visa','mastercard','mc','karta','za pobraniem','przelew'];
+  function isChip(el){
+    if(el.closest('.pay-badges'))return false;
+    var tx=(el.textContent||'').trim(); if(tx.length>14)return false;
+    if(PAYTOK.indexOf(tx.toLowerCase())<0)return false;
+    var kids=el.children,onlySvg=true;
+    for(var i=0;i<kids.length;i++){if(kids[i].tagName.toLowerCase()!=='svg'){onlySvg=false;break;}}
+    if(!(kids.length===0||onlySvg))return false;
+    var cs=getComputedStyle(el);
+    return (cs.borderStyle!=='none'&&parseFloat(cs.borderTopWidth)>0)||parseFloat(cs.borderTopLeftRadius)>=6||(cs.backgroundColor&&cs.backgroundColor!=='rgba(0, 0, 0, 0)');
+  }
+  var chips=[].filter.call(document.querySelectorAll('body *'),isChip);
+  var groups=new Map();
+  chips.forEach(function(c){var p=c.parentElement;if(!groups.has(p))groups.set(p,[]);groups.get(p).push(c);});
+  var res=[];
+  groups.forEach(function(arr,parent){ if(arr.length>=2){ res.push(parent.outerHTML); } });
+  return JSON.stringify(res);
+})()
+"""
+
+def autoswap_paybadges(target):
+    """--fix: podmien kontenery-klastry imitacji na kanoniczny blok SSOT (innerHTML kontenera).
+    Zwraca (n_swapped, notatki)."""
+    if target.startswith(("http://","https://")):
+        return 0, ["--fix dziala tylko na pliku lokalnym (nie URL)"]
+    canon=canonical_paybadges_inner()
+    if not canon:
+        return 0, ["nie znaleziono kanonicznego bloku w SSOT pay-badges.html"]
+    chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="swap-")
+    url="file:///"+os.path.abspath(target).replace("\\","/")
+    args=[chrome,"--headless=new","--disable-gpu","--hide-scrollbars","--no-first-run",
+          "--no-default-browser-check","--disable-extensions","--force-device-scale-factor=1",
+          "--remote-debugging-port=%d"%port,"--user-data-dir="+profile,"--window-size=1280,900",url]
+    proc=subprocess.Popen(args,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    outers=[]
+    try:
+        if not wait_debugger(port): return 0,["debugger nie wstal"]
+        tabs=[t for t in cdp_get(port,"/json") if t.get("type")=="page"]
+        ws=WS(tabs[0]["webSocketDebuggerUrl"]); ws.call("Runtime.enable"); time.sleep(1.5)
+        r=ws.call("Runtime.evaluate",{"expression":PAYSWAP_JS,"returnByValue":True},timeout=30)
+        outers=json.loads(r.get("result",{}).get("value") or "[]")
+    finally:
+        proc.terminate()
+        try: proc.wait(timeout=5)
+        except Exception: proc.kill()
+        shutil.rmtree(profile,ignore_errors=True)
+    if not outers: return 0, ["brak klastrow do podmiany"]
+    src=io.open(os.path.abspath(target),encoding="utf-8").read()
+    notes=[]; n=0
+    for outer in outers:
+        m=re.match(r'\s*(<[a-zA-Z][^>]*>)([\s\S]*)(</[a-zA-Z0-9]+>)\s*$', outer)
+        if not m:
+            notes.append("nie sparsowano outerHTML kontenera — podmien recznie"); continue
+        open_tag,_,close_tag=m.group(1),m.group(2),m.group(3)
+        new_outer=open_tag+"\n  "+canon+"\n"+close_tag
+        if outer in src:
+            src=src.replace(outer,new_outer,1); n+=1; notes.append("swap OK (dokladne dopasowanie)")
+        else:
+            # fuzzy: dopasuj po znormalizowanych bialych znakach
+            def norm(s): return re.sub(r'\s+',' ',s).strip()
+            no=norm(outer); done=False
+            # przeszukaj kandydatow open_tag..close_tag w zrodle
+            for mm in re.finditer(re.escape(open_tag.split(' ')[0]), src):
+                pass
+            notes.append("outerHTML nie znaleziony doslownie w zrodle (roznice formatowania) — podmien recznie klaster: "+no[:80])
+    if n:
+        io.open(os.path.abspath(target),"w",encoding="utf-8").write(src)
+    return n, notes
+
 def main():
     target=sys.argv[1]
     out=None
     if "--out" in sys.argv: out=sys.argv[sys.argv.index("--out")+1]
+    do_fix="--fix" in sys.argv
     findings=[]
     def add(w,loc,prob,sev,fix,by):
         findings.append({"warstwa":w,"lokalizacja":loc,"problem":prob,"severity":sev,"fix":fix,"wykryte_przez":by})
+
+    # PASS 4 --fix: auto-swap klastrow imitacji pay-badges na kanon PRZED analiza (re-run na czystym)
+    if do_fix:
+        nsw,notes=autoswap_paybadges(target)
+        print("PAYBADGES --fix: podmieniono %d klastrow. %s"%(nsw,"; ".join(notes[:4])))
 
     D_desk=load_and_analyze(target,1280,900,False)
     D_mob=load_and_analyze(target,390,844,True)
@@ -365,8 +619,19 @@ def main():
         if pbv < st["h"]-4:
             add("interakcje","sticky-buy","Sticky-buy (h=%dpx) fixed, a body padding-bottom=%s — ostatnia tresc/stopka moze byc zaslaniana przy dole strony"%(st["h"],pb),"P2","Dodaj padding-bottom na body/stopce = wysokosc sticky","skrypt")
 
+    # ===== PASS 4 — DETALE OSADZENIA (FINALNY-PASS §PASS 4) =====
+    gap_seen=set()
+    check_gap(D_desk, add, gap_seen)
+    check_gap(D_mob, add, gap_seen)
+    check_crop(D_desk, add, fetch_img)
+    check_interactive(D_desk, add, 1280)
+    check_interactive(D_mob, add, 390)
+    paybadges_guard(D_desk, add)
+
     result={"findings":findings,"raw":{"fonts":D_desk["fonts"],"sizes":D_desk["sizes"],
-            "n_imgs":len(D_desk["imgs"]),"sticky":D_desk.get("sticky")}}
+            "n_imgs":len(D_desk["imgs"]),"sticky":D_desk.get("sticky"),
+            "n_blocks":len(D_desk.get("blocks",[])),"n_paychips":len(D_desk.get("paychips",[])),
+            "sliders":D_desk.get("probe",{}).get("sliders",[])}}
     txt=json.dumps(result,ensure_ascii=False,indent=1)
     if out:
         io.open(out,"w",encoding="utf-8").write(txt)

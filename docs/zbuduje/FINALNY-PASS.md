@@ -35,6 +35,24 @@ bez detali? — łapie dokładnie to, co SSIM przepuszcza.
 zgodność klasy (P/U/S z mapy assetów) z allowlistą slotu (OBRAZY-ROLE) · brakujące alt ·
 obrazy-placeholdery.
 
+**PASS 4 — DETALE OSADZENIA (skrypt + hit-test per viewport; kalibracja po Latarku 17.07).**
+Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
+- **ODSTĘPY BLOKÓW:** sąsiadujące bloki interaktywne/wizualne (CTA · pay-badges · pill · form ·
+  figure) w tym samym kontenerze — pionowy gap <8px bez wspólnej intencji grupującej =
+  „przyklejone" P1; 8-12px = ciasno P2. Twardy przypadek: `.pay-badges` tuż pod `.btn`.
+- **CROP/ROZDZIELCZOŚĆ W KAFLACH:** `img object-fit:cover` w kaflu o stałym AR — crop =
+  1−min(imgAR,boxAR)/max(imgAR,boxAR); >25% = P1 (podmień AR kafla albo obraz o AR≈box).
+  Upscaling przy DPR2: (render·2)/natural >1.3× = P2, >1.6× = P1.
+- **INTERAKCJE PER VIEWPORT (rozszerzenie F6b):** każdy widget sterujący na 1280 I 390 —
+  (a) `elementFromPoint(center)` == kontrolka/potomek (inaczej P0 zasłonięte), (b)
+  `pointer-events≠none` (inaczej P0), (c) driven-property (styl obliczony LUB custom-prop `--t`)
+  RÓŻNI się przy min i max — identyczna = P1 „martwa interakcja". PROBE uruchamia drugi
+  viewport 390 (druga instancja Chrome).
+- **PAY-BADGES KANON:** `paybadges_guard` — pigułki płatności tylko z SSOT
+  `assets/pay-badges.html`; tekstowe imitacje marek (poza `.pay-badges`) = P1 pojedynczy /
+  P0 klaster (≥2 chipy w kontenerze) / P2 brak kanonu przy CTA; `--fix` = auto-swap klastra
+  na blok SSOT (innerHTML kontenera → kanon; wrapper layoutu zachowany; re-run detektora).
+
 ## ZASADY
 - Porównujemy z REGUŁAMI (ta checklista + OBRAZY-ROLE + zakazy standardu), nie z makietą
   (makieta przeszła na etapie SSIM). Few-shot 2-3 przykłady dobrze/źle w promptach vision.
@@ -62,13 +80,18 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
 4. OBRAZY (11: role P/U/S, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
 5. STANY/INTERAKCJE (6: hover/focus/disabled, empty/error, touch, sticky, reduced-motion)
 6. TREŚĆ (6: placeholdery, zakazane frazy, ceny/format, ton, duplikaty)
+7. OSADZENIE (4: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
+   per viewport, pay-badges kanon vs imitacje) — PASS 4, pokrywa `detail-lint.py`
 
 ## NARZĘDZIA (zbudowane — reużywalne)
-- **`scripts/mockup-tools/detail-lint.py <html> [--out f.json]`** — PASS 0 skryptowy (CDP
-  `getComputedStyle`/`getBoundingClientRect` + PIL na obrazach): spacing 4/8, near-same fonty,
-  Delta-E akcentów, WCAG (tekst na tle + worst-pixel pod tekstem na scenie), focus-ring,
-  touch≥44, aspect/upscaling, **hash-dedup obrazów cross-sekcja**, bbox-overlap fotografii,
-  zakazane frazy/placeholdery/podwójne spacje/proste cudzysłowy, sticky geometry.
+- **`scripts/mockup-tools/detail-lint.py <html> [--out f.json] [--fix]`** — PASS 0 + PASS 4
+  skryptowo (CDP `getComputedStyle`/`getBoundingClientRect` + PIL na obrazach). **PASS 0:**
+  spacing 4/8, near-same fonty, Delta-E akcentów, WCAG (tekst na tle + worst-pixel pod tekstem
+  na scenie), focus-ring, touch≥44, aspect/upscaling, **hash-dedup obrazów cross-sekcja**,
+  bbox-overlap fotografii, zakazane frazy/placeholdery/podwójne spacje/proste cudzysłowy, sticky
+  geometry. **PASS 4:** odstępy bloków (gap<12px różny kind), crop cover >25% + upscaling DPR2,
+  interakcja per viewport (hit-test 1280/390 + martwa-property PROBE), pay-badges kanon vs
+  imitacje (`--fix` auto-swap klastra na SSOT).
 - **`scripts/mockup-tools/capture-lint.py <html> <outdir>`** — full 1280/390, crop'y sekcji
   hi-res, `blur.jpg`+`placeholdified.jpg` do PASS 2 squint.
 

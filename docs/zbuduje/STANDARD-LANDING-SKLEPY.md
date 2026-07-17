@@ -55,9 +55,35 @@ layouty poprzednich produktów są inspiracją POZIOMU jakości, NIGDY wzorem do
 Świętość makiety (Z2) działa W OBRĘBIE jednego landingu (wierność przeniesienia po akcepcie);
 między landingami rządzi unikatowość (spójne z anty-doorway, sekcja 5 GEO).
 
+**Z7 — KARTA PRAWDY = JEDYNE ŹRÓDŁO DANYCH.** Wszystkie fakty produktu (cena, specs, opis,
+warianty, dowody) żyją w JEDNYM bloku generowanym w F0.6 (format §1a). Żaden brief (plan F1,
+koder F4, copy) nie dostaje luźnych wyimków snapshotu — dostaje TĘ kartę. Claim bez pozycji
+w karcie = CUT; brak pola = „brak danych", nigdy zmyślanie.
+
 ---
 
 ## 1. FLOW FABRYKI (fazy F0→F8; wykonawca = agent, koder = gpt-5.6-sol)
+
+**§1a — FORMAT KARTY PRAWDY PRODUKTU (F0.6; zapis `FABRYKA-*/<slug>/KARTA-PRAWDY.md`).**
+Jeden blok markdown, sekcje: **0. Tożsamość** (klasa z title+categories — kategoria Ali
+WEWNĘTRZNA, nie na stronę; mini-marka/slug) · **1. Cena** (koszt zakupu per wariant USD
+z `sku_prices`; kurs NBP ZAPISANY z datą — audytowalność; NASZA cena PL jedna dla wszystkich
+wariantów; końcówki wg reguły <150 →,90 / ≥150 → pełne/9,00) · **2. Specyfikacja** (`specs`
+1:1 VERBATIM, tabela; puste POMIŃ) · **3. Opis sprzedawcy — DESTYLACJA:** FAKTY (z kotwicą
+specs/tytuł/galeria — wolno użyć) / BEŁKOT (superlatywy, „premium", zdrowotne, pilność —
+ODRZUCONE) / oryginał jako referencja · **4. Warianty** (tabela: oryg. nazwa → PL → koszt USD
+→ czy swatch [tylko z dowodem koloru w galerii]; MODEL CENY: jedna cena PL, wariant = wybór
+estetyczny) · **5. Dowód** (`sold_volume` wg reguły §sold niżej; `review_stats` 1:1; `video_url`
+po vision-gate; `shop` 🚫 NIGDY na stronie) · **6.** wskaźnik na `gallery_curated` · **7.**
+wskaźnik na `PASZPORT.md` i `videos_curated`. **DESTYLACJA:** FAKT (konkret weryfikowalny
+z kotwicą) / BEŁKOT (ocena bez miary → CUT) / WĄTPLIWE (wygląda jak fakt, brak w specs → CUT
+chyba że galeria/tytuł potwierdza). Mapowanie: materiał→jakość+FAQ konserwacja; specs→tabela+
+porównanie; opis-FAKTY→feature→benefit z kotwicą („stal nierdzewna"→„nie rdzewieje, służy
+latami (spec: Materiał=stal nierdzewna)"); zestaw→oferta; użycie→demo 1-2-3.
+**§sold — `sold_volume`:** liczba Ali GLOBALNA ≠ nasz sklep → „X sprzedanych u nas" = FAŁSZ =
+ZAKAZ. Domyślnie POMIJAMY; opcjonalnie (≥1000) JEDNA nieprzypisana fraza bez liczby
+(„sprawdzony produkt, tysiące zamówień na świecie"), nigdy licznik/pilność. Główna rola:
+wewnętrzny gate doboru. `shop{name,url}` 🚫 NIGDY na stronie (white label) + grep gate w F6.
 
 **F0 — DANE + VISION-GATE.** Snapshot z `bud_tt_products.ali_snapshot` (tytuł, opinie
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
@@ -66,12 +92,21 @@ zmyślonych cm/kg). **🚫 GATE `source='detail'` — TWARDY, PIERWSZY KROK (inc
 `docs/zbuduje/GALERIA-ALI.md` §0; source≠detail po force:true = STOP PRODUKTU.
 Następnie F0.5 KURACJA GALERII (GALERIA-ALI §1-4): werdykty per kadr →
 `bud_tt_products.gallery_curated` + kopia GALERIA.md; galeria na stronie budowana TYLKO
-z kuracji (klasa R).** Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
+z kuracji (klasa R).**
+**Następnie F0.6 KARTA PRAWDY PRODUKTU (format §1a):** jeden blok markdown ze WSZYSTKICH pól
+snapshotu (cena z `sku_prices`+NBP, specs 1:1, DESTYLACJA opisu FAKT/BEŁKOT, warianty+mapowanie
+PL, `sold_volume`/review/video/shop) + wskaźniki do `PASZPORT.md`, `gallery_curated`,
+`videos_curated`. Zapis `FABRYKA-*/<slug>/KARTA-PRAWDY.md`. **Każdy brief (F1/F4/copy) dostaje
+TĘ kartę zamiast luźnych wyimków (Z7).** Puste pole = „brak danych", nie zmyślać.
+Vision-gate KAŻDEGO materiału: zdjęcia aukcji (infografiki z obcym
 tekstem/marką = odrzut z galerii, treść wolno cytować), zdjęcia opinii (zrzuty apki
 AliExpress/obce marki/off-topic = odrzut), WIDEO (poster/klatka — off-product w obie strony
 = sekcję pominąć, nawet przy milionach wyświetleń). Cena = półka rynkowa kategorii PL +
 zdrowa marża (nie sztywny mnożnik); końcówki: <150 → ,90; ≥150 → pełne/9,00. Mini-marka:
 USP-first zdrobnienie korzyści (Zmieścik/Świtek/Blasik…), slug lowercase bez znaków.
+**REZERWACJA w `bud_brand_names`** (INSERT-or-fail per `product_id`, `scripts/mockup-tools/
+brand-forge.py` albo REST): kolizja (0 wierszy) = następna kandydatka (pętla). Nazwa zajęta
+dla innego usera/landingu TEGO produktu NIE wraca. Rezerwacja PRZED generacją favicona (F2.5).
 
 **F1 — PLAN OD GPT (zawsze pierwszy krok).** Briefing (wzór: scratchpad zmiescik-plan-
 briefing.md, aktualizowany o ten standard): cel+kontekst, zdjęcia produktu jako input_image
@@ -79,9 +114,11 @@ briefing.md, aktualizowany o ten standard): cel+kontekst, zdjęcia produktu jako
 GPT zwraca: koncepcję pod TEN produkt (motyw przewodni = wizualna metafora korzyści,
 NIGDY „clean e-commerce"), dobór i kolejność sekcji z uzasadnieniem, paletę+font+charakter,
 listę grafik, funkcje konwersji. FILTR PLANU (my): zakazy, formularz→CTA checkout_url,
-esencja produktu na scenach kluczowych, jasne tła, **ANTY-MISMATCH (GALERIA-ALI §5):
-tabela CLAIM→ŹRÓDŁO (tytuł detail/specs/galeria detail/opinie); claim bez źródła = CUT;
-claim o klasie produktu/elemencie tożsamości bez źródła = STOP planu.**
+esencja produktu na scenach kluczowych, jasne tła, **ANTY-MISMATCH ROZSZERZONY (GALERIA-ALI §5):
+tabela CLAIM→ŹRÓDŁO ∈ {tytuł detail, specs, galeria detail, opinie, opis-FAKTY po destylacji};
+KAŻDA korzyść NIESIE KOTWICĘ w nawiasie („służy latami (spec: Materiał=stal nierdzewna)");
+claim bez źródła = CUT; claim o klasie produktu/elemencie tożsamości bez źródła = STOP planu;
+BEŁKOT (superlatywy/oceny bez miary z Karty Prawdy) NIGDY nie wchodzi do copy.**
 
 **F2 — MAKIETY (projekt całej strony).**
 **⚓ MAKIETA MUSI BYĆ KOMPLETNA (Z2):** do promptu KAŻDEJ makiety wchodzą wymagania sekcji 3
@@ -94,6 +131,22 @@ czy wygląda na DROGI projekt?") ocenia MAKIETY — przed akceptem.** AKCEPT MAK
 po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do tego punktu.
 1. **STYL-MASTER ×1** (pełna scena z motywem; gate: motyw↔korzyść, jasno, hierarchia,
    produkt wierny, minimalny fake-tekst; FAIL→regeneracja promptu).
+1.5. **BRANDING (F2.5) — favicon + wordmark; PO styl-masterze, PRZED hero** (`scripts/
+   mockup-tools/brand-forge.py`; SSOT rezerwacji: `bud_brand_names`, F0). **FAVICON/znak:**
+   gpt-image-2 (przez wf2-gen, `type:'logo'`, quality high, 1:1, BIAŁE tło → biel→alpha PIL),
+   ref = styl-master `{type:'ref'}` (NIE packshot); prompt-recepta: jeden prosty geometryczny
+   znak z 2-3 prymitywów (koło/łuk/linia), grube kreski, czytelny @32px, 1-2 kolory z palety,
+   pure-white tło, margines ~20%, zero tekstu/gradientu/3D. **N=4-6 kandydatów (1 call
+   count=N) → selektor skryptowy @32px** (n_kolorów ≤3, gęstość krawędzi, kontrast, BRAK
+   TEKSTU/OCR, margines-wypełnienie 55-80%; odrzuty twarde) → **werdykt vision top-2** (6/6:
+   czytelny w 32px / oddaje korzyść / paleta+charakter / 1-2 kolory flat zero 3D / zero liter /
+   czyste krawędzie; brak → regeneracja z zaostrzeniem, pętla do wyczerpania, zero udziału
+   Tomka). **WORDMARK: NIGDY z gpt-image (diakrytyki PL = hazard)** — render z webfontu landingu
+   (Pillow ImageFont / headless), transparent; **LOCKUP: favicon LEWA + wordmark PRAWA**,
+   flex align-center gap ~.5ch, NIGDY pion. Deliverables → `bud-assets/<slug>/brand/`:
+   favicon-512/256/32.png, wordmark.png, logo-combo.png, (OG 1200×630 opcjonalnie). Znak jako
+   `{type:'logo'}` ref do makiet z topbarem (wordmark w makiecie = tekst; kod odtwarza live-text).
+   Każdy plik obejrzany (Read) przed użyciem.
 2. **HERO-MAKIETA** (pełny 1. ekran: topbar, nagłówek PL, scena z produktem, karta wtopiona
    w scenę, pay-row; gate WOW — iterować max 3, wybrać najlepszą).
 3. **MAKIETY WSZYSTKICH SEKCJI planu** (pokrycie CAŁEGO planu — tylko czysta stopka bez
@@ -199,6 +252,10 @@ SLOCIE:** żywy tekst (treść z promptu makiety), kanoniczny blok pay-badges, r
 opinii/produktu. NICZEGO nie dodajemy ani nie usuwamy — brak/błąd na makiecie ⇒ powrót
 do F2 (poprawka grafiki), nie inwencja kodera. Sekcje czysto-danowe mogą iść z kontraktu.
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
+**BRANDING w kodzie (F2.5):** wordmark = ŻYWY tekst HTML/CSS w foncie landingu (NIGDY obrazek
+z gpt-image — diakrytyki), favicon 32 w `<head>` jako data-URI, lockup topbara = favicon LEWA
++ wordmark PRAWA (flex, NIGDY pion). Pliki brand/ (favicon/wordmark/combo) renderowane z fontu,
+nie generowane — pochodzą z F2.5.
 
 **F5 — ETAP ŻYCIA I ZAANGAŻOWANIA — OSOBNY, SEKWENCYJNY PRZEBIEG (wzmocnione przez Tomka
 16.07: „brakuje animacji w JS, czegoś co doda życia, pokaże profesjonalizm i ZAANGAŻUJE;
@@ -375,8 +432,12 @@ wyglądu żadnego kadru.**
   — AI-sceny (S) ZAKAZANE jako slajd galerii/karty (mogą być tłem sekcji, nie dowodem);
   lightbox + alt PL z `alt_pl`; szczegóły `docs/zbuduje/GALERIA-ALI.md`;
 - realne zdjęcia produktu w karcie/galerii/ofercie (AI nie zastępuje dowodu);
-- hit z TikToka: self-host MP4 bez ramki odtwarzacza (pipeline i ryzyko: sekcja 5),
-  TYLKO po vision-gate on-product;
+- **sekcja WIDEO TikToka: 4-6 kurowanych (`videos_curated` keep:true), self-host MP4 bez ramki
+  playera** — siatka 9:16 (desktop 4-5 kafli grid auto-fit; mobile snap-scroll widać 1.2 kafla),
+  IO-autoplay mute TYLKO widoczne (unmute jednego wycisza resztę), `preload=none`, poster
+  REHOSTOWANY (cover CDN WYGASA — własna klatka ffmpeg), per-kafel głośnik + atrybucja „@autor";
+  klik = lightbox 9:16 z dźwiękiem. TYLKO po vision-gate on-product; <3 PASS → tryb 1-wideo lub
+  pominięcie. Pipeline i ryzyko: sekcja 5;
 - pomiar (sekcja 5), JSON-LD @graph, `{{PIXEL_ID}}`/`{{CANONICAL_URL}}`+noindex;
 - dane twarde 1:1, zakazy (sekcja 4), jasne tła, tech budżet (sekcja 5).
 
@@ -387,7 +448,7 @@ wyglądu żadnego kadru.**
 **Biblioteka sekcji** (checklist pokrycia — dobór/kolejność ustala plan GPT): topbar mini ·
 HERO = kompletna mikro-oferta 1. ekranu (h1-echo → sub „dla kogo+efekt" → scena z produktem →
 chip ★ z uczciwym N → cena → JEDNO CTA → mikrocopy) · pas zaufania/COD 1-2-3 (narracja
-procesu) · problem→rozwiązanie · demo „jak działa" 1-2-3 · hit z TikToka · korzyści
+procesu) · problem→rozwiązanie · demo „jak działa" 1-2-3 · sekcja wideo (4-6 kurowanych) · korzyści
 (konkrety z aukcji) · UCZCIWE porównanie z JEDNYM prawdziwym minusem · galeria (lazy,
 lightbox, wpleść UGC) · social proof (3-6 opinii ze zdjęciami; małe N uczciwie; 0 opinii →
 sekcję pomiń) · oferta box #zamow („co dostajesz", warianty-buttony gdy API poda, gwarancja
@@ -411,11 +472,22 @@ odbiorze"; mikrocopy: „Płatność przy odbiorze · 14 dni na zwrot · Wysyłk
 **PŁATNOŚCI**: pełen wachlarz (BLIK/karta/COD) — COD jako główny risk-reversal w narracji,
 nie jedyna forma. Pokazujemy TYLKO metody realnie dostępne w checkoucie platformy.
 
+**WARIANTY I DOWÓD Z DANYCH (z Karty Prawdy §1a):** MODEL JEDNEJ CENY — jedna cena PL dla
+wszystkich wariantów (baza marży = MAX kosztu wariantów z `sku_prices`); `sku_prices` są
+WEWNĘTRZNE (nie pokazywać różnic cen między wariantami). Wariant = wybór estetyczny, NIE zmienia
+`data-checkout`/ceny. Swatche/warianty na stronie TYLKO z wizualnym dowodem koloru w galerii;
+mapowanie 1:1 PL (Blue→Niebieski, Pink→Różowy, Kaki→Khaki, „LED"→„podświetlenie LED").
+`sold_volume` wg §sold (domyślnie POMIJAMY; ≥1000 = jedna nieprzypisana fraza bez liczby, nigdy
+licznik u nas). Wideo TikToka na stronie TYLKO po vision-gate (sekcja 3). `shop{name,url}` 🚫
+NIGDY na stronie (white label).
+
 **ZAKAZY:** zmyślona pilność/liczniki/„ostatnie sztuki"/„tylko dziś" · JAKIEKOLWIEK obietnice
 czasu dostawy („24h", „magazyn w PL") — dotyczy też CYTATÓW opinii (przycinać do zgodnej
 części) · przekreślone ceny · obietnice zdrowotne/medyczne (beauty = język kosmetyczny;
 zabawki antystres = język zabawowy) · liczby spoza snapshotu · klejmy niepotwierdzone
-w aukcji · stockowe twarze · kalki językowe (polszczyzna natywna).
+w aukcji · stockowe twarze · kalki językowe (polszczyzna natywna) · **nazwa/URL sklepu
+źródłowego (`shop`)** · **różnice cen między wariantami (`sku_prices` wewnętrzne)** ·
+**`sold_volume` przypisany NASZEMU sklepowi („X sprzedanych u nas")**.
 
 **Pilność wyłącznie realna** (sezon). **Ceny psychologiczne**: <150 → ,90; ≥150 → pełne/9,00;
 spójne końcówki w portfelu.
@@ -434,12 +506,20 @@ PageView+ViewContent (load), **AddToCart na klik KAŻDEGO CTA** (zasila CP2!),
 InitiateCheckout (wyjście na kasę) + link decoration (fbclid/_fbp/_fbc na checkout_url) +
 HOOKS `?h=N`.
 
-**Wideo TikToka (self-host, decyzja Tomka):** `python -m yt_dlp` → ffmpeg H.264
-`scale=720:1280,fps=30 crf 26-28 +faststart` (HEVC nie gra w Chrome; frame-extract
-`-pix_fmt yuvj420p`) → upload edge `wf2-asset-rehost` → `<video muted loop playsinline
-preload="none">` + IO autoplay/pause + przycisk głośnika + reduced-motion→controls; poster
-z bud-covers; podpis „wideo: @autor (TikTok) · ponad X mln wyświetleń" (W DÓŁ). ⚠️ Ryzyko
-licencyjne odnotowane: atrybucja zostaje, zdjęcie na żądanie twórcy, NIGDY w kreacjach Meta.
+**Wideo TikToka (self-host, decyzja Tomka) — PIPELINE BATCH 1→N (wejście `videos_curated`
+keep:true; pętla per element, nazewnictwo `tt/1..N`):**
+1. `python -m yt_dlp -f mp4` → tmp (element.url = strona watch, NIE mp4 → yt-dlp obowiązkowy);
+2. ffmpeg `scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30 -c:v libx264
+   -crf 28 -preset veryfast -movflags +faststart -c:a aac 96k` (HEVC nie gra w Chrome);
+   **GATE wagi >2,5 MB → podbij crf / skróć (8-12 s)**; łącznie ≤10-12 MB;
+3. **POSTER = WŁASNA KLATKA** ffmpeg (klatka 0 `-pix_fmt yuvj420p`) — cover CDN WYGASA (jak
+   ae-pic), nigdy nie linkować `cover` na produkcji;
+4. rehost `wf2-asset-rehost` → `bud-assets/<slug>/tt/<i>.mp4` + `<i>.jpg` (Content-Type JAWNY!);
+   zapisz `mp4_hosted`/`poster_hosted` z powrotem do `videos_curated`.
+Render: `<video muted loop playsinline preload="none">` + IO autoplay/pause (tylko widoczne) +
+przycisk głośnika (unmute-jeden-wycisza-resztę) + reduced-motion→poster+controls; atrybucja
+PER KAFEL „@autor" (pełna w lightboxie). ⚠️ Ryzyko licencyjne: atrybucja zostaje, zdjęcie na
+żądanie twórcy, **NIGDY w kreacjach Meta.**
 
 **GEO (pełna wiedza: GEO-LLM.md):** każdy fakt w serwerowym HTML (boty nie wykonują JS;
 count-up = statyczna liczba w źródle) · answer-first (hero-sub 2-3 zdania, akapity 40-75
@@ -463,6 +543,8 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
    mobile ≥0.78) + werdykt „ten sam projekt" dla KAŻDEJ sekcji.
 9. Sanity rendera (F7.2) czyste: zero błędów technicznych renderu.
 10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze.
+11. **Karta Prawdy (Z7):** grep `shop.name`/URL sklepu źródłowego ⊄ HTML; KAŻDY claim ma kotwicę
+    w źródle (§1a); JEDNA cena PL (zero różnic wariantów); `sold_volume` nieprzypisany.
 
 ---
 
@@ -507,6 +589,14 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 - Dane ZAWSZE ze snapshotu (nie z odziedziczonego briefu); puste specs → komunikaty
   jakościowe **+ wymiary z rozmiarówek galerii (kuracja DANE) uzupełniają specs**.
 - Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
+- **Kuracja wideo → `bud_tt_products.videos_curated jsonb`** (mirror `gallery_curated`; migracja
+  `20260717c_videos_curated.sql`): vision-gate PO POSTERZE (on-product w obie strony; mem/stock
+  bez produktu = ODRZUĆ; obca marka/watermark = ODRZUĆ; ≥360p pion 9:16), typ ujęcia
+  {unboxing|użycie|efekt|reakcja}, ranking plays DESC → eng-rate → dywersyfikacja typów, wybór
+  4-6. `video_count` (pole) ≠ `len(videos)` (cap ~12) — kuracja z REALNEJ tablicy `tt_shop.videos`.
+  Kształt: `{source_ok, product_id, curated_at, items:[{url, author, plays, likes, cover_src,
+  typ, werdykt, keep, kolejnosc, poster_hosted, mp4_hosted, alt_pl, powod}]}` + kopia
+  `FABRYKA-*/<slug>/WIDEO.md`. Sekcja buduje kafle WYŁĄCZNIE z `keep:true`.
 - Rehost zewnętrznych obrazów TYLKO do `bud-assets/<slug>/` — to PREFIX w buckecie
   `attachments` (upload: `/object/attachments/bud-assets/<slug>/...`), nie osobny bucket.
 - Treść odrzuconych infografik producenta wolno cytować (dane z aukcji, nie fantazja).
@@ -525,6 +615,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   2 warstwy + crossfade `opacity` — standard dla wszystkich „zmieniających kolor" scen.
 - **Auto-zajawka każdego interaktywnego demo** (teaser 1 cykl → natychmiastowe oddanie
   kontroli przy 1. interakcji → hint; reduced-motion → bez teasera) — wzorzec F5.
+- **Sekcja wideo (F5):** kafle JEDEN `aspect-ratio:9/16` `object-fit:cover` radius+cień, ZERO
+  chrome TikToka; lightbox 9:16 w JEDNYM chunku kodera (inaczej zduplikowane ID); JS =
+  ROZSZERZENIE istniejącego IO wideo (autoplay-on-visible) o „unmute jednego wycisza resztę";
+  wszystkie `preload=none`, poster JPEG rehostowany. Wzorzec 1-wideo: `usmieszek` `#tiktok`
+  HTML l.1245-1292, JS l.2400-2408.
 
 ### 7e. Narzędzia
 - yt-dlp przez `python -m yt_dlp` (winget-shim myli); payloady PL przez plik UTF-8 (cp1250!);
@@ -536,6 +631,13 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   da się załadować = twardy błąd, nie cicha generacja z promptu.
 - **`input_fidelity` NIE istnieje w gpt-image-2** (parametr odrzucany; wysoka wierność
   inputu jest wbudowana) — nie dodawać do payloadu; dotyczy tylko gpt-image-1/1.5.
+- **BRANDING (F2.5) `scripts/mockup-tools/brand-forge.py`** {slug, nazwa, product_id,
+  styl-master, paleta, metafora, --font}: rezerwuje nazwę (`bud_brand_names`), generuje N
+  faviconów (wf2-gen, gpt-image-2 `type:'logo'`), selektor @32px → top-2 do werdyktu vision,
+  biel→alpha, wordmark z fontu, upload `bud-assets/<slug>/brand/`. **Wordmark NIGDY z gpt-image
+  (diakrytyki PL) — render z webfontu. Favicon: gpt-image + biel→alpha, quality high, N
+  kandydatów + selektor + werdykt vision 6/6.** Dry-run: `--dry-run` (walidacja + rezerwacja-
+  check bez zapisu). Nazwy: `CLAUDE_BRANDING_PROCEDURE.md` = tn-workflow, NIE fabryka — nie mieszać.
 
 ---
 

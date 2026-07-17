@@ -70,6 +70,17 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
 `curatedUrl` ratuje zdjęcie karty, ale NIE podnosi source. Kuracja galerii →
 `bud_tt_products.gallery_curated jsonb` (procedura `docs/zbuduje/GALERIA-ALI.md`).
 
+### Fabryka landingów — nowe kroki (17.07; SSOT `docs/zbuduje/STANDARD-LANDING-SKLEPY.md`)
+- **F0.6 KARTA PRAWDY** (§1a; `FABRYKA-*/<slug>/KARTA-PRAWDY.md`) = JEDYNE źródło danych (Z7);
+  każdy brief F1/F4/copy dostaje TĘ kartę, claim bez kotwicy = CUT.
+- **F2.5 BRANDING + rejestr nazw**: `scripts/mockup-tools/brand-forge.py` (favicon gpt-image →
+  selektor @32px → vision top-2; wordmark z fontu, NIE gpt-image); rezerwacja `bud_brand_names`
+  (INSERT-or-fail; migracja `20260717b_bud_brand_names.sql`).
+- **Sekcja WIDEO**: kuracja `bud_tt_products.videos_curated jsonb` (mirror `gallery_curated`;
+  migracja `20260717c_videos_curated.sql`), self-host MP4 pipeline 1→N (poster własną klatką).
+- **PASS 4** w `detail-lint.py` (F7.3 `docs/zbuduje/FINALNY-PASS.md`): odstępy bloków, crop/DPR2,
+  interakcja per viewport (hit-test), pay-badges kanon vs imitacje (`--fix` auto-swap).
+
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 
 **Osobna aplikacja** (`tn-app/index.html` lista + `tn-app/projekt.html`), LIVE:
