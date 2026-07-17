@@ -55,3 +55,8 @@ Artefakty testów na sklepie „test" (`019f650b-8d9b-7225-b0aa-c5455f6298a1`): 
    landingu: polling do skutku albo składanie URL z domeny+sluga.
 5. Brak endpointów pixel/CAPI per sklep (wymagania trackingowe §6 SSOT) i metod płatności checkoutu (pytania płatnościowe §5: COD w checkoucie? lista metod Autopay? branding kasy?). Flaga `isCashOnDelivery` w delivery-methods sugeruje COD w modelu — potwierdzić w checkoucie.
 6. Brak robots.txt/sitemap/llms.txt endpointów (wymagania GEO §5b — po stronie platformy).
+7. **Brak meta/SEO po API dla stron renderowanych przez platformę** (zbadane 17.07: title
+   i description = „Default" na home/products/product/{nr}; title produktu = „{nazwa} | Default").
+   Nasz HTML (isHtml) ma meta pod kontrolą — luka dotyczy auto-stron: potrzebne ustawienia
+   SEO sklepu (nazwa do szablonu title, description, OG-image) + meta per produkt. Auto-strony
+   produktów będą się indeksować z „Default" równolegle z landingami.
