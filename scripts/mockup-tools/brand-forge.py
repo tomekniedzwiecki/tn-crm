@@ -5,7 +5,7 @@ SSOT: docs/zbuduje/STANDARD-LANDING-SKLEPY.md (F0 rejestr nazw, F2.5 branding, 7
 
 Kroki (R2):
   (a) REZERWACJA nazwy w bud_brand_names (REST INSERT-or-fail; kolizja => exit 3)
-  (b) GENERACJA N=5 faviconow przez wf2-gen (gpt-image-2, type=logo, quality high, 1:1,
+  (b) GENERACJA N=5 faviconow przez wf2-gen (gpt-image-2, type=logo, quality MEDIUM - high z ref = 504, 1:1,
       ref styl-master type=ref), prompt-recepta wg R2
   (c) SELEKTOR skryptowy @32px (n_kolorow / gestosc krawedzi / kontrast / brak-tekstu OCR /
       margines-wypelnienie) -> ranking + odrzuty twarde; zapis kandydatow i wynikow
@@ -93,7 +93,7 @@ def gen_favicons(slug, prompt, styl_master_url, count, wf2_secret, outdir):
     """1 call count=N przez wf2-gen -> lista lokalnych PNG kandydatow."""
     payload = {"fn": "generate-image", "payload": {
         "prompt": prompt, "count": count, "workflow_id": "brand-" + slug,
-        "type": "logo", "provider": "gpt-image-2", "quality": "high",
+        "type": "logo", "provider": "gpt-image-2", "quality": "medium",  # high+ref = 504 wall-clock (Odpalak 17.07)
         "aspect_ratio": "1:1",
         "reference_images": [{"url": styl_master_url, "type": "ref"}],
     }}

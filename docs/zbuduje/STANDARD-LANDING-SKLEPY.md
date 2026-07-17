@@ -701,8 +701,12 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   jakościowe **+ wymiary z rozmiarówek galerii (kuracja DANE) uzupełniają specs**.
 - Vision-gate zdjęć, opinii i WIDEO (off-product w obie strony) — obowiązkowy (F0).
 - **Kuracja wideo → `bud_tt_products.videos_curated jsonb`** (mirror `gallery_curated`; migracja
-  `20260717c_videos_curated.sql`): vision-gate PO POSTERZE (on-product w obie strony; mem/stock
-  bez produktu = ODRZUĆ; obca marka/watermark = ODRZUĆ; ≥360p pion 9:16), typ ujęcia
+  `20260717c_videos_curated.sql`): vision-gate — ⚠️ POSTER BYWA CLICKBAITEM (Odpalak 17.07:
+  3 top klipy 110M plays = drama-ragebait bez produktu, postery myliły) → dla SHORTLISTY
+  pobierz MP4 i gate'uj po KLATCE ŚRODKOWEJ, nie po posterze (on-product w obie strony;
+  mem/stock bez produktu = ODRZUĆ; obca marka/watermark czytelny = ODRZUĆ; ≥360p pion 9:16;
+  marka egzemplarza z TikToka może się różnić od aukcji Ali — udokumentuj w KARCIE, landing
+  OK gdy logo nieczytelne, NIGDY do kreacji Meta), typ ujęcia
   {unboxing|użycie|efekt|reakcja}, ranking plays DESC → eng-rate → dywersyfikacja typów, wybór
   4-6. `video_count` (pole) ≠ `len(videos)` (cap ~12) — kuracja z REALNEJ tablicy `tt_shop.videos`.
   Kształt: `{source_ok, product_id, curated_at, items:[{url, author, plays, likes, cover_src,
