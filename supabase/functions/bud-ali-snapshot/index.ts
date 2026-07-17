@@ -315,13 +315,20 @@ async function tryDetail(id: string, key: string): Promise<Record<string, unknow
 const DATAHUB_HOST = 'aliexpress-datahub.p.rapidapi.com';
 async function tryDataHub(id: string, key: string): Promise<{ specs: Array<{ name: string; value: string }>; description: string; variants: string[]; sku_prices: Array<{ v: string; price: number | null }>; sold_volume: number | null } | null> {
   try {
-    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
-    const r = await fetch(`https://${DATAHUB_HOST}/item_detail_3?itemId=${id}&region=PL&currency=USD&locale=en_US`,
-      { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': DATAHUB_HOST }, signal: ctrl.signal });
-    clearTimeout(t);
-    if (!r.ok) { console.warn('[datahub]', r.status); return null; }
-    const j = await r.json();
-    const item = j?.result?.item;
+    // kaskada wersji endpointu (DataHub potrafi mieć 5040 na pojedynczej wersji;
+    // sonda 17.07: item_detail_6 dziala i ma properties+description+sku)
+    let item: Record<string, unknown> | null = null;
+    for (const ep of ['item_detail_6', 'item_detail_3', 'item_detail_2']) {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
+      const r = await fetch(`https://${DATAHUB_HOST}/${ep}?itemId=${id}&region=PL&currency=USD&locale=en_US`,
+        { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': DATAHUB_HOST }, signal: ctrl.signal });
+      clearTimeout(t);
+      if (!r.ok) { console.warn('[datahub]', ep, r.status); continue; }
+      const j = await r.json().catch(() => null);
+      const it = j?.result?.item;
+      if (it && (it.properties || it.sku || it.description)) { item = it; break; }
+      console.warn('[datahub]', ep, j?.result?.status?.code ?? 'bez-item');
+    }
     if (!item) return null;
     const specs = (Array.isArray(item.properties?.list) ? item.properties.list : [])
       .map((p: Record<string, unknown>) => ({ name: String(p.name ?? '').slice(0, 60), value: String(p.value ?? '').slice(0, 120) }))
@@ -418,10 +425,32 @@ Deno.serve(async (req) => {
     // SONDA RAW (diagnostyka 17.07: puste specs/description/sku — sprawdzamy, czy to API,
     // czy nasze mapowanie): rawProbe:true + product_id → surowa odpowiedź product-info,
     // bez zapisu. Wymaga tej samej autoryzacji co reszta (backend/admin/sesja).
-    const rawProbe = (body as Record<string, unknown>).rawProbe === true;
-    if (rawProbe) {
+    const rawProbe = (body as Record<string, unknown>).rawProbe;
+    if (rawProbe === true || rawProbe === 'datahub') {
       const rid = String(body.product_id || '').trim();
       if (!rid || !RAPID_KEY) return json({ error: 'brak_product_id_lub_klucza' }, 400, c);
+      if (rawProbe === 'datahub') {
+        const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
+        const ep = String((body as Record<string, unknown>).dh_endpoint || 'item_detail_3');
+        const r = await fetch(`https://${DATAHUB_HOST}/${ep}?itemId=${rid}&region=PL&currency=USD&locale=en_US`,
+          { headers: { 'x-rapidapi-key': RAPID_KEY, 'x-rapidapi-host': DATAHUB_HOST }, signal: ctrl.signal });
+        clearTimeout(t);
+        const text = await r.text();
+        // tryb podsumowania struktury (unikamy 100kB HTML-opisu w odpowiedzi sondy)
+        if ((body as Record<string, unknown>).dh_summary === true) {
+          try {
+            const jj = JSON.parse(text); const it = jj?.result?.item ?? {};
+            return json({ status: r.status, item_keys: Object.keys(it),
+              properties_sample: (it.properties?.list ?? []).slice(0, 6),
+              sku_keys: it.sku ? Object.keys(it.sku) : null,
+              sku_base_sample: (it.sku?.base ?? []).slice(0, 2),
+              sku_props_sample: (it.sku?.props ?? []).slice(0, 1),
+              desc_len: String(it.description?.html ?? '').length,
+              sales: it.sales ?? null }, 200, c);
+          } catch { /* spadnij do raw */ }
+        }
+        return json({ status: r.status, body: text.slice(0, 6000) }, 200, c);
+      }
       const rawResp = await rapidGet(`/api/v3/product-info?product_id=${rid}&target_currency=USD&target_language=EN&country=PL&ship_to_country=PL`, RAPID_KEY);
       return json({ raw: rawResp }, 200, c);
     }
