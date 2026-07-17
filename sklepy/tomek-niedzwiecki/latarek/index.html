@@ -1207,6 +1207,20 @@
       text-align: left;
     }
   }
+
+  /* F7.4 DETALE OSADZENIA — interakcja PER VIEWPORT:
+     na desktop kadr 3:2 pokazywał obie klatki (macro-off/on to DWA różne ujęcia o innym
+     zoomie i kącie) w całości → crossfade czytał się jak podmiana sceny, a pazurek był mały.
+     Mobile (4:5) crop-zoomuje w centrum i to działa. Tu robimy to samo na desktop:
+     wspólny kadr wcentrowany na czubku pazurka (gdzie oba ujęcia się pokrywają), obcięcie
+     rozjeżdżającej się peryferii. Mechanika --t (opacity crossfade) NIETKNIĘTA. */
+  @media (min-width: 701px) {
+    #interakcja .sim-image {
+      object-position: 52% 50%;
+      transform: scale(1.34);
+      transform-origin: 52% 50%;
+    }
+  }
 </style>
 
 <section id="benefits" class="sect-pad" data-mo="benefits">
@@ -1750,10 +1764,10 @@
 
     <div class="gallery-grid" data-stagger="center">
       <div class="gallery-tile reveal" data-mo="gallery-tile">
-        <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-products/1005006966937448/g6.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-products/1005006966937448/g6.webp" width="1000" height="1000" loading="lazy" alt="Latarek — biały obcinacz 2w1 z wyświetlaczem">
+        <img class="gitem gitem--contain" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-products/1005006966937448/g6.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-products/1005006966937448/g6.webp" width="800" height="800" loading="lazy" alt="Latarek — biały obcinacz 2w1 z wyświetlaczem">
       </div>
       <div class="gallery-tile reveal" data-mo="gallery-tile">
-        <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/korzysci-pack.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/korzysci-pack.webp" width="1200" height="900" loading="lazy" alt="Latarek na miękkim kocu">
+        <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/macro-off.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/macro-off.webp" width="1536" height="1024" loading="lazy" alt="Zbliżenie na jasny pazurek tuż przed przycięciem">
       </div>
       <div class="gallery-tile reveal" data-mo="gallery-tile">
         <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/problem-on.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/problem-on.webp" width="1200" height="900" loading="lazy" alt="Podświetlony pazurek podczas obcinania">
@@ -1765,7 +1779,7 @@
         <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/claw-lit.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/claw-lit.webp" width="1200" height="900" loading="lazy" alt="Prześwietlony pazurek z widoczną żyłką">
       </div>
       <div class="gallery-tile reveal" data-mo="gallery-tile">
-        <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-covers/7647855203932310815.jpg" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-covers/7647855203932310815.jpg" width="1200" height="900" loading="lazy" alt="Pies podczas obcinania pazurków Latarkiem">
+        <img class="gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/finalcta-scene2.webp" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/finalcta-scene2.webp" width="1400" height="933" loading="lazy" style="object-position:center 40%" alt="Spokojny pies z zadbaną łapką po pielęgnacji Latarkiem">
       </div>
     </div>
   </div>
@@ -1812,6 +1826,13 @@
     object-fit: cover;
     cursor: zoom-in;
     transition: transform 280ms ease;
+  }
+
+  /* F7.4 DETALE OSADZENIA: packshoty (kwadrat/pion) nie mieszczą się w kaflu 4:3 przy cover
+     (produkt ucinany) — contain na białym tle kafla pokazuje cały produkt bez przycięcia */
+  #galeria .gitem--contain {
+    object-fit: contain;
+    background: var(--white);
   }
 
   #galeria .gallery-tile:hover .gitem {
@@ -2187,6 +2208,11 @@
 
   #zamow .btn.cta {
     text-align: center;
+  }
+
+  /* F7.4 DETALE OSADZENIA: pay-badges nie mogą być przyklejone do CTA (gap 0 → ≥14px) */
+  #zamow .pay-badges {
+    margin-top: 16px;
   }
 
   #zamow .order-details .microcopy {
