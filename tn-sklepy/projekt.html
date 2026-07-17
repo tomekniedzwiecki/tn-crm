@@ -102,7 +102,8 @@
                         </div>
                         <div id="p-meta" class="text-zinc-500 text-xs mt-2 flex items-center gap-3 flex-wrap"></div>
                     </div>
-                    <div class="flex items-center gap-2 flex-shrink-0">
+                    <!-- mobile: siatka 2×2 (równe kafle); desktop: rząd — kafel „zam." zawijał się i wystawał (visual-verify 18.07) -->
+                    <div class="grid grid-cols-2 sm:flex items-stretch gap-2 flex-shrink-0">
                         <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center">
                             <div class="text-xl font-semibold text-white" id="stat-progress">–</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">postęp</div>
@@ -117,7 +118,7 @@
                         </div>
                         <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" title="Zamówienia z platformy (wf2_orders) — cel: przekazanie sterów">
                             <div class="text-xl font-semibold text-[#4cb782]" id="stat-orders">0</div>
-                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">/ <span id="stat-target">1000</span> zam.</div>
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 whitespace-nowrap">/&nbsp;<span id="stat-target">1000</span>&nbsp;zam.</div>
                         </div>
                     </div>
                 </div>
@@ -619,7 +620,11 @@
             saveLinks([...(project.links || []), { label, url, icon: 'ph-arrow-square-out' }]);
         }
         function removeLink(i) {
-            const arr = (project.links || []).slice(); arr.splice(i, 1); saveLinks(arr);
+            const arr = (project.links || []).slice();
+            const l = arr[i]; if (!l) return;
+            // confirm — chip X sąsiaduje z linkiem; przypadkowy klik kasował podgląd bez śladu (incydent 18.07)
+            if (!confirm(`Usunąć podgląd „${l.label || l.url}"?`)) return;
+            arr.splice(i, 1); saveLinks(arr);
         }
 
         function renderPills() {
@@ -766,7 +771,7 @@
         function renderFields() {
             document.getElementById('p-fields').innerHTML = PROJECT_FIELDS.map(f => `
                 <div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label>
-                <input class="fld" value="${escapeHtml(project[f.col] ?? '')}" onchange="saveField('${f.col}', this.value, ${!!f.num})"></div>`).join('');
+                <input class="fld" aria-label="${escapeHtml(f.l)}" name="${f.col}" value="${escapeHtml(project[f.col] ?? '')}" onchange="saveField('${f.col}', this.value, ${!!f.num})"></div>`).join('');
         }
         async function saveField(col, value, num) {
             // target_orders ma NOT NULL DEFAULT 1000 — puste pole wraca do defaultu, nie do NULL
@@ -1098,8 +1103,8 @@
             const fields = ws.fields || [];
             if (fields.length) {
                 h += '<div class="space-y-3">' + fields.map((f, i) => f.ta
-                    ? `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><textarea rows="4" class="fld resize-y" onchange="sdSaveField(${i}, this.value)">${escapeHtml(fieldGet(f))}</textarea></div>`
-                    : `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><input class="fld" value="${escapeHtml(fieldGet(f))}" onchange="sdSaveField(${i}, this.value)"></div>`
+                    ? `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><textarea rows="4" class="fld resize-y" aria-label="${escapeHtml(f.l)}" onchange="sdSaveField(${i}, this.value)">${escapeHtml(fieldGet(f))}</textarea></div>`
+                    : `<div><label class="text-xs text-zinc-500 block mb-1">${escapeHtml(f.l)}</label><input class="fld" aria-label="${escapeHtml(f.l)}" value="${escapeHtml(fieldGet(f))}" onchange="sdSaveField(${i}, this.value)"></div>`
                 ).join('') + '</div>';
             }
             if (ws.productBtn && p) {
