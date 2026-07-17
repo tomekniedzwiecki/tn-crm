@@ -197,6 +197,12 @@ Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 16.07: „brakuje animacji w JS, czegoś co doda życia, pokaże profesjonalizm i ZAANGAŻUJE;
 nie robić wszystkiego naraz — etapami").** Wykonywany DOPIERO po zamknięciu dopasowania
 wizualnego (F7.1) i audytu grafika-first — na stabilnej stronie, jako dedykowana runda:
+0. **CHOREOGRAF (NOWE, Tomek 17.07) — procedura `docs/zbuduje/CHOREOGRAFIA-ANIMACJI.md`
+   (CZYTAĆ):** 1 call gpt-5.6-sol (high, tekst, cap ~4k) → MOTION-DNA landingu (tokeny
+   ruchu z osobowości marki) + SPEC animacji per KAŻDA sekcja (motyw z TREŚCI sekcji,
+   intensywność L1/L2/L3, budżet ≤2×L3). Implementacja = JEDEN wspólny moduł (data-mo +
+   rozszerzenie istniejącego IO), weryfikacja CDP (klasy .in, 55fps, CLS=0, reduced-motion).
+   Każda sekcja żyje własnym motywem, całość mówi jednym językiem.
 1. **CREATIVE TECHNOLOGIST** (gpt-5.6-sol; wybór wzorców z **`docs/zbuduje/
    INTERAKCJE-KATALOG.md`** — katalog 15 wzorców per typ produktu + szablon SPEC-a +
    anty-wzorce; research 16.07). **FILTR SENSU (twardy):** interakcja musi demonstrować
@@ -225,6 +231,15 @@ następnego; jeden etap = jedna intencja (nie mieszać dopasowania z animacjami 
 `<img>` naturalWidth>0 (eager-wait) · assety 200 · reduced-motion pokazuje pełną treść ·
 grep zakazów i liczb · JSON-LD parse · `node --check` exec-scriptu · placeholdery+noindex ·
 sticky nie zasłania (padding-bottom stopki) · lightbox/taby/wideo działają ·
+**GATE'y z oceny Latarka (Tomek 17.07 — 3 bugi, których stare F6 nie łapało):**
+(a) **ZERO SIEROT-ASSETÓW:** lista plików w archiwum `assets/` == URL-e w kodzie — każdy
+wygenerowany asset użyty albo świadomie skreślony z notą (Latarek: para macro-off/on i foto
+porównania leżały nieużyte, a sekcje były okaleczone); (b) **INTERAKCJA = WIDOCZNA ZMIANA:**
+screenshot stanu min vs max (po zatrzymaniu teasera przez zdarzenie input!) — SSIM stanów
+<0.9, inaczej FAIL (Latarek: oba stany suwaka = ten sam plik + filtr, który nic nie ukrywał;
+efekt „zobacz X" WYMAGA realnej pary stanów); (c) **ASPEKT SCENY == SLOT:** grafika pionowa
+w szerokim slocie full-bleed (i odwrotnie) = FAIL PRZED montażem (Latarek: finał 2:3 w slocie
+3:2 → cover-zoom obcinał psa); object-position wg pozycji podmiotu na makiecie.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**

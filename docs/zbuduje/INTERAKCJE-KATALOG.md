@@ -58,3 +58,13 @@ ciemne „kosmiczne" tła · marquee logotypów · scroll-hijack/smooth-scroll p
 animacje opóźniające treść (intra/„loading experience") · AI-poetic copy przy animacjach ·
 autoplay z dźwiękiem · kontrolka zmieniająca tylko liczbę · efekty tylko-hover (mobile!) ·
 brak prefers-reduced-motion.
+
+## LEKCJA LATARKA (17.07) — STANY INTERAKCJI PRZED/PO
+Interakcja typu „zobacz X" (LED pokazuje żyłkę, przed/po efektu) WYMAGA realnej PARY stanów:
+- ZAKAZ: jeden obraz + filtr CSS jako stan bazowy, gdy filtr nie UKRYWA efektu (Latarek:
+  desaturacja nie chowała żyłki → suwak „nie działał" wizualnie mimo poprawnego JS).
+- Para z DRYFEM kadru (generacje nie są pixel-aligned) → **crossfade z ostrą krzywą**
+  `opacity: clamp(0,(var(--t) - .4)*5,1)` (strefa duchów zawężona do t≈.4-.6), NIE wipe
+  z linią podziału (szew zdradza różnicę kadrów). Wipe tylko przy parze pixel-aligned
+  (jeden obraz przetworzony deterministycznie, np. filtr który NAPRAWDĘ ukrywa efekt).
+- Gate F6(b): screenshot stanu min vs max (teaser zatrzymany przez event input) — SSIM <0.9.
