@@ -54,9 +54,15 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   zero fioletu/rose. Sidebar: `/tn-sklepy` sprawdzane PRZED `/tn-sklep` w detectCurrentApp.
 
 ### bud-ali-snapshot — GOTCHA endpointu
-Detail aukcji = `/api/v3/product-info` (aliexpress-true-api); odpowiedź to TABLICA
-`[{...}]`, błąd = `{"No information":...}`; `target_currency=PLN`/`target_language=PL`
-NIE działa — tylko USD/EN (ceny w snapshocie SĄ W USD, front przelicza kursem NBP).
+Detail aukcji = DWA źródła (od 17.07): (1) `/api/v3/product-info` (aliexpress-true-api,
+warstwa AFILIACYJNA — tytuł/galeria/cena/sold_volume/video/shop; odpowiedź to TABLICA
+`[{...}]`, błąd = `{"No information":...}`; NIGDY nie zwróci specs/opisu/SKU — żaden tier);
+(2) **AliExpress DataHub** (`aliexpress-datahub.p.rapidapi.com`, ten sam klucz RapidAPI po
+subskrypcji) — kaskada `item_detail_6→3→2` (pojedyncze wersje miewają 5040) dociąga:
+`properties.list`→specs, `description.html`→opis, `sku.base+props`→warianty z cenami.
+`target_currency=PLN`/`target_language=PL` NIE działa — tylko USD/EN (ceny w snapshocie
+SĄ W USD, front przelicza kursem NBP). Sonda diagnostyczna: body `{rawProbe:true|'datahub',
+product_id, dh_endpoint?, dh_summary?}`.
 `source==='detail'` = potwierdzona żywa aukcja; 'search' = możliwy INNY produkt/martwa
 aukcja (UI pokazuje alert + podmianę linku). Endpoint nie zwraca opisu ani cen SKU.
 **Fabryka landingów: `source!=='detail'` = GATE STOP** (force:true raz, potem nota do
