@@ -281,7 +281,18 @@ Reguły do dopisania do §1/§2/§1.16 (triangulowane z 2-3 źródeł; źródła
 - [x] **Fix PKE opt-out (obie apki)** — LIVE 2026-07-17. `winback_1`→`marketing:true` + centralny gate opt-out w `sendTpl` + guard placeholdera + budżet `mailedThisRun` w welcome/nudge; Fachmat migr. `0027` (przywraca `trial_tip_*` do dedup idx — regresja 0026). DW `baadaba`, Fachmat `bbc3415`, redeploy `lifecycle-emails` obu.
 - [x] **Pętla udoskonalania fabryki — fala 1** — 2026-07-17. 4 soczewki (research zewn. Sonnet 5 + red-team 5 nisz + krytyk kompletności + audyt rozjazdu 3 impl.) → **§6 taksonomia aha + 9 punktów wariacji**, **§7 rozszerzenia 2026**, **§8 anti-drift**. Prompt kroku `onboarding` zaktualizowany (`03c61221`). Hardening startera LIVE (`ce9bc0a`): dashboard env-niezależny + `activated_from_fallback`, clamp step_index/name + cap, `initChecklist(ctx,{steps})`, a11y baseline (focus-visible, touch≥24px, aria-live), `ONBOARDING_ACTIVATION_CONFIG`.
 
-### BACKLOG (świadomie odłożone — wymagają własnych sesji; priorytet malejąco)
+- [x] **Backlog fala F1 (kontynuacja 17.07)** — WDROŻONE do startera (`saas-starter` `59c5a74`/`946d80c`/`444b952`) + apki: meta-onboarding OPERATORA (`operator-onboard.js` + `operator_activated`), stan kroku `awaiting`, `_shared/aha.ts emitServerAha` (4. źródło aha), pas zaufania `trustBar`, pomiar jakościowy `askFriction`, variant cross-app, progressive profiling `captureProfileField`, resurrection (osobny etap, migr. starter 0021), detektor spójności aha + a11y hook w `audit-static`, `LIFECYCLE_TIMING`+`EXPECTED_TTFV_DAYS` (okna serii/IDLE skalowane) + anti-„wyrzut" nudge. Dług apek: DW przyjął generyczny `generation.js` + render KPI generacji (`a509f02`); Fachmat emituje `setup_completed` (`b8a8106`, admin-stats redeploy). PKE opt-out fix wdrożony w obu (`baadaba`/`bbc3415`).
+
+### BACKLOG (POZOSTAŁE — wymagają własnych sesji/decyzji; priorytet malejąco)
+- **Central „activation across apps" w tn-crm** (§7 uczenie między apkami) — agregacja median TTFV/activation per nisza (rura ai-billing) → realne progi §1.16 + rozbicie po `variant` (hook `getVariant` już w starterze).
+- **value-before-signup + keepable artifact** (§7) — demo-aha przed rejestracją / artefakt „do zabrania"; decyzja per nisza.
+- **Agent domyka setup „za mnie"** (§7 / §4b) — dla setupu >2 pól; rozszerzenie async-AI.
+- **axe-core E2E gate a11y** (§7) — pełny gate na 3 powierzchniach (survey/checklist/empty-state); dziś heurystyczny WARN w audit-static.
+- **Deliverability SLO — pełna implementacja** (§7) — auto-pauza kindu (complaint>0,1%/bounce>0,5%) + bramka `mail_domain_verified`; dziś TODO-hook. + tier SMS + progi handoffu do człowieka + changelog↔onboarding gating.
+- **Wave 2b pełna regeneracja serwerowa nudge** — `_shared/plan-core.ts` (refaktor rdzenia `prep-plan`, parytet+E2E) → nudge dostarcza GOTOWY plan zamiast resume-linku.
+- **Fachmat: migracja onboardingu z `pulpit.js` do wspólnego silnika `@dsChecklist`** (dziś enhance in-place — dozwolona wariacja, ale dług).
+
+### BACKLOG-DONE (referencja, świadomie odłożone → zrobione w F1)
 1. **Meta-onboarding OPERATORA** (§7) — checklista „Pierwsze kroki operatora" + operator-empty-states w `admin.html`. Największa luka wg krytyka kompletności (dziś ZERO). Reuse `@dsChecklist`.
 2. **Stan `awaiting`/`enablingCta`** w `renderChecklist` (§6 pkt 5) — dla aha od-third-party/po-integracji/zespołowe („zrobione po Twojej stronie — czekamy na X"). Bez tego czekający wygląda jak porażka + nudge-„wyrzut".
 3. **Komponent/wzorzec server-aha** (§6 pkt 2, `aha_source=server-webhook`) — helper wstawiania eventu aha service-rolem (`user_id`=właściciel) dla wartości async/od innego aktora. Checklist już zniesie (nasłuch po user_id).
