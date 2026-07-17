@@ -942,8 +942,8 @@
     </header>
 
     <div id="sim" class="sim is-idle reveal" style="--t:0">
-      <img class="sim-image sim-image-off" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/claw-lit.webp" width="1536" height="1024" loading="lazy" alt="Jasny pazurek bez podświetlenia">
-      <img class="sim-image sim-image-on" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/claw-lit.webp" width="1536" height="1024" loading="lazy" alt="Jasny pazurek z widoczną żyłką dzięki podświetleniu LED">
+      <img class="sim-image sim-image-off" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/macro-off.webp" width="1536" height="1024" loading="lazy" alt="Jasny pazurek bez podświetlenia — żyłki nie widać">
+      <img class="sim-image sim-image-on" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/macro-on.webp" width="1536" height="1024" loading="lazy" alt="Jasny pazurek z widoczną różową żyłką dzięki podświetleniu LED">
 
       <span class="sim-chip sim-chip-left">
         <svg viewBox="0 0 28 28" width="24" height="24" aria-hidden="true">
@@ -1019,13 +1019,15 @@
 
   #interakcja .sim-image-off {
     z-index: 1;
-    filter: saturate(.35) brightness(1.07) contrast(.98) sepia(.05);
   }
 
+  /* para realnych stanów (macro-off/on) — crossfade sterowany --t (światło „rozjaśnia się");
+     kadry pary nie są pixel-aligned: wipe z szwem odpada, a strefa mieszania (duchy)
+     zawężona ostrą krzywą do t≈0.40-0.60 — końcówki suwaka = czyste stany */
   #interakcja .sim-image-on {
     z-index: 2;
-    clip-path: inset(0 calc((1 - var(--t)) * 100%) 0 0);
-    will-change: clip-path;
+    opacity: clamp(0, (var(--t) - 0.4) * 5, 1);
+    will-change: opacity;
   }
 
   #interakcja .sim-chip {
@@ -1069,17 +1071,7 @@
   }
 
   #interakcja .sim-divider {
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: calc(var(--t) * 100%);
-    z-index: 4;
-    width: 3px;
-    background: rgba(255, 255, 255, .96);
-    box-shadow: 0 0 12px rgba(32, 38, 46, .12);
-    transform: translateX(-50%);
-    pointer-events: none;
-    will-change: left;
+    display: none; /* crossfade zamiast wipe — linia podziału zbędna */
   }
 
   #interakcja .sim-handle {
@@ -1471,7 +1463,9 @@
 </style>
 
 <section id="porownanie" class="sect-pad">
-  <div class="wrap">
+  <div class="wrap porownanie-grid">
+    <img class="porownanie-photo reveal" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/latarek/porownanie-photo.webp" width="760" height="1024" loading="lazy" alt="Pies podczas obcinania pazurków Latarkiem z włączonym podświetleniem">
+    <div class="porownanie-right">
     <header class="porownanie-head reveal">
       <p class="eyebrow">UCZCIWIE</p>
       <h2 class="h2">Latarek kontra <span class="ac">zwykły</span> obcinacz</h2>
@@ -1517,9 +1511,36 @@
 
       <p class="comparison-note">Czarne i ciemne pazurki: światło nie prześwietla — żyłki nie widać (jak w każdym obcinaczu).</p>
     </div>
+    </div>
   </div>
 </section>
 <style>
+  /* siatka wg makiety 07: zdjęcie zabiegu w lewej kolumnie, treść po prawej */
+  #porownanie .porownanie-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: clamp(24px, 3.5vw, 52px);
+    align-items: stretch;
+  }
+  #porownanie .porownanie-photo {
+    width: 100%;
+    height: 100%;
+    min-height: 420px;
+    object-fit: cover;
+    border-radius: 18px;
+    box-shadow: 0 18px 44px rgba(32, 38, 46, .12);
+  }
+  #porownanie .porownanie-right { min-width: 0; }
+  @media (max-width: 860px) {
+    #porownanie .porownanie-grid { grid-template-columns: 1fr; }
+    #porownanie .porownanie-photo {
+      min-height: 0;
+      aspect-ratio: 4 / 3;
+      order: 2;
+      margin-top: 6px;
+    }
+    #porownanie .porownanie-right { order: 1; }
+  }
   #porownanie {
     background: var(--paper-2);
     color: var(--ink);
@@ -2384,7 +2405,7 @@
 </style>
 
 <section id="final" class="final">
-  <img class="scene" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/latarek/finalcta-scene.webp?width=1400&amp;quality=80&amp;resize=contain" width="1400" height="933" alt="Spokojny pies z zadbaną łapką obok Latarka" loading="lazy">
+  <img class="scene" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/latarek/finalcta-scene2.webp?width=1400&amp;quality=80&amp;resize=contain" width="1400" height="933" alt="Spokojny pies z zadbaną łapką obok Latarka" loading="lazy">
 
   <div class="wrap final-wrap">
     <div class="final-content">
@@ -2415,7 +2436,9 @@
     height: 100%;
     aspect-ratio: 3 / 2;
     object-fit: cover;
-    object-position: center center;
+    /* podmiot (pies) jest w LEWEJ połowie sceny (makieta 12) — trzymaj go w kadrze,
+       treść i gradient zajmują prawą stronę */
+    object-position: 14% center;
   }
 
   #final::before {
