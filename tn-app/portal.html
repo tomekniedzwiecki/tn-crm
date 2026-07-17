@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Postęp budowy Twojej aplikacji</title>
     <meta name="robots" content="noindex, nofollow">
     <meta name="theme-color" content="#0a0a0b">
@@ -14,6 +14,16 @@
         /* Jedna wąska kolumna czytana z góry na dół — portal ma dwa zadania:
            (1) status w 5 sekund, (2) lista rzeczy do uzupełnienia. Nic nie konkuruje o uwagę. */
         * { margin:0; padding:0; box-sizing:border-box; }
+        /* Tokeny semantyczne (Faza 1) — ALIASY do obecnych wartości portalu. Zero zmian wizualnych:
+           to te same hexy, tylko wystawione jako zmienne, których używa nowy chrome nawigacji. */
+        :root{
+          --bg:#0a0a0b; --bg-elev:#0e0e10; --surface:#151517; --surface-2:#18181b;
+          --border:#1e1e21; --border-hover:#2b2b30; --border-strong:#333338;
+          --text:#fff; --text-2:#d4d4d8; --text-3:#a7a7af; --text-muted:#71717a; --text-faint:#5b5b63;
+          --accent:#0070f3; --accent-2:#52a8ff; --accent-bg:rgba(0,112,243,.12); --accent-border:rgba(0,112,243,.42);
+          --ok:#4cb782; --ok-2:#5fce8c; --warn:#f5b955; --err:#f26d78;
+          --r-sm:8px; --r:12px; --r-lg:14px; --tap:44px;
+        }
         body { background:#0a0a0b; color:#d4d4d8; font:14px/1.6 Inter, sans-serif; -webkit-font-smoothing:antialiased; min-height:100dvh; }
         ::selection { background:#fff; color:#000; }
         .wrap { max-width:640px; margin:0 auto; padding:52px 22px 88px; }
@@ -182,17 +192,17 @@
             font-size:12.5px; font-weight:500; padding:11px 16px; text-align:center; display:flex; align-items:center;
             justify-content:center; gap:8px; box-shadow:0 1px 0 rgba(255,255,255,.1); }
 
-        /* Wejście: sekcje pojawiają się miękko, jedna po drugiej */
-        #content > * { animation:fadeUp .45s ease both; }
-        #content > *:nth-child(2) { animation-delay:.05s; } #content > *:nth-child(3) { animation-delay:.1s; }
-        #content > *:nth-child(4) { animation-delay:.15s; } #content > *:nth-child(5) { animation-delay:.2s; }
-        #content > *:nth-child(6) { animation-delay:.25s; } #content > *:nth-child(7) { animation-delay:.3s; }
-        #content > *:nth-child(8) { animation-delay:.35s; } #content > *:nth-child(9) { animation-delay:.4s; }
+        /* Wejście: sekcje aktywnego panelu pojawiają się miękko, jedna po drugiej (re-run przy zmianie zakładki) */
+        .panel > * { animation:fadeUp .45s ease both; }
+        .panel > *:nth-child(2) { animation-delay:.05s; } .panel > *:nth-child(3) { animation-delay:.1s; }
+        .panel > *:nth-child(4) { animation-delay:.15s; } .panel > *:nth-child(5) { animation-delay:.2s; }
+        .panel > *:nth-child(6) { animation-delay:.25s; } .panel > *:nth-child(7) { animation-delay:.3s; }
         @keyframes fadeUp { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
         @media (prefers-reduced-motion: reduce) {
-            #content > * { animation:none; }
+            .panel > * { animation:none; }
             .bar { transition:none; }
             .life::before, .trow.cur .tglyph::before { animation:none; }
+            .navlink { transition:none; }
         }
 
         /* Testy aplikacji — czat „spowiednika testów" */
@@ -271,6 +281,64 @@
         .cl-cta { display:inline-flex; align-items:center; gap:6px; margin-top:12px; color:#5aa2ff; font-size:13px; font-weight:500; text-decoration:none; }
         .cl-cta:hover { color:#7fb8ff; }
         .cl-empty { color:#6b6b74; font-size:13px; margin-top:14px; }
+
+        /* ===== Nawigacja hub-and-spoke (Faza 1) — bottom-nav mobile + sidebar desktop ===== */
+        .panel[hidden] { display:none; }
+        .side-nav, .bot-nav { display:none; }
+        #nav-more-sheet[hidden] { display:none; }
+        .nav-badge { position:absolute; top:-5px; right:-9px; min-width:16px; height:16px; padding:0 4px;
+            border-radius:99px; background:var(--accent); color:#fff; font-size:10px; font-weight:600;
+            line-height:16px; text-align:center; font-variant-numeric:tabular-nums; }
+        .navlink { background:none; border:none; font-family:inherit; cursor:pointer; }
+        /* Desktop (>768px): lewy sidebar */
+        @media (min-width:769px) {
+            body.hub-on { padding-left:240px; }
+            body.hub-on .side-nav { display:flex; }
+            .side-nav { position:fixed; top:0; left:0; bottom:0; width:240px; flex-direction:column; gap:2px;
+                padding:26px 14px calc(26px + env(safe-area-inset-bottom)); background:var(--bg-elev);
+                border-right:1px solid var(--border); overflow-y:auto; z-index:90; }
+            .side-nav .snav-brand { display:flex; align-items:center; gap:9px; color:var(--text-faint);
+                font-size:12px; padding:2px 12px 20px; }
+            .side-nav .snav-brand b { color:#93939c; font-weight:500; }
+            .side-nav .navlink { display:flex; align-items:center; gap:12px; min-height:44px; padding:0 12px;
+                border-radius:var(--r-sm); color:var(--text-3); text-decoration:none; font-size:14px; font-weight:500;
+                transition:background .15s ease, color .15s ease; }
+            .side-nav .navlink .nav-ic { position:relative; display:flex; font-size:19px; }
+            .side-nav .navlink:hover { background:var(--surface); color:var(--text-2); }
+            .side-nav .navlink.active { background:var(--surface-2); color:var(--text); }
+            .side-nav .navlink:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+        }
+        /* Mobile (<=768px): dolny fixed pasek (kciuk, safe-area) */
+        @media (max-width:768px) {
+            body.hub-on { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+            body.hub-on .bot-nav { display:flex; }
+            .bot-nav { position:fixed; left:0; right:0; bottom:0; z-index:90; justify-content:space-around;
+                align-items:stretch; gap:2px; padding:6px 6px max(12px, env(safe-area-inset-bottom));
+                background:rgba(10,10,11,.92); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+                border-top:1px solid var(--border); }
+            .bot-nav .navlink { flex:1 1 0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+                gap:3px; min-height:var(--tap); min-width:var(--tap); padding:4px 2px; border-radius:10px;
+                color:var(--text-muted); text-decoration:none; font-size:10.5px; font-weight:500;
+                transition:background .15s ease, color .15s ease; }
+            .bot-nav .navlink .nav-ic { position:relative; display:flex; font-size:21px; }
+            .bot-nav .navlink .nav-lbl { line-height:1; letter-spacing:-.01em; }
+            .bot-nav .navlink.active { color:var(--text); background:var(--surface-2); font-weight:600; }
+            .bot-nav .navlink:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+        }
+        /* Arkusz „Więcej" (overflow > 5) */
+        #nav-more-sheet { position:fixed; z-index:95; left:0; right:0; bottom:0; background:var(--bg-elev);
+            border-top:1px solid var(--border); padding:10px 14px calc(14px + env(safe-area-inset-bottom));
+            display:flex; flex-direction:column; gap:2px; box-shadow:0 -8px 24px rgba(0,0,0,.4); }
+        @media (min-width:769px) { #nav-more-sheet { left:240px; } }
+        #nav-more-sheet .navlink { display:flex; align-items:center; gap:12px; min-height:44px; padding:0 12px;
+            border-radius:var(--r-sm); color:var(--text-3); text-decoration:none; font-size:14px; font-weight:500; }
+        #nav-more-sheet .navlink .nav-ic { position:relative; display:flex; font-size:19px; }
+        #nav-more-sheet .navlink.active { background:var(--surface-2); color:var(--text); }
+        /* Twój ruch — CTA deep-link + rama nagłówka „Twoje zgłoszenia" */
+        .move-cta { display:inline-flex; align-items:center; gap:5px; margin-left:8px; color:var(--warn);
+            font-weight:600; text-decoration:none; white-space:nowrap; }
+        .move-cta:hover { text-decoration:underline; }
+        .tk-frame { color:var(--text-2); font-size:13.5px; font-weight:600; margin-bottom:8px; }
     </style>
 </head>
 <body>
@@ -306,92 +374,120 @@
         <p class="sub">Ten link jest niekompletny. Użyj dokładnie tego, który otrzymałeś w wiadomości.</p>
     </div>
 
-    <!-- Treść -->
+    <!-- Treść — hub-and-spoke: każda zakładka = osobny panel (Faza 1/2). Panele zostają w DOM (hidden),
+         stan i scroll przetrwają przełączenie; nawigacja w #snav/#mnav (poza .wrap). -->
     <div id="content" class="hidden">
-        <!-- 1. Status: wszystko, czego klient potrzebuje, w kilku linijkach -->
-        <section style="margin-top:0">
-            <h1 id="c-name">…</h1>
-            <p class="sub" id="c-hello"></p>
-            <div class="prog">
-                <div class="bar-wrap"><div class="bar" id="c-bar"></div></div>
-                <span class="pct" id="c-pct"></span>
-            </div>
-            <p class="stageline" id="c-stageline"></p>
-            <p class="hint" id="c-hint"></p>
-            <p class="life" id="c-life"></p>
-        </section>
 
-        <!-- 1b. Jeden punkt wejścia partnera: „Otwórz swoją aplikację" (widoczne tylko gdy app_url = https://) -->
-        <a class="appcard hidden" id="c-appcard" target="_blank" rel="noopener" href="#">
-            <span class="appcard-ic"><i class="ph ph-rocket-launch"></i></span>
-            <span class="appcard-txt">
-                <span class="appcard-t">Otwórz swoją aplikację</span>
-                <span class="appcard-d" id="c-appcard-domain"></span>
-            </span>
-            <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
-        </a>
+        <!-- ===== PANEL: Przegląd ===== -->
+        <div class="panel" data-panel="przeglad" hidden>
+            <!-- Status: wszystko, czego klient potrzebuje, w kilku linijkach (pasek % + linia etapu + dowód życia) -->
+            <section style="margin-top:0">
+                <h1 id="c-name">…</h1>
+                <p class="sub" id="c-hello"></p>
+                <div class="prog">
+                    <div class="bar-wrap"><div class="bar" id="c-bar"></div></div>
+                    <span class="pct" id="c-pct"></span>
+                </div>
+                <p class="stageline" id="c-stageline"></p>
+                <p class="hint" id="c-hint"></p>
+                <p class="life" id="c-life"></p>
+            </section>
 
-        <!-- 2. Twój ruch: jedna linia, gdy piłka jest po stronie klienta -->
-        <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span></div>
+            <!-- Twój ruch: next-best-action z deep-linkiem do właściwej zakładki -->
+            <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span><a class="move-cta hidden" id="c-move-link" href="#/zadania" data-mod="zadania">Przejdź <i class="ph ph-arrow-right"></i></a></div>
 
-        <!-- 2a. Co nowego: opublikowane wpisy changelog (nowości / ulepszenia / poprawki) -->
-        <section class="hidden" id="c-changelog">
-            <div class="shead"><h2><i class="ph ph-megaphone" style="color:#5aa2ff"></i> Co nowego <span class="cl-badge hidden" id="c-cl-badge"></span></h2></div>
-            <p class="sdesc">Najnowsze ulepszenia Twojej aplikacji.</p>
-            <div id="c-cl-list"></div>
-        </section>
+            <!-- Mirror „Otwórz swoją aplikację" (proof-of-life, gdy app_url = https://) -->
+            <a class="appcard hidden" id="c-appcard-mirror" target="_blank" rel="noopener" href="#">
+                <span class="appcard-ic"><i class="ph ph-rocket-launch"></i></span>
+                <span class="appcard-txt">
+                    <span class="appcard-t">Otwórz swoją aplikację</span>
+                    <span class="appcard-d" id="c-appcard-mirror-domain"></span>
+                </span>
+                <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
+            </a>
 
-        <!-- 2b. Testy aplikacji: czat „spowiednika testów" (widoczny gdy krok testów aktywny) -->
-        <section class="hidden" id="c-testy">
-            <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
-            <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
-            <div class="tk-notice hidden" id="ct-notice"></div>
-            <div class="tk-chat card" id="ct-chat"></div>
-            <div class="tk-shots" id="ct-shots"></div>
-            <div class="tk-compose" id="ct-compose">
-                <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu z pliku" aria-label="Dodaj zrzut ekranu z pliku"><i class="ph ph-image"></i></button>
-                <button class="tk-ic cap" id="ct-capture" type="button" title="Zrób zrzut ekranu teraz" aria-label="Zrób zrzut ekranu teraz"><i class="ph ph-monitor"></i></button>
-                <textarea id="ct-input" rows="1" aria-label="Napisz, co zauważyłeś w aplikacji" placeholder="Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)"></textarea>
-                <button class="tk-ic snd" id="ct-send" type="button" title="Wyślij" aria-label="Wyślij wiadomość"><i class="ph ph-paper-plane-tilt"></i></button>
-            </div>
-            <p class="tk-hint">Zrzut ekranu: zrób go teraz ikoną monitora, dodaj z pliku ikoną obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij tutaj.</p>
-            <div class="tk-endrow"><button class="tk-end" id="ct-end" type="button">To wszystko — zakończ testy</button></div>
-            <div class="tk-issues hidden" id="ct-issues"></div>
-            <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" class="hidden">
-        </section>
+            <footer class="foot">
+                <p id="c-deadline"></p>
+                <p>Masz pytanie? Odpisz po prostu na naszą korespondencję mailową.</p>
+            </footer>
+        </div>
 
-        <!-- 3. Do uzupełnienia: jedyne miejsce z akcjami klienta -->
-        <section class="hidden" id="c-intake">
-            <div class="shead"><h2>Do uzupełnienia</h2><span class="scount" id="ci-count"></span></div>
-            <p class="sdesc">Uzupełnij, kiedy masz chwilę — im wcześniej, tym płynniej idzie budowa.</p>
-            <div id="ci-cards"></div>
-            <p class="tasks-foot">Każda karta zapisuje się osobno. Możesz tu wracać w dowolnym momencie.</p>
-        </section>
+        <!-- ===== PANEL: Budowa (oś kamieni + makiety) ===== -->
+        <div class="panel" data-panel="budowa" hidden>
+            <!-- Jedna oś czasu: kamienie milowe z datami ukończenia (jedyna szczegółowa reprezentacja procesu) -->
+            <section style="margin-top:0">
+                <div class="shead"><h2>Kamienie milowe</h2></div>
+                <div style="margin-top:14px" id="c-timeline"></div>
+            </section>
 
-        <!-- 4. Makiety ze sparingu -->
-        <section class="hidden" id="c-vision">
-            <div class="shead"><h2>Jak będzie wyglądać</h2></div>
-            <p class="sdesc">Wstępna wizja z naszej rozmowy — kierunek, nie finalny wygląd. Kliknij, aby powiększyć.</p>
-            <div class="vision-row" id="c-vision-grid"></div>
-        </section>
+            <!-- Makiety ze sparingu -->
+            <section class="hidden" id="c-vision">
+                <div class="shead"><h2>Jak będzie wyglądać</h2></div>
+                <p class="sdesc">Wstępna wizja z naszej rozmowy — kierunek, nie finalny wygląd. Kliknij, aby powiększyć.</p>
+                <div class="vision-row" id="c-vision-grid"></div>
+            </section>
+        </div>
 
-        <!-- 5. Jedna oś czasu: kamienie milowe z datami ukończenia -->
-        <section>
-            <div class="shead"><h2>Kamienie milowe</h2></div>
-            <div style="margin-top:14px" id="c-timeline"></div>
-        </section>
+        <!-- ===== PANEL: Do zrobienia (intake) ===== -->
+        <div class="panel" data-panel="zadania" hidden>
+            <section class="hidden" id="c-intake" style="margin-top:0">
+                <div class="shead"><h2>Do uzupełnienia</h2><span class="scount" id="ci-count"></span></div>
+                <p class="sdesc">Uzupełnij, kiedy masz chwilę — im wcześniej, tym płynniej idzie budowa.</p>
+                <div id="ci-cards"></div>
+                <p class="tasks-foot">Każda karta zapisuje się osobno. Możesz tu wracać w dowolnym momencie.</p>
+            </section>
+        </div>
 
-        <section class="hidden" id="c-linkbox">
-            <div class="shead"><h2>Linki</h2></div>
-            <div class="links" style="margin-top:12px" id="c-links"></div>
-        </section>
+        <!-- ===== PANEL: Testy (czat „spowiednika testów" + Twoje zgłoszenia) ===== -->
+        <div class="panel" data-panel="testy" hidden>
+            <section class="hidden" id="c-testy" style="margin-top:0">
+                <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
+                <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
+                <div class="tk-notice hidden" id="ct-notice"></div>
+                <div class="tk-chat card" id="ct-chat"></div>
+                <div class="tk-shots" id="ct-shots"></div>
+                <div class="tk-compose" id="ct-compose">
+                    <button class="tk-ic att" id="ct-attach" type="button" title="Dodaj zrzut ekranu z pliku" aria-label="Dodaj zrzut ekranu z pliku"><i class="ph ph-image"></i></button>
+                    <button class="tk-ic cap" id="ct-capture" type="button" title="Zrób zrzut ekranu teraz" aria-label="Zrób zrzut ekranu teraz"><i class="ph ph-monitor"></i></button>
+                    <textarea id="ct-input" rows="1" aria-label="Napisz, co zauważyłeś w aplikacji" placeholder="Napisz, co zauważyłeś… (możesz wkleić zrzut: Ctrl+V)"></textarea>
+                    <button class="tk-ic snd" id="ct-send" type="button" title="Wyślij" aria-label="Wyślij wiadomość"><i class="ph ph-paper-plane-tilt"></i></button>
+                </div>
+                <p class="tk-hint">Zrzut ekranu: zrób go teraz ikoną monitora, dodaj z pliku ikoną obrazka, wklej ze schowka (Ctrl+V) lub przeciągnij tutaj.</p>
+                <div class="tk-endrow"><button class="tk-end" id="ct-end" type="button">To wszystko — zakończ testy</button></div>
+                <div class="tk-issues hidden" id="ct-issues"></div>
+                <input type="file" id="ct-file" accept="image/png,image/jpeg,image/webp" class="hidden">
+            </section>
+        </div>
 
-        <div class="card hidden" id="c-contract" style="margin-top:58px"></div>
+        <!-- ===== PANEL: Twoja aplikacja (appcard + Co widzą Twoi użytkownicy + Linki) ===== -->
+        <div class="panel" data-panel="apka" hidden>
+            <a class="appcard hidden" id="c-appcard" target="_blank" rel="noopener" href="#" style="margin-top:0">
+                <span class="appcard-ic"><i class="ph ph-rocket-launch"></i></span>
+                <span class="appcard-txt">
+                    <span class="appcard-t">Otwórz swoją aplikację</span>
+                    <span class="appcard-d" id="c-appcard-domain"></span>
+                </span>
+                <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
+            </a>
 
-        <footer class="foot">
-            <p id="c-deadline"></p>
-            <p>Masz pytanie? Odpisz po prostu na naszą korespondencję mailową.</p>
-        </footer>
+            <!-- Co nowego: opublikowane wpisy changelog — rama „Co widzą Twoi użytkownicy" -->
+            <section class="hidden" id="c-changelog">
+                <div class="shead"><h2><i class="ph ph-megaphone" style="color:#5aa2ff"></i> Co nowego <span class="cl-badge hidden" id="c-cl-badge"></span></h2></div>
+                <p class="sdesc">Co widzą Twoi użytkownicy — najnowsze ulepszenia Twojej aplikacji.</p>
+                <div id="c-cl-list"></div>
+            </section>
+
+            <section class="hidden" id="c-linkbox">
+                <div class="shead"><h2>Linki</h2></div>
+                <div class="links" style="margin-top:12px" id="c-links"></div>
+            </section>
+        </div>
+
+        <!-- ===== PANEL: Umowa (warunkowy — dziś predykat = false, w „Więcej") ===== -->
+        <div class="panel" data-panel="umowa" hidden>
+            <div class="card hidden" id="c-contract" style="margin-top:0"></div>
+        </div>
+
     </div>
 
     <div id="loading" class="skel">Ładowanie…</div>
@@ -400,6 +496,11 @@
         accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.html,.htm,.csv,.xls,.xlsx,.doc,.docx,.txt,.zip">
 </div>
 <div id="vlb" onclick="this.classList.remove('show')"><img id="vlb-img" src="" alt=""></div>
+
+<!-- Nawigacja hub-and-spoke (poza .wrap; widoczna dopiero po wejściu do huba = body.hub-on) -->
+<nav id="snav" class="side-nav" aria-label="Sekcje portalu"></nav>
+<nav id="mnav" class="bot-nav" aria-label="Sekcje portalu"></nav>
+<div id="nav-more-sheet" aria-label="Więcej sekcji" hidden></div>
 
 <script>
     const FN_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wfa-portal';
@@ -469,6 +570,124 @@
         ['login','setpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
     }
 
+    // ============ NAWIGACJA HUB-AND-SPOKE (Faza 1/2) ============
+    // Pojedyncze źródło prawdy nawigacji. Panele są statyczne w DOM (treść zasilają istniejące loadX()),
+    // showModule() tylko przełącza widoczność → stan formularzy i zbindowane handlery przetrwają.
+    const navData = {};              // pola do when(): app_url, landing_url, changelog_any, testy_active, contract_status; + _clUnread, _testyBadge
+    let currentModule = null, hubReady = false, pendingRoute = null;
+    function intakeOpenCount() { if (!intakeData) return 0; try { return IC_ORDER.filter(k => icStatus(k) !== 'done').length; } catch (_) { return 0; } }
+    const MODULES = [
+        { id:'przeglad', label:'Przegląd',        icon:'ph-squares-four',     when:()=>true },
+        { id:'budowa',   label:'Budowa',          icon:'ph-stack',            when:()=>true },
+        { id:'zadania',  label:'Do zrobienia',    icon:'ph-list-checks',      when:()=>true,                                                          badge:()=>intakeOpenCount() },
+        { id:'testy',    label:'Testy',           icon:'ph-chat-circle-dots', when:d=>!!d.testy_active,                                               badge:()=>navData._testyBadge||0 },
+        { id:'apka',     label:'Twoja aplikacja', icon:'ph-rocket-launch',    when:d=>!!(d.app_url||d.landing_url||d.changelog_any),                  badge:()=>navData._clUnread||0 },
+        { id:'umowa',    label:'Umowa',           icon:'ph-file-text',        when:d=>!!d.contract_status && d.contract_status!=='brak' },
+    ];
+    const DEFAULT_MODULE = 'przeglad';
+    function visibleModules() { return MODULES.filter(m => { try { return !!m.when(navData); } catch (_) { return false; } }); }
+    function moduleVisible(id) { const m = MODULES.find(x => x.id === id); if (!m) return false; try { return !!m.when(navData); } catch (_) { return false; } }
+    // Router-vs-token: token siedzi w #t=<token> (auth czyta go na każdym starcie). Route dopisujemy jako
+    // parametr &m=<id> (URLSearchParams NIE psuje 32-hex tokenu) → token przeżywa nawigację i odświeżenie.
+    // Bez tokenu (teoretyczny deep-link z maila) → czysty #/<id>. parseRoute() akceptuje OBIE formy.
+    function routeHash(id) { return token ? ('#t=' + encodeURIComponent(token) + '&m=' + id) : ('#/' + id); }
+    function parseRoute() {
+        const h = location.hash || '';
+        const mm = h.match(/#\/([a-z]+)/i);          // wzorzec #/<id> (deep-link)
+        if (mm) return mm[1].toLowerCase();
+        try { const p = new URLSearchParams(h.replace(/^#/, '')); const m = p.get('m'); if (m) return String(m).toLowerCase(); } catch (_) {}
+        return null;                                  // #t=/#admintok/pusty → ignorowane (fallback)
+    }
+    function navBadgeHtml(m) { const b = m.badge ? (Number(m.badge()) || 0) : 0; return b > 0 ? '<span class="nav-badge">' + (b > 99 ? '99+' : b) + '</span>' : ''; }
+    // Etykieta/ikona = literały z MODULES (nie dane usera); esc() defensywnie mimo to.
+    function navItemHtml(m) {
+        return '<a class="navlink" data-mod="' + m.id + '" href="#/' + m.id + '" aria-current="false">' +
+            '<span class="nav-ic"><i class="ph ' + m.icon + '"></i>' + navBadgeHtml(m) + '</span>' +
+            '<span class="nav-lbl">' + esc(m.label) + '</span></a>';
+    }
+    function markActive(id) {
+        document.querySelectorAll('.navlink[data-mod]').forEach(a => {
+            const on = a.getAttribute('data-mod') === id;
+            a.classList.toggle('active', on);
+            a.setAttribute('aria-current', on ? 'page' : 'false');
+        });
+    }
+    function buildNav() {
+        const vis = visibleModules();
+        const snav = $('snav'), mnav = $('mnav'), sheet = $('nav-more-sheet');
+        if (snav) snav.innerHTML = '<div class="snav-brand"><i class="ph ph-app-window"></i> <b>Twój portal</b></div>' + vis.map(navItemHtml).join('');
+        let primary = vis, overflow = [];
+        if (vis.length > 5) { primary = vis.slice(0, 4); overflow = vis.slice(4); } // >5 → ostatni slot „Więcej"
+        let mh = primary.map(navItemHtml).join('');
+        if (overflow.length) mh += '<button class="navlink more-btn" type="button" aria-label="Więcej sekcji"><span class="nav-ic"><i class="ph ph-dots-three"></i></span><span class="nav-lbl">Więcej</span></button>';
+        if (mnav) mnav.innerHTML = mh;
+        if (sheet) { if (overflow.length) { sheet.innerHTML = overflow.map(navItemHtml).join(''); } else { sheet.innerHTML = ''; sheet.hidden = true; } }
+        markActive(currentModule || DEFAULT_MODULE);
+    }
+    function showModule(id) {
+        if (!moduleVisible(id)) id = DEFAULT_MODULE;
+        const changed = id !== currentModule;
+        currentModule = id;
+        document.querySelectorAll('#content > .panel').forEach(p => { p.hidden = (p.getAttribute('data-panel') !== id); });
+        markActive(id);
+        if (changed) { try { window.scrollTo(0, 0); } catch (_) {} }
+    }
+    function goModule(id) {
+        pendingRoute = null;                                  // jawna nawigacja użytkownika anuluje deep-link „w oczekiwaniu"
+        if (!moduleVisible(id)) id = DEFAULT_MODULE;
+        try { history.pushState(null, '', routeHash(id)); } catch (_) {}
+        showModule(id);
+    }
+    function onRoute() {
+        let id = parseRoute();
+        if (!id || !moduleVisible(id)) id = DEFAULT_MODULE;   // nieznany/niedozwolony/token → DEFAULT
+        showModule(id);
+    }
+    // Deleguj kliknięcia nav na document: preserwuj token (pushState → routeHash), przepuszczaj otwieranie
+    // w nowej karcie (modyfikatory / środkowy przycisk). Zero interpolacji danych — tylko id modułu z data-mod.
+    function navClickHandler(e) {
+        const more = e.target.closest && e.target.closest('.more-btn');
+        if (more) { e.preventDefault(); const s = $('nav-more-sheet'); if (s) s.hidden = !s.hidden; return; }
+        const a = e.target.closest && e.target.closest('[data-mod]');
+        if (!a) { const s = $('nav-more-sheet'); if (s && !s.hidden && !(e.target.closest && e.target.closest('#nav-more-sheet'))) s.hidden = true; return; }
+        if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || (e.button && e.button !== 0)) return;
+        e.preventDefault();
+        const s = $('nav-more-sheet'); if (s) s.hidden = true;
+        goModule(a.getAttribute('data-mod'));
+    }
+    // „Twój ruch" deep-link: intake niekompletny → Do zrobienia; runda testów gotowa → Testy; inaczej ukryj.
+    function updateMoveLink() {
+        const link = $('c-move-link'); if (!link) return;
+        let target = '';
+        if (intakeOpenCount() > 0) target = 'zadania';
+        else if (navData.testy_active && (navData._testyBadge || 0) > 0) target = 'testy';
+        if (target && moduleVisible(target)) { link.setAttribute('href', routeHash(target)); link.setAttribute('data-mod', target); link.classList.remove('hidden'); }
+        else link.classList.add('hidden');
+    }
+    // Przelicz nav po każdym powrocie fetchu (pojaw/znikaj fazowych zakładek + badge + deep-link).
+    function syncNav() {
+        buildNav();
+        updateMoveLink();
+        if (currentModule && !moduleVisible(currentModule)) { try { history.replaceState(null, '', routeHash(DEFAULT_MODULE)); } catch (_) {} showModule(DEFAULT_MODULE); }
+        // Deep-link do zakładki fazowej, która stała się dostępna dopiero po fetchu (testy/apka) — dokończ przejście.
+        if (pendingRoute && moduleVisible(pendingRoute)) { const p = pendingRoute; pendingRoute = null; try { history.replaceState(null, '', routeHash(p)); } catch (_) {} showModule(p); }
+    }
+    // Start huba: DOPIERO po show('content') (token już przetworzony). Idempotentny (guard hubReady).
+    function enterHub() {
+        document.body.classList.add('hub-on');
+        if (!hubReady) {
+            hubReady = true;
+            window.addEventListener('hashchange', onRoute);
+            window.addEventListener('popstate', onRoute);
+            document.addEventListener('click', navClickHandler);
+        }
+        buildNav();
+        const want = parseRoute();                            // zapamiętaj żądaną zakładkę (deep-link) zanim fazowe fetche wrócą
+        pendingRoute = (want && !moduleVisible(want)) ? want : null;
+        onRoute();
+        updateMoveLink();
+    }
+
     // First-visit: bez hasła pytamy portal, czy klient musi je dopiero ustawić (hash NULL),
     // czy loguje się istniejącym hasłem. Token 32-hex = sekret dostępowy.
     async function bootstrapAuth() {
@@ -522,6 +741,7 @@
             sessionStorage.setItem(PW_KEY, pw);
             currentPw = pw;
             render(d); show('content');
+            enterHub();     // router startuje po show('content') i po przetworzeniu tokenu
             loadContract(); // nie blokuje głównego renderu
             loadIntake();
             loadTesty();
@@ -544,6 +764,7 @@
             const d = await res.json();
             render(d); show('content');
             showPreviewBanner();
+            enterHub();     // nawigacja i deep-linki działają też w podglądzie (read-only)
             loadContract();
             loadIntake();
             loadTesty();
@@ -598,10 +819,12 @@
         const mk = (d.mockups || []).filter(m => m && m.url);
         if (mk.length) {
             vg.innerHTML = mk.map(m =>
-                '<div class="vision-item" onclick="openVlb(\'' + encodeURIComponent(m.url) + '\')">' +
+                '<div class="vision-item" data-vurl="' + esc(m.url) + '">' +
                 '<img src="' + esc(m.url) + '" alt="" loading="lazy">' +
                 '<div class="vcap">' + esc(m.view || '') + '</div></div>'
             ).join('');
+            // GATE A: klik przez delegację (data-vurl + esc), NIE inline onclick — apostrof w URL łamał string (encodeURIComponent nie koduje ').
+            vg.onclick = e => { const it = e.target.closest('[data-vurl]'); if (it) openVlb(encodeURIComponent(it.getAttribute('data-vurl'))); };
             $('c-vision').classList.remove('hidden');
         } else { $('c-vision').classList.add('hidden'); }
 
@@ -629,15 +852,8 @@
         // href ustawiamy przez setAttribute na ZWALIDOWANYM https:// (mocniej niż esc-do-innerHTML:
         // zero konkatenacji do HTML, DOM sam escapuje atrybut). Brak/niepoprawny app_url = ukryj.
         const appUrl = safeHttpsUrl(d.app_url);
-        const appCard = $('c-appcard');
-        if (appUrl) {
-            appCard.setAttribute('href', appUrl);
-            $('c-appcard-domain').textContent = urlHost(appUrl);
-            appCard.classList.remove('hidden');
-        } else {
-            appCard.setAttribute('href', '#');
-            appCard.classList.add('hidden');
-        }
+        renderAppcard('c-appcard', 'c-appcard-domain', appUrl);       // real (panel Twoja aplikacja)
+        renderAppcard('c-appcard-mirror', 'c-appcard-mirror-domain', appUrl); // mirror (Przegląd)
 
         const links = [];
         const landingUrl = safeHttpsUrl(d.landing_url);
@@ -646,6 +862,24 @@
         $('c-links').innerHTML = links.join('');
 
         $('c-deadline').textContent = d.deadline_at ? ('Planowany termin oddania: ' + new Date(d.deadline_at).toLocaleDateString('pl-PL') + '.') : '';
+
+        // Zasil nawigację: predykaty when() dla zakładki „Twoja aplikacja" + odśwież nav/deep-link.
+        navData.app_url = appUrl || '';
+        navData.landing_url = landingUrl || '';
+        syncNav();
+    }
+    // Ustaw href/domenę/widoczność appcard przez setAttribute na ZWALIDOWANYM https:// (DOM sam escapuje
+    // atrybut — zero konkatenacji do HTML). Brak/niepoprawny app_url = ukryj. Używane dla realnej karty i mirrora.
+    function renderAppcard(cardId, domId, appUrl) {
+        const el = $(cardId); if (!el) return;
+        if (appUrl) {
+            el.setAttribute('href', appUrl);
+            const dm = $(domId); if (dm) dm.textContent = urlHost(appUrl);
+            el.classList.remove('hidden');
+        } else {
+            el.setAttribute('href', '#');
+            el.classList.add('hidden');
+        }
     }
 
     // „Ostatnia praca" po ludzku (dowód życia). Zwraca '' gdy brak daty.
@@ -677,15 +911,19 @@
     async function loadChangelogFeed() {
         try {
             const res = await callFn({ action: 'changelog_feed' });
-            if (!res.ok) { $('c-changelog').classList.add('hidden'); return; }
+            if (!res.ok) { $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); return; }
             renderChangelogFeed(await res.json());
-        } catch (e) { $('c-changelog').classList.add('hidden'); }
+        } catch (e) { $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); }
     }
     function renderChangelogFeed(d) {
         const sec = $('c-changelog'); if (!sec) return;
         const entries = (d && d.entries) || [];
         sec.classList.remove('hidden');
         const unread = (d && d.unread) || 0;
+        // Predykat when() zakładki „Twoja aplikacja": pusty changelog NIE odsłania zakładki (nie pokazujemy pustki).
+        navData.changelog_any = entries.length > 0;
+        navData._clUnread = unread;
+        syncNav();
         const badge = $('c-cl-badge');
         if (unread > 0) { badge.textContent = unread; badge.classList.remove('hidden'); }
         else { badge.textContent = ''; badge.classList.add('hidden'); }
@@ -713,7 +951,7 @@
     async function markChangelogSeen() {
         try {
             const res = await callFn({ action: 'changelog_seen' });
-            if (res.ok) { const b = $('c-cl-badge'); if (b) { b.textContent = ''; b.classList.add('hidden'); } }
+            if (res.ok) { const b = $('c-cl-badge'); if (b) { b.textContent = ''; b.classList.add('hidden'); } navData._clUnread = 0; syncNav(); }
         } catch (e) {}
     }
 
@@ -742,6 +980,7 @@
         const box = $('c-contract');
         const m = contractMeta || {};
         const st = m.contract_status || 'brak';
+        navData.contract_status = st; syncNav();   // predykat when() zakładki Umowa (dziś SHOW_CONTRACT=false → nieaktywna)
         if (st === 'brak') { box.classList.add('hidden'); box.innerHTML = ''; return; }
         box.classList.remove('hidden');
         let inner = '<div class="shead" style="margin-bottom:14px"><h2>Umowa</h2></div>';
@@ -771,7 +1010,7 @@
             inner += '<div class="note-box">Otrzymaliśmy Twoją podpisaną umowę — po podpisie z naszej strony znajdziesz tu finalny dokument.</div>';
         } else if (st === 'podpisana') {
             inner += '<div class="ok-box"><div style="color:#8fe3a3;font-weight:600;margin-bottom:6px"><i class="ph ph-seal-check"></i> Umowa podpisana obustronnie</div>' +
-                (m.final_url ? '<a href="' + esc(m.final_url) + '" target="_blank" rel="noopener"><i class="ph ph-download-simple"></i> Pobierz podpisaną umowę</a>' : '<span style="color:#9db8a4;font-size:12.5px">Finalny dokument pojawi się tutaj wkrótce.</span>') +
+                (safeHttpsUrl(m.final_url) ? '<a href="' + safeHttpsUrl(m.final_url) + '" target="_blank" rel="noopener"><i class="ph ph-download-simple"></i> Pobierz podpisaną umowę</a>' : '<span style="color:#9db8a4;font-size:12.5px">Finalny dokument pojawi się tutaj wkrótce.</span>') +
                 '</div>';
         }
         box.innerHTML = inner;
@@ -861,7 +1100,7 @@
             intakeData = d.sections;
             renderIntake();
             $('c-intake').classList.remove('hidden');
-        } catch (e) { $('c-intake').classList.add('hidden'); }
+        } catch (e) { $('c-intake').classList.add('hidden'); if (typeof syncNav === 'function') syncNav(); }
     }
 
     // Status karty: firma/materiały/beta wg backendu; Stripe wyliczany z faktów.
@@ -927,6 +1166,7 @@
         });
         $('ci-count').textContent = done + ' z ' + IC_ORDER.length + (done === IC_ORDER.length ? ' ✓' : ' uzupełnione');
         const sbtn = $('ci-stripe-btn'); if (sbtn) sbtn.style.display = icStatus('stripe') === 'done' ? 'none' : '';
+        if (hubReady) syncNav();   // badge nav „Do zrobienia" = liczba nieukończonych + odśwież deep-link „Twój ruch"
     }
 
     function renderIntake() {
@@ -965,7 +1205,7 @@
             line(!!st.blik_active, 'BLIK aktywny') +
             (previewMode
                 ? '<div class="note-box" style="margin-top:12px"><i class="ph ph-info"></i> Podgląd — tu klient przechodzi weryfikację w Stripe.</div>'
-                : '<a class="cbtn ic-save" id="ci-stripe-btn" style="display:inline-flex;text-decoration:none;margin-top:12px" href="' + esc(st.onboard_url || '#') + '" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i> Przejdź weryfikację w Stripe</a>') +
+                : '<a class="cbtn ic-save" id="ci-stripe-btn" style="display:inline-flex;text-decoration:none;margin-top:12px" href="' + (safeHttpsUrl(st.onboard_url) || '#') + '" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i> Przejdź weryfikację w Stripe</a>') +
             '<p class="ic-hint">Konto zakładasz raz, zajmuje ok. 10 minut. Dane trafiają bezpośrednio do Stripe — my ich nie widzimy.</p>';
 
         // Karta 4 — Beta
@@ -1136,15 +1376,18 @@
     async function loadTesty() {
         try {
             const res = await callTest({ action: 'history' });
-            if (!res.ok) { $('c-testy').classList.add('hidden'); return; }
+            if (!res.ok) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
             const d = await res.json();
-            if (!d.active) { $('c-testy').classList.add('hidden'); return; }
+            if (!d.active) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
             $('c-testy').classList.remove('hidden');
             renderTestChat(d.messages || []);
             renderTestIssues(d.issues || [], d.rounds || []);
             renderRoundNotice(d.round_notice || null);
             if (previewMode) lockTestCompose();
-        } catch (e) { $('c-testy').classList.add('hidden'); }
+            navData.testy_active = true;                       // predykat when() zakładki Testy
+            navData._testyBadge = d.round_notice ? 1 : 0;      // badge = nowa runda
+            syncNav();
+        } catch (e) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); }
     }
     // Komunikat serii poprawek („Runda N gotowa — przetestuj ponownie"). Znika, gdy klient
     // dorzuci nowe zgłoszenie w bieżącej rundzie (edge przestaje go zwracać / hide przy wysyłce).
@@ -1208,7 +1451,8 @@
         const byRound = {};
         issues.forEach(i => { const r = i.round_no || 1; (byRound[r] = byRound[r] || []).push(i); });
         const rnums = Object.keys(byRound).map(Number).sort((a, b) => a - b);
-        let h = '<div class="tih">Historia poprawek' + (done ? ' · ' + done + ' naprawionych ✅' : '') + '</div>';
+        let h = '<div class="tk-frame">Twoje zgłoszenia</div>' +
+            '<div class="tih">Historia poprawek' + (done ? ' · ' + done + ' naprawionych ✅' : '') + '</div>';
         rnums.forEach(r => {
             if (rnums.length > 1) {
                 const m = roundMeta[r]; let sub = '';
