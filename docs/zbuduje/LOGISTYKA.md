@@ -39,6 +39,13 @@ Własny magazyn w Polsce. Przez cały czas operacje trzymamy my."
 
 ## 3. Stos API (sourcing + zamówienia)
 
+> **DECYZJA Tomka 2026-07-17: CJ Dropshipping ODRZUCONE. Fokus wyłącznie AliExpress + Allegro.**
+> Kręgosłup zamówień = AliExpress DS API; Allegro = sourcing PL (zakup ręczny linkiem;
+> dostęp do wyszukiwania — patrz research dróg dostępu, oficjalny /offers/listing jest
+> partner-gated). Wiersze CJ/BigBuy/agenci w tabeli niżej = ARCHIWALNE opcje na przyszłość,
+> nie aktualny plan. Etap 2 (agent/branding) do ponownego wyboru dostawcy, gdy wolumen tego
+> zażąda — bez CJ.
+
 | Warstwa | Narzędzie | Status dostępu |
 |---|---|---|
 | **Zamówienia + fracht (kręgosłup)** | **CJ Dropshipping API** (free 1000 req/d, order create, magazyny EU/PL, sub-konta multi-store, sourcing requests 5/d — „znajdź mi to taniej" w 48 h; oficjalny MCP dla Claude!) | self-service — konto do założenia (Tomek) |
@@ -104,10 +111,31 @@ wpięty w realizację (bez tego konsument płaci VAT na odprawie = zwroty) · wh
 
 ## 8. Action items TOMKA (konta — wymagają firmy/decyzji)
 
-1. Konto CJ Dropshipping (self-service, od ręki) → potem klucz API do panelu; rozważyć
-   od razu MCP CJ dla Claude.
-2. Wniosek AliExpress Open Platform / DS API (konto sprzedawcy + developer, 1-2 dni).
-3. Kontakt partnerski AliPrice (partner.aliprice.com) — cross-platform image API.
-4. Rejestracja aplikacji Allegro API (odczyt ofert/ratingów).
-5. Z księgowym przed Etapem 3: model importera (wariant B: Tomek hurtowo → faktura B2B),
+1. Wniosek AliExpress Open Platform / DS API (konto sprzedawcy + developer, 1-2 dni).
+2. Kontakt partnerski AliPrice (partner.aliprice.com) — cross-platform image API.
+3. Allegro: wg wyników researchu dróg dostępu (oficjalny listing = partner-gated;
+   alternatywy: afiliacja/feedy, scraping-API-as-a-service — decyzja po raporcie).
+4. Z księgowym przed Etapem 3: model importera (wariant B: Tomek hurtowo → faktura B2B),
    IOSS klientów, EORI.
+~~Konto CJ Dropshipping~~ — ODRZUCONE decyzją Tomka 17.07.
+
+## 9. ⏸ WSTRZYMANE (decyzja Tomka 17.07: „zostaw na razie, wrócimy do tego")
+
+Wyszukiwarka ofert (search Ali+Allegro w zakładce Logistyka) — research DOMKNIĘTY,
+wdrożenie wstrzymane przed rozpoczęciem. Gotowa decyzja na powrót:
+- **JEDEN serwis = APIFY** (jedyny pokrywający oba portale): Allegro search =
+  `automation-lab/allegro-scraper` (cena+dostawa, sprzedawca, rating%, Super Seller;
+  ~$2-3/1000); Ali search = `epctex/aliexpress-scraper` (JEDYNY z shipTo=Poland +
+  ceny PLN Z WYSYŁKĄ + positive% + sold; $30/mies. rental, 4.97★); Ali po zdjęciu =
+  `freecamp008/aliexpress-search-by-image-actor` ($1.20/1000, 5.0★; NIE mylić z jego
+  DEPRECATED wariantem). Fallbacki: Piloterr (Allegro), fetch_cat (Ali), RapidAPI
+  true-api (detal — już wpięty).
+- Oficjalny Allegro /offers/listing = 403 dla nowych aplikacji (zawieszone przez
+  Allegro „z powodów biznesowych" — potwierdzone przez pracownika, IX.2025). RapidAPI
+  nie ma wiarygodnego Allegro.
+- Allegro Affiliate Business — do założenia przy powrocie (prowizja od własnych zakupów).
+- Plan wdrożenia (prompt gotowy w transkrypcie): edge `bud-allegro-search` → rozszerzyć
+  na `bud-offer-search` (oba portale), wspólny moduł silnika `_shared/offer-engine.ts`
+  (wyciągnięty z bud-offers), cache 12 h (tabela bud_allegro_cache), przycisk „Szukaj"
+  w detalu Logistyki, wyniki → „+ jako oferta" z prefilled score. Wymaga: APIFY_TOKEN
+  w sekretach edge (konto Apify Tomka).
