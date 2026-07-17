@@ -62,26 +62,32 @@ Deno.serve(async (req) => {
   // jeszcze nie jest storage'owy). Zwraca {processed, rehosted_images, failed}. Wołane w pętli aż processed=0.
   if (body.op === "shop_images") {
     const lim: number = Math.min(body.limit || 50, 100);
-    // Kandydaci: images obecne, images_hosted brak. Filtr jsonb-path w PostgREST + dodatkowy guard w JS.
-    const { data: cand, error: cErr } = await supabase
+    const topUp = !!body.topUp; // dorabianie brakujących: hosted istnieje, ale krótsze niż images (limit był 3, teraz 8)
+    // Kandydaci: images obecne; bez topUp — images_hosted brak; z topUp — filtr długości w JS (PostgREST
+    // nie porówna długości dwóch tablic jsonb).
+    let q = supabase
       .from("bud_tt_products")
       .select("key,cover,tt_shop")
       .in("status", ["pending", "approved"])
-      .not("tt_shop->images", "is", null)
-      .is("tt_shop->images_hosted", null)
-      .limit(lim);
+      .not("tt_shop->images", "is", null);
+    if (!topUp) q = q.is("tt_shop->images_hosted", null);
+    const { data: cand, error: cErr } = await q.limit(topUp ? 1000 : lim);
     if (cErr) return jsonRes({ error: cErr.message }, 500);
     let processed = 0, rehosted_images = 0, failed = 0;
     const results: Array<Record<string, unknown>> = [];
     for (const row of (cand || [])) {
+      if (processed >= lim) break;
       // deno-lint-ignore no-explicit-any
       const ts: any = row.tt_shop;
       const imgs: string[] = Array.isArray(ts?.images) ? ts.images : [];
-      if (!imgs.length || (Array.isArray(ts?.images_hosted) && ts.images_hosted.length)) continue; // guard
+      const hostedNow: string[] = Array.isArray(ts?.images_hosted) ? ts.images_hosted : [];
+      if (!imgs.length) continue;
+      if (topUp) { if (hostedNow.length >= Math.min(imgs.length, 8)) continue; } // komplet — pomiń
+      else if (hostedNow.length) continue; // guard trybu podstawowego
       processed++;
       const key = row.key as string;
       try {
-        const hosted = await rehostShopImages(supabase, key, imgs, 3);
+        const hosted = await rehostShopImages(supabase, key, imgs, 8);
         if (!hosted.length) { failed++; results.push({ key, err: "no-hosted" }); continue; }
         // deno-lint-ignore no-explicit-any
         const patch: Record<string, any> = { tt_shop: { ...ts, images_hosted: hosted } };

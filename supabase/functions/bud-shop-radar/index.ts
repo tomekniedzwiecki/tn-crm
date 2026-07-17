@@ -467,7 +467,7 @@ Deno.serve(async (req) => {
       if (Date.now() - t0 > DEADLINE_MS - 20_000) { partial = true; break } // zostaw zapas na zapis
       const imgs = Array.isArray(r.tt_shop?.images) ? r.tt_shop.images : []
       if (!imgs.length) continue
-      const hosted = await rehostShopImages(supabase, r.key, imgs, 3)
+      const hosted = await rehostShopImages(supabase, r.key, imgs, 8)
       if (!hosted.length) continue
       const tt_shop = { ...r.tt_shop, images_hosted: hosted }
       const patch: any = { tt_shop: deepSanitize(tt_shop) }

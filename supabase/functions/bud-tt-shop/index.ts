@@ -191,7 +191,7 @@ async function processRow(supabase: any, row: any): Promise<{ key: string; score
     if (prevHosted?.length) {
       shop.images_hosted = prevHosted
     } else if (Array.isArray(shop.images) && shop.images.length) {
-      const hosted = await rehostShopImages(supabase, row.key, shop.images, 3)
+      const hosted = await rehostShopImages(supabase, row.key, shop.images, 8)
       if (hosted.length) shop.images_hosted = hosted
     }
     patch.tt_shop = deepClean(shop)   // usuń osierocone surogaty (slice tnie emoji) → inaczej PGRST102 wywala cały UPDATE
