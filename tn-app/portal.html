@@ -47,9 +47,44 @@
         .life::before { content:''; width:6px; height:6px; border-radius:50%; background:#4cb782; animation:pulse 2.2s ease-in-out infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
 
-        /* Twój ruch — spokojna linia, nie baner */
-        .move { margin-top:38px; border-left:2px solid #f5b955; padding:3px 0 3px 15px; font-size:13.5px; color:#cbbd9e; line-height:1.6; }
-        .move b { color:#f5b955; font-weight:600; }
+        /* Twój ruch — next-best-action (Faza 3): karta; z twardym CTA = mocny akcent, bez = spokojna */
+        .move { margin-top:38px; padding:15px 18px; border:1px solid var(--border); border-radius:var(--r);
+            background:var(--bg-elev); display:flex; align-items:center; gap:12px 16px; flex-wrap:wrap; }
+        .move.move--cta { border-color:var(--accent-border); background:var(--accent-bg); }
+        .move-txt { flex:1 1 auto; min-width:180px; }
+        .move-lead { display:block; color:var(--accent-2); font-size:11px; font-weight:600;
+            text-transform:uppercase; letter-spacing:.07em; margin-bottom:3px; }
+        .move:not(.move--cta) .move-lead { color:var(--text-muted); }
+        .move-body { color:var(--text); font-size:14.5px; font-weight:500; line-height:1.5; }
+        .move-cta { display:inline-flex; align-items:center; justify-content:center; gap:7px;
+            min-height:var(--tap); padding:0 18px; border-radius:var(--r-sm); background:var(--accent);
+            color:#fff; font-size:13.5px; font-weight:600; text-decoration:none; white-space:nowrap;
+            transition:background .15s ease, transform .15s ease; }
+        .move-cta:hover { background:var(--accent-2); transform:translateY(-1px); }
+        .move-cta:focus-visible { outline:2px solid var(--accent-2); outline-offset:2px; }
+        /* Spokojny stan pustego ruchu — bez krzykliwego CTA */
+        .move-empty { margin-top:38px; padding:14px 18px; border:1px solid var(--border); border-radius:var(--r);
+            background:var(--bg-elev); color:var(--text-3); font-size:13.5px; line-height:1.5;
+            display:flex; align-items:center; gap:9px; }
+        .move-empty i { color:var(--ok); font-size:17px; flex-shrink:0; }
+
+        /* Kafle-skróty (Faza 3) — LEGO do zakładek istotnych w tej fazie: ikona + tytuł + stan + badge */
+        .tiles { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:34px; }
+        .tiles[hidden] { display:none; }
+        @media (max-width:420px){ .tiles { grid-template-columns:1fr; } }
+        .tile { display:flex; flex-direction:column; gap:7px; min-height:var(--tap); padding:15px 16px;
+            border:1px solid var(--border); border-radius:var(--r); background:var(--bg-elev);
+            text-decoration:none; transition:border-color .15s ease, background .15s ease, transform .15s ease; }
+        .tile:hover { border-color:var(--border-hover); background:var(--surface); transform:translateY(-1px); }
+        .tile:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+        .tile-ic { position:relative; display:inline-flex; align-items:center; justify-content:center;
+            width:34px; height:34px; border-radius:var(--r-sm); background:var(--surface-2);
+            color:var(--accent-2); font-size:19px; }
+        .tile-badge { position:absolute; top:-6px; right:-8px; min-width:16px; height:16px; padding:0 4px;
+            border-radius:99px; background:var(--accent); color:#fff; font-size:10px; font-weight:600;
+            line-height:16px; text-align:center; font-variant-numeric:tabular-nums; }
+        .tile-t { color:var(--text); font-size:14px; font-weight:600; letter-spacing:-.01em; }
+        .tile-s { color:var(--text-3); font-size:12.5px; line-height:1.4; }
 
         /* Jeden punkt wejścia partnera — „Otwórz swoją aplikację" (kartka, nie kokpit) */
         .appcard { display:flex; align-items:center; gap:16px; margin-top:34px; padding:18px 20px; text-decoration:none;
@@ -203,6 +238,7 @@
             .bar { transition:none; }
             .life::before, .trow.cur .tglyph::before { animation:none; }
             .navlink { transition:none; }
+            .tile, .move-cta { transition:none; }
         }
 
         /* Testy aplikacji — czat „spowiednika testów" */
@@ -334,10 +370,7 @@
             border-radius:var(--r-sm); color:var(--text-3); text-decoration:none; font-size:14px; font-weight:500; }
         #nav-more-sheet .navlink .nav-ic { position:relative; display:flex; font-size:19px; }
         #nav-more-sheet .navlink.active { background:var(--surface-2); color:var(--text); }
-        /* Twój ruch — CTA deep-link + rama nagłówka „Twoje zgłoszenia" */
-        .move-cta { display:inline-flex; align-items:center; gap:5px; margin-left:8px; color:var(--warn);
-            font-weight:600; text-decoration:none; white-space:nowrap; }
-        .move-cta:hover { text-decoration:underline; }
+        /* Rama nagłówka „Twoje zgłoszenia" (Testy) */
         .tk-frame { color:var(--text-2); font-size:13.5px; font-weight:600; margin-bottom:8px; }
     </style>
 </head>
@@ -393,8 +426,12 @@
                 <p class="life" id="c-life"></p>
             </section>
 
-            <!-- Twój ruch: next-best-action z deep-linkiem do właściwej zakładki -->
-            <div class="move hidden" id="c-move"><b>Twój ruch:</b> <span id="c-move-text"></span><a class="move-cta hidden" id="c-move-link" href="#/zadania" data-mod="zadania">Przejdź <i class="ph ph-arrow-right"></i></a></div>
+            <!-- Next-best-action (primary CTA): „Twój ruch" jako karta z deep-linkiem; pusty ruch = spokojny stan -->
+            <div class="move hidden" id="c-move">
+                <span class="move-txt"><span class="move-lead">Twój ruch</span><span class="move-body" id="c-move-text"></span></span>
+                <a class="move-cta hidden" id="c-move-link" href="#/zadania" data-mod="zadania">Przejdź <i class="ph ph-arrow-right"></i></a>
+            </div>
+            <div class="move-empty hidden" id="c-move-empty"><i class="ph ph-check-circle"></i> Nie masz teraz nic do zrobienia — pracujemy nad Twoją aplikacją.</div>
 
             <!-- Mirror „Otwórz swoją aplikację" (proof-of-life, gdy app_url = https://) -->
             <a class="appcard hidden" id="c-appcard-mirror" target="_blank" rel="noopener" href="#">
@@ -405,6 +442,9 @@
                 </span>
                 <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
             </a>
+
+            <!-- Kafle-skróty do zakładek istotnych w tej fazie (renderTiles — dynamiczne wg moduleVisible + dane) -->
+            <div class="tiles" id="c-tiles" hidden></div>
 
             <footer class="foot">
                 <p id="c-deadline"></p>
@@ -655,19 +695,71 @@
         const s = $('nav-more-sheet'); if (s) s.hidden = true;
         goModule(a.getAttribute('data-mod'));
     }
-    // „Twój ruch" deep-link: intake niekompletny → Do zrobienia; runda testów gotowa → Testy; inaczej ukryj.
+    // „Twój ruch" deep-link: intake niekompletny → Do zrobienia; runda testów gotowa → Testy; inaczej brak twardego CTA.
+    // Twardy cel → karta dostaje mocny akcent (.move--cta) + przycisk; brak celu → spokojna karta bez CTA.
     function updateMoveLink() {
         const link = $('c-move-link'); if (!link) return;
+        const box = $('c-move');
         let target = '';
         if (intakeOpenCount() > 0) target = 'zadania';
         else if (navData.testy_active && (navData._testyBadge || 0) > 0) target = 'testy';
-        if (target && moduleVisible(target)) { link.setAttribute('href', routeHash(target)); link.setAttribute('data-mod', target); link.classList.remove('hidden'); }
-        else link.classList.add('hidden');
+        if (target && moduleVisible(target)) {
+            link.setAttribute('href', routeHash(target)); link.setAttribute('data-mod', target);
+            link.classList.remove('hidden'); if (box) box.classList.add('move--cta');
+        } else {
+            link.classList.add('hidden'); if (box) box.classList.remove('move--cta');
+        }
+    }
+    // ── Kafle-skróty (Faza 3): dynamiczne wg widocznych modułów + danych. Każdy kafel = ikona + tytuł +
+    // 1 linia stanu + ewentualny badge. Klik = goModule(id) przez delegację navClickHandler ([data-mod]);
+    // href = routeHash(id) (token zachowany). Zero interpolacji danych — tytuły literalne, stan przez esc().
+    const TILE_ORDER = ['zadania', 'budowa', 'testy', 'apka'];
+    const TILE_META = {
+        zadania: { icon: 'ph-list-checks',      title: 'Do zrobienia' },
+        budowa:  { icon: 'ph-stack',            title: 'Budowa' },
+        testy:   { icon: 'ph-chat-circle-dots', title: 'Testy' },
+        apka:    { icon: 'ph-rocket-launch',    title: 'Twoja aplikacja' },
+    };
+    function tileState(id) {
+        if (id === 'zadania') { const n = intakeOpenCount(); return n > 0 ? (n + ' do uzupełnienia') : 'Wszystko uzupełnione ✓'; }
+        if (id === 'budowa') {
+            const tot = navData._stageTotal || 0, idx = navData._stageIdx || 0, nm = navData._stageName || '';
+            if (nm === '__done__') return 'Wszystkie etapy ukończone';
+            if (tot > 0 && idx > 0) return 'Etap ' + idx + ' z ' + tot + (nm ? ' — ' + nm : '');
+            if (nm) return nm;
+            return 'Kamienie milowe i makiety';
+        }
+        if (id === 'testy') return 'Zgłoś uwagę · status zgłoszeń';
+        if (id === 'apka')  return 'Otwórz aplikację · co nowego';
+        return '';
+    }
+    function tileBadge(id) {
+        if (id === 'zadania') return intakeOpenCount();
+        if (id === 'testy')   return navData._testyBadge || 0;
+        if (id === 'apka')    return navData._clUnread || 0;
+        return 0;
+    }
+    function renderTiles() {
+        const box = $('c-tiles'); if (!box) return;
+        const ids = TILE_ORDER.filter(id => moduleVisible(id));
+        if (!ids.length) { box.hidden = true; box.innerHTML = ''; return; }
+        box.innerHTML = ids.map(id => {
+            const m = TILE_META[id];
+            const b = Number(tileBadge(id)) || 0;
+            const badge = b > 0 ? '<span class="tile-badge">' + (b > 99 ? '99+' : b) + '</span>' : '';
+            return '<a class="tile" data-mod="' + id + '" href="' + esc(routeHash(id)) + '">' +
+                '<span class="tile-ic"><i class="ph ' + m.icon + '"></i>' + badge + '</span>' +
+                '<span class="tile-t">' + esc(m.title) + '</span>' +
+                '<span class="tile-s">' + esc(tileState(id)) + '</span>' +
+                '</a>';
+        }).join('');
+        box.hidden = false;
     }
     // Przelicz nav po każdym powrocie fetchu (pojaw/znikaj fazowych zakładek + badge + deep-link).
     function syncNav() {
         buildNav();
         updateMoveLink();
+        renderTiles();
         if (currentModule && !moduleVisible(currentModule)) { try { history.replaceState(null, '', routeHash(DEFAULT_MODULE)); } catch (_) {} showModule(DEFAULT_MODULE); }
         // Deep-link do zakładki fazowej, która stała się dostępna dopiero po fetchu (testy/apka) — dokończ przejście.
         if (pendingRoute && moduleVisible(pendingRoute)) { const p = pendingRoute; pendingRoute = null; try { history.replaceState(null, '', routeHash(p)); } catch (_) {} showModule(p); }
@@ -802,6 +894,12 @@
         $('c-stageline').innerHTML = sl;
         $('c-stageline').style.display = sl ? 'block' : 'none';
 
+        // Zasil kafel „Budowa" tymi samymi danymi co linia etapu (jeden globalny licznik, bez duplikatu osi).
+        navData._stageTotal = stages.length;
+        if (stages.length && curIdx === -1) { navData._stageIdx = stages.length; navData._stageName = '__done__'; }
+        else if (stages.length) { navData._stageIdx = curIdx + 1; navData._stageName = d.current_stage || stages[curIdx].label || ''; }
+        else { navData._stageIdx = 0; navData._stageName = d.current_stage || ''; }
+
         // Opis etapu po ludzku + dowód życia
         $('c-hint').textContent = d.current_stage_hint || '';
         $('c-hint').style.display = d.current_stage_hint ? 'block' : 'none';
@@ -809,10 +907,17 @@
         $('c-life').textContent = life ? ('Ostatnia praca nad projektem: ' + life) : '';
         $('c-life').style.display = life ? 'flex' : 'none';
 
-        // Twój ruch (piłka po stronie klienta)
-        const moveBox = $('c-move');
-        if (d.your_move) { $('c-move-text').textContent = d.your_move; moveBox.classList.remove('hidden'); }
-        else { moveBox.classList.add('hidden'); }
+        // Twój ruch (piłka po stronie klienta) — karta CTA; pusty ruch = spokojny stan (bez krzykliwego CTA).
+        // Akcent/przycisk ustawia updateMoveLink() (wołany przez syncNav na końcu render).
+        const moveBox = $('c-move'), moveEmpty = $('c-move-empty');
+        if (d.your_move) {
+            $('c-move-text').textContent = d.your_move;
+            moveBox.classList.remove('hidden');
+            if (moveEmpty) moveEmpty.classList.add('hidden');
+        } else {
+            moveBox.classList.add('hidden');
+            if (moveEmpty) moveEmpty.classList.remove('hidden');
+        }
 
         // Makiety ze sparingu
         const vg = $('c-vision-grid');
