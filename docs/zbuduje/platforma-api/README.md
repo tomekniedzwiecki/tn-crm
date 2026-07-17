@@ -36,8 +36,8 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-platform
 | `GET /stores/{id}/domains` | ✅ 200 | starterDomain/activeDomain/isOnCustomDomain + lista custom domen z rekordami DNS |
 | `POST /stores/{id}/domains` | 🔸 nietestowane (side-effect) | body `{domain}` → rekordy DNS (z www) |
 | `POST /stores/{id}/domains/{domainId}/activate` | 🔸 nietestowane | promuje domenę na aktywną |
-| `PUT /stores/{id}/branding/logo` | 🔸 nietestowane | body `{data: base64/dataURI, fileName}` → URL |
-| `PUT /stores/{id}/branding/favicon` | 🔸 nietestowane | jw. |
+| `PUT /stores/{id}/branding/logo` | ✅ 200 (test 16.07: PNG 200 KB raw base64) | → `{url}` na CDN platformy (DO Spaces); storefront podmienia logo NATYCHMIAST (header+stopka przez next/image) |
+| `PUT /stores/{id}/branding/favicon` | 🔸 nietestowane | kontrakt jak logo |
 | `GET /stores/{id}/delivery-methods` | ✅ 200 | ma **`isCashOnDelivery`** (COD istnieje w modelu!) + priceGroups |
 | `GET /stores/{id}/delivery-methods/options` | ✅ 200 | brokerzy: **Apaczka** + Sandbox; priceGroups |
 | `POST /stores/{id}/delivery-methods` | 🔸 nietestowane | pełny body (broker, priceGroup, deliveryMode enum, COD flag, freeAboveThreshold) |
