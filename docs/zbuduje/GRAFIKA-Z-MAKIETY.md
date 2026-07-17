@@ -59,7 +59,10 @@ bezszwowe = mirror+blend końców. Eksport PNG (alfa jeśli feather) → upload 
 **REGEN referencyjny (gpt-image-2):** ref = zaakceptowana makieta + CZYSTY packshot
 (NIGDY infografika — zatruwa paletę). Prompt: **numerowane REQUIREMENTS** (giną w prozie):
 #1 same room/framing/light · #2 produkt SAME size and position as reference (+ krótki opis
-sylwetki — edit potrafi zmienić kształt) · #3 strefy treści „fade seamlessly into flat solid
+sylwetki — edit potrafi zmienić kształt) · **#2b gdy sekcja jest KOLEJNĄ sceną produktową:
+wymuś INNY kąt/kontekst niż już użyte pozy („avoid: same upright pose as hero") — inaczej
+„SAME placement" produkuje klony (incydent Loczek 17.07: hero=03=12 ta sama poza)** ·
+#3 strefy treści „fade seamlessly into flat solid
 #HEX" · #4 REMOVE all text/UI, leave empty negative space. Dryf rekwizytów = cecha metody
 (SSIM cap ~0.7) — oceniaj kierunkowo + werdykt vision.
 

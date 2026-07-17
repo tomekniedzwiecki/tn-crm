@@ -40,6 +40,12 @@ detekcja białego prostokąta wklejonego w scenę · rozdzielczość vs rozmiar 
 dozwolony) · WCAG contrast pod tekstem na obrazie · **TAG KLASY (P/U/S/R) każdego assetu
 w mapie assetów + allowlista klas per slot sekcji → klasa spoza allowlisty = BLOK**
 (to łapie „UGC w ofercie" mechanicznie; obejmuje też R poza galerią/kartą i S w galerii).
+**Anty-monotonia (Loczek 17.07):** hash-dedup rozszerzony o perceptual (pHash Hamming
+≤próg / SSIM>0.85 na masce produktu) między scenami S — near-dup przy RÓŻNYCH plikach =
+**P1 „monotonia produktu"** (łapie klony pozy hero, których hash nie widzi). Ten sam kadr
+>1× poza parą oferta↔sticky = P1. Distinct product views <5 = P1. Sekcja typu sekwencja/
+„jak działa" z <2 różnymi ujęciami produktu = P1. Fix zawsze: „wygeneruj nowe ujęcie wg
+katalogu STANDARD sek. 2 (PRODUKT W SCENACH)".
 **Vision (na wątpliwe):** spójność światła/kąta/tonu w sekcji · konflikt światła
 packshot↔scena · realizm cutoutu (cień, skala) · fałszywa autentyczność (P/S udające U) ·
 AI-slop tells · dopasowanie semantyczne obrazu do roli.

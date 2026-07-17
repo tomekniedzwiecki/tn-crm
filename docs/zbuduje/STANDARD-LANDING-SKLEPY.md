@@ -41,8 +41,9 @@ Spójność robi styl-master jako referencja KAŻDEJ generacji + mapa assetów (
 stylu, nie liczba grafik). Krytyk pyta: „czy to wygląda na DROGI projekt?" — ubogi landing
 iterujemy W GÓRĘ. **Bogactwo to nie liczba grafik, lecz DETAL INTENCJONALNY (research 17.07):
 warstwowość, kontrast typograficzny (caps-label + oversized serif), jeden mocny akcent na
-sekcję (highlight/wielka liczba/annotation), asymetria i sygnatura wydawnicza (numery sekcji,
-hairlines, plusiki). Gładkie tła bez ziarna, równe siatki kart i wyśrodkowany split 50/50 =
+sekcję (highlight/wielka liczba/annotation), asymetria i sygnatura wydawnicza (hairlines,
+plusiki). **⛔ ZAKAZ numeracji sekcji „01 / 12" na stronie (Tomek 17.07: „bez sensu")** —
+numery kroków WEWNĄTRZ sekcji (demo 01/02/03) zostają. Gładkie tła bez ziarna, równe siatki kart i wyśrodkowany split 50/50 =
 „poprawny AI-generyk" = FAIL kalibracji human-touch (patrz DETAL-LAYER w F2).**
 
 **Z4 — KOD PISZE ZAWSZE gpt-5.6-sol** (via edge `wf2-gpt`): sekcje, poprawki, iteracje.
@@ -165,14 +166,14 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
 **🎛️ RZEMIOSŁO PROMPTÓW MAKIET (research D, 16.07 — OpenAI cookbook + praktycy; UNIWERSALNE):**
 - **🎨 DETAL-LAYER (research 17.07 — human-crafted vs AI-generic): poprawna ≠ droga.**
   Każda makieta sekcji dostaje min. 3/4 warstw detalu wydawniczego (dobrane pod motyw, nie
-  hurtowo): (a) SYGNATURA WYDAWNICZA — numer sekcji „0N" + eyebrow ALL-CAPS tracking 0.2em
-  nad oversized display-serif H2 (kontrast skali ≥1:5); (b) JEDEN AKCENT na sekcję —
+  hurtowo): (a) SYGNATURA WYDAWNICZA — eyebrow ALL-CAPS tracking 0.2em nad oversized
+  display-serif H2 (kontrast skali ≥1:5); ⛔ BEZ numeru sekcji „0N / NN" (Tomek 17.07); (b) JEDEN AKCENT na sekcję —
   highlight-swash w ciepłym kolorze pod 1 słowem ALBO wielka liczba-jako-grafika ALBO
   1 annotation — dokładnie JEDEN, nie zbiór; (c) STRUKTURA WIDOCZNA — hairlines 1px,
   plusiki „+" w rogach kart, crop-marks; karty na border+kontrast, JEDEN radius serii,
   bez „shadow-lg"; (d) ASYMETRIA+WARSTWA — split ~35/65 lub bento z NIErównymi kaflami,
   min. 1 element wychodzący poza kolumnę, depth skalą i temperaturą (nie cieniem).
-  W prompt makiety idą techniki renderowalne (numeracja, caps+serif, swash, wielkie liczby,
+  W prompt makiety idą techniki renderowalne (caps+serif, swash, wielkie liczby,
   bento-asymetria, hairlines, plusiki, taped-photo, split 35/65, depth). Do KODU F4 (model
   drży / to montaż): grain SVG feTurbulence (opacity ≤.05, 1 źródło), annotation-arrows
   inline SVG (1/sekcja), overlap MIĘDZY sekcjami (ujemny margin + z-index), hand-drawn
@@ -262,6 +263,10 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
    (karta oferty = TYLKO packshot, NIGDY UGC; opinie = TYLKO UGC; zakaz obrazu-na-obrazie
    — na scenie tylko cutout z alfą). Klasa spoza allowlisty = BLOK. Arkusze (ikony) z planem cięcia (PIL, biel→alpha) i adresem każdego
    wycinka. 100% assetów użytych; 0 sekcji bez assetu. OG = 1200×630 w stylu master.
+   **Kolumna `ujecie` per asset produktowy** (hero/problem/demo-seq/detail/packshot/
+   galeria-angle/scale). Gate anty-monotonii: **`min_distinct_product_views ≥ 5`**; ten sam
+   kadr >1× (poza oferta↔sticky) = BLOK z fixem „nowe ujęcie wg katalogu sek. 2"; sekcja
+   sekwencja/„jak działa" z <2 ujęciami produktu = BLOK.
 5. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
 
 **F4 — KOD (gpt-5.6-sol).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
@@ -415,6 +420,18 @@ produkt niosą wyłącznie realne zdjęcia i UGC.
 mechanizm/efekt działania (pompka → ściśnięte worki; budzik → światło świtu). Plan GPT
 proponujący „no product" na scenach kluczowych = nadpisać. Gate całości: z samych grafik
 widać, CO produkt robi i po co go kupić.
+
+**PRODUKT W SCENACH — anty-monotonia (feedback Tomka do Loczka 17.07: „wszędzie jest tylko
+to jedno zdjęcie, to słabo wygląda").** Produkt jest bohaterem — każda sekcja produktowa MA
+WŁASNE ujęcie. Ten sam kadr produktu **max 1×** (jedyny wyjątek: packshot oferta+sticky).
+Katalog ujęć per typ sekcji: hero=scena bohaterska · problem=kontekst frustracji/porównania
+(inny kąt! poziomo/top-down) · demo=SEKWENCJA ≥2-3 ujęć użycia (wkłada → działa → efekt) ·
+benefits=detal mechanizmu/rączki (INNY makro niż demo) · oferta=packshot · galeria=MIX kątów
+(przód/bok/tył/w dłoni/skala) · final=domknięcie z efektem (inny kąt niż hero). Niedobór
+realnych kadrów z galerii Ali → **GENERUJEMY sceny S** (4 WARUNKI + paszport), NIE
+akceptujemy monotonii jako „sufitu danych". ⚠️ Klony tej samej POZY w różnych plikach
+(scene-from-mockup dziedziczy pozę z ref!) = tak samo złe jak identyczny reuse — w promptach
+kolejnych scen produktowych wymuszaj INNY kąt/kontekst („avoid: same upright pose as hero").
 
 **PAY-BADGES — kanoniczny blok `docs/zbuduje/assets/pay-badges.html`** (prawdziwe logotypy:
 Visa wordmark-path, Mastercard geometria kół, BLIK znak słowny; białe pigułki z borderem
