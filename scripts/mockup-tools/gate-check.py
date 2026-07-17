@@ -1,0 +1,674 @@
+# -*- coding: utf-8 -*-
+"""
+gate-check.py <slug> [--archiwum <dir>] [--code <index.html>] [--manifest <json>] [--product-key <uuid>] [--no-net]
+
+Zbiorczy GATE kompletnosci artefaktow landingu fabryki (R11a + R11b).
+Zrodlo prawdy o kompletnosci = TEN skrypt + gate-manifest.json (DANE), nie deklaracja agenta.
+EXIT: 0 = brak FAIL (WARN/SKIP dozwolone), 1 = >=1 FAIL.
+
+Kategorie (manifest): files, dopasowanie, interakcje, grep_forbidden, sieroty, wagi,
+phash, baza, wideo_kafle, makiety_mobile, og_image, ledger_fazy.
+
+Wymaga: Pillow, imagehash, requests (venv scripts/mockup-tools/.venv).
+NIE modyfikuje niczego — czyta artefakty i (opcjonalnie) siec + baze.
+"""
+import sys, os, re, json, glob, argparse, fnmatch
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# ------------------------------------------------------------------ utils
+def read_text(path):
+    for enc in ("utf-8", "utf-8-sig", "cp1250", "latin-1"):
+        try:
+            with open(path, "r", encoding=enc) as f:
+                return f.read()
+        except (UnicodeDecodeError, FileNotFoundError):
+            if not os.path.exists(path):
+                return None
+    try:
+        with open(path, "rb") as f:
+            return f.read().decode("utf-8", "replace")
+    except Exception:
+        return None
+
+def load_env(path):
+    env = {}
+    txt = read_text(path)
+    if not txt:
+        return env
+    for line in txt.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        env[k.strip()] = v.strip().strip('"').strip("'")
+    return env
+
+def norm(s):
+    """lowercase + usun separatory — do tolerancyjnego dopasowania nazw."""
+    return re.sub(r"[-_/. ]", "", (s or "").lower())
+
+# ------------------------------------------------------------------ result sink
+class Results:
+    def __init__(self):
+        self.rows = []  # (category, name, status, detail) ; status in PASS/FAIL/WARN/SKIP
+    def add(self, cat, name, status, detail=""):
+        self.rows.append((cat, name, status, detail))
+    def fails(self):
+        return [r for r in self.rows if r[2] == "FAIL"]
+    def counts(self):
+        c = {"PASS": 0, "FAIL": 0, "WARN": 0, "SKIP": 0}
+        for r in self.rows:
+            c[r[2]] = c.get(r[2], 0) + 1
+        return c
+
+def status_for(passed, severity):
+    """passed bool + severity(FAIL/WARN) -> status."""
+    if passed:
+        return "PASS"
+    return "FAIL" if severity == "FAIL" else "WARN"
+
+# ------------------------------------------------------------------ HTTP cache
+_HTTP = {}
+def http_head_size(url, timeout):
+    """Zwraca (status_code, size_bytes|None). Cache. HEAD -> fallback GET stream."""
+    if url in _HTTP:
+        return _HTTP[url]
+    import requests
+    res = (None, None)
+    try:
+        r = requests.head(url, timeout=timeout, allow_redirects=True)
+        size = r.headers.get("content-length")
+        if r.status_code == 200 and size is None:
+            # render API czesto nie daje content-length na HEAD -> GET
+            g = requests.get(url, timeout=timeout, stream=True)
+            body = g.content
+            res = (g.status_code, len(body))
+            g.close()
+        else:
+            res = (r.status_code, int(size) if size else None)
+    except Exception as e:
+        res = ("ERR:%s" % type(e).__name__, None)
+    _HTTP[url] = res
+    return res
+
+def http_get_bytes(url, timeout):
+    import requests
+    try:
+        r = requests.get(url, timeout=timeout)
+        if r.status_code == 200:
+            return r.content
+    except Exception:
+        return None
+    return None
+
+# ------------------------------------------------------------------ code / sections
+SECTION_RE = re.compile(r'<section\b[^>]*\bid\s*=\s*"([^"]+)"', re.I)
+
+def parse_sections(html):
+    return SECTION_RE.findall(html or "")
+
+def section_has_attr(html, sec_id, attr):
+    """Czy sekcja o danym id ma dany atrybut w tagu otwierajacym <section ...>."""
+    for m in re.finditer(r'<section\b([^>]*)>', html or "", re.I):
+        tag = m.group(1)
+        idm = re.search(r'\bid\s*=\s*"([^"]+)"', tag, re.I)
+        if idm and idm.group(1) == sec_id and attr.lower() in tag.lower():
+            return True
+    return False
+
+def image_urls(html):
+    """Wszystkie URL-e bud-assets (obrazy + mp4) z HTML (rozkodowane &amp;)."""
+    urls = set()
+    for m in re.finditer(r'https://[^\s"\'<>]*bud-assets/[^\s"\'<>)]+', html or ""):
+        u = m.group(0).replace("&amp;", "&")
+        urls.add(u)
+    return sorted(urls)
+
+def url_asset_path(url):
+    """Sciezka assetu wewn. bud-assets bez query, np. scenes/hero-d.webp"""
+    m = re.search(r'bud-assets/[^/]+/(.+?)(\?|$)', url)
+    return m.group(1) if m else url
+
+def url_width(url):
+    m = re.search(r'[?&]width=(\d+)', url)
+    return int(m.group(1)) if m else 0
+
+# ================================================================== CHECKS
+
+def find_glob(archiwum, pattern):
+    return glob.glob(os.path.join(archiwum, pattern.replace("/", os.sep)))
+
+def check_files(res, M, ctx):
+    m = M["files"]; sev = m["severity"]; arch = ctx["archiwum"]
+    for rel in m["wymagane"]:
+        p = os.path.join(arch, rel.replace("/", os.sep))
+        ok = os.path.isfile(p) and os.path.getsize(p) > 0
+        res.add("files", rel, status_for(ok, sev),
+                "" if ok else ("brak" if not os.path.exists(p) else "pusty"))
+    for g in m["globy"]:
+        files = find_glob(arch, g["glob"])
+        ok = len(files) >= g["min"]
+        res.add("files", g["label"], status_for(ok, sev), "%d/%d" % (len(files), g["min"]))
+    # brand wzorce
+    brand_files = [os.path.basename(x).lower() for x in find_glob(arch, "brand/*")]
+    for bw in m.get("brand_wzorce", []):
+        pats = bw["wzor"].split("|")
+        ok = any(fnmatch.fnmatch(bf, "*" + p.strip("*") + "*") or fnmatch.fnmatch(bf, p) for bf in brand_files for p in pats)
+        res.add("files", "brand: " + bw["label"], status_for(ok, sev), "" if ok else "brak wzorca")
+
+def check_dopasowanie(res, M, ctx):
+    m = M["dopasowanie"]; sev = m["severity"]; arch = ctx["archiwum"]
+    sections = ctx["sections"]
+    comps = [os.path.basename(x) for x in find_glob(arch, m["kompozyt_glob"])]
+    comps_n = [norm(c) for c in comps]
+    aliasy = m["aliasy_sekcji"]
+    matched, missing = [], []
+    for i, sid in enumerate(sections, start=1):
+        toks = aliasy.get(sid, [sid])
+        toks = [norm(t) for t in toks] + ["%02d" % i, str(i)]
+        hit = any(any(t and t in cn for t in toks) for cn in comps_n)
+        (matched if hit else missing).append(sid)
+    if missing:
+        res.add("dopasowanie", "kompozyty per sekcja", status_for(False, sev),
+                "%d/%d; brak: %s" % (len(matched), len(sections), ", ".join(missing)))
+    else:
+        res.add("dopasowanie", "kompozyty per sekcja", "PASS",
+                "%d/%d" % (len(matched), len(sections)))
+    # DOPASOWANIE.md z wierszami SSIM
+    md_p = os.path.join(arch, m["md"].replace("/", os.sep))
+    md = read_text(md_p)
+    if not md:
+        res.add("dopasowanie", "DOPASOWANIE.md + wiersze SSIM", status_for(False, sev), "brak pliku")
+    else:
+        rx = re.compile(m["md_ssim_regex"])
+        rows_ssim = sum(1 for ln in md.splitlines() if rx.search(ln))
+        ok = rows_ssim >= len(sections)
+        res.add("dopasowanie", "DOPASOWANIE.md + wiersze SSIM", status_for(ok, sev),
+                "%d wierszy SSIM / %d sekcji" % (rows_ssim, len(sections)))
+
+def check_interakcje(res, M, ctx):
+    m = M["interakcje"]; sev = m["severity"]; arch = ctx["archiwum"]
+    html = ctx["html"]; ledger = ctx["ledger"] or ""
+    ids = set(m.get("always_ids", []))
+    for sid in ctx["sections"]:
+        if section_has_attr(html, sid, m["tor_i_attr"]):
+            ids.add(sid)
+    # tylko te always_ids ktore realnie sa sekcjami + wszystkie z tor-i
+    ids = [i for i in ids if i in ctx["sections"] or section_has_attr(html, i, m["tor_i_attr"])]
+    if not ids:
+        res.add("interakcje", "(brak sekcji interaktywnych)", "SKIP", "")
+        return
+    idir = os.path.join(arch, "interakcje")
+    for sid in sorted(ids):
+        dg = re.search(m["downgrade_regex"].replace("{id}", re.escape(sid)), ledger, re.I)
+        if dg:
+            res.add("interakcje", sid, "SKIP", "downgrade w LEDGER")
+            continue
+        missing = []
+        for tmpl in m["wymagane_na_sekcje"]:
+            fn = tmpl.replace("{id}", sid)
+            if not (os.path.isfile(os.path.join(idir, fn)) and os.path.getsize(os.path.join(idir, fn)) > 0):
+                missing.append(fn)
+        tdir = os.path.join(idir, m["wymagany_katalog"].replace("{id}", sid))
+        if not (os.path.isdir(tdir) and os.listdir(tdir)):
+            missing.append(m["wymagany_katalog"].replace("{id}", sid) + "/")
+        ok = not missing
+        res.add("interakcje", sid, status_for(ok, sev), "" if ok else "brak: " + ", ".join(missing))
+
+def check_grep_forbidden(res, M, ctx):
+    m = M["grep_forbidden"]; html = ctx["html"]; low = html.lower()
+    for rule in m["statyczne"]:
+        sev = rule["severity"]; label = rule["label"]
+        if "regex" in rule:
+            hits = re.findall(rule["regex"], html, re.I)
+            ok = not hits
+            det = "" if ok else "%d trafien: %s" % (len(hits), str(hits[:3]))
+        else:
+            n = low.count(rule["text"].lower())
+            ok = n == 0
+            det = "" if ok else "%d trafien" % n
+        res.add("grep", label, status_for(ok, sev), det)
+    # dynamiczny shop z KARTY PRAWDY
+    d = m["dynamiczne_shop"]; sev = d["severity"]
+    karta = ctx["karta"]
+    if not karta:
+        res.add("grep", "shop white-label (dynamiczny)", "SKIP", "brak KARTA-PRAWDY.md")
+        return
+    ignor = set(x.lower() for x in d["ignoruj_kandydatow"])
+    cands = set()
+    for ln in karta.splitlines():
+        ll = ln.lower()
+        if not any(k.lower() in ll for k in d["linie_zawieraja"]):
+            continue
+        # stringi w cudzyslowach/backtickach + po dwukropku
+        for c in re.findall(r'[`"„”\'"]([^`"„”\']{2,60})[`"„”\']', ln):
+            cands.add(c.strip())
+        if ":" in ln:
+            after = ln.split(":", 1)[1].strip()
+            if 0 < len(after) <= 60:
+                cands.add(after.strip("` *"))
+    # filtr kandydatow
+    clean = []
+    for c in cands:
+        cl = c.strip().strip("*`").strip()
+        if len(cl) < d["min_dlugosc"]:
+            continue
+        low_c = cl.lower()
+        if any(ig in low_c for ig in ignor):
+            continue
+        if re.search(r'[{}]', cl):
+            continue
+        clean.append(cl)
+    if not clean:
+        res.add("grep", "shop white-label (dynamiczny)", "PASS", "brak konkretnej nazwy shop w karcie")
+        return
+    hits = [c for c in clean if c.lower() in low]
+    ok = not hits
+    res.add("grep", "shop white-label (dynamiczny)", status_for(ok, sev),
+            ("kandydaci: %s" % clean[:5]) if ok else ("WYCIEK: %s" % hits))
+
+def collect_assets(arch, m):
+    exts = tuple(m["rozszerzenia"])
+    out = []
+    for p in find_glob(arch, m["assets_glob"]):
+        if os.path.isfile(p) and p.lower().endswith(exts):
+            out.append(p)
+    return out
+
+def check_sieroty(res, M, ctx):
+    m = M["sieroty"]; sev = m["severity"]; arch = ctx["archiwum"]
+    html = ctx["html"]; nhtml = norm(html)
+    # dokumentacja (MAPA-ASSETOW / F3)
+    docs = ""
+    for dn in m["dokumentacja"]:
+        t = read_text(os.path.join(arch, dn))
+        if t:
+            docs += "\n" + t
+    ndocs = norm(docs)
+    doc_low = docs.lower()
+    orphans = []
+    assets = collect_assets(arch, m)
+    for p in assets:
+        stem = os.path.splitext(os.path.basename(p))[0]
+        ns = norm(stem)
+        if ns and ns in nhtml:
+            continue
+        if ns and ns in ndocs:
+            # udokumentowany — sprawdz czy nie jest tylko skreslony (i tak OK = udokumentowany)
+            continue
+        orphans.append(os.path.basename(p))
+    ok = not orphans
+    res.add("sieroty", "assety bez URL i bez dokumentacji", status_for(ok, sev),
+            ("%d/%d udokumentowanych" % (len(assets) - len(orphans), len(assets))) if ok
+            else ("sieroty: %s" % orphans))
+    # HTTP 200 dla URL-i bud-assets w kodzie
+    if m.get("http_200") and not ctx["no_net"]:
+        bad = []
+        for u in ctx["urls"]:
+            code, _ = http_head_size(u, ctx["timeout"])
+            if code != 200:
+                bad.append("%s -> %s" % (url_asset_path(u), code))
+        ok2 = not bad
+        res.add("sieroty", "URL-e bud-assets HTTP 200", status_for(ok2, sev),
+                ("%d URL-i OK" % len(ctx["urls"])) if ok2 else ("; ".join(bad[:8])))
+    else:
+        res.add("sieroty", "URL-e bud-assets HTTP 200", "SKIP", "--no-net")
+
+def classify_weight(url, m):
+    p = url.lower()
+    for k in m["klasy"]:
+        if any(mt.lower() in p for mt in k["match"]):
+            return k["label"], k["max_kb"]
+    return "inne", m["domyslny_max_kb"]
+
+def check_wagi(res, M, ctx):
+    m = M["wagi"]; sev = m["severity"]
+    if ctx["no_net"]:
+        res.add("wagi", "(budzety wag)", "SKIP", "--no-net")
+        return
+    # per asset-path: najwiekszy wariant width
+    best = {}
+    for u in ctx["urls"]:
+        ap = url_asset_path(u)
+        w = url_width(u)
+        if ap not in best or w > best[ap][1]:
+            best[ap] = (u, w)
+    any_row = False
+    for ap, (u, w) in sorted(best.items()):
+        label, maxkb = classify_weight(u, m)
+        code, size = http_head_size(u, ctx["timeout"])
+        if code != 200 or size is None:
+            res.add("wagi", ap, "SKIP", "brak rozmiaru (%s)" % code)
+            continue
+        kb = size / 1024.0
+        ok = kb <= maxkb
+        any_row = True
+        res.add("wagi", "%s [%s]" % (ap, label), status_for(ok, sev),
+                "%.0f KB / %d KB" % (kb, maxkb))
+    if not any_row:
+        res.add("wagi", "(budzety wag)", "SKIP", "brak URL-i obrazowych")
+
+def check_phash(res, M, ctx):
+    m = M["phash"]; sev = m["severity"]
+    if ctx["no_net"]:
+        res.add("phash", "(anty-monotonia)", "SKIP", "--no-net")
+        return
+    try:
+        import imagehash
+        from PIL import Image
+        import io
+    except Exception as e:
+        res.add("phash", "(anty-monotonia)", "SKIP", "brak imagehash/PIL: %s" % e)
+        return
+    # jeden wariant (najwiekszy) per asset-path z klas scena/produkt
+    cand = {}
+    for u in ctx["urls"]:
+        ap = url_asset_path(u)
+        if not any(c in u for c in m["klasy_path"]):
+            continue
+        w = url_width(u)
+        if ap not in cand or w > cand[ap][1]:
+            cand[ap] = (u, w)
+    hashes = {}
+    for ap, (u, w) in cand.items():
+        b = http_get_bytes(u, ctx["timeout"])
+        if not b:
+            continue
+        try:
+            hashes[ap] = imagehash.phash(Image.open(io.BytesIO(b)).convert("RGB"))
+        except Exception:
+            continue
+    keys = sorted(hashes)
+    dups = []
+    for i in range(len(keys)):
+        for j in range(i + 1, len(keys)):
+            a, b = keys[i], keys[j]
+            if any(tok in a.lower() or tok in b.lower() for tok in m["wyjatek_tokeny"]):
+                continue
+            dist = hashes[a] - hashes[b]
+            if dist <= m["hamming_max"]:
+                dups.append("%s <=> %s (d=%d)" % (a, b, dist))
+    ok = not dups
+    res.add("phash", "near-dup scena/produkt (Hamming<=%d)" % m["hamming_max"],
+            status_for(ok, sev),
+            ("%d obrazow porownanych" % len(hashes)) if ok else ("; ".join(dups)))
+
+def curated_items(v):
+    """Zwraca liste itemow kuracji (obsluguje [] oraz {items:[...]})."""
+    if isinstance(v, list):
+        return v
+    if isinstance(v, dict) and isinstance(v.get("items"), list):
+        return v["items"]
+    return None
+
+def curated_keep_count(v):
+    """Liczba KEEP itemow (keep_count / items[keep] / len)."""
+    if isinstance(v, dict) and isinstance(v.get("keep_count"), int):
+        return v["keep_count"]
+    items = curated_items(v)
+    if items is None:
+        return len(v) if isinstance(v, (list, dict)) else 0
+    return len([x for x in items if (not isinstance(x, dict)) or x.get("keep", True)])
+
+def curated_nonempty(v):
+    items = curated_items(v)
+    if items is not None:
+        return len([x for x in items if (not isinstance(x, dict)) or x.get("keep", True)]) > 0
+    return bool(v)
+
+def pg_get(env, M, table, params, timeout):
+    """PostgREST GET -> lista dict albo None (brak dostepu)."""
+    import requests
+    url = env.get(M["supabase"]["url_env"]) or M["supabase"]["host_fallback"]
+    key = env.get(M["supabase"]["key_env"])
+    if not key:
+        return None
+    base = url.rstrip("/") + "/rest/v1/" + table
+    try:
+        r = requests.get(base, params=params, timeout=timeout,
+                         headers={"apikey": key, "Authorization": "Bearer " + key})
+        if r.status_code == 200:
+            return r.json()
+        return None
+    except Exception:
+        return None
+
+def check_baza(res, M, ctx):
+    m = M["baza"]; sev = m["severity"]; env = ctx["env"]
+    if ctx["no_net"] or not env.get(M["supabase"]["key_env"]):
+        res.add("baza", "(kuracje + rejestr nazw)", "SKIP", "brak SUPABASE_SERVICE_KEY / --no-net")
+        return
+    pk = ctx["product_key"]
+    if pk:
+        rows = pg_get(env, M, m["tabela_produkty"],
+                      {"id": "eq." + pk, "select": "%s,%s" % (m["kolumny_kuracji"]["gallery"], m["kolumny_kuracji"]["videos"])},
+                      ctx["timeout"])
+        if rows is None:
+            res.add("baza", "bud_tt_products", "SKIP", "brak dostepu do bazy")
+        elif not rows:
+            res.add("baza", "bud_tt_products", status_for(False, sev), "brak wiersza id=%s" % pk)
+        else:
+            row = rows[0]
+            g = row.get(m["kolumny_kuracji"]["gallery"])
+            v = row.get(m["kolumny_kuracji"]["videos"])
+            gok = curated_nonempty(g)
+            gi = curated_items(g)
+            res.add("baza", "gallery_curated niepuste", status_for(gok, sev),
+                    ("%d keep" % curated_keep_count(g)) if gok else "puste/NULL")
+            vok = curated_nonempty(v) or ("wideo" in (ctx["ledger"] or "").lower())
+            res.add("baza", "videos_curated niepuste-lub-nota", status_for(vok, sev),
+                    ("%d keep" % curated_keep_count(v)) if curated_nonempty(v)
+                    else ("nota wideo w LEDGER" if vok else "puste/NULL i brak noty"))
+    else:
+        res.add("baza", "bud_tt_products", "SKIP", "brak product-key")
+    # bud_brand_names
+    brand_rows = pg_get(env, M, m["tabela_nazw"],
+                        {m["kolumna_nazwy"]: "ilike." + ctx["slug"], "select": m["kolumna_nazwy"]},
+                        ctx["timeout"])
+    if brand_rows is None:
+        res.add("baza", "bud_brand_names", "SKIP", "brak dostepu")
+    else:
+        ok = len(brand_rows) > 0
+        res.add("baza", "bud_brand_names ma wpis '%s'" % ctx["slug"], status_for(ok, sev),
+                "" if ok else "brak rezerwacji nazwy")
+
+def check_wideo_kafle(res, M, ctx):
+    m = M["wideo_kafle"]; sev = m["severity"]; html = ctx["html"]
+    # licz kafle: literalne <video ORAZ (opcj.) unikalne sciezki .mp4 (lazy data-src)
+    n_tags = len(re.findall(re.escape(m["video_tag"]), html, re.I))
+    n_mp4 = 0
+    if m.get("licz_mp4_z_url"):
+        n_mp4 = len(set(url_asset_path(u) for u in ctx["urls"] if u.lower().split("?")[0].endswith(".mp4")))
+    n_video = max(n_tags, n_mp4)
+    if n_video == 0:
+        res.add("wideo_kafle", "kafle wideo == keep", "SKIP", "brak wideo (tagow <video ani .mp4) w HTML")
+        return
+    downgrade = bool(re.search(m["downgrade_regex"], ctx["ledger"] or "", re.I))
+    # keep z bazy
+    n_keep = None
+    env = ctx["env"]
+    if not ctx["no_net"] and env.get(M["supabase"]["key_env"]) and ctx["product_key"]:
+        rows = pg_get(env, M, M["baza"]["tabela_produkty"],
+                      {"id": "eq." + ctx["product_key"], "select": M["baza"]["kolumny_kuracji"]["videos"]},
+                      ctx["timeout"])
+        if rows:
+            v = rows[0].get(M["baza"]["kolumny_kuracji"]["videos"])
+            if v is not None:
+                n_keep = curated_keep_count(v)
+    if n_keep is None:
+        if downgrade:
+            res.add("wideo_kafle", "kafle wideo == keep", "PASS", "%d kafli; downgrade wideo w LEDGER" % n_video)
+        else:
+            res.add("wideo_kafle", "kafle wideo == keep", "SKIP",
+                    "%d kafli; brak videos_curated z bazy do porownania" % n_video)
+        return
+    ok = (n_video == n_keep) or downgrade
+    res.add("wideo_kafle", "kafle wideo == keep", status_for(ok, sev),
+            "kafle=%d keep=%d%s" % (n_video, n_keep, " (downgrade)" if downgrade else ""))
+
+def check_makiety_mobile(res, M, ctx):
+    m = M["makiety_mobile"]; sev = m["severity"]; arch = ctx["archiwum"]
+    has_tor_i = any(section_has_attr(ctx["html"], s, "data-tor-i") for s in ctx["sections"]) or ("demo" in ctx["sections"])
+    has_wideo = any(s in ("wideo", "video", "interakcja") for s in ctx["sections"])
+    nota = bool(re.search(m["nota_regex"], ctx["ledger"] or "", re.I))
+    for req in m["wymagane"]:
+        gate = req["gdy"]
+        if gate == "tor_i" and not has_tor_i:
+            continue
+        if gate == "wideo" and not has_wideo:
+            continue
+        found = any(find_glob(arch, w) for w in req["wzory"])
+        ok = found or nota
+        res.add("makiety_mobile", req["label"], status_for(ok, sev),
+                "" if found else ("nota w LEDGER" if nota else "brak pliku i noty"))
+
+def check_og_image(res, M, ctx):
+    m = M["og_image"]; sev = m["severity"]; html = ctx["html"]
+    mm = re.search(m["meta_regex"], html, re.I)
+    if not mm:
+        res.add("og_image", "og:image dedykowany", status_for(False, sev), "brak og:image")
+        return
+    url = mm.group(1)
+    bad = [t for t in m["zakazane_tokeny"] if t.lower() in url.lower()]
+    has_expected = m["oczekiwany_token"].lower() in url_asset_path(url).lower()
+    ok = (not bad) and has_expected
+    if bad:
+        det = "og wskazuje scene hero: %s" % url_asset_path(url)
+    elif not has_expected:
+        det = "brak dedykowanego pliku '%s': %s" % (m["oczekiwany_token"], url_asset_path(url))
+    else:
+        det = url_asset_path(url)
+    res.add("og_image", "og:image dedykowany 1200x630", status_for(ok, sev), det)
+
+def check_ledger_fazy(res, M, ctx):
+    m = M["ledger_fazy"]; sev = m["severity"]; arch = ctx["archiwum"]
+    ledger = (ctx["ledger"] or "")
+    for r in m["reguly"]:
+        present = False
+        if "gdy_plik" in r:
+            present = os.path.isfile(os.path.join(arch, r["gdy_plik"]))
+        elif "gdy_katalog" in r:
+            present = os.path.isdir(os.path.join(arch, r["gdy_katalog"]))
+        if not present:
+            res.add("ledger_fazy", r["label"], "SKIP", "faza nieobecna w archiwum")
+            continue
+        ok = any(tok.lower() in ledger.lower() for tok in r["ledger_zawiera"])
+        res.add("ledger_fazy", r["label"], status_for(ok, sev),
+                "" if ok else "brak linii kosztow fazy w LEDGER")
+
+# ================================================================== main
+def latest_archiwum(glob_tmpl, slug):
+    pat = glob_tmpl.replace("{slug}", slug)
+    dirs = [d for d in glob.glob(pat) if os.path.isdir(d)]
+    if not dirs:
+        return None
+    # wybierz po dacie modyfikacji (najnowsza FABRYKA-*)
+    dirs.sort(key=lambda d: os.path.getmtime(d), reverse=True)
+    return dirs[0]
+
+def extract_product_key(karta):
+    if not karta:
+        return None
+    m = re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', karta, re.I)
+    return m.group(0) if m else None
+
+CHECK_ORDER = [
+    ("files", check_files),
+    ("dopasowanie", check_dopasowanie),
+    ("interakcje", check_interakcje),
+    ("grep_forbidden", check_grep_forbidden),
+    ("sieroty", check_sieroty),
+    ("wagi", check_wagi),
+    ("phash", check_phash),
+    ("baza", check_baza),
+    ("wideo_kafle", check_wideo_kafle),
+    ("makiety_mobile", check_makiety_mobile),
+    ("og_image", check_og_image),
+    ("ledger_fazy", check_ledger_fazy),
+]
+
+def main():
+    ap = argparse.ArgumentParser(description="Zbiorczy gate kompletnosci landingu")
+    ap.add_argument("slug")
+    ap.add_argument("--archiwum")
+    ap.add_argument("--code")
+    ap.add_argument("--manifest", default=os.path.join(SCRIPT_DIR, "gate-manifest.json"))
+    ap.add_argument("--product-key")
+    ap.add_argument("--no-net", action="store_true", help="pomin siec i baze")
+    args = ap.parse_args()
+
+    M = json.loads(read_text(args.manifest))
+    slug = args.slug
+
+    arch = args.archiwum or latest_archiwum(M["sciezki"]["archiwum_glob"], slug)
+    code = args.code or M["sciezki"]["kod"].replace("{slug}", slug)
+
+    print("=" * 74)
+    print("GATE-CHECK  ·  slug=%s" % slug)
+    print("  archiwum: %s" % (arch or "(NIE ZNALEZIONO)"))
+    print("  kod     : %s" % code)
+    print("=" * 74)
+
+    if not arch or not os.path.isdir(arch):
+        print("BLAD: brak katalogu archiwum dla slug=%s" % slug)
+        return 1
+    html = read_text(code)
+    if html is None:
+        print("BLAD: brak pliku kodu %s" % code)
+        return 1
+
+    env = load_env(M["sciezki"]["env"].replace("{slug}", slug))
+    karta = read_text(os.path.join(arch, "KARTA-PRAWDY.md"))
+    ledger = read_text(os.path.join(arch, "LEDGER.md"))
+    product_key = args.product_key or extract_product_key(karta)
+
+    ctx = {
+        "slug": slug, "archiwum": arch, "code": code, "html": html,
+        "env": env, "karta": karta, "ledger": ledger,
+        "sections": parse_sections(html),
+        "urls": image_urls(html),
+        "timeout": M.get("http_timeout_s", 10),
+        "no_net": args.no_net,
+        "product_key": product_key,
+    }
+    print("  sekcje(id): %d  ·  URL-e bud-assets: %d  ·  product-key: %s"
+          % (len(ctx["sections"]), len(ctx["urls"]), product_key or "-"))
+    print("-" * 74)
+
+    res = Results()
+    for name, fn in CHECK_ORDER:
+        try:
+            fn(res, M, ctx)
+        except Exception as e:
+            res.add(name, "(blad checka)", "FAIL", "exception: %s" % e)
+
+    # ---- tabela
+    ICON = {"PASS": "PASS", "FAIL": "FAIL", "WARN": "WARN", "SKIP": "SKIP"}
+    cur = None
+    for cat, nm, st, det in res.rows:
+        if cat != cur:
+            cur = cat
+            print("\n[%s]" % cat.upper())
+        line = "  %-4s  %-46s %s" % (ICON[st], nm[:46], det)
+        print(line)
+
+    c = res.counts()
+    print("\n" + "=" * 74)
+    print("PODSUMOWANIE:  PASS=%d  FAIL=%d  WARN=%d  SKIP=%d"
+          % (c["PASS"], c["FAIL"], c["WARN"], c["SKIP"]))
+    if c["FAIL"]:
+        print("WYNIK: FAIL (exit 1) — %d blokujacych:" % c["FAIL"])
+        for cat, nm, st, det in res.fails():
+            print("   - [%s] %s: %s" % (cat, nm, det))
+    else:
+        print("WYNIK: OK (exit 0) — brak FAIL (WARN/SKIP nie blokuja)")
+    print("=" * 74)
+    return 1 if c["FAIL"] else 0
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,158 @@
+{
+  "_opis": "DANE dla gate-check.py — zbiorczy gate kompletnosci artefaktow landingu. Rozszerzasz TU, nie w kodzie.",
+  "_wersja": "1.0 (R11a + R11b)",
+
+  "sciezki": {
+    "archiwum_glob": "C:/Users/tomek/Desktop/TN-Sklepy-grafiki/FABRYKA-*/{slug}",
+    "kod": "c:/repos_tn/tn-crm/sklepy/tomek-niedzwiecki/{slug}/index.html",
+    "env": "c:/repos_tn/tn-crm/.env"
+  },
+
+  "supabase": {
+    "url_env": "SUPABASE_URL",
+    "key_env": "SUPABASE_SERVICE_KEY",
+    "host_fallback": "https://yxmavwkwnfuphjqbelws.supabase.co"
+  },
+
+  "http_timeout_s": 10,
+
+  "files": {
+    "severity": "FAIL",
+    "wymagane": [
+      "KARTA-PRAWDY.md",
+      "PASZPORT.md",
+      "LEDGER.md",
+      "MAPA-ASSETOW.md",
+      "galeria-kuracja/GALERIA.md",
+      "RETRO.md"
+    ],
+    "globy": [
+      { "glob": "makiety/*.png", "min": 1, "label": "makiety/*.png" },
+      { "glob": "brand/*.png", "min": 3, "label": "brand/ (favicon+wordmark+lockup)" }
+    ],
+    "brand_wzorce": [
+      { "wzor": "favicon*32", "label": "favicon 32px" },
+      { "wzor": "wordmark", "label": "wordmark" },
+      { "wzor": "*logo*combo*|*lockup*", "label": "lockup/logo-combo" }
+    ]
+  },
+
+  "dopasowanie": {
+    "severity": "FAIL",
+    "kompozyt_glob": "dopasowanie/*.png",
+    "kompozyt_marker": "kompozyt",
+    "md": "dopasowanie/DOPASOWANIE.md",
+    "md_ssim_regex": "0[.,][0-9]{2}",
+    "aliasy_sekcji": {
+      "hero": ["hero", "01"],
+      "trust": ["trust", "zaufanie", "02"],
+      "problem": ["problem", "03"],
+      "demo": ["demo", "04"],
+      "wideo": ["wideo", "video", "05"],
+      "benefits": ["benefit", "korzysci", "06"],
+      "porownanie": ["porownanie", "07"],
+      "opinie": ["opinie", "reviews", "08", "09"],
+      "galeria": ["galeria", "gallery", "08", "09"],
+      "zamow": ["zamow", "oferta", "10"],
+      "faq": ["faq", "11"],
+      "final": ["final", "finalcta", "12"],
+      "interakcja": ["interakcja", "05"]
+    }
+  },
+
+  "interakcje": {
+    "severity": "FAIL",
+    "always_ids": ["demo"],
+    "tor_i_attr": "data-tor-i",
+    "wymagane_na_sekcje": ["{id}-SPEC-I.md", "{id}-sandbox.html"],
+    "wymagany_katalog": "{id}-test",
+    "downgrade_regex": "downgrade\\s+{id}"
+  },
+
+  "grep_forbidden": {
+    "statyczne": [
+      { "regex": ">\\s*0?\\d\\s*/\\s*1[0-9]\\s*<", "severity": "FAIL", "label": "numeracja sekcji NN/NN w tresci" },
+      { "text": "wysyłka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
+      { "text": "wysylka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
+      { "text": "magazyn w PL", "severity": "FAIL", "label": "magazyn w PL" },
+      { "text": "dropship", "severity": "FAIL", "label": "dropshipping" },
+      { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (z UGC wideo) w HTML" },
+      { "text": "pobranie", "severity": "WARN", "label": "wzmianka 'pobranie'" },
+      { "regex": "\\braty\\b", "severity": "WARN", "label": "wzmianka 'raty'" }
+    ],
+    "dynamiczne_shop": {
+      "severity": "FAIL",
+      "linie_zawieraja": ["shop", "sklep źródłowy", "sklep zrodlowy"],
+      "ignoruj_kandydatow": ["shop", "sklep", "name", "url", "shop{name,url}", "shop{name", "name,url}", "nigdy", "white", "label"],
+      "min_dlugosc": 4
+    }
+  },
+
+  "sieroty": {
+    "severity": "FAIL",
+    "assets_glob": "assets/*",
+    "rozszerzenia": [".png", ".webp", ".jpg", ".jpeg", ".avif"],
+    "skip_markery": ["skreślony", "skreslony", "SKIP", "odrzuć", "odrzuc", "ODRZUĆ", "deferred"],
+    "dokumentacja": ["MAPA-ASSETOW.md", "F3-ASSETY-MAPA.md"],
+    "http_200": true
+  },
+
+  "wagi": {
+    "severity": "FAIL",
+    "klasy": [
+      { "match": ["hero"], "label": "hero", "max_kb": 230 },
+      { "match": ["/scenes/"], "label": "scena", "max_kb": 180 },
+      { "match": ["poster"], "label": "poster", "max_kb": 60 },
+      { "match": ["/gallery/", "/ugc/"], "label": "kafel", "max_kb": 100 },
+      { "match": [".mp4"], "label": "wideo mp4", "max_kb": 2560 }
+    ],
+    "domyslny_max_kb": 120
+  },
+
+  "phash": {
+    "severity": "FAIL",
+    "klasy_path": ["/scenes/", "/gallery/"],
+    "hamming_max": 10,
+    "wyjatek_tokeny": ["packshot"]
+  },
+
+  "baza": {
+    "severity": "FAIL",
+    "tabela_produkty": "bud_tt_products",
+    "kolumny_kuracji": { "gallery": "gallery_curated", "videos": "videos_curated" },
+    "tabela_nazw": "bud_brand_names",
+    "kolumna_nazwy": "name"
+  },
+
+  "wideo_kafle": {
+    "severity": "FAIL",
+    "video_tag": "<video",
+    "licz_mp4_z_url": true,
+    "downgrade_regex": "downgrade\\s+wideo"
+  },
+
+  "makiety_mobile": {
+    "severity": "WARN",
+    "wymagane": [
+      { "gdy": "zawsze", "wzory": ["makiety/*hero*mobile*"], "label": "hero mobile" },
+      { "gdy": "tor_i", "wzory": ["makiety/*demo*mobile*", "makiety/*interakcja*mobile*"], "label": "demo/interakcja mobile" },
+      { "gdy": "wideo", "wzory": ["makiety/*wideo*mobile*", "makiety/*video*mobile*"], "label": "wideo mobile" }
+    ],
+    "nota_regex": "makiet[ay][ ]*mobile|mobile[ ]*desktop-only|tylko desktop"
+  },
+
+  "og_image": {
+    "severity": "WARN",
+    "meta_regex": "og:image[^>]*content=\"([^\"]+)\"",
+    "zakazane_tokeny": ["hero-d", "hero-desk", "hero-mobile", "hero-m."],
+    "oczekiwany_token": "og"
+  },
+
+  "ledger_fazy": {
+    "severity": "WARN",
+    "reguly": [
+      { "gdy_plik": "CHOREOGRAFIA.md", "ledger_zawiera": ["choreograf", "F5"], "label": "faza choreografii (F5)" },
+      { "gdy_katalog": "interakcje", "ledger_zawiera": ["TOR-I", "tor-i"], "label": "faza TOR-I" }
+    ]
+  }
+}

@@ -169,6 +169,11 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    i WSTRZYKUJE dropship-claims (przekreślenia, „NR 1 W POLSCE", darmowa dostawa)! Mobile
    generować per-sekcja z DOKŁADNĄ treścią wypisaną w prompcie (jak desktop); referencja
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
+   **ZAKRES (urealnienie po audycie 17.07 — żaden przebieg nie robił 13 par):** mobile-makieta
+   OBOWIĄZKOWA dla: hero, sekcji TOR-I i sekcji wideo (gate-check liczy pliki). Pozostałe
+   sekcje: mobile wynika z desktop-makiety + reguł kaskady (sticky svh, stack, kompakt),
+   a jakość 390px pilnują PASS-y (capture-lint/detail-lint) i dowody dopasowania. Sekcja,
+   której mobile wyszedł ŹLE mimo reguł → dorobić mobile-makietę i wrócić po kontrakcie.
 
 **🎛️ RZEMIOSŁO PROMPTÓW MAKIET (research D, 16.07 — OpenAI cookbook + praktycy; UNIWERSALNE):**
 - **🎨 DETAL-LAYER (research 17.07 — human-crafted vs AI-generic): poprawna ≠ droga.**
@@ -353,6 +358,7 @@ interakcja (klik bez zmiany sceny, SSIM stanów ≥0.9) = FAIL nawet gdy reszta 
 kompozytu):** policz pliki `dopasowanie/NN-*.png` — musi być KOMPLET sekcji (hero+02–13).
 Braki = FAIL „niekompletny dowód F7.1", niezależnie od reszty. Twierdzenie „13/13 1:1"
 bez 13 kompozytów jest nieważne.
+(f) **GATE-CHECK (zbiorczy, maszynowy):** commit landingu dozwolony wyłącznie po `python scripts/mockup-tools/gate-check.py <slug>` z wynikiem 0 FAIL — skrypt (manifest `gate-manifest.json`) jest źródłem prawdy o kompletności artefaktów, nie deklaracja agenta. Sprawdza: pliki obowiązkowe, komplet dopasowanie/, interakcje/ TOR-I, grep zakazów (w tym dynamiczna nazwa shop z KARTY PRAWDY), sieroty assetów, budżety wag, pHash anty-monotonii, kuracje+rejestr nazw w bazie.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**
