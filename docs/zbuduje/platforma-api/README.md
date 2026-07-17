@@ -45,6 +45,30 @@ POST https://yxmavwkwnfuphjqbelws.supabase.co/functions/v1/wf2-platform
 Artefakty testów na sklepie „test" (`019f650b-8d9b-7225-b0aa-c5455f6298a1`): produkt **„API Test Produkt"**
 (id `019f6baf-8ea0-75c5-89e0-c16bdbd9ba93`, slug `api-test-produkt`) — brak endpointu DELETE, zostaje.
 
+## Integracje + dostawy (doszły w API 17.07 — przetestowane)
+
+**`GET /stores/{id}/integrations`** — 8 typów per sklep: FacebookPixel, TikTokPixel, GoogleAnalytics,
+GoogleTagManager, HotJar, LiveChat, Sms, **WpPixel**; każdy z `integrationId`, `isActive` i polami
+konfiguracji (pixelId/apiKey/containerId/hotjarId/senderId/liveChatId).
+**`PUT /integrations/{integrationId}`** — wysyłać tylko pola danego typu; **UWAGA: PUT z wartością
+AUTO-WŁĄCZA integrację** (isActive:true). **`PUT .../toggle`** — flip stanu (bez body).
+
+Test 17.07 (FacebookPixel, sklep „test", pixelId testowy, po teście wyczyszczone): pixel
+wstrzykiwany server-side na WSZYSTKICH stronach storefrontu — home, checkout **i naszych
+podstronach isHtml**. Konsekwencje:
+- **Wymóg §7 TESTY.md „ten sam pixel na obu domenach" REALIZUJE PLATFORMA** — ustawiamy
+  pixelId per sklep przez API, checkout jest pokryty.
+- **⚠️ REGUŁA LANDINGÓW: init-guard.** Skoro platforma wstrzykuje pixel także w strony isHtml,
+  exec-script landingu przy podmienionym `{{PIXEL_ID}}` NIE może drugi raz init/PageView
+  (dubel eventów) — ma tylko dowieszać VC/ATC/IC (sprawdzenie `window.fbq` przed loaderem).
+- `apiKey` przy FacebookPixel = najpewniej token Conversions API — **pytanie do Adriana:
+  czy platforma emituje Purchase server-side (CAPI) z `event_id` (dedup) i czy przenosi
+  `fbclid/_fbp/_fbc` z wejścia do zdarzenia?** To ostatni brakujący klocek trackingu.
+
+Dostawy (nowe endpointy, nietestowane): `PUT/DELETE /delivery-methods/{id}`, `PUT /delivery-methods/order`,
+`GET /delivery-brokers/{id}/services`, **`PUT /delivery-brokers/{id}/cod-bank-account`** (konto do pobrań
+— COD potwierdzone na poziomie brokera).
+
 ## Luki vs wymagania SSOT (do zgłoszenia developerowi)
 
 1. ~~PUT html not implemented~~ **WDROŻONE i przetestowane 16.07 wieczór** (kontrakt `{isHtml, html}`; pilot: Uśmieszek na sklepie „test").
