@@ -301,12 +301,25 @@ jako akcenty tekstu/ikon. Footer JASNY. (Badania: jasne = wierność zdjęć, cz
 masowego B2C; „ciemne+neon" = AI-slop; dark wygrywa tylko w niszach premium/B2B.)
 **CTA: kontrast + izolacja** — jeden ciepły kolor, WYŁĄCZNIE na przycisku zakupu.
 
-**WIERNOŚĆ PRODUKTU — 3 WARUNKI (każda generacja z produktem w kadrze):**
-(1) zdjęcie referencyjne produktu w input (2 ujęcia); (2) w prompcie WPROST: „Faithfully
-reproduce the product EXACTLY as shown in the reference — same shape, proportions, colors
-and details; do NOT redesign" + MINIMALNY opis słowny (opis konkuruje z referencją!);
-(3) gate porównawczy side-by-side z realnym zdjęciem; drift = regeneracja; uporczywy drift
-małych gadżetów → scena bez produktu + realny `<img>`.
+**WIERNOŚĆ PRODUKTU — 4 WARUNKI (każda generacja z produktem w kadrze; przepisane po
+incydencie Latarka 17.07 — „grinder-pen zamiast gilotyny", klient dostałby inny produkt):**
+(0) **PASZPORT PRODUKTU** — spisany RAZ per produkt z galerii (agent vision): geometria
+i proporcje liczbowo, materiały/kolory, KAŻDY element funkcjonalny z pozycją (wyświetlacz —
+co dokładnie pokazuje!, przyciski, osłony, końcówki) + sekcja **„CZEGO NIE MA"** (archetypy,
+w które model ucieka). Wstrzykiwany do KAŻDEGO promptu z produktem. Zapis: archiwum
+`FABRYKA-*/<slug>/PASZPORT.md`.
+(1) referencje = **2 czyste packshoty text-free jako obiekty `{url, type:'product'}`**
+(⚠️ gołe stringi w `reference_images` to typ 'ref' — scena/styl, NIE produkt; przed 17.07
+stringi były GUBIONE po cichu i wszystko generowało się bez referencji!); ZAKAZ infografik
+z wypalonym tekstem jako ref; produkt idzie jako image[0] (edge sortuje);
+(2) w prompcie: preserve-list (co ma się NIE zmienić) + cechy dyskryminujące z paszportu —
+dla produktów ZŁOŻONYCH opis NIE jest minimalny (minimalizm = model wypełnia luki
+archetypem); nadal NIE opisuj produktu „na nowo" własnymi słowami poza paszportem;
+(3) **gate porównawczy vs REALNE zdjęcie + checklist z paszportu** (cecha po cesze
+PASS/FAIL; ≥1 FAIL krytyczny — klasa produktu / element tożsamości typu wyświetlacz —
+= ODRZUT i regeneracja; NIGDY gate tylko vs makieta — makieta może już nieść dryf);
+uporczywy drift → scena bez produktu + realny `<img>` na stronie (dla sklepu to
+najbezpieczniejszy default przy produktach złożonych).
 **Wyjątek — produkt CUSTOM** (personalizowany ze zdjęcia klienta): AI TYLKO sceneria,
 produkt niosą wyłącznie realne zdjęcia i UGC.
 
@@ -503,6 +516,13 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 ### 7e. Narzędzia
 - yt-dlp przez `python -m yt_dlp` (winget-shim myli); payloady PL przez plik UTF-8 (cp1250!);
   node ścieżki `c:/...`; jq brak — python/node.
+- **wf2-gen/generate-image `reference_images` = ZAWSZE obiekty `{url, type}`** (type:
+  `product` — wierność 1:1, idzie jako image[0] · `logo` · `ref` — scena/styl/makieta).
+  Gołe stringi są od 17.07 normalizowane do typu 'ref' (a wcześniej były GUBIONE po cichu —
+  incydent: cała fabryka generowała bez referencji). Guard: podane referencje, których nie
+  da się załadować = twardy błąd, nie cicha generacja z promptu.
+- **`input_fidelity` NIE istnieje w gpt-image-2** (parametr odrzucany; wysoka wierność
+  inputu jest wbudowana) — nie dodawać do payloadu; dotyczy tylko gpt-image-1/1.5.
 
 ---
 

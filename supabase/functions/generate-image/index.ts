@@ -134,7 +134,7 @@ async function generateWithOpenAI(
   prompt: string,
   count: number,
   apiKey: string,
-  referenceImages?: { url: string; type: 'logo' | 'product' }[],
+  referenceImages?: { url: string; type: 'logo' | 'product' | 'ref' }[],
   aspectRatio?: string,
   quality: string = 'high'
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
@@ -145,7 +145,7 @@ async function generateWithOpenAI(
   console.log(`Using OpenAI model: ${model}, size: ${size}, n: ${n}`)
 
   // Fetch reference images in parallel with retry
-  const refBlobs: { blob: Blob; filename: string; type: 'logo' | 'product' }[] = []
+  const refBlobs: { blob: Blob; filename: string; type: 'logo' | 'product' | 'ref' }[] = []
   let productRefAdded = false
   let logoRefAdded = false
   const refErrors: string[] = []
@@ -184,12 +184,23 @@ async function generateWithOpenAI(
     throw new Error(`Product reference image could not be loaded after retries. Errors: ${refErrors.join('; ')}`)
   }
 
+  // TWARDY GUARD (incydent 17.07: stringi w reference_images były po cichu gubione i
+  // WSZYSTKIE generacje szły bez referencji): jeśli wołający podał referencje, a żadnej
+  // nie udało się załadować — to błąd, nie „generuj dalej z samego promptu".
+  if (referenceImages && referenceImages.length > 0 && refBlobs.length === 0) {
+    throw new Error(`No reference image could be loaded (requested ${referenceImages.length}). Errors: ${refErrors.join('; ') || 'invalid reference format — expected {url, type} or URL string'}`)
+  }
+
+  // Produkt ZAWSZE jako image[0] — pierwszy obraz w /images/edits zachowuje najbogatszą
+  // teksturę/detal (OpenAI cookbook), a to produkt musi być wierny 1:1.
+  refBlobs.sort((a, b) => (a.type === 'product' ? -1 : 0) - (b.type === 'product' ? -1 : 0))
+
   // Build prompt with same reference instructions as Gemini path
   let finalPrompt = prompt
   if (productRefAdded && logoRefAdded) {
     finalPrompt = `The physical product in the scene matches the first reference image exactly. The brand logo printed on the merchandise matches the second reference image — copy it pixel-perfect: same shape, same colors, same proportions, same letterforms. Do not invent a new logo.\n\n${prompt}`
   } else if (productRefAdded) {
-    finalPrompt = `Using the exact product shown in the reference image as the physical object in the scene:\n\n${prompt}`
+    finalPrompt = `Image 1 is the EXACT physical product — the single source of truth for its shape, proportions, colors, materials and every functional element. Reproduce it unchanged: do not restyle, redesign, simplify or invent any part of it. Change ONLY the surrounding scene, lighting and background.\n\n${prompt}`
   } else if (logoRefAdded) {
     finalPrompt = `The merchandise in this scene displays the exact logo from the reference image. Copy the logo pixel-perfect onto the item — same shape, same colors, same proportions, same letterforms as shown in the reference. The logo is fixed artwork, not a design to reinterpret.\n\n${prompt}`
   }
@@ -289,7 +300,7 @@ async function generateWithGemini(
   prompt: string,
   count: number,
   apiKey: string,
-  referenceImages?: { url: string; type: 'logo' | 'product' }[],
+  referenceImages?: { url: string; type: 'logo' | 'product' | 'ref' }[],
   aspectRatio?: string
 ): Promise<{ images: { base64: string; mimeType: string }[] }> {
 
@@ -552,10 +563,15 @@ Deno.serve(async (req) => {
     console.log(`Prompt: ${prompt.substring(0, 100)}...`)
 
     // Support both old format (reference_image_url) and new format (reference_images array)
-    let refImages: { url: string; type: 'logo' | 'product' }[] = []
+    let refImages: { url: string; type: 'logo' | 'product' | 'ref' }[] = []
     if (reference_images && Array.isArray(reference_images)) {
+      // Normalizacja (incydent 17.07): fabryka słała gołe stringi URL — wcześniej były
+      // po cichu gubione (ref.url === undefined). String => typ 'ref' (ogólna referencja
+      // stylu/sceny); rolę 'product'/'logo' trzeba nadać jawnie obiektem {url, type}.
       refImages = reference_images
-      console.log(`Reference images: ${refImages.length} (new format)`)
+        .map((r: unknown) => typeof r === 'string' ? { url: r, type: 'ref' as const } : r as { url: string; type: 'logo' | 'product' | 'ref' })
+        .filter((r) => r && typeof r.url === 'string' && r.url.length > 0)
+      console.log(`Reference images: ${refImages.length} (new format; ${reference_images.length - refImages.length} dropped as invalid)`)
     } else if (reference_image_url) {
       refImages = [{ url: reference_image_url, type: 'logo' }]
       console.log(`Reference image: ${reference_image_url} (legacy format)`)

@@ -64,10 +64,13 @@ sylwetki — edit potrafi zmienić kształt) · #3 strefy treści „fade seamle
 (SSIM cap ~0.7) — oceniaj kierunkowo + werdykt vision.
 
 **EDITS+MASK (inpainting):** `/v1/images/edits`, `image[]`=makieta (baza pierwsza),
-`mask`=PNG tych samych wymiarów (alfa=0 = edytuj; z bboxów tekstu z IR + feather),
-`input_fidelity=high`. **NIE pixel-perfect** (soft-mask, rerender całości) — tylko dla
-tekstu na fakturze. Wymaga rozszerzenia `generate-image/index.ts` (pola `edit_image_url`,
-`mask_url`, `input_fidelity`; gałąź edits ~l.199-237); `wf2-gen` = proxy, bez zmian. [TODO]
+`mask`=PNG tych samych wymiarów (alfa=0 = edytuj; z bboxów tekstu z IR + feather).
+**NIE pixel-perfect** (soft-mask, rerender całości) — tylko dla tekstu na fakturze.
+Wymaga rozszerzenia `generate-image/index.ts` (pola `edit_image_url`, `mask_url`;
+gałąź edits); `wf2-gen` = proxy, bez zmian. [TODO]
+⚠️ KOREKTA 17.07: **`input_fidelity` NIE dotyczy gpt-image-2** (parametr odrzucany —
+wierność inputu wbudowana); wcześniejsza nota o `input_fidelity` obowiązuje tylko przy
+zejściu na gpt-image-1/1.5.
 
 ## 4. WERYFIKACJA 1:1 — REGION-SSIM (nie cała sekcja!)
 
@@ -79,7 +82,10 @@ wyrównania); regen/edits → kierunkowo (cap ~0.7), twardy pomiar tylko na wars
 ## 5. FAKTY TWARDE (nie odkrywać ponownie)
 
 - Makiety i output gpt-image-2 = max **1536×1024 / 1024×1536** — regen nie podnosi rozdz.
-- `generate-image` z referencjami JUŻ woła `/images/edits` (bez maski/input_fidelity) —
-  stąd dryf rekwizytów przy scene-from-mockup.
+- `generate-image` z referencjami woła `/images/edits` (bez maski) — dryf rekwizytów to
+  cecha editów bez maski. **INCYDENT 17.07: do tego dnia `reference_images` jako STRINGI
+  były gubione po cichu (ref.url===undefined) — CAŁA fabryka generowała bez referencji,
+  czysto z promptu.** Od 17.07: stringi → typ 'ref', produkt/logo wymagają obiektów
+  `{url,type}`, brak załadowanej referencji = twardy błąd, produkt sortowany jako image[0].
 - Edits+mask w gpt-image = soft-mask + pełny rerender (nie DALL·E-2-style podstawienie).
 - Jedyna prawdziwie pixel-perfect ścieżka = CROP (+ paint-over na płaskim).
