@@ -13,6 +13,12 @@ Przed czymkolwiek sprawdź `bud_tt_products.ali_snapshot->>'source'`:
   ZAKAZ budowy na search-galerii (bywa INNYM produktem). `curatedUrl` ratuje pojedyncze
   zdjęcie karty, ale NIE podnosi source i nie odblokowuje budowy.
 - **PASZPORT PRODUKTU i KAŻDA referencja generacji — wyłącznie z galerii detail.**
+- **Doprecyzowanie (Tomek 17.07): gate NIE jest o „żywości" aukcji, tylko o POCHODZENIU
+  danych.** Snapshot detail RAZ pobrany wystarcza na zawsze (galeria zrehostowana u nas,
+  dane zamrożone) — fabryka przy budowie NIE odpytuje żywej aukcji. Żywa aukcja jest
+  potrzebna jednorazowo do UTWORZENIA snapshotu detail (search-snapshot to sklejka
+  z wyszukiwarki — bywa INNYM produktem i nie da się go „naprawić" bez detail) oraz
+  niezależnie przy realizacji zamówień (fulfillment musi mieć skąd kupić towar).
 
 ## 1. F0.5 KURACJA GALERII (po zielonym gate, PRZED F1)
 Agent-kurator orzeka per kadr galerii detail; werdykty zapisuje w
