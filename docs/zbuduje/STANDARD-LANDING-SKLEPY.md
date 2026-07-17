@@ -134,6 +134,13 @@ wartość = REGENERACJA makiety z poprawionym promptem (podmiana w tym samym slo
 wycinanie/edycja na etapie kodu. **KRYTYK (bezlitosny art director + CRO: „czy czuć produkt?
 czy wygląda na DROGI projekt?") ocenia MAKIETY — przed akceptem.** AKCEPT MAKIET = kontrakt;
 po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do tego punktu.
+
+**⚙️ KWALIFIKACJA TOR-I (T0, tu — na makietach, nie w kodzie).** Każdą sekcję oznacz tagiem
+`TOR-I`, jeśli niesie interakcję flagową (INTERAKCJE-KATALOG #1–9/13/15) lub jest sekcją
+„jak działa"/demo 1-2-3/symulacją/przed-po/konfiguratorem (demo „jak działa" = DOMYŚLNIE
+TOR-I). Makieta sekcji TOR-I MUSI pokazać STANY demonstracji (osobny kadr per krok/stan),
+nie statyczną kartę z jednym zdjęciem — brak stanów = regeneracja makiety przed akceptem.
+Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
 1. **STYL-MASTER ×1** (pełna scena z motywem; gate: motyw↔korzyść, jasno, hierarchia,
    produkt wierny, minimalny fake-tekst; FAIL→regeneracja promptu).
 1.5. **BRANDING (F2.5) — favicon + wordmark; PO styl-masterze, PRZED hero** (`scripts/
@@ -280,6 +287,10 @@ twarde w F7.1). **Jedyne dozwolone różnice względem makiety = podmiany 1:1 W 
 SLOCIE:** żywy tekst (treść z promptu makiety), kanoniczny blok pay-badges, realne zdjęcia
 opinii/produktu. NICZEGO nie dodajemy ani nie usuwamy — brak/błąd na makiecie ⇒ powrót
 do F2 (poprawka grafiki), nie inwencja kodera. Sekcje czysto-danowe mogą iść z kontraktu.
+**Sekcje oznaczone `TOR-I` NIE idą tym torem — mają OSOBNY, RÓWNOLEGŁY przebieg (SPEC-I →
+sandbox izolowany → test automatyczny stanów → pętla do zgodności → montaż markerowy na
+końcu) wg `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`. Do index.html wchodzą dopiero jako
+zielony sandbox.**
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
 **BRANDING w kodzie (F2.5):** wordmark = ŻYWY tekst HTML/CSS w foncie landingu (NIGDY obrazek
 z gpt-image — diakrytyki), favicon 32 w `<head>` jako data-URI, lockup topbara = favicon LEWA
@@ -332,7 +343,12 @@ screenshot stanu min vs max (po zatrzymaniu teasera przez zdarzenie input!) — 
 <0.9, inaczej FAIL (Latarek: oba stany suwaka = ten sam plik + filtr, który nic nie ukrywał;
 efekt „zobacz X" WYMAGA realnej pary stanów); (c) **ASPEKT SCENY == SLOT:** grafika pionowa
 w szerokim slocie full-bleed (i odwrotnie) = FAIL PRZED montażem (Latarek: finał 2:3 w slocie
-3:2 → cover-zoom obcinał psa); object-position wg pozycji podmiotu na makiecie.
+3:2 → cover-zoom obcinał psa); object-position wg pozycji podmiotu na makiecie;
+(d) **DEFINICJA GOTOWE TOR-I:** każda sekcja `TOR-I` ma w archiwum `interakcje/`:
+SPEC-I.md + sandbox.html + klatki testu (A/mid/B × 390 i 1280) + werdykt vision
+„demonstruje cel SPEC-I?". Brak kompletu = FAIL. Świadomy downgrade do wariantu
+statycznego jest ważnym „gotowe" wyłącznie z wpisem w LEDGER.md (powód+data). Martwa
+interakcja (klik bez zmiany sceny, SSIM stanów ≥0.9) = FAIL nawet gdy reszta zielona.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**
