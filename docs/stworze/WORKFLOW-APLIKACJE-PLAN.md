@@ -441,4 +441,13 @@ prompt czatu ×3, front ×2 pliki; backupy `_backup_20260711`): „kod i pełna 
       (świadomie NIE twardy lock kroków — zegar umowny 4-8 tyg. biegnie od płatności, Tomek może przygotowywać
       infrastrukturę). Kontekst incydentu: rata Revolut nie ustawiała `full_paid_at` (naprawione w
       revolut-webhook — lustro tpay; commit `7c96fe3`).
+- [~] **Aktywacja across apps (ONBOARDING-FABRYKA §7b + §1.16)** — 2026-07-17. Centralny widok „uczenie między
+      apkami": każda apka pushuje NOCNYM CRONEM swoje activation stats (z `admin-stats` scope `onboarding`) na edge
+      `wfa-activation-ingest` z sekretem `WFA_INGEST_SECRET` (ta sama rura co ai-billing — apka→centrala; helper
+      push-crona po stronie `saas-startera` = FOLLOW-UP, dodawany osobno). Odbiornik upsertuje idempotentnie do
+      `wfa_activation_stats` (klucz `(project_slug, snapshot_date)`; `project_id` domykany ze slug). Panel
+      `tn-app/activation.html` (sidebar „Aktywacja"): kafle globalne + **agregat median PER NISZA** (→ realne progi
+      §1.16 zamiast zgadywania), tabela per aplikacja z trendem, rozbicie po wariancie A/B. RLS `team_members`
+      (żaden anon). **Migracja `20260717f_wfa_activation_stats.sql` + deploy edge `--no-verify-jwt`: sesja główna.**
+      Kontrakt push = nagłówek edge `wfa-activation-ingest/index.ts`.
 - [ ] F4 automaty — NIE ZACZĘTE (poza powiadomieniem spowiednika wyżej)
