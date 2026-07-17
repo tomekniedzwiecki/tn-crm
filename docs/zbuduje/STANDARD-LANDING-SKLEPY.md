@@ -589,6 +589,12 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   w reasoning i tekst wraca pusty) · `high` TYLKO krótkie calle tekstowe bez obrazów
   (creative technologist, koncepcje) z capem ~4k · KOD sekcji = `medium` · drobne poprawki /
   przycinanie copy = `low`.
+- **⚡ RÓWNOLEGŁOŚĆ GENERACJI (17.07 — wąskie gardło to API ~2 min/obraz):** styl-master
+  i hero sekwencyjnie (są referencją), ale makiety RÓŻNYCH sekcji po akceptacji hero =
+  NIEZALEŻNE → batch 4-6 równoległych POST-ów do wf2-gen (python futures), oglądanie
+  i gate'y PO zebraniu. Quality: high tylko drobny tekst + favicon; sceny text-free =
+  medium. count=2 tylko przy gate'ach WOW/wierności. Rehosty/pobrania też równolegle.
+  Efekt: faza graficzna ~35-45 min → ~12-15 min bez utraty gate'ów.
 - **Chunki: ≤~4 sekcje na chunk; lightboxy + JS interakcji ZAWSZE OSOBNYM wywołaniem**
   (5 sekcji + 12 lightboxów + JS = pewny 504).
 - Marker `<!--PAYBADGES-->`: instruować kodera „NIE dodawaj własnego wrappera .pay-badges"
