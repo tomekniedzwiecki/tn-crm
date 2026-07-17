@@ -268,7 +268,23 @@ function parseSnapshot(raw: any): Record<string, unknown> | null {
     .trim().slice(0, 2500);
 
   if (!title && !images.length) return null;
-  return { title, images, main_image: mainImage || images[0] || '', specs, variants, sku_prices: skuPrices, price, description, fetched_at: new Date().toISOString() };
+
+  // Pola affiliate-detail, których wcześniej nie zbieraliśmy (sonda raw 17.07):
+  // wolumen sprzedaży (radar sold-first!), oficjalne wideo, sklep, kategorie.
+  const soldVolume = num(d.lastest_volume ?? base.lastest_volume);
+  const videoUrl = String(d.product_video_url ?? base.product_video_url ?? '').trim() || null;
+  const shop = (d.shop_name || d.shop_url) ? {
+    name: String(d.shop_name ?? '').slice(0, 120) || null,
+    url: String(d.shop_url ?? '').trim() || null,
+  } : null;
+  const categories = {
+    l1: String(d.first_level_category_name ?? '').slice(0, 80) || null,
+    l2: String(d.second_level_category_name ?? '').slice(0, 80) || null,
+  };
+
+  return { title, images, main_image: mainImage || images[0] || '', specs, variants, sku_prices: skuPrices, price, description,
+    sold_volume: soldVolume, video_url: videoUrl, shop, categories,
+    fetched_at: new Date().toISOString() };
 }
 
 async function rapidGet(path: string, key: string): Promise<any | null> {
@@ -352,6 +368,17 @@ Deno.serve(async (req) => {
       if (!sid || !UUID_RE.test(sid)) return json({ error: 'nieprawidlowa_sesja' }, 400, c);
       const { data: s } = await supabase.from('bud_sessions').select('id').eq('id', sid).maybeSingle();
       if (!s) return json({ error: 'nieprawidlowa_sesja' }, 404, c);
+    }
+
+    // SONDA RAW (diagnostyka 17.07: puste specs/description/sku — sprawdzamy, czy to API,
+    // czy nasze mapowanie): rawProbe:true + product_id → surowa odpowiedź product-info,
+    // bez zapisu. Wymaga tej samej autoryzacji co reszta (backend/admin/sesja).
+    const rawProbe = (body as Record<string, unknown>).rawProbe === true;
+    if (rawProbe) {
+      const rid = String(body.product_id || '').trim();
+      if (!rid || !RAPID_KEY) return json({ error: 'brak_product_id_lub_klucza' }, 400, c);
+      const rawResp = await rapidGet(`/api/v3/product-info?product_id=${rid}&target_currency=USD&target_language=EN&country=PL&ship_to_country=PL`, RAPID_KEY);
+      return json({ raw: rawResp }, 200, c);
     }
 
     const productKey = (body.productKey || '').trim();
