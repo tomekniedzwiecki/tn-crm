@@ -181,6 +181,94 @@ dashboard aktywacji).
 
 ---
 
+## 6. TAKSONOMIA TYPÓW AHA + PUNKTY WARIACJI (rdzeń — czytać PRZED projektowaniem apki)
+
+> Wniosek z red-teamu fabryki (2026-07-17): §0-§5 były dopracowane dla JEDNEJ klasy niszy — **aha-solo-instant**
+> (wartość powstaje z akcji SAMEGO usera, w tej samej sesji, emitowana klienckim `track()`). §4b dodał
+> **aha-solo-async-AI**. Cztery UKRYTE ZAŁOŻENIA rdzenia (Z1-Z4) pękają na innych niszach — a fabryka celowo
+> robi RÓŻNE nisze. Krok `onboarding` MUSI najpierw sklasyfikować typ aha; domyślne = obecny stan (obie
+> zrobione apki bez zmian).
+
+**Z1-Z4 (założenia do świadomego łamania):** Z1 aha emituje sam user, klientowo, w sesji · Z2 TTFV w minutach,
+okno kohorty 7 dni, alarm <20%, trial 14 dni — zaszyte na stałe · Z3 droga do aha w pełni w rękach usera ·
+Z4 wartość SOLO (1 user → 1 wartość, grain=user).
+
+| Typ aha | Kto/co daje wartość | Kiedy | Reguły specyficzne |
+|---|---|---|---|
+| **solo-instant** *(default)* | user, in-app | sesja, minuty | Obecny standard bez zmian. |
+| **solo-async-AI** | model AI | sesja, 10-60 s | §4b (`generation.js`). |
+| **od-third-party** *(booking)* | inny aktor (gość) | godz.-dni | Aha SERWEROWE (webhook→app_events dla właściciela). Krok `awaiting` + „zrobione po Twojej stronie". Furtka = akcja TESTOWA, nie fałszywy seed. Nudge tylko gdy NOT `setup_completed`. |
+| **po-integracji** *(dashboard/raporty)* | dane z podłączonego źródła | min. (sync)/async | Empty-state „Podłącz", nie „Utwórz". Demo-mode = DOMYŚLNY nośnik aha PRZED integracją. §1.11 „opcjonalne" NIE obowiązuje — integracja to pełny krok Setup. Aha serwerowe po ETL. |
+| **zespołowe** *(multi-user)* | zespół (≥N członków) | dni | `activation_grain=workspace` (encja `accounts`). Dwie persony (owner/członek) = różne `ONBOARDING_STEPS` (wymaga `opts.steps`). Aha serwerowe na poziomie workspace. Zaproszeni POZA lejkiem trialu. |
+| **marketplace-dwustronne** | druga strona | dni (po płynności) | Survey wybiera STRONĘ → różny checklist/empty/aha/dashboard per strona. Liquidity concierge (realna podaż operatora) zamiast seedu. Dwa niezależne aha + dwa lejki. |
+| **długocyklowe** *(SEO/windykacja/oszczędzanie)* | świat/czas | dni-tygodnie | Trial ≥ TTFV LUB gating value-metered (paywall po wartości, nie po zegarze). **Leading proxy-aha** (wcześnie mierzalny kamień przewidujący wartość) jako `activated` + `realized_value` osobno. Skala dni w kubełkach/oknach. „Aha oczekiwania" (widoczny harmonogram „co i KIEDY się wydarzy") w sesji 1. Reengagement nie myli „czeka na wartość" ze „stalled". |
+
+**9 JAWNYCH PUNKTÓW WARIACJI (krok `onboarding` ustawia, z domyślną):**
+1. `aha_type` ∈ taksonomia — *default: solo-instant*.
+2. `aha_source`: client-track | **server-webhook** — *default: client-track*. **[Z1-fix — najważniejsza uniwersalna poprawka]** rozszerz „KONTRAKT AHA" o 4. dozwolone źródło: event wstawiony SERWEROWO (service-role, `user_id`=właściciel) gdy wartość przychodzi async/od innego aktora. Checklist to zniesie bez zmian (nasłuchuje app_events po user_id).
+3. `activation_grain`: user | workspace — *default: user*.
+4. `ONBOARDING_STEPS` per segment/rola/strona — *default: jedna tablica*. **[fix silnika]** `initChecklist(ctx, {steps})` — override tablicy kroków; bez tego dwustronne/zespołowe NIEWYRAŻALNE.
+5. krok `awaiting`/`enablingCta` (akcja usera vs oczekiwanie na świat) — *default: brak*. **[fix `renderChecklist`]** stan „zrobione po Twojej stronie — czekamy na X" zamiast „aktywne CTA" sugerujące porażkę usera.
+6. `expected_ttfv` → napędza: krawędzie kubełków TTFV, okno kohorty (`ACT_WINDOW_D`), próg alarmu, okna serii maili, `IDLE_DAYS`, `trial_days` — *default: minuty/7 dni/14 dni*. **[Z2-fix]** dziś stałe w kodzie.
+7. model furtki (§1.7d): sample-data | action-test | concierge/liquidity | demo-mode — *default: sample-data*.
+8. gating: time-trial | value-metered — *default: time-trial 14 dni*. **NAJGROŹNIEJSZY POJEDYNCZY BŁĄD: trial czasowy < TTFV → paywall przed pierwszą wartością.**
+9. nudge-suppression: activation_step/nudge tylko gdy `activated_at IS NULL` **AND NOT (`setup_completed` OR awaiting-external)** — *default: samo `activated_at IS NULL`* (dziś nadgorliwe wobec czekających — łamie własny zakaz nudge-„wyrzutu").
+
+---
+
+## 7. ROZSZERZENIA UNIWERSALNE 2026 (research zewn. + krytyk kompletności — obowiązują KAŻDĄ apkę)
+
+Reguły do dopisania do §1/§2/§1.16 (triangulowane z 2-3 źródeł; źródła w `docs/stworze/onboarding/`).
+
+**A11Y i mobile [NAJWIĘKSZA DZIURA — prawnie wymagane w UE od 28.06.2025, EAA/WCAG 2.2 AA]:** onboarding i maile spełniają WCAG 2.2 AA jako baseline — touch-target ≥24×24 px, widoczny nie-zasłonięty focus, kontrast ≥4.5:1, pełna klawiatura, `aria-live="polite"` na pasku postępu checklisty, **ZERO ponownego pytania o dane już podane (Redundant Entry)**, auth bez testów poznawczych (magic-link/hasło OK). Każdy ekran i mail projektowany NAJPIERW na 375 px. Gate: `axe-core` w E2E na 3 powierzchniach (survey/checklist/empty-state).
+
+**PAS ZAUFANIA (lęk#1=scam) [uniwersalny dla persony B2B/JDG]:** każdy onboarding niesie stały, widoczny sygnał legitymacji OD PIERWSZEGO EKRANU: kto stoi za produktem (twarz/realna firma/NIP), co dzieje się z danymi (link do trust page), 1 dowód (case/liczba), 1 żywy kanał kontaktu. Mikro-sygnał zaufania + „po co to pole" przy KAŻDYM polu Setup. Minimalizacja: nie zbieraj danych wrażliwych przed aha.
+
+**WARTOŚĆ PRZED REJESTRACJĄ + artefakt „do zabrania":** rozważ demo-aha PRZED rejestracją (podgląd/próbka na jednym wejściu). Gdy aha musi być za loginem — pierwsza sesja MUSI wytworzyć artefakt, który user ZACHOWA nawet bez powrotu (i który jest hakiem winbacku). Bije w 98%-churn-w-2-tyg.
+
+**PROGRESSIVE PROFILING jako MECHANIKA (nie tylko §1.1):** rejestracja ≤2 pola; każde kolejne pole zbierane KONTEKSTOWO przy pierwszym użyciu funkcji, która go wymaga (z „po co teraz") — nigdy batch, nigdy 2× (spina się z WCAG Redundant Entry). Event `profile_field_captured{field}`; wskaźnik kompletności z eventów, nie osobny formularz. ZAKAZ kroku „dokończ profil".
+
+**AGENT DOMYKA SETUP „ZA MNIE" [naturalne dla niszy „mało czasu, nietechniczny", >2× aktywacji]:** gdzie setup ma >2 pola/decyzje, DOMYŚLNĄ ścieżką jest agent wypełniający je z inputu usera (dane z KRS/strony → gotowa konfiguracja do AKCEPTACJI); user tylko zatwierdza, ręczne klikanie opcjonalne. Aha = zaakceptowana konfiguracja + 1. wynik. Rozszerzenie §4b poza „ładne czekanie".
+
+**DWA KPI CZASU + metoda odkrycia aha:** panel mierzy TTFV (do 1. wartości) ORAZ **TTCV = czas do `habit`** (nawyk = predyktor retencji) — OSOBNO. Aha odkrywaj metodą: kohorta retencjonowana 30d vs porzucona → NAJWCZEŚNIEJSZA akcja rozdzielająca kohorty → eksperyment na kauzalność. Cele TTFV per-KATEGORIA, nie z cross-firmowej średniej.
+
+**DELIVERABILITY SLO + tier SMS:** silnik maili nie startuje bez SPF+DKIM+DMARC domeny; complaint <0,1% / hard-bounce <0,5% → auto-pauza kindu. Zdefiniuj 1-2 momenty time-critical per apka jako SMS-eligible (porzucona generacja, ostatni dzień trialu) — SMS tylko gdy user podał telefon i tylko transakcyjny/aktywacyjny, nigdy marketing.
+
+**RESURRECTION jako OSOBNY etap [4. stan, ≠ nigdy-aha, ≠ rezygnacja]:** user BYŁ aktywowany, złapał częściowy nawyk, zniknął bez rezygnacji subskrypcji. Event `resurrected` (powrót po N dni idle), własna kohorta w panelu, dedykowany motion (mail/SMS zakotwiczony w JEGO minionej wartości + „co się zmieniło"). Segment `lifecycle-emails`: `activated_at IS NOT NULL AND last_active_at < now()-N AND status ∈ trialing/paying`. Guard świeżości jak milestone. Rozłączny od `activation_nudge` i `winback`.
+
+**META-ONBOARDING OPERATORA [głęboka luka — dziś ZERO]:** operator (klient fabryki, płacący) wchodzi w pusty `admin.html` bez prowadzenia — paradoks („pusty ekran = porzucenie"). Własna checklista „Pierwsze kroki operatora" (reuse `@dsChecklist`): {ustaw ceny, potwierdź `aha_type`+`AHA_EVENT`+próg, wyślij 1. „Co nowego", zajrzyj w dashboard aktywacji, ustaw kill-switch/testowego usera}. Operator-empty-states na zakładkach. „Operator activated" = pierwszy NIETESTOWY user apki osiągnął aha.
+
+**POMIAR JAKOŚCIOWY drop-offu (dlaczego, nie tylko ile):** mikro-prompt 1-tap przy porzuceniu Setup / po N bezczynności w oknie onboardingu („Co Cię zatrzymało?" — 3-4 gotowe powody + opcjonalne pole) → event `onboarding_friction{step, reason}` → kafel „Powody porzucenia". Lejek mówi GDZIE, to mówi DLACZEGO (inaczej pętla krytyka zgaduje).
+
+**PROGI HANDOFFU do człowieka (uogólnienie §4b na całą apkę):** proaktywny ALERT do operatora (nie autonomiczna wysyłka) gdy: HIGH-INTENT bez aha (dodał kartę/zapłacił, brak `activated` > Xh), 2× `generation_failed` LUB powtarzalne `client_errors` usera, feedback z negatywnym sentymentem, powrót po długiej nieobecności bez akcji. Próg = punkt wariacji per apka.
+
+**CHANGELOG ↔ ONBOARDING (dwa audytoria, te same mechanizmy):** bramkuj ogłoszenia „Co nowego" po wieku konta/aktywacji (badge tylko dla userów PO onboardingu — nowy user nie dostaje ogłoszeń o funkcjach, których nie miał). Przy MAJOR funkcji dla ISTNIEJĄCYCH userów: `feature-onboarding` = mini-checklista/`showTip` przy funkcji, nie modal na loginie.
+
+**ONBOARDING TO SYSTEM ŻYWY (poziom fabryki):** „wdrożony" ≠ „skończony". Po launchu, przy kohorcie ≥N, największy drop-off z lejka §1.16 atakowany KWARTALNIE 1 zmianą + pomiarem (A/B lub before/after).
+
+**UCZENIE MIĘDZY APKAMI [waga ROŚNIE z każdą apką — sedno „fabryki"]:** (a) lekki przydział wariantu w `track.js` (stabilny hash usera → property `variant` na eventach; dashboard rozbija activation po wariancie); (b) centralny widok w tn-crm „activation across apps" (ta sama rura co cron ai-billing) → mediany TTFV/activation per NISZA zasilają realne progi §1.16; (c) FORMALNA zasada: wzorzec wygrany na jednej apce = backport do `saas-starter`.
+
+**WERSJONOWANIE ONBOARDINGU:** przy zmianie `ONBOARDING_STEPS` na żywej apce stan RE-DERIVUJ z app_events (trwałe), NIGDY z localStorage (ulotne) + stempel `onboarding_version`. (Uogólnienie gotchy `wfa_steps.data->checklist`.)
+
+**PUNKTY WARIACJI (standard NAZYWA, nie narzuca):** i18n/podstawa prawna maila (dziś PKE/PL zaszyte — dla innego rynku = konfig), integracja-jako-prerekwizyt, multi-user/team/seat, PWA install & push priming (`beforeinstallprompt` po 1. wartości, nie na load).
+
+---
+
+## 8. DOPRECYZOWANIA ANTI-DRIFT (audyt 3 implementacji — usuwają dwuznaczności, które już zrodziły dług)
+
+1. **Komponent (§4 w. „`@dsChecklist`?"):** REGUŁY §1.5 + KONTRAKT EVENTÓW §1.14 IDENTYCZNE we wszystkich apkach; komponent = wspólny silnik startera (`initChecklist`, config-only) PREFEROWANY. Własna implementacja dozwolona TYLKO z (a) tymi samymi klasami `@dsChecklist`, (b) testem E2E kontraktu eventów. (Dziś 3 forki: starter/DW/Fachmat.)
+2. **Survey (§1.2):** wymagany TYLKO gdy odpowiedź JTBD realnie ROUTUJE ścieżkę; apka jedno-ścieżkowa może pominąć, ale MUSI to udokumentować i dostarczyć wymiar segmentu z innego pola (albo jawnie zadeklarować `segments:[]`).
+3. **`setup_completed` (§1.14):** emituje SILNIK onboardingu po ukończeniu kroków prerekwizytowych; apka NIE MOŻE zastąpić go eventem domenowym (panel operatora wspólny). Kotwica lejka = JEDNA nazwa `signed_up` (nie `signup`).
+4. **Spójność aha [egzekwuj, nie honor-system]:** aha = JEDNA współdzielona stała (front) + hardcode edge-defaultu do niej + **detektor w `audit-static`/`preflight`, że `AHA_EVENT` (jeśli ustawiony) == stała**, ORAZ (obowiązkowo) **env-niezależna aktywacja w dashboardzie** (activated_at OR 1. event aha z app_events + flaga `activated_from_fallback`) — by rozjazd env nie mógł wyzerować metryki (wzorzec Fachmata; incydent już wystąpił).
+5. **Dedup one-time maili (§2):** KANONICZNA lista (welcome, activation_step, activation_nudge, milestone, winback_1, trial_ending, trial_ending_inactive, trial_expired, trial_tip_1..3, trial_half) MUSI być w `email_log_once_delivered_idx` w KAŻDEJ apce.
+6. **Opt-out + List-Unsubscribe (§2):** egzekwowane CENTRALNIE w `sendTpl` (defense-in-depth po `DEFAULTS[kind].marketing`), nie w pojedynczych sekcjach + guard placeholdera `TODO —` w `sendTpl`. (Dług: DW/Fachmat miały starą `sendTpl` → winback do wypisanych = PKE; naprawiane.)
+7. **Budżet maili (§2):** KAŻDA sekcja serii (także welcome/activation_step/nudge) sprawdza `mailedThisRun` przed wysyłką.
+8. **Dashboard — do standardu:** clamp `step_index`[0,50] + `step_name`≤64 + cap ~30 kroków (anty-DoS lejka wstrzykniętym eventem) + env-niezależna aktywacja (p.4). Limit `step_name` ujednolicony = 64, `step_index` zawsze dołączany.
+9. **§4b — apka-źródło przyjmuje uogólnienie:** po backporcie+uogólnieniu komponentu apka źródłowa (DW) MUSI przyjąć wersję generyczną (`meta.fallbackHref/Label/Note`), nie trzymać forka z zaszytym `kind==="plan"`/`factsHref`.
+10. **Guard REGRESJI w apce:** każda apka ma asercję E2E/smoke: (1) checklist się renderuje, (2) `onboarding_step_done` leci z kontraktem, (3) `activated_at` ustawia się po realnym aha.
+
+---
+
 ## STAN WDROŻENIA (aktualizować)
 - [x] Research ×3 (Sonnet 5) — `docs/stworze/onboarding/RESEARCH-1..3.md` — 2026-07-16
 - [x] SSOT (ten dokument) — 2026-07-16
