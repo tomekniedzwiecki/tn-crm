@@ -343,6 +343,46 @@
   .scorePill.mid{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.08)}
   .tblEmpty{text-align:center;color:var(--dim2);padding:50px 20px;font-size:14px}
 
+  /* LOGISTYKA */
+  .logiBtn.on{border-color:var(--gold);color:var(--gold)}
+  .seedBtn{margin-left:8px}
+  .logiChip{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:99px;border:1px solid var(--line2);background:var(--surface2);color:var(--dim)}
+  .logiChip.none{color:var(--dim2)}
+  .logiChip.sourcing{color:var(--gold);border-color:#5a4412;background:rgba(245,181,63,.08)}
+  .logiChip.verified{color:var(--blue);border-color:#234a6e;background:rgba(50,145,255,.08)}
+  .logiChip.test_ordered{color:#c48be0;border-color:#4a2c5a;background:rgba(180,120,220,.1)}
+  .logiChip.ready,.logiChip.eu_stock,.logiChip.pl_stock{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.1)}
+  .logiChip.mini{font-size:10px;padding:1px 7px;gap:3px}
+  .statusSel{font-size:11.5px;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:8px;padding:6px 9px}
+  .logiTbl{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:12px}
+  .logiTbl th,.logiTbl td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+  .logiTbl th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim2);font-weight:600}
+  .logiTbl tbody tr:last-child td{border-bottom:0}
+  .logiTbl tr.chosen{background:rgba(70,180,106,.07)}
+  .logiTbl td.razem{font-weight:600;color:var(--text)}
+  .srcTag{display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:1px 7px;border-radius:5px;border:1px solid var(--line2);background:var(--surface2);color:var(--dim)}
+  .killed{color:var(--red);font-weight:700;cursor:help}
+  .ofWarn{margin-left:5px;color:var(--amber,#f5a623);cursor:help;font-size:12px}
+  .ost{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
+  .ost.chosen{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.1)}
+  .ost.backup{color:var(--blue);border-color:#234a6e}
+  .ost.rejected{color:var(--red);border-color:#5a2326}
+  .ost.verified{color:var(--gold);border-color:#5a4412}
+  .logiActs{display:flex;gap:5px}
+  .logiForm{border:1px solid var(--line2);border-radius:10px;background:var(--surface);margin-top:10px}
+  .logiForm>summary{list-style:none;cursor:pointer;padding:9px 12px;font-size:12px;font-weight:600;color:var(--dim);display:flex;align-items:center;gap:7px}
+  .logiForm>summary::-webkit-details-marker{display:none}
+  .logiForm>summary::after{content:'▾';margin-left:auto;color:var(--dim2);font-size:11px}
+  .logiForm[open]>summary::after{content:'▴'}
+  .logiForm[open]>summary{border-bottom:1px solid var(--line)}
+  .logiForm>summary:hover{color:var(--text)}
+  .logiFormBody{padding:11px 12px;display:flex;flex-wrap:wrap;gap:9px;align-items:flex-end}
+  .logiFormBody label{font-size:10.5px;color:var(--dim2);display:flex;flex-direction:column;gap:3px;font-weight:600}
+  .logiFormBody .ipt,.logiFormBody .sel{padding:6px 9px;font-size:12px}
+  .ckItem{flex-direction:row!important;align-items:center;gap:7px;font-size:12px;color:var(--dim);width:100%;font-weight:400!important;cursor:pointer}
+  .toItem{border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:9px 11px;margin-bottom:9px}
+  .toHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--dim)}
+
   /* LIGHTBOX / CHEAT / TOAST / LOADER */
   .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:none;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
   .lightbox.show{display:flex}
@@ -389,6 +429,7 @@
       <button data-sort="growth">Rosnące</button>
     </div>
     <button id="tableBtn" class="btn btn-sm" style="display:none">Tabela</button>
+    <button id="logiBtn" class="btn btn-sm logiBtn" title="Widok logistyki — oferty zakupu, test-ordery, łańcuch dostaw">Logistyka</button>
   </div>
   <div class="seasonCard" id="seasonCard" style="display:none"></div>
   <div class="filterChips" id="filterChips"></div>
@@ -486,9 +527,14 @@ let SUBQ=null;                    // sub-kolejka pending: ready|dogrywka|nopack|
 let FPROOF=false, FSEASONOFF=false, FSEASONSOON=false;
 let FFUTURE=false, FSEASONCHECK=false; // chipy: „Na przyszły sezon" (pending) / „Sezon do sprawdzenia"
 let SCARD=null;                   // aktywny licznik karty „Sezony": enter|end|hib|check|null
-let VIEW='list';                  // list|table
+let VIEW='list';                  // list|table|logistics
 let SELID=null, LASTDET=undefined, CURVID=null, REASONOPEN=false, LISTN=100;
 let TSORT={col:'score',dir:-1};
+// ── LOGISTYKA ── widok zakupów/łańcucha dostaw (approved). LSTAT = filtr lejka logistics_status.
+let LSTAT='';                     // ''|none|sourcing|verified|test_ordered|ready|eu_stock|pl_stock
+const OFFERS=new Map();           // key → [bud_offers]
+const TORDERS=new Map();          // key → [bud_test_orders]
+const LOGI_LABEL={none:'brak',sourcing:'sourcing',verified:'zweryfikowany',test_ordered:'test-order',ready:'gotowy',eu_stock:'magazyn EU',pl_stock:'magazyn PL'};
 const INLIB=new Set();
 const HIST=new Map(), HISTFETCHED=new Set();
 const GROWTH=new Map();            // key → growth_pct (tempo sprzedaży z bud_breakout_v, ≥2 snapshoty)
@@ -538,6 +584,7 @@ async function init(){
   $('refresh').onclick=load;
   $('sortSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('sortSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');SORT=b.dataset.sort;LISTN=100;render();});
   $('tableBtn').onclick=toggleTable;
+  $('logiBtn').onclick=toggleLogistics;
   document.addEventListener('keydown',onKey);
   await load();
 }
@@ -557,6 +604,7 @@ async function load(){
   await fetchLibrary();
   await loadGrowth();
   ROWS=all; SELID=null; LASTDET=undefined; LISTN=100;
+  if(VIEW==='logistics')await loadLogistics();
   render();
 }
 // bud_breakout_v: growth_pct per key (tempo sprzedaży, klucze z ≥2 snapshotami; pusto do 2. migawki).
@@ -660,6 +708,7 @@ function applyFilters(){LISTROWS=ROWS.filter(rowMatches);sortRows(LISTROWS);}
 // ── RENDER GŁÓWNY ──
 function render(){
   updateToolbar();
+  if(VIEW==='logistics'){renderLogistics();return;}
   applyFilters();
   renderFunnel();
   renderSeasonCard();
@@ -672,7 +721,9 @@ function render(){
   if(SELID!==LASTDET)renderDetail(SELID);
 }
 function updateToolbar(){
-  const showTable=(FSTAT==='approved'||FSTAT==='inlib');
+  const logi=VIEW==='logistics';
+  const lb=$('logiBtn'); if(lb)lb.classList.toggle('on',logi);
+  const showTable=!logi&&(FSTAT==='approved'||FSTAT==='inlib');
   const tb=$('tableBtn'); if(tb){tb.style.display=showTable?'':'none';tb.classList.toggle('on',VIEW==='table');}
   if(!showTable&&VIEW==='table')VIEW='list';
   const ss=$('sortSeg'); if(ss)ss.style.display=VIEW==='table'?'none':'';
@@ -791,6 +842,7 @@ function listRowHtml(x){
       <div class="rname">${esc(x.pl_name)}</div>
       <div class="rmeta">
         <span class="sold ${soldClass(sold)}">🛒 ${sold!=null?fmt(sold):'—'}</span>
+        ${VIEW==='logistics'?logiChipMini(x):''}
         ${price!=null?`<span class="rp mono">$${Math.round(price)}</span>`:''}
         ${sc!=null?`<span class="rsc">⚡${sc}</span>`:''}
         ${hasVid?`<span class="ic" title="ma wideo">🎬</span>`:''}
@@ -845,9 +897,14 @@ function renderDetail(id){
   const x=id?ROWS.find(r=>r.id===id):null;
   if(!x){box.innerHTML=`<div class="detEmpty">${I.trend}<p>Wybierz produkt z listy po lewej.</p></div>`;CURVID=null;LASTDET=id;return;}
   const vid=(x.tiktok_url||'').match(/\/video\/(\d+)/)?.[1]||'';
-  box.innerHTML=actionBarHtml(x)+detHeadHtml(x)+mediaHtml(x,vid)
-    +((x.status!=='rejected'&&x.status!=='duplicate')?(matchHtml(x,vid)+aliPanelSectionHtml(x)):'')
-    +shopDetailsHtml(x)+tractionHtml(x)+linksHtml(x);
+  if(VIEW==='logistics'){
+    box.innerHTML=logiActionBarHtml(x)+detHeadHtml(x)+mediaHtml(x,vid)
+      +offersSectionHtml(x)+testOrdersSectionHtml(x)+linksHtml(x);
+  }else{
+    box.innerHTML=actionBarHtml(x)+detHeadHtml(x)+mediaHtml(x,vid)
+      +((x.status!=='rejected'&&x.status!=='duplicate')?(matchHtml(x,vid)+aliPanelSectionHtml(x)):'')
+      +shopDetailsHtml(x)+tractionHtml(x)+linksHtml(x);
+  }
   mountDetailVid(vid);
   box.scrollTop=0;
   LASTDET=id;
@@ -883,6 +940,7 @@ function detHeadHtml(x){
       ${x.origin==='shop_radar'?`<span class="originBadge">${I.store} Shop-radar</span>`:''}
       ${x.ali_mismatch===true?`<span class="mmBadge">⚠ Inny produkt?</span>`:''}
       ${x.reviewed_by?`<span class="chip">${esc(x.reviewed_by)}${x.reviewed_at?' · '+fmtDate(x.reviewed_at):''}${x.reject_reason?' · '+esc(x.reject_reason):''}</span>`:''}
+      ${x.status==='approved'?`<span id="detHeadLogi-${x.id}">${logiChip(x)}</span>`:''}
     </div>
     ${metricsHtml(x)}
     ${seasonEditHtml(x)}
@@ -1466,6 +1524,394 @@ function openCard(id){
   const el=document.getElementById('row-'+id); if(el)el.scrollIntoView({block:'center'});
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// ── WIDOK LOGISTYKA ── oferty zakupu, ocena sprzedawcy, test-ordery, łańcuch dostaw
+//    (SSOT: docs/zbuduje/LOGISTYKA.md sekcje 4/5/7). Pokazuje TYLKO approved.
+//    Silnik kill-gates/scoring/choose/seed = edge bud-offers; proste operacje = supabase-js.
+// ════════════════════════════════════════════════════════════════════════════
+function logiLabel(s){return LOGI_LABEL[s||'none']||s||'brak';}
+function logiChip(x){const s=x.logistics_status||'none';return `<span class="logiChip ${esc(s)}" title="status logistyczny">${I.box} ${esc(logiLabel(s))}</span>`;}
+function logiChipMini(x){const s=x.logistics_status||'none';return `<span class="logiChip mini ${esc(s)}" title="status logistyczny">${esc(logiLabel(s))}</span>`;}
+function srcTag(s){const m={aliexpress:'Ali',cj:'CJ',allegro:'Allegro','1688':'1688',bigbuy:'BigBuy',other:'Inne'};return `<span class="srcTag">${esc(m[s]||s||'?')}</span>`;}
+// dozwolone domeny per source (LUSTRO edge bud-offers SOURCE_DOMAINS); 'other' = dowolne https
+const SOURCE_DOMAINS={aliexpress:['aliexpress.com'],cj:['cjdropshipping.com'],allegro:['allegro.pl'],'1688':['1688.com'],bigbuy:['bigbuy.eu','bigbuy.com'],other:[]};
+function validOfferUrl(url,source){
+  let u;try{u=new URL(url);}catch(_){return false;}
+  if(u.protocol!=='https:')return false;
+  const allow=SOURCE_DOMAINS[source];
+  if(!allow)return false;
+  if(!allow.length)return true; // other
+  const host=u.hostname.toLowerCase();
+  return allow.some(d=>host===d||host.endsWith('.'+d));
+}
+function medianTotal(offers){
+  const v=(offers||[]).filter(o=>o.status!=='rejected').map(o=>(+o.price_pln||0)+(+o.shipping_pln||0)).filter(n=>n>0).sort((a,b)=>a-b);
+  if(!v.length)return null;
+  const m=Math.floor(v.length/2);
+  return v.length%2?Math.round(v[m]):Math.round((v[m-1]+v[m])/2);
+}
+function logiCounts(){
+  const c={all:0,none:0,sourcing:0,verified:0,test_ordered:0,ready:0,eu_stock:0,pl_stock:0};
+  ROWS.forEach(x=>{if(x.status!=='approved')return;c.all++;const s=x.logistics_status||'none';if(c[s]!=null)c[s]++;else c.none++;});
+  return c;
+}
+
+// ── ŁADOWANIE OFERT/TEST-ORDERÓW (paginacja .range jak reszta) ──
+async function loadLogistics(){
+  OFFERS.clear();TORDERS.clear();
+  try{
+    for(let off=0;;off+=1000){
+      const {data,error}=await sb.from('bud_offers').select('*').range(off,off+999);
+      if(error||!data||!data.length)break;
+      data.forEach(o=>{const a=OFFERS.get(o.key)||[];a.push(o);OFFERS.set(o.key,a);});
+      if(data.length<1000)break;
+    }
+  }catch(e){}
+  try{
+    for(let off=0;;off+=1000){
+      const {data,error}=await sb.from('bud_test_orders').select('*').range(off,off+999);
+      if(error||!data||!data.length)break;
+      data.forEach(t=>{const a=TORDERS.get(t.key)||[];a.push(t);TORDERS.set(t.key,a);});
+      if(data.length<1000)break;
+    }
+  }catch(e){}
+}
+async function refreshOffers(key){try{const {data}=await sb.from('bud_offers').select('*').eq('key',key);OFFERS.set(key,data||[]);}catch(e){if(!OFFERS.has(key))OFFERS.set(key,[]);}}
+async function refreshTorders(key){try{const {data}=await sb.from('bud_test_orders').select('*').eq('key',key);TORDERS.set(key,data||[]);}catch(e){if(!TORDERS.has(key))TORDERS.set(key,[]);}}
+
+// ── PRZEŁĄCZANIE WIDOKU ──
+function toggleLogistics(){
+  if(VIEW==='logistics'){VIEW='list';LASTDET=undefined;SELID=null;render();return;}
+  VIEW='logistics';LSTAT='';SELID=null;LASTDET=undefined;LISTN=100;
+  render();
+  loadLogistics().then(()=>{
+    if(VIEW!=='logistics')return;
+    renderLogisticsFunnel();
+    if(SELID){const x=ROWS.find(r=>r.id===SELID);if(x)patchLogiSections(x);}
+  });
+}
+function logiRowMatches(x){
+  if(!x||x.status!=='approved')return false;
+  const fc=$('fcat').value; if(fc&&x.category!==fc)return false;
+  const term=$('q').value.toLowerCase().trim(); if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
+  if(LSTAT&&(x.logistics_status||'none')!==LSTAT)return false;
+  return true;
+}
+function applyLogisticsFilters(){LISTROWS=ROWS.filter(logiRowMatches);sortRows(LISTROWS);}
+function renderLogistics(){
+  applyLogisticsFilters();
+  renderLogisticsFunnel();
+  const sc=$('seasonCard');if(sc){sc.style.display='none';sc.innerHTML='';}
+  const fc=$('filterChips');if(fc)fc.innerHTML='';
+  $('split').style.display='';$('tableWrap').style.display='none';
+  renderList();
+  if(!SELID||!LISTROWS.some(r=>r.id===SELID))SELID=(LISTROWS[0]||{}).id||null;
+  markSelected();
+  if(SELID!==LASTDET)renderDetail(SELID);
+}
+function renderLogisticsFunnel(){
+  const c=logiCounts();
+  const seg=(k,lab,val,cls)=>`<button class="fseg ${cls||''} ${LSTAT===k?'on':''}" onclick="setLstat('${k}')"><span class="fn">${val}</span><span class="fl">${lab}</span></button>`;
+  let h=`<button class="fseg ${LSTAT===''?'on':''}" onclick="setLstat('')"><span class="fn">${c.all}</span><span class="fl">Zatwierdzone</span></button>`;
+  h+=seg('sourcing','Sourcing',c.sourcing);
+  h+=seg('verified','Zweryf.',c.verified);
+  h+=seg('test_ordered','Test-order',c.test_ordered);
+  h+=seg('ready','Gotowe',c.ready,'g');
+  h+=seg('eu_stock','Mag. EU',c.eu_stock,'g');
+  h+=seg('pl_stock','Mag. PL',c.pl_stock,'g');
+  h+=seg('none','Bez statusu',c.none);
+  h+=`<button class="btn seedBtn" onclick="seedOffers()" title="Przenieś istniejące dopasowania (chosen_link / kandydaci) do tabeli ofert">${I.box} Zasiej oferty z dopasowań</button>`;
+  $('funnel').innerHTML=h;
+}
+function setLstat(k){LSTAT=LSTAT===k?'':k;LISTN=100;SELID=null;LASTDET=undefined;render();}
+function patchLogiSections(x){
+  if(VIEW!=='logistics'||SELID!==x.id)return;
+  const o=$('logiOffers-'+x.id);if(o)o.outerHTML=offersSectionHtml(x);
+  const t=$('logiTests-'+x.id);if(t)t.outerHTML=testOrdersSectionHtml(x);
+}
+// Patch chipa statusu w nagłówku detalu (bez remontu wideo).
+function patchLogiHeadChip(x){const hc=$('detHeadLogi-'+x.id);if(hc)hc.innerHTML=logiChip(x);}
+
+// ── ACTION BAR (back + selektor statusu logistycznego) ──
+function logiActionBarHtml(x){
+  const back=`<button class="detBack" onclick="closeDetail()">${I.chev} Wróć</button>`;
+  const states=[['none','— brak —'],['sourcing','Sourcing'],['verified','Zweryfikowany'],['test_ordered','Test-order'],['ready','Gotowy'],['eu_stock','Magazyn EU'],['pl_stock','Magazyn PL']];
+  const cur=x.logistics_status||'none';
+  const sel=`<select class="statusSel" onchange="setLogisticsStatus('${x.id}',this.value)">${states.map(([v,l])=>`<option value="${v}"${v===cur?' selected':''}>${esc(l)}</option>`).join('')}</select>`;
+  return `<div class="detBar" id="logiActionBar-${x.id}">${back}<div class="detBarBtns"><span style="font-size:12px;color:var(--dim2)">Status:</span>${sel}${logiChip(x)}</div></div>`;
+}
+
+// ── SEKCJA OFERTY ZAKUPU ──
+function offerStatusBadge(st){const lab={candidate:'kandydat',verified:'zweryf.',chosen:'GŁÓWNA',backup:'backup',rejected:'odrzuc.'}[st]||st||'—';return `<span class="ost ${esc(st||'')}">${esc(lab)}</span>`;}
+function breakdownTitle(b){return Object.keys(b||{}).map(k=>k+': '+b[k]).join(' · ');}
+function offerScoreCell(o){
+  const g=o.gates||{};
+  const warns=Array.isArray(g.warnings)?g.warnings:[];
+  const warnIco=warns.length?`<span class="ofWarn" title="${esc(warns.join(', '))}">⚠</span>`:'';
+  if(g.killed){const r=(g.kill_reasons||[]).join(', ');return `<span class="killed" title="${esc(r||'kill-gate')}">KILLED</span>${warnIco}`;}
+  if(o.seller_score!=null){const sb=o.score_breakdown||{};const bd=breakdownTitle(sb.breakdown||sb);return `<span title="${esc(bd)}">${esc(String(o.seller_score))}</span>${warnIco}`;}
+  return `<span style="color:var(--dim2)">—</span>${warnIco}`;
+}
+function offerRowHtml(x,o){
+  const razem=(+o.price_pln||0)+(+o.shipping_pln||0);
+  const chosen=x.chosen_offer_id===o.id||o.status==='chosen';
+  return `<tr class="${chosen?'chosen':''}">
+    <td>${srcTag(o.source)}</td>
+    <td>${esc(o.seller_name||'—')}</td>
+    <td class="razem mono">${razem?Math.round(razem)+' zł':'—'}<span style="color:var(--dim2);font-weight:400"> (${Math.round(+o.price_pln||0)}+${Math.round(+o.shipping_pln||0)})</span></td>
+    <td class="mono">${o.delivery_days!=null?o.delivery_days+' dni':'—'}</td>
+    <td>${offerScoreCell(o)}</td>
+    <td>${offerStatusBadge(o.status)}</td>
+    <td><div class="logiActs">
+      <button class="btn btn-sm" onclick="chooseOffer('${x.id}','${o.id}')" title="Ustaw jako ofertę główną">Wybierz</button>
+      <button class="btn btn-sm" onclick="setOfferStatus('${x.id}','${o.id}','backup')" title="Oznacz jako backup">Backup</button>
+      <button class="btn btn-sm btn-r" onclick="setOfferStatus('${x.id}','${o.id}','rejected')" title="Odrzuć ofertę">${I.x}</button>
+    </div></td>
+  </tr>`;
+}
+function addOfferFormHtml(x){
+  const srcOpts=[['aliexpress','AliExpress'],['cj','CJ Dropshipping'],['allegro','Allegro'],['1688','1688'],['bigbuy','BigBuy'],['other','Inne']].map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+  return `<details class="logiForm"><summary>${I.check} Dodaj ofertę</summary><div class="logiFormBody">
+    <label>Źródło<select class="sel" id="of-src-${x.id}">${srcOpts}</select></label>
+    <label style="flex:1;min-width:200px">Link<input class="ipt" id="of-url-${x.id}" placeholder="https://…"></label>
+    <label>Cena zł<input class="ipt" id="of-price-${x.id}" type="number" step="0.01" style="width:90px"></label>
+    <label>Dostawa zł<input class="ipt" id="of-ship-${x.id}" type="number" step="0.01" style="width:90px"></label>
+    <label>Dni<input class="ipt" id="of-days-${x.id}" type="number" style="width:70px"></label>
+    <label style="flex:1;min-width:150px">Sprzedawca<input class="ipt" id="of-seller-${x.id}" placeholder="nazwa sklepu"></label>
+    <button class="btn btn-g btn-sm" onclick="addOffer('${x.id}')">${I.check} Dodaj</button>
+  </div></details>`;
+}
+function scoreFormHtml(x,offers){
+  if(!offers.length)return '';
+  const offOpts=offers.map(o=>`<option value="${o.id}">${esc((o.seller_name||'oferta')+' · '+(o.source||''))}</option>`).join('');
+  const dsr=id=>`<select class="sel" id="${id}"><option value="better">lepszy</option><option value="equal" selected>równy</option><option value="worse">gorszy</option></select>`;
+  return `<details class="logiForm"><summary>${I.star} Oceń sprzedawcę</summary><div class="logiFormBody">
+    <label style="flex:1;min-width:180px">Oferta<select class="sel" id="sc-offer-${x.id}">${offOpts}</select></label>
+    <label>Positive %<input class="ipt" id="sc-pos-${x.id}" type="number" step="0.1" style="width:90px"></label>
+    <label>Zamówienia<input class="ipt" id="sc-ord-${x.id}" type="number" style="width:100px"></label>
+    <label>Wiek (mies.)<input class="ipt" id="sc-age-${x.id}" type="number" style="width:90px"></label>
+    <label>DSR opis${dsr('sc-dsrd-'+x.id)}</label>
+    <label>DSR wysyłka${dsr('sc-dsrs-'+x.id)}</label>
+    <label>DSR komun.${dsr('sc-dsrc-'+x.id)}</label>
+    <label>Badge<select class="sel" id="sc-badge-${x.id}"><option value="none">brak</option><option value="choice">Choice</option><option value="top">Top</option></select></label>
+    <label>Foto-recenzje<select class="sel" id="sc-photo-${x.id}"><option value="yes">tak</option><option value="no">nie</option></select></label>
+    <label>Rozkład OK<select class="sel" id="sc-dist-${x.id}"><option value="yes">tak</option><option value="no">nie</option></select></label>
+    <button class="btn btn-g btn-sm" onclick="scoreOffer('${x.id}')">${I.star} Oceń</button>
+  </div></details>`;
+}
+function offersSectionHtml(x){
+  const offers=OFFERS.get(x.key)||[];
+  const med=medianTotal(offers);
+  const rows=offers.map(o=>offerRowHtml(x,o)).join('');
+  return `<div class="sec logiOffers" id="logiOffers-${x.id}">
+    <div class="secLab">${I.cart} Oferty zakupu <span class="hint">${offers.length?`— ${offers.length} ofert${med!=null?` · mediana RAZEM ${med} zł`:''}`:''}</span></div>
+    ${offers.length
+      ? `<table class="logiTbl"><thead><tr><th>Źr.</th><th>Sprzedawca</th><th>Razem</th><th>Czas</th><th>Score</th><th>Status</th><th></th></tr></thead><tbody>${rows}</tbody></table>`
+      : `<div class="nocand">Brak ofert dla tego produktu. Dodaj ofertę linkiem albo „Zasiej oferty z dopasowań".</div>`}
+    ${addOfferFormHtml(x)}
+    ${scoreFormHtml(x,offers)}
+  </div>`;
+}
+
+// ── SEKCJA TEST-ORDERY ──
+function verdictBadge(v){if(!v)return `<span class="ost">w drodze</span>`;const c={pass:'chosen',fail:'rejected',partial:'backup'}[v]||'';const l={pass:'PASS',fail:'FAIL',partial:'CZĘŚĆ'}[v]||v;return `<span class="ost ${c}">${esc(l)}</span>`;}
+function checklistFormHtml(x,t){
+  const ck=t.checklist||{};
+  const item=(n,lab)=>`<label class="ckItem"><input type="checkbox" id="ck-${n}-${t.id}"${ck[n]?' checked':''}> ${lab}</label>`;
+  return `<details class="logiForm"><summary>${I.check} Odbiór / checklista</summary><div class="logiFormBody" style="flex-direction:column;align-items:stretch">
+    ${item('czas','Realny czas do PL zgodny z deklaracją')}
+    ${item('zgodnosc','Zgodność ze zdjęciami / wariantem')}
+    ${item('material','Materiał / wykonanie OK')}
+    ${item('dzialanie','Działa poprawnie')}
+    ${item('opakowanie','Opakowanie bez chińskich cenówek / ulotek (brak przecieków)')}
+    ${item('reverse','Reverse-photo fizycznego produktu OK')}
+    <label style="width:100%">Notatka<input class="ipt" id="ck-note-${t.id}" value="${esc(t.notes||'')}" placeholder="uwagi z odbioru"></label>
+    <div style="display:flex;gap:9px;align-items:flex-end;width:100%;flex-wrap:wrap">
+      <label>Werdykt<select class="sel" id="ck-verdict-${t.id}"><option value="">—</option><option value="pass"${t.verdict==='pass'?' selected':''}>pass</option><option value="partial"${t.verdict==='partial'?' selected':''}>partial</option><option value="fail"${t.verdict==='fail'?' selected':''}>fail</option></select></label>
+      <button class="btn btn-g btn-sm" onclick="saveChecklist('${x.id}','${t.id}')">${I.check} Zapisz odbiór</button>
+    </div>
+  </div></details>`;
+}
+function testOrderItemHtml(x,t){
+  const offer=(OFFERS.get(x.key)||[]).find(o=>o.id===t.offer_id);
+  return `<div class="toItem">
+    <div class="toHead">
+      <span class="mono">${esc((t.ordered_at||'').slice(0,10)||'—')}</span>
+      <span>${offer?srcTag(offer.source)+' '+esc(offer.seller_name||''):'—'}</span>
+      ${t.cost_pln!=null?`<span class="mono">${Math.round(+t.cost_pln)} zł</span>`:''}
+      ${t.received_at?`<span class="mono" title="odebrano">📦 ${esc((t.received_at||'').slice(0,10))}</span>`:''}
+      ${verdictBadge(t.verdict)}
+    </div>
+    ${checklistFormHtml(x,t)}
+  </div>`;
+}
+function addTestOrderFormHtml(x){
+  const offers=(OFFERS.get(x.key)||[]).filter(o=>o.status!=='rejected');
+  if(!offers.length)return `<div class="nocand" style="margin-top:8px">Dodaj ofertę powyżej, aby zamówić test-order.</div>`;
+  const offOpts=offers.map(o=>`<option value="${o.id}">${esc((o.seller_name||'oferta')+' · '+(o.source||''))}</option>`).join('');
+  const today=new Date().toISOString().slice(0,10);
+  return `<details class="logiForm"><summary>${I.box} Dodaj test-order</summary><div class="logiFormBody">
+    <label style="flex:1;min-width:180px">Oferta<select class="sel" id="to-offer-${x.id}">${offOpts}</select></label>
+    <label>Data<input class="ipt" id="to-date-${x.id}" type="date" value="${today}"></label>
+    <label>Koszt zł<input class="ipt" id="to-cost-${x.id}" type="number" step="0.01" style="width:100px"></label>
+    <button class="btn btn-g btn-sm" onclick="addTestOrder('${x.id}')">${I.check} Zamów</button>
+  </div></details>`;
+}
+function testOrdersSectionHtml(x){
+  const tos=TORDERS.get(x.key)||[];
+  const anyPass=tos.some(t=>t.verdict==='pass');
+  const isReady=['ready','eu_stock','pl_stock'].includes(x.logistics_status);
+  return `<div class="sec logiTests" id="logiTests-${x.id}">
+    <div class="secLab">${I.box} Test-ordery <span class="hint">${tos.length?`— ${tos.length}`:'— bramka przed podpięciem do sklepu klienta'}</span></div>
+    ${tos.length?tos.map(t=>testOrderItemHtml(x,t)).join(''):`<div class="nocand">Brak test-orderów. Zamów 2-3 kandydatów naraz do porównania jakości i realnego czasu.</div>`}
+    ${addTestOrderFormHtml(x)}
+    ${anyPass&&!isReady?`<button class="btn btn-g" style="margin-top:11px" onclick="markReady('${x.id}')">${I.check} Oznacz GOTOWY</button>`:''}
+  </div>`;
+}
+
+// ── OPERACJE ──
+async function seedOffers(){
+  toast('Zasiewam oferty z dopasowań…');
+  try{
+    const {data,error}=await sb.functions.invoke('bud-offers',{body:{op:'seed'}});
+    if(error)throw error;
+    await loadLogistics();
+    if(VIEW==='logistics'){renderLogisticsFunnel();applyLogisticsFilters();renderList();markSelected();if(SELID){const x=ROWS.find(r=>r.id===SELID);if(x)patchLogiSections(x);}}
+    toast('Zasiano oferty ✓'+(data&&data.offers_created!=null?` (${data.offers_created} ofert / ${data.seeded_products??0} prod.)`:''));
+  }catch(e){toast('Seed nieudany (funkcja bud-offers w budowie?)');}
+}
+async function addOffer(id){
+  const x=ROWS.find(r=>r.id===id);if(!x||!x.key){toast('Brak klucza produktu');return;}
+  const source=($('of-src-'+id)||{}).value||'other';
+  const url=(($('of-url-'+id)||{}).value||'').trim();
+  const price=parseFloat(($('of-price-'+id)||{}).value);
+  const ship=parseFloat(($('of-ship-'+id)||{}).value);
+  const days=parseInt(($('of-days-'+id)||{}).value,10);
+  const seller=(($('of-seller-'+id)||{}).value||'').trim()||null;
+  if(!validOfferUrl(url,source)){
+    const allow=SOURCE_DOMAINS[source];
+    toast(allow&&allow.length?`Link musi być z domeny: ${allow.join(', ')} (https)`:'Wklej poprawny link https://…',5000);
+    return;
+  }
+  const {error}=await sb.from('bud_offers').insert({key:x.key,source,url,seller_name:seller,price_pln:isNaN(price)?null:price,shipping_pln:isNaN(ship)?0:ship,delivery_days:isNaN(days)?null:days,status:'candidate'});
+  if(error){toast('Błąd zapisu oferty: '+error.message);return;}
+  await refreshOffers(x.key);
+  patchLogiSections(x);applyLogisticsFilters();renderList();markSelected();
+  toast('Oferta dodana ✓');
+}
+async function chooseOffer(id,offerId){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  toast('Ustawiam ofertę główną…');
+  try{
+    const {data,error}=await sb.functions.invoke('bud-offers',{body:{op:'choose',key:x.key,offer_id:offerId}});
+    if(error)throw error;
+    if(data&&data.logistics_status)x.logistics_status=data.logistics_status;
+    x.chosen_offer_id=(data&&data.chosen_offer_id!==undefined)?data.chosen_offer_id:offerId;
+    await refreshOffers(x.key);
+    patchLogiSections(x);renderLogisticsFunnel();applyLogisticsFilters();renderList();markSelected();
+    const ab=$('logiActionBar-'+id);if(ab)ab.outerHTML=logiActionBarHtml(x);
+    patchLogiHeadChip(x);
+    toast('Wybrano ofertę główną ✓');
+  }catch(e){toast('Wybór nieudany (funkcja bud-offers w budowie?)');}
+}
+async function setOfferStatus(id,offerId,status){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const {error}=await sb.from('bud_offers').update({status}).eq('id',offerId);
+  if(error){toast('Błąd: '+error.message);return;}
+  await refreshOffers(x.key);
+  patchLogiSections(x);
+  toast(status==='backup'?'Oznaczono jako backup':'Oferta odrzucona');
+}
+async function scoreOffer(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const offerId=($('sc-offer-'+id)||{}).value;
+  if(!offerId){toast('Wybierz ofertę do oceny');return;}
+  const num=s=>{const v=parseFloat(($(s+id)||{}).value);return isNaN(v)?null:v;};
+  const inputs={
+    positive_pct:num('sc-pos-'),orders:num('sc-ord-'),age_months:num('sc-age-'),
+    dsr_desc:($('sc-dsrd-'+id)||{}).value,dsr_ship:($('sc-dsrs-'+id)||{}).value,dsr_comm:($('sc-dsrc-'+id)||{}).value,
+    badge:($('sc-badge-'+id)||{}).value,photo_reviews:($('sc-photo-'+id)||{}).value==='yes',rating_dist_ok:($('sc-dist-'+id)||{}).value==='yes',
+  };
+  toast('Oceniam sprzedawcę…');
+  try{
+    const {data,error}=await sb.functions.invoke('bud-offers',{body:{op:'score',offer_id:offerId,inputs}});
+    if(error)throw error;
+    await refreshOffers(x.key);
+    patchLogiSections(x);applyLogisticsFilters();renderList();markSelected();
+    const g=(data&&data.gates)||{};
+    if(g.killed)toast('KILLED — '+((g.kill_reasons||[]).join(', ')||'kill-gate'),5000);
+    else{const w=Array.isArray(g.warnings)&&g.warnings.length?' ⚠ '+g.warnings.join(', '):'';toast('Wynik sprzedawcy: '+(data&&data.seller_score!=null?data.seller_score:'—')+(data&&data.tier?' ('+data.tier+')':'')+w+' ✓',w?5000:2500);}
+  }catch(e){toast('Ocena nieudana (funkcja bud-offers w budowie?)');}
+}
+async function addTestOrder(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const offerId=($('to-offer-'+id)||{}).value||null;
+  if(!offerId){toast('Wybierz ofertę do zamówienia');return;}
+  const ordered=($('to-date-'+id)||{}).value||new Date().toISOString().slice(0,10);
+  const cost=parseFloat(($('to-cost-'+id)||{}).value);
+  const {error}=await sb.from('bud_test_orders').insert({key:x.key,offer_id:offerId,ordered_at:ordered,cost_pln:isNaN(cost)?null:cost});
+  if(error){toast('Błąd: '+error.message);return;}
+  await refreshTorders(x.key);
+  patchLogiSections(x);
+  toast('Test-order dodany ✓');
+}
+async function saveChecklist(id,toId){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const cb=n=>($('ck-'+n+'-'+toId)||{}).checked===true;
+  const checklist={czas:cb('czas'),zgodnosc:cb('zgodnosc'),material:cb('material'),dzialanie:cb('dzialanie'),opakowanie:cb('opakowanie'),reverse:cb('reverse')};
+  const verdict=($('ck-verdict-'+toId)||{}).value||null;
+  const notes=(($('ck-note-'+toId)||{}).value||'').trim()||null;
+  const {error}=await sb.from('bud_test_orders').update({checklist,verdict,notes,received_at:new Date().toISOString().slice(0,10)}).eq('id',toId);
+  if(error){toast('Błąd: '+error.message);return;}
+  await refreshTorders(x.key);
+  patchLogiSections(x);
+  toast('Odbiór zapisany ✓'+(verdict?' · '+verdict:''));
+}
+function markReady(id){setLogisticsStatus(id,'ready');}
+// Miękkie statusy = bramka omijalna fallbackiem; twarde wymagają walidacji edge (chosen + test pass).
+const LOGI_SOFT=['none','sourcing','verified','test_ordered'];
+const LOGI_HARD=['ready','eu_stock','pl_stock'];
+// Zmiana statusu logistycznego (KONTRAKT §1):
+//  • edge op 'status' z polem `logistics_status`;
+//  • FALLBACK direct-UPDATE TYLKO dla miękkich statusów i TYLKO przy błędzie transportu (brak odp./5xx);
+//  • twarde statusy (ready/eu_stock/pl_stock): ZERO fallbacku — błąd edge (409 z powodem) pokazany wprost.
+async function setLogisticsStatus(id,status){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  let done=false,transportErr=false;
+  const revertSel=()=>{const ab=$('logiActionBar-'+id);if(ab)ab.outerHTML=logiActionBarHtml(x);}; // selektor wraca do stanu x
+  try{
+    const {data,error}=await sb.functions.invoke('bud-offers',{body:{op:'status',key:x.key,logistics_status:status}});
+    if(error){
+      // wyciągnij HTTP status + message (powod/error) z odpowiedzi edge
+      let http=0,msg='';
+      try{if(error.context&&typeof error.context.json==='function'){http=error.context.status||0;const j=await error.context.json();msg=(j&&(j.powod||j.error))||'';}}catch(_){}
+      const isTransport=(error.name==='FunctionsFetchError'||error.name==='FunctionsRelayError'||http>=500||http===0);
+      if(!isTransport){
+        // błąd biznesowy (400/409) — pokaż powód wprost, NIE zmieniaj statusu lokalnie, ZERO fallbacku
+        toast('Nie można ustawić „'+logiLabel(status)+'": '+(msg||'odrzucone przez serwer'),5000);
+        revertSel();return;
+      }
+      transportErr=true;
+    }else{done=true;if(data&&data.logistics_status)status=data.logistics_status;}
+  }catch(e){transportErr=true;}
+  if(!done){
+    // fallback dozwolony WYŁĄCZNIE: miękki status + błąd transportu. Twardy status → bez fallbacku.
+    if(transportErr&&LOGI_SOFT.includes(status)){
+      const {error}=await sb.from('bud_tt_products').update({logistics_status:status}).eq('id',id);
+      if(error){toast('Błąd zmiany statusu: '+error.message);revertSel();return;}
+    }else{
+      toast('Nie udało się ustawić „'+logiLabel(status)+'" (serwer niedostępny) — spróbuj ponownie.',5000);
+      revertSel();return;
+    }
+  }
+  x.logistics_status=status;
+  renderLogisticsFunnel();applyLogisticsFilters();renderList();markSelected();
+  const ab=$('logiActionBar-'+id);if(ab)ab.outerHTML=logiActionBarHtml(x);
+  patchLogiHeadChip(x);
+  patchLogiSections(x);
+  toast('Status: '+logiLabel(status));
+}
+
 // ── KLAWIATURA (globalna; wyłączona gdy focus w input/select/textarea) ──
 function onKey(e){
   const el=e.target, tag=(el&&el.tagName||'').toLowerCase();
@@ -1487,9 +1933,9 @@ function onKey(e){
   switch(e.key){
     case 'j':case 'ArrowDown':e.preventDefault();moveSel(1);break;
     case 'k':case 'ArrowUp':e.preventDefault();moveSel(-1);break;
-    case 'a':if(x&&x.status==='pending')approveCurrent(x.id);break;
-    case 'r':if(x&&x.status==='pending')openReasonMenu();break;
-    case 'd':if(x&&x.status==='pending')markDup(x.id);break;
+    case 'a':if(VIEW!=='logistics'&&x&&x.status==='pending')approveCurrent(x.id);break;
+    case 'r':if(VIEW!=='logistics'&&x&&x.status==='pending')openReasonMenu();break;
+    case 'd':if(VIEW!=='logistics'&&x&&x.status==='pending')markDup(x.id);break;
   }
 }
 
