@@ -595,6 +595,19 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
   i gate'y PO zebraniu. Quality: high tylko drobny tekst + favicon; sceny text-free =
   medium. count=2 tylko przy gate'ach WOW/wierności. Rehosty/pobrania też równolegle.
   Efekt: faza graficzna ~35-45 min → ~12-15 min bez utraty gate'ów.
+  **Quality (kalibracja Loczek 17.07):** `high` przy 1536×1024 z referencją = 504 na
+  wf2-gen; **`medium` = DEFAULT całej serii makiet i scen** (tekst PL i wierność produktu
+  w pełni wystarczające — 25/25 PASS); `high` tylko małe generacje (favicon 1:1) i tylko
+  gdy medium zawiedzie. `aspect_ratio` = format Gemini (`3:2`/`2:3`/`1:1`), NIE
+  `1536x1024` (cichy fallback do 1:1!).
+- **⚡ RÓWNOLEGŁOŚĆ FAZY KODU (17.07, quick-wins Tomka):** (1) pipeline WIDEO (yt-dlp/
+  ffmpeg/rehost) startuje W TLE równolegle z F4 od pierwszej minuty; (2) najpierw SŁOWNIK
+  KLAS + szkielet-kontrakt (1 krok), POTEM 3-4 chunki kodera gpt-5.6-sol RÓWNOLEGLE
+  (ThreadPoolExecutor; chunk ≤4 sekcje; lightboxy+JS osobno na końcu) — słownik z góry
+  eliminuje rozjazd CSS↔body przy równoległości; (3) sekcje czysto-danowe (FAQ/stopka/
+  sticky/prosty pas zaufania) składane z kontraktu BEZ calli GPT; (4) weryfikacje BATCHEM:
+  jedna sesja przeglądarki na komplet zrzutów + viewport-diff + kalibracja typografii
+  pomiarem OD RAZU (nie po fakcie). Efekt: F4-F7 ~2h → ~30-45 min.
 - **Chunki: ≤~4 sekcje na chunk; lightboxy + JS interakcji ZAWSZE OSOBNYM wywołaniem**
   (5 sekcji + 12 lightboxów + JS = pewny 504).
 - Marker `<!--PAYBADGES-->`: instruować kodera „NIE dodawaj własnego wrappera .pay-badges"
