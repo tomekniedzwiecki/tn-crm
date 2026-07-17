@@ -102,6 +102,17 @@ bboxy usuniętego tekstu MASKUJ przed pomiarem. Progi: crop → ~1.0 z definicji
 wyrównania); regen/edits → kierunkowo (cap ~0.7), twardy pomiar tylko na warstwie treści.
 [TODO] `render-diff.py --region x,y,w,h [--mask-bbox ...]`.
 
+## 4a. PODMIANA SCENY PO AKCEPCIE = GATE KOMPOZYCJI (incydent Odpalak 17.07)
+Scena już osadzona na landingu (przeszła dowód dopasowania / widział ją Tomek) jest
+ZAMROŻONA jak makieta. Każda podmiana (np. „tylko poprawka LCD") wymaga: (a) regen z
+ORYGINALNĄ sceną jako ref + „SAME scene, SAME composition and framing, only change: …";
+(b) gate PODWÓJNY: wierność paszportu ORAZ kompozycja vs oryginał (vision: to samo
+kadrowanie? produkt to samo miejsce/rozmiar? ten sam aspekt!); (c) FAIL → zostaje
+oryginał. Incydent: „poprawka LCD" podmieniła sceny 3:2/2:3 na generacje 1:1 (pikselowa
+forma aspektu = cichy fallback, „zaakceptowany" przez agenta) → regres kompozycji na
+live. **⛔ NIGDY pikselowa forma aspektu ('1536x1024') — ZAWSZE stringowa ('3:2'/'2:3'/
+'1:1'); fallback do 1:1 przy scenie niekwadratowej = FAIL, nie „akceptowalne".**
+
 ## 5. FAKTY TWARDE (nie odkrywać ponownie)
 
 - Makiety i output gpt-image-2 = max **1536×1024 / 1024×1536** — regen nie podnosi rozdz.
