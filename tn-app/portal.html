@@ -227,18 +227,14 @@
             font-size:12.5px; font-weight:500; padding:11px 16px; text-align:center; display:flex; align-items:center;
             justify-content:center; gap:8px; box-shadow:0 1px 0 rgba(255,255,255,.1); }
 
-        /* Wejście: sekcje aktywnego panelu pojawiają się miękko, jedna po drugiej (re-run przy zmianie zakładki) */
-        .panel > * { animation:fadeUp .45s ease both; }
-        .panel > *:nth-child(2) { animation-delay:.05s; } .panel > *:nth-child(3) { animation-delay:.1s; }
-        .panel > *:nth-child(4) { animation-delay:.15s; } .panel > *:nth-child(5) { animation-delay:.2s; }
-        .panel > *:nth-child(6) { animation-delay:.25s; } .panel > *:nth-child(7) { animation-delay:.3s; }
-        @keyframes fadeUp { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }
+        /* Faza 4: usunięto animację wejścia fadeUp nth-child — realna kolejność sekcji zależy od sieci,
+           nie od DOM (P3/CLS). Panele pojawiają się natychmiast; skeletony trzymają wymiary do czasu danych. */
         @media (prefers-reduced-motion: reduce) {
-            .panel > * { animation:none; }
             .bar { transition:none; }
-            .life::before, .trow.cur .tglyph::before { animation:none; }
-            .navlink { transition:none; }
-            .tile, .move-cta { transition:none; }
+            .life::before, .trow.cur .tglyph::before, .tk-typing span { animation:none; }
+            .skeleton { animation:none; }
+            .toast { transition:none; }
+            .navlink, .tile, .move-cta, .appcard, .appcard-arrow, .empty-state .es-cta { transition:none; }
         }
 
         /* Testy aplikacji — czat „spowiednika testów" */
@@ -372,6 +368,72 @@
         #nav-more-sheet .navlink.active { background:var(--surface-2); color:var(--text); }
         /* Rama nagłówka „Twoje zgłoszenia" (Testy) */
         .tk-frame { color:var(--text-2); font-size:13.5px; font-weight:600; margin-bottom:8px; }
+
+        /* ===== Faza 4: skeletony · empty-states · toast · a11y ===== */
+        /* Skeleton — mirror docelowego layoutu (rezerwuje wymiary = zero CLS). Subtelny puls (reduced-motion wyłącza). */
+        .skeleton { animation:skelPulse 1.6s ease-in-out infinite; }
+        .sk { background:var(--surface-2); border-radius:6px; display:block; }
+        @keyframes skelPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+        .sk-title { height:26px; width:62%; margin-bottom:14px; }
+        .sk-sub { height:14px; width:82%; margin-bottom:26px; }
+        .sk-bar { height:6px; width:100%; border-radius:99px; margin-bottom:30px; }
+        .sk-head { height:20px; width:150px; margin-bottom:20px; }
+        /* Skeleton wiersza intake / karty — mirror .ic (kółko + tytuł + podsumowanie) */
+        .sk-card { display:flex; align-items:center; gap:14px; min-height:54px; padding:15px 18px;
+            border:1px solid var(--border); border-radius:12px; background:var(--bg-elev); margin-bottom:8px; }
+        .sk-circle { width:22px; height:22px; border-radius:50%; flex-shrink:0; }
+        .sk-lines { flex:1; display:flex; flex-direction:column; gap:7px; }
+        .sk-l1 { height:11px; width:42%; }
+        .sk-l2 { height:9px; width:68%; }
+        /* Skeleton czatu (Testy) — mirror .tk-chat */
+        .sk-chat { min-height:200px; display:flex; flex-direction:column; gap:12px; }
+        .sk-bubble { height:46px; border-radius:13px; }
+        .sk-bubble.ai { align-self:flex-start; width:74%; background:var(--surface); }
+        .sk-bubble.me { align-self:flex-end; width:56%; background:#0d3a6b; }
+        /* Skeleton „Co nowego" — mirror .cl-item */
+        .sk-cl { height:96px; border:1px solid var(--border); border-radius:12px; background:var(--bg-elev); margin-bottom:12px; }
+
+        /* Empty-state — ikona + nagłówek + 1 zdanie (+ opcjonalne CTA). Ton ciepły; ZAKAZ „Brak danych". */
+        .empty-state { display:flex; flex-direction:column; align-items:center; text-align:center; gap:9px;
+            padding:32px 22px; border:1px dashed var(--border-hover); border-radius:var(--r);
+            background:var(--bg-elev); color:var(--text-3); }
+        .empty-state .es-ic { font-size:28px; color:var(--text-muted); line-height:1; }
+        .empty-state .es-h { color:var(--text-2); font-size:14.5px; font-weight:600; letter-spacing:-.01em; }
+        .empty-state .es-t { font-size:13px; line-height:1.55; max-width:40ch; }
+        .empty-state .es-cta { display:inline-flex; align-items:center; gap:7px; min-height:var(--tap);
+            padding:0 16px; margin-top:4px; border-radius:var(--r-sm); background:var(--accent); color:#fff;
+            font-size:13px; font-weight:600; text-decoration:none; transition:background .15s ease, transform .15s ease; }
+        .empty-state .es-cta:hover { background:var(--accent-2); transform:translateY(-1px); }
+
+        /* Toast — potwierdzenia zapisu; nad bottom-nav (mobile, safe-area) / w rogu (desktop). role=alert. */
+        .toast-host { position:fixed; z-index:150; left:0; right:0; bottom:calc(72px + env(safe-area-inset-bottom));
+            display:flex; flex-direction:column; align-items:center; gap:8px; padding:0 16px; pointer-events:none; }
+        @media (min-width:769px){ .toast-host { left:auto; right:24px; bottom:24px; align-items:flex-end; } }
+        .toast { pointer-events:auto; display:flex; align-items:center; gap:10px; max-width:min(420px,92vw);
+            padding:12px 15px; border-radius:var(--r); background:var(--surface-2); border:1px solid var(--border-strong);
+            color:var(--text); font-size:13.5px; line-height:1.4; box-shadow:0 10px 30px rgba(0,0,0,.45);
+            transform:translateY(14px); opacity:0; transition:transform .4s cubic-bezier(.22,1,.36,1), opacity .35s ease; }
+        .toast.show { transform:none; opacity:1; }
+        .toast i { font-size:19px; flex-shrink:0; }
+        .toast.ok i { color:var(--ok-2); }
+        .toast.err i { color:var(--err); }
+
+        /* Focus-visible: pierścień na WSZYSTKICH interaktywnych. Po :focus{outline:none} inputów —
+           równa specyficzność + późniejsza kolejność w źródle = ta reguła wygrywa dla klawiatury. */
+        a:focus-visible, button:focus-visible, [tabindex]:focus-visible, [role="button"]:focus-visible,
+        input:focus-visible, textarea:focus-visible, select:focus-visible,
+        input.ci:focus-visible, textarea.ci:focus-visible, input[type=password]:focus-visible,
+        .vision-item:focus-visible, .appcard:focus-visible, .ifile .fx:focus-visible {
+            outline:2px solid var(--accent-2); outline-offset:2px;
+        }
+
+        /* Mobile: pola ≥16px (bez zoomu iOS przy focusie) + touch ≥44px na akcjach */
+        @media (max-width:600px){
+            input.ci, textarea.ci, input[type=password], .tk-compose textarea { font-size:16px; }
+            .cbtn, .cbtn-sec, .ic-save, .badd, #login button, #setpw button { min-height:44px; }
+            .brm, .tk-ic { width:44px; height:44px; }
+            .tk-expand { height:40px; }
+        }
     </style>
 </head>
 <body>
@@ -463,13 +525,23 @@
             <!-- Makiety ze sparingu -->
             <section class="hidden" id="c-vision">
                 <div class="shead"><h2>Jak będzie wyglądać</h2></div>
-                <p class="sdesc">Wstępna wizja z naszej rozmowy — kierunek, nie finalny wygląd. Kliknij, aby powiększyć.</p>
+                <p class="sdesc" id="c-vision-desc">Wstępna wizja z naszej rozmowy — kierunek, nie finalny wygląd. Kliknij, aby powiększyć.</p>
                 <div class="vision-row" id="c-vision-grid"></div>
+                <div id="c-vision-empty" class="hidden"></div>
             </section>
         </div>
 
         <!-- ===== PANEL: Do zrobienia (intake) ===== -->
         <div class="panel" data-panel="zadania" hidden>
+            <!-- Skeleton mirrorujący layout intake (nagłówek + 4 karty-akordeony) — widoczny do powrotu loadIntake -->
+            <div id="ci-skeleton" class="skeleton" aria-hidden="true">
+                <div class="sk sk-head"></div>
+                <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+                <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+                <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+                <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+            </div>
+            <div id="ci-empty" class="hidden"></div>
             <section class="hidden" id="c-intake" style="margin-top:0">
                 <div class="shead"><h2>Do uzupełnienia</h2><span class="scount" id="ci-count"></span></div>
                 <p class="sdesc">Uzupełnij, kiedy masz chwilę — im wcześniej, tym płynniej idzie budowa.</p>
@@ -480,6 +552,13 @@
 
         <!-- ===== PANEL: Testy (czat „spowiednika testów" + Twoje zgłoszenia) ===== -->
         <div class="panel" data-panel="testy" hidden>
+            <!-- Skeleton mirrorujący czat — widoczny do powrotu loadTesty -->
+            <div id="ct-skeleton" class="skeleton" aria-hidden="true">
+                <div class="sk sk-head"></div>
+                <div class="sk-chat card">
+                    <div class="sk-bubble ai"></div><div class="sk-bubble me"></div><div class="sk-bubble ai"></div>
+                </div>
+            </div>
             <section class="hidden" id="c-testy" style="margin-top:0">
                 <div class="shead"><h2>Testy aplikacji</h2><span class="tk-head-r"><span class="scount" id="ct-count"></span><button class="tk-expand" id="ct-expand" type="button" title="Powiększ czat na cały ekran" aria-label="Powiększ czat na cały ekran"><i class="ph ph-arrows-out"></i><span class="tk-expand-lbl" id="ct-expand-lbl">Powiększ</span></button></span></div>
                 <p class="sdesc">Przetestuj swoją aplikację i powiedz mi o wszystkim, co Ci nie gra — nawet drobiazgi. Zrzut ekranu bardzo pomaga.</p>
@@ -510,6 +589,12 @@
                 <span class="appcard-arrow"><i class="ph ph-arrow-right"></i></span>
             </a>
 
+            <!-- Skeleton „Co nowego" — widoczny do powrotu loadChangelogFeed -->
+            <div id="c-cl-skeleton" class="skeleton" aria-hidden="true">
+                <div class="sk sk-head"></div>
+                <div class="sk-cl"></div><div class="sk-cl"></div>
+            </div>
+
             <!-- Co nowego: opublikowane wpisy changelog — rama „Co widzą Twoi użytkownicy" -->
             <section class="hidden" id="c-changelog">
                 <div class="shead"><h2><i class="ph ph-megaphone" style="color:#5aa2ff"></i> Co nowego <span class="cl-badge hidden" id="c-cl-badge"></span></h2></div>
@@ -530,7 +615,17 @@
 
     </div>
 
-    <div id="loading" class="skel">Ładowanie…</div>
+    <!-- Loading = skeleton mirrorujący layout Przeglądu (tytuł + pasek + karty) — zero „Ładowanie…", zero CLS. -->
+    <div id="loading" aria-busy="true" aria-label="Wczytywanie portalu">
+        <div class="skeleton" aria-hidden="true">
+            <div class="sk sk-title"></div>
+            <div class="sk sk-sub"></div>
+            <div class="sk sk-bar"></div>
+            <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+            <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+            <div class="sk-card"><span class="sk sk-circle"></span><span class="sk-lines"><span class="sk sk-l1"></span><span class="sk sk-l2"></span></span></div>
+        </div>
+    </div>
 
     <input type="file" id="ci-file-input" multiple class="hidden"
         accept=".pdf,.png,.jpg,.jpeg,.webp,.heic,.html,.htm,.csv,.xls,.xlsx,.doc,.docx,.txt,.zip">
@@ -608,6 +703,36 @@
 
     function show(id) {
         ['login','setpw','notoken','content','loading'].forEach(x => $(x).classList.toggle('hidden', x !== id));
+    }
+
+    // ============ Faza 4: skeleton · empty-state · toast (dopieszczenie) ============
+    function hideSkel(id) { const el = $(id); if (el) el.classList.add('hidden'); }
+    // Empty-state wg wzorca: ikona (ph) + nagłówek + 1 zdanie (+ opcjonalne CTA do zakładki).
+    // Wszystkie argumenty = LITERAŁY z kodu; esc() defensywnie. CTA przez data-mod (delegacja navClickHandler),
+    // href = routeHash(id) (token zachowany) — zero interpolacji danych usera.
+    function emptyState(icon, heading, text, ctaMod, ctaLabel) {
+        let h = '<div class="empty-state"><i class="ph ' + esc(icon) + ' es-ic" aria-hidden="true"></i>' +
+            '<div class="es-h">' + esc(heading) + '</div>' +
+            '<div class="es-t">' + esc(text) + '</div>';
+        if (ctaMod && ctaLabel) h += '<a class="es-cta" data-mod="' + esc(ctaMod) + '" href="' + esc(routeHash(ctaMod)) + '">' + esc(ctaLabel) + ' <i class="ph ph-arrow-right"></i></a>';
+        return h + '</div>';
+    }
+    // Toast zapisu — wejście ~400ms, życie ~4.2s, auto-dismiss, role=alert/aria-live. Komunikat przez
+    // textContent (zero innerHTML z danymi). W previewMode zapisy zwracają wcześnie → toast nie jest wołany.
+    let _toastHost = null;
+    function toast(msg, kind) {
+        if (!_toastHost) { _toastHost = document.createElement('div'); _toastHost.className = 'toast-host'; document.body.appendChild(_toastHost); }
+        const t = document.createElement('div');
+        t.className = 'toast ' + (kind === 'err' ? 'err' : 'ok');
+        t.setAttribute('role', 'alert');
+        t.setAttribute('aria-live', kind === 'err' ? 'assertive' : 'polite');
+        const ic = document.createElement('i');
+        ic.className = 'ph ' + (kind === 'err' ? 'ph-warning-circle' : 'ph-check-circle');
+        const sp = document.createElement('span'); sp.textContent = msg;
+        t.appendChild(ic); t.appendChild(sp);
+        _toastHost.appendChild(t);
+        requestAnimationFrame(() => requestAnimationFrame(() => t.classList.add('show')));
+        setTimeout(() => { t.classList.remove('show'); setTimeout(() => { if (t.parentNode) t.remove(); }, 450); }, 4200);
     }
 
     // ============ NAWIGACJA HUB-AND-SPOKE (Faza 1/2) ============
@@ -920,18 +1045,27 @@
         }
 
         // Makiety ze sparingu
-        const vg = $('c-vision-grid');
+        const vg = $('c-vision-grid'), vDesc = $('c-vision-desc'), vEmpty = $('c-vision-empty');
         const mk = (d.mockups || []).filter(m => m && m.url);
         if (mk.length) {
+            // Kafel makiety = interaktywny (klawiatura: role=button + tabindex + Enter/Spacja); lightbox przez delegację.
             vg.innerHTML = mk.map(m =>
-                '<div class="vision-item" data-vurl="' + esc(m.url) + '">' +
+                '<div class="vision-item" data-vurl="' + esc(m.url) + '" role="button" tabindex="0" aria-label="Powiększ makietę">' +
                 '<img src="' + esc(m.url) + '" alt="" loading="lazy">' +
                 '<div class="vcap">' + esc(m.view || '') + '</div></div>'
             ).join('');
             // GATE A: klik przez delegację (data-vurl + esc), NIE inline onclick — apostrof w URL łamał string (encodeURIComponent nie koduje ').
             vg.onclick = e => { const it = e.target.closest('[data-vurl]'); if (it) openVlb(encodeURIComponent(it.getAttribute('data-vurl'))); };
+            vg.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { const it = e.target.closest('[data-vurl]'); if (it) { e.preventDefault(); openVlb(encodeURIComponent(it.getAttribute('data-vurl'))); } } };
+            vg.style.display = ''; if (vDesc) vDesc.style.display = '';
+            if (vEmpty) { vEmpty.classList.add('hidden'); vEmpty.innerHTML = ''; }
             $('c-vision').classList.remove('hidden');
-        } else { $('c-vision').classList.add('hidden'); }
+        } else {
+            // Brak makiet → nie chowamy sekcji, tylko empty-state (bez mylącego podpisu o „wizji z rozmowy").
+            vg.innerHTML = ''; vg.style.display = 'none'; if (vDesc) vDesc.style.display = 'none';
+            if (vEmpty) { vEmpty.innerHTML = emptyState('ph-image', 'Makiety w drodze', 'Gdy przygotujemy wizję wyglądu Twojej aplikacji, pokażemy ją tutaj.'); vEmpty.classList.remove('hidden'); }
+            $('c-vision').classList.remove('hidden');
+        }
 
         // Oś czasu: kamienie milowe (mają daty ukończenia = dowód pracy); fallback: etapy.
         const miles = d.milestones || [];
@@ -1016,12 +1150,13 @@
     async function loadChangelogFeed() {
         try {
             const res = await callFn({ action: 'changelog_feed' });
-            if (!res.ok) { $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); return; }
+            if (!res.ok) { hideSkel('c-cl-skeleton'); $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); return; }
             renderChangelogFeed(await res.json());
-        } catch (e) { $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); }
+        } catch (e) { hideSkel('c-cl-skeleton'); $('c-changelog').classList.add('hidden'); navData.changelog_any = false; navData._clUnread = 0; syncNav(); }
     }
     function renderChangelogFeed(d) {
         const sec = $('c-changelog'); if (!sec) return;
+        hideSkel('c-cl-skeleton');
         const entries = (d && d.entries) || [];
         sec.classList.remove('hidden');
         const unread = (d && d.unread) || 0;
@@ -1034,7 +1169,7 @@
         else { badge.textContent = ''; badge.classList.add('hidden'); }
         const list = $('c-cl-list');
         if (!entries.length) {
-            list.innerHTML = '<p class="cl-empty">Nic nowego — tu pokażemy ulepszenia Twojej aplikacji.</p>';
+            list.innerHTML = emptyState('ph-megaphone', 'Jeszcze nic nowego', 'Tu pokażemy ulepszenia i nowości w Twojej aplikacji — damy znać, gdy tylko coś się pojawi.');
             return;
         }
         list.innerHTML = entries.map(e => {
@@ -1128,11 +1263,12 @@
         try {
             const res = await callFn({ action: 'contract_data', fields });
             const d = await res.json().catch(() => ({}));
-            if (!res.ok) { if (errBox) errBox.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; return; }
+            if (!res.ok) { if (errBox) errBox.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; toast('Nie udało się zapisać', 'err'); return; }
             contractHtmlCache = null;
+            toast('Zapisano ✓', 'ok');
             await loadContract();
         } catch (e) {
-            if (errBox) errBox.textContent = 'Błąd połączenia — spróbuj ponownie.';
+            if (errBox) errBox.textContent = 'Błąd połączenia — spróbuj ponownie.'; toast('Błąd połączenia', 'err');
         } finally { if (btn) btn.disabled = false; }
     }
 
@@ -1197,15 +1333,23 @@
     function fmtBytes(n) { n = Number(n) || 0; if (n < 1024) return n + ' B'; if (n < 1048576) return Math.round(n / 1024) + ' KB'; return (n / 1048576).toFixed(1) + ' MB'; }
     const plForm = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14)) ? n + ' ' + few : n + ' ' + many;
 
+    function showIntakeError() {
+        hideSkel('ci-skeleton');
+        $('c-intake').classList.add('hidden');
+        const box = $('ci-empty'); if (!box) return;
+        box.innerHTML = emptyState('ph-warning-circle', 'Nie udało się wczytać', 'Odśwież stronę za chwilę — jeśli to nie pomoże, po prostu odpisz na naszą korespondencję mailową.');
+        box.classList.remove('hidden');
+    }
     async function loadIntake() {
         try {
             const res = await callFn({ action: 'intake_get' });
-            if (!res.ok) { $('c-intake').classList.add('hidden'); return; }
+            if (!res.ok) { showIntakeError(); return; }
             const d = await res.json();
             intakeData = d.sections;
             renderIntake();
+            hideSkel('ci-skeleton'); $('ci-empty').classList.add('hidden');
             $('c-intake').classList.remove('hidden');
-        } catch (e) { $('c-intake').classList.add('hidden'); if (typeof syncNav === 'function') syncNav(); }
+        } catch (e) { showIntakeError(); if (typeof syncNav === 'function') syncNav(); }
     }
 
     // Status karty: firma/materiały/beta wg backendu; Stripe wyliczany z faktów.
@@ -1286,7 +1430,7 @@
               '<div class="ic-full"><label class="lbl">Imię i nazwisko</label><input class="ci" id="if-full_name"' + dis + ' value="' + iv(f.full_name) + '"></div>' +
               '<div class="ic-full"><label class="lbl">Firma (jeśli zawierasz umowę jako firma)</label><input class="ci" id="if-company"' + dis + ' value="' + iv(f.company) + '"></div>' +
               '<div><label class="lbl">NIP</label><input class="ci" id="if-nip"' + dis + ' value="' + iv(f.nip) + '"></div>' +
-              '<div><label class="lbl">Telefon</label><input class="ci" id="if-phone"' + dis + ' value="' + iv(f.phone) + '"></div>' +
+              '<div><label class="lbl">Telefon</label><input class="ci" id="if-phone" type="tel" inputmode="tel" autocomplete="tel"' + dis + ' value="' + iv(f.phone) + '"></div>' +
               '<div class="ic-full"><label class="lbl">Ulica i numer</label><input class="ci" id="if-street"' + dis + ' value="' + iv(f.street) + '"></div>' +
               '<div><label class="lbl">Kod pocztowy</label><input class="ci" id="if-postal"' + dis + ' placeholder="00-000" value="' + iv(f.postal) + '"></div>' +
               '<div><label class="lbl">Miejscowość</label><input class="ci" id="if-city"' + dis + ' value="' + iv(f.city) + '"></div>' +
@@ -1348,6 +1492,8 @@
     function renderIntakeFiles() {
         const box = $('if-files'); if (!box) return;
         const files = (intakeData.materialy && intakeData.materialy.files) || [];
+        // Puste w edycji = brak tekstu (upzone jest zaproszeniem do wgrania). W podglądzie (brak upzone) — empty-state.
+        if (!files.length) { box.innerHTML = previewMode ? emptyState('ph-folder-open', 'Brak plików', 'Tu pojawią się materiały wgrane przez klienta.') : ''; box.onclick = null; return; }
         box.innerHTML = files.map(f =>
             '<div class="ifile"><i class="ph ph-file fi"></i><span class="fn">' + esc(f.filename) + '</span>' +
             '<span class="fs">' + fmtBytes(f.size_bytes) + '</span>' +
@@ -1372,10 +1518,10 @@
         try {
             const res = await callFn({ action: 'intake_save', section: 'firma', data });
             const d = await res.json().catch(() => ({}));
-            if (!res.ok) { if (err) err.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; return; }
+            if (!res.ok) { if (err) err.textContent = (d.messages && d.messages.join(' ')) || 'Nie udało się zapisać danych.'; toast('Nie udało się zapisać', 'err'); return; }
             intakeData.firma.data = data; intakeData.firma.status = d.status || intakeData.firma.status;
-            updateChips(); flashOk('if-firma-ok');
-        } catch (e) { if (err) err.textContent = 'Błąd połączenia — spróbuj ponownie.'; }
+            updateChips(); flashOk('if-firma-ok'); toast('Zapisano ✓', 'ok');
+        } catch (e) { if (err) err.textContent = 'Błąd połączenia — spróbuj ponownie.'; toast('Błąd połączenia', 'err'); }
         finally { if (btn) btn.disabled = false; }
     }
 
@@ -1386,10 +1532,10 @@
         try {
             const res = await callFn({ action: 'intake_save', section: 'materialy', data });
             const d = await res.json().catch(() => ({}));
-            if (!res.ok) return;
+            if (!res.ok) { toast('Nie udało się zapisać', 'err'); return; }
             intakeData.materialy.data = data; intakeData.materialy.status = d.status;
-            updateChips(); flashOk('if-mat-ok');
-        } catch (e) {} finally { if (btn) btn.disabled = false; }
+            updateChips(); flashOk('if-mat-ok'); toast('Zapisano ✓', 'ok');
+        } catch (e) { toast('Błąd połączenia', 'err'); } finally { if (btn) btn.disabled = false; }
     }
 
     async function saveIntakeBeta() {
@@ -1400,10 +1546,10 @@
         try {
             const res = await callFn({ action: 'intake_save', section: 'beta', data: { people } });
             const d = await res.json().catch(() => ({}));
-            if (!res.ok) return;
+            if (!res.ok) { toast('Nie udało się zapisać', 'err'); return; }
             intakeData.beta.data.people = people; intakeData.beta.status = d.status;
-            updateChips(); flashOk('if-beta-ok');
-        } catch (e) {} finally { if (btn) btn.disabled = false; }
+            updateChips(); flashOk('if-beta-ok'); toast('Zapisano ✓', 'ok');
+        } catch (e) { toast('Błąd połączenia', 'err'); } finally { if (btn) btn.disabled = false; }
     }
 
     // Upload sekwencyjny: init → PUT (signed url, progres) → done
@@ -1481,9 +1627,10 @@
     async function loadTesty() {
         try {
             const res = await callTest({ action: 'history' });
-            if (!res.ok) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
+            if (!res.ok) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
             const d = await res.json();
-            if (!d.active) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
+            if (!d.active) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); return; }
+            hideSkel('ct-skeleton');
             $('c-testy').classList.remove('hidden');
             renderTestChat(d.messages || []);
             renderTestIssues(d.issues || [], d.rounds || []);
@@ -1492,7 +1639,7 @@
             navData.testy_active = true;                       // predykat when() zakładki Testy
             navData._testyBadge = d.round_notice ? 1 : 0;      // badge = nowa runda
             syncNav();
-        } catch (e) { $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); }
+        } catch (e) { hideSkel('ct-skeleton'); $('c-testy').classList.add('hidden'); navData.testy_active = false; navData._testyBadge = 0; syncNav(); }
     }
     // Komunikat serii poprawek („Runda N gotowa — przetestuj ponownie"). Znika, gdy klient
     // dorzuci nowe zgłoszenie w bieżącej rundzie (edge przestaje go zwracać / hide przy wysyłce).
@@ -1541,7 +1688,14 @@
     // poprawek) z podsumowaniem rundy zamkniętej. Trwała (widoczna też po zakończeniu testów).
     function renderTestIssues(issues, rounds) {
         const box = $('ct-issues'), count = $('ct-count');
-        if (!issues || !issues.length) { box.classList.add('hidden'); box.innerHTML = ''; count.textContent = ''; return; }
+        if (!issues || !issues.length) {
+            // Zamiast pustki: rama „Twoje zgłoszenia" + empty-state (co się tu pojawi). W trybie pełnoekranowym .tk-issues jest ukryta.
+            box.classList.remove('hidden');
+            box.innerHTML = '<div class="tk-frame">Twoje zgłoszenia</div>' +
+                emptyState('ph-clipboard-text', 'Brak zgłoszeń — na razie', 'Opisz w czacie powyżej, co Ci nie gra w aplikacji. Zebrane uwagi i ich status pojawią się tutaj.');
+            count.textContent = '';
+            return;
+        }
         count.textContent = 'Zgłoszeń: ' + issues.length;
         box.classList.remove('hidden');
         const done = issues.filter(i => i.status === 'done').length;
@@ -1641,6 +1795,7 @@
             tkHideTyping();
             tkAppend('assistant', d.reply || 'Dziękuję za testy!', []);
             if (d.issues) renderTestIssues(d.issues, d.rounds || []);
+            if (res.ok) toast('Testy zakończone — dziękujemy ✓', 'ok');
         } catch (e) { tkHideTyping(); } finally { testBusy = false; }
     }
     // ── Zrzut ekranu „od razu" (#4): getDisplayMedia → klatka na canvas → PNG → ta sama ścieżka co plik.
@@ -1724,6 +1879,11 @@
         if (e.key !== 'Enter') return;
         if (!$('login').classList.contains('hidden')) load();
         else if (!$('setpw').classList.contains('hidden')) setPassword();
+    });
+    // Lightbox makiet: zamknij klawiszem Escape (klik już zamyka przez inline onclick).
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape') return;
+        const lb = $('vlb'); if (lb && lb.classList.contains('show')) lb.classList.remove('show');
     });
 </script>
 </body>
