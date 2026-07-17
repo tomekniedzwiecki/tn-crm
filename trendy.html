@@ -16,7 +16,8 @@
     color-scheme:dark;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font-family:'Geist','Inter',system-ui,sans-serif;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Geist','Inter',system-ui,sans-serif;letter-spacing:-.011em;-webkit-font-smoothing:antialiased;height:100vh;overflow:hidden;display:flex;flex-direction:column}
   .mono{font-family:'Geist Mono',ui-monospace,monospace}
   ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-thumb{background:#2a2a30;border-radius:99px}::-webkit-scrollbar-track{background:transparent}
   a{color:inherit;text-decoration:none}
@@ -24,18 +25,35 @@
   :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:8px}
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
   summary{list-style:none;cursor:pointer}summary::-webkit-details-marker{display:none}
+  kbd{font-family:'Geist Mono',monospace;font-size:11px;background:var(--surface3);border:1px solid var(--line2);border-radius:5px;padding:1px 6px;color:var(--text)}
 
   /* HEADER */
-  .bar{position:sticky;top:0;z-index:30;background:rgba(8,8,10,.86);backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
-  .wrap{max-width:1040px;margin:0 auto;padding:0 22px}
-  .barTop{display:flex;align-items:center;gap:14px;padding:14px 0 12px;flex-wrap:wrap}
-  .brand{display:flex;align-items:center;gap:10px;margin-right:auto;font-weight:600;font-size:16px}
+  .bar{flex:0 0 auto;background:rgba(8,8,10,.86);border-bottom:1px solid var(--line)}
+  .barTop{display:flex;align-items:center;gap:14px;padding:11px 20px 9px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+  .brand .sub{color:var(--dim);font-weight:400}
   .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--gold);box-shadow:0 0 12px var(--gold)}
-  .kpis{display:flex;gap:8px;flex-wrap:wrap}
-  .kpi{display:flex;align-items:baseline;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:6px 11px;font-size:12px;color:var(--dim)}
-  .kpi b{font-size:15px;color:var(--text)}
-  .kpi.g b{color:var(--green)}
-  .controls{display:flex;gap:9px;align-items:center;padding-bottom:13px;flex-wrap:wrap}
+  /* LEJEK */
+  .funnel{display:flex;gap:6px;align-items:stretch;flex-wrap:wrap}
+  .fseg{display:flex;flex-direction:column;align-items:flex-start;gap:0;border:1px solid var(--line);background:var(--surface);color:var(--dim);border-radius:10px;padding:5px 12px;cursor:pointer;transition:.15s;min-width:72px}
+  .fseg .fn{font-size:16px;font-weight:700;color:var(--text);line-height:1.15}
+  .fseg .fl{font-size:10px;color:var(--dim2);white-space:nowrap}
+  .fseg .fl em{font-style:normal;color:var(--gold)}
+  .fseg:hover{border-color:var(--line2)}
+  .fseg.on{border-color:var(--blue);background:rgba(50,145,255,.08)}
+  .fseg.on .fn{color:var(--blue)}
+  .fseg.g.on{border-color:var(--green-d);background:rgba(70,180,106,.08)}.fseg.g.on .fn{color:var(--green)}
+  .fseg.mm .fn{color:var(--text)}
+  .fseg.mm.on{border-color:#5a2326;background:rgba(229,72,77,.1)}.fseg.mm.on .fn{color:var(--red)}
+  .fmore{position:relative}
+  .fmore>summary{display:flex;align-items:center}
+  .fmore>summary .fseg{min-width:0}
+  .fmoreMenu{position:absolute;top:100%;right:0;margin-top:6px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:6px;display:flex;flex-direction:column;gap:2px;z-index:40;min-width:180px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .fmoreMenu button{text-align:left;border:0;background:transparent;color:var(--dim);padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer}
+  .fmoreMenu button:hover{background:var(--surface3);color:var(--text)}
+  .fmoreMenu button.on{color:var(--blue)}
+  .refreshBtn{margin-left:auto}
+  .controls{display:flex;gap:9px;align-items:center;padding:0 20px 11px;flex-wrap:wrap}
   .ipt,.sel{background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:8px 12px;font-size:13px;color:var(--text);transition:border-color .15s}
   .ipt:focus,.sel:focus{border-color:var(--blue);outline:none}
   .search{position:relative;flex:1;min-width:170px}
@@ -44,80 +62,131 @@
   .seg{display:flex;background:var(--surface);border:1px solid var(--line2);border-radius:9px;padding:3px;gap:2px}
   .seg button{border:0;background:transparent;color:var(--dim);font-size:12px;font-weight:500;padding:6px 12px;border-radius:6px;cursor:pointer;transition:.15s;white-space:nowrap}
   .seg button.on{background:var(--surface2);color:var(--text);box-shadow:0 1px 0 rgba(255,255,255,.04) inset}
-  .seg button .cnt{display:inline-block;min-width:17px;padding:0 5px;margin-left:5px;border-radius:99px;background:var(--line);color:var(--dim2);font-size:10.5px;font-weight:600;line-height:16px;text-align:center;vertical-align:1px}
-  .seg button.on .cnt{background:var(--line2);color:var(--text)}
   .btn{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:9px;padding:8px 13px;font-size:13px;font-weight:500;cursor:pointer;transition:.15s;white-space:nowrap}
   .btn:hover{border-color:#3a3a42;background:#1b1b1f}
   .btn:disabled{opacity:.5;cursor:default}
   .btn-g{background:var(--green-d);border-color:#3d9450;color:#eafff0}
   .btn-g:hover{background:#368049}
   .btn-r:hover{background:#4a1a1d;border-color:var(--red);color:#ffd7d8}
-  .btn-dup:hover{background:#1a2433;border-color:var(--blue);color:#cfe3ff}
   .btn-sm{padding:6px 10px;font-size:12px}
+  .btn.on{border-color:var(--gold);color:var(--gold)}
+  /* CHIPY */
+  .filterChips{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:0 20px 11px}
+  .filterChips:empty{display:none}
+  .chipsep{width:1px;height:20px;background:var(--line)}
+  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--line2);background:var(--surface);color:var(--dim);cursor:pointer;transition:.15s}
+  .fchip:hover{border-color:#3a3a42;color:var(--text)}
+  .fchip.on{border-color:var(--green-d);background:rgba(70,180,106,.1);color:var(--green)}
+  .fchip.sq.on{border-color:var(--blue);background:rgba(50,145,255,.1);color:var(--blue)}
+  .fchip.soff.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .fchip.ssoon.on{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
+  .fchip svg{width:13px;height:13px}
+  .libBtn.done{background:var(--green-d);border-color:#3d9450;color:#eafff0}
 
-  /* LIST */
-  main{max-width:1040px;margin:0 auto;padding:18px 22px 90px}
-  .cards{display:flex;flex-direction:column;gap:18px}
-  .card{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:border-color .2s}
-  .card:hover{border-color:#34343c}
-  .card.approved{border-color:var(--green-d)}
-  .card.rejected{opacity:.45}
-  .card.duplicate{opacity:.55}
-  .card.duplicate .pname{text-decoration:line-through;text-decoration-color:var(--dim2);text-decoration-thickness:1px}
+  /* SHELL */
+  main{flex:1;min-height:0;overflow:hidden;position:relative}
+  .split{display:grid;grid-template-columns:420px 1fr;height:100%}
+  .listPane{display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line)}
+  .listHead{padding:8px 14px;font-size:11px;color:var(--dim2);border-bottom:1px solid var(--line);flex:0 0 auto}
+  .listBody{overflow-y:auto;flex:1;min-height:0}
+  .listMore{padding:12px;text-align:center;flex:0 0 auto}.listMore:empty{display:none}
+  .moreBtn{background:var(--surface);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:8px 16px;font-size:12.5px;cursor:pointer}
+  .moreBtn:hover{border-color:var(--gold);color:var(--gold)}
 
-  /* HEAD — wideo GRA W KARCIE (autoodtwarzanie na scroll) + nazwa + heat + status */
-  .head{display:grid;grid-template-columns:210px 1fr;gap:18px;padding:16px 18px;align-items:start}
-  .vid{position:relative;width:210px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;flex:0 0 auto}
-  .vid iframe.vidframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:6;display:block;background:#000}
-  .vid[data-mounted] .play,.vid[data-mounted] .vidph{display:none}
-  .vid img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s;position:relative;z-index:1}
-  .vid .vidph{position:absolute;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim2);background:linear-gradient(135deg,#1b1b20,#0c0c0e)}
-  .vid .vidph svg{width:22px;height:22px;opacity:.45}
-  .vid .vidph span{font-size:9px;letter-spacing:.05em;text-transform:uppercase}
-  .vid.healing .vidph span{color:var(--gold)}
-  .vid:hover img{transform:scale(1.04)}
-  .vid .play{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(0,0,0,.02),rgba(0,0,0,.3))}
-  .vid .play span{width:40px;height:40px;border-radius:50%;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);border:1.5px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center}
-  .vid .play span svg{width:18px;height:18px;color:#fff;margin-left:2px;fill:#fff}
-  .vid:hover .play span{background:rgba(0,0,0,.72)}
-  .vid .age{position:absolute;top:6px;left:6px;font-size:10px;font-weight:600;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);padding:2px 6px;border-radius:5px;color:#fff}
-  .vid .age.hot{background:rgba(245,181,63,.92);color:#1a1205}
+  /* WIERSZ LISTY */
+  .row{display:grid;grid-template-columns:48px 1fr;gap:11px;padding:9px 14px;border-bottom:1px solid var(--line);cursor:pointer;border-left:3px solid transparent;transition:background .1s}
+  .row:hover{background:var(--surface)}
+  .row.sel{background:var(--surface2);border-left-color:var(--gold)}
+  .rthumb{width:48px;height:48px;border-radius:8px;overflow:hidden;background:var(--surface3);display:flex;align-items:center;justify-content:center;color:var(--dim2)}
+  .rthumb img{width:100%;height:100%;object-fit:cover;display:block}
+  .rmain{min-width:0;display:flex;flex-direction:column;gap:5px;justify-content:center}
+  .rname{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rmeta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--dim)}
+  .rmeta .sold{font-weight:700;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid var(--line2);background:var(--surface2)}
+  .rmeta .sold.na{color:var(--dim2)}
+  .rmeta .sold.g1{color:var(--green);border-color:var(--green-d)}
+  .rmeta .sold.g2{color:#7fe0a0;border-color:#3d9450;background:rgba(70,180,106,.14)}
+  .rmeta .sold.g3{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.12)}
+  .rmeta .rp{color:var(--dim);font-weight:600}
+  .rmeta .rsc{color:var(--gold);font-weight:600}
+  .rmeta .ic{font-size:11px}
+  .rmeta .ic.soff{filter:none}
 
-  .meta{min-width:0;display:flex;flex-direction:column;gap:9px}
-  .metaTop{display:flex;align-items:flex-start;gap:10px}
-  .pname{font-size:17px;font-weight:600;line-height:1.25;margin:0;flex:1;min-width:0}
-  .heat{flex:0 0 auto;display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--line2);border-radius:9px;padding:5px 9px;font-weight:700;font-size:13px}
-  .heat svg{width:14px;height:14px;color:var(--gold)}
-  .heat.hi{border-color:#7a5a12;background:#231803;color:var(--gold)}
-  .metaRow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  /* DETAL */
+  .detail{overflow-y:auto;min-height:0}
+  .detEmpty{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--dim2)}
+  .detEmpty svg{width:34px;height:34px;opacity:.4}
+  .detEmpty p{margin:0;font-size:14px}
+  .detBar{position:sticky;top:0;z-index:20;background:rgba(8,8,10,.94);backdrop-filter:blur(10px);border-bottom:1px solid var(--line);padding:11px 20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .detBarBtns{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+  .abtn{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:9px;padding:9px 15px;font-size:13.5px;font-weight:600;cursor:pointer;transition:.15s}
+  .abtn b{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:5px;background:var(--surface3);font-size:11px;font-weight:700;color:var(--dim)}
+  .abtn:hover{border-color:#3a3a42}
+  .abtn.ap{background:var(--green-d);border-color:#3d9450;color:#eafff0}.abtn.ap b{background:rgba(0,0,0,.25);color:#eafff0}.abtn.ap:hover{background:#368049}
+  .abtn.rj:hover{background:#4a1a1d;border-color:var(--red);color:#ffd7d8}
+  .abtn.dp:hover{background:#1a2433;border-color:var(--blue);color:#cfe3ff}
+  .rWrap{position:relative}
+  .reasonMenu{position:absolute;top:100%;left:0;margin-top:6px;background:var(--surface2);border:1px solid var(--line2);border-radius:10px;padding:6px;display:none;flex-direction:column;gap:2px;z-index:30;min-width:200px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .reasonMenu.open{display:flex}
+  .reasonMenu button{display:flex;align-items:center;gap:9px;text-align:left;border:0;background:transparent;color:var(--dim);padding:7px 10px;border-radius:7px;font-size:12.5px;cursor:pointer}
+  .reasonMenu button:hover{background:var(--surface3);color:var(--text)}
+  .reasonMenu b{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;border-radius:5px;background:var(--surface3);font-size:11px;flex:0 0 auto}
+  .detBack{display:none;align-items:center;gap:5px;border:1px solid var(--line2);background:var(--surface2);color:var(--text);border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer}
+  .detHead{padding:16px 20px 4px}
+  .detTitle{margin:0 0 10px;font-size:20px;font-weight:600;line-height:1.25}
+  .detHeadRow{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
   .catsel{font-size:11.5px;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:7px;padding:4px 8px}
+  .detMetrics{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 4px}
+  .mtr{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:6px 11px}
+  .mtr svg{width:14px;height:14px;color:var(--dim2)}
+  .mtr b{color:var(--text);font-weight:700;font-size:14px}
+  .mtr.sold b{color:var(--green)}
+  .mtr.sc b{color:var(--gold)}
+  .mtr b.up{color:var(--green)}
+  .detMedia{display:grid;grid-template-columns:200px 1fr;gap:16px;padding:14px 20px 6px}
+  .detVid{position:relative;width:200px;aspect-ratio:9/16;border-radius:12px;overflow:hidden;background:#000;flex:0 0 auto}
+  .detVid .vidframe{position:absolute;inset:0;width:100%;height:100%;border:0;z-index:6;display:block;background:#000}
+  .detVid .vposter{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;display:block}
+  .detVid .vidph{position:absolute;inset:0;z-index:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;color:var(--dim2);background:linear-gradient(135deg,#1b1b20,#0c0c0e)}
+  .detVid .vidph svg{width:22px;height:22px;opacity:.45}
+  .detVid .vidph span{font-size:9px;letter-spacing:.05em;text-transform:uppercase}
+  .detGal{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:8px;align-content:start}
+  .detGal img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:9px;border:1px solid var(--line);background:#fff;cursor:zoom-in;display:block}
+  .galNone{color:var(--dim2);display:flex;align-items:center;gap:7px;font-size:12px}
+  .detTraction{margin-top:8px;padding:11px 20px;font-size:12px;color:var(--dim);border-top:1px solid var(--line);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .detTraction svg{width:13px;height:13px;color:var(--dim2)}
+  .detLinks{display:flex;gap:8px;flex-wrap:wrap;padding:12px 20px 40px}
+  .detLinks a{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--dim);border:1px solid var(--line2);border-radius:8px;padding:6px 11px}
+  .detLinks a:hover{color:var(--text);border-color:#3a3a42;background:var(--surface2)}
+  .detLinks a.shop:hover{color:var(--green)}
+
+  /* BADGE'e (współdzielone) */
+  .stbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
+  .stbadge.approved{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.08)}
+  .stbadge.rejected{color:var(--red);border-color:#5a2326}
+  .stbadge.duplicate{color:var(--blue);border-color:#234a6e;background:rgba(50,145,255,.08)}
+  .stbadge.pending{color:var(--gold);border-color:#5a4412;background:rgba(245,181,63,.06)}
+  .mmBadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid #5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  .originBadge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:7px;border:1px solid #234a6e;background:rgba(50,145,255,.08);color:var(--blue)}
+  .originBadge svg{width:11px;height:11px}
+  .seasonBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid var(--line2);background:var(--surface2);color:var(--dim)}
+  .seasonBadge.ay{font-weight:600}
+  .seasonBadge.in{border-color:#234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
+  .seasonBadge.soon{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
+  .seasonBadge.off{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
   .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
   .chip svg{width:12px;height:12px}
-  .chip.ad{color:var(--gold);border-color:#5a4412;background:#1f1705}
   .chip.a{cursor:pointer}.chip.a:hover{border-color:#3a3a42;color:var(--text)}
-  /* Statystyki wideo — schowane w rozwijalne „i" (dane researchu, nie do matchowania) */
-  .statfold{margin-top:2px}
-  .statfold>summary{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:var(--dim2);border:1px solid var(--line);background:var(--surface2);border-radius:7px;padding:4px 9px;width:fit-content}
-  .statfold>summary:hover{color:var(--dim);border-color:var(--line2)}
-  .statfold[open]>summary{color:var(--dim);margin-bottom:9px}
-  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
-  @media(max-width:760px){.stats{grid-template-columns:repeat(3,1fr)}}
-  .stat{background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
-  .stat .lab{display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
-  .stat .val{font-size:14px;font-weight:600;line-height:1}
-  .stat.gold{border-color:#5a4412}.stat.gold .val{color:var(--gold)}.stat.gold .lab{color:#b88e2e}
   .srcLinks{display:flex;gap:8px;flex-wrap:wrap}
   .srcLinks a{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim);border:1px solid var(--line2);border-radius:8px;padding:5px 10px;transition:.15s}
   .srcLinks a:hover{color:var(--text);border-color:#3a3a42;background:var(--surface2)}
   .srcLinks a.shop:hover{color:var(--green)}
 
-  /* SEKCJE */
-  .sec{border-top:1px solid var(--line);padding:15px 18px}
+  /* SEKCJE detalu */
+  .sec{border-top:1px solid var(--line);padding:15px 20px}
   .secLab{font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
   .secLab svg{width:13px;height:13px}
   .secLab .hint{text-transform:none;letter-spacing:0;color:var(--dim2);font-weight:400;margin-left:2px}
-
-  /* STREFA DOPASOWANIA — okładka wideo vs kandydaci Ali (porównanie wizualne 1:1) */
   .match{background:rgba(255,255,255,.012)}
   .matchGrid{display:grid;grid-template-columns:120px 1fr;gap:16px;align-items:start}
   @media(max-width:640px){.matchGrid{grid-template-columns:1fr}}
@@ -144,52 +213,38 @@
   .cand .ext{border:1px solid var(--line2);background:var(--surface2);border-radius:7px;width:30px;display:flex;align-items:center;justify-content:center;color:var(--dim)}
   .cand .ext:hover{color:var(--gold);border-color:#7a4a12}
   .nocand{color:var(--dim2);font-size:13px;padding:4px 0 10px}
-
-  /* AKCJE */
   .actions{display:flex;gap:9px;align-items:center;margin-top:14px;flex-wrap:wrap}
   .actions .ipt{flex:1;min-width:220px}
-  .stbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
-  .stbadge.approved{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.08)}
-  .stbadge.rejected{color:var(--red);border-color:#5a2326}
-  .stbadge.duplicate{color:var(--blue);border-color:#234a6e;background:rgba(50,145,255,.08)}
-  .stbadge.pending{color:var(--gold);border-color:#5a4412;background:rgba(245,181,63,.06)}
 
-  /* RADAR v2 „dowód sprzedaży" — badge sprzedaży / mismatch / origin + filtr-chipy + eksport do biblioteki */
-  .sellBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid var(--green-d);background:rgba(70,180,106,.13);color:var(--green)}
-  .sellBadge.gray{border-color:var(--line2);background:var(--surface2);color:var(--dim);font-weight:600}
-  .mmBadge{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:4px 10px;border-radius:99px;border:1px solid #5a2326;background:rgba(229,72,77,.1);color:var(--red)}
-  .originBadge{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;padding:3px 8px;border-radius:7px;border:1px solid #234a6e;background:rgba(50,145,255,.08);color:var(--blue)}
-  .originBadge svg{width:11px;height:11px}
-  /* SEZONOWOŚĆ — badge okna sprzedażowego produktu (całoroczny / w oknie / kończy się / po sezonie) */
-  .seasonBadge{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 11px;border-radius:99px;border:1px solid var(--line2);background:var(--surface2);color:var(--dim)}
-  .seasonBadge.ay{font-weight:600;border-color:var(--line2);background:var(--surface2);color:var(--dim)}
-  .seasonBadge.in{border-color:#234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
-  .seasonBadge.soon{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
-  .seasonBadge.off{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
-  .filterChips{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-  .filterChips:empty{display:none}
-  .fchip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:6px 12px;border-radius:99px;border:1px solid var(--line2);background:var(--surface);color:var(--dim);cursor:pointer;transition:.15s}
-  .fchip:hover{border-color:#3a3a42;color:var(--text)}
-  .fchip.on{border-color:var(--green-d);background:rgba(70,180,106,.1);color:var(--green)}
-  .fchip.mm.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
-  .fchip.soff.on{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
-  .fchip.ssoon.on{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
-  .fchip svg{width:13px;height:13px}
-  .libBtn{margin-left:auto}
-  .libBtn.done{background:var(--green-d);border-color:#3d9450;color:#eafff0}
-  .controls.tableMode #sortseg{display:none}
-
-  /* SNAPSHOT — co realnie pobraliśmy z aukcji (galeria, cena, warianty, OPINIE ze zdjęciami) */
-  .snap>summary{display:flex;align-items:center;gap:9px;font-size:11px;color:var(--dim2);text-transform:uppercase;letter-spacing:.07em;padding:2px 0}
-  .snap>summary .chev{margin-left:auto;transition:transform .2s;color:var(--dim2)}
-  .snap[open]>summary .chev{transform:rotate(180deg)}
-  .snap>summary:hover{color:var(--dim)}
-  .snap>summary .badge{text-transform:none;letter-spacing:0;font-weight:600;font-size:11px;padding:3px 9px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
-  .snap>summary .badge.ok{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.08)}
-  .snap>summary .badge.warn{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.08)}
-  .snapBody{padding-top:14px;display:flex;flex-direction:column;gap:16px}
+  /* TABY ŹRÓDEŁ + snapshot */
+  .srcWrap{border-top:1px solid var(--line)}
+  .srcTabs{display:flex;gap:2px;border-bottom:1px solid var(--line);padding:0 20px;overflow-x:auto}
+  .srcTab{border:0;background:transparent;color:var(--dim);font-size:12.5px;font-weight:600;padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
+  .srcTab:hover:not(.disabled){color:var(--text)}
+  .srcTab.on{color:var(--text);border-bottom-color:var(--gold)}
+  .srcTab svg{width:14px;height:14px}
+  .srcTab .tc{font-size:10px;color:var(--dim2);background:var(--surface2);border:1px solid var(--line);border-radius:99px;padding:1px 6px;line-height:1.5}
+  .srcTab.on .tc{color:var(--gold);border-color:#5a4412}
+  .srcTab.soon{color:var(--dim2);cursor:default;opacity:.55}
+  .srcPanel{display:none;padding:16px 20px}
+  .srcPanel.on{display:block}
+  .shopStats{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
+  @media(max-width:1100px){.shopStats{grid-template-columns:repeat(3,1fr)}}
+  @media(max-width:520px){.shopStats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--surface2);border:1px solid var(--line);border-radius:9px;padding:7px 9px}
+  .stat .lab{display:flex;align-items:center;gap:4px;font-size:9.5px;color:var(--dim2);text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+  .stat .val{font-size:14px;font-weight:600;line-height:1}
+  .stat.gold{border-color:#5a4412}.stat.gold .val{color:var(--gold)}.stat.gold .lab{color:#b88e2e}
+  .shopEmpty,.snapEmpty{color:var(--dim2);font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0}
+  .vidLinks{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px}
+  .vidLink{position:relative;flex:0 0 84px;width:84px;aspect-ratio:9/16;border-radius:9px;overflow:hidden;background:#000;border:1px solid var(--line2);display:block;transition:border-color .15s}
+  .vidLink:hover{border-color:var(--gold)}
+  .vidLink img{width:100%;height:100%;object-fit:cover;display:block}
+  .vidLink .vl{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#fff;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent);padding:10px 5px 4px}
+  .vidLink .vl svg{width:10px;height:10px}
+  .vidLink .vlph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim2)}
   .snapTop{display:grid;grid-template-columns:1fr 260px;gap:18px}
-  @media(max-width:760px){.snapTop{grid-template-columns:1fr}}
+  @media(max-width:900px){.snapTop{grid-template-columns:1fr}}
   .gal{display:flex;flex-direction:column;gap:9px}
   .galMain{aspect-ratio:1;max-width:300px;border-radius:12px;overflow:hidden;background:#fff;border:1px solid var(--line2)}
   .galMain img{width:100%;height:100%;object-fit:contain;display:block}
@@ -206,8 +261,6 @@
   .vlist span{font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:6px;padding:3px 8px}
   .specTbl{font-size:11.5px;color:var(--dim);display:grid;grid-template-columns:auto 1fr;gap:3px 12px}
   .specTbl b{color:var(--text);font-weight:500}
-  .rstats{display:flex;align-items:center;gap:12px;font-size:13px}
-  .rstats .avg{font-size:20px;font-weight:700;color:var(--gold)}
   .reviews{display:flex;gap:11px;overflow-x:auto;padding:2px 2px 8px}
   .rev{flex:0 0 210px;border:1px solid var(--line);border-radius:11px;background:var(--surface2);overflow:hidden;display:flex;flex-direction:column}
   .rev .rimg{display:flex;gap:0}
@@ -216,8 +269,7 @@
   .rev .rstars{color:var(--gold);font-size:11px;letter-spacing:1px}
   .rev .rtext{font-size:11.5px;color:var(--dim);line-height:1.4;max-height:70px;overflow:hidden}
   .rev .rname{font-size:10px;color:var(--dim2)}
-  /* Referencja generatora (curated / snapshot) — co model dostaje jako zdjęcie produktu */
-  .refbox{display:flex;gap:12px;align-items:flex-start;background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:12px}
+  .refbox{display:flex;gap:12px;align-items:flex-start;background:var(--surface2);border:1px solid var(--line);border-radius:11px;padding:12px;margin-top:16px}
   .refbox .refimg{flex:0 0 60px;width:60px;height:60px;border-radius:9px;overflow:hidden;background:#fff;border:1px solid var(--line2)}
   .refbox .refimg img{width:100%;height:100%;object-fit:cover;display:block}
   .refbox .refimg.none{display:flex;align-items:center;justify-content:center;color:var(--dim2);font-size:9px;text-align:center;padding:3px}
@@ -227,56 +279,12 @@
   .refbadge.warn{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.08)}
   .refrow{display:flex;gap:8px;flex-wrap:wrap}
   .refrow .ipt{flex:1;min-width:200px}
-  .snapEmpty{color:var(--dim2);font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-
-  /* SCORECARD — wynik produktu (approved): score + sprzedaż/marża na jeden rzut oka */
-  .scorecard{border-top:1px solid var(--line);padding:14px 18px;display:flex;align-items:center;gap:16px;background:linear-gradient(180deg,rgba(245,181,63,.03),transparent)}
-  .scoreBig{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;width:70px;height:70px;border-radius:14px;border:1px solid var(--line2);background:var(--surface2)}
-  .scoreBig .n{font-size:25px;font-weight:800;line-height:1}
-  .scoreBig .l{font-size:8px;color:var(--dim2);text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
-  .scoreBig.hi{border-color:var(--green-d);background:rgba(70,180,106,.1)}.scoreBig.hi .n{color:var(--green)}
-  .scoreBig.mid{border-color:#7a5a12;background:rgba(245,181,63,.08)}.scoreBig.mid .n{color:var(--gold)}
-  .scoreBig.lo .n{color:var(--dim)}
-  .scoreFacts{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
-  .scoreFact{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--dim)}
-  .scoreFact b{color:var(--text);font-weight:600;font-size:13.5px}
-  .scoreFact svg{width:14px;height:14px;color:var(--dim2)}
-  .scoreFact.sold b{color:var(--green)}
-  .scoreFact.mk b{color:var(--gold)}
-  .scoreWarn{font-size:11px;color:var(--gold);display:inline-flex;align-items:center;gap:5px;border:1px solid #5a4412;background:rgba(245,181,63,.06);border-radius:7px;padding:3px 9px}
-  @media(max-width:680px){.scorecard{flex-wrap:wrap;gap:12px}.scoreFacts{gap:6px 12px}}
-
-  /* TABY ŹRÓDEŁ — AliExpress | TikTok Shop | (przyszłe) */
-  .srcTabs{display:flex;gap:2px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:0 18px;overflow-x:auto}
-  .srcTab{border:0;background:transparent;color:var(--dim);font-size:12.5px;font-weight:600;padding:12px 14px;cursor:pointer;border-bottom:2px solid transparent;display:inline-flex;align-items:center;gap:7px;transition:.15s;white-space:nowrap}
-  .srcTab:hover:not(.disabled){color:var(--text)}
-  .srcTab.on{color:var(--text);border-bottom-color:var(--gold)}
-  .srcTab svg{width:14px;height:14px}
-  .srcTab .tc{font-size:10px;color:var(--dim2);background:var(--surface2);border:1px solid var(--line);border-radius:99px;padding:1px 6px;line-height:1.5}
-  .srcTab.on .tc{color:var(--gold);border-color:#5a4412}
-  .srcTab.soon{color:var(--dim2);cursor:default;opacity:.55}
-  .srcPanel{display:none;padding:16px 18px}
-  .srcPanel.on{display:block}
-  .shopStats{display:grid;grid-template-columns:repeat(6,1fr);gap:9px}
-  @media(max-width:760px){.shopStats{grid-template-columns:repeat(3,1fr)}}
-  @media(max-width:420px){.shopStats{grid-template-columns:repeat(2,1fr)}}
-  .shopEmpty{color:var(--dim2);font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0}
-  /* Podobne wideo (TikTok Shop related_videos) — podgląd „podobnych filmów" */
-  .vidLinks{display:flex;gap:9px;overflow-x:auto;padding:2px 2px 8px}
-  .vidLink{position:relative;flex:0 0 84px;width:84px;aspect-ratio:9/16;border-radius:9px;overflow:hidden;background:#000;border:1px solid var(--line2);display:block;transition:border-color .15s}
-  .vidLink:hover{border-color:var(--gold)}
-  .vidLink img{width:100%;height:100%;object-fit:cover;display:block}
-  .vidLink .vl{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;gap:3px;font-size:9.5px;font-weight:600;color:#fff;background:linear-gradient(0deg,rgba(0,0,0,.8),transparent);padding:10px 5px 4px}
-  .vidLink .vl svg{width:10px;height:10px}
-  .vidLink .vlph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim2)}
 
   /* WIDOK TABELA */
-  .viewSeg button{padding:6px 14px}
-  .controls.tableMode #stseg{display:none}
-  #tableWrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
-  .tblCount{font-size:12px;color:var(--dim2);padding:12px 16px 0}
+  #tableWrap{height:100%;overflow:auto;padding:16px 20px}
+  .tblCount{font-size:12px;color:var(--dim2);padding:0 2px 12px}
   .tblCount b{color:var(--text)}
-  .ptbl{width:100%;border-collapse:collapse;font-size:13px}
+  .ptbl{width:100%;border-collapse:collapse;font-size:13px;border:1px solid var(--line);border-radius:14px;overflow:hidden}
   .ptbl th,.ptbl td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
   .ptbl tbody tr:last-child td{border-bottom:0}
   .ptbl th{background:var(--surface);color:var(--dim2);font-weight:600;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
@@ -292,95 +300,84 @@
   .ptbl a.tlink{color:var(--dim2);margin-left:4px;font-weight:600}
   .ptbl a.tlink:hover{color:var(--gold)}
   .ptbl .warn{color:var(--gold);cursor:help}
-  .tblLegend{font-size:11px;color:var(--dim2);padding:10px 16px 14px;display:flex;gap:16px;flex-wrap:wrap}
+  .tblLegend{font-size:11px;color:var(--dim2);padding:12px 2px;display:flex;gap:16px;flex-wrap:wrap}
   .scorePill{display:inline-block;min-width:30px;text-align:center;font-weight:700;font-size:12px;padding:3px 8px;border-radius:99px;border:1px solid var(--line2);color:var(--dim)}
   .scorePill.hi{color:var(--green);border-color:var(--green-d);background:rgba(70,180,106,.1)}
   .scorePill.mid{color:var(--gold);border-color:#7a5a12;background:rgba(245,181,63,.08)}
   .tblEmpty{text-align:center;color:var(--dim2);padding:50px 20px;font-size:14px}
 
-  /* PLAYER / LIGHTBOX MODAL */
-  .modal{position:fixed;inset:0;background:rgba(0,0,0,.9);backdrop-filter:blur(6px);z-index:90;display:none;align-items:center;justify-content:center;padding:24px}
-  .modal.show{display:flex}
-  .modalC{display:flex;gap:0;background:var(--surface);border:1px solid var(--line2);border-radius:18px;overflow:hidden;max-width:880px;width:100%;max-height:92vh}
-  .modalC .pl{flex:0 0 auto;width:340px;max-width:46vw;background:#000;display:flex;align-items:center;justify-content:center}
-  .modalC .pl iframe{width:100%;height:min(86vh,600px);border:0;display:block}
-  .modalC .info{flex:1;min-width:0;padding:24px;overflow:auto}
-  .modalC .info h3{margin:0 0 4px;font-size:20px;font-weight:600;line-height:1.25}
-  .mx{position:absolute;top:18px;right:22px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.08);border:1px solid var(--line2);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:2}
-  .mx:hover{background:rgba(255,255,255,.16)}
+  /* LIGHTBOX / CHEAT / TOAST / LOADER */
   .lightbox{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100;display:none;align-items:center;justify-content:center;padding:30px;cursor:zoom-out}
   .lightbox.show{display:flex}
   .lightbox img{max-width:92vw;max-height:92vh;object-fit:contain;border-radius:12px;background:#fff}
-  @media (max-width:720px){ .modalC{flex-direction:column;max-height:94vh;overflow:auto} .modalC .pl{width:100%;max-width:none} .modalC .pl iframe{height:62vh} }
-
+  .cheat{position:fixed;inset:0;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);z-index:110;display:none;align-items:center;justify-content:center;padding:24px}
+  .cheat.show{display:flex}
+  .cheatBox{background:var(--surface2);border:1px solid var(--line2);border-radius:16px;padding:24px 28px;max-width:360px;width:100%;display:flex;flex-direction:column;gap:10px}
+  .cheatBox h4{margin:0 0 6px;font-size:16px;font-weight:600}
+  .cheatBox div{font-size:13px;color:var(--dim);display:flex;align-items:center;gap:8px}
   .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface2);border:1px solid var(--line2);padding:11px 19px;border-radius:11px;font-size:13px;z-index:120;opacity:0;transition:opacity .2s;box-shadow:0 10px 30px rgba(0,0,0,.5)}
   .toast.show{opacity:1}
-  .loader{display:flex;justify-content:center;padding:80px}.spin{width:36px;height:36px;border:3px solid #222;border-top-color:var(--gold);border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
-  .empty{text-align:center;color:var(--dim2);padding:70px 20px;font-size:14px}
-  .pager{display:flex;align-items:center;justify-content:center;gap:14px;padding:22px 0 8px;flex-wrap:wrap}
-  .pager:empty{display:none}
-  .pgbtn{background:var(--surface);border:1px solid var(--line2);color:var(--text);border-radius:9px;padding:8px 15px;font-size:13px;font-weight:600;cursor:pointer;transition:border-color .15s,color .15s}
-  .pgbtn:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
-  .pgbtn:disabled{opacity:.4;cursor:default}
-  .pginfo{font-size:12.5px;color:var(--dim)}.pginfo b{color:var(--text)}
+  .loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:80;background:var(--bg)}
+  .spin{width:36px;height:36px;border:3px solid #222;border-top-color:var(--gold);border-radius:50%;animation:s .7s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
 
-  @media (max-width:680px){
-    .wrap,main{padding-left:13px;padding-right:13px}
-    .seg{width:100%;overflow-x:auto;flex-wrap:nowrap;-webkit-overflow-scrolling:touch}
-    .head{grid-template-columns:150px 1fr;gap:13px;padding:13px}
-    .vid{width:150px}
-    .pname{font-size:15px;flex-basis:100%}      /* tytuł pełna szerokość — heat/status zawijają pod spód */
-    .metaTop{flex-wrap:wrap}
-    .stats{grid-template-columns:repeat(2,1fr)}
-    .cands{grid-template-columns:repeat(2,1fr)}
-    .actions .ipt{min-width:100%}
-    .actions .btn{flex:1}
+  @media (max-width:900px){
+    .split{grid-template-columns:1fr}
+    .listPane{border-right:0}
+    .detail{position:fixed;inset:0;z-index:70;background:var(--bg);transform:translateX(100%);transition:transform .2s}
+    body.detOpen .detail{transform:none}
+    .detBack{display:inline-flex}
+    .detBar{order:-1}
+    .detMedia{grid-template-columns:150px 1fr}
+    .detVid{width:150px}
+    .shopStats{grid-template-columns:repeat(2,1fr)}
   }
-  @media (max-width:420px){ .head{grid-template-columns:120px 1fr} .vid{width:120px} }
 </style>
 </head>
 <body>
 <header class="bar">
-  <div class="wrap">
-    <div class="barTop">
-      <div class="brand"><span class="dot"></span>Radar produktów <span style="color:var(--dim);font-weight:400">TikTok → AliExpress</span></div>
-      <div class="seg viewSeg" id="viewSeg">
-        <button data-v="trendy" class="on">Trendy</button>
-        <button data-v="table">Tabela</button>
-      </div>
-      <div class="kpis" id="kpis"></div>
-    </div>
-    <div class="controls">
-      <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input id="q" class="ipt" placeholder="Szukaj produktu…"></div>
-      <select id="fcat" class="sel"><option value="">Wszystkie kategorie</option></select>
-      <div class="seg" id="stseg">
-        <button data-s="pending" class="on">Do dopasowania<span class="cnt" data-c="pending"></span></button>
-        <button data-s="approved">Zatwierdzone<span class="cnt" data-c="approved"></span></button>
-        <button data-s="rejected">Odrzucone<span class="cnt" data-c="rejected"></span></button>
-        <button data-s="duplicate">Duplikaty<span class="cnt" data-c="duplicate"></span></button>
-        <button data-s="">Wszystkie<span class="cnt" data-c="all"></span></button>
-      </div>
-      <div class="seg" id="sortseg" title="Kolejność kart">
-        <button data-sort="sales" class="on">Sprzedaż</button>
-        <button data-sort="heat">Heat</button>
-        <button data-sort="new">Najnowsze</button>
-      </div>
-      <button id="refresh" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Odśwież</button>
-    </div>
+  <div class="barTop">
+    <div class="brand"><span class="dot"></span>Radar produktów <span class="sub">TikTok → AliExpress</span></div>
+    <div class="funnel" id="funnel"></div>
+    <button id="refresh" class="btn refreshBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>Odśwież</button>
   </div>
+  <div class="controls">
+    <div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input id="q" class="ipt" placeholder="Szukaj produktu…"></div>
+    <select id="fcat" class="sel"><option value="">Wszystkie kategorie</option></select>
+    <div class="seg" id="sortSeg" title="Kolejność listy">
+      <button data-sort="sales" class="on">Sprzedaż</button>
+      <button data-sort="score">Score</button>
+      <button data-sort="price">Cena</button>
+      <button data-sort="new">Najnowsze</button>
+    </div>
+    <button id="tableBtn" class="btn btn-sm" style="display:none">Tabela</button>
+  </div>
+  <div class="filterChips" id="filterChips"></div>
 </header>
 
 <main>
-  <div class="loader" id="loading"><div class="spin"></div></div>
-  <div class="filterChips" id="filterChips"></div>
-  <div class="cards" id="cards"></div>
-  <div class="empty" id="empty" style="display:none">Brak pozycji dla tego filtra.</div>
-  <div class="pager" id="pager"></div>
+  <div class="split" id="split">
+    <aside class="listPane" id="listPane">
+      <div class="listHead"><span id="listCount"></span></div>
+      <div class="listBody" id="listBody"></div>
+      <div class="listMore" id="listMore"></div>
+    </aside>
+    <section class="detail" id="detail"></section>
+  </div>
   <div id="tableWrap" style="display:none"></div>
+  <div class="loader" id="loading"><div class="spin"></div></div>
 </main>
 
-<div class="modal" id="modal" onclick="closeM(event)"><div class="mx" onclick="closeM(event,true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></div><div class="modalC" id="modalC" onclick="event.stopPropagation()"></div></div>
 <div class="lightbox" id="lightbox" onclick="this.classList.remove('show')"><img id="lightboxImg" src="" alt=""></div>
+<div class="cheat" id="cheat" onclick="this.classList.remove('show')">
+  <div class="cheatBox" onclick="event.stopPropagation()">
+    <h4>Skróty klawiaturowe</h4>
+    <div><kbd>j</kbd> / <kbd>k</kbd> — następny / poprzedni</div>
+    <div><kbd>a</kbd> — zatwierdź</div>
+    <div><kbd>r</kbd> — odrzuć, potem <kbd>1</kbd>–<kbd>8</kbd> = powód</div>
+    <div><kbd>d</kbd> — duplikat</div>
+    <div><kbd>?</kbd> — ta ściąga &nbsp;·&nbsp; <kbd>Esc</kbd> — zamknij</div>
+  </div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -388,27 +385,27 @@ const SUPABASE_URL='https://yxmavwkwnfuphjqbelws.supabase.co';
 const ANON='sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
 const sb=window.supabase.createClient(SUPABASE_URL,ANON);
 const $=id=>document.getElementById(id);
-const esc=s=>(''+(s||'')).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const esc=s=>(''+(s||'')).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>{u=String(u||'');return /^(https?:\/\/|\/)/i.test(u)?u:'';};
 const fmt=n=>{n=+n||0;return n>=1e6?(n/1e6).toFixed(1).replace('.',',')+'M':n>=1000?(n/1000).toFixed(n>=1e4?0:1).replace('.',',')+'k':String(n);};
 const fmtDate=s=>{if(!s)return'';const d=new Date(s);return isNaN(d)?'':d.toLocaleDateString('pl-PL',{day:'2-digit',month:'2-digit',year:'numeric'});};
 // ── SEZONOWOŚĆ ── okno sprzedażowe MM-DD (wrap-around); null-e traktujemy jak „zawsze w oknie".
-const _mmddPL=s=>{const m=/^(\d{2})-(\d{2})$/.exec(s||'');return m?`${m[2]}.${m[1]}`:'';};   // "07-16" → "16.07"
-function inWindow(from,to){                                   // czy dziś mieści się w oknie [from,to]
+const _mmddPL=s=>{const m=/^(\d{2})-(\d{2})$/.exec(s||'');return m?`${m[2]}.${m[1]}`:'';};
+function inWindow(from,to){
   if(!from||!to)return true;
   const pf=/^(\d{2})-(\d{2})$/.exec(from),pt=/^(\d{2})-(\d{2})$/.exec(to);
   if(!pf||!pt)return true;
   const now=new Date(),nowN=(now.getMonth()+1)*100+now.getDate();
   const fromN=+pf[1]*100+ +pf[2],toN=+pt[1]*100+ +pt[2];
-  return fromN<=toN ? (nowN>=fromN&&nowN<=toN) : (nowN>=fromN||nowN<=toN);   // wrap-around gdy from>to
+  return fromN<=toN ? (nowN>=fromN&&nowN<=toN) : (nowN>=fromN||nowN<=toN);
 }
-function _daysUntil(mmdd){                                    // ile dni do najbliższego wystąpienia MM-DD
+function _daysUntil(mmdd){
   const m=/^(\d{2})-(\d{2})$/.exec(mmdd||'');if(!m)return null;
   const now=new Date();now.setHours(0,0,0,0);
   let d=new Date(now.getFullYear(),+m[1]-1,+m[2]);
   if(d<now)d=new Date(now.getFullYear()+1,+m[1]-1,+m[2]);
   return Math.round((d-now)/86400000);
 }
-// Stany sezonu produktu (bud_tt_products.season_type/season_label/sell_from/sell_to)
 function _seasonOff(x){return x.season_type==='seasonal'&&!inWindow(x.sell_from,x.sell_to);}
 function _seasonSoon(x){if(x.season_type!=='seasonal'||!inWindow(x.sell_from,x.sell_to))return false;const d=_daysUntil(x.sell_to);return d!=null&&d<=21;}
 function seasonBadgeHtml(x){
@@ -422,15 +419,23 @@ function seasonBadgeHtml(x){
   return `<span class="seasonBadge in">🗓 ${lab}${end?` · do ${end}`:''}</span>`;
 }
 const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Ogród & Majsterkowanie','Moda & Akcesoria','Podróże','Hobby & Kreatywne','Biuro & Organizacja','Inne'];
-let ROWS=[], ME='', FSTAT='pending', toastT, PAGE=0; const PER=20;
-let VIEW='trendy', TSORT={col:'score',dir:-1};   // widok Trendy(karty) | Tabela(zatwierdzone)
-// RADAR v2 „dowód sprzedaży > viral": kolejność kart + filtry + cache biblioteki/tempa sprzedaży
-let SORT='sales', FPROOF=false, FMISMATCH=false;   // sortowanie: sales|heat|new · filtr dowodu/mismatchu
-let FSEASONOFF=false, FSEASONSOON=false;           // filtry sezonowości: po sezonie / kończy się okno
-const INLIB=new Set();                             // workflow_products.bud_key już w bibliotece CRM
-const HIST=new Map(), HISTFETCHED=new Set();       // key → sprzedaż/tydzień (delta z bud_tt_shop_history)
+const REJECT_REASONS=[['za-drogie','za drogie'],['słaba-marża','słaba marża'],['gabaryt-wysyłka','gabaryt / wysyłka'],['marka-licencja','marka / licencja'],['moda-odzież','moda / odzież'],['commodity-nuda','commodity / nuda'],['zły-produkt','zły produkt'],['inne','inne']];
+
+// ── STAN ──
+let ROWS=[], LISTROWS=[], ME='', toastT;
+let FSTAT='pending';              // lejek: pending|approved|inlib|mismatch|rejected|duplicate|'' (wszystkie)
+let SORT='sales';                 // sales|score|price|new
+let SUBQ=null;                    // sub-kolejka pending: ready|dogrywka|nopack|null
+let FPROOF=false, FSEASONOFF=false, FSEASONSOON=false;
+let VIEW='list';                  // list|table
+let SELID=null, LASTDET=undefined, CURVID=null, REASONOPEN=false, LISTN=100;
+let TSORT={col:'score',dir:-1};
+const INLIB=new Set();
+const HIST=new Map(), HISTFETCHED=new Set();
+const HEALED=new Set(); let HEALING=false;
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
-function lightbox(src){if(!src)return;$('lightboxImg').src=src;$('lightbox').classList.add('show');}
+function lightbox(src){if(!src)return;$('lightboxImg').src=safeUrl(src);$('lightbox').classList.add('show');}
+function isMobile(){return window.matchMedia('(max-width:900px)').matches;}
 
 const I={
   play:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="6 3 20 12 6 21 6 3"/></svg>',
@@ -449,7 +454,7 @@ const I={
   ext:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>',
   store:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 7l1.5-3h17L22 7"/><path d="M2 7h20v3a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0z"/><path d="M4 10v10h16V10"/></svg>',
   tiktok:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 3a5 5 0 0 0 5 5v3a8 8 0 0 1-5-1.7V15a6 6 0 1 1-6-6v3a3 3 0 1 0 3 3V3z"/></svg>',
-  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+  chev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
   img:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.6-3.6a2 2 0 0 0-2.8 0L6 20"/></svg>',
   star:'<svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="m12 2 3 6.9 7.5.6-5.7 5 1.8 7.3L12 24l-6.6-2.2L7.2 14.5 1.5 9.5 9 8.9z"/></svg>',
   info:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>',
@@ -463,21 +468,21 @@ async function init(){
   const {data:{session}}=await sb.auth.getSession();
   if(!session){location.href='/login.html?redirect=/trendy';return;}
   const ALLOW=['93675a5a-ea02-488c-a6c2-4adf687ea435','7cd1830f-fca0-44d4-a419-7a822f77f919'];
-  if(!ALLOW.includes(session.user.id)){$('loading').outerHTML='<div class="empty">Brak dostępu — ten widok jest tylko dla Maćka i Tomka.</div>';return;}
+  if(!ALLOW.includes(session.user.id)){$('loading').outerHTML='<div class="loader" style="color:var(--dim2);font-size:14px">Brak dostępu — ten widok jest tylko dla Maćka i Tomka.</div>';return;}
   const {data:tm}=await sb.from('team_members').select('name').eq('user_id',session.user.id).maybeSingle();
   ME=tm?.name||session.user.email;
-  $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${c}</option>`).join('');
-  $('q').oninput=()=>{PAGE=0;render()}; $('fcat').onchange=()=>{PAGE=0;render()}; $('refresh').onclick=load;
-  $('stseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('stseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');FSTAT=b.dataset.s;PAGE=0;render();});
-  $('sortseg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('sortseg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');SORT=b.dataset.sort;PAGE=0;render();});
-  $('viewSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
-  document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeM(null,true);$('lightbox').classList.remove('show');}});
+  $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
+  $('q').oninput=()=>{LISTN=100;render();};
+  $('fcat').onchange=()=>{LISTN=100;render();};
+  $('refresh').onclick=load;
+  $('sortSeg').querySelectorAll('button').forEach(b=>b.onclick=()=>{$('sortSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');SORT=b.dataset.sort;LISTN=100;render();});
+  $('tableBtn').onclick=toggleTable;
+  document.addEventListener('keydown',onKey);
   await load();
 }
 async function load(){
-  $('loading').style.display='flex';$('cards').innerHTML='';
-  // PostgREST oddaje max 1000 wierszy na zapytanie — pula > 1000, więc paginujemy .range,
-  // inaczej najniższy-heat ogon (np. część approved) wypada z widoku i „znika" z liczników.
+  $('loading').style.display='flex';
+  // PostgREST oddaje max 1000 wierszy — paginujemy .range, inaczej ogon puli wypada z widoku.
   let all=[],err=null;
   for(let off=0;;off+=1000){
     const {data,error}=await sb.from('bud_tt_products').select('*').order('heat',{ascending:false}).order('key',{ascending:true}).range(off,off+999);
@@ -489,10 +494,10 @@ async function load(){
   $('loading').style.display='none';
   if(err){toast('Błąd: '+err.message);return;}
   await fetchLibrary();
-  ROWS=all;render();
+  ROWS=all; SELID=null; LASTDET=undefined; LISTN=100;
+  render();
 }
-// Które produkty są już w bibliotece CRM (workflow_products.bud_key) — do oznaczenia kart approved.
-// RLS: authenticated SELECT dozwolony. Paginacja jak wyżej (pula może przekroczyć 1000).
+// workflow_products.bud_key już w bibliotece CRM (RLS: authenticated SELECT; paginacja jak wyżej).
 async function fetchLibrary(){
   try{
     INLIB.clear();
@@ -504,96 +509,478 @@ async function fetchLibrary(){
     }
   }catch(e){}
 }
-function render(){
-  const term=$('q').value.toLowerCase().trim(),fc=$('fcat').value;
-  let r=ROWS.filter(x=>{
-    if(FSTAT&&x.status!==FSTAT)return false;
-    if(fc&&x.category!==fc)return false;
-    if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
-    if(FPROOF&&!(x.tt_shop&&+x.tt_shop.sold_count>0))return false;   // filtr „Dowód sprzedaży"
-    if(FMISMATCH&&x.ali_mismatch!==true)return false;                // filtr „Mismatche"
-    if(FSEASONOFF&&!_seasonOff(x))return false;                      // filtr „Po sezonie"
-    if(FSEASONSOON&&!_seasonSoon(x))return false;                    // filtr „Kończy się okno"
-    return true;
-  });
-  const cnt={pending:0,approved:0,rejected:0,duplicate:0};
-  ROWS.forEach(x=>{if(cnt[x.status]!=null)cnt[x.status]++;});
-  document.querySelectorAll('#stseg .cnt').forEach(el=>{const k=el.dataset.c;el.textContent=k==='all'?ROWS.length:(cnt[k]||0);});
-  const matched=ROWS.filter(x=>x.status==='pending'&&(x.ali_candidates||[]).length).length;
-  $('kpis').innerHTML=`<div class="kpi"><b>${ROWS.length}</b> produktów</div><div class="kpi"><b>${cnt.pending}</b> do dopasowania</div><div class="kpi g"><b>${cnt.approved}</b> zatwierdzonych</div>`;
-  renderChips();
-  if(VIEW==='table'){ renderTable(); return; }
-  sortCards(r);
-  const total=r.length, pages=Math.max(1,Math.ceil(total/PER));
-  if(PAGE>=pages)PAGE=pages-1; if(PAGE<0)PAGE=0;
-  const slice=r.slice(PAGE*PER,PAGE*PER+PER);
-  $('empty').style.display=total?'none':'block';
-  $('cards').innerHTML=slice.map(card).join('');
-  renderPager(total,pages);
-  healVisible(slice);
-  loadHistory(slice);
-  setupVids();
-}
-// ── KOLEJNOŚĆ KART ── „Sprzedaż" (domyślna, dowód > viral): najpierw produkty z TikTok Shop
-// po sold_count malejąco, potem reszta po heat malejąco. „Heat" i „Najnowsze" = alternatywy.
+
+// ── SYGNAŁY PRODUKTU ──
 function _sold0(x){return (x.tt_shop&&x.tt_shop.sold_count!=null)?+x.tt_shop.sold_count:null;}
+function _ttU(x){return (x.tt_shop&&x.tt_shop.price_real!=null)?+x.tt_shop.price_real:null;}
 function _newness(x){
   const t=Date.parse(x.created_at||x.inserted_at||x.first_seen||'');
   if(!isNaN(t))return t;
-  return x.newest_days!=null? -x.newest_days*86400000 : -Infinity;   // fallback: mniej dni = nowszy
+  return x.newest_days!=null? -x.newest_days*86400000 : -Infinity;
 }
-function sortCards(r){
-  if(SORT==='heat'){ r.sort((a,b)=>(b.heat||0)-(a.heat||0)); return; }
-  if(SORT==='new'){ r.sort((a,b)=>_newness(b)-_newness(a)); return; }
-  r.sort((a,b)=>{                                          // 'sales'
-    const ax=!!a.tt_shop, bx=!!b.tt_shop;
-    if(ax&&bx)return ((_sold0(b)||0)-(_sold0(a)||0))||((b.heat||0)-(a.heat||0));
-    if(ax)return -1; if(bx)return 1;
-    return (b.heat||0)-(a.heat||0);
+function _packshots(x){
+  const s=x.tt_shop||{};
+  const h=Array.isArray(s.images_hosted)?s.images_hosted.filter(Boolean):[];
+  if(h.length)return h;
+  const i=Array.isArray(s.images)?s.images.filter(Boolean):[];
+  return i;
+}
+function _thumb(x){const p=_packshots(x);return p.length?p[0]:(x.cover||'');}
+function _qReady(x){const s=x.tt_shop||{};const price=s.price_real!=null||s.price_display;return s.sold_count!=null&&!!price&&_packshots(x).length>0;}
+function _qDogrywka(x){return !x.shop_url&&!x.tt_shop;}
+function _qNopack(x){return (!!x.tt_shop||!!x.shop_url)&&_packshots(x).length===0;}
+function soldClass(n){if(n==null)return 'na';if(n<10000)return 'g1';if(n<=50000)return 'g2';return 'g3';}
+
+// ── FILTRY / SORT ──
+function rowInFunnel(x){
+  if(FSTAT==='pending')return x.status==='pending';
+  if(FSTAT==='approved')return x.status==='approved';
+  if(FSTAT==='inlib')return x.status==='approved'&&!!x.key&&INLIB.has(x.key);
+  if(FSTAT==='mismatch')return x.ali_mismatch===true;
+  if(FSTAT==='rejected')return x.status==='rejected';
+  if(FSTAT==='duplicate')return x.status==='duplicate';
+  return true;
+}
+function rowMatches(x){
+  if(!x)return false;
+  if(!rowInFunnel(x))return false;
+  const fc=$('fcat').value; if(fc&&x.category!==fc)return false;
+  const term=$('q').value.toLowerCase().trim(); if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
+  if(FSTAT==='pending'&&SUBQ){
+    if(SUBQ==='ready'&&!_qReady(x))return false;
+    if(SUBQ==='dogrywka'&&!_qDogrywka(x))return false;
+    if(SUBQ==='nopack'&&!_qNopack(x))return false;
+  }
+  if(FPROOF&&!(x.tt_shop&&+x.tt_shop.sold_count>0))return false;
+  if(FSEASONOFF&&!_seasonOff(x))return false;
+  if(FSEASONSOON&&!_seasonSoon(x))return false;
+  return true;
+}
+function sortRows(r){
+  if(SORT==='score'){r.sort((a,b)=>((b.product_score==null?-1:b.product_score)-(a.product_score==null?-1:a.product_score)));return;}
+  if(SORT==='price'){r.sort((a,b)=>{const pa=_ttU(a),pb=_ttU(b);return (pa==null?Infinity:pa)-(pb==null?Infinity:pb);});return;}
+  if(SORT==='new'){r.sort((a,b)=>_newness(b)-_newness(a));return;}
+  // 'sales' domyślne: sold desc NULLS LAST → potem score desc
+  r.sort((a,b)=>{
+    const sa=_sold0(a),sb2=_sold0(b);
+    if(sa==null&&sb2==null)return (b.product_score==null?-1:b.product_score)-(a.product_score==null?-1:a.product_score);
+    if(sa==null)return 1; if(sb2==null)return -1;
+    return (sb2-sa)||((b.product_score==null?-1:b.product_score)-(a.product_score==null?-1:a.product_score));
   });
 }
-// ── FILTR-CHIPY + EKSPORT ZBIORCZY ── nad listą; stan odzwierciedla FPROOF/FMISMATCH
+function applyFilters(){LISTROWS=ROWS.filter(rowMatches);sortRows(LISTROWS);}
+
+// ── RENDER GŁÓWNY ──
+function render(){
+  updateToolbar();
+  applyFilters();
+  renderFunnel();
+  renderChips();
+  if(VIEW==='table'){$('split').style.display='none';$('tableWrap').style.display='';renderTable();return;}
+  $('split').style.display='';$('tableWrap').style.display='none';
+  renderList();
+  if(!SELID||!LISTROWS.some(r=>r.id===SELID))SELID=(LISTROWS[0]||{}).id||null;
+  markSelected();
+  if(SELID!==LASTDET)renderDetail(SELID);
+}
+function updateToolbar(){
+  const showTable=(FSTAT==='approved'||FSTAT==='inlib');
+  const tb=$('tableBtn'); if(tb){tb.style.display=showTable?'':'none';tb.classList.toggle('on',VIEW==='table');}
+  if(!showTable&&VIEW==='table')VIEW='list';
+  const ss=$('sortSeg'); if(ss)ss.style.display=VIEW==='table'?'none':'';
+}
+function counts(){
+  let pending=0,approved=0,inlib=0,exportable=0,mismatch=0,rejected=0,duplicate=0;
+  ROWS.forEach(x=>{
+    if(x.status==='pending')pending++;
+    else if(x.status==='approved'){approved++;const has=x.key&&INLIB.has(x.key);if(has)inlib++;else if(x.tt_shop&&+x.tt_shop.sold_count>0)exportable++;}
+    else if(x.status==='rejected')rejected++;
+    else if(x.status==='duplicate')duplicate++;
+    if(x.ali_mismatch===true)mismatch++;
+  });
+  return {pending,approved,inlib,exportable,mismatch,rejected,duplicate};
+}
+function renderFunnel(){
+  const c=counts();
+  const seg=(k,lab,val,sub,cls)=>`<button class="fseg ${cls||''} ${FSTAT===k?'on':''}" onclick="setFunnel('${k}')"><span class="fn">${val}</span><span class="fl">${lab}${sub?` <em>${sub}</em>`:''}</span></button>`;
+  let h=seg('pending','Do decyzji',c.pending)
+    +seg('approved','Zatwierdzone',c.approved,'','g')
+    +seg('inlib','W bibliotece',c.inlib,c.exportable?`${c.exportable} do eksportu`:'','g')
+    +seg('mismatch','Mismatche',c.mismatch,'','mm');
+  h+=`<details class="fmore"><summary><span class="fseg"><span class="fn">···</span><span class="fl">więcej</span></span></summary><div class="fmoreMenu">
+    <button class="${FSTAT==='rejected'?'on':''}" onclick="setFunnel('rejected')">Odrzucone · ${c.rejected}</button>
+    <button class="${FSTAT==='duplicate'?'on':''}" onclick="setFunnel('duplicate')">Duplikaty · ${c.duplicate}</button>
+    <button class="${FSTAT===''?'on':''}" onclick="setFunnel('')">Wszystkie · ${ROWS.length}</button>
+  </div></details>`;
+  $('funnel').innerHTML=h;
+}
+function setFunnel(k){FSTAT=k;SUBQ=null;LISTN=100;SELID=null;LASTDET=undefined;if(k!=='approved'&&k!=='inlib')VIEW='list';render();}
+
+// ── CHIPY ──
 function renderChips(){
   const el=$('filterChips'); if(!el)return;
   if(VIEW==='table'){el.innerHTML='';return;}
-  const inFstat=x=>FSTAT?x.status===FSTAT:true;
-  const proofN=ROWS.filter(x=>inFstat(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
-  const mmN=ROWS.filter(x=>inFstat(x)&&x.ali_mismatch===true).length;
-  const soffN=ROWS.filter(x=>inFstat(x)&&_seasonOff(x)).length;
-  const ssoonN=ROWS.filter(x=>inFstat(x)&&_seasonSoon(x)).length;
-  let h=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`
-    +`<button class="fchip mm ${FMISMATCH?'on':''}" onclick="toggleMismatch()">⚠ Mismatche${mmN?` · ${mmN}`:''}</button>`
-    +`<button class="fchip soff ${FSEASONOFF?'on':''}" onclick="toggleSeasonOff()">⛔ Po sezonie${soffN?` · ${soffN}`:''}</button>`
-    +`<button class="fchip ssoon ${FSEASONSOON?'on':''}" onclick="toggleSeasonSoon()">⏳ Kończy się okno${ssoonN?` · ${ssoonN}`:''}</button>`;
-  if(FSTAT==='approved'){
-    const exportable=ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key));
-    h+=`<button class="btn btn-sm libBtn" onclick="exportAllProof()" ${exportable.length?'':'disabled'}>${I.box} Eksportuj wszystkie z dowodem sprzedaży${exportable.length?` (${exportable.length})`:''}</button>`;
+  let h='';
+  if(FSTAT==='pending'){
+    const rn=ROWS.filter(x=>x.status==='pending'&&_qReady(x)).length;
+    const dn=ROWS.filter(x=>x.status==='pending'&&_qDogrywka(x)).length;
+    const pn=ROWS.filter(x=>x.status==='pending'&&_qNopack(x)).length;
+    h+=`<button class="fchip sq ${SUBQ==='ready'?'on':''}" onclick="setSubq('ready')">✅ Gotowe do decyzji${rn?` · ${rn}`:''}</button>`;
+    h+=`<button class="fchip sq ${SUBQ==='dogrywka'?'on':''}" onclick="setSubq('dogrywka')">◦ Do dogrywki${dn?` · ${dn}`:''}</button>`;
+    h+=`<button class="fchip sq ${SUBQ==='nopack'?'on':''}" onclick="setSubq('nopack')">🖼 Bez packshotów${pn?` · ${pn}`:''}</button>`;
+    h+=`<span class="chipsep"></span>`;
+  }
+  const proofN=ROWS.filter(x=>rowInFunnel(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
+  const soffN=ROWS.filter(x=>rowInFunnel(x)&&_seasonOff(x)).length;
+  const ssoonN=ROWS.filter(x=>rowInFunnel(x)&&_seasonSoon(x)).length;
+  h+=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`;
+  h+=`<button class="fchip soff ${FSEASONOFF?'on':''}" onclick="toggleSeasonOff()">⛔ Po sezonie${soffN?` · ${soffN}`:''}</button>`;
+  h+=`<button class="fchip ssoon ${FSEASONSOON?'on':''}" onclick="toggleSeasonSoon()">⏳ Kończy się okno${ssoonN?` · ${ssoonN}`:''}</button>`;
+  if(FSTAT==='approved'||FSTAT==='inlib'){
+    const ex=ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key));
+    h+=`<button class="btn btn-sm libBtn" onclick="exportAllProof()" ${ex.length?'':'disabled'}>${I.box} Eksportuj z dowodem${ex.length?` (${ex.length})`:''}</button>`;
   }
   if(FSTAT==='pending'){
-    const offPending=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)).length;
-    h+=`<button class="btn btn-sm btn-r libBtn" onclick="rejectSeasonOff()" ${offPending?'':'disabled'}>⛔ Odrzuć po sezonie${offPending?` (${offPending})`:''}</button>`;
+    const offP=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)).length;
+    h+=`<button class="btn btn-sm btn-r libBtn" onclick="rejectSeasonOff()" ${offP?'':'disabled'}>⛔ Odrzuć po sezonie${offP?` (${offP})`:''}</button>`;
   }
   el.innerHTML=h;
 }
-function toggleProof(){FPROOF=!FPROOF;PAGE=0;render();}
-function toggleMismatch(){FMISMATCH=!FMISMATCH;PAGE=0;render();}
-function toggleSeasonOff(){FSEASONOFF=!FSEASONOFF;PAGE=0;render();}
-function toggleSeasonSoon(){FSEASONSOON=!FSEASONSOON;PAGE=0;render();}
-// ── ZBIOROWE ODRZUCENIE „PO SEZONIE" ── pending seasonal poza oknem → rejected (recenzent = auto-season).
-// RLS pozwala recenzentom UPDATE bud_tt_products (jak reject/clearMismatch).
+function setSubq(k){SUBQ=SUBQ===k?null:k;LISTN=100;SELID=null;render();}
+function toggleProof(){FPROOF=!FPROOF;LISTN=100;render();}
+function toggleSeasonOff(){FSEASONOFF=!FSEASONOFF;LISTN=100;render();}
+function toggleSeasonSoon(){FSEASONSOON=!FSEASONSOON;LISTN=100;render();}
+// Zbiorowe odrzucenie „po sezonie" — pending seasonal poza oknem → rejected (auto-season).
 async function rejectSeasonOff(){
   const targets=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)&&x.id);
   if(!targets.length){toast('Brak produktów po sezonie do odrzucenia');return;}
-  if(!confirm(`Odrzucić ${targets.length} produktów po sezonie? Znikną z listy „do dopasowania".`))return;
+  if(!confirm(`Odrzucić ${targets.length} produktów po sezonie? Znikną z listy „do decyzji".`))return;
   toast('Odrzucam '+targets.length+' po sezonie…');
   const ids=targets.map(x=>x.id), now=new Date().toISOString();
+  // Bez reject_reason: to auto-akcja (reviewed_by='auto-season' ją znaczy) — nie zaśmiecamy kubełków strojenia auto-filtra.
   const{error}=await sb.from('bud_tt_products').update({status:'rejected',reviewed_by:'auto-season',reviewed_at:now}).in('id',ids);
   if(error){toast('Błąd: '+error.message);return;}
   targets.forEach(x=>{x.status='rejected';x.reviewed_by='auto-season';x.reviewed_at=now;});
-  toast(`Odrzucono ${targets.length} po sezonie ✓`);render();
+  toast(`Odrzucono ${targets.length} po sezonie ✓`);
+  SELID=null;render();
 }
-// ── TEMPO SPRZEDAŻY ── delta/tydzień z bud_tt_shop_history (>=2 snapshoty). Dociągane dla
-// widocznej strony (jak healVisible); po policzeniu re-render (HISTFETCHED chroni przed pętlą).
+
+// ── LISTA (lewa kolumna) ──
+function renderList(){
+  const body=$('listBody'); if(!body)return;
+  const slice=LISTROWS.slice(0,LISTN);
+  body.innerHTML=slice.map(listRowHtml).join('');
+  $('listMore').innerHTML=LISTROWS.length>LISTN?`<button class="moreBtn" onclick="showMore()">Pokaż więcej (${LISTROWS.length-LISTN})</button>`:'';
+  updateListCount();
+  healVisible(slice);
+  loadHistory(slice);
+}
+function showMore(){LISTN+=100;renderList();markSelected();}
+function updateListCount(){const el=$('listCount');if(el)el.textContent=LISTROWS.length+' pozycji';}
+function seasonMiniHtml(x){
+  if(x.season_type!=='seasonal')return '';
+  if(!inWindow(x.sell_from,x.sell_to))return `<span class="ic soff" title="po sezonie">⛔</span>`;
+  const d=_daysUntil(x.sell_to);
+  if(d!=null&&d<=21)return `<span class="ic ssoon" title="kończy się okno">⏳</span>`;
+  return `<span class="ic sin" title="w oknie sezonu">🗓</span>`;
+}
+function listRowHtml(x){
+  const hasVid=!!(x.tiktok_url||'').match(/\/video\/\d+/);
+  const sold=_sold0(x), price=_ttU(x), sc=x.product_score, packs=_packshots(x), th=safeUrl(_thumb(x));
+  return `<div class="row ${SELID===x.id?'sel':''}" id="row-${x.id}" onclick="selectRow('${x.id}')">
+    <div class="rthumb">${th?`<img id="thumb-${x.id}" loading="lazy" src="${esc(th)}" onerror="this.style.display='none'">`:`<span class="rthph">${I.img}</span>`}</div>
+    <div class="rmain">
+      <div class="rname">${esc(x.pl_name)}</div>
+      <div class="rmeta">
+        <span class="sold ${soldClass(sold)}">🛒 ${sold!=null?fmt(sold):'—'}</span>
+        ${price!=null?`<span class="rp mono">$${Math.round(price)}</span>`:''}
+        ${sc!=null?`<span class="rsc">⚡${sc}</span>`:''}
+        ${hasVid?`<span class="ic" title="ma wideo">🎬</span>`:''}
+        ${packs.length?`<span class="ic" title="packshoty">🖼${packs.length}</span>`:''}
+        ${seasonMiniHtml(x)}
+      </div>
+    </div>
+  </div>`;
+}
+function markSelected(){
+  document.querySelectorAll('#listBody .row.sel').forEach(r=>r.classList.remove('sel'));
+  if(SELID){const el=$('row-'+SELID);if(el)el.classList.add('sel');}
+}
+function scrollSelIntoView(){if(!SELID)return;const el=$('row-'+SELID);if(el)el.scrollIntoView({block:'nearest'});}
+function selectRow(id){
+  if(!LISTROWS.some(r=>r.id===id))return;
+  SELID=id;
+  const idx=LISTROWS.findIndex(r=>r.id===id);
+  while(idx>=LISTN)LISTN+=100;
+  if(!$('row-'+id))renderList();
+  markSelected();
+  renderDetail(id);
+  scrollSelIntoView();
+  if(isMobile())document.body.classList.add('detOpen');
+}
+function moveSel(dir){
+  if(!LISTROWS.length)return;
+  let i=LISTROWS.findIndex(r=>r.id===SELID);
+  if(i<0)i=0; else i+=dir;
+  if(i<0)i=0; if(i>=LISTROWS.length)i=LISTROWS.length-1;
+  selectRow(LISTROWS[i].id);
+}
+function neighborId(id){
+  const i=LISTROWS.findIndex(r=>r.id===id);
+  if(i<0)return (LISTROWS[0]||{}).id||null;
+  return ((LISTROWS[i+1]||LISTROWS[i-1]||{}).id)||null;
+}
+function dropListRow(id){
+  const i=LISTROWS.findIndex(r=>r.id===id);
+  if(i>=0)LISTROWS.splice(i,1);
+  const el=$('row-'+id); if(el)el.remove();
+  $('listMore').innerHTML=LISTROWS.length>LISTN?`<button class="moreBtn" onclick="showMore()">Pokaż więcej (${LISTROWS.length-LISTN})</button>`:'';
+  updateListCount();
+}
+function closeDetail(){document.body.classList.remove('detOpen');}
+
+// ── DETAL (prawy panel) ──
+function renderDetail(id){
+  const box=$('detail'); if(!box)return;
+  REASONOPEN=false;
+  const x=id?ROWS.find(r=>r.id===id):null;
+  if(!x){box.innerHTML=`<div class="detEmpty">${I.trend}<p>Wybierz produkt z listy po lewej.</p></div>`;CURVID=null;LASTDET=id;return;}
+  const vid=(x.tiktok_url||'').match(/\/video\/(\d+)/)?.[1]||'';
+  box.innerHTML=actionBarHtml(x)+detHeadHtml(x)+metricsHtml(x)+mediaHtml(x,vid)
+    +((x.status!=='rejected'&&x.status!=='duplicate')?matchHtml(x,vid):'')
+    +sourceTabsHtml(x)+tractionHtml(x)+linksHtml(x);
+  mountDetailVid(vid);
+  box.scrollTop=0;
+  LASTDET=id;
+}
+function actionBarHtml(x){
+  const back=`<button class="detBack" onclick="closeDetail()">${I.chev} Wróć</button>`;
+  let btns='';
+  if(x.status==='pending'){
+    btns=`<button class="abtn ap" onclick="approveCurrent('${x.id}')"><b>A</b> Zatwierdź</button>`
+      +`<div class="rWrap"><button class="abtn rj" onclick="openReasonMenu()"><b>R</b> Odrzuć ▾</button>${reasonMenuHtml()}</div>`
+      +`<button class="abtn dp" onclick="markDup('${x.id}')"><b>D</b> Duplikat</button>`;
+  }else if(x.status==='approved'){
+    btns=libBtnHtml(x)+(x.ali_mismatch===true?`<button class="abtn" onclick="clearMismatch('${x.id}')">${I.check} To dobry link</button>`:'');
+  }else{
+    btns=`<button class="abtn" onclick="reopen('${x.id}')">↩ Przywróć</button>`;
+  }
+  return `<div class="detBar">${back}<div class="detBarBtns">${btns}</div></div>`;
+}
+function reasonMenuHtml(){
+  return `<div class="reasonMenu" id="reasonMenu">${REJECT_REASONS.map((r,i)=>`<button onclick="chooseReason(${i})"><b>${i+1}</b> ${esc(r[1])}</button>`).join('')}</div>`;
+}
+function libBtnHtml(x){
+  const inlib=!!(x.key&&INLIB.has(x.key));
+  return `<button class="abtn libBtn ${inlib?'done':''}" onclick="exportToLib('${x.id}')" ${inlib?'disabled':''}>${inlib?I.check+' W bibliotece':I.box+' → Biblioteka CRM'}</button>`;
+}
+function detHeadHtml(x){
+  const st=x.status, stLab=st==='approved'?'Zatwierdzone':st==='rejected'?'Odrzucone':st==='duplicate'?'Duplikat':'Do decyzji';
+  return `<div class="detHead">
+    <h2 class="detTitle">${esc(x.pl_name)}</h2>
+    <div class="detHeadRow">
+      <select class="catsel" onchange="setCat('${x.id}',this.value)">${CATS.map(c=>`<option ${c===x.category?'selected':''}>${esc(c)}</option>`).join('')}</select>
+      <span class="stbadge ${st}">${stLab}</span>
+      ${x.origin==='shop_radar'?`<span class="originBadge">${I.store} Shop-radar</span>`:''}
+      ${seasonBadgeHtml(x)}
+      ${x.ali_mismatch===true?`<span class="mmBadge">⚠ Inny produkt?</span>`:''}
+      ${x.reviewed_by?`<span class="chip">${esc(x.reviewed_by)}${x.reviewed_at?' · '+fmtDate(x.reviewed_at):''}${x.reject_reason?' · '+esc(x.reject_reason):''}</span>`:''}
+    </div>
+  </div>`;
+}
+function metricsHtml(x){
+  const shop=x.tt_shop||null, m=x.score_meta||{};
+  const sold=shop&&shop.sold_count!=null?+shop.sold_count:null, sc=x.product_score;
+  const priceD=shop&&(shop.price_display||(shop.price_real!=null?((shop.currency_symbol||'$')+shop.price_real):null));
+  const rating=(shop&&shop.rating)?shop.rating:((x.ali_snapshot&&x.ali_snapshot.review_stats&&x.ali_snapshot.review_stats.avg)||null);
+  const dw=x.key?HIST.get(x.key):null;
+  const items=[];
+  items.push(`<div class="mtr sold">${I.cart}<b>${sold!=null?fmt(sold):'—'}</b><span>sprzedane</span></div>`);
+  items.push(`<div class="mtr">${I.tag}<b>${priceD?esc(String(priceD)):'—'}</b><span>cena TT</span></div>`);
+  items.push(`<div class="mtr">${I.box}<b>${shop&&shop.stock!=null?fmt(shop.stock):'—'}</b><span>stan</span></div>`);
+  items.push(`<div class="mtr sc"><b>⚡${sc!=null?sc:'—'}</b><span>wynik</span></div>`);
+  if(m.markup_x)items.push(`<div class="mtr">${I.trend}<b>×${esc(String(m.markup_x))}</b><span>narzut</span></div>`);
+  if(m.ali_usd)items.push(`<div class="mtr">${I.store}<b>~${Math.round(m.ali_usd*4)} zł</b><span>Ali</span></div>`);
+  if(rating)items.push(`<div class="mtr">${I.star}<b>${esc(String(rating))}</b><span>ocena</span></div>`);
+  items.push(`<div class="mtr" id="detDeltaWrap" style="${dw!=null&&dw>0?'':'display:none'}">${I.trend}<b class="up" id="detDelta">${dw!=null&&dw>0?'+'+fmt(dw):''}</b><span>/tydz.</span></div>`);
+  return `<div class="detMetrics">${items.join('')}</div>`;
+}
+function mediaHtml(x,vid){
+  const packs=_packshots(x), cover=safeUrl(x.cover);
+  return `<div class="detMedia">
+    <div class="detVid" id="detVid" ${vid?`data-vidid="${vid}"`:''}>
+      ${vid?(cover?`<img class="vposter" loading="lazy" src="${esc(cover)}" onerror="this.remove()">`:''):`<div class="vidph">${I.tiktok}<span>brak wideo</span></div>`}
+    </div>
+    <div class="detGal">
+      ${packs.length?packs.slice(0,12).map(u=>{const s=safeUrl(u);return s?`<img loading="lazy" src="${esc(s)}" onclick="lightbox('${esc(s)}')">`:'';}).join(''):`<div class="galNone">${I.img}<span>brak packshotów</span></div>`}
+    </div>
+  </div>`;
+}
+function vidSrc(id){return `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&rel=0&music_info=0&description=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1`;}
+let VIDMOUNT_T=null;
+function mountDetailVid(vid){
+  CURVID=vid||null;
+  const box=$('detVid'); if(!box||!vid)return;
+  // debounce: przy przytrzymanym j/k nie montujemy playera na każdy krok
+  clearTimeout(VIDMOUNT_T);
+  VIDMOUNT_T=setTimeout(()=>{
+    if(CURVID!==vid)return; const b=$('detVid'); if(!b)return;
+    const f=document.createElement('iframe');
+    f.className='vidframe'; f.src=vidSrc(vid);
+    f.allow='autoplay; fullscreen; encrypted-media'; f.setAttribute('allowfullscreen','');
+    b.appendChild(f);
+  },180);
+}
+function tractionHtml(x){
+  const eng=((x.eng_rate||0)*100).toFixed(1)+'%', parts=[];
+  if(x.videos!=null)parts.push(`${fmt(x.videos)} filmów`);
+  if(x.max_plays!=null)parts.push(`${fmt(x.max_plays)} odtworzeń`);
+  if(x.saves!=null)parts.push(`${fmt(x.saves)} zapisów`);
+  if(x.comments!=null)parts.push(`${fmt(x.comments)} komentarzy`);
+  if(x.eng_rate!=null)parts.push(`${eng} eng.`);
+  parts.push(`heat ${Math.round(x.heat||0)}`);
+  return `<div class="detTraction">${I.trend} ${esc(parts.join(' · '))}</div>`;
+}
+function linksHtml(x){
+  return `<div class="detLinks">
+    ${x.tiktok_url&&safeUrl(x.tiktok_url)?`<a href="${esc(safeUrl(x.tiktok_url))}" target="_blank" rel="noopener">${I.tiktok} TikTok</a>`:''}
+    ${x.shop_url&&safeUrl(x.shop_url)?`<a class="shop" href="${esc(safeUrl(x.shop_url))}" target="_blank" rel="noopener">${I.store} TikTok Shop</a>`:''}
+    ${x.author?`<span class="chip">${I.user} @${esc(x.author)}${x.author_followers?' · '+fmt(x.author_followers):''}</span>`:''}
+  </div>`;
+}
+
+// ── MENU POWODÓW ODRZUCENIA ──
+function openReasonMenu(){const m=$('reasonMenu');if(m){m.classList.add('open');REASONOPEN=true;}}
+function closeReasonMenu(){const m=$('reasonMenu');if(m)m.classList.remove('open');REASONOPEN=false;}
+function chooseReason(i){const r=REJECT_REASONS[i];if(!r||!SELID)return;closeReasonMenu();reject(SELID,r[0]);}
+
+// ── DECYZJE (approve/reject/dup/reopen) — wspólny przepływ: aktualizacja + usunięcie wiersza + następny ──
+async function decideRun(id,patch,msg){
+  const wasSel=SELID===id, nextId=wasSel?neighborId(id):SELID;
+  const ok=await upd(id,patch,msg);
+  if(ok===false)return;
+  postMutate(id,wasSel,nextId);
+}
+function postMutate(id,wasSel,nextId){
+  const x=ROWS.find(r=>r.id===id);
+  if(!rowMatches(x)){dropListRow(id);if(wasSel)SELID=nextId;}
+  renderFunnel(); renderChips();
+  if(SELID){if(!$('row-'+SELID))renderList();markSelected();renderDetail(SELID);scrollSelIntoView();}
+  else{renderDetail(null);if(isMobile())closeDetail();}
+}
+// Rdzeń zapisu — reviewed_by/at, szybki UPDATE + potriggery (rehost/snapshot/shop) w tle. Zwraca bool.
+async function upd(id,patch,msg){
+  patch.reviewed_by=ME; patch.reviewed_at=new Date().toISOString();
+  const {error}=await sb.from('bud_tt_products').update(patch).eq('id',id);
+  if(error){toast('Błąd: '+error.message);return false;}
+  const x=ROWS.find(r=>r.id===id); if(x)Object.assign(x,patch);
+  toast(msg);
+  if(patch.status==='approved'&&x&&x.key)postApprove(x,patch);
+  return true;
+}
+// Potriggery zatwierdzenia (fire-and-forget, nie blokują przejścia do następnego): cover→storage,
+// snapshot Ali + opinie (gdy jest link), TikTok Shop + WYNIK. Detal odświeżamy tylko jeśli wciąż wybrany.
+async function postApprove(x,patch){
+  const id=x.id;
+  try{sb.functions.invoke('bud-tt-rehost',{body:{keys:[x.key]}}).catch(()=>{});}catch(e){}
+  if(patch.chosen_link||x.chosen_link){
+    try{
+      const {data}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
+      if(data&&data.snapshot){x.ali_snapshot=data.snapshot;if(SELID===id)renderDetail(id);}
+    }catch(e){}
+  }
+  try{
+    await sb.functions.invoke('bud-tt-shop',{body:{key:x.key}});
+    const {data:fr}=await sb.from('bud_tt_products').select('tt_shop,product_score,score_meta').eq('id',id).maybeSingle();
+    if(fr){x.tt_shop=fr.tt_shop;x.product_score=fr.product_score;x.score_meta=fr.score_meta;renderFunnel();
+      const t=$('thumb-'+id);if(t)t.src=safeUrl(_thumb(x));
+      if(SELID===id)renderDetail(id);
+      if(fr.tt_shop&&fr.tt_shop.sold_count!=null)toast('Wynik: '+fr.product_score+' · '+fmt(fr.tt_shop.sold_count)+' sprzedanych ✓');}
+  }catch(e){}
+}
+function pick(id,link){decideRun(id,{chosen_link:link,status:'approved'},'Zatwierdzone');}
+function approveCurrent(id){const el=$('cl-'+id);const v=(el&&el.value||'').trim();const patch={status:'approved'};if(v)patch.chosen_link=v;decideRun(id,patch,v?'Zatwierdzono własny link':'Zatwierdzone');}
+function customApprove(id){const v=($('cl-'+id)?.value||'').trim();if(!v){toast('Wklej link');return;}decideRun(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link');}
+function markDup(id){decideRun(id,{status:'duplicate'},'Oznaczone jako duplikat');}
+function reject(id,reason){decideRun(id,{status:'rejected',reject_reason:reason||null},'Odrzucone'+(reason?' · '+reason:''));}
+function reopen(id){decideRun(id,{status:'pending',reject_reason:null},'Przywrócone do decyzji');}
+async function setCat(id,cat){const{error}=await sb.from('bud_tt_products').update({category:cat}).eq('id',id);if(error){toast('Błąd: '+error.message);return;}const x=ROWS.find(r=>r.id===id);if(x)x.category=cat;toast('Kategoria: '+cat);render();}
+// MISMATCH: recenzent rozstrzyga auto-flagę (zostaje status, znika flaga) — w widoku „Mismatche" wiersz wychodzi.
+async function clearMismatch(id){
+  const wasSel=SELID===id, nextId=wasSel?neighborId(id):SELID;
+  const{error}=await sb.from('bud_tt_products').update({ali_mismatch:false}).eq('id',id);
+  if(error){toast('Błąd: '+error.message);return;}
+  const x=ROWS.find(r=>r.id===id);if(x)x.ali_mismatch=false;
+  toast('Oznaczono jako właściwy link ✓');
+  postMutate(id,wasSel,nextId);
+}
+
+// ── EKSPORT DO BIBLIOTEKI CRM (bud-crm-export; kontrakt {exported,updated,skipped:[{key,reason}]}) ──
+async function exportToLib(id){
+  const x=ROWS.find(r=>r.id===id); if(!x||!x.key){toast('Brak klucza produktu');return;}
+  const btn=(typeof event!=='undefined')&&event.currentTarget; if(btn)btn.disabled=true;
+  toast('Eksportuję do biblioteki CRM…');
+  try{
+    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys:[x.key]}});
+    if(error)throw error;
+    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
+    if(skipped.length&&!(data.exported>0||data.updated>0)){
+      toast('Eksport pominięty: '+(skipped[0].reason||'błąd'));
+      if(btn)btn.disabled=false; return;
+    }
+    INLIB.add(x.key);
+    toast((data&&data.exported>0)?'Dodano do biblioteki CRM ✓':'Zaktualizowano w bibliotece ✓');
+    renderFunnel(); renderChips();
+    if(SELID===id)renderDetail(id);
+  }catch(e){
+    toast('Nie udało się wyeksportować (funkcja w budowie?)');
+    if(btn)btn.disabled=false;
+  }
+}
+async function exportAllProof(){
+  const keys=[...new Set(ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key)).map(x=>x.key))];
+  if(!keys.length){toast('Brak nowych produktów z dowodem sprzedaży do eksportu');return;}
+  if(!confirm(`Wyeksportować ${keys.length} zatwierdzonych produktów z dowodem sprzedaży do biblioteki CRM?`))return;
+  toast('Eksportuję '+keys.length+' produktów…');
+  try{
+    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys}});
+    if(error)throw error;
+    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
+    const skippedKeys=new Set(skipped.map(s=>s.key));
+    keys.forEach(k=>{if(!skippedKeys.has(k))INLIB.add(k);});
+    const ex=(data&&data.exported!=null)?(data.exported+(data.updated||0)):keys.length-skipped.length;
+    toast(`Wyeksportowano ${ex}${skipped.length?` · pominięto ${skipped.length}`:''} ✓`);
+    renderFunnel(); renderChips();
+    if(SELID)renderDetail(SELID);
+  }catch(e){
+    toast('Eksport zbiorczy nieudany (funkcja w budowie?)');
+  }
+}
+
+// ── LECZENIE COVERÓW ── podpisane URL-e TikTok CDN wygasają ~dobę; bud-tt-rehost wgrywa świeży
+// thumbnail (oEmbed) do storage. Robimy „na widoku" — tylko dla widocznej strony listy, w paczkach po 6.
+async function healVisible(slice){
+  if(HEALING)return;
+  const need=(slice||[]).filter(x=>x.tiktok_url&&!(x.cover||'').includes('/storage/v1/')&&!HEALED.has(x.key));
+  if(!need.length)return;
+  HEALING=true;
+  try{
+    for(let i=0;i<need.length;i+=6){
+      const chunk=need.slice(i,i+6), keys=chunk.map(x=>x.key);
+      keys.forEach(k=>HEALED.add(k));
+      const {error}=await sb.functions.invoke('bud-tt-rehost',{body:{keys,limit:keys.length}});
+      if(error)continue;
+      const {data:fresh}=await sb.from('bud_tt_products').select('key,cover').in('key',keys);
+      (fresh||[]).forEach(f=>{
+        if(!f.cover||!f.cover.includes('/storage/v1/'))return;
+        const x=ROWS.find(r=>r.key===f.key);if(!x)return;x.cover=f.cover;
+        const t=$('thumb-'+x.id);if(t)t.src=safeUrl(_thumb(x));
+        if(SELID===x.id){const rc=$('detRefCover');if(rc){const im=rc.querySelector('img');if(im)im.src=safeUrl(f.cover);}}
+      });
+    }
+  }catch(e){}finally{HEALING=false;}
+}
+// ── TEMPO SPRZEDAŻY ── delta/tydzień z bud_tt_shop_history (≥2 snapshoty). Dociągane dla widocznej strony.
 async function loadHistory(slice){
   const keys=(slice||[]).filter(x=>x.tt_shop&&x.key&&!HISTFETCHED.has(x.key)).map(x=>x.key);
   if(!keys.length)return;
@@ -614,100 +1001,214 @@ async function loadHistory(slice){
       const perWeek=Math.round((+last.sold_count - +first.sold_count)/days*7);
       HIST.set(k,perWeek); changed=true;
     });
-    if(changed)render();
+    if(changed&&SELID){
+      const sx=ROWS.find(r=>r.id===SELID);
+      if(sx&&sx.key){const dw=HIST.get(sx.key);const d=$('detDelta'),w=$('detDeltaWrap');if(d&&w&&dw!=null&&dw>0){d.textContent='+'+fmt(dw);w.style.display='';}}
+    }
   }catch(e){}
 }
-// ── WIDEO GRA W KARCIE ── odtwarzacz TikTok montuje się dla produktu w polu widzenia
-// i sam startuje (autoplay). Gra TYLKO jeden — najlepiej widoczny — żeby 20 filmów nie
-// grało naraz; przewinięcie do innego przełącza. Zejście z ekranu = odmontowanie (stop).
-let VIDOBS=null; const VIDR=new Map();
-function vidSrc(id){return `https://www.tiktok.com/player/v1/${id}?autoplay=1&loop=1&rel=0&music_info=0&description=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1`;}
-function mountVid(el){
-  if(el.dataset.mounted)return; const id=el.dataset.vidid; if(!id)return;
-  el.dataset.mounted='1';
-  const f=document.createElement('iframe');
-  f.className='vidframe'; f.src=vidSrc(id);
-  f.allow='autoplay; fullscreen; encrypted-media'; f.setAttribute('allowfullscreen','');
-  el.appendChild(f);
+
+// ── STREFA DOPASOWANIA AliExpress (kandydaci + własny link) ──
+function statTile(icon,val,lab,gold){return `<div class="stat${gold?' gold':''}"><div class="lab">${I[icon]}${lab}</div><div class="val mono">${val}</div></div>`;}
+function priceOf(c){const k=c&&(c.koszt||c.price);return k&&typeof k==='number'?k+' zł':(k||'');}
+function candHtml(x,c){return `<div class="cand${x.chosen_link===c.link?' picked':''}">
+  <div class="cimg" onclick="lightbox('${esc(safeUrl(c.img))}')">${safeUrl(c.img)?`<img loading="lazy" src="${esc(safeUrl(c.img))}">`:''}${x.chosen_link===c.link?`<div class="pickedTag">${I.check}</div>`:''}</div>
+  <div class="ci"><div class="pr mono">${esc(c.price||priceOf(c)||'—')}</div><div class="ti">${esc((c.title||'').slice(0,60))}</div></div>
+  <div class="crow"><button class="pickbtn" onclick="pick('${x.id}','${esc(safeUrl(c.link))}')">${I.check} Wybierz</button><a class="ext" href="${esc(safeUrl(c.link))}" target="_blank" rel="noopener" title="Otwórz w AliExpress">${I.ext}</a></div>
+</div>`;}
+function matchHtml(x,vid){
+  const cands=x.ali_candidates||[];
+  const chosenOutside=x.status==='approved'&&x.chosen_link&&!cands.some(c=>c.link===x.chosen_link);
+  return `<div class="sec match">
+    <div class="secLab">${I.store} Dopasuj produkt z AliExpress <span class="hint">— porównaj kadry z okładką wideo</span></div>
+    <div class="matchGrid">
+      <div class="refCol">
+        <div class="refCover" id="detRefCover">${safeUrl(x.cover)?`<img loading="lazy" src="${esc(safeUrl(x.cover))}">`:''}</div>
+        <div class="rl">okładka wideo (do porównania)</div>
+      </div>
+      <div>
+        <div class="cands">${cands.length?cands.map(c=>candHtml(x,c)).join(''):`<div class="nocand">Brak kandydatów z reverse-image (w toku albo kadr-haczyk). Wklej link ręcznie niżej.</div>`}</div>
+        <div class="actions">
+          <input class="ipt" id="cl-${x.id}" placeholder="…lub wklej własny link do produktu AliExpress" value="${esc(chosenOutside?(x.chosen_link||''):'')}">
+          <button class="btn btn-g" onclick="customApprove('${x.id}')">${I.check} Zatwierdź własny</button>
+          ${x.ali_mismatch===true?`<button class="btn btn-sm" onclick="clearMismatch('${x.id}')" title="Auto-flaga niesłuszna — ten link to właściwy produkt">${I.check} To dobry link</button>`:''}
+        </div>
+      </div>
+    </div>
+  </div>`;
 }
-function unmountVid(el){ if(!el.dataset.mounted)return; delete el.dataset.mounted; const f=el.querySelector('iframe.vidframe'); if(f)f.remove(); }
-function refreshVids(){
-  let best=null,bestR=0; VIDR.forEach((r,el)=>{if(r>bestR){bestR=r;best=el;}});
-  document.querySelectorAll('.vid[data-vidid]').forEach(el=>{ if(el===best&&bestR>=0.35)mountVid(el); else unmountVid(el); });
-}
-function setupVids(){
-  if(VIDOBS)VIDOBS.disconnect(); VIDR.clear();
-  VIDOBS=new IntersectionObserver(ents=>{
-    ents.forEach(e=>{ if(e.isIntersecting)VIDR.set(e.target,e.intersectionRatio); else VIDR.delete(e.target); });
-    refreshVids();
-  },{threshold:[0,0.35,0.6,0.85]});
-  document.querySelectorAll('.vid[data-vidid]').forEach(el=>VIDOBS.observe(el));
-}
-// Miniatury z TikTok CDN to podpisane URL-e z krótkim TTL → wygasają w ~dobę i nie wczytują
-// się w panelu. bud-tt-rehost pobiera ŚWIEŻY thumbnail przez oEmbed i wgrywa go na trwałe do
-// storage. Robimy to „na widoku" — tylko dla aktualnie wyświetlanych kart (≤20), w paczkach.
-const HEALED=new Set(); let HEALING=false;
-async function healVisible(slice){
-  if(HEALING)return;
-  const need=(slice||[]).filter(x=>x.tiktok_url&&!(x.cover||'').includes('/storage/v1/')&&!HEALED.has(x.key));
-  if(!need.length)return;
-  HEALING=true;
-  need.forEach(x=>{const el=$('r-'+x.id);if(el){const v=el.querySelector('.vid');if(v)v.classList.add('healing');}});
-  try{
-    for(let i=0;i<need.length;i+=6){
-      const chunk=need.slice(i,i+6), keys=chunk.map(x=>x.key);
-      keys.forEach(k=>HEALED.add(k));
-      const {error}=await sb.functions.invoke('bud-tt-rehost',{body:{keys,limit:keys.length}});
-      if(error)continue;
-      const {data:fresh}=await sb.from('bud_tt_products').select('key,cover').in('key',keys);
-      (fresh||[]).forEach(f=>{
-        if(!f.cover||!f.cover.includes('/storage/v1/'))return;
-        const x=ROWS.find(r=>r.key===f.key);if(!x)return;x.cover=f.cover;
-        const el=$('r-'+x.id);if(!el)return;
-        const v=el.querySelector('.vid');if(v)v.classList.remove('healing');
-        let img=el.querySelector('.vid img');
-        if(img){img.style.display='';img.src=f.cover;}
-        else if(v){img=document.createElement('img');img.loading='lazy';img.src=f.cover;v.insertBefore(img,v.querySelector('.age')||v.querySelector('.play')||null);}
-        // odśwież też referencyjną okładkę w strefie dopasowania
-        const rc=el.querySelector('.refCover img'); if(rc)rc.src=f.cover; else{const rcbox=el.querySelector('.refCover');if(rcbox){const ri=document.createElement('img');ri.loading='lazy';ri.src=f.cover;rcbox.prepend(ri);}}
-      });
-    }
-  }catch(e){}finally{
-    document.querySelectorAll('.vid.healing').forEach(v=>v.classList.remove('healing'));
-    HEALING=false;
+
+// ── TABY ŹRÓDEŁ: AliExpress | TikTok Shop ──
+function sourceTabsHtml(x){
+  const snap=x.ali_snapshot||null, shop=x.tt_shop||null;
+  const hasChosen=!!(x.chosen_link||(x.ali_candidates||[]).length);
+  if(!snap && !shop){
+    if(x.status==='rejected'||x.status==='duplicate')return '';
+    return `<div class="sec"><div class="snapEmpty">Dane produktu (galeria, cena, opinie, sprzedaż) pojawią się po zatwierdzeniu.${hasChosen?` <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')">↻ Pobierz AliExpress</button>`:''}</div></div>`;
   }
+  const aliN=snap&&Array.isArray(snap.images)?snap.images.length:0;
+  const shopBadge=shop?`<span class="tc">${shop.sold_count!=null?fmt(shop.sold_count)+' szt.':'✓'}</span>`:(x.shop_url?'<span class="tc">pobierz</span>':'');
+  return `<div class="srcWrap">
+    <div class="srcTabs">
+      <button class="srcTab on" onclick="srcTab('${x.id}','ali',this)">${I.store} AliExpress${aliN?`<span class="tc">${aliN}</span>`:''}</button>
+      <button class="srcTab" onclick="srcTab('${x.id}','shop',this)">${I.tiktok} TikTok Shop${shopBadge}</button>
+      <button class="srcTab soon" disabled title="Kolejne źródła w planie">+ więcej</button>
+    </div>
+    <div class="srcPanel on" id="sp-ali-${x.id}">${aliPanelHtml(x,snap)}</div>
+    <div class="srcPanel" id="sp-shop-${x.id}">${shopPanelHtml(x,shop)}</div>
+  </div>`;
 }
-function renderPager(total,pages){
-  const pg=$('pager');if(!pg)return;
-  if(total<=PER){pg.innerHTML='';return;}
-  const from=PAGE*PER+1,to=Math.min(total,PAGE*PER+PER);
-  pg.innerHTML=`<button class="pgbtn" ${PAGE<=0?'disabled':''} onclick="gotoPage(${PAGE-1})">‹ Poprzednia</button>`
-    +`<span class="pginfo">Strona <b>${PAGE+1}</b> z ${pages} · ${from}–${to} z ${total}</span>`
-    +`<button class="pgbtn" ${PAGE>=pages-1?'disabled':''} onclick="gotoPage(${PAGE+1})">Następna ›</button>`;
+function srcTab(id,name,btn){
+  const root=btn.closest('.srcWrap'); if(!root)return;
+  root.querySelectorAll('.srcTab').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  root.querySelectorAll('.srcPanel').forEach(p=>p.classList.remove('on'));
+  const panel=root.querySelector('#sp-'+name+'-'+id); if(panel)panel.classList.add('on');
 }
-function gotoPage(p){PAGE=p;render();window.scrollTo({top:0,behavior:'smooth'});}
+function aliPanelHtml(x,snap){
+  if(!snap){
+    const hasChosen=!!(x.chosen_link||(x.ali_candidates||[]).length);
+    return `<div class="snapEmpty">Snapshot AliExpress zbuduje się przy zatwierdzeniu.${hasChosen?` <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')">↻ Pobierz teraz</button>`:''}</div>`;
+  }
+  const src=String(snap.source||'');
+  let badge='tylko okładka',bcls='';
+  if(src==='detail'){badge='pełen detal aukcji';bcls='ok';}
+  else if(src==='search'){badge='⚠ z wyszukiwarki — sprawdź czy to TEN produkt';bcls='warn';}
+  const imgs=Array.isArray(snap.images)?snap.images.filter(Boolean):[];
+  const main=snap.main_image||imgs[0]||'';
+  const price=snap.price||null;
+  const cur=price&&price.currency?(' '+price.currency):(price?' USD':'');
+  const variants=Array.isArray(snap.variants)?snap.variants:[];
+  const specs=Array.isArray(snap.specs)?snap.specs:[];
+  const reviews=Array.isArray(snap.reviews)?snap.reviews:[];
+  const rs=snap.review_stats||null;
+  return `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"><span class="refbadge ${bcls}">${badge}</span>${snap.fetched_at?`<span class="chip">${I.cal} pobrano ${fmtDate(snap.fetched_at)}</span>`:''}${x.chosen_link&&safeUrl(x.chosen_link)?`<a class="chip a" href="${esc(safeUrl(x.chosen_link))}" target="_blank" rel="noopener">${I.ext} otwórz aukcję</a>`:''}</div>
+    <div class="snapTop">
+      <div class="gal">
+        <div class="galMain" id="gm-${x.id}">${safeUrl(main)?`<img src="${esc(safeUrl(main))}" onclick="lightbox(this.src)" style="cursor:zoom-in">`:''}</div>
+        ${imgs.length>1?`<div class="galThumbs">${imgs.slice(0,8).map((u,i)=>safeUrl(u)?`<img loading="lazy" src="${esc(safeUrl(u))}" class="${i===0?'on':''}" onclick="galSel('${x.id}','${esc(safeUrl(u))}',this)">`:'').join('')}</div>`:''}
+      </div>
+      <div class="facts">
+        ${price?`<div class="priceRow"><span class="now mono">${esc(String(price.sale))}${cur}</span>${price.original&&price.original>price.sale?`<span class="was mono">${esc(String(price.original))}${cur}</span>`:''}</div>`:''}
+        ${snap.title?`<div class="kv"><span class="k">Tytuł aukcji</span><div style="font-size:12px;color:var(--dim);line-height:1.4">${esc(String(snap.title).slice(0,140))}</div></div>`:''}
+        ${variants.length?`<div class="kv"><span class="k">Warianty (${variants.length})</span><div class="vlist">${variants.slice(0,12).map(v=>`<span>${esc(String(v).slice(0,26))}</span>`).join('')}</div></div>`:''}
+        ${specs.length?`<div class="kv"><span class="k">Specyfikacja</span><div class="specTbl">${specs.slice(0,6).map(s=>`<b>${esc(s.name)}</b><span>${esc(s.value)}</span>`).join('')}</div></div>`:''}
+      </div>
+    </div>
+    ${reviews.length?`<div style="margin-top:16px">
+      <div class="secLab">${I.star} Opinie AliExpress <span class="hint">${rs?`— ${rs.avg?(''+rs.avg+'★'):''}${rs.numRatings?` · ${fmt(rs.numRatings)} ocen`:''}`:''}</span></div>
+      <div class="reviews">${reviews.slice(0,16).map(r=>revHtml(r)).join('')}</div>
+    </div>`:''}
+    ${refHtml(x,snap)}
+  `;
+}
+function shopPanelHtml(x,shop){
+  if(!shop){
+    return `<div class="shopEmpty">${x.shop_url
+      ? `Nie pobrano jeszcze danych z TikTok Shop. <button class="btn btn-sm" onclick="pullShop('${x.id}')">↻ Pobierz teraz</button>`
+      : `Ten produkt nie ma linku do TikTok Shop — film go nie podlinkował, więc realnej sprzedaży nie znamy.`}</div>`;
+  }
+  const m=x.score_meta||{};
+  const imgs=Array.isArray(shop.images)?shop.images.filter(Boolean):[];
+  return `
+    <div class="shopStats">
+      ${statTile('cart',shop.sold_count!=null?fmt(shop.sold_count):'—','Sprzedane',true)}
+      ${statTile('tag',shop.price_display||(shop.price_real!=null?((shop.currency_symbol||'')+shop.price_real):'—'),'Cena rynkowa')}
+      ${statTile('trend',m.markup_x?('×'+m.markup_x):'—','Narzut vs Ali')}
+      ${statTile('star',shop.rating?(shop.rating+'★'):'—','Ocena')}
+      ${statTile('msg',shop.review_count!=null?fmt(shop.review_count):'—','Opinie')}
+      ${statTile('box',shop.stock!=null?fmt(shop.stock):'—','Stan mag.')}
+    </div>
+    ${imgs.length?`<div class="galThumbs" style="margin-top:13px">${imgs.slice(0,8).map(u=>safeUrl(u)?`<img loading="lazy" src="${esc(safeUrl(u))}" onclick="lightbox('${esc(safeUrl(u))}')" style="width:56px;height:56px;cursor:zoom-in">`:'').join('')}</div>`:''}
+    ${Array.isArray(shop.videos)&&shop.videos.length?`<div style="margin-top:16px">
+      <div class="secLab">${I.play} Podobne wideo <span class="hint">— ${shop.videos.length} filmów promujących ten produkt, klik = podgląd na TikToku</span></div>
+      <div class="vidLinks">${shop.videos.map(v=>`<a class="vidLink" href="${esc(safeUrl(v.url))}" target="_blank" rel="noopener" title="${esc((v.title||'').slice(0,80))}${v.author?' · @'+esc(v.author):''}">${safeUrl(v.cover)?`<img loading="lazy" src="${esc(safeUrl(v.cover))}" onerror="this.style.display='none'">`:`<span class="vlph">${I.tiktok}</span>`}<span class="vl">${I.play}${fmt(v.plays||0)}</span></a>`).join('')}</div>
+    </div>`:''}
+    <div class="srcLinks" style="margin-top:14px">
+      ${x.shop_url&&safeUrl(x.shop_url)?`<a href="${esc(safeUrl(x.shop_url))}" target="_blank" rel="noopener">${I.tiktok} Otwórz w TikTok Shop</a>`:''}
+      ${shop.fetched_at?`<span class="chip">${I.cal} pobrano ${fmtDate(shop.fetched_at)}</span>`:''}
+      <button class="btn btn-sm" onclick="pullShop('${x.id}')">↻ Odśwież</button>
+    </div>
+  `;
+}
+async function pullShop(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  if(!x.shop_url){toast('Ten produkt nie ma linku TikTok Shop');return;}
+  toast('Pobieram dane TikTok Shop…');
+  try{
+    await sb.functions.invoke('bud-tt-shop',{body:{key:x.key}});
+    const {data:fr}=await sb.from('bud_tt_products').select('tt_shop,product_score,score_meta').eq('id',id).maybeSingle();
+    if(fr){x.tt_shop=fr.tt_shop;x.product_score=fr.product_score;x.score_meta=fr.score_meta;renderFunnel();const t=$('thumb-'+id);if(t)t.src=safeUrl(_thumb(x));if(SELID===id)renderDetail(id);toast('Dane TikTok Shop zaktualizowane ✓');}
+    else toast('Brak zmian');
+  }catch(e){toast('Błąd pobierania Shop');}
+}
+function revHtml(r){
+  const stars='★'.repeat(Math.max(0,Math.min(5,r.stars||5)));
+  const imgs=Array.isArray(r.images)?r.images.filter(Boolean):[];
+  const txt=r.text_pl||r.text||'';
+  return `<div class="rev">
+    ${imgs.length?`<div class="rimg">${imgs.slice(0,3).map(u=>safeUrl(u)?`<img loading="lazy" src="${esc(safeUrl(u))}" onclick="lightbox('${esc(safeUrl(u))}')" style="cursor:zoom-in">`:'').join('')}</div>`:''}
+    <div class="rbody"><div class="rstars">${stars}</div>${txt?`<div class="rtext">${esc(txt.slice(0,220))}</div>`:''}<div class="rname">${esc(r.name||'')}${r.date?' · '+esc(String(r.date).slice(0,10)):''}</div></div>
+  </div>`;
+}
+function galSel(id,url,el){const gm=$('gm-'+id);if(gm){let img=gm.querySelector('img');if(!img){img=document.createElement('img');img.onclick=()=>lightbox(img.src);img.style.cursor='zoom-in';gm.appendChild(img);}img.src=safeUrl(url);}el.parentNode.querySelectorAll('img').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+// Referencja generatora (curated / snapshot) — co model dostaje jako zdjęcie produktu.
+function refHtml(x,snap){
+  const imgsN=snap&&Array.isArray(snap.images)?snap.images.length:0;
+  const src=snap?String(snap.source||''):'';
+  let badge,cls;
+  if(x.curated_image){badge=`${I.check} ręczne zdjęcie admina — pierwsza referencja generatora`;cls='ok';}
+  else if(src==='detail'){badge=`${I.check} galeria z wybranego linku (${imgsN} kadrów)`;cls='ok';}
+  else if(src==='search'){badge=`⚠ galeria z wyszukiwarki (${imgsN}) — może być INNY produkt`;cls='warn';}
+  else{badge='tylko okładka wideo — warto dodać zdjęcie';cls='warn';}
+  const thumb=x.curated_image||(snap&&(snap.main_image||((snap.images||[])[0])))||'';
+  return `<div class="refbox">
+    <div class="refimg${safeUrl(thumb)?'':' none'}">${safeUrl(thumb)?`<img loading="lazy" src="${esc(safeUrl(thumb))}" onclick="lightbox(this.src)" style="cursor:zoom-in" onerror="this.parentNode.classList.add('none');this.remove()">`:'brak'}</div>
+    <div class="refmeta">
+      <span class="refbadge ${cls}">${badge}</span>
+      <div style="font-size:10.5px;color:var(--dim2);line-height:1.4">Tak generator „widzi" produkt na makietach i reklamach. Gdy dopasowanie z wyszukiwarki trafiło w INNY produkt — wklej realne zdjęcie, żeby to naprawić.</div>
+      <div class="refrow">
+        <input class="ipt" id="ci-${x.id}" placeholder="URL realnego zdjęcia produktu (kopiuj adres obrazka z AliExpress)">
+        <button class="btn btn-g btn-sm" onclick="setCurated('${x.id}')">${I.check} Ustaw główne</button>
+        ${x.curated_image?`<button class="btn btn-r btn-sm" onclick="clearCurated('${x.id}')">${I.x} Usuń ręczne</button>`:''}
+        <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')" title="Świeży snapshot z wybranego linku">↻ Przebuduj</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function setCurated(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const v=($('ci-'+id)?.value||'').trim();if(!v){toast('Wklej URL zdjęcia');return;}
+  toast('Pobieram i zapisuję zdjęcie…');
+  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedUrl:v}});
+  if(error||!data||!data.curated_image){toast('Nie udało się pobrać zdjęcia — sprawdź URL');return;}
+  x.curated_image=data.curated_image;toast('Zdjęcie główne ustawione ✓');if(SELID===id)renderDetail(id);
+}
+async function clearCurated(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  const {error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedClear:true}});
+  if(error){toast('Błąd: '+error.message);return;}
+  x.curated_image=null;toast('Usunięto ręczne zdjęcie');if(SELID===id)renderDetail(id);
+}
+async function rebuildSnap(id){
+  const x=ROWS.find(r=>r.id===id);if(!x)return;
+  toast('Przebudowuję snapshot… (do ~30 s)');
+  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
+  if(error){toast('Błąd przebudowy: '+error.message);return;}
+  if(data&&data.snapshot)x.ali_snapshot=data.snapshot;
+  else{const {data:fresh}=await sb.from('bud_tt_products').select('ali_snapshot').eq('id',id).maybeSingle();if(fresh)x.ali_snapshot=fresh.ali_snapshot;}
+  toast('Snapshot przebudowany ✓');if(SELID===id)renderDetail(id);
+}
 
 // ── WIDOK TABELA (zatwierdzone: koszt Ali / cena TikTok Shop / zysk / marża) ──
-function setView(v){
-  VIEW=v;
-  document.querySelectorAll('#viewSeg button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  document.querySelector('.controls').classList.toggle('tableMode',v==='table');
-  $('cards').style.display=v==='table'?'none':'';
-  $('pager').style.display=v==='table'?'none':'';
-  $('empty').style.display='none';
-  $('tableWrap').style.display=v==='table'?'':'none';
-  render();
-}
-// przeliczniki (ali_usd/tt USD → zł ×4; RATE=4 spójne z backendem)
 const _aliU=x=>(x.score_meta&&x.score_meta.ali_usd!=null)?+x.score_meta.ali_usd:null;
-const _ttU=x=>(x.tt_shop&&x.tt_shop.price_real!=null)?+x.tt_shop.price_real:null;
 const _aliPln=x=>{const u=_aliU(x);return u!=null?Math.round(u*4):null;};
 const _ttPln=x=>{const u=_ttU(x);return u!=null?Math.round(u*4):null;};
 const _zysk=x=>{const a=_aliU(x),t=_ttU(x);return (a!=null&&t!=null)?Math.round((t-a)*4):null;};
 const _marza=x=>{const a=_aliU(x),t=_ttU(x);return (a!=null&&t!=null&&t>0)?Math.round((t-a)/t*100):null;};
 const _mk=x=>(x.score_meta&&x.score_meta.markup_x!=null)?+x.score_meta.markup_x:null;
 const _sold=x=>(x.tt_shop&&x.tt_shop.sold_count!=null)?+x.tt_shop.sold_count:null;
-const _shortR=s=>String(s||'').replace(/\.\d+/g,'').replace(/\s*-\s*/,'–');   // "$46.99 - 69.99" → "$46–69"
+const _shortR=s=>String(s||'').replace(/\.\d+/g,'').replace(/\s*-\s*/,'–');
 const TCOLS=[
   {k:'name',lab:'Produkt',txt:x=>(x.pl_name||'').toLowerCase()},
   {k:'cat',lab:'Kategoria',txt:x=>x.category||''},
@@ -735,9 +1236,9 @@ function renderTable(){
   const body=r.map(x=>{
     const z=_zysk(x),m=_marza(x),tt=_ttPln(x),sc=x.product_score;
     const scCls=sc>=70?'hi':sc>=40?'mid':'';
-    const aliUnc=x.ali_snapshot&&x.ali_snapshot.source==='search';   // cena z wyszukiwarki = niepewne dopasowanie
-    const aliLink=x.chosen_link?` <a class="tlink" href="${esc(x.chosen_link)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Sprawdź cenę na AliExpress">↗</a>`:'';
-    const ttLink=x.shop_url?` <a class="tlink" href="${esc(x.shop_url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Otwórz w TikTok Shop">↗</a>`:'';
+    const aliUnc=x.ali_snapshot&&x.ali_snapshot.source==='search';
+    const aliLink=x.chosen_link&&safeUrl(x.chosen_link)?` <a class="tlink" href="${esc(safeUrl(x.chosen_link))}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Sprawdź cenę na AliExpress">↗</a>`:'';
+    const ttLink=x.shop_url&&safeUrl(x.shop_url)?` <a class="tlink" href="${esc(safeUrl(x.shop_url))}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Otwórz w TikTok Shop">↗</a>`:'';
     const seasonB=seasonBadgeHtml(x);
     return `<tr onclick="openCard('${x.id}')">
       <td class="name">${esc(x.pl_name)}${seasonB?`<div style="margin-top:5px">${seasonB}</div>`:''}</td>
@@ -753,422 +1254,46 @@ function renderTable(){
   }).join('');
   const withShop=r.filter(x=>x.tt_shop).length;
   $('tableWrap').innerHTML=r.length
-    ? `<div class="tblCount"><b>${r.length}</b> zatwierdzonych · <b>${withShop}</b> z danymi TikTok Shop · klik w wiersz → pełna karta</div><table class="ptbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table><div class="tblLegend"><span>↗ = otwórz źródło i sprawdź realną cenę</span><span class="warn">⚠ = cena z wyszukiwarki (dopasowanie niepewne)</span><span>Koszt Ali = cena z API (jeden wariant) × 4 — orientacyjnie, warianty/promocje potrafią się różnić</span></div>`
+    ? `<div class="tblCount"><b>${r.length}</b> zatwierdzonych · <b>${withShop}</b> z danymi TikTok Shop · klik w wiersz → pełny detal</div><table class="ptbl"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table><div class="tblLegend"><span>↗ = otwórz źródło i sprawdź realną cenę</span><span class="warn">⚠ = cena z wyszukiwarki (dopasowanie niepewne)</span><span>Koszt Ali = cena z API (jeden wariant) × 4 — orientacyjnie</span></div>`
     : `<div class="tblEmpty">Brak zatwierdzonych produktów dla tego filtra.</div>`;
 }
-function setStatSeg(s){document.querySelectorAll('#stseg button').forEach(x=>x.classList.toggle('on',x.dataset.s===s));FSTAT=s;}
+function toggleTable(){VIEW=VIEW==='table'?'list':'table';render();}
+// Tabela → detal listy po ID (nie po nazwie): przełącz na listę, ustaw lejek approved, zaznacz produkt.
 function openCard(id){
   const x=ROWS.find(r=>r.id===id);if(!x)return;
-  $('q').value=x.pl_name; setStatSeg('approved');
-  setView('trendy');
-  setTimeout(()=>{const el=$('r-'+id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},80);
-}
-function statTile(icon,val,lab,gold){return `<div class="stat${gold?' gold':''}"><div class="lab">${I[icon]}${lab}</div><div class="val mono">${val}</div></div>`;}
-
-// ── KARTA PRODUKTU ────────────────────────────────────────────────────────
-function card(x){
-  const vid=(x.tiktok_url||'').match(/\/video\/(\d+)/)?.[1]||'';
-  const days=x.newest_days, hot=days!=null&&days<=14;
-  const eng=((x.eng_rate||0)*100).toFixed(1)+'%';
-  const heatHi=(x.heat||0)>=48;
-  const soldN=(x.tt_shop&&x.tt_shop.sold_count!=null)?+x.tt_shop.sold_count:null;
-  // Dowód sprzedaży na karcie pending: realna sprzedaż (zielony) lub „do pobrania" (szary)
-  const sellBadge=x.status==='pending'
-    ? (soldN!=null?`<span class="sellBadge">🛒 ${fmt(soldN)} sprzedanych</span>`
-      : (x.shop_url&&!x.tt_shop?`<span class="sellBadge gray">${I.store} Shop: do pobrania</span>`:''))
-    : '';
-  const mmBadge=x.ali_mismatch===true?`<span class="mmBadge">⚠ Inny produkt?</span>`:'';
-  const originBadge=x.origin==='shop_radar'?`<span class="originBadge">${I.store} Shop-radar</span>`:'';
-  return `<div class="card ${x.status}" id="r-${x.id}">
-    <div class="head">
-      <div class="vid" ${vid?`data-vidid="${vid}"`:''}>
-        <div class="vidph">${I.tiktok}<span>miniatura</span></div>
-        ${x.cover?`<img loading=lazy src="${esc(x.cover)}" onerror="this.style.display='none'">`:''}
-        ${days!=null?`<div class="age${hot?' hot':''}">${hot?'🔥 ':''}${days}d</div>`:''}
-        ${vid?`<div class="play"><span>${I.play}</span></div>`:''}
-      </div>
-      <div class="meta">
-        <div class="metaTop">
-          <h3 class="pname">${esc(x.pl_name)}</h3>
-          <div class="heat ${heatHi?'hi':''}" title="Heat — siła trendu">${I.flame}${Math.round(x.heat||0)}</div>
-          <span class="stbadge ${x.status}">${x.status==='approved'?'Zatwierdzone':x.status==='rejected'?'Odrzucone':x.status==='duplicate'?'Duplikat':'Do dopasowania'}</span>
-        </div>
-        <div class="metaRow">
-          ${sellBadge}${seasonBadgeHtml(x)}${mmBadge}${originBadge}
-          <select class="catsel" onchange="setCat('${x.id}',this.value)">${CATS.map(c=>`<option ${c===x.category?'selected':''}>${c}</option>`).join('')}</select>
-          ${days!=null?`<span class="chip">${I.cal} ${hot?'🔥 ':''}${days} dni temu</span>`:''}
-          ${x.is_ad?`<span class="chip ad">${I.mega} reklamowany</span>`:''}
-          ${x.author?`<span class="chip">${I.user} @${esc(x.author)}${x.author_followers?' · '+fmt(x.author_followers):''}</span>`:''}
-        </div>
-        <div class="srcLinks">
-          ${x.tiktok_url?`<a href="${esc(x.tiktok_url)}" target="_blank" rel="noopener">${I.tiktok} TikTok</a>`:''}
-          ${x.shop_url?`<a class="shop" href="${esc(x.shop_url)}" target="_blank" rel="noopener">${I.store} TikTok Shop</a>`:''}
-        </div>
-        <details class="statfold">
-          <summary>${I.info} statystyki wideo</summary>
-          <div class="stats">
-            ${statTile('bookmark',fmt(x.saves),'Zapisy',true)}
-            ${statTile('heart',eng,'Engag.')}
-            ${statTile('eye',fmt(x.max_plays),'Odtworz.')}
-            ${statTile('msg',fmt(x.comments),'Komentarze')}
-            ${statTile('share',fmt(x.shares),'Udost.')}
-            ${statTile('flame',x.videos,'Filmów')}
-          </div>
-        </details>
-      </div>
-    </div>
-    ${scorecardHtml(x)}
-    ${x.status!=='rejected'&&x.status!=='duplicate'?matchHtml(x,vid):''}
-    ${x.status==='rejected'||x.status==='duplicate'?`<div class="sec"><div class="actions"><button class="btn btn-sm" onclick="reopen('${x.id}')">↩ Przywróć do dopasowania</button></div></div>`:''}
-    ${sourceTabsHtml(x)}
-  </div>`;
+  VIEW='list';FSTAT='approved';SUBQ=null;FPROOF=false;FSEASONOFF=false;FSEASONSOON=false;
+  $('q').value='';LISTN=100;SELID=id;LASTDET=undefined;
+  render(); // render sam wybiera SELID i montuje detal — selectRow byłby drugim montażem playera
+  const el=document.getElementById('row-'+id); if(el)el.scrollIntoView({block:'center'});
 }
 
-// ── STREFA DOPASOWANIA: okładka wideo obok kandydatów Ali (porównanie 1:1) ──
-function candHtml(x,c){return `<div class="cand${x.chosen_link===c.link?' picked':''}">
-  <div class="cimg" onclick="lightbox('${esc(c.img)}')">${c.img?`<img loading=lazy src="${esc(c.img)}">`:''}${x.chosen_link===c.link?`<div class="pickedTag">${I.check}</div>`:''}</div>
-  <div class="ci"><div class="pr mono">${esc(c.price||priceOf(c)||'—')}</div><div class="ti">${esc((c.title||'').slice(0,60))}</div></div>
-  <div class="crow"><button class="pickbtn" onclick="pick('${x.id}','${esc(c.link)}')">${I.check} Wybierz</button><a class="ext" href="${esc(c.link)}" target="_blank" rel="noopener" title="Otwórz w AliExpress">${I.ext}</a></div>
-</div>`;}
-function priceOf(c){const k=c&&(c.koszt||c.price);return k&&typeof k==='number'?k+' zł':(k||'');}
-function matchHtml(x,vid){
-  const cands=x.ali_candidates||[];
-  const chosenOutside=x.status==='approved'&&x.chosen_link&&!cands.some(c=>c.link===x.chosen_link);
-  return `<div class="sec match">
-    <div class="secLab">${I.store} Dopasuj produkt z AliExpress <span class="hint">— porównaj kadry z okładką wideo</span></div>
-    <div class="matchGrid">
-      <div class="refCol">
-        <div class="refCover">${x.cover?`<img loading=lazy src="${esc(x.cover)}">`:''}</div>
-        <div class="rl">okładka wideo (do porównania)</div>
-      </div>
-      <div>
-        <div class="cands">${cands.length?cands.map(c=>candHtml(x,c)).join(''):`<div class="nocand">Brak kandydatów z reverse-image (w toku albo kadr-haczyk). Wklej link ręcznie niżej.</div>`}</div>
-        <div class="actions">
-          <input class="ipt" id="cl-${x.id}" placeholder="…lub wklej własny link do produktu AliExpress" value="${esc(chosenOutside?(x.chosen_link||''):'')}">
-          <button class="btn btn-g" onclick="customApprove('${x.id}')">${I.check} Zatwierdź własny</button>
-          <button class="btn btn-r" onclick="reject('${x.id}')">${I.x} Odrzuć</button>
-          <button class="btn btn-dup" onclick="markDup('${x.id}')" title="Ten produkt już był w radarze">${I.copy} Duplikat</button>
-          ${x.ali_mismatch===true?`<button class="btn btn-sm" onclick="clearMismatch('${x.id}')" title="Auto-flaga niesłuszna — ten link to właściwy produkt">${I.check} To dobry link</button>`:''}
-          ${x.reviewed_by?`<span class="chip">${esc(x.reviewed_by)}${x.reviewed_at?' · '+fmtDate(x.reviewed_at):''}</span>`:''}
-        </div>
-      </div>
-    </div>
-  </div>`;
-}
-
-// ── SCORECARD: wynik produktu (approved) — score + sprzedaż/marża na jeden rzut oka ──
-function scorecardHtml(x){
-  // approved zawsze renderuje (miejsce na przycisk biblioteki); pending/reszta tylko gdy są dane
-  if(x.product_score==null && !x.tt_shop && x.status!=='approved') return '';
-  const s=x.product_score; const sc=(s==null?'—':s);
-  const cls=s>=70?'hi':s>=40?'mid':'lo';
-  const shop=x.tt_shop||null; const m=x.score_meta||{};
-  const facts=[];
-  if(shop && shop.sold_count!=null) facts.push(`<span class="scoreFact sold">${I.cart}<b>${fmt(shop.sold_count)}</b> sprzedane</span>`);
-  else facts.push(`<span class="scoreWarn">${I.info} brak danych TikTok Shop — wynik wstępny</span>`);
-  const dw=x.key?HIST.get(x.key):null;   // tempo sprzedaży (delta/tydzień z historii snapshotów)
-  if(dw!=null&&dw>0) facts.push(`<span class="scoreFact" style="color:var(--green)">▲ +${fmt(dw)}/tydz.</span>`);
-  if(shop && shop.price_display) facts.push(`<span class="scoreFact">${I.tag}<b>${esc(shop.price_display)}</b> rynek</span>`);
-  if(m.ali_usd) facts.push(`<span class="scoreFact">${I.store}Ali ~${Math.round(m.ali_usd*4)} zł</span>`);
-  if(m.markup_x) facts.push(`<span class="scoreFact mk">${I.trend}<b>×${m.markup_x}</b> narzut</span>`);
-  const rating=(shop && shop.rating)?shop.rating:(x.ali_snapshot?.review_stats?.avg||null);
-  if(rating) facts.push(`<span class="scoreFact">${I.star}<b>${rating}</b>${shop&&shop.review_count?` (${fmt(shop.review_count)})`:''}</span>`);
-  facts.push(`<span class="scoreFact">${I.flame}heat ${Math.round(x.heat||0)}</span>`);
-  return `<div class="scorecard">
-    <div class="scoreBig ${cls}" title="Wynik produktu (0–100): sprzedaż 40 / narzut 25 / heat 20 / ocena 10 / świeżość 5"><div class="n mono">${sc}</div><div class="l">wynik</div></div>
-    <div class="scoreFacts">${facts.join('')}</div>
-    ${x.status==='approved'?libBtnHtml(x):''}
-  </div>`;
-}
-// Przycisk eksportu pojedynczego produktu do biblioteki CRM (kartę approved oznacza „✓ W bibliotece")
-function libBtnHtml(x){
-  const inlib=!!(x.key&&INLIB.has(x.key));
-  return `<button class="btn btn-sm libBtn ${inlib?'done':''}" onclick="exportToLib('${x.id}')" ${inlib?'disabled':''}>${inlib?I.check+' W bibliotece':I.box+' → Biblioteka CRM'}</button>`;
-}
-
-// ── TABY ŹRÓDEŁ: AliExpress | TikTok Shop | (przyszłe) ──
-function sourceTabsHtml(x){
-  const snap=x.ali_snapshot||null, shop=x.tt_shop||null;
-  const hasChosen=!!(x.chosen_link||(x.ali_candidates||[]).length);
-  if(!snap && !shop){
-    if(x.status==='rejected'||x.status==='duplicate')return '';
-    return `<div class="sec"><div class="snapEmpty">Dane produktu (galeria, cena, opinie, sprzedaż) pojawią się po zatwierdzeniu.${hasChosen?` <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')">↻ Pobierz AliExpress</button>`:''}</div></div>`;
+// ── KLAWIATURA (globalna; wyłączona gdy focus w input/select/textarea) ──
+function onKey(e){
+  const el=e.target, tag=(el&&el.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='select'||tag==='textarea'||(el&&el.isContentEditable)){
+    if(e.key==='Escape'&&el.blur)el.blur();
+    return;
   }
-  const aliN=snap&&Array.isArray(snap.images)?snap.images.length:0;
-  const shopBadge=shop?`<span class="tc">${shop.sold_count!=null?fmt(shop.sold_count)+' szt.':'✓'}</span>`:(x.shop_url?'<span class="tc">pobierz</span>':'');
-  return `<div>
-    <div class="srcTabs">
-      <button class="srcTab on" onclick="srcTab('${x.id}','ali',this)">${I.store} AliExpress${aliN?`<span class="tc">${aliN}</span>`:''}</button>
-      <button class="srcTab" onclick="srcTab('${x.id}','shop',this)">${I.tiktok} TikTok Shop${shopBadge}</button>
-      <button class="srcTab soon" disabled title="Kolejne źródła w planie">+ więcej</button>
-    </div>
-    <div class="srcPanel on" id="sp-ali-${x.id}">${aliPanelHtml(x,snap)}</div>
-    <div class="srcPanel" id="sp-shop-${x.id}">${shopPanelHtml(x,shop)}</div>
-  </div>`;
-}
-function srcTab(id,name,btn){
-  const card=btn.closest('.card'); if(!card)return;
-  card.querySelectorAll('.srcTab').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
-  card.querySelectorAll('.srcPanel').forEach(p=>p.classList.remove('on'));
-  const panel=card.querySelector('#sp-'+name+'-'+id); if(panel)panel.classList.add('on');
-}
-
-// PANEL AliExpress — galeria, cena, warianty, specy, opinie ze zdjęciami + referencja generatora
-function aliPanelHtml(x,snap){
-  if(!snap){
-    const hasChosen=!!(x.chosen_link||(x.ali_candidates||[]).length);
-    return `<div class="snapEmpty">Snapshot AliExpress zbuduje się przy zatwierdzeniu.${hasChosen?` <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')">↻ Pobierz teraz</button>`:''}</div>`;
+  if(e.key==='Escape'){closeReasonMenu();$('cheat').classList.remove('show');$('lightbox').classList.remove('show');if(isMobile())closeDetail();return;}
+  // pod otwartym lightboxem/ściągą połykamy skróty decyzji i nawigacji (footgun:
+  // recenzent ogląda zdjęcie i 'a' zatwierdziłby produkt w tle)
+  if($('lightbox').classList.contains('show')||$('cheat').classList.contains('show'))return;
+  if(REASONOPEN){
+    if(/^[1-8]$/.test(e.key)){e.preventDefault();chooseReason(+e.key-1);}
+    return;
   }
-  const src=String(snap.source||'');
-  let badge='tylko okładka',bcls='';
-  if(src==='detail'){badge='pełen detal aukcji';bcls='ok';}
-  else if(src==='search'){badge='⚠ z wyszukiwarki — sprawdź czy to TEN produkt';bcls='warn';}
-  const imgs=Array.isArray(snap.images)?snap.images.filter(Boolean):[];
-  const main=snap.main_image||imgs[0]||'';
-  const price=snap.price||null;
-  const cur=price&&price.currency?(' '+price.currency):(price?' USD':'');
-  const variants=Array.isArray(snap.variants)?snap.variants:[];
-  const specs=Array.isArray(snap.specs)?snap.specs:[];
-  const reviews=Array.isArray(snap.reviews)?snap.reviews:[];
-  const rs=snap.review_stats||null;
-  return `
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap"><span class="refbadge ${bcls}">${badge}</span>${snap.fetched_at?`<span class="chip">${I.cal} pobrano ${fmtDate(snap.fetched_at)}</span>`:''}${x.chosen_link?`<a class="chip a" href="${esc(x.chosen_link)}" target="_blank" rel="noopener">${I.ext} otwórz aukcję</a>`:''}</div>
-    <div class="snapTop">
-      <div class="gal">
-        <div class="galMain" id="gm-${x.id}">${main?`<img src="${esc(main)}" onclick="lightbox(this.src)" style="cursor:zoom-in">`:''}</div>
-        ${imgs.length>1?`<div class="galThumbs">${imgs.slice(0,8).map((u,i)=>`<img loading=lazy src="${esc(u)}" class="${i===0?'on':''}" onclick="galSel('${x.id}','${esc(u)}',this)">`).join('')}</div>`:''}
-      </div>
-      <div class="facts">
-        ${price?`<div class="priceRow"><span class="now mono">${esc(String(price.sale))}${cur}</span>${price.original&&price.original>price.sale?`<span class="was mono">${esc(String(price.original))}${cur}</span>`:''}</div>`:''}
-        ${snap.title?`<div class="kv"><span class="k">Tytuł aukcji</span><div style="font-size:12px;color:var(--dim);line-height:1.4">${esc(String(snap.title).slice(0,140))}</div></div>`:''}
-        ${variants.length?`<div class="kv"><span class="k">Warianty (${variants.length})</span><div class="vlist">${variants.slice(0,12).map(v=>`<span>${esc(String(v).slice(0,26))}</span>`).join('')}</div></div>`:''}
-        ${specs.length?`<div class="kv"><span class="k">Specyfikacja</span><div class="specTbl">${specs.slice(0,6).map(s=>`<b>${esc(s.name)}</b><span>${esc(s.value)}</span>`).join('')}</div></div>`:''}
-      </div>
-    </div>
-    ${reviews.length?`<div style="margin-top:16px">
-      <div class="secLab">${I.star} Opinie AliExpress <span class="hint">${rs?`— ${rs.avg?(''+rs.avg+'★'):''}${rs.numRatings?` · ${fmt(rs.numRatings)} ocen`:''}`:''}</span></div>
-      <div class="reviews">${reviews.slice(0,16).map(r=>revHtml(r)).join('')}</div>
-    </div>`:''}
-    ${refHtml(x,snap)}
-  `;
-}
-
-// PANEL TikTok Shop — sprzedaż, cena rynkowa, narzut, ocena, opinie, stan, wideo promujące
-function shopPanelHtml(x,shop){
-  if(!shop){
-    return `<div class="shopEmpty">${x.shop_url
-      ? `Nie pobrano jeszcze danych z TikTok Shop. <button class="btn btn-sm" onclick="pullShop('${x.id}')">↻ Pobierz teraz</button>`
-      : `Ten produkt nie ma linku do TikTok Shop — film go nie podlinkował, więc realnej sprzedaży nie znamy.`}</div>`;
-  }
-  const m=x.score_meta||{};
-  const imgs=Array.isArray(shop.images)?shop.images.filter(Boolean):[];
-  return `
-    <div class="shopStats">
-      ${statTile('cart',shop.sold_count!=null?fmt(shop.sold_count):'—','Sprzedane',true)}
-      ${statTile('tag',shop.price_display||(shop.price_real!=null?((shop.currency_symbol||'')+shop.price_real):'—'),'Cena rynkowa')}
-      ${statTile('trend',m.markup_x?('×'+m.markup_x):'—','Narzut vs Ali')}
-      ${statTile('star',shop.rating?(shop.rating+'★'):'—','Ocena')}
-      ${statTile('msg',shop.review_count!=null?fmt(shop.review_count):'—','Opinie')}
-      ${statTile('box',shop.stock!=null?fmt(shop.stock):'—','Stan mag.')}
-    </div>
-    ${imgs.length?`<div class="galThumbs" style="margin-top:13px">${imgs.slice(0,8).map(u=>`<img loading=lazy src="${esc(u)}" onclick="lightbox('${esc(u)}')" style="width:56px;height:56px;cursor:zoom-in">`).join('')}</div>`:''}
-    ${Array.isArray(shop.videos)&&shop.videos.length?`<div style="margin-top:16px">
-      <div class="secLab">${I.play} Podobne wideo <span class="hint">— ${shop.videos.length} filmów promujących ten produkt, klik = podgląd na TikToku</span></div>
-      <div class="vidLinks">${shop.videos.map(v=>`<a class="vidLink" href="${esc(v.url)}" target="_blank" rel="noopener" title="${esc((v.title||'').slice(0,80))}${v.author?' · @'+esc(v.author):''}">${v.cover?`<img loading=lazy src="${esc(v.cover)}" onerror="this.style.display='none'">`:`<span class="vlph">${I.tiktok}</span>`}<span class="vl">${I.play}${fmt(v.plays||0)}</span></a>`).join('')}</div>
-    </div>`:''}
-    <div class="srcLinks" style="margin-top:14px">
-      ${x.shop_url?`<a href="${esc(x.shop_url)}" target="_blank" rel="noopener">${I.tiktok} Otwórz w TikTok Shop</a>`:''}
-      ${shop.fetched_at?`<span class="chip">${I.cal} pobrano ${fmtDate(shop.fetched_at)}</span>`:''}
-      <button class="btn btn-sm" onclick="pullShop('${x.id}')">↻ Odśwież</button>
-    </div>
-  `;
-}
-async function pullShop(id){
-  const x=ROWS.find(r=>r.id===id);if(!x)return;
-  if(!x.shop_url){toast('Ten produkt nie ma linku TikTok Shop');return;}
-  toast('Pobieram dane TikTok Shop…');
-  try{
-    await sb.functions.invoke('bud-tt-shop',{body:{key:x.key}});
-    const {data:fr}=await sb.from('bud_tt_products').select('tt_shop,product_score,score_meta').eq('id',id).maybeSingle();
-    if(fr){x.tt_shop=fr.tt_shop;x.product_score=fr.product_score;x.score_meta=fr.score_meta;render();toast('Dane TikTok Shop zaktualizowane ✓');}
-    else toast('Brak zmian');
-  }catch(e){toast('Błąd pobierania Shop');}
-}
-function revHtml(r){
-  const stars='★'.repeat(Math.max(0,Math.min(5,r.stars||5)));
-  const imgs=Array.isArray(r.images)?r.images.filter(Boolean):[];
-  const txt=r.text_pl||r.text||'';
-  return `<div class="rev">
-    ${imgs.length?`<div class="rimg">${imgs.slice(0,3).map(u=>`<img loading=lazy src="${esc(u)}" onclick="lightbox('${esc(u)}')" style="cursor:zoom-in">`).join('')}</div>`:''}
-    <div class="rbody"><div class="rstars">${stars}</div>${txt?`<div class="rtext">${esc(txt.slice(0,220))}</div>`:''}<div class="rname">${esc(r.name||'')}${r.date?' · '+esc(String(r.date).slice(0,10)):''}</div></div>
-  </div>`;
-}
-function galSel(id,url,el){const gm=$('gm-'+id);if(gm){let img=gm.querySelector('img');if(!img){img=document.createElement('img');img.onclick=()=>lightbox(img.src);img.style.cursor='zoom-in';gm.appendChild(img);}img.src=url;}el.parentNode.querySelectorAll('img').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
-
-// ── REFERENCJA GENERATORA (curated / snapshot) — co model dostaje jako zdjęcie produktu ──
-function refHtml(x,snap){
-  const imgsN=snap&&Array.isArray(snap.images)?snap.images.length:0;
-  const src=snap?String(snap.source||''):'';
-  let badge,cls;
-  if(x.curated_image){badge=`${I.check} ręczne zdjęcie admina — pierwsza referencja generatora`;cls='ok';}
-  else if(src==='detail'){badge=`${I.check} galeria z wybranego linku (${imgsN} kadrów)`;cls='ok';}
-  else if(src==='search'){badge=`⚠ galeria z wyszukiwarki (${imgsN}) — może być INNY produkt`;cls='warn';}
-  else{badge='tylko okładka wideo — warto dodać zdjęcie';cls='warn';}
-  const thumb=x.curated_image||(snap&&(snap.main_image||((snap.images||[])[0])))||'';
-  return `<div class="refbox">
-    <div class="refimg${thumb?'':' none'}">${thumb?`<img loading=lazy src="${esc(thumb)}" onclick="lightbox(this.src)" style="cursor:zoom-in" onerror="this.parentNode.classList.add('none');this.remove()">`:'brak'}</div>
-    <div class="refmeta">
-      <span class="refbadge ${cls}">${badge}</span>
-      <div style="font-size:10.5px;color:var(--dim2);line-height:1.4">Tak generator „widzi" produkt na makietach i reklamach. Gdy dopasowanie z wyszukiwarki trafiło w INNY produkt — wklej realne zdjęcie, żeby to naprawić.</div>
-      <div class="refrow">
-        <input class="ipt" id="ci-${x.id}" placeholder="URL realnego zdjęcia produktu (kopiuj adres obrazka z AliExpress)">
-        <button class="btn btn-g btn-sm" onclick="setCurated('${x.id}')">${I.check} Ustaw główne</button>
-        ${x.curated_image?`<button class="btn btn-r btn-sm" onclick="clearCurated('${x.id}')">${I.x} Usuń ręczne</button>`:''}
-        <button class="btn btn-sm" onclick="rebuildSnap('${x.id}')" title="Świeży snapshot z wybranego linku">↻ Przebuduj</button>
-      </div>
-    </div>
-  </div>`;
-}
-async function setCurated(id){
-  const x=ROWS.find(r=>r.id===id);if(!x)return;
-  const v=($('ci-'+id)?.value||'').trim();if(!v){toast('Wklej URL zdjęcia');return;}
-  toast('Pobieram i zapisuję zdjęcie…');
-  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedUrl:v}});
-  if(error||!data||!data.curated_image){toast('Nie udało się pobrać zdjęcia — sprawdź URL');return;}
-  x.curated_image=data.curated_image;toast('Zdjęcie główne ustawione ✓');render();
-}
-async function clearCurated(id){
-  const x=ROWS.find(r=>r.id===id);if(!x)return;
-  const {error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,curatedClear:true}});
-  if(error){toast('Błąd: '+error.message);return;}
-  x.curated_image=null;toast('Usunięto ręczne zdjęcie');render();
-}
-async function rebuildSnap(id){
-  const x=ROWS.find(r=>r.id===id);if(!x)return;
-  toast('Przebudowuję snapshot… (do ~30 s)');
-  const {data,error}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
-  if(error){toast('Błąd przebudowy: '+error.message);return;}
-  if(data&&data.snapshot)x.ali_snapshot=data.snapshot;
-  else{const {data:fresh}=await sb.from('bud_tt_products').select('ali_snapshot').eq('id',id).maybeSingle();if(fresh)x.ali_snapshot=fresh.ali_snapshot;}
-  toast('Snapshot przebudowany ✓');render();
-}
-
-// ── PLAYER MODAL (video + dane obok) ──
-function openM(id){
-  const x=ROWS.find(r=>r.id===id);if(!x)return;
-  const vid=(x.tiktok_url||'').match(/\/video\/(\d+)/)?.[1]||'';
-  const src=`https://www.tiktok.com/player/v1/${vid}?music_info=0&description=0&rel=0&native_context_menu=0&closed_caption=0&timestamp=0&controls=1&progress_bar=1&play_button=1&volume_control=1&fullscreen_button=1`;
-  const eng=((x.eng_rate||0)*100).toFixed(1)+'%';
-  $('modalC').innerHTML=`
-    <div class="pl"><iframe src="${src}" allow="autoplay; fullscreen; encrypted-media" allowfullscreen></iframe></div>
-    <div class="info">
-      <h3>${esc(x.pl_name)}</h3>
-      <div style="color:var(--dim);font-size:13px;margin-bottom:16px">${esc(x.category||'')} · ${x.newest_days!=null?x.newest_days+' dni temu':''} ${x.is_ad?'· <span style="color:var(--gold)">reklamowany</span>':''}</div>
-      <div class="stats" style="grid-template-columns:repeat(2,1fr)">
-        ${statTile('bookmark',fmt(x.saves),'Zapisy',true)}
-        ${statTile('heart',eng,'Engagement')}
-        ${statTile('eye',fmt(x.max_plays),'Odtworzenia')}
-        ${statTile('msg',fmt(x.comments),'Komentarze')}
-        ${statTile('flame',Math.round(x.heat||0),'Heat')}
-        ${statTile('user',fmt(x.author_followers),'Obserwujący')}
-      </div>
-      ${x.author?`<div style="margin-top:14px;color:var(--dim);font-size:13px;display:flex;align-items:center;gap:7px">${I.user} @${esc(x.author)}</div>`:''}
-      <div class="srcLinks" style="margin-top:16px">
-        ${x.tiktok_url?`<a href="${esc(x.tiktok_url)}" target="_blank" rel="noopener">${I.tiktok} TikTok</a>`:''}
-        ${x.shop_url?`<a class="shop" href="${esc(x.shop_url)}" target="_blank" rel="noopener">${I.store} TikTok Shop</a>`:''}
-        ${x.chosen_link?`<a class="shop" href="${esc(x.chosen_link)}" target="_blank" rel="noopener">${I.store} Wybrany produkt</a>`:''}
-      </div>
-    </div>`;
-  $('modal').classList.add('show');
-}
-function closeM(e,force){if(force||(e&&e.target&&e.target.id==='modal')){$('modal').classList.remove('show');$('modalC').innerHTML='';}}
-
-async function upd(id,patch,msg){
-  patch.reviewed_by=ME;patch.reviewed_at=new Date().toISOString();
-  const {error}=await sb.from('bud_tt_products').update(patch).eq('id',id);
-  if(error){toast('Błąd: '+error.message);return;}
-  const x=ROWS.find(r=>r.id===id);if(x)Object.assign(x,patch);
-  toast(msg);render();
-  // Po zatwierdzeniu: przenieś cover na TRWAŁY URL storage (cover z TikTok CDN to podpisany
-  // URL z krótkim TTL → w /sklep gnije w ~dobę). Fire-and-forget, świeży thumb przez oEmbed.
-  if(patch.status==='approved'&&x&&x.key){
-    try{sb.functions.invoke('bud-tt-rehost',{body:{keys:[x.key]}}).catch(()=>{});}catch(e){}
-    // ORAZ: zbuduj snapshot AliExpress i REHOSTUJ GALERIĘ + OPINIE do naszego Storage od razu
-    // (req Tomka: zdjęcia zawsze u nas — ae-pic wygasa). force=true = świeży snapshot wybranego.
-    if(patch.chosen_link||x.chosen_link){
-      toast('Zatwierdzone — pobieram snapshot i opinie…');
-      try{
-        const {data}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
-        if(data&&data.snapshot){x.ali_snapshot=data.snapshot;render();toast('Snapshot i opinie gotowe ✓');}
-      }catch(e){}
-    }
-    // TikTok Shop + WYNIK PRODUKTU (tylko approved; funkcja pominie brak shop_url, policzy score
-    // z dostępnych sygnałów). Odświeża scorecard od razu po zatwierdzeniu.
-    try{
-      await sb.functions.invoke('bud-tt-shop',{body:{key:x.key}});
-      const {data:fr}=await sb.from('bud_tt_products').select('tt_shop,product_score,score_meta').eq('id',id).maybeSingle();
-      if(fr){x.tt_shop=fr.tt_shop;x.product_score=fr.product_score;x.score_meta=fr.score_meta;render();
-        if(fr.tt_shop&&fr.tt_shop.sold_count!=null)toast('Wynik produktu: '+fr.product_score+' · '+fmt(fr.tt_shop.sold_count)+' sprzedanych ✓');}
-    }catch(e){}
+  if(e.key==='?'||(e.shiftKey&&e.key==='/')){$('cheat').classList.toggle('show');return;}
+  if(VIEW==='table')return;
+  const x=SELID?ROWS.find(r=>r.id===SELID):null;
+  switch(e.key){
+    case 'j':case 'ArrowDown':e.preventDefault();moveSel(1);break;
+    case 'k':case 'ArrowUp':e.preventDefault();moveSel(-1);break;
+    case 'a':if(x&&x.status==='pending')approveCurrent(x.id);break;
+    case 'r':if(x&&x.status==='pending')openReasonMenu();break;
+    case 'd':if(x&&x.status==='pending')markDup(x.id);break;
   }
 }
-function pick(id,link){upd(id,{chosen_link:link,status:'approved'},'Zatwierdzone');}
-function customApprove(id){const v=$('cl-'+id).value.trim();if(!v){toast('Wklej link');return;}upd(id,{chosen_link:v,status:'approved'},'Zatwierdzono własny link');}
-function reject(id){upd(id,{status:'rejected'},'Odrzucone');}
-function markDup(id){upd(id,{status:'duplicate'},'Oznaczone jako duplikat — już był');}
-function reopen(id){upd(id,{status:'pending'},'Przywrócone do dopasowania');}
-async function setCat(id,cat){const{error}=await sb.from('bud_tt_products').update({category:cat}).eq('id',id);if(error){toast('Błąd: '+error.message);return;}const x=ROWS.find(r=>r.id===id);if(x)x.category=cat;toast('Kategoria: '+cat);}
 
-// ── MISMATCH: recenzent rozstrzyga auto-flagę (RLS pozwala recenzentom UPDATE bud_tt_products) ──
-async function clearMismatch(id){
-  const{error}=await sb.from('bud_tt_products').update({ali_mismatch:false}).eq('id',id);
-  if(error){toast('Błąd: '+error.message);return;}
-  const x=ROWS.find(r=>r.id===id);if(x)x.ali_mismatch=false;
-  toast('Oznaczono jako właściwy link ✓');render();
-}
-
-// ── EKSPORT DO BIBLIOTEKI CRM (edge bud-crm-export; JWT recenzenta przechodzi przez adminGate) ──
-// Kontrakt: POST {keys:string[]} → {exported:number, skipped:number, errors?:[]}. Błąd = graceful toast.
-async function exportToLib(id){
-  const x=ROWS.find(r=>r.id===id); if(!x||!x.key){toast('Brak klucza produktu');return;}
-  const btn=(typeof event!=='undefined')&&event.currentTarget; if(btn)btn.disabled=true;
-  toast('Eksportuję do biblioteki CRM…');
-  try{
-    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys:[x.key]}});
-    if(error)throw error;
-    // kontrakt: {exported, updated, skipped:[{key,reason}]} — skip = eksport NIE doszedł do skutku
-    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
-    if(skipped.length&&!(data.exported>0||data.updated>0)){
-      toast('Eksport pominięty: '+(skipped[0].reason||'błąd'));
-      if(btn)btn.disabled=false; return;
-    }
-    INLIB.add(x.key);
-    toast((data&&data.exported>0)?'Dodano do biblioteki CRM ✓':'Zaktualizowano w bibliotece ✓');
-    render();
-  }catch(e){
-    toast('Nie udało się wyeksportować (funkcja w budowie?)');
-    if(btn)btn.disabled=false;
-  }
-}
-async function exportAllProof(){
-  const keys=[...new Set(ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key)).map(x=>x.key))];
-  if(!keys.length){toast('Brak nowych produktów z dowodem sprzedaży do eksportu');return;}
-  if(!confirm(`Wyeksportować ${keys.length} zatwierdzonych produktów z dowodem sprzedaży do biblioteki CRM?`))return;
-  toast('Eksportuję '+keys.length+' produktów…');
-  try{
-    const{data,error}=await sb.functions.invoke('bud-crm-export',{body:{keys}});
-    if(error)throw error;
-    // kontrakt: skipped = TABLICA {key,reason}; do INLIB tylko te, które realnie weszły
-    const skipped=(data&&Array.isArray(data.skipped))?data.skipped:[];
-    const skippedKeys=new Set(skipped.map(s=>s.key));
-    keys.forEach(k=>{if(!skippedKeys.has(k))INLIB.add(k);});
-    const ex=(data&&data.exported!=null)?(data.exported+(data.updated||0)):keys.length-skipped.length;
-    toast(`Wyeksportowano ${ex}${skipped.length?` · pominięto ${skipped.length}`:''} ✓`);
-    render();
-  }catch(e){
-    toast('Eksport zbiorczy nieudany (funkcja w budowie?)');
-  }
-}
 init();
 </script>
 </body>
