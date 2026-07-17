@@ -287,7 +287,7 @@ Reguły do dopisania do §1/§2/§1.16 (triangulowane z 2-3 źródeł; źródła
 - **Central „activation across apps" w tn-crm** (§7 uczenie między apkami) — agregacja median TTFV/activation per nisza (rura ai-billing) → realne progi §1.16 + rozbicie po `variant` (hook `getVariant` już w starterze).
 - **value-before-signup + keepable artifact** (§7) — demo-aha przed rejestracją / artefakt „do zabrania"; decyzja per nisza.
 - **Agent domyka setup „za mnie"** (§7 / §4b) — dla setupu >2 pól; rozszerzenie async-AI.
-- **axe-core E2E gate a11y** (§7) — pełny gate na 3 powierzchniach (survey/checklist/empty-state); dziś heurystyczny WARN w audit-static.
+- ~~axe-core E2E gate a11y~~ — ZROBIONE (starter `049c5a2`: `npm run test:a11y`, `@axe-core/playwright`, FAIL serious/critical na survey/checklist/empty-state; wymaga `npm install`+konto testowe w bramce apki).
 - **Deliverability SLO — pełna implementacja** (§7) — auto-pauza kindu (complaint>0,1%/bounce>0,5%) + bramka `mail_domain_verified`; dziś TODO-hook. + tier SMS + progi handoffu do człowieka + changelog↔onboarding gating.
 - **Wave 2b pełna regeneracja serwerowa nudge** — `_shared/plan-core.ts` (refaktor rdzenia `prep-plan`, parytet+E2E) → nudge dostarcza GOTOWY plan zamiast resume-linku.
 - **Fachmat: migracja onboardingu z `pulpit.js` do wspólnego silnika `@dsChecklist`** (dziś enhance in-place — dozwolona wariacja, ale dług).
