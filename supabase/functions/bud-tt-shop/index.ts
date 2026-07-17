@@ -72,7 +72,7 @@ function parseShop(j: any, pdpUrl: string): any | null {
   const title = String(pb.title || '').slice(0, 240)
   const sold = count(pb.sold_count) ?? count(pb.combined_sales_volume)
   // images: tablica obiektów {url_list,[thumb_url_list]} albo (rzadziej) stringów
-  const images = (Array.isArray(pb.images) ? pb.images : []).map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.thumb_url_list?.[0] || '')).filter(Boolean).slice(0, 8)
+  const images = (Array.isArray(pb.images) ? pb.images : []).map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.thumb_url_list?.[0] || '')).filter(Boolean).slice(0, 30)
   if (!title && sold == null && !images.length) return null   // pusta/nieznana odpowiedź
   const pid = String(j.product_id || (pdpUrl.match(/\/pdp\/(?:[^/]*\/)?(\d+)/) || pdpUrl.match(/(\d{6,})/) || [])[1] || '') || null
   const priceReal = num(price.min_sku_price) ?? num(price.real_price)   // numeryczny FLOOR (do narzutu)
@@ -191,7 +191,7 @@ async function processRow(supabase: any, row: any): Promise<{ key: string; score
     if (prevHosted?.length) {
       shop.images_hosted = prevHosted
     } else if (Array.isArray(shop.images) && shop.images.length) {
-      const hosted = await rehostShopImages(supabase, row.key, shop.images, 8)
+      const hosted = await rehostShopImages(supabase, row.key, shop.images, 30)
       if (hosted.length) shop.images_hosted = hosted
     }
     patch.tt_shop = deepClean(shop)   // usuń osierocone surogaty (slice tnie emoji) → inaczej PGRST102 wywala cały UPDATE

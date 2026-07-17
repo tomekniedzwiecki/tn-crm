@@ -82,12 +82,12 @@ Deno.serve(async (req) => {
       const imgs: string[] = Array.isArray(ts?.images) ? ts.images : [];
       const hostedNow: string[] = Array.isArray(ts?.images_hosted) ? ts.images_hosted : [];
       if (!imgs.length) continue;
-      if (topUp) { if (hostedNow.length >= Math.min(imgs.length, 8)) continue; } // komplet — pomiń
+      if (topUp) { if (hostedNow.length >= Math.min(imgs.length, 30)) continue; } // komplet — pomiń
       else if (hostedNow.length) continue; // guard trybu podstawowego
       processed++;
       const key = row.key as string;
       try {
-        const hosted = await rehostShopImages(supabase, key, imgs, 8);
+        const hosted = await rehostShopImages(supabase, key, imgs, 30);
         if (!hosted.length) { failed++; results.push({ key, err: "no-hosted" }); continue; }
         // deno-lint-ignore no-explicit-any
         const patch: Record<string, any> = { tt_shop: { ...ts, images_hosted: hosted } };

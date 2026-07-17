@@ -173,7 +173,7 @@ function parseSearchItem(p: any): any {
   const title = String(p.title ?? p.product_name ?? '').slice(0, 240)
   // image = pojedynczy obiekt {url_list}; images = ewentualna tablica
   const rawImgs = Array.isArray(p.images) ? p.images : (p.image ? [p.image] : [])
-  const images = rawImgs.map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.url || '')).filter(Boolean).slice(0, 8)
+  const images = rawImgs.map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.url || '')).filter(Boolean).slice(0, 30)
   const si2 = p.seller_info || {}
   const seller = (si2.shop_name || si2.name) ? {
     name: String(si2.shop_name || si2.name).slice(0, 60),
@@ -195,7 +195,7 @@ function parseProductDetail(j: any, pdpUrl: string): any | null {
   const price = pb.price || {}
   const rev = j.product_detail_review || j.product_info?.product_detail_review || {}
   const skus = Array.isArray(j.skus) ? j.skus : (j.product_info?.skus || [])
-  const images = (Array.isArray(pb.images) ? pb.images : []).map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.thumb_url_list?.[0] || '')).filter(Boolean).slice(0, 8)
+  const images = (Array.isArray(pb.images) ? pb.images : []).map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.thumb_url_list?.[0] || '')).filter(Boolean).slice(0, 30)
   const rv = Array.isArray(j.related_videos) ? j.related_videos : []
   const videos = rv.map((v: any) => ({
     url: String(v.url || v.author_url || v.content_url || '').trim(),
@@ -467,7 +467,7 @@ Deno.serve(async (req) => {
       if (Date.now() - t0 > DEADLINE_MS - 20_000) { partial = true; break } // zostaw zapas na zapis
       const imgs = Array.isArray(r.tt_shop?.images) ? r.tt_shop.images : []
       if (!imgs.length) continue
-      const hosted = await rehostShopImages(supabase, r.key, imgs, 8)
+      const hosted = await rehostShopImages(supabase, r.key, imgs, 30)
       if (!hosted.length) continue
       const tt_shop = { ...r.tt_shop, images_hosted: hosted }
       const patch: any = { tt_shop: deepSanitize(tt_shop) }
