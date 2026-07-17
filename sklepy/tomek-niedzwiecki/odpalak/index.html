@@ -17,8 +17,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=Archivo+Black&display=swap" rel="stylesheet">
-  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/hero-d.webp?width=1600&quality=80&resize=contain" media="(min-width:860px)">
-  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/hero-m.webp?width=900&quality=82&resize=contain" media="(max-width:859px)">
+  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/hero-d-r.webp" media="(min-width:860px)">
+  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/hero-m-r.webp" media="(max-width:859px)">
   <style>
     :root{
       --paper:#F4F1EC;        /* jasne ciepłe tło */
@@ -89,6 +89,8 @@
     .btn.block{display:flex;width:100%}
     .btn .arr{transition:transform .2s}
     .btn.cta:hover .arr{transform:translateX(4px)}
+    .cta-short{display:none;white-space:nowrap}
+    @media(max-width:560px){.btn .cta-full{display:none}.btn .cta-short{display:inline-flex;align-items:center;gap:8px}}
     .microcopy{font-size:12.5px;color:var(--steel);line-height:1.5;display:inline-flex;align-items:center;gap:8px}
     .pill{display:inline-flex;align-items:center;gap:9px;background:var(--white);border:1px solid var(--line);
       border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:600;color:var(--ink);box-shadow:var(--shadow-sm)}
@@ -234,7 +236,7 @@
     .demo-tab svg{width:20px;height:20px;stroke:currentColor}
     .demo-tab[aria-selected="true"]{background:var(--amber);color:#fff}
     .demo-grid{display:grid;grid-template-columns:1fr;gap:16px;position:relative}
-    .demo-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;position:relative;transition:border-color .35s,box-shadow .35s}
+    .demo-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-lg);overflow:hidden;position:relative;z-index:1;transition:border-color .35s,box-shadow .35s}
     .demo-card .dc-top{display:flex;align-items:flex-start;gap:14px;padding:20px 20px 14px}
     .demo-card .dc-num{font-family:"Archivo Black",sans-serif;font-size:34px;color:var(--ink);line-height:.9;transition:color .3s}
     .demo-card .dc-cap{font-family:"Archivo",sans-serif;font-weight:700;color:var(--ink);font-size:16px;line-height:1.3;padding-top:5px}
@@ -244,7 +246,7 @@
     .demo-card[data-active="true"]{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber),0 16px 34px rgba(242,121,43,.14)}
     .demo-card[data-active="true"] .dc-num{color:var(--amber)}
     /* impuls — linia energii między krokami */
-    .demo-impulse{position:absolute;pointer-events:none;z-index:3}
+    .demo-impulse{position:absolute;pointer-events:none;z-index:0}
     .demo-impulse .di-track{position:absolute;background:var(--line-2)}
     .demo-impulse .di-fill{position:absolute;background:linear-gradient(90deg,var(--amber),rgba(242,121,43,.5));transition:transform .55s var(--mo-ease),width .55s var(--mo-ease)}
     .demo-impulse .di-dot{position:absolute;width:13px;height:13px;border-radius:50%;background:var(--amber);box-shadow:0 0 0 5px var(--amber-soft);transition:left .55s var(--mo-ease),top .55s var(--mo-ease)}
@@ -273,7 +275,7 @@
     .vid-rail::-webkit-scrollbar{display:none}
     .vtile{position:relative;aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:#111;scroll-snap-align:start;cursor:pointer;border:1px solid var(--line)}
     .vtile video,.vtile img.vposter{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-    .vtile .vplay{position:absolute;left:14px;bottom:14px;width:44px;height:44px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.3)}
+    .vtile .vplay{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:54px;height:54px;border-radius:50%;background:var(--amber);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.35);z-index:2}
     .vtile .vplay svg{width:18px;height:18px;fill:#fff}
     .vtile .vmute{position:absolute;top:12px;right:12px;width:46px;height:46px;border-radius:50%;background:rgba(20,20,20,.55);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:3}
     .vtile .vmute svg{width:20px;height:20px;stroke:#fff;fill:none}
@@ -293,7 +295,7 @@
     .ben-card .bc-t{font-family:"Archivo",sans-serif;font-weight:700;color:var(--ink);font-size:15.5px;line-height:1.35}
     .ben-card .bc-t b{font-weight:700}
     .ben-card .bc-s{color:var(--body);font-size:14px}
-    .ben-card .bc-ghost{position:absolute;right:-6px;top:6px;font-family:"Archivo Black",sans-serif;font-size:78px;color:var(--line-2);z-index:0;line-height:1;pointer-events:none}
+    .ben-card .bc-ghost{position:absolute;right:10px;top:6px;font-family:"Archivo Black",sans-serif;font-size:clamp(56px,14vw,78px);color:var(--line-2);z-index:0;line-height:1;pointer-events:none}
     .ben-card>*{position:relative;z-index:1}
     .ben-media{border-radius:var(--radius-lg);overflow:hidden;background:#151617;aspect-ratio:4/5;box-shadow:var(--shadow)}
     .ben-media img{width:100%;height:100%;object-fit:cover}
@@ -404,7 +406,7 @@
     .final-content{max-width:540px}
     .final-h{font-family:"Archivo Black",sans-serif;font-size:clamp(36px,5.6vw,68px);line-height:1.0;letter-spacing:-.02em;color:var(--ink);margin:0 0 20px}
     .final-price{font-family:"Archivo Black",sans-serif;font-size:clamp(48px,7vw,84px);color:var(--ink);line-height:1;margin-bottom:18px}
-    .final-price small{font-family:"Archivo",sans-serif;font-weight:700;font-size:.4em}
+    .final-price small{font-family:"Archivo",sans-serif;font-weight:700;font-size:.44em;vertical-align:baseline;margin-left:.1em;letter-spacing:.01em}
     .final-quote{display:flex;align-items:center;gap:10px;margin:18px 0 0;font-size:14px;color:var(--body)}
     .final-quote .fq-stars{color:var(--amber);letter-spacing:1px;font-size:14px}
     .final-div{height:1px;background:var(--line);margin:18px 0;max-width:420px}
@@ -466,8 +468,8 @@
 <!-- ═══════════ HERO ═══════════ -->
 <section id="hero" class="hero" aria-labelledby="hero-h1">
   <picture class="hero-media" data-mo="hero-scene" aria-hidden="true">
-    <source media="(min-width:860px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/hero-d.webp?width=1600&amp;quality=80&amp;resize=contain">
-    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/hero-m.webp?width=900&amp;quality=82&amp;resize=contain" width="1200" height="1500" alt="Odpalak — awaryjny rozrusznik z kompresorem na poboczu o zmierzchu, obok klemy i końcówki do pompowania" fetchpriority="high">
+    <source media="(min-width:860px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/hero-d-r.webp">
+    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/hero-m-r.webp" width="1024" height="1024" alt="Odpalak — awaryjny rozrusznik z kompresorem na poboczu o zmierzchu, obok klemy i końcówki do pompowania" fetchpriority="high">
   </picture>
   <div class="hero-scrim" aria-hidden="true"></div>
   <div class="wrap hero-wrap">
@@ -480,7 +482,7 @@
       </div>
       <div class="offer-card plus reveal" data-mo="hero-item">
         <div class="oc-price">599 zł</div>
-        <a class="btn cta big block" data-checkout="odpalak" href="#zamow">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn cta big block" data-checkout="odpalak" href="#zamow"><span class="cta-full">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></span><span class="cta-short">Zamawiam za pobraniem <span class="arr" aria-hidden="true">→</span></span></a>
         <div class="oc-ship">
           <svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M3 7h11v8H3zM14 10h4l3 3v2h-7z"/><circle cx="7" cy="18" r="1.6"/><circle cx="17.5" cy="18" r="1.6"/></svg>
           Wysyłka pod Twój adres
@@ -540,7 +542,7 @@
 <section id="problem" class="prob" aria-labelledby="prob-h">
   <div class="prob-grid">
     <div class="prob-media" data-mo="scene">
-      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/problem.webp?width=1100&amp;quality=80&amp;resize=contain" width="1100" height="1100" loading="lazy" alt="Kierowca przy otwartej masce auta na ciemnym, mroźnym parkingu; Odpalak podłączony do akumulatora rozświetla scenę bursztynowo">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/problem-r.webp" width="1280" height="853" loading="lazy" alt="Kierowca przy otwartej masce auta na ciemnym, mroźnym parkingu; Odpalak podłączony do akumulatora rozświetla scenę bursztynowo">
       <svg class="prob-arrow" viewBox="0 0 74 60" fill="none" aria-hidden="true"><path d="M70 8C48 4 20 14 6 40" stroke="#F2792B" stroke-width="3.4" stroke-linecap="round"/><path d="M4 34l2 10 10-3" stroke="#F2792B" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </div>
     <div class="prob-body">
@@ -618,8 +620,9 @@
 <section id="wideo" class="sect-pad" style="background:var(--paper-2)" aria-labelledby="vid-h">
   <div class="wrap">
     <div class="vid-head reveal" data-mo="up">
-      <p class="eyebrow amber">Zobacz w prawdziwej sytuacji</p>
-      <h2 id="vid-h" class="h2">Nie render —<br><span class="uline">realne nagrania</span></h2>
+      <p class="eyebrow amber">Zobacz go w akcji</p>
+      <h2 id="vid-h" class="h2">Ten sprzęt<br>w <span class="uline">prawdziwym użyciu</span></h2>
+      <p class="lead reveal" data-mo="up" style="max-width:560px;margin-top:14px">Nagrania z sieci pokazujące ten typ urządzenia w terenie — rozruch, pompowanie opony i ładowanie.</p>
     </div>
     <p class="vid-mute-note reveal" data-mo="up"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path d="M17 9l4 6M21 9l-4 6"/></svg>Dźwięk wyciszony · dotknij, by włączyć</p>
     <div class="vid-rail" id="vid-rail">
@@ -686,7 +689,7 @@
           </div>
           <div class="ben-card plus reveal" data-mo="up">
             <div class="bc-ico"><svg viewBox="0 0 44 44" fill="none" stroke="#17181A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="14" width="20" height="16" rx="2"/><path d="M26 19h3v6h-3"/><path d="M14 18l-3 5h4l-3 5" stroke="#F2792B"/><rect x="31" y="16" width="8" height="14" rx="1.5"/></svg></div>
-            <p class="bc-t">Power bank 20000–30000 mAh — <span class="bc-s">USB do telefonu</span></p>
+            <p class="bc-t">Power bank 26800 mAh — <span class="bc-s">USB do telefonu</span></p>
           </div>
           <div class="ben-card plus reveal" data-mo="up">
             <div class="bc-ico"><svg viewBox="0 0 44 44" fill="none" stroke="#17181A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 26l8-8 4 4-8 8-5 1z"/><rect x="24" y="12" width="8" height="8" rx="1.5" transform="rotate(45 28 16)"/><path d="M33 9l2-2M35 13h3M31 5v3" stroke="#F2792B"/></svg></div>
@@ -762,25 +765,25 @@
       <h2 id="gal-h" class="h2">Konkretny sprzęt,<br>nie <span class="uline">anonimowy gadżet</span></h2>
     </div>
     <div class="gal-main">
-      <figure class="gal-lead gitem reveal" data-mo="up" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=1400&amp;quality=84&amp;resize=contain">
-        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=1500&amp;quality=82&amp;resize=contain" width="1100" height="688" loading="lazy" alt="Odpalak z klemami, końcówkami do pompowania i etui — pełny zestaw na jasnym tle">
+      <figure class="gal-lead gitem reveal" data-mo="up" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1r.webp?width=1000&amp;quality=86&amp;resize=contain">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1r.webp?width=1000&amp;quality=84&amp;resize=contain" width="1000" height="795" loading="lazy" alt="Odpalak z klemami, końcówkami do pompowania i etui — pełny zestaw na jasnym tle">
       </figure>
       <div class="gal-tiles">
         <figure class="gtile gitem reveal" data-mo="tile" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g2.webp?width=1200&amp;quality=84&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g2.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Odpalak trzymany w dłoni — realna skala urządzenia">
-          <figcaption>W dłoni — realna skala</figcaption>
-        </figure>
-        <figure class="gtile gitem reveal" data-mo="tile" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g3.webp?width=1000&amp;quality=72&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g3.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Czerwona i czarna klema podłączone do akumulatora">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g2.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Czerwona i czarna klema Odpalaka podłączone do akumulatora">
           <figcaption>Klemy na akumulatorze</figcaption>
         </figure>
+        <figure class="gtile gitem reveal" data-mo="tile" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/demo-b3.webp?width=1200&amp;quality=84&amp;resize=contain">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/demo-b3.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Odpalak przy feldze auta — wąż kompresora podłączony do wentyla opony">
+          <figcaption>Pompowanie opony przy feldze</figcaption>
+        </figure>
         <figure class="gtile gitem reveal" data-mo="tile" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=1200&amp;quality=84&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Pompowanie opony przy feldze — wąż podłączony do wentyla">
-          <figcaption>Pompowanie przy feldze</figcaption>
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Czarna i czerwona klema w dłoniach przy rozruchu w komorze silnika">
+          <figcaption>Rozruch — klemy w komorze</figcaption>
         </figure>
         <figure class="gtile gitem reveal" data-mo="tile" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g5.webp?width=1200&amp;quality=84&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g5.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Porty USB z tyłu urządzenia — ładowanie telefonu">
-          <figcaption>Porty USB z tyłu</figcaption>
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g5.webp?width=640&amp;quality=80&amp;resize=contain" width="640" height="480" loading="lazy" alt="Odpalak w dłoniach — porty USB-A i USB-C, szczeliny wentylacji">
+          <figcaption>Porty USB — ładowanie</figcaption>
         </figure>
       </div>
     </div>
@@ -807,28 +810,28 @@
           <div class="rc-stars" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
           <p class="rc-q">„Odpaliło auto za pierwszym razem.”</p>
         </div>
-        <div class="rc-photo gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g3.webp?width=1000&amp;quality=72&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g3.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Odpalak podłączony do akumulatora w komorze silnika">
-        </div>
-        <p class="rc-src">zdjęcia od kupujących</p>
-      </article>
-      <article class="rev-card reveal" data-mo="tile">
-        <div class="rc-body">
-          <div class="rc-stars" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
-          <p class="rc-q">„Idealnie napompowało oponę.”</p>
-        </div>
         <div class="rc-photo gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=1200&amp;quality=84&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Pompowanie opony Odpalakiem przy feldze">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g4.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Czarna i czerwona klema Odpalaka w dłoniach przy rozruchu w komorze silnika">
         </div>
         <p class="rc-src">zdjęcia od kupujących</p>
       </article>
       <article class="rev-card reveal" data-mo="tile">
         <div class="rc-body">
           <div class="rc-stars" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
-          <p class="rc-q">„Solidnie zrobione, komplet akcesoriów.”</p>
+          <p class="rc-q">„Solidne, dobrze leży w dłoni.”</p>
         </div>
-        <div class="rc-photo gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=1400&amp;quality=84&amp;resize=contain">
-          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Odpalak z etui i kompletem akcesoriów">
+        <div class="rc-photo gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g5.webp?width=1200&amp;quality=84&amp;resize=contain">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g5.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Odpalak trzymany w dłoniach — porty USB i szczeliny wentylacji">
+        </div>
+        <p class="rc-src">zdjęcia od kupujących</p>
+      </article>
+      <article class="rev-card reveal" data-mo="tile">
+        <div class="rc-body">
+          <div class="rc-stars" aria-label="Ocena 5 na 5"><span aria-hidden="true">★★★★★</span></div>
+          <p class="rc-q">„Mocne klemy, pewny styk.”</p>
+        </div>
+        <div class="rc-photo gitem" data-full="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g2.webp?width=1200&amp;quality=84&amp;resize=contain">
+          <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g2.webp?width=560&amp;quality=80&amp;resize=contain" width="560" height="420" loading="lazy" alt="Czerwona i czarna klema Odpalaka podłączone do akumulatora auta">
         </div>
         <p class="rc-src">zdjęcia od kupujących</p>
       </article>
@@ -841,7 +844,7 @@
   <div class="wrap">
     <div class="of-grid">
       <div class="of-media reveal" data-mo="up">
-        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=1000&amp;quality=84&amp;resize=contain" width="1000" height="1000" loading="lazy" alt="Odpalak z pełnym zestawem: urządzenie, klemy, końcówki do pompowania, etui i kabel USB">
+        <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1r.webp?width=1000&amp;quality=84&amp;resize=contain" width="1000" height="1000" loading="lazy" alt="Odpalak z pełnym zestawem: urządzenie, klemy, końcówki do pompowania, etui i kabel USB">
       </div>
       <div class="of-card reveal" data-mo="up">
         <p class="eyebrow">Wszystko gotowe do bagażnika</p>
@@ -854,7 +857,7 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>Kabel USB</li>
         </ul>
         <div class="of-price">599 zł</div>
-        <a class="btn cta big block" data-checkout="odpalak" href="#zamow">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn cta big block" data-checkout="odpalak" href="#zamow"><span class="cta-full">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></span><span class="cta-short">Zamawiam za pobraniem <span class="arr" aria-hidden="true">→</span></span></a>
         <div class="of-pay">
           <div class="pay-badges" style="margin-top:12px" aria-label="Dostępne metody płatności">
             <span class="pb pb--blik" title="BLIK"><svg viewBox="0 0 60 26" role="img" aria-label="BLIK"><rect width="60" height="26" rx="6" fill="#000"/><text x="30" y="18.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="15.5" font-weight="700" letter-spacing=".5" fill="#fff">blik</text><circle cx="49.5" cy="7.5" r="2.6" fill="url(#pbblikg2)"/><defs><linearGradient id="pbblikg2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4b9b"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#3fe0c8"/></linearGradient></defs></svg></span>
@@ -902,7 +905,7 @@
         </details>
         <details class="faq-item">
           <summary class="faq-q">Do jakich aut pasuje?<span class="fq-plus" aria-hidden="true"></span></summary>
-          <div class="faq-a"><div class="faq-a-in">Do aut osobowych — benzynowych i diesli do 10 L pojemności. Odpala na napięciu 12 V, a prąd szczytowy powyżej 1200 A wystarcza do rozruchu typowego samochodu osobowego.</div></div>
+          <div class="faq-a"><div class="faq-a-in">Do aut osobowych — benzynowych i z silnikiem Diesla. Odpala na napięciu 12 V, a prąd szczytowy powyżej 1200 A wystarcza do rozruchu typowego samochodu osobowego.</div></div>
         </details>
         <details class="faq-item">
           <summary class="faq-q">Jak działa zwrot?<span class="fq-plus" aria-hidden="true"></span></summary>
@@ -924,8 +927,8 @@
 <!-- ═══════════ FINAL ═══════════ -->
 <section id="final" class="final" aria-labelledby="final-h">
   <picture class="final-media" data-mo="final-breath" aria-hidden="true">
-    <source media="(min-width:860px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/final.webp?width=1600&amp;quality=80&amp;resize=contain">
-    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/scenes/final-m.webp?width=900&amp;quality=82&amp;resize=contain" width="1200" height="900" loading="lazy" alt="Otwarty bagażnik gotowego do wyjazdu auta o złotej godzinie; Odpalak w otwartym etui obok bagaży, droga w tle">
+    <source media="(min-width:860px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/final-r.webp">
+    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/odpalak/scenes/final-m-r.webp" width="1024" height="1024" loading="lazy" alt="Otwarty bagażnik gotowego do wyjazdu auta o złotej godzinie; Odpalak w otwartym etui obok bagaży, droga w tle">
   </picture>
   <div class="final-scrim" aria-hidden="true"></div>
   <div class="wrap final-wrap">
@@ -933,7 +936,7 @@
       <p class="eyebrow" data-mo="up">Spokój czeka w bagażniku</p>
       <h2 id="final-h" class="final-h reveal">Miej własny ratunek<br>zawsze <span class="uline">pod ręką</span></h2>
       <div class="final-price reveal">599 <small>zł</small></div>
-      <a class="btn cta big final-cta" data-checkout="odpalak" href="#zamow">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+      <a class="btn cta big final-cta" data-checkout="odpalak" href="#zamow"><span class="cta-full">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></span><span class="cta-short">Zamawiam za pobraniem <span class="arr" aria-hidden="true">→</span></span></a>
       <div class="final-quote reveal"><span class="fq-stars" aria-hidden="true">★★★★★</span><span>„Odpaliło auto za pierwszym razem.”</span></div>
       <div class="final-div"></div>
       <div class="microcopy">Płatność online lub przy odbiorze · 14 dni na zwrot</div>
@@ -962,7 +965,7 @@
 <!-- sticky buy (mobile) -->
 <div class="sticky-buy" role="region" aria-label="Szybkie zamówienie">
   <div class="sb">
-    <img class="sb-thumb" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1.webp?width=120&amp;quality=72&amp;resize=contain" width="44" height="44" alt="" aria-hidden="true">
+    <img class="sb-thumb" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/odpalak/gallery/g1r.webp?width=120&amp;quality=72&amp;resize=contain" width="44" height="44" alt="" aria-hidden="true">
     <div class="sb-info">
       <div class="sb-price">599 zł</div>
       <div class="sb-sub">Płatność przy odbiorze · 14 dni na zwrot</div>
@@ -1201,14 +1204,14 @@
 {"@context":"https://schema.org","@graph":[
 {"@type":"OnlineStore","name":"Odpalak","url":"{{CANONICAL_URL}}"},
 {"@type":"Product","name":"Odpalak — awaryjny rozrusznik z kompresorem 150 PSI","brand":{"@type":"Brand","name":"Odpalak"},
-"description":"Awaryjny rozrusznik do auta z wbudowanym kompresorem 150 PSI, power bankiem 20000–30000 mAh i latarką 400 lm. Odpala auta benzynowe i diesle do 10 L na 12 V, prąd szczytowy powyżej 1200 A. Ekran LCD 2,7\", praca w zakresie −20°C do +60°C, certyfikat CE. W zestawie klemy, końcówki do pompowania, etui EVA i kabel USB.",
+"description":"Awaryjny rozrusznik do auta z wbudowanym kompresorem 150 PSI, power bankiem 26800 mAh i latarką 400 lm. Odpala auta benzynowe i z silnikiem Diesla na 12 V, prąd szczytowy powyżej 1200 A. Ekran LCD 2,7\", praca w zakresie −20°C do +60°C, certyfikat CE. W zestawie klemy, końcówki do pompowania, etui EVA i kabel USB.",
 "offers":{"@type":"Offer","price":"599.00","priceCurrency":"PLN","availability":"https://schema.org/InStock","url":"{{CANONICAL_URL}}"},
 "aggregateRating":{"@type":"AggregateRating","ratingValue":"4.9","reviewCount":"499","bestRating":"5"}},
 {"@type":"FAQPage","mainEntity":[
 {"@type":"Question","name":"Czym jest płatność za pobraniem?","acceptedAnswer":{"@type":"Answer","text":"To opcja, w której płacisz dopiero przy odbiorze przesyłki. Nie płacisz nic z góry — pieniądze wręczasz kurierowi lub w punkcie, gdy paczka do Ciebie dotrze."}},
 {"@type":"Question","name":"Co się dzieje po kliknięciu Zamawiam?","acceptedAnswer":{"@type":"Answer","text":"Przechodzisz do prostego formularza zamówienia. Podajesz adres wysyłki i wybierasz płatność — BLIK, kartę lub płatność przy odbiorze. Przesyłka rusza pod Twój adres."}},
 {"@type":"Question","name":"Co jest w zestawie?","acceptedAnswer":{"@type":"Answer","text":"Urządzenie rozruchowe, klemy czerwona i czarna (SAE), wąż z końcówkami do pompowania, etui EVA oraz kabel USB."}},
-{"@type":"Question","name":"Do jakich aut pasuje?","acceptedAnswer":{"@type":"Answer","text":"Do aut osobowych — benzynowych i diesli do 10 L pojemności, na napięciu 12 V. Prąd szczytowy powyżej 1200 A wystarcza do rozruchu typowego samochodu osobowego."}},
+{"@type":"Question","name":"Do jakich aut pasuje?","acceptedAnswer":{"@type":"Answer","text":"Do aut osobowych — benzynowych i z silnikiem Diesla, na napięciu 12 V. Prąd szczytowy powyżej 1200 A wystarcza do rozruchu typowego samochodu osobowego."}},
 {"@type":"Question","name":"Jak działa zwrot?","acceptedAnswer":{"@type":"Answer","text":"Na zwrot masz 14 dni od odebrania przesyłki. Jeśli sprzęt Ci nie odpowiada, odsyłasz go i otrzymujesz zwrot pieniędzy."}},
 {"@type":"Question","name":"Co pokazuje ekran LCD?","acceptedAnswer":{"@type":"Answer","text":"Segmentowy ekran 2,7 cala pokazuje poziom naładowania, ciśnienie przy pompowaniu (PSI, BAR, KPA, Kg/cm²) oraz stan pracy — ładowanie, wejście/wyjście, wentylator i temperaturę."}},
 {"@type":"Question","name":"Czy zadziała zimą?","acceptedAnswer":{"@type":"Answer","text":"Tak. Odpalak jest przystosowany do pracy w zakresie od −20°C do +60°C — właśnie na mroźne poranki, gdy akumulator odmawia."}}
