@@ -306,6 +306,51 @@ async function tryDetail(id: string, key: string): Promise<Record<string, unknow
   return j ? parseSnapshot(j) : null;
 }
 
+// DATAHUB (drugie źródło, 17.07): true-api to warstwa AFILIACYJNA — NIGDY nie zwróci
+// specs/description/SKU/wariantów (potwierdzone sondą raw + playground; żaden tier).
+// AliExpress DataHub item_detail_3 oddaje: properties.list (specs), description.html,
+// sku (warianty+ceny), sales. Ten sam klucz RapidAPI działa po SUBSKRYPCJI DataHub
+// na tym samym koncie (rapidapi.com/ecommdatahub/api/aliexpress-datahub, PRO $7.99).
+// Brak subskrypcji => 403 => cicho pomijamy (snapshot afiliacyjny zostaje pełnoprawny).
+const DATAHUB_HOST = 'aliexpress-datahub.p.rapidapi.com';
+async function tryDataHub(id: string, key: string): Promise<{ specs: Array<{ name: string; value: string }>; description: string; variants: string[]; sku_prices: Array<{ v: string; price: number | null }>; sold_volume: number | null } | null> {
+  try {
+    const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 25000);
+    const r = await fetch(`https://${DATAHUB_HOST}/item_detail_3?itemId=${id}&region=PL&currency=USD&locale=en_US`,
+      { headers: { 'x-rapidapi-key': key, 'x-rapidapi-host': DATAHUB_HOST }, signal: ctrl.signal });
+    clearTimeout(t);
+    if (!r.ok) { console.warn('[datahub]', r.status); return null; }
+    const j = await r.json();
+    const item = j?.result?.item;
+    if (!item) return null;
+    const specs = (Array.isArray(item.properties?.list) ? item.properties.list : [])
+      .map((p: Record<string, unknown>) => ({ name: String(p.name ?? '').slice(0, 60), value: String(p.value ?? '').slice(0, 120) }))
+      .filter((s: { name: string; value: string }) => s.name && s.value).slice(0, 30);
+    const rawDesc = String(item.description?.html ?? '');
+    const description = rawDesc
+      .replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 2500);
+    const variants: string[] = []; const sku_prices: Array<{ v: string; price: number | null }> = [];
+    const skuList = item.sku?.base ?? item.sku?.skus ?? item.sku?.list ?? [];
+    const propsDef = item.sku?.props ?? [];
+    const valName = (pid: string) => {
+      for (const p of (Array.isArray(propsDef) ? propsDef : [])) {
+        for (const v of (p?.values || [])) if (String(v.vid) === pid) return String(v.name || '').slice(0, 60);
+      }
+      return '';
+    };
+    for (const s of (Array.isArray(skuList) ? skuList : []).slice(0, 24)) {
+      const ids = String(s.propMap ?? s.props ?? '').split(';').map((x: string) => x.split(':')[1]).filter(Boolean);
+      const names = ids.map(valName).filter(Boolean);
+      const label = names.join(' / ') || String(s.skuAttr ?? '').slice(0, 80);
+      const priceRaw = parseFloat(String(s.promotionPrice ?? s.price ?? ''));
+      if (label) { sku_prices.push({ v: label, price: Number.isFinite(priceRaw) ? priceRaw : null }); for (const n of names) if (!variants.includes(n)) variants.push(n); }
+    }
+    const soldRaw = parseFloat(String(item.sales ?? ''));
+    return { specs, description, variants: variants.slice(0, 24), sku_prices, sold_volume: Number.isFinite(soldRaw) ? soldRaw : null };
+  } catch (e) { console.warn('[datahub]', (e as Error).message); return null; }
+}
+
 // NIEZAWODNY enrichment: endpoint SEARCH (działa w produkcji) → dopasuj po product_id
 // → tytuł + galeria miniatur (product_small_image_urls). Gdy brak dopasowania, null.
 async function searchEnrich(id: string, queryStr: string, key: string): Promise<{ title: string; images: string[]; price: { sale: number; original: number | null; currency: string | null } | null } | null> {
@@ -453,6 +498,17 @@ Deno.serve(async (req) => {
     if (id && RAPID_KEY) {
       detail = await tryDetail(id, RAPID_KEY);
       if (!detail) enr = await searchEnrich(id, row.query || row.pl_name || '', RAPID_KEY);
+      // DataHub: dociąga specs/opis/SKU, których warstwa afiliacyjna nie ma (patrz tryDataHub).
+      if (detail) {
+        const dh = await tryDataHub(id, RAPID_KEY);
+        if (dh) {
+          if (dh.specs.length && !(detail.specs as unknown[])?.length) detail.specs = dh.specs;
+          if (dh.description && !String(detail.description || '')) detail.description = dh.description;
+          if (dh.variants.length && !(detail.variants as unknown[])?.length) detail.variants = dh.variants;
+          if (dh.sku_prices.length && !(detail.sku_prices as unknown[])?.length) detail.sku_prices = dh.sku_prices;
+          if (dh.sold_volume != null && (detail as Record<string, unknown>).sold_volume == null) (detail as Record<string, unknown>).sold_volume = dh.sold_volume;
+        }
+      }
     }
 
     // Kolejność ma znaczenie (productRefs bierze images[0..] jako referencje generatora):
@@ -475,6 +531,10 @@ Deno.serve(async (req) => {
       price: (detail?.price as Record<string, unknown>) || enr?.price || null,
       sku_prices: (detail?.sku_prices as unknown[]) || [],
       description: String(detail?.description || ''),
+      sold_volume: (detail as Record<string, unknown>)?.sold_volume ?? null,
+      video_url: (detail as Record<string, unknown>)?.video_url ?? null,
+      shop: (detail as Record<string, unknown>)?.shop ?? null,
+      categories: (detail as Record<string, unknown>)?.categories ?? null,
       product_id: id || null,
       source: detail ? 'detail' : (enr ? 'search' : 'have'),
       fetched_at: new Date().toISOString(),
