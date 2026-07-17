@@ -526,6 +526,12 @@ spójne końcówki w portfelu.
 woff2, swap, latin-ext; body = system stack) · hero przez Storage render API (eager+preload,
 width wg viewportu), reszta lazy, wszystkie width/height · self-contained: 1 plik, CSS
 inline, JEDEN exec-`<script>`, zero bibliotek · overflow-x zablokowany.
+**WAGI ASSETÓW (Tomek 17.07 — twarde cele, sprawdzać przy KAŻDYM eksporcie):** format WebP
+(foto q≈78-82; PNG tylko D-art z alfą, preferuj WebP-alfa) · wymiar pod realne użycie
+(full-bleed ≤1536 szer., kafle ~800px, postery wideo ~720px) · scena hero ≤230 KB · scena
+sekcji ≤180 KB · kafel/crop ≤100 KB · poster wideo ≤60 KB · D-art ≤40 KB · wideo ≤2,5 MB/szt.
+· 1. ekran ≤350 KB obrazów, cała strona ≤2,5 MB bez wideo. MAPA ASSETÓW ma kolumnę „waga KB"
++ sumę. Przekroczenie = zbij quality/wymiar przed użyciem, nie „potem".
 
 **Pomiar (spięty z WORKFLOW-V2-TESTY.md):** pixel `{{PIXEL_ID}}` (init tylko po podmianie):
 PageView+ViewContent (load), **AddToCart na klik KAŻDEGO CTA** (zasila CP2!),
