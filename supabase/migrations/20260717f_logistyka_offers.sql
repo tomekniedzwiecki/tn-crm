@@ -1,0 +1,8 @@
+-- LOGISTYKA (SSOT: docs/zbuduje/LOGISTYKA.md): oferty zakupu per produkt + test-ordery
+-- + lejek logistyczny na bud_tt_products. RLS = 2 recenzentów (jak bud_tt_products).
+-- APPLIED 2026-07-17 przez MCP — plik dla spójności repo. Pełny DDL wykonany:
+-- bud_offers (source/url/seller/ceny PLN/delivery_days/seller_score/gates/score_breakdown/
+--   status candidate|verified|rejected|chosen|backup) + index (key,status) + RLS rw 2 uid
+-- bud_test_orders (offer_id FK, koszt, daty, checklist jsonb, verdict pass|fail|partial) + RLS
+-- bud_tt_products: logistics_status (none|sourcing|verified|test_ordered|ready|eu_stock|pl_stock),
+--   chosen_offer_id uuid
