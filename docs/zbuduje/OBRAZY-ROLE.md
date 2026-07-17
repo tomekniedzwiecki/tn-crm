@@ -45,7 +45,8 @@ w mapie assetów + allowlista klas per slot sekcji → klasa spoza allowlisty = 
 **P1 „monotonia produktu"** (łapie klony pozy hero, których hash nie widzi). Ten sam kadr
 >1× poza parą oferta↔sticky = P1. Distinct product views <5 = P1. Sekcja typu sekwencja/
 „jak działa" z <2 różnymi ujęciami produktu = P1. Fix zawsze: „wygeneruj nowe ujęcie wg
-katalogu STANDARD sek. 2 (PRODUKT W SCENACH)".
+KARTY PRZEWODNIKA F1.7 (inny ŚWIAT: kontekst+skala+światło), nie tylko inna poza — poza
+to najsłabszy dyferencjator". Near-dup ŚWIATA (nie tylko pozy) między scenami S = P1.
 **Vision (na wątpliwe):** spójność światła/kąta/tonu w sekcji · konflikt światła
 packshot↔scena · realizm cutoutu (cień, skala) · fałszywa autentyczność (P/S udające U) ·
 AI-slop tells · dopasowanie semantyczne obrazu do roli.

@@ -125,6 +125,18 @@ KAŻDA korzyść NIESIE KOTWICĘ w nawiasie („służy latami (spec: Materiał=
 claim bez źródła = CUT; claim o klasie produktu/elemencie tożsamości bez źródła = STOP planu;
 BEŁKOT (superlatywy/oceny bez miary z Karty Prawdy) NIGDY nie wchodzi do copy.**
 
+**F1.7 — PRZEWODNIK GRAFICZNY (całościowy plan wizualny; PRZED makietami).**
+Po planie F1, przed F2, agent tworzy RAZ per landing przewodnik warstwy wizualnej:
+łuk narracyjny (każda sekcja = klatka filmu), matryca OSI RÓŻNORODNOŚCI (≥3 konteksty
+/ ≥3 skale / ≥2 światła / człowiek ≥30% / ≥2 perspektywy), karta per sekcja
+{rola→ujęcie→emocja→seed EN→powiązanie z sąsiadami} i REGUŁA RYTMU (2 sąsiednie
+sekcje nie dzielą kontekst+skala). Powód (Loczek 17.07): katalog ujęć §2 wymusił
+różne POZY, ale JEDEN świat (różowe studio) → „wszystko wygląda tak samo". Gate:
+krytyk ocenia SAM przewodnik („czy z opisów widać różnorodność i ciąg?") PRZED
+makietami. Pełny proces: `docs/zbuduje/PRZEWODNIK-GRAFICZNY.md`. Zapis:
+`FABRYKA-*/<slug>/PRZEWODNIK-GRAFICZNY.md`. Seedy przewodnika wchodzą do promptów
+makiet F2 jako zadany świat/kontekst każdej sceny.
+
 **F2 — MAKIETY (projekt całej strony).**
 **⚓ MAKIETA MUSI BYĆ KOMPLETNA (Z2):** do promptu KAŻDEJ makiety wchodzą wymagania sekcji 3
 (hero: karta mikro-oferty z PRAWDZIWĄ ceną + pay-row + pasek trust) oraz PRAWDZIWE dane z F0
@@ -278,7 +290,9 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    **Kolumna `ujecie` per asset produktowy** (hero/problem/demo-seq/detail/packshot/
    galeria-angle/scale). Gate anty-monotonii: **`min_distinct_product_views ≥ 5`**; ten sam
    kadr >1× (poza oferta↔sticky) = BLOK z fixem „nowe ujęcie wg katalogu sek. 2"; sekcja
-   sekwencja/„jak działa" z <2 ujęciami produktu = BLOK.
+   sekwencja/„jak działa" z <2 ujęciami produktu = BLOK. **Mapa wskazuje też KARTĘ
+   PRZEWODNIKA (F1.7) per asset** — każdy plik ma przypisany świat {kontekst/skala/
+   światło/człowiek/perspektywa}; asset spoza świata swojej karty = regeneracja.
 5. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
 
 **F4 — KOD (gpt-5.6-sol).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
