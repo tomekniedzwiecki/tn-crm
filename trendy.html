@@ -440,7 +440,7 @@ let TSORT={col:'score',dir:-1};
 const INLIB=new Set();
 const HIST=new Map(), HISTFETCHED=new Set();
 const HEALED=new Set(); let HEALING=false;
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2400);}
+function toast(m,ms){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2400);}
 function lightbox(src){if(!src)return;$('lightboxImg').src=safeUrl(src);$('lightbox').classList.add('show');}
 function isMobile(){return window.matchMedia('(max-width:900px)').matches;}
 
@@ -949,8 +949,16 @@ async function postApprove(x,patch){
   if(patch.chosen_link||x.chosen_link){
     try{
       const {data}=await sb.functions.invoke('bud-ali-snapshot',{body:{productKey:x.key,force:true}});
-      if(data&&data.snapshot){x.ali_snapshot=data.snapshot;if(SELID===id)renderDetail(id);}
-    }catch(e){}
+      if(data&&data.snapshot){
+        x.ali_snapshot=data.snapshot;if(SELID===id)renderDetail(id);
+        // GATE 17.07 (incydent Latarka): snapshot NIE-detail = dane/galeria mogą być z INNEJ
+        // aukcji — alarmuj od razu przy zatwierdzeniu, nie po cichu (fabryka i tak zablokuje).
+        if(data.snapshot.source!=='detail')
+          toast('⚠️ Snapshot NIE pochodzi z aukcji (source='+(data.snapshot.source||'?')+') — podmień link na żywą aukcję, inaczej fabryka zablokuje produkt',6000);
+      } else {
+        toast('⚠️ Nie udało się pobrać snapshotu z aukcji — sprawdź link',6000);
+      }
+    }catch(e){toast('⚠️ Snapshot Ali nie powstał ('+(e&&e.message||'błąd')+') — sprawdź link',6000);}
   }
   try{
     await sb.functions.invoke('bud-tt-shop',{body:{key:x.key}});
