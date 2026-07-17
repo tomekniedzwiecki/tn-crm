@@ -39,11 +39,23 @@ Deno.serve(async (req) => {
     );
     const { data, error } = await supabase
       .from("wf2_products")
-      .select("name, price, checkout_url, status, margin_mode")
+      .select("project_id, name, price, checkout_url, status, margin_mode")
       .eq("id", id)
       .maybeSingle();
     if (error) throw error;
     if (!data) return json({ error: "not_found" }, 404);
+
+    // social-proof: ile zamówień z platformy zawiera ten produkt (mapowanie robi wf2-orders-sync).
+    // Uczciwe liczby własnego sklepu — landing pokazuje TYLKO przy sensownym progu (decyzja frontu).
+    let sold = 0;
+    try {
+      const { count } = await supabase
+        .from("wf2_orders")
+        .select("id", { count: "exact", head: true })
+        .eq("project_id", data.project_id)
+        .contains("lines", [{ product_id: id }]);
+      sold = count || 0;
+    } catch (_) { /* brak liczby ≠ brak ceny */ }
 
     return json(
       {
@@ -54,6 +66,7 @@ Deno.serve(async (req) => {
         // COD komunikujemy narracyjnie w treści landinga; flaga na przyszłość
         cod: true,
         status: data.status,
+        sold,
       },
       200,
       // cena zmienia się rzadko (test→scale) — 5 min cache na edge'ach/CDN wystarcza
