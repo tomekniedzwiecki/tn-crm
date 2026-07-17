@@ -3,9 +3,12 @@
 // Zwraca: sold_count (realna sprzedaż = najmocniejszy sygnał popytu), cena rynkowa, stan,
 // ocena sklepu, liczba opinii, wideo promujące. Zapis do bud_tt_products.tt_shop + product_score.
 //
-// SCORING (zbalansowany, 0–100): sprzedaż 40 / narzut rynkowy(TT÷Ali) 25 / heat 20 / ocena 10 / świeżość 5.
-// Składowe bez danych są pomijane, wagi przeskalowane do obecnych → produkt bez linku Shop
-// dostaje wynik CZĘŚCIOWY (z wiralowości + Ali), oznaczony partial=true.
+// SCORING v3 (empiryczny, 0–100): sprzedaż 40 / narzut(TT÷Ali) 25 / recenzje 15 / ocena 10 / świeżość 5 / heat 5.
+// Podstawa: audyt na 450 produktach — corr(review_count, sold)=0.968, corr(heat, sold)=-0.105 → recenzje
+// są mocnym proxy sprzedaży (log-skala, nasycenie ~2000), heat zdegradowany 20→5 (koreluje UJEMNIE).
+// Brak składowej = 0 (ΣW=1.0, BEZ przeskalowania). SALES-BLIND: produkt bez sold_count I bez review_count
+// → product_score=null + score_meta.blind=true (uczciwe „brak danych" zamiast rankingu po szumie heatu).
+// Wiersz z recenzjami, ale bez sold, liczony jest normalnie (recenzje jako proxy). partial=true = brak sold.
 //
 // Operacje (admin-gated: team_member JWT | x-tools-secret):
 //   {key}                      → jeden produkt (wołane z panelu po zatwierdzeniu)
@@ -20,7 +23,7 @@ import { rehostShopImages } from '../_shared/shop-images.ts'
 const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
 const RATE = 4   // koszt Ali (PLN-ish) = USD × RATE — spójne z bud-tt-trends
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-tools-secret', 'access-control-allow-methods': 'POST, OPTIONS' }
-const W = { sales: 0.40, markup: 0.25, heat: 0.20, rating: 0.10, fresh: 0.05 }
+const W = { sales: 0.40, markup: 0.25, reviews: 0.15, rating: 0.10, fresh: 0.05, heat: 0.05 }
 
 const clamp = (x: number) => Math.max(0, Math.min(1, x))
 // SANITYZACJA stringów do jsonb: slice(0,N) na tytułach/wideo z TikToka TNIE pary surogatów emoji
@@ -140,8 +143,15 @@ function aliUsdOf(row: any): number | null {
 
 // deno-lint-ignore no-explicit-any
 function score(row: any, shop: any): { score: number | null; meta: any } {
+  const hasSold = !!(shop && shop.sold_count != null)
+  const hasReviews = !!(shop && shop.review_count != null)
+  // SALES-BLIND: brak JAKIEGOKOLWIEK sygnału sprzedaży (ani sold, ani recenzji) → nie liczymy score
+  // z heatu (corr ujemna) — null + blind=true, żeby ranking nie był szumem wiralowości.
+  if (!hasSold && !hasReviews) return { score: null, meta: { blind: true, partial: true, weights: W } }
   const p: Record<string, number> = {}
-  if (shop && shop.sold_count != null) p.sales = clamp(Math.log10(shop.sold_count + 1) / Math.log10(50000))   // 50k szt = pełne
+  if (hasSold) p.sales = clamp(Math.log10(shop.sold_count + 1) / Math.log10(50000))   // 50k szt = pełne
+  // RECENZJE: log-skala review_count, nasycenie ~2000 — proxy sprzedaży o corr 0.968 (audyt 450 szt).
+  if (hasReviews) p.reviews = clamp(Math.log10(shop.review_count + 1) / Math.log10(2000))
   const aliUsd = aliUsdOf(row)
   // GUARD narzutu: cena z ali_snapshot bywa z WYSZUKIWARKI (source!=='detail') → może być INNY
   // produkt niż nasz (fałszywy narzut). Gdy USD do narzutu pochodzi z takiego snapshotu, NIE licz
@@ -159,7 +169,7 @@ function score(row: any, shop: any): { score: number | null; meta: any } {
       p.markup = clamp((markupX - 1) / 5)                                                                     // ×6 narzut = pełne
     }
   }
-  if (row.heat != null) p.heat = clamp((row.heat || 0) / 70)                                                  // heat 70 = pełne
+  if (row.heat != null) p.heat = clamp((row.heat || 0) / 70)                                                  // heat 70 = pełne (waga 0.05)
   const rating = (shop && shop.rating && shop.rating > 0) ? shop.rating : (row.ali_snapshot?.review_stats?.avg ? +row.ali_snapshot.review_stats.avg : null)
   if (rating && rating > 0) p.rating = clamp(rating / 5)
   if (row.newest_days != null) { const d = row.newest_days; p.fresh = d <= 14 ? 1 : d <= 30 ? 0.6 : d <= 60 ? 0.3 : 0.1 }
@@ -169,17 +179,21 @@ function score(row: any, shop: any): { score: number | null; meta: any } {
   let n = 0
   for (const k of Object.keys(W) as (keyof typeof W)[]) n += W[k] * (p[k] ?? 0)
   const sc = Math.round(100 * n)
-  return { score: sc, meta: { ...p, markup_x: markupX ? +markupX.toFixed(2) : null, ali_usd: aliUsd ? +aliUsd.toFixed(2) : null, ...(markupSkippedReason ? { markup_skipped_reason: markupSkippedReason } : {}), partial: !(shop && shop.sold_count != null), weights: W } }
+  return { score: sc, meta: { ...p, markup_x: markupX ? +markupX.toFixed(2) : null, ali_usd: aliUsd ? +aliUsd.toFixed(2) : null, ...(markupSkippedReason ? { markup_skipped_reason: markupSkippedReason } : {}), partial: !hasSold, weights: W } }
 }
 
 const COLS = 'id,key,status,shop_url,chosen_link,ali_candidates,ali_snapshot,heat,newest_days,tt_shop,score_meta'
 
 // deno-lint-ignore no-explicit-any
-async function processRow(supabase: any, row: any): Promise<{ key: string; score: number | null; sold: number | null; shop: boolean; history: boolean }> {
+async function processRow(supabase: any, row: any): Promise<{ key: string; score: number | null; sold: number | null; shop: boolean; blind: boolean; history: boolean }> {
   let shop = null
   const url = String(row.shop_url || '')
   if (url && /\/pdp\//.test(url) && SC) shop = parseShop(await fetchShop(url), url)
-  const { score: sc, meta } = score(row, shop)
+  // Fallback do OSTATNIEGO tt_shop przy scoringu: świeży fetch bywa null (transient 4xx/timeout/brak
+  // shop_url). Bez tego produkt z realną sprzedażą, ale chwilowym błędem API, fałszywie lądowałby jako
+  // blind=null. History/patch tt_shop nadal TYLKO ze świeżego `shop`; do score() idzie effShop.
+  const effShop = shop || (row.tt_shop && typeof row.tt_shop === 'object' ? row.tt_shop : null)
+  const { score: sc, meta } = score(row, effShop)
   // scored_at = znacznik OSTATNIEGO przetworzenia (zapisywany zawsze, także gdy brak danych Shop) —
   // secondary klucz priorytetu w backfillu: rotuje wiersze, które nigdy nie dostają tt_shop (brak/zły shop_url).
   const patch: Record<string, unknown> = { product_score: sc, score_meta: { ...meta, scored_at: new Date().toISOString() } }
@@ -224,7 +238,7 @@ async function processRow(supabase: any, row: any): Promise<{ key: string; score
       else history = true
     }
   }
-  return { key: row.key, score: sc, sold: shop?.sold_count ?? null, shop: !!shop, history }
+  return { key: row.key, score: sc, sold: effShop?.sold_count ?? null, shop: !!shop, blind: meta?.blind === true, history }
 }
 
 async function pool<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
@@ -291,7 +305,7 @@ Deno.serve(async (req) => {
     const lim = Math.min(rows.length, body.limit || 500)
     const res = await pool(rows.slice(0, lim), 4, (r) => processRow(supabase, r))
     const withShop = res.filter((r) => r.shop).length
-    return j({ ok: true, scope, refreshed_oldest_first: true, processed: res.length, with_shop: withShop, scored: res.filter((r) => r.score != null).length, history_inserted: res.filter((r) => r.history).length, sample: res.slice(0, 20) })
+    return j({ ok: true, scope, refreshed_oldest_first: true, processed: res.length, with_shop: withShop, scored: res.filter((r) => r.score != null).length, blind: res.filter((r) => r.blind).length, history_inserted: res.filter((r) => r.history).length, sample: res.slice(0, 20) })
   }
 
   // Lista kluczy

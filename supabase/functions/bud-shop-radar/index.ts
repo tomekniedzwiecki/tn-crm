@@ -5,13 +5,23 @@
 // shop_url (PDP), tt_shop (sold/cena/stan/sklep/wideo), tiktok_url (najlepsze powiązane wideo),
 // pl_name (już dopracowana → name_refined_at=now()). Do tego snapshot do bud_tt_shop_history.
 //
+// SELLER-MINING ("dobry sklep = kopalnia"): sprzedawca, który dał nam JUŻ zwalidowany hit, ma na
+// półce całą listę pre-walidowanych bestsellerów. seed_sellers zbiera sprawdzonych sprzedawców z
+// bud_tt_products; mine_sellers pobiera ich KATALOG (/v1/tiktok/shop/products?sort_by=top) i pcha
+// przez ten sam pipeline co scan (filtr → enrich → nazwy PL → dedup → upsert pending), origin='seller_mine'.
+//
 // Źródła (ScrapeCreators, 1 kredyt / request, nagłówek x-api-key):
-//   GET /v1/tiktok/shop/search?query=&region=US  → lista produktów Shop (sold_info, price, rate)
+//   GET /v1/tiktok/shop/search?query=&region=US   → lista produktów Shop (sold_info, price, rate)
+//   GET /v1/tiktok/shop/products?url=<store_url>&sort_by=top&region=US → KATALOG sprzedawcy (paginacja cursor)
 //   GET /v1/tiktok/product?url=<seo_url>&region=US → szczegóły (stock, related_videos, dokładne ceny)
+//   store_url format: https://www.tiktok.com/shop/store/<slug>/<seller_id>
 //
 // Operacje (POST, admin-gated: team_member JWT | x-tools-secret). Deploy: --no-verify-jwt.
-//   {op:'probe', queries:['car gadgets']}  → surowa odpowiedź /shop/search (diagnoza kształtu/paginacji)
-//   {op:'scan',  queries:[...], ...}       → pełny flow (patrz KONTRAKT niżej)
+//   {op:'probe', queries:['car gadgets']}              → surowa odpowiedź /shop/search (diagnoza kształtu)
+//   {op:'probe_products', sellerId, shopName?|storeUrl?} → surowa odpowiedź /shop/products (diagnoza URL/kształtu)
+//   {op:'scan',  queries:[...], ...}                   → pełny flow sold-first (patrz KONTRAKT niżej)
+//   {op:'seed_sellers'}                                → zasiej bud_radar_sellers ze sprawdzonych hitów → {seeded}
+//   {op:'mine_sellers', limit?:5, perSeller?:2}        → mine katalogów sprzedawców → pending (origin='seller_mine')
 import { adminGate } from '../_shared/bud-owner.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
@@ -51,18 +61,24 @@ function count(x: unknown): number | null {
 // znormalizowana nazwa = key (identyczne z bud-tt-ingest / bud-tt-trends)
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
+// slug sklepu do store_url (ASCII-safe; TikTok ignoruje slug i routuje po seller_id, ale trzymamy czytelny).
+function sellerSlug(name: string | null | undefined): string {
+  const map: Record<string, string> = { ą: 'a', ć: 'c', ę: 'e', ł: 'l', ń: 'n', ó: 'o', ś: 's', ź: 'z', ż: 'z' }
+  const s = String(name || 'shop').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => map[c] || c)
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60)
+  return s || 'shop'
+}
+// store_url z obiektu shop (tt_shop.shop). Format zweryfikowany empirycznie: /shop/store/<slug>/<seller_id>.
+function buildStoreUrl(shop: any): string | null {
+  const sid = String(shop?.seller_id || '').trim()
+  if (!sid) return null
+  return `https://www.tiktok.com/shop/store/${sellerSlug(shop?.name)}/${sid}`
+}
+
 // ── SEZONOWOŚĆ ── (SSOT: docs/zbuduje/SEZONOWOSC.md; enum+okna w _shared/seasons.ts)
-// GPT wybiera TYLKO kod z zamkniętego enuma; okno narzuca serwer (seasonFields).
-// Reguła twarda (seasonRule) wygrywa z draftem modelu i domyka weryfikację.
-// Opis kodów do promptu (kod → jednowyrazowy hint), bez okien i wolnych etykiet.
 const SEASON_ENUM_HINT = SEASONAL_CODES.map((c) => `"${c}" (${SEASONS[c].label})`).join(', ')
 
-// -- SANITYZACJA POD JSONB --
-// Postgres jsonb ODRZUCA znak NUL oraz OSIEROCONE surogaty UTF-16 (blad
-// "invalid input syntax for type json"). Osierocony surogat powstaje gdy .slice() utnie
-// emoji/znak spoza BMP w polowie pary. JSON.stringify (ES2019 well-formed) zamienia go na
-// literalny surogat w tresci -> jsonb sie wywala. Naprawiamy: toWellFormed() (osierocone
-// surogaty -> U+FFFD) + usuniecie znakow sterujacych (petla po code-pointach, bez control-byte w zrodle).
+// -- SANITYZACJA POD JSONB -- (patrz nagłówek w oryginale; Postgres jsonb odrzuca NUL i osierocone surogaty)
 function cleanStr(s: string): string {
   // deno-lint-ignore no-explicit-any
   const x: string = (typeof (s as any).toWellFormed === 'function') ? (s as any).toWellFormed() : s
@@ -73,14 +89,13 @@ function cleanStr(s: string): string {
 // deno-lint-ignore no-explicit-any
 function deepSanitize(v: any): any {
   if (v === undefined || v === null) return null
-  if (typeof v === 'number') return Number.isFinite(v) ? v : null // NaN/Infinity -> null
+  if (typeof v === 'number') return Number.isFinite(v) ? v : null
   if (typeof v === 'string') return cleanStr(v)
   if (typeof v === 'boolean') return v
   if (Array.isArray(v)) return v.map(deepSanitize)
   if (typeof v === 'object') { const o: Record<string, any> = {}; for (const k of Object.keys(v)) o[k] = deepSanitize(v[k]); return o }
   return v
 }
-// Diagnoza PRZED sanityzacja: ktore stringi lamia jsonb (NUL / osierocony surogat).
 // deno-lint-ignore no-explicit-any
 function badJsonReasons(obj: any): string[] {
   const bad: string[] = []
@@ -106,7 +121,6 @@ async function safeUpsert(supabase: any, dbRows: any[]): Promise<{ upserted: num
     const chunk = dbRows.slice(i, i + 20)
     const { error, count } = await supabase.from('bud_tt_products').upsert(chunk, { onConflict: 'key', count: 'exact' })
     if (!error) { upserted += count ?? chunk.length; continue }
-    // fallback per-wiersz — izoluje zepsuty rekord
     for (const r of chunk) {
       const { error: e2 } = await supabase.from('bud_tt_products').upsert([r], { onConflict: 'key' })
       if (e2) { failed++; if (errors.length < 10) errors.push({ key: r.key, error: String(e2.message).slice(0, 160) }); console.warn('[bud-shop-radar] upsert FAIL', r.key, e2.message) }
@@ -133,7 +147,7 @@ async function scGet(url: string, attempts = 3): Promise<{ status: number; data:
   return { status: 0, data: null }
 }
 
-// Wydobądź tablicę produktów z odpowiedzi /shop/search (kształt nieznany empirycznie → fallbacki).
+// Wydobądź tablicę produktów z odpowiedzi /shop/search LUB /shop/products (kształt spójny → te same fallbacki).
 function extractSearchProducts(j: any): any[] {
   if (!j || typeof j !== 'object') return []
   const cands = [j.products, j.data?.products, j.data, j.results, j.items, j.product_list, j.search_item_list]
@@ -141,12 +155,12 @@ function extractSearchProducts(j: any): any[] {
   return []
 }
 
-// Znormalizuj pojedynczy produkt z /shop/search do wspólnego kształtu.
+// Znormalizuj pojedynczy produkt z /shop/search (i /shop/products — ten sam kształt obiektu produktu).
 // KSZTAŁT ZWERYFIKOWANY EMPIRYCZNIE (2026-07-16, query 'car gadgets'):
-//   product_price_info.sale_price_decimal="12.35" (string) / origin_price_decimal / currency_name / currency_symbol
-//   rate_info.score=4.7 / review_count (bywa null)      sold_info.sold_count=124919 (number)
-//   seller_info.shop_name / seller_id                    seo_url = OBIEKT {canonical_url, slug, type}
-//   image = OBIEKT {url_list:[...]}                      video = OBIEKT {share_url, aweme_id, author:{unique_id}}
+//   product_price_info.sale_price_decimal="12.35" / origin_price_decimal / currency_name / currency_symbol
+//   rate_info.score=4.7 / review_count      sold_info.sold_count=124919
+//   seller_info.shop_name / seller_id        seo_url = OBIEKT {canonical_url, slug, type}
+//   image = OBIEKT {url_list:[...]}          video = OBIEKT {share_url, aweme_id, author:{unique_id}}
 function parseSearchItem(p: any): any {
   if (!p || typeof p !== 'object') return null
   const pi = p.product_price_info || {}
@@ -159,12 +173,10 @@ function parseSearchItem(p: any): any {
   const reviews = count(ri.review_count)
   const currency = String(pi.currency_name || 'USD')
   const currencySymbol = String(pi.currency_symbol || '$')
-  // seo_url = obiekt z canonical_url (link PDP do /v1/tiktok/product); dopuść też string na wszelki wypadek
   const seoObj = p.seo_url
   const seoUrl = String((typeof seoObj === 'string' ? seoObj : (seoObj?.canonical_url || '')) || '').trim()
   const pid = String((p.product_id ?? p.id) || (seoUrl.match(/\/pdp\/(?:[^/]*\/)?(\d+)/) || seoUrl.match(/(\d{6,})/) || [])[1] || '')
   const title = String(p.title ?? p.product_name ?? '').slice(0, 240)
-  // image = pojedynczy obiekt {url_list}; images = ewentualna tablica
   const rawImgs = Array.isArray(p.images) ? p.images : (p.image ? [p.image] : [])
   const images = rawImgs.map((im: any) => typeof im === 'string' ? im : (im?.url_list?.[0] || im?.url || '')).filter(Boolean).slice(0, 30)
   const si2 = p.seller_info || {}
@@ -173,7 +185,6 @@ function parseSearchItem(p: any): any {
     seller_id: String(si2.seller_id || si2.id || ''),
     rating: num(si2.rating ?? si2.score),
   } : null
-  // wideo które wypłynęło ten produkt w wyszukiwarce (fallback tiktok_url gdy enrich nie da related_videos)
   const v = p.video || {}
   const uid = v.author?.unique_id, aid = v.aweme_id
   const searchVideo = (uid && aid) ? `https://www.tiktok.com/@${uid}/video/${aid}` : (String(v.share_url || '').split('?')[0] || '')
@@ -229,8 +240,35 @@ function parseProductDetail(j: any, pdpUrl: string): any | null {
   }
 }
 
+// ── FILTR PRZYDATNOŚCI (współdzielony scan ↔ mine): sprzedaż ≥ minSold, cena w widełkach USD,
+// ocena ≥ 4.0 (gdy dostępna), musi mieć seoUrl (do enrich + PDP). ──
+function passesFilter(it: any, minSold: number, priceUsdMin: number, priceUsdMax: number): boolean {
+  return (it.sold ?? 0) >= minSold &&
+    !!it.seoUrl &&
+    it.priceSale != null && it.priceSale >= priceUsdMin && it.priceSale <= priceUsdMax &&
+    (it.rating == null || it.rating >= 4.0)
+}
+
+// Pobierz katalog sprzedawcy z /v1/tiktok/shop/products (paginacja cursor, sort_by=top). Max `maxPages` stron.
+async function fetchSellerProducts(storeUrl: string, region: string, maxPages: number): Promise<{ items: any[]; pages: number; lastStatus: number }> {
+  const items: any[] = []
+  let cursor = ''
+  let pages = 0
+  let lastStatus = 0
+  for (let p = 0; p < maxPages; p++) {
+    const u = `${B}/v1/tiktok/shop/products?url=${encodeURIComponent(storeUrl)}&sort_by=top&region=${encodeURIComponent(region)}${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ''}`
+    const { status, data } = await scGet(u)
+    lastStatus = status
+    pages++
+    const arr = extractSearchProducts(data)
+    items.push(...arr)
+    cursor = String(data?.cursor || data?.next_cursor || '')
+    if (!data?.has_more || !cursor || !arr.length) break
+  }
+  return { items, pages, lastStatus }
+}
+
 // GPT: batchem przetłumacz tytuły (EN, keyword-stuffed) na krótkie polskie nazwy handlowe + kategorię.
-// Zasady jak refinePlName (bud-ali-snapshot). 1 call / scan → tanio. Zwraca [] gdy błąd (caller pominie).
 let RU = { i: 0, c: 0, o: 0, calls: 0 }
 function feedUsage(data: any) { const u = data?.usage; if (u) { RU.i += u.prompt_tokens || 0; RU.c += u.prompt_tokens_details?.cached_tokens || 0; RU.o += u.completion_tokens || 0; RU.calls++ } }
 async function flushUsage(supabase: any) {
@@ -270,6 +308,153 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promis
   await Promise.all(Array.from({ length: Math.min(n, items.length) }, w)); return out
 }
 
+// ── WSPÓLNY PIPELINE (scan ↔ mine_sellers): dostaje już PRZEFILTROWANE `picked` (parseSearchItem +
+// passesFilter, każdy z ._query), robi: dedup po pid → enrich /product → nazwy PL + sezon → wyklucz
+// istniejące key → dedup po key → build wierszy (origin param) → upsert + history → rehost packshotów.
+// Zwraca komplet liczników + sample + partial. Identyczna semantyka jak dawny inline-scan. ──
+async function ingestPicked(
+  supabase: any,
+  picked: any[],
+  opts: { region: string; enrich: boolean; ingest: boolean; origin: string; t0: number },
+): Promise<{ found: number; upserted: number; failed: number; skipped_existing: number; images_rehosted: number; upsert_errors: { key: string; error: string }[]; diag: { key: string; reasons: string[] }[]; partial: boolean; sample: any[] }> {
+  const { region, enrich, ingest, origin, t0 } = opts
+  let partial = false
+
+  // dedup w obrębie batcha po pid (albo seoUrl)
+  const seen = new Set<string>()
+  const uniq = picked.filter((it: any) => { const k = it.pid || it.seoUrl; if (!k || seen.has(k)) return false; seen.add(k); return true })
+
+  // ── ENRICH: /v1/tiktok/product per produkt (stock, related_videos → tiktok_url, dokładne ceny) ──
+  if (enrich && uniq.length) {
+    await pool(uniq, 4, async (it: any) => {
+      if (Date.now() - t0 > DEADLINE_MS) { partial = true; return }
+      const { data } = await scGet(`${B}/v1/tiktok/product?url=${encodeURIComponent(it.seoUrl)}&region=${encodeURIComponent(region)}`)
+      it._detail = parseProductDetail(data, it.seoUrl)
+    })
+  }
+
+  // ── NAZWY PL + KATEGORIE (1 GPT call, batch) ──
+  const nc = await namesAndCats(uniq.map((it: any) => it._detail?.title || it.title))
+  uniq.forEach((it: any, i: number) => {
+    it._pl = nc[i]?.pl || ''; it._cat = nc[i]?.category || 'Inne'
+    const ruleCode = seasonRule(it._pl)
+    const code = ruleCode || nc[i]?.season_code || 'all_year'
+    it._season = { ...seasonFields(code), season_source: ruleCode ? 'rule' : 'draft', season_verified: !!ruleCode }
+  })
+
+  const named = uniq.filter((it: any) => { it._key = norm(it._pl); return it._key && it._pl })
+
+  // ── WYKLUCZ ISTNIEJĄCE key (paginacja po 1000 — pułapka PostgREST 1000 wierszy) ──
+  const have = new Set<string>()
+  if (ingest && named.length) {
+    for (let off = 0; ; off += 1000) {
+      const { data: ex } = await supabase.from('bud_tt_products').select('key').range(off, off + 999)
+      if (!ex?.length) break
+      for (const r of ex as any[]) have.add(r.key)
+      if (ex.length < 1000) break
+    }
+  }
+  // dedup po _key TAKŻE wewnątrz batcha (ta sama nazwa PL z GPT = ten sam key; zostaje wariant z większą sprzedażą)
+  const byKey = new Map<string, any>()
+  for (const it of named) {
+    const prev = byKey.get(it._key)
+    if (!prev || (Number(it.sold) || 0) > (Number(prev.sold) || 0)) byKey.set(it._key, it)
+  }
+  const fresh = [...byKey.values()].filter((it: any) => !have.has(it._key))
+  const skippedExisting = named.length - fresh.length
+
+  // ── BUDUJ WIERSZE + tt_shop (kształt jak bud-tt-shop) ──
+  const nowIso = new Date().toISOString()
+  const rows = fresh.map((it: any) => {
+    const d = it._detail
+    const bestVideo = d?.videos?.[0]?.url || it.searchVideo || null
+    const tt_shop: any = {
+      product_id: d?.product_id || it.pid || null,
+      title: d?.title || it.title,
+      sold_count: d?.sold_count ?? it.sold ?? null,
+      price_real: d?.price_real ?? it.priceSale ?? null,
+      price_max: d?.price_max ?? null,
+      price_original: d?.price_original ?? it.priceOrig ?? null,
+      price_display: d?.price_display || (it.priceSale != null ? `$${it.priceSale}` : ''),
+      currency: d?.currency ?? it.currency ?? 'USD',
+      currency_symbol: d?.currency_symbol ?? it.currencySymbol ?? '$',
+      stock: d?.stock ?? null,
+      rating: d?.rating ?? it.rating ?? null,
+      review_count: d?.review_count ?? it.reviews ?? null,
+      images: (d?.images?.length ? d.images : it.images) || [],
+      videos: d?.videos || [],
+      video_count: d?.video_count ?? 0,
+      shop: d?.shop || it.seller || null,
+      source: origin,
+      fetched_at: nowIso,
+    }
+    return {
+      key: it._key,
+      pl_name: it._pl,
+      category: it._cat,
+      season_type: it._season?.season_type || 'all_year',
+      season_label: it._season?.season_label ?? 'całoroczny',
+      sell_from: it._season?.sell_from ?? null,
+      sell_to: it._season?.sell_to ?? null,
+      season_source: it._season?.season_source || 'draft',
+      season_verified: it._season?.season_verified ?? false,
+      query: it._query || null,
+      tiktok_url: bestVideo,
+      cover: it.images?.[0] || d?.images?.[0] || null,
+      shop_url: it.seoUrl,
+      tt_shop,
+      status: 'pending',
+      origin,
+      name_refined_at: nowIso,
+      heat: 0,
+      _sold: tt_shop.sold_count,
+      _price: tt_shop.price_real,
+      _stock: tt_shop.stock,
+    }
+  })
+
+  let upserted = 0, failed = 0
+  let upsertErrors: { key: string; error: string }[] = []
+  const diag: { key: string; reasons: string[] }[] = []
+  for (const r of rows) { const { _sold, _price, _stock, ...clean } = r as any; const rs = badJsonReasons(clean); if (rs.length && diag.length < 15) diag.push({ key: r.key, reasons: [...new Set(rs.map((x: string) => x.split(':').pop()!))] }) }
+
+  if (ingest && rows.length) {
+    const dbRows = rows.map(({ _sold, _price, _stock, ...r }: any) => deepSanitize(r))
+    const res = await safeUpsert(supabase, dbRows)
+    upserted = res.upserted; failed = res.failed; upsertErrors = res.errors
+    const hist = rows.filter((r: any) => r._sold != null).map((r: any) => deepSanitize({ key: r.key, sold_count: r._sold, price_usd: r._price, stock: r._stock }))
+    if (hist.length) {
+      const { error: he } = await supabase.from('bud_tt_shop_history').insert(hist)
+      if (he) {
+        for (const h of hist) { const { error: he2 } = await supabase.from('bud_tt_shop_history').insert([h]); if (he2) console.warn('[bud-shop-radar] history row', h.key, he2.message) }
+      }
+    }
+  }
+
+  // ── REHOST PACKSHOTÓW (CDN TikToka wygasa; kopiujemy do storage attachments/bud-shop-imgs/) ──
+  let imagesRehosted = 0
+  if (ingest && upserted) {
+    for (const r of rows as any[]) {
+      if (Date.now() - t0 > DEADLINE_MS - 20_000) { partial = true; break }
+      const imgs = Array.isArray(r.tt_shop?.images) ? r.tt_shop.images : []
+      if (!imgs.length) continue
+      const hosted = await rehostShopImages(supabase, r.key, imgs, 30)
+      if (!hosted.length) continue
+      const tt_shop = { ...r.tt_shop, images_hosted: hosted }
+      const patch: any = { tt_shop: deepSanitize(tt_shop) }
+      patch.cover = hosted[0]
+      const { error: ue } = await supabase.from('bud_tt_products').update(patch).eq('key', r.key)
+      if (ue) { console.warn('[bud-shop-radar] rehost update', r.key, String(ue.message || ue).slice(0, 120)); continue }
+      imagesRehosted++
+    }
+  }
+
+  const sample = (ingest ? rows : named.map((it: any) => ({ pl_name: it._pl, _sold: it._detail?.sold_count ?? it.sold, _price: it._detail?.price_real ?? it.priceSale, tiktok_url: it._detail?.videos?.[0]?.url || it.searchVideo || null }))).slice(0, 5)
+    .map((r: any) => ({ pl: r.pl_name, sold: r._sold ?? null, priceUsd: r._price ?? null, hasVideo: !!r.tiktok_url }))
+
+  return { found: uniq.length, upserted, failed, skipped_existing: skippedExisting, images_rehosted: imagesRehosted, upsert_errors: upsertErrors, diag, partial, sample }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
@@ -281,11 +466,126 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}))
   const op = body.op || 'scan'
   const region = body.region || 'US'
+  // wspólne knobi filtra (scan i mine)
+  const minSold = body.minSold ?? 1000
+  const priceUsdMin = body.priceUsdMin ?? 3
+  const priceUsdMax = body.priceUsdMax ?? 60
+  const enrich = body.enrich !== false
+  const ingest = body.ingest !== false
+
+  // ── SEED_SELLERS: zbierz sprawdzonych sprzedawców (approved LUB sold>20000) z bud_tt_products → bud_radar_sellers ──
+  if (op === 'seed_sellers') {
+    // deno-lint-ignore no-explicit-any
+    const sellers = new Map<string, { seller_id: string; shop_name: string | null; store_url: string | null; source_key: string; total_sold: number; _srcSold: number }>()
+    for (let off = 0; ; off += 1000) {
+      const { data, error } = await supabase.from('bud_tt_products').select('key,status,tt_shop').range(off, off + 999)
+      if (error) return J({ error: 'db_read', detail: String(error.message).slice(0, 200) }, 500)
+      if (!data?.length) break
+      for (const r of data as any[]) {
+        const shop = r.tt_shop?.shop
+        const sid = String(shop?.seller_id || '').trim()
+        if (!sid) continue
+        const sold = Number(r.tt_shop?.sold_count) || 0
+        if (!(r.status === 'approved' || sold > 20000)) continue
+        const prev = sellers.get(sid)
+        if (!prev) {
+          sellers.set(sid, { seller_id: sid, shop_name: shop?.name || null, store_url: buildStoreUrl(shop), source_key: r.key, total_sold: sold, _srcSold: sold })
+        } else {
+          prev.total_sold += sold // suma sold naszych hitów tego sprzedawcy (sygnał "kopalni")
+          if (sold > prev._srcSold) { prev._srcSold = sold; prev.source_key = r.key } // source_key = największy hit
+          if (!prev.shop_name && shop?.name) { prev.shop_name = shop.name; prev.store_url = buildStoreUrl(shop) }
+        }
+      }
+      if (data.length < 1000) break
+    }
+    const rows = [...sellers.values()].map(({ _srcSold, ...s }) => s)
+    if (!rows.length) return J({ seeded: 0, note: 'brak_kwalifikujacych_sprzedawcow' })
+    // upsert (nie nadpisuj last_mined_at — kolumny brak w payloadzie → zostaje) chunkami po 100
+    let seeded = 0
+    for (let i = 0; i < rows.length; i += 100) {
+      const chunk = rows.slice(i, i + 100).map((r) => deepSanitize(r))
+      const { error, count } = await supabase.from('bud_radar_sellers').upsert(chunk, { onConflict: 'seller_id', count: 'exact', ignoreDuplicates: false })
+      if (error) { console.warn('[bud-shop-radar] seed upsert', error.message); continue }
+      seeded += count ?? chunk.length
+    }
+    return J({ seeded, distinct_sellers: rows.length })
+  }
+
+  // ── PROBE_PRODUCTS: surowa odpowiedź /v1/tiktok/shop/products (weryfikacja store_url + kształtu) ──
+  if (op === 'probe_products') {
+    const storeUrl = String(body.storeUrl || buildStoreUrl({ name: body.shopName, seller_id: body.sellerId }) || '')
+    if (!storeUrl) return J({ error: 'brak_storeUrl_lub_sellerId' }, 400)
+    const append = body.append ? `&${String(body.append)}` : ''
+    const url = `${B}/v1/tiktok/shop/products?url=${encodeURIComponent(storeUrl)}&sort_by=${encodeURIComponent(body.sort_by || 'top')}&region=${encodeURIComponent(region)}${append}`
+    const { status, data } = await scGet(url)
+    const arr = extractSearchProducts(data)
+    return J({
+      store_url: storeUrl, url, http_status: status,
+      top_keys: data && typeof data === 'object' ? Object.keys(data) : null,
+      has_more: data?.has_more ?? null,
+      cursor: data?.cursor ?? data?.next_cursor ?? null,
+      total_products: data?.total_products ?? null,
+      items_found: arr.length,
+      first_item_keys: arr[0] && typeof arr[0] === 'object' ? Object.keys(arr[0]) : null,
+      first_item_raw: arr[0] ?? null,
+      parsed_sample: arr.slice(0, 3).map(parseSearchItem),
+    })
+  }
+
+  // ── MINE_SELLERS: weź `limit` najdawniej minowanych sprzedawców → pobierz ich katalogi → pipeline ──
+  if (op === 'mine_sellers') {
+    const limit = Math.min(Math.max(Number(body.limit ?? 5), 1), 20)
+    const perSeller = Math.min(Math.max(Number(body.perSeller ?? 2), 1), 5)
+    const { data: sellers, error } = await supabase.from('bud_radar_sellers')
+      .select('seller_id,shop_name,store_url')
+      .order('last_mined_at', { ascending: true, nullsFirst: true })
+      .order('discovered_at', { ascending: true })
+      .limit(limit)
+    if (error) return J({ error: 'db_read_sellers', detail: String(error.message).slice(0, 200) }, 500)
+    if (!sellers?.length) return J({ sellers_mined: 0, scanned: 0, upserted: 0, skipped_existing: 0, failed: 0, note: 'brak_sprzedawcow_najpierw_seed_sellers' })
+
+    const picked: any[] = []
+    let sellersMined = 0, scanned = 0, minePartial = false
+    const minedIds: string[] = []
+    const perSellerStats: { seller: string; found: number; passed: number; pages: number; http: number }[] = []
+    for (const s of sellers as any[]) {
+      if (Date.now() - t0 > DEADLINE_MS - 60_000) { minePartial = true; break } // zostaw zapas na enrich+ingest
+      const storeUrl = s.store_url || buildStoreUrl({ name: s.shop_name, seller_id: s.seller_id })
+      if (!storeUrl) { minedIds.push(s.seller_id); continue }
+      const { items: raw, pages, lastStatus } = await fetchSellerProducts(storeUrl, region, perSeller)
+      const items = raw.map(parseSearchItem).filter(Boolean)
+      scanned += items.length
+      const passed = items.filter((it: any) => passesFilter(it, minSold, priceUsdMin, priceUsdMax))
+      for (const it of passed) { it._query = `seller:${(s.shop_name || s.seller_id)}`.slice(0, 120); picked.push(it) }
+      perSellerStats.push({ seller: s.shop_name || s.seller_id, found: items.length, passed: passed.length, pages, http: lastStatus })
+      sellersMined++
+      minedIds.push(s.seller_id)
+    }
+    // stempluj last_mined_at (nawet gdy 0 trafień — inaczej ten sam martwy sprzedawca blokowałby rotację)
+    if (minedIds.length) {
+      const { error: ue } = await supabase.from('bud_radar_sellers').update({ last_mined_at: new Date().toISOString() }).in('seller_id', minedIds)
+      if (ue) console.warn('[bud-shop-radar] stamp last_mined_at', ue.message)
+    }
+
+    const res = await ingestPicked(supabase, picked, { region, enrich, ingest, origin: 'seller_mine', t0 })
+    await flushUsage(supabase)
+    return J({
+      sellers_mined: sellersMined, scanned, found: res.found,
+      upserted: res.upserted, skipped_existing: res.skipped_existing, failed: res.failed,
+      images_rehosted: res.images_rehosted,
+      ...(res.failed ? { upsert_errors: res.upsert_errors } : {}),
+      ...(res.diag.length ? { diag: res.diag } : {}),
+      ...(res.partial || minePartial ? { partial: true } : {}),
+      per_seller: perSellerStats,
+      sample: res.sample,
+    })
+  }
+
+  // ── PROBE / SCAN wymagają queries ──
   let queries: string[] = Array.isArray(body.queries) ? body.queries.map((q: any) => String(q || '').trim()).filter(Boolean) : []
   if (!queries.length) return J({ error: 'brak_queries' }, 400)
 
   // ── PROBE: surowa odpowiedź /shop/search (ustalenie kształtu pól + paginacji page vs amount) ──
-  // body.append = dodatkowy fragment query-stringa do przetestowania (np. "page=2" albo "amount=30").
   if (op === 'probe') {
     const q = queries[0]
     const append = body.append ? `&${String(body.append)}` : ''
@@ -304,17 +604,11 @@ Deno.serve(async (req) => {
 
   // ── SCAN ──
   queries = queries.slice(0, 8) // max 8 queries / call
-  const minSold = body.minSold ?? 1000
   const maxPerQuery = body.maxPerQuery ?? 30
-  const priceUsdMin = body.priceUsdMin ?? 3
-  const priceUsdMax = body.priceUsdMax ?? 60
-  const enrich = body.enrich !== false
-  const ingest = body.ingest !== false
 
   let scanned = 0, filteredCount = 0
   let partial = false
   const nextQueries: string[] = []
-  // zebrane, przefiltrowane produkty (przed enrich/dedupem) — mapa po pid żeby nie dublować w obrębie scanu
   const picked: any[] = []
 
   for (let qi = 0; qi < queries.length; qi++) {
@@ -324,168 +618,21 @@ Deno.serve(async (req) => {
     const { data } = await scGet(url)
     const items = extractSearchProducts(data).map(parseSearchItem).filter(Boolean)
     scanned += items.length
-    // FILTR: sprzedaż >= minSold, cena w widełkach USD, ocena >= 4.0 (gdy dostępna)
-    const passed = items.filter((it: any) =>
-      (it.sold ?? 0) >= minSold &&
-      it.seoUrl &&
-      it.priceSale != null && it.priceSale >= priceUsdMin && it.priceSale <= priceUsdMax &&
-      (it.rating == null || it.rating >= 4.0)
-    ).sort((a: any, b: any) => (b.sold ?? 0) - (a.sold ?? 0)).slice(0, maxPerQuery)
+    const passed = items.filter((it: any) => passesFilter(it, minSold, priceUsdMin, priceUsdMax))
+      .sort((a: any, b: any) => (b.sold ?? 0) - (a.sold ?? 0)).slice(0, maxPerQuery)
     filteredCount += passed.length
     for (const it of passed) { it._query = q; picked.push(it) }
   }
 
-  // dedup w obrębie scanu po pid (albo seoUrl)
-  const seen = new Set<string>()
-  const uniq = picked.filter((it: any) => { const k = it.pid || it.seoUrl; if (!k || seen.has(k)) return false; seen.add(k); return true })
-
-  // ── ENRICH: /v1/tiktok/product per produkt (stock, related_videos → tiktok_url, dokładne ceny) ──
-  if (enrich && uniq.length) {
-    await pool(uniq, 4, async (it: any) => {
-      if (Date.now() - t0 > DEADLINE_MS) { partial = true; return }
-      const { data } = await scGet(`${B}/v1/tiktok/product?url=${encodeURIComponent(it.seoUrl)}&region=${encodeURIComponent(region)}`)
-      it._detail = parseProductDetail(data, it.seoUrl)
-    })
-  }
-
-  // ── NAZWY PL + KATEGORIE (1 GPT call, batch) ──
-  const nc = await namesAndCats(uniq.map((it: any) => it._detail?.title || it.title))
-  uniq.forEach((it: any, i: number) => {
-    it._pl = nc[i]?.pl || ''; it._cat = nc[i]?.category || 'Inne'
-    // Reguła twarda (słownik wymuszeń) PRZED wynikiem GPT: trafienie → source='rule', verified=true;
-    // inaczej draft z modelu (kod z enuma) → source='draft', verified=false. Okno zawsze z serwera.
-    const ruleCode = seasonRule(it._pl)
-    const code = ruleCode || nc[i]?.season_code || 'all_year'
-    it._season = { ...seasonFields(code), season_source: ruleCode ? 'rule' : 'draft', season_verified: !!ruleCode }
-  })
-
-  // odrzuć te bez sensownej nazwy / key
-  const named = uniq.filter((it: any) => { it._key = norm(it._pl); return it._key && it._pl })
-
-  // ── WYKLUCZ ISTNIEJĄCE key (paginacja po 1000 — pułapka PostgREST 1000 wierszy) ──
-  const have = new Set<string>()
-  if (ingest && named.length) {
-    for (let off = 0; ; off += 1000) {
-      const { data: ex } = await supabase.from('bud_tt_products').select('key').range(off, off + 999)
-      if (!ex?.length) break
-      for (const r of ex as any[]) have.add(r.key)
-      if (ex.length < 1000) break
-    }
-  }
-  // dedup po _key TAKŻE wewnątrz batcha (dwa produkty → ta sama nazwa PL z GPT = ten sam key;
-  // zduplikowany key w jednym upsercie wywala chunk: "ON CONFLICT ... cannot affect row a second time").
-  // Zostaje wariant z większą sprzedażą.
-  const byKey = new Map<string, any>()
-  for (const it of named) {
-    const prev = byKey.get(it._key)
-    if (!prev || (Number(it.sold) || 0) > (Number(prev.sold) || 0)) byKey.set(it._key, it)
-  }
-  const fresh = [...byKey.values()].filter((it: any) => !have.has(it._key))
-  const skippedExisting = named.length - fresh.length
-
-  // ── BUDUJ WIERSZE + tt_shop (kształt jak bud-tt-shop) ──
-  const nowIso = new Date().toISOString()
-  const rows = fresh.map((it: any) => {
-    const d = it._detail
-    const bestVideo = d?.videos?.[0]?.url || it.searchVideo || null
-    // tt_shop: baza z /shop/search, nadpisana szczegółami z /product gdy enrich
-    const tt_shop: any = {
-      product_id: d?.product_id || it.pid || null,
-      title: d?.title || it.title,
-      sold_count: d?.sold_count ?? it.sold ?? null,
-      price_real: d?.price_real ?? it.priceSale ?? null,
-      price_max: d?.price_max ?? null,
-      price_original: d?.price_original ?? it.priceOrig ?? null,
-      price_display: d?.price_display || (it.priceSale != null ? `$${it.priceSale}` : ''),
-      currency: d?.currency ?? it.currency ?? 'USD',
-      currency_symbol: d?.currency_symbol ?? it.currencySymbol ?? '$',
-      stock: d?.stock ?? null,
-      rating: d?.rating ?? it.rating ?? null,
-      review_count: d?.review_count ?? it.reviews ?? null,
-      images: (d?.images?.length ? d.images : it.images) || [],
-      videos: d?.videos || [],
-      video_count: d?.video_count ?? 0,
-      shop: d?.shop || it.seller || null,
-      source: 'shop_radar',
-      fetched_at: nowIso,
-    }
-    return {
-      key: it._key,
-      pl_name: it._pl,
-      category: it._cat,
-      season_type: it._season?.season_type || 'all_year',
-      season_label: it._season?.season_label ?? 'całoroczny',
-      sell_from: it._season?.sell_from ?? null,
-      sell_to: it._season?.sell_to ?? null,
-      season_source: it._season?.season_source || 'draft',
-      season_verified: it._season?.season_verified ?? false,
-      query: it._query || null,
-      tiktok_url: bestVideo,
-      cover: it.images?.[0] || d?.images?.[0] || null, // pierwszy obraz produktu z shop CDN
-      shop_url: it.seoUrl,
-      tt_shop,
-      status: 'pending',
-      origin: 'shop_radar',
-      name_refined_at: nowIso, // nazwa dopracowana od razu
-      heat: 0,
-      _sold: tt_shop.sold_count, // pomocnicze do history/sample (nie kolumna)
-      _price: tt_shop.price_real,
-      _stock: tt_shop.stock,
-    }
-  })
-
-  let upserted = 0, failed = 0
-  let upsertErrors: { key: string; error: string }[] = []
-  // DIAGNOZA: policz ile wierszy miało jsonb-niebezpieczne stringi PRZED sanityzacją (dowód przyczyny).
-  const diag: { key: string; reasons: string[] }[] = []
-  for (const r of rows) { const { _sold, _price, _stock, ...clean } = r as any; const rs = badJsonReasons(clean); if (rs.length && diag.length < 15) diag.push({ key: r.key, reasons: [...new Set(rs.map((x: string) => x.split(':').pop()))] }) }
-
-  if (ingest && rows.length) {
-    // SANITYZACJA: głęboka (undefined/NaN→null, osierocone surogaty→U+FFFD, strip control) — chroni jsonb.
-    const dbRows = rows.map(({ _sold, _price, _stock, ...r }: any) => deepSanitize(r))
-    const res = await safeUpsert(supabase, dbRows)
-    upserted = res.upserted; failed = res.failed; upsertErrors = res.errors
-    // snapshot sprzedaży → bud_tt_shop_history (tempo sprzedaży liczone później z delty). Też defensywnie.
-    const hist = rows.filter((r: any) => r._sold != null).map((r: any) => deepSanitize({ key: r.key, sold_count: r._sold, price_usd: r._price, stock: r._stock }))
-    if (hist.length) {
-      const { error: he } = await supabase.from('bud_tt_shop_history').insert(hist)
-      if (he) { // fallback per-wiersz, żeby jeden zły snapshot nie zablokował reszty
-        for (const h of hist) { const { error: he2 } = await supabase.from('bud_tt_shop_history').insert([h]); if (he2) console.warn('[bud-shop-radar] history row', h.key, he2.message) }
-      }
-    }
-  }
-
-  // ── REHOST PACKSHOTÓW: images z tt_shop to podpisane URL-e TikTok CDN (wygasają w ~dobę) →
-  // wgraj BAJTY do storage `attachments/bud-shop-imgs/<slug(key)>/<n>.jpg`, zapisz tt_shop.images_hosted
-  // + podmień cover na pierwszy hosted URL (cover z shop CDN TEŻ wygasa). Deadline 300s: rehostujemy
-  // sekwencyjnie i PRZERYWAMY gdy blisko limitu — wiersze bez images_hosted dorobi backfill (bud-tt-rehost).
-  let imagesRehosted = 0
-  if (ingest && upserted) {
-    for (const r of rows as any[]) {
-      if (Date.now() - t0 > DEADLINE_MS - 20_000) { partial = true; break } // zostaw zapas na zapis
-      const imgs = Array.isArray(r.tt_shop?.images) ? r.tt_shop.images : []
-      if (!imgs.length) continue
-      const hosted = await rehostShopImages(supabase, r.key, imgs, 30)
-      if (!hosted.length) continue
-      const tt_shop = { ...r.tt_shop, images_hosted: hosted }
-      const patch: any = { tt_shop: deepSanitize(tt_shop) }
-      patch.cover = hosted[0] // trwały cover (shop CDN wygasa)
-      const { error: ue } = await supabase.from('bud_tt_products').update(patch).eq('key', r.key)
-      if (ue) { console.warn('[bud-shop-radar] rehost update', r.key, String(ue.message || ue).slice(0, 120)); continue }
-      imagesRehosted++
-    }
-  }
-
+  const res = await ingestPicked(supabase, picked, { region, enrich, ingest, origin: 'shop_radar', t0 })
   await flushUsage(supabase)
-  const sample = (ingest ? rows : named.map((it: any) => ({ pl_name: it._pl, _sold: it._detail?.sold_count ?? it.sold, _price: it._detail?.price_real ?? it.priceSale, tiktok_url: it._detail?.videos?.[0]?.url || it.searchVideo || null }))).slice(0, 5)
-    .map((r: any) => ({ pl: r.pl_name, sold: r._sold ?? null, priceUsd: r._price ?? null, hasVideo: !!r.tiktok_url }))
 
   return J({
-    scanned, found: uniq.length, filtered: filteredCount,
-    upserted, failed, skipped_existing: skippedExisting, images_rehosted: imagesRehosted,
-    ...(failed ? { upsert_errors: upsertErrors } : {}),
-    ...(diag.length ? { diag } : {}),
-    ...(partial ? { partial: true, nextQueries } : {}),
-    sample,
+    scanned, found: res.found, filtered: filteredCount,
+    upserted: res.upserted, failed: res.failed, skipped_existing: res.skipped_existing, images_rehosted: res.images_rehosted,
+    ...(res.failed ? { upsert_errors: res.upsert_errors } : {}),
+    ...(res.diag.length ? { diag: res.diag } : {}),
+    ...(partial || res.partial ? { partial: true, nextQueries } : {}),
+    sample: res.sample,
   })
 })

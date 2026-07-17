@@ -111,6 +111,9 @@
   .rmeta .rsc{color:var(--gold);font-weight:600}
   .rmeta .ic{font-size:11px}
   .rmeta .ic.soff{filter:none}
+  .rmeta .grBadge{display:inline-flex;align-items:center;gap:3px;font-weight:700;font-size:10.5px;padding:1px 7px;border-radius:99px;color:var(--green);border:1px solid var(--green-d);background:rgba(70,180,106,.12)}
+  .growthInfo{display:flex;align-items:center;gap:9px;margin:10px 12px;padding:11px 13px;font-size:12.5px;line-height:1.45;color:var(--dim);border:1px solid var(--line2);border-radius:12px;background:var(--surface2)}
+  .growthInfo svg{width:16px;height:16px;flex:0 0 auto;color:var(--gold)}
 
   /* DETAL */
   .detail{overflow-y:auto;min-height:0}
@@ -383,6 +386,7 @@
       <button data-sort="score">Score</button>
       <button data-sort="price">Cena</button>
       <button data-sort="new">Najnowsze</button>
+      <button data-sort="growth">Rosnące</button>
     </div>
     <button id="tableBtn" class="btn btn-sm" style="display:none">Tabela</button>
   </div>
@@ -477,7 +481,7 @@ const REJECT_REASONS=[['za-drogie','za drogie'],['słaba-marża','słaba marża'
 // ── STAN ──
 let ROWS=[], LISTROWS=[], ME='', MEID='', toastT;
 let FSTAT='pending';              // lejek: pending|approved|inlib|mismatch|rejected|duplicate|'' (wszystkie)
-let SORT='sales';                 // sales|score|price|new
+let SORT='sales';                 // sales|score|price|new|growth
 let SUBQ=null;                    // sub-kolejka pending: ready|dogrywka|nopack|null
 let FPROOF=false, FSEASONOFF=false, FSEASONSOON=false;
 let FFUTURE=false, FSEASONCHECK=false; // chipy: „Na przyszły sezon" (pending) / „Sezon do sprawdzenia"
@@ -487,6 +491,7 @@ let SELID=null, LASTDET=undefined, CURVID=null, REASONOPEN=false, LISTN=100;
 let TSORT={col:'score',dir:-1};
 const INLIB=new Set();
 const HIST=new Map(), HISTFETCHED=new Set();
+const GROWTH=new Map();            // key → growth_pct (tempo sprzedaży z bud_breakout_v, ≥2 snapshoty)
 const HEALED=new Set(); let HEALING=false;
 function toast(m,ms){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),ms||2400);}
 function lightbox(src){if(!src)return;$('lightboxImg').src=safeUrl(src);$('lightbox').classList.add('show');}
@@ -550,8 +555,19 @@ async function load(){
   $('loading').style.display='none';
   if(err){toast('Błąd: '+err.message);return;}
   await fetchLibrary();
+  await loadGrowth();
   ROWS=all; SELID=null; LASTDET=undefined; LISTN=100;
   render();
+}
+// bud_breakout_v: growth_pct per key (tempo sprzedaży, klucze z ≥2 snapshotami; pusto do 2. migawki).
+// RLS widoku (security_invoker) = recenzenci. Ładujemy raz na load, sort „Rosnące" czyta z GROWTH.
+async function loadGrowth(){
+  try{
+    GROWTH.clear();
+    const {data,error}=await sb.from('bud_breakout_v').select('key,growth_pct');
+    if(error||!data)return;
+    data.forEach(r=>{if(r.key&&r.growth_pct!=null)GROWTH.set(r.key,+r.growth_pct);});
+  }catch(e){}
 }
 // workflow_products.bud_key już w bibliotece CRM (RLS: authenticated SELECT; paginacja jak wyżej).
 async function fetchLibrary(){
@@ -629,6 +645,8 @@ function sortRows(r){
   if(SORT==='score'){r.sort((a,b)=>((b.product_score==null?-1:b.product_score)-(a.product_score==null?-1:a.product_score)));return;}
   if(SORT==='price'){r.sort((a,b)=>{const pa=_ttU(a),pb=_ttU(b);return (pa==null?Infinity:pa)-(pb==null?Infinity:pb);});return;}
   if(SORT==='new'){r.sort((a,b)=>_newness(b)-_newness(a));return;}
+  // 'growth': po growth_pct z bud_breakout_v (GROWTH); produkty bez delty (brak 2. migawki) na końcu.
+  if(SORT==='growth'){const g=x=>{const v=x.key?GROWTH.get(x.key):null;return v==null?-Infinity:v;};r.sort((a,b)=>g(b)-g(a));return;}
   // 'sales' domyślne: sold desc NULLS LAST → potem score desc
   r.sort((a,b)=>{
     const sa=_sold0(a),sb2=_sold0(b);
@@ -745,7 +763,11 @@ function setScard(k){SCARD=SCARD===k?null:k;LISTN=100;SELID=null;LASTDET=undefin
 function renderList(){
   const body=$('listBody'); if(!body)return;
   const slice=LISTROWS.slice(0,LISTN);
-  body.innerHTML=slice.map(listRowHtml).join('');
+  // Sort „Rosnące" bez żadnej delty (brak 2. migawki) → informacja zamiast pustej obietnicy.
+  const growthInfo=(SORT==='growth'&&GROWTH.size===0)
+    ? `<div class="growthInfo">${I.trend}<span>Tempo sprzedaży pojawi się od pierwszego podwójnego pomiaru (sobota) — potrzebne ≥2 migawki historii.</span></div>`
+    : '';
+  body.innerHTML=growthInfo+slice.map(listRowHtml).join('');
   $('listMore').innerHTML=LISTROWS.length>LISTN?`<button class="moreBtn" onclick="showMore()">Pokaż więcej (${LISTROWS.length-LISTN})</button>`:'';
   updateListCount();
   healVisible(slice);
@@ -773,6 +795,7 @@ function listRowHtml(x){
         ${sc!=null?`<span class="rsc">⚡${sc}</span>`:''}
         ${hasVid?`<span class="ic" title="ma wideo">🎬</span>`:''}
         ${packs.length?`<span class="ic" title="packshoty">🖼${packs.length}</span>`:''}
+        ${(()=>{const g=x.key?GROWTH.get(x.key):null;return g!=null&&g>0?`<span class="grBadge" title="wzrost sprzedaży tydzień do tygodnia">▲ +${g}%/tydz.</span>`:'';})()}
         ${seasonMiniHtml(x)}
       </div>
     </div>

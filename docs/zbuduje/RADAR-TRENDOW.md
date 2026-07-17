@@ -81,3 +81,13 @@ front liczy „dziś" lokalnie, edge w UTC — rozjazd max ~2 h na granicy okna.
 - **Windows curl + polskie znaki**: payloady przez plik (`--data-binary @plik`), nie inline (cp1250).
 - **Snapshot `source='search'`** może być innym produktem — scoring pomija narzut, panel flaguje ⚠, `ali_mismatch` do ręcznej podmiany linku.
 - Panel `/trendy`: dostęp RLS = 2 uid (Tomek+Maciek); `bud_tt_shop_history` SELECT też.
+
+## Usprawnienia 2026-07-17 (research bestsellerów — 3 agenci)
+
+- **Scoring v3**: sprzedaż 0.40 / narzut 0.25 / **recenzje 0.15** (log review_count, nasycenie 2k — corr ze sold 0.968!) / ocena 0.10 / świeżość 0.05 / **heat 0.05** (corr -0.105 — zdegradowany). Sales-blind (brak sold I recenzji) → score=null + score_meta.blind (koniec rankingu po szumie).
+- **Breakout/velocity**: widok `bud_breakout_v` (delta sold z bud_tt_shop_history, snapshoty ≥4 dni; puste do ~24.07 — historia młoda). Panel: sort „Rosnące" + badge ▲%/tydz. Refresh pending wt+pt (szybsza 2. migawka). To sygnał W1 z metodologii: velocity WoW > wartość absolutna.
+- **SELLER-MINING** („dobry sklep = kopalnia"): tabela `bud_radar_sellers` (188 sprzedawców z hitów, rotacja last_mined_at), `bud-shop-radar op:'mine_sellers'` → `/shop/products?sort_by=top` (slug w URL ignorowany — routing po seller_id; kształt = shop/search, parseSearchItem 1:1); cron pon/czw 06:45 {limit:5, perSeller:2} ≈ 70-110 kredytów/run. Pierwszy test: 2 sprzedawców → 33 bestsellery (SEESE: śrubokręty 315k!). Wspólny pipeline `ingestPicked()` dla scan+mine.
+- **Sezonowe queries dodane wyprzedzająco** (12: heaters/koce/choinki/szkoła) — jesienią radar ma amunicję.
+- **TikTok Shop PL** (start 15.06.2026 — fakt!): ScrapeCreators NIE pokrywa jeszcze region=PL (probe: 0 wyników; PL brak na liście regionów). Monitorować — natywne dane PL skompresują arbitraż US→PL. Early-mover window.
+- **Metodologia (docs w raportach agentów)**: wejście = 1. tydzień wzrostu; szczyt = twórcy przestają przybywać; progi jakości rating≥4.5/marża≥30%/saturacja <50 listingów; NIE scorować statycznej liczby twórców z 12 wideo (nasze dane: corr ujemna — to snapshot, nie przyrost).
+- **BACKLOG (kolejność wg wartości)**: creator-mining `/user/showcase` (wymaga author handle w parseProductDetail); recenzje TT `/shop/product/reviews` jako gate przy approve (świeżość, % incentivized, zdjęcia klientów pod landingi); enrich 159 ślepych pendingów (szukaj w shop/search po query EN); instrumentacja query→outcome (skuteczność tematów); raport reject_reason po N≥200; TikHub (GMV) dopiero gdy powyższe działają.
