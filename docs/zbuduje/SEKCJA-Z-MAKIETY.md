@@ -65,6 +65,18 @@ mobile <0.78 ⇒ sekcja NIE jest DONE — niezależnie od werdyktu wizualnego.**
 scene-from-mockup (STANDARD F3.1) cap assetowy nie istnieje — niski SSIM to kod albo
 grafika do poprawy, nie „sufit danych".
 
+**🔒 RUBRYKA WERDYKTU (R13 — OBOWIĄZKOWA w DOPASOWANIE.md, egzekwowana przez `gate-check.py`).**
+Każdy werdykt sekcji NIE jest prozą — to 5 pól T/N + WERDYKT. Format wiersza (kolumna „werdykt"):
+`skala_elem:T · AR_proporcje:T · guttery:T · tresc_od_krawedzi:T · wys_vs_makieta:T → WERDYKT: TAK`.
+- **WERDYKT=TAK bez kompletu 5×T = FAIL** (nie wolno „zaliczyć" sekcji z otwartym defektem).
+- **Sekcje KODOWE:** fraza-wytrych w wierszu werdyktu = FAIL. Zbanowane: `bez wpływu`, `reflow`,
+  `sufit`, `cap ~0`, `świadoma`, `pomijalne`, `do decyzji` (to były usprawiedliwienia odpuszczające
+  defekty — incydent Odpalak wideo). Chcesz zamknąć mimo różnicy? Napraw albo postaw pole na `N`
+  i uzasadnij MERYTORYCZNIE poza wierszem werdyktu.
+- 5 pól = te same osie co LAYOUT-DIFF: skala elementów, AR/proporcje, guttery, treść od krawędzi,
+  wysokość vs makieta. `sekcja-diff.py` wypełnia kolumnę LAYOUT (OK / LAYOUT-FAIL: …) strukturalnie;
+  vision wypełnia rubrykę — rozjazd LAYOUT=FAIL a rubryka=5×T sam się rzuca w oczy.
+
 ## ZASADY DODATKOWE
 - Sekcja bardzo złożona (gęsta siatka) → potnij makietę na pod-bloki (DCGen/LaTCoder),
   koduj blokami, składaj wg bboxów.
@@ -104,14 +116,30 @@ grafika do poprawy, nie „sufit danych".
   (np. 1024×1536) jest bardziej ściśnięta w pionie niż realna sekcja RWD, więc kontrolki
   wypadają poza porównywany (nakładający się od góry) kadr → SSIM ~0.72 mimo wiernego layoutu.
   Rekomendacja narzędziowa: dla mobile **letterbox obu obrazów do wspólnego aspektu** albo
-  ocena strukturalna; próg DONE mobile realnie ~0.72–0.80. **Werdykt wizualny rządzi.**
-- **SSIM przy scene-from-mockup — DOPRECYZOWANE (hero Uśmieszka 16.07):** scena z OSOBNEJ
-  generacji jest „ta sama" semantycznie, ale NIE pikselowo (inne ułożenie rekwizytów/faktur)
-  → SSIM całej sekcji ma naturalny sufit ~0.68–0.75 mimo wiernego kodu. Progi twarde (0.85/0.78)
-  stosować do sekcji, których assety są 1:1 (packshoty, UGC); dla sekcji z generowaną sceną:
-  oceniaj SSIM KIERUNKOWO (rosnący = lepiej) + werdykt vision na kompozycie decyduje o DONE,
-  a diffy sprawdzaj na WARSTWIE TREŚCI (kolumna copy/karty — tam kod odpowiada za piksele).
-  Sufit zniknie dopiero, gdy tło = dokładnie te same piksele (inpainting makiety — do zbadania).
+  ocena strukturalna. **⚠️ R13: „werdykt wizualny rządzi" USUNIĘTE** — sam werdykt vision
+  odpuszczał defekty mechaniki (Odpalak wideo: „kafle mniejsze niż makieta — bez wpływu na
+  charakter"). Werdykt vision jest teraz WSPÓŁ-warunkiem w RUBRYCE (Krok 5), a mechanikę i
+  proporcje twardo pilnuje LAYOUT-DIFF strukturalny (patrz niżej) — vision może zaostrzyć, nie
+  odpuścić.
+- **Naturalny sufit SSIM ~0.68–0.75 dotyczy TYLKO MASKI SCENY (R13 — nie całej sekcji).**
+  Scena z OSOBNEJ generacji jest „ta sama" semantycznie, ale NIE pikselowo (inne ułożenie
+  rekwizytów/faktur). Dlatego dla sekcji SCENOWEJ SSIM liczymy **DWUSKŁADNIKOWO** (`sekcja-diff.py`,
+  `ssim_split_scene`): (a) **maska bboxa sceny** (z IR lub selektorów `.hero-media` / `.prob-scene`
+  / `.final-scene` / `img[data-scene]`) — cap ~0.70 OSOBNO, tu sufit jest legalny; (b) **RESZTA
+  sekcji po zamaskowaniu sceny** (kolumny copy/karty — tam kod odpowiada za piksele) — próg 0.85.
+  Zakaz stosowania sufitu ~0.7 do CAŁEJ sekcji (to była furtka, którą przeszły zepsute sekcje).
+  Dla sekcji KODOWEJ (patrz „TYPY SEKCJI") sceny nie ma → SSIM twardy < 0.85 desktop / 0.80 mobile
+  = LAYOUT-FAIL. **Uwaga empiryczna R13:** SSIM real-render vs makieta AI ma niski sufit na OBU
+  landingach (dobry i zły) → SSIM sam NIE dyskryminuje wierności; robi to LAYOUT-DIFF + RUBRYKA.
+
+## TYPY SEKCJI (R13 — źródło: `gate-manifest.json` → `sekcja_typy`)
+- **KODOWA** (mechanika 1:1 z makiety, brak generowanej sceny): `wideo, porownanie, faq, opinie,
+  zamow, zaufanie, galeria`. SSIM twardy < 0.85 = LAYOUT-FAIL. Musi bazować na MODULE KANONICZNYM
+  gdy istnieje (`docs/zbuduje/moduly/`).
+- **SCENOWA** (dominuje generowana scena): `hero, problem, demo, final, korzysci`. SSIM
+  dwuskładnikowy (maska sceny cap ~0.70 + reszta 0.85). Aliasy DOM→typ: `trust→zaufanie`,
+  `benefits→korzysci`, `video→wideo`, `reviews→opinie`, `oferta→zamow`, `finalcta→final`.
+  Nadpisanie per landing: `sekcja_typy.override_per_landing`.
 - **Pomiar hero ze `svh`: viewport-diff.py (NOWE narzędzie)** — render-diff.py ma domyślny
   viewport 2400px wysokości, co rozciąga sekcje `min-height:100svh` i psuje crop `cover`
   (fałszywy SSIM). Pierwszy ekran porównuj: `viewport-diff.py <plik> <makieta> 1536 1024`

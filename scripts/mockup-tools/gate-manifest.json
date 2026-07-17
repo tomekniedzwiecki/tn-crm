@@ -162,5 +162,67 @@
       { "gdy_plik": "CHOREOGRAFIA.md", "ledger_zawiera": ["choreograf", "F5"], "label": "faza choreografii (F5)" },
       { "gdy_katalog": "interakcje", "ledger_zawiera": ["TOR-I", "tor-i"], "label": "faza TOR-I" }
     ]
+  },
+
+  "_opis_R13": "Domkniecia audytu R13 (17.07): typy sekcji + rubryka werdyktu + layout-diff strukturalny. Powod: werdykty vision odpuszczaly defekty mechaniki ('Kafle mniejsze niz makieta - bez wplywu na charakter'), IR nie istnial dla 4 zepsutych sekcji, SSIM po resize do wspolnej szerokosci niszczyl informacje o skali.",
+
+  "sekcja_typy": {
+    "_opis": "KODOWA = mechanika 1:1 z makiety, SSIM twardy. SCENOWA = generowana scena, SSIM dwuskladnikowy (maska sceny cap ~0.7, reszta 0.85). Aliasy normalizuja id z DOM do typu.",
+    "kodowa": ["wideo", "porownanie", "faq", "opinie", "zamow", "zaufanie", "galeria"],
+    "scenowa": ["hero", "problem", "demo", "final", "korzysci"],
+    "aliasy": {
+      "trust": "zaufanie", "benefits": "korzysci", "video": "wideo",
+      "reviews": "opinie", "gallery": "galeria", "oferta": "zamow",
+      "finalcta": "final", "final-cta": "final"
+    },
+    "override_per_landing": {}
+  },
+
+  "werdykt_rubryka": {
+    "severity": "FAIL",
+    "_opis": "Werdykt per sekcja MUSI miec 5 pol T/N + WERDYKT. WERDYKT=TAK bez kompletu 5xT = FAIL. Dla sekcji KODOWYCH: fraza-wytrych w wierszu werdyktu = FAIL.",
+    "pola": ["skala_elem", "AR_proporcje", "guttery", "tresc_od_krawedzi", "wys_vs_makieta"],
+    "pole_regex": "\\b(?:skala|ar|gut|kraw|wys)[a-z_]*\\s*[:=]\\s*\\*{0,2}([TN])\\b",
+    "min_pol": 5,
+    "werdykt_regex": "\\bWERDYKT\\s*[:=\\u2192-]{0,2}\\s*\\*{0,2}(TAK|NIE)\\b",
+    "tak_bez_werdykt_regex": "(?:\\||^)\\s*\\*{0,2}(TAK|NIE)\\b",
+    "fraza_wytrych_regex": "bez wp[lł]ywu|reflow|sufit|cap ~?0|[sś]wiadom|pomijaln|do decyzji"
+  },
+
+  "layout_diff": {
+    "severity": "FAIL",
+    "_opis": "Strukturalny diff IR-makiety vs DOM. Kolumna LAYOUT w DOPASOWANIE.md = FAIL/OK per check. gate-check czyta LAYOUT jako severity FAIL. IR komplet == liczba sekcji (wymuszane).",
+    "kolumna": "LAYOUT",
+    "fail_token": "LAYOUT-FAIL",
+    "checks": ["kafle", "wysokosc", "guttery", "obraz"],
+    "ir_dir": "ir",
+    "ir_glob": "*-IR.json",
+    "progi": {
+      "kafle_dwidth_pct": 30,
+      "kafle_dar_pct": 20,
+      "kafle_dcols": 1,
+      "sliver_medwpct_max": 0.12,
+      "sliver_cols_min": 5,
+      "sliver_ar_max": 0.8,
+      "wysokosc_tol_pct": 40,
+      "wysokosc_tylko_kodowa": true,
+      "gutter_asym_delta": 0.35,
+      "gutter_sekcje": ["hero", "final"],
+      "obraz_center_delta": 0.30,
+      "obraz_imgslot_min_area": 0.08,
+      "obraz_area_pct": 30,
+      "obraz_offset_slot_pct": 20
+    },
+    "ssim_progi": {
+      "kodowa_desktop": 0.85,
+      "kodowa_mobile": 0.80,
+      "scenowa_reszta": 0.85,
+      "scena_cap": 0.70
+    },
+    "scena_selektory": [
+      ".hero-media", "[data-mo='hero-scene']", ".prob-scene", "[data-mo='scene']",
+      ".final-scene", "[data-mo='final-breath']", ".benefits-scene", ".ben-media",
+      ".prob-media", ".final-media", "img[data-scene]"
+    ]
   }
 }

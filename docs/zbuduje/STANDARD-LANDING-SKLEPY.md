@@ -317,6 +317,15 @@ sandbox izolowany → test automatyczny stanów → pętla do zgodności → mon
 końcu) wg `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`. Do index.html wchodzą dopiero jako
 zielony sandbox.**
 Montaż markerowy + cross-check klas body↔CSS + grep gołych `<svg>`.
+**🧩 MODUŁY KANONICZNE (R13 — `docs/zbuduje/moduly/` + `MODULY.md`).** Gdy sekcja ma
+odpowiednik w bibliotece, koder MUSI użyć modułu jako **BAZY MECHANIKI** — nie pisze
+mechaniki od zera. Dostępne @1: `wideo-rail` (rail 9:16, IO-autoplay, unmute-exclusive),
+`lightbox` (delegacja `.gitem`), `sticky-buy` (IO na `.hero`), `faq-accordion` (natywny
+`<details>`, ZERO JS). Skórowanie = TYLKO tokeny/kolory/promienie/cienie/treść (kontrakt w
+nagłówku pliku modułu). **Z6 (design per projekt) dotyczy WYGLĄDU, nie MECHANIKI** — mechanika
+jest wspólna i sprawdzona; proporcje i JS = nietykalne (np. wideo desktop = `repeat(N,1fr)`,
+⛔ NIGDY `grid-auto-flow:column;grid-auto-columns:1fr` = slivery Odpalaka). Pisanie mechaniki
+od zera dla sekcji z modułem = **ODSTĘPSTWO raportowane w LEDGER**.
 **BRANDING w kodzie (F2.5):** wordmark = ŻYWY tekst HTML/CSS w foncie landingu (NIGDY obrazek
 z gpt-image — diakrytyki), favicon 32 w `<head>` jako data-URI, lockup topbara = favicon LEWA
 + wordmark PRAWA (flex, NIGDY pion). Pliki brand/ (favicon/wordmark/combo) renderowane z fontu,
@@ -378,7 +387,20 @@ interakcja (klik bez zmiany sceny, SSIM stanów ≥0.9) = FAIL nawet gdy reszta 
 kompozytu):** policz pliki `dopasowanie/NN-*.png` — musi być KOMPLET sekcji (hero+02–13).
 Braki = FAIL „niekompletny dowód F7.1", niezależnie od reszty. Twierdzenie „13/13 1:1"
 bez 13 kompozytów jest nieważne.
-(f) **GATE-CHECK (zbiorczy, maszynowy):** commit landingu dozwolony wyłącznie po `python scripts/mockup-tools/gate-check.py <slug>` z wynikiem 0 FAIL — skrypt (manifest `gate-manifest.json`) jest źródłem prawdy o kompletności artefaktów, nie deklaracja agenta. Sprawdza: pliki obowiązkowe, komplet dopasowanie/, interakcje/ TOR-I, grep zakazów (w tym dynamiczna nazwa shop z KARTY PRAWDY), sieroty assetów, budżety wag, pHash anty-monotonii, kuracje+rejestr nazw w bazie.
+(e2) **SSIM DWUSKŁADNIKOWY + LAYOUT-DIFF STRUKTURALNY (R13 — audyt Odpalaka: werdykty
+odpuszczały mechanikę „kafle mniejsze — bez wpływu").** `sekcja-diff.py` liczy per sekcję:
+(1) **SSIM wg TYPU** — KODOWA: twardy < 0.85 desktop / 0.80 mobile = LAYOUT-FAIL; SCENOWA:
+dwuskładnikowy (maska bboxa sceny cap ~0.70 OSOBNO + reszta sekcji po zamaskowaniu sceny próg
+0.85) — koniec z „sufit 0.7 na całą sekcję". (2) **LAYOUT-DIFF geometryczny** (IR makiety vs DOM
+getBoundingClientRect, wszystko w % szer.): kafle-slivery (cols≥5 & szer<12% & portret),
+wysokość vs makieta (kodowa, |Δ|>40%), guttery kolumny treści (hero/final, |Δasym|>0.35), obraz
+w slocie (środek na złej stronie, Δcx>0.30). Wynik = kolumna **LAYOUT** w DOPASOWANIE.md; każdy
+LAYOUT-FAIL blokuje. Werdykt vision w DOPASOWANIE.md musi być **RUBRYKĄ 5×T/N + WERDYKT**
+(skala_elem·AR·guttery·krawędź·wys) — WERDYKT=TAK bez 5×T = FAIL; frazy-wytrychy w sekcji
+KODOWEJ (`bez wpływu`, `pomijalne`, `świadoma`, `reflow`, `sufit`, `do decyzji`) = FAIL.
+**IR wymuszony dla WSZYSTKICH sekcji** (auto-gen mockup-ir; gate-check: „IR komplet == sekcje").
+Progi/typy = `gate-manifest.json` (`sekcja_typy`, `layout_diff`). Szczegóły: `SEKCJA-Z-MAKIETY.md`.
+(f) **GATE-CHECK (zbiorczy, maszynowy):** commit landingu dozwolony wyłącznie po `python scripts/mockup-tools/gate-check.py <slug>` z wynikiem 0 FAIL — skrypt (manifest `gate-manifest.json`) jest źródłem prawdy o kompletności artefaktów, nie deklaracja agenta. Sprawdza: pliki obowiązkowe, komplet dopasowanie/, interakcje/ TOR-I, grep zakazów (w tym dynamiczna nazwa shop z KARTY PRAWDY), sieroty assetów, budżety wag, pHash anty-monotonii, kuracje+rejestr nazw w bazie, **oraz (R13): rubryka werdyktu 5×T/N + frazy-wytrychy (KODOWE), kolumna LAYOUT (LAYOUT-FAIL), IR komplet == sekcje**.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**

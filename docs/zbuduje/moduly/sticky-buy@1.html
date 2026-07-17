@@ -1,0 +1,66 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: sticky-buy@1
+ŹRÓDŁO:   loczek@8726382b (2026-07-17) — dolny pasek szybkiego zamówienia (mobile)
+ROLA:     przyklejony pasek CTA na dole viewportu; pokazuje się DOPIERO po
+          zjechaniu poza hero (IntersectionObserver), na desktopie ukryty.
+
+────────────────────────────────────────────────────────────────────────────
+KONTRAKT SKÓROWANIA (co WOLNO zmienić):
+  • TYLKO tokeny/kolory/promienie: tło (rgba var(--paper)), var(--line), var(--ink),
+    var(--muted), radius miniatury, treść (nazwa/cena/podtytuł), href checkoutu.
+
+CO JEST NIETYKALNE (mechanika i proporcje — NIE RUSZAĆ):
+  • position:fixed + transform:translateY(120%) → .show translateY(0) (wjazd),
+  • @media(min-width:900px){display:none} (desktop ukryty),
+  • body padding-bottom pod pasek na mobile (żeby nie zasłaniał stopki),
+  • JS: IntersectionObserver na .hero — poza hero => .show; fallback => .show.
+
+WYMAGANIA: na stronie MUSI istnieć `.hero` (obserwowany) oraz element z
+  `data-checkout="<slug>"` (globalny listener checkoutu dekoruje link fbclid/_fbp).
+
+⛔ ANTY-WZORZEC: NIE pokazuj paska od razu (bez IO) — zasłania hero i psuje
+   pierwsze wrażenie; NIE pokazuj na desktopie.
+============================================================================
+-->
+
+<!-- (1) STYLE — do <head> lub scoped. -->
+<style>
+  .sticky-buy{position:fixed;left:0;right:0;bottom:0;z-index:60;transform:translateY(120%);
+    transition:transform .32s cubic-bezier(.4,0,.2,1);background:rgba(253,247,247,.95);
+    backdrop-filter:blur(12px);border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(80,45,39,.10);
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom))}
+  .sticky-buy.show{transform:translateY(0)}
+  .sticky-buy .sb{display:flex;align-items:center;gap:12px;max-width:var(--max);margin:0 auto}
+  .sticky-buy .sb-thumb{width:44px;height:44px;border-radius:10px;object-fit:cover;flex:0 0 auto;background:var(--paper-2)}
+  .sticky-buy .sb-info{flex:1;min-width:0}
+  .sticky-buy .sb-price{font-weight:700;font-size:16.5px;color:var(--ink)}
+  .sticky-buy .sb-price b{font-family:"Playfair Display",serif;font-weight:600}
+  .sticky-buy .sb-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sticky-buy .btn{padding:13px 24px;font-size:15.5px;white-space:nowrap}
+  @media (min-width:900px){.sticky-buy{display:none}}
+  @media (max-width:899px){body{padding-bottom:calc(74px + env(safe-area-inset-bottom))}}
+</style>
+
+<!-- (2) MARKUP — tuż przed </body>. -->
+<div class="sticky-buy" role="region" aria-label="Szybkie zamówienie">
+  <div class="sb">
+    <img class="sb-thumb" src="{{THUMB_URL}}" width="120" height="120" loading="lazy" alt="{{MARKA}}">
+    <div class="sb-info">
+      <div class="sb-price">{{MARKA}} · <b>{{CENA}}</b></div>
+      <div class="sb-sub">{{METODY_PLATNOSCI}}</div>
+    </div>
+    <a class="btn cta" data-checkout="{{SLUG}}" href="#zamow">Zamawiam</a>
+  </div>
+</div>
+
+<!-- (3) SKRYPT — IO na .hero; NIE RUSZAĆ logiki wjazdu. -->
+<script>
+(function(){try{
+  var stickyEl=document.querySelector('.sticky-buy'),heroEl=document.querySelector('.hero');
+  if(stickyEl&&heroEl&&'IntersectionObserver'in window){
+    new IntersectionObserver(function(es){es.forEach(function(en){en.isIntersecting?stickyEl.classList.remove('show'):stickyEl.classList.add('show');});},{threshold:0}).observe(heroEl);
+  }else if(stickyEl){stickyEl.classList.add('show');}
+}catch(e){try{document.querySelector('.sticky-buy').classList.add('show');}catch(_e){}}
+})();
+</script>

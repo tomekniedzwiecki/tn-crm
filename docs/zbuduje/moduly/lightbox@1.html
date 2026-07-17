@@ -1,0 +1,57 @@
+<!--
+============================================================================
+MODUŁ KANONICZNY: lightbox@1
+ŹRÓDŁO:   loczek@8726382b (2026-07-17) — overlay galerii + delegacja kliknięć
+ROLA:     pełnoekranowy podgląd zdjęcia/wideo z galerii. Delegacja zdarzeń
+          (jeden listener na document), zamknięcie: tło · przycisk × · Escape.
+
+────────────────────────────────────────────────────────────────────────────
+KONTRAKT SKÓROWANIA (co WOLNO zmienić):
+  • TYLKO kolory/promienie/cienie: tło overlaya (rgba), border-radius obrazu,
+    kolor/tło przycisku ×, blur. Rozmiary max (92vw/88vh) i mechanika = zostają.
+
+CO JEST NIETYKALNE (mechanika — NIE RUSZAĆ):
+  • delegacja `document.addEventListener('click', ...)` z `.closest('.gitem')`,
+  • odczyt źródła z `data-full` (fallback: <img src>) i alt z <img alt>,
+  • zamknięcie na `e.target===lb || e.target===x` oraz Escape,
+  • `.gitem{cursor:zoom-in}` na klikalnych kaflach galerii.
+
+UŻYCIE: każdy klikalny kafel galerii dostaje klasę `.gitem` + opcjonalnie
+        `data-full="<URL pełnego zdjęcia>"`; wewnątrz <img alt="...">.
+
+⛔ ANTY-WZORZEC: NIE podpinaj osobnego listenera pod każdy kafel (N listenerów,
+   sieroty po lazy-renderze). Delegacja na document jest jedynym poprawnym torem.
+============================================================================
+-->
+
+<!-- (1) STYLE — do <head> lub scoped. Klasy .lb-* i .gitem. -->
+<style>
+  .lb-overlay{position:fixed;inset:0;z-index:120;display:none;align-items:center;justify-content:center;
+    background:rgba(43,25,20,.82);backdrop-filter:blur(4px);padding:24px}
+  .lb-overlay.open{display:flex}
+  .lb-overlay img{max-width:min(92vw,1000px);max-height:88vh;width:auto;height:auto;border-radius:14px;
+    box-shadow:0 30px 80px rgba(0,0,0,.5)}
+  .lb-overlay video{max-width:min(92vw,440px);max-height:88vh;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,.5);background:#000}
+  .lb-overlay .lb-x{position:absolute;top:18px;right:20px;width:44px;height:44px;border-radius:50%;
+    border:none;background:rgba(255,255,255,.94);color:#3B2018;font-size:22px;cursor:pointer;line-height:1}
+  .gitem{cursor:zoom-in}
+</style>
+
+<!-- (2) MARKUP — jeden na stronę, tuż przed </body>. -->
+<div class="lb-overlay" id="lb" aria-hidden="true"><button class="lb-x" id="lb-x" aria-label="Zamknij">×</button><img id="lb-img" alt=""></div>
+
+<!-- (3) SKRYPT — delegacja; NIE RUSZAĆ. -->
+<script>
+(function(){try{
+  var lb=document.getElementById('lb'),img=document.getElementById('lb-img'),x=document.getElementById('lb-x');
+  if(!lb)return;
+  function open(src,alt){img.src=src;img.alt=alt||'';lb.classList.add('open');lb.setAttribute('aria-hidden','false');}
+  function close(){lb.classList.remove('open');lb.setAttribute('aria-hidden','true');img.src='';}
+  document.addEventListener('click',function(e){
+    var g=e.target.closest&&e.target.closest('.gitem');
+    if(g){var f=g.getAttribute('data-full')||(g.querySelector('img')&&g.querySelector('img').getAttribute('src'));var a=g.querySelector('img');open(f,a?a.getAttribute('alt'):'');return;}
+    if(e.target===lb||e.target===x)close();
+  });
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+}catch(e){}})();
+</script>

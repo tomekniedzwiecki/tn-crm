@@ -590,6 +590,149 @@ def check_ledger_fazy(res, M, ctx):
         res.add("ledger_fazy", r["label"], status_for(ok, sev),
                 "" if ok else "brak linii kosztow fazy w LEDGER")
 
+# ================================================================== R13: rubryka + layout-diff
+def resolve_sectype(sid, M):
+    st = M.get("sekcja_typy", {})
+    al = st.get("aliasy", {})
+    def nn(x): return norm(al.get(x, x))
+    base = nn(sid)
+    for k in st.get("kodowa", []):
+        if norm(k) == base or norm(k) == norm(sid): return "kodowa"
+    for k in st.get("scenowa", []):
+        if norm(k) == base or norm(k) == norm(sid): return "scenowa"
+    return "inna"
+
+def parse_md_table(md):
+    """Pierwsza tabela z naglowkiem zawierajacym 'sekcja' (przed MOBILE-390).
+       Zwraca (header_cells, {sekcja_id: cells})."""
+    head = md.split("<!-- MOBILE-390 -->", 1)[0]
+    rows = []
+    for ln in head.splitlines():
+        s = ln.strip()
+        if s.startswith("|") and s.endswith("|"):
+            rows.append([c.strip() for c in s.strip("|").split("|")])
+    header = None; hi = -1
+    for i, r in enumerate(rows):
+        if r and norm(r[0]) == "sekcja":
+            header = r; hi = i; break
+    if header is None:
+        return (None, {})
+    data = {}
+    for r in rows[hi+1:]:
+        if len(r) != len(header):
+            continue
+        if all(re.fullmatch(r"[-:\s]*", c) for c in r):
+            continue
+        sid = r[0].strip()
+        if not sid or re.fullmatch(r"[-:\s]*", sid):
+            continue
+        data[sid] = r
+    return (header, data)
+
+def col_idx(header, *keys):
+    for i, h in enumerate(header):
+        for k in keys:
+            if k in norm(h):
+                return i
+    return -1
+
+def check_werdykt_rubryka(res, M, ctx):
+    m = M.get("werdykt_rubryka")
+    if not m:
+        res.add("rubryka", "(config)", "SKIP", "brak werdykt_rubryka w manifescie")
+        return
+    sev = m["severity"]
+    md = ctx.get("dopasowanie_md")
+    if not md:
+        res.add("rubryka", "DOPASOWANIE.md", status_for(False, sev), "brak pliku")
+        return
+    header, data = parse_md_table(md)
+    if not header:
+        res.add("rubryka", "tabela werdyktow", status_for(False, sev), "brak tabeli z naglowkiem 'sekcja'")
+        return
+    wi = col_idx(header, "werdykt")
+    pol = re.compile(m["pole_regex"], re.I)
+    wrx = re.compile(m["werdykt_regex"], re.I)
+    bare = re.compile(m["tak_bez_werdykt_regex"], re.I)
+    fraza = re.compile(m["fraza_wytrych_regex"], re.I)
+    minp = m.get("min_pol", 5)
+    sections = ctx["sections"]
+    seen = 0
+    for sid in sections:
+        # dopasuj wiersz po id (lub aliasie DOM)
+        row = data.get(sid)
+        if row is None:
+            for k in data:
+                if norm(k) == norm(sid):
+                    row = data[k]; break
+        if row is None:
+            res.add("rubryka", sid, status_for(False, sev), "brak wiersza w DOPASOWANIE.md")
+            continue
+        seen += 1
+        cell = row[wi] if 0 <= wi < len(row) else row[-1]
+        flags = pol.findall(cell)
+        wm = wrx.search(cell)
+        verdict = wm.group(1).upper() if wm else (bare.search(cell).group(1).upper() if bare.search(cell) else None)
+        stype = resolve_sectype(sid, M)
+        n_t = sum(1 for f in flags if f.upper() == "T")
+        # (b) sekcje KODOWE: fraza-wytrych w werdykcie (odpuszczanie defektu) = FAIL
+        if stype == "kodowa":
+            fm = fraza.search(cell)
+            if fm:
+                res.add("rubryka", sid, status_for(False, sev),
+                        "fraza-wytrych w werdykcie KODOWEJ: '%s'" % fm.group(0))
+                continue
+        # (a) WERDYKT=TAK bez kompletu 5xT
+        if verdict == "TAK" and (len(flags) < minp or n_t < minp):
+            res.add("rubryka", sid, status_for(False, sev),
+                    "WERDYKT=TAK bez kompletu %dxT (pol=%d, T=%d)" % (minp, len(flags), n_t))
+            continue
+        if verdict is None:
+            res.add("rubryka", sid, status_for(False, sev), "brak WERDYKT (TAK/NIE) w wierszu")
+            continue
+        res.add("rubryka", sid, "PASS", "%s (%dxT)" % (verdict, n_t))
+    if seen == 0:
+        res.add("rubryka", "(wiersze)", status_for(False, sev), "zaden wiersz sekcji nie sparsowany")
+
+def check_layout_diff(res, M, ctx):
+    m = M.get("layout_diff")
+    if not m:
+        res.add("layout", "(config)", "SKIP", "brak layout_diff w manifescie")
+        return
+    sev = m["severity"]
+    # IR komplet == sekcje (R13: wymuszamy IR dla WSZYSTKICH sekcji)
+    ir_dir = os.path.join(ctx["archiwum"], m.get("ir_dir", "ir"))
+    ir_files = glob.glob(os.path.join(ir_dir, m.get("ir_glob", "*-IR.json")))
+    n_sec = len(ctx["sections"])
+    ok_ir = len(ir_files) >= n_sec
+    res.add("layout", "IR komplet == sekcje", status_for(ok_ir, sev),
+            "%d IR / %d sekcji" % (len(ir_files), n_sec))
+    # LAYOUT column w DOPASOWANIE.md
+    md = ctx.get("dopasowanie_md")
+    if not md:
+        res.add("layout", "kolumna LAYOUT", status_for(False, sev), "brak DOPASOWANIE.md")
+        return
+    header, data = parse_md_table(md)
+    if not header:
+        res.add("layout", "kolumna LAYOUT", status_for(False, sev), "brak tabeli")
+        return
+    li = col_idx(header, "layout")
+    if li < 0:
+        res.add("layout", "kolumna LAYOUT", status_for(False, sev),
+                "brak kolumny LAYOUT — uruchom sekcja-diff.py (R13)")
+        return
+    ftok = m.get("fail_token", "LAYOUT-FAIL")
+    fails = []
+    for sid, row in data.items():
+        cell = row[li] if 0 <= li < len(row) else ""
+        if ftok in cell or re.search(r"\bFAIL\b", cell):
+            fails.append("%s: %s" % (sid, cell[:60]))
+    if fails:
+        res.add("layout", "LAYOUT-FAIL per sekcja", status_for(False, sev),
+                "%d FAIL: %s" % (len(fails), " | ".join(fails[:6])))
+    else:
+        res.add("layout", "LAYOUT-FAIL per sekcja", "PASS", "brak LAYOUT-FAIL")
+
 # ================================================================== main
 def latest_archiwum(glob_tmpl, slug):
     pat = glob_tmpl.replace("{slug}", slug)
@@ -619,6 +762,8 @@ CHECK_ORDER = [
     ("makiety_mobile", check_makiety_mobile),
     ("og_image", check_og_image),
     ("ledger_fazy", check_ledger_fazy),
+    ("werdykt_rubryka", check_werdykt_rubryka),
+    ("layout_diff", check_layout_diff),
 ]
 
 def main():
@@ -655,6 +800,7 @@ def main():
     karta = read_text(os.path.join(arch, "KARTA-PRAWDY.md"))
     ledger = read_text(os.path.join(arch, "LEDGER.md"))
     product_key = args.product_key or extract_product_key(karta)
+    dop_md = read_text(os.path.join(arch, M.get("dopasowanie", {}).get("md", "dopasowanie/DOPASOWANIE.md").replace("/", os.sep)))
 
     ctx = {
         "slug": slug, "archiwum": arch, "code": code, "html": html,
@@ -664,6 +810,7 @@ def main():
         "timeout": M.get("http_timeout_s", 10),
         "no_net": args.no_net,
         "product_key": product_key,
+        "dopasowanie_md": dop_md,
     }
     print("  sekcje(id): %d  ·  URL-e bud-assets: %d  ·  product-key: %s"
           % (len(ctx["sections"]), len(ctx["urls"]), product_key or "-"))

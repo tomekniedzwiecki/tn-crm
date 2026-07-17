@@ -94,6 +94,14 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   makietach, SPEC-I, sandbox, test stanów (SSIM<0.9 + klatki), pętla max 4 → downgrade z notą.
 - **PRODUKT W SCENACH** (STANDARD §2): każda sekcja produktowa = WŁASNE ujęcie; ten sam kadr
   max 1× (wyj. oferta↔sticky); ≥5 distinct views; klony pozy scene-from-mockup = P1.
+- **MODUŁY KANONICZNE (R13; `docs/zbuduje/moduly/` + `MODULY.md`):** sekcja z odpowiednikiem MUSI
+  bazować na module (wideo-rail/lightbox/sticky-buy/faq-accordion@1) — skórka = tokeny/treść, mechanika
+  i proporcje NIETYKALNE (⛔ `grid-auto-flow:column;grid-auto-columns:1fr` = slivery). Kodowanie od zera = odstępstwo w LEDGER.
+- **TYPY SEKCJI + RUBRYKA WERDYKTU (R13; `gate-manifest.json` → `sekcja_typy`, `layout_diff`):** KODOWA
+  (wideo/porownanie/faq/opinie/zamow/zaufanie/galeria) SSIM<0.85=LAYOUT-FAIL; SCENOWA SSIM dwuskładnikowy
+  (maska sceny cap ~0.7 + reszta 0.85). Werdykt w DOPASOWANIE.md = **5×T/N + WERDYKT** (TAK bez 5×T=FAIL;
+  frazy-wytrychy `bez wpływu`/`pomijalne`/`świadoma`/`reflow` w KODOWEJ=FAIL). `sekcja-diff.py` = kolumna LAYOUT
+  strukturalny (kafle-sliver/wysokość/guttery/obraz); `gate-check.py` egzekwuje rubrykę + LAYOUT + IR komplet.
 
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 
