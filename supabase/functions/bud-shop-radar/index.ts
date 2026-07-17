@@ -16,6 +16,7 @@ import { adminGate } from '../_shared/bud-owner.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
 import { rehostShopImages } from '../_shared/shop-images.ts'
+import { normSeasonCode, seasonFields, seasonRule, SEASONS, SEASONAL_CODES } from '../_shared/seasons.ts'
 
 const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
@@ -50,19 +51,11 @@ function count(x: unknown): number | null {
 // znormalizowana nazwa = key (identyczne z bud-tt-ingest / bud-tt-trends)
 const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
 
-// ── SEZONOWOŚĆ ──
-// Walidacja klasyfikacji sezonowej z GPT. sell_from/sell_to = 'MM-DD' (okno SPRZEDAŻOWE).
-// Zła data / niepewne → all_year (NULL-e). Cel: nie sprzedawać po sezonie.
-const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
-// deno-lint-ignore no-explicit-any
-function normSeason(it: any): { season_type: string; season_label: string | null; sell_from: string | null; sell_to: string | null } {
-  const rawLabel = (typeof it?.season_label === 'string' && it.season_label.trim()) ? it.season_label.trim().slice(0, 40) : ''
-  if (it?.season_type !== 'seasonal') return { season_type: 'all_year', season_label: rawLabel || 'całoroczny', sell_from: null, sell_to: null }
-  const from = String(it?.sell_from || '').trim()
-  const to = String(it?.sell_to || '').trim()
-  if (!MMDD.test(from) || !MMDD.test(to)) return { season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null }
-  return { season_type: 'seasonal', season_label: rawLabel || 'sezonowy', sell_from: from, sell_to: to }
-}
+// ── SEZONOWOŚĆ ── (SSOT: docs/zbuduje/SEZONOWOSC.md; enum+okna w _shared/seasons.ts)
+// GPT wybiera TYLKO kod z zamkniętego enuma; okno narzuca serwer (seasonFields).
+// Reguła twarda (seasonRule) wygrywa z draftem modelu i domyka weryfikację.
+// Opis kodów do promptu (kod → jednowyrazowy hint), bez okien i wolnych etykiet.
+const SEASON_ENUM_HINT = SEASONAL_CODES.map((c) => `"${c}" (${SEASONS[c].label})`).join(', ')
 
 // -- SANITYZACJA POD JSONB --
 // Postgres jsonb ODRZUCA znak NUL oraz OSIEROCONE surogaty UTF-16 (blad
@@ -248,9 +241,9 @@ async function flushUsage(supabase: any) {
   const snap = { ...RU }; RU = { i: 0, c: 0, o: 0, calls: 0 }
   try { await supabase.from('bud_usage').insert({ session_id: null, kind: 'radar', model: MODEL, input_tokens: snap.i, cached_tokens: snap.c, output_tokens: snap.o, cost_usd: cost, meta: { from: 'bud-shop-radar', calls: snap.calls } }) } catch (e) { console.error('[bud-shop-radar] usage', e) }
 }
-type NameCat = { pl: string; category: string; season_type: string; season_label: string | null; sell_from: string | null; sell_to: string | null }
+type NameCat = { pl: string; category: string; season_code: string }
 async function namesAndCats(titles: string[]): Promise<NameCat[]> {
-  const fallback = (): NameCat => ({ pl: '', category: 'Inne', season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null })
+  const fallback = (): NameCat => ({ pl: '', category: 'Inne', season_code: 'all_year' })
   if (!titles.length || !OPENAI_KEY) return titles.map(fallback)
   const list = titles.map((t, i) => `${i}. ${(t || '').replace(/\s+/g, ' ').slice(0, 200)}`).join('\n')
   try {
@@ -258,7 +251,7 @@ async function namesAndCats(titles: string[]): Promise<NameCat[]> {
       method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: `Dostajesz listę tytułów produktów z TikTok Shop (EN, przeładowane słowami kluczowymi i śmieciami). Dla KAŻDEGO zwróć krótką polską nazwę handlową, kategorię i klasyfikację sezonową.\nZASADY NAZWY:\n- 2–6 słów, naturalna handlowa polszczyzna, pierwsza litera wielka\n- WYTNIJ śmieci: "2026","New","Hot Sale","Free Shipping","Dropshipping", kody, zbędne wymiary/ilości, listy wariantów\n- zachowaj wyróżnik/istotę produktu\n- markę podaj TYLKO gdy jest tożsamością produktu (np. CarPlay); inaczej pomiń\n- poprawne polskie diakrytyki\nZASADY SEZONOWOŚCI:\n- season_type: "seasonal" tylko gdy sprzedaż WYRAŹNIE zależy od pory roku/okazji; inaczej "all_year"\n- season_label: krótka polska etykieta (np. "lato","zima","grill","święta","Halloween","całoroczny")\n- sell_from/sell_to: okno SPRZEDAŻOWE w formacie "MM-DD" (start ~4-6 tyg. PRZED sezonem, koniec ~2-3 tyg. PRZED końcem sezonu; wrap-around dozwolony). Dla all_year → null.\n- Przykładowe okna: lato 04-15→08-05, grill 03-15→08-15, zima 09-15→01-31, święta 10-15→12-18, Halloween 09-01→10-25.\n- Wątpliwe → "all_year" (null-e).\nZwróć JSON {"items":[{"pl":"<nazwa>","category":"<jedna z: ${TT_CATS.join(' / ')}>","season_type":"all_year|seasonal","season_label":"<PL>","sell_from":"MM-DD|null","sell_to":"MM-DD|null"}]} w TEJ SAMEJ kolejności i liczbie co tytuły.\nTytuły:\n${list}` }],
+        messages: [{ role: 'user', content: `Dostajesz listę tytułów produktów z TikTok Shop (EN, przeładowane słowami kluczowymi i śmieciami). Dla KAŻDEGO zwróć krótką polską nazwę handlową, kategorię i KOD sezonu.\nZASADY NAZWY:\n- 2–6 słów, naturalna handlowa polszczyzna, pierwsza litera wielka\n- WYTNIJ śmieci: "2026","New","Hot Sale","Free Shipping","Dropshipping", kody, zbędne wymiary/ilości, listy wariantów\n- zachowaj wyróżnik/istotę produktu\n- markę podaj TYLKO gdy jest tożsamością produktu (np. CarPlay); inaczej pomiń\n- poprawne polskie diakrytyki\nSEZONOWOŚĆ — JEDYNE KRYTERIUM = POPYT (nie motyw wizualny ani słowo w nazwie):\n"Czy przeciętny Polak kupi ten produkt w danym miesiącu tak samo chętnie jak w szczycie? Jeśli poza oknem popyt praktycznie ZNIKA — sezonowy. Jeśli tylko spada — all_year."\n- Motyw/dekor (aurora, pączek, dynia) NIGDY sam nie przesądza sezonu.\n- Wątpliwe → "all_year" (fałszywy sezon ukrywa dobry produkt — gorszy błąd).\n- Dwusezonowe → "all_year".\nPRZYKŁADY (negatywne): projektor aurory → all_year; lampka-pączek → all_year; mata plażowa → lato; ogrzewacz rąk → zima_grzanie.\n- Zwróć season_code = DOKŁADNIE JEDEN kod z listy: "all_year", ${SEASON_ENUM_HINT}. Żadnych dat ani innych etykiet.\nZwróć JSON {"items":[{"pl":"<nazwa>","category":"<jedna z: ${TT_CATS.join(' / ')}>","season_code":"<kod z enuma>"}]} w TEJ SAMEJ kolejności i liczbie co tytuły.\nTytuły:\n${list}` }],
       }),
     }, 'shop-radar-names')
     if (!res.ok) { try { await res.body?.cancel() } catch { /* */ } return titles.map(fallback) }
@@ -266,8 +259,7 @@ async function namesAndCats(titles: string[]): Promise<NameCat[]> {
     const items = JSON.parse(j.choices[0].message.content).items || []
     return titles.map((_, i) => {
       const it = items[i] || {}
-      const s = normSeason(it)
-      return { pl: String(it?.pl || '').trim().slice(0, 80), category: TT_CATS.includes(it?.category) ? it.category : 'Inne', ...s }
+      return { pl: String(it?.pl || '').trim().slice(0, 80), category: TT_CATS.includes(it?.category) ? it.category : 'Inne', season_code: normSeasonCode(it?.season_code) || 'all_year' }
     })
   } catch { return titles.map(fallback) }
 }
@@ -360,7 +352,11 @@ Deno.serve(async (req) => {
   const nc = await namesAndCats(uniq.map((it: any) => it._detail?.title || it.title))
   uniq.forEach((it: any, i: number) => {
     it._pl = nc[i]?.pl || ''; it._cat = nc[i]?.category || 'Inne'
-    it._season = { season_type: nc[i]?.season_type || 'all_year', season_label: nc[i]?.season_label ?? 'całoroczny', sell_from: nc[i]?.sell_from ?? null, sell_to: nc[i]?.sell_to ?? null }
+    // Reguła twarda (słownik wymuszeń) PRZED wynikiem GPT: trafienie → source='rule', verified=true;
+    // inaczej draft z modelu (kod z enuma) → source='draft', verified=false. Okno zawsze z serwera.
+    const ruleCode = seasonRule(it._pl)
+    const code = ruleCode || nc[i]?.season_code || 'all_year'
+    it._season = { ...seasonFields(code), season_source: ruleCode ? 'rule' : 'draft', season_verified: !!ruleCode }
   })
 
   // odrzuć te bez sensownej nazwy / key
@@ -421,6 +417,8 @@ Deno.serve(async (req) => {
       season_label: it._season?.season_label ?? 'całoroczny',
       sell_from: it._season?.sell_from ?? null,
       sell_to: it._season?.sell_to ?? null,
+      season_source: it._season?.season_source || 'draft',
+      season_verified: it._season?.season_verified ?? false,
       query: it._query || null,
       tiktok_url: bestVideo,
       cover: it.images?.[0] || d?.images?.[0] || null, // pierwszy obraz produktu z shop CDN

@@ -7,6 +7,7 @@
 import { adminGate } from '../_shared/bud-owner.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { openaiFetchRetry } from '../_shared/openai-fetch.ts'
+import { normSeasonCode, seasonFields, seasonRule, SEASONS, SEASONAL_CODES } from '../_shared/seasons.ts'
 
 const SC = Deno.env.get('BUD_SCRAPECREATORS_API_KEY') || ''
 const OPENAI_KEY = Deno.env.get('OPENAI_API_KEY') || ''
@@ -42,28 +43,21 @@ async function pool<T, R>(items: T[], n: number, fn: (x: T, i: number) => Promis
 // GPT: z opisów filmów wyłuskaj POJEDYNCZY fizyczny produkt + kategorię; odsiej kompilacje/kursy/clickbait
 const TT_CATS = ['Dom & Kuchnia', 'Sprzątanie', 'Auto', 'Tech & Gadżety', 'Zdrowie & Uroda', 'Zwierzęta', 'Dzieci & Zabawki', 'Sport & Outdoor', 'Ogród & Majsterkowanie', 'Moda & Akcesoria', 'Podróże', 'Hobby & Kreatywne', 'Biuro & Organizacja', 'Inne']
 
-// ── SEZONOWOŚĆ ── walidacja klasyfikacji z GPT (okno SPRZEDAŻOWE 'MM-DD'; złe/niepewne → all_year).
-const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
-// deno-lint-ignore no-explicit-any
-function normSeason(it: any): { season_type: string; season_label: string | null; sell_from: string | null; sell_to: string | null } {
-  const rawLabel = (typeof it?.season_label === 'string' && it.season_label.trim()) ? it.season_label.trim().slice(0, 40) : ''
-  if (it?.season_type !== 'seasonal') return { season_type: 'all_year', season_label: rawLabel || 'całoroczny', sell_from: null, sell_to: null }
-  const from = String(it?.sell_from || '').trim()
-  const to = String(it?.sell_to || '').trim()
-  if (!MMDD.test(from) || !MMDD.test(to)) return { season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null }
-  return { season_type: 'seasonal', season_label: rawLabel || 'sezonowy', sell_from: from, sell_to: to }
-}
+// ── SEZONOWOŚĆ ── (SSOT: docs/zbuduje/SEZONOWOSC.md; enum+okna w _shared/seasons.ts)
+// GPT zwraca TYLKO kod z zamkniętego enuma; okno narzuca serwer (seasonFields). Reguła twarda
+// (seasonRule na pl_name) wygrywa z modelem. Pola płyną dalej przez bud-tt-ingest.
+const SEASON_ENUM_HINT = SEASONAL_CODES.map((c) => `"${c}" (${SEASONS[c].label})`).join(', ')
 
-type Extracted = { is_product: boolean, pl: string, q: string, category: string, season_type: string, season_label: string | null, sell_from: string | null, sell_to: string | null }
+type Extracted = { is_product: boolean, pl: string, q: string, category: string, season_code: string }
 async function extractProducts(descs: string[]): Promise<Extracted[]> {
-  const fb = (): Extracted => ({ is_product: false, pl: '', q: '', category: 'Inne', season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null })
+  const fb = (): Extracted => ({ is_product: false, pl: '', q: '', category: 'Inne', season_code: 'all_year' })
   const list = descs.map((d, i) => `${i}. ${d.replace(/\s+/g, ' ').slice(0, 160)}`).join('\n')
   try {
     const res = await openaiFetchRetry('https://api.openai.com/v1/chat/completions', {
       method: 'POST', headers: { authorization: `Bearer ${OPENAI_KEY}`, 'content-type': 'application/json' },
       body: JSON.stringify({
         model: MODEL, reasoning_effort: 'low', response_format: { type: 'json_object' },
-        messages: [{ role: 'user', content: `Z każdego opisu filmu TikTok (#tiktokmademebuyit itp.) wyłuskaj JEDEN konkretny fizyczny produkt.\nZwróć JSON {"items":[{"is_product":bool,"pl":"krótka polska nazwa handlowa","q":"2-4 słowa EN do wyszukania na AliExpress (generyczny typ produktu)","category":"<jedna z: ${TT_CATS.join(' / ')}>","season_type":"all_year|seasonal","season_label":"<PL etykieta, np. lato/zima/grill/święta/Halloween/całoroczny>","sell_from":"MM-DD|null","sell_to":"MM-DD|null"}]} w TEJ SAMEJ kolejności i liczbie.\nis_product=false gdy: kompilacja wielu produktów ("that last one", "who is buying the first one", "3 things"), film o dropshippingu/kursie/zarabianiu, sama lista hashtagów bez produktu, clickbait bez konkretu, usługa/aplikacja/treść cyfrowa, JEDZENIE/napój/suplement do spożycia, produkt czysto brandowany (konkretna marka nie do odtworzenia), ODZIEŻ lub etui do telefonu.\nSEZONOWOŚĆ: season_type="seasonal" tylko gdy sprzedaż WYRAŹNIE zależy od pory roku/okazji; inaczej "all_year". sell_from/sell_to = okno SPRZEDAŻOWE "MM-DD" (start ~4-6 tyg. PRZED sezonem, koniec ~2-3 tyg. PRZED końcem; wrap-around dozwolony); dla all_year → null. Przykłady: lato 04-15→08-05, grill 03-15→08-15, zima 09-15→01-31, święta 10-15→12-18, Halloween 09-01→10-25. Wątpliwe → all_year (null).\nOpisy:\n${list}` }],
+        messages: [{ role: 'user', content: `Z każdego opisu filmu TikTok (#tiktokmademebuyit itp.) wyłuskaj JEDEN konkretny fizyczny produkt.\nZwróć JSON {"items":[{"is_product":bool,"pl":"krótka polska nazwa handlowa","q":"2-4 słowa EN do wyszukania na AliExpress (generyczny typ produktu)","category":"<jedna z: ${TT_CATS.join(' / ')}>","season_code":"<kod sezonu>"}]} w TEJ SAMEJ kolejności i liczbie.\nis_product=false gdy: kompilacja wielu produktów ("that last one", "who is buying the first one", "3 things"), film o dropshippingu/kursie/zarabianiu, sama lista hashtagów bez produktu, clickbait bez konkretu, usługa/aplikacja/treść cyfrowa, JEDZENIE/napój/suplement do spożycia, produkt czysto brandowany (konkretna marka nie do odtworzenia), ODZIEŻ lub etui do telefonu.\nSEZONOWOŚĆ — JEDYNE KRYTERIUM = POPYT (nie motyw ani słowo w nazwie):\n"Czy przeciętny Polak kupi ten produkt w danym miesiącu tak samo chętnie jak w szczycie? Jeśli poza oknem popyt praktycznie ZNIKA — sezonowy. Jeśli tylko spada — all_year."\n- Motyw/dekor (aurora, pączek, dynia) NIGDY sam nie przesądza sezonu. Wątpliwe → "all_year". Dwusezonowe → "all_year".\n- Przykłady (negatywne): projektor aurory → all_year; lampka-pączek → all_year; mata plażowa → lato; ogrzewacz rąk → zima_grzanie.\n- season_code = DOKŁADNIE JEDEN kod z: "all_year", ${SEASON_ENUM_HINT}. Żadnych dat ani innych etykiet.\nOpisy:\n${list}` }],
       }),
     }, 'tt-extract')
     if (!res.ok) return descs.map(fb)
@@ -71,7 +65,7 @@ async function extractProducts(descs: string[]): Promise<Extracted[]> {
     feedUsage(j)
     const items = JSON.parse(j.choices[0].message.content).items || []
     // deno-lint-ignore no-explicit-any
-    return items.map((it: any) => ({ is_product: !!it?.is_product, pl: String(it?.pl || ''), q: String(it?.q || ''), category: it?.category || 'Inne', ...normSeason(it) }))
+    return items.map((it: any) => ({ is_product: !!it?.is_product, pl: String(it?.pl || ''), q: String(it?.q || ''), category: it?.category || 'Inne', season_code: normSeasonCode(it?.season_code) || 'all_year' }))
   } catch { return descs.map(fb) }
 }
 
@@ -285,7 +279,7 @@ Deno.serve(async (req) => {
       const key = norm(e.pl)
       if (!key) return
       let g = cl.get(key)
-      if (!g) { g = { pl: e.pl, q: e.q, category: e.category || 'Inne', season_type: e.season_type || 'all_year', season_label: e.season_label ?? 'całoroczny', sell_from: e.sell_from ?? null, sell_to: e.sell_to ?? null, videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, shares: 0, saves: 0, newest: 0, isAd: false, authorNick: '', followers: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
+      if (!g) { g = { pl: e.pl, q: e.q, category: e.category || 'Inne', season_code: e.season_code || 'all_year', videos: 0, plays: 0, maxPlays: 0, comments: 0, diggs: 0, shares: 0, saves: 0, newest: 0, isAd: false, authorNick: '', followers: 0, tags: new Set<string>(), urls: [], shop: '', cover: '', originCover: '', desc: '' }; cl.set(key, g) }
       g.videos++; g.plays += it.plays; g.comments += it.comments || 0; g.diggs += it.diggs || 0; g.shares += it.shares || 0; g.saves += it.saves || 0
       if (it.isAd) g.isAd = true
       if (it.plays > g.maxPlays) { g.maxPlays = it.plays; g.cover = cov(it.cover); g.originCover = cov(it.originCover); g.desc = it.seed; g.authorNick = it.authorNick || it.author; g.followers = it.followers || 0 }
@@ -341,7 +335,13 @@ Deno.serve(async (req) => {
     await flushRadar(supabase)   // koszt OpenAI tego przebiegu → bud_usage (kind='radar')
     return new Response(JSON.stringify({
       scanned_videos: items.length, found_products: cl.size, dropped_no_shop, require_shop: requireShop,
-      products: final.map(g => ({ pl: g.pl, q: g.q, category: g.category || 'Inne', season_type: g.season_type || 'all_year', season_label: g.season_label ?? 'całoroczny', sell_from: g.sell_from ?? null, sell_to: g.sell_to ?? null, heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, saves: g.saves, shares: g.shares, eng_rate: g.eng_rate, is_ad: g.isAd, author: g.authorNick, author_followers: g.followers, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null })),
+      products: final.map(g => {
+        // Reguła twarda PRZED wynikiem GPT: trafienie → 'rule'/verified; inaczej draft z modelu.
+        const ruleCode = seasonRule(g.pl)
+        const code = ruleCode || g.season_code || 'all_year'
+        const sf = seasonFields(code)
+        return { pl: g.pl, q: g.q, category: g.category || 'Inne', season_code: code, ...sf, season_source: ruleCode ? 'rule' : 'draft', season_verified: !!ruleCode, heat: g.heat, videos: g.videos, max_plays: g.maxPlays, total_plays: g.plays, comments: g.comments, saves: g.saves, shares: g.shares, eng_rate: g.eng_rate, is_ad: g.isAd, author: g.authorNick, author_followers: g.followers, newest_days: days(g.newest), tags: [...g.tags].slice(0, 4), tiktok_urls: g.urls, shop_url: g.shop, cover: g.cover, ali: g.ali || null, aliDbg: g.aliDbg || null }
+      }),
     }), { headers: { ...cors, 'content-type': 'application/json' } })
   }
 

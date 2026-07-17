@@ -100,6 +100,7 @@ Deno.serve(async (req) => {
       orders_sold_source,
       rating,
       review_count,
+      season_type: src.season_type || null,
       season_label: src.season_label || null,
       sell_from: src.sell_from || null,
       sell_to: src.sell_to || null,

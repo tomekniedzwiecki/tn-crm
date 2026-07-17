@@ -205,6 +205,34 @@
   .seasonBadge.in{border-color:#234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
   .seasonBadge.soon{border-color:#5a4412;background:rgba(245,181,63,.1);color:var(--gold)}
   .seasonBadge.off{border-color:#5a2326;background:rgba(229,72,77,.1);color:var(--red)}
+  /* Edytor sezonu w detalu */
+  .detSeasonEdit{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 20px 2px;font-size:12px}
+  .detSeasonEdit .seLab{display:inline-flex;align-items:center;gap:5px;color:var(--dim2);font-weight:600}
+  .detSeasonEdit .seLab svg{width:13px;height:13px}
+  .seSel{font-size:12px;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:7px;padding:4px 8px}
+  .seUnv{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px;border:1px solid #234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
+  .seVer{display:inline-flex;align-items:center;font-size:12px;font-weight:700;color:var(--green)}
+  .seWinBtn{font-size:11px;color:var(--dim);background:none;border:none;text-decoration:underline;cursor:pointer;padding:2px 4px}
+  .seWinBtn:hover{color:var(--text)}
+  .seWin{display:inline-flex;align-items:center;gap:6px}
+  .seIn{width:64px;font-size:12px;font-family:monospace;color:var(--text);background:var(--surface2);border:1px solid var(--line2);border-radius:6px;padding:3px 6px}
+  .seSave{display:inline-flex;align-items:center;background:rgba(70,180,106,.15);border:1px solid var(--green-d);border-radius:6px;color:var(--green);cursor:pointer;padding:3px 7px}
+  .seSave svg{width:12px;height:12px}
+  /* Karta „Sezony" */
+  .seasonCard{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;padding:8px 0 2px}
+  .seasonCard .scTitle{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--dim2);align-self:center}
+  .seasonCard .scTitle svg{width:13px;height:13px}
+  .scCell{display:flex;flex-direction:column;gap:1px;min-width:120px;text-align:left;padding:6px 12px;border-radius:8px;border:1px solid var(--line2);background:var(--surface);cursor:pointer;transition:.15s}
+  .scCell:hover:not([disabled]){border-color:#3a3a42}
+  .scCell[disabled]{opacity:.45;cursor:default}
+  .scCell .scN{font-size:16px;font-weight:700;color:var(--text)}
+  .scCell .scL{font-size:11px;color:var(--dim)}
+  .scCell.on{border-color:var(--green-d);background:rgba(70,180,106,.1)}
+  .scCell.gold.on{border-color:#5a4412;background:rgba(245,181,63,.1)}
+  .scCell.red.on{border-color:#5a2326;background:rgba(229,72,77,.1)}
+  .scCell.blue.on{border-color:#234a6e;background:rgba(50,145,255,.1)}
+  .fchip.fut.on{border-color:#2c5a3a;background:rgba(70,180,106,.1);color:var(--green)}
+  .fchip.chk.on{border-color:#234a6e;background:rgba(50,145,255,.1);color:var(--blue)}
   .chip{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);background:var(--surface2);border:1px solid var(--line);border-radius:7px;padding:3px 8px}
   .chip svg{width:12px;height:12px}
   .chip.a{cursor:pointer}.chip.a:hover{border-color:#3a3a42;color:var(--text)}
@@ -358,6 +386,7 @@
     </div>
     <button id="tableBtn" class="btn btn-sm" style="display:none">Tabela</button>
   </div>
+  <div class="seasonCard" id="seasonCard" style="display:none"></div>
   <div class="filterChips" id="filterChips"></div>
 </header>
 
@@ -425,15 +454,34 @@ function seasonBadgeHtml(x){
   if(end&&d!=null&&d<=21)return `<span class="seasonBadge soon">⏳ ${lab} · koniec ${end}</span>`;
   return `<span class="seasonBadge in">🗓 ${lab}${end?` · do ${end}`:''}</span>`;
 }
+// Enum sezonów PL (SSOT docs/zbuduje/SEZONOWOSC.md) — kod + label + okno sprzedażowe MM-DD (serwer narzuca okna).
+// season_type w bazie = coarse ('all_year'|'seasonal'); konkretny sezon rozróżnia label. Okna zaszyte tu = źródło auto-ustawienia.
+const SEASONS=[
+  {kod:'all_year',      label:'całoroczny', from:null,    to:null},
+  {kod:'lato',          label:'lato',       from:'04-15', to:'08-31'},
+  {kod:'zima_grzanie',  label:'zima',       from:'09-15', to:'01-31'},
+  {kod:'swieta_bn',     label:'święta',     from:'10-15', to:'12-18'},
+  {kod:'ogrod_wiosna',  label:'ogród',      from:'03-01', to:'09-30'},
+  {kod:'grill',         label:'grill',      from:'03-15', to:'09-30'},
+  {kod:'back_to_school',label:'szkoła',     from:'08-01', to:'09-15'},
+];
+// Predykaty sezonowe używane przez chipy i kartę „Sezony".
+function _seasonUnverified(x){return x.season_type==='seasonal'&&!x.season_verified;}         // „do sprawdzenia"
+function _seasonFuture(x){return x.status==='pending'&&_seasonOff(x);}                          // pending poza oknem = „na przyszły sezon"
+function _seasonEnter(x){if(x.season_type!=='seasonal'||inWindow(x.sell_from,x.sell_to))return false;const d=_daysUntil(x.sell_from);return d!=null&&d<=14;}
+function _seasonEnding(x){if(x.season_type!=='seasonal'||!inWindow(x.sell_from,x.sell_to))return false;const d=_daysUntil(x.sell_to);return d!=null&&d<=14;}
+function _seasonHib(x){return x.status==='approved'&&x.season_type==='seasonal'&&!inWindow(x.sell_from,x.sell_to);}
 const CATS=['Dom & Kuchnia','Sprzątanie','Auto','Tech & Gadżety','Zdrowie & Uroda','Zwierzęta','Dzieci & Zabawki','Sport & Outdoor','Ogród & Majsterkowanie','Moda & Akcesoria','Podróże','Hobby & Kreatywne','Biuro & Organizacja','Inne'];
 const REJECT_REASONS=[['za-drogie','za drogie'],['słaba-marża','słaba marża'],['gabaryt-wysyłka','gabaryt / wysyłka'],['marka-licencja','marka / licencja'],['moda-odzież','moda / odzież'],['commodity-nuda','commodity / nuda'],['zły-produkt','zły produkt'],['inne','inne']];
 
 // ── STAN ──
-let ROWS=[], LISTROWS=[], ME='', toastT;
+let ROWS=[], LISTROWS=[], ME='', MEID='', toastT;
 let FSTAT='pending';              // lejek: pending|approved|inlib|mismatch|rejected|duplicate|'' (wszystkie)
 let SORT='sales';                 // sales|score|price|new
 let SUBQ=null;                    // sub-kolejka pending: ready|dogrywka|nopack|null
 let FPROOF=false, FSEASONOFF=false, FSEASONSOON=false;
+let FFUTURE=false, FSEASONCHECK=false; // chipy: „Na przyszły sezon" (pending) / „Sezon do sprawdzenia"
+let SCARD=null;                   // aktywny licznik karty „Sezony": enter|end|hib|check|null
 let VIEW='list';                  // list|table
 let SELID=null, LASTDET=undefined, CURVID=null, REASONOPEN=false, LISTN=100;
 let TSORT={col:'score',dir:-1};
@@ -476,6 +524,7 @@ async function init(){
   if(!session){location.href='/login.html?redirect=/trendy';return;}
   const ALLOW=['93675a5a-ea02-488c-a6c2-4adf687ea435','7cd1830f-fca0-44d4-a419-7a822f77f919'];
   if(!ALLOW.includes(session.user.id)){$('loading').outerHTML='<div class="loader" style="color:var(--dim2);font-size:14px">Brak dostępu — ten widok jest tylko dla Maćka i Tomka.</div>';return;}
+  MEID=session.user.id;
   const {data:tm}=await sb.from('team_members').select('name').eq('user_id',session.user.id).maybeSingle();
   ME=tm?.name||session.user.email;
   $('fcat').innerHTML='<option value="">Wszystkie kategorie</option>'+CATS.map(c=>`<option>${esc(c)}</option>`).join('');
@@ -548,11 +597,24 @@ function rowInFunnel(x){
   if(FSTAT==='duplicate')return x.status==='duplicate';
   return true;
 }
+function _scardPred(x){
+  if(SCARD==='enter')return _seasonEnter(x);
+  if(SCARD==='end')return _seasonEnding(x);
+  if(SCARD==='hib')return _seasonHib(x);
+  if(SCARD==='check')return _seasonUnverified(x);
+  return true;
+}
 function rowMatches(x){
   if(!x)return false;
-  if(!rowInFunnel(x))return false;
   const fc=$('fcat').value; if(fc&&x.category!==fc)return false;
   const term=$('q').value.toLowerCase().trim(); if(term&&!(x.pl_name||'').toLowerCase().includes(term))return false;
+  // Karta „Sezony" — gdy aktywny licznik, pokazujemy jego zbiór z pominięciem lejka/chipów (globalny przegląd).
+  if(SCARD)return _scardPred(x);
+  if(!rowInFunnel(x))return false;
+  // „Na przyszły sezon": pending seasonal poza oknem WYKLUCZAMY z domyślnej kolejki (widoczne tylko po kliknięciu chipa/„Po sezonie").
+  if(FSTAT==='pending'&&_seasonOff(x)&&!FFUTURE&&!FSEASONOFF)return false;
+  if(FFUTURE&&!_seasonFuture(x))return false;
+  if(FSEASONCHECK&&!_seasonUnverified(x))return false;
   if(FSTAT==='pending'&&SUBQ){
     if(SUBQ==='ready'&&!_qReady(x))return false;
     if(SUBQ==='dogrywka'&&!_qDogrywka(x))return false;
@@ -582,6 +644,7 @@ function render(){
   updateToolbar();
   applyFilters();
   renderFunnel();
+  renderSeasonCard();
   renderChips();
   if(VIEW==='table'){$('split').style.display='none';$('tableWrap').style.display='';renderTable();return;}
   $('split').style.display='';$('tableWrap').style.display='none';
@@ -621,7 +684,7 @@ function renderFunnel(){
   </div></details>`;
   $('funnel').innerHTML=h;
 }
-function setFunnel(k){FSTAT=k;SUBQ=null;LISTN=100;SELID=null;LASTDET=undefined;if(k!=='approved'&&k!=='inlib')VIEW='list';render();}
+function setFunnel(k){FSTAT=k;SUBQ=null;SCARD=null;FFUTURE=false;LISTN=100;SELID=null;LASTDET=undefined;if(k!=='approved'&&k!=='inlib')VIEW='list';render();}
 
 // ── CHIPY ──
 function renderChips(){
@@ -635,42 +698,48 @@ function renderChips(){
     h+=`<button class="fchip sq ${SUBQ==='ready'?'on':''}" onclick="setSubq('ready')">✅ Gotowe do decyzji${rn?` · ${rn}`:''}</button>`;
     h+=`<button class="fchip sq ${SUBQ==='dogrywka'?'on':''}" onclick="setSubq('dogrywka')">◦ Do dogrywki${dn?` · ${dn}`:''}</button>`;
     h+=`<button class="fchip sq ${SUBQ==='nopack'?'on':''}" onclick="setSubq('nopack')">🖼 Bez packshotów${pn?` · ${pn}`:''}</button>`;
+    const futN=ROWS.filter(_seasonFuture).length;
+    h+=`<button class="fchip fut ${FFUTURE?'on':''}" onclick="toggleFuture()">🌱 Na przyszły sezon${futN?` · ${futN}`:''}</button>`;
     h+=`<span class="chipsep"></span>`;
   }
   const proofN=ROWS.filter(x=>rowInFunnel(x)&&x.tt_shop&&+x.tt_shop.sold_count>0).length;
   const soffN=ROWS.filter(x=>rowInFunnel(x)&&_seasonOff(x)).length;
   const ssoonN=ROWS.filter(x=>rowInFunnel(x)&&_seasonSoon(x)).length;
+  const checkN=ROWS.filter(x=>rowInFunnel(x)&&_seasonUnverified(x)).length;
   h+=`<button class="fchip ${FPROOF?'on':''}" onclick="toggleProof()">${I.cart} Dowód sprzedaży${proofN?` · ${proofN}`:''}</button>`;
+  h+=`<button class="fchip chk ${FSEASONCHECK?'on':''}" onclick="toggleSeasonCheck()">🔎 Sezon do sprawdzenia${checkN?` · ${checkN}`:''}</button>`;
   h+=`<button class="fchip soff ${FSEASONOFF?'on':''}" onclick="toggleSeasonOff()">⛔ Po sezonie${soffN?` · ${soffN}`:''}</button>`;
   h+=`<button class="fchip ssoon ${FSEASONSOON?'on':''}" onclick="toggleSeasonSoon()">⏳ Kończy się okno${ssoonN?` · ${ssoonN}`:''}</button>`;
   if(FSTAT==='approved'||FSTAT==='inlib'){
     const ex=ROWS.filter(x=>x.status==='approved'&&x.tt_shop&&+x.tt_shop.sold_count>0&&x.key&&!INLIB.has(x.key));
     h+=`<button class="btn btn-sm libBtn" onclick="exportAllProof()" ${ex.length?'':'disabled'}>${I.box} Eksportuj z dowodem${ex.length?` (${ex.length})`:''}</button>`;
   }
-  if(FSTAT==='pending'){
-    const offP=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)).length;
-    h+=`<button class="btn btn-sm btn-r libBtn" onclick="rejectSeasonOff()" ${offP?'':'disabled'}>⛔ Odrzuć po sezonie${offP?` (${offP})`:''}</button>`;
-  }
+  // „Odrzuć po sezonie" USUNIĘTE (SSOT: hibernacja, nie reject — dobry produkt sezonowy wraca za rok).
   el.innerHTML=h;
 }
-function setSubq(k){SUBQ=SUBQ===k?null:k;LISTN=100;SELID=null;render();}
-function toggleProof(){FPROOF=!FPROOF;LISTN=100;render();}
-function toggleSeasonOff(){FSEASONOFF=!FSEASONOFF;LISTN=100;render();}
-function toggleSeasonSoon(){FSEASONSOON=!FSEASONSOON;LISTN=100;render();}
-// Zbiorowe odrzucenie „po sezonie" — pending seasonal poza oknem → rejected (auto-season).
-async function rejectSeasonOff(){
-  const targets=ROWS.filter(x=>x.status==='pending'&&_seasonOff(x)&&x.id);
-  if(!targets.length){toast('Brak produktów po sezonie do odrzucenia');return;}
-  if(!confirm(`Odrzucić ${targets.length} produktów po sezonie? Znikną z listy „do decyzji".`))return;
-  toast('Odrzucam '+targets.length+' po sezonie…');
-  const ids=targets.map(x=>x.id), now=new Date().toISOString();
-  // Bez reject_reason: to auto-akcja (reviewed_by='auto-season' ją znaczy) — nie zaśmiecamy kubełków strojenia auto-filtra.
-  const{error}=await sb.from('bud_tt_products').update({status:'rejected',reviewed_by:'auto-season',reviewed_at:now}).in('id',ids);
-  if(error){toast('Błąd: '+error.message);return;}
-  targets.forEach(x=>{x.status='rejected';x.reviewed_by='auto-season';x.reviewed_at=now;});
-  toast(`Odrzucono ${targets.length} po sezonie ✓`);
-  SELID=null;render();
+function setSubq(k){SUBQ=SUBQ===k?null:k;SCARD=null;LISTN=100;SELID=null;render();}
+function toggleProof(){FPROOF=!FPROOF;SCARD=null;LISTN=100;render();}
+function toggleSeasonOff(){FSEASONOFF=!FSEASONOFF;SCARD=null;LISTN=100;render();}
+function toggleSeasonSoon(){FSEASONSOON=!FSEASONSOON;SCARD=null;LISTN=100;render();}
+function toggleFuture(){FFUTURE=!FFUTURE;SCARD=null;LISTN=100;SELID=null;render();}
+function toggleSeasonCheck(){FSEASONCHECK=!FSEASONCHECK;SCARD=null;LISTN=100;render();}
+
+// ── KARTA „SEZONY" (4 liczniki-filtry; widoczna tylko gdy którykolwiek >0) ──
+function renderSeasonCard(){
+  const el=$('seasonCard'); if(!el)return;
+  if(VIEW==='table'){el.style.display='none';el.innerHTML='';return;}
+  const enter=ROWS.filter(_seasonEnter).length, end=ROWS.filter(_seasonEnding).length,
+        hib=ROWS.filter(_seasonHib).length, chk=ROWS.filter(_seasonUnverified).length;
+  if(!(enter||end||hib||chk)){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  const cell=(k,ic,lab,val,cls)=>`<button class="scCell ${cls||''} ${SCARD===k?'on':''}" onclick="setScard('${k}')" ${val?'':'disabled'}><span class="scN">${val}</span><span class="scL">${ic} ${lab}</span></button>`;
+  el.innerHTML=`<span class="scTitle">${I.cal} Sezony</span>`
+    +cell('enter','🌱','Wchodzą w sezon',enter,'')
+    +cell('end','⏳','Kończą okno',end,'gold')
+    +cell('hib','⛔','Hibernacja',hib,'red')
+    +cell('check','🔎','Do sprawdzenia',chk,'blue');
 }
+function setScard(k){SCARD=SCARD===k?null:k;LISTN=100;SELID=null;LASTDET=undefined;render();}
 
 // ── LISTA (lewa kolumna) ──
 function renderList(){
@@ -793,7 +862,58 @@ function detHeadHtml(x){
       ${x.reviewed_by?`<span class="chip">${esc(x.reviewed_by)}${x.reviewed_at?' · '+fmtDate(x.reviewed_at):''}${x.reject_reason?' · '+esc(x.reject_reason):''}</span>`:''}
     </div>
     ${metricsHtml(x)}
+    ${seasonEditHtml(x)}
   </div>`;
+}
+// Edytor sezonu — select 7 pozycji (auto-okno z SEASONS) + „edytuj okno" (2× MM-DD). Zapis: manual + verified.
+function seasonEditHtml(x){
+  const isAY=x.season_type==='all_year', isSeasonal=x.season_type==='seasonal';
+  const curLabel=(x.season_label||'').trim().toLowerCase();
+  let selVal='';
+  if(isAY)selVal='0';
+  else if(isSeasonal){const i=SEASONS.findIndex(s=>s.kod!=='all_year'&&s.label.toLowerCase()===curLabel);selVal=i>=0?String(i):'';}
+  const opts=`<option value="">— nieoznaczony —</option>`+SEASONS.map((s,i)=>`<option value="${i}"${String(i)===selVal?' selected':''}>${esc(s.label)}${s.from?` · ${_mmddPL(s.from)}–${_mmddPL(s.to)}`:''}</option>`).join('');
+  const ver=isSeasonal?(x.season_verified
+      ?`<span class="seVer" title="zweryfikowany${x.season_source?' · źródło: '+esc(x.season_source):''}">✓</span>`
+      :`<span class="seUnv" title="sezon do sprawdzenia">● do sprawdzenia</span>`):'';
+  const win=isSeasonal?`<button type="button" class="seWinBtn" onclick="toggleSeasonWin('${x.id}')">edytuj okno</button>`
+    +`<span class="seWin" id="seWin-${x.id}" style="display:none">`
+    +`<input class="seIn" id="seFrom-${x.id}" value="${esc(x.sell_from||'')}" placeholder="MM-DD" maxlength="5">→`
+    +`<input class="seIn" id="seTo-${x.id}" value="${esc(x.sell_to||'')}" placeholder="MM-DD" maxlength="5">`
+    +`<button type="button" class="seSave" onclick="saveSeasonWindow('${x.id}')" title="Zapisz okno">${I.check}</button></span>`:'';
+  return `<div class="detSeasonEdit" id="detSeasonEdit">
+    <span class="seLab">${I.cal} Sezon:</span>
+    <select class="seSel" onchange="setSeasonFromSelect('${x.id}',this.value)">${opts}</select>
+    <span id="detSeasonBadge">${seasonBadgeHtml(x)}</span>
+    ${ver}${win}
+  </div>`;
+}
+function toggleSeasonWin(id){const w=$('seWin-'+id);if(w)w.style.display=(w.style.display==='none'?'inline-flex':'none');}
+// Zapis wyboru z selecta: auto-okno z SEASONS; puste = wyczyszczenie sezonu.
+async function setSeasonFromSelect(id,val){
+  const x=ROWS.find(r=>r.id===id); if(!x)return;
+  if(val===''){await writeSeason(x,{season_type:null,season_label:null,sell_from:null,sell_to:null});return;}
+  const s=SEASONS[+val]; if(!s)return;
+  await writeSeason(x,{season_type:s.kod==='all_year'?'all_year':'seasonal',season_label:s.label,sell_from:s.from,sell_to:s.to});
+}
+// Ręczne okno (wyjątki): walidacja MM-DD (01-12 / 01-31).
+async function saveSeasonWindow(id){
+  const x=ROWS.find(r=>r.id===id); if(!x)return;
+  const rf=/^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+  const f=(($('seFrom-'+id)||{}).value||'').trim(), t=(($('seTo-'+id)||{}).value||'').trim();
+  if(!rf.test(f)||!rf.test(t)){toast('Okno w formacie MM-DD (np. 04-15)');return;}
+  await writeSeason(x,{season_type:'seasonal',season_label:x.season_label||'sezonowy',sell_from:f,sell_to:t});
+}
+// Wspólny zapis sezonu — season_source='manual', verified=true, by=uid sesji, at=now. Patch UI bez remontu wideo.
+async function writeSeason(x,fields){
+  const now=new Date().toISOString();
+  const patch=Object.assign({},fields,{season_source:'manual',season_verified:true,season_verified_by:MEID,season_verified_at:now});
+  const {error}=await sb.from('bud_tt_products').update(patch).eq('id',x.id);
+  if(error){toast('Błąd zapisu sezonu: '+error.message);return;}
+  Object.assign(x,patch);
+  const ed=$('detSeasonEdit'); if(ed)ed.outerHTML=seasonEditHtml(x); // patch bloku (badge+select), NIE renderDetail → wideo gra dalej
+  applyFilters();renderList();markSelected();renderFunnel();renderSeasonCard();renderChips();
+  toast('Sezon zapisany ✓');
 }
 function metricsHtml(x){
   const shop=x.tt_shop||null, m=x.score_meta||{};
@@ -809,7 +929,7 @@ function metricsHtml(x){
   if(m.markup_x)items.push(`<div class="mtr">${I.trend}<b>×${esc(String(m.markup_x))}</b><span>narzut</span></div>`);
   if(m.ali_usd)items.push(`<div class="mtr">${I.store}<b>~${Math.round(m.ali_usd*4)} zł</b><span>Ali</span></div>`);
   if(rating)items.push(`<div class="mtr">${I.star}<b>${esc(String(rating))}</b><span>ocena</span></div>`);
-  const seas=seasonBadgeHtml(x); if(seas)items.push(seas);
+  // Badge sezonu przeniesiony do edytora sezonu (seasonEditHtml) — bez duplikatu w metrykach.
   items.push(`<div class="mtr" id="detDeltaWrap" style="${dw!=null&&dw>0?'':'display:none'}">${I.trend}<b class="up" id="detDelta">${dw!=null&&dw>0?'+'+fmt(dw):''}</b><span>/tydz.</span></div>`);
   return `<div class="detMetrics">${items.join('')}</div>`;
 }
@@ -1317,7 +1437,7 @@ function toggleTable(){VIEW=VIEW==='table'?'list':'table';render();}
 // Tabela → detal listy po ID (nie po nazwie): przełącz na listę, ustaw lejek approved, zaznacz produkt.
 function openCard(id){
   const x=ROWS.find(r=>r.id===id);if(!x)return;
-  VIEW='list';FSTAT='approved';SUBQ=null;FPROOF=false;FSEASONOFF=false;FSEASONSOON=false;
+  VIEW='list';FSTAT='approved';SUBQ=null;FPROOF=false;FSEASONOFF=false;FSEASONSOON=false;FFUTURE=false;FSEASONCHECK=false;SCARD=null;
   $('q').value='';LISTN=100;SELID=id;LASTDET=undefined;
   render(); // render sam wybiera SELID i montuje detal — selectRow byłby drugim montażem playera
   const el=document.getElementById('row-'+id); if(el)el.scrollIntoView({block:'center'});

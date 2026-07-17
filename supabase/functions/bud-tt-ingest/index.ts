@@ -2,6 +2,7 @@
 // Upsert po `key` — NIE nadpisuje pól weryfikacji pracownika (status/chosen_link/reviewed_*).
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { adminGate } from '../_shared/bud-owner.ts'
+import { applySeason, codeFromLabel, normSeasonCode, seasonFields, seasonRule } from '../_shared/seasons.ts'
 
 const cors = { 'access-control-allow-origin': '*', 'access-control-allow-headers': '*', 'access-control-allow-methods': 'POST, OPTIONS' }
 
@@ -17,20 +18,23 @@ Deno.serve(async (req) => {
   if (!prods.length) return new Response(JSON.stringify({ ok: true, purged: !!body.purge }), { headers: { ...cors, 'content-type': 'application/json' } })
 
   const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-ząćęłńóśźż0-9 ]/g, '').replace(/\s+/g, ' ').trim()
-  // SEZONOWOŚĆ: walidacja pól przekazanych z bud-tt-trends (okno 'MM-DD'; złe/niepewne → all_year).
-  const MMDD = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/
-  const season = (p: any) => {
-    const rawLabel = (typeof p?.season_label === 'string' && p.season_label.trim()) ? p.season_label.trim().slice(0, 40) : ''
-    if (p?.season_type !== 'seasonal') return { season_type: 'all_year', season_label: rawLabel || 'całoroczny', sell_from: null, sell_to: null }
-    const from = String(p?.sell_from || '').trim(); const to = String(p?.sell_to || '').trim()
-    if (!MMDD.test(from) || !MMDD.test(to)) return { season_type: 'all_year', season_label: 'całoroczny', sell_from: null, sell_to: null }
-    return { season_type: 'seasonal', season_label: rawLabel || 'sezonowy', sell_from: from, sell_to: to }
+  // SEZONOWOŚĆ (SSOT: docs/zbuduje/SEZONOWOSC.md): GPT dał KOD z enuma; okno narzuca serwer
+  // (seasonFields). Reguła twarda (seasonRule na pl_name) wygrywa → source='rule', verified=true;
+  // inaczej draft z radaru → source='draft', verified=false. Legacy fallback: kod z labelu.
+  // deno-lint-ignore no-explicit-any
+  const seasonOf = (p: any) => {
+    const plName = p.pl || p.pl_name || ''
+    const ruleCode = seasonRule(plName)
+    const code = ruleCode || normSeasonCode(p.season_code) ||
+      (p.season_type === 'seasonal' ? codeFromLabel(p.season_label) : null) || 'all_year'
+    return { ...seasonFields(code), season_source: ruleCode ? 'rule' : 'draft', season_verified: !!ruleCode }
   }
+  // deno-lint-ignore no-explicit-any
   const rows = prods.map((p: any) => ({
     key: norm(p.pl || p.pl_name || '') || (p.tiktok_url || '').slice(-24),
     pl_name: p.pl || p.pl_name || '',
     category: p.category || 'Inne',
-    ...season(p),
+    ...seasonOf(p),
     query: p.q || p.query || null,
     tiktok_url: p.tiktok_url || (p.tiktok_urls?.[0]) || null,
     cover: p.cover || null,
@@ -42,30 +46,46 @@ Deno.serve(async (req) => {
     ali_candidates: p.ali_candidates || [],
     ali_search_url: p.ali_search_url || null,
     shop_url: p.shop_url || null,
+    // deno-lint-ignore no-explicit-any
   })).filter((r: any) => r.key && r.pl_name)
 
-  // OCHRONA TRWAŁYCH MINIATUR: cover z TikTok CDN wygasa, więc po zatwierdzeniu jest
-  // przenoszony do storage (bud-tt-rehost). Re-ingest tego samego produktu NIE może
-  // nadpisać trwałego URL-a storage świeżym-wygasającym z TikToka. Wiersze, które już
-  // mają cover w storage, upsertujemy BEZ kolumny cover (zachowują storage).
+  // Stan istniejących wierszy: cover (ochrona miniatur) + season_source (priorytet źródeł).
   const keys = rows.map((r: any) => r.key)
-  const protectedKeys = new Set<string>()
+  const existingMap = new Map<string, { cover?: string; season_source?: string }>()
   for (let i = 0; i < keys.length; i += 300) {
-    const { data: ex } = await supabase.from('bud_tt_products').select('key,cover').in('key', keys.slice(i, i + 300))
-    for (const e of (ex || [])) { if (typeof e.cover === 'string' && e.cover.includes('/storage/v1/')) protectedKeys.add(e.key) }
+    const { data: ex } = await supabase.from('bud_tt_products').select('key,cover,season_source').in('key', keys.slice(i, i + 300))
+    for (const e of (ex || [])) existingMap.set((e as any).key, { cover: (e as any).cover, season_source: (e as any).season_source })
   }
-  const rowsNormal = rows.filter((r: any) => !protectedKeys.has(r.key))
-  const rowsProtected = rows.filter((r: any) => protectedKeys.has(r.key)).map((r: any) => { const { cover, ...rest } = r; return rest })
+
+  // Dwie niezależne ochrony przy upsercie istniejących:
+  //  (a) COVER: cover z TikTok CDN wygasa; po zatwierdzeniu jest w storage (bud-tt-rehost).
+  //      Re-ingest NIE nadpisuje trwałego storage-URL świeżym-wygasającym z TikToka → strip `cover`.
+  //  (b) SEZON: priorytet data>manual>rule>llm2>draft (applySeason). Draft z re-skanu NIE depcze
+  //      ręcznej/regułowej korekty → strip pól sezonu. Re-kick korekt niemożliwy.
+  const SEASON_COLS = ['season_type', 'season_label', 'sell_from', 'sell_to', 'season_source', 'season_verified']
+  let coverProtected = 0, seasonProtected = 0
+  const prepared = rows.map((r: any) => {
+    const ex = existingMap.get(r.key)
+    const out: any = { ...r }
+    if (ex && typeof ex.cover === 'string' && ex.cover.includes('/storage/v1/')) { delete out.cover; coverProtected++ }
+    if (ex && ex.season_source && !applySeason(ex, out.season_source)) { for (const c of SEASON_COLS) delete out[c]; seasonProtected++ }
+    return out
+  })
+
+  // Upsert w grupach o identycznym zestawie kolumn (mieszany zestaw w jednym INSERT NULL-owałby
+  // pominięte kolumny — dlatego grupujemy po sygnaturze kluczy).
+  const groups = new Map<string, any[]>()
+  for (const o of prepared) {
+    const sig = Object.keys(o).sort().join(',')
+    const arr = groups.get(sig) || []
+    if (!groups.has(sig)) groups.set(sig, arr)
+    arr.push(o)
+  }
   let upserted = 0
-  if (rowsNormal.length) {
-    const { error, count } = await supabase.from('bud_tt_products').upsert(rowsNormal, { onConflict: 'key', count: 'exact' })
+  for (const arr of groups.values()) {
+    const { error, count } = await supabase.from('bud_tt_products').upsert(arr, { onConflict: 'key', count: 'exact' })
     if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, 'content-type': 'application/json' } })
-    upserted += count ?? rowsNormal.length
+    upserted += count ?? arr.length
   }
-  if (rowsProtected.length) {
-    const { error, count } = await supabase.from('bud_tt_products').upsert(rowsProtected, { onConflict: 'key', count: 'exact' })
-    if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: { ...cors, 'content-type': 'application/json' } })
-    upserted += count ?? rowsProtected.length
-  }
-  return new Response(JSON.stringify({ ok: true, upserted, cover_protected: rowsProtected.length }), { headers: { ...cors, 'content-type': 'application/json' } })
+  return new Response(JSON.stringify({ ok: true, upserted, cover_protected: coverProtected, season_protected: seasonProtected }), { headers: { ...cors, 'content-type': 'application/json' } })
 })

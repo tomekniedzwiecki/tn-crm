@@ -424,8 +424,8 @@
             return out;
         }
 
-        // ── SEZONOWOŚĆ (kompakt) ── dane płyną z radaru: season_label/sell_from/sell_to ('MM-DD').
-        // Brak season_type w workflow_products → całoroczny rozpoznajemy po etykiecie ('całoroczny').
+        // ── SEZONOWOŚĆ (kompakt) ── dane płyną z radaru: season_type/season_label/sell_from/sell_to ('MM-DD').
+        // season_type ('all_year'|'seasonal') = źródło prawdy; label tylko do wyświetlenia.
         function _mmddPL(s) { const m = /^(\d{2})-(\d{2})$/.exec(s || ''); return m ? `${m[2]}.${m[1]}` : ''; } // "07-16" → "16.07"
         function inWindow(from, to) {                                  // czy dziś mieści się w oknie [from,to] (wrap-around)
             if (!from || !to) return true;
@@ -443,14 +443,16 @@
             return Math.round((d - now) / 86400000);
         }
         // Zwraca <span> badge sezonu (te same stany co /trendy) albo '' gdy brak danych sezonu.
+        // Decyzja o typie płynie z season_type (kolumna); /całoroczn/i tylko jako fallback dla nie-zmigrowanych wierszy.
         function seasonBadge(p) {
-            const label = (p.season_label || '').trim(), from = p.sell_from, to = p.sell_to;
-            if (!label && !from && !to) return '';
+            const type = (p.season_type || '').trim(), label = (p.season_label || '').trim(), from = p.sell_from, to = p.sell_to;
+            if (!type && !label && !from && !to) return '';
             const base = 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-medium border';
-            if (/całoroczn/i.test(label)) return `<span class="${base} bg-zinc-700/20 text-zinc-400 border-zinc-600/30">∞ ${esc(label || 'całoroczny')}</span>`;
+            if (type === 'all_year' || (!type && /całoroczn/i.test(label))) return `<span class="${base} bg-zinc-700/20 text-zinc-400 border-zinc-600/30">∞ ${esc(label || 'całoroczny')}</span>`;
+            if (type && type !== 'seasonal') return '';                         // nieznany typ → brak badge
             const lab = esc(label || 'sezonowy');
             if (from && to) {
-                if (!inWindow(from, to)) return `<span class="${base} bg-red-500/15 text-red-400 border-red-500/25">⛔ po sezonie (${lab})</span>`;
+                if (!inWindow(from, to)) return `<span class="${base} bg-red-500/15 text-red-400 border-red-500/25" title="Poza sezonem — wraca ${esc(_mmddPL(from))}">⛔ poza sezonem (${lab})</span>`;
                 const end = _mmddPL(to), d = _daysUntil(to);
                 if (end && d != null && d <= 21) return `<span class="${base} bg-amber-500/15 text-amber-400 border-amber-500/25">⏳ ${lab} · koniec ${end}</span>`;
                 return `<span class="${base} bg-blue-500/15 text-blue-400 border-blue-500/25">🗓 ${lab}${end ? ` · do ${end}` : ''}</span>`;
