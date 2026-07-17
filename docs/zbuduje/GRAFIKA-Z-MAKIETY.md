@@ -72,6 +72,26 @@ gałąź edits); `wf2-gen` = proxy, bez zmian. [TODO]
 wierność inputu wbudowana); wcześniejsza nota o `input_fidelity` obowiązuje tylko przy
 zejściu na gpt-image-1/1.5.
 
+## 3a. ARSENAŁ GRAFICZNY — co generować poza scenami/packshotami (klasa [D-art])
+
+Grafika landingu to nie tylko sceny i packshoty (research 17.07). Dozwolony arsenał
+dekoracyjny cięty z arkuszy (biel→alpha, klasa **[D-art]** — reguły w STANDARD F3.4):
+- **hand-drawn akcenty** (arkusz: strzałki/podkreślenia markerem/kółka, 1 kolor akcentu,
+  felt-tip, na czystej bieli) — najwyższy zwrot „human" przy małym ryzyku; max 2-3/stronę,
+  nakładka `mix-blend-mode:multiply`, nigdy POD tekstem wymagającym kontrastu;
+- **podkłady badge/pieczęci** (ząbkowany seal/ribbon, flat, 1 kolor, PUSTY środek) —
+  **tekst PL zawsze nakłada KOD** (diakrytyki!); prosty seal lepiej w czystym SVG;
+- **ramki washi-tape / polaroid / torn-paper** pod realne UGC (rotate ~2°, collage-feel;
+  ramka = D-art, zawartość = klasa U — osobne tagi);
+- **serie spot-ilustracji** z JEDNEGO arkusza 3×3 (wspólna paleta ≤3 kolorów) — tylko dla
+  marek „ciepłych"; clinical/tech → zostać przy flat SVG;
+- **tekstury papieru/lnu** — OSTROŻNIE: gpt-image NIE robi prawdziwego seamless; kafel
+  1536² jako `cover` bez repeat, albo mirror-blend szwu w PIL (test `np.roll`).
+**Reguła WEKTOR-FIRST (twarde NIE dla AI-PNG):** section dividers, wielkie liczby kroków
+(typografia!), noise/grain (SVG `feTurbulence`, opacity ≤.05), proste seale, watermark-
+patterny, izometryczne 3D-scenki (AI-slop tell), confetti. Format D-art: WebP/PNG z alfą,
+512px (drobne) / 1024px (detal), data-URI dla małych.
+
 ## 4. WERYFIKACJA 1:1 — REGION-SSIM (nie cała sekcja!)
 
 Wytnij TEN SAM bbox z makiety i z grafiki/renderu → wspólny rozmiar → SSIM sub-rectu;

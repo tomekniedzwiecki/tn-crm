@@ -68,3 +68,9 @@ Interakcja typu „zobacz X" (LED pokazuje żyłkę, przed/po efektu) WYMAGA rea
   z linią podziału (szew zdradza różnicę kadrów). Wipe tylko przy parze pixel-aligned
   (jeden obraz przetworzony deterministycznie, np. filtr który NAPRAWDĘ ukrywa efekt).
 - Gate F6(b): screenshot stanu min vs max (teaser zatrzymany przez event input) — SSIM <0.9.
+
+## GRANICA DETAL-LAYERA (17.07 — żeby wzbogacanie nie wpadło w tandetę)
+annotation/strzałki/highlighty = MAX 1 na sekcję (nie dekorować hurtowo) · grain = 1 źródło,
+opacity ≤.05 · hand-drawn tylko cienkie, nie „komiks" · overlap między-sekcjami z realnym
+elementem (produkt/karta/liczba), nie ozdobny blob · zero: rotacje na wszystkim, plusiki na
+każdym rogu, taped-photo gdy nie ma zdjęcia. Detal ma być RZADKI i celny, nie gęsty.

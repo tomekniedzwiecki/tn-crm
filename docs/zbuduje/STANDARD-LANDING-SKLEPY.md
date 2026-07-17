@@ -39,7 +39,11 @@ kod+efekty F4/F5 ~$0.8-1.2 · pętle F7 ~$0.8-1.2 · rezerwa na regeneracje i it
 W GÓRĘ ~$1.5-2.0. Landing za 2-3 zł = za ubogi = FAIL kalibracji.
 Spójność robi styl-master jako referencja KAŻDEJ generacji + mapa assetów (chaos = brak DNA
 stylu, nie liczba grafik). Krytyk pyta: „czy to wygląda na DROGI projekt?" — ubogi landing
-iterujemy W GÓRĘ.
+iterujemy W GÓRĘ. **Bogactwo to nie liczba grafik, lecz DETAL INTENCJONALNY (research 17.07):
+warstwowość, kontrast typograficzny (caps-label + oversized serif), jeden mocny akcent na
+sekcję (highlight/wielka liczba/annotation), asymetria i sygnatura wydawnicza (numery sekcji,
+hairlines, plusiki). Gładkie tła bez ziarna, równe siatki kart i wyśrodkowany split 50/50 =
+„poprawny AI-generyk" = FAIL kalibracji human-touch (patrz DETAL-LAYER w F2).**
 
 **Z4 — KOD PISZE ZAWSZE gpt-5.6-sol** (via edge `wf2-gpt`): sekcje, poprawki, iteracje.
 Agent Claude: dane, spec, montaż markerowy, weryfikacja, fixy integracyjne <5% (raportowane).
@@ -159,6 +163,21 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
    desktop tylko dla stylu/układu. Mobile-makieta WIĄŻE dla 390px, desktopowa dla ≥768px.
 
 **🎛️ RZEMIOSŁO PROMPTÓW MAKIET (research D, 16.07 — OpenAI cookbook + praktycy; UNIWERSALNE):**
+- **🎨 DETAL-LAYER (research 17.07 — human-crafted vs AI-generic): poprawna ≠ droga.**
+  Każda makieta sekcji dostaje min. 3/4 warstw detalu wydawniczego (dobrane pod motyw, nie
+  hurtowo): (a) SYGNATURA WYDAWNICZA — numer sekcji „0N" + eyebrow ALL-CAPS tracking 0.2em
+  nad oversized display-serif H2 (kontrast skali ≥1:5); (b) JEDEN AKCENT na sekcję —
+  highlight-swash w ciepłym kolorze pod 1 słowem ALBO wielka liczba-jako-grafika ALBO
+  1 annotation — dokładnie JEDEN, nie zbiór; (c) STRUKTURA WIDOCZNA — hairlines 1px,
+  plusiki „+" w rogach kart, crop-marks; karty na border+kontrast, JEDEN radius serii,
+  bez „shadow-lg"; (d) ASYMETRIA+WARSTWA — split ~35/65 lub bento z NIErównymi kaflami,
+  min. 1 element wychodzący poza kolumnę, depth skalą i temperaturą (nie cieniem).
+  W prompt makiety idą techniki renderowalne (numeracja, caps+serif, swash, wielkie liczby,
+  bento-asymetria, hairlines, plusiki, taped-photo, split 35/65, depth). Do KODU F4 (model
+  drży / to montaż): grain SVG feTurbulence (opacity ≤.05, 1 źródło), annotation-arrows
+  inline SVG (1/sekcja), overlap MIĘDZY sekcjami (ujemny margin + z-index), hand-drawn
+  stroke. Gate KRYTYKA rozszerzony: „gdzie tu ślad ręki projektanta?" — brak 3/4 warstw =
+  regeneracja makiety. Anty-AI-card: banuj shadow-lg + rounded-2xl/3xl.
 - **🥇 BRIEF CELU > DYKTAT ELEMENTÓW (Tomek 16.07, potwierdzone testem A/B na hero Uśmieszka):**
   najlepsze makiety wychodzą, gdy prompt opowiada CO sprzedajemy, KOMU i CO klient ma poczuć,
   a PRAWDZIWE fakty (cena, oceny, cechy, płatności) podaje jako MATERIAŁ do wyboru — kompozycję
@@ -233,6 +252,11 @@ po akceptcie zmiany wyglądu wyłącznie przez poprawkę grafiki i powrót do te
    = rozjazd z makietą (lekcja demo Świtka).
 4. **MAPA ASSETÓW (gate przed kodem):** tabela asset → sekcja → sposób użycia; taksonomia
    **[P] produkt/użycie/efekt** (wierność 3 warunków) / **[D] design związany z motywem**
+   — podklasa **[D-art]** = dekoracja cięta z arkusza biel→alpha (hand-drawn akcenty /
+   badge-podkład BEZ tekstu / ramka washi/polaroid/torn / spot-seria): ZERO wypalonego
+   tekstu PL, ≤3 kolory z mastera, ≤3/sekcję, `pointer-events:none`, nie liczy się do
+   pokrycia P/S/R; **wektor-first** — divider/liczby/grain/prosty seal/watermark = CSS/SVG,
+   NIE AI (szczegóły: GRAFIKA-Z-MAKIETY §3a)
    (nigdy generic). **Każdy asset dostaje też TAG KLASY OBRAZU (P=packshot / U=UGC /
    S=scena AI), a każdy slot sekcji ma ALLOWLISTĘ klas wg `docs/zbuduje/OBRAZY-ROLE.md`**
    (karta oferty = TYLKO packshot, NIGDY UGC; opinie = TYLKO UGC; zakaz obrazu-na-obrazie
@@ -409,7 +433,9 @@ glow ≤0.42, kadr ≥520px desktop) — biały wash marnuje bogatą generację.
 i width, i height) · hero mobile: jasny panel/scrim pod copy (tekst nie może nachodzić
 na scenę/twarz) · UGC podpisywać „zdjęcia od kupujących" — NIGDY „z AliExpress" (zdradzanie
 źródła = sygnał dropshippingu; uczciwość ≠ zdradzanie źródła) ·
-zakaz ornamentów-PNG (wstążki/chmurki/ściegi — cukierkowe; akcenty czystym CSS; wycinki
+zakaz ornamentów-PNG *cukierkowych* (glossy wstążki/chmurki/ściegi/złoto) — to zakaz TANDETY,
+nie kategorii dekoracji: [D-art] z arkuszy wg mapy assetów DOZWOLONY (hand-drawn, torn-paper,
+badge-podkład; grain = SVG feTurbulence, nie PNG); poza tym akcenty czystym CSS; wycinki
 z arkuszy tylko wg mapy assetów) · UGC z normalizacją CSS (brightness/contrast/saturate) ·
 PRZED/PO bez sparowanego realnego kadru = statyczny panel z JEDNĄ spójną sceną (nie mieszać
 realnego zdjęcia ze sceną AI w suwaku) · „świecenie" na jasnym packshocie = spotlight
