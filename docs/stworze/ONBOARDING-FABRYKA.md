@@ -184,6 +184,6 @@ dashboard aktywacji).
 - [x] SSOT (ten dokument) — 2026-07-16
 - [x] Research AI-async (Sonnet 5) — `docs/stworze/onboarding/RESEARCH-AI-ASYNC.md` + §4b „Aha za async-AI" — 2026-07-17
 - [x] Krok `onboarding` dodany: `wfa_step_defs` (stage 3, sort 88, owner admin, milestone „Onboarding gotowy — user wie, co robić") + WS (checklista §3) + prompt sesji (streszcza §3) w `tn-app/projekt.html`; ensure_steps dla Dobry Wstęp + fachmat — 2026-07-16 (migr. `20260716f_wfa_krok_onboarding.sql`)
-- [ ] Standard fabryki (starter scaffolding + prompt + template/CLAUDE.md) — reszta robi strumień startera
+- [x] Standard fabryki (starter scaffolding) — LIVE 2026-07-17. Checklist `@dsChecklist` (1. pre-checked, aha tylko realnym eventem), welcome survey, empty-states, instrumentacja stałych eventów, silnik maili (milestone trwały, seria gaśnie po aha, budżet 1/przebieg, List-Unsubscribe One-Click), dashboard aktywacji (lejek po step_index + kotwica t0, JTBD k-anon, rozkład TTFV). **Siatka bezpieczeństwa:** gate FAIL na `ONBOARDING_CONFIGURED=false` / `TODO —` (public+edge) / `<placeholder_nazwy>` + runtime-guard w `sendTpl`. Spójność aha: jedna nazwa w 3 miejscach (onboard core.event + AHA_EVENT + track). 3 rundy krytyka (UX+inżynier) + 3 rundy poprawek. Commity saas-starter `80f68a1`/`d873391`.
 - [ ] Wdrożenie Dobry Wstęp (aha = pierwszy wygenerowany PLAN)
 - [ ] Wdrożenie Fachmat (aha = pierwszy wygenerowany PDF oferty)
