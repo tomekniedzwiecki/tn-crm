@@ -3,6 +3,18 @@
 > Obowiązuje w każdym projekcie `/tn-app`. Prompty generowane w panelu odwołują się do tego dokumentu.
 > Pętla: **Spec → Plan → Sesje → Weryfikacja**. Zero „skakania do kodu". Tomek = decyzje i bramki; sesje = wykonanie.
 
+## 0. AUTONOMIA — default = KONTYNUUJ (decyzja Tomka 2026-07-17)
+
+**Nigdy nie pytaj „co robić", gdy czeka znana robota (backlog/etapy/kroki/STAN).** Rób ją. Fabryka ma iść
+sama tak długo, jak to możliwe, bez udziału Tomka. „Wymaga decyzji Tomka" NIE jest powodem do stopu, jeśli
+da się przyjąć rozsądny DOMYŚLNY wybór — wtedy buduj PARAMETRYZOWALNIE (env/config z bezpieczną domyślną),
+wdróż i odnotuj „(zmienisz jednym flagiem)". Po każdym domkniętym kroku sięgaj po następny.
+**PAUZA (przygotowując wszystko aż do bramki, i robiąc RÓWNOLEGLE inne rzeczy z backlogu) tylko przy PRAWDZIWYCH
+bramkach:** wysyłka maili/SMS do realnych ludzi (nigdy autonomicznie), płatności/Stripe/ceny, operacje
+destrukcyjne, ryzykowny deploy prod apki LIVE z realnymi userami (→ gałąź+preview). Pre-launch (cron off,
+brak realnych userów) = deploy autonomiczny OK. Bramki fabryki (audyt bezp., GATE A/B, SEC-CHECK, retro-akcept)
+egzekwuj i PRZECHODŹ sam. Szczegóły: pamięć `feedback-autonomia-maks-runway`.
+
 ## 1. Trzy filary kontekstu (żyją w REPO aplikacji, nie w czacie)
 
 1. **Paczka `brief/` w repo aplikacji** — spec (00-KONTEKST … 07-RUNBOOK + **08-PLAN-SESJI.md** + 09-SEO).
