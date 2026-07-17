@@ -80,6 +80,13 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   migracja `20260717c_videos_curated.sql`), self-host MP4 pipeline 1→N (poster własną klatką).
 - **PASS 4** w `detail-lint.py` (F7.3 `docs/zbuduje/FINALNY-PASS.md`): odstępy bloków, crop/DPR2,
   interakcja per viewport (hit-test), pay-badges kanon vs imitacje (`--fix` auto-swap).
+- **F7.1 DOWÓD per sekcja = GATE:** `dopasowanie/NN-*.png` komplet (hero+02–13) OBOWIĄZKOWY
+  przed DONE; brak = FAIL („13/13 1:1" bez kompozytów = nieważne). Skrypt `sekcja-diff.py
+  <url> <slug>` (batch cropy z granic DOM). ⛔ numeracja sekcji „01/12" na stronie = zakaz.
+- **TOR-I sekcje interaktywne** (`docs/zbuduje/SEKCJE-INTERAKTYWNE.md`): kwalifikacja na
+  makietach, SPEC-I, sandbox, test stanów (SSIM<0.9 + klatki), pętla max 4 → downgrade z notą.
+- **PRODUKT W SCENACH** (STANDARD §2): każda sekcja produktowa = WŁASNE ujęcie; ten sam kadr
+  max 1× (wyj. oferta↔sticky); ≥5 distinct views; klony pozy scene-from-mockup = P1.
 
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 

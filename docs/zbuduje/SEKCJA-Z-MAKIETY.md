@@ -48,6 +48,13 @@ render→diff→popraw (nie „na oko").
   edytuj wskazane bloki, nie regeneruj całości.
 **Krok 4 — pętla** aż DONE lub brak poprawy SSIM 2 rundy (→ eskalacja: regeneracja
 grafiki sceny / nota). Publikowana jest wersja KEEP-BEST.
+**Krok 5 — DOWÓD (OBOWIĄZKOWY, gate):** każda sekcja kończy się zapisem
+`FABRYKA-*/<slug>/dopasowanie/NN-<sekcja>.png` (makieta|render|heatmapa) + wierszem w
+`dopasowanie/DOPASOWANIE.md` (SSIM · werdykt vision · v#). BEZ tego pliku sekcja NIE jest
+DONE — zdanie „przeniesione 1:1" w LEDGER bez kompozytu = niedozwolone (incydent Loczek
+06-korzyści 17.07: biały panel+overlap makiety → open+kafel-podium; przepuszczone, bo
+kompozytu nie było — jedyna sekcja z dowodem [hero] była jedyną bez dryfu). Batch:
+`sekcja-diff.py <url> <slug>` generuje wszystkie NN naraz z granic DOM.
 **📏 PRÓG MINIMALNY ZAMKNIĘCIA (twardy, po hero Uśmieszka 0.7829): desktop <0.85 albo
 mobile <0.78 ⇒ sekcja NIE jest DONE — niezależnie od werdyktu wizualnego.** Werdykt
 „ten sam projekt?" jest WSPÓŁ-warunkiem (może zaostrzyć, nie obniżyć). Przy tle

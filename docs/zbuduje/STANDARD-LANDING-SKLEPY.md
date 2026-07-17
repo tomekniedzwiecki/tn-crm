@@ -348,7 +348,11 @@ w szerokim slocie full-bleed (i odwrotnie) = FAIL PRZED montażem (Latarek: fina
 SPEC-I.md + sandbox.html + klatki testu (A/mid/B × 390 i 1280) + werdykt vision
 „demonstruje cel SPEC-I?". Brak kompletu = FAIL. Świadomy downgrade do wariantu
 statycznego jest ważnym „gotowe" wyłącznie z wpisem w LEDGER.md (powód+data). Martwa
-interakcja (klik bez zmiany sceny, SSIM stanów ≥0.9) = FAIL nawet gdy reszta zielona.
+interakcja (klik bez zmiany sceny, SSIM stanów ≥0.9) = FAIL nawet gdy reszta zielona;
+(e) **GATE DOWODU DOPASOWANIA (audyt Loczka 17.07 — dryf 6/13 sekcji, wszystkie BEZ
+kompozytu):** policz pliki `dopasowanie/NN-*.png` — musi być KOMPLET sekcji (hero+02–13).
+Braki = FAIL „niekompletny dowód F7.1", niezależnie od reszty. Twierdzenie „13/13 1:1"
+bez 13 kompozytów jest nieważne.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**
@@ -376,7 +380,10 @@ ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-blee
    assetem" znika — tło strony = tło makiety, więc niski SSIM = wina kodu lub grafiki do
    poprawy.** Start od hero. Kompozyty
    archiwizować per sekcja/iteracja (`FABRYKA-*/<slug>/dopasowanie/<sekcja>-vN.png`) —
-   postęp ma być widoczny dla Tomka. Podział pracy (RETRO 16.07): analizę rozjazdów na
+   postęp ma być widoczny dla Tomka. **Artefakt per sekcja jest WARUNKIEM ZAMKNIĘCIA, nie
+   opcją. „Kod bezpośrednio przez agenta" (bez calli GPT) NIE zwalnia z F7.1 — odstępstwo
+   dotyczy tylko autora kodu, nie pętli dowodu. Koder chunku równoległego dostaje OBRAZ
+   makiety sekcji (anotowany URL) ZAWSZE, nie tylko przy „sekcji złożonej".** Podział pracy (RETRO 16.07): analizę rozjazdów na
    kompozytach może robić agent (vision) — GPT wołać do PRZEBUDÓW sekcji; mechaniczne fixy
    CSS/typografii <5% pliku = fixy integracyjne (dozwolone agentowi, raportowane).
 2. **Sanity rendera (krytyk wyglądu PRZENIESIONY do F2 — ocenia MAKIETY przed akceptem,
