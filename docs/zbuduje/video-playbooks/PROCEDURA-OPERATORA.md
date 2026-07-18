@@ -31,7 +31,7 @@ Skopiuj `KARTA.template.json` → `C:\tmp\video-factory\<proj>\KARTA.json` i wyp
 - **HSV nie „na oko":** `qa_gate.hsv_calibrate(packshot, cx_rel, cy_rel)` próbkuje region packshotu (współrzędne względne 0-1) i zwraca sugerowany zakres + werdykt `cv_reliable` (auto-wykrywa pasmo skóry). Wynik wpisz do KARTY; ręczny zakres tylko gdy kalibracja niemożliwa.
 - **`cv_reliable=false` MUSISZ ustawić także gdy** (poza metalem/skórą/LED): (a) **kolor FRAGMENTARYCZNY** na produkcie — rozproszone plamy/wzór/print → `connectedComponents` liczy PLAMY, nie egzemplarze; (b) **odcień przy hue-wrap 0/180 (CZERWIENIE!)** — H pęknięty na dwa końce skali; jeśli mimo to używasz maski, wypełnij `KARTA.product.hsv_ranges` DWOMA zakresami (obsłużone w `qa_gate`); (c) **kolor produktu kolidujący z elementami sceny** (tło/rekwizyt w tym samym zakresie HSV). **REGUŁA: zawsze zweryfikuj zakres HSV względem sceny** — jeśli tło/rekwizyty wpadają w maskę → `cv_reliable:false`, licznik robi VLM.
 - **Tożsamość gdy CAŁY WZORZEC pokazuje inny kolor/wariant niż nasza galeria Ali:** renderuj **ZAWSZE wg Ali** (galeria = jedyna prawda tożsamości), a kolor/wariant wzorca **wpisz do `forbidden_leaks`** — model referencji ruchu silnie ciągnie ku barwie wzorca, bez tego przecieknie.
-KARTA wchodzi VERBATIM do promptów i JEST checklistą bramki. Braki w KARCIE = braki w bramce.
+**KARTA = checklista BRAMEK, NIE tekst promptów** (rewizja 19.07): do promptów generacji idzie nazwa produktu + REFERENCJE-OBRAZY + akcja + zakazy (`forbidden_leaks`→negative); anatomia słowna zostaje w bramce (porównanie z packshotem per-element). Tekst opisujący wygląd walczy z obrazem i bywa błędny — incydent drapek. Braki w KARCIE = braki w bramce.
 
 ## KROK 3 — BLUEPRINT (agent vision)
 Dekonstruuj wzorzec do JSON wg **`blueprint.template.json`** (schemat OBOWIĄZKOWY od 19.07; wzór wypełnienia: `pilot-lokowka/blueprint-v2-przyklad-lokowka.json`): sceny z rolami, emocjami (min. 4 zwroty — beauty), akcjami OBU RĄK, briefami klatek EN, promptami ruchu, kwestiami PL z tagami v3. Kondensuj do 15 s wg 0c (jedna idea, 4-6 cięć, ujęcia ≤2,5-3 s). Blok `consistency` (twarz/kabel/rekwizyty/stany).
@@ -69,7 +69,10 @@ klatkami kluczowymi — incydent v2). Szczegóły: SSOT 0i.
    drift") — chainowanie tylko z first = wbudowany dryf (incydent drapek).
 3. **Preflight kontraktu**: każda scena demo ma `kontrakt_produktowy` (stan/kąt/skala/
    elementy/uzycie/must_show) — brak = STOP. Klatka łamie kontrakt → **inpaint-fix** nano
-   (`[zla_klatka, ref_stanu]`, „replace ONLY the mechanism") zanim spalisz FLF.
+   (`[zla_klatka, ref_stanu]`, „replace ONLY the mechanism to match Image 2") zanim spalisz FLF.
+4. **PROMPTY = INTENCJA + REFY + ZAKAZY** (rewizja 19.07): wygląd produktu niosą WYŁĄCZNIE
+   obrazy („the product from the reference images, EXACTLY as-is"); słowem opisujesz akcję
+   i użycie; negativem — czego ma nie być. ZAKAZ recytowania anatomii w promptach.
 
 ## KROK 7 — BRAMKA WIZYJNA KLIPU (`qa_gate.py`) — egzekwowalna
 Dla KAŻDEGO klipu przed montażem:

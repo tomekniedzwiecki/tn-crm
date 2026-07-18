@@ -78,9 +78,14 @@ Trzy niezależne audyty (detale / ciągłość / grade) tego samego segmentu →
 
 1. **KARTA PRODUKTU** — przed produkcją spisać kanoniczną anatomię z packshotu (dla lokówki:
    korona 6 ząbków = 2 wysokie płatki + 4 proste, wałek rose-gold, 2 listki + Y-LED + przycisk
-   na rękojeści, cienki RÓŻOWY kabel). Karta wchodzi VERBATIM do KAŻDEGO promptu klatki
-   i jest checklistą QA klatek. Przecieki z referencji pozy (szary kabel TYMO, pierścionki,
-   lakier) = odrzut klatki.
+   na rękojeści, cienki RÓŻOWY kabel). **REWIZJA 19.07 (Tomek — „nie opisuj detali, model
+   umie sam, jeśli go nakierujesz"): anatomia jest CHECKLISTĄ BRAMKI, NIE tekstem promptu.**
+   Do promptów generacji idzie: NAZWA produktu + REFERENCJE-OBRAZY („the scratch board from
+   the reference images, kept EXACTLY as-is") + akcja/intencja + ZAKAZY. Słowny opis wyglądu
+   w prompcie WALCZY z obrazem i potrafi wygrać — dowód: KARTA drapka kłamała („wnęka przy
+   lewym końcu"), zdjęcia mówiły center-right, model słuchał BŁĘDNEGO TEKSTU wbrew poprawnym
+   refom. Przecieki z referencji pozy (szary kabel TYMO, pierścionki, lakier) = odrzut klatki
+   (to egzekwuje bramka, nie prompt).
 2. **KARTA SCENOGRAFII** — jeden kanoniczny layout tła (dla pilota: półka z kosmetykami przy
    LEWEJ krawędzi, zasłona wafel za plecami, ciepłe okno) + strona ekranu urządzenia
    (prawa dłoń, prawa skroń, prawa strona kadru). Flip sceny = naprawa hflip w montażu.
@@ -297,6 +302,19 @@ ocenia per-klip, z pamięci, a `functional_count` jest ŚLEPY NA KSZTAŁT (1 pok
 nieważne że to ramka). Tomek: „tylko jedna scena pokazuje, jak działa produkt… to kluczowe,
 żeby reklama działała, a nie odstraszała". System = PREWENCJA + BRAMKA na wspólnym kontrakcie:
 
+**ZASADA NADRZĘDNA PROMPTÓW (Tomek 19.07): INTENCJA + REFERENCJE + ZAKAZY.**
+Dobry model wie, jak pokazać produkt, jeśli go NAKIEROWAĆ — nadmiar poleceń go gubi.
+Podział ról informacji:
+- **JAK PRODUKT WYGLĄDA → WYŁĄCZNIE ZDJĘCIA** (packshoty/stany/lifestyle jako refy +
+  „match the reference images exactly"). ZERO słownych opisów anatomii w promptach —
+  tekst walczy z obrazem i bywa błędny (incydent: KARTA kłamała, model poszedł za tekstem).
+- **CO SIĘ DZIEJE i JAK PRODUKT DZIAŁA → słowem** (akcja, intencja sceny, użycie —
+  krótko, bez mikro-reżyserii detali).
+- **CZEGO MA NIE BYĆ → negative/zakazy** (to zostaje twarde: morfy, ranty, zawiasy,
+  brandy, duplikaty — mówimy jak video NIE ma wyglądać).
+- Szczegółowe listy elementów/anatomii żyją w KARCIE jako **checklista BRAMKI** —
+  bramka porównuje wynik z packshotem per-element; prompt tego nie recytuje.
+
 **PREWENCJA (generacja — zrób wiernie za 1. razem):**
 1. **Per-frame packshot re-injection (ROOT-CAUSE, $0):** `last()` dostaje `[first, packshot
    właściwego STANU]` z rolą „Image 2 = EXACT product identity+state — correct any drift".
@@ -385,6 +403,45 @@ na której FLF halucynował otwarcie wnęki w ~3,3 s: Kling O1 z elements (front
 4 fps: zamknięta pokrywa, stały szew/pętla, zero rantu/zawiasu), $0.56. **`kref` WDROŻONY
 w render.py** (engine 'kref', EST 0.56). Vidu = backup nietestowany (odpalać tylko, gdy
 kref zawiedzie na innym produkcie).
+
+## 0j. RÓWNOLEGŁOŚĆ fal.ai — `gen_batch` (nie `gen()` w pętli) [pomiar 20.07]
+
+- **LIMIT KONTA (zmierzony empirycznie 20.07): ~12 równoległych** jobów `IN_PROGRESS` (test:
+  20× flux-pro submitnięte naraz → 12 biegło jednocześnie, 8 czekało `IN_QUEUE`; plateau=12).
+  Zgodne z fal docs: nowe konto = 2, skaluje się **do 40** z zakupem kredytów (>40 = enterprise);
+  to konto siedzi na ~12. Skrypty testowe: `scratchpad/conc_test*.py`.
+- **KLUCZOWE: `submit()` (kolejka) NIGDY nie dostaje 429.** Nadmiar ponad limit czeka w `IN_QUEUE`
+  ZA DARMO (kolejka nie liczy się do limitu), fal dyspozycjonuje gdy zwolni się runner → **submit-all
+  jest bezpieczny niezależnie od limitu** (twardo: 10 jobów wisiało IN_QUEUE 90s+ bez błędu).
+- **REGUŁA: pojedyncze generacje rób przez `fal.gen_batch(jobs)`, NIE `gen()` w pętli.** `gen()` jest
+  BLOKUJĄCY (submit+poll+download naraz → klipy sekwencyjnie). `gen_batch` = uogólniony wzorzec
+  render.py (submit WSZYSTKICH → poll-all → download): `jobs=[{model,payload,tag}]`, zwraca
+  `{tag: ścieżka}` (gdy `outdir`) albo `{tag: wynik_dict}` (gdy `outdir=None` — własne nazwy/num_images>1).
+  Odporność jak gen/render (4 transient z rzędu = `.failed`, dociągalny `reclaim`). CLI: `fal.py batch
+  <jobs.json> <outdir> [proj] [maxN]`. **`render.py render_scenes()` JUŻ jest równoległy — nie ruszać.**
+- **`max_parallel`**: `None` = submit wszystko (kolejka i tak trzyma limit). Na **WSPÓŁDZIELONYM koncie**
+  ustaw `max_parallel` (okno PRZESUWNE, nie fale), by nie zająć wszystkich ~12 slotów i nie zagłodzić
+  drugiej sesji — sensowny default 4-6 (zostawia sloty współlokatorowi).
+- **PROJECT-PREFIX (problem z 20.07: ledger mieszał 2 równoległe sesje — moje hero + reklama innej
+  sesji — po tagu):** równoległe zadania MUSZĄ używać RÓŻNYCH `project` (`gen_batch(..., project='hero')`
+  lub `fal.set_project()`), inaczej koszty w ledgerze zlewają się po tagu. Atrybucja = suma `est_usd`
+  po prefiksie tagu; **saldo prawdy = `fal.balance()`, NIE suma est** (billing propaguje ASYNC — delta
+  before/after pojedynczego szybkiego testu bywa $0; licz kumulatywnie).
+- **GDZIE UŻYĆ W FABRYCE:** (a) `render.py` klipy — ✓ już równoległe; (b) **`gen_audio.py`
+  (VO+music+ambient+SFX, ~13 jobów/kreację) — DZIŚ sekwencyjne w pętli `gen()`, NAJWIĘKSZY zysk**
+  (~3-4 min → ~30-60s): `gen_batch(outdir=None)` + download/postproc (ffmpeg trim SFX) per tag;
+  (c) **`genframes.py` klatki nano-banana** — sekwencyjne: batchuj wszystkie `first` (niezależne), potem
+  drugą falą wszystkie `last` (chainowane z uploadu first); (d) **przyszłe hero-video landingów**
+  (klip per landing / warianty hooka) → gen_batch z `project=<slug>`.
+- **OBRAZY gpt-image (wf2-gen → generate-image) — JUŻ RÓWNOLEGŁE:** bud-mockup / generate-campaign-batch /
+  bud-landing-gen fan-outują przez `Promise.all`/`allSettled` (count:1 per obraz, N osobnych edge-inwokacji
+  gpt-image-2 → równolegle). NIE bottleneck. (Jedyny sekwencyjny zakątek: JEDEN call generate-image
+  z `count>1` + provider **gemini** pętli `for i<min(count,4)`; gpt-image-2 robi `n` w jednym callu
+  server-side, a batch-callery używają count:1 — więc martwe. Zrównoleglać NIE trzeba.)
+- **LEKCJA modeli ZIMNYCH:** obskurne preview (`fal-ai/ltx-video`) = brak ciepłych runnerów, wiszą
+  w `IN_QUEUE` minutami (10 jobów, 90s+, zero dispatchu) — do fabryki brać CIEPŁE (Kling/nano-banana/
+  flux/Wan/OmniHuman). Transient 503 na status-pollu się zdarza (test: 2/20) → dlatego gen_batch/gen/
+  render tolerują 4 błędy z rzędu (job już OPŁACONY, dociągalny).
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 
