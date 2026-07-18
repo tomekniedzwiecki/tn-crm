@@ -231,7 +231,8 @@
                             <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-coins text-[#3291ff]"></i> Koszty produkcji</h3>
                             <span class="text-zinc-600 text-[11px]">sesje logują koszty same (panelUpd) · kurs NBP do przeliczeń USD→PLN</span>
                         </div>
-                        <div id="costs-cards" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5"></div>
+                        <div id="costs-cards" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3"></div>
+                        <div id="costs-kinds" class="flex flex-wrap gap-1.5 mb-5"></div>
                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
                             <div>
                                 <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Koszt jednostkowy per etap</div>
@@ -951,6 +952,14 @@
             document.getElementById('costs-cards').innerHTML = cards.map(c =>
                 `<div class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-3"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${c[0]}</div><div class="text-sm font-semibold font-mono ${c[2]}">${c[1]}</div></div>`).join('');
 
+            // rozbicie wg rodzaju (wideo = fal, osobno — życzenie Tomka 18.07)
+            const KIND_LABEL = { fal: 'wideo (fal)', manus: 'Manus', 'gpt-image': 'gpt-image', openai: 'OpenAI', gemini: 'Gemini', inne: 'inne' };
+            const byKind = {};
+            costs.forEach(c => { const k = c.kind || 'inne'; byKind[k] = (byKind[k] || 0) + costPln(c); });
+            document.getElementById('costs-kinds').innerHTML = Object.entries(byKind).sort((a, b) => b[1] - a[1]).map(([k, v]) =>
+                `<span class="inline-flex items-center gap-1.5 border border-[#2a2a2a] rounded-md px-2.5 py-1 text-[11px]"><span class="text-zinc-500">${escapeHtml(KIND_LABEL[k] || k)}</span><span class="font-mono text-white">${moneyPL(v)}</span></span>`).join('')
+                || '<span class="text-zinc-600 text-[11px]">—</span>';
+
             // per etap (stage z wpisu; fallback: z definicji kroku)
             const byStage = {};
             costs.forEach(c => {
@@ -1082,7 +1091,7 @@
                 check:['Choreograf: MOTION-DNA + spec per sekcja','Zestaw obowiązkowy: scroll-reveal, count-up, sticky slide-in','Mikrointerakcje CTA/kart','Interaktywne demo korzyści (filtr sensu OK)','TOR-I: SPEC-I → sandbox → test stanów → montaż','Zero martwych interakcji (SSIM stanów <0.9)','reduced-motion → pełna treść; 55-60fps, CLS=0'], prompt:'lp_zycie' },
             lp_finisz: { desc:'Ostatnia bramka. Weryfikacja twarda F6 (0 konsoli, 0 h-scroll, img OK, grep zakazów). GATE-CHECK maszynowy: gate-check.py <slug> = 0 FAIL (jedyna prawda o kompletności). Finalny pass F7.3 + PASS 5 semantyka. Na końcu RETRO F8: NOWE WNIOSKI → LEKSYKON + CHANGELOG.',
                 fields:[{k:'gate_check',l:'gate-check.py: FAIL count (=0)'},{k:'landing_url',l:'Landing URL (preview)'},{k:'nowe_wnioski',l:'NOWE WNIOSKI (retro F8)',ta:true}],
-                check:['F6 twarda: 0 konsoli, 0 h-scroll (390/768/1280), img OK','Grep zakazów + shop.name nie występuje w HTML','GATE-CHECK gate-check.py = 0 FAIL','Finalny pass: PASS 0-4 czyste','PASS 5 semantyka: SEMANTYKA.md komplet','Wersja + grafiki zarchiwizowane (Desktop)','RETRO F8: NOWE WNIOSKI + LEKSYKON + CHANGELOG','Status produktu → gotowy'], prompt:'lp_finisz' },
+                check:['F6 twarda: 0 konsoli, 0 h-scroll (390/768/1280), img OK','Grep zakazów + shop.name nie występuje w HTML','GATE-CHECK gate-check.py = 0 FAIL','Finalny pass: PASS 0-4 czyste','PASS 5 semantyka: SEMANTYKA.md komplet','Wersja + grafiki zarchiwizowane (Desktop)','RETRO F8: NOWE WNIOSKI + LEKSYKON + CHANGELOG','Koszty landinga zalogowane w wf2_costs (zakładka Koszty)','Status produktu → gotowy'], prompt:'lp_finisz' },
 
             // ── ETAP 3: SKLEP NA PLATFORMIE (Trevio przez wf2-platform) ──
             pl_sklep: { desc:'Przypięcie sklepu partnera do projektu: lista sklepów z API (akcja stores), wybór wolnego, zapis platform_shop_id + domeny startowej. Nowy sklep provisionuje developer platformy.',

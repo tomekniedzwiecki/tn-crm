@@ -736,7 +736,11 @@ widoczne FAQ; pól bez danych nie zmyślać) · anty-doorway (każdy landing gen
 8. Pętla dopasowania (F7.1) zamknięta: sekcje == makiety, progi twarde (desktop ≥0.85 /
    mobile ≥0.78) + werdykt „ten sam projekt" dla KAŻDEJ sekcji.
 9. Sanity rendera (F7.2) czyste: zero błędów technicznych renderu.
-10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze.
+10. Wersje + grafiki zarchiwizowane na pulpicie; koszty w ledgerze **ORAZ w `wf2_costs`
+    (od 18.07 OBOWIĄZKOWO — zakładka „Koszty" w /tn-sklepy; incydent Drapek: ledger był,
+    panel pusty): INSERT per faza (project_id wf2; produkt z portfela → product_id + step_key
+    lp_*; stage=2; amount USD; kind gpt-image/openai/fal; landing spoza portfela wf2 →
+    projekt rozwojowy `baacc66f-3dd0-462a-9799-de9c7aaea639`).
 11. **Karta Prawdy (Z7):** grep `shop.name`/URL sklepu źródłowego ⊄ HTML; KAŻDY claim ma kotwicę
     w źródle (§1a); JEDNA cena PL (zero różnic wariantów); `sold_volume` nieprzypisany.
 
