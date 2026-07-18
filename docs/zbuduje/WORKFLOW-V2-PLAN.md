@@ -70,7 +70,8 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   set_checkout_slug/integracje/domeny/logo/orders/dostawy+COD; retry 429; raw zostaje) ·
   **`wf2-landing-api`** (PUBLICZNY GET ?product= → cena/checkout_url z DB, cache 5 min —
   hydratacja ceny na landingu bez re-publikacji przy test→scale) · **`wf2-ads`** (rev2 19.07:
-  ŁĄCZNIE 3 kreacje Manus per produkt — kąty demo/problem/proof × format 4:5 w JEDNYM tasku;
+  ŁĄCZNIE 3 kreacje Manus per produkt — kąty demo/problem/lifestyle × format 4:5 w JEDNYM tasku
+  (`proof` = opcjonalny przez `body.angles`, decyzja Tomka 19.07 „zero grafik z opiniami");
   **silnik = WYŁĄCZNIE Manus, ZERO fallbacku Gemini (ZG9 „Manus albo nic")** — awaria = failed +
   reset ręczny; wynik → `wf2_products.ads_creatives` + rejestr `wf2_creatives` media_type='image';
   manus-webhook ma 3. gałąź routingu) · `wf2-orders-sync` (cron).
@@ -87,15 +88,18 @@ landingów i wideo — SSOT + playbooki + bramki QA z dowodami + rejestr z rodow
 wyników + odzwierciedlenie w panelu. **Silnik generacji = WYŁĄCZNIE Manus** (decyzja Tomka
 19.07: „albo Manus, albo ma się nie wykonać" — tor fallback Gemini CAŁKOWICIE wycięty z edge).
 
-- **Zestaw startowy (D2):** ŁĄCZNIE **3 kreacje** — 3 kąty (`demo`/`problem`/`proof`) × 1 format
+- **Zestaw startowy (D2):** ŁĄCZNIE **3 kreacje** — 3 kąty (`demo`/`problem`/`lifestyle`) × 1 format
   **4:5** (1080×1350) w JEDNYM tasku Manusa; pliki `ad_<n>_<angle>.png` (back-compat parsera).
+  `proof` (opinie/liczby zamówień) = OPCJONALNY, tylko na jawne `body.angles:['proof']` (decyzja
+  Tomka 19.07 „nie rób grafiki z opiniami"); edge waliduje białą listą `demo`/`problem`/`lifestyle`/`proof`.
   Format 9:16 (safe-zones 14/35/6%) = opisane ROZSZERZENIE na przyszłość, nie generowane domyślnie.
 - **Awaria (D2b):** kill-switch off / brak `MANUS_API_KEY` → edge zwraca 503 („generator wyłączony")
   bez generacji; brak kredytów / timeout >32 min / 0 obrazów → `ads_manus_status='failed'` +
   `ads_manus_step` z powodem + alert Slack; ŻADNEJ generacji zastępczej. Wznowienie = ręczny reset
   breakera w panelu po doładowaniu kredytów.
 - **SSOT + playbooki:** `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` (zasady ZG1–ZG9, fazy G0–G8,
-  formaty/polityka Meta/rejestr/modele D10) + `docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md`.
+  formaty/polityka Meta/rejestr/modele D10) + `docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md`
+  (`lifestyle` = domyślny 3. kąt; `proof` = opcjonalny).
 - **Bramki QA (D8):** `scripts/mockup-tools/ad-gate.py` (pomiary: miniatury @320px, safe-zones dla
   `*_916*`, pHash pairwise kątów) + werdykt agentowy; dowody → `bud-assets/<slug>/ads/dowody/` +
   `wf2_artifacts` kind='proof'.
@@ -422,7 +426,7 @@ Ból v1, którego v2 NIE dziedziczy:
 ### ETAP 5 — Materiały i kampania (scope: product)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
-| `ads_grafiki` | 3 grafiki (Manus) | admin | demo/problem/proof 4:5 — 3 koncepcyjnie różne „byty" (Andromeda skleja podobne) |
+| `ads_grafiki` | 3 grafiki (Manus) | admin | demo/problem/lifestyle 4:5 — 3 koncepcyjnie różne „byty" (Andromeda skleja podobne); `proof` opcjonalny przez `body.angles` |
 | `ads_wideo` | Wideo 15 s | admin | fabryka wideo (sub-kroki `avi_*`); finał + pack hooków ≤3 wersje |
 | `ads_zestaw` | Zestaw reklam + copy | admin | 6 adów (3 hooki wideo + 3 statyki), copy COD (125 znaków hook/headline ≤27/5 różnych tekstów), audyt polityki copy+LP RAZEM, flagi AI, mapa ?h=N, rejestr `wf2_creatives` |
 | `ads_kampanie` | Kampania Meta 🏁 | admin | 1 kampania/produkt, ABO, broad, Advantage+, PAUSED; `campaign_id` (§7) |

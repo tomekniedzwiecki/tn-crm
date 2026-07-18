@@ -81,7 +81,8 @@ Bramki G3–G5 są NIESAMOAKCEPTOWALNE: wierność ma DWIE pary oczu (pass-1 gen
 `bud-assets/<slug>/ads/dowody/`, nie notatka z pamięci.
 
 **ZG8 — EMOCJA↔PRODUKT (transfer twardy z PRZEWODNIK-GRAFICZNY).** **Nasz produkt pojawia się
-TYLKO w kadrach POZYTYWNYCH / rozwiązania** (demo w akcji, efekt/„po", oferta, packshot, CTA).
+TYLKO w kadrach POZYTYWNYCH / rozwiązania** (demo w akcji, `lifestyle` — scena „z życia" persony,
+efekt/„po", oferta, packshot, CTA).
 **Kąt/kadr „problem" pokazuje BÓL BEZ naszego produktu** — stary sposób, frustrację albo sam
 problem. ⛔ Nasz produkt NIGDY w sąsiedztwie negatywnej emocji (strach/stres/walka/opór/ból) —
 oko czyta „to ON jest źródłem stresu" niezależnie od copy (incydent Drapek: pies kulący się przy
@@ -131,7 +132,9 @@ referencja produktu jako OBIEKT · [T] logo + paleta + landing URL dostępne. Kt
 
 ### G1 — BRIEF PER KĄT
 **Cel:** 3 briefy = 3 koncepcyjnie różne byty, każdy zakotwiczony w prawdziwych bólach.
-**Kroki:** dla każdego z kątów `demo` / `problem` / `proof` otwórz właściwy playbook
+**Kroki:** dla każdego z kątów `demo` / `problem` / `lifestyle` (zestaw domyślny; `proof` jest
+OPCJONALNY — patrz `PLAYBOOK-ad-proof.md` — i wchodzi TYLKO na jawne `body.angles:['proof']`)
+otwórz właściwy playbook
 (`ad-playbooks/PLAYBOOK-ad-<angle>.md`) i wypisz: rolę/hook (echo hero landingu; hooki z
 `lp_plan` jeśli są), WIELKI hook/headline PL 2–4 słowa (do 6), badge (TYLKO prawdziwy, OPCJONALNY
 na grafice), primary_text 2–3 zdania,
@@ -145,9 +148,12 @@ storage='repo')`.
 
 ### G2 — GENERACJA (edge wf2-ads / Manus)
 **Cel:** wygenerować ŁĄCZNIE 3 kreacje w JEDNYM tasku Manusa.
-**Kroki:** invoke `wf2-ads {product_id, force?}` (default `angles=['demo','problem','proof']`,
-`formats=['45']`). Manus: 1 task = 3 pliki `ad_1_demo.png` / `ad_2_problem.png` / `ad_3_proof.png`
+**Kroki:** invoke `wf2-ads {product_id, force?}` (default `angles=['demo','problem','lifestyle']`,
+`formats=['45']`). Manus: 1 task = 3 pliki `ad_1_demo.png` / `ad_2_problem.png` / `ad_3_lifestyle.png`
 (4:5, 1080×1350) + `campaign.json`. Poll status; przy `running` link `https://manus.im/app/{task_id}`.
+Edge waliduje `angles` białą listą `demo`/`problem`/`lifestyle`/`proof`; `proof` (opinie/liczby) =
+OPCJONALNY, wchodzi TYLKO na jawne `body.angles:['proof']` (decyzja Tomka 19.07: zero grafik z opinii
+w defaultach — zamiast `proof` idzie `lifestyle`).
 **⚠️ ZG9:** jeśli edge zwraca 503 („generator wyłączony") lub `failed` → NIE ma ścieżki
 zastępczej. Zgłoś stan, poczekaj na ręczny reset (kredyty). Nie generuj niczym innym.
 **Bramka G2 (T/N):** [T] `ads_manus_status='completed'` · [T] 3 pliki obecne · [T] `campaign.json`
@@ -191,7 +197,9 @@ pseudo-glifów/scramble; diakrytyki poprawne (Read grafiki + porównanie z `camp
 „Wstydzisz się…") · [T] zero before/after wellness (w tym implied „produkt obok zdrowej osoby")
 · [T] zero słów-triggerów (cure/treat/„gwarantowane rezultaty"/„efekt w 24h"/„natychmiastowa
 ulga") · [T] blocklista `ADS-BLOCKLISTA-PL.md` czysta · [T] zero obcych logo / TikTok UI · [T]
-`proof` = AI-prezenter demonstrujący, NIGDY fałszywy testimonial-człowiek · [T] flaga AI ustawiona
+`lifestyle` = scena UGC „z życia" (ciepła, autentyczna, produkt w użyciu), NIGDY stockowy uśmiech/
+studyjna perfekcja/elementy UI · [T] **gdy w zestawie jest OPCJONALNY `proof`:** `proof` = AI-prezenter
+demonstrujący, NIGDY fałszywy testimonial-człowiek · [T] flaga AI ustawiona
 (`ai_labeled=true`). **Bramka różnorodności (T/N):** [T] pHash pairwise między 3 kątami ≥ próg
 (3 różne byty — próg w `ad-gate.py`) · [T] 3 różne layouty/palety/role produktu. FAIL różnorodności
 → regeneracja najbliższej pary z innym playbookiem. → dowód: `dowody/report.json` (pHash) +
@@ -382,6 +390,15 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 ---
 
 ## CHANGELOG DECYZJI (G8)
+
+- **2026-07-19 — ZESTAW KĄTÓW: `proof` (opinie/liczby) WYPADA z defaultów** (decyzja Tomka: «nie
+  rób grafiki z opiniami»); zamiast niego `lifestyle` (UGC z życia persony — wzorzec Kreacji 2 ze
+  starego `manus-full-campaign`). `proof` = OPCJONALNY przez `body.angles:['proof']`. Edge waliduje
+  `angles` białą listą `demo`/`problem`/`lifestyle`/`proof`; default = `['demo','problem','lifestyle']`
+  (`wf2-ads` `ANGLES`), pliki `ad_1_demo`/`ad_2_problem`/`ad_3_lifestyle`. Nowy `PLAYBOOK-ad-lifestyle.md`
+  (autentyczność, zero stockowego uśmiechu, zero UI, produkt 1:1 w naturalnym użyciu); `PLAYBOOK-ad-proof.md`
+  oznaczony jako OPCJONALNY (box na górze). Zsynchronizowane: G1/G2/G5, ZG8, FORMATY. Źródło prawdy DNA
+  kątów pozostaje `buildAdsInstruction()` w `wf2-ads`.
 
 - **2026-07-19 — rev3 ART-DIRECTION PREMIUM** (feedback Tomka po 1. przebiegu: «fatalna jakość
   vs stary flow»): wzorce przywrócone ze starego `manus-full-campaign` (Clean Hero / MIT vs FAKT /

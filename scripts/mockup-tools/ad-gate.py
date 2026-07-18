@@ -16,7 +16,7 @@ Wynik: report.json (w katalogu dowodow) + czytelny stdout PASS/FLAG.
 Konwencja nazw (D2): 4:5 => ad_<n>_<angle>.png ; 9:16 => ad_<n>_<angle>_916.png.
 Parser rozpoznaje TEZ kanoniczny rehost D6: ad_<angle>_<fmt>.png (np. ad_demo_45.png) — dzieki temu
 bramka roznorodnosci dziala rowniez na plikach pobranych z bud-assets/<slug>/ads/.
-Katy: demo / problem / proof (parser tolerancyjny — bierze cokolwiek po numerze / przed formatem).
+Katy: demo / problem / lifestyle (default) + proof (opcjonalny) — parser tolerancyjny: bierze cokolwiek po numerze / przed formatem.
 
 Uzycie:
   python ad-gate.py <katalog_png> [--out <katalog_dowodow>] [--thumb-width 320]

@@ -238,7 +238,7 @@ konkuruje o 1 slot) → liczy się różnorodność KONCEPCYJNA, nie wolumen.
 
 ### 9.1 Zestaw testowy per produkt
 - **6 adów w 1 ad secie:** 1 body wideo × 3 hooki (baza + ≤2 warianty — pack z fabryki wideo,
-  decyzja Tomka „max 3 wersje") + 3 statyki demo/problem/proof. 4 ady = minimum, nie optimum.
+  decyzja Tomka „max 3 wersje") + 3 statyki demo/problem/lifestyle (`proof` opcjonalny). 4 ady = minimum, nie optimum.
 - Copy COD: hook w pierwszych **125 znakach** primary (tyle widać na mobile), headline **≤27**,
   **5 RÓŻNYCH tekstów** w polach (nie parafrazy), risk-reversal („płacisz przy odbiorze",
   zwrot 14 dni) + social proof z konkretną liczbą z KARTY PRAWDY. Emoji 1–2 max.

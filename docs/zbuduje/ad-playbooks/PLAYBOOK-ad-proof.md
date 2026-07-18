@@ -1,8 +1,18 @@
 # PLAYBOOK — kąt `proof` (authority / premium close-up; dowód prawdziwy)
 
-> Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_3_proof.png` (4:5).
-> Czytaj po SSOT. DNA = art-direction kąta `proof` z `buildAdsInstruction()` w `wf2-ads`
-> (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`). Kąt najbardziej wrażliwy na politykę.
+> ┌──────────────────────────────────────────────────────────────────────────────────────────┐
+> │ ⚠️ **KĄT OPCJONALNY — NIE w defaultach.** Decyzja Tomka 19.07: „nie rób grafiki z opiniami" │
+> │ — zero grafik z opinii/liczb zamówień w standardowym zestawie. `proof` NIE wchodzi do        │
+> │ domyślnego zestawu startowego (default = `demo`/`problem`/`lifestyle`). Używać WYŁĄCZNIE na  │
+> │ jawne życzenie, przez `wf2-ads` `body.angles:['proof']` (edge waliduje białą listą           │
+> │ `demo`/`problem`/`lifestyle`/`proof`). W standardowym torze zamiast `proof` idzie             │
+> │ `lifestyle` (patrz `PLAYBOOK-ad-lifestyle.md`).                                              │
+> └──────────────────────────────────────────────────────────────────────────────────────────┘
+
+> Kąt OPCJONALNY (poza zestawem startowym — patrz box wyżej). Plik przy jawnym wywołaniu:
+> `ad_<n>_proof.png` (4:5). Czytaj po SSOT. DNA = art-direction kąta `proof` z `buildAdsInstruction()`
+> w `wf2-ads` (rev3 PREMIUM, wzorzec ze starego flow `manus-full-campaign`). Kąt najbardziej wrażliwy
+> na politykę.
 
 ## KIEDY UŻYWAĆ
 Obiekcja „czy to w ogóle działa / czy nie oszustwo?" (lęk #1 rynku PL). Zaufanie budujemy przez

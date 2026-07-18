@@ -26,8 +26,11 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const MANUS_API_KEY = Deno.env.get('MANUS_API_KEY') || ''
 const MANUS_ENABLED = ((Deno.env.get('WF2_ADS_MANUS_ENABLED') || Deno.env.get('BUD_ADS_MANUS_ENABLED') || '') === '1') && !!MANUS_API_KEY
 const MANUS_BASE = 'https://api.manus.ai/v2'
-// 3 KĄTY: demo pierwszy — najsilniejszy na zimno (R4 §3.2 ads_grafiki).
-const ANGLES = ['demo', 'problem', 'proof']
+// 3 KĄTY DEFAULT: demo pierwszy — najsilniejszy na zimno; lifestyle zamiast proof (decyzja
+// Tomka 19.07: ZERO grafik z opiniami/liczbami zamówień w defaultach — proof tylko na jawne
+// życzenie przez body.angles).
+const ANGLES = ['demo', 'problem', 'lifestyle']
+const ALLOWED_ANGLES = ['demo', 'problem', 'lifestyle', 'proof']
 // Formaty: default '45' (1080×1350, feed) → ŁĄCZNIE 3 kreacje. '916' (1080×1920, Stories/Reels)
 // = rozszerzenie na przyszłość (safe-zones w prompcie), nie generowane domyślnie.
 const DEFAULT_FORMATS = ['45']
@@ -119,15 +122,30 @@ function buildAdsInstruction(
   // Claim „Hit z TikToka"/„Viralowy hit" = PRAWDZIWY tylko gdy produkt realnie pochodzi z radaru /trendy
   // (fromTrendy). Inaczej to zmyślony rodowód (playbook proof §krytyczna, ZG4, polityka Meta 2026) — bramkujemy
   // go tak samo jak liczby na realnych danych: bez /trendy → generyczny dowód społeczny / risk-reversal, zero virala.
-  const proofDesc = fromTrendy
-    ? 'dowód społeczny: viral z TikToka — BEZ zmyślonych liczb/recenzji'
-    : 'dowód społeczny / risk-reversal: „sprawdzony wybór", COD — BEZ claimu virala/TikToka i BEZ zmyślonych liczb/recenzji'
   const badgeList = fromTrendy
     ? '„Płatność przy odbiorze" / „14 dni na zwrot" / „Hit z TikToka" / „Viralowy hit"'
     : '„Płatność przy odbiorze" / „14 dni na zwrot" / „Sprawdzony wybór"'
-  const proofArt = fromTrendy
-    ? '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Hit z TikToka". Typografia elegancka, dużo światła/oddechu. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.'
-    : '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Sprawdzony wybór". ZAKAZ „Hit z TikToka"/„Viralowy hit"/claimów virala — produkt NIE pochodzi z radaru /trendy. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.'
+  // Mapy per kąt (opis copy + art-direction) — składane dynamicznie wg realnie wybranych angles.
+  // Default = demo/problem/lifestyle; 'proof' (opinie/liczby) TYLKO na jawne body.angles (decyzja Tomka 19.07).
+  const angleDesc: Record<string, string> = {
+    demo: 'demonstracja/„wow", mechanizm',
+    problem: 'problem→rozwiązanie',
+    lifestyle: 'scena z życia — autentyczność persony, produkt w naturalnym użyciu',
+    proof: fromTrendy
+      ? 'dowód społeczny: viral z TikToka — BEZ zmyślonych liczb/recenzji'
+      : 'dowód społeczny / risk-reversal: „sprawdzony wybór", COD — BEZ claimu virala/TikToka i BEZ zmyślonych liczb/recenzji',
+  }
+  const angleArt: Record<string, string> = {
+    demo: '- demo — CLEAN PRODUCT HERO + WIELKI HOOK: produkt-bohater dramatycznie oświetlony na ciemnym/gradientowym tle (premium look), nad nim WIELKI, gruby polski hook 2–4 słowa oddający mechanizm/„wow" (wzór klasy: „3 MINUTY."). Minimalizm — produkt + hook + logo, nic więcej. Może być subtelna sugestia akcji (użycie, efekt), ale kompozycja zostaje czysta.',
+    problem: '- problem — MIT vs FAKT / STARY SPOSÓB vs NASZ (split-screen, EMOCJA↔PRODUKT): dwa kontrastujące panele. Strona problemu: stary/nieudany sposób BEZ NASZEGO PRODUKTU (realistyczna, dokumentalna foto bólu/frustracji; etykieta np. „MIT:"/„STARY SPOSÓB"). Strona rozwiązania: nasz produkt w użyciu, jasne ciepłe światło, 2–3 krótkie checkmarki korzyści (etykieta „FAKT:"/nazwa marki). Headline BEZOSOBOWO (ZAKAZ „Masz problem z…", „Wstydzisz się…" — personal attributes Meta). Mocny kontrast wizualny obu stron.',
+    lifestyle: '- lifestyle — UGC / Z ŻYCIA (autentyczność): realna polska osoba dopasowana do persony „dla kogo" (przy produktach dla zwierząt: zwierzę + właściciel) używa produktu w naturalnym domowym otoczeniu. Kadr jak dobre zdjęcie z telefonu — ciepłe światło dnia, prawdziwe wnętrze, ZERO studyjnej perfekcji i stockowego uśmiechu; produkt wyraźnie widoczny w użyciu, dokładnie ten z referencji. Napisy oszczędne: krótki hook małą/średnią typografią albo wcale — scena ma wyglądać jak organiczny post, nie baner. ZAKAZ elementów UI (pigułek/przycisków) na tej kreacji.',
+    proof: fromTrendy
+      ? '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Hit z TikToka". Typografia elegancka, dużo światła/oddechu. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.'
+      : '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Sprawdzony wybór". ZAKAZ „Hit z TikToka"/„Viralowy hit"/claimów virala — produkt NIE pochodzi z radaru /trendy. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.',
+  }
+  const planAngles = [...new Set(plan.map((p) => p.angle))]
+  const anglesDescLine = planAngles.map((a) => `"${a}" (${angleDesc[a] || a})`).join(', ')
+  const anglesArtBlock = planAngles.map((a) => angleArt[a] || `- ${a} — art-direction wg najlepszych praktyk DR.`).join('\n')
   return `Jesteś full-stack marketerem DTC na rynek polski. Zrobisz KOMPLET ${nFiles} statycznych reklam-banerów na Facebook/Instagram dla jednoproduktowego sklepu (model dropshipping → własna marka, sprzedaż przez landing z PŁATNOŚCIĄ PRZY ODBIORZE / COD).
 
 🎯 PRODUKT — WIERNOŚĆ 1:1 (zasada święta):
@@ -144,7 +162,7 @@ KONTEKST (z briefu mini-marki — dopasuj DOKŁADNIE):
 ${priceInfo ? `- PRAWDZIWE LICZBY (używaj WYŁĄCZNIE tych, z kotwicą; zero zmyślonych): ${priceInfo}` : '- LICZBY: brak zweryfikowanych — NIE podawaj ŻADNYCH liczb/cen/ocen na grafice.'}
 ${repCtx}
 === ZADANIE 1: COPY (po jednym na kąt) ===
-Kąty: "demo" (demonstracja/„wow", mechanizm), "problem" (problem→rozwiązanie), "proof" (${proofDesc}).
+Kąty: ${anglesDescLine}.
 Dla każdego: angle, headline (2–6 słów, PL, to jest WIELKI hook renderowany na grafice, JEDNA obietnica), badge (≤3 słowa, TYLKO prawdziwy: ${badgeList} — do copy kampanii; na grafikę trafia tylko gdy wzmacnia kompozycję), primary_text (2–3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów"; KAŻDY kąt zaczyna się INNYM zdaniem — zakaz powtarzania tego samego otwarcia).
 
 === ZADANIE 2: ${nFiles} KREACJI GRAFICZNYCH (najważniejsze) ===
@@ -152,15 +170,13 @@ Wygeneruj DOKŁADNIE te pliki (każdy = inny kąt/format):
 ${fileList}
 ⚠️ POZIOM JAKOŚCI: każda grafika ma wyglądać jak od DROGIEJ AGENCJI robiącej reklamy topowych marek D2C — kinematograficzne światło, przemyślana kompozycja, minimalizm. NIE „baner z generatora": im MNIEJ elementów, tym drożej to wygląda.
 ⚠️ RÓŻNORODNOŚĆ (test A/B): kąty to RÓŻNE reklamy — inny układ, inne tło/paleta, inny charakter typografii. Dwie podobne = test nic nie mierzy. Art-direction per kąt:
-- demo — CLEAN PRODUCT HERO + WIELKI HOOK: produkt-bohater dramatycznie oświetlony na ciemnym/gradientowym tle (premium look), nad nim WIELKI, gruby polski hook 2–4 słowa oddający mechanizm/„wow" (wzór klasy: „3 MINUTY."). Minimalizm — produkt + hook + logo, nic więcej. Może być subtelna sugestia akcji (użycie, efekt), ale kompozycja zostaje czysta.
-- problem — MIT vs FAKT / STARY SPOSÓB vs NASZ (split-screen, EMOCJA↔PRODUKT): dwa kontrastujące panele. Strona problemu: stary/nieudany sposób BEZ NASZEGO PRODUKTU (realistyczna, dokumentalna foto bólu/frustracji; etykieta np. „MIT:"/„STARY SPOSÓB"). Strona rozwiązania: nasz produkt w użyciu, jasne ciepłe światło, 2–3 krótkie checkmarki korzyści (etykieta „FAKT:"/nazwa marki). Headline BEZOSOBOWO (ZAKAZ „Masz problem z…", „Wstydzisz się…" — personal attributes Meta). Mocny kontrast wizualny obu stron.
-${proofArt}${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo w SAFE-ZONES — góra 14%, dół 35%, boki 6% wolne od tekstu/CTA (inaczej UI Stories/Reels przytnie). Format 4:5 wypełnia kadr normalnie.` : ''}
+${anglesArtBlock}${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo w SAFE-ZONES — góra 14%, dół 35%, boki 6% wolne od tekstu/CTA (inaczej UI Stories/Reels przytnie). Format 4:5 wypełnia kadr normalnie.` : ''}
 ZASADY GRAFIK:
 - ROZDZIELCZOŚĆ: renderuj w najwyższej dostępnej jakości, minimum 1350×1688 px dla 4:5 (celuj wyżej, np. 1536×1920) — pliki idą do płatnych kampanii, detale i typografia muszą być ostre.
 - Polski tekst poprawny (z diakrytykami) i OSZCZĘDNY: na grafice przede wszystkim WIELKI hook (2–6 słów, JEDNA obietnica); krótkie etykiety/checkmarki tylko tam, gdzie art-direction je przewiduje (split, proof). Przycisk/pigułka CTA i badge są OPCJONALNE — dodawaj tylko, gdy realnie wzmacniają kompozycję; tekst łącznie ≤~20% płótna.
 - ŻADNE elementy tekstowe nie mogą na siebie nachodzić ani się przycinać — każdy napis ma pełną, zarezerwowaną przestrzeń i oddech wokół siebie. Brakuje miejsca → usuń element, nigdy nie ściskaj.
 - Logo w rogu 8–12% wysokości, niecentralne (albo subtelnie na dole jak podpis marki); branding spójny z landingiem.
-- Światło/nastrój wg art-direction danego kąta (NIE jedno oświetlenie na wszystkich); premium dark pasuje do hero/proof, strona rozwiązania w split — jasna i ciepła; NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
+- Światło/nastrój wg art-direction danego kąta (NIE jedno oświetlenie na wszystkich); premium dark pasuje do hero/close-upów, lifestyle i strona rozwiązania w split — jasne i ciepłe; NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
 - DIAKRYTYKI W WERSALIKACH (twarda): polskie znaki MUSZĄ przetrwać także w WIELKICH literach — „ZAMÓWIEŃ" nie „ZAMOWIEN", „SPOSÓB" nie „SPOSOB". Po wygenerowaniu KAŻDEJ grafiki OBEJRZYJ ją i sprawdź litera po literze każdy napis; zgubiony znak (Ó/Ń/Ś/Ż/Ą/Ę/Ł/Ć) = wygeneruj grafikę PONOWNIE albo zmień zapis (małe litery / inne słowo) — NIE oddawaj pliku z błędną polszczyzną.
 - Jeśli renderowany tekst byłby niepewny/zniekształcony: zostaw SAM hook, odpuść resztę napisów — nigdy połamanych/przekręconych liter.
 ZAKAZY (COD / polityka Meta 2026): zero zmyślonej pilności/countdownów; zero „dostawa 24h"/„magazyn w Polsce"; zero zmyślonych liczb/gwiazdek/recenzji (liczby TYLKO z sekcji „PRAWDZIWE LICZBY" wyżej); zero obcych logo; zero obietnic medycznych/wellness i before/after ciała; zero personal attributes (nie oskarżaj odbiorcy); bez cen na grafice o ile nie podano wyżej.
@@ -668,7 +684,7 @@ Deno.serve(async (req) => {
     const reportCtx = [reportContextBlock(reportObj), briefParts.join('\n')].filter(Boolean).join('\n').slice(0, 2000)
 
     // Plan kreacji: angles×formats z body (default 3 kąty × 4:5 = ŁĄCZNIE 3 kreacje).
-    const bodyAngles = Array.isArray(body.angles) ? (body.angles as unknown[]).map((x) => String(x || '').toLowerCase().trim()).filter(Boolean) : []
+    const bodyAngles = Array.isArray(body.angles) ? (body.angles as unknown[]).map((x) => String(x || '').toLowerCase().trim()).filter((a) => ALLOWED_ANGLES.includes(a)) : []
     const angles = bodyAngles.length ? bodyAngles : ANGLES
     const bodyFormats = Array.isArray(body.formats) ? (body.formats as unknown[]).map((x) => String(x || '').trim()).filter((fmt) => ALLOWED_FORMATS.includes(fmt)) : []
     const formats = bodyFormats.length ? bodyFormats : DEFAULT_FORMATS

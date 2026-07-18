@@ -62,8 +62,10 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
   z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - **Etap 5 → `ads_grafiki` = FABRYKA statycznych grafik (rev2, 19.07; SSOT
-  `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` + playbooki `ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md`):**
-  ŁĄCZNIE **3 kreacje** = kąty demo/problem/proof × format 4:5 (1080×1350) w JEDNYM tasku Manusa
+  `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` + playbooki `ad-playbooks/PLAYBOOK-ad-{demo,problem,lifestyle,proof}.md`):**
+  ŁĄCZNIE **3 kreacje** = kąty demo/problem/lifestyle × format 4:5 (1080×1350) w JEDNYM tasku Manusa
+  (`proof` = opinie/liczby = OPCJONALNY, tylko na jawne `body.angles:['proof']` — decyzja Tomka 19.07
+  „nie rób grafiki z opiniami")
   (9:16 = rozszerzenie na przyszłość, nie default). Silnik = **WYŁĄCZNIE Manus, ZERO fallbacku
   Gemini** (ZG9 „Manus albo nic" — awaria = `ads_manus_status='failed'` + reset RĘCZNY w panelu po
   doładowaniu kredytów; edge 503 gdy kill-switch off / brak `MANUS_API_KEY`). Fazy G0–G8 z bramkami

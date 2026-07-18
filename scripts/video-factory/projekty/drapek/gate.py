@@ -2,10 +2,10 @@
 """Driver bramek v2 drapek. KROK 7 (qa_gate siatki) + KROK 7.5 (product_gate sbs + identity board).
 Generuje artefakty do przegladu VLM (operator oglada, potem wpisuje werdykty osobnym krokiem).
 Uzycie:
-  python gate_v2.py grids           -> siatki qa dla wszystkich klipow
-  python gate_v2.py sbs             -> kompozyty side-by-side per scena (packshot|klatka) + cropy
-  python gate_v2.py board           -> identity board (2 packshoty + crop kazdej sceny)
-  python gate_v2.py floor           -> size_floor per scena demo
+  python gate.py grids           -> siatki qa dla wszystkich klipow
+  python gate.py sbs             -> kompozyty side-by-side per scena (packshot|klatka) + cropy
+  python gate.py board           -> identity board (2 packshoty + crop kazdej sceny)
+  python gate.py floor           -> size_floor per scena demo
 """
 import os, sys, subprocess, glob, json
 sys.path.insert(0, r"C:/tmp/video-factory/tools")
