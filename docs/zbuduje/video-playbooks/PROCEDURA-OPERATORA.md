@@ -57,6 +57,43 @@ Generuj wg `PROMPTY-BIBLIOTEKA.md` (1) role obrazów + (2) pary FLF. **Master-fr
 Sceny FAILED zostawiają `<tag>.failed`; poll odporny (status_url/response_url z submita; blip HTTP liczy się dopiero po 3 z rzędu — job jest już OPŁACONY).
 **PAD SESJI (uśpienie/crash) = NIE re-submituj:** joby żyją server-side i są opłacone. `python fal.py reclaim <outdir>` czyta ledger i dociąga wyniki po `response_url` (re-poll darmowy; ślepy re-submit = drugi bill). Pomija tagi z istniejącym plikiem/`.failed`.
 
+## RÓWNOLEGŁOŚĆ — wzorzec przebiegu (skraca wall-clock ~40-60 min → ~10-15 min)
+**Zasada:** `fal.gen()` jest BLOKUJĄCY (submit+poll+download naraz) — w pętli SERIALIZUJE generacje. Dla WIELU niezależnych generacji ZAWSZE `fal.gen_batch(jobs, outdir=GEN, max_parallel=8, project=<slug>)` (submit-all → poll-all → download, okno przesuwne). Rendery scen: `render.render_scenes()` — **już równoległy, NIE cofać do pętli**. Audio nie ma zależności → leci JEDNĄ falą razem z klatkami-FIRST i schodzi z krytycznej ścieżki.
+
+**Zmierzone (masażer 18.07):** przebieg złożony z ~26 pojedynczych `gen()` zamiast 3-4 batchy. Rozkład czystego passa v2 (10:56 E2E): klatki 3 nano SEKW 1:17 · bramka 0:44 · **render 3 RÓWNOLEGLE 4:52 (jedyna nieredukowalna generacja)** · QA+fidelity 2:29 · VO 4 SEKW 0:50 (regenowane DOPIERO po renderze!) · montaż 0:44. W głównym passie v1 blok audio (13 calli, 2:07) leżał osobną fazą NA ścieżce krytycznej, a klatki w 2 sekwencyjnych fazach z 3-min bramkami między nimi. Suma sekwencyjnego narzutu do odzyskania: ~4-5 min czekania na serializowane submity + ~2 min bloku audio na ścieżce krytycznej.
+
+**Szkielet (co startuje razem, co na co czeka):**
+```
+KROK 0-3  Ingest / KARTA / blueprint / refy (bramka Tomka #1) — jak dotąd.
+FALA A  (jeden gen_batch, RÓWNOLEGLE, max_parallel=8):
+   • WSZYSTKIE klatki-FIRST (wzajemnie niezależne)
+   • CAŁE audio: muzyka + ambient + VO×N + SFX×N   ← ZERO zależności, schodzi z krytycznej ścieżki
+FALA B  (drugi gen_batch, po Fali A):
+   • klatki-LAST i klatki chainowane z persony/hooka (ZALEŻĄ od FIRST)
+   • SFX: trim ffmpeg lokalnie PO pobraniu (raw 10 s → okno)
+BRAMKA klatek (agent, samoakcept #2 + log) — na komplecie klatek.
+RENDER  render.render_scenes(sceny, GEN, project=slug)  ← równoległy (~5 min)
+   W TLE oczekiwania: emisje panel-sync + siatki QA klipów, które JUŻ spadły + plan montażu.
+BRAMKA qa_gate + product_gate (KROK 7/7.5) — nie-samoakceptowalna.
+MONTAŻ  montaz.build(...) + napisy — lokalne.
+```
+
+**Reguły zależności (NIE złamać):** klatka LAST zależy od FIRST → osobna fala; klatka chainowana z persony (`hook_first`) → po wygenerowaniu tej persony; FIRSTy różnych scen są niezależne → jedna fala; audio i klatki-FIRST są wzajemnie niezależne → wspólna Fala A; rendery zależą od klatek (+audio dla omnihuman) → po bramce klatek.
+
+**Wspólne konto fal (DRUGA SESJA):** `max_parallel=8` — okno PRZESUWNE (nowy job wchodzi gdy zwolni się slot), nie sztywne fale. Bez limitu zagłodzisz drugą sesję; za niski = wolniej. Kolejka fal i tak dyspozycjonuje do limitu konta, nadmiar czeka IN_QUEUE ZA DARMO (submit nie dostaje 429). Różne biegi = różne `project=` (izolacja kosztów w ledgerze; saldo licz i tak przez `fal.balance()`, nie sumę est_usd).
+
+**Szacowany nowy wall-clock (czysty pass, bez iteracji):** klatki+audio ~2 min (było ~6) · bramka klatek ~2 min · render ~5 min (nieredukowalne) · QA/montaż częściowo za renderem ~2 min → **~10-12 min** (było ~18 min czysty / 40-60 min z iteracjami; iteracje kompresują się tak samo).
+
+**Szablon:** `scripts/video-factory/projekty/_szablon_przebiegu.py` — kopiuj per projekt; wypełnij `frames_first_spec()`/`frames_last_spec()`/`audio_spec()`/`scenes_spec()`. Orkiestracja tam, prompty/refy zostają w plikach projektu (KARTA/blueprint).
+
+**⛔ CZEGO NIE ROBIĆ dla minut (zepsuje jakość/bramki):**
+- NIE batchuj klatek-LAST razem z FIRST (dostaniesz puste/stare refy — LAST edytuje FIRST).
+- NIE zwijaj bramek `qa_gate`/`product_gate` ani przeglądu WIERSZ-NA-KLATKĘ — zbiorcza ocena przepuściła 2× duplikat (KROK 7). Bramka = jedyna nie-samoakceptowalna kontrola.
+- NIE podnoś `max_parallel` bez limitu na WSPÓLNYM koncie — zagłodzisz drugą sesję, a i tak nie przyspieszysz generacji (kolejka fal dyspozycjonuje do limitu konta).
+- NIE równoleglij refinera/SeedVR2 (biling od megapikseli wyczerpał konto 18.07) — domyślnie OFF.
+- NIE przycinaj/ściszaj VO ani nie skracaj renderów, żeby zdążyć — jakość first-time to cała wartość (kolizja VO = przeprojektuj mapowanie, KROK 4).
+- NIE łącz RÓŻNYCH projektów w jednym `gen_batch` bez różnych `project=` (ledger miesza koszty po tagu).
+
 ## KROK 5b — WIERNOŚĆ NA KLATKACH (0i — PRZED renderami)
 **DOKTRYNA „EDYTUJ PRAWDĘ" (v3 — nadrzędna):** klatki produktowe = nano-EDYCJA packshotu
 (otoczenie/aktor dorysowane WOKÓŁ pikseli produktu); produkt STATYCZNY wewnątrz sceny

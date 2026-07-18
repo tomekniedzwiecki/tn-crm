@@ -36,6 +36,23 @@ lokowka/ = pilot; ledger.json = koszty per call).
    ciągłość kabla/rekwizytów, stany włosów) → poprawki → remontaż. Iteracje z Tomkiem na
    SEGMENTACH 10-12 s, pełne video dopiero bez uwag.
 
+## ⚡ RÓWNOLEGŁOŚĆ (skraca wall-clock ~40-60 min → ~10-15 min)
+
+`fal.gen()` jest BLOKUJĄCY — w pętli SERIALIZUJE generacje (pomiar masażer 18.07: ~26
+pojedynczych `gen()` zamiast 3-4 batchy; blok audio i klatki leżały osobnymi fazami na
+ścieżce krytycznej, jedyna nieredukowalna generacja to rendery ~5 min RÓWNOLEGLE). Wzorzec:
+- **FALA A** = jeden `fal.gen_batch(jobs, GEN, max_parallel=8, project=slug)`: WSZYSTKIE
+  klatki-FIRST (niezależne) **+ CAŁE audio** (music/ambient/VO/SFX — zero zależności, schodzi
+  z krytycznej ścieżki).
+- **FALA B** = drugi `gen_batch`: klatki-LAST/chainowane (ZALEŻĄ od FIRST) + trim SFX lokalnie.
+- **RENDER** = `render.render_scenes()` (już równoległy — NIE cofać do pętli); w tle oczekiwania
+  emisje panel-sync + siatki QA klipów, które JUŻ spadły.
+- **Wspólne konto fal** = `max_parallel=8` (okno przesuwne, nie głodź drugiej sesji); różne biegi
+  = różne `project=` (izolacja kosztów).
+
+Szkielet + reguły zależności + „czego NIE robić dla minut": `docs/zbuduje/video-playbooks/PROCEDURA-OPERATORA.md`
+(sekcja „RÓWNOLEGŁOŚĆ — wzorzec przebiegu"). Gotowy szablon: `projekty/_szablon_przebiegu.py`.
+
 ## Pliki
 
 **PIERWSZA LEKTURA OPERATORA (po SSOT):** `docs/zbuduje/video-playbooks/` — skodyfikowane know-how
