@@ -81,6 +81,12 @@ per wystąpienie, zapisane do `dopasowanie/SEMANTYKA.md` (gate-check wymaga plik
    problemu", niezależnie od copy). Scena PROBLEM/„przed" MUSI pokazywać stary sposób
    (obcinaczki/gilotynka + opór psa) / frustrację / sam problem — BEZ naszego produktu w
    kadrze. Negatywna emocja dozwolona TYLKO przy starym sposobie lub samym problemie.
+7. **PROPORCJE / PROFIL PRODUKTU (Drapek 18.07):** czy bryła produktu — grubość, profil,
+   proporcje wymiarów — na KAŻDEJ scenie zgadza się z oryginałem/paszportem? Produkt PŁASKI
+   w oryginale (np. cienka deska, krawędź ~2–3 cm) **NIE może być gruby/bryłowaty na scenie**
+   (gruby blok/pudełko/klocek); smukły/wysoki nie może być przysadzisty. **= FAIL, gdy
+   proporcje/grubość dryfują od oryginału** (uzupełnia F3A — gate cech łapał kolor/elementy,
+   NIE proporcje; incydent: cienka deska Drapek wyszła jako gruby drewniany klocek we wszystkich scenach).
 Werdykt FAIL któregokolwiek pytania = naprawa + powtórka PASS 5 (pętla do czystej rundy).
 
 **🔗 KOMPLEMENTARNOŚĆ z F3A (GATE WIERNOŚCI DO SKUTKU, `GRAFIKA-Z-MAKIETY.md §4b`).** PASS 5 i F3A

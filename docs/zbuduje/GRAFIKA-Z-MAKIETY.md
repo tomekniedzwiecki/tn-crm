@@ -147,7 +147,11 @@ Egzekwuje `gate-check.py` (blok `wiernosc`; artefakt `dopasowanie/WIERNOSC.md`).
 - Werdykt **ZGODNA wymaga: 0 FAIL cech ∧ PASS ≥ K ∧ pass-2 = TAK.**
 
 **⛔ FAIL cechy PRODUKTU = NIGDY waivable.** Cechy z paszportu (klasa produktu, elementy
-tożsamości: wyświetlacz / ostrze / mechanizm / dwubarwność…) są twarde — 1 FAIL = NIEZGODNA.
+tożsamości: wyświetlacz / ostrze / mechanizm / dwubarwność **/ PROPORCJE / GRUBOŚĆ / PROFIL
+bryły**…) są twarde — 1 FAIL = NIEZGODNA. **Profil/proporcje = cecha TWARDA na równi z kolorem
+i elementami: „produkt płaski w oryginale nie może być gruby na scenie" (incydent Drapek 18.07 —
+cienka deska ścierna wyszła jako gruby drewniany klocek ~5–8 cm; gate cech łapał kolor/elementy,
+ale NIE proporcje/grubość). Za gruba / za bryłowata / złe proporcje vs realny kadr = NIEZGODNA.**
 **Dryf REKWIZYTU-nie-produktu** (tło, dłoń, odłożone akcesorium scenografii) wolno przepuścić
 WYŁĄCZNIE z notą w LEDGER („co dryfnęło + dlaczego to nie produkt") i **zgodą OBU par** — to
 jedyna furtka. Furtka „dryf PRODUKTU = cecha metody" NIE ISTNIEJE.

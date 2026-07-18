@@ -659,6 +659,17 @@ do Tomka; bez noty LEDGER = FAIL). Dowód: wiersz per grafika w `dopasowanie/WIE
 **Wyjątek — produkt CUSTOM** (personalizowany ze zdjęcia klienta): AI TYLKO sceneria,
 produkt niosą wyłącznie realne zdjęcia i UGC.
 
+**⚠️ PROPORCJE / GRUBOŚĆ / PROFIL = TWARDA cecha wierności (nie tylko kolor/elementy).**
+Kształt bryły produktu — grubość, profil, proporcje wymiarów — jest cechą dyskryminującą **na
+równi z kolorem i elementami tożsamości: „produkt płaski w oryginale nie może być gruby na
+scenie"** (i odwrotnie: smukły/wysoki nie może być przysadzisty). Paszport MUSI mieć wiersz
+„Cechy dyskryminujące" o profilu/grubości z KONKRETEM liczbowym (np. „płaska deska, krawędź
+~2–3 cm, NIE gruby blok"), a prompt KAŻDEJ sceny MUSI go wymuszać (`FLAT THIN … edge only
+~2-3 cm … NOT a thick box/block`). Model domyślnie pogrubia/upraszcza bryłę do archetypu —
+**incydent Drapek 18.07: cienka deska ścierna wyszła jako gruby drewniany klocek ~5–8 cm we
+WSZYSTKICH scenach; gate łapał kolor/elementy, ale NIE proporcje.** Gate F3A ocenia profil
+cecha-po-cesze vs realny kadr Ali; za gruba / za bryłowata = NIEZGODNA → pętla regeneracji do skutku.
+
 **ESENCJA PRODUKTU.** Sceny kluczowe (hero, demo/PRZED-PO, zastosowania) MUSZĄ pokazywać
 mechanizm/efekt działania (pompka → ściśnięte worki; budzik → światło świtu). Plan GPT
 proponujący „no product" na scenach kluczowych = nadpisać. Gate całości: z samych grafik
@@ -751,13 +762,19 @@ proof liczbowy. ★ i „N ocen" TYLKO w: sekcji opinii, karcie oferty #zamow, f
 **MAPA ANTY-DUPLIKACJI TRUST** (każda informacja zaufania max 1× per sekcja):
 | topbar | „Płatność przy odbiorze · 14 dni na zwrot" (⛔ bez ★/ocen) |
 |---|---|
-| header/hero chip | REDUKCJA RYZYKA („Płacisz przy odbiorze — bez ryzyka" / gwarancja) — ⛔ NIE ★/N ocen |
+| header/hero chip | REDUKCJA RYZYKA („Płacisz przy odbiorze — bez ryzyka" / gwarancja) — ⛔ NIE ★/N ocen · **TYLKO desktop** |
 | HERO | pod CTA+ceną JEDEN rząd: pay-badges + badge „14 DNI NA ZWROT" |
 | COD-strip | narracja 1-2-3 (proces, nie badge) |
 | OFERTA | lista „co dostajesz" + pay-badges bez powtórek mikrocopy |
 | FINAL | jedyne pełne zdanie płatności + mini-opinia |
 | sticky | skrót „BLIK · karta · za pobraniem — 14 dni na zwrot" |
 Gate: policz wystąpienia „14 dni"/„pobranie"/„BLIK" per sekcja.
+
+**⛔ HERO CHIP = TYLKO DESKTOP (Tomek 18.07):** floating chip zaufania w hero (`position:absolute`,
+róg sceny) **NIGDY na mobile** — zasłania scenę/wideo hero nad foldem. Mobilny breakpoint MUSI mieć
+`.hero-trust{display:none}` (lub odpowiednik). Na mobile redukcja ryzyka żyje wyłącznie w topbarze
+i w rzędzie pod CTA (pay-badges + „14 DNI NA ZWROT") — nie jako nakładka na obraz. Incydent Drapek:
+chip „Płacisz przy odbiorze" przykrywał hero-wideo na 390px.
 
 **CTA**: jedno działanie ×3-4 (hero/po dowodzie/finał/sticky); „Zamawiam — zapłacę przy
 odbiorze"; mikrocopy: „Płatność przy odbiorze · 14 dni na zwrot · Wysyłka pod Twój adres".
