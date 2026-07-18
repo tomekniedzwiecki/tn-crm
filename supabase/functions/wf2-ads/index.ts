@@ -157,6 +157,7 @@ ${proofArt}${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo 
 ZASADY GRAFIK:
 - Polski tekst poprawny (z diakrytykami), TYLKO krótki: headline (3–6 słów, JEDNA obietnica) + przycisk-pigułka „Kup teraz" (+ ewentualnie badge). Bez akapitów; tekst ≤~20% płótna.
 - „Kup teraz" jako element UI (pigułka), wysoki kontrast do tła; risk-reversal COD: badge „Płatność przy odbiorze" pasuje do problem/proof.
+- KOMPOZYCJA BLOKU TEKSTU (twarda): headline, badge i „Kup teraz" NIE MOGĄ na siebie nachodzić ani przycinać się nawzajem — zarezerwuj pionową przestrzeń na PEŁNY headline (obie linie!) ZANIM położysz pigułki; odstęp min. ~4% wysokości między headline a pigułkami. Jeśli brakuje miejsca: skróć headline do jednej linii albo odpuść badge — NIGDY nie nakładaj pigułki na litery. (Lekcja z 1. przebiegu: badge przykrył drugą linię headline.)
 - Logo w rogu 8–12% wysokości, niecentralne; branding spójny z landingiem.
 - Światło/nastrój wg art-direction danego kąta (NIE jedno oświetlenie na wszystkich); NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
 - Jeśli renderowany tekst byłby niepewny/zniekształcony: zostaw SAM headline + „Kup teraz", odpuść badge — nigdy połamanych/przekręconych liter.

@@ -381,3 +381,16 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   media_type='image' + widok `wf2_angle_perf`, kompas CTR→CPC→ATC→CPA. Playbooki per kąt
   (`ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md`). Kąt `problem` naprawiony wg EMOCJA↔PRODUKT
   (produkt POZA strefą bólu). Modele: Sonnet domyślnie, Haiku skrypty, Opus tylko otwarta kreacja.
+
+- **2026-07-19 — pierwszy przebieg E2E (Drapek, task `ZavkgNowkZjTSTYN6Ys65X`, ~14 min, $0.30):**
+  3/3 kreacje dowiezione, rejestr + artefakty + koszt zapisane automatycznie; liczby w „proof"
+  poprawnie zakotwiczone (4,7/5 · 1548 → „ponad 1500 zamówień" — ZG4 działa). **Lekcja G8 #1
+  (klasa: KOMPOZYCJA BLOKU TEKSTU):** w „demo" badge przykrył drugą linię headline'a
+  („Zetrzyj pazury" przycięte) = FAIL bramki G4 czytelności. Fix FABRYKI (nie pliku): twarda
+  reguła anty-overlap w prompcie `wf2-ads` (rezerwa pionowa na pełny headline PRZED pigułkami;
+  brak miejsca → 1 linia headline albo drop badge). Obserwacja #2: primary_text wszystkich
+  3 kątów otwierał się tym samym zdaniem („Napięcie znika. Zostaje zabawa.") — przy
+  kompletowaniu ads_zestaw pilnować 5 RÓŻNYCH tekstów; kandydat na regułę promptu, jeśli
+  się powtórzy. Obserwacja #3: kąt „problem" w stylu ilustracyjnym — produkt w strefie
+  rozwiązania mniej wierny (skrytka z klockami zamiast karmy); bramka G3 ma to łapać,
+  styl ilustracyjny NIE zwalnia z wierności skrytki/proporcji.
