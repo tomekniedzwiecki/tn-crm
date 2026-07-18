@@ -58,6 +58,13 @@ Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
   `pointer-events≠none` (inaczej P0), (c) driven-property (styl obliczony LUB custom-prop `--t`)
   RÓŻNI się przy min i max — identyczna = P1 „martwa interakcja". PROBE uruchamia drugi
   viewport 390 (druga instancja Chrome).
+- **OVERLAY-CAPTION NA OBRAZIE (label/tytuł absolutny na scenie — TOR-I `demo-cap`, badge na kaflu,
+  chip na hero):** na mobile obraz jest MAŁY, a overlay z pełnym tekstem (tytuł+opis) + przyciemnienie
+  zasłania scenę — „nic nie widać" (incydent Drapek `demo-cap` 18.07). Render 390: jeśli overlay
+  (caption/shade) zajmuje **>~30% wysokości obrazu** LUB jego treść jest **ZDUPLIKOWANA** w
+  kontrolkach/kafelkach pod obrazem → **ukryj overlay na mobile** (`display:none` w `@media`), obraz
+  pełny; aktywny stan czyta się z podświetlenia kontrolek. Overlay zostaje tylko na desktopie (duży
+  obraz). Overlay zasłaniający scenę produktową na mobile = **P1**.
 - **PAY-BADGES KANON:** `paybadges_guard` — pigułki płatności tylko z SSOT
   `assets/pay-badges.html`; tekstowe imitacje marek (poza `.pay-badges`) = P1 pojedynczy /
   P0 klaster (≥2 chipy w kontenerze) / P2 brak kanonu przy CTA; `--fix` = auto-swap klastra
