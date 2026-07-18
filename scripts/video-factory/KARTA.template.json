@@ -1,0 +1,24 @@
+{
+  "_doc": "KARTA projektu = JEDNO zrodlo prawdy: wchodzi VERBATIM do promptow klatek, generuje negative_extra (forbidden_leaks) i JEST checklista bramki QA. Instancja: C:/tmp/video-factory/<proj>/KARTA.json",
+  "archetype": "gadzet-handsPOV | beauty-talkinghead | auto-POV",
+  "product": {
+    "nazwa": "krotka nazwa rzeczownikowa do promptow (np. 'pink curler', 'orange screwdriver')",
+    "anatomy_str": "OPIS ANATOMII Z GALERII ALI: kolory, ksztalt, liczba elementow funkcyjnych (dysze/zabki/ramiona), przyciski, kabel",
+    "functional_count": "np. 4 dysze swirl / 6 zabkow / 4 ramiona — LICZBA STALA WE WSZYSTKICH SCENACH (check ciaglosci!). Produkt BEZ policzalnych powtarzalnych elementow (zestaw roznych czesci, po 1 z kazdej) -> WYMIEN czesci: 'zestaw: korpus + 1 nasadka + 1 kabel + 1 podstawka' — bramka sprawdza obecnosc kazdej po 1 szt.",
+    "exactly_one": "EXACTLY ONE device in the scene",
+    "hsv_color": [[0, 0, 0], [180, 255, 255]],
+    "hsv_ranges": [],
+    "_hsv_ranges_doc": "lista par [lo,hi] gdy jeden zakres nie wystarcza (hue-wrap). Przyklad czerwieni (odcien pekniety na dwa konce H): [[[0,120,70],[10,255,255]],[[170,120,70],[180,255,255]]]. Puste [] = uzyj jednozakresowego hsv_color. qa_gate.cv_precheck sumuje maski z obu zakresow.",
+    "cv_reliable": "true = produkt wyrazisty barwnie, JEDNOLITY, odseparowany od tla (maska HSV liczy egzemplarze w cv_precheck). false gdy KTORYKOLWIEK z wyzwalaczy: (a) gunmetal/czarny/srebrny/przezroczysty/kolor skory; (b) emisyjne gradienty RGB LED / podswietlenie teczowe (HSV bezuzyteczna mimo jaskrawego koloru — barwa zmienna w czasie i po powierzchni); (c) kolor FRAGMENTARYCZNY na produkcie (rozproszone plamy/wzor/print — connectedComponents liczy PLAMY, nie egzemplarze); (d) odcien przy hue-wrap 0/180 (CZERWIENIE! H pekniety na dwa konce skali — jesli mimo to uzywasz maski, wypelnij hsv_ranges DWOMA zakresami, obsluzone w qa_gate); (e) kolor produktu KOLIDUJE z elementami sceny (tlo/rekwizyt w tym samym zakresie HSV). W (a)-(e) licznik egzemplarzy robi VLM wiersz-na-klatke. REGULA: zawsze zweryfikuj zakres HSV wzgledem sceny — tlo i rekwizyty NIE moga wpasc w maske; jesli wpadaja -> cv_reliable:false.",
+    "fluid": "nazwa cieczy do placeholdera {PHYSICS_FLUID} w promptach (np. 'water', 'foam cleanser', 'oil', 'gel') lub null gdy produkt nie generuje plynow",
+    "forbidden_leaks": ["branding konkurenta", "zly kolor elementu X", "kolor/wariant wzorca rozny od naszej galerii Ali", "rings", "nail polish", "second device", "duplicate product"]
+  },
+  "scenography": {"layout": "jeden kanon tla + strona kadru urzadzenia", "swiatlo": "charakter"},
+  "grammar": {
+    "action_steps": ["fizyczne kroki uzycia z klipow referencyjnych"],
+    "both_hands": "rola KAZDEJ dloni w kazdym kroku",
+    "physics": "co JEST fizycznie mozliwe (kierunek strumienia z czola dyszy; os narzedzia = os wkreta; woda != piana)"
+  },
+  "identity": {"face_ref": "refs/face-ref.png lub null (hands-POV)", "eye_color": "..."},
+  "screens_and_text": "rekwizyty ekranowe/etykiety: generyczne, BEZ tekstu zblizonego do czytelnego — wyrazne glify = odrzut"
+}
