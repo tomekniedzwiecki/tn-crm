@@ -652,7 +652,10 @@
         }
 
         function stageNums() { return [...new Set(stepDefs.map(d=>d.stage))].sort((a,b)=>a-b); }
-        function defsForStage(n) { return stepDefs.filter(d=>d.stage===n); }
+        // sub_of: sub-kroki (np. avi_* fabryki wideo) NIE są kolumnami matrycy ani pigułek —
+        // renderują się jako timeline wewnątrz warsztatu kroku-rodzica (adsWideoBlock)
+        function defsForStage(n) { return stepDefs.filter(d=>d.stage===n && !d.sub_of); }
+        function subDefsFor(parentKey) { return stepDefs.filter(d=>d.sub_of===parentKey).sort((a,b)=>(a.sort||0)-(b.sort||0)); }
         function defFor(key) { return stepDefs.find(d => d.key===key); }
         function stepFor(key, productId) {
             return steps.find(s => s.step_key===key && (productId ? s.product_id===productId : !s.product_id));
@@ -1238,9 +1241,9 @@
             ads_grafiki: { desc:'SET 3 GRAFIK per produkt — Manus przez edge wf2-ads (research FB Ad Library → copy PL → 3 kreacje 4:5). Kąty: demo (mechanizm) / problem (plakat DR) / proof (viral). Referencja = curated_image + logo mini-marki. Zgodne z polityką Meta. Koszt ~$0.30. ⚡ RÓWNOLEGLE: można odpalić już po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
                 fields:[{k:'grafiki_url',l:'Link do folderu (opcjonalnie, gdy ręcznie)'}],
                 check:['Referencja produktu + logo poprawne (wierność 1:1)','Research konkurencji (Manus) zrobiony','3 koncepty: demo / problem / proof — copy + wizual','Format 4:5 (feed+reels)','Zgodne z polityką Meta (bez pilności, bez „dostawa 24h")','Grafiki zaakceptowane do testów'], prompt:'ads_grafiki' },
-            ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF ~$2.5; talking-head → OmniHuman). Bramki: KARTA produktu + qa_gate (.pass na KAŻDYM klipie) + 2× akcept Tomka. OZNACZENIE AI OBOWIĄZKOWE. Koszt ~$2.5-8. ⚡ RÓWNOLEGLE: niezależne od landinga — wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
-                fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (PUBLIC attachments/bud-assets/<slug>/ads/; wf2-video=research+archiwum)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)'}],
-                check:['Wzorzec (tiktok_url) + mp4 pobrany do prywatnego bucketu','KARTA.json spisana (anatomia z galerii Ali)','Blueprint zaakceptowany (bramka Tomka #1)','Klatki-klucze zaakceptowane (bramka Tomka #2)','Wszystkie klipy z .pass (qa_gate)','Montaż 15 s złożony (hook≤2s, bez napisów)','Pętla QA czysta (zero AI-tells)','Oznaczenie AI ustawione (Meta/TikTok)','Koszt zalogowany, video_url zapisany'], prompt:'ads_wideo' },
+            ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF; talking-head → OmniHuman; gadżet+gadająca głowa → handsPOV). Postęp = timeline etapów niżej (artefakty per etap). JEDYNA twarda bramka = qa_gate (.pass na KAŻDYM klipie); bramki Tomka #1/#2 w trybie autonomicznym = samoakcept operatora z logiem. Koszt realny: ~$2.5-5.5 hands-POV bez refinera (refiner +$3-4 TYLKO hero/retargeting — na cold DR OFF). Flaga AI na kreacji; faktyczne disclosure = przy publikacji (krok Kampanie). ⚡ RÓWNOLEGLE: wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
+                fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (PUBLIC attachments/bud-assets/<slug>/ads/; wf2-video=research+archiwum)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)', col:'product.video_cost_usd'}],
+                check:['Wzorzec: mp4 lokalnie/PRIVATE (cudzy content — NIGDY publicznie); w panelu tylko link TikTok','KARTA.json z galerii Ali (anatomia, functional_count, forbidden_leaks)','Blueprint wg szablonu (hook problem-first, LOOP CLOSE, SFX na akcje) — samoakcept #1 zalogowany','Klatki-klucze OK (pod-elementy produktu!) — samoakcept #2 zalogowany','KAŻDY klip z .pass (qa_gate; REJECT = pętla poprawek do wyczerpania)','Montaż: SFX na akcję + ambient (bramka) · −14 LUFS · LOOP CLOSE · handheld','Flaga video_ai_labeled=true (disclosure ustawiane przy publikacji)','Koszt z ledgera → video_cost_usd; finał → video_url; rejestr wf2_creatives'], prompt:'ads_wideo' },
             ads_kampanie: { desc:'Kampania 1:1 dla produktu wg WORKFLOW-V2-TESTY §1: OUTCOME_SALES/Purchase + CAPI, ABO ~17-25 zł/d, broad (zero stackowania zainteresowań), Advantage+ placements, 9:16 wideo first. Nazwa: [WF2:klient] produkt. Start ZAWSZE PAUSED — publikacja = bramka Tomka (pon.–wt. rano).',
                 fields:[{k:'campaign_id',l:'Meta campaign ID', col:'product.campaign_id'},{k:'daily',l:'Budżet dzienny (zł)'}],
                 check:['GATE: pixel+CAPI (Test Events) + metoda płatności + strona przypisana + ali_src=detail','Kreacje podpięte (wideo 9:16 + 3 grafiki)','Kampania utworzona (PAUSED)','ABO + broad + Advantage+ placements','Budżet dzienny wg Bramki A (~17–25 zł)','campaign_id zapisany (sync → wf2_ad_stats)','Start zatwierdzony przez Tomka'], prompt:'ads_kampanie' },
@@ -1489,19 +1492,61 @@
             if (data) { const i = products.findIndex(x => x.id === pid); if (i >= 0) products[i] = data; }
         }
 
-        // ── special-case: wideo 15 s ──
+        // ── special-case: wideo 15 s — timeline etapów fabryki + artefakty per etap ──
+        const VIDEO_STATUS_META = { planning:['#f5b955','planowanie'], rendering:['#52a8ff','rendery scen'], qa:['#f5a623','bramka QA'], done:['#62c073','gotowa'], failed:['#f26d78','BŁĄD — patrz notatki etapów'] };
         function adsWideoBlock(p) {
-            let h = '<div class="space-y-2">';
+            const subs = subDefsFor('ads_wideo');
+            let h = '<div class="space-y-3">';
             if (p.video_url) {
                 h += `<div class="border border-[#45a557]/30 bg-[#45a557]/[.05] rounded-md px-4 py-3 text-[12px] text-[#62c073] flex items-center gap-2 flex-wrap">
-                    <i class="ph ph-film-slate"></i> Kreacja gotowa${p.video_ai_labeled ? ' · <span class="mile-badge">AI-oznaczona</span>' : ' · <span class="text-[#f5b955]">⚠ brak oznaczenia AI</span>'}
+                    <i class="ph ph-film-slate"></i> Kreacja gotowa${p.video_ai_labeled ? ' · <span class="mile-badge">flaga AI (disclosure przy publikacji)</span>' : ' · <span class="text-[#f5b955]">⚠ brak flagi AI</span>'}
                     ${p.video_cost_usd ? `<span class="text-zinc-500 font-mono">$${p.video_cost_usd}</span>` : ''}
                     <a href="${escapeHtml(p.video_url)}" target="_blank" class="ml-auto underline">otwórz</a></div>`;
             } else {
-                h += `<div class="text-[11.5px] text-zinc-500 bg-[#111] border border-[#232323] rounded-md px-3.5 py-2.5">Kreacja powstaje w fabryce wideo (sesja Claude Code wg checklisty — skopiuj prompt niżej). Status: <b class="text-zinc-300">${escapeHtml(p.video_status || 'nie zaczęte')}</b></div>`;
+                const vm = VIDEO_STATUS_META[p.video_status] || ['#a1a1aa', p.video_status || 'nie zaczęte'];
+                h += `<div class="text-[11.5px] text-zinc-500 bg-[#111] border border-[#232323] rounded-md px-3.5 py-2.5 flex items-center gap-2">Kreacja powstaje w fabryce wideo — etapy niżej. Status: <b style="color:${vm[0]}">${escapeHtml(vm[1])}</b>
+                    <button onclick="wf2VideoRefresh()" class="ml-auto text-[10.5px] underline text-zinc-400 hover:text-white">sprawdź teraz</button></div>`;
+            }
+            const vc = (costs || []).filter(c => c.product_id === p.id && c.kind === 'fal');
+            const vcSum = vc.reduce((s, c) => s + (+c.amount || 0), 0);
+            if (vcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki (fal): $${vcSum.toFixed(2)} · ${vc.length} poz. (szczegóły: zakładka Koszty)</div>`;
+            if (subs.length) {
+                h += '<div class="space-y-2">' + subs.map((d, i) => {
+                    const st = stepFor(d.key, p.id) || { status: 'pending' };
+                    const note = st.data && st.data.note ? st.data.note : '';
+                    const arts = artifactsFor(p.id, d.key);
+                    const icon = st.status==='done' ? 'ph-check-circle' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='blocked' ? 'ph-x-circle' : st.status==='skipped' ? 'ph-minus-circle' : 'ph-circle';
+                    const col = st.status==='done' ? '#45a557' : st.status==='in_progress' ? '#0070f3' : st.status==='blocked' ? '#e5484d' : '#3f3f46';
+                    return `<div class="border border-[#1f1f1f] rounded-md px-3 py-2 bg-[#0d0d0d]">
+                        <div class="flex items-center gap-2 text-[11.5px]">
+                            <i class="ph ${icon}" style="color:${col}"></i>
+                            <i class="ph ${escapeHtml(d.icon || 'ph-circle')} text-zinc-500"></i>
+                            <span class="text-zinc-300">${i + 1}. ${escapeHtml(d.label)}</span>
+                            ${d.milestone_label ? `<span class="mile-badge"><i class="ph ph-flag-checkered"></i></span>` : ''}
+                            <span class="ml-auto text-[10px] text-zinc-600">${STEP_LABELS[st.status] || st.status}</span>
+                        </div>
+                        ${note ? `<div class="text-[10.5px] text-zinc-500 mt-1.5 whitespace-pre-line">${escapeHtml(note)}</div>` : ''}
+                        ${arts.length ? `<div class="mt-2">${artifactsGallery(arts)}</div>` : ''}
+                    </div>`;
+                }).join('') + '</div>';
             }
             h += '</div>';
             return h;
+        }
+        async function wf2VideoRefresh() {
+            // fabryka pracuje out-of-band (brak realtime) — celowy re-fetch produktu + jego steps/artifacts/costs
+            const p = drawerProduct(); if (!p) return;
+            showToast('Odświeżam stan fabryki…');
+            const [pr, st, ar, co] = await Promise.all([
+                supabaseClient.from('wf2_products').select('*').eq('id', p.id).single(),
+                supabaseClient.from('wf2_steps').select('*').eq('product_id', p.id),
+                supabaseClient.from('wf2_artifacts').select('*').eq('product_id', p.id),
+                supabaseClient.from('wf2_costs').select('*').eq('product_id', p.id),
+            ]);
+            if (pr.data) { const i = products.findIndex(x => x.id === p.id); if (i >= 0) products[i] = pr.data; }
+            const mergeIn = (arr, rows) => (rows || []).forEach(row => { const i = arr.findIndex(x => x.id === row.id); if (i >= 0) arr[i] = row; else arr.push(row); });
+            mergeIn(steps, st.data); mergeIn(artifacts, ar.data); mergeIn(costs, co.data);
+            renderDrawer(); renderCosts();
         }
 
         // ============ POLA / CHECKLISTY / STATUSY DRAWERA ============

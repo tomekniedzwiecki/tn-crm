@@ -134,9 +134,15 @@ def reclaim(outdir):
             got.append(download(url, base + ext)); print("[reclaim] saved:", base + ext, flush=True)
     return got
 
-def download(url, out):
-    urllib.request.urlretrieve(url, out)
-    return out
+def download(url, out, tries=3):
+    # retry na blipy sieci (WinError 10054 przerywal batch audio — lekcja drapek 19.07)
+    for a in range(tries):
+        try:
+            urllib.request.urlretrieve(url, out)
+            return out
+        except OSError as e:
+            if a == tries - 1: raise
+            time.sleep(2 * (a + 1))
 
 if __name__ == "__main__":
     cmd = sys.argv[1]

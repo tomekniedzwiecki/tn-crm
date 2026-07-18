@@ -7,6 +7,9 @@
 ## Cel jakościowy
 Kreacja najwyższej klasy **za pierwszym razem**. Test 17.07 (3 produkty z samej dokumentacji) to potwierdził: 3/3 przeszły bramki, śr. $2,57/kreację. Utrzymanie tego = trzymanie się kroków i bramek poniżej.
 
+## ⛔ REGUŁA NADRZĘDNA: BRAK EMISJI DO PANELU = ETAP NIEZALICZONY
+Proces MUSI być widoczny w panelu `/tn-sklepy` na bieżąco (decyzja Tomka 19.07). Po wskazanych KROKACH operator emituje przez `scripts/mockup-tools/panel-sync.py` (import lub CLI): (a) awans sub-kroku `step_update(project, product, 'avi_*', status, note=...)`, (b) artefakty oglądalne `artifact_add(..., step='avi_*')`, (c) koszt `cost_add(...)` i wpis osi czasu `activity_add(...)`. Mapa emisji — sekcja „EMISJE DO PANELU" niżej. Etap bez emisji = niewykonany; panel i proces NIE mogą się rozjechać.
+
 ---
 
 ## KROK 0 — Wejście i archetyp
@@ -96,6 +99,22 @@ Fabryka bez tego jest ślepa na własną skuteczność — rodowód kreacji MUSI
 5. **Nauka:** wnioski z wyników (który archetyp/wzorzec trzyma hook, gdzie ludzie odpadają) wpisuj do KART/playbooków — to jest cała racja bytu pętli.
 
 ---
+
+## EMISJE DO PANELU (mapa KROK → sub-krok `avi_*` → co leci)
+Sub-kroki wideo = natywne `wf2_step_defs` z `sub_of='ads_wideo'` (timeline w warsztacie kroku Wideo; artefakty/koszty/checklisty wiszą na `(product_id, 'avi_*')`). Statusy `wf2_products.video_status` = rollup dla badge.
+
+| Po KROKU | Sub-krok | Emisja (panel-sync) |
+|---|---|---|
+| 0 (start) | — | `product_meta`: `video_status='planning'`, `video_pattern_tiktok_url`; `artifact_add(avi_wzorzec, kind='link', url=<tiktok>)` — **NIGDY mp4 wzorca** (cudzy content: lokalnie/PRIVATE); `activity_add('video_start', ...)` |
+| 2 (KARTA) | `avi_wzorzec` → done | note: „archetyp X · N scen · cuts/min"; `artifact_add(kind='doc', KARTA — storage='repo')`; `video_status='rendering'` |
+| 3 (blueprint, samoakcept #1) | `avi_blueprint` → done | note z uzasadnieniem samoakceptu; `artifact_add(kind='doc', BLUEPRINT — storage='repo')` |
+| 5 (klatki, samoakcept #2) | `avi_klatki` → done | **PUBLIC** arkusz klatek-kluczy jpg → `bud-assets/<slug>/video/frames/` (`storage_upload` + `artifact_add(kind='proof')`); koszt klatek `cost_add(note='<slug> klatki')` |
+| 7 (wszystkie .pass) | `avi_render_qa` → done | `video_status='qa'` w trakcie; **PUBLIC** siatki QA `grid_*.jpg` → `bud-assets/<slug>/video/qa/` (`kind='proof'`); note-tabela werdyktów („6/7 PASS; hook 2×REJECT→fix"); koszt renderów `cost_add(note='<slug> rendery')` |
+| 8 (montaż) | `avi_montaz` → done | note: „−14 LUFS · SFX/ambient · LOOP OK"; **PUBLIC** kreacja robocza → `bud-assets/<slug>/video/preview/` (`kind='video'`) |
+| 11 (rejestr) | `avi_final` → done | finał → **PUBLIC** `bud-assets/<slug>/ads/kreacja_15s.mp4`; `product_meta`: `video_status='done'`, `video_url`, `video_cost_usd` (z ledgera), `video_ai_labeled=true`; `creative_upsert(slug, ..., public_url=...)`; `cost_add` total-korekta; `activity_add('video_done', '🏁 ...')` |
+| REJECT / 403 / pad | bieżący | sub-krok `in_progress`/`blocked` + note z powodem (panel MA pokazać, że utknęło — nie ciszę) |
+
+GOTCHA (drapek 19.07): `npx supabase storage cp` z absolutnym `C:/...` jako źródłem = `LegacyStorageUnsupportedOperationError` — kopiuj plik do cwd (tn-crm) i podawaj ścieżkę WZGLĘDNĄ.
 
 ## GDZIE ŁAPIEMY 9 DZISIEJSZYCH INCYDENTÓW (mapa bramka→incydent)
 | # | Incydent | Łapany w |

@@ -107,6 +107,9 @@ Scena omnihuman → `n:2`. „warm brown eyes" OBOWIĄZKOWE (OmniHuman zmienia k
 - Głosy sprawdzone: **„Aria"** (kobiecy PL), **„Bill"** (męski PL).
 - Tagi emocji w `text`: `[skeptical]` / `[gasp]` / `[laughs]` / `[pause]` (i dłuższe pauzy przez `[pause]`).
 - Tempo ~**14 znaków/s** — z tego licz długość sceny mówionej (kwestia + 0,6 s pad).
+  **Przy 6 scenach × ~2,5 s (standard 15 s): kwestia = ~20-25 ZNAKÓW na scenę** (fraza, nie
+  zdanie!) albo VO co drugą scenę — pełne zdania first-person mają 4-5 s i NIE mieszczą się
+  (lekcja drapek 19.07).
 - **REJESTR VO (audyt 19.07 — reguła twarda):** first-person/story, jak człowiek do człowieka:
   „Nie wierzyłem, dopóki…", „Tata dostał to na Dzień Ojca…" (wzór: myjka). **ZAKAZ
   broadcast-sloganów**: „Pięć w jednym. Sprawdź sam.", „Poznaj X", „Rewolucja w Y", wyliczanki
@@ -119,8 +122,8 @@ beginning, then silence, close-up, dry, NO music, NO reverb". **GOTCHA: `seconds
 = 403 na submicie** — zamawiaj 10 s i przytnij do hitu:
 `ffmpeg -af "silenceremove=start_periods=1:start_threshold=-45dB,atrim=0:1.2"`. Ambient bed:
 ten sam model, opis tonu pomieszczenia („room tone... steady and seamless, NO melody"),
-20-25 s. Koszt $0.20/plik. (`fal-ai/elevenlabs/sound-effects` istnieje i byłby tańszy, ale
-18.07 zwracał „Sound effect generation failed" na każdy payload — sprawdzić ponownie później.)
+20-25 s. Koszt $0.20/plik. (`fal-ai/elevenlabs/sound-effects` = **MARTWY** — 18.07 i 19.07
+każdy payload kończy się „Sound effect generation failed"; NIE trać na niego callów.)
 Do planu montażu: scena `sfx:[{plik, at (s od startu sceny), gain~0.8}]` + `audio.ambient
 {plik, gain~0.12}` — `montaz.py` miksuje je OSOBNĄ gałęzią (bez duckingu) i ODMÓWI montażu
 sceny `has_physical_action:true` bez sfx (bramka `require_sfx`).

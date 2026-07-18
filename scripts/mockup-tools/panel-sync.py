@@ -53,7 +53,7 @@ PRODUCT_META_WHITELIST = {
     "price", "cost_purchase", "cost_shipping", "fees_pct", "margin_mode", "status",
     "slug", "repo_path", "name", "cover_url", "platform_product_id", "checkout_url",
     "platform_name", "platform_page_url", "campaign_id", "video_url", "video_cost_usd",
-    "video_ai_labeled", "ads_creatives", "notes",
+    "video_ai_labeled", "video_status", "video_pattern_tiktok_url", "ads_creatives", "notes",
 }
 
 
@@ -250,6 +250,57 @@ def product_meta(product, patch):
     _patch("wf2_products", {"id": f"eq.{product}"}, clean)
     log(f"product_meta: PATCH {product} pola={sorted(clean)}")
     return clean
+
+
+# ── 4b. Fabryka wideo: koszty / oś czasu / rejestr kreacji ──
+def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=4,
+             note=None, created_by="auto"):
+    """Koszt do wf2_costs. Tabela NIE ma uniku — dedup po (project, product, step, kind, note);
+    bez note NIE deduplikuje (świadomie: kolejne pozycje)."""
+    if note:
+        params = {"project_id": f"eq.{project}", "kind": f"eq.{kind}", "note": f"eq.{note}",
+                  "select": "id"}
+        if product:
+            params["product_id"] = f"eq.{product}"
+        if step:
+            params["step_key"] = f"eq.{step}"
+        rows = _get("wf2_costs", params)
+        if rows:
+            log(f"cost_add: SKIP (istnieje) {kind} {note!r}")
+            return rows[0]["id"]
+    created = _post("wf2_costs", {"project_id": project, "product_id": product,
+                                  "step_key": step, "stage": stage, "amount": amount,
+                                  "currency": currency, "kind": kind, "note": note,
+                                  "created_by": created_by})
+    cid = _first_id(created)
+    log(f"cost_add: INSERT {kind} {amount} {currency} → {cid}")
+    return cid
+
+
+def activity_add(project, action, description, actor="auto"):
+    """Wpis na oś czasu projektu (wf2_activities) — log fabryki (kropka zielona: actor=auto)."""
+    created = _post("wf2_activities", {"project_id": project, "actor": actor,
+                                       "action": action, "description": description})
+    aid = _first_id(created)
+    log(f"activity_add: {action} → {aid}")
+    return aid
+
+
+def creative_upsert(slug, **fields):
+    """Upsert wf2_creatives po slug (UNIQUE). fields = kolumny tabeli: project_id, product_id,
+    archetype, pattern_tiktok_url, engine_mix, duration_s, cost_usd, ai_labeled, status,
+    storage_path, public_url, variants, meta_ad_ids, notes, meta."""
+    rows = _get("wf2_creatives", {"slug": f"eq.{slug}", "select": "id"})
+    body = {k: v for k, v in fields.items() if v is not None}
+    if rows:
+        cid = rows[0]["id"]
+        _patch("wf2_creatives", {"id": f"eq.{cid}"}, body)
+        log(f"creative_upsert: PATCH {slug} → {cid}")
+        return cid
+    created = _post("wf2_creatives", {"slug": slug, **body})
+    cid = _first_id(created)
+    log(f"creative_upsert: INSERT {slug} → {cid}")
+    return cid
 
 
 # ── 5. project_link_add ──

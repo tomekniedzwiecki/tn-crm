@@ -57,6 +57,13 @@ w blueprincie RAZEM z klatką hooka — para first↔last domyka koło); audio c
 wraca do hooka?" — NIE = popraw scenę CTA, zanim oddasz kreację. Pętla kompozycyjna,
 nie rewind/reset (gadżet = odrzut).
 
+## GOTCHA: Kling FLF SPRZĘGA produkt z akcją (drapek 19.07)
+Gdy scena pokazuje performera w kontekście czynności silnie skojarzonej z produktem
+(np. pielęgnacja pazurów), FLF **wstrzykuje produkt nawet gdy pierwsza I ostatnia klatka
+go nie mają** — odporne na negatywy i przekadrowanie (2× identyczna halucynacja).
+Dla „problem-hooka BEZ produktu": (a) trim czystego okna klipu (fantom zwykle wchodzi
+po ~1 s), (b) osobny bardzo krótki klip hookowy, (c) sceneria bez „stołu roboczego".
+
 ## Anty-wzorce
 Intro/logo na starcie · clickbait (wysoki hook rate + hold <25% = odrzut; waliduj CPA)
 · startle-audio · packshot bez ruchu · zależność od napisu · dosłowny before-after w beauty.
