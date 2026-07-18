@@ -94,6 +94,12 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   makietach, SPEC-I, sandbox, test stanów (SSIM<0.9 + klatki), pętla max 4 → downgrade z notą.
 - **PRODUKT W SCENACH** (STANDARD §2): każda sekcja produktowa = WŁASNE ujęcie; ten sam kadr
   max 1× (wyj. oferta↔sticky); ≥5 distinct views; klony pozy scene-from-mockup = P1.
+- **MODELE PER FAZA (18.07; SSOT: STANDARD §Z8):** subagenci fabryki NIE są już „zawsze Opus".
+  Domyślnie **Sonnet**; **Haiku** dla skryptów/REST (gate-check/sekcja-diff/detail-lint/panel-sync,
+  F-1, F6, backfill); **Opus** tylko dla otwartej kreacji/architektury (F1.7 przewodnik, KRYTYK
+  makiet, kod nietypowy/TOR-I flagowa, projektowanie gate'ów/mostu). Gate'y R13 ubezpieczają jakość
+  → tańszy model przechodzi te same progi. Jawny `model:` w spawnie wygrywa z env
+  `CLAUDE_CODE_SUBAGENT_MODEL=claude-opus-4-8` (env = bezpiecznik). Eskalacja Sonnet→Opus w LEDGER.
 - **MODUŁY KANONICZNE (R13; `docs/zbuduje/moduly/` + `MODULY.md`):** sekcja z odpowiednikiem MUSI
   bazować na module (wideo-rail/lightbox/sticky-buy/faq-accordion@1) — skórka = tokeny/treść, mechanika
   i proporcje NIETYKALNE (⛔ `grid-auto-flow:column;grid-auto-columns:1fr` = slivery). Kodowanie od zera = odstępstwo w LEDGER.

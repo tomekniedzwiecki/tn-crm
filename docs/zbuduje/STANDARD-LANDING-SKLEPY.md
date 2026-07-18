@@ -72,6 +72,25 @@ warianty, dowody) żyją w JEDNYM bloku generowanym w F0.6 (format §1a). Żaden
 koder F4, copy) nie dostaje luźnych wyimków snapshotu — dostaje TĘ kartę. Claim bez pozycji
 w karcie = CUT; brak pola = „brak danych", nigdy zmyślanie.
 
+**Z8 — MODELE PER FAZA (optymalizacja kosztów, 18.07; ZASTĘPUJE „subagenci=zawsze Opus").**
+Twarde gate'y (gate-check.py · sekcja-diff SSIM+LAYOUT · rubryka 5×T/N · PASS 0-5 · moduły
+kanoniczne) są SIATKĄ BEZPIECZEŃSTWA model-agnostyczną → subagent może być tańszy, bo gate łapie
+spadek jakości PRZED publikacją. DOMYŚLNY model subagenta fazy = **Sonnet**; **Haiku** dla czystych
+skryptów/REST (F-1 arytmetyka, source-gate, detail-lint/gate-check/sekcja-diff, panel-sync, backfill,
+selektor @32px, F6); **Opus** TYLKO tam, gdzie osąd otwarty i BRAK gate'u za nim:
+F1.7 przewodnik graficzny · KRYTYK makiet (art director) · kod sekcji nietypowych/TOR-I flagowej ·
+rozwój fabryki (gate'y/most/architektura). gpt-5.6-sol (plan F1/koder F4/choreograf F5) to OSOBNA oś
+kosztu (OpenAI, steruj `WF2_EFFORT`) — nie mylić z modelem agenta Claude. Vision-gate wg ZAMKNIĘTEJ
+checklisty (kuracja galerii, gate wierności 4-warunki, rubryka 5×T/N, PASS 5, detail-lint findings)
+= **Sonnet** (mocny vision, osąd zamknięty). Otwarty osąd estetyczny/kreacja = **Opus**.
+ESKALACJA (log w LEDGER): Sonnet→Opus gdy (a) 2× brak postępu na tym samym gate, (b) werdykt
+graniczny estetycznie, (c) sekcja bez modułu i bez wzorca w katalogu. De-eskalacja: typ sekcji
+3× 0-FAIL na Sonnet → zdjęty z eskalacji. Spawn subagenta MUSI podać jawny `model:` (env default
+Opus zostaje bezpiecznikiem). Weryfikacja że jakość nie spadła: pierwszy landing hybrydowy przechodzi
+TE SAME gate'y na 0 FAIL + A/B werdyktów Sonnet↔Opus na tych samych kompozytach; powtarzalna
+eskalacja danego typu (≥2 landingi) = ten typ na stałe Opus. Szacowana redukcja: ~65-70% tokenów
+agenta Claude/landing.
+
 ---
 
 ## 1. FLOW FABRYKI (fazy F0→F8; wykonawca = agent, koder = gpt-5.6-sol)
