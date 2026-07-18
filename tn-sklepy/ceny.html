@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TN CRM - Sklepy / Ceny</title>
+    <link rel="icon" type="image/svg+xml" href="/tn-workflow/favicon.svg">
+    <meta name="theme-color" content="#050505">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.91.0"></script>
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="../components/shared-sidebar.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { theme: { extend: { fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] } } } }
+    </script>
+    <style>
+        body { background: #000; color: #e5e5e5; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::selection { background: white; color: black; }
+        .glass-header { background: rgba(0,0,0,.7); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,.08); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(5px);} to { opacity:1; transform:translateY(0);} }
+        .animate-enter { animation: fadeIn .4s ease-out forwards; }
+        .phase-badge { display:inline-flex; align-items:center; gap:5px; border:1px solid; border-radius:6px; padding:2px 8px; font-size:11px; font-weight:600; }
+        .drawer { position:fixed; top:0; right:0; bottom:0; width:min(560px,100vw); background:#0a0a0a; border-left:1px solid #1f1f1f;
+                  transform:translateX(100%); transition:transform .25s ease; z-index:60; overflow-y:auto; }
+        .drawer.open { transform:translateX(0); }
+        .rung { border:1px solid #1f1f1f; border-radius:8px; padding:10px 14px; }
+        .rung.active { border-color:rgba(0,112,243,.6); background:rgba(0,112,243,.07); }
+        .rung.done { border-color:rgba(69,165,87,.5); }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
+
+    <aside id="sidebar" class="w-[280px] bg-zinc-950 border-r border-white/5 flex flex-col flex-shrink-0"></aside>
+
+    <main class="flex-1 flex flex-col bg-black relative min-w-0">
+        <header class="glass-header flex items-center justify-between px-6 h-14 flex-shrink-0 z-10">
+            <div class="flex items-center gap-3">
+                <button onclick="Sidebar.toggle()" class="mobile-menu-btn hidden p-2 -ml-2 text-zinc-400 hover:text-white"><i class="ph ph-list text-xl"></i></button>
+                <span class="text-zinc-500 text-xs font-mono">tn-sklepy / <span class="text-zinc-300">ceny</span></span>
+            </div>
+            <div id="engine-chip" class="inline-flex items-center gap-2 border border-[#333] rounded-md px-3 py-1.5 text-[11px] text-zinc-400">
+                <span class="w-2 h-2 rounded-full bg-zinc-600" id="engine-dot"></span><span id="engine-label">silnik: …</span>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-6 lg:p-10">
+            <div class="max-w-7xl mx-auto animate-enter">
+
+                <div class="mb-8">
+                    <h1 class="text-3xl font-semibold text-white tracking-tight mb-1">Ceny — silnik decyzji produktowych</h1>
+                    <p class="text-zinc-500">Drabinka TEST → SCALE → OPT per produkt · prawda o zamówieniach = API platformy · SSOT: <span class="font-mono text-zinc-400">docs/zbuduje/CENNIK-PLAN.md</span></p>
+                </div>
+
+                <!-- STREFA: DO DECYZJI -->
+                <div id="decisions-wrap" class="mb-8 hidden">
+                    <div class="flex items-baseline gap-2 mb-3">
+                        <span class="text-[11px] font-mono font-semibold tracking-wider text-[#f5b955]">DO DECYZJI</span>
+                        <span id="decisions-count" class="text-[11px] text-zinc-500"></span>
+                    </div>
+                    <div id="decisions-cards" class="grid gap-3 md:grid-cols-2"></div>
+                </div>
+                <div id="decisions-empty" class="mb-8 border border-[#1f1f1f] rounded-lg px-5 py-4 text-zinc-500 text-xs flex items-center gap-2">
+                    <i class="ph ph-check-circle text-[#62c073] text-base"></i> Brak decyzji do podjęcia — wszystko działa samo.
+                </div>
+
+                <!-- Filtry -->
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <select id="f-project" onchange="renderTable()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60">
+                        <option value="">Wszystkie projekty</option>
+                    </select>
+                    <select id="f-phase" onchange="renderTable()" class="bg-[#0a0a0a] border border-[#333] rounded-md px-3 py-1.5 text-xs text-white focus:outline-none focus:border-[#0070f3]/60">
+                        <option value="">Wszystkie fazy</option>
+                        <option value="1">TEST</option><option value="2">RAMP</option>
+                        <option value="3">SCALE</option><option value="4">OPT</option>
+                    </select>
+                    <label class="inline-flex items-center gap-2 text-xs text-zinc-400 cursor-pointer">
+                        <input id="f-attention" type="checkbox" onchange="renderTable()" class="accent-[#0070f3]"> wymaga uwagi
+                    </label>
+                </div>
+
+                <!-- Tabela produktów -->
+                <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead>
+                                <tr class="border-b border-[#1f1f1f] text-[11px] font-mono uppercase tracking-wider text-zinc-500">
+                                    <th class="px-4 py-3">Produkt</th>
+                                    <th class="px-4 py-3">Faza</th>
+                                    <th class="px-4 py-3 text-right">Cena</th>
+                                    <th class="px-4 py-3 text-right">Platforma</th>
+                                    <th class="px-4 py-3">Awans</th>
+                                    <th class="px-4 py-3 text-right">Zysk/szt.</th>
+                                    <th class="px-4 py-3 text-right">BEROAS</th>
+                                    <th class="px-4 py-3 text-right">Spend</th>
+                                    <th class="px-4 py-3 text-right">Przychód</th>
+                                    <th class="px-4 py-3">Drabinka</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rows"></tbody>
+                        </table>
+                    </div>
+                    <div id="empty-state" class="hidden py-16 text-center text-zinc-500">
+                        <i class="ph ph-tag text-4xl mb-3 block text-zinc-700"></i>
+                        Brak produktów spełniających filtr.
+                    </div>
+                </div>
+
+                <p class="text-zinc-600 text-[11px] mt-4">
+                    Sprzedaż = zamówienia z API platformy (bez statusu płatności do czasu <span class="font-mono">paymentStatus</span> — progi liczone z korektą
+                    <span class="font-mono" id="eff-factor-note"></span>). Spend/przychód: kampania <span class="font-mono">level='campaign'</span> + wf2_sales.
+                </p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Drawer produktu (read-only W1) -->
+    <div id="drawer" class="drawer">
+        <div class="sticky top-0 bg-[#0a0a0a]/95 backdrop-blur border-b border-[#1f1f1f] px-6 py-4 flex items-center justify-between z-10">
+            <div class="flex items-center gap-3 min-w-0">
+                <img id="dr-cover" class="w-9 h-9 rounded-md object-cover border border-[#1f1f1f] hidden" alt="">
+                <div class="min-w-0">
+                    <div id="dr-name" class="text-white font-semibold truncate"></div>
+                    <div id="dr-project" class="text-zinc-500 text-[11px] truncate"></div>
+                </div>
+            </div>
+            <button onclick="closeDrawer()" class="p-2 text-zinc-400 hover:text-white"><i class="ph ph-x text-lg"></i></button>
+        </div>
+        <div class="p-6 space-y-6">
+            <div id="dr-stats" class="grid grid-cols-3 gap-3"></div>
+            <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Drabinka cenowa</div>
+                <div id="dr-ladder" class="space-y-2"></div>
+            </div>
+            <div>
+                <div class="text-[11px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Historia zmian cen</div>
+                <div id="dr-events" class="space-y-1.5"></div>
+            </div>
+            <a id="dr-open-project" class="inline-flex items-center gap-1.5 border border-[#333] hover:border-[#0070f3]/60 text-zinc-300 hover:text-white rounded-md px-3 py-1.5 text-xs transition-colors" href="#">
+                Otwórz projekt <i class="ph ph-arrow-right"></i>
+            </a>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://yxmavwkwnfuphjqbelws.supabase.co';
+        const SUPABASE_ANON_KEY = 'sb_publishable_vT94u2GI4gzYl8gCV5sHbQ_Q94YidaI';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        Sidebar.render();
+        Sidebar.setupLogout(supabaseClient);
+
+        let projects = [], products = [], events = [], proposals = [], cfg = {};
+        let spendByProduct = {}, revenueByProduct = {}, ordersByProduct = {};
+
+        const PHASES = {
+            1: { label: 'TEST',  cls: 'border-[#f5a623]/50 text-[#f5b955]' },
+            2: { label: 'RAMP',  cls: 'border-[#0070f3]/50 text-[#52a8ff]' },
+            3: { label: 'SCALE', cls: 'border-[#45a557]/50 text-[#62c073]' },
+            4: { label: 'OPT',   cls: 'border-[#45a557]/50 text-[#62c073]' },
+        };
+        const STATE_ICON = {
+            ok:               '<i class="ph ph-check-circle text-[#62c073]" title="cena zgodna z platformą"></i>',
+            pending_platform: '<i class="ph ph-clock text-[#f5b955]" title="czeka na zmianę ceny na platformie"></i>',
+            mismatch:         '<i class="ph ph-warning-circle text-[#f26d78]" title="ROZJAZD: platforma ≠ panel"></i>',
+            paused:           '<i class="ph ph-pause-circle text-zinc-400" title="silnik wstrzymany na produkcie"></i>',
+        };
+        const KIND_LABEL = {
+            winner_reco: 'Rekomendacja WINNER', price_scale: 'Cena SCALE (propozycja AI)',
+            price_opt_over_ceiling: 'Krok OPT ponad widełkami', rollback: 'Propozycja rollbacku',
+            campaign_kill: 'Kampania: KILL / wymiana kreacji', creative_refresh: 'Odświeżenie kreacji',
+            budget_scale: 'Skalowanie budżetu', budget_realloc: 'Realokacja budżetu', manual_price_platform: 'Ręczna zmiana ceny na platformie',
+        };
+
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+        }
+        const money = (n) => (n === null || n === undefined || isNaN(n)) ? '—' : Number(n).toFixed(2).replace('.', ',') + ' zł';
+        const num = (v) => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+        function relDate(iso) {
+            if (!iso) return '—';
+            const d = new Date(iso); if (isNaN(d.getTime())) return '—';
+            return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        async function checkAuth() {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
+            Sidebar.setUserEmail(session.user.email.split('@')[0]);
+            const { data } = await supabaseClient.from('team_members').select('*');
+            const me = (data || []).find(m => m.user_id === session.user.id);
+            if (me) { Sidebar.setUserName(me.name); Sidebar.setUserColor(me.color); Sidebar.setupProfileClick(); }
+            Sidebar.showAdminNav(me?.role === 'admin');
+            return session;
+        }
+
+        // ============ DANE ============
+        async function loadAll() {
+            const [projQ, prodQ, evQ, propQ, adsQ, salesQ, cfgQ] = await Promise.all([
+                supabaseClient.from('wf2_projects').select('id, customer_name, status').range(0, 999),
+                supabaseClient.from('wf2_products').select('id, project_id, name, status, cover_url, cost_purchase, cost_shipping, fees_pct, price, unit_profit, shipping_paid_by, margin_mode, price_phase, phase_started_at, price_ladder, price_state, orders_paid, platform_price, platform_synced_at, platform_product_id, campaign_id').range(0, 4999),
+                supabaseClient.from('wf2_price_events').select('*').order('at', { ascending: false }).range(0, 499),
+                supabaseClient.from('wf2_proposals').select('*').eq('status', 'proposed').order('created_at', { ascending: false }).range(0, 99),
+                // ANTY-PODWÓJNE LICZENIE (TESTY.md §7.1): P&L wyłącznie level='campaign'
+                supabaseClient.from('wf2_ad_stats').select('product_id, spend, level').eq('level', 'campaign').range(0, 9999),
+                supabaseClient.from('wf2_sales').select('product_id, orders, revenue, source').eq('source', 'takedrop').range(0, 9999),
+                supabaseClient.from('settings').select('value').eq('key', 'wf2_price_config').maybeSingle(),
+            ]);
+            projects = projQ.data || [];
+            products = (prodQ.data || []).filter(p => p.status !== 'kill');
+            events = evQ.data || [];
+            proposals = propQ.data || [];
+            try { cfg = JSON.parse(cfgQ.data?.value || '{}'); } catch { cfg = {}; }
+
+            spendByProduct = {}; (adsQ.data || []).forEach(r => { if (r.product_id) spendByProduct[r.product_id] = (spendByProduct[r.product_id] || 0) + num(r.spend); });
+            revenueByProduct = {}; ordersByProduct = {};
+            (salesQ.data || []).forEach(r => {
+                if (!r.product_id) return;
+                revenueByProduct[r.product_id] = (revenueByProduct[r.product_id] || 0) + num(r.revenue);
+                ordersByProduct[r.product_id] = (ordersByProduct[r.product_id] || 0) + num(r.orders);
+            });
+
+            renderEngineChip();
+            renderProjectFilter();
+            renderDecisions();
+            renderTable();
+            document.getElementById('eff-factor-note').textContent = '×' + (cfg.effective_factor ?? 0.9);
+        }
+
+        function renderEngineChip() {
+            const dot = document.getElementById('engine-dot'), lbl = document.getElementById('engine-label');
+            if (cfg.engine_enabled && !cfg.dry_run) { dot.style.background = '#45a557'; lbl.textContent = 'silnik: AKTYWNY'; }
+            else if (cfg.engine_enabled && cfg.dry_run) { dot.style.background = '#f5a623'; lbl.textContent = 'silnik: DRY-RUN'; }
+            else { dot.style.background = '#52525b'; lbl.textContent = 'silnik: wyłączony (W2)'; }
+        }
+
+        function renderProjectFilter() {
+            const sel = document.getElementById('f-project');
+            const withProducts = projects.filter(p => products.some(x => x.project_id === p.id));
+            sel.innerHTML = '<option value="">Wszystkie projekty</option>' + withProducts.map(p =>
+                `<option value="${p.id}">${escapeHtml(p.customer_name || '(bez klienta)')}</option>`).join('');
+        }
+
+        // ============ DO DECYZJI ============
+        function renderDecisions() {
+            const wrap = document.getElementById('decisions-wrap');
+            const empty = document.getElementById('decisions-empty');
+            if (!proposals.length) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+            wrap.classList.remove('hidden'); empty.classList.add('hidden');
+            document.getElementById('decisions-count').textContent = proposals.length + ' propozycji czeka';
+            document.getElementById('decisions-cards').innerHTML = proposals.map(pr => {
+                const prod = products.find(p => p.id === pr.product_id);
+                const proj = projects.find(p => p.id === (pr.project_id || prod?.project_id));
+                const pl = pr.payload || {};
+                // format agencyjny: obserwacja → rekomendacja → efekt → termin (payload z silnika, W3)
+                const lines = ['observation', 'recommendation', 'expected_effect', 'deadline']
+                    .filter(k => pl[k]).map(k => `<div class="text-zinc-400 text-xs">${escapeHtml(pl[k])}</div>`).join('');
+                return `<div class="border border-[#f5a623]/40 bg-[#f5a623]/5 rounded-lg p-4">
+                    <div class="flex items-center justify-between mb-1.5">
+                        <span class="text-[#f5b955] text-xs font-semibold">${escapeHtml(KIND_LABEL[pr.kind] || pr.kind)}</span>
+                        <span class="text-zinc-600 text-[10px]">${relDate(pr.created_at)}</span>
+                    </div>
+                    <div class="text-white text-sm mb-1">${escapeHtml(prod?.name || '—')} <span class="text-zinc-500 text-xs">· ${escapeHtml(proj?.customer_name || '')}</span></div>
+                    ${lines || '<div class="text-zinc-500 text-xs">szczegóły w payload</div>'}
+                    <div class="text-zinc-600 text-[10px] mt-2">Akcept/odrzuć — od W3 (na razie podgląd)</div>
+                </div>`;
+            }).join('');
+        }
+
+        // ============ TABELA ============
+        function phaseOf(p) { return Math.min(num(p.price_phase) || 1, 4); }
+        function beroas(p) { const up = num(p.unit_profit); return (up > 0 && num(p.price) > 0) ? (num(p.price) / up) : null; }
+        function advanceLabel(p) {
+            if (!p.price_ladder?.accepted_at) return '<span class="text-zinc-600">drabinka nie zaakceptowana</span>';
+            const need = num(cfg.advance_orders_test ?? 5);
+            const eff = Math.floor(num(p.orders_paid) * (cfg.effective_factor ?? 0.9) * 100) / 100;
+            if (phaseOf(p) === 1) return `<span class="font-mono text-zinc-300">${num(p.orders_paid)}</span><span class="text-zinc-500"> zam. · próg ${need} (eff ${eff.toFixed(1)})</span>`;
+            return '<span class="text-zinc-500">wg silnika (W2)</span>';
+        }
+        function attention(p) { return (p.price_state && p.price_state !== 'ok') || proposals.some(x => x.product_id === p.id); }
+
+        function renderTable() {
+            const fp = document.getElementById('f-project').value;
+            const fph = document.getElementById('f-phase').value;
+            const fat = document.getElementById('f-attention').checked;
+            let rows = products;
+            if (fp) rows = rows.filter(p => p.project_id === fp);
+            if (fph) rows = rows.filter(p => String(phaseOf(p)) === fph);
+            if (fat) rows = rows.filter(attention);
+            document.getElementById('empty-state').classList.toggle('hidden', rows.length > 0);
+            document.getElementById('rows').innerHTML = rows.map(p => {
+                const proj = projects.find(x => x.id === p.project_id);
+                const ph = PHASES[phaseOf(p)] || PHASES[1];
+                const be = beroas(p);
+                const spend = spendByProduct[p.id] || 0;
+                const rev = revenueByProduct[p.id] || 0;
+                const ladderOk = !!p.price_ladder?.accepted_at;
+                return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.03] cursor-pointer transition-colors" onclick="openDrawer('${p.id}')">
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            ${p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-8 h-8 rounded object-cover border border-[#1f1f1f] flex-shrink-0" alt="">` : '<div class="w-8 h-8 rounded bg-[#111] border border-[#1f1f1f] flex-shrink-0"></div>'}
+                            <div class="min-w-0">
+                                <div class="text-white font-medium truncate max-w-[220px]">${escapeHtml(p.name)}</div>
+                                <div class="text-zinc-600 text-[11px] truncate">${escapeHtml(proj?.customer_name || '')}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3"><span class="phase-badge ${ph.cls}">${ph.label}</span></td>
+                    <td class="px-4 py-3 text-right font-mono text-white">${money(p.price)} <span class="ml-1">${STATE_ICON[p.price_state || 'ok'] || ''}</span></td>
+                    <td class="px-4 py-3 text-right font-mono text-zinc-400">${money(p.platform_price)}</td>
+                    <td class="px-4 py-3 text-xs">${advanceLabel(p)}</td>
+                    <td class="px-4 py-3 text-right font-mono ${num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]'}">${money(p.unit_profit)}</td>
+                    <td class="px-4 py-3 text-right font-mono ${be && be <= 4 ? 'text-[#62c073]' : 'text-[#f5b955]'}">${be ? be.toFixed(1) : '—'}</td>
+                    <td class="px-4 py-3 text-right font-mono text-zinc-300">${spend ? money(spend) : '—'}</td>
+                    <td class="px-4 py-3 text-right font-mono text-zinc-300">${rev ? money(rev) : '—'}</td>
+                    <td class="px-4 py-3 text-xs">${ladderOk ? '<span class="text-[#62c073]"><i class="ph ph-check"></i> zaakceptowana</span>' : '<span class="text-zinc-500">brak</span>'}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        // ============ DRAWER ============
+        function closeDrawer() { document.getElementById('drawer').classList.remove('open'); }
+        function openDrawer(pid) {
+            const p = products.find(x => x.id === pid); if (!p) return;
+            const proj = projects.find(x => x.id === p.project_id);
+            document.getElementById('dr-name').textContent = p.name;
+            document.getElementById('dr-project').textContent = (proj?.customer_name || '') + ' · faza ' + (PHASES[phaseOf(p)]?.label || '?') + (p.phase_started_at ? ' od ' + relDate(p.phase_started_at) : '');
+            const cov = document.getElementById('dr-cover');
+            if (p.cover_url) { cov.src = p.cover_url; cov.classList.remove('hidden'); } else cov.classList.add('hidden');
+            document.getElementById('dr-open-project').href = 'projekt.html?id=' + p.project_id;
+
+            const spend = spendByProduct[p.id] || 0, rev = revenueByProduct[p.id] || 0;
+            const contrib = num(p.unit_profit) * num(p.orders_paid) - spend;
+            const stat = (l, v, cls) => `<div class="border border-[#1f1f1f] rounded-lg p-3"><div class="text-zinc-500 text-[10px] font-mono uppercase tracking-wider mb-1">${l}</div><div class="font-mono ${cls || 'text-white'}">${v}</div></div>`;
+            document.getElementById('dr-stats').innerHTML =
+                stat('Zamówienia', num(p.orders_paid)) +
+                stat('Przychód', money(rev)) +
+                stat('Spend', money(spend)) +
+                stat('Zysk/szt.', money(p.unit_profit), num(p.unit_profit) > 0 ? 'text-[#62c073]' : 'text-[#f26d78]') +
+                stat('BEROAS', beroas(p) ? beroas(p).toFixed(1) : '—') +
+                stat('Wynik (zł)', money(contrib), contrib >= 0 ? 'text-[#62c073]' : 'text-[#f26d78]');
+
+            // drabinka
+            const ladder = p.price_ladder;
+            const cur = phaseOf(p);
+            const PHASE_NO = { test: 1, ramp: 2, scale: 3, opt: 4 };
+            document.getElementById('dr-ladder').innerHTML = ladder?.rungs?.length ? ladder.rungs.map(r => {
+                const no = PHASE_NO[r.phase] || 9;
+                const cls = no < cur ? 'done' : no === cur ? 'active' : '';
+                const priceTxt = r.price != null ? money(r.price) : (r.source === 'ai' ? 'propozycja AI (bramka Tomka)' : r.step_pct ? '+' + r.step_pct + '% / szczebel' : '—');
+                return `<div class="rung ${cls} flex items-center justify-between">
+                    <div><span class="text-white text-xs font-semibold uppercase">${escapeHtml(r.phase)}</span>
+                        ${r.note ? `<span class="text-zinc-500 text-[11px] ml-2">${escapeHtml(r.note)}</span>` : ''}</div>
+                    <div class="font-mono text-xs ${no === cur ? 'text-[#52a8ff]' : 'text-zinc-300'}">${priceTxt}</div>
+                </div>`;
+            }).join('') + (ladder.accepted_at ? `<div class="text-zinc-600 text-[10px]">zaakceptowana ${relDate(ladder.accepted_at)} przez ${escapeHtml(ladder.accepted_by || '?')}</div>` : '')
+              : '<div class="text-zinc-500 text-xs">Brak drabinki — wygeneruj i zaakceptuj w kroku „Wybór + kalkulacja" projektu.</div>';
+
+            // historia
+            const evs = events.filter(e => e.product_id === pid);
+            document.getElementById('dr-events').innerHTML = evs.length ? evs.map(e => {
+                const st = { proposed: '#f5b955', accepted: '#52a8ff', applied: '#52a8ff', confirmed: '#62c073', rejected: '#71717a', failed: '#f26d78' }[e.status] || '#71717a';
+                return `<div class="flex items-center gap-2 text-xs">
+                    <span class="w-1.5 h-1.5 rounded-full flex-shrink-0" style="background:${st}"></span>
+                    <span class="text-zinc-500 font-mono text-[10px] w-24 flex-shrink-0">${relDate(e.at)}</span>
+                    <span class="text-zinc-300 font-mono">${money(e.old_price)} → ${money(e.new_price)}</span>
+                    <span class="text-zinc-500">${escapeHtml(e.trigger_kind)} · ${escapeHtml(e.status)}</span>
+                </div>`;
+            }).join('') : '<div class="text-zinc-500 text-xs">Brak zmian cen.</div>';
+
+            document.getElementById('drawer').classList.add('open');
+        }
+        document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+        (async () => {
+            const session = await checkAuth();
+            if (!session) return;
+            await loadAll();
+        })();
+    </script>
+</body>
+</html>

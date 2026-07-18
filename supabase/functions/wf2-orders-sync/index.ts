@@ -43,6 +43,17 @@ function num(v: unknown): number {
   if (typeof v === 'string') { const n = parseFloat(v.replace(',', '.')); return Number.isFinite(n) ? n : 0; }
   return 0;
 }
+// kwoty Trevio są ZAGNIEŻDŻONE: total:{amount,currency}, unitPrice:{amount,currency}
+// (potwierdzone na realnym zamówieniu 58088579, 2026-07-18 — CENNIK-PLAN.md §3.2).
+// num(obiekt) zwracał 0 → całe revenue/P&L liczyło się na zerach. amt() rozpakowuje.
+function amt(v: unknown): number {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const o = v as Record<string, unknown>;
+    if ('amount' in o) return num(o.amount);
+    if ('value' in o) return num(o.value);
+  }
+  return num(v);
+}
 // normalizacja nazwy do mapowania: trim + lower + zwinięcie wielokrotnych spacji
 function normName(s: unknown): string { return str(s).trim().toLowerCase().replace(/\s+/g, ' '); }
 // pierwsza niepusta wartość z listy aliasów pola
@@ -76,15 +87,15 @@ function mapOrder(o: Record<string, unknown>): MappedOrder {
   const dRaw = pick(o, ['orderDate', 'order_date', 'date', 'createdAt', 'created_at', 'createdDate', 'created', 'placedAt']);
   const parsed = dRaw != null ? new Date(str(dRaw)) : null;
   const order_date = parsed && !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
-  const value = num(pick(o, ['value', 'total', 'totalValue', 'totalGross', 'grossValue', 'amount', 'sum', 'price']));
-  const delivery_cost = num(pick(o, ['deliveryCost', 'delivery_cost', 'shippingCost', 'shipping_cost', 'deliveryPrice', 'shipping']));
+  const value = amt(pick(o, ['value', 'total', 'totalValue', 'totalGross', 'grossValue', 'amount', 'sum', 'price']));
+  const delivery_cost = amt(pick(o, ['deliveryCost', 'delivery_cost', 'shippingCost', 'shipping_cost', 'deliveryPrice', 'shipping']));
   const is_cod = toBoolOrNull(pick(o, ['isCashOnDelivery', 'is_cod', 'isCod', 'cod', 'cashOnDelivery', 'paymentMethod']));
   const linesRaw = pick(o, ['products', 'lines', 'items', 'orderLines', 'orderItems', 'positions']);
   const arr = Array.isArray(linesRaw) ? linesRaw as Record<string, unknown>[] : [];
   const lines: MappedLine[] = arr.map((l) => ({
     name: str(pick(l, ['name', 'productName', 'product_name', 'title', 'label'])),
-    price: num(pick(l, ['price', 'unitPrice', 'unit_price', 'grossPrice', 'priceGross', 'value'])),
-    quantity: num(pick(l, ['quantity', 'qty', 'amount', 'count'])) || 1,
+    price: amt(pick(l, ['price', 'unitPrice', 'unit_price', 'grossPrice', 'priceGross', 'value'])),
+    quantity: num(pick(l, ['quantity', 'qty', 'count'])) || 1,
     product_id: null,
   }));
   return { id, number, order_date, value, delivery_cost, is_cod, lines };
@@ -241,6 +252,20 @@ async function syncProject(
     }
   }
 
+  // 4b) orders_paid per produkt = COUNT zamówień zawierających produkt (całość, all-time).
+  //     Definicja „sprzedaży" wg CENNIK-PLAN §2: proxy = zamówienie zsynchronizowane
+  //     (API nie zwraca statusu płatności); po dorobieniu paymentStatus → filtr paid.
+  //     ≤10 produktów/projekt → tanie count-y; liczone zawsze (samoleczenie dryfu).
+  for (const p of (products || []) as { id: string }[]) {
+    if (Date.now() - startedAt > DEADLINE_MS) break;
+    const { count, error: cntErr } = await supabase.from('wf2_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('project_id', proj.id)
+      .contains('lines', JSON.stringify([{ product_id: p.id }]));
+    if (cntErr) { console.error(`[wf2-orders-sync] orders_paid count błąd (produkt ${p.id})`, cntErr.message); continue; }
+    await supabase.from('wf2_products').update({ orders_paid: count ?? 0 }).eq('id', p.id);
+  }
+
   // wpis o niezmapowanych nazwach — raz na przebieg projektu
   if (unmappedNames.size > 0) {
     const list = [...unmappedNames].slice(0, 40).join(', ');
@@ -387,7 +412,7 @@ async function runGuard(
   // (3) ROZJAZD CENY — produkty z platform_product_id + price; jedna strona produktów/projekt
   try {
     const { data: prods } = await supabase.from('wf2_products')
-      .select('id, name, price, platform_product_id')
+      .select('id, name, price, platform_product_id, platform_variant_id, price_state')
       .eq('project_id', proj.id)
       .not('platform_product_id', 'is', null)
       .not('price', 'is', null);
@@ -396,27 +421,38 @@ async function runGuard(
       if (r.ok) {
         const items = extractList(r.data, ['items', 'data', 'products', 'records']);
         const priceById = new Map<string, number>();
+        const variantById = new Map<string, string>();
         for (const it of items) {
           const pid = str(pick(it, ['id', 'productId', 'product_id']));
           if (!pid) continue;
           const variants = pick(it, ['variants', 'variantList', 'skus']);
           const v0 = Array.isArray(variants) && variants.length > 0 ? variants[0] as Record<string, unknown> : null;
           const pr = v0
-            ? num(pick(v0, ['price', 'grossPrice', 'priceGross', 'value', 'amount']))
-            : num(pick(it, ['price', 'grossPrice', 'priceGross', 'value']));
+            ? amt(pick(v0, ['price', 'grossPrice', 'priceGross', 'value', 'amount']))
+            : amt(pick(it, ['price', 'grossPrice', 'priceGross', 'value']));
           priceById.set(pid, pr);
+          const vid = v0 ? str(pick(v0, ['id', 'variantId', 'variant_id'])) : '';
+          if (vid) variantById.set(pid, vid);
         }
         // dedup: otwarte noty cenowe projektu (po prefiksie) — jedno zapytanie na projekt
         const { data: openPriceNotes } = await supabase.from('wf2_notes')
           .select('body').eq('project_id', proj.id).eq('status', 'open').like('body', '⚠️ AUTOMAT: cena%');
         const priceBodies = ((openPriceNotes || []) as { body: string }[]).map((n) => n.body || '');
-        for (const p of (prods as { id: string; name: string; price: number; platform_product_id: string }[])) {
+        for (const p of (prods as { id: string; name: string; price: number; platform_product_id: string; platform_variant_id: string | null; price_state: string | null }[])) {
           const pid = str(p.platform_product_id);
           if (!priceById.has(pid)) continue;   // produktu nie ma na tej stronie — brak wiarygodnych danych, nie ruszamy
           const platPrice = priceById.get(pid)!;
-          await supabase.from('wf2_products').update({ platform_price: platPrice, platform_synced_at: nowIso }).eq('id', p.id);
           const panelPrice = num(p.price);
-          if (Math.abs(platPrice - panelPrice) > 0.01) {
+          const diff = Math.abs(platPrice - panelPrice) > 0.01;
+          // price_state (CENNIK-PLAN §4.3): mismatch przy rozjeździe; powrót do 'ok' TYLKO
+          // z 'mismatch' (nie nadpisujemy 'pending_platform'/'paused' — stany silnika/interim)
+          const upd: Record<string, unknown> = { platform_price: platPrice, platform_synced_at: nowIso };
+          if (diff && (p.price_state === 'ok' || p.price_state == null)) upd.price_state = 'mismatch';
+          if (!diff && p.price_state === 'mismatch') upd.price_state = 'ok';
+          if (!diff && p.price_state === 'pending_platform') upd.price_state = 'ok';   // interim: ręczna zmiana kasy potwierdzona
+          if (!p.platform_variant_id && variantById.has(pid)) upd.platform_variant_id = variantById.get(pid);
+          await supabase.from('wf2_products').update(upd).eq('id', p.id);
+          if (diff) {
             const marker = `dla ${p.name} —`;   // dedup po prefiksie 'cena' + nazwie produktu
             if (priceBodies.some((b) => b.includes(marker))) continue;
             const body = `⚠️ AUTOMAT: cena na platformie (${money(platPrice)} zł) ≠ cena w panelu (${money(panelPrice)} zł) dla ${p.name} — kasa pobierze ${money(platPrice)}. Wyrównaj w panelu platformy albo zaktualizuj cenę produktu.`;

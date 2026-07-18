@@ -89,6 +89,7 @@ const NAV_ITEMS_SKLEP = [
 // TN Sklepy (workflow v2 — prowadzenie wspólnych biznesów po rezerwacji /sklep)
 const NAV_ITEMS_SKLEPY = [
     { id: 'index', icon: 'ph-list-checks', label: 'Projekty' },
+    { id: 'ceny', icon: 'ph-tag', label: 'Ceny' },
 ];
 
 // TN App (workflow budowy aplikacji SaaS po pełnej płatności /aplikacja)

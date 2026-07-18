@@ -1129,7 +1129,7 @@
                 fields:[{k:'grafiki_url',l:'Link do folderu (opcjonalnie, gdy ręcznie)'}],
                 check:['Referencja produktu + logo poprawne (wierność 1:1)','Research konkurencji (Manus) zrobiony','3 koncepty: demo / problem / proof — copy + wizual','Format 4:5 (feed+reels)','Zgodne z polityką Meta (bez pilności, bez „dostawa 24h")','Grafiki zaakceptowane do testów'], prompt:'ads_grafiki' },
             ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF ~$2.5; talking-head → OmniHuman). Bramki: KARTA produktu + qa_gate (.pass na KAŻDYM klipie) + 2× akcept Tomka. OZNACZENIE AI OBOWIĄZKOWE. Koszt ~$2.5-8. ⚡ RÓWNOLEGLE: niezależne od landinga — wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
-                fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (Storage public)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)'}],
+                fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (PUBLIC attachments/bud-assets/<slug>/ads/; wf2-video=research+archiwum)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)'}],
                 check:['Wzorzec (tiktok_url) + mp4 pobrany do prywatnego bucketu','KARTA.json spisana (anatomia z galerii Ali)','Blueprint zaakceptowany (bramka Tomka #1)','Klatki-klucze zaakceptowane (bramka Tomka #2)','Wszystkie klipy z .pass (qa_gate)','Montaż 15 s złożony (hook≤2s, bez napisów)','Pętla QA czysta (zero AI-tells)','Oznaczenie AI ustawione (Meta/TikTok)','Koszt zalogowany, video_url zapisany'], prompt:'ads_wideo' },
             ads_kampanie: { desc:'Kampania 1:1 dla produktu wg WORKFLOW-V2-TESTY §1: OUTCOME_SALES/Purchase + CAPI, ABO ~17-25 zł/d, broad (zero stackowania zainteresowań), Advantage+ placements, 9:16 wideo first. Nazwa: [WF2:klient] produkt. Start ZAWSZE PAUSED — publikacja = bramka Tomka (pon.–wt. rano).',
                 fields:[{k:'campaign_id',l:'Meta campaign ID', col:'product.campaign_id'},{k:'daily',l:'Budżet dzienny (zł)'}],
@@ -1590,20 +1590,82 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                     <div class="text-xs text-zinc-400">Marża: <span id="wy-margin" class="font-mono font-semibold text-zinc-500">—</span></div>
                     <div class="text-[11px] text-zinc-600">na testach celujemy w ~${TEST_MARGIN_PCT}%</div>
                 </div>
+                <!-- DRABINKA CENOWA (CENNIK-PLAN.md v2.0 §2): akcept = bramka startowa silnika cen -->
+                <div class="bg-[#0a0a0a] border border-[#262626] rounded-md px-4 py-3">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">Drabinka cenowa</span>
+                        <a href="ceny.html" class="text-[10px] text-zinc-600 hover:text-zinc-400">panel Ceny →</a>
+                    </div>
+                    <div id="wy-ladder" class="space-y-1.5 text-xs"></div>
+                    <div id="wy-ladder-foot" class="mt-2.5"></div>
+                </div>
                 <div class="flex items-center gap-4">
                     <button onclick="openCard('${p.id}')" class="text-xs text-[#52a8ff] hover:text-[#78b6ff] inline-flex items-center gap-1.5"><i class="ph ph-identification-card"></i> Karta produktu</button>
                     <button onclick="openProductModal('${p.id}')" class="text-xs text-zinc-500 hover:text-zinc-300 inline-flex items-center gap-1.5"><i class="ph ph-sliders-horizontal"></i> Pełna edycja</button>
                 </div>
             </div>`;
         }
+        // Drabinka: TEST (cena z pola) → SCALE (szacunek ~2,5× kosztu; finalnie propozycja AI = bramka Tomka) → OPT (+8–12%)
+        function wyLadderRungs(p, price) {
+            const cost = Number(p.cost_purchase) || 0, ship = Number(p.cost_shipping) || 0;
+            const scaleEst = cost > 0 ? psychPriceUp(Math.max((cost + ship) * 2.5, price || 0)) : null;
+            return [
+                { phase: 'test', price: price ?? null, note: `koszt+${TEST_MARGIN_PCT}% · awans: winner wg TESTY.md (5/3 zam. + spend)` },
+                { phase: 'scale', price: null, source: 'ai', est: scaleEst, note: 'cena z propozycji AI (bramka Tomka); wykonanie dwustopniowe ramp→baza' },
+                { phase: 'opt', step_pct: 10, note: '+8–12%/szczebel co ≥8 zam. lub 21 dni, dopóki kontrybucja zł/dzień trzyma' },
+            ];
+        }
+        function wyLadderRecalc() {
+            const p = drawerProduct(); if (!p) return;
+            const wrap = document.getElementById('wy-ladder'); if (!wrap) return;
+            const price = parseFloat(document.getElementById('wy-price')?.value);
+            const rungs = wyLadderRungs(p, isNaN(price) ? null : price);
+            wrap.innerHTML = rungs.map(r => `<div class="flex items-center justify-between gap-3">
+                <span class="text-zinc-300 font-semibold uppercase text-[10px] w-11 flex-shrink-0">${r.phase}</span>
+                <span class="text-zinc-600 flex-1 text-[10px] leading-tight">${r.note}</span>
+                <span class="font-mono text-zinc-300 flex-shrink-0">${r.price != null ? moneyPL(r.price) : r.est ? '~' + moneyPL(r.est) : r.step_pct ? '+' + r.step_pct + '%' : '—'}</span>
+            </div>`).join('');
+            const foot = document.getElementById('wy-ladder-foot');
+            const lad = p.price_ladder;
+            const testRung = lad?.rungs?.find(r => r.phase === 'test');
+            const stale = lad?.accepted_at && testRung && !isNaN(price) && Math.abs(Number(testRung.price) - price) > 0.001;
+            if (lad?.accepted_at && !stale) {
+                foot.innerHTML = `<span class="text-[#62c073] text-[11px] inline-flex items-center gap-1"><i class="ph ph-check-circle"></i> Zaakceptowana ${new Date(lad.accepted_at).toLocaleDateString('pl-PL')} — silnik cen może działać</span>`;
+            } else {
+                foot.innerHTML = `${stale ? '<div class="text-[#f5b955] text-[10px] mb-1.5">Cena zmieniona po akcepcie — wymagany ponowny akcept.</div>' : ''}
+                    <button onclick="wyAcceptLadder()" class="text-[11px] font-semibold bg-white text-black rounded-md px-3 py-1.5 hover:bg-zinc-200 transition-colors">Zaakceptuj drabinkę</button>
+                    <span class="text-zinc-600 text-[10px] ml-2">bez akceptu silnik cen NIE rusza produktu</span>`;
+            }
+        }
+        async function wyAcceptLadder() {
+            const p = drawerProduct(); if (!p) return;
+            const price = parseFloat(document.getElementById('wy-price')?.value);
+            if (isNaN(price) || price <= 0) { showToast('Najpierw ustaw cenę sprzedaży (TEST)', 'error'); return; }
+            const ladder = {
+                mode: 'cost_plus',
+                accepted_at: new Date().toISOString(),
+                accepted_by: 'tomek',
+                rungs: wyLadderRungs(p, price),
+            };
+            const upd = { price_ladder: ladder, price_phase: p.price_phase || 1 };
+            if (!p.phase_started_at) upd.phase_started_at = new Date().toISOString();
+            if (!p.test_started_at) upd.test_started_at = new Date().toISOString();
+            const { error } = await supabaseClient.from('wf2_products').update(upd).eq('id', p.id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            Object.assign(p, upd);
+            logActivity('ladder_accepted', `Drabinka cenowa zaakceptowana: ${p.name} — TEST ${moneyPL(price)}`);
+            wyLadderRecalc();
+            showToast('Drabinka zaakceptowana', 'success');
+        }
         function wyRecalc() {
             const cost = parseFloat(document.getElementById('wy-cost').value);
             const price = parseFloat(document.getElementById('wy-price').value);
             const el = document.getElementById('wy-margin');
-            if (isNaN(cost) || isNaN(price) || cost <= 0) { el.textContent = '—'; el.className = 'font-mono font-semibold text-zinc-500'; return; }
+            if (isNaN(cost) || isNaN(price) || cost <= 0) { el.textContent = '—'; el.className = 'font-mono font-semibold text-zinc-500'; wyLadderRecalc(); return; }
             const profit = price - cost;
             el.textContent = `${moneyPL(profit)} (${Math.round(profit / cost * 100)}%)`;
             el.className = 'font-mono font-semibold ' + (profit > 0 ? 'text-[#4cb782]' : 'text-[#f26d78]');
+            wyLadderRecalc();
         }
         async function wySave() {
             const p = drawerProduct(); if (!p) return;

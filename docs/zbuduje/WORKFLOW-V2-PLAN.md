@@ -228,6 +228,15 @@ Konsekwencje architektoniczne:
 
 ### Cennik dwufazowy (decyzja Tomka 15.07)
 
+> **18.07: pełny projekt modułu cen → `CENNIK-PLAN.md` v2.0** (silnik decyzji produktowych:
+> drabinka TEST→SCALE(ramp→baza)→OPT po kontrybucji zł/dzień, `wf2-price-engine` +
+> **`wf2-ads-sync` (NOWY prerekwizyt — wf2_ad_stats nikt dziś nie zapełnia!)** + reconcile
+> + kill-switch, panel `ceny.html`, AOV/multipak, klient-notify; endpoint ceny i status
+> płatności DOROBI developer — decyzje Tomka 18.07, spec §3.4; ⛔ P0: mapper orders-sync
+> nie czyta zagnieżdżonych `{amount}` → revenue=0, fix w W1). v2.0 = po rundzie krytyków
+> (2× Opus) + researchu (2× Sonnet). Status: PLAN OSTATECZNY — czeka na akcept Tomka;
+> parametry progów NADPISUJĄ §6 TESTY.md po akcepcie.
+
 - **Faza TEST**: marża 15% narzutu na koszt (`TEST_MARGIN_PCT`, już w UI). Świadomie
   nierentowna — cel: szybkie pierwsze OPŁACONE zamówienia (walidacja popytu, social proof,
   dane), nie zysk. Koszt tej fazy = koszt walidacji produktu.
