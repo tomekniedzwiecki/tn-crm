@@ -159,6 +159,7 @@
                         <button class="ptab active" data-ptab="projekt" onclick="switchPsec('projekt')">Projekt</button>
                         <button class="ptab" data-ptab="uwagi" onclick="switchPsec('uwagi')">Uwagi <span id="tab-notes-count"></span></button>
                         <button class="ptab" data-ptab="sprzedaz" onclick="switchPsec('sprzedaz')">Sprzedaż</button>
+                        <button class="ptab" data-ptab="koszty" onclick="switchPsec('koszty')">Koszty <span id="tab-costs-sum"></span></button>
                         <button class="ptab" data-ptab="aktywnosc" onclick="switchPsec('aktywnosc')">Aktywność</button>
                     </div>
                 </div>
@@ -220,6 +221,45 @@
                             </table>
                         </div>
                         <div id="sales-empty" class="hidden py-8 text-center text-zinc-600 text-xs">Brak danych sprzedażowych — pojawią się po synchronizacji zamówień z platformy i statystyk Meta.</div>
+                    </div>
+                </div>
+
+                <!-- TAB: Koszty (wf2_costs — jednostkowe per etap + podsumowanie) -->
+                <div data-psec="koszty" class="hidden mb-10">
+                    <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-lg p-5">
+                        <div class="flex items-center justify-between flex-wrap gap-2 mb-4">
+                            <h3 class="text-white font-semibold flex items-center gap-2"><i class="ph ph-coins text-[#3291ff]"></i> Koszty produkcji</h3>
+                            <span class="text-zinc-600 text-[11px]">sesje logują koszty same (panelUpd) · kurs NBP do przeliczeń USD→PLN</span>
+                        </div>
+                        <div id="costs-cards" class="grid grid-cols-2 md:grid-cols-4 gap-2 mb-5"></div>
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                            <div>
+                                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Koszt jednostkowy per etap</div>
+                                <table class="w-full text-left">
+                                    <thead><tr class="border-b border-[#1f1f1f] text-[10.5px] font-mono uppercase tracking-wider text-zinc-500">
+                                        <th class="px-2 py-2">Etap</th><th class="px-2 py-2 text-right">Koszt</th><th class="px-2 py-2 text-right">/ produkt</th>
+                                    </tr></thead>
+                                    <tbody id="costs-stage-body"></tbody>
+                                </table>
+                            </div>
+                            <div>
+                                <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Koszt per produkt</div>
+                                <div id="costs-prod-wrap" class="space-y-1.5"></div>
+                            </div>
+                        </div>
+                        <div class="border-t border-[#1f1f1f] mt-5 pt-4">
+                            <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Dodaj koszt ręcznie</div>
+                            <div class="flex gap-2 flex-wrap items-end">
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Kwota</label><input id="cost-amount" type="number" step="0.01" min="0" class="fld" style="width:100px" aria-label="Kwota"></div>
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Waluta</label><select id="cost-currency" class="fld" style="width:auto"><option>USD</option><option>PLN</option></select></div>
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Rodzaj</label><select id="cost-kind" class="fld" style="width:auto"><option>openai</option><option>manus</option><option>fal</option><option>gpt-image</option><option>gemini</option><option selected>inne</option></select></div>
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Etap</label><select id="cost-stage" class="fld" style="width:auto"></select></div>
+                                <div><label class="text-[10px] text-zinc-600 block mb-0.5">Produkt</label><select id="cost-product" class="fld" style="width:auto"><option value="">— projekt —</option></select></div>
+                                <div class="flex-1 min-w-[160px]"><label class="text-[10px] text-zinc-600 block mb-0.5">Notatka</label><input id="cost-note" class="fld" aria-label="Notatka kosztu"></div>
+                                <button onclick="addCost()" class="px-4 py-2 text-xs font-semibold bg-white text-black rounded-md hover:bg-zinc-200 flex-shrink-0">Dodaj</button>
+                            </div>
+                        </div>
+                        <div id="costs-list" class="mt-4 space-y-1"></div>
                     </div>
                 </div>
 
@@ -415,6 +455,7 @@
         let notes = [];          // wf2_notes (uwagi Tomka)
         let sales = [];
         let adStats = [];
+        let costs = [];          // wf2_costs (koszty jednostkowe per etap/produkt)
         let ordersCount = 0;     // COUNT(*) z wf2_orders (dokładny licznik do 1000)
         let activeStage = 1;
         let editingProductId = null;
@@ -508,7 +549,7 @@
         async function loadAll() {
             // dosiej brakujące instancje kroków (nowe defs / nowe produkty)
             await supabaseClient.rpc('wf2_ensure_steps', { p_project: projectId });
-            const [projQ, defsQ, stepsQ, prodQ, actQ, salesQ, adsQ, artQ, notesQ, ordQ] = await Promise.all([
+            const [projQ, defsQ, stepsQ, prodQ, actQ, salesQ, adsQ, artQ, notesQ, ordQ, costsQ] = await Promise.all([
                 supabaseClient.from('wf2_projects').select('*').eq('id', projectId).single(),
                 supabaseClient.from('wf2_step_defs').select('*').eq('active', true).order('stage').order('sort'),
                 // GOTCHA PostgREST: default 1000 wierszy (35 defs × produkty — jawny range)
@@ -520,11 +561,13 @@
                 supabaseClient.from('wf2_artifacts').select('*').eq('project_id', projectId).order('created_at').range(0, 4999),
                 supabaseClient.from('wf2_notes').select('*').eq('project_id', projectId).order('created_at', {ascending:false}).range(0, 499),
                 supabaseClient.from('wf2_orders').select('id', { count:'exact', head:true }).eq('project_id', projectId),
+                supabaseClient.from('wf2_costs').select('*').eq('project_id', projectId).order('created_at', {ascending:false}).range(0, 1999),
             ]);
             if (projQ.error || !projQ.data) { showToast('Nie znaleziono projektu','error'); location.href='index.html'; return; }
             project = projQ.data; stepDefs = defsQ.data||[]; steps = stepsQ.data||[]; products = prodQ.data||[];
             sales = salesQ.data||[]; adStats = adsQ.data||[]; artifacts = artQ.data||[]; notes = notesQ.data||[];
-            ordersCount = ordQ.count || 0;
+            ordersCount = ordQ.count || 0; costs = costsQ.data||[];
+            await getUsdRate();   // kurs do rollupów kosztów USD→PLN
             // generacje z lejka /sklep (typ A) — pokazywane w warsztatach kroków landingowych
             const genIds = [...new Set(products.map(p => p.gen_session_id).filter(Boolean))];
             genMap = {};
@@ -534,7 +577,7 @@
                 (gs || []).forEach(g => genMap[g.id] = g);
             }
             renderHeader(); renderLinks(); renderPills(); renderStage();
-            renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderFields();
+            renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderCosts(); renderFields();
         }
 
         function stageNums() { return [...new Set(stepDefs.map(d=>d.stage))].sort((a,b)=>a-b); }
@@ -892,6 +935,96 @@
             }).join('');
         }
 
+        // ── TAB Koszty (wf2_costs): rollup per etap + per produkt + podsumowanie ──
+        function costPln(c) { return c.currency === 'USD' ? Number(c.amount) * (usdRate || 4) : Number(c.amount); }
+        function renderCosts() {
+            const prodCost = costs.reduce((a, c) => a + costPln(c), 0);
+            const adsSpend = adStats.reduce((a, s) => a + Number(s.spend || 0), 0);
+            document.getElementById('tab-costs-sum').textContent = prodCost > 0 ? `(${Math.round(prodCost)} zł)` : '';
+            const perProduct = products.length ? prodCost / products.length : 0;
+            const cards = [
+                ['Produkcja (AI/treści)', moneyPL(prodCost), 'text-white'],
+                ['Reklamy (spend Meta)', moneyPL(adsSpend), 'text-white'],
+                ['RAZEM', moneyPL(prodCost + adsSpend), 'text-[#f5b955]'],
+                ['Śr. produkcja / produkt', products.length ? moneyPL(perProduct) : '—', 'text-white'],
+            ];
+            document.getElementById('costs-cards').innerHTML = cards.map(c =>
+                `<div class="bg-[#111] border border-[#262626] rounded-md px-3.5 py-3"><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1">${c[0]}</div><div class="text-sm font-semibold font-mono ${c[2]}">${c[1]}</div></div>`).join('');
+
+            // per etap (stage z wpisu; fallback: z definicji kroku)
+            const byStage = {};
+            costs.forEach(c => {
+                const st = c.stage || (c.step_key ? (defFor(c.step_key)?.stage || 0) : 0);
+                (byStage[st] = byStage[st] || { sum: 0, n: 0 }).sum += costPln(c); byStage[st].n++;
+            });
+            const stageRows = stageNums().map(n => {
+                const s = byStage[n] || { sum: 0, n: 0 };
+                const label = defsForStage(n)[0]?.stage_label || ('Etap ' + n);
+                const hasProd = defsForStage(n).some(d => d.scope === 'product');
+                const per = hasProd && products.length ? s.sum / products.length : null;
+                return `<tr class="border-b border-[#1f1f1f]">
+                    <td class="px-2 py-2 text-xs text-zinc-300">${n}. ${escapeHtml(label)}</td>
+                    <td class="px-2 py-2 text-right font-mono text-xs ${s.sum > 0 ? 'text-white' : 'text-zinc-600'}">${s.sum > 0 ? moneyPL(s.sum) : '—'}</td>
+                    <td class="px-2 py-2 text-right font-mono text-[11px] text-zinc-500">${per != null && s.sum > 0 ? moneyPL(per) : '—'}</td>
+                </tr>`;
+            }).join('');
+            const other = byStage[0];
+            document.getElementById('costs-stage-body').innerHTML = stageRows
+                + (other ? `<tr><td class="px-2 py-2 text-xs text-zinc-500">bez etapu</td><td class="px-2 py-2 text-right font-mono text-xs">${moneyPL(other.sum)}</td><td></td></tr>` : '');
+
+            // per produkt
+            const byProd = {};
+            costs.forEach(c => { const k = c.product_id || '_proj'; (byProd[k] = byProd[k] || 0); byProd[k] += costPln(c); });
+            document.getElementById('costs-prod-wrap').innerHTML = products.map(p => {
+                const v = byProd[p.id] || 0;
+                const pct = prodCost > 0 ? Math.round(v / prodCost * 100) : 0;
+                return `<div class="flex items-center gap-2 text-xs">
+                    <span class="text-zinc-300 truncate flex-1">${escapeHtml(p.name)}</span>
+                    <div class="pp-bar w-24"><div style="width:${pct}%"></div></div>
+                    <span class="font-mono ${v > 0 ? 'text-white' : 'text-zinc-600'} w-20 text-right">${v > 0 ? moneyPL(v) : '—'}</span>
+                </div>`;
+            }).join('') + (byProd['_proj'] ? `<div class="flex items-center gap-2 text-xs pt-1 border-t border-[#1f1f1f]"><span class="text-zinc-500 flex-1">koszty wspólne projektu</span><span class="font-mono text-zinc-300">${moneyPL(byProd['_proj'])}</span></div>` : '');
+
+            // selecty formularza + ostatnie wpisy
+            const stageSel = document.getElementById('cost-stage');
+            if (stageSel && !stageSel.options.length) stageSel.innerHTML = stageNums().map(n => `<option value="${n}">${n}. ${escapeHtml(defsForStage(n)[0]?.stage_label || n)}</option>`).join('');
+            const prodSel = document.getElementById('cost-product');
+            if (prodSel && prodSel.options.length !== products.length + 1) prodSel.innerHTML = '<option value="">— projekt —</option>' + products.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join('');
+            document.getElementById('costs-list').innerHTML = costs.slice(0, 15).map(c => {
+                const p = c.product_id ? products.find(x => x.id === c.product_id) : null;
+                return `<div class="flex items-center gap-2 text-[11.5px] bg-[#111] border border-[#232323] rounded px-2.5 py-1.5">
+                    <span class="text-[9.5px] border border-[#333] rounded px-1.5 py-0.5 text-zinc-400">${escapeHtml(c.kind)}</span>
+                    <span class="font-mono text-white">${Number(c.amount).toFixed(2)} ${c.currency}</span>
+                    <span class="text-zinc-500 truncate flex-1">${c.step_key ? escapeHtml(defFor(c.step_key)?.label || c.step_key) + (p ? ' · ' + escapeHtml(p.name) : '') : (p ? escapeHtml(p.name) : 'projekt')}${c.note ? ' — ' + escapeHtml(c.note) : ''}</span>
+                    <span class="text-zinc-600 text-[10px] flex-shrink-0">${relTime(c.created_at)}${c.created_by === 'auto' ? ' · auto' : ''}</span>
+                    <button onclick="deleteCost('${c.id}')" class="p-0.5 text-zinc-700 hover:text-[#f26d78] flex-shrink-0" data-tip-title="Usuń wpis kosztu"><i class="ph ph-x text-[10px]"></i></button>
+                </div>`;
+            }).join('') || '<div class="text-zinc-600 text-xs py-2">Brak wpisów. Sesje Claude Code logują koszty automatycznie na końcu pracy.</div>';
+        }
+        async function addCost() {
+            const amount = parseFloat(document.getElementById('cost-amount').value);
+            if (isNaN(amount) || amount < 0) { showToast('Podaj kwotę', 'error'); return; }
+            const row = {
+                project_id: projectId,
+                product_id: document.getElementById('cost-product').value || null,
+                stage: parseInt(document.getElementById('cost-stage').value) || null,
+                amount, currency: document.getElementById('cost-currency').value,
+                kind: document.getElementById('cost-kind').value,
+                note: document.getElementById('cost-note').value.trim() || null,
+                created_by: 'admin',
+            };
+            const { data, error } = await supabaseClient.from('wf2_costs').insert(row).select().single();
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            costs.unshift(data);
+            document.getElementById('cost-amount').value = ''; document.getElementById('cost-note').value = '';
+            renderCosts(); showToast('Koszt zapisany', 'success');
+        }
+        async function deleteCost(id) {
+            const { error } = await supabaseClient.from('wf2_costs').delete().eq('id', id);
+            if (error) { showToast('Błąd: ' + error.message, 'error'); return; }
+            costs = costs.filter(c => c.id !== id); renderCosts();
+        }
+
         // ============ AKCJE: kroki ============
         async function cycleStep(key, productId) {
             const st = stepFor(key, productId);
@@ -969,7 +1102,7 @@
             pl_integracje: { desc:'Integracje per sklep przez API: Meta pixel (PUT AUTO-WŁĄCZA; pixel wstrzykiwany na WSZYSTKICH stronach — także landingach isHtml → landing ma INIT-GUARD), GA4 opcjonalnie. Pixel_id powstaje w Etapie Kampanie — krok jest idempotentny.',
                 fields:[{k:'ga4_id',l:'GA4 measurement ID (opcjonalnie)'},{k:'capi',l:'CAPI token ustawiony? (apiKey)'}],
                 check:['GA4 ustawione (jeśli używamy)','Meta pixel ustawiony (set_integration, gdy pixel_id znany)','Pixel aktywny na storefroncie (weryfikacja w źródle strony)'], prompt:'pl_integracje' },
-            pl_produkt: { desc:'Produkt na platformie: ensure_product {name, price=cena TEST} (idempotentny po nazwie — brak DELETE!) → set_checkout_slug (slug mini-marki) → checkout_url (materializuje się z opóźnieniem). Zapis platform_product_id/checkout_url/platform_name na produkcie.',
+            pl_produkt: { desc:'Produkt na platformie: ensure_product {name, price=cena TEST} (idempotentny po nazwie — brak DELETE!) → set_checkout_slug (slug mini-marki) → checkout_url (materializuje się z opóźnieniem). Zapis platform_product_id/checkout_url/platform_name na produkcie. ⚡ RÓWNOLEGLE: można zrobić zaraz po Wyborze+kalkulacji (cena TEST znana) — checkout_url jest potrzebny dopiero przy publikacji landinga.',
                 fields:[{k:'platform_product_id',l:'Product ID (platforma)', col:'product.platform_product_id'},{k:'checkout_url',l:'Checkout URL', col:'product.checkout_url'},{k:'platform_name',l:'Nazwa na platformie', col:'product.platform_name'}],
                 check:['Produkt utworzony/znaleziony (ensure_product)','Slug kasy ustawiony (set_checkout_slug)','checkout_url zmaterializowany (kasa odpowiada 200)','platform_product_id + platform_name zapisane'], prompt:'pl_produkt' },
             pl_landing: { desc:'Publikacja landinga: HTML z repo (tn-crm/sklepy/<klient>/<slug>/index.html po gate-check 0 FAIL) + podmiana placeholderów ({{WF2_PRODUCT_ID}}, {{CHECKOUT_URL}}, canonical, zdjęcie noindex) → publish_landing {path: slug}. Landing MUSI mieć runtime-snippet (cena z wf2-landing-api + trevio + init-guard).',
@@ -992,10 +1125,10 @@
             ads_pixel: { desc:'Pixel w TYM SAMYM BM co konto (inny BM = WCA nie działają). Checkout na domenie platformy → pixel per sklep przez API platformy (krok Integracje) + CAPI. Purchase w Test Events = GATE przed kampaniami.',
                 fields:[{k:'pixel',l:'Pixel ID', col:'project.pixel_id'}],
                 check:['Pixel utworzony w BM z kontem reklamowym','Strona FB przypisana do konta (wymóg create_ad)','Obie domeny zweryfikowane w BM (landing + checkout)','Pixel ustawiony na platformie (set_integration)','Pixel + CAPI token na checkoucie platformy','Purchase testowy widoczny w Events Managerze (Test Events)'], prompt:'ads_pixel' },
-            ads_grafiki: { desc:'SET 3 GRAFIK per produkt — Manus przez edge wf2-ads (research FB Ad Library → copy PL → 3 kreacje 4:5). Kąty: demo (mechanizm) / problem (plakat DR) / proof (viral). Referencja = curated_image + logo mini-marki. Zgodne z polityką Meta. Koszt ~$0.30.',
+            ads_grafiki: { desc:'SET 3 GRAFIK per produkt — Manus przez edge wf2-ads (research FB Ad Library → copy PL → 3 kreacje 4:5). Kąty: demo (mechanizm) / problem (plakat DR) / proof (viral). Referencja = curated_image + logo mini-marki. Zgodne z polityką Meta. Koszt ~$0.30. ⚡ RÓWNOLEGLE: można odpalić już po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
                 fields:[{k:'grafiki_url',l:'Link do folderu (opcjonalnie, gdy ręcznie)'}],
                 check:['Referencja produktu + logo poprawne (wierność 1:1)','Research konkurencji (Manus) zrobiony','3 koncepty: demo / problem / proof — copy + wizual','Format 4:5 (feed+reels)','Zgodne z polityką Meta (bez pilności, bez „dostawa 24h")','Grafiki zaakceptowane do testów'], prompt:'ads_grafiki' },
-            ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF ~$2.5; talking-head → OmniHuman). Bramki: KARTA produktu + qa_gate (.pass na KAŻDYM klipie) + 2× akcept Tomka. OZNACZENIE AI OBOWIĄZKOWE. Koszt ~$2.5-8.',
+            ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF ~$2.5; talking-head → OmniHuman). Bramki: KARTA produktu + qa_gate (.pass na KAŻDYM klipie) + 2× akcept Tomka. OZNACZENIE AI OBOWIĄZKOWE. Koszt ~$2.5-8. ⚡ RÓWNOLEGLE: niezależne od landinga — wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
                 fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (Storage public)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)'}],
                 check:['Wzorzec (tiktok_url) + mp4 pobrany do prywatnego bucketu','KARTA.json spisana (anatomia z galerii Ali)','Blueprint zaakceptowany (bramka Tomka #1)','Klatki-klucze zaakceptowane (bramka Tomka #2)','Wszystkie klipy z .pass (qa_gate)','Montaż 15 s złożony (hook≤2s, bez napisów)','Pętla QA czysta (zero AI-tells)','Oznaczenie AI ustawione (Meta/TikTok)','Koszt zalogowany, video_url zapisany'], prompt:'ads_wideo' },
             ads_kampanie: { desc:'Kampania 1:1 dla produktu wg WORKFLOW-V2-TESTY §1: OUTCOME_SALES/Purchase + CAPI, ABO ~17-25 zł/d, broad (zero stackowania zainteresowań), Advantage+ placements, 9:16 wideo first. Nazwa: [WF2:klient] produkt. Start ZAWSZE PAUSED — publikacja = bramka Tomka (pon.–wt. rano).',
@@ -1417,7 +1550,8 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                     + `3) Notatka z DOWODAMI (2-4 zdania): UPDATE wf2_steps SET data = jsonb_set(data, '{note}', to_jsonb('<podsumowanie>'::text)) WHERE id='${stCur.id}';\n`
                     + `4) Log: INSERT INTO wf2_activities (project_id, actor, action, description) VALUES ('${projectId}', 'auto', 'session', '<1 zdanie>');\n`
                     + `5) Artefakty oglądalne (makiety/grafiki/dowody/kreacje/screenshoty) → INSERT INTO wf2_artifacts (project_id, product_id, step_key, kind, label, url, meta) VALUES ('${projectId}', ${stCur.product_id ? `'${stCur.product_id}'` : 'NULL'}, '${drawerCtx.key}', '<kind>', '<label>', '<url Storage>', '<meta json>');\n`
-                    + `6) Nowy URL wart obejrzenia (landing/preview/galeria) → dopisz do paska Podglądy (deduplikuj po label): UPDATE wf2_projects SET links = COALESCE(links,'[]'::jsonb) || '[{"label":"<nazwa>","url":"<url>","icon":"ph-arrow-square-out"}]'::jsonb WHERE id='${projectId}';`;
+                    + `6) Nowy URL wart obejrzenia (landing/preview/galeria) → dopisz do paska Podglądy (deduplikuj po label): UPDATE wf2_projects SET links = COALESCE(links,'[]'::jsonb) || '[{"label":"<nazwa>","url":"<url>","icon":"ph-arrow-square-out"}]'::jsonb WHERE id='${projectId}';\n`
+                    + `7) KOSZTY sesji (każdy realny wydatek: OpenAI/gpt-image/Manus/fal — suma per dostawca wystarczy): INSERT INTO wf2_costs (project_id, product_id, step_key, stage, amount, currency, kind, note, created_by) VALUES ('${projectId}', ${stCur.product_id ? `'${stCur.product_id}'` : 'NULL'}, '${drawerCtx.key}', ${dCur ? dCur.stage : 'NULL'}, <kwota>, 'USD', '<openai|manus|fal|gpt-image|gemini|inne>', '<za co, krótko>', 'auto');`;
             }
 
             const kindKey = map[kind] ? kind : (dCur ? dCur.key : kind);

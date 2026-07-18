@@ -296,6 +296,18 @@ async function logActivity(supabase: any, projectId: string | null, action: stri
   catch (e) { console.error('[wf2-ads] logActivity err', e) }
 }
 
+// Koszt jednostkowy → wf2_costs (rollup per etap/produkt w zakładce Koszty panelu).
+// deno-lint-ignore no-explicit-any
+async function logCost(supabase: any, projectId: string | null, productId: string | null, amountUsd: number, kind: string, note: string): Promise<void> {
+  if (!projectId || !(amountUsd > 0)) return
+  try {
+    await supabase.from('wf2_costs').insert({
+      project_id: projectId, product_id: productId, step_key: 'ads_grafiki', stage: 4,
+      amount: amountUsd, currency: 'USD', kind, note, created_by: 'auto',
+    })
+  } catch (e) { console.error('[wf2-ads] logCost err', e) }
+}
+
 // deno-lint-ignore no-explicit-any
 function tolerantParse(t: string): any {
   try { return JSON.parse(t) } catch { /* */ }
@@ -370,6 +382,7 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   if (!won || !won.length) return { done: true, ads }
   const projectId = (won[0] as { project_id?: string }).project_id || null
   await logActivity(supabase, projectId, 'ads_generated', `3 grafiki reklamowe (Manus) gotowe — koszt ~$${MANUS_TASK_USD.toFixed(2)} · task ${taskId}`)
+  await logCost(supabase, projectId, productId, MANUS_TASK_USD, 'manus', `3 grafiki (task ${taskId})`)
   return { done: true, ads }
 }
 
@@ -636,6 +649,7 @@ Deno.serve(async (req) => {
         }
         await supabase.from('wf2_products').update({ ads_creatives: ads, ads_manus_status: 'completed', ads_manus_completed_at: new Date().toISOString(), ads_manus_step: null }).eq('id', productId)
         await logActivity(supabase, projectId, 'ads_generated', `${nImg} grafik reklamowych (Gemini, fallback) gotowe — koszt ~$${(GEMINI_IMAGE_USD * nImg).toFixed(2)}`)
+        await logCost(supabase, projectId, productId, GEMINI_IMAGE_USD * nImg, 'gemini', `${nImg} grafik (fallback)`)
       } catch (e) {
         console.error('[wf2-ads] gen task error:', e)
         try { await supabase.from('wf2_products').update({ ads_manus_status: 'failed', ads_manus_step: 'gemini_error' }).eq('id', productId) } catch { /* */ }
