@@ -771,15 +771,16 @@
 
         // „Następny krok" = pierwsza AKCJONOWALNA instancja wg kolejności etap→sort
         // (pending/blocked, albo in_progress u admina); kroki WISZĄCE u klienta/auto
-        // (in_progress — czekamy na zewnętrzny świat: zakup domeny, DNS, wpłata) nie
-        // blokują wskaźnika — wracają dopiero, gdy nie ma nic innego do roboty.
+        // ORAZ kroki z flagą waits_external (in_progress — czekamy na zewnętrzny świat:
+        // zakup domeny, propagacja DNS, wpłata) nie blokują wskaźnika — wracają dopiero,
+        // gdy nie ma nic innego do roboty.
         // Sub-kroki (sub_of) nie sterują wskaźnikiem — żyją w warsztacie rodzica.
         function nextStep() {
             let waiting = null;
             const probe = (d, p) => {
                 const st = stepFor(d.key, p ? p.id : null);
                 if (!st || st.status === 'done' || st.status === 'skipped') return null;
-                if (st.status === 'in_progress' && d.owner !== 'admin') { if (!waiting) waiting = { d, p, st }; return null; }
+                if (st.status === 'in_progress' && (d.owner !== 'admin' || d.waits_external)) { if (!waiting) waiting = { d, p, st }; return null; }
                 return { d, p, st };
             };
             for (const d of stepDefs) {
