@@ -237,8 +237,11 @@
                 const chips = st.defs.map(d => {
                     const cnt = countByKey[d.key] || 0;
                     const badge = cnt > 0 ? `<span class="step-badge" style="background:${BADGE_COLORS[d.owner] || '#0070f3'}">${cnt}</span>` : '';
-                    const scopeMark = d.scope === 'product' ? '<i class="ph ph-stack text-[10px] opacity-60" title="krok per produkt"></i>' : '';
-                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')" title="${OWNER_LABEL[d.owner]}${d.scope === 'product' ? ' · per produkt' : ''}">
+                    const scopeMark = d.scope === 'product' ? '<i class="ph ph-stack text-[10px] opacity-60"></i>' : '';
+                    return `<button class="step-chip ${filterStepKey === d.key ? 'active' : ''}" onclick="toggleFilter('${d.key}')"
+                        data-tip-title="${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}"
+                        data-tip-sub="Etap ${d.stage} · ${OWNER_LABEL[d.owner]}${d.scope === 'product' ? ' · per produkt' : ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}"
+                        data-tip-desc="${cnt > 0 ? cnt + ' projekt(y) czekają na tym kroku · ' : ''}klik = filtr listy po tym kroku">
                         <span class="owner-dot" style="background:${BADGE_COLORS[d.owner]}"></span>
                         <i class="ph ${escapeHtml(d.icon)}"></i>${escapeHtml(d.label)}${scopeMark}${badge}</button>`;
                 }).join('');

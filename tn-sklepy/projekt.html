@@ -68,12 +68,7 @@
         /* mini-pasek postępu produktu */
         .pp-bar { height:4px; border-radius:2px; background:#27272a; overflow:hidden; }
         .pp-bar > div { height:100%; background:#0070f3; border-radius:2px; }
-        /* tooltip macierzy (fixed — nie tnie go overflow-x tabeli) */
-        #mx-tooltip { position:fixed; z-index:120; background:#111; border:1px solid #333; border-radius:6px;
-            padding:9px 11px; font-size:11.5px; line-height:1.45; color:#e5e5e5; max-width:280px;
-            pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.55); display:none; }
-        #mx-tooltip .tt-title { color:#fff; font-weight:600; font-size:12px; }
-        #mx-tooltip .tt-desc { color:#a1a1aa; margin-top:3px; font-size:11px; }
+        /* nagłówek kolumny macierzy (tooltip = globalny #tn-tooltip z shared-sidebar.js) */
         .mx-head { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:help; padding:2px 0; }
         .mx-head:hover i { color:#52a8ff; }
         /* kafle artefaktów w drawerze */
@@ -120,11 +115,11 @@
                             <div class="text-xl font-semibold text-white" id="stat-products">–</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">produkty</div>
                         </div>
-                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" title="Kamienie milowe (milestone_label)">
+                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" data-tip-title="Kamienie milowe" data-tip-desc="Najważniejsze punkty procesu (🏁 przy krokach). Kamienie per produkt liczą się osobno dla każdego produktu portfela.">
                             <div class="text-xl font-semibold text-[#4cb782]" id="stat-miles">–</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500">kamienie</div>
                         </div>
-                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" title="Zamówienia z platformy (wf2_orders) — cel: przekazanie sterów">
+                        <div class="bg-[#0a0a0a] border border-[#1f1f1f] rounded-md px-4 py-2.5 text-center" data-tip-title="Zamówienia z platformy" data-tip-desc="Realne zamówienia sklepu (sync co 30 min). Po osiągnięciu celu przekazujemy stery klientowi.">
                             <div class="text-xl font-semibold text-[#4cb782]" id="stat-orders">0</div>
                             <div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 whitespace-nowrap">/&nbsp;<span id="stat-target">1000</span>&nbsp;zam.</div>
                         </div>
@@ -245,8 +240,6 @@
         <img id="lightbox-img" class="max-w-full max-h-full rounded-lg border border-[#333]" alt="">
     </div>
 
-    <!-- Tooltip nagłówków/komórek macierzy -->
-    <div id="mx-tooltip"></div>
 
     <!-- Modal: dodawanie produktów — LOSOWANIE z zatwierdzonych albo ręczny wybór -->
     <div id="picker-modal" class="hidden fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closePicker()">
@@ -498,34 +491,7 @@
         function openLightbox(url) { if (!url) return; document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.remove('hidden'); }
         function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); }
 
-        // ── tooltip macierzy: delegacja na [data-tip-title]; fixed → nie tnie go overflow tabeli ──
-        (function () {
-            const tt = () => document.getElementById('mx-tooltip');
-            document.addEventListener('mouseover', (ev) => {
-                const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
-                if (!el) return;
-                const box = tt(); if (!box) return;
-                const sub = el.dataset.tipSub || '', desc = el.dataset.tipDesc || '';
-                box.innerHTML = `<div class="tt-title">${escapeHtml(el.dataset.tipTitle)}</div>`
-                    + (sub ? `<div class="text-[10px] text-[#52a8ff] mt-0.5">${escapeHtml(sub)}</div>` : '')
-                    + (desc ? `<div class="tt-desc">${escapeHtml(desc)}</div>` : '');
-                box.style.display = 'block';
-                const r = el.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
-                let x = r.left + r.width / 2 - bw / 2;
-                x = Math.max(8, Math.min(x, window.innerWidth - bw - 8));
-                let y = r.bottom + 8;
-                if (y + bh > window.innerHeight - 8) y = r.top - bh - 8;
-                box.style.left = x + 'px'; box.style.top = Math.max(8, y) + 'px';
-            });
-            document.addEventListener('mouseout', (ev) => {
-                const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
-                if (!el) return;
-                if (ev.relatedTarget && el.contains(ev.relatedTarget)) return;   // ruch wewnątrz elementu
-                const box = tt(); if (box) box.style.display = 'none';
-            });
-            // klik (mobile/otwarcie drawera) chowa tooltip
-            document.addEventListener('click', () => { const box = tt(); if (box) box.style.display = 'none'; }, true);
-        })();
+        // tooltip [data-tip-title] = globalny moduł w components/shared-sidebar.js (#tn-tooltip)
 
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
@@ -645,7 +611,7 @@
                 <span class="inline-flex items-center border border-[#2a2a2a] rounded-md overflow-hidden">
                     <a href="${escapeHtml(l.url)}" target="_blank" class="flex items-center gap-1.5 px-2.5 py-1.5 text-[11.5px] text-zinc-300 hover:text-white hover:bg-white/[.04]">
                         <i class="ph ${escapeHtml(l.icon || 'ph-link')} text-[#52a8ff]"></i>${escapeHtml(l.label || l.url)}</a>
-                    <button onclick="removeLink(${i})" class="px-1.5 py-1.5 text-zinc-600 hover:text-[#f26d78]" title="Usuń link"><i class="ph ph-x text-[10px]"></i></button>
+                    <button onclick="removeLink(${i})" class="px-1.5 py-1.5 text-zinc-600 hover:text-[#f26d78]" data-tip-title="Usuń podgląd"><i class="ph ph-x text-[10px]"></i></button>
                 </span>`).join('')
                 + `<button onclick="addLink()" class="inline-flex items-center gap-1 border border-dashed border-[#2a2a2a] hover:border-[#0070f3]/50 rounded-md px-2.5 py-1.5 text-[11.5px] text-zinc-500 hover:text-zinc-300"><i class="ph ph-plus"></i> podgląd</button>`;
         }
@@ -704,10 +670,12 @@
                 const st = stepFor(d.key) || { status:'pending', data:{} };
                 const note = st.data && st.data.note ? st.data.note : '';
                 const isMile = d.milestone_label && st.status === 'done';
+                const wsDesc = (WS[d.key] && WS[d.key].desc) ? String(WS[d.key].desc) : '';
+                const descShort = wsDesc.length > 140 ? wsDesc.slice(0, 140).replace(/\s+\S*$/, '') + '…' : wsDesc;
                 return `<div class="bg-[#0a0a0a] border ${isMile?'border-[#45a557]/40':'border-[#1f1f1f]'} rounded-lg p-4 flex flex-col gap-3 cursor-pointer hover:border-[#0070f3]/40 transition-colors" onclick="openStep('${d.key}', null)">
                     <div class="flex items-start justify-between gap-2">
                         <div class="flex items-center gap-2.5 min-w-0">
-                            <div class="relative w-9 h-9 rounded-md bg-zinc-800/80 flex items-center justify-center flex-shrink-0" title="Kolejność w etapie: ${i+1}"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i><span class="absolute -top-1.5 -left-1.5 min-w-[18px] px-0.5 rounded-full bg-[#0070f3] text-white text-[9px] font-mono font-bold flex items-center justify-center leading-none" style="height:18px">${i+1}</span></div>
+                            <div class="relative w-9 h-9 rounded-md bg-zinc-800/80 flex items-center justify-center flex-shrink-0" data-tip-title="${i+1}. ${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}" data-tip-sub="${OWNER_LABEL[d.owner] || ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}" data-tip-desc="${escapeHtml(descShort)}"><i class="ph ${escapeHtml(d.icon)} text-lg text-zinc-300"></i><span class="absolute -top-1.5 -left-1.5 min-w-[18px] px-0.5 rounded-full bg-[#0070f3] text-white text-[9px] font-mono font-bold flex items-center justify-center leading-none" style="height:18px">${i+1}</span></div>
                             <div class="min-w-0">
                                 <div class="text-white font-medium text-[13px] truncate">${escapeHtml(d.label)}</div>
                                 <span class="owner-tag owner-${d.owner}">${OWNER_LABEL[d.owner]}</span>
@@ -718,7 +686,7 @@
                     ${isMile ? `<div class="mile-badge"><i class="ph ph-flag-checkered"></i> ${escapeHtml(d.milestone_label)}</div>` : ''}
                     ${note ? `<div class="text-zinc-600 text-[10px] flex items-center gap-1"><i class="ph ph-note"></i> notatka w warsztacie</div>` : ''}
                     <div class="flex items-center justify-between mt-auto">
-                        <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" title="Klik = przełącz status">
+                        <button class="st-btn st-${st.status}" onclick="event.stopPropagation();cycleStep('${d.key}', null)" data-tip-title="Klik = przełącz status" data-tip-desc="do zrobienia → w trakcie → ukończone; pełna kontrola w warsztacie kroku">
                             <i class="ph ${st.status==='done'?'ph-check-circle':st.status==='in_progress'?'ph-circle-half':st.status==='skipped'?'ph-minus-circle':'ph-circle'}"></i>
                             ${STEP_LABELS[st.status]}
                         </button>
@@ -1081,7 +1049,8 @@
                 const webVisible = a.storage !== 'repo' && a.storage !== 'desktop';
                 const isImg = webVisible && (/\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(a.url || '') || ['mockup','makieta','makieta_mobile','scena','dowod','proof','ad_creative','screenshot_final','styl_master','gallery','branding','brand'].includes(a.kind));
                 if (isImg && a.url && /^https?:/.test(a.url)) {
-                    return `<a class="art-tile" href="javascript:void(0)" data-url="${escapeHtml(a.url)}" onclick="openLightbox(this.dataset.url)">
+                    return `<a class="art-tile" href="javascript:void(0)" data-url="${escapeHtml(a.url)}" onclick="openLightbox(this.dataset.url)"
+                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełny podgląd">
                         <img src="${escapeHtml(thumbUrl(a.url, 360))}" loading="lazy" onerror="this.parentElement.style.display='none'">
                         <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
                 }

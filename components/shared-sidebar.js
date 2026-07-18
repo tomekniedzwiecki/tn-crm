@@ -873,6 +873,56 @@ function closeMobileSidebar() {
 }
 
 // ============================================
+// TOOLTIP (opt-in, globalny): element z [data-tip-title] dostaje stylowany dymek
+// zamiast natywnego title (motyw z macierzy tn-sklepy — decyzja Tomka 18.07).
+// Atrybuty: data-tip-title (wymagany), data-tip-sub (niebieski wiersz), data-tip-desc (szary opis).
+// Pozycja fixed + docisk do viewportu — nie tnie go overflow przewijanych tabel.
+// ============================================
+(function initTnTooltip() {
+    if (window.__tnTooltipInit) return; window.__tnTooltipInit = true;
+    const style = document.createElement('style');
+    style.textContent = `
+        #tn-tooltip { position:fixed; z-index:9998; background:#111; border:1px solid #333; border-radius:6px;
+            padding:9px 11px; font-size:11.5px; line-height:1.45; color:#e5e5e5; max-width:280px;
+            pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.55); display:none;
+            font-family:Inter,sans-serif; text-transform:none; letter-spacing:normal; white-space:normal; }
+        #tn-tooltip .tt-title { color:#fff; font-weight:600; font-size:12px; }
+        #tn-tooltip .tt-sub { color:#52a8ff; font-size:10px; margin-top:2px; }
+        #tn-tooltip .tt-desc { color:#a1a1aa; margin-top:3px; font-size:11px; }`;
+    document.head.appendChild(style);
+    let box = null;
+    function ensureBox() {
+        if (!box) { box = document.createElement('div'); box.id = 'tn-tooltip'; document.body.appendChild(box); }
+        return box;
+    }
+    const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    document.addEventListener('mouseover', (ev) => {
+        const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
+        if (!el) return;
+        const b = ensureBox();
+        const sub = el.dataset.tipSub || '', desc = el.dataset.tipDesc || '';
+        b.innerHTML = `<div class="tt-title">${esc(el.dataset.tipTitle)}</div>`
+            + (sub ? `<div class="tt-sub">${esc(sub)}</div>` : '')
+            + (desc ? `<div class="tt-desc">${esc(desc)}</div>` : '');
+        b.style.display = 'block';
+        const r = el.getBoundingClientRect(), bw = b.offsetWidth, bh = b.offsetHeight;
+        let x = r.left + r.width / 2 - bw / 2;
+        x = Math.max(8, Math.min(x, window.innerWidth - bw - 8));
+        let y = r.bottom + 8;
+        if (y + bh > window.innerHeight - 8) y = r.top - bh - 8;
+        b.style.left = x + 'px'; b.style.top = Math.max(8, y) + 'px';
+    });
+    document.addEventListener('mouseout', (ev) => {
+        const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
+        if (!el) return;
+        if (ev.relatedTarget && el.contains(ev.relatedTarget)) return;
+        if (box) box.style.display = 'none';
+    });
+    document.addEventListener('click', () => { if (box) box.style.display = 'none'; }, true);
+})();
+
+// ============================================
 // EXPORT
 // ============================================
 window.Sidebar = {
