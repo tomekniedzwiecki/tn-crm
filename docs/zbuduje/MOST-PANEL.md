@@ -55,6 +55,8 @@ i `import panel_sync as ps`. Każda funkcja loguje `insert/update/skip + id`.
 | `project_link_add` | `(project, label, url, icon='ph-link') → links` | GET links; dedup po `label`; PATCH. |
 | `storage_upload` | `(local, dest, bucket='attachments', content_type=None, upsert=True, max_width=None, to_webp=False, quality=82) → public_url` | POST `/storage/v1/object/{bucket}/{dest}` z `x-upsert`; opcjonalny PIL downscale + WebP. |
 | `public_url` | `(path, bucket='attachments') → url` | buduje publiczny URL. |
+| `cost_add` | `(project, product, amount, kind='fal', currency='USD', step=None, stage=5, note=None) → id` | Koszt do `wf2_costs` (tabela BEZ uniku). Dedup po `(project, product, step, kind, note)` — **bez `note` NIE deduplikuje** (świadomie: kolejne pozycje). `step` = kolumna `step_key`. ⚠ Fabryka grafik: koszt Manusa loguje EDGE `wf2-ads` sam przy pullu — NIE wołać `cost_add(kind='manus')` (noty się różnią → dublet w nagłówku bloku). |
+| `activity_add` | `(project, action, description, actor='auto') → id` | Wpis na oś czasu `wf2_activities` (log fabryki, kropka zielona `actor='auto'`). Bez dedup — każde wołanie = nowy wiersz. |
 
 **CLI:** `panel-sync.py {link|step|artifact|meta|projlink|upload} …` (`-h` po szczegóły).
 `step`/`artifact`: `product='-'`/`projekt` = krok projektu. `--fields/--checklist/--meta/patch` = JSON.

@@ -1,7 +1,7 @@
 # PLAYBOOK — kąt `problem` (plakat DR / PAS; ból BEZ produktu)
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_2_problem.png` (4:5).
-> Czytaj po SSOT + `PRZEWODNIK-GRAFICZNY.md` (EMOCJA↔PRODUKT). DNA = NAPRAWIONY `angleArt('problem')`.
+> Czytaj po SSOT + `PRZEWODNIK-GRAFICZNY.md` (EMOCJA↔PRODUKT). DNA = NAPRAWIONA art-direction kąta `problem` w `buildAdsInstruction()` w `wf2-ads` (dawniej `angleArt()`).
 
 ## KIEDY UŻYWAĆ
 Zimny ruch, gdy ból jest OSTRY i rozpoznawalny (plączące się kable, tępy nóż, rozlana kawa,

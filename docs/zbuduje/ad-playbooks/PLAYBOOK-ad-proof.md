@@ -1,7 +1,7 @@
 # PLAYBOOK — kąt `proof` (social / viral; dowód prawdziwy)
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_3_proof.png` (4:5).
-> Czytaj po SSOT. DNA = ulepszony `angleArt('proof')` z `wf2-ads`. Kąt najbardziej wrażliwy na politykę.
+> Czytaj po SSOT. DNA = ulepszona art-direction kąta `proof` z `buildAdsInstruction()` w `wf2-ads` (dawniej `angleArt()`). Kąt najbardziej wrażliwy na politykę.
 
 ## KIEDY UŻYWAĆ
 Obiekcja „czy to w ogóle działa / czy nie oszustwo?" (lęk #1 rynku PL). Dowód społeczny jako

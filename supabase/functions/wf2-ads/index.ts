@@ -36,6 +36,11 @@ const ALLOWED_FORMATS = ['45', '916']
 const MANUS_TASK_USD = parseFloat(Deno.env.get('BUD_MANUS_TASK_USD') || '') || 0.30
 // Wall-clock edge ~400 s (pamięć: „edge-wallclock-niewidzialne-pady") — sweep ma twardy deadline.
 const SWEEP_DEADLINE_MS = 300 * 1000
+// Karencja na eventual-consistency Manusa: task.detail bywa 'completed'/'done' ZANIM task.listMessages
+// pokaże assistant_message.attachments. Nie flipujemy na failed('no_output') zanim minie ta karencja od
+// startu tasku — inaczej chwilowa niespójność = fałszywy FAIL bez silnika zastępczego (a bud-ads celowo
+// zdaje to na self-heal timeoutem). 'stopped' = realne przerwanie → fail od razu (patrz niżej).
+const NO_OUTPUT_GRACE_MS = 5 * 60 * 1000
 
 function json(b: Record<string, unknown>, s: number, c: Record<string, string>): Response {
   return new Response(JSON.stringify(b), { status: s, headers: { ...c, 'Content-Type': 'application/json' } })
@@ -91,6 +96,7 @@ function buildAdsInstruction(
   refs: { url: string }[], productImageUrl: string, logoUrl: string, reportCtx: string,
   dna: { paleta?: string; fonty?: string; stylMasterUrl?: string; landingUrl?: string; priceInfo?: string },
   plan: Array<{ idx: number; angle: string; format: string; filename: string }>,
+  fromTrendy: boolean,
 ): string {
   const name = String(product?.nazwa || product?.name || snapTitle || 'produkt').slice(0, 120)
   const dla = String(ust?.dla_kogo || '').slice(0, 240)
@@ -110,6 +116,18 @@ function buildAdsInstruction(
   const fmtLabel = (f: string) => f === '916' ? 'PIONOWY 9:16 (1080×1920 px, Stories/Reels)' : 'PIONOWY 4:5 (1080×1350 px, feed IG/FB)'
   const fileList = plan.map((p) => `  • ${p.filename} — kąt „${p.angle}", ${fmtLabel(p.format)}`).join('\n')
   const nFiles = plan.length
+  // Claim „Hit z TikToka"/„Viralowy hit" = PRAWDZIWY tylko gdy produkt realnie pochodzi z radaru /trendy
+  // (fromTrendy). Inaczej to zmyślony rodowód (playbook proof §krytyczna, ZG4, polityka Meta 2026) — bramkujemy
+  // go tak samo jak liczby na realnych danych: bez /trendy → generyczny dowód społeczny / risk-reversal, zero virala.
+  const proofDesc = fromTrendy
+    ? 'dowód społeczny: viral z TikToka — BEZ zmyślonych liczb/recenzji'
+    : 'dowód społeczny / risk-reversal: „sprawdzony wybór", COD — BEZ claimu virala/TikToka i BEZ zmyślonych liczb/recenzji'
+  const badgeList = fromTrendy
+    ? '„Płatność przy odbiorze" / „14 dni na zwrot" / „Hit z TikToka" / „Viralowy hit"'
+    : '„Płatność przy odbiorze" / „14 dni na zwrot" / „Sprawdzony wybór"'
+  const proofArt = fromTrendy
+    ? '- proof — VIRAL/SOCIAL: produkt-bohater na CIEMNYM/kontrastowym tle + wyrazista pieczęć „Hit z TikToka" / „Viralowy hit"; surowy socialowy vibe, skondensowana typografia. BEZ gwiazdek/liczb/fałszywych recenzji, BEZ interfejsu/logo TikToka.'
+    : '- proof — DOWÓD SPOŁECZNY / RISK-REVERSAL: produkt-bohater na CIEMNYM/kontrastowym tle, surowy socialowy vibe, skondensowana typografia; zamiast virala pieczęć „Sprawdzony wybór" i/lub badge „Płatność przy odbiorze". ZAKAZ „Hit z TikToka"/„Viralowy hit"/jakiegokolwiek claimu virala — produkt NIE pochodzi z radaru /trendy. BEZ gwiazdek/liczb/fałszywych recenzji, BEZ interfejsu/logo TikToka.'
   return `Jesteś full-stack marketerem DTC na rynek polski. Zrobisz KOMPLET ${nFiles} statycznych reklam-banerów na Facebook/Instagram dla jednoproduktowego sklepu (model dropshipping → własna marka, sprzedaż przez landing z PŁATNOŚCIĄ PRZY ODBIORZE / COD).
 
 🎯 PRODUKT — WIERNOŚĆ 1:1 (zasada święta):
@@ -126,8 +144,8 @@ KONTEKST (z briefu mini-marki — dopasuj DOKŁADNIE):
 ${priceInfo ? `- PRAWDZIWE LICZBY (używaj WYŁĄCZNIE tych, z kotwicą; zero zmyślonych): ${priceInfo}` : '- LICZBY: brak zweryfikowanych — NIE podawaj ŻADNYCH liczb/cen/ocen na grafice.'}
 ${repCtx}
 === ZADANIE 1: COPY (po jednym na kąt) ===
-Kąty: "demo" (demonstracja/„wow", mechanizm), "problem" (problem→rozwiązanie), "proof" (dowód społeczny: viral z TikToka — BEZ zmyślonych liczb/recenzji).
-Dla każdego: angle, headline (3–6 słów, PL, renderowany na grafice, JEDNA obietnica), badge (≤3 słowa, TYLKO prawdziwy: „Płatność przy odbiorze" / „14 dni na zwrot" / „Hit z TikToka" / „Viralowy hit"), primary_text (2–3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów").
+Kąty: "demo" (demonstracja/„wow", mechanizm), "problem" (problem→rozwiązanie), "proof" (${proofDesc}).
+Dla każdego: angle, headline (3–6 słów, PL, renderowany na grafice, JEDNA obietnica), badge (≤3 słowa, TYLKO prawdziwy: ${badgeList}), primary_text (2–3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów").
 
 === ZADANIE 2: ${nFiles} KREACJI GRAFICZNYCH (najważniejsze) ===
 Wygeneruj DOKŁADNIE te pliki (każdy = inny kąt/format):
@@ -135,7 +153,7 @@ ${fileList}
 ⚠️ RÓŻNORODNOŚĆ (test A/B): kąty to RÓŻNE reklamy — inny układ, inne tło/paleta, inny charakter typografii. Dwie podobne = test nic nie mierzy. Art-direction per kąt:
 - demo — FULL-BLEED AKCJA: produkt W AKCJI / mid-use wypełnia CAŁY kadr, dynamiczna diagonala, energia ruchu; headline na kontrastowym pasku; mały inset produktu solo dla wierności kształtu; paleta fotograficzna ze sceny — BEZ płaskiego bloku koloru. Najsilniejszy kadr „na zimno".
 - problem — PLAKAT DR, EMOCJA↔PRODUKT: pokaż BÓL / stary (nieudany) sposób BEZ NASZEGO PRODUKTU w strefie problemu (irytująca sytuacja, bałagan, frustracja). Nasz produkt pojawia się WYŁĄCZNIE w strefie rozwiązania/CTA jako „naprawa". Duży, gruby headline nazywający ból BEZOSOBOWO (ZAKAZ „Masz problem z…", „Wstydzisz się…" — personal attributes Meta). Płaskie tło w kolorze marki.
-- proof — VIRAL/SOCIAL: produkt-bohater na CIEMNYM/kontrastowym tle + wyrazista pieczęć „Hit z TikToka" / „Viralowy hit"; surowy socialowy vibe, skondensowana typografia. BEZ gwiazdek/liczb/fałszywych recenzji, BEZ interfejsu/logo TikToka.${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo w SAFE-ZONES — góra 14%, dół 35%, boki 6% wolne od tekstu/CTA (inaczej UI Stories/Reels przytnie). Format 4:5 wypełnia kadr normalnie.` : ''}
+${proofArt}${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo w SAFE-ZONES — góra 14%, dół 35%, boki 6% wolne od tekstu/CTA (inaczej UI Stories/Reels przytnie). Format 4:5 wypełnia kadr normalnie.` : ''}
 ZASADY GRAFIK:
 - Polski tekst poprawny (z diakrytykami), TYLKO krótki: headline (3–6 słów, JEDNA obietnica) + przycisk-pigułka „Kup teraz" (+ ewentualnie badge). Bez akapitów; tekst ≤~20% płótna.
 - „Kup teraz" jako element UI (pigułka), wysoki kontrast do tła; risk-reversal COD: badge „Płatność przy odbiorze" pasuje do problem/proof.
@@ -342,8 +360,10 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   if (!['completed', 'done', 'stopped'].includes(task.status)) return { done: false }
 
   // Slug do ścieżki kanonicznej D6 (bud-assets/<slug>/ads/); fallback bez slug → ai-generated/wf2/<pid>/.
-  const { data: prow } = await supabase.from('wf2_products').select('slug').eq('id', productId).maybeSingle()
+  // started_at — do karencji no_output (patrz niżej): mierzymy okno eventual-consistency od startu tasku.
+  const { data: prow } = await supabase.from('wf2_products').select('slug, ads_manus_started_at').eq('id', productId).maybeSingle()
   const slug = String((prow as { slug?: string })?.slug || '').trim().replace(/^\/+|\/+$/g, '')
+  const startedAt = (prow as { ads_manus_started_at?: string })?.ads_manus_started_at || null
 
   const msgRes = await fetch(`${MANUS_BASE}/task.listMessages?task_id=${taskId}&limit=100`, { headers })
   const msgData = await msgRes.json().catch(() => null)
@@ -359,6 +379,30 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   // deno-lint-ignore no-explicit-any
   const jsonFiles = att.filter((a: any) => a.type === 'file' && a.content_type === 'application/json')
 
+  // D2b: task TERMINALNY z ZEROWĄ liczbą obrazów = trigger FAILED ('no_output') — retry nie pomoże
+  // (task się skończył, nic nie wyprodukował). ALE Manus miewa eventual-consistency: task.detail wraca
+  // 'completed'/'done' ZANIM task.listMessages pokaże załączniki → images=0 w oknie niespójności. Dlatego
+  // flip TYLKO gdy (a) task realnie 'stopped' (przerwanie — nic już nie dojdzie), albo (b) minęła karencja
+  // NO_OUTPUT_GRACE_MS od startu tasku (okno na propagację listMessages). W karencji zwracamy {done:false}
+  // (poll/sweep ponowi), a nie fałszywy FAIL — bud-ads zdaje ten przypadek na self-heal timeoutem 32/40 min.
+  // listOk chroni przed fałszywym alarmem, gdy to listMessages padło (transient) → wtedy {done:false} do ponowienia.
+  // ODRÓŻNIENIE od „wszystkie uploady padły" (images>0, items puste) — tam retry MA sens (patrz check niżej).
+  // Flip atomowy .eq('running') + Slack tylko dla zwycięzcy (poll i sweep mogą wejść równolegle), by nie dublować alertu.
+  const listOk = !!(msgRes.ok && msgData && Array.isArray(msgData.messages))
+  if (listOk && images.length === 0) {
+    const startedMs = startedAt ? Date.parse(String(startedAt)) : 0
+    const graceElapsed = startedMs > 0 && (Date.now() - startedMs) > NO_OUTPUT_GRACE_MS
+    if (task.status === 'stopped' || graceElapsed) {
+      const { data: flipped } = await supabase.from('wf2_products')
+        .update({ ads_manus_status: 'failed', ads_manus_step: 'no_output' })
+        .eq('id', productId).eq('ads_manus_status', 'running').select('id')
+      if (flipped && flipped.length) {
+        await postSlackSparing('bud_gen_error', { product_id: productId, stage: 'wf2 reklamy — Manus skończył BEZ grafik (0 obrazów; brak silnika zastępczego)', error: `task ${taskId} zakończony bez żadnej grafiki — sprawdź kredyty/kolejkę Manusa, potem RESET w panelu` })
+      }
+    }
+    return { done: false }
+  }
+
   const copyByAngle: Record<string, { headline: string; primary_text: string; badge: string }> = {}
   if (jsonFiles.length) {
     try {
@@ -371,6 +415,10 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
 
   // Rehost obrazów; kąt+format z nazwy pliku (back-compat: ad_<n>_<angle>[.png] ORAZ ad_<n>_<angle>_<fmt>.png).
   const items: Array<{ angle: string; format: string; image_url: string }> = []
+  // Ścieżka D6 jest DETERMINISTYCZNA (regeneracja nadpisuje TEN SAM obiekt, upsert:true) → public_url się
+  // nie zmienia. Doklejamy wersję ?v=<stamp> do URL, żeby po „Regeneruj" panel (thumbUrl/render-CDN) i Meta
+  // nie serwowały starej klatki z cache (Storage domyślnie cacheControl 3600 s). Ścieżka fizyczna bez zmian.
+  const ver = Date.now()
   for (let i = 0; i < images.length; i++) {
     const img = images[i]
     try {
@@ -386,7 +434,7 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
       const { error } = await supabase.storage.from('attachments').upload(path, buf, { contentType: img.content_type || 'image/png', upsert: true })
       if (error) continue
       const { data: pub } = supabase.storage.from('attachments').getPublicUrl(path)
-      if (pub?.publicUrl) items.push({ angle: ang, format: fmt, image_url: pub.publicUrl })
+      if (pub?.publicUrl) items.push({ angle: ang, format: fmt, image_url: `${pub.publicUrl}?v=${ver}` })
     } catch { /* */ }
   }
 
@@ -605,6 +653,9 @@ Deno.serve(async (req) => {
     const priceInfo = [cenaPl ? `Cena PL: ${cenaPl}` : '', reviewStats ? `Realne liczby z aukcji (source=detail): ${reviewStats}` : ''].filter(Boolean).join(' · ')
     const landingUrl = String(product.platform_page_url || '').trim()
     const dna = { paleta, fonty, stylMasterUrl, landingUrl, priceInfo }
+    // Rodowód /trendy: produkt ma realny wpis w radarze bud_tt_products (tt) → claim „Hit z TikToka" jest PRAWDZIWY.
+    // Bez tt (tt_product_id NULL/nieistniejący) → NIE pozwalamy Manusowi zmyślać virala (bramka lustrzana do liczb).
+    const fromTrendy = !!tt
 
     // Brief = raport (jeśli jest) + obietnica + hooki + notatki produktu → bogatszy materiał na copy.
     const briefParts: string[] = []
@@ -622,9 +673,11 @@ Deno.serve(async (req) => {
 
     // Atomowa rezerwacja slotu (anty-podwójny task przy double-click). Marker = status 'running'
     // z task_id=NULL (sweep/poll wymagają task_id, więc go pomijają). force → nadpisz nawet biegnący.
+    // NIE nulujemy tu ads_creatives: gdy task.create padnie (np. brak kredytów), stare kreacje +
+    // akcepty muszą zostać widoczne w panelu (wzorzec bud-ads). Blob czyścimy dopiero na sukcesie create.
     const claimSlot = async (): Promise<boolean> => {
       let q = supabase.from('wf2_products')
-        .update({ ads_manus_status: 'running', ads_manus_task_id: null, ads_manus_completed_at: null, ads_manus_started_at: new Date().toISOString(), ads_manus_step: 'claim', ads_creatives: null })
+        .update({ ads_manus_status: 'running', ads_manus_task_id: null, ads_manus_completed_at: null, ads_manus_started_at: new Date().toISOString(), ads_manus_step: 'claim' })
         .eq('id', productId)
       if (!force) q = q.or('ads_manus_status.is.null,ads_manus_status.eq.completed,ads_manus_status.eq.failed')
       const { data, error } = await q.select('id')
@@ -638,7 +691,7 @@ Deno.serve(async (req) => {
     try {
       const rawRef = refs[0]?.url || ''
       const productImageUrl = rawRef ? await cacheRefToStorage(supabase, productId, rawRef) : ''
-      const messagePayload: Record<string, unknown> = { content: buildAdsInstruction(productCtx, ust, brandName, snapTitle, refs, productImageUrl, logoUrl, reportCtx, dna, plan) }
+      const messagePayload: Record<string, unknown> = { content: buildAdsInstruction(productCtx, ust, brandName, snapTitle, refs, productImageUrl, logoUrl, reportCtx, dna, plan, fromTrendy) }
       // Załączniki: product_reference (wierność 1:1) + styl_master (D3 referencja stylu marki).
       const guessCt = (u: string): string => { const lo = u.toLowerCase(); return lo.includes('.png') ? 'image/png' : lo.includes('.webp') ? 'image/webp' : lo.includes('.avif') ? 'image/avif' : 'image/jpeg' }
       const attachments: Array<Record<string, unknown>> = []
@@ -651,7 +704,10 @@ Deno.serve(async (req) => {
         manusCreateErr = `HTTP ${createRes.status}: ${JSON.stringify(createData).slice(0, 180)}`
         console.error('[wf2-ads] Manus task.create failed', manusCreateErr)
       } else {
-        await supabase.from('wf2_products').update({ ads_manus_task_id: createData.task_id, ads_manus_status: 'running', ads_manus_started_at: new Date().toISOString(), ads_manus_step: null }).eq('id', productId)
+        // Task realnie utworzony → DOPIERO teraz czyścimy stary blob (bud-ads: session_ads=null na sukcesie
+        // create). Dzięki temu create-fail zostawia poprzednie kreacje, a nulling nie odsłania cache-hitu
+        // przy kolejnych pollach (status='running' + ads_creatives=null → poll idzie ścieżką dociągnięcia).
+        await supabase.from('wf2_products').update({ ads_manus_task_id: createData.task_id, ads_manus_status: 'running', ads_manus_started_at: new Date().toISOString(), ads_manus_step: null, ads_creatives: null }).eq('id', productId)
         return json({ pending: true, manus: 'created', task_id: createData.task_id }, 202, c)
       }
     } catch (e) {

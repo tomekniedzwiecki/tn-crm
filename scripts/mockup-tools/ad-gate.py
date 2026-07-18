@@ -14,7 +14,9 @@ wg SSOT (dwie pary oczu). Trzy sita mierzalne:
 Wynik: report.json (w katalogu dowodow) + czytelny stdout PASS/FLAG.
 
 Konwencja nazw (D2): 4:5 => ad_<n>_<angle>.png ; 9:16 => ad_<n>_<angle>_916.png.
-Katy: demo / problem / proof (parser tolerancyjny — bierze cokolwiek po numerze).
+Parser rozpoznaje TEZ kanoniczny rehost D6: ad_<angle>_<fmt>.png (np. ad_demo_45.png) — dzieki temu
+bramka roznorodnosci dziala rowniez na plikach pobranych z bud-assets/<slug>/ads/.
+Katy: demo / problem / proof (parser tolerancyjny — bierze cokolwiek po numerze / przed formatem).
 
 Uzycie:
   python ad-gate.py <katalog_png> [--out <katalog_dowodow>] [--thumb-width 320]
@@ -61,15 +63,22 @@ IMG_EXT = (".png", ".jpg", ".jpeg", ".webp")
 
 # ------------------------------------------------------------------ util
 def parse_name(fname):
-    """ad_<n>_<angle>[_<fmt>].<ext> -> (n:int|None, angle:str, fmt:str, rozpoznane:bool).
-       Brak sufiksu formatu => '45' (D2, back-compat). Sufiks '916'/'45'/inne cyfry => ten format."""
+    """Dwie konwencje nazw -> (n:int|None, angle:str, fmt:str, rozpoznane:bool):
+       (1) Manus (surowe):   ad_<n>_<angle>[_<fmt>].<ext>  (wiodaca CYFRA = numer kreacji);
+       (2) rehost D6 (kan.):  ad_<angle>_<fmt>.<ext>        (kat SLOWEM, format CYFRA).
+       Brak sufiksu formatu w (1) => '45' (back-compat). OBIE daja poprawny KAT, zeby bramka
+       roznorodnosci ZG3 (pHash pairwise per format) miala co porownywac niezaleznie od tego, czy
+       operator karmi skrypt plikami z Manusa czy rehostami z bud-assets/<slug>/ads/ (inaczej kat='?'
+       -> diff_angle=False dla kazdej pary -> cichy PASS bez analizy katow)."""
+    # (1) Manus: ad_<n>_<angle>[_<fmt>]  (zachowanie 1:1 z poprzednia wersja)
     m = re.match(r"^ad_(\d+)_([a-z]+)(?:_(\d+))?\.[a-z0-9]+$", fname, re.I)
-    if not m:
-        return (None, "?", "?", False)
-    n = int(m.group(1))
-    angle = m.group(2).lower()
-    fmt = m.group(3) if m.group(3) else "45"
-    return (n, angle, fmt, True)
+    if m:
+        return (int(m.group(1)), m.group(2).lower(), m.group(3) if m.group(3) else "45", True)
+    # (2) rehost D6: ad_<angle>_<fmt>  (np. ad_demo_45.png / ad_problem_916.png)
+    m = re.match(r"^ad_([a-z]+)_(\d+)\.[a-z0-9]+$", fname, re.I)
+    if m:
+        return (None, m.group(1).lower(), m.group(2), True)
+    return (None, "?", "?", False)
 
 def phash_int(pil):
     """64-bitowy hash percepcyjny jako int. imagehash.phash gdy dostepne, inaczej wlasny dHash."""

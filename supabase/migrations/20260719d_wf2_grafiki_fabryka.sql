@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- FABRYKA STATYCZNYCH GRAFIK ADS (krok ads_grafiki, Etap 5 „Materiały i kampania")
--- Decyzja 18.07: ads_grafiki dostaje pełną fabrykę na wzór landingów i wideo —
+-- Decyzja 19.07 (rev2 „Manus albo nic"): ads_grafiki dostaje pełną fabrykę na wzór landingów i wideo —
 -- SSOT + playbooki + bramki QA + rejestr z rodowodem + pętla wyników. Migracja
 -- domyka warstwę danych:
 --   1. wf2_creatives  = rejestr obsługuje teraz też OBRAZY (media_type='image'),

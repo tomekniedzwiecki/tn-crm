@@ -1,7 +1,7 @@
 # PLAYBOOK — kąt `demo` (full-bleed akcja / benefit-callouts)
 
 > Jeden z 3 kątów zestawu startowego (`STANDARD-GRAFIKI-SKLEPY.md`). Plik: `ad_1_demo.png` (4:5).
-> Czytaj po SSOT. DNA layoutu = ulepszony `angleArt('demo')` z `wf2-ads`.
+> Czytaj po SSOT. DNA layoutu = ulepszona art-direction kąta `demo` z `buildAdsInstruction()` w `wf2-ads` (dawniej `angleArt()`).
 
 ## KIEDY UŻYWAĆ
 Najsilniejszy kadr „na zimno". Produkt sam się tłumaczy przez DZIAŁANIE: mechanizm, „wow"
