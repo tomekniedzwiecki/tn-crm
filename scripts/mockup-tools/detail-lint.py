@@ -335,9 +335,17 @@ def check_crop(D, add, fetch):
                     "P1","Podmien AR kafla albo obraz o proporcji ~box","skrypt")
         ups2=(rw*2)/nw
         if ups2>1.3:
+            # DPR2-upscaling: obrazy object-fit:cover (pelnoekranowe sceny + kafle AI) sa KADROWANE i
+            # ograniczone natywna rozdzielczoscia generatora (gpt-image-2 <=1536) + budzetem wagi (WAGI-gate)
+            # -> DPR2/retina crispness = swiadomy tradeoff, SPOJNIE z checkiem DPR1 nizej (linia ~537), ktory
+            # JUZ wyklucza cover ("objfit!='cover'"). Wiec cover -> P2 (informacyjny, WIDOCZNY, nie hard-FAIL).
+            # Niecover (tresciowe, realnie podmienialne na wieksza rozdzielczosc): >1.6 = P1.
+            # Kalibracja 18.07 (RETRO §1, precedens sekcja-diff): nie hard-FAIL WIERNEGO landingu na
+            # niedyskryminujacej metryce; realny defekt lapia WAGI + WIERNOSC + crop-AR (osobny check wyzej).
+            sev = "P2" if im["objfit"]=="cover" else ("P1" if ups2>1.6 else "P2")
             add("obrazy",im["sec"]+" / "+base,
                 "Upscaling przy DPR2: render*2 (%dpx) / natural (%dpx) = %.2fx"%(rw*2,nw,ups2),
-                "P1" if ups2>1.6 else "P2","Podmien na wieksza rozdzielczosc (>=2x szerokosci renderu)","skrypt")
+                sev,"Podmien na wieksza rozdzielczosc (>=2x szerokosci renderu)","skrypt")
 
 def check_interactive(D, add, vw):
     """Hit-test + martwa interakcja per viewport."""
