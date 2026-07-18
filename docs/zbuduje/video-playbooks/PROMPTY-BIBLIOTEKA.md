@@ -110,6 +110,10 @@ Scena omnihuman → `n:2`. „warm brown eyes" OBOWIĄZKOWE (OmniHuman zmienia k
   **Przy 6 scenach × ~2,5 s (standard 15 s): kwestia = ~20-25 ZNAKÓW na scenę** (fraza, nie
   zdanie!) albo VO co drugą scenę — pełne zdania first-person mają 4-5 s i NIE mieszczą się
   (lekcja drapek 19.07).
+- **⛔ TEKST VO/NAPISÓW = PEŁNE POLSKIE ZNAKI, ZAWSZE** (incydent 19.07: lektor przeczytał
+  „BOL/NAPIECIE" — konwencja ASCII dotyczy WYŁĄCZNIE printów konsoli cp1250, NIGDY treści!).
+  Teksty VO trzymaj w plikach UTF-8 i podawaj do TTS z pliku; przed generacją sprawdź,
+  że payload zawiera ą/ę/ó/ł/ż/ś. To samo `known_text` dla napisów.
 - **REJESTR VO (audyt 19.07 — reguła twarda):** first-person/story, jak człowiek do człowieka:
   „Nie wierzyłem, dopóki…", „Tata dostał to na Dzień Ojca…" (wzór: myjka). **ZAKAZ
   broadcast-sloganów**: „Pięć w jednym. Sprawdź sam.", „Poznaj X", „Rewolucja w Y", wyliczanki

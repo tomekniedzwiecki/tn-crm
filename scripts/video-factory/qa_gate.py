@@ -25,6 +25,9 @@ Checklist (dla agenta-recenzenta, per siatka):
      z dominujaca skora (dlonie/twarz/przedramie); fix = PROMPT (klauzula skory), nie post.
  12. GRANICE SCEN (hands-POV): akcja przechodzi przez ciecie (bez martwej freeze-klatki);
      OSTATNIA klatka kreacji = echo PIERWSZEJ (LOOP CLOSE) — brak echa = poprawa sceny CTA.
+ 13. UMIEJSCOWIENIE UZYCIA NA CIELE == placement_ref (lifestyle z poprawnym zalozeniem)!
+     Produkt wierny ale zle zalozony (masazer na GARDLE zamiast na KARKU, 19.07) = REJECT.
+     EN: kark = "nape/back of the neck" — samo "neck" laduje na przodzie szyi.
 
 Werdykt: agent MUSI wyemitowac WIERSZ NA KLATKE (nr, #obiektow produktu, #dloni, flagi) — ZAKAZ
 oceny zbiorczej. Siatka = triaz; klatka z flaga -> dociagnij PELNA rozdzielczosc. Dla klipow MC

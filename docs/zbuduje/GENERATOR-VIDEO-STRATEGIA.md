@@ -315,6 +315,17 @@ Podział ról informacji:
 - Szczegółowe listy elementów/anatomii żyją w KARCIE jako **checklista BRAMKI** —
   bramka porównuje wynik z packshotem per-element; prompt tego nie recytuje.
 
+**UMIEJSCOWIENIE UŻYCIA NA CIELE (incydent masażer 19.07: urządzenie na GARDLE zamiast
+na KARKU — produkt wierny, użycie błędne):** wierność produktu ≠ wierność UŻYCIA. Reguły:
+1. Sceny użycia na ciele mają w kontrakcie `placement_ref` = zdjęcie lifestyle z POPRAWNYM
+   założeniem (obraz-kotwica umiejscowienia — zgodnie z doktryną: użycie też pokazujemy
+   ZDJĘCIEM, nie tylko słowem) + `placement` słownie JEDNOZNACZNIE anatomicznie.
+2. **Słownik anatomii PL→EN (dwuznaczności zakazane):** kark = "nape / back of the neck /
+   upper trapezius, seen from behind-side" (NIGDY samo "neck" — model wybiera PRZÓD szyi,
+   bo tam produkt widać); nadgarstek/łydka/lędźwie itd. — zawsze doprecyzowane stroną ciała.
+3. **Bramka**: rubryka product_gate dostaje obowiązkowy wiersz per scena „UMIEJSCOWIENIE ==
+   placement_ref?" — rozjazd = REJECT sceny (nawet gdy produkt idealny).
+
 **PREWENCJA (generacja — zrób wiernie za 1. razem):**
 1. **Per-frame packshot re-injection (ROOT-CAUSE, $0):** `last()` dostaje `[first, packshot
    właściwego STANU]` z rolą „Image 2 = EXACT product identity+state — correct any drift".
