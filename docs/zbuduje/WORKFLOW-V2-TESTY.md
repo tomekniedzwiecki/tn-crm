@@ -263,6 +263,13 @@ konkuruje o 1 slot) → liczy się różnorodność KONCEPCYJNA, nie wolumen.
   `wf2_proposals` kind='creative_refresh' (decyzja Tomka).
 - Testy NOWYCH kreacji: wewnątrz głównej broad kampanii, ocena po KONTRYBUCJI zakupów
   (nierówny spend to feature Andromedy, nie bug) — bez osobnej kampanii testowej „na siłę".
+- **STRAŻNIK WDROŻONY (19.07):** `wf2-ads-sync` po każdym dziennym syncu tworzy karty
+  `wf2_proposals` wg powyższych progów — `campaign_kill` (spend >1,5×cena bez ATC/zakupów,
+  min. 2 dni danych) i `creative_refresh` (CTR −25% + frequency>3, albo CTR −50%; okna
+  min. 1500 wyświetleń). Dedup tygodniowy (odrzucona karta nie wraca w tym samym tygodniu).
+  Karty → warsztat „Opieka i higiena" (akcept/odrzut = Tomek; **akcept NIE wykonuje zmiany
+  w Meta** — wykonanie zawsze przez sesję/człowieka). Blocklista komentarzy = standard
+  w `docs/zbuduje/ADS-BLOCKLISTA-PL.md` (wgranie w Pre-flight).
 
 ### 9.3 Higiena konta i kampanii (krok `ads_opieka`)
 - **Komentarze = trust signal cold traffic** (negatywy potrafią zdusić CTR i podbić CPM):

@@ -7,6 +7,10 @@
 //     → upsert wf2_ad_stats (level='ad') + dopasowanie creative_id po wf2_creatives.meta_ad_ids.
 //  3. Health-scan kont: account_status/disable_reason ≠ aktywny → alert do wf2_activities.
 //  4. WYKLUCZENIE konta Tomka act 1537659320657091 + log (pamięć: wyklucz i loguj).
+//  5. STRAŻNIK KAMPANII (19.07; TESTY §9.2/§9.3): karty wf2_proposals do decyzji Tomka —
+//     campaign_kill (spend >1,5×cena bez ATC/zakupów, min. 2 dni danych) i creative_refresh
+//     (CTR −25% + frequency>3, albo CTR −50%). Automat NICZEGO nie wyłącza; dedup per tydzień
+//     (odrzucona karta nie wraca w tym samym tygodniu). Panel: warsztat „Opieka i higiena".
 //
 // Gate: x-wf2-secret == WF2_GEN_SECRET  LUB  x-admin-secret == SPAR_CRON_SECRET.
 // Token: WF2_META_TOKEN (system user, partner access do BM klientów) — BRAK sekretu =>
@@ -58,10 +62,10 @@ Deno.serve(async (req) => {
 
   const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
   const t0 = Date.now();
-  const out = { campaigns: 0, rows_campaign: 0, rows_ad: 0, alerts: 0, skipped_excluded: 0, errors: [] as string[] };
+  const out = { campaigns: 0, rows_campaign: 0, rows_ad: 0, alerts: 0, proposals: 0, skipped_excluded: 0, errors: [] as string[] };
 
   const { data: products } = await sb.from("wf2_products")
-    .select("id, project_id, name, campaign_id").not("campaign_id", "is", null).neq("campaign_id", "");
+    .select("id, project_id, name, campaign_id, price").not("campaign_id", "is", null).neq("campaign_id", "");
   const { data: projects } = await sb.from("wf2_projects").select("id, meta_ad_account_id");
   const accByProject = new Map((projects ?? []).map((p) => [p.id, String(p.meta_ad_account_id ?? "").replace("act_", "")]));
 
@@ -134,6 +138,85 @@ Deno.serve(async (req) => {
       out.errors.push(`${prod.name ?? prod.id}: ${String(e).slice(0, 200)}`);
     }
   }
+
+  // ── STRAŻNIK KAMPANII — karty decyzyjne do wf2_proposals (nic nie wyłącza sam) ──
+  try {
+    const since = new Date(Date.now() - 7 * 864e5).toISOString().slice(0, 10);
+    const prodIds = (products ?? []).map((p) => p.id);
+    if (prodIds.length) {
+      const { data: stats } = await sb.from("wf2_ad_stats")
+        .select("product_id, level, date, spend, impressions, link_clicks, atc, purchases, frequency, creative_id")
+        .in("product_id", prodIds).gte("date", since);
+      // klucz tygodnia ISO — dedup: max 1 karta danego typu na produkt/kreację na tydzień
+      const wk = (() => {
+        const t = new Date(); const d = new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()));
+        const day = d.getUTCDay() || 7; d.setUTCDate(d.getUTCDate() + 4 - day);
+        const y0 = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return `${d.getUTCFullYear()}-W${String(Math.ceil((((d.getTime() - y0.getTime()) / 864e5) + 1) / 7)).padStart(2, "0")}`;
+      })();
+      const proposals: Record<string, unknown>[] = [];
+
+      for (const prod of products ?? []) {
+        const camp = (stats ?? []).filter((s) => s.product_id === prod.id && s.level === "campaign")
+          .sort((a, b) => String(a.date).localeCompare(String(b.date)));
+        if (!camp.length) continue;
+        const spend7 = camp.reduce((s, r) => s + num(r.spend), 0);
+        const atc7 = camp.reduce((s, r) => s + int(r.atc), 0);
+        const pur7 = camp.reduce((s, r) => s + int(r.purchases), 0);
+        const daysWithSpend = new Set(camp.filter((r) => num(r.spend) > 0).map((r) => r.date)).size;
+        const price = num(prod.price);
+        // KILL-flag: spend >1,5×cena, zero ATC i zakupów, min. 2 dni danych (min 48 h — TESTY §2)
+        if (price > 0 && daysWithSpend >= 2 && spend7 > 1.5 * price && atc7 === 0 && pur7 === 0) {
+          proposals.push({
+            project_id: prod.project_id, product_id: prod.id, kind: "campaign_kill",
+            dedup_key: `campaign_kill:${prod.id}:${wk}`,
+            payload: { rule: "spend >1,5×cena bez ATC i zakupów (okno 7 d)", spend_7d: +spend7.toFixed(2),
+                       price, atc_7d: atc7, purchases_7d: pur7, days_with_spend: daysWithSpend },
+          });
+        }
+        // FATIGUE per kreacja (TESTY §9.2): CTR ost. 2 dni vs wcześniejsze (min. 1500 impr./okno);
+        // −25% przy frequency>3 na kampanii ALBO −50% bezwarunkowo.
+        const freqLast = num(camp.at(-1)?.frequency);
+        const ads = (stats ?? []).filter((s) => s.product_id === prod.id && s.level === "ad" && s.creative_id);
+        const byCreative = new Map<string, typeof ads>();
+        for (const r of ads) { const k = String(r.creative_id); if (!byCreative.has(k)) byCreative.set(k, []); byCreative.get(k)!.push(r); }
+        const cut = new Date(Date.now() - 2 * 864e5).toISOString().slice(0, 10);
+        for (const [cid, rows] of byCreative) {
+          const recent = rows.filter((r) => String(r.date) >= cut);
+          const prior = rows.filter((r) => String(r.date) < cut);
+          const impR = recent.reduce((s, r) => s + int(r.impressions), 0);
+          const impP = prior.reduce((s, r) => s + int(r.impressions), 0);
+          if (impR < 1500 || impP < 1500) continue;
+          const ctrR = recent.reduce((s, r) => s + int(r.link_clicks), 0) / impR;
+          const ctrP = prior.reduce((s, r) => s + int(r.link_clicks), 0) / impP;
+          if (ctrP <= 0) continue;
+          const drop = 1 - ctrR / ctrP;
+          if ((drop >= 0.25 && freqLast > 3) || drop >= 0.5) {
+            proposals.push({
+              project_id: prod.project_id, product_id: prod.id, kind: "creative_refresh",
+              dedup_key: `creative_refresh:${cid}:${wk}`,
+              payload: { creative_id: cid, rule: "CTR −25% przy frequency>3 (albo CTR −50%)",
+                         ctr_recent_pct: +(ctrR * 100).toFixed(2), ctr_prior_pct: +(ctrP * 100).toFixed(2),
+                         drop_pct: +(drop * 100).toFixed(1), frequency: freqLast },
+            });
+          }
+        }
+      }
+      if (proposals.length) {
+        // ignoreDuplicates + select → aktywność logujemy TYLKO dla świeżo wstawionych kart
+        const { data: inserted, error } = await sb.from("wf2_proposals")
+          .upsert(proposals, { onConflict: "dedup_key", ignoreDuplicates: true }).select("id, project_id, kind, payload");
+        if (error) { out.errors.push(`straznik upsert: ${error.message.slice(0, 150)}`); }
+        for (const p of inserted ?? []) {
+          out.proposals++;
+          await sb.from("wf2_activities").insert({
+            project_id: p.project_id, actor: "wf2-ads-sync", action: "ads_proposal",
+            description: `Karta do decyzji Tomka: ${p.kind} — ${(p.payload as { rule?: string })?.rule ?? ""} (warsztat „Opieka i higiena")`,
+          });
+        }
+      }
+    }
+  } catch (e) { out.errors.push(`straznik: ${String(e).slice(0, 200)}`); }
 
   // ── health-scan kont (operational health — zablokowane konto = 100% straty) ──
   const seen = new Set<string>();
