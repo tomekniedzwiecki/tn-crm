@@ -107,6 +107,23 @@ Scena omnihuman → `n:2`. „warm brown eyes" OBOWIĄZKOWE (OmniHuman zmienia k
 - Głosy sprawdzone: **„Aria"** (kobiecy PL), **„Bill"** (męski PL).
 - Tagi emocji w `text`: `[skeptical]` / `[gasp]` / `[laughs]` / `[pause]` (i dłuższe pauzy przez `[pause]`).
 - Tempo ~**14 znaków/s** — z tego licz długość sceny mówionej (kwestia + 0,6 s pad).
+- **REJESTR VO (audyt 19.07 — reguła twarda):** first-person/story, jak człowiek do człowieka:
+  „Nie wierzyłem, dopóki…", „Tata dostał to na Dzień Ojca…" (wzór: myjka). **ZAKAZ
+  broadcast-sloganów**: „Pięć w jednym. Sprawdź sam.", „Poznaj X", „Rewolucja w Y", wyliczanki
+  featurów tonem spikera — to ad-feel, który zabija native (anty-wzór: głośnik/słuchawka).
+  Luźna, niedoskonała dykcja > spikerska: stability NIŻEJ, naturalne pauzy/oddech w tekście.
+
+**SFX diegetyczne (5b) — warstwa 0h, „dźwięk na akcję".** Sprawdzony tor (18.07):
+**Stable Audio 2.5** z promptem „sound effect foley: [jedno konkretne zdarzenie] at the very
+beginning, then silence, close-up, dry, NO music, NO reverb". **GOTCHA: `seconds_total` < ~10
+= 403 na submicie** — zamawiaj 10 s i przytnij do hitu:
+`ffmpeg -af "silenceremove=start_periods=1:start_threshold=-45dB,atrim=0:1.2"`. Ambient bed:
+ten sam model, opis tonu pomieszczenia („room tone... steady and seamless, NO melody"),
+20-25 s. Koszt $0.20/plik. (`fal-ai/elevenlabs/sound-effects` istnieje i byłby tańszy, ale
+18.07 zwracał „Sound effect generation failed" na każdy payload — sprawdzić ponownie później.)
+Do planu montażu: scena `sfx:[{plik, at (s od startu sceny), gain~0.8}]` + `audio.ambient
+{plik, gain~0.12}` — `montaz.py` miksuje je OSOBNĄ gałęzią (bez duckingu) i ODMÓWI montażu
+sceny `has_physical_action:true` bez sfx (bramka `require_sfx`).
 
 **Muzyka — Stable Audio 2.5.** Model: `fal-ai/stable-audio-25/text-to-audio`. Payload `{prompt, seconds_total, num_inference_steps:8}`; wynik = `res['audio']['url']`; koszt **$0.20**.
 - Łuk dynamiki (dip w suspensie, drop/pik na reveal) opisuj w `prompt` **czasami względem WŁASNEJ osi montażu** (np. „builds tension for the first 6s, then a hard drop at ~7s"), nie względem oryginału.
@@ -115,6 +132,13 @@ Scena omnihuman → `n:2`. „warm brown eyes" OBOWIĄZKOWE (OmniHuman zmienia k
 
 ## Ściąga podstawień KARTY
 `{KARTA.product.anatomy_str}` · `{KARTA.product.functional_count}` · `{KARTA.product.exactly_one}` · `{KARTA.product.forbidden_leaks}` (→ `negative_extra`) · `{KARTA.product.hsv_color}`/`{KARTA.product.hsv_ranges}`/`{KARTA.product.cv_reliable}` (→ bramka CV) · `{KARTA.product.fluid}` (→ `{PHYSICS_FLUID}`) · `{KARTA.scenography.layout}`/`.swiatlo` · `{KARTA.grammar.physics}`/`.action_steps`/`.both_hands` · `{KARTA.identity.face_ref}`/`.eye_color` · `{KARTA.screens_and_text}`.
+
+### Klauzula SKÓRY (audyt klatek 19.07 — rezydualny AI-tell #2)
+Nano-banana/OmniHuman renderują skórę domyślnie ZA GŁADKO (wosk). Do KAŻDEGO promptu klatki
+z widoczną skórą (dłonie, twarz, przedramię) dopisuj: **„visible skin pores, fine skin texture,
+natural micro-imperfections, subsurface scattering — NOT waxy, NOT airbrushed"**. Naprawa jest
+PROMPT-side; post-hoc face-restore (CodeFormer/GFPGAN/Topaz) ZAKAZANY (0e pkt 8 — zwiększa
+plastik i migocze). Bramka: checklist qa_gate „tekstura skóry obecna (nie woskowa)".
 
 ### Regula briefu muzycznego (feedback Tomka 18.07: "muzyka ledwo slyszalna, ma dawac emocje")
 Podklad reklamowy = WYRAZNY BEAT OD SEKUNDY 0 i przez caly czas ("punchy kick and crisp snare

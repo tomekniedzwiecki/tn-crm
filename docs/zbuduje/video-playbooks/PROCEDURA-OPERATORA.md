@@ -31,12 +31,13 @@ Skopiuj `KARTA.template.json` → `C:\tmp\video-factory\<proj>\KARTA.json` i wyp
 KARTA wchodzi VERBATIM do promptów i JEST checklistą bramki. Braki w KARCIE = braki w bramce.
 
 ## KROK 3 — BLUEPRINT (agent vision)
-Dekonstruuj wzorzec do JSON (wzór `pilot-lokowka/blueprint-v2-przyklad-lokowka.json`): sceny z rolami, emocjami (min. 4 zwroty — beauty), akcjami OBU RĄK, briefami klatek EN, promptami ruchu, kwestiami PL z tagami v3. Kondensuj do 15 s wg 0c (jedna idea, 4-6 cięć, ujęcia ≤2,5-3 s). Blok `consistency` (twarz/kabel/rekwizyty/stany).
+Dekonstruuj wzorzec do JSON wg **`blueprint.template.json`** (schemat OBOWIĄZKOWY od 19.07; wzór wypełnienia: `pilot-lokowka/blueprint-v2-przyklad-lokowka.json`): sceny z rolami, emocjami (min. 4 zwroty — beauty), akcjami OBU RĄK, briefami klatek EN, promptami ruchu, kwestiami PL z tagami v3. Kondensuj do 15 s wg 0c (jedna idea, 4-6 cięć, ujęcia ≤2,5-3 s). Blok `consistency` (twarz/kabel/rekwizyty/stany).
+**NOŚNIKI VIRALOWOŚCI (nowe pola — bez nich blueprint niekompletny):** blok `wzorzec` (audio_character — CO robił dźwięk oryginału; on_screen_text; cut_rhythm; loop; reaction_sound; comment_driver), blok `loop_close` (ostatnia klatka = echo pierwszej — projektuj PARĘ hook↔CTA razem; SSOT 0c LOOP CLOSE), per scena `has_physical_action` + `sfx[]` (0h „dźwięk na akcję"), `hook_design` (typ wg HOOK-STANDARD; dla gadżetów domyślnie problem-first; ciemny hook = FAIL).
 ### ⛔ BRAMKA TOMKA #1 (30 s): AKCEPT BLUEPRINTU — przed jakąkolwiek generacją.
 > **Tryb autonomiczny (nocny/agentowy):** obie bramki Tomka (#1 blueprint, #2 klatki-klucze) są **aktywne TYLKO gdy przebieg jest interaktywny**. W trybie autonomicznym operator **sam akceptuje i LOGUJE decyzję** (uzasadnienie w raporcie = retro-akceptacja wg pamięci fabryki; Tomek nie jest bramką klikania). Realną, egzekwowalną bramką pozostaje `qa_gate` (KROK 7) — jej nie wolno samo-zaakceptować w żadnym trybie.
 
 ## KROK 4 — AUDIO
-VO ElevenLabs v3 per scena (tagi emocji + pauzy; ~14 zn/s; celuj ~10% krócej niż video). Muzyka Stable Audio 2.5 z łukiem pod NASZĄ oś czasu (drop na reveal). Sceny mówione: driving OmniHuman = kwestia + `apad=pad_dur=0.6`. Payloady obu silników → `PROMPTY-BIBLIOTEKA.md` (5).
+VO ElevenLabs v3 per scena (tagi emocji + pauzy; ~14 zn/s; celuj ~10% krócej niż video; **REJESTR first-person/story, ZAKAZ broadcast-sloganów** — PROMPTY (5)). Muzyka Stable Audio 2.5 z łukiem pod NASZĄ oś czasu (drop na reveal; zamawiaj +60% długości — fade-out gotcha). **SFX diegetyczne (0h): wygeneruj foley-hit dla KAŻDEJ akcji z blueprintu + ambient bed świata sceny** (`fal-ai/elevenlabs/sound-effects`, grosze — PROMPTY (5b)); przy wzorcu ASMR sygnaturowy dźwięk produktu w hooku GŁOŚNIEJSZY niż muzyka. Sceny mówione: driving OmniHuman = kwestia + `apad=pad_dur=0.6`. Payloady → `PROMPTY-BIBLIOTEKA.md` (5).
 **VO dłuższe niż scena = defekt mapowania, nie miksu:** scena mówiona trwa = **długość kwestii + 0,6 s**, ALBO dawaj VO **co drugą scenę**. `montaz.py` **drukuje ostrzeżenie przy kolizji** (VO dłuższe niż jego scena) — kolizja = **przeprojektuj mapowanie kwestii na sceny, NIE ściszaj ani nie przycinaj VO**.
 **TWARDY CHECK długości VO (przed montażem):** dla każdej sceny mówionej **czas VO ≤ dur sceny − 10%**. Jeśli dłuższy → **skróć tekst kwestii i przegeneruj VO PRZED montażem** (nie wchodź do `montaz.py` z za długim VO — przycinanie/ściszanie zakazane).
 
@@ -61,10 +62,10 @@ Dla KAŻDEGO klipu przed montażem:
 4. `save_verdict(clip, "PASS"|"REJECT", flags)` → `<klip>.verdict.json` + `<klip>.pass` przy PASS. REJECT → wróć do KROK 5/6 (pętla poprawek do wyczerpania).
 
 ## KROK 8 — MONTAŻ (`montaz.py`)
-Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra} + audio {music,mus_offset,dip,peak}); wzór `plany-15s.json`. `build(...)` **odmówi bez `.pass`** każdego klipu (`require_pass=True`; bypass tylko świadomie na już zbramkowanym materiale). Wbudowane: grade-match per scena, globalne ziarno-zszywka, VO na startach scen, dip/peak muzyki + ducking, limiter (nie loudnorm), post realizmu, 48 kHz. BEZ napisów (Tomek robi osobno).
+Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra,has_physical_action,sfx[],handheld} + audio {music,mus_offset,dip,peak,ambient}); wzór `plany-15s.json`. `build(...)` **odmówi bez `.pass`** każdego klipu (`require_pass=True`) **oraz przy scenie z akcją fizyczną bez SFX** (`require_sfx=True` — bramka 0h); bypassy tylko świadomie na już zbramkowanym materiale. Wbudowane: grade-match per scena, globalne ziarno-zszywka, **micro-handheld domyślnie ON** (opt-out per scena `handheld:false` — logowany), VO na startach scen, dip/peak muzyki + ducking, **SFX/ambient osobną gałęzią bez duckingu**, limiter + **normalizacja do -14 LUFS** (mierz-i-przesuń, zachowuje dynamikę), 48 kHz. Cięcia hands-POV w apogeum akcji (0b.5 aneks), koniec = LOOP CLOSE (audio ciągłe przez granicę pętli, bez akcentu-stopu). BEZ napisów (Tomek robi osobno).
 
-## KROK 9 — REFINER (opcjonalny)
-SeedVR2 WYŁĄCZNIE przez `refine.py` (chunki ≤4.8 s — model tnie dłuższe wejście do 5 s) — odbudowa tekstury bez agresywnego sharpeningu. **KOSZT REALNY ~$3-4/final 15 s** (biling od MEGAPIKSELI wyjścia, 2× upscale — to on wyczerpał konto 18.07); przed refine sprawdź `fal.balance()`. ZAKAZY: interpolacja 60 fps (soap-opera), CodeFormer klatka-po-klatce, Topaz na max, forensiczne AI-detectory jako bramka.
+## KROK 9 — REFINER (opcjonalny; **cold DR = OFF**)
+**Domyślnie NIE refinuj kreacji na zimny ruch DR** — „native/ugly" ma wyższy thumbstop od polished na cold, a refiner robi materiał „bardziej reklamowym" ZA $3-4. SeedVR2 tylko dla hero/retargetingu/brandu, WYŁĄCZNIE przez `refine.py` (chunki ≤4.8 s — model tnie dłuższe wejście do 5 s). **KOSZT REALNY ~$3-4/final 15 s** (biling od MEGAPIKSELI wyjścia — to on wyczerpał konto 18.07); przed refine sprawdź `fal.balance()`. ZAKAZY: interpolacja 60 fps (soap-opera), CodeFormer klatka-po-klatce, Topaz na max, forensiczne AI-detectory jako bramka.
 
 ## KROK 10 — CHECKLIST KOŃCOWY (przed oddaniem)
 - [ ] Każdy klip ma `.pass`; montaż nie użył bypassu.
@@ -75,6 +76,16 @@ SeedVR2 WYŁĄCZNIE przez `refine.py` (chunki ≤4.8 s — model tnie dłuższe 
 - [ ] (beauty) twarz+oczy stabilne vs face_ref; jeden egzemplarz; brak biżuterii/lakieru.
 - [ ] Tożsamość z Ali (nie shop-packshot); rekwizyty/scenografia bez teleportacji.
 - [ ] Ledger sprawdzony (`ledger.json`); brak napisów wypalonych.
+- [ ] **Pętla domknięta** (ostatnia klatka = echo hooka; audio bez akcentu-stopu na granicy).
+- [ ] **Każda akcja fizyczna słyszalna** (SFX na timestampach; ambient bed obecny) — montaż i tak odmówi bez tego, ale sprawdź czy hity siedzą NA akcji.
+- [ ] Handheld nałożony (lub opt-out zalogowany); cięcia hands-POV w apogeum akcji (bez freeze na granicach scen).
+- [ ] VO w rejestrze first-person (zero broadcast-sloganów); skóra z teksturą (nie woskowa).
+
+## KROK 10b — PACK WARIANTÓW HOOKA (max 3 wersje — decyzja Tomka 19.07)
+Po akceptacji bazy dorób do ad setu **do 2 wariantów hooka na wspólnym rdzeniu** (razem MAX 3 pliki):
+1. **Cold-open re-cut** ($0): technika z HOOK-STANDARD — 1,2 s money-shotu na przód, body ≤16 s.
+2. **Świeże ujęcie hookowe** (~$0,45): 1-2 klatki nano ($0,039) + 1 Kling FLF 5 s ($0,35) + remontaż $0; INNY typ hooka z rankingu (nie odcień tego samego).
+Warianty przechodzą bramkę hooka (jasność/typ/ruch) i trafiają do `wf2_creatives.variants`; każdy wariant = ta sama pętla wyników po publikacji.
 
 ## KROK 11 — REJESTR KREACJI + PĘTLA WYNIKÓW (obowiązkowy po finale)
 Fabryka bez tego jest ślepa na własną skuteczność — rodowód kreacji MUSI trafić do bazy:
@@ -120,3 +131,11 @@ Fabryka bez tego jest ślepa na własną skuteczność — rodowód kreacji MUSI
 
 ## NAPISY (opcjonalny krok po finale)
 Gdy zamowienie obejmuje wersje z napisami: `python scripts/video-factory/napisy.py <final.mp4>` -> `_subs.mp4` (styl rolek: word-by-word pop, aktywne slowo zolte; PL glify OK — Montserrat Black). Oryginal bez napisow ZAWSZE zostaje. Po pierwszym renderze obejrzyj klatke z polskimi znakami i sprawdz szerokosc fraz.
+
+
+## HOOK (obowiazkowy krok blueprintu — pelny standard: HOOK-STANDARD.md)
+Projektuj na 1,7 s; hook dziala BEZ dzwieku i BEZ napisow; klatka 1 = duzy produkt-w-akcji
+lub twarz + ruch; scena hooka JASNA (lift cieni przy ciemnym materiale); zero intro. Nazwij
+typ hooka wzorca i odtworz jego sile lub uzyj typu z rankingu per kategoria. Domyslna
+technika $0: COLD-OPEN (1,2 s money-shotu z crop-zoom 1,25x + lift, potem body, total <=16 s).
+Do kazdej kreacji dolacz hook_caption_pl (sugestia napisu dla narzedzia Tomka).

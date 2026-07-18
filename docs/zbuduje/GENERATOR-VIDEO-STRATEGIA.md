@@ -94,6 +94,10 @@ Trzy niezależne audyty (detale / ciągłość / grade) tego samego segmentu →
    Zawsze: wyznacz scenę-kotwicę → signalstats YAVG/U/SAT per scena → eq/colortemperature/
    unsharp per odstająca scena → GLOBALNE ziarno `noise=alls=5:allf=t` na całość jako zszywka.
 5. **CIĘCIA NA ODDECHU** — cięcie tylko w pauzie audio; akcja „dokańcza się" przed cięciem.
+   **ANEKS per-archetyp (audyt 19.07):** to reguła dla TALKING-HEAD/beauty (payoff emocji musi
+   wylądować). Dla **hands-POV/auto tnij w APOGEUM akcji** (match-on-action: ruch przechodzi
+   PRZEZ cięcie, ostatnia klatka sceny N = początek akcji sceny N+1, bez freeze na granicy) —
+   oko śledzi ruch, nie szew AI; cięcie na martwej pauzie obnaża dwa przybite ujęcia.
 6. **BRAMKA TOŻSAMOŚCI** — kolor oczu/twarz w każdej scenie vs face-ref (OmniHuman potrafi
    zmienić kolor oczu!); jawne „warm brown eyes" w promptach + kontrola klatek wyjściowych.
 7. **JEDEN EGZEMPLARZ PRODUKTU + BRAMKA WIZYJNA KLIPU** (incydent 17.07: Motion Control
@@ -118,14 +122,31 @@ hook rate cel 30-35% (elita 40%+), completion 15-sekundówki ≥30%.
 → DEMO/MECHANIZM 2-7 s (pokazuj, nie tłumacz; jeden feature) → DOWÓD/TRANSFORMACJA 7-13 s
 (reakcja/before-after; to konwertuje) → CTA 13-15 s (jedna komenda). 4-6 cięć, żadne ujęcie >2,5-3 s.
 
+**LOOP CLOSE (domyślne zakończenie — audyt viralowości 19.07):** kreacja NIE kończy się twardym
+stopem z akcentem muzyki — pętla = rewatch, a rewatch to najsilniejszy sygnał algorytmu (watch-time
+>100%; drugie obejrzenie tego samego widza waży więcej niż świeże wyświetlenie). Trzy wymogi:
+(1) ostatnia klatka = ECHO pierwszej (kadr/światło/pozycja produktu — projektowane w blueprincie,
+pole `loop_close`); (2) audio ciągłe przez granicę pętli (muzyka bar-aligned, BEZ „domknięcia
+akcentem"/fade); (3) ostatnia linia VO ustawia pierwszą. Pętla KOMPOZYCYJNA, nie gadżet
+rewind/reset. CTA zostaje (13-15 s), ale wizualnie scena CTA wraca do kadru hooka.
+
+**REJESTR VO (audyt 19.07):** first-person/story („Tata dostał to na Dzień Ojca…"), luźna
+niedoskonała dykcja (ElevenLabs stability niżej, pauzy); ZAKAZ broadcast-sloganów
+(„Pięć w jednym. Sprawdź sam." = ad-feel, zabija native). Szczegóły i lista zakazanych
+fraz: PROMPTY-BIBLIOTEKA (5).
+
 **Algorytm kondensacji virala → 15 s:** (1) zmapuj master na beaty; (2) wybierz JEDNĄ ideę
 (mechanizm ALBO transformacja); (3) wytnij w kolejności: gadanie/intro → drugi dowód →
 setup problemu; (4) najmocniejszą klatkę na sam początek jako hook; (5) 40-80 słów VO;
 (6) OBOWIĄZKOWE przeżywają zawsze: hook wizualny, mechanizm w akcji, jedna transformacja, jeden CTA.
 
-**Para kreacji:** faza odkrywania = 2 RÓŻNE KĄTY (np. „ciekawość procesu" vs „szok efektu");
-faza skalowania = 2 hooki na wspólnym rdzeniu (izolacja hooka; rozstrzyga się 48-72 h).
-Kadencja po zwycięzcy: 3-5 wariantów co 2-3 tyg., zmieniaj JEDEN element.
+**PACK WARIANTÓW HOOKA (decyzja Tomka 19.07: MAX 3 WERSJE):** zamiast pary pełnych produkcji —
+**1 kreacja BAZOWA + do 2 wariantów hooka na wspólnym rdzeniu** (razem max 3 pliki do ad setu).
+Warianty i koszty: re-cut cold-open (HOOK-STANDARD, remontaż $0) · świeże ujęcie hookowe
+(1-2 klatki nano $0,039/szt + 1 Kling FLF 5 s $0,35 + remontaż $0 ≈ **$0,45**). Cały pack
+≈ koszt bazy + $0-0,9. To godzi standard „jednej kreacji" z Andromedą (CENNIK §2b: 1 kampania
+= 1 ad set z kilkoma plikami — pliki ≠ produkcje; resztę slotów wypełniają grafiki wf2-ads).
+Kadencja po zwycięzcy: refresh hooka triggerowany CPM/frequency, zmieniaj JEDEN element.
 
 **Warsztat:** plan kreacji = JSON zgodny z `montaz.py` (sceny {id,plik,ss,dur,vo,vf_extra} +
 audio {music,mus_offset,dip,peak}); wzór: `C:\tmp\video-factory\lokowka\plany-15s.json`
@@ -183,7 +204,9 @@ WYMÓG wiersza-na-klatkę (zakaz oceny zbiorczej) + `save_verdict()` → `<klip>
 4. ✅ **SeedVR2 refiner** — WYŁĄCZNIE `refine.py` (chunki ≤4.8 s; model tnie dłuższe wejście
    do 5 s). UWAGA KOSZT: bilingowany od MEGAPIKSELI wyjścia (2× upscale!) = realnie ~$3-4/15 s,
    nie $0.9 — to on wyczerpał konto (403, 18.07). Dawny `montaz.refine_seedvr` (cały klip
-   1 callem = desync) USUNIĘTY.
+   1 callem = desync) USUNIĘTY. **POLITYKA (audyt skuteczności 19.07): na ZIMNY ruch DR
+   refiner OFF** — „ugly/native" ma wyższy thumbstop od polished na cold (+15-25%), a glossy
+   refiner robi z kreacji „reklamę" ZA $3-4; ON tylko dla hero/retargetingu/brandu.
 5. ❌ **Routing na Kling v3** — ODRZUCONY po audycie: +50-140% kosztu za marginalny zysk;
    afordancję dłoni domykają master-frame/FLF-chaining + bramka. Nie podmieniać stacku.
 6. ✅ **Playbooki per-archetyp** — komplet w `docs/zbuduje/video-playbooks/`.
@@ -238,6 +261,30 @@ hipoteza „kopiujemy wzorzec = dziedziczymy viralowość" była NIESPRAWDZALNA.
   ctr, purchases) i `wf2_pattern_perf` (per archetyp). Operator: PROCEDURA KROK 11.
 Metryki-kompas kreacji: thumbstop (hook ≤2 s działa?) → hold_50 (demo trzyma?) → p100+ctr
 (CTA domyka?). Decyzje kampanijne (KILL/skalowanie) = CENNIK-PLAN, NIE ta pętla.
+
+## 0h. WARSTWA DŹWIĘKU DIEGETYCZNEGO (audyt 3 agentów 19.07 — jednogłośny brak #1)
+
+Do 19.07 miks = TYLKO VO + muzyka. Prysznic bez szumu wody, zatrzask bez „klik", odkładany
+telefon bez stuknięcia → mózg widza czyta „render/makieta", nie świat. Muzyka+VO = „reklama",
+dźwięk diegetyczny = „rzeczywistość". Najboleśniejszy incydent: wzorzec słuchawki (32 mln plays)
+był czystym ASMR WODY — sygnaturowy dźwięk produktu wypadł z pipeline'u w całości.
+
+**Reguły (egzekwowane, nie sugerowane):**
+1. **DŹWIĘK NA AKCJĘ** — każde WIDOCZNE zdarzenie fizyczne dostaje foley-hit na swoim
+   timestampie (klik, woda-on, bit-seat, spust, posadzenie, tap). Blueprint: scena z akcją ma
+   `has_physical_action: true` + listę `sfx[]`; **`montaz.py` ODMAWIA montażu** sceny z akcją
+   bez sfx (bramka `require_sfx`, lustro `require_pass`).
+2. **AMBIENT BED OBOWIĄZKOWY** — cichy ton świata per kreacja (echo łazienki, pomruk kabiny,
+   room-tone biurka) na niskim gainie (~0.12) zabija „próżnię"; generuj ≥ długości kreacji.
+3. **ASMR-HOOK**: gdy `wzorzec.audio_character = raw-diegetic/ASMR`, w hooku sygnaturowy
+   dźwięk produktu JEST GŁOŚNIEJSZY niż muzyka (HOOK-STANDARD typ 2 to już mówił — teraz
+   blueprint to realizuje).
+4. **Miks**: SFX/ambient idą OSOBNĄ gałęzią (bez sidechain!) — dźwięk akcji nie może być
+   duszony przez VO; hero-hity umiarkowanie, bed nisko. Generacja SFX: PROMPTY-BIBLIOTEKA (5b).
+5. **Ludzka reakcja w hands-POV = DŹWIĘKIEM** (gasp, „o ja", westchnienie ulgi — pole
+   `wzorzec.reaction_sound` w blueprincie), NIE doklejaną twarzą.
+**Anty-reguły:** bez kreskówkowego sound-designu (dźwięk na każdy mikroruch), bez SFX
+zagłuszających VO, bez trendujących ścieżek z TikToka (IP — audio ZAWSZE nasze).
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 

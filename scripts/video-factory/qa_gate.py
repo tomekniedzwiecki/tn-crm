@@ -21,6 +21,10 @@ Checklist (dla agenta-recenzenta, per siatka):
      sie w piane/blobby; sztywne czesci bez podwojnego obrysu (ghosting); os narzedzia = os pracy.
   9. TEKST/GLIFY: ekrany, etykiety, wskazniki — wyrazne pseudo-glify = ODRZUT; male i rozmyte = OK.
  10. AFORDANCJA: pozycja rak mozliwa dla czynnosci (dloni na kierownicy gdy auto jedzie itp.).
+ 11. SKORA: tekstura obecna (pory/niedoskonalosci), NIE woskowa/airbrush — na klatkach
+     z dominujaca skora (dlonie/twarz/przedramie); fix = PROMPT (klauzula skory), nie post.
+ 12. GRANICE SCEN (hands-POV): akcja przechodzi przez ciecie (bez martwej freeze-klatki);
+     OSTATNIA klatka kreacji = echo PIERWSZEJ (LOOP CLOSE) — brak echa = poprawa sceny CTA.
 
 Werdykt: agent MUSI wyemitowac WIERSZ NA KLATKE (nr, #obiektow produktu, #dloni, flagi) — ZAKAZ
 oceny zbiorczej. Siatka = triaz; klatka z flaga -> dociagnij PELNA rozdzielczosc. Dla klipow MC

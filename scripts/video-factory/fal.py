@@ -28,6 +28,7 @@ COST = {
     "fal-ai/elevenlabs/tts/eleven-v3": lambda p: 0.10 * len(p.get("text", "")) / 1000,
     "fal-ai/elevenlabs/tts/turbo-v2.5": lambda p: 0.05 * len(p.get("text", "")) / 1000,
     "fal-ai/stable-audio-25/text-to-audio": lambda p: 0.20,
+    "fal-ai/elevenlabs/sound-effects": lambda p: 0.05,
     "fal-ai/kling-video/lipsync/audio-to-video": lambda p: 0.03,
     # omnihuman rozlicza po sekundach audio — nieznane z payloadu; ledger_add z est recznie
 }
