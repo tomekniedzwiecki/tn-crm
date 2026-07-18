@@ -63,7 +63,8 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   GATE produkcyjny + uwagi `wf2_notes` + panelUpd z INSERT-em artefaktów), pasek „Podglądy"
   (`wf2_projects.links`), karta produktu (zdjęcie/cena/dostawca/TikToki ≤5/galeria kurowana),
   kamienie milowe (product-scope liczone per produkt), taby Projekt/Uwagi/Sprzedaż/Aktywność,
-  **losowanie portfela = PRAWDZIWY random** (Fisher-Yates z całej puli approved; cel 5;
+  **losowanie portfela = PRAWDZIWY random** (Fisher-Yates z całej puli approved; cel 3 —
+  decyzja Tomka 19.07, wcześniej 5;
   stary scoring/dywersyfikacja SKASOWANE — decyzja Tomka 17.07).
 - **Edge:** `wf2-platform` = TYPED ACTIONS (stores/publish_landing/ensure_product/
   set_checkout_slug/integracje/domeny/logo/orders/dostawy+COD; retry 429; raw zostaje) ·
@@ -291,7 +292,8 @@ Konsekwencje architektoniczne:
 
 ### Kampanie reklamowe (decyzja Tomka 15.07)
 
-- Budżet projektu: **1000 zł = 500 zł testy 5 produktów → 1-2 winnery → ~500 zł skalowanie**.
+- Budżet projektu: **1000 zł = 500 zł testy 3 produktów → 1-2 winnery → ~500 zł skalowanie**
+  (19.07: portfel zmniejszony z 5 → 3 — decyzja Tomka; ~165 zł testu/produkt zamiast ~100 zł).
 - Content reklamowy: **Manus** (rodzina manus-* z v1 do spięcia z wf2 per produkt —
   research FB Ad Library → copy PL → kreacje; referencje = zdjęcia produktu + landing).
 - Kampanie przez **Meta MCP na koncie reklamowym KLIENTA** (przygotowanie konta+budżetu =

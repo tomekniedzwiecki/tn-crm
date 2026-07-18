@@ -58,8 +58,9 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   Zamówienia platformy = `wf2_orders` (cron wf2-orders-sync; licznik do 1000 = COUNT).
   Cena na landingu = publiczny edge `wf2-landing-api` + snippet
   `docs/zbuduje/assets/landing-runtime-snippet.html` (window.trevio + INIT-GUARD pixela).
-  Marża testowa = ~15% narzutu (`TEST_MARGIN_PCT`). Portfel: cel 5 produktów,
-  dobór = **PRAWDZIWE losowanie** z approved /trendy (bez scoringu — decyzja Tomka 17.07).
+  Marża testowa = ~15% narzutu (`TEST_MARGIN_PCT`). Portfel: cel **3 produkty** (decyzja Tomka
+  19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
+  z approved /trendy (bez scoringu — decyzja Tomka 17.07).
 - Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,
@@ -93,9 +94,10 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   migracja `20260717c_videos_curated.sql`), self-host MP4 pipeline 1→N (poster własną klatką).
 - **PASS 4** w `detail-lint.py` (F7.3 `docs/zbuduje/FINALNY-PASS.md`): odstępy bloków, crop/DPR2,
   interakcja per viewport (hit-test), pay-badges kanon vs imitacje (`--fix` auto-swap).
-- **F7.1 DOWÓD per sekcja = GATE:** `dopasowanie/NN-*.png` komplet (hero+02–13) OBOWIĄZKOWY
-  przed DONE; brak = FAIL („13/13 1:1" bez kompozytów = nieważne). Skrypt `sekcja-diff.py
-  <url> <slug>` (batch cropy z granic DOM). ⛔ numeracja sekcji „01/12" na stronie = zakaz.
+- **F7.1 DOWÓD per sekcja = GATE:** `dopasowanie/NN-*.png` komplet (hero + 02..ostatnia wg
+  planu; aliasy manifest 01→12) OBOWIĄZKOWY przed DONE; brak = FAIL („komplet 1:1" bez
+  kompozytów = nieważne). Skrypt `sekcja-diff.py <url> <slug>` (batch cropy z granic DOM +
+  sekcja „DELTY POMIAROWE"). ⛔ numeracja sekcji „01/12" na stronie = zakaz.
 - **TOR-I sekcje interaktywne** (`docs/zbuduje/SEKCJE-INTERAKTYWNE.md`): kwalifikacja na
   makietach, SPEC-I, sandbox, test stanów (SSIM<0.9 + klatki), pętla max 4 → downgrade z notą.
 - **PRODUKT W SCENACH** (STANDARD §2): każda sekcja produktowa = WŁASNE ujęcie; ten sam kadr

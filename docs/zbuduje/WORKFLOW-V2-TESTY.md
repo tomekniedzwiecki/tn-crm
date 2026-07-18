@@ -12,14 +12,17 @@ jest po to, by TANIO znaleźć produkt, który sprzedaje, i dopiero na nim zarab
 
 ## 0. RAMA I REALIZM BUDŻETU (fundament — przeczytaj najpierw)
 
-**500 zł na 5 produktów = 100 zł/produkt = ~1/15 „podręcznikowego" budżetu testu jednego produktu**
+**[DECYZJA Tomka 2026-07-19: portfel testowy = 3 PRODUKTY (było 5)]** — mniej roboty fabryki
+(landing + wideo + grafiki per produkt), większy budżet i sygnał na produkt.
+
+**500 zł na 3 produkty ≈ 165 zł/produkt = ~1/10 „podręcznikowego" budżetu testu jednego produktu**
 (polskie agencje: min. 1 500–3 000 zł / 2–3 tyg. / 1 produkt). Konsekwencje:
 
-1. **Przy 100 zł/produkt NIE decydujemy po koszcie/zakup.** Rachunek na benchmarkach PL:
-   CPM ~30 zł → 100 zł ≈ 3 300 wyświetleń → CTR 1% ≈ 33 kliki → CR 1,5% ≈ **0,4 zakupu**.
-   Zero mocy statystycznej. Decyzje = **sygnały górnego lejka** (link CTR, CPC, ATC rate,
+1. **Przy ~165 zł/produkt wciąż NIE decydujemy po koszcie/zakup.** Rachunek na benchmarkach PL:
+   CPM ~30 zł → 165 zł ≈ 5 500 wyświetleń → CTR 1% ≈ 55 klików → CR 1,5% ≈ **0,8 zakupu**.
+   Za mało mocy statystycznej. Decyzje = **sygnały górnego lejka** (link CTR, CPC, ATC rate,
    koszt/ATC); zakup to potwierdzenie, nie warunek.
-2. **Równy podział 5×100 zł jest suboptymalny** — rozlany budżet nie wyprodukuje sygnału
+2. **Równy podział 3×165 zł nadal jest suboptymalny** — rozlany budżet nie wyprodukuje sygnału
    zakupowego na żadnym produkcie. System = **alokacja dwubramkowa** (§4.3).
 3. **Świeży pixel + ~20 zł/dzień = trwały learning-limited na Purchase — akceptujemy.**
    NIE optymalizujemy na tańsze zdarzenia „na skróty" (uczy Meta szukać ludzi, którzy nie kupują).
@@ -119,14 +122,16 @@ NIEPOTWIERDZONEJ nie jest podstawą kalkulacji (wymóg `detail` PRZED kampanią,
 
 `max_test_CPA = 1,5 × cena_test` [PROPOZYCJA] — tolerancja straty na zakup w teście.
 
-### 4.3 Alokacja dwubramkowa 500 zł [kluczowa decyzja systemowa]
+### 4.3 Alokacja dwubramkowa 500 zł [kluczowa decyzja systemowa; przeliczona na 3 produkty 19.07]
 
-- **Bramka A (siew, ~250 zł): 5 × ~50 zł** — czyta HOOK (CP1) i początek INTENCJI. Odsiane 2–3 martwe.
-- **Bramka B (głębia, ~250 zł): top 1–2 survivorów × 125–250 zł** (wg pasma) — czyta POPYT (CP3).
+- **Bramka A (siew, ~150 zł): 3 × ~50 zł** — czyta HOOK (CP1) i początek INTENCJI. Odsiewa 1–2 martwe.
+- **Bramka B (głębia, ~350 zł): top 1–2 survivorów × 175–350 zł** (wg pasma) — czyta POPYT (CP3).
+  Przy 3 produktach survivor pasma nisko/średnio dostaje PEŁNY VALIDATION_CAP (przy 5 nie było
+  to możliwe) — twardsze werdykty za ten sam budżet.
 
-Suma capów pełnej walidacji 5 produktów (~840 zł) > 500 zł → pełna walidacja wszystkich jest
-niemożliwa Z DEFINICJI; dwubramka koncentruje budżet tam, gdzie jest sygnał. 5×100 zł dałoby
-~0,4 zakupu/produkt = zero werdyktów.
+Suma capów pełnej walidacji 3 produktów (~420–600 zł) wciąż przekracza to, co zostaje po
+Bramce A → dwubramka nadal koncentruje budżet tam, gdzie jest sygnał; równe 3×165 zł dałoby
+~0,8 zakupu/produkt = brak twardych werdyktów.
 
 ---
 
@@ -291,15 +296,17 @@ konkuruje o 1 slot) → liczy się różnorodność KONCEPCYJNA, nie wolumen.
 2. **Tempo skalowania:** §5 „+20%/dzień" vs research „+20% co 3–4 dni, min. 48 h"
    (skok >30% = reset learning). W krokach panelu zapisano ostrożniej: „+20%, odstęp ≥48 h".
    Parametr `daily_increase_pct` w settings — do rozstrzygnięcia.
-3. **Test sekwencyjny:** przy 5 produktach × ~20 zł/d sygnał się rozmywa — alternatywa:
-   2–3 produkty naraz z wyższym budżetem/szt. (Bramka A bez zmian, inna kolejność).
+3. **ROZSTRZYGNIĘTE 19.07 — portfel = 3 produkty** (decyzja Tomka: „mniej roboty wokół tego
+   i większy efekt"). §0 i §4.3 przeliczone, `products_count=3` w settings, panel
+   PORTFOLIO_TARGET=3. Istniejący portfel rozwojowy (6 szt.) zostaje jako R&D — nowa zasada
+   obowiązuje dla kolejnych projektów / kolejnych fal testów.
 
 ---
 
 ## PARAMETRY (settings, 2 klucze JSON)
 
 `settings.wf2_test_config` (defaulty): test_margin_pct 15 [D] · budget_total 500 [D] ·
-products_count 5 [D] · gateA_budget_per_product 50 [P] · cp1_spend 50 [P] · cp2_spend 100 [P] ·
+products_count 3 [D 19.07; było 5] · gateA_budget_per_product 50 [P] · cp1_spend 50 [P] · cp2_spend 100 [P] ·
 min_hours_before_kill 48 [B] · min_impressions_ctr_read 1500 [P] · kill_link_ctr 0.5 [B] ·
 healthy_link_ctr 1.0 [B] · kill_cpc_max 3.5 [B] · healthy_cpc_max 2.5 [P] · atc_rate_min 2.0 [B] ·
 atc_rate_healthy 5.0 [B] · cost_atc_max 12 [P] · max_test_cpa_mult 1.5 [P] · kill_cpa_mult 4.0 [B] ·
