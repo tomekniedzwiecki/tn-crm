@@ -1,14 +1,18 @@
 #!/bin/bash
-# verify-docs.sh — strażnik spójności SAMEJ PROCEDURY (docs/landing/* + skrypty)
+# verify-docs.sh — strażnik spójności SAMEJ PROCEDURY (docs/landing/* + docs/zbuduje/* + skrypty)
 # Wprowadzony v5.0 (2026-06) po sweepie sprzeczności: agent w AUTO-RUN kopiuje snippety
 # z docs DOSŁOWNIE, więc procedura nie może łamać własnych zakazów ani podawać
-# sprzecznych progów.
+# sprzecznych progów. Rozszerzony 2026-07-18 o docs/zbuduje/ (fabryka landingów sklepy).
 #
 # Usage: bash scripts/verify-docs.sh
-# Exit 0 = docs spójne; Exit 1 = regresja (zakazany token wrócił do procedury)
+# Exit 0 = docs spójne; Exit 1 = regresja (zakazany token / martwe odwołanie / sprzeczny próg)
 #
-# Scope: docs/landing/*.md + docs/landing/reference/*.md + docs/landing/style-atlas/*.md
+# Scope A (docs/landing): docs/landing/*.md + reference/*.md + style-atlas/*.md
 #        + scripts/landing-autorun.sh + CLAUDE.md
+# Scope B (docs/zbuduje — fabryka sklepy): docs/zbuduje/**/*.md
+#        ⚠️ OSOBNY zestaw reguł: fabryka WYMAGA „za pobraniem"/COD → checki BNPL/COD
+#           i „24h dostawa" ze Scope A NIE obowiązują tu (celowo). Tu pilnujemy WYŁĄCZNIE
+#           spójności wewnętrznej: martwe odwołania do narzędzi + sprzeczne progi.
 # Poza scope: docs/landing/_research/ (archiwum), CHANGELOG.md (historia)
 
 set -e
@@ -17,6 +21,7 @@ cd "$(dirname "$0")/.."
 FAIL=0
 
 DOCS=$(find docs/landing -name "*.md" -not -path "*/_research/*" -not -name "CHANGELOG.md"; echo "CLAUDE.md"; echo "scripts/landing-autorun.sh")
+DOCS_ZBUDUJE=$(find docs/zbuduje -name "*.md")
 
 fail_hit() {
   echo "  ❌ $1"
@@ -27,6 +32,7 @@ fail_hit() {
 echo ""
 echo "═══ VERIFY DOCS — spójność procedury ═══"
 echo ""
+echo "── Scope A: docs/landing ──"
 
 # 1. subset=latin-ext jako INSTRUKCJA DODANIA lub żywy snippet <link>
 #    (dozwolone wyłącznie w negacjach: BEZ/NIGDY/NIE/anty-wzorzec/USUŃ/0)
@@ -75,6 +81,36 @@ if [ -n "$HITS" ]; then
   fail_hit "zakazana obietnica dostawy w żywej treści docs" "$HITS"
 else
   echo "  ✅ Obietnice dostawy tylko w zakazach"
+fi
+
+echo ""
+echo "── Scope B: docs/zbuduje (fabryka sklepy — reguly osobne; COD/za pobraniem DOZWOLONE) ──"
+
+# 7. Martwe odwołanie do capture.py — narzędzie nazywa się capture-lint.py
+#    (regex "capture\.py" NIE pasuje do "capture-lint.py")
+HITS=$(echo "$DOCS_ZBUDUJE" | xargs grep -nE "capture\.py" 2>/dev/null || true)
+if [ -n "$HITS" ]; then
+  fail_hit "martwe odwołanie 'capture.py' (narzędzie = 'capture-lint.py')" "$HITS"
+else
+  echo "  ✅ Brak martwego 'capture.py' (jest capture-lint.py)"
+fi
+
+# 8. input_fidelity jako ŻYWA instrukcja — parametr NIE istnieje w gpt-image-2
+#    (dozwolone wyłącznie w negacji/korekcie: NIE/BEZ/nie istnieje/odrzucany/KOREKTA/gpt-image-1)
+HITS=$(echo "$DOCS_ZBUDUJE" | xargs grep -niE "input_fidelity" 2>/dev/null | grep -viE "\bnie\b|\bbez\b|dotyczy|istnieje|odrzucan|korekta|tylko przy|gpt-image-1|nie dodawać|wcześniejsza|wykreśl" || true)
+if [ -n "$HITS" ]; then
+  fail_hit "input_fidelity jako żywa instrukcja (nie istnieje w gpt-image-2 — patrz GRAFIKA §3)" "$HITS"
+else
+  echo "  ✅ input_fidelity tylko w negacjach/korekcie"
+fi
+
+# 9. Sprzeczny próg SSIM mobilny 0.78 — kanon R13 = 0.80 (gate-manifest layout_diff.ssim_progi)
+#    (historyczne wzmianki MUSZĄ być oznaczone SUPERSEDED / „przeszło" / „pierwotnie")
+HITS=$(echo "$DOCS_ZBUDUJE" | xargs grep -niE "mobile[^0-9]{0,15}0[.,]78" 2>/dev/null | grep -viE "SUPERSEDED|historyczn|pierwotnie|przeszło|było|relikt|dawn" || true)
+if [ -n "$HITS" ]; then
+  fail_hit "sprzeczny próg mobilny SSIM 0.78 jako żywy (kanon R13 = 0.80)" "$HITS"
+else
+  echo "  ✅ Próg mobilny SSIM = kanon R13 (0.80); 0.78 tylko historycznie"
 fi
 
 echo ""

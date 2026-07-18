@@ -19,7 +19,7 @@ dużego regionu orzeknij:
 2. TYP grafiki: `scena-fullbleed` | `pas-dekoracyjny` | `zdjecie-w-karcie` | `ornament`.
 3. Czy zawiera PRODUKT? Czy ma wypalony TEKST/UI (overlay)?
 4. Rekomendacja: crop czy regeneracja (drzewo niżej).
-5. Klasa OBRAZY-ROLE (P/U/S) + zgodność z allowlistą slotu.
+5. Klasa OBRAZY-ROLE (P/U/S/R) + zgodność z allowlistą slotu.
 Frosted-glass karta na scenie = KOD, ale tło POD nią to część sceny-fullbleed (nie wycinać
 dziury — scena idzie w całości, kod nakłada glass).
 
@@ -44,9 +44,9 @@ werdykt vision. Pseudokod: raport researchu 16.07 (transkrypt sesji fabryki).
 3. Potrzebny inny aspekt / reframe / rozszerzenie kadru? → ► REGEN
 4. Tekst/UI NA grafice:
    ├─ na PŁASKIM kolorze → ► CROP + paint-over płaskim #HEX w PIL (pixel-perfect, darmowy)
-   └─ na FAKTURZE/scenie → ► EDITS+MASK input_fidelity=high (najbliższe zachowanie tła;
-      wymaga rozszerzenia generate-image — sekcja 5) LUB REGEN referencyjny (akcept
-      „semantycznie ta sama")
+   └─ na FAKTURZE/scenie → ► EDITS+MASK (soft-mask, najbliższe zachowanie tła; ⚠️ BEZ
+      `input_fidelity` — nie istnieje w gpt-image-2, patrz §3; wymaga rozszerzenia
+      generate-image — sekcja 5) LUB REGEN referencyjny (akcept „semantycznie ta sama")
 ```
 
 **⚠️ DRYF a WIERNOŚĆ — granica twarda (spina się z §4b F3A):** „dryf = cecha metody

@@ -76,6 +76,40 @@ i `import panel_sync as ps`. Każda funkcja loguje `insert/update/skip + id`.
   Lokalne `.md` (KARTA/PASZPORT/PLAN/PRZEWODNIK/MAPA) → `storage='desktop'`, `url` = ścieżka Desktop
   = chip (nieklikalny). Repo (kod) → `storage='repo'` = chip.
 
+## 🗺️ KATALOG MAPOWAŃ (artefakt/etap fabryki → krok panelu + kind + fields) — EGZEKWOWANY
+**To jest tabela prawdy mostu.** Każdy etap/artefakt fabryki ma DOKŁADNIE JEDNO miejsce w panelu.
+Egzekwuje `gate-check.py` blok `panel_sync` (severity FAIL) — kolumna „Gate" wskazuje regułę w
+`gate-manifest.json`, która pilnuje danego wiersza (sync = część definicji DONE, nie uznaniowość agenta).
+
+| Etap / artefakt fabryki | Krok panelu | kind artefaktu | Co w `data.fields` / kolumnach | Gate (`panel_sync`) |
+|---|---|---|---|---|
+| wybór/kalkulacja produktu | *(wiersz produktu)* | — | KOLUMNY `price, cost_purchase, cost_shipping, fees_pct, margin_mode, status, slug, repo_path` | `karta_kolumny_wymagane` |
+| F0 kadry keep (galeria ref) | `lp_dane` | `gallery` | `{source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep}` | `kroki_done[lp_dane]` |
+| F0 KARTA-PRAWDY.md / PASZPORT.md | `lp_dane` | `doc` (storage=desktop→chip) | `{karta_url, paszport_url}` | `kroki_done[lp_dane]` |
+| F1 PLAN.md / PRZEWODNIK-GRAFICZNY.md | `lp_plan` | `doc` (desktop) | `{motyw, sekcje, tor_i_demo, plan_url, przewodnik_url}` | `kroki_done[lp_plan]` |
+| F2.5 styl-master | `lp_styl_marka` | `styl_master` | `{marka_nazwa, slug, font, paleta, styl_master_url, brand_dir}` | `kroki_done[lp_styl_marka]` |
+| F2.5 favicon / wordmark / logo-combo | `lp_styl_marka` | `branding` | *(j.w.)* | `kroki_done[lp_styl_marka]` |
+| F2 makiety desktop | `lp_makiety` | `makieta` | `meta{section, viewport:'desktop'}` · `{sekcje_count, akcept}` | `artefakty_liczba[makiety desktop]` (stem, tol 2) |
+| **F2 makiety mobile** *(nowe 18.07)* | `lp_makiety` | **`makieta_mobile`** | `meta{viewport:'mobile'}` | `artefakty_liczba[makiety mobile]` (stem, tol 2) |
+| F3 sceny produkcyjne (full-bleed) | `lp_grafiki` | `scena` / `image` | `{assets_dir, distinct_views, waga_first}` | `artefakty_liczba[grafiki produktowe]` (stem, tol 2) |
+| **F3 galeria HIGH (`g*-hq`)** *(nowe 18.07)* | `lp_grafiki` | `gallery` / `image` | *(j.w.)* | `artefakty_liczba[grafiki produktowe]` (stem, tol 2) |
+| F3 MAPA-ASSETOW.md | `lp_grafiki` | `doc` (desktop) | `{mapa_url}` | `kroki_done[lp_grafiki]` |
+| **F3A WIERNOSC.md** *(nowe 18.07)* | `lp_grafiki` | **`doc`** (token `wiernosc`) | — | **`doc_wymagane[WIERNOSC.md]`** |
+| F4 kod (index.html) | `lp_kod` | `link` / `screenshot_final` | `{preview_url, repo_path, video_count, moduly_uzyte}` | `kroki_done[lp_kod]` |
+| **F4 footer (`footer@1`)** *(nowe 18.07)* | `lp_kod` | *(fields)* | `moduly_uzyte` zawiera `footer@1` | **`kod_wzmianki[footer]`** (FAIL) |
+| **F4 logo/brand w kodzie** *(nowe 18.07)* | `lp_kod` | *(fields)* / `branding` na `lp_styl_marka` | wzmianka `favicon/wordmark` | **`kod_wzmianki[logo]`** (WARN) |
+| **F5 hero-video / wideo** *(nowe 18.07)* | `lp_zycie` | **`video`** (+ `lp_kod.video_count`) | `{tor_i_done, motion_dna}` | **`kod_wzmianki[wideo]`** |
+| F5 życie / choreografia | `lp_zycie` | `video` / `screenshot_final` | `{motion_dna, interakcja_flagowa, tor_i_done}` | `kroki_done[lp_zycie]` *(opcjonalny→WARN)* |
+| F7.1 kompozyty / contact-sheety | `lp_dopasowanie` | `dowod` / `proof` | `{sekcje_done, ssim_min, dopasowanie_dir}` | `artefakty_liczba[dowod]` *(obecnosc)* + `kroki_done` |
+| F6/F7/F8 finisz | `lp_finisz` | `gate_check`, `landing_live`, `screenshot_final` | `{gate_check, landing_url, nowe_wnioski}` + `product_meta(status:'gotowy')` | *(karta: `status`)* |
+
+**⚖️ REGUŁA KATALOGU (twarda): nowy typ artefaktu/etapu MUSI dostać wiersz w TEJ tabeli ZANIM
+wejdzie do fabryki** — inaczej nie wiadomo, gdzie w panelu ląduje, i most staje się znów „na pamięć".
+Wiersz katalogu = para {miejsce w panelu (krok+kind+fields)} + {reguła w `gate-manifest.json panel_sync`,
+która to egzekwuje} (`kroki_done` / `artefakty_liczba` / `doc_wymagane` / `kod_wzmianki`). Dodanie nowego
+etapu bez wiersza tutaj i bez reguły w manifeście = etap NIEKOMPLETNY (blokada w code-review fabryki).
+Progi tolerancji i severity są DANE w manifeście (tuning tam, nie w kodzie checka).
+
 ## Pułapki (P0)
 1. **Checklisty VERBATIM.** Panel merguje po dokładnym `t` z `WS` w `tn-sklepy/projekt.html`.
    Każda literówka/„drobne ulepszenie" tworzy sierotę (podwójna pozycja). Najbezpieczniej: wyciągnąć

@@ -19,10 +19,20 @@ render→diff→popraw (nie „na oko").
    - bloki: OpenCV findContours → bboxy kart/kolumn/przycisków `[{n,x,y,w,h}]`
      (współrzędne też w skali 0-1000);
    - anotacja SoM: makieta z ponumerowanymi bboxami + siatka 128px + podpis wymiarów.
-2. **`render-diff.py <sekcja-url/plik> <makieta.png> <szerokość>`** → kompozyt
+2. **`render-diff.py <sekcja-url/plik> <makieta.png> <selektor-CSS> <szerokość>`** → kompozyt
    (makieta | render | heatmapa pixelmatch) + **SSIM skalar** + lista regionów różnic.
+   (`<selektor-CSS>` = selektor sekcji do wycięcia z renderu, np. `#hero`; pozycyjny, PRZED
+   szerokością — patrz sygnatura skryptu `target makieta selector width`.)
    Render headless Chrome w KANONICZNEJ szerokości = szerokość makiety (skala musi się
    zgadzać!). Tracking **keep-best** (zachowuj najlepszą wersję wg SSIM, nie ostatnią).
+3. **`sekcja-diff.py <url> <slug> [--viewport 390]`** → batch kompozytów WSZYSTKICH sekcji
+   z granic DOM + `dopasowanie/DOPASOWANIE.md` (SSIM typowany + kolumna LAYOUT + rubryka) ORAZ
+   **PĘTLA DELT (audyt 18.07): sekcja „DELTY POMIAROWE per sekcja"** (marker
+   `<!-- DELTY-POMIAROWE -->`) = render `getComputedStyle`/`getBoundingClientRect` vs IR makiety
+   → KONKRETNE delty: font-size H1/eyebrow vs `scale_px_norm`, kolor tła ΔE (`→ ustaw --paper`),
+   pozycja chip-trust (cx), swash/podkreślenie `.hi`, **`region-SSIM copy`** (SSIM na blokach
+   TEKSTU = sygnał DYSKRYMINUJĄCY, w przeciwieństwie do raw-SSIM real-vs-AI, który wierności NIE
+   dyskryminuje). Montaż/koder konsumuje delty do PUNKTOWYCH poprawek (nie rewrite).
 
 ## PROCEDURA (per sekcja)
 **Krok 0 — IR:** mockup-ir.py na parze makiet (desktop+mobile).
@@ -32,8 +42,12 @@ render→diff→popraw (nie „na oko").
   tekstu gpt-image bywa niedokładny; treść w prompcie i na makiecie jest IDENTYCZNA, bo
   prompt podaje ją w cudzysłowach — Z2/F2 ⚓). Rozjazd treści prompt↔makieta zauważony przy
   kodowaniu = poprawka GRAFIKI, nie decyzja kodera;
-- IR jako tekst: „PALETA (użyj DOKŁADNIE): #… (tło 62%), …; SKALA TYPO: H1≈52px…;
-  BLOKI: #1 karta zdjęcia x=0-460 y=… (0-1000)"; słownik klas; realne URL-e assetów;
+- IR jako tekst — **blok `ir.root.css` DOSŁOWNIE (wdrożenie wierności 18.07)**: koder dostaje
+  gotowy `:root{}` (DOKŁADNE hex tła/tekstu/akcentu + `typo_clamp` zmiennych `--typo-*`) i wkleja
+  go 1:1. ⛔ **ZAKAZ RE-APROKSYMACJI** zmierzonych hex/px (koder aproksymował #FAF3E6 przy
+  zmierzonym #F6F2ED). Zamiast „PALETA: #…" podawaj `ir.root.css` + „SKALA TYPO @1180: H1≈Xpx"
+  ze **`scale_px_norm`** (px znormalizowane makieta 1536→render ~1180) — NIE surowe px z makiety
+  ani „clamp z głowy". BLOKI: #1 karta zdjęcia x=0-460 y=… (0-1000); słownik klas; realne URL-e assetów;
 - CoT wymuszony: „NAJPIERW wypisz siatkę sekcji (wiersze/kolumny/wyrównania z bboxów),
   POTEM kod" (layout-as-thought);
 - zakazy + kontrakt jak w standardzie.
@@ -55,14 +69,23 @@ DONE — zdanie „przeniesione 1:1" w LEDGER bez kompozytu = niedozwolone (incy
 06-korzyści 17.07: biały panel+overlap makiety → open+kafel-podium; przepuszczone, bo
 kompozytu nie było — jedyna sekcja z dowodem [hero] była jedyną bez dryfu). Batch:
 `sekcja-diff.py <url> <slug>` generuje wszystkie NN naraz z granic DOM.
+**🎯 PĘTLA DELT (18.07, część F7.1): `sekcja-diff.py` dokłada do DOPASOWANIE.md sekcję
+„DELTY POMIAROWE per sekcja" (font-size vs `scale_px_norm` / kolor-ΔE / pozycja chipa / swash
++ `region-SSIM copy` na blokach tekstu — DYSKRYMINUJE, obok noty „raw-SSIM nie dyskryminuje").
+Montaż/koder konsumuje delty do PUNKTOWYCH poprawek (nie rewrite całości).** OCR dla IR:
+PaddleOCR bywa niedostępny (Py3.14) → fallback Tesseract z auto-językiem; **dla PL doinstaluj
+`pol.traineddata`** (bez niego diakrytyki gubione), NIGDY nie akceptuj `[?]` w odczycie tekstu.
 **Dowód jest DWUKROTNY: desktop (1280) I mobile (390) — `sekcja-diff.py --viewport 390`;
 mobile bez makiety = składanka render-only z werdyktem jakości (incydent Loczek 17.07: mobile
 nie było sprawdzane wcale).** Mobilne kompozyty = `dopasowanie/NN-<sekcja>-m.png`, werdykty w
 sekcji `<!-- MOBILE-390 -->` DOPASOWANIE.md; gate-check egzekwuje komplet `-m` + werdykty.
-**📏 PRÓG MINIMALNY ZAMKNIĘCIA (twardy, po hero Uśmieszka 0.7829): desktop <0.85 albo
-mobile <0.78 ⇒ sekcja NIE jest DONE — niezależnie od werdyktu wizualnego.** Werdykt
-„ten sam projekt?" jest WSPÓŁ-warunkiem (może zaostrzyć, nie obniżyć). Przy tle
-scene-from-mockup (STANDARD F3.1) cap assetowy nie istnieje — niski SSIM to kod albo
+**📏 ZAMKNIĘCIE SEKCJI = GATE R13, NIE SUROWY SSIM (po hero Uśmieszka surowy 0.7829): sekcja
+jest DONE dopiero gdy 0 LAYOUT-FAIL (DOM self-checki) ∧ RUBRYKA 5×T/N → WERDYKT TAK ∧ SSIM
+TYPOWANY OK — KODOWA <0.85 desktop / <0.80 mobile = LAYOUT-FAIL; SCENOWA: maska sceny cap
+~0.70 (INFO) + reszta po zamaskowaniu sceny <0.85 = FAIL. Kanon = `gate-manifest.json
+layout_diff`.** Surowy SSIM CAŁEJ sekcji STERUJE pętlą (Krok 3: rewrite/edit/keep), NIE zamyka.
+Werdykt „ten sam projekt?" jest WSPÓŁ-warunkiem (może zaostrzyć, nie obniżyć). Przy tle
+scene-from-mockup (STANDARD F3.1) cap dotyczy TYLKO maski sceny — niski SSIM reszty to kod albo
 grafika do poprawy, nie „sufit danych".
 
 **🔒 RUBRYKA WERDYKTU (R13 — OBOWIĄZKOWA w DOPASOWANIE.md, egzekwowana przez `gate-check.py`).**
@@ -105,12 +128,13 @@ FAIL Odpalak (wideo+zamów+hero+final), PASS Drapek (0/13) + Loczek (0/12). Self
   dlatego liczby idą TEKSTEM, nie „z oka").
 - Werdykt końcowy nadal wizualny (kompozyt, „czy to ten sam projekt?") — SSIM steruje
   pętlą, człowiek/krytyk ocenia charakter.
-- **Zrzuty do diff/kompozytów ZAWSZE z force-reveal + eager-img** (narzędzie `capture.py`
+- **Zrzuty do diff/kompozytów ZAWSZE z force-reveal + eager-img** (narzędzie `capture-lint.py`
   w mockup-tools — wymusza `.reveal.in`, czeka naturalWidth>0, wykrywa h-scroll/broken-img);
   bez tego kolumna RENDER jest „wyprana" (opacity:0) = fałszywy alarm.
 - **SZABLON BRIEFU KODERA sekcji** (luka wykryta w teście Uśmieszka — używać zawsze):
-  {sekcja+cel · anotowana makieta URL (desktop+mobile) · IR tekstem (PALETA DOKŁADNIE /
-  SKALA TYPO / BLOKI 0-1000) · DOKŁADNE copy w cudzysłowach · realne URL-e assetów/scen ·
+  {sekcja+cel · anotowana makieta URL (desktop+mobile) · IR tekstem = blok `ir.root.css`
+  DOSŁOWNIE (`:root{}` + `typo_clamp`, wklej 1:1, ZAKAZ re-aproksymacji) / SKALA TYPO ze
+  `scale_px_norm` @1180 / BLOKI 0-1000 · DOKŁADNE copy w cudzysłowach · realne URL-e assetów/scen ·
   słownik klas z prefiksem sekcji · kontrakt hooków JS (nazwa+zakres+jednostka!) ·
   format odpowiedzi: `<section>` + scoped `<style>`, marker `<!--PAYBADGES-->` BEZ
   własnego wrappera · zakazy + dane twarde · „NAJPIERW siatka, POTEM kod"}.

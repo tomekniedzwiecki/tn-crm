@@ -23,6 +23,7 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 | **lightbox** | @1 | `lightbox@1.html` | loczek@8726382b · 2026-07-17 | skórka: kolory/radius/blur overlaya i ×. NIETYKALNE: delegacja na `document` z `.closest('.gitem')`, odczyt `data-full`/alt, zamknięcie tło/×/Escape. ⛔ osobny listener per kafel. |
 | **sticky-buy** | @1 | `sticky-buy@1.html` | loczek@8726382b · 2026-07-17 | skórka: tokeny/kolory/radius, treść (marka/cena/metody), href. NIETYKALNE: fixed + translateY(120%)→.show, `@media(min-width:900px){display:none}`, body padding-bottom, IO na `.hero`. ⛔ pokazywanie od razu / na desktopie. |
 | **faq-accordion** | @1 | `faq-accordion@1.html` | loczek@8726382b · 2026-07-17 | skórka: tokeny/kolory/radius, treść pytań, obraz media. NIETYKALNE: grid `1.62fr 1fr` + bp 820px, natywny `<details>/<summary>` (ZERO JS), ikona ::before/::after, media sticky top:90px. ⛔ przepisanie na JS accordion. |
+| **footer** | @1 | `footer@1.html` | drapek@2026-07-18 · montaż finalny | skórka: tokeny/kolory/radius, treść (marka/claim/rating/copyright/teksty linków), favicon. NIETYKALNE: 3 strefy `.foot-top` (marka+claim+rating / linki prawne / zaufanie) + `.foot-bottom`, KOMPLET linków (Regulamin·Polityka·Zwroty·Dostawa·Kontakt) z placeholderami `{{*_URL}}`, pay-badges kanoniczne, siatka 3→2→1 (bp 820/520), touch ≥40px, ZERO JS. ⛔ „stopka = jedna linijka wyśrodkowana" / wordmark z obrazka. |
 
 ## WERSJONOWANIE
 - `@N` w nazwie pliku = wersja mechaniki. Zmiana mechaniki (nowe zachowanie/proporcje) =
@@ -31,6 +32,11 @@ nagłówkowym pliku `<moduł>@<wersja>.html`. Proporcje i JS = nietykalne; token
 - Źródłem wersji jest ZAWSZE konkretny commit dobrego landingu (nie „z głowy").
 
 ## CHANGELOG
+- **2026-07-18 — footer@1 (NOWY):** pierwszy kanoniczny footer fabryki, wydzielony z `drapek`
+  (montaż finalny). Powód: Tomek — „footer praktycznie nie ma, a to ważne miejsce: regulamin,
+  polityka prywatności, elementy zaufania". Footer = STANDARD każdego landingu (patrz STANDARD F4).
+  Struktura: marka+claim+rating / komplet linków prawnych (placeholdery {{*_URL}}) / warstwa
+  zaufania (pay-badges + chipy) / copyright. Bez JS.
 - **2026-07-17 — @1 (wszystkie 4):** wydzielone z `loczek@8726382b` (ostatni dobry przed
   audytem R13). Loczek/Odpalak jako pliki landingów idą do kosza — moduły przejmują ich
   sprawdzoną mechanikę. Powód: audyt R13 wykrył, że werdykty vision odpuszczały regresje

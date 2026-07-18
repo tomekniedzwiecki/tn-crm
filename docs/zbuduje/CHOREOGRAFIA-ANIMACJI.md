@@ -39,18 +39,22 @@ wiersz przewagi rozjaśnia się ostatni); opinie = „karty rzucone na stół" (
 naprzemienna rotacja ±1°→0, scale .97→1); demo 1-2-3 = „kroki zapalają się sekwencyjnie"
 (numer scale 1.06 + glow, łącznik scaleX 0→1); hero = wejście H1→sub→CTA kaskadą DNA.
 
-## 3. PIPELINE (w F5, PRZED creative technologist interakcji flagowej)
+## 3. PIPELINE (etap F5.0 = choreografia; kroki F5.0.1–F5.0.3, PRZED creative technologist)
 
-- **F5.0 CHOREOGRAF** — 1 call gpt-5.6-sol (`high`, cap ~4k, TEKST bez obrazów).
+> ⚠️ **Numeracja:** „F5.1" w STANDARD-LANDING-SKLEPY.md = **CREATIVE TECHNOLOGIST** (interakcja
+> flagowa, osobny krok PO choreografii) — NIE implementacja animacji, która jest **F5.0.2** tutaj.
+> Kroki F5 w STANDARD: F5.0 choreografia (ten dok) → F5.1 creative technologist → F5.2 zestaw → F5.3 filtr.
+
+- **F5.0.1 CHOREOGRAF (plan)** — 1 call gpt-5.6-sol (`high`, cap ~4k, TEKST bez obrazów).
   Input: lista sekcji z DOM (id + rola + 1 zdanie treści) + osobowość marki z F1 + ten
   format. Output: MOTION-DNA + tablica SPEC-ów per sekcja. To PLAN, nie kod. Choreograf
   OZNACZA sekcje L3 — ich pełny spec robi się szablonem z INTERAKCJE-KATALOG (nie dublować).
-- **F5.1 IMPLEMENTACJA = JEDEN wspólny moduł** (nie kod per sekcja!): 1 call kodera →
+- **F5.0.2 IMPLEMENTACJA = JEDEN wspólny moduł** (nie kod per sekcja!): 1 call kodera →
   jeden blok CSS (klasy motywów sterowane `data-mo="tilt|cards|steps|…"` na sekcjach
   + tokeny w :root) + rozszerzenie ISTNIEJĄCEGO IO (`.reveal`→`.in`) o warianty
   `.reveal[data-mo=…]`. Sekcje dostają TYLKO atrybuty data-mo/data-stagger. Zero drugiego
   obserwatora, zero konfliktów ID.
-- **F5.2 WERYFIKACJA (CDP):** (a) scroll przez stronę — każda sekcja dostaje `.in`
+- **F5.0.3 WERYFIKACJA (CDP):** (a) scroll przez stronę — każda sekcja dostaje `.in`
   (classList, nie „z obrazu"); (b) trace podczas scrolla: brak long-tasks, ≥55fps, CLS=0;
   (c) emulacja prefers-reduced-motion → zero ruchu mimowolnego, pełna treść; (d) CPU 4× →
   płynnie; (e) interakcje L3: gate stanów min/max (F6b).

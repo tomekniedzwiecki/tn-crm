@@ -32,7 +32,7 @@ bez detali? — łapie dokładnie to, co SSIM przepuszcza.
 
 **PASS 3 — PROWENIENCJA ASSETÓW (skrypt):** hash/`src` wszystkich obrazów per sekcja →
 **ten sam asset w dwóch rolach = FLAGA** (dokładnie „zdjęcie z opinii w karcie oferty") ·
-zgodność klasy (P/U/S z mapy assetów) z allowlistą slotu (OBRAZY-ROLE) · brakujące alt ·
+zgodność klasy (P/U/S/R z mapy assetów) z allowlistą slotu (OBRAZY-ROLE) · brakujące alt ·
 obrazy-placeholdery.
 
 **PASS 4 — DETALE OSADZENIA (skrypt + hit-test per viewport; kalibracja po Latarku 17.07).**
@@ -73,6 +73,14 @@ per wystąpienie, zapisane do `dopasowanie/SEMANTYKA.md` (gate-check wymaga plik
    silnika, temperatury, czasy).
 5. **OBIETNICE SEKCJI:** nagłówki nie obiecują więcej niż treść (np. „nagrania naszych
    klientów" przy obcym UGC = kłamstwo; „realne zdjęcia" przy renderach = kłamstwo).
+6. **ROLA NARRACYJNA / EMOCJA↔PRODUKT (Drapek 18.07):** czy nasz produkt pojawia się
+   WYŁĄCZNIE w kontekście pozytywnym / rozwiązania (hero, rozwiązanie/USP, demo, efekt/po,
+   oferta, final)? Przejrzyj sekcje z negatywną emocją (problem/„przed", porównanie ze
+   starym sposobem, ból) — **czy KTÓRAKOLWIEK łączy NASZ produkt z negatywną emocją
+   (strach/stres/walka/opór/odrzucenie/ból)? = FAIL** (oko czyta „nasz produkt = źródło
+   problemu", niezależnie od copy). Scena PROBLEM/„przed" MUSI pokazywać stary sposób
+   (obcinaczki/gilotynka + opór psa) / frustrację / sam problem — BEZ naszego produktu w
+   kadrze. Negatywna emocja dozwolona TYLKO przy starym sposobie lub samym problemie.
 Werdykt FAIL któregokolwiek pytania = naprawa + powtórka PASS 5 (pętla do czystej rundy).
 
 **🔗 KOMPLEMENTARNOŚĆ z F3A (GATE WIERNOŚCI DO SKUTKU, `GRAFIKA-Z-MAKIETY.md §4b`).** PASS 5 i F3A
@@ -108,7 +116,7 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
 1. SPACING/WYRÓWNANIE (10 punktów — największe źródło „surowizny")
 2. TYPOGRAFIA (12: wdowy, sieroty, skala, łamania, hierarchia, PL-interpunkcja)
 3. KOLOR/KONTRAST (9: WCAG, akcent CTA jedyny, jasne tła, stany)
-4. OBRAZY (11: role P/U/S, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
+4. OBRAZY (11: role P/U/S/R, dedup cross-sekcja, kolizje warstw, kadry, światło, ikony)
 5. STANY/INTERAKCJE (6: hover/focus/disabled, empty/error, touch, sticky, reduced-motion)
 6. TREŚĆ (6: placeholdery, zakazane frazy, ceny/format, ton, duplikaty)
 7. OSADZENIE (4: odstępy bloków „przyklejone", crop/upscaling w kaflach, martwa interakcja
@@ -123,6 +131,11 @@ optyczne wyrównanie). P0/P1 blokują oddanie; P2 naprawiać dopóki tanie.
   geometry. **PASS 4:** odstępy bloków (gap<12px różny kind), crop cover >25% + upscaling DPR2,
   interakcja per viewport (hit-test 1280/390 + martwa-property PROBE), pay-badges kanon vs
   imitacje (`--fix` auto-swap klastra na SSOT).
+  **[TODO domknięcia — właściciel detail-lint, SPEC F7]:** (1) detail-lint NIE emituje jeszcze
+  **h-scroll** (`scrollWidth-clientWidth==0`) — dziura do dodania (blok `finalny_pass`
+  w `gate-manifest.json` już to odnotowuje). (2) Lista zakazanych fraz `bad` trzymana W KODZIE
+  detail-lint = **DUPLIKAT** SSOT-u zakazów tekstowych → przepiąć na `gate-manifest.json
+  grep_forbidden` (JEDYNE źródło; dwie kopie mogą się rozjechać).
 - **`scripts/mockup-tools/capture-lint.py <html> <outdir>`** — full 1280/390, crop'y sekcji
   hi-res, `blur.jpg`+`placeholdified.jpg` do PASS 2 squint.
 

@@ -1,7 +1,7 @@
 # GALERIA-ALI — kuracja realnych zdjęć z galerii AliExpress (F0 GATE + F0.5)
 
 **Status: OBOWIĄZUJE (2026-07-17; zasada Tomka „galeria AliExpress = punkt wyjścia tego,
-jak wygląda produkt" + incydent Latarka: search-galeria z INNEJ aukcji → landing zbudowany
+jak wygląda produkt" + incydent Latarek: search-galeria z INNEJ aukcji → landing zbudowany
 na nieistniejącym produkcie).** Synteza 2× research Sonnet (kurator + integrator).
 
 ## 0. GATE F0: `source='detail'` OBOWIĄZKOWY (twardy)
@@ -66,7 +66,7 @@ materiał): źródło ∈ {tytuł detail, **specs**, galeria detail, opinie, **o
 destylacji** (Karta Prawdy §1a — NIGDY BEŁKOT)}. KAŻDA korzyść NIESIE KOTWICĘ w nawiasie
 („służy latami (spec: Materiał=stal nierdzewna)"). Claim bez źródła = CUT.
 Claim o KLASIE produktu / elemencie tożsamości (typ narzędzia, wyświetlacz, mechanizm)
-bez źródła = **STOP planu** (incydent Latarka: elektryczny pistolet vs realne cążki).
+bez źródła = **STOP planu** (incydent Latarek: elektryczny pistolet vs realne cążki).
 **Warianty/swatche:** `sku.props` = źródło swatchy, mapowanie 1:1 PL (Blue→Niebieski,
 Pink→Różowy, Kaki→Khaki); swatch TYLKO gdy w galerii jest wizualny dowód koloru. JEDNA cena PL
 (baza marży = MAX kosztu wariantów z `sku_prices`); różnice cen wariantów WEWNĘTRZNE — nie na stronę.
