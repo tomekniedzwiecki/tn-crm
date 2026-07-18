@@ -378,8 +378,13 @@ jej; zmiana stanu mechanizmu NADAL cięciem (kotwica przybija tożsamość, nie 
 transformacji). Multi-view packshoty (front/3-4/bok/mechanizm-open) = najsilniejszy
 pojedynczy fix po samym „daj referencję" — jeden frontal nie ogranicza geometrii 3D.
 Refy czyste ≥1024px (upscale STILLA przed użyciem, bez przesharpienia). cfg ~0.5;
-morfy do negative („hinged lid, tray rim, morphing construction"). PILOT: 1 scena
-mechanizmu × {FLF, kref, Vidu} na gęstych siatkach ruchu (~$3-4), potem `kref` do render.py.
+morfy do negative („hinged lid, tray rim, morphing construction").
+**PILOT WYKONANY (drapek board, 19.07): kref WYGRYWA.** Ten sam brief i klatka startowa,
+na której FLF halucynował otwarcie wnęki w ~3,3 s: Kling O1 z elements (frontal prod-closed
++ refy prod-open/lifestyle) utrzymał deskę IDENTYCZNĄ przez pełne 5 s (recenzja 20 klatek
+4 fps: zamknięta pokrywa, stały szew/pętla, zero rantu/zawiasu), $0.56. **`kref` WDROŻONY
+w render.py** (engine 'kref', EST 0.56). Vidu = backup nietestowany (odpalać tylko, gdy
+kref zawiedzie na innym produkcie).
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 

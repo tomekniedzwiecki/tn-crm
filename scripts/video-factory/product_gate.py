@@ -108,7 +108,7 @@ def finalize(gen_dir, board_verdict=None):
     problems = []
     for passf in glob.glob(os.path.join(gen_dir, "*.pass")):
         base = passf[:-5]
-        if base.endswith(".fidelity"):
+        if os.path.basename(base) == "fidelity":   # wlasny marker, nie klip
             continue
         fj = base + ".fidelity.json"
         if not os.path.exists(fj):

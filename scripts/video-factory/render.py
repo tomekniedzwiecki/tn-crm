@@ -16,6 +16,13 @@ MODELS = {
     "mc": "fal-ai/kling-video/v2.6/pro/motion-control",
     "flf": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
     "omnihuman": "fal-ai/bytedance/omnihuman/v1.5",
+    # kref = SILNIK SCEN PRODUKTOWYCH (0i-b): model WIDZI packshot przez caly klip.
+    # Scena: {engine:'kref', image_urls:[klatka-startowa "z prawdy"], elements:[{frontal_image_url:
+    # packshot, reference_image_urls:[widoki/stany]}], prompt zaczynajacy od "Take @Image1 as the
+    # start frame...", duration:'5', aspect_ratio:'9:16', negative_prompt: morfy konstrukcji}.
+    # BEZ tail_image (kotwica tozsamosci zamiast przypiecia konca). Pilot drapek 19.07: zabil
+    # halucynacje otwarcia mechanizmu, ktorej FLF nie utrzymal na tym samym briefie.
+    "kref": "fal-ai/kling-video/o1/reference-to-video",
 }
 # NEG = tylko GENERYCZNE wady; cechy produktowe (kolory, ksztalty, "two curlers" itp.)
 # podawaj per scena w polu `negative_extra` — z KARTY PRODUKTU (lekcja: NEG z lokowki
@@ -25,7 +32,7 @@ NEG = ("extra fingers, fused fingers, extra hand, third arm, extra limbs, deform
        "jewelry, nail polish, text, logo, low quality")
 # EST realne per ~5 s (audyt 18.07: stare 0.5/0.6 zanizaly ~40%, a KROK 0 sumuje est_usd):
 # mc = $0.112/s * 7.5 s sr., omnihuman = ~$0.16/s * 5 s. Zrodlem prawdy budzetu i tak jest fal.balance().
-EST = {"mc": 0.85, "flf": 0.35, "omnihuman": 0.85}
+EST = {"mc": 0.85, "flf": 0.35, "omnihuman": 0.85, "kref": 0.56}
 
 def render_scenes(scenes, outdir, timeout_s=2400, project=""):
     """Scena moze miec n=2 (best-of-N): submituje kandydatow tag__c1/tag__c2.
@@ -47,6 +54,8 @@ def render_scenes(scenes, outdir, timeout_s=2400, project=""):
         payload = {k: v for k, v in sc.items() if k not in ("tag", "engine", "negative_extra")}
         neg_extra = sc.get("negative_extra")
         if eng == "mc": payload.setdefault("character_orientation", "image")
+        if eng == "kref":
+            payload.setdefault("duration", "5"); payload.setdefault("aspect_ratio", "9:16")
         if eng == "flf":
             payload.setdefault("duration", "5"); payload.setdefault("cfg_scale", 0.5)
             payload.setdefault("negative_prompt", NEG + (", " + neg_extra if neg_extra else ""))
