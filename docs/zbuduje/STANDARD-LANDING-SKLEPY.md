@@ -92,8 +92,11 @@ wewnętrzny gate doboru. `shop{name,url}` 🚫 NIGDY na stronie (white label) + 
 
 **F-1 — GATE WYKONALNOŚCI (PRZED F0, przy WYBORZE produktu; incydent „Zwijek" 18.07: wąż
 ogrodowy przeszedł do fazy 1, gdzie dopiero wyszło, że koszt lądowany 292-319 zł zabija marżę
-COD).** Zanim produkt wejdzie w budowę, policz z snapshotu: MAX kosztu SKU (`sku_prices`) ×
-kurs NBP = koszt lądowany; realna półka PL kategorii; marża = półka − lądowany − (~30% półki
+COD).** Zanim produkt wejdzie w budowę, policz z snapshotu: koszt lądowany = koszt FAKTYCZNIE
+SPRZEDAWANEJ konfiguracji × kurs NBP (⚠️ NIE „MAX kosztu SKU" gdy drogiego wariantu NIE
+oferujemy — landing sprzedaje JEDNĄ konfigurację, licz od NIEJ; MAX-SKU to bezpiecznik tylko
+gdy klient wybiera wariant. Deska pazurów 18.07: MAX $34 „ze stojakiem" mylił, realny bazowy
+$17,5 = zdrowa marża); realna półka PL kategorii; marża = półka − lądowany − (~30% półki
 na reklamę+COD+zwroty+cło). **Marża brutto < ~40% półki LUB koszt lądowany > ~150 zł przy
 COD = FLAGA: produkt słaby do płatnego ruchu → inny produkt albo świadoma zgoda Tomka.**
 Sprawdź też: galeria po odsiewie ma ≥2 czyste packshoty (inaczej ciężka faza graficzna),
