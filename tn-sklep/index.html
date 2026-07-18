@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TN Sklep — leady i źródło prawdy</title>
-<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<title>Sklep · Leady (lejek AI)</title>
+<link rel="icon" type="image/svg+xml" href="/tn-sklep/favicon.svg?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
@@ -105,15 +105,16 @@
 
 <!-- ════════ LEWE MENU (boczne, z obsługą mobile) ════════ -->
 <aside id="appnav" class="flex flex-col w-60 shrink-0 bg-zinc-950 border-r border-white/5 h-screen sticky top-0 z-50">
-  <div class="flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0">
-    <div class="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shrink-0">
+  <button id="panel-switcher-btn" type="button" title="Przełącz aplikację (Ctrl+K)" class="w-full flex items-center gap-2.5 px-5 h-16 border-b border-white/5 shrink-0 text-left hover:bg-white/5 transition-colors">
+    <span class="w-8 h-8 rounded-lg bg-[#0070f3] flex items-center justify-center shrink-0">
       <i class="ph-bold ph-storefront text-white text-sm"></i>
-    </div>
-    <div class="min-w-0">
-      <div class="text-white font-semibold text-sm leading-tight truncate">TN Sklep</div>
-      <div class="text-[10px] text-zinc-500 leading-tight truncate">lejek Sklep (e-commerce)</div>
-    </div>
-  </div>
+    </span>
+    <span class="min-w-0 flex-1">
+      <span class="block text-white font-semibold text-sm leading-tight truncate">Sklep</span>
+      <span class="block text-[10px] text-zinc-500 leading-tight truncate">Leady — lejek AI</span>
+    </span>
+    <i class="ph-bold ph-caret-up-down text-zinc-500 text-sm shrink-0"></i>
+  </button>
   <nav class="flex-1 overflow-y-auto px-3 py-4 space-y-1" id="tabs">
     <button data-tab="przeglad" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-squares-four text-lg shrink-0"></i><span>Przegląd</span></button>
     <button data-tab="leady" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-users-three text-lg shrink-0"></i><span>Leady</span></button>
@@ -126,7 +127,7 @@
     <button data-tab="zrodlo" class="tab-btn w-full flex items-center gap-3 px-3 py-2.5 rounded-lg border border-transparent text-zinc-400 hover:text-white hover:bg-white/5 transition text-sm font-medium text-left"><i class="ph ph-seal-check text-lg shrink-0"></i><span>Źródło prawdy</span></button>
   </nav>
   <div class="border-t border-white/5 p-3 shrink-0">
-    <a href="/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-white hover:bg-white/5 transition mb-1"><i class="ph ph-arrow-left text-base"></i>Wróć do TN CRM</a>
+    <a href="/" class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs text-zinc-500 hover:text-white hover:bg-white/5 transition mb-1"><i class="ph ph-arrow-left text-base"></i>Wróć do CRM</a>
     <div class="flex items-center gap-2.5 px-2 py-1.5">
       <div id="nav-avatar" class="w-8 h-8 rounded-full bg-gradient-to-b from-blue-600 to-blue-700 border border-white/10 flex items-center justify-center text-xs font-medium text-white shrink-0">--</div>
       <div class="flex-1 min-w-0"><div id="nav-user-name" class="text-xs font-medium text-zinc-200 truncate">—</div><div id="nav-user-email" class="text-[10px] text-zinc-500 truncate"></div></div>
@@ -2618,12 +2619,15 @@ async function init() {
   if (!DEMO) {
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) { window.location.href = (window.Sidebar ? Sidebar.getLoginPath() : '/'); return; }
+    if (window.Sidebar?.mountPanelSwitcher) Sidebar.mountPanelSwitcher({ email: session?.user?.email });
     const email = session.user.email;
     const nm = (session.user.user_metadata && session.user.user_metadata.full_name) || email;
     setNavUser(nm, email);
   } else {
     seedDemo();
     setNavUser('Demo Admin', 'demo@tn.pl');
+    // Tryb demo (?demo=1): brak realnej sesji — pełny dostęp Tomka, by pokazać wszystkie apki
+    if (window.Sidebar?.mountPanelSwitcher) Sidebar.mountPanelSwitcher({ email: 'tomekniedzwiecki@gmail.com' });
   }
 
   // domyślny zakres kosztów: 30 dni

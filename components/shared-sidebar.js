@@ -1,28 +1,30 @@
 /**
  * TN Shared Sidebar Component
- * Single source of truth for navigation across all apps (CRM, Workflow, Todo, Stack)
+ * Single source of truth for navigation across all apps
+ * (CRM, Biznes, Sklep, Sklepy workflow, Aplikacje, Aplikacje workflow, Workflow[legacy])
  *
  * Usage: Sidebar.render({ appId: 'crm' })
+ * Panele bez sidebara (tn-sklep, tn-aplikacje): Sidebar.mountPanelSwitcher({ email })
  */
 
 // ============================================
 // APP CONFIGURATION
 // ============================================
+// Pola: id/name/sub (podtytuł w boxie) / group (glowne|sklepy|aplikacje|stare)
+// / icon / color (kafelek) / defaultPage / legacy (stary system) / shortcut (Alt+N).
 const APPS = [
-    { id: 'crm', name: 'TN CRM', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard' },
-    { id: 'workflow', name: 'TN Workflow', icon: 'ph-path', color: 'bg-emerald-500 text-white', defaultPage: 'workflows' },
-    { id: 'todo', name: 'TN Todo', icon: 'ph-checks', color: 'bg-violet-500 text-white', defaultPage: 'boards' },
-    { id: 'biznes', name: 'TN Biznes', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard' },
-    { id: 'aplikacje', name: 'TN Aplikacje', icon: 'ph-rocket-launch', color: 'bg-blue-500 text-white', defaultPage: 'index' },
-    { id: 'sklep', name: 'TN Sklep', icon: 'ph-storefront', color: 'bg-blue-500 text-white', defaultPage: 'index' },
-    { id: 'sklepy', name: 'TN Sklepy', icon: 'ph-shopping-bag', color: 'bg-[#0070f3] text-white', defaultPage: 'index' },
-    { id: 'app', name: 'TN App', icon: 'ph-app-window', color: 'bg-[#0070f3] text-white', defaultPage: 'index' }
+    { id: 'crm', name: 'CRM', sub: 'Leady · oferty · zamówienia', group: 'glowne', icon: 'ph-lightning', color: 'bg-white text-black', defaultPage: 'dashboard', shortcut: 1 },
+    { id: 'biznes', name: 'Biznes', sub: 'Finanse firmy', group: 'glowne', icon: 'ph-currency-dollar', color: 'bg-amber-500 text-white', defaultPage: 'dashboard', shortcut: 2 },
+    { id: 'sklep', name: 'Sklep', sub: 'Leady — lejek AI', group: 'sklepy', icon: 'ph-storefront', color: 'bg-[#0070f3] text-white', defaultPage: 'index', shortcut: 3 },
+    { id: 'sklepy', name: 'Sklepy workflow', sub: 'Prowadzenie sklepów', group: 'sklepy', icon: 'ph-factory', color: 'bg-[#0891b2] text-white', defaultPage: 'index', shortcut: 4 },
+    { id: 'aplikacje', name: 'Aplikacje', sub: 'Leady — lejek AI', group: 'aplikacje', icon: 'ph-rocket-launch', color: 'bg-[#8b5cf6] text-white', defaultPage: 'index', shortcut: 5 },
+    { id: 'app', name: 'Aplikacje workflow', sub: 'Budowa aplikacji SaaS', group: 'aplikacje', icon: 'ph-app-window', color: 'bg-[#c026d3] text-white', defaultPage: 'index', shortcut: 6 },
+    { id: 'workflow', name: 'Workflow', sub: 'Stary system — do wygaszenia', group: 'stare', icon: 'ph-path', color: 'bg-emerald-600 text-white', defaultPage: 'workflows', legacy: true, shortcut: 7 }
 ];
 
 const APP_BASES = {
     crm: '',
     workflow: '/tn-workflow',
-    todo: '/tn-todo',
     biznes: '/tn-biznes',
     aplikacje: '/tn-aplikacje',
     sklep: '/tn-sklep',
@@ -33,13 +35,20 @@ const APP_BASES = {
 const APP_AVATAR_COLORS = {
     crm: 'from-emerald-600 to-emerald-700',
     workflow: 'from-emerald-600 to-emerald-700',
-    todo: 'from-violet-600 to-violet-700',
     biznes: 'from-amber-500 to-amber-600',
-    aplikacje: 'from-blue-600 to-blue-700',
-    sklep: 'from-blue-600 to-blue-700',
-    sklepy: 'from-[#0070f3] to-[#0761d1]',
-    app: 'from-[#0070f3] to-[#0761d1]'
+    aplikacje: 'from-violet-500 to-violet-700',
+    sklep: 'from-[#0070f3] to-[#0761d1]',
+    sklepy: 'from-[#0891b2] to-[#0e7490]',
+    app: 'from-[#c026d3] to-[#a21caf]'
 };
+
+// Nagłówki i kolejność grup w boxie przełącznika
+const APP_GROUPS = [
+    { id: 'glowne', label: 'Główne' },
+    { id: 'sklepy', label: 'Sklepy' },
+    { id: 'aplikacje', label: 'Aplikacje' },
+    { id: 'stare', label: 'Stare' }
+];
 
 // ============================================
 // NAVIGATION ITEMS PER APP
@@ -67,12 +76,6 @@ const NAV_ITEMS_WORKFLOW = [
     { id: 'email-templates', icon: 'ph-file-code', label: 'Szablony emaili' },
     { id: 'email-log', icon: 'ph-envelope', label: 'Historia emaili' },
     { id: 'settings', icon: 'ph-gear', label: 'Ustawienia' },
-];
-
-const NAV_ITEMS_TODO = [
-    { id: 'boards', icon: 'ph-kanban', label: 'Tablice' },
-    { id: 'my-tasks', icon: 'ph-user-circle', label: 'Moje zadania' },
-    { id: 'notes', icon: 'ph-note-pencil', label: 'Notatki' },
 ];
 
 // TN Aplikacje (lejek Stworzę) — panel jest single-page z wewnętrznymi
@@ -114,7 +117,6 @@ const NAV_ITEMS_BIZNES = [
 function getNavItemsForApp(appId) {
     switch (appId) {
         case 'workflow': return NAV_ITEMS_WORKFLOW;
-        case 'todo': return NAV_ITEMS_TODO;
         case 'biznes': return NAV_ITEMS_BIZNES;
         case 'aplikacje': return NAV_ITEMS_APLIKACJE;
         case 'sklepy': return NAV_ITEMS_SKLEPY;
@@ -393,10 +395,63 @@ function getAvailableApps(userEmail) {
 }
 
 // ============================================
+// APP SWITCHER BOX (jedno źródło: sidebar + header switcher)
+// ============================================
+// Buduje wnętrze boxu przełącznika: grupy z nagłówkami, każdy wiersz z kafelkiem,
+// nazwą, podtytułem, skrótem Alt+N; bieżąca aplikacja podświetlona z ph-check;
+// legacy (workflow) wyszarzona z badge „STARE". Filtruje po dostępach użytkownika.
+function buildSwitcherHtml(userEmail, currentAppId) {
+    const available = getAvailableApps(userEmail);
+    let html = '';
+    APP_GROUPS.forEach(group => {
+        const apps = available.filter(a => (a.group || 'glowne') === group.id);
+        if (!apps.length) return;
+        const spacing = html ? ' mt-1 pt-2 border-t border-white/5' : '';
+        html += `<div class="text-[10px] uppercase tracking-wider text-zinc-500 font-semibold px-3 pt-1 pb-1${spacing}">${group.label}</div>`;
+        html += apps.map(app => {
+            const isCurrent = app.id === currentAppId;
+            const legacyRow = app.legacy ? ' opacity-60' : '';
+            const legacyBadge = app.legacy
+                ? '<span class="text-[9px] uppercase bg-zinc-800 text-zinc-400 border border-white/10 rounded px-1 py-px leading-none">STARE</span>'
+                : '';
+            const stateClasses = isCurrent
+                ? 'bg-white/10 text-white'
+                : 'text-zinc-400 hover:text-white hover:bg-white/5';
+            const right = isCurrent
+                ? '<i class="ph-bold ph-check text-emerald-400 text-sm ml-auto shrink-0"></i>'
+                : (app.shortcut
+                    ? `<kbd class="ml-auto shrink-0 text-[10px] text-zinc-600 border border-white/10 rounded px-1 font-mono">Alt+${app.shortcut}</kbd>`
+                    : '');
+            const tag = isCurrent ? 'div' : 'a';
+            const attrs = isCurrent
+                ? ' aria-current="page"'
+                : ` href="${getAppPath(app.id)}"`;
+            return `
+        <${tag}${attrs} class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors${legacyRow} ${stateClasses}">
+            <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center shrink-0">
+                <i class="ph-bold ${app.icon} text-xs"></i>
+            </div>
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-medium truncate">${app.name}</span>
+                    ${legacyBadge}
+                </div>
+                ${app.sub ? `<div class="text-[11px] text-zinc-500 truncate leading-tight">${app.sub}</div>` : ''}
+            </div>
+            ${right}
+        </${tag}>`;
+        }).join('');
+    });
+    return html;
+}
+
+// ============================================
 // INTERNAL STATE
 // ============================================
 let _currentAppId = 'crm';
 let _userEmail = null;
+// Toggle boxu przełącznika w panelach bez sidebara (ustawiany przez mountPanelSwitcher)
+let _panelSwitcherToggle = null;
 
 // ============================================
 // PATH HELPERS
@@ -487,7 +542,6 @@ function getCurrentPage() {
 // Detect current app based on URL (fallback if no appId provided)
 function detectCurrentApp() {
     const path = location.pathname;
-    if (path.includes('/tn-todo')) return 'todo';
     if (path.includes('/tn-biznes')) return 'biznes';
     if (path.includes('/tn-workflow')) return 'workflow';
     if (path.includes('/tn-aplikacje')) return 'aplikacje';
@@ -503,7 +557,7 @@ function detectCurrentApp() {
 // RENDER SIDEBAR
 // ============================================
 function renderSidebar(config = {}) {
-    // Support old signature: renderSidebar('sidebar') or renderSidebar({ appId: 'todo' })
+    // Support old signature: renderSidebar('sidebar') or renderSidebar({ appId: 'biznes' })
     let containerId = 'sidebar';
     let appId = null;
 
@@ -537,16 +591,12 @@ function renderSidebar(config = {}) {
     const navItems = getNavItemsForApp(_currentAppId);
     const avatarColor = APP_AVATAR_COLORS[_currentAppId] || APP_AVATAR_COLORS.crm;
 
-    // Build app switcher dropdown HTML (filtered by user access)
-    const availableApps = getAvailableApps(_userEmail);
-    const appSwitcherDropdown = availableApps.filter(a => a.id !== _currentAppId).map(app => `
-        <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
-                <i class="ph-bold ${app.icon} text-xs"></i>
-            </div>
-            <span class="text-sm font-medium">${app.name}</span>
-        </a>
-    `).join('');
+    // Build app switcher box HTML (grupy + dostępy) — wspólna funkcja
+    const appSwitcherDropdown = buildSwitcherHtml(_userEmail, _currentAppId);
+    // Badge „STARE" przy nazwie w przycisku, gdy bieżąca apka jest legacy
+    const currentLegacyBadge = currentApp && currentApp.legacy
+        ? '<span class="ml-2 text-[9px] uppercase bg-zinc-800 text-zinc-400 border border-white/10 rounded px-1 py-px leading-none">STARE</span>'
+        : '';
 
     // Build navigation HTML
     const navHtml = navItems.map(item => {
@@ -610,13 +660,12 @@ function renderSidebar(config = {}) {
                 <div class="w-7 h-7 ${currentApp.color} rounded flex items-center justify-center mr-3 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
                     <i class="ph-bold ${currentApp.icon} text-sm"></i>
                 </div>
-                <span class="font-medium text-base text-zinc-200">${currentApp.name}</span>
+                <span class="font-medium text-base text-zinc-200">${currentApp.name}</span>${currentLegacyBadge}
                 <i class="ph-bold ph-caret-up-down ml-auto text-zinc-500"></i>
             </button>
 
-            <!-- Dropdown -->
-            <div id="app-switcher-dropdown" class="app-switcher-dropdown absolute top-full left-0 right-0 bg-zinc-900 border border-white/10 rounded-lg m-2 p-2 shadow-xl z-50">
-                <div class="text-[10px] uppercase tracking-wider text-zinc-500 px-3 py-1.5 font-semibold">Przełącz na</div>
+            <!-- Dropdown (stała szerokość w-72; wystaje poza sidebar, by pełne nazwy/suby się mieściły) -->
+            <div id="app-switcher-dropdown" class="app-switcher-dropdown absolute top-full left-2 w-72 bg-zinc-900 border border-white/10 rounded-lg mt-1 p-2 shadow-xl z-50">
                 ${appSwitcherDropdown}
             </div>
         </div>
@@ -676,6 +725,54 @@ function setupAppSwitcher() {
             dropdown.classList.remove('open');
         }
     });
+
+    // Globalne skróty (Alt+N, Ctrl/Cmd+K) — rejestrowane raz
+    registerSwitcherKeys();
+}
+
+// ============================================
+// GLOBALNE SKRÓTY KLAWISZOWE
+// ============================================
+// Alt+1..7 → nawigacja do apki o danym shortcut (respektuje dostępy).
+// Ctrl+K / Cmd+K → toggle boxu przełącznika. Escape zamyka (obsługa lokalna).
+// AltGr (polski układ) ustawia ctrlKey+altKey — wykluczamy przez !e.ctrlKey.
+function toggleSwitcherDropdown() {
+    const sb = document.getElementById('app-switcher-dropdown');
+    if (sb) { sb.classList.toggle('open'); return; }
+    if (typeof _panelSwitcherToggle === 'function') _panelSwitcherToggle();
+}
+
+function isTypingTarget() {
+    const ae = document.activeElement;
+    if (!ae) return false;
+    const tag = ae.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ae.isContentEditable;
+}
+
+function registerSwitcherKeys() {
+    if (window.__tnSwitcherKeys) return;
+    window.__tnSwitcherKeys = true;
+    document.addEventListener('keydown', (e) => {
+        // Ctrl+K / Cmd+K → toggle przełącznika
+        if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.key === 'k' || e.key === 'K')) {
+            e.preventDefault();
+            toggleSwitcherDropdown();
+            return;
+        }
+        // Alt+1..7 → skok do aplikacji (bez AltGr: ten ustawia ctrlKey+altKey)
+        if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+            const m = e.code && e.code.match(/^Digit([1-7])$/);
+            if (!m) return;
+            if (isTypingTarget()) return;
+            const shortcut = parseInt(m[1], 10);
+            const app = APPS.find(a => a.shortcut === shortcut);
+            if (!app) return;
+            // respektuj dostępy — skacz tylko do widocznych apek
+            if (!getAvailableApps(_userEmail).some(a => a.id === app.id)) return;
+            e.preventDefault();
+            window.location.href = getAppPath(app.id);
+        }
+    });
 }
 
 function updateNavLinks() {
@@ -729,21 +826,60 @@ function setUserEmail(email) {
 function updateAppSwitcherVisibility() {
     const dropdown = document.getElementById('app-switcher-dropdown');
     if (!dropdown) return;
+    dropdown.innerHTML = buildSwitcherHtml(_userEmail, _currentAppId);
+}
 
-    const availableApps = getAvailableApps(_userEmail);
-    const appSwitcherDropdown = availableApps.filter(a => a.id !== _currentAppId).map(app => `
-        <a href="${getAppPath(app.id)}" class="flex items-center gap-3 px-3 py-2.5 text-zinc-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
-            <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center">
-                <i class="ph-bold ${app.icon} text-xs"></i>
-            </div>
-            <span class="text-sm font-medium">${app.name}</span>
-        </a>
-    `).join('');
+// ============================================
+// PANEL SWITCHER (panele bez sidebara: tn-sklep, tn-aplikacje)
+// ============================================
+// Model mentalny: trigger = nagłówek w lewym górnym rogu panelu (#panel-switcher-btn,
+// statyczny w HTML panelu). Klik/​Ctrl+K otwiera TEN SAM box (buildSwitcherHtml).
+// Box doklejamy do <body> z position:fixed liczonym z rectu triggera — omija to
+// przycinanie przez overflow oraz transform mobilnego #appnav. Idempotentny.
+function mountPanelSwitcher(opts = {}) {
+    if (window.__tnPanelSwitcher) return;
 
-    dropdown.innerHTML = `
-        <div class="text-[10px] uppercase tracking-wider text-zinc-500 px-3 py-1.5 font-semibold">Przełącz na</div>
-        ${appSwitcherDropdown}
-    `;
+    // Panele nie wołają render() → same ustalamy bieżącą apkę i email
+    _currentAppId = detectCurrentApp();
+    _userEmail = opts.email || _userEmail;
+
+    const trigger = document.getElementById('panel-switcher-btn');
+    if (!trigger) return;
+    window.__tnPanelSwitcher = true;
+
+    if (!document.getElementById('sidebar-styles')) {
+        const style = document.createElement('style');
+        style.id = 'sidebar-styles';
+        style.textContent = SIDEBAR_CSS;
+        document.head.appendChild(style);
+    }
+
+    const dd = document.createElement('div');
+    dd.id = 'panel-switcher-dropdown';
+    dd.className = 'hidden fixed w-72 bg-zinc-900 border border-white/10 rounded-lg p-2 shadow-xl z-[60]';
+    document.body.appendChild(dd);
+
+    const position = () => {
+        const r = trigger.getBoundingClientRect();
+        let left = Math.round(r.left);
+        // docisk do prawej krawędzi viewportu (box = 288px)
+        left = Math.min(left, window.innerWidth - 288 - 8);
+        left = Math.max(8, left);
+        dd.style.left = left + 'px';
+        dd.style.top = Math.round(r.bottom + 6) + 'px';
+    };
+    const open = () => { dd.innerHTML = buildSwitcherHtml(_userEmail, _currentAppId); position(); dd.classList.remove('hidden'); };
+    const close = () => dd.classList.add('hidden');
+    const toggle = () => { if (dd.classList.contains('hidden')) open(); else close(); };
+    _panelSwitcherToggle = toggle;
+
+    trigger.addEventListener('click', (e) => { e.stopPropagation(); toggle(); });
+    document.addEventListener('click', (e) => { if (!dd.contains(e.target) && !trigger.contains(e.target)) close(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+    window.addEventListener('resize', () => { if (!dd.classList.contains('hidden')) position(); });
+
+    // Globalne skróty (Alt+N, Ctrl/Cmd+K)
+    registerSwitcherKeys();
 }
 
 function setUserName(name) {
@@ -928,6 +1064,7 @@ function closeMobileSidebar() {
 // ============================================
 window.Sidebar = {
     render: renderSidebar,
+    mountPanelSwitcher,
     showAdminNav,
     setUserEmail,
     setUserName,
