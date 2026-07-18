@@ -89,14 +89,44 @@
     .btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;
       font-family:"Baloo 2",-apple-system,"Segoe UI",sans-serif;font-weight:700;font-size:17px;border:none;cursor:pointer;
       border-radius:13px;padding:16px 30px;transition:transform .18s ease,box-shadow .25s ease,background .2s;letter-spacing:.005em}
-    .btn.cta{background:var(--cta);color:var(--cta-ink);box-shadow:0 12px 30px rgba(224,149,74,.30)}
-    .btn.cta:hover{background:var(--cta-d);transform:translateY(-2px);box-shadow:0 18px 40px rgba(224,149,74,.38)}
-    .btn.cta:active{transform:translateY(0)}
+    /* CTA: gradient z głębszym dołem (figure-ground ≥3:1 na kremie/foto) + cień CIEPŁO-BRĄZOWY
+       (nie amber-glow — unosi z tła) + inset highlight + hairline. Token --cta NIETKNIĘTY
+       (swash/demo/faq go dzielą) — skórka tylko na .btn.cta. Tekst ciemnobrąz (biały=WCAG FAIL). */
+    .btn.cta{position:relative;overflow:hidden;color:var(--cta-ink);
+      background:linear-gradient(180deg,#E9974B 0%,#DD8636 55%,#C56F27 100%);
+      box-shadow:0 10px 24px -6px rgba(120,66,18,.42),0 2px 0 rgba(120,66,18,.20),inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(120,66,18,.14)}
+    .btn.cta::after{content:"";position:absolute;inset:0;pointer-events:none;
+      background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.30) 50%,transparent 68%);
+      transform:translateX(-130%);transition:transform .7s var(--mo-ease)}
+    .btn.cta:hover::after{transform:translateX(130%)}
+    .btn.cta:hover{transform:translateY(-3px);
+      background:linear-gradient(180deg,#EEA059 0%,#DD8636 50%,#BC671F 100%);
+      box-shadow:0 18px 38px -8px rgba(120,66,18,.52),0 3px 0 rgba(120,66,18,.22),inset 0 1px 0 rgba(255,255,255,.32),0 0 0 1px rgba(120,66,18,.16)}
+    .btn.cta:active{transform:translateY(0);box-shadow:0 6px 14px -6px rgba(120,66,18,.4),inset 0 2px 4px rgba(120,66,18,.25)}
+    .btn.cta:focus-visible{outline:3px solid color-mix(in srgb,var(--cta) 55%,transparent);outline-offset:3px}
     .btn.big{padding:18px 34px;font-size:19px}
     .btn.block{display:flex;width:100%}
     .btn .arr{transition:transform .2s}
-    .btn.cta:hover .arr{transform:translateX(4px)}
+    .btn.cta:hover .arr{transform:translateX(5px)}
+    @media (prefers-reduced-motion:reduce){.btn.cta::after{display:none}}
+    /* idle „breathing" — puls SAMEGO cienia (zero reflow/migotania), tylko klasa .pulse (hero+final) */
+    @media (prefers-reduced-motion:no-preference){
+      @keyframes cta-breathe{0%,100%{box-shadow:0 10px 24px -6px rgba(120,66,18,.42),0 2px 0 rgba(120,66,18,.20),inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(120,66,18,.14)}
+        50%{box-shadow:0 16px 34px -4px rgba(120,66,18,.58),0 2px 0 rgba(120,66,18,.20),inset 0 1px 0 rgba(255,255,255,.28),0 0 0 1px rgba(120,66,18,.14)}}
+      .btn.cta.pulse{animation:cta-breathe 3.4s var(--mo-ease) infinite}
+      .btn.cta.pulse:hover{animation:none}}
     .microcopy{font-size:13px;color:var(--body);margin-top:13px;line-height:1.5}
+    .microcopy.after-cta{margin-top:12px;text-align:center;max-width:470px;margin-left:auto;margin-right:auto;font-size:12.5px}
+    #zamow .off-guarantee{display:flex;align-items:flex-start;gap:10px;margin:0 0 18px;padding:12px 15px;
+      background:#EDF4EE;border:1px solid #D2E2D6;border-radius:12px;font-size:13.5px;line-height:1.5;color:#33493A}
+    #zamow .off-guarantee svg{width:19px;height:19px;flex:0 0 auto;color:#4E8C6A;margin-top:1px}
+    #zamow .off-guarantee b{color:#284032}
+    /* reassure-strip — rząd redukcji ryzyka pod samodzielnym CTA (moduł fabryki) */
+    .reassure-strip{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:center;align-items:center;
+      margin:15px 0 0;padding:0;font-size:12.5px;color:var(--body);font-weight:600;list-style:none}
+    .reassure-strip span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+    .reassure-strip span::before{content:"";width:15px;height:15px;flex:0 0 auto;border-radius:50%;
+      background:#E7F0EA url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%234E8C6A' stroke-width='3.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6L9 17l-5-5'/%3E%3C/svg%3E") center/11px no-repeat}
     /* chips / pills */
     .pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);border:1px solid var(--line);
       border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:700;color:var(--ink);box-shadow:var(--shadow-sm)}
@@ -156,8 +186,10 @@
     .sticky-buy .sb-info{flex:1;min-width:0}
     .sticky-buy .sb-price{font-weight:700;font-size:16.5px;color:var(--ink)}
     .sticky-buy .sb-price b{font-family:"Baloo 2",sans-serif;font-weight:700}
-    .sticky-buy .sb-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .sticky-buy .btn{padding:13px 24px;font-size:15.5px;white-space:nowrap;border-radius:11px}
+    .sticky-buy .sb-sub{font-size:11.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+    .sticky-buy .sb-pays{display:inline-flex;align-items:center;gap:6px;flex:0 0 auto}
+    .sticky-buy .sbp{height:13px;width:auto;display:block}
+    .sticky-buy .btn{padding:15px 28px;font-size:16px;min-height:48px;white-space:nowrap;border-radius:11px}
     @media (min-width:900px){.sticky-buy{display:none}}
     @media (max-width:899px){body{padding-bottom:calc(74px + env(safe-area-inset-bottom))}}
 
@@ -557,7 +589,7 @@
       <p id="hero-sub" class="lead hero-lead" data-mo="hero-item">Deska ze schowkiem na smakołyki. Chowasz nagrodę, pies drapie łapą — i przy okazji sam ściera pazury. Koniec szarpaniny przy obcinaniu.</p>
       <div class="hero-price" data-mo="hero-item" data-price>149,90 zł</div>
       <div class="hero-cta-row" data-mo="hero-item">
-        <a class="btn cta big block" data-checkout="drapek" href="#zamow">Zamawiam <span class="arr" aria-hidden="true">→</span></a>
+        <a class="btn cta big block pulse" data-checkout="drapek" href="#zamow">Zamawiam Drapka <span class="arr" aria-hidden="true">→</span></a>
       </div>
       <div class="hero-pay" data-mo="hero-item">
         <div class="pay-badges" aria-label="Dostępne metody płatności">
@@ -672,7 +704,8 @@
     </div>
 
     <div class="demo-cta-wrap reveal">
-      <a class="btn cta big" data-checkout="drapek" href="#zamow">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+      <a class="btn cta big" data-checkout="drapek" href="#zamow">Zamawiam Drapka <span class="arr" aria-hidden="true">→</span></a>
+      <p class="reassure-strip"><span>Płacisz przy odbiorze</span><span>Sprawdzasz przed zapłatą</span><span>14 dni na zwrot</span></p>
     </div>
 
     <noscript>
@@ -941,7 +974,9 @@
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10" opacity=".3"/><path d="M8 12.5l2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg> Wymienna czarna powierzchnia ścierna</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10" opacity=".3"/><path d="M8 12.5l2.5 2.5L16 9" stroke-linecap="round" stroke-linejoin="round"/></svg> Wysuwana szuflada i pętla</li>
         </ul>
-        <a class="btn cta big block" data-checkout="drapek" href="#zamow-checkout">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+        <p class="off-guarantee"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg><span><b>Kupujesz bez ryzyka.</b> Nie spodoba się — odsyłasz w 14 dni, oddajemy pełną kwotę.</span></p>
+        <a class="btn cta big block" data-checkout="drapek" href="#zamow">Zamawiam Drapka <span class="arr" aria-hidden="true">→</span></a>
+        <p class="microcopy after-cta">Po kliknięciu otwiera się bezpieczny formularz — najpierw adres, płatność wybierasz na końcu. <b>Nic nie płacisz teraz.</b></p>
         <div class="off-pay">
           <div class="pay-badges" aria-label="Dostępne metody płatności">
             <span class="pb pb--blik" title="BLIK"><svg viewBox="0 0 60 26" role="img" aria-label="BLIK"><rect width="60" height="26" rx="6" fill="#000"/><text x="30" y="18.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="15.5" font-weight="700" letter-spacing=".5" fill="#fff">blik</text><circle cx="49.5" cy="7.5" r="2.6" fill="url(#pbblikg3)"/><defs><linearGradient id="pbblikg3" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff4b9b"/><stop offset=".5" stop-color="#ffd23f"/><stop offset="1" stop-color="#3fe0c8"/></linearGradient></defs></svg></span>
@@ -1004,7 +1039,7 @@
       <span class="plus" aria-hidden="true">+</span>
       <p class="eyebrow" data-mo="final-item">Ostatni krok</p>
       <h2 class="h2" data-mo="final-item">Zamień napięcie przy pazurach w <span class="hi">zabawę</span> ze smakołykiem</h2>
-      <a class="btn cta big block final-cta" data-checkout="drapek" href="#zamow" data-mo="final-item">Zamawiam — zapłacę przy odbiorze <span class="arr" aria-hidden="true">→</span></a>
+      <a class="btn cta big block final-cta pulse" data-checkout="drapek" href="#zamow" data-mo="final-item">Zamawiam Drapka <span class="arr" aria-hidden="true">→</span></a>
       <div class="final-price" data-mo="final-item" data-price>149,90 zł</div>
       <p class="final-quote" data-mo="final-item">„Wreszcie obcinanie pazurów nie jest walką."</p>
       <div class="final-foot" data-mo="final-item">
@@ -1067,7 +1102,7 @@
     <img class="sb-thumb" src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/render/image/public/attachments/bud-assets/drapek/scenes/oferta.webp?width=120&quality=80&resize=contain" width="120" height="120" loading="lazy" alt="Drapek">
     <div class="sb-info">
       <div class="sb-price">Drapek · <b data-price>149,90 zł</b></div>
-      <div class="sb-sub">BLIK · karta · za pobraniem — 14 dni na zwrot</div>
+      <div class="sb-sub"><span class="sb-pays" aria-label="Płatność BLIK, kartą lub za pobraniem"><svg class="sbp" viewBox="0 0 60 26" aria-hidden="true"><rect width="60" height="26" rx="6" fill="#000"/><text x="30" y="18.5" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-size="15.5" font-weight="700" fill="#fff">blik</text><circle cx="49.5" cy="7.5" r="2.6" fill="#ff4b9b"/></svg><svg class="sbp" viewBox="0 0 40 14" aria-hidden="true"><text x="0" y="12" font-family="Arial,Helvetica,sans-serif" font-size="13.5" font-weight="800" font-style="italic" fill="#1A1F71" letter-spacing=".5">VISA</text></svg><svg class="sbp" viewBox="0 0 36 22" aria-hidden="true"><circle cx="14" cy="11" r="9" fill="#EB001B"/><circle cx="22" cy="11" r="9" fill="#F79E1B"/><path d="M18 4.2a8.9 8.9 0 0 1 0 13.6 8.9 8.9 0 0 1 0-13.6z" fill="#FF5F00"/></svg></span> za pobraniem · 14 dni na zwrot</div>
     </div>
     <a class="btn cta" data-checkout="drapek" href="#zamow">Zamawiam</a>
   </div>
@@ -1367,6 +1402,10 @@
   var tWait=0;var tIv=setInterval(function(){tWait+=300;if(window.trevio){clearInterval(tIv);trevioViewItem();return;}if(tWait>=4500)clearInterval(tIv);},300);
   document.addEventListener('click',function(ev){
     var el=ev.target&&ev.target.closest?ev.target.closest('[data-checkout]'):null;if(!el)return;
+    // pixel-guard: ATC/IC palimy TYLKO gdy przycisk realnie wychodzi na checkout (href zhydratowany
+    // do URL platformy) — nie przy martwym kliknięciu-scrollu do #zamow (inaczej fałszywe eventy pomiaru)
+    var _href=(el.getAttribute&&el.getAttribute('href'))||'';
+    if(_href.charAt(0)==='#'||!/^https?:/i.test(_href))return;
     fbqSafe('AddToCart');fbqSafe('InitiateCheckout');
     if(window.trevio){var item=trevioItem();item.quantity=1;try{window.trevio.addToCart({currency:state.currency,productId:item.productId,name:item.name,price:item.price,quantity:1});}catch(e){}try{window.trevio.beginCheckout({currency:state.currency,total:item.price,items:[item]});}catch(e){}}
   },true);

@@ -141,6 +141,10 @@
   document.addEventListener('click', function (ev) {
     var el = ev.target && ev.target.closest ? ev.target.closest('[data-checkout]') : null;
     if (!el) return;
+    // pixel-guard (Tomek 18.07): ATC/IC palimy TYLKO gdy przycisk realnie wychodzi na checkout
+    // (href zhydratowany do URL platformy), NIE przy kliknięciu-scrollu do #zamow (fałszywe eventy)
+    var _href = (el.getAttribute && el.getAttribute('href')) || '';
+    if (_href.charAt(0) === '#' || !/^https?:/i.test(_href)) return;
     fbqSafe('AddToCart');
     fbqSafe('InitiateCheckout');
     if (window.trevio) {

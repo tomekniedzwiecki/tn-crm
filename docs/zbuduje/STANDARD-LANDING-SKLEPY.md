@@ -772,8 +772,9 @@ proof liczbowy. ★ i „N ocen" TYLKO w: sekcji opinii, karcie oferty #zamow, f
 | COD-strip | narracja 1-2-3 (proces, nie badge) |
 | OFERTA | lista „co dostajesz" + pay-badges bez powtórek mikrocopy |
 | FINAL | jedyne pełne zdanie płatności + mini-opinia |
-| sticky | skrót „BLIK · karta · za pobraniem — 14 dni na zwrot" |
-Gate: policz wystąpienia „14 dni"/„pobranie"/„BLIK" per sekcja.
+| sticky | **LOGO** BLIK/Visa/MC (⛔ nie nazwy tekstem) + „za pobraniem · 14 dni na zwrot" |
+Gate: policz wystąpienia „14 dni"/„pobranie"/„BLIK" per sekcja. **Pay-badges = LOGO (SVG), nie nazwy
+tekstowe** — także w sticky-buy (Tomek 18.07): „BLIK · karta" jako tekst → podmień na SVG logo.
 
 **⛔ HERO CHIP = TYLKO DESKTOP (Tomek 18.07):** floating chip zaufania w hero (`position:absolute`,
 róg sceny) **NIGDY na mobile** — zasłania scenę/wideo hero nad foldem. Mobilny breakpoint MUSI mieć
@@ -781,8 +782,30 @@ róg sceny) **NIGDY na mobile** — zasłania scenę/wideo hero nad foldem. Mobi
 i w rzędzie pod CTA (pay-badges + „14 DNI NA ZWROT") — nie jako nakładka na obraz. Incydent Drapek:
 chip „Płacisz przy odbiorze" przykrywał hero-wideo na 390px.
 
-**CTA**: jedno działanie ×3-4 (hero/po dowodzie/finał/sticky); „Zamawiam — zapłacę przy
-odbiorze"; mikrocopy: „Płatność przy odbiorze · 14 dni na zwrot · Wysyłka pod Twój adres".
+**CTA — WIDOCZNOŚĆ + SKUTECZNOŚĆ (rev. Tomek 18.07 — analiza CRO + Shopify/DTC):**
+- **Copy action-first, ⛔ NIGDY COD na przycisku:** „Zamawiam <Produkt>" (1. os. + nazwa = poczucie
+  własności, spójny czasownik na WSZYSTKICH przyciskach). „zapłacę przy odbiorze"/„za pobraniem" jako
+  tekst przycisku = ZAKAZ — COD to ważna informacja, ale schodzi do mikrocopy/reassure POD przyciskiem.
+- **Design (kanoniczny `.btn.cta` — jedna zmiana → wszystkie landingi):** akcent na kremie/ciepłym
+  zdjęciu ma mieć kontrast ≥3:1 (WCAG 1.4.11). Sam token `--cta` bywa za jasny → kamuflaż („przycisk
+  harmonizuje zamiast dominować"). `.btn.cta` dostaje **GRADIENT z głębszym dołem** + **cień CIEPŁO-
+  BRĄZOWY** (nie akcent-glow — unosi z tła) + inset highlight + hairline. Tekst ciemny (biały na amber
+  ≈2.5:1 = WCAG FAIL). ⛔ **NIE zmieniać samego tokena** `--cta` (dzielą go swash `.hi`, węzły demo, FAQ).
+- **Efekty (clinical-warmth):** hover-lift+cień, sheen-sweep (`::after`, ~.7s), arrow-nudge,
+  `:focus-visible`; idle „breathing" = puls SAMEGO cienia (3.4s, klasa `.pulse` TYLKO hero+final,
+  `prefers-reduced-motion`). ⛔ zakaz: heartbeat/szybki puls, neon-glow, flip koloru, migotanie (tandeta).
+- **reassure-strip pod KAŻDYM samodzielnym CTA** (poza hero/oferta/final z pełnym rzędem pay-badges):
+  rząd redukcji ryzyka „Płacisz przy odbiorze · Sprawdzasz przed zapłatą · 14 dni" (wariacja anty-dup).
+  Incydent Drapek: CTA w demo stał goły — najsłabsze ogniwo dla persony scam-lęk.
+- **OFERTA #zamow:** gwarancja jako JAWNE zdanie risk-reversal („Kupujesz bez ryzyka — nie spodoba się,
+  odsyłasz w 14 dni, oddajemy pełną kwotę"), nie tylko badge; + mikrocopy „co po kliknięciu" pod CTA
+  („bezpieczny formularz — najpierw adres, płatność na końcu; nic nie płacisz teraz") — odczarowuje lęk
+  przed checkoutem nieznanego sklepu.
+- **Desktop re-CTA:** sticky-buy jest mobile-only → na desktopie po klastrze dowodu (opinie/korzyści)
+  wstaw inline-CTA/pas — inaczej ~6 sekcji jedzie bez przycisku (martwa strefa; sticky nie łata desktopu).
+- **PIXEL-GUARD (runtime):** listener `[data-checkout]` pali `AddToCart`/`InitiateCheckout` **TYLKO gdy
+  href realnie wychodzi na checkout** (URL platformy zhydratowany), NIE przy kliknięciu-scrollu do
+  `#zamow` (inaczej fałszywe eventy pomiaru na każdym CTA). Reguła w `landing-runtime-snippet`.
 
 **PŁATNOŚCI**: pełen wachlarz (BLIK/karta/COD) — COD jako główny risk-reversal w narracji,
 nie jedyna forma. Pokazujemy TYLKO metody realnie dostępne w checkoucie platformy.
