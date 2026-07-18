@@ -68,6 +68,14 @@
         /* mini-pasek postępu produktu */
         .pp-bar { height:4px; border-radius:2px; background:#27272a; overflow:hidden; }
         .pp-bar > div { height:100%; background:#0070f3; border-radius:2px; }
+        /* tooltip macierzy (fixed — nie tnie go overflow-x tabeli) */
+        #mx-tooltip { position:fixed; z-index:120; background:#111; border:1px solid #333; border-radius:6px;
+            padding:9px 11px; font-size:11.5px; line-height:1.45; color:#e5e5e5; max-width:280px;
+            pointer-events:none; box-shadow:0 8px 24px rgba(0,0,0,.55); display:none; }
+        #mx-tooltip .tt-title { color:#fff; font-weight:600; font-size:12px; }
+        #mx-tooltip .tt-desc { color:#a1a1aa; margin-top:3px; font-size:11px; }
+        .mx-head { display:flex; flex-direction:column; align-items:center; gap:2px; cursor:help; padding:2px 0; }
+        .mx-head:hover i { color:#52a8ff; }
         /* kafle artefaktów w drawerze */
         .art-tile { position:relative; display:block; border:1px solid #2a2a2a; border-radius:6px; overflow:hidden; background:#111; }
         .art-tile img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
@@ -236,6 +244,9 @@
     <div id="lightbox" class="hidden fixed inset-0 z-[90] bg-black/85 flex items-center justify-center p-6" onclick="closeLightbox()">
         <img id="lightbox-img" class="max-w-full max-h-full rounded-lg border border-[#333]" alt="">
     </div>
+
+    <!-- Tooltip nagłówków/komórek macierzy -->
+    <div id="mx-tooltip"></div>
 
     <!-- Modal: dodawanie produktów — LOSOWANIE z zatwierdzonych albo ręczny wybór -->
     <div id="picker-modal" class="hidden fixed inset-0 z-[55] flex items-center justify-center bg-black/70 p-4" onclick="if(event.target===this)closePicker()">
@@ -487,6 +498,35 @@
         function openLightbox(url) { if (!url) return; document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.remove('hidden'); }
         function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); }
 
+        // ── tooltip macierzy: delegacja na [data-tip-title]; fixed → nie tnie go overflow tabeli ──
+        (function () {
+            const tt = () => document.getElementById('mx-tooltip');
+            document.addEventListener('mouseover', (ev) => {
+                const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
+                if (!el) return;
+                const box = tt(); if (!box) return;
+                const sub = el.dataset.tipSub || '', desc = el.dataset.tipDesc || '';
+                box.innerHTML = `<div class="tt-title">${escapeHtml(el.dataset.tipTitle)}</div>`
+                    + (sub ? `<div class="text-[10px] text-[#52a8ff] mt-0.5">${escapeHtml(sub)}</div>` : '')
+                    + (desc ? `<div class="tt-desc">${escapeHtml(desc)}</div>` : '');
+                box.style.display = 'block';
+                const r = el.getBoundingClientRect(), bw = box.offsetWidth, bh = box.offsetHeight;
+                let x = r.left + r.width / 2 - bw / 2;
+                x = Math.max(8, Math.min(x, window.innerWidth - bw - 8));
+                let y = r.bottom + 8;
+                if (y + bh > window.innerHeight - 8) y = r.top - bh - 8;
+                box.style.left = x + 'px'; box.style.top = Math.max(8, y) + 'px';
+            });
+            document.addEventListener('mouseout', (ev) => {
+                const el = ev.target && ev.target.closest ? ev.target.closest('[data-tip-title]') : null;
+                if (!el) return;
+                if (ev.relatedTarget && el.contains(ev.relatedTarget)) return;   // ruch wewnątrz elementu
+                const box = tt(); if (box) box.style.display = 'none';
+            });
+            // klik (mobile/otwarcie drawera) chowa tooltip
+            document.addEventListener('click', () => { const box = tt(); if (box) box.style.display = 'none'; }, true);
+        })();
+
         async function checkAuth() {
             const { data: { session } } = await supabaseClient.auth.getSession();
             if (!session) { window.location.href = Sidebar.getLoginPath(); return null; }
@@ -704,8 +744,21 @@
 
         function renderMatrix(prodDefs) {
             document.getElementById('portfolio-count').textContent = products.length ? `(${products.length}/${PORTFOLIO_TARGET})` : '';
+            // nagłówki kroków: DUŻA ikona + numer kolejności; szczegóły (nazwa, właściciel,
+            // kamień, skrót opisu z WS) w tooltipie po najechaniu — 9px podpisy były nieczytelne
+            // (feedback Tomka 18.07)
             const head = ['<th class="px-3 py-2.5">Produkt</th>', '<th class="px-3 py-2.5">Status</th>', '<th class="px-3 py-2.5 text-right">Zysk/szt.</th>', '<th class="px-3 py-2.5 min-w-[90px]">Postęp</th>']
-                .concat(prodDefs.map(d=>`<th class="px-2 py-2.5 text-center" title="${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}"><i class="ph ${escapeHtml(d.icon)} text-sm"></i><div class="text-[9px] normal-case mt-0.5 max-w-[64px] mx-auto leading-tight">${escapeHtml(d.label)}</div></th>`))
+                .concat(prodDefs.map((d, i) => {
+                    const desc = (WS[d.key] && WS[d.key].desc) ? String(WS[d.key].desc) : '';
+                    const short = desc.length > 140 ? desc.slice(0, 140).replace(/\s+\S*$/, '') + '…' : desc;
+                    return `<th class="px-2 py-1.5 text-center"><div class="mx-head"
+                        data-tip-title="${i+1}. ${escapeHtml(d.label)}${d.milestone_label ? ' 🏁' : ''}"
+                        data-tip-sub="${OWNER_LABEL[d.owner] || ''}${d.milestone_label ? ' · kamień: ' + escapeHtml(d.milestone_label) : ''}"
+                        data-tip-desc="${escapeHtml(short)}">
+                        <i class="ph ${escapeHtml(d.icon)} text-xl text-zinc-300"></i>
+                        <span class="text-[9.5px] font-mono text-zinc-500">${i+1}</span>
+                    </div></th>`;
+                }))
                 .concat(['<th class="px-3 py-2.5"></th>']);
             document.getElementById('matrix-head').innerHTML = head.join('');
             document.getElementById('matrix-empty').classList.toggle('hidden', products.length > 0);
@@ -719,7 +772,11 @@
                 const cells = prodDefs.map(d => {
                     const st = stepFor(d.key, p.id) || { status:'pending' };
                     const icon = st.status==='done' ? 'ph-check' : st.status==='in_progress' ? 'ph-circle-half' : st.status==='skipped' ? 'ph-minus' : st.status==='blocked' ? 'ph-x' : 'ph-circle';
-                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}" title="${escapeHtml(d.label)}: ${STEP_LABELS[st.status]} — klik otwiera warsztat" onclick="openStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
+                    return `<td class="px-2 py-2"><div class="mx-cell mx-${st.status}"
+                        data-tip-title="${escapeHtml(d.label)}"
+                        data-tip-sub="${escapeHtml(p.name || '')} · ${STEP_LABELS[st.status]}"
+                        data-tip-desc="klik otwiera warsztat kroku"
+                        onclick="openStep('${d.key}', '${p.id}')"><i class="ph ${icon} text-[13px]"></i></div></td>`;
                 }).join('');
                 const cover = p.cover_url ? `<img src="${escapeHtml(p.cover_url)}" class="w-9 h-9 rounded-lg object-cover flex-shrink-0 cursor-pointer" onclick="openCard('${p.id}')" onerror="this.style.display='none'" title="Karta produktu">` : `<div class="w-9 h-9 rounded-lg bg-zinc-800 flex items-center justify-center flex-shrink-0 cursor-pointer" onclick="openCard('${p.id}')"><i class="ph ph-package text-zinc-600"></i></div>`;
                 return `<tr class="border-b border-[#1f1f1f] hover:bg-white/[.02]">
