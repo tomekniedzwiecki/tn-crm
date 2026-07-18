@@ -10,9 +10,12 @@ Panel `tn-sklepy/projekt.html` przebudowany OD ZERA na wzór `tn-app/projekt.htm
 Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje przesiane).
 
 - **NOWA STRUKTURA ETAPÓW (6; korekta 18.07 wieczór — Etap 1 = „Fundament sklepu"):**
-  **1 Fundament sklepu** (marka 🏁 [project] + pl_domena 🏁 [project, PRZENIESIONA z Etapu 3 —
-  tor domeny: zakup LH.pl → DNS → propagacja 24-48 h → weryfikacja w Meta BM to najdłuższa
-  ścieżka projektu, MUSI biec równolegle do landingów] + wybor 🏁 [product])
+  **1 Fundament sklepu** (kolejność wg decyzji Tomka 18.07 wieczór, migracja
+  `20260718h_wf2_etap1_kolejnosc`: **wybor 🏁 [product] → marka 🏁 [project] → pl_domena 🏁**
+  — marka RUSZA PO wyborze produktów, portfel jest kontekstem nazwy; pusty portfel = baner
+  „Dobierz portfel" zamiast kroku. pl_domena PRZENIESIONA z Etapu 3 — tor domeny: zakup
+  LH.pl → DNS → propagacja 24-48 h → weryfikacja w Meta BM to najdłuższa ścieżka projektu,
+  MUSI biec równolegle do landingów)
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
