@@ -159,21 +159,24 @@ jedyna furtka. Furtka „dryf PRODUKTU = cecha metody" NIE ISTNIEJE.
 **⛔ ZASADA NADRZĘDNA PROMPTU (feedback Tomka 18.07 — źródło losowego dryfu produktu):**
 **Prompt NIGDY nie opisuje, JAK produkt wygląda — opisuje TYLKO wizję sceny** (co się dzieje, gdzie,
 światło, emocja, kompozycja, kadr). Wygląd produktu definiuje **WYŁĄCZNIE referencja** (`image[0]`
-packshot) + `input_fidelity:high` + prefix generate-image „Image 1 = EXACT product, reproduce
-unchanged, change ONLY the scene". Słowny opis cech w prompcie („flat thin board", „wooden edge
-2-3 cm", „add black loop, NOT metal") **KONKURUJE z referencją i sprowadza generację na złe tory** —
-model interpretuje SŁOWA zamiast odwzorować OBRAZ, stąd „raz produkt 1:1, raz inny". Cechy paszportu
-służą WYŁĄCZNIE do WERYFIKACJI po generacji (gate F3A), **NIGDY jako tekst promptu**. Generacja
-bezpośrednia (agent woła OpenAI z pominięciem generate-image) MUSI powtórzyć ten sam prefix + wysłać
-`input_fidelity:high` + trzymać prompt czysto scenowy — inaczej omija zabezpieczenie edge.
+packshot) + prefix generate-image „Image 1 = EXACT product, reproduce unchanged, change ONLY the
+scene". Słowny opis cech w prompcie („flat thin board", „wooden edge 2-3 cm", „add black loop, NOT
+metal") **KONKURUJE z referencją i sprowadza generację na złe tory** — model interpretuje SŁOWA
+zamiast odwzorować OBRAZ, stąd „raz produkt 1:1, raz inny". Cechy paszportu służą WYŁĄCZNIE do
+WERYFIKACJI po generacji (gate F3A), **NIGDY jako tekst promptu**. Generacja bezpośrednia (agent woła
+OpenAI z pominięciem generate-image) MUSI powtórzyć ten sam prefix + trzymać prompt czysto scenowy.
+⚠️ **`input_fidelity` NIE dla gpt-image-2** (§3 / korekta 17.07 — HTTP 400 `invalid_input_fidelity_model`;
+parametr istnieje tylko na gpt-image-1). Na gpt-image-2 (model fabryki) wierność płynie z referencji +
+prefiksu + czystego promptu — **walidacja A/B 18.07 to potwierdziła: sam czysty prompt (bez opisu cech)
+dał produkt WIERNIEJSZY** niż prompt opisowy (benefit: przywrócona linia wymiennego panelu, którą opis
+słowny zgubił). Czysty prompt jest też ODPORNIEJSZY (brak kruchych fraz „flat thin board, NOT box" do utrzymania).
 
 **🪜 DRABINA REGENERACJI → ESKALACJA (do skutku, max 3 rundy):**
-NIEZGODNA → regeneracja **NIE przez dopisanie słownego opisu cechy**, lecz przez: (1) **`input_fidelity:
-high`** (wymuś trzymanie referencji — generate-image robi to od 18.07); (2) **czystszy/inny realny
-packshot jako ref**, na którym cecha (która FAILowała) jest wyraźnie widoczna — referencja niesie
-cechę, nie słowa; (3) **poprawę WIZJI SCENY**, jeśli kadr przesłania cechę lub wymusza zły kąt
-(np. „side loop visible in frame" jako element KOMPOZYCJI sceny, nie opis produktu). Po **3 rundach**
-bez ZGODNA → **ESKALACJA** (wybierz, zapisz w LEDGER):
+NIEZGODNA → regeneracja **NIE przez dopisanie słownego opisu cechy**, lecz przez: (1) **czystszy/inny
+realny packshot jako ref**, na którym cecha (która FAILowała) jest wyraźnie widoczna — referencja niesie
+cechę, nie słowa; (2) **poprawę WIZJI SCENY**, jeśli kadr przesłania cechę lub wymusza zły kąt (np.
+„side loop visible in frame" jako element KOMPOZYCJI sceny, nie opis produktu); (3) tylko na gpt-image-1
+(NIE -2) dołożyć `input_fidelity:high`. Po **3 rundach** bez ZGODNA → **ESKALACJA** (wybierz, zapisz w LEDGER):
 (a) inny **realny packshot** jako ref; (b) **crop-first** — wytnij produkt z realnego kadru
 zamiast generować; (c) **scena BEZ produktu** + realny `<img>` produktu na stronie
 (najbezpieczniejszy default dla produktów złożonych); (d) **nota do Tomka** (świadoma decyzja).

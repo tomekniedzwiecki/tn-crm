@@ -215,11 +215,12 @@ async function generateWithOpenAI(
     form.append('n', String(n))
     if (size !== 'auto') form.append('size', size)
     form.append('quality', quality)
-    // input_fidelity:high — zmusza model do TRZYMANIA referencji (produkt/logo/twarz z image[0]).
-    // Bez tego gpt-image reinterpretuje produkt „z pamieci" mimo prefiksu tekstowego — zrodlo
-    // losowego dryfu wygladu produktu (feedback Tomka 18.07: produkt raz 1:1, raz inny).
-    // Wierność wyglądu MUSI plynac z REFERENCJI, nie z opisu slownego w promptcie.
-    form.append('input_fidelity', 'high')
+    // UWAGA: gpt-image-2 NIE wspiera 'input_fidelity' (HTTP 400 invalid_input_fidelity_model —
+    // parametr istnieje tylko na gpt-image-1). Wierność produktu bierze się z: (a) referencji jako
+    // image[0], (b) prefiksu „reproduce unchanged, change only the scene", (c) CZYSTEGO promptu
+    // scenowego BEZ słownego opisu cech produktu (walidacja A/B 18.07: czysty prompt = wierniejszy
+    // od opisowego; opis cech w prompcie konkuruje z referencją i powoduje dryf). Gdyby model
+    // kiedyś wrócił do gpt-image-1 — wtedy dodać: form.append('input_fidelity','high').
     for (const rb of refBlobs) {
       form.append('image[]', rb.blob, rb.filename)
     }
