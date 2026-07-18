@@ -1,9 +1,12 @@
 """Sterownik fal.ai przez edge proxy bud-fal-proxy (klucz zostaje server-side).
 Uzycie modulowe albo CLI:
   python fal.py store <plik> <sciezka_docelowa>
-  python fal.py gen <model> <payload.json> <out_prefix>   # submit+poll+download
+  python fal.py gen <model> <payload.json> <out_prefix>   # submit+poll+download (BLOKUJACY, 1 job)
+  python fal.py batch <jobs.json> <outdir> [proj] [maxN]  # ROWNOLEGLE N jobow (submit-all->poll-all)
   python fal.py saldo                                     # realne saldo konta (op billing)
   python fal.py reclaim <outdir>                          # dociagnij OPLACONE joby po padzie
+ROWNOLEGLOSC: `gen()` jest sekwencyjny (1 klip = submit+poll+download naraz); dla WIELU niezaleznych
+generacji uzywaj `gen_batch()` (kolejka fal biegnie rownolegle do limitu konta) — NIE gen w petli.
 Ledger: C:/tmp/video-factory/ledger.json (kazdy submit z szacunkiem kosztu).
 BUDZET: est_usd to tylko orientacja (SeedVR2 liczony od MEGAPIKSELI — incydent 403 z 18.07);
 zrodlem prawdy jest balance()/preflight() przez op 'billing' proxy.
@@ -97,6 +100,103 @@ def gen(model, payload, tag=""):
         if time.time() - t0 > 900: raise RuntimeError("timeout 15 min")
     return _post({"op": "poll", "url": sub["response_url"]})
 
+def _extract_url_ext(res):
+    """URL wyniku + wlasciwe rozszerzenie z odpowiedzi response_url (video/images/audio).
+    Wspoldzielone przez gen_batch i reclaim (jedno miejsce mapowania typu -> ext)."""
+    url = ((res.get("video") or {}).get("url") or (res.get("images") or [{}])[0].get("url")
+           or (res.get("audio") or {}).get("url"))
+    ext = ".mp4" if res.get("video") else (".mp3" if res.get("audio") else ".png")
+    return url, ext
+
+def gen_batch(jobs, outdir=None, max_parallel=None, timeout_s=2400, poll_every=15, project=None):
+    """ROWNOLEGLA generacja wielu NIEZALEZNYCH jobow przez kolejke fal (submit-all -> poll-all ->
+    download). Uogolnienie wzorca render.render_scenes na DOWOLNE modele — zastepuje `gen()` w petli
+    (gen jest BLOKUJACY: submit+poll+download naraz => klipy leca sekwencyjnie). `gen()` zostaje bez
+    zmian dla pojedynczych generacji (BC).
+
+    jobs: lista {model, payload, tag} (tag = unikatowy identyfikator = nazwa pliku BEZ rozszerzenia).
+    Zwraca:
+      - outdir podany -> {tag: sciezka}  (pobrane outdir/<tag>.<ext>; ext z wyniku: video->.mp4 /
+        audio->.mp3 / obraz->.png). Joby FAILED: plik outdir/<tag>.failed z trescia bledu.
+      - outdir=None   -> {tag: wynik_dict} (surowe odpowiedzi response_url; download po stronie wolajacego —
+        potrzebne gdy num_images>1 albo wlasne nazwy plikow, np. genframes).
+    max_parallel: gorny limit jobow W LOCIE (submitted-niepobranych). None = submit WSZYSTKO naraz
+      (kolejka fal i tak dyspozycjonuje do limitu konta; nadmiar czeka IN_QUEUE ZA DARMO — submit nie
+      dostaje 429). Ustaw na WSPOLDZIELONYM koncie, by nie zaglodzic drugiej sesji: okno PRZESUWNE
+      (nowy job wchodzi gdy zwolni sie slot), nie sztywne fale.
+    project: prefiks izolacji budzetu w ledgerze (analog set_project / render_scenes tag_full) — KAZDY
+      job = OSOBNY wpis. Przy 2 sesjach naraz na wspoldzielonym koncie UZYJ ROZNYCH project, inaczej
+      ledger miesza koszty po tagu (saldo licz i tak przez balance(), nie sume est_usd).
+    Odpornosc (jak gen/render): blip HTTP/sieci NIE spisuje OPLACONEGO joba — 4 bledy Z RZEDU per job
+      = .failed (dociagalny: `fal.py reclaim <outdir>` z response_url w ledgerze). timeout_s = deadline batcha.
+    """
+    if outdir: os.makedirs(outdir, exist_ok=True)
+    backlog = list(jobs)
+    active, done, fails = {}, {}, {}
+    t0 = time.time()
+
+    def _fail(tag, msg):
+        if outdir: open(os.path.join(outdir, str(tag) + ".failed"), "w", encoding="utf-8").write(str(msg)[:500])
+        else: done[tag] = {"error": str(msg)[:500]}
+
+    def _submit(job):
+        tag, model, payload = job["tag"], job["model"], job.get("payload", {})
+        est = COST.get(model, lambda p: 0)(payload)
+        try:
+            sub = _post({"op": "submit", "model": model, "payload": payload})
+        except Exception as e:
+            sub = {"error": repr(e)[:300]}
+        if not sub.get("request_id"):
+            _fail(tag, sub); return
+        led_tag = f"{project}_{tag}" if project and not str(tag).startswith(project + "_") else tag
+        total = ledger_add({"ts": time.strftime("%Y-%m-%d %H:%M:%S"), "model": model, "tag": led_tag,
+                            "tag_full": led_tag, "request_id": sub["request_id"], "est_usd": round(est, 3),
+                            "response_url": sub.get("response_url")})
+        active[tag] = sub
+        print(f"[batch] submit {led_tag} rid={sub['request_id']} est=${est:.3f} total=${total:.2f} "
+              f"(active={len(active)} backlog={len(backlog)})", flush=True)
+
+    def _refill():
+        while backlog and (max_parallel is None or len(active) < max_parallel):
+            _submit(backlog.pop(0))
+
+    _refill()
+    while (active or backlog) and time.time() - t0 < timeout_s:
+        time.sleep(poll_every)
+        for tag in list(active):
+            job = active[tag]
+            try:
+                st = _post({"op": "poll", "url": job["status_url"] + "?logs=0"})
+                fails[tag] = 0
+            except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError) as e:
+                fails[tag] = fails.get(tag, 0) + 1
+                if fails[tag] < 4: continue
+                _fail(tag, f"poll 4x transient: {e}"); del active[tag]; continue
+            s = st.get("status")
+            if s == "COMPLETED":
+                try:
+                    res = _post({"op": "poll", "url": job["response_url"]})
+                    if outdir:
+                        url, ext = _extract_url_ext(res)
+                        if not url: raise RuntimeError(f"brak url w wyniku: {str(res)[:200]}")
+                        out = os.path.join(outdir, str(tag) + ext); download(url, out)
+                        done[tag] = out; print(f"[batch] DONE {tag} -> {out}", flush=True)
+                    else:
+                        done[tag] = res; print(f"[batch] DONE {tag} (raw)", flush=True)
+                except Exception as e:
+                    _fail(tag, f"download/fetch: {e}")
+                del active[tag]
+            elif s not in ("IN_QUEUE", "IN_PROGRESS"):
+                _fail(tag, st); del active[tag]
+        _refill()
+    # timeout: aktywne = OPLACONE ale niepobrane (dociagnij reclaim); backlog = nie zdazyl submit
+    for tag in list(active):
+        if outdir: open(os.path.join(outdir, str(tag) + ".timeout"), "w", encoding="utf-8").write("timeout batcha; fal.py reclaim")
+        else: done.setdefault(tag, {"error": "timeout (aktywny, dociagalny reclaim)"})
+    for job in backlog:
+        done.setdefault(job["tag"], {"error": "timeout (nie zdazyl submit)"})
+    return done
+
 def balance():
     """Realne saldo konta fal w USD (op 'billing' proxy; wymaga sekretu BUD_FAL_ADMIN_KEY na edge).
     To jest zrodlo prawdy budzetu — NIE suma est_usd z ledgera."""
@@ -127,10 +227,8 @@ def reclaim(outdir):
             res = _post({"op": "poll", "url": ru})
         except Exception as e:
             print(f"[reclaim] {tag}: {e}", flush=True); continue
-        url = ((res.get("video") or {}).get("url") or (res.get("images") or [{}])[0].get("url")
-               or (res.get("audio") or {}).get("url"))
+        url, ext = _extract_url_ext(res)
         if url:
-            ext = ".mp4" if res.get("video") else (".mp3" if res.get("audio") else ".png")
             got.append(download(url, base + ext)); print("[reclaim] saved:", base + ext, flush=True)
     return got
 
@@ -162,3 +260,12 @@ if __name__ == "__main__":
         if url:
             ext = ".mp4" if ".mp4" in url or res.get("video") else ".png"
             print("saved:", download(url, prefix + ext))
+    elif cmd == "batch":
+        # python fal.py batch <jobs.json> <outdir> [project] [max_parallel]
+        # jobs.json = lista {model, payload, tag}; download outdir/<tag>.<ext> ROWNOLEGLE.
+        jobs = json.load(open(sys.argv[2], encoding="utf-8"))
+        outdir = sys.argv[3]
+        proj = sys.argv[4] if len(sys.argv) > 4 else None
+        mp = int(sys.argv[5]) if len(sys.argv) > 5 else None
+        out = gen_batch(jobs, outdir=outdir, project=proj, max_parallel=mp)
+        print(json.dumps(out, ensure_ascii=False)[:800])
