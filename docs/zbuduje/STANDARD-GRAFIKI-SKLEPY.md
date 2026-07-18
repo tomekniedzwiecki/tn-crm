@@ -26,7 +26,8 @@ z dowodami, emisje do panelu przez `scripts/mockup-tools/panel-sync.py` (kontrak
 sam ból, ta sama obietnica, ten sam key visual (ujęcie produktu, paleta, wordmark z KARTY
 PRAWDY), ta sama oferta/cena. Hook grafiki = echo hero landingu; jeśli landing ma mapę
 `HOOKS={1..3}` (`?h=N`), kreacja danego kąta linkuje `?h=N` z hookiem pasującym do jej headline.
-CTA grafiki („Kup teraz") = pierwszy krok na landingu (zamów/COD). Dryf głosu/wizualu/obietnicy
+CTA kampanii (gdy pojawia się na grafice — „Kup teraz", element OPCJONALNY wg rev3) = pierwszy
+krok na landingu (zamów/COD). Dryf głosu/wizualu/obietnicy
 przy skali (3 dryfy z Motion) łapie KARTA PRAWDY + bramki — nie budujemy osobnej narracji reklamy.
 
 **ZG2 — 🖼️ WIERNOŚĆ PRODUKTU ŚWIĘTA (doktryna „edytuj prawdę").** Produkt na grafice = pikselowa
@@ -45,7 +46,8 @@ wariantów tej samej grafiki konkuruje o 1 slot) → dwie podobne kreacje = test
 Różnorodność jest MIERZONA (pHash pairwise, `ad-gate.py`) i bramkowana (ZG7/G5).
 
 **ZG4 — UCZCIWOŚĆ = KONWERSJA (rynek PL).** COD jako risk-reversal (badge „Płatność przy
-odbiorze" na 2/3 kreacji), zero fałszywej pilności/countdownów, zero zmyślonych liczb. **Każda
+odbiorze" — wg rev3 OPCJONALNY na grafice, dodawany tylko gdy wzmacnia kompozycję; domyślnie
+żyje w copy kampanii), zero fałszywej pilności/countdownów, zero zmyślonych liczb. **Każda
 liczba na grafice pochodzi WYŁĄCZNIE z danych produktu z kotwicą:** cena z `lp_dane.fields.cena_pl`,
 oceny/`review_stats` TYLKO gdy `ali_snapshot.source='detail'` (search-galeria = inny produkt).
 Brak twardej liczby = grafika obywa się bez niej (jakościowy komunikat), nigdy zmyślanie.
@@ -64,11 +66,13 @@ MUSI mieć wysoki kontrast do feedu — akcentu nie chować w pastelu.
 
 **ZG6 — TEKST-NA-GRAFICE = RYZYKO #1.** To defekt klasy #1 grafik (analog „pseudo-glifów"
 z wideo): AI miesza polskie diakrytyki i scramble'uje wyrazy. Reguły: renderuj TYLKO krótki
-tekst (headline **3–6 słów**, ≤~27 znaków; przycisk „Kup teraz"; opcjonalny badge ≤3 słowa),
-poprawna polszczyzna z diakrytykami, ZERO akapitów/fine-printu na grafice, tekst ≤~20% płótna
-(algorytm down-weightuje tekst-heavy mimo zniesienia formalnego limitu). **„Drop the badge
-rather than render broken letters"** — jak renderowany tekst byłby niepewny/połamany, zostaw
-sam headline + „Kup teraz", badge odpuść. Nigdy słowo z literówką/scramble. Egzekwuje bramka G4.
+tekst — przede wszystkim WIELKI hook/headline (**2–4 słowa**, do 6 dopuszczalne, ≤~27 znaków);
+przycisk „Kup teraz" i badge ≤3 słowa są OPCJONALNE (rev3 — tylko gdy wzmacniają kompozycję,
+minimalizm = premium), poprawna polszczyzna z diakrytykami, ZERO akapitów/fine-printu na grafice,
+tekst ≤~20% płótna (algorytm down-weightuje tekst-heavy mimo zniesienia formalnego limitu).
+**„Drop the badge rather than render broken letters"** — jak renderowany tekst byłby niepewny/
+połamany, zostaw SAM WIELKI hook, resztę napisów (badge/pigułkę/checkmarki) odpuść. Nigdy słowo
+z literówką/scramble. Egzekwuje bramka G4.
 
 **ZG7 — BRAMKI ROZSTRZYGAJĄ, NIE AUTOR (dowody, nie deklaracje).** Jakość grafiki potwierdza
 DOWÓD-PLIK (side-by-side, miniatura @320px, raport pHash), nie zdanie operatora „wygląda dobrze".
@@ -129,7 +133,8 @@ referencja produktu jako OBIEKT · [T] logo + paleta + landing URL dostępne. Kt
 **Cel:** 3 briefy = 3 koncepcyjnie różne byty, każdy zakotwiczony w prawdziwych bólach.
 **Kroki:** dla każdego z kątów `demo` / `problem` / `proof` otwórz właściwy playbook
 (`ad-playbooks/PLAYBOOK-ad-<angle>.md`) i wypisz: rolę/hook (echo hero landingu; hooki z
-`lp_plan` jeśli są), headline PL 3–6 słów, badge (TYLKO prawdziwy), primary_text 2–3 zdania,
+`lp_plan` jeśli są), WIELKI hook/headline PL 2–4 słowa (do 6), badge (TYLKO prawdziwy, OPCJONALNY
+na grafice), primary_text 2–3 zdania,
 rolę produktu w kompozycji (ZG8 — dla `problem` produkt POZA strefą bólu). Brief = INTENCJA +
 REFERENCJE-OBRAZY + ZAKAZY, bez recytacji anatomii (ZG2).
 **Bramka G1 (T/N):** [T] 3 różne kąty · [T] każdy headline ≤6 słów, PL, korzyściowy · [T] brief
@@ -177,7 +182,7 @@ domyślnego zestawu 4:5 skrypt NIE liczy marginesu ani kontrastu) + odczyt agent
 pseudo-glifów/scramble; diakrytyki poprawne (Read grafiki + porównanie z `campaign.json`) ·
 [T] tekst i logo ≥8% od krawędzi (nic przyciętego) · [T] kontrast tekst/tło ≥4.5:1 · [T] tekst
 ≤~20% płótna · [T] JEDNA obietnica na grafikę. FAIL tekstu → regeneracja LUB fallback ZG6
-(zostaw sam headline + „Kup teraz", drop badge). → dowód: `dowody/ad_<n>_<angle>_320.png` +
+(zostaw SAM WIELKI hook, drop badge/pigułkę/checkmarki). → dowód: `dowody/ad_<n>_<angle>_320.png` +
 `dowody/report.json`.
 
 ### G5 — BRAMKA POLITYKI + RÓŻNORODNOŚCI
@@ -246,11 +251,17 @@ Tekst i logo POZA strefami (edge-to-edge = przycięty). `ad-gate.py` nakłada ov
 `*_916*` i flaguje treść/tekst w strefach ZASŁANIANYCH (góra/dół). Gdy fabryka wejdzie w 9:16 — produkować NATYWNIE
 (nie auto-crop): 4:5 gubi się do 9:16 (czarne pasy / ucięta góra-dół).
 
+**Rozdzielczość renderu (rev3):** 1080×1350 to KANONICZNA specyfikacja 4:5 Meta (minimum), ale
+renderujemy w wysokiej jakości — **min. 1350×1688 px, cel 1536×1920** — bo pliki idą do płatnych
+kampanii i detale/typografia muszą być ostre. Prompt `wf2-ads` żąda tego wprost.
+
 **Twarde limity:** max **30 MB**/obraz; tekst ≤~**20%** powierzchni (algorytm down-weightuje
-tekst-heavy); headline **3–6 słów** ≤~27 znaków; JEDNA obietnica/grafikę; logo 8–12% wysokości,
-niecentralne (top-left / bottom-right). Anatomia zwycięskiej statyki (5–6 elementów ≈ 2× win-rate):
-hook nazywający ból/rezultat · jeden wizual rozstrzygalny w 0,5 s · JEDNA obietnica · dowód/USP
-jako główny wizual · CTA-czasownik („Kup teraz") · logo niecentralne.
+tekst-heavy); WIELKI hook/headline **2–4 słowa** (do 6), ≤~27 znaków; JEDNA obietnica/grafikę;
+logo 8–12% wysokości, niecentralne (top-left / bottom-right). Anatomia zwycięskiej statyki
+(elementy = tylko te, które realnie pracują — **minimalizm = premium wg rev3**, „im mniej
+elementów, tym drożej wygląda"): WIELKI hook nazywający ból/rezultat · jeden wizual rozstrzygalny
+w 0,5 s · JEDNA obietnica · dowód/USP jako główny wizual (proof) · **CTA-czasownik „Kup teraz"
+i badge = OPCJONALNE** (dodawaj tylko gdy wzmacniają kompozycję) · logo niecentralne.
 
 ---
 
@@ -343,7 +354,8 @@ jakość tekstu/layoutu; ZG9 rozstrzyga na rzecz jakości Manusa. Toru Gemini w 
 
 ## 7. CHECKLIST PRZED PUBLIKACJĄ (gate — wszystkie PASS)
 
-- [ ] 3 kreacje 4:5 (1080×1350), pliki `ad_<n>_<angle>.png`, ≤30 MB.
+- [ ] 3 kreacje 4:5 (kanon 1080×1350; render wysokorozdzielczy **min. 1350×1688**, cel 1536×1920 —
+      rev3), pliki `ad_<n>_<angle>.png`, ≤30 MB.
 - [ ] Wierność (G3): każda kreacja produktowa ZGODNA vs paszport, dwie pary oczu, dowód-plik.
 - [ ] Tekst (G4): zero scramble/pseudo-glifów, diakrytyki OK, @320px czytelny, safe-margin ≥8%.
 - [ ] Polityka (G5): zero personal attributes / before-after wellness / słów-triggerów / obcych
@@ -371,6 +383,18 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 
 ## CHANGELOG DECYZJI (G8)
 
+- **2026-07-19 — rev3 ART-DIRECTION PREMIUM** (feedback Tomka po 1. przebiegu: «fatalna jakość
+  vs stary flow»): wzorce przywrócone ze starego `manus-full-campaign` (Clean Hero / MIT vs FAKT /
+  Authority close-up), pigułki CTA i badge zdegradowane do opcjonalnych, minimalizm = premium,
+  wymóg wysokiej rozdzielczości (min. 1350×1688). Zasady uczciwości rev2 (kotwice liczb,
+  EMOCJA↔PRODUKT, personal attributes) bez zmian. Źródło prawdy DNA kątów = `buildAdsInstruction()`
+  w `wf2-ads`; playbooki `ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md` przepisane pod rev3
+  (demo: clean product hero + WIELKI hook 2–4 słowa na ciemnym/gradientowym tle, wzorzec „3 MINUTY.";
+  problem: split-screen MIT vs FAKT — panel bólu BEZ produktu, panel FAKT z produktem + 2–3
+  checkmarki; proof: authority/premium close-up detalu + JEDEN element zaufania). Sekcje FORMATY/
+  ZG4/ZG6 zsynchronizowane (CTA-pigułka i badge OPCJONALNE, fallback = sam WIELKI hook, render
+  w wysokiej rozdzielczości).
+
 - **2026-07-19 (v1.0 — powstanie SSOT + rev2 decyzji Tomka):** krok `ads_grafiki` podniesiony
   do pełnej fabryki na wzór landingów/wideo. **ZG9 „Manus albo nic"** (D2b): CAŁY tor fallback
   Gemini/gpt-5.1-copy wycięty z `wf2-ads`; awaria = kontrolowany 503 / `failed` + reset ręczny,
@@ -394,3 +418,11 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   się powtórzy. Obserwacja #3: kąt „problem" w stylu ilustracyjnym — produkt w strefie
   rozwiązania mniej wierny (skrytka z klockami zamiast karmy); bramka G3 ma to łapać,
   styl ilustracyjny NIE zwalnia z wierności skrytki/proporcji.
+
+- **2026-07-19 — lekcja G8 #2 (klasa: DIAKRYTYKI-WERSALIKI), przebieg rev3 Drapka (task
+  `ARoCy6ya4Rw6Xvdu2tvKhW`, ~10 min):** jakość klasy agencyjnej osiągnięta (Clean Hero /
+  split MIT-FAKT / Authority close-up, 1664×2080), ale silnik obrazowy Manusa GUBI polskie
+  znaki w WIELKICH literach („ZAMOWIEN.", „STARY SPOSOB") przy poprawnych małych literach.
+  Fix FABRYKI: twarda reguła w prompcie — samokontrola wizualna każdego napisu litera po
+  literze po wygenerowaniu; zgubiony znak = regeneracja / zapis zdaniowy. Bramka G4 ma
+  wersalikowe diakrytyki jako osobny punkt kontroli.

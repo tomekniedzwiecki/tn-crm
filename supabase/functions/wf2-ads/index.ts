@@ -126,8 +126,8 @@ function buildAdsInstruction(
     ? '„Płatność przy odbiorze" / „14 dni na zwrot" / „Hit z TikToka" / „Viralowy hit"'
     : '„Płatność przy odbiorze" / „14 dni na zwrot" / „Sprawdzony wybór"'
   const proofArt = fromTrendy
-    ? '- proof — VIRAL/SOCIAL: produkt-bohater na CIEMNYM/kontrastowym tle + wyrazista pieczęć „Hit z TikToka" / „Viralowy hit"; surowy socialowy vibe, skondensowana typografia. BEZ gwiazdek/liczb/fałszywych recenzji, BEZ interfejsu/logo TikToka.'
-    : '- proof — DOWÓD SPOŁECZNY / RISK-REVERSAL: produkt-bohater na CIEMNYM/kontrastowym tle, surowy socialowy vibe, skondensowana typografia; zamiast virala pieczęć „Sprawdzony wybór" i/lub badge „Płatność przy odbiorze". ZAKAZ „Hit z TikToka"/„Viralowy hit"/jakiegokolwiek claimu virala — produkt NIE pochodzi z radaru /trendy. BEZ gwiazdek/liczb/fałszywych recenzji, BEZ interfejsu/logo TikToka.'
+    ? '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Hit z TikToka". Typografia elegancka, dużo światła/oddechu. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.'
+    : '- proof — AUTHORITY / SOCIAL PROOF (premium): dramatyczny CLOSE-UP produktu (detal materiału/mechanizmu, płytka głębia, przemyślane światło) + JEDEN element zaufania złożony elegancko w kompozycję: prawdziwe liczby z sekcji „PRAWDZIWE LICZBY" (jeśli są) lub dyskretna pieczęć „Sprawdzony wybór". ZAKAZ „Hit z TikToka"/„Viralowy hit"/claimów virala — produkt NIE pochodzi z radaru /trendy. BEZ zmyślonych gwiazdek/recenzji, BEZ interfejsu/logo TikToka.'
   return `Jesteś full-stack marketerem DTC na rynek polski. Zrobisz KOMPLET ${nFiles} statycznych reklam-banerów na Facebook/Instagram dla jednoproduktowego sklepu (model dropshipping → własna marka, sprzedaż przez landing z PŁATNOŚCIĄ PRZY ODBIORZE / COD).
 
 🎯 PRODUKT — WIERNOŚĆ 1:1 (zasada święta):
@@ -145,22 +145,24 @@ ${priceInfo ? `- PRAWDZIWE LICZBY (używaj WYŁĄCZNIE tych, z kotwicą; zero zm
 ${repCtx}
 === ZADANIE 1: COPY (po jednym na kąt) ===
 Kąty: "demo" (demonstracja/„wow", mechanizm), "problem" (problem→rozwiązanie), "proof" (${proofDesc}).
-Dla każdego: angle, headline (3–6 słów, PL, renderowany na grafice, JEDNA obietnica), badge (≤3 słowa, TYLKO prawdziwy: ${badgeList}), primary_text (2–3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów").
+Dla każdego: angle, headline (2–6 słów, PL, to jest WIELKI hook renderowany na grafice, JEDNA obietnica), badge (≤3 słowa, TYLKO prawdziwy: ${badgeList} — do copy kampanii; na grafikę trafia tylko gdy wzmacnia kompozycję), primary_text (2–3 zdania, hak w 1. zdaniu, korzyść, lekkie CTA „Sprawdź"/„Zamów"; KAŻDY kąt zaczyna się INNYM zdaniem — zakaz powtarzania tego samego otwarcia).
 
 === ZADANIE 2: ${nFiles} KREACJI GRAFICZNYCH (najważniejsze) ===
 Wygeneruj DOKŁADNIE te pliki (każdy = inny kąt/format):
 ${fileList}
+⚠️ POZIOM JAKOŚCI: każda grafika ma wyglądać jak od DROGIEJ AGENCJI robiącej reklamy topowych marek D2C — kinematograficzne światło, przemyślana kompozycja, minimalizm. NIE „baner z generatora": im MNIEJ elementów, tym drożej to wygląda.
 ⚠️ RÓŻNORODNOŚĆ (test A/B): kąty to RÓŻNE reklamy — inny układ, inne tło/paleta, inny charakter typografii. Dwie podobne = test nic nie mierzy. Art-direction per kąt:
-- demo — FULL-BLEED AKCJA: produkt W AKCJI / mid-use wypełnia CAŁY kadr, dynamiczna diagonala, energia ruchu; headline na kontrastowym pasku; mały inset produktu solo dla wierności kształtu; paleta fotograficzna ze sceny — BEZ płaskiego bloku koloru. Najsilniejszy kadr „na zimno".
-- problem — PLAKAT DR, EMOCJA↔PRODUKT: pokaż BÓL / stary (nieudany) sposób BEZ NASZEGO PRODUKTU w strefie problemu (irytująca sytuacja, bałagan, frustracja). Nasz produkt pojawia się WYŁĄCZNIE w strefie rozwiązania/CTA jako „naprawa". Duży, gruby headline nazywający ból BEZOSOBOWO (ZAKAZ „Masz problem z…", „Wstydzisz się…" — personal attributes Meta). Płaskie tło w kolorze marki.
+- demo — CLEAN PRODUCT HERO + WIELKI HOOK: produkt-bohater dramatycznie oświetlony na ciemnym/gradientowym tle (premium look), nad nim WIELKI, gruby polski hook 2–4 słowa oddający mechanizm/„wow" (wzór klasy: „3 MINUTY."). Minimalizm — produkt + hook + logo, nic więcej. Może być subtelna sugestia akcji (użycie, efekt), ale kompozycja zostaje czysta.
+- problem — MIT vs FAKT / STARY SPOSÓB vs NASZ (split-screen, EMOCJA↔PRODUKT): dwa kontrastujące panele. Strona problemu: stary/nieudany sposób BEZ NASZEGO PRODUKTU (realistyczna, dokumentalna foto bólu/frustracji; etykieta np. „MIT:"/„STARY SPOSÓB"). Strona rozwiązania: nasz produkt w użyciu, jasne ciepłe światło, 2–3 krótkie checkmarki korzyści (etykieta „FAKT:"/nazwa marki). Headline BEZOSOBOWO (ZAKAZ „Masz problem z…", „Wstydzisz się…" — personal attributes Meta). Mocny kontrast wizualny obu stron.
 ${proofArt}${has916 ? `\n⚠️ FORMAT 9:16 (pliki *_916): trzymaj tekst i logo w SAFE-ZONES — góra 14%, dół 35%, boki 6% wolne od tekstu/CTA (inaczej UI Stories/Reels przytnie). Format 4:5 wypełnia kadr normalnie.` : ''}
 ZASADY GRAFIK:
-- Polski tekst poprawny (z diakrytykami), TYLKO krótki: headline (3–6 słów, JEDNA obietnica) + przycisk-pigułka „Kup teraz" (+ ewentualnie badge). Bez akapitów; tekst ≤~20% płótna.
-- „Kup teraz" jako element UI (pigułka), wysoki kontrast do tła; risk-reversal COD: badge „Płatność przy odbiorze" pasuje do problem/proof.
-- KOMPOZYCJA BLOKU TEKSTU (twarda): headline, badge i „Kup teraz" NIE MOGĄ na siebie nachodzić ani przycinać się nawzajem — zarezerwuj pionową przestrzeń na PEŁNY headline (obie linie!) ZANIM położysz pigułki; odstęp min. ~4% wysokości między headline a pigułkami. Jeśli brakuje miejsca: skróć headline do jednej linii albo odpuść badge — NIGDY nie nakładaj pigułki na litery. (Lekcja z 1. przebiegu: badge przykrył drugą linię headline.)
-- Logo w rogu 8–12% wysokości, niecentralne; branding spójny z landingiem.
-- Światło/nastrój wg art-direction danego kąta (NIE jedno oświetlenie na wszystkich); NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
-- Jeśli renderowany tekst byłby niepewny/zniekształcony: zostaw SAM headline + „Kup teraz", odpuść badge — nigdy połamanych/przekręconych liter.
+- ROZDZIELCZOŚĆ: renderuj w najwyższej dostępnej jakości, minimum 1350×1688 px dla 4:5 (celuj wyżej, np. 1536×1920) — pliki idą do płatnych kampanii, detale i typografia muszą być ostre.
+- Polski tekst poprawny (z diakrytykami) i OSZCZĘDNY: na grafice przede wszystkim WIELKI hook (2–6 słów, JEDNA obietnica); krótkie etykiety/checkmarki tylko tam, gdzie art-direction je przewiduje (split, proof). Przycisk/pigułka CTA i badge są OPCJONALNE — dodawaj tylko, gdy realnie wzmacniają kompozycję; tekst łącznie ≤~20% płótna.
+- ŻADNE elementy tekstowe nie mogą na siebie nachodzić ani się przycinać — każdy napis ma pełną, zarezerwowaną przestrzeń i oddech wokół siebie. Brakuje miejsca → usuń element, nigdy nie ściskaj.
+- Logo w rogu 8–12% wysokości, niecentralne (albo subtelnie na dole jak podpis marki); branding spójny z landingiem.
+- Światło/nastrój wg art-direction danego kąta (NIE jedno oświetlenie na wszystkich); premium dark pasuje do hero/proof, strona rozwiązania w split — jasna i ciepła; NIE białe studio na żadnej (wygląda jak Allegro); produkt 1:1 z referencji na każdej.
+- DIAKRYTYKI W WERSALIKACH (twarda): polskie znaki MUSZĄ przetrwać także w WIELKICH literach — „ZAMÓWIEŃ" nie „ZAMOWIEN", „SPOSÓB" nie „SPOSOB". Po wygenerowaniu KAŻDEJ grafiki OBEJRZYJ ją i sprawdź litera po literze każdy napis; zgubiony znak (Ó/Ń/Ś/Ż/Ą/Ę/Ł/Ć) = wygeneruj grafikę PONOWNIE albo zmień zapis (małe litery / inne słowo) — NIE oddawaj pliku z błędną polszczyzną.
+- Jeśli renderowany tekst byłby niepewny/zniekształcony: zostaw SAM hook, odpuść resztę napisów — nigdy połamanych/przekręconych liter.
 ZAKAZY (COD / polityka Meta 2026): zero zmyślonej pilności/countdownów; zero „dostawa 24h"/„magazyn w Polsce"; zero zmyślonych liczb/gwiazdek/recenzji (liczby TYLKO z sekcji „PRAWDZIWE LICZBY" wyżej); zero obcych logo; zero obietnic medycznych/wellness i before/after ciała; zero personal attributes (nie oskarżaj odbiorcy); bez cen na grafice o ile nie podano wyżej.
 
 === OUTPUT (KONIECZNIE) ===
