@@ -733,6 +733,178 @@ def check_layout_diff(res, M, ctx):
     else:
         res.add("layout", "LAYOUT-FAIL per sekcja", "PASS", "brak LAYOUT-FAIL")
 
+# ================================================================== F3A: GATE WIERNOSCI DO SKUTKU
+def parse_pipe_table(md, header_key):
+    """Zwraca (header_cells, [data_rows,...]) pierwszej tabeli markdown, ktorej
+       naglowek zawiera header_key w KTOREJKOLWIEK komorce (norm). Pomija separatory."""
+    rows = []
+    for ln in (md or "").splitlines():
+        s = ln.strip()
+        if s.startswith("|") and s.endswith("|"):
+            rows.append([c.strip() for c in s.strip("|").split("|")])
+    header = None; hi = -1
+    for i, r in enumerate(rows):
+        if r and any(header_key in norm(c) for c in r):
+            header = r; hi = i; break
+    if header is None:
+        for i, r in enumerate(rows):
+            if not all(re.fullmatch(r"[-:\s]*", c) for c in r):
+                header = r; hi = i; break
+    if header is None:
+        return (None, [])
+    data = []
+    for r in rows[hi+1:]:
+        if all(re.fullmatch(r"[-:\s]*", c) for c in r):
+            continue
+        data.append(r)
+    return (header, data)
+
+def count_paszport_features(paszport, marker, header_tokeny):
+    """K = liczba wierszy DANYCH tabeli pod naglowkiem zawierajacym marker
+       ('Cechy dyskryminujace'). None = brak PASZPORT; 0 = brak tabeli."""
+    if paszport is None:
+        return None
+    lines = paszport.splitlines()
+    start = None
+    for i, ln in enumerate(lines):
+        if marker.lower() in ln.lower():
+            start = i; break
+    if start is None:
+        return 0
+    k = 0; seen = False
+    for ln in lines[start+1:]:
+        s = ln.strip()
+        if s.startswith("#"):
+            if seen:
+                break
+            continue
+        if s.startswith("|") and s.endswith("|"):
+            cells = [c.strip() for c in s.strip("|").split("|")]
+            if all(re.fullmatch(r"[-:\s]*", c) for c in cells):
+                continue
+            if not seen and any(t in norm(cells[0]) for t in header_tokeny):
+                seen = True  # to jest wiersz naglowka tabeli — pomin
+                continue
+            seen = True
+            k += 1
+        elif seen and not s:
+            break
+    return k
+
+def check_wiernosc(res, M, ctx):
+    """F3A — GATE WIERNOSCI DO SKUTKU: kazda grafika produktowa uzyta w kodzie
+       ma wiersz w dopasowanie/WIERNOSC.md z werdyktem ZGODNA/REAL/ESKALACJA."""
+    m = M.get("wiernosc")
+    if not m:
+        res.add("wiernosc", "(config)", "SKIP", "brak wiernosc w manifescie")
+        return
+    sev = m["severity"]; arch = ctx["archiwum"]
+    # --- K z PASZPORT (tabela 'Cechy dyskryminujace')
+    paszport = read_text(os.path.join(arch, m.get("paszport", "PASZPORT.md").replace("/", os.sep)))
+    header_tokeny = m.get("cechy_header_tokeny", ["cecha"])
+    K = count_paszport_features(paszport, m.get("cechy_marker", "Cechy dyskryminuj"), header_tokeny)
+    if paszport is None:
+        res.add("wiernosc", "PASZPORT.md (cechy dyskryminujace)", status_for(False, sev), "brak PASZPORT.md")
+        K = 0
+    elif K == 0:
+        res.add("wiernosc", "PASZPORT.md tabela 'Cechy dyskryminujace'", "WARN",
+                "brak tabeli cech — retro-PASZPORT wymagany przy najblizszym dotknieciu")
+    else:
+        res.add("wiernosc", "PASZPORT.md tabela 'Cechy dyskryminujace'", "PASS", "K=%d cech" % K)
+    # --- grafiki produktowe uzyte w kodzie (URL-e), z wykluczeniami
+    tokens = [t.lower() for t in m.get("prod_path_tokens", [])]
+    excl = [t.lower() for t in m.get("wyklucz_tokeny", [])]
+    prod = {}
+    for u in ctx["urls"]:
+        ul = u.lower()
+        if any(x in ul for x in excl):
+            continue
+        if not any(t in ul for t in tokens):
+            continue
+        prod[url_asset_path(u)] = u
+    if not prod:
+        res.add("wiernosc", "(grafiki produktowe)", "SKIP", "brak grafik produktowych w kodzie")
+        return
+    # --- WIERNOSC.md
+    md = read_text(os.path.join(arch, m.get("md", "dopasowanie/WIERNOSC.md").replace("/", os.sep)))
+    if not md:
+        lst = ", ".join(sorted(os.path.basename(p) for p in prod)[:8])
+        res.add("wiernosc", "dopasowanie/WIERNOSC.md", status_for(False, sev),
+                "brak pliku — %d grafik produktowych bez dowodu wiernosci: %s" % (len(prod), lst))
+        return
+    header, drows = parse_pipe_table(md, "grafik")
+    ci_pass2 = col_idx(header, "pass2") if header else -1
+    ci_cech = col_idx(header, "cech") if header else -1
+    ci_rund = col_idx(header, "rund") if header else -1
+    ci_werd = col_idx(header, "wierno", "werdykt") if header else -1
+    wrx = re.compile(m["werdykt_regex"], re.I)
+    p2rx = re.compile(m.get("pass2_regex", "(TAK|NIE|OK)"), re.I)
+    p2lead = re.compile(m.get("pass2_lead_regex", "^\\s*(TAK|OK)"), re.I)
+    frx = re.compile(m.get("cecha_fail_regex", "\\bFAIL\\b"), re.I)
+    prx = re.compile(m.get("cecha_pass_regex", "\\bPASS\\b"), re.I)
+    rurx = re.compile(m.get("rundy_regex", "rund[ay]?\\D{0,4}(\\d+)"), re.I)
+    ledger_low = (ctx.get("ledger") or "").lower()
+    esc_toks = [t.lower() for t in m.get("eskalacja_ledger_tokeny", [])]
+    max_rundy = m.get("max_rundy", 3)
+    real_token = m.get("real_token", "REAL").upper()
+    for ap in sorted(prod):
+        stem = norm(os.path.splitext(os.path.basename(ap))[0])
+        row = None
+        for r in drows:
+            if stem and stem in norm(" ".join(r)):
+                row = r; break
+        if row is None:
+            res.add("wiernosc", os.path.basename(ap), status_for(False, sev), "brak wiersza w WIERNOSC.md")
+            continue
+        rowtext = " ".join(row)
+        werd_src = row[ci_werd] if (0 <= ci_werd < len(row)) else rowtext
+        wm = wrx.search(werd_src) or wrx.search(rowtext)
+        verdict = wm.group(1).upper() if wm else None
+        if verdict == real_token:
+            res.add("wiernosc", os.path.basename(ap), "PASS", "REAL (realny kadr, bez cech)")
+            continue
+        if verdict is None:
+            res.add("wiernosc", os.path.basename(ap), status_for(False, sev), "brak werdyktu WIERNOSC w wierszu")
+            continue
+        # cechy: PASS/FAIL (preferuj kolumne 'cech')
+        cech_cell = row[ci_cech] if (0 <= ci_cech < len(row)) else rowtext
+        n_fail = len(frx.findall(cech_cell))
+        n_pass = len(prx.findall(cech_cell))
+        # pass-2 (drugie oczy): lead TAK/OK w kolumnie, albo jawny marker w wierszu
+        if 0 <= ci_pass2 < len(row):
+            pass2 = bool(p2lead.match(row[ci_pass2]))
+        else:
+            pm = p2rx.search(rowtext)
+            pass2 = bool(pm) and pm.group(1).upper() in ("TAK", "OK", "ZGOD")
+        # rundy
+        if 0 <= ci_rund < len(row):
+            dm = re.search(r"\d+", row[ci_rund])
+            rundy = int(dm.group(0)) if dm else None
+        else:
+            rm = rurx.search(rowtext)
+            rundy = int(rm.group(1)) if rm else None
+        if verdict == "ZGODNA":
+            problems = []
+            if n_fail > 0:
+                problems.append("%d FAIL cech (PRODUKT niewaivable)" % n_fail)
+            if K and n_pass < K:
+                problems.append("PASS %d/%d < K" % (n_pass, K))
+            if not pass2:
+                problems.append("pass-2 (drugie oczy) != TAK")
+            if rundy is not None and rundy > max_rundy:
+                problems.append("rundy %d>%d bez ESKALACJA" % (rundy, max_rundy))
+            ok = not problems
+            res.add("wiernosc", os.path.basename(ap), status_for(ok, sev),
+                    ("ZGODNA (%d/%d cech, pass-2 TAK)" % (n_pass, K)) if ok
+                    else ("ZGODNA ODRZUCONA: " + "; ".join(problems)))
+        elif verdict == "ESKALACJA":
+            has_note = any(t in ledger_low for t in esc_toks)
+            res.add("wiernosc", os.path.basename(ap), status_for(has_note, sev),
+                    "ESKALACJA + nota LEDGER" if has_note else "ESKALACJA bez noty w LEDGER (wymagana)")
+        else:  # NIEZGODNA
+            res.add("wiernosc", os.path.basename(ap), status_for(False, sev),
+                    "NIEZGODNA — grafika niezgodna z produktem (petla regen/eskalacja niedomknieta)")
+
 # ================================================================== main
 def latest_archiwum(glob_tmpl, slug):
     pat = glob_tmpl.replace("{slug}", slug)
@@ -764,6 +936,7 @@ CHECK_ORDER = [
     ("ledger_fazy", check_ledger_fazy),
     ("werdykt_rubryka", check_werdykt_rubryka),
     ("layout_diff", check_layout_diff),
+    ("wiernosc", check_wiernosc),
 ]
 
 def main():

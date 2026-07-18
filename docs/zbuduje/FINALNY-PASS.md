@@ -75,6 +75,15 @@ per wystąpienie, zapisane do `dopasowanie/SEMANTYKA.md` (gate-check wymaga plik
    klientów" przy obcym UGC = kłamstwo; „realne zdjęcia" przy renderach = kłamstwo).
 Werdykt FAIL któregokolwiek pytania = naprawa + powtórka PASS 5 (pętla do czystej rundy).
 
+**🔗 KOMPLEMENTARNOŚĆ z F3A (GATE WIERNOŚCI DO SKUTKU, `GRAFIKA-Z-MAKIETY.md §4b`).** PASS 5 i F3A
+to DWA różne cięcia i oba są wymagane: **F3A działa PER GRAFIKA, PRZED kodem** (trójkąt grafika +
+tabela „Cechy dyskryminujące" paszportu + realny kadr Ali × dwie pary oczu — „czy ten render to
+TEN produkt, cecha-po-cesze?"; dowód `dopasowanie/WIERNOSC.md`). **PASS 5 działa na CAŁEJ stronie,
+PO kodzie** (podpisy↔obraz, tożsamość cross-section, autentyczność, dane, obietnice sekcji). F3A
+nie zwalnia z PASS 5, a PASS 5 nie zastępuje F3A — grafika wierna produktowi (F3A) może wciąż
+dostać zły podpis/rolę na stronie (PASS 5), a spójna strona może nieść grafikę z dryfem cechy,
+którego semantyka całości nie złapie.
+
 ## ZASADY
 - Porównujemy z REGUŁAMI (ta checklista + OBRAZY-ROLE + zakazy standardu), nie z makietą
   (makieta przeszła na etapie SSIM). Few-shot 2-3 przykłady dobrze/źle w promptach vision.

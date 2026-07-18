@@ -366,6 +366,16 @@ Pełny proces: `docs/zbuduje/SEKCJE-INTERAKTYWNE.md`.
    światło/człowiek/perspektywa}; asset spoza świata swojej karty = regeneracja.
 5. KAŻDA generacja obejrzana (Read) przed użyciem; wtopiony tekst/UI w tle = odrzut.
 
+**F3A — GATE WIERNOŚCI DO SKUTKU (bramka F3→F4; pełny proces: `GRAFIKA-Z-MAKIETY.md §4b`).**
+**Wejście do kodu (F4) jest ZABLOKOWANE, dopóki KAŻDA grafika produktowa (klasa S/P użyta
+w kodzie) nie ma werdyktu WIERNOŚĆ ∈ {ZGODNA, REAL, ESKALACJA+nota LEDGER} w
+`dopasowanie/WIERNOSC.md`.** Trójkąt (grafika + tabela „Cechy dyskryminujące" paszportu + realny
+kadr Ali) × DWIE niezależne pary oczu (pass-1 generator + pass-2 ŚWIEŻY Sonnet bez promptu
+i werdyktu-1; rozjazd = NIEZGODNA); **FAIL cechy PRODUKTU = NIGDY waivable**; dryf
+rekwizytu-nie-produktu tylko z notą LEDGER + zgodą obu par; pętla regen celowana w KONKRETNĄ
+cechę, max 3 rundy → eskalacja (ref / crop-first / scena bez produktu / nota Tomek). Egzekwuje
+`gate-check.py` (blok `wiernosc`; „brak wiersza / NIEZGODNA / ESKALACJA bez noty / rundy>3" = FAIL).
+
 **F4 — KOD (gpt-5.6-sol).** Szkielet-kontrakt z najnowszego wzorca (head: canonical/OG/
 noindex `{{CANONICAL_URL}}`, JSON-LD @graph, JEDEN exec-script: pixel `{{PIXEL_ID}}`
 VC/ATC/IC + link decoration + HOOKS + sticky IO + wideo autoplay-on-visible; lightboxy;
@@ -465,7 +475,7 @@ LAYOUT-FAIL blokuje. Werdykt vision w DOPASOWANIE.md musi być **RUBRYKĄ 5×T/N
 KODOWEJ (`bez wpływu`, `pomijalne`, `świadoma`, `reflow`, `sufit`, `do decyzji`) = FAIL.
 **IR wymuszony dla WSZYSTKICH sekcji** (auto-gen mockup-ir; gate-check: „IR komplet == sekcje").
 Progi/typy = `gate-manifest.json` (`sekcja_typy`, `layout_diff`). Szczegóły: `SEKCJA-Z-MAKIETY.md`.
-(f) **GATE-CHECK (zbiorczy, maszynowy):** commit landingu dozwolony wyłącznie po `python scripts/mockup-tools/gate-check.py <slug>` z wynikiem 0 FAIL — skrypt (manifest `gate-manifest.json`) jest źródłem prawdy o kompletności artefaktów, nie deklaracja agenta. Sprawdza: pliki obowiązkowe, komplet dopasowanie/, interakcje/ TOR-I, grep zakazów (w tym dynamiczna nazwa shop z KARTY PRAWDY), sieroty assetów, budżety wag, pHash anty-monotonii, kuracje+rejestr nazw w bazie, **oraz (R13): rubryka werdyktu 5×T/N + frazy-wytrychy (KODOWE), kolumna LAYOUT (LAYOUT-FAIL), IR komplet == sekcje**.
+(f) **GATE-CHECK (zbiorczy, maszynowy):** commit landingu dozwolony wyłącznie po `python scripts/mockup-tools/gate-check.py <slug>` z wynikiem 0 FAIL — skrypt (manifest `gate-manifest.json`) jest źródłem prawdy o kompletności artefaktów, nie deklaracja agenta. Sprawdza: pliki obowiązkowe, komplet dopasowanie/, interakcje/ TOR-I, grep zakazów (w tym dynamiczna nazwa shop z KARTY PRAWDY), sieroty assetów, budżety wag, pHash anty-monotonii, kuracje+rejestr nazw w bazie, **(R13): rubryka werdyktu 5×T/N + frazy-wytrychy (KODOWE), kolumna LAYOUT (LAYOUT-FAIL), IR komplet == sekcje**, **oraz (F3A): wierność produktu — wiersz WIERNOŚĆ ∈ {ZGODNA,REAL,ESKALACJA+nota} per grafika produktowa w `dopasowanie/WIERNOSC.md`**.
 **AUDYT GRAFIKA-FIRST (RETRO 16.07 — Świtek użył 2/47 grafik!): hero ma `<picture>`
 z 3 wariantami scen; liczba unikalnych scen AI w kodzie == mapa assetów (grep URL-i
 ai-generated/bud-assets vs mapa); sekcja z makietą-sceną bez grafiki full-bleed = FAIL.**
@@ -535,8 +545,10 @@ incydencie Latarka 17.07 — „grinder-pen zamiast gilotyny", klient dostałby 
 (0) **PASZPORT PRODUKTU** — spisany RAZ per produkt z galerii (agent vision): geometria
 i proporcje liczbowo, materiały/kolory, KAŻDY element funkcjonalny z pozycją (wyświetlacz —
 co dokładnie pokazuje!, przyciski, osłony, końcówki) + sekcja **„CZEGO NIE MA"** (archetypy,
-w które model ucieka). Wstrzykiwany do KAŻDEGO promptu z produktem. Zapis: archiwum
-`FABRYKA-*/<slug>/PASZPORT.md`.
+w które model ucieka) **+ OBOWIĄZKOWA tabela „Cechy dyskryminujące"** (K wierszy
+`| Cecha | Musi być | FAIL jeśli |` — klasa produktu + elementy tożsamości; to ONA jest
+checklistą gate'u F3A cecha-po-cesze i źródłem K dla `gate-check.py`). Wstrzykiwany do KAŻDEGO
+promptu z produktem. Zapis: archiwum `FABRYKA-*/<slug>/PASZPORT.md`.
 (1) referencje = **2 czyste packshoty text-free jako obiekty `{url, type:'product'}`**
 (⚠️ gołe stringi w `reference_images` to typ 'ref' — scena/styl, NIE produkt; przed 17.07
 stringi były GUBIONE po cichu i wszystko generowało się bez referencji!); ZAKAZ infografik
@@ -544,11 +556,19 @@ z wypalonym tekstem jako ref; produkt idzie jako image[0] (edge sortuje);
 (2) w prompcie: preserve-list (co ma się NIE zmienić) + cechy dyskryminujące z paszportu —
 dla produktów ZŁOŻONYCH opis NIE jest minimalny (minimalizm = model wypełnia luki
 archetypem); nadal NIE opisuj produktu „na nowo" własnymi słowami poza paszportem;
-(3) **gate porównawczy vs REALNE zdjęcie + checklist z paszportu** (cecha po cesze
-PASS/FAIL; ≥1 FAIL krytyczny — klasa produktu / element tożsamości typu wyświetlacz —
-= ODRZUT i regeneracja; NIGDY gate tylko vs makieta — makieta może już nieść dryf);
-uporczywy drift → scena bez produktu + realny `<img>` na stronie (dla sklepu to
-najbezpieczniejszy default przy produktach złożonych).
+(3) **GATE = F3A „WIERNOŚĆ DO SKUTKU" — osobny pod-etap, bramka F3→F4 (pełny proces:
+`GRAFIKA-Z-MAKIETY.md §4b`).** Per grafika produktowa: **TRÓJKĄT** (grafika + tabela „Cechy
+dyskryminujące" paszportu K cech PASS/FAIL + REALNY kadr Ali — NIGDY tylko vs makieta, makieta
+może już nieść dryf) oceniany przez **DWIE NIEZALEŻNE PARY OCZU** (pass-1 = generator; pass-2 =
+ŚWIEŻY Sonnet BEZ promptu generacji i BEZ werdyktu-1 — rozjazd par = NIEZGODNA). **ZGODNA wymaga
+0 FAIL cech ∧ PASS≥K ∧ pass-2=TAK. FAIL którejkolwiek cechy PRODUKTU (klasa / element tożsamości:
+wyświetlacz / ostrze / mechanizm) = NIGDY waivable → NIEZGODNA.** Dryf REKWIZYTU-nie-produktu
+(tło / dłoń / akcesorium scenografii) — tylko z notą LEDGER + zgodą OBU par. **Pętla regeneracji
+DO SKUTKU** z promptem wzmocnionym o KONKRETNĄ cechę (nie „popraw wierność" ogólnie), **max
+3 rundy → ESKALACJA** (inny realny ref / crop-first / scena bez produktu + realny `<img>` / nota
+do Tomka; bez noty LEDGER = FAIL). Dowód: wiersz per grafika w `dopasowanie/WIERNOSC.md`
+(WIERNOŚĆ ∈ {ZGODNA, REAL, ESKALACJA+nota}), egzekwowany przez `gate-check.py` (blok `wiernosc`).
+**⛔ Furtka „dryf PRODUKTU = cecha metody" USUNIĘTA — zostaje wyłącznie dla rekwizytu.**
 **Wyjątek — produkt CUSTOM** (personalizowany ze zdjęcia klienta): AI TYLKO sceneria,
 produkt niosą wyłącznie realne zdjęcia i UGC.
 
@@ -869,6 +889,17 @@ DebugBear · Gemius E-commerce PL 2024 (39% COD) · tpay (19% oszukanych) · FTC
 Contentsquare (sticky ATC +11…31%) · senja/convert-via (UGC) · landerlab/replo (benchmarki).
 
 ## CHANGELOG DECYZJI (F8)
+
+- **2026-07-18 (GATE WIERNOŚCI DO SKUTKU — proces F3A)**: warunek wierności produktu (3) przepisany
+  na osobny pod-etap **F3A** = bramka F3→F4 (wejście do kodu zablokowane, dopóki każda grafika
+  produktowa nie ma WIERNOŚĆ ∈ {ZGODNA, REAL, ESKALACJA+nota} w `dopasowanie/WIERNOSC.md`). Trójkąt
+  (grafika + tabela „Cechy dyskryminujące" paszportu K cech + realny kadr Ali), **dwie niezależne
+  pary oczu** (pass-1 generator + pass-2 świeży Sonnet bez promptu i werdyktu-1; rozjazd=NIEZGODNA),
+  **FAIL cechy PRODUKTU nigdy waivable**, pętla regen celowana w konkretną cechę max 3 rundy→eskalacja.
+  **⛔ Usunięta furtka „dryf PRODUKTU = cecha metody"** (zostaje tylko dla rekwizytu). PASZPORT
+  dostaje OBOWIĄZKOWĄ tabelę „Cechy dyskryminujące" (§2 warunek 0). Egzekucja: `gate-check.py` blok
+  `wiernosc` + `gate-manifest.json`; `dopasowanie/WIERNOSC.md` w `files.wymagane`. Stare landingi =
+  retro-WIERNOSC przy najbliższym dotknięciu. Pełny proces: `GRAFIKA-Z-MAKIETY.md §4b`.
 
 - **2026-07-18 (przebudowa panelu tn-sklepy)**: fazy F0→F8 odwzorowane 1:1 jako kroki panelu
   `lp_dane…lp_finisz` (Etap 2 „Landing" w /tn-sklepy; kamienie: akcept makiet + gate-check

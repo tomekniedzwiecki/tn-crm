@@ -49,6 +49,12 @@ werdykt vision. Pseudokod: raport researchu 16.07 (transkrypt sesji fabryki).
       „semantycznie ta sama")
 ```
 
+**⚠️ DRYF a WIERNOŚĆ — granica twarda (spina się z §4b F3A):** „dryf = cecha metody
+scene-from-mockup" usprawiedliwia **WYŁĄCZNIE obiekty NIE-produktowe** (rekwizyty, tło,
+scenografia, dłoń). **Każda cecha PRODUKTU z tabeli „Cechy dyskryminujące" paszportu jest
+twarda** — jej dryf = NIEZGODNA = powrót do pętli regeneracji (§4b), nie waiver. Rekwizyt wolno
+przepuścić tylko z notą w LEDGER + zgodą obu par oczu.
+
 ## 3. RECEPTURY
 
 **CROP:** bbox z IR (0-1000 → px), `Image.crop`, krawędzie wchodzące w treść = feather
@@ -63,8 +69,11 @@ sylwetki — edit potrafi zmienić kształt) · **#2b gdy sekcja jest KOLEJNĄ s
 wymuś INNY kąt/kontekst niż już użyte pozy („avoid: same upright pose as hero") — inaczej
 „SAME placement" produkuje klony (incydent Loczek 17.07: hero=03=12 ta sama poza)** ·
 #3 strefy treści „fade seamlessly into flat solid
-#HEX" · #4 REMOVE all text/UI, leave empty negative space. Dryf rekwizytów = cecha metody
-(SSIM cap ~0.7) — oceniaj kierunkowo + werdykt vision.
+#HEX" · #4 REMOVE all text/UI, leave empty negative space. **Dryf REKWIZYTÓW (obiekty
+NIE-produktowe: tło, dłoń, odłożone akcesoria scenografii) = cecha metody** (SSIM cap ~0.7) —
+oceniaj kierunkowo + werdykt vision. **⛔ To NIE dotyczy PRODUKTU: dryf którejkolwiek cechy
+z tabeli „Cechy dyskryminujące" paszportu = NIEZGODNA = powrót do pętli F3A (§4b), NIGDY
+usprawiedliwiany jako „cecha metody".**
 
 **EDITS+MASK (inpainting):** `/v1/images/edits`, `image[]`=makieta (baza pierwsza),
 `mask`=PNG tych samych wymiarów (alfa=0 = edytuj; z bboxów tekstu z IR + feather).
@@ -112,6 +121,63 @@ oryginał. Incydent: „poprawka LCD" podmieniła sceny 3:2/2:3 na generacje 1:1
 forma aspektu = cichy fallback, „zaakceptowany" przez agenta) → regres kompozycji na
 live. **⛔ NIGDY pikselowa forma aspektu ('1536x1024') — ZAWSZE stringowa ('3:2'/'2:3'/
 '1:1'); fallback do 1:1 przy scenie niekwadratowej = FAIL, nie „akceptowalne".**
+
+## 4b. WERYFIKACJA WIERNOŚCI PRODUKTU (F3A) — DO SKUTKU (bramka F3→F4)
+
+**Status: OBOWIĄZUJE (18.07; proces F3A).** Powód: grafika produktowa niezgodna z faktycznym
+produktem przechodziła, bo werdykt wierności miał **JEDNĄ parę oczu** (generator, który sam
+zamówił obraz) i furtkę „dryf = cecha metody" (incydent Latarek 17.07: grinder-pen zamiast
+gilotyny — klient dostałby INNY produkt). **Żadna grafika produktowa (klasa S/P użyta w kodzie)
+nie wchodzi do F4, dopóki nie ma werdyktu WIERNOŚĆ ∈ {ZGODNA, REAL, ESKALACJA+nota LEDGER}.**
+Egzekwuje `gate-check.py` (blok `wiernosc`; artefakt `dopasowanie/WIERNOSC.md`).
+
+**🔺 TRÓJKĄT DOWODU (jeden obraz side-by-side, per grafika):**
+1. **GRAFIKA** — wygenerowana scena / packshot produkcyjny.
+2. **PASZPORT — tabela „Cechy dyskryminujące"** (K cech; `PASZPORT.md` §Cechy dyskryminujące,
+   format `| Cecha | Musi być | FAIL jeśli |`) → każda cecha oceniana PASS/FAIL na grafice.
+3. **REALNY KADR Ali** — najczystszy packshot z galerii `detail` (⚠️ NIGDY tylko vs makieta —
+   makieta może już nieść dryf). Porównanie cecha-po-cesze idzie ZAWSZE vs realny produkt.
+
+**👁️👁️ DWIE NIEZALEŻNE PARY OCZU (twarde — nie jedna):**
+- **pass-1 — generator**: cecha-po-cesze vs paszport + realny kadr; wypełnia K flag PASS/FAIL
+  + werdykt wstępny.
+- **pass-2 — ŚWIEŻY Sonnet**, który NIE widział promptu generacji ANI werdyktu-1: dostaje tylko
+  grafikę + tabelę cech + realny kadr i pytanie „czy to TEN produkt? cecha-po-cesze". **Rozjazd
+  między parami = NIEZGODNA** (konserwatywnie, nie uśredniaj).
+- Werdykt **ZGODNA wymaga: 0 FAIL cech ∧ PASS ≥ K ∧ pass-2 = TAK.**
+
+**⛔ FAIL cechy PRODUKTU = NIGDY waivable.** Cechy z paszportu (klasa produktu, elementy
+tożsamości: wyświetlacz / ostrze / mechanizm / dwubarwność…) są twarde — 1 FAIL = NIEZGODNA.
+**Dryf REKWIZYTU-nie-produktu** (tło, dłoń, odłożone akcesorium scenografii) wolno przepuścić
+WYŁĄCZNIE z notą w LEDGER („co dryfnęło + dlaczego to nie produkt") i **zgodą OBU par** — to
+jedyna furtka. Furtka „dryf PRODUKTU = cecha metody" NIE ISTNIEJE.
+
+**🪜 DRABINA REGENERACJI → ESKALACJA (do skutku, max 3 rundy):**
+NIEZGODNA → regeneracja z promptem **WZMOCNIONYM o KONKRETNĄ cechę**, która FAILuje (nie „popraw
+wierność" ogólnie — np. „add the black side loop; light wood-grain sides, NOT metal") → ponowny
+trójkąt + dwie pary. Po **3 rundach** bez ZGODNA → **ESKALACJA** (wybierz, zapisz w LEDGER):
+(a) inny **realny packshot** jako ref; (b) **crop-first** — wytnij produkt z realnego kadru
+zamiast generować; (c) **scena BEZ produktu** + realny `<img>` produktu na stronie
+(najbezpieczniejszy default dla produktów złożonych); (d) **nota do Tomka** (świadoma decyzja).
+ESKALACJA bez noty LEDGER = FAIL gate; `rundy > 3` bez ESKALACJA = FAIL.
+
+**📝 FORMAT WIERSZA `dopasowanie/WIERNOSC.md`** (gate-check parsuje tę tabelę po kolumnach):
+
+| grafika | klasa | ujęcie | pass-1 (generator) | pass-2 (świeży Sonnet) | cechy K (po cesze) | rundy | WIERNOŚĆ |
+|---|---|---|---|---|---|---|---|
+| scenes/hero-d.webp | S | hero | ZGODNA 6/6 | TAK — ten sam produkt | Klasa:PASS · Wierzch:PASS · Boki:PASS · Schowek:PASS · Pętla:PASS · Marka:PASS | 1 | WIERNOŚĆ: ZGODNA |
+| scenes/problem.webp | S | problem | rekwizyt: obcinaczki złagodzone | TAK — produkt 6/6 wierny | Klasa:PASS · Wierzch:PASS · Boki:PASS · Schowek:PASS · Pętla:PASS · Marka:PASS (dryf REKWIZYTU) | 3 | WIERNOŚĆ: ESKALACJA — nota LEDGER, zgoda obu par |
+| scenes/packshot-oferta.webp | P | packshot | REAL — realny kadr Ali | — | — | — | WIERNOŚĆ: REAL |
+
+Kolumny: **pass-2** = lead TAK/NIE (świeży osąd); **cechy** = `Nazwa:PASS/FAIL` po cesze
+(≥K wpisów — 0 FAIL i PASS≥K przy ZGODNA); **rundy** = liczba regeneracji; **WIERNOŚĆ** ∈
+{ZGODNA, NIEZGODNA, ESKALACJA, REAL}. **REAL** = realny kadr (crop galerii) = PASS bez cech.
+**NIEZGODNA** w pliku = pętla niedomknięta = FAIL gate. Grafiki nie-produktowe (wideo mp4,
+postery tt, UGC, D-art, brand, pay-badges, OG) — NIE w tabeli (gate je wyklucza).
+
+**Komplementarność z PASS 5 (FINALNY-PASS.md):** F3A działa **PER GRAFIKA, PRZED kodem** (czy
+render = ten produkt?); PASS 5 SEMANTYKA działa na **CAŁEJ stronie PO kodzie** (czy podpisy/role/
+dane spójne). Oba potrzebne — F3A nie zwalnia z PASS 5 i odwrotnie.
 
 ## 5. FAKTY TWARDE (nie odkrywać ponownie)
 
