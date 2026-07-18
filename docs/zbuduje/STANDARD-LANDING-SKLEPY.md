@@ -90,6 +90,16 @@ ZAKAZ. Domyślnie POMIJAMY; opcjonalnie (≥1000) JEDNA nieprzypisana fraza bez 
 („sprawdzony produkt, tysiące zamówień na świecie"), nigdy licznik/pilność. Główna rola:
 wewnętrzny gate doboru. `shop{name,url}` 🚫 NIGDY na stronie (white label) + grep gate w F6.
 
+**F-1 — GATE WYKONALNOŚCI (PRZED F0, przy WYBORZE produktu; incydent „Zwijek" 18.07: wąż
+ogrodowy przeszedł do fazy 1, gdzie dopiero wyszło, że koszt lądowany 292-319 zł zabija marżę
+COD).** Zanim produkt wejdzie w budowę, policz z snapshotu: MAX kosztu SKU (`sku_prices`) ×
+kurs NBP = koszt lądowany; realna półka PL kategorii; marża = półka − lądowany − (~30% półki
+na reklamę+COD+zwroty+cło). **Marża brutto < ~40% półki LUB koszt lądowany > ~150 zł przy
+COD = FLAGA: produkt słaby do płatnego ruchu → inny produkt albo świadoma zgoda Tomka.**
+Sprawdź też: galeria po odsiewie ma ≥2 czyste packshoty (inaczej ciężka faza graficzna),
+≥150 ocen (wiarygodny dowód), ≥6 wideo (sekcja multi). Tanie liczenie z samego snapshotu —
+NIE marnować brandingu/kuracji na produkt, który odpadnie na marży.
+
 **F0 — DANE + VISION-GATE.** Snapshot z `bud_tt_products.ali_snapshot` (tytuł, opinie
 z text_pl, review_stats, sku_prices; PUSTE specs = tylko komunikaty jakościowe, zero
 zmyślonych cm/kg). **🚫 GATE `source='detail'` — TWARDY, PIERWSZY KROK (incydent Latarka
