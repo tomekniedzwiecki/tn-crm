@@ -1838,6 +1838,10 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
             const p = drawerProduct(); if (!p) return;
             const price = parseFloat(document.getElementById('wy-price')?.value);
             if (isNaN(price) || price <= 0) { showToast('Najpierw ustaw cenę sprzedaży (TEST)', 'error'); return; }
+            // FAIL-FAST Etapu 1: aukcja niepotwierdzona (source≠detail) i tak STOP-uje fabrykę
+            // w lp_dane — nie wpuszczamy produktu do portfela na ślepo (audyt 18.07)
+            if (wyTT && wyTT.ali_src !== 'detail') { showToast('Aukcja niepotwierdzona (source≠detail) — podmień link w pełnej edycji, potem akceptuj', 'error'); return; }
+            if (!wyTT && p.tt_product_id && !confirm('Nie udało się zweryfikować aukcji (snapshot niezaładowany). Zaakceptować drabinkę mimo to?')) return;
             const ladder = {
                 mode: 'cost_plus',
                 accepted_at: new Date().toISOString(),
