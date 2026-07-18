@@ -48,13 +48,16 @@ Deno.serve(async (req) => {
       catch { return j(r.status === 200 ? 502 : r.status, { raw: text.slice(0, 500), upstream_status: r.status }); }
     }
     if (op === "billing") {
-      const admin = Deno.env.get("BUD_FAL_ADMIN_KEY") ?? "";
-      if (!admin) return j(500, { error: "BUD_FAL_ADMIN_KEY not set" });
+      // Preferuj dedykowany klucz Admin; fallback na BUD_FAL_API_KEY — jeśli został
+      // utworzony z zakresem Admin, saldo zadziała bez dodatkowego sekretu.
+      const admin = Deno.env.get("BUD_FAL_ADMIN_KEY") || FAL_KEY;
       const r = await fetch("https://api.fal.ai/v1/account/billing?expand=credits", {
         headers: { Authorization: `Key ${admin}` },
       });
       const d = await r.json().catch(() => null);
-      return j(r.status, {
+      if (!r.ok) return j(r.status, { balance: null, upstream_status: r.status,
+        hint: "klucz bez zakresu Admin? utworz Admin key na fal.ai -> sekret BUD_FAL_ADMIN_KEY" });
+      return j(200, {
         balance: d?.credits?.current_balance ?? null,
         currency: d?.credits?.currency ?? "USD",
       });
