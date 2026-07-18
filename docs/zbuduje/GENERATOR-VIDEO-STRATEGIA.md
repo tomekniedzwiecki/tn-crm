@@ -219,6 +219,26 @@ załatane tej samej nocy (reguła rozstrzygania archetypu „gadżet+prezenter�
 audio; reguła VO>scena; samoakcept GATE A/B w trybie autonomicznym; functional_count jako
 zestaw; dubel wzorów). Pętla walidacja→poprawki-do-fabryki DOMKNIĘTA.
 
+## 0g. PĘTLA WYNIKÓW (18.07) — kreacja → Meta → wyniki → nauka do KART
+
+Wniosek finalnego przeglądu (3 agentów): produkcja+jakość domknięte, ale bez danych z kampanii
+hipoteza „kopiujemy wzorzec = dziedziczymy viralowość" była NIESPRAWDZALNA. Wdrożone szyny:
+- **`wf2_creatives`** = rejestr kreacji z RODOWODEM (slug=katalog `projekty/<slug>`, archetyp,
+  `pattern_tiktok_url`, engine_mix, koszt, `meta_ad_ids`, storage_path/public_url/variants);
+  seed: 6 kreacji z 17-18.07. Artefakty tekstowe w git (`scripts/video-factory/projekty/`),
+  finały w archiwum `wf2-video/video-factory/<slug>/` (bucket PRIVATE; finał dla panelu/Meta
+  → PUBLICZNY `attachments/bud-assets/<slug>/ads/`).
+- **`wf2-ads-sync`** (edge + cron `wf2-ads-sync-daily` 6:20): Graph API insights
+  `level=campaign` (P&L; anty-podwójne liczenie) + `level=ad` z metrykami video
+  (3s/p25-100/thruplay) → `wf2_ad_stats`; dopasowanie `creative_id` po `meta_ad_ids`;
+  health-scan kont (account_status → alert w `wf2_activities`); wykluczenie konta Tomka
+  act 1537… + log. **Wymaga sekretu `WF2_META_TOKEN`** (system-user, partner access BM) —
+  do tego czasu zwraca `{skipped}` (cichy cron).
+- **Widoki:** `wf2_creative_perf` (per kreacja: thumbstop=3s/impr, hold_50=p50/3s, p100_rate,
+  ctr, purchases) i `wf2_pattern_perf` (per archetyp). Operator: PROCEDURA KROK 11.
+Metryki-kompas kreacji: thumbstop (hook ≤2 s działa?) → hold_50 (demo trzyma?) → p100+ctr
+(CTA domyka?). Decyzje kampanijne (KILL/skalowanie) = CENNIK-PLAN, NIE ta pętla.
+
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 
 - **NIE MAMY pobranych plików mp4.** Radar trzyma wyłącznie LINKI: `bud_tt_products.tiktok_url`

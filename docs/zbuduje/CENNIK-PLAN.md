@@ -96,11 +96,14 @@ z CPM×(1+`q4_cpm_uplift`).
 
 ## 2b. KAMPANIE META — jeden silnik decyzji produktowych
 
-- **Dane: `wf2-ads-sync` (NOWA funkcja — twardy prerekwizyt, dziś NIE istnieje w repo,
-  a `wf2_ad_stats` jest pusta):** dzienny cron Graph API insights campaign-level per
-  `campaign_id` + ad-level on-demand przy checkpointach; anty-podwójne liczenie: P&L
-  WYŁĄCZNIE `level='campaign'` (TESTY §7.1); konta KLIENTÓW przez system user token
-  (partner access BM Tomka); **wykluczenie konta Tomka act 1537… + log**. Spec w §4.2.
+- **Dane: `wf2-ads-sync` — ✅ WDROŻONA 18.07** (edge + cron `wf2-ads-sync-daily` 6:20;
+  wisi na sekrecie `WF2_META_TOKEN` — do jego dodania zwraca `{skipped}`): dzienny Graph API
+  insights campaign-level per `campaign_id` (+ ad-level Z METRYKAMI VIDEO dla pętli wyników
+  kreacji `wf2_creatives`/`wf2_creative_perf`); anty-podwójne liczenie: P&L WYŁĄCZNIE
+  `level='campaign'` (TESTY §7.1); konta KLIENTÓW przez system user token (partner access
+  BM Tomka); **wykluczenie konta Tomka act 1537… + log** ✅; health-scan kont
+  (account_status/disable_reason → alert `wf2_activities`) ✅ wersja bazowa. Spec w §4.2
+  (adrules_library/PING_ENDPOINT nadal TODO).
 - **P&L per produkt**: przychód − koszt produktu − wysyłka (wg `shipping_paid_by`!) −
   prowizje − spend − rezerwa COD/zwroty = **wynik w zł** + **kontrybucja zł/dzień** +
   **MER vs breakeven-MER (=1/marża%)** — North Star zamiast platformowego ROAS.

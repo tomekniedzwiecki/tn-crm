@@ -51,7 +51,7 @@ ALTER TABLE public.wf2_products
   ADD COLUMN IF NOT EXISTS ads_creatives           jsonb,         -- [{angle,headline,primary_text,image_url}]
   ADD COLUMN IF NOT EXISTS video_pattern_tiktok_url text,
   ADD COLUMN IF NOT EXISTS video_status            text,          -- planning|rendering|qa|done|failed
-  ADD COLUMN IF NOT EXISTS video_url               text,          -- kreacja_15s.mp4 (bucket wf2-video)
+  ADD COLUMN IF NOT EXISTS video_url               text,          -- FINAL: PUBLIC attachments/bud-assets/<slug>/ads/kreacja_15s.mp4 (panel gra plain <a>); wf2-video (PRIVATE) = tylko research + archiwum
   ADD COLUMN IF NOT EXISTS video_cost_usd          numeric(10,2),
   ADD COLUMN IF NOT EXISTS video_ai_labeled        boolean NOT NULL DEFAULT false;
 
@@ -60,7 +60,8 @@ CREATE INDEX IF NOT EXISTS idx_wf2_products_ads_manus
 CREATE INDEX IF NOT EXISTS idx_wf2_products_ads_task
   ON public.wf2_products(ads_manus_task_id) WHERE ads_manus_task_id IS NOT NULL;
 
--- bucket prywatny: materiał badawczy wideo (cudzy content = research) + gotowe kreacje
+-- bucket prywatny: materiał badawczy wideo (cudzy content = research) + ARCHIWUM finałów fabryki
+-- (finał dla panelu idzie do PUBLICZNEGO attachments/bud-assets/<slug>/ads/ — patrz video_url wyżej)
 INSERT INTO storage.buckets (id, name, public) VALUES ('wf2-video','wf2-video', false)
 ON CONFLICT (id) DO NOTHING;
 

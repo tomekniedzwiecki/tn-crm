@@ -76,6 +76,14 @@ SeedVR2 WYŁĄCZNIE przez `refine.py` (chunki ≤4.8 s — model tnie dłuższe 
 - [ ] Tożsamość z Ali (nie shop-packshot); rekwizyty/scenografia bez teleportacji.
 - [ ] Ledger sprawdzony (`ledger.json`); brak napisów wypalonych.
 
+## KROK 11 — REJESTR KREACJI + PĘTLA WYNIKÓW (obowiązkowy po finale)
+Fabryka bez tego jest ślepa na własną skuteczność — rodowód kreacji MUSI trafić do bazy:
+1. **Archiwum:** finał (+ warianty `_refined`/`_subs`) → prywatny bucket `wf2-video/video-factory/<slug>/` (`npx supabase storage cp <plik> ss:///wf2-video/video-factory/<slug>/<plik> --experimental --linked`). Finał dla panelu/Meta → PUBLICZNY `attachments/bud-assets/<slug>/ads/kreacja_15s.mp4` (panel-sync / op store).
+2. **Rejestr:** INSERT/UPDATE `wf2_creatives` (slug UNIQUE = katalog `projekty/<slug>`): `archetype`, `pattern_tiktok_url` (WZORZEC = rodowód!), `engine_mix`, `cost_usd` (z ledgera), `storage_path`, `public_url`, `variants`, `ai_labeled`. Artefakty tekstowe (KARTA, blueprint, plan) commituj do `scripts/video-factory/projekty/<slug>/`.
+3. **Po publikacji reklamy:** dopisz `meta_ad_ids` (ad_id z Meta) + `status='published'` — bez tego sync NIE dopasuje statystyk do kreacji.
+4. **Wyniki czytaj z widoków:** `wf2_creative_perf` (per kreacja: thumbstop = 3s/impr, hold_50, p100_rate, ctr, purchases) i `wf2_pattern_perf` (per archetyp). Zasila je dzienny cron `wf2-ads-sync-daily` (6:20; wymaga sekretu `WF2_META_TOKEN`; metryki video z wierszy `level='ad'`; P&L liczy TYLKO `level='campaign'`).
+5. **Nauka:** wnioski z wyników (który archetyp/wzorzec trzyma hook, gdzie ludzie odpadają) wpisuj do KART/playbooków — to jest cała racja bytu pętli.
+
 ---
 
 ## GDZIE ŁAPIEMY 9 DZISIEJSZYCH INCYDENTÓW (mapa bramka→incydent)
