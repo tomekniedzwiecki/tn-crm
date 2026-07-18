@@ -215,6 +215,11 @@ async function generateWithOpenAI(
     form.append('n', String(n))
     if (size !== 'auto') form.append('size', size)
     form.append('quality', quality)
+    // input_fidelity:high — zmusza model do TRZYMANIA referencji (produkt/logo/twarz z image[0]).
+    // Bez tego gpt-image reinterpretuje produkt „z pamieci" mimo prefiksu tekstowego — zrodlo
+    // losowego dryfu wygladu produktu (feedback Tomka 18.07: produkt raz 1:1, raz inny).
+    // Wierność wyglądu MUSI plynac z REFERENCJI, nie z opisu slownego w promptcie.
+    form.append('input_fidelity', 'high')
     for (const rb of refBlobs) {
       form.append('image[]', rb.blob, rb.filename)
     }

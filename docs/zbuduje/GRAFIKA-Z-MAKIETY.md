@@ -156,10 +156,24 @@ ale NIE proporcje/grubość). Za gruba / za bryłowata / złe proporcje vs realn
 WYŁĄCZNIE z notą w LEDGER („co dryfnęło + dlaczego to nie produkt") i **zgodą OBU par** — to
 jedyna furtka. Furtka „dryf PRODUKTU = cecha metody" NIE ISTNIEJE.
 
+**⛔ ZASADA NADRZĘDNA PROMPTU (feedback Tomka 18.07 — źródło losowego dryfu produktu):**
+**Prompt NIGDY nie opisuje, JAK produkt wygląda — opisuje TYLKO wizję sceny** (co się dzieje, gdzie,
+światło, emocja, kompozycja, kadr). Wygląd produktu definiuje **WYŁĄCZNIE referencja** (`image[0]`
+packshot) + `input_fidelity:high` + prefix generate-image „Image 1 = EXACT product, reproduce
+unchanged, change ONLY the scene". Słowny opis cech w prompcie („flat thin board", „wooden edge
+2-3 cm", „add black loop, NOT metal") **KONKURUJE z referencją i sprowadza generację na złe tory** —
+model interpretuje SŁOWA zamiast odwzorować OBRAZ, stąd „raz produkt 1:1, raz inny". Cechy paszportu
+służą WYŁĄCZNIE do WERYFIKACJI po generacji (gate F3A), **NIGDY jako tekst promptu**. Generacja
+bezpośrednia (agent woła OpenAI z pominięciem generate-image) MUSI powtórzyć ten sam prefix + wysłać
+`input_fidelity:high` + trzymać prompt czysto scenowy — inaczej omija zabezpieczenie edge.
+
 **🪜 DRABINA REGENERACJI → ESKALACJA (do skutku, max 3 rundy):**
-NIEZGODNA → regeneracja z promptem **WZMOCNIONYM o KONKRETNĄ cechę**, która FAILuje (nie „popraw
-wierność" ogólnie — np. „add the black side loop; light wood-grain sides, NOT metal") → ponowny
-trójkąt + dwie pary. Po **3 rundach** bez ZGODNA → **ESKALACJA** (wybierz, zapisz w LEDGER):
+NIEZGODNA → regeneracja **NIE przez dopisanie słownego opisu cechy**, lecz przez: (1) **`input_fidelity:
+high`** (wymuś trzymanie referencji — generate-image robi to od 18.07); (2) **czystszy/inny realny
+packshot jako ref**, na którym cecha (która FAILowała) jest wyraźnie widoczna — referencja niesie
+cechę, nie słowa; (3) **poprawę WIZJI SCENY**, jeśli kadr przesłania cechę lub wymusza zły kąt
+(np. „side loop visible in frame" jako element KOMPOZYCJI sceny, nie opis produktu). Po **3 rundach**
+bez ZGODNA → **ESKALACJA** (wybierz, zapisz w LEDGER):
 (a) inny **realny packshot** jako ref; (b) **crop-first** — wytnij produkt z realnego kadru
 zamiast generować; (c) **scena BEZ produktu** + realny `<img>` produktu na stronie
 (najbezpieczniejszy default dla produktów złożonych); (d) **nota do Tomka** (świadoma decyzja).
