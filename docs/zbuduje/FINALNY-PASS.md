@@ -43,6 +43,16 @@ Cztery klasy uszczelnień, wszystkie w `detail-lint.py`:
 - **CROP/ROZDZIELCZOŚĆ W KAFLACH:** `img object-fit:cover` w kaflu o stałym AR — crop =
   1−min(imgAR,boxAR)/max(imgAR,boxAR); >25% = P1 (podmień AR kafla albo obraz o AR≈box).
   Upscaling przy DPR2: (render·2)/natural >1.3× = P2, >1.6× = P1.
+- **DOPASOWANIE OBRAZ↔BOKS PER VIEWPORT (`img-fit.py`, render CDP 390+1280).** Statyczny crop-lint
+  liczy AR z deklaracji, ale NIE widzi `@media` nadpisań aspektu boksa — dlatego łapać to trzeba
+  na RENDERZE per viewport (incydent Drapek 18.07: benefit/porownanie/oferta/demo ucinane 20-64%
+  TYLKO na mobile, bo `@media` odwracał aspect-ratio boksa vs obraz; desktop 0%). Dla KAŻDEGO `<img>`
+  mierzy natywny AR vs AR realnego boksa → % ucięcia + oś (poziom/pion) + `object-position`.
+  **Ucięcie ≥40% przy pos DOMYŚLNYM (`50% 50%`) = FAIL** — niedopatrzenie: dopasuj `aspect-ratio`
+  boksa do obrazu (portret↔portret, kwadrat↔kwadrat). **Gdy ucięcie nieuniknione** (scena-tło
+  full-bleed) — `object-position` MUSI wskazać część z produktem/psem/twarzą, nie center; ustawiony
+  pos + duże ucięcie = WARN (zweryfikuj crop wizualnie, zwykle OK). Zasada: aspekt boksa ≈ aspekt
+  obrazu; jeśli MUSI być ucięte — steruj którą część pokazać, nigdy center „na ślepo".
 - **INTERAKCJE PER VIEWPORT (rozszerzenie F6b):** każdy widget sterujący na 1280 I 390 —
   (a) `elementFromPoint(center)` == kontrolka/potomek (inaczej P0 zasłonięte), (b)
   `pointer-events≠none` (inaczej P0), (c) driven-property (styl obliczony LUB custom-prop `--t`)

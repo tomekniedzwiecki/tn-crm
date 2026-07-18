@@ -542,7 +542,12 @@ dwuskładnikowy (maska bboxa sceny cap ~0.70 OSOBNO + reszta sekcji po zamaskowa
 getBoundingClientRect, wszystko w % szer.): kafle-slivery (cols≥5 & szer<12% & portret),
 wysokość vs makieta (kodowa, |Δ|>40%), guttery kolumny treści (hero/final, |Δasym|>0.35), obraz
 w slocie (środek na złej stronie, Δcx>0.30). Wynik = kolumna **LAYOUT** w DOPASOWANIE.md; każdy
-LAYOUT-FAIL blokuje. Werdykt vision w DOPASOWANIE.md musi być **RUBRYKĄ 5×T/N + WERDYKT**
+LAYOUT-FAIL blokuje. **`img-fit.py`** (render CDP per viewport 390+1280) domyka to o DOPASOWANIE
+OBRAZ↔BOKS: natywny AR każdego `<img>` vs AR realnego boksa → % ucięcia + oś; ≥40% przy
+`object-position` domyślnym = FAIL (dopasuj `aspect-ratio` boksa do obrazu albo steruj `object-position`
+którą część pokazać — nigdy center „na ślepo") — łapie `@media` odwrócenia aspektu boksa, których
+statyczny crop-lint NIE widzi (incydent Drapek 18.07: obrazy dopasowane na desktopie, ucinane 20-64%
+tylko na mobile). Werdykt vision w DOPASOWANIE.md musi być **RUBRYKĄ 5×T/N + WERDYKT**
 (skala_elem·AR·guttery·krawędź·wys) — WERDYKT=TAK bez 5×T = FAIL; frazy-wytrychy w sekcji
 KODOWEJ (`bez wpływu`, `pomijalne`, `świadoma`, `reflow`, `sufit`, `do decyzji`) = FAIL.
 **IR wymuszony dla WSZYSTKICH sekcji** (auto-gen mockup-ir; gate-check: „IR komplet == sekcje").
