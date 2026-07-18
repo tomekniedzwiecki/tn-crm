@@ -46,8 +46,15 @@ plusiki). **⛔ ZAKAZ numeracji sekcji „01 / 12" na stronie (Tomek 17.07: „b
 numery kroków WEWNĄTRZ sekcji (demo 01/02/03) zostają. Gładkie tła bez ziarna, równe siatki kart i wyśrodkowany split 50/50 =
 „poprawny AI-generyk" = FAIL kalibracji human-touch (patrz DETAL-LAYER w F2).**
 
-**Z4 — KOD PISZE ZAWSZE gpt-5.6-sol** (via edge `wf2-gpt`): sekcje, poprawki, iteracje.
-Agent Claude: dane, spec, montaż markerowy, weryfikacja, fixy integracyjne <5% (raportowane).
+**Z4 — KOD: ROZSTRZYGAJĄ GATE'Y, NIE AUTOR (zaktualizowane 18.07 po 3 przebiegach).**
+Historycznie „ZAWSZE gpt-5.6-sol"; w praktyce kod autorski agenta przeszedł 3× (Loczek/
+Odpalak/Drapek) z zielonymi gate'ami, a od R13 jakość rozstrzygają TWARDE, deterministyczne
+gate'y (layout-diff strukturalny + rubryka werdyktu 5×T/N + dowód dopasowania + PASS 1-5),
+niezależnie od tego kto napisał kod. Zasada: **kod może pisać agent autorsko LUB gpt-5.6-sol
+(edge `wf2-gpt`) — wybór wg niezawodności/złożoności; to co MUSI przejść to gate'y F6/F7,
+nie pochodzenie kodu.** gpt-5.6-sol zalecany przy gęstych/nietypowych sekcjach (świeże
+spojrzenie), agent autorski przy spójności całości i mechanice z modułów kanonicznych.
+Odstępstwo raportowane w LEDGER (który autor), ale NIE jest już wadą samą w sobie.
 
 **Z5 — UCZCIWOŚĆ = KONWERSJA (rynek PL).** Dane twarde 1:1 ze snapshotu aukcji, uczciwe N
 opinii, jeden prawdziwy minus w porównaniu, zero fałszywej pilności. Szczegóły: sekcja 4.
