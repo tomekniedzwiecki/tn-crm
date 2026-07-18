@@ -76,6 +76,31 @@
         .art-tile img { width:100%; aspect-ratio:4/3; object-fit:cover; display:block; }
         .art-tile .art-label { position:absolute; left:0; right:0; bottom:0; background:rgba(0,0,0,.72);
             color:#d4d4d8; font-size:9.5px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        /* makiety mobile — kafle pionowe 9:16 (specyficzność .art-tile.art-mobile img > .art-tile img) */
+        .art-tile.art-mobile img { aspect-ratio:9/16; }
+        /* nagłówek grupy artefaktów (Makiety desktop / mobile / Pozostałe) */
+        .art-group-head { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; }
+        .agh-title { font-size:10px; font-family:ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; color:#a1a1aa; }
+        .agh-count { font-size:10px; font-family:ui-monospace,monospace; color:#52a8ff; }
+        /* lightbox z nawigacją (styl Geist — ciemne #0a0a0a/#111, akcent #0070f3) */
+        .lb-nav { position:absolute; top:50%; transform:translateY(-50%); z-index:2;
+            width:44px; height:44px; border-radius:9999px; border:1px solid #333; background:#111;
+            color:#e4e4e7; display:flex; align-items:center; justify-content:center; cursor:pointer;
+            font-size:20px; transition:background .15s ease, border-color .15s ease, color .15s ease; }
+        .lb-nav:hover { background:#0070f3; border-color:#0070f3; color:#fff; }
+        .lb-nav.lb-prev { left:20px; }
+        .lb-nav.lb-next { right:20px; }
+        .lb-hud { position:absolute; top:18px; left:50%; transform:translateX(-50%); z-index:2;
+            background:#0a0a0a; border:1px solid #333; color:#a1a1aa; font:11px/1 ui-monospace,monospace;
+            padding:6px 12px; border-radius:9999px; }
+        .lb-cap { position:absolute; bottom:18px; left:50%; transform:translateX(-50%); z-index:2; max-width:80vw;
+            background:#0a0a0a; border:1px solid #333; color:#d4d4d8; font-size:12px;
+            padding:6px 14px; border-radius:8px; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .lb-close { position:absolute; top:16px; right:20px; z-index:2;
+            width:40px; height:40px; border-radius:9999px; border:1px solid #333; background:#0a0a0a;
+            color:#e4e4e7; display:flex; align-items:center; justify-content:center; cursor:pointer;
+            font-size:20px; transition:background .15s ease, border-color .15s ease, color .15s ease; }
+        .lb-close:hover { background:#e5484d; border-color:#e5484d; color:#fff; }
     </style>
 </head>
 <body class="h-screen flex overflow-hidden font-sans text-sm tracking-tight antialiased">
@@ -279,9 +304,16 @@
         </div>
     </main>
 
-    <!-- Lightbox artefaktów -->
-    <div id="lightbox" class="hidden fixed inset-0 z-[90] bg-black/85 flex items-center justify-center p-6" onclick="closeLightbox()">
-        <img id="lightbox-img" class="max-w-full max-h-full rounded-lg border border-[#333]" alt="">
+    <!-- Lightbox artefaktów — nawigacja strzałkami/klawiaturą, licznik (3/13), podpis = meta.section -->
+    <div id="lightbox" class="hidden fixed inset-0 z-[90] bg-black/90 flex items-center justify-center p-6" onclick="lbBgClose(event)">
+        <button type="button" class="lb-close" aria-label="Zamknij" onclick="closeLightbox()"><i class="ph ph-x"></i></button>
+        <button type="button" id="lb-prev" class="lb-nav lb-prev hidden" aria-label="Poprzedni" onclick="lbStep(-1)"><i class="ph ph-caret-left"></i></button>
+        <div id="lb-stage" class="relative flex items-center justify-center max-w-full max-h-full">
+            <img id="lightbox-img" class="max-w-full max-h-[86vh] rounded-lg border border-[#333] object-contain" alt="">
+        </div>
+        <button type="button" id="lb-next" class="lb-nav lb-next hidden" aria-label="Następny" onclick="lbStep(1)"><i class="ph ph-caret-right"></i></button>
+        <div id="lb-hud" class="lb-hud hidden"></div>
+        <div id="lb-cap" class="lb-cap hidden"></div>
     </div>
 
 
@@ -531,10 +563,45 @@
             if (!m) return url;
             return `${m[1]}/storage/v1/render/image/public/${m[2]}?width=${w || 360}&resize=contain`;
         }
-        // Lightbox otwierany WYŁĄCZNIE przez data-url (this.dataset.url) — interpolacja URL-a
-        // w onclick('${…}') pozwalałaby apostrofowi wybić string JS (recenzja 18.07, P1).
-        function openLightbox(url) { if (!url) return; document.getElementById('lightbox-img').src = url; document.getElementById('lightbox').classList.remove('hidden'); }
-        function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); }
+        // Lightbox z nawigacją. Grupa zbierana z DOM przez data-lb-* (NIE interpolujemy URL-a
+        // w onclick('${…}') — apostrof w URL wybiłby string JS; recenzja 18.07, P1).
+        let lbItems = [];   // [{url, cap}]
+        let lbIdx = 0;
+        // BC: pojedynczy obraz (karta produktu cover+galeria, kreacje Manus) — bez nawigacji
+        function openLightbox(url) { if (!url) return; lbItems = [{ url: url, cap: '' }]; lbIdx = 0; lbShow(); }
+        // grupa: klik na kaflu z data-lb-group — zbiera rodzeństwo z tej samej grupy (gid unikalny → CSS-safe)
+        function openLightboxG(el) {
+            const gid = el.getAttribute('data-lb-group');
+            const nodes = gid ? Array.from(document.querySelectorAll('[data-lb-group="' + gid + '"]')) : [el];
+            lbItems = nodes.map(n => ({ url: n.getAttribute('data-lb-url') || '', cap: n.getAttribute('data-lb-cap') || '' })).filter(it => it.url);
+            if (!lbItems.length) return;
+            lbIdx = Math.max(0, nodes.indexOf(el));
+            lbShow();
+        }
+        function lbShow() {
+            const it = lbItems[lbIdx]; if (!it) return;
+            document.getElementById('lightbox-img').src = it.url;
+            const multi = lbItems.length > 1;
+            document.getElementById('lb-prev').classList.toggle('hidden', !multi);
+            document.getElementById('lb-next').classList.toggle('hidden', !multi);
+            const hud = document.getElementById('lb-hud');
+            hud.textContent = (lbIdx + 1) + ' / ' + lbItems.length;
+            hud.classList.toggle('hidden', !multi);
+            const cap = document.getElementById('lb-cap');
+            cap.textContent = it.cap || '';
+            cap.classList.toggle('hidden', !it.cap);
+            document.getElementById('lightbox').classList.remove('hidden');
+        }
+        function lbStep(dir) { if (!lbItems.length) return; lbIdx = (lbIdx + dir + lbItems.length) % lbItems.length; lbShow(); }
+        function closeLightbox() { document.getElementById('lightbox').classList.add('hidden'); lbItems = []; }
+        // zamknij tylko klikiem w tło (nie w obraz/strzałki/przyciski — te mają własny onclick i bąbelkują)
+        function lbBgClose(e) { if (e.target === e.currentTarget) closeLightbox(); }
+        document.addEventListener('keydown', (e) => {
+            if (document.getElementById('lightbox').classList.contains('hidden')) return;
+            if (e.key === 'Escape') closeLightbox();
+            else if (e.key === 'ArrowLeft') lbStep(-1);
+            else if (e.key === 'ArrowRight') lbStep(1);
+        });
 
         // tooltip [data-tip-title] = globalny moduł w components/shared-sidebar.js (#tn-tooltip)
 
@@ -1217,27 +1284,52 @@
         // przełączanie produktu w otwartym drawerze (iteracja po portfelu bez zamykania)
         function sdSwitchProduct(pid) { if (!drawerCtx) return; drawerCtx.productId = pid; renderDrawer(); }
 
-        // galeria artefaktów kroku (miniatury z render API + lightbox)
+        // galeria artefaktów kroku — makiety desktop / mobile / reszta, każda grupa z osobną
+        // nawigacją lightbox (Tomek chce wygodnie przeglądać makiety po powiększeniu).
+        let lbGroupSeq = 0;
         function artifactsGallery(list) {
             if (!list.length) return '';
             const KIND_ICON = { mockup:'ph-layout', makieta:'ph-layout', makieta_mobile:'ph-device-mobile', brand:'ph-palette', branding:'ph-palette', styl_master:'ph-paint-brush', proof:'ph-git-diff', dowod:'ph-git-diff', scena:'ph-image', gallery:'ph-images', ad_creative:'ph-megaphone', video:'ph-film-slate', doc:'ph-file-text', link:'ph-link', screenshot_final:'ph-monitor', gate_check:'ph-seal-check', landing_live:'ph-rocket-launch' };
-            const tiles = list.map(a => {
+            // partycja: mobile ma pierwszeństwo (makieta+viewport=mobile nie trafia do obu grup)
+            const vp = a => (a.meta && a.meta.viewport) || '';
+            const isMobile  = a => a.kind === 'makieta_mobile' || vp(a) === 'mobile';
+            const isDesktop = a => !isMobile(a) && (a.kind === 'makieta' || vp(a) === 'desktop');
+            const mobile  = list.filter(isMobile);
+            const desktop = list.filter(isDesktop);
+            const rest    = list.filter(a => !isMobile(a) && !isDesktop(a));
+
+            const tile = (a, gid, mobileTile) => {
                 const webVisible = a.storage !== 'repo' && a.storage !== 'desktop';
                 const isImg = webVisible && (/\.(png|jpe?g|webp|avif|gif)(\?|$)/i.test(a.url || '') || ['mockup','makieta','makieta_mobile','scena','dowod','proof','ad_creative','screenshot_final','styl_master','gallery','branding','brand'].includes(a.kind));
                 if (isImg && a.url && /^https?:/.test(a.url)) {
-                    return `<a class="art-tile" href="javascript:void(0)" data-url="${escapeHtml(a.url)}" onclick="openLightbox(this.dataset.url)"
-                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełny podgląd">
+                    const cap = (a.meta && a.meta.section) ? a.meta.section : (a.label || a.kind);
+                    return `<a class="art-tile${mobileTile ? ' art-mobile' : ''}" href="javascript:void(0)"
+                        data-lb-group="${gid}" data-lb-url="${escapeHtml(a.url)}" data-lb-cap="${escapeHtml(cap)}" onclick="openLightboxG(this)"
+                        data-tip-title="${escapeHtml(a.label || a.kind)}" data-tip-sub="${escapeHtml(a.kind)}${a.meta && a.meta.section ? ' · ' + escapeHtml(a.meta.section) : ''}" data-tip-desc="klik = pełny podgląd + nawigacja">
                         <img src="${escapeHtml(thumbUrl(a.url, 360))}" loading="lazy" onerror="this.parentElement.style.display='none'">
                         <span class="art-label">${escapeHtml(a.label || a.kind)}</span></a>`;
                 }
                 const icon = KIND_ICON[a.kind] || 'ph-file';
                 const clickable = a.url && /^https?:/.test(a.url);
+                // chipy (repo/desktop storage, dokumenty) — bez data-lb, poza nawigacją lightbox
                 return `<${clickable?'a':'div'} ${clickable?`href="${escapeHtml(a.url)}" target="_blank"`:''} class="art-tile flex items-center gap-2 p-2.5" style="aspect-ratio:auto">
                     <i class="ph ${icon} text-[#52a8ff]"></i><span class="text-[11px] text-zinc-300 truncate">${escapeHtml(a.label || a.kind)}</span>
                     ${!clickable ? `<span class="text-[9px] text-zinc-600 font-mono ml-auto">${escapeHtml(a.storage)}</span>` : ''}</${clickable?'a':'div'}>`;
-            }).join('');
-            return `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Artefakty (${list.length})</div>
-                <div class="grid grid-cols-3 gap-2">${tiles}</div></div>`;
+            };
+            const group = (items, title, gridCls, mobileTile) => {
+                if (!items.length) return '';
+                const gid = 'lbg-' + (++lbGroupSeq);
+                return `<div class="mb-3"><div class="art-group-head"><span class="agh-title">${escapeHtml(title)}</span><span class="agh-count">${items.length}</span></div>
+                    <div class="grid ${gridCls} gap-2">${items.map(a => tile(a, gid, mobileTile)).join('')}</div></div>`;
+            };
+
+            // brak makiet → jedna prosta sekcja „Artefakty" (bez regresji dla pozostałych kroków / karty produktu)
+            if (!desktop.length && !mobile.length) {
+                const gid = 'lbg-' + (++lbGroupSeq);
+                return `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-2">Artefakty (${rest.length})</div>
+                    <div class="grid grid-cols-3 gap-2">${rest.map(a => tile(a, gid, false)).join('')}</div></div>`;
+            }
+            return `<div>${group(desktop, 'Makiety desktop', 'grid-cols-3', false)}${group(mobile, 'Makiety mobile', 'grid-cols-4 sm:grid-cols-5', true)}${group(rest, 'Pozostałe artefakty', 'grid-cols-3', false)}</div>`;
         }
 
         function renderDrawer() {
