@@ -110,6 +110,11 @@ STRUCT_JS = r"""
   function isFullBleedScene(el,SW,SH){var r=el.getBoundingClientRect();var cs=getComputedStyle(el);
     var big=(r.width*r.height)>=0.55*SW*SH; var abs=(cs.position==='absolute'||cs.position==='fixed');
     return big&&abs;}
+  function natOf(el){ if(el.tagName==='IMG') return [el.naturalWidth||0, el.naturalHeight||0];
+    if(el.tagName==='VIDEO') return [el.videoWidth||0, el.videoHeight||0];
+    var im=el.querySelector&&el.querySelector('img'); if(im) return [im.naturalWidth||0, im.naturalHeight||0]; return [0,0]; }
+  function ofOf(el){ var e=el; if(el.tagName==='PICTURE'){var im=el.querySelector('img'); if(im)e=im;}
+    return getComputedStyle(e).objectFit||''; }
   var sections=[];
   document.querySelectorAll('section[id]').forEach(function(sec){
     var sr=sec.getBoundingClientRect();var SX=sr.x,SYY=sr.y+window.scrollY,SW=sr.width,SH=sr.height;
@@ -134,13 +139,17 @@ STRUCT_JS = r"""
       var wss=best.members.map(function(m){return m.w;}).sort(function(a,b){return a-b;}); var medW=wss[Math.floor(wss.length/2)];
       tiles={sig:best.sig,count:best.members.length,cols:cols,medWpct:medW/SW,medHpct:medH/SH,ar:medW/medH,
              yband:[(minY-SYY)/SH, (Math.max.apply(null,best.members.map(function(m){return m.y+m.h;}))-SYY)/SH]}; }
-    // ---- images (in-flow, poza full-bleed sceną) ----
+    // ---- images (in-flow, poza full-bleed sceną). Pomijamy <img> wewnątrz <picture> (podwójne
+    //      liczenie tego samego kadru). objectFit+natW/H → self-check „pustka" (letterbox contain). ----
     var imgs=[];
-    sec.querySelectorAll('img,video,picture').forEach(function(im){ var r=im.getBoundingClientRect();
-      if(r.width*r.height<0.01*SW*SH) return; var fb=isFullBleedScene(im,SW,SH);
+    sec.querySelectorAll('img,video,picture').forEach(function(im){
+      if(im.tagName==='IMG' && im.closest('picture')) return;
+      var r=im.getBoundingClientRect();
+      if(r.width*r.height<0.01*SW*SH) return; var fb=isFullBleedScene(im,SW,SH); var nat=natOf(im);
       imgs.push({xpct:(r.x-SX)/SW,wpct:r.width/SW,ypct:(r.y+window.scrollY-SYY)/SH,hpct:r.height/SH,
                  cxpct:((r.x+r.width/2)-SX)/SW,cypct:((r.y+window.scrollY+r.height/2)-SYY)/SH,
-                 areaPct:(r.width*r.height)/(SW*SH),ar:r.height/r.width,fullbleed:fb}); });
+                 areaPct:(r.width*r.height)/(SW*SH),ar:r.height/r.width,fullbleed:fb,
+                 boxW:r.width,boxH:r.height,natW:nat[0],natH:nat[1],objectFit:ofOf(im)}); });
     imgs.sort(function(a,b){return b.areaPct-a.areaPct;});
     // ---- text column (reading column: pomiń pełnoszerokie bloki >0.8 z prawej krawędzi) ----
     var minL=Infinity,maxR=-Infinity,any=false;
@@ -151,7 +160,23 @@ STRUCT_JS = r"""
       if(wpct<0.8 && (tr.x+tr.width-SX)/SW>maxR) maxR=(tr.x+tr.width-SX)/SW; });
     var content=null;
     if(any&&maxR>0){ var L=Math.max(0,minL),R=Math.max(0,1-maxR); content={leftGut:L,rightGut:R,asym:Math.abs(L-R),colW:Math.max(0,maxR-minL)}; }
-    sections.push({id:sec.id,x:SX,y:SYY,w:SW,h:SH,ar:SH/SW,tiles:tiles,imgs:imgs.slice(0,3),content:content});
+    // ---- wrap (kontener max-width) — do pomiaru gutterów W RENDERZE (self-check, bez makiety) ----
+    var wrapEl=sec.querySelector('.wrap, .hero-wrap, .final-wrap, [class*="wrap"]'); var wrap=null;
+    if(wrapEl){ var wr=wrapEl.getBoundingClientRect(); wrap={L:(wr.x-SX)/SW, R:(wr.x+wr.width-SX)/SW}; }
+    // ---- contentBlock: union bbox treści (tekst+CTA+obrazy in-flow), BEZ scen full-bleed.
+    //      Ostatnia solidna „dolna krawędź treści" (pustka-w-sekcji) + gutter-hug (przyklejenie do boku). ----
+    var cbL=Infinity,cbR=-Infinity,cbB=-Infinity,cbN=0;
+    function cbAdd(r){ var l=(r.x-SX)/SW,rr=(r.x+r.width-SX)/SW,b=(r.y+window.scrollY+r.height-SYY)/SH;
+      if(l<cbL)cbL=l; if(rr>cbR)cbR=rr; if(b>cbB)cbB=b; cbN++; }
+    sec.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,summary,blockquote,figcaption,.eyebrow,.lead,a.btn,button,[data-checkout]').forEach(function(t){
+      if(t.closest('svg')) return; var tr=t.getBoundingClientRect(); var txt=(t.textContent||'').trim();
+      var isBtn=t.matches('a.btn,button,[data-checkout]');
+      if(tr.width<10||tr.height<6) return; if(!isBtn && txt.length<2) return; cbAdd(tr); });
+    sec.querySelectorAll('img,video,picture').forEach(function(im){ if(im.tagName==='IMG'&&im.closest('picture'))return;
+      var r=im.getBoundingClientRect(); if(r.width*r.height<0.01*SW*SH) return; if(isFullBleedScene(im,SW,SH))return; cbAdd(r); });
+    var contentBlock = cbN? {L:Math.max(0,cbL),R:Math.min(1,cbR),B:cbB,n:cbN} : null;
+    sections.push({id:sec.id,x:SX,y:SYY,w:SW,h:SH,ar:SH/SW,tiles:tiles,imgs:imgs.slice(0,3),content:content,
+                   wrap:wrap,contentBlock:contentBlock});
   });
   return JSON.stringify({sections:sections,vw:window.innerWidth});
 })()
@@ -447,10 +472,26 @@ def makieta_columns(makieta_path, yband=None):
     if not (2 <= len(runs) <= 10): return None
     return {"cols": len(runs), "medWpct": ws[len(ws)//2]}
 
+def img_letterbox(im):
+    """Puste pasma (letterbox/pillarbox) obrazu w jego BOKSIE DOM przy object-fit contain/scale-down.
+    Zwraca (emptyV, emptyH) — ulamek wysokosci/szerokosci boksu ZAJETY przez pustke. Mierzone w
+    samym renderze (box DOM vs natural intrinsic), BEZ makiety. cover/fill/none => (0,0)."""
+    of = (im.get("objectFit") or "").lower()
+    nw, nh = im.get("natW", 0) or 0, im.get("natH", 0) or 0
+    bw, bh = im.get("boxW", 0) or 0, im.get("boxH", 0) or 0
+    if nw <= 0 or nh <= 0 or bw <= 0 or bh <= 0: return (0.0, 0.0)
+    if of not in ("contain", "scale-down"): return (0.0, 0.0)  # fill/cover/none nie zostawiaja pasm
+    ba = bw / bh; ia = nw / nh  # aspekty W/H
+    if ba < ia:  return (max(0.0, 1 - ba / ia), 0.0)   # obraz szerszy niz box => pasy gora/dol
+    if ba > ia:  return (0.0, max(0.0, 1 - ia / ba))   # obraz wyzszy niz box => pasy lewo/prawo
+    return (0.0, 0.0)
+
 def layout_checks(sid, stype, dom, makieta_path, ir, cfg):
-    """Zwraca (status 'OK'|'FAIL', fails[list of check], detail_str). Progi z cfg (manifest)."""
-    if dom is None or ir is None:
-        return ("SKIP", [], "brak DOM/IR")
+    """Zwraca (status 'OK'|'FAIL', fails[list of check], detail_str). Progi z cfg (manifest).
+    TWARDE checki (sliver/pustka/gutter) sa DOM-only i NIE wymagaja IR (self-referential);
+    IR-owe checki (wysokosc/guttery/obraz) sa informacyjne i pomijane gdy IR brak."""
+    if dom is None:
+        return ("SKIP", [], "brak DOM")
     P = cfg["layout_diff"]["progi"]; fails = []; det = []
     # ---- (1) KAFLE / slivery ----
     # Sliver-guard (absolutny) = jedyny NIEZAWODNY sygnal kafli: projekcja kolumn makiety
@@ -461,33 +502,104 @@ def layout_checks(sid, stype, dom, makieta_path, ir, cfg):
         mc = makieta_columns(makieta_path, t.get("yband"))
         fails.append("kafle"); det.append("kafle-sliver: %d kol @%.1f%% szer (portret ar=%.2f) — makieta cols~%s"
                                            % (t["cols"], 100*t["medWpct"], t["ar"], mc["cols"] if mc else "?"))
-    # ---- (2) WYSOKOSC sekcji vs proporcja makiety (KODOWA) ----
-    if not (P.get("wysokosc_tylko_kodowa") and stype != "kodowa"):
-        cb = ir_content_bbox(ir)
-        if cb and cb["contentAR"] > 0:
-            dev = abs(dom["ar"] - cb["contentAR"]) / cb["contentAR"] * 100
-            if dev > P["wysokosc_tol_pct"]:
-                fails.append("wysokosc"); det.append("wysokosc: sekcja AR %.2f vs makieta %.2f (d=%.0f%%)"
-                                                      % (dom["ar"], cb["contentAR"], dev))
-    # ---- (3) GUTTERY kolumny tresci (sekcje scene-split: hero/final) ----
-    if sid in P.get("gutter_sekcje", []):
-        ta = ir_text_asym(ir); dc = dom.get("content")
-        if ta and dc:
-            dasym = abs(dc["asym"] - ta["asym"])
-            if dasym > P["gutter_asym_delta"]:
-                fails.append("guttery"); det.append("guttery: render asym %.2f vs makieta %.2f (d=%.2f)"
-                                                     % (dc["asym"], ta["asym"], dasym))
-    # ---- (4) OBRAZ w slocie (strona/srodek vs makieta) ----
-    # TYLKO sekcje z JEDNYM dominujacym obrazem (nie kafle/galerie — tam imgs[0] to jeden
-    # z wielu kafli, porownanie do calego slotu makiety = falszywy alarm).
-    isl = ir_image_slot(ir); imgs = dom.get("imgs") or []
-    single = (not t) and imgs and imgs[0]["areaPct"] >= 0.20
-    if isl and single and isl["areaPct"] >= P.get("obraz_imgslot_min_area", 0.08):
-        rimg = imgs[0]
-        dcx = abs(rimg["cxpct"] - isl["cxpct"])
-        if dcx > P.get("obraz_center_delta", 0.30):
-            fails.append("obraz"); det.append("obraz: srodek render x%.2f vs makieta x%.2f (d=%.2f, zla strona)"
-                                               % (rimg["cxpct"], isl["cxpct"], dcx))
+    # ================================================================================================
+    # TWARDE DOM SELF-CHECKI (mierzone w SAMYM renderze, BEZ porownania z IR makiety — dlatego odporne
+    # na szum makiet AI, ktory slusznie zdemotowal (2)-(4) do „info"). Lapia patologie-same-w-sobie.
+    # Progi w gate-manifest.json (layout_diff.progi), skalibrowane empirycznie: FAIL Odpalak,
+    # PASS Drapek+Loczek (18.07). Uzupelniaja sliver-guard (1).
+    # ================================================================================================
+    imgs = dom.get("imgs") or []
+    inflow = [im for im in imgs if not im.get("fullbleed")]
+    # ---- (2) PUSTKA-POD-OBRAZEM (Odpalak C „obraz za wysoko podnosi sekcje") ----
+    # Patologia: dominujacy obraz IN-FLOW w za WYSOKIM boksie => produkt (contain) plywa z duzymi
+    # pustymi pasmami. Sygnal DOM: object-fit contain + emptyV (box vs intrinsic) + box wyrazny portret.
+    # Wariant B: pod dominujacym obrazem dolne >X% sekcji nie ma ZADNEJ tresci (contentBlock.B nisko).
+    if inflow:
+        di = inflow[0]
+        if di["areaPct"] >= P.get("pustka_img_min_area", 0.18):
+            evd, _ehd = img_letterbox(di)
+            boxAR = (di.get("boxH", 0) / di["boxW"]) if di.get("boxW") else di.get("ar", 0)
+            if evd >= P.get("pustka_emptyv_min", 0.30) and boxAR >= P.get("pustka_boxar_min", 1.40):
+                fails.append("pustka")
+                det.append("pustka-pod-obrazem: obraz contain box ar=%.2f, pustka pionowa %.0f%% (produkt plywa w za wysokim boksie)"
+                            % (boxAR, 100*evd))
+            else:
+                cbk = dom.get("contentBlock")
+                if cbk and cbk.get("B", 1.0) <= P.get("pustka_section_bottom_max", 0.70):
+                    fails.append("pustka")
+                    det.append("pustka-pod-obrazem: dolne %.0f%% sekcji bez tresci (obraz konczy sie wysoko, pod nim pusto)"
+                                % (100*(1 - cbk["B"])))
+    # ---- (3) GUTTER-ASYMETRIA / SCENA-ZLA-STRONA (Odpalak D „treść do lewej", hero-obraz-zla-strona) ----
+    cb = dom.get("contentBlock"); wrap = dom.get("wrap")
+    fb = [im for im in imgs if im.get("fullbleed")]
+    gutter_hit = False
+    # (3a) SCENA JEDNOSTRONNA: scena full-bleed (absolut, >=55% pola) ale kryjaca TYLKO jeden bok
+    #      (wpct<max) i mocno OFF-CENTER => tresc wcisnieta w gutter po drugiej stronie. Intencja
+    #      hero/final/problem = scena EDGE-TO-EDGE; scena z boku = zla strona/gutter. Self-referential.
+    if fb:
+        sc = fb[0]; offcx = abs(sc["cxpct"] - 0.5)
+        opp_ok = True
+        if cb:  # tresc po PRZECIWNEJ stronie niz scena (klasyczny split)
+            cb_cx = (cb["L"] + cb["R"]) / 2.0
+            opp_ok = (cb_cx - 0.5) * (sc["cxpct"] - 0.5) < 0
+        if sc["wpct"] < P.get("gutter_scene_wmax", 0.85) and offcx > P.get("gutter_scene_offcx_min", 0.12) and opp_ok:
+            fails.append("gutter"); gutter_hit = True
+            det.append("gutter-scena-jednostronna: scena full-bleed kryje %.0f%% szer (cx=%.2f, off=%.2f) — tresc wciśnieta w gutter, scena po zlej stronie"
+                        % (100*sc["wpct"], sc["cxpct"], offcx))
+    # (3b) GUTTER-LEWY-PRZYKLEJONY: blok tresci przyklejony do boku wzgledem .wrap, a PRZECIWNY gutter
+    #      PUSTY (nie kryty zadnym obrazem). left<40%*right (lub odwrotnie). Self-referential.
+    if not gutter_hit and cb and wrap:
+        wL, wR = wrap["L"], wrap["R"]; wW = wR - wL
+        if wW > 0.2:
+            gL = max(0.0, (cb["L"] - wL) / wW); gR = max(0.0, (wR - cb["R"]) / wW)
+            big = max(gL, gR); small = min(gL, gR)
+            ratio = small / big if big > 1e-3 else 1.0
+            if ratio < P.get("gutter_hug_ratio_max", 0.40) and big >= P.get("gutter_hug_biggut_min", 0.25):
+                big_right = gR >= gL
+                covered = False
+                for im in imgs:  # czy duzy gutter kryty JAKIMKOLWIEK obrazem (scena/kafel)?
+                    iL = im["xpct"]; iR = im["xpct"] + im["wpct"]
+                    if big_right and iR > cb["R"] + 0.03: covered = True
+                    if (not big_right) and iL < cb["L"] - 0.03: covered = True
+                if not covered:
+                    fails.append("gutter")
+                    det.append("gutter-lewy-przyklejony: tresc przyklejona do %s (gL=%.2f gR=%.2f ratio=%.2f), przeciwny gutter PUSTY"
+                                % ("lewej" if big_right else "prawej", gL, gR, ratio))
+    # ---- (4)-(6) checki WYWODZONE Z IR MAKIETY = INFORMACYJNE, nie hard-FAIL (R13 domkniecie,
+    # test Drapek 18.07). Powod: detekcja blokow mockup-ir (findContours+OCR) na pastelowych
+    # full-bleed makietach AI jest zbyt szumna — TEN SAM powod, dla ktorego makieta_columns (kafle-cols)
+    # juz jest informacyjna (patrz komentarz w (1)). Zweryfikowane falszywe alarmy na WIERNYM landingu:
+    #   galeria „wysokosc" (IR content-bbox zlapal tylko naglowek -> AR 0.23 zamiast pelnego 2x2 gridu),
+    #   porownanie „obraz" (ir_image_slot wybral maly inset bottom-left zamiast glownego obrazu prawego),
+    #   hero „guttery" (OCR-asym makiety=0.00 bo chip ★ po prawej upozorowal symetrie).
+    # Hard-FAIL zostaje na DOM-owym sliver-guard (1) + RUBRYCE vision (5xT/N). Diagnostyka zostaje
+    # WIDOCZNA w kolumnie LAYOUT jako „info:" (transparentnosc, nie ukrywanie).
+    info = []
+    if ir is not None:
+        if not (P.get("wysokosc_tylko_kodowa") and stype != "kodowa"):
+            cbi = ir_content_bbox(ir)
+            if cbi and cbi["contentAR"] > 0:
+                dev = abs(dom["ar"] - cbi["contentAR"]) / cbi["contentAR"] * 100
+                if dev > P["wysokosc_tol_pct"]:
+                    info.append("wysokosc(makieta-IR) sekcja AR %.2f vs makieta %.2f (d=%.0f%%)"
+                                % (dom["ar"], cbi["contentAR"], dev))
+        if sid in P.get("gutter_sekcje", []):
+            ta = ir_text_asym(ir); dc = dom.get("content")
+            if ta and dc:
+                dasym = abs(dc["asym"] - ta["asym"])
+                if dasym > P["gutter_asym_delta"]:
+                    info.append("guttery(makieta-IR) render asym %.2f vs makieta %.2f (d=%.2f)"
+                                % (dc["asym"], ta["asym"], dasym))
+        isl = ir_image_slot(ir)
+        single = (not t) and imgs and imgs[0]["areaPct"] >= 0.20
+        if isl and single and isl["areaPct"] >= P.get("obraz_imgslot_min_area", 0.08):
+            rimg = imgs[0]
+            dcx = abs(rimg["cxpct"] - isl["cxpct"])
+            if dcx > P.get("obraz_center_delta", 0.30):
+                info.append("obraz(makieta-IR) srodek render x%.2f vs makieta x%.2f (d=%.2f)"
+                            % (rimg["cxpct"], isl["cxpct"], dcx))
+    if info:
+        det.append("info: " + "; ".join(info))
     status = "FAIL" if fails else "OK"
     return (status, fails, "; ".join(det))
 
@@ -528,10 +640,13 @@ def write_dopasowanie_v2(md_path, target, width, rows2, mobile_tail):
         rub = "skala:? AR:? gut:? kraw:? wys:? → WERDYKT: ?"
         md.append("| %s | %s | %s | %s | %s | %s |" % (sec, stype, mkn, ssims, lay, rub))
     md += ["",
-        "> Progi LAYOUT (manifest layout_diff.progi): kafle-sliver cols>=5 & szer<12%% & portret;",
-        "> wysokosc (kodowa) |AR-makieta|>40%%; guttery (hero/final) |dasym|>0.35; obraz srodek-strona d>0.30.",
-        "> SCENOWA: SSIM dwuskladnikowy (maska sceny cap ~0.70 OSOBNO + reszta prog 0.85).",
-        "> KODOWA: SSIM<0.85 desktop = LAYOUT-FAIL (twarde). Werdykt vision WSPOL-decyduje (moze zaostrzyc)."]
+        "> LAYOUT twarde (DOM self-checki, mierzone w renderze — BEZ makiety): (1) kafle-sliver cols>=5 &",
+        "> szer<12% & portret; (2) pustka-pod-obrazem: obraz in-flow contain w boksie ar>=1.4 z pustka",
+        "> pionowa >=30% (produkt plywa) LUB dolne >30% sekcji bez tresci; (3) gutter: scena full-bleed",
+        "> jednostronna (kryje <85% szer & off-center >0.12) LUB tresc przyklejona do boku z pustym gutterem.",
+        "> INFORMACYJNE (kolumna LAYOUT: 'info:', NIE FAIL — szum makiet AI): wysokosc/guttery/obraz z IR-makiety,",
+        "> raw-SSIM (real-render vs AI-makieta nie dyskryminuje wiernosci). Decyduja: DOM self-checki + RUBRYKA vision 5xT/N.",
+        "> SCENOWA: SSIM dwuskladnikowy (maska sceny cap ~0.70 OSOBNO + reszta) — informacyjnie."]
     io.open(md_path, "w", encoding="utf-8").write("\n".join(md) + mobile_tail)
 
 def main():
@@ -595,12 +710,19 @@ def main():
         lay_fails=[]; lay_det=[]
         if M:
             st, lf, ld = layout_checks(sec, stype, dom, mkpath, ir, M)
-            if lf: lay_fails += lf; lay_det.append(ld)
-        # SSIM severity wg typu
+            if lf: lay_fails += lf
+            if ld: lay_det.append(ld)          # zawsze przechwytuj detal (takze „info:")
+        # SSIM wg typu — INFORMACYJNY, nie hard-FAIL (R13, test Drapek 18.07).
+        # Doc SEKCJA-Z-MAKIETY L132-133: „SSIM real-render vs makieta AI ma niski sufit na OBU
+        # landingach (dobry i zly) -> SSIM sam NIE dyskryminuje wiernosci; robi to LAYOUT-DIFF + RUBRYKA".
+        # Empiria Drapka (13/13 WIERNYCH sekcji @ SSIM 0.32-0.76): prog 0.85 jest niemozliwy do
+        # spelnienia dla real-render vs AI-makieta -> demote do „info:". Decyduja: sliver-guard (DOM) +
+        # RUBRYKA (vision 5xT/N, wypelniana uczciwie — pozostaje twardym straznikiem mechaniki).
         ssim_disp = "%.3f" % sv
         if stype == "kodowa":
             if sv < Lprog["kodowa_desktop"]:
-                lay_fails.append("SSIM<%.2f" % Lprog["kodowa_desktop"])
+                lay_det.append("info: SSIM %.3f<%.2f (real-render vs AI-makieta — nie dyskryminuje, decyduje RUBRYKA)"
+                               % (sv, Lprog["kodowa_desktop"]))
         elif stype == "scenowa" and dom and dom.get("imgs"):
             scene = dom["imgs"][0]
             scene_rel = (max(0,scene["xpct"]), max(0,scene["ypct"]),
@@ -608,8 +730,13 @@ def main():
             sc, rest = ssim_split_scene(makieta, crop, scene_rel)
             ssim_disp = "%.3f (sc %.2f/reszta %.2f)" % (sv, sc, rest)
             if rest < Lprog["scenowa_reszta"] and (scene["wpct"]*scene["hpct"]) < 0.75:
-                lay_fails.append("reszta-SSIM<%.2f" % Lprog["scenowa_reszta"])
-        layout_str = "OK" if not lay_fails else ("LAYOUT-FAIL: " + ", ".join(lay_fails))
+                lay_det.append("info: reszta-SSIM %.3f<%.2f (real vs AI-makieta)" % (rest, Lprog["scenowa_reszta"]))
+        # LAYOUT hard-FAIL tylko z sliver-guard (DOM). Detal informacyjny doklejany jawnie.
+        info_txt = "; ".join(d for d in lay_det if d)
+        if lay_fails:
+            layout_str = "LAYOUT-FAIL: " + ", ".join(lay_fails) + ((" · " + info_txt) if info_txt else "")
+        else:
+            layout_str = "OK" + ((" · " + info_txt) if info_txt else "")
         rows.append((sec, os.path.basename(mkpath), ssim_disp, layout_str, stype))
         print("  #%-11s [%-7s] SSIM=%.3f  LAYOUT=%s%s"
               % (sec, stype, sv, layout_str, ("  {%s}" % " | ".join(lay_det) if lay_det else "")))

@@ -191,10 +191,11 @@
 
   "layout_diff": {
     "severity": "FAIL",
-    "_opis": "Strukturalny diff IR-makiety vs DOM. Kolumna LAYOUT w DOPASOWANIE.md = FAIL/OK per check. gate-check czyta LAYOUT jako severity FAIL. IR komplet == liczba sekcji (wymuszane).",
+    "_opis": "TWARDE LAYOUT-FAIL = DOM self-checki mierzone w SAMYM renderze (sliver-guard + pustka-pod-obrazem + gutter-asymetria/scena-zla-strona), odporne na szum makiet AI. Checki wywodzone z IR-makiety (wysokosc/guttery-IR/obraz) oraz raw-SSIM = INFORMACYJNE (kolumna LAYOUT: 'info:'), bo detekcja mockup-ir/OCR na pastelowych full-bleed kanwach AI jest zbyt szumna (R13 domkniecie + test Drapek 18.07). Rubryka vision 5xT/N = trzecia, niezalezna siatka. IR komplet == liczba sekcji (wymuszane).",
     "kolumna": "LAYOUT",
     "fail_token": "LAYOUT-FAIL",
-    "checks": ["kafle", "wysokosc", "guttery", "obraz"],
+    "checks": ["kafle", "pustka", "gutter"],
+    "checks_info": ["wysokosc", "guttery", "obraz"],
     "ir_dir": "ir",
     "ir_glob": "*-IR.json",
     "progi": {
@@ -211,7 +212,16 @@
       "obraz_center_delta": 0.30,
       "obraz_imgslot_min_area": 0.08,
       "obraz_area_pct": 30,
-      "obraz_offset_slot_pct": 20
+      "obraz_offset_slot_pct": 20,
+      "_opis_dom_selfchecki": "Progi TWARDYCH DOM self-checkow (mierzone w renderze, bez makiety). Kalibracja 18.07: Odpalak FAIL / Drapek+Loczek PASS. pustka: obraz in-flow contain w za wysokim boksie (emptyV=pustka pionowa box-vs-intrinsic; boxAR=H/W). gutter: scena full-bleed jednostronna (wpct<wmax i |cx-0.5|>offcx) LUB tresc przyklejona do boku z pustym przeciwnym gutterem.",
+      "pustka_img_min_area": 0.18,
+      "pustka_emptyv_min": 0.30,
+      "pustka_boxar_min": 1.40,
+      "pustka_section_bottom_max": 0.70,
+      "gutter_scene_wmax": 0.85,
+      "gutter_scene_offcx_min": 0.12,
+      "gutter_hug_ratio_max": 0.40,
+      "gutter_hug_biggut_min": 0.25
     },
     "ssim_progi": {
       "kodowa_desktop": 0.85,

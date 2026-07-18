@@ -104,10 +104,14 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   bazować na module (wideo-rail/lightbox/sticky-buy/faq-accordion@1) — skórka = tokeny/treść, mechanika
   i proporcje NIETYKALNE (⛔ `grid-auto-flow:column;grid-auto-columns:1fr` = slivery). Kodowanie od zera = odstępstwo w LEDGER.
 - **TYPY SEKCJI + RUBRYKA WERDYKTU (R13; `gate-manifest.json` → `sekcja_typy`, `layout_diff`):** KODOWA
-  (wideo/porownanie/faq/opinie/zamow/zaufanie/galeria) SSIM<0.85=LAYOUT-FAIL; SCENOWA SSIM dwuskładnikowy
-  (maska sceny cap ~0.7 + reszta 0.85). Werdykt w DOPASOWANIE.md = **5×T/N + WERDYKT** (TAK bez 5×T=FAIL;
-  frazy-wytrychy `bez wpływu`/`pomijalne`/`świadoma`/`reflow` w KODOWEJ=FAIL). `sekcja-diff.py` = kolumna LAYOUT
-  strukturalny (kafle-sliver/wysokość/guttery/obraz); `gate-check.py` egzekwuje rubrykę + LAYOUT + IR komplet.
+  (wideo/porownanie/faq/opinie/zamow/zaufanie/galeria) vs SCENOWA (hero/problem/demo/final/korzysci).
+  Werdykt w DOPASOWANIE.md = **5×T/N + WERDYKT** (TAK bez 5×T=FAIL; frazy-wytrychy `bez wpływu`/`pomijalne`/
+  `świadoma`/`reflow` w KODOWEJ=FAIL). **Trzy siatki obrony, nie jedna: twarde LAYOUT = DOM self-checki
+  mierzone w SAMYM renderze (sliver + pustka-pod-obrazem + gutter-asym/scena-zła-strona — `layout_diff.progi`
+  `pustka_*`/`gutter_*`); IR-compare (wysokość/guttery/obraz) i raw-SSIM = INFORMACYJNE ('info:', szum makiet
+  AI — mockup-ir/OCR na pastelach zawodny, SSIM real-vs-AI nie dyskryminuje); rubryka vision = TRZECIA siatka,
+  NIE jedyna.** DOM self-checki nie wymagają IR (18.07: FAIL Odpalak wideo+zamów+hero+final, PASS Drapek+Loczek).
+  `gate-check.py` egzekwuje rubrykę + LAYOUT + IR komplet.
 
 ### Fabryka → panel `/tn-sklepy`: MOST `panel-sync.py`
 - **Na końcu KAŻDEJ fazy sync do panelu** (`scripts/mockup-tools/panel-sync.py`; kontrakt+mapa

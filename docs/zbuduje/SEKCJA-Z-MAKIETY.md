@@ -77,6 +77,25 @@ Każdy werdykt sekcji NIE jest prozą — to 5 pól T/N + WERDYKT. Format wiersz
   wysokość vs makieta. `sekcja-diff.py` wypełnia kolumnę LAYOUT (OK / LAYOUT-FAIL: …) strukturalnie;
   vision wypełnia rubrykę — rozjazd LAYOUT=FAIL a rubryka=5×T sam się rzuca w oczy.
 
+**🔩 TWARDE LAYOUT-FAIL = DOM SELF-CHECKI (mierzone w SAMYM renderze, BEZ makiety — 18.07).**
+Trzy siatki obrony, NIE jedna: (a) **DOM self-checki** = twarde LAYOUT-FAIL; (b) **IR-compare + raw-SSIM**
+= tylko „info:" (szum makiet AI — mockup-ir/OCR na pastelowych full-bleed kanwach jest zawodny; SSIM
+real-render vs AI-makieta nie dyskryminuje wierności); (c) **rubryka vision 5×T/N** = trzecia siatka.
+Powód: faza 4 Drapka słusznie zdemotowała checki oparte na IR-makiety, ale przez to rozbroiła 3/4
+strażników geometrii z R13 — przywrócone jako self-checki, które mierzą PATOLOGIĘ SAMĄ W SOBIE:
+- **kafle-sliver** (DOM): kolumny kafli cols≥5 & med. szer <12% & portret (ar<0.8) → siatka „drzazgi".
+- **pustka-pod-obrazem** (DOM): dominujący obraz IN-FLOW `object-fit:contain` w za WYSOKIM boksie
+  (H/W ≥ 1.40) z pustką pionową (letterbox box-vs-`naturalWidth/Height`) ≥ 30% → produkt pływa w białym
+  boksie; wariant B: dolne >30% sekcji bez żadnej treści (`contentBlock.B` ≤ 0.70). Łapie „obraz za
+  wysoko podnosi sekcję" (Odpalak zamów). NIE liczy `contain`, który się mieści (Loczek faq), ani `fill`
+  (Loczek zamów), ani kwadratowego boksu (Drapek zamów, boxAR 1.00).
+- **gutter-asymetria** (DOM): (3a) scena full-bleed kryjąca TYLKO jeden bok (wpct<0.85) i off-center
+  (|cx−0.5|>0.12), treść po drugiej stronie → „scena zła strona / treść wciśnięta w gutter" (Odpalak
+  hero/final: scena 57–60% cx 0.70–0.72 vs wierne full-bleed cx 0.50); (3b) blok treści przyklejony do
+  boku względem `.wrap`, a przeciwny gutter PUSTY (nie kryty żadnym obrazem).
+Progi w `gate-manifest.json` → `layout_diff.progi` (`pustka_*`, `gutter_*`), kalibrowane empirycznie:
+FAIL Odpalak (wideo+zamów+hero+final), PASS Drapek (0/13) + Loczek (0/12). Self-checki nie wymagają IR.
+
 ## ZASADY DODATKOWE
 - Sekcja bardzo złożona (gęsta siatka) → potnij makietę na pod-bloki (DCGen/LaTCoder),
   koduj blokami, składaj wg bboxów.
