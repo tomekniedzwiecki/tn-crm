@@ -337,13 +337,49 @@ regeneracje/kreację** w budżecie +20% (~$0.5-0.7: gate $0.05-0.15 + inpainty +
 **Czego NIE robić:** zmiana silnika na v3 „dla spójności" (0e pkt 5) · refiner „żeby było
 ładniej" · rotacje 360° (ghosting) · dosypywanie zdań do anatomy_str (mechanizm wchodzi
 OBRAZEM) · >4 refy na klatkę · maska HSV na czarne/drewniane produkty.
-**WALIDACJA (drapek v2, 19.07): DZIAŁA** — 6/6 scen fidelity PASS, identity board CONSISTENT,
-$2.61 (cap $3), 1 pętla regenu. Lekcje: (a) ruch „wysuwu w bok" degeneruje do „zawiasu" —
-w promptach ruchu TWARDO „stays FLAT and LEVEL, slides sideways in-plane, NEVER tilts/hinged";
-(b) `size_floor` bezużyteczny na czarnym produkcie w high-key (czerń ma V>60 → fałszywe
-„za mały") — przy cv_reliable:false floor pomijać, decyzja W CAŁOŚCI na kompozytach VLM;
-(c) przed REJECTEM „zła pozycja elementu" sprawdź packshot NA KOMPOZYCIE — „wnęka na środku"
-okazała się zgodna z prawdą produktu (ocena pamięciowa by odrzuciła).
+**WALIDACJA v2 (19.07): NIEWYSTARCZAJĄCA — Tomek odrzucił.** Klatki kluczowe przeszły bramkę,
+ale mechanizm psuł się W RUCHU między nimi (pokrywa unosiła się jak zawias; w połowie sceny
+deska stawała się tacą z rantem). Lekcja meta: **bramka na rzadkich klatkach ≠ funkcja
+w ruchu**. Pomniejsze: `size_floor` bezużyteczny na czarnym w high-key; pozycję elementu
+weryfikuj na kompozycie (nie z pamięci — „wnęka na środku" była zgodna z packshotem).
+
+**DOKTRYNA v3 „EDYTUJ PRAWDĘ" (19.07 — z jedynej udanej sceny: „raz się udało = przepis"):**
+1. **Klatki produktowe = nano-EDYCJA PACKSHOTU** (dorysuj otoczenie/psa/dłoń WOKÓŁ realnych
+   pikseli produktu; „keep the product EXACTLY as-is, add..."), NIGDY generacja produktu
+   z opisu/refów. Piksele prawdy = geometria prawdy.
+2. **PRODUKT STATYCZNY WEWNĄTRZ SCENY**: first i last sceny budowane NA TEJ SAMEJ bazie
+   packshotu (stan identyczny; zmienia się TYLKO aktor/dłoń/rysy) — Kling nie ma czego
+   morfować w produkcie.
+3. **ZMIANA STANU MECHANIZMU = CIĘCIE + SFX, NIE ANIMACJA.** Ciągła transformacja mechaniczna
+   to najsłabsza umiejętność video-modeli — tam rodzą się zawiasy/tace. Zamknięta → CIĘCIE
+   (z sygnaturowym dźwiękiem, np. drewniane „szzzk") → otwarta. Montaż sprzedaje zmianę,
+   dźwięk czyni ją realną. (Opcjonalny 1-s makro-insert dwóch stanów pośrednich = też CIĘCIE.)
+4. **BRAMKA GĘSTA W RUCHU**: fidelity ocenia siatki 4-6 fps CAŁEJ sceny (nie first/mid/last);
+   jawne zakazy per produkt (rant/taca, zawias, teleport wnęki). PASS klatek ≠ PASS sceny.
+
+**0i-b. REFERENCE-TO-VIDEO — model WIDZI produkt w ruchu (research 19.07):**
+Root-cause morfu: FLF dostaje 2 klatki + tekst — packshotu nie widzi nigdy. Na fal istnieje
+klasa modeli z kotwicą tożsamości OBIEKTU przez cały klip:
+- **`fal-ai/kling-video/o1/reference-to-video`** — GŁÓWNY kandydat na silnik scen
+  produktowych (`kref`): `elements[{frontal_image_url: packshot, reference_image_urls:
+  [3-4 widoki + stany mechanizmu]}]` + `image_urls[0]` = nasza nano-klatka „z prawdy"
+  jako start frame („Take @Image1 as the start frame..."); 9:16, 3-10 s, **$0.112/s
+  ($0.56/5 s)**. BEZ tail_image — kotwica tożsamości zamiast przypięcia końca.
+- **`fal-ai/kling-video/o1/video-to-video/reference`** (`kmcref`) — Motion Control
+  z kotwicą produktu (driving + elements, max 4 refy łącznie) — na halucynację
+  „drugiego egzemplarza".
+- **Vidu Q2 reference-to-video** (720p $0.30/klip, do 7 refów) — tani backup/cross-scene.
+- Veo 3.1 reference = tylko hero/brand ($0.40/s); Wan VACE deprecated — NIE budować.
+**Reguła doboru per scena:** wierność produktu w ruchu (demo/mechanizm/makro) → `kref`
+(+multi-view refy!); precyzyjna kompozycja KOŃCA (loop-close, before/after) → FLF; kref
+TYLKO na sceny, gdzie morf zabija sprzedaż (+~24% na kreacji przy 2 scenach). Refy
+kumulują się z doktryną „edytuj prawdę" (start frame z realnych pikseli), NIE zastępują
+jej; zmiana stanu mechanizmu NADAL cięciem (kotwica przybija tożsamość, nie fizykę
+transformacji). Multi-view packshoty (front/3-4/bok/mechanizm-open) = najsilniejszy
+pojedynczy fix po samym „daj referencję" — jeden frontal nie ogranicza geometrii 3D.
+Refy czyste ≥1024px (upscale STILLA przed użyciem, bez przesharpienia). cfg ~0.5;
+morfy do negative („hinged lid, tray rim, morphing construction"). PILOT: 1 scena
+mechanizmu × {FLF, kref, Vidu} na gęstych siatkach ruchu (~$3-4), potem `kref` do render.py.
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 

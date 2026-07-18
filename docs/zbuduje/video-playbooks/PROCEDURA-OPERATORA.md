@@ -58,6 +58,11 @@ Sceny FAILED zostawiają `<tag>.failed`; poll odporny (status_url/response_url z
 **PAD SESJI (uśpienie/crash) = NIE re-submituj:** joby żyją server-side i są opłacone. `python fal.py reclaim <outdir>` czyta ledger i dociąga wyniki po `response_url` (re-poll darmowy; ślepy re-submit = drugi bill). Pomija tagi z istniejącym plikiem/`.failed`.
 
 ## KROK 5b — WIERNOŚĆ NA KLATKACH (0i — PRZED renderami)
+**DOKTRYNA „EDYTUJ PRAWDĘ" (v3 — nadrzędna):** klatki produktowe = nano-EDYCJA packshotu
+(otoczenie/aktor dorysowane WOKÓŁ pikseli produktu); produkt STATYCZNY wewnątrz sceny
+(first+last z TEJ SAMEJ bazy); zmiana stanu mechanizmu = CIĘCIE+SFX między scenami, NIGDY
+ciągła animacja; bramka wierności na siatkach 4-6 fps CAŁEJ sceny (morfy żyją MIĘDZY
+klatkami kluczowymi — incydent v2). Szczegóły: SSOT 0i.
 1. **Paszport mechanizmu**: wytnij refy stanów (`mechanism_states`) z packshotów i LIFESTYLE
    (obraz realnego działania!); stany powierzchni (np. rysy) — jeden kanoniczny ref.
 2. **`last()` ZAWSZE z `[first, ref_stanu]`** („Image 2 = EXACT identity+state — correct any
