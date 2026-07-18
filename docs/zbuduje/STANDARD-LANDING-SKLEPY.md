@@ -69,6 +69,32 @@ w karcie = CUT; brak pola = „brak danych", nigdy zmyślanie.
 
 ## 1. FLOW FABRYKI (fazy F0→F8; wykonawca = agent, koder = gpt-5.6-sol)
 
+**§1-sync — 🔌 SYNC PANELU (OBOWIĄZKOWY na końcu KAŻDEJ fazy).** Fabryka pracuje w plikach na
+Desktopie; panel `/tn-sklepy` = jedyne okno Tomka na postęp. MOST = `scripts/mockup-tools/panel-sync.py`
+(pełny kontrakt: `docs/zbuduje/MOST-PANEL.md`). Po zamknięciu fazy agent zapisuje krok DONE +
+fields + checklistę (VERBATIM!) + artefakty. Wszystko idempotentne (GET→PATCH|POST) — wolno puścić
+N razy. Import w Pythonie (`import panel_sync as ps`; payloady PL bez pułapki cp1250), CLI dla ad-hoc.
+
+**Mapa faza → krok panelu** (scope=produkt; ceny/koszt/status/slug = KOLUMNY przez `product_meta`, NIE fields):
+- **wybór/kalkulacja** → `link_product(proj, tt, name, slug, sort, cover)` (dosiewa kroki `wf2_ensure_steps`)
+  + `product_meta(pid, {price, cost_purchase, cost_shipping, fees_pct, margin_mode:'test', status:'w_budowie', slug, repo_path})`. `unit_profit` = kolumna GENERATED — NIE pisać.
+- **F0 dane/karta/paszport** → `lp_dane` · fields {source_ok, cena_pl, koszt_landed, marza, ocena, zdjecia_keep, wideo_keep, karta_url, paszport_url} · artefakty: `gallery` (kadry keep), `doc` KARTA-PRAWDY.md + PASZPORT.md (`storage='desktop'` → chip).
+- **F1 plan + F1.7 przewodnik** → `lp_plan` · fields {motyw, sekcje, tor_i_demo, plan_url, przewodnik_url} · artefakty: `doc` PLAN.md + PRZEWODNIK-GRAFICZNY.md (desktop).
+- **F2.5 branding + styl-master** → `lp_styl_marka` · fields {marka_nazwa, slug, font, paleta, styl_master_url, brand_dir} · artefakty: `styl_master` + `branding` (favicon / wordmark / logo-combo z Storage).
+- **F2 makiety 🏁** → `lp_makiety` · fields {sekcje_count, makiety, tor_i, akcept} · REHOST każdej makiety do `bud-assets/<slug>/makiety/` (`storage_upload(..., max_width=1440, to_webp=True, quality=82)`) → `artifact_add` kind `makieta` (mobile → `makieta_mobile`), `meta={section:'03-problem', viewport:'desktop'|'mobile'}`.
+- **F3 grafiki** → `lp_grafiki` · fields {assets_dir, distinct_views, mapa_url, waga_first} · artefakty: `scena`/`image` (grafiki produkcyjne), `doc` MAPA-ASSETOW.md.
+- **F4 kod** → `lp_kod` · `product_meta(pid, {repo_path})` + fields {preview_url, video_count} · artefakt `link`/`screenshot_final` (podgląd).
+- **F7.1 dopasowanie** → `lp_dopasowanie` · fields {sekcje_done, ssim_min, dopasowanie_dir} · artefakty `dowod`/`proof` (kompozyty NN-*.png).
+- **F5 życie** → `lp_zycie` · fields {motion_dna, interakcja_flagowa, tor_i_done} · artefakt `video`/`screenshot_final`.
+- **F6/F7/F8 finisz 🏁** → `lp_finisz` · fields {gate_check, landing_url, nowe_wnioski} · artefakty `gate_check`, `landing_live`, `screenshot_final`; `product_meta(pid, {status:'gotowy'})`; `project_link_add(proj, 'Landing <slug>', <preview_url>, 'ph-eye')` gdy jest URL.
+
+⚠️ **4 pułapki** (pełne w MOST-PANEL.md): (1) **checklisty = tekst VERBATIM** z obiektu `WS` w
+`tn-sklepy/projekt.html` — panel merguje po dokładnym `t`; literówka/„ulepszenie" = sierota (najprościej:
+wyciągnąć `WS[step_key].check` skryptem z projekt.html). (2) **ceny/koszt/marża/status/slug = KOLUMNY**
+(`product_meta`, whitelista) — panel ich NIE czyta z `data.fields`. (3) **storage:** `supabase`/`external`
++ rozszerzenie obrazu (lub kind graficzny: makieta/scena/branding/styl_master…) = MINIATURA; `repo`/`desktop`
+= chip (lokalne .md: url = ścieżka Desktop, nieklikalne). (4) **wiązanie** artefaktu z krokiem = `product_id` + `step_key`.
+
 **§1a — FORMAT KARTY PRAWDY PRODUKTU (F0.6; zapis `FABRYKA-*/<slug>/KARTA-PRAWDY.md`).**
 Jeden blok markdown, sekcje: **0. Tożsamość** (klasa z title+categories — kategoria Ali
 WEWNĘTRZNA, nie na stronę; mini-marka/slug) · **1. Cena** (koszt zakupu per wariant USD

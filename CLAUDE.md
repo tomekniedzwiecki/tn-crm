@@ -103,6 +103,15 @@ Tomka; incydent Latarka 17.07 — landing zbudowany na search-galerii innego pro
   frazy-wytrychy `bez wpływu`/`pomijalne`/`świadoma`/`reflow` w KODOWEJ=FAIL). `sekcja-diff.py` = kolumna LAYOUT
   strukturalny (kafle-sliver/wysokość/guttery/obraz); `gate-check.py` egzekwuje rubrykę + LAYOUT + IR komplet.
 
+### Fabryka → panel `/tn-sklepy`: MOST `panel-sync.py`
+- **Na końcu KAŻDEJ fazy sync do panelu** (`scripts/mockup-tools/panel-sync.py`; kontrakt+mapa
+  `docs/zbuduje/MOST-PANEL.md`, skrót w STANDARD §1-sync): faza→krok (`lp_dane/lp_plan/lp_styl_marka/
+  lp_makiety🏁/lp_grafiki/lp_kod/lp_dopasowanie/lp_zycie/lp_finisz🏁`) status=done + fields + checklista
+  **VERBATIM** z obiektu `WS` w `tn-sklepy/projekt.html` (panel merguje po dokładnym `t` = literówka daje sierotę) + artefakty (`wf2_artifacts`).
+- **Ceny/koszt/marża/status/slug/repo_path = KOLUMNY produktu** przez `product_meta` (whitelista; `unit_profit`
+  GENERATED — nie pisać), NIE `data.fields`. Makiety/branding rehost → `bud-assets/<slug>/…` (WebP) = miniatury; lokalne `.md` z `storage='desktop'` = chip. Idempotentne (GET→PATCH|POST; wiązanie = `product_id`+`step_key`).
+- Funkcje/CLI: `link_product · step_update · artifact_add · product_meta · project_link_add · storage_upload`.
+
 ## TN App — workflow budowy aplikacji SaaS (po pełnej płatności /aplikacja)
 
 **Osobna aplikacja** (`tn-app/index.html` lista + `tn-app/projekt.html`), LIVE:
