@@ -61,6 +61,18 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   Marża testowa = ~15% narzutu (`TEST_MARGIN_PCT`). Portfel: cel **3 produkty** (decyzja Tomka
   19.07, wcześniej 5 — mniej produkcji, ~165 zł testu/produkt), dobór = **PRAWDZIWE losowanie**
   z approved /trendy (bez scoringu — decyzja Tomka 17.07).
+- **Etap 5 → `ads_grafiki` = FABRYKA statycznych grafik (rev2, 19.07; SSOT
+  `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` + playbooki `ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md`):**
+  ŁĄCZNIE **3 kreacje** = kąty demo/problem/proof × format 4:5 (1080×1350) w JEDNYM tasku Manusa
+  (9:16 = rozszerzenie na przyszłość, nie default). Silnik = **WYŁĄCZNIE Manus, ZERO fallbacku
+  Gemini** (ZG9 „Manus albo nic" — awaria = `ads_manus_status='failed'` + reset RĘCZNY w panelu po
+  doładowaniu kredytów; edge 503 gdy kill-switch off / brak `MANUS_API_KEY`). Fazy G0–G8 z bramkami
+  QA (dowody, nie deklaracje): wierność produktu (2 pary oczu), tekst PL, polityka Meta, czytelność
+  @320px/safe-zone, różnorodność kątów (pHash) — narzędzie `scripts/mockup-tools/ad-gate.py`
+  (pomiary) + werdykt agenta. Rejestr: `wf2_creatives` media_type='image' (angle/format/ai_labeled)
+  + `wf2_artifacts` kind='ad_creative'; pętla wyników przez `wf2_creative_perf`/`wf2_angle_perf`
+  (migracja `20260719d_wf2_grafiki_fabryka`). Storage kanonicznie `bud-assets/<slug>/ads/`.
+  Panel: `adsGrafikiBlock` (timeline agr_*, galeria 3 kreacji, akcept per kreacja, pill status).
 - Auto-create projektu: tpay-webhook przy opłaconej rezerwacji 500 zł (blok WORKFLOW V2,
   własny try/catch — NIGDY nie może przerwać obsługi płatności).
 - **Styl modułu = Geist/Vercel (twardo)**: tła #0a0a0a/#111, 1px bordery #1f1f1f–#333,

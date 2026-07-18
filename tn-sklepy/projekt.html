@@ -78,6 +78,15 @@
             color:#d4d4d8; font-size:9.5px; padding:2px 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
         /* makiety mobile — kafle pionowe 9:16 (specyficzność .art-tile.art-mobile img > .art-tile img) */
         .art-tile.art-mobile img { aspect-ratio:9/16; }
+        /* kreacje statyczne ads_grafiki — kafel 4:5 z badge kąta / „AI" / toggle akceptu */
+        .ads-cr { position:relative; border:1px solid #2a2a2a; border-radius:6px; overflow:hidden; background:#111; }
+        .ads-cr img { width:100%; aspect-ratio:4/5; object-fit:cover; display:block; cursor:pointer; }
+        .ads-cr-empty { aspect-ratio:4/5; display:flex; align-items:center; justify-content:center; color:#52525b; font-size:11px; }
+        .ads-cr-angle { position:absolute; top:6px; left:6px; background:rgba(0,0,0,.72); color:#fff; font-size:9.5px; padding:2px 6px; border-radius:4px; text-transform:capitalize; }
+        .ads-cr-ai { position:absolute; top:6px; right:6px; background:rgba(0,112,243,.85); color:#fff; font-size:9px; font-weight:600; padding:2px 5px; border-radius:4px; letter-spacing:.03em; }
+        .ads-cr-ok { position:absolute; bottom:6px; right:6px; width:26px; height:26px; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.7); color:#a1a1aa; border:1px solid #333; border-radius:6px; cursor:pointer; transition:all .15s; }
+        .ads-cr-ok:hover { color:#fff; border-color:#555; }
+        .ads-cr-ok.is-ok { color:#45a557; border-color:#45a557; background:rgba(69,165,87,.16); }
         /* nagłówek grupy artefaktów (Makiety desktop / mobile / Pozostałe) */
         .art-group-head { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; }
         .agh-title { font-size:10px; font-family:ui-monospace,monospace; text-transform:uppercase; letter-spacing:.08em; color:#a1a1aa; }
@@ -1265,9 +1274,9 @@
                 check:['Płatność realnie zeszła (mikro-wydatek 5–15 zł/d przez 2–3 dni, bez skoków)','Account Quality czyste (brak restrykcji na koncie/BM/stronie)','Naming ustalony: [WF2:klient] produkt · lowercase/underscore','UTM z ID: utm_id={{ad.id}} · source=facebook/instagram · medium=paid_social','Blocklista komentarzy PL wgrana na stronę (scam/oszust*/chińsk*/nie doszło…)','Plan struktury: 1 kampania = 1 produkt = 1 ad set (ABO), broad, Advantage+'], prompt:'ads_preflight' },
 
             // ── ETAP 5: MATERIAŁY I KAMPANIA (product-scope; fabryka kreacji → kampania → start) ──
-            ads_grafiki: { desc:'SET 3 GRAFIK per produkt — Manus przez edge wf2-ads (research FB Ad Library → copy PL → 3 kreacje 4:5). Kąty: demo (mechanizm) / problem (plakat DR) / proof (viral) — 3 koncepcyjnie RÓŻNE kreacje = 3 osobne „byty" dla Andromedy (warianty tej samej grafiki konkurują o 1 slot). Referencja = curated_image + logo mini-marki. Zgodne z polityką Meta. Koszt ~$0.30. ⚡ RÓWNOLEGLE: można odpalić już po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
+            ads_grafiki: { desc:'FABRYKA 3 STATYCZNYCH KREACJI per produkt — silnik WYŁĄCZNIE Manus przez edge wf2-ads (research FB Ad Library PL → copy PL → ŁĄCZNIE 3 kreacje 4:5 1080×1350). Kąty: demo (mechanizm) / problem (plakat DR, ból BEZ produktu) / proof (viral, prawdziwe liczby) — 3 koncepcyjnie RÓŻNE „byty" (warianty tej samej grafiki konkurują o 1 slot Andromedy). Proces G0–G8 wg STANDARD-GRAFIKI-SKLEPY.md: dziedziczenie DNA marki (logo/paleta/fonty/styl-master/landing), bramki QA z DOWODAMI (wierność vs packshot, tekst PL, polityka Meta, czytelność @320px, różnorodność pHash), akcept per kreacja w panelu, rejestr wf2_creatives (media_type=image) + flaga AI. Silnik bez fallbacku — awaria = reset ręczny po doładowaniu kredytów. Koszt ~$0.30. ⚡ RÓWNOLEGLE: można odpalić już po kroku Styl-master + mini-marka (potrzebuje logo, nie landinga).',
                 fields:[{k:'grafiki_url',l:'Link do folderu (opcjonalnie, gdy ręcznie)'}],
-                check:['Referencja produktu + logo poprawne (wierność 1:1)','Research konkurencji (Manus) zrobiony','3 koncepty: demo / problem / proof — copy + wizual','Format 4:5 (feed+reels)','Zgodne z polityką Meta (bez pilności, bez „dostawa 24h")','Grafiki zaakceptowane do testów'], prompt:'ads_grafiki' },
+                check:['Referencja produktu + logo poprawne (wierność 1:1)','Research konkurencji (Manus) zrobiony','3 koncepty: demo / problem / proof — copy + wizual','Format 4:5 (feed+reels)','Zgodne z polityką Meta (bez pilności, bez „dostawa 24h")','Grafiki zaakceptowane do testów','Bramki QA z dowodami (5 sit): wierność vs packshot (2 pary oczu) · tekst PL · polityka Meta · czytelność @320px · różnorodność pHash','Dowody bramek → bud-assets/<slug>/ads/dowody/ + wf2_artifacts (kind=proof)','Rejestr wf2_creatives (media_type=image, angle, format) + wf2_artifacts (kind=ad_creative)','Flaga AI (ai_labeled=true; „AI info" przy publikacji — Meta 2026)'], prompt:'ads_grafiki' },
             ads_wideo: { desc:'1 kreacja ~15 s (9:16) z fabryki wideo na wzór trendującego TikToka. Archetyp wzorca decyduje o stacku (hands-POV → Kling FLF; talking-head → OmniHuman; gadżet+gadająca głowa → handsPOV). Postęp = timeline etapów niżej (artefakty per etap). JEDYNA twarda bramka = qa_gate (.pass na KAŻDYM klipie); bramki Tomka #1/#2 w trybie autonomicznym = samoakcept operatora z logiem. Koszt realny: ~$2.5-5.5 hands-POV bez refinera (refiner +$3-4 TYLKO hero/retargeting — na cold DR OFF). PACK HOOKÓW (decyzja Tomka): baza + ≤2 warianty hooka (cold-open re-cut $0 / świeże ujęcie FLF) — wideo wygrywa cold, a hook to największa dźwignia; 3 wersje wideo + 3 statyki = 6 adów zestawu. Flaga AI na kreacji; faktyczne disclosure = przy publikacji (krok Start). ⚡ RÓWNOLEGLE: wystarczy wzorzec z /trendy + kurowana galeria Ali (krok Dane).',
                 fields:[{k:'pattern_url',l:'Wzorzec (tiktok_url)', col:'product.video_pattern_tiktok_url'},{k:'video_url',l:'URL kreacji (PUBLIC attachments/bud-assets/<slug>/ads/; wf2-video=research+archiwum)', col:'product.video_url'},{k:'koszt',l:'Koszt (USD)', col:'product.video_cost_usd'}],
                 check:['Wzorzec: mp4 lokalnie/PRIVATE (cudzy content — NIGDY publicznie); w panelu tylko link TikTok','KARTA.json z galerii Ali (anatomia, functional_count, forbidden_leaks)','Blueprint wg szablonu (hook problem-first, LOOP CLOSE, SFX na akcje) — samoakcept #1 zalogowany','Klatki-klucze OK (pod-elementy produktu!) — samoakcept #2 zalogowany','KAŻDY klip z .pass (qa_gate; REJECT = pętla poprawek do wyczerpania)','Montaż: SFX na akcję + ambient (bramka) · −14 LUFS · LOOP CLOSE · handheld','Pack hooków: baza + ≤2 warianty (*_hook.mp4; łącznie ≤3 wersje)','Flaga video_ai_labeled=true (disclosure ustawiane przy publikacji)','Koszt z ledgera → video_cost_usd; finał → video_url; rejestr wf2_creatives'], prompt:'ads_wideo' },
@@ -1490,25 +1499,82 @@
                 `<button onclick="sdSetStatus('${s}')" class="st-btn ${st.status === s ? 'st-' + s : 'st-pending opacity-50 hover:opacity-100'}">${STEP_LABELS[s]}</button>`).join('');
         }
 
-        // ── special-case: 3 grafiki (Manus / wf2-ads) ──
+        // ── special-case: 3 statyczne kreacje (fabryka grafik; silnik = WYŁĄCZNIE Manus) ──
+        // Rev2 (decyzja Tomka 19.07): 3 kąty × 1 format 4:5, zero fallbacku — awaria = failed + reset ręczny.
+        const ADS_MANUS_META = { running:['#f5a623','Manus pracuje nad kreacjami'], failed:['#e5484d','Generacja padła'], completed:['#45a557','Kreacje gotowe'] };
         function adsGrafikiBlock(p) {
             const st = p.ads_manus_status;
+            const subs = subDefsFor('ads_grafiki');
             const creatives = Array.isArray(p.ads_creatives) ? p.ads_creatives : [];
+            const taskUrl = p.ads_manus_task_id ? `https://manus.im/app/${encodeURIComponent(p.ads_manus_task_id)}` : '';
             let h = '<div class="space-y-3">';
-            if (st === 'running') {
-                h += `<div class="border border-[#f5a623]/40 bg-[#f5a623]/[.06] rounded-md px-4 py-3 text-[12px] text-[#f5b955] flex items-center gap-2"><i class="ph ph-circle-notch animate-spin"></i> Manus pracuje nad kreacjami… (start: ${relTime(p.ads_manus_started_at)}) <button onclick="wf2AdsSweep()" class="ml-auto text-[10.5px] underline">sprawdź teraz</button></div>`;
-            } else if (st === 'failed') {
-                h += `<div class="border border-[#e5484d]/40 bg-[#e5484d]/[.06] rounded-md px-4 py-3 text-[12px] text-[#f26d78]">Generacja padła (${escapeHtml(p.ads_manus_step || 'błąd')}). <button onclick="wf2AdsGenerate(true)" class="underline">Spróbuj ponownie</button></div>`;
+
+            // (d) status pill running/failed/completed + link do zadania Manusa (running/failed)
+            const m = ADS_MANUS_META[st];
+            if (m) {
+                const running = st === 'running', failed = st === 'failed', col = m[0];
+                h += `<div class="border rounded-md px-4 py-3 text-[12px] flex items-center gap-2 flex-wrap" style="border-color:${col}66;background:${col}14;color:${col}">
+                    <i class="ph ${running ? 'ph-circle-notch animate-spin' : failed ? 'ph-warning-circle' : 'ph-check-circle'}"></i>
+                    <b>${escapeHtml(m[1])}</b>${running ? ` <span class="text-zinc-400">(start: ${relTime(p.ads_manus_started_at)})</span>` : ''}${failed && p.ads_manus_step ? ` <span class="text-zinc-400">· ${escapeHtml(p.ads_manus_step)}</span>` : ''}
+                    ${taskUrl && (running || failed) ? `<a href="${taskUrl}" target="_blank" class="underline text-[11px]">zadanie Manus ↗</a>` : ''}
+                    ${running ? `<button onclick="wf2AdsSweep()" class="ml-auto text-[10.5px] underline">sprawdź teraz</button>` : ''}</div>`;
             }
+
+            // (e) failed → reset ręczny (po doładowaniu kredytów); komunikat: generator = wyłącznie Manus
+            if (st === 'failed') {
+                h += `<div class="border border-[#e5484d]/40 bg-[#e5484d]/[.06] rounded-md px-3.5 py-2.5 text-[11px] text-[#f26d78] space-y-2">
+                    <div>Generator statyczny = <b>wyłącznie Manus</b>, bez silnika zastępczego. Wznowienie ręczne — najpierw doładuj kredyty w konsoli Manusa, potem zresetuj breaker.</div>
+                    <button onclick="wf2AdsReset()" class="inline-flex items-center gap-1.5 bg-[#e5484d]/15 hover:bg-[#e5484d]/25 border border-[#e5484d]/40 rounded px-3 py-1.5 text-[11px] font-medium transition-colors"><i class="ph ph-arrow-counter-clockwise"></i> Reset (po doładowaniu kredytów)</button></div>`;
+            }
+
+            // (f) suma kosztów z wf2_costs (step_key='ads_grafiki') w nagłówku bloku
+            const gc = (costs || []).filter(c => c.product_id === p.id && c.step_key === 'ads_grafiki');
+            const gcSum = gc.reduce((s, c) => s + costPln(c), 0);
+            if (gcSum > 0) h += `<div class="text-[10.5px] text-zinc-500 font-mono">koszt fabryki grafik (Manus): ${moneyPL(gcSum)} · ${gc.length} poz. (szczegóły: zakładka Koszty)</div>`;
+
+            // (b)+(c) galeria kreacji: badge kąta + „AI", lightbox z nawigacją, akcept ✓/✗ per kreacja
             if (creatives.length) {
-                h += '<div class="grid grid-cols-3 gap-2">' + creatives.map(c => `
-                    <a class="art-tile" href="javascript:void(0)" data-url="${escapeHtml(c.image_url || '')}" onclick="openLightbox(this.dataset.url)">
-                        ${c.image_url ? `<img src="${escapeHtml(thumbUrl(c.image_url, 360))}" loading="lazy">` : '<div class="p-4 text-zinc-600 text-[11px]">brak obrazu</div>'}
-                        <span class="art-label">${escapeHtml(c.angle || '')}: ${escapeHtml(c.headline || '')}</span></a>`).join('') + '</div>';
-                h += '<div class="space-y-1.5">' + creatives.map(c => `<div class="text-[11px] text-zinc-400 bg-[#111] border border-[#232323] rounded px-2.5 py-1.5"><b class="text-[#52a8ff]">${escapeHtml(c.angle||'')}</b> · ${escapeHtml(c.headline||'')}<br><span class="text-zinc-500">${escapeHtml(c.primary_text||'')}</span></div>`).join('') + '</div>';
+                const gid = 'ads-cr-' + (++lbGroupSeq);
+                h += '<div class="grid grid-cols-3 gap-2">' + creatives.map((c, i) => {
+                    const url = c.image_url || '';
+                    const fmt = c.format === '916' ? '9:16' : '4:5';
+                    const ok = !!c.approved;
+                    return `<div class="ads-cr">
+                        ${url ? `<a href="javascript:void(0)" data-lb-group="${gid}" data-lb-url="${escapeHtml(url)}" data-lb-cap="${escapeHtml((c.angle||'')+' · '+(c.headline||''))}" onclick="openLightboxG(this)"><img src="${escapeHtml(thumbUrl(url, 360))}" loading="lazy"></a>` : '<div class="ads-cr-empty">brak obrazu</div>'}
+                        <span class="ads-cr-angle">${escapeHtml(c.angle || '—')} · ${fmt}</span>
+                        <span class="ads-cr-ai" title="oznaczone jako AI (disclosure przy publikacji — Meta 2026)">AI</span>
+                        <button onclick="wf2AdsToggleApprove(${i})" class="ads-cr-ok ${ok ? 'is-ok' : ''}" title="${ok ? 'zaakceptowana — kliknij, by cofnąć' : 'zaakceptuj tę kreację do testów'}"><i class="ph ${ok ? 'ph-check-circle' : 'ph-circle'}"></i></button>
+                    </div>`;
+                }).join('') + '</div>';
+                // copy per kreacja (headline + badge + primary text)
+                h += '<div class="space-y-1.5">' + creatives.map(c => `<div class="text-[11px] text-zinc-400 bg-[#111] border border-[#232323] rounded px-2.5 py-1.5"><b class="text-[#52a8ff]">${escapeHtml(c.angle||'')}</b>${c.badge ? ` <span class="text-[#f5b955]">${escapeHtml(c.badge)}</span>` : ''} · ${escapeHtml(c.headline||'')}<br><span class="text-zinc-500">${escapeHtml(c.primary_text||'')}</span></div>`).join('') + '</div>';
             }
-            if (st !== 'running') {
-                h += `<button onclick="wf2AdsGenerate(${creatives.length ? 'true' : 'false'})" class="w-full inline-flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2.5 text-xs font-semibold transition-colors"><i class="ph ph-magic-wand"></i> ${creatives.length ? 'Regeneruj 3 grafiki (Manus, ~$0.30)' : 'Generuj 3 grafiki (Manus, ~$0.30)'}</button>`;
+
+            // (a) timeline sub-kroków agr_* (jak fabryka wideo) — brief → generacja → QA → finał
+            if (subs.length) {
+                h += '<div class="space-y-2">' + subs.map((d, i) => {
+                    const sst = stepFor(d.key, p.id) || { status: 'pending' };
+                    const note = sst.data && sst.data.note ? sst.data.note : '';
+                    const arts = artifactsFor(p.id, d.key);
+                    const icon = sst.status==='done' ? 'ph-check-circle' : sst.status==='in_progress' ? 'ph-circle-half' : sst.status==='blocked' ? 'ph-x-circle' : sst.status==='skipped' ? 'ph-minus-circle' : 'ph-circle';
+                    const col = sst.status==='done' ? '#45a557' : sst.status==='in_progress' ? '#0070f3' : sst.status==='blocked' ? '#e5484d' : '#3f3f46';
+                    return `<div class="border border-[#1f1f1f] rounded-md px-3 py-2 bg-[#0d0d0d]">
+                        <div class="flex items-center gap-2 text-[11.5px]">
+                            <i class="ph ${icon}" style="color:${col}"></i>
+                            <i class="ph ${escapeHtml(d.icon || 'ph-circle')} text-zinc-500"></i>
+                            <span class="text-zinc-300">${i + 1}. ${escapeHtml(d.label)}</span>
+                            ${d.milestone_label ? `<span class="mile-badge"><i class="ph ph-flag-checkered"></i></span>` : ''}
+                            <span class="ml-auto text-[10px] text-zinc-600">${STEP_LABELS[sst.status] || sst.status}</span>
+                        </div>
+                        ${note ? `<div class="text-[10.5px] text-zinc-500 mt-1.5 whitespace-pre-line">${escapeHtml(note)}</div>` : ''}
+                        ${arts.length ? `<div class="mt-2">${artifactsGallery(arts)}</div>` : ''}
+                    </div>`;
+                }).join('') + '</div>';
+            }
+
+            // (g) generacja przez edge wf2-ads — ukryta przy running/failed (failed wymaga wpierw resetu breakera)
+            if (st !== 'running' && st !== 'failed') {
+                h += `<button onclick="wf2AdsGenerate(${creatives.length ? 'true' : 'false'})" class="w-full inline-flex items-center justify-center gap-2 bg-white text-black hover:bg-zinc-200 rounded-md px-4 py-2.5 text-xs font-semibold transition-colors"><i class="ph ph-magic-wand"></i> ${creatives.length ? 'Regeneruj 3 kreacje (Manus, ~$0.30)' : 'Generuj 3 kreacje (Manus, ~$0.30)'}</button>`;
             }
             h += '</div>';
             return h;
@@ -1528,6 +1594,31 @@
             const p = drawerProduct(); if (!p) return;
             try { await supabaseClient.functions.invoke('wf2-ads', { body: { product_id: p.id } }); } catch (_) {}
             await refreshProduct(p.id); renderDrawer();
+        }
+        // (c) toggle akceptu pojedynczej kreacji → approved w wf2_products.ads_creatives (team RLS)
+        async function wf2AdsToggleApprove(idx) {
+            const p = drawerProduct(); if (!p) return;
+            const arr = Array.isArray(p.ads_creatives) ? p.ads_creatives.slice() : [];
+            if (!arr[idx]) return;
+            arr[idx] = { ...arr[idx], approved: !arr[idx].approved };
+            try {
+                const { error } = await supabaseClient.from('wf2_products').update({ ads_creatives: arr }).eq('id', p.id);
+                if (error) throw error;
+                p.ads_creatives = arr; renderDrawer();   // odczyt panelu = tablica products; mutacja in-place
+            } catch (e) { showToast('Nie zapisano akceptu: ' + (e.message || e), 'error'); }
+        }
+        // (e) reset breakera po awarii — WYŁĄCZNIE po doładowaniu kredytów (generator bez fallbacku)
+        async function wf2AdsReset() {
+            const p = drawerProduct(); if (!p) return;
+            if (!confirm('Zresetować breaker generatora grafik?\n\nRób to WYŁĄCZNIE po doładowaniu kredytów Manusa — generator statyczny nie ma silnika zastępczego.')) return;
+            try {
+                const { error } = await supabaseClient.from('wf2_products')
+                    .update({ ads_manus_status: null, ads_manus_step: null, ads_manus_task_id: null, ads_manus_started_at: null })
+                    .eq('id', p.id);
+                if (error) throw error;
+                showToast('Breaker zresetowany — możesz zlecić generację ponownie', 'success');
+                await refreshProduct(p.id); renderDrawer();
+            } catch (e) { showToast('Nie udało się zresetować: ' + (e.message || e), 'error'); }
         }
         async function refreshProduct(pid) {
             const { data } = await supabaseClient.from('wf2_products').select('*').eq('id', pid).single();
@@ -1838,7 +1929,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 pl_glowna: `KROK STRONA GŁÓWNA. Zbuduj galerię marki parasolowej — tokeny marki z wf2_projects: name/tagline/brand_opis/palette/fonts/logo_url (krok „Marka sklepu"); kafle WSZYSTKICH produktów ze statusem gotowy/live — zdjęcie, nazwa mini-marki, cena, link do landinga platform_page_url. Lekki statyczny HTML (self-contained; window.trevio.viewItemList z listą produktów). Przez wf2-platform: 'publish_landing' {shop_id, path:'', html}. Aktualizuj przy każdym nowym gotowym produkcie. Zapisz URL w polu kroku.`,
                 pl_test: `KROK TEST ZAKUPOWY (BRAMKA). Złóż realne zamówienie testowe COD end-to-end: landing → CTA → checkout → zamówienie. Zweryfikuj: zamówienie widoczne przez wf2-platform 'orders' (zapisz id), zdarzenia trevio/pixel złapane, ceny landing↔kasa zgodne. Dowody (id zamówienia + zrzut) do notatki kroku. To bramka „sklep sprzedaje".`,
                 ads_pixel: `KROK PIXEL + POMIAR (Etap 4 Środowisko reklamowe). Zweryfikuj/utwórz pixel w BM z kontem reklamowym klienta (${project.meta_ad_account_id || 'act_?'}): pixel w TYM SAMYM BM (inny BM = WCA nie działają), OBIE domeny zweryfikowane w BM (domena parasolowa + domena checkoutu platformy), pixel ustawiony na platformie przez wf2-platform 'set_integration' (FacebookPixel: pixelId + apiKey=token CAPI). Dual tracking wg WORKFLOW-V2-TESTY §7.2: pixel przeglądarkowy + CAPI serwerowe Z DEDUPLIKACJĄ po wspólnym event_id (Test Events: JEDNO zdarzenie, nie dwa), hashowane email/telefon/fbp/fbc w CAPI (COD je ma z formularza — cel EMQ 8+, min. 6), link decoration fbclid/_fbp/_fbc na przejściu landing→kasa (runtime-snippet). Purchase testowy w Events Managerze jako GATE. Zapisz pixel_id na projekcie.`,
-                ads_grafiki: `KROK 3 GRAFIKI dla ${S} (id ${PID}). Zleć przez edge wf2-ads: POST {product_id:'${PID}'} (gate: team JWT / x-wf2-secret). Pipeline: Manus (research FB Ad Library PL → copy PL → 3 kreacje 4:5 1080×1350; kąty demo/problem/proof; referencja = curated_image/galeria Ali + logo mini-marki z kroku Styl+marka; KROK ZEROWY weryfikacji referencji). Po ukończeniu ZWERYFIKUJ wierność produktu na każdej grafice vs referencja (drift = regeneracja) i zgodność z polityką Meta (zero fałszywej pilności/obietnic dostawy; risk-reversal COD). Wynik w wf2_products.ads_creatives — panel pokazuje w tym kroku. Zaakceptowane 3 szt. = done.`,
+                ads_grafiki: `KROK 3 STATYCZNE KREACJE dla ${S} (id ${PID}). NAJPIERW przeczytaj CAŁY docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md (SSOT: zasady ZG1–ZG9, fazy G0–G8) + playbooki docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md. Silnik generacji = WYŁĄCZNIE Manus (ZG9 „Manus albo nic" — zero fallbacku; awaria = failed + reset ręczny w panelu po doładowaniu kredytów, nigdy cicha degradacja jakości). Modele operatora (D10): domyślnie Sonnet (briefy, werdykty bramek), Haiku do skryptów/REST, Opus TYLKO gdy otwarta kreacja. FAZY: G0 wejście (KARTA PRAWDY/paszport DZIEDZICZONE z fabryki landingu, brand, landing URL live, gate source='detail'); G1 brief per kąt (playbook + hooki z lp_plan; demo=mechanizm, problem=ból BEZ produktu [ZG8 EMOCJA↔PRODUKT — produkt tylko w strefie rozwiązania/CTA], proof=prawdziwe liczby z kotwicą); G2 generacja przez edge wf2-ads: POST {product_id:'${PID}'} (gate: team JWT / x-wf2-secret; default angles=demo/problem/proof, formats=['45'] → ŁĄCZNIE 3 kreacje 4:5 1080×1350 w JEDNYM tasku Manusa; DNA marki: logo + styl_master jako attachment + paleta/fonty + landing do obejrzenia); G3 bramka wierności produktu (side-by-side vs packshot, DWIE PARY OCZU: pass-2 = świeży agent Sonnet bez kontekstu; drift = regeneracja); G4 bramka tekstu PL (diakrytyki/glify/scramble) + czytelności @320px / safe-zone; G5 bramka polityki Meta (docs/zbuduje/ADS-BLOCKLISTA-PL.md + personal attributes + before/after) + różnorodności (pHash — 3 koncepcyjnie różne byty). Pomiary: python scripts/mockup-tools/ad-gate.py <katalog_png> --out dowody/ (miniatury 320px, safe-zones, pHash pairwise) — werdykt jakościowy robisz TY, nie skrypt; dowody → bud-assets/${S}/ads/dowody/ + wf2_artifacts kind='proof'. G6 AKCEPT: każdą kreację odhaczasz w panelu (toggle ✓ per kreacja — bramka ludzka Tomka). G7 rejestr+emisje przez scripts/mockup-tools/panel-sync.py (kontrakt docs/zbuduje/MOST-PANEL.md): step_update (checklista VERBATIM), artifact_add (kind='ad_creative', bud-assets/${S}/ads/), cost_add (kind='manus'); edge sam pisze wf2_creatives (media_type='image', angle, format, ai_labeled=true) + ads_creatives blob. G8 RETRO: lekcje → CHANGELOG w STANDARD-GRAFIKI-SKLEPY.md. ŚWIĘTOŚCI: wierność produktu (ZG2 — refy=OBIEKTY {url,type:'product'}, nigdy stringi), zero zmyślonych liczb (ZG4 — liczby TYLKO z danych produktu z kotwicą, zero fałszywej pilności/obietnic dostawy; risk-reversal COD), flaga AI obowiązkowa (Meta 2026). Wynik: wf2_products.ads_creatives + rejestr — panel pokazuje w tym kroku. 3 zaakceptowane kreacje = done.`,
                 ads_wideo: `KROK WIDEO 15 s dla ${S} (id ${PID}). Wg scripts/video-factory/README.md + GENERATOR-VIDEO-STRATEGIA.md (sekcje 0-0e): wzorzec = ${p && p.video_pattern_tiktok_url ? p.video_pattern_tiktok_url : 'top wideo z bud_tt_products (tt_shop.videos / tiktok_url — wybierz wg plays i dopasowania)'}; NAJPIERW odczytaj ARCHETYP wzorca i dobierz stack (hands-POV → cała kreacja Kling FLF ~$2.5; talking-head → OmniHuman + face-ref + bramka tożsamości; sceny z gestem = Motion Control z drivingiem oryginału). Spisz KARTA.json z galerii Ali (NIE z brandowanych packshotów TikTok Shop). Prowadź: ingest → blueprint (BRAMKA TOMKA #1) → audio+klatki (BRAMKA #2: arkusz klatek) → render przez bud-fal-proxy → qa_gate.py (.pass na KAŻDYM klipie — montaz.py odmawia bez .pass) → montaż 15 s (hook≤2s, bez napisów) → pętla QA do czystej rundy. Po finale PACK HOOKÓW (PROCEDURA KROK 10b): baza + ≤2 warianty (cold-open re-cut $0 / świeże ujęcie FLF ~$0.45) → pliki *_hook.mp4 obok finału. OZNACZENIE AI w Meta OBOWIĄZKOWE. Materiał badawczy (mp4 wzorca) → prywatny bucket wf2-video; FINALNĄ kreację + warianty wgraj do PUBLICZNEGO Storage attachments/bud-assets/<slug>/ads/kreacja_15s.mp4 (panel i Meta ją czytają), zapisz video_url + video_cost_usd + video_ai_labeled na produkcie + INSERT wf2_artifacts (kind='video').`,
                 ads_preflight: `KROK PRE-FLIGHT ŚRODOWISKA (bramka zamykająca Etap 4 — kampanie nie powstają przy brakach). Zweryfikuj środowisko end-to-end na koncie ${project.meta_ad_account_id || 'act_?'}: (1) Account Quality — brak restrykcji konta/BM/strony; (2) płatność realnie schodzi: mikro-wydatek 5–15 zł/d przez 2–3 dni (spokojny start bez skoków = anty fraud-flag; kampanię rozruchową utwórz PAUSED — odpala Tomek) albo potwierdzony wydatek historyczny; (3) strona FB przypisana do konta + BLOCKLISTA komentarzy PL wgrana na stronę — lista standardowa i instrukcja wgrania 1:1: docs/zbuduje/ADS-BLOCKLISTA-PL.md (Moderation Assist NIE działa na reklamach — tylko keyword blocklist + profanity filter); (4) konwencje RAZ NA ZAWSZE: nazwy „[WF2:${project.customer_name || 'klient'}] produkt", UTM: utm_source=facebook/instagram (NIE „meta"), utm_medium=paid_social, utm_id={{ad.id}} + {{campaign.id}}/{{adset.id}} (ID, nie nazwy — rename psuje raporty); (5) plan struktury zapisany: 1 kampania = 1 produkt = 1 ad set (ABO), broad (PL, wiek, płeć wg produktu), Advantage+ placements, jedno bidowanie (highest volume). Wynik = tabela braków w notatce kroku; 0 braków = done (kamień „Środowisko reklamowe gotowe").`,
                 ads_zestaw: `KROK ZESTAW REKLAM dla ${S} (id ${PID}). Skompletuj zestaw 6 adów do kampanii: 3 wersje wideo (finał + warianty *_hook.mp4 z kroku Wideo) + 3 statyki (ads_creatives z kroku Grafiki) — każdy ad to koncepcyjnie INNY byt (Andromeda skleja podobne kreacje w jeden slot). Copy PL per ad wg zasad COD: primary text z hookiem w pierwszych 125 znakach, headline ≤27 znaków (wartość, nie powtórka), 5 RÓŻNYCH tekstów w polach tekstowych (nie parafrazy), risk-reversal („płacisz przy odbiorze" + zwrot 14 dni) + social proof z KONKRETNĄ liczbą z KARTY PRAWDY (zero zmyślonych liczb, zakaz fałszywej pilności/obietnic dostawy). Mapa message-match: kreacja N → landing ?h=N (mapa HOOKS z brandingu). AUDYT POLITYKI: Meta ocenia copy+landing RAZEM (semantic intent) — sprawdź parę pod misleading claims / personal attributes („masz problem z…" = flaga) / implied transformations; awatar AI = wyłącznie prezenter demonstrujący produkt, NIGDY „zadowolony klient" z testimonialem. Flaga AI per kreacja (self-certification — brak = odrzucenie). Zapisz pola kroku (ads_count, hooks_map), uzupełnij rejestr wf2_creatives (slug/archetyp/warianty/koszt) + artefakty wf2_artifacts (kind='ad_creative').`,

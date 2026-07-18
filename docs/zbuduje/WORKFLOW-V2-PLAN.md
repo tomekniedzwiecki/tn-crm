@@ -69,14 +69,45 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
 - **Edge:** `wf2-platform` = TYPED ACTIONS (stores/publish_landing/ensure_product/
   set_checkout_slug/integracje/domeny/logo/orders/dostawy+COD; retry 429; raw zostaje) ·
   **`wf2-landing-api`** (PUBLICZNY GET ?product= → cena/checkout_url z DB, cache 5 min —
-  hydratacja ceny na landingu bez re-publikacji przy test→scale) · **`wf2-ads`** (3 grafiki
-  Manus per produkt: kąty demo/problem/proof 4:5, fallback Gemini; wynik →
-  `wf2_products.ads_creatives`; manus-webhook ma 3. gałąź routingu) · `wf2-orders-sync` (cron).
+  hydratacja ceny na landingu bez re-publikacji przy test→scale) · **`wf2-ads`** (rev2 19.07:
+  ŁĄCZNIE 3 kreacje Manus per produkt — kąty demo/problem/proof × format 4:5 w JEDNYM tasku;
+  **silnik = WYŁĄCZNIE Manus, ZERO fallbacku Gemini (ZG9 „Manus albo nic")** — awaria = failed +
+  reset ręczny; wynik → `wf2_products.ads_creatives` + rejestr `wf2_creatives` media_type='image';
+  manus-webhook ma 3. gałąź routingu) · `wf2-orders-sync` (cron).
 - **Landing runtime:** `docs/zbuduje/assets/landing-runtime-snippet.html` — kontrakt
   data-checkout/data-price + {{WF2_PRODUCT_ID}}; window.trevio (viewItem/addToCart/
   beginCheckout) + Meta VC/ATC/IC z **INIT-GUARD** (platforma wstrzykuje pixel na stronach
   isHtml — landing NIGDY nie robi 2. init/PageView) + doklejanie fbclid/_fbp/_fbc do kasy.
 - Świeży katalog API (26 endpointów + guide `window.trevio`): `platforma-api/docs-raw.json`.
+
+## 0a-quater. FABRYKA STATYCZNYCH GRAFIK ADS (2026-07-19 — rev2 „Manus albo nic")
+
+Krok `ads_grafiki` (Etap 5) podniesiony z „3 grafiki Manus" do PEŁNEJ FABRYKI na wzór
+landingów i wideo — SSOT + playbooki + bramki QA z dowodami + rejestr z rodowodem + pętla
+wyników + odzwierciedlenie w panelu. **Silnik generacji = WYŁĄCZNIE Manus** (decyzja Tomka
+19.07: „albo Manus, albo ma się nie wykonać" — tor fallback Gemini CAŁKOWICIE wycięty z edge).
+
+- **Zestaw startowy (D2):** ŁĄCZNIE **3 kreacje** — 3 kąty (`demo`/`problem`/`proof`) × 1 format
+  **4:5** (1080×1350) w JEDNYM tasku Manusa; pliki `ad_<n>_<angle>.png` (back-compat parsera).
+  Format 9:16 (safe-zones 14/35/6%) = opisane ROZSZERZENIE na przyszłość, nie generowane domyślnie.
+- **Awaria (D2b):** kill-switch off / brak `MANUS_API_KEY` → edge zwraca 503 („generator wyłączony")
+  bez generacji; brak kredytów / timeout >32 min / 0 obrazów → `ads_manus_status='failed'` +
+  `ads_manus_step` z powodem + alert Slack; ŻADNEJ generacji zastępczej. Wznowienie = ręczny reset
+  breakera w panelu po doładowaniu kredytów.
+- **SSOT + playbooki:** `docs/zbuduje/STANDARD-GRAFIKI-SKLEPY.md` (zasady ZG1–ZG9, fazy G0–G8,
+  formaty/polityka Meta/rejestr/modele D10) + `docs/zbuduje/ad-playbooks/PLAYBOOK-ad-{demo,problem,proof}.md`.
+- **Bramki QA (D8):** `scripts/mockup-tools/ad-gate.py` (pomiary: miniatury @320px, safe-zones dla
+  `*_916*`, pHash pairwise kątów) + werdykt agentowy; dowody → `bud-assets/<slug>/ads/dowody/` +
+  `wf2_artifacts` kind='proof'.
+- **Rejestr + pętla (D5/D11):** migracja `20260719d_wf2_grafiki_fabryka.sql` — `wf2_creatives`
+  rozszerzone o `media_type/angle/format/pattern_ref`; widok `wf2_creative_perf` +CTR/CPC/CPA;
+  nowy `wf2_angle_perf` (image, group by angle+format); sub-kroki `agr_brief/generacja/qa/final`
+  (sub_of='ads_grafiki', stage=5). `wf2-ads-sync` mapuje po `meta_ad_ids` — bez zmian.
+- **Panel (`tn-sklepy/projekt.html`):** `adsGrafikiBlock(p)` v2 — timeline `agr_*`, galeria 3 kreacji
+  4:5 z lightboxem + badge kąta/„AI", akcept per kreacja (toggle ✓/✗ → `ads_creatives.approved`),
+  pill running/failed/completed + link `manus.im/app/{task_id}`, przycisk „Reset" przy failed,
+  suma kosztów z `wf2_costs`. `map.ads_grafiki` = pełny rytuał G0–G8 z odesłaniem do SSOT.
+- **Flaga AI (D9):** `ai_labeled=true` w rejestrze — Meta 2026 egzekwuje disclosure.
 
 ## 0a-bis. FABRYKA LANDINGÓW — STAN (2026-07-16 wieczór, po 2 dniach dopracowywania flow)
 

@@ -102,5 +102,41 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   r.status < 300 ? ok('wf2_costs dostępne (kolumny amount/currency/stage/kind)') : bad('wf2_costs', `status ${r.status}`);
 }
 
+// ── 7. Fabryka statycznych grafik ads (ads_grafiki, rev2 „Manus albo nic") ──
+// Asserty statyczne (b/c/d/f) — grep źródeł, bez sieci. Asserty (a/e) sondują DB i
+// przechodzą DOPIERO po zaaplikowaniu migracji W2 (20260719d) — przed nią FAIL oczekiwany.
+{
+  const adsSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads', 'index.ts'), 'utf8');
+  const html = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
+  const pkg = readFileSync(join(ROOT, 'package.json'), 'utf8');
+
+  // (b) edge pisze rejestr obrazów (D5) + rehost na ścieżkę kanoniczną D6
+  adsSrc.includes('wf2_creatives') ? ok('wf2-ads pisze do rejestru wf2_creatives (D5)') : bad('wf2-ads rejestr', 'brak zapisu wf2_creatives — grafiki bez rodowodu');
+  (adsSrc.includes('bud-assets/') && /\/ads\/ad_/.test(adsSrc)) ? ok('wf2-ads rehostuje do bud-assets/<slug>/ads/ (D6)') : bad('wf2-ads storage', 'brak ścieżki kanonicznej bud-assets/…/ads/');
+
+  // (f) ZG9 „Manus albo nic": zero toru fallback Gemini (generate-image / provider gemini)
+  /generate-image|gemini/i.test(adsSrc)
+    ? bad('wf2-ads tor Gemini (ZG9!)', 'źródło wciąż wywołuje generate-image/gemini — „Manus albo nic" złamane')
+    : ok('wf2-ads: zero toru fallback Gemini (ZG9 „Manus albo nic")');
+
+  // (c) prompt-mapa kroku odsyła do SSOT grafik
+  html.includes('STANDARD-GRAFIKI-SKLEPY') ? ok('map.ads_grafiki odsyła do STANDARD-GRAFIKI-SKLEPY') : bad('map.ads_grafiki SSOT', 'brak odwołania do STANDARD-GRAFIKI-SKLEPY.md');
+
+  // (d) deploy skryptu pętli wyników (wf2-ads-sync mapuje kreacje po meta_ad_ids)
+  pkg.includes('deploy:wf2-ads-sync') ? ok('package.json ma deploy:wf2-ads-sync') : bad('package.json', 'brak deploy:wf2-ads-sync');
+
+  // (a) DB: sub-kroki agr_* z sub_of='ads_grafiki' (timeline fabryki grafik) — po migracji W2
+  const agrR = await rest("wf2_step_defs?select=key,sub_of&sub_of=eq.ads_grafiki&active=eq.true", SK);
+  const agrKeys = Array.isArray(agrR.data) ? agrR.data.map((d) => d.key).sort() : [];
+  const wantAgr = ['agr_brief', 'agr_final', 'agr_generacja', 'agr_qa'];
+  wantAgr.every((k) => agrKeys.includes(k))
+    ? ok(`step_defs: sub-kroki agr_* (${agrKeys.length}) z sub_of='ads_grafiki'`)
+    : bad('step_defs agr_*', `oczekiwane ${wantAgr.join('/')}, jest [${agrKeys.join(', ')}] — migracja W2 (20260719d) zaaplikowana?`);
+
+  // (e) schemat wf2_creatives: kolumna media_type (rejestr obsługuje obrazy) — po migracji W2
+  const rc = await rest('wf2_creatives?select=id,media_type,angle,format&limit=1', SK);
+  rc.status < 300 ? ok('wf2_creatives ma media_type/angle/format (rejestr obrazów)') : bad('wf2_creatives schemat', `status ${rc.status} — migracja W2 (20260719d) zaaplikowana? (${String(rc.data).slice(0, 120)})`);
+}
+
 console.log(`\n=== Wynik: ${pass} OK, ${fail} FAIL ===`);
 process.exit(fail ? 1 : 0);

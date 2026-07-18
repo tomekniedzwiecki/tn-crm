@@ -19,7 +19,8 @@ tabel `wf2_*`, żeby panel pokazał: krok DONE, wypełnione pola, checklistę i 
   Skrypt czyta go sam (Pythonem, UTF-8); można nadpisać przez env `SUPABASE_SERVICE_KEY` / `TN_CRM_ENV`.
 - Runtime: `scripts/mockup-tools/.venv` (ma `requests` + `pillow`).
 - Storage: bucket **`attachments`** (publiczny), folder-prefix **`bud-assets/<slug>/`**
-  (`brand/`, `refs/`, `makiety/`, `assets/`, `panel/`). Publiczny URL:
+  (`brand/`, `refs/`, `makiety/`, `assets/`, `panel/`, `ads/` [kreacje reklamowe + `ads/dowody/`]).
+  Publiczny URL:
   `…/storage/v1/object/public/attachments/bud-assets/<slug>/<plik>`.
 
 ## Model danych (tabele `wf2_*`)
@@ -102,6 +103,8 @@ Egzekwuje `gate-check.py` blok `panel_sync` (severity FAIL) — kolumna „Gate"
 | F5 życie / choreografia | `lp_zycie` | `video` / `screenshot_final` | `{motion_dna, interakcja_flagowa, tor_i_done}` | `kroki_done[lp_zycie]` *(opcjonalny→WARN)* |
 | F7.1 kompozyty / contact-sheety | `lp_dopasowanie` | `dowod` / `proof` | `{sekcje_done, ssim_min, dopasowanie_dir}` | `artefakty_liczba[dowod]` *(obecnosc)* + `kroki_done` |
 | F6/F7/F8 finisz | `lp_finisz` | `gate_check`, `landing_live`, `screenshot_final` | `{gate_check, landing_url, nowe_wnioski}` + `product_meta(status:'gotowy')` | *(karta: `status`)* |
+| **G2 kreacje ads (3× demo/problem/proof, 4:5)** *(rev2 19.07)* | `ads_grafiki` | **`ad_creative`** | blob `ads_creatives[]{angle,format,headline,badge,image_url,approved}` + rejestr `wf2_creatives` (media_type='image', angle/format/ai_labeled) → `bud-assets/<slug>/ads/ad_<angle>_<fmt>.png` | *(bramka ludzka: 3× akcept toggle + milestone `agr_final`)* |
+| **G3–G5 dowody bramek QA** *(rev2 19.07)* | `ads_grafiki` | **`proof`** | miniatury@320px / safe-zones / pHash z `ad-gate.py` → `bud-assets/<slug>/ads/dowody/` | *(bramka: `ad-gate.py` pomiary + werdykt agenta wg SSOT)* |
 
 **⚖️ REGUŁA KATALOGU (twarda): nowy typ artefaktu/etapu MUSI dostać wiersz w TEJ tabeli ZANIM
 wejdzie do fabryki** — inaczej nie wiadomo, gdzie w panelu ląduje, i most staje się znów „na pamięć".
