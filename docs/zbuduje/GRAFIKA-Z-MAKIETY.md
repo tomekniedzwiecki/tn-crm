@@ -171,6 +171,14 @@ prefiksu + czystego promptu — **walidacja A/B 18.07 to potwierdziła: sam czys
 dał produkt WIERNIEJSZY** niż prompt opisowy (benefit: przywrócona linia wymiennego panelu, którą opis
 słowny zgubił). Czysty prompt jest też ODPORNIEJSZY (brak kruchych fraz „flat thin board, NOT box" do utrzymania).
 
+**🔒 EGZEKWOWANIE (globalne, nie tylko zapis doktryny):** przed KAŻDĄ generacją sceny produktowej
+uruchom `scripts/mockup-tools/prompt-lint.py "<prompt>" --expect-product-ref`. Wykrywa opis cech
+produktu w prompcie (wymiary, materiały-produktu, „NOT metal/box", elementy: schowek/pętla/panel,
+bezpośredni opis „the board is…") ORAZ brak prefiksu referencji. **≥1 flaga = przepisz prompt na
+czysto scenowy przed generacją** (nie generuj z opisem produktu). Zapisz finalny prompt per grafikę
+do `LEDGER.md` (audyt — gate/człowiek może przelintować cały zestaw: `prompt-lint.py --file <prompty>`).
+Reguła obowiązuje TAK SAMO agenta wołającego OpenAI bezpośrednio, jak ścieżkę przez generate-image.
+
 **🪜 DRABINA REGENERACJI → ESKALACJA (do skutku, max 3 rundy):**
 NIEZGODNA → regeneracja **NIE przez dopisanie słownego opisu cechy**, lecz przez: (1) **czystszy/inny
 realny packshot jako ref**, na którym cecha (która FAILowała) jest wyraźnie widoczna — referencja niesie
