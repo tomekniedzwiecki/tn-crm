@@ -145,6 +145,16 @@ Deno.serve(async (req) => {
         message = formatBudGenErrorMessage(data)
         break
 
+      case 'wf2_order':
+        webhookUrl = webhookSparing
+        message = formatWf2OrderMessage(data)
+        break
+
+      case 'wf2_ads_ready':
+        webhookUrl = webhookSparing
+        message = formatWf2AdsReadyMessage(data)
+        break
+
       default:
         throw new Error(`Nieznany typ powiadomienia: ${type}`)
     }
@@ -1521,6 +1531,45 @@ function formatBudMockupsMessage(data: {
 // #sparing: bot zaproponował leadowi wpłatę ZWROTNEJ rezerwacji 500 zł (marker <makieta>
 // w bud-chat, po zielonym świetle). Gorący moment lejka /sklep — Tomek ma odezwać się,
 // póki decyzja świeża. Deep-link do panelu tn-sklep + WhatsApp.
+// TN Sklepy (workflow v2): NOWE ZAMÓWIENIA z platformy — najważniejszy sygnał fabryki.
+function formatWf2OrderMessage(data: {
+  project_id?: string
+  customer?: string
+  count?: number
+  total_value?: number
+  shop_domain?: string
+}) {
+  const n = Number(data.count) || 1
+  const val = Number(data.total_value) || 0
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: `🛒 SKLEP SPRZEDAJE — ${n === 1 ? 'nowe zamówienie!' : n + ' nowe zamówienia!'}`, emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `*${data.customer || '(projekt)'}*${data.shop_domain ? ` · ${data.shop_domain}` : ''}${val > 0 ? `\n💰 wartość: *${val.toLocaleString('pl-PL', { minimumFractionDigits: 2 })} zł*` : ''}` } },
+  ]
+  if (data.project_id) {
+    blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Otwórz projekt', emoji: true }, url: `https://crm.tomekniedzwiecki.pl/tn-sklepy/projekt?id=${data.project_id}` }] })
+  }
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }] })
+  return { blocks }
+}
+
+// TN Sklepy: kreacje reklamowe produktu gotowe (wf2-ads: Manus/Gemini) — do akceptu.
+function formatWf2AdsReadyMessage(data: {
+  project_id?: string
+  customer?: string
+  product?: string
+  source?: string
+}) {
+  const blocks: any[] = [
+    { type: 'header', text: { type: 'plain_text', text: '🎨 3 grafiki reklamowe gotowe', emoji: true } },
+    { type: 'section', text: { type: 'mrkdwn', text: `*${data.product || '(produkt)'}*${data.customer ? ` · ${data.customer}` : ''}${data.source ? ` · ${data.source}` : ''}\nSprawdź wierność produktu i zaakceptuj w kroku „3 grafiki (Manus)".` } },
+  ]
+  if (data.project_id) {
+    blocks.push({ type: 'actions', elements: [{ type: 'button', text: { type: 'plain_text', text: 'Otwórz projekt', emoji: true }, url: `https://crm.tomekniedzwiecki.pl/tn-sklepy/projekt?id=${data.project_id}` }] })
+  }
+  blocks.push({ type: 'context', elements: [{ type: 'mrkdwn', text: `📅 ${new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' })}` }] })
+  return { blocks }
+}
+
 function formatBudReservationMessage(data: {
   session_id?: string
   name?: string

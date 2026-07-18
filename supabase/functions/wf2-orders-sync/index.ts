@@ -102,6 +102,23 @@ function mapOrder(o: Record<string, unknown>): MappedOrder {
 }
 
 // wywołanie adaptera platformy (jedyna droga do API Trevio)
+// Ping #sparing przez slack-notify (wzorzec 1:1 z wf2-ads; nigdy nie wywraca synca).
+async function postSlackSparing(type: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    const url = Deno.env.get('SUPABASE_URL')
+    const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    if (!url || !key) return
+    const res = await fetch(`${url}/functions/v1/slack-notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
+      body: JSON.stringify({ type, data }),
+    })
+    if (!res.ok) console.error(`[wf2-orders-sync] slack-notify ${type} HTTP`, res.status)
+  } catch (err) {
+    console.error(`[wf2-orders-sync] slack-notify ${type} exception:`, err)
+  }
+}
+
 async function callPlatform(baseUrl: string, wf2: string, payload: Record<string, unknown>): Promise<{ httpOk: boolean; httpStatus: number; env: unknown }> {
   const r = await fetch(`${baseUrl}/functions/v1/wf2-platform`, {
     method: 'POST',
@@ -129,7 +146,7 @@ async function syncProject(
   wf2: string,
   proj: { id: string; platform_shop_id: string; orders_synced_at: string | null },
   startedAt: number,
-): Promise<{ upserted: number; unmapped: number; timedOut: boolean }> {
+): Promise<{ upserted: number; unmapped: number; timedOut: boolean; new_count: number; new_value: number }> {
   const shopId = proj.platform_shop_id;
   const firstRun = !proj.orders_synced_at;
   // From = coalesce(orders_synced_at, now-30d) - 1d (overlap; dedup po id neutralizuje); To = now.
@@ -189,6 +206,16 @@ async function syncProject(
       is_cod: m.is_cod, lines: m.lines, synced_at: nowIso,
     };
   });
+
+  // 3a) które zamówienia są NOWE (Slack tylko dla realnie nowych, nie dla overlap-update'ów)
+  const knownIds = new Set<string>();
+  for (let i = 0; i < orderRows.length; i += 200) {
+    const part = orderRows.slice(i, i + 200).map((r) => r.id as string);
+    const { data: ex } = await supabase.from('wf2_orders').select('id').in('id', part);
+    ((ex || []) as { id: string }[]).forEach((e) => knownIds.add(e.id));
+  }
+  const newRows = orderRows.filter((r) => !knownIds.has(r.id as string));
+  const newValue = newRows.reduce((a, r) => a + (Number(r.value) || 0), 0);
 
   // 3) upsert wf2_orders (on conflict id → update; idempotentne, overlap bezpieczny)
   for (let i = 0; i < orderRows.length; i += UPSERT_CHUNK) {
@@ -278,7 +305,7 @@ async function syncProject(
   // 5) znacznik: To (koniec okna) — kolejny run rusza od tego czasu (minus 1d overlap)
   await supabase.from('wf2_projects').update({ orders_synced_at: toIso }).eq('id', proj.id);
 
-  return { upserted: orderRows.length, unmapped: unmappedNames.size, timedOut };
+  return { upserted: orderRows.length, unmapped: unmappedNames.size, timedOut, new_count: newRows.length, new_value: newValue };
 }
 
 // ══════════════════════════════════════════════════════════════════════════
@@ -492,16 +519,16 @@ Deno.serve(async (req) => {
 
     // wybór projektów: platform_shop_id NOT NULL i status != 'zamkniety'; najstarsze wg orders_synced_at
     let partial = false;
-    let projects: { id: string; platform_shop_id: string; orders_synced_at: string | null; pixel_id: string | null; domain: string | null }[] = [];
+    let projects: { id: string; platform_shop_id: string; orders_synced_at: string | null; pixel_id: string | null; domain: string | null; customer_name: string | null }[] = [];
     if (onlyProject) {
       const { data, error } = await supabase.from('wf2_projects')
-        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain')
+        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain, customer_name')
         .eq('id', onlyProject).not('platform_shop_id', 'is', null).neq('status', 'zamkniety').limit(1);
       if (error) throw error;
       projects = (data || []) as typeof projects;
     } else {
       const { data, error } = await supabase.from('wf2_projects')
-        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain')
+        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain, customer_name')
         .not('platform_shop_id', 'is', null).neq('status', 'zamkniety')
         .order('orders_synced_at', { ascending: true, nullsFirst: true })
         .limit(MAX_PROJECTS_PER_RUN + 1);
@@ -520,6 +547,13 @@ Deno.serve(async (req) => {
         const r = await syncProject(supabase, SUPABASE_URL, WF2, proj, startedAt);
         processed++; ordersUpserted += r.upserted; unmapped += r.unmapped;
         syncTimedOut = r.timedOut;
+        // 🛒 SKLEP SPRZEDAJE — ping na Slacku przy realnie NOWYCH zamówieniach
+        if (r.new_count > 0) {
+          await postSlackSparing('wf2_order', {
+            project_id: proj.id, customer: proj.customer_name || '',
+            count: r.new_count, total_value: r.new_value, shop_domain: proj.domain || '',
+          });
+        }
       } catch (e) {
         console.error(`[wf2-orders-sync] projekt ${proj.id} nieudany:`, e instanceof Error ? e.message : String(e));
         // pojedynczy projekt nie wywraca całego przebiegu — lecimy dalej (strażnik i tak zadziała)
@@ -535,6 +569,19 @@ Deno.serve(async (req) => {
       }
       if (syncTimedOut || Date.now() - startedAt > DEADLINE_MS) { partial = true; break; }
     }
+
+    // BEZPIECZNIK KREACJI: dociągnij zawieszone taski Manusa (manus-webhook mógł nie dojść) —
+    // fire-and-forget, nie liczy się do budżetu tego przebiegu
+    try {
+      const sweep = fetch(`${SUPABASE_URL}/functions/v1/wf2-ads`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-wf2-secret': WF2 },
+        body: JSON.stringify({ sweep: true }),
+      }).then((r) => { if (!r.ok) console.error('[wf2-orders-sync] wf2-ads sweep HTTP', r.status) }).catch((e) => console.error('[wf2-orders-sync] wf2-ads sweep:', e))
+      // deno-lint-ignore no-explicit-any
+      const er = (globalThis as any).EdgeRuntime
+      if (er?.waitUntil) er.waitUntil(sweep)
+    } catch (_) { /* bezpiecznik nie może wywrócić odpowiedzi */ }
 
     return J({ ok: true, projects: processed, orders_upserted: ordersUpserted, unmapped, partial, guard });
   } catch (e) {

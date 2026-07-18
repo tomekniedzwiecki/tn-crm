@@ -395,11 +395,13 @@ async function manusPollAndPull(supabase: any, productId: string, taskId: string
   // status='running' wygrywa raz; przegrany NIE liczy kosztu drugi raz.
   const { data: won } = await supabase.from('wf2_products')
     .update({ ads_creatives: ads, ads_manus_status: 'completed', ads_manus_completed_at: new Date().toISOString(), ads_manus_step: null })
-    .eq('id', productId).eq('ads_manus_status', 'running').select('id, project_id')
+    .eq('id', productId).eq('ads_manus_status', 'running').select('id, project_id, name')
   if (!won || !won.length) return { done: true, ads }
   const projectId = (won[0] as { project_id?: string }).project_id || null
+  const wonName = (won[0] as { name?: string }).name || ''
   await logActivity(supabase, projectId, 'ads_generated', `3 grafiki reklamowe (Manus) gotowe — koszt ~$${MANUS_TASK_USD.toFixed(2)} · task ${taskId}`)
   await logCost(supabase, projectId, productId, MANUS_TASK_USD, 'manus', `3 grafiki (task ${taskId})`)
+  await postSlackSparing('wf2_ads_ready', { project_id: projectId || '', product: wonName, source: 'Manus' })
   return { done: true, ads }
 }
 
@@ -668,6 +670,7 @@ Deno.serve(async (req) => {
         await supabase.from('wf2_products').update({ ads_creatives: ads, ads_manus_status: 'completed', ads_manus_completed_at: new Date().toISOString(), ads_manus_step: null }).eq('id', productId)
         await logActivity(supabase, projectId, 'ads_generated', `${nImg} grafik reklamowych (Gemini, fallback) gotowe — koszt ~$${(GEMINI_IMAGE_USD * nImg).toFixed(2)}`)
         await logCost(supabase, projectId, productId, GEMINI_IMAGE_USD * nImg, 'gemini', `${nImg} grafik (fallback)`)
+        await postSlackSparing('wf2_ads_ready', { project_id: projectId || '', product: name, source: 'Gemini (fallback)' })
       } catch (e) {
         console.error('[wf2-ads] gen task error:', e)
         try { await supabase.from('wf2_products').update({ ads_manus_status: 'failed', ads_manus_step: 'gemini_error' }).eq('id', productId) } catch { /* */ }

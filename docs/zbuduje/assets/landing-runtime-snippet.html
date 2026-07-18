@@ -4,6 +4,10 @@
     - CTA:   <a data-checkout href="#zamow">…</a>  → runtime podmienia href na checkout_url z API
     - CENA:  <span data-price>149,90 zł</span>     → runtime nadpisuje AKTUALNĄ ceną (zapieczona = fallback)
              <span data-price-raw>149.90</span>    → wariant bez formatowania (opcjonalny)
+    - SOLD (opcjonalny, UCZCIWY social-proof z REALNYCH zamówień naszego sklepu):
+             <span data-sold-wrap hidden>Już <b data-sold>–</b> zamówień w naszym sklepie</span>
+             → runtime wstawia liczbę i ODKRYWA wrap TYLKO gdy sold ≥ próg (data-sold-min,
+             domyślnie 30). Poniżej progu sekcja zostaje ukryta — zero fałszywych liczb.
   Placeholdery podmieniane PRZY PUBLIKACJI (krok pl_publikacja):
     {{WF2_PRODUCT_ID}} — wf2_products.id
     {{PIXEL_ID}}       — Meta pixel (zwykle NIEPOTRZEBNY: platforma wstrzykuje pixel przez
@@ -76,6 +80,16 @@
         if (d.price != null && d.price > 0) state.price = d.price;
         if (d.checkout_url) state.checkoutUrl = d.checkout_url;
         if (d.name) state.name = d.name;
+        // social-proof: realne zamówienia sklepu; pokazujemy WYŁĄCZNIE od progu (uczciwe liczby)
+        if (typeof d.sold === 'number') {
+          document.querySelectorAll('[data-sold-wrap]').forEach(function (w) {
+            var min = parseInt(w.getAttribute('data-sold-min') || '30', 10);
+            if (d.sold >= min) {
+              w.querySelectorAll('[data-sold]').forEach(function (el) { el.textContent = d.sold.toLocaleString('pl-PL'); });
+              w.hidden = false; w.removeAttribute('hidden');
+            }
+          });
+        }
         applyState();
         trevioViewItem();
       })

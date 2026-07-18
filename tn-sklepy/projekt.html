@@ -130,7 +130,10 @@
                 <div id="p-links" class="flex items-center gap-2 flex-wrap mb-6"></div>
 
                 <!-- Pigułki etapów -->
-                <div id="stage-pills" class="flex gap-2.5 overflow-x-auto pb-2 mb-6"></div>
+                <div id="stage-pills" class="flex gap-2.5 overflow-x-auto pb-2 mb-3"></div>
+
+                <!-- Następny krok — jednoklikowa kontynuacja ciągu zdarzeń -->
+                <div id="next-step" class="mb-6"></div>
 
                 <!-- Kroki projektu (scope=project) -->
                 <div id="steps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-7"></div>
@@ -577,7 +580,7 @@
                     .select('id, brand, mockups, chosen_style, landing_url').in('id', genIds);
                 (gs || []).forEach(g => genMap[g.id] = g);
             }
-            renderHeader(); renderLinks(); renderPills(); renderStage();
+            renderHeader(); renderLinks(); renderPills(); renderNextStep(); renderStage();
             renderActivity(actQ.data||[]); renderNotes(); renderSales(); renderCosts(); renderFields();
         }
 
@@ -694,6 +697,34 @@
             }).join('');
         }
         function switchStage(n) { activeStage = n; renderPills(); renderStage(); }
+
+        // „Następny krok" = pierwszy nie-done/nie-skipped wg kolejności etap→sort;
+        // dla scope=product: pierwszy produkt z otwartą instancją (kolejność portfela).
+        function nextStep() {
+            for (const d of stepDefs) {
+                if (d.scope === 'project') {
+                    const st = stepFor(d.key, null);
+                    if (st && st.status !== 'done' && st.status !== 'skipped') return { d, p: null, st };
+                } else {
+                    for (const p of products) {
+                        const st = stepFor(d.key, p.id);
+                        if (st && st.status !== 'done' && st.status !== 'skipped') return { d, p, st };
+                    }
+                }
+            }
+            return null;
+        }
+        function renderNextStep() {
+            const el = document.getElementById('next-step');
+            const nx = nextStep();
+            if (!nx) { el.innerHTML = '<div class="border border-[#45a557]/40 bg-[#45a557]/[.06] rounded-md px-4 py-2.5 text-[12.5px] text-[#62c073]"><i class="ph ph-flag-checkered"></i> Wszystkie kroki ukończone — projekt w trybie prowadzenia.</div>'; return; }
+            const { d, p, st } = nx;
+            el.innerHTML = `<div class="flex items-center gap-3 border border-[#0070f3]/30 bg-[#0070f3]/[.05] rounded-md px-4 py-2.5 flex-wrap">
+                <span class="text-[10px] font-mono uppercase tracking-wider text-[#52a8ff] flex-shrink-0">Następny krok</span>
+                <span class="text-[12.5px] text-white min-w-0 truncate"><i class="ph ${escapeHtml(d.icon)} text-[#52a8ff]"></i> ${escapeHtml(d.label)}${p ? ` — <span class="text-zinc-300">${escapeHtml(p.name)}</span>` : ''} <span class="text-zinc-600">(Etap ${d.stage}${st.status === 'in_progress' ? ' · w trakcie' : ''}${st.status === 'blocked' ? ' · ZABLOKOWANY' : ''})</span></span>
+                <button onclick="activeStage=${d.stage};renderPills();renderStage();openStep('${d.key}', ${p ? `'${p.id}'` : 'null'})" class="ml-auto inline-flex items-center gap-1.5 bg-white text-black hover:bg-zinc-200 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors flex-shrink-0">Otwórz warsztat <i class="ph ph-arrow-right"></i></button>
+            </div>`;
+        }
 
         // kroki klienckie „wiszące" — ile dni czekamy na klienta
         function clientLagBadge(d, st) {
@@ -1049,7 +1080,7 @@
                 logActivity('step_done', `Ukończono: ${d?.label||key}${prodName?' — '+prodName:''}`);
                 if (d?.milestone_label) showToast('🏁 ' + d.milestone_label, 'success');
             }
-            renderPills(); renderStage(); renderHeader();
+            renderPills(); renderNextStep(); renderStage(); renderHeader();
         }
 
         // ============ WARSZTATY KROKÓW (WS) ============
@@ -1117,6 +1148,9 @@
             pl_landing: { desc:'Publikacja landinga: HTML z repo (tn-crm/sklepy/<klient>/<slug>/index.html po gate-check 0 FAIL) + podmiana placeholderów ({{WF2_PRODUCT_ID}}, {{CHECKOUT_URL}}, canonical, zdjęcie noindex) → publish_landing {path: slug}. Landing MUSI mieć runtime-snippet (cena z wf2-landing-api + trevio + init-guard).',
                 fields:[{k:'page_url',l:'URL landinga na platformie', col:'product.platform_page_url'},{k:'published_at',l:'Data publikacji'}],
                 check:['Placeholdery podmienione (product_id/checkout/canonical/noindex zdjęty)','publish_landing wykonany (isHtml:true)','URL 200 + treść 1:1','CTA prowadzi do kasy (checkout_url)','Cena hydratowana z API (test w konsoli)'], prompt:'pl_landing' },
+            pl_prawne: { desc:'Podstrony prawne sklepu jako custom-HTML: /regulamin, /polityka-prywatnosci, /zwroty, /kontakt. Treści z szablonów + dane firmy klienta (krok „Dane rozliczeniowe"). Zaufanie + zgodność (COD/konsument) + GEO. Publikacja przez publish_landing.',
+                fields:[{k:'strony',l:'Opublikowane ścieżki (lista)',ta:true}],
+                check:['Dane firmy z kroku Dane rozliczeniowe kompletne','Regulamin (COD, zwroty 14 dni, reklamacje)','Polityka prywatności (RODO, pixel/analityka)','Strona zwrotów + kontakt','Opublikowane (publish_landing) — 4× HTTP 200','Linki w stopce landingów i strony głównej'], prompt:'pl_prawne' },
             pl_glowna: { desc:'Strona główna sklepu = galeria marki parasolowej linkująca do landingów produktów (publish_landing z path:""). Aktualizowana przy każdym nowym gotowym produkcie.',
                 fields:[{k:'home_url',l:'URL strony głównej', col:'project.td_shop_url'}],
                 check:['Home = galeria parasola (publish_landing path:"")','Linki do wszystkich landingów produktów','Branding parasola (logo, kolory)'], prompt:'pl_glowna' },
@@ -1450,7 +1484,7 @@
                 logActivity('step_done', `Ukończono: ${d?.label || ''}${p ? ' — ' + p.name : ''}`);
                 if (d?.milestone_label) showToast('🏁 ' + d.milestone_label, 'success');
             }
-            renderPills(); renderStage(); renderHeader(); renderDrawer();
+            renderPills(); renderNextStep(); renderStage(); renderHeader(); renderDrawer();
         }
         async function sdToggleSkip() {
             const st = drawerStep();
@@ -1475,8 +1509,12 @@
                 }
             }
             logActivity('test_decision', `Wynik testu: ${p.name} = ${dec === 'winner' ? 'WINNER (skalujemy)' : dec === 'kill' ? 'KILL' : 'testujemy dalej'}`);
-            renderPills(); renderStage(); renderHeader(); renderDrawer();
+            renderPills(); renderNextStep(); renderStage(); renderHeader(); renderDrawer();
             showToast('Decyzja zapisana', 'success');
+            // rotacja: po KILL od razu proponujemy następcę (losowanie z /trendy)
+            if (dec === 'kill' && confirm(`KILL zapisany. Wylosować następcę „${p.name}" z zatwierdzonych na /trendy?`)) {
+                closeStep(); openPicker(); setTimeout(() => pkShow('auto'), 50);
+            }
         }
 
         // ============ PACZKI PROMPTÓW (5 warstw: base + zadanie + RYTUAŁ + GATE + uwagi + panelUpd) ============
@@ -1501,7 +1539,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
 ⚠️ GATE PRODUKCYJNY: ten krok dotyka systemów na żywo (platforma sklepu / pixel / kampanie / płatności klienta). Działaj IDEMPOTENTNIE (najpierw odczytaj stan — GET/list), operacje na platformie wyłącznie przez wf2-platform (nigdy surowym kluczem API), kampanie tworzysz PAUSED, cen i budżetów nie zmieniasz bez zapisanej decyzji Tomka, po zmianach w edge functions deploy --no-verify-jwt + npm run test:webhooks. Produkt na platformie NIE MA DELETE — ensure_product przed POST.`;
 
             const RITUAL_KINDS = ['marka','lp_dane','lp_plan','lp_styl_marka','lp_makiety','lp_grafiki','lp_kod','lp_dopasowanie','lp_zycie','lp_finisz','ads_grafiki','ads_wideo'];
-            const GATE_KINDS = ['pl_sklep','pl_branding','pl_dostawy','pl_domena','pl_integracje','pl_produkt','pl_landing','pl_glowna','pl_test','ads_pixel','ads_kampanie','sprzedaz_sync','skalowanie'];
+            const GATE_KINDS = ['pl_sklep','pl_branding','pl_dostawy','pl_domena','pl_integracje','pl_produkt','pl_landing','pl_prawne','pl_glowna','pl_test','ads_pixel','ads_kampanie','sprzedaz_sync','skalowanie'];
 
             const S = p ? (p.slug || '<slug>') : '<slug>';
             const PID = p ? p.id : '<product_id>';
@@ -1523,6 +1561,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                 pl_integracje: `KROK INTEGRACJE. Przez wf2-platform: 'integrations' (stan) → 'set_integration' {type:'FacebookPixel', config:{pixelId: wf2_projects.pixel_id, apiKey: <token CAPI jeśli mamy>}} — UWAGA: PUT AUTO-WŁĄCZA. GA4 opcjonalnie {type:'GoogleAnalytics'}. Jeśli pixel_id jeszcze nie istnieje (Etap Kampanie) — krok zostaje in_progress z notą; jest idempotentny. Zweryfikuj w źródle storefrontu, że pixel się wstrzykuje.`,
                 pl_produkt: `KROK PRODUKT + KASA dla ${S} (id ${PID}). Przez wf2-platform: 'ensure_product' {name: nazwa wyświetleniowa mini-marki, price: wf2_products.price} (idempotentny po nazwie — platforma NIE MA DELETE produktu!) → 'set_checkout_slug' {product_id, variant_id, slug: '${S}'} → poczekaj na materializację checkout_url (akcja robi polling; fallback: https://<activeDomain>/checkout?p=${S}). Zapisz na wf2_products: platform_product_id, checkout_url, platform_name. Test: kasa odpowiada 200.`,
                 pl_landing: `KROK PUBLIKACJA LANDINGA dla ${S} (id ${PID}). Źródło: tn-crm/sklepy/<klient>/${S}/index.html (WYŁĄCZNIE po gate-check 0 FAIL z kroku Finisz). Podmień placeholdery: {{WF2_PRODUCT_ID}}→${PID}, {{CHECKOUT_URL}}→wf2_products.checkout_url, {{CANONICAL_URL}}→https://<domena>/${S}, zdejmij noindex. Landing MUSI zawierać runtime-snippet (data-checkout/data-price + trevio + INIT-GUARD — zero własnego fbq init). Przez wf2-platform: 'publish_landing' {shop_id, path:'${S}', html}. Zweryfikuj: URL 200, treść 1:1, CTA→kasa, hydratacja ceny z wf2-landing-api w konsoli. Zapisz wf2_products.platform_page_url + dopisz link do paska Podglądy.`,
+                pl_prawne: `KROK PODSTRONY PRAWNE. Zbuduj 4 podstrony custom-HTML sklepu: /regulamin (sprzedaż z COD, odstąpienie 14 dni, reklamacje — polskie prawo konsumenckie), /polityka-prywatnosci (RODO + pixel Meta/analityka platformy), /zwroty (procedura krok po kroku, przyjazny ton), /kontakt (dane firmy + e-mail sklepu). Dane firmy = pola kroku „Dane rozliczeniowe + prawne" (brak danych = krok in_progress z notą, NIE zmyślaj). Styl: lekki statyczny HTML w tokenach marki parasolowej (jasne tła), self-contained. Publikacja przez wf2-platform 'publish_landing' {path:'regulamin'|…}. Weryfikacja: 4× HTTP 200. Dopisz linki do stopki strony głównej (i przekaż notę do stopek landingów produktowych).`,
                 pl_glowna: `KROK STRONA GŁÓWNA. Zbuduj galerię marki parasolowej (logo/kolory parasola; kafle WSZYSTKICH produktów ze statusem gotowy/live — zdjęcie, nazwa mini-marki, cena, link do landinga platform_page_url). Lekki statyczny HTML (self-contained; window.trevio.viewItemList z listą produktów). Przez wf2-platform: 'publish_landing' {shop_id, path:'', html}. Aktualizuj przy każdym nowym gotowym produkcie. Zapisz URL w polu kroku.`,
                 pl_test: `KROK TEST ZAKUPOWY (BRAMKA). Złóż realne zamówienie testowe COD end-to-end: landing → CTA → checkout → zamówienie. Zweryfikuj: zamówienie widoczne przez wf2-platform 'orders' (zapisz id), zdarzenia trevio/pixel złapane, ceny landing↔kasa zgodne. Dowody (id zamówienia + zrzut) do notatki kroku. To bramka „sklep sprzedaje".`,
                 ads_pixel: `KROK PIXEL + POMIAR. Zweryfikuj/utwórz pixel w BM z kontem reklamowym klienta (${project.meta_ad_account_id || 'act_?'}): pixel w TYM SAMYM BM (inny BM = WCA nie działają), strona FB przypisana do konta, OBIE domeny zweryfikowane w BM (domena parasolowa + domena checkoutu platformy), pixel ustawiony na platformie przez wf2-platform 'set_integration' (FacebookPixel: pixelId + apiKey=token CAPI), Purchase testowy w Events Managerze (Test Events) jako GATE. Zapisz pixel_id na projekcie.`,
@@ -1941,6 +1980,7 @@ Rytuał sesji fabryki: (1) przeczytaj artefakty poprzednich kroków TEGO produkt
                         ${shopName ? `<div class="flex items-center gap-2 text-zinc-500 text-[11px]"><i class="ph ph-warning-circle text-zinc-600"></i> sklep źródłowy: ${escapeHtml(shopName)} <span class="text-zinc-700">(white-label — NIGDY na stronie)</span></div>` : ''}
                         ${p.platform_page_url ? `<div class="flex items-center gap-2"><i class="ph ph-rocket-launch text-zinc-600"></i> <a href="${escapeHtml(p.platform_page_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff]">Landing na platformie</a></div>` : ''}
                         ${p.checkout_url ? `<div class="flex items-center gap-2"><i class="ph ph-shopping-cart text-zinc-600"></i> <a href="${escapeHtml(p.checkout_url)}" target="_blank" class="text-[#52a8ff] hover:text-[#78b6ff]">Kasa (checkout)</a></div>` : ''}
+                        ${(() => { const pc = costs.filter(c => c.product_id === p.id).reduce((a, c) => a + costPln(c), 0); return pc > 0 ? `<div class="flex items-center gap-2 text-zinc-400"><i class="ph ph-coins text-zinc-600"></i> Koszt produkcji (AI): <b class="text-white font-mono">${moneyPL(pc)}</b> <span class="text-zinc-600 text-[10.5px]">— szczegóły w zakładce Koszty</span></div>` : ''; })()}
                     </div>
                     ${vids.length ? `<div><div class="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mb-1.5">TikToki (${vids.length})</div>
                         <div class="space-y-1">${vids.map((v, i) => `<a href="${escapeHtml(v.url)}" target="_blank" class="flex items-center gap-2 text-[11.5px] text-zinc-300 hover:text-white bg-[#111] border border-[#232323] hover:border-[#0070f3]/40 rounded px-2.5 py-1.5 transition-colors">
