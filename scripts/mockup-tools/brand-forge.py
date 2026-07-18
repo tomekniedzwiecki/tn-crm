@@ -19,6 +19,12 @@ Zaleznosci: Pillow, numpy, pytesseract (OCR opcjonalny — degraduje do heurysty
 Uruchamiac przez venv: scripts/mockup-tools/.venv/Scripts/python.exe
 
   --dry-run : walidacja parametrow + sprawdzenie rezerwacji (GET, bez zapisu) — nic nie generuje.
+
+TRYB PARASOLOWY (marka parasolowa sklepu, krok 'marka' w TN Sklepy): pominac
+--product-id i --styl-master => rezerwacja w bud_brand_names POMIJANA (tabela
+wymaga product_id; dedup parasola = domena .pl) i generacja BEZ referencji
+(parasol jest abstrakcyjny — nie ma packshotu ani styl-mastera). Konwencja
+slug: 'parasol-<slug>' (upload -> bud-assets/parasol-<slug>/brand/).
 """
 import sys, os, io, re, json, time, base64, argparse, urllib.request, urllib.parse, math
 
@@ -90,13 +96,16 @@ def favicon_prompt(nazwa, metafora, palette):
     )
 
 def gen_favicons(slug, prompt, styl_master_url, count, wf2_secret, outdir):
-    """1 call count=N przez wf2-gen -> lista lokalnych PNG kandydatow."""
+    """1 call count=N przez wf2-gen -> lista lokalnych PNG kandydatow.
+    styl_master_url=None (tryb PARASOLOWY) => generacja BEZ referencji
+    (/v1/images/generations po stronie edge; parasol nie ma styl-mastera)."""
     payload = {"fn": "generate-image", "payload": {
         "prompt": prompt, "count": count, "workflow_id": "brand-" + slug,
         "type": "logo", "provider": "gpt-image-2", "quality": "medium",  # high+ref = 504 wall-clock (Odpalak 17.07)
         "aspect_ratio": "1:1",
-        "reference_images": [{"url": styl_master_url, "type": "ref"}],
     }}
+    if styl_master_url:
+        payload["payload"]["reference_images"] = [{"url": styl_master_url, "type": "ref"}]
     body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(project_url() + "/functions/v1/wf2-gen", data=body,
         headers={"Content-Type": "application/json", "x-wf2-secret": wf2_secret})
@@ -273,12 +282,15 @@ def upload_storage(slug, local_path, service_key):
 # =============================================================================
 def build_args():
     ap = argparse.ArgumentParser(description="brand-forge — favicon+wordmark+rejestr nazw (F2.5)")
-    ap.add_argument("--slug", required=True, help="slug mini-marki (lowercase, bez znakow)")
-    ap.add_argument("--nazwa", required=True, help="nazwa mini-marki (wordmark)")
-    ap.add_argument("--product-id", required=True, help="bud_tt_products.id (UUID)")
-    ap.add_argument("--styl-master", required=True, help="URL styl-mastera (referencja type=ref)")
+    ap.add_argument("--slug", required=True, help="slug marki (lowercase; parasol: 'parasol-<slug>')")
+    ap.add_argument("--nazwa", required=True, help="nazwa marki (wordmark)")
+    ap.add_argument("--product-id", help="bud_tt_products.id (UUID). BRAK = tryb PARASOLOWY: "
+                    "rezerwacja w bud_brand_names POMIJANA (tabela wymaga product_id; "
+                    "dedup parasola = domena .pl)")
+    ap.add_argument("--styl-master", help="URL styl-mastera (referencja type=ref). BRAK = tryb "
+                    "PARASOLOWY: generacja bez referencji (parasol jest abstrakcyjny)")
     ap.add_argument("--paleta", required=True, help="hexy palety, po przecinku: '#0f172a,#f5a623'")
-    ap.add_argument("--metafora", required=True, help="metafora korzysci (do promptu favicona)")
+    ap.add_argument("--metafora", required=True, help="metafora korzysci / esencja marki (do promptu favicona)")
     ap.add_argument("--font", help="sciezka do fontu .ttf/.otf wordmarka (wymagany poza --dry-run)")
     ap.add_argument("--outdir", help="katalog FABRYKA na kandydatow/wyniki (domyslnie ./FABRYKA-<slug>/brand)")
     ap.add_argument("--count", type=int, default=5, help="liczba kandydatow favicona (domyslnie 5)")
@@ -304,10 +316,12 @@ def main():
         raise SystemExit("brak SUPABASE_SERVICE_KEY w .env")
     outdir = args.outdir or os.path.join(os.getcwd(), "FABRYKA-" + slug, "brand")
 
+    parasol = not args.product_id
     # ---- DRY-RUN: walidacja + rezerwacja-check (bez zapisu) ----
     if args.dry_run:
         print("[dry-run] baza:", project_url())
-        print("[dry-run] slug=%s nazwa=%s product_id=%s" % (slug, args.nazwa, args.product_id))
+        print("[dry-run] slug=%s nazwa=%s product_id=%s%s" % (slug, args.nazwa, args.product_id,
+              " [TRYB PARASOLOWY]" if parasol else ""))
         print("[dry-run] paleta=%s" % palette)
         print("[dry-run] metafora=%s" % args.metafora)
         print("[dry-run] prompt favicona:\n  " + favicon_prompt(args.nazwa, args.metafora, palette))
@@ -315,14 +329,17 @@ def main():
             print("[dry-run] font %s: %s" % (args.font, "OK" if os.path.isfile(args.font) else "BRAK PLIKU!"))
         else:
             print("[dry-run] font: (niepodany — wymagany w trybie realnym)")
-        try:
-            hits = reservation_check(args.product_id, args.nazwa, slug, service_key)
-            if hits:
-                print("[dry-run] REZERWACJA: KOLIZJA — nazwa/slug juz zajete:", json.dumps(hits, ensure_ascii=False))
-            else:
-                print("[dry-run] REZERWACJA: wolne — mozna zarezerwowac '%s' / '%s'" % (args.nazwa, slug))
-        except Exception as e:
-            print("[dry-run] rezerwacja-check nieudany (sprawdz klucz/uprawnienia):", e)
+        if parasol:
+            print("[dry-run] REZERWACJA: pomijana (parasol; dedup = domena .pl)")
+        else:
+            try:
+                hits = reservation_check(args.product_id, args.nazwa, slug, service_key)
+                if hits:
+                    print("[dry-run] REZERWACJA: KOLIZJA — nazwa/slug juz zajete:", json.dumps(hits, ensure_ascii=False))
+                else:
+                    print("[dry-run] REZERWACJA: wolne — mozna zarezerwowac '%s' / '%s'" % (args.nazwa, slug))
+            except Exception as e:
+                print("[dry-run] rezerwacja-check nieudany (sprawdz klucz/uprawnienia):", e)
         print("[dry-run] OK — walidacja parametrow przeszla, nic nie zapisano.")
         return
 
@@ -333,13 +350,17 @@ def main():
         raise SystemExit("brak WF2_GEN_SECRET w .env (potrzebny do wf2-gen)")
     os.makedirs(outdir, exist_ok=True)
 
-    # (a) rezerwacja PRZED generacja
-    ok, row = reserve_name(args.product_id, args.nazwa, slug, service_key, args.landing_ref, args.user_ref)
-    if not ok:
-        print("KOLIZJA — nazwa '%s' lub slug '%s' zajete dla product_id=%s. Podaj nastepna kandydatke."
-              % (args.nazwa, slug, args.product_id))
-        sys.exit(3)
-    print("[a] zarezerwowano nazwe:", json.dumps(row, ensure_ascii=False))
+    # (a) rezerwacja PRZED generacja (parasol: pomijana — bud_brand_names wymaga product_id,
+    #     dedup parasola = domena .pl kupowana przez Tomka)
+    if parasol:
+        print("[a] tryb PARASOLOWY — rezerwacja w bud_brand_names pomijana")
+    else:
+        ok, row = reserve_name(args.product_id, args.nazwa, slug, service_key, args.landing_ref, args.user_ref)
+        if not ok:
+            print("KOLIZJA — nazwa '%s' lub slug '%s' zajete dla product_id=%s. Podaj nastepna kandydatke."
+                  % (args.nazwa, slug, args.product_id))
+            sys.exit(3)
+        print("[a] zarezerwowano nazwe:", json.dumps(row, ensure_ascii=False))
 
     # (b) generacja faviconow
     prompt = favicon_prompt(args.nazwa, args.metafora, palette)

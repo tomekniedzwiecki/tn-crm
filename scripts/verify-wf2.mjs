@@ -41,7 +41,7 @@ console.log('=== Smoke test TN Sklepy (wf2) ===\n');
 // ── 1. Spójność WS / prompt-mapy w panelu ↔ wf2_step_defs w bazie ──────────
 {
   const html = readFileSync(join(ROOT, 'tn-sklepy', 'projekt.html'), 'utf8');
-  const { data: defs } = await rest('wf2_step_defs?select=key,stage,scope,owner&active=eq.true', SK);
+  const { data: defs } = await rest('wf2_step_defs?select=key,stage,scope,owner,sub_of&active=eq.true', SK);
   const defKeys = new Set(defs.map((d) => d.key));
 
   const wsBlock = html.match(/const WS = \{([\s\S]*?)\n        \};/);
@@ -54,8 +54,9 @@ console.log('=== Smoke test TN Sklepy (wf2) ===\n');
   const mapOrphans = [...mapKeys].filter((k) => !defKeys.has(k));
   mapOrphans.length ? bad('prompt-mapa bez definicji w DB', mapOrphans.join(', ')) : ok('każdy klucz prompt-mapy istnieje w wf2_step_defs');
   // krok bez WS = dostanie warsztat generyczny (dozwolone) — ale krok admin/auto bez WS i bez
-  // prompt-mapy zgłaszamy jako WARN-FAIL, bo to zwykle zapomniany kontrakt nowego kroku
-  const bare = defs.filter((d) => d.owner !== 'client' && !wsKeys.has(d.key) && !mapKeys.has(d.key)).map((d) => d.key);
+  // prompt-mapy zgłaszamy jako WARN-FAIL, bo to zwykle zapomniany kontrakt nowego kroku.
+  // Wyjątek: sub-kroki (sub_of) celowo nie mają WS/promptu — żyją w warsztacie rodzica.
+  const bare = defs.filter((d) => d.owner !== 'client' && !d.sub_of && !wsKeys.has(d.key) && !mapKeys.has(d.key)).map((d) => d.key);
   bare.length ? bad('kroki admin/auto bez WS i bez promptu', bare.join(', ')) : ok('wszystkie kroki admin/auto mają WS albo prompt');
   defs.length >= 30 ? ok(`seed kompletny (${defs.length} kroków, ${new Set(defs.map((d) => d.stage)).size} etapów)`) : bad('seed step_defs', `tylko ${defs.length} kroków`);
 }

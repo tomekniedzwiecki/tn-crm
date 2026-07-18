@@ -9,15 +9,33 @@ Panel `tn-sklepy/projekt.html` przebudowany OD ZERA na wzór `tn-app/projekt.htm
 (decyzja Tomka 17.07: „chcę pracować nad sklepem tak samo jak nad aplikacją").
 Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje przesiane).
 
-- **NOWA STRUKTURA ETAPÓW (6):** 1 Portfel produktów (marka [project] + wybor [product])
+- **NOWA STRUKTURA ETAPÓW (6; korekta 18.07 wieczór — Etap 1 = „Fundament sklepu"):**
+  **1 Fundament sklepu** (marka 🏁 [project] + pl_domena 🏁 [project, PRZENIESIONA z Etapu 3 —
+  tor domeny: zakup LH.pl → DNS → propagacja 24-48 h → weryfikacja w Meta BM to najdłuższa
+  ścieżka projektu, MUSI biec równolegle do landingów] + wybor 🏁 [product])
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
-  pl_domena 🏁 [**Tomek kupuje przez LH.pl**; rekordy z add_domain wpisywane w edytorze
-  stref LH.pl, aktywacja = strażnik auto] → pl_integracje → pl_produkt [product] →
-  pl_landing [product] → pl_glowna → pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
+  pl_integracje → pl_produkt [product] → pl_landing [product] → pl_prawne → pl_glowna →
+  pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
   [client], ads_pixel 🏁, ads_grafiki [product], **ads_wideo** [product, NOWY], ads_kampanie 🏁
   [product]) · 5 Testy i skalowanie · 6 Przekazanie sterów.
+- **KROK 'marka' = pełny kontrakt marki PARASOLOWEJ (przebudowa 18.07 wieczór, migracja
+  `20260718f_wf2_fundament_marka`):** kolumny `wf2_projects.tagline/brand_opis/palette/fonts/
+  logo_url/favicon_url` + binding pola nazwy do `project.name` (WCZEŚNIEJ project.name było
+  MARTWE — każda paczka promptów renderowała „Marka parasolowa: —"). Krok w pełni AUTONOMICZNY
+  (bramka wydatku = zakup domeny żyje w pl_domena): shortlista nazw pojemnych (portfel ROTUJE)
+  + RDAP/WHOIS wolnych .pl + web-check kolizji → tagline/opis (zasilą pl_glowna) → paleta
+  z rolami (jasne tła) + fonty latin-ext → logo lockup + favicon przez `brand-forge.py`
+  w **TRYBIE PARASOLOWYM** (bez --product-id/--styl-master: bez rezerwacji bud_brand_names
+  [wymaga product_id; dedup parasola = domena], generacja bez referencji) → Storage
+  `bud-assets/parasol-<slug>/brand/` + wf2_artifacts (kind='brand', product_id NULL).
+  Konsumenci kontraktu: paczki promptów (name/domain), pl_branding (logo_url/favicon_url →
+  upload_logo/upload_favicon, SUROWY base64 PNG), pl_glowna + pl_prawne (tagline/brand_opis/
+  palette/fonts), ads_pixel (domain → weryfikacja w BM), pl_landing (canonical).
+  Kamień na 'wybor': „Kalkulacja zaakceptowana — produkt gotowy do fabryki".
+  `nextStep()` w panelu: kroki wiszące u klienta/auto (in_progress) NIE blokują wskaźnika
+  następnej roboty; sub-kroki (sub_of) pominięte.
 - **`wf2_artifacts`** (project_id, product_id, step_key, kind, label, url, storage, meta) —
   artefakty fabryki (makiety/branding/dowody/kreacje) widoczne w warsztatach kroków panelu;
   fabryka INSERT-uje wiersz po każdym uploadzie do Storage (`bud-assets/<slug>/…`).
