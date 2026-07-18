@@ -337,6 +337,13 @@ regeneracje/kreację** w budżecie +20% (~$0.5-0.7: gate $0.05-0.15 + inpainty +
 **Czego NIE robić:** zmiana silnika na v3 „dla spójności" (0e pkt 5) · refiner „żeby było
 ładniej" · rotacje 360° (ghosting) · dosypywanie zdań do anatomy_str (mechanizm wchodzi
 OBRAZEM) · >4 refy na klatkę · maska HSV na czarne/drewniane produkty.
+**WALIDACJA (drapek v2, 19.07): DZIAŁA** — 6/6 scen fidelity PASS, identity board CONSISTENT,
+$2.61 (cap $3), 1 pętla regenu. Lekcje: (a) ruch „wysuwu w bok" degeneruje do „zawiasu" —
+w promptach ruchu TWARDO „stays FLAT and LEVEL, slides sideways in-plane, NEVER tilts/hinged";
+(b) `size_floor` bezużyteczny na czarnym produkcie w high-key (czerń ma V>60 → fałszywe
+„za mały") — przy cv_reliable:false floor pomijać, decyzja W CAŁOŚCI na kompozytach VLM;
+(c) przed REJECTEM „zła pozycja elementu" sprawdź packshot NA KOMPOZYCIE — „wnęka na środku"
+okazała się zgodna z prawdą produktu (ocena pamięciowa by odrzuciła).
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 
