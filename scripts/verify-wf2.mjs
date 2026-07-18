@@ -87,7 +87,15 @@ for (const t of ['wf2_projects', 'wf2_products', 'wf2_costs', 'wf2_orders', 'wf2
   leak ? bad(`RLS anon ${t}`, 'anon widzi wiersze!') : ok(`RLS: anon nie widzi ${t}`);
 }
 
-// ── 5. Schemat kosztów (zakładka Koszty ma na czym pracować) ───────────────
+// ── 5. Kontrakty w kodzie edge (rozjazdy psujące się CICHO — R5) ───────────
+{
+  const adsSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-ads', 'index.ts'), 'utf8');
+  adsSrc.includes("'lp_styl_marka'") ? ok('wf2-ads czyta branding z lp_styl_marka (krok fabryki)') : bad('wf2-ads branding-lookup', 'brak lp_styl_marka — kreacje pójdą bez mini-marki');
+  const lapSrc = readFileSync(join(ROOT, 'supabase', 'functions', 'wf2-landing-api', 'index.ts'), 'utf8');
+  (!lapSrc.includes(".select('*')") && !lapSrc.includes('.select("*")')) ? ok('landing-api: jawna lista kolumn (bez .select(*))') : bad('landing-api', '.select(*) na publicznym endpoincie = ryzyko wycieku');
+}
+
+// ── 6. Schemat kosztów (zakładka Koszty ma na czym pracować) ───────────────
 {
   const r = await rest('wf2_costs?select=id,amount,currency,stage,kind&limit=1', SK);
   r.status < 300 ? ok('wf2_costs dostępne (kolumny amount/currency/stage/kind)') : bad('wf2_costs', `status ${r.status}`);

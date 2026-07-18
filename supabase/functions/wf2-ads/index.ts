@@ -229,25 +229,42 @@ function buildProductRefs(tt: any, coverUrl: string): { url: string; type: 'prod
 
 // Odczyt briefu mini-marki z kroku 'lp_branding' / 'branding' (data.fields wg panelu tn-sklepy).
 // Czytamy tolerancyjnie: pola mogą nie istnieć / leżeć płasko w data zamiast data.fields.
+// Merge z priorytetem kroków (R5 18.07: fabryka trzyma mini-markę w lp_styl_marka —
+// pole marka_nazwa; logo NIE jest polem, wyprowadzamy je z brand_dir → logo-combo.png).
+const BRANDING_STEP_PRIORITY = ['lp_styl_marka', 'lp_branding', 'branding', 'lp_plan']
 // deno-lint-ignore no-explicit-any
 function readBranding(steps: any[]): { brandName: string; logoUrl: string; ust: Record<string, string>; obietnica: string; hooki: string } {
+  const prio = (k: string) => { const i = BRANDING_STEP_PRIORITY.indexOf(k); return i < 0 ? 99 : i }
+  const sorted = [...(steps || [])].sort((a, b) => prio(String(a?.step_key || '')) - prio(String(b?.step_key || '')))
   // deno-lint-ignore no-explicit-any
-  let f: Record<string, any> = {}
-  for (const s of (steps || [])) {
+  const f: Record<string, any> = {}
+  for (const s of sorted) {
     const d = s?.data || {}
     const fields = (d.fields && typeof d.fields === 'object') ? d.fields : d
-    // pierwszy krok z jakąkolwiek treścią wygrywa
-    if (fields && typeof fields === 'object' && Object.values(fields).some((v) => String(v || '').trim())) { f = fields; break }
+    if (!fields || typeof fields !== 'object') continue
+    for (const [k, v] of Object.entries(fields)) {
+      if (!(k in f) && v != null && String(v).trim()) f[k] = v   // wcześniejszy krok wygrywa per-pole
+    }
   }
   const g = (...keys: string[]): string => {
     for (const k of keys) { const v = f[k]; if (v != null && String(v).trim()) return String(v).trim() }
     return ''
   }
-  const brandName = g('nazwa', 'brand', 'marka', 'nazwa_marki', 'chosen_name').slice(0, 60)
-  const logoRaw = g('logo_url', 'logo')
+  const brandName = g('marka_nazwa', 'nazwa', 'brand', 'marka', 'nazwa_marki', 'chosen_name').slice(0, 60)
+  let logoRaw = g('logo_url', 'logo')
+  if (!logoRaw) {
+    // konwencja fabryki: brand_dir = bud-assets/<slug>/brand/ (Storage public) → logo-combo.png
+    const dir = g('brand_dir')
+    if (dir) {
+      const base = Deno.env.get('SUPABASE_URL') || ''
+      logoRaw = /^https?:\/\//i.test(dir)
+        ? dir.replace(/\/+$/, '') + '/logo-combo.png'
+        : `${base}/storage/v1/object/public/attachments/${dir.replace(/^\/+|\/+$/g, '')}/logo-combo.png`
+    }
+  }
   const logoUrl = /^https?:\/\//i.test(logoRaw) ? logoRaw : ''   // inline SVG nie nadaje się jako URL do pobrania
   const persona = g('persona', 'dla_kogo', 'avatar')
-  const obietnica = g('obietnica', 'kat', 'kąt', 'wyroznik', 'wyróżnik')
+  const obietnica = g('obietnica', 'kat', 'kąt', 'wyroznik', 'wyróżnik', 'motyw')
   const hooki = g('hooki', 'hook', 'hasla', 'hasło', 'haslo')
   const haslo = (hooki.split(/[\n;•]/).map((x) => x.trim()).filter(Boolean)[0] || '').slice(0, 120)
   const ust: Record<string, string> = { dla_kogo: persona, kat: obietnica, ton_marki: g('ton', 'ton_marki'), haslo }
@@ -495,9 +512,10 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Branding (mini-marka) — krok 'lp_branding' lub 'branding' TEGO produktu.
+    // Branding (mini-marka) — fabryka trzyma go w 'lp_styl_marka' (marka_nazwa + brand_dir);
+    // legacy aliasy i lp_plan (motyw jako kąt) jako fallback (priorytet w readBranding).
     const { data: brandingSteps } = await supabase.from('wf2_steps')
-      .select('step_key, data').eq('product_id', productId).in('step_key', ['lp_branding', 'branding'])
+      .select('step_key, data').eq('product_id', productId).in('step_key', BRANDING_STEP_PRIORITY)
     const { brandName: brandRaw, logoUrl, ust, obietnica, hooki } = readBranding(brandingSteps || [])
     const brandName = (brandRaw || String((project?.name as string) || '')).slice(0, 60)
 

@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+    // ⚠️ ENDPOINT PUBLICZNY NA SERVICE-ROLE: lista kolumn poniżej = JEDYNA bariera
+    // przed wyciekiem. NIGDY select('*'); dokładasz kolumnę = upewnij się, że jest
+    // jawnie publikowana na landingu (zero PII/kosztów/marż zakupu).
     const { data, error } = await supabase
       .from("wf2_products")
       .select("project_id, name, price, checkout_url, status, margin_mode")

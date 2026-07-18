@@ -11,10 +11,13 @@
 //   {}                     → cron: 10 najstarszych projektów wg orders_synced_at (chunk)
 //   { project_id: <uuid> } → ręczny trigger jednego projektu (panel/sesja)
 //
-// Zwraca: { ok, projects, orders_upserted, unmapped, partial }
+// Zwraca: { ok, projects, orders_upserted, unmapped, partial, guard:{domains_activated, pixel_alerts, price_alerts} }
 //
 // Deadline wewnętrzny 300 s (edge wall-clock 400 s — pamięć: split + deadline 330 s). Chunk: ≤10 projektów/wywołanie;
 // jeśli więcej kwalifikujących się → przetwarza 10 najstarszych i zwraca partial:true (kolejny run dobierze resztę).
+//
+// STRAŻNIK PLATFORMY (autonomia): po syncu, w TYM SAMYM budżecie, dla każdego projektu leci cykliczna kontrola
+// (auto-aktywacja zweryfikowanej domeny + audyt pixela + rozjazd cen produktów). Każdy check w try/catch — patrz runGuard().
 
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { adminGate } from "../_shared/bud-owner.ts";
@@ -253,6 +256,184 @@ async function syncProject(
   return { upserted: orderRows.length, unmapped: unmappedNames.size, timedOut };
 }
 
+// ══════════════════════════════════════════════════════════════════════════
+// STRAŻNIK PLATFORMY — autonomiczna kontrola i auto-domykanie spraw (bez człowieka).
+// Uruchamiany po syncu zamówień, w tym samym budżecie 300 s. Każdy z 3 checków w osobnym
+// try/catch — padnięcie jednego nie wywraca pozostałych ani synca. Max 3 GET/projekt
+// (domains + integrations + products) → przy chunku 10 mieści się w rate-limicie 120/min.
+// ⚠️ ZERO PUT na integracjach: czytamy WYŁĄCZNIE action 'integrations' (GET). set_integration
+// robi PUT, który AUTO-WŁĄCZA integrację (pamięć) — strażnik nigdy go nie woła.
+// ══════════════════════════════════════════════════════════════════════════
+type GuardResult = { domains_activated: number; pixel_alerts: number; price_alerts: number };
+
+// generyczny ekstraktor listy z rozmaitych kształtów odpowiedzi
+function extractList(raw: unknown, keys: string[]): Record<string, unknown>[] {
+  if (Array.isArray(raw)) return raw as Record<string, unknown>[];
+  if (raw && typeof raw === 'object') {
+    const o = raw as Record<string, unknown>;
+    for (const k of keys) if (Array.isArray(o[k])) return o[k] as Record<string, unknown>[];
+  }
+  return [];
+}
+function normDomain(v: unknown): string { return str(v).trim().toLowerCase().replace(/^www\./, '').replace(/\/+$/, ''); }
+function isTruthy(v: unknown): boolean {
+  if (typeof v === 'boolean') return v;
+  if (typeof v === 'number') return v === 1;
+  if (typeof v === 'string') return ['true', '1', 'yes', 'active', 'enabled', 'on'].includes(v.toLowerCase());
+  return false;
+}
+const money = (n: number) => n.toFixed(2).replace('.', ',');
+
+// wołanie adaptera + rozpakowanie koperty { status, data } platformy (GET i POST tak samo)
+async function platformCall(baseUrl: string, wf2: string, payload: Record<string, unknown>): Promise<{ ok: boolean; status: number; data: unknown }> {
+  const { httpOk, httpStatus, env } = await callPlatform(baseUrl, wf2, payload);
+  if (!httpOk) return { ok: false, status: httpStatus, data: null };
+  const envelope = (env && typeof env === 'object') ? env as { status?: number; data?: unknown; error?: string } : {};
+  if (envelope.error) return { ok: false, status: httpStatus, data: null };
+  const st = typeof envelope.status === 'number' ? envelope.status : httpStatus;
+  return { ok: st < 400, status: st, data: envelope.data };
+}
+
+async function runGuard(
+  supabase: Supa, baseUrl: string, wf2: string,
+  proj: { id: string; platform_shop_id: string; pixel_id: string | null; domain: string | null },
+  startedAt: number,
+): Promise<GuardResult> {
+  const out: GuardResult = { domains_activated: 0, pixel_alerts: 0, price_alerts: 0 };
+  if (Date.now() - startedAt > DEADLINE_MS) return out;
+  const shopId = proj.platform_shop_id;
+  const nowIso = new Date().toISOString();
+
+  // (1) AUTO-AKTYWACJA DOMENY — tylko gdy pl_domena otwarte (instancja project-scope)
+  try {
+    const { data: steps } = await supabase.from('wf2_steps')
+      .select('id, status').eq('project_id', proj.id).eq('step_key', 'pl_domena')
+      .is('product_id', null).in('status', ['pending', 'in_progress']).limit(1);
+    if (steps && steps.length > 0) {
+      const r = await platformCall(baseUrl, wf2, { action: 'domains', shop_id: shopId });
+      if (r.ok) {
+        const top = (r.data && typeof r.data === 'object') ? r.data as Record<string, unknown> : {};
+        const activeDomain = normDomain(pick(top, ['activeDomain', 'active_domain']));
+        const list = extractList(r.data, ['domains', 'customDomains', 'items', 'data', 'records']);
+        const isVerified = (d: Record<string, unknown>) => {
+          const v = pick(d, ['isVerified', 'verified', 'isDnsVerified', 'dnsVerified', 'isConfirmed']);
+          if (typeof v === 'boolean') return v;
+          const st = str(pick(d, ['status', 'verificationStatus', 'state'])).toLowerCase();
+          return ['verified', 'active', 'ok', 'confirmed', 'ready'].includes(st);
+        };
+        const isActiveDomain = (d: Record<string, unknown>) => {
+          const a = pick(d, ['isActive', 'active', 'isPrimary', 'isCurrent']);
+          if (typeof a === 'boolean') return a;
+          const nm = normDomain(pick(d, ['domain', 'name', 'host', 'hostname']));
+          return !!nm && !!activeDomain && nm === activeDomain;
+        };
+        const cand = list.find((d) => isVerified(d) && !isActiveDomain(d));
+        const domainId = cand ? str(pick(cand, ['id', 'domainId', 'websiteDomainId'])) : '';
+        if (cand && domainId) {
+          const act = await platformCall(baseUrl, wf2, { action: 'activate_domain', shop_id: shopId, domain_id: domainId });
+          if (act.ok) {
+            const domainName = str(pick(cand, ['domain', 'name', 'host', 'hostname']));
+            if (!proj.domain && domainName) await supabase.from('wf2_projects').update({ domain: domainName }).eq('id', proj.id);
+            await supabase.from('wf2_steps').update({ status: 'done', completed_at: nowIso, completed_by: 'auto' }).eq('id', (steps[0] as { id: string }).id);
+            await supabase.from('wf2_activities').insert({
+              project_id: proj.id, actor: 'auto', action: 'domain_activated',
+              description: `Domena ${domainName || domainId} aktywowana automatycznie (strażnik platformy).`,
+            });
+            out.domains_activated++;
+          } else {
+            console.error(`[wf2-orders-sync/guard] activate_domain nieudane (projekt ${proj.id}, status ${act.status})`);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[wf2-orders-sync/guard] domena (projekt ${proj.id}):`, e instanceof Error ? e.message : String(e));
+  }
+
+  // (2) AUDYT PIXELA — tylko gdy projekt ma pixel_id; WYŁĄCZNIE odczyt integracji (GET)
+  try {
+    if (proj.pixel_id) {
+      const r = await platformCall(baseUrl, wf2, { action: 'integrations', shop_id: shopId });
+      if (r.ok) {
+        const arr = extractList(r.data, ['integrations', 'items', 'data', 'records']);
+        const fp = arr.find((i) => str(pick(i, ['type', 'name'])).toLowerCase() === 'facebookpixel');
+        if (fp) {
+          const active = isTruthy(pick(fp, ['isActive', 'active', 'enabled']));
+          const platPixel = str(pick(fp, ['pixelId', 'pixel_id', 'value']));
+          const expected = str(proj.pixel_id);
+          if (!active || platPixel !== expected) {
+            const { data: dup } = await supabase.from('wf2_notes')
+              .select('id').eq('project_id', proj.id).eq('status', 'open')
+              .like('body', '⚠️ AUTOMAT: pixel%').limit(1);
+            if (!dup || dup.length === 0) {
+              const stanParts: string[] = [];
+              if (!active) stanParts.push('nieaktywny');
+              if (platPixel !== expected) stanParts.push(`pixelId=${platPixel || '(pusty)'}`);
+              const stan = stanParts.join(', ') || 'rozjazd';
+              await supabase.from('wf2_notes').insert({
+                project_id: proj.id, tag: 'blokada', status: 'open', author: 'auto',
+                body: `⚠️ AUTOMAT: pixel na platformie nieaktywny/rozjechany (oczekiwany ${expected}, jest ${stan}) — krok Integracje wymaga uwagi`,
+              });
+              out.pixel_alerts++;
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[wf2-orders-sync/guard] pixel (projekt ${proj.id}):`, e instanceof Error ? e.message : String(e));
+  }
+
+  // (3) ROZJAZD CENY — produkty z platform_product_id + price; jedna strona produktów/projekt
+  try {
+    const { data: prods } = await supabase.from('wf2_products')
+      .select('id, name, price, platform_product_id')
+      .eq('project_id', proj.id)
+      .not('platform_product_id', 'is', null)
+      .not('price', 'is', null);
+    if (prods && prods.length > 0) {
+      const r = await platformCall(baseUrl, wf2, { action: 'products', shop_id: shopId, page_size: 100 });
+      if (r.ok) {
+        const items = extractList(r.data, ['items', 'data', 'products', 'records']);
+        const priceById = new Map<string, number>();
+        for (const it of items) {
+          const pid = str(pick(it, ['id', 'productId', 'product_id']));
+          if (!pid) continue;
+          const variants = pick(it, ['variants', 'variantList', 'skus']);
+          const v0 = Array.isArray(variants) && variants.length > 0 ? variants[0] as Record<string, unknown> : null;
+          const pr = v0
+            ? num(pick(v0, ['price', 'grossPrice', 'priceGross', 'value', 'amount']))
+            : num(pick(it, ['price', 'grossPrice', 'priceGross', 'value']));
+          priceById.set(pid, pr);
+        }
+        // dedup: otwarte noty cenowe projektu (po prefiksie) — jedno zapytanie na projekt
+        const { data: openPriceNotes } = await supabase.from('wf2_notes')
+          .select('body').eq('project_id', proj.id).eq('status', 'open').like('body', '⚠️ AUTOMAT: cena%');
+        const priceBodies = ((openPriceNotes || []) as { body: string }[]).map((n) => n.body || '');
+        for (const p of (prods as { id: string; name: string; price: number; platform_product_id: string }[])) {
+          const pid = str(p.platform_product_id);
+          if (!priceById.has(pid)) continue;   // produktu nie ma na tej stronie — brak wiarygodnych danych, nie ruszamy
+          const platPrice = priceById.get(pid)!;
+          await supabase.from('wf2_products').update({ platform_price: platPrice, platform_synced_at: nowIso }).eq('id', p.id);
+          const panelPrice = num(p.price);
+          if (Math.abs(platPrice - panelPrice) > 0.01) {
+            const marker = `dla ${p.name} —`;   // dedup po prefiksie 'cena' + nazwie produktu
+            if (priceBodies.some((b) => b.includes(marker))) continue;
+            const body = `⚠️ AUTOMAT: cena na platformie (${money(platPrice)} zł) ≠ cena w panelu (${money(panelPrice)} zł) dla ${p.name} — kasa pobierze ${money(platPrice)}. Wyrównaj w panelu platformy albo zaktualizuj cenę produktu.`;
+            await supabase.from('wf2_notes').insert({ project_id: proj.id, product_id: p.id, tag: 'blokada', status: 'open', author: 'auto', body });
+            priceBodies.push(body);
+            out.price_alerts++;
+          }
+        }
+      }
+    }
+  } catch (e) {
+    console.error(`[wf2-orders-sync/guard] cena (projekt ${proj.id}):`, e instanceof Error ? e.message : String(e));
+  }
+
+  return out;
+}
+
 // ── serwer ─────────────────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   const startedAt = Date.now();
@@ -275,16 +456,16 @@ Deno.serve(async (req) => {
 
     // wybór projektów: platform_shop_id NOT NULL i status != 'zamkniety'; najstarsze wg orders_synced_at
     let partial = false;
-    let projects: { id: string; platform_shop_id: string; orders_synced_at: string | null }[] = [];
+    let projects: { id: string; platform_shop_id: string; orders_synced_at: string | null; pixel_id: string | null; domain: string | null }[] = [];
     if (onlyProject) {
       const { data, error } = await supabase.from('wf2_projects')
-        .select('id, platform_shop_id, orders_synced_at')
+        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain')
         .eq('id', onlyProject).not('platform_shop_id', 'is', null).neq('status', 'zamkniety').limit(1);
       if (error) throw error;
       projects = (data || []) as typeof projects;
     } else {
       const { data, error } = await supabase.from('wf2_projects')
-        .select('id, platform_shop_id, orders_synced_at')
+        .select('id, platform_shop_id, orders_synced_at, pixel_id, domain')
         .not('platform_shop_id', 'is', null).neq('status', 'zamkniety')
         .order('orders_synced_at', { ascending: true, nullsFirst: true })
         .limit(MAX_PROJECTS_PER_RUN + 1);
@@ -295,19 +476,31 @@ Deno.serve(async (req) => {
     }
 
     let processed = 0, ordersUpserted = 0, unmapped = 0;
+    const guard: GuardResult = { domains_activated: 0, pixel_alerts: 0, price_alerts: 0 };
     for (const proj of projects) {
       if (Date.now() - startedAt > DEADLINE_MS) { partial = true; break; }   // budżet wyczerpany — reszta w kolejnym runie
+      let syncTimedOut = false;
       try {
         const r = await syncProject(supabase, SUPABASE_URL, WF2, proj, startedAt);
         processed++; ordersUpserted += r.upserted; unmapped += r.unmapped;
-        if (r.timedOut) { partial = true; break; }
+        syncTimedOut = r.timedOut;
       } catch (e) {
         console.error(`[wf2-orders-sync] projekt ${proj.id} nieudany:`, e instanceof Error ? e.message : String(e));
-        // pojedynczy projekt nie wywraca całego przebiegu — lecimy dalej
+        // pojedynczy projekt nie wywraca całego przebiegu — lecimy dalej (strażnik i tak zadziała)
       }
+      // STRAŻNIK PLATFORMY — po syncu, w tym samym budżecie; własny try/catch (niezależny od synca)
+      try {
+        const g = await runGuard(supabase, SUPABASE_URL, WF2, proj, startedAt);
+        guard.domains_activated += g.domains_activated;
+        guard.pixel_alerts += g.pixel_alerts;
+        guard.price_alerts += g.price_alerts;
+      } catch (e) {
+        console.error(`[wf2-orders-sync] strażnik ${proj.id} nieudany:`, e instanceof Error ? e.message : String(e));
+      }
+      if (syncTimedOut || Date.now() - startedAt > DEADLINE_MS) { partial = true; break; }
     }
 
-    return J({ ok: true, projects: processed, orders_upserted: ordersUpserted, unmapped, partial });
+    return J({ ok: true, projects: processed, orders_upserted: ordersUpserted, unmapped, partial, guard });
   } catch (e) {
     console.error('[wf2-orders-sync] ERROR:', e);
     return J({ error: 'blad_serwera', detail: e instanceof Error ? e.message : String(e) }, 500);
