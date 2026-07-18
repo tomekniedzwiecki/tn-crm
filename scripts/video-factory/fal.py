@@ -213,14 +213,18 @@ def preflight(floor_usd=15.0):
     print(f"[fal] saldo ${b:.2f} OK (floor ${floor_usd})", flush=True)
     return b
 
-def reclaim(outdir):
+def reclaim(outdir, prefix=None):
     """Dociagnij OPLACONE joby po padzie sesji: czyta ledger i POLLUJE response_url
-    (re-poll = darmowy; re-submit = drugi bill!). Pomija tagi z istniejacym wynikiem/.failed."""
+    (re-poll = darmowy; re-submit = drugi bill!). Pomija tagi z istniejacym wynikiem/.failed.
+    prefix: filtr tagow (np. 'masazer_') — BEZ niego sciaga WSZYSTKIE projekty z ledgera
+    do outdir (incydent: ~30 cudzych klipow w gen/). Default = _PROJECT gdy ustawiony."""
     led = json.load(open(LEDGER, encoding="utf-8"))
+    pref = prefix if prefix is not None else (_PROJECT + "_" if _PROJECT else None)
     got = []
     for c in led.get("calls", []):
         ru, tag = c.get("response_url"), c.get("tag") or c.get("request_id")
         if not ru or not tag: continue
+        if pref and not str(tag).startswith(pref): continue
         base = os.path.join(outdir, str(tag))
         if any(os.path.exists(base + e) for e in (".mp4", ".png", ".mp3", ".failed")): continue
         try:
@@ -249,7 +253,7 @@ if __name__ == "__main__":
     elif cmd == "saldo":
         print(f"${balance():.2f}")
     elif cmd == "reclaim":
-        print(f"dociagnieto {len(reclaim(sys.argv[2]))} plikow")
+        print(f"dociagnieto {len(reclaim(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else None))} plikow")
     elif cmd == "gen":
         model, pf, prefix = sys.argv[2], sys.argv[3], sys.argv[4]
         payload = json.load(open(pf, encoding="utf-8"))

@@ -56,6 +56,7 @@ def render_scenes(scenes, outdir, timeout_s=2400, project=""):
         if eng == "mc": payload.setdefault("character_orientation", "image")
         if eng == "kref":
             payload.setdefault("duration", "5"); payload.setdefault("aspect_ratio", "9:16")
+            payload.setdefault("negative_prompt", NEG + (", " + neg_extra if neg_extra else ""))
         if eng == "flf":
             payload.setdefault("duration", "5"); payload.setdefault("cfg_scale", 0.5)
             payload.setdefault("negative_prompt", NEG + (", " + neg_extra if neg_extra else ""))

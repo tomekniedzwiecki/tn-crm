@@ -39,3 +39,9 @@ VO = **ElevenLabs v3** z tagami emocji `[skeptical]`/`[gasp]`/`[laughs]` i PAUZA
 3. **PRZECIEKI BIŻUTERII/PAZNOKCI z referencji pozy** (pierścionki, lakier, brandowany kabel z klipu referencyjnego). Referencja pozy daje TYLKO układ ciała; tożsamość produktu z Ali, twarz z face_ref. Negative: `rings, nail polish, jewelry`; `forbidden_leaks` w KARCIE. **Gdy CAŁY wzorzec ma inny kolor/wariant urządzenia niż nasza galeria Ali** → renderuj ZAWSZE wg Ali, kolor/wariant wzorca do `forbidden_leaks` (referencja ruchu silnie ciągnie ku barwie wzorca).
 4. **ZMIANA KOLORU OCZU** — patrz §3, „warm brown eyes" w każdym promcie + bramka.
 5. **CIĄGŁOŚĆ REKWIZYTÓW** (kabel!) — kolor/obecność kabla i rekwizytów identyczne we wszystkich scenach z urządzeniem (`consistency` w blueprincie).
+
+## WARIANT: produkt-na-ciele BEZ MOWY (caption-driven; masazer 19.07)
+Wzorzec = testimonial niesiony NAPISAMI (zero lip-sync, osoba pasywnie odbiera dzialanie):
+DROP OmniHuman/MC; sceny produktowe = kref (multi-view refy), przejscia/loop-close = FLF;
+emocje = mimika bez mowy (ulga, oddech) + SFX/ambient; narracja = VO off-screen albo
+caption Tomka. Persona chainowana z hook_first wystarcza przy minimalnej twarzy.
