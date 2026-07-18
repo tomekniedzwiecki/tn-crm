@@ -137,11 +137,20 @@ def select_best(gen_dir, tag):
         vpath = os.path.splitext(mp4)[0] + ".verdict.json"
         if not os.path.exists(vpath): continue
         v = json.load(open(vpath, encoding="utf-8"))
-        if v.get("verdict") == "PASS":
-            cands.append((len(v.get("flags") or []), mp4))
+        if v.get("verdict") != "PASS":
+            continue
+        # wiernosci (product_gate na kandydatach): REJECT = dyskwalifikacja; wyzszy score wygrywa
+        fpath = os.path.splitext(mp4)[0] + ".fidelity.json"
+        fs = 0
+        if os.path.exists(fpath):
+            f = json.load(open(fpath, encoding="utf-8"))
+            if f.get("verdict") == "REJECT":
+                continue
+            fs = f.get("fidelity_score") or 0
+        cands.append((len(v.get("flags") or []), -fs, mp4))
     if not cands: return None
     cands.sort()
-    win = cands[0][1]
+    win = cands[0][2]
     dst = os.path.join(gen_dir, tag + ".mp4")
     shutil.copy(win, dst)
     shutil.copy(os.path.splitext(win)[0] + ".verdict.json", os.path.splitext(dst)[0] + ".verdict.json")

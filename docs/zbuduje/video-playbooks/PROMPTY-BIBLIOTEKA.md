@@ -136,6 +136,18 @@ sceny `has_physical_action:true` bez sfx (bramka `require_sfx`).
 ## Ściąga podstawień KARTY
 `{KARTA.product.anatomy_str}` · `{KARTA.product.functional_count}` · `{KARTA.product.exactly_one}` · `{KARTA.product.forbidden_leaks}` (→ `negative_extra`) · `{KARTA.product.hsv_color}`/`{KARTA.product.hsv_ranges}`/`{KARTA.product.cv_reliable}` (→ bramka CV) · `{KARTA.product.fluid}` (→ `{PHYSICS_FLUID}`) · `{KARTA.scenography.layout}`/`.swiatlo` · `{KARTA.grammar.physics}`/`.action_steps`/`.both_hands` · `{KARTA.identity.face_ref}`/`.eye_color` · `{KARTA.screens_and_text}`.
 
+### Klauzule WIERNOŚCI (0i — incydent drapek 19.07)
+1. **Role refów (max 3-4, każdy JEDNA jawna rola):** „Image 1 = POSE/COMPOSITION only ·
+   Image 2 = PRODUCT IDENTITY (exact) · Image 3 = MECHANISM STATE (match exactly) ·
+   Image 4 = SURFACE STATE". Nie mieszaj ról; >4 refy rozmywają.
+2. **LAST-frame ZAWSZE z packshotem stanu:** `[first, ref_stanu]` + „Image 2 = EXACT product
+   identity and mechanism state — CORRECT any drift or hallucination to match it". Chainowanie
+   last tylko z first = dryf wbudowany (drapek: pokrywa 4 różne konstrukcje).
+3. **Kąt+skala z kontraktu:** wstrzykuj `kontrakt_produktowy.kat` (JEDEN kanon na kreację)
+   + „product fills ≥{skala_min_pct}% of frame width" — zabija klin/teleport skali.
+4. **Stany powierzchni OBRAZEM:** efekty użycia (rysy/ślady) = kanoniczny ref generowany RAZ
+   („dense fine light-grey scuff striations, NOT white chalk lines"), nie opis per scena.
+
 ### Klauzula SKÓRY (audyt klatek 19.07 — rezydualny AI-tell #2)
 Nano-banana/OmniHuman renderują skórę domyślnie ZA GŁADKO (wosk). Do KAŻDEGO promptu klatki
 z widoczną skórą (dłonie, twarz, przedramię) dopisuj: **„visible skin pores, fine skin texture,

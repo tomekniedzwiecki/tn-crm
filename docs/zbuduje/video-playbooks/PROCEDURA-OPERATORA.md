@@ -57,12 +57,35 @@ Generuj wg `PROMPTY-BIBLIOTEKA.md` (1) role obrazów + (2) pary FLF. **Master-fr
 Sceny FAILED zostawiają `<tag>.failed`; poll odporny (status_url/response_url z submita; blip HTTP liczy się dopiero po 3 z rzędu — job jest już OPŁACONY).
 **PAD SESJI (uśpienie/crash) = NIE re-submituj:** joby żyją server-side i są opłacone. `python fal.py reclaim <outdir>` czyta ledger i dociąga wyniki po `response_url` (re-poll darmowy; ślepy re-submit = drugi bill). Pomija tagi z istniejącym plikiem/`.failed`.
 
+## KROK 5b — WIERNOŚĆ NA KLATKACH (0i — PRZED renderami)
+1. **Paszport mechanizmu**: wytnij refy stanów (`mechanism_states`) z packshotów i LIFESTYLE
+   (obraz realnego działania!); stany powierzchni (np. rysy) — jeden kanoniczny ref.
+2. **`last()` ZAWSZE z `[first, ref_stanu]`** („Image 2 = EXACT identity+state — correct any
+   drift") — chainowanie tylko z first = wbudowany dryf (incydent drapek).
+3. **Preflight kontraktu**: każda scena demo ma `kontrakt_produktowy` (stan/kąt/skala/
+   elementy/uzycie/must_show) — brak = STOP. Klatka łamie kontrakt → **inpaint-fix** nano
+   (`[zla_klatka, ref_stanu]`, „replace ONLY the mechanism") zanim spalisz FLF.
+
 ## KROK 7 — BRAMKA WIZYJNA KLIPU (`qa_gate.py`) — egzekwowalna
 Dla KAŻDEGO klipu przed montażem:
 1. `python qa_gate.py precheck <klip> <KARTA.json>` (lub `cv_precheck()` z modułu) — TYLKO gdy `cv_reliable:true`: maska HSV (sumuje zakresy z `hsv_ranges` przy hue-wrap) + connectedComponents = twardy licznik egzemplarzy, $0. **Interpretacja flag: >1 obiekt = duplikat egzemplarza LUB piana/blob z rozpadu fizyki — OBIE złe, oba to ODRZUT.** Gdy `cv_reliable:false` (kolory skórne/metal) → NIE ufaj CV, licznik robi VLM.
 2. `make_grids` → siatki 3×3 (2 fps; MC próbkuj 4 fps).
 3. Przegląd agentem z checklistą KARTY: **WIERSZ NA KLATKĘ** (nr, #obiektów produktu, #dłoni, flagi) — ZAKAZ oceny zbiorczej (zbiorcza przepuściła 2× duplikat 17.07). Sprawdzasz: liczbę egzemplarzy, `functional_count` (ciągłość), dłonie, twarz+oczy vs face_ref, tło, fizykę w ruchu, glify, afordancję.
 4. `save_verdict(clip, "PASS"|"REJECT", flags)` → `<klip>.verdict.json` + `<klip>.pass` przy PASS. REJECT → wróć do KROK 5/6 (pętla poprawek do wyczerpania).
+
+### KROK 7.5 — PRODUCT-FIDELITY GATE (`product_gate.py`) — egzekwowalna, NIE-samoakceptowalna
+Po `.pass` WSZYSTKICH scen, PRZED montażem (montaz `require_fidelity` i tak odmówi bez markera):
+1. Kompozyty side-by-side per scena (`product_gate.py sbs <packshot> <klatka> <out>`; 3-4/scenę:
+   first/mid/last + apogeum mechanizmu; packshot dobrany do KONTRAKTOWEGO stanu sceny).
+2. **Rubryka per-ELEMENT** (`KARTA.product.elements[]`): agent emituje WIERSZ NA ELEMENT × klatkę
+   (obecny? WIERNY konstrukcyjnie/pozycyjnie? jak zniekształcony?) — zakaz oceny zbiorczej;
+   werdykt sceny = min po elementach. + werdykt `kontrakt_produktowy` (must_show/must_not_show).
+3. **IDENTITY BOARD**: `product_gate.py board <out> <packshot1> <packshot2> <cropy scen...>` →
+   wiersz-na-kafelek „ten sam przedmiot co kotwica?"; NIESPÓJNY = REJECT scen odstających.
+4. Zapis: `save_fidelity(...)` per scena + `finalize(gen_dir, board_verdict)` → `fidelity.pass`
+   TYLKO przy komplecie PASS+CONSISTENT. Deterministyczny floor: `size_floor` (produkt <8% kadru
+   w scenie demo = flaga). REJECT → pętla naprawcza KROK 5b (≤2 regeneracje; 3. = eskalacja).
+   Dla scen best-of-N: fidelity na KANDYDATACH przed `select_best` (REJECT dyskwalifikuje).
 
 ## KROK 8 — MONTAŻ (`montaz.py`)
 Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra,has_physical_action,sfx[],handheld} + audio {music,mus_offset,dip,peak,ambient}); wzór `plany-15s.json`. `build(...)` **odmówi bez `.pass`** każdego klipu (`require_pass=True`) **oraz przy scenie z akcją fizyczną bez SFX** (`require_sfx=True` — bramka 0h); bypassy tylko świadomie na już zbramkowanym materiale. Wbudowane: grade-match per scena, globalne ziarno-zszywka, **micro-handheld domyślnie ON** (opt-out per scena `handheld:false` — logowany), VO na startach scen, dip/peak muzyki + ducking, **SFX/ambient osobną gałęzią bez duckingu**, limiter + **normalizacja do -14 LUFS** (mierz-i-przesuń, zachowuje dynamikę), 48 kHz. Cięcia hands-POV w apogeum akcji (0b.5 aneks), koniec = LOOP CLOSE (audio ciągłe przez granicę pętli, bez akcentu-stopu). BEZ napisów (Tomek robi osobno).
@@ -83,6 +106,7 @@ Plan JSON (sceny {id,plik,ss,dur,vo,vf_extra,has_physical_action,sfx[],handheld}
 - [ ] **Każda akcja fizyczna słyszalna** (SFX na timestampach; ambient bed obecny) — montaż i tak odmówi bez tego, ale sprawdź czy hity siedzą NA akcji.
 - [ ] Handheld nałożony (lub opt-out zalogowany); cięcia hands-POV w apogeum akcji (bez freeze na granicach scen).
 - [ ] VO w rejestrze first-person (zero broadcast-sloganów); skóra z teksturą (nie woskowa).
+- [ ] **`fidelity.pass` obecny**; identity-board CONSISTENT; każda scena demo spełnia `kontrakt_produktowy` (mechanizm W DZIAŁANIU, nie „obok").
 
 ## KROK 10b — PACK WARIANTÓW HOOKA (max 3 wersje — decyzja Tomka 19.07)
 Po akceptacji bazy dorób do ad setu **do 2 wariantów hooka na wspólnym rdzeniu** (razem MAX 3 pliki):

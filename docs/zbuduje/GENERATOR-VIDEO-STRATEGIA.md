@@ -213,6 +213,9 @@ WYMÓG wiersza-na-klatkę (zakaz oceny zbiorczej) + `save_verdict()` → `<klip>
 7. ✅ **2 bramki Tomka po 30 s** — w PROCEDURZE (tryb autonomiczny: samoakcept + log).
 8. ✅ **ZAKAZY z researchu:** interpolacja 60 fps dla UGC (soap-opera), CodeFormer
    klatka-po-klatce, Topaz na max, forensiczne AI-detectory jako bramka jakości.
+10. ✅ **PRODUCT-FIDELITY GATE (19.07)** — domyka klasę defektów #1 (MORF PRODUKTU MIĘDZY
+   SCENAMI): `functional_count` NIE wystarcza (ślepy na kształt/konstrukcję — incydent drapek).
+   Kontrakt+bramka: sekcja **0i**; `product_gate.py`; montaz `require_fidelity`.
 9. ✅ **Odporność/budżet (18.07):** transient-retry w pollach (`fal.gen`, `render` — blip HTTP
    nie spisuje OPŁACONEGO joba na straty), `python fal.py reclaim <outdir>` (dociąga opłacone
    joby po padzie sesji z response_url w ledgerze — re-poll darmowy, re-submit = drugi bill),
@@ -285,6 +288,55 @@ był czystym ASMR WODY — sygnaturowy dźwięk produktu wypadł z pipeline'u w 
    `wzorzec.reaction_sound` w blueprincie), NIE doklejaną twarzą.
 **Anty-reguły:** bez kreskówkowego sound-designu (dźwięk na każdy mikroruch), bez SFX
 zagłuszających VO, bez trendujących ścieżek z TikToka (IP — audio ZAWSZE nasze).
+
+## 0i. WIERNOŚĆ PRODUKTU: KONTRAKT + BRAMKA (feedback Tomka 19.07 — priorytet, budżet +20%)
+
+Incydent drapek: mechanizm szufladki miał INNĄ KONSTRUKCJĘ niemal w każdej scenie (ramka /
+recesowana wnęka / zsuwany panel; pozycja lewo/środek/prawo), a bramka to przepuściła — bo
+ocenia per-klip, z pamięci, a `functional_count` jest ŚLEPY NA KSZTAŁT (1 pokrywa = 1 pokrywa,
+nieważne że to ramka). Tomek: „tylko jedna scena pokazuje, jak działa produkt… to kluczowe,
+żeby reklama działała, a nie odstraszała". System = PREWENCJA + BRAMKA na wspólnym kontrakcie:
+
+**PREWENCJA (generacja — zrób wiernie za 1. razem):**
+1. **Per-frame packshot re-injection (ROOT-CAUSE, $0):** `last()` dostaje `[first, packshot
+   właściwego STANU]` z rolą „Image 2 = EXACT product identity+state — correct any drift".
+   (Drapek: last chainowany TYLKO z first = dryf wbudowany w kod.)
+2. **PASZPORT MECHANIZMU** (`KARTA.product.mechanism_states{}`): obraz-ref per stan mechanizmu,
+   wycięty z packshotów/LIFESTYLE (lifestyle-demo = często JEDYNY obraz realnego działania —
+   drapek go w ogóle nie używał!). Scena→stan→ref, zawsze jako OBIEKT-ref (nie opis!).
+3. **KONTRAKT PRODUKTOWY SCENY** (`blueprint.sceny[].kontrakt_produktowy`): stan mechanizmu
+   per klatka, JEDEN kanon kąta na kreację, `skala_min_pct` (demo ≥55% szer. kadru),
+   elementy_wymagane, `mechanizm_w_dzialaniu` (demo pokazuje ZMIANĘ STANU lub UŻYCIE, nie
+   „produkt obok"), must_show/must_not_show (w tym anty-spoiler: wnęka zamknięta przed sceną
+   nagrody). **Preflight-walidator: scena demo bez kontraktu = STOP przed generacją.**
+4. **Inpaint-fix mechanizmu PRZED FLF** (~$0.04/klatka): klatka łamie kontrakt → nano-edit
+   `[zla_klatka, ref_stanu]` „replace ONLY the mechanism to match Image 2" — taniej niż
+   re-render Klinga. Max 3-4 refy/klatkę, każdy z JAWNĄ rolą (DOG/PRODUCT/MECHANISM/SURFACE).
+5. **Stany powierzchni jako ref** (np. `scratched-surface`): efekty użycia (rysy!) generowane
+   RAZ jako kanon — nie „białe kredowe bazgroły" wymyślane per scena.
+
+**BRAMKA `product_gate.py` (KROK 7.5, po qa_gate, przed montażem):**
+- **Kompozyty side-by-side** packshot|klatka (3-4/scena) — VLM porównuje 1:1, nie z pamięci.
+- **Rubryka per-ELEMENT** (`KARTA.product.elements[]`): wiersz-na-element×klatka; werdykt
+  sceny = min po elementach; ZAKAZ oceny zbiorczej „anatomia ok".
+- **Kontrakt użycia**: brak must_show w scenie demo / obecny must_not_show = REJECT.
+- **IDENTITY BOARD** (cross-scenowy — tego brakowało): jeden rząd = 2 packshoty-kotwice +
+  crop produktu z KAŻDEJ sceny; wiersz-na-kafelek „ten sam przedmiot?"; NIESPÓJNY = REJECT
+  scen odstających.
+- **Werdykty**: `<klip>.fidelity.json` + `gen/fidelity_board.json`; `fidelity.pass` TYLKO gdy
+  wszystkie sceny PASS + board CONSISTENT; **montaz `require_fidelity=True` ODMAWIA bez
+  markera**; `select_best` dyskwalifikuje REJECT i sortuje po fidelity_score.
+- PASS = wszystkie elementy WIERNE (konstrukcja+pozycja+kształt, nie tylko „jest") + kontrakt
+  + spójność. „Ładne, ale konstrukcja inna" = REJECT, nie MINOR.
+- Deterministyka przy `cv_reliable:false` = TYLKO floor (`size_floor`: produkt <8% kadru)
+  i przesłanki; decyzję podejmuje VLM na kompozytach (czerń psa == czerń deski).
+**Pętla naprawcza:** bramka zwraca listę defektów per-element → prewencja re-warunkowuje
+(ref stanu do KAŻDEJ klatki, zaostrzone elementy) → regen TYLKO failujących scen; **≤2
+regeneracje/kreację** w budżecie +20% (~$0.5-0.7: gate $0.05-0.15 + inpainty + 1-2 FLF);
+3. porażka = eskalacja, nie loop-burn.
+**Czego NIE robić:** zmiana silnika na v3 „dla spójności" (0e pkt 5) · refiner „żeby było
+ładniej" · rotacje 360° (ghosting) · dosypywanie zdań do anatomy_str (mechanizm wchodzi
+OBRAZEM) · >4 refy na klatkę · maska HSV na czarne/drewniane produkty.
 
 ## 1. Stan wyjściowy (fakty z kodu, 17.07)
 

@@ -11,7 +11,18 @@
     "_hsv_ranges_doc": "lista par [lo,hi] gdy jeden zakres nie wystarcza (hue-wrap). Przyklad czerwieni (odcien pekniety na dwa konce H): [[[0,120,70],[10,255,255]],[[170,120,70],[180,255,255]]]. Puste [] = uzyj jednozakresowego hsv_color. qa_gate.cv_precheck sumuje maski z obu zakresow.",
     "cv_reliable": "true = produkt wyrazisty barwnie, JEDNOLITY, odseparowany od tla (maska HSV liczy egzemplarze w cv_precheck). false gdy KTORYKOLWIEK z wyzwalaczy: (a) gunmetal/czarny/srebrny/przezroczysty/kolor skory; (b) emisyjne gradienty RGB LED / podswietlenie teczowe (HSV bezuzyteczna mimo jaskrawego koloru — barwa zmienna w czasie i po powierzchni); (c) kolor FRAGMENTARYCZNY na produkcie (rozproszone plamy/wzor/print — connectedComponents liczy PLAMY, nie egzemplarze); (d) odcien przy hue-wrap 0/180 (CZERWIENIE! H pekniety na dwa konce skali — jesli mimo to uzywasz maski, wypelnij hsv_ranges DWOMA zakresami, obsluzone w qa_gate); (e) kolor produktu KOLIDUJE z elementami sceny (tlo/rekwizyt w tym samym zakresie HSV). W (a)-(e) licznik egzemplarzy robi VLM wiersz-na-klatke. REGULA: zawsze zweryfikuj zakres HSV wzgledem sceny — tlo i rekwizyty NIE moga wpasc w maske; jesli wpadaja -> cv_reliable:false.",
     "fluid": "nazwa cieczy do placeholdera {PHYSICS_FLUID} w promptach (np. 'water', 'foam cleanser', 'oil', 'gel') lub null gdy produkt nie generuje plynow",
-    "forbidden_leaks": ["branding konkurenta", "zly kolor elementu X", "kolor/wariant wzorca rozny od naszej galerii Ali", "rings", "nail polish", "second device", "duplicate product"]
+    "forbidden_leaks": ["branding konkurenta", "zly kolor elementu X", "kolor/wariant wzorca rozny od naszej galerii Ali", "rings", "nail polish", "second device", "duplicate product"],
+    "elements": [
+      "LISTA ELEMENTOW do rubryki wiernosci (0i): kazdy = osobny WIERSZ oceny bramki",
+      "np. 'pokrywa_wysuwana — czarny wierzch FLUSH w plaszczyznie, zsuwana z KONCA (NIE ramka, NIE panel na wierzchu)'",
+      "opisuj KONSTRUKCJE i POZYCJE, nie tylko kolor — functional_count jest slepy na ksztalt!"
+    ],
+    "packshots": {"closed": "refs/prod-closed.png", "open": "refs/prod-open.png",
+                  "_doc": "kotwice prawdy do kompozytow side-by-side i identity_board (0i)"},
+    "mechanism_states": {
+      "_doc": "PASZPORT MECHANIZMU: obraz-ref per STAN (crop z packshotow/lifestyle!). Kazda generacja klatki dostaje ref WLASCIWEGO stanu; last() ZAWSZE dostaje [first, ref_stanu] — lekcja drapka: last chainowany tylko z first = wbudowany dryf.",
+      "zamkniety": "refs/mech-closed.png", "otwarty": "refs/mech-open.png"
+    }
   },
   "scenography": {"layout": "jeden kanon tla + strona kadru urzadzenia", "swiatlo": "charakter"},
   "grammar": {

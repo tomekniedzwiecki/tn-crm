@@ -45,12 +45,19 @@ def _hh(si):
     y = f"(ih-1920)/2+11*sin(2*PI*t*0.31+{p + 0.9:.2f})+6*sin(2*PI*t*0.97+{p + 3.4:.2f})"
     return f"scale=1124:2000:force_original_aspect_ratio=increase,crop=1080:1920:x='{x}':y='{y}',fps=30"
 
-def build(plan, audio, gen_dir, out_path, require_pass=True, require_sfx=True, handheld=True):
+def build(plan, audio, gen_dir, out_path, require_pass=True, require_sfx=True,
+          require_fidelity=True, handheld=True):
     """require_pass: kazda scena musi miec <plik-bez-ext>.pass od qa_gate (bramka egzekwowalna).
     require_sfx: scena z has_physical_action=true MUSI miec sfx (bramka 0h "dzwiek na akcje").
+    require_fidelity: gen_dir musi miec fidelity.pass od product_gate (bramka 0i WIERNOSCI —
+    per-element vs packshot + kontrakt uzycia + identity board miedzy scenami).
     handheld: micro-shake domyslnie ON; opt-out per scena polem handheld=false (logowany).
     Bypass TYLKO swiadomie (np. czysty remontaz juz zbramkowanego materialu)."""
     outdir = os.path.dirname(out_path); os.makedirs(outdir, exist_ok=True)
+    if require_fidelity and not os.path.exists(os.path.join(gen_dir, "fidelity.pass")):
+        raise RuntimeError("BRAMKA 0i WIERNOSCI: brak fidelity.pass — product_gate nie potwierdzil "
+                           "wiernosci produktu (per-element + demo-kontrakt + identity board); "
+                           "uruchom KROK 7.5 (lub swiadomie require_fidelity=False)")
     for sc in plan:
         if require_sfx and sc.get("has_physical_action") and not sc.get("sfx"):
             raise RuntimeError(f"BRAMKA 0h: scena {sc['id']} ma has_physical_action=true i ZERO sfx "
