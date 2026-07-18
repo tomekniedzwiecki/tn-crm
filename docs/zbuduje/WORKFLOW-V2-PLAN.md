@@ -13,8 +13,9 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   · **2 Landing** (lp_dane → lp_plan → lp_styl_marka → lp_makiety 🏁 → lp_grafiki → lp_kod →
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
-  pl_domena 🏁 [client] → pl_integracje → pl_produkt [product] → pl_landing [product] →
-  pl_glowna → pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
+  pl_domena 🏁 [**Tomek kupuje przez LH.pl**; rekordy z add_domain wpisywane w edytorze
+  stref LH.pl, aktywacja = strażnik auto] → pl_integracje → pl_produkt [product] →
+  pl_landing [product] → pl_glowna → pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
   [client], ads_pixel 🏁, ads_grafiki [product], **ads_wideo** [product, NOWY], ads_kampanie 🏁
   [product]) · 5 Testy i skalowanie · 6 Przekazanie sterów.
 - **`wf2_artifacts`** (project_id, product_id, step_key, kind, label, url, storage, meta) —
