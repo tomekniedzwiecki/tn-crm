@@ -123,3 +123,9 @@ mellow, soft — te gatunki maja rzadkie sekcje, ktore w miksie brzmia jak cisza
 Prompt zawsze konczymy: "absolutely no vocals, NO lo-fi, NO ambient". Miks (montaz.py v2):
 music_gain 0.65 + loudnorm I=-16 na wejsciu muzyki + ducking ratio 3/release 250 (muzyka
 wraca miedzy zdaniami); dip_gain 0.30; parametry per kreacja w AUDIO_CFG.
+**GOTCHA FADE-OUT (zmierzone 18.07):** Stable Audio robi fade-out na koncu zamowionej
+dlugosci — przy `seconds_total: 15` ostatnie ~5 s gasnie do ciszy (-13 dB -> -46 dB), czyli
+kulminacja i CTA zostaja BEZ muzyki. Regula: **zamawiaj utwor ~+60% dluzszy niz kreacja**
+(15 s kreacji -> `seconds_total: 25`) + w promptcie "constant energy until the very end,
+no outro, no fade out"; montaz i tak tnie do dlugosci kreacji (`-t total`). Weryfikacja:
+volumedetect w oknach 0/srodek/koniec — wszystkie w ~2-3 dB od siebie.
