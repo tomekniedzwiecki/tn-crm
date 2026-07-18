@@ -41,6 +41,13 @@ from datetime import datetime, timezone
 
 import requests
 
+# UTF-8 na stdout/stderr (Windows cp1250/cp1252 crashuje na ↔/„…" w log/help — audyt 18.07 P0)
+for _s in (sys.stdout, sys.stderr):
+    try:
+        _s.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ── Konfiguracja stała (projekt CRM, NIE ZE_SUPABASE_URL — to inny projekt!) ──
 PROJECT_REF = "yxmavwkwnfuphjqbelws"
 REST = f"https://{PROJECT_REF}.supabase.co/rest/v1"
