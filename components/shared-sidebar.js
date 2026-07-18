@@ -360,6 +360,22 @@ const SIDEBAR_CSS = `
         visibility: visible;
         transform: translateY(0);
     }
+
+    /* Box przełącznika: limit wysokości na niskich viewportach + cienki scrollbar */
+    #app-switcher-dropdown, #panel-switcher-dropdown {
+        max-height: 80vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #3f3f46 transparent;
+    }
+    #app-switcher-dropdown::-webkit-scrollbar, #panel-switcher-dropdown::-webkit-scrollbar { width: 8px; }
+    #app-switcher-dropdown::-webkit-scrollbar-track, #panel-switcher-dropdown::-webkit-scrollbar-track { background: transparent; }
+    #app-switcher-dropdown::-webkit-scrollbar-thumb, #panel-switcher-dropdown::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 99px; }
+    #app-switcher-dropdown::-webkit-scrollbar-thumb:hover, #panel-switcher-dropdown::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+    /* Podświetlenie nawigacji klawiaturą (↑/↓) — widoczne też na bieżącej apce */
+    .sw-row.sw-hl { background: rgba(255,255,255,0.06); box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22); }
+    [aria-current].sw-row.sw-hl { background: rgba(255,255,255,0.16); }
 `;
 
 // ============================================
@@ -427,7 +443,7 @@ function buildSwitcherHtml(userEmail, currentAppId) {
                 ? ' aria-current="page"'
                 : ` href="${getAppPath(app.id)}"`;
             return `
-        <${tag}${attrs} class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors${legacyRow} ${stateClasses}">
+        <${tag}${attrs} data-app-id="${app.id}" class="sw-row flex items-center gap-3 px-3 py-2 rounded-lg transition-colors${legacyRow} ${stateClasses}">
             <div class="w-6 h-6 ${app.color} rounded flex items-center justify-center shrink-0">
                 <i class="ph-bold ${app.icon} text-xs"></i>
             </div>
@@ -488,21 +504,51 @@ function getPagePath(page) {
     return `${base}/${page}`;
 }
 
+// Czy dana strona (item.id) jest bezpieczna do przywrócenia dla appId:
+// musi być pozycją NAV danej apki, i (bezpiecznik uprawnień) nie może być
+// adminOnly ani ownerEmails, których bieżący _userEmail nie przechodzi.
+function isNavPageAllowed(appId, pageId) {
+    const item = getNavItemsForApp(appId).find(i => i.id === pageId);
+    if (!item) return false;
+    if (item.adminOnly) return false; // brak pewności co do admina → fallback
+    if (item.ownerEmails) {
+        const userUsername = (_userEmail || '').toLowerCase().split('@')[0];
+        const allowed = item.ownerEmails.some(e => {
+            const u = e.toLowerCase().includes('@') ? e.toLowerCase().split('@')[0] : e.toLowerCase();
+            return u === userUsername;
+        });
+        if (!allowed) return false;
+    }
+    return true;
+}
+
+// Ostatnio odwiedzana zakładka apki (localStorage), jeśli whitelistowana; inaczej defaultPage.
+function pageForApp(appId) {
+    const app = APPS.find(a => a.id === appId);
+    const def = app ? app.defaultPage : 'dashboard';
+    try {
+        const last = localStorage.getItem('tn_last_page_' + appId);
+        if (last && isNavPageAllowed(appId, last)) return last;
+    } catch (_) { /* prywatny tryb / brak localStorage */ }
+    return def;
+}
+
 function getAppPath(appId) {
     const app = APPS.find(a => a.id === appId);
     if (!app) return '/';
     const base = APP_BASES[appId] || '';
+    const page = pageForApp(appId);
     if (isLocalhost()) {
         // Detect if we're running from parent folder
         const path = location.pathname;
         const hasParentPrefix = path.includes('/tn-crm/');
 
         if (hasParentPrefix) {
-            return `/tn-crm${base}/${app.defaultPage}.html`;
+            return `/tn-crm${base}/${page}.html`;
         }
-        return `${base}/${app.defaultPage}.html`;
+        return `${base}/${page}.html`;
     }
-    return `${base}/${app.defaultPage}`;
+    return `${base}/${page}`;
 }
 
 function getLoginPath() {
@@ -590,6 +636,14 @@ function renderSidebar(config = {}) {
     const currentApp = APPS.find(a => a.id === _currentAppId);
     const navItems = getNavItemsForApp(_currentAppId);
     const avatarColor = APP_AVATAR_COLORS[_currentAppId] || APP_AVATAR_COLORS.crm;
+
+    // Zapamiętaj ostatnią zakładkę — TYLKO gdy to pozycja NAV (nie widok szczegółu:
+    // lead/offer/projekt/board itp.). Przywracana przez pageForApp() w getAppPath.
+    try {
+        if (navItems.some(i => i.id === currentPage)) {
+            localStorage.setItem('tn_last_page_' + _currentAppId, currentPage);
+        }
+    } catch (_) { /* prywatny tryb / brak localStorage */ }
 
     // Build app switcher box HTML (grupy + dostępy) — wspólna funkcja
     const appSwitcherDropdown = buildSwitcherHtml(_userEmail, _currentAppId);
@@ -712,6 +766,7 @@ function setupAppSwitcher() {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
         dropdown.classList.toggle('open');
+        if (dropdown.classList.contains('open')) highlightCurrentRow(dropdown);
     });
 
     document.addEventListener('click', (e) => {
@@ -738,7 +793,11 @@ function setupAppSwitcher() {
 // AltGr (polski układ) ustawia ctrlKey+altKey — wykluczamy przez !e.ctrlKey.
 function toggleSwitcherDropdown() {
     const sb = document.getElementById('app-switcher-dropdown');
-    if (sb) { sb.classList.toggle('open'); return; }
+    if (sb) {
+        sb.classList.toggle('open');
+        if (sb.classList.contains('open')) highlightCurrentRow(sb);
+        return;
+    }
     if (typeof _panelSwitcherToggle === 'function') _panelSwitcherToggle();
 }
 
@@ -747,6 +806,47 @@ function isTypingTarget() {
     if (!ae) return false;
     const tag = ae.tagName;
     return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || ae.isContentEditable;
+}
+
+// ---- Nawigacja klawiaturą w OTWARTYM boxie (↑/↓/Enter/1-7) — wspólna dla obu wariantów ----
+function getOpenSwitcher() {
+    const sb = document.getElementById('app-switcher-dropdown');
+    if (sb && sb.classList.contains('open')) return sb;
+    const pn = document.getElementById('panel-switcher-dropdown');
+    if (pn && !pn.classList.contains('hidden')) return pn;
+    return null;
+}
+function switcherRows(dd) {
+    return dd ? [...dd.querySelectorAll('.sw-row[data-app-id]')] : [];
+}
+function highlightCurrentRow(dd) {
+    const rows = switcherRows(dd);
+    rows.forEach(r => r.classList.remove('sw-hl'));
+    if (!rows.length) return;
+    // start = bieżąca aplikacja
+    const cur = rows.find(r => r.getAttribute('data-app-id') === _currentAppId) || rows[0];
+    cur.classList.add('sw-hl');
+}
+function moveSwitcherHighlight(dd, dir) {
+    const rows = switcherRows(dd);
+    if (!rows.length) return;
+    let idx = rows.findIndex(r => r.classList.contains('sw-hl'));
+    rows.forEach(r => r.classList.remove('sw-hl'));
+    idx = (idx === -1) ? (dir > 0 ? 0 : rows.length - 1) : (idx + dir + rows.length) % rows.length; // zawijanie
+    rows[idx].classList.add('sw-hl');
+    rows[idx].scrollIntoView({ block: 'nearest' });
+}
+function activateSwitcherHighlight(dd) {
+    const row = dd.querySelector('.sw-row.sw-hl[data-app-id]') || dd.querySelector('.sw-row[data-app-id]');
+    if (row) window.location.href = getAppPath(row.getAttribute('data-app-id'));
+}
+// Skok do apki o danym shortoucie (respektuje dostępy). Zwraca true, jeśli wykonano.
+function navToShortcut(n) {
+    const app = APPS.find(a => a.shortcut === n);
+    if (!app) return false;
+    if (!getAvailableApps(_userEmail).some(a => a.id === app.id)) return false;
+    window.location.href = getAppPath(app.id);
+    return true;
 }
 
 function registerSwitcherKeys() {
@@ -759,18 +859,21 @@ function registerSwitcherKeys() {
             toggleSwitcherDropdown();
             return;
         }
-        // Alt+1..7 → skok do aplikacji (bez AltGr: ten ustawia ctrlKey+altKey)
+        // Nawigacja WEWNĄTRZ otwartego boxu (bez modyfikatorów, focus nie w inpucie)
+        const openDd = getOpenSwitcher();
+        if (openDd && !e.altKey && !e.ctrlKey && !e.metaKey && !isTypingTarget()) {
+            if (e.key === 'ArrowDown') { e.preventDefault(); moveSwitcherHighlight(openDd, 1); return; }
+            if (e.key === 'ArrowUp') { e.preventDefault(); moveSwitcherHighlight(openDd, -1); return; }
+            if (e.key === 'Enter') { e.preventDefault(); activateSwitcherHighlight(openDd); return; }
+            const dm = e.code && e.code.match(/^Digit([1-7])$/);
+            if (dm) { if (navToShortcut(parseInt(dm[1], 10))) e.preventDefault(); return; }
+        }
+        // Alt+1..7 → skok do aplikacji globalnie (bez AltGr: ten ustawia ctrlKey+altKey)
         if (e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
             const m = e.code && e.code.match(/^Digit([1-7])$/);
             if (!m) return;
             if (isTypingTarget()) return;
-            const shortcut = parseInt(m[1], 10);
-            const app = APPS.find(a => a.shortcut === shortcut);
-            if (!app) return;
-            // respektuj dostępy — skacz tylko do widocznych apek
-            if (!getAvailableApps(_userEmail).some(a => a.id === app.id)) return;
-            e.preventDefault();
-            window.location.href = getAppPath(app.id);
+            if (navToShortcut(parseInt(m[1], 10))) e.preventDefault();
         }
     });
 }
@@ -865,10 +968,13 @@ function mountPanelSwitcher(opts = {}) {
         // docisk do prawej krawędzi viewportu (box = 288px)
         left = Math.min(left, window.innerWidth - 288 - 8);
         left = Math.max(8, left);
+        const top = Math.round(r.bottom + 6);
         dd.style.left = left + 'px';
-        dd.style.top = Math.round(r.bottom + 6) + 'px';
+        dd.style.top = top + 'px';
+        // fixed box nie może wyjść poza dół viewportu — clamp (reszta scrolluje)
+        dd.style.maxHeight = Math.max(160, window.innerHeight - top - 12) + 'px';
     };
-    const open = () => { dd.innerHTML = buildSwitcherHtml(_userEmail, _currentAppId); position(); dd.classList.remove('hidden'); };
+    const open = () => { dd.innerHTML = buildSwitcherHtml(_userEmail, _currentAppId); position(); dd.classList.remove('hidden'); highlightCurrentRow(dd); };
     const close = () => dd.classList.add('hidden');
     const toggle = () => { if (dd.classList.contains('hidden')) open(); else close(); };
     _panelSwitcherToggle = toggle;
