@@ -7,12 +7,13 @@ Zrodlo prawdy o kompletnosci = TEN skrypt + gate-manifest.json (DANE), nie dekla
 EXIT: 0 = brak FAIL (WARN/SKIP dozwolone), 1 = >=1 FAIL.
 
 Kategorie (manifest): files, dopasowanie, interakcje, grep_forbidden, sieroty, wagi,
-phash, baza, wideo_kafle, makiety_mobile, og_image, ledger_fazy.
+phash, baza, wideo_kafle, makiety_mobile, og_image, ledger_fazy, werdykt_rubryka,
+layout_diff, wiernosc, panel_sync (most fabryka->panel tn-sklepy wf2_*).
 
 Wymaga: Pillow, imagehash, requests (venv scripts/mockup-tools/.venv).
 NIE modyfikuje niczego — czyta artefakty i (opcjonalnie) siec + baze.
 """
-import sys, os, re, json, glob, argparse, fnmatch
+import sys, os, re, json, glob, argparse, fnmatch, subprocess, tempfile
 try:
     sys.stdout.reconfigure(encoding="utf-8")
 except Exception:
@@ -51,6 +52,25 @@ def load_env(path):
 def norm(s):
     """lowercase + usun separatory — do tolerancyjnego dopasowania nazw."""
     return re.sub(r"[-_/. ]", "", (s or "").lower())
+
+_ENTITIES = {"&amp;": "&", "&nbsp;": " ", "&deg;": "°", "&times;": "×",
+             "&mdash;": "—", "&ndash;": "–", "&lt;": "<", "&gt;": ">",
+             "&quot;": '"', "&#215;": "×", "&#176;": "°"}
+def strip_scripts(html):
+    """Markup z USUNIETYMI blokami <script>/<style>/<template>/<noscript>, ale z zachowanymi tagami.
+       Do ekstrakcji atrybutow (np. data-price) bez lapania selektorow CSS/JS wewnatrz skryptow."""
+    return re.sub(r"(?is)<(script|style|template|noscript)\b[^>]*>.*?</\1>", " ", html or "")
+
+def visible_text(html):
+    """Przyblizony tekst WIDOCZNY: usun <script>/<style>/<template>, tagi, rozkoduj kilka encji,
+       scal biale znaki. Do gruntowania copy-gate (liczby/zakazy w prozie, NIE w atrybutach)."""
+    if not html:
+        return ""
+    t = re.sub(r"(?s)<[^>]+>", " ", strip_scripts(html))
+    for k, v in _ENTITIES.items():
+        t = t.replace(k, v)
+    t = re.sub(r"&#\d+;", " ", t)
+    return re.sub(r"[ \t\r\f\v]+", " ", t)
 
 # ------------------------------------------------------------------ result sink
 class Results:
@@ -251,7 +271,7 @@ def check_interakcje(res, M, ctx):
 
 def check_grep_forbidden(res, M, ctx):
     m = M["grep_forbidden"]; html = ctx["html"]; low = html.lower()
-    for rule in m["statyczne"]:
+    def apply_rule(rule):
         sev = rule["severity"]; label = rule["label"]
         if "regex" in rule:
             hits = re.findall(rule["regex"], html, re.I)
@@ -262,6 +282,11 @@ def check_grep_forbidden(res, M, ctx):
             ok = n == 0
             det = "" if ok else "%d trafien" % n
         res.add("grep", label, status_for(ok, sev), det)
+    for rule in m["statyczne"]:
+        apply_rule(rule)
+    # zakazy PRODUKTOWE (per-landing override; np. TYMO tylko na loczek/odpalak — task#6)
+    for rule in m.get("per_landing", {}).get(ctx["slug"], []):
+        apply_rule(rule)
     # dynamiczny shop z KARTY PRAWDY
     d = m["dynamiczne_shop"]; sev = d["severity"]
     karta = ctx["karta"]
@@ -335,16 +360,27 @@ def check_sieroty(res, M, ctx):
     res.add("sieroty", "assety bez URL i bez dokumentacji", status_for(ok, sev),
             ("%d/%d udokumentowanych" % (len(assets) - len(orphans), len(assets))) if ok
             else ("sieroty: %s" % orphans))
-    # HTTP 200 dla URL-i bud-assets w kodzie
+    # HTTP 200 dla URL-i bud-assets w kodzie.
+    # Rozdziel bledy TWARDE (asset naprawde brak: 404/403/410...) = FAIL od TRANSIENTNYCH
+    # (blip sieci: ERR:*, 429, 5xx) = WARN — blip nie moze wywalac gate'u (task#5b).
     if m.get("http_200") and not ctx["no_net"]:
-        bad = []
+        transient_codes = set(m.get("http_transient_codes", [408, 425, 429, 500, 502, 503, 504]))
+        def is_transient(code):
+            return (isinstance(code, str) and code.startswith("ERR:")) or (isinstance(code, int) and code in transient_codes)
+        hard, transient = [], []
         for u in ctx["urls"]:
             code, _ = http_head_size(u, ctx["timeout"])
-            if code != 200:
-                bad.append("%s -> %s" % (url_asset_path(u), code))
-        ok2 = not bad
-        res.add("sieroty", "URL-e bud-assets HTTP 200", status_for(ok2, sev),
-                ("%d URL-i OK" % len(ctx["urls"])) if ok2 else ("; ".join(bad[:8])))
+            if code == 200:
+                continue
+            (transient if is_transient(code) else hard).append("%s -> %s" % (url_asset_path(u), code))
+        if hard:
+            res.add("sieroty", "URL-e bud-assets HTTP 200", status_for(False, sev),
+                    "TWARDE: " + "; ".join(hard[:8]) + (" (+%d transient)" % len(transient) if transient else ""))
+        elif transient:
+            res.add("sieroty", "URL-e bud-assets HTTP 200", "WARN",
+                    "tylko transient (blip sieci, nie blokuje): " + "; ".join(transient[:8]))
+        else:
+            res.add("sieroty", "URL-e bud-assets HTTP 200", "PASS", "%d URL-i OK" % len(ctx["urls"]))
     else:
         res.add("sieroty", "URL-e bud-assets HTTP 200", "SKIP", "--no-net")
 
@@ -451,9 +487,13 @@ def curated_nonempty(v):
     return bool(v)
 
 def pg_get(env, M, table, params, timeout):
-    """PostgREST GET -> lista dict albo None (brak dostepu)."""
+    """PostgREST GET -> lista dict albo None (brak dostepu).
+       Host WYMUSZONY na projekcie CRM z manifestu (baza.host / panel_sync.host / host_fallback),
+       NIE z env SUPABASE_URL — bo .env moze wskazywac projekt sparingu i mielibysmy dane z ZLEGO
+       projektu (jak panel_sync; task#5c). Jesli klucz nie pasuje do CRM -> 401 -> None -> SKIP."""
     import requests
-    url = env.get(M["supabase"]["url_env"]) or M["supabase"]["host_fallback"]
+    url = (M.get("baza", {}).get("host") or M.get("panel_sync", {}).get("host")
+           or M["supabase"]["host_fallback"])
     key = env.get(M["supabase"]["key_env"])
     if not key:
         return None
@@ -555,6 +595,23 @@ def check_makiety_mobile(res, M, ctx):
         ok = found or nota
         res.add("makiety_mobile", req["label"], status_for(ok, sev),
                 "" if found else ("nota w LEDGER" if nota else "brak pliku i noty"))
+    # F2.4 rozszerzenie (Tomek 18.07): mobile-makieta dla KAZDEJ sekcji — komplet mobile == liczba
+    # sekcji (== liczba makiet desktop poza styl-master). Wlacza flaga komplet_wg_sekcji w manifescie.
+    # Wlasny, WASKI komplet_nota_regex (nota_regex ogolne matchuje kazda wzmianke 'makiety mobile',
+    # wiec bezuzyteczne jako wentyl kompletu).
+    if m.get("komplet_wg_sekcji"):
+        IMG = (".png", ".webp", ".jpg", ".jpeg")
+        excl = tuple(x.lower() for x in m.get("komplet_wyklucz", ["styl-master", "00-"]))
+        allm = [os.path.basename(x) for x in find_glob(arch, "makiety/*")]
+        imgs = [n for n in allm if n.lower().endswith(IMG)]
+        desktop = [n for n in imgs if "mobile" not in n.lower() and not any(e in n.lower() for e in excl)]
+        mobile = [n for n in imgs if "mobile" in n.lower()]
+        n_sec = len(ctx["sections"]) or len(desktop)
+        knota = bool(re.search(m.get("komplet_nota_regex", r"(?!x)x"), ctx["ledger"] or "", re.I))
+        ok = (len(mobile) >= n_sec) or knota
+        res.add("makiety_mobile", "komplet mobile == sekcje", status_for(ok, sev),
+                "%d mobile / %d sekcji%s" % (len(mobile), n_sec,
+                    "" if len(mobile) >= n_sec else (" — nota-wyjatek w LEDGER" if knota else " — BRAK par mobile")))
 
 def check_og_image(res, M, ctx):
     m = M["og_image"]; sev = m["severity"]; html = ctx["html"]
@@ -689,6 +746,12 @@ def check_werdykt_rubryka(res, M, ctx):
             continue
         if verdict is None:
             res.add("rubryka", sid, status_for(False, sev), "brak WERDYKT (TAK/NIE) w wierszu")
+            continue
+        # (c) WERDYKT=NIE = sekcja niezgodna z makieta -> FAIL (task#5a; dawniej PASS = agent
+        # mogl jawnie przyznac NIE a gate i tak przepuszczal — dziura uczciwosci).
+        if verdict == "NIE":
+            res.add("rubryka", sid, status_for(False, sev),
+                    "WERDYKT=NIE (sekcja NIEZGODNA z makieta — petla dopasowania niedomknieta)")
             continue
         res.add("rubryka", sid, "PASS", "%s (%dxT)" % (verdict, n_t))
     if seen == 0:
@@ -905,6 +968,439 @@ def check_wiernosc(res, M, ctx):
             res.add("wiernosc", os.path.basename(ap), status_for(False, sev),
                     "NIEZGODNA — grafika niezgodna z produktem (petla regen/eskalacja niedomknieta)")
 
+# ================================================================== PANEL-SYNC: egzekwowalny most fabryka -> panel tn-sklepy (wf2_*)
+def _pg_crm(M, env, table, params, timeout):
+    """GET PostgREST na projekcie CRM. Host WYMUSZONY z manifestu (panel_sync.host),
+       NIE z env SUPABASE_URL — bo .env moze wskazywac projekt sparingu (patrz MOST-PANEL.md).
+       Zwraca list|None (None = brak klucza/dostepu/blad)."""
+    import requests
+    m = M["panel_sync"]
+    host = m.get("host") or M["supabase"]["host_fallback"]
+    key = env.get(M["supabase"]["key_env"])
+    if not key:
+        return None
+    try:
+        r = requests.get(host.rstrip("/") + "/rest/v1/" + table, params=params, timeout=timeout,
+                         headers={"apikey": key, "Authorization": "Bearer " + key})
+        return r.json() if r.status_code == 200 else None
+    except Exception:
+        return None
+
+def _stem(path_or_url):
+    """Znormalizowany rdzen nazwy pliku z URL/sciezki (bez query, katalogu, rozszerzenia)."""
+    s = str(path_or_url or "").split("?")[0].rstrip("/")
+    base = s.replace("\\", "/").split("/")[-1]
+    return norm(os.path.splitext(base)[0])
+
+def _arch_files(arch, glob_pat, wyklucz):
+    """Basenames plikow archiwum pasujacych do globa, z wykluczeniem tokenow w nazwie."""
+    out = []
+    wyk = [x.lower() for x in (wyklucz or [])]
+    for p in find_glob(arch, glob_pat):
+        if not os.path.isfile(p):
+            continue
+        bn = os.path.basename(p)
+        if any(x in bn.lower() for x in wyk):
+            continue
+        out.append(bn)
+    return sorted(set(out))
+
+def check_panel_sync(res, M, ctx):
+    """EGZEKWOWALNY check kompletnosci MOSTU fabryka->panel tn-sklepy (wf2_*).
+    Gwarantuje, ze deliverable/artefakt istniejacy w archiwum-kodzie ma odbicie w panelu
+    (krok done, artefakty == pliki, karta produktu, doc-i, wzmianki kod->panel). Zrodlo prawdy
+    o KOMPLETNOSCI syncu = TEN check + manifest, nie pamiec agenta ('sync per faza' bez kontroli).
+    Landing bez projektu w panelu -> SKIP (nie kazdy preview ma projekt)."""
+    m = M.get("panel_sync")
+    if not m:
+        res.add("panel_sync", "(config)", "SKIP", "brak panel_sync w manifescie")
+        return
+    sev = m["severity"]; env = ctx["env"]; arch = ctx["archiwum"]
+    if ctx["no_net"] or not env.get(M["supabase"]["key_env"]):
+        res.add("panel_sync", "(most fabryka->panel)", "SKIP", "brak SUPABASE_SERVICE_KEY / --no-net")
+        return
+    # --- MAPOWANIE: landing slug -> wf2_products (jedno okno mostu) ---
+    prod = _pg_crm(M, env, m["tabela_produkty"],
+                   {m.get("slug_kolumna", "slug"): "eq." + ctx["slug"], "select": "*"}, ctx["timeout"])
+    if prod is None:
+        res.add("panel_sync", "wf2_products (dostep)", "SKIP", "brak dostepu do bazy CRM")
+        return
+    if not prod:
+        res.add("panel_sync", "projekt panelu", "SKIP",
+                "landing bez projektu panelu (brak wiersza wf2_products slug=%s) — nie fail" % ctx["slug"])
+        return
+    P = prod[0]; pid = P["id"]
+    steps = _pg_crm(M, env, m["tabela_kroki"],
+                    {"product_id": "eq." + pid, "select": "step_key,status,data"}, ctx["timeout"]) or []
+    arts = _pg_crm(M, env, m["tabela_artefakty"],
+                   {"product_id": "eq." + pid, "select": "kind,step_key,url,label,storage"}, ctx["timeout"]) or []
+    step_by = {s.get("step_key"): s for s in steps}
+    res.add("panel_sync", "projekt panelu", "PASS",
+            "wf2_products id=%s status=%s · %d krokow · %d artefaktow" % (pid[:8], P.get("status"), len(steps), len(arts)))
+
+    # --- (1) KARTA PRODUKTU: kluczowe kolumny nie-NULL ---
+    braki = [k for k in m.get("karta_kolumny_wymagane", []) if P.get(k) in (None, "", [])]
+    res.add("panel_sync", "karta produktu (kolumny)", status_for(not braki, sev),
+            "komplet (%s)" % ", ".join(m.get("karta_kolumny_wymagane", [])) if not braki
+            else "NULL w kolumnach: " + ", ".join(braki))
+
+    # --- (2) KROKI DONE: deliverable istnieje -> panel status='done' ---
+    for kd in m.get("kroki_done", []):
+        step = kd["step"]
+        exists = bool(ctx["html"]) if kd.get("gdy_kod") else False
+        for f in kd.get("gdy_plik", []):
+            if os.path.isfile(os.path.join(arch, f.replace("/", os.sep))):
+                exists = True
+        for g in kd.get("gdy_glob", []):
+            if find_glob(arch, g):
+                exists = True
+        if not exists:
+            res.add("panel_sync", "krok %s == done" % step, "SKIP", "deliverable nieobecny w archiwum")
+            continue
+        st = (step_by.get(step) or {}).get("status")
+        ok = (st == "done")
+        s2 = "WARN" if kd.get("opcjonalny") else sev
+        res.add("panel_sync", "krok %s == done" % step, status_for(ok, s2),
+                "done" if ok else "deliverable '%s' istnieje, panel status=%s" % (kd["label"], st or "BRAK-KROKU"))
+
+    # --- (3) ARTEFAKTY == PLIKI (stem-match / obecnosc) ---
+    for r in m.get("artefakty_liczba", []):
+        kinds = set(r["kind"])
+        panel_arts = [a for a in arts if a.get("kind") in kinds]
+        panel_stems = set(_stem(a.get("url")) for a in panel_arts)
+        panel_n = len(panel_arts)
+        arch_files = []
+        for z in r["zrodla"]:
+            arch_files += _arch_files(arch, z["glob"], z.get("wyklucz"))
+        arch_files = sorted(set(arch_files))
+        if r.get("tryb") == "obecnosc":
+            ok = (not arch_files) or panel_n > 0
+            res.add("panel_sync", "artefakty: %s" % r["label"], status_for(ok, sev),
+                    "%d w panelu / %d plikow (obecnosc OK)" % (panel_n, len(arch_files)) if ok
+                    else "%d plikow w archiwum, 0 artefaktow w panelu" % len(arch_files))
+            continue
+        if not arch_files:
+            res.add("panel_sync", "artefakty: %s" % r["label"], "SKIP", "brak plikow zrodlowych w archiwum")
+            continue
+        missing = [f for f in arch_files if _stem(f) not in panel_stems]
+        tol = r.get("tolerancja", 0)
+        ok = len(missing) <= tol
+        res.add("panel_sync", "artefakty: %s" % r["label"], status_for(ok, sev),
+                "panel %d / archiwum %d (brak %d <= tol %d)" % (panel_n, len(arch_files), len(missing), tol) if ok
+                else "panel NIEAKTUALNY vs archiwum: panel %d, archiwum %d; BRAK w panelu (%d): %s"
+                     % (panel_n, len(arch_files), len(missing), ", ".join(missing[:10])))
+
+    # --- (4) DOC WYMAGANE (np. WIERNOSC.md -> artefakt kind=doc) ---
+    for d in m.get("doc_wymagane", []):
+        if not os.path.isfile(os.path.join(arch, d["plik"].replace("/", os.sep))):
+            res.add("panel_sync", "doc %s w panelu" % os.path.basename(d["plik"]), "SKIP", "brak pliku w archiwum")
+            continue
+        tok = d["token"].lower()
+        has = any(a.get("kind") == d["kind"] and tok in (str(a.get("url", "")) + str(a.get("label", ""))).lower()
+                  for a in arts)
+        res.add("panel_sync", "doc %s w panelu" % os.path.basename(d["plik"]), status_for(has, sev),
+                "obecny (kind=%s)" % d["kind"] if has
+                else "%s w archiwum, BRAK artefaktu kind=%s w panelu" % (d["plik"], d["kind"]))
+
+    # --- (5) KOD -> WZMIANKI (footer/logo w fields kroku; wideo w panelu) ---
+    html = ctx["html"] or ""
+    for w in m.get("kod_wzmianki", []):
+        if not re.search(w["gdy_kod_regex"], html, re.I):
+            continue  # element nieobecny w kodzie -> regula nie dotyczy
+        wsev = w.get("severity", sev)
+        data = (step_by.get(w["step"]) or {}).get("data") or {}
+        hay = json.dumps({"fields": data.get("fields"), "note": data.get("note")}, ensure_ascii=False).lower()
+        ok = any(t.lower() in hay for t in w["tokeny"])
+        if not ok and w.get("kind_alt"):
+            ok = any(a.get("kind") == w["kind_alt"] for a in arts)
+        res.add("panel_sync", w["label"], status_for(ok, wsev),
+                "wzmiankowane w panelu" if ok else "obecne w kodzie, BRAK wzmianki w panelu (krok %s)" % w["step"])
+
+    # --- (6) PUSTE DONE (WARN): krok done bez opisu w warsztacie ---
+    psev = m.get("puste_done_severity", "WARN")
+    for s in steps:
+        if not str(s.get("step_key", "")).startswith("lp_") or s.get("status") != "done":
+            continue
+        f = ((s.get("data") or {}).get("fields")) or {}
+        if len(f) == 0:
+            res.add("panel_sync", "opis kroku %s" % s["step_key"], status_for(False, psev),
+                    "krok done bez opisu (data.fields puste) — warsztat pusty")
+
+
+# ================================================================== F7 COPY-GATE (task#2): kotwiczenie liczb w KARCIE + jedna cena
+def _num_tokens(text):
+    """Zbior znormalizowanych liczb z tekstu (przecinek->kropka; wariant bez zbednych zer)."""
+    out = set()
+    for mm in re.finditer(r"\d+(?:[.,]\d+)?", text or ""):
+        v = mm.group(0).replace(",", ".")
+        out.add(v)
+        if "." in v:
+            v2 = v.rstrip("0").rstrip(".")
+            if v2:
+                out.add(v2)
+    return out
+
+def check_copy(res, M, ctx):
+    """(a) Kazda liczba-z-jednostka (spec) w prozie MUSI miec kotwice w KARCIE (tag [KONKRET-SKU]/
+       [SPEC]/[KONKRET]); liczba spoza karty = FAIL 'liczba bez kotwicy'. (b) >1 distinct data-price =
+       FAIL (jedna cena PL). Zakazy tekstowe (scarcity/own-stock/przekreslenia) w grep_forbidden (SSOT)."""
+    m = M.get("copy")
+    if not m:
+        res.add("copy", "(config)", "SKIP", "brak copy w manifescie")
+        return
+    sev = m["severity"]; html = ctx["html"]; vis = visible_text(html)
+    markup = strip_scripts(html)  # atrybuty bez selektorow CSS/JS ze skryptow (np. [data-price] w bakedPrice)
+    # --- (b) jedna cena PL: distinct data-price ---
+    dp = m.get("data_price", {})
+    price_tokens = []
+    for rx in (dp.get("attr_regex"), dp.get("text_regex")):
+        if rx:
+            price_tokens += re.findall(rx, markup, re.I)
+    prices = set()
+    for tok in price_tokens:
+        nm = re.search(r"\d+(?:[.,]\d+)?", tok or "")
+        if nm:
+            try:
+                prices.add(round(float(nm.group(0).replace(",", ".")), 2))
+            except Exception:
+                pass
+    maxd = dp.get("max_distinct", 1)
+    if not prices:
+        res.add("copy", "data-price (jedna cena PL)", "PASS", "brak jawnej ceny data-price")
+    else:
+        okp = len(prices) <= maxd
+        res.add("copy", "data-price (jedna cena PL)", status_for(okp, dp.get("severity", sev)),
+                ("cena: %s" % sorted(prices)) if okp
+                else ("%d roznych cen data-price: %s" % (len(prices), sorted(prices))))
+    # --- (a) kotwiczenie liczb-specow ---
+    a = m.get("anchor", {})
+    karta = ctx["karta"]
+    if not karta:
+        res.add("copy", "kotwice liczb (KARTA-PRAWDY)", "SKIP", "brak KARTA-PRAWDY.md")
+        return
+    units = sorted(a.get("jednostki_spec", []), key=len, reverse=True)
+    if not units:
+        res.add("copy", "kotwice liczb (KARTA-PRAWDY)", "SKIP", "brak jednostek w manifescie")
+        return
+    unit_alt = "|".join(re.escape(u) for u in units)
+    rx = re.compile(r"(\d+(?:[.,]\d+)?)\s?(%s)(?![\w])" % unit_alt)
+    ignor = set(str(x).replace(",", ".") for x in a.get("ignoruj_liczby", []))
+    tags = a.get("karta_tagi", [])
+    # tag na linii = '[KONKRET-SKU' / '[SPEC' itd. — tolerancyjnie na ': detal' lub ']' po slowie
+    tag_toks = [t.strip("[]") for t in tags]
+    tag_rx = re.compile(r"\[(?:" + "|".join(re.escape(t) for t in tag_toks) + r")\b", re.I) if tag_toks else None
+    karta_lines = karta.splitlines()
+    has_tags = bool(tag_rx) and any(tag_rx.search(ln) for ln in karta_lines)
+    anchor_nums = set()
+    for ln in karta_lines:
+        if (not tag_rx) or tag_rx.search(ln):
+            anchor_nums |= _num_tokens(ln)
+    all_nums = _num_tokens(karta)
+    seen = set(); no_anchor = []; soft = []; checked = 0
+    for mnum, unit in rx.findall(vis):
+        val = mnum.replace(",", ".")
+        if (val, unit) in seen:
+            continue
+        seen.add((val, unit))
+        vv = {val}
+        if "." in val:  # strip zer TYLKO po kropce (2.50->2.5), NIE z liczb calkowitych (5000!=5)
+            vv.add(val.rstrip("0").rstrip("."))
+        if vv & ignor:
+            continue
+        checked += 1
+        if vv & anchor_nums:
+            continue
+        if has_tags and (vv & all_nums):
+            soft.append("%s %s" % (mnum, unit))
+        else:
+            no_anchor.append("%s %s" % (mnum, unit))
+    if no_anchor:
+        res.add("copy", "liczby-z-jednostkami zakotwiczone", status_for(False, sev),
+                "%d BEZ KOTWICY w karcie: %s" % (len(no_anchor), ", ".join(no_anchor[:8])))
+    elif soft:
+        res.add("copy", "liczby-z-jednostkami zakotwiczone", "WARN",
+                "%d w karcie ale poza tagiem %s: %s" % (len(soft), tags, ", ".join(soft[:8])))
+    else:
+        res.add("copy", "liczby-z-jednostkami zakotwiczone", "PASS",
+                "%d liczb-specow zakotwiczonych%s" % (checked, "" if has_tags else " (karta bez tagow)"))
+    if not has_tags and checked:
+        res.add("copy", "tagi kotwic [KONKRET-SKU]/[SPEC]", "WARN",
+                "karta bez tagow — kotwiczenie po calej karcie (slabsze); dodaj tagi wg F7")
+
+# ================================================================== F1 MARZA (task#4): ekonomia polki + landed COD
+def check_f1_marza(res, M, ctx):
+    """Marza z wf2_products (price/cost_purchase). <prog% polki = FAIL. landed>prog_zl przy COD bez
+       noty-waivera w LEDGER = FAIL (incydent Zwijek). Brak projektu panelu -> SKIP. Host CRM z manifestu."""
+    m = M.get("f1_marza")
+    if not m:
+        res.add("f1_marza", "(config)", "SKIP", "brak f1_marza w manifescie")
+        return
+    sev = m["severity"]; env = ctx["env"]
+    if ctx["no_net"] or not env.get(M["supabase"]["key_env"]):
+        res.add("f1_marza", "(marza + landed)", "SKIP", "brak SUPABASE_SERVICE_KEY / --no-net")
+        return
+    kp = m.get("kol_price", "price"); kc = m.get("kol_cost", "cost_purchase")
+    rows = _pg_crm(M, env, m.get("tabela", "wf2_products"),
+                   {m.get("slug_kolumna", "slug"): "eq." + ctx["slug"], "select": "%s,%s" % (kp, kc)},
+                   ctx["timeout"])
+    if rows is None:
+        res.add("f1_marza", "(marza + landed)", "SKIP", "brak dostepu do bazy CRM")
+        return
+    if not rows:
+        res.add("f1_marza", "projekt panelu", "SKIP",
+                "landing bez projektu panelu (wf2_products slug=%s)" % ctx["slug"])
+        return
+    P = rows[0]
+    try:
+        price = float(P.get(kp)) if P.get(kp) not in (None, "") else None
+        cost = float(P.get(kc)) if P.get(kc) not in (None, "") else None
+    except Exception:
+        price = cost = None
+    if not price or price <= 0 or cost is None:
+        res.add("f1_marza", "marza polki", "WARN",
+                "brak price/cost_purchase (price=%s cost=%s)" % (P.get(kp), P.get(kc)))
+        return
+    prog = m.get("prog_marza_pct", 40)
+    margin = (price - cost) / price
+    res.add("f1_marza", "marza polki >= %d%%" % prog, status_for(margin >= prog / 100.0, sev),
+            "marza %.0f%% (cena %.2f, koszt %.2f)" % (margin * 100, price, cost))
+    prog_landed = m.get("landed_prog_zl", 150)
+    if cost > prog_landed:
+        waiver = bool(re.search(m.get("waiver_regex", r"(?!x)x"), ctx["ledger"] or "", re.I))
+        cod = bool(re.search(m.get("cod_regex", r"za pobraniem|\bCOD\b"), ctx["html"] or "", re.I))
+        lab = "landed <= %d zl (ryzyko COD)" % prog_landed
+        if waiver:
+            res.add("f1_marza", lab, "PASS", "landed %.2f > %d ALE nota-waiver w LEDGER" % (cost, prog_landed))
+        elif cod:
+            res.add("f1_marza", lab, status_for(False, sev),
+                    "landed %.2f zl > %d + COD na stronie, BRAK noty-waivera (incydent Zwijek)" % (cost, prog_landed))
+        else:
+            res.add("f1_marza", lab, "WARN",
+                    "landed %.2f zl > %d (COD niewykryty) — zweryfikuj model platnosci" % (cost, prog_landed))
+
+# ================================================================== GO-LIVE (task#3): --published <url>
+def _fetch_published(url, timeout):
+    """(status, text). http(s) przez requests; file://path / lokalna sciezka przez read_text
+       (do testu go-live bez realnego URL). status: 200 / int / 'ERR:...'."""
+    if url.startswith(("http://", "https://")):
+        import requests
+        try:
+            r = requests.get(url, timeout=timeout, headers={"User-Agent": "Mozilla/5.0"})
+            return (r.status_code, r.text)
+        except Exception as e:
+            return ("ERR:%s" % type(e).__name__, None)
+    path = re.sub(r"^file://+", "", url)
+    path = re.sub(r"^/([A-Za-z]:)", r"\1", path)
+    txt = read_text(path)
+    return (200, txt) if txt is not None else ("ERR:NoFile", None)
+
+def check_published(res, M, ctx):
+    """Tryb go-live: pobierz LIVE html i FAIL gdy zostaly placeholdery ({{), noindex, nierozwiazane
+       pixel/product-id/legal-URL. Preview (bez --published) NIE sprawdza (placeholdery oczekiwane)."""
+    url = ctx.get("published_url")
+    if not url:
+        res.add("published", "(tryb go-live)", "SKIP",
+                "preview — placeholdery oczekiwane (--published <url> na go-live)")
+        return
+    m = M.get("published", {})
+    sev = m.get("severity", "FAIL")
+    if ctx["no_net"] and url.startswith("http"):
+        res.add("published", "(tryb go-live)", "SKIP", "--no-net z URL http")
+        return
+    code, text = _fetch_published(url, ctx["timeout"])
+    transient = set(m.get("http_transient_codes", [408, 425, 429, 500, 502, 503, 504]))
+    if text is None or (isinstance(code, str) and code.startswith("ERR:")):
+        res.add("published", "pobranie LIVE", "WARN", "nie pobrano (%s) — blip? powtorz" % code)
+        return
+    if isinstance(code, int) and code != 200:
+        if code in transient:
+            res.add("published", "pobranie LIVE", "WARN", "HTTP %s (transient) na %s" % (code, url))
+        else:
+            res.add("published", "pobranie LIVE", status_for(False, sev), "HTTP %s na %s" % (code, url))
+            return
+    else:
+        res.add("published", "pobranie LIVE", "PASS", "HTTP 200 (%d B)" % len(text))
+    for rule in m.get("fail_regex", []):
+        hits = re.findall(rule["regex"], text, re.I)
+        ok = not hits
+        res.add("published", rule["label"], status_for(ok, sev),
+                "" if ok else "%d trafien: %s" % (len(hits), str(list(dict.fromkeys(hits))[:4])))
+
+# ================================================================== F7.3 FINALNY PASS (task#1): detail-lint.py
+def check_finalny_pass(res, M, ctx):
+    """Odpal detail-lint.py (PASS 0 design-linter: WCAG/touch>=44/crop/martwa-interakcja/pay-badges-
+       imitacje/dup-asset/typografia) i sparsuj findings. P0/P1 -> FAIL, P2 -> WARN (progi w manifescie).
+       Placeholdery/zakazy tekstowe odfiltrowane (nalezą do published/grep_forbidden — SSOT)."""
+    m = M.get("finalny_pass")
+    if not m:
+        res.add("finalny_pass", "(config)", "SKIP", "brak finalny_pass w manifescie")
+        return
+    if ctx["no_net"]:
+        res.add("finalny_pass", "(detail-lint)", "SKIP", "--no-net (Chrome + fetch obrazow)")
+        return
+    script = os.path.join(SCRIPT_DIR, m.get("skrypt", "detail-lint.py"))
+    if not os.path.isfile(script):
+        res.add("finalny_pass", "(detail-lint)", "SKIP", "brak %s" % m.get("skrypt"))
+        return
+    venv_py = os.path.join(SCRIPT_DIR, ".venv", "Scripts", "python.exe")
+    py = venv_py if os.path.isfile(venv_py) else sys.executable
+    outp = os.path.join(tempfile.gettempdir(), "detail-lint-%s.json" % re.sub(r"[^\w.-]", "_", ctx["slug"]))
+    try:
+        if os.path.exists(outp):
+            os.remove(outp)
+    except Exception:
+        pass
+    cmd = [py, script, ctx["code"], "--out", outp]
+    try:
+        p = subprocess.run(cmd, capture_output=True, text=True,
+                           timeout=m.get("timeout_s", 300), cwd=SCRIPT_DIR)
+    except subprocess.TimeoutExpired:
+        res.add("finalny_pass", "(detail-lint)", "WARN",
+                "timeout %ss — pass niedokonczony (odpal recznie)" % m.get("timeout_s", 300))
+        return
+    except Exception as e:
+        res.add("finalny_pass", "(detail-lint)", "SKIP", "nie uruchomiono: %s" % e)
+        return
+    data = None
+    txt = read_text(outp)
+    if txt:
+        try:
+            data = json.loads(txt)
+        except Exception:
+            data = None
+    if data is None:
+        tail = ""
+        blob = (p.stderr or p.stdout or "").strip().splitlines()
+        if blob:
+            tail = blob[-1][:80]
+        res.add("finalny_pass", "(detail-lint)", "SKIP", "brak findings JSON (rc=%s) %s" % (p.returncode, tail))
+        return
+    findings = data.get("findings", [])
+    sev_map = m.get("severity_map", {"P0": "FAIL", "P1": "FAIL", "P2": "WARN"})
+    ign = [x.lower() for x in m.get("ignoruj_problem_wzorce", [])]
+    def ignored(f):
+        pl = (f.get("problem", "") + " " + f.get("lokalizacja", "")).lower()
+        return any(x in pl for x in ign)
+    kept = [f for f in findings if not ignored(f)]
+    buckets = {"P0": [], "P1": [], "P2": []}
+    for f in kept:
+        buckets.setdefault(f.get("severity", "P2"), buckets["P2"]).append(f)
+    cap = m.get("max_detail", 12)
+    for lvl in ("P0", "P1"):
+        st = sev_map.get(lvl, "FAIL")
+        for f in buckets[lvl][:cap]:
+            res.add("finalny_pass", "[%s] %s/%s" % (lvl, f.get("warstwa", "?"), f.get("lokalizacja", "?")),
+                    st, f.get("problem", "")[:80])
+        if len(buckets[lvl]) > cap:
+            res.add("finalny_pass", "[%s] (+%d wiecej)" % (lvl, len(buckets[lvl]) - cap),
+                    sev_map.get(lvl, "FAIL"), "patrz %s" % outp)
+    if buckets["P2"]:
+        exa = "; ".join(f.get("problem", "")[:40] for f in buckets["P2"][:3])
+        res.add("finalny_pass", "P2 detale (%d)" % len(buckets["P2"]), sev_map.get("P2", "WARN"), exa)
+    if not any(buckets[l] for l in ("P0", "P1", "P2")):
+        res.add("finalny_pass", "detail-lint (0 blokujacych)", "PASS",
+                "%d findings odfiltrowanych" % len(findings) if findings else "0 findings")
+
 # ================================================================== main
 def latest_archiwum(glob_tmpl, slug):
     pat = glob_tmpl.replace("{slug}", slug)
@@ -926,10 +1422,12 @@ CHECK_ORDER = [
     ("dopasowanie", check_dopasowanie),
     ("interakcje", check_interakcje),
     ("grep_forbidden", check_grep_forbidden),
+    ("copy", check_copy),
     ("sieroty", check_sieroty),
     ("wagi", check_wagi),
     ("phash", check_phash),
     ("baza", check_baza),
+    ("f1_marza", check_f1_marza),
     ("wideo_kafle", check_wideo_kafle),
     ("makiety_mobile", check_makiety_mobile),
     ("og_image", check_og_image),
@@ -937,6 +1435,9 @@ CHECK_ORDER = [
     ("werdykt_rubryka", check_werdykt_rubryka),
     ("layout_diff", check_layout_diff),
     ("wiernosc", check_wiernosc),
+    ("panel_sync", check_panel_sync),
+    ("published", check_published),
+    ("finalny_pass", check_finalny_pass),
 ]
 
 def main():
@@ -947,6 +1448,7 @@ def main():
     ap.add_argument("--manifest", default=os.path.join(SCRIPT_DIR, "gate-manifest.json"))
     ap.add_argument("--product-key")
     ap.add_argument("--no-net", action="store_true", help="pomin siec i baze")
+    ap.add_argument("--published", help="tryb go-live: URL/sciezka LIVE — FAIL gdy zostaly {{}}/noindex/nierozwiazane id")
     args = ap.parse_args()
 
     M = json.loads(read_text(args.manifest))
@@ -984,9 +1486,11 @@ def main():
         "no_net": args.no_net,
         "product_key": product_key,
         "dopasowanie_md": dop_md,
+        "published_url": args.published,
     }
-    print("  sekcje(id): %d  ·  URL-e bud-assets: %d  ·  product-key: %s"
-          % (len(ctx["sections"]), len(ctx["urls"]), product_key or "-"))
+    print("  sekcje(id): %d  ·  URL-e bud-assets: %d  ·  product-key: %s%s"
+          % (len(ctx["sections"]), len(ctx["urls"]), product_key or "-",
+             ("  ·  PUBLISHED: %s" % args.published) if args.published else ""))
     print("-" * 74)
 
     res = Results()

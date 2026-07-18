@@ -93,6 +93,20 @@ fabryka w toku). Edge: wf2-asset-rehost. Decyzje Tomka wplatane na żywo (6 duż
 | Generacje obrazów (5 log + 3 landing + 1 retry, gpt-image-2 medium) | — | ~$1,5 |
 | **Razem blok popołudniowy** | **~12M (w tym 1,04M zmierzone)** | **~$34 (zakres $26–45) ≈ 126 zł** |
 
+### 2026-07-19 — Rozbicie etapu „Kampanie" na Środowisko + Materiały (decyzja Tomka)
+
+Zakres: research 3× Sonnet (mapa środowiska wf2 + setup Meta 2026 + kreacje/opieka) →
+migracja `20260719c` (7 etapów, 6 nowych kroków: ads_strona/ads_preflight/ads_zestaw/
+ads_start/ads_wyniki/ads_opieka) → panel (WS+prompty+blok wf2_creative_perf) →
+TESTY §9 + noty decyzyjne → test:wf2 19/19.
+
+| Składnik | Tokeny | Koszt API (szac.) |
+|---|---|---|
+| Subagenty Sonnet ×3 zmierzone (mapa repo 197k, środowisko Meta 73k, kreacje 69k) | ~339 000 | ~$2 |
+| Główna pętla Fable — output (migracja/WS/prompty/SSOT/SQL) | ~35 000 | ~$1,8 |
+| Główna pętla Fable — input kumulacyjny (cache read) | ~5M | ~$9 |
+| **Razem** | **~5,4M (w tym 339k zmierzone)** | **~$13 ≈ 48 zł** |
+
 ### Suma narastająco (po całym 2026-07-03)
 
 | | Tokeny (szac.) | Koszt API (szac.) |

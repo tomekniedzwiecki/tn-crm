@@ -15,7 +15,7 @@ narzucamy przez override, nie --window-size). Kroki:
 
 Wymaga: Chrome + numpy + Pillow + scikit-image.
 """
-import sys, os, io, json, time, subprocess, socket, urllib.request, base64, tempfile, shutil, re, glob
+import sys, os, io, json, time, subprocess, socket, urllib.request, base64, tempfile, shutil, re, glob, math
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
 from skimage.metrics import structural_similarity as ssim
@@ -182,6 +182,47 @@ STRUCT_JS = r"""
 })()
 """
 
+# PETLA DELT (audyt 18.07): pomiar kluczowych elementow renderu (getComputedStyle +
+# getBoundingClientRect) per sekcja -> porownanie z IR makiety -> KONKRETNE delty (font-size,
+# kolor tla, pozycja chipa, obecnosc swasha). Wzorzec z viewport-diff.py --measure, tu per-sekcja.
+MEASURE_JS = r"""
+(function(){
+  function px(v){ v=parseFloat(v); return isFinite(v)?Math.round(v):0; }
+  function effBg(el){ var e=el;
+    while(e){ var c=getComputedStyle(e).backgroundColor;
+      if(c && c!=='rgba(0, 0, 0, 0)' && c!=='transparent') return c; e=e.parentElement; }
+    return getComputedStyle(document.body).backgroundColor; }
+  function biggestHeading(sec){ var best=null,bp=0;
+    sec.querySelectorAll('h1,h2,h3,[class*="title"],[class*="hero-h"],[class*="headline"]').forEach(function(t){
+      var tx=(t.textContent||'').trim(); if(tx.length<2) return;
+      var r=t.getBoundingClientRect(); if(r.width<10||r.height<8) return;
+      var fp=px(getComputedStyle(t).fontSize); if(fp>bp){ bp=fp; best=t; } });
+    return best; }
+  function meas(el,SX,SW){ if(!el) return null; var cs=getComputedStyle(el); var r=el.getBoundingClientRect();
+    var tx=(el.textContent||'').trim().slice(0,32);
+    return {px:px(cs.fontSize), weight:cs.fontWeight, color:cs.color,
+            cx:((r.x+r.width/2)-SX)/SW, sample:tx}; }
+  var PRICE='.hero-price,.price,[class*="price"],[class*="cena"],[class*="kwota"]';
+  var EYE='.eyebrow,[class*="eyebrow"],[class*="kicker"],[class*="overline"]';
+  var out={};
+  document.querySelectorAll('section[id]').forEach(function(sec){
+    var sr=sec.getBoundingClientRect(); var SX=sr.x, SW=sr.width; if(SW<4) return;
+    var hi=[];
+    sec.querySelectorAll('.hi,[class*="hi-"],mark,u,[class*="underline"],[class*="swash"],[class*="squiggle"]').forEach(function(e){
+      var r=e.getBoundingClientRect(); if(r.width<6||r.height<6) return;
+      hi.push({x:Math.round(r.x), y:Math.round(r.y+window.scrollY), w:Math.round(r.width), h:Math.round(r.height)}); });
+    var chips=[];
+    sec.querySelectorAll('[class*="chip"],[class*="trust"],[class*="badge"],[class*="rating"],[class*="stars"]').forEach(function(e){
+      var r=e.getBoundingClientRect(); if(r.width<8||r.height<8||r.width>0.6*SW) return;
+      chips.push({cx:((r.x+r.width/2)-SX)/SW, w:r.width/SW}); });
+    out[sec.id]={w:Math.round(SW), bg:effBg(sec), h1:meas(biggestHeading(sec),SX,SW),
+                 price:meas(sec.querySelector(PRICE),SX,SW), eyebrow:meas(sec.querySelector(EYE),SX,SW),
+                 hi:hi, chips:chips};
+  });
+  return JSON.stringify(out);
+})()
+"""
+
 def render_full(target, width, mobile=False):
     chrome=chrome_path(); port=free_port(); profile=tempfile.mkdtemp(prefix="sdiff-")
     url=target if target.startswith(("http://","https://")) else "file:///"+os.path.abspath(target).replace("\\","/")
@@ -214,6 +255,11 @@ def render_full(target, width, mobile=False):
             struct=json.loads(sres.get("result",{}).get("value"))
         except Exception:
             struct={"sections":[]}
+        try:
+            mres=ws.call("Runtime.evaluate",{"expression":MEASURE_JS,"returnByValue":True},timeout=40)
+            measure=json.loads(mres.get("result",{}).get("value"))
+        except Exception:
+            measure={}
         docH=min(int(meta["docH"]), 30000)
         shot=ws.call("Page.captureScreenshot",{"format":"png","captureBeyondViewport":True,
               "clip":{"x":0,"y":0,"width":width,"height":docH,"scale":1}},timeout=120)
@@ -222,7 +268,7 @@ def render_full(target, width, mobile=False):
         # DPR>1: screenshot pixels = CSS px * dpr; rects are CSS px -> zwroc realny dpr do skalowania cropow
         real_dpr = img.size[0] / float(width)
         struct_by_id = {s["id"]: s for s in struct.get("sections", [])}
-        return img, meta["rects"], real_dpr, struct_by_id
+        return img, meta["rects"], real_dpr, struct_by_id, (measure or {})
     finally:
         proc.terminate()
         try: proc.wait(timeout=5)
@@ -336,7 +382,7 @@ def merge_mobile_md(md_path, target, rows, dpr):
     io.open(md_path, "w", encoding="utf-8").write("\n".join(block))
 
 def run_mobile(target, makiety_dir, out_dir, width):
-    img, rects, dpr, _struct = render_full(target, width, mobile=True)
+    img, rects, dpr, _struct, _measure = render_full(target, width, mobile=True)
     print("Render MOBILE: %dx%d px (dpr~%.2f), sekcji: %d" % (img.size[0], img.size[1], dpr, len(rects)))
     mk_mob = load_makieta_mobile_map(makiety_dir)
     rects=[r for r in rects if r["h"]>=40]
@@ -626,7 +672,168 @@ def ssim_split_scene(makieta_img, render_img, scene_rel):
     except Exception: rest_ssim = 0.0
     return (scene_ssim, rest_ssim)
 
-def write_dopasowanie_v2(md_path, target, width, rows2, mobile_tail):
+# ============================================================================
+# PETLA DELT POMIAROWYCH (audyt 18.07) — render(getComputedStyle) vs IR makiety.
+# Emituje KONKRETNE delty (font-size / kolor tla / pozycja chipa / swash) + region-SSIM na copy.
+# Cel: koder robi PUNKTOWE poprawki zamiast re-aproksymowac (P2/P3 audytu).
+# ============================================================================
+def _hex_to_rgb(h):
+    h = (h or "").lstrip("#")
+    if len(h) != 6:
+        return None
+    try:
+        return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
+    except Exception:
+        return None
+
+def _rgb_from_css(s):
+    if not s:
+        return None
+    if s.startswith("#"):
+        return _hex_to_rgb(s)
+    m = re.search(r"rgba?\(([^)]+)\)", s)
+    if not m:
+        return None
+    parts = [p.strip() for p in m.group(1).split(",")]
+    try:
+        return tuple(int(round(float(parts[i]))) for i in range(3))
+    except Exception:
+        return None
+
+def _rgb_hex(rgb):
+    return "#%02X%02X%02X" % tuple(rgb) if rgb else "?"
+
+def _srgb_to_lab(rgb):
+    def f(c):
+        c = c / 255.0
+        return ((c + 0.055) / 1.055) ** 2.4 if c > 0.04045 else c / 12.92
+    r, g, b = [f(x) for x in rgb]
+    X = r*0.4124 + g*0.3576 + b*0.1805; Y = r*0.2126 + g*0.7152 + b*0.0722; Z = r*0.0193 + g*0.1192 + b*0.9505
+    Xn, Yn, Zn = 0.95047, 1.0, 1.08883
+    def g2(t):
+        return t ** (1/3.0) if t > 0.008856 else 7.787 * t + 16/116.0
+    fx, fy, fz = g2(X/Xn), g2(Y/Yn), g2(Z/Zn)
+    return (116*fy - 16, 500*(fx - fy), 200*(fy - fz))
+
+def deltaE76(c1, c2):
+    if not c1 or not c2:
+        return None
+    l1, l2 = _srgb_to_lab(c1), _srgb_to_lab(c2)
+    return math.sqrt(sum((a - b) ** 2 for a, b in zip(l1, l2)))
+
+def _fmt_pct(rp, mk):
+    if not mk:
+        return "?"
+    d = 100.0 * (rp - mk) / mk
+    return ("+%.0f%%" % d) if d >= 0 else ("%.0f%%" % d)
+
+def _ir_topright_chip(ir):
+    """Maly blok tekstu w gornych 25% makiety po prawej (chip typu '* 4.9') -> oczekiwane cx."""
+    blocks = ir.get("blocks", []) if ir else []
+    cands = [b for b in blocks if b.get("kind") == "text" and b.get("y1000", 999) < 250 and b.get("w1000", 999) < 320]
+    if not cands:
+        return None
+    best = max(cands, key=lambda b: b["x1000"] + b["w1000"] / 2.0)
+    cx = (best["x1000"] + best["w1000"] / 2.0) / 1000.0
+    return cx if cx > 0.5 else None
+
+def region_ssim_copy(makieta_img, crop, ir):
+    """SSIM na bboxach COPY makiety (znormalizowane, wspolne pudlo Wc x Hc). Region-SSIM na tekscie
+    DYSKRYMINUJE tam, gdzie SSIM calej sekcji nie (zespol slusznie odrzucil SSIM-calosci — audyt 18.07)."""
+    tb = [b for b in ir.get("blocks", []) if b.get("kind") == "text"] if ir else []
+    if not tb:
+        return None
+    Wm = ir.get("image", {}).get("w", 1) or 1
+    Hm = ir.get("image", {}).get("h", 1) or 1
+    Wc, Hc = 480, 640
+    def prep(im):
+        return np.asarray(im.resize((Wc, Hc)).convert("L"))
+    A = prep(makieta_img); B = prep(crop)
+    vals = []
+    for b in tb:
+        x0 = int(b["x"] / Wm * Wc); x1 = int((b["x"] + b["w"]) / Wm * Wc)
+        y0 = int(b["y"] / Hm * Hc); y1 = int((b["y"] + b["h"]) / Hm * Hc)
+        x0 = max(0, min(Wc - 2, x0)); x1 = max(x0 + 2, min(Wc, x1))
+        y0 = max(0, min(Hc - 2, y0)); y1 = max(y0 + 2, min(Hc, y1))
+        if x1 - x0 < 6 or y1 - y0 < 6:
+            continue
+        try:
+            vals.append(float(ssim(A[y0:y1, x0:x1], B[y0:y1, x0:x1])))
+        except Exception:
+            pass
+    return (sum(vals) / len(vals)) if vals else None
+
+def swash_accent_report(img, hi_rects, dpr, accent_rgb):
+    """Ile elementow .hi ma pod soba piksele akcentu (podkreslenie/swash). Zwraca (n_hi, n_z_akcentem).
+    Zlapaloby incydent 'swash 0/17' (koder pominal podkreslenie pod .hi)."""
+    if not hi_rects or not accent_rgb:
+        return (0, 0)
+    W, H = img.size; acc = np.array(accent_rgb, dtype=np.float32); n_acc = 0
+    for r in hi_rects:
+        x0 = int(r["x"] * dpr); x1 = int((r["x"] + r["w"]) * dpr)
+        ys = int((r["y"] + r["h"] * 0.55) * dpr); ye = int((r["y"] + r["h"] + 8) * dpr)
+        x0 = max(0, min(W - 1, x0)); x1 = max(x0 + 1, min(W, x1))
+        ys = max(0, min(H - 1, ys)); ye = max(ys + 1, min(H, ye))
+        strip = np.asarray(img.crop((x0, ys, x1, ye)).convert("RGB")).reshape(-1, 3)
+        if strip.size == 0:
+            continue
+        d = np.sqrt(((strip.astype(np.float32) - acc) ** 2).sum(axis=1))
+        if float((d < 60).mean()) > 0.01:
+            n_acc += 1
+    return (len(hi_rects), n_acc)
+
+def compute_deltas(sid, m, ir, region_ss=None, swash=None):
+    """Lista KONKRETNYCH delt render vs IR makiety. Puste = pomiar zgodny / brak elementow."""
+    delty = []
+    if not ir:
+        return delty
+    norm = (ir.get("typography", {}) or {}).get("scale_px_norm", {}) or {}
+    root = ir.get("root", {}) or {}
+    if m and m.get("h1") and norm.get("H1"):
+        rp = m["h1"]["px"]; mk = norm["H1"]
+        if mk and abs(rp - mk) / mk > 0.12:
+            kier = "za duzy, zmniejsz" if rp > mk else "za maly, powieksz"
+            delty.append("H1 render %dpx vs makieta %dpx (%s) -> %s" % (rp, mk, _fmt_pct(rp, mk), kier))
+    if m and m.get("eyebrow") and norm.get("caption"):
+        rp = m["eyebrow"]["px"]; mk = norm["caption"]
+        if mk and abs(rp - mk) / mk > 0.35:
+            delty.append("eyebrow render %dpx vs makieta ~%dpx (%s)" % (rp, mk, _fmt_pct(rp, mk)))
+    if m and m.get("bg") and root.get("paper"):
+        rbg = _rgb_from_css(m["bg"]); mbg = _hex_to_rgb(root["paper"]); dE = deltaE76(rbg, mbg)
+        if dE is not None and dE > 4.0:
+            delty.append("tlo render %s vs makieta %s (dE=%.1f) -> ustaw --paper %s"
+                         % (_rgb_hex(rbg), root["paper"], dE, root["paper"]))
+    if m and m.get("chips"):
+        chip = min(m["chips"], key=lambda c: c["cx"])
+        exp_right = _ir_topright_chip(ir)
+        if exp_right is not None and chip["cx"] < 0.35 and exp_right > 0.6:
+            delty.append("chip-trust cx %.2f vs makieta %.2f -> przenies inline-right" % (chip["cx"], exp_right))
+    if swash is not None:
+        n_hi, n_acc = swash
+        if n_hi > 0 and n_acc == 0:
+            delty.append("swash/podkreslenie .hi: %d el. bez piksela akcentu (0) -> dodaj podkreslenie w kolorze --cta" % n_hi)
+    if region_ss is not None:
+        delty.append("region-SSIM copy=%.3f (sygnal dyskryminujacy na blokach tekstu; niski = dryf ukladu/typografii)" % region_ss)
+    return delty
+
+DELTY_MARK = "<!-- DELTY-POMIAROWE -->"
+def build_delty_block(delty_by_sec):
+    lines = ["", DELTY_MARK,
+        "## DELTY POMIAROWE per sekcja (sekcja-diff.py: render getComputedStyle vs IR makiety)", "",
+        "Twarde liczby z pomiaru RENDERU porownane z IR makiety (paleta/skala/pozycje). Koder/montaz",
+        "konsumuje to do PUNKTOWYCH poprawek: NIE aproksymuj, popraw dokladnie wskazana wartosc.", ""]
+    any_d = False
+    for sec, ds in delty_by_sec:
+        if ds:
+            any_d = True
+            lines.append("**%s:**" % sec)
+            lines += ["- %s" % d for d in ds]
+            lines.append("")
+    if not any_d:
+        lines += ["- (brak zmierzonych delt — pomiar zgodny z IR albo brak elementow do zmierzenia)", ""]
+    return "\n".join(lines)
+
+def write_dopasowanie_v2(md_path, target, width, rows2, mobile_tail, delty_block=""):
     """DOPASOWANIE.md z kolumnami: SSIM | LAYOUT | werdykt (rubryka 5xT/N). rows2:
        (sec, mkname, ssim_str, layout_str, stype)."""
     md = ["# DOPASOWANIE — dowody per sekcja (sekcja-diff.py · R13)", "",
@@ -647,7 +854,7 @@ def write_dopasowanie_v2(md_path, target, width, rows2, mobile_tail):
         "> INFORMACYJNE (kolumna LAYOUT: 'info:', NIE FAIL — szum makiet AI): wysokosc/guttery/obraz z IR-makiety,",
         "> raw-SSIM (real-render vs AI-makieta nie dyskryminuje wiernosci). Decyduja: DOM self-checki + RUBRYKA vision 5xT/N.",
         "> SCENOWA: SSIM dwuskladnikowy (maska sceny cap ~0.70 OSOBNO + reszta) — informacyjnie."]
-    io.open(md_path, "w", encoding="utf-8").write("\n".join(md) + mobile_tail)
+    io.open(md_path, "w", encoding="utf-8").write("\n".join(md) + "\n" + delty_block + mobile_tail)
 
 def main():
     if len(sys.argv)<4:
@@ -670,7 +877,7 @@ def main():
             if "=" in pair:
                 k,v=pair.split("=",1); manifest[k.strip()]=v.strip()
 
-    img, rects, _dpr, struct = render_full(target, width)
+    img, rects, _dpr, struct, measure = render_full(target, width)
     print("Render: %dx%d px, sekcji: %d"%(img.size[0],img.size[1],len(rects)))
     mk_map, mk_files = load_makieta_map(makiety_dir)
 
@@ -683,7 +890,7 @@ def main():
 
     rects=[r for r in rects if r["h"]>=40]
     rects_sorted=sorted(rects,key=lambda r:r["y"])
-    rows=[]
+    rows=[]; delty_by_sec=[]
     for idx, rc in enumerate(rects_sorted):
         sec=rc["id"]
         # rozdzielczosc makiety: manifest > mapa NN po nazwie sekcji
@@ -731,6 +938,17 @@ def main():
             ssim_disp = "%.3f (sc %.2f/reszta %.2f)" % (sv, sc, rest)
             if rest < Lprog["scenowa_reszta"] and (scene["wpct"]*scene["hpct"]) < 0.75:
                 lay_det.append("info: reszta-SSIM %.3f<%.2f (real vs AI-makieta)" % (rest, Lprog["scenowa_reszta"]))
+        # ---- PETLA DELT: pomiar renderu vs IR makiety -> konkretne delty do DOPASOWANIE.md ----
+        mmeas = measure.get(sec)
+        rss = region_ssim_copy(makieta, crop, ir) if ir else None
+        accent_rgb = _hex_to_rgb((ir.get("root", {}) or {}).get("cta")) if ir else None
+        hi_rects = (mmeas or {}).get("hi")
+        swash = swash_accent_report(img, hi_rects, _dpr, accent_rgb) if (hi_rects and accent_rgb) else None
+        sec_delty = compute_deltas(sec, mmeas, ir, region_ss=rss, swash=swash)
+        delty_by_sec.append((sec, sec_delty))
+        if sec_delty:
+            for d in sec_delty:
+                print("      delta: %s" % d)
         # LAYOUT hard-FAIL tylko z sliver-guard (DOM). Detal informacyjny doklejany jawnie.
         info_txt = "; ".join(d for d in lay_det if d)
         if lay_fails:
@@ -748,12 +966,14 @@ def main():
         prev=io.open(md_path,encoding="utf-8").read()
         if MOBILE_MARK in prev:
             mobile_tail="\n\n"+MOBILE_MARK+prev.split(MOBILE_MARK,1)[1]
-    write_dopasowanie_v2(md_path, target, width, rows, mobile_tail)
+    write_dopasowanie_v2(md_path, target, width, rows, mobile_tail, build_delty_block(delty_by_sec))
     # IR komplet check (R13): tyle IR ile sekcji z makieta
     n_ir = len(glob.glob(os.path.join(ir_dir, "*-IR.json"))) if os.path.isdir(ir_dir) else 0
     n_sec = sum(1 for r in rows if r[1] not in ("BRAK-MAKIETY",))
     n_fail = sum(1 for r in rows if str(r[3]).startswith("LAYOUT-FAIL"))
+    n_delt = sum(len(d) for _, d in delty_by_sec)
     print("Zapisano:", md_path)
+    print("DELTY POMIAROWE: %d delt w %d sekcjach" % (n_delt, sum(1 for _, d in delty_by_sec if d)))
     print("IR: %d plikow w %s (sekcji z makieta: %d)" % (n_ir, ir_dir, n_sec))
     print("LAYOUT-FAIL: %d/%d sekcji" % (n_fail, len(rows)))
 

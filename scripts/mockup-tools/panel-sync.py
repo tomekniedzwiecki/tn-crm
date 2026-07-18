@@ -260,7 +260,7 @@ def product_meta(product, patch):
 
 
 # ── 4b. Fabryka wideo: koszty / oś czasu / rejestr kreacji ──
-def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=4,
+def cost_add(project, product, amount, kind="fal", currency="USD", step=None, stage=5,
              note=None, created_by="auto"):
     """Koszt do wf2_costs. Tabela NIE ma uniku — dedup po (project, product, step, kind, note);
     bez note NIE deduplikuje (świadomie: kolejne pozycje)."""

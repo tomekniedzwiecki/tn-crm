@@ -224,6 +224,78 @@ z event_id, przenoszenie parametrów `fbclid/_fbp/_fbc` z wejścia na checkout d
 
 ---
 
+## 9. KREACJE I OPIEKA NAD KAMPANIAMI (aneks 2026-07-19; research 3× Sonnet)
+
+Podstawa dla kroków `ads_zestaw` / `ads_start` / `ads_opieka` / `ads_wyniki` (etapy 5-6 panelu).
+Kontekst algorytmiczny: **Andromeda/GEM — kreacja = targetowanie** (Meta: jakość kreacji ~56%
+wyniku); wizualnie PODOBNE ady sklejane w jeden „byt" (10 wariantów tej samej grafiki
+konkuruje o 1 slot) → liczy się różnorodność KONCEPCYJNA, nie wolumen.
+
+### 9.1 Zestaw testowy per produkt
+- **6 adów w 1 ad secie:** 1 body wideo × 3 hooki (baza + ≤2 warianty — pack z fabryki wideo,
+  decyzja Tomka „max 3 wersje") + 3 statyki demo/problem/proof. 4 ady = minimum, nie optimum.
+- Copy COD: hook w pierwszych **125 znakach** primary (tyle widać na mobile), headline **≤27**,
+  **5 RÓŻNYCH tekstów** w polach (nie parafrazy), risk-reversal („płacisz przy odbiorze",
+  zwrot 14 dni) + social proof z konkretną liczbą z KARTY PRAWDY. Emoji 1–2 max.
+- **Flaga AI obowiązkowa** (self-certification; brak = odrzucenie ada). Awatar AI = wyłącznie
+  PREZENTER demonstrujący produkt — **NIGDY „zadowolony klient" z testimonialem**
+  (deceptive practices Meta + FTC; zaufanie do UGC-człowieka 81% vs 63% AI).
+- Audyt polityki: Meta ocenia **copy + landing RAZEM** (semantic intent) — sprawdzać parę;
+  pułapki: implied transformations (produkt obok „efektu"), personal attributes
+  („masz problem z…"), health claims.
+- Styl: AI ma wyglądać jak surowe UGC/telefon, nie studio („ugly ads" biją polished:
+  UGC ~1,8% CTR vs 1,1%; Andromeda premiuje autentyczność).
+
+### 9.2 Reguły kreacji po starcie (uzupełniają CP1-CP3 — nie zastępują)
+- Diagnostyka per kreacja w kolejności: **thumbstop → hold → CTR → CPA**
+  (thumbstop <20% = hook; dobry hook + słaby hold = body; dobre oba + niski ATC = landing/oferta).
+  Dane: widok `wf2_creative_perf` (krok „Pomiar wyników").
+- **Kill kreacji:** 3× docelowe CPA wydane i 0 zakupów → wymiana; ŻADNYCH decyzji przed
+  dniem 3-5 / <10k wyświetleń (dni 1–2 = drogi szum; Andromeda potrzebuje ~72 h na szczyt).
+- **Fatigue — triggery refreshu (łącznie):** frequency >3 (prospecting) · CTR −25% od baseline
+  · CPM +35%; thumbstop spada PRZED CTR (najwcześniejszy sygnał). Żywotność konceptu
+  2–4 tyg.; winner → **4–6 świeżych WARIANTÓW konceptu** (nie kopii). Zgłoszenie =
+  `wf2_proposals` kind='creative_refresh' (decyzja Tomka).
+- Testy NOWYCH kreacji: wewnątrz głównej broad kampanii, ocena po KONTRYBUCJI zakupów
+  (nierówny spend to feature Andromedy, nie bug) — bez osobnej kampanii testowej „na siłę".
+
+### 9.3 Higiena konta i kampanii (krok `ads_opieka`)
+- **Komentarze = trust signal cold traffic** (negatywy potrafią zdusić CTR i podbić CPM):
+  blocklista PL na stronie ZANIM poleci pierwszy ad (Moderation Assist NIE działa na
+  reklamach — tylko keyword blocklist do 1000 fraz), ukrywanie (nie usuwanie), konkretne
+  odpowiedzi na pytania.
+- **Feedback score strony** (ankiety po zakupie): <3 = interwencja obsługowa, <2 = kara
+  delivery, <1 = zakaz reklam. Dla COD to najczęstsza cicha śmierć konta — komunikować
+  czas dostawy, obsługiwać zapytania.
+- Alerty: odrzucone ady (poprawka pod kod polityki, nie apelacja w ciemno; między apelacjami
+  48–72 h) · spend >1,5× ceny produktu bez ATC · CPM spike >40% d/d · Account Quality.
+- Świeże konto: **spokojny start bez skoków wydatków** (mikro-wydatek kilka dni) — „warm-up"
+  jako rytuał to mit, ale skok 0→duży budżet pierwszego dnia = klasyczny fraud-trigger.
+  Konta klientów trzymać w ICH portfolio (ban jednego ≠ ban wszystkich; BM agencyjny czysty).
+
+### 9.4 Automatyzacja (Meta automated rules / MCP)
+- WOLNO automatem: reguły OBRONNE (pauza przy spend bez sprzedaży z progiem 1,3–1,5×,
+  nie 1,03×), alerty bez akcji, dayparting. Limit 250 reguł/konto; świeże konto = niski
+  limit API (spend-based throttling, błąd code 17 → backoff).
+- NIE automatem: kill/scale winnera na gołych danych Meta (gubią 20–30% konwersji, a COD
+  ma jeszcze confirm-rate — decyzja na danych PLATFORMY), masowa publikacja kreacji bez
+  człowieka (ryzyko bana), zmiany cen/budżetów bez zapisanej decyzji Tomka.
+- Roll-out zmian na wielu kontach: **canary run na 1 koncie** → dopiero reszta
+  (błąd masowy = reputacja BM agencyjnego).
+
+### 9.5 Otwarte punkty [DO DECYZJI TOMKA — noty w wf2_notes 19.07]
+1. **Zdarzenie optymalizacji w teście:** §1 mówi twardo Purchase (bridge wyłączony);
+   research 2026: przy ~20-25 zł/d/produkt 50 konwersji/tydz. nie osiągniemy nigdy —
+   rekomendacja zewnętrzna to optymalizacja na IC/ATC w fazie testu i Purchase dopiero
+   na winnerze. Default zostaje wg §1 (Purchase); decyzja może zmienić `optimize_event`.
+2. **Tempo skalowania:** §5 „+20%/dzień" vs research „+20% co 3–4 dni, min. 48 h"
+   (skok >30% = reset learning). W krokach panelu zapisano ostrożniej: „+20%, odstęp ≥48 h".
+   Parametr `daily_increase_pct` w settings — do rozstrzygnięcia.
+3. **Test sekwencyjny:** przy 5 produktach × ~20 zł/d sygnał się rozmywa — alternatywa:
+   2–3 produkty naraz z wyższym budżetem/szt. (Bramka A bez zmian, inna kolejność).
+
+---
+
 ## PARAMETRY (settings, 2 klucze JSON)
 
 `settings.wf2_test_config` (defaulty): test_margin_pct 15 [D] · budget_total 500 [D] ·

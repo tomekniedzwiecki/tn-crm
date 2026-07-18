@@ -9,7 +9,8 @@ Panel `tn-sklepy/projekt.html` przebudowany OD ZERA na wzór `tn-app/projekt.htm
 (decyzja Tomka 17.07: „chcę pracować nad sklepem tak samo jak nad aplikacją").
 Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje przesiane).
 
-- **NOWA STRUKTURA ETAPÓW (6; korekta 18.07 wieczór — Etap 1 = „Fundament sklepu"):**
+- **NOWA STRUKTURA ETAPÓW (7; rozbicie „Kampanii" 19.07 — migracja
+  `20260719c_wf2_kampanie_rozbicie`; wcześniej korekta 18.07 — Etap 1 = „Fundament sklepu"):**
   **1 Fundament sklepu** (kolejność wg decyzji Tomka 18.07 wieczór, migracja
   `20260718h_wf2_etap1_kolejnosc`: **wybor 🏁 [product] → marka 🏁 [project] → pl_domena 🏁**
   — marka RUSZA PO wyborze produktów, portfel jest kontekstem nazwy; pusty portfel = baner
@@ -20,9 +21,22 @@ Migracja `20260718_wf2_fabryka_panel.sql` (WDROŻONA — twardy swap, instancje 
   lp_dopasowanie → lp_zycie → lp_finisz 🏁 — proces fabryki F0→F8 1:1, scope=product)
   · **3 Sklep na platformie** (pl_sklep 🏁 → pl_dane [client] → pl_branding → pl_dostawy →
   pl_integracje → pl_produkt [product] → pl_landing [product] → pl_prawne → pl_glowna →
-  pl_test 🏁 — wszystko przez API Trevio) · **4 Kampanie** (ads_konto, ads_budzet
-  [client], ads_pixel 🏁, ads_grafiki [product], **ads_wideo** [product, NOWY], ads_kampanie 🏁
-  [product]) · 5 Testy i skalowanie · 6 Przekazanie sterów.
+  pl_test 🏁 — wszystko przez API Trevio)
+  · **4 Środowisko reklamowe** (project-scope, wszystko gotowe ZANIM powstaną materiały:
+  ads_konto [client] → **ads_strona** [client, NOWY: wiarygodność FB/IG] → ads_budzet [client]
+  → ads_pixel 🏁 [pixel+CAPI dedup event_id, EMQ z danych COD] → **ads_preflight 🏁** [NOWY:
+  bramka 0 braków — płatność schodzi, Account Quality, naming/UTM z ID, blocklista komentarzy,
+  plan struktury])
+  · **5 Materiały i kampania** (product-scope, fabryka kreacji → kampania → start:
+  ads_grafiki [3 statyki Manus] → ads_wideo [+sub avi_*; finał + pack hooków ≤3 wersje] →
+  **ads_zestaw** [NOWY: kompletacja 6 adów + copy COD + audyt polityki copy+LP + flagi AI +
+  rejestr wf2_creatives] → ads_kampanie 🏁 [PAUSED] → **ads_start 🏁** [NOWY: bramka Tomka,
+  review adów, meta_ad_ids do pętli wyników, pierwsza doba bez decyzji])
+  · **6 Testy i skalowanie** (**ads_wyniki** [NOWY, auto: WF2_META_TOKEN + cron wf2-ads-sync +
+  wf2_creative_perf, tabela w panelu] → test_wynik → **ads_opieka** [NOWY: komentarze/odrzuty/
+  alerty/fatigue/feedback score — żyje cały test] → skalowanie → rotacja → sprzedaz_sync)
+  · **7 Przekazanie sterów**. Zasady obsługi/analizy: `WORKFLOW-V2-TESTY.md` §9 (research
+  3× Sonnet 19.07: Andromeda, fatigue, moderacja, automated rules).
 - **KROK 'marka' = pełny kontrakt marki PARASOLOWEJ (przebudowa 18.07 wieczór, migracja
   `20260718f_wf2_fundament_marka`):** kolumny `wf2_projects.tagline/brand_opis/palette/fonts/
   logo_url/favicon_url` + binding pola nazwy do `project.name` (WCZEŚNIEJ project.name było
@@ -363,24 +377,35 @@ Ból v1, którego v2 NIE dziedziczy:
 | `td_domena` | Domena | admin | |
 | `td_test` | Test zakupowy | admin | zamknięcie etapu — sklep gotowy do ruchu |
 
-### ETAP 4 — Kampanie (przygotowanie)
+### ETAP 4 — Środowisko reklamowe (od 19.07 rozbite z dawnych „Kampanii"; scope: project)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
-| `ads_konto` | Konto reklamowe | client+admin | BM, partner access (model jak v1: jeden token MCP Tomka) |
-| `ads_pixel` | Pixel | admin | `pixel_id` na projekcie; kod na stronach TD |
-| `ads_grafiki` | Grafiki reklamowe | admin | **scope: product** — content Tomka do testów |
-| `ads_kampanie` | Kampanie Meta | admin | **scope: product** — 1 kampania/produkt, zapis `campaign_id` (§7) |
-| `ads_budzet` | Budżet | client | zasilenie konta |
+| `ads_konto` | Konto reklamowe | client | BM klienta: PLN + Europe/Warsaw (nieodwracalne), 2FA, partner access do BM Tomka; dokumenty firmy pod weryfikację |
+| `ads_strona` | Strona FB + Instagram | client | wiarygodność przed startem (posty/dane/IG); strona przypisana do konta |
+| `ads_budzet` | Budżet | client | doładowanie prepaid + limit wydatków + zapasowa metoda |
+| `ads_pixel` | Pixel 🏁 | admin | pixel+CAPI, dedup po `event_id`, EMQ 8+ z danych COD, weryfikacja OBU domen, Purchase w Test Events |
+| `ads_preflight` | Pre-flight 🏁 | admin | bramka 0 braków: płatność realnie schodzi (mikro-start bez skoków), Account Quality, naming/UTM z ID, blocklista komentarzy PL, plan struktury (1 kampania=1 produkt=1 ad set ABO) |
 
-### ETAP 5 — Testy i skalowanie (żyje długo; scope: product + project)
+### ETAP 5 — Materiały i kampania (scope: product)
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
+| `ads_grafiki` | 3 grafiki (Manus) | admin | demo/problem/proof 4:5 — 3 koncepcyjnie różne „byty" (Andromeda skleja podobne) |
+| `ads_wideo` | Wideo 15 s | admin | fabryka wideo (sub-kroki `avi_*`); finał + pack hooków ≤3 wersje |
+| `ads_zestaw` | Zestaw reklam + copy | admin | 6 adów (3 hooki wideo + 3 statyki), copy COD (125 znaków hook/headline ≤27/5 różnych tekstów), audyt polityki copy+LP RAZEM, flagi AI, mapa ?h=N, rejestr `wf2_creatives` |
+| `ads_kampanie` | Kampania Meta 🏁 | admin | 1 kampania/produkt, ABO, broad, Advantage+, PAUSED; `campaign_id` (§7) |
+| `ads_start` | Start i pierwsza doba 🏁 | admin | bramka Tomka (pon.–wt. rano); review adów, disclosure AI, `meta_ad_ids`→wf2_creatives, dni 1–2 zero decyzji |
+
+### ETAP 6 — Testy i skalowanie (żyje długo; scope: product + project)
+| Krok | Label | Owner | Uwagi |
+|---|---|---|---|
+| `ads_wyniki` | Pomiar wyników (sync Meta) | auto | WF2_META_TOKEN + cron wf2-ads-sync; widoki `wf2_creative_perf`/`wf2_pattern_perf` (tabela w panelu); P&L tylko level=campaign |
 | `test_wynik` | Wynik testu | auto/admin | scope: product — P&L produktu (§8), decyzja WINNER/KILL/ITERUJ |
-| `skalowanie` | Skalowanie winnerów | admin | scope: product — podniesienie marży, budowa marki |
+| `ads_opieka` | Opieka i higiena kampanii | admin | codziennie: komentarze/odrzuty/spend-bez-ATC/CPM; co 3–4 dni: fatigue (frequency>3 · CTR −25% · CPM +35% → `wf2_proposals` creative_refresh); tygodniowo: feedback score |
+| `skalowanie` | Skalowanie winnerów | admin | scope: product — najpierw cena scale, potem budżet +20% (odstęp ≥48 h) |
 | `rotacja` | Kolejne produkty | admin | nowe produkty wchodzą do portfela (wracają do Etapu 2) |
-| `sprzedaz_sync` | Sync sprzedaży | auto | Meta MCP + import pliku TD (§8); licznik do 1000 |
+| `sprzedaz_sync` | Sync sprzedaży | auto | platforma = prawda biznesowa (COD: potwierdzone, nie pixel); licznik do 1000 |
 
-### ETAP 6 — Przekazanie sterów
+### ETAP 7 — Przekazanie sterów
 | Krok | Label | Owner | Uwagi |
 |---|---|---|---|
 | `wdrazanie` | Wdrażanie klienta | admin | materiały co/jak/dlaczego; log sesji wdrożeniowych |

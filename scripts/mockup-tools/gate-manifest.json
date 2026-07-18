@@ -43,7 +43,7 @@
   "dopasowanie": {
     "severity": "FAIL",
     "kompozyt_glob": "dopasowanie/*.png",
-    "kompozyt_marker": "kompozyt",
+    "_kompozyt_marker_MARTWY": "kompozyt (task#5d: nieczytany przez gate-check ani sekcja-diff)",
     "md": "dopasowanie/DOPASOWANIE.md",
     "md_ssim_regex": "0[.,][0-9]{2}",
     "mobile": {
@@ -79,16 +79,35 @@
   },
 
   "grep_forbidden": {
+    "_ssot_zakazow": "JEDYNE zrodlo zakazow TEKSTOWYCH gate-check (task#6 konsolidacja). detail-lint.py trzyma wlasna kopie listy 'bad' w kodzie (render-time) — DUPLIKAT do przepiecia na ten SSOT przez wlasciciela detail-lint (SPEC F7). Zakazy scarcity/own-stock/przekreslenia dolozone z copy-gate (task#2c). COD 'za pobraniem' DOZWOLONE (Etap5) — celowo brak go w regulach.",
     "statyczne": [
       { "regex": ">\\s*0?\\d\\s*/\\s*1[0-9]\\s*<", "severity": "FAIL", "label": "numeracja sekcji NN/NN w tresci" },
       { "text": "wysyłka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
       { "text": "wysylka w 24h", "severity": "FAIL", "label": "obietnica wysylki 24h" },
       { "text": "magazyn w PL", "severity": "FAIL", "label": "magazyn w PL" },
       { "text": "dropship", "severity": "FAIL", "label": "dropshipping" },
-      { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (z UGC wideo) w HTML" },
+      { "text": "aliexpress", "severity": "FAIL", "label": "leak marketplace 'AliExpress'" },
+      { "regex": "\\blorem\\b", "severity": "FAIL", "label": "placeholder 'lorem'" },
+      { "regex": "(?:nr|numer)\\s*1\\s+w\\s+(?:polsce|pl)\\b", "severity": "FAIL", "label": "nieweryfikowalne 'nr 1 w Polsce'" },
+      { "regex": "darmowa\\s+dostawa", "severity": "WARN", "label": "claim 'darmowa dostawa' (weryfikuj — parytet z detail-lint)" },
+      { "regex": "\\bgratis\\b", "severity": "WARN", "label": "claim 'gratis' (parytet z detail-lint)" },
+      { "regex": "\\bnajtaniej\\b", "severity": "WARN", "label": "superlatyw 'najtaniej' (parytet z detail-lint)" },
+      { "regex": "ostatnie\\s+sztuki", "severity": "FAIL", "label": "fake-scarcity: ostatnie sztuki" },
+      { "regex": "tylko\\s+dzi(?:s|ś|siaj)\\b", "severity": "FAIL", "label": "fake-scarcity/urgency: tylko dzis" },
+      { "regex": "zosta[lł][oy]?\\s+(?:ju[zż]\\s+|tylko\\s+|jeszcze\\s+)*\\d+\\s*(?:szt|sztuk|egzempl)", "severity": "FAIL", "label": "fake-scarcity: zostalo N sztuk" },
+      { "regex": "w\\s+naszym\\s+(?:magazynie|sklepie|centrum|stanie)", "severity": "FAIL", "label": "own-stock: 'w naszym magazynie/sklepie'" },
+      { "regex": "mamy\\s+na\\s+(?:stanie|magazynie)", "severity": "FAIL", "label": "own-stock: 'mamy na stanie'" },
+      { "regex": "(?:sprzedano|sold)\\b[^<]{0,40}?(?:u\\s+nas|w\\s+naszym)", "severity": "WARN", "label": "own-stock: 'sprzedano u nas' (mozliwy FP)" },
+      { "regex": "data-price-old|class=\"[^\"]*(?:price-old|old-price|price--old|stara-cena|cena-stara)", "severity": "FAIL", "label": "przekreslona cena (fake-discount anchor)" },
+      { "regex": "<del[\\s>]|<s[\\s>]|text-decoration\\s*:\\s*line-through", "severity": "WARN", "label": "przekreslenie (sprawdz czy nie fake-cena)" },
       { "text": "pobranie", "severity": "WARN", "label": "wzmianka 'pobranie'" },
       { "regex": "\\braty\\b", "severity": "WARN", "label": "wzmianka 'raty'" }
     ],
+    "per_landing": {
+      "_opis": "Zakazy PRODUKTOWE (nie globalne; task#6). Klucz=slug. TYMO = marka z UGC wideo lokowki (loczek) — pilnujemy leaku do HTML na loczek/odpalak (tam wystepuje w materialach). Poza tymi slugami 'TYMO' to szum -> NIE w globalnej liscie.",
+      "loczek": [ { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (UGC lokowka) w HTML" } ],
+      "odpalak": [ { "text": "TYMO", "severity": "FAIL", "label": "marka TYMO (UGC) w HTML" } ]
+    },
     "dynamiczne_shop": {
       "severity": "FAIL",
       "linie_zawieraja": ["shop", "sklep źródłowy", "sklep zrodlowy"],
@@ -101,9 +120,10 @@
     "severity": "FAIL",
     "assets_glob": "assets/*",
     "rozszerzenia": [".png", ".webp", ".jpg", ".jpeg", ".avif"],
-    "skip_markery": ["skreślony", "skreslony", "SKIP", "odrzuć", "odrzuc", "ODRZUĆ", "deferred"],
+    "_skip_markery_MARTWY": ["task#5d: nieczytane przez check_sieroty — logika 'udokumentowany' idzie po ndocs, nie po tych markerach"],
     "dokumentacja": ["MAPA-ASSETOW.md", "F3-ASSETY-MAPA.md"],
-    "http_200": true
+    "http_200": true,
+    "http_transient_codes": [408, 425, 429, 500, 502, 503, 504]
   },
 
   "wagi": {
@@ -127,6 +147,8 @@
 
   "baza": {
     "severity": "FAIL",
+    "_host_nota": "Host WYMUSZONY na projekcie CRM (task#5c) — pg_get IGNORUJE env SUPABASE_URL (moze wskazywac sparing) i uzywa tego host. Klucz niepasujacy do CRM -> 401 -> SKIP (lepsze niz dane z ZLEGO projektu).",
+    "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
     "tabela_produkty": "bud_tt_products",
     "kolumny_kuracji": { "gallery": "gallery_curated", "videos": "videos_curated" },
     "tabela_nazw": "bud_brand_names",
@@ -141,7 +163,11 @@
   },
 
   "makiety_mobile": {
-    "severity": "WARN",
+    "severity": "FAIL",
+    "_nota": "F2.4 rozszerzenie (Tomek 18.07): mobile-makieta dla WSZYSTKICH sekcji, nie tylko hero/TOR-I/wideo. komplet_wg_sekcji=true egzekwuje komplet mobile == liczba sekcji (== liczba makiet desktop poza styl-master). Swiadomy wyjatek pojedynczej sekcji = jawna nota w LEDGER wg komplet_nota_regex (nota_regex ogolne jest za luzne na komplet — matchuje kazda wzmianke 'makiety mobile').",
+    "komplet_wg_sekcji": true,
+    "komplet_wyklucz": ["styl-master", "00-"],
+    "komplet_nota_regex": "mobile-makiet[ay]-(wyjatek|skip|desktop-only)",
     "wymagane": [
       { "gdy": "zawsze", "wzory": ["makiety/*hero*mobile*"], "label": "hero mobile" },
       { "gdy": "tor_i", "wzory": ["makiety/*demo*mobile*", "makiety/*interakcja*mobile*"], "label": "demo/interakcja mobile" },
@@ -165,6 +191,60 @@
     ]
   },
 
+  "_opis_TASK_18_07": "Domkniecia audytu meta-szczelnosci + skryptow (18.07). Ostatnie miejsca, gdzie gate ufal DEKLARACJI agenta: (1) finalny_pass = detail-lint spiety maszynowo (caly PASS 0 dot. render), (2) copy = kotwiczenie liczb w KARCIE + jedna cena, (3) published = tryb go-live (placeholdery preview nie moga zostac na LIVE), (4) f1_marza = ekonomia polki. DANE tu; funkcje analogiczne do check_wiernosc/check_panel_sync.",
+
+  "copy": {
+    "severity": "FAIL",
+    "_opis": "F7 COPY-GATE (task#2). (a) liczba-z-jednostka (spec) w prozie MUSI miec kotwice w KARTA-PRAWDY.md na linii z tagiem [KONKRET-SKU]/[KONKRET]/[SPEC]; liczba spoza karty = FAIL 'liczba bez kotwicy' (fabrykowane specy). W karcie ale poza tagiem = WARN. Jednostki CZASU/% CELOWO poza lista (14 dni zwrotu/gwarancja = polityka, nie spec -> unik FP). (b) >1 distinct data-price = FAIL (jedna cena PL). data-price bywa BOOLEAN (cena w textContent) -> lapiemy tez text_regex. COD 'za pobraniem' DOZWOLONE (nie zakaz).",
+    "anchor": {
+      "karta_tagi": ["[KONKRET-SKU]", "[KONKRET]", "[SPEC]"],
+      "jednostki_spec": ["mAh", "Wh", "cali", "mm", "cm", "kg", "ml", "szt", "g", "W", "V"],
+      "ignoruj_liczby": ["2023", "2024", "2025", "2026", "2027"]
+    },
+    "data_price": {
+      "severity": "FAIL",
+      "max_distinct": 1,
+      "attr_regex": "data-price(?![-\\w])\\s*=\\s*\"([^\"]*)\"",
+      "text_regex": "data-price(?![-\\w])[^>]*>\\s*([^<]{1,40})"
+    }
+  },
+
+  "f1_marza": {
+    "severity": "FAIL",
+    "_opis": "Ekonomia polki z wf2_products (CRM; task#4). marza=(price-cost_purchase)/price; < prog_marza_pct = FAIL. landed(cost_purchase) > landed_prog_zl przy COD na stronie bez noty-waivera w LEDGER = FAIL (incydent Zwijek: drogi landed + COD = strata na odmowach odbioru). landed>prog bez COD = WARN. Brak wiersza wf2_products slug=... -> SKIP. Host CRM wymuszony przez _pg_crm (panel_sync.host), nie env.",
+    "tabela": "wf2_products",
+    "slug_kolumna": "slug",
+    "kol_price": "price",
+    "kol_cost": "cost_purchase",
+    "prog_marza_pct": 40,
+    "landed_prog_zl": 150,
+    "cod_regex": "za pobraniem|\\bCOD\\b|p[lł]atno[sś][cć][^<]{0,14}(kurier|odbi[oó]r)",
+    "waiver_regex": "landed[- ]?waiver|waiver[- ]?landed|nota[- ]?landed|landed[^\\n]{0,24}(akcept|zaakcept|zgoda|ok tomek)|COD[^\\n]{0,24}ryzyko[^\\n]{0,24}(akcept|ok)"
+  },
+
+  "published": {
+    "severity": "FAIL",
+    "_opis": "Tryb GO-LIVE (--published <url|sciezka>; task#3). Pobiera LIVE html i FAIL gdy zostaly artefakty preview: {{}} placeholder, noindex (niewidoczne dla Google), nierozwiazane URL-e prawne / pixel / product-id. Preview (bez --published) NIE sprawdza — placeholdery OCZEKIWANE. file://sciezka / lokalna sciezka dozwolone (test go-live bez realnego URL). Blad pobrania / 5xx / 429 = WARN (blip), 404 = FAIL (strona nie zyje).",
+    "http_transient_codes": [408, 425, 429, 500, 502, 503, 504],
+    "fail_regex": [
+      { "regex": "\\{\\{", "label": "nierozwiazany placeholder {{...}}" },
+      { "regex": "noindex", "label": "noindex na produkcji (niewidoczne dla Google)" },
+      { "regex": "REGULAMIN_URL|POLITYKA_URL|PRYWATNOSC_URL|ZWROTY_URL|DOSTAWA_URL|KONTAKT_URL|CANONICAL_URL", "label": "nierozwiazany URL prawny/legal (bez klamer)" },
+      { "regex": "PIXEL_ID|WF2_PRODUCT_ID|PRODUCT_ID", "label": "nierozwiazany pixel / product-id" },
+      { "regex": "fbq\\(\\s*['\"]init['\"]\\s*,\\s*['\"]\\s*['\"]\\s*\\)", "label": "pusty Pixel init fbq('init','')" }
+    ]
+  },
+
+  "finalny_pass": {
+    "severity": "FAIL",
+    "_opis": "F7.3 FINALNY PASS spiety maszynowo (task#1) — CALY PASS 0 detail-lint byl dotad niespiety z gate. Odpala detail-lint.py <index.html> --out <json> (venv), parsuje findings, mapuje severity_map. Domyka jednym ruchem: WCAG kontrast, touch>=44, crop cover/upscaling, martwa-interakcja (suwak min==max), pay-badges-imitacje (klaster POZA SSOT), dup-asset cross-sekcja, typografia. Findings placeholder/zakaz-tekstowy ODFILTROWANE (ignoruj_problem_wzorce) — nalezą do published/grep_forbidden (SSOT; unikamy podw. FAIL + FALSZYWEGO FAIL na preview {{). Uwaga: detail-lint NIE emituje h-scroll — dziura do domkniecia u wlasciciela detail-lint (SPEC F7).",
+    "skrypt": "detail-lint.py",
+    "timeout_s": 300,
+    "max_detail": 12,
+    "severity_map": { "P0": "FAIL", "P1": "FAIL", "P2": "WARN" },
+    "ignoruj_problem_wzorce": ["zakazana/placeholder fraza", "{{"]
+  },
+
   "_opis_R13": "Domkniecia audytu R13 (17.07): typy sekcji + rubryka werdyktu + layout-diff strukturalny. Powod: werdykty vision odpuszczaly defekty mechaniki ('Kafle mniejsze niz makieta - bez wplywu na charakter'), IR nie istnial dla 4 zepsutych sekcji, SSIM po resize do wspolnej szerokosci niszczyl informacje o skali.",
 
   "sekcja_typy": {
@@ -176,7 +256,7 @@
       "reviews": "opinie", "gallery": "galeria", "oferta": "zamow",
       "finalcta": "final", "final-cta": "final"
     },
-    "override_per_landing": {}
+    "_override_per_landing_MARTWY": "task#5d: nieczytane przez resolve_sectype (gate-check) ani resolve_type (sekcja-diff)"
   },
 
   "werdykt_rubryka": {
@@ -193,16 +273,17 @@
   "layout_diff": {
     "severity": "FAIL",
     "_opis": "TWARDE LAYOUT-FAIL = DOM self-checki mierzone w SAMYM renderze (sliver-guard + pustka-pod-obrazem + gutter-asymetria/scena-zla-strona), odporne na szum makiet AI. Checki wywodzone z IR-makiety (wysokosc/guttery-IR/obraz) oraz raw-SSIM = INFORMACYJNE (kolumna LAYOUT: 'info:'), bo detekcja mockup-ir/OCR na pastelowych full-bleed kanwach AI jest zbyt szumna (R13 domkniecie + test Drapek 18.07). Rubryka vision 5xT/N = trzecia, niezalezna siatka. IR komplet == liczba sekcji (wymuszane).",
-    "kolumna": "LAYOUT",
+    "_kolumna_MARTWY": "LAYOUT (task#5d: gate-check uzywa hardcoded col_idx('layout'), nie tego klucza)",
     "fail_token": "LAYOUT-FAIL",
-    "checks": ["kafle", "pustka", "gutter"],
-    "checks_info": ["wysokosc", "guttery", "obraz"],
+    "_checks_MARTWY": ["kafle", "pustka", "gutter"],
+    "_checks_info_MARTWY": ["wysokosc", "guttery", "obraz"],
     "ir_dir": "ir",
     "ir_glob": "*-IR.json",
     "progi": {
-      "kafle_dwidth_pct": 30,
-      "kafle_dar_pct": 20,
-      "kafle_dcols": 1,
+      "_kafle_MARTWE_task5d": "kafle_dwidth_pct/kafle_dar_pct/kafle_dcols zdemotowane do 'info' w sekcja-diff (Delta-cols szumny na kanwach AI) — nieczytane przez zaden skrypt",
+      "_kafle_dwidth_pct": 30,
+      "_kafle_dar_pct": 20,
+      "_kafle_dcols": 1,
       "sliver_medwpct_max": 0.12,
       "sliver_cols_min": 5,
       "sliver_ar_max": 0.8,
@@ -228,12 +309,12 @@
       "kodowa_desktop": 0.85,
       "kodowa_mobile": 0.80,
       "scenowa_reszta": 0.85,
-      "scena_cap": 0.70
+      "_scena_cap_MARTWY": 0.70,
+      "_scena_cap_nota": "task#5d: sekcja-diff czyta z ssim_progi tylko kodowa_desktop/scenowa_reszta (linie 723/732); scena_cap nieczytany"
     },
-    "scena_selektory": [
-      ".hero-media", "[data-mo='hero-scene']", ".prob-scene", "[data-mo='scene']",
-      ".final-scene", "[data-mo='final-breath']", ".benefits-scene", ".ben-media",
-      ".prob-media", ".final-media", "img[data-scene]"
+    "_scena_selektory_MARTWY": [
+      "task#5d: nieczytane przez gate-check ani sekcja-diff (selekcja sceny idzie po klasach w JS analizatora)",
+      ".hero-media", "[data-mo='hero-scene']", ".prob-scene", "img[data-scene]"
     ]
   },
 
@@ -258,5 +339,58 @@
     "rundy_regex": "rund[ay]?\\D{0,4}(\\d+)",
     "max_rundy": 3,
     "eskalacja_ledger_tokeny": ["eskalacja", "crop-first", "crop first", "scena bez produktu", "realny <img>", "realny img", "nota tomek", "nota do tomka", "referencyjn", "ref produktu"]
+  },
+
+  "_opis_PANEL_SYNC": "MOST FABRYKA->PANEL EGZEKWOWALNY (18.07). Powod: sync panelu 'tn-sklepy' (wf2_*) byl OBOWIAZKOWY per faza tylko w STANDARDZIE, bez kontroli maszynowej — ta sama klasa luki co samo-deklaracja gate'u ('PASS 10/10'). Panel = jedyne okno Tomka na postep; faza bez syncu = niewidoczna. Ten blok czyni sync CZESCIA definicji DONE, egzekwowana tu. Kontrakt+katalog mapowan: docs/zbuduje/MOST-PANEL.md; skrot: STANDARD-LANDING-SKLEPY.md §1-sync. Mapowanie: landing slug -> wf2_products.slug; brak wiersza = SKIP (nie kazdy preview ma projekt, np. loczek/odpalak). Host WYMUSZONY na projekcie CRM (NIE env SUPABASE_URL — .env wskazuje projekt sparingu). Progi tolerancji + severity = DANE (tuning tu, nie w kodzie).",
+
+  "panel_sync": {
+    "severity": "FAIL",
+    "host": "https://yxmavwkwnfuphjqbelws.supabase.co",
+    "tabela_produkty": "wf2_products",
+    "tabela_kroki": "wf2_steps",
+    "tabela_artefakty": "wf2_artifacts",
+    "slug_kolumna": "slug",
+    "karta_kolumny_wymagane": ["price", "cost_purchase", "repo_path", "status"],
+    "puste_done_severity": "WARN",
+
+    "_opis_kroki": "Deliverable w archiwum/kodzie => panel status='done'. Mapowanie krok->deliverable (co DOWODZI, ze faza zamknieta). gdy_plik/gdy_glob wzgledem archiwum, gdy_kod = index.html (ctx code). opcjonalny=true => WARN zamiast FAIL (faza moze byc downgradowana, np. zycie).",
+    "kroki_done": [
+      { "step": "lp_dane",        "label": "F0 dane/karta",        "gdy_plik": ["KARTA-PRAWDY.md"] },
+      { "step": "lp_plan",        "label": "F1 plan+przewodnik",   "gdy_plik": ["PRZEWODNIK-GRAFICZNY.md"] },
+      { "step": "lp_styl_marka",  "label": "F2.5 branding",        "gdy_glob": ["brand/favicon*.png"] },
+      { "step": "lp_makiety",     "label": "F2 makiety",           "gdy_glob": ["makiety/*.png"] },
+      { "step": "lp_grafiki",     "label": "F3 grafiki+wiernosc",  "gdy_plik": ["MAPA-ASSETOW.md"] },
+      { "step": "lp_kod",         "label": "F4 kod",               "gdy_kod": true },
+      { "step": "lp_dopasowanie", "label": "F7.1 dopasowanie",     "gdy_glob": ["dopasowanie/*.png"] },
+      { "step": "lp_zycie",       "label": "F5 zycie",             "gdy_glob": ["interakcje/*-SPEC-I.md", "CHOREOGRAFIA.md"], "opcjonalny": true }
+    ],
+
+    "_opis_artefakty": "Artefakty panelu == pliki archiwum. tryb 'stem': dopasowanie po rdzeniu nazwy pliku (URL panelu vs plik archiwum), missing = archiwum-nie-w-panelu; FAIL gdy missing > tolerancja (lista brakow w detalu). tryb 'obecnosc': kontrakt to kontakt-arkusze/agregaty (np. dowod = contact-sheety, NIE 1:1 na kompozyt) => wystarczy >=1 artefakt gdy sa pliki. kind[] = dozwolone rodzaje (dedup po URL-stem).",
+    "artefakty_liczba": [
+      { "label": "makiety desktop", "tryb": "stem", "kind": ["makieta"],
+        "zrodla": [{ "glob": "makiety/*.png", "wyklucz": ["mobile", "00-", "styl-master"] }], "tolerancja": 2 },
+      { "label": "makiety mobile", "tryb": "stem", "kind": ["makieta_mobile"],
+        "zrodla": [{ "glob": "makiety/*mobile*.png" }], "tolerancja": 2 },
+      { "label": "grafiki produktowe (sceny + galeria HIGH)", "tryb": "stem", "kind": ["scena", "image", "gallery"],
+        "zrodla": [{ "glob": "assets/scenes/*.webp", "wyklucz": ["og."] }, { "glob": "assets/gallery/*-hq.webp" }],
+        "tolerancja": 2 },
+      { "label": "kompozyty dopasowania (dowod/proof)", "tryb": "obecnosc", "kind": ["dowod", "proof"],
+        "zrodla": [{ "glob": "dopasowanie/*.png" }] }
+    ],
+
+    "_opis_doc": "Dokument fabryki, ktory MUSI byc widoczny jako chip w panelu (kind=doc). WIERNOSC.md = dowod gate'u wiernosci F3A -> lp_grafiki. token = fragment url/label ktory potwierdza obecnosc.",
+    "doc_wymagane": [
+      { "label": "WIERNOSC.md (F3A) w lp_grafiki", "plik": "dopasowanie/WIERNOSC.md", "kind": "doc", "token": "wiernosc" }
+    ],
+
+    "_opis_kod_wzmianki": "Element obecny w KODZIE (footer/logo/wideo) musi miec odbicie w panelu — wzmianka w data.fields kroku LUB artefakt kind_alt. gdy_kod_regex kwalifikuje regule (element w kodzie). footer=FAIL (modul footer@1 to standard KAZDEGO landingu; brak w moduly_uzyte = realny defekt syncu). logo/brand=WARN (branding bywa juz na lp_styl_marka; wzmianka w lp_kod = nicosc do domkniecia, nie blokada). wideo: satysfakcja gdy fields wzmiankuja video LUB istnieje artefakt kind=video (lp_zycie).",
+    "kod_wzmianki": [
+      { "label": "footer w lp_kod (modul footer@1)", "severity": "FAIL", "step": "lp_kod",
+        "gdy_kod_regex": "<footer", "tokeny": ["footer", "stopk"] },
+      { "label": "brand/logo w lp_kod (favicon+wordmark zywy)", "severity": "WARN", "step": "lp_kod",
+        "gdy_kod_regex": "favicon|wordmark", "tokeny": ["logo", "favicon", "wordmark", "brand", "lockup"] },
+      { "label": "wideo w panelu (lp_kod video_count / lp_zycie video)", "severity": "FAIL", "step": "lp_kod",
+        "gdy_kod_regex": "<video|\\.mp4", "tokeny": ["video", "wideo"], "kind_alt": "video" }
+    ]
   }
 }

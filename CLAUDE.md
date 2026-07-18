@@ -43,11 +43,17 @@ RLS: `authenticated` = admin CRUD, `anon` = klient SELECT only.
   (**kroki = konfiguracja: nowy krok = 1 INSERT, zero zmian frontu**), steps (jedyne
   źródło postępu), sales, ad_stats, payments (UI ukryte), activities. RLS wyłącznie
   `team_members` — ZERO polityk anon (portal klienta pójdzie przez edge function).
-- **Etapy 1–6 (od 2026-07-18, migracja `20260718_wf2_fabryka_panel`):** 1 Portfel (marka+wybor)
+- **Etapy 1–7 (od 2026-07-19, migracja `20260719c_wf2_kampanie_rozbicie`; baza:
+  `20260718_wf2_fabryka_panel`):** 1 Fundament sklepu (wybor→marka→pl_domena)
   → **2 Landing** (lp_dane→lp_plan→lp_styl_marka→lp_makiety🏁→lp_grafiki→lp_kod→lp_dopasowanie→
   lp_zycie→lp_finisz🏁 = fabryka F0→F8) → **3 Sklep na platformie** (pl_* przez API Trevio,
-  edge wf2-platform TYPED ACTIONS) → 4 Kampanie (konto→budżet→pixel🏁→**3 grafiki wf2-ads**→
-  **ads_wideo**→kampania🏁 PAUSED) → 5 Testy i skalowanie → 6 Stery. Artefakty fabryki
+  edge wf2-platform TYPED ACTIONS) → **4 Środowisko reklamowe** (project-scope:
+  ads_konto→ads_strona→ads_budzet→ads_pixel🏁→ads_preflight🏁 — bramka 0 braków przed
+  materiałami) → **5 Materiały i kampania** (product-scope: ads_grafiki→ads_wideo[+avi_*]→
+  ads_zestaw [6 adów+copy COD+flagi AI]→ads_kampanie🏁 PAUSED→ads_start🏁 bramka Tomka)
+  → **6 Testy i skalowanie** (ads_wyniki [sync Meta]→test_wynik→ads_opieka [higiena:
+  komentarze/fatigue/feedback score]→skalowanie→rotacja→sprzedaz_sync) → 7 Stery.
+  Zasady kampanii/kreacji: `docs/zbuduje/WORKFLOW-V2-TESTY.md` (§9 = kreacje i opieka). Artefakty fabryki
   (makiety/dowody/kreacje) = tabela `wf2_artifacts` → galerie w warsztatach kroków.
   Zamówienia platformy = `wf2_orders` (cron wf2-orders-sync; licznik do 1000 = COUNT).
   Cena na landingu = publiczny edge `wf2-landing-api` + snippet

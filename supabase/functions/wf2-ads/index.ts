@@ -319,7 +319,7 @@ async function logCost(supabase: any, projectId: string | null, productId: strin
   if (!projectId || !(amountUsd > 0)) return
   try {
     await supabase.from('wf2_costs').insert({
-      project_id: projectId, product_id: productId, step_key: 'ads_grafiki', stage: 4,
+      project_id: projectId, product_id: productId, step_key: 'ads_grafiki', stage: 5,
       amount: amountUsd, currency: 'USD', kind, note, created_by: 'auto',
     })
   } catch (e) { console.error('[wf2-ads] logCost err', e) }
