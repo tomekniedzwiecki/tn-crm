@@ -435,11 +435,13 @@ def build_copy_prompt(bundle, angles):
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"STUDYJNA wskazówka EN, max kilka słów — '
                 'tylko rekwizyt/kolor/faktura tła obok produktu, BEZ ludzi i BEZ scen wnętrz (np. \\"a few dog treats scattered beside the board\\")"}')
-        else:
+        else:  # lifestyle
             schema_lines.append(
-                '  "%s": {"hook_baner":"KRÓTKI MARKER-TEKST PL, ≤3 słowa, jak odręczna notka (np. \\"smakołyk tutaj →\\")",'
+                '  "%s": {"hook_baner":"ODRĘCZNY MARKER PL sprzedający MECHANIZM — że pies robi to SAM, ≤3 słowa, z wykrzyknikiem (np. \\"SAM ŚCIERA PAZURY!\\")",'
+                '"mini_adnotacja":"KRÓTKA druga odręczna adnotacja PL przy szufladzie, ≤3 słowa (np. \\"smakołyki w środku\\")",'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
-                '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — konkretna wizja sceny dla TEGO produktu/persony (gdzie leży, co wokół, pora dnia)"}' % a)
+                '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta",'
+                '"scene_vision":"1 zdanie EN — MECHANIZM W AKCJI: pies SAM energicznie drapie deskę (pazury na czarnej powierzchni), szuflada uchylona ze smakołykami, wzrok na schowku, BEZ ludzkiej ręki podającej smakołyk"}' % a)
     schema = "{\n" + ",\n".join(schema_lines) + "\n}"
 
     return (
@@ -451,14 +453,19 @@ def build_copy_prompt(bundle, angles):
         "ZADANIE — dla kątów: %s.\n"
         "Dla każdego kąta:\n"
         "• hook_baner: GŁÓWNY hook renderowany WIELKI na banerze. demo = pytanie-lustro lub benefit; "
-        "problem = transformacja (przed→po); lifestyle = krótki odręczny marker-tekst. PL, z diakrytykami.\n"
+        "problem = transformacja (przed→po); lifestyle = ODRĘCZNY MARKER sprzedający MECHANIZM — że pies robi to SAM "
+        "(np. \"SAM ŚCIERA PAZURY!\"), NIE „gdzie jest smakołyk\". PL, z diakrytykami.\n"
+        "• mini_adnotacja (TYLKO lifestyle): druga, malutka odręczna adnotacja przy szufladzie, ≤3 słowa (np. \"smakołyki w środku\").\n"
         "• callouts_demo (TYLKO demo): 3 krótkie etykiety ≤3 słowa Z FAKTÓW produktu (tytuł aukcji/opisy kadrów) "
         "wskazujące części produktu (schowek na smakołyki / ściera pazury naturalnie / antypoślizgowy spód). ZERO zmyślania.\n"
         "• headline: 2-4 słowa PL, JEDNA obietnica, dobrze wygląda WERSALIKAMI (diakrytyki OK).\n"
         "• subline: opcjonalny, ≤6 słów PL (pusty string gdy zbędny).\n"
         "• primary_text: 2-3 zdania PL, hak w 1. zdaniu, lekkie CTA; KAŻDY kąt zaczyna się INNYM zdaniem.\n"
+        "• USP-MOMENT (TWARDA zasada scen WSZYSTKICH kątów z produktem): scena łapie MECHANIZM W AKCJI — pies SAM energicznie DRAPIE "
+        "(pazury w kontakcie z czarną powierzchnią ścierną), szuflada uchylona z WIDOCZNYMI smakołykami, wzrok psa na schowku. "
+        "ZAKAZ: pies stojący/siedzący biernie; smakołyk podawany z ludzkiej ręki. Widz w 0,5 s musi zrozumieć, że pies robi to SAM.\n"
         "• scene_vision: 1 zdanie EN — konkretna wizja sceny dla TEGO produktu i persony (opisuj SCENĘ/otoczenie/światło/porę dnia, "
-        "NIGDY wyglądu produktu — produkt niesie referencja).\n"
+        "NIGDY wyglądu produktu — produkt niesie referencja; ZAWSZE respektuj USP-MOMENT powyżej).\n"
         "• WYJĄTEK dla kąta 'demo': scene_vision to STUDYJNA wskazówka (rekwizyt/kolor/faktura tła obok produktu, max kilka słów, "
         "BEZ ludzi i BEZ pełnych scen wnętrz) — reklama demo ma być czysto studyjna (produkt-bohater na gradiencie), nie druga scena lifestyle.\n"
         "Dla kąta 'problem' dodatkowo:\n"
@@ -1687,6 +1694,30 @@ def run_finisher(out_dir, creatives, regions_by_angle, state, slug):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# BRAMKA „POWÓD KLIKNIĘCIA" (v7.1, Tomek: „czy banery PRZEKONUJĄ do wejścia w reklamę — klik, nie estetyka").
+# Vision-checklista finałów: AGENT ogląda KAŻDY baner i odpowiada 3 pytania; brak jasnej odpowiedzi =
+# poprawka briefu + regeneracja kąta. Werdykty agenta w KLIK.json → state.klik_verdicts (audyt).
+# ══════════════════════════════════════════════════════════════════════════════
+CLICK_GATE_QUESTIONS = [
+    "(a) CO widz rozumie w 0,5 s (jeden rzut oka, zanim scrolluje dalej)?",
+    "(b) JAKI HAK każe kliknąć (ciekawość / benefit / ulga) — a nie sama estetyka?",
+    "(c) Czy USP-MECHANIZM (pies SAM ściera pazury drapiąc po smakołyk w schowku) jest WIDOCZNY w kadrze?",
+]
+
+
+def print_click_gate(angles, klik=None):
+    """Wypisuje bramkę powodu kliknięcia jako OBOWIĄZKOWĄ checklistę finałów (odpowiada AGENT z vision)."""
+    print("BRAMKA POWODU KLIKNIĘCIA (vision — obejrzyj KAŻDY finał; brak jasnej odpowiedzi = poprawka briefu + regen):")
+    for q in CLICK_GATE_QUESTIONS:
+        print("   %s" % q)
+    if klik and isinstance(klik.get("werdykty"), list):
+        for v in klik["werdykty"]:
+            print("  • %-10s klik=%-4s | 0.5s: %s | hak: %s | USP: %s" %
+                  (str(v.get("kreacja", "?")), str(v.get("werdykt", "?")), v.get("s05", "?"),
+                   v.get("hak", "?"), v.get("usp", "?")))
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # QA + PUBLIKACJA.
 # ══════════════════════════════════════════════════════════════════════════════
 def run_ad_gate(out_dir):
@@ -1907,28 +1938,47 @@ FD_ART = {
     "demo": (
         "ART DIRECTION — DEMO / ANATOMY (mechanism 'wow'): the product is the hero in a BRIGHT, warm, real "
         "home interior with soft natural daylight (NEVER a white studio, NEVER a dark night scene) — a dog "
-        "interacting naturally with it. A big question headline sits across a clean calm area at the top. "
-        "2-3 short callout labels, each connected by ONE thin elegant line/dot to the exact product part it "
-        "names. A small cash-on-delivery trust pill and a clear CTA button anchored at the bottom. Everything "
-        "integrated, premium, un-cluttered."
+        "CAUGHT MID-SCRATCH, working the board BY ITSELF: a front paw pressed and dragging on the black "
+        "sandpaper toward the pulled-out treat drawer (NO human hand in frame). A big question headline sits "
+        "across a clean calm area at the top. 2-3 short callout labels, each connected by ONE thin elegant "
+        "line/dot to the exact product part it names. A small cash-on-delivery trust pill and a clear CTA "
+        "button anchored at the bottom. Everything integrated, premium, un-cluttered."
     ),
     "problem": (
         "ART DIRECTION — PROBLEM / PRZED→PO (transformation, split-screen): a vertical 50/50 split. LEFT "
         "(PRZED): a desaturated, cool, tense documentary photo of a frustrated owner struggling to clip an "
         "anxious dog's nails — WITHOUT the product. RIGHT (PO): a bright, warm photo of the same kind of dog "
-        "happily using the product. A crisp thin divider between halves. A big transformation headline across "
-        "the top. A muted 'PRZED' tag on the left, an accent 'PO' tag on the right. At the bottom: the real "
-        "price block and a short CTA. Strong visual contrast between the two sides."
+        "HAPPILY SCRATCHING the board BY ITSELF — a front paw dragging on the black sandpaper to reach the "
+        "treats in the open drawer, NO human hand feeding it. A crisp thin divider between halves. A big "
+        "transformation headline across the top. A muted 'PRZED' tag on the left, an accent 'PO' tag on the "
+        "right. At the bottom: the real price block and a short CTA. Strong visual contrast between the two sides."
     ),
     "lifestyle": (
         "ART DIRECTION — LIFESTYLE / UGC (organic post): an authentic phone-style photo in warm golden-hour "
-        "light in a real living room — a dog pawing at the product while an owner's hand offers a treat. It "
-        "must look like a real customer's social post, NOT a studio ad: candid framing, slight imperfection, "
-        "no stocky perfection. Minimal graphics: ONE small slightly-rotated hand-written sticker note with a "
-        "curved arrow pointing at the treat drawer, plus a small rounded 'za pobraniem' capsule in a corner "
-        "and the small brand logo. No banner bars, no big pills."
+        "light in a real living room — the dog is CAUGHT MID-SCRATCH, working the board BY ITSELF: a front "
+        "paw dragging on the black sandpaper to reach the treats in the open drawer, its gaze locked on the "
+        "compartment. NO human in the frame, NO hand offering anything. It must look like a real customer's "
+        "candid social post, NOT a studio ad: phone-style framing, slight imperfection, no stocky perfection. "
+        "Minimal graphics: ONE small slightly-rotated hand-written sticker note with a curved arrow pointing "
+        "at the scratching PAW / black surface, PLUS a second tiny hand-written annotation with a short arrow "
+        "pointing at the open treat DRAWER, a small rounded 'za pobraniem' capsule in a corner, and the small "
+        "brand logo. No banner bars, no big pills."
     ),
 }
+# USP-MOMENT (v7.1, twarda zasada Tomka „lifestyle za mało pokazuje USP; pies robi to SAM"): KAŻDY kadr,
+# w którym pies używa produktu (scena DEMO/LIFESTYLE oraz połówka PO w PRZED/PO), MUSI złapać MECHANIZM
+# W AKCJI — inaczej reklama nie sprzedaje USP. Dołączane do briefu każdego kąta w build_fulldesign.
+FD_USP_MOMENT = (
+    "\n\nUSP-MOMENT (MANDATORY — the single most important thing wherever the dog uses the product: the "
+    "DEMO/LIFESTYLE scene, and the PO half of a before/after): capture the mechanism IN ACTION — the dog is "
+    "ENERGETICALLY SCRATCHING the board BY ITSELF, at least one front paw pressed and DRAGGING across the "
+    "BLACK sandpaper surface with claws visibly in contact, weight leaning into the scratch, its gaze locked "
+    "on the pulled-out drawer. The drawer is AJAR with a few treats CLEARLY VISIBLE inside the light-wood "
+    "compartment — this is WHY the dog scratches: it is working to reach the hidden treat. BANNED, never "
+    "depict: a dog merely standing, sitting or sniffing passively; a human hand feeding, holding out or "
+    "offering a treat; a treat pinched in fingers; an empty or closed drawer. A viewer must understand in "
+    "HALF A SECOND that the DOG does this ITSELF — the self-service claw-grinding is the entire product."
+)
 
 
 def _fd_txt(s):
@@ -1957,6 +2007,7 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
         brand_line += "\nTypography vibe: %s (clean bold modern sans, Polish text)." % fonty
     parts.append(brand_line)
     parts.append("\n\n" + FD_ART.get(angle, FD_ART["lifestyle"]))
+    parts.append(FD_USP_MOMENT)                                    # v7.1: mechanizm W AKCJI dla każdego kąta
 
     intended, lines = [], []
 
@@ -1984,7 +2035,10 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
             add("Under price (small)", "za pobraniem")
         add("CTA button (bottom-right)", "ZAMÓW")
     else:  # lifestyle
-        add("Hand-written sticker note (with arrow to product)", hook)
+        add("Hand-written sticker note (arrow to the scratching PAW / black surface)", hook)
+        mini = _fd_txt(ca.get("mini_adnotacja") or "")
+        if mini:
+            add("Tiny second annotation (short arrow to the open treat DRAWER)", mini)
         add("Small capsule (corner)", "za pobraniem")
 
     parts.append(FD_TEXT_RULE + "\n".join(lines))
@@ -2314,6 +2368,9 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
     verdicts = _load_json_file(args.verdicts or os.path.join(out_dir, "VERDICTS.json"))
     if verdicts:
         state["fidelity_verdicts"] = verdicts
+    klik = _load_json_file(args.klik or os.path.join(out_dir, "KLIK.json"))
+    if klik:
+        state["klik_verdicts"] = klik
 
     # przebuduj wszystkie dowody (finały + kandydaci + ciągłość)
     comp = build_all_composites(out_dir, refsd, angles)
@@ -2326,6 +2383,8 @@ def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, log
             print("  • %-10s %s" % (a, comp[a]))
     if "_ciaglosc" in comp:
         print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
+    print("-" * 88)
+    print_click_gate(angles, state.get("klik_verdicts"))
     if state.get("karta"):
         print("KARTA PRODUKTU (%s): %d cech" % (state["karta"].get("produkt", "?"), len(state["karta"].get("cechy", []))))
     if added > 0:
@@ -2517,6 +2576,8 @@ def run(args):
                 print("  • %-10s %s" % (a, comp[a]))
         if "_ciaglosc" in comp:
             print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
+        print("-" * 88)
+        print_click_gate(angles)
         print("Po weryfikacji: --fix ANGLE='opis cechy' / --regen ANGLE / --pick ANGLE=cN, na końcu --finalize.")
         print("out=%s" % out_dir)
         return 0
@@ -2705,6 +2766,7 @@ def build_argparser():
                     help="wybierz kandydata jako finał (np. --pick demo=c1) — powtarzalne / po przecinku")
     ap.add_argument("--karta", default="", help="ścieżka KARTA.json (domyślnie out/KARTA.json)")
     ap.add_argument("--verdicts", default="", help="ścieżka VERDICTS.json (domyślnie out/VERDICTS.json)")
+    ap.add_argument("--klik", default="", help="ścieżka KLIK.json — werdykty bramki powodu kliknięcia (domyślnie out/KLIK.json)")
     return ap
 
 
