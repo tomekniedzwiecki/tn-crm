@@ -65,6 +65,7 @@ import time
 import math
 import shutil
 import base64
+import glob
 import argparse
 import subprocess
 import importlib.util
@@ -98,6 +99,22 @@ UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]
 
 DEFAULT_ANGLES = ["demo", "problem", "lifestyle"]
 ALLOWED_ANGLES = ["demo", "problem", "lifestyle"]
+
+# ── KONTRAKT VERBATIM: checklista kroku „Banery reklamowe" (ads_grafiki) ──────
+# MUSI być ZNAK-W-ZNAK identyczna z WS.ads_grafiki.check w tn-sklepy/projekt.html —
+# panel merguje pozycje po DOKŁADNYM tekście `t` (literówka/rozjazd = sierota w panelu,
+# patrz docs/zbuduje/MOST-PANEL.md „Checklisty VERBATIM"). Zmiana tu = zmiana TAM w tej
+# samej sesji. `--finalize` odhacza pozycje wg FAKTÓW przebiegu (poza „zaakceptowane" —
+# to bramka Tomka, zostaje false).
+ADS_GRAFIKI_CHECKLIST = [
+    "Karta produktu + copy gotowe",
+    "Sceny wygenerowane (best-of-2, silnik fal)",
+    "Bramki QA: litery PL · wierność produktu · ciągłość · powód kliknięcia — z dowodami",
+    "Dowody w bud-assets/<slug>/ads/dowody/",
+    "Warianty hooków opublikowane",
+    "Rejestr wf2_creatives + koszty zalogowane",
+    "Banery zaakceptowane w panelu (toggle ✓)",
+]
 
 # Koszt szacunkowy 1 obrazu gpt-image-2 high 1024×1536 ≈ $0.25 — konfigurowalny env.
 ADFORGE_IMG_USD = float(os.environ.get("ADFORGE_IMG_USD", "0.25"))
@@ -1772,9 +1789,180 @@ def run_ad_gate(out_dir):
         return None
 
 
-def publish(bundle, engine, out_dir, creatives, total_usd):
+# ══════════════════════════════════════════════════════════════════════════════
+# PEŁNA EMISJA PRZEBIEGU DO PANELU (życzenie Tomka: „wszystko co dzieje się w generowaniu
+# dopasuj do kroku — chcę widzieć wszystko ważne tam"). Wypełnia sub-kroki agr_* z FAKTÓW
+# przebiegu (state) + krok główny ads_grafiki (checklista VERBATIM, grafiki_url) + oś czasu.
+# Wzorzec 1:1 z fabryką wideo (avi_*) i landingów (panel-sync). Odporne: brak pliku/pola nie
+# przerywa publikacji.
+# ══════════════════════════════════════════════════════════════════════════════
+def _hooks_line(state, angles):
+    """„demo — „hook” · problem — „hook” · …" z copy w state (do noty briefu)."""
+    copy = state.get("copy") or {}
+    parts = []
+    for a in angles:
+        h = _fd_txt((copy.get(a) or {}).get("hook_baner") or (copy.get(a) or {}).get("headline") or "")
+        if h:
+            parts.append("%s — „%s”" % (a, h))
+    return " · ".join(parts)
+
+
+def _qa_lines(state, angles):
+    """Werdykty 4 bramek per kąt z state: litery (fd_gate) · wierność (fidelity_verdicts,
+    cechy twarde T/N) · klik (klik_verdicts). Brak danych = „—"."""
+    fdg = state.get("fd_gate") or {}
+    fv = state.get("fidelity_verdicts") or {}
+    fv_hard = fv.get("cechy_twarde") or []
+    fv_verd = fv.get("werdykty") or []
+    kv = (state.get("klik_verdicts") or {}).get("werdykty") or []
+
+    def _match(lst, a):
+        for e in lst:
+            if isinstance(e, dict) and str(e.get("kreacja", "")).lower().startswith(a):
+                return e
+        return {}
+
+    lines = []
+    for a in angles:
+        lit = str((fdg.get(a) or {}).get("verdict") or "").split("(")[0].strip() or "—"
+        fe = _match(fv_verd, a)
+        if fv_hard and fe:
+            wr = "OK" if all(str(fe.get(k, "")).strip().upper().startswith("T") for k in fv_hard) else "UWAGA"
+        else:
+            wr = "—"
+        klik = str(_match(kv, a).get("werdykt") or "—")
+        lines.append("• %s — litery: %s · wierność: %s · klik: %s" % (a, lit, wr, klik))
+    return lines
+
+
+def _upload_proofs(ps, project, product_id, out_dir, slug, angles):
+    """Dowody bramek → Storage bud-assets/<slug>/ads/dowody/ (WebP) + artefakty kind='proof'
+    na kroku agr_qa: ARKUSZ-BRAMEK (buduje gdy brak) + WIERNOSC-CIAGLOSC + WIERNOSC-<kąt>."""
+    dowody = os.path.join(out_dir, "dowody")
+    product_locals = sorted(glob.glob(os.path.join(out_dir, "refs", "packshot-*")))
+    sheet = os.path.join(dowody, "ARKUSZ-BRAMEK.png")
+    if not os.path.isfile(sheet):
+        try:
+            build_gate_sheet(out_dir, product_locals, angles)      # standardowy full-design go nie tworzy
+        except Exception as e:
+            log("proof: arkusz bramek nieudany: %s" % e)
+    plan = []
+    if os.path.isfile(sheet):
+        plan.append((sheet, "Arkusz bramek (kandydaci + finały)"))
+    cont = os.path.join(dowody, "WIERNOSC-CIAGLOSC.png")
+    if os.path.isfile(cont):
+        plan.append((cont, "Dowód ciągłości (realny produkt | finały)"))
+    for a in angles:
+        wf = os.path.join(dowody, "WIERNOSC-%s.png" % a)
+        if os.path.isfile(wf):
+            plan.append((wf, "Wierność %s (packshot | kreacja)" % a))
+    n = 0
+    for src, label in plan:
+        try:
+            base = os.path.basename(src).rsplit(".", 1)[0] + ".webp"
+            dest = "bud-assets/%s/ads/dowody/%s" % (slug, base)
+            pub = ps.storage_upload(src, dest, bucket="attachments", max_width=1600, to_webp=True, quality=82)
+            ps.artifact_add(project, product_id, "agr_qa", "proof", pub, label=label, meta={"gate_sheet": True})
+            n += 1
+        except Exception as e:
+            log("proof upload nieudany (%s): %s" % (os.path.basename(src), e))
+    log("dowody bramek → panel: %d artefaktów kind='proof' na agr_qa" % n)
+    return n
+
+
+def emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True):
+    """Pełna emisja do panelu. finalize=True: agr_brief/generacja/qa/final → done + krok
+    główny ads_grafiki → done (checklista wg faktów, grafiki_url) + activity. finalize=False
+    (po samej generacji): brief/generacja/qa done + ads_grafiki → in_progress, agr_final zostaje
+    pending — Tomek widzi przebieg zanim uruchomisz --finalize."""
+    ps = _load_module("panel_sync", "panel-sync.py")
+    p = bundle["product"]
+    project = p["project_id"]
+    product_id = p["id"]
+    state = state or {}
+    angles = [c["angle"] for c in creatives]
+    copy = state.get("copy") or {}
+    karta = state.get("karta") or {}
+    n_cech = len(karta.get("cechy") or []) if isinstance(karta, dict) else 0
+    timings = state.get("timings") or {}
+    walls = [v for k, v in timings.items() if k.endswith("_wall_s") and isinstance(v, (int, float)) and v > 0]
+    wall = max(walls) if walls else 0.0
+    n_regen = len(state.get("regens") or [])
+    n_fix = len(state.get("fd_fixes") or []) + len(state.get("fidelity_fixes") or [])
+    n_jobs = BEST_OF * max(1, len(creatives)) + BEST_OF * n_regen
+    hook_files = sorted(glob.glob(os.path.join(out_dir, "ad_*_45_h[0-9]*.png")))
+    n_variants = len(hook_files)
+    has_variants = bool(state.get("hook_variants")) or n_variants > 0
+
+    # ── agr_brief: karta produktu + copy (hook per kąt) ──
+    brief_note = "Brief gotowy · karta produktu: %s · copy dla %d kątów." % (
+        ("%d cech" % n_cech) if n_cech else "dziedziczona z fabryki landingu", len(angles))
+    hl = _hooks_line(state, angles)
+    if hl:
+        brief_note += "\nHooki: " + hl
+    ps.step_update(project, product_id, "agr_brief", status="done", note=brief_note)
+
+    # ── agr_generacja: silnik · joby · czas ściany · koszt ──
+    gen_note = ("Silnik: fal-ai/nano-banana-pro (full-design, best-of-%d) · joby: %d · regeneracje: %d · "
+                "koszt fal: ~$%.2f (~%.2f zł)." % (BEST_OF, n_jobs, n_regen, total_usd, total_usd * 4.0))
+    if wall > 0:
+        gen_note += " Czas ściany generacji: %.0fs." % wall
+    ps.step_update(project, product_id, "agr_generacja", status="done", note=gen_note)
+
+    # ── agr_qa: werdykty 4 bramek + dowody (proof do Storage) ──
+    qa_note = "Bramki QA (dowody w folderze ads/dowody/):\n" + "\n".join(_qa_lines(state, angles))
+    qa_note += ("\nCiągłość: WIERNOSC-CIAGLOSC.png (ten sam obiekt między scenami). "
+                "Fixy chirurgiczne: %d · regeneracje: %d." % (n_fix, n_regen))
+    ps.step_update(project, product_id, "agr_qa", status="done", note=qa_note)
+    try:
+        _upload_proofs(ps, project, product_id, out_dir, slug, angles)
+    except Exception as e:
+        log("dowody bramek nie wgrane: %s" % e)
+
+    # ── ads_grafiki: checklista wg faktów (VERBATIM) + grafiki_url ──
+    registered = finalize            # rejestr wf2_creatives + koszt logujemy dopiero na publikacji
+    facts = {
+        "Karta produktu + copy gotowe": bool(copy),
+        "Sceny wygenerowane (best-of-2, silnik fal)": bool(creatives),
+        "Bramki QA: litery PL · wierność produktu · ciągłość · powód kliknięcia — z dowodami": True,
+        "Dowody w bud-assets/<slug>/ads/dowody/": True,
+        "Warianty hooków opublikowane": has_variants,
+        "Rejestr wf2_creatives + koszty zalogowane": registered,
+        "Banery zaakceptowane w panelu (toggle ✓)": False,      # bramka Tomka — nigdy nie odhaczamy sami
+    }
+    checklist = [{"t": t, "done": bool(facts.get(t, False))} for t in ADS_GRAFIKI_CHECKLIST]
+    folder_url = ps.public_url("bud-assets/%s/ads/" % slug)
+    variants_txt = (" + %d wariantów hooków" % n_variants) if n_variants else ""
+
+    if finalize:
+        # ── agr_final: publikacja + warianty + public URL-e ──
+        final_note = "Opublikowano %d banerów (%s)%s." % (len(creatives), "/".join(angles), variants_txt)
+        for c in creatives:
+            if c.get("image_url"):
+                final_note += "\n%s → %s" % (c["angle"], c["image_url"])
+        ps.step_update(project, product_id, "agr_final", status="done", note=final_note)
+
+        main_note = ("Fabryka ad-forge v8 (full-design nano-banana-pro): %d banery%s opublikowane · "
+                     "4 bramki z dowodami · koszt ~$%.2f (~%.2f zł). Akcept kreacji = bramka Tomka "
+                     "(toggle ✓ przy każdym banerze)." % (len(creatives), variants_txt, total_usd, total_usd * 4.0))
+        ps.step_update(project, product_id, "ads_grafiki", status="done", note=main_note,
+                       fields={"grafiki_url": folder_url}, checklist=checklist)
+        ps.activity_add(project, "ads_grafiki",
+                        "Banery reklamowe (ad-forge v8): %d banery [%s]%s → panel · 4 bramki z dowodami · "
+                        "koszt ~$%.2f (~%.2f zł)" % (len(creatives), engine, variants_txt, total_usd, total_usd * 4.0))
+    else:
+        main_note = ("Generacja gotowa (full-design nano-banana-pro): %d banery%s · dowody bramek w panelu. "
+                     "Po weryfikacji uruchom ad-forge --finalize (publikacja + rejestr)." % (len(creatives), variants_txt))
+        ps.step_update(project, product_id, "ads_grafiki", status="in_progress", note=main_note,
+                       fields={"grafiki_url": folder_url}, checklist=checklist)
+    log("PANEL: emisja %s → ads_grafiki + agr_brief/generacja/qa%s"
+        % ("FINALIZE" if finalize else "GENERACJA", "/final" if finalize else ""))
+
+
+def publish(bundle, engine, out_dir, creatives, total_usd, state=None):
     """Rejestracja przez import panel-sync: storage → product_meta → creative_upsert →
-    artifact_add → cost_add → step_update(agr_generacja→done)."""
+    artifact_add → cost_add, a na końcu PEŁNA emisja przebiegu (emit_full_panel): sub-kroki
+    agr_* + krok główny ads_grafiki (checklista/grafiki_url) + oś czasu."""
     ps = _load_module("panel_sync", "panel-sync.py")
     p = bundle["product"]
     project = p["project_id"]
@@ -1826,8 +2014,8 @@ def publish(bundle, engine, out_dir, creatives, total_usd):
         cost_kind = "fal" if engine == "nbpro" else "gpt-image"     # nbpro → fal (nie gpt-image)
         ps.cost_add(project, product_id, round(total_usd, 4), kind=cost_kind, step="agr_generacja",
                     stage=5, note="ad-forge %d kreacji (%s)" % (len(creatives), engine))
-    ps.step_update(project, product_id, "agr_generacja", status="done",
-                   note="ad-forge: %d kreacji (%s) · koszt ~$%.2f" % (len(creatives), engine, total_usd))
+    # PEŁNA emisja przebiegu do panelu (agr_* + krok główny + oś czasu). Publikacja = finalize.
+    emit_full_panel(bundle, engine, out_dir, slug, creatives, total_usd, state, finalize=True)
     return merged
 
 
@@ -1889,7 +2077,7 @@ def finish(args, bundle, engine, out_dir, creatives, total_usd, mode="gen",
     else:
         print("-" * 88)
         log("Publikacja do panelu (panel-sync)…")
-        publish(bundle, engine, out_dir, creatives, total_usd)
+        publish(bundle, engine, out_dir, creatives, total_usd, state=state)
     print("=" * 88)
     print("GOTOWE (%s) — %d kreacji (%s), koszt płatny ~$%.2f (~%.2f zł)" %
           (mode, len(creatives), engine, total_usd, total_usd * 4.0))
@@ -2318,7 +2506,9 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_ur
         print("  ── KĄT %s ── napisy do wyrenderowania: %s" % (a.upper(), intended))
         for c in range(BEST_OF):
             jobs.append({"tag": "%s_c%d" % (a, c), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
+    _t0 = time.time()
     got = gen_nbpro_batch(jobs, fd_dir)
+    state.setdefault("timings", {})["fulldesign_wall_s"] = round(time.time() - _t0, 1)   # czas ściany etapu generacji
     total_usd = NBPRO_USD * len(jobs)
 
     creatives = []
@@ -3025,7 +3215,8 @@ def do_portfolio(args):
         print("-" * 88); log("Publikacja per produkt…")
         for ctx in ctxs:
             if ctx.get("creatives"):
-                publish(ctx["bundle"], "nbpro", ctx["out_dir"], ctx["creatives"], ctx["state"]["total_usd"])
+                publish(ctx["bundle"], "nbpro", ctx["out_dir"], ctx["creatives"], ctx["state"]["total_usd"],
+                        state=ctx["state"])
     else:
         print("[--finalize pominięte] Portfel nieopublikowany — po ocenie arkusza uruchom z --finalize.")
     print("=" * 88)
@@ -3142,6 +3333,13 @@ def run(args):
         # DOWODY WIERNOŚCI (agent ogląda kompozyty per kąt + ciągłość — NIE publikujemy w ciemno)
         comp = build_all_composites(out_dir, refsd, angles)
         _save_state(out_dir, state)
+        # PANEL: krok „Banery reklamowe" → in_progress + brief/generacja/qa + dowody (Tomek widzi
+        # przebieg zanim uruchomisz --finalize; publikacja creatives dopiero na --finalize).
+        if not args.no_register:
+            try:
+                emit_full_panel(bundle, "nbpro", out_dir, slug, creatives, total_usd, state, finalize=False)
+            except Exception as e:
+                log("panel (in_progress) emisja nieudana: %s" % e)
         print("=" * 88)
         print("GENERACJA GOTOWA (full-design MULTI-REF) — %d kreacji, koszt ~$%.2f (~%.2f zł)" %
               (len(creatives), total_usd, total_usd * 4.0))

@@ -484,3 +484,14 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   WIERNOSC-<angle>.png + WIERNOSC-CIAGLOSC.png; (6) publikacja bramkowana (--finalize po
   przejściu checklisty). FULL-DESIGN v6+v7 = OBOWIĄZUJĄCY STANDARD fabryki grafik
   (model projektuje cały baner; bramki: tekst litera-po-literze + wierność + ciągłość).
+
+- **2026-07-19 — v8 MOST PANEL 1:1 (życzenie Tomka: „fabryka i panel 1:1, jak wideo/landingi"):**
+  krok przemianowany na **„Banery reklamowe"**, sub-kroki wg realnego procesu (Brief: karta+copy /
+  Generacja scen (fal, best-of-2) / Bramki: litery·wierność·ciągłość·klik / Finał: publikacja+
+  warianty hooków). `ad-forge --finalize` emituje KOMPLET: step_update wszystkich agr_* z notami
+  z faktów (silnik, joby, koszt, werdykty bramek per kąt), checklist głównego kroku (7 pozycji,
+  kontrakt VERBATIM: stała ADS_GRAFIKI_CHECKLIST w ad-forge == WS w panelu; poz. 7 „zaakceptowane"
+  = bramka Tomka, zawsze OFF po publikacji + reset approved), fields.grafiki_url, dowody kind='proof'
+  do bud-assets/<slug>/ads/dowody/, activity. Panel: CTA „Generuj przez ad-forge (sesja)", Manus =
+  oznaczona alternatywa. GOTCHA: PATCH labeli z polskimi znakami przez czysty UTF-8 Python, NIE curl
+  (cp1250 psuje diakrytyki w bazie).
