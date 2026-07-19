@@ -458,7 +458,12 @@ reguły [D-art] [pkt 4].)*
    — a kod dokłada dopasowany scrim-gradient nad sceną w strefie treści (Tomek 16.07: bez tego
    makieta wygląda dobrze, finał gorzej).**
    **Gate: side-by-side wygenerowanego tła z makietą — inne pomieszczenie/kadr/światło/skala
-   produktu = odrzut i ponowna generacja.**
+   produktu = odrzut i ponowna generacja. + CHECK „CZYSTA STREFA NEGATYWNA" (masażer 19.07 —
+   systematyczny artefakt edits, 4/7 scen full-bleed): model potrafi przenieść FRAGMENT UI
+   makiety jako obiekt sceny (odczepiony „panel-widmo" produktu z cieniem w strefie copy;
+   resztkowe leader-lines po cropach). Skanuj strefę negatywną każdej sceny; defekt = paint-over
+   PIL płaskim kolorem tła (deterministyczne, $0) albo regen. „Przykryje to treść HTML" NIE
+   jest odpowiedzią — fade-brzegi bywają widoczne.**
 2. **HERO: TRZY warianty (mobile 2:3 · tablet ~1:1 · desktop 3:2, `<picture>`) = REFRAME
    TEJ SAMEJ SCENY** (za każdym razem hero-makieta jako referencja + „extend/reframe the
    same scene to N:M"). Mobile: `object-position` uniesiony (produkt nie może zniknąć za
