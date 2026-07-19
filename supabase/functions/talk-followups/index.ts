@@ -51,6 +51,16 @@ const MAX_START_AGE_H = 30 * 24      // nie zaczynaj serii, gdy kotwica starsza 
 const CHANNEL_GAP_MS = 10 * 3600 * 1000
 const MAX_PER_RUN = 6
 const DAILY_CAP = 60                 // twardy sufit wysyłek/dobę (higiena reputacji domeny)
+
+// ── SERIA B: lead z WYSTAWIONĄ ofertą (talk_sessions.offer_token, bez wpłaty) ─
+// Oś liczona od PIERWSZEJ oferty leada (regeneracja po wygaśnięciu NIE restartuje
+// serii — talk_sessions.offer_token wskazuje tylko najnowszy token, stare rekordy
+// client_offers zostają). Ważność oferty (valid_until) = PRAWDZIWY deadline.
+// Kindy zaczynają się od 'talk_followup' → chip/filtr w lead.html działa bez zmian.
+const OFFER_URL_BASE = 'https://crm.tomekniedzwiecki.pl/p/'
+const OFFER_KINDS = ['talk_followup_oferta_1', 'talk_followup_oferta_2', 'talk_followup_oferta_3', 'talk_followup_oferta_4', 'talk_followup_oferta_5']
+const THRESH_OFFER_H = [4, 24, 76, 144, 240]   // +4h, D+1, D+3, D+6 (przedostatni dzień ważności), D+10 (po wygaśnięciu)
+const MIN_SPACING_OFFER_H = [0, 20, 48, 68, 96]
 const DEADLINE_MS = 300_000          // soft-deadline (edge wall-clock 400 s)
 const HISTORY_CAP = 30               // wypowiedzi rozmowy podawanych modelowi
 const OPENAI_MODEL = Deno.env.get('TALK_FOLLOWUP_MODEL') || 'gpt-5.6'
@@ -86,13 +96,19 @@ function stripMarkers(s: string): string {
 }
 
 // Body (zwykły tekst od GPT) → minimalny HTML „jak pisany w skrzynce".
-// Jedyny dopuszczalny link = token [tekst](LINK_ROZMOWA); inne linki wycinane
-// (model NIE może wstawiać własnych URL-i). Stopka dokleja się w send-email.
-function mdToHtml(body: string, talkUrl: string): string {
+// Dopuszczalne linki = tokeny [tekst](LINK_ROZMOWA) / [tekst](LINK_OFERTA);
+// inne linki wycinane (model NIE może wstawiać własnych URL-i). Gdy w treści nie
+// ma żadnego linku — dokładany fallback z linkiem głównym serii. Stopka w send-email.
+function mdToHtml(body: string, talkUrl: string, offerUrl?: string | null): string {
   let t = escHtml(body || '')
   t = t.replace(/\[([^\]]+)\]\(LINK_ROZMOWA\)/g, (_m, l) => `<a href="${talkUrl}" style="color:#2563eb;">${l}</a>`)
+  if (offerUrl) t = t.replace(/\[([^\]]+)\]\(LINK_OFERTA\)/g, (_m, l) => `<a href="${offerUrl}" style="color:#2563eb;">${l}</a>`)
   t = t.replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-  if (t.indexOf(talkUrl) < 0) t += `\n\nWrócisz do rozmowy tutaj: <a href="${talkUrl}" style="color:#2563eb;">${talkUrl}</a>`
+  if (t.indexOf(talkUrl) < 0 && (!offerUrl || t.indexOf(offerUrl) < 0)) {
+    const mainUrl = offerUrl || talkUrl
+    const label = offerUrl ? 'Twoja oferta jest tutaj' : 'Wrócisz do rozmowy tutaj'
+    t += `\n\n${label}: <a href="${mainUrl}" style="color:#2563eb;">${mainUrl}</a>`
+  }
   const paras = t.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
   const inner = paras.map((p) => `<p style="margin:0 0 14px;">${p.replace(/\n/g, '<br>')}</p>`).join('')
   return `<div style="font-family:-apple-system,Segoe UI,Roboto,Arial,sans-serif;font-size:15px;line-height:1.6;color:#1a1a1a;">${inner}</div>`
@@ -172,10 +188,32 @@ async function openaiFetch(body: Record<string, unknown>): Promise<any> {
   throw lastErr || new Error('OpenAI: nieznany błąd')
 }
 
-// ── Generacja treści maila (JIT, zero szablonów) ─────────────────────────────
+// Stan oferty dla generatora — JEDYNE źródło liczb o ofercie w mailu.
 // deno-lint-ignore no-explicit-any
-async function generateMail(supabase: any, prompts: Record<string, string>, lead: any, sess: any, kindIdx: number): Promise<{ subject: string; body: string }> {
-  const system = `${prompts.rozmowa_followup_system}\n\n=== CEL TEGO MAILA (krok ${kindIdx + 1}/5) ===\n${prompts['rozmowa_followup_krok' + (kindIdx + 1)]}`
+function offerStateBlock(offer: any): string {
+  const today = new Date().toISOString().slice(0, 10)
+  const createdMs = Date.parse(offer.created_at || '') || Date.now()
+  const ageDays = Math.max(0, Math.round((Date.now() - createdMs) / 86_400_000))
+  const expired = String(offer.valid_until) < today
+  const leftDays = Math.max(0, Math.round((Date.parse(String(offer.valid_until) + 'T23:59:59Z') - Date.now()) / 86_400_000))
+  const opened = (offer.view_count || 0) > 0
+  return [
+    `Oferta (spisana, na piśmie) wystawiona ${ageDays === 0 ? 'dzisiaj' : ageDays + ' dni temu'}.`,
+    expired
+      ? `Oferta WYGASŁA (${offer.valid_until}). Po powrocie do rozmowy lead dostanie ŚWIEŻĄ ofertę.`
+      : `Ważna do ${offer.valid_until} — zostało ${leftDays === 0 ? 'MNIEJ NIŻ DZIEŃ (ostatni dzień!)' : leftDays + ' dni'}.`,
+    opened ? `Lead OTWORZYŁ ofertę (${offer.view_count}×), ale nie zarezerwował.` : 'Lead JESZCZE NIE otworzył oferty.',
+    'Liczby o ofercie (dni ważności, daty) bierz WYŁĄCZNIE z tego bloku.',
+  ].join('\n')
+}
+
+// ── Generacja treści maila (JIT, zero szablonów) ─────────────────────────────
+// offer != null → seria B (po wystawieniu oferty): cele z rozmowa_followup_oferta_krokN,
+// link główny = LINK_OFERTA (krok 5 po wygaśnięciu → LINK_ROZMOWA).
+// deno-lint-ignore no-explicit-any
+async function generateMail(supabase: any, prompts: Record<string, string>, lead: any, sess: any, kindIdx: number, offer?: any): Promise<{ subject: string; body: string }> {
+  const krokKey = offer ? 'rozmowa_followup_oferta_krok' + (kindIdx + 1) : 'rozmowa_followup_krok' + (kindIdx + 1)
+  const system = `${prompts.rozmowa_followup_system}\n\n=== CEL TEGO MAILA (krok ${kindIdx + 1}/5 serii ${offer ? 'PO WYSTAWIENIU OFERTY' : 'przed ofertą'}) ===\n${prompts[krokKey]}`
 
   // transkrypt rozmowy (jeśli była) + wiek kotwicy (model dopasowuje naturalność po czasie)
   let talkBlock = 'Lead NIE rozpoczął jeszcze rozmowy z AI Tomka — jedyny kontekst to ankieta. CTA maila = zacznij rozmowę (dostanie w niej konkretny plan i wycenę, bez zobowiązań).'
@@ -213,13 +251,21 @@ async function generateMail(supabase: any, prompts: Record<string, string>, lead
 
   const ageH = anchorMs ? Math.round((Date.now() - anchorMs) / 3_600_000) : 0
   const ageStr = !anchorMs ? 'nieznany' : ageH < 48 ? `${ageH} godz.` : `${Math.round(ageH / 24)} dni`
+  const today = new Date().toISOString().slice(0, 10)
+  const offerExpired = offer ? String(offer.valid_until) < today : false
+  const linkLine = !offer
+    ? `LINK: dokładnie JEDEN link w treści, wyłącznie tokenem [tekst kotwicy](LINK_ROZMOWA) — prowadzi z powrotem do TEJ SAMEJ rozmowy (zapisany stan, lead wraca w to samo miejsce). Nie wypisuj żadnych innych URL-i.`
+    : offerExpired
+      ? `LINK: dokładnie JEDEN link w treści, wyłącznie tokenem [tekst kotwicy](LINK_ROZMOWA) — oferta wygasła, więc link prowadzi do rozmowy (po powrocie lead dostanie świeżą ofertę). Nie wypisuj żadnych innych URL-i.`
+      : `LINK: dokładnie JEDEN link w treści, wyłącznie tokenem [tekst kotwicy](LINK_OFERTA) — prowadzi do spisanej oferty leada (szczegóły współpracy + rezerwacja). Nie wypisuj żadnych innych URL-i.`
   const user = [
     `DANE LEADA Z ANKIETY /zapisy:\n${leadContext(lead)}`,
     `CZAS OD OSTATNIEJ AKTYWNOŚCI LEADA (rozmowa/rejestracja): ${ageStr} temu — dopasuj do tego naturalność (świeże = nawiąż wprost; po tygodniach NIE udawaj, że zgłoszenie „właśnie dotarło" — nawiąż uczciwie po czasie).`,
     `STAN ROZMOWY Z AI:\n${talkBlock}`,
-    `WCZEŚNIEJSZE MAILE TEJ SERII (NIE powtarzaj ich treści, argumentów ani tematów):\n${prevBlock}`,
-    `LINK: dokładnie JEDEN link w treści, wyłącznie tokenem [tekst kotwicy](LINK_ROZMOWA) — prowadzi z powrotem do TEJ SAMEJ rozmowy (zapisany stan, lead wraca w to samo miejsce). Nie wypisuj żadnych innych URL-i.`,
-  ].join('\n\n')
+    offer ? `STAN OFERTY:\n${offerStateBlock(offer)}` : null,
+    `WCZEŚNIEJSZE MAILE DO TEGO LEADA (obie serie — NIE powtarzaj ich treści, argumentów, otwarć ani tematów):\n${prevBlock}`,
+    linkLine,
+  ].filter(Boolean).join('\n\n')
 
   const j = await openaiFetch({
     model: OPENAI_MODEL,
@@ -252,7 +298,10 @@ async function withSignature(SUPABASE_URL: string, SERVICE_KEY: string, subject:
 
 const LEAD_COLS = 'id, name, email, phone, direction, current_income, budget, weekly_hours, experience, open_question, created_at, followups_muted_at'
 const SESS_COLS = 'id, lead_id, offer_token, last_seen_at, last_phase, tags, turns, is_test, created_at'
-const PROMPT_KEYS = ['rozmowa_followup_system', 'rozmowa_followup_krok1', 'rozmowa_followup_krok2', 'rozmowa_followup_krok3', 'rozmowa_followup_krok4', 'rozmowa_followup_krok5']
+const OFFER_COLS = 'id, lead_id, unique_token, valid_until, view_count, viewed_at, created_at'
+const PROMPT_KEYS_A = ['rozmowa_followup_system', 'rozmowa_followup_krok1', 'rozmowa_followup_krok2', 'rozmowa_followup_krok3', 'rozmowa_followup_krok4', 'rozmowa_followup_krok5']
+const PROMPT_KEYS_B = ['rozmowa_followup_system', 'rozmowa_followup_oferta_krok1', 'rozmowa_followup_oferta_krok2', 'rozmowa_followup_oferta_krok3', 'rozmowa_followup_oferta_krok4', 'rozmowa_followup_oferta_krok5']
+const PROMPT_KEYS = [...new Set([...PROMPT_KEYS_A, ...PROMPT_KEYS_B])]
 
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: CORS })
@@ -280,11 +329,13 @@ Deno.serve(async (req: Request) => {
 
     // settings: flaga + prompty (bez cache — cron i tak chodzi co 30 min)
     const { data: settingsRows } = await supabase.from('settings')
-      .select('key, value').in('key', ['talk_followups_enabled', ...PROMPT_KEYS])
+      .select('key, value').in('key', ['talk_followups_enabled', 'talk_offer_followups_enabled', ...PROMPT_KEYS])
     const settings: Record<string, string> = {}
     for (const r of (settingsRows || []) as { key: string; value: string }[]) settings[r.key] = r.value
     const ENABLED = settings.talk_followups_enabled === 'true'
-    const promptsReady = PROMPT_KEYS.every((k) => (settings[k] || '').trim().length > 40)
+    const ENABLED_OFFER = settings.talk_offer_followups_enabled === 'true'
+    const promptsReady = PROMPT_KEYS_A.every((k) => (settings[k] || '').trim().length > 40)
+    const promptsReadyOffer = PROMPT_KEYS_B.every((k) => (settings[k] || '').trim().length > 40)
 
     // ── Akcje admina ─────────────────────────────────────────────────────────
     if (isAdmin && (body.action === 'preview' || body.action === 'send_test' || body.action === 'status')) {
@@ -296,18 +347,38 @@ Deno.serve(async (req: Request) => {
         .select('kind, status, subject, sent_at, created_at').eq('lead_id', body.lead_id).order('created_at')
 
       if (body.action === 'status') {
-        return jsonResponse({ ok: true, enabled: ENABLED, session_id: sess?.id || null, offer_token: !!sess?.offer_token, rows: rows || [] }, 200)
+        return jsonResponse({ ok: true, enabled: ENABLED, enabled_offer: ENABLED_OFFER, session_id: sess?.id || null, offer_token: !!sess?.offer_token, rows: rows || [] }, 200)
       }
-      if (!promptsReady) return jsonResponse({ error: 'prompty_niekompletne', missing: PROMPT_KEYS.filter((k) => !(settings[k] || '').trim()) }, 500)
-      const sentCnt = (rows || []).filter((r: { status: string }) => r.status === 'sent').length
-      const kindIdx = body.kind && KINDS.includes(body.kind) ? KINDS.indexOf(body.kind) : Math.min(sentCnt, KINDS.length - 1)
-      const { subject, body: mailBody } = await generateMail(supabase, settings, lead, sess || null, kindIdx)
+      // seria B (oferta) gdy jawnie podany kind ofertowy ALBO sesja ma offer_token
+      const isOfferSeries = body.kind ? OFFER_KINDS.includes(body.kind) : !!sess?.offer_token
+      const SERIES = isOfferSeries ? OFFER_KINDS : KINDS
+      if (!(isOfferSeries ? promptsReadyOffer : promptsReady)) {
+        return jsonResponse({ error: 'prompty_niekompletne', missing: (isOfferSeries ? PROMPT_KEYS_B : PROMPT_KEYS_A).filter((k) => !(settings[k] || '').trim()) }, 500)
+      }
+      let offer: Record<string, unknown> | null = null
+      if (isOfferSeries) {
+        if (sess?.offer_token) {
+          const { data: o } = await supabase.from('client_offers').select(OFFER_COLS).eq('unique_token', sess.offer_token).maybeSingle()
+          offer = o || null
+        }
+        if (!offer) {
+          const { data: o } = await supabase.from('client_offers').select(OFFER_COLS)
+            .eq('lead_id', body.lead_id).eq('source', 'rozmowa').order('created_at', { ascending: false }).limit(1).maybeSingle()
+          offer = o || null
+        }
+        if (!offer) return jsonResponse({ error: 'brak_oferty_dla_leada' }, 404)
+      }
+      const sentCnt = (rows || []).filter((r: { status: string; kind: string }) => r.status === 'sent' && SERIES.includes(r.kind)).length
+      const kindIdx = body.kind && SERIES.includes(body.kind) ? SERIES.indexOf(body.kind) : Math.min(sentCnt, SERIES.length - 1)
+      const { subject, body: mailBody } = await generateMail(supabase, settings, lead, sess || null, kindIdx, offer)
       const talkUrl = `${TALK_URL_BASE}${lead.id}`
-      const html = mdToHtml(mailBody, talkUrl)
+      const today = new Date().toISOString().slice(0, 10)
+      const offerUrl = offer && String(offer.valid_until) >= today ? `${OFFER_URL_BASE}${offer.unique_token}` : null
+      const html = mdToHtml(mailBody, talkUrl, offerUrl)
 
       if (body.action === 'preview') {
         const full = await withSignature(SUPABASE_URL, SERVICE_KEY, subject, html)
-        return jsonResponse({ ok: true, kind: KINDS[kindIdx], subject, body: mailBody, html: full }, 200)
+        return jsonResponse({ ok: true, kind: SERIES[kindIdx], subject, body: mailBody, html: full }, 200)
       }
       // send_test → na wskazany adres, BEZ lead_id (nie zaśmieca historii leada)
       const to = cleanStr(body.to, 120)
@@ -317,15 +388,15 @@ Deno.serve(async (req: Request) => {
         body: JSON.stringify({ to, subject, html, email_type: 'talk_followup_test' }),
       })
       if (!res.ok) return jsonResponse({ error: `send-email ${res.status}: ${await res.text()}` }, 502)
-      return jsonResponse({ ok: true, kind: KINDS[kindIdx], subject, to }, 200)
+      return jsonResponse({ ok: true, kind: SERIES[kindIdx], subject, to }, 200)
     }
 
     // ── Przebieg crona ───────────────────────────────────────────────────────
     const now = Date.now()
     const hour = warsawHour()
-    const out: Record<string, number> = { sent: 0, skipped_flag_off: 0, cancelled: 0, errors: 0, candidates: 0 }
+    const out: Record<string, number> = { sent: 0, sent_oferta: 0, skipped_flag_off: 0, skipped_offer_off: 0, cancelled: 0, errors: 0, candidates: 0, candidates_oferta: 0 }
     if (hour < 8 || hour >= 21) return jsonResponse({ ok: true, window: 'closed', hour }, 200)
-    if (!promptsReady) return jsonResponse({ ok: false, error: 'prompty_niekompletne — uzupełnij w crm/settings' }, 200)
+    if (!promptsReady && !promptsReadyOffer) return jsonResponse({ ok: false, error: 'prompty_niekompletne — uzupełnij w crm/settings' }, 200)
 
     // Kandydaci: realne sesje talk + leady website (30 dni) z emailem.
     const { data: sessAll } = await supabase.from('talk_sessions').select(SESS_COLS).eq('is_test', false).limit(2000)
@@ -405,6 +476,26 @@ Deno.serve(async (req: Request) => {
         .select('lead_id').eq('status', 'paid').in('lead_id', leadIds).limit(2000)
       for (const o of (po || []) as { lead_id: string }[]) if (o.lead_id) paidLeads.add(o.lead_id)
     }
+    // Oferty z rozmowy dla leadów z offer_token (seria B). Kotwica osi = PIERWSZA
+    // oferta leada (regeneracja po wygaśnięciu nie restartuje serii).
+    // deno-lint-ignore no-explicit-any
+    const offersByLead = new Map<string, { firstMs: number; rows: any[] }>()
+    {
+      const withOffer = [...sessByLead.values()].filter((s) => s.offer_token)
+        .map((s) => String(s.lead_id)).filter((id) => leadById.has(id))
+      if (withOffer.length) {
+        const { data: offs } = await supabase.from('client_offers').select(OFFER_COLS)
+          .eq('source', 'rozmowa').in('lead_id', withOffer).limit(2000)
+        for (const o of (offs || [])) {
+          const lid = String(o.lead_id)
+          const e = offersByLead.get(lid) || { firstMs: Infinity, rows: [] }
+          e.rows.push(o)
+          const ts = Date.parse(o.created_at || '') || 0
+          if (ts && ts < e.firstMs) e.firstMs = ts
+          offersByLead.set(lid, e)
+        }
+      }
+    }
 
     async function cancelPending(leadId: string) {
       const { count } = await supabase.from('talk_followups')
@@ -438,9 +529,63 @@ Deno.serve(async (req: Request) => {
       const id = String(lead.id)
       if (lead.followups_muted_at) continue
       if (paidLeads.has(id)) { await cancelPending(id); continue }
-      if (sess?.offer_token) { await cancelPending(id); continue } // dostał ofertę → inna seria (przyszła)
 
       const hoursSince = (now - anchorMs) / 3_600_000
+
+      // ── SERIA B: oferta wystawiona, rezerwacja nie wpłacona ────────────────
+      if (sess?.offer_token) {
+        const offs = offersByLead.get(id)
+        // deno-lint-ignore no-explicit-any
+        const current = offs?.rows.find((o: any) => o.unique_token === sess.offer_token) || null
+        if (!offs || !current) continue
+        const t = touches.get(id)
+        const sentCnt = OFFER_KINDS.filter((k) => t?.sentKinds.has(k)).length
+        if (sentCnt >= OFFER_KINDS.length) continue
+        const hoursSinceOffer = (now - offs.firstMs) / 3_600_000
+        if (hoursSinceOffer < THRESH_OFFER_H[sentCnt]) continue
+        if (sentCnt > 0 && t?.lastSent && now - t.lastSent < MIN_SPACING_OFFER_H[sentCnt] * 3_600_000) continue
+        if (t?.lastSent && now - t.lastSent < CHANNEL_GAP_MS) continue
+        const lastMailB = lastMailByLead.get(id) || 0
+        if (lastMailB && now - lastMailB < CHANNEL_GAP_MS) continue
+        if (sentCnt >= 2 && !deliveredLeads.has(id)) continue     // reputacja
+        if (hoursSince < THRESH_H[0]) continue                    // lead właśnie aktywny — nie przeszkadzaj
+        out.candidates_oferta++
+        if (!ENABLED_OFFER || !promptsReadyOffer) { out.skipped_offer_off++; continue }
+        if (mailBudget <= 0 || Date.now() - t0 > DEADLINE_MS) break
+
+        const kind = OFFER_KINDS[sentCnt]
+        const { data: claim, error: claimErr } = await supabase.from('talk_followups')
+          .upsert([{ lead_id: id, session_id: sess.id, kind }], { onConflict: 'lead_id,kind', ignoreDuplicates: true })
+          .select('id')
+        if (claimErr) { console.error('[talk-followups] claim B:', claimErr); out.errors++; continue }
+        if (!claim || !claim.length) continue
+        try {
+          const { subject, body: mailBody } = await generateMail(supabase, settings, lead, sess, sentCnt, current)
+          const talkUrl = `${TALK_URL_BASE}${id}`
+          const todayStr = new Date().toISOString().slice(0, 10)
+          const offerUrl = String(current.valid_until) >= todayStr ? `${OFFER_URL_BASE}${current.unique_token}` : null
+          const html = mdToHtml(mailBody, talkUrl, offerUrl)
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${SERVICE_KEY}` },
+            body: JSON.stringify({ to: lead.email, subject, html, lead_id: id, unsubscribe: true, email_type: kind }),
+          })
+          if (!res.ok) throw new Error(`send-email ${res.status}: ${await res.text()}`)
+          let resendId: string | null = null
+          try { const j = await res.json(); resendId = j?.id || j?.resend_id || j?.data?.id || null } catch { /* ignoruj */ }
+          await supabase.from('talk_followups')
+            .update({ subject, body_text: mailBody, html, status: 'sent', sent_at: new Date().toISOString(), resend_id: resendId })
+            .eq('lead_id', id).eq('kind', kind)
+          mailBudget--; out.sent_oferta++
+        } catch (e) {
+          console.error(`[talk-followups] ${kind} dla ${id}:`, e)
+          await supabase.from('talk_followups').delete().eq('lead_id', id).eq('kind', kind)
+          out.errors++
+          if (String(e).includes('insufficient_quota')) break
+        }
+        continue
+      }
+
+      // ── SERIA A: przed ofertą ──────────────────────────────────────────────
       if (hoursSince < THRESH_H[0]) continue // świeża aktywność — może wciąż rozmawia
       const t = touches.get(id)
       const sentCnt = KINDS.filter((k) => t?.sentKinds.has(k)).length
@@ -454,7 +599,7 @@ Deno.serve(async (req: Request) => {
       if (sentCnt >= 2 && !deliveredLeads.has(id)) continue       // reputacja: nic nie doszło → nie dosyłaj
 
       out.candidates++
-      if (!ENABLED) { out.skipped_flag_off++; continue }
+      if (!ENABLED || !promptsReady) { out.skipped_flag_off++; continue }
 
       // claim-before-send (UNIQUE lead_id,kind); pusty wynik = już claimowane.
       const kind = KINDS[sentCnt]
@@ -489,7 +634,7 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return jsonResponse({ ok: true, enabled: ENABLED, ...out }, 200)
+    return jsonResponse({ ok: true, enabled: ENABLED, enabled_offer: ENABLED_OFFER, ...out }, 200)
   } catch (e) {
     console.error('[talk-followups] fatal:', e)
     return jsonResponse({ error: String(e) }, 500)

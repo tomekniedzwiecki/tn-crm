@@ -679,6 +679,24 @@
                                 <div id="followup-fields" class="space-y-4">
                                     <div class="text-zinc-500 text-sm text-center py-8">Ładowanie sekcji…</div>
                                 </div>
+
+                                <!-- SERIA B: followupy po WYSTAWIENIU oferty -->
+                                <div class="pt-4 border-t border-white/10">
+                                    <h2 class="text-xl font-semibold text-white tracking-tight mb-1">Followupy po ofercie</h2>
+                                    <p class="text-zinc-500 text-sm">Seria 5 maili do leadów, którym AI wystawiło ofertę (/p/…), a którzy nie wpłacili rezerwacji. Oś: +4 h → +1 dzień → +3 dni (połowa ważności) → +6 dni (końcówka) → +10 dni (po wygaśnięciu). Fundament stylu wspólny z serią wyżej.</p>
+                                </div>
+
+                                <div class="bg-zinc-900/40 rounded-lg border border-white/5 p-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <p class="text-sm text-white font-medium">Wysyłka followupów ofertowych</p>
+                                        <p class="text-xs text-zinc-500 mt-0.5">Stop automatyczny: wpłata rezerwacji, wyciszenie leada. Wspólny limit 60 maili/dobę z serią wyżej.</p>
+                                    </div>
+                                    <button id="offer-followups-enabled-toggle" onclick="toggleOfferFollowupsEnabled()" class="px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-zinc-800 text-zinc-400">…</button>
+                                </div>
+
+                                <div id="offer-followup-fields" class="space-y-4">
+                                    <div class="text-zinc-500 text-sm text-center py-8">Ładowanie sekcji…</div>
+                                </div>
                             </div>
 
                             <!-- TAB: Zapisy -->
@@ -2150,10 +2168,18 @@
             { key: 'rozmowa_followup_krok4',  label: 'Mail 4 — konkret (+7 dni)',       desc: 'Pierwsze wyraźne CTA: dokończ rozmowę → oferta. Rama selekcji bez fałszywych terminów.', rows: 6 },
             { key: 'rozmowa_followup_krok5',  label: 'Mail 5 — break-up (+14 dni)',     desc: 'Krótkie zamknięcie tematu z otwartymi drzwiami. Max 3-5 zdań.', rows: 6 },
         ];
+        // Seria B — leady z WYSTAWIONĄ ofertą (bez wpłaty). Fundament wspólny z serią A.
+        const OFFER_FOLLOWUP_FIELDS = [
+            { key: 'rozmowa_followup_oferta_krok1', label: 'Oferta 1 — oferta czeka (+4 h)',        desc: 'Wariant nieotwarta/otwarta; wolno przypomnieć zwrotne 500 zł.', rows: 7 },
+            { key: 'rozmowa_followup_oferta_krok2', label: 'Oferta 2 — rozbrojenie (+1 dzień)',     desc: 'Jedna wątpliwość z rozmowy albo zero-ryzyko (zwrotna rezerwacja, telefon Tomka).', rows: 6 },
+            { key: 'rozmowa_followup_oferta_krok3', label: 'Oferta 3 — połowa ważności (+3 dni)',   desc: 'Prawdziwa liczba dni ze stanu oferty + co się dzieje po rezerwacji.', rows: 6 },
+            { key: 'rozmowa_followup_oferta_krok4', label: 'Oferta 4 — końcówka ważności (+6 dni)', desc: 'Ostatni spokojny sygnał przed wygaśnięciem; jedyny sygnał selekcji.', rows: 6 },
+            { key: 'rozmowa_followup_oferta_krok5', label: 'Oferta 5 — zamknięcie (+10 dni)',       desc: 'Po wygaśnięciu: drzwi otwarte, świeża oferta po powrocie do rozmowy.', rows: 6 },
+        ];
         let rozmowaEnabled = true;
         let followupsEnabled = false;
         async function loadRozmowaSettings() {
-            const keys = ROZMOWA_FIELDS.map(f => f.key).concat(FOLLOWUP_FIELDS.map(f => f.key)).concat(['rozmowa_enabled', 'talk_followups_enabled']);
+            const keys = ROZMOWA_FIELDS.map(f => f.key).concat(FOLLOWUP_FIELDS.map(f => f.key)).concat(OFFER_FOLLOWUP_FIELDS.map(f => f.key)).concat(['rozmowa_enabled', 'talk_followups_enabled', 'talk_offer_followups_enabled']);
             const { data, error } = await supabaseClient.from('settings').select('key, value').in('key', keys);
             if (error) { console.error('[rozmowa settings]', error); return; }
             const map = Object.fromEntries((data || []).map(r => [r.key, r.value]));
@@ -2188,10 +2214,30 @@
             if (wrap) { wrap.innerHTML = ROZMOWA_FIELDS.map(fieldCard).join(''); bindFields(ROZMOWA_FIELDS); }
             const fwrap = document.getElementById('followup-fields');
             if (fwrap) { fwrap.innerHTML = FOLLOWUP_FIELDS.map(fieldCard).join(''); bindFields(FOLLOWUP_FIELDS); }
+            const owrap = document.getElementById('offer-followup-fields');
+            if (owrap) { owrap.innerHTML = OFFER_FOLLOWUP_FIELDS.map(fieldCard).join(''); bindFields(OFFER_FOLLOWUP_FIELDS); }
             rozmowaEnabled = String(map.rozmowa_enabled || 'true').toLowerCase() !== 'false';
             renderRozmowaToggle();
             followupsEnabled = String(map.talk_followups_enabled || 'false').toLowerCase() === 'true';
             renderFollowupsToggle();
+            offerFollowupsEnabled = String(map.talk_offer_followups_enabled || 'false').toLowerCase() === 'true';
+            renderOfferFollowupsToggle();
+        }
+        let offerFollowupsEnabled = false;
+        function renderOfferFollowupsToggle() {
+            const b = document.getElementById('offer-followups-enabled-toggle');
+            if (!b) return;
+            b.textContent = offerFollowupsEnabled ? 'Włączona' : 'Wyłączona';
+            b.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-colors ' +
+                (offerFollowupsEnabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/10 text-red-300 border border-red-500/30');
+        }
+        async function toggleOfferFollowupsEnabled() {
+            offerFollowupsEnabled = !offerFollowupsEnabled;
+            renderOfferFollowupsToggle();
+            const { error } = await supabaseClient.from('settings')
+                .upsert({ key: 'talk_offer_followups_enabled', value: offerFollowupsEnabled ? 'true' : 'false' }, { onConflict: 'key' });
+            if (error) { showToast('Błąd zapisu: ' + error.message, 'error'); offerFollowupsEnabled = !offerFollowupsEnabled; renderOfferFollowupsToggle(); }
+            else showToast(offerFollowupsEnabled ? 'Followupy ofertowe WŁĄCZONE' : 'Followupy ofertowe wyłączone', 'success');
         }
         function renderFollowupsToggle() {
             const b = document.getElementById('followups-enabled-toggle');
