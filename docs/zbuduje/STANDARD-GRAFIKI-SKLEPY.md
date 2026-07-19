@@ -473,3 +473,14 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
   wektorowej. Benchmark silników scen (fal.ai, $0.55): nano-banana-2/edit ($0.12, natywne
   4:5) i flux-2-pro/edit ($0.045) biją cenowo gpt-image-2 HIGH przy równej/lepszej scenie —
   wybór silnika czeka na decyzję Tomka.
+
+- **2026-07-19 — v7 WIERNOŚĆ PRODUKTU (feedback Tomka po akcepcie v6: „produkt wygląda nieco
+  inaczej niż faktycznie — pilnuj tego"):** mechanizmy przeniesione z fabryki VIDEO/landingów:
+  (1) MULTI-REF — 3 różne kadry produktu z gallery_curated[keep] do nbpro (root-cause fix:
+  1 packshot = model zgadywał geometrię; morf zniknął bez ani jednego fixu); (2) KARTA.json =
+  checklista 4-6 cech dyskryminujących (bramka, NIE tekst promptu); (3) bramka wierności per
+  kandydat (vision, side-by-side, T/N per cecha; drabina: drugi kandydat → surgical fix →
+  regeneracja); (4) bramka CIĄGŁOŚCI między kreacjami (lekcja „morf" z video); (5) dowody
+  WIERNOSC-<angle>.png + WIERNOSC-CIAGLOSC.png; (6) publikacja bramkowana (--finalize po
+  przejściu checklisty). FULL-DESIGN v6+v7 = OBOWIĄZUJĄCY STANDARD fabryki grafik
+  (model projektuje cały baner; bramki: tekst litera-po-literze + wierność + ciągłość).

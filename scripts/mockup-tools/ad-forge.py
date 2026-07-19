@@ -1875,6 +1875,21 @@ FD_PRODUCT = (
     "ONLY the physical product; IGNORE and DROP any arrows, chevrons, watermarks or text baked into the "
     "reference. Do not reinterpret, restyle or invent a variant."
 )
+
+
+def _fd_product_para(n_product):
+    """Akapit wierności produktu. Przy MULTI-REF (2-4 kadry) mówi JEDNO zdanie ról — wygląd niosą
+    refy, NIE recytujemy anatomii słowem (doktryna 0i/GRAFIKA-Z-MAKIETY §4b)."""
+    if n_product <= 1:
+        return FD_PRODUCT
+    return (
+        "\n\nPRODUCT — 1:1 FIDELITY (sacred): Images 1-%d show the SAME product from different angles and "
+        "states — reproduce this exact product with its exact geometry (drawer position, opening/compartment "
+        "shape, proportions and thickness); do not redesign or invent variations. Keep its shape, colors, "
+        "materials, details and on-product branding identical wherever it appears. Reproduce ONLY the physical "
+        "product; IGNORE and DROP any arrows, chevrons, watermarks, measurement lines or text baked into the "
+        "reference images." % n_product
+    )
 FD_HONESTY = (
     "\n\nHONESTY (Meta 2026 / COD): NO invented urgency or countdowns; NO shipping-time or 'in-stock in "
     "Poland' claims; NO invented numbers, stars or reviews; NO foreign brand logos; NO medical/wellness "
@@ -1920,18 +1935,20 @@ def _fd_txt(s):
     return re.sub(r"\[\[|\]\]", "", str(s or "")).strip()
 
 
-def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl):
-    """Zwraca (prompt, intended_texts). intended_texts = DOKŁADNE napisy PL do weryfikacji przez agenta."""
+def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=1):
+    """Zwraca (prompt, intended_texts). intended_texts = DOKŁADNE napisy PL do weryfikacji przez agenta.
+    n_product = liczba kadrów produktu w image_urls (multi-ref: wygląd niesie N refów, nie słowo)."""
     brand = b.get("brand_name") or ""
     paleta = b.get("paleta") or ""
     fonty = b.get("fonty") or ""
     hook = _fd_txt(ca.get("hook_baner") or ca.get("headline") or "").upper()
-    parts = [FD_HEADER, FD_PRODUCT]
+    parts = [FD_HEADER, _fd_product_para(n_product)]
 
+    logo_ref = ("The reference image right after the %d product photos" % n_product) if n_product > 1 else "The SECOND reference image"
     brand_line = "\n\nBRAND: %s." % (brand or "(no name — neutral, consistent branding; do NOT invent a name)")
     if has_logo:
-        brand_line += (" The SECOND reference image is the brand LOGO — place it 1:1 (do NOT redraw its shape, "
-                       "letters or colors) in ONE corner at 8-12% of frame height, never centered.")
+        brand_line += (" %s is the brand LOGO — place it 1:1 (do NOT redraw its shape, "
+                       "letters or colors) in ONE corner at 8-12%% of frame height, never centered." % logo_ref)
     if has_styl:
         brand_line += " The LAST reference image is the brand's visual STYLE-MASTER — keep mood and palette consistent with it."
     if paleta:
@@ -1992,34 +2009,208 @@ def fulldesign_surgical_fix(out_dir, slug, angle, bad, good, state):
     return b_path, NBPRO_USD
 
 
-def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, styl_url, packshots,
-                  packshot_local, styl_local, logo_url, refs_dir, state):
-    """ETAP FULL-DESIGN: rehost refów (packshot+logo+styl) → best-of-2 per kąt → auto-pick (ostrość) →
-    zapis kandydatów + provisional finału + intended_texts do state. Zwraca (creatives, total_usd)."""
-    Image = _pil()[0]
-    # rehost refów (packshot = image[0], logo = image[1], styl = image[2])
-    log("FULL-DESIGN: rehost refów przez fal.store…")
-    packshot_fal = rehost_ref(packshot_local[0], "adforge/%s/fd_packshot.%s" %
-                              (slug, packshot_local[0].rsplit(".", 1)[-1]), packshots[0], state) if packshot_local else None
+# ── MULTI-REF PRODUKTU + BRAMKA WIERNOŚCI (feedback Tomka 19.07: produkt „nieco inaczej niż faktycznie") ──
+# Mechanizmy przeniesione z fabryki VIDEO (0i „edytuj prawdę", rubryka per-ELEMENT, klasa „morf produktu
+# między scenami") i landingów (GRAFIKA-Z-MAKIETY §4b: LEPSZY REF, nie słowny opis cechy).
+PRODUCT_REF_MAX = 3          # ile RÓŻNYCH kadrów produktu podać nbpro (packshot główny + wysunięta szuflada + akcja)
+
+
+def _save_state(out_dir, state):
+    try:
+        io.open(os.path.join(out_dir, "adforge-state.json"), "w", encoding="utf-8").write(
+            json.dumps(state, ensure_ascii=False, indent=1))
+    except Exception as e:
+        log("state zapis nieudany: %s" % e)
+
+
+def _load_json_file(path):
+    try:
+        return json.loads(io.open(path, encoding="utf-8").read())
+    except Exception:
+        return None
+
+
+def prep_fd_refs(bundle, out_dir, slug, refs_dir, logo_url, styl_url, state):
+    """Pobierz + rehostuj (fal.store RAZ, cache w state.fal_refs) MULTI-REF produktu (2-4 RÓŻNE kadry
+    z gallery_curated[keep]), logo-combo i styl-master. Zwraca dict URL-i fal + lokalnych packshotów.
+    Kolejność image_urls generacji = product×N (packshot główny, wysunięta szuflada, akcja) → logo → styl."""
+    os.makedirs(refs_dir, exist_ok=True)
+    product_urls = [r["url"] for r in (bundle.get("refs") or [])][:PRODUCT_REF_MAX]
+    product_local, product_fal = [], []
+    for i, u in enumerate(product_urls):
+        try:
+            blob, ct = _download(u)
+            pth = os.path.join(refs_dir, "packshot-%d.%s" % (i, _ct_ext(ct)))
+            io.open(pth, "wb").write(blob)
+            product_local.append(pth)
+        except Exception as e:
+            log("packshot %d pobranie nieudane: %s" % (i, e))
+            continue
+        try:
+            fu = rehost_ref(pth, "adforge/%s/fd_prod%d.%s" % (slug, i, pth.rsplit(".", 1)[-1]), u, state)
+            product_fal.append(fu)
+        except Exception as e:
+            log("packshot %d rehost nieudany: %s" % (i, e))
     logo_local = os.path.join(refs_dir, "logo-combo.png")
     logo_fal = rehost_ref(logo_local, "adforge/%s/fd_logo.png" % slug, logo_url, state) \
         if (logo_url and os.path.isfile(logo_local)) else None
-    styl_fal = rehost_ref(styl_local, "adforge/%s/fd_styl.%s" % (slug, styl_local.rsplit(".", 1)[-1]), styl_url, state) \
-        if styl_local else None
-    try:
-        io.open(os.path.join(out_dir, "adforge-state.json"), "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
-    except Exception:
-        pass
+    styl_local, styl_fal = None, None
+    if styl_url:
+        try:
+            blob, ct = _download(styl_url)
+            styl_local = os.path.join(refs_dir, "styl-master." + _ct_ext(ct))
+            io.open(styl_local, "wb").write(blob)
+            styl_fal = rehost_ref(styl_local, "adforge/%s/fd_styl.%s" % (slug, styl_local.rsplit(".", 1)[-1]), styl_url, state)
+        except Exception as e:
+            log("styl-master ref nieudany: %s" % e)
+    _save_state(out_dir, state)
+    log("MULTI-REF: %d kadrów produktu + logo=%s + styl=%s" %
+        (len(product_fal), "TAK" if logo_fal else "NIE", "TAK" if styl_fal else "NIE"))
+    return {"product_fal": product_fal, "product_local": product_local,
+            "logo_fal": logo_fal, "styl_fal": styl_fal, "styl_local": styl_local}
 
+
+def _fd_image_urls(refsd):
+    return list(refsd["product_fal"]) + [u for u in (refsd["logo_fal"], refsd["styl_fal"]) if u]
+
+
+# ── Kompozyty side-by-side (DOWODY WIERNOŚCI) — VLM (agent) porównuje 1:1, nie z pamięci (0i) ──
+def _montage(cells, out_path, cell_w=560, gap=18, label_h=46):
+    """cells = [(pil_img, label)]. Ułóż POZIOMO na kremowym tle, wspólna wysokość, podpis pod komórką."""
+    Image, ImageDraw, ImageFont, _, _ = _pil()
+    prepared = []
+    for img, lab in cells:
+        im = img.convert("RGB")
+        w, h = im.size
+        nh = max(1, int(round(h * cell_w / max(1, w))))
+        prepared.append((im.resize((cell_w, nh), Image.LANCZOS), lab))
+    body_h = max(im.size[1] for im, _ in prepared)
+    n = len(prepared)
+    W = n * cell_w + (n + 1) * gap
+    H = body_h + label_h + 2 * gap
+    canvas = Image.new("RGB", (W, H), (245, 241, 232))
+    d = ImageDraw.Draw(canvas)
+    try:
+        f = ImageFont.truetype(FALLBACK_FONT, 26)
+    except Exception:
+        f = ImageFont.load_default()
+    x = gap
+    for im, lab in prepared:
+        canvas.paste(im, (x, gap + (body_h - im.size[1]) // 2))
+        d.text((x + cell_w // 2, gap + body_h + 8), lab, font=f, fill=(23, 19, 16), anchor="ma")
+        x += cell_w + gap
+    canvas.save(out_path, "PNG")
+    return out_path
+
+
+def build_fidelity_composite(product_local, creative_path, out_path, label):
+    """DOWÓD WIERNOŚCI: realne packshoty | kreacja — do checklisty T/N per cecha."""
+    Image = _pil()[0]
+    cells = [(Image.open(p), "REALNY packshot %d" % i) for i, p in enumerate(product_local[:PRODUCT_REF_MAX])]
+    cells.append((Image.open(creative_path), label))
+    return _montage(cells, out_path)
+
+
+def build_continuity_composite(product_local, finals, out_path):
+    """DOWÓD CIĄGŁOŚCI: realny produkt | 3 finały obok siebie — czy to TEN SAM obiekt (geometria)."""
+    Image = _pil()[0]
+    cells = []
+    if product_local:
+        cells.append((Image.open(product_local[0]), "REALNY produkt"))
+    for a, p in finals:
+        if os.path.isfile(p):
+            cells.append((Image.open(p), "kreacja %s" % a))
+    return _montage(cells, out_path, cell_w=620)
+
+
+def build_all_composites(out_dir, refsd, angles):
+    """Zbuduj WIERNOSC-<angle>.png (finał) + per-kandydat + CIAGLOSC. Zwraca dict ścieżek."""
+    dowody = os.path.join(out_dir, "dowody")
+    os.makedirs(dowody, exist_ok=True)
+    plocal = refsd["product_local"]
+    paths = {}
+    finals = []
+    for a in angles:
+        fin = os.path.join(out_dir, "ad_%s_45.png" % a)
+        if os.path.isfile(fin):
+            p = os.path.join(dowody, "WIERNOSC-%s.png" % a)
+            build_fidelity_composite(plocal, fin, p, "kreacja %s (FINAŁ)" % a)
+            paths[a] = p
+            finals.append((a, fin))
+        for c in range(BEST_OF):
+            cf = os.path.join(out_dir, "ad_%s_45_c%d.png" % (a, c))
+            if os.path.isfile(cf):
+                build_fidelity_composite(plocal, cf, os.path.join(dowody, "WIERNOSC-%s-c%d.png" % (a, c)),
+                                         "kandydat %s #c%d" % (a, c))
+    if finals:
+        paths["_ciaglosc"] = build_continuity_composite(plocal, finals, os.path.join(dowody, "WIERNOSC-CIAGLOSC.png"))
+    return paths
+
+
+def fidelity_surgical_fix(out_dir, slug, angle, cecha, product_fal, state):
+    """Chirurgiczna korekta GEOMETRII produktu na gotowym banerze (nano-banana-pro/edit):
+    baner = image[0], realne kadry produktu = kolejne refy; napraw TYLKO <cecha> (litery nietknięte)."""
+    b_path = os.path.join(out_dir, "ad_%s_45.png" % angle)
+    banner_fal = _fal().store(b_path, "adforge/%s/fidfix_in_%s.png" % (slug, angle))
+    image_urls = [banner_fal] + list(product_fal or [])
+    prompt = ("The FIRST image is a finished ad banner; the following images show the REAL product from "
+              "different angles. Make the product match the reference images exactly: fix %s. Keep the exact "
+              "same layout, background, dog, logo and ALL text/letters pixel-identical — change ONLY the "
+              "product so its geometry matches the real references. Do not change anything else." % cecha)
+    blob = gen_nbpro_one(prompt, image_urls, "fidfix_%s" % angle)
+    Image = _pil()[0]
+    final = to_45(Image.open(io.BytesIO(blob)).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS)
+    final.save(b_path, "PNG")
+    state.setdefault("fidelity_fixes", []).append({"angle": angle, "cecha": cecha})
+    log("fidelity fix [%s]: '%s' → %s" % (angle, cecha, b_path))
+    return b_path, NBPRO_USD
+
+
+def regen_fd_angle(out_dir, slug, angle, ca, b, palette, cena, refsd, state):
+    """Pełna REGENERACJA jednego kąta best-of-2 na MULTI-REF (świeży katalog — bez resume starych)."""
+    Image = _pil()[0]
+    image_urls = _fd_image_urls(refsd)
+    n_prod = len(refsd["product_fal"])
+    prompt, _intended = build_fulldesign(angle, ca, b, palette, cena, bool(refsd["logo_fal"]), bool(refsd["styl_fal"]), n_prod)
+    n = state.get("regen_count", 0) + 1
+    state["regen_count"] = n
+    regen_dir = os.path.join(out_dir, "regen", "%s_%d" % (angle, n))
+    jobs = [{"tag": "%s_r%d" % (angle, c), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt}
+            for c in range(BEST_OF)]
+    got = gen_nbpro_batch(jobs, regen_dir)
+    cand = [got.get("%s_r%d" % (angle, c)) for c in range(BEST_OF)]
+    cand = [p for p in cand if p and os.path.isfile(p)]
+    if not cand:
+        raise SystemExit("regen %s: brak kandydatów (reclaim: fal.py reclaim %s)" % (angle, regen_dir))
+    finals = [to_45(Image.open(p).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS) for p in cand]
+    for c, f in enumerate(finals):
+        f.save(os.path.join(out_dir, "ad_%s_45_c%d.png" % (angle, c)), "PNG")
+    best_i, _ = pick_best_candidate(finals, (0.0, 0.0, 1.0, 1.0))
+    finals[best_i].save(os.path.join(out_dir, "ad_%s_45.png" % angle), "PNG")
+    state.setdefault("regens", []).append({"angle": angle, "run": n})
+    log("REGEN [%s] best-of-%d → provizorycznie #%d" % (angle, len(finals), best_i))
+    return NBPRO_USD * len(cand)
+
+
+def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_url, styl_url, refs_dir, state):
+    """ETAP FULL-DESIGN (multi-ref): rehost 2-4 kadrów produktu + logo + styl → best-of-2 per kąt →
+    provizoryczny wybór (ostrość; BRAMKĘ WIERNOŚCI robi agent na kompozytach) → dowody + state.
+    Zwraca (creatives, total_usd, refsd)."""
+    Image = _pil()[0]
+    log("FULL-DESIGN: rehost MULTI-REF przez fal.store…")
+    refsd = prep_fd_refs(bundle, out_dir, slug, refs_dir, logo_url, styl_url, state)
+    if not refsd["product_fal"]:
+        raise SystemExit("full-design: brak żadnego rehostowanego kadru produktu — przerwano.")
     cena = clean_price(bundle.get("cena_pl"))
-    image_urls = [u for u in (packshot_fal, logo_fal, styl_fal) if u]
+    image_urls = _fd_image_urls(refsd)
+    n_prod = len(refsd["product_fal"])
     fd_dir = os.path.join(out_dir, "fulldesign")
     intended_by_angle, jobs = {}, []
     print("-" * 88)
-    print("FULL-DESIGN PROMPTY + DOKŁADNE NAPISY (bramka tekstu):")
+    print("FULL-DESIGN PROMPTY + DOKŁADNE NAPISY (bramka tekstu) · MULTI-REF produktu = %d kadry:" % n_prod)
     for a in angles:
         ca = copy.get(a) or {}
-        prompt, intended = build_fulldesign(a, ca, b, palette, cena, bool(logo_fal), bool(styl_fal))
+        prompt, intended = build_fulldesign(a, ca, b, palette, cena, bool(refsd["logo_fal"]), bool(refsd["styl_fal"]), n_prod)
         intended_by_angle[a] = intended
         print("  ── KĄT %s ── napisy do wyrenderowania: %s" % (a.upper(), intended))
         for c in range(BEST_OF):
@@ -2043,9 +2234,9 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, styl_ur
             f.save(cf, "PNG")
             cand_files.append(cf)
         out_path = os.path.join(out_dir, "ad_%s_45.png" % a)
-        finals[best_i].save(out_path, "PNG")                       # provisional (agent zweryfikuje tekst)
+        finals[best_i].save(out_path, "PNG")                       # provizoryczne (agent zweryfikuje wierność+tekst)
         cand_by_angle[a] = cand_files
-        log("  [%s] best-of-%d → prowizorycznie #%d (ostrość); kandydaci: %s" %
+        log("  [%s] best-of-%d → provizorycznie #%d (ostrość); kandydaci: %s" %
             (a, len(finals), best_i, [os.path.basename(x) for x in cand_files]))
         creatives.append({"angle": a, "path": out_path,
                           "headline": (ca.get("hook_baner") or ca.get("headline") or ""),
@@ -2054,16 +2245,103 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, styl_ur
     state["mode"] = "fulldesign"
     state["fd_intended"] = intended_by_angle
     state["fd_candidates"] = {a: [os.path.basename(x) for x in v] for a, v in cand_by_angle.items()}
+    state["fd_provisional"] = {a: True for a in angles}
     state["engine"] = "nbpro"
+    state["total_usd"] = round(total_usd, 4)
     merged_copy = dict((state.get("copy") or {}))
     for a in angles:
         merged_copy[a] = copy.get(a) or {}
     state["copy"] = merged_copy
-    try:
-        io.open(os.path.join(out_dir, "adforge-state.json"), "w", encoding="utf-8").write(json.dumps(state, ensure_ascii=False, indent=1))
-    except Exception:
-        pass
-    return creatives, total_usd
+    _save_state(out_dir, state)
+    return creatives, total_usd, refsd
+
+
+def do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, logo_url, styl_url, refs_dir):
+    """BRAMKA WIERNOŚCI po generacji: --pick / --regen / --fix / --finalize (publikacja MERGE).
+    Wznawia ze stanu (adforge-state.json); refy rehostowane RAZ (cache) → operacje ~$0 poza generacją."""
+    state_path = os.path.join(out_dir, "adforge-state.json")
+    if not os.path.isfile(state_path):
+        raise SystemExit("--finalize/--fix/--regen/--pick: brak %s — uruchom generację najpierw." % state_path)
+    state = json.loads(io.open(state_path, encoding="utf-8").read())
+    copy = state.get("copy") or {}
+    if not copy:
+        raise SystemExit("state bez copy — uruchom pełną generację.")
+    cena = clean_price(bundle.get("cena_pl"))
+    refsd = prep_fd_refs(bundle, out_dir, slug, refs_dir, logo_url, styl_url, state)  # cache → ~$0
+    added = 0.0
+
+    # 1) --pick ANGLE=cN : wybierz kandydata jako finał
+    for spec in (args.pick or []):
+        for token in spec.split(","):
+            if "=" not in token:
+                continue
+            a, csel = token.split("=", 1)
+            a, csel = a.strip(), csel.strip().lstrip("c")
+            src = os.path.join(out_dir, "ad_%s_45_c%s.png" % (a, csel))
+            if not os.path.isfile(src):
+                raise SystemExit("--pick: brak kandydata %s" % src)
+            shutil.copyfile(src, os.path.join(out_dir, "ad_%s_45.png" % a))
+            state.setdefault("fd_picks", {})[a] = "c%s" % csel
+            log("PICK [%s] ← kandydat c%s" % (a, csel))
+
+    # 2) --regen ANGLES : pełna regeneracja best-of-2 (multi-ref)
+    regen_angles = []
+    for spec in (args.regen or "").split(","):
+        s = spec.strip().lower()
+        if s in ALLOWED_ANGLES:
+            regen_angles.append(s)
+    for a in regen_angles:
+        added += regen_fd_angle(out_dir, slug, a, copy.get(a) or {}, b, palette, cena, refsd, state)
+
+    # 3) --fix ANGLE=cecha : chirurgiczna korekta geometrii produktu
+    for spec in (args.fix or []):
+        if "=" not in spec:
+            raise SystemExit("--fix wymaga formatu ANGLE=opis-cechy (np. lifestyle=prostokątny schowek przy krawędzi)")
+        a, cecha = spec.split("=", 1)
+        a, cecha = a.strip().lower(), cecha.strip()
+        if a not in ALLOWED_ANGLES:
+            raise SystemExit("--fix: nieznany kąt %s" % a)
+        _p, cost = fidelity_surgical_fix(out_dir, slug, a, cecha, refsd["product_fal"], state)
+        added += cost
+
+    total_usd = round(state.get("total_usd", 0.0) + added, 4)
+    state["total_usd"] = total_usd
+
+    # KARTA + werdykty (opcjonalne pliki agenta) → state + stdout
+    karta = _load_json_file(args.karta or os.path.join(out_dir, "KARTA.json"))
+    if karta:
+        state["karta"] = karta
+    verdicts = _load_json_file(args.verdicts or os.path.join(out_dir, "VERDICTS.json"))
+    if verdicts:
+        state["fidelity_verdicts"] = verdicts
+
+    # przebuduj wszystkie dowody (finały + kandydaci + ciągłość)
+    comp = build_all_composites(out_dir, refsd, angles)
+    _save_state(out_dir, state)
+
+    print("-" * 88)
+    print("BRAMKA WIERNOŚCI — DOWODY (obejrzyj przed publikacją):")
+    for a in angles:
+        if a in comp:
+            print("  • %-10s %s" % (a, comp[a]))
+    if "_ciaglosc" in comp:
+        print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
+    if state.get("karta"):
+        print("KARTA PRODUKTU (%s): %d cech" % (state["karta"].get("produkt", "?"), len(state["karta"].get("cechy", []))))
+    if added > 0:
+        print("Koszt operacji tej rundy: ~$%.2f (fixy/regeny)" % added)
+
+    if not args.finalize:
+        print("-" * 88)
+        print("[--finalize pominięte] Nie publikuję. Po weryfikacji uruchom z --finalize.")
+        print("out=%s" % out_dir)
+        return 0
+
+    creatives = [{"angle": a, "path": os.path.join(out_dir, "ad_%s_45.png" % a),
+                  "headline": ((copy.get(a) or {}).get("hook_baner") or (copy.get(a) or {}).get("headline") or ""),
+                  "primary_text": (copy.get(a) or {}).get("primary_text") or ""} for a in angles]
+    return finish(args, bundle, "nbpro", out_dir, creatives, total_usd, mode="fulldesign-finalize",
+                  regions_by_angle={}, state=state, run_finisher_pass=False)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -2170,13 +2448,18 @@ def run(args):
     print("Refy produktu (%d, wierność malejąco):" % len(product_refs))
     for i, r in enumerate(product_refs):
         print("  [%d] %s" % (i, r["url"]))
-    packshots = [r["url"] for r in product_refs][:2]              # max 2 najlepsze packshoty
-    print("Packshoty do generacji (max 2): %s" % packshots)
+    packshots = [r["url"] for r in product_refs][:PRODUCT_REF_MAX]  # MULTI-REF (2-4 różne kadry produktu)
+    print("Packshoty MULTI-REF do generacji (max %d): %s" % (PRODUCT_REF_MAX, packshots))
     print("Tytuł aukcji (dezambiguacja, source=detail): %s" % (bundle.get("snap_title") or "BRAK"))
     print("Opisy kadrów (alt_pl keep, max 3): %s" % (bundle.get("alt_texts") or "BRAK"))
     print("Cena PL (lp_dane, na blok ceny): %s → %s" % (bundle.get("cena_pl") or "BRAK", clean_price(bundle.get("cena_pl")) or "—"))
 
     logo_img = load_logo(logo_url, refs_dir)
+
+    # ── BRAMKA WIERNOŚCI (post-generacja): --finalize / --fix / --regen / --pick ──
+    # Wznawia ze stanu; publikacja PO przejściu checklisty wierności + ciągłości (agent na kompozytach).
+    if args.finalize or args.fix or args.regen or args.pick:
+        return do_fd_postgen(args, bundle, out_dir, slug, b, palette, logo_img, angles, logo_url, styl_url, refs_dir)
 
     # ── RECOMPOSE: z zapisanych scen, bez copy-calla i bez płatnej generacji ──
     if args.recompose:
@@ -2220,27 +2503,23 @@ def run(args):
                   (len(angles), BEST_OF, est, est * 4.0))
             return 0
         print("-" * 88)
-        styl_local = None
-        if styl_url:
-            try:
-                blob, ct = _download(styl_url)
-                styl_local = os.path.join(refs_dir, "styl-master." + _ct_ext(ct))
-                io.open(styl_local, "wb").write(blob)
-            except Exception as e:
-                log("styl-master pobranie nieudane: %s" % e)
-        packshot_local = []
-        for i, u in enumerate(packshots):
-            try:
-                pblob, pct = _download(u)
-                pth = os.path.join(refs_dir, "packshot-%d.%s" % (i, _ct_ext(pct)))
-                io.open(pth, "wb").write(pblob)
-                packshot_local.append(pth)
-            except Exception as e:
-                log("packshot %d pobranie nieudane: %s" % (i, e))
-        creatives, total_usd = do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles,
-                                             styl_url, packshots, packshot_local, styl_local, logo_url, refs_dir, state)
-        return finish(args, bundle, "nbpro", out_dir, creatives, total_usd, mode="fulldesign",
-                      regions_by_angle={}, state=state, run_finisher_pass=False)
+        creatives, total_usd, refsd = do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles,
+                                                    logo_url, styl_url, refs_dir, state)
+        # DOWODY WIERNOŚCI (agent ogląda kompozyty per kąt + ciągłość — NIE publikujemy w ciemno)
+        comp = build_all_composites(out_dir, refsd, angles)
+        _save_state(out_dir, state)
+        print("=" * 88)
+        print("GENERACJA GOTOWA (full-design MULTI-REF) — %d kreacji, koszt ~$%.2f (~%.2f zł)" %
+              (len(creatives), total_usd, total_usd * 4.0))
+        print("BRAMKA WIERNOŚCI: obejrzyj kompozyty (realny produkt | kreacja) i checklistę T/N:")
+        for a in angles:
+            if a in comp:
+                print("  • %-10s %s" % (a, comp[a]))
+        if "_ciaglosc" in comp:
+            print("  • CIĄGŁOŚĆ   %s" % comp["_ciaglosc"])
+        print("Po weryfikacji: --fix ANGLE='opis cechy' / --regen ANGLE / --pick ANGLE=cN, na końcu --finalize.")
+        print("out=%s" % out_dir)
+        return 0
 
     # ── plan scen + prompty + prompt-lint (tryb OVERLAY) ──
     print("-" * 88)
@@ -2415,6 +2694,17 @@ def build_argparser():
                     help="użyj zapisanych surowych scen z out/sceny/ — tylko crop/kompozycja/publikacja, BEZ płatnej generacji")
     ap.add_argument("--no-register", action="store_true", help="nie rejestruj w panelu (tylko pliki lokalne)")
     ap.add_argument("--quality", default="high", choices=["high", "medium"], help="jakość gpt-image-2")
+    # ── BRAMKA WIERNOŚCI (full-design, post-generacja) ──
+    ap.add_argument("--finalize", action="store_true",
+                    help="full-design: publikacja MERGE po przejściu checklisty wierności (wznawia ze stanu)")
+    ap.add_argument("--fix", action="append", default=[], metavar="ANGLE=CECHA",
+                    help="chirurgiczna korekta geometrii produktu (nbpro/edit) — powtarzalne (np. --fix lifestyle='prostokątny schowek przy krawędzi')")
+    ap.add_argument("--regen", default="",
+                    help="pełna regeneracja best-of-2 (multi-ref) danych kątów po przecinku (np. --regen problem,lifestyle)")
+    ap.add_argument("--pick", action="append", default=[], metavar="ANGLE=cN",
+                    help="wybierz kandydata jako finał (np. --pick demo=c1) — powtarzalne / po przecinku")
+    ap.add_argument("--karta", default="", help="ścieżka KARTA.json (domyślnie out/KARTA.json)")
+    ap.add_argument("--verdicts", default="", help="ścieżka VERDICTS.json (domyślnie out/VERDICTS.json)")
     return ap
 
 
