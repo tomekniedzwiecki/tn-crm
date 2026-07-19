@@ -110,6 +110,16 @@ klatkami kluczowymi — incydent v2). Szczegóły: SSOT 0i.
 4. **PROMPTY = INTENCJA + REFY + ZAKAZY** (rewizja 19.07): wygląd produktu niosą WYŁĄCZNIE
    obrazy („the product from the reference images, EXACTLY as-is"); słowem opisujesz akcję
    i użycie; negativem — czego ma nie być. ZAKAZ recytowania anatomii w promptach.
+5. **PRE-NEUTRALIZACJA REFÓW kref (stolik 19.07 — koszt lekcji $4.5 i 2 rundy renderów):**
+   refy `elements` PRZECIEKAJĄ CAŁĄ zawartością do scen o ciasnym kadrze — scenografią
+   (granatowa poduszka/boazeria/marmur z packshotu) i rekwizytami (LAPTOP Z LOGO APPLE
+   z refa użycia!). Kotwica tła w prompcie NIE wystarcza. PRZED pierwszym renderem:
+   każdy ref z „krzykliwą" scenografią → nano-neutralizacja ($0.04: „zmień TYLKO otoczenie
+   na neutralne, produkt nietknięty"); refy = zneutralizowany frontal (multi-view tylko
+   gdy sceny renderują się w scenerii zbliżonej do refów, jak masażer).
+6. **KAŻDY inpaint-fix klatki OBEJRZYJ w PEŁNEJ rozdzielczości przed renderem** — skrawek
+   granatu przy krawędzi kadru przeżył 2 fixy niezauważony na miniaturze 420px i kosztował
+   rundę renderu (nano słabo usuwa obiekty przy krawędzi; ratunek: crop w montażu, $0).
 
 ## KROK 7 — BRAMKA WIZYJNA KLIPU (`qa_gate.py`) — egzekwowalna
 Dla KAŻDEGO klipu przed montażem:

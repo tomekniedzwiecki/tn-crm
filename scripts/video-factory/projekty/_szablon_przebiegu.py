@@ -97,6 +97,28 @@ def trim_sfx(sfx_trims):
         subprocess.run(["ffmpeg", "-v", "error", "-i", raw, "-af", af, "-y", out], check=True)
         print("SFX trim", tag, "->", out)
 
+# ── AUTO-PROFIL MUZYKI (stolik 19.07: Stable Audio wstawil BREAKDOWN -40 dB w srodku
+# utworu; kreacja konczyla sie w dziurze = LOOP CLOSE bez muzyki; recznie kosztowalo
+# ~15 min sledztwa — profil per 1 s wykrywa to w 5 s) ────────────────────────────
+def check_music(path, kreacja_s=15.0, floor_db=-30.0):
+    """Profil energii co 1 s w oknie 0..kreacja_s+1. Dziura (< floor_db) => WARNING
+    z gotowa recepta (wytnij okno acrossfade=0.2 albo mus_offset). Zwraca liste dziur."""
+    holes = []
+    for s in range(0, int(kreacja_s) + 2):
+        out = subprocess.run(["ffmpeg", "-v", "info", "-ss", str(s), "-t", "1", "-i", path,
+                              "-af", "volumedetect", "-f", "null", "-"],
+                             capture_output=True, text=True).stderr
+        for ln in out.splitlines():
+            if "mean_volume" in ln:
+                v = float(ln.split(":")[1].strip().split()[0])
+                if v < floor_db: holes.append((s, v))
+    if holes:
+        print(f"[MUZYKA] DZIURY ENERGII {holes} — wytnij okno (atrim+acrossfade=0.2) "
+              f"lub przesun mus_offset; NIE montuj z dziura w oknie 0..{kreacja_s}s!")
+    else:
+        print(f"[MUZYKA] profil OK (0..{int(kreacja_s)+1}s bez dziur < {floor_db} dB)")
+    return holes
+
 # ── PRZEBIEG ────────────────────────────────────────────────────────────────────
 def main():
     # KROK 0 — BRAMKA SALDA (nie zaczynaj biegu, którego nie dokończysz)
@@ -110,6 +132,8 @@ def main():
           f"= {len(fala_a)} jobów RÓWNOLEGLE (max_parallel={MAX_PARALLEL})")
     got_a = fal.gen_batch(fala_a, outdir=GEN, max_parallel=MAX_PARALLEL, project=SLUG)
     trim_sfx(sfx_trims)                                    # lokalny trim SFX po pobraniu
+    mp = os.path.join(GEN, "music.mp3")
+    if os.path.exists(mp): check_music(mp)                 # dziury energii ZANIM cokolwiek dalej
 
     firsts = {t: p for t, p in got_a.items() if isinstance(p, str) and t.endswith("_first")}
 
