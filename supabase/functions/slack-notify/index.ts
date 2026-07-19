@@ -1,3 +1,4 @@
+import { createClient } from "jsr:@supabase/supabase-js@2";
  
 
 // Allowed origins for CORS
@@ -165,6 +166,37 @@ Deno.serve(async (req) => {
         JSON.stringify({ success: true, skipped: true, reason: 'No webhook configured' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
+    }
+
+    // TRYB BOTA dla new_lead: chat.postMessage zwraca ts → kotwica WĄTKU, w którym
+    // talk-transcript-cron dośle transkrypcję rozmowy AI. Wymaga sekretów
+    // SLACK_BOT_TOKEN (xoxb, scope chat:write) + SLACK_LEADS_CHANNEL (ID kanału leadów).
+    // Bez nich: klasyczny webhook (bez wątków) — zachowanie bez zmian.
+    const botToken = Deno.env.get('SLACK_BOT_TOKEN')
+    const leadsChannel = Deno.env.get('SLACK_LEADS_CHANNEL')
+    if (type === 'new_lead' && botToken && leadsChannel) {
+      const botRes = await fetch('https://slack.com/api/chat.postMessage', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${botToken}`, 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({ channel: leadsChannel, ...message, unfurl_links: false })
+      })
+      const botJson = await botRes.json().catch(() => null)
+      if (botJson?.ok) {
+        if (data.lead_id && botJson.ts) {
+          const admin = createClient(
+            Deno.env.get('SUPABASE_URL')!,
+            Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+          )
+          await admin.from('leads')
+            .update({ slack_ts: botJson.ts, slack_channel: botJson.channel })
+            .eq('id', data.lead_id)
+        }
+        return new Response(
+          JSON.stringify({ success: true, via: 'bot' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+        )
+      }
+      console.error('Slack bot fallback na webhook:', botJson?.error)
     }
 
     // Send to Slack
