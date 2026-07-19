@@ -1483,6 +1483,9 @@
                                     <button onclick="filterEmails('outbound')" class="email-filter-btn px-3 py-1.5 text-xs rounded-lg border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10 transition-colors" data-filter="outbound">
                                         <i class="ph ph-arrow-up mr-1"></i> Wysłane
                                     </button>
+                                    <button onclick="filterEmails('ai_followup')" class="email-filter-btn px-3 py-1.5 text-xs rounded-lg border border-violet-500/30 text-violet-300 hover:bg-violet-500/10 transition-colors" data-filter="ai_followup">
+                                        <i class="ph ph-robot mr-1"></i> Followupy AI
+                                    </button>
                                 </div>
                             </div>
 
@@ -3104,13 +3107,15 @@
 
                 const directionLabel = isInbound ? 'Otrzymano' : 'Wysłano';
                 const bgClass = isInbound ? 'border-blue-500/20' : 'border-emerald-500/20';
+                const aiChip = (email.email_type || '').startsWith('talk_followup')
+                    ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-medium bg-violet-500/20 text-violet-300 whitespace-nowrap">🤖 Followup AI</span>' : '';
 
                 return `
                     <div class="p-3 bg-zinc-950/50 rounded-lg border ${bgClass} cursor-pointer hover:bg-zinc-900/50 transition-colors" onclick="showEmailDetail('${email.id}')">
                         <div class="flex items-start gap-2">
                             <div class="mt-0.5">${directionIcon}</div>
                             <div class="flex-1 min-w-0">
-                                <div class="text-xs text-white font-medium truncate">${email.subject || '(bez tematu)'}</div>
+                                <div class="text-xs text-white font-medium truncate">${aiChip} ${email.subject || '(bez tematu)'}</div>
                                 <div class="text-[10px] text-zinc-500 mt-0.5 truncate">
                                     ${isInbound ? 'Od: ' + email.from_email : 'Do: ' + email.to_email}
                                 </div>
@@ -7436,6 +7441,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 const directionLabel = isInbound ? 'Otrzymano' : 'Wysłano';
                 const bgClass = isInbound ? 'border-blue-500/20 hover:border-blue-500/40' : 'border-emerald-500/20 hover:border-emerald-500/40';
                 const labelClass = isInbound ? 'bg-blue-500/20 text-blue-400' : 'bg-emerald-500/20 text-emerald-400';
+                const isAiFollowup = (email.email_type || '').startsWith('talk_followup');
+                const aiChip = isAiFollowup
+                    ? `<span class="px-2 py-0.5 rounded text-[10px] font-medium bg-violet-500/20 text-violet-300">🤖 Followup AI · mail ${(email.email_type.match(/_(\d)$/) || [])[1] || '?'}/5</span>` : '';
 
                 // Truncate body preview
                 const bodyPreview = (email.body_text || '').substring(0, 120).replace(/\n/g, ' ') + ((email.body_text?.length > 120) ? '...' : '');
@@ -7445,8 +7453,9 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                         <div class="flex items-start gap-3">
                             <div class="mt-1">${directionIcon}</div>
                             <div class="flex-1 min-w-0">
-                                <div class="flex items-center gap-2 mb-1">
+                                <div class="flex items-center gap-2 mb-1 flex-wrap">
                                     <span class="px-2 py-0.5 rounded text-[10px] font-medium ${labelClass}">${directionLabel}</span>
+                                    ${aiChip}
                                     <span class="text-[10px] text-zinc-600 font-mono">${dateStr}</span>
                                 </div>
                                 <div class="text-sm text-white font-medium mb-1">${email.subject || '(bez tematu)'}</div>
@@ -7479,6 +7488,8 @@ Napisz krótką wiadomość follow-up, która pomoże przejść do etapu "Zakwal
                 filteredEmails = allEmails.filter(e => e.direction === 'inbound');
             } else if (filter === 'outbound') {
                 filteredEmails = allEmails.filter(e => e.direction === 'outbound');
+            } else if (filter === 'ai_followup') {
+                filteredEmails = allEmails.filter(e => (e.email_type || '').startsWith('talk_followup'));
             }
 
             renderEmailList(filteredEmails);

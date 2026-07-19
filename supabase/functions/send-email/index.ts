@@ -290,7 +290,8 @@ Deno.serve(async (req) => {
       senderName = reqBody.sender_name || 'Tomek Niedzwiecki'
       finalBody = reqBody.no_signature ? reqBody.html : reqBody.html + getEmailSignature(senderName)
       leadId = reqBody.lead_id || null
-      emailType = 'direct'
+      // opcjonalny email_type od callera (np. talk_followup_1) — rozróżnialny w email_messages/lead.html
+      emailType = (typeof reqBody.email_type === 'string' && reqBody.email_type.trim()) ? reqBody.email_type.trim().slice(0, 60) : 'direct'
 
       // Custom reply_to takes priority (for test emails, outreach, etc.)
       if (reqBody.reply_to) {
