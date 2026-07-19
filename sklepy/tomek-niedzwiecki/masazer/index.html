@@ -21,7 +21,7 @@
   <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito+Sans:opsz,wght@6..12,400;6..12,600;6..12,700;6..12,800&display=swap" rel="stylesheet">
   <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-d.webp" media="(min-width:1024px)">
-  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-m.webp" media="(max-width:767px)">
+  <link rel="preload" as="image" href="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-m.webp?v=2" media="(max-width:767px)">
   <style>
     :root{
       /* ── TOKENS-MAKIETY.md (SSOT, spisane z planszy DNA 00-styl-master; ZAKAZ aproksymacji) ── */
@@ -180,6 +180,8 @@
     .hero-title{font-family:"Baloo 2",sans-serif;font-weight:800;color:var(--ink);
       font-size:clamp(38px,5.4vw,68px);line-height:1.02;letter-spacing:-.015em;margin:0 0 8px}
     .hero-lead{max-width:440px;margin:16px 0 26px;color:var(--body)}
+    .hero-lead-m{display:none}   /* skrócony 1-liniowy lead — tylko mobile (makieta 01-hero-mobile) */
+    .hbr{display:none}           /* wymuszony łam H1 — aktywny tylko na mobile */
     .hero-price{font-family:"Nunito Sans",sans-serif;font-weight:800;font-size:clamp(34px,4vw,46px);color:var(--ink);line-height:1;margin-bottom:18px}
     .hero-cta-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
     .hero-pay{margin-top:22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
@@ -191,13 +193,31 @@
     }
     @media(max-width:767px){
       .hero{display:flex;flex-direction:column}
-      .hero-media{position:relative;width:100%;height:52svh;min-height:330px;flex:0 0 auto}
-      .hero-media img{object-position:center 32%}
-      .hero-video.hero-video--m{inset:0 0 auto 0;height:52svh;min-height:330px;object-position:center 32%}
+      /* scena top-band kompaktowa (43svh) — karta oferty w całości nad fold @844 (wzorzec Drapek, dysp. Tomka 19.07) */
+      .hero-media{position:relative;width:100%;height:43svh;min-height:296px;flex:0 0 auto}
+      .hero-media img{object-position:center 30%}
+      .hero-video.hero-video--m{inset:0 0 auto 0;height:43svh;min-height:296px;object-position:center 30%}
       .hero-scrim{display:none}
-      .hero-wrap{background:var(--paper);padding-top:26px;padding-bottom:32px}
-      .hero-copy{max-width:100%}
-      .hero-title{font-size:clamp(38px,9vw,48px)}
+      /* BIAŁA karta mikro-oferty unosi się nad sceną (ujemny margin) — nie „gołe elementy na kremie" (Drapek montaż#2) */
+      .hero-wrap{background:transparent;padding:0 14px 30px;margin-top:-46px}
+      .hbr{display:inline}         /* aktywuje wymuszony łam „…napięcie / puszcza pod / naciskiem dłoni" */
+      .hero-copy{max-width:100%;background:var(--card);border:1px solid var(--line);
+        border-radius:var(--radius-lg);box-shadow:var(--shadow-lg);padding:20px 14px 22px}
+      .hero-copy .eyebrow{margin-bottom:10px}
+      /* H1 floor 38px (TOKENS) + line-height 1.2 + swash tuż pod słowem → podkreślenie POD „puszcza" NIE dotyka „naciskiem" */
+      .hero-title{font-size:38px;line-height:1.2;margin-bottom:6px}
+      .hero-title .hi::after{bottom:0;height:.2em;min-height:6px}
+      .hero-lead-d{display:none}
+      .hero-lead-m{display:block;font-size:15px;line-height:1.5;margin:0 0 15px;max-width:100%}
+      .hero-price{font-size:38px;margin-bottom:12px}
+      /* pay-row w JEDNYM rzędzie (makieta): BLIK/Visa/MC + pill zwrotu; COD-badge ukryty */
+      .hero-pay{margin-top:15px;gap:8px;flex-wrap:wrap;align-items:center}
+      .hero-pay .pay-badges{gap:7px;flex-wrap:nowrap}
+      .hero-pay .pb{height:30px;padding:0 9px}
+      .hero-pay .pb--cod{display:none}
+      .hero-pay .ret-badge{background:var(--card);border:1px solid var(--line);border-radius:999px;
+        padding:7px 10px;font-size:10.5px;box-shadow:var(--shadow-sm);flex:0 0 auto}
+      .hero-pay .ret-badge svg{width:13px;height:13px}
       .hero-trust{display:none}
       .hero-cta-row .btn{width:100%}
     }
@@ -370,12 +390,17 @@
     .bezk-spec small{font-size:14px;font-weight:600;color:var(--body)}
     @media(max-width:767px){
       .bezk{min-height:0;padding:0;flex-direction:column;align-items:stretch}
-      .bezk-scene{position:relative;width:100%;height:auto;aspect-ratio:4/3;max-height:60svh;min-height:280px;flex:0 0 auto}
-      .bezk-scene img{object-position:center 34%}
+      /* scena top-band ~46svh (makieta 06-bezkabla-mobile; kadr: mężczyzna+masażer+laptop w górnych ~48%) */
+      .bezk-scene{position:relative;width:100%;height:46svh;min-height:300px;flex:0 0 auto}
+      .bezk-scene img{object-position:center 18%}
       .bezk-scrim{top:auto;bottom:0;height:30%;background:linear-gradient(to bottom,rgba(246,241,231,0),var(--paper))}
       .bezk-wrap{background:var(--paper);padding-top:26px;padding-bottom:42px}
       .bezk-panel{max-width:100%}
-      .bezk-specs{max-width:100%}
+      /* 4 spec-chipy: siatka 2×2 dużych tap-targetów, RÓWNE kolumny (minmax(0,1fr)); ikony charcoal outline */
+      .bezk-specs{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;max-width:100%;margin-top:22px}
+      .bezk-spec{gap:11px;padding:14px 13px;min-height:76px;align-items:center}
+      .bezk-spec b{font-size:16px}
+      .bezk-spec small{font-size:12.5px}
     }
 
     /* ===================== 07 · GALERIA ===================== */
@@ -618,7 +643,7 @@
   <picture class="hero-media" aria-hidden="true">
     <source media="(min-width:1024px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-d.webp">
     <source media="(min-width:768px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-t.webp">
-    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-m.webp" width="1024" height="1536" alt="Kobieta odpoczywa w fotelu z masażerem Odprężek na karku — widoczna silikonowa dłoń i srebrny panel" fetchpriority="high">
+    <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/hero-m.webp?v=2" width="1024" height="1536" alt="Kobieta odpoczywa w fotelu z masażerem Odprężek na karku — widoczna silikonowa dłoń i srebrny panel" fetchpriority="high">
   </picture>
   <div class="hero-scrim" aria-hidden="true"></div>
   <div class="hero-trust">
@@ -628,8 +653,9 @@
   <div class="wrap hero-wrap">
     <div class="hero-copy" data-stagger>
       <p class="eyebrow" data-mo>Bezprzewodowy masażer karku i ramion</p>
-      <h1 id="hero-h1" class="hero-title" data-mo>Poczuj, jak napięcie <span class="hi">puszcza</span> pod naciskiem dłoni</h1>
-      <p id="hero-sub" class="lead hero-lead" data-mo>Odprężek ugniata spięte barki silikonową dłonią i kciukiem — domowa chwila rozluźnienia po całym dniu.</p>
+      <h1 id="hero-h1" class="hero-title" data-mo>Poczuj, jak napięcie<br class="hbr" aria-hidden="true"> <span class="hi">puszcza</span> pod naciskiem dłoni</h1>
+      <p id="hero-sub" class="lead hero-lead hero-lead-d" data-mo>Odprężek ugniata spięte barki silikonową dłonią i kciukiem — domowa chwila rozluźnienia po całym dniu.</p>
+      <p class="lead hero-lead hero-lead-m" aria-hidden="true">Ugniata spięte barki silikonową dłonią i kciukiem.</p>
       <div class="hero-price" data-mo data-price>299,00 zł</div>
       <div class="hero-cta-row" data-mo>
         <a class="btn cta big block pulse" data-checkout="masazer" href="#zamow">Zamawiam Odprężka <span class="arr" aria-hidden="true">→</span></a>
@@ -818,7 +844,7 @@
   <div class="bezk-scene" aria-hidden="true">
     <picture>
       <source media="(min-width:768px)" srcset="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/bezkabla-d.webp">
-      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/bezkabla-m.webp" width="1024" height="1536" loading="lazy" alt="" aria-hidden="true">
+      <img src="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/scenes/bezkabla-m.webp?v=2" width="1024" height="1536" loading="lazy" alt="" aria-hidden="true">
     </picture>
   </div>
   <div class="bezk-scrim" aria-hidden="true"></div>
@@ -1353,7 +1379,7 @@
   if(mq('(prefers-reduced-motion: reduce)').matches)return;   // reduced-motion = statyczny hero
   var c=navigator.connection||{}; if(c.saveData)return;        // save-data = statyczny hero
   var SB="https://yxmavwkwnfuphjqbelws.supabase.co/storage/v1/object/public/attachments/bud-assets/masazer/";
-  var VER="?v=2";                                              // cache-bust re-uploadu klipow
+  // VER (cache-bust) rozdzielony per-viewport w apply(): desktop ?v=2 (bajty bez zmian), mobile ?v=3 (klip nadpisany)
   var mqDesk=mq('(min-width:768px)');
   window.addEventListener('load',function(){try{
     var media=document.querySelector('.hero .hero-media'); if(!media)return;
@@ -1369,7 +1395,8 @@
       if(cur===desktop)return;                                 // ta sama strona breakpointu -> nic
       cur=desktop;
       var VID=SB+"video/"+(desktop?"hero-loop":"hero-loop-m");
-      var POS=SB+"scenes/"+(desktop?"hero-d.webp":"hero-m.webp"); // poster = niezmieniona scena LCP (bez VER)
+      var VER=desktop?"?v=2":"?v=3";                             // desktop bajty bez zmian; mobile klip = v3
+      var POS=SB+"scenes/"+(desktop?"hero-d.webp":"hero-m.webp?v=2"); // desktop poster bez VER; mobile poster = scena v2
       v.className='hero-video'+(desktop?'':' hero-video--m');   // reassignment kasuje 'on' -> fade od nowa
       v.setAttribute('poster',POS);
       v.innerHTML='<source src="'+VID+'.webm'+VER+'" type="video/webm"><source src="'+VID+'.mp4'+VER+'" type="video/mp4">';
