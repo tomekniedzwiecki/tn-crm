@@ -392,6 +392,41 @@ P/U/S/R), `ADS-BLOCKLISTA-PL.md`.
 
 ## CHANGELOG DECYZJI (G8)
 
+- **2026-07-19 (v9) — GENERALIZACJA FABRYKI = DRUGI PRODUKT (Masażer „Odprężek", `557ed2b0…`, ~$2.03 /
+  8.1 zł, 3 finały + 9 wariantów hooków):** pierwszy przebieg po Drapku ujawnił, że fabryka była
+  **zahardkodowana pod jeden produkt** (pies + deska + smakołyki) w CAŁEJ warstwie generacji. Trzy lekcje:
+  - **Lekcja G8 #1 (klasa: HARDCODE SCENARIUSZA — największa).** `FD_ART`, `FD_USP_MOMENT`, schemat
+    `build_copy_prompt`, `CLICK_GATE_QUESTIONS`, hinty callloutów demo, `fidelity_surgical_fix` i
+    `_fd_product_para` opisywały DOSŁOWNIE psa drapiącego deskę po smakołyk. Co gorsza, **full-design
+    IGNOROWAŁ `scene_vision`/`pain_vision` z copy** (copy generuje je per-produkt!) i wklejał scenariusz
+    psa. Masażer wygenerowałby psa z masażerem. **Fix FABRYKI (nie pliku):** `FD_ART`/`FD_USP_MOMENT`/
+    schemat copy przepisane PRODUCT-AGNOSTIC (opisują tylko KOMPOZYCJĘ/layout/światło); `build_fulldesign`
+    wstrzykuje `{SCENE}`/`{PAIN}`/`{MINI}` z copy do art-direction danego kąta. Zasada: **subiekt/AKCJĘ
+    niesie `scene_vision` (per produkt), szablon niesie tylko kompozycję.** Efekt: masażer wyszedł wierny
+    (zielony pikowany korpus + silikonowa dłoń+kciuk + srebrny panel + grzanie) bez ani jednego ręcznego
+    obejścia; diakrytyki w wersalikach 100% (Ę Ó Ł Ń Ś Ć ż).
+  - **Lekcja G8 #2 (klasa: RECLAIM CROSS-PRODUCT — bug ujawniony DOPIERO na 2. produkcie).** Tagi ledgera
+    fal w trybie single-product (`hbase_*`, `%s_c%d`) NIE były namespace'owane slugiem, więc `_reclaim_paid`
+    (poluje ledger po `project+"_"+tag`) **dociągnął OPŁACONE bazy Drapka** do przebiegu masażera i
+    opublikował 9 błędnych wariantów (pies pod hasłem „RELAKS NA KANAPIE"). **Fix FABRYKI:** slug-namespace
+    WSZYSTKICH tagów single-product (`slug__hbase_%s`, `slug__%s_c%d`) — spójnie z trybem portfelowym
+    (`do_portfolio` już to robił). Sprzątanie: 9 artefaktów usunięte + storage nadpisany + regeneracja
+    (`slug__hbase_*` → brak matchu Drapka). **Reguła nadrzędna: każdy tag ledgera fal MUSI być per-produkt,
+    inaczej RESUME/RECLAIM przecieka między produktami przy wspólnym ledgerze.**
+  - **Lekcja G8 #3 (klasa: POLITYKA WELLNESS).** Masażer = kategoria zdrowie/wellness → ryzyko Meta
+    (claimy medyczne, before/after ciała, personal attributes). Dopisano twardą regułę do `build_copy_prompt`:
+    framing = relaks/komfort/odprężenie/ulga w napięciu mięśni, ZAKAZ „koniec bólu"/„leczy"/„natychmiastowa
+    ulga"; w kącie problem dozwolony wyłącznie kontrast NASTROJU/napięcia tej samej osoby (zmęczenie→ulga),
+    NIE transformacja ciała. `FD_HONESTY` już zawierał „NO medical/wellness claims; NO before/after of a
+    human body". Wygenerowane hooki wyszły bezpieczne („Napięcie, które puszcza", „Napięcie → odprężenie").
+  - **Drobne luki (zalogowane, nie blokujące):** (a) brand fonty (Baloo 2/Caveat/Nunito Sans) nie ma w
+    `fonts/` → nakładka hooków renderuje fallback Montserrat-Black; main finały renderuje model (nbpro) więc
+    krój OK — tylko warianty hooków w innym kroju (do dosypania TTF do `FONT_MAP`). (b) MULTI-REF wziął 1 kadr
+    lifestyle (`g1`, kobieta z produktem) jako „packshot" — wierność i tak OK, ale dobór refów mógłby
+    preferować czyste packshoty. (c) model raz wyrenderował literalne „CTA |" przed CTA w bazie `no_hook`
+    (jednorazowy quirk; main finał czysty). WNIOSEK OGÓLNY: **każdy nowy produkt jest testem generalizacji —
+    hardcode jednego produktu = dług, który spłaca dopiero drugi.**
+
 - **2026-07-19 (v1.1) — MANUS USUNIĘTY Z MODUŁU (decyzja Tomka: „fabryka banerów = ad-forge/fal"):**
   edge `wf2-ads` SKASOWANY, gałąź routingu `ads_manus_task_id→wf2_products→wf2-ads` wycięta z
   `manus-webhook`, kolumny `wf2_products.ads_manus_*` (task_id/status/step/started_at/completed_at)

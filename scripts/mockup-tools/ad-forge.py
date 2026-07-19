@@ -147,7 +147,7 @@ FINISHER_PROMPT = (
     "Professional graphic designer finishing pass on this ad banner. Integrate the graphic overlays "
     "with the photo: add soft realistic drop shadows under the pills and buttons as if printed in the "
     "scene, unify color grade between photo and graphics, subtle vignette, very subtle film grain. "
-    "Where a text pill overlaps the dog or a person, make the subject's edge slightly overlap the pill "
+    "Where a text pill overlaps the main subject (product, person or animal), make the subject's edge slightly overlap the pill "
     "for depth. CRITICAL: do NOT change, redraw, move or restyle ANY letters, words, numbers, logos or "
     "icons — every glyph must remain pixel-identical in shape; do not add any new text."
 )
@@ -467,24 +467,24 @@ def build_copy_prompt(bundle, angles, with_hook_alts=False):
     for a in angles:
         if a == "problem":
             schema_lines.append(
-                '  "problem": {' + alts + '"hook_baner":"TRANSFORMACJA PL, 2-4 słowa (np. \\"Koniec walki o pazury\\")",'
+                '  "problem": {' + alts + '"hook_baner":"TRANSFORMACJA PL przed→po, 2-4 słowa (nazwij zmianę, którą daje produkt)",'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
-                '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — scena FAKTU z produktem",'
-                '"pain_vision":"1 zdanie EN — scena bólu BEZ produktu","fakt_checkmarki":["≤3 słowa PL","≤3 słowa PL","≤3 słowa PL"]}')
+                '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"1 zdanie EN — scena FAKTU: produkt w realnym użyciu (efekt/„po")",'
+                '"pain_vision":"1 zdanie EN — scena frustracji/problemu BEZ produktu w kadrze","fakt_checkmarki":["≤3 słowa PL","≤3 słowa PL","≤3 słowa PL"]}')
         elif a == "demo":
             schema_lines.append(
-                '  "demo": {' + alts + '"hook_baner":"PYTANIE-LUSTRO lub BENEFIT PL (np. \\"Twój pies nie znosi obcinania pazurów?\\")",'
-                '"callouts_demo":["≤3 słowa PL z FAKTÓW (np. schowek na smakołyki)","≤3 słowa PL (np. ściera pazury naturalnie)","≤3 słowa PL (np. antypoślizgowy spód)"],'
+                '  "demo": {' + alts + '"hook_baner":"PYTANIE-LUSTRO lub BENEFIT PL (nazwij główną korzyść albo ból persony)",'
+                '"callouts_demo":["≤3 słowa PL z FAKTÓW — nazwa REALNEJ części/cechy produktu","≤3 słowa PL z FAKTÓW","≤3 słowa PL z FAKTÓW"],'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta","scene_vision":"STUDYJNA wskazówka EN, max kilka słów — '
-                'tylko rekwizyt/kolor/faktura tła obok produktu, BEZ ludzi i BEZ scen wnętrz (np. \\"a few dog treats scattered beside the board\\")"}')
+                'tylko rekwizyt/kolor/faktura tła obok produktu, BEZ ludzi i BEZ scen wnętrz (np. \\"warm beige gradient, a folded towel beside it\\")"}')
         else:  # lifestyle
             schema_lines.append(
-                ('  "%s": {' % a) + alts + '"hook_baner":"ODRĘCZNY MARKER PL sprzedający MECHANIZM — że pies robi to SAM, ≤3 słowa, z wykrzyknikiem (np. \\"SAM ŚCIERA PAZURY!\\")",'
-                '"mini_adnotacja":"KRÓTKA druga odręczna adnotacja PL przy szufladzie, ≤3 słowa (np. \\"smakołyki w środku\\")",'
+                ('  "%s": {' % a) + alts + '"hook_baner":"ODRĘCZNY MARKER PL — krótki, żywy, sprzedający GŁÓWNY EFEKT/KORZYŚĆ produktu w codziennym użyciu, ≤3 słowa, może z wykrzyknikiem",'
+                '"mini_adnotacja":"OPCJONALNA druga odręczna adnotacja PL przy realnym detalu produktu, ≤3 słowa (albo pusty string)",'
                 '"headline":"2-4 słowa PL WERSALIKI-friendly","subline":"≤6 słów PL lub \\"\\"",'
                 '"primary_text":"2-3 zdania PL, INNE otwarcie niż reszta",'
-                '"scene_vision":"1 zdanie EN — MECHANIZM W AKCJI: pies SAM energicznie drapie deskę (pazury na czarnej powierzchni), szuflada uchylona ze smakołykami, wzrok na schowku, BEZ ludzkiej ręki podającej smakołyk"}')
+                '"scene_vision":"1 zdanie EN — MECHANIZM/EFEKT W AKCJI: produkt w realnym, codziennym użyciu pokazujący główną korzyść (decydujący moment użycia), autentycznie jak w domu"}')
     schema = "{\n" + ",\n".join(schema_lines) + "\n}"
 
     return (
@@ -496,28 +496,37 @@ def build_copy_prompt(bundle, angles, with_hook_alts=False):
         "ZADANIE — dla kątów: %s.\n"
         "Dla każdego kąta:\n"
         "• hook_baner: GŁÓWNY hook renderowany WIELKI na banerze. demo = pytanie-lustro lub benefit; "
-        "problem = transformacja (przed→po); lifestyle = ODRĘCZNY MARKER sprzedający MECHANIZM — że pies robi to SAM "
-        "(np. \"SAM ŚCIERA PAZURY!\"), NIE „gdzie jest smakołyk\". PL, z diakrytykami.\n"
-        "• mini_adnotacja (TYLKO lifestyle): druga, malutka odręczna adnotacja przy szufladzie, ≤3 słowa (np. \"smakołyki w środku\").\n"
+        "problem = transformacja (przed→po); lifestyle = ODRĘCZNY MARKER sprzedający GŁÓWNY EFEKT/KORZYŚĆ "
+        "produktu w codziennym użyciu (krótki, żywy). PL, z diakrytykami.\n"
+        "• mini_adnotacja (TYLKO lifestyle): OPCJONALNA, malutka druga odręczna adnotacja przy realnym detalu "
+        "produktu, ≤3 słowa (pusty string, gdy zbędna).\n"
         "• callouts_demo (TYLKO demo): 3 krótkie etykiety ≤3 słowa Z FAKTÓW produktu (tytuł aukcji/opisy kadrów) "
-        "wskazujące części produktu (schowek na smakołyki / ściera pazury naturalnie / antypoślizgowy spód). ZERO zmyślania.\n"
+        "nazywające REALNE części/cechy produktu. ZERO zmyślania.\n"
         "• headline: 2-4 słowa PL, JEDNA obietnica, dobrze wygląda WERSALIKAMI (diakrytyki OK).\n"
         "• subline: opcjonalny, ≤6 słów PL (pusty string gdy zbędny).\n"
         "• primary_text: 2-3 zdania PL, hak w 1. zdaniu, lekkie CTA; KAŻDY kąt zaczyna się INNYM zdaniem.\n"
-        "• USP-MOMENT (TWARDA zasada scen WSZYSTKICH kątów z produktem): scena łapie MECHANIZM W AKCJI — pies SAM energicznie DRAPIE "
-        "(pazury w kontakcie z czarną powierzchnią ścierną), szuflada uchylona z WIDOCZNYMI smakołykami, wzrok psa na schowku. "
-        "ZAKAZ: pies stojący/siedzący biernie; smakołyk podawany z ludzkiej ręki. Widz w 0,5 s musi zrozumieć, że pies robi to SAM.\n"
-        "• scene_vision: 1 zdanie EN — konkretna wizja sceny dla TEGO produktu i persony (opisuj SCENĘ/otoczenie/światło/porę dnia, "
-        "NIGDY wyglądu produktu — produkt niesie referencja; ZAWSZE respektuj USP-MOMENT powyżej).\n"
-        "• WYJĄTEK dla kąta 'demo': scene_vision to STUDYJNA wskazówka (rekwizyt/kolor/faktura tła obok produktu, max kilka słów, "
-        "BEZ ludzi i BEZ pełnych scen wnętrz) — reklama demo ma być czysto studyjna (produkt-bohater na gradiencie), nie druga scena lifestyle.\n"
+        "• USP-MOMENT (TWARDA zasada scen WSZYSTKICH kątów, gdzie produkt jest UŻYWANY): scena łapie GŁÓWNY "
+        "MECHANIZM/EFEKT produktu W AKCJI — produkt w decydującym momencie realnego użycia, tak by w 0,5 s było "
+        "jasne CO robi i DLACZEGO pomaga. ZAKAZ: produkt nieużywany/bierny rekwizyt, w opakowaniu, trzymany do "
+        "kamery jak katalog. Wyprowadź moment użycia z FAKTÓW produktu (jak realnie się go używa).\n"
+        "• scene_vision: 1 zdanie EN — konkretna wizja sceny dla TEGO produktu i persony (opisuj SCENĘ/otoczenie/"
+        "światło/porę dnia oraz UŻYCIE produktu, NIGDY wyglądu produktu — wygląd niesie referencja; ZAWSZE "
+        "respektuj USP-MOMENT powyżej).\n"
+        "• WYJĄTEK dla kąta 'demo': scene_vision to STUDYJNA wskazówka (rekwizyt/kolor/faktura tła obok produktu, "
+        "max kilka słów, BEZ ludzi i BEZ pełnych scen wnętrz) — demo to czysty produkt-bohater na tle (części "
+        "widoczne pod callouty), nie druga scena lifestyle.\n"
         "Dla kąta 'problem' dodatkowo:\n"
-        "• pain_vision: 1 zdanie EN — scena frustracji/bólu BEZ produktu w kadrze.\n"
+        "• pain_vision: 1 zdanie EN — scena frustracji/problemu BEZ produktu w kadrze.\n"
         "• fakt_checkmarki: 3 korzyści PL, każda ≤3 słowa.\n\n"
         "ZASADY UCZCIWOŚCI TWARDE (Meta 2026, decyzja Tomka): zero zmyślonych rabatów/starych cen/„-%%”, "
         "zero urgency/countdownów, zero „darmowej dostawy” (niepotwierdzona), zero gwiazdek/opinii/liczb w copy, "
-        "zero personal attributes (headline bezosobowo), zero obietnic medycznych, zero opisu wyglądu produktu w scene_vision. "
-        "Callouty i copy TYLKO z realnych faktów produktu.\n\n"
+        "zero personal attributes (headline bezosobowo), zero opisu wyglądu produktu w scene_vision. "
+        "Callouty i copy TYLKO z realnych faktów produktu.\n"
+        "ZDROWIE/WELLNESS (twarde — Meta): dla produktów zdrowotnych/pielęgnacyjnych/wellness framing = "
+        "relaks / komfort / odprężenie / ulga w napięciu mięśni / wygoda, NIGDY claim medyczny/terapeutyczny/"
+        "leczniczy ani „koniec bólu”/„leczy”/„usuwa ból”/„natychmiastowa ulga”; ZERO before/after CIAŁA "
+        "(sylwetka/skóra/waga) — w kącie problem dozwolony wyłącznie kontrast NASTROJU/napięcia tej samej "
+        "osoby (zmęczenie→odprężenie), nie transformacja ciała.\n\n"
         "ZWRÓĆ WYŁĄCZNIE obiekt JSON (bez markdown, bez komentarza) o strukturze:\n%s"
         % (name, marka or "(brak — neutralnie)", kategoria or "—", dla or "—", kat or "—",
            ton or "—", hooki or "—", fakty, ", ".join(angles), schema)
@@ -1755,7 +1764,7 @@ def run_finisher(out_dir, creatives, regions_by_angle, state, slug):
 CLICK_GATE_QUESTIONS = [
     "(a) CO widz rozumie w 0,5 s (jeden rzut oka, zanim scrolluje dalej)?",
     "(b) JAKI HAK każe kliknąć (ciekawość / benefit / ulga) — a nie sama estetyka?",
-    "(c) Czy USP-MECHANIZM (pies SAM ściera pazury drapiąc po smakołyk w schowku) jest WIDOCZNY w kadrze?",
+    "(c) Czy USP/mechanizm produktu (to, co realnie robi i dlaczego pomaga) jest WIDOCZNY w kadrze — moment użycia, nie martwy packshot?",
 ]
 
 
@@ -2140,8 +2149,9 @@ def _fd_product_para(n_product):
         return FD_PRODUCT
     return (
         "\n\nPRODUCT — 1:1 FIDELITY (sacred): Images 1-%d show the SAME product from different angles and "
-        "states — reproduce this exact product with its exact geometry (drawer position, opening/compartment "
-        "shape, proportions and thickness); do not redesign or invent variations. Keep its shape, colors, "
+        "states — reproduce this exact product with its exact geometry (overall silhouette, proportions, "
+        "thickness, and every functional part, opening or moving element); do not redesign or invent "
+        "variations. Keep its shape, colors, "
         "materials, details and on-product branding identical wherever it appears. Reproduce ONLY the physical "
         "product; IGNORE and DROP any arrows, chevrons, watermarks, measurement lines or text baked into the "
         "reference images." % n_product
@@ -2159,50 +2169,49 @@ FD_TEXT_RULE = (
     "Every glyph must be sharp and spelled correctly. Put NO other text anywhere on the image.\n"
 )
 
+# ART-DIRECTION per kąt — PRODUCT-AGNOSTIC (generalizacja v9, lekcja Masażer 19.07: fabryka była
+# zahardkodowana pod Drapka/psa; scenariusz/AKCJĘ niesie teraz scene_vision/pain_vision z copy —
+# per produkt — a szablon opisuje tylko KOMPOZYCJĘ/layout/światło. Placeholdery {SCENE}/{PAIN}/{MINI}
+# podstawia build_fulldesign z copy.
 FD_ART = {
     "demo": (
-        "ART DIRECTION — DEMO / ANATOMY (mechanism 'wow'): the product is the hero in a BRIGHT, warm, real "
-        "home interior with soft natural daylight (NEVER a white studio, NEVER a dark night scene) — a dog "
-        "CAUGHT MID-SCRATCH, working the board BY ITSELF: a front paw pressed and dragging on the black "
-        "sandpaper toward the pulled-out treat drawer (NO human hand in frame). A big question headline sits "
-        "across a clean calm area at the top. 2-3 short callout labels, each connected by ONE thin elegant "
-        "line/dot to the exact product part it names. A small cash-on-delivery trust pill and a clear CTA "
-        "button anchored at the bottom. Everything integrated, premium, un-cluttered."
+        "ART DIRECTION — DEMO / ANATOMY (hero product + callouts): the product is the clear HERO, prominently "
+        "and fully visible so thin connector lines can reach the exact parts named by the callouts, on a warm, "
+        "premium, un-busy background that suits the product (soft natural light; NEVER a flat clinical white "
+        "studio, NEVER a dark scene). Follow the STUDIO HINT below for backdrop, props and mood. A big headline "
+        "sits across a clean calm area at the top. 2-3 short callout labels, each connected by ONE thin elegant "
+        "line/dot to the exact product part it names. A small cash-on-delivery trust pill and a clear CTA button "
+        "anchored at the bottom. Everything integrated, premium, un-cluttered.\nSTUDIO HINT: {SCENE}"
     ),
     "problem": (
         "ART DIRECTION — PROBLEM / PRZED→PO (transformation, split-screen): a vertical 50/50 split. LEFT "
-        "(PRZED): a desaturated, cool, tense documentary photo of a frustrated owner struggling to clip an "
-        "anxious dog's nails — WITHOUT the product. RIGHT (PO): a bright, warm photo of the same kind of dog "
-        "HAPPILY SCRATCHING the board BY ITSELF — a front paw dragging on the black sandpaper to reach the "
-        "treats in the open drawer, NO human hand feeding it. A crisp thin divider between halves. A big "
-        "transformation headline across the top. A muted 'PRZED' tag on the left, an accent 'PO' tag on the "
-        "right. At the bottom: the real price block and a short CTA. Strong visual contrast between the two sides."
+        "(PRZED): a desaturated, cool, tense documentary photo of the FRUSTRATION described in PROBLEM-SCENE — "
+        "WITHOUT the product anywhere in frame. RIGHT (PO): a bright, warm photo of the RELIEF / RESULT "
+        "described in SOLUTION-SCENE, WITH the product in natural real use. A crisp thin divider between the "
+        "halves. A big transformation headline across the top. A muted 'PRZED' tag on the left, an accent 'PO' "
+        "tag on the right. At the bottom: the real price block and a short CTA. Strong visual contrast between "
+        "the two sides.\nPROBLEM-SCENE (LEFT half, NO product): {PAIN}\nSOLUTION-SCENE (RIGHT half, WITH product in use): {SCENE}"
     ),
     "lifestyle": (
-        "ART DIRECTION — LIFESTYLE / UGC (organic post): an authentic phone-style photo in warm golden-hour "
-        "light in a real living room — the dog is CAUGHT MID-SCRATCH, working the board BY ITSELF: a front "
-        "paw dragging on the black sandpaper to reach the treats in the open drawer, its gaze locked on the "
-        "compartment. NO human in the frame, NO hand offering anything. It must look like a real customer's "
-        "candid social post, NOT a studio ad: phone-style framing, slight imperfection, no stocky perfection. "
-        "Minimal graphics: ONE small slightly-rotated hand-written sticker note with a curved arrow pointing "
-        "at the scratching PAW / black surface, PLUS a second tiny hand-written annotation with a short arrow "
-        "pointing at the open treat DRAWER, a small rounded 'za pobraniem' capsule in a corner, and the small "
-        "brand logo. No banner bars, no big pills."
+        "ART DIRECTION — LIFESTYLE / UGC (organic post): an authentic phone-style photo in warm natural light "
+        "in a real everyday setting — the product in genuine real-life use exactly as the SCENE below "
+        "describes. It must look like a real customer's candid social post, NOT a studio ad: phone-style "
+        "framing, slight imperfection, no stocky perfection. Minimal graphics: ONE small slightly-rotated "
+        "hand-written sticker note with a curved arrow pointing at the product doing its job, {MINI}a small "
+        "rounded 'za pobraniem' capsule in a corner, and the small brand logo. No banner bars, no big pills."
+        "\nSCENE (compose exactly this): {SCENE}"
     ),
 }
-# USP-MOMENT (v7.1, twarda zasada Tomka „lifestyle za mało pokazuje USP; pies robi to SAM"): KAŻDY kadr,
-# w którym pies używa produktu (scena DEMO/LIFESTYLE oraz połówka PO w PRZED/PO), MUSI złapać MECHANIZM
-# W AKCJI — inaczej reklama nie sprzedaje USP. Dołączane do briefu każdego kąta w build_fulldesign.
+# USP-MOMENT (product-agnostic): KAŻDY kadr, w którym produkt jest UŻYWANY (scena DEMO/LIFESTYLE oraz
+# połówka PO w PRZED/PO), MUSI złapać GŁÓWNY MECHANIZM/EFEKT produktu W AKCJI — inaczej reklama nie
+# sprzedaje USP. Dołączane do briefu każdego kąta w build_fulldesign. Konkret AKCJI niesie scene_vision.
 FD_USP_MOMENT = (
-    "\n\nUSP-MOMENT (MANDATORY — the single most important thing wherever the dog uses the product: the "
-    "DEMO/LIFESTYLE scene, and the PO half of a before/after): capture the mechanism IN ACTION — the dog is "
-    "ENERGETICALLY SCRATCHING the board BY ITSELF, at least one front paw pressed and DRAGGING across the "
-    "BLACK sandpaper surface with claws visibly in contact, weight leaning into the scratch, its gaze locked "
-    "on the pulled-out drawer. The drawer is AJAR with a few treats CLEARLY VISIBLE inside the light-wood "
-    "compartment — this is WHY the dog scratches: it is working to reach the hidden treat. BANNED, never "
-    "depict: a dog merely standing, sitting or sniffing passively; a human hand feeding, holding out or "
-    "offering a treat; a treat pinched in fingers; an empty or closed drawer. A viewer must understand in "
-    "HALF A SECOND that the DOG does this ITSELF — the self-service claw-grinding is the entire product."
+    "\n\nUSP-MOMENT (MANDATORY — the single most important thing wherever the product is shown in use: the "
+    "DEMO and LIFESTYLE scenes and the PO half of a before/after): capture the product's core MECHANISM / "
+    "BENEFIT IN ACTION exactly as the facts and the SCENE describe it — the product visibly DOING ITS JOB at "
+    "the decisive moment of real use, so the payoff is unmistakable. BANNED: the product sitting unused as a "
+    "passive prop, still in packaging, held up to the camera like a catalog shot, or a staged studio pose with "
+    "no action. A viewer must understand in HALF A SECOND what the product does and why it helps."
 )
 
 
@@ -2240,8 +2249,19 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
     if fonty:
         brand_line += "\nTypography vibe: %s (clean bold modern sans, Polish text)." % fonty
     parts.append(brand_line)
-    parts.append("\n\n" + FD_ART.get(angle, FD_ART["lifestyle"]))
-    parts.append(FD_USP_MOMENT)                                    # v7.1: mechanizm W AKCJI dla każdego kąta
+    # ART-DIRECTION per kąt — SUBIEKT/AKCJĘ niesie scene_vision/pain_vision z copy (per produkt),
+    # NIE hardcode scenariusza (generalizacja v9: fabryka product-agnostic — lekcja Masażer 19.07).
+    scene_v = _fd_txt(ca.get("scene_vision") or "")
+    pain_v = _fd_txt(ca.get("pain_vision") or "")
+    mini_v = _fd_txt(ca.get("mini_adnotacja") or "")
+    art = FD_ART.get(angle, FD_ART["lifestyle"])
+    art = art.replace("{SCENE}", scene_v or "(the product in natural, real everyday use — its core benefit visible)")
+    art = art.replace("{PAIN}", pain_v or "(a candid moment of the everyday frustration this product solves — NO product in frame)")
+    mini_hint = ("PLUS a second tiny hand-written annotation with a short arrow pointing at a key product detail, "
+                 if (angle == "lifestyle" and mini_v) else "")
+    art = art.replace("{MINI}", mini_hint)
+    parts.append("\n\n" + art)
+    parts.append(FD_USP_MOMENT)                                    # mechanizm/efekt W AKCJI (product-agnostic)
 
     intended, lines = [], []
 
@@ -2255,8 +2275,7 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
         if not no_hook:
             add("Big headline (top)", hook)
         callouts = [c for c in (ca.get("callouts_demo") or []) if _fd_txt(c)][:3]
-        hints = ["→ points to the treat drawer/compartment", "→ points to the black sandpaper scratch surface",
-                 "→ points to the pull loop / drawer"]
+        hints = ["→ point the connector line to the exact product part this label names"] * 3
         for i, c in enumerate(callouts):
             add("Callout label %d %s" % (i + 1, hints[i] if i < len(hints) else ""), _fd_txt(c).upper())
         add("Trust pill (bottom)", "PŁATNOŚĆ PRZY ODBIORZE")
@@ -2272,10 +2291,10 @@ def build_fulldesign(angle, ca, b, palette, cena, has_logo, has_styl, n_product=
         add("CTA button (bottom-right)", "ZAMÓW")
     else:  # lifestyle
         if not no_hook:
-            add("Hand-written sticker note (arrow to the scratching PAW / black surface)", hook)
+            add("Hand-written sticker note (arrow pointing at the product in use)", hook)
         mini = _fd_txt(ca.get("mini_adnotacja") or "")
         if mini:
-            add("Tiny second annotation (short arrow to the open treat DRAWER)", mini)
+            add("Tiny second annotation (short arrow to a key product detail)", mini)
         add("Small capsule (corner)", "za pobraniem")
 
     parts.append(FD_TEXT_RULE + "\n".join(lines))
@@ -2446,8 +2465,8 @@ def fidelity_surgical_fix(out_dir, slug, angle, cecha, product_fal, state):
     image_urls = [banner_fal] + list(product_fal or [])
     prompt = ("The FIRST image is a finished ad banner; the following images show the REAL product from "
               "different angles. Make the product match the reference images exactly: fix %s. Keep the exact "
-              "same layout, background, dog, logo and ALL text/letters pixel-identical — change ONLY the "
-              "product so its geometry matches the real references. Do not change anything else." % cecha)
+              "same layout, background, subject/person, logo and ALL text/letters pixel-identical — change "
+              "ONLY the product so its geometry matches the real references. Do not change anything else." % cecha)
     blob = gen_nbpro_one(prompt, image_urls, "fidfix_%s" % angle)
     Image = _pil()[0]
     final = to_45(Image.open(io.BytesIO(blob)).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS)
@@ -2496,6 +2515,7 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_ur
     image_urls = _fd_image_urls(refsd)
     n_prod = len(refsd["product_fal"])
     fd_dir = os.path.join(out_dir, "fulldesign")
+    ftag = lambda a, c: "%s__%s_c%d" % (slug, a, c)      # slug-namespace (spójnie z portfelem/hook-wariantami)
     intended_by_angle, jobs = {}, []
     print("-" * 88)
     print("FULL-DESIGN PROMPTY + DOKŁADNE NAPISY (bramka tekstu) · MULTI-REF produktu = %d kadry:" % n_prod)
@@ -2505,7 +2525,7 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_ur
         intended_by_angle[a] = intended
         print("  ── KĄT %s ── napisy do wyrenderowania: %s" % (a.upper(), intended))
         for c in range(BEST_OF):
-            jobs.append({"tag": "%s_c%d" % (a, c), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
+            jobs.append({"tag": ftag(a, c), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
     _t0 = time.time()
     got = gen_nbpro_batch(jobs, fd_dir)
     state.setdefault("timings", {})["fulldesign_wall_s"] = round(time.time() - _t0, 1)   # czas ściany etapu generacji
@@ -2515,7 +2535,7 @@ def do_fulldesign(args, bundle, out_dir, slug, b, palette, copy, angles, logo_ur
     cand_by_angle = {}
     for a in angles:
         ca = copy.get(a) or {}
-        cand_paths = [got.get("%s_c%d" % (a, c)) for c in range(BEST_OF)]
+        cand_paths = [got.get(ftag(a, c)) for c in range(BEST_OF)]
         cand_paths = [pp for pp in cand_paths if pp and os.path.isfile(pp)]
         if not cand_paths:
             raise SystemExit("full-design: brak kandydatów dla %s (reclaim: fal.py reclaim %s)" % (a, fd_dir))
@@ -2901,6 +2921,12 @@ def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, l
     RESPEKTUJE istniejące finały (NIE regeneruje ich). --finalize → publikacja wariantów (finały nietknięte)."""
     Image = _pil()[0]
     nvar = max(1, int(args.hook_variants))
+    # Tagi ledgera fal MUSZĄ być namespace'owane slugiem — inaczej RECLAIM (_reclaim_paid poluje
+    # ledger po project+"_"+tag) dociąga OPŁACONE joby INNEGO produktu o tym samym tagu (incydent
+    # Masażer 19.07: reclaim pociągnął bazy 'hbase_*' Drapka do przebiegu masażera). Wzorzec 'slug__…'
+    # jak w trybie portfelowym (do_portfolio).
+    htag = lambda a: "%s__hbase_%s" % (slug, a)
+    abtag = lambda c: "%s__ab_demo_c%d" % (slug, c)
     state_path = os.path.join(out_dir, "adforge-state.json")
     state = _load_json_file(state_path) or {}
 
@@ -2932,7 +2958,7 @@ def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, l
         ca = copy.get(a) or {}
         prompt, _ = build_fulldesign(a, ca, b, palette, cena, bool(refsd["logo_fal"]),
                                      bool(refsd["styl_fal"]), n_prod, no_hook=True)
-        jobs.append({"tag": "hbase_%s" % a, "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
+        jobs.append({"tag": htag(a), "model": NBPRO_EDIT, "image_urls": image_urls, "prompt": prompt})
     ab_on = bool(args.ab_engine)
     if ab_on:
         ca = copy.get("demo") or (copy.get(angles[0]) or {})
@@ -2940,7 +2966,7 @@ def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, l
         ab_prompt, _ = build_fulldesign(ab_angle, ca, b, palette, cena, bool(refsd["logo_fal"]),
                                         bool(refsd["styl_fal"]), n_prod, no_hook=False)
         for c in range(BEST_OF):
-            jobs.append({"tag": "ab_demo_c%d" % c, "model": NB2_EDIT, "image_urls": image_urls, "prompt": ab_prompt})
+            jobs.append({"tag": abtag(c), "model": NB2_EDIT, "image_urls": image_urls, "prompt": ab_prompt})
 
     est = NBPRO_USD * len(angles) + (NB2_USD * BEST_OF if ab_on else 0.0)
     if args.dry:
@@ -2980,10 +3006,10 @@ def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, l
     # 6) BAZY + NAKŁADKI wariantów (font marki)
     hook_files = {}
     for a in angles:
-        bp = got.get("hbase_%s" % a)
+        bp = got.get(htag(a))
         if not bp or not os.path.isfile(bp):
             log("  UWAGA: baza bez naglowka [%s] BRAK - pomijam warianty tego kata" % a); continue
-        if ("hbase_%s" % a) in new_tags:
+        if htag(a) in new_tags:
             added += NBPRO_USD                                     # naliczaj tylko za świeżą generację
         base_final = to_45(Image.open(bp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS)
         base_path = os.path.join(out_dir, "ad_%s_45_hbase.png" % a)
@@ -3003,11 +3029,11 @@ def do_hookvariants(args, bundle, out_dir, slug, b, palette, logo_img, angles, l
     # 7) A/B kompozyt (nb2 vs nbpro; NIE publikujemy nb2)
     ab_path = None
     if ab_on:
-        cand = [got.get("ab_demo_c%d" % c) for c in range(BEST_OF)]
+        cand = [got.get(abtag(c)) for c in range(BEST_OF)]
         cand = [pp for pp in cand if pp and os.path.isfile(pp)]
         if cand:
             added += NB2_USD * sum(1 for c in range(BEST_OF)
-                                   if ("ab_demo_c%d" % c) in new_tags and got.get("ab_demo_c%d" % c))
+                                   if abtag(c) in new_tags and got.get(abtag(c)))
             nb2_finals = [to_45(Image.open(pp).convert("RGB")).resize((FINAL_W, FINAL_H), Image.LANCZOS) for pp in cand]
             bi, _ = pick_best_candidate(nb2_finals, (0.0, 0.0, 1.0, 1.0))
             nb2_best = os.path.join(out_dir, "ad_demo_45_nb2.png")
